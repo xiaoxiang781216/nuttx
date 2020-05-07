@@ -82,7 +82,7 @@ include usrsock/Make.defs
 include binder/Make.defs
 include sysevent/Make.defs
 include reset/Make.defs
-include pcie/Make.defs
+include pci/Make.defs
 include virt/Make.defs
 include coresight/Make.defs
 
