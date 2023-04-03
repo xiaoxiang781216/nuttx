@@ -1170,7 +1170,9 @@ static int yaffs_vfs_bind(FAR struct inode *driver, FAR const void *data,
         }
     }
 
-  ret = yaffs_mount2_reldev(dev, (data && strstr(data, "ro")));
+  ret = yaffs_mount3_reldev(dev,
+                           (data && strstr(data, "ro")),
+                           (data && strstr(data, "skip_chkpt")));
   if (ret < 0)
     {
       /* Auto format the device if -o autoformat */
