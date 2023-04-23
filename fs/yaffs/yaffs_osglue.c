@@ -56,7 +56,7 @@ void yaffsfs_Unlock(void)
   nxmutex_unlock(&g_yaffs_lock);
 }
 
-u32 yaffsfs_CurrentTime(void)
+u64 yaffsfs_CurrentTime(void)
 {
   return time(NULL);
 }
