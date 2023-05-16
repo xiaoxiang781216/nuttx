@@ -41,7 +41,6 @@ unsigned int yaffs_trace_mask =
              YAFFS_TRACE_ALWAYS;
 
 static mutex_t g_yaffs_lock = NXMUTEX_INITIALIZER;
-static int g_yaffs_last_error;
 
 /****************************************************************************
  * Public Functions
@@ -64,12 +63,12 @@ u32 yaffsfs_CurrentTime(void)
 
 void yaffsfs_SetError(int err)
 {
-  g_yaffs_last_error = err;
+  set_errno(-err);
 }
 
 int yaffsfs_GetLastError(void)
 {
-  return g_yaffs_last_error;
+  return -get_errno();
 }
 
 FAR void *yaffsfs_malloc(size_t size)
