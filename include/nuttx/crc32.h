@@ -116,6 +116,26 @@ uint32_t crc32hf4acfb13_part(FAR const uint8_t *src,
 
 uint32_t crc32hf4acfb13(FAR const uint8_t *src, size_t len);
 
+/****************************************************************************
+ * Name: crc32part_ieee
+ *
+ * Description:
+ *   Continue CRC-32-IEEE 802.3 calculation on a part of the buffer.
+ *
+ ****************************************************************************/
+
+uint32_t crc32part_ieee(FAR const uint8_t *src, size_t len,
+                        uint32_t crc32val);
+
+/****************************************************************************
+ * Name: crc32_ieee
+ *
+ * Description:
+ *   Return a 32-bit CRC of the contents of the 'src' buffer, length 'len'
+ *
+ ****************************************************************************/
+
+uint32_t crc32_ieee(FAR const uint8_t *src, size_t len);
 #undef EXTERN
 #ifdef __cplusplus
 }
