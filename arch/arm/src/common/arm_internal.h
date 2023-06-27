@@ -403,6 +403,9 @@ int  arm_securefault(int irq, void *context, void *arg);
 /* Interrupt acknowledge and dispatch */
 
 uint32_t *arm_doirq(int irq, uint32_t *regs);
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+uint32_t *arm_dofiq(int fiq, uint32_t *regs);
+#endif
 
 /* Paging support */
 
