@@ -17,6 +17,12 @@ config RPTUN_PING
 		This is for debugging & profiling, create ping rpmsg
 		channel, user can use it to get send/recv speed & latency.
 
+config RPTUN_SECURE
+	bool "rptun secure support"
+	default n
+	---help---
+		This is for secure rptun support.
+
 if RPTUN
 
 config RPTUN_PRIORITY
