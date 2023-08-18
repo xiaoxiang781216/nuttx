@@ -59,6 +59,7 @@
 #define list_in_list(item) ((item)->prev != NULL)
 #define list_is_empty(list) ((list)->next == list)
 #define list_is_clear(list) ((list)->next == NULL)
+#define list_is_singular(list) ((list)->next == (list)->prev)
 
 #define list_initialize(list) \
   do \
