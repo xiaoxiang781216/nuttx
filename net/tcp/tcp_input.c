@@ -1180,7 +1180,7 @@ found:
                   return;
                 }
             }
-          else
+          else if ((conn->tcpstateflags & TCP_STATE_MASK) <= TCP_ESTABLISHED)
             {
 #ifdef CONFIG_NET_TCP_OUT_OF_ORDER
               /* Queue out-of-order segments. */
