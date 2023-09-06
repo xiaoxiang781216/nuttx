@@ -384,6 +384,8 @@ uint32_t *arm_doirq(int irq, uint32_t *regs);
 
 int  arm_svcall(int irq, void *context, void *arg);
 int  arm_hardfault(int irq, void *context, void *arg);
+int  arm_enable_dbgmonitor(void);
+int  arm_dbgmonitor(int irq, void *context, void *arg);
 
 #  if defined(CONFIG_ARCH_ARMV7M) || defined(CONFIG_ARCH_ARMV8M)
 
