@@ -134,6 +134,18 @@ void devurandom_register(void);
 void devcrypto_register(void);
 
 /****************************************************************************
+ * Name: devmem_register
+ *
+ * Description:
+ *   Register devmem driver
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_DEV_MEM
+int devmem_register(void);
+#endif
+
+/****************************************************************************
  * Name: devzero_register
  *
  * Description:
