@@ -920,6 +920,24 @@
 #  define ipcinfo     _none
 #endif
 
+#ifdef CONFIG_DEBUG_CORESIGHT_ERROR
+#  define cserr       _err
+#else
+#  define cserr      _none
+#endif
+
+#ifdef CONFIG_DEBUG_CORESIGHT_WARN
+#  define cswarn     _warn
+#else
+#  define cswarn     _none
+#endif
+
+#ifdef CONFIG_DEBUG_CORESIGHT_INFO
+#  define csinfo     _info
+#else
+#  define csinfo     _none
+#endif
+
 #ifdef CONFIG_DEBUG_PCIE_ERROR
 #  define pcieerr       _err
 #else
