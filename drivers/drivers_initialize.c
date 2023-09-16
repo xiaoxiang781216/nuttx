@@ -52,6 +52,10 @@
 #include <nuttx/virtio/virtio.h>
 #include <nuttx/drivers/optee.h>
 
+#ifdef CONFIG_SCHED_PERF_EVENTS
+#  include <perf/pmu.h>
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -153,6 +157,10 @@ void drivers_initialize(void)
   /* Register the master pseudo-terminal multiplexor device */
 
   ptmx_register();
+#endif
+
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  pmu_initialize();
 #endif
 
 #if defined(CONFIG_CRYPTO)
