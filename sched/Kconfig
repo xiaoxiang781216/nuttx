@@ -1737,7 +1737,7 @@ config SCHED_LPNTHREADS
 
 config SCHED_LPWORKPRIORITY
 	int "Low priority worker thread priority"
-	default 90
+	default 100
 	---help---
 		The minimum execution priority of the lower priority worker thread.
 
