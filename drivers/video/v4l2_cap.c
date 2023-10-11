@@ -45,8 +45,6 @@
 
 #define REMAINING_CAPNUM_INFINITY (-1)
 
-#define CAPTURE_ID(x, y)          (((x) << 16) | (y))
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -3045,8 +3043,7 @@ static int capture_query_ext_ctrl(FAR struct file *filep,
   attr->nr_of_dims = 0;
   memset(attr->dims, 0, sizeof(attr->dims));
 
-  if (attr->ctrl_class == V4L2_CTRL_CLASS_CAMERA &&
-      attr->id == V4L2_CID_SCENE_MODE)
+  if (attr->id == V4L2_CID_SCENE_MODE)
     {
       /* Scene mode is processed in only video driver. */
 
@@ -3060,9 +3057,7 @@ static int capture_query_ext_ctrl(FAR struct file *filep,
     }
   else
     {
-      ret = IMGSENSOR_GET_SUPPORTED_VALUE(cmng->imgsensor,
-              CAPTURE_ID(attr->ctrl_class, attr->id),
-              &value);
+      ret = IMGSENSOR_GET_SUPPORTED_VALUE(cmng->imgsensor, attr->id, &value);
       if (ret < 0)
         {
           return ret;
@@ -3097,8 +3092,7 @@ static int capture_query_ext_ctrl(FAR struct file *filep,
             break;
         }
 
-      set_parameter_name(CAPTURE_ID(attr->ctrl_class, attr->id),
-                         attr->name);
+      set_parameter_name(attr->id, attr->name);
     }
 
   return OK;
@@ -3119,8 +3113,7 @@ static int capture_querymenu(FAR struct file *filep,
 
   ASSERT(cmng->imgsensor);
 
-  if (menu->ctrl_class == V4L2_CTRL_CLASS_CAMERA &&
-      menu->id == V4L2_CID_SCENE_MODE)
+  if (menu->id == V4L2_CID_SCENE_MODE)
     {
       /* Scene mode is processed in only video driver. */
 
@@ -3134,8 +3127,8 @@ static int capture_querymenu(FAR struct file *filep,
   else
     {
       ret = IMGSENSOR_GET_SUPPORTED_VALUE(cmng->imgsensor,
-              CAPTURE_ID(menu->ctrl_class, menu->id),
-              &value);
+                                          menu->id,
+                                          &value);
       if (ret < 0)
         {
           return ret;
@@ -3243,7 +3236,7 @@ static int capture_g_ext_ctrls(FAR struct file *filep,
        cnt++, control++)
     {
       ret = IMGSENSOR_GET_VALUE(cmng->imgsensor,
-              CAPTURE_ID(ctrls->ctrl_class, control->id),
+              control->id,
               control->size,
               (imgsensor_value_t *)&control->value64);
       if (ret < 0)
@@ -3278,15 +3271,14 @@ static int capture_s_ext_ctrls(FAR struct file *filep,
        cnt < ctrls->count;
        cnt++, control++)
     {
-      if (ctrls->ctrl_class == V4L2_CTRL_CLASS_CAMERA &&
-          control->id == V4L2_CID_SCENE_MODE)
+      if (control->id == V4L2_CID_SCENE_MODE)
         {
           ret = reflect_scene_parameter(cmng, control->value);
         }
       else
         {
           ret = IMGSENSOR_SET_VALUE(cmng->imgsensor,
-                  CAPTURE_ID(ctrls->ctrl_class, control->id),
+                  control->id,
                   control->size,
                   (imgsensor_value_t)control->value64);
           if (ret == 0)
@@ -3294,7 +3286,7 @@ static int capture_s_ext_ctrls(FAR struct file *filep,
               if (cmng->capture_scene_mode == V4L2_SCENE_MODE_NONE)
                 {
                   save_scene_param(cmng, V4L2_SCENE_MODE_NONE,
-                    CAPTURE_ID(ctrls->ctrl_class, control->id),
+                    control->id,
                     control);
                 }
             }
@@ -3352,9 +3344,7 @@ static int capture_s_ext_ctrls_scene(FAR struct file *filep,
        cnt < ctrls->control.count;
        cnt++, control++)
     {
-      ret = save_scene_param(cmng, ctrls->mode,
-               CAPTURE_ID(ctrls->control.ctrl_class, control->id),
-               control);
+      ret = save_scene_param(cmng, ctrls->mode, control->id, control);
       if (ret != OK)
         {
           ctrls->control.error_idx = cnt;
@@ -3384,7 +3374,7 @@ static int capture_g_ext_ctrls_scene(FAR struct file *filep,
        cnt++, control++)
     {
       ret = read_scene_param(cmng, ctrls->mode,
-               CAPTURE_ID(ctrls->control.ctrl_class, control->id),
+               control->id,
                control);
       if (ret != OK)
         {
