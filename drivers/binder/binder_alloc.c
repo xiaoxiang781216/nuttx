@@ -245,6 +245,7 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
   /* Pad 0-size buffers so they get assigned unique addresses */
 
   size      = data_offsets_size + ALIGN(secctx_sz, sizeof(void *));
+  size      = max(size, sizeof(void *));
   buffer    = NULL;
 
   list_for_every_entry(&alloc->free_buffers_list, tmp,
