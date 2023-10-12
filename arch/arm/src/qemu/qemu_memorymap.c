@@ -25,6 +25,8 @@
 #include <sys/param.h>
 
 #include "mmu.h"
+
+#include "hardware/qemu_memorymap.h"
 #include "qemu_memorymap.h"
 
 /****************************************************************************
