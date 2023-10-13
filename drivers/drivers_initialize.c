@@ -47,6 +47,7 @@
 #include <nuttx/sysevent/sysevent_dev.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/syslog/syslog_console.h>
+#include <nuttx/thermal.h>
 #include <nuttx/trace.h>
 #include <nuttx/usrsock/usrsock_rpmsg.h>
 #include <nuttx/virtio/virtio.h>
@@ -247,6 +248,10 @@ void drivers_initialize(void)
 
 #ifndef CONFIG_DEV_OPTEE_NONE
   optee_register();
+#endif
+
+#ifdef CONFIG_THERMAL
+  thermal_init();
 #endif
 
   drivers_trace_end();
