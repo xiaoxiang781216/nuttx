@@ -594,6 +594,10 @@ get_scan:
       goto get_scan;
     }
 
+  /* Add a terminator fot the rbuf */
+
+  rbuf[ret] = '\0';
+
   ret = -EAGAIN;
   for (p = rbuf; *p != '\0'; p++)
     {
