@@ -298,6 +298,7 @@ static int rpmsgtee_send_recv(FAR struct socket *psocket,
 
   size_t arg_size = OPTEE_MSG_GET_ARG_SIZE(arg->num_params);
   size_t shm_size[MAX_PARAM_NUM];
+  size_t shm_addr[MAX_PARAM_NUM];
   struct iovec iov[MAX_IOVEC_NUM];
   struct msghdr msghdr;
   unsigned long iovlen = 1;
@@ -319,11 +320,13 @@ static int rpmsgtee_send_recv(FAR struct socket *psocket,
             (FAR void *)(uintptr_t)arg->params[i].u.rmem.shm_ref;
           iov[iovlen].iov_len = arg->params[i].u.rmem.size;
           shm_size[i] = arg->params[i].u.rmem.size;
+          shm_addr[i] = arg->params[i].u.rmem.shm_ref;
           iovlen++;
         }
       else if (arg->params[i].attr == OPTEE_MSG_ATTR_TYPE_RMEM_OUTPUT)
         {
           shm_size[i] = arg->params[i].u.rmem.size;
+          shm_addr[i] = arg->params[i].u.rmem.shm_ref;
         }
     }
 
@@ -349,6 +352,7 @@ static int rpmsgtee_send_recv(FAR struct socket *psocket,
           arg->params[i].attr == OPTEE_MSG_ATTR_TYPE_RMEM_INOUT)
         {
           size_t size = MIN(arg->params[i].u.rmem.size, shm_size[i]);
+          arg->params[i].u.rmem.shm_ref = shm_addr[i];
           ret = rpmsgtee_recv(psocket,
                               (FAR void *)(uintptr_t)
                               arg->params[i].u.rmem.shm_ref, size);
