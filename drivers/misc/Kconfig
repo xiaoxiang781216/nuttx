@@ -39,10 +39,22 @@ config DEV_RPMSG_SERVER
 	default n
 	depends on RPTUN
 
-config TEE_RPMSG
-	bool "RPMSG TEE Device Client Support"
-	default n
-	depends on RPTUN
+choice
+	prompt "Select optee dev implementation"
+	default DEV_OPTEE_NONE
+
+config DEV_OPTEE_LOCAL
+	bool "OPTEE Local Socket Support"
+	depends on NET_LOCAL
+
+config DEV_OPTEE_RPMSG
+	bool "OPTEE RPMSG Socket Support"
+	depends on NET_RPMSG
+
+config DEV_OPTEE_NONE
+	bool "Disable optee driver"
+
+endchoice
 
 config DRVR_MKRD
 	bool "RAM disk wrapper (mkrd)"

@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/drivers/rpmsgtee.h
+ * include/nuttx/drivers/optee.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_DRIVERS_RPMSGTEE_H
-#define __INCLUDE_NUTTX_DRIVERS_RPMSGTEE_H
+#ifndef __INCLUDE_NUTTX_DRIVERS_OPTEE_H
+#define __INCLUDE_NUTTX_DRIVERS_OPTEE_H
 
 /****************************************************************************
  * Included Files
@@ -44,7 +44,7 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Name: rpmsgtee_register
+ * Name: optee_register
  *
  * Description:
  *   Rpmsg-device client initialize function, the client cpu should call
@@ -60,8 +60,8 @@ extern "C"
  *
  ****************************************************************************/
 
-#ifdef CONFIG_TEE_RPMSG
-int rpmsgtee_register(FAR const char *remotecpu, FAR const char *devpath);
+#ifndef CONFIG_DEV_OPTEE_NONE
+int optee_register(FAR const char *remotecpu, FAR const char *devpath);
 #endif
 
 #undef EXTERN
@@ -69,4 +69,4 @@ int rpmsgtee_register(FAR const char *remotecpu, FAR const char *devpath);
 }
 #endif
 
-#endif /* __INCLUDE_NUTTX_DRIVERS_RPMSGTEE_H */
+#endif /* __INCLUDE_NUTTX_DRIVERS_OPTEE_H */

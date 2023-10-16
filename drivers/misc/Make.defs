@@ -72,8 +72,8 @@ ifeq ($(CONFIG_BLK_RPMSG_SERVER),y)
   CSRCS += rpmsgblk_server.c
 endif
 
-ifeq ($(CONFIG_TEE_RPMSG),y)
-  CSRCS += rpmsgtee.c
+ifneq ($(CONFIG_DEV_OPTEE_NONE),y)
+  CSRCS += optee.c
 endif
 
 ifeq ($(CONFIG_GOLDFISH_PIPE),y)
