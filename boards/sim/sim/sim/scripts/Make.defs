@@ -267,6 +267,10 @@ else
   LDFLAGS += -Wl,-Ttext-segment=0x400000
 endif
 
+ifeq ($(CONFIG_DEBUG_LINK_MAP),y)
+  LDFLAGS += -Wl,-Map=$(TOPDIR)/nuttx.map
+endif
+
 ifeq ($(CONFIG_SIM_M32),y)
   LDLINKFLAGS += -melf_i386
   LDFLAGS += -m32
