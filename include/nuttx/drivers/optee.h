@@ -47,13 +47,7 @@ extern "C"
  * Name: optee_register
  *
  * Description:
- *   Rpmsg-device client initialize function, the client cpu should call
- *   this function in the board initialize process.
- *
- * Parameters:
- *   remotecpu  - the server cpu name
- *   devpath    - the device path in local cpu, provide this argument to
- *                supoort custom device path
+ *   optee-device client initialize function
  *
  * Returned Values:
  *   OK on success; A negated errno value is returned on any failure.
@@ -61,7 +55,7 @@ extern "C"
  ****************************************************************************/
 
 #ifndef CONFIG_DEV_OPTEE_NONE
-int optee_register(FAR const char *remotecpu, FAR const char *devpath);
+int optee_register(void);
 #endif
 
 #undef EXTERN

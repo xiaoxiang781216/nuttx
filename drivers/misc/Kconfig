@@ -56,6 +56,11 @@ config DEV_OPTEE_NONE
 
 endchoice
 
+config OPTEE_REMOTE_CPU_NAME
+	string "The cpuname on which the optee server runs"
+	default "tee"
+	depends on DEV_OPTEE_RPMSG
+
 config DRVR_MKRD
 	bool "RAM disk wrapper (mkrd)"
 	default n

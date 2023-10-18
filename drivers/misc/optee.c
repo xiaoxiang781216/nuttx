@@ -57,6 +57,7 @@
 #define OPTEE_MAX_PARAM_NUM             6
 
 #define OPTEE_SERVER_PATH               "optee"
+#define OPTEE_DEV_PATH                  "/dev/tee0"
 
 /****************************************************************************
  * Private Types
@@ -100,7 +101,7 @@ static const struct file_operations g_optee_ops =
  * Name: optee_open
  *
  * Description:
- *   Rpmsg-tee open operation
+ *   optee open operation
  *
  * Parameters:
  *   filep  - the file instance
@@ -116,14 +117,9 @@ static int optee_open(FAR struct file *filep)
 #ifdef CONFIG_DEV_OPTEE_LOCAL
   struct sockaddr_un addr;
 #else
-  FAR char *remotecpu;
   struct sockaddr_rpmsg addr;
 #endif
   int ret;
-
-#ifndef CONFIG_DEV_OPTEE_LOCAL
-  remotecpu = filep->f_inode->i_private;
-#endif
 
   psock = (FAR struct socket *)kmm_zalloc(sizeof(struct socket));
   if (psock == NULL)
@@ -150,7 +146,7 @@ static int optee_open(FAR struct file *filep)
 #else
   addr.rp_family = AF_RPMSG;
   strlcpy(addr.rp_name, OPTEE_SERVER_PATH, sizeof(addr.rp_name));
-  strlcpy(addr.rp_cpu, remotecpu, sizeof(addr.rp_cpu));
+  strlcpy(addr.rp_cpu, CONFIG_OPTEE_REMOTE_CPU_NAME, sizeof(addr.rp_cpu));
 #endif
 
   ret = psock_connect(psock, (FAR const struct sockaddr *)&addr,
@@ -170,7 +166,7 @@ static int optee_open(FAR struct file *filep)
  * Name: optee_close
  *
  * Description:
- *   Rpmsg-tee close operation
+ *   optee close operation
  *
  * Parameters:
  *   filep  - the file instance
@@ -592,7 +588,7 @@ optee_ioctl_shm_alloc(FAR struct tee_ioctl_shm_alloc_data *data)
  * Name: optee_ioctl
  *
  * Description:
- *   Rpmsg-tee ioctl operation
+ *   optee ioctl operation
  *
  * Parameters:
  *   filep  - the file instance
@@ -638,27 +634,15 @@ static int optee_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
  * Name: optee_register
  *
  * Description:
- *   Rpmsg-tee client initialize function, the client cpu should call
+ *   optee client initialize function, the client cpu should call
  *   this function in the board initialize process.
- *
- * Parameters:
- *   remotecpu  - the server cpu name
- *   localpath  - the tee path in local cpu,
  *
  * Returned Values:
  *   OK on success; A negated errno value is returned on any failure.
  *
  ****************************************************************************/
 
-int optee_register(FAR const char *remotecpu, FAR const char *devpath)
+int optee_register(void)
 {
-  /* Arguments check */
-
-  if (remotecpu == NULL || devpath == NULL)
-    {
-      return -EINVAL;
-    }
-
-  return register_driver(devpath, &g_optee_ops, 0666,
-                         (FAR void *)remotecpu);
+  return register_driver(OPTEE_DEV_PATH, &g_optee_ops, 0666, NULL);
 }
