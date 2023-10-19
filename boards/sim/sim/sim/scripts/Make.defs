@@ -268,7 +268,9 @@ else
 endif
 
 ifeq ($(CONFIG_DEBUG_LINK_MAP),y)
-  LDFLAGS += -Wl,-Map=$(TOPDIR)/nuttx.map
+  ifeq ($(CONFIG_HOST_MACOS),)
+    LDFLAGS += -Wl,-Map=$(TOPDIR)/nuttx.map
+  endif
 endif
 
 ifeq ($(CONFIG_SIM_M32),y)
