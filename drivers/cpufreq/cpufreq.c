@@ -232,7 +232,7 @@ static unsigned int cpufreq_verify_current_freq(
 {
   unsigned int new_freq;
 
-  new_freq = policy->driver->get_frequency(policy->driver);
+  new_freq = policy->driver->get_frequency(policy);
   if (!new_freq)
     {
       return 0;
@@ -362,7 +362,7 @@ int cpufreq_driver_target(FAR struct cpufreq_policy *policy,
 
   blocking_notifier_call_chain(&policy->notifier_list,
                                CPUFREQ_PRECHANGE, &freqs);
-  ret = policy->driver->target_index(policy->driver, idx);
+  ret = policy->driver->target_index(policy, idx);
   blocking_notifier_call_chain(&policy->notifier_list,
                                CPUFREQ_POSTCHANGE, &freqs);
   if (ret)
@@ -412,7 +412,7 @@ int cpufreq_init(FAR struct cpufreq_driver *driver)
     }
 
   policy->driver = driver;
-  policy->freq_table = driver->get_table(driver);
+  policy->freq_table = driver->get_table(policy);
   if (!policy->freq_table)
     {
       ret = -EPERM;
@@ -456,7 +456,7 @@ int cpufreq_init(FAR struct cpufreq_driver *driver)
       goto out_free_policy;
     }
 
-  policy->cur = policy->driver->get_frequency(policy->driver);
+  policy->cur = policy->driver->get_frequency(policy);
   ret = cpufreq_table_get_index(policy, policy->cur);
   if (ret == -EINVAL)
     {
@@ -524,7 +524,7 @@ int cpufreq_suspend(FAR struct cpufreq_policy *policy)
 
   if (policy->driver->suspend)
     {
-      ret = policy->driver->suspend(policy->driver);
+      ret = policy->driver->suspend(policy);
       if (ret)
         {
           return ret;
@@ -551,7 +551,7 @@ int cpufreq_resume(FAR struct cpufreq_policy *policy)
 
   if (policy->driver->resume)
     {
-      ret = policy->driver->resume(policy->driver);
+      ret = policy->driver->resume(policy);
       if (ret)
         {
           pwrerr("%s: Failed to resume driver: %p\n", __func__, policy);
@@ -608,7 +608,7 @@ unsigned int cpufreq_get(FAR struct cpufreq_policy *policy)
       return -EINVAL;
     }
 
-  return policy->driver->get_frequency(policy->driver);
+  return policy->driver->get_frequency(policy);
 }
 
 FAR struct cpufreq_qos *cpufreq_qos_add_request(

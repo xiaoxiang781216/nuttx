@@ -44,6 +44,9 @@
  * Public Types
  ****************************************************************************/
 
+struct cpufreq_policy;
+struct cpufreq_qos;
+
 struct cpufreq_frequency_table
 {
   unsigned int frequency;       /* kHz - should be in order */
@@ -57,16 +60,14 @@ struct cpufreq_freqs
 
 struct cpufreq_driver
 {
-  FAR const struct cpufreq_frequency_table *
-      (*get_table)(FAR struct cpufreq_driver *driver);
-  int (*target_index)(FAR struct cpufreq_driver *driver, unsigned int index);
-  int (*get_frequency)(FAR struct cpufreq_driver *driver);
-  int (*suspend)(FAR struct cpufreq_driver *driver);
-  int (*resume)(FAR struct cpufreq_driver *driver);
+  CODE FAR const struct cpufreq_frequency_table *
+           (*get_table)(FAR struct cpufreq_policy *policy);
+  CODE int (*target_index)(FAR struct cpufreq_policy *policy,
+                           unsigned int index);
+  CODE int (*get_frequency)(FAR struct cpufreq_policy *policy);
+  CODE int (*suspend)(FAR struct cpufreq_policy *policy);
+  CODE int (*resume)(FAR struct cpufreq_policy *policy);
 };
-
-struct cpufreq_policy;
-struct cpufreq_qos;
 
 /****************************************************************************
  * Public Function Prototypes
