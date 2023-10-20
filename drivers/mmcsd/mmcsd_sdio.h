@@ -42,8 +42,9 @@
  *  [07:03] Always 0
  *  [02:00] Command Set
  */
-#define MMCSD_CMD6_BUSWIDTH_RWSHIFT   (16)
-#  define MMCSD_CMD6_BUSWIDTH_RW      ((uint32_t)0xb7 << MMCSD_CMD6_BUSWIDTH_RWSHIFT)  /* R/W */
+#define MMCSD_CMD6_INDEX_SHIFT   (16)
+#  define MMCSD_CMD6_BUSWIDTH_RW      ((uint32_t)0xb7 << MMCSD_CMD6_INDEX_SHIFT)  /* R/W */
+#  define MMCSD_CMD6_PARTITION_CONFIG ((uint32_t)0xb3 << MMCSD_CMD6_INDEX_SHIFT)  /* R/W */
 
 #define MMCSD_CMD6_WRITE_BYTE_SHIFT   (24)
 #  define MMCSD_CMD6_MODE_CMD_SET     ((uint32_t)0x00 << MMCSD_CMD6_WRITE_BYTE_SHIFT)  /* Change the command set */
@@ -51,12 +52,25 @@
 #  define MMCSD_CMD6_MODE_CLEAR_BITS  ((uint32_t)0x02 << MMCSD_CMD6_WRITE_BYTE_SHIFT)  /* Clear bits which are 1 in value */
 #  define MMCSD_CMD6_MODE_WRITE_BYTE  ((uint32_t)0x03 << MMCSD_CMD6_WRITE_BYTE_SHIFT)  /* Set target to value */
 
-#define MMCSD_CMD6_BUS_WIDTH_SHIFT    (8)
-#  define MMCSD_CMD6_BUS_WIDTH_1      ((uint32_t)0x00 << MMCSD_CMD6_BUS_WIDTH_SHIFT)  /* Card is in 1 bit mode */
-#  define MMCSD_CMD6_BUS_WIDTH_4      ((uint32_t)0x01 << MMCSD_CMD6_BUS_WIDTH_SHIFT)  /* Card is in 4 bit mode */
-#  define MMCSD_CMD6_CSD_BUS_WIDTH_8  ((uint32_t)0x02 << MMCSD_CMD6_BUS_WIDTH_SHIFT)  /* Card is in 8 bit mode */
-#  define MMCSD_CMD6_DDR_BUS_WIDTH_4  ((uint32_t)0x05 << MMCSD_CMD6_BUS_WIDTH_SHIFT)  /* Card is in 4 bit DDR mode */
-#  define MMCSD_CMD6_DDR_BUS_WIDTH_8  ((uint32_t)0x06 << MMCSD_CMD6_BUS_WIDTH_SHIFT)  /* Card is in 8 bit DDR mode */
+#define MMCSD_CMD6_VALUE_SHIFT    (8)
+#  define MMCSD_CMD6_BUS_WIDTH_1      ((uint32_t)0x00 << MMCSD_CMD6_VALUE_SHIFT)  /* Card is in 1 bit mode */
+#  define MMCSD_CMD6_BUS_WIDTH_4      ((uint32_t)0x01 << MMCSD_CMD6_VALUE_SHIFT)  /* Card is in 4 bit mode */
+#  define MMCSD_CMD6_CSD_BUS_WIDTH_8  ((uint32_t)0x02 << MMCSD_CMD6_VALUE_SHIFT)  /* Card is in 8 bit mode */
+#  define MMCSD_CMD6_DDR_BUS_WIDTH_4  ((uint32_t)0x05 << MMCSD_CMD6_VALUE_SHIFT)  /* Card is in 4 bit DDR mode */
+#  define MMCSD_CMD6_DDR_BUS_WIDTH_8  ((uint32_t)0x06 << MMCSD_CMD6_VALUE_SHIFT)  /* Card is in 8 bit DDR mode */
+
+/* Partition type */
+
+#  define MMCSD_CMD6_PARTITION(n)     ((uint32_t)(n) << MMCSD_CMD6_VALUE_SHIFT)
+
+#  define MMCSD_PART_UDATA            0
+#  define MMCSD_PART_BOOT0            1
+#  define MMCSD_PART_BOOT1            2
+#  define MMCSD_PART_RPMB             3
+#  define MMCSD_PART_GENP0            4
+#  define MMCSD_PART_GENP1            5
+#  define MMCSD_PART_GENP2            6
+#  define MMCSD_PART_GENP3            7
 
 /* CMD8 Argument:
  *    [31:12]: Reserved (shall be set to '0')
