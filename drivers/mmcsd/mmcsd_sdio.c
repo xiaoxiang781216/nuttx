@@ -155,7 +155,7 @@ static int     mmcsd_setblocklen(FAR struct mmcsd_state_s *priv,
 static ssize_t mmcsd_readsingle(FAR struct mmcsd_state_s *priv,
                                 FAR uint8_t *buffer, off_t startblock);
 #if MMCSD_MULTIBLOCK_LIMIT != 1
-static ssize_t mmcsd_readmultiple(FAR struct mmcsd_state_s *priv,
+static ssize_t mmcsd_readmultiple(FAR struct mmcsd_part_s *part,
                                   FAR uint8_t *buffer, off_t startblock,
                                   size_t nblocks);
 #endif
@@ -163,7 +163,7 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
                                  FAR const uint8_t *buffer,
                                  off_t startblock);
 #if MMCSD_MULTIBLOCK_LIMIT != 1
-static ssize_t mmcsd_writemultiple(FAR struct mmcsd_state_s *priv,
+static ssize_t mmcsd_writemultiple(FAR struct mmcsd_part_s *part,
                                    FAR const uint8_t *buffer,
                                    off_t startblock,
                                    size_t nblocks);
@@ -201,9 +201,9 @@ static int     mmcsd_probe(FAR struct mmcsd_state_s *priv);
 static int     mmcsd_removed(FAR struct mmcsd_state_s *priv);
 static int     mmcsd_hwinitialize(FAR struct mmcsd_state_s *priv);
 #ifdef CONFIG_MMCSD_IOCSUPPORT
-static int     mmcsd_iocmd(FAR struct mmcsd_state_s *priv,
+static int     mmcsd_iocmd(FAR struct mmcsd_part_s *part,
                            FAR struct mmc_ioc_cmd *ic_ptr);
-static int     mmcsd_multi_iocmd(FAR struct mmcsd_state_s *priv,
+static int     mmcsd_multi_iocmd(FAR struct mmcsd_part_s *part,
                                  FAR struct mmc_ioc_multi_cmd *imc_ptr);
 #endif
 
@@ -1533,16 +1533,18 @@ static ssize_t mmcsd_readsingle(FAR struct mmcsd_state_s *priv,
  ****************************************************************************/
 
 #if MMCSD_MULTIBLOCK_LIMIT != 1
-static ssize_t mmcsd_readmultiple(FAR struct mmcsd_state_s *priv,
+static ssize_t mmcsd_readmultiple(FAR struct mmcsd_part_s *part,
                                   FAR uint8_t *buffer, off_t startblock,
                                   size_t nblocks)
 {
+  FAR struct mmcsd_state_s *priv = part->priv;
   size_t nbytes = nblocks << priv->blockshift;
+  uint32_t partnum = part - priv->part;
   off_t  offset;
   int ret;
 
   finfo("startblock=%jd nblocks=%zu\n", (intmax_t)startblock, nblocks);
-  DEBUGASSERT(priv != NULL && buffer != NULL && nblocks > 1);
+  DEBUGASSERT(priv != NULL && buffer != NULL);
 
   /* Check if the card is locked */
 
@@ -1550,6 +1552,20 @@ static ssize_t mmcsd_readmultiple(FAR struct mmcsd_state_s *priv,
     {
       ferr("ERROR: Card is locked\n");
       return -EPERM;
+    }
+
+  if (priv->partnum != partnum)
+    {
+      ret = mmcsd_switch(priv, MMCSD_CMD6_MODE_WRITE_BYTE |
+                               MMCSD_CMD6_PARTITION_CONFIG |
+                               MMCSD_CMD6_PARTITION(partnum));
+      if (ret != OK)
+        {
+          ferr("ERROR: mmcsd_switch failed: %d\n", ret);
+          return ret;
+        }
+
+      priv->partnum = partnum;
     }
 
 #if defined(CONFIG_SDIO_DMA) && defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
@@ -1843,16 +1859,18 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
  ****************************************************************************/
 
 #if MMCSD_MULTIBLOCK_LIMIT != 1
-static ssize_t mmcsd_writemultiple(FAR struct mmcsd_state_s *priv,
+static ssize_t mmcsd_writemultiple(FAR struct mmcsd_part_s *part,
                                    FAR const uint8_t *buffer,
                                    off_t startblock, size_t nblocks)
 {
+  FAR struct mmcsd_state_s *priv = part->priv;
   size_t nbytes = nblocks << priv->blockshift;
+  uint32_t partnum = part - priv->part;
   off_t  offset;
   int ret;
 
   finfo("startblock=%jd nblocks=%zu\n", (intmax_t)startblock, nblocks);
-  DEBUGASSERT(priv != NULL && buffer != NULL && nblocks > 1);
+  DEBUGASSERT(priv != NULL && buffer != NULL);
 
   /* Check if the card is locked or write protected (either via software or
    * via the mechanical write protect on the card)
@@ -1862,6 +1880,20 @@ static ssize_t mmcsd_writemultiple(FAR struct mmcsd_state_s *priv,
     {
       ferr("ERROR: Card is locked or write protected\n");
       return -EPERM;
+    }
+
+  if (priv->partnum != partnum)
+    {
+      ret = mmcsd_switch(priv, MMCSD_CMD6_MODE_WRITE_BYTE |
+                               MMCSD_CMD6_PARTITION_CONFIG |
+                               MMCSD_CMD6_PARTITION(partnum));
+      if (ret != OK)
+        {
+          ferr("ERROR: mmcsd_switch failed: %d\n", ret);
+          return ret;
+        }
+
+      priv->partnum = partnum;
     }
 
 #if defined(CONFIG_SDIO_DMA) && defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
@@ -1950,7 +1982,21 @@ static ssize_t mmcsd_writemultiple(FAR struct mmcsd_state_s *priv,
         }
     }
 
-  mmcsd_sendcmdpoll(priv, MMCSD_CMD23, nblocks);
+  /* Data to the RPMB is programmed with the WRITE_MULTIPLE_BLOCK(CMD25),
+   * in prior to the command CMD25 the block count is set by CMD23,
+   * with argument bit [31] set as 1 to indicate Reliable Write type of
+   * programming access.
+   */
+
+  if (priv->partnum == MMCSD_PART_RPMB)
+    {
+      mmcsd_sendcmdpoll(priv, MMCSD_CMD23, (1 << 31) | nblocks);
+    }
+  else
+    {
+      mmcsd_sendcmdpoll(priv, MMCSD_CMD23, nblocks);
+    }
+
   ret = mmcsd_recv_r1(priv, MMCSD_CMD23);
   if (ret != OK)
     {
@@ -2193,7 +2239,7 @@ static ssize_t mmcsd_read(FAR struct inode *inode, unsigned char *buffer,
             }
           else
             {
-              nread = mmcsd_readmultiple(priv, buffer, sector, nread);
+              nread = mmcsd_readmultiple(part, buffer, sector, nread);
             }
 
 #endif
@@ -2291,7 +2337,7 @@ static ssize_t mmcsd_write(FAR struct inode *inode,
             }
           else
             {
-              nwrite = mmcsd_writemultiple(priv, buffer, sector, nwrite);
+              nwrite = mmcsd_writemultiple(part, buffer, sector, nwrite);
             }
 
 #endif
@@ -2443,7 +2489,7 @@ static int mmcsd_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
     case MMC_IOC_CMD: /* MMCSD device ioctl commands */
       {
         finfo("MMC_IOC_CMD\n");
-        ret = mmcsd_iocmd(priv, (FAR struct mmc_ioc_cmd *)arg);
+        ret = mmcsd_iocmd(part, (FAR struct mmc_ioc_cmd *)arg);
         if (ret != OK)
           {
             ferr("ERROR: mmcsd_iocmd failed: %d\n", ret);
@@ -2454,7 +2500,7 @@ static int mmcsd_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
     case MMC_IOC_MULTI_CMD: /* MMCSD device ioctl muti commands */
       {
         finfo("MMC_IOC_MULTI_CMD\n");
-        ret = mmcsd_multi_iocmd(priv, (FAR struct mmc_ioc_multi_cmd *)arg);
+        ret = mmcsd_multi_iocmd(part, (FAR struct mmc_ioc_multi_cmd *)arg);
         if (ret != OK)
           {
             ferr("ERROR: mmcsd_iocmd failed: %d\n", ret);
@@ -3329,9 +3375,10 @@ static int mmcsd_general_cmd_read(FAR struct mmcsd_state_s *priv,
  *
  ****************************************************************************/
 
-static int mmcsd_iocmd(FAR struct mmcsd_state_s *priv,
+static int mmcsd_iocmd(FAR struct mmcsd_part_s *part,
                        FAR struct mmc_ioc_cmd *ic_ptr)
 {
+  FAR struct mmcsd_state_s *priv = part->priv;
   uint32_t opcode;
   int ret = OK;
 
@@ -3363,6 +3410,46 @@ static int mmcsd_iocmd(FAR struct mmcsd_state_s *priv,
       }
       break;
 #endif
+    case MMCSD_CMDIDX18: /* Read multi blocks commands */
+      {
+        if (ic_ptr->blocks > 0)
+          {
+            /* Address argument in CMD18, 25 will be ignored in rpmb case */
+
+            ret = mmcsd_readmultiple(part,
+                                  (FAR uint8_t *)(uintptr_t)ic_ptr->data_ptr,
+                                   ic_ptr->arg, ic_ptr->blocks);
+            if (ret != ic_ptr->blocks)
+              {
+                ferr("ERROR: mmcsd_readmultiple failed: %d\n", ret);
+              }
+            else
+              {
+                ret = OK;
+              }
+          }
+      }
+      break;
+    case MMCSD_CMDIDX25: /* Write multi blocks commands */
+      {
+        if (ic_ptr->blocks > 0)
+          {
+            /* Address argument in CMD18, 25 will be ignored in rpmb case */
+
+            ret = mmcsd_writemultiple(part,
+                            (const FAR uint8_t *)(uintptr_t)ic_ptr->data_ptr,
+                             ic_ptr->arg, ic_ptr->blocks);
+            if (ret != ic_ptr->blocks)
+              {
+                ferr("ERROR: mmcsd_writemultiple failed: %d\n", ret);
+              }
+            else
+              {
+                ret = OK;
+              }
+          }
+      }
+      break;
     case MMCSD_CMDIDX56: /* General commands */
       {
         if (ic_ptr->write_flag)
@@ -3406,9 +3493,10 @@ static int mmcsd_iocmd(FAR struct mmcsd_state_s *priv,
  *
  ****************************************************************************/
 
-static int mmcsd_multi_iocmd(FAR struct mmcsd_state_s *priv,
+static int mmcsd_multi_iocmd(FAR struct mmcsd_part_s *part,
                              FAR struct mmc_ioc_multi_cmd *imc_ptr)
 {
+  FAR struct mmcsd_state_s *priv = part->priv;
   int ret;
   int i;
 
@@ -3422,7 +3510,7 @@ static int mmcsd_multi_iocmd(FAR struct mmcsd_state_s *priv,
 
   for (i = 0; i < imc_ptr->num_of_cmds; ++i)
     {
-      ret = mmcsd_iocmd(priv, &imc_ptr->cmds[i]);
+      ret = mmcsd_iocmd(part, &imc_ptr->cmds[i]);
       if (ret != OK)
         {
           ferr("cmds %d failed.\n", i);
