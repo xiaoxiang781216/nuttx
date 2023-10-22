@@ -104,9 +104,9 @@ struct mempool_s
   /* Private data for memory pool */
 
   FAR char  *ibase;   /* The inerrupt mempool base pointer */
-  sq_queue_t queue;   /* The free block queue in normal mempool */
-  sq_queue_t iqueue;  /* The free block queue in interrupt mempool */
-  sq_queue_t equeue;  /* The expand block queue for normal mempool */
+  dq_queue_t queue;   /* The free block queue in normal mempool */
+  dq_queue_t iqueue;  /* The free block queue in interrupt mempool */
+  dq_queue_t equeue;  /* The expand block queue for normal mempool */
 #if CONFIG_MM_BACKTRACE >= 0
   struct list_node alist;     /* The used block list in mempool */
 #else
