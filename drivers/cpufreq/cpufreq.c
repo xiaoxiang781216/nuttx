@@ -70,9 +70,9 @@ static unsigned int cpufreq_verify_current_freq(
                             FAR struct cpufreq_policy *policy);
 
 static int cpufreq_notifier_min(FAR struct notifier_block *nb,
-                                unsigned long freq, void *data);
+                                unsigned long freq, FAR void *data);
 static int cpufreq_notifier_max(FAR struct notifier_block *nb,
-                                unsigned long freq, void *data);
+                                unsigned long freq, FAR void *data);
 static FAR struct cpufreq_policy *cpufreq_policy_alloc(void);
 static void cpufreq_policy_free(FAR struct cpufreq_policy *policy);
 
@@ -252,7 +252,7 @@ static unsigned int cpufreq_verify_current_freq(
 }
 
 static int cpufreq_notifier_min(FAR struct notifier_block *nb,
-                                unsigned long freq, void *data)
+                                unsigned long freq, FAR void *data)
 {
   FAR struct cpufreq_policy *policy =
       container_of(nb, struct cpufreq_policy, nb_min);
@@ -262,7 +262,7 @@ static int cpufreq_notifier_min(FAR struct notifier_block *nb,
 }
 
 static int cpufreq_notifier_max(FAR struct notifier_block *nb,
-                                unsigned long freq, void *data)
+                                unsigned long freq, FAR void *data)
 {
   FAR struct cpufreq_policy *policy =
       container_of(nb, struct cpufreq_policy, nb_max);
@@ -356,10 +356,9 @@ int cpufreq_driver_target(FAR struct cpufreq_policy *policy,
       return 0;
     }
 
-  pwrinfo("%s, target old %u new %u KHz\n", __func__, freqs.old, freqs.new);
-
   freqs.old = policy->cur;
   freqs.new = target_freq;
+  pwrinfo("%s, target old %u new %u KHz\n", __func__, freqs.old, freqs.new);
 
   blocking_notifier_call_chain(&policy->notifier_list,
                                CPUFREQ_PRECHANGE, &freqs);
@@ -371,8 +370,8 @@ int cpufreq_driver_target(FAR struct cpufreq_policy *policy,
       pwrerr("%s: Failed to change cpu frequency: %u to %u, ret %d\n",
               __func__, freqs.old, freqs.new, ret);
 
-      freqs.old = policy->cur;
-      freqs.new = target_freq;
+      freqs.old = target_freq;
+      freqs.new = policy->cur;
       blocking_notifier_call_chain(&policy->notifier_list,
                                    CPUFREQ_PRECHANGE, &freqs);
       blocking_notifier_call_chain(&policy->notifier_list,
@@ -391,7 +390,8 @@ int cpufreq_init(FAR struct cpufreq_driver *driver)
   FAR struct cpufreq_policy *policy;
   int ret;
 
-  if (!driver)
+  if (!driver || !driver->get_table || !driver->get_frequency ||
+      !driver->target_index)
     {
       return -EINVAL;
     }
@@ -407,6 +407,7 @@ int cpufreq_init(FAR struct cpufreq_driver *driver)
   policy->governor = cpufreq_default_governor();
   if (!policy->governor)
     {
+      ret = -EPERM;
       goto out_free_policy;
     }
 
@@ -414,6 +415,7 @@ int cpufreq_init(FAR struct cpufreq_driver *driver)
   policy->freq_table = driver->get_table(driver);
   if (!policy->freq_table)
     {
+      ret = -EPERM;
       goto out_free_policy;
     }
 
