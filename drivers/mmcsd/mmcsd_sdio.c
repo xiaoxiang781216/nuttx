@@ -3405,6 +3405,15 @@ static int mmcsd_iocmd(FAR struct mmcsd_part_s *part,
       }
       break;
 #endif
+    case MMCSD_CMDIDX13: /* Send status commands */
+      {
+        ret = mmcsd_get_r1(priv, ic_ptr->response);
+        if (ret != OK)
+          {
+            ferr("ERROR: mmcsd_get_r1 failed: %d\n", ret);
+          }
+      }
+      break;
     case MMCSD_CMDIDX18: /* Read multi blocks commands */
       {
         if (ic_ptr->blocks > 0)
