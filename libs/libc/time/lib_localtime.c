@@ -975,7 +975,6 @@ static int tzload(FAR const char *name,
                   sp->timecnt--;
                 }
 
-              sp->goahead = ts->goahead;
               for (i = 0; i < ts->timecnt && sp->timecnt < TZ_MAX_TIMES; i++)
                 {
                   time_t t = ts->ats[i];
@@ -988,11 +987,6 @@ static int tzload(FAR const char *name,
                   sp->ats[sp->timecnt] = t;
                   sp->types[sp->timecnt] = (sp->typecnt + ts->types[i]);
                   sp->timecnt++;
-                }
-
-              if (sp->timecnt >= TZ_MAX_TIMES)
-                {
-                  sp->goahead = false;
                 }
 
               for (i = 0; i < ts->typecnt; i++)
