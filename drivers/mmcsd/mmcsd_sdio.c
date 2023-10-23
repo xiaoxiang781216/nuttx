@@ -2204,6 +2204,7 @@ static ssize_t mmcsd_read(FAR struct inode *inode, unsigned char *buffer,
                                    MMCSD_CMD6_PARTITION(partnum));
           if (ret != OK)
             {
+              mmcsd_unlock(priv);
               ferr("ERROR: mmcsd_switch failed: %d\n", ret);
               return ret;
             }
