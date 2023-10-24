@@ -152,14 +152,14 @@ static int     mmcsd_transferready(FAR struct mmcsd_state_s *priv);
 
 static int     mmcsd_setblocklen(FAR struct mmcsd_state_s *priv,
                                  uint32_t blocklen);
-static ssize_t mmcsd_readsingle(FAR struct mmcsd_state_s *priv,
+static ssize_t mmcsd_readsingle(FAR struct mmcsd_part_s *part,
                                 FAR uint8_t *buffer, off_t startblock);
 #if MMCSD_MULTIBLOCK_LIMIT != 1
 static ssize_t mmcsd_readmultiple(FAR struct mmcsd_part_s *part,
                                   FAR uint8_t *buffer, off_t startblock,
                                   size_t nblocks);
 #endif
-static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
+static ssize_t mmcsd_writesingle(FAR struct mmcsd_part_s *part,
                                  FAR const uint8_t *buffer,
                                  off_t startblock);
 #if MMCSD_MULTIBLOCK_LIMIT != 1
@@ -1395,9 +1395,11 @@ static int mmcsd_setblocklen(FAR struct mmcsd_state_s *priv,
  *
  ****************************************************************************/
 
-static ssize_t mmcsd_readsingle(FAR struct mmcsd_state_s *priv,
+static ssize_t mmcsd_readsingle(FAR struct mmcsd_part_s *part,
                                 FAR uint8_t *buffer, off_t startblock)
 {
+  FAR struct mmcsd_state_s *priv = part->priv;
+  uint32_t partnum = part - priv->part;
   off_t offset;
   int ret;
 
@@ -1410,6 +1412,20 @@ static ssize_t mmcsd_readsingle(FAR struct mmcsd_state_s *priv,
     {
       ferr("ERROR: Card is locked\n");
       return -EPERM;
+    }
+
+  if (priv->partnum != partnum)
+    {
+      ret = mmcsd_switch(priv, MMCSD_CMD6_MODE_WRITE_BYTE |
+                               MMCSD_CMD6_PARTITION_CONFIG |
+                               MMCSD_CMD6_PARTITION(partnum));
+      if (ret != OK)
+        {
+          ferr("ERROR: mmcsd_switch failed: %d\n", ret);
+          return ret;
+        }
+
+      priv->partnum = partnum;
     }
 
 #if defined(CONFIG_SDIO_DMA) && defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
@@ -1686,9 +1702,11 @@ static ssize_t mmcsd_readmultiple(FAR struct mmcsd_part_s *part,
  *
  ****************************************************************************/
 
-static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
+static ssize_t mmcsd_writesingle(FAR struct mmcsd_part_s *part,
                                  FAR const uint8_t *buffer, off_t startblock)
 {
+  FAR struct mmcsd_state_s *priv = part->priv;
+  uint32_t partnum = part - priv->part;
   off_t offset;
   int ret;
 
@@ -1703,6 +1721,20 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
     {
       ferr("ERROR: Card is locked or write protected\n");
       return -EPERM;
+    }
+
+  if (priv->partnum != partnum)
+    {
+      ret = mmcsd_switch(priv, MMCSD_CMD6_MODE_WRITE_BYTE |
+                               MMCSD_CMD6_PARTITION_CONFIG |
+                               MMCSD_CMD6_PARTITION(partnum));
+      if (ret != OK)
+        {
+          ferr("ERROR: mmcsd_switch failed: %d\n", ret);
+          return ret;
+        }
+
+      priv->partnum = partnum;
     }
 
 #if defined(CONFIG_SDIO_DMA) && defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
@@ -2174,7 +2206,6 @@ static ssize_t mmcsd_read(FAR struct inode *inode, unsigned char *buffer,
 {
   FAR struct mmcsd_state_s *priv;
   FAR struct mmcsd_part_s *part;
-  uint32_t partnum;
   size_t sector;
   size_t endsector;
   ssize_t nread;
@@ -2183,8 +2214,6 @@ static ssize_t mmcsd_read(FAR struct inode *inode, unsigned char *buffer,
   DEBUGASSERT(inode->i_private);
   part = inode->i_private;
   priv = part->priv;
-
-  partnum = part - priv->part;
 
   finfo("startsector: %" PRIuOFF " nsectors: %u sectorsize: %d\n",
         startsector, nsectors, priv->blocksize);
@@ -2197,21 +2226,6 @@ static ssize_t mmcsd_read(FAR struct inode *inode, unsigned char *buffer,
           return ret;
         }
 
-      if (priv->partnum != partnum)
-        {
-          ret = mmcsd_switch(priv, MMCSD_CMD6_MODE_WRITE_BYTE |
-                                   MMCSD_CMD6_PARTITION_CONFIG |
-                                   MMCSD_CMD6_PARTITION(partnum));
-          if (ret != OK)
-            {
-              mmcsd_unlock(priv);
-              ferr("ERROR: mmcsd_switch failed: %d\n", ret);
-              return ret;
-            }
-
-          priv->partnum = partnum;
-        }
-
       ret = nsectors;
       endsector = startsector + nsectors;
       for (sector = startsector; sector < endsector; sector += nread)
@@ -2221,7 +2235,7 @@ static ssize_t mmcsd_read(FAR struct inode *inode, unsigned char *buffer,
 #if MMCSD_MULTIBLOCK_LIMIT == 1
           /* Read each block using only the single block transfer method */
 
-          nread = mmcsd_readsingle(priv, buffer, sector);
+          nread = mmcsd_readsingle(part, buffer, sector);
 #else
           nread = endsector - sector;
           if (nread > MMCSD_MULTIBLOCK_LIMIT)
@@ -2231,7 +2245,7 @@ static ssize_t mmcsd_read(FAR struct inode *inode, unsigned char *buffer,
 
           if (nread == 1)
             {
-              nread = mmcsd_readsingle(priv, buffer, sector);
+              nread = mmcsd_readsingle(part, buffer, sector);
             }
           else
             {
@@ -2273,7 +2287,6 @@ static ssize_t mmcsd_write(FAR struct inode *inode,
 {
   FAR struct mmcsd_state_s *priv;
   FAR struct mmcsd_part_s *part;
-  uint32_t partnum;
   size_t sector;
   size_t endsector;
   ssize_t nwrite;
@@ -2282,8 +2295,6 @@ static ssize_t mmcsd_write(FAR struct inode *inode,
   DEBUGASSERT(inode->i_private);
   part = inode->i_private;
   priv = part->priv;
-
-  partnum = part - priv->part;
 
   finfo("startsector: %" PRIuOFF " nsectors: %u sectorsize: %d\n",
         startsector, nsectors, priv->blocksize);
@@ -2296,20 +2307,6 @@ static ssize_t mmcsd_write(FAR struct inode *inode,
           return ret;
         }
 
-      if (priv->partnum != partnum)
-        {
-          ret = mmcsd_switch(priv, MMCSD_CMD6_MODE_WRITE_BYTE |
-                                   MMCSD_CMD6_PARTITION_CONFIG |
-                                   MMCSD_CMD6_PARTITION(partnum));
-          if (ret != OK)
-            {
-              ferr("ERROR: mmcsd_switch failed: %d\n", ret);
-              return ret;
-            }
-
-          priv->partnum = partnum;
-        }
-
       ret = nsectors;
       endsector = startsector + nsectors;
       for (sector = startsector; sector < endsector; sector += nwrite)
@@ -2319,7 +2316,7 @@ static ssize_t mmcsd_write(FAR struct inode *inode,
 #if MMCSD_MULTIBLOCK_LIMIT == 1
           /* Write each block using only the single block transfer method */
 
-          nwrite = mmcsd_writesingle(priv, buffer, sector);
+          nwrite = mmcsd_writesingle(part, buffer, sector);
 #else
           nwrite = endsector - sector;
           if (nwrite > MMCSD_MULTIBLOCK_LIMIT)
@@ -2329,7 +2326,7 @@ static ssize_t mmcsd_write(FAR struct inode *inode,
 
           if (nwrite == 1)
             {
-              nwrite = mmcsd_writesingle(priv, buffer, sector);
+              nwrite = mmcsd_writesingle(part, buffer, sector);
             }
           else
             {
