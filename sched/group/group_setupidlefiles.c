@@ -59,7 +59,6 @@
 
 int group_setupidlefiles(FAR struct task_tcb_s *tcb)
 {
-  int ret = OK;
 #if defined(CONFIG_DEV_CONSOLE) || defined(CONFIG_DEV_NULL)
   int fd;
 #endif
@@ -116,5 +115,5 @@ int group_setupidlefiles(FAR struct task_tcb_s *tcb)
 #endif /* defined(CONFIG_DEV_CONSOLE) || defined(CONFIG_DEV_NULL) */
 
   sched_trace_end();
-  return ret;
+  return OK;
 }
