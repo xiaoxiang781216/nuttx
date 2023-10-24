@@ -1943,3 +1943,10 @@ config GROUP_KILL_CHILDREN_TIMEOUT_MS
 		> 0 means wait timeout
 		= 0 means don't do kill signal
 
+config SCHED_PERF_EVENTS
+	bool "Support Perf Events"
+	select SCHED_RESUMESCHEDULER
+	select SCHED_SUSPENDSCHEDULER
+	default n
+	---help---
+		Enable to support perf events.

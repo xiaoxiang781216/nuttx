@@ -102,6 +102,7 @@
 #define _BINDERBASE     (0x3d00) /* Binder device ioctl commands */
 #define _PINCTRLBASE    (0x3e00) /* Pinctrl driver ioctl commands */
 #define _FFIOCBASE      (0x3f00) /* Force feedback ioctl commands */
+#define _PERFBASE       (0x4000) /* Perf ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 
 /* boardctl() commands share the same number space */
@@ -719,6 +720,13 @@
 
 #define _FFIOCVALID(c) (_IOC_TYPE(c)==_FFIOCBASE)
 #define _FFIOC(nr)     _IOC(_FFIOCBASE,nr)
+
+/* Perf driver ioctl definitions ********************************************/
+
+/* see nuttx/include/perf.h */
+
+#define _PERFIOCVALID(c)  (_IOC_TYPE(c)==_PERFBASE)
+#define _PERFIOC(nr)      _IOC(_PERFBASE,nr)
 
 /****************************************************************************
  * Public Type Definitions
