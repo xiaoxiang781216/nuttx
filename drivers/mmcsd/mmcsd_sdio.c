@@ -3383,6 +3383,12 @@ static int mmcsd_iocmd(FAR struct mmcsd_part_s *part,
   opcode = ic_ptr->opcode & MMCSD_CMDIDX_MASK;
   switch (opcode)
     {
+    case MMCSD_CMDIDX0: /* Reset card to idle state */
+      {
+        mmcsd_sendcmdpoll(priv, MMCSD_CMD0, ic_ptr->arg);
+        nxsig_usleep(MMCSD_IDLE_DELAY);
+      }
+      break;
     case MMCSD_CMDIDX2: /* Get cid reg data */
       {
         memcpy((FAR void *)(uintptr_t)ic_ptr->data_ptr,
