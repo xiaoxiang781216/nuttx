@@ -49,14 +49,28 @@
 static inline FAR dq_entry_t *
 mempool_remove_queue(FAR struct mempool_s *pool, FAR dq_queue_t *queue)
 {
-  FAR dq_entry_t *check = dq_tail(queue);
+  FAR dq_entry_t *ret = queue->tail;
 
-  if (pool->check && check && check->blink)
+  if (ret)
     {
-      pool->check(pool, check->blink);
+      FAR dq_entry_t *prev = ret->blink;
+      if (prev == NULL)
+        {
+          queue->head = NULL;
+          queue->tail = NULL;
+        }
+      else
+        {
+          pool->check(pool, prev);
+          queue->tail = prev;
+          prev->flink = NULL;
+        }
+
+      ret->flink = NULL;
+      ret->blink = NULL;
     }
 
-  return dq_remlast(queue);
+  return ret;
 }
 
 static inline void mempool_add_queue(FAR dq_queue_t *queue,
