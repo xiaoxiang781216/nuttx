@@ -53,7 +53,7 @@ mempool_remove_queue(FAR struct mempool_s *pool, FAR dq_queue_t *queue)
 
   if (pool->check && check && check->blink)
     {
-      pool->check(pool->priv, check->blink);
+      pool->check(pool, check->blink);
     }
 
   return dq_remlast(queue);
