@@ -23,3 +23,4 @@ Guides
   minidumpserver.rst
   gdbwithpython.rst
   ofloader.rst
+  stackrecord.rst
