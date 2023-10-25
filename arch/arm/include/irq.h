@@ -134,6 +134,7 @@ int up_cpu_index(void);
  *
  ****************************************************************************/
 
+noinstrument_function
 static inline bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
