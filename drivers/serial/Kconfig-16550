@@ -528,4 +528,11 @@ config 16550_WAIT_LCR
 		will trigger spurious interrupts when setting the LCR without
 		waiting.  Default: n
 
+config 16550_DLF_SIZE
+	int "DLF(Divisor Latch Fraction) size of DesignWare APB UART"
+	default 0
+	---help---
+		The bit width of DLF register for DesignWare APB UART.
+		DLF_SIZE=0 means no support. Default: 0
+
 endif # 16550_UART
