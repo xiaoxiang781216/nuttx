@@ -427,9 +427,22 @@ FAR struct binder_thread *binder_select_thread_ilocked(
                                     struct binder_thread,
                                     waiting_thread_node);
 
-  if (thread)
+  /* If the thread is calling IPCThreadState::waitForResponse() and
+   * is polling after received EAGAIN, then:
+   * - thread is not NULL
+   * - binder_available_for_proc_work_ilocked(thread) is false
+   *
+   * In this case, set thread to NULL. That is, there is no thread
+   * currently waiting for process work.
+   */
+
+  if (thread && binder_available_for_proc_work_ilocked(thread))
     {
       list_delete_init(&thread->waiting_thread_node);
+    }
+  else
+    {
+      thread = NULL;
     }
 
   return thread;

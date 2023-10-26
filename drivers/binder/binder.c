@@ -147,8 +147,7 @@ static int binder_write_read(FAR struct binder_proc *proc,
     {
       ret = binder_thread_read(proc, thread, bwr->read_buffer,
                                bwr->read_size, &bwr->read_consumed,
-                               (oflag & O_NONBLOCK) &&
-                               proc->is_open_nonblock);
+                               oflag & O_NONBLOCK);
 
       nxmutex_lock(&proc->proc_lock);
       if (!list_is_empty(&proc->todo_list))
@@ -160,6 +159,8 @@ static int binder_write_read(FAR struct binder_proc *proc,
 
       if (ret < 0)
         {
+          if (ret == -EAGAIN && bwr->write_consumed != 0)
+            ret = 0;
           goto out;
         }
     }
@@ -492,7 +493,6 @@ static int binder_open(FAR struct file *filep)
 
   nxmutex_init(&proc->proc_lock);
   proc->pid = getpid();
-  proc->is_open_nonblock = filep->f_oflags & O_NONBLOCK;
   list_initialize(&proc->threads);
   list_initialize(&proc->nodes);
   list_initialize(&proc->freeze_wait);

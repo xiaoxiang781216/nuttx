@@ -379,7 +379,6 @@ struct binder_proc
   bool sync_recv;
   bool async_recv;
   bool is_dead;
-  bool is_open_nonblock;
   int outstanding_txns;
   int requested_threads;
   int requested_threads_started;
