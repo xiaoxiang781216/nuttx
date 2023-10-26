@@ -563,7 +563,7 @@ static int reset_rpmsg_acquire_handler(FAR struct rpmsg_endpoint *ept,
   nxmutex_unlock(&server->lock);
 
 out:
-  msg->header.result = rstc ? 0 : -ENENT;
+  msg->header.result = rstc ? 0 : -ENOENT;
   return rpmsg_send(ept, data, len);
 }
 
