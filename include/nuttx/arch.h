@@ -2721,7 +2721,6 @@ void up_perf_init(FAR void *arg);
 unsigned long up_perf_gettime(void);
 unsigned long up_perf_getfreq(void);
 void up_perf_convert(unsigned long elapsed, FAR struct timespec *ts);
-unsigned int up_perf_get_inst(void);
 
 /****************************************************************************
  * Name: up_show_cpuinfo

@@ -29,34 +29,16 @@
 #ifdef CONFIG_ARCH_PERF_EVENTS
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static const unsigned int g_pmu_events_map[PMU_EVENT_ID_MAX] =
-{
-  [PMU_EVENT_ID_INST_RETIRED]    = PMUV3_EVNUM_INST_RETIRED,
-};
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 void up_perf_init(void *arg)
 {
-  int i = 0;
-
-  for (i = 0; i < PMU_EVENT_ID_MAX; i++)
-    {
-      pmu_cntr_select(i);
-      pmu_cntr_set_xevtyper(PMEVTYPERN_EL0_NSH | g_pmu_events_map[i]);
-    }
-
   pmu_ccntr_ccfiltr_config(PMCCFILTR_EL0_NSH);
-  pmu_cntr_control_config(PMCR_EL0_C | PMCR_EL0_P | PMCR_EL0_E);
-  pmu_cntr_ovsclr_config(PMOVSCLR_EL0_C | ((1ul << PMU_EVENT_ID_MAX) - 1));
+  pmu_cntr_control_config(PMCR_EL0_C | PMCR_EL0_E);
   pmu_cntr_trap_control(PMUSERENR_EL0_EN);
-  pmu_cntr_irq_disable(PMINTENCLR_EL1_C | ((1ul << PMU_EVENT_ID_MAX) - 1));
-  pmu_cntr_enable(PMCNTENSET_EL0_C | ((1ul << PMU_EVENT_ID_MAX) - 1));
+  pmu_cntr_irq_disable(PMINTENCLR_EL1_C);
+  pmu_cntr_enable(PMCNTENSET_EL0_C);
 }
 
 unsigned long up_perf_getfreq(void)
@@ -77,11 +59,5 @@ void up_perf_convert(unsigned long elapsed, struct timespec *ts)
   ts->tv_sec  = elapsed / cpu_freq;
   left        = elapsed - ts->tv_sec * cpu_freq;
   ts->tv_nsec = NSEC_PER_SEC * left / cpu_freq;
-}
-
-unsigned int up_perf_get_inst(void)
-{
-  pmu_cntr_select(PMU_EVENT_ID_INST_RETIRED);
-  return pmu_cntr_get_xevcntr();
 }
 #endif
