@@ -146,6 +146,10 @@ static int reset_rpmsg_deassert(FAR struct reset_controller_dev *rcdev,
 static int reset_rpmsg_status(FAR struct reset_controller_dev *rcdev,
                               unsigned int id);
 
+static int reset_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
+                              FAR void *data, size_t len,
+                              uint32_t src, FAR void *priv);
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
