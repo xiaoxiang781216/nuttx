@@ -948,20 +948,18 @@ void binder_transaction(FAR struct binder_proc *proc,
                         FAR struct binder_thread *thread,
                         FAR struct binder_transaction_data *tr, int reply)
 {
-  int                            ret = 0;
+  int                            ret                = 0;
   FAR struct binder_transaction *t;
   FAR struct binder_work        *w;
   FAR struct binder_work        *tcomplete;
-  binder_size_t                  buffer_offset = 0;
-  binder_size_t                  off_start_offset;
-  binder_size_t                  off_end_offset;
+  binder_size_t                  buffer_offset      = 0;
   binder_size_t                  off_min;
-  binder_size_t                  user_offset         = 0;
+  binder_size_t                  user_offset        = 0;
   FAR struct binder_proc        *target_proc        = NULL;
   FAR struct binder_thread      *target_thread      = NULL;
   FAR struct binder_node        *target_node        = NULL;
   FAR struct binder_transaction *in_reply_to        = NULL;
-  int                            return_error        = 0;
+  int                            return_error       = 0;
   FAR struct binder_context     *context            = proc->context;
   FAR const void *user_buffer = (const void *)(uintptr_t)tr->data.ptr.buffer;
   FAR char *secctx            = NULL;
@@ -1308,11 +1306,10 @@ void binder_transaction(FAR struct binder_proc *proc,
       goto err_bad_offset;
     }
 
-  off_start_offset  = ALIGN(tr->data_size, sizeof(void *));
-  buffer_offset     = off_start_offset;
-  off_end_offset    = off_start_offset + tr->offsets_size;
   off_min           = 0;
-  for (buffer_offset = off_start_offset; buffer_offset < off_end_offset;
+  for (buffer_offset = ALIGN(tr->data_size, sizeof(void *));
+       buffer_offset <
+       ALIGN(tr->data_size, sizeof(void *)) + tr->offsets_size;
        buffer_offset += sizeof(binder_size_t))
     {
       FAR struct binder_object_header   *hdr;
