@@ -243,6 +243,10 @@
 
 #  define noinstrument_function __attribute__((no_instrument_function))
 
+/* The nooptimiziation_function attribute no optimize */
+
+#  define nooptimiziation_function __attribute__((optimize(0)))
+
 /* The nosanitize_address attribute informs GCC don't sanitize it */
 
 #  define nosanitize_address __attribute__((no_sanitize_address))
@@ -547,6 +551,7 @@
 #  define always_inline_function
 #  define noinline_function
 #  define noinstrument_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
@@ -690,6 +695,7 @@
 #  define always_inline_function
 #  define noinline_function
 #  define noinstrument_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
@@ -801,6 +807,7 @@
 #  define always_inline_function
 #  define noinline_function
 #  define noinstrument_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
@@ -891,6 +898,7 @@
 #  define always_inline_function
 #  define noinline_function
 #  define noinstrument_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
@@ -956,6 +964,7 @@
 #  define always_inline_function
 #  define noinline_function
 #  define noinstrument_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
