@@ -171,7 +171,7 @@ define_property(
 function(nuttx_add_library target)
   add_library(${target} ${ARGN})
 
-  set_property(GLOBAL APPEND PROPERTY NUTTX_EXTRA_LIBRARIES ${target})
+  set_property(GLOBAL APPEND PROPERTY NUTTX_SYSTEM_LIBRARIES ${target})
 
   get_target_property(target_type ${target} TYPE)
   if(${target_type} STREQUAL "STATIC_LIBRARY")
@@ -179,6 +179,16 @@ function(nuttx_add_library target)
   endif()
 
   nuttx_add_library_internal(${target})
+endfunction()
+
+# =============================================================================
+#
+# nuttx_add_extra_library
+#
+# Add extra library to extra attribute
+#
+function(nuttx_add_extra_library target)
+  set_property(GLOBAL APPEND PROPERTY NUTTX_EXTRA_LIBRARIES ${target})
 endfunction()
 
 # Import static library
