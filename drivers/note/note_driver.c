@@ -152,7 +152,7 @@ struct note_taskname_s
 #endif
 
 /****************************************************************************
- * Private Data
+ * Private Function Prototypes
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FUNCTION
@@ -160,10 +160,17 @@ static void note_driver_instrument_enter(FAR void *this_fn,
             FAR void *call_site, FAR void *arg) noinstrument_function;
 static void note_driver_instrument_leave(FAR void *this_fn,
             FAR void *call_site, FAR void *arg) noinstrument_function;
+#endif
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FUNCTION
 static struct instrument_s g_note_instrument =
 {
-  .entry = note_driver_instrument_enter,
-  .exit = note_driver_instrument_leave,
+  .enter = note_driver_instrument_enter,
+  .leave = note_driver_instrument_leave,
 };
 #endif
 
@@ -2001,7 +2008,7 @@ int note_driver_register(FAR struct note_driver_s *driver)
 
   if (!initialized)
     {
-      instrument_register(g_note_instrument)
+      instrument_register(&g_note_instrument);
       initialized = true;
     }
 #endif
