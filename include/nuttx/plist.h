@@ -118,7 +118,7 @@ struct plist_node
  */
 
 #define plist_for_each_continue(pos, head) \
-  list_for_each_entry_continue(pos, &(head)->node_list, node_list)
+  list_for_every_entry_continue(pos, &(head)->node_list, typeof(*pos), node_list)
 
 /**
  * plist_for_each_safe - iterate safely over a plist of given type
@@ -152,7 +152,7 @@ struct plist_node
  * the current position.
  */
 #define plist_for_each_entry_continue(pos, head, m) \
-  list_for_each_entry_continue(pos, &(head)->node_list, m.node_list)
+  list_for_every_entry_continue(pos, &(head)->node_list, typeof(*pos), m.node_list)
 
 /**
  * plist_for_each_entry_safe - iterate safely over list of given type
