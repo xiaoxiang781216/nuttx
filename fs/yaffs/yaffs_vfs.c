@@ -943,7 +943,7 @@ static int yaffs_read_chunk_fn(FAR struct yaffs_dev *dev, int nand_chunk,
   int nchunk;
   ssize_t retval;
   enum yaffs_ecc_result ecc_status;
-  int ret = YAFFS_OK;
+  int ret = YAFFS_FAIL;
 
   mtd = yaffs_dev_to_mtd(dev);
   nchunk = data_len / dev->param.total_bytes_per_chunk;
@@ -954,14 +954,14 @@ static int yaffs_read_chunk_fn(FAR struct yaffs_dev *dev, int nand_chunk,
       if (retval == nchunk)
         {
           ecc_status = YAFFS_ECC_RESULT_NO_ERROR;
+          ret = YAFFS_OK;
         }
       else
         {
-          ret = YAFFS_FAIL;
-
           if (retval == -EUCLEAN)
             {
               ecc_status = YAFFS_ECC_RESULT_FIXED;
+              ret = YAFFS_OK;
             }
           else if (retval == -EBADMSG)
             {
@@ -1002,7 +1002,7 @@ static int yaffs_write_chunk_fn(FAR struct yaffs_dev *dev, int nand_chunk,
   FAR struct mtd_dev_s *mtd;
   int nchunk;
   ssize_t retval;
-  int ret = YAFFS_OK;
+  int ret = YAFFS_FAIL;
 
   mtd = yaffs_dev_to_mtd(dev);
   nchunk = data_len / dev->param.total_bytes_per_chunk;
@@ -1010,9 +1010,9 @@ static int yaffs_write_chunk_fn(FAR struct yaffs_dev *dev, int nand_chunk,
   if (data && data_len > 0)
     {
       retval = MTD_BWRITE(mtd, nand_chunk, nchunk, data);
-      if (retval != nchunk)
+      if (retval == nchunk)
         {
-          ret = YAFFS_FAIL;
+          ret = YAFFS_OK;
         }
     }
 
