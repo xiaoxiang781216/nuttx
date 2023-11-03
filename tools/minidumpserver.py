@@ -313,6 +313,7 @@ class DumpELFFile:
             if matches:
                 continue
             print(res)
+        exit(0)
 
     def get_memories(self):
         return self.__memories
