@@ -1073,13 +1073,13 @@ static ssize_t proc_stack(FAR struct proc_file_s *procfile,
       remaining -= copysize;
     }
 
-  if (tcb->caller_deppest)
+  if (tcb->caller_deepest)
     {
       linesize = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                                 "Warning stack record buffer too small."
-                                 "Max: %zu Overflow: %zu\n",
+                                 "Warning stack record buffer too small\n"
+                                 "Max: %u Overflow: %zu\n",
                                  CONFIG_SCHED_STACK_RECORD,
-                                 tcb->caller_deppest);
+                                 tcb->caller_deepest);
       copysize = procfs_memcpy(procfile->line, linesize, buffer, remaining,
                                &offset);
       totalsize += copysize;

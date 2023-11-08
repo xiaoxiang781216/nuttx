@@ -657,7 +657,7 @@ struct tcb_s
   FAR void *stackrecord_pc_deepest[CONFIG_SCHED_STACK_RECORD];
   FAR void *stackrecord_sp_deepest[CONFIG_SCHED_STACK_RECORD];
   FAR void *sp_deepest;
-  size_t caller_deppest;
+  size_t caller_deepest;
   size_t level_deepest;
   size_t level;
 #endif

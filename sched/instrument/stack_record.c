@@ -74,9 +74,9 @@ static void stack_record_enter(FAR void *this_fn, FAR void *call_site,
       tcb->stackrecord_sp[tcb->level] = sp;
       tcb->stackrecord_pc[tcb->level++] = this_fn;
     }
-  else if (tcb->caller_deppest < ++tcb->level)
+  else if (tcb->caller_deepest < ++tcb->level)
     {
-      tcb->caller_deppest = tcb->level;
+      tcb->caller_deepest = tcb->level;
     }
 
   if (tcb->sp_deepest == NULL || sp < tcb->sp_deepest)
