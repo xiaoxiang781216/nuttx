@@ -62,7 +62,7 @@
 #endif
 
 #ifdef CONFIG_VNCSERVER
-#include <nuttx/video/vnc.h>
+#  include <nuttx/video/vnc.h>
 #endif
 
 #if defined(CONFIG_INPUT_BUTTONS_LOWER) && defined(CONFIG_SIM_BUTTONS)
@@ -293,7 +293,11 @@ int sim_bringup(void)
   /* Initialize and register the simulated framebuffer driver */
 
 #  ifdef CONFIG_VNCSERVER
-  vnc_fb_register(0);
+  ret = vnc_fb_register(0);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: vnc_fb_register() failed: %d\n", ret);
+    }
 #  else
   ret = fb_register(0, 0);
   if (ret < 0)
