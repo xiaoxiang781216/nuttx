@@ -80,6 +80,21 @@ int elf_read(FAR struct elf_loadinfo_s *loadinfo, FAR uint8_t *buffer,
 int elf_loadphdrs(FAR struct elf_loadinfo_s *loadinfo);
 
 /****************************************************************************
+ * Name: elf_sectname
+ *
+ * Description:
+ *   Get the symbol name in loadinfo->iobuffer[].
+ *
+ * Returned Value:
+ *   0 (OK) is returned on success and a negated errno is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+int elf_sectname(FAR struct elf_loadinfo_s *loadinfo,
+                 FAR const Elf_Shdr *shdr);
+
+/****************************************************************************
  * Name: elf_loadshdrs
  *
  * Description:
