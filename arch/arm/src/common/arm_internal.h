@@ -358,6 +358,11 @@ uintptr_t arm_intstack_top(void);
 void weak_function arm_initialize_stack(void);
 #endif
 
+/* Interrupt acknowledge and dispatch */
+
+void arm_ack_irq(int irq);
+uint32_t *arm_doirq(int irq, uint32_t *regs);
+
 /* Exception handling logic unique to the Cortex-M family */
 
 #if defined(CONFIG_ARCH_ARMV6M) || defined(CONFIG_ARCH_ARMV7M) || \
@@ -374,11 +379,6 @@ EXTERN const void *__vector_table[];
 #else
 EXTERN const void * const _vectors[];
 #endif
-
-/* Interrupt acknowledge and dispatch */
-
-void arm_ack_irq(int irq);
-uint32_t *arm_doirq(int irq, uint32_t *regs);
 
 /* Exception Handlers */
 
@@ -404,7 +404,6 @@ int  arm_securefault(int irq, void *context, void *arg);
 
 /* Interrupt acknowledge and dispatch */
 
-uint32_t *arm_doirq(int irq, uint32_t *regs);
 #ifdef CONFIG_ARCH_HIPRI_INTERRUPT
 uint32_t *arm_dofiq(int fiq, uint32_t *regs);
 #endif
@@ -428,11 +427,6 @@ uint32_t *arm_undefinedinsn(uint32_t *regs);
 /* Exception handling logic common to other ARM7 and ARM9 family. */
 
 #else /* ARM7 | ARM9 */
-
-/* Interrupt acknowledge and dispatch */
-
-void arm_ack_irq(int irq);
-void arm_doirq(int irq, uint32_t *regs);
 
 /* Paging support (and exception handlers) */
 
