@@ -138,8 +138,8 @@ struct note_startalloc_s
 #if CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
 struct note_taskname_info_s
 {
-  uint8_t size;
   pid_t pid;
+  uint8_t size;
   char name[1];
 };
 
@@ -592,10 +592,10 @@ static void note_record_taskname(pid_t pid, FAR const char *name)
 
   ti = (FAR struct note_taskname_info_s *)
         &g_note_taskname.buffer[g_note_taskname.head];
-  ti->size = tilen;
+  ti->size = NOTE_ALIGN(tilen);
   ti->pid = pid;
   strlcpy(ti->name, name, namelen + 1);
-  g_note_taskname.head += tilen;
+  g_note_taskname.head += ti->size;
 }
 #endif
 
