@@ -104,7 +104,7 @@ static int nxtask_spawn_create(FAR const char *name, int priority,
   /* Initialize the task */
 
   ret = nxtask_init(tcb, name, priority, stack_addr, stack_size,
-                    entry, argv, envp);
+                    entry, argv, envp, actions);
   if (ret < OK)
     {
       kmm_free(tcb);
@@ -115,22 +115,7 @@ static int nxtask_spawn_create(FAR const char *name, int priority,
 
   pid = tcb->cmn.pid;
 
-  /* Perform file actions */
-
-  if (actions != NULL)
-    {
-      ret = spawn_file_actions(&tcb->cmn, actions);
-      if (ret < 0)
-        {
-          goto errout_with_taskinit;
-        }
-    }
-
-  /* Close the file descriptors with O_CLOEXEC before active task */
-
-  files_close_onexec(&tcb->cmn);
-
-  /* Get the assigned pid before we start the task */
+  /* Set the attributes */
 
   if (attr)
     {
