@@ -582,7 +582,7 @@ static void note_record_taskname(pid_t pid, FAR const char *name)
       ti = (FAR struct note_taskname_info_s *)
             &g_note_taskname.buffer[g_note_taskname.head];
       ti->size = skiplen;
-      ti->pid = 0xffff;
+      ti->pid = INVALID_PROCESS_ID;
       ti->name[0] = '\0';
 
       /* Move to the begin of circle buffer */
@@ -1065,9 +1065,9 @@ void sched_note_premption(FAR struct tcb_s *tcb, bool locked)
       if (!formatted)
         {
           formatted = true;
-          note.npr_count = tcb->lockcount;
           note_common(tcb, &note.npr_cmn, sizeof(struct note_preempt_s),
                       locked ? NOTE_PREEMPT_LOCK : NOTE_PREEMPT_UNLOCK);
+          note.npr_count = tcb->lockcount;
         }
 
       /* Add the note to circular buffer */
@@ -1377,9 +1377,9 @@ void sched_note_string_ip(uint32_t tag, uintptr_t ip, FAR const char *buf)
               length = sizeof(data);
             }
 
-          note->nst_ip = ip;
           note_common(tcb, &note->nst_cmn, length, NOTE_DUMP_STRING);
           memcpy(note->nst_data, buf, length - sizeof(struct note_string_s));
+          note->nst_ip = ip;
           data[length - 1] = '\0';
         }
 
@@ -1428,8 +1428,8 @@ void sched_note_event_ip(uint32_t tag, uintptr_t ip, uint8_t event,
               length = sizeof(data);
             }
 
-          note->nbi_ip = ip;
           note_common(tcb, &note->nbi_cmn, length, event);
+          note->nbi_ip = ip;
           memcpy(note->nbi_data, buf,
                  length - sizeof(struct note_binary_s) + 1);
         }
@@ -1483,8 +1483,8 @@ void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip,
               length = sizeof(data);
             }
 
-          note->nst_ip = ip;
           note_common(tcb, &note->nst_cmn, length, NOTE_DUMP_STRING);
+          note->nst_ip = ip;
         }
 
       /* Add the note to circular buffer */
@@ -1701,8 +1701,8 @@ void sched_note_vbprintf_ip(uint32_t tag, uintptr_t ip,
 
           length = SIZEOF_NOTE_BINARY(next);
 
-          note->nbi_ip = ip;
           note_common(tcb, &note->nbi_cmn, length, NOTE_DUMP_BINARY);
+          note->nbi_ip = ip;
         }
 
       /* Add the note to circular buffer */
