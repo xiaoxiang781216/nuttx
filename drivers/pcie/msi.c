@@ -46,7 +46,9 @@ static uint32_t get_msi_mmc(FAR struct pcie_dev_s *dev,
 {
   uint32_t mcr;
 
-  mcr = dev->ops->pci_cfg_read(dev->bdf, base + PCIE_MSI_MCR);
+  mcr = dev->ctrl_dev->ops->pci_cfg_read(dev->ctrl_dev,
+                                         dev->bdf,
+                                         base + PCIE_MSI_MCR);
 
   /* Getting MMC true count: 2^(MMC field) */
 
@@ -72,9 +74,11 @@ static void disable_msi(FAR struct pcie_dev_s *dev,
 {
   uint32_t mcr;
 
-  mcr = dev->ops->pci_cfg_read(dev->bdf, base + PCIE_MSI_MCR);
+  mcr = dev->ctrl_dev->ops->pci_cfg_read(dev->ctrl_dev, dev->bdf,
+                                         base + PCIE_MSI_MCR);
   mcr &= ~PCIE_MSI_MCR_EN;
-  dev->ops->pci_cfg_write(dev->bdf, base + PCIE_MSI_MCR, mcr);
+  dev->ctrl_dev->ops->pci_cfg_write(dev->ctrl_dev, dev->bdf,
+                                    base + PCIE_MSI_MCR, mcr);
 }
 
 /****************************************************************************
@@ -111,25 +115,38 @@ static void enable_msi(FAR struct pcie_dev_s *dev,
 
   /* write map to MSI Message lower Address */
 
-  dev->ops->pci_cfg_write(dev->bdf, base + PCIE_MSI_MAP0, map);
+  dev->ctrl_dev->ops->pci_cfg_write(dev->ctrl_dev,
+                                    dev->bdf,
+                                    base + PCIE_MSI_MAP0, map);
 
   mdr = vectors->arch.eventid;
-  mcr = dev->ops->pci_cfg_read(dev->bdf, base + PCIE_MSI_MCR);
+  mcr = dev->ctrl_dev->ops->pci_cfg_read(dev->ctrl_dev,
+                                         dev->bdf,
+                                         base + PCIE_MSI_MCR);
   if ((mcr & PCIE_MSI_MCR_64) != 0U)
     {
       /* write 0 to MSI Message Upper Address */
 
-      dev->ops->pci_cfg_write(dev->bdf, base + PCIE_MSI_MAP1_64, 0U);
+      dev->ctrl_dev->ops->pci_cfg_write(dev->ctrl_dev,
+                                        dev->bdf,
+                                        base + PCIE_MSI_MAP1_64,
+                                        0U);
 
       /* write data to MSI Message Data register */
 
-      dev->ops->pci_cfg_write(dev->bdf, base + PCIE_MSI_MDR_64, mdr);
+      dev->ctrl_dev->ops->pci_cfg_write(dev->ctrl_dev,
+                                        dev->bdf,
+                                        base + PCIE_MSI_MDR_64,
+                                        mdr);
     }
   else
     {
       /* write data to 32bit MSI Message Data register */
 
-      dev->ops->pci_cfg_write(dev->bdf, base + PCIE_MSI_MDR_32, mdr);
+      dev->ctrl_dev->ops->pci_cfg_write(dev->ctrl_dev,
+                                        dev->bdf,
+                                        base + PCIE_MSI_MDR_32,
+                                        mdr);
     }
 
   /* Generating MME field (1 counts as a power of 2) */
@@ -142,7 +159,10 @@ static void enable_msi(FAR struct pcie_dev_s *dev,
   mcr |= mme << PCIE_MSI_MCR_MME_SHIFT;
 
   mcr |= PCIE_MSI_MCR_EN;
-  dev->ops->pci_cfg_write(dev->bdf, base + PCIE_MSI_MCR, mcr);
+  dev->ctrl_dev->ops->pci_cfg_write(dev->ctrl_dev,
+                                    dev->bdf,
+                                    base + PCIE_MSI_MCR,
+                                    mcr);
 }
 
 /****************************************************************************
@@ -208,8 +228,8 @@ bool pcie_msi_vector_connect(FAR struct pcie_dev_s *dev,
       return false;
     }
 
-  return dev->ops->pcie_msi_vector_connect(vector, handler, parameter,
-                                           flags);
+  return dev->ctrl_dev->ops->pcie_msi_vector_connect(vector, handler,
+                                                     parameter, flags);
 }
 
 /****************************************************************************
@@ -257,7 +277,8 @@ uint8_t pcie_msi_vectors_allocate(FAR struct pcie_dev_s *dev,
       vectors[req_vectors].bdf = dev->bdf;
     }
 
-  return dev->ops->pcie_msi_vectors_allocate(priority, vectors, n_vector);
+  return dev->ctrl_dev->ops->pcie_msi_vectors_allocate(priority, vectors,
+                                                       n_vector);
 }
 
 /****************************************************************************
@@ -310,7 +331,7 @@ bool pcie_msi_enable(FAR struct pcie_dev_s *dev, FAR msi_vector_t *vectors,
 
   enable_msi(dev, vectors, n_vector, base, irq);
 
-  pcie_set_cmd(dev->ops, dev->bdf, PCIE_CONF_CMDSTAT_MASTER, true);
+  pcie_set_cmd(dev->ctrl_dev, dev->bdf, PCIE_CONF_CMDSTAT_MASTER, true);
 
   return true;
 }
