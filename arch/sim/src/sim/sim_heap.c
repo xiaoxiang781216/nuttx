@@ -325,13 +325,6 @@ void *mm_realloc(struct mm_heap_s *heap, void *oldmem,
   int newsize;
 
   mm_free_delaylist(heap, false);
-
-  if (size == 0)
-    {
-      mm_free(heap, oldmem);
-      return NULL;
-    }
-
   atomic_fetch_sub(&heap->uordblks, host_mallocsize(oldmem));
   mem = host_realloc(oldmem, size);
 
