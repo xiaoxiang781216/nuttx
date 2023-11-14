@@ -87,6 +87,13 @@ SECTIONS
   . = ALIGN(4096);
   _e_initstack = . ;
   _szdata = _e_initstack - _sdata;
+
+  .noinit : {
+        _snoinit = ABSOLUTE(.);
+        *(.noinit*)
+        _enoinit = ABSOLUTE(.);
+  }
+
   /* Sections to be discarded */
   /DISCARD/ : {
        *(.exit.text)

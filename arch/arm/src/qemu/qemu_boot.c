@@ -28,6 +28,11 @@
 
 #include "qemu_irq.h"
 #include "qemu_memorymap.h"
+#include "qemu_boot.h"
+
+#ifdef CONFIG_SMP
+#include "scu.h"
+#endif
 
 #ifdef CONFIG_DEVICE_TREE
 #  include <nuttx/fdt.h>
@@ -51,6 +56,12 @@ void arm_boot(void)
 
   qemu_setupmappings();
 
+#ifdef CONFIG_SMP
+  /* Enable SMP cache coherency for CPU0 */
+
+  arm_enable_smp(0);
+#endif
+
   arm_fpuconfig();
 
 #if defined(CONFIG_ARCH_HAVE_PSCI)
@@ -67,5 +78,15 @@ void arm_boot(void)
    */
 
   arm_earlyserialinit();
+#endif
+
+#ifdef CONFIG_SMP
+  /* Now we can enable all other CPUs.  The enabled CPUs will start execution
+   * at __cpuN_start and, after very low-level CPU initialization has been
+   * performed, will branch to arm_cpu_boot()
+   * (see arch/arm/src/armv7-a/smp.h)
+   */
+
+  qemu_cpu_enable();
 #endif
 }
