@@ -152,6 +152,8 @@ static int     mmcsd_transferready(FAR struct mmcsd_state_s *priv);
 
 static int     mmcsd_setblocklen(FAR struct mmcsd_state_s *priv,
                                  uint32_t blocklen);
+static int     mmcsd_setblockcount(FAR struct mmcsd_state_s *priv,
+                                   uint32_t nblocks);
 static ssize_t mmcsd_readsingle(FAR struct mmcsd_part_s *part,
                                 FAR uint8_t *buffer, off_t startblock);
 #if MMCSD_MULTIBLOCK_LIMIT != 1
@@ -1388,6 +1390,29 @@ static int mmcsd_setblocklen(FAR struct mmcsd_state_s *priv,
 }
 
 /****************************************************************************
+ * Name: mmcsd_setblockcount
+ *
+ * Description:
+ *   Set the block counts.
+ *
+ ****************************************************************************/
+
+static int mmcsd_setblockcount(FAR struct mmcsd_state_s *priv,
+                               uint32_t nblocks)
+{
+  int ret = OK;
+
+  mmcsd_sendcmdpoll(priv, MMCSD_CMD23, nblocks);
+  ret = mmcsd_recv_r1(priv, MMCSD_CMD23);
+  if (ret != OK)
+    {
+      ferr("ERROR: mmcsd_recv_r1 for CMD23 failed: %d\n", ret);
+    }
+
+  return ret;
+}
+
+/****************************************************************************
  * Name: mmcsd_readsingle
  *
  * Description:
@@ -1658,11 +1683,9 @@ static ssize_t mmcsd_readmultiple(FAR struct mmcsd_part_s *part,
       SDIO_RECVSETUP(priv->dev, buffer, nbytes);
     }
 
-  mmcsd_sendcmdpoll(priv, MMCSD_CMD23, nblocks);
-  ret = mmcsd_recv_r1(priv, MMCSD_CMD23);
+  ret = mmcsd_setblockcount(priv, nblocks);
   if (ret != OK)
     {
-      ferr("ERROR: mmcsd_recv_r1 for MMCSD_CMD23 failed: %d\n", ret);
       return ret;
     }
 
@@ -2015,19 +2038,10 @@ static ssize_t mmcsd_writemultiple(FAR struct mmcsd_part_s *part,
    * programming access.
    */
 
-  if (priv->partnum == MMCSD_PART_RPMB)
-    {
-      mmcsd_sendcmdpoll(priv, MMCSD_CMD23, (1 << 31) | nblocks);
-    }
-  else
-    {
-      mmcsd_sendcmdpoll(priv, MMCSD_CMD23, nblocks);
-    }
-
-  ret = mmcsd_recv_r1(priv, MMCSD_CMD23);
+  ret = mmcsd_setblockcount(priv,
+       priv->partnum == MMCSD_PART_RPMB ? ((1 << 31) | nblocks) : nblocks);
   if (ret != OK)
     {
-      ferr("ERROR: mmcsd_recv_r1 for MMCSD_CMD23 failed: %d\n", ret);
       return ret;
     }
 
@@ -3436,6 +3450,12 @@ static int mmcsd_iocmd(FAR struct mmcsd_part_s *part,
                 ret = OK;
               }
           }
+      }
+      break;
+    case MMCSD_CMDIDX23: /* Set transfer block counts */
+      {
+        ret = mmcsd_setblockcount(priv,
+                              ic_ptr->blocks ? ic_ptr->blocks : ic_ptr->arg);
       }
       break;
     case MMCSD_CMDIDX25: /* Write multi blocks commands */
