@@ -222,20 +222,9 @@ function setup_toolchain()
     fi
   fi
 
-  # Add compile cache
-  CCACHE_DIR=${ROOTDIR}/prebuilts/tools/ccache/${SYSTEM}/${SYS_ARCH}
-  export PATH="${CCACHE_DIR}:$PATH"
-
-  # AIDL Tool
-  AIDL_DIR=${ROOTDIR}/prebuilts/tools/aidl/${SYSTEM}/${SYS_ARCH}
-  export PATH=${AIDL_DIR}:$PATH
-  # HIDL Tool
-  HIDL_DIR=${ROOTDIR}/prebuilts/tools/hidl/${SYSTEM}/${SYS_ARCH}
-  export PATH=${HIDL_DIR}:$PATH
-
-  # genromfs
-  GENROMFS_DIR=${ROOTDIR}/prebuilts/tools/genromfs/${SYSTEM}/${SYS_ARCH}
-  export PATH=${GENROMFS_DIR}:$PATH
+  # Add prebuilt tool
+  TOOLS_DIR=${ROOTDIR}/prebuilts/tools/${SYSTEM}/${SYS_ARCH}
+  export PATH="${TOOLS_DIR}:$PATH"
 
   # Additional prebuilt GNU tools
   if [ ${SYSTEM} == "darwin" ]; then
