@@ -391,6 +391,8 @@ static ssize_t rpmsgfs_ioctl_arglen(int cmd)
       case FIONWRITE:
       case FIONREAD:
         return sizeof(int);
+      case FIOC_FILEPATH:
+        return PATH_MAX;
       default:
         return -ENOTTY;
     }
