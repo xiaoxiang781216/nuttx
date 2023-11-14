@@ -39,6 +39,7 @@
 #include <nuttx/mm/mm.h>
 #include <nuttx/sched.h>
 #include <nuttx/mm/mempool.h>
+#include <nuttx/sched_note.h>
 
 #include "tlsf/tlsf.h"
 #include "kasan/kasan.h"
@@ -502,15 +503,16 @@ static void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem,
 {
   if (mm_lock(heap) == 0)
     {
+      size_t size = mm_malloc_size(heap, mem);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-      memset(mem, 0x55, mm_malloc_size(heap, mem));
+      memset(mem, 0x55, size);
 #endif
 
-      kasan_poison(mem, mm_malloc_size(heap, mem));
+      kasan_poison(mem, size);
 
       /* Update heap statistics */
 
-      heap->mm_curused -= mm_malloc_size(heap, mem);
+      heap->mm_curused -= size;
 
       /* Pass, return to the tlsf pool */
 
@@ -520,6 +522,7 @@ static void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem,
         }
       else
         {
+          sched_note_heap(false, heap, mem, size);
           tlsf_free(heap->mm_tlsf, mem);
         }
 
@@ -1095,6 +1098,7 @@ size_t mm_malloc_size(FAR struct mm_heap_s *heap, FAR void *mem)
 
 FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 {
+  size_t nodesize;
   FAR void *ret;
 
   /* In case of zero-length allocations allocate the minimum size object */
@@ -1126,7 +1130,8 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
   ret = tlsf_malloc(heap->mm_tlsf, size);
 #endif
 
-  heap->mm_curused += mm_malloc_size(heap, ret);
+  nodesize = mm_malloc_size(heap, ret);
+  heap->mm_curused += nodesize;
   if (heap->mm_curused > heap->mm_maxused)
     {
       heap->mm_maxused = heap->mm_curused;
@@ -1137,14 +1142,16 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
   if (ret)
     {
 #if CONFIG_MM_BACKTRACE >= 0
-      FAR struct memdump_backtrace_s *buf = ret + mm_malloc_size(heap, ret);
+      FAR struct memdump_backtrace_s *buf = ret + nodesize;
 
       memdump_backtrace(heap, buf);
 #endif
-      kasan_unpoison(ret, mm_malloc_size(heap, ret));
+
+      kasan_unpoison(ret, nodesize);
+      sched_note_heap(true, heap, ret, nodesize);
 
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-      memset(ret, 0xaa, mm_malloc_size(heap, ret));
+      memset(ret, 0xaa, nodesize);
 #endif
     }
 
@@ -1176,6 +1183,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
                       size_t size)
 {
+  size_t nodesize;
   FAR void *ret;
 
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
@@ -1200,7 +1208,8 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
   ret = tlsf_memalign(heap->mm_tlsf, alignment, size);
 #endif
 
-  heap->mm_curused += mm_malloc_size(heap, ret);
+  nodesize = mm_malloc_size(heap, ret);
+  heap->mm_curused += nodesize;
   if (heap->mm_curused > heap->mm_maxused)
     {
       heap->mm_maxused = heap->mm_curused;
@@ -1211,11 +1220,12 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
   if (ret)
     {
 #if CONFIG_MM_BACKTRACE >= 0
-      FAR struct memdump_backtrace_s *buf = ret + mm_malloc_size(heap, ret);
+      FAR struct memdump_backtrace_s *buf = ret + nodesize;
 
       memdump_backtrace(heap, buf);
 #endif
-      kasan_unpoison(ret, mm_malloc_size(heap, ret));
+      kasan_unpoison(ret, nodesize);
+      sched_note_heap(true, heap, ret, nodesize);
     }
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
@@ -1257,6 +1267,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
                      size_t size)
 {
   FAR void *newmem;
+  size_t oldsize;
+  size_t newsize;
 
   /* If oldmem is NULL, then realloc is equivalent to malloc */
 
@@ -1313,7 +1325,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
   /* Allocate from the tlsf pool */
 
   DEBUGVERIFY(mm_lock(heap));
-  heap->mm_curused -= mm_malloc_size(heap, oldmem);
+  oldsize = mm_malloc_size(heap, oldmem);
+  heap->mm_curused -= oldsize;
 #if CONFIG_MM_BACKTRACE >= 0
   newmem = tlsf_realloc(heap->mm_tlsf, oldmem, size +
                         sizeof(struct memdump_backtrace_s));
@@ -1321,7 +1334,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
   newmem = tlsf_realloc(heap->mm_tlsf, oldmem, size);
 #endif
 
-  heap->mm_curused += mm_malloc_size(heap, newmem ? newmem : oldmem);
+  newsize = mm_malloc_size(heap, newmem);
+  heap->mm_curused += newmem ? newsize : oldsize;
   if (heap->mm_curused > heap->mm_maxused)
     {
       heap->mm_maxused = heap->mm_curused;
@@ -1329,20 +1343,21 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
   mm_unlock(heap);
 
-#if CONFIG_MM_BACKTRACE >= 0
   if (newmem)
     {
-      FAR struct memdump_backtrace_s *buf =
-        newmem + mm_malloc_size(heap, newmem);
-
+#if CONFIG_MM_BACKTRACE >= 0
+      FAR struct memdump_backtrace_s *buf = newmem + newsize;
       memdump_backtrace(heap, buf);
-    }
 #endif
+
+      sched_note_heap(false, heap, oldmem, oldsize);
+      sched_note_heap(true, heap, newmem, newsize);
+    }
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
   /* Try again after free delay list */
 
-  if (newmem == NULL && free_delaylist(heap, true))
+  else if (free_delaylist(heap, true))
     {
       return mm_realloc(heap, oldmem, size);
     }
