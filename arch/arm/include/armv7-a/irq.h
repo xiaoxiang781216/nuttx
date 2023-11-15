@@ -380,9 +380,8 @@ static inline irqstate_t up_irq_enable(void)
     (
       "\tmrs    %0, cpsr\n"
 #if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
-      "\tcpsie  f\n"
-#endif
-#ifndef CONFIG_ARCH_TRUSTZONE_SECURE
+      "\tcpsie  if\n"
+#else
       "\tcpsie  i\n"
 #endif
       : "=r" (cpsr)
