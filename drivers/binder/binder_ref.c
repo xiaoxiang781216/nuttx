@@ -55,8 +55,6 @@
  * Private Data
  ****************************************************************************/
 
-static unsigned int binder_ref_id = 1;
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -111,8 +109,10 @@ binder_get_ref_for_node_olocked(FAR struct binder_proc *proc,
                                 FAR struct binder_node *node,
                                 FAR struct binder_ref *new_ref)
 {
+  bool                       insert_ref = false;
   FAR struct binder_context *context    = proc->context;
   FAR struct binder_ref     *ref        = NULL;
+  FAR struct binder_ref     *n          = NULL;
 
   list_for_every_entry(&proc->refs_by_node, ref, struct binder_ref,
                        rb_node_node)
@@ -133,8 +133,24 @@ binder_get_ref_for_node_olocked(FAR struct binder_proc *proc,
   new_ref->node             = node;
   list_add_head(&proc->refs_by_node, &new_ref->rb_node_node);
 
-  new_ref->data.desc = (node == context->mgr_node) ? 0 : binder_ref_id++;
-  list_add_head(&proc->refs_by_desc, &new_ref->rb_node_desc);
+  new_ref->data.desc = (node == context->mgr_node) ? 0 : 1;
+  list_for_every_entry(&proc->refs_by_desc, n, struct binder_ref,
+                       rb_node_desc)
+    {
+      if (n->data.desc > new_ref->data.desc)
+        {
+          list_add_before(&n->rb_node_desc, &new_ref->rb_node_desc);
+          insert_ref = true;
+          break;
+        }
+
+      new_ref->data.desc = n->data.desc + 1;
+    }
+
+  if (!insert_ref)
+    {
+      list_add_tail(&proc->refs_by_desc, &new_ref->rb_node_desc);
+    }
 
   nxmutex_lock(&node->node_lock);
   list_add_head(&node->refs, &new_ref->node_entry);
