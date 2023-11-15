@@ -138,7 +138,6 @@ static void coredump_dump_blkdev(pid_t pid)
   lib_lzfoutstream(&g_lzfstream,
                    (FAR struct lib_outstream_s *)&g_blockstream);
   stream = &g_lzfstream;
-  info->compress = compress;
 #endif
 
   ret = core_dump(g_regions, stream, pid);
