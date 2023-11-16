@@ -176,9 +176,9 @@ extern "C"
     { \
       FAR struct atomic_notifier_head *nh = (nhead); \
       irqstate_t flags; \
-      flags = enter_critical_section(); \
+      flags = spin_lock_irqsave(NULL); \
       notifier_chain_register(nh->head, (nb), false); \
-      leave_critical_section(flags); \
+      spin_unlock_irqrestore(NULL, flags); \
     } \
   while(0)
 
@@ -187,9 +187,9 @@ extern "C"
     { \
       FAR struct atomic_notifier_head *nh = (nhead); \
       irqstate_t flags; \
-      flags = enter_critical_section(); \
+      flags = spin_lock_irqsave(NULL); \
       notifier_chain_register(nh->head, (nb), true); \
-      leave_critical_section(flags); \
+      spin_unlock_irqrestore(NULL, flags); \
     } \
   while(0)
 
@@ -198,9 +198,9 @@ extern "C"
     { \
       FAR struct atomic_notifier_head *nh = (nhead); \
       irqstate_t flags; \
-      flags = enter_critical_section(); \
+      flags = spin_lock_irqsave(NULL); \
       notifier_chain_unregister(nh->head, (nb)); \
-      leave_critical_section(flags); \
+      spin_unlock_irqrestore(NULL, flags); \
     } \
   while(0)
 
