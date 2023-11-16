@@ -46,7 +46,9 @@
  *   form SIOCIWFIRSTPRIV to SIOCIWLASTPRIV
  */
 
-#define SIOCSIWDTIM SIOCIWFIRSTPRIV         /* Set DTIM interval time */
-#define SIOCGIWDTIM (SIOCIWFIRSTPRIV + 1)   /* Get DTIM interval time */
+#define SIOCSIWDTIM         (SIOCIWFIRSTPRIV + 0)       /* Set DTIM interval time */
+#define SIOCGIWDTIM         (SIOCIWFIRSTPRIV + 1)       /* Get DTIM interval time */
+#define SIOCSIWPWSAVE       (SIOCIWFIRSTPRIV + 2)       /* Set power save mode */
+#define SIOCGIWPWSAVE       (SIOCIWFIRSTPRIV + 3)       /* Get power save mode */
 
 #endif /* __INCLUDE_NUTTX_WIRELESS_WIRELESS_PRIV_H */
