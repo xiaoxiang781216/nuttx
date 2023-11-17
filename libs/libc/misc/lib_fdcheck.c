@@ -37,17 +37,19 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define FD_SHIFT  0
-#define FD_BITS   LOG2_CEIL(OPEN_MAX)
-#define FD_MASK   ((1 << FD_BITS) - 1)
-
-#define TAG_SHIFT (FD_BITS + FD_SHIFT)
+#define TAG_SHIFT 0
 #define TAG_BITS  4
 #define TAG_MASK  ((1 << TAG_BITS) - 1)
 
 #define PID_SHIFT (TAG_BITS + TAG_SHIFT)
 #define PID_BITS  4
 #define PID_MASK  ((1 << PID_BITS) - 1)
+
+#define FD_SHIFT  (PID_SHIFT + PID_BITS)
+#define FD_BITS   LOG2_CEIL(OPEN_MAX)
+#define FD_MASK   ((1 << FD_BITS) - 1)
+
+static_assert(FD_BITS <= (TAG_BITS + PID_BITS), "FD_BITS is too long");
 
 /****************************************************************************
  * Private Data
@@ -91,8 +93,12 @@ int fdcheck_restore(int val)
   int pid_expect;
   int ppid_now;
   int pid_now;
+  int fd;
 
-  if (val <= 2)
+  /* If val is a bare fd（0~255）, we should return it directly  */
+
+  fd = (val >> FD_SHIFT) & FD_MASK;
+  if (fd == 0)
     {
       return val;
     }
@@ -110,7 +116,7 @@ int fdcheck_restore(int val)
   if (pid_expect != 0)
     {
       uint8_t tag_store;
-      int ret = ioctl(val & FD_MASK, FIOC_GETTAG_FDCHECK, &tag_store);
+      int ret = ioctl(fd, FIOC_GETTAG_FDCHECK, &tag_store);
       if (ret >= 0)
         {
           uint8_t tag_expect = (val >> TAG_SHIFT) & TAG_MASK;
@@ -123,7 +129,7 @@ int fdcheck_restore(int val)
         }
     }
 
-  return val & FD_MASK;
+  return fd;
 }
 
 /****************************************************************************
@@ -160,7 +166,7 @@ int fdcheck_protect(int fd)
       return fd;
     }
 
-  protect_fd = fd & FD_MASK;
+  protect_fd = (fd & FD_MASK) << FD_SHIFT;
   protect_fd |= (_SCHED_GETPID() & PID_MASK) << PID_SHIFT;
 
   ret = ioctl(fd, FIOC_GETTAG_FDCHECK, &tag);
