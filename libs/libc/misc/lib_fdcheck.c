@@ -38,11 +38,11 @@
  ****************************************************************************/
 
 #define TAG_SHIFT 0
-#define TAG_BITS  4
+#define TAG_BITS  8
 #define TAG_MASK  ((1 << TAG_BITS) - 1)
 
 #define PID_SHIFT (TAG_BITS + TAG_SHIFT)
-#define PID_BITS  4
+#define PID_BITS  8
 #define PID_MASK  ((1 << PID_BITS) - 1)
 
 #define FD_SHIFT  (PID_SHIFT + PID_BITS)
