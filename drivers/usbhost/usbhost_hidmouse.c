@@ -2366,8 +2366,8 @@ static int usbhost_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       if (i >= CONFIG_HIDMOUSE_NPOLLWAITERS)
         {
-          fds->priv    = NULL;
-          ret          = -EBUSY;
+          fds->priv = NULL;
+          ret       = -EBUSY;
           goto errout;
         }
 
@@ -2377,7 +2377,7 @@ static int usbhost_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       if (priv->valid)
         {
-          poll_notify(priv->fds, CONFIG_HIDMOUSE_NPOLLWAITERS, POLLIN);
+          poll_notify(&fds, 1, POLLIN);
         }
     }
   else

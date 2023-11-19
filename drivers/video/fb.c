@@ -1091,7 +1091,7 @@ static int fb_poll(FAR struct file *filep, struct pollfd *fds, bool setup)
       panbuf = fb_get_panbuf(fb, priv->overlay);
       if (!circbuf_is_full(panbuf))
         {
-          poll_notify(pollfds, 1, POLLOUT);
+          poll_notify(&fds, 1, POLLOUT);
         }
     }
   else if (fds->priv != NULL)
@@ -1202,7 +1202,6 @@ static void fb_do_pollnotify(wdparm_t arg)
   FAR struct fb_priv_s * priv;
   irqstate_t flags;
   int overlay;
-  int i;
 
   overlay = paninfo - paninfo->dev->paninfo - 1;
 
@@ -1214,15 +1213,9 @@ static void fb_do_pollnotify(wdparm_t arg)
           continue;
         }
 
-      for (i = 0; i < CONFIG_VIDEO_FB_NPOLLWAITERS; i++)
-        {
-          if (priv->fds[i] != NULL)
-            {
-              /* Notify framebuffer is writable. */
+      /* Notify framebuffer is writable. */
 
-              poll_notify(&priv->fds[i], 1, POLLOUT);
-            }
-        }
+      poll_notify(priv->fds, CONFIG_VIDEO_FB_NPOLLWAITERS, POLLOUT);
     }
 
   leave_critical_section(flags);
