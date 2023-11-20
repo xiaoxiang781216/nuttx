@@ -78,7 +78,7 @@ static void group_remove(FAR struct task_group_s *group)
    * This is probably un-necessary.
    */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(NULL);
 
   /* Find the task group structure */
 
@@ -104,7 +104,7 @@ static void group_remove(FAR struct task_group_s *group)
       curr->flink = NULL;
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(NULL, flags);
 }
 #endif
 
