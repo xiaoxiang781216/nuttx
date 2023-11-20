@@ -184,7 +184,7 @@ static void kfifo_free(FAR struct kfifo_s *fifo)
 static ssize_t sysevent_dev_read(FAR struct file *filep, FAR char *buffer,
                                  size_t len)
 {
-  int ret;
+  int ret = 0;
   int fifo_len;
   int tmp_out_size;
 
