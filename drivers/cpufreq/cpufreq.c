@@ -549,6 +549,8 @@ int cpufreq_resume(FAR struct cpufreq_policy *policy)
       return 0;
     }
 
+  policy->suspended = false;
+
   if (policy->driver->resume)
     {
       ret = policy->driver->resume(policy);
@@ -569,7 +571,6 @@ int cpufreq_resume(FAR struct cpufreq_policy *policy)
       return ret;
     }
 
-  policy->suspended = false;
   return 0;
 }
 
