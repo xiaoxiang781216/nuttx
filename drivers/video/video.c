@@ -631,13 +631,13 @@ static int start_capture(FAR video_mng_t *vmng,
   convert_to_imgsensorfmt(&fmt[VIDEO_FMT_SUB], &sf[IMGSENSOR_FMT_SUB]);
   convert_to_imgsensorinterval(interval, &si);
 
+  IMGDATA_SET_BUF(vmng->imgdata, (FAR uint8_t *)bufaddr, bufsize);
+  IMGDATA_START_CAPTURE(vmng->imgdata,
+     nr_fmt, df, &di, video_complete_capture, vmng);
   IMGSENSOR_START_CAPTURE(vmng->imgsensor,
      type == V4L2_BUF_TYPE_VIDEO_CAPTURE ?
      IMGSENSOR_STREAM_TYPE_VIDEO : IMGSENSOR_STREAM_TYPE_STILL,
      nr_fmt, sf, &si);
-  IMGDATA_START_CAPTURE(vmng->imgdata,
-     nr_fmt, df, &di, video_complete_capture, vmng);
-  IMGDATA_SET_BUF(vmng->imgdata, (FAR uint8_t *)bufaddr, bufsize);
   return OK;
 }
 
