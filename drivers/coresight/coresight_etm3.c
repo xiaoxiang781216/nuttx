@@ -240,8 +240,7 @@ static void etm_modify_reg32(FAR struct coresight_etm_dev_s *etmdev,
 {
   uint32_t temp = etm_read_reg(etmdev, off);
 
-  etm_write_reg(etmdev, (temp & ~mask) | (val & mask),
-                etmdev->csdev.addr + off);
+  etm_write_reg(etmdev, (temp & ~mask) | (val & mask), off);
 }
 
 /****************************************************************************
