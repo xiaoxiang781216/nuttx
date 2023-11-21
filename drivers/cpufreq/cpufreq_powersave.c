@@ -48,7 +48,9 @@ static struct cpufreq_governor cpufreq_gov_powersave =
 static void cpufreq_gov_powersave_limits(
                         FAR struct cpufreq_policy *policy)
 {
+  nxmutex_lock(&policy->lock);
   cpufreq_driver_target(policy, policy->min, CPUFREQ_RELATION_L);
+  nxmutex_unlock(&policy->lock);
 }
 
 /****************************************************************************

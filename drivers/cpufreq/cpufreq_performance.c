@@ -48,7 +48,9 @@ static struct cpufreq_governor cpufreq_gov_performance =
 static void cpufreq_gov_performance_limits(
                         FAR struct cpufreq_policy *policy)
 {
+  nxmutex_lock(&policy->lock);
   cpufreq_driver_target(policy, policy->max, CPUFREQ_RELATION_H);
+  nxmutex_unlock(&policy->lock);
 }
 
 /****************************************************************************

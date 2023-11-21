@@ -87,6 +87,7 @@ struct cpufreq_policy
   struct blocking_notifier_head notifier_list;
   struct notifier_block nb_min;
   struct notifier_block nb_max;
+  FAR void *governor_data;
 };
 
 struct cpufreq_governor

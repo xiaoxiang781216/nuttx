@@ -221,9 +221,8 @@ static int cpufreq_refresh_limits(FAR struct cpufreq_policy *policy)
   pwrinfo("%s, user requests (%u-%u) KHz, limits (%u-%u) kHz\n",
                 __func__, cv.min, cv.max, policy->min, policy->max);
 
-  cpufreq_limits_governor(policy);
-
   nxmutex_unlock(&policy->lock);
+  cpufreq_limits_governor(policy);
   return 0;
 }
 
@@ -498,13 +497,8 @@ int cpufreq_uninit(void)
       return -EINVAL;
     }
 
-  nxmutex_lock(&policy->lock);
-
   cpufreq_stop_governor(policy);
   cpufreq_exit_governor(policy);
-
-  nxmutex_unlock(&policy->lock);
-
   cpufreq_policy_free(policy);
   return 0;
 }
@@ -518,10 +512,7 @@ int cpufreq_suspend(FAR struct cpufreq_policy *policy)
 {
   int ret;
 
-  nxmutex_lock(&policy->lock);
   cpufreq_stop_governor(policy);
-  nxmutex_unlock(&policy->lock);
-
   if (policy->driver->suspend)
     {
       ret = policy->driver->suspend(policy);
@@ -561,9 +552,7 @@ int cpufreq_resume(FAR struct cpufreq_policy *policy)
         }
     }
 
-  nxmutex_lock(&policy->lock);
   ret = cpufreq_start_governor(policy);
-  nxmutex_unlock(&policy->lock);
   if (ret)
     {
       pwrerr("%s: Failed to start governor for policy: %p\n",

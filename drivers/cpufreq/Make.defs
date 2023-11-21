@@ -36,6 +36,12 @@ CSRCS += cpufreq_powersave.c
 
 endif
 
+ifeq ($(CONFIG_CPUFREQ_DEFAULT_GOV_ONDEMAND),y)
+
+CSRCS += cpufreq_ondemand.c
+
+endif
+
 DEPPATH += --dep-path cpufreq
 VPATH += cpufreq
 

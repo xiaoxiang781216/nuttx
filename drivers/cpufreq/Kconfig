@@ -25,6 +25,27 @@ config CPUFREQ_DEFAULT_GOV_POWERSAVE
 	---help---
 		cpufreq_powersave governor
 
+config CPUFREQ_DEFAULT_GOV_ONDEMAND
+	bool "cpufreq_ondemand"
+	---help---
+		cpufreq_ondemand governor
+
+if CPUFREQ_DEFAULT_GOV_ONDEMAND
+
+config CPUFREQ_SAMPLE_RATE
+	int "the default sample rate (us) to get the cpuload"
+	default 1000000
+	---help---
+		Ondemand sample rate
+
+config CPUFREQ_LOAD_THRESHOLD
+	int "the default cpu load threshold up to max cpu freq"
+	default 80
+	---help---
+		Ondemand cpu load threshold
+
+endif
+
 endchoice
 
 endif
