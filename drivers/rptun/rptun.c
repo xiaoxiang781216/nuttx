@@ -778,6 +778,7 @@ static int rptun_dev_start(FAR struct remoteproc *rproc)
     }
 
   rptun_update_rx(priv);
+  rptun_wakeup_rx(priv);
 
   /* Broadcast device_created to all registers */
 
@@ -799,7 +800,6 @@ static int rptun_dev_start(FAR struct remoteproc *rproc)
   /* Register callback to mbox for receiving remote message */
 
   RPTUN_REGISTER_CALLBACK(priv->dev, rptun_callback, priv);
-  rptun_wakeup_rx(priv);
 
   /* Open tx buffer return callback */
 
