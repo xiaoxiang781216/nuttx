@@ -50,6 +50,7 @@
 
 #define RPMSG_SOCKET_CMD_SYNC           1
 #define RPMSG_SOCKET_CMD_DATA           2
+#define RPMSG_SOCKET_CMD_SHUTDOWN       3
 #define RPMSG_SOCKET_NAME_PREFIX        "sk:"
 #define RPMSG_SOCKET_NAME_PREFIX_LEN    3
 #define RPMSG_SOCKET_NAME_ID_LEN        13
@@ -81,6 +82,12 @@ begin_packed_struct struct rpmsg_socket_data_s
   char                           data[0];
 } end_packed_struct;
 
+begin_packed_struct struct rpmsg_socket_shutdown_s
+{
+  uint32_t                       cmd;
+  uint32_t                       how;
+} end_packed_struct;
+
 struct rpmsg_socket_conn_s
 {
   /* Common prologue of all connection structures. */
@@ -93,6 +100,7 @@ struct rpmsg_socket_conn_s
   struct sockaddr_rpmsg          rpaddr;
   char                           nameid[RPMSG_SOCKET_NAME_ID_LEN];
   uint16_t                       crefs;
+  uint32_t                       how;
 
   FAR struct pollfd              *fds[CONFIG_NET_RPMSG_NPOLLWAITERS];
   mutex_t                        polllock;
@@ -165,6 +173,7 @@ static ssize_t    rpmsg_socket_recvmsg(FAR struct socket *psock,
 static int        rpmsg_socket_close(FAR struct socket *psock);
 static int        rpmsg_socket_ioctl(FAR struct socket *psock,
                                      int cmd, unsigned long arg);
+static int        rpmsg_socket_shutdown(FAR struct socket *psock, int how);
 #ifdef CONFIG_NET_SOCKOPTS
 static int        rpmsg_socket_getsockopt(FAR struct socket *psock,
                                           int level, int option,
@@ -193,7 +202,7 @@ const struct sock_intf_s g_rpmsg_sockif =
   rpmsg_socket_close,       /* si_close */
   rpmsg_socket_ioctl,       /* si_ioctl */
   NULL,                     /* si_socketpair */
-  NULL                      /* si_shutdown */
+  rpmsg_socket_shutdown     /* si_shutdown */
 #ifdef CONFIG_NET_SOCKOPTS
   , rpmsg_socket_getsockopt /* si_getsockopt */
   , NULL                    /* si_setsockopt */
@@ -328,7 +337,7 @@ static int rpmsg_socket_ept_cb(FAR struct rpmsg_endpoint *ept,
       rpmsg_socket_poll_notify(conn, POLLOUT);
       nxmutex_unlock(&conn->recvlock);
     }
-  else
+  else if (head->cmd == RPMSG_SOCKET_CMD_DATA)
     {
       FAR struct rpmsg_socket_data_s *msg = data;
       FAR uint8_t *buf = (FAR uint8_t *)msg->data;
@@ -394,6 +403,26 @@ static int rpmsg_socket_ept_cb(FAR struct rpmsg_endpoint *ept,
             }
 
           nxmutex_unlock(&conn->recvlock);
+        }
+    }
+  else if (head->cmd == RPMSG_SOCKET_CMD_SHUTDOWN)
+    {
+      FAR struct rpmsg_socket_shutdown_s *msg = data;
+
+      if (msg->how & SHUT_WR)
+        {
+          conn->how |= SHUT_RD;
+
+          rpmsg_socket_post(&conn->recvsem);
+          rpmsg_socket_poll_notify(conn, POLLIN | POLLHUP);
+        }
+
+      if (msg->how & SHUT_RD)
+        {
+          conn->how |= SHUT_WR;
+
+          rpmsg_socket_post(&conn->sendsem);
+          rpmsg_socket_poll_notify(conn, POLLOUT | POLLHUP);
         }
     }
 
@@ -1199,6 +1228,11 @@ static ssize_t rpmsg_socket_sendmsg(FAR struct socket *psock,
       return -ECONNRESET;
     }
 
+  if (conn->how & SHUT_WR)
+    {
+      return -EPIPE;
+    }
+
   nonblock = _SS_ISNONBLOCK(conn->sconn.s_flags) ||
                             (flags & MSG_DONTWAIT) != 0;
 
@@ -1235,6 +1269,11 @@ static ssize_t rpmsg_socket_recvmsg(FAR struct socket *psock,
   if (!_SS_ISCONNECTED(conn->sconn.s_flags))
     {
       return -EISCONN;
+    }
+
+  if (conn->how & SHUT_RD)
+    {
+      return 0;
     }
 
   nxmutex_lock(&conn->recvlock);
@@ -1399,6 +1438,24 @@ static int rpmsg_socket_ioctl(FAR struct socket *psock,
     }
 
   return ret;
+}
+
+static int rpmsg_socket_shutdown(FAR struct socket *psock, int how)
+{
+  FAR struct rpmsg_socket_conn_s *conn = psock->s_conn;
+  struct rpmsg_socket_shutdown_s msg;
+
+  if (!conn->ept.rdev || conn->unbind)
+    {
+      return -ENOTCONN;
+    }
+
+  conn->how |= how;
+
+  msg.cmd = RPMSG_SOCKET_CMD_SHUTDOWN;
+  msg.how = how;
+
+  return rpmsg_send(&conn->ept, &msg, sizeof(msg));
 }
 
 #ifdef CONFIG_NET_SOCKOPTS
