@@ -22,6 +22,12 @@ config INPUT_GOLDFISH_NBUFFER
 	depends on INPUT_GOLDFISH_EVENTS
 	default 8
 
+config INPUT_FF
+	bool "Support Force Feedback device"
+	default n
+	---help---
+		Enable support for force feedback devices.
+
 config INPUT_MOUSE
 	bool
 	default n

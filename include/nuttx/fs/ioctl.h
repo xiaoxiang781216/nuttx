@@ -101,6 +101,7 @@
 #define _SYSLOGBASE     (0x3c00) /* Syslog device ioctl commands */
 #define _BINDERBASE     (0x3d00) /* Binder device ioctl commands */
 #define _PINCTRLBASE    (0x3e00) /* Pinctrl driver ioctl commands */
+#define _FFIOCBASE      (0x3f00) /* Force feedback ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 
 /* boardctl() commands share the same number space */
@@ -711,6 +712,13 @@
 
 #define _PINCTRLIOCVALID(c) (_IOC_TYPE(c)==_PINCTRLBASE)
 #define _PINCTRLIOC(nr)     _IOC(_PINCTRLBASE,nr)
+
+/* Force Feedback driver command definitions ********************************/
+
+/* see nuttx/include/input/ff.h */
+
+#define _FFIOCVALID(c) (_IOC_TYPE(c)==_FFIOCBASE)
+#define _FFIOC(nr)     _IOC(_FFIOCBASE,nr)
 
 /****************************************************************************
  * Public Type Definitions
