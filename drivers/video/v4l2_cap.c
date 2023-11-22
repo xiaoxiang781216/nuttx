@@ -788,7 +788,8 @@ static int start_capture(FAR struct capture_mng_s *cmng,
   convert_to_imgsensorfmt(&fmt[CAPTURE_FMT_SUB], &sf[IMGSENSOR_FMT_SUB]);
   convert_to_imgsensorinterval(interval, &si);
 
-  IMGDATA_SET_BUF(cmng->imgdata, (FAR uint8_t *)bufaddr, bufsize);
+  IMGDATA_SET_BUF(cmng->imgdata,
+    nr_fmt, df, (FAR uint8_t *)bufaddr, bufsize);
   IMGDATA_START_CAPTURE(cmng->imgdata,
      nr_fmt, df, &di, complete_capture, cmng);
   IMGSENSOR_START_CAPTURE(cmng->imgsensor,
@@ -1932,6 +1933,8 @@ static int complete_capture(uint8_t err_code,
   FAR vbuf_container_t *container = NULL;
   enum v4l2_buf_type buf_type;
   irqstate_t flags;
+  imgdata_format_t df[MAX_CAPTURE_FMT];
+  video_format_t c_fmt[MAX_CAPTURE_FMT];
 
   flags = enter_critical_section();
 
@@ -2005,7 +2008,19 @@ static int complete_capture(uint8_t err_code,
         }
       else
         {
+          get_clipped_format(type_inf->nr_fmt,
+                             type_inf->fmt,
+                             &type_inf->clip,
+                             c_fmt);
+
+          convert_to_imgdatafmt(&c_fmt[CAPTURE_FMT_MAIN],
+                                &df[IMGDATA_FMT_MAIN]);
+          convert_to_imgdatafmt(&c_fmt[CAPTURE_FMT_SUB],
+                                &df[IMGDATA_FMT_SUB]);
+
           IMGDATA_SET_BUF(cmng->imgdata,
+            type_inf->nr_fmt,
+            df,
             (FAR uint8_t *)container->buf.m.userptr,
             container->buf.length);
           container->buf.sequence = type_inf->seqnum++;
