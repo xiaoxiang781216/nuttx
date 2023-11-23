@@ -54,6 +54,14 @@
 #ifdef CONFIG_RAMLOG
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define RAMLOG_MAGIC_INIT 0x12345678
+#define RAMLOG_MAGIC_LEN 4
+#define RAMLOG_FINAL_BUFSIZE (CONFIG_RAMLOG_BUFSIZE - RAMLOG_MAGIC_LEN)
+
+/****************************************************************************
  * Private Types
  ****************************************************************************/
 
@@ -136,14 +144,14 @@ static char g_sysbuffer[CONFIG_RAMLOG_BUFSIZE];
 
 static struct ramlog_dev_s g_sysdev =
 {
-  CONFIG_RAMLOG_BUFSIZE,         /* rl_head */
-  CONFIG_RAMLOG_BUFSIZE,         /* rl_tail */
-  NXMUTEX_INITIALIZER,           /* rl_lock */
+  RAMLOG_FINAL_BUFSIZE,         /* rl_head */
+  RAMLOG_FINAL_BUFSIZE,         /* rl_tail */
+  NXMUTEX_INITIALIZER,          /* rl_lock */
 #  ifndef CONFIG_RAMLOG_NONBLOCKING
   SEM_INITIALIZER(0),           /* rl_waitsem */
 #  endif
-  CONFIG_RAMLOG_BUFSIZE,         /* rl_bufsize */
-  g_sysbuffer                    /* rl_buffer */
+  RAMLOG_FINAL_BUFSIZE,         /* rl_bufsize */
+  g_sysbuffer                   /* rl_buffer */
 };
 #endif
 
@@ -219,45 +227,33 @@ static void ramlog_pollnotify(FAR struct ramlog_dev_s *priv,
 static void ramlog_initbuf(void)
 {
   FAR struct ramlog_dev_s *priv = &g_sysdev;
-#ifdef CONFIG_BOARDCTL_RESET_CAUSE
-  struct boardioc_reset_cause_s cause;
-  int ret;
-#endif
+  FAR uint32_t *pmagic = NULL;
   bool is_empty = true;
   char prev;
   char cur;
   size_t i;
 
-  if (priv->rl_head != CONFIG_RAMLOG_BUFSIZE ||
-      priv->rl_tail != CONFIG_RAMLOG_BUFSIZE)
+  if (priv->rl_head != RAMLOG_FINAL_BUFSIZE ||
+      priv->rl_tail != RAMLOG_FINAL_BUFSIZE)
     {
       return;
     }
 
-#ifdef CONFIG_BOARDCTL_RESET_CAUSE
-  memset(&cause, 0, sizeof(cause));
-  ret = boardctl(BOARDIOC_RESET_CAUSE, (uintptr_t)&cause);
-  if (ret >= 0 && cause.cause == BOARDIOC_RESETCAUSE_SYS_CHIPPOR)
+  pmagic = (FAR uint32_t *)&priv->rl_buffer[priv->rl_bufsize];
+  if (*pmagic != RAMLOG_MAGIC_INIT)
     {
+      *pmagic = RAMLOG_MAGIC_INIT;
       memset(priv->rl_buffer, 0, priv->rl_bufsize);
       priv->rl_head = priv->rl_tail = 0;
       return;
     }
-#endif
 
   prev = priv->rl_buffer[priv->rl_bufsize - 1];
 
   for (i = 0; i < priv->rl_bufsize; i++)
     {
       cur = priv->rl_buffer[i];
-
-      if (!isprint(cur) && !isspace(cur) && cur != '\0')
-        {
-          memset(priv->rl_buffer, 0, priv->rl_bufsize);
-          is_empty = true;
-          break;
-        }
-      else if (prev && !cur)
+      if (prev && !cur)
         {
           priv->rl_head = i;
           is_empty = false;
@@ -270,7 +266,7 @@ static void ramlog_initbuf(void)
       prev = cur;
     }
 
-  if (is_empty)
+  if (i != priv->rl_bufsize || is_empty)
     {
       priv->rl_head = priv->rl_tail = 0;
     }
@@ -716,7 +712,7 @@ int ramlog_register(FAR const char *devpath, FAR char *buffer, size_t buflen)
 
   /* Sanity checking */
 
-  DEBUGASSERT(devpath && buffer && buflen > 1);
+  DEBUGASSERT(devpath && buffer && buflen > (RAMLOG_MAGIC_LEN + 1));
 
   /* Allocate a RAM logging device structure */
 
@@ -730,7 +726,7 @@ int ramlog_register(FAR const char *devpath, FAR char *buffer, size_t buflen)
       nxsem_init(&priv->rl_waitsem, 0, 0);
 #endif
 
-      priv->rl_bufsize = buflen;
+      priv->rl_bufsize = buflen - RAMLOG_MAGIC_LEN;
       priv->rl_buffer  = buffer;
 
       /* Register the character driver */
