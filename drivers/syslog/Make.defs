@@ -21,14 +21,16 @@
 ############################################################################
 # Include SYSLOG Infrastructure
 
+ifeq ($(CONFIG_SYSLOG),y)
 CSRCS += vsyslog.c syslog_channel.c syslog_putc.c
 CSRCS += syslog_write.c syslog_flush.c
+endif
 
 ifeq ($(CONFIG_SYSLOG_INTBUFFER),y)
   CSRCS += syslog_intbuffer.c
 endif
 
-ifneq ($(CONFIG_ARCH_SYSLOG),y)
+ifeq ($(CONFIG_SYSLOG),y)
   CSRCS += syslog_initialize.c
 endif
 
@@ -47,7 +49,9 @@ endif
 
 # System logging to a character device (or file)
 
+ifeq ($(CONFIG_SYSLOG),y)
 CSRCS += syslog_device.c
+endif
 
 ifeq ($(CONFIG_SYSLOG_CHAR),y)
 CSRCS += syslog_devchannel.c
