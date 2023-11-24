@@ -81,7 +81,7 @@
 #define USB_RAW_EP0_MAX_LEN         256
 #define USB_RAW_EP_MAX_LEN          1024
 
-#define USB_RAW_RX_BUF_NUM          8
+#define USB_RAW_RX_BUF_NUM          256
 
 #define USB_RAW_DEVICE              "dummy_udc.0"
 #define USB_RAW_DRIVER              "dummy_udc"
