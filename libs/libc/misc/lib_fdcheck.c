@@ -84,7 +84,7 @@ static uint8_t    g_fdcheck_tag = 0;
  * Input Parameters:
  *   val - this val carrying pid, tag and original fd information
  *
- * Returned Value: none
+ * Returned Value: The original fd is returned.
  *
  ****************************************************************************/
 
