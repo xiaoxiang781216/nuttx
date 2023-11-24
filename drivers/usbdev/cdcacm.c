@@ -1983,6 +1983,11 @@ static void cdcacm_disconnect(FAR struct usbdevclass_driver_s *driver,
     }
 #endif
 
+  /* clear rxpending data */
+
+  sq_init(&priv->rxpending);
+  priv->nrdq = 0;
+
   /* Inform the "upper half serial driver that we have lost the USB serial
    * connection.
    */
