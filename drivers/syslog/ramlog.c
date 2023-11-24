@@ -57,8 +57,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define RAMLOG_MAGIC_INIT 0x12345678
-#define RAMLOG_MAGIC_LEN 4
+#define RAMLOG_MAGIC_INIT    0x12345678
+#define RAMLOG_MAGIC_LEN     4
 #define RAMLOG_FINAL_BUFSIZE (CONFIG_RAMLOG_BUFSIZE - RAMLOG_MAGIC_LEN)
 
 /****************************************************************************
@@ -227,7 +227,7 @@ static void ramlog_pollnotify(FAR struct ramlog_dev_s *priv,
 static void ramlog_initbuf(void)
 {
   FAR struct ramlog_dev_s *priv = &g_sysdev;
-  FAR uint32_t *pmagic = NULL;
+  FAR uint32_t *magic = NULL;
   bool is_empty = true;
   char prev;
   char cur;
@@ -239,10 +239,10 @@ static void ramlog_initbuf(void)
       return;
     }
 
-  pmagic = (FAR uint32_t *)&priv->rl_buffer[priv->rl_bufsize];
-  if (*pmagic != RAMLOG_MAGIC_INIT)
+  magic = (FAR uint32_t *)&priv->rl_buffer[priv->rl_bufsize];
+  if (*magic != RAMLOG_MAGIC_INIT)
     {
-      *pmagic = RAMLOG_MAGIC_INIT;
+      *magic = RAMLOG_MAGIC_INIT;
       memset(priv->rl_buffer, 0, priv->rl_bufsize);
       priv->rl_head = priv->rl_tail = 0;
       return;
