@@ -168,6 +168,7 @@ const struct mountpt_operations g_fatfs_operations =
   fatfs_ioctl,         /* ioctl */
   NULL,                /* mmap */
   fatfs_truncate,      /* truncate */
+  NULL,                /* poll */
 
   fatfs_sync,          /* sync */
   fatfs_dup,           /* dup */

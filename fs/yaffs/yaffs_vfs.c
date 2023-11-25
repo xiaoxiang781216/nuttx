@@ -165,6 +165,7 @@ const struct mountpt_operations g_yaffs_operations =
   yaffs_vfs_ioctl,         /* ioctl */
   NULL,                    /* mmap */
   yaffs_vfs_truncate,      /* truncate */
+  NULL,                    /* poll */
 
   yaffs_vfs_sync,          /* sync */
   yaffs_vfs_dup,           /* dup */
