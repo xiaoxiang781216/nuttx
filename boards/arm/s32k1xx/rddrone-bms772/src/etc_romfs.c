@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/s32k1xx/rddrone-bms772/include/nsh_romfsimg.h
+ * boards/arm/s32k1xx/rddrone-bms772/src/etc_romfs.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -19,9 +19,6 @@
  ****************************************************************************/
 
 /* Copyright 2022 NXP */
-
-#ifndef __BOARDS_ARM_S32K1XX_RDDRONE_BMS772_INCLUDE_NSH_ROMFSIMG_H
-#define __BOARDS_ARM_S32K1XX_RDDRONE_BMS772_INCLUDE_NSH_ROMFSIMG_H
 
 /****************************************************************************
  * Included Files
@@ -227,4 +224,7 @@ const unsigned char aligned_data(4) romfs_img[] =
 const unsigned int romfs_img_len = 1024;
 
 #endif /* CONFIG_DEBUG_FEATURES */
-#endif /* __BOARDS_ARM_S32K1XX_RDDRONE_BMS772_INCLUDE_NSH_ROMFSIMG_H */
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/

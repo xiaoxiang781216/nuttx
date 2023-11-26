@@ -4390,7 +4390,7 @@ Configurations
          CONFIG_NSH_ROMFSMOUNTPT="/etc"  : Mount at /etc
          CONFIG_NSH_ROMFSDEVNO=0         : Device is /dev/ram0
          CONFIG_NSH_ARCHROMFS=y          : ROMFS image is at
-                                           boards/arm/sama5/sama5d4-ek/include/nsh_romfsimg.h
+                                           boards/arm/sama5/sama5d4-ek/src/etc_romfs.c
        The content of /etc/init.d/rcS can be see in the file rcS.template that
        can be found at: boards/arm/sama5/sama5d4-ek/include/rcS.template:
 
