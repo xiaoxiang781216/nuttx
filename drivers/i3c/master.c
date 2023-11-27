@@ -1459,8 +1459,8 @@ int i3c_master_enec_locked(FAR struct i3c_master_controller *master,
  *   master - Master used to send frames on the bus.
  *
  * Returned Value:
- *  0 in case of success, a positive I3C error code if the error is
- *  one of the official Mx error codes, and a negative error code otherwise.
+ *   0 in case of success, a positive I3C error code if the error is one of
+ *   the official Mx error codes, and a negative error code otherwise.
  *
  ****************************************************************************/
 
@@ -1495,8 +1495,8 @@ int i3c_master_entdaa_locked(FAR struct i3c_master_controller *master)
  *   evts   - Events to disable
  *
  * Returned Value:
- *  0 in case of success, a positive I3C error code if the error is
- *  one of the official Mx error codes, and a negative error code otherwise
+ *   0 in case of success, a positive I3C error code if the error is one of
+ *   the official Mx error codes, and a negative error code otherwise.
  *
  ****************************************************************************/
 

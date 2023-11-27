@@ -547,14 +547,14 @@ struct i3c_master_controller_ops
 
 struct i3c_master_controller
 {
-  /* external implementation */
+  /* External implementation */
 
   int i3c_bus_id;                                  /* indicate a i3c bus id */
   int i2c_bus_id;                                  /* indicate a i2c bus id */
   enum i3c_bus_mode mode;                          /* select i3c bus mode by all device */
   unsigned long max_i2c_scl_rate;                  /* select max i2c scl rate by all i2c device */
 
-  /* internal implementation */
+  /* Internal implementation */
 
   FAR const struct i3c_master_controller_ops *ops; /* operation callback implemented in IP driver */
   FAR struct i3c_dev_desc *this;
@@ -568,7 +568,7 @@ struct i3c_master_controller
  * @node: used to insert generic IBI slot list.
  * @base: an I3C IBI slot.
  *
- * this structure is struct i3c_ibi_slot list.
+ * This structure is struct i3c_ibi_slot list.
  */
 
 struct i3c_generic_ibi_slot
@@ -585,7 +585,7 @@ struct i3c_generic_ibi_slot
  * @free_slots: a free slot list from a generic IBI pool.
  * @pending: a pending slots list from a generic IBI pool.
  *
- * this structure is used to manager all general ibi pool data,such as
+ * This structure is used to manager all general ibi pool data,such as
  * pending slots or free slots.
  */
 
