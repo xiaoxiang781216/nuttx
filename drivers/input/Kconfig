@@ -28,6 +28,23 @@ config INPUT_FF
 	---help---
 		Enable support for force feedback devices.
 
+if INPUT_FF
+
+config FF_AW86225
+	bool "Enable aw86225 driver"
+	default n
+	---help---
+		Enable aw86225 haptic controller chip.
+
+config FF_RTP_FILE_PATH
+	string "Path of aw86225 rtp file"
+	default "/etc"
+	depends on FF_AW86225
+	---help---
+		File path depend on the opening of FF_AW86225.
+
+endif # INPUT_FF
+
 config INPUT_MOUSE
 	bool
 	default n
