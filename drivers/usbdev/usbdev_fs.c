@@ -782,14 +782,6 @@ static int usbdev_fs_poll(FAR struct file *filep, FAR struct pollfd *fds,
       return ret;
     }
 
-  /* Check if the usbdev device has been unbind */
-
-  if (fs_ep->unlinked)
-    {
-      nxmutex_unlock(&fs_ep->lock);
-      return -ENOTCONN;
-    }
-
   if (!setup)
     {
       /* This is a request to tear down the poll. */
@@ -834,9 +826,16 @@ static int usbdev_fs_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   eventset = 0;
 
+  /* Check if the usbdev device has been unbind */
+
+  if (fs_ep->unlinked)
+    {
+      eventset |= POLLHUP;
+    }
+
   /* Notify the POLLIN/POLLOUT event if at least one request is available */
 
-  if (!sq_empty(&fs_ep->reqq))
+  else if (!sq_empty(&fs_ep->reqq))
     {
       if (USB_ISEPIN(fs_ep->ep->eplog))
         {
