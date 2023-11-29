@@ -56,6 +56,69 @@
  * Private Functions
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
+static int modlib_section_alloc(FAR struct mod_loadinfo_s *loadinfo,
+                                FAR Elf_Shdr *shdr, uint8_t idx)
+{
+  if (loadinfo->ehdr.e_type != ET_REL)
+    {
+      return -EINVAL;
+    }
+
+  if (loadinfo->sectalloc == NULL)
+    {
+      /* Allocate memory info for all sections */
+
+      loadinfo->sectalloc = lib_zalloc(sizeof(uintptr_t) *
+                                      loadinfo->ehdr.e_shnum);
+      if (loadinfo->sectalloc == NULL)
+        {
+          return -ENOMEM;
+        }
+    }
+
+  modlib_sectname(loadinfo, shdr);
+  if ((shdr->sh_flags & SHF_WRITE) != 0)
+    {
+#  ifdef CONFIG_ARCH_USE_DATA_HEAP
+      loadinfo->sectalloc[idx] = (uintptr_t)
+                                 up_dataheap_memalign(
+                                   (FAR const char *)loadinfo->iobuffer,
+                                                     shdr->sh_addralign,
+                                                     shdr->sh_size);
+#  else
+      loadinfo->sectalloc[idx] = (uintptr_t)lib_memalign(shdr->sh_addralign,
+                                                        shdr->sh_size);
+#  endif
+
+      if (loadinfo->datastart == 0)
+        {
+          loadinfo->datastart = loadinfo->sectalloc[idx];
+        }
+    }
+  else
+    {
+#  ifdef CONFIG_ARCH_USE_TEXT_HEAP
+      loadinfo->sectalloc[idx] = (uintptr_t)
+                                 up_textheap_memalign(
+                                   (FAR const char *)loadinfo->iobuffer,
+                                                     shdr->sh_addralign,
+                                                     shdr->sh_size);
+#  else
+      loadinfo->sectalloc[idx] = (uintptr_t)lib_memalign(shdr->sh_addralign,
+                                                         shdr->sh_size);
+#  endif
+
+      if (loadinfo->textalloc == 0)
+        {
+          loadinfo->textalloc = loadinfo->sectalloc[idx];
+        }
+    }
+
+  return 0;
+}
+#endif
+
 /****************************************************************************
  * Name: modlib_elfsize
  *
@@ -70,7 +133,10 @@ static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo)
   size_t datasize = 0;
   int i;
 
-  /* Accumulate the size each section into memory that is marked SHF_ALLOC */
+  /* Accumulate the size each section into memory that is marked SHF_ALLOC
+   * if CONFIG_ARCH_USE_SEPARATED_SECTION is enabled, allocate
+   * (and zero) memory for the each section.
+   */
 
   if (loadinfo->ehdr.e_phnum > 0)
     {
@@ -114,6 +180,13 @@ static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo)
 
               if ((shdr->sh_flags & SHF_WRITE) != 0)
                 {
+#ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
+                  if (modlib_section_alloc(loadinfo, shdr, i) >= 0)
+                    {
+                      continue;
+                    }
+#endif
+
                   datasize = _ALIGN_UP(datasize, shdr->sh_addralign);
                   datasize += ELF_ALIGNUP(shdr->sh_size);
                   if (loadinfo->dataalign < shdr->sh_addralign)
@@ -123,6 +196,13 @@ static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo)
                 }
               else
                 {
+#ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
+                  if (modlib_section_alloc(loadinfo, shdr, i) >= 0)
+                    {
+                      continue;
+                    }
+#endif
+
                   textsize = _ALIGN_UP(textsize, shdr->sh_addralign);
                   textsize += ELF_ALIGNUP(shdr->sh_size);
                   if (loadinfo->textalign < shdr->sh_addralign)
@@ -157,7 +237,6 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
 {
   FAR uint8_t *text = (FAR uint8_t *)loadinfo->textalloc;
   FAR uint8_t *data = (FAR uint8_t *)loadinfo->datastart;
-  FAR uint8_t **pptr;
   int ret;
   int i;
 
@@ -200,6 +279,7 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
       for (i = 0; i < loadinfo->ehdr.e_shnum; i++)
         {
           FAR Elf_Shdr *shdr = &loadinfo->shdr[i];
+          FAR uint8_t **pptr = NULL;
 
           /* SHF_ALLOC indicates that the section requires memory during
            * execution
@@ -210,21 +290,31 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
               continue;
             }
 
-          /* SHF_WRITE indicates that the section address space is write-
-           * able
-           */
-
-          if ((shdr->sh_flags & SHF_WRITE) != 0)
+#ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
+          if (loadinfo->ehdr.e_type == ET_REL)
             {
-              pptr = &data;
+              pptr = (FAR uint8_t **)&loadinfo->sectalloc[i];
             }
-          else
-            {
-              pptr = &text;
-            }
+#endif
 
-          *pptr = (FAR uint8_t *)_ALIGN_UP((uintptr_t)*pptr,
-                                          shdr->sh_addralign);
+          if (pptr == NULL)
+            {
+              /* SHF_WRITE indicates that the section address space is
+               * writeable
+               */
+
+              if ((shdr->sh_flags & SHF_WRITE) != 0)
+                {
+                  pptr = &data;
+                }
+              else
+                {
+                  pptr = &text;
+                }
+
+              *pptr = (FAR uint8_t *)_ALIGN_UP((uintptr_t)*pptr,
+                                           shdr->sh_addralign);
+            }
 
           /* SHT_NOBITS indicates that there is no data in the file for the
            * section.
@@ -259,9 +349,16 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
 
           shdr->sh_addr = (uintptr_t)*pptr;
 
+#ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
+          if (loadinfo->ehdr.e_type != ET_REL)
+            {
+              *pptr += ELF_ALIGNUP(shdr->sh_size);
+            }
+#else
           /* Setup the memory pointer for the next time through the loop */
 
           *pptr += ELF_ALIGNUP(shdr->sh_size);
+#endif
         }
     }
 
@@ -316,18 +413,19 @@ int modlib_load(FAR struct mod_loadinfo_s *loadinfo)
 
   if (loadinfo->ehdr.e_type == ET_REL)
     {
+#ifndef CONFIG_ARCH_USE_SEPARATED_SECTION
       if (loadinfo->textsize > 0)
         {
-#if defined(CONFIG_ARCH_USE_TEXT_HEAP)
+#  ifdef CONFIG_ARCH_USE_TEXT_HEAP
           loadinfo->textalloc = (uintptr_t)
                                 up_textheap_memalign(loadinfo->textalign,
                                                      loadinfo->textsize +
                                                      loadinfo->segpad);
-#else
+#  else
           loadinfo->textalloc = (uintptr_t)lib_memalign(loadinfo->textalign,
                                                         loadinfo->textsize +
                                                         loadinfo->segpad);
-#endif
+#  endif
           if (!loadinfo->textalloc)
             {
               berr("ERROR: Failed to allocate memory for the module text\n");
@@ -338,14 +436,14 @@ int modlib_load(FAR struct mod_loadinfo_s *loadinfo)
 
       if (loadinfo->datasize > 0)
         {
-#if defined(CONFIG_ARCH_USE_DATA_HEAP)
+#  ifdef CONFIG_ARCH_USE_DATA_HEAP
           loadinfo->datastart = (uintptr_t)
                                  up_dataheap_memalign(loadinfo->dataalign,
                                                       loadinfo->datasize);
-#else
+#  else
           loadinfo->datastart = (uintptr_t)lib_memalign(loadinfo->dataalign,
                                                         loadinfo->datasize);
-#endif
+#  endif
           if (!loadinfo->datastart)
             {
               berr("ERROR: Failed to allocate memory for the module data\n");
@@ -353,6 +451,7 @@ int modlib_load(FAR struct mod_loadinfo_s *loadinfo)
               goto errout_with_buffers;
             }
         }
+#endif
     }
   else
     {
