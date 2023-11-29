@@ -98,7 +98,7 @@ int fdcheck_restore(int val)
   /* If val is a bare fd（0~255）, we should return it directly  */
 
   fd = (val >> FD_SHIFT) & FD_MASK;
-  if (fd == 0)
+  if (fd == 0 || val < 0)
     {
       return val;
     }
