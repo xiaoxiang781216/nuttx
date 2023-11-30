@@ -32,6 +32,8 @@
 #include <sys/param.h>
 #include <debug.h>
 
+#include "sysevent_dev.h"
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -337,7 +339,7 @@ errout:
  *
  ****************************************************************************/
 
-int write_sysevent_kfifo(char *kbuf, int size)
+int write_sysevent_kfifo(FAR char *kbuf, int size)
 {
   int ret;
 

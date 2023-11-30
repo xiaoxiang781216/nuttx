@@ -20,7 +20,7 @@
 
 ifeq ($(CONFIG_SYSEVENT),y)
 
-CSRCS += sysevent_dev.c sysevent.c
+CSRCS += sysevent_dev.c sysevent.c sysdiag.c
 
 DEPPATH += --dep-path sysevent
 VPATH += :sysevent
