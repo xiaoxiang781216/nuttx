@@ -40,25 +40,19 @@
 FAR sigactq_t *nxsig_find_action(FAR struct task_group_s *group, int signo)
 {
   FAR sigactq_t *sigact = NULL;
+  irqstate_t flags;
 
   /* Verify the caller's sanity */
 
   if (group)
     {
-      /* Sigactions can only be assigned to the currently executing
-       * thread.  So, a simple lock ought to give us sufficient
-       * protection.
-       */
-
-      sched_lock();
-
       /* Search the list for a sigaction on this signal */
 
+      flags = spin_lock_irqsave(NULL);
       for (sigact = (FAR sigactq_t *)group->tg_sigactionq.head;
            ((sigact) && (sigact->signo != signo));
            sigact = sigact->flink);
-
-      sched_unlock();
+      spin_unlock_irqrestore(NULL, flags);
     }
 
   return sigact;
