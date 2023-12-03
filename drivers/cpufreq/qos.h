@@ -38,19 +38,6 @@
 #define FREQ_QOS_MAX_DEFAULT_VALUE              INT32_MAX
 
 #define PM_QOS_DEFAULT_VALUE                    (-1)
-#define PM_QOS_LATENCY_ANY                      INT32_MAX
-#define PM_QOS_LATENCY_ANY_NS                   ((s64)PM_QOS_LATENCY_ANY * \
-                                                 NSEC_PER_USEC)
-
-#define PM_QOS_CPU_LATENCY_DEFAULT_VALUE        (2000 * USEC_PER_SEC)
-#define PM_QOS_RESUME_LATENCY_DEFAULT_VALUE     PM_QOS_LATENCY_ANY
-#define PM_QOS_RESUME_LATENCY_NO_CONSTRAINT     PM_QOS_LATENCY_ANY
-#define PM_QOS_RESUME_LATENCY_NO_CONSTRAINT_NS  PM_QOS_LATENCY_ANY_NS
-#define PM_QOS_LATENCY_TOLERANCE_DEFAULT_VALUE  0
-#define PM_QOS_MIN_FREQUENCY_DEFAULT_VALUE      0
-#define PM_QOS_MAX_FREQUENCY_DEFAULT_VALUE      FREQ_QOS_MAX_DEFAULT_VALUE
-#define PM_QOS_LATENCY_TOLERANCE_NO_CONSTRAINT  (-1)
-
 #define PM_QOS_FLAG_NO_POWER_OFF                (1 << 0)
 
 /****************************************************************************
@@ -59,20 +46,15 @@
 
 enum pm_qos_type
 {
-  PM_QOS_UNITIALIZED, PM_QOS_MAX,   /* return the largest value */
-  PM_QOS_MIN,                       /* return the smallest value */
+  PM_QOS_UNITIALIZED,
+  PM_QOS_MAX,         /* Return the largest value */
+  PM_QOS_MIN,         /* Return the smallest value */
 };
-
-/**
- * Note: The lockless read path depends on the CPU accessing target_value
- * or effective_flags atomically.  Atomic access is only guaranteed on
- * all CPU types linux supports for 32 bit quantites
- */
 
 struct pm_qos_constraints
 {
   struct plist_head list;
-  int32_t target_value;     /* Do not change to 64 bit */
+  int32_t target_value;
   int32_t default_value;
   int32_t no_constraint_value;
   enum pm_qos_type type;
@@ -88,18 +70,19 @@ struct pm_qos_request
 struct pm_qos_flags_request
 {
   struct list_node node;
-  int32_t flags;    /* Do not change to 64 bit */
+  int32_t flags;
 };
 
 struct pm_qos_flags
 {
   struct list_node list;
-  int32_t effective_flags;      /* Do not change to 64 bit */
+  int32_t effective_flags;
 };
 
 enum freq_qos_req_type
 {
-  FREQ_QOS_MIN = 1, FREQ_QOS_MAX,
+  FREQ_QOS_MIN = 1,
+  FREQ_QOS_MAX,
 };
 
 struct freq_constraints
@@ -132,15 +115,15 @@ enum pm_qos_req_action
  ****************************************************************************/
 
 int32_t pm_qos_read_value(FAR struct pm_qos_constraints *c);
+
 int pm_qos_update_target(FAR struct pm_qos_constraints *c,
                          FAR struct plist_node *node,
-                         enum pm_qos_req_action action, int value);
-bool pm_qos_update_flags(FAR struct pm_qos_flags *pqf,
-                         FAR struct pm_qos_flags_request *req,
-                         enum pm_qos_req_action action, int32_t val);
+                         enum pm_qos_req_action action, int32_t value);
+int pm_qos_update_flags(FAR struct pm_qos_flags *pqf,
+                        FAR struct pm_qos_flags_request *req,
+                        enum pm_qos_req_action action, int32_t val);
 
 void freq_constraints_init(FAR struct freq_constraints *qos);
-
 int32_t freq_qos_read_value(FAR struct freq_constraints *qos,
                             enum freq_qos_req_type type);
 
@@ -150,6 +133,7 @@ int freq_qos_add_request(FAR struct freq_constraints *qos,
 int freq_qos_update_request(FAR struct freq_qos_request *req,
                             int32_t new_value);
 int freq_qos_remove_request(FAR struct freq_qos_request *req);
+
 int freq_qos_apply(FAR struct freq_qos_request *req,
                    enum pm_qos_req_action action, int32_t value);
 
