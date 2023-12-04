@@ -2123,7 +2123,7 @@ int i3c_master_i2c_attach(FAR struct i3c_master_controller *master,
 
   if (master->ops->attach_i2c_dev)
     {
-      ret = master->ops->attach_i2c_dev(config);
+      ret = master->ops->attach_i2c_dev(master, config);
       if (ret < 0)
         {
           return ret;
@@ -2142,7 +2142,7 @@ void i3c_master_detach_i2c_dev(FAR struct i3c_master_controller *master,
 
   if (master->ops->detach_i2c_dev)
     {
-      master->ops->detach_i2c_dev(config);
+      master->ops->detach_i2c_dev(master, config);
     }
 
   i3c_bus_normaluse_unlock(&master->bus);

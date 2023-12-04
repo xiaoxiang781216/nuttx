@@ -500,27 +500,29 @@ struct i3c_master_controller_ops
   CODE void (*bus_cleanup)(FAR struct i3c_master_controller *master);
   CODE int (*attach_i3c_dev)(FAR struct i3c_dev_desc *dev);
   CODE int (*reattach_i3c_dev)(FAR struct i3c_dev_desc *dev,
-                          unsigned char old_dyn_addr);
+                               unsigned char old_dyn_addr);
   CODE void (*detach_i3c_dev)(FAR struct i3c_dev_desc *dev);
   CODE int (*do_daa)(FAR struct i3c_master_controller *master);
   CODE bool (*supports_ccc_cmd)(FAR struct i3c_master_controller *master,
-        FAR const struct i3c_ccc_cmd *cmd);
+                                FAR const struct i3c_ccc_cmd *cmd);
   CODE int (*send_ccc_cmd)(FAR struct i3c_master_controller *master,
-       FAR struct i3c_ccc_cmd *cmd);
+                           FAR struct i3c_ccc_cmd *cmd);
   CODE int (*priv_xfers)(FAR struct i3c_dev_desc *dev,
-        FAR struct i3c_priv_xfer *xfers,
-        int nxfers);
-  CODE int (*attach_i2c_dev)(FAR const struct i2c_config_s *config);
-  CODE int (*detach_i2c_dev)(FAR const struct i2c_config_s *config);
+                         FAR struct i3c_priv_xfer *xfers,
+                         int nxfers);
+  CODE int (*attach_i2c_dev)(FAR struct i3c_master_controller *master,
+                             FAR const struct i2c_config_s *config);
+  CODE int (*detach_i2c_dev)(FAR struct i3c_master_controller *master,
+                             FAR const struct i2c_config_s *config);
   CODE int (*i2c_xfers)(FAR struct i3c_master_controller *master,
-       FAR const struct i2c_msg_s *xfers, int nxfers);
+                        FAR const struct i2c_msg_s *xfers, int nxfers);
   CODE int (*request_ibi)(FAR struct i3c_dev_desc *dev,
-         FAR const struct i3c_ibi_setup *req);
+                          FAR const struct i3c_ibi_setup *req);
   CODE void (*free_ibi)(FAR struct i3c_dev_desc *dev);
   CODE int (*enable_ibi)(FAR struct i3c_dev_desc *dev);
   CODE int (*disable_ibi)(FAR struct i3c_dev_desc *dev);
   CODE void (*recycle_ibi_slot)(FAR struct i3c_dev_desc *dev,
-         FAR struct i3c_ibi_slot *slot);
+                                FAR struct i3c_ibi_slot *slot);
 };
 
 /* struct i3c_master_controller - I3C master controller object
