@@ -287,13 +287,13 @@ class DumpELFFile:
         elf.close()
         return True
 
-    def _parse_addr_to_line(self, addtoline: str, args: list, addr: str) -> str:
+    def _parse_addr2line(self, addr2line: str, args: list, addr: str) -> str:
         args_string = " ".join(args)
-        cmd = "{} {} {}".format(addtoline, args_string, addr)
+        cmd = "{} {} {}".format(addr2line, args_string, addr)
         return subprocess.check_output(cmd, universal_newlines=True, shell=True)
 
-    def parse_addr_to_line(self, arch: str, addtoline: str, addr_list: list):
-        if addtoline is None:
+    def parse_addr2line(self, arch: str, addr2line: str, addr_list: list):
+        if addr2line is None:
             return
 
         is_audio = False
@@ -308,7 +308,7 @@ class DumpELFFile:
             if is_audio:
                 addr &= 0x7fffffff
 
-            res = self._parse_addr_to_line(addtoline, ["-Cfe", self.elffile, "-a"], hex(addr))
+            res = self._parse_addr2line(addr2line, ["-Cfe", self.elffile, "-a"], hex(addr))
             matches = re.findall(r"\?\?:", res)
             if matches:
                 continue
@@ -745,7 +745,7 @@ def main(args):
     elf = DumpELFFile(args.elffile)
     elf.parse()
 
-    elf.parse_addr_to_line(args.arch, args.addr2line, log.stack_data)
+    elf.parse_addr2line(args.arch, args.addr2line, log.stack_data)
 
     gdb_stub = GDBStub(log, elf)
 
