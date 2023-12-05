@@ -37,8 +37,8 @@ static void cpufreq_gov_performance_limits(
 
 static struct cpufreq_governor cpufreq_gov_performance =
 {
-  .name     = "performance",
-  .limits   = cpufreq_gov_performance_limits,
+  .name   = "performance",
+  .limits = cpufreq_gov_performance_limits,
 };
 
 /****************************************************************************

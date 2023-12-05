@@ -37,8 +37,8 @@ static void cpufreq_gov_powersave_limits(
 
 static struct cpufreq_governor cpufreq_gov_powersave =
 {
-  .name     = "powersave",
-  .limits   = cpufreq_gov_powersave_limits,
+  .name   = "powersave",
+  .limits = cpufreq_gov_powersave_limits,
 };
 
 /****************************************************************************

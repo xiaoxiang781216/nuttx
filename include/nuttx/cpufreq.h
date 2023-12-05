@@ -32,13 +32,13 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define CPUFREQ_PRECHANGE       (0)
-#define CPUFREQ_POSTCHANGE      (1)
+#define CPUFREQ_PRECHANGE     0
+#define CPUFREQ_POSTCHANGE    1
 
 /* Special Values of .frequency field */
 
-#define CPUFREQ_ENTRY_INVALID       ~0u
-#define CPUFREQ_TABLE_END           ~1u
+#define CPUFREQ_ENTRY_INVALID ~0u
+#define CPUFREQ_TABLE_END     ~1u
 
 /****************************************************************************
  * Public Types
@@ -73,28 +73,23 @@ struct cpufreq_driver
  * Public Function Prototypes
  ****************************************************************************/
 
-/**
- * cpufreq_int - init cpufreq with driver
- * @driver: lower driver
+/* cpufreq_int - init cpufreq with driver
+ * driver: lower driver
  */
 
 int cpufreq_init(FAR struct cpufreq_driver *driver);
 
-/**
- * cpufreq_unint - uninit cpufreq
- */
+/* cpufreq_unint - uninit cpufreq */
 
 int cpufreq_uninit(void);
 
-/**
- * cpufreq_plicy_get - get cpufreq_policy handler
+/* cpufreq_plicy_get - get cpufreq_policy handler
  */
 
 FAR struct cpufreq_policy *cpufreq_policy_get(void);
 
-/**
- * cpufreq_suspend() - Suspend CPUFreq governors.
- * @policy: cpufreq_policy handle
+/* cpufreq_suspend() - Suspend CPUFreq governors.
+ * policy: cpufreq_policy handle
  *
  * Called during system wide Suspend/Hibernate cycles for suspending
  * governors as some platforms can't change frequency after this
@@ -105,25 +100,22 @@ FAR struct cpufreq_policy *cpufreq_policy_get(void);
 
 int cpufreq_suspend(FAR struct cpufreq_policy *policy);
 
-/**
- * cpufreq_resume() - Resume CPUFreq governors.
- * @policy: cpufreq_policy handle
+/* cpufreq_resume() - Resume CPUFreq governors.
+ * policy: cpufreq_policy handle
  *
  * Called during system wide Suspend/Hibernate cycle for resuming governors
- *that
- * are suspended with cpufreq_suspend().
+ * that are suspended with cpufreq_suspend().
  */
 
 int cpufreq_resume(FAR struct cpufreq_policy *policy);
 
-/**
- * cpufreq_register_notifier - Register a notifier with cpufreq.
- * @policy: cpufreq_policy handle
- * @nb: notifier function to register.
+/* cpufreq_register_notifier - Register a notifier with cpufreq.
+ * policy: cpufreq_policy handle
+ * nb: notifier function to register.
  *
  * Add a notifier to one of two lists: either a list of notifiers that run on
  * clock rate changes (once before and once after every transition), or a
- * list of notifiers that ron on cpufreq policy changes.
+ * list of notifiers that run on cpufreq policy changes.
  *
  * This function may sleep and it has the same return values as
  * blocking_notifier_chain_register().
@@ -132,10 +124,9 @@ int cpufreq_resume(FAR struct cpufreq_policy *policy);
 int cpufreq_register_notifier(FAR struct cpufreq_policy *policy,
                               FAR struct notifier_block *nb);
 
-/**
- * cpufreq_unregister_notifier - Unregister a notifier from cpufreq.
- * @policy: cpufreq_policy handle
- * @nb: notifier block to be unregistered.
+/* cpufreq_unregister_notifier - Unregister a notifier from cpufreq.
+ * policy: cpufreq_policy handle
+ * nb: notifier block to be unregistered.
  *
  * Remove a notifier from one of the cpufreq notifier lists.
  *
@@ -146,23 +137,21 @@ int cpufreq_register_notifier(FAR struct cpufreq_policy *policy,
 int cpufreq_unregister_notifier(FAR struct cpufreq_policy *policy,
                                 FAR struct notifier_block *nb);
 
-/**
- * cpufreq_get - get the current CPU frequency (in kHz)
- * @policy: cpufreq_policy handle
+/* cpufreq_get - get the current CPU frequency (in kHz)
+ * policy: cpufreq_policy handle
  *
  * Get the CPU current (static) CPU frequency
  */
 
-unsigned int cpufreq_get(FAR struct cpufreq_policy *policy);
+int cpufreq_get(FAR struct cpufreq_policy *policy);
 
-/**
- * cpufreq_qos_add_request - Insert new frequency QoS request
- * @policy: cpufreq_policy handle
- * @min: min freq
- * @max: max freq
+/* cpufreq_qos_add_request - Insert new frequency QoS request
+ * policy: cpufreq_policy handle
+ * min: min freq
+ * max: max freq
  *
- * Insert a new entry into the @qos list of requests, recompute the effective
- * QoS constraint value for that list and initialize the @req object.  The
+ * Insert a new entry into the qos list of requests, recompute the effective
+ * QoS constraint value for that list and initialize the req object.  The
  * caller needs to save that object for later use in updates and removal.
  *
  * Return qos handle for update and remove, or NULL if fail
@@ -172,11 +161,10 @@ FAR struct cpufreq_qos *cpufreq_qos_add_request(
                             FAR struct cpufreq_policy *policy,
                             unsigned int min, unsigned int max);
 
-/**
- * cpufreq_qos_update_request - Update frequency QoS request from its list.
- * @qos: Request to remove.
- * @min: min freq
- * @max: max freq
+/* cpufreq_qos_update_request - Update frequency QoS request from its list.
+ * qos: Request to remove.
+ * min: min freq
+ * max: max freq
  *
  * Update an existing frequency QoS request along with the effective
  * constraint value for the list of requests it belongs to.
@@ -185,9 +173,8 @@ FAR struct cpufreq_qos *cpufreq_qos_add_request(
 int cpufreq_qos_update_request(FAR struct cpufreq_qos *qos,
                                unsigned int min, unsigned int max);
 
-/**
- * cpufreq_qos_remove_request - Remove frequency QoS request from its list.
- * @qos: Request to remove.
+/* cpufreq_qos_remove_request - Remove frequency QoS request from its list.
+ * qos: Request to remove.
  *
  * Remove the given frequency QoS request from the list of constraints it
  * belongs to and recompute the effective constraint value for that list.
