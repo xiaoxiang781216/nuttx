@@ -25,7 +25,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <syslog.h>
 #include <nuttx/cpufreq.h>
 
 #include "qos.h"
@@ -72,15 +71,6 @@ struct cpufreq_policy
 
   const struct cpufreq_frequency_table *freq_table;
   enum cpufreq_table_sorting freq_table_sorted;
-
-  /**
-   * The rules for this semaphore:
-   * - Any routine that wants to read from the policy structure will
-   *   do a down_read on this semaphore.
-   * - Any routine that will write to the policy structure and/or may take
-   *   away the policy altogether (eg. CPU hotplug), will hold this lock
-   *   in write mode before doing so.
-   */
 
   struct mutex_s lock;
 

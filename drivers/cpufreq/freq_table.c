@@ -29,57 +29,52 @@
  ****************************************************************************/
 
 #define clamp_val(val, hi, lo) \
-        ((val) >= (hi) ? (hi) : ((val) <= (lo) ? (lo) : (val)))
+  ((val) >= (hi) ? (hi) : ((val) <= (lo) ? (lo) : (val)))
 
-/**
- * cpufreq_for_each_entry - iterate over a cpufreq_frequency_table
- * @pos:   the cpufreq_frequency_table * to use as a loop cursor.
- * @table: the cpufreq_frequency_table * to iterate over.
+/* cpufreq_for_each_entry - iterate over a cpufreq_frequency_table
+ * pos:   the cpufreq_frequency_table * to use as a loop cursor.
+ * table: the cpufreq_frequency_table * to iterate over.
  */
 
 #define cpufreq_for_each_entry(pos, table) \
   for (pos = table; pos->frequency != CPUFREQ_TABLE_END; pos++)
 
-/**
- * cpufreq_for_each_entry_idx -
+/* cpufreq_for_each_entry_idx
  * iterate over a cpufreq_frequency_table with index
- * @pos:   the cpufreq_frequency_table * to use as a loop cursor.
- * @table: the cpufreq_frequency_table * to iterate over.
- * @idx:   the table entry currently being processed
+ * pos:   the cpufreq_frequency_table * to use as a loop cursor.
+ * table: the cpufreq_frequency_table * to iterate over.
+ * idx:   the table entry currently being processed
  */
 
-#define cpufreq_for_each_entry_idx(pos, table, idx)               \
-  for (pos = table, idx = 0; pos->frequency != CPUFREQ_TABLE_END; \
-       pos++, idx++)
+#define cpufreq_for_each_entry_idx(pos, table, idx) \
+  for (pos = table, idx = 0; pos->frequency != CPUFREQ_TABLE_END; pos++, idx++)
 
-/**
- * cpufreq_for_each_valid_entry -
- *  iterate over a cpufreq_frequency_table
- *  excluding CPUFREQ_ENTRY_INVALID frequencies.
- * @pos:   the cpufreq_frequency_table * to use as a loop cursor.
- * @table: the cpufreq_frequency_table * to iterate over.
+/* cpufreq_for_each_valid_entry
+ * iterate over a cpufreq_frequency_table
+ * excluding CPUFREQ_ENTRY_INVALID frequencies.
+ * pos:   the cpufreq_frequency_table * to use as a loop cursor.
+ * table: the cpufreq_frequency_table * to iterate over.
  */
 
-#define cpufreq_for_each_valid_entry(pos, table)                \
-  for (pos = table; pos->frequency != CPUFREQ_TABLE_END; pos++) \
-  if (pos->frequency == CPUFREQ_ENTRY_INVALID)                  \
-  continue;                                                     \
-  else
+#define cpufreq_for_each_valid_entry(pos, table) \
+  cpufreq_for_each_entry(pos, table) \
+    if (pos->frequency == CPUFREQ_ENTRY_INVALID) \
+        continue;                                \
+    else
 
-/**
- * cpufreq_for_each_valid_entry_idx -
- *  iterate with index over a cpufreq
- *  frequency_table excluding CPUFREQ_ENTRY_INVALID frequencies.
- * @pos:   the cpufreq_frequency_table * to use as a loop cursor.
- * @table: the cpufreq_frequency_table * to iterate over.
- * @idx:   the table entry currently being processed
+/* cpufreq_for_each_valid_entry_idx
+ * iterate with index over a cpufreq
+ * frequency_table excluding CPUFREQ_ENTRY_INVALID frequencies.
+ * pos:   the cpufreq_frequency_table * to use as a loop cursor.
+ * table: the cpufreq_frequency_table * to iterate over.
+ * idx:   the table entry currently being processed
  */
 
 #define cpufreq_for_each_valid_entry_idx(pos, table, idx) \
   cpufreq_for_each_entry_idx(pos, table, idx)             \
-  if (pos->frequency == CPUFREQ_ENTRY_INVALID)            \
-  continue;                                               \
-  else
+    if (pos->frequency == CPUFREQ_ENTRY_INVALID)          \
+      continue;                                           \
+    else
 
 /****************************************************************************
  * Private Function Prototypes
@@ -114,15 +109,12 @@ static int cpufreq_table_find_index_al(FAR struct cpufreq_policy *policy,
 {
   FAR const struct cpufreq_frequency_table *table = policy->freq_table;
   FAR const struct cpufreq_frequency_table *pos;
-  unsigned int freq;
-  int idx;
   int best = -1;
+  int idx;
 
   cpufreq_for_each_valid_entry_idx(pos, table, idx)
     {
-      freq = pos->frequency;
-
-      if (freq >= target_freq)
+      if (pos->frequency >= target_freq)
         {
           return idx;
         }
@@ -140,13 +132,12 @@ static int cpufreq_table_find_index_dl(FAR struct cpufreq_policy *policy,
 {
   FAR const struct cpufreq_frequency_table *table = policy->freq_table;
   FAR const struct cpufreq_frequency_table *pos;
-  unsigned int freq;
   int best = -1;
   int idx;
 
   cpufreq_for_each_valid_entry_idx(pos, table, idx)
     {
-      freq = pos->frequency;
+      unsigned int freq = pos->frequency;
 
       if (freq == target_freq)
         {
@@ -179,13 +170,12 @@ static int cpufreq_table_find_index_ah(FAR struct cpufreq_policy *policy,
 {
   FAR const struct cpufreq_frequency_table *table = policy->freq_table;
   FAR const struct cpufreq_frequency_table *pos;
-  unsigned int freq;
   int best = -1;
   int idx;
 
   cpufreq_for_each_valid_entry_idx(pos, table, idx)
     {
-      freq = pos->frequency;
+      unsigned int freq = pos->frequency;
 
       if (freq == target_freq)
         {
@@ -218,15 +208,12 @@ static int cpufreq_table_find_index_dh(FAR struct cpufreq_policy *policy,
 {
   FAR const struct cpufreq_frequency_table *table = policy->freq_table;
   FAR const struct cpufreq_frequency_table *pos;
-  unsigned int freq;
   int best = -1;
   int idx;
 
   cpufreq_for_each_valid_entry_idx(pos, table, idx)
     {
-      freq = pos->frequency;
-
-      if (freq <= target_freq)
+      if (pos->frequency <= target_freq)
         {
           return idx;
         }
@@ -244,13 +231,12 @@ static int cpufreq_table_find_index_ac(FAR struct cpufreq_policy *policy,
 {
   FAR const struct cpufreq_frequency_table *table = policy->freq_table;
   FAR const struct cpufreq_frequency_table *pos;
-  unsigned int freq;
   int best = -1;
   int idx;
 
   cpufreq_for_each_valid_entry_idx(pos, table, idx)
     {
-      freq = pos->frequency;
+      unsigned int freq = pos->frequency;
 
       if (freq == target_freq)
         {
@@ -290,13 +276,12 @@ static int cpufreq_table_find_index_dc(FAR struct cpufreq_policy *policy,
 {
   FAR const struct cpufreq_frequency_table *table = policy->freq_table;
   FAR const struct cpufreq_frequency_table *pos;
-  unsigned int freq;
   int best = -1;
   int idx;
 
   cpufreq_for_each_valid_entry_idx(pos, table, idx)
     {
-      freq = pos->frequency;
+      unsigned int freq = pos->frequency;
 
       if (freq == target_freq)
         {
@@ -333,8 +318,6 @@ static int cpufreq_table_target(FAR struct cpufreq_policy *policy,
                                 unsigned int target_freq,
                                 unsigned int relation)
 {
-  int idx;
-
   target_freq = clamp_val(target_freq, policy->max, policy->min);
 
   switch (relation)
@@ -342,41 +325,36 @@ static int cpufreq_table_target(FAR struct cpufreq_policy *policy,
     case CPUFREQ_RELATION_L:
       if (policy->freq_table_sorted == CPUFREQ_TABLE_SORTED_ASCENDING)
         {
-          idx = cpufreq_table_find_index_al(policy, target_freq);
+          return cpufreq_table_find_index_al(policy, target_freq);
         }
       else
         {
-          idx = cpufreq_table_find_index_dl(policy, target_freq);
+          return cpufreq_table_find_index_dl(policy, target_freq);
         }
-      break;
 
     case CPUFREQ_RELATION_H:
       if (policy->freq_table_sorted == CPUFREQ_TABLE_SORTED_ASCENDING)
         {
-          idx = cpufreq_table_find_index_ah(policy, target_freq);
+          return cpufreq_table_find_index_ah(policy, target_freq);
         }
       else
         {
-          idx = cpufreq_table_find_index_dh(policy, target_freq);
+          return cpufreq_table_find_index_dh(policy, target_freq);
         }
-      break;
 
     case CPUFREQ_RELATION_C:
       if (policy->freq_table_sorted == CPUFREQ_TABLE_SORTED_ASCENDING)
         {
-          idx = cpufreq_table_find_index_ac(policy, target_freq);
+          return cpufreq_table_find_index_ac(policy, target_freq);
         }
       else
         {
-          idx = cpufreq_table_find_index_dc(policy, target_freq);
+          return cpufreq_table_find_index_dc(policy, target_freq);
         }
-      break;
 
     default:
-      return 0;
+      return -EINVAL;
     }
-
-  return idx;
 }
 
 static int cpufreq_table_set_sorted(FAR struct cpufreq_policy *policy)
@@ -416,9 +394,9 @@ static int cpufreq_table_set_sorted(FAR struct cpufreq_policy *policy)
         }
       else
         {
-          /* Frequency decreased from prev to pos */
-
-          /* But frequency was increasing earlier */
+          /* Frequency decreased from prev to pos,
+           * but frequency was increasing earlier
+           */
 
           if (ascending > 0)
             {
@@ -452,16 +430,29 @@ static void cpufreq_verify_within_limits(FAR struct cpufreq_verify *cv,
                                          unsigned int max)
 {
   if (cv->min < min)
-    cv->min = min;
+    {
+      cv->min = min;
+    }
+
   if (cv->max < min)
-    cv->max = min;
+    {
+      cv->max = min;
+    }
+
   if (cv->min > max)
-    cv->min = max;
+    {
+      cv->min = max;
+    }
+
   if (cv->max > max)
-    cv->max = max;
+    {
+      cv->max = max;
+    }
+
   if (cv->min > cv->max)
-    cv->min = cv->max;
-  return;
+    {
+      cv->min = cv->max;
+    }
 }
 
 /****************************************************************************
@@ -490,13 +481,12 @@ int cpufreq_table_validate(FAR struct cpufreq_policy *policy)
 {
   FAR const struct cpufreq_frequency_table *table = policy->freq_table;
   FAR const struct cpufreq_frequency_table *pos;
-  unsigned int min_freq = ~0;
+  unsigned int min_freq = UINT_MAX;
   unsigned int max_freq = 0;
-  unsigned int freq;
 
   cpufreq_for_each_valid_entry(pos, table)
     {
-      freq = pos->frequency;
+      unsigned int freq = pos->frequency;
 
       if (freq < min_freq)
         {
@@ -512,7 +502,7 @@ int cpufreq_table_validate(FAR struct cpufreq_policy *policy)
   policy->min = policy->min_freq = min_freq;
   policy->max = policy->max_freq = max_freq;
 
-  if (policy->min == ~0)
+  if (policy->min == UINT_MAX)
     {
       return -EINVAL;
     }
@@ -525,23 +515,22 @@ int cpufreq_table_verify(FAR struct cpufreq_policy *policy,
 {
   FAR const struct cpufreq_frequency_table *table = policy->freq_table;
   FAR const struct cpufreq_frequency_table *pos;
-  unsigned int next_larger = ~0;
-  unsigned int freq;
+  unsigned int next_larger = UINT_MAX;
   bool found = false;
 
   cpufreq_verify_within_limits(cv, policy->min_freq, policy->max_freq);
 
   cpufreq_for_each_valid_entry(pos, table)
     {
-      freq = pos->frequency;
+      unsigned int freq = pos->frequency;
 
-      if ((freq >= cv->min) && (freq <= cv->max))
+      if (freq >= cv->min && freq <= cv->max)
         {
           found = true;
           break;
         }
 
-      if ((next_larger > freq) && (freq > cv->max))
+      if (next_larger > freq && freq > cv->max)
         {
           next_larger = freq;
         }
