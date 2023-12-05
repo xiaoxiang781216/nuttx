@@ -55,6 +55,7 @@ endif # BLUETOOTH_UART
 
 config BLUETOOTH_BRIDGE
 	bool "Bluetooth BT/BLE Dual Mode Bridge Driver"
+	depends on UART_BTH4 || UART_BTH5
 	default n
 	---help---
 		Enable Bluetooth BT/BLE Dual Mode Bridge Driver.
