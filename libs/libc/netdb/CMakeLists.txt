@@ -41,7 +41,8 @@ if(CONFIG_LIBC_NETDB)
     lib_gaistrerror.c
     lib_freeaddrinfo.c
     lib_getaddrinfo.c
-    lib_getnameinfo.c)
+    lib_getnameinfo.c
+    lib_dn.c)
 
   # Add host file support
 
