@@ -762,9 +762,7 @@ typedef CODE void (*nxsched_foreach_t)(FAR struct tcb_s *tcb, FAR void *arg);
 
 /* This is the callback type used by nxsched_smp_call() */
 
-#ifdef CONFIG_SMP_CALL
 typedef CODE int (*nxsched_smp_call_t)(FAR void *arg);
-#endif
 
 #endif /* __ASSEMBLY__ */
 
