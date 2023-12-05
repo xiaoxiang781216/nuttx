@@ -24,12 +24,46 @@
 
 #include <debug.h>
 
+#include <nuttx/instrument.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/note/noteram_driver.h>
 #include <nuttx/note/notectl_driver.h>
 #include <nuttx/note/notesnap_driver.h>
 #include <nuttx/segger/note_rtt.h>
 #include <nuttx/segger/sysview.h>
+
+/****************************************************************************
+ * Private Function Prototypes
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FUNCTION
+static void note_driver_instrument_enter(FAR void *this_fn,
+            FAR void *call_site, FAR void *arg) noinstrument_function;
+static void note_driver_instrument_leave(FAR void *this_fn,
+            FAR void *call_site, FAR void *arg) noinstrument_function;
+#endif
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FUNCTION
+static void note_driver_instrument_enter(FAR void *this_fn,
+                                         FAR void *call_site,
+                                         FAR void *arg)
+{
+  sched_note_event_ip(NOTE_TAG_ALWAYS, (uintptr_t)this_fn,
+                      NOTE_DUMP_BEGIN, NULL, 0);
+}
+
+static void note_driver_instrument_leave(FAR void *this_fn,
+                                         FAR void *call_site,
+                                         FAR void *arg)
+{
+  sched_note_event_ip(NOTE_TAG_ALWAYS, (uintptr_t)this_fn,
+                      NOTE_DUMP_END, NULL, 0);
+}
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -53,6 +87,10 @@
 int note_initialize(void)
 {
   int ret = 0;
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FUNCTION
+  instrument_register(&g_note_instrument);
+#endif
 
 #ifdef CONFIG_DRIVERS_NOTERAM
   ret = noteram_register();
