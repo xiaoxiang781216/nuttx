@@ -66,6 +66,18 @@ static void note_driver_instrument_leave(FAR void *this_fn,
 #endif
 
 /****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FUNCTION
+static struct instrument_s g_note_instrument =
+{
+  .enter = note_driver_instrument_enter,
+  .leave = note_driver_instrument_leave,
+};
+#endif
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 

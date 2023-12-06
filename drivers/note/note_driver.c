@@ -152,14 +152,6 @@ struct note_taskname_s
  * Private Data
  ****************************************************************************/
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FUNCTION
-static struct instrument_s g_note_instrument =
-{
-  .enter = note_driver_instrument_enter,
-  .leave = note_driver_instrument_leave,
-};
-#endif
-
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
 static struct note_filter_s g_note_filter =
 {
