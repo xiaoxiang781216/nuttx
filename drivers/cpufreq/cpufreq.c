@@ -661,7 +661,7 @@ int cpufreq_qos_update_request(FAR struct cpufreq_qos *qos,
       return -EINVAL;
     }
 
-  ret = freq_qos_apply(&qos->min, PM_QOS_UPDATE_REQ_NON_NOTIFY, min);
+  ret = freq_qos_apply(&qos->min, PM_QOS_UPDATE_REQ, min);
   if (ret < 0)
     {
       return ret;
