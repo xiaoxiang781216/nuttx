@@ -71,9 +71,11 @@
 void spin_lock(FAR volatile spinlock_t *lock)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
+  struct tcb_s *tcb = this_task();
+
   /* Notify that we are waiting for a spinlock */
 
-  sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_LOCK);
+  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCK);
 #endif
 
 #ifdef CONFIG_TICKET_SPINLOCK
@@ -91,7 +93,7 @@ void spin_lock(FAR volatile spinlock_t *lock)
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
   /* Notify that we have the spinlock */
 
-  sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_LOCKED);
+  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCKED);
 #endif
   SP_DMB();
 }
@@ -157,9 +159,11 @@ void spin_lock_wo_note(FAR volatile spinlock_t *lock)
 bool spin_trylock(FAR volatile spinlock_t *lock)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
+  struct tcb_s *tcb = this_task();
+
   /* Notify that we are waiting for a spinlock */
 
-  sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_LOCK);
+  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCK);
 #endif
 
 #ifdef CONFIG_TICKET_SPINLOCK
@@ -189,7 +193,7 @@ bool spin_trylock(FAR volatile spinlock_t *lock)
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
       /* Notify that we abort for a spinlock */
 
-      sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_ABORT);
+      sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_ABORT);
 #endif
       SP_DSB();
       return false;
@@ -198,7 +202,7 @@ bool spin_trylock(FAR volatile spinlock_t *lock)
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
   /* Notify that we have the spinlock */
 
-  sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_LOCKED);
+  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCKED);
 #endif
   SP_DMB();
   return true;

@@ -92,7 +92,7 @@ FAR chipreg_t *z16_doirq(int irq, FAR chipreg_t *regs)
            * crashes.
            */
 
-          g_running_tasks[this_cpu()] = this_task();
+          g_running_tasks[this_cpu()] = this_task_inirq();
         }
 
       /* Restore the previous value of g_current_regs.  NULL would indicate

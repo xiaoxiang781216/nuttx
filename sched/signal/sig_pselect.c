@@ -65,7 +65,7 @@ int pselect(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
             FAR fd_set *exceptfds, FAR const struct timespec *timeout,
             FAR const sigset_t *sigmask)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   sigset_t saved_sigprocmask;
   irqstate_t flags;
   int ret = ERROR;
@@ -77,6 +77,7 @@ int pselect(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
    */
 
   flags = enter_critical_section();
+  rtcb  = this_task_inirq();
 
   /* Save a copy of the old sigprocmask and install
    * the new (temporary) sigprocmask

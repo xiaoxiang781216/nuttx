@@ -57,7 +57,7 @@
 
 static int group_continue_handler(pid_t pid, FAR void *arg)
 {
-  FAR struct tcb_s *tcb = this_task();
+  FAR struct tcb_s *tcb = this_task_inirq();
   FAR struct tcb_s *rtcb;
 
   /* Resume all threads */

@@ -318,7 +318,7 @@ static void notesnap_spinlock(FAR struct note_driver_s *drv,
 static void notesnap_irqhandler(FAR struct note_driver_s *drv, int irq,
                                 FAR void *handler, bool enter)
 {
-  notesnap_common(drv, this_task(), enter ? NOTE_IRQ_ENTER :
+  notesnap_common(drv, this_task_inirq(), enter ? NOTE_IRQ_ENTER :
                   NOTE_IRQ_LEAVE, irq);
 }
 #endif
@@ -327,13 +327,13 @@ static void notesnap_irqhandler(FAR struct note_driver_s *drv, int irq,
 static void notesnap_syscall_enter(FAR struct note_driver_s *drv, int nr,
                                    int argc, FAR va_list *ap)
 {
-  notesnap_common(drv, this_task(), NOTE_SYSCALL_ENTER, nr);
+  notesnap_common(drv, this_task_inirq(), NOTE_SYSCALL_ENTER, nr);
 }
 
 static void notesnap_syscall_leave(FAR struct note_driver_s *drv, int nr,
                                    uintptr_t result)
 {
-  notesnap_common(drv, this_task(), NOTE_SYSCALL_LEAVE, nr);
+  notesnap_common(drv, this_task_inirq(), NOTE_SYSCALL_LEAVE, nr);
 }
 #endif
 

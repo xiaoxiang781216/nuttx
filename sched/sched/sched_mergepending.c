@@ -80,7 +80,7 @@ bool nxsched_merge_pending(void)
 
   /* Initialize the inner search loop */
 
-  rtcb = this_task();
+  rtcb = this_task_inirq();
 
   /* Process every TCB in the g_pendingtasks list
    *

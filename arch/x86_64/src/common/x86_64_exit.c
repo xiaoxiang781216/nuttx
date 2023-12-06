@@ -60,7 +60,7 @@ void up_exit(int status)
 
   enter_critical_section();
 
-  sinfo("TCB=%p exiting\n", this_task());
+  sinfo("TCB=%p exiting\n", this_task_inirq());
 
   nxsched_dumponexit();
 
@@ -72,7 +72,7 @@ void up_exit(int status)
    * head of the list.
    */
 
-  tcb = this_task();
+  tcb = this_task_inirq();
 
   /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases
    * NOTE: the API also adjusts the global IRQ control for SMP

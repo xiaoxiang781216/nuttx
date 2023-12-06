@@ -54,7 +54,7 @@
 
 void riscv_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task();
+  struct tcb_s *rtcb = this_task_inirq();
   uintptr_t *regs = rtcb->xcp.saved_regs;
 
 #ifdef CONFIG_SMP

@@ -95,7 +95,7 @@ uint8_t *avr_doirq(uint8_t irq, uint8_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task();
+      g_running_tasks[this_cpu()] = this_task_inirq();
     }
 
   regs = (uint8_t *)g_current_regs;   /* Cast removes volatile attribute */

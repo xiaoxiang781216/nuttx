@@ -50,19 +50,18 @@
 
 void _exit(int status)
 {
-  struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb;
 
   /* Make sure that we are in a critical section with local interrupts.
    * The IRQ state will be restored when the next task is started.
    */
 
   enter_critical_section();
-
-  sinfo("TCB=%p exiting\n", tcb);
+  sinfo("TCB=%p exiting\n", this_task_inirq());
 
   /* Update scheduler parameters */
 
-  sched_suspend_scheduler(tcb);
+  sched_suspend_scheduler(this_task_inirq());
 
   /* Destroy the task at the head of the ready to run list. */
 
@@ -72,7 +71,7 @@ void _exit(int status)
    * head of the list.
    */
 
-  tcb = this_task();
+  tcb = this_task_inirq();
 
   /* Reset scheduler parameters */
 

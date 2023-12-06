@@ -82,17 +82,16 @@ sigset_t nxsig_pendingset(FAR struct tcb_s *stcb)
   FAR sigpendq_t *sigpend;
   irqstate_t flags;
 
+  sigemptyset(&sigpendset);
+
+  flags = enter_critical_section();
   if (stcb == NULL)
     {
-      stcb = this_task();
+      stcb = this_task_inirq();
     }
 
   group = stcb->group;
   DEBUGASSERT(group);
-
-  sigemptyset(&sigpendset);
-
-  flags = enter_critical_section();
   for (sigpend = (FAR sigpendq_t *)group->tg_sigpendingq.head;
        (sigpend); sigpend = sigpend->flink)
     {

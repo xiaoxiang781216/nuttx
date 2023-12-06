@@ -393,7 +393,7 @@ irqstate_t enter_critical_section(void)
 
   if (!up_interrupt_context())
     {
-      FAR struct tcb_s *rtcb = this_task();
+      FAR struct tcb_s *rtcb = this_task_inirq();
       DEBUGASSERT(rtcb != NULL);
 
       /* Have we just entered the critical section?  Or is this a nested
@@ -560,7 +560,7 @@ void leave_critical_section(irqstate_t flags)
 
   if (!up_interrupt_context())
     {
-      FAR struct tcb_s *rtcb = this_task();
+      FAR struct tcb_s *rtcb = this_task_inirq();
       DEBUGASSERT(rtcb != NULL);
 
       /* Have we left entered the critical section?  Or are we still

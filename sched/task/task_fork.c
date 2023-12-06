@@ -197,7 +197,7 @@ FAR struct task_tcb_s *nxtask_setup_fork(start_t retaddr)
 
   sinfo("Child priority=%d start=%p\n", priority, retaddr);
   ret = nxtask_setup_scheduler(child, priority, retaddr,
-                               ptcb->entry.main, ttype);
+                               ptcb->entry.main, ttype, ptcb);
   if (ret < OK)
     {
       goto errout_with_tcb;

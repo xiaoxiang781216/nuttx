@@ -140,7 +140,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 
   if (sched_priority <= nxttcb->sched_priority)
     {
-      FAR struct tcb_s *rtcb = this_task();
+      FAR struct tcb_s *rtcb = this_task_inirq();
 
       if (rtcb->lockcount > 0)
         {
@@ -175,7 +175,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 
           if (nxsched_reprioritize_rtr(tcb, sched_priority))
             {
-              up_switch_context(this_task(), rtcb);
+              up_switch_context(this_task_inirq(), rtcb);
             }
         }
     }
@@ -247,7 +247,7 @@ static void nxsched_readytorun_setpriority(FAR struct tcb_s *tcb,
    * may be caused by the re-prioritization.
    */
 
-  rtcb = this_task();
+  rtcb = this_task_inirq();
 #endif
 
   /* A context switch will occur if the new priority of the ready-to-run
@@ -260,7 +260,7 @@ static void nxsched_readytorun_setpriority(FAR struct tcb_s *tcb,
 
       if (nxsched_reprioritize_rtr(tcb, sched_priority))
         {
-          up_switch_context(this_task(), rtcb);
+          up_switch_context(this_task_inirq(), rtcb);
         }
     }
 

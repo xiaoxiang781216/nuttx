@@ -253,7 +253,7 @@ int nxmq_wait_send(FAR struct mqueue_inode_s *msgq, int oflags)
        * When we are unblocked, we will try again
        */
 
-      rtcb          = this_task();
+      rtcb          = this_task_inirq();
       rtcb->waitobj = msgq;
       msgq->cmn.nwaitnotfull++;
 
@@ -282,7 +282,7 @@ int nxmq_wait_send(FAR struct mqueue_inode_s *msgq, int oflags)
 
       if (switch_needed)
         {
-          up_switch_context(this_task(), rtcb);
+          up_switch_context(this_task_inirq(), rtcb);
         }
 
       /* When we resume at this point, either (1) the message queue
@@ -404,7 +404,7 @@ int nxmq_do_send(FAR struct mqueue_inode_s *msgq,
 
   if (msgq->cmn.nwaitnotempty > 0)
     {
-      FAR struct tcb_s *rtcb = this_task();
+      FAR struct tcb_s *rtcb = this_task_inirq();
 
       /* Find the highest priority task that is waiting for
        * this queue to be non-empty in waitfornotempty

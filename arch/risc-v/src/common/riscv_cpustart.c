@@ -91,7 +91,7 @@ void riscv_cpu_boot(int cpu)
   _info("CPU%d Started\n", this_cpu());
 
 #ifdef CONFIG_STACK_COLORATION
-  struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb = this_task_inirq();
 
   /* If stack debug is enabled, then fill the stack with a
    * recognizable value that we can use later to test for high
@@ -110,7 +110,7 @@ void riscv_cpu_boot(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify that this CPU has started */
 
-  sched_note_cpu_started(this_task());
+  sched_note_cpu_started(this_task_inirq());
 #endif
 
   up_irq_enable();
@@ -154,7 +154,7 @@ int up_cpu_start(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the start event */
 
-  sched_note_cpu_start(this_task(), cpu);
+  sched_note_cpu_start(this_task_inirq(), cpu);
 #endif
 
   /* Send IPI to CPU(cpu) */

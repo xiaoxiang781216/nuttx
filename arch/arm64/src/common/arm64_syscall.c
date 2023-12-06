@@ -219,7 +219,7 @@ uint64_t *arm64_syscall_switch(uint64_t * regs)
        * assertion logic for reporting crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task();
+      g_running_tasks[this_cpu()] = this_task_inirq();
 
       /* Restore the cpu lock */
 

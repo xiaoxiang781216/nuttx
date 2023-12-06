@@ -88,9 +88,9 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * being delivered to the currently executing task.
        */
 
-      sinfo("rtcb=%p CURRENT_REGS=%p\n", this_task(), CURRENT_REGS);
+      sinfo("rtcb=%p CURRENT_REGS=%p\n", this_task_inirq(), CURRENT_REGS);
 
-      if (tcb == this_task())
+      if (tcb == this_task_inirq())
         {
           /* CASE 1:  We are not in an interrupt handler and
            * a task is signalling itself for some reason.

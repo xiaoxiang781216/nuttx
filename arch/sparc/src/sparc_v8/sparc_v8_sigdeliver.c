@@ -54,7 +54,7 @@
 
 void sparc_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task();
+  struct tcb_s *rtcb = this_task_inirq();
 
   uint32_t regs[XCPTCONTEXT_REGS];
 

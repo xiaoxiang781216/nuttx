@@ -67,7 +67,7 @@
 #ifdef CONFIG_PAGING
 uint32_t *arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr)
 {
-  struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb = this_task_inirq();
   uint32_t *savestate;
 
   /* Save the saved processor context in CURRENT_REGS where it can be
@@ -127,7 +127,7 @@ uint32_t *arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr)
    *     execute immediately when we return from this exception.
    */
 
-  pg_miss();
+  pg_miss(tcb);
 
   /* Restore the previous value of CURRENT_REGS.  NULL would indicate that
    * we are no longer in an interrupt handler.  It will be non-NULL if we

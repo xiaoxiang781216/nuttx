@@ -53,7 +53,7 @@
 
 void x86_64_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task();
+  struct tcb_s *rtcb = this_task_inirq();
   sig_deliver_t sighandler;
   uint64_t regs_area[XCPTCONTEXT_REGS + 2];
   uint64_t *regs;

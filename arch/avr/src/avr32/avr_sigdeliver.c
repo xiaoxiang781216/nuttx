@@ -53,7 +53,7 @@
 
 void avr_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task();
+  struct tcb_s *rtcb = this_task_inirq();
 #if 0
   uint32_t regs[XCPTCONTEXT_REGS + 3];  /* Why +3? See below */
 #else

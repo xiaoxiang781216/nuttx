@@ -108,7 +108,7 @@ uint32_t *renesas_doirq(int irq, uint32_t * regs)
            * crashes.
            */
 
-          g_running_tasks[this_cpu()] = this_task();
+          g_running_tasks[this_cpu()] = this_task_inirq();
         }
 
       /* Get the current value of regs... it may have changed because

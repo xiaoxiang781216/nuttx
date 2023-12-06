@@ -87,7 +87,7 @@
 int setitimer(int which, FAR const struct itimerval *value,
               FAR struct itimerval *ovalue)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   struct itimerspec spec;
   struct itimerspec ospec;
   irqstate_t flags;
@@ -99,21 +99,23 @@ int setitimer(int which, FAR const struct itimerval *value,
       return ERROR;
     }
 
+  flags = enter_critical_section();
+  rtcb = this_task_inirq();
   if (!rtcb->group->itimer)
     {
-      flags = enter_critical_section();
       if (!rtcb->group->itimer)
         {
           ret = timer_create(CLOCK_REALTIME, NULL, &rtcb->group->itimer);
         }
 
-      leave_critical_section(flags);
-
       if (ret != OK)
         {
+          leave_critical_section(flags);
           return ret;
         }
     }
+
+  leave_critical_section(flags);
 
   TIMEVAL_TO_TIMESPEC(&value->it_value, &spec.it_value);
   TIMEVAL_TO_TIMESPEC(&value->it_interval, &spec.it_interval);

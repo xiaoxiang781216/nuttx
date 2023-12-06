@@ -68,7 +68,7 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
           FAR const struct timespec *timeout_ts,
           FAR const sigset_t *sigmask)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   sigset_t saved_sigprocmask;
   irqstate_t flags;
   int ret = ERROR;
@@ -80,6 +80,7 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
    */
 
   flags = enter_critical_section();
+  rtcb = this_task_inirq();
 
   /* Save a copy of the old sigprocmask and install
    * the new (temporary) sigprocmask

@@ -91,7 +91,7 @@ FAR chipreg_t *z80_doirq(uint8_t irq, FAR chipreg_t *regs)
            * crashes.
            */
 
-          g_running_tasks[this_cpu()] = this_task();
+          g_running_tasks[this_cpu()] = this_task_inirq();
         }
 
       regs = newregs;

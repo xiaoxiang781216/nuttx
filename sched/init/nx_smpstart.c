@@ -65,7 +65,7 @@
 void nx_idle_trampoline(void)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION
-  FAR struct tcb_s *tcb = this_task();
+  FAR struct tcb_s *tcb = this_task_inirq();
 
   /* Announce that the IDLE task has started */
 

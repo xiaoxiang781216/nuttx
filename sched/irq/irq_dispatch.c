@@ -100,7 +100,7 @@
 void irq_dispatch(int irq, FAR void *context)
 {
 #ifdef CONFIG_DEBUG_MM
-  struct tcb_s *rtcb = this_task();
+  struct tcb_s *rtcb = this_task_inirq();
 #endif
   xcpt_t vector = irq_unexpected_isr;
   FAR void *arg = NULL;
@@ -154,7 +154,7 @@ void irq_dispatch(int irq, FAR void *context)
 
 #ifdef CONFIG_DEBUG_MM
   if ((rtcb->flags & TCB_FLAG_HEAP_CHECK) ||
-      (this_task()->flags & TCB_FLAG_HEAP_CHECK))
+      (this_task_inirq()->flags & TCB_FLAG_HEAP_CHECK))
     {
       kmm_checkcorruption();
     }

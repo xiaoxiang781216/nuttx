@@ -86,7 +86,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
   if (tcb->xcp.sigdeliver == NULL)
     {
       tcb->xcp.sigdeliver = sigdeliver;
-      if (tcb == this_task())
+      if (tcb == this_task_inirq())
         {
           sigdeliver(tcb);
           tcb->xcp.sigdeliver = NULL;

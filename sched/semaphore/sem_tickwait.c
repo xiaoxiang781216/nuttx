@@ -66,7 +66,7 @@
 
 int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   irqstate_t flags;
   int ret;
 
@@ -81,6 +81,7 @@ int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
    */
 
   flags = enter_critical_section();
+  rtcb = this_task_inirq();
 
   /* Try to take the semaphore without waiting. */
 

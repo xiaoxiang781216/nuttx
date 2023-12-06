@@ -90,7 +90,7 @@
 int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
                     FAR const struct timespec *abstime)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   irqstate_t flags;
   sclock_t ticks;
   int status;
@@ -108,6 +108,7 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
    */
 
   flags = enter_critical_section();
+  rtcb = this_task_inirq();
 
   /* Try to take the semaphore without waiting. */
 

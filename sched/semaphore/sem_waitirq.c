@@ -69,7 +69,7 @@
 
 void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb = this_task_inirq();
   FAR sem_t *sem = wtcb->waitobj;
 
 #ifdef CONFIG_ARCH_ADDRENV

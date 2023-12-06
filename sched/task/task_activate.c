@@ -62,7 +62,7 @@
 void nxtask_activate(FAR struct tcb_s *tcb)
 {
   irqstate_t flags = enter_critical_section();
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb = this_task_inirq();
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
 

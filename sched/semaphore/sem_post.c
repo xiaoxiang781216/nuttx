@@ -148,7 +148,7 @@ int nxsem_post(FAR sem_t *sem)
 
       if (stcb != NULL)
         {
-          FAR struct tcb_s *rtcb = this_task();
+          FAR struct tcb_s *rtcb = this_task_inirq();
 
           /* The task will be the new holder of the semaphore when
            * it is awakened.

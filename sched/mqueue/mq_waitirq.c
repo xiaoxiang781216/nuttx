@@ -62,7 +62,7 @@
 
 void nxmq_wait_irq(FAR struct tcb_s *wtcb, int errcode)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb = this_task_inirq();
   FAR struct mqueue_inode_s *msgq;
 
   /* It is possible that an interrupt/context switch beat us to the punch and

@@ -97,7 +97,7 @@ uint64_t *arm64_doirq(int irq, uint64_t * regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task();
+      g_running_tasks[this_cpu()] = this_task_inirq();
 
       /* Restore the cpu lock */
 

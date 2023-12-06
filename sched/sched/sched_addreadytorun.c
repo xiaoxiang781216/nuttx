@@ -67,7 +67,7 @@
 #ifndef CONFIG_SMP
 bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb = this_task_inirq();
   bool ret;
 
   /* Check if pre-emption is disabled for the current running task and if

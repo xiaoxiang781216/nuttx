@@ -43,7 +43,7 @@ struct tcb_s; /* Forward reference */
 
 void nxtask_start(void);
 int  nxtask_setup_scheduler(FAR struct task_tcb_s *tcb, int priority,
-       start_t start, main_t main, uint8_t ttype);
+       start_t start, main_t main, uint8_t ttype, FAR struct tcb_s *rtcb);
 int  nxtask_setup_arguments(FAR struct task_tcb_s *tcb,
        FAR const char *name, FAR char * const argv[]);
 

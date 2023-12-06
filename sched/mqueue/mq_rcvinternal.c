@@ -168,7 +168,7 @@ int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
         {
           /* Yes.. Block and try again */
 
-          rtcb          = this_task();
+          rtcb          = this_task_inirq();
           rtcb->waitobj = msgq;
           msgq->cmn.nwaitnotempty++;
 
@@ -197,7 +197,7 @@ int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
 
           if (switch_needed)
             {
-              up_switch_context(this_task(), rtcb);
+              up_switch_context(this_task_inirq(), rtcb);
             }
 
           /* When we resume at this point, either (1) the message queue
@@ -296,7 +296,7 @@ ssize_t nxmq_do_receive(FAR struct mqueue_inode_s *msgq,
 
   if (msgq->cmn.nwaitnotfull > 0)
     {
-      FAR struct tcb_s *rtcb = this_task();
+      FAR struct tcb_s *rtcb = this_task_inirq();
 
       /* Find the highest priority task that is waiting for
        * this queue to be not-full in waitfornotfull list.

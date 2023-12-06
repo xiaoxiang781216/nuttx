@@ -71,7 +71,7 @@ static void z8_copystate(FAR chipreg_t *dest, FAR const chipreg_t *src)
 
 void z80_sigdeliver(void)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb = this_task_inirq();
   chipreg_t regs[XCPTCONTEXT_REGS];
 
   board_autoled_on(LED_SIGNAL);

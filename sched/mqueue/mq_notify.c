@@ -127,7 +127,7 @@ int mq_notify(mqd_t mqdes, FAR const struct sigevent *notification)
 
   /* Get the current process ID */
 
-  rtcb = this_task();
+  rtcb = this_task_inirq();
 
   /* Is there already a notification attached */
 

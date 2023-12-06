@@ -72,7 +72,7 @@ void *sim_doirq(int irq, void *context)
            * crashes.
            */
 
-          g_running_tasks[this_cpu()] = this_task();
+          g_running_tasks[this_cpu()] = this_task_inirq();
         }
 
       regs = (void *)CURRENT_REGS;

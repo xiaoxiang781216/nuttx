@@ -109,7 +109,7 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
   /* Get a reference to the thread-private environ in the TCB. */
 
   flags = enter_critical_section();
-  rtcb  = this_task();
+  rtcb  = this_task_inirq();
   group = rtcb->group;
   DEBUGASSERT(group);
 

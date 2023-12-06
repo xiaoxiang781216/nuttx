@@ -69,7 +69,7 @@
 
 int nxsem_wait(FAR sem_t *sem)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   irqstate_t flags;
   bool switch_needed;
   int ret;
@@ -85,6 +85,7 @@ int nxsem_wait(FAR sem_t *sem)
    */
 
   flags = enter_critical_section();
+  rtcb = this_task_inirq();
 
   /* Make sure we were supplied with a valid semaphore. */
 
@@ -172,7 +173,7 @@ int nxsem_wait(FAR sem_t *sem)
 
       if (switch_needed)
         {
-          up_switch_context(this_task(), rtcb);
+          up_switch_context(this_task_inirq(), rtcb);
         }
 
       /* When we resume at this point, either (1) the semaphore has been
