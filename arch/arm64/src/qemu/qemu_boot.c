@@ -29,6 +29,7 @@
 #include <debug.h>
 
 #include <nuttx/cache.h>
+#include <nuttx/syslog/syslog_rpmsg.h>
 #ifdef CONFIG_PAGING
 #  include <nuttx/page.h>
 #endif
@@ -74,6 +75,10 @@ const struct arm_mmu_config g_mmu_config =
   .num_regions = nitems(g_mmu_regions),
   .mmu_regions = g_mmu_regions,
 };
+
+#ifdef CONFIG_SYSLOG_RPMSG
+static char g_syslog_rpmsg_buf[4096];
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -202,5 +207,9 @@ void arm64_chip_boot(void)
 
 #ifdef CONFIG_ARCH_PERF_EVENTS
   up_perf_init((void *)CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC);
+#endif
+
+#ifdef CONFIG_SYSLOG_RPMSG
+  syslog_rpmsg_init_early(g_syslog_rpmsg_buf, sizeof(g_syslog_rpmsg_buf));
 #endif
 }
