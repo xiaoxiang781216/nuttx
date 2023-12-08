@@ -252,12 +252,6 @@ int syslog_flush_intbuffer(bool force)
   int ch;
   int i;
 
-  /* This logic is performed with the scheduler disabled to protect from
-   * concurrent modification by other tasks.
-   */
-
-  sched_lock();
-
   do
     {
       /* Transfer one character to time.  This is inefficient, but is
@@ -292,8 +286,6 @@ int syslog_flush_intbuffer(bool force)
         }
     }
   while (ch != EOF);
-
-  sched_unlock();
 
   return ch;
 }
