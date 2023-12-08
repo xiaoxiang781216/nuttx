@@ -195,4 +195,19 @@ int cpufreq_qos_update_request(FAR struct cpufreq_qos *qos,
 
 int cpufreq_qos_remove_request(FAR struct cpufreq_qos *qos);
 
+/****************************************************************************
+ * Name: cpufreq_table_count_valid_entries
+ *
+ * Description:
+ *   get cpufreq table count
+ *
+ * Input Parameters:
+ *   policy - the cpu cpufreq_policy
+ *
+ * Returned Value:
+ *   a non-negative value
+ ****************************************************************************/
+
+int cpufreq_table_count_valid_entries(FAR struct cpufreq_policy *policy);
+
 #endif /* __INCLUDE_NUTTX_CPUFREQ_H */

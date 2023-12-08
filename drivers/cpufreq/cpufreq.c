@@ -678,3 +678,29 @@ int cpufreq_qos_remove_request(FAR struct cpufreq_qos *qos)
   kmm_free(qos);
   return 0;
 }
+
+int cpufreq_table_count_valid_entries(FAR struct cpufreq_policy *policy)
+{
+  FAR const struct cpufreq_frequency_table *pos;
+  int count = 0;
+
+  if (policy == NULL || policy->freq_table == NULL)
+    {
+      return 0;
+    }
+
+  pos = policy->freq_table;
+  for (; pos->frequency != CPUFREQ_TABLE_END; pos++)
+    {
+      if (pos->frequency == CPUFREQ_ENTRY_INVALID)
+        {
+          continue;
+        }
+      else
+        {
+          count++;
+        }
+    }
+
+  return count;
+}
