@@ -1015,7 +1015,7 @@ str_lpad:
           flags &= ~(FL_NEGATIVE | FL_ALT);
           if (x < 0)
             {
-              x = -x;
+              x = ~x + 1;
               flags |= FL_NEGATIVE;
             }
 
