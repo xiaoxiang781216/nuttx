@@ -538,10 +538,9 @@ extern "C"
 
 #define CXD56_GNSS_IOCTL_SET_1PPS_OUTPUT 52
 
-/**
- * Get the current 1PPS output setting
+/* Get the current 1PPS output setting
  *
- * @param[out] arg
+ * param[out] arg
  * enable(1) or disable(0)
  */
 

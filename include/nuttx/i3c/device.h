@@ -119,11 +119,11 @@ struct i3c_device_id
  * &struct_i3c_priv_xfer.err or &struct i3c_hdr_cmd.err to get a better
  * idea of what went wrong.
  *
- * @I3C_ERROR_UNKNOWN: unknown error, usually means the error is not I3C
+ * I3C_ERROR_UNKNOWN: unknown error, usually means the error is not I3C
  *      related
- * @I3C_ERROR_M0: M0 error
- * @I3C_ERROR_M1: M1 error
- * @I3C_ERROR_M2: M2 error
+ * I3C_ERROR_M0: M0 error
+ * I3C_ERROR_M1: M1 error
+ * I3C_ERROR_M2: M2 error
  */
 
 enum i3c_error_code
@@ -135,9 +135,9 @@ enum i3c_error_code
 };
 
 /* enum i3c_hdr_mode - HDR mode ids
- * @I3C_HDR_DDR: DDR mode
- * @I3C_HDR_TSP: TSP mode
- * @I3C_HDR_TSL: TSL mode
+ * I3C_HDR_DDR: DDR mode
+ * I3C_HDR_TSP: TSP mode
+ * I3C_HDR_TSL: TSL mode
  */
 
 enum i3c_hdr_mode
@@ -148,13 +148,13 @@ enum i3c_hdr_mode
 };
 
 /* struct i3c_priv_xfer - I3C SDR private transfer
- * @flags: encodes the transfer direction. bit 0 indicates read or write,
+ * flags: encodes the transfer direction. bit 0 indicates read or write,
  *      set 1 for read, set 0 for write
- * @len: transfer length in bytes of the transfer
- * @data: input/output buffer
- * @data.in: input buffer. Must point to a DMA-able buffer
- * @data.out: output buffer. Must point to a DMA-able buffer
- * @err: I3C error code
+ * len: transfer length in bytes of the transfer
+ * data: input/output buffer
+ * data.in: input buffer. Must point to a DMA-able buffer
+ * data.out: output buffer. Must point to a DMA-able buffer
+ * err: I3C error code
  */
 
 struct i3c_priv_xfer
@@ -170,7 +170,7 @@ struct i3c_priv_xfer
 };
 
 /* enum i3c_dcr - I3C DCR values
- * @I3C_DCR_GENERIC_DEVICE: generic I3C device
+ * I3C_DCR_GENERIC_DEVICE: generic I3C device
  */
 
 enum i3c_dcr
@@ -179,18 +179,18 @@ enum i3c_dcr
 };
 
 /* struct i3c_device_info - I3C device information
- * @pid: Provisional ID
- * @bcr: Bus Characteristic Register
- * @dcr: Device Characteristic Register
- * @static_addr: static/I2C address
- * @dyn_addr: dynamic address
- * @hdr_cap: supported HDR modes
- * @max_read_ds: max read speed information
- * @max_write_ds: max write speed information
- * @max_ibi_len: max IBI payload length
- * @max_read_turnaround: max read turn-around time in micro-seconds
- * @max_read_len: max private SDR read length in bytes
- * @max_write_len: max private SDR write length in bytes
+ * pid: Provisional ID
+ * bcr: Bus Characteristic Register
+ * dcr: Device Characteristic Register
+ * static_addr: static/I2C address
+ * dyn_addr: dynamic address
+ * hdr_cap: supported HDR modes
+ * max_read_ds: max read speed information
+ * max_write_ds: max write speed information
+ * max_ibi_len: max IBI payload length
+ * max_read_turnaround: max read turn-around time in micro-seconds
+ * max_read_len: max private SDR read length in bytes
+ * max_write_len: max private SDR write length in bytes
  *
  * These are all basic information that should be advertised by an I3C
  * device.
@@ -230,13 +230,13 @@ struct i3c_ibi_payload
 };
 
 /* struct i3c_ibi_setup - IBI setup object
- * @max_payload_len: maximum length of the payload associated to an IBI.
+ * max_payload_len: maximum length of the payload associated to an IBI.
  *         If one IBI appears to have a payload that is bigger than this
  *         number, the IBI will be rejected.
- * @num_slots: number of pre-allocated IBI slots. This should be chosen so
+ * num_slots: number of pre-allocated IBI slots. This should be chosen so
  *         that the system never runs out of IBI slots, otherwise you'll
  *         lose IBIs.
- * @handler: IBI handler, every time an IBI is received. This handler is
+ * handler: IBI handler, every time an IBI is received. This handler is
  *       called in a workqueue context. It is allowed to sleep and send new
  *       messages on the bus, though it's recommended to keep the
  *       processing done there as fast as possible to avoid delaying
@@ -266,7 +266,7 @@ struct i3c_ibi_setup
  * Description:
  *   Do I3C SDR private transfers directed to a specific device.
  *
- *   Initiate one or several private SDR transfers with @dev.
+ *   Initiate one or several private SDR transfers with dev.
  *
  *   This function can sleep and thus cannot be called in atomic context.
  *
@@ -346,7 +346,7 @@ int i3c_device_enable_ibi(FAR const struct i3c_device *dev);
  *   Request an IBI.
  *
  *   This function is responsible for pre-allocating all resources needed to
- *   process IBIs coming from @dev. When this function returns, the IBI is
+ *   process IBIs coming from dev. When this function returns, the IBI is
  *   not enabled until i3c_device_enable_ibi() is called.
  *
  * Input Parameters:

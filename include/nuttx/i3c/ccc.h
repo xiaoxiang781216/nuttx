@@ -100,7 +100,7 @@
 
 /* struct i3c_ccc_events - payload passed to ENEC/DISEC CCC
  *
- * @events: bitmask of I3C_CCC_EVENT_xxx events.
+ * events: bitmask of I3C_CCC_EVENT_xxx events.
  *
  * Depending on the CCC command, the specific events coming from all devices
  * (broadcast version) or a specific device (unicast version) will be
@@ -114,7 +114,7 @@ struct i3c_ccc_events
 
 /* struct i3c_ccc_mwl - payload passed to SETMWL/GETMWL CCC
  *
- * @len: maximum write length in bytes
+ * len: maximum write length in bytes
  *
  * The maximum write length is only applicable to SDR private messages or
  * extended Write CCCs (like SETXTIME).
@@ -127,13 +127,13 @@ struct i3c_ccc_mwl
 
 /* struct i3c_ccc_mrl - payload passed to SETMRL/GETMRL CCC
  *
- * @len: maximum read length in bytes
- * @ibi_len: maximum IBI payload length
+ * len: maximum read length in bytes
+ * ibi_len: maximum IBI payload length
  *
  * The maximum read length is only applicable to SDR private messages or
  * extended Read CCCs (like GETXTIME).
  * The IBI length is only valid if the I3C slave is IBI capable
- * (%I3C_BCR_IBI_REQ_CAP is set).
+ * (I3C_BCR_IBI_REQ_CAP is set).
  */
 
 begin_packed_struct struct i3c_ccc_mrl
@@ -144,12 +144,12 @@ begin_packed_struct struct i3c_ccc_mrl
 
 /* struct i3c_ccc_dev_desc - I3C/I2C device descriptor used for DEFSLVS
  *
- * @dyn_addr: dynamic address assigned to the I3C slave or 0 if the entry is
+ * dyn_addr: dynamic address assigned to the I3C slave or 0 if the entry is
  *       describing an I2C slave.
- * @dcr: DCR value (not applicable to entries describing I2C devices)
- * @lvr: LVR value (not applicable to entries describing I3C devices)
- * @bcr: BCR value or 0 if this entry is describing an I2C slave
- * @static_addr: static address or 0 if the device does not have a static
+ * dcr: DCR value (not applicable to entries describing I2C devices)
+ * lvr: LVR value (not applicable to entries describing I3C devices)
+ * bcr: BCR value or 0 if this entry is describing an I2C slave
+ * static_addr: static address or 0 if the device does not have a static
  *       address
  *
  * The DEFSLVS command should be passed an array of i3c_ccc_dev_desc
@@ -170,9 +170,9 @@ struct i3c_ccc_dev_desc
 
 /* struct i3c_ccc_defslvs - payload passed to DEFSLVS CCC
  *
- * @count: number of dev descriptors
- * @master: descriptor describing the current master
- * @slaves: array of descriptors describing slaves controlled by the
+ * count: number of dev descriptors
+ * master: descriptor describing the current master
+ * slaves: array of descriptors describing slaves controlled by the
  *         current master
  *
  * Information passed to the broadcast DEFSLVS to propagate device
@@ -189,8 +189,8 @@ begin_packed_struct struct i3c_ccc_defslvs
 
 /* enum i3c_ccc_test_mode - enum listing all available test modes
  *
- * @I3C_CCC_EXIT_TEST_MODE: exit test mode
- * @I3C_CCC_VENDOR_TEST_MODE: enter vendor test mode
+ * I3C_CCC_EXIT_TEST_MODE: exit test mode
+ * I3C_CCC_VENDOR_TEST_MODE: enter vendor test mode
  */
 
 enum i3c_ccc_test_mode
@@ -201,7 +201,7 @@ enum i3c_ccc_test_mode
 
 /* struct i3c_ccc_enttm - payload passed to ENTTM CCC
  *
- * @mode: one of the &enum i3c_ccc_test_mode modes
+ * mode: one of the &enum i3c_ccc_test_mode modes
  *
  * Information passed to the ENTTM CCC to instruct an I3C device to enter a
  * specific test mode.
@@ -214,7 +214,7 @@ struct i3c_ccc_enttm
 
 /* struct i3c_ccc_setda - payload passed to SETNEWDA and SETDASA CCCs
  *
- * @addr: dynamic address to assign to an I3C device
+ * addr: dynamic address to assign to an I3C device
  *
  * Information passed to the SETNEWDA and SETDASA CCCs to assign/change the
  * dynamic address of an I3C device.
@@ -227,7 +227,7 @@ struct i3c_ccc_setda
 
 /* struct i3c_ccc_getpid - payload passed to GETPID CCC
  *
- * @pid: 48 bits PID in big endian
+ * pid: 48 bits PID in big endian
  */
 
 struct i3c_ccc_getpid
@@ -237,7 +237,7 @@ struct i3c_ccc_getpid
 
 /* struct i3c_ccc_getbcr - payload passed to GETBCR CCC
  *
- * @bcr: BCR (Bus Characteristic Register) value
+ * bcr: BCR (Bus Characteristic Register) value
  */
 
 struct i3c_ccc_getbcr
@@ -247,7 +247,7 @@ struct i3c_ccc_getbcr
 
 /* struct i3c_ccc_getdcr - payload passed to GETDCR CCC
  *
- * @dcr: DCR (Device Characteristic Register) value
+ * dcr: DCR (Device Characteristic Register) value
  */
 
 struct i3c_ccc_getdcr
@@ -257,7 +257,7 @@ struct i3c_ccc_getdcr
 
 /* struct i3c_ccc_getstatus - payload passed to GETSTATUS CCC
  *
- * @status: status of the I3C slave (see I3C_CCC_STATUS_xxx macros for more
+ * status: status of the I3C slave (see I3C_CCC_STATUS_xxx macros for more
  *        information).
  */
 
@@ -268,7 +268,7 @@ struct i3c_ccc_getstatus
 
 /* struct i3c_ccc_getaccmst - payload passed to GETACCMST CCC
  *
- * @newmaster: address of the master taking bus ownership
+ * newmaster: address of the master taking bus ownership
  */
 
 struct i3c_ccc_getaccmst
@@ -278,8 +278,8 @@ struct i3c_ccc_getaccmst
 
 /* struct i3c_ccc_bridged_slave_desc - bridged slave descriptor
  *
- * @addr: dynamic address of the bridged device
- * @id: ID of the slave device behind the bridge
+ * addr: dynamic address of the bridged device
+ * id: ID of the slave device behind the bridge
  */
 
 begin_packed_struct struct i3c_ccc_bridged_slave_desc
@@ -290,8 +290,8 @@ begin_packed_struct struct i3c_ccc_bridged_slave_desc
 
 /* struct i3c_ccc_setbrgtgt - payload passed to SETBRGTGT CCC
  *
- * @count: number of bridged slaves
- * @bslaves: bridged slave descriptors
+ * count: number of bridged slaves
+ * bslaves: bridged slave descriptors
  */
 
 begin_packed_struct struct i3c_ccc_setbrgtgt
@@ -326,9 +326,9 @@ enum i3c_tsco
 
 /* struct i3c_ccc_getmxds - payload passed to GETMXDS CCC
  *
- * @maxwr: write limitations
- * @maxrd: read limitations
- * @maxrdturn: maximum read turn-around expressed micro-seconds and
+ * maxwr: write limitations
+ * maxrd: read limitations
+ * maxrdturn: maximum read turn-around expressed micro-seconds and
  *         little-endian formatted
  */
 
@@ -341,7 +341,7 @@ begin_packed_struct struct i3c_ccc_getmxds
 
 /* struct i3c_ccc_gethdrcap - payload passed to GETHDRCAP CCC
  *
- * @modes: bitmap of supported HDR modes
+ * modes: bitmap of supported HDR modes
  */
 
 begin_packed_struct struct i3c_ccc_gethdrcap
@@ -367,8 +367,8 @@ enum i3c_ccc_setxtime_subcmd
 
 /* struct i3c_ccc_setxtime - payload passed to SETXTIME CCC
  *
- * @subcmd: one of the sub-commands ddefined in &enum i3c_ccc_setxtime_subcmd
- * @data: sub-command payload. Amount of data is determined by
+ * subcmd: one of the sub-commands ddefined in &enum i3c_ccc_setxtime_subcmd
+ * data: sub-command payload. Amount of data is determined by
  *      &i3c_ccc_setxtime->subcmd
  */
 
@@ -380,10 +380,10 @@ begin_packed_struct struct i3c_ccc_setxtime
 
 /* struct i3c_ccc_getxtime - payload retrieved from GETXTIME CCC
  *
- * @supported_modes: bitmap describing supported XTIME modes
- * @state: current status (enabled mode and overflow status)
- * @frequency: slave's internal oscillator frequency in 500KHz steps
- * @inaccuracy: slave's internal oscillator inaccuracy in 0.1% steps
+ * supported_modes: bitmap describing supported XTIME modes
+ * state: current status (enabled mode and overflow status)
+ * frequency: slave's internal oscillator frequency in 500KHz steps
+ * inaccuracy: slave's internal oscillator inaccuracy in 0.1% steps
  */
 
 begin_packed_struct struct i3c_ccc_getxtime
@@ -396,8 +396,8 @@ begin_packed_struct struct i3c_ccc_getxtime
 
 /* struct i3c_ccc_cmd_payload - CCC payload
  *
- * @len: payload length
- * @data: payload data. This buffer must be DMA-able
+ * len: payload length
+ * data: payload data. This buffer must be DMA-able
  */
 
 struct i3c_ccc_cmd_payload
@@ -408,9 +408,9 @@ struct i3c_ccc_cmd_payload
 
 /* struct i3c_ccc_cmd_dest - CCC command destination
  *
- * @addr: can be an I3C device address or the broadcast address if this is a
+ * addr: can be an I3C device address or the broadcast address if this is a
  *      broadcast CCC
- * @payload: payload to be sent to this device or broadcasted
+ * payload: payload to be sent to this device or broadcasted
  */
 
 struct i3c_ccc_cmd_dest
@@ -421,14 +421,14 @@ struct i3c_ccc_cmd_dest
 
 /* struct i3c_ccc_cmd - CCC command
  *
- * @rnw: true if the CCC should retrieve data from the device. Only valid
+ * rnw: true if the CCC should retrieve data from the device. Only valid
  *    for unicast commands
- * @id: CCC command id
- * @ndests: number of destinations. Should always be one for broadcast
+ * id: CCC command id
+ * ndests: number of destinations. Should always be one for broadcast
  *    commands
- * @dests: array of destinations and associated payload for this CCC. Most
+ * dests: array of destinations and associated payload for this CCC. Most
  *    of the time, only one destination is provided
- * @err: I3C error code
+ * err: I3C error code
  */
 
 struct i3c_ccc_cmd

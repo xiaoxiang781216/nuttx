@@ -76,7 +76,7 @@ enum
 
 /**
  * enum flat_binder_object_shifts: shift values for flat_binder_object_flags
- * @FLAT_BINDER_FLAG_SCHED_POLICY_SHIFT: shift for getting scheduler policy.
+ * FLAT_BINDER_FLAG_SCHED_POLICY_SHIFT: shift for getting scheduler policy.
  *
  */
 
@@ -92,12 +92,12 @@ enum flat_binder_object_shifts
 enum flat_binder_object_flags
 {
   /**
-   * @FLAT_BINDER_FLAG_PRIORITY_MASK: bit-mask for min scheduler priority
+   * FLAT_BINDER_FLAG_PRIORITY_MASK: bit-mask for min scheduler priority
    *
    * These bits can be used to set the minimum scheduler priority
    * at which transactions into this node should run. Valid values
    * in these bits depend on the scheduler policy encoded in
-   * @FLAT_BINDER_FLAG_SCHED_POLICY_MASK.
+   * FLAT_BINDER_FLAG_SCHED_POLICY_MASK.
    *
    * For SCHED_NORMAL/SCHED_BATCH, the valid range is between [-20..19]
    * For SCHED_FIFO/SCHED_RR, the value can run between [1..99]
@@ -106,13 +106,13 @@ enum flat_binder_object_flags
   FLAT_BINDER_FLAG_PRIORITY_MASK = 0xff,
 
   /**
-   * @FLAT_BINDER_FLAG_ACCEPTS_FDS: whether the node accepts fds.
+   * FLAT_BINDER_FLAG_ACCEPTS_FDS: whether the node accepts fds.
    */
 
   FLAT_BINDER_FLAG_ACCEPTS_FDS = 0x100,
 
   /**
-   * @FLAT_BINDER_FLAG_SCHED_POLICY_MASK: bit-mask for scheduling policy
+   * FLAT_BINDER_FLAG_SCHED_POLICY_MASK: bit-mask for scheduling policy
    *
    * These two bits can be used to set the min scheduling policy at which
    * transactions on this node should run. These match the UAPI
@@ -127,7 +127,7 @@ enum flat_binder_object_flags
        3u << FLAT_BINDER_FLAG_SCHED_POLICY_SHIFT,
 
   /**
-   * @FLAT_BINDER_FLAG_INHERIT_RT: whether the node inherits RT policy
+   * FLAT_BINDER_FLAG_INHERIT_RT: whether the node inherits RT policy
    *
    * Only when set, calls into this node will inherit a real-time
    * scheduling policy from the caller (for synchronous transactions).
@@ -136,7 +136,7 @@ enum flat_binder_object_flags
   FLAT_BINDER_FLAG_INHERIT_RT = 0x800,
 
   /**
-   * @FLAT_BINDER_FLAG_TXN_SECURITY_CTX: request security contexts
+   * FLAT_BINDER_FLAG_TXN_SECURITY_CTX: request security contexts
    *
    * Only when set, causes senders to include their security
    * context
@@ -156,7 +156,7 @@ typedef uint64_t binder_uintptr_t;
 /**
  * struct binder_object_header
  *  - header shared by all binder metadata objects.
- * @type: type of the object
+ * type: type of the object
  */
 
 struct binder_object_header
@@ -191,11 +191,11 @@ struct flat_binder_object
 
 /**
  * struct binder_fd_object - describes a filedescriptor to be fixed up.
- * @hdr: common header structure
- * @pad_flags: padding to remain compatible with old userspace code
- * @pad_binder: padding to remain compatible with old userspace code
- * @fd: file descriptor
- * @cookie: opaque data, used by user-space
+ * hdr: common header structure
+ * pad_flags: padding to remain compatible with old userspace code
+ * pad_binder: padding to remain compatible with old userspace code
+ * fd: file descriptor
+ * cookie: opaque data, used by user-space
  */
 
 struct binder_fd_object
@@ -212,12 +212,12 @@ struct binder_fd_object
 };
 
 /* struct binder_buffer_object - object describing a userspace buffer
- * @hdr: common header structure
- * @flags: one or more BINDER_BUFFER_* flags
- * @buffer: address of the buffer
- * @length: length of the buffer
- * @parent: index in offset array pointing to parent buffer
- * @parent_offset: offset in @parent pointing to this buffer
+ * hdr: common header structure
+ * flags: one or more BINDER_BUFFER_* flags
+ * buffer: address of the buffer
+ * length: length of the buffer
+ * parent: index in offset array pointing to parent buffer
+ * parent_offset: offset in parent pointing to this buffer
  *
  * A binder_buffer object represents an object that the
  * binder kernel driver can copy verbatim to the target
@@ -225,9 +225,9 @@ struct binder_fd_object
  * within another buffer, meaning that the pointer inside
  * that other buffer needs to be fixed up as well. This
  * can be done by setting the BINDER_BUFFER_FLAG_HAS_PARENT
- * flag in @flags, by setting @parent buffer to the index
+ * flag in flags, by setting parent buffer to the index
  * in the offset array pointing to the parent binder_buffer_object,
- * and by setting @parent_offset to the offset in the parent buffer
+ * and by setting parent_offset to the offset in the parent buffer
  * at which the pointer to this buffer is located.
  */
 
@@ -248,11 +248,11 @@ enum
 
 /* struct binder_fd_array_object -
  * object describing an array of fds in a buffer
- * @hdr: common header structure
- * @pad: padding to ensure correct alignment
- * @num_fds: number of file descriptors in the buffer
- * @parent: index in offset array to buffer holding the fd array
- * @parent_offset: start offset of fd array in the buffer
+ * hdr: common header structure
+ * pad: padding to ensure correct alignment
+ * num_fds: number of file descriptors in the buffer
+ * parent: index in offset array to buffer holding the fd array
+ * parent_offset: start offset of fd array in the buffer
  *
  * A binder_fd_array object represents an array of file
  * descriptors embedded in a binder_buffer_object. It is
@@ -358,9 +358,9 @@ struct binder_frozen_status_info
 };
 
 /* struct binder_extened_error - extended error information
- * @id:      identifier for the failed operation
- * @command: command as defined by binder_driver_return_protocol
- * @param:   parameter holding a negative errno value
+ * id:      identifier for the failed operation
+ * command: command as defined by binder_driver_return_protocol
+ * param:   parameter holding a negative errno value
  *
  * Used with BINDER_GET_EXTENDED_ERROR. This extends the error information
  * returned by the driver upon a failed operation. Userspace can pull this

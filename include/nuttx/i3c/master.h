@@ -81,8 +81,8 @@
 
 /* i3c_bus_for_each_i3cdev() - iterate over all I3C devices present on the
  *     bus
- * @bus: the I3C bus
- * @dev: and I3C device descriptor pointer updated to point to the current
+ * bus: the I3C bus
+ * dev: and I3C device descriptor pointer updated to point to the current
  *     slot
  *   at each iteration of the loop
  *
@@ -104,11 +104,11 @@ struct i3c_device_info;
 struct i3c_generic_ibi_pool;
 
 /* struct i3c_i2c_dev_desc - Common part of the I3C/I2C device descriptor
- * @node: node element used to insert the slot into the I2C or I3C device
+ * node: node element used to insert the slot into the I2C or I3C device
  *      list
- * @master: I3C master that instantiated this device. Will be used to do
+ * master: I3C master that instantiated this device. Will be used to do
  *      I2C/I3C transfers
- * @master_priv: master private data assigned to the device. Can be used
+ * master_priv: master private data assigned to the device. Can be used
  * to add master specific information
  *
  * This structure is describing common I3C/I2C dev information.
@@ -129,9 +129,9 @@ struct i2c_board_info
 };
 
 /* struct i2c_dev_boardinfo - I2C device board information
- * @node: used to insert the boardinfo object in the I2C boardinfo list
- * @base: regular I2C board information
- * @lvr: LVR (Legacy Virtual Register) needed by the I3C core to know about
+ * node: used to insert the boardinfo object in the I2C boardinfo list
+ * base: regular I2C board information
+ * lvr: LVR (Legacy Virtual Register) needed by the I3C core to know about
  *   the I2C device limitations
  *
  * This structure is used to attach board-level information to an I2C device.
@@ -146,10 +146,10 @@ struct i2c_dev_boardinfo
 };
 
 /* struct i2c_dev_desc - I2C device descriptor
- * @common: common part of the I2C device descriptor
- * @boardinfo: pointer to the boardinfo attached to this I2C device
- * @addr: I2C device address
- * @lvr: LVR (Legacy Virtual Register) needed by the I3C core to know about
+ * common: common part of the I2C device descriptor
+ * boardinfo: pointer to the boardinfo attached to this I2C device
+ * addr: I2C device address
+ * lvr: LVR (Legacy Virtual Register) needed by the I3C core to know about
  *   the I2C device limitations
  *
  * Each I2C device connected on the bus will have an i2c_dev_desc.
@@ -170,11 +170,11 @@ struct i2c_dev_desc
 };
 
 /* struct i3c_ibi_slot - I3C IBI (In-Band Interrupt) slot
- * @work: work associated to this slot. The IBI handler will be called
+ * work: work associated to this slot. The IBI handler will be called
  * from there
- * @dev: the I3C device that has generated this IBI
- * @len: length of the payload associated to this IBI
- * @data: payload buffer
+ * dev: the I3C device that has generated this IBI
+ * len: length of the payload associated to this IBI
+ * data: payload buffer
  *
  * An IBI slot is an object pre-allocated by the controller and used when
  * an IBI comes in.
@@ -196,20 +196,20 @@ struct i3c_ibi_slot
 };
 
 /* struct i3c_device_ibi_info - IBI information attached to a specific device
- * @all_ibis_handled: used to be informed when no more IBIs are waiting to be
+ * all_ibis_handled: used to be informed when no more IBIs are waiting to be
  *       processed. Used by i3c_device_disable_ibi() to wait for
  *       all IBIs to be dequeued
- * @pending_ibis: count the number of pending IBIs. Each pending IBI has its
+ * pending_ibis: count the number of pending IBIs. Each pending IBI has its
  *       work element queued to the controller workqueue
- * @max_payload_len: maximum payload length for an IBI coming from this
+ * max_payload_len: maximum payload length for an IBI coming from this
  *       device.
  *       this value is specified when calling
  *       i3c_device_request_ibi() and should not change at run
  *       time. All messages IBIs exceeding this limit should be
  *       rejected by the master
- * @num_slots: number of IBI slots reserved for this device
- * @enabled: reflect the IBI status
- * @handler: IBI handler specified at i3c_device_request_ibi() call time.
+ * num_slots: number of IBI slots reserved for this device
+ * enabled: reflect the IBI status
+ * handler: IBI handler specified at i3c_device_request_ibi() call time.
  *       This handler will be called from the controller workqueue, and as
  *       such is allowed to sleep (though it is recommended to process the
  *       IBI as fast as possible to not stall processing of other IBIs queued
@@ -238,16 +238,16 @@ struct i3c_device_ibi_info
 };
 
 /* struct i3c_dev_boardinfo - I3C device board information
- * @node: used to insert the boardinfo object in the I3C boardinfo list
- * @init_dyn_addr: initial dynamic address requested by the FW. We provide
+ * node: used to insert the boardinfo object in the I3C boardinfo list
+ * init_dyn_addr: initial dynamic address requested by the FW. We provide
  *    no guarantee that the device will end up using this address,
  *    but try our best to assign this specific address to the
  *    device
- * @static_addr: static address the I3C device listen on before it's been
+ * static_addr: static address the I3C device listen on before it's been
  *    assigned a dynamic address by the master. Will be used during
  *    bus initialization to assign it a specific dynamic address
  *    before starting DAA (Dynamic Address Assignment)
- * @pid: I3C Provisional ID exposed by the device. This is a unique
+ * pid: I3C Provisional ID exposed by the device. This is a unique
  *    identifier that may be used to attach boardinfo to i3c_dev_desc when
  *    the device does not have a static address
  *
@@ -266,17 +266,17 @@ struct i3c_dev_boardinfo
 };
 
 /* struct i3c_dev_desc - I3C device descriptor
- * @common: common part of the I3C device descriptor
- * @info: I3C device information. Will be automatically filled when you
+ * common: common part of the I3C device descriptor
+ * info: I3C device information. Will be automatically filled when you
  *   create your device with i3c_master_add_i3c_dev_locked()
- * @ibi_lock: lock used to protect the &struct_i3c_device->ibi
- * @ibi: IBI info attached to a device. Should be NULL until
+ * ibi_lock: lock used to protect the &struct_i3c_device->ibi
+ * ibi: IBI info attached to a device. Should be NULL until
  *   i3c_device_request_ibi() is called
- * @dev: pointer to the I3C device object exposed to I3C device drivers. This
+ * dev: pointer to the I3C device object exposed to I3C device drivers. This
  *   should never be accessed from I3C master controller drivers. Only core
  *   code should manipulate it in when updating the dev <-> desc link or
  *   when propagating IBI events to the driver
- * @boardinfo: pointer to the boardinfo attached to this I3C device
+ * boardinfo: pointer to the boardinfo attached to this I3C device
  *
  * Internal representation of an I3C device. This object is only used by the
  * core and passed to I3C master controller drivers when they're requested to
@@ -296,10 +296,10 @@ struct i3c_dev_desc
 };
 
 /* struct i3c_device - I3C device object
- * @desc: pointer to an i3c device descriptor object. This link is updated
+ * desc: pointer to an i3c device descriptor object. This link is updated
  *   every time the I3C device is rediscovered with a different dynamic
  *   address assigned
- * @bus: I3C bus this device is attached to
+ * bus: I3C bus this device is attached to
  *
  * I3C device object exposed to I3C device drivers. The takes care of linking
  * this object to the relevant &struct_i3c_dev_desc one.
@@ -314,17 +314,17 @@ struct i3c_device
 };
 
 /* enum i3c_bus_mode - I3C bus mode
- * @I3C_BUS_MODE_PURE: only I3C devices are connected to the bus.
+ * I3C_BUS_MODE_PURE: only I3C devices are connected to the bus.
  *           No limitation expected
- * @I3C_BUS_MODE_MIXED_FAST: I2C devices with 50ns spike filter are present
+ * I3C_BUS_MODE_MIXED_FAST: I2C devices with 50ns spike filter are present
  *           on the bus. The only impact in this mode is that the
  *           high SCL pulse has to stay below 50ns to trick I2C
  *           devices when transmitting I3C frames
- * @I3C_BUS_MODE_MIXED_LIMITED: I2C devices without 50ns spike filter are
+ * I3C_BUS_MODE_MIXED_LIMITED: I2C devices without 50ns spike filter are
  *        present on the bus. However they allow
  *        compliance up to the maximum SDR SCL clock
  *        frequency.
- * @I3C_BUS_MODE_MIXED_SLOW: I2C devices without 50ns spike filter are
+ * I3C_BUS_MODE_MIXED_SLOW: I2C devices without 50ns spike filter are
  *           present on the bus
  */
 
@@ -337,11 +337,11 @@ enum i3c_bus_mode
 };
 
 /* enum i3c_addr_slot_status - I3C address slot status
- * @I3C_ADDR_SLOT_FREE: address is free
- * @I3C_ADDR_SLOT_RSVD: address is reserved
- * @I3C_ADDR_SLOT_I2C_DEV: address is assigned to an I2C device
- * @I3C_ADDR_SLOT_I3C_DEV: address is assigned to an I3C device
- * @I3C_ADDR_SLOT_STATUS_MASK: address slot mask
+ * I3C_ADDR_SLOT_FREE: address is free
+ * I3C_ADDR_SLOT_RSVD: address is reserved
+ * I3C_ADDR_SLOT_I2C_DEV: address is assigned to an I2C device
+ * I3C_ADDR_SLOT_I3C_DEV: address is assigned to an I3C device
+ * I3C_ADDR_SLOT_STATUS_MASK: address slot mask
  *
  * On an I3C bus, addresses are assigned dynamically, and we need to know
  * which addresses are free to use and which ones are already assigned.
@@ -360,27 +360,27 @@ enum i3c_addr_slot_status
 };
 
 /* struct i3c_bus - I3C bus object
- * @cur_master: I3C master currently driving the bus. Since I3C is
+ * cur_master: I3C master currently driving the bus. Since I3C is
  *    multi-master this can change over the time. Will be used to let
  *    a master know whether it needs to request bus ownership before
  *    sending a frame or not
- * @id: bus ID. Assigned by the framework when register the bus
- * @addrslots: a bitmap with 2-bits per-slot to encode the address status
+ * id: bus ID. Assigned by the framework when register the bus
+ * addrslots: a bitmap with 2-bits per-slot to encode the address status
  *    and ease the DAA (Dynamic Address Assignment) procedure (see
  *    &enum i3c_addr_slot_status)
- * @mode: bus mode (see &enum i3c_bus_mode)
- * @scl_rate.i3c: maximum rate for the clock signal when doing I3C SDR/priv
+ * mode: bus mode (see &enum i3c_bus_mode)
+ * scl_rate.i3c: maximum rate for the clock signal when doing I3C SDR/priv
  *    transfers
- * @scl_rate.i2c: maximum rate for the clock signal when doing I2C transfers
- * @scl_rate: SCL signal rate for I3C and I2C mode
- * @devs.i3c: contains a list of I3C device descriptors representing I3C
+ * scl_rate.i2c: maximum rate for the clock signal when doing I2C transfers
+ * scl_rate: SCL signal rate for I3C and I2C mode
+ * devs.i3c: contains a list of I3C device descriptors representing I3C
  *    devices connected on the bus and successfully attached to the
  *    I3C master
- * @devs.i2c: contains a list of I2C device descriptors representing I2C
+ * devs.i2c: contains a list of I2C device descriptors representing I2C
  *    devices connected on the bus and successfully attached to the
  *    I3C master
- * @devs: 2 lists containing all I3C/I2C devices connected to the bus
- * @lock: read/write lock on the bus. This is needed to protect against
+ * devs: 2 lists containing all I3C/I2C devices connected to the bus
+ * lock: read/write lock on the bus. This is needed to protect against
  *    operations that have an impact on the whole bus and the devices
  *    connected to it. For example, when asking slaves to drop their
  *    dynamic address (RSTDAA CCC), we need to make sure no one is trying
@@ -417,14 +417,14 @@ struct i3c_bus
 };
 
 /* struct i3c_master_controller_ops - I3C master methods
- * @bus_init: hook responsible for the I3C bus initialization. You should
+ * bus_init: hook responsible for the I3C bus initialization. You should
  *        at least call master_set_info() from there and set the bus mode.
  *        You can also put controller specific initialization in there.
  *        This method is mandatory.
- * @bus_cleanup: cleanup everything done in
+ * bus_cleanup: cleanup everything done in
  *       &i3c_master_controller_ops->bus_init().
  *       This method is optional.
- * @attach_i3c_dev: called every time an I3C device is attached to the bus.
+ * attach_i3c_dev: called every time an I3C device is attached to the bus.
  *        It can be after a DAA or when a device is statically declared
  *        by the FW, in which case it will only have a static address
  *        and the dynamic address will be 0.
@@ -433,60 +433,60 @@ struct i3c_bus
  *        This is a good place to attach master controller specific
  *        data to I3C devices.
  *        This method is optional.
- * @reattach_i3c_dev: called every time an I3C device has its addressed
+ * reattach_i3c_dev: called every time an I3C device has its addressed
  *        changed. It can be because the device has been powered
  *        down and has lost its address, or it can happen when a
  *        device had a static address and has been assigned a
  *        dynamic address with SETDASA.
  *        This method is optional.
- * @detach_i3c_dev: called when an I3C device is detached from the bus.
+ * detach_i3c_dev: called when an I3C device is detached from the bus.
  *        Usually happens when the master device is unregistered.
  *        This method is optional.
- * @do_daa: do a DAA (Dynamic Address Assignment) procedure. This is
+ * do_daa: do a DAA (Dynamic Address Assignment) procedure. This is
  *        procedure should send an ENTDAA CCC command and then add all
  *        devices discovered sure the DAA using
  *        i3c_master_add_i3c_dev_locked().
  *        Add devices added with i3c_master_add_i3c_dev_locked() will then be
  *        attached or re-attached to the controller.
  *        This method is mandatory.
- * @supports_ccc_cmd: should return true if the CCC command is supported,
+ * supports_ccc_cmd: should return true if the CCC command is supported,
  *        false otherwise.
  *        This method is optional, if not provided the core assumes
  *        all CCC commands are supported.
- * @send_ccc_cmd: send a CCC command
+ * send_ccc_cmd: send a CCC command
  *        This method is mandatory.
- * @priv_xfers: do one or several private I3C SDR transfers
+ * priv_xfers: do one or several private I3C SDR transfers
  *        This method is mandatory.
- * @attach_i2c_dev: called every time an I2C device is attached to the bus.
- * @detach_i2c_dev: called when an I2C device is detached from the bus.
- * @i2c_xfers: do one or several I2C transfers. Note that, unlike i3c
+ * attach_i2c_dev: called every time an I2C device is attached to the bus.
+ * detach_i2c_dev: called when an I2C device is detached from the bus.
+ * i2c_xfers: do one or several I2C transfers. Note that, unlike i3c
  *        transfers, the core does not guarantee that buffers attached to
  *        the transfers are DMA-safe. If drivers want to have DMA-safe
  *        buffers, they should use the i2c_get_dma_safe_msg_buf()
  *        and i2c_put_dma_safe_msg_buf() helpers provided by the I2C
  *        framework.
  *        This method is mandatory.
- * @request_ibi: attach an IBI handler to an I3C device. This implies
+ * request_ibi: attach an IBI handler to an I3C device. This implies
  *        defining an IBI handler and the constraints of the IBI (maximum
  *        payload length and number of pre-allocated slots).
  *        Some controllers support less IBI-capable devices than regular
- *        devices, so this method might return -%EBUSY if there's no
+ *        devices, so this method might return -EBUSY if there's no
  *        more space for an extra IBI registration
  *        This method is optional.
- * @free_ibi: free an IBI previously requested with ->request_ibi(). The IBI
+ * free_ibi: free an IBI previously requested with ->request_ibi(). The IBI
  *        should have been disabled with ->disable_irq() prior to that
  *        This method is mandatory only if ->request_ibi is not NULL.
- * @enable_ibi: enable the IBI. Only valid if ->request_ibi() has been called
+ * enable_ibi: enable the IBI. Only valid if ->request_ibi() has been called
  *        prior to ->enable_ibi(). The controller should first enable
  *        the IBI on the controller end (for example, unmask the hardware
  *        IRQ) and then send the ENEC CCC command (with the IBI flag set)
  *        to the I3C device.
  *        This method is mandatory only if ->request_ibi is not NULL.
- * @disable_ibi: disable an IBI. First send the DISEC CCC command with the
+ * disable_ibi: disable an IBI. First send the DISEC CCC command with the
  *        IBI flag set and then deactivate the hardware IRQ on the
  *        controller end.
  *        This method is mandatory only if ->request_ibi is not NULL.
- * @recycle_ibi_slot: recycle an IBI slot. Called every time an IBI has been
+ * recycle_ibi_slot: recycle an IBI slot. Called every time an IBI has been
  *        processed by its handler. The IBI slot should be put back
  *        in the IBI slot pool so that the controller can re-use it
  *        for a future IBI
@@ -526,20 +526,20 @@ struct i3c_master_controller_ops
 };
 
 /* struct i3c_master_controller - I3C master controller object
- * @i3c_bus_id: the master id registered to the i3c bus
- * @i2c_bus_id: the i2c driver id registered to this master
- * @mode: mode selection by i2c device feature.
- * @max_i2c_scl_rate: max i2c scl rate in all i2c device
- * @ops: master operations. See &struct i3c_master_controller_ops
- * @this: an I3C device object representing this master. This device will
+ * i3c_bus_id: the master id registered to the i3c bus
+ * i2c_bus_id: the i2c driver id registered to this master
+ * mode: mode selection by i2c device feature.
+ * max_i2c_scl_rate: max i2c scl rate in all i2c device
+ * ops: master operations. See &struct i3c_master_controller_ops
+ * this: an I3C device object representing this master. This device will
  *    be added to the list of I3C devs available on the bus
- * @i2c: I2C driver used for backward compatibility. This adapter is
+ * i2c: I2C driver used for backward compatibility. This adapter is
  *   registered to the I2C subsystem to be as transparent as possible to
  *   existing I2C drivers
 
- * @secondary: true if the master is a secondary master
- * @init_done: true when the bus initialization is done
- * @bus: I3C bus exposed by this master
+ * secondary: true if the master is a secondary master
+ * init_done: true when the bus initialization is done
+ * bus: I3C bus exposed by this master
  *
  * A &struct i3c_master_controller has to be registered to the I3C subsystem
  * through i3c_master_register(). None of &struct i3c_master_controller
@@ -567,8 +567,8 @@ struct i3c_master_controller
 };
 
 /* struct i3c_generic_ibi_slot - an I3C generic IBI slot structure
- * @node: used to insert generic IBI slot list.
- * @base: an I3C IBI slot.
+ * node: used to insert generic IBI slot list.
+ * base: an I3C IBI slot.
  *
  * This structure is struct i3c_ibi_slot list.
  */
@@ -580,12 +580,12 @@ struct i3c_generic_ibi_slot
 };
 
 /* struct i3c_generic_ibi_pool - I3C master controller object
- * @lock: used to protect share resource.
- * @num_slots: the number of struct i3c_generic_ibi_slot.
- * @slots: the general slot used to manager payload infomation in pool.
- * @payload_buf: pending process messages from IBI handler.
- * @free_slots: a free slot list from a generic IBI pool.
- * @pending: a pending slots list from a generic IBI pool.
+ * lock: used to protect share resource.
+ * num_slots: the number of struct i3c_generic_ibi_slot.
+ * slots: the general slot used to manager payload infomation in pool.
+ * payload_buf: pending process messages from IBI handler.
+ * free_slots: a free slot list from a generic IBI pool.
+ * pending: a pending slots list from a generic IBI pool.
  *
  * This structure is used to manager all general ibi pool data,such as
  * pending slots or free slots.
@@ -695,7 +695,7 @@ i2c_dev_set_master_data(FAR struct i2c_dev_desc *dev, FAR void *data)
  *   dev - I3C dev.
  *
  * Returned Value:
- *   The master controller driving @dev.
+ *   The master controller driving dev.
  *
  ****************************************************************************/
 
@@ -739,7 +739,7 @@ i2c_dev_get_master(FAR struct i2c_dev_desc *dev)
  *   dev - Master object.
  *
  * Returned Value:
- *   The I3C bus @master is connected to.
+ *   The I3C bus master is connected to.
  *
  ****************************************************************************/
 
@@ -793,7 +793,7 @@ void i3c_bus_normaluse_unlock(FAR struct i3c_bus *bus);
  * Description:
  *   Create a generic IBI pool
  *
- *   Create a generic IBI pool based on the information provided in @req.
+ *   Create a generic IBI pool based on the information provided in req.
  *
  * Input Parameters:
  *   dev - The device this pool will be used for
@@ -943,13 +943,13 @@ void i3c_master_unregister(FAR struct i3c_master_controller *master);
  *   Send a DISEC CCC command
  *
  *   Send a DISEC CCC command to disable some or all events coming from a
- *   Specific slave, or all devices if @addr is %I3C_BROADCAST_ADDR.
+ *   Specific slave, or all devices if addr is I3C_BROADCAST_ADDR.
  *
  *   This function must be called with the bus lock held in write mode.
  *
  * Input Parameters:
  *   master - Master used to send frames on the bus.
- *   addr   - A valid I3C slave address or %I3C_BROADCAST_ADDR
+ *   addr   - A valid I3C slave address or I3C_BROADCAST_ADDR
  *   evts   - Events to disable
  *
  * Returned Value:
@@ -968,13 +968,13 @@ int i3c_master_disec_locked(FAR struct i3c_master_controller *master,
  *   Send an ENEC CCC command
  *
  *   Sends an ENEC CCC command to enable some or all events coming from a
- *   specific slave, or all devices if @addr is %I3C_BROADCAST_ADDR.
+ *   specific slave, or all devices if addr is I3C_BROADCAST_ADDR.
  *
  *   This function must be called with the bus lock held in write mode.
  *
  * Input Parameters:
  *   master - Master used to send frames on the bus.
- *   addr   - A valid I3C slave address or %I3C_BROADCAST_ADDR
+ *   addr   - A valid I3C slave address or I3C_BROADCAST_ADDR
  *   evts   - Events to enable
  *
  * Returned Value:
@@ -1052,7 +1052,7 @@ int i3c_master_defslvs_locked(FAR struct i3c_master_controller *master);
  *   start_addr - Where to start searching.
  *
  * Returned Value:
- *   The first free address starting at @start_addr (included) or -ENOMEM
+ *   The first free address starting at start_addr (included) or -ENOMEM
  *   if there's no more address available.
  *
  ****************************************************************************/
@@ -1128,7 +1128,7 @@ int i3c_master_do_daa(FAR struct i3c_master_controller *master);
  *   - &i3c_device_info->bcr
  *   - &i3c_device_info->dcr
  *   - &i3c_device_info->pid
- *   - &i3c_device_info->hdr_cap if %I3C_BCR_HDR_CAP bit is set in
+ *   - &i3c_device_info->hdr_cap if I3C_BCR_HDR_CAP bit is set in
  *    &i3c_device_info->bcr
  *
  *   This function must be called with the bus lock held in maintenance mode.
@@ -1138,9 +1138,9 @@ int i3c_master_do_daa(FAR struct i3c_master_controller *master);
  *   info   -  I3C device information
  *
  * Returned Value:
- *   0 if @info contains valid information (not every piece of
+ *   0 if info contains valid information (not every piece of
  *   information can be checked, but we can at least make sure info->dyn_addr
- *   and @info->bcr are correct), -EINVAL otherwise.
+ *   and info->bcr are correct), -EINVAL otherwise.
  *
  ****************************************************************************/
 

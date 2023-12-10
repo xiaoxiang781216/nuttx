@@ -255,8 +255,8 @@
 #define PCIE_MAX_DEV  (0xFFFFFFFFU & PCIE_BDF_DEV_MASK)
 #define PCIE_MAX_FUNC (0xFFFFFFFFU & PCIE_BDF_FUNC_MASK)
 
-/* @typedef pcie_bdf_t
- * @brief A unique PCI(e) endpoint (bus, device, function).
+/* typedef pcie_bdf_t
+ * brief A unique PCI(e) endpoint (bus, device, function).
  *
  * A PCI(e) endpoint is uniquely identified topologically using a
  * (bus, device, function) tuple. The internal structure is documented
@@ -295,10 +295,10 @@
  ****************************************************************************/
 
 /* Structure describing a device that supports the PCI Express Controller API
- * @cfg_addr: Configuration space address
- * @cfg_size: Configuration space size
- * @bus_start: bus-centric offset from the start of the region
- * @size: region size
+ * cfg_addr: Configuration space address
+ * cfg_size: Configuration space size
+ * bus_start: bus-centric offset from the start of the region
+ * size: region size
  */
 
 struct pcie_cfg_data
@@ -322,10 +322,10 @@ struct pcie_bar
 };
 
 /* struct pcie_bus_state - pcie bus state when scanning
- * @bus_bdf: Current scanned bus BDF, always valid
- * @bridge_bdf: Current bridge endpoint BDF, either
+ * bus_bdf: Current scanned bus BDF, always valid
+ * bridge_bdf: Current bridge endpoint BDF, either
  *    valid or PCIE_BDF_NONE
- * @next_bdf: Next BDF to scan on bus, either valid
+ * next_bdf: Next BDF to scan on bus, either valid
  *    or PCIE_BDF_NONE when all EP scanned
  */
 
@@ -391,10 +391,10 @@ struct pcie_bus_s
 };
 
 /* PCIE device type, defines by vendor ID and device ID
- * @vendor: Device vendor ID
- * @device: Device ID
- * @class_rev: Device reversion
- * @nam: Human readable name
+ * vendor: Device vendor ID
+ * device: Device ID
+ * class_rev: Device reversion
+ * nam: Human readable name
  */
 
 struct pcie_dev_type_s

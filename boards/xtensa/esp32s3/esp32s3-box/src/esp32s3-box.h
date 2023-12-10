@@ -44,8 +44,7 @@
 
 #define DISPLAY_SPI         2
 
-/**
- * CS:   5
+/* CS:   5
  * CLK:  7
  * MOSI: 6
  * MISO: N/A
@@ -59,8 +58,7 @@
 
 #define TOUCHSCEEN_I2C      0
 
-/**
- * SCL: 18
+/* SCL: 18
  * SDA: 8
  */
 

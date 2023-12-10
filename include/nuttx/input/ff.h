@@ -303,8 +303,8 @@ struct ff_rumble_effect
 
 /* struct ff_effect - defines force feedback effect
  * This structure is sent through ioctl from the application to the driver.
- * To create a new effect application should set its @id to -1; the kernel
- * will return assigned @id which can later be used to update or delete
+ * To create a new effect application should set its id to -1; the kernel
+ * will return assigned id which can later be used to update or delete
  * this effect.
  */
 
