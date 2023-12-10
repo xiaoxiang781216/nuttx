@@ -265,6 +265,7 @@ static void nxsig_abnormal_termination(int signo)
 static void nxsig_stop_task(int signo)
 {
   FAR struct tcb_s *rtcb = this_task();
+  irqstate_t flags;
 #if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
   FAR struct task_group_s *group;
 
@@ -285,12 +286,7 @@ static void nxsig_stop_task(int signo)
   group_suspend_children(rtcb);
 #endif
 
-  /* Lock the scheduler so this thread is not pre-empted until after we
-   * call nxsched_suspend().
-   */
-
-  sched_lock();
-
+  flags = enter_critical_section();
 #if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
   /* Notify via waitpid if any parent is waiting for this task to EXIT
    * or STOP.  This action is only performed if WUNTRACED is set in the
@@ -327,7 +323,7 @@ static void nxsig_stop_task(int signo)
   /* Then, finally, suspend this the final thread of the task group */
 
   nxsched_suspend(rtcb);
-  sched_unlock();
+  leave_critical_section(flags);
 }
 #endif
 

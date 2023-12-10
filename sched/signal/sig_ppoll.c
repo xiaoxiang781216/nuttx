@@ -124,7 +124,6 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
       /* We are running again, restore the original sigprocmask */
 
       rtcb->sigprocmask = saved_sigprocmask;
-      leave_critical_section(flags);
 
       /* Now, handle the (rare?) case where (a) a blocked signal was received
        * while the task was suspended but (b) restoring the original
@@ -132,6 +131,7 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
        */
 
       nxsig_unmask_pendingsignal();
+      leave_critical_section(flags);
     }
 
   return ret;
