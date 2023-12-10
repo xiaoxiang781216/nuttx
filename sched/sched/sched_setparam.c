@@ -78,7 +78,6 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
 {
   FAR struct tcb_s *rtcb;
   FAR struct tcb_s *tcb;
-  int ret;
 
   /* Verify that the requested priority is in the valid range */
 
@@ -86,12 +85,6 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
     {
       return -EINVAL;
     }
-
-  /* Prohibit modifications to the head of the ready-to-run task
-   * list while adjusting the priority
-   */
-
-  sched_lock();
 
   /* Check if the task to reprioritize is the calling task */
 
@@ -110,8 +103,7 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
         {
           /* No task with this PID was found */
 
-          ret = -ESRCH;
-          goto errout_with_lock;
+          return -ESRCH;
         }
     }
 
@@ -128,8 +120,7 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
       if (param->sched_ss_max_repl < 1 ||
           param->sched_ss_max_repl > CONFIG_SCHED_SPORADIC_MAXREPL)
         {
-          ret = -EINVAL;
-          goto errout_with_lock;
+          return -EINVAL;
         }
 
       /* Convert timespec values to system clock ticks */
@@ -163,8 +154,7 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
       if (repl_ticks < budget_ticks)
 #endif
         {
-          ret = -EINVAL;
-          goto errout_with_lock;
+          return -EINVAL;
         }
 
       /* Stop/reset current sporadic scheduling */
@@ -198,18 +188,14 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
       leave_critical_section(flags);
       if (ret < 0)
         {
-          goto errout_with_lock;
+          return ret;
         }
     }
 #endif
 
   /* Then perform the reprioritization */
 
-  ret = nxsched_reprioritize(tcb, param->sched_priority);
-
-errout_with_lock:
-  sched_unlock();
-  return ret;
+  return nxsched_reprioritize(tcb, param->sched_priority);
 }
 
 /****************************************************************************

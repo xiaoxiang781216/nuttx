@@ -93,7 +93,6 @@ int nxsched_get_param(pid_t pid, FAR struct sched_param *param)
     {
       /* Get the TCB associated with this PID */
 
-      sched_lock();
       tcb = nxsched_get_tcb(pid);
       if (!tcb)
         {
@@ -136,8 +135,6 @@ int nxsched_get_param(pid_t pid, FAR struct sched_param *param)
             }
 #endif
         }
-
-      sched_unlock();
     }
 
   return ret;
