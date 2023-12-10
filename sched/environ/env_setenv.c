@@ -73,6 +73,7 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
   FAR char **envp;
   ssize_t envc = 0;
   ssize_t ret = OK;
+  irqstate_t flags;
   int varlen;
 
   /* Verify input parameter */
@@ -107,7 +108,7 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
 
   /* Get a reference to the thread-private environ in the TCB. */
 
-  sched_lock();
+  flags = enter_critical_section();
   rtcb  = this_task();
   group = rtcb->group;
   DEBUGASSERT(group);
@@ -122,7 +123,7 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
         {
           /* No.. then just return success */
 
-          sched_unlock();
+          leave_critical_section(flags);
           return OK;
         }
 
@@ -185,13 +186,13 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
   /* Now, put the new name=value string into the environment buffer */
 
   snprintf(pvar, varlen, "%s=%s", name, value);
-  sched_unlock();
+  leave_critical_section(flags);
   return OK;
 
 errout_with_var:
   group_free(group, pvar);
 errout_with_lock:
-  sched_unlock();
+  leave_critical_section(flags);
 errout:
   set_errno(ret);
   return ERROR;
