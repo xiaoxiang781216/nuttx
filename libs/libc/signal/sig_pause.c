@@ -48,7 +48,6 @@ int sigpause(int signo)
 
   /* Get the current set of blocked signals */
 
-  sched_lock();
   ret = sigprocmask(SIG_SETMASK, NULL, &set);
   if (ret == OK)
     {
@@ -64,6 +63,5 @@ int sigpause(int signo)
       ret = sigsuspend(&set);
     }
 
-  sched_unlock();
   return ret;
 }
