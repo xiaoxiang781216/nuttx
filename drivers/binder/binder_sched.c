@@ -72,37 +72,15 @@ int binder_get_priority(pid_t pid, FAR struct binder_priority * priority)
   return 0;
 }
 
-static int binder_set_priority_internal(pid_t pid, unsigned int sched_policy,
-                                        int prio)
-{
-  struct sched_param    params;
-  int                   ret;
-
-  params.sched_priority = prio;
-  ret                   = sched_setscheduler(pid, sched_policy, &params);
-
-  binder_debug(BINDER_DEBUG_PRIORITY, "pid=%d, ret=%d\n", pid, ret);
-  return ret;
-}
-
 void binder_set_priority(FAR struct binder_thread *thread,
                          FAR const struct binder_priority *desired)
 {
-  int                       priority;
-  unsigned int              policy;
-  struct binder_priority    task_priority = *desired;
+  struct sched_param params;
 
-  binder_get_priority(thread->tid, &task_priority);
+  params.sched_priority = desired->sched_prio;
+  sched_setscheduler(thread->tid, desired->sched_policy, &params);
 
-  if (task_priority.sched_policy == desired->sched_policy &&
-      task_priority.sched_prio == desired->sched_prio)
-    {
-      return;
-    }
-
-  policy    = desired->sched_policy;
-  priority  = desired->sched_prio;
-  binder_set_priority_internal(thread->tid, policy, priority);
+  binder_debug(BINDER_DEBUG_PRIORITY, "pid=%d\n", thread->pid);
 }
 
 void init_waitqueue_entry(FAR struct wait_queue_entry *wq_entry,
