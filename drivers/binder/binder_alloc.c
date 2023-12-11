@@ -49,33 +49,19 @@
 #define PAGE_ALIGN(addr)    ALIGN(addr, PAGE_SIZE)
 #define PAGE_ALIGNED(addr)  IS_ALIGNED((unsigned long)(addr), PAGE_SIZE)
 
+#define list_is_last(list, head) ((list)->next == (head))
+#define buffer_next(buffer) \
+        list_entry((buffer)->entry.next, struct binder_buffer, entry)
+#define buffer_prev(buffer) \
+        list_entry((buffer)->entry.prev, struct binder_buffer, entry)
+#define buffer_start_page(buffer) \
+        ((void *)((uintptr_t)(buffer)->user_data & PAGE_MASK))
+#define prev_buffer_end_page(buffer) \
+        ((void *)(((uintptr_t)(buffer)->user_data - 1) & PAGE_MASK))
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-/**
- * list_is_last - tests whether @list is the last entry in list @head
- * @list: the entry to test
- * @head: the head of the list
- */
-
-static inline int list_is_last(FAR const struct list_node *list,
-                               FAR const struct list_node *head)
-{
-  return list->next == head;
-}
-
-static inline FAR struct binder_buffer *buffer_next(
-  FAR struct binder_buffer *buffer)
-{
-  return list_entry(buffer->entry.next, struct binder_buffer, entry);
-}
-
-static inline FAR struct binder_buffer *buffer_prev(
-  FAR struct binder_buffer *buffer)
-{
-  return list_entry(buffer->entry.prev, struct binder_buffer, entry);
-}
 
 static size_t alloc_buffer_size(FAR struct binder_alloc *alloc,
                                 FAR struct binder_buffer *buffer)
@@ -343,16 +329,6 @@ err_alloc_buf_struct_failed:
   binder_update_page_range(alloc, 0, page_range, end_page_addr);
   *p_ret = -ENOMEM;
   return NULL;
-}
-
-static void  *buffer_start_page(FAR struct binder_buffer *buffer)
-{
-  return (void  *)((uintptr_t)buffer->user_data & PAGE_MASK);
-}
-
-static void  *prev_buffer_end_page(FAR struct binder_buffer *buffer)
-{
-  return (void  *)(((uintptr_t)(buffer->user_data) - 1) & PAGE_MASK);
 }
 
 static void delete_free_buffer(FAR struct binder_alloc *alloc,
