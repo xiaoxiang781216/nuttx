@@ -401,8 +401,6 @@ int cpufreq_init(FAR struct cpufreq_driver *driver)
       return -ENOMEM;
     }
 
-  nxmutex_lock(&policy->lock);
-
   policy->governor = cpufreq_default_governor();
   if (!policy->governor)
     {
@@ -478,12 +476,9 @@ int cpufreq_init(FAR struct cpufreq_driver *driver)
 
   g_cpufreq_policy = policy;
 
-  nxmutex_unlock(&policy->lock);
-
   return 0;
 
 out_free_policy:
-  nxmutex_unlock(&policy->lock);
   cpufreq_policy_free(policy);
   return ret;
 }
