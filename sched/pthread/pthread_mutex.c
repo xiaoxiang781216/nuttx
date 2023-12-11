@@ -148,10 +148,6 @@ int pthread_mutex_take(FAR struct pthread_mutex_s *mutex,
   DEBUGASSERT(mutex != NULL);
   if (mutex != NULL)
     {
-      /* Make sure that no unexpected context switches occur */
-
-      sched_lock();
-
       /* Error out if the mutex is already in an inconsistent state. */
 
       if ((mutex->flags & _PTHREAD_MFLAGS_INCONSISTENT) != 0)
@@ -185,8 +181,6 @@ int pthread_mutex_take(FAR struct pthread_mutex_s *mutex,
                 }
             }
         }
-
-      sched_unlock();
     }
 
   return ret;
@@ -218,10 +212,6 @@ int pthread_mutex_trytake(FAR struct pthread_mutex_s *mutex)
   DEBUGASSERT(mutex != NULL);
   if (mutex != NULL)
     {
-      /* Make sure that no unexpected context switches occur */
-
-      sched_lock();
-
       /* Error out if the mutex is already in an inconsistent state. */
 
       if ((mutex->flags & _PTHREAD_MFLAGS_INCONSISTENT) != 0)
@@ -244,8 +234,6 @@ int pthread_mutex_trytake(FAR struct pthread_mutex_s *mutex)
               pthread_mutex_add(mutex);
             }
         }
-
-      sched_unlock();
     }
 
   return ret;

@@ -65,12 +65,6 @@ int pthread_mutex_destroy(FAR pthread_mutex_t *mutex)
 
   if (mutex != NULL)
     {
-      /* Make sure the semaphore is stable while we make the following
-       * checks.
-       */
-
-      sched_lock();
-
       /* Is the mutex available? */
 
       if (mutex->pid >= 0)
@@ -142,8 +136,6 @@ int pthread_mutex_destroy(FAR pthread_mutex_t *mutex)
           status = nxsem_destroy(&mutex->sem);
           ret = ((status < 0) ? -status : OK);
         }
-
-      sched_unlock();
     }
 
   sinfo("Returning %d\n", ret);

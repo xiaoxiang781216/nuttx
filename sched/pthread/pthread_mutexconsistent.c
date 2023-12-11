@@ -81,10 +81,6 @@ int pthread_mutex_consistent(FAR pthread_mutex_t *mutex)
 
   if (mutex != NULL)
     {
-      /* Make sure the mutex is stable while we make the following checks. */
-
-      sched_lock();
-
       /* Is the mutex available? */
 
       DEBUGASSERT(mutex->pid != 0); /* < 0: available, >0 owned, ==0 error */
@@ -103,10 +99,6 @@ int pthread_mutex_consistent(FAR pthread_mutex_t *mutex)
 
           if (nxsched_get_tcb(mutex->pid) == NULL)
             {
-              /* The thread associated with the PID no longer exists */
-
-              mutex->pid    = INVALID_PROCESS_ID;
-              mutex->flags &= _PTHREAD_MFLAGS_ROBUST;
 #ifdef CONFIG_PTHREAD_MUTEX_TYPES
               mutex->nlocks = 0;
 #endif
@@ -115,6 +107,11 @@ int pthread_mutex_consistent(FAR pthread_mutex_t *mutex)
                */
 
               status = nxsem_reset(&mutex->sem, 1);
+
+              /* The thread associated with the PID no longer exists */
+
+              mutex->pid    = INVALID_PROCESS_ID;
+              mutex->flags &= _PTHREAD_MFLAGS_ROBUST;
               if (status < 0)
                 {
                   ret = -status;
@@ -141,8 +138,6 @@ int pthread_mutex_consistent(FAR pthread_mutex_t *mutex)
 #endif
           ret = OK;
         }
-
-      sched_unlock();
     }
 
   sinfo("Returning %d\n", ret);
