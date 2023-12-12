@@ -50,7 +50,6 @@ volatile spinlock_t g_cpu_irqlock = SP_UNLOCKED;
 
 /* Used to keep track of which CPU(s) hold the IRQ lock. */
 
-volatile spinlock_t g_cpu_irqsetlock;
 volatile cpu_set_t g_cpu_irqset;
 
 /* Handles nested calls to enter_critical section from interrupt handlers */
@@ -274,18 +273,7 @@ try_again_in_irq:
                    */
 
                   DEBUGVERIFY(up_cpu_paused(cpu));
-
-                  /* NOTE: As the result of up_cpu_paused(cpu), this CPU
-                   * might set g_cpu_irqset in nxsched_resume_scheduler()
-                   * However, another CPU might hold g_cpu_irqlock.
-                   * To avoid this situation, releae g_cpu_irqlock first.
-                   */
-
-                  if ((g_cpu_irqset & (1 << cpu)) != 0)
-                    {
-                      spin_clrbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
-                                  &g_cpu_irqlock);
-                    }
+                  DEBUGASSERT((g_cpu_irqset & (1 << cpu)) == 0);
 
                   /* NOTE: Here, this CPU does not hold g_cpu_irqlock,
                    * so call irq_waitlock(cpu) to acquire g_cpu_irqlock.
@@ -293,18 +281,15 @@ try_again_in_irq:
 
                   goto try_again_in_irq;
                 }
+
+                g_cpu_irqset |= (1 << cpu);
             }
 
           /* In any event, the nesting count is now one */
 
           g_cpu_nestcount[cpu] = 1;
-
-          /* Also set the CPU bit so that other CPUs will be aware that
-           * this CPU holds the critical section.
-           */
-
-          spin_setbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
-                      &g_cpu_irqlock);
+          DEBUGASSERT(spin_is_locked(&g_cpu_irqlock) &&
+                      (g_cpu_irqset & (1 << cpu)) != 0);
         }
     }
   else
@@ -369,8 +354,7 @@ try_again_in_irq:
            * like lockcount:  Both will disable pre-emption.
            */
 
-          spin_setbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
-                      &g_cpu_irqlock);
+          g_cpu_irqset |= (1 << cpu);
           rtcb->irqcount = 1;
 
           /* Note that we have entered the critical section */
@@ -488,11 +472,12 @@ void leave_critical_section(irqstate_t flags)
 
           FAR struct tcb_s *rtcb = current_task(cpu);
           DEBUGASSERT(rtcb != NULL);
+          DEBUGASSERT((g_cpu_irqset & (1 << cpu)) != 0);
 
           if (rtcb->irqcount <= 0)
             {
-              spin_clrbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
-                          &g_cpu_irqlock);
+              g_cpu_irqset = 0;
+              g_cpu_irqlock = SP_UNLOCKED;
             }
 
           g_cpu_nestcount[cpu] = 0;
@@ -547,8 +532,8 @@ void leave_critical_section(irqstate_t flags)
            */
 
           rtcb->irqcount = 0;
-          spin_clrbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
-                      &g_cpu_irqlock);
+          g_cpu_irqset = 0;
+          g_cpu_irqlock = SP_UNLOCKED;
 
           /* Have all CPUs released the lock? */
         }
@@ -625,13 +610,14 @@ void restore_critical_section(void)
    * followed by context switching.
    */
 
-  FAR struct tcb_s *tcb = this_task();
+  FAR struct tcb_s *tcb;
   int me = this_cpu();
 
   /* Adjust global IRQ controls.  If irqcount is greater than zero,
    * then this task/this CPU holds the IRQ lock
    */
 
+  tcb = current_task(me);
   if (tcb->irqcount > 0)
     {
       /* Do notihing here
@@ -653,8 +639,8 @@ void restore_critical_section(void)
 
       if ((g_cpu_irqset & (1 << me)) != 0)
         {
-          spin_clrbit(&g_cpu_irqset, me, &g_cpu_irqsetlock,
-                      &g_cpu_irqlock);
+          g_cpu_irqset = 0;
+          g_cpu_irqlock = SP_UNLOCKED;
         }
     }
 }

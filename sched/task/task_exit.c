@@ -130,8 +130,7 @@ int nxtask_exit(void)
 #ifdef CONFIG_SMP
   /* Make sure that the system knows about the locked state */
 
-  spin_setbit(&g_cpu_lockset, this_cpu(), &g_cpu_locksetlock,
-              &g_cpu_schedlock);
+  g_cpu_lockset |= (1 << cpu);
 #endif
 
   rtcb->task_state = TSTATE_TASK_READYTORUN;
@@ -173,8 +172,7 @@ int nxtask_exit(void)
     {
       /* Make sure that the system knows about the unlocked state */
 
-      spin_clrbit(&g_cpu_lockset, this_cpu(), &g_cpu_locksetlock,
-                  &g_cpu_schedlock);
+      g_cpu_lockset &= ~(1 << cpu);
     }
 #endif
 
