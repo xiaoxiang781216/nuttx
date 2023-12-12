@@ -55,6 +55,7 @@ int sysdiag_write(enum diagnosis_tag_e diag_id, FAR const char *fmt, ...)
       return -EINVAL;
     }
 
+  memset(&event, 0, sizeof(event));
   va_start(ap, fmt);
   buf_size = vsnprintf(event.payload, DIAGNOSIS_EVENT_MAX_LEN, fmt, ap);
   va_end(ap);
@@ -63,7 +64,6 @@ int sysdiag_write(enum diagnosis_tag_e diag_id, FAR const char *fmt, ...)
       return -EINVAL;
     }
 
-  memset(&event, 0, sizeof(event));
   event.header.id = diag_id;
   event.header.type = EVENT_TYPE_KERNEL;
   memcpy(event.header.format, fmt, strlen(fmt));
