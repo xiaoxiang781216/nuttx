@@ -28,6 +28,7 @@
 #include <sched.h>
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #include <nuttx/fs/fs.h>
 
@@ -40,10 +41,11 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: file_close
+ * Name: file_close_without_clear
  *
  * Description:
- *   Close a file that was previously opened with file_open().
+ *   Close a file that was previously opened with file_open(), but without
+ *   clear filep.
  *
  * Input Parameters:
  *   filep - A pointer to a user provided memory location containing the
@@ -55,7 +57,7 @@
  *
  ****************************************************************************/
 
-int file_close(FAR struct file *filep)
+int file_close_without_clear(FAR struct file *filep)
 {
   struct inode *inode;
   int ret = OK;
@@ -85,10 +87,37 @@ int file_close(FAR struct file *filep)
       /* And release the inode */
 
       inode_release(inode);
+    }
 
+  return ret;
+}
+
+/****************************************************************************
+ * Name: file_close
+ *
+ * Description:
+ *   Close a file that was previously opened with file_open().
+ *
+ * Input Parameters:
+ *   filep - A pointer to a user provided memory location containing the
+ *           open file data returned by file_open().
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returned on
+ *   any failure to indicate the nature of the failure.
+ *
+ ****************************************************************************/
+
+int file_close(FAR struct file *filep)
+{
+  int ret;
+
+  ret = file_close_without_clear(filep);
+  if (ret >= 0 && filep->f_inode)
+    {
       /* Reset the user file struct instance so that it cannot be reused. */
 
-      memset(filep, 0, sizeof(*filep));
+      filep->f_inode = NULL;
     }
 
   return ret;
