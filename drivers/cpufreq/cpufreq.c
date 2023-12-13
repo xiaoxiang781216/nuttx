@@ -208,6 +208,8 @@ static int cpufreq_refresh_limits(FAR struct cpufreq_policy *policy)
    * nor undershoot the requested minimum.
    */
 
+  policy->min = cv.min;
+  policy->max = cv.max;
   policy->min = cpufreq_table_resolve_freq(policy, cv.min,
                                            CPUFREQ_RELATION_L, NULL);
   policy->max = cpufreq_table_resolve_freq(policy, cv.max,
