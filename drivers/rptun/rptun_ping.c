@@ -100,20 +100,19 @@ static int rptun_ping_ept_cb(FAR struct rpmsg_endpoint *ept,
 }
 
 static int rptun_ping_once(FAR struct rpmsg_endpoint *ept,
-                           int len, int ack)
+                           int len, int ack, uint32_t *buf_len)
 {
   FAR struct rptun_ping_msg_s *msg;
-  uint32_t space;
   int ret;
 
-  msg = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  msg = rpmsg_get_tx_payload_buffer(ept, buf_len, true);
   if (!msg)
     {
       return -ENOMEM;
     }
 
   len = MAX(len, sizeof(struct rptun_ping_msg_s));
-  len = MIN(len, space);
+  len = MIN(len, *buf_len);
 
   memset(msg, 0, len);
 
@@ -190,6 +189,8 @@ int rptun_ping(FAR struct rpmsg_endpoint *ept,
   clock_t min = ULONG_MAX;
   clock_t max = 0;
   uint64_t total = 0;
+  uint32_t buf_len = 0;
+  int send_len;
   int i;
 
   if (!ept || !ping || ping->times <= 0)
@@ -201,10 +202,10 @@ int rptun_ping(FAR struct rpmsg_endpoint *ept,
     {
       clock_t tm = perf_gettime();
 
-      int ret = rptun_ping_once(ept, ping->len, ping->ack);
-      if (ret < 0)
+      send_len = rptun_ping_once(ept, ping->len, ping->ack, &buf_len);
+      if (send_len < 0)
         {
-          return ret;
+          return send_len;
         }
 
       tm     = perf_gettime() - tm;
@@ -216,11 +217,13 @@ int rptun_ping(FAR struct rpmsg_endpoint *ept,
     }
 
   syslog(LOG_INFO, "ping times: %d\n", ping->times);
+  syslog(LOG_INFO, "buffer_len: %" PRIu32 ", send_len: %d\n",
+                    buf_len, send_len);
 
   rptun_ping_logout("avg", total / ping->times);
   rptun_ping_logout("min", min);
   rptun_ping_logout("max", max);
-  rptun_ping_logout_rate(ping->len, total / ping->times);
+  rptun_ping_logout_rate(send_len, total / ping->times);
 
   return 0;
 }
