@@ -1728,8 +1728,8 @@ int i3c_master_add_i3c_dev_locked(FAR struct i3c_master_controller *master,
         }
       else
         {
-          i3cerr("Failed to assign reserved/old address to device %d%llx\n",
-                   master->bus.id, newdev->info.pid);
+          i3cerr("Failed to assign reserved/old address%d%"PRIx64"\n",
+                  master->bus.id, newdev->info.pid);
         }
     }
 
@@ -1746,15 +1746,15 @@ int i3c_master_add_i3c_dev_locked(FAR struct i3c_master_controller *master,
       ret = i3c_dev_request_ibi_locked(newdev, &ibireq);
       if (ret)
         {
-          i3cerr("Failed to request IBI on device %d-%llx\n", master->bus.id,
-                  newdev->info.pid);
+          i3cerr("Failed to request IBI on device %d-%"PRIx64"\n",
+                  master->bus.id, newdev->info.pid);
         }
       else if (enable_ibi)
         {
           ret = i3c_dev_enable_ibi_locked(newdev);
           if (ret)
             {
-              i3cerr("Failed to re-enable IBI on device %d-%llx\n",
+              i3cerr("Failed to re-enable IBI on device %d-%"PRIx64"\n",
                                      master->bus.id, newdev->info.pid);
             }
         }
