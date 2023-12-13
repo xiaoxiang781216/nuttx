@@ -382,6 +382,7 @@ static int binder_proc_transaction(FAR struct binder_transaction *t,
     }
 
   proc->outstanding_txns++;
+  proc->tmp_ref--;
   nxmutex_unlock(&proc->proc_lock);
   nxmutex_unlock(&node->node_lock);
 
@@ -1472,6 +1473,7 @@ void binder_transaction(FAR struct binder_proc *proc,
       binder_pop_transaction_ilocked(target_thread, in_reply_to);
       binder_enqueue_thread_work_ilocked(target_thread, &t->work);
       target_proc->outstanding_txns++;
+      target_proc->tmp_ref--;
       nxmutex_unlock(&target_proc->proc_lock);
       wait_wake_up(&target_thread->wait, 0);
       binder_set_priority(thread, &in_reply_to->saved_priority);
@@ -1520,7 +1522,6 @@ void binder_transaction(FAR struct binder_proc *proc,
       binder_thread_dec_tmpref(target_thread);
     }
 
-  binder_proc_dec_tmpref(target_proc);
   if (target_node)
     {
       binder_dec_node_tmpref(target_node);
