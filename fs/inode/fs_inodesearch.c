@@ -483,7 +483,7 @@ int inode_search(FAR struct inode_search_s *desc)
 
   if (*desc->path != '/')
     {
-      ret = asprintf(&desc->buffer, "%s/%s", _inode_getcwd(), desc->path);
+      ret = asprintf(&desc->buffer, "%s%s", _inode_getcwd(), desc->path);
       if (ret < 0)
         {
           return -ENOMEM;
