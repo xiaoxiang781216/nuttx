@@ -80,7 +80,7 @@ void binder_set_priority(FAR struct binder_thread *thread,
   params.sched_priority = desired->sched_prio;
   sched_setscheduler(thread->tid, desired->sched_policy, &params);
 
-  binder_debug(BINDER_DEBUG_PRIORITY, "pid=%d\n", thread->pid);
+  binder_debug(BINDER_DEBUG_PRIORITY, "tid=%d\n", thread->tid);
 }
 
 void init_waitqueue_entry(FAR struct wait_queue_entry *wq_entry,
