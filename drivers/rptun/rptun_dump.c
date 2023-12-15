@@ -28,7 +28,7 @@
 
 #include <rpmsg/rpmsg_internal.h>
 
-#include "rptun.h"
+#include "rptun_virtio.h"
 
 /****************************************************************************
  * Private Functions
