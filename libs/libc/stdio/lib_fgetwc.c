@@ -30,6 +30,7 @@
 
 #include <wchar.h>
 #include <errno.h>
+#include <string.h>
 
 #ifdef CONFIG_FILE_STREAM
 
@@ -56,15 +57,13 @@
 
 wint_t fgetwc_unlocked(FAR FILE *f)
 {
-  mbstate_t st =
-    {
-      0
-    };
-
+  mbstate_t st;
   wchar_t wc;
   int c;
   char b;
   size_t l = -2;
+
+  memset(&st, 0, sizeof(mbstate_t));
 
   /* Convert character byte-by-byte */
 
