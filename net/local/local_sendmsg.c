@@ -188,11 +188,6 @@ static ssize_t local_send(FAR struct socket *psock,
 
           if (peer->lc_state != LOCAL_STATE_CONNECTED)
             {
-              if (peer->lc_state == LOCAL_STATE_CONNECTING)
-                {
-                  return -EAGAIN;
-                }
-
               nerr("ERROR: not connected\n");
               return -ENOTCONN;
             }
