@@ -865,8 +865,6 @@ static int bcmf_txavail(FAR struct net_driver_s *dev)
 #if defined(CONFIG_NET_MCASTGROUP) || defined(CONFIG_NET_ICMPv6)
 static int bcmf_addmac(FAR struct net_driver_s *dev, FAR const uint8_t *mac)
 {
-  FAR struct bcmf_dev_s *priv = (FAR struct bcmf_dev_s *)dev->d_private;
-
   /* Add the MAC address to the hardware multicast routing table */
 
   UNUSED(priv);
@@ -895,8 +893,6 @@ static int bcmf_addmac(FAR struct net_driver_s *dev, FAR const uint8_t *mac)
 #ifdef CONFIG_NET_MCASTGROUP
 static int bcmf_rmmac(FAR struct net_driver_s *dev, FAR const uint8_t *mac)
 {
-  FAR struct bcmf_dev_s *priv = (FAR struct bcmf_dev_s *)dev->d_private;
-
   /* Add the MAC address to the hardware multicast routing table */
 
   UNUSED(priv);
