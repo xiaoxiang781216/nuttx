@@ -109,10 +109,6 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
 
       g_running_tasks[this_cpu()] = this_task_inirq();
 
-      /* Restore the cpu lock */
-
-      restore_critical_section();
-
       /* If a context switch occurred while processing the interrupt then
        * CURRENT_REGS may have change value.  If we return any value
        * different from the input regs, then the lower level will know

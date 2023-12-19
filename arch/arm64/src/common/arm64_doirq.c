@@ -98,10 +98,6 @@ uint64_t *arm64_doirq(int irq, uint64_t * regs)
        */
 
       g_running_tasks[this_cpu()] = this_task_inirq();
-
-      /* Restore the cpu lock */
-
-      restore_critical_section();
       regs = (uint64_t *)CURRENT_REGS;
     }
 
