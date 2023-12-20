@@ -71,8 +71,6 @@
 
 /* These are not standard but are defined for Linux compatibility */
 
-#ifdef CONFIG_SMP
-
 /* void CPU_ZERO(FAR cpu_set_t *set); */
 
 #  define CPU_ZERO(s) do { *(s) = 0; } while (0)
@@ -175,8 +173,6 @@
  */
 
 #  define CPU_EQUAL_S(n,s1,s2) CPU_EQUAL(s1,s2)
-
-#endif /* CONFIG_SMP */
 
 /****************************************************************************
  * Public Type Definitions
