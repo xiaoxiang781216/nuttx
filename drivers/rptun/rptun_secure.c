@@ -124,7 +124,7 @@ static int rptun_secure_notify(FAR struct rptun_dev_s *dev, uint32_t vqid)
 
   CPU_ZERO(&cpuset);
   CPU_SET(0, &cpuset);
-  up_trigger_irq(priv->irq_trigger, &cpuset);
+  up_trigger_irq(priv->irq_trigger, cpuset);
   return 0;
 }
 
