@@ -76,25 +76,31 @@ static size_t alloc_buffer_size(FAR struct binder_alloc *alloc,
   return buffer_next(buffer)->user_data - buffer->user_data;
 }
 
-/**
- * check_buffer() - verify that buffer/offset is safe to access
- * @alloc: binder_alloc for this proc
- * @buffer: binder buffer to be accessed
- * @offset: offset into @buffer data
- * @bytes: bytes to access from offset
+/****************************************************************************
+ * Name: check_buffer
  *
- * Check that the @offset/@bytes are within the size of the given
- * @buffer and that the buffer is currently active and not freeable.
- * Offsets must also be multiples of sizeof(u32). The kernel is
- * allowed to touch the buffer in two cases:
+ * Description:
+ *   verify that buffer/offset is safe to access.
  *
- * 1) when the buffer is being created:
- *     (buffer->free == 0 && buffer->allow_user_free == 0)
- * 2) when the buffer is being torn down:
- *     (buffer->free == 0 && buffer->transaction == NULL).
+ *   Check that the offset/bytes are within the size of the given
+ *   buffer and that the buffer is currently active and not freeable.
+ *   Offsets must also be multiples of sizeof(u32). The kernel is
+ *   allowed to touch the buffer in two cases:
  *
- * Return: true if the buffer is safe to access
- */
+ *   1) when the buffer is being created:
+ *       (buffer->free == 0 && buffer->allow_user_free == 0)
+ *   2) when the buffer is being torn down:
+ *       (buffer->free == 0 && buffer->transaction == NULL).
+ *
+ * Input Parameters:
+ *   alloc  - binder_alloc for this proc
+ *   buffer - binder buffer to be accessed
+ *   offset - offset into buffer data
+ *   bytes  - bytes to access from offset
+ *
+ * Returned Value:
+ *   true if the buffer is safe to access
+ ****************************************************************************/
 
 static bool check_buffer(FAR struct binder_alloc *alloc,
                          FAR struct binder_buffer *buffer,
@@ -439,25 +445,30 @@ static void binder_free_buf_locked(FAR struct binder_alloc *alloc,
   insert_free_buffer(alloc, buffer);
 }
 
-/**
- * binder_alloc_get_page() - get kernel pointer for given buffer offset
- * @alloc: binder_alloc for this proc
- * @buffer: binder buffer to be accessed
- * @buffer_offset: offset into @buffer data
- * @pgoffp: address to copy final page offset to
+/****************************************************************************
+ * Name: binder_alloc_get_page
  *
- * Lookup the struct page corresponding to the address
- * at @buffer_offset into @buffer->user_data. If @pgoffp is not
- * NULL, the byte-offset into the page is written there.
+ * Description:
+ *   Lookup the struct page corresponding to the address
+ *   at buffer_offset into buffer->user_data. If pgoffp is not
+ *   NULL, the byte-offset into the page is written there.
  *
- * The caller is responsible to ensure that the offset points
- * to a valid address within the @buffer and that @buffer is
- * not freeable by the user. Since it can't be freed, we are
- * guaranteed that the corresponding elements of @alloc->pages[]
- * cannot change.
+ *   The caller is responsible to ensure that the offset points
+ *   to a valid address within the buffer and that buffer is
+ *   not freeable by the user. Since it can't be freed, we are
+ *   guaranteed that the corresponding elements of alloc->pages[]
+ *   cannot change.
  *
- * Return: struct page
- */
+ * Input Parameters:
+ *   alloc         - binder_alloc for this proc
+ *   buffer        - binder buffer to be accessed
+ *   buffer_offset - offset into buffer data
+ *   pgoffp        - address to copy final page offset to
+ *
+ * Returned Value:
+ *   struct page
+ *
+ ****************************************************************************/
 
 static void *binder_alloc_get_page(
   FAR struct binder_alloc *alloc, FAR struct binder_buffer *buffer,
@@ -481,13 +492,17 @@ static void *binder_alloc_get_page(
   return lru_page->page_ptr;
 }
 
-/**
- * binder_alloc_clear_buf() - zero out buffer
- * @alloc: binder_alloc for this proc
- * @buffer: binder buffer to be cleared
+/****************************************************************************
+ * Name: binder_alloc_clear_buf
  *
- * memset the given buffer to 0
- */
+ * Description:
+ *   memset the given buffer to 0
+ *
+ * Input Parameters:
+ *   alloc  - binder_alloc for this proc
+ *   buffer - binder buffer to be cleared
+ *
+ ****************************************************************************/
 
 static void binder_alloc_clear_buf(
   FAR struct binder_alloc *alloc, FAR struct binder_buffer *buffer)
@@ -558,18 +573,22 @@ static int binder_alloc_do_buffer_copy(
  * Public Functions
  ****************************************************************************/
 
-/**
- * binder_alloc_prepare_to_free() - get buffer given user ptr
- * @alloc:    binder_alloc for this proc
- * @user_ptr: User pointer to buffer data
+/****************************************************************************
+ * Name: binder_alloc_prepare_to_free
  *
- * Validate userspace pointer to buffer data and return buffer corresponding
- * to
- * that user pointer. Search the rb tree for buffer that matches user data
- * pointer.
+ * Description:
+ *   Get buffer given user ptr. Validate userspace pointer to buffer data and
+ *   return buffer corresponding to that user pointer. Search the rb tree for
+ *   buffer that matches user data pointer.
  *
- * Return:  Pointer to buffer or NULL
- */
+ * Input Parameters:
+ *   alloc    - binder_alloc for this proc
+ *   user_ptr - user pointer to buffer data
+ *
+ * Returned Value:
+ *   Pointer to buffer or NULL
+ *
+ ****************************************************************************/
 
 FAR struct binder_buffer *binder_alloc_prepare_to_free(
   FAR struct binder_alloc *alloc, uintptr_t user_ptr)
@@ -582,23 +601,28 @@ FAR struct binder_buffer *binder_alloc_prepare_to_free(
   return buffer;
 }
 
-/**
- * binder_alloc_new_buf() - Allocate a new binder buffer
- * @alloc:              binder_alloc for this proc
- * @data_size:          size of user data buffer
- * @offsets_size:       user specified buffer offset
- * @extra_buffers_size: size of extra space for meta-data (eg, security
- * context)
- * @is_async:           buffer for async transaction
- * @pid:        pid to attribute allocation to (used for debugging)
+/****************************************************************************
+ * Name: binder_alloc_new_buf
  *
- * Allocate a new buffer given the requested sizes. Returns
- * the kernel version of the buffer pointer. The size allocated
- * is the sum of the three given sizes (each rounded up to
- * pointer-sized boundary)
+ * Description:
+ *   allocate a new buffer given the requested sizes. Returns the kernel.
  *
- * Return:  The allocated buffer or %NULL if error
- */
+ *   version of the buffer pointer. The size allocated is the sum of the
+ *   three given sizes (each rounded up to pointer-sized boundary)
+ *
+ * Input Parameters:
+ *   alloc              - binder_alloc for this proc
+ *   data_size          - size of user data buffer
+ *   offsets_size       - user specified buffer offset
+ *   extra_buffers_size - size of extra space for meta-data
+ *                        (eg, security context)
+ *   is_async           - buffer for async transaction
+ *   pid                - pid to attribute allocation to (used for debugging)
+ *
+ * Returned Value:
+ *   The allocated buffer or NULL if error
+ *
+ ****************************************************************************/
 
 FAR struct binder_buffer *binder_alloc_new_buf(
   FAR struct binder_alloc *alloc, size_t data_size, size_t offsets_size,
@@ -631,13 +655,17 @@ int binder_alloc_copy_from_buffer(FAR struct binder_alloc *alloc,
                                      dest, bytes);
 }
 
-/**
- * binder_alloc_free_buf() - free a binder buffer
- * @alloc:  binder_alloc for this proc
- * @buffer:  kernel pointer to buffer
+/****************************************************************************
+ * Name: binder_alloc_free_buf
  *
- * Free the buffer allocated via binder_alloc_new_buf()
- */
+ * Description:
+ *   Free the buffer allocated via binder_alloc_new_buf()
+ *
+ * Input Parameters:
+ *   alloc  - binder_alloc for this proc
+ *   buffer - kernel pointer to buffer
+ *
+ ****************************************************************************/
 
 void binder_alloc_free_buf(FAR struct binder_alloc *alloc,
                            FAR struct binder_buffer *buffer)
@@ -727,14 +755,20 @@ void binder_alloc_deferred_release(FAR struct binder_alloc *alloc)
                page_count);
 }
 
-/**
- * binder_alloc_unmmap() - unmap address space for proc
- * @alloc:  alloc structure for this proc
- * @vma:  vma passed to mmap()
+/****************************************************************************
+ * Name: binder_alloc_unmmap
  *
- * Return:
- *      0 = success
- */
+ * Description:
+ *   Description of the operation of the function.
+ *
+ * Input Parameters:
+ *   alloc - alloc structure for this proc
+ *   vma   - vma passed to mmap().
+ *
+ * Returned Value:
+ *   0 = success
+ *
+ ****************************************************************************/
 
 int binder_alloc_unmmap(FAR struct binder_alloc *alloc,
                         FAR struct binder_mmap_area *vma)
@@ -743,19 +777,23 @@ int binder_alloc_unmmap(FAR struct binder_alloc *alloc,
   return 0;
 }
 
-/**
- * binder_alloc_mmap() - map address space for proc
- * @alloc:  alloc structure for this proc
- * @vma:  vma passed to mmap()
+/****************************************************************************
+ * Name: binder_alloc_mmap
  *
- * Called by binder_mmap() to initialize the space specified in
- * vma for allocating binder buffers
+ * Description:
+ *   Map address space for proc. Called by binder_mmap() to initialize the
+ *   space specified in vma for allocating binder buffers
  *
- * Return:
- *      0 = success
- *      -EBUSY = address space already mapped
- *      -ENOMEM = failed to map memory to given address space
- */
+ * Input Parameters:
+ *   alloc - alloc structure for this proc
+ *   vma   - vma passed to mmap()
+ *
+ * Returned Value:
+ *   0       : success
+ *   -EBUSY  : address space already mapped
+ *   -ENOMEM : failed to map memory to given address space
+ *
+ ****************************************************************************/
 
 int binder_alloc_mmap(FAR struct binder_alloc *alloc,
                       FAR struct binder_mmap_area *vma)
@@ -836,14 +874,17 @@ err_alloc_maparea_failed:
   return ret;
 }
 
-/**
- * binder_alloc_init() - called by binder_open() for per-proc initialization
- * @alloc: binder_alloc for this proc
- * @pid:   Process ID for this proc
+/****************************************************************************
+ * Name: binder_alloc_init
  *
- * Called from binder_open() to initialize binder_alloc fields for
- * new binder proc
- */
+ * Description:
+ *   Called by binder_open() for per-proc initialization
+ *
+ * Input Parameters:
+ *   alloc - binder_alloc for this proc
+ *   pid   - Process ID for this proc
+ *
+ ****************************************************************************/
 
 void binder_alloc_init(FAR struct binder_alloc *alloc, pid_t pid)
 {

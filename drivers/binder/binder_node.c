@@ -305,21 +305,21 @@ void binder_dec_node(FAR struct binder_node *node, int strong, int internal)
     }
 }
 
-/**
- * binder_inc_node_tmpref() - take a temporary reference on node
- * @node:  node to reference
+/****************************************************************************
+ * Name: binder_inc_node_tmpref
  *
- * Take reference on node to prevent the node from being freed
- * while referenced only by a local variable. The inner lock is
- * needed to serialize with the node work on the queue (which
- * isn't needed after the node is dead).
+ * Description:
+ *    Take reference on node to prevent the node from being freed while
+ *    referenced only by a local variable. The inner lock is needed to
+ *    serialize with the node work on the queue (which isn't needed after
+ *    the node is dead).
  *
- * If the node is dead (node->proc is NULL),
- * use binder_dead_nodes_lock to protect
- * node->tmp_refs against dead-node-only cases where the node
- * lock cannot be acquired (eg traversing the dead node list to
- * print nodes)
- */
+ *    If the node is dead (node->proc is NULL), use
+ *    binder_dead_nodes_lock to protect node->tmp_refs against
+ *    dead-node-only cases where the node lock cannot be acquired
+ *    (eg traversing the dead node list to print nodes)
+ *
+ ****************************************************************************/
 
 static void binder_inc_node_tmpref(FAR struct binder_node *node)
 {
@@ -351,12 +351,14 @@ static void binder_inc_node_tmpref(FAR struct binder_node *node)
   nxmutex_unlock(&node->node_lock);
 }
 
-/**
- * binder_dec_node_tmpref() - remove a temporary reference on node
- * @node:  node to reference
+/****************************************************************************
+ * Name: binder_dec_node_tmpref
  *
- * Release temporary reference on node taken via binder_inc_node_tmpref()
- */
+ * Description:
+ *   remove a temporary reference on node to reference. Release temporary
+ *   reference on node taken via binder_inc_node_tmpref()
+ *
+ ****************************************************************************/
 
 void binder_dec_node_tmpref(FAR struct binder_node *node)
 {
@@ -429,18 +431,22 @@ out:
   return node;
 }
 
-/**
- * binder_get_node_from_ref() - get the node from the given proc/desc
- * @proc:  proc containing the ref
- * @desc:  the handle associated with the ref
- * @need_strong_ref: if true, only return node if ref is strong
- * @rdata:  the id/refcount data for the ref
+/****************************************************************************
+ * Name: binder_get_node_from_ref
  *
- * Given a proc and ref handle, return the associated binder_node
+ * Description:
+ *   get the node from the given proc/desc
  *
- * Return: a binder_node or NULL if not found or not strong when strong
- * required
- */
+ * Input Parameters:
+ *   proc            - proc containing the ref
+ *   desc            - the handle associated with the ref
+ *   need_strong_ref - if true, only return node if ref is strong
+ *   rdata           - the id/refcount data for the ref
+ *
+ * Returned Value:
+ *   a binder_node or NULL if not found or not strong when strong required
+ *
+ ****************************************************************************/
 
 FAR struct binder_node *
 binder_get_node_from_ref(FAR struct binder_proc *proc,

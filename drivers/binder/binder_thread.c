@@ -170,17 +170,21 @@ static int binder_wait_for_work(FAR struct binder_thread *thread,
   return ret;
 }
 
-/**
- * binder_free_buf() - free the specified buffer
- * @proc:  binder proc that owns buffer
- * @buffer:  buffer to be freed
- * @is_failure:  failed to send transaction
+/****************************************************************************
+ * Name: binder_free_buf
  *
- * If buffer for an async transaction, enqueue the next async
- * transaction from the node.
+ * Description:
+ *   free the specified buffer.
+ *   If buffer for an async transaction, enqueue the next async
+ *   transaction from the node.
+ *   Cleanup buffer and free it.
  *
- * Cleanup buffer and free it.
- */
+ * Input Parameters:
+ *   proc       - binder proc that owns buffer
+ *   buffer     - buffer to be freed
+ *   is_failure - failed to send transaction
+ *
+ ****************************************************************************/
 
 static void binder_free_buf(FAR struct binder_proc *proc,
                             FAR struct binder_thread *thread,
@@ -221,16 +225,23 @@ static void binder_free_buf(FAR struct binder_proc *proc,
   binder_alloc_free_buf(&proc->alloc, buffer);
 }
 
-/**
- * binder_get_txn_from() - safely extract the "from" thread in transaction
- * @t:  binder transaction for t->from
+/****************************************************************************
+ * Name: binder_get_txn_from
  *
- * Atomically return the "from" thread and increment the tmp_ref
- * count for the thread to ensure it stays alive until
- * binder_thread_dec_tmpref() is called.
+ * Description:
+ *   safely extract the "from" thread in transaction.
  *
- * Return: the value of t->from
- */
+ *   Atomically return the "from" thread and increment the tmp_ref
+ *   count for the thread to ensure it stays alive until
+ *   binder_thread_dec_tmpref() is called.
+ *
+ * Input Parameters:
+ *   t - binder transaction for t->from
+ *
+ * Returned Value:
+ *   the value of t->from
+ *
+ ****************************************************************************/
 
 static struct binder_thread * binder_get_txn_from(
   FAR struct binder_transaction *t)
@@ -308,20 +319,29 @@ static int binder_put_node_cmd(FAR struct binder_proc *proc,
   return 0;
 }
 
-/**
- * binder_apply_fd_fixups() - finish fd translation
- * @proc:         binder_proc associated @t->buffer
- * @t:  binder transaction with list of fd fixups
+/****************************************************************************
+ * Name: binder_apply_fd_fixups
  *
- * Now that we are in the context of the transaction target
- * process, we can allocate and install fds. Process the
- * list of fds to translate and fixup the buffer with the
- * new fds.
+ * Description:
+ *   finish fd translation.
  *
- * If we fail to allocate an fd, then free the resources by
- * fput'ing files that have not been processed and ksys_close'ing
- * any fds that have already been allocated.
- */
+ *   Now that we are in the context of the transaction target
+ *   process, we can allocate and install fds. Process the
+ *   list of fds to translate and fixup the buffer with the
+ *   new fds.
+ *
+ *   If we fail to allocate an fd, then free the resources by
+ *   fput'ing files that have not been processed and ksys_close'ing
+ *   any fds that have already been allocated.
+ *
+ * Input Parameters:
+ *   proc - binder_proc associated t->buffer
+ *   t    - binder transaction with list of fd fixups
+ *
+ * Returned Value:
+ *   the value of t->from
+ *
+ ****************************************************************************/
 
 static int binder_apply_fd_fixups(FAR struct binder_proc *proc,
                                   FAR struct binder_transaction *t)
@@ -393,14 +413,20 @@ bool binder_has_work(FAR struct binder_thread *thread, bool do_proc_work)
   return has_work;
 }
 
-/**
- * binder_dequeue_work() - Removes an item from the work list
- * @proc:         binder_proc associated with list
- * @work:         struct binder_work to remove from list
+/****************************************************************************
+ * Name: binder_dequeue_work
  *
- * Removes the specified work item from whatever list it is on.
- * Can safely be called if work is not on any list.
- */
+ * Description:
+ *   Removes an item from the work list
+ *
+ *   Removes the specified work item from whatever list it is on.
+ *   Can safely be called if work is not on any list.
+ *
+ * Input Parameters:
+ *   proc - binder_proc associated with list
+ *   work - struct binder_work to remove from list
+ *
+ ****************************************************************************/
 
 void binder_dequeue_work(FAR struct binder_proc *proc,
                          FAR struct binder_work *work)
@@ -410,13 +436,20 @@ void binder_dequeue_work(FAR struct binder_proc *proc,
   nxmutex_unlock(&proc->proc_lock);
 }
 
-/**
- * binder_select_thread_ilocked() - selects a thread for doing proc work.
- * @proc:  process to select a thread from
+/****************************************************************************
+ * Name: binder_select_thread_ilocked
  *
- * Return:  If there's a thread currently waiting for process work,
- *    returns that thread. Otherwise returns NULL.
- */
+ * Description:
+ *   selects a thread for doing proc work.
+ *
+ * Input Parameters:
+ *   proc - process to select a thread from
+ *
+ * Returned Value:
+ *   If there's a thread currently waiting for process work,
+ *   returns that thread. Otherwise returns NULL.
+ *
+ ****************************************************************************/
 
 FAR struct binder_thread *binder_select_thread_ilocked(
   FAR struct binder_proc *proc)
@@ -448,22 +481,28 @@ FAR struct binder_thread *binder_select_thread_ilocked(
   return thread;
 }
 
-/**
- * binder_wakeup_thread_ilocked() - wakes up a thread for doing proc work.
- * @proc:  process to wake up a thread in
- * @thread:  specific thread to wake-up (may be NULL)
- * @sync:  whether to do a synchronous wake-up
+/****************************************************************************
+ * Name: binder_wakeup_thread_ilocked
  *
- * This function wakes up a thread in the @proc process.
- * The caller may provide a specific thread to wake-up in
- * the @thread parameter. If @thread is NULL, this function
- * will wake up threads that have called poll().
+ * Description:
+ *   wakes up a thread for doing proc work.
  *
- * Note that for this function to work as expected, callers
- * should first call binder_select_thread() to find a thread
- * to handle the work (if they don't have a thread already),
- * and pass the result into the @thread parameter.
- */
+ *   This function wakes up a thread in the proc process.
+ *   The caller may provide a specific thread to wake-up in
+ *   the thread parameter. If thread is NULL, this function
+ *   will wake up threads that have called poll().
+ *
+ *   Note that for this function to work as expected, callers
+ *   should first call binder_select_thread() to find a thread
+ *   to handle the work (if they don't have a thread already),
+ *   and pass the result into the thread parameter.
+ *
+ * Input Parameters:
+ *   proc   - process to wake up a thread in
+ *   thread - specific thread to wake-up (may be NULL)
+ *   sync   - whether to do a synchronous wake-up
+ *
+ ****************************************************************************/
 
 void binder_wakeup_thread_ilocked(FAR struct binder_proc *proc,
                                   FAR struct binder_thread *thread,
@@ -502,14 +541,18 @@ void binder_wakeup_thread_ilocked(FAR struct binder_proc *proc,
   binder_wakeup_poll_threads_ilocked(proc, sync);
 }
 
-/**
- * binder_enqueue_thread_work() - Add an item to the thread work list
- * @thread:       thread to queue work to
- * @work:         struct binder_work to add to list
+/****************************************************************************
+ * Name: binder_enqueue_thread_work
  *
- * Adds the work to the todo list of the thread, and enables processing
- * of the todo queue.
- */
+ * Description:
+ *   Adds the work to the todo list of the thread, and enables processing
+ *   of the todo queue.
+ *
+ * Input Parameters:
+ *   thread - thread to queue work to
+ *   work   - struct binder_work to add to list
+ *
+ ****************************************************************************/
 
 void binder_enqueue_thread_work(FAR struct binder_thread *thread,
                                 FAR struct binder_work *work)
@@ -528,18 +571,22 @@ void binder_wakeup_proc_ilocked(FAR struct binder_proc *proc)
   binder_wakeup_thread_ilocked(proc, thread, /* sync = */ false);
 }
 
-/**
- * binder_proc_dec_tmpref() - decrement proc->tmp_ref
- * @proc:  proc to decrement
+/****************************************************************************
+ * Name: binder_proc_dec_tmpref
  *
- * A binder_proc needs to be kept alive while being used to create or
- * handle a transaction. proc->tmp_ref is incremented when
- * creating a new transaction or the binder_proc is currently in-use
- * by threads that are being released. When done with the binder_proc,
- * this function is called to decrement the counter and free the
- * proc if appropriate (proc has been released, all threads have
- * been released and not currenly in-use to process a transaction).
- */
+ * Description:
+ *   A binder_proc needs to be kept alive while being used to create or
+ *   handle a transaction. proc->tmp_ref is incremented when
+ *   creating a new transaction or the binder_proc is currently in-use
+ *   by threads that are being released. When done with the binder_proc,
+ *   this function is called to decrement the counter and free the
+ *   proc if appropriate (proc has been released, all threads have
+ *   been released and not currenly in-use to process a transaction).
+ *
+ * Input Parameters:
+ *   proc - proc to decrement
+ *
+ ****************************************************************************/
 
 void binder_proc_dec_tmpref(FAR struct binder_proc *proc)
 {
@@ -555,18 +602,22 @@ void binder_proc_dec_tmpref(FAR struct binder_proc *proc)
   nxmutex_unlock(&proc->proc_lock);
 }
 
-/**
- * binder_thread_dec_tmpref() - decrement thread->tmp_ref
- * @thread:  thread to decrement
+/****************************************************************************
+ * Name: binder_thread_dec_tmpref
  *
- * A thread needs to be kept alive while being used to create or
- * handle a transaction. binder_get_txn_from() is used to safely
- * extract t->from from a binder_transaction and keep the thread
- * indicated by t->from from being freed. When done with that
- * binder_thread, this function is called to decrement the
- * tmp_ref and free if appropriate (thread has been released
- * and no transaction being processed by the driver)
- */
+ * Description:
+ *   A thread needs to be kept alive while being used to create or
+ *   handle a transaction. binder_get_txn_from() is used to safely
+ *   extract t->from from a binder_transaction and keep the thread
+ *   indicated by t->from from being freed. When done with that
+ *   binder_thread, this function is called to decrement the
+ *   tmp_ref and free if appropriate (thread has been released
+ *   and no transaction being processed by the driver)
+ *
+ * Input Parameters:
+ *   thread - thread to decrement
+ *
+ ****************************************************************************/
 
 void binder_thread_dec_tmpref(FAR struct binder_thread *thread)
 {

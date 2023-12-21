@@ -85,24 +85,29 @@ struct binder_ref *binder_get_ref_olocked(
   return NULL;
 }
 
-/**
- * binder_get_ref_for_node_olocked() - get the ref associated with given node
- * @proc:  binder_proc that owns the ref
- * @node:  binder_node of target
- * @new_ref:  newly allocated binder_ref to be initialized or %NULL
+/****************************************************************************
+ * Name: binder_get_ref_for_node_olocked
  *
- * Look up the ref for the given node and return it if it exists
+ * Description:
+ *   get the ref associated with given node.
+ *   Look up the ref for the given node and return it if it exists.
+ *   If it doesn't exist and the caller provides a newly allocated
+ *   ref, initialize the fields of the newly allocated ref and insert
+ *   into the given proc rb_trees and node refs list.
  *
- * If it doesn't exist and the caller provides a newly allocated
- * ref, initialize the fields of the newly allocated ref and insert
- * into the given proc rb_trees and node refs list.
+ * Input Parameters:
+ *   proc    - binder_proc that owns the ref
+ *   node    - binder_node of target
+ *   new_ref - newly allocated binder_ref to be initialized or %NULL
  *
- * Return:  the ref for node. It is possible that another thread
- *    allocated/initialized the ref first in which case the
- *    returned ref would be different than the passed-in
- *    new_ref. new_ref must be kfree'd by the caller in
- *    this case.
- */
+ * Returned Value:
+ *   the ref for node. It is possible that another thread
+ *   allocated/initialized the ref first in which case the
+ *   returned ref would be different than the passed-in
+ *   new_ref. new_ref must be kfree'd by the caller in
+ *   this case.
+ *
+ ****************************************************************************/
 
 FAR struct binder_ref *
 binder_get_ref_for_node_olocked(FAR struct binder_proc *proc,
@@ -207,16 +212,22 @@ void binder_cleanup_ref_olocked(FAR struct binder_ref *ref)
     }
 }
 
-/**
- * binder_inc_ref_olocked() - increment the ref for given handle
- * @ref:         ref to be incremented
- * @strong:      if true, strong increment, else weak
- * @target_list: list to queue node work on
+/****************************************************************************
+ * Name: binder_inc_ref_olocked
  *
- * Increment the ref. @ref->proc->outer_lock must be held on entry
+ * Description:
+ *   increment the ref for given handle.
+ *   Increment the ref. ref->proc->outer_lock must be held on entry
  *
- * Return: 0, if successful, else errno
- */
+ * Input Parameters:
+ *   ref         - ref to be incremented
+ *   strong      - if true, strong increment, else weak
+ *   target_list - list to queue node work on
+ *
+ * Returned Value:
+ *   0, if successful, else errno
+ *
+ ****************************************************************************/
 
 int binder_inc_ref_olocked(FAR struct binder_ref *ref, int strong,
                            FAR struct list_node *target_list)
@@ -253,15 +264,21 @@ int binder_inc_ref_olocked(FAR struct binder_ref *ref, int strong,
   return 0;
 }
 
-/**
- * binder_dec_ref() - dec the ref for given handle
- * @ref:  ref to be decremented
- * @strong:  if true, strong decrement, else weak
+/****************************************************************************
+ * Name: binder_dec_ref
  *
- * Decrement the ref.
+ * Description:
+ *   dec the ref for given handle.
+ *   Decrement the ref.
  *
- * Return: true if ref is cleaned up and ready to be freed
- */
+ * Input Parameters:
+ *   ref    - ref to be decremented
+ *   strong - if true, strong decrement, else weak
+ *
+ * Returned Value:
+ *   true if ref is cleaned up and ready to be freed
+ *
+ ****************************************************************************/
 
 static bool binder_dec_ref_olocked(FAR struct binder_ref *ref, int strong)
 {
@@ -309,13 +326,17 @@ static bool binder_dec_ref_olocked(FAR struct binder_ref *ref, int strong)
   return false;
 }
 
-/**
- * binder_free_ref() - free the binder_ref
- * @ref:  ref to free
+/****************************************************************************
+ * Name: binder_free_ref
  *
- * Free the binder_ref. Free the binder_node indicated by ref->node
- * (if non-NULL) and the binder_ref_death indicated by ref->death.
- */
+ * Description:
+ *   free the binder_ref. Free the binder_node indicated by ref->node
+ *   (if non-NULL) and the binder_ref_death indicated by ref->death.
+ *
+ * Input Parameters:
+ *   ref:  ref to free
+ *
+ ****************************************************************************/
 
 void binder_free_ref(FAR struct binder_ref *ref)
 {
@@ -332,19 +353,25 @@ void binder_free_ref(FAR struct binder_ref *ref)
  * Public Functions
  ****************************************************************************/
 
-/**
- * binder_inc_ref_for_node() - increment the ref for given proc/node
- * @proc:   proc containing the ref
- * @node:   target node
- * @strong:   true=strong reference, false=weak reference
- * @target_list: worklist to use if node is incremented
- * @rdata:   the id/refcount data for the ref
+/****************************************************************************
+ * Name: binder_inc_ref_for_node
  *
- * Given a proc and node, increment the ref. Create the ref if it
- * doesn't already exist
+ * Description:
+ *   increment the ref for given proc/node.
+ *   Given a proc and node, increment the ref. Create the ref if it
+ *   doesn't already exist
  *
- * Return: 0 if successful, else errno
- */
+ * Input Parameters:
+ *   proc        - proc containing the ref
+ *   node        - target node
+ *   strong      - true=strong reference, false=weak reference
+ *   target_list - worklist to use if node is incremented
+ *   rdata       - the id/refcount data for the ref
+ *
+ * Returned Value:
+ *   0 if successful, else errno
+ *
+ ****************************************************************************/
 
 int binder_inc_ref_for_node(FAR struct binder_proc *proc,
                             FAR struct binder_node *node, bool strong,
@@ -388,19 +415,25 @@ int binder_inc_ref_for_node(FAR struct binder_proc *proc,
   return ret;
 }
 
-/**
- * binder_update_ref_for_handle() - inc/dec the ref for given handle
- * @proc:  proc containing the ref
- * @desc:  the handle associated with the ref
- * @increment:  true=inc reference, false=dec reference
- * @strong:  true=strong reference, false=weak reference
- * @rdata:  the id/refcount data for the ref
+/****************************************************************************
+ * Name: binder_update_ref_for_handle
  *
- * Given a proc and ref handle, increment or decrement the ref
- * according to "increment" arg.
+ * Description:
+ *   inc/dec the ref for given handle
+ *   Given a proc and ref handle, increment or decrement the ref
+ *   according to "increment" arg.
  *
- * Return: 0 if successful, else errno
- */
+ * Input Parameters:
+ *   proc      - proc containing the ref
+ *   desc      - the handle associated with the ref
+ *   increment - true=inc reference, false=dec reference
+ *   strong    - true=strong reference, false=weak reference
+ *   rdata     - the id/refcount data for the ref
+ *
+ * Returned Value:
+ *   0 if successful, else errno
+ *
+ ****************************************************************************/
 
 int binder_update_ref_for_handle(FAR struct binder_proc *proc, uint32_t desc,
                                  bool increment, bool strong,
@@ -446,17 +479,23 @@ err_no_ref:
   return ret;
 }
 
-/**
- * binder_dec_ref_for_handle() - dec the ref for given handle
- * @proc:  proc containing the ref
- * @desc:  the handle associated with the ref
- * @strong:  true=strong reference, false=weak reference
- * @rdata:  the id/refcount data for the ref
+/****************************************************************************
+ * Name: binder_dec_ref_for_handle
  *
- * Just calls binder_update_ref_for_handle() to decrement the ref.
+ * Description:
+ *   dec the ref for given handle
+ *   Just calls binder_update_ref_for_handle() to decrement the ref.
  *
- * Return: 0 if successful, else errno
- */
+ * Input Parameters:
+ *   proc   - proc containing the ref
+ *   desc   - the handle associated with the ref
+ *   strong - true=strong reference, false=weak reference
+ *   rdata  - the id/refcount data for the ref
+ *
+ * Returned Value:
+ *   0 if successful, else errno
+ *
+ ****************************************************************************/
 
 int binder_dec_ref_for_handle(FAR struct binder_proc *proc, uint32_t desc,
                               bool strong, FAR struct binder_ref_data *rdata)

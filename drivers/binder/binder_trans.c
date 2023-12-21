@@ -91,7 +91,7 @@ static uid_t geteuid_bypid(pid_t pid)
 #endif
 }
 
-/**
+/****************************************************************************
  * Name: file_tx_get
  *
  * Description:
@@ -108,7 +108,7 @@ static uid_t geteuid_bypid(pid_t pid)
  *   Zero (OK) is returned on success; a negated errno value is returned on
  *   any failure.
  *
- */
+ ****************************************************************************/
 
 static int file_tx_get(unsigned int fd, FAR struct file *filep)
 {
@@ -130,22 +130,28 @@ static int file_tx_get(unsigned int fd, FAR struct file *filep)
   return ret;
 }
 
-/**
- * binder_get_object() - gets object and checks for valid metadata
- * @proc:  binder_proc owning the buffer
- * @u:    sender's user pointer to base of buffer
- * @buffer:  binder_buffer that we're parsing.
- * @offset:  offset in the @buffer at which to validate an object.
- * @object:  struct binder_object to read into
+/****************************************************************************
+ * Name: binder_get_object
  *
- * Copy the binder object at the given offset into @object. If @u is
- * provided then the copy is from the sender's buffer. If not, then
- * it is copied from the target's @buffer.
+ * Description:
+ *   gets object and checks for valid metadata.
+ *   Copy the binder object at the given offset into object. If u is
+ *   provided then the copy is from the sender's buffer. If not, then
+ *   it is copied from the target's buffer.
  *
- * Return:  If there's a valid metadata object at @offset, the
- *    size of that object. Otherwise, it returns zero. The object
- *    is read into the struct binder_object pointed to by @object.
- */
+ * Input Parameters:
+ *   proc   - binder_proc owning the buffer
+ *   u      - sender's user pointer to base of buffer
+ *   buffer - binder_buffer that we're parsing.
+ *   offset - offset in the @buffer at which to validate an object.
+ *   object - struct binder_object to read into
+ *
+ * Returned Value:
+ *   If there's a valid metadata object at offset, the
+ *   size of that object. Otherwise, it returns zero. The object
+ *   is read into the struct binder_object pointed to by object.
+ *
+ ****************************************************************************/
 
 static size_t binder_get_object(FAR struct binder_proc *proc,
                                 FAR const void  *u,
@@ -215,16 +221,22 @@ static size_t binder_get_object(FAR struct binder_proc *proc,
     }
 }
 
-/**
- * binder_get_txn_from() - safely extract the "from" thread in transaction
- * @t:  binder transaction for t->from
+/****************************************************************************
+ * Name: binder_get_txn_from
  *
- * Atomically return the "from" thread and increment the tmp_ref
- * count for the thread to ensure it stays alive until
- * binder_thread_dec_tmpref() is called.
+ * Description:
+ *   safely extract the "from" thread in transaction.
+ *   Atomically return the "from" thread and increment the tmp_ref
+ *   count for the thread to ensure it stays alive until
+ *   binder_thread_dec_tmpref() is called.
  *
- * Return: the value of t->from
- */
+ * Input Parameters:
+ *   t - binder transaction for t->from
+ *
+ * Returned Value:
+ *   the value of t->from
+ *
+ ****************************************************************************/
 
 static struct binder_thread * binder_get_txn_from(
   FAR struct binder_transaction *t)
@@ -254,17 +266,25 @@ static void binder_pop_transaction_ilocked(
   t->from = NULL;
 }
 
-/**
- * binder_get_txn_from_and_acq_inner() - get t->from and acquire inner lock
- * @t:  binder transaction for t->from
+/****************************************************************************
+ * Name: binder_get_txn_from_and_acq_inner
  *
- * Same as binder_get_txn_from() except it also acquires the proc->inner_lock
- * to guarantee that the thread cannot be released while operating on it.
- * The caller must call binder_inner_proc_unlock() to release the inner lock
- * as well as call binder_dec_thread_txn() to release the reference.
+ * Description:
+ *   get t->from and acquire inner lock
  *
- * Return: the value of t->from
- */
+ *   Same as binder_get_txn_from() except it also acquires the
+ *   proc->inner_lock to guarantee that the thread cannot be released while
+ *   operating on it. The caller must call binder_inner_proc_unlock() to
+ *   release the inner lock as well as call binder_dec_thread_txn() to
+ *   release the reference.
+ *
+ * Input Parameters:
+ *   t - binder transaction for t->from
+ *
+ * Returned Value:
+ *   the value of t->from
+ *
+ ****************************************************************************/
 
 static struct binder_thread *binder_get_txn_from_and_acq_inner(
   FAR struct binder_transaction *t)
@@ -292,25 +312,31 @@ static struct binder_thread *binder_get_txn_from_and_acq_inner(
   return NULL;
 }
 
-/**
- * binder_proc_transaction() - sends a transaction to a process and wakes it
- * up
- * @t:    transaction to send
- * @proc:  process to send the transaction to
- * @thread:  thread in @proc to send the transaction to (may be NULL)
+/****************************************************************************
+ * Name: binder_proc_transaction
  *
- * This function queues a transaction to the specified process. It will try
- * to find a thread in the target process to handle the transaction and
- * wake it up. If no thread is found, the work is queued to the proc
- * waitqueue.
+ * Description:
+ *   sends a transaction to a process and wakes it
  *
- * If the @thread parameter is not NULL, the transaction is always queued
- * to the waitlist of that specific thread.
+ *   This function queues a transaction to the specified process. It will
+ *   try to find a thread in the target process to handle the transaction
+ *   and wake it up. If no thread is found, the work is queued to the proc
+ *   waitqueue.
  *
- * Return:  0 if the transaction was successfully queued
- *    BR_DEAD_REPLY if the target process or thread is dead
- *    BR_FROZEN_REPLY if the target process or thread is frozen
- */
+ *   If the thread parameter is not NULL, the transaction is always queued
+ *   to the waitlist of that specific thread.
+ *
+ * Input Parameters:
+ *   t      - transaction to send
+ *   proc   - process to send the transaction to
+ *   thread - thread in @proc to send the transaction to (may be NULL)
+ *
+ * Returned Value:
+ *   0 if the transaction was successfully queued
+ *   BR_DEAD_REPLY if the target process or thread is dead
+ *   BR_FROZEN_REPLY if the target process or thread is frozen
+ *
+ ****************************************************************************/
 
 static int binder_proc_transaction(FAR struct binder_transaction *t,
                                    FAR struct binder_proc *proc,
@@ -592,27 +618,34 @@ err_fd_not_accepted:
   return ret;
 }
 
-/**
- * binder_get_node_refs_for_txn() - Get required refs on node for txn
- * @node:         struct binder_node for which to get refs
- * @proc:         returns @node->proc if valid
- * @error:        if no @proc then returns BR_DEAD_REPLY
+/****************************************************************************
+ * Name: binder_get_node_refs_for_txn
  *
- * User-space normally keeps the node alive when creating a transaction
- * since it has a reference to the target. The local strong ref keeps it
- * alive if the sending process dies before the target process processes
- * the transaction. If the source process is malicious or has a reference
- * counting bug, relying on the local strong ref can fail.
+ * Description:
+ *   Get required refs on node for txn.
  *
- * Since user-space can cause the local strong ref to go away, we also take
- * a tmpref on the node to ensure it survives while we are constructing
- * the transaction. We also need a tmpref on the proc while we are
- * constructing the transaction, so we take that here as well.
+ *   User-space normally keeps the node alive when creating a transaction
+ *   since it has a reference to the target. The local strong ref keeps it
+ *   alive if the sending process dies before the target process processes
+ *   the transaction. If the source process is malicious or has a reference
+ *   counting bug, relying on the local strong ref can fail.
  *
- * Return: The target_node with refs taken or NULL if no @node->proc is NULL.
- * Also sets @proc if valid. If the @node->proc is NULL indicating that the
- * target proc has died, @error is set to BR_DEAD_REPLY
- */
+ *   Since user-space can cause the local strong ref to go away, we also take
+ *   a tmpref on the node to ensure it survives while we are constructing
+ *   the transaction. We also need a tmpref on the proc while we are
+ *   constructing the transaction, so we take that here as well.
+ *
+ * Input Parameters:
+ *   node  - struct binder_node for which to get refs
+ *   proc  - returns node->proc if valid
+ *   error - if no proc then returns BR_DEAD_REPLY
+ *
+ * Returned Value:
+ *   The target_node with refs taken or NULL if no node->proc is NULL.
+ *   Also sets proc if valid. If the node->proc is NULL indicating that the
+ *   target proc has died, error is set to BR_DEAD_REPLY
+ *
+ ****************************************************************************/
 
 static struct binder_node *binder_get_node_refs_for_txn(
   FAR struct binder_node *node, FAR struct binder_proc **procp,
@@ -771,11 +804,16 @@ void binder_transaction_buffer_release(FAR struct binder_proc *proc,
     }
 }
 
-/**
- * binder_deferred_fd_close()
- *  - schedule a close for the given file-descriptor
- * @fd:    file-descriptor to close
- */
+/****************************************************************************
+ * Name: binder_deferred_fd_close
+ *
+ * Description:
+ *   schedule a close for the given file-descriptor
+ *
+ * Input Parameters:
+ *   fd - file-descriptor to close
+ *
+ ****************************************************************************/
 
 void binder_deferred_fd_close(int fd)
 {
@@ -892,12 +930,18 @@ void binder_send_failed_reply(FAR struct binder_transaction *t,
     }
 }
 
-/**
- * binder_cleanup_transaction() - cleans up undelivered transaction
- * @t:    transaction that needs to be cleaned up
- * @reason:  reason the transaction wasn't delivered
- * @error_code:  error to return to caller (if synchronous call)
- */
+/****************************************************************************
+ * Name: binder_cleanup_transaction
+ *
+ * Description:
+ *   cleans up undelivered transaction
+ *
+ * Input Parameters:
+ *   t          - transaction that needs to be cleaned up
+ *   reason     - reason the transaction wasn't delivered
+ *   error_code - error to return to caller (if synchronous call)
+ *
+ ****************************************************************************/
 
 void binder_cleanup_transaction(FAR struct binder_transaction *t,
                                 FAR const char *reason, uint32_t error_code)
