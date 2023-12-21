@@ -298,8 +298,6 @@ static int16_t composite_mkcfgdesc(FAR struct usbdevclass_driver_s *driver,
   memcpy(buf, priv->descs->cfgdesc, sizeof(struct usb_cfgdesc_s));
 
   cfgdesc = (FAR struct usb_cfgdesc_s *)buf;
-  cfgdesc->totallen[0] = LSBYTE(priv->cfgdescsize);
-  cfgdesc->totallen[1] = MSBYTE(priv->cfgdescsize);
   cfgdesc->ninterfaces = priv->ninterfaces;
 
   /* Increment the size and buf to point right behind the information
@@ -328,6 +326,9 @@ static int16_t composite_mkcfgdesc(FAR struct usbdevclass_driver_s *driver,
       buf += len;
 #endif
     }
+
+  cfgdesc->totallen[0] = LSBYTE(total);
+  cfgdesc->totallen[1] = MSBYTE(total);
 
   return total;
 }
