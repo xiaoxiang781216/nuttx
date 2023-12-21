@@ -92,6 +92,24 @@ config DRIVERS_NOTE_STRIP_FORMAT
 	---help---
 		Strip sched_note_printf format string.
 
+config DRIVERS_NOTELOWEROUT
+	bool "Note lower output"
+	default n
+	---help---
+		Note uses lower output.
+
+config DRIVERS_NOTEFILE
+	bool "Note file driver"
+	---help---
+		The note driver output to file.
+
+config DRIVERS_NOTEFILE_PATH
+	string "Note file path"
+	depends on DRIVERS_NOTEFILE
+	default "/dev/ttyS1"
+	---help---
+		The note driver output to file path.
+
 config DRIVERS_NOTELOG
 	bool "Note syslog driver"
 	---help---
