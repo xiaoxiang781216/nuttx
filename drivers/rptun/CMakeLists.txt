@@ -20,7 +20,7 @@
 if(CONFIG_RPTUN)
   set(SRCS)
 
-  list(APPEND SRCS rptun_virtio.c rptun_dump.c)
+  list(APPEND SRCS rptun.c rptun_dump.c)
 
   if(CONFIG_RPTUN_PING)
     list(APPEND SRCS rptun_ping.c)

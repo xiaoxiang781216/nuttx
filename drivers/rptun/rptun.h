@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/rptun/rptun_virtio.h
+ * drivers/rptun/rptun.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __DRIVERS_RPTUN_RPTUN_VIRTIO_H
-#define __DRIVERS_RPTUN_RPTUN_VIRTIO_H
+#ifndef __DRIVERS_RPTUN_RPTUN_H
+#define __DRIVERS_RPTUN_RPTUN_H
 
 /****************************************************************************
  * Included Files
@@ -37,4 +37,4 @@
 int rptun_buffer_nused(FAR struct rpmsg_virtio_device *rvdev, bool rx);
 void rptun_dump(FAR struct rpmsg_virtio_device *rvdev);
 
-#endif /* __DRIVERS_RPTUN_RPTUN_VIRTIO_H */
+#endif /* __DRIVERS_RPTUN_RPTUN_H */

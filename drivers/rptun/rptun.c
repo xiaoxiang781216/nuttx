@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/rptun/rptun_virtio.c
+ * drivers/rptun/rptun.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -42,7 +42,7 @@
 #include <nuttx/wqueue.h>
 #include <metal/utilities.h>
 
-#include "rptun_virtio.h"
+#include "rptun.h"
 
 /****************************************************************************
  * Pre-processor Definitions
