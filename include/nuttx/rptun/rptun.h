@@ -29,21 +29,13 @@
 
 #ifdef CONFIG_RPTUN
 
-#include <nuttx/fs/ioctl.h>
-#include <nuttx/rptun/rptun_ping.h>
+#include <nuttx/rpmsg/rpmsg.h>
 #include <openamp/remoteproc.h>
 #include <openamp/rpmsg_virtio.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#define RPTUNIOC_START              _RPTUNIOC(1)
-#define RPTUNIOC_STOP               _RPTUNIOC(2)
-#define RPTUNIOC_RESET              _RPTUNIOC(3)
-#define RPTUNIOC_PANIC              _RPTUNIOC(4)
-#define RPTUNIOC_DUMP               _RPTUNIOC(5)
-#define RPTUNIOC_PING               _RPTUNIOC(6)
 
 #define RPTUN_NOTIFY_ALL            (UINT32_MAX - 0)
 

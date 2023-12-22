@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/rptun/rptun_ping.c
+ * drivers/rpmsg/rpmsg_ping.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -24,30 +24,32 @@
 
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
+#include <nuttx/signal.h>
 
 #include <inttypes.h>
 #include <string.h>
 #include <sys/param.h>
 #include <time.h>
-#include <nuttx/signal.h>
+#include <syslog.h>
 
-#include "rptun_ping.h"
+#include "rpmsg_ping.h"
+
 /****************************************************************************
  * Pre-processor definitions
  ****************************************************************************/
 
-#define RPTUN_PING_EPT_NAME         "rpmsg-ping"
-#define RPTUN_PING_SEND             1
-#define RPTUN_PING_SEND_CHECK       2
-#define RPTUN_PING_SEND_NOACK       3
-#define RPTUN_PING_ACK              4
-#define RPTUN_PING_CHECK_DATA       0xee
+#define RPMSG_PING_EPT_NAME         "rpmsg-ping"
+#define RPMSG_PING_SEND             1
+#define RPMSG_PING_SEND_CHECK       2
+#define RPMSG_PING_SEND_NOACK       3
+#define RPMSG_PING_ACK              4
+#define RPMSG_PING_CHECK_DATA       0xee
 
 /****************************************************************************
  * Private Types
  ****************************************************************************/
 
-begin_packed_struct struct rptun_ping_msg_s
+begin_packed_struct struct rpmsg_ping_msg_s
 {
   uint32_t cmd;
   uint32_t len;
@@ -59,27 +61,27 @@ begin_packed_struct struct rptun_ping_msg_s
  * Private Functions
  ****************************************************************************/
 
-static int rptun_ping_ept_cb(FAR struct rpmsg_endpoint *ept,
+static int rpmsg_ping_ept_cb(FAR struct rpmsg_endpoint *ept,
                              FAR void *data, size_t len, uint32_t src,
                              FAR void *priv)
 {
-  FAR struct rptun_ping_msg_s *msg = data;
+  FAR struct rpmsg_ping_msg_s *msg = data;
   FAR sem_t *sem = (FAR sem_t *)(uintptr_t)msg->cookie;
 
-  if (msg->cmd == RPTUN_PING_SEND)
+  if (msg->cmd == RPMSG_PING_SEND)
     {
-      msg->cmd = RPTUN_PING_ACK;
+      msg->cmd = RPMSG_PING_ACK;
       rpmsg_send(ept, msg, len);
     }
-  else if (msg->cmd == RPTUN_PING_SEND_CHECK)
+  else if (msg->cmd == RPMSG_PING_SEND_CHECK)
     {
       size_t data_len;
       size_t i;
 
-      data_len = msg->len - sizeof(struct rptun_ping_msg_s) + 1;
+      data_len = msg->len - sizeof(struct rpmsg_ping_msg_s) + 1;
       for (i = 0; i < data_len; i++)
         {
-          if (msg->data[i] != RPTUN_PING_CHECK_DATA)
+          if (msg->data[i] != RPMSG_PING_CHECK_DATA)
             {
               syslog(LOG_ERR, "rptun ping remote receive data error!\n");
               break;
@@ -88,10 +90,10 @@ static int rptun_ping_ept_cb(FAR struct rpmsg_endpoint *ept,
           msg->data[i] = 0;
         }
 
-      msg->cmd = RPTUN_PING_ACK;
+      msg->cmd = RPMSG_PING_ACK;
       rpmsg_send(ept, msg, len);
     }
-  else if (msg->cmd == RPTUN_PING_ACK)
+  else if (msg->cmd == RPMSG_PING_ACK)
     {
       nxsem_post(sem);
     }
@@ -99,10 +101,10 @@ static int rptun_ping_ept_cb(FAR struct rpmsg_endpoint *ept,
   return 0;
 }
 
-static int rptun_ping_once(FAR struct rpmsg_endpoint *ept,
+static int rpmsg_ping_once(FAR struct rpmsg_endpoint *ept,
                            int len, int ack, uint32_t *buf_len)
 {
-  FAR struct rptun_ping_msg_s *msg;
+  FAR struct rpmsg_ping_msg_s *msg;
   int ret;
 
   msg = rpmsg_get_tx_payload_buffer(ept, buf_len, true);
@@ -111,7 +113,7 @@ static int rptun_ping_once(FAR struct rpmsg_endpoint *ept,
       return -ENOMEM;
     }
 
-  len = MAX(len, sizeof(struct rptun_ping_msg_s));
+  len = MAX(len, sizeof(struct rpmsg_ping_msg_s));
   len = MIN(len, *buf_len);
 
   memset(msg, 0, len);
@@ -120,14 +122,14 @@ static int rptun_ping_once(FAR struct rpmsg_endpoint *ept,
     {
       sem_t sem;
 
-      msg->cmd = (ack == 1)? RPTUN_PING_SEND : RPTUN_PING_SEND_CHECK;
+      msg->cmd = (ack == 1)? RPMSG_PING_SEND : RPMSG_PING_SEND_CHECK;
       msg->len    = len;
       msg->cookie = (uintptr_t)&sem;
 
-      if (msg->cmd == RPTUN_PING_SEND_CHECK)
+      if (msg->cmd == RPMSG_PING_SEND_CHECK)
         {
-          memset(msg->data, RPTUN_PING_CHECK_DATA,
-                 len - sizeof(struct rptun_ping_msg_s) + 1);
+          memset(msg->data, RPMSG_PING_CHECK_DATA,
+                 len - sizeof(struct rpmsg_ping_msg_s) + 1);
         }
 
       nxsem_init(&sem, 0, 0);
@@ -142,7 +144,7 @@ static int rptun_ping_once(FAR struct rpmsg_endpoint *ept,
     }
   else
     {
-      msg->cmd = RPTUN_PING_SEND_NOACK;
+      msg->cmd = RPMSG_PING_SEND_NOACK;
       msg->len = len;
       ret = rpmsg_send_nocopy(ept, msg, len);
     }
@@ -150,7 +152,7 @@ static int rptun_ping_once(FAR struct rpmsg_endpoint *ept,
   return ret;
 }
 
-static void rptun_ping_logout(FAR const char *s, clock_t value)
+static void rpmsg_ping_logout(FAR const char *s, clock_t value)
 {
   struct timespec ts;
 
@@ -163,7 +165,7 @@ static void rptun_ping_logout(FAR const char *s, clock_t value)
 #endif
 }
 
-static void rptun_ping_logout_rate(uint64_t len, clock_t avg)
+static void rpmsg_ping_logout_rate(uint64_t len, clock_t avg)
 {
   struct timespec ts;
   size_t ratebits;
@@ -183,8 +185,8 @@ static void rptun_ping_logout_rate(uint64_t len, clock_t avg)
  * Public Functions
  ****************************************************************************/
 
-int rptun_ping(FAR struct rpmsg_endpoint *ept,
-               FAR const struct rptun_ping_s *ping)
+int rpmsg_ping(FAR struct rpmsg_endpoint *ept,
+               FAR const struct rpmsg_ping_s *ping)
 {
   clock_t min = CLOCK_MAX;
   clock_t max = 0;
@@ -202,7 +204,7 @@ int rptun_ping(FAR struct rpmsg_endpoint *ept,
     {
       clock_t tm = perf_gettime();
 
-      send_len = rptun_ping_once(ept, ping->len, ping->ack, &buf_len);
+      send_len = rpmsg_ping_once(ept, ping->len, ping->ack, &buf_len);
       if (send_len < 0)
         {
           return send_len;
@@ -220,23 +222,23 @@ int rptun_ping(FAR struct rpmsg_endpoint *ept,
   syslog(LOG_INFO, "buffer_len: %" PRIu32 ", send_len: %d\n",
                     buf_len, send_len);
 
-  rptun_ping_logout("avg", total / ping->times);
-  rptun_ping_logout("min", min);
-  rptun_ping_logout("max", max);
-  rptun_ping_logout_rate(send_len, total / ping->times);
+  rpmsg_ping_logout("avg", total / ping->times);
+  rpmsg_ping_logout("min", min);
+  rpmsg_ping_logout("max", max);
+  rpmsg_ping_logout_rate(send_len, total / ping->times);
 
   return 0;
 }
 
-int rptun_ping_init(FAR struct rpmsg_device *rdev,
+int rpmsg_ping_init(FAR struct rpmsg_device *rdev,
                     FAR struct rpmsg_endpoint *ept)
 {
-  return rpmsg_create_ept(ept, rdev, RPTUN_PING_EPT_NAME,
+  return rpmsg_create_ept(ept, rdev, RPMSG_PING_EPT_NAME,
                           RPMSG_ADDR_ANY, RPMSG_ADDR_ANY,
-                          rptun_ping_ept_cb, NULL);
+                          rpmsg_ping_ept_cb, NULL);
 }
 
-void rptun_ping_deinit(FAR struct rpmsg_endpoint *ept)
+void rpmsg_ping_deinit(FAR struct rpmsg_endpoint *ept)
 {
   rpmsg_destroy_ept(ept);
 }
