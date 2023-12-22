@@ -26,7 +26,6 @@
 #include <sys/param.h>
 
 #include "cpufreq_internal.h"
-#include "sched/sched.h"
 
 /****************************************************************************
  * Pre-processor Definitions
