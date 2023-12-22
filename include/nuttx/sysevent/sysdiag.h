@@ -281,5 +281,9 @@ typedef struct diag_event_s
  *
  ****************************************************************************/
 
+#ifdef CONFIG_SYSEVENT
 int sysdiag_write(enum diagnosis_tag_e diag_id, FAR const char *fmt, ...);
+#else
+#define sysdiag_write(diag_id,fmt, ...)
+#endif
 #endif  //__INCLUDE_NUTTX_SYSEVENT_SYSDIAG_H
