@@ -32,6 +32,18 @@
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: pci_ivshmem_register
+ *
+ * Description:
+ *   Register common pci ivshmem driver
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_PCI_IVSHMEM
+int pci_ivshmem_register(void);
+#endif
+
+/****************************************************************************
  * Name: pci_register_uio_ivshmem_driver
  *
  * Description:
