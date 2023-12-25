@@ -224,7 +224,7 @@ static int elf_vma2lma(FAR struct elf_loadinfo_s *loadinfo,
       FAR Elf_Phdr *phdr = &loadinfo->phdr[i];
 
       if (shdr->sh_addr >= phdr->p_vaddr &&
-          shdr->sh_addr < phdr->p_vaddr + phdr->p_memsz)
+          shdr->sh_addr + shdr->sh_size <= phdr->p_vaddr + phdr->p_memsz)
         {
           *lma = phdr->p_paddr + shdr->sh_addr - phdr->p_vaddr;
           return 0;
