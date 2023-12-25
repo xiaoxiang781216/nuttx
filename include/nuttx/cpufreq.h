@@ -25,6 +25,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/cpufreq/qos.h>
 #include <nuttx/notifier.h>
 #include <sys/types.h>
 
@@ -32,6 +33,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define CPUFREQ_NAME_LEN      16
 #define CPUFREQ_PRECHANGE     0
 #define CPUFREQ_POSTCHANGE    1
 
@@ -44,8 +46,54 @@
  * Public Types
  ****************************************************************************/
 
-struct cpufreq_policy;
-struct cpufreq_qos;
+struct cpufreq_driver;
+struct cpufreq_governor;
+
+enum cpufreq_table_sorting
+{
+  CPUFREQ_TABLE_UNSORTED,
+  CPUFREQ_TABLE_SORTED_ASCENDING,
+  CPUFREQ_TABLE_SORTED_DESCENDING
+};
+
+struct cpufreq_policy
+{
+  FAR struct cpufreq_driver *driver;
+  bool suspended;
+
+  unsigned int max_freq;
+  unsigned int min_freq;
+
+  unsigned int min;                     /* in kHz */
+  unsigned int max;                     /* in kHz */
+  unsigned int cur;                     /* in kHz */
+
+  FAR struct cpufreq_governor *governor;
+
+  struct freq_constraints constraints;
+  struct freq_qos_request min_freq_req;
+  struct freq_qos_request max_freq_req;
+
+  FAR const struct cpufreq_frequency_table *freq_table;
+  enum cpufreq_table_sorting freq_table_sorted;
+
+  struct mutex_s lock;
+
+  struct blocking_notifier_head notifier_list;
+  struct notifier_block nb_min;
+  struct notifier_block nb_max;
+  FAR void *governor_data;
+};
+
+struct cpufreq_governor
+{
+  char name[CPUFREQ_NAME_LEN];
+  CODE int (*init)(FAR struct cpufreq_policy *policy);
+  CODE int (*exit)(FAR struct cpufreq_policy *policy);
+  CODE int (*start)(FAR struct cpufreq_policy *policy);
+  CODE void (*stop)(FAR struct cpufreq_policy *policy);
+  CODE void (*limits)(FAR struct cpufreq_policy *policy);
+};
 
 struct cpufreq_frequency_table
 {
