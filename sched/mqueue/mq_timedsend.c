@@ -335,7 +335,9 @@ int nxmq_timedsend(mqd_t mqdes, FAR const char *msg, size_t msglen,
       return ret;
     }
 
-  return file_mq_timedsend(filep, msg, msglen, prio, abstime);
+  ret = file_mq_timedsend(filep, msg, msglen, prio, abstime);
+  fs_putfilep(filep);
+  return ret;
 }
 
 /****************************************************************************

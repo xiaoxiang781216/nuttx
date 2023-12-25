@@ -138,11 +138,12 @@ int psock_listen(FAR struct socket *psock, int backlog)
 int listen(int sockfd, int backlog)
 {
   FAR struct socket *psock;
+  FAR struct file *filep;
   int ret;
 
   /* Get the underlying socket structure */
 
-  ret = sockfd_socket(sockfd, &psock);
+  ret = sockfd_socket(sockfd, &filep, &psock);
 
   /* The let psock_listen to the work. If psock_listen() fails, it will have
    * set the errno variable.
@@ -151,6 +152,7 @@ int listen(int sockfd, int backlog)
   if (ret == OK)
     {
       ret = psock_listen(psock, backlog);
+      fs_putfilep(filep);
     }
 
   if (ret < 0)

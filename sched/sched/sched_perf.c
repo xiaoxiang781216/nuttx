@@ -2126,6 +2126,7 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
   FAR struct tcb_s *tcb = NULL;
   FAR struct perf_event_context_s *ctx;
   FAR struct pmu_event_context_s *pmu_ctx;
+  FAR struct file *group_file = NULL;
   int event_fd = -1;
   int ret;
 
@@ -2143,7 +2144,6 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
 
   if (group_fd >= 0)
     {
-      FAR struct file *group_file;
       ret = fs_getfilep(group_fd, &group_file);
       if (ret < 0)
         {
@@ -2155,6 +2155,7 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
 
       if (group_leader->cpu != cpu)
         {
+          fs_putfilep(group_file);
           serr("Event cpu must be same as group leader\n");
           return -EINVAL;
         }
@@ -2173,6 +2174,11 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
 
       if (tcb == NULL)
         {
+          if (group_file != NULL)
+            {
+              fs_putfilep(group_file);
+            }
+
           serr("perf event pid fail:%d\n", pid);
           return -ESRCH;
         }
@@ -2181,6 +2187,11 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
   event = perf_event_alloc(attr, cpu, tcb, group_leader, NULL);
   if (event == NULL)
     {
+      if (group_file != NULL)
+        {
+          fs_putfilep(group_file);
+        }
+
       return -ENOMEM;
     }
 
@@ -2219,10 +2230,20 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
       goto err_with_event;
     }
 
+  if (group_file != NULL)
+    {
+      fs_putfilep(group_file);
+    }
+
   perf_add_event_to_count(event, ctx);
   return event_fd;
 
 err_with_event:
+  if (group_file != NULL)
+    {
+      fs_putfilep(group_file);
+    }
+
   perf_free_event(event);
   return ret;
 }

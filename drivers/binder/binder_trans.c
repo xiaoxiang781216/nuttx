@@ -122,11 +122,7 @@ static int file_tx_get(unsigned int fd, FAR struct file *filep)
     }
 
   ret = file_dup2(file, filep);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
+  fs_putfilep(file);
   return ret;
 }
 

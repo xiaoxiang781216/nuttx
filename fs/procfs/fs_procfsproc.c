@@ -1298,7 +1298,7 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
 
       /* Is there an inode associated with the file descriptor? */
 
-      if (filep->f_inode == NULL)
+      if (filep == NULL)
         {
           continue;
         }
@@ -1323,6 +1323,7 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
                                    i, filep->f_oflags,
                                    INODE_GET_TYPE(filep->f_inode),
                                    (long)filep->f_pos, path, buf);
+      fs_putfilep(filep);
       copysize   = procfs_memcpy(procfile->line, linesize,
                                  buffer, remaining, &offset);
       if (linesize + 1 == STATUS_LINELEN)

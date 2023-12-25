@@ -149,17 +149,19 @@ int psock_bind(FAR struct socket *psock, const struct sockaddr *addr,
 int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 {
   FAR struct socket *psock;
+  FAR struct file *filep;
   int ret;
 
   /* Get the underlying socket structure */
 
-  ret = sockfd_socket(sockfd, &psock);
+  ret = sockfd_socket(sockfd, &filep, &psock);
 
   /* Then let psock_bind do all of the work */
 
   if (ret == OK)
     {
       ret = psock_bind(psock, addr, addrlen);
+      fs_putfilep(filep);
     }
 
   if (ret < 0)
