@@ -42,7 +42,7 @@
  ****************************************************************************/
 
 #if defined(CONFIG_SMP) && CONFIG_SMP_NCPUS > 1
-static volatile bool g_gic_init_done[CONFIG_SMP_NCPUS];
+static volatile cpu_set_t g_gic_init_done;
 #endif
 
 /****************************************************************************
@@ -62,20 +62,22 @@ static volatile bool g_gic_init_done[CONFIG_SMP_NCPUS];
 #if defined(CONFIG_SMP) && CONFIG_SMP_NCPUS > 1
 static void arm_gic_init_done(void)
 {
-  int cpu = up_cpu_index();
-  int i;
+  CPU_SET(up_cpu_index(), &g_gic_init_done);
+}
 
-  g_gic_init_done[cpu] = true;
-  if (cpu == 0)
+static void arm_gic_wait_done(cpu_set_t cpuset)
+{
+  cpu_set_t tmpset;
+
+  do
     {
-      for (i = 1; i < CONFIG_SMP_NCPUS; i++)
-        {
-          while (!g_gic_init_done[i]);
-        }
+      CPU_AND(&tmpset, &g_gic_init_done, &cpuset);
     }
+  while (!CPU_EQUAL(&tmpset, &cpuset));
 }
 #else
 #define arm_gic_init_done()
+#define arm_gic_wait_done(cpuset)
 #endif
 
 /****************************************************************************
@@ -699,6 +701,32 @@ int arm_gic_irq_trigger(int irq, bool edge)
     }
 
   return -EINVAL;
+}
+
+void arm_cpu_sgi(int sgi, unsigned int cpuset)
+{
+  uint32_t regval;
+
+  arm_gic_wait_done(cpuset);
+
+#ifdef CONFIG_SMP
+  regval = GIC_ICDSGIR_INTID(sgi) | GIC_ICDSGIR_CPUTARGET(cpuset) |
+           GIC_ICDSGIR_TGTFILTER_LIST;
+#else
+  regval = GIC_ICDSGIR_INTID(sgi) | GIC_ICDSGIR_CPUTARGET(0) |
+           GIC_ICDSGIR_TGTFILTER_THIS;
+#endif
+
+#ifndef CONFIG_ARCH_TRUSTZONE_SECURE
+  /* Set NSATT be 1: forward the SGI specified in the SGIINTID field to a
+   * specified CPU interfaces only if the SGI is configured as Group 1 on
+   * that interface.
+   */
+
+  regval |= GIC_ICDSGIR_NSATT_GRP1;
+#endif
+
+  putreg32(regval, GIC_ICDSGIR);
 }
 
 #endif /* CONFIG_ARMV7A_HAVE_GICv2 */
