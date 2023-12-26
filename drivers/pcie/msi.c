@@ -22,6 +22,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/irq.h>
 #include <nuttx/pcie/cap.h>
 #include <nuttx/pcie/pcie.h>
 #include <nuttx/pcie/controller.h>
@@ -53,32 +54,6 @@ static uint32_t get_msi_mmc(FAR struct pcie_dev_s *dev,
   /* Getting MMC true count: 2^(MMC field) */
 
   return 1 << ((mcr & PCIE_MSI_MCR_MMC) >> PCIE_MSI_MCR_MMC_SHIFT);
-}
-
-/****************************************************************************
- * Name: disable_msi
- *
- * Description:
- *   This function is used to disable the MSI Enable bit in Message Control
- * Register for MSI.
- *
- * Input Parameters:
- *   dev  - A PCI-E device private data
- *   base - A pointer in Configuration Space to the first entry
- * of a linked list of new capabilities.
- *
- ****************************************************************************/
-
-static void disable_msi(FAR struct pcie_dev_s *dev,
-                        uint32_t base)
-{
-  uint32_t mcr;
-
-  mcr = dev->ctrl_dev->ops->pci_cfg_read(dev->ctrl_dev, dev->bdf,
-                                         base + PCIE_MSI_MCR);
-  mcr &= ~PCIE_MSI_MCR_EN;
-  dev->ctrl_dev->ops->pci_cfg_write(dev->ctrl_dev, dev->bdf,
-                                    base + PCIE_MSI_MCR, mcr);
 }
 
 /****************************************************************************
@@ -216,7 +191,7 @@ static uint32_t pcie_msi_base(FAR struct pcie_dev_s *dev, FAR bool *msi)
 
 bool pcie_msi_vector_connect(FAR struct pcie_dev_s *dev,
            msi_vector_t *vector,
-           CODE int (*handler)(int irq, FAR void *context, FAR void *arg),
+           CODE xcpt_t handler,
            FAR const void *parameter,
            uint32_t flags)
 {
