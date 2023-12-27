@@ -228,6 +228,12 @@ int tcp_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
   info = conn->pollinfo;
   while (info->conn != NULL)
     {
+      if ((fds->events & info->fds->events) != 0)
+        {
+          nwarn("WARNING: fds->events %" PRIx32 " same event bit\n",
+                fds->events);
+        }
+
       if (++info >= &conn->pollinfo[CONFIG_NET_TCP_NPOLLWAITERS])
         {
           DEBUGPANIC();
