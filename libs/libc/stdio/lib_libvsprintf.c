@@ -1015,7 +1015,11 @@ str_lpad:
           flags &= ~(FL_NEGATIVE | FL_ALT);
           if (x < 0)
             {
-              x = ~x + 1;
+#ifndef CONFIG_HAVE_LONG_LONG
+              x = -(unsigned long)x;
+#else
+              x = -(unsigned long long)x;
+#endif
               flags |= FL_NEGATIVE;
             }
 
