@@ -58,6 +58,9 @@
 
 uint32_t *sparc_doirq(int irq, uint32_t *regs)
 {
+  int cpu = up_cpu_index();
+  uint32_t **current_regs = (uint32_t **)&g_current_regs[cpu];
+
   board_autoled_on(LED_INIRQ);
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   PANIC();
@@ -69,8 +72,8 @@ uint32_t *sparc_doirq(int irq, uint32_t *regs)
    * Nested interrupts are not supported.
    */
 
-  DEBUGASSERT(CURRENT_REGS == NULL);
-  CURRENT_REGS = regs;
+  DEBUGASSERT(*current_regs == NULL);
+  *current_regs = regs;
 
   /* Deliver the IRQ */
 
@@ -83,12 +86,12 @@ uint32_t *sparc_doirq(int irq, uint32_t *regs)
    * environment before returning from the interrupt.
    */
 
-  if (regs != CURRENT_REGS)
+  if (regs != *current_regs)
     {
 #ifdef CONFIG_ARCH_FPU
       /* Restore floating point registers */
 
-      up_restorefpu((uint32_t *)CURRENT_REGS);
+      up_restorefpu(*current_regs);
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
@@ -106,7 +109,7 @@ uint32_t *sparc_doirq(int irq, uint32_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task_inirq();
+      g_running_tasks[cpu] = current_task(cpu);
     }
 
   /* If a context switch occurred while processing the interrupt then
@@ -115,14 +118,13 @@ uint32_t *sparc_doirq(int irq, uint32_t *regs)
    * switch occurred during interrupt processing.
    */
 
-  regs = (uint32_t *)((uint32_t)CURRENT_REGS -
-                                CPU_MINIMUM_STACK_FRAME_SIZE);
+  regs = (*current_regs - CPU_MINIMUM_STACK_FRAME_SIZE);
 
   /* Set CURRENT_REGS to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  CURRENT_REGS = NULL;
+  *current_regs = NULL;
 #endif
   board_autoled_off(LED_INIRQ);
   return regs;
