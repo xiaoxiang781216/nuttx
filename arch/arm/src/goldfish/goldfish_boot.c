@@ -50,6 +50,10 @@
 
 void arm_boot(void)
 {
+  /* Perf init */
+
+  up_perf_init(0);
+
   /* Set the page table for section */
 
   goldfish_setupmappings();
