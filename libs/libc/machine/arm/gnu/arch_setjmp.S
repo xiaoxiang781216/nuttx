@@ -67,6 +67,7 @@ setjmp:
 	mov		ip, sp				/* Move sp to ip so we can save it */
 
 #ifdef CONFIG_ARCH_ARMV6M
+	push		{r2-r7}
 	stmia		r0!, {r4-r7}			/* Save R4 ~ R7 */
 
 	mov		r2, r8
@@ -93,6 +94,10 @@ setjmp:
 #endif /* CONFIG_ARCH_FPU */
 
 	/* we're done, we're out of here */
+
+#ifdef CONFIG_ARCH_ARMV6M
+	pop		{r2-r7}
+#endif
 
 	movs		r0, #0
 	bx		lr
