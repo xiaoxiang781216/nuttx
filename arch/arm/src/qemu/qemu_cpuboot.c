@@ -34,30 +34,8 @@
 
 #include "arm_internal.h"
 #include "sctlr.h"
-#include "smp.h"
 #include "scu.h"
 #include "gic.h"
-#include "mmu.h"
-#include "barriers.h"
-#include "arm_cpu_psci.h"
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static const start_t g_cpu_boot[CONFIG_SMP_NCPUS] =
-{
-  0,
-#if CONFIG_SMP_NCPUS > 1
-  __cpu1_start,
-#endif
-#if CONFIG_SMP_NCPUS > 2
-  __cpu2_start,
-#endif
-#if CONFIG_SMP_NCPUS > 3
-  __cpu3_start
-#endif
-};
 
 /****************************************************************************
  * Public Data
@@ -72,38 +50,6 @@ extern uint8_t _vector_start[]; /* Beginning of vector block */
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: qemu_cpu_enable
- *
- * Description:
- *   Called from CPU0 to enable all other CPUs.  The enabled CPUs will start
- *   execution at __cpuN_start and, after very low-level CPU initialization
- *   has been performed, will branch to arm_cpu_boot()
- *   (see arch/arm/src/armv7-a/smp.h)
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void qemu_cpu_enable(void)
-{
-  start_t bootaddr;
-  int cpu;
-
-  for (cpu = 1; cpu < CONFIG_SMP_NCPUS; cpu++)
-    {
-      bootaddr = g_cpu_boot[cpu];
-      if (psci_cpu_on(cpu, (uintptr_t)bootaddr))
-        {
-          sinfo("Failed to boot CPU core %d \n", cpu);
-        }
-    }
-}
 
 /****************************************************************************
  * Name: arm_cpu_boot
