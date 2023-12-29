@@ -266,6 +266,13 @@ static inline int elf_loadfile(FAR struct elf_loadinfo_s *loadinfo)
     {
       FAR Elf_Shdr *shdr = &loadinfo->shdr[i];
 
+      /* Skip the empty section */
+
+      if (shdr->sh_size == 0)
+        {
+          continue;
+        }
+
       /* SHF_ALLOC indicates that the section requires memory during
        * execution.
        */
