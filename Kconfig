@@ -2295,6 +2295,38 @@ config DEBUG_CORESIGHT_INFO
 
 endif # DEBUG_CORESIGHT
 
+config DEBUG_RPMSG
+	bool "Rpmsg Debug Features"
+	default n
+	depends on RPMSG
+	---help---
+		Enable rpmsg debug features.
+
+if DEBUG_RPMSG
+
+config DEBUG_RPMSG_ERROR
+	bool "Rpmsg Error Output"
+	default n
+	depends on DEBUG_ERROR
+	---help---
+		Enable rpmsg driver error output to SYSLOG.
+
+config DEBUG_RPMSG_WARN
+	bool "Rpmsg Warnings Output"
+	default n
+	depends on DEBUG_WARN
+	---help---
+		Enable rpmsg warning output to SYSLOG.
+
+config DEBUG_RPMSG_INFO
+	bool "Rpmsg Informational Output"
+	default n
+	depends on DEBUG_INFO
+	---help---
+		Enable rpmsg driver informational output to SYSLOG.
+
+endif # DEBUG_RPMSG
+
 endif # DEBUG_FEATURES
 
 config ARCH_HAVE_STACKCHECK
