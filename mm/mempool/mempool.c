@@ -286,10 +286,6 @@ retry:
         }
     }
 
-#ifdef CONFIG_MM_FILL_ALLOCATIONS
-  memset(blk, 0xaa, pool->blocksize);
-#endif
-
 #if CONFIG_MM_BACKTRACE >= 0
   mempool_add_backtrace(pool, (FAR struct mempool_backtrace_s *)
                               ((FAR char *)blk + pool->blocksize));
@@ -297,6 +293,9 @@ retry:
   pool->nalloc++;
 #endif
   kasan_unpoison(blk, pool->blocksize);
+#ifdef CONFIG_MM_FILL_ALLOCATIONS
+  memset(blk, 0xaa, pool->blocksize);
+#endif
 out_with_lock:
   spin_unlock_irqrestore(&pool->lock, flags);
   return blk;
