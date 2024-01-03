@@ -26,7 +26,6 @@
 #include <errno.h>
 #include <stddef.h>
 
-#include <nuttx/mm/iob.h>
 #include <nuttx/streams.h>
 #include <nuttx/syslog/syslog.h>
 
@@ -279,24 +278,8 @@ void lib_syslograwstream_open(FAR struct lib_syslograwstream_s *stream)
 #ifdef CONFIG_SYSLOG_BUFFER
   stream->common.flush = syslograwstream_flush;
 
-  /* Allocate an IOB */
-
-#  ifdef CONFIG_MM_IOB
-  stream->iob = iob_tryalloc(true);
-  if (stream->iob != NULL)
-    {
-      stream->base = (FAR void *)stream->iob->io_data;
-      stream->size = sizeof(stream->iob->io_data);
-    }
-  else
-    {
-      stream->base = NULL;
-      stream->size = 0;
-    }
-#  else
   stream->base = stream->buffer;
   stream->size = sizeof(stream->buffer);
-#  endif
   stream->offset = 0;
 #else
   stream->common.flush = lib_noflush;
@@ -323,22 +306,6 @@ void lib_syslograwstream_close(FAR struct lib_syslograwstream_s *stream)
 {
   DEBUGASSERT(stream != NULL);
 
-  /* Verify that there is an IOB attached (there should be) */
-
-#  ifdef CONFIG_MM_IOB
-  if (stream->iob != NULL)
-    {
-      /* Flush the output buffered in the IOB */
-
-      syslograwstream_flush(&stream->common);
-
-      /* Free the IOB */
-
-      iob_free(stream->iob);
-      stream->iob = NULL;
-    }
-#  else
   syslograwstream_flush(&stream->common);
-#  endif
 }
 #endif

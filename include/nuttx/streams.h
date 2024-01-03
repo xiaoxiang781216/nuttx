@@ -256,11 +256,7 @@ struct lib_syslograwstream_s
 {
   struct lib_outstream_s common;
 #ifdef CONFIG_SYSLOG_BUFFER
-#  ifdef CONFIG_MM_IOB
-  FAR struct iob_s *iob;
-#  else
   char buffer[CONFIG_SYSLOG_BUFSIZE];
-#  endif
   FAR char *base;
   int size;
   int offset;
