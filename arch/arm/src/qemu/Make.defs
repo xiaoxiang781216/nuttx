@@ -21,8 +21,9 @@
 include armv7-a/Make.defs
 
 # qemu-specific C source files
-CHIP_CSRCS  = qemu_boot.c qemu_serial.c qemu_irq.c qemu_timer.c qemu_memorymap.c
-CHIP_CSRCS += qemu_pgalloc.c
+CHIP_CSRCS  = qemu_allocateheap.c qemu_boot.c 
+CHIP_CSRCS += qemu_irq.c qemu_memorymap.c
+CHIP_CSRCS += qemu_pgalloc.c qemu_serial.c qemu_timer.c qemu_pgalloc.c
 
 ifeq ($(CONFIG_SMP),y)
 CHIP_CSRCS += qemu_cpuboot.c
