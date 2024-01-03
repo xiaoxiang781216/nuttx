@@ -215,12 +215,12 @@
 #define sched_note_mark(tag, str) \
         sched_note_event(tag, NOTE_DUMP_MARK, str, strlen(str))
 
-#define sched_note_counter(tag, name, value) \
+#define sched_note_counter(tag, name_, value_) \
         do \
           { \
             struct note_counter_s counter; \
-            counter.value = value; \
-            strlcpy(counter.name, name, NAME_MAX); \
+            counter.value = value_; \
+            strlcpy(counter.name, name_, NAME_MAX); \
             sched_note_event(tag, NOTE_DUMP_COUNTER, \
                              &counter, sizeof(counter)); \
           } \
