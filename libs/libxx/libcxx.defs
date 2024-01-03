@@ -178,6 +178,13 @@ ifeq ($(shell expr $(GCCVER) \>= 12), 1)
 	libcxx/src/ryu/d2s.cpp_CXXFLAGS += -Wno-maybe-uninitialized
 endif
 
+# libcxx/new:270:24: warning: argument 1 value '4294967292' exceeds maximum object size 2147483647 [-Walloc-size-larger-than=]
+#   270 |   return ::operator new(__args...);
+#       |          ~~~~~~~~~~~~~~^~~~~~~~~~~
+ifeq ($(shell expr $(GCCVER) \>= 13), 1)
+	libcxx/src/string.cpp_CXXFLAGS += -Wno-alloc-size-larger-than
+endif
+
 
 CPPSRCS += $(wildcard libcxx/src/*.cpp)
 CPPSRCS += $(wildcard libcxx/src/experimental/*.cpp)
