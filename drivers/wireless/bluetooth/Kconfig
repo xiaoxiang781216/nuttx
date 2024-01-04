@@ -92,6 +92,13 @@ config BLUETOOTH_RPMSG
 	depends on EXPERIMENTAL
 	default n
 
+config BLUETOOTH_UART_SHIM_BRIDGE
+	bool "Bluetooth UART SHIM bridge"
+	depends on UART_BTH4 || UART_BTH5
+	select BLUETOOTH_UART_GENERIC
+	select BLUETOOTH_UART_SHIM
+	default n
+
 config BLUETOOTH_SLIP
 	bool "Bluetooth SLIP support"
 	default n
