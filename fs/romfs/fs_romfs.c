@@ -1112,7 +1112,7 @@ static int romfs_bind(FAR struct inode *blkdriver, FAR const void *data,
    * the ROMF header
    */
 
-  ret = romfs_fsconfigure(rm);
+  ret = romfs_fsconfigure(rm, data);
   if (ret < 0)
     {
       ferr("ERROR: romfs_fsconfigure failed: %d\n", ret);
@@ -1223,6 +1223,9 @@ static int romfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
 #ifdef CONFIG_FS_ROMFS_CACHE_NODE
       romfs_freenode(rm->rm_root);
 #endif
+#ifdef CONFIG_FS_ROMFS_WRITEABLE
+      romfs_free_sparelist(&rm->rm_sparelist);
+#endif
       nxrmutex_destroy(&rm->rm_lock);
       kmm_free(rm);
       return OK;
@@ -1280,8 +1283,8 @@ static int romfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
   /* Everything else follows in units of sectors */
 
   buf->f_blocks  = SEC_NSECTORS(rm, rm->rm_volsize + SEC_NDXMASK(rm));
-  buf->f_bfree   = 0;
-  buf->f_bavail  = 0;
+  buf->f_bfree   = rm->rm_hwnsectors - buf->f_blocks;
+  buf->f_bavail  = buf->f_bfree;
   buf->f_namelen = NAME_MAX;
 
 errout_with_lock:
