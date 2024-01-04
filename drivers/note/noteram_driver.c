@@ -108,7 +108,7 @@ struct noteram_dump_task_context_s
 struct noteram_dump_context_s
 {
   struct noteram_dump_cpu_context_s cpu[NCPUS];
-  struct noteram_dump_task_context_s *task;
+  FAR struct noteram_dump_task_context_s *task;
 };
 
 /****************************************************************************
@@ -119,7 +119,7 @@ static int noteram_open(FAR struct file *filep);
 static int noteram_close(FAR struct file *filep);
 static ssize_t noteram_read(FAR struct file *filep,
                             FAR char *buffer, size_t buflen);
-static int noteram_ioctl(struct file *filep, int cmd, unsigned long arg);
+static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
 static void noteram_add(FAR struct note_driver_s *drv,
                         FAR const void *note, size_t len);
 static void
