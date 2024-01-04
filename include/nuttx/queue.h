@@ -99,6 +99,17 @@
     } \
   while (0)
 
+#define dq_addfirst_notempty(p, q) \
+  do \
+    { \
+      FAR dq_entry_t *tmp_node = (p); \
+      tmp_node->blink = NULL; \
+      tmp_node->flink = (q)->head; \
+      (q)->head->blink = tmp_node; \
+      (q)->head = tmp_node; \
+    } \
+  while (0)
+
 #define sq_addlast(p, q) \
   do \
     { \
@@ -218,6 +229,27 @@
         } \
       tmp_node->flink = NULL; \
       tmp_node->blink = NULL; \
+    } \
+  while (0)
+
+#define dq_rem_head(p, q) \
+  do \
+    { \
+      FAR dq_entry_t *tmp_node = (p); \
+      FAR dq_entry_t *tmp_next = tmp_node->flink; \
+      (q)->head = tmp_next; \
+      tmp_next->blink = NULL; \
+      tmp_node->flink = NULL; \
+    } \
+  while (0)
+
+#define dq_rem_mid(p) \
+  do \
+    { \
+      FAR dq_entry_t *tmp_prev = (FAR dq_entry_t *)p->blink; \
+      FAR dq_entry_t *tmp_next = (FAR dq_entry_t *)p->flink; \
+      tmp_prev->flink = tmp_next; \
+      tmp_next->blink = tmp_prev; \
     } \
   while (0)
 
