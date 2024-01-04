@@ -22,6 +22,10 @@ ifeq ($(CONFIG_LIBC_ARCH_ATOMIC),y)
   CSRCS += arch_atomic.c
 endif
 
+ifeq ($(CONFIG_MM_KASAN),y)
+  CSRCS += arch_libc.c
+endif
+
 ifeq ($(CONFIG_ARCH_ARM),y)
 include $(TOPDIR)/libs/libc/machine/arm/Make.defs
 endif

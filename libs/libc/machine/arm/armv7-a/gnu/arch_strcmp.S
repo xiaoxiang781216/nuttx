@@ -54,9 +54,9 @@
 
 	.arm
 	.syntax unified
-	.global strcmp
-	.type	strcmp, %function
-strcmp:
+	.global ARCH_LIBCFUN(strcmp)
+	.type	ARCH_LIBCFUN(strcmp), %function
+ARCH_LIBCFUN(strcmp):
 	pld	[r0, #0]
 	pld	[r1, #0]
 	eor	r2, r0, r1
@@ -304,6 +304,6 @@ strcmp:
 	ldr	r4, [sp], #4
 	ldr	r5, [sp], #4
 	bx	lr
-	.size strcmp, . - strcmp
+	.size ARCH_LIBCFUN(strcmp), . - ARCH_LIBCFUN(strcmp)
 
 #endif
