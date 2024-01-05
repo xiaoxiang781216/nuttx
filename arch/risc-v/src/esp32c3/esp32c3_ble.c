@@ -40,10 +40,6 @@
 #include <nuttx/wireless/bluetooth/bt_driver.h>
 #include <nuttx/wireless/bluetooth/bt_uart.h>
 
-#if defined(CONFIG_UART_BTH4)
-  #include <nuttx/serial/uart_bth4.h>
-#endif
-
 #include "esp32c3_ble_adapter.h"
 
 /****************************************************************************
@@ -313,16 +309,14 @@ int esp32c3_ble_initialize(void)
       return ERROR;
     }
 
-#if defined(CONFIG_UART_BTH4)
-  ret = uart_bth4_register(CONFIG_ESP32C3_BLE_TTY_NAME, &g_ble_priv.drv);
-#else
-  ret = bt_netdev_register(&g_ble_priv.drv);
-#endif
+#ifdef CONFIG_DRIVERS_BLUETOOTH
+  ret = bt_driver_register(&g_ble_priv.drv);
   if (ret < 0)
     {
-      wlerr("bt_netdev_register error: %d\n", ret);
+      wlerr("bt_driver_register error: %d\n", ret);
       return ret;
     }
+#endif
 
   return OK;
 }

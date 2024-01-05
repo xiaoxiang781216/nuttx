@@ -859,11 +859,6 @@ endmenu # Wi-Fi configuration
 menu "BLE Configuration"
 	depends on ESP32C3_BLE
 
-config ESP32C3_BLE_TTY_NAME
-	string "BLE TTY device name"
-	default "/dev/ttyHCI0"
-	depends on UART_BTH4
-
 config ESP32C3_BLE_TASK_STACK_SIZE
 	int "Controller task stack size"
 	default 4096
