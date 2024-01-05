@@ -24,7 +24,7 @@ config BLUETOOTH_UART_GENERIC
 	default n
 
 config BLUETOOTH_UART_SHIM
-	bool
+	bool "Bluetooth UART SHIM driver"
 	default n
 
 if BLUETOOTH_UART
@@ -96,13 +96,6 @@ config BLUETOOTH_RPMSG_SERVER
 config BLUETOOTH_RPMSG
 	bool "RPMSG Bluetooth HCI client support"
 	depends on EXPERIMENTAL
-	default n
-
-config BLUETOOTH_UART_SHIM_BRIDGE
-	bool "Bluetooth UART SHIM bridge"
-	depends on UART_BTH4 || UART_BTH5
-	select BLUETOOTH_UART_GENERIC
-	select BLUETOOTH_UART_SHIM
 	default n
 
 config BLUETOOTH_SLIP
