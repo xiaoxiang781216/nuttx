@@ -305,7 +305,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
   if (ret)
     {
       MM_ADD_BACKTRACE(heap, node);
-      kasan_unpoison(ret, nodesize);
+      kasan_unpoison(ret, alignsize - MM_ALLOCNODE_OVERHEAD);
       sched_note_heap(true, heap, ret, nodesize);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
       memset(ret, 0xaa, alignsize - MM_ALLOCNODE_OVERHEAD);

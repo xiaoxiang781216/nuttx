@@ -272,7 +272,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
   mm_unlock(heap);
 
   MM_ADD_BACKTRACE(heap, node);
-  kasan_unpoison((FAR void *)alignedchunk, size);
+  kasan_unpoison((FAR void *)alignedchunk, size - MM_ALLOCNODE_OVERHEAD);
   sched_note_heap(true, heap, (FAR void *)alignedchunk, size);
 
   DEBUGASSERT(alignedchunk % alignment == 0);
