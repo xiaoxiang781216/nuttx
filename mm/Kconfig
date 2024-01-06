@@ -281,6 +281,14 @@ config MM_KASAN_DISABLE_WRITES_CHECK
 	---help---
 		This option disable kasan writes check.
 
+config MM_KASAN_DISABLE_PANIC
+	bool "Disable panic on kasan error"
+	depends on MM_KASAN
+	default n
+	---help---
+		This option disable panic on kasan error. It will print error info
+		and continue to run.
+
 config MM_UBSAN
 	bool "Undefined Behavior Sanitizer"
 	default n

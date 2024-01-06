@@ -26,6 +26,7 @@
 
 #include <assert.h>
 #include <debug.h>
+#include <execinfo.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -186,6 +187,9 @@ static void kasan_report(FAR const void *addr, size_t size,
                          FAR void *return_address)
 {
   static int recursion;
+  irqstate_t flags;
+
+  flags = enter_critical_section();
 
   if (++recursion == 1)
     {
@@ -195,10 +199,15 @@ static void kasan_report(FAR const void *addr, size_t size,
              addr, size, return_address);
 
       kasan_show_memory(addr, size, 80);
+#ifndef CONFIG_MM_KASAN_DISABLE_PANIC
       PANIC();
+#else
+      dump_stack();
+#endif
     }
 
   --recursion;
+  leave_critical_section(flags);
 }
 
 static bool kasan_is_poisoned(FAR const void *addr, size_t size)
