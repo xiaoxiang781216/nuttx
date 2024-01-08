@@ -37,6 +37,10 @@
 
 #include "arm_internal.h"
 
+#ifdef CONFIG_ARCH_HAVE_MMU
+#include "mmu.h"
+#endif
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -132,8 +136,10 @@ void weak_function up_allocate_heap(void **heap_start, size_t *heap_size)
   board_autoled_on(LED_HEAPALLOCATE);
   *heap_start = (void *)g_idle_topstack;
 
-#ifdef CONFIG_ARCH_PGPOOL_PBASE
+#if defined(CONFIG_ARCH_PGPOOL_PBASE)
   *heap_size  = CONFIG_ARCH_PGPOOL_PBASE - g_idle_topstack;
+#elif defined(PGTABLE_BASE_PADDR)
+  *heap_size  = PGTABLE_BASE_PADDR - g_idle_topstack;
 #else
   *heap_size  = CONFIG_RAM_END - g_idle_topstack;
 #endif
