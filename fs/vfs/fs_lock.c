@@ -115,13 +115,6 @@ static int file_lock_normalize(FAR struct file *filep,
   off_t start;
   off_t end;
 
-  /* Check the legality of incoming flocks */
-
-  if (flock->l_len - 1 > OFFSET_MAX - flock->l_start)
-    {
-      return -EOVERFLOW;
-    }
-
   /* Check that the type brought in the flock is correct */
 
   switch (flock->l_type)
@@ -177,8 +170,18 @@ static int file_lock_normalize(FAR struct file *filep,
     }
 
   start += flock->l_start;
+  if (start < 0)
+    {
+      return -EINVAL;
+    }
+
   if (flock->l_len > 0)
     {
+      if (flock->l_len - 1 > OFFSET_MAX - start)
+        {
+          return -EOVERFLOW;
+        }
+
       end = start + flock->l_len - 1;
     }
   else if (flock->l_len < 0)
@@ -197,7 +200,6 @@ static int file_lock_normalize(FAR struct file *filep,
     }
 
   out->l_whence = SEEK_SET;
-  out->l_pid = getpid();
   out->l_type = flock->l_type;
   out->l_start = start;
   out->l_end = end;
@@ -562,8 +564,6 @@ int file_getlk(FAR struct file *filep, FAR struct flock *flock)
       return ret;
     }
 
-  flock->l_type = F_UNLCK;
-
   nxmutex_lock(&g_protect_lock);
 
   bucket = file_lock_find_bucket(path);
@@ -575,12 +575,12 @@ int file_getlk(FAR struct file *filep, FAR struct flock *flock)
           if (file_lock_is_conflict(flock, &file_lock->fl_lock))
             {
               memcpy(flock, &file_lock->fl_lock, sizeof(*flock));
-              break;
+              goto out;
             }
         }
     }
 
-  nxmutex_unlock(&g_protect_lock);
+  flock->l_type = F_UNLCK;
 
   /* Convert back to flock
    * The flock information saved in filelock is used as an offset
@@ -588,6 +588,8 @@ int file_getlk(FAR struct file *filep, FAR struct flock *flock)
    * l_len should be converted to cover the data quantity
    */
 
+out:
+  nxmutex_unlock(&g_protect_lock);
   if (flock->l_end == OFFSET_MAX)
     {
       flock->l_len = 0;
@@ -640,6 +642,8 @@ int file_setlk(FAR struct file *filep, FAR struct flock *flock,
     {
       return ret;
     }
+
+  request.l_pid = getpid();
 
   nxmutex_lock(&g_protect_lock);
 
