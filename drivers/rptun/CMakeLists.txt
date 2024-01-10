@@ -20,7 +20,7 @@
 if(CONFIG_RPTUN)
   set(SRCS)
 
-  list(APPEND SRCS rptun.c rptun_dump.c)
+  list(APPEND SRCS rptun.c)
 
   if(CONFIG_RPTUN_IVSHMEM)
     list(APPEND SRCS rptun_ivshmem.c)

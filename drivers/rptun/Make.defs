@@ -22,7 +22,7 @@
 
 ifeq ($(CONFIG_RPTUN),y)
 
-CSRCS += rptun.c rptun_dump.c
+CSRCS += rptun.c
 
 ifeq ($(CONFIG_RPTUN_SECURE),y)
 CSRCS += rptun_secure.c
