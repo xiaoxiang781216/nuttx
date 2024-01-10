@@ -299,6 +299,18 @@ void nxsched_remove_not_running(FAR struct tcb_s *rtcb)
 {
   FAR dq_queue_t *tasklist;
 
+  /* if rtcb == g_delivertasks[i] we set NULL to g_delivertasks[i] */
+
+  for (int i = 0; i < CONFIG_SMP_NCPUS; i++)
+    {
+      if (rtcb == g_delivertasks[i])
+        {
+          g_delivertasks[i] = NULL;
+          rtcb->task_state = TSTATE_TASK_INVALID;
+          return;
+        }
+    }
+
   tasklist = TLIST_HEAD(rtcb, rtcb->cpu);
 
   DEBUGASSERT(rtcb->task_state != TSTATE_TASK_RUNNING);

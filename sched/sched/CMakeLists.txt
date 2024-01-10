@@ -53,8 +53,14 @@ if(CONFIG_PRIORITY_INHERITANCE)
 endif()
 
 if(CONFIG_SMP)
-  list(APPEND SRCS sched_cpupause.c sched_getcpu.c sched_getaffinity.c
-       sched_setaffinity.c)
+  list(
+    APPEND
+    SRCS
+    sched_cpupause.c
+    sched_getcpu.c
+    sched_getaffinity.c
+    sched_setaffinity.c
+    sched_process_delivered.c)
 endif()
 
 if(CONFIG_SIG_SIGSTOP_ACTION)
