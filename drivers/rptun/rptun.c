@@ -912,10 +912,11 @@ static int rptun_do_ioctl(FAR struct rptun_priv_s *priv, int cmd,
         RPTUN_PANIC(priv->dev);
         break;
       case RPTUNIOC_DUMP:
-        rptun_dump(&priv->rvdev);
 #ifdef CONFIG_RPTUN_PM
-        metal_log(METAL_LOG_EMERGENCY, "rptun headrx %d\n", priv->headrx);
+        metal_log(METAL_LOG_EMERGENCY, "Remote: %s headrx %d\n",
+                  RPTUN_GET_CPUNAME(priv->dev), priv->headrx);
 #endif
+        rptun_dump(&priv->rvdev);
         break;
 #ifdef CONFIG_RPTUN_PING
       case RPTUNIOC_PING:

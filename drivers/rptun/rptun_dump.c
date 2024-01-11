@@ -24,6 +24,7 @@
 
 #include <nuttx/rptun/openamp.h>
 #include <nuttx/rptun/rptun.h>
+#include <nuttx/syslog/syslog.h>
 #include <metal/utilities.h>
 
 #include <rpmsg/rpmsg_internal.h>
@@ -134,6 +135,8 @@ void rptun_dump(FAR struct rpmsg_virtio_device *rvdev)
 
   rptun_dump_buffer(rvdev, true);
   rptun_dump_buffer(rvdev, false);
+
+  syslog_flush();
 
   if (needlock)
     {
