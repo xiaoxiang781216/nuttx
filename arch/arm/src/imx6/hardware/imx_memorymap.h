@@ -874,9 +874,6 @@
 #    error "One of PGTABLE_BASE_PADDR or PGTABLE_BASE_VADDR is undefined"
 #  endif
 
-#    undef PGTABLE_BASE_PADDR
-#    undef PGTABLE_BASE_VADDR
-
 /* The page table then lies at the beginning of the OSSRAM and
  * the IDLE stack follows immediately.
  */

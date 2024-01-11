@@ -894,16 +894,6 @@
 #define PG_POOL_PGPADDR(ndx)    (PG_PAGED_PBASE + ((ndx) << PAGESHIFT))
 #define PG_POOL_PGVADDR(ndx)    (PG_PAGED_VBASE + ((ndx) << PAGESHIFT))
 
-#else
-
-#ifndef PGTABLE_BASE_PADDR
-#  define PGTABLE_BASE_PADDR    (CONFIG_RAM_START + CONFIG_RAM_SIZE - ALL_PGTABLE_SIZE)
-#endif
-
-#ifndef PGTABLE_BASE_VADDR
-#  define PGTABLE_BASE_VADDR    (CONFIG_RAM_START + CONFIG_RAM_SIZE - ALL_PGTABLE_SIZE)
-#endif
-
 #endif /* CONFIG_PAGING */
 
 /****************************************************************************
