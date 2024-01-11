@@ -100,6 +100,12 @@ static int rpmsg_dev_ioctl_(FAR struct rpmsg_s *rpmsg, int cmd,
 
   switch (cmd)
     {
+      case RPMSGIOC_PANIC:
+        rpmsg->ops->panic(rpmsg);
+        break;
+      case RPMSGIOC_DUMP:
+        rpmsg->ops->dump(rpmsg);
+        break;
 #ifdef CONFIG_RPMSG_PING
       case RPMSGIOC_PING:
         ret = rpmsg_ping(&rpmsg->ping, (FAR const struct rpmsg_ping_s *)arg);
@@ -508,4 +514,14 @@ int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg)
 
   nxrmutex_unlock(&g_rpmsg_lock);
   return ret;
+}
+
+int rpmsg_panic(FAR const char *cpuname)
+{
+  return rpmsg_ioctl(cpuname, RPMSGIOC_PANIC, 0);
+}
+
+void rpmsg_dump_all(void)
+{
+  rpmsg_ioctl(NULL, RPMSGIOC_DUMP, 0);
 }
