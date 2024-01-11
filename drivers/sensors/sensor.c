@@ -442,9 +442,17 @@ static ssize_t sensor_do_samples(FAR struct sensor_upperhalf_s *upper,
 
   if (user->state.interval == ULONG_MAX)
     {
-      ret = circbuf_peekat(&upper->buffer,
-                           user->bufferpos * upper->state.esize,
-                           buffer, len);
+      if (buffer != NULL)
+        {
+          ret = circbuf_peekat(&upper->buffer,
+                        user->bufferpos * upper->state.esize,
+                        buffer, len);
+        }
+      else
+        {
+          ret = len;
+        }
+
       user->bufferpos += nums;
       circbuf_peekat(&upper->timing,
                      (user->bufferpos - 1) * TIMING_BUF_ESIZE,
@@ -492,9 +500,17 @@ static ssize_t sensor_do_samples(FAR struct sensor_upperhalf_s *upper,
               ((user->state.generation + user->state.interval) << 1);
       if (delta >= 0)
         {
-          ret += circbuf_peekat(&upper->buffer,
-                                (pos - 1) * upper->state.esize,
-                                buffer + ret, upper->state.esize);
+          if (buffer != NULL)
+            {
+              ret += circbuf_peekat(&upper->buffer,
+                                    (pos - 1) * upper->state.esize,
+                                    buffer + ret, upper->state.esize);
+            }
+          else
+            {
+              ret += upper->state.esize;
+            }
+
           user->bufferpos = pos;
           user->state.generation += user->state.interval;
           if (ret >= len)
@@ -679,7 +695,7 @@ static ssize_t sensor_read(FAR struct file *filep, FAR char *buffer,
   FAR struct sensor_user_s *user = filep->f_priv;
   ssize_t ret;
 
-  if (!buffer || !len)
+  if (!len)
     {
       return -EINVAL;
     }
@@ -687,6 +703,11 @@ static ssize_t sensor_read(FAR struct file *filep, FAR char *buffer,
   nxrmutex_lock(&upper->lock);
   if (lower->ops->fetch)
     {
+      if (buffer == NULL)
+        {
+          return -EINVAL;
+        }
+
       if (!(filep->f_oflags & O_NONBLOCK))
         {
           nxrmutex_unlock(&upper->lock);
@@ -716,11 +737,18 @@ static ssize_t sensor_read(FAR struct file *filep, FAR char *buffer,
     }
   else if (lower->persist)
     {
-      /* Persistent device can get latest old data if not updated. */
+      if (buffer == NULL)
+        {
+          ret = upper->state.esize;
+        }
+      else
+        {
+          /* Persistent device can get latest old data if not updated. */
 
-      ret = circbuf_peekat(&upper->buffer,
-                           (user->bufferpos - 1) * upper->state.esize,
-                           buffer, upper->state.esize);
+          ret = circbuf_peekat(&upper->buffer,
+                               (user->bufferpos - 1) * upper->state.esize,
+                               buffer, upper->state.esize);
+        }
     }
   else
     {
