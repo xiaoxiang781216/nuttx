@@ -265,7 +265,6 @@ static int ff_upload(FAR struct ff_upperhalf_s *upper,
         }
     }
 
-  nxmutex_lock(&upper->lock);
   if (effect->id == -1)
     {
       for (id = 0; id < upper->max_effects; id++)
@@ -278,8 +277,7 @@ static int ff_upload(FAR struct ff_upperhalf_s *upper,
 
       if (id >= upper->max_effects)
         {
-          ret = -ENOSPC;
-          goto out;
+          return -ENOSPC;
         }
 
       effect->id = id;
@@ -291,28 +289,25 @@ static int ff_upload(FAR struct ff_upperhalf_s *upper,
       ret = ff_check_effect_access(upper, id, filep);
       if (ret < 0)
         {
-          goto out;
+          return ret;
         }
 
       old = &upper->effects[id].data;
       if (!ff_check_effects_compatible(effect, old))
         {
-          ret = -EINVAL;
-          goto out;
+          return -EINVAL;
         }
     }
 
   ret = lower->upload(lower, effect, old);
   if (ret < 0)
     {
-      goto out;
+      return ret;
     }
 
   upper->effects[id].data = *effect;
   upper->effects[id].owner = filep;
 
-out:
-  nxmutex_unlock(&upper->lock);
   return ret;
 }
 
