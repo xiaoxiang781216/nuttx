@@ -26,10 +26,6 @@ if(CONFIG_SERIAL_GDBSTUB)
   list(APPEND SRCS serial_gdbstub.c)
 endif()
 
-if(CONFIG_UART_PL011)
-  list(APPEND SRCS serial_pl011.c)
-endif()
-
 if(CONFIG_CMSDK_UART)
   list(APPEND SRCS serial_cmsdk.c)
 endif()
@@ -42,6 +38,10 @@ endif()
 
 if(CONFIG_16550_UART)
   list(APPEND SRCS uart_16550.c)
+endif()
+
+if(CONFIG_UART_PL011)
+  list(APPEND SRCS uart_pl011.c)
 endif()
 
 if(CONFIG_RPMSG_UART)
