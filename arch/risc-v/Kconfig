@@ -240,6 +240,19 @@ config ARCH_RV_ISA_C
 	bool
 	default n
 
+config ARCH_RV_ISA_V
+	bool
+	default n
+	depends on ARCH_FPU
+
+config ARCH_RV_MMIO_BITS
+	int
+	# special cases
+	default 32		if ARCH_CHIP_K230
+	# general fallbacks
+	default 32 		if ARCH_RV32
+	default 64		if ARCH_RV64
+
 config ARCH_FAMILY
 	string
 	default "rv32"		if ARCH_RV32
