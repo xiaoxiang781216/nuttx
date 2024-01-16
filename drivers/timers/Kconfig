@@ -501,4 +501,9 @@ config CS2100CP_REGDEBUG
 	depends on DEBUG_FEATURES
 
 endif # TIMERS_CS2100CP
+
+config GOLDFISH_TIMER
+	bool "Enable GOLDFISH_TIMER"
+	default n
+
 endmenu # Timer Driver Support
