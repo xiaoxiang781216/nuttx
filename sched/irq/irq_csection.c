@@ -30,6 +30,7 @@
 #include <nuttx/init.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/irq.h>
 #include <arch/irq.h>
 
 #include "sched/sched.h"
@@ -47,6 +48,7 @@
  */
 
 volatile spinlock_t g_cpu_irqlock = SP_UNLOCKED;
+volatile spinlock_t g_cpu_irqsetlock;
 
 /* Used to keep track of which CPU(s) hold the IRQ lock. */
 
@@ -60,6 +62,82 @@ volatile uint8_t g_cpu_nestcount[CONFIG_SMP_NCPUS];
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: spin_setbit
+ *
+ * Description:
+ *   Makes setting a CPU bit in a bitset an atomic action
+ *
+ * Input Parameters:
+ *   set     - A reference to the bitset to set the CPU bit in
+ *   cpu     - The bit number to be set
+ *   setlock - A reference to the lock protecting the set
+ *   orlock  - Will be set to SP_LOCKED while holding setlock
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+static void spin_setbit(FAR volatile cpu_set_t *set, unsigned int cpu,
+                        FAR volatile spinlock_t *setlock,
+                        FAR volatile spinlock_t *orlock)
+{
+  /* Then, get the 'setlock' spinlock */
+
+  spin_lock(setlock);
+
+  /* Then set the bit and mark the 'orlock' as locked */
+
+  *set   |= (1 << cpu);
+  *orlock = SP_LOCKED;
+
+  /* Release the 'setlock' and restore local interrupts */
+
+  spin_unlock(setlock);
+}
+#endif
+
+/****************************************************************************
+ * Name: spin_clrbit
+ *
+ * Description:
+ *   Makes clearing a CPU bit in a bitset an atomic action
+ *
+ * Input Parameters:
+ *   set     - A reference to the bitset to set the CPU bit in
+ *   cpu     - The bit number to be set
+ *   setlock - A reference to the lock protecting the set
+ *   orlock  - Will be set to SP_UNLOCKED if all bits become cleared in set
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+static void spin_clrbit(FAR volatile cpu_set_t *set, unsigned int cpu,
+                        FAR volatile spinlock_t *setlock,
+                        FAR volatile spinlock_t *orlock)
+{
+  /* First, get the 'setlock' spinlock */
+
+  spin_lock(setlock);
+
+  /* Then clear the bit in the CPU set.  Set/clear the 'orlock' depending
+   * upon the resulting state of the CPU set.
+   */
+
+  *set   &= ~(1 << cpu);
+  *orlock = (*set != 0) ? SP_LOCKED : SP_UNLOCKED;
+
+  /* Release the 'setlock' and restore local interrupts */
+
+  spin_unlock(setlock);
+}
+#endif
 
 /****************************************************************************
  * Name: irq_waitlock
@@ -282,7 +360,8 @@ try_again_in_irq:
                   goto try_again_in_irq;
                 }
 
-                g_cpu_irqset |= (1 << cpu);
+              spin_setbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
+                          &g_cpu_irqlock);
             }
 
           /* In any event, the nesting count is now one */
@@ -354,7 +433,8 @@ try_again_in_irq:
            * like lockcount:  Both will disable pre-emption.
            */
 
-          g_cpu_irqset |= (1 << cpu);
+          spin_setbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
+                      &g_cpu_irqlock);
           rtcb->irqcount = 1;
 
           /* Note that we have entered the critical section */
@@ -476,8 +556,8 @@ void leave_critical_section(irqstate_t flags)
 
           if (rtcb->irqcount <= 0)
             {
-              g_cpu_irqset = 0;
-              g_cpu_irqlock = SP_UNLOCKED;
+              spin_clrbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
+                          &g_cpu_irqlock);
             }
 
           g_cpu_nestcount[cpu] = 0;
@@ -532,8 +612,8 @@ void leave_critical_section(irqstate_t flags)
            */
 
           rtcb->irqcount = 0;
-          g_cpu_irqset = 0;
-          g_cpu_irqlock = SP_UNLOCKED;
+          spin_clrbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
+                      &g_cpu_irqlock);
 
           /* Have all CPUs released the lock? */
         }
@@ -586,4 +666,21 @@ void leave_critical_section(irqstate_t flags)
   up_irq_restore(flags);
 }
 #endif
+
+#ifdef CONFIG_SMP
+void restore_critical_section(FAR void *tcb_, int cpu)
+{
+  FAR struct tcb_s *tcb = (FAR struct tcb_s *)tcb_;
+
+  if (tcb->irqcount <= 0)
+    {
+      if ((g_cpu_irqset & (1 << cpu)) != 0 && g_cpu_nestcount[cpu] <= 0)
+        {
+          spin_clrbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
+                      &g_cpu_irqlock);
+        }
+    }
+}
+#endif
+
 #endif /* CONFIG_IRQCOUNT */
