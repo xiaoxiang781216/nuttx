@@ -380,7 +380,6 @@ void nxsched_critmon_preemption(FAR struct tcb_s *tcb, bool state);
 void nxsched_critmon_csection(FAR struct tcb_s *tcb, bool state);
 void nxsched_resume_critmon(FAR struct tcb_s *tcb);
 void nxsched_suspend_critmon(FAR struct tcb_s *tcb);
-void nxsched_update_critmon(FAR struct tcb_s *tcb);
 #endif
 
 /* TCB operations */
