@@ -50,7 +50,6 @@
 void nxsched_suspend(FAR struct tcb_s *tcb)
 {
   irqstate_t flags;
-  bool switch_needed;
 
   DEBUGASSERT(tcb != NULL);
 
@@ -90,21 +89,18 @@ void nxsched_suspend(FAR struct tcb_s *tcb)
 
       DEBUGASSERT(!is_idle_task(tcb));
 
-      /* Remove the tcb task from the ready-to-run list. */
+      /* Remove the tcb task from the running list. */
 
-      switch_needed = nxsched_remove_readytorun(tcb, true);
+      nxsched_remove_running(tcb);
 
       /* Add the task to the specified blocked task list */
 
       tcb->task_state = TSTATE_TASK_STOPPED;
       dq_addlast((FAR dq_entry_t *)tcb, &g_stoppedtasks);
 
-      /* Now, perform the context switch if one is needed */
+      /* Now, perform the context switch */
 
-      if (switch_needed)
-        {
-          up_switch_context(this_task_inirq(), rtcb);
-        }
+      up_switch_context(this_task_inirq(), rtcb);
     }
 
   leave_critical_section(flags);

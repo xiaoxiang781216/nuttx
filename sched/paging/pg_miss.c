@@ -109,7 +109,6 @@
 void pg_miss(FAR struct tcb_s *ftcb)
 {
   FAR struct tcb_s *wtcb;
-  bool switch_needed;
 
   /* Sanity checking
    *
@@ -135,21 +134,18 @@ void pg_miss(FAR struct tcb_s *ftcb)
 
   DEBUGASSERT(!is_idle_task(ftcb));
 
-  /* Remove the tcb task from the ready-to-run list. */
+  /* Remove the tcb task from the running list. */
 
-  switch_needed = nxsched_remove_readytorun(ftcb, true);
+  nxsched_remove_running(ftcb);
 
   /* Add the task to the specified blocked task list */
 
   ftcb->task_state = TSTATE_WAIT_PAGEFILL;
   nxsched_add_prioritized(ftcb, &g_waitingforfill);
 
-  /* Now, perform the context switch if one is needed */
+  /* Now, perform the context switch */
 
-  if (switch_needed)
-    {
-      up_switch_context(this_task_inirq(), ftcb);
-    }
+  up_switch_context(this_task_inirq(), ftcb);
 
   /* Boost the page fill worker thread priority.
    * - Check the priority of the task at the head of the g_waitingforfill

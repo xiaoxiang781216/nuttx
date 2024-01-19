@@ -150,9 +150,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 
           do
             {
-              bool check = nxsched_remove_readytorun(nxttcb, false);
-              DEBUGASSERT(check == false);
-              UNUSED(check);
+              nxsched_remove_not_running(nxttcb);
 
               nxsched_add_prioritized(nxttcb, &g_pendingtasks);
               nxttcb->task_state = TSTATE_TASK_PENDING;
@@ -211,7 +209,6 @@ static void nxsched_readytorun_setpriority(FAR struct tcb_s *tcb,
                                            int sched_priority)
 {
   FAR struct tcb_s *rtcb;
-
 #ifdef CONFIG_SMP
   int cpu;
 
@@ -270,13 +267,13 @@ static void nxsched_readytorun_setpriority(FAR struct tcb_s *tcb,
 
   else
     {
+      bool check;
+
       /* Remove the TCB from the ready-to-run task list that it resides in.
        * It should not be at the head of the list.
        */
 
-      bool check = nxsched_remove_readytorun(tcb, false);
-      DEBUGASSERT(check == false);
-      UNUSED(check);
+      nxsched_remove_not_running(tcb);
 
       /* Change the task priority */
 

@@ -103,7 +103,7 @@ int nxtask_terminate(pid_t pid)
   /* Remove dtcb from tasklist, let remove_readtorun() do the job */
 
   task_state = dtcb->task_state;
-  nxsched_remove_readytorun(dtcb, false);
+  nxsched_remove(dtcb);
   dtcb->task_state = task_state;
 
   leave_critical_section(flags);
