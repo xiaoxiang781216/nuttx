@@ -110,7 +110,7 @@ void arm64_el_init(void)
 {
   uint64_t reg;
 
-  write_sysreg(CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC, cntfrq_el0);
+  write_sysreg(CONFIG_SYS_COUNT_CLK_FREQ, cntfrq_el0);
 
   ARM64_ISB();
 

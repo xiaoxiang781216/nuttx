@@ -41,8 +41,8 @@
 
 #if CONFIG_ARM64_GIC_VERSION == 3 || CONFIG_ARM64_GIC_VERSION == 4
 
-#define CONFIG_GICD_BASE          0xe7000000
-#define CONFIG_GICR_BASE          0xe7040000
+#define CONFIG_GICD_BASE          0xe5a00000
+#define CONFIG_GICR_BASE          0xe5a40000
 #define CONFIG_GICR_OFFSET        0x20000
 
 #else
