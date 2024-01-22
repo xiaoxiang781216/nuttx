@@ -137,7 +137,7 @@ reg_table = {
         "T4": 29,
         "T5": 30,
         "T6": 31,
-        "PC": 32,
+        "EPC": 32,
     },
     # use xtensa-esp32s3-elf-gdb register table
     "esp32s3": {
