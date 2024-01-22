@@ -449,6 +449,56 @@ static int v4l2_ioctl(FAR struct file *filep,
                              (FAR struct v4l2_frmsizeenum *)arg);
         break;
 
+      case VIDIOC_CROPCAP:
+        if (v4l2->vops->cropcap == NULL)
+          {
+            break;
+          }
+
+        return v4l2->vops->cropcap(v4l2,
+                             (FAR struct v4l2_cropcap *)arg);
+        break;
+
+      case VIDIOC_DQEVENT:
+        if (v4l2->vops->dqevent == NULL)
+          {
+            break;
+          }
+
+        return v4l2->vops->dqevent(v4l2,
+                             (FAR struct v4l2_event *)arg);
+        break;
+
+      case VIDIOC_SUBSCRIBE_EVENT:
+        if (v4l2->vops->subscribe_event == NULL)
+          {
+            break;
+          }
+
+        return v4l2->vops->subscribe_event(v4l2,
+                             (FAR struct v4l2_event_subscription *)arg);
+        break;
+
+      case VIDIOC_DECODER_CMD:
+        if (v4l2->vops->decoder_cmd == NULL)
+          {
+            break;
+          }
+
+        return v4l2->vops->decoder_cmd(v4l2,
+                             (FAR struct v4l2_decoder_cmd *)arg);
+        break;
+
+      case VIDIOC_ENCODER_CMD:
+        if (v4l2->vops->encoder_cmd == NULL)
+          {
+            break;
+          }
+
+        return v4l2->vops->encoder_cmd(v4l2,
+                             (FAR struct v4l2_encoder_cmd *)arg);
+        break;
+
       default:
         verr("Unrecognized cmd: %d\n", cmd);
         break;
