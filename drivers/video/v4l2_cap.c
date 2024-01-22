@@ -1050,6 +1050,7 @@ static int initialize_scene_parameter(FAR capture_mng_t *cmng,
       return -ENOMEM;
     }
 
+  sp->mode            = mode;
   sp->brightness      = get_default_value(cmng, IMGSENSOR_ID_BRIGHTNESS);
   sp->contrast        = get_default_value(cmng, IMGSENSOR_ID_CONTRAST);
   sp->saturation      = get_default_value(cmng, IMGSENSOR_ID_SATURATION);
@@ -1109,51 +1110,51 @@ static void initialize_scenes_parameter(FAR capture_mng_t *cmng)
            &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_BACKLIGHT */
 #ifdef CONFIG_VIDEO_SCENE_BEACHSNOW
-  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_BEACHSNOW,
+  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_BEACH_SNOW,
               &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_BEACHSNOW */
 #ifdef CONFIG_VIDEO_SCENE_CANDLELIGHT
-  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_CANDLELIGHT,
+  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_CANDLE_LIGHT,
                 &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_CANDLELIGHT */
 #ifdef CONFIG_VIDEO_SCENE_DAWNDUSK
-  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_DAWNDUSK,
+  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_DAWN_DUSK,
              &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_DAWNDUSK */
 #ifdef CONFIG_VIDEO_SCENE_FALLCOLORS
-  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_FALLCOLORS,
+  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_FALL_COLORS,
                &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_FALLCOLORS */
 #ifdef CONFIG_VIDEO_SCENE_FIREWORKS
-  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_FIREWORKS,
+  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_FIREWORKS,
               &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_FIREWORKS */
 #ifdef CONFIG_VIDEO_SCENE_LANDSCAPE
-  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_LANDSCAPE,
+  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_LANDSCAPE,
               &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_LANDSCAPE */
 #ifdef CONFIG_VIDEO_SCENE_NIGHT
-  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_NIGHT,
+  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_NIGHT,
           &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_NIGHT */
 #ifdef CONFIG_VIDEO_SCENE_PARTYINDOOR
-  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_PARTYINDOOR,
+  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_PARTY_INDOOR,
                 &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_PARTYINDOOR */
 #ifdef CONFIG_VIDEO_SCENE_PORTRAIT
-  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_PORTRAIT,
+  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_PORTRAIT,
              &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_PORTRAIT */
 #ifdef CONFIG_VIDEO_SCENE_SPORTS
-  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_SPORTS,
+  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_SPORTS,
            &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_SPORTS */
 #ifdef CONFIG_VIDEO_SCENE_SUNSET
-  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_SUNSET,
+  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_SUNSET,
            &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_SUNSET */
 #ifdef CONFIG_VIDEO_SCENE_TEXT
-  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_TEXT,
+  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_TEXT,
          &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_TEXT */
 }
@@ -3236,16 +3237,23 @@ static int capture_g_ext_ctrls(FAR struct file *filep,
        cnt < ctrls->count;
        cnt++, control++)
     {
-      ret = IMGSENSOR_GET_VALUE(cmng->imgsensor,
-              control->id,
-              control->size,
-              (imgsensor_value_t *)&control->value64);
-      if (ret < 0)
+      if (control->id == V4L2_CID_SCENE_MODE)
         {
-          /* Set cnt in that error occurred */
+          control->value = cmng->capture_scene_mode;
+        }
+      else
+        {
+          ret = IMGSENSOR_GET_VALUE(cmng->imgsensor,
+                  control->id,
+                  control->size,
+                  (imgsensor_value_t *)&control->value64);
+          if (ret < 0)
+            {
+              /* Set cnt in that error occurred */
 
-          ctrls->error_idx = cnt;
-          return ret;
+              ctrls->error_idx = cnt;
+              return ret;
+            }
         }
     }
 
