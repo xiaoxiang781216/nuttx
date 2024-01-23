@@ -815,22 +815,10 @@ static int virtio_mmio_init_device(FAR struct virtio_mmio_device_s *vmdev,
 
 static int virtio_register_mmio_device_(FAR void *regs, int irq, bool secure)
 {
-  struct metal_init_params params = METAL_INIT_DEFAULTS;
   FAR struct virtio_mmio_device_s *vmdev;
-  static bool onceinit;
   int ret;
 
   DEBUGASSERT(regs != NULL);
-
-  if (onceinit == false)
-    {
-      onceinit = true;
-      ret = metal_init(&params);
-      if (ret < 0)
-        {
-          return ret;
-        }
-    }
 
   vmdev = kmm_zalloc(sizeof(*vmdev));
   if (vmdev == NULL)
