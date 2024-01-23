@@ -116,6 +116,7 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
       irqstate_t flags;
       sclock_t repl_ticks;
       sclock_t budget_ticks;
+      int ret;
 
       if (param->sched_ss_max_repl < 1 ||
           param->sched_ss_max_repl > CONFIG_SCHED_SPORADIC_MAXREPL)
