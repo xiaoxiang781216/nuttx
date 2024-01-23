@@ -233,6 +233,11 @@ static void kasan_set_poison(FAR const void *addr, size_t size,
   uintptr_t mask;
   int flags;
 
+  if (size == 0)
+    {
+      return;
+    }
+
   flags = spin_lock_irqsave(&g_lock);
 
   p = kasan_find_mem((uintptr_t)addr, size, &bit);
