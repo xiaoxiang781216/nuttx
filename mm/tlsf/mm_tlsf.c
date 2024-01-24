@@ -1420,3 +1420,16 @@ FAR void *mm_zalloc(FAR struct mm_heap_s *heap, size_t size)
 
   return alloc;
 }
+
+/****************************************************************************
+ * Name: mm_heapfree
+ *
+ * Description:
+ *   Return the total free size (in bytes) in the heap
+ *
+ ****************************************************************************/
+
+size_t mm_heapfree(FAR struct mm_heap_s *heap)
+{
+  return heap->mm_heapsize - heap->mm_curused;
+}
