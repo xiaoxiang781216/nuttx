@@ -194,6 +194,7 @@ noinline_function void arm_initialize_stack(void)
 
       "mov %1, sp\n"
       "msr psp, %1\n"
+      "isb sy\n"
 
       /* Select PSP */
 
@@ -205,6 +206,7 @@ noinline_function void arm_initialize_stack(void)
       /* Initialize MSP */
 
       "msr msp, %0\n"
+      "isb sy\n"
       :
       : "r" (stack), "r" (temp)
       : "memory");
