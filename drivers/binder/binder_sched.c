@@ -131,7 +131,9 @@ void wait_wake_up(FAR struct list_node *wq_head, int sync)
   struct wait_queue_entry   *curr;
   struct wait_queue_entry   *next;
   int                        ret;
+  irqstate_t flags;
 
+  flags = enter_critical_section();
   list_for_every_entry_safe(wq_head, curr, next,
                             struct wait_queue_entry, entry)
     {
@@ -141,6 +143,8 @@ void wait_wake_up(FAR struct list_node *wq_head, int sync)
           break;
         }
     }
+
+  leave_critical_section(flags);
 }
 
 void wake_up_pollfree(FAR struct binder_thread *thread)
