@@ -864,6 +864,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
 
   switch (note->nc_type)
     {
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
     case NOTE_START:
       {
         ret += noteram_dump_header(s, note, ctx);
@@ -883,7 +884,6 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
       }
       break;
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
     case NOTE_SUSPEND:
       {
         FAR struct note_suspend_s *nsu = (FAR struct note_suspend_s *)p;
@@ -1106,6 +1106,11 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
         ret += noteram_dump_header(s, &nbi->nev_cmn, ctx);
         ret += lib_sprintf(s, "tracing_mark_write: C|%d|%s|%ld\n",
                            pid, counter->name, counter->value);
+      }
+      break;
+    case NOTE_DUMP_RAW:
+      {
+        ret += lib_stream_puts(s, note, note->nc_length);
       }
       break;
 #endif
