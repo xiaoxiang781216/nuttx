@@ -32,7 +32,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
 /* Nonzero if either x or y is not aligned on a "long" boundary. */
 
 #define UNALIGNED(x, y) \
@@ -72,7 +72,7 @@
 nosanitize_address
 FAR char *stpcpy(FAR char *dest, FAR const char *src)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
   FAR long *aligned_dst;
   FAR const long *aligned_src;
 

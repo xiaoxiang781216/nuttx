@@ -34,7 +34,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
 
 #define LBLOCKSIZE (sizeof(long))
 
@@ -87,7 +87,7 @@
 nosanitize_address
 FAR char *strncpy(FAR char *dest, FAR const char *src, size_t n)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
   FAR char *dst0 = dest;
   FAR const char *src0 = src;
   FAR long *aligned_dst;

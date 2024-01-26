@@ -42,7 +42,7 @@
 #undef strrchr /* See mm/README.txt */
 FAR char *strrchr(FAR const char *s, int c)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
   FAR const char *last = NULL;
 
   if (c)

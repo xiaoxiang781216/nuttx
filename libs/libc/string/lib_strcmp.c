@@ -34,7 +34,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
 /* Nonzero if either x or y is not aligned on a "long" boundary. */
 
 #define UNALIGNED(x, y) \
@@ -61,7 +61,7 @@
 nosanitize_address
 int strcmp(FAR const char *cs, FAR const char *ct)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
   FAR unsigned long *a1;
   FAR unsigned long *a2;
 

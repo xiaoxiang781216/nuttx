@@ -52,7 +52,7 @@
 #undef strchrnul /* See mm/README.txt */
 FAR char *strchrnul(FAR const char *s, int c)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
   FAR char *s1 = strchr(s, c);
 
   return s1 ? s1 : (FAR char *)s + strlen(s);

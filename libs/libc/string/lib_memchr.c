@@ -34,7 +34,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
 
 #define UNALIGNED(x) ((long)(uintptr_t)(x) & (sizeof(long) - 1))
 
@@ -84,7 +84,7 @@
 #undef memchr /* See mm/README.txt */
 FAR void *memchr(FAR const void *s, int c, size_t n)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
   FAR const unsigned char *p = (FAR const unsigned char *)s;
   FAR unsigned long *asrc;
   unsigned char d = c;

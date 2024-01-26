@@ -34,7 +34,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
 /* Nonzero if either x or y is not aligned on a "long" boundary. */
 
 #define UNALIGNED(x, y) \
@@ -59,7 +59,7 @@
 no_builtin("memcmp")
 int memcmp(FAR const void *s1, FAR const void *s2, size_t n)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
   FAR unsigned char *p1 = (FAR unsigned char *)s1;
   FAR unsigned char *p2 = (FAR unsigned char *)s2;
   FAR unsigned long *a1;

@@ -34,7 +34,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
 
 #define UNALIGNED(x) ((long)(uintptr_t)(x) & (sizeof(long) - 1))
 
@@ -79,7 +79,7 @@
 nosanitize_address
 FAR char *strchr(FAR const char *s, int c)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
   FAR const unsigned char *s1 = (FAR const unsigned char *)s;
   FAR unsigned long *aligned_addr;
   unsigned char i = c;

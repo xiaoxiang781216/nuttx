@@ -32,7 +32,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
 /* Nonzero if x is not aligned on a "long" boundary. */
 
 #define UNALIGNED(x) ((long)(uintptr_t)((x) + 1) & (sizeof(long) - 1))
@@ -80,7 +80,7 @@
 #undef memrchr /* See mm/README.txt */
 FAR void *memrchr(FAR const void *s, int c, size_t n)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
   FAR const unsigned char *src0 =
             (FAR const unsigned char *)s + n - 1;
   FAR unsigned long *asrc;

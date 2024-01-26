@@ -34,7 +34,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
 
 #define ALIGNED(x) \
   (((long)(uintptr_t)(x) & (sizeof(long) - 1)) == 0)
@@ -60,7 +60,7 @@
 nosanitize_address
 FAR char *strcat(FAR char *dest, FAR const char *src)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
   FAR char *ret = dest;
 
   /* Skip over the data in dest as quickly as possible. */

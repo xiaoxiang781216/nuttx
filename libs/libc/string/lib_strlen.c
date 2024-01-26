@@ -34,7 +34,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
 
 #define LBLOCKSIZE (sizeof(long))
 #define UNALIGNED(x) ((long)(uintptr_t)(x) & (LBLOCKSIZE - 1))
@@ -60,7 +60,7 @@
 nosanitize_address
 size_t strlen(FAR const char *s)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
   FAR const char *start = s;
   FAR unsigned long *aligned_addr;
 

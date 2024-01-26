@@ -34,7 +34,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
 
 #define LBLOCKSIZE (sizeof(long))
 
@@ -64,7 +64,7 @@
 nosanitize_address
 int strncmp(FAR const char *cs, FAR const char *ct, size_t nb)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
   FAR unsigned long *a1;
   FAR unsigned long *a2;
 

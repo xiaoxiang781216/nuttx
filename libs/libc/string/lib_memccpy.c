@@ -32,7 +32,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
 /* Nonzero if either x or y is not aligned on a "long" boundary. */
 
 #define UNALIGNED(x, y) \
@@ -81,7 +81,7 @@
 #undef memccpy /* See mm/README.txt */
 FAR void *memccpy(FAR void *s1, FAR const void *s2, int c, size_t n)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+#ifdef CONFIG_LIBC_STRING_OPTIMIZE
   FAR void *ptr = NULL;
   FAR unsigned char *pout = (FAR unsigned char *)s1;
   FAR const unsigned char *pin = (FAR const unsigned char *)s2;
