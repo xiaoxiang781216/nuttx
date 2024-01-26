@@ -186,8 +186,13 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
   size_t copysize;
   size_t totalsize;
 
+  UNUSED(maxtime);
+  UNUSED(linesize);
+  UNUSED(copysize);
+
   totalsize = 0;
 
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
   /* Convert the for maximum time pre-emption disabled */
 
   if (g_premp_max[cpu] > 0)
@@ -218,7 +223,9 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
     {
       return totalsize;
     }
+#endif
 
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
   /* Convert and generate output for maximum time in a critical section */
 
   if (g_crit_max[cpu] > 0)
@@ -243,6 +250,8 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
   copysize = procfs_memcpy(attr->line, linesize, buffer, buflen, offset);
 
   totalsize += copysize;
+#endif
+
   return totalsize;
 }
 
