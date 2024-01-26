@@ -572,14 +572,22 @@ uint16_t devif_conn_event(FAR struct net_driver_s *dev, uint16_t flags,
 uint16_t devif_dev_event(FAR struct net_driver_s *dev, uint16_t flags)
 {
   FAR struct devif_callback_s *cb;
+  FAR struct devif_callback_s *next;
 
   /* Loop for each callback in the list and while there are still events
    * set in the flags set.
    */
 
   net_lock();
-  for (cb = dev->d_devcb; cb != NULL && flags != 0; cb = cb->nxtdev)
+  for (cb = dev->d_devcb; cb != NULL && flags != 0; cb = next)
     {
+      /* Save the pointer to the next callback in the lists.  This is done
+       * because the callback action might delete the entry pointed to by
+       * list.
+       */
+
+      next = cb->nxtdev;
+
       /* Check if this callback handles any of the events in the flag set */
 
       if (cb->event != NULL && devif_event_trigger(flags, cb->flags))
@@ -593,6 +601,12 @@ uint16_t devif_dev_event(FAR struct net_driver_s *dev, uint16_t flags)
 
           flags = cb->event(dev, cb->priv, flags);
           cb->free_flags &= ~DEVIF_CB_DONT_FREE;
+
+          /* update the next callback to prevent previously recorded the
+           * next callback from being deleted
+           */
+
+          next = cb->nxtdev;
           if ((cb->free_flags & DEVIF_CB_PEND_FREE) != 0)
             {
               cb->free_flags &= ~DEVIF_CB_PEND_FREE;
