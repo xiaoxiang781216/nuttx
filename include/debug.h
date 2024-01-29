@@ -956,24 +956,6 @@
 #  define csinfo     _none
 #endif
 
-#ifdef CONFIG_DEBUG_PCIE_ERROR
-#  define pcieerr       _err
-#else
-#  define pcieerr      _none
-#endif
-
-#ifdef CONFIG_DEBUG_PCIE_WARN
-#  define pciewarn     _warn
-#else
-#  define pciewarn     _none
-#endif
-
-#ifdef CONFIG_DEBUG_PCIE_INFO
-#  define pcieinfo     _info
-#else
-#  define pcieinfo     _none
-#endif
-
 /* Buffer dumping macros do not depend on varargs */
 
 #ifdef CONFIG_DEBUG_ERROR
@@ -1262,13 +1244,6 @@
 #  define resetinfodumpbuffer(m,b,n)
 #endif
 
-#ifdef CONFIG_DEBUG_PCIE
-#  define pcieerrdumpbuffer(m,b,n)  errdumpbuffer(m,b,n)
-#  define pcieinfodumpbuffer(m,b,n) infodumpbuffer(m,b,n)
-#else
-#  define pcieerrdumpbuffer(m,b,n)
-#  define pcieinfodumpbuffer(m,b,n)
-#endif
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
