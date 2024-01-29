@@ -57,13 +57,13 @@ static void pcie_generic_ctrl_enumerate_bars(
                                     pcie_bdf_t bdf,
                                     unsigned int nbars)
 {
-  size_t size;
-  size_t bar_size;
   unsigned int bar;
   unsigned int reg;
   unsigned int data;
   uintptr_t scratch;
   uintptr_t bar_bus_addr;
+  size_t size;
+  size_t bar_size;
   bool found_mem64 = false;
   bool found_mem = false;
   uintptr_t bar_phys_addr;
@@ -80,7 +80,7 @@ static void pcie_generic_ctrl_enumerate_bars(
       scratch = ctrl_dev->ops->pci_cfg_read(bdf, reg);
       data = scratch;
 
-      /* Reserved bit 010 or bit 110 */
+      /* reserved bit 010 or bit 110 */
 
       if (PCIE_CONF_BAR_INVAL_FLAGS(data))
         {
@@ -371,12 +371,12 @@ pcie_generic_ctrl_enumerate_endpoint(FAR struct pcie_ctrl_dev *ctrl_dev,
                                      pcie_bdf_t bdf,
                                      FAR bool *skip_next_func)
 {
-  uint32_t id;
+  bool multifunction_device = false;
+  bool layout_type_1 = false;
   uint32_t data;
   uint32_t class;
+  uint32_t id;
   bool is_bridge = false;
-  bool layout_type_1 = false;
-  bool multifunction_device = false;
 
   if (ctrl_dev == NULL || ctrl_dev->ops == NULL || ctrl_dev->data == NULL)
     {
