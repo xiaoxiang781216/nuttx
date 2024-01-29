@@ -68,11 +68,6 @@ void up_exit(int status)
 
   nxsched_dumponexit();
 
-  /* Destroy the task at the head of the ready to run list. */
-#ifdef CONFIG_ARCH_FPU
-  arm64_destory_fpu(this_task_inirq());
-#endif
-
   nxtask_exit();
 
   /* Now, perform the context switch to the new ready-to-run task at the

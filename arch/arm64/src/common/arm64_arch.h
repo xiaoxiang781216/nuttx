@@ -327,6 +327,9 @@ struct regs_context
   uint64_t  exe_depth;
   uint64_t  tpidr_el0;
   uint64_t  tpidr_el1;
+#ifdef CONFIG_ARCH_FPU
+  struct fpu_reg fpu_regs;
+#endif
 };
 
 /****************************************************************************

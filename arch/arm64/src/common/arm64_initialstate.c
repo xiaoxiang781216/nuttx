@@ -46,10 +46,6 @@
 #include "chip.h"
 #include "arm64_fatal.h"
 
-#ifdef CONFIG_ARCH_FPU
-#include "arm64_fpu.h"
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -58,17 +54,6 @@ void arm64_new_task(struct tcb_s * tcb)
 {
   char *stack_ptr = tcb->stack_base_ptr + tcb->adj_stack_size;
   struct regs_context *pinitctx;
-
-#ifdef CONFIG_ARCH_FPU
-  struct fpu_reg *pfpuctx;
-  pfpuctx = STACK_PTR_TO_FRAME(struct fpu_reg, stack_ptr);
-  tcb->xcp.fpu_regs   = (uint64_t *)pfpuctx;
-
-  /* set fpu context */
-
-  arm64_init_fpu(tcb);
-  stack_ptr  = (char *)pfpuctx;
-#endif
 
   pinitctx = STACK_PTR_TO_FRAME(struct regs_context, stack_ptr);
   memset(pinitctx, 0, sizeof(struct regs_context));
@@ -122,11 +107,6 @@ void up_initial_state(struct tcb_s *tcb)
       tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
       tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE;
 
-#ifdef CONFIG_ARCH_FPU
-      /* set fpu context */
-
-      arm64_init_fpu(tcb);
-#endif
       /* set initialize idle thread tcb and exception depth
        * core 0, idle0
        */
