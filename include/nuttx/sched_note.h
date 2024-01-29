@@ -263,7 +263,6 @@ enum note_type_e
   NOTE_DUMP_END,
   NOTE_DUMP_MARK,
   NOTE_DUMP_COUNTER,
-  NOTE_DUMP_RAW,
 
   /* Always last */
 

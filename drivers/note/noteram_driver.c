@@ -1108,11 +1108,6 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
                            pid, counter->name, counter->value);
       }
       break;
-    case NOTE_DUMP_RAW:
-      {
-        ret += lib_stream_puts(s, note, note->nc_length);
-      }
-      break;
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
     case NOTE_ALLOC:
