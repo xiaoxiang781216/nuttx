@@ -346,12 +346,10 @@ struct pcie_dev_s;
 
 struct pcie_bus_ops_s
 {
-    CODE void (*pci_cfg_write)(const FAR struct pcie_ctrl_dev *dev,
-                              pcie_bdf_t bdf, unsigned int reg,
+    CODE int (*pci_cfg_write)(pcie_bdf_t bdf, unsigned int reg,
                               uint32_t data);
 
-    CODE uint32_t (*pci_cfg_read)(const FAR struct pcie_ctrl_dev *dev,
-                                  pcie_bdf_t bdf, unsigned int reg);
+    CODE int (*pci_cfg_read)(pcie_bdf_t bdf, unsigned int reg);
 
     CODE int (*pci_map_bar)(FAR struct pcie_dev_s *dev, uint32_t addr,
                             unsigned long length);
@@ -366,11 +364,11 @@ struct pcie_bus_ops_s
                                  bool mem, bool mem64, size_t bar_size,
                                  FAR uintptr_t *bar_bus_addr);
     CODE bool (*region_get_allocate_base)(
-                                const FAR struct pcie_ctrl_dev *ctrl_dev,
+                                FAR struct pcie_ctrl_dev *ctrl_dev,
                                 pcie_bdf_t bdf,
                                 bool mem, bool mem64, size_t align,
                                 FAR uintptr_t *bar_base_addr);
-    CODE bool (*region_translate)(const FAR struct pcie_ctrl_dev *ctrl_dev,
+    CODE bool (*region_translate)(FAR struct pcie_ctrl_dev *ctrl_dev,
                                 pcie_bdf_t bdf,
                                 bool mem, bool mem64, uintptr_t bar_bus_addr,
                                 FAR uintptr_t *bar_addr);
@@ -413,7 +411,7 @@ struct pcie_dev_s
 
   /* operations */
 
-  FAR const struct pcie_ctrl_dev *ctrl_dev;
+  FAR const struct pcie_bus_ops_s *ops;
   FAR struct pcie_dev_type_s *type;
 
   /* FAR struct pcie_cfg_data *data; */
@@ -456,7 +454,7 @@ extern "C"
  *
  ****************************************************************************/
 
-int pcie_scan_bus(FAR const struct pcie_ctrl_dev *ctrl_dev, uint8_t bus);
+int pcie_scan_bus(FAR const struct pcie_bus_ops_s *ops, uint8_t bus);
 
 /****************************************************************************
  * Name:
@@ -471,7 +469,7 @@ int pcie_scan_bus(FAR const struct pcie_ctrl_dev *ctrl_dev, uint8_t bus);
  *
  ****************************************************************************/
 
-void pcie_set_cmd(FAR const struct pcie_ctrl_dev *ctrl_dev,
+void pcie_set_cmd(FAR const struct pcie_bus_ops_s *ops,
                   pcie_bdf_t bdf,
                   uint32_t bits, bool on);
 

@@ -32,6 +32,7 @@
 #include <nuttx/pcie/pcie.h>
 #include <nuttx/pcie/controller.h>
 
+int pcie_scan_bus(FAR const struct pcie_bus_ops_s *ops, uint8_t bus);
 extern struct pcie_ctrl_dev g_nuttx_init_data;
 
 /****************************************************************************
@@ -40,6 +41,7 @@ extern struct pcie_ctrl_dev g_nuttx_init_data;
 
 static struct list_node
 g_pcie_dev_list = LIST_INITIAL_VALUE(g_pcie_dev_list);
+static mutex_t g_pcie_dev_list_mutex = NXMUTEX_INITIALIZER;
 
 static struct list_node
 g_pcie_driver_list = LIST_INITIAL_VALUE(g_pcie_driver_list);
@@ -56,16 +58,15 @@ static mutex_t g_pcie_driver_mutex = NXMUTEX_INITIALIZER;
  *   This function is used to scanning all device endpoints in pcie bus.
  *
  * Input Parameters:
- *   ctrl_dev - PCI Express Controller device pointer
- *   bus      - bus number
- *   dev      - device number(include 8 function)
+ *   ops - Operation callback of the pcie contoller.
+ *   bus - bus number
+ *   dev - device number(include 8 function)
  *
  * Return Value:
  *   Return 1 if sunccess, otherwise 0 or negative number.
  ****************************************************************************/
 
-static int pcie_scan_dev(FAR const struct pcie_ctrl_dev *ctrl_dev,
-                         uint8_t bus,
+static int pcie_scan_dev(FAR const struct pcie_bus_ops_s *ops, uint8_t bus,
                          uint8_t dev)
 {
   uint32_t secondary = 0;
@@ -75,13 +76,13 @@ static int pcie_scan_dev(FAR const struct pcie_ctrl_dev *ctrl_dev,
   FAR struct pcie_dev_s *pcie_dev;
   uint32_t num;
 
-  if (ctrl_dev == NULL && ctrl_dev->ops == NULL)
+  if (ops == NULL)
     {
       pcieerr("(%s) ops paramter Error\n", __func__);
       return -EINVAL;
     }
 
-  id = ctrl_dev->ops->pci_cfg_read(ctrl_dev, bdf, PCIE_CONF_ID);
+  id = ops->pci_cfg_read(bdf, PCIE_CONF_ID);
 
   if (!PCIE_ID_IS_VALID(id))
     {
@@ -89,7 +90,7 @@ static int pcie_scan_dev(FAR const struct pcie_ctrl_dev *ctrl_dev,
       return 0;
     }
 
-  type = ctrl_dev->ops->pci_cfg_read(ctrl_dev, bdf, PCIE_CONF_TYPE);
+  type = ops->pci_cfg_read(bdf, PCIE_CONF_TYPE);
   switch (PCIE_CONF_TYPE_GET(type))
   {
     case PCIE_CONF_TYPE_STANDARD:
@@ -109,16 +110,16 @@ static int pcie_scan_dev(FAR const struct pcie_ctrl_dev *ctrl_dev,
       pcie_dev->type->vendor = PCIE_ID_TO_VEND(id);
       pcie_dev->type->device = PCIE_ID_TO_DEV(id);
       pcie_dev->bdf = bdf;
-      pcie_dev->ctrl_dev = ctrl_dev;
+      pcie_dev->ops = ops;
 
       list_add_after(&g_pcie_dev_list, &pcie_dev->node);
 
       break;
     case PCIE_CONF_TYPE_PCI_BRIDGE:
-      num = ctrl_dev->ops->pci_cfg_read(ctrl_dev, bdf, PCIE_BUS_NUMBER);
+      num = ops->pci_cfg_read(bdf, PCIE_BUS_NUMBER);
       secondary = PCIE_BUS_SECONDARY_NUMBER(num);
 
-      if (pcie_scan_bus(ctrl_dev, secondary) < 0)
+      if (pcie_scan_bus(ops, secondary) < 0)
         {
           pcieerr("PCI-E scan bus error\n");
           return -EINVAL;
@@ -154,7 +155,6 @@ static bool pci_get_bar(FAR struct pcie_dev_s *dev,
 {
   size_t size;
   uintptr_t phys_addr;
-  FAR struct pcie_bus_ops_s  *ops;
   uint32_t reg = bar_index + PCIE_CONF_BAR0;
 
   if (dev == NULL)
@@ -169,18 +169,16 @@ static bool pci_get_bar(FAR struct pcie_dev_s *dev,
       return false;
     }
 
-  ops = (FAR struct pcie_bus_ops_s *)dev->ctrl_dev->ops;
-  phys_addr = ops->pci_cfg_read(dev->ctrl_dev, dev->bdf, reg);
+  phys_addr = dev->ops->pci_cfg_read(dev->bdf, reg);
 
-  ops->pci_cfg_write(dev->ctrl_dev, dev->bdf, reg, 0xffffffff);
-  size = ops->pci_cfg_read(dev->ctrl_dev, dev->bdf, reg);
-  ops->pci_cfg_write(dev->ctrl_dev, dev->bdf, reg, (uint32_t)phys_addr);
+  dev->ops->pci_cfg_write(dev->bdf, reg, 0xffffffff);
+  size = dev->ops->pci_cfg_read(dev->bdf, reg);
+  dev->ops->pci_cfg_write(dev->bdf, reg, (uint32_t)phys_addr);
 
   if (PCIE_CONF_BAR_64(phys_addr))
     {
       reg++;
-      phys_addr |= ((uint64_t)ops->pci_cfg_read(dev->ctrl_dev,
-                                                     dev->bdf, reg)) << 32;
+      phys_addr |= ((uint64_t)dev->ops->pci_cfg_read(dev->bdf, reg)) << 32;
 
       if (PCIE_CONF_BAR_ADDR(phys_addr) == PCIE_CONF_BAR_INVAL64 ||
           PCIE_CONF_BAR_ADDR(phys_addr) == PCIE_CONF_BAR_NONE)
@@ -191,11 +189,10 @@ static bool pci_get_bar(FAR struct pcie_dev_s *dev,
           return false;
         }
 
-      ops->pci_cfg_write(dev->ctrl_dev, dev->bdf, reg, 0xffffffff);
-      size |= ((uint64_t)ops->pci_cfg_read(dev->ctrl_dev,
-                                           dev->bdf, reg)) << 32;
-      ops->pci_cfg_write(dev->ctrl_dev, dev->bdf, reg,
-                         (uint32_t)((uint64_t)phys_addr >> 32));
+      dev->ops->pci_cfg_write(dev->bdf, reg, 0xffffffff);
+      size |= ((uint64_t)dev->ops->pci_cfg_read(dev->bdf, reg)) << 32;
+      dev->ops->pci_cfg_write(dev->bdf, reg,
+                              (uint32_t)((uint64_t)phys_addr >> 32));
     }
   else if (PCIE_CONF_BAR_ADDR(phys_addr) == PCIE_CONF_BAR_INVAL ||
            PCIE_CONF_BAR_ADDR(phys_addr) == PCIE_CONF_BAR_NONE)
@@ -265,18 +262,18 @@ static bool pci_get_bar(FAR struct pcie_dev_s *dev,
  *   Return positive number if success, otherwise negative number.
  ****************************************************************************/
 
-int pcie_scan_bus(FAR const struct pcie_ctrl_dev *ctrl_dev, uint8_t bus)
+int pcie_scan_bus(FAR const struct pcie_bus_ops_s *ops, uint8_t bus)
 {
   for (uint8_t dev = 0; dev <= PCIE_MAX_DEV; dev++)
     {
-      if (pcie_scan_dev(ctrl_dev, bus, dev) < 0)
+      if (pcie_scan_dev(ops, bus, dev) < 0)
         {
           pcieerr("pcie scan dev failed\n");
           return -EINVAL;
         }
     }
 
-  return OK;
+  return 1;
 }
 
 /****************************************************************************
@@ -377,18 +374,18 @@ int pcie_initialize(FAR struct pcie_dev_s *dev,
  *
  ****************************************************************************/
 
-void pcie_set_cmd(FAR const struct pcie_ctrl_dev *ctrl_dev, pcie_bdf_t bdf,
+void pcie_set_cmd(FAR const struct pcie_bus_ops_s *ops, pcie_bdf_t bdf,
                   uint32_t bits, bool on)
 {
   uint32_t cmdstat;
 
-  if (ctrl_dev == NULL)
+  if (ops == NULL)
     {
       pcieerr("(%s) ops paramter Error\n", __func__);
       return;
     }
 
-  cmdstat = ctrl_dev->ops->pci_cfg_read(ctrl_dev, bdf, PCIE_CONF_CMDSTAT);
+  cmdstat = ops->pci_cfg_read(bdf, PCIE_CONF_CMDSTAT);
 
   if (on)
     {
@@ -399,7 +396,7 @@ void pcie_set_cmd(FAR const struct pcie_ctrl_dev *ctrl_dev, pcie_bdf_t bdf,
       cmdstat &= ~bits;
     }
 
-  ctrl_dev->ops->pci_cfg_write(ctrl_dev, bdf, PCIE_CONF_CMDSTAT, cmdstat);
+  ops->pci_cfg_write(bdf, PCIE_CONF_CMDSTAT, cmdstat);
 }
 
 /****************************************************************************
@@ -432,8 +429,7 @@ int pcie_find_cap(FAR struct pcie_dev_s *dev, uint16_t cap_id)
 
   /* Read type0/type1 status register */
 
-  data = dev->ctrl_dev->ops->pci_cfg_read(dev->ctrl_dev, dev->bdf,
-                                          PCIE_CONF_CMDSTAT);
+  data = dev->ops->pci_cfg_read(dev->bdf, PCIE_CONF_CMDSTAT);
 
   /* Capabilities list bit in status register must be hardwired to 1b */
 
@@ -444,8 +440,7 @@ int pcie_find_cap(FAR struct pcie_dev_s *dev, uint16_t cap_id)
    * entry of a linked list of new capabilities
    */
 
-  data = dev->ctrl_dev->ops->pci_cfg_read(dev->ctrl_dev, dev->bdf,
-                                          PCIE_CONF_CAPPTR);
+  data = dev->ops->pci_cfg_read(dev->bdf, PCIE_CONF_CAPPTR);
 
   /* The bottom two bits are Reserved and must be set to 00b */
 
@@ -453,7 +448,7 @@ int pcie_find_cap(FAR struct pcie_dev_s *dev, uint16_t cap_id)
 
   while (reg != 0)
     {
-      data = dev->ctrl_dev->ops->pci_cfg_read(dev->ctrl_dev, dev->bdf, reg);
+      data = dev->ops->pci_cfg_read(dev->bdf, reg);
 
       /* PCI Express Capability List Register, see 7.5.3.1.
        * Capability ID - Indicates the MSI Capability structure
@@ -529,8 +524,7 @@ bool pcie_probe_bar(FAR struct pcie_dev_s *dev, unsigned int index,
   for (reg = PCIE_CONF_BAR0; index > 0 && reg <= PCIE_CONF_BAR5;
        reg++, index--)
     {
-      uintptr_t addr = dev->ctrl_dev->ops->pci_cfg_read(dev->ctrl_dev,
-                                                        dev->bdf, reg);
+      uintptr_t addr = dev->ops->pci_cfg_read(dev->bdf, reg);
 
       if (PCIE_CONF_BAR_MEM(addr) && PCIE_CONF_BAR_64(addr))
         {
@@ -571,8 +565,7 @@ bool pcie_alloc_irq(FAR struct pcie_dev_s *dev, unsigned int irq)
       return false;
     }
 
-  data = dev->ctrl_dev->ops->pci_cfg_read(dev->ctrl_dev, dev->bdf,
-                                          PCIE_CONF_INTR);
+  data = dev->ops->pci_cfg_read(dev->bdf, PCIE_CONF_INTR);
   irq = PCIE_CONF_INTR_IRQ(data);
 
   if (irq == PCIE_CONF_INTR_IRQ_NONE || irq >= CONFIG_MAX_IRQ_LINES)
@@ -582,8 +575,7 @@ bool pcie_alloc_irq(FAR struct pcie_dev_s *dev, unsigned int irq)
 
   data &= ~0xff;
   data |= irq;
-  dev->ctrl_dev->ops->pci_cfg_write(dev->ctrl_dev, dev->bdf, PCIE_CONF_INTR,
-                                    data);
+  dev->ops->pci_cfg_write(dev->bdf, PCIE_CONF_INTR, data);
 
   return true;
 }
@@ -612,8 +604,7 @@ int pcie_get_irq(FAR struct pcie_dev_s *dev)
       return -EINVAL;
     }
 
-  data = dev->ctrl_dev->ops->pci_cfg_read(dev->ctrl_dev, dev->bdf,
-                                          PCIE_CONF_INTR);
+  data = dev->ops->pci_cfg_read(dev->bdf, PCIE_CONF_INTR);
 
   return PCIE_CONF_INTR_IRQ(data);
 }
