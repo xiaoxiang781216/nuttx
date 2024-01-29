@@ -346,6 +346,9 @@ struct pcie_dev_s;
 
 struct pcie_bus_ops_s
 {
+    CODE int (*pcie_enumerate)(FAR struct pcie_bus_s *bus,
+                               FAR struct pcie_dev_type_s **types);
+
     CODE int (*pci_cfg_write)(pcie_bdf_t bdf, unsigned int reg,
                               uint32_t data);
 
@@ -359,6 +362,8 @@ struct pcie_bus_ops_s
 
     CODE int (*pci_msi_register)(FAR struct pcie_dev_s *dev,
                                  uint16_t vector);
+    CODE int (*pci_msix_register)(FAR struct pcie_dev_s *dev,
+                                  uint32_t vector, uint32_t index);
     CODE bool (*region_allocate)(FAR struct pcie_ctrl_dev *ctrl_dev,
                                  pcie_bdf_t bdf,
                                  bool mem, bool mem64, size_t bar_size,
