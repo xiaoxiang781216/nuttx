@@ -27,19 +27,19 @@
 #include <errno.h>
 #include <debug.h>
 #include <assert.h>
-
 #include <nuttx/mm/mm.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/pcie/pcie.h>
 #include <nuttx/pcie/controller.h>
-#include <nuttx/pcie/msi.h>
 
 extern struct pcie_ctrl_dev g_nuttx_init_data;
-extern struct list_node g_pcie_host_dev_list;
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
+
+static struct list_node
+g_pcie_dev_list = LIST_INITIAL_VALUE(g_pcie_dev_list);
 
 static struct list_node
 g_pcie_driver_list = LIST_INITIAL_VALUE(g_pcie_driver_list);
@@ -64,16 +64,16 @@ static mutex_t g_pcie_driver_mutex = NXMUTEX_INITIALIZER;
  *   Return 1 if sunccess, otherwise 0 or negative number.
  ****************************************************************************/
 
-static int pcie_scan_dev(FAR struct pcie_ctrl_dev *ctrl_dev,
+static int pcie_scan_dev(FAR const struct pcie_ctrl_dev *ctrl_dev,
                          uint8_t bus,
                          uint8_t dev)
 {
+  uint32_t secondary = 0;
   uint32_t id;
   uint32_t type;
-  uint32_t num;
-  uint32_t secondary = 0;
   pcie_bdf_t bdf = PCIE_BDF(bus, dev, 0);
   FAR struct pcie_dev_s *pcie_dev;
+  uint32_t num;
 
   if (ctrl_dev == NULL && ctrl_dev->ops == NULL)
     {
@@ -111,7 +111,7 @@ static int pcie_scan_dev(FAR struct pcie_ctrl_dev *ctrl_dev,
       pcie_dev->bdf = bdf;
       pcie_dev->ctrl_dev = ctrl_dev;
 
-      list_add_after(&ctrl_dev->dev_list, &pcie_dev->node);
+      list_add_after(&g_pcie_dev_list, &pcie_dev->node);
 
       break;
     case PCIE_CONF_TYPE_PCI_BRIDGE:
@@ -265,7 +265,7 @@ static bool pci_get_bar(FAR struct pcie_dev_s *dev,
  *   Return positive number if success, otherwise negative number.
  ****************************************************************************/
 
-int pcie_scan_bus(FAR struct pcie_ctrl_dev *ctrl_dev, uint8_t bus)
+int pcie_scan_bus(FAR const struct pcie_ctrl_dev *ctrl_dev, uint8_t bus)
 {
   for (uint8_t dev = 0; dev <= PCIE_MAX_DEV; dev++)
     {
@@ -312,8 +312,7 @@ bool pci_lookup_dev(FAR struct pcie_dev_s *dev,
       return false;
     }
 
-  list_for_every_entry(&dev->ctrl_dev->dev_list, device, struct pcie_dev_s,
-                       node)
+  list_for_every_entry(&g_pcie_dev_list, device, struct pcie_dev_s, node)
     {
       if (device->type->vendor == PCI_ID_ANY)
         {
@@ -576,7 +575,7 @@ bool pcie_alloc_irq(FAR struct pcie_dev_s *dev, unsigned int irq)
                                           PCIE_CONF_INTR);
   irq = PCIE_CONF_INTR_IRQ(data);
 
-  if (irq == PCIE_CONF_INTR_IRQ_NONE || irq >= CONFIG_PCIE_MAX_IRQ_LINES)
+  if (irq == PCIE_CONF_INTR_IRQ_NONE || irq >= CONFIG_MAX_IRQ_LINES)
     {
       return false;
     }
@@ -649,7 +648,7 @@ bool pcie_connect_irq(FAR struct pcie_dev_s *dev, unsigned int irq,
       msi_vector_t vector;
 
       if ((pcie_msi_vectors_allocate(dev, priority, &vector, 1) == 0) ||
-           !pcie_msi_vector_connect(dev, &vector, handler, parameter, flags))
+           !pcie_msi_vector_connect(bdf, &vector, handler, parameter, flags))
         {
           return false;
         }
@@ -681,7 +680,7 @@ bool pcie_connect_irq(FAR struct pcie_dev_s *dev, unsigned int irq,
 void pcie_irq_enable(FAR struct pcie_dev_s *dev, unsigned int irq)
 {
 #if defined(CONFIG_PCIE_MSI)
-  if (pcie_msi_enable(dev, NULL, 1, irq))
+  if (pcie_msi_enable(dev->bdf, NULL, 1, irq))
     {
       return;
     }
@@ -697,8 +696,6 @@ void pcie_irq_enable(FAR struct pcie_dev_s *dev, unsigned int irq)
 int pcie_register_driver(FAR struct pcie_drv_s *driver)
 {
   FAR struct pcie_dev_s *device;
-  FAR struct pcie_ctrl_dev *ctrl_dev;
-  bool flags = false;
   int ret;
 
   DEBUGASSERT(driver != NULL && driver->probe != NULL &&
@@ -710,29 +707,16 @@ int pcie_register_driver(FAR struct pcie_drv_s *driver)
       return ret;
     }
 
-  list_for_every_entry(&g_pcie_host_dev_list, ctrl_dev, struct pcie_ctrl_dev,
-                       node)
+  list_for_every_entry(&g_pcie_dev_list, device,
+                       struct pcie_dev_s, node)
     {
-      if (ctrl_dev->host_id == driver->host_id)
+      if (driver->device->type->vendor == device->type->vendor &&
+          driver->device->type->device == device->type->device)
         {
-          flags = true;
-          break;
-        }
-    }
-
-  if (flags)
-    {
-      list_for_every_entry(&ctrl_dev->dev_list, device, struct pcie_dev_s,
-                           node)
-        {
-          if (driver->device->type->vendor == device->type->vendor &&
-              driver->device->type->device == device->type->device)
+          ret = driver->probe(device);
+          if (ret > 0)
             {
-              ret = driver->probe(device);
-              if (ret > 0)
-                {
-                  list_add_after(&ctrl_dev->dev_list, &driver->node);
-                }
+              list_add_after(&g_pcie_driver_list, &driver->node);
             }
         }
     }
@@ -748,8 +732,6 @@ int pcie_register_driver(FAR struct pcie_drv_s *driver)
 int pcie_unregister_driver(FAR struct pcie_drv_s *driver)
 {
   FAR struct pcie_dev_s *device;
-  FAR struct pcie_ctrl_dev *ctrl_dev;
-  bool flags = false;
   int ret;
 
   DEBUGASSERT(driver != NULL && driver->probe != NULL &&
@@ -761,27 +743,15 @@ int pcie_unregister_driver(FAR struct pcie_drv_s *driver)
       return ret;
     }
 
-  list_for_every_entry(&g_pcie_host_dev_list, ctrl_dev, struct pcie_ctrl_dev,
-                       node)
+  list_for_every_entry(&g_pcie_dev_list, device,
+                       struct pcie_dev_s, node)
     {
-      if (ctrl_dev->host_id == driver->host_id)
+      if (driver->device->type->vendor == device->type->vendor &&
+          driver->device->type->device == device->type->device)
         {
-          flags = true;
-          break;
-        }
-    }
-
-  if (flags)
-    {
-      list_for_every_entry(&ctrl_dev->dev_list, device, struct pcie_dev_s,
-                           node)
-        {
-          if (driver->device->type->vendor == device->type->vendor &&
-              driver->device->type->device == device->type->device)
-            {
-              driver->remove(device);
-              list_delete(&driver->node);
-            }
+          driver->remove(device);
+          list_delete(&driver->node);
+          ret = 0;
         }
     }
 

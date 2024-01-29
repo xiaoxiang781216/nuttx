@@ -17,12 +17,13 @@ config PCIE_MAX_BDF
 	---help---
 		The maximum bdf number to be scaned on PCI-E bus
 
-config PCIE_MAX_IRQ_LINES
-	int "Number of IRQ lines"
-	default 128
-	range 0 224
-	---help---
-		This option specifies the number of IRQ lines in the system. It
-		determines the size of the _irq_to_interrupt_vector_table, which
-		is used to track the association between vectors and IRQ numbers.
+config MAX_IRQ_LINES
+  int "Number of IRQ lines"
+  default 128
+  range 0 224
+  help
+    This option specifies the number of IRQ lines in the system. It
+    determines the size of the _irq_to_interrupt_vector_table, which
+    is used to track the association between vectors and IRQ numbers.
+
 endif

@@ -32,12 +32,7 @@
 
 #define MAX_TRAVERSE_STACK 256
 
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-struct list_node
-g_pcie_host_dev_list = LIST_INITIAL_VALUE(g_pcie_host_dev_list);
+struct pcie_ctrl_dev g_nuttx_init_data;
 
 /****************************************************************************
  * Private Functions
@@ -609,16 +604,14 @@ static void pcie_generic_ctrl_enumerate(FAR struct pcie_ctrl_dev *ctrl_dev,
 
 void pcie_boot_init(FAR struct pcie_ctrl_dev *ctrl_dev)
 {
-  if (ctrl_dev == NULL || ctrl_dev->data == NULL)
+  if (ctrl_dev == NULL ||  ctrl_dev->ops == NULL || ctrl_dev->data == NULL)
     {
       return;
     }
 
-  /* initialize the PCIe Endpoint dev list */
+  /* storage PCIE configuration space data to local global var */
 
-  list_initialize(&ctrl_dev->dev_list);
-
-  list_add_after(&g_pcie_host_dev_list, &ctrl_dev->node);
+  g_nuttx_init_data = *ctrl_dev;
 
   /* begin to enumerate PCIE bus tree */
 

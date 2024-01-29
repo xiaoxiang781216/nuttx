@@ -294,21 +294,6 @@
  * Public Types
  ****************************************************************************/
 
-/* PCIe Controllers Regions type
- * @PCIE_REGION_IO: IO space region
- * @PCIE_REGION_MEM: 32 bit memory space region
- * @PCIE_REGION_MEM64: 64 bit memory space region
- * @PCIE_REGION_MAX: regions max limition value
- */
-
-enum pcie_region_type
-{
-  PCIE_REGION_IO = 0,
-  PCIE_REGION_MEM,
-  PCIE_REGION_MEM64,
-  PCIE_REGION_MAX,
-};
-
 /* Structure describing a device that supports the PCI Express Controller API
  * cfg_addr: Configuration space address
  * cfg_size: Configuration space size
@@ -320,22 +305,14 @@ struct pcie_cfg_data
 {
   uintptr_t cfg_addr;
   size_t cfg_size;
-  struct
-  {
-    uintptr_t phys_start;
-    uintptr_t bus_start;
-    size_t size;
-  }
-  regions[PCIE_REGION_MAX];
+  uintptr_t bus_start;
+  size_t size;
 };
 
 struct pcie_ctrl_dev
 {
-  struct list_node node;
   FAR struct pcie_cfg_data *data;
-  FAR const struct pcie_bus_ops_s *ops;
-  uint8_t host_id;
-  struct list_node dev_list;
+  FAR const struct pcie_bus_ops_s *ops
 };
 
 struct pcie_bar
@@ -357,6 +334,53 @@ struct pcie_bus_state
   unsigned int bus_bdf;
   unsigned int bridge_bdf;
   unsigned int next_bdf;
+};
+
+/* The PCIE driver interface */
+
+struct pcie_bus_s;
+struct pcie_dev_type_s;
+struct pcie_dev_s;
+
+/* Bus related operations */
+
+struct pcie_bus_ops_s
+{
+    CODE void (*pci_cfg_write)(const FAR struct pcie_ctrl_dev *dev,
+                              pcie_bdf_t bdf, unsigned int reg,
+                              uint32_t data);
+
+    CODE uint32_t (*pci_cfg_read)(const FAR struct pcie_ctrl_dev *dev,
+                                  pcie_bdf_t bdf, unsigned int reg);
+
+    CODE int (*pci_map_bar)(FAR struct pcie_dev_s *dev, uint32_t addr,
+                            unsigned long length);
+
+    CODE int (*pci_map_bar64)(FAR struct pcie_dev_s *dev, uint64_t addr,
+                            unsigned long length);
+
+    CODE int (*pci_msi_register)(FAR struct pcie_dev_s *dev,
+                                 uint16_t vector);
+    CODE bool (*region_allocate)(FAR struct pcie_ctrl_dev *ctrl_dev,
+                                 pcie_bdf_t bdf,
+                                 bool mem, bool mem64, size_t bar_size,
+                                 FAR uintptr_t *bar_bus_addr);
+    CODE bool (*region_get_allocate_base)(
+                                const FAR struct pcie_ctrl_dev *ctrl_dev,
+                                pcie_bdf_t bdf,
+                                bool mem, bool mem64, size_t align,
+                                FAR uintptr_t *bar_base_addr);
+    CODE bool (*region_translate)(const FAR struct pcie_ctrl_dev *ctrl_dev,
+                                pcie_bdf_t bdf,
+                                bool mem, bool mem64, uintptr_t bar_bus_addr,
+                                FAR uintptr_t *bar_addr);
+    CODE bool(*pcie_msi_vectors_allocate)(unsigned int priority,
+                                          FAR msi_vector_t *vectors,
+                                          FAR uint8_t n_vector);
+    CODE bool (*pcie_msi_vector_connect)(FAR msi_vector_t *vector,
+            CODE int (*handler)(int irq, FAR void *context, FAR void *arg),
+            FAR const void *parameter,
+            uint32_t flags)
 };
 
 /* PCIE bus private data. */
@@ -401,53 +425,11 @@ struct pcie_drv_s
 {
   struct list_node node;
   FAR struct pcie_dev_s *device;
-  uint8_t host_id;
 
   /* Call back function when a device is probed */
 
   CODE int (*probe)(FAR struct pcie_dev_s *device);
   CODE void (*remove)(FAR struct pcie_dev_s *device);
-};
-
-/* Bus related operations */
-
-struct pcie_bus_ops_s
-{
-    CODE void (*pci_cfg_write)(const FAR struct pcie_ctrl_dev *dev,
-                              pcie_bdf_t bdf, unsigned int reg,
-                              uint32_t data);
-
-    CODE uint32_t (*pci_cfg_read)(const FAR struct pcie_ctrl_dev *dev,
-                                  pcie_bdf_t bdf, unsigned int reg);
-
-    CODE int (*pci_map_bar)(FAR struct pcie_dev_s *dev, uint32_t addr,
-                            unsigned long length);
-
-    CODE int (*pci_map_bar64)(FAR struct pcie_dev_s *dev, uint64_t addr,
-                            unsigned long length);
-
-    CODE int (*pci_msi_register)(FAR struct pcie_dev_s *dev,
-                                 uint16_t vector);
-    CODE bool (*region_allocate)(FAR struct pcie_ctrl_dev *ctrl_dev,
-                                 pcie_bdf_t bdf,
-                                 bool mem, bool mem64, size_t bar_size,
-                                 FAR uintptr_t *bar_bus_addr);
-    CODE bool (*region_get_allocate_base)(
-                                const FAR struct pcie_ctrl_dev *ctrl_dev,
-                                pcie_bdf_t bdf,
-                                bool mem, bool mem64, size_t align,
-                                FAR uintptr_t *bar_base_addr);
-    CODE bool (*region_translate)(const FAR struct pcie_ctrl_dev *ctrl_dev,
-                                pcie_bdf_t bdf,
-                                bool mem, bool mem64, uintptr_t bar_bus_addr,
-                                FAR uintptr_t *bar_addr);
-    CODE bool(*pcie_msi_vectors_allocate)(unsigned int priority,
-                                          FAR msi_vector_t *vectors,
-                                          FAR uint8_t n_vector);
-    CODE bool (*pcie_msi_vector_connect)(FAR msi_vector_t *vector,
-                                         CODE xcpt_t handler,
-                                         FAR const void *parameter,
-                                         uint32_t flags);
 };
 
 /****************************************************************************
@@ -474,7 +456,7 @@ extern "C"
  *
  ****************************************************************************/
 
-int pcie_scan_bus(FAR struct pcie_ctrl_dev *ctrl_dev, uint8_t bus);
+int pcie_scan_bus(FAR const struct pcie_ctrl_dev *ctrl_dev, uint8_t bus);
 
 /****************************************************************************
  * Name:
