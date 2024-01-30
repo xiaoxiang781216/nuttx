@@ -109,7 +109,7 @@ if(CONFIG_SMP)
     arm_scu.c)
 endif()
 
-if(CONFIG_ARCH_HAVE_PSCI)
+if(CONFIG_ARM_PSCI)
   list(APPEND SRCS arm_cpu_psci.c arm_smccc.S)
 endif()
 
