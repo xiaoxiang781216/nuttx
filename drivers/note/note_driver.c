@@ -43,6 +43,7 @@
 #include <nuttx/sched_note.h>
 
 #include "sched/sched.h"
+#include "noterpmsg.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -180,6 +181,9 @@ FAR static struct note_driver_s *
 #endif
 #ifdef CONFIG_DRIVERS_NOTELOWEROUT
   (FAR struct note_driver_s *)&g_notestream_lowerout,
+#endif
+#ifdef CONFIG_DRIVERS_NOTERPMSG
+  (FAR struct note_driver_s *)&g_noterpmsg_driver,
 #endif
   NULL
 };

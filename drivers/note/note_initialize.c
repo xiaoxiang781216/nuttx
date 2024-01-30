@@ -33,6 +33,8 @@
 #include <nuttx/segger/note_rtt.h>
 #include <nuttx/segger/sysview.h>
 
+#include "noterpmsg.h"
+
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -155,6 +157,24 @@ int note_initialize(void)
   if (ret < 0)
     {
       serr("notesnap_register failed %d\n", ret);
+      return ret;
+    }
+#endif
+
+#ifdef CONFIG_DRIVERS_NOTERPMSG_SERVER
+  ret = noterpmsg_server_init();
+  if (ret < 0)
+    {
+      serr("noterpmsg_server_init failed %d\n", ret);
+      return ret;
+    }
+#endif
+
+#ifdef CONFIG_DRIVERS_NOTERPMSG
+  ret = noterpmsg_init();
+  if (ret < 0)
+    {
+      serr("noterpmsg_init failed %d\n", ret);
       return ret;
     }
 #endif
