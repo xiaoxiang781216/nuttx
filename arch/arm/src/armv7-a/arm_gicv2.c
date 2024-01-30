@@ -62,7 +62,11 @@ static volatile cpu_set_t g_gic_init_done;
 #if defined(CONFIG_SMP) && CONFIG_SMP_NCPUS > 1
 static void arm_gic_init_done(void)
 {
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(NULL);
   CPU_SET(up_cpu_index(), &g_gic_init_done);
+  spin_unlock_irqrestore(NULL, flags);
 }
 
 static void arm_gic_wait_done(cpu_set_t cpuset)
