@@ -145,7 +145,7 @@ int up_cpu_index(void);
  *
  ****************************************************************************/
 
-static inline bool up_interrupt_context(void)
+static inline_function bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();

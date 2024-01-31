@@ -440,7 +440,7 @@ int up_cpu_index(void);
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-noinstrument_function static inline bool up_interrupt_context(void)
+noinstrument_function static inline_function bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();
