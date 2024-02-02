@@ -78,7 +78,7 @@ static bool kasan_is_poisoned(FAR const void *addr, size_t size);
 
 static spinlock_t g_lock;
 static FAR struct kasan_region_s *g_region;
-static uint32_t g_region_init = KASAN_INIT_VALUE;
+static uint32_t g_region_init;
 
 /****************************************************************************
  * Private Functions
@@ -318,6 +318,7 @@ void kasan_register(FAR void *addr, FAR size_t *size)
   region->end   = region->begin + *size;
   region->next  = g_region;
   g_region      = region;
+  g_region_init = KASAN_INIT_VALUE;
 
   kasan_poison(addr, *size);
   *size -= KASAN_REGION_SIZE(*size);
