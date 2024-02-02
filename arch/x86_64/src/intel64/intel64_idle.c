@@ -64,7 +64,7 @@ void up_idle(void)
    * "fake" timer interrupts. Hopefully, something will wake up.
    */
 
-  sched_process_timer();
+  nxsched_process_timer();
 #else
   asm volatile("hlt");
 #endif
