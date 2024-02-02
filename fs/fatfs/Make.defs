@@ -24,6 +24,10 @@ ifeq ($(CONFIG_FS_FATFS),y)
 
 CSRCS += fatfs_vfs.c
 
+ifeq ($(CONFIG_TRACE_FATFS_FS),y)
+fatfs/fatfs_vfs.c_CFLAGS += -finstrument-functions
+endif
+
 DEPPATH += --dep-path fatfs
 VPATH += :fatfs
 

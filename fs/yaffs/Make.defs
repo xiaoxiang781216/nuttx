@@ -24,6 +24,10 @@ ifeq ($(CONFIG_FS_YAFFS),y)
 
 CSRCS += yaffs_vfs.c yaffs_osglue.c
 
+ifeq ($(CONFIG_TRACE_YAFFS_FS),y)
+yaffs/yaffs_vfs.c_CFLAGS += -finstrument-functions
+endif
+
 DEPPATH += --dep-path yaffs
 VPATH += :yaffs
 
