@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/video/video_controls.h
+ * include/sys/video_controls.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_VIDEO_VIDEO_CONTROLS_H
-#define __INCLUDE_NUTTX_VIDEO_VIDEO_CONTROLS_H
+#ifndef __INCLUDE_SYS_VIDEO_CONTROLS_H
+#define __INCLUDE_SYS_VIDEO_CONTROLS_H
 
 /****************************************************************************
  * Included Files
@@ -591,4 +591,4 @@ enum v4l2_mpeg_video_vp8_profile
   V4L2_MPEG_VIDEO_VP8_PROFILE_3 = 3,
 };
 
-#endif /* __INCLUDE_NUTTX_VIDEO_VIDEO_CONTROLS_H */
+#endif /* __INCLUDE_SYS_VIDEO_CONTROLS_H */
