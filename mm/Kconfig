@@ -253,6 +253,13 @@ config MM_KASAN
 		bugs in native code. After turn on this option, Please
 		add -fsanitize=kernel-address to CFLAGS/CXXFLAGS too.
 
+config MM_KASAN_DUMMY
+	bool "Kernel Address empty implementation"
+	depends on !MM_KASAN
+	default n
+	---help---
+		Use an empty implementation when compiling the SDK
+
 config MM_KASAN_ALL
 	bool "Enable KASan for the entire image"
 	depends on MM_KASAN
