@@ -32,12 +32,12 @@ config DEV_ASCII
 config DEV_RPMSG
 	bool "RPMSG Device Client Support"
 	default n
-	depends on RPTUN
+	depends on RPMSG
 
 config DEV_RPMSG_SERVER
 	bool "RPMSG Device Server Support"
 	default n
-	depends on RPTUN
+	depends on RPMSG
 
 choice
 	prompt "Select optee dev implementation"
@@ -73,12 +73,12 @@ config DRVR_MKRD
 config BLK_RPMSG
 	bool "RPMSG Block Client Support"
 	default n
-	depends on RPTUN
+	depends on RPMSG
 
 config BLK_RPMSG_SERVER
 	bool "RPMSG Block Server Support"
 	default n
-	depends on RPTUN
+	depends on RPMSG
 
 config GOLDFISH_PIPE
 	bool "Goldfish Pipe Support"
