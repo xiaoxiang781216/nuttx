@@ -140,11 +140,26 @@ retry:
    * expand space.
    */
 
+  temp = g_pidhash;
+
+  /* Calling malloc in a critical section may cause thread switching.
+   * Here we check whether other threads have applied successfully,
+   * and if successful, return directly
+   */
+
   pidhash = kmm_zalloc(g_npidhash * 2 * sizeof(*pidhash));
   if (pidhash == NULL)
     {
       leave_critical_section(flags);
       return -ENOMEM;
+    }
+
+  /* Handle conner case: context siwtch happened when kmm_malloc */
+
+  if (temp != g_pidhash)
+    {
+      kmm_free(pidhash);
+      goto retry;
     }
 
   g_npidhash *= 2;
@@ -163,7 +178,6 @@ retry:
 
   /* Release resource for original g_pidhash, using new g_pidhash */
 
-  temp = g_pidhash;
   g_pidhash = pidhash;
   kmm_free(temp);
 
