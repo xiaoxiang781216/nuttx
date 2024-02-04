@@ -78,7 +78,8 @@ if(NOT KCONFIGLIB)
   $ pip install kconfiglib")
 endif()
 
-if(EXISTS ${BOARD_CONFIG} AND EXISTS ${BOARD_CONFIG}/defconfig)
+if(EXISTS ${NUTTX_DIR}/${BOARD_CONFIG}
+   AND EXISTS ${NUTTX_DIR}/${BOARD_CONFIG}/defconfig)
   get_filename_component(NUTTX_BOARD_ABS_DIR ${BOARD_CONFIG} ABSOLUTE BASE_DIR
                          ${NUTTX_DIR})
 
@@ -97,7 +98,7 @@ if(EXISTS ${BOARD_CONFIG} AND EXISTS ${BOARD_CONFIG}/defconfig)
 
   string(REGEX REPLACE "(.*)/(.*)/${NUTTX_CONFIG}" "\\1" NUTTX_BOARD_DIR
                        ${NUTTX_BOARD_ABS_DIR})
-  set(NUTTX_DEFCONFIG ${BOARD_CONFIG}/defconfig)
+  set(NUTTX_DEFCONFIG ${NUTTX_DIR}/${BOARD_CONFIG}/defconfig)
 else()
   if(BOARD_CONFIG MATCHES "/")
     set(MATCH_REGEX "/")
