@@ -25,6 +25,12 @@
 #include <string.h>
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define LONG_INT_N_BYTES sizeof(long)
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -46,27 +52,237 @@
 FAR void *memmem(FAR const void *haystack, size_t haystacklen,
                  FAR const void *needle, size_t needlelen)
 {
-  FAR const unsigned char *h = haystack;
-  FAR const unsigned char *n = needle;
-  size_t i;
-  size_t y;
+    FAR const unsigned char *needle_ptr;
+    FAR const unsigned char *haystack_ptr;
+    int sums_diff;
+    size_t compare_len;
+    unsigned long last_needle_chars;
+    unsigned long last_haystack_chars;
+    unsigned int i;
 
-  if (needlelen > haystacklen)
-    {
-      return NULL;
-    }
+    switch (needlelen)
+      {
+        case (0):
 
-  for (i = 0; i < haystacklen - needlelen; i++)
-    {
-      y = 0;
-      while (h[i + y] == n[y])
-        {
-          if (++y == needlelen)
-            {
-              return (void *)(h + i);
-            }
-        }
-    }
+            /* empty needle */
 
-  return NULL;
+            return (FAR void *)haystack;
+            break;
+        case (1):
+
+            /* special case for single-character needles */
+
+            return memchr(haystack,
+                          *((FAR unsigned char *)needle), haystacklen);
+            break;
+      }
+
+    /* start searching through haystack only from the first occurence of
+     * the first character of needle.
+     */
+
+    haystack_ptr = (FAR const unsigned char *)memchr(haystack,
+                    *((FAR const unsigned char *)needle), haystacklen);
+    if (!haystack_ptr)
+      {
+        /* the first character of needle isn't in haystack */
+
+        return NULL;
+      }
+
+    haystacklen -= (haystack_ptr - (FAR const unsigned char *)haystack);
+    if (haystacklen < needlelen)
+      {
+        /* the remaining haystack is smaller than needle */
+
+        return NULL;
+      }
+
+    haystack = (FAR void *)haystack_ptr;
+
+    if (needlelen > LONG_INT_N_BYTES + 1)
+      {
+        needle_ptr = (FAR const unsigned char *)needle;
+        sums_diff = 0;
+        for (i = needlelen - LONG_INT_N_BYTES; i > 0; --i)
+          {
+            sums_diff -= *needle_ptr++;
+            sums_diff += *haystack_ptr++;
+          }
+
+        last_needle_chars = 0;
+        last_haystack_chars = 0;
+        for (i = LONG_INT_N_BYTES; i > 0; --i)
+          {
+            last_needle_chars <<= 8;
+            last_needle_chars ^= *needle_ptr;
+            last_haystack_chars <<= 8;
+            last_haystack_chars ^= *haystack_ptr;
+            sums_diff -= *needle_ptr++;
+            sums_diff += *haystack_ptr++;
+          }
+
+        /* we will call memcmp() only once we know that the sums are equal
+         * and that LONG_INT_N_BYTES last chars are equal, so it will be
+         * enough to compare all but the last LONG_INT_N_BYTES + 1
+         * characters.
+         */
+
+        compare_len = needlelen - (LONG_INT_N_BYTES + 1);
+
+        /* At this point:
+         * needle is at least two characters long
+         * haystack is at least needlelen characters long (also at least two)
+         * the first characters of needle and haystack are identical
+         */
+
+        if (sums_diff == 0
+            && last_haystack_chars == last_needle_chars
+            && memcmp(haystack, needle, compare_len) == 0)
+          {
+            return (FAR void *)haystack;
+          }
+
+        /* iterate through the remainder of haystack, updating the sums'
+         * differenceand checking for identity whenever the difference
+         * is zero.
+         */
+
+        for (i = haystacklen - needlelen; i > 0; --i)
+          {
+            last_haystack_chars <<= 8;
+            last_haystack_chars ^= *haystack_ptr;
+            sums_diff -= *(FAR const unsigned char *)haystack++;
+            sums_diff += *haystack_ptr++;
+            /* if sums_diff == 0, we know that the sums are equal, so it is
+             * enough to compare all but the last characters.
+             */
+
+            if (sums_diff == 0
+                && last_haystack_chars == last_needle_chars
+                && memcmp(haystack, needle, compare_len) == 0)
+              {
+                return (FAR void *)haystack;
+              }
+          }
+      }
+    else if (needlelen < LONG_INT_N_BYTES)
+      {
+        needle_ptr = (FAR const unsigned char *)needle;
+        sums_diff = 0;
+        for (i = needlelen; i > 0; --i)
+          {
+            sums_diff -= *needle_ptr++;
+            sums_diff += *haystack_ptr++;
+          }
+
+        /* we will call memcmp() only once we know that the sums are equal,
+         * so it will be enough to compare all but the last characters.
+         */
+
+        compare_len = needlelen - 1;
+
+        /* At this point:
+         * needle is at least two characters long
+         * haystack is at least needlelen characters long (also at least two)
+         * the first characters of needle and haystack are identical
+         */
+
+        if (sums_diff == 0
+            && memcmp(haystack, needle, compare_len) == 0)
+          {
+            return (FAR void *)haystack;
+          }
+
+        /* iterate through the remainder of haystack, updating the sums'
+         * difference and checking for identity whenever the difference
+         * is zero.
+         */
+
+        for (i = haystacklen - needlelen; i > 0; --i)
+          {
+            sums_diff -= *(FAR const unsigned char *)haystack++;
+            sums_diff += *haystack_ptr++;
+            /* if sums_diff == 0, we know that the sums are equal, so it is
+             * enough to compare all but the last characters.
+             */
+
+            if (sums_diff == 0
+                && memcmp(haystack, needle, compare_len) == 0)
+              {
+                return (FAR void *)haystack;
+              }
+          }
+      }
+    else if (needlelen == LONG_INT_N_BYTES)
+      {
+        needle_ptr = (FAR const unsigned char *)needle;
+        last_needle_chars = 0;
+        last_haystack_chars = 0;
+        for (i = needlelen; i > 0; --i)
+          {
+            last_needle_chars <<= 8;
+            last_needle_chars ^= *needle_ptr++;
+            last_haystack_chars <<= 8;
+            last_haystack_chars ^= *haystack_ptr++;
+          }
+
+        if (last_haystack_chars == last_needle_chars)
+          {
+            return (FAR void *)haystack;
+          }
+
+        /* iterate through the remainder of haystack, updating the last char
+         * data and checking for equality.
+         */
+
+        for (i = haystacklen - needlelen; i > 0; --i)
+          {
+            last_haystack_chars <<= 8;
+            last_haystack_chars ^= *haystack_ptr++;
+            if (last_haystack_chars == last_needle_chars)
+              {
+                return (FAR void *)(haystack_ptr - needlelen);
+              }
+          }
+      }
+    else /* needlelen == LONG_INT_N_BYTES + 1 */
+      {
+        needle_ptr = (FAR const unsigned char *)needle;
+        last_needle_chars = 0;
+        last_haystack_chars = 0;
+        for (i = LONG_INT_N_BYTES; i > 0; --i)
+          {
+            last_needle_chars <<= 8;
+            last_needle_chars ^= *needle_ptr++;
+            last_haystack_chars <<= 8;
+            last_haystack_chars ^= *haystack_ptr++;
+          }
+
+        unsigned char last_needle_char =
+                *(((FAR const unsigned char *)needle) + LONG_INT_N_BYTES);
+
+        if (last_haystack_chars == last_needle_chars
+            && *haystack_ptr == last_needle_char)
+          {
+            return (FAR void *)haystack;
+          }
+
+        /* iterate through the remainder of haystack, updating the last char
+         * data and checking for equality.
+         */
+
+        for (i = haystacklen - needlelen; i > 0; --i)
+          {
+            last_haystack_chars <<= 8;
+            last_haystack_chars ^= *haystack_ptr++;
+            if (last_haystack_chars == last_needle_chars
+                && *haystack_ptr == last_needle_char)
+              {
+                return (FAR void *)(haystack_ptr - (needlelen - 1));
+              }
+          }
+      }
+
+    return NULL;
 }
