@@ -610,7 +610,7 @@ uint16_t devif_dev_event(FAR struct net_driver_s *dev, uint16_t flags)
           if ((cb->free_flags & DEVIF_CB_PEND_FREE) != 0)
             {
               cb->free_flags &= ~DEVIF_CB_PEND_FREE;
-              devif_dev_callback_free(dev, cb);
+              devif_callback_free(dev, cb, NULL, NULL);
             }
         }
     }
