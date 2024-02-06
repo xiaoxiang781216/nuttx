@@ -197,11 +197,14 @@ static void syslog_rpmsg_addbuf(FAR struct syslog_rpmsg_s *priv,
 
   if (priv->head + len - priv->tail >= priv->size)
     {
+      bool ret = false;
+
       if (!priv->flush && !up_interrupt_context() && !sched_idletask())
         {
-          syslog_rpmsg_transfer(priv, true);
+          ret = syslog_rpmsg_transfer(priv, true);
         }
-      else
+
+      if (!ret)
         {
           overwritten = true;
         }
