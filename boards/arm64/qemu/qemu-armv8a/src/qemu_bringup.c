@@ -27,9 +27,9 @@
 #include <sys/types.h>
 #include <syslog.h>
 
-#include <nuttx/fs/fs.h>
-#include <nuttx/virtio/virtio-mmio.h>
 #include <nuttx/fdt.h>
+#include <nuttx/pci/pci_ecam.h>
+#include <nuttx/virtio/virtio-mmio.h>
 
 #ifdef CONFIG_LIBC_FDT
 #  include <libfdt.h>
@@ -42,6 +42,12 @@
  ****************************************************************************/
 
 #define QEMU_SPI_IRQ_BASE            32
+
+#define FDT_PCI_TYPE_IO              0x01000000
+#define FDT_PCI_TYPE_MEM32           0x02000000
+#define FDT_PCI_TYPE_MEM64           0x03000000
+#define FDT_PCI_TYPE_MASK            0x03000000
+#define FDT_PCI_PREFTCH              0x40000000
 
 /****************************************************************************
  * Private Functions
@@ -89,6 +95,59 @@ fdt_get_irq_by_path(const void *fdt, const char *path)
 }
 
 /****************************************************************************
+ * Name: fdt_get_parent_address_cells
+ ****************************************************************************/
+
+static int unused_code
+fdt_get_parent_address_cells(const void *fdt, int offset)
+{
+  int parentoff;
+
+  parentoff = fdt_parent_offset(fdt, offset);
+  if (parentoff < 0)
+    {
+      return parentoff;
+    }
+
+  return fdt_address_cells(fdt, parentoff);
+}
+
+/****************************************************************************
+ * Name: fdt_get_parent_size_cells
+ ****************************************************************************/
+
+static int unused_code
+fdt_get_parent_size_cells(const void *fdt, int offset)
+{
+  int parentoff;
+
+  parentoff = fdt_parent_offset(fdt, offset);
+  if (parentoff < 0)
+    {
+      return parentoff;
+    }
+
+  return fdt_size_cells(fdt, parentoff);
+}
+
+/****************************************************************************
+ * Name: fdt_get_value_by_cells
+ ****************************************************************************/
+
+static inline uintptr_t unused_code
+fdt_ld_by_cells(const void *value, int cells)
+{
+  if (cells == 2)
+    {
+      return fdt64_ld(value);
+    }
+  else
+    {
+      return fdt32_ld(value);
+    }
+}
+
+/****************************************************************************
  * Name: fdt_get_reg_base
  ****************************************************************************/
 
@@ -97,28 +156,33 @@ fdt_get_reg_base(const void *fdt, int offset)
 {
   const void *reg;
   uintptr_t addr = 0;
-  int parentoff;
-
-  parentoff = fdt_parent_offset(fdt, offset);
-  if (parentoff < 0)
-    {
-      return addr;
-    }
 
   reg = fdt_getprop(fdt, offset, "reg", NULL);
   if (reg != NULL)
     {
-      if (fdt_address_cells(fdt, parentoff) == 2)
-        {
-          addr = fdt64_ld(reg);
-        }
-      else
-        {
-          addr = fdt32_ld(reg);
-        }
+      addr = fdt_ld_by_cells(reg, fdt_get_parent_address_cells(fdt, offset));
     }
 
   return addr;
+}
+
+/****************************************************************************
+ * Name: fdt_get_reg_size
+ ****************************************************************************/
+
+static uintptr_t unused_code
+fdt_get_reg_size(const void *fdt, int offset)
+{
+  const void *reg;
+  uintptr_t size = 0;
+
+  reg = fdt_getprop(fdt, offset, "reg", NULL);
+  if (reg != NULL)
+    {
+      size = fdt_ld_by_cells(reg, fdt_get_parent_size_cells(fdt, offset));
+    }
+
+  return size;
 }
 
 /****************************************************************************
@@ -163,6 +227,90 @@ static void register_virtio_devices_from_fdt(const void *fdt)
 #endif
 
 /****************************************************************************
+ * Name: register_pci_host_from_fdt
+ ****************************************************************************/
+
+#ifdef CONFIG_PCI
+static void register_pci_host_from_fdt(const void *fdt)
+{
+  struct pci_resource_s prefetch;
+  struct pci_resource_s cfg;
+  struct pci_resource_s mem;
+  struct pci_resource_s io;
+  const fdt32_t *ranges;
+  int offset;
+
+  /* #address-size must be 3
+   * defined in the PCI Bus Binding to IEEE Std 1275-1994 :
+   * Bit#
+   *
+   * phys.hi cell:  npt000ss bbbbbbbb dddddfff rrrrrrrr
+   * phys.mid cell: hhhhhhhh hhhhhhhh hhhhhhhh hhhhhhhh
+   * phys.lo cell:  llllllll llllllll llllllll llllllll
+   */
+
+  const int na = 3;
+
+  /* #size-cells must be 2 */
+
+  const int ns = 2;
+  int rlen;
+  int pna;
+
+  memset(&prefetch, 0, sizeof(prefetch));
+  memset(&cfg, 0, sizeof(cfg));
+  memset(&mem, 0, sizeof(mem));
+  memset(&io, 0, sizeof(io));
+
+  offset = fdt_node_offset_by_compatible(fdt, -1,
+                                         "pci-host-ecam-generic");
+  if (offset < 0)
+    {
+      return;
+    }
+
+  /* Get the reg address, 64 or 32 */
+
+  cfg.start = fdt_get_reg_base(fdt, offset);
+  cfg.end = cfg.start + fdt_get_reg_size(fdt, offset);
+
+  /* Get the ranges address */
+
+  ranges = fdt_getprop(fdt, offset, "ranges", &rlen);
+  if (ranges < 0)
+    {
+      return;
+    }
+
+  pna = fdt_get_parent_address_cells(fdt, offset);
+
+  for (rlen /= 4; (rlen -= na + pna + ns) >= 0; ranges += na + pna + ns)
+    {
+      uint32_t type = fdt32_ld(ranges);
+
+      if ((type & FDT_PCI_TYPE_MASK) == FDT_PCI_TYPE_IO)
+        {
+          io.start = fdt_ld_by_cells(ranges + na, pna);
+          io.end = io.start + fdt_ld_by_cells(ranges + na + pna, ns);
+        }
+      else if ((type & FDT_PCI_PREFTCH) == FDT_PCI_PREFTCH)
+        {
+          prefetch.start = fdt_ld_by_cells(ranges + na, pna);
+          prefetch.end = prefetch.start +
+                         fdt_ld_by_cells(ranges + na + pna, ns);
+        }
+      else
+        {
+          mem.start = fdt_ld_by_cells(ranges + na, pna);
+          mem.end = mem.start + fdt_ld_by_cells(ranges + na + pna, ns);
+        }
+    }
+
+  pci_ecam_register(&cfg, &io, &mem, NULL);
+}
+#endif
+
+/****************************************************************************
  * Name: register_devices_from_fdt
  ****************************************************************************/
 
@@ -177,6 +325,10 @@ static void register_devices_from_fdt(void)
 
 #ifdef CONFIG_DRIVERS_VIRTIO_MMIO
   register_virtio_devices_from_fdt(fdt);
+#endif
+
+#ifdef CONFIG_PCI
+  register_pci_host_from_fdt(fdt);
 #endif
 }
 
