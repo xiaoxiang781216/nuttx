@@ -90,6 +90,12 @@ function setup_environment()
       "g++-multilib" \
       )
 
+  PYMODULES=( \
+      "ply" \
+      "mako" \
+      "jsonpath" \
+      )
+
   for (( i = 0; i < ${#PACKAGES[*]}; i++)); do
     dpkg -l ${PACKAGES[$i]} > /dev/null 2>&1
     if [ $? -eq 1 ]; then
@@ -98,34 +104,55 @@ function setup_environment()
     fi
   done
 
-  if [ ${#INSTALLS[*]} -eq 0 ]; then
-    return
-  fi
-
-  if [ ${#INSTALLS[*]} -eq 1 ] && [ "${INSTALLS[0]}" == "kconfig-frontends" ]; then
-    return
-  fi
-
-  echo "*************************************************************************************"
-  echo "The environment of Vela depends on above tools, Run the following command to install:"
-  echo ""
-  echo " sudo dpkg --add-architecture i386"
-
-  for (( i = 0; i < ${#INSTALLS[*]}; i++)); do
-    result=`apt-cache search ${INSTALLS[$i]}`
-    if [ "$result" == "" ]; then
-      if [ "${INSTALLS[$i]}" == "kconfig-frontends" ]; then
-        unset INSTALLS[$i]
-      fi
+  for (( i = 0; i < ${#PYMODULES[*]}; i++)); do
+    pip show ${PYMODULES[$i]} > /dev/null 2>&1
+    if [ $? -eq 1 ]; then
+      echo "WARNING: no python module found matching ${PYMODULES[$i]}"
+      PYINSTALLS[${#PYINSTALLS[@]}]=${PYMODULES[$i]}
     fi
   done
 
-  echo " sudo apt-get install -y software-properties-common"
-  echo " sudo add-apt-repository ppa:ubuntu-toolchain-r/test"
-  echo " sudo apt-get update"
-  echo " sudo apt-get install -y ${INSTALLS[@]}"
-  echo ""
-  echo "*************************************************************************************"
+  if [ ${#INSTALLS[*]} -eq 0 ] && [ ${#PYINSTALLS[*]} -eq 0 ]; then
+    return
+  fi
+
+  if [ ${#INSTALLS[*]} -eq 1 ] && [ ${#PYINSTALLS[*]} -eq 0 ] && [ "${INSTALLS[0]}" == "kconfig-frontends" ]; then
+    return
+  fi
+
+  if [ ${#INSTALLS[*]} -ne 0 ]; then
+    echo "*************************************************************************************"
+    echo "The environment of Vela depends on above tools, Run the following command to install:"
+    echo ""
+    echo " sudo dpkg --add-architecture i386"
+
+    for (( i = 0; i < ${#INSTALLS[*]}; i++)); do
+      result=`apt-cache search ${INSTALLS[$i]}`
+      if [ "$result" == "" ]; then
+        if [ "${INSTALLS[$i]}" == "kconfig-frontends" ]; then
+          unset INSTALLS[$i]
+        fi
+      fi
+    done
+
+    echo " sudo apt-get install -y software-properties-common"
+    echo " sudo add-apt-repository ppa:ubuntu-toolchain-r/test"
+    echo " sudo apt-get update"
+    echo " sudo apt-get install -y ${INSTALLS[@]}"
+    echo ""
+    echo "*************************************************************************************"
+  fi
+
+  if [ ${#PYINSTALLS[*]} -ne 0 ]; then
+    echo "*************************************************************************************"
+    echo "The environment of Vela depends on above python modules"
+    echo "Run the following command to install:"
+    echo ""
+    echo " sudo pip install --upgrade pip"
+    echo " sudo pip install ${PYINSTALLS[@]}"
+    echo ""
+    echo "*************************************************************************************"
+  fi
 }
 
 function setup_toolchain()
