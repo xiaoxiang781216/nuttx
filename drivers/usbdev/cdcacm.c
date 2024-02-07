@@ -868,6 +868,16 @@ errout_with_flags:
 
 static void cdcacm_resetconfig(FAR struct cdcacm_dev_s *priv)
 {
+  /* When the USB is pulled out, if there is an unprocessed buffer,
+   * it needs to be push them to upper half serial drivers RX buffer.
+   */
+
+  if (priv->nrdq != 0)
+    {
+      cdcacm_release_rxpending(priv);
+      priv->nrdq = 0;
+    }
+
   /* Are we configured? */
 
   if (priv->config != CDCACM_CONFIGIDNONE)
@@ -1031,8 +1041,6 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
     }
 
   priv->epbulkout->priv = priv;
-
-  /* Queue read requests in the bulk OUT endpoint */
 
   DEBUGASSERT(priv->nrdq == 0);
   for (i = 0; i < CONFIG_CDCACM_NRDREQS; i++)
@@ -1478,19 +1486,11 @@ static void cdcacm_unbind(FAR struct usbdevclass_driver_s *driver,
           priv->ctrlreq = NULL;
         }
 
-      /* When the USB is pulled out, if there is an unprocessed buffer,
-       * it needs to be push them to upper half serial drivers RX buffer.
-       */
-
-      if (priv->nrdq != 0)
-        {
-          cdcacm_release_rxpending(priv);
-        }
-
       /* Free pre-allocated read requests (which should all have
        * been returned to the free list at this time -- we don't check)
        */
 
+      DEBUGASSERT(priv->nrdq == 0);
       for (i = 0; i < CONFIG_CDCACM_NRDREQS; i++)
         {
           rdcontainer = &priv->rdreqs[i];
