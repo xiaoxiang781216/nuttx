@@ -37,6 +37,7 @@
 #include <nuttx/net/tun.h>
 #include <nuttx/net/telnet.h>
 #include <nuttx/note/note_driver.h>
+#include <nuttx/pci/pci.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/power/regulator.h>
 #include <nuttx/reset/reset-controller.h>
@@ -240,6 +241,10 @@ void drivers_initialize(void)
 
 #ifdef CONFIG_DRIVERS_BINDER
   binder_initialize();
+#endif
+
+#ifdef CONFIG_PCI
+  pci_register_drivers();
 #endif
 
 #ifdef CONFIG_DRIVERS_VIRTIO
