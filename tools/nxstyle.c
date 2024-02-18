@@ -207,6 +207,7 @@ static const char *g_white_prefix[] =
   "lua_",    /* Ref:  apps/interpreters/lua/lua-5.x.x/src/lua.h */
   "luaL_",   /* Ref:  apps/interpreters/lua/lua-5.x.x/src/lauxlib.h */
   "V4L2_",   /* Ref:  include/sys/video_controls.h */
+  "Ifx",     /* Ref:  arch/tricore/src */
 
   NULL
 };
@@ -570,6 +571,12 @@ static const char *g_white_content_list[] =
 static const char *g_white_headers[] =
 {
   "windows.h",
+
+  /* Ref:
+   * arch/tricore/src/common/tricore_serial.c
+   */
+
+  "IfxAsclin_Asc.h",
   NULL
 };
 
