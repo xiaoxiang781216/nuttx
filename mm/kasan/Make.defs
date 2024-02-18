@@ -33,7 +33,9 @@ CFLAGS += -fno-sanitize=kernel-hwaddress
 endif
 
 CFLAGS += -fno-builtin
-CFLAGS += -fno-lto
+ifeq ($(CONFIG_LTO_NONE),n)
+  CFLAGS += -fno-lto
+endif
 endif
 
 # Add the core heap directory to the build
