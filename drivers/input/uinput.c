@@ -34,7 +34,7 @@
 #include <nuttx/list.h>
 
 #ifdef CONFIG_UINPUT_RPMSG
-#  include <nuttx/rptun/openamp.h>
+#  include <nuttx/rpmsg/rpmsg.h>
 #endif
 
 /****************************************************************************

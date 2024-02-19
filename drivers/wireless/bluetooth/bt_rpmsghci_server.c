@@ -28,7 +28,7 @@
 #include <debug.h>
 #include <stdlib.h>
 
-#include <nuttx/rptun/openamp.h>
+#include <nuttx/rpmsg/rpmsg.h>
 #include <nuttx/wireless/bluetooth/bt_rpmsghci.h>
 
 #include "bt_rpmsghci.h"
