@@ -57,15 +57,17 @@ endif()
 get_directory_property(NUTTX_EXTRA_FLAGS DIRECTORY ${CMAKE_SOURCE_DIR}
                                                    COMPILE_OPTIONS)
 
+separate_arguments(CMAKE_C_FLAG_ARGS NATIVE_COMMAND ${CMAKE_C_FLAGS})
+
 execute_process(
-  COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAGS} ${NUTTX_EXTRA_FLAGS}
+  COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
           --print-libgcc-file-name
   OUTPUT_STRIP_TRAILING_WHITESPACE
   OUTPUT_VARIABLE extra_library)
 if(NOT EXISTS ${extra_library} AND CONFIG_ARCH_TOOLCHAIN_CLANG)
   get_filename_component(COMPILER_RT_LIB ${extra_library} NAME)
   execute_process(
-    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAGS} ${NUTTX_EXTRA_FLAGS}
+    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
             --print-file-name ${COMPILER_RT_LIB}
     OUTPUT_STRIP_TRAILING_WHITESPACE
     OUTPUT_VARIABLE extra_library)
@@ -75,7 +77,7 @@ list(APPEND EXTRA_LIB ${extra_library})
 
 if(NOT CONFIG_LIBM)
   execute_process(
-    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAGS} ${NUTTX_EXTRA_FLAGS}
+    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
             --print-file-name=libm.a
     OUTPUT_STRIP_TRAILING_WHITESPACE
     OUTPUT_VARIABLE extra_library)
@@ -84,7 +86,7 @@ endif()
 
 if(CONFIG_LIBSUPCXX)
   execute_process(
-    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAGS} ${NUTTX_EXTRA_FLAGS}
+    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
             --print-file-name=libsupc++.a
     OUTPUT_STRIP_TRAILING_WHITESPACE
     OUTPUT_VARIABLE extra_library)
@@ -93,7 +95,7 @@ endif()
 
 if(CONFIG_ARCH_COVERAGE)
   execute_process(
-    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAGS} ${NUTTX_EXTRA_FLAGS}
+    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
             --print-file-name=libgcov.a
     OUTPUT_STRIP_TRAILING_WHITESPACE
     OUTPUT_VARIABLE extra_library)
@@ -102,5 +104,4 @@ endif()
 
 nuttx_add_extra_library(${EXTRA_LIB})
 
-separate_arguments(CMAKE_C_FLAG_ARGS NATIVE_COMMAND ${CMAKE_C_FLAGS})
 set(PREPROCES ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)
