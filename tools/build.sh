@@ -316,6 +316,30 @@ function build_board()
   fi
 }
 
+function build_board_cmake()
+{
+  j_arg=$(echo ${@:2} |grep -oP '\-j[0-9]+')
+  echo -e "Build command line:"
+  echo -e "  cmake -B out -S ${NUTTXDIR} -DBOARD_CONFIG=$1 -GNinja"
+  echo -e "  cmake --build out $j_arg"
+
+  setup_toolchain $1
+
+  if ! cmake -B out -S ${NUTTXDIR} -DBOARD_CONFIG=$1 -GNinja; then
+    echo "Error: ############# config ${1} fail ##############"
+    exit 1
+  fi
+
+  if ! ${BEAR} cmake --build out $j_arg; then
+    echo "Error: ############# build ${1} fail ##############"
+    exit 2
+  else
+    if [ -f "${COMPILE_COMMANDS}" ]; then
+      cp ${COMPILE_COMMANDS} ${COMPILE_COMMANDS_BACKUP}
+    fi
+  fi
+}
+
 function pack_sdk()
 {
   VENDOR=(\
@@ -370,11 +394,12 @@ function pack_sdk()
 }
 
 if [ $# == 0 ]; then
-  echo "Usage: $0 [-m] <board-name>:<config-name> [-e <extraflags>] [make options]"
+  echo "Usage: $0 [-m] <board-name>:<config-name> [-e <extraflags>] [--cmake] [make options]"
   echo ""
   echo "Where:"
   echo "  -m: out of tree build. Or default in tree build without it."
   echo "  -e: pass extra c/c++ flags such as -Werror via make command line"
+  echo "  --cmake: switch the build mode to CMake compilation."
   exit 1
 fi
 
@@ -426,10 +451,23 @@ if [ "$1" == "-e" ]; then
   shift
 fi
 
+if [ "$1" == "--cmake" ]; then
+  CMAKE_BUILD="cmake"
+  shift
+fi
+
 if [ -d ${ROOTDIR}/${board_config} ]; then
-  build_board ${ROOTDIR}/${board_config} $*
+  if [ -z "$CMAKE_BUILD" ]; then
+    build_board ${ROOTDIR}/${board_config} $*
+  else
+    build_board_cmake ../${board_config} $*
+  fi
 else
-  build_board ${board_config} $*
+  if [ -z "$CMAKE_BUILD" ]; then
+    build_board ${board_config} $*
+  else
+    build_board_cmake ${board_config} $*
+  fi
 fi
 
 pack_sdk ${board_config} $*
