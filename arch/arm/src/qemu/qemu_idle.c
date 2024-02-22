@@ -51,7 +51,7 @@
 void up_idle(void)
 {
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-  sm_switch_nsec();
+  arm_sm_switch_nsec();
 #else
 
   /* Sleep until an interrupt occurs to save power */
