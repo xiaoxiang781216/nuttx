@@ -51,7 +51,7 @@
 void up_idle(void)
 {
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-  sm_switch_nsec();
+  arm_sm_switch_nsec();
 #else
   #if defined(CONFIG_SUPPRESS_INTERRUPTS) || defined(CONFIG_SUPPRESS_TIMER_INTS)
   /* If the system is idle and there are no timer interrupts, then process
