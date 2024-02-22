@@ -338,6 +338,8 @@ try_again:
 
           if ((g_cpu_irqset & (1 << cpu)) == 0)
             {
+              int paused = false;
+
               /* Wait until we can get the spinlock (meaning that we are
                * no longer blocked by the critical section).
                */
@@ -350,8 +352,14 @@ try_again_in_irq:
                    * handling the pause request now.
                    */
 
+                  if (!paused)
+                    {
+                      up_cpu_paused_save();
+                    }
+
                   DEBUGVERIFY(up_cpu_paused(cpu));
                   DEBUGASSERT((g_cpu_irqset & (1 << cpu)) == 0);
+                  paused = true;
 
                   /* NOTE: Here, this CPU does not hold g_cpu_irqlock,
                    * so call irq_waitlock(cpu) to acquire g_cpu_irqlock.
@@ -362,6 +370,10 @@ try_again_in_irq:
 
               spin_setbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
                           &g_cpu_irqlock);
+              if (paused)
+                {
+                  up_cpu_paused_restore();
+                }
             }
 
           /* In any event, the nesting count is now one */
