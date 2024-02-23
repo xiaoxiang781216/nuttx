@@ -28,6 +28,7 @@
 #include <nuttx/pci/pci_qemu_edu.h>
 #include <nuttx/pci/pci_qemu_test.h>
 #include <nuttx/rptun/rptun_ivshmem.h>
+#include <nuttx/rpmsg/rpmsg_virtio_ivshmem.h>
 
 #include "pci_drivers.h"
 
@@ -59,6 +60,15 @@ int pci_register_drivers(void)
   if (ret < 0)
     {
       pcierr("pci_register_rptun_ivshmem_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_RPMSG_VIRTIO_IVSHMEM
+  ret = pci_register_rpmsg_virtio_ivshmem_driver();
+  if (ret < 0)
+    {
+      pcierr("pci_register_rpmsg_virtio_ivshmem_driver failed, ret=%d\n",
+             ret);
     }
 #endif
 
