@@ -68,12 +68,16 @@ static void rptun_dump_buffer(FAR struct rpmsg_virtio_device *rvdev,
     {
       if ((rpmsg_virtio_get_role(rvdev) == RPMSG_HOST) ^ rx)
         {
+          RPTUN_INVALIDATE(vq->vq_ring.used->idx);
           desc_idx = (vq->vq_ring.used->idx + i) & (vq->vq_nentries - 1);
+          RPTUN_INVALIDATE(vq->vq_ring.avail->ring[desc_idx]);
           desc_idx = vq->vq_ring.avail->ring[desc_idx];
         }
       else
         {
+          RPTUN_INVALIDATE(vq->vq_ring.avail->idx);
           desc_idx = (vq->vq_ring.avail->idx + i) & (vq->vq_nentries - 1);
+          RPTUN_INVALIDATE(vq->vq_ring.used->ring[desc_idx].id);
           desc_idx = vq->vq_ring.used->ring[desc_idx].id;
         }
 

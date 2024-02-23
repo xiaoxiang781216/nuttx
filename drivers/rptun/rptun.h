@@ -31,6 +31,16 @@
 #include "rptun_ping.h"
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifdef CONFIG_OPENAMP_CACHE
+#  define RPTUN_INVALIDATE(x) metal_cache_invalidate(&x, sizeof(x))
+#else
+#  define RPTUN_INVALIDATE(x)
+#endif
+
+/****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 

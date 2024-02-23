@@ -273,10 +273,12 @@ static inline void rptun_update_rx(FAR struct rptun_priv_s *priv)
 
   if (rpmsg_virtio_get_role(rvdev) == RPMSG_HOST)
     {
+      RPTUN_INVALIDATE(rvq->vq_ring.used->idx);
       priv->headrx = rvq->vq_ring.used->idx;
     }
   else
     {
+      RPTUN_INVALIDATE(rvq->vq_ring.avail->idx);
       priv->headrx = rvq->vq_ring.avail->idx;
     }
 }
@@ -1368,7 +1370,11 @@ int rptun_panic(FAR const char *cpuname)
 int rptun_buffer_nused(FAR struct rpmsg_virtio_device *rvdev, bool rx)
 {
   FAR struct virtqueue *vq = rx ? rvdev->rvq : rvdev->svq;
-  uint16_t nused = vq->vq_ring.avail->idx - vq->vq_ring.used->idx;
+  uint16_t nused;
+
+  RPTUN_INVALIDATE(vq->vq_ring.avail->idx);
+  RPTUN_INVALIDATE(vq->vq_ring.used->idx);
+  nused = vq->vq_ring.avail->idx - vq->vq_ring.used->idx;
 
   if ((rpmsg_virtio_get_role(rvdev) == RPMSG_HOST) ^ rx)
     {
