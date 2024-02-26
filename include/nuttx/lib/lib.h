@@ -121,6 +121,11 @@ unsigned long nrand(unsigned long limit);
 FAR char *lib_realpath(FAR const char *path, FAR char *resolved,
                        bool notfollow);
 
+/* Functions defined in lib_pathbuffer.c ************************************/
+
+FAR char *lib_get_pathbuffer(void);
+void lib_put_pathbuffer(FAR char *buffer);
+
 #undef EXTERN
 #ifdef __cplusplus
 }
