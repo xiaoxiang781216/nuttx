@@ -190,7 +190,7 @@ int rptun_ping(FAR struct rpmsg_endpoint *ept,
   clock_t max = 0;
   uint64_t total = 0;
   uint32_t buf_len = 0;
-  int send_len;
+  int send_len = 0;
   int i;
 
   if (!ept || !ping || ping->times <= 0)
