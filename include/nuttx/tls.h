@@ -47,7 +47,6 @@
 #endif
 
 #ifndef CONFIG_TLS_NELEM
-#  warning CONFIG_TLS_NELEM is not defined
 #  define CONFIG_TLS_NELEM 0
 #endif
 
