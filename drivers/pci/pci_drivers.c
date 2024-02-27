@@ -25,6 +25,7 @@
 #include <debug.h>
 
 #include <nuttx/pci/pci.h>
+#include <nuttx/pci/pci_qemu_edu.h>
 #include <nuttx/pci/pci_qemu_test.h>
 #include <nuttx/rptun/rptun_ivshmem.h>
 
@@ -58,6 +59,16 @@ int pci_register_drivers(void)
   if (ret < 0)
     {
       pcierr("pci_register_qemu_test_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+  /* Initialization qemu edu driver */
+
+#ifdef CONFIG_PCI_QEMU_EDU
+  ret = pci_register_qemu_edu_driver();
+  if (ret < 0)
+    {
+      pcierr("pci_register_qemu_edu_driver failed, ret=%d\n", ret);
     }
 #endif
 
