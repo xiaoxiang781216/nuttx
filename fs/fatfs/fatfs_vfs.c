@@ -457,6 +457,16 @@ static ssize_t fatfs_write(FAR struct file *filep, FAR const char *buffer,
 
   fp = filep->f_priv;
   fs = filep->f_inode->i_private;
+
+  if (filep->f_pos > f_size(&fp->f))
+    {
+      ret = fatfs_truncate(filep, filep->f_pos);
+      if (ret < 0)
+        {
+          return ret;
+        }
+    }
+
   ret = nxmutex_lock(&fs->lock);
   if (ret < 0)
     {
