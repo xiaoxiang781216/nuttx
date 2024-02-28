@@ -114,6 +114,15 @@ enum pm_qos_req_action
  * Public Function Prototypes
  ****************************************************************************/
 
+#undef EXTERN
+#if defined(__cplusplus)
+#define EXTERN extern "C"
+extern "C"
+{
+#else
+#define EXTERN extern
+#endif
+
 int32_t pm_qos_read_value(FAR struct pm_qos_constraints *c);
 
 int pm_qos_update_target(FAR struct pm_qos_constraints *c,
@@ -143,5 +152,10 @@ int freq_qos_add_notifier(FAR struct freq_constraints *qos,
 int freq_qos_remove_notifier(FAR struct freq_constraints *qos,
                              enum freq_qos_req_type type,
                              FAR struct notifier_block *notifier);
+
+#undef EXTERN
+#if defined(__cplusplus)
+}
+#endif
 
 #endif /* _DRIVERS_CPUFREQ_QOS_H */

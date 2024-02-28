@@ -121,6 +121,15 @@ struct cpufreq_driver
  * Public Function Prototypes
  ****************************************************************************/
 
+#undef EXTERN
+#if defined(__cplusplus)
+#define EXTERN extern "C"
+extern "C"
+{
+#else
+#define EXTERN extern
+#endif
+
 /* cpufreq_int - init cpufreq with driver
  * driver: lower driver
  */
@@ -244,5 +253,10 @@ int cpufreq_qos_remove_request(FAR struct cpufreq_qos *qos);
  ****************************************************************************/
 
 int cpufreq_table_count_valid_entries(FAR struct cpufreq_policy *policy);
+
+#undef EXTERN
+#if defined(__cplusplus)
+}
+#endif
 
 #endif /* __INCLUDE_NUTTX_CPUFREQ_H */
