@@ -58,13 +58,13 @@ struct pm_qos_constraints
   int32_t default_value;
   int32_t no_constraint_value;
   enum pm_qos_type type;
-  struct blocking_notifier_head *notifiers;
+  FAR struct blocking_notifier_head *notifiers;
 };
 
 struct pm_qos_request
 {
   struct plist_node node;
-  struct pm_qos_constraints *qos;
+  FAR struct pm_qos_constraints *qos;
 };
 
 struct pm_qos_flags_request
@@ -97,7 +97,7 @@ struct freq_qos_request
 {
   enum freq_qos_req_type type;
   struct plist_node pnode;
-  struct freq_constraints *qos;
+  FAR struct freq_constraints *qos;
 };
 
 /* Action requested to pm_qos_update_target */
@@ -148,7 +148,7 @@ int freq_qos_apply(FAR struct freq_qos_request *req,
 
 int freq_qos_add_notifier(FAR struct freq_constraints *qos,
                           enum freq_qos_req_type type,
-                          struct notifier_block *notifier);
+                          FAR struct notifier_block *notifier);
 int freq_qos_remove_notifier(FAR struct freq_constraints *qos,
                              enum freq_qos_req_type type,
                              FAR struct notifier_block *notifier);
