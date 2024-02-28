@@ -80,8 +80,8 @@ static uint32_t __clk_round_rate(FAR struct clk_s *clk, uint32_t rate);
 static int __clk_enable(FAR struct clk_s *clk);
 static int __clk_disable(FAR struct clk_s *clk);
 
-static struct clk_s *__clk_lookup(FAR const char *name,
-                                  FAR struct clk_s *clk);
+static FAR struct clk_s *__clk_lookup(FAR const char *name,
+                                      FAR struct clk_s *clk);
 static int __clk_register(FAR struct clk_s *clk);
 
 static void clk_disable_unused_subtree(FAR struct clk_s *clk);
@@ -561,8 +561,8 @@ static void clk_change_rate(FAR struct clk_s *clk, uint32_t best_parent_rate)
     }
 }
 
-static struct clk_s *__clk_lookup(FAR const char *name,
-                                  FAR struct clk_s *clk)
+static FAR struct clk_s *__clk_lookup(FAR const char *name,
+                                      FAR struct clk_s *clk)
 {
   FAR struct clk_s *child;
   FAR struct clk_s *ret;

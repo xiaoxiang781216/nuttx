@@ -51,7 +51,7 @@ struct cpufreq_qos
  * Private Data
  ****************************************************************************/
 
-static struct cpufreq_policy *g_cpufreq_policy;
+static FAR struct cpufreq_policy *g_cpufreq_policy;
 
 /****************************************************************************
  * Private Function Prototypes
@@ -494,7 +494,7 @@ int cpufreq_uninit(void)
   return 0;
 }
 
-struct cpufreq_policy *cpufreq_policy_get(void)
+FAR struct cpufreq_policy *cpufreq_policy_get(void)
 {
   return g_cpufreq_policy;
 }
