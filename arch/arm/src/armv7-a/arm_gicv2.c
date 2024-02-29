@@ -30,6 +30,7 @@
 #include <errno.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/spinlock.h>
 #include <arch/irq.h>
 
 #include "arm_internal.h"
