@@ -61,7 +61,7 @@ SECTIONS
       KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
       KEEP(*(.init_array EXCLUDE_FILE(*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o) .ctors))
       _einit = ABSOLUTE(.);
-      . = ALIGN(4096);
+      . = ALIGN(8);
       _etext = .; /* End_1 of .text */
       _sztext = _etext - _stext;
   } > ROM
@@ -85,7 +85,7 @@ SECTIONS
       *(.rodata*)
       *(.data.rel.ro*)
       KEEP(*(SORT(.scattered_array*)));
-      . = ALIGN(4096);
+      . = ALIGN(8);
       _erodata = .;
   } > ROM
 
@@ -106,7 +106,7 @@ SECTIONS
   .bss : {                     /* BSS */
        _sbss = .;
        *(.bss*)
-       . = ALIGN(4096);
+       . = ALIGN(8);
        _ebss = .;
   } > RAM
 
