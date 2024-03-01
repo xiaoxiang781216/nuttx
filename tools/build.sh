@@ -88,6 +88,7 @@ function setup_environment()
       "protobuf-c-compiler" \
       "gcc-multilib" \
       "g++-multilib" \
+      "gettext" \
       )
 
   for (( i = 0; i < ${#PACKAGES[*]}; i++)); do
