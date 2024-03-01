@@ -94,7 +94,9 @@ struct rpmsg_socket_conn_s
 
   struct socket_conn_s           sconn;
 
+  bool                           unbind;
   struct rpmsg_endpoint          ept;
+
   struct sockaddr_rpmsg          rpaddr;
   char                           nameid[RPMSG_SOCKET_NAME_ID_LEN];
   uint16_t                       crefs;
@@ -283,7 +285,7 @@ static int rpmsg_socket_wakeup(FAR struct rpmsg_socket_conn_s *conn)
   uint32_t space;
   int ret = 0;
 
-  if (!conn->ept.rdev)
+  if (!conn->ept.rdev || conn->unbind)
     {
       return ret;
     }
@@ -420,6 +422,29 @@ static int rpmsg_socket_ept_cb(FAR struct rpmsg_endpoint *ept,
   return 0;
 }
 
+static inline void rpmsg_socket_destroy_ept(
+                    FAR struct rpmsg_socket_conn_s *conn)
+{
+  if (!conn)
+    {
+      return;
+    }
+
+  nxmutex_lock(&conn->recvlock);
+  nxmutex_lock(&conn->sendlock);
+
+  if (conn->ept.rdev)
+    {
+      rpmsg_socket_post(&conn->sendsem);
+      rpmsg_socket_post(&conn->recvsem);
+      rpmsg_socket_poll_notify(conn, POLLIN | POLLOUT);
+    }
+
+  nxmutex_unlock(&conn->sendlock);
+  nxmutex_unlock(&conn->recvlock);
+  rpmsg_destroy_ept(&conn->ept);
+}
+
 static void rpmsg_socket_ns_bound(struct rpmsg_endpoint *ept)
 {
   FAR struct rpmsg_socket_conn_s *conn = ept->priv;
@@ -439,18 +464,13 @@ static void rpmsg_socket_ns_unbind(FAR struct rpmsg_endpoint *ept)
   FAR struct rpmsg_socket_conn_s *conn = ept->priv;
 
   nxmutex_lock(&conn->recvlock);
-  nxmutex_lock(&conn->sendlock);
 
-  if (conn->ept.rdev)
-    {
-      rpmsg_socket_post(&conn->sendsem);
-      rpmsg_socket_post(&conn->recvsem);
-      rpmsg_socket_poll_notify(conn, POLLIN | POLLOUT);
-    }
+  conn->unbind = true;
+  rpmsg_socket_post(&conn->sendsem);
+  rpmsg_socket_post(&conn->recvsem);
+  rpmsg_socket_poll_notify(conn, POLLIN | POLLOUT);
 
-  nxmutex_unlock(&conn->sendlock);
   nxmutex_unlock(&conn->recvlock);
-  rpmsg_destroy_ept(&conn->ept);
 }
 
 static void rpmsg_socket_ept_release(FAR struct rpmsg_endpoint *ept)
@@ -738,7 +758,7 @@ static int rpmsg_socket_connect_internal(FAR struct socket *psock)
                                     NULL,
                                     NULL,
                                     NULL);
-          rpmsg_socket_ns_unbind(&conn->ept);
+          rpmsg_socket_destroy_ept(conn);
         }
     }
   else
@@ -881,7 +901,7 @@ static int rpmsg_socket_poll(FAR struct socket *psock,
         }
       else if (_SS_ISCONNECTED(conn->sconn.s_flags))
         {
-          if (!conn->ept.rdev)
+          if (!conn->ept.rdev || conn->unbind)
             {
               eventset |= POLLHUP;
             }
@@ -904,7 +924,8 @@ static int rpmsg_socket_poll(FAR struct socket *psock,
         }
       else /* !_SS_ISCONNECTED(conn->sconn.s_flags) */
         {
-          if (!conn->ept.rdev && !_SS_INITD(conn->sconn.s_flags))
+          if ((!conn->ept.rdev || conn->unbind) &&
+              !_SS_INITD(conn->sconn.s_flags))
             {
               eventset |= POLLHUP;
             }
@@ -977,7 +998,7 @@ static ssize_t rpmsg_socket_send_continuous(FAR struct socket *psock,
 
           ret = net_sem_timedwait(&conn->sendsem,
                                   _SO_TIMEOUT(conn->sconn.s_sndtimeo));
-          if (!conn->ept.rdev)
+          if (!conn->ept.rdev || conn->unbind)
             {
               ret = -ECONNRESET;
             }
@@ -1074,7 +1095,7 @@ static ssize_t rpmsg_socket_send_single(FAR struct socket *psock,
 
       ret = net_sem_timedwait(&conn->sendsem,
                               _SO_TIMEOUT(conn->sconn.s_sndtimeo));
-      if (!conn->ept.rdev)
+      if (!conn->ept.rdev || conn->unbind)
         {
           ret = -ECONNRESET;
         }
@@ -1158,7 +1179,7 @@ static ssize_t rpmsg_socket_sendmsg(FAR struct socket *psock,
         }
     }
 
-  if (!conn->ept.rdev)
+  if (!conn->ept.rdev || conn->unbind)
     {
       /* return ECONNRESET if lower IPC closed */
 
@@ -1242,7 +1263,7 @@ static ssize_t rpmsg_socket_recvmsg(FAR struct socket *psock,
       goto out;
     }
 
-  if (!conn->ept.rdev)
+  if (!conn->ept.rdev || conn->unbind)
     {
       /* return EOF if lower IPC closed */
 
@@ -1264,7 +1285,7 @@ static ssize_t rpmsg_socket_recvmsg(FAR struct socket *psock,
 
   ret = net_sem_timedwait(&conn->recvsem,
                           _SO_TIMEOUT(conn->sconn.s_rcvtimeo));
-  if (!conn->ept.rdev)
+  if (!conn->ept.rdev || conn->unbind)
     {
       ret = 0;
     }
@@ -1318,7 +1339,7 @@ static int rpmsg_socket_close(FAR struct socket *psock)
 
   if (conn->ept.rdev)
     {
-      rpmsg_socket_ns_unbind(&conn->ept);
+      rpmsg_socket_destroy_ept(conn);
     }
   else
     {
@@ -1380,7 +1401,7 @@ static int rpmsg_socket_shutdown(FAR struct socket *psock, int how)
   FAR struct rpmsg_socket_conn_s *conn = psock->s_conn;
   struct rpmsg_socket_shutdown_s msg;
 
-  if (!conn->ept.rdev)
+  if (!conn->ept.rdev || conn->unbind)
     {
       return -ENOTCONN;
     }
