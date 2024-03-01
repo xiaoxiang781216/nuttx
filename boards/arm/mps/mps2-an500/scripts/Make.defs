@@ -23,16 +23,18 @@ include $(TOPDIR)/tools/Config.mk
 include $(TOPDIR)/arch/arm/src/armv7-m/Toolchain.defs
 
 ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)
-define POSTBUILD
-  $(GMEMFILE) nuttx -o nuttx.bin
-endef
-else
-define POSTBUILD
-  $(OBJCOPY) -O binary nuttx nuttx.bin
-endef
-endif
+  define POSTBUILD
+    $(GMEMFILE) nuttx -o nuttx.bin
+  endef
 
-LDSCRIPT = flash.ld
+  LDSCRIPT = ghs-flash.ld
+else
+  define POSTBUILD
+    $(OBJCOPY) -O binary nuttx nuttx.bin
+  endef
+
+  LDSCRIPT = flash.ld
+endif
 
 ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
 
