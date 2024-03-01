@@ -85,7 +85,7 @@ static int load_default_priority(FAR struct binary_s *bin)
  * Name: load_absmodule
  *
  * Description:
- *   Load a module into memory, bind it to an exported symbol take, and
+ *   Load a module into memory, bind it to an exported symbol table, and
  *   prep the module for execution.  filename is known to be an absolute
  *   path to the file to be loaded.
  *
@@ -138,7 +138,7 @@ static int load_absmodule(FAR struct binary_s *bin, FAR const char *filename,
  * Name: load_module
  *
  * Description:
- *   Load a module into memory, bind it to an exported symbol take, and
+ *   Load a module into memory, bind it to an exported symbol table, and
  *   prep the module for execution.
  *
  * Returned Value:
