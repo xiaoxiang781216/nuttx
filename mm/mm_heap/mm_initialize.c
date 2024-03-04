@@ -132,7 +132,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
   /* Use the fill value to mark uninitialized user memory */
 
-  memset(heapstart, 0xcc, heapsize);
+  memset(heapstart, MM_INIT_MAGIC, heapsize);
 #endif
 
   /* Register to KASan for access check */

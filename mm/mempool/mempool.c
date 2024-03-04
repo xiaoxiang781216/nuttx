@@ -294,7 +294,7 @@ retry:
 #endif
   kasan_unpoison(blk, pool->blocksize);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-  memset(blk, 0xaa, pool->blocksize);
+  memset(blk, MM_ALLOC_MAGIC, pool->blocksize);
 #endif
 out_with_lock:
   spin_unlock_irqrestore(&pool->lock, flags);
@@ -329,7 +329,7 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
 #endif
 
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-  memset(blk, 0x55, pool->blocksize);
+  memset(blk, MM_FREE_MAGIC, pool->blocksize);
 #endif
 
   if (pool->interruptsize > blocksize)

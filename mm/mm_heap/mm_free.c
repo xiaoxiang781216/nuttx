@@ -92,7 +92,7 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
 
   nodesize = mm_malloc_size(heap, mem);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-  memset(mem, 0x55, nodesize);
+  memset(mem, MM_FREE_MAGIC, nodesize);
 #endif
 
   kasan_poison(mem, nodesize);
