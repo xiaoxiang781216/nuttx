@@ -92,11 +92,11 @@ set(ARCHCXXFLAGS
     "-nostdinc++ -fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas"
 )
 
-if(CONFIG_CXX_EXCEPTION)
+if(NOT CONFIG_CXX_EXCEPTION)
   string(APPEND ARCHCXXFLAGS " -fno-exceptions -fcheck-new")
 endif()
 
-if(CONFIG_CXX_RTTI)
+if(NOT CONFIG_CXX_RTTI)
   string(APPEND ARCHCXXFLAGS " -fno-rtti")
 endif()
 

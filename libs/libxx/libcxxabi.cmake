@@ -39,9 +39,6 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxxabi)
         ""
         TEST_COMMAND
         ""
-    PATCH_COMMAND
-      patch -p0 -d ${CMAKE_CURRENT_LIST_DIR} <
-      ${CMAKE_CURRENT_LIST_DIR}/0001-libc-abi-avoid-the-waring-__EXCEPTIONS-is-not-define.patch
     DOWNLOAD_NO_PROGRESS true
     TIMEOUT 30)
 
@@ -52,13 +49,13 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxxabi)
   endif()
 endif()
 
-nuttx_add_system_library(libcxxabi)
-
 set_property(
   TARGET nuttx
   APPEND
-  PROPERTY NUTTX_INCLUDE_DIRECTORIES
+  PROPERTY NUTTX_CXX_INCLUDE_DIRECTORIES
            ${CMAKE_CURRENT_LIST_DIR}/libcxxabi/include)
+
+nuttx_add_system_library(libcxxabi)
 
 set(SRCS)
 
@@ -102,3 +99,6 @@ foreach(src ${SRCS})
 endforeach()
 
 target_sources(libcxxabi PRIVATE ${TARGET_SRCS})
+target_compile_options(libcxxabi PRIVATE -frtti)
+target_include_directories(libcxxabi BEFORE
+                           PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)
