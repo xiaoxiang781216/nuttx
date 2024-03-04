@@ -33,7 +33,7 @@
 #include <sys/socket.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mm/circbuf.h>
+#include <nuttx/circbuf.h>
 #include <nuttx/rptun/openamp.h>
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>

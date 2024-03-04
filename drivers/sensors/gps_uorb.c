@@ -25,7 +25,7 @@
 #include <nuttx/config.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mm/circbuf.h>
+#include <nuttx/circbuf.h>
 #include <nuttx/sensors/sensor.h>
 #include <nuttx/sensors/gps.h>
 

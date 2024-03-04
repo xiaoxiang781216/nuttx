@@ -26,7 +26,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/mm/circbuf.h>
+#include <nuttx/circbuf.h>
 #include <nuttx/semaphore.h>
 
 #include <poll.h>

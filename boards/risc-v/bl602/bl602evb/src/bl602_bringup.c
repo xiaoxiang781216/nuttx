@@ -58,7 +58,7 @@
 #include <nuttx/net/bluetooth.h>
 #include <nuttx/wireless/bluetooth/bt_driver.h>
 #include <nuttx/wireless/bluetooth/bt_uart.h>
-#include <nuttx/mm/circbuf.h>
+#include <nuttx/circbuf.h>
 #endif /* CONFIG_BL602_BLE_CONTROLLER */
 
 #ifdef CONFIG_FS_ROMFS

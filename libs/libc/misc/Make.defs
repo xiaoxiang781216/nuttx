@@ -20,12 +20,12 @@
 
 # Add the internal C files to the build
 
-CSRCS += lib_mknod.c lib_umask.c lib_utsname.c lib_getrandom.c
-CSRCS += lib_xorshift128.c lib_tea_encrypt.c lib_tea_decrypt.c
-CSRCS += lib_cxx_initialize.c lib_impure.c lib_memfd.c lib_mutex.c
-CSRCS += lib_fchmodat.c lib_fstatat.c lib_getfullpath.c lib_openat.c
-CSRCS += lib_mkdirat.c lib_utimensat.c lib_mallopt.c lib_memoryregion.c
-CSRCS += lib_pathbuffer.c
+CSRCS += lib_circbuf.c lib_mknod.c lib_umask.c lib_utsname.c
+CSRCS += lib_getrandom.c lib_xorshift128.c lib_tea_encrypt.c
+CSRCS += lib_tea_decrypt.c lib_cxx_initialize.c lib_impure.c
+CSRCS += lib_memfd.c lib_mutex.c lib_fchmodat.c lib_fstatat.c
+CSRCS += lib_getfullpath.c lib_openat.c lib_mkdirat.c lib_utimensat.c
+CSRCS += lib_mallopt.c lib_memoryregion.c lib_pathbuffer.c
 
 # Support for platforms that do not have long long types
 
