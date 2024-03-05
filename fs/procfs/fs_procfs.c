@@ -321,8 +321,8 @@ struct procfs_level0_s
   /* Our private data */
 
   uint8_t lastlen;                       /* length of last reported static dir */
-  pid_t pid[CONFIG_FS_PROCFS_MAX_TASKS]; /* Snapshot of all active task IDs */
   FAR const char *lastread;              /* Pointer to last static dir read */
+  pid_t pid[0];                          /* Snapshot of all active task IDs */
 };
 
 /* Level 1 is an internal virtual directory (such as /proc/fs) which
@@ -369,6 +369,15 @@ static void procfs_enum(FAR struct tcb_s *tcb, FAR void *arg)
 
   dir->pid[index] = tcb->pid;
   dir->base.nentries = index + 1;
+}
+
+/****************************************************************************
+ * Name: procfs_thread_number
+ ****************************************************************************/
+
+static void procfs_thread_number(FAR struct tcb_s *tcb, FAR void *arg)
+{
+  (*(FAR size_t *)arg)++;
 }
 
 /****************************************************************************
@@ -644,12 +653,18 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
 
   if (!relpath || relpath[0] == '\0')
     {
+      size_t num = 0;
+
       /* The path refers to the top level directory.  Allocate the level0
        * dirent structure.
        */
 
+#ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
+      nxsched_foreach(procfs_thread_number, &num);
+#endif
+
       level0 = (FAR struct procfs_level0_s *)
-         kmm_zalloc(sizeof(struct procfs_level0_s));
+         kmm_zalloc(sizeof(struct procfs_level0_s) + sizeof(pid_t) * num) ;
       if (!level0)
         {
           ferr("ERROR: Failed to allocate the level0 directory structure\n");
