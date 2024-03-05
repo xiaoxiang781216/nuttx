@@ -47,6 +47,7 @@
 #include <nuttx/fs/procfs.h>
 
 #include "mount/mount.h"
+#include "sched/sched.h"
 #include "fs_heap.h"
 
 /****************************************************************************
@@ -328,7 +329,7 @@ struct procfs_level0_s
 
   uint8_t lastlen;                       /* length of last reported static dir */
   FAR const char *lastread;              /* Pointer to last static dir read */
-  pid_t pid[0];                          /* Snapshot of all active task IDs */
+  pid_t pid[1];                          /* Snapshot of all active task IDs */
 };
 
 /* Level 1 is an internal virtual directory (such as /proc/fs) which
@@ -375,15 +376,6 @@ static void procfs_enum(FAR struct tcb_s *tcb, FAR void *arg)
   index = dir->base.index;
   dir->pid[index] = tcb->pid;
   dir->base.index = index + 1;
-}
-
-/****************************************************************************
- * Name: procfs_thread_number
- ****************************************************************************/
-
-static void procfs_thread_number(FAR struct tcb_s *tcb, FAR void *arg)
-{
-  (*(FAR size_t *)arg)++;
 }
 
 /****************************************************************************
@@ -666,11 +658,11 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
        */
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
-      nxsched_foreach(procfs_thread_number, &num);
+      num = g_npidhash;
 #endif
 
       level0 = (FAR struct procfs_level0_s *)
-         fs_heap_zalloc(sizeof(struct procfs_level0_s) + sizeof(pid_t) * num) ;
+      fs_heap_zalloc(sizeof(struct procfs_level0_s) + sizeof(pid_t) * num);
       if (!level0)
         {
           ferr("ERROR: Failed to allocate the level0 directory structure\n");
