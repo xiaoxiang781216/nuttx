@@ -1066,18 +1066,19 @@ int rptun_initialize(FAR struct rptun_dev_s *dev)
 {
   FAR struct rptun_priv_s *priv;
   FAR char *argv[3];
-  char arg1[19];
+  char arg1[32];
   char name[32];
   int ret;
 
   priv = kmm_zalloc(sizeof(struct rptun_priv_s));
   if (priv == NULL)
     {
-      ret = -ENOMEM;
-      goto err_mem;
+      return -ENOMEM;
     }
 
   priv->dev = dev;
+  nxsem_init(&priv->semtx, 0, 0);
+  nxsem_init(&priv->semrx, 0, 0);
 
   remoteproc_init(&priv->rproc, &g_rptun_ops, priv);
 
@@ -1088,10 +1089,8 @@ int rptun_initialize(FAR struct rptun_dev_s *dev)
       goto err_driver;
     }
 
-  nxsem_init(&priv->semtx, 0, 0);
-  nxsem_init(&priv->semrx, 0, 0);
-  snprintf(arg1, sizeof(arg1), "0x%" PRIxPTR, (uintptr_t)priv);
-  argv[0] = (void *)RPTUN_GET_CPUNAME(dev);
+  snprintf(arg1, sizeof(arg1), "%p", priv);
+  argv[0] = (FAR char *)RPTUN_GET_CPUNAME(dev);
   argv[1] = arg1;
   argv[2] = NULL;
 
@@ -1099,8 +1098,6 @@ int rptun_initialize(FAR struct rptun_dev_s *dev)
                        CONFIG_RPTUN_STACKSIZE, rptun_thread, argv);
   if (ret < 0)
     {
-      nxsem_destroy(&priv->semtx);
-      nxsem_destroy(&priv->semrx);
       goto err_thread;
     }
 
@@ -1117,10 +1114,10 @@ err_thread:
   rpmsg_unregister(name, &priv->rpmsg);
 
 err_driver:
+  nxsem_destroy(&priv->semtx);
+  nxsem_destroy(&priv->semrx);
   kmm_free(priv);
 
-err_mem:
-  metal_finish();
   return ret;
 }
 
