@@ -85,4 +85,86 @@ int fdt_register(FAR const char *fdt_base);
 
 FAR const char *fdt_get(void);
 
+/****************************************************************************
+ * Name: fdt_get_irq
+ *
+ * Description:
+ *   Get the interrupt number of the node
+ *
+ ****************************************************************************/
+
+int fdt_get_irq(FAR const void *fdt, int offset, int irqbase);
+
+/****************************************************************************
+ * Name: fdt_get_irq_by_path
+ *
+ * Description:
+ *   Get the interrupt number of the node
+ *
+ ****************************************************************************/
+
+int fdt_get_irq_by_path(FAR const void *fdt, const char *path, int irqbase);
+
+/****************************************************************************
+ * Name: fdt_get_parent_address_cells
+ *
+ * Description:
+ *   Get the parent address of the register space
+ *
+ ****************************************************************************/
+
+int fdt_get_parent_address_cells(FAR const void *fdt, int offset);
+
+/****************************************************************************
+ * Name: fdt_get_parent_size_cells
+ *
+ * Description:
+ *   Get the parent size of the register space
+ *
+ ****************************************************************************/
+
+int fdt_get_parent_size_cells(FAR const void *fdt, int offset);
+
+/****************************************************************************
+ * Name: fdt_ld_by_cells
+ *
+ * Description:
+ *   Load a 32-bit or 64-bit value from a buffer, depending on the number
+ *   of address cells.
+ *
+ ****************************************************************************/
+
+uintptr_t fdt_ld_by_cells(FAR const void *value, int cells);
+
+/****************************************************************************
+ * Name: fdt_get_reg_base
+ *
+ * Description:
+ *   Get the base address of the register space
+ *
+ ****************************************************************************/
+
+uintptr_t fdt_get_reg_base(FAR const void *fdt, int offset);
+
+/****************************************************************************
+ * Name: fdt_get_reg_size
+ *
+ * Description:
+ *   Get the size of the register space
+ *
+ ****************************************************************************/
+
+uintptr_t fdt_get_reg_size(FAR const void *fdt, int offset);
+
+/****************************************************************************
+ * Name: fdt_get_reg_base_by_path
+ *
+ * Description:
+ *   Get the base address of the register space
+ *
+ ****************************************************************************/
+
+uintptr_t fdt_get_reg_base_by_path(FAR const void *fdt,
+                                   FAR const char *path);
+
 #endif /* __INCLUDE_NUTTX_FDT_H */

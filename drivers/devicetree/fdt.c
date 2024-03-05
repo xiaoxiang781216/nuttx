@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <nuttx/compiler.h>
 #include <nuttx/fdt.h>
+#include <libfdt.h>
 
 /****************************************************************************
  * Private Data
@@ -84,3 +85,159 @@ FAR const char *fdt_get(void)
 {
   return g_fdt_base;
 }
+
+/****************************************************************************
+ * Name: fdt_get_irq
+ *
+ * Description:
+ *   Get the interrupt number of the node
+ *
+ ****************************************************************************/
+
+int fdt_get_irq(FAR const void *fdt, int offset, int irqbase)
+{
+  FAR const fdt32_t *pv;
+  int irq = -1;
+
+  pv = fdt_getprop(fdt, offset, "interrupts", NULL);
+  if (pv != NULL)
+    {
+      irq = fdt32_ld(pv + 1) + irqbase;
+    }
+
+  return irq;
+}
+
+/****************************************************************************
+ * Name: fdt_get_irq_by_path
+ *
+ * Description:
+ *   Get the interrupt number of the node
+ *
+ ****************************************************************************/
+
+int fdt_get_irq_by_path(FAR const void *fdt, const char *path, int irqbase)
+{
+  return fdt_get_irq(fdt, fdt_path_offset(fdt, path), irqbase);
+}
+
+/****************************************************************************
+ * Name: fdt_get_parent_address_cells
+ *
+ * Description:
+ *   Get the parent address of the register space
+ *
+ ****************************************************************************/
+
+int fdt_get_parent_address_cells(FAR const void *fdt, int offset)
+{
+  int parentoff;
+
+  parentoff = fdt_parent_offset(fdt, offset);
+  if (parentoff < 0)
+    {
+      return parentoff;
+    }
+
+  return fdt_address_cells(fdt, parentoff);
+}
+
+/****************************************************************************
+ * Name: fdt_get_parent_size_cells
+ *
+ * Description:
+ *   Get the parent size of the register space
+ *
+ ****************************************************************************/
+
+int fdt_get_parent_size_cells(FAR const void *fdt, int offset)
+{
+  int parentoff;
+
+  parentoff = fdt_parent_offset(fdt, offset);
+  if (parentoff < 0)
+    {
+      return parentoff;
+    }
+
+  return fdt_size_cells(fdt, parentoff);
+}
+
+/****************************************************************************
+ * Name: fdt_ld_by_cells
+ *
+ * Description:
+ *   Load a 32-bit or 64-bit value from a buffer, depending on the number
+ *   of address cells.
+ *
+ ****************************************************************************/
+
+uintptr_t fdt_ld_by_cells(FAR const void *value, int cells)
+{
+  if (cells == 2)
+    {
+      return fdt64_ld(value);
+    }
+  else
+    {
+      return fdt32_ld(value);
+    }
+}
+
+/****************************************************************************
+ * Name: fdt_get_reg_base
+ *
+ * Description:
+ *   Get the base address of the register space
+ *
+ ****************************************************************************/
+
+uintptr_t fdt_get_reg_base(FAR const void *fdt, int offset)
+{
+  FAR const void *reg;
+  uintptr_t addr = 0;
+
+  reg = fdt_getprop(fdt, offset, "reg", NULL);
+  if (reg != NULL)
+    {
+      addr = fdt_ld_by_cells(reg, fdt_get_parent_address_cells(fdt, offset));
+    }
+
+  return addr;
+}
+
+/****************************************************************************
+ * Name: fdt_get_reg_size
+ *
+ * Description:
+ *   Get the size of the register space
+ *
+ ****************************************************************************/
+
+uintptr_t fdt_get_reg_size(FAR const void *fdt, int offset)
+{
+  FAR const void *reg;
+  uintptr_t size = 0;
+
+  reg = fdt_getprop(fdt, offset, "reg", NULL);
+  if (reg != NULL)
+    {
+      size = fdt_ld_by_cells(reg, fdt_get_parent_size_cells(fdt, offset));
+    }
+
+  return size;
+}
+
+/****************************************************************************
+ * Name: fdt_get_reg_base_by_path
+ *
+ * Description:
+ *   Get the base address of the register space
+ *
+ ****************************************************************************/
+
+uintptr_t fdt_get_reg_base_by_path(FAR const void *fdt, FAR const char *path)
+{
+  return fdt_get_reg_base(fdt, fdt_path_offset(fdt, path));
+}
+
