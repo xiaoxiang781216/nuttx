@@ -155,7 +155,7 @@ static int files_extend(FAR struct filelist *list, size_t row)
 
   spin_unlock_irqrestore(NULL, flags);
 
-  if (tmp != NULL)
+  if (tmp != NULL && tmp != &list->fl_prefile)
     {
       kmm_free(tmp);
     }
@@ -299,7 +299,13 @@ static int nx_dup3_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2,
 
 void files_initlist(FAR struct filelist *list)
 {
-  DEBUGASSERT(list);
+  /* The first row will reuse pre-allocated files, which will avoid
+   * unnecessary allocator accesses during file initialization.
+   */
+
+  list->fl_rows = 1;
+  list->fl_files = &list->fl_prefile;
+  list->fl_prefile = list->fl_prefiles;
 }
 
 /****************************************************************************
@@ -329,11 +335,17 @@ void files_releaselist(FAR struct filelist *list)
           file_close(&list->fl_files[i][j]);
         }
 
-      kmm_free(list->fl_files[i]);
-      list->fl_rows--;
+      if (i != 0)
+        {
+          kmm_free(list->fl_files[i]);
+          list->fl_rows--;
+        }
     }
 
-  kmm_free(list->fl_files);
+  if (list->fl_files != &list->fl_prefile)
+    {
+      kmm_free(list->fl_files);
+    }
 }
 
 /****************************************************************************
