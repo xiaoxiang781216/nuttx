@@ -91,12 +91,8 @@ if(CONFIG_OPENAMP_CACHE)
   target_compile_options(openamp PRIVATE -DVIRTIO_CACHED_VRINGS)
 endif()
 
-if(CONFIG_OPENAMP_RPMSG_DEBUG)
-  target_compile_options(openamp PRIVATE -DRPMSG_DEBUG)
-endif()
-
-if(CONFIG_OPENAMP_VQUEUE_DEBUG)
-  target_compile_options(openamp PRIVATE -DVQUEUE_DEBUG)
+if(CONFIG_OPENAMP_DEBUG)
+  target_compile_options(openamp PRIVATE -DRPMSG_DEBUG -DVQUEUE_DEBUG)
 endif()
 
 target_sources(
