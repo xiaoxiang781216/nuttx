@@ -32,9 +32,11 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/queue.h>
 
 #include "clock/clock.h"
 #include "sched/sched.h"
@@ -49,22 +51,24 @@
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD >= 0
 static clock_t clock_process_runtime(FAR struct tcb_s *tcb)
 {
+# ifdef HAVE_GROUP_MEMBERS
   FAR struct task_group_s *group = tcb->group;
   clock_t runtime = 0;
+  FAR sq_entry_t *curr;
+  FAR sq_entry_t *next;
   irqstate_t flags;
-  int i;
 
-  flags = enter_critical_section();
-  for (i = group->tg_nmembers - 1; i >= 0; i--)
+  flags = spin_lock_irqsave(NULL);
+  sq_for_every_safe(&group->tg_members, curr, next)
     {
-      tcb = nxsched_get_tcb(group->tg_members[i]);
-      if (tcb != NULL)
-        {
-          runtime += tcb->run_time;
-        }
+      tcb = container_of(curr, struct tcb_s, member);
+      runtime += tcb->run_time;
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(NULL, flags);
+# else  /* HAVE_GROUP_MEMBERS */
+  runtime = tcb->run_time;
+# endif /* HAVE_GROUP_MEMBERS */
   return runtime;
 }
 #endif

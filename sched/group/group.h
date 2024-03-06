@@ -72,7 +72,6 @@ void group_del_waiter(FAR struct task_group_s *group);
 #endif
 
 #ifdef HAVE_GROUP_MEMBERS
-int group_addmember(FAR struct task_group_s *group, pid_t pid);
 int group_foreachchild(FAR struct task_group_s *group,
                        foreachchild_t handler, FAR void *arg);
 int group_kill_children(FAR struct tcb_s *tcb);
