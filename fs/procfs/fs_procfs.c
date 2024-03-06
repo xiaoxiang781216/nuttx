@@ -362,11 +362,6 @@ static void procfs_enum(FAR struct tcb_s *tcb, FAR void *arg)
   /* Add the PID to the list */
 
   index = dir->base.nentries;
-  if (index >= CONFIG_FS_PROCFS_MAX_TASKS)
-    {
-      return;
-    }
-
   dir->pid[index] = tcb->pid;
   dir->base.nentries = index + 1;
 }
