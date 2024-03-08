@@ -28,6 +28,8 @@ ifeq ($(CONFIG_OPENAMP_DEBUG),y)
   CFLAGS += -DRPMSG_DEBUG -DVQUEUE_DEBUG
 endif
 
+CFLAGS += -Delf_loader=remoteproc_elf_loader
+
 CSRCS += open-amp/lib/remoteproc/elf_loader.c
 CSRCS += open-amp/lib/remoteproc/remoteproc.c
 CSRCS += open-amp/lib/remoteproc/remoteproc_virtio.c
