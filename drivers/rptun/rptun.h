@@ -25,6 +25,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <metal/cache.h>
 #include <nuttx/rptun/rptun.h>
 #include <openamp/open_amp.h>
 
