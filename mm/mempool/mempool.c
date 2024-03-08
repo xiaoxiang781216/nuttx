@@ -95,7 +95,10 @@ static inline size_t mempool_sq_count(FAR sq_queue_t *queue)
 static inline void mempool_add_backtrace(FAR struct mempool_s *pool,
                                          FAR struct mempool_backtrace_s *buf)
 {
+  irqstate_t flags = spin_lock_irqsave(&pool->lock);
   list_add_head(&pool->alist, &buf->node);
+  spin_unlock_irqrestore(&pool->lock, flags);
+
   buf->pid = _SCHED_GETTID();
   buf->seqno = g_mm_seqno++;
 #  if CONFIG_MM_BACKTRACE > 0
@@ -242,7 +245,8 @@ retry:
           blk = mempool_remove_queue(pool, &pool->iqueue);
           if (blk == NULL)
             {
-              goto out_with_lock;
+              spin_unlock_irqrestore(&pool->lock, flags);
+              return NULL;
             }
         }
       else
@@ -281,18 +285,21 @@ retry:
         }
     }
 
-#if CONFIG_MM_BACKTRACE >= 0
-  mempool_add_backtrace(pool, (FAR struct mempool_backtrace_s *)
-                              ((FAR char *)blk + pool->blocksize));
-#else
+#if CONFIG_MM_BACKTRACE < 0
   pool->nalloc++;
 #endif
+
+  spin_unlock_irqrestore(&pool->lock, flags);
   blk = kasan_unpoison(blk, pool->blocksize);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
   memset(blk, MM_ALLOC_MAGIC, pool->blocksize);
 #endif
-out_with_lock:
-  spin_unlock_irqrestore(&pool->lock, flags);
+
+#if CONFIG_MM_BACKTRACE >= 0
+  mempool_add_backtrace(pool, (FAR struct mempool_backtrace_s *)
+                              ((FAR char *)blk + pool->blocksize));
+#endif
+
   return blk;
 }
 
