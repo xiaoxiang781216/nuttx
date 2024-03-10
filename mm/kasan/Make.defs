@@ -26,14 +26,10 @@ CSRCS += kasan.c
 
 CFLAGS += -fno-sanitize=kernel-address
 CFLAGS += -fno-lto
-endif
-
-ifeq ($(CONFIG_MM_KASAN_DUMMY),y)
-  CSRCS += kasan_dummy.c
-endif
 
 # Add the core heap directory to the build
 
 DEPPATH += --dep-path kasan
 VPATH += :kasan
 
+endif
