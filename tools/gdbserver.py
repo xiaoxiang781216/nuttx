@@ -51,6 +51,15 @@ DEFAULT_GDB_INIT_CMD = "-ex 'bt full' -ex 'info reg' -ex 'display /40i $pc-40'"
 
 logger = logging.getLogger()
 
+# The global register table is dictionary like {arch:{reg:ndx}}
+#
+# where arch is the CPU architecture name;
+#       reg  is the name of the register as used in log file
+#       ndx  is the index of the register in GDB group registers list
+#
+# Registers with multiple convenient names can have multiple entries here, one
+# for each name and with the same index.
+
 reg_table = {
     "arm": {
         "R0": 0,
@@ -144,6 +153,7 @@ reg_table = {
         "SP_ELX": 31,
         "ELR": 32,
     },
+    # rv64 works with gdb-multiarch on Ubuntu
     "riscv": {
         "ZERO": 0,
         "RA": 1,
@@ -177,6 +187,7 @@ reg_table = {
         "T4": 29,
         "T5": 30,
         "T6": 31,
+        "S0": 8,
         "EPC": 32,
     },
     # use xtensa-esp32s3-elf-gdb register table
@@ -253,6 +264,7 @@ reg_fix_value = {
         "WINDOWSTART": (1, 585),
         "PS": (0x40000, 742),
     },
+    "riscv": {"ZERO": (0, 0)},
 }
 
 
@@ -399,6 +411,7 @@ class DumpLogFile:
         self.reg_len = 32
 
     def _init_register(self):
+        # registers list should be able to hold the max index
         self.registers = [b"x"] * (max(self.reg_table.values()) + 1)
 
     def _parse_register(self, line):
@@ -1033,8 +1046,8 @@ def arg_parser():
     parser.add_argument(
         "-a",
         "--arch",
-        help="select architecture,if not use this options",
-        required=True,
+        help="Only use if can't be learnt from ELFFILE.",
+        required=False,
         choices=[arch for arch in reg_table.keys()],
     )
     parser.add_argument(
@@ -1167,13 +1180,7 @@ def main(args):
 
     config_log(args.debug)
 
-    if args.logfile is not None:
-        selected_log = auto_parse_log_file(args.logfile)
-
-        log = DumpLogFile(selected_log)
-        log.parse(args.arch)
-    else:
-        log = DumpLogFile(None)
+    # parse ELF firstly to get arch
 
     elf = DumpELFFile(args.elffile)
 
@@ -1182,13 +1189,24 @@ def main(args):
             args.symbol = True
 
     elf.parse(args.symbol)
+    arch = args.arch or elf.arch()
 
     if args.logfile is not None:
-        elf.parse_addr2line(args.arch, args.addr2line, log.stack_data)
+        selected_log = auto_parse_log_file(args.logfile)
+
+        log = DumpLogFile(selected_log)
+        log.parse(arch)
+    else:
+        log = DumpLogFile(None)
+
+    elf = DumpELFFile(args.elffile)
+
+    if args.logfile is not None:
+        elf.parse_addr2line(arch, args.addr2line, log.stack_data)
 
     raw = RawMemoryFile(args.rawfile)
     coredump = CoreDumpFile(args.coredump)
-    gdb_stub = GDBStub(log, elf, raw, coredump, args.arch)
+    gdb_stub = GDBStub(log, elf, raw, coredump, arch)
 
     gdbserver = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
