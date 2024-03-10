@@ -147,7 +147,7 @@ static FAR uintptr_t *kasan_mem_to_shadow(FAR const void *ptr, size_t size,
   size_t mod;
   size_t i;
 
-  if (g_region_init != KASAN_INIT_VALUE || size == 0)
+  if (g_region_init != KASAN_INIT_VALUE)
     {
       return NULL;
     }
@@ -159,7 +159,7 @@ static FAR uintptr_t *kasan_mem_to_shadow(FAR const void *ptr, size_t size,
         {
           ret = kasan_find_mem(addr + i * KASAN_SHADOW_SCALE,
                                KASAN_SHADOW_SCALE, bit);
-          if (ret == NULL)
+          if (ret)
             {
               return ret;
             }
@@ -249,7 +249,7 @@ static bool kasan_is_poisoned(FAR const void *addr, size_t size)
   FAR uintptr_t *p;
   unsigned int bit;
 
-  p = kasan_mem_to_shadow(addr, size, &bit);
+  p = kasan_mem_to_shadow(addr + size - 1, 1, &bit);
   return p && ((*p >> bit) & 1);
 }
 
@@ -269,7 +269,7 @@ static void kasan_set_poison(FAR const void *addr, size_t size,
 
   flags = spin_lock_irqsave(&g_lock);
 
-  p = kasan_find_mem((uintptr_t)addr, size, &bit);
+  p = kasan_mem_to_shadow(addr, size, &bit);
   DEBUGASSERT(p != NULL);
 
   nbit = KASAN_BITS_PER_WORD - bit % KASAN_BITS_PER_WORD;
