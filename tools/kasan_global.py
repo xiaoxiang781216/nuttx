@@ -192,7 +192,7 @@ def create_kasan_file(config: Config, region_list=[]):
             region = region_list[i]
 
             # Fill the array of regions
-            # The filling order is as follows, from mm/kasan.h
+            # The filling order is as follows, from mm/kasan/generic.c
             # The data set to 0 is assigned by the program body
             # 1. FAR struct kasan_region_s *next;
             #   This type will be used to record the size of the shadow area

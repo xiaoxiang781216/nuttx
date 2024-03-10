@@ -29,10 +29,10 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/mm/mm.h>
+#include <nuttx/mm/kasan.h>
 #include <nuttx/sched_note.h>
 
 #include "mm_heap/mm.h"
-#include "kasan/kasan.h"
 
 /****************************************************************************
  * Private Functions
