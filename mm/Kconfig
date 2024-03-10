@@ -98,6 +98,56 @@ config MM_REGIONS
 		that the memory manager must handle and enables the API
 		mm_addregion(heap, start, end);
 
+config MM_FILL_ALLOCATIONS
+	bool "Fill allocations with debug value"
+	default n
+	---help---
+		Fill all malloc() allocations with MM_ALLOC_MAGIC.
+		Fill all add_addregion() with MM_INIT_MAGIC.
+		Fill all free() with MM_FREE_MAGIC.
+		This helps detecting uninitialized variable errors.
+
+config MM_BACKTRACE
+	int "The depth of backtrace"
+	default -1
+	---help---
+		Config the depth of backtrace in memory block by specified this
+		config: disable backtrace by -1, only record pid info by zero and
+		enable record backtrace info by 8(fixed depth).
+
+config MM_BACKTRACE_SKIP
+	int "The skip depth of backtrace"
+	depends on MM_BACKTRACE > 0
+	default 3
+
+config MM_BACKTRACE_DEFAULT
+	bool "Enable the backtrace record by default"
+	default n
+	depends on MM_BACKTRACE > 0
+
+config MM_DUMP_ON_FAILURE
+	bool "Dump heap info on allocation failure"
+	default n
+	depends on DEBUG_MM
+
+config MM_DUMP_DETAILS_ON_FAILURE
+	bool "Dump all used memory blocks on allocation failure"
+	default n
+	depends on MM_DUMP_ON_FAILURE
+
+config MM_PANIC_ON_FAILURE
+	bool "Panic on allocation failure"
+	default n
+	depends on DEBUG_MM
+
+config MM_FREE_DELAYCOUNT_MAX
+	int "Maximum memory nodes can be delayed to free"
+	default 0
+	---help---
+		Set to 0 to disable the delayed free mechanism. Otherwise,
+		the value decides the maximum number of memory nodes that
+		will be delayed to free.
+
 config ARCH_HAVE_HEAP2
 	bool
 	default n
@@ -131,10 +181,11 @@ config GRAN
 		allocation size to 32 granules.  That restriction could be
 		eliminated with some additional coding effort.
 
+if GRAN
+
 config GRAN_INTR
 	bool "Interrupt level support"
 	default n
-	depends on GRAN
 	---help---
 		Normally mutual exclusive access to granule allocator data is assured
 		using a semaphore.  If this option is set then, instead, mutual
@@ -145,10 +196,12 @@ config GRAN_INTR
 config DEBUG_GRAN
 	bool "Granule Allocator Debug"
 	default n
-	depends on GRAN && DEBUG_FEATURES
+	depends on DEBUG_FEATURES
 	---help---
 		Just like DEBUG_MM, but only generates output from the gran
 		allocation logic.
+
+endif # GRAN
 
 config MM_PGALLOC
 	bool "Enable Page Allocator"
@@ -247,9 +300,10 @@ config MM_KASAN
 		bugs in native code. After turn on this option, Please
 		add -fsanitize=kernel-address to CFLAGS/CXXFLAGS too.
 
+if MM_KASAN
+
 config MM_KASAN_ALL
 	bool "Enable KASan for the entire image"
-	depends on MM_KASAN
 	default y
 	---help---
 		This option activates address sanitizer for the entire image.
@@ -260,7 +314,6 @@ config MM_KASAN_ALL
 
 config MM_KASAN_DISABLE_READS_CHECK
 	bool "Disable reads check"
-	depends on MM_KASAN
 	default n
 	---help---
 		This option disable kasan reads check. It speeds up performance
@@ -270,14 +323,12 @@ config MM_KASAN_DISABLE_READS_CHECK
 
 config MM_KASAN_DISABLE_WRITES_CHECK
 	bool "Disable writes check"
-	depends on MM_KASAN
 	default n
 	---help---
 		This option disable kasan writes check.
 
 config MM_KASAN_GLOBAL
 	bool "Enable global data check"
-	depends on MM_KASAN
 	default n
 	---help---
 		This option enables KASan global data check.
@@ -292,11 +343,12 @@ config MM_KASAN_GLOBAL
 
 config MM_KASAN_DISABLE_PANIC
 	bool "Disable panic on kasan error"
-	depends on MM_KASAN
 	default n
 	---help---
 		This option disable panic on kasan error. It will print error info
 		and continue to run.
+
+endif # MM_KASAN
 
 config MM_UBSAN
 	bool "Undefined Behavior Sanitizer"
@@ -306,9 +358,10 @@ config MM_UBSAN
 		the program at compile-time to catch various kinds of
 		undefined behavior during program execution
 
+if MM_UBSAN
+
 config MM_UBSAN_ALL
 	bool "Enable UBSan for the entire image"
-	depends on MM_UBSAN
 	default y
 	---help---
 		This option activates UBSan instrumentation for the
@@ -320,7 +373,6 @@ config MM_UBSAN_ALL
 
 config MM_UBSAN_OPTION
 	string "UBSan options"
-	depends on MM_UBSAN
 	default "-fsanitize=undefined"
 	---help---
 		This option activates specified UBSan instrumentation. Please
@@ -329,60 +381,11 @@ config MM_UBSAN_OPTION
 
 config MM_UBSAN_TRAP_ON_ERROR
 	bool "Enable UBSan trap on error to crash immediately"
-	depends on MM_UBSAN
 	default n
 	---help---
 		The undefined instruction trap should cause your program to crash,
 		save the code space significantly.
 
-config MM_FILL_ALLOCATIONS
-	bool "Fill allocations with debug value"
-	default n
-	---help---
-		Fill all malloc() allocations with MM_ALLOC_MAGIC.
-		Fill all add_addregion() with MM_INIT_MAGIC.
-		Fill all free() with MM_FREE_MAGIC.
-		This helps detecting uninitialized variable errors.
-
-config MM_BACKTRACE
-	int "The depth of backtrace"
-	default -1
-	---help---
-		Config the depth of backtrace in memory block by specified this
-		config: disable backtrace by -1, only record pid info by zero and
-		enable record backtrace info by 8(fixed depth).
-
-config MM_BACKTRACE_SKIP
-	int "The skip depth of backtrace"
-	depends on MM_BACKTRACE > 0
-	default 3
-
-config MM_BACKTRACE_DEFAULT
-	bool "Enable the backtrace record by default"
-	default n
-	depends on MM_BACKTRACE > 0
-
-config MM_DUMP_ON_FAILURE
-	bool "Dump heap info on allocation failure"
-	default n
-	depends on DEBUG_MM
-
-config MM_DUMP_DETAILS_ON_FAILURE
-	bool "Dump all used memory blocks on allocation failure"
-	default n
-	depends on MM_DUMP_ON_FAILURE
-
-config MM_PANIC_ON_FAILURE
-	bool "Panic on allocation failure"
-	default n
-	depends on DEBUG_MM
-
-config MM_FREE_DELAYCOUNT_MAX
-	int "Maximum memory nodes can be delayed to free"
-	default 0
-	---help---
-		Set to 0 to disable the delayed free mechanism. Otherwise,
-		the value decides the maximum number of memory nodes that
-		will be delayed to free.
+endif # MM_UBSAN
 
 source "mm/iob/Kconfig"
