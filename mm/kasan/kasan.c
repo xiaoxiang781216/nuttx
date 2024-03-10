@@ -147,7 +147,7 @@ static FAR uintptr_t *kasan_mem_to_shadow(FAR const void *ptr, size_t size,
   size_t mod;
   size_t i;
 
-  if (g_region_init != KASAN_INIT_VALUE)
+  if (g_region_init != KASAN_INIT_VALUE || size == 0)
     {
       return NULL;
     }
@@ -166,11 +166,6 @@ static FAR uintptr_t *kasan_mem_to_shadow(FAR const void *ptr, size_t size,
         }
 
       mod = size % KASAN_SHADOW_SCALE;
-      if (mod == 0)
-        {
-          return NULL;
-        }
-
       addr += mul * KASAN_SHADOW_SCALE;
       size = mod;
     }
