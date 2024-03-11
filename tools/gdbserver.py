@@ -996,6 +996,11 @@ class GDBStub:
         else:
             self.put_gdb_packet(b"")
 
+    def handle_vkill_packet(self, pkt):
+        self.put_gdb_packet(b"OK")
+        logger.debug("quit with gdb")
+        sys.exit(0)
+
     def run(self, socket: socket.socket):
         self.socket = socket
 
@@ -1031,8 +1036,9 @@ class GDBStub:
                 self.handle_thread_context(pkt)
             elif pkt_type == b"T":
                 self.handle_is_thread_active(pkt)
-            elif pkt_type == b"k":
+            elif pkt.startswith(b"vKill") or pkt_type == b"k":
                 # GDB quits
+                self.handle_vkill_packet(pkt)
                 break
             else:
                 self.put_gdb_packet(b"")
