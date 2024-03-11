@@ -97,10 +97,19 @@ struct psci_interface
  * Public Function Prototypes
  ****************************************************************************/
 
+#ifdef CONFIG_ARM64_PSCI
 uint32_t psci_version(void);
 int psci_cpu_off(void);
 int psci_cpu_on(unsigned long cpuid, uintptr_t entry_point);
 int psci_sys_poweroff(void);
 int psci_sys_reset(void);
+#else
+#  define psci_version() ((void)PSCI_RET_NOT_SUPPORTED)
+#  define psci_cpu_off() ((void)PSCI_RET_NOT_SUPPORTED)
+#  define psci_cpu_reset() ((void)PSCI_RET_NOT_SUPPORTED)
+#  define psci_cpu_on(cpuid, entry_point) ((void)PSCI_RET_NOT_SUPPORTED)
+#  define psci_sys_poweroff() ((void)PSCI_RET_NOT_SUPPORTED)
+#  define psci_sys_reset() ((void)PSCI_RET_NOT_SUPPORTED)
+#endif
 
 #endif /* __ARCH_ARM64_SRC_COMMON_ARM64_CPU_PSCI_H */
