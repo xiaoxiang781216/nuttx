@@ -12,6 +12,10 @@ menuconfig PCI
 
 if PCI
 
+config PCI_MSIX
+	bool "PCI MSIX support"
+	default n
+
 config PCI_ASSIGN_ALL_BUSES
 	bool "Assign resource to all buses"
 	default !ARCH_X86 && !ARCH_X86_64
