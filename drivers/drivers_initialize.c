@@ -243,7 +243,7 @@ void drivers_initialize(void)
   binder_initialize();
 #endif
 
-#ifdef CONFIG_PCI
+#if defined(CONFIG_PCI) && !defined(CONFIG_PCI_LATE_DRIVERS_REGISTER)
   pci_register_drivers();
 #endif
 
