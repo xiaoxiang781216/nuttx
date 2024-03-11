@@ -40,8 +40,7 @@
 #define RPTUN_PING_SEND             1
 #define RPTUN_PING_SEND_CHECK       2
 #define RPTUN_PING_SEND_NOACK       3
-#define RPTUN_PING_SEND_ACK         4
-#define RPTUN_PING_ACK              5
+#define RPTUN_PING_ACK              4
 #define RPTUN_PING_CHECK_DATA       0xee
 
 /****************************************************************************
@@ -92,11 +91,6 @@ static int rptun_ping_ept_cb(FAR struct rpmsg_endpoint *ept,
       msg->cmd = RPTUN_PING_ACK;
       rpmsg_send(ept, msg, len);
     }
-  else if (msg->cmd == RPTUN_PING_SEND_ACK)
-    {
-      msg->cmd = RPTUN_PING_ACK;
-      rpmsg_send(ept, msg, sizeof(*msg));
-    }
   else if (msg->cmd == RPTUN_PING_ACK)
     {
       nxsem_post(sem);
@@ -126,19 +120,7 @@ static int rptun_ping_once(FAR struct rpmsg_endpoint *ept,
     {
       sem_t sem;
 
-      if (ack == 1)
-        {
-          msg->cmd = RPTUN_PING_SEND;
-        }
-      else if (ack == 2)
-        {
-          msg->cmd = RPTUN_PING_SEND_CHECK;
-        }
-      else
-        {
-          msg->cmd = RPTUN_PING_SEND_ACK;
-        }
-
+      msg->cmd = (ack == 1)? RPTUN_PING_SEND : RPTUN_PING_SEND_CHECK;
       msg->len    = len;
       msg->cookie = (uintptr_t)&sem;
 
