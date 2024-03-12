@@ -379,10 +379,10 @@ static inline irqstate_t up_irq_enable(void)
   __asm__ __volatile__
     (
       "\tmrs    %0, cpsr\n"
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
-      "\tcpsie  f\n"
-#else
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
       "\tcpsie  if\n"
+#else
+      "\tcpsie  i\n"
 #endif
       : "=r" (cpsr)
       :
