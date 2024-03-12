@@ -21,7 +21,7 @@
 set(SRCS instrument.c)
 
 if(NOT "${CONFIG_SCHED_STACK_RECORD}" STREQUAL "0")
-  list(APPEND SRCS stack_record.c)
+  list(APPEND SRCS stack_monitor.c)
 endif()
 
 target_sources(sched PRIVATE ${SRCS})
