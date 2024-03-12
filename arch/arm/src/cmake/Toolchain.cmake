@@ -148,6 +148,10 @@ if(CONFIG_ARCH_COVERAGE)
   add_compile_options(-fprofile-generate -ftest-coverage)
 endif()
 
+if(CONFIG_SCHED_GPROF_ALL)
+  add_compile_options(-pg)
+endif()
+
 # Optimization of unused sections
 
 if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)

@@ -60,4 +60,8 @@ if(CONFIG_ARCH_SETJMP_H)
   endif()
 endif()
 
+if(CONFIG_SCHED_GPROF)
+  list(APPEND SRCS gnu/mcount.S)
+endif()
+
 target_sources(c PRIVATE ${SRCS})
