@@ -237,7 +237,6 @@ static void syslog_rpmsg_addbuf(FAR struct syslog_rpmsg_s *priv,
 #if defined(CONFIG_ARCH_LOWPUTC)
       up_nputs(buffer, len);
 #endif
-
       priv->flush += len;
       return;
     }
@@ -384,13 +383,12 @@ int syslog_rpmsg_flush(FAR struct syslog_channel_s *channel)
       priv->flush = priv->tail;
     }
 
-  if (priv->flush < priv->head)
+  while (priv->flush < priv->head)
     {
-      size_t len = priv->head - priv->flush;
 #if defined(CONFIG_ARCH_LOWPUTC)
-      up_nputs(&priv->buffer[SYSLOG_RPMSG_FLUSHOFF(priv)], len);
+      up_putc(priv->buffer[SYSLOG_RPMSG_FLUSHOFF(priv)]);
 #endif
-      priv->flush += len;
+      priv->flush++;
     }
 
   leave_critical_section(flags);
