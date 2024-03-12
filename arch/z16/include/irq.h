@@ -116,6 +116,13 @@ EXTERN volatile FAR chipreg_t *g_current_regs;
 
 #define up_interrupt_context() (g_current_regs != NULL)
 
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((FAR chipreg_t *)((regs) ? (regs) : g_current_regs))[REG_PC])
+
 #undef EXTERN
 #ifdef __cplusplus
 }

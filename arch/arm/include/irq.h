@@ -116,7 +116,7 @@ EXTERN volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-int up_cpu_index(void) noinstrument_function ;
+int up_cpu_index(void) noinstrument_function;
 #else
 #  define up_cpu_index() (0)
 #endif
@@ -149,6 +149,14 @@ static inline bool up_interrupt_context(void)
 
   return ret;
 }
+
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((uint32_t *)((regs) ? (regs) : CURRENT_REGS))[REG_PC])
+
 #endif /* __ASSEMBLY__ */
 
 #undef EXTERN

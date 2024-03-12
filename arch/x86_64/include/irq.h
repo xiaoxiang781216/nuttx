@@ -111,6 +111,13 @@ extern "C"
 
 #define up_interrupt_context() (g_current_regs != NULL)
 
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((uint64_t *)((regs) ? (regs) : g_current_regs))[REG_RIP])
+
 #undef EXTERN
 #ifdef __cplusplus
 }

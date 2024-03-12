@@ -77,7 +77,7 @@ extern "C"
  * such value for each processor that can receive an interrupt.
  */
 
-EXTERN volatile void *g_current_regs[CONFIG_SMP_NCPUS];
+EXTERN volatile xcpt_reg_t *g_current_regs[CONFIG_SMP_NCPUS];
 #define CURRENT_REGS (g_current_regs[up_cpu_index()])
 
 /****************************************************************************
@@ -161,6 +161,19 @@ static inline bool up_interrupt_context(void)
 
   return ret;
 }
+
+/****************************************************************************
+ * Name: up_getusrpc
+ *
+ * Description:
+ *   Get the PC value, The interrupted context PC register cannot be
+ *   correctly obtained in sim It will return the PC of the interrupt
+ *   handler function, normally it will return sim_doirq
+ *
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((xcpt_reg_t *)((regs) ? (regs) : CURRENT_REGS))[JB_PC])
 
 #undef EXTERN
 #ifdef __cplusplus

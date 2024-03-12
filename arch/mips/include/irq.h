@@ -136,7 +136,14 @@ EXTERN volatile uint32_t *g_current_regs;
  *
  ****************************************************************************/
 
-#define up_interrupt_context() (g_current_regs != NULL)
+#define up_interrupt_context() (CURRENT_REGS != NULL)
+
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((uint32_t *)((regs) ? (regs) : CURRENT_REGS))[REG_EPC])
 
 #undef EXTERN
 #ifdef __cplusplus

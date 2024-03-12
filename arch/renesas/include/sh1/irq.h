@@ -568,6 +568,13 @@ static inline void up_irq_restore(irqstate_t flags)
  * Public Functions Prototypes
  ****************************************************************************/
 
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((uint32_t *)((regs) ? (regs) : g_current_regs))[REG_PC])
+
 #undef EXTERN
 #ifdef __cplusplus
 }

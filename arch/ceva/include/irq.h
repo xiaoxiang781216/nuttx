@@ -159,6 +159,13 @@ static inline bool up_interrupt_context(void)
   return ret;
 }
 
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((uint32_t *)((regs) ? (regs) : CURRENT_REGS))[REG_PC])
+
 #undef EXTERN
 #ifdef __cplusplus
 }
