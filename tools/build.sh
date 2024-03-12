@@ -203,6 +203,9 @@ function setup_toolchain()
   export PATH=${WASI_SDK_PATH}:$PATH
   export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/pyelftools
   export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/cxxfilt
+  export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/Mako
+  export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/ply
+  export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/jsonpath
 
   for (( i = 0; i < ${#ARCH[*]}; i++)); do
     for (( j = 0; j < ${#TOOLCHAIN[*]}; j++)); do
