@@ -48,6 +48,7 @@
 #include <nuttx/drivers/drivers.h>
 #include <nuttx/init.h>
 
+#include "task/task.h"
 #include "sched/sched.h"
 #include "signal/signal.h"
 #include "semaphore/semaphore.h"
@@ -512,6 +513,10 @@ void nx_start(void)
       /* Allocate the IDLE group */
 
       DEBUGVERIFY(group_initialize(&g_idletcb[i], g_idletcb[i].cmn.flags));
+
+      /* Initialize the task join */
+
+      nxtask_joininit(&g_idletcb[i].cmn);
 
 #ifdef CONFIG_SMP
       /* Create a stack for all CPU IDLE threads (except CPU0 which already
