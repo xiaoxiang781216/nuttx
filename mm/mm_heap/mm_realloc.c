@@ -379,7 +379,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
       mm_unlock(heap);
       MM_ADD_BACKTRACE(heap, (FAR char *)newmem - MM_SIZEOF_ALLOCNODE);
 
-      kasan_unpoison(newmem, newsize - MM_ALLOCNODE_OVERHEAD);
+      kasan_unpoison(newmem, MM_SIZEOF_NODE(oldnode) -
+                     MM_ALLOCNODE_OVERHEAD);
       if (newmem != oldmem)
         {
           /* Now we have to move the user contents 'down' in memory.  memcpy
