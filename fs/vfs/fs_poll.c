@@ -342,11 +342,14 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
 
           ret = inode->u.i_ops->poll(filep, fds, setup);
         }
+
+#ifndef CONFIG_DISABLE_MOUNTPOINT
       else if (INODE_IS_MOUNTPT(inode) && inode->u.i_mops != NULL &&
                inode->u.i_mops->poll != NULL)
         {
           ret = inode->u.i_mops->poll(filep, fds, setup);
         }
+#endif
 
       /* Regular files (and block devices) are always readable and
        * writable. Open Group: "Regular files shall always poll TRUE for
