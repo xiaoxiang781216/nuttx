@@ -34,14 +34,14 @@
 
 #include "nat/nat.h"
 
-#if defined(CONFIG_NET_NAT) && defined(CONFIG_NET_IPv4)
+#ifdef CONFIG_NET_NAT44
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static DECLARE_HASHTABLE(g_table_inbound, CONFIG_NET_NAT_HASH_BITS);
-static DECLARE_HASHTABLE(g_table_outbound, CONFIG_NET_NAT_HASH_BITS);
+static DECLARE_HASHTABLE(g_nat44_inbound, CONFIG_NET_NAT_HASH_BITS);
+static DECLARE_HASHTABLE(g_nat44_outbound, CONFIG_NET_NAT_HASH_BITS);
 
 /****************************************************************************
  * Private Functions
@@ -134,16 +134,16 @@ ipv4_nat_entry_create(uint8_t protocol,
   entry->external_port = external_port;
   entry->local_ip      = local_ip;
   entry->local_port    = local_port;
-#ifdef CONFIG_NET_NAT_SYMMETRIC
+#ifdef CONFIG_NET_NAT44_SYMMETRIC
   entry->peer_ip       = peer_ip;
   entry->peer_port     = peer_port;
 #endif
 
   ipv4_nat_entry_refresh(entry);
 
-  hashtable_add(g_table_inbound, &entry->hash_inbound,
+  hashtable_add(g_nat44_inbound, &entry->hash_inbound,
                 ipv4_nat_inbound_key(external_ip, external_port, protocol));
-  hashtable_add(g_table_outbound, &entry->hash_outbound,
+  hashtable_add(g_nat44_outbound, &entry->hash_outbound,
                 ipv4_nat_outbound_key(local_ip, local_port, protocol));
 
   return entry;
@@ -162,16 +162,16 @@ ipv4_nat_entry_create(uint8_t protocol,
 
 static void ipv4_nat_entry_delete(FAR struct ipv4_nat_entry *entry)
 {
-  ninfo("INFO: Removing NAT entry proto=%" PRIu8
+  ninfo("INFO: Removing NAT44 entry proto=%" PRIu8
         ", local=%" PRIx32 ":%" PRIu16 ", external=:%" PRIu16 "\n",
         entry->protocol, entry->local_ip, entry->local_port,
         entry->external_port);
 
-  hashtable_delete(g_table_inbound, &entry->hash_inbound,
+  hashtable_delete(g_nat44_inbound, &entry->hash_inbound,
                    ipv4_nat_inbound_key(entry->external_ip,
                                         entry->external_port,
                                         entry->protocol));
-  hashtable_delete(g_table_outbound, &entry->hash_outbound,
+  hashtable_delete(g_nat44_outbound, &entry->hash_outbound,
                    ipv4_nat_outbound_key(entry->local_ip,
                                          entry->local_port,
                                          entry->protocol));
@@ -207,9 +207,9 @@ static void ipv4_nat_reclaim_entry(int32_t current_time)
       int count = 0;
       int i;
 
-      ninfo("INFO: Reclaiming all expired NAT entries.\n");
+      ninfo("INFO: Reclaiming all expired NAT44 entries.\n");
 
-      hashtable_for_every_safe(g_table_inbound, p, tmp, i)
+      hashtable_for_every_safe(g_nat44_inbound, p, tmp, i)
         {
           FAR struct ipv4_nat_entry *entry =
             container_of(p, struct ipv4_nat_entry, hash_inbound);
@@ -221,10 +221,12 @@ static void ipv4_nat_reclaim_entry(int32_t current_time)
             }
         }
 
-      ninfo("INFO: %d expired NAT entries reclaimed.\n", count);
+      ninfo("INFO: %d expired NAT44 entries reclaimed.\n", count);
       next_reclaim_time = current_time + CONFIG_NET_NAT_ENTRY_RECLAIM_SEC;
     }
 }
+#else
+#  define ipv4_nat_reclaim_entry(t)
 #endif
 
 /****************************************************************************
@@ -239,7 +241,7 @@ static void ipv4_nat_reclaim_entry(int32_t current_time)
  *   any device.
  *
  * Input Parameters:
- *   dev        - The device on which NAT entries will be cleared.
+ *   dev - The device on which NAT entries will be cleared.
  *
  * Assumptions:
  *   NAT is initialized.
@@ -252,9 +254,9 @@ void ipv4_nat_entry_clear(FAR struct net_driver_s *dev)
   FAR hash_node_t *tmp;
   int i;
 
-  ninfo("INFO: Clearing all NAT entries for %s\n", dev->d_ifname);
+  ninfo("INFO: Clearing all NAT44 entries for %s\n", dev->d_ifname);
 
-  hashtable_for_every_safe(g_table_inbound, p, tmp, i)
+  hashtable_for_every_safe(g_nat44_inbound, p, tmp, i)
     {
       FAR struct ipv4_nat_entry *entry =
         container_of(p, struct ipv4_nat_entry, hash_inbound);
@@ -293,16 +295,14 @@ ipv4_nat_inbound_entry_find(uint8_t protocol, in_addr_t external_ip,
   FAR hash_node_t *p;
   FAR hash_node_t *tmp;
   bool skip_ip = net_ipv4addr_cmp(external_ip, INADDR_ANY);
-#ifdef CONFIG_NET_NAT_SYMMETRIC
+#ifdef CONFIG_NET_NAT44_SYMMETRIC
   bool skip_peer = net_ipv4addr_cmp(peer_ip, INADDR_ANY);
 #endif
   int32_t current_time = TICK2SEC(clock_systime_ticks());
 
-#if CONFIG_NET_NAT_ENTRY_RECLAIM_SEC > 0
   ipv4_nat_reclaim_entry(current_time);
-#endif
 
-  hashtable_for_every_possible_safe(g_table_inbound, p, tmp,
+  hashtable_for_every_possible_safe(g_nat44_inbound, p, tmp,
                   ipv4_nat_inbound_key(external_ip, external_port, protocol))
     {
       FAR struct ipv4_nat_entry *entry =
@@ -319,7 +319,7 @@ ipv4_nat_inbound_entry_find(uint8_t protocol, in_addr_t external_ip,
       if (entry->protocol == protocol &&
           (skip_ip || net_ipv4addr_cmp(entry->external_ip, external_ip)) &&
           entry->external_port == external_port
-#ifdef CONFIG_NET_NAT_SYMMETRIC
+#ifdef CONFIG_NET_NAT44_SYMMETRIC
           && (skip_peer || (net_ipv4addr_cmp(entry->peer_ip, peer_ip) &&
                             entry->peer_port == peer_port))
 #endif
@@ -376,11 +376,9 @@ ipv4_nat_outbound_entry_find(FAR struct net_driver_s *dev, uint8_t protocol,
   uint16_t external_port;
   int32_t current_time = TICK2SEC(clock_systime_ticks());
 
-#if CONFIG_NET_NAT_ENTRY_RECLAIM_SEC > 0
   ipv4_nat_reclaim_entry(current_time);
-#endif
 
-  hashtable_for_every_possible_safe(g_table_outbound, p, tmp,
+  hashtable_for_every_possible_safe(g_nat44_outbound, p, tmp,
                       ipv4_nat_outbound_key(local_ip, local_port, protocol))
     {
       FAR struct ipv4_nat_entry *entry =
@@ -398,7 +396,7 @@ ipv4_nat_outbound_entry_find(FAR struct net_driver_s *dev, uint8_t protocol,
           net_ipv4addr_cmp(entry->external_ip, dev->d_ipaddr) &&
           net_ipv4addr_cmp(entry->local_ip, local_ip) &&
           entry->local_port == local_port
-#ifdef CONFIG_NET_NAT_SYMMETRIC
+#ifdef CONFIG_NET_NAT44_SYMMETRIC
           && net_ipv4addr_cmp(entry->peer_ip, peer_ip) &&
           entry->peer_port == peer_port
 #endif
@@ -432,4 +430,4 @@ ipv4_nat_outbound_entry_find(FAR struct net_driver_s *dev, uint8_t protocol,
                                local_ip, local_port, peer_ip, peer_port);
 }
 
-#endif /* CONFIG_NET_NAT && CONFIG_NET_IPv4 */
+#endif /* CONFIG_NET_NAT44 */
