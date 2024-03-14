@@ -153,8 +153,6 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
   sclock_t ticks;
   int ret;
 
-  DEBUGASSERT(up_interrupt_context() == false);
-
   /* Verify the input parameters on any failures to verify. */
 
   ret = nxmq_verify_send(mq, msg, msglen, prio);
