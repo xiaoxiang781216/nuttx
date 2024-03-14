@@ -111,3 +111,10 @@ void board_late_initialize(void)
   qemu_bringup();
 }
 #endif /* CONFIG_BOARD_LATE_INITIALIZE */
+
+#ifdef CONFIG_BOARDCTL_RESET
+int board_reset(int status)
+{
+  while (1);
+}
+#endif
