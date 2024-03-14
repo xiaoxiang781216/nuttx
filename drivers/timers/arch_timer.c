@@ -401,9 +401,9 @@ void up_perf_init(FAR void *arg)
   UNUSED(arg);
 }
 
-unsigned long up_perf_gettime(void)
+clock_t up_perf_gettime(void)
 {
-  unsigned long ret = 0;
+  clock_t ret = 0;
 
   if (g_timer.lower != NULL)
     {
@@ -418,8 +418,7 @@ unsigned long up_perf_getfreq(void)
   return USEC_PER_SEC;
 }
 
-void up_perf_convert(unsigned long elapsed,
-                     FAR struct timespec *ts)
+void up_perf_convert(clock_t elapsed, FAR struct timespec *ts)
 {
   timespec_from_usec(ts, elapsed);
 }
