@@ -137,10 +137,10 @@ static void kasan_set_poison(FAR const void *addr, size_t size,
                              bool poisoned)
 {
   FAR uintptr_t *p;
+  irqstate_t flags;
   unsigned int bit;
   unsigned int nbit;
   uintptr_t mask;
-  int flags;
 
   p = kasan_mem_to_shadow(addr, size, &bit);
   if (p == NULL)
@@ -191,6 +191,11 @@ static void kasan_set_poison(FAR const void *addr, size_t size,
  * Public Functions
  ****************************************************************************/
 
+FAR void *kasan_reset_tag(FAR const void *addr)
+{
+  return (FAR void *)addr;
+}
+
 bool kasan_is_poisoned(FAR const void *addr, size_t size)
 {
   FAR uintptr_t *p;
@@ -205,9 +210,10 @@ void kasan_poison(FAR const void *addr, size_t size)
   kasan_set_poison(addr, size, true);
 }
 
-void kasan_unpoison(FAR const void *addr, size_t size)
+FAR void *kasan_unpoison(FAR const void *addr, size_t size)
 {
   kasan_set_poison(addr, size, false);
+  return (FAR void *)addr;
 }
 
 void kasan_register(FAR void *addr, FAR size_t *size)

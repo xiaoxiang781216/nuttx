@@ -291,7 +291,7 @@ retry:
 #else
   pool->nalloc++;
 #endif
-  kasan_unpoison(blk, pool->blocksize);
+  blk = kasan_unpoison(blk, pool->blocksize);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
   memset(blk, MM_ALLOC_MAGIC, pool->blocksize);
 #endif

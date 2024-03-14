@@ -1152,7 +1152,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       memdump_backtrace(heap, buf);
 #endif
 
-      kasan_unpoison(ret, nodesize);
+      ret = kasan_unpoison(ret, nodesize);
       sched_note_heap(true, heap, ret, nodesize);
 
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
@@ -1229,7 +1229,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
 
       memdump_backtrace(heap, buf);
 #endif
-      kasan_unpoison(ret, nodesize);
+      ret = kasan_unpoison(ret, nodesize);
       sched_note_heap(true, heap, ret, nodesize);
     }
 
