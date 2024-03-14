@@ -94,6 +94,11 @@ SECTIONS
       _sdata = .;
       *(.data*)
       . = ALIGN(8);
+      __start_impls = .;
+      *(.impls)
+      KEEP(*(.impls))
+      . = ALIGN(4);
+      __stop_impls = .;
       _edata = .;
   } > RAM AT > ROM
 
