@@ -164,7 +164,14 @@ static void cpufreq_gov_ondemand_stop(FAR struct cpufreq_policy *policy)
 {
   FAR struct cpufreq_ondemand_s *data = policy->governor_data;
 
-  work_cancel_sync(HPWORK, &data->work);
+  if (sched_idletask())
+    {
+      work_cancel(HPWORK, &data->work);
+    }
+  else
+    {
+      work_cancel_sync(HPWORK, &data->work);
+    }
 }
 
 static void cpufreq_gov_ondemand_limits(FAR struct cpufreq_policy *policy)
