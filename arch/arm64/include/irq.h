@@ -52,7 +52,7 @@
 
 /* MPIDR_EL1, Multiprocessor Affinity Register */
 
-#define MPIDR_AFFLVL_MASK   (0xff)
+#define MPIDR_AFFLVL_MASK   (CONFIG_SMP_NCPUS - 1)
 
 #define MPIDR_AFF0_SHIFT    (0)
 #define MPIDR_AFF1_SHIFT    (8)
