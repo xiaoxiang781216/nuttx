@@ -26,7 +26,8 @@
 #include <stdint.h>
 
 #include <nuttx/pci/pci.h>
-#include <nuttx/pci/pci_qemu_test.h>
+
+#include "pci_drivers.h"
 
 /****************************************************************************
  * Pre-processor Definitions
