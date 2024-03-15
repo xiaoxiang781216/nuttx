@@ -82,8 +82,10 @@
 
     /* Save the FPU registers */
 
+#ifdef CONFIG_ARCH_FPU
     add    x0, sp, #8 * XCPTCONTEXT_GP_REGS
     bl     arm64_fpu_save
+#endif
 .endm
 
 /****************************************************************************
@@ -239,8 +241,10 @@ GTEXT(arm64_exit_exception)
 SECTION_FUNC(text, arm64_exit_exception)
 
     mov    sp, x0
+#ifdef CONFIG_ARCH_FPU
     add    x0, x0, #8 * XCPTCONTEXT_GP_REGS
     bl     arm64_fpu_restore
+#endif
 
     /* restore spsr and elr at el1*/
 
