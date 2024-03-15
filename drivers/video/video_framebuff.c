@@ -227,6 +227,10 @@ video_framebuff_get_vacant_container(video_framebuff_t *fbuf)
 
 void video_framebuff_capture_done(video_framebuff_t *fbuf)
 {
+  irqstate_t flags;
+
+  flags = enter_critical_section();
+
   fbuf->vbuf_curr = NULL;
   if (fbuf->vbuf_next != NULL)
     {
@@ -236,8 +240,11 @@ void video_framebuff_capture_done(video_framebuff_t *fbuf)
           syslog(LOG_WARNING, "video buffer is overflow.\n");
           fbuf->vbuf_top  = fbuf->vbuf_top->next;
           fbuf->vbuf_tail = fbuf->vbuf_tail->next;
+          fbuf->vbuf_next = NULL;
         }
     }
+
+  leave_critical_section(flags);
 }
 
 void video_framebuff_change_mode(video_framebuff_t  *fbuf,
