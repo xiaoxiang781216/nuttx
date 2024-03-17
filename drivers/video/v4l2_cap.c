@@ -1949,7 +1949,7 @@ static int complete_capture(uint8_t err_code,
 
   if (err_code == 0)
     {
-      type_inf->bufinf.vbuf_curr->buf.flags = 0;
+      type_inf->bufinf.vbuf_next->buf.flags = 0;
       if (type_inf->remaining_capnum > 0)
         {
           type_inf->remaining_capnum--;
@@ -1957,13 +1957,13 @@ static int complete_capture(uint8_t err_code,
     }
   else
     {
-      type_inf->bufinf.vbuf_curr->buf.flags = V4L2_BUF_FLAG_ERROR;
+      type_inf->bufinf.vbuf_next->buf.flags = V4L2_BUF_FLAG_ERROR;
     }
 
-  type_inf->bufinf.vbuf_curr->buf.bytesused = datasize;
+  type_inf->bufinf.vbuf_next->buf.bytesused = datasize;
   if (ts != NULL)
     {
-      type_inf->bufinf.vbuf_curr->buf.timestamp = *ts;
+      type_inf->bufinf.vbuf_next->buf.timestamp = *ts;
     }
 
   video_framebuff_capture_done(&type_inf->bufinf);
