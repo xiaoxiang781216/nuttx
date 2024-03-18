@@ -32,7 +32,6 @@ CSRCS += sw_tags.c
 CFLAGS += -fno-sanitize=kernel-hwaddress
 endif
 
-CFLAGS += -fno-lto
 endif
 
 # Add the core heap directory to the build

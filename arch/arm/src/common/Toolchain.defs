@@ -104,16 +104,26 @@ endif
 
 ifeq ($(CONFIG_LTO_THIN),y)
   ARCHOPTIMIZATION += -flto=thin
-  ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
-    LDFLAGS += --lto
-  endif
 else ifeq ($(CONFIG_LTO_FULL),y)
   ARCHOPTIMIZATION += -flto
-  ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
-    ARCHOPTIMIZATION += -fuse-linker-plugin
-  endif
+else ifeq ($(CONFIG_LTO_FAT), y)
+  ARCHOPTIMIZATION += -flto -ffat-lto-objects
+endif
+
+# The arm clang toolchain requires to pass the linker option will
+# gcc tool chain can automatically perform lto at linking time if it
+# found any object files are compiled with flto
+
+ifneq ($(CONFIG_LTO_NONE),y)
   ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
     LDFLAGS += --lto
+  endif
+
+  # For gcc, use the linker plugin to extract objects with GIMPLE
+  # info from the lib archive
+
+  ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
+    ARCHOPTIMIZATION += -fuse-linker-plugin
   endif
 endif
 
@@ -260,8 +270,13 @@ else
   OBJCOPY = $(CROSSDEV)objcopy
   OBJDUMP = $(CROSSDEV)objdump
 
-  ifeq ($(CONFIG_LTO_FULL),y)
-    ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
+  # For dealing with object files with GIMPLE bytecode
+  # special wrappers prefixed with "gcc-" reuired
+  # such as creating static libraries.
+  # https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html
+
+  ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
+    ifneq ($(CONFIG_LTO_NONE),y)
       LD := $(CROSSDEV)gcc
       AR := $(CROSSDEV)gcc-ar rcs
       NM := $(CROSSDEV)gcc-nm

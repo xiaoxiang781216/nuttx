@@ -283,6 +283,14 @@ config LTO_NONE
 	---help---
 		Build the kernel normally, without Link Time Optimization (LTO).
 
+config LTO_FAT
+	bool "GNU/CLANG Fat LTO (EXPERIMENTAL)"
+	depends on ARCH_TOOLCHAIN_GNU || ARCH_TOOLCHAIN_CLANG
+	---help---
+		This option allows the linker to decide whether to use LTO at all down to the
+		linktime. So that the internal IR code will be embedded into the object files
+		to provide compatibility.
+
 config LTO_FULL
 	bool "GNU Full LTO (EXPERIMENTAL)"
 	depends on ARCH_TOOLCHAIN_GNU
