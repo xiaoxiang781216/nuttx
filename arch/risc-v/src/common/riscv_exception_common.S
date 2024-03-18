@@ -129,7 +129,7 @@ exception_common:
   jal        x1, riscv_dispatch_irq
 
 #else
-  /* Reserve some space for CURRENT_REGS if interrupt stack disabled */
+  /* Reserve some space for current_regs if interrupt stack disabled */
 
   addi       sp, sp, -XCPTCONTEXT_SIZE
 

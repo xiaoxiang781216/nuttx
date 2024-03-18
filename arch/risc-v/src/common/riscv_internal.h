@@ -93,8 +93,8 @@
  * only a reference stored in TCB.
  */
 
-#define riscv_savestate(regs) (regs = (uintptr_t *)CURRENT_REGS)
-#define riscv_restorestate(regs) (CURRENT_REGS = regs)
+#define riscv_savestate(regs) (regs = get_current_regs())
+#define riscv_restorestate(regs) set_current_regs(regs)
 
 /* Determine which (if any) console driver to use.  If a console is enabled
  * and no other console device is specified, then a serial console is
@@ -232,7 +232,7 @@ static inline uintptr_t *riscv_fpuregs(struct tcb_s *tcb)
 
 static inline void riscv_savecontext(struct tcb_s *tcb)
 {
-  tcb->xcp.regs = (uintptr_t *)CURRENT_REGS;
+  tcb->xcp.regs = get_current_regs();
 
 #ifdef CONFIG_ARCH_FPU
   /* Save current process FPU state to TCB */
@@ -243,7 +243,7 @@ static inline void riscv_savecontext(struct tcb_s *tcb)
 
 static inline void riscv_restorecontext(struct tcb_s *tcb)
 {
-  CURRENT_REGS = (uintptr_t *)tcb->xcp.regs;
+  set_current_regs((uintptr_t *)tcb->xcp.regs);
 
 #ifdef CONFIG_ARCH_FPU
   /* Restore FPU state for next process */

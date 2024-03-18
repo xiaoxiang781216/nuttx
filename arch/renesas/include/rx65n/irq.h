@@ -1090,7 +1090,7 @@ static inline void up_irq_restore(irqstate_t flags)
  ****************************************************************************/
 
 #define up_getusrpc(regs) \
-    (((uint32_t *)((regs) ? (regs) : g_current_regs))[REG_PC])
+    (((uint32_t *)((regs) ? (regs) : get_current_regs()))[REG_PC])
 
 #endif /* __ASSEMBLY__ */
 

@@ -310,7 +310,7 @@ struct xcptcontext
  ****************************************************************************/
 
 #define up_getusrpc(regs) \
-    (((uint32_t *)((regs) ? (regs) : g_current_regs))[REG_CSR_MEPC])
+    (((uint32_t *)((regs) ? (regs) : get_current_regs()))[REG_CSR_MEPC])
 
 #endif /* __ASSEMBLY__ */
 #endif /* __ARCH_MISOC_INCLUDE_MINERVA_IRQ_H */

@@ -163,7 +163,7 @@ uint32_t *pic32mx_exception(uint32_t *regs)
    * contents.
    */
 
-  CURRENT_REGS = regs;
+  set_current_regs(regs);
   PANIC_WITH_REGS("panic", regs);
   return regs; /* Won't get here */
 }
