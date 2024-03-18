@@ -1618,6 +1618,12 @@ found:
              */
 
             conn->tcpstateflags = TCP_CLOSED;
+
+            /* In the TCP_FIN_WAIT_1, we need call tcp_close_eventhandler to
+             * release nofosegs, that we received in this state.
+             */
+
+            tcp_callback(dev, conn, TCP_CLOSE);
             tcp_reset(dev, conn);
             return;
           }
@@ -1651,6 +1657,12 @@ found:
              */
 
             conn->tcpstateflags = TCP_CLOSED;
+
+            /* In the TCP_FIN_WAIT_2, we need call tcp_close_eventhandler to
+             * release nofosegs, that we received in this state.
+             */
+
+            tcp_callback(dev, conn, TCP_CLOSE);
             tcp_reset(dev, conn);
             return;
           }
