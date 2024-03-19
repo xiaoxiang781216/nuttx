@@ -287,6 +287,7 @@
 "strerror","string.h","","FAR char *","int"
 "strerror_r","string.h","","int","int","FAR char *","size_t"
 "strftime","time.h","","size_t","FAR char *","size_t","FAR const char *","FAR const struct tm *"
+"strlcpy","string.h","","size_t","FAR char *","FAR const char *","size_t"
 "strlen","string.h","","size_t","FAR const char *"
 "strncasecmp","strings.h","","int","FAR const char *","FAR const char *","size_t"
 "strncat","string.h","","FAR char *","FAR char *","FAR const char *","size_t"
