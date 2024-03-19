@@ -358,7 +358,7 @@ noinstrument_function static inline irqstate_t up_irq_save(void)
     (
       "\tmrs    %0, cpsr\n"
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-      "\tcpsid  f\n"
+      "\tcpsid  if\n"
 #else
       "\tcpsid  i\n"
 #endif
