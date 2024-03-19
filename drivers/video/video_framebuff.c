@@ -240,7 +240,6 @@ void video_framebuff_capture_done(video_framebuff_t *fbuf)
         {
           fbuf->vbuf_top  = fbuf->vbuf_top->next;
           fbuf->vbuf_tail = fbuf->vbuf_tail->next;
-          fbuf->vbuf_next = NULL;
         }
     }
 
