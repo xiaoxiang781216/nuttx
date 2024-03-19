@@ -179,6 +179,10 @@ function setup_toolchain()
   export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/Mako
   export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/ply
   export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/jsonpath
+  export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/kconfiglib
+
+  # Recommended to use kconfiglib instead of kconfig-frontends
+  export PATH=${ROOTDIR}/prebuilts/tools/python/bin:$PATH
 
   for (( i = 0; i < ${#ARCH[*]}; i++)); do
     for (( j = 0; j < ${#TOOLCHAIN[*]}; j++)); do
