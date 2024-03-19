@@ -41,6 +41,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define QEMU_SPI_IRQ_BASE            32
+
 #define FDT_PCI_TYPE_IO              0x01000000
 #define FDT_PCI_TYPE_MEM32           0x02000000
 #define FDT_PCI_TYPE_MEM64           0x03000000
