@@ -1269,7 +1269,7 @@ int i3c_master_send_ccc_cmd_locked(
     }
 
   if (master->init_done &&
-      nxmutex_is_locked(&master->bus.lock))
+      !nxmutex_is_locked(&master->bus.lock))
     {
       return -EINVAL;
     }
