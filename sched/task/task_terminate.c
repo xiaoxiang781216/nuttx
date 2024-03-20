@@ -89,6 +89,8 @@ int nxtask_terminate(pid_t pid)
       return -ESRCH;
     }
 
+  flags = enter_critical_section();
+
   /* Perform common task termination logic.  We need to do
    * this as early as possible so that higher level clean-up logic
    * can run in a healthy tasking environment.
@@ -97,8 +99,6 @@ int nxtask_terminate(pid_t pid)
    */
 
   nxtask_exithook(dtcb, EXIT_SUCCESS);
-
-  flags = enter_critical_section();
 
   /* Remove dtcb from tasklist, let remove_readtorun() do the job */
 
