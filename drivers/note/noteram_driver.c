@@ -657,7 +657,7 @@ static void noteram_add(FAR struct note_driver_s *driver,
   DEBUGASSERT(note != NULL && notelen < drv->ni_bufsize);
   remain = drv->ni_bufsize - noteram_length(drv);
 
-  if (remain < notelen)
+  if (remain <= NOTE_ALIGN(notelen))
     {
       if (drv->ni_overwrite == NOTERAM_MODE_OVERWRITE_DISABLE)
         {
@@ -676,7 +676,7 @@ static void noteram_add(FAR struct note_driver_s *driver,
           noteram_remove(drv);
           remain = drv->ni_bufsize - noteram_length(drv);
         }
-      while (remain < notelen);
+      while (remain <= NOTE_ALIGN(notelen));
     }
 
   head = drv->ni_head;
