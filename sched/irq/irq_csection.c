@@ -183,7 +183,7 @@ static void spin_clrbit(FAR volatile cpu_set_t *set, unsigned int cpu,
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-static bool irq_waitlock(int cpu)
+static inline_function bool irq_waitlock(int cpu)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
   FAR struct tcb_s *tcb = current_task(cpu);
