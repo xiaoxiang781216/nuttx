@@ -159,4 +159,14 @@
 #  define wireless_trace_end()
 #endif
 
+#ifdef CONFIG_TRACE_CPUFREQ
+#  define cpufreq_trace_begin() trace_begin(NOTE_TAG_CPUFREQ)
+#  define cpufreq_trace_end() trace_end(NOTE_TAG_CPUFREQ)
+#  define cpufreq_trace_printf(fmt, ...) sched_note_printf(NOTE_TAG_CPUFREQ, fmt, ##__VA_ARGS__)
+#else
+#  define cpufreq_trace_begin()
+#  define cpufreq_trace_end()
+#  define cpufreq_trace_printf(...)
+#endif
+
 #endif /* __INCLUDE_NUTTX_TRACE_H */

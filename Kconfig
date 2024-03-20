@@ -2393,6 +2393,10 @@ config TRACE_BOARDS
 	bool "Enable tracepoints in boards"
 	default n
 
+config TRACE_CPUFREQ
+	bool "Enable tracepoints in cpufreq"
+	default n
+
 config TRACE_CRYPTO
 	bool "Enable tracepoints in crypto"
 	default n

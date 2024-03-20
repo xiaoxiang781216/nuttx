@@ -296,6 +296,7 @@ enum note_tag_e
   NOTE_TAG_SCHED,
   NOTE_TAG_VIDEO,
   NOTE_TAG_WIRLESS,
+  NOTE_TAG_CPUFREQ,
 
   /* Always last */
 
