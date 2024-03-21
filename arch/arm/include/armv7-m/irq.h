@@ -558,6 +558,22 @@ static inline_function void set_current_regs(uint32_t *regs)
   g_current_regs[up_cpu_index()] = regs;
 }
 
+noinstrument_function
+static inline_function bool up_interrupt_context(void)
+{
+#ifdef CONFIG_SMP
+  irqstate_t flags = up_irq_save();
+#endif
+
+  bool ret = get_current_regs() != NULL;
+
+#ifdef CONFIG_SMP
+  up_irq_restore(flags);
+#endif
+
+  return ret;
+}
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/

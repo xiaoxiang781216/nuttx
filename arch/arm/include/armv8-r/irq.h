@@ -434,6 +434,12 @@ static inline_function void set_current_regs(uint32_t *regs)
   );
 }
 
+noinstrument_function
+static inline_function bool up_interrupt_context(void)
+{
+  return get_current_regs() != NULL;
+}
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
