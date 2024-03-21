@@ -17,7 +17,45 @@
 # the License.
 #
 # ##############################################################################
+if(CONFIG_GPSUTILS_MINMEA_LIB)
 
-nuttx_generate_kconfig(MENUDESC "GPS Utilities")
+  if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/minmea)
 
-target_sources(c PRIVATE minmea/minmea.c)
+    set(MINMEA_VERSION db46128e73cee26d6a6eb0482dcba544ee1ea9f5)
+
+    FetchContent_Declare(
+      minmea
+      DOWNLOAD_DIR ${CMAKE_CURRENT_LIST_DIR}
+      URL "https://github.com/kosma/minmea/archive/${MINMEA_VERSION}.zip"
+          SOURCE_DIR
+          ${CMAKE_CURRENT_LIST_DIR}/minmea
+          BINARY_DIR
+          ${CMAKE_BINARY_DIR}/libs/libc/gpsutils/minmea
+          CONFIGURE_COMMAND
+          ""
+          BUILD_COMMAND
+          ""
+          INSTALL_COMMAND
+          ""
+          TEST_COMMAND
+          ""
+      DOWNLOAD_NO_PROGRESS true
+      TIMEOUT 30)
+
+    FetchContent_GetProperties(minmea)
+
+    if(NOT minmea_POPULATED)
+      FetchContent_Populate(minmea)
+    endif()
+  endif()
+
+  if(NOT EXISTS ${CMAKE_BINARY_DIR}/include/minmea)
+    file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include/minmea)
+  endif()
+
+  configure_file(${CMAKE_CURRENT_LIST_DIR}/minmea/minmea.h
+                 ${CMAKE_BINARY_DIR}/include/minmea/minmea.h COPYONLY)
+
+  target_sources(c PRIVATE minmea/minmea.c)
+
+endif()
