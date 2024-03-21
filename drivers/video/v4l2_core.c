@@ -426,7 +426,6 @@ static int v4l2_ioctl(FAR struct file *filep,
 
         return v4l2->vops->enum_fmt(filep,
                              (FAR struct v4l2_fmtdesc *)arg);
-        break;
 
       case VIDIOC_ENUM_FRAMEINTERVALS:
         if (v4l2->vops->enum_frminterval == NULL)
@@ -436,7 +435,6 @@ static int v4l2_ioctl(FAR struct file *filep,
 
         return v4l2->vops->enum_frminterval(filep,
                              (FAR struct v4l2_frmivalenum *)arg);
-        break;
 
       case VIDIOC_ENUM_FRAMESIZES:
         if (v4l2->vops->enum_frmsize == NULL)
@@ -446,7 +444,6 @@ static int v4l2_ioctl(FAR struct file *filep,
 
         return v4l2->vops->enum_frmsize(filep,
                              (FAR struct v4l2_frmsizeenum *)arg);
-        break;
 
       case VIDIOC_CROPCAP:
         if (v4l2->vops->cropcap == NULL)
@@ -456,7 +453,6 @@ static int v4l2_ioctl(FAR struct file *filep,
 
         return v4l2->vops->cropcap(filep,
                              (FAR struct v4l2_cropcap *)arg);
-        break;
 
       case VIDIOC_DQEVENT:
         if (v4l2->vops->dqevent == NULL)
@@ -466,7 +462,6 @@ static int v4l2_ioctl(FAR struct file *filep,
 
         return v4l2->vops->dqevent(filep,
                              (FAR struct v4l2_event *)arg);
-        break;
 
       case VIDIOC_SUBSCRIBE_EVENT:
         if (v4l2->vops->subscribe_event == NULL)
@@ -476,7 +471,6 @@ static int v4l2_ioctl(FAR struct file *filep,
 
         return v4l2->vops->subscribe_event(filep,
                              (FAR struct v4l2_event_subscription *)arg);
-        break;
 
       case VIDIOC_DECODER_CMD:
         if (v4l2->vops->decoder_cmd == NULL)
@@ -486,7 +480,6 @@ static int v4l2_ioctl(FAR struct file *filep,
 
         return v4l2->vops->decoder_cmd(filep,
                              (FAR struct v4l2_decoder_cmd *)arg);
-        break;
 
       case VIDIOC_ENCODER_CMD:
         if (v4l2->vops->encoder_cmd == NULL)
@@ -496,7 +489,6 @@ static int v4l2_ioctl(FAR struct file *filep,
 
         return v4l2->vops->encoder_cmd(filep,
                              (FAR struct v4l2_encoder_cmd *)arg);
-        break;
 
       default:
         verr("Unrecognized cmd: %d\n", cmd);
