@@ -28,6 +28,7 @@
 #include <nuttx/rptun/rptun_ivshmem.h>
 #include <nuttx/rpmsg/rpmsg_virtio_ivshmem.h>
 #include <nuttx/net/e1000.h>
+#include <nuttx/net/igc.h>
 
 #include "pci_drivers.h"
 
@@ -106,6 +107,16 @@ int pci_register_drivers(void)
   if (ret < 0)
     {
       pcierr("pci_e1000_init failed, ret=%d\n", ret);
+    }
+#endif
+
+  /* Initialization igc driver */
+
+#ifdef CONFIG_NET_IGC
+  ret = pci_igc_init();
+  if (ret < 0)
+    {
+      pcierr("pci_igc_init failed, ret=%d\n", ret);
     }
 #endif
 
