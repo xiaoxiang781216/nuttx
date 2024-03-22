@@ -28,7 +28,7 @@ ifeq ($(CONFIG_OPENAMP_DEBUG),y)
   CFLAGS += -DRPMSG_DEBUG -DVQUEUE_DEBUG
 endif
 
-CFLAGS += -Delf_loader=remoteproc_elf_loader
+CFLAGS += -Delf_load=remoteproc_elf_load
 
 ifeq ($(CONFIG_OPENAMP_VIRTIO_DEVICE_ONLY),y)
   CFLAGS += -DVIRTIO_DEVICE_ONLY
