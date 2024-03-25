@@ -114,6 +114,31 @@ typedef uint8_t spinlock_t;
  *
  ****************************************************************************/
 
+#if defined(CONFIG_ARCH_HAVE_TESTSET)
+static inline_function spinlock_t up_testset(FAR volatile spinlock_t *lock)
+{
+  spinlock_t ret = SP_UNLOCKED;
+
+  __asm__ __volatile__
+  (
+    "1:                    \n"
+    "ldrexb   %0, [%2]     \n"
+    "cmp      %0, %1       \n"
+    "beq      2f           \n"
+    "strexb   %0, %1, [%2] \n"
+    "cmp      %0, %1       \n"
+    "beq      1b           \n"
+    "dmb                   \n"
+    "2:                    \n"
+    : "+r" (ret)
+    : "r" (SP_LOCKED), "r" (lock)
+    : "memory"
+  );
+
+  return ret;
+}
+#endif
+
 /* See prototype in nuttx/include/nuttx/spinlock.h */
 
 #endif /* __ASSEMBLY__ */
