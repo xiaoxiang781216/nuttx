@@ -640,7 +640,7 @@ static inline uart_datawidth_t u16550_serialin(FAR struct u16550_s *priv,
 {
   /* Get correct offset */
 
-  offset *= priv->regincr;
+  offset *= (priv->regincr * sizeof(uart_datawidth_t));
   return priv->ops->getreg(priv, offset);
 }
 
@@ -653,7 +653,7 @@ static inline void u16550_serialout(FAR struct u16550_s *priv, int offset,
 {
   /* Get correct offset */
 
-  offset *= priv->regincr;
+  offset *= (priv->regincr * sizeof(uart_datawidth_t));
   priv->ops->putreg(priv, offset, value);
 }
 
