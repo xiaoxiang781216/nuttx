@@ -394,6 +394,16 @@ static void pl011_send(struct uart_dev_s *dev, int ch)
   config->uart->dr = ch;
 }
 
+static void pl011_putc(struct uart_dev_s *dev, int ch)
+{
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(NULL);
+  while (!pl011_txempty(dev));
+  pl011_send(dev, ch);
+  spin_unlock_irqrestore(NULL, flags);
+}
+
 /***************************************************************************
  * Name: pl011_rxavailable
  *
@@ -694,6 +704,7 @@ static int pl011_setup(struct uart_dev_s *dev)
     }
 
   up_irq_restore(i_flags);
+  pl011_enable(sport);
 
   return 0;
 }
@@ -809,10 +820,10 @@ int up_putc(int ch)
     {
       /* Add CR */
 
-      pl011_send(dev, '\r');
+      pl011_putc(dev, '\r');
     }
 
-  pl011_send(dev, ch);
+  pl011_putc(dev, ch);
 #endif
 
   return ch;
