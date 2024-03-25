@@ -29,6 +29,7 @@
 #include <nuttx/rpmsg/rpmsg_virtio_ivshmem.h>
 #include <nuttx/net/e1000.h>
 #include <nuttx/net/igc.h>
+#include <nuttx/virtio/virtio-pci.h>
 
 #include "pci_drivers.h"
 
@@ -117,6 +118,16 @@ int pci_register_drivers(void)
   if (ret < 0)
     {
       pcierr("pci_igc_init failed, ret=%d\n", ret);
+    }
+#endif
+
+  /* Initialization virtio pci driver */
+
+#ifdef CONFIG_DRIVERS_VIRTIO_PCI
+  ret = register_virtio_pci_driver();
+  if (ret < 0)
+    {
+      pcierr("register_virtio_pci_driver failed, ret=%d\n", ret);
     }
 #endif
 
