@@ -234,18 +234,6 @@ extern "C"
  * Public Data
  ****************************************************************************/
 
-/* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the macro
- * current_regs for portability.
- */
-
-/* For the case of architectures with multiple CPUs, then there must be one
- * such value for each processor that can receive an interrupt.
- */
-
-EXTERN volatile uint64_t *g_current_regs[CONFIG_SMP_NCPUS];
-
 struct xcptcontext
 {
   /* The following function pointer is non-zero if there are pending signals
@@ -410,12 +398,14 @@ static inline void up_irq_restore(irqstate_t flags)
 
 static inline_function uint64_t *get_current_regs(void)
 {
-  return (uint64_t *)g_current_regs[up_cpu_index()];
+  uint64_t *regs;
+  __asm__ volatile ("mrs %0, " "tpidr_el1" : "=r" (regs));
+  return regs;
 }
 
 static inline_function void set_current_regs(uint64_t *regs)
 {
-  g_current_regs[up_cpu_index()] = regs;
+  __asm__ volatile ("msr " "tpidr_el1" ", %0" : : "r" (regs));
 }
 
 /****************************************************************************
