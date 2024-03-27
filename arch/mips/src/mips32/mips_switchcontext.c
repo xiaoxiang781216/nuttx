@@ -63,7 +63,7 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 
   /* Are we in an interrupt handler? */
 
-  if (CURRENT_REGS)
+  if (get_current_regs())
     {
       /* Yes, then we have to do things differently.
        * Just copy the g_current_regs into the OLD rtcb.

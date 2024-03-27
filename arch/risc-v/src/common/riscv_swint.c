@@ -116,7 +116,7 @@ int riscv_swint(int irq, void *context, void *arg)
 {
   uintptr_t *regs = (uintptr_t *)context;
 
-  DEBUGASSERT(regs && regs == CURRENT_REGS);
+  DEBUGASSERT(regs && regs == get_current_regs());
 
   /* Software interrupt 0 is invoked with REG_A0 (REG_X10) = system call
    * command and REG_A1-6 = variable number of
@@ -142,9 +142,9 @@ int riscv_swint(int irq, void *context, void *arg)
        *   A0 = SYS_restore_context
        *   A1 = next
        *
-       * In this case, we simply need to set CURRENT_REGS to restore register
-       * area referenced in the saved A1. context == CURRENT_REGS is the
-       * normal exception return.  By setting CURRENT_REGS = context[A1], we
+       * In this case, we simply need to set current_regs to restore register
+       * area referenced in the saved A1. context == current_regs is the
+       * normal exception return.  By setting current_regs = context[A1], we
        * force the return to the saved context referenced in $a1.
        */
 
@@ -170,7 +170,7 @@ int riscv_swint(int irq, void *context, void *arg)
        *
        * In this case, we save the context registers to the save register
        * area referenced by the saved contents of R5 and then set
-       * CURRENT_REGS to the save register area referenced by the saved
+       * current_regs to the save register area referenced by the saved
        * contents of R6.
        */
 
@@ -467,7 +467,7 @@ int riscv_swint(int irq, void *context, void *arg)
 
           /* Verify that the SYS call number is within range */
 
-          DEBUGASSERT(CURRENT_REGS[REG_A0] < SYS_maxsyscall);
+          DEBUGASSERT(get_current_regs()[REG_A0] < SYS_maxsyscall);
 
           /* Make sure that we got here that there is a no saved syscall
            * return address.  We cannot yet handle nested system calls.
@@ -522,10 +522,10 @@ int riscv_swint(int irq, void *context, void *arg)
    */
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
-  if (regs != CURRENT_REGS)
+  if (regs != get_current_regs())
     {
       svcinfo("SWInt Return: Context switch!\n");
-      up_dump_register(CURRENT_REGS);
+      up_dump_register(get_current_regs());
     }
   else
     {

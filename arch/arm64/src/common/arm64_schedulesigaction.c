@@ -124,7 +124,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signaling itself for some reason.
            */
 
-          if (!CURRENT_REGS)
+          if (!get_current_regs())
             {
               /* In this case just deliver the signal now.
                * REVISIT:  Signal handler will run in a critical section!
@@ -142,7 +142,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * Hmmm... there looks like a latent bug here: The following logic
            * would fail in the strange case where we are in an interrupt
            * handler, the thread is signaling itself, but a context switch
-           * to another task has occurred so that CURRENT_REGS does not
+           * to another task has occurred so that current_regs does not
            * refer to the thread of this_task()!
            */
 
@@ -155,13 +155,13 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
               /* create signal process context */
 
-              tcb->xcp.saved_reg = (uint64_t *)CURRENT_REGS;
+              tcb->xcp.saved_reg = get_current_regs();
               arm64_init_signal_process(tcb,
-              (struct regs_context *)CURRENT_REGS);
+              (struct regs_context *)get_current_regs());
 
               /* trigger switch to signal process */
 
-              CURRENT_REGS = tcb->xcp.regs;
+              set_current_regs(tcb->xcp.regs);
             }
         }
 
@@ -204,7 +204,8 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to task that is currently executing on any CPU.
        */
 
-      sinfo("rtcb=%p CURRENT_REGS=%p\n", this_task_inirq(), CURRENT_REGS);
+      sinfo("rtcb=%p current_regs=%p\n", this_task_inirq(),
+            get_current_regs());
 
       if (tcb->task_state == TSTATE_TASK_RUNNING)
         {
@@ -215,7 +216,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signaling itself for some reason.
            */
 
-          if (cpu == me && !CURRENT_REGS)
+          if (cpu == me && !get_current_regs())
             {
               /* In this case just deliver the signal now.
                * REVISIT:  Signal handler will run in a critical section!
@@ -275,13 +276,13 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
                   /* create signal process context */
 
-                  tcb->xcp.saved_reg = (uint64_t *)CURRENT_REGS;
+                  tcb->xcp.saved_reg = get_current_regs();
                   arm64_init_signal_process(tcb,
-                  (struct regs_context *)CURRENT_REGS);
+                  (struct regs_context *)get_current_regs());
 
                   /* trigger switch to signal process */
 
-                  CURRENT_REGS = tcb->xcp.regs;
+                  set_current_regs(tcb->xcp.regs);
                 }
 
               /* NOTE: If the task runs on another CPU(cpu), adjusting

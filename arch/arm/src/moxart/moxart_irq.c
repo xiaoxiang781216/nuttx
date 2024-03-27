@@ -276,11 +276,11 @@ uint32_t *arm_decodeirq(uint32_t *regs)
   num = ffs(status) - 1;
   arm_ack_irq(num);
 
-  DEBUGASSERT(CURRENT_REGS == NULL);
-  CURRENT_REGS = regs;
+  DEBUGASSERT(get_current_regs() == NULL);
+  set_current_regs(regs);
 
   irq_dispatch(num, regs);
-  CURRENT_REGS = NULL;
+  set_current_regs(NULL);
 
   return NULL;  /* Return not used in this architecture */
 }

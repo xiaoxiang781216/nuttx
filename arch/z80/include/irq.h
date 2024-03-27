@@ -53,7 +53,7 @@ uintptr_t up_getsp(void);
  ****************************************************************************/
 
 #define up_getusrpc(regs) \
-    (((FAR chipreg_t *)((regs) ? (regs) : g_current_regs))[XCPT_PC])
+    (((FAR chipreg_t *)((regs) ? (regs) : get_current_regs()))[XCPT_PC])
 
 #undef EXTERN
 #ifdef __cplusplus

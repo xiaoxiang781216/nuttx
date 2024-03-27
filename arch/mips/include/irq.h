@@ -90,8 +90,8 @@ static inline uint32_t up_getsp(void)
 
 /* g_current_regs holds a references to the current interrupt level
  * register storage structure.  It is non-NULL only during interrupt
- * processing.  Access to g_current_regs must be through the macro
- * CURRENT_REGS for portability.
+ * processing.  Access to g_current_regs must be through the
+ * [get/set]_current_regs for portability.
  */
 
 /* For the case of architectures with multiple CPUs, then there must be one
@@ -99,7 +99,6 @@ static inline uint32_t up_getsp(void)
  */
 
 EXTERN volatile uint32_t *g_current_regs;
-#define CURRENT_REGS g_current_regs
 
 /****************************************************************************
  * Public Function Prototypes
@@ -127,6 +126,16 @@ EXTERN volatile uint32_t *g_current_regs;
  * Inline functions
  ****************************************************************************/
 
+static inline_function uint32_t *get_current_regs(void)
+{
+  return (uint32_t *)g_current_regs;
+}
+
+static inline_function void set_current_regs(uint32_t *regs)
+{
+  g_current_regs = regs;
+}
+
 /****************************************************************************
  * Name: up_interrupt_context
  *
@@ -136,14 +145,14 @@ EXTERN volatile uint32_t *g_current_regs;
  *
  ****************************************************************************/
 
-#define up_interrupt_context() (CURRENT_REGS != NULL)
+#define up_interrupt_context() (get_current_regs() != NULL)
 
 /****************************************************************************
  * Name: up_getusrpc
  ****************************************************************************/
 
 #define up_getusrpc(regs) \
-    (((uint32_t *)((regs) ? (regs) : CURRENT_REGS))[REG_EPC])
+    (((uint32_t *)((regs) ? (regs) : get_current_regs()))[REG_EPC])
 
 #undef EXTERN
 #ifdef __cplusplus

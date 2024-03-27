@@ -53,7 +53,7 @@ uintptr_t up_getusrsp(void *regs)
 
 void up_dump_register(void *dumpregs)
 {
-  volatile uintptr_t *regs = dumpregs ? dumpregs : CURRENT_REGS;
+  volatile uintptr_t *regs = dumpregs ? dumpregs : get_current_regs();
 
   /* Are user registers available from interrupt processing? */
 
