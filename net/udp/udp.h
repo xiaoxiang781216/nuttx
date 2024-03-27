@@ -233,6 +233,7 @@ void udp_free(FAR struct udp_conn_s *conn);
  ****************************************************************************/
 
 FAR struct udp_conn_s *udp_active(FAR struct net_driver_s *dev,
+                                  FAR struct udp_conn_s *conn,
                                   FAR struct udp_hdr_s *udp);
 
 /****************************************************************************
