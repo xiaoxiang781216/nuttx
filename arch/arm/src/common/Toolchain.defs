@@ -378,7 +378,7 @@ ifeq ($(CONFIG_DEBUG_LINK_MAP),y)
 endif
 
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
-  ARCHOPTIMIZATION += -g
+  ARCHOPTIMIZATION += -g3
   ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
     LDFLAGS += --debug
   endif
