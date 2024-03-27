@@ -35,8 +35,8 @@
 
 /* g_current_regs[] holds a references to the current interrupt level
  * register storage structure.  If is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the
- * [get/set]_current_regs for portability.
+ * processing.  Access to g_current_regs[] must be through the macro
+ * CURRENT_REGS for portability.
  */
 
 uint32_t *volatile g_current_regs[CONFIG_SMP_NCPUS];
@@ -47,9 +47,12 @@ uint32_t *volatile g_current_regs[CONFIG_SMP_NCPUS];
 
 uint32_t *ceva_doirq(int irq, uint32_t *regs)
 {
+  int cpu = up_cpu_index();
+  uint32_t **current_regs = (uint32_t **)&g_current_regs[cpu];
+
   /* Is it the outermost interrupt? */
 
-  if (get_current_regs() != NULL)
+  if (*current_regs != NULL)
     {
       /* No, simply deliver the IRQ because only the outermost nested
        * interrupt can result in a context switch.
@@ -60,39 +63,39 @@ uint32_t *ceva_doirq(int irq, uint32_t *regs)
   else
     {
       /* Current regs non-zero indicates that we are processing an interrupt;
-       * current_regs is also used to manage interrupt level context
+       * CURRENT_REGS is also used to manage interrupt level context
        * switches.
        */
 
-      set_current_regs(regs);
+      *current_regs = regs;
 
       /* Deliver the IRQ */
 
       irq_dispatch(irq, regs);
 
       /* If a context switch occurred while processing the interrupt then
-       * current_regs may have change value.  If we return any value
+       * CURRENT_REGS may have change value.  If we return any value
        * different from the input regs, then the lower level will know that
        * a context switch occurred during interrupt processing.
        */
 
-      if (regs != get_current_regs())
+      if (regs != *current_regs)
         {
           /* Record the new "running" task when context switch occurred.
            * g_running_tasks[] is only used by assertion logic for reporting
            * crashes.
            */
 
-          g_running_tasks[this_cpu()] = this_task_inirq();
-          regs = get_current_regs();
+          g_running_tasks[cpu] = current_task(cpu);
+          regs = *current_regs;
         }
 
-      /* Restore the previous value of current_regs.  NULL would indicate
+      /* Restore the previous value of CURRENT_REGS.  NULL would indicate
        * that we are no longer in an interrupt handler.
        * It will be non-NULL if we are returning from a nested interrupt.
        */
 
-      set_current_regs(NULL);
+      *current_regs = NULL;
 
       if (regs != (uint32_t *)regs[REG_SP])
         {

@@ -87,8 +87,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to task that is currently executing on any CPU.
        */
 
-      sinfo("rtcb=%p current_regs=%p\n", this_task_inirq(),
-            get_current_regs());
+      sinfo("rtcb=%p CURRENT_REGS=%p\n", this_task_inirq(), CURRENT_REGS);
 
       if (tcb->task_state == TSTATE_TASK_RUNNING)
         {
@@ -103,7 +102,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signaling itself for some reason.
            */
 
-          if (cpu == me && !get_current_regs())
+          if (cpu == me && !CURRENT_REGS)
             {
               /* In this case just deliver the signal now. */
 
@@ -144,28 +143,28 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
               /* Save the current register context location */
 
-              tcb->xcp.saved_regs = get_current_regs();
+              tcb->xcp.saved_regs = g_current_regs[cpu];
 
               /* Duplicate the register context.  These will be
                * restored by the signal trampoline after the signal has been
                * delivered.
                */
 
-              get_current_regs() -= XCPTCONTEXT_REGS;
-              memcpy(get_current_regs(), get_current_regs() +
+              g_current_regs[cpu] -= XCPTCONTEXT_REGS;
+              memcpy(g_current_regs[cpu], g_current_regs[cpu] +
                      XCPTCONTEXT_REGS, XCPTCONTEXT_SIZE);
 
-              get_current_regs()[REG_SP]  = (uint32_t)get_current_regs();
+              g_current_regs[cpu][REG_SP]  = (uint32_t)g_current_regs[cpu];
 
               /* Then set up to vector to the trampoline with interrupts
                * unchanged.  We must already be in privileged thread mode
                * to be here.
                */
 
-              get_current_regs()[REG_PC]  = (uint32_t)ceva_sigdeliver;
+              g_current_regs[cpu][REG_PC]  = (uint32_t)ceva_sigdeliver;
 #ifdef REG_OM
-              get_current_regs()[REG_OM] &= ~REG_OM_MASK;
-              get_current_regs()[REG_OM] |=  REG_OM_KERNEL;
+              g_current_regs[cpu][REG_OM] &= ~REG_OM_MASK;
+              g_current_regs[cpu][REG_OM] |=  REG_OM_KERNEL;
 #endif
 
 #ifdef CONFIG_SMP

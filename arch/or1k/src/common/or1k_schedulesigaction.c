@@ -88,8 +88,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * being delivered to the currently executing task.
        */
 
-      sinfo("rtcb=%p current_regs=%p\n", this_task_inirq(),
-            get_current_regs());
+      sinfo("rtcb=%p CURRENT_REGS=%p\n", this_task_inirq(), CURRENT_REGS);
 
       if (tcb == this_task_inirq())
         {
@@ -97,7 +96,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * a task is signalling itself for some reason.
            */
 
-          if (!get_current_regs())
+          if (!CURRENT_REGS)
             {
               /* In this case just deliver the signal now. */
 
@@ -114,7 +113,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * logic would fail in the strange case where we are in an
            * interrupt handler, the thread is signalling itself, but
            * a context switch to another task has occurred so that
-           * current_regs does not refer to the thread of this_task()!
+           * CURRENT_REGS does not refer to the thread of this_task()!
            */
 
           else
@@ -124,16 +123,16 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * the signals have been delivered.
                */
 
-              /* tcb->xcp.saved_pc   = get_current_regs()[REG_PC];
-               * tcb->xcp.saved_cpsr = get_current_regs()[REG_CPSR];
+              /* tcb->xcp.saved_pc      = CURRENT_REGS[REG_PC];
+               * tcb->xcp.saved_cpsr    = CURRENT_REGS[REG_CPSR];
                */
 
               /* Then set up to vector to the trampoline with interrupts
                * disabled
                */
 
-              /* get_current_regs()[REG_PC]   = (uint32_t)or1k_sigdeliver;
-               * get_current_regs()[REG_CPSR] = SVC_MODE | PSR_I_BIT |
+              /* CURRENT_REGS[REG_PC]   = (uint32_t)or1k_sigdeliver;
+               * CURRENT_REGS[REG_CPSR] = SVC_MODE | PSR_I_BIT |
                *                          PSR_F_BIT;
                */
 

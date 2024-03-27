@@ -84,8 +84,8 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to the currently executing task.
        */
 
-      sinfo("rtcb=%p current_regs=%p\n",
-            this_task_inirq(), get_current_regs());
+      sinfo("rtcb=%p g_current_regs=%p\n",
+            this_task_inirq(), g_current_regs);
 
       if (tcb == this_task_inirq())
         {
@@ -93,7 +93,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signalling itself for some reason.
            */
 
-          if (!get_current_regs())
+          if (!g_current_regs)
             {
               /* In this case just deliver the signal now. */
 
@@ -120,15 +120,15 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * have been delivered.
                */
 
-              tcb->xcp.saved_eip    = get_current_regs()[REG_EIP];
-              tcb->xcp.saved_eflags = get_current_regs()[REG_EFLAGS];
+              tcb->xcp.saved_eip         = g_current_regs[REG_EIP];
+              tcb->xcp.saved_eflags      = g_current_regs[REG_EFLAGS];
 
               /* Then set up to vector to the trampoline with interrupts
                * disabled
                */
 
-              get_current_regs()[REG_EIP]    = (uint32_t)x86_sigdeliver;
-              get_current_regs()[REG_EFLAGS] = 0;
+              g_current_regs[REG_EIP]    = (uint32_t)x86_sigdeliver;
+              g_current_regs[REG_EFLAGS] = 0;
 
               /* And make sure that the saved context in the TCB
                * is the same as the interrupt return context.

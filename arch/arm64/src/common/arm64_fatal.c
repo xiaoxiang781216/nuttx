@@ -548,9 +548,9 @@ void arm64_fatal_handler(struct regs_context *regs)
 
   /* Nested exception are not supported */
 
-  DEBUGASSERT(get_current_regs() == NULL);
+  DEBUGASSERT(CURRENT_REGS == NULL);
 
-  set_current_regs((uint64_t *)regs);
+  CURRENT_REGS = (uint64_t *)regs;
 
   ret = arm64_exception_handler(regs);
 
@@ -561,11 +561,11 @@ void arm64_fatal_handler(struct regs_context *regs)
       PANIC_WITH_REGS("panic", regs);
     }
 
-  /* Set current_regs to NULL to indicate that we are no longer in an
+  /* Set CURRENT_REGS to NULL to indicate that we are no longer in an
    * Exception handler.
    */
 
-  set_current_regs(NULL);
+  CURRENT_REGS = NULL;
 }
 
 void arm64_register_debug_hook(int nr, fatal_handle_func_t fn)

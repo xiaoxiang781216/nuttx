@@ -169,8 +169,8 @@ extern "C"
  ****************************************************************************/
 
 #define up_getusrpc(regs) \
-    ((((uint8_t *)((regs) ? (regs) : get_current_regs()))[REG_PCH] << 8) | \
-     (((uint8_t *)((regs) ? (regs) : get_current_regs()))[REG_PCL] << 0))
+    ((((uint8_t *)((regs) ? (regs) : g_current_regs))[REG_PCH] << 8) | \
+     (((uint8_t *)((regs) ? (regs) : g_current_regs))[REG_PCL] << 0))
 
 /****************************************************************************
  * Public Functions Prototypes

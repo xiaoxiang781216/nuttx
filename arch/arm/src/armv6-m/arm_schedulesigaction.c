@@ -94,8 +94,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to the currently executing task.
        */
 
-      sinfo("rtcb=%p current_regs=%p\n", this_task_inirq(),
-            get_current_regs());
+      sinfo("rtcb=%p CURRENT_REGS=%p\n", this_task_inirq(), CURRENT_REGS);
 
       if (tcb == this_task_inirq())
         {
@@ -103,7 +102,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signaling itself for some reason.
            */
 
-          if (!get_current_regs())
+          if (!CURRENT_REGS)
             {
               /* In this case just deliver the signal now.
                * REVISIT:  Signal handle will run in a critical section!
@@ -138,26 +137,27 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * delivered.
                */
 
-              set_current_regs(get_current_regs() - XCPTCONTEXT_REGS);
-              memcpy(get_current_regs(), tcb->xcp.saved_regs,
+              CURRENT_REGS                 = (void *)
+                                             ((uint32_t)CURRENT_REGS -
+                                                        XCPTCONTEXT_SIZE);
+              memcpy((uint32_t *)CURRENT_REGS, tcb->xcp.saved_regs,
                      XCPTCONTEXT_SIZE);
 
-              get_current_regs()[REG_SP] = (uint32_t)(get_current_regs() +
-                                                      XCPTCONTEXT_REGS);
+              CURRENT_REGS[REG_SP]         = (uint32_t)CURRENT_REGS +
+                                                       XCPTCONTEXT_SIZE;
 
               /* Then set up to vector to the trampoline with interrupts
                * disabled.  The kernel-space trampoline must run in
                * privileged thread mode.
                */
 
-              get_current_regs()[REG_PC]         = (uint32_t)arm_sigdeliver;
-              get_current_regs()[REG_PRIMASK]    = 1;
-              get_current_regs()[REG_XPSR]       = ARMV6M_XPSR_T;
+              CURRENT_REGS[REG_PC]         = (uint32_t)arm_sigdeliver;
+              CURRENT_REGS[REG_PRIMASK]    = 1;
+              CURRENT_REGS[REG_XPSR]       = ARMV6M_XPSR_T;
 #ifdef CONFIG_BUILD_PROTECTED
-              get_current_regs()[REG_LR]         = EXC_RETURN_THREAD;
-              get_current_regs()[REG_EXC_RETURN] = EXC_RETURN_THREAD;
-              get_current_regs()[REG_CONTROL]    = getcontrol() &
-                                                   ~CONTROL_NPRIV;
+              CURRENT_REGS[REG_LR]         = EXC_RETURN_THREAD;
+              CURRENT_REGS[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+              CURRENT_REGS[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
 #endif
             }
         }
@@ -226,8 +226,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to task that is currently executing on any CPU.
        */
 
-      sinfo("rtcb=%p current_regs=%p\n", this_task_inirq(),
-            get_current_regs());
+      sinfo("rtcb=%p CURRENT_REGS=%p\n", this_task_inirq(), CURRENT_REGS);
 
       if (tcb->task_state == TSTATE_TASK_RUNNING)
         {
@@ -238,7 +237,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signaling itself for some reason.
            */
 
-          if (cpu == me && !get_current_regs())
+          if (cpu == me && !CURRENT_REGS)
             {
               /* In this case just deliver the signal now.
                * REVISIT:  Signal handler will run in a critical section!
@@ -333,25 +332,26 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    * been delivered.
                    */
 
-                  set_current_regs(get_current_regs() - XCPTCONTEXT_REGS);
-                  memcpy(get_current_regs(), tcb->xcp.saved_regs,
+                  CURRENT_REGS              = (void *)
+                                              ((uint32_t)CURRENT_REGS -
+                                                         XCPTCONTEXT_SIZE);
+                  memcpy((uint32_t *)CURRENT_REGS, tcb->xcp.saved_regs,
                          XCPTCONTEXT_SIZE);
 
-                  get_current_regs()[REG_SP] = (uint32_t)(get_current_regs()
-                                                         + XCPTCONTEXT_REGS);
+                  CURRENT_REGS[REG_SP]      = (uint32_t)CURRENT_REGS +
+                                                        XCPTCONTEXT_SIZE;
 
                   /* Then set up vector to the trampoline with interrupts
                    * disabled.  The kernel-space trampoline must run in
                    * privileged thread mode.
                    */
 
-                  get_current_regs()[REG_PC]      = (uint32_t)arm_sigdeliver;
-                  get_current_regs()[REG_PRIMASK] = 1;
-                  get_current_regs()[REG_XPSR]    = ARMV6M_XPSR_T;
+                  CURRENT_REGS[REG_PC]      = (uint32_t)arm_sigdeliver;
+                  CURRENT_REGS[REG_PRIMASK] = 1;
+                  CURRENT_REGS[REG_XPSR]    = ARMV6M_XPSR_T;
 #ifdef CONFIG_BUILD_PROTECTED
-                  get_current_regs()[REG_LR]      = EXC_RETURN_THREAD;
-                  get_current_regs()[REG_CONTROL] = getcontrol() &
-                                                    ~CONTROL_NPRIV;
+                  CURRENT_REGS[REG_LR]      = EXC_RETURN_THREAD;
+                  CURRENT_REGS[REG_CONTROL] = getcontrol() & ~CONTROL_NPRIV;
 #endif
                 }
 

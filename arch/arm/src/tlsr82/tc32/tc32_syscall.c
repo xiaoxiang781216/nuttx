@@ -52,6 +52,6 @@
 void arm_syscall(uint32_t *regs)
 {
   _alert("Syscall from 0x%" PRIx32 "\n", regs[REG_PC]);
-  set_current_regs(regs);
+  CURRENT_REGS = regs;
   PANIC();
 }

@@ -96,8 +96,8 @@
 
 /* Macros to handle saving and restoring interrupt state ********************/
 
-#define sim_savestate(regs) sim_copyfullstate(regs, get_current_regs())
-#define sim_restorestate(regs) set_current_regs(regs)
+#define sim_savestate(regs) sim_copyfullstate(regs, (xcpt_reg_t *)CURRENT_REGS)
+#define sim_restorestate(regs) (CURRENT_REGS = regs)
 
 #define sim_saveusercontext(saveregs, ret)                      \
     do                                                          \

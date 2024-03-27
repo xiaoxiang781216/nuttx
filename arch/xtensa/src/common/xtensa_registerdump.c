@@ -53,7 +53,8 @@ uintptr_t up_getusrsp(void *regs)
 
 void up_dump_register(void *dumpregs)
 {
-  volatile uintptr_t *regs = dumpregs ? dumpregs : get_current_regs();
+  volatile uintptr_t *regs = dumpregs ? dumpregs :
+                            (uintptr_t *)CURRENT_REGS;
 
   _alert("   PC: %08lx    PS: %08lx\n",
          (unsigned long)regs[REG_PC], (unsigned long)regs[REG_PS]);

@@ -145,7 +145,7 @@ void board_crashdump(uintptr_t sp, struct tcb_s *tcb,
    * fault.
    */
 
-  pdump->info.current_regs = (uintptr_t)get_current_regs();
+  pdump->info.current_regs = (uintptr_t)CURRENT_REGS;
 
   /* Save Context */
 
@@ -160,14 +160,14 @@ void board_crashdump(uintptr_t sp, struct tcb_s *tcb,
    * the users context
    */
 
-  if (get_current_regs())
+  if (CURRENT_REGS)
     {
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
       pdump->info.stacks.interrupt.sp = sp;
 #endif
       pdump->info.flags |= (REGS_PRESENT | USERSTACK_PRESENT | \
                             INTSTACK_PRESENT);
-      memcpy(pdump->info.regs, get_current_regs(),
+      memcpy(pdump->info.regs, (void *)CURRENT_REGS,
              sizeof(pdump->info.regs));
       pdump->info.stacks.user.sp = pdump->info.regs[REG_R13];
     }
