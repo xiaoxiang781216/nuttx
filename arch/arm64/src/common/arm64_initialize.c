@@ -108,9 +108,9 @@ INIT_STACK_DEFINE(g_interrupt_fiq_stack, INTSTACK_SIZE);
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-uintptr_t arm64_intstack_alloc(void)
+uintptr_t arm64_intstack_alloc(int cpu)
 {
-  return (uintptr_t)(g_interrupt_stacks[up_cpu_index()]);
+  return (uintptr_t)(g_interrupt_stacks[cpu]);
 }
 
 /****************************************************************************
@@ -122,9 +122,9 @@ uintptr_t arm64_intstack_alloc(void)
  *
  ****************************************************************************/
 
-uintptr_t arm64_intstack_top(void)
+uintptr_t arm64_intstack_top(int cpu)
 {
-  return (uintptr_t)(g_interrupt_stacks[up_cpu_index()] + INTSTACK_SIZE);
+  return (uintptr_t)(g_interrupt_stacks[cpu] + INTSTACK_SIZE);
 }
 
 #endif
