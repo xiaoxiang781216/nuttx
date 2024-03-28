@@ -249,13 +249,13 @@ config ARCH_CHIP
 	default "imx8"      if ARCH_CHIP_IMX8
 
 config ARM64_HAVE_PSCI
-	bool "ARM PCSI (Power State Coordination Interface) Support"
+	bool "ARM PSCI (Power State Coordination Interface) Support"
 	default n
 	---help---
 		This Power State Coordination Interface (PSCI) defines
-		a standard interface for power management. the PCSI need
+		a standard interface for power management. the PSCI need
 		to implement handling firmware at EL2 or EL3. The option
-		maybe not applicable for arm core without PCSI firmware
+		maybe not applicable for arm core without PSCI firmware
 		interface implement
 
 config ARM64_PSCI
