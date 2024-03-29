@@ -28,7 +28,10 @@ else ifeq ($(CONFIG_DEBUG_FULLOPT),y)
   ARCHOPTIMIZATION += -Os
 endif
 
-ARCHCPUFLAGS = -fPIC -fno-stack-protector -mno-red-zone -mrdrnd
+ARCHCFLAGS += -fno-common
+ARCHCXXFLAGS += -fno-common -nostdinc++
+
+ARCHCPUFLAGS = -fPIC -mno-red-zone -mrdrnd
 ARCHPICFLAGS = -fPIC
 ARCHWARNINGS = -Wall -Wstrict-prototypes -Wshadow -Wundef
 
@@ -43,7 +46,31 @@ ifeq ($(CONFIG_HOST_MACOS),y)
 CROSSDEV = x86_64-elf-
 endif
 
+ifneq ($(CONFIG_CXX_STANDARD),)
+  ARCHCXXFLAGS += -std=$(CONFIG_CXX_STANDARD)
+endif
+
+ifeq ($(CONFIG_STACK_CANARIES),y)
+  ARCHOPTIMIZATION += -fstack-protector-all
+else
+  ARCHOPTIMIZATION += -fno-stack-protector
+endif
+
+ifneq ($(CONFIG_CXX_EXCEPTION),y)
+  ARCHCXXFLAGS += -fno-exceptions -fcheck-new
+endif
+
+ifneq ($(CONFIG_CXX_RTTI),y)
+  ARCHCXXFLAGS += -fno-rtti
+endif
+
+ifeq ($(CONFIG_DEBUG_OPT_UNUSED_SECTIONS),y)
+  LDFLAGS          += --gc-sections
+  ARCHOPTIMIZATION += -ffunction-sections -fdata-sections
+endif
+
 CC = $(CROSSDEV)gcc
+CXX = $(CROSSDEV)g++
 CPP = $(CROSSDEV)gcc -E -x c
 LD = $(CROSSDEV)ld
 STRIP = $(CROSSDEV)strip --strip-unneeded
@@ -53,6 +80,7 @@ OBJCOPY = $(CROSSDEV)objcopy
 OBJDUMP = $(CROSSDEV)objdump
 
 CFLAGS := $(ARCHWARNINGS) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS) -pipe
+CXXFLAGS := $(ARCHOPTIMIZATION) $(ARCHCXXFLAGS) $(ARCHXXINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS) -pipe
 CPPFLAGS := $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS)
 AFLAGS := $(CFLAGS) -D__ASSEMBLY__
 
@@ -61,6 +89,8 @@ AFLAGS += -Wa,--divide
 endif
 
 EXEEXT = .elf
+
+LDFLAGS += -nostdlib
 
 ifeq ($(CONFIG_ARCH_X86_64_SSE3),y)
   ARCHCPUFLAGS += -msse3
