@@ -28,8 +28,8 @@ else ifeq ($(CONFIG_DEBUG_FULLOPT),y)
   ARCHOPTIMIZATION += -Os
 endif
 
-ARCHCFLAGS += -fno-common
-ARCHCXXFLAGS += -fno-common -nostdinc++
+ARCHCFLAGS += -fno-common -Wno-attributes
+ARCHCXXFLAGS += -fno-common -Wno-attributes -nostdinc++
 
 ARCHCPUFLAGS = -fPIC -mno-red-zone -mrdrnd
 ARCHPICFLAGS = -fPIC
