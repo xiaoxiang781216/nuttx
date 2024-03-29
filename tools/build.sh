@@ -298,19 +298,45 @@ function build_board()
 
 function build_board_cmake()
 {
-  j_arg=$(echo ${@:2} |grep -oP '\-j[0-9]+')
-  echo -e "Build command line:"
-  echo -e "  cmake -B out -S ${NUTTXDIR} -DBOARD_CONFIG=$1 -GNinja"
-  echo -e "  cmake --build out $j_arg"
-
-  setup_toolchain $1
-
-  if ! cmake -B out -S ${NUTTXDIR} -DBOARD_CONFIG=$1 -GNinja; then
-    echo "Error: ############# config ${1} fail ##############"
-    exit 1
+  # first check if the command target is `distclean`
+  # cmake is built for out-of-tree, so delete the cmake_out directory directly
+  if echo "${@:2}" | grep -q "distclean"; then
+    echo -e "Build target distclean:"
+    echo -e "  there is no need to distclean in cmake, delete 'cmake_out' directly"
+    if [ -d "cmake_out" ]; then
+      rm -rf cmake_out
+    fi
+    return 0
   fi
-
-  if ! ${BEAR} cmake --build out $j_arg; then
+  # check parallelism
+  j_arg=$(echo ${@:2} |grep -oP '\-j[0-9]+')
+  # import environmeni
+  setup_toolchain $1
+  # check if cmake configuration is required
+  if [ ! -d "cmake_out" ]; then
+    echo -e "Build CMake configuration:"
+    echo -e "  cmake -B cmake_out -S ${NUTTXDIR} -DBOARD_CONFIG=$1 -GNinja"
+    if ! cmake -B cmake_out -S ${NUTTXDIR} -DBOARD_CONFIG=$1 -GNinja; then
+      echo "Error: ############# config ${1} fail ##############"
+      exit 1
+    fi
+  fi
+  # check if the command target is `Xconfig`
+  for arg in "${@:2}"
+  do
+    if [[ $arg == *config ]]; then
+      echo -e "  cmake --build cmake_out -t $arg"
+      if ! cmake --build cmake_out -t $arg; then
+        echo "Error: ############# CMake -t $arg fail ##############"
+        exit 2
+      else
+        return 0
+      fi
+    fi
+  done
+  # do cmake build
+  echo -e "  cmake --build cmake_out $j_arg"
+  if ! ${BEAR} cmake --build cmake_out $j_arg; then
     echo "Error: ############# build ${1} fail ##############"
     exit 2
   else
