@@ -67,7 +67,16 @@ SECTIONS
         _etext = ABSOLUTE(.);
     }
 
-    .rodata ALIGN(0x1000) : AT ( (LOADADDR (.text) + SIZEOF (.text) + 0xFFF) & 0xFFFFFFFFFFFFF000 )
+    .init_section ALIGN(0x1000) : AT ( (LOADADDR (.text) + SIZEOF (.text) + 0xFFF) & 0xFFFFFFFFFFFFF000 )
+    {
+        _sinit = ABSOLUTE(.);
+        KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
+        KEEP(*(.init_array EXCLUDE_FILE(*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o) .ctors))
+        . = ALIGN(4096);
+        _einit = ABSOLUTE(.);
+    }
+
+    .rodata ALIGN(0x1000) : AT ( (LOADADDR (.init_section) + SIZEOF (.init_section) + 0xFFF) & 0xFFFFFFFFFFFFF000 )
     {
         _srodata = ABSOLUTE(.);
         *(.rodata .rodata.*)
