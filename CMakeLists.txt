@@ -419,6 +419,10 @@ if(CONFIG_BUILD_PROTECTED)
   add_executable(nuttx_user)
 endif()
 
+if(CONFIG_ALLSYMS)
+  include(nuttx_allsyms)
+endif()
+
 add_dependencies(nuttx nuttx_context)
 
 if(WIN32)
