@@ -58,18 +58,28 @@
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-/* This holds a references to the current interrupt level register storage
- * structure.  If is non-NULL only during interrupt processing.
+
+/* CPU private data */
+
+struct intel64_cpu_s
+{
+  int     id;
+  uint8_t loapic_id;
+  bool    ready;
+
+/* current_regs holds a references to the current interrupt level
+ * register storage structure.  If is non-NULL only during interrupt
+ * processing.  Access to current_regs must be through
+ * up_current_regs() and up_set_current_regs() functions
  */
 
-extern volatile uint64_t *g_current_regs;
-#endif
+  uint64_t *current_regs;
+};
 
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
-#ifndef __ASSEMBLY__
 #ifdef __cplusplus
 #define EXTERN extern "C"
 extern "C"
@@ -102,12 +112,18 @@ extern "C"
 
 static inline_function uint64_t *up_current_regs(void)
 {
-  return (uint64_t *)g_current_regs;
+  uint64_t *regs;
+  asm volatile("movq %%gs:(%c1), %0"
+               : "=rm" (regs)
+               : "i" (offsetof(struct intel64_cpu_s, current_regs)));
+  return regs;
 }
 
 static inline_function void up_set_current_regs(uint64_t *regs)
 {
-  g_current_regs = regs;
+  asm volatile("movq %0, %%gs:(%c1)"
+               :: "r" (regs), "i" (offsetof(struct intel64_cpu_s,
+                                            current_regs)));
 }
 
 /****************************************************************************
@@ -119,7 +135,11 @@ static inline_function void up_set_current_regs(uint64_t *regs)
  *
  ****************************************************************************/
 
-#define up_interrupt_context() (up_current_regs() != NULL)
+noinstrument_function
+static inline_function bool up_interrupt_context(void)
+{
+  return up_current_regs() != NULL;
+}
 
 /****************************************************************************
  * Name: up_getusrpc
