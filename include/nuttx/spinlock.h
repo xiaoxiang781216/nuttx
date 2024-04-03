@@ -29,6 +29,7 @@
 
 #include <sys/types.h>
 #include <stdint.h>
+#include <assert.h>
 
 #if defined(CONFIG_TICKET_SPINLOCK) || defined(CONFIG_RW_SPINLOCK)
 #  if !defined(__cplusplus)
