@@ -432,27 +432,36 @@ static inline void up_idtinit(void)
 
 void up_irqinitialize(void)
 {
+  int cpu = up_cpu_index();
+
   /* Initialize the TSS */
 
-  x86_64_cpu_tss_init(0);
+  x86_64_cpu_tss_init(cpu);
 
   /* Initialize the APIC */
 
   up_apic_init();
 
+  if (cpu == 0)
+    {
 #ifndef CONFIG_ARCH_INTEL64_DISABLE_INT_INIT
-  /* Disable 8259 PIC */
+      /* Disable 8259 PIC */
 
-  up_deinit_8259();
+      up_deinit_8259();
 
-  /* Initialize the IOAPIC */
+      /* Initialize the IOAPIC */
 
-  up_ioapic_init();
+      up_ioapic_init();
 #endif
 
-  /* Initialize the IDT */
+      /* Initialize the IDT */
 
-  up_idtinit();
+      up_idtinit();
+    }
+
+  /* Program the IDT - one per all cores */
+
+  setidt(&g_idt_entries, sizeof(struct idt_entry_s) * NR_IRQS - 1);
 
   /* And finally, enable interrupts */
 
