@@ -94,7 +94,17 @@ void up_exit(int status)
   addrenv_switch(tcb);
 #endif
 
+  /* Restore the cpu lock */
+
+  restore_critical_section(tcb, this_cpu());
+
   /* Then switch contexts */
 
   x86_64_fullcontextrestore(tcb->xcp.regs);
+
+  /* x86_64_fullcontextrestore() should not return but could if the software
+   * interrupts are disabled.
+   */
+
+  PANIC();
 }
