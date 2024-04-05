@@ -110,7 +110,7 @@ static int msgrcv_wait(FAR struct msgq_s *msgq, FAR struct msgbuf_s **rcvmsg,
        * has been satisfied?
        */
 
-      rtcb          = this_task_inirq();
+      rtcb          = this_task_irq();
       rtcb->waitobj = msgq;
       msgq->cmn.nwaitnotempty++;
 
@@ -137,7 +137,7 @@ static int msgrcv_wait(FAR struct msgq_s *msgq, FAR struct msgbuf_s **rcvmsg,
 
       /* Now, perform the context switch */
 
-      up_switch_context(this_task_inirq(), rtcb);
+      up_switch_context(this_task_irq(), rtcb);
 
       /* When we resume at this point, either (1) the message queue
        * is no longer empty, or (2) the wait has been interrupted by
@@ -233,7 +233,7 @@ ssize_t msgrcv(int msqid, FAR void *msgp, size_t msgsz, long msgtyp,
 
   if (msgq->cmn.nwaitnotfull > 0)
     {
-      FAR struct tcb_s *rtcb = this_task_inirq();
+      FAR struct tcb_s *rtcb = this_task_irq();
 
       /* Find the highest priority task that is waiting for
        * this queue to be not-full in g_waitingformqnotfull list.

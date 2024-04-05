@@ -74,7 +74,7 @@ void up_exit(int status)
    * head of the list.
    */
 
-  tcb = this_task_inirq();
+  tcb = this_task_irq();
 
   /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases
    * NOTE: the API also adjusts the global IRQ control for SMP

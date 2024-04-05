@@ -77,7 +77,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
            * crashes.
            */
 
-          g_running_tasks[this_cpu()] = this_task_inirq();
+          g_running_tasks[this_cpu()] = this_task_irq();
           regs = get_current_regs();
         }
 

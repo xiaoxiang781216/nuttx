@@ -67,7 +67,7 @@
 #ifdef CONFIG_PAGING
 uint32_t *arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr)
 {
-  struct tcb_s *tcb = this_task_inirq();
+  struct tcb_s *tcb = this_task_irq();
   uint32_t *savestate;
 
   /* Save the saved processor context in current_regs where it can be

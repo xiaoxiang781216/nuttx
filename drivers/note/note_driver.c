@@ -1215,7 +1215,7 @@ void sched_note_syscall_enter(int nr, int argc, ...)
   struct note_syscall_enter_s note;
   FAR struct note_driver_s **driver;
   bool formatted = false;
-  FAR struct tcb_s *tcb = this_task_inirq();
+  FAR struct tcb_s *tcb = this_task_irq();
   unsigned int length;
   uintptr_t arg;
   va_list ap;
@@ -1287,7 +1287,7 @@ void sched_note_syscall_leave(int nr, uintptr_t result)
   struct note_syscall_leave_s note;
   FAR struct note_driver_s **driver;
   bool formatted = false;
-  FAR struct tcb_s *tcb = this_task_inirq();
+  FAR struct tcb_s *tcb = this_task_irq();
 
   if (!note_isenabled_syscall(nr))
     {
@@ -1332,7 +1332,7 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter)
   struct note_irqhandler_s note;
   FAR struct note_driver_s **driver;
   bool formatted = false;
-  FAR struct tcb_s *tcb = this_task_inirq();
+  FAR struct tcb_s *tcb = this_task_irq();
 
   if (!note_isenabled_irq(irq, enter))
     {

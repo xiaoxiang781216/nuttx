@@ -85,7 +85,7 @@ static int nxtask_restart(pid_t pid)
 
   /* Check if the task to restart is the calling task */
 
-  rtcb = this_task_inirq();
+  rtcb = this_task_irq();
   if ((pid == 0) || (pid == rtcb->pid))
     {
       /* Not implemented */

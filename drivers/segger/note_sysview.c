@@ -258,7 +258,7 @@ static void note_sysview_irqhandler(FAR struct note_driver_s *drv, int irq,
 
       if (up_interrupt_context())
         {
-          FAR struct tcb_s *tcb = this_task_inirq();
+          FAR struct tcb_s *tcb = this_task_irq();
 
           if (tcb && !is_idle_task(tcb))
             {

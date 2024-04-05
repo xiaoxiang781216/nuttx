@@ -228,7 +228,7 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
   sigemptyset(&set);
   nxsig_addset(&set, SIGCHLD);
   flags = enter_critical_section();
-  rtcb = this_task_inirq();
+  rtcb = this_task_irq();
 
   /* Verify that this task actually has children and that the requested PID
    * is actually a child of this task.

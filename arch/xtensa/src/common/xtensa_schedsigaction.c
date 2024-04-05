@@ -90,14 +90,14 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
     {
       tcb->xcp.sigdeliver = sigdeliver;
 
-      sinfo("rtcb=%p current_regs=%p\n", this_task_inirq(),
+      sinfo("rtcb=%p current_regs=%p\n", this_task_irq(),
             get_current_regs());
 
       /* First, handle some special cases when the signal is being delivered
        * to the currently executing task.
        */
 
-      if (tcb == this_task_inirq())
+      if (tcb == this_task_irq())
         {
           /* CASE 1:  We are not in an interrupt handler and a task is
            * signaling itself for some reason.
@@ -232,7 +232,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to task that is currently executing on any CPU.
        */
 
-      sinfo("rtcb=%p current_regs=%p\n", this_task_inirq(),
+      sinfo("rtcb=%p current_regs=%p\n", this_task_irq(),
             get_current_regs());
 
       if (tcb->task_state == TSTATE_TASK_RUNNING)

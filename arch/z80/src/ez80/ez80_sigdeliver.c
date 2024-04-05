@@ -55,7 +55,7 @@
 
 void z80_sigdeliver(void)
 {
-  FAR struct tcb_s *rtcb = this_task_inirq();
+  FAR struct tcb_s *rtcb = this_task_irq();
   chipreg_t regs[XCPTCONTEXT_REGS];
 
   board_autoled_on(LED_SIGNAL);

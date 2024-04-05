@@ -62,7 +62,7 @@ void up_exit(int status)
 
   enter_critical_section();
 
-  sinfo("TCB=%p exiting\n", this_task_inirq());
+  sinfo("TCB=%p exiting\n", this_task_irq());
 
   nxsched_dumponexit();
 
@@ -74,7 +74,7 @@ void up_exit(int status)
    * head of the list.
    */
 
-  tcb = this_task_inirq();
+  tcb = this_task_irq();
 
   /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases */
 

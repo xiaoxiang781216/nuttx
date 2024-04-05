@@ -534,7 +534,7 @@ int pg_worker(int argc, FAR char *argv[])
 
   pginfo("Started\n");
   up_irq_save();
-  wtcb = this_task_inirq();
+  wtcb = this_task_irq();
 
   for (; ; )
     {

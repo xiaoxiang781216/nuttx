@@ -87,7 +87,7 @@ sigset_t nxsig_pendingset(FAR struct tcb_s *stcb)
   flags = enter_critical_section();
   if (stcb == NULL)
     {
-      stcb = this_task_inirq();
+      stcb = this_task_irq();
     }
 
   group = stcb->group;

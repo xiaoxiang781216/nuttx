@@ -68,7 +68,7 @@
 #ifdef CONFIG_PAGING
 void arm_dataabort(uint32_t *regs, uint32_t far, uint32_t fsr)
 {
-  struct tcb_s *tcb = this_task_inirq();
+  struct tcb_s *tcb = this_task_irq();
 #ifdef CONFIG_PAGING
   uint32_t *savestate;
 

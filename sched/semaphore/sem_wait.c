@@ -84,7 +84,7 @@ int nxsem_wait(FAR sem_t *sem)
    */
 
   flags = enter_critical_section_nonirq();
-  rtcb = this_task_inirq();
+  rtcb = this_task_irq();
 
   /* Make sure we were supplied with a valid semaphore. */
 
@@ -170,7 +170,7 @@ int nxsem_wait(FAR sem_t *sem)
 
       /* Now, perform the context switch */
 
-      up_switch_context(this_task_inirq(), rtcb);
+      up_switch_context(this_task_irq(), rtcb);
 
       /* When we resume at this point, either (1) the semaphore has been
        * assigned to this thread of execution, or (2) the semaphore wait

@@ -87,7 +87,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to task that is currently executing on any CPU.
        */
 
-      sinfo("rtcb=%p current_regs=%p\n", this_task_inirq(),
+      sinfo("rtcb=%p current_regs=%p\n", this_task_irq(),
             get_current_regs());
 
       if (tcb->task_state == TSTATE_TASK_RUNNING)

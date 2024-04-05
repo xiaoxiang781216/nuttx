@@ -136,7 +136,7 @@ int sched_unlock(void)
         {
           if (nxsched_merge_pending())
             {
-              up_switch_context(this_task_inirq(), rtcb);
+              up_switch_context(this_task_irq(), rtcb);
             }
         }
 
@@ -214,7 +214,7 @@ int sched_unlock(void)
 
 int sched_unlock(void)
 {
-  FAR struct tcb_s *rtcb = this_task_inirq();
+  FAR struct tcb_s *rtcb = this_task_irq();
   irqstate_t flags;
 
   DEBUGASSERT(rtcb != NULL);
@@ -258,7 +258,7 @@ int sched_unlock(void)
     {
       if (nxsched_merge_pending())
         {
-          up_switch_context(this_task_inirq(), rtcb);
+          up_switch_context(this_task_irq(), rtcb);
         }
     }
 
@@ -280,7 +280,7 @@ int sched_unlock(void)
        * maximum.
        */
 
-      if (rtcb != this_task_inirq())
+      if (rtcb != this_task_irq())
         {
           rtcb->timeslice = MSEC2TICK(CONFIG_RR_INTERVAL);
         }
@@ -318,7 +318,7 @@ int sched_unlock(void)
        * change the currently active task.
        */
 
-      if (rtcb == this_task_inirq())
+      if (rtcb == this_task_irq())
         {
           nxsched_reassess_timer();
         }

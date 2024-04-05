@@ -155,7 +155,7 @@ bool up_cpu_pausereq(int cpu)
 
 int up_cpu_paused_save(void)
 {
-  struct tcb_s *tcb = this_task_inirq();
+  struct tcb_s *tcb = this_task_irq();
 
   /* Update scheduler parameters */
 
@@ -239,7 +239,7 @@ int up_cpu_paused(int cpu)
 
 int up_cpu_paused_restore(void)
 {
-  struct tcb_s *tcb = this_task_inirq();
+  struct tcb_s *tcb = this_task_irq();
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify that we have resumed */
@@ -362,7 +362,7 @@ int up_cpu_pause(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the pause event */
 
-  sched_note_cpu_pause(this_task_inirq(), cpu);
+  sched_note_cpu_pause(this_task_irq(), cpu);
 #endif
 
   /* Take the both spinlocks.  The g_cpu_wait spinlock will prevent the SGI2
@@ -430,7 +430,7 @@ int up_cpu_resume(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the resume event */
 
-  sched_note_cpu_resume(this_task_inirq(), cpu);
+  sched_note_cpu_resume(this_task_irq(), cpu);
 #endif
 
   /* Release the spinlock.  Releasing the spinlock will cause the SGI2

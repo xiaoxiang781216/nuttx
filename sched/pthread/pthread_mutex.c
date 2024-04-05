@@ -64,7 +64,7 @@ static void pthread_mutex_add(FAR struct pthread_mutex_s *mutex)
   /* Add the mutex to the list of mutexes held by this pthread */
 
   flags        = enter_critical_section();
-  rtcb         = this_task_inirq();
+  rtcb         = this_task_irq();
   mutex->flink = rtcb->mhead;
   rtcb->mhead  = mutex;
   leave_critical_section(flags);
@@ -127,7 +127,7 @@ static void pthread_mutex_remove(FAR struct pthread_mutex_s *mutex)
   irqstate_t flags;
 
   flags = enter_critical_section();
-  rtcb = this_task_inirq();
+  rtcb = this_task_irq();
 
   /* Remove the mutex from the list of mutexes held by this task */
 

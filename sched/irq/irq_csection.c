@@ -452,7 +452,7 @@ inline_function irqstate_t enter_critical_section_nonirq(void)
   DEBUGASSERT(g_nx_initstate >= OSINIT_TASKLISTS);
   DEBUGASSERT(!up_interrupt_context());
 
-  rtcb = this_task_inirq();
+  rtcb = this_task_irq();
   DEBUGASSERT(rtcb != NULL);
 
   /* Have we just entered the critical section?  Or is this a nested
@@ -628,7 +628,7 @@ void leave_critical_section(irqstate_t flags)
 
 inline_function void leave_critical_section_nonirq(irqstate_t flags)
 {
-  FAR struct tcb_s *rtcb = this_task_inirq();
+  FAR struct tcb_s *rtcb = this_task_irq();
 
   DEBUGASSERT(g_nx_initstate >= OSINIT_TASKLISTS);
   DEBUGASSERT(!up_interrupt_context());

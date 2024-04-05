@@ -97,7 +97,7 @@ static void nxsig_timeout(wdparm_t arg)
 
   if (wtcb->task_state == TSTATE_WAIT_SIG)
     {
-      FAR struct tcb_s *rtcb = this_task_inirq();
+      FAR struct tcb_s *rtcb = this_task_irq();
 
       wtcb->sigunbinfo.si_signo           = SIG_WAIT_TIMEOUT;
       wtcb->sigunbinfo.si_code            = SI_TIMER;
@@ -164,7 +164,7 @@ void nxsig_wait_irq(FAR struct tcb_s *wtcb, int errcode)
 
   if (wtcb->task_state == TSTATE_WAIT_SIG)
     {
-      FAR struct tcb_s *rtcb = this_task_inirq();
+      FAR struct tcb_s *rtcb = this_task_irq();
 
       wtcb->sigunbinfo.si_signo           = SIG_CANCEL_TIMEOUT;
       wtcb->sigunbinfo.si_code            = SI_USER;
@@ -254,7 +254,7 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
    */
 
   flags = enter_critical_section();
-  rtcb = this_task_inirq();
+  rtcb = this_task_irq();
 
   /* Check if there is a pending signal corresponding to one of the
    * signals in the pending signal set argument.
@@ -362,7 +362,7 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
 
               /* Now, perform the context switch if one is needed */
 
-              up_switch_context(this_task_inirq(), rtcb);
+              up_switch_context(this_task_irq(), rtcb);
 
               /* We no longer need the watchdog */
 
@@ -401,7 +401,7 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
 
           /* Now, perform the context switch */
 
-          up_switch_context(this_task_inirq(), rtcb);
+          up_switch_context(this_task_irq(), rtcb);
         }
 
       /* We are running again, clear the sigwaitmask */

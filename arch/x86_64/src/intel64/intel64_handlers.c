@@ -101,7 +101,7 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task_inirq();
+      g_running_tasks[this_cpu()] = this_task_irq();
     }
 
   /* If a context switch occurred while processing the interrupt then
@@ -155,7 +155,7 @@ uint64_t *isr_handler(uint64_t *regs, uint64_t irq)
       case 0:
       case 16:
         asm volatile("fnclex":::"memory");
-        nxsig_kill(this_task_inirq()->pid, SIGFPE);
+        nxsig_kill(this_task_irq()->pid, SIGFPE);
         break;
 
       default:

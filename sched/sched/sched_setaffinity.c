@@ -88,7 +88,7 @@ int nxsched_set_affinity(pid_t pid, size_t cpusetsize,
 
   if (!pid)
     {
-      tcb = this_task_inirq();
+      tcb = this_task_irq();
     }
   else
     {

@@ -389,7 +389,7 @@ int exec_module(FAR struct binary_s *binp,
 
   if (!spawn)
     {
-      exec_swap(this_task_inirq(), (FAR struct tcb_s *)tcb);
+      exec_swap(this_task_irq(), (FAR struct tcb_s *)tcb);
     }
 
   /* Get the assigned pid before we start the task */

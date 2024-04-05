@@ -57,11 +57,11 @@ void _exit(int status)
    */
 
   enter_critical_section();
-  sinfo("TCB=%p exiting\n", this_task_inirq());
+  sinfo("TCB=%p exiting\n", this_task_irq());
 
   /* Update scheduler parameters */
 
-  sched_suspend_scheduler(this_task_inirq());
+  sched_suspend_scheduler(this_task_irq());
 
   /* Destroy the task at the head of the ready to run list. */
 
@@ -71,7 +71,7 @@ void _exit(int status)
    * head of the list.
    */
 
-  tcb = this_task_inirq();
+  tcb = this_task_irq();
 
   /* Reset scheduler parameters */
 

@@ -107,7 +107,7 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task_inirq();
+      g_running_tasks[this_cpu()] = this_task_irq();
 
       /* If a context switch occurred while processing the interrupt then
        * current_regs may have change value.  If we return any value

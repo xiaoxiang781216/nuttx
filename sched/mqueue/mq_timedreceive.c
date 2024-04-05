@@ -168,7 +168,7 @@ ssize_t file_mq_timedreceive(FAR struct file *mq, FAR char *msg,
    */
 
   flags = enter_critical_section_nonirq();
-  rtcb = this_task_inirq();
+  rtcb = this_task_irq();
 
   /* Check if the message queue is empty.  If it is NOT empty, then we
    * will not need to start timer.

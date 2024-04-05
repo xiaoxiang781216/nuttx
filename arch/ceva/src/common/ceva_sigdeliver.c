@@ -50,7 +50,7 @@
 
 void ceva_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task_inirq();
+  struct tcb_s *rtcb = this_task_irq();
   uint32_t *regs = rtcb->xcp.saved_regs;
   sig_deliver_t sigdeliver;
 

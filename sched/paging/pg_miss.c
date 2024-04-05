@@ -145,7 +145,7 @@ void pg_miss(FAR struct tcb_s *ftcb)
 
   /* Now, perform the context switch */
 
-  up_switch_context(this_task_inirq(), ftcb);
+  up_switch_context(this_task_irq(), ftcb);
 
   /* Boost the page fill worker thread priority.
    * - Check the priority of the task at the head of the g_waitingforfill

@@ -85,7 +85,7 @@ int nxtask_exit(void)
   cpu  = this_cpu();
   dtcb = current_task(cpu);
 #else
-  dtcb = this_task_inirq();
+  dtcb = this_task_irq();
 #endif
 
   /* Update scheduler parameters */
@@ -107,7 +107,7 @@ int nxtask_exit(void)
 #ifdef CONFIG_SMP
   rtcb = current_task(cpu);
 #else
-  rtcb = this_task_inirq();
+  rtcb = this_task_irq();
 #endif
 
   /* NOTE: nxsched_resume_scheduler() was moved to up_exit()

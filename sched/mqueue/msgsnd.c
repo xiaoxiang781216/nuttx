@@ -76,7 +76,7 @@ static int msgsnd_wait(FAR struct msgq_s *msgq, int msgflg)
        * When we are unblocked, we will try again
        */
 
-      rtcb          = this_task_inirq();
+      rtcb          = this_task_irq();
       rtcb->waitobj = msgq;
       msgq->cmn.nwaitnotfull++;
 
@@ -103,7 +103,7 @@ static int msgsnd_wait(FAR struct msgq_s *msgq, int msgflg)
 
       /* Now, perform the context switch */
 
-      up_switch_context(this_task_inirq(), rtcb);
+      up_switch_context(this_task_irq(), rtcb);
 
       /* When we resume at this point, either (1) the message queue
        * is no longer empty, or (2) the wait has been interrupted by
@@ -228,7 +228,7 @@ int msgsnd(int msqid, FAR const void *msgp, size_t msgsz, int msgflg)
 
       if (msgq->cmn.nwaitnotempty > 0)
         {
-          FAR struct tcb_s *rtcb = this_task_inirq();
+          FAR struct tcb_s *rtcb = this_task_irq();
 
           /* Find the highest priority task that is waiting for
            * this queue to be non-empty in g_waitingformqnotempty
