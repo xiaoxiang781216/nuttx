@@ -27,7 +27,6 @@
 
 #include <nuttx/config.h>
 #include <nuttx/can.h>
-#include <netpacket/can.h>
 
 #ifdef CONFIG_NET_CAN
 
