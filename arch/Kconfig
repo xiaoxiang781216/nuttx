@@ -126,6 +126,7 @@ config ARCH_SIM
 config ARCH_X86
 	bool "x86"
 	select ARCH_HAVE_TCBINFO
+	select ARCH_TOOLCHAIN_GNU
 	---help---
 		Intel x86 architectures.
 
@@ -137,6 +138,7 @@ config ARCH_X86_64
 	select ARCH_HAVE_TESTSET
 	select PCI_LATE_DRIVERS_REGISTER if PCI
 	select LIBC_ARCH_ELF_64BIT if LIBC_ARCH_ELF
+	select ARCH_TOOLCHAIN_GNU
 	---help---
 		x86-64 architectures.
 
