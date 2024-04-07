@@ -752,6 +752,12 @@ mempool_multiple_mallinfo(FAR struct mempool_multiple_s *mpool)
   struct mallinfo info;
   size_t i;
 
+  if (mpool == NULL)
+    {
+      memset(&info, 0, sizeof(struct mallinfo));
+      return info;
+    }
+
   memset(&info, 0, sizeof(struct mallinfo));
 
   nxrmutex_lock(&mpool->lock);
@@ -833,6 +839,11 @@ void mempool_multiple_memdump(FAR struct mempool_multiple_s *mpool,
 {
   size_t i;
 
+  if (mpool == NULL)
+    {
+      return;
+    }
+
   for (i = 0; i < mpool->npools; i++)
     {
       mempool_memdump(mpool->pools + i, dump);
@@ -854,7 +865,10 @@ void mempool_multiple_deinit(FAR struct mempool_multiple_s *mpool)
 {
   size_t i;
 
-  DEBUGASSERT(mpool != NULL);
+  if (mpool == NULL)
+    {
+      return;
+    }
 
   for (i = 0; i < mpool->npools; i++)
     {
