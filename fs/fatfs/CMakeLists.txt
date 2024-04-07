@@ -25,4 +25,10 @@ if(CONFIG_FS_FATFS)
 
   target_include_directories(fs PRIVATE ${CMAKE_CURRENT_LIST_DIR}
                                         ${CMAKE_CURRENT_LIST_DIR}/fatfs/source)
+
+  if(CONFIG_TRACE_FATFS_FS)
+    set_source_files_properties(fatfs_vfs.c PROPERTIES COMPILE_FLAGS
+                                                       -finstrument-functions)
+  endif()
+
 endif()

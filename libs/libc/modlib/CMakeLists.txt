@@ -29,14 +29,14 @@ if(CONFIG_LIBC_MODLIB)
     modlib_iobuffer.c
     modlib_load.c
     modlib_loadhdrs.c
+    modlib_verify.c
     modlib_read.c
     modlib_registry.c
     modlib_sections.c
     modlib_symbols.c
     modlib_symtab.c
     modlib_uninit.c
-    modlib_unload.c
-    modlib_verify.c)
+    modlib_unload.c)
 
   list(APPEND SRCS modlib_globals.S)
 

@@ -114,4 +114,8 @@ if(CONFIG_SMP_CALL)
   list(APPEND SRCS sched_smp.c)
 endif()
 
+if(CONFIG_SCHED_PERF_EVENTS)
+  list(APPEND SRCS sched_perf.c)
+endif()
+
 target_sources(sched PRIVATE ${SRCS})
