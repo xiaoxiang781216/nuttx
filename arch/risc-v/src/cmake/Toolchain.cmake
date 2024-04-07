@@ -279,6 +279,10 @@ if(CONFIG_MM_KASAN_ALL)
   add_compile_options(-fsanitize=kernel-address)
 endif()
 
+if(CONFIG_MM_KASAN_GLOBAL)
+  add_compile_options(--param asan-globals=1)
+endif()
+
 if(CONFIG_MM_KASAN_DISABLE_READS_CHECK)
   add_compile_options(--param asan-instrument-reads=0)
 endif()
@@ -293,4 +297,10 @@ endif()
 
 if(CONFIG_MM_UBSAN_TRAP_ON_ERROR)
   add_compile_options(-fsanitize-undefined-trap-on-error)
+endif()
+
+# Instrumentation options
+
+if(CONFIG_ARCH_INSTRUMENT_ALL)
+  add_compile_options(-finstrument-functions)
 endif()
