@@ -67,8 +67,23 @@ set_property(
   PROPERTY NUTTX_CXX_INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}/include/libcxx)
 
 add_compile_definitions(_LIBCPP_BUILDING_LIBRARY)
-if(CONFIG_LIBSUPCXX)
-  add_compile_definitions(__GLIBCXX__)
+if(CONFIG_ARCH_SIM OR CONFIG_ARCH_X86_64)
+  if(CONFIG_HOST_MACOS)
+    add_compile_definitions(LIBCXX_BUILDING_LIBCXXABI)
+  else()
+    add_compile_definitions(__GLIBCXX__)
+  endif()
+  add_compile_definitions(_LIBCPP_DISABLE_AVAILABILITY)
+  add_compile_options(
+    -U_AIX
+    -U_WIN32
+    -U__APPLE__
+    -U__FreeBSD__
+    -U__NetBSD__
+    -U__linux__
+    -U__sun__
+    -U__unix__
+    -U__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
 endif()
 
 set(CMAKE_CXX_STANDARD 20)
