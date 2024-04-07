@@ -856,6 +856,7 @@ static int noteram_dump_sched_switch(FAR struct lib_outstream_s *s,
  * Name: noteram_dump_printf
  ****************************************************************************/
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
 static int noteram_dump_printf(FAR struct lib_outstream_s *s,
                                FAR struct note_printf_s *note)
 {
@@ -908,6 +909,7 @@ static int noteram_dump_printf(FAR struct lib_outstream_s *s,
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: noteram_dump_one
