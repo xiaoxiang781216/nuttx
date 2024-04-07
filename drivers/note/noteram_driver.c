@@ -148,7 +148,8 @@ static const struct file_operations g_noteram_fops =
   noteram_poll,  /* poll */
 };
 
-static uint8_t g_ramnote_buffer[CONFIG_DRIVERS_NOTERAM_BUFSIZE];
+static uint8_t g_ramnote_buffer[CONFIG_DRIVERS_NOTERAM_BUFSIZE]
+  locate_data(CONFIG_DRIVERS_NOTERAM_SECTION);
 
 static const struct note_driver_ops_s g_noteram_ops =
 {
