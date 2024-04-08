@@ -60,8 +60,8 @@ uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
    * accessed for register dumps and possibly context switching.
    */
 
-  savestate = get_current_regs();
-  set_current_regs(regs);
+  savestate = up_current_regs();
+  up_set_current_regs(regs);
 
   /* Get the (virtual) address of instruction that caused the prefetch
    * abort. When the exception occurred, this address was provided in the
@@ -105,7 +105,7 @@ uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
        *  It will be non-NULL if we are returning from a nested interrupt.
        */
 
-      set_current_regs(savestate);
+      up_set_current_regs(savestate);
     }
   else
     {
@@ -125,7 +125,7 @@ uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
    * accessed for register dumps and possibly context switching.
    */
 
-  set_current_regs(regs);
+  up_set_current_regs(regs);
 
   /* Crash -- possibly showing diagnostic debug information. */
 

@@ -96,7 +96,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        */
 
       sinfo("rtcb=%p current_regs=%p\n", this_task_irq(),
-            get_current_regs());
+            up_current_regs());
 
       if (tcb == this_task_irq())
         {
@@ -104,7 +104,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signaling itself for some reason.
            */
 
-          if (!get_current_regs())
+          if (!up_current_regs())
             {
               /* In this case just deliver the signal now.
                * REVISIT:  Signal handle will run in a critical section!
@@ -139,11 +139,11 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * delivered.
                */
 
-              set_current_regs(get_current_regs() - XCPTCONTEXT_REGS);
-              memcpy(get_current_regs(), tcb->xcp.saved_regs,
+              up_set_current_regs(up_current_regs() - XCPTCONTEXT_REGS);
+              memcpy(up_current_regs(), tcb->xcp.saved_regs,
                      XCPTCONTEXT_SIZE);
 
-              get_current_regs()[REG_SP] = (uint32_t)(get_current_regs() +
+              up_current_regs()[REG_SP] = (uint32_t)(up_current_regs() +
                                                       XCPTCONTEXT_REGS);
 
               /* Then set up to vector to the trampoline with interrupts
@@ -151,18 +151,18 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * privileged thread mode.
                */
 
-              get_current_regs()[REG_PC]         = (uint32_t)arm_sigdeliver;
+              up_current_regs()[REG_PC]         = (uint32_t)arm_sigdeliver;
 #ifdef CONFIG_ARMV8M_USEBASEPRI
-              get_current_regs()[REG_BASEPRI]    =
+              up_current_regs()[REG_BASEPRI]    =
                                                   NVIC_SYSH_DISABLE_PRIORITY;
 #else
-              get_current_regs()[REG_PRIMASK]    = 1;
+              up_current_regs()[REG_PRIMASK]    = 1;
 #endif
-              get_current_regs()[REG_XPSR]       = ARMV8M_XPSR_T;
+              up_current_regs()[REG_XPSR]       = ARMV8M_XPSR_T;
 #ifdef CONFIG_BUILD_PROTECTED
-              get_current_regs()[REG_LR]         = EXC_RETURN_THREAD;
-              get_current_regs()[REG_EXC_RETURN] = EXC_RETURN_THREAD;
-              get_current_regs()[REG_CONTROL]    = getcontrol() &
+              up_current_regs()[REG_LR]         = EXC_RETURN_THREAD;
+              up_current_regs()[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+              up_current_regs()[REG_CONTROL]    = getcontrol() &
                                                    ~CONTROL_NPRIV;
 #endif
             }
@@ -237,7 +237,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        */
 
       sinfo("rtcb=%p current_regs=%p\n", this_task_irq(),
-            get_current_regs());
+            up_current_regs());
 
       if (tcb->task_state == TSTATE_TASK_RUNNING)
         {
@@ -248,7 +248,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signaling itself for some reason.
            */
 
-          if (cpu == me && !get_current_regs())
+          if (cpu == me && !up_current_regs())
             {
               /* In this case just deliver the signal now.
                * REVISIT:  Signal handler will run in a critical section!
@@ -347,11 +347,11 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    * been delivered.
                    */
 
-                  set_current_regs(get_current_regs() - XCPTCONTEXT_REGS);
-                  memcpy(get_current_regs(), tcb->xcp.saved_regs,
+                  up_set_current_regs(up_current_regs() - XCPTCONTEXT_REGS);
+                  memcpy(up_current_regs(), tcb->xcp.saved_regs,
                          XCPTCONTEXT_SIZE);
 
-                  get_current_regs()[REG_SP] = (uint32_t)(get_current_regs()
+                  up_current_regs()[REG_SP] = (uint32_t)(up_current_regs()
                                                         + XCPTCONTEXT_REGS);
 
                   /* Then set up vector to the trampoline with interrupts
@@ -359,17 +359,17 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    * privileged thread mode.
                    */
 
-                  get_current_regs()[REG_PC]      = (uint32_t)arm_sigdeliver;
+                  up_current_regs()[REG_PC]      = (uint32_t)arm_sigdeliver;
 #ifdef CONFIG_ARMV8M_USEBASEPRI
-                  get_current_regs()[REG_BASEPRI] =
+                  up_current_regs()[REG_BASEPRI] =
                   NVIC_SYSH_DISABLE_PRIORITY;
 #else
-                  get_current_regs()[REG_PRIMASK] = 1;
+                  up_current_regs()[REG_PRIMASK] = 1;
 #endif
-                  get_current_regs()[REG_XPSR]    = ARMV8M_XPSR_T;
+                  up_current_regs()[REG_XPSR]    = ARMV8M_XPSR_T;
 #ifdef CONFIG_BUILD_PROTECTED
-                  get_current_regs()[REG_LR]      = EXC_RETURN_THREAD;
-                  get_current_regs()[REG_CONTROL] = getcontrol() &
+                  up_current_regs()[REG_LR]      = EXC_RETURN_THREAD;
+                  up_current_regs()[REG_CONTROL] = getcontrol() &
                                                     ~CONTROL_NPRIV;
 #endif
                 }

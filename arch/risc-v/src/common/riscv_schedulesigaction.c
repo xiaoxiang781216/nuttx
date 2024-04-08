@@ -94,7 +94,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        */
 
       sinfo("rtcb=%p current_regs=%p\n",
-            this_task_irq(), get_current_regs());
+            this_task_irq(), up_current_regs());
 
       if (tcb == this_task_irq())
         {
@@ -102,7 +102,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * a task is signalling itself for some reason.
            */
 
-          if (!get_current_regs())
+          if (!up_current_regs())
             {
               /* In this case just deliver the signal now. */
 
@@ -136,9 +136,9 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * been delivered.
                */
 
-              set_current_regs(get_current_regs() - XCPTCONTEXT_REGS);
+              up_set_current_regs(up_current_regs() - XCPTCONTEXT_REGS);
 
-              memcpy(get_current_regs(), tcb->xcp.saved_regs,
+              memcpy(up_current_regs(), tcb->xcp.saved_regs,
                      XCPTCONTEXT_SIZE);
 
               /* Then set up to vector to the trampoline with interrupts
@@ -146,24 +146,24 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * privileged thread mode.
                */
 
-              get_current_regs()[REG_EPC] = (uintptr_t)riscv_sigdeliver;
+              up_current_regs()[REG_EPC] = (uintptr_t)riscv_sigdeliver;
 
-              int_ctx  = get_current_regs()[REG_INT_CTX];
+              int_ctx  = up_current_regs()[REG_INT_CTX];
               int_ctx &= ~STATUS_PIE;
 #ifndef CONFIG_BUILD_FLAT
               int_ctx |= STATUS_PPP;
 #endif
-              get_current_regs()[REG_INT_CTX] = int_ctx;
+              up_current_regs()[REG_INT_CTX] = int_ctx;
 
-              get_current_regs()[REG_SP] = (uintptr_t)(get_current_regs() +
+              up_current_regs()[REG_SP] = (uintptr_t)(up_current_regs() +
                                                        XCPTCONTEXT_REGS);
 
               sinfo("PC/STATUS Saved: %" PRIxREG "/%" PRIxREG
                     " New: %" PRIxREG "/%" PRIxREG "\n",
                     tcb->xcp.saved_regs[REG_EPC],
                     tcb->xcp.saved_regs[REG_INT_CTX],
-                    get_current_regs()[REG_EPC],
-                    get_current_regs()[REG_INT_CTX]);
+                    up_current_regs()[REG_EPC],
+                    up_current_regs()[REG_INT_CTX]);
             }
         }
 
@@ -233,7 +233,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        */
 
       sinfo("rtcb=%p current_regs=%p\n", this_task_irq(),
-            get_current_regs());
+            up_current_regs());
 
       if (tcb->task_state == TSTATE_TASK_RUNNING)
         {
@@ -244,7 +244,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signaling itself for some reason.
            */
 
-          if (cpu == me && !get_current_regs())
+          if (cpu == me && !up_current_regs())
             {
               /* In this case just deliver the signal now.
                * REVISIT:  Signal handler will run in a critical section!
@@ -327,19 +327,19 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    * been delivered.
                    */
 
-                  tcb->xcp.saved_regs = get_current_regs();
+                  tcb->xcp.saved_regs = up_current_regs();
 
                   /* Duplicate the register context.  These will be
                    * restored by the signal trampoline after the signal has
                    * been delivered.
                    */
 
-                  set_current_regs(get_current_regs() - XCPTCONTEXT_REGS);
+                  up_set_current_regs(up_current_regs() - XCPTCONTEXT_REGS);
 
-                  memcpy(get_current_regs(), tcb->xcp.saved_regs,
+                  memcpy(up_current_regs(), tcb->xcp.saved_regs,
                          XCPTCONTEXT_SIZE);
 
-                  get_current_regs()[REG_SP] = (uintptr_t)(get_current_regs()
+                  up_current_regs()[REG_SP] = (uintptr_t)(up_current_regs()
                                                          + XCPTCONTEXT_REGS);
 
                   /* Then set up vector to the trampoline with interrupts
@@ -347,14 +347,14 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    * privileged thread mode.
                    */
 
-                  get_current_regs()[REG_EPC] = (uintptr_t)riscv_sigdeliver;
+                  up_current_regs()[REG_EPC] = (uintptr_t)riscv_sigdeliver;
 
-                  int_ctx  = get_current_regs()[REG_INT_CTX];
+                  int_ctx  = up_current_regs()[REG_INT_CTX];
                   int_ctx &= ~STATUS_PIE;
 #ifndef CONFIG_BUILD_FLAT
                   int_ctx |= STATUS_PPP;
 #endif
-                  get_current_regs()[REG_INT_CTX] = int_ctx;
+                  up_current_regs()[REG_INT_CTX] = int_ctx;
                 }
 
               /* NOTE: If the task runs on another CPU(cpu), adjusting

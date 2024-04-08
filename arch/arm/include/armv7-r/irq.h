@@ -466,7 +466,7 @@ static inline_function int up_cpu_index(void)
 #  define up_cpu_index() 0
 #endif /* CONFIG_SMP */
 
-static inline_function uint32_t *get_current_regs(void)
+static inline_function uint32_t *up_current_regs(void)
 {
   uint32_t *regs;
   __asm__ __volatile__
@@ -477,7 +477,7 @@ static inline_function uint32_t *get_current_regs(void)
   return regs;
 }
 
-static inline_function void set_current_regs(uint32_t *regs)
+static inline_function void up_set_current_regs(uint32_t *regs)
 {
   __asm__ __volatile__
   (
@@ -489,7 +489,7 @@ static inline_function void set_current_regs(uint32_t *regs)
 noinstrument_function
 static inline_function bool up_interrupt_context(void)
 {
-  return get_current_regs() != NULL;
+  return up_current_regs() != NULL;
 }
 
 /****************************************************************************

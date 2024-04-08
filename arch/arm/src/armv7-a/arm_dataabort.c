@@ -74,8 +74,8 @@ uint32_t *arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr)
    * accessed for register dumps and possibly context switching.
    */
 
-  savestate = get_current_regs();
-  set_current_regs(regs);
+  savestate = up_current_regs();
+  up_set_current_regs(regs);
 
   /* In the NuttX on-demand paging implementation, only the read-only, .text
    * section is paged.  However, the ARM compiler generated PC-relative data
@@ -134,7 +134,7 @@ uint32_t *arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr)
    * are returning from a nested interrupt.
    */
 
-  set_current_regs(savestate);
+  up_set_current_regs(savestate);
   return regs;
 
 segfault:
@@ -152,7 +152,7 @@ uint32_t *arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr)
    * accessed for register dumps and possibly context switching.
    */
 
-  set_current_regs(regs);
+  up_set_current_regs(regs);
 
   /* Crash -- possibly showing diagnostic debug information. */
 

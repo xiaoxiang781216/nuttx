@@ -58,7 +58,7 @@
 uint32_t *arm_decodeirq(uint32_t *regs)
 {
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
-  set_current_regs(regs);
+  up_set_current_regs(regs);
   err("ERROR: Unexpected IRQ\n");
   PANIC();
   return NULL;
@@ -72,8 +72,8 @@ uint32_t *arm_decodeirq(uint32_t *regs)
    * Nested interrupts are not supported.
    */
 
-  DEBUGASSERT(get_current_regs() == NULL);
-  set_current_regs(regs);
+  DEBUGASSERT(up_current_regs() == NULL);
+  up_set_current_regs(regs);
 
   /* Loop while there are pending interrupts to be processed */
 
@@ -108,7 +108,7 @@ uint32_t *arm_decodeirq(uint32_t *regs)
            * from the interrupt.
            */
 
-          if (regs != get_current_regs())
+          if (regs != up_current_regs())
             {
               /* Make sure that the address environment for the previously
                * running task is closed down gracefully (data caches dump,
@@ -127,7 +127,7 @@ uint32_t *arm_decodeirq(uint32_t *regs)
    * an interrupt handler.
    */
 
-  set_current_regs(NULL);
+  up_set_current_regs(NULL);
   return NULL;  /* Return not used in this architecture */
 #endif
 }

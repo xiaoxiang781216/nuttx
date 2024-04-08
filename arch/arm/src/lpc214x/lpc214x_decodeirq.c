@@ -82,7 +82,7 @@ static uint32_t *lpc214x_decodeirq(uint32_t *regs)
 #endif
 {
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
-  set_current_regs(regs);
+  up_set_current_regs(regs);
   err("ERROR: Unexpected IRQ\n");
   PANIC();
   return NULL;
@@ -123,8 +123,8 @@ static uint32_t *lpc214x_decodeirq(uint32_t *regs)
        * switches.
        */
 
-      savestate = get_current_regs();
-      set_current_regs(regs);
+      savestate = up_current_regs();
+      up_set_current_regs(regs);
 
       /* Deliver the IRQ */
 
@@ -135,7 +135,7 @@ static uint32_t *lpc214x_decodeirq(uint32_t *regs)
        * if we are returning from a nested interrupt.
        */
 
-      set_current_regs(savestate);
+      up_set_current_regs(savestate);
     }
 
   return NULL;  /* Return not used in this architecture */

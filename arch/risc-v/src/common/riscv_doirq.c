@@ -76,8 +76,8 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
    * Nested interrupts are not supported
    */
 
-  DEBUGASSERT(get_current_regs() == NULL);
-  set_current_regs(regs);
+  DEBUGASSERT(up_current_regs() == NULL);
+  up_set_current_regs(regs);
 
   /* Deliver the IRQ */
 
@@ -90,7 +90,7 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
    * returning from the interrupt.
    */
 
-  if (regs != get_current_regs())
+  if (regs != up_current_regs())
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -115,14 +115,14 @@ uintptr_t *riscv_doirq(int irq, uintptr_t *regs)
        * that a context switch occurred during interrupt processing.
        */
 
-      regs = get_current_regs();
+      regs = up_current_regs();
     }
 
   /* Set current_regs to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  set_current_regs(NULL);
+  up_set_current_regs(NULL);
 
 #endif
   board_autoled_off(LED_INIRQ);

@@ -53,7 +53,7 @@ uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
    * accessed for register dumps and possibly context switching.
    */
 
-  set_current_regs(regs);
+  up_set_current_regs(regs);
 
   /* Crash -- possibly showing diagnostic debug information. */
 

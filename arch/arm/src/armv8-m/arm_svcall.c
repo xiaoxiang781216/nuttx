@@ -126,7 +126,7 @@ int arm_svcall(int irq, void *context, void *arg)
   uint32_t *regs = (uint32_t *)context;
   uint32_t cmd;
 
-  DEBUGASSERT(regs && regs == get_current_regs());
+  DEBUGASSERT(regs && regs == up_current_regs());
   cmd = regs[REG_R0];
 
   /* The SVCall software interrupt is called with R0 = system call command
@@ -174,7 +174,7 @@ int arm_svcall(int irq, void *context, void *arg)
       case SYS_restore_context:
         {
           DEBUGASSERT(regs[REG_R1] != 0);
-          set_current_regs((uint32_t *)regs[REG_R1]);
+          up_set_current_regs((uint32_t *)regs[REG_R1]);
         }
         break;
 
@@ -199,7 +199,7 @@ int arm_svcall(int irq, void *context, void *arg)
         {
           DEBUGASSERT(regs[REG_R1] != 0 && regs[REG_R2] != 0);
           *(uint32_t **)regs[REG_R1] = regs;
-          set_current_regs((uint32_t *)regs[REG_R2]);
+          up_set_current_regs((uint32_t *)regs[REG_R2]);
         }
         break;
 
@@ -457,24 +457,24 @@ int arm_svcall(int irq, void *context, void *arg)
 #  ifndef CONFIG_DEBUG_SVCALL
   if (cmd > SYS_switch_context)
 #  else
-  if (regs != get_current_regs())
+  if (regs != up_current_regs())
 #  endif
     {
       svcinfo("SVCall Return:\n");
       svcinfo("  R0: %08x %08x %08x %08x %08x %08x %08x %08x\n",
-              get_current_regs()[REG_R0],  get_current_regs()[REG_R1],
-              get_current_regs()[REG_R2],  get_current_regs()[REG_R3],
-              get_current_regs()[REG_R4],  get_current_regs()[REG_R5],
-              get_current_regs()[REG_R6],  get_current_regs()[REG_R7]);
+              up_current_regs()[REG_R0],  up_current_regs()[REG_R1],
+              up_current_regs()[REG_R2],  up_current_regs()[REG_R3],
+              up_current_regs()[REG_R4],  up_current_regs()[REG_R5],
+              up_current_regs()[REG_R6],  up_current_regs()[REG_R7]);
       svcinfo("  R8: %08x %08x %08x %08x %08x %08x %08x %08x\n",
-              get_current_regs()[REG_R8],  get_current_regs()[REG_R9],
-              get_current_regs()[REG_R10], get_current_regs()[REG_R11],
-              get_current_regs()[REG_R12], get_current_regs()[REG_R13],
-              get_current_regs()[REG_R14], get_current_regs()[REG_R15]);
+              up_current_regs()[REG_R8],  up_current_regs()[REG_R9],
+              up_current_regs()[REG_R10], up_current_regs()[REG_R11],
+              up_current_regs()[REG_R12], up_current_regs()[REG_R13],
+              up_current_regs()[REG_R14], up_current_regs()[REG_R15]);
       svcinfo(" PSR: %08x EXC_RETURN: %08x CONTROL: %08x\n",
-              get_current_regs()[REG_XPSR],
-              get_current_regs()[REG_EXC_RETURN],
-              get_current_regs()[REG_CONTROL]);
+              up_current_regs()[REG_XPSR],
+              up_current_regs()[REG_EXC_RETURN],
+              up_current_regs()[REG_CONTROL]);
     }
 #  ifdef CONFIG_DEBUG_SVCALL
   else

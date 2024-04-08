@@ -55,7 +55,7 @@ uint32_t *arm_decodeirq(uint32_t *regs)
 {
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   board_autoled_on(LED_INIRQ);
-  set_current_regs(regs);
+  up_set_current_regs(regs);
   err("ERROR: Unexpected IRQ\n");
   PANIC();
   return NULL;
@@ -80,8 +80,8 @@ uint32_t *arm_decodeirq(uint32_t *regs)
        * context switches.
        */
 
-      savestate = get_current_regs();
-      set_current_regs(regs);
+      savestate = up_current_regs();
+      up_set_current_regs(regs);
 
       /* Acknowledge the interrupt */
 
@@ -96,7 +96,7 @@ uint32_t *arm_decodeirq(uint32_t *regs)
        *  It will be non-NULL if we are returning from a nested interrupt.
        */
 
-      set_current_regs(savestate);
+      up_set_current_regs(savestate);
     }
 #ifdef CONFIG_DEBUG_FEATURES
   else

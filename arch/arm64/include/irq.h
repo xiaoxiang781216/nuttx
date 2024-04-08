@@ -396,14 +396,14 @@ static inline void up_irq_restore(irqstate_t flags)
 #  define up_cpu_index() (0)
 #endif
 
-static inline_function uint64_t *get_current_regs(void)
+static inline_function uint64_t *up_current_regs(void)
 {
   uint64_t *regs;
   __asm__ volatile ("mrs %0, " "tpidr_el1" : "=r" (regs));
   return regs;
 }
 
-static inline_function void set_current_regs(uint64_t *regs)
+static inline_function void up_set_current_regs(uint64_t *regs)
 {
   __asm__ volatile ("msr " "tpidr_el1" ", %0" : : "r" (regs));
 }
@@ -418,7 +418,7 @@ static inline_function void set_current_regs(uint64_t *regs)
 
 static inline_function bool up_interrupt_context(void)
 {
-  return get_current_regs() != NULL;
+  return up_current_regs() != NULL;
 }
 
 /****************************************************************************
@@ -426,7 +426,7 @@ static inline_function bool up_interrupt_context(void)
  ****************************************************************************/
 
 #define up_getusrpc(regs) \
-    (((uintptr_t *)((regs) ? (regs) : get_current_regs()))[REG_ELR])
+    (((uintptr_t *)((regs) ? (regs) : up_current_regs()))[REG_ELR])
 
 #undef EXTERN
 #ifdef __cplusplus

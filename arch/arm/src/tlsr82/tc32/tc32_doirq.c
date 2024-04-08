@@ -72,9 +72,9 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
    * current_regs is also used to manage interrupt level context switches.
    */
 
-  if (get_current_regs() == NULL)
+  if (up_current_regs() == NULL)
     {
-      set_current_regs(regs);
+      up_set_current_regs(regs);
       regs         = NULL;
     }
 
@@ -84,7 +84,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   /* Deliver the IRQ */
 
-  irq_dispatch(irq, get_current_regs());
+  irq_dispatch(irq, up_current_regs());
 
   /* If a context switch occurred while processing the interrupt then
    * current_regs may have change value.  If we return any value different
@@ -96,14 +96,14 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
     {
       /* Restore the cpu lock */
 
-      if (regs != get_current_regs())
+      if (regs != up_current_regs())
         {
-          regs = get_current_regs();
+          regs = up_current_regs();
         }
 
       /* Update the current_regs to NULL. */
 
-      set_current_regs(NULL);
+      up_set_current_regs(NULL);
     }
 #endif
 

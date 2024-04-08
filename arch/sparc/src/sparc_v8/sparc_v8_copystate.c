@@ -71,7 +71,7 @@ void sparc_copystate(uint32_t *dest, uint32_t *src)
 
 void task_flush_trap(uint32_t *trap, uint32_t *task)
 {
-  set_current_regs(task);
+  up_set_current_regs(task);
 }
 
 void trap_flush_task(uint32_t *task, uint32_t *trap)

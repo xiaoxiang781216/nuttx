@@ -96,8 +96,8 @@
  * only a referenced is passed to get the state from the TCB.
  */
 
-#define mips_savestate(regs)    mips_copystate(regs, get_current_regs())
-#define mips_restorestate(regs) set_current_regs(regs)
+#define mips_savestate(regs)    mips_copystate(regs, up_current_regs())
+#define mips_restorestate(regs) up_set_current_regs(regs)
 
 /****************************************************************************
  * Public Types

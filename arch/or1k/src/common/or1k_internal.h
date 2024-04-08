@@ -84,8 +84,8 @@
 #define STACK_ALIGN_DOWN(a) ((a) & ~STACK_ALIGN_MASK)
 #define STACK_ALIGN_UP(a)   (((a) + STACK_ALIGN_MASK) & ~STACK_ALIGN_MASK)
 
-#define or1k_savestate(regs)  or1k_copyfullstate(regs, get_current_regs())
-#define or1k_restorestate(regs) or1k_copyfullstate(get_current_regs(), regs)
+#define or1k_savestate(regs)  or1k_copyfullstate(regs, up_current_regs())
+#define or1k_restorestate(regs) or1k_copyfullstate(up_current_regs(), regs)
 
 #define _START_TEXT  _stext
 #define _END_TEXT    _etext

@@ -169,13 +169,13 @@ uint32_t *arm_syscall(uint32_t *regs)
 
   /* Nested interrupts are not supported */
 
-  DEBUGASSERT(get_current_regs() == NULL);
+  DEBUGASSERT(up_current_regs() == NULL);
 
   /* Current regs non-zero indicates that we are processing an interrupt;
    * current_regs is also used to manage interrupt level context switches.
    */
 
-  set_current_regs(regs);
+  up_set_current_regs(regs);
 
   /* The SYSCALL command is in R0 on entry.  Parameters follow in R1..R7 */
 
@@ -272,8 +272,8 @@ uint32_t *arm_syscall(uint32_t *regs)
            * set will determine the restored context.
            */
 
-          set_current_regs((uint32_t *)regs[REG_R1]);
-          DEBUGASSERT(get_current_regs());
+          up_set_current_regs((uint32_t *)regs[REG_R1]);
+          DEBUGASSERT(up_current_regs());
         }
         break;
 
@@ -298,7 +298,7 @@ uint32_t *arm_syscall(uint32_t *regs)
         {
           DEBUGASSERT(regs[REG_R1] != 0 && regs[REG_R2] != 0);
           *(uint32_t **)regs[REG_R1] = regs;
-          set_current_regs((uint32_t *)regs[REG_R2]);
+          up_set_current_regs((uint32_t *)regs[REG_R2]);
         }
         break;
 
@@ -572,7 +572,7 @@ uint32_t *arm_syscall(uint32_t *regs)
    * address environment before returning from the interrupt.
    */
 
-  if (regs != get_current_regs())
+  if (regs != up_current_regs())
     {
       /* Make sure that the address environment for the previously
        * running task is closed down gracefully (data caches dump,
@@ -586,7 +586,7 @@ uint32_t *arm_syscall(uint32_t *regs)
 
   /* Restore the cpu lock */
 
-  if (regs != get_current_regs())
+  if (regs != up_current_regs())
     {
       /* Record the new "running" task.  g_running_tasks[] is only used by
        * assertion logic for reporting crashes.
@@ -599,7 +599,7 @@ uint32_t *arm_syscall(uint32_t *regs)
       /* Restore the cpu lock */
 
       restore_critical_section(tcb, cpu);
-      regs = get_current_regs();
+      regs = up_current_regs();
     }
 
   /* Report what happened */
@@ -610,7 +610,7 @@ uint32_t *arm_syscall(uint32_t *regs)
    * interrupt handler.
    */
 
-  set_current_regs(NULL);
+  up_set_current_regs(NULL);
 
   /* Return the last value of curent_regs.  This supports context switches
    * on return from the exception.  That capability is only used with the

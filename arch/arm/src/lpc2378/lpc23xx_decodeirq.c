@@ -93,7 +93,7 @@ static uint32_t *lpc23xx_decodeirq(uint32_t *regs)
 {
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   err("ERROR: Unexpected IRQ\n");
-  set_current_regs(regs);
+  up_set_current_regs(regs);
   PANIC();
   return NULL;
 #else
@@ -122,8 +122,8 @@ static uint32_t *lpc23xx_decodeirq(uint32_t *regs)
        * context switches.
        */
 
-      savestate = get_current_regs();
-      set_current_regs(regs);
+      savestate = up_current_regs();
+      up_set_current_regs(regs);
 
       /* Acknowledge the interrupt */
 
@@ -138,7 +138,7 @@ static uint32_t *lpc23xx_decodeirq(uint32_t *regs)
        * It will be non-NULL if we are returning from a nested interrupt.
        */
 
-      set_current_regs(savestate);
+      up_set_current_regs(savestate);
     }
 
   return NULL;  /* Return not used in this architecture */

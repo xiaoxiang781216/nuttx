@@ -63,7 +63,7 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
   /* Are we in an interrupt handler? */
 
 #if 0  /* REVISIT */
-  if (get_current_regs())
+  if (up_current_regs())
 #else
   if (0)
 #endif

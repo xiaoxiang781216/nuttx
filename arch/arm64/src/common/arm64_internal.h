@@ -88,8 +88,8 @@
  * floating point registers as well as normal ARM registers.
  */
 
-#define arm64_savestate(regs) (regs = get_current_regs())
-#define arm64_restorestate(regs) set_current_regs(regs)
+#define arm64_savestate(regs) (regs = up_current_regs())
+#define arm64_restorestate(regs) up_set_current_regs(regs)
 
 /* This is the value used to mark the stack for subsequent stack monitoring
  * logic.

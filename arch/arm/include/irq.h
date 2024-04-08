@@ -91,7 +91,7 @@ extern "C"
  ****************************************************************************/
 
 #define up_getusrpc(regs) \
-    (((uint32_t *)((regs) ? (regs) : get_current_regs()))[REG_PC])
+    (((uint32_t *)((regs) ? (regs) : up_current_regs()))[REG_PC])
 
 #endif /* __ASSEMBLY__ */
 

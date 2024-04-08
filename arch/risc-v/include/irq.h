@@ -671,12 +671,12 @@ int up_cpu_index(void);
  * Inline Functions
  ****************************************************************************/
 
-static inline_function uintptr_t *get_current_regs(void)
+static inline_function uintptr_t *up_current_regs(void)
 {
   return (uintptr_t *)g_current_regs[up_cpu_index()];
 }
 
-static inline_function void set_current_regs(uintptr_t *regs)
+static inline_function void up_set_current_regs(uintptr_t *regs)
 {
   g_current_regs[up_cpu_index()] = regs;
 }
@@ -744,7 +744,7 @@ noinstrument_function static inline_function bool up_interrupt_context(void)
   irqstate_t flags = up_irq_save();
 #endif
 
-  bool ret = get_current_regs() != NULL;
+  bool ret = up_current_regs() != NULL;
 
 #ifdef CONFIG_SMP
   up_irq_restore(flags);
@@ -758,7 +758,7 @@ noinstrument_function static inline_function bool up_interrupt_context(void)
  ****************************************************************************/
 
 #define up_getusrpc(regs) \
-    (((uintptr_t *)((regs) ? (regs) : get_current_regs()))[REG_EPC])
+    (((uintptr_t *)((regs) ? (regs) : up_current_regs()))[REG_EPC])
 
 #undef EXTERN
 #if defined(__cplusplus)

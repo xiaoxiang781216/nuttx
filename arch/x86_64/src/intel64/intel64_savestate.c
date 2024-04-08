@@ -46,5 +46,5 @@
 
 void x86_64_savestate(uint64_t *regs)
 {
-  x86_64_copystate(regs, get_current_regs());
+  x86_64_copystate(regs, up_current_regs());
 }

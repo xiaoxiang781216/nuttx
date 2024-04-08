@@ -41,9 +41,9 @@
  * state from the TCB.
  */
 
-#define sparc_restorestate(regs) set_current_regs(regs)
+#define sparc_restorestate(regs) up_set_current_regs(regs)
 
-#define sparc_savestate(regs)   trap_flush_task(regs, get_current_regs())
+#define sparc_savestate(regs)   trap_flush_task(regs, up_current_regs())
 
 /****************************************************************************
  * Public Types

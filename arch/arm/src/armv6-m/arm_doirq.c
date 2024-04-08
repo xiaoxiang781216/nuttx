@@ -49,7 +49,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   if (regs[REG_EXC_RETURN] & EXC_RETURN_THREAD_MODE)
     {
-      set_current_regs(regs);
+      up_set_current_regs(regs);
     }
 
   /* Acknowledge the interrupt */
@@ -70,7 +70,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
     {
       /* Restore the cpu lock */
 
-      if (regs != get_current_regs())
+      if (regs != up_current_regs())
         {
           /* Record the new "running" task when context switch occurred.
            * g_running_tasks[] is only used by assertion logic for reporting
@@ -78,12 +78,12 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
            */
 
           g_running_tasks[this_cpu()] = this_task_irq();
-          regs = get_current_regs();
+          regs = up_current_regs();
         }
 
       /* Update the current_regs to NULL. */
 
-      set_current_regs(NULL);
+      up_set_current_regs(NULL);
     }
 #endif
 

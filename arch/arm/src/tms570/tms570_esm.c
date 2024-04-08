@@ -150,12 +150,12 @@ int tms570_esm_interrupt(int irq, void *context, void *arg)
    * accessed for register dumps and possibly context switching.
    */
 
-  set_current_regs((uint32_t *)context);
+  up_set_current_regs((uint32_t *)context);
 
   /* Crash -- possibly showing diagnostic debug information. */
 
   _err("ERROR: ESM Interrupt. PC: %08" PRIx32 "\n",
-       get_current_regs()[REG_PC]);
+       up_current_regs()[REG_PC]);
   PANIC();
   return OK; /* To keep the compiler happy */
 }

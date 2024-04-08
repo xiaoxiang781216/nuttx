@@ -58,7 +58,7 @@ int xtensa_swint(int irq, void *context, void *arg)
   uint32_t *regs = (uint32_t *)context;
   uint32_t cmd;
 
-  DEBUGASSERT(regs != NULL && regs == get_current_regs());
+  DEBUGASSERT(regs != NULL && regs == up_current_regs());
 
   cmd = regs[REG_A2];
 
@@ -115,7 +115,7 @@ int xtensa_swint(int irq, void *context, void *arg)
       case SYS_restore_context:
         {
           DEBUGASSERT(regs[REG_A3] != 0);
-          set_current_regs((uint32_t *)regs[REG_A3]);
+          up_set_current_regs((uint32_t *)regs[REG_A3]);
         }
         break;
 
@@ -140,7 +140,7 @@ int xtensa_swint(int irq, void *context, void *arg)
         {
           DEBUGASSERT(regs[REG_A3] != 0 && regs[REG_A4] != 0);
           *(uint32_t **)regs[REG_A3] = regs;
-          set_current_regs((uint32_t *)regs[REG_A4]);
+          up_set_current_regs((uint32_t *)regs[REG_A4]);
         }
         break;
 
@@ -418,9 +418,9 @@ int xtensa_swint(int irq, void *context, void *arg)
         break;
     }
 
-  if ((get_current_regs()[REG_PS] & PS_EXCM_MASK) != 0)
+  if ((up_current_regs()[REG_PS] & PS_EXCM_MASK) != 0)
     {
-      get_current_regs()[REG_PS] &= ~PS_EXCM_MASK;
+      up_current_regs()[REG_PS] &= ~PS_EXCM_MASK;
     }
 
   /* Report what happened.  That might difficult in the case of a context
@@ -428,10 +428,10 @@ int xtensa_swint(int irq, void *context, void *arg)
    */
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
-  if (regs != get_current_regs())
+  if (regs != up_current_regs())
     {
       svcinfo("SYSCALL Return: Context switch!\n");
-      up_dump_register(get_current_regs());
+      up_dump_register(up_current_regs());
     }
   else
     {

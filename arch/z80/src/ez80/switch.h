@@ -43,14 +43,14 @@
 
 /* Initialize the IRQ state */
 
-#define INIT_IRQCONTEXT()        set_current_regs(NULL)
+#define INIT_IRQCONTEXT()        up_set_current_regs(NULL)
 
 /* IN_INTERRUPT returns true if the system is currently operating in the
  * interrupt context.  IN_INTERRUPT is the inline equivalent
  * of up_interrupt_context().
  */
 
-#define IN_INTERRUPT()           (get_current_regs() != NULL)
+#define IN_INTERRUPT()           (up_current_regs() != NULL)
 
 /* The following macro is used when the system enters interrupt
  * handling logic
@@ -69,8 +69,8 @@
 #define IRQ_ENTER(irq, regs) \
   do \
     { \
-      savestate = get_current_regs(); \
-      set_current_regs(regs); \
+      savestate = up_current_regs(); \
+      up_set_current_regs(regs); \
     } \
   while (0)
 
@@ -78,21 +78,21 @@
  * handling logic
  */
 
-#define IRQ_LEAVE(irq)           set_current_regs(savestate)
+#define IRQ_LEAVE(irq)           up_set_current_regs(savestate)
 
 /* The following macro is used to sample the interrupt state
  * (as a opaque handle)
  */
 
-#define IRQ_STATE()              get_current_regs()
+#define IRQ_STATE()              up_current_regs()
 
 /* Save the current IRQ context in the specified TCB */
 
-#define SAVE_IRQCONTEXT(tcb)     ez80_copystate((tcb)->xcp.regs, get_current_regs())
+#define SAVE_IRQCONTEXT(tcb)     ez80_copystate((tcb)->xcp.regs, up_current_regs())
 
 /* Set the current IRQ context to the state specified in the TCB */
 
-#define SET_IRQCONTEXT(tcb)      ez80_copystate(get_current_regs(), (tcb)->xcp.regs)
+#define SET_IRQCONTEXT(tcb)      ez80_copystate(up_current_regs(), (tcb)->xcp.regs)
 
 /* Save the user context in the specified TCB.
  * User context saves can be simpler because only those registers normally
@@ -149,12 +149,12 @@ void ez80_restorecontext(FAR chipreg_t *regs);
  * Inline Functions
  ****************************************************************************/
 
-static inline_function chipreg_t *get_current_regs(void)
+static inline_function chipreg_t *up_current_regs(void)
 {
   return (FAR chipreg_t *)g_current_regs;
 }
 
-static inline_function void set_current_regs(FAR chipreg_t *regs)
+static inline_function void up_set_current_regs(FAR chipreg_t *regs)
 {
   g_current_regs = regs;
 }

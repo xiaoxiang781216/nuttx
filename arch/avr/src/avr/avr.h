@@ -43,7 +43,7 @@
  * state from the TCB.
  */
 
-#define avr_savestate(regs)    avr_copystate(regs, get_current_regs())
+#define avr_savestate(regs)    avr_copystate(regs, up_current_regs())
 #define avr_restorestate(regs) set_current_resg(regs)
 
 /****************************************************************************

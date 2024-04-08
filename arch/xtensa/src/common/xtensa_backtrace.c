@@ -255,8 +255,8 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
 #endif
           ret += backtrace_stack(rtcb->stack_base_ptr,
                                  rtcb->stack_base_ptr + rtcb->adj_stack_size,
-                                 (void *)get_current_regs()[REG_A1],
-                                 (void *)get_current_regs()[REG_A0],
+                                 (void *)up_current_regs()[REG_A1],
+                                 (void *)up_current_regs()[REG_A0],
                                  &buffer[ret], size - ret, &skip);
         }
       else

@@ -69,8 +69,8 @@ uint32_t *sparc_doirq(int irq, uint32_t *regs)
    * Nested interrupts are not supported.
    */
 
-  DEBUGASSERT(get_current_regs() == NULL);
-  set_current_regs(regs);
+  DEBUGASSERT(up_current_regs() == NULL);
+  up_set_current_regs(regs);
 
   /* Deliver the IRQ */
 
@@ -83,12 +83,12 @@ uint32_t *sparc_doirq(int irq, uint32_t *regs)
    * environment before returning from the interrupt.
    */
 
-  if (regs != get_current_regs())
+  if (regs != up_current_regs())
     {
 #ifdef CONFIG_ARCH_FPU
       /* Restore floating point registers */
 
-      up_restorefpu(get_current_regs());
+      up_restorefpu(up_current_regs());
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
@@ -115,14 +115,14 @@ uint32_t *sparc_doirq(int irq, uint32_t *regs)
    * switch occurred during interrupt processing.
    */
 
-  regs = (uint32_t *)((uint32_t)get_current_regs() -
+  regs = (uint32_t *)((uint32_t)up_current_regs() -
                                 CPU_MINIMUM_STACK_FRAME_SIZE);
 
   /* Set current_regs to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  set_current_regs(NULL);
+  up_set_current_regs(NULL);
 #endif
   board_autoled_off(LED_INIRQ);
   return regs;

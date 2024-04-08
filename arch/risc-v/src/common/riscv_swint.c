@@ -116,7 +116,7 @@ int riscv_swint(int irq, void *context, void *arg)
 {
   uintptr_t *regs = (uintptr_t *)context;
 
-  DEBUGASSERT(regs && regs == get_current_regs());
+  DEBUGASSERT(regs && regs == up_current_regs());
 
   /* Software interrupt 0 is invoked with REG_A0 (REG_X10) = system call
    * command and REG_A1-6 = variable number of
@@ -467,7 +467,7 @@ int riscv_swint(int irq, void *context, void *arg)
 
           /* Verify that the SYS call number is within range */
 
-          DEBUGASSERT(get_current_regs()[REG_A0] < SYS_maxsyscall);
+          DEBUGASSERT(up_current_regs()[REG_A0] < SYS_maxsyscall);
 
           /* Make sure that we got here that there is a no saved syscall
            * return address.  We cannot yet handle nested system calls.
@@ -522,10 +522,10 @@ int riscv_swint(int irq, void *context, void *arg)
    */
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
-  if (regs != get_current_regs())
+  if (regs != up_current_regs())
     {
       svcinfo("SWInt Return: Context switch!\n");
-      up_dump_register(get_current_regs());
+      up_dump_register(up_current_regs());
     }
   else
     {

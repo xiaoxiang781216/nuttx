@@ -144,10 +144,10 @@ void up_initialize(void)
 
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
-      get_current_regs()[i] = NULL;
+      up_current_regs()[i] = NULL;
     }
 #else
-  set_current_regs(NULL);
+  up_set_current_regs(NULL);
 #endif
 
   /* Colorize the interrupt stack */

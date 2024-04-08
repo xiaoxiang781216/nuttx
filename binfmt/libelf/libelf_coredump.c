@@ -267,7 +267,7 @@ static void elf_emit_tcb_note(FAR struct elf_dumpinfo_s *cinfo,
     {
       if (up_interrupt_context())
         {
-          regs = (FAR uintptr_t *)get_current_regs();
+          regs = (FAR uintptr_t *)up_current_regs();
         }
       else
         {

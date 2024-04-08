@@ -124,7 +124,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signaling itself for some reason.
            */
 
-          if (!get_current_regs())
+          if (!up_current_regs())
             {
               /* In this case just deliver the signal now.
                * REVISIT:  Signal handler will run in a critical section!
@@ -155,13 +155,13 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
               /* create signal process context */
 
-              tcb->xcp.saved_reg = get_current_regs();
+              tcb->xcp.saved_reg = up_current_regs();
               arm64_init_signal_process(tcb,
-              (struct regs_context *)get_current_regs());
+              (struct regs_context *)up_current_regs());
 
               /* trigger switch to signal process */
 
-              set_current_regs(tcb->xcp.regs);
+              up_set_current_regs(tcb->xcp.regs);
             }
         }
 
@@ -205,7 +205,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        */
 
       sinfo("rtcb=%p current_regs=%p\n", this_task_irq(),
-            get_current_regs());
+            up_current_regs());
 
       if (tcb->task_state == TSTATE_TASK_RUNNING)
         {
@@ -216,7 +216,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signaling itself for some reason.
            */
 
-          if (cpu == me && !get_current_regs())
+          if (cpu == me && !up_current_regs())
             {
               /* In this case just deliver the signal now.
                * REVISIT:  Signal handler will run in a critical section!
@@ -276,13 +276,13 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
                   /* create signal process context */
 
-                  tcb->xcp.saved_reg = get_current_regs();
+                  tcb->xcp.saved_reg = up_current_regs();
                   arm64_init_signal_process(tcb,
-                  (struct regs_context *)get_current_regs());
+                  (struct regs_context *)up_current_regs());
 
                   /* trigger switch to signal process */
 
-                  set_current_regs(tcb->xcp.regs);
+                  up_set_current_regs(tcb->xcp.regs);
                 }
 
               /* NOTE: If the task runs on another CPU(cpu), adjusting

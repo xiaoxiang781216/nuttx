@@ -87,11 +87,11 @@ uint32_t *pic32mz_decodeirq(uint32_t *regs)
    */
 
 #ifdef CONFIG_PIC32MZ_NESTED_INTERRUPTS
-  savestate = get_current_regs();
+  savestate = up_current_regs();
 #else
-  DEBUGASSERT(get_current_regs() == NULL);
+  DEBUGASSERT(up_current_regs() == NULL);
 #endif
-  set_current_regs(regs);
+  up_set_current_regs(regs);
 
   /* Loop while there are pending interrupts with priority greater than
    * zero
@@ -130,7 +130,7 @@ uint32_t *pic32mz_decodeirq(uint32_t *regs)
    * switch occurred during interrupt processing.
    */
 
-  regs = get_current_regs();
+  regs = up_current_regs();
 
 #if defined(CONFIG_ARCH_FPU) || defined(CONFIG_ARCH_ADDRENV)
   /* Check for a context switch.  If a context switch occurred, then
@@ -140,12 +140,12 @@ uint32_t *pic32mz_decodeirq(uint32_t *regs)
    * returning from the interrupt.
    */
 
-  if (regs != get_current_regs())
+  if (regs != up_current_regs())
     {
 #ifdef CONFIG_ARCH_FPU
       /* Restore floating point registers */
 
-      up_restorefpu(get_current_regs());
+      up_restorefpu(up_current_regs());
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
@@ -170,13 +170,13 @@ uint32_t *pic32mz_decodeirq(uint32_t *regs)
    * of fixing nested context switching.  The logic here is insufficient.
    */
 
-  set_current_regs(savestate);
-  if (get_current_regs() == NULL)
+  up_set_current_regs(savestate);
+  if (up_current_regs() == NULL)
     {
       board_autoled_off(LED_INIRQ);
     }
 #else
-  set_current_regs(NULL);
+  up_set_current_regs(NULL);
   board_autoled_off(LED_INIRQ);
 #endif
 

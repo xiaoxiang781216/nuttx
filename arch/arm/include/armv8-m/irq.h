@@ -543,12 +543,12 @@ int up_cpu_index(void) noinstrument_function;
 #  define up_cpu_index() 0
 #endif /* CONFIG_SMP */
 
-static inline_function uint32_t *get_current_regs(void)
+static inline_function uint32_t *up_current_regs(void)
 {
   return (uint32_t *)g_current_regs[up_cpu_index()];
 }
 
-static inline_function void set_current_regs(uint32_t *regs)
+static inline_function void up_set_current_regs(uint32_t *regs)
 {
   g_current_regs[up_cpu_index()] = regs;
 }

@@ -46,7 +46,7 @@
 /* Initialize the IRQ state */
 
 #define INIT_IRQCONTEXT() \
-  set_current_regs(NULL)
+  up_set_current_regs(NULL)
 
 /* IN_INTERRUPT returns true if the system is currently operating
  * in the interrupt context.  IN_INTERRUPT is the inline equivalent
@@ -54,7 +54,7 @@
  */
 
 #define IN_INTERRUPT() \
-  (get_current_regs() != NULL)
+  (up_current_regs() != NULL)
 
 /* The following macro declares the variables need by IRQ_ENTER
  * and IRQ_LEAVE.  These variables are used to support nested interrupts.
@@ -83,7 +83,7 @@
 #define IRQ_ENTER(irq, regs) \
   do \
     { \
-      savestate = get_current_regs(); \
+      savestate = up_current_regs(); \
       savecbr = current_cbr; \
       set_current_resg(regs) \
       current_cbr = inp(Z180_MMU_CBR); \
@@ -100,8 +100,8 @@
 #define IRQ_LEAVE(irq) \
   do \
     { \
-      set_current_regs(savestate); \
-      if (get_current_regs()) \
+      up_set_current_regs(savestate); \
+      if (up_current_regs()) \
         { \
           current_cbr = savecbr; \
         } \
@@ -117,12 +117,12 @@
  */
 
 #define IRQ_STATE() \
-  get_current_regs()
+  up_current_regs()
 
 /* Save the current IRQ context in the specified TCB */
 
 #define SAVE_IRQCONTEXT(tcb) \
-  z180_copystate((tcb)->xcp.regs, get_current_regs())
+  z180_copystate((tcb)->xcp.regs, up_current_regs())
 
 /* Set the current IRQ context to the state specified in the TCB */
 
@@ -133,7 +133,7 @@
         { \
           current_cbr = (tcb)->xcp.cbr->cbr; \
         } \
-      z180_copystate(get_current_regs(), (tcb)->xcp.regs); \
+      z180_copystate(up_current_regs(), (tcb)->xcp.regs); \
     } \
   while (0)
 
@@ -215,12 +215,12 @@ void z180_sigsetup(FAR struct tcb_s *tcb, sig_deliver_t sigdeliver,
  * Inline Functions
  ****************************************************************************/
 
-static inline_function chipreg_t *get_current_regs(void)
+static inline_function chipreg_t *up_current_regs(void)
 {
   return (FAR chipreg_t *)g_current_regs;
 }
 
-static inline_function void set_current_regs(FAR chipreg_t *regs)
+static inline_function void up_set_current_regs(FAR chipreg_t *regs)
 {
   g_current_regs = regs;
 }

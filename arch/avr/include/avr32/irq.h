@@ -233,7 +233,7 @@ static inline irqstate_t up_irq_enable(void)
  ****************************************************************************/
 
 #define up_getusrpc(regs) \
-    (((uint32_t *)((regs) ? (regs) : get_current_regs()))[REG_PC])
+    (((uint32_t *)((regs) ? (regs) : up_current_regs()))[REG_PC])
 
 #ifndef __ASSEMBLY__
 #ifdef __cplusplus

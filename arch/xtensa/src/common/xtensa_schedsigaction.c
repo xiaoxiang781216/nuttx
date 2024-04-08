@@ -91,7 +91,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
       tcb->xcp.sigdeliver = sigdeliver;
 
       sinfo("rtcb=%p current_regs=%p\n", this_task_irq(),
-            get_current_regs());
+            up_current_regs());
 
       /* First, handle some special cases when the signal is being delivered
        * to the currently executing task.
@@ -103,7 +103,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signaling itself for some reason.
            */
 
-          if (!get_current_regs())
+          if (!up_current_regs())
             {
               /* In this case just deliver the signal now.
                * REVISIT:  Signal handler will run in a critical section!
@@ -140,29 +140,29 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * been delivered.
                */
 
-              set_current_regs(get_current_regs() - XCPTCONTEXT_REGS);
+              up_set_current_regs(up_current_regs() - XCPTCONTEXT_REGS);
 
-              memcpy(get_current_regs(), tcb->xcp.saved_regs,
+              memcpy(up_current_regs(), tcb->xcp.saved_regs,
                      XCPTCONTEXT_SIZE);
 
               /* Then set up to vector to the trampoline with interrupts
                * disabled
                */
 
-              get_current_regs()[REG_PC] = (uint32_t)xtensa_sig_deliver;
+              up_current_regs()[REG_PC] = (uint32_t)xtensa_sig_deliver;
 #ifdef __XTENSA_CALL0_ABI__
-              get_current_regs()[REG_PS] = (uint32_t)
+              up_current_regs()[REG_PS] = (uint32_t)
                   (PS_INTLEVEL(XCHAL_EXCM_LEVEL) | PS_UM);
 #else
-              get_current_regs()[REG_PS] = (uint32_t)
+              up_current_regs()[REG_PS] = (uint32_t)
                   (PS_INTLEVEL(XCHAL_EXCM_LEVEL) | PS_UM |
                    PS_WOE | PS_CALLINC(1));
 #endif
 #ifndef CONFIG_BUILD_FLAT
-              xtensa_raiseprivilege(get_current_regs());
+              xtensa_raiseprivilege(up_current_regs());
 #endif
 
-              get_current_regs()[REG_A1] = (uint32_t)(get_current_regs() +
+              up_current_regs()[REG_A1] = (uint32_t)(up_current_regs() +
                                                       XCPTCONTEXT_REGS);
             }
         }
@@ -233,7 +233,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        */
 
       sinfo("rtcb=%p current_regs=%p\n", this_task_irq(),
-            get_current_regs());
+            up_current_regs());
 
       if (tcb->task_state == TSTATE_TASK_RUNNING)
         {
@@ -244,7 +244,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signaling itself for some reason.
            */
 
-          if (cpu == me && !get_current_regs())
+          if (cpu == me && !up_current_regs())
             {
               /* In this case just deliver the signal now.
                * REVISIT:  Signal handler will run in a critical section!
@@ -365,28 +365,28 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    * been delivered.
                    */
 
-                  set_current_regs(get_current_regs() - XCPTCONTEXT_REGS);
-                  memcpy(get_current_regs(), tcb->xcp.saved_regs,
+                  up_set_current_regs(up_current_regs() - XCPTCONTEXT_REGS);
+                  memcpy(up_current_regs(), tcb->xcp.saved_regs,
                          XCPTCONTEXT_SIZE);
 
-                  get_current_regs()[REG_A1] = (uint32_t)(get_current_regs()
+                  up_current_regs()[REG_A1] = (uint32_t)(up_current_regs()
                                                          + XCPTCONTEXT_REGS);
 
                   /* Then set up to vector to the trampoline with interrupts
                    * disabled
                    */
 
-                  get_current_regs()[REG_PC] = (uint32_t)xtensa_sig_deliver;
+                  up_current_regs()[REG_PC] = (uint32_t)xtensa_sig_deliver;
 #ifdef __XTENSA_CALL0_ABI__
-                  get_current_regs()[REG_PS] = (uint32_t)
+                  up_current_regs()[REG_PS] = (uint32_t)
                       (PS_INTLEVEL(XCHAL_EXCM_LEVEL) | PS_UM);
 #else
-                  get_current_regs()[REG_PS] = (uint32_t)
+                  up_current_regs()[REG_PS] = (uint32_t)
                       (PS_INTLEVEL(XCHAL_EXCM_LEVEL) | PS_UM |
                        PS_WOE | PS_CALLINC(1));
 #endif
 #ifndef CONFIG_BUILD_FLAT
-                  xtensa_raiseprivilege(get_current_regs());
+                  xtensa_raiseprivilege(up_current_regs());
 #endif
                 }
 

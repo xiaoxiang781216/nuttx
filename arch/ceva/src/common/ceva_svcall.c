@@ -52,7 +52,7 @@ int ceva_svcall(int irq, void *context, void *arg)
   uint32_t *regs = (uint32_t *)context;
   uint32_t cmd;
 
-  DEBUGASSERT(regs && regs == get_current_regs());
+  DEBUGASSERT(regs && regs == up_current_regs());
   cmd = regs[REG_A0];
 
   /* The SVCall software interrupt is called with A0 = system call command
@@ -121,7 +121,7 @@ int ceva_svcall(int irq, void *context, void *arg)
       case SYS_restore_context:
         {
           DEBUGASSERT(regs[REG_A1] != 0);
-          set_current_regs((uint32_t *)regs[REG_A1]);
+          up_set_current_regs((uint32_t *)regs[REG_A1]);
         }
         break;
 
@@ -146,7 +146,7 @@ int ceva_svcall(int irq, void *context, void *arg)
         {
           DEBUGASSERT(regs[REG_A1] != 0 && regs[REG_A2] != 0);
           *(uint32_t **)regs[REG_A1] = regs;
-          set_current_regs((uint32_t *)regs[REG_A2]);
+          up_set_current_regs((uint32_t *)regs[REG_A2]);
         }
         break;
 
@@ -384,20 +384,20 @@ int ceva_svcall(int irq, void *context, void *arg)
 #  ifndef CONFIG_DEBUG_SVCALL
   if (cmd > SYS_switch_context)
 #  else
-  if (regs != get_current_regs())
+  if (regs != up_current_regs())
 #  endif
     {
       svcinfo("SVCall Return:\n");
       svcinfo("A0: %08x %08x %08x %08x %08x %08x %08x\n",
-              get_current_regs()[REG_A0], get_current_regs()[REG_A1],
-              get_current_regs()[REG_A2], get_current_regs()[REG_A3],
-              get_current_regs()[REG_A4], get_current_regs()[REG_A5],
-              get_current_regs()[REG_A6]);
+              up_current_regs()[REG_A0], up_current_regs()[REG_A1],
+              up_current_regs()[REG_A2], up_current_regs()[REG_A3],
+              up_current_regs()[REG_A4], up_current_regs()[REG_A5],
+              up_current_regs()[REG_A6]);
       svcinfo("FP: %08x LR: %08x PC: %08x IRQ: %08x OM: %08x\n",
-              get_current_regs()[REG_FP], get_current_regs()[REG_LR],
-              get_current_regs()[REG_PC], get_current_regs()[REG_IRQ],
+              up_current_regs()[REG_FP], up_current_regs()[REG_LR],
+              up_current_regs()[REG_PC], up_current_regs()[REG_IRQ],
 # ifdef REG_OM
-              get_current_regs()[REG_OM]
+              up_current_regs()[REG_OM]
 #else
               0x00000000
 #endif

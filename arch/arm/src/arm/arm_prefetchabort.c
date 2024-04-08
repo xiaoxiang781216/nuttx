@@ -72,9 +72,9 @@ void arm_prefetchabort(uint32_t *regs)
    * accessed for register dumps and possibly context switching.
    */
 
-  savestate = get_current_regs();
+  savestate = up_current_regs();
 #endif
-  set_current_regs(regs);
+  up_set_current_regs(regs);
 
 #ifdef CONFIG_PAGING
   /* Get the (virtual) address of instruction that caused the prefetch
@@ -119,7 +119,7 @@ void arm_prefetchabort(uint32_t *regs)
        * if we are returning from a nested interrupt.
        */
 
-      set_current_regs(savestate);
+      up_set_current_regs(savestate);
     }
   else
 #endif

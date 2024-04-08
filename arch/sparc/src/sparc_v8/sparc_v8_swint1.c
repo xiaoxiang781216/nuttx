@@ -73,7 +73,7 @@ int sparc_swint1(int irq, void *context, void *arg)
 {
   uint32_t *regs = (uint32_t *)context;
 
-  DEBUGASSERT(regs && regs == get_current_regs());
+  DEBUGASSERT(regs && regs == up_current_regs());
 
   /* Software interrupt 0 is invoked with REG_A0 (REG_R4) = system call
    * command and REG_A1-3 and REG_T0-2 (REG_R5-10) = variable number of
@@ -129,7 +129,7 @@ int sparc_swint1(int irq, void *context, void *arg)
       case SYS_restore_context:
         {
           DEBUGASSERT(regs[REG_I1] != 0);
-          set_current_regs((uint32_t *)regs[REG_I1]);
+          up_set_current_regs((uint32_t *)regs[REG_I1]);
         }
         break;
 
@@ -157,7 +157,7 @@ int sparc_swint1(int irq, void *context, void *arg)
 
           /* task_flush_trap(regs,(uint32_t *)regs[REG_I2]); */
 
-          set_current_regs((uint32_t *)regs[REG_I2]);
+          up_set_current_regs((uint32_t *)regs[REG_I2]);
         }
         break;
 
@@ -187,7 +187,7 @@ int sparc_swint1(int irq, void *context, void *arg)
            * the original mode.
            */
 
-          get_current_regs()[REG_I7] = rtcb->xcp.syscall[index].sysreturn;
+          up_current_regs()[REG_I7] = rtcb->xcp.syscall[index].sysreturn;
 #error "Missing logic -- need to restore the original mode"
           rtcb->xcp.nsyscalls   = index;
         }
@@ -202,7 +202,7 @@ int sparc_swint1(int irq, void *context, void *arg)
 
           /* Verify that the SYS call number is within range */
 
-          DEBUGASSERT(get_current_regs()[REG_I1] < SYS_maxsyscall);
+          DEBUGASSERT(up_current_regs()[REG_I1] < SYS_maxsyscall);
 
           /* Make sure that we got here that there is a no saved syscall
            * return address.  We cannot yet handle nested system calls.
@@ -221,7 +221,7 @@ int sparc_swint1(int irq, void *context, void *arg)
 
           /* Offset R0 to account for the reserved values */
 
-          /* get_current_regs()[REG_R0] -= CONFIG_SYS_RESERVED; *//*zouboan*/
+          /* up_current_regs()[REG_R0] -= CONFIG_SYS_RESERVED; *//*zouboan*/
 #else
           svcerr("ERROR: Bad SYS call: %d\n", regs[REG_I1]);
 #endif
@@ -234,10 +234,10 @@ int sparc_swint1(int irq, void *context, void *arg)
    */
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
-  if (regs != get_current_regs())
+  if (regs != up_current_regs())
     {
       svcinfo("SWInt Return: Context switch!\n");
-      up_dump_register(get_current_regs());
+      up_dump_register(up_current_regs());
     }
   else
     {

@@ -93,7 +93,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        */
 
       sinfo("rtcb=%p current_regs=%p\n", this_task_irq(),
-            get_current_regs());
+            up_current_regs());
 
       if (tcb == this_task_irq())
         {
@@ -101,7 +101,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * a task is signalling itself for some reason.
            */
 
-          if (!get_current_regs())
+          if (!up_current_regs())
             {
               /* In this case just deliver the signal now. */
 
@@ -128,17 +128,17 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * trampoline after the signal(s) have been delivered.
                */
 
-              tcb->xcp.saved_pc     = get_current_regs()[REG_PC];
-              tcb->xcp.saved_npc    = get_current_regs()[REG_NPC];
-              tcb->xcp.saved_status = get_current_regs()[REG_PSR];
+              tcb->xcp.saved_pc     = up_current_regs()[REG_PC];
+              tcb->xcp.saved_npc    = up_current_regs()[REG_NPC];
+              tcb->xcp.saved_status = up_current_regs()[REG_PSR];
 
               /* Then set up to vector to the trampoline with interrupts
                * disabled
                */
 
-              get_current_regs()[REG_PC]  = (uint32_t)sparc_sigdeliver;
-              get_current_regs()[REG_NPC] = (uint32_t)sparc_sigdeliver + 4;
-              get_current_regs()[REG_PSR] |= SPARC_PSR_ET_MASK;
+              up_current_regs()[REG_PC]  = (uint32_t)sparc_sigdeliver;
+              up_current_regs()[REG_NPC] = (uint32_t)sparc_sigdeliver + 4;
+              up_current_regs()[REG_PSR] |= SPARC_PSR_ET_MASK;
 
               /* And make sure that the saved context in the TCB
                * is the same as the interrupt return context.
@@ -203,7 +203,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        */
 
       sinfo("rtcb=0x%p current_regs=0x%p\n",
-            this_task_irq(), get_current_regs());
+            this_task_irq(), up_current_regs());
 
       if (tcb->task_state == TSTATE_TASK_RUNNING)
         {
@@ -214,7 +214,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * signaling itself for some reason.
            */
 
-          if (cpu == me && !get_current_regs())
+          if (cpu == me && !up_current_regs())
             {
               /* In this case just deliver the signal now.
                * REVISIT:  Signal handler will run in a critical section!
@@ -279,19 +279,19 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    * trampoline after the signal(s) have been delivered.
                    */
 
-                  tcb->xcp.saved_pc     = get_current_regs()[REG_PC];
-                  tcb->xcp.saved_npc    = get_current_regs()[REG_NPC];
-                  tcb->xcp.saved_status = get_current_regs()[REG_PSR];
+                  tcb->xcp.saved_pc     = up_current_regs()[REG_PC];
+                  tcb->xcp.saved_npc    = up_current_regs()[REG_NPC];
+                  tcb->xcp.saved_status = up_current_regs()[REG_PSR];
 
                   /* Then set up vector to the trampoline with interrupts
                    * disabled.  The kernel-space trampoline must run in
                    * privileged thread mode.
                    */
 
-                  get_current_regs()[REG_PC]  = (uint32_t)sparc_sigdeliver;
-                  get_current_regs()[REG_NPC] = (uint32_t)sparc_sigdeliver
+                  up_current_regs()[REG_PC]  = (uint32_t)sparc_sigdeliver;
+                  up_current_regs()[REG_NPC] = (uint32_t)sparc_sigdeliver
                                                 + 4;
-                  get_current_regs()[REG_PSR] |= SPARC_PSR_ET_MASK;
+                  up_current_regs()[REG_PSR] |= SPARC_PSR_ET_MASK;
 
                   /* And make sure that the saved context in the TCB is the
                    * same as the interrupt return context.
@@ -328,9 +328,9 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * trampoline after the signal(s) have been delivered.
            */
 
-          tcb->xcp.saved_pc     = get_current_regs()[REG_PC];
-          tcb->xcp.saved_npc    = get_current_regs()[REG_NPC];
-          tcb->xcp.saved_status = get_current_regs()[REG_PSR];
+          tcb->xcp.saved_pc     = up_current_regs()[REG_PC];
+          tcb->xcp.saved_npc    = up_current_regs()[REG_NPC];
+          tcb->xcp.saved_status = up_current_regs()[REG_PSR];
 
           /* Then set up to vector to the trampoline with interrupts
            * disabled.  We must already be in privileged thread mode to be
