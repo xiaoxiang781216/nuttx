@@ -28,6 +28,7 @@
 
 #include <nuttx/addrenv.h>
 
+#include "sched/sched.h"
 #include "riscv_internal.h"
 
 /****************************************************************************
