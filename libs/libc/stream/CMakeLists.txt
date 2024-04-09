@@ -39,6 +39,7 @@ list(
   lib_syslograwstream.c
   lib_bufferedoutstream.c
   lib_hexdumpstream.c
+  lib_base64outstream.c
   lib_fileoutstream.c)
 
 if(CONFIG_FILE_STREAM)
