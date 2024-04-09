@@ -1330,6 +1330,18 @@ config SCHED_GPROF_ALL
 		You can add the '-pg' parameter to the specified module in the
 		makefile to only analyze the content of the module.
 
+config SCHED_GCOV
+	bool "Enable GCOV support"
+	select HAVE_CXXINITIALIZE
+	default n
+	---help---
+		Enable GCOV support for code coverage analysis.
+		After turning on this option, code coverage can be analyzed.
+		If this option is enabled, image size and performance will be
+		significantly reduced. Before use, you need to add the
+		"-fprofile-generate -ftest-coverage" compilation parameters
+		to the file to be analyzed.
+
 endmenu
 
 menu "Files and I/O"
