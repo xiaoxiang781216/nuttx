@@ -23,7 +23,7 @@ Getting Started
 1. Configuring and running
   1.1 Single Core
    Configuring NuttX and compile:
-   $ ./tools/configure.sh -l mps-an547:nsh
+   $ ./tools/configure.sh -l mps3-an547:nsh
    $ make
    Running with qemu
    $ qemu-system-arm -M mps3-an547 -nographic -kernel nuttx.bin
