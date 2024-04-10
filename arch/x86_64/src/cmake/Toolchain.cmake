@@ -81,6 +81,19 @@ add_link_options(-Wl,--no-relax)
 add_compile_options(-fPIC)
 add_compile_options(-mno-red-zone)
 
+# Libcxx flags
+
+add_compile_options(
+  -U_AIX
+  -U_WIN32
+  -U__APPLE__
+  -U__FreeBSD__
+  -U__NetBSD__
+  -U__linux__
+  -U__sun__
+  -U__unix__
+  -U__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
+
 if(CONFIG_DEBUG_LINK_MAP)
   add_link_options(-Wl,--cref -Wl,-Map=nuttx.map)
 endif()
@@ -94,6 +107,11 @@ set(ARCHCXXFLAGS
 
 if(CONFIG_CXX_STANDARD)
   string(APPEND ARCHCXXFLAGS " -std=${CONFIG_CXX_STANDARD}")
+endif()
+
+if(CONFIG_LIBCXX)
+  add_compile_options(-D__GLIBCXX__)
+  add_compile_options(-D_LIBCPP_DISABLE_AVAILABILITY)
 endif()
 
 if(CONFIG_STACK_CANARIES)
