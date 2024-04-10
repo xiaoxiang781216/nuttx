@@ -1400,6 +1400,7 @@ static int rpmsg_socket_shutdown(FAR struct socket *psock, int how)
 {
   FAR struct rpmsg_socket_conn_s *conn = psock->s_conn;
   struct rpmsg_socket_shutdown_s msg;
+  int ret;
 
   if (!conn->ept.rdev || conn->unbind)
     {
@@ -1411,7 +1412,11 @@ static int rpmsg_socket_shutdown(FAR struct socket *psock, int how)
   msg.cmd = RPMSG_SOCKET_CMD_SHUTDOWN;
   msg.how = how;
 
-  return rpmsg_send(&conn->ept, &msg, sizeof(msg));
+  ret = rpmsg_send(&conn->ept, &msg, sizeof(msg));
+  if (ret < 0)
+      return ret;
+
+  return OK;
 }
 
 #ifdef CONFIG_NET_SOCKOPTS
