@@ -20,6 +20,7 @@
 
 #include <nuttx/config.h>
 
+#include <arch/irq.h>
 #include "arm64_arch.h"
 #include "arm64_macro.inc"
 

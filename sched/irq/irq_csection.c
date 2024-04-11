@@ -364,6 +364,27 @@ try_again:
     }
   else
     {
+      /* CHECK IRQ
+       *
+       * After the OS starts, in the thread context,
+       * we must ensure that the interrupt is not masked
+       * when first enters the critical section.
+       * Otherwise, at this time when another CPU issues a pause
+       * interrupt to the current CPU, it can lead to a deadlock.
+       *
+       * During the vela os startup phase, interrupts are masked until
+       * the interrupt initialization function (irq_initialize) is called.
+       * Before invoking the interrupt initialization function,
+       * umm_initialize will call enter_critical_section,
+       * during which time interrupts are masked.
+       * Therefore, we need to use OSINIT_IDLELOOP
+       * as a condition for judgment at this point.
+       */
+
+#ifdef up_irq_is_disabled
+      DEBUGASSERT(!OSINIT_IDLELOOP() || !up_irq_is_disabled(ret));
+#endif
+
       /* If we get here with irqcount == 0, then we know that the
        * current task running on this CPU is not in a critical
        * section.  However other tasks on other CPUs may be in a

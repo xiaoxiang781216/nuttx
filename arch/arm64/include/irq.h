@@ -39,6 +39,7 @@
 /* Include NuttX-specific IRQ definitions */
 
 #include <nuttx/irq.h>
+#include <nuttx/bits.h>
 
 /* Include chip-specific IRQ definitions (including IRQ numbers) */
 
@@ -219,6 +220,29 @@
 
 #define XCPTCONTEXT_REGS    (XCPTCONTEXT_GP_REGS + XCPTCONTEXT_FPU_REGS)
 #define XCPTCONTEXT_SIZE    (8 * XCPTCONTEXT_REGS)
+
+#define DAIFSET_FIQ_BIT     BIT(0)
+#define DAIFSET_IRQ_BIT     BIT(1)
+#define DAIFSET_ABT_BIT     BIT(2)
+#define DAIFSET_DBG_BIT     BIT(3)
+
+#define DAIFCLR_FIQ_BIT     BIT(0)
+#define DAIFCLR_IRQ_BIT     BIT(1)
+#define DAIFCLR_ABT_BIT     BIT(2)
+#define DAIFCLR_DBG_BIT     BIT(3)
+
+#define DAIF_FIQ_BIT        BIT(6)
+#define DAIF_IRQ_BIT        BIT(7)
+#define DAIF_ABT_BIT        BIT(8)
+#define DAIF_DBG_BIT        BIT(9)
+
+#define DAIF_MASK           (0xf << 6)
+
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+#  define up_irq_is_disabled(flags) (((flags) & DAIF_FIQ_BIT) != 0)
+#else
+#  define up_irq_is_disabled(flags) (((flags) & DAIF_IRQ_BIT) != 0)
+#endif
 
 #ifndef __ASSEMBLY__
 
