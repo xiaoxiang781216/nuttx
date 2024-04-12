@@ -2990,16 +2990,6 @@ static int mmcsd_mmcinitialize(FAR struct mmcsd_state_s *priv)
 
   mmcsd_decode_csd(priv, priv->csd);
 
-  /* It's up to the driver to act on the widebus request.  mmcsd_widebus()
-   * enables the CLOCK_MMC_TRANSFER, so call it here always.
-   */
-
-  ret = mmcsd_widebus(priv);
-  if (ret != OK)
-    {
-      ferr("ERROR: Failed to set wide bus operation: %d\n", ret);
-    }
-
   return OK;
 }
 
@@ -3711,22 +3701,6 @@ static int mmcsd_sdinitialize(FAR struct mmcsd_state_s *priv)
 
   mmcsd_decode_scr(priv, scr);
 
-  if ((priv->caps & SDIO_CAPS_4BIT_ONLY) != 0)
-    {
-      /* Select width (4-bit) bus operation (if the card supports it) */
-
-      ret = mmcsd_widebus(priv);
-      if (ret != OK)
-        {
-          ferr("ERROR: Failed to set wide bus operation: %d\n", ret);
-        }
-    }
-
-  /* TODO: If wide-bus selected, then send CMD6 to see if the card supports
-   * high speed mode.  A new SDIO method will be needed to set high speed
-   * mode.
-   */
-
   return OK;
 }
 
@@ -4294,7 +4268,6 @@ static int mmcsd_removed(FAR struct mmcsd_state_s *priv)
   priv->buswidth     = MMCSD_SCR_BUSWIDTH_1BIT;
   SDIO_WIDEBUS(priv->dev, false);
   priv->widebus      = false;
-  mmcsd_widebus(priv);
 
   /* Disable clocking to the card */
 
