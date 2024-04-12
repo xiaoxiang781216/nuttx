@@ -194,8 +194,8 @@ endfunction()
 #
 # Add extra library to extra attribute
 #
-function(nuttx_add_extra_library target)
-  set_property(GLOBAL APPEND PROPERTY NUTTX_EXTRA_LIBRARIES ${target})
+function(nuttx_add_extra_library)
+  set_property(GLOBAL APPEND PROPERTY NUTTX_EXTRA_LIBRARIES ${ARGN})
 endfunction()
 
 # Import static library
