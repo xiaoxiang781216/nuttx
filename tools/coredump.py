@@ -108,8 +108,8 @@ def main():
         outfile.close()
         os.unlink(tmp)
     else:
-        tmpfile.rename(args.output)
         tmpfile.close()
+        os.rename(tmp, args.output)
 
     print("Core file conversion completed: " + args.output)
 
