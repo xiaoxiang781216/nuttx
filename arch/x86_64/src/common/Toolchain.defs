@@ -128,7 +128,7 @@ endif
 
 EXEEXT = .elf
 
-LDFLAGS += -nostdlib
+LDFLAGS += -nostdlib -static
 
 ifeq ($(CONFIG_ARCH_X86_64_SSE3),y)
   ARCHCPUFLAGS += -msse3
