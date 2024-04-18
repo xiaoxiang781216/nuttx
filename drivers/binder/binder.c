@@ -106,13 +106,13 @@ static int binder_set_ctx_mgr(FAR struct binder_proc * proc,
       goto out;
     }
 
-  nxmutex_lock(&new_node->node_lock);
+  binder_node_lock(new_node);
   new_node->local_weak_refs++;
   new_node->local_strong_refs++;
   new_node->has_strong_ref  = 1;
   new_node->has_weak_ref    = 1;
   context->mgr_node         = new_node;
-  nxmutex_unlock(&new_node->node_lock);
+  binder_node_unlock(new_node);
   binder_put_node(new_node);
 out:
   nxmutex_unlock(&context->context_lock);
@@ -149,13 +149,14 @@ static int binder_write_read(FAR struct binder_proc *proc,
                                bwr->read_size, &bwr->read_consumed,
                                oflag & O_NONBLOCK);
 
-      nxmutex_lock(&proc->proc_lock);
+      binder_inner_proc_lock(proc);
+
       if (!list_is_empty(&proc->todo_list))
         {
           binder_wakeup_proc_ilocked(proc);
         }
 
-      nxmutex_unlock(&proc->proc_lock);
+      binder_inner_proc_unlock(proc);
 
       if (ret < 0)
         {
@@ -225,7 +226,7 @@ static int binder_flush(FAR struct file *filp)
   FAR struct binder_thread  *thread_itr;
   int wake_count = 0;
 
-  nxmutex_lock(&proc->proc_lock);
+  binder_inner_proc_lock(proc);
 
   list_for_every_entry_safe(&proc->threads, thread, thread_itr,
                             struct binder_thread, thread_node)
@@ -238,7 +239,7 @@ static int binder_flush(FAR struct file *filp)
     }
   }
 
-  nxmutex_unlock(&proc->proc_lock);
+  binder_inner_proc_unlock(proc);
 
   binder_debug(BINDER_DEBUG_OPEN_CLOSE,
          "binder_flush: %d woke up %d threads\n", proc->pid,
@@ -289,10 +290,10 @@ static int binder_ioctl(FAR struct file *filp, int cmd, unsigned long arg)
     {
       FAR int *p_int;
       p_int = (int *)arg;
-      nxmutex_lock(&proc->proc_lock);
+      binder_inner_proc_lock(proc);
       proc->max_threads = MIN(*p_int, CONFIG_DRIVERS_BINDER_MAX_THREADS);
       ret               = 0;
-      nxmutex_unlock(&proc->proc_lock);
+      binder_inner_proc_unlock(proc);
       break;
     }
 
@@ -454,10 +455,10 @@ static int binder_poll(FAR struct file *filp,
       binder_debug(BINDER_DEBUG_SCHED, "%d:%d poll setup\n",
                    proc->pid, thread->tid);
 
-      nxmutex_lock(&thread->proc->proc_lock);
+      binder_inner_proc_lock(thread->proc);
       thread->looper        |= BINDER_LOOPER_STATE_POLL;
       wait_for_proc_work    = binder_available_for_proc_work_ilocked(thread);
-      nxmutex_unlock(&thread->proc->proc_lock);
+      binder_inner_proc_unlock(thread->proc);
 
       if (binder_has_work(thread, wait_for_proc_work))
         {
@@ -491,7 +492,8 @@ static int binder_open(FAR struct file *filep)
       return -ENOMEM;
     }
 
-  nxmutex_init(&proc->proc_lock);
+  nxmutex_init(&proc->inner_lock);
+  nxmutex_init(&proc->outer_lock);
   proc->pid = getpid();
   list_initialize(&proc->threads);
   list_initialize(&proc->nodes);
@@ -560,7 +562,7 @@ static int binder_close(FAR struct file *filep)
 
   nxmutex_unlock(&context->context_lock);
 
-  nxmutex_lock(&proc->proc_lock);
+  binder_inner_proc_lock(proc);
 
   /* Make sure proc stays alive after we
    * remove all the threads
@@ -578,10 +580,10 @@ static int binder_close(FAR struct file *filep)
   list_for_every_entry_safe(&proc->threads, thread, thread_itr,
                             struct binder_thread, thread_node)
   {
-    nxmutex_unlock(&proc->proc_lock);
+    binder_inner_proc_unlock(proc);
     threads++;
     active_transactions += binder_thread_release(proc, thread);
-    nxmutex_lock(&proc->proc_lock);
+    binder_inner_proc_lock(proc);
   }
 
   nodes         = 0;
@@ -594,26 +596,26 @@ static int binder_close(FAR struct file *filep)
 
     binder_inc_node_tmpref_ilocked(node);
     list_delete_init(&node->rb_node);
-    nxmutex_unlock(&proc->proc_lock);
+    binder_inner_proc_unlock(proc);
     incoming_refs = binder_node_release(node, incoming_refs);
-    nxmutex_lock(&proc->proc_lock);
+    binder_inner_proc_lock(proc);
   }
 
-  nxmutex_unlock(&proc->proc_lock);
+  binder_inner_proc_unlock(proc);
 
   outgoing_refs = 0;
-  nxmutex_lock(&proc->proc_lock);
+  binder_proc_lock(proc);
   list_for_every_entry_safe(&proc->refs_by_desc, ref, ref_itr,
                             struct binder_ref, rb_node_desc)
   {
     outgoing_refs++;
     binder_cleanup_ref_olocked(ref);
-    nxmutex_unlock(&proc->proc_lock);
+    binder_proc_unlock(proc);
     binder_free_ref(ref);
-    nxmutex_lock(&proc->proc_lock);
+    binder_proc_lock(proc);
   }
 
-  nxmutex_unlock(&proc->proc_lock);
+  binder_proc_unlock(proc);
 
   binder_release_work(proc, &proc->todo_list);
   binder_release_work(proc, &proc->delivered_death);
@@ -694,3 +696,190 @@ int binder_initialize(void)
 
   return ret;
 }
+
+/****************************************************************************
+ * Name: _binder_proc_lock
+ *
+ * Description:
+ *   Acquires proc->outer_lock. Used to protect binder_ref
+ *   structures associated with the given proc.
+ *
+ * Input Parameters:
+ *   proc       - struct binder_proc to acquire
+ *
+ ****************************************************************************/
+
+void _binder_proc_lock(FAR struct binder_proc *proc, int line)
+{
+  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  nxmutex_lock(&proc->outer_lock);
+}
+
+/****************************************************************************
+ * Name: _binder_proc_unlock
+ *
+ * Description:
+ *   Release lock acquired via binder_proc_lock()
+ *
+ * Input Parameters:
+ *   proc       - struct binder_proc to acquire
+ *
+ ****************************************************************************/
+
+void _binder_proc_unlock(FAR struct binder_proc *proc, int line)
+{
+  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  nxmutex_unlock(&proc->outer_lock);
+}
+
+/****************************************************************************
+ * Name: _binder_inner_proc_lock
+ *
+ * Description:
+ *   Acquires proc->inner_lock. Used to protect todo lists
+ *
+ * Input Parameters:
+ *   proc       - struct binder_proc to acquire
+ *
+ ****************************************************************************/
+
+void _binder_inner_proc_lock(FAR struct binder_proc *proc, int line)
+{
+  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  nxmutex_lock(&proc->inner_lock);
+}
+
+/****************************************************************************
+ * Name: _binder_inner_proc_unlock
+ *
+ * Description:
+ *   Release lock acquired via binder_inner_proc_lock()
+ *
+ * Input Parameters:
+ *   proc       - struct binder_proc to acquire
+ *
+ ****************************************************************************/
+
+void _binder_inner_proc_unlock(FAR struct binder_proc *proc, int line)
+{
+  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  nxmutex_unlock(&proc->inner_lock);
+}
+
+/****************************************************************************
+ * Name: _binder_node_lock
+ *
+ * Description:
+ *   Acquires node->lock. Used to protect binder_node fields
+ *
+ * Input Parameters:
+ *   node       - struct binder_node to acquire
+ *
+ ****************************************************************************/
+
+void _binder_node_lock(FAR struct binder_node *node, int line)
+{
+  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  nxmutex_lock(&node->lock);
+}
+
+/****************************************************************************
+ * Name: _binder_node_unlock
+ *
+ * Description:
+ *   Release lock acquired via binder_node_lock()
+ *
+ * Input Parameters:
+ *   node       - struct binder_node to acquire
+ *
+ ****************************************************************************/
+
+void _binder_node_unlock(FAR struct binder_node *node, int line)
+{
+  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  nxmutex_unlock(&node->lock);
+}
+
+/****************************************************************************
+ * Name: _binder_node_inner_lock
+ *
+ * Description:
+ *   Acquires node->lock. If node->proc also acquires
+ *   proc->inner_lock. Used to protect binder_node fields
+ *
+ * Input Parameters:
+ *   node       - struct binder_node to acquire
+ *
+ ****************************************************************************/
+
+void _binder_node_inner_lock(FAR struct binder_node *node, int line)
+{
+  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  nxmutex_lock(&node->lock);
+  if (node->proc)
+    {
+      binder_inner_proc_lock(node->proc);
+    }
+}
+
+/****************************************************************************
+ * Name: _binder_node_inner_unlock
+ *
+ * Description:
+ *   Release lock acquired via binder_node_lock()
+ *
+ * Input Parameters:
+ *   node       - struct binder_node to acquire
+ *
+ ****************************************************************************/
+
+void _binder_node_inner_unlock(FAR struct binder_node *node, int line)
+{
+  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  if (node->proc)
+    {
+      binder_inner_proc_unlock(node->proc);
+    }
+
+  nxmutex_unlock(&node->lock);
+}
+
+/****************************************************************************
+ * Name: _binder_inner_proc_assert_locked
+ *
+ * Description:
+ *   Assert if the proc inner_lock is not in locked state.
+ *
+ * Input Parameters:
+ *   proc       - struct binder_proc to acquire
+ *
+ ****************************************************************************/
+
+void _binder_inner_proc_assert_locked(FAR struct binder_proc *proc, int line)
+{
+  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  BUG_ON(!nxmutex_is_locked(&proc->inner_lock));
+}
+
+/****************************************************************************
+ * Name: _binder_node_inner_assert_locked
+ *
+ * Description:
+ *   Assert if the node lock & proc inner_lock is not in locked state.
+ *
+ * Input Parameters:
+ *   node       - struct binder_node to acquire
+ *
+ ****************************************************************************/
+
+void _binder_node_inner_assert_locked(FAR struct binder_node *node, int line)
+{
+  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  BUG_ON(!nxmutex_is_locked(&node->lock));
+
+  if (node->proc)
+    {
+      BUG_ON(!nxmutex_is_locked(&node->proc->inner_lock));
+    }
+}
+

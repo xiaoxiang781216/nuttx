@@ -125,7 +125,7 @@ static int binder_wait_for_work(FAR struct binder_thread *thread,
 
   nxsem_init(&waitsem, 0, 0);
   init_waitqueue_entry(&wait, (void *)&waitsem, binder_wake_function);
-  nxmutex_lock(&proc->proc_lock);
+  binder_inner_proc_lock(proc);
 
   for (; ; )
     {
@@ -146,9 +146,9 @@ static int binder_wait_for_work(FAR struct binder_thread *thread,
                    proc->pid, thread->tid,
                    do_proc_work? "true":"false");
 
-      nxmutex_unlock(&proc->proc_lock);
+      binder_inner_proc_unlock(proc);
       ret = nxsem_wait(&waitsem);
-      nxmutex_lock(&proc->proc_lock);
+      binder_inner_proc_lock(proc);
       list_delete_init(&thread->waiting_thread_node);
       binder_debug(BINDER_DEBUG_THREADS, "%d:%d finish wait ret=%d\n",
                    proc->pid, thread->tid, ret);
@@ -165,7 +165,7 @@ static int binder_wait_for_work(FAR struct binder_thread *thread,
     }
 
   finish_wait(&wait);
-  nxmutex_unlock(&proc->proc_lock);
+  binder_inner_proc_unlock(proc);
 
   return ret;
 }
@@ -191,21 +191,21 @@ static void binder_free_buf(FAR struct binder_proc *proc,
                             FAR struct binder_buffer *buffer,
                             bool is_failure)
 {
-  nxmutex_lock(&proc->proc_lock);
+  binder_inner_proc_lock(proc);
   if (buffer->transaction)
     {
       buffer->transaction->buffer   = NULL;
       buffer->transaction           = NULL;
     }
 
-  nxmutex_unlock(&proc->proc_lock);
+  binder_inner_proc_unlock(proc);
   if (buffer->async_transaction && buffer->target_node)
     {
       FAR struct binder_node    *buf_node;
       FAR struct binder_work    *w;
 
       buf_node = buffer->target_node;
-      nxmutex_lock(&buf_node->node_lock);
+      binder_node_inner_lock(buf_node);
       BUG_ON(!buf_node->has_async_transaction);
       BUG_ON(buf_node->proc != proc);
       w = binder_dequeue_work_head_ilocked(&buf_node->async_todo);
@@ -218,7 +218,7 @@ static void binder_free_buf(FAR struct binder_proc *proc,
           binder_enqueue_work_ilocked(w, &proc->todo_list);
           binder_wakeup_proc_ilocked(proc);
         }
-      nxmutex_unlock(&buf_node->node_lock);
+      binder_node_inner_unlock(buf_node);
     }
 
   binder_transaction_buffer_release(proc, thread, buffer, 0, is_failure);
@@ -406,9 +406,9 @@ bool binder_has_work(FAR struct binder_thread *thread, bool do_proc_work)
 {
   bool has_work;
 
-  nxmutex_lock(&thread->proc->proc_lock);
+  binder_inner_proc_lock(thread->proc);
   has_work = binder_has_work_ilocked(thread, do_proc_work);
-  nxmutex_unlock(&thread->proc->proc_lock);
+  binder_inner_proc_unlock(thread->proc);
 
   return has_work;
 }
@@ -431,9 +431,9 @@ bool binder_has_work(FAR struct binder_thread *thread, bool do_proc_work)
 void binder_dequeue_work(FAR struct binder_proc *proc,
                          FAR struct binder_work *work)
 {
-  nxmutex_lock(&proc->proc_lock);
+  binder_inner_proc_lock(proc);
   binder_dequeue_work_ilocked(work);
-  nxmutex_unlock(&proc->proc_lock);
+  binder_inner_proc_unlock(proc);
 }
 
 /****************************************************************************
@@ -455,6 +455,8 @@ FAR struct binder_thread *binder_select_thread_ilocked(
   FAR struct binder_proc *proc)
 {
   FAR struct binder_thread *thread;
+
+  binder_inner_proc_assert_locked(proc);
 
   thread = list_first_entry_or_null(&proc->waiting_threads,
                                     struct binder_thread,
@@ -508,6 +510,8 @@ void binder_wakeup_thread_ilocked(FAR struct binder_proc *proc,
                                   FAR struct binder_thread *thread,
                                   bool sync)
 {
+  binder_inner_proc_assert_locked(proc);
+
   binder_debug(BINDER_DEBUG_THREADS, "wake up %d:%d sync:%s\n", proc->pid,
                thread != NULL ? thread->tid : 0, sync ? "true":"false");
   if (thread)
@@ -557,11 +561,9 @@ void binder_wakeup_thread_ilocked(FAR struct binder_proc *proc,
 void binder_enqueue_thread_work(FAR struct binder_thread *thread,
                                 FAR struct binder_work *work)
 {
-  FAR struct binder_proc *proc = thread->proc;
-
-  nxmutex_lock(&proc->proc_lock);
+  binder_inner_proc_lock(thread->proc);
   binder_enqueue_thread_work_ilocked(thread, work);
-  nxmutex_unlock(&proc->proc_lock);
+  binder_inner_proc_unlock(thread->proc);
 }
 
 void binder_wakeup_proc_ilocked(FAR struct binder_proc *proc)
@@ -590,16 +592,16 @@ void binder_wakeup_proc_ilocked(FAR struct binder_proc *proc)
 
 void binder_proc_dec_tmpref(FAR struct binder_proc *proc)
 {
-  nxmutex_lock(&proc->proc_lock);
+  binder_inner_proc_lock(proc);
   proc->tmp_ref--;
   if (proc->is_dead && list_is_empty(&proc->threads) && !proc->tmp_ref)
     {
-      nxmutex_unlock(&proc->proc_lock);
+      binder_inner_proc_unlock(proc);
       binder_free_proc(proc);
       return;
     }
 
-  nxmutex_unlock(&proc->proc_lock);
+  binder_inner_proc_unlock(proc);
 }
 
 /****************************************************************************
@@ -621,71 +623,90 @@ void binder_proc_dec_tmpref(FAR struct binder_proc *proc)
 
 void binder_thread_dec_tmpref(FAR struct binder_thread *thread)
 {
-  FAR struct binder_proc *proc;
-
   /* atomic is used to protect the counter value while
    * it cannot reach zero or thread->is_dead is false
    */
 
-  proc = thread->proc;
-  nxmutex_lock(&proc->proc_lock);
+  binder_inner_proc_lock(thread->proc);
   thread->tmp_ref--;
   if (thread->is_dead && thread->tmp_ref == 0)
     {
-      nxmutex_unlock(&proc->proc_lock);
+      binder_inner_proc_unlock(thread->proc);
       binder_free_thread(thread);
       return;
     }
 
-  nxmutex_unlock(&proc->proc_lock);
+  binder_inner_proc_unlock(thread->proc);
 }
 
-FAR struct binder_thread *binder_get_thread(FAR struct binder_proc *proc)
+FAR static struct binder_thread *binder_get_thread_ilocked(
+            FAR struct binder_proc *proc,
+            FAR struct binder_thread *new_thread)
 {
   FAR struct binder_thread  *itr        = NULL;
   FAR struct binder_thread  *thread     = NULL;
   pid_t                      thread_pid  = gettid();
 
-  nxmutex_lock(&proc->proc_lock);
   list_for_every_entry(&proc->threads, itr,
                        struct binder_thread, thread_node)
     {
       if (itr->tid == thread_pid)
         {
           thread = itr;
-          break;
+          return thread;
         }
     }
 
-  nxmutex_unlock(&proc->proc_lock);
+  if (!new_thread)
+    {
+      return NULL;
+    }
+
+  thread = new_thread;
+  thread->proc      = proc;
+  thread->tid       = thread_pid;
+  thread->tmp_ref   = 0;
+  list_initialize(&thread->thread_node);
+  list_initialize(&thread->wait);
+  list_initialize(&thread->todo);
+  list_initialize(&thread->waiting_thread_node);
+
+  thread->return_error.work.type = BINDER_WORK_RETURN_ERROR;
+  thread->return_error.cmd       = BR_OK;
+  list_initialize(&thread->return_error.work.entry_node);
+
+  thread->reply_error.work.type = BINDER_WORK_RETURN_ERROR;
+  thread->reply_error.cmd       = BR_OK;
+  list_initialize(&thread->reply_error.work.entry_node);
+  list_add_head(&proc->threads, &thread->thread_node);
+
+  return thread;
+}
+
+FAR struct binder_thread *binder_get_thread(FAR struct binder_proc *proc)
+{
+  FAR struct binder_thread  *thread;
+  FAR struct binder_thread  *new_thread;
+
+  binder_inner_proc_lock(proc);
+  thread = binder_get_thread_ilocked(proc, NULL);
+  binder_inner_proc_unlock(proc);
 
   if (thread == NULL)
     {
-      thread            = kmm_zalloc(sizeof(struct binder_thread));
-      if (thread == NULL)
+      new_thread = kmm_zalloc(sizeof(struct binder_thread));
+      if (new_thread == NULL)
         {
           return NULL;
         }
 
-      thread->proc      = proc;
-      thread->tid       = thread_pid;
-      thread->tmp_ref   = 0;
-      list_initialize(&thread->thread_node);
-      list_initialize(&thread->wait);
-      list_initialize(&thread->todo);
-      list_initialize(&thread->waiting_thread_node);
-
-      thread->return_error.work.type = BINDER_WORK_RETURN_ERROR;
-      thread->return_error.cmd       = BR_OK;
-      list_initialize(&thread->return_error.work.entry_node);
-
-      thread->reply_error.work.type = BINDER_WORK_RETURN_ERROR;
-      thread->reply_error.cmd       = BR_OK;
-      list_initialize(&thread->reply_error.work.entry_node);
-
-      nxmutex_lock(&proc->proc_lock);
-      list_add_head(&proc->threads, &thread->thread_node);
-      nxmutex_unlock(&proc->proc_lock);
+      binder_inner_proc_lock(proc);
+      thread = binder_get_thread_ilocked(proc, new_thread);
+      binder_inner_proc_unlock(proc);
+      if (thread != new_thread)
+        {
+          kmm_free(new_thread);
+        }
     }
 
   return thread;
@@ -841,7 +862,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
               break;
             }
 
-          nxmutex_lock(&node->node_lock);
+          binder_node_inner_lock(node);
           if (cmd == BC_ACQUIRE_DONE)
             {
               if (node->pending_strong_ref == 0)
@@ -850,7 +871,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
                                "BC_ACQUIRE_DONE node %d has no "
                                "pending acquire request\n",
                                node->debug_id);
-                  nxmutex_unlock(&node->node_lock);
+                  binder_node_inner_unlock(node);
                   binder_put_node(node);
                   break;
                 }
@@ -865,7 +886,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
                                "BC_INCREFS_DONE node %d has no pending "
                                "increfs request\n",
                                node->debug_id);
-                  nxmutex_unlock(&node->node_lock);
+                  binder_node_inner_unlock(node);
                   binder_put_node(node);
                   break;
                 }
@@ -880,7 +901,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
                        "BC_INCREFS_DONE" : "BC_ACQUIRE_DONE",
                        node->debug_id, node->local_strong_refs,
                        node->local_weak_refs, node->tmp_refs);
-          nxmutex_unlock(&node->node_lock);
+          binder_node_inner_unlock(node);
           binder_put_node(node);
           break;
         }
@@ -931,7 +952,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
         case BC_REGISTER_LOOPER:
         {
           binder_debug(BINDER_DEBUG_THREADS, "BC_REGISTER_LOOPER\n");
-          nxmutex_lock(&proc->proc_lock);
+          binder_inner_proc_lock(proc);
           if (thread->looper & BINDER_LOOPER_STATE_ENTERED)
             {
               thread->looper |= BINDER_LOOPER_STATE_INVALID;
@@ -953,7 +974,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
             }
 
           thread->looper |= BINDER_LOOPER_STATE_REGISTERED;
-          nxmutex_unlock(&proc->proc_lock);
+          binder_inner_proc_unlock(proc);
           break;
         }
 
@@ -1013,7 +1034,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
               list_initialize(&death->work.entry_node);
             }
 
-          nxmutex_lock(&proc->proc_lock);
+          binder_proc_lock(proc);
           ref = binder_get_ref_olocked(proc, target, false);
           if (ref == NULL)
             {
@@ -1022,7 +1043,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
                            "BC_REQUEST_DEATH_NOTIFICATION"
                             :"BC_CLEAR_DEATH_NOTIFICATION",
                            target);
-              nxmutex_unlock(&proc->proc_lock);
+              binder_proc_unlock(proc);
               kmm_free(death);
               break;
             }
@@ -1036,7 +1057,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
                        cookie, ref->data.debug_id, ref->data.desc,
                        ref->data.strong, ref->data.weak,
                        ref->node->debug_id);
-          nxmutex_lock(&ref->node->node_lock);
+          binder_node_lock(ref->node);
           if (cmd == BC_REQUEST_DEATH_NOTIFICATION)
             {
               if (ref->death)
@@ -1044,8 +1065,8 @@ int binder_thread_write(FAR struct binder_proc *proc,
                   binder_debug(BINDER_DEBUG_ERROR,
                                "BC_REQUEST_DEATH_NOTIFICATION death"
                                "notification already set\n");
-                  nxmutex_unlock(&ref->node->node_lock);
-                  nxmutex_unlock(&proc->proc_lock);
+                  binder_node_unlock(ref->node);
+                  binder_proc_unlock(proc);
                   kmm_free(death);
                   break;
                 }
@@ -1055,9 +1076,11 @@ int binder_thread_write(FAR struct binder_proc *proc,
               if (ref->node->proc == NULL)
                 {
                   ref->death->work.type = BINDER_WORK_DEAD_BINDER;
+                  binder_inner_proc_lock(proc);
                   binder_enqueue_work_ilocked(&ref->death->work,
                                               &proc->todo_list);
                   binder_wakeup_proc_ilocked(proc);
+                  binder_inner_proc_unlock(proc);
                 }
             }
           else
@@ -1067,8 +1090,8 @@ int binder_thread_write(FAR struct binder_proc *proc,
                   binder_debug(BINDER_DEBUG_ERROR,
                                "BC_CLEAR_DEATH_NOTIFICATION death "
                                "notification not active\n");
-                  nxmutex_unlock(&ref->node->node_lock);
-                  nxmutex_unlock(&proc->proc_lock);
+                  binder_node_unlock(ref->node);
+                  binder_proc_unlock(proc);
                   break;
                 }
 
@@ -1080,12 +1103,13 @@ int binder_thread_write(FAR struct binder_proc *proc,
                                "notification cookie mismatch"
                                " %"PRIx64" != %"PRIx64"\n",
                                death->cookie, cookie);
-                  nxmutex_unlock(&ref->node->node_lock);
-                  nxmutex_unlock(&proc->proc_lock);
+                  binder_node_unlock(ref->node);
+                  binder_proc_unlock(proc);
                   break;
                 }
 
               ref->death = NULL;
+              binder_inner_proc_lock(proc);
               if (list_is_empty(&death->work.entry_node))
                 {
                   death->work.type = BINDER_WORK_CLEAR_DEATH_NOTIFICATION;
@@ -1108,10 +1132,12 @@ int binder_thread_write(FAR struct binder_proc *proc,
                   BUG_ON(death->work.type != BINDER_WORK_DEAD_BINDER);
                   death->work.type = BINDER_WORK_DEAD_BINDER_AND_CLEAR;
                 }
+
+              binder_inner_proc_unlock(proc);
             }
 
-          nxmutex_unlock(&ref->node->node_lock);
-          nxmutex_unlock(&proc->proc_lock);
+          binder_node_unlock(ref->node);
+          binder_proc_unlock(proc);
           break;
         }
 
@@ -1124,7 +1150,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
           get_value(cookie, (binder_uintptr_t *)ptr);
           ptr += sizeof(binder_uintptr_t);
 
-          nxmutex_lock(&proc->proc_lock);
+          binder_inner_proc_lock(proc);
           list_for_every_entry(&proc->delivered_death, w,
                                struct binder_work, entry_node)
           {
@@ -1146,7 +1172,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
               binder_debug(BINDER_DEBUG_ERROR,
                            "BC_DEAD_BINDER_DONE %" PRIx64 " not found\n",
                            cookie);
-              nxmutex_unlock(&proc->proc_lock);
+              binder_inner_proc_unlock(proc);
               break;
             }
 
@@ -1168,7 +1194,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
                 }
             }
 
-          nxmutex_unlock(&proc->proc_lock);
+          binder_inner_proc_unlock(proc);
           break;
         }
 
@@ -1204,9 +1230,9 @@ int binder_thread_read(FAR struct binder_proc *proc,
     }
 
 retry:
-  nxmutex_lock(&proc->proc_lock);
+  binder_inner_proc_lock(proc);
   wait_for_proc_work = binder_available_for_proc_work_ilocked(thread);
-  nxmutex_unlock(&proc->proc_lock);
+  binder_inner_proc_unlock(proc);
 
   thread->looper |= BINDER_LOOPER_STATE_WAITING;
 
@@ -1256,7 +1282,7 @@ retry:
       uint32_t                               cmd;
 
       memset(&tr, 0x0, sizeof(struct binder_transaction_data_secctx));
-      nxmutex_lock(&proc->proc_lock);
+      binder_inner_proc_lock(proc);
       if (!binder_worklist_empty_ilocked(&thread->todo))
         {
           list = &thread->todo;
@@ -1268,7 +1294,7 @@ retry:
         }
       else
         {
-          nxmutex_unlock(&proc->proc_lock);
+          binder_inner_proc_unlock(proc);
 
           /* no data added */
 
@@ -1286,7 +1312,7 @@ retry:
 
       if (end - ptr < sizeof(tr) + 4)
         {
-          nxmutex_unlock(&proc->proc_lock);
+          binder_inner_proc_unlock(proc);
           break;
         }
 
@@ -1300,7 +1326,7 @@ retry:
       {
         case BINDER_WORK_TRANSACTION:
         {
-          nxmutex_unlock(&proc->proc_lock);
+          binder_inner_proc_unlock(proc);
           t = container_of(w, struct binder_transaction, work);
         }
         break;
@@ -1311,7 +1337,7 @@ retry:
                     container_of(w, struct binder_error, work);
 
           WARN_ON(e->cmd == BR_OK);
-          nxmutex_unlock(&proc->proc_lock);
+          binder_inner_proc_unlock(proc);
           put_value(e->cmd, (uint32_t *)ptr);
           cmd       = e->cmd;
           e->cmd    = BR_OK;
@@ -1323,7 +1349,7 @@ retry:
         case BINDER_WORK_TRANSACTION_ONEWAY_SPAM_SUSPECT:
         {
           cmd = BR_TRANSACTION_COMPLETE;
-          nxmutex_unlock(&proc->proc_lock);
+          binder_inner_proc_unlock(proc);
           kmm_free(w);
           put_value(cmd, (uint32_t *)ptr);
           ptr += sizeof(uint32_t);
@@ -1388,8 +1414,8 @@ retry:
 
               list_delete_init(&node->rb_node);
 
-              nxmutex_unlock(&proc->proc_lock);
-              nxmutex_lock(&node->node_lock);
+              binder_inner_proc_unlock(proc);
+              binder_node_lock(node);
 
               /* Acquire the node lock before freeing the
                * node to serialize with other threads that
@@ -1401,12 +1427,12 @@ retry:
                * TODO: it is need for NuttX??
                */
 
-              nxmutex_unlock(&node->node_lock);
+              binder_node_unlock(node);
               binder_free_node(node);
             }
           else
             {
-              nxmutex_unlock(&proc->proc_lock);
+              binder_inner_proc_unlock(proc);
             }
 
           if (weak && !has_weak_ref)
@@ -1477,13 +1503,13 @@ retry:
                        cookie);
           if (w->type == BINDER_WORK_CLEAR_DEATH_NOTIFICATION)
             {
-              nxmutex_unlock(&proc->proc_lock);
+              binder_inner_proc_unlock(proc);
               kmm_free(death);
            }
           else
             {
               binder_enqueue_work_ilocked(w, &proc->delivered_death);
-              nxmutex_unlock(&proc->proc_lock);
+              binder_inner_proc_unlock(proc);
             }
 
           put_value(cmd, (uint32_t *)ptr);
@@ -1501,7 +1527,7 @@ retry:
 
         default:
         {
-          nxmutex_unlock(&proc->proc_lock);
+          binder_inner_proc_unlock(proc);
           binder_debug(BINDER_DEBUG_ERROR, "bad work type %d\n", w->type);
           break;
         }
@@ -1609,12 +1635,11 @@ retry:
       t->buffer->allow_user_free = 1;
       if (cmd != BR_REPLY && !(t->flags & TF_ONE_WAY))
         {
-          nxmutex_lock(&thread->proc->proc_lock);
+          binder_inner_proc_lock(thread->proc);
           t->to_parent              = thread->transaction_stack;
           t->to_thread              = thread;
           thread->transaction_stack = t;
-
-          nxmutex_unlock(&thread->proc->proc_lock);
+          binder_inner_proc_unlock(thread->proc);
         }
       else
         {
@@ -1626,7 +1651,7 @@ retry:
 done:
   *consumed = ptr - buffer;
 
-  nxmutex_lock(&proc->proc_lock);
+  binder_inner_proc_lock(proc);
   if (proc->requested_threads == 0 &&
       list_is_empty(&thread->proc->waiting_threads) &&
       proc->requested_threads_started < proc->max_threads &&
@@ -1635,13 +1660,13 @@ done:
     {
       proc->requested_threads++;
 
-      nxmutex_unlock(&proc->proc_lock);
+      binder_inner_proc_unlock(proc);
       binder_debug(BINDER_DEBUG_THREADS, "BR_SPAWN_LOOPER\n");
       put_value(BR_SPAWN_LOOPER, (uint32_t *)buffer);
     }
   else
     {
-      nxmutex_unlock(&proc->proc_lock);
+      binder_inner_proc_unlock(proc);
     }
 
   return 0;
@@ -1654,9 +1679,9 @@ void binder_release_work(FAR struct binder_proc *proc,
 
   while (1)
     {
-      nxmutex_lock(&proc->proc_lock);
+      binder_inner_proc_lock(proc);
       w     = binder_dequeue_work_head_ilocked(list);
-      nxmutex_unlock(&proc->proc_lock);
+      binder_inner_proc_unlock(proc);
       if (!w)
         {
           return;
@@ -1730,7 +1755,7 @@ int binder_thread_release(FAR struct binder_proc *proc,
   int                            active_transactions = 0;
   FAR struct binder_transaction *last_t             = NULL;
 
-  nxmutex_lock(&thread->proc->proc_lock);
+  binder_inner_proc_lock(thread->proc);
 
   /* take a ref on the proc so it survives
    * after we remove this thread from proc->threads.
@@ -1807,7 +1832,7 @@ int binder_thread_release(FAR struct binder_proc *proc,
       wake_up_pollfree(thread);
     }
 
-  nxmutex_unlock(&thread->proc->proc_lock);
+  binder_inner_proc_unlock(thread->proc);
 
   if (send_reply)
     {

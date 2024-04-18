@@ -85,6 +85,7 @@ enum
   BINDER_DEBUG_TRANSACTION          = 1U << 14,
   BINDER_DEBUG_TRANSACTION_COMPLETE = 1U << 15,
   BINDER_DEBUG_SCHED                = 1U << 16,
+  BINDER_DEBUG_LOCKS                = 1U << 17,
 };
 
 #define BINDER_LOG_BUFSIZE  256
@@ -133,6 +134,17 @@ void binder_syslog(FAR char * buff, int pos,
     list_is_empty(list) ?                            \
     NULL: (list_first_entry(list, type, member));    \
   })
+
+#define binder_proc_lock(proc)                _binder_proc_lock(proc, __LINE__)
+#define binder_proc_unlock(_proc)             _binder_proc_unlock(_proc, __LINE__)
+#define binder_inner_proc_lock(proc)          _binder_inner_proc_lock(proc, __LINE__)
+#define binder_inner_proc_unlock(proc)        _binder_inner_proc_unlock(proc, __LINE__)
+#define binder_node_lock(node)                _binder_node_lock(node, __LINE__)
+#define binder_node_unlock(node)              _binder_node_unlock(node, __LINE__)
+#define binder_node_inner_lock(node)          _binder_node_inner_lock(node, __LINE__)
+#define binder_node_inner_unlock(node)        _binder_node_inner_unlock(node, __LINE__)
+#define binder_inner_proc_assert_locked(proc) _binder_inner_proc_assert_locked(proc, __LINE__)
+#define binder_node_inner_assert_locked(node) _binder_node_inner_assert_locked(node, __LINE__)
 
 /* debug info output mask */
 
@@ -346,7 +358,8 @@ struct binder_proc
 
   pid_t pid;
   struct list_node proc_node;
-  mutex_t proc_lock;
+  mutex_t inner_lock;
+  mutex_t outer_lock;
 
   /* Fields used to support link into different list */
 
@@ -390,7 +403,7 @@ struct binder_proc
  *
  * debug_id:             unique ID for debugging
  *                        (invariant after initialized)
- * node_lock:            lock for node fields
+ * lock:                 lock for node fields
  * work:                 worklist element for node work
  * rb_node:              element for proc->nodes list
  * dead_node:            element for binder_dead_nodes list
@@ -437,7 +450,7 @@ struct binder_proc
 struct binder_node
 {
   int debug_id;
-  mutex_t node_lock;
+  mutex_t lock;
   struct binder_work work;
   union
   {
@@ -846,5 +859,18 @@ void binder_transaction_priority(FAR struct binder_thread *thread,
 void binder_deferred_fd_close(int fd);
 void binder_send_failed_reply(FAR struct binder_transaction *t,
                               uint32_t error_code);
+
+void _binder_proc_lock(struct binder_proc *proc, int line);
+void _binder_proc_unlock(struct binder_proc *proc, int line);
+void _binder_inner_proc_lock(struct binder_proc *proc, int line);
+void _binder_inner_proc_unlock(struct binder_proc *proc, int line);
+void _binder_node_lock(struct binder_node *node, int line);
+void _binder_node_unlock(struct binder_node *node, int line);
+void _binder_node_inner_lock(struct binder_node *node, int line);
+void _binder_node_inner_unlock(struct binder_node *node, int line);
+void _binder_inner_proc_assert_locked(FAR struct binder_proc *proc,
+                                      int line);
+void _binder_node_inner_assert_locked(FAR struct binder_node *node,
+                                      int line);
 
 #endif /* __DRIVERS_BINDER_BINDER_INTERNAL_H__ */

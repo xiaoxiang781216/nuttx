@@ -247,7 +247,9 @@ static struct binder_thread * binder_get_txn_from(
   from = t->from;
   if (from)
     {
+      binder_inner_proc_lock(from->proc);
       from->tmp_ref++;
+      binder_inner_proc_unlock(from->proc);
     }
 
   nxmutex_unlock(&t->lock);
@@ -258,6 +260,8 @@ static void binder_pop_transaction_ilocked(
   FAR struct binder_thread *target_thread, FAR struct binder_transaction *t)
 {
   BUG_ON(!target_thread);
+  binder_inner_proc_assert_locked(target_thread->proc);
+
   BUG_ON(target_thread->transaction_stack != t);
   BUG_ON(target_thread->transaction_stack->from != target_thread);
 
@@ -290,7 +294,6 @@ static struct binder_thread *binder_get_txn_from_and_acq_inner(
   FAR struct binder_transaction *t)
 {
   FAR struct binder_thread  *from;
-  FAR struct binder_proc    *proc;
 
   from = binder_get_txn_from(t);
   if (!from)
@@ -298,16 +301,14 @@ static struct binder_thread *binder_get_txn_from_and_acq_inner(
       return NULL;
     }
 
-  proc = from->proc;
-  nxmutex_lock(&proc->proc_lock);
+  binder_inner_proc_lock(from->proc);
   if (t->from)
     {
-      nxmutex_unlock(&proc->proc_lock);
       BUG_ON(from != t->from);
       return from;
     }
 
-  nxmutex_unlock(&proc->proc_lock);
+  binder_inner_proc_unlock(from->proc);
   binder_thread_dec_tmpref(from);
   return NULL;
 }
@@ -347,7 +348,7 @@ static int binder_proc_transaction(FAR struct binder_transaction *t,
   bool                      pending_async   = false;
 
   BUG_ON(!node);
-  nxmutex_lock(&node->node_lock);
+  binder_node_lock(node);
 
   if (oneway)
     {
@@ -362,7 +363,7 @@ static int binder_proc_transaction(FAR struct binder_transaction *t,
         }
     }
 
-  nxmutex_lock(&proc->proc_lock);
+  binder_inner_proc_lock(proc);
   if (proc->is_frozen)
     {
       proc->sync_recv   |= !oneway;
@@ -372,8 +373,8 @@ static int binder_proc_transaction(FAR struct binder_transaction *t,
   if ((proc->is_frozen && !oneway) || proc->is_dead ||
       (thread && thread->is_dead))
     {
-      nxmutex_unlock(&proc->proc_lock);
-      nxmutex_unlock(&node->node_lock);
+      binder_inner_proc_unlock(proc);
+      binder_node_unlock(node);
       return proc->is_frozen ? BR_FROZEN_REPLY : BR_DEAD_REPLY;
     }
 
@@ -409,8 +410,8 @@ static int binder_proc_transaction(FAR struct binder_transaction *t,
 
   proc->outstanding_txns++;
   proc->tmp_ref--;
-  nxmutex_unlock(&proc->proc_lock);
-  nxmutex_unlock(&node->node_lock);
+  binder_inner_proc_unlock(proc);
+  binder_node_unlock(node);
 
   return 0;
 }
@@ -496,7 +497,7 @@ static int binder_translate_handle(struct flat_binder_object *fp,
       return -EINVAL;
     }
 
-  nxmutex_lock(&node->node_lock);
+  binder_node_lock(node);
   if (node->proc == target_proc)
     {
       if (fp->hdr.type == BINDER_TYPE_HANDLE)
@@ -512,27 +513,27 @@ static int binder_translate_handle(struct flat_binder_object *fp,
       fp->cookie    = node->cookie;
       if (node->proc)
         {
-          nxmutex_lock(&node->proc->proc_lock);
+          binder_inner_proc_lock(node->proc);
         }
 
       binder_inc_node_nilocked(node, fp->hdr.type == BINDER_TYPE_BINDER, 0,
                                NULL);
       if (node->proc)
         {
-          nxmutex_unlock(&node->proc->proc_lock);
+          binder_inner_proc_unlock(node->proc);
         }
 
       binder_debug(BINDER_DEBUG_TRANSACTION,
                    "ref %d desc %d -> node %d %" PRIx64 "\n",
                    src_rdata.debug_id, (int)src_rdata.desc, node->debug_id,
                    node->ptr);
-      nxmutex_unlock(&node->node_lock);
+      binder_node_unlock(node);
     }
   else
     {
       struct binder_ref_data dest_rdata;
 
-      nxmutex_unlock(&node->node_lock);
+      binder_node_unlock(node);
       ret = binder_inc_ref_for_node(target_proc, node,
                                     fp->hdr.type == BINDER_TYPE_HANDLE, NULL,
                                     &dest_rdata);
@@ -653,7 +654,7 @@ static struct binder_node *binder_get_node_refs_for_txn(
 {
   FAR struct binder_node *target_node = NULL;
 
-  nxmutex_lock(&node->node_lock);
+  binder_node_inner_lock(node);
   if (node->proc)
     {
       target_node = node;
@@ -667,7 +668,7 @@ static struct binder_node *binder_get_node_refs_for_txn(
       *error = BR_DEAD_REPLY;
     }
 
-  nxmutex_unlock(&node->node_lock);
+  binder_node_inner_unlock(node);
 
   return target_node;
 }
@@ -899,11 +900,7 @@ void binder_send_failed_reply(FAR struct binder_transaction *t,
                            (int)target_thread->reply_error.cmd);
             }
 
-          if (nxmutex_is_hold(&target_thread->proc->proc_lock))
-            {
-              nxmutex_unlock(&target_thread->proc->proc_lock);
-            }
-
+          binder_inner_proc_unlock(target_thread->proc);
           binder_thread_dec_tmpref(target_thread);
           binder_free_transaction(t);
           return;
@@ -964,7 +961,7 @@ void binder_free_transaction(FAR struct binder_transaction *t)
 
   if (target_proc)
     {
-      nxmutex_lock(&target_proc->proc_lock);
+      binder_inner_proc_lock(target_proc);
       target_proc->outstanding_txns--;
       if (target_proc->outstanding_txns < 0)
         {
@@ -983,7 +980,7 @@ void binder_free_transaction(FAR struct binder_transaction *t)
           t->buffer->transaction = NULL;
         }
 
-      nxmutex_unlock(&target_proc->proc_lock);
+      binder_inner_proc_unlock(target_proc);
     }
 
   kmm_free(t);
@@ -1012,11 +1009,11 @@ void binder_transaction(FAR struct binder_proc *proc,
 
   if (reply)
     {
-      nxmutex_lock(&proc->proc_lock);
+      binder_inner_proc_lock(proc);
       in_reply_to = thread->transaction_stack;
       if (in_reply_to == NULL)
         {
-          nxmutex_unlock(&proc->proc_lock);
+          binder_inner_proc_unlock(proc);
           binder_debug(BINDER_DEBUG_ERROR,
                        "[%s][%d:%d]:"
                        "got reply transaction with no transaction stack\n",
@@ -1037,14 +1034,14 @@ void binder_transaction(FAR struct binder_proc *proc,
                        in_reply_to->to_thread ?
                        in_reply_to->to_thread->tid : 0);
           nxmutex_unlock(&in_reply_to->lock);
-          nxmutex_unlock(&proc->proc_lock);
+          binder_inner_proc_unlock(proc);
           return_error          = BR_FAILED_REPLY;
           in_reply_to           = NULL;
           goto err_bad_call_stack;
         }
 
       thread->transaction_stack = in_reply_to->to_parent;
-      nxmutex_unlock(&proc->proc_lock);
+      binder_inner_proc_unlock(proc);
       target_thread = binder_get_txn_from_and_acq_inner(in_reply_to);
       if (target_thread == NULL)
         {
@@ -1063,11 +1060,9 @@ void binder_transaction(FAR struct binder_proc *proc,
                        target_thread->transaction_stack->debug_id : 0,
                        in_reply_to->debug_id);
 
-          if (nxmutex_is_hold(&target_thread->proc->proc_lock))
-            {
-              nxmutex_unlock(&target_thread->proc->proc_lock);
-            }
+          BUG_ON(!nxmutex_is_hold(&target_thread->proc->inner_lock));
 
+          binder_inner_proc_unlock(target_thread->proc);
           return_error          = BR_FAILED_REPLY;
           in_reply_to           = NULL;
           target_thread         = NULL;
@@ -1076,10 +1071,9 @@ void binder_transaction(FAR struct binder_proc *proc,
 
       target_proc = target_thread->proc;
       target_proc->tmp_ref++;
-      if (nxmutex_is_hold(&target_thread->proc->proc_lock))
-        {
-          nxmutex_unlock(&target_thread->proc->proc_lock);
-        }
+      BUG_ON(!nxmutex_is_hold(&target_thread->proc->inner_lock));
+
+      binder_inner_proc_unlock(target_thread->proc);
     }
   else
     {
@@ -1092,7 +1086,7 @@ void binder_transaction(FAR struct binder_proc *proc,
            * stays alive until the transaction is done.
            */
 
-          nxmutex_lock(&proc->proc_lock);
+          binder_proc_lock(proc);
           ref = binder_get_ref_olocked(proc, tr->target.handle, true);
           if (ref)
             {
@@ -1108,7 +1102,7 @@ void binder_transaction(FAR struct binder_proc *proc,
               return_error = BR_FAILED_REPLY;
             }
 
-          nxmutex_unlock(&proc->proc_lock);
+          binder_proc_unlock(proc);
         }
       else
         {
@@ -1151,7 +1145,7 @@ void binder_transaction(FAR struct binder_proc *proc,
           goto err_invalid_target_handle;
         }
 
-      nxmutex_lock(&proc->proc_lock);
+      binder_inner_proc_lock(proc);
       w = list_first_entry_or_null(&thread->todo, struct binder_work,
                                    entry_node);
       if (!(tr->flags & TF_ONE_WAY) && w &&
@@ -1171,7 +1165,7 @@ void binder_transaction(FAR struct binder_proc *proc,
                        "new transaction not allowed when there is "
                        "a transaction on thread todo\n",
                        LOG_TAG, getpid(), gettid());
-          nxmutex_unlock(&proc->proc_lock);
+          binder_inner_proc_unlock(proc);
           return_error          = BR_FAILED_REPLY;
           goto err_bad_todo_list;
         }
@@ -1190,7 +1184,7 @@ void binder_transaction(FAR struct binder_proc *proc,
                            tmp->to_proc ? tmp->to_proc->pid : 0,
                            tmp->to_thread ? tmp->to_thread->tid : 0);
               nxmutex_unlock(&tmp->lock);
-              nxmutex_unlock(&proc->proc_lock);
+              binder_inner_proc_unlock(proc);
               return_error          = BR_FAILED_REPLY;
               goto err_bad_call_stack;
             }
@@ -1213,7 +1207,7 @@ void binder_transaction(FAR struct binder_proc *proc,
             }
         }
 
-      nxmutex_unlock(&proc->proc_lock);
+      binder_inner_proc_unlock(proc);
     }
 
   /* TODO: reuse incoming transaction for reply */
@@ -1505,11 +1499,11 @@ void binder_transaction(FAR struct binder_proc *proc,
   if (reply)
     {
       binder_enqueue_thread_work(thread, tcomplete);
-      nxmutex_lock(&target_proc->proc_lock);
+      binder_inner_proc_lock(target_proc);
       if (target_thread->is_dead)
         {
           return_error = BR_DEAD_REPLY;
-          nxmutex_unlock(&target_proc->proc_lock);
+          binder_inner_proc_unlock(target_proc);
           goto err_dead_proc_or_thread;
         }
 
@@ -1518,7 +1512,7 @@ void binder_transaction(FAR struct binder_proc *proc,
       binder_enqueue_thread_work_ilocked(target_thread, &t->work);
       target_proc->outstanding_txns++;
       target_proc->tmp_ref--;
-      nxmutex_unlock(&target_proc->proc_lock);
+      binder_inner_proc_unlock(target_proc);
       wait_wake_up(&target_thread->wait, 0);
       binder_set_priority(thread, &in_reply_to->saved_priority);
       binder_free_transaction(in_reply_to);
@@ -1526,7 +1520,7 @@ void binder_transaction(FAR struct binder_proc *proc,
   else if (!(t->flags & TF_ONE_WAY))
     {
       BUG_ON(t->buffer->async_transaction != 0);
-      nxmutex_lock(&proc->proc_lock);
+      binder_inner_proc_lock(proc);
 
       /* Defer the TRANSACTION_COMPLETE, so we don't return to
        * userspace immediately; this allows the target process to
@@ -1539,13 +1533,13 @@ void binder_transaction(FAR struct binder_proc *proc,
       t->need_reply             = 1;
       t->from_parent            = thread->transaction_stack;
       thread->transaction_stack = t;
-      nxmutex_unlock(&proc->proc_lock);
+      binder_inner_proc_unlock(proc);
       return_error = binder_proc_transaction(t, target_proc, target_thread);
       if (return_error)
         {
-          nxmutex_lock(&proc->proc_lock);
+          binder_inner_proc_lock(proc);
           binder_pop_transaction_ilocked(thread, t);
-          nxmutex_unlock(&proc->proc_lock);
+          binder_inner_proc_unlock(proc);
           goto err_dead_proc_or_thread;
         }
     }

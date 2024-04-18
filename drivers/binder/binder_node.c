@@ -60,14 +60,35 @@ static mutex_t          binder_dead_nodes_lock = NXMUTEX_INITIALIZER;
  ****************************************************************************/
 
 static struct binder_node *binder_init_node_ilocked(
-  FAR struct binder_proc *proc, FAR struct binder_node *node,
+  FAR struct binder_proc *proc, FAR struct binder_node *new_node,
   FAR struct flat_binder_object *fp)
 {
   binder_uintptr_t  ptr     = fp ? fp->binder : 0;
   binder_uintptr_t  cookie  = fp ? fp->cookie : 0;
   uint32_t          flags   = fp ? fp->flags : 0;
+  FAR struct binder_node    *node;
+  FAR struct binder_node    *itr;
   signed char       priority;
 
+  binder_inner_proc_assert_locked(proc);
+
+  node = NULL;
+  list_for_every_entry(&proc->nodes, itr, struct binder_node, rb_node)
+    {
+      if (ptr == itr->ptr)
+        {
+          /* A matching node is already in the node list of process.
+           * The node was already added by another thread.
+           * Abandon the init and return it.
+           */
+
+          binder_inc_node_tmpref_ilocked(node);
+          node = itr;
+          return node;
+        }
+    }
+
+  node = new_node;
   node->tmp_refs++;
   node->debug_id        = binder_last_debug_id++;
   node->proc            = proc;
@@ -93,7 +114,7 @@ static struct binder_node *binder_init_node_ilocked(
   node->accept_fds          = !!(flags & FLAT_BINDER_FLAG_ACCEPTS_FDS);
   node->inherit_rt          = !!(flags & FLAT_BINDER_FLAG_INHERIT_RT);
   node->txn_security_ctx    = !!(flags & FLAT_BINDER_FLAG_TXN_SECURITY_CTX);
-  nxmutex_init(&node->node_lock);
+  nxmutex_init(&node->lock);
   list_initialize(&node->work.entry_node);
   list_initialize(&node->async_todo);
   list_initialize(&node->rb_node);
@@ -118,7 +139,7 @@ FAR struct binder_node *binder_get_node(FAR struct binder_proc *proc,
   FAR struct binder_node    *itr;
   FAR struct binder_node    *node;
 
-  nxmutex_lock(&proc->proc_lock);
+  binder_inner_proc_lock(proc);
   node = NULL;
   list_for_every_entry(&proc->nodes, itr, struct binder_node, rb_node)
     {
@@ -134,13 +155,15 @@ FAR struct binder_node *binder_get_node(FAR struct binder_proc *proc,
         }
     }
 
-  nxmutex_unlock(&proc->proc_lock);
+  binder_inner_proc_unlock(proc);
   return node;
 }
 
 int binder_inc_node_nilocked(FAR struct binder_node *node, int strong,
                              int internal, FAR struct list_node *target_list)
 {
+  binder_node_inner_assert_locked(node);
+
   if (strong)
     {
       if (internal)
@@ -202,9 +225,9 @@ int binder_inc_node(FAR struct binder_node *node, int strong, int internal,
 {
   int ret;
 
-  nxmutex_lock(&node->node_lock);
+  binder_node_inner_lock(node);
   ret = binder_inc_node_nilocked(node, strong, internal, target_list);
-  nxmutex_unlock(&node->node_lock);
+  binder_node_inner_unlock(node);
 
   return ret;
 }
@@ -213,6 +236,8 @@ bool binder_dec_node_nilocked(FAR struct binder_node *node, int strong,
                               int internal)
 {
   FAR struct binder_proc *proc = node->proc;
+
+  binder_node_inner_assert_locked(node);
 
   if (strong)
     {
@@ -296,9 +321,9 @@ void binder_dec_node(FAR struct binder_node *node, int strong, int internal)
 {
   bool free_node;
 
-  nxmutex_lock(&node->node_lock);
+  binder_node_inner_lock(node);
   free_node = binder_dec_node_nilocked(node, strong, internal);
-  nxmutex_unlock(&node->node_lock);
+  binder_node_inner_unlock(node);
   if (free_node)
     {
       binder_free_node(node);
@@ -327,10 +352,10 @@ static void binder_inc_node_tmpref(FAR struct binder_node *node)
 
   proc = node->proc;
 
-  nxmutex_lock(&node->node_lock);
+  binder_node_lock(node);
   if (proc != NULL)
     {
-      nxmutex_lock(&proc->proc_lock);
+      binder_inner_proc_lock(proc);
     }
   else
     {
@@ -341,14 +366,14 @@ static void binder_inc_node_tmpref(FAR struct binder_node *node)
 
   if (proc != NULL)
     {
-      nxmutex_unlock(&proc->proc_lock);
+      binder_inner_proc_unlock(node->proc);
     }
   else
     {
       nxmutex_unlock(&binder_dead_nodes_lock);
     }
 
-  nxmutex_unlock(&node->node_lock);
+  binder_node_unlock(node);
 }
 
 /****************************************************************************
@@ -364,9 +389,18 @@ void binder_dec_node_tmpref(FAR struct binder_node *node)
 {
   bool free_node;
 
-  nxmutex_lock(&node->node_lock);
+  binder_node_inner_lock(node);
+  if (!node->proc)
+    {
+      nxmutex_lock(&binder_dead_nodes_lock);
+    }
+
   node->tmp_refs--;
   BUG_ON(node->tmp_refs < 0);
+  if (!node->proc)
+    {
+      nxmutex_unlock(&binder_dead_nodes_lock);
+    }
 
   /* Call binder_dec_node() to check if all refcounts are 0
    * and cleanup is needed. Calling with strong=0 and internal=1
@@ -375,7 +409,7 @@ void binder_dec_node_tmpref(FAR struct binder_node *node)
    */
 
   free_node = binder_dec_node_nilocked(node, 0, 1);
-  nxmutex_unlock(&node->node_lock);
+  binder_node_inner_unlock(node);
   if (free_node)
     {
       binder_free_node(node);
@@ -390,44 +424,26 @@ void binder_put_node(FAR struct binder_node *node)
 FAR struct binder_node *binder_new_node(FAR struct binder_proc *proc,
                                         FAR struct flat_binder_object *fp)
 {
-  FAR struct binder_node    *itr;
   FAR struct binder_node    *node;
   FAR struct binder_node    *new_node;
-  binder_uintptr_t          ptr = fp ? fp->binder : 0;
 
-  nxmutex_lock(&proc->proc_lock);
-  node = NULL;
-  list_for_every_entry(&proc->nodes, itr, struct binder_node, rb_node)
+  new_node = kmm_zalloc(sizeof(struct binder_node));
+  if (new_node == NULL)
     {
-      if (ptr == itr->ptr)
-        {
-          /* A matching node is already in the node list of process.
-           * The node was already added by another thread.
-           * Abandon the init and return it.
-           */
-
-          binder_inc_node_tmpref_ilocked(node);
-          node = itr;
-          break;
-        }
+      return NULL;
     }
 
-  nxmutex_unlock(&proc->proc_lock);
+  binder_inner_proc_lock(proc);
+  node = binder_init_node_ilocked(proc, new_node, fp);
+  binder_inner_proc_unlock(proc);
 
-  if (node == NULL)
+  if (node != new_node)
     {
-      new_node = kmm_zalloc(sizeof(struct binder_node));
-      if (new_node == NULL)
-        {
-          goto out;
-        }
+      /* The node was already added by another thread */
 
-      nxmutex_lock(&proc->proc_lock);
-      node = binder_init_node_ilocked(proc, new_node, fp);
-      nxmutex_unlock(&proc->proc_lock);
+      kmm_free(new_node);
     }
 
-out:
   return node;
 }
 
@@ -456,7 +472,7 @@ binder_get_node_from_ref(FAR struct binder_proc *proc,
   FAR struct binder_node    *node;
   FAR struct binder_ref     *ref;
 
-  nxmutex_lock(&proc->proc_lock);
+  binder_proc_lock(proc);
   ref = binder_get_ref_olocked(proc, desc, need_strong_ref);
   if (!ref)
     {
@@ -476,12 +492,12 @@ binder_get_node_from_ref(FAR struct binder_proc *proc,
       *rdata = ref->data;
     }
 
-  nxmutex_unlock(&proc->proc_lock);
+  binder_proc_unlock(proc);
 
   return node;
 
 err_no_ref:
-  nxmutex_unlock(&proc->proc_lock);
+  binder_proc_unlock(proc);
   return NULL;
 }
 
@@ -493,8 +509,8 @@ int binder_node_release(FAR struct binder_node *node, int refs)
 
   binder_release_work(proc, &node->async_todo);
 
-  nxmutex_lock(&node->node_lock);
-  nxmutex_lock(&proc->proc_lock);
+  binder_node_lock(node);
+  binder_inner_proc_lock(proc);
   binder_dequeue_work_ilocked(&node->work);
 
   /* The caller must have taken a temporary ref on the node */
@@ -502,8 +518,8 @@ int binder_node_release(FAR struct binder_node *node, int refs)
   BUG_ON(!node->tmp_refs);
   if (list_is_empty(&node->refs) && node->tmp_refs == 1)
     {
-      nxmutex_unlock(&proc->proc_lock);
-      nxmutex_unlock(&node->node_lock);
+      binder_inner_proc_unlock(proc);
+      binder_node_unlock(node);
       binder_free_node(node);
 
       return refs;
@@ -513,7 +529,7 @@ int binder_node_release(FAR struct binder_node *node, int refs)
   node->local_strong_refs   = 0;
   node->local_weak_refs     = 0;
 
-  nxmutex_unlock(&proc->proc_lock);
+  binder_inner_proc_unlock(proc);
 
   nxmutex_lock(&binder_dead_nodes_lock);
   list_add_head(&binder_dead_nodes, &node->dead_node);
@@ -528,10 +544,10 @@ int binder_node_release(FAR struct binder_node *node, int refs)
        * synchronize with queued death notifications.
        */
 
-      nxmutex_lock(&ref->proc->proc_lock);
+      binder_inner_proc_lock(ref->proc);
       if (!ref->death)
         {
-          nxmutex_unlock(&ref->proc->proc_lock);
+          binder_inner_proc_unlock(ref->proc);
           continue;
         }
 
@@ -540,13 +556,13 @@ int binder_node_release(FAR struct binder_node *node, int refs)
       ref->death->work.type = BINDER_WORK_DEAD_BINDER;
       binder_enqueue_work_ilocked(&ref->death->work, &ref->proc->todo_list);
       binder_wakeup_proc_ilocked(ref->proc);
-      nxmutex_unlock(&ref->proc->proc_lock);
+      binder_inner_proc_unlock(ref->proc);
     }
 
   binder_debug(BINDER_DEBUG_DEAD_BINDER,
                "node %d now dead, refs %d, death %d\n", node->debug_id, refs,
                death);
-  nxmutex_unlock(&node->node_lock);
+  binder_node_unlock(node);
   binder_put_node(node);
 
   return refs;

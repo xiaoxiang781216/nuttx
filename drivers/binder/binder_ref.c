@@ -157,21 +157,20 @@ binder_get_ref_for_node_olocked(FAR struct binder_proc *proc,
       list_add_tail(&proc->refs_by_desc, &new_ref->rb_node_desc);
     }
 
-  nxmutex_lock(&node->node_lock);
+  binder_node_lock(node);
   list_add_head(&node->refs, &new_ref->node_entry);
 
   binder_debug(BINDER_DEBUG_INTERNAL_REFS,
                "%d new ref %d desc %d for node %d\n", proc->pid,
                new_ref->data.debug_id, (int)new_ref->data.desc,
                node->debug_id);
-  nxmutex_unlock(&node->node_lock);
+  binder_node_unlock(node);
   return new_ref;
 }
 
 void binder_cleanup_ref_olocked(FAR struct binder_ref *ref)
 {
   bool                       delete_node = false;
-  FAR struct binder_node    *node;
 
   binder_debug(BINDER_DEBUG_INTERNAL_REFS,
                "%d delete ref %d desc %d for node %d\n", ref->proc->pid,
@@ -180,8 +179,7 @@ void binder_cleanup_ref_olocked(FAR struct binder_ref *ref)
   list_delete_init(&ref->rb_node_desc);
   list_delete_init(&ref->rb_node_node);
 
-  node = ref->node;
-  nxmutex_lock(&node->node_lock);
+  binder_node_inner_lock(ref->node);
   if (ref->data.strong)
     {
       binder_dec_node_nilocked(ref->node, 1, 1);
@@ -189,7 +187,7 @@ void binder_cleanup_ref_olocked(FAR struct binder_ref *ref)
 
   list_delete_init(&ref->node_entry);
   delete_node = binder_dec_node_nilocked(ref->node, 0, 1);
-  nxmutex_unlock(&node->node_lock);
+  binder_node_inner_unlock(ref->node);
 
   /* Clear ref->node unless we want the caller to free the node */
 
@@ -382,18 +380,18 @@ int binder_inc_ref_for_node(FAR struct binder_proc *proc,
   FAR struct binder_ref *new_ref     = NULL;
   int                    ret         = 0;
 
-  nxmutex_lock(&proc->proc_lock);
+  binder_proc_lock(proc);
   ref = binder_get_ref_for_node_olocked(proc, node, NULL);
   if (!ref)
     {
-      nxmutex_unlock(&proc->proc_lock);
+      binder_proc_unlock(proc);
       new_ref = kmm_zalloc(sizeof(struct binder_ref));
       if (!new_ref)
         {
           return -ENOMEM;
         }
 
-      nxmutex_lock(&proc->proc_lock);
+      binder_proc_lock(proc);
       list_initialize(&new_ref->rb_node_desc);
       list_initialize(&new_ref->rb_node_node);
       list_initialize(&new_ref->node_entry);
@@ -402,7 +400,21 @@ int binder_inc_ref_for_node(FAR struct binder_proc *proc,
 
   ret       = binder_inc_ref_olocked(ref, strong, target_list);
   *rdata    = ref->data;
-  nxmutex_unlock(&proc->proc_lock);
+
+  if (ret && ref == new_ref)
+    {
+      /* Cleanup the failed reference here as the target
+       * could now be dead and have already released its
+       * references by now. Calling on the new reference
+       * with strong=0 and a tmp_refs will not decrement
+       * the node. The new_ref gets kfree'd below.
+       */
+
+      binder_cleanup_ref_olocked(new_ref);
+      ref = NULL;
+    }
+
+  binder_proc_unlock(proc);
   if (new_ref && ref != new_ref)
     {
       /* Another thread created the ref first so
@@ -443,7 +455,7 @@ int binder_update_ref_for_handle(FAR struct binder_proc *proc, uint32_t desc,
   FAR struct binder_ref *ref;
   bool                   delete_ref = false;
 
-  nxmutex_lock(&proc->proc_lock);
+  binder_proc_lock(proc);
   ref = binder_get_ref_olocked(proc, desc, strong);
   if (!ref)
     {
@@ -465,7 +477,7 @@ int binder_update_ref_for_handle(FAR struct binder_proc *proc, uint32_t desc,
       *rdata = ref->data;
     }
 
-  nxmutex_unlock(&proc->proc_lock);
+  binder_proc_unlock(proc);
 
   if (delete_ref)
     {
@@ -475,7 +487,7 @@ int binder_update_ref_for_handle(FAR struct binder_proc *proc, uint32_t desc,
   return ret;
 
 err_no_ref:
-  nxmutex_unlock(&proc->proc_lock);
+  binder_proc_unlock(proc);
   return ret;
 }
 
