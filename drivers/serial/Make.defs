@@ -87,6 +87,12 @@ ifeq ($(CONFIG_16550_PCI_UART),y)
   CSRCS += uart_pci_16550.c
 endif
 
+# Serial cmux driver
+
+ifeq ($(CONFIG_UART_CMUX),y)
+  CSRCS += uart_cmux.c
+endif
+
 # Include serial build support
 
 DEPPATH += --dep-path serial

@@ -44,6 +44,7 @@
 #include <nuttx/reset/reset-controller.h>
 #include <nuttx/segger/rtt.h>
 #include <nuttx/sensors/sensor.h>
+#include <nuttx/serial/gsmmux.h>
 #include <nuttx/serial/pty.h>
 #include <nuttx/serial/uart_hostfs.h>
 #include <nuttx/serial/uart_ram.h>
@@ -118,6 +119,10 @@ void drivers_initialize(void)
   drivers_trace_begin();
 
   /* Register devices */
+
+#ifdef CONFIG_UART_CMUX
+  uart_cmux_initialize();
+#endif
 
   syslog_initialize();
 

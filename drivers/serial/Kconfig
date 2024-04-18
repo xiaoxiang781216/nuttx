@@ -941,4 +941,66 @@ config UART_BTH5_NPOLLWAITERS
 
 endif # UART_BTH5
 
+config UART_CMUX
+	bool "Serial Channel Multiplexer"
+	default n
+	select SERIAL_TXDMA
+	select SERIAL_RXDMA
+	---help---
+		Enable serial port multiplexing support. It uses the gsm0710 protocol
+		to multiplex a physical serial port into multiple serial devices.
+
+if UART_CMUX
+
+config UART_CMUX_DEVNAME
+	string "Serial device names used by cmux"
+	default "/dev/ttyS0"
+	---help---
+		The physical serial device name used by cmux
+
+config UART_CMUX_BUFSIZE
+	int "CMUX uart channel buffer size"
+	default 512
+	---help---
+		Receive and send buffer size of cmux virtual serial port.
+
+config UART_CMUX_GSMTTY1
+	bool "Register cmux gsmtty1 device"
+	default y
+	---help---
+		Enable this option to register a cmux gsmtty1 device
+
+config UART_CMUX_GSMTTY2
+	bool "Register cmux gsmtty2 device"
+	default n
+	---help---
+		Enable this option to register a cmux gsmtty2 device
+
+config UART_CMUX_CONSOLE
+	bool "Register cmux console device"
+	default n
+	---help---
+		Enable this option to register a cmux console device
+
+config UART_CMUX_LOG
+	bool "cmux log channel"
+	default n
+	---help---
+		Enable this option to log cmux channel data
+
+config UART_CMUX_LOG_TO_CONSOLE
+	bool "cmux log to console"
+	default n
+	---help---
+		Enable this option to use the same channel for syslog and console
+
+config UART_CMUX_DEBUG
+	int "cmux debug level"
+	range 0 7
+	default 0
+	---help---
+		Enable this option to print cmux debug information
+
+endif
+
 endif # SERIAL
