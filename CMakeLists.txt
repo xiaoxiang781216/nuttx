@@ -365,6 +365,7 @@ include(nuttx_add_module)
 include(nuttx_add_dependencies)
 include(nuttx_export_header)
 include(nuttx_remove_compile_options)
+include(nuttx_source_file_properties)
 include(menuconfig)
 
 include(ExternalProject)
