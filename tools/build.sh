@@ -180,6 +180,7 @@ function setup_toolchain()
   export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/ply
   export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/jsonpath
   export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/kconfiglib
+  export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/construct
 
   # Recommended to use kconfiglib instead of kconfig-frontends
   export PATH=${ROOTDIR}/prebuilts/tools/python/bin:$PATH
