@@ -1095,7 +1095,7 @@ static int usbdev_fs_ep_bind(FAR struct usbdev_s *dev, uint8_t epno,
 
       container->req->priv = container;
 
-      if (USB_ISEPIN(epinfo->desc.addr))
+      if (USB_ISEPIN(epinfo->desc.addr) || epno == 0)
         {
           container->req->callback = usbdev_fs_wrcomplete;
           sq_addlast(&container->node, &fs_ep->reqq);
