@@ -60,7 +60,7 @@
  ****************************************************************************/
 
 #ifndef CONFIG_SMP
-void nxsched_remove_running(FAR struct tcb_s *rtcb)
+inline_function void nxsched_remove_running(FAR struct tcb_s *rtcb)
 {
   FAR dq_queue_t *tasklist;
   FAR struct tcb_s *nxttcb;
@@ -95,7 +95,7 @@ void nxsched_remove_running(FAR struct tcb_s *rtcb)
     }
 }
 
-void nxsched_remove_not_running(FAR struct tcb_s *rtcb)
+inline_function void nxsched_remove_not_running(FAR struct tcb_s *rtcb)
 {
   FAR dq_queue_t *tasklist;
 
@@ -286,7 +286,7 @@ void nxsched_remove_running_without_merge(FAR struct tcb_s *rtcb)
   rtcb->task_state = TSTATE_TASK_INVALID;
 }
 
-void nxsched_remove_running(FAR struct tcb_s *rtcb)
+inline_function void nxsched_remove_running(FAR struct tcb_s *rtcb)
 {
   nxsched_remove_running_without_merge(rtcb);
   if (g_pendingtasks.head)
@@ -295,7 +295,7 @@ void nxsched_remove_running(FAR struct tcb_s *rtcb)
     }
 }
 
-void nxsched_remove_not_running(FAR struct tcb_s *rtcb)
+inline_function void nxsched_remove_not_running(FAR struct tcb_s *rtcb)
 {
   FAR dq_queue_t *tasklist;
 
