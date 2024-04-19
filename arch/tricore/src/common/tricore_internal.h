@@ -197,13 +197,10 @@ extern uintptr_t        _lc_ge_data[]; /* End+1 of .data */
  * Inline Functions
  ****************************************************************************/
 
-#define tricore_savecontext(regs)    (regs = (uintptr_t *)CURRENT_REGS)
-#define tricore_restorecontext(regs) (CURRENT_REGS = regs)
-
 /* Macros to handle saving and restoring interrupt state. */
 
-#define tricore_savestate(regs)    (regs = (uintptr_t *)CURRENT_REGS)
-#define tricore_restorestate(regs) (CURRENT_REGS = regs)
+#define tricore_savestate(regs)    (regs = up_current_regs())
+#define tricore_restorestate(regs) (up_set_current_regs(regs))
 
 /****************************************************************************
  * Public Function Prototypes
