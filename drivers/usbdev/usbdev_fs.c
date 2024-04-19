@@ -1495,10 +1495,11 @@ static int usbdev_fs_classsetup(FAR struct usbdevclass_driver_s *driver,
                                    struct usbdev_ctrlreq_s, node);
 
           memcpy(&container->req, ctrl, sizeof(*ctrl));
-          ret = sizeof(*ctrl);
 
           sq_addlast(&container->node, &ep0->ctrlreqq);
           usbdev_fs_notify(ep0, POLLIN);
+
+          ret = OK;
         }
       else
         {
