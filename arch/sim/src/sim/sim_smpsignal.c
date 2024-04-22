@@ -252,10 +252,6 @@ int up_cpu_paused_restore(void)
 
   nxsched_resume_scheduler(tcb);
 
-  /* Restore the cpu lock */
-
-  restore_critical_section(tcb, cpu);
-
   /* Then switch contexts.  Any necessary address environment changes
    * will be made when the interrupt returns.
    */
@@ -275,7 +271,7 @@ int up_cpu_paused_restore(void)
 
 void host_cpu_started(void)
 {
-#ifdef CONFIG_SCHED_INSTRUMENTATION
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   struct tcb_s *tcb = this_task();
 
   /* Notify that this CPU has started */
