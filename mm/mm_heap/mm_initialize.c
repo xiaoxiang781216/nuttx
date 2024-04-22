@@ -320,9 +320,16 @@ FAR struct mm_heap_s *mm_initialize(FAR const char *name,
 
 void mm_uninitialize(FAR struct mm_heap_s *heap)
 {
+  int i;
+
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
   mempool_multiple_deinit(heap->mm_mpool);
 #endif
+
+  for (i = 0; i < CONFIG_MM_REGIONS; i++)
+    {
+      kasan_unregister(heap->mm_heapstart[i]);
+    }
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
 #  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
