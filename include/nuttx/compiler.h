@@ -265,8 +265,10 @@
 
 #  if defined(__clang__)
 #    define nooptimiziation_function __attribute__((optnone))
-#  else
+#  elif !defined(__ghs__)
 #    define nooptimiziation_function __attribute__((optimize("O0")))
+#  else
+#    define nooptimiziation_function
 #  endif
 
 /* The nosanitize_address attribute informs GCC don't sanitize it */
