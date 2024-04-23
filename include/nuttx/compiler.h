@@ -273,7 +273,11 @@
 
 /* The nosanitize_address attribute informs GCC don't sanitize it */
 
-#  define nosanitize_address __attribute__((no_sanitize_address))
+#  if !defined(__ghs__)
+#    define nosanitize_address __attribute__((no_sanitize_address))
+#  else
+#    define nosanitize_address
+#  endif
 
 /* The nosanitize_undefined attribute informs GCC don't sanitize it */
 
