@@ -534,7 +534,7 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
     }
 
   priv->rvdev.rdev.ns_unbind_cb = rpmsg_ns_unbind;
-  priv->rvdev.rdev.notify_wait_cb = rpmsg_virtio_notify_wait;
+  priv->rvdev.notify_wait_cb = rpmsg_virtio_notify_wait;
 
   RPMSG_VIRTIO_REGISTER_CALLBACK(priv->dev, rpmsg_virtio_callback, priv);
 
