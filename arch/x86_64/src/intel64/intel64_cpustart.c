@@ -92,7 +92,7 @@ static int x86_64_ap_startup(int cpu)
 
   /* Wait for AP ready */
 
-  up_udelay(200);
+  up_udelay(300);
   SP_DMB();
 
   /* Check CPU ready flag */
