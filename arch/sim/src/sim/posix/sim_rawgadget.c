@@ -223,7 +223,7 @@ static void host_raw_handle_signal(int signum)
 {
   struct usb_raw_gadget_dev_t *dev = &g_raw_gadget_dev;
 
-  if (signum == SIGUSR2)
+  if (signum == SIGRTMIN)
     {
       dev->loop_stop = true;
     }
@@ -579,7 +579,7 @@ static void *host_raw_ep0handle(void *arg)
 
   memset(&action, 0, sizeof(struct sigaction));
   action.sa_handler = host_raw_handle_signal;
-  sigaction(SIGUSR2, &action, NULL);
+  sigaction(SIGRTMIN, &action, NULL);
 
   while (!dev->loop_stop)
     {
@@ -619,7 +619,7 @@ static void *host_raw_ephandle(void *arg)
 
   memset(&action, 0, sizeof(struct sigaction));
   action.sa_handler = host_raw_handle_signal;
-  sigaction(SIGUSR2, &action, NULL);
+  sigaction(SIGRTMIN, &action, NULL);
 
   while (!dev->loop_stop)
     {
@@ -693,11 +693,11 @@ int host_usbdev_deinit(void)
   for (i = 0; i < USB_RAW_EPS_NUM_MAX &&
               dev->eps_entry[i].ep_thread > 0; i++)
     {
-      pthread_kill(dev->eps_entry[i].ep_thread, SIGUSR2);
+      pthread_kill(dev->eps_entry[i].ep_thread, SIGRTMIN);
       pthread_join(dev->eps_entry[i].ep_thread, NULL);
     }
 
-  pthread_kill(dev->ep0_thread, SIGUSR2);
+  pthread_kill(dev->ep0_thread, SIGRTMIN);
   pthread_join(dev->ep0_thread, NULL);
   host_raw_close(dev->fd);
   dev->fd = -1;
