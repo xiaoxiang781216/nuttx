@@ -531,6 +531,19 @@ static inline_function bool up_interrupt_context(void)
   return up_current_regs() != NULL;
 }
 
+static inline_function uint32_t up_getsp(void)
+{
+  register uint32_t sp;
+
+  __asm__ __volatile__
+  (
+    "mov %0, sp\n"
+    : "=r" (sp)
+  );
+
+  return sp;
+}
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/

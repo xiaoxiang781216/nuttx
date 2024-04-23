@@ -565,6 +565,19 @@ static inline_function bool up_interrupt_context(void)
   return getipsr() != 0;
 }
 
+static inline_function uint32_t up_getsp(void)
+{
+  uint32_t sp;
+
+  __asm__ __volatile__
+  (
+    "mov %0, sp\n"
+    : "=r" (sp)
+  );
+
+  return sp;
+}
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
