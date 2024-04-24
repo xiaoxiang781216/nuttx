@@ -226,6 +226,7 @@ int up_cpu_paused_restore(void)
 
 int s698pm_pause_handler(int irq, void *c, void *arg)
 {
+  struct tcb_s *tcb;
   int cpu = up_cpu_index();
 
   /* Clear IPI (Inter-Processor-Interrupt) */
@@ -254,14 +255,12 @@ int s698pm_pause_handler(int irq, void *c, void *arg)
 
       leave_critical_section(flags);
     }
-  else
-    {
-      struct tcb_s *tcb = current_task(cpu);
-      sparc_savestate(tcb->xcp.regs);
-      nxsched_process_delivered(cpu);
-      tcb = current_task(cpu);
-      sparc_restorestate(tcb->xcp.regs);
-    }
+
+  tcb = current_task(cpu);
+  sparc_savestate(tcb->xcp.regs);
+  nxsched_process_delivered(cpu);
+  tcb = current_task(cpu);
+  sparc_restorestate(tcb->xcp.regs);
 
   return OK;
 }

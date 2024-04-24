@@ -74,6 +74,7 @@ static volatile spinlock_t g_cpu_resumed[CONFIG_SMP_NCPUS];
 
 static int sim_cpupause_handler(int irq, void *context, void *arg)
 {
+  struct tcb_s *tcb;
   int cpu = this_cpu();
 
   /* Check for false alarms.  Such false could occur as a consequence of
@@ -99,14 +100,12 @@ static int sim_cpupause_handler(int irq, void *context, void *arg)
 
       leave_critical_section(flags);
     }
-  else
-    {
-      struct tcb_s *tcb = current_task(cpu);
-      sim_savestate(tcb->xcp.regs);
-      nxsched_process_delivered(cpu);
-      tcb = current_task(cpu);
-      sim_restorestate(tcb->xcp.regs);
-    }
+
+  tcb = current_task(cpu);
+  sim_savestate(tcb->xcp.regs);
+  nxsched_process_delivered(cpu);
+  tcb = current_task(cpu);
+  sim_restorestate(tcb->xcp.regs);
 
   return OK;
 }

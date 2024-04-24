@@ -226,6 +226,7 @@ int up_cpu_paused_restore(void)
 
 int riscv_pause_handler(int irq, void *c, void *arg)
 {
+  struct tcb_s *tcb;
   int cpu = up_cpu_index();
 
   /* Clear IPI (Inter-Processor-Interrupt) */
@@ -254,14 +255,12 @@ int riscv_pause_handler(int irq, void *c, void *arg)
 
       leave_critical_section(flags);
     }
-  else
-    {
-      struct tcb_s *tcb = current_task(cpu);
-      riscv_savecontext(tcb);
-      nxsched_process_delivered(cpu);
-      tcb = current_task(cpu);
-      riscv_restorecontext(tcb);
-    }
+
+  tcb = current_task(cpu);
+  riscv_savecontext(tcb);
+  nxsched_process_delivered(cpu);
+  tcb = current_task(cpu);
+  riscv_restorecontext(tcb);
 
   return OK;
 }

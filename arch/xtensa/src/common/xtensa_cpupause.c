@@ -218,6 +218,7 @@ int up_cpu_paused_restore(void)
 
 void xtensa_pause_handler(void)
 {
+  struct tcb_s *tcb;
   int cpu = up_cpu_index();
 
   /* Check for false alarms.  Such false could occur as a consequence of
@@ -242,14 +243,12 @@ void xtensa_pause_handler(void)
 
       leave_critical_section(flags);
     }
-  else
-    {
-      struct tcb_s *tcb = current_task(cpu);
-      xtensa_savestate(tcb->xcp.regs);
-      nxsched_process_delivered(cpu);
-      tcb = current_task(cpu);
-      xtensa_restorestate(tcb->xcp.regs);
-    }
+
+  tcb = current_task(cpu);
+  xtensa_savestate(tcb->xcp.regs);
+  nxsched_process_delivered(cpu);
+  tcb = current_task(cpu);
+  xtensa_restorestate(tcb->xcp.regs);
 }
 
 /****************************************************************************

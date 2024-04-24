@@ -238,6 +238,7 @@ int up_cpu_paused_restore(void)
 
 int arm_pause_handler(int irq, void *context, void *arg)
 {
+  struct tcb_s *tcb;
   int cpu = this_cpu();
 
   /* Check for false alarms.  Such false could occur as a consequence of
@@ -263,14 +264,12 @@ int arm_pause_handler(int irq, void *context, void *arg)
 
       leave_critical_section(flags);
     }
-  else
-    {
-      struct tcb_s *tcb = current_task(cpu);
-      arm_savestate(tcb->xcp.regs);
-      nxsched_process_delivered(cpu);
-      tcb = current_task(cpu);
-      arm_restorestate(tcb->xcp.regs);
-    }
+
+  tcb = current_task(cpu);
+  arm_savestate(tcb->xcp.regs);
+  nxsched_process_delivered(cpu);
+  tcb = current_task(cpu);
+  arm_restorestate(tcb->xcp.regs);
 
   return OK;
 }
