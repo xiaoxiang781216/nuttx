@@ -67,15 +67,13 @@ static struct binder_node *binder_init_node_ilocked(
   binder_uintptr_t  cookie  = fp ? fp->cookie : 0;
   uint32_t          flags   = fp ? fp->flags : 0;
   FAR struct binder_node    *node;
-  FAR struct binder_node    *itr;
   signed char       priority;
 
   binder_inner_proc_assert_locked(proc);
 
-  node = NULL;
-  list_for_every_entry(&proc->nodes, itr, struct binder_node, rb_node)
+  list_for_every_entry(&proc->nodes, node, struct binder_node, rb_node)
     {
-      if (ptr == itr->ptr)
+      if (ptr == node->ptr)
         {
           /* A matching node is already in the node list of process.
            * The node was already added by another thread.
@@ -83,7 +81,6 @@ static struct binder_node *binder_init_node_ilocked(
            */
 
           binder_inc_node_tmpref_ilocked(node);
-          node = itr;
           return node;
         }
     }
