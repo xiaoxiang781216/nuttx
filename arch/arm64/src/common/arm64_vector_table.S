@@ -73,13 +73,6 @@
     mrs    x1, spsr_el1
     stp    x0, x1,  [sp, #8 * REG_ELR]
 
-    /* Increment exception depth */
-
-    mrs    x0, tpidrro_el0
-    mov    x1, #1
-    add    x0, x0, x1
-    msr    tpidrro_el0, x0
-
     /* Save the FPU registers */
 
 #ifdef CONFIG_ARCH_FPU
@@ -251,13 +244,6 @@ SECTION_FUNC(text, arm64_exit_exception)
     ldp    x0, x1,   [sp, #8 * REG_ELR]
     msr    elr_el1,   x0
     msr    spsr_el1,  x1
-
-    /* decrement exception depth */
-
-    mrs    x0, tpidrro_el0
-    mov    x1, #1
-    sub    x0, x0, x1
-    msr    tpidrro_el0, x0
 
     ldp    x30, x0,  [sp, #8 * REG_X30]
     ldp    x0,  x1,  [sp, #8 * REG_X0]

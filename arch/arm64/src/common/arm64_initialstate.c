@@ -69,8 +69,6 @@ void arm64_new_task(struct tcb_s * tcb)
 
   pinitctx->sp_elx    = (uint64_t)stack_ptr;
   pinitctx->sp_el0    = (uint64_t)pinitctx;
-  pinitctx->exe_depth = 0;
-  pinitctx->tpidr_el0 = (uint64_t)tcb;
 
   tcb->xcp.regs       = (uint64_t *)pinitctx;
 }
@@ -110,7 +108,6 @@ void up_initial_state(struct tcb_s *tcb)
        * core 0, idle0
        */
 
-      write_sysreg(0, tpidrro_el0);
       write_sysreg(tcb, tpidr_el0);
 
 #ifdef CONFIG_STACK_COLORATION

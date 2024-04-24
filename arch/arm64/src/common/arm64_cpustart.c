@@ -136,7 +136,6 @@ static void arm64_smp_init_top(void *arg)
 
   /* core n, idle n */
 
-  write_sysreg(0, tpidrro_el0);
   write_sysreg(tcb, tpidr_el0);
 
   cpu_boot_params.cpu_ready_flag = 1;
@@ -281,4 +280,3 @@ void arm64_boot_secondary_c_routine(void)
 
   func(arg);
 }
-
