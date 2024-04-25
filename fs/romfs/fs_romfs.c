@@ -1108,6 +1108,18 @@ static int romfs_bind(FAR struct inode *blkdriver, FAR const void *data,
       goto errout_with_mount;
     }
 
+#ifdef CONFIG_FS_ROMFS_WRITEABLE
+  if (data && strstr(data, "rw") && strstr(data, "forceformat"))
+    {
+      ret = romfs_mkfs(rm);
+      if (ret < 0)
+        {
+          ferr("ERROR: romfs_mkfs failed: %d\n", ret);
+          goto errout_with_buffer;
+        }
+    }
+#endif
+
   /* Then complete the mount by getting the ROMFS configuratrion from
    * the ROMF header
    */
@@ -1115,8 +1127,29 @@ static int romfs_bind(FAR struct inode *blkdriver, FAR const void *data,
   ret = romfs_fsconfigure(rm, data);
   if (ret < 0)
     {
-      ferr("ERROR: romfs_fsconfigure failed: %d\n", ret);
-      goto errout_with_buffer;
+#ifdef CONFIG_FS_ROMFS_WRITEABLE
+      if (data && strstr(data, "rw") && strstr(data, "autoformat"))
+        {
+          ret = romfs_mkfs(rm);
+          if (ret < 0)
+            {
+              ferr("ERROR: romfs_format failed: %d\n", ret);
+              goto errout_with_buffer;
+            }
+
+          ret = romfs_fsconfigure(rm, data);
+          if (ret < 0)
+            {
+              ferr("ERROR: romfs_fsconfigure failed: %d\n", ret);
+              goto errout_with_buffer;
+            }
+        }
+      else
+#endif
+        {
+          ferr("ERROR: romfs_fsconfigure failed: %d\n", ret);
+          goto errout_with_buffer;
+        }
     }
 
   /* Mounted! */
@@ -1125,10 +1158,7 @@ static int romfs_bind(FAR struct inode *blkdriver, FAR const void *data,
   return OK;
 
 errout_with_buffer:
-  if (!rm->rm_xipbase)
-    {
-      kmm_free(rm->rm_buffer);
-    }
+  kmm_free(rm->rm_devbuffer);
 
 errout_with_mount:
   nxrmutex_destroy(&rm->rm_lock);
@@ -1215,11 +1245,7 @@ static int romfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
 
       /* Release the mountpoint private data */
 
-      if (!rm->rm_xipbase)
-        {
-          kmm_free(rm->rm_buffer);
-        }
-
+      kmm_free(rm->rm_devbuffer);
 #ifdef CONFIG_FS_ROMFS_CACHE_NODE
       romfs_freenode(rm->rm_root);
 #endif
