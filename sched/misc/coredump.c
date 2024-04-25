@@ -173,7 +173,8 @@ static void coredump_dump_blkdev(pid_t pid)
       return;
     }
 
-  _alert("Finish coredump.\n");
+  _alert("Finish coredump, write %d bytes to %s\n",
+         info->size, CONFIG_BOARD_COREDUMP_BLKDEV_PATH);
 }
 #endif
 
