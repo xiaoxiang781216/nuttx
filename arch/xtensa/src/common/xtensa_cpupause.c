@@ -252,7 +252,7 @@ void xtensa_pause_handler(void)
 }
 
 /****************************************************************************
- * Name: up_cpu_async_pause
+ * Name: up_cpu_pause_async
  *
  * Description:
  *   pause task execution on the CPU
@@ -270,7 +270,7 @@ void xtensa_pause_handler(void)
  *
  ****************************************************************************/
 
-inline_function int up_cpu_async_pause(int cpu)
+inline_function int up_cpu_pause_async(int cpu)
 {
   /* Execute the intercpu interrupt */
 
@@ -323,7 +323,7 @@ int up_cpu_pause(int cpu)
   spin_lock(&g_cpu_wait[cpu]);
   spin_lock(&g_cpu_paused[cpu]);
 
-  up_cpu_async_pause(cpu);
+  up_cpu_pause_async(cpu);
 
   /* Wait for the other CPU to unlock g_cpu_paused meaning that
    * it is fully paused and ready for up_cpu_resume();

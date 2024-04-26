@@ -220,6 +220,40 @@ int up_cpu_paused_restore(void)
 }
 
 /****************************************************************************
+ * Name: arm64_pause_async_handler
+ *
+ * Description:
+ *   This is the handler for async pause.
+ *
+ *   1. It saves the current task state at the head of the current assigned
+ *      task list.
+ *   2. It porcess g_delivertasks
+ *   3. Returns from interrupt, restoring the state of the new task at the
+ *      head of the ready to run list.
+ *
+ * Input Parameters:
+ *   Standard interrupt handling
+ *
+ * Returned Value:
+ *   Zero on success; a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+int arm64_pause_async_handler(int irq, void *context, void *arg)
+{
+  struct tcb_s *tcb;
+  int cpu = this_cpu();
+
+  tcb = current_task(cpu);
+  arm64_savestate(tcb->xcp.regs);
+  nxsched_process_delivered(cpu);
+  tcb = current_task(cpu);
+  arm64_restorestate(tcb->xcp.regs);
+
+  return OK;
+}
+
+/****************************************************************************
  * Name: arm64_pause_handler
  *
  * Description:
@@ -241,7 +275,6 @@ int up_cpu_paused_restore(void)
 
 int arm64_pause_handler(int irq, void *context, void *arg)
 {
-  struct tcb_s *tcb;
   int cpu = this_cpu();
 
   /* Check for false alarms.  Such false could occur as a consequence of
@@ -268,17 +301,11 @@ int arm64_pause_handler(int irq, void *context, void *arg)
       leave_critical_section(flags);
     }
 
-  tcb = current_task(cpu);
-  arm64_savestate(tcb->xcp.regs);
-  nxsched_process_delivered(cpu);
-  tcb = current_task(cpu);
-  arm64_restorestate(tcb->xcp.regs);
-
   return OK;
 }
 
 /****************************************************************************
- * Name: up_cpu_async_pause
+ * Name: up_cpu_pause_async
  *
  * Description:
  *   pause task execution on the CPU
@@ -296,11 +323,11 @@ int arm64_pause_handler(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-inline_function int up_cpu_async_pause(int cpu)
+inline_function int up_cpu_pause_async(int cpu)
 {
   /* Execute SGI2 */
 
-  arm64_gic_raise_sgi(GIC_SMP_CPUPAUSE, (1 << cpu));
+  arm64_gic_raise_sgi(GIC_SMP_CPUPAUSE_ASYNC, (1 << cpu));
 
   return OK;
 }
@@ -349,7 +376,7 @@ int up_cpu_pause(int cpu)
   spin_lock(&g_cpu_wait[cpu]);
   spin_lock(&g_cpu_paused[cpu]);
 
-  up_cpu_async_pause(cpu);
+  arm64_gic_raise_sgi(GIC_SMP_CPUPAUSE, (1 << cpu));
 
   /* Wait for the other CPU to unlock g_cpu_paused meaning that
    * it is fully paused and ready for up_cpu_resume();

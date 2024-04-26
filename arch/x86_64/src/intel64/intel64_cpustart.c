@@ -46,6 +46,7 @@
 
 extern void __ap_entry(void);
 extern int up_pause_handler(int irq, void *c, void *arg);
+extern int up_pause_async_handler(int irq, void *c, void *arg);
 
 /****************************************************************************
  * Private Functions
@@ -159,7 +160,9 @@ void x86_64_ap_boot(void)
   /* Connect Pause IRQ to CPU */
 
   irq_attach(SMP_IPI_IRQ, up_pause_handler, NULL);
+  irq_attach(SMP_IPI_ASYNC_IRQ, up_pause_async_handler, NULL);
   up_enable_irq(SMP_IPI_IRQ);
+  up_enable_irq(SMP_IPI_ASYNC_IRQ);
 
   /* CPU ready */
 

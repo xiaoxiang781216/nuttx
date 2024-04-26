@@ -2241,7 +2241,7 @@ int up_cpu_pause(int cpu);
 #endif
 
 /****************************************************************************
- * Name: up_cpu_async_pause
+ * Name: up_cpu_pause_async
  *
  * Description:
  *   pause task execution on the CPU
@@ -2260,7 +2260,7 @@ int up_cpu_pause(int cpu);
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-int up_cpu_async_pause(int cpu);
+int up_cpu_pause_async(int cpu);
 #endif
 
 /****************************************************************************
