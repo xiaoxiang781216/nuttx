@@ -99,10 +99,10 @@ extern "C"
 #ifdef CONFIG_SMP
 static inline_function int up_cpu_index(void)
 {
-  int cpu;
+  unsigned long cpu;
 
   asm volatile(
-    "\tmov %%gs:(%c1), %0\n"
+    "\tmovq %%gs:(%c1), %0\n"
     : "=rm" (cpu)
     : "i" (offsetof(struct intel64_cpu_s, id))
     :);
