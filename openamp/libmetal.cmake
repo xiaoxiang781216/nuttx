@@ -56,102 +56,16 @@ else()
   set(LIBMETAL_ARCH ${CONFIG_ARCH})
 endif()
 
-# cmake-format: off
-function(libmetal_hdrs_sedexp input_header output_header)
-  execute_process(
-    COMMAND
-      sed
-      -e "s/@PROJECT_VERSION_MAJOR@/0/g"
-      -e "s/@PROJECT_VERSION_MINOR@/1/g"
-      -e "s/@PROJECT_VERSION_PATCH@/0/g"
-      -e "s/@PROJECT_VERSION@/0.1.0/g"
-      -e "s/@PROJECT_SYSTEM@/nuttx/g"
-      -e "s/@PROJECT_PROCESSOR@/${LIBMETAL_ARCH}/g"
-      -e "s/@PROJECT_MACHINE@/${CONFIG_ARCH_CHIP}/g"
-      -e "s/@PROJECT_SYSTEM_UPPER@/nuttx/g"
-      -e "s/@PROJECT_PROCESSOR_UPPER@/${LIBMETAL_ARCH}/g"
-      -e "s/@PROJECT_MACHINE_UPPER@/${CONFIG_ARCH_CHIP}/g"
-      -e "s/cmakedefine HAVE_STDATOMIC_H/define HAVE_STDATOMIC_H/g"
-      -e "s/cmakedefine/undef/g" ${input_header}
-    OUTPUT_FILE ${output_header})
-endfunction()
-# cmake-format: on
+set(PROJECT_SYSTEM nuttx)
+set(CMAKE_SYSTEM_PROCESSOR ${LIBMETAL_ARCH})
+set(MACHINE ${CONFIG_ARCH})
+set(CMAKE_SYSTEM_NAME NuttX)
+set(WITH_DOC OFF)
 
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include/metal)
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include/metal/system/nuttx)
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include/metal/compiler/gcc)
-file(MAKE_DIRECTORY
-     ${CMAKE_BINARY_DIR}/include/metal/processor/${LIBMETAL_ARCH})
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/libmetal
+                 ${CMAKE_CURRENT_BINARY_DIR}/libmetal EXCLUDE_FROM_ALL)
 
-set(headers)
-file(
-  GLOB headers
-  LIST_DIRECTORIES false
-  RELATIVE ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib
-  ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/*.h)
-foreach(header ${headers})
-  libmetal_hdrs_sedexp(${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/${header}
-                       ${CMAKE_BINARY_DIR}/include/metal/${header})
-endforeach()
+nuttx_create_symlink(${CMAKE_CURRENT_BINARY_DIR}/libmetal/lib/include/metal
+                     ${CMAKE_BINARY_DIR}/include/metal)
 
-set(headers)
-file(
-  GLOB headers
-  LIST_DIRECTORIES false
-  RELATIVE ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/system/nuttx
-  ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/system/nuttx/*.h)
-foreach(header ${headers})
-  libmetal_hdrs_sedexp(
-    ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/system/nuttx/${header}
-    ${CMAKE_BINARY_DIR}/include/metal/system/nuttx/${header})
-endforeach()
-
-set(headers)
-file(
-  GLOB headers
-  LIST_DIRECTORIES false
-  RELATIVE ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/processor/${LIBMETAL_ARCH}
-  ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/processor/${LIBMETAL_ARCH}/*.h)
-foreach(header ${headers})
-  libmetal_hdrs_sedexp(
-    ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/processor/${LIBMETAL_ARCH}/${header}
-    ${CMAKE_BINARY_DIR}/include/metal/processor/${LIBMETAL_ARCH}/${header})
-endforeach()
-
-set(headers)
-file(
-  GLOB headers
-  LIST_DIRECTORIES false
-  RELATIVE ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/compiler/gcc
-  ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/compiler/gcc/*.h)
-foreach(header ${headers})
-  libmetal_hdrs_sedexp(
-    ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/compiler/gcc/${header}
-    ${CMAKE_BINARY_DIR}/include/metal/compiler/gcc/${header})
-endforeach()
-
-nuttx_add_kernel_library(lib_metal)
-
-target_sources(
-  lib_metal
-  PRIVATE libmetal/lib/system/nuttx/condition.c
-          libmetal/lib/system/nuttx/device.c
-          libmetal/lib/system/nuttx/init.c
-          libmetal/lib/system/nuttx/io.c
-          libmetal/lib/system/nuttx/irq.c
-          libmetal/lib/system/nuttx/shmem.c
-          libmetal/lib/system/nuttx/time.c
-          libmetal/lib/device.c
-          libmetal/lib/dma.c
-          libmetal/lib/init.c
-          libmetal/lib/io.c
-          libmetal/lib/irq.c
-          libmetal/lib/log.c
-          libmetal/lib/shmem.c
-          libmetal/lib/version.c)
-
-if(CONFIG_OPENAMP_CACHE)
-  target_compile_definitions(lib_metal PRIVATE METAL_CACHE)
-endif()
-
-target_compile_definitions(lib_metal PRIVATE METAL_INTERNAL)
+nuttx_add_external_library(metal-static MODE KERNEL)
