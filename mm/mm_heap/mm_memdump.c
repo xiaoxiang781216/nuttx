@@ -29,6 +29,7 @@
 #include <debug.h>
 
 #include <nuttx/mm/mm.h>
+#include <nuttx/sched.h>
 
 #include "mm_heap/mm.h"
 
@@ -140,9 +141,19 @@ void mm_memdump(FAR struct mm_heap_s *heap,
 {
   struct mallinfo_task info;
 
+  info = mm_mallinfo_task(heap, dump);
+
+  if (info.aordblks == 0)
+    {
+      return;
+    }
+
   if (dump->pid >= PID_MM_ALLOC)
     {
-      syslog(LOG_INFO, "Dump all used memory node info:\n");
+      FAR struct tcb_s *tcb = nxsched_get_tcb(dump->pid);
+      FAR const char *name = tcb ? tcb->name : "Unknown";
+
+      syslog(LOG_INFO, "Dump %s all used memory node info:\n", name);
 #if CONFIG_MM_BACKTRACE < 0
       syslog(LOG_INFO, "%12s%*s\n", "Size", MM_PTR_FMT_WIDTH, "Address");
 #else
@@ -160,8 +171,6 @@ void mm_memdump(FAR struct mm_heap_s *heap,
   mempool_multiple_memdump(heap->mm_mpool, dump);
 #endif
   mm_foreach(heap, memdump_handler, (FAR void *)dump);
-
-  info = mm_mallinfo_task(heap, dump);
 
   syslog(LOG_INFO, "%12s%12s\n", "Total Blks", "Total Size");
   syslog(LOG_INFO, "%12d%12d\n", info.aordblks, info.uordblks);
