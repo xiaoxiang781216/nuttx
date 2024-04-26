@@ -56,16 +56,33 @@ else()
   set(LIBMETAL_ARCH ${CONFIG_ARCH})
 endif()
 
-set(PROJECT_VERSION_MAJOR 0)
-set(PROJECT_VERSION_MINOR 1)
-set(PROJECT_VERSION_PATCH 0)
-set(PROJECT_VERSION 0.1.0)
-set(PROJECT_SYSTEM nuttx)
-set(PROJECT_PROCESSOR ${LIBMETAL_ARCH})
-set(PROJECT_MACHINE ${CONFIG_ARCH_CHIP})
-set(PROJECT_SYSTEM_UPPER nuttx)
-set(PROJECT_PROCESSOR_UPPER ${LIBMETAL_ARCH})
-set(PROJECT_MACHINE_UPPER ${CONFIG_ARCH_CHIP})
+# cmake-format: off
+function(libmetal_hdrs_sedexp input_header output_header)
+  execute_process(
+    COMMAND
+      sed
+      -e "s/@PROJECT_VERSION_MAJOR@/0/g"
+      -e "s/@PROJECT_VERSION_MINOR@/1/g"
+      -e "s/@PROJECT_VERSION_PATCH@/0/g"
+      -e "s/@PROJECT_VERSION@/0.1.0/g"
+      -e "s/@PROJECT_SYSTEM@/nuttx/g"
+      -e "s/@PROJECT_PROCESSOR@/${LIBMETAL_ARCH}/g"
+      -e "s/@PROJECT_MACHINE@/${CONFIG_ARCH_CHIP}/g"
+      -e "s/@PROJECT_SYSTEM_UPPER@/nuttx/g"
+      -e "s/@PROJECT_PROCESSOR_UPPER@/${LIBMETAL_ARCH}/g"
+      -e "s/@PROJECT_MACHINE_UPPER@/${CONFIG_ARCH_CHIP}/g"
+      -e "s/cmakedefine HAVE_STDATOMIC_H/include <nuttx\\/compiler.h>/g"
+      -e "s/defined(HAVE_STDATOMIC_H)/defined(CONFIG_HAVE_ATOMICS)/g"
+      -e "s/cmakedefine/undef/g" ${input_header}
+    OUTPUT_FILE ${output_header})
+endfunction()
+# cmake-format: on
+
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include/metal)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include/metal/system/nuttx)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include/metal/compiler/gcc)
+file(MAKE_DIRECTORY
+     ${CMAKE_BINARY_DIR}/include/metal/processor/${LIBMETAL_ARCH})
 
 set(headers)
 file(
@@ -74,8 +91,8 @@ file(
   RELATIVE ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib
   ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/*.h)
 foreach(header ${headers})
-  configure_file(${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/${header}
-                 ${CMAKE_BINARY_DIR}/include/metal/${header})
+  libmetal_hdrs_sedexp(${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/${header}
+                       ${CMAKE_BINARY_DIR}/include/metal/${header})
 endforeach()
 
 set(headers)
@@ -85,8 +102,9 @@ file(
   RELATIVE ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/system/nuttx
   ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/system/nuttx/*.h)
 foreach(header ${headers})
-  configure_file(${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/system/nuttx/${header}
-                 ${CMAKE_BINARY_DIR}/include/metal/system/nuttx/${header})
+  libmetal_hdrs_sedexp(
+    ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/system/nuttx/${header}
+    ${CMAKE_BINARY_DIR}/include/metal/system/nuttx/${header})
 endforeach()
 
 set(headers)
@@ -96,7 +114,7 @@ file(
   RELATIVE ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/processor/${LIBMETAL_ARCH}
   ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/processor/${LIBMETAL_ARCH}/*.h)
 foreach(header ${headers})
-  configure_file(
+  libmetal_hdrs_sedexp(
     ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/processor/${LIBMETAL_ARCH}/${header}
     ${CMAKE_BINARY_DIR}/include/metal/processor/${LIBMETAL_ARCH}/${header})
 endforeach()
@@ -108,8 +126,9 @@ file(
   RELATIVE ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/compiler/gcc
   ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/compiler/gcc/*.h)
 foreach(header ${headers})
-  configure_file(${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/compiler/gcc/${header}
-                 ${CMAKE_BINARY_DIR}/include/metal/compiler/gcc/${header})
+  libmetal_hdrs_sedexp(
+    ${CMAKE_CURRENT_LIST_DIR}/libmetal/lib/compiler/gcc/${header}
+    ${CMAKE_BINARY_DIR}/include/metal/compiler/gcc/${header})
 endforeach()
 
 nuttx_add_kernel_library(lib_metal)
