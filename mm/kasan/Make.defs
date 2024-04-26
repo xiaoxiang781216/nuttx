@@ -33,7 +33,7 @@ CFLAGS += -fno-sanitize=kernel-hwaddress
 endif
 
 CFLAGS += -fno-builtin
-ifeq ($(CONFIG_LTO_NONE),n)
+ifneq ($(CONFIG_LTO_NONE),y)
   CFLAGS += -fno-lto
 endif
 endif
