@@ -39,7 +39,7 @@ static FAR wchar_t *twoway_wcsstr(FAR const wchar_t *h, FAR const wchar_t *n)
 {
   FAR const wchar_t *z;
   size_t l;
-  size_t ip;
+  ssize_t ip;
   size_t jp;
   size_t k;
   size_t p;
