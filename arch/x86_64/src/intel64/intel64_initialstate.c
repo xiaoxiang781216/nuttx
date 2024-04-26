@@ -122,8 +122,8 @@ void up_initial_state(struct tcb_s *tcb)
    * the "interrupt occurs."
    */
 
-  xcp->regs[REG_RSP]    = (uint64_t)xcp->regs;
-  xcp->regs[REG_RBP]    = (uint64_t)xcp->regs;
+  xcp->regs[REG_RSP]    = (uint64_t)xcp->regs - 8;
+  xcp->regs[REG_RBP]    = (uint64_t)xcp->regs - 8;
 
   /* Save the task entry point */
 
