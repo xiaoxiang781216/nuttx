@@ -103,6 +103,15 @@ config ARCH_CHIP_ESP32S3
 		802.11 b/g/n Wi-Fi and Bluetooth 5 (LE) connectivity that provides long-range
 		support.
 
+config ARCH_CHIP_ISS_HIFI4
+	bool "ISS HIFI4"
+	select ARCH_FAMILY_LX7
+	select XTENSA_HAVE_INTERRUPTS
+	select LIBC_ARCH_ATOMIC
+	select ARCH_HAVE_RESET
+	---help---
+		hifi4 simulation on Xtensa Instruction Set Simulator (ISS)
+
 config ARCH_CHIP_XTENSA_CUSTOM
 	bool "Custom XTENSA chip"
 	select ARCH_CHIP_CUSTOM
@@ -195,6 +204,7 @@ config ARCH_CHIP
 	default "esp32" if ARCH_CHIP_ESP32
 	default "esp32s2" if ARCH_CHIP_ESP32S2
 	default "esp32s3" if ARCH_CHIP_ESP32S3
+	default "iss-hifi4" if ARCH_CHIP_ISS_HIFI4
 
 config XTENSA_CP_LAZY
 	bool "Lazy co-processor state restoration"
@@ -333,6 +343,10 @@ endif
 
 if ARCH_CHIP_ESP32S3
 source "arch/xtensa/src/esp32s3/Kconfig"
+endif
+
+if ARCH_CHIP_ISS_HIFI4
+source "arch/xtensa/src/iss-hifi4/Kconfig"
 endif
 
 endif # ARCH_XTENSA
