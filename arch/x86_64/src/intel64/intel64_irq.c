@@ -54,8 +54,8 @@
 
 struct intel64_irq_priv_s
 {
-  uint8_t busy;
-  bool    msi;
+  cpu_set_t busy;
+  bool      msi;
 };
 
 /****************************************************************************
@@ -498,12 +498,9 @@ void up_disable_irq(int irq)
       return;
     }
 
-  if (g_irq_priv[irq].busy > 0)
-    {
-      g_irq_priv[irq].busy -= 1;
-    }
+  CPU_CLR(up_cpu_index(), &g_irq_priv[irq].busy);
 
-  if (g_irq_priv[irq].busy == 0)
+  if (CPU_COUNT(&g_irq_priv[irq].busy) == 0)
     {
       /* One time disable */
 
@@ -533,7 +530,7 @@ void up_enable_irq(int irq)
 #  ifndef CONFIG_IRQCHAIN
   /* Check if IRQ is free if we don't support IRQ chains */
 
-  if (g_irq_priv[irq].busy)
+  if (CPU_ISSET(up_cpu_index(), &g_irq_priv[irq].busy))
     {
       ASSERT(0);
     }
@@ -554,7 +551,7 @@ void up_enable_irq(int irq)
       ASSERT(0);
     }
 
-  if (g_irq_priv[irq].busy == 0)
+  if (CPU_COUNT(&g_irq_priv[irq].busy) == 0)
     {
       /* One time enable */
 
@@ -564,7 +561,7 @@ void up_enable_irq(int irq)
         }
     }
 
-  g_irq_priv[irq].busy += 1;
+  CPU_SET(up_cpu_index(), &g_irq_priv[irq].busy);
 
   spin_unlock_irqrestore(&g_irq_spin, flags);
 #endif
@@ -626,7 +623,7 @@ int up_alloc_irq_msi(int *num)
 
   for (i = 0; i < *num; i++)
     {
-      ASSERT(g_irq_priv[irq + i].busy == 0);
+      ASSERT(CPU_COUNT(&g_irq_priv[irq + i].busy) == 0);
       g_irq_priv[irq + i].msi = true;
     }
 
