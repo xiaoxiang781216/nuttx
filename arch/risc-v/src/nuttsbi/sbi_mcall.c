@@ -53,6 +53,9 @@ void sbi_mcall_handle(uintptr_t *regs)
 
   switch (regs[REG_A7])
   {
+    case SBI_EXT_IPI:
+      sbi_send_ipi(regs[REG_A0], regs[REG_A1]);
+      break;
     case SBI_EXT_TIME:
       switch (regs[REG_A6])
       {
