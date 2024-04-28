@@ -354,7 +354,7 @@ static void mempool_multiple_check(FAR struct mempool_s *pool,
 {
   FAR struct mempool_multiple_s *mpool = pool->priv;
 
-  assert(mempool_multiple_get_dict(mpool, blk));
+  DEBUGASSERT(mempool_multiple_get_dict(mpool, blk));
 }
 
 /****************************************************************************
