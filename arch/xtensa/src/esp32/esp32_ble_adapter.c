@@ -841,7 +841,7 @@ static xt_handler esp_ble_set_isr(int n, xt_handler f, void *arg)
   if (!adapter)
     {
       wlerr("Failed to alloc %d memory\n", tmp);
-      assert(0);
+      ASSERT(0);
       return NULL;
     }
 
@@ -852,7 +852,7 @@ static xt_handler esp_ble_set_isr(int n, xt_handler f, void *arg)
   if (ret)
     {
       wlerr("Failed to attach IRQ %d\n", irq);
-      assert(0);
+      ASSERT(0);
       return NULL;
     }
 

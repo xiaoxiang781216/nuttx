@@ -368,7 +368,7 @@ static uint32_t imxrt_flexspi_configure_dll(struct flexspi_type_s *base,
           }
         break;
       default:
-          assert(false);
+          ASSERT(false);
           break;
   }
 
@@ -429,7 +429,7 @@ static int imxrt_flexspi_check_and_clear_error(struct flexspi_type_s *base,
         }
       else
         {
-          assert(false);
+          ASSERT(false);
         }
 
       /* Clear the flags */
@@ -798,7 +798,7 @@ void imxrt_flexspi_update_lut_private(struct flexspi_type_s *base,
                                       const uint32_t *cmd,
                                       uint32_t count)
 {
-  assert(index < 64u);
+  ASSERT(index < 64u);
 
   uint32_t i = 0;
   volatile uint32_t *lut_base;

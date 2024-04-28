@@ -836,7 +836,7 @@ static void esp_set_isr(int32_t n, void *f, void *arg)
   if (!adapter)
     {
       wlerr("Failed to alloc %d memory\n", tmp);
-      assert(0);
+      ASSERT(0);
       return ;
     }
 
@@ -847,7 +847,7 @@ static void esp_set_isr(int32_t n, void *f, void *arg)
   if (ret)
     {
       wlerr("Failed to attach IRQ %d\n", irq);
-      assert(0);
+      ASSERT(0);
       return ;
     }
 }
