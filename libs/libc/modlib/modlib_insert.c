@@ -105,21 +105,6 @@ static void modlib_dumploadinfo(FAR struct mod_loadinfo_s *loadinfo)
 #endif
 
 /****************************************************************************
- * Name: modlib_dumpinitializer
- ****************************************************************************/
-
-#ifdef CONFIG_MODLIB_DUMPBUFFER
-static void modlib_dumpinitializer(mod_initializer_t initializer,
-                                   FAR struct mod_loadinfo_s *loadinfo)
-{
-  modlib_dumpbuffer("Initializer code", (FAR const uint8_t *)initializer,
-                    MIN(loadinfo->textsize - loadinfo->ehdr.e_entry, 512));
-}
-#else
-#  define modlib_dumpinitializer(b,l)
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -153,7 +138,6 @@ FAR void *modlib_insert(FAR const char *filename, FAR const char *modname)
 {
   struct mod_loadinfo_s loadinfo;
   FAR struct module_s *modp;
-  mod_initializer_t initializer;
   FAR void (**array)(void);
   int ret;
   int i;
@@ -227,27 +211,11 @@ FAR void *modlib_insert(FAR const char *filename, FAR const char *modname)
   modp->datasize  = loadinfo.datasize;
 #endif
 
-  /* Get the module initializer entry point */
-
-  initializer = (mod_initializer_t)(loadinfo.textalloc +
-                                    loadinfo.ehdr.e_entry);
-#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MODULE)
-  modp->initializer = initializer;
-#endif
-  modlib_dumpinitializer(initializer, &loadinfo);
-
   /* Call the module initializer */
 
   switch (loadinfo.ehdr.e_type)
     {
       case ET_REL :
-          ret = initializer(&modp->modinfo);
-          if (ret < 0)
-            {
-              binfo("Failed to initialize the module: %d\n", ret);
-              goto errout_with_load;
-            }
-          break;
       case ET_DYN :
 
           /* Process any preinit_array entries */
@@ -293,4 +261,3 @@ errout_with_lock:
   set_errno(-ret);
   return NULL;
 }
-
