@@ -98,7 +98,7 @@
  * Public Types
  ****************************************************************************/
 
-typedef CODE void (*iob_free_t)(FAR void *data);
+typedef CODE void (*iob_free_cb_t)(FAR void *data);
 
 /* Represents one I/O buffer.  A packet is contained by one or more I/O
  * buffers in a chain.  The io_pktlen is only valid for the I/O buffer at
@@ -126,10 +126,10 @@ struct iob_s
   unsigned int io_pktlen; /* Total length of the packet */
 
 #ifdef CONFIG_IOB_ALLOC
-  iob_free_t   io_free;   /* Custom free callback */
-  FAR uint8_t *io_data;
+  iob_free_cb_t io_free;  /* Custom free callback */
+  FAR uint8_t  *io_data;
 #else
-  uint8_t      io_data[CONFIG_IOB_BUFSIZE];
+  uint8_t       io_data[CONFIG_IOB_BUFSIZE];
 #endif
 };
 
@@ -263,7 +263,7 @@ FAR struct iob_s *iob_alloc_dynamic(uint16_t size);
  ****************************************************************************/
 
 FAR struct iob_s *iob_alloc_with_data(FAR void *data, uint16_t size,
-                                      iob_free_t free_cb);
+                                      iob_free_cb_t free_cb);
 #endif
 
 /****************************************************************************

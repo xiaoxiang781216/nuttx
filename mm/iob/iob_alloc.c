@@ -202,7 +202,7 @@ static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout)
 
 #ifdef CONFIG_IOB_ALLOC
 /****************************************************************************
- * Name: iob_free_dummy
+ * Name: iob_free_dynamic
  *
  * Description:
  *   Dummy free callback function, do nothing.
@@ -212,7 +212,7 @@ static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout)
  *
  ****************************************************************************/
 
-static void iob_free_dummy(FAR void *data)
+static void iob_free_dynamic(FAR void *data)
 {
 }
 #endif
@@ -379,12 +379,12 @@ FAR struct iob_s *iob_alloc_dynamic(uint16_t size)
   iob = kmm_memalign(CONFIG_IOB_ALIGNMENT, alignsize);
   if (iob)
     {
-      iob->io_flink   = NULL;           /* Not in a chain */
-      iob->io_len     = 0;              /* Length of the data in the entry */
-      iob->io_offset  = 0;              /* Offset to the beginning of data */
-      iob->io_bufsize = size;           /* Total length of the iob buffer */
-      iob->io_pktlen  = 0;              /* Total length of the packet */
-      iob->io_free    = iob_free_dummy; /* Customer free callback */
+      iob->io_flink   = NULL;             /* Not in a chain */
+      iob->io_len     = 0;                /* Length of the data in the entry */
+      iob->io_offset  = 0;                /* Offset to the beginning of data */
+      iob->io_bufsize = size;             /* Total length of the iob buffer */
+      iob->io_pktlen  = 0;                /* Total length of the packet */
+      iob->io_free    = iob_free_dynamic; /* Customer free callback */
       iob->io_data    = (FAR uint8_t *)ROUNDUP((uintptr_t)(iob + 1),
                                                CONFIG_IOB_ALIGNMENT);
     }
@@ -416,9 +416,11 @@ FAR struct iob_s *iob_alloc_dynamic(uint16_t size)
  ****************************************************************************/
 
 FAR struct iob_s *iob_alloc_with_data(FAR void *data, uint16_t size,
-                                      iob_free_t free_cb)
+                                      iob_free_cb_t free_cb)
 {
   FAR struct iob_s *iob;
+
+  DEBUGASSERT(free_cb != NULL);
 
   iob = kmm_malloc(sizeof(struct iob_s));
   if (iob)
