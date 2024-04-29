@@ -52,6 +52,7 @@
 #include <nuttx/streams.h>
 #include <nuttx/allsyms.h>
 #include <nuttx/symtab.h>
+#include <sys/param.h>
 
 #include "lib_dtoa_engine.h"
 #include "lib_ultoa_invert.h"
@@ -1343,7 +1344,7 @@ int lib_vsprintf(FAR struct lib_outstream_s *stream,
 
   struct arg_s arglist;
   int numargs = vsprintf_internal(NULL, &arglist, NL_ARGMAX, fmt, ap);
-  union arg_u argvalue[numargs];
+  union arg_u argvalue[MAX(numargs, 1)];
   int i;
 
   arglist.value = argvalue;
