@@ -460,6 +460,19 @@ ifeq ($(CONFIG_SCHED_GCOV),y)
   EXTRA_LIBS += $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libgcov.a))
 endif
 
+# Loadable module definitions
+
+CMODULEFLAGS = $(CFLAGS) -fvisbility=hidden -mlong-calls # --target1-abs
+LDMODULEFLAGS = -r -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/modlib/gnu-elf.ld)
+
+# ELF module definitions
+
+CELFFLAGS = $(CFLAGS) -fvisbility=hidden -mlong-calls # --target1-abs
+CXXELFFLAGS = $(CXXFLAGS) -fvisbility=hidden
+
+LDELFFLAGS = -r -e main
+LDELFFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)$(DELIM)binfmt$(DELIM)libelf$(DELIM)gnu-elf.ld)
+
 # Zig toolchain
 
 include $(TOPDIR)/tools/Zig.defs

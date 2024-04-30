@@ -222,8 +222,8 @@ ifeq ($(CONFIG_LIBCXX),y)
 endif
 
 # Loadable module definitions
+CMODULEFLAGS = $(CFLAGS) -fvisibility=hidden
 
-CMODULEFLAGS = $(CFLAGS)
 # -fno-pic to avoid GOT relocations
 CMODULEFLAGS += -fno-pic
 ifeq ($(CONFIG_LIBC_ARCH_ELF_64BIT),y)
@@ -240,7 +240,7 @@ endif
 # not available on NuttX.
 CMODULEFLAGS += -fno-stack-protector
 
-LDMODULEFLAGS = -r -e module_initialize --gc-sections
+LDMODULEFLAGS = -r --gc-sections
 LDMODULEFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/modlib/gnu-elf.ld)
 SHMODULEFLAGS = -Bsymbolic -G -Bdynamic
 
@@ -255,8 +255,8 @@ endif
 
 # ELF module definitions
 
-CELFFLAGS = $(CFLAGS)
-CXXELFFLAGS = $(CXXFLAGS)
+CELFFLAGS = $(CFLAGS) -fvisibility=hidden
+CXXELFFLAGS = $(CXXFLAGS) -fvisibility=hidden
 # -fno-pic to avoid GOT relocations
 CELFFLAGS += -fno-pic
 CXXELFFLAGS += -fno-pic
