@@ -39,6 +39,60 @@
  * Private Functions
  ****************************************************************************/
 
+#ifdef CONFIG_PM_PROCFS
+static void pm_stats(FAR struct pm_domain_s *dom, int curstate, int newstate)
+{
+  struct timespec ts;
+
+  clock_systime_timespec(&ts);
+  clock_timespec_subtract(&ts, &dom->start, &ts);
+
+  if (newstate == PM_RESTORE)
+    {
+      /* Wakeup from WFI */
+
+      clock_timespec_add(&ts, &dom->sleep[curstate], &dom->sleep[curstate]);
+    }
+  else
+    {
+      /* Sleep to WFI */
+
+      clock_timespec_add(&ts, &dom->wake[curstate], &dom->wake[curstate]);
+    }
+
+  /* Update start */
+
+  clock_systime_timespec(&dom->start);
+}
+
+static void pm_stats_preparefail(int domain,
+                                 FAR struct pm_callback_s *callback,
+                                 int newstate, int ret)
+{
+  struct timespec ts;
+  FAR struct pm_preparefail_s *pf = &callback->preparefail[domain];
+
+  if (pf->state != PM_RESTORE)
+    {
+      clock_systime_timespec(&ts);
+      clock_timespec_subtract(&ts, &pf->start, &ts);
+      clock_timespec_add(&ts, &pf->duration[pf->state],
+                         &pf->duration[pf->state]);
+      pf->state = PM_RESTORE;
+    }
+
+  if (ret < 0)
+    {
+      clock_systime_timespec(&pf->start);
+      pf->state = newstate;
+    }
+}
+
+#else
+#  define pm_stats(dom, curstate, newstate)
+#  define pm_stats_preparefail(domain, callback, newstate, ret)
+#endif
+
 /****************************************************************************
  * Name: pm_prepall
  *
@@ -60,7 +114,7 @@
  *
  ****************************************************************************/
 
-static int pm_prepall(int domain, enum pm_state_e newstate)
+static int pm_prepall(int domain, enum pm_state_e newstate, bool restore)
 {
   FAR dq_entry_t *entry;
   int ret = OK;
@@ -81,6 +135,10 @@ static int pm_prepall(int domain, enum pm_state_e newstate)
               /* Yes.. prepare the driver */
 
               ret = cb->prepare(cb, domain, newstate);
+              if (!restore)
+                {
+                  pm_stats_preparefail(domain, cb, newstate, ret);
+                }
             }
         }
     }
@@ -100,6 +158,10 @@ static int pm_prepall(int domain, enum pm_state_e newstate)
               /* Yes.. prepare the driver */
 
               ret = cb->prepare(cb, domain, newstate);
+              if (!restore)
+                {
+                  pm_stats_preparefail(domain, cb, newstate, ret);
+                }
             }
         }
     }
@@ -168,35 +230,6 @@ static inline void pm_changeall(int domain, enum pm_state_e newstate)
     }
 }
 
-#ifdef CONFIG_PM_PROCFS
-static void pm_stats(FAR struct pm_domain_s *dom, int curstate, int newstate)
-{
-  struct timespec ts;
-
-  clock_systime_timespec(&ts);
-  clock_timespec_subtract(&ts, &dom->start, &ts);
-
-  if (newstate == PM_RESTORE)
-    {
-      /* Wakeup from WFI */
-
-      clock_timespec_add(&ts, &dom->sleep[curstate], &dom->sleep[curstate]);
-    }
-  else
-    {
-      /* Sleep to WFI */
-
-      clock_timespec_add(&ts, &dom->wake[curstate], &dom->wake[curstate]);
-    }
-
-  /* Update start */
-
-  clock_systime_timespec(&dom->start);
-}
-#else
-#  define pm_stats(dom, curstate, newstate)
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -250,7 +283,7 @@ int pm_changestate(int domain, enum pm_state_e newstate)
        * drivers may refuse the state state change.
        */
 
-      ret = pm_prepall(domain, newstate);
+      ret = pm_prepall(domain, newstate, false);
       if (ret != OK)
         {
           /* One or more drivers is not ready for this state change.
@@ -258,7 +291,7 @@ int pm_changestate(int domain, enum pm_state_e newstate)
            */
 
           newstate = g_pmglobals.domain[domain].state;
-          pm_prepall(domain, newstate);
+          pm_prepall(domain, newstate, true);
         }
     }
 
