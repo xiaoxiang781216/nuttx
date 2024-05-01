@@ -290,7 +290,7 @@ static void unregister_debug_hook(struct list_node *node)
   spin_unlock_irqrestore(&g_debug_hook_lock, flags);
 }
 
-static int call_break_inst_hook(struct regs_context *regs, uint64_t esr)
+static int call_break_inst_hook(uint64_t *regs, uint64_t esr)
 {
   struct list_node       *list;
   break_func_t            func = NULL;
@@ -343,7 +343,7 @@ static int call_break_inst_hook(struct regs_context *regs, uint64_t esr)
   return func ? func(regs, esr) : DBG_HOOK_ERROR;
 }
 
-static int arm64_brk_handler(struct regs_context *regs, uint64_t far,
+static int arm64_brk_handler(uint64_t *regs, uint64_t far,
                              uint64_t esr)
 {
   int el;
@@ -727,7 +727,7 @@ static int arm64_hw_breakpoint_control(int handle,
 }
 
 static int arm64_breakpoint_report(struct arch_hw_breakpoint *bp,
-                                   uint64_t addr, struct regs_context *regs)
+                                   uint64_t addr, uint64_t *regs)
 {
   bp->trigger = addr;
   bp->handle_fn(bp->type, (void *)addr, bp->size, bp->arg);
@@ -736,7 +736,7 @@ static int arm64_breakpoint_report(struct arch_hw_breakpoint *bp,
 }
 
 static int arm64_watchpoint_report(struct arch_hw_breakpoint *wp,
-                                   uint64_t addr, struct regs_context *regs)
+                                   uint64_t addr, uint64_t *regs)
 {
   wp->trigger = addr;
   wp->handle_fn(wp->type, (void *)addr, wp->size, wp->arg);
@@ -800,7 +800,7 @@ static void arm64_toggle_bp_registers(int reg, enum dbg_active_el el,
     }
 }
 
-static int arm64_breakpoint_handler(struct regs_context *regs,
+static int arm64_breakpoint_handler(uint64_t *regs,
                                     uint64_t unused, uint64_t esr)
 {
   struct arm64_breakpoint_context *ctx;
@@ -814,7 +814,7 @@ static int arm64_breakpoint_handler(struct regs_context *regs,
   uint8_t  cpu;
   int      el;
 
-  addr = regs->elr;
+  addr = regs[REG_ELR];
 
   cpu = this_cpu();
   ctx = &g_cpu_bp_ctx[cpu];
@@ -880,7 +880,7 @@ static int arm64_breakpoint_handler(struct regs_context *regs,
   return 0;
 }
 
-static int arm64_watchpoint_handler(struct regs_context *regs, uint64_t addr,
+static int arm64_watchpoint_handler(uint64_t *regs, uint64_t addr,
                                     uint64_t esr)
 {
   struct   arm64_breakpoint_context *ctx;
@@ -967,7 +967,7 @@ static int arm64_watchpoint_handler(struct regs_context *regs, uint64_t addr,
   return 0;
 }
 
-static int arm64_single_step_handler(struct regs_context *regs,
+static int arm64_single_step_handler(uint64_t *regs,
                                      uint64_t far, uint64_t esr)
 {
   return 0;

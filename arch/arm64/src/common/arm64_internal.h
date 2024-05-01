@@ -269,8 +269,6 @@ EXTERN uint8_t g_idle_topstack[];   /* End+1 of heap */
  * Public Function Prototypes
  ****************************************************************************/
 
-void arm64_new_task(struct tcb_s *tak_new);
-
 /* Low level initialization provided by chip logic */
 
 void arm64_chip_boot(void);

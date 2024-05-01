@@ -296,7 +296,7 @@ struct arm64_debugpoint_slot
   struct arm64_debugpoint slot[ARM64_MAX_HBP_SLOTS];
 };
 
-typedef int (*break_func_t)(struct regs_context *regs, uint64_t esr);
+typedef int (*break_func_t)(uint64_t *regs, uint64_t esr);
 
 struct break_inst_hook
 {

@@ -65,7 +65,7 @@ void arm64_fork_fpureg_save(struct fork_s *context)
 
   flags = enter_critical_section();
 
-  arm64_fpu_save(&context->fpu);
+  arm64_fpu_save(context->fpu);
   ARM64_DSB();
 
   leave_critical_section(flags);
@@ -131,7 +131,7 @@ pid_t arm64_fork(const struct fork_s *context)
   char   *stack_ptr;
   struct regs_context  *pforkctx;
 #ifdef CONFIG_ARCH_FPU
-  struct fpu_reg       *pfpuctx;
+  uint64_t *pfpuctx;
 #endif
 
   /* Allocate and initialize a TCB for the child task. */
@@ -190,16 +190,16 @@ pid_t arm64_fork(const struct fork_s *context)
   stack_ptr = (char *)newsp;
 
 #ifdef CONFIG_ARCH_FPU
-  pfpuctx      = STACK_PTR_TO_FRAME(struct fpu_reg, stack_ptr);
+  pfpuctx = (uint64_t *)((uintptr_t)stack_ptr -  8 * FPU_CONTEXT_REGS);
 
-  child->cmn.xcp.fpu_regs = (uint64_t *)pfpuctx;
-  memcpy(pfpuctx, &context->fpu, sizeof(struct fpu_reg));
+  child->cmn.xcp.fpu_regs = pfpuctx;
+  memcpy(pfpuctx, context->fpu, 8 * FPU_CONTEXT_REGS);
 
-  stack_ptr  = (char *)pfpuctx;
+  stack_ptr = (char *)pfpuctx;
 
 #endif
 
-  pforkctx      = STACK_PTR_TO_FRAME(struct regs_context, stack_ptr);
+  pforkctx = STACK_PTR_TO_FRAME(struct regs_context, stack_ptr);
 
   pforkctx->regs[REG_X0]   = 0;
   pforkctx->regs[REG_X8]   = context->regs[FORK_REG_X8];

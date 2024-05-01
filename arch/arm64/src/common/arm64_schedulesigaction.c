@@ -39,33 +39,33 @@
 #include "arm64_fatal.h"
 
 /****************************************************************************
- * Public Functions
+ * Private Functions
  ****************************************************************************/
 
-void arm64_init_signal_process(struct tcb_s *tcb, struct regs_context *regs)
+static void arm64_init_signal_process(struct tcb_s *tcb, uint64_t *regs)
 {
 /****************************************************************************
  * if regs != NULL We are interrupting the context,
  * we should modify the regs
  ****************************************************************************/
 
-  struct regs_context  *pctx = (regs != NULL) ? regs :
-  (struct regs_context *)tcb->xcp.regs;
-  struct regs_context  *psigctx;
-  char *stack_ptr = (char *)pctx->sp_elx - sizeof(struct regs_context);
+  regs = (regs != NULL) ? regs : tcb->xcp.regs;
 
-  psigctx      = STACK_PTR_TO_FRAME(struct regs_context, stack_ptr);
-  memset(psigctx, 0, sizeof(struct regs_context));
-  psigctx->elr           = (uint64_t)arm64_sigdeliver;
+  tcb->xcp.regs = (uint64_t *)(regs[REG_SP_ELX] - XCPTCONTEXT_SIZE * 2);
+  memset(tcb->xcp.regs, 0, XCPTCONTEXT_SIZE);
+
+  tcb->xcp.regs[REG_ELR]    = (uint64_t)arm64_sigdeliver;
 
   /* Keep using SP_EL1 */
 
-  psigctx->spsr      = SPSR_MODE_EL1H | DAIF_FIQ_BIT | DAIF_IRQ_BIT;
-  psigctx->sp_elx    = (uint64_t)stack_ptr;
-  psigctx->sp_el0    = (uint64_t)psigctx;
-
-  tcb->xcp.regs      = (uint64_t *)psigctx;
+  tcb->xcp.regs[REG_SPSR]   = SPSR_MODE_EL1H | DAIF_FIQ_BIT | DAIF_IRQ_BIT;
+  tcb->xcp.regs[REG_SP_ELX] = regs[REG_SP_ELX] - XCPTCONTEXT_SIZE;
+  tcb->xcp.regs[REG_SP_EL0] = regs[REG_SP_ELX] - XCPTCONTEXT_SIZE * 2;
 }
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
 
 /****************************************************************************
  * Name: up_schedule_sigaction
@@ -154,8 +154,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
               /* create signal process context */
 
               tcb->xcp.saved_reg = up_current_regs();
-              arm64_init_signal_process(tcb,
-              (struct regs_context *)up_current_regs());
+              arm64_init_signal_process(tcb, up_current_regs());
 
               /* trigger switch to signal process */
 
@@ -275,8 +274,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                   /* create signal process context */
 
                   tcb->xcp.saved_reg = up_current_regs();
-                  arm64_init_signal_process(tcb,
-                  (struct regs_context *)up_current_regs());
+                  arm64_init_signal_process(tcb, up_current_regs());
 
                   /* trigger switch to signal process */
 

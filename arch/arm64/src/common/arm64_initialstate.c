@@ -50,29 +50,6 @@
  * Public Functions
  ****************************************************************************/
 
-void arm64_new_task(struct tcb_s * tcb)
-{
-  char *stack_ptr = tcb->stack_base_ptr + tcb->adj_stack_size;
-  struct regs_context *pinitctx;
-
-  pinitctx = STACK_PTR_TO_FRAME(struct regs_context, stack_ptr);
-  memset(pinitctx, 0, sizeof(struct regs_context));
-  pinitctx->elr       = (uint64_t)tcb->start;
-
-  /* Keep using SP_EL1 */
-
-  pinitctx->spsr      = SPSR_MODE_EL1H;
-
-#ifdef CONFIG_SUPPRESS_INTERRUPTS
-  pinitctx->spsr       |= (DAIF_IRQ_BIT | DAIF_FIQ_BIT);
-#endif /* CONFIG_SUPPRESS_INTERRUPTS */
-
-  pinitctx->sp_elx    = (uint64_t)stack_ptr;
-  pinitctx->sp_el0    = (uint64_t)pinitctx;
-
-  tcb->xcp.regs       = (uint64_t *)pinitctx;
-}
-
 /****************************************************************************
  * Name: up_initial_state
  *
@@ -122,5 +99,30 @@ void up_initial_state(struct tcb_s *tcb)
       return;
     }
 
-  arm64_new_task(tcb);
+  /* Initialize the context registers to stack top */
+
+  xcp->regs = (void *)((uint64_t)tcb->stack_base_ptr +
+                                 tcb->adj_stack_size -
+                                 XCPTCONTEXT_SIZE);
+
+  /* Initialize the xcp registers */
+
+  memset(xcp->regs, 0, XCPTCONTEXT_SIZE);
+
+  /* Save the initial stack pointer */
+
+  xcp->regs[REG_SP_ELX] = (uint64_t)tcb->stack_base_ptr +
+                                    tcb->adj_stack_size;
+  xcp->regs[REG_SP_EL0] = (uint64_t)tcb->stack_base_ptr +
+                                    tcb->adj_stack_size - XCPTCONTEXT_SIZE;
+
+  xcp->regs[REG_ELR] = (uint64_t)tcb->start;
+
+  /* Keep using SP_EL1 */
+
+  xcp->regs[REG_SPSR] = SPSR_MODE_EL1H;
+
+#ifdef CONFIG_SUPPRESS_INTERRUPTS
+  xcp->regs[REG_SPSR]  |= (DAIF_IRQ_BIT | DAIF_FIQ_BIT);
+#endif /* CONFIG_SUPPRESS_INTERRUPTS */
 }
