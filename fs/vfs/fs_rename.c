@@ -244,8 +244,6 @@ next_subdir:
 errout_with_lock:
   inode_unlock();
 
-errout:
-  RELEASE_SEARCH(&newdesc);
 #ifdef CONFIG_FS_NOTIFY
   if (ret >= 0)
     {
@@ -253,6 +251,8 @@ errout:
     }
 #endif
 
+errout:
+  RELEASE_SEARCH(&newdesc);
   if (subdir != NULL)
     {
       lib_free(subdir);
@@ -457,6 +457,13 @@ next_subdir:
 
   ret = oldinode->u.i_mops->rename(oldinode, oldrelpath, newrelpath);
 
+#ifdef CONFIG_FS_NOTIFY
+  if (ret >= 0)
+    {
+      notify_rename(oldpath, oldisdir, newpath, newisdir);
+    }
+#endif
+
 errout_with_newinode:
   inode_release(newinode);
 
@@ -466,13 +473,6 @@ errout_with_newsearch:
     {
       lib_free(subdir);
     }
-
-#ifdef CONFIG_FS_NOTIFY
-  if (ret >= 0)
-    {
-      notify_rename(oldpath, oldisdir, newpath, newisdir);
-    }
-#endif
 
   return ret;
 }
