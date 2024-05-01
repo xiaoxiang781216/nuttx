@@ -236,7 +236,7 @@ void up_systempoweroff(void)
   ret = psci_sys_poweroff();
   if (ret)
     {
-      sinfo("Failed to power off CPU, error code: %d\n", ret);
+      serr("Failed to power off CPU, error code: %d\n", ret);
     }
 
   /* Wait for power off */
@@ -261,7 +261,7 @@ void up_systemreset(void)
   ret = psci_sys_reset();
   if (ret)
     {
-      sinfo("Failed to reset CPU, error code: %d\n", ret);
+      serr("Failed to reset CPU, error code: %d\n", ret);
     }
 
   /* Wait for the reset */

@@ -157,7 +157,7 @@
 #define __builtin_unreachable()    \
   do                               \
     {                              \
-      sinfo("Unreachable code\n"); \
+      serr("Unreachable code\n"); \
       PANIC();                     \
     } while (true)
 
