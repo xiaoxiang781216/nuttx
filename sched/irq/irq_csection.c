@@ -382,7 +382,7 @@ try_again:
        */
 
 #ifdef up_irq_is_disabled
-      DEBUGASSERT(!OSINIT_IDLELOOP() || !up_irq_is_disabled(ret));
+      DEBUGASSERT(is_idle_task(rtcb) || !up_irq_is_disabled(ret));
 #endif
 
       /* If we get here with irqcount == 0, then we know that the
