@@ -143,6 +143,8 @@
 #define MM_ALLOC_MAGIC   0xaa
 #define MM_FREE_MAGIC    0x55
 
+#define MM_PTR_FMT_WIDTH ((int)sizeof(uintptr_t) * 2 + 3) /* 3: ' 0x' prefix */
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/

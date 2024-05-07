@@ -32,12 +32,6 @@
 #include <nuttx/mm/mempool.h>
 #include <nuttx/sched.h>
 
-#if UINTPTR_MAX <= UINT32_MAX
-#  define MM_PTR_FMT_WIDTH 11
-#elif UINTPTR_MAX <= UINT64_MAX
-#  define MM_PTR_FMT_WIDTH 19
-#endif
-
 #undef  ALIGN_UP
 #define ALIGN_UP(x, a) (((x) + ((a) - 1)) & (~((a) - 1)))
 

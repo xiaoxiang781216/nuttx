@@ -48,12 +48,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#if UINTPTR_MAX <= UINT32_MAX
-#  define MM_PTR_FMT_WIDTH 11
-#elif UINTPTR_MAX <= UINT64_MAX
-#  define MM_PTR_FMT_WIDTH 19
-#endif
-
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
 #  define MEMPOOL_NPOOLS (CONFIG_MM_HEAP_MEMPOOL_THRESHOLD / tlsf_align_size())
 #endif
