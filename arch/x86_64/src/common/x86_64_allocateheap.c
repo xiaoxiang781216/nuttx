@@ -100,7 +100,7 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
   board_autoled_on(LED_HEAPALLOCATE);
 
-  topstack = g_idle_topstack[CONFIG_SMP_NCPUS - 1];
+  topstack = g_idle_topstack[CONFIG_SMP_NCPUS - 1] + 8;
 
   /* Calculate the end of .bss section */
 
