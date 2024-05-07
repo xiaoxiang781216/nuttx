@@ -37,7 +37,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define SWAP(a,b,t)    do { t = a; a = b; b = t; } while (0)
+#define SWAP_PTR(a,b) do { FAR void *t = (a); (a) = (b); (b) = t; } while (0)
 
 /****************************************************************************
  * Private Types
@@ -242,6 +242,10 @@ static int check_replace(FAR const struct ipt_replace *repl)
   ipt_entry_for_every(entry, repl->entries, repl->size)
     {
       entry_count++;
+      if (entry->next_offset == 0)
+        {
+          return -EINVAL;
+        }
     }
 
   if (entry_count != repl->num_entries)
@@ -304,9 +308,8 @@ static int replace_entries(FAR const struct ipt_replace *repl, socklen_t len)
 
   if (ret == OK)
     {
-      FAR struct ipt_replace *tmp;
       memcpy(new_repl, repl, sizeof(*repl) + repl->size);
-      SWAP(table->repl, new_repl, tmp);
+      SWAP_PTR(table->repl, new_repl);
     }
 
   kmm_free(new_repl);
@@ -370,7 +373,7 @@ FAR struct ipt_replace *ipt_alloc_table(FAR const char *table,
   repl->num_entries = num_hooks + 1;
   repl->size = entry_size;
 
-  entry = (FAR struct ipt_standard_entry_s *)(repl + 1);
+  entry = (FAR struct ipt_standard_entry_s *)(repl->entries);
 
   for (hook = 0; hook < NF_INET_NUMHOOKS; hook++)
     {
@@ -379,7 +382,7 @@ FAR struct ipt_replace *ipt_alloc_table(FAR const char *table,
           continue;
         }
 
-      repl->hook_entry[hook] = (uintptr_t)entry - (uintptr_t)(repl + 1);
+      repl->hook_entry[hook] = (uintptr_t)entry - (uintptr_t)(repl->entries);
       repl->underflow[hook] = repl->hook_entry[hook];
 
       entry->target.verdict = -NF_ACCEPT - 1;
