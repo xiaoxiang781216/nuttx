@@ -432,10 +432,14 @@ ssize_t pipecommon_read(FAR struct file *filep, FAR char *buffer, size_t len)
    * FIFO when buffer can accept more than d_polloutthrd bytes.
    */
 
-  leave_critical_section(flags);
   if (circbuf_used(&dev->d_buffer) <= (dev->d_bufsize - dev->d_polloutthrd))
     {
+      leave_critical_section(flags);
       poll_notify(dev->d_fds, CONFIG_DEV_PIPE_NPOLLWAITERS, POLLOUT);
+    }
+  else
+    {
+      leave_critical_section(flags);
     }
 
   /* Notify all waiting writers that bytes have been removed from the
@@ -523,11 +527,15 @@ ssize_t pipecommon_write(FAR struct file *filep, FAR const char *buffer,
                * FIFO when buffer used exceeds poll threshold.
                */
 
-              leave_critical_section(flags);
               if (circbuf_used(&dev->d_buffer) > dev->d_pollinthrd)
                 {
+                  leave_critical_section(flags);
                   poll_notify(dev->d_fds, CONFIG_DEV_PIPE_NPOLLWAITERS,
                               POLLIN);
+                }
+              else
+                {
+                  leave_critical_section(flags);
                 }
 
               /* Yes.. Notify all of the waiting readers that more data is
@@ -539,6 +547,10 @@ ssize_t pipecommon_write(FAR struct file *filep, FAR const char *buffer,
               /* Return the number of bytes written */
 
               return len;
+            }
+          else
+            {
+              leave_critical_section(flags);
             }
         }
       else
