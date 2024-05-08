@@ -351,7 +351,7 @@ int nxmutex_timedlock(FAR mutex_t *mutex, unsigned int timeout)
 
   /* Wait until we get the lock or until the timeout expires */
 
-  return nxmutex_clocklock(mutex, CLOCK_REALTIME, &rqtp);
+  return nxmutex_clocklock(mutex, CLOCK_MONOTONIC, &rqtp);
 }
 
 /****************************************************************************
