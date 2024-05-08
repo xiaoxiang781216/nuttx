@@ -49,7 +49,6 @@ list(
   sim_stackframe.c
   sim_exit.c
   sim_schedulesigaction.c
-  sim_switchcontext.c
   sim_heap.c
   sim_uart.c
   sim_copyfullstate.c

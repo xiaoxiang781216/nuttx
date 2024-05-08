@@ -84,13 +84,6 @@
 #  define CONFIG_ARCH_INTERRUPTSTACK 0
 #endif
 
-/* If the floating point unit is present and enabled, then save the
- * floating point registers as well as normal ARM registers.
- */
-
-#define arm64_savestate(regs) (regs = up_current_regs())
-#define arm64_restorestate(regs) up_set_current_regs(regs)
-
 /* This is the value used to mark the stack for subsequent stack monitoring
  * logic.
  */
@@ -116,18 +109,6 @@
 #  define SMP_STACK_SIZE    STACK_ALIGN_UP(CONFIG_IDLETHREAD_STACKSIZE)
 #  define SMP_STACK_WORDS   (SMP_STACK_SIZE >> 2)
 #endif
-
-/* Context switching */
-
-#define arm64_fullcontextrestore(restoreregs) \
-  do \
-    { \
-      sys_call1(SYS_restore_context, (uintptr_t)restoreregs); \
-    } \
-  while (1)
-
-#define arm64_switchcontext(saveregs, restoreregs) \
-  sys_call2(SYS_switch_context, (uintptr_t)saveregs, (uintptr_t)restoreregs)
 
 /****************************************************************************
  * Public Types

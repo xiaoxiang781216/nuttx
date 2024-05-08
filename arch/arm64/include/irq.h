@@ -34,6 +34,7 @@
 
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
+#  include <arch/syscall.h>
 #endif
 
 /* Include NuttX-specific IRQ definitions */
@@ -243,6 +244,41 @@
 #else
 #  define up_irq_is_disabled(flags) (((flags) & DAIF_IRQ_BIT) != 0)
 #endif
+
+/* Context switching */
+
+#define arm64_fullcontextrestore(restoreregs) \
+  do \
+    { \
+      sys_call1(SYS_restore_context, (uintptr_t)restoreregs); \
+    } \
+  while (1)
+
+#define arm64_switchcontext(saveregs, restoreregs) \
+  sys_call2(SYS_switch_context, (uintptr_t)saveregs, (uintptr_t)restoreregs)
+
+/* If the floating point unit is present and enabled, then save the
+ * floating point registers as well as normal ARM registers.
+ */
+
+#define arm64_savestate(regs) (regs = up_current_regs())
+#define arm64_restorestate(regs) up_set_current_regs(regs)
+
+#define up_switch_context(tcb, rtcb)                         \
+  do {                                                       \
+    nxsched_suspend_scheduler(rtcb);                         \
+    if (up_current_regs())                                   \
+      {                                                      \
+        arm64_savestate(rtcb->xcp.regs);                     \
+        nxsched_resume_scheduler(tcb);                       \
+        arm64_restorestate(tcb->xcp.regs);                   \
+      }                                                      \
+    else                                                     \
+      {                                                      \
+        nxsched_resume_scheduler(tcb);                       \
+        arm64_switchcontext(&rtcb->xcp.regs, tcb->xcp.regs); \
+      }                                                      \
+  } while (0)
 
 #ifndef __ASSEMBLY__
 

@@ -148,6 +148,54 @@ static inline_function bool up_interrupt_context(void)
   return up_current_regs() != NULL;
 }
 
+/* Macros to handle saving and restore interrupt state.  In the current
+ * model, the state is copied from the stack to the TCB, but only a
+ * referenced is passed to get the state from the TCB.
+ */
+
+#define x86_64_restorestate(regs) (up_set_current_regs(regs))
+
+#ifdef CONFIG_ARCH_ADDRENV
+#  define up_switch_context(tcb, rtcb)             \
+  do {                                             \
+    nxsched_suspend_scheduler((rtcb));             \
+    if (up_current_regs())                         \
+      {                                            \
+        x86_64_savestate(rtcb->xcp.regs);          \
+        x86_64_restore_auxstate(tcb);              \
+        nxsched_resume_scheduler(tcb);             \
+        x86_64_restorestate(tcb->xcp.regs);        \
+      }                                            \
+    else if (!up_saveusercontext(rtcb->xcp.regs))  \
+      {                                            \
+        x86_64_restore_auxstate(tcb);              \
+        addrenv_switch(tcb);                       \
+        nxsched_resume_scheduler(tcb);             \
+        restore_critical_section(tcb, this_cpu()); \
+        x86_64_fullcontextrestore(tcb->xcp.regs);  \
+      }                                            \
+  } while (0)
+#else
+#  define up_switch_context(tcb, rtcb)             \
+  do {                                             \
+    nxsched_suspend_scheduler((rtcb));             \
+    if (up_current_regs())                         \
+      {                                            \
+        x86_64_savestate(rtcb->xcp.regs);          \
+        x86_64_restore_auxstate(tcb);              \
+        nxsched_resume_scheduler(tcb);             \
+        x86_64_restorestate(tcb->xcp.regs);        \
+      }                                            \
+    else if (!up_saveusercontext(rtcb->xcp.regs))  \
+      {                                            \
+        x86_64_restore_auxstate(tcb);              \
+        nxsched_resume_scheduler(tcb);             \
+        restore_critical_section(tcb, this_cpu()); \
+        x86_64_fullcontextrestore(tcb->xcp.regs);  \
+      }                                            \
+  } while (0)
+#endif
+
 /****************************************************************************
  * Name: up_getusrpc
  ****************************************************************************/

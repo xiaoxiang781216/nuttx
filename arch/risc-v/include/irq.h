@@ -38,6 +38,7 @@
 #include <arch/csr.h>
 #include <arch/chip/irq.h>
 #include <arch/mode.h>
+#include <arch/syscall.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -754,6 +755,91 @@ noinstrument_function static inline_function bool up_interrupt_context(void)
 
   return ret;
 }
+
+#ifdef CONFIG_ARCH_FPU
+void riscv_fpuconfig(void);
+void riscv_savefpu(uintptr_t *regs, uintptr_t *fregs);
+void riscv_restorefpu(uintptr_t *regs, uintptr_t *fregs);
+
+/* Get FPU register save area */
+
+#ifdef CONFIG_ARCH_LAZYFPU
+  /* With lazy FPU the registers are simply in tcb */
+
+#define riscv_fpuregs(tcb) ((uintptr_t *)(tcb)->xcp.fregs)
+#else
+  /* Otherwise they are after the integer registers */
+#define riscv_fpuregs(tcb) (uintptr_t *)((uintptr_t)(tcb)->xcp.regs + INT_XCPT_SIZE)
+#endif
+#else
+#  define riscv_fpuconfig()
+#  define riscv_savefpu(regs, fregs)
+#  define riscv_restorefpu(regs, fregs)
+#  define riscv_fpuregs(tcb)
+#endif
+
+/* Save / restore context of task */
+
+#ifdef CONFIG_ARCH_FPU
+#  define riscv_savecontext(tcb) \
+  do { \
+    tcb->xcp.regs = up_current_regs(); \
+    riscv_savefpu(tcb->xcp.regs, riscv_fpuregs(tcb)); \
+  } while (0)
+#else
+#  define riscv_savecontext(tcb) \
+  do { \
+    tcb->xcp.regs = up_current_regs(); \
+  } while (0)
+#endif
+
+#ifdef CONFIG_ARCH_FPU
+#  define riscv_restorecontext(tcb) \
+  do { \
+    up_set_current_regs((uintptr_t *)tcb->xcp.regs); \
+    riscv_restorefpu(tcb->xcp.regs, riscv_fpuregs(tcb)); \
+  } \
+  while (0)
+#else
+#  define riscv_restorecontext(tcb) \
+  do { \
+      up_set_current_regs((uintptr_t *)tcb->xcp.regs); \
+  } while (0)
+#endif
+
+/* Context switching via system calls ***************************************/
+
+/* SYS call 1:
+ *
+ * void riscv_fullcontextrestore(struct tcb_s *next) noreturn_function;
+ */
+
+#define riscv_fullcontextrestore(next) \
+  sys_call1(SYS_restore_context, (uintptr_t)next)
+
+/* SYS call 2:
+ *
+ * riscv_switchcontext(struct tcb_s *prev, struct tcb_s *next);
+ */
+
+#define riscv_switchcontext(prev, next) \
+  sys_call2(SYS_switch_context, (uintptr_t)prev, (uintptr_t)next)
+
+#define up_switch_context(tcb, rtcb)    \
+  do {                                  \
+    nxsched_suspend_scheduler(rtcb);    \
+    if (up_current_regs())              \
+      {                                 \
+        riscv_savecontext(rtcb);        \
+        nxsched_resume_scheduler(tcb);  \
+        riscv_restorecontext(tcb);      \
+      }                                 \
+    else                                \
+      {                                 \
+        nxsched_resume_scheduler(tcb);  \
+        riscv_switchcontext(rtcb, tcb); \
+      }                                 \
+  } while (0)
 
 /****************************************************************************
  * Name: up_getusrpc

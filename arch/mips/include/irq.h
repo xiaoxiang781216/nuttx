@@ -154,6 +154,31 @@ static inline_function void up_set_current_regs(uint32_t *regs)
 #define up_getusrpc(regs) \
     (((uint32_t *)((regs) ? (regs) : up_current_regs()))[REG_EPC])
 
+/****************************************************************************
+ * Public Functions Prototypes
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: up_switch_context
+ *
+ * Description:
+ *   A task is currently in the ready-to-run list but has been prepped
+ *   to execute. Restore its context, and start execution.
+ *
+ *   This function is called only from the NuttX scheduling
+ *   logic.  Interrupts will always be disabled when this
+ *   function is called.
+ *
+ * Input Parameters:
+ *   tcb: Refers to the head task of the ready-to-run list
+ *     which will be executed.
+ *   rtcb: Refers to the running task which will be blocked.
+ *
+ ****************************************************************************/
+
+struct tcb_s;
+void up_switch_context(FAR struct tcb_s *tcb, FAR struct tcb_s *rtcb);
+
 #undef EXTERN
 #ifdef __cplusplus
 }
