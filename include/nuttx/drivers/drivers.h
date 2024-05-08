@@ -220,7 +220,7 @@ int bchlib_teardown(FAR void *handle);
  *
  ****************************************************************************/
 
-ssize_t bchlib_read(FAR void *handle, FAR char *buffer, size_t offset,
+ssize_t bchlib_read(FAR void *handle, FAR char *buffer, off_t offset,
                     size_t len);
 
 /****************************************************************************
@@ -232,7 +232,7 @@ ssize_t bchlib_read(FAR void *handle, FAR char *buffer, size_t offset,
  *
  ****************************************************************************/
 
-ssize_t bchlib_write(FAR void *handle, FAR const char *buffer, size_t offset,
+ssize_t bchlib_write(FAR void *handle, FAR const char *buffer, off_t offset,
                      size_t len);
 
 /****************************************************************************
