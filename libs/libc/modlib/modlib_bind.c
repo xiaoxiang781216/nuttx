@@ -909,24 +909,28 @@ int modlib_bind(FAR struct module_s *modp,
         {
           modp->dynamic = 0;
 
-          /* Make sure that the section is allocated.  We can't
-           * relocate sections that were not loaded into memory.
-           */
-
-          if ((loadinfo->shdr[i].sh_flags & SHF_ALLOC) == 0 &&
-              (loadinfo->shdr[i].sh_flags & SHF_INFO_LINK) == 0)
-            {
-              continue;
-            }
-
           /* Process the relocations by type */
 
           switch (loadinfo->shdr[i].sh_type)
             {
+              /* Make sure that the section is allocated.  We can't
+               * relocate sections that were not loaded into memory.
+               */
+
               case SHT_REL:
+                if ((loadinfo->shdr[infosec].sh_flags & SHF_ALLOC) == 0)
+                  {
+                    continue;
+                  }
+
                 ret = modlib_relocate(modp, loadinfo, i);
                 break;
               case SHT_RELA:
+                if ((loadinfo->shdr[infosec].sh_flags & SHF_ALLOC) == 0)
+                  {
+                    continue;
+                  }
+
                 ret = modlib_relocateadd(modp, loadinfo, i);
                 break;
               case SHT_INIT_ARRAY:
