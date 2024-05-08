@@ -191,13 +191,13 @@ endif
 
 # Loadable module definitions
 
-CMODULEFLAGS = $(CFLAGS) -fvisbility=hidden -mtext-section-literals
+CMODULEFLAGS = $(CFLAGS) -fvisibility=hidden -mtext-section-literals
 LDMODULEFLAGS = -r -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/modlib/gnu-elf.ld)
 
 # ELF module definitions
 
-CELFFLAGS = $(CFLAGS) -fvisbility=hidden -mtext-section-literals
-CXXELFFLAGS = $(CXXFLAGS) -fvisbility=hidden -mtext-section-literals
+CELFFLAGS = $(CFLAGS) -fvisibility=hidden -mtext-section-literals
+CXXELFFLAGS = $(CXXFLAGS) -fvisibility=hidden -mtext-section-literals
 
 LDELFFLAGS = -r -e main
 LDELFFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)$(DELIM)binfmt$(DELIM)libelf$(DELIM)gnu-elf.ld)
