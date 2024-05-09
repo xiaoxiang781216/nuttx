@@ -29,6 +29,7 @@ set(SRCS
     x86_64_modifyreg16.c
     x86_64_modifyreg32.c
     x86_64_nputs.c
+    x86_64_switchcontext.c
     x86_64_udelay.c
     x86_64_tcbinfo.c)
 

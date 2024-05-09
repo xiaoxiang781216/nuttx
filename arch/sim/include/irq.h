@@ -171,62 +171,6 @@ static inline_function bool up_interrupt_context(void)
   return ret;
 }
 
-/* Macros to handle saving and restoring interrupt state ********************/
-
-#define sim_savestate(regs) sim_copyfullstate(regs, up_current_regs())
-#define sim_restorestate(regs) up_set_current_regs(regs)
-
-#define sim_saveusercontext(saveregs, ret)                      \
-    do                                                          \
-      {                                                         \
-        irqstate_t flags = up_irq_flags();                      \
-        xcpt_reg_t *env = (saveregs);                           \
-        uint32_t *val = (uint32_t *)&env[JB_FLAG];              \
-                                                                \
-        val[0] = flags & UINT32_MAX;                            \
-        val[1] = (flags >> 32) & UINT32_MAX;                    \
-                                                                \
-        (ret) = setjmp(saveregs);                               \
-      }                                                         \
-    while (0)
-
-#define sim_fullcontextrestore(restoreregs)                     \
-    do                                                          \
-      {                                                         \
-        xcpt_reg_t *env = (restoreregs);                        \
-        uint32_t *flags = (uint32_t *)&env[JB_FLAG];            \
-                                                                \
-        up_irq_restore(((uint64_t)flags[1] << 32) | flags[0]);  \
-        longjmp(env, 1);                                        \
-      }                                                         \
-    while (0)
-
-#define up_switch_context(tcb, rtcb)                            \
-  do {                                                          \
-    int ret;                                                    \
-    nxsched_suspend_scheduler((rtcb));                          \
-    if (up_current_regs())                                      \
-      {                                                         \
-        sim_savestate((rtcb)->xcp.regs);                        \
-        nxsched_resume_scheduler((tcb));                        \
-        sim_restorestate((tcb)->xcp.regs);                      \
-      }                                                         \
-    else                                                        \
-      {                                                         \
-        sim_saveusercontext((rtcb)->xcp.regs, ret);             \
-      if (ret == 0)                                             \
-        {                                                       \
-          nxsched_resume_scheduler((tcb));                      \
-          restore_critical_section((tcb), this_cpu());          \
-          sim_fullcontextrestore((tcb)->xcp.regs);              \
-        }                                                       \
-      else                                                      \
-        {                                                       \
-          sim_sigdeliver();                                     \
-        }                                                       \
-      }                                                         \
-  } while (0)
-
 /****************************************************************************
  * Name: up_getusrpc
  *

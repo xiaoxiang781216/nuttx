@@ -32,9 +32,6 @@
 #include <sys/types.h>
 #ifndef __ASSEMBLY__
 #  include <stdbool.h>
-#  if defined(__GNUC__) && !defined(__clang__)
-#    include <arch/syscall.h>
-#  endif
 #endif
 
 /****************************************************************************
@@ -78,43 +75,6 @@
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-
-/* Macros to handle saving and restoring interrupt state. */
-
-#define arm_savestate(regs)    (regs = up_current_regs())
-#define arm_restorestate(regs) up_set_current_regs(regs)
-
-/* Context switching */
-
-#ifndef arm_fullcontextrestore
-#  define arm_fullcontextrestore(restoreregs) \
-    sys_call1(SYS_restore_context, (uintptr_t)restoreregs);
-#else
-extern void arm_fullcontextrestore(uint32_t *restoreregs);
-#endif
-
-#ifdef CONFIG_ARCH_CHIP_TLSR82
-#  define arm_switchcontext tc32_switchcontext
-#else
-#  define arm_switchcontext(saveregs, restoreregs) \
-    sys_call2(SYS_switch_context, (uintptr_t)saveregs, (uintptr_t)restoreregs);
-#endif
-
-#define up_switch_context(tcb, rtcb)                       \
-  do {                                                     \
-    nxsched_suspend_scheduler(rtcb);                       \
-    if (up_current_regs())                                 \
-      {                                                    \
-        arm_savestate(rtcb->xcp.regs);                     \
-        nxsched_resume_scheduler(tcb);                     \
-        arm_restorestate(tcb->xcp.regs);                   \
-      }                                                    \
-    else                                                   \
-      {                                                    \
-        nxsched_resume_scheduler(tcb);                     \
-        arm_switchcontext(&rtcb->xcp.regs, tcb->xcp.regs); \
-      }                                                    \
-  } while (0)
 
 #ifdef __cplusplus
 #define EXTERN extern "C"
