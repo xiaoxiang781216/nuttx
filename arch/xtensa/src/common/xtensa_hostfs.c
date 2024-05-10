@@ -97,6 +97,11 @@ int host_open(const char *pathname, int flags, int mode)
       simcall_flags |= SIMCALL_O_EXCL;
     }
 
+  if ((flags & O_NONBLOCK) != 0)
+    {
+      simcall_flags |= SIMCALL_O_NONBLOCK;
+    }
+
 #ifdef CONFIG_XTENSA_SEMIHOSTING_HOSTFS_CACHE_COHERENCE
   up_clean_dcache(pathname, pathname + strlen(pathname) + 1);
 #endif
@@ -113,6 +118,18 @@ ssize_t host_read(int fd, void *buf, size_t count)
 #ifdef CONFIG_XTENSA_SEMIHOSTING_HOSTFS_CACHE_COHERENCE
   up_invalidate_dcache(buf, buf + count);
 #endif
+
+  if (fd == STDIN_FILENO)
+    {
+      static int ifd = -1;
+
+      if (ifd < 0)
+        {
+          ifd = host_open("/dev/tty", O_RDWR | O_NONBLOCK, 0666);
+        }
+
+      return host_call(SIMCALL_SYS_READ, ifd, (int)buf, count);
+    }
 
   return host_call(SIMCALL_SYS_READ, fd, (int)buf, count);
 }

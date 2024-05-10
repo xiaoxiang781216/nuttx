@@ -225,7 +225,24 @@ nuttx_ssize_t host_read(int fd, void *buf, nuttx_size_t count)
 {
   /* Just call the read routine */
 
-  nuttx_ssize_t ret = read(fd, buf, count);
+  nuttx_ssize_t ret;
+
+  if (fd == STDIN_FILENO)
+    {
+      static int ifd = -1;
+
+      if (ifd < 0)
+        {
+          ifd = host_open("/dev/tty", O_RDWR | O_NONBLOCK, 0666);
+        }
+
+      ret = read(ifd, buf, count);
+    }
+  else
+    {
+      ret = read(fd, buf, count);
+    }
+
   if (ret == -1)
     {
       ret = -errno;
