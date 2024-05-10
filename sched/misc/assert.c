@@ -72,11 +72,18 @@
 
 #define DUMP_PTR(p, x) ((uintptr_t)(&(p)[(x)]) < stack_top ? (p)[(x)] : 0)
 
+/* Architecture can overwrite the default XCPTCONTEXT alignment */
+
+#ifndef XCPTCONTEXT_ALIGN
+#  define XCPTCONTEXT_ALIGN 16
+#endif
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static uintptr_t g_last_regs[XCPTCONTEXT_REGS] aligned_data(16);
+static uintptr_t
+g_last_regs[XCPTCONTEXT_REGS] aligned_data(XCPTCONTEXT_ALIGN);
 static FAR const char *g_policy[4] =
 {
   "FIFO", "RR", "SPORADIC"
