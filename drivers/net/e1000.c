@@ -668,6 +668,7 @@ static void e1000_txdone(FAR struct netdev_lowerhalf_s *dev)
 static void e1000_msi_interrupt(FAR struct e1000_driver_s *priv)
 {
   uint32_t status;
+  uint32_t tmp;
 
   status = e1000_getreg_mem(priv, E1000_ICR);
   ninfo("irq status = 0x%" PRIx32 "\n", status);
@@ -691,9 +692,10 @@ static void e1000_msi_interrupt(FAR struct e1000_driver_s *priv)
 
   if (status & E1000_IC_LSC)
     {
-      if (e1000_getreg_mem(priv, E1000_STATUS) & E1000_STATUS_LU)
+      tmp = e1000_getreg_mem(priv, E1000_STATUS);
+      if (tmp & E1000_STATUS_LU)
         {
-          ninfo("Link up\n");
+          ninfo("Link up, status = 0x%x\n", tmp);
           netdev_lower_carrier_on(&priv->dev);
         }
       else

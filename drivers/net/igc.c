@@ -623,6 +623,7 @@ static void igc_msix_interrupt(FAR struct igc_driver_s *priv)
 {
   uint32_t icr  = 0;
   uint32_t eicr = 0;
+  uint32_t tmp  = 0;
 
   /* Get interrupts */
 
@@ -649,9 +650,10 @@ static void igc_msix_interrupt(FAR struct igc_driver_s *priv)
 
   if (icr & IGC_IC_LSC)
     {
-      if (igc_getreg_mem(priv, IGC_STATUS) & IGC_STATUS_LU)
+      tmp = igc_getreg_mem(priv, IGC_STATUS);
+      if (tmp & IGC_STATUS_LU)
         {
-          ninfo("Link up\n");
+          ninfo("Link up, status = 0x%x\n", tmp);
           netdev_lower_carrier_on(&priv->dev);
         }
       else
