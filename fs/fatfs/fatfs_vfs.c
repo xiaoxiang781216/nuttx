@@ -374,6 +374,7 @@ static int fatfs_close(FAR struct file *filep)
 {
   FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_file_s *fp;
+  int crefs;
   int ret;
 
   fp = filep->f_priv;
@@ -384,7 +385,8 @@ static int fatfs_close(FAR struct file *filep)
       return ret;
     }
 
-  if (--fp->refs <= 0)
+  crefs = --fp->refs;
+  if (crefs <= 0)
     {
       ret = fatfs_convert_result(f_close(&fp->f));
       if (ret < 0)
@@ -394,7 +396,7 @@ static int fatfs_close(FAR struct file *filep)
     }
 
   nxmutex_unlock(&fs->lock);
-  if (fp->refs <= 0 && ret >= 0)
+  if (crefs <= 0 && ret >= 0)
     {
       kmm_free(fp);
     }
