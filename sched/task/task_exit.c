@@ -127,12 +127,6 @@ int nxtask_exit(void)
 
   rtcb->lockcount++;
 
-#ifdef CONFIG_SMP
-  /* Make sure that the system knows about the locked state */
-
-  g_cpu_lockset |= (1 << cpu);
-#endif
-
   rtcb->task_state = TSTATE_TASK_READYTORUN;
 
   /* Move the TCB to the specified blocked task list and delete it.  Calling
@@ -166,15 +160,6 @@ int nxtask_exit(void)
   /* Decrement the lockcount on rctb. */
 
   rtcb->lockcount--;
-
-#ifdef CONFIG_SMP
-  if (rtcb->lockcount == 0)
-    {
-      /* Make sure that the system knows about the unlocked state */
-
-      g_cpu_lockset &= ~(1 << cpu);
-    }
-#endif
 
   return ret;
 }

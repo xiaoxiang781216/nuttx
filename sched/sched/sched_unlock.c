@@ -70,13 +70,11 @@ int sched_unlock(void)
 
   DEBUGASSERT(rtcb != NULL);
   DEBUGASSERT(!up_interrupt_context());
+  DEBUGASSERT(rtcb->lockcount > 0);
 
   /* Decrement the preemption lock counter */
 
-  if (rtcb->lockcount > 0)
-    {
-      rtcb->lockcount--;
-    }
+  rtcb->lockcount--;
 
   /* Check if the lock counter has decremented to zero.  If so,
    * then pre-emption has been re-enabled.
@@ -96,14 +94,6 @@ int sched_unlock(void)
       /* Set the lock count to zero */
 
       rtcb->lockcount = 0;
-
-      /* The lockcount has decremented to zero and we need to perform
-       * release our hold on the lock.
-       */
-
-      DEBUGASSERT((g_cpu_lockset & (1 << cpu)) != 0);
-
-      g_cpu_lockset &= ~(1 << cpu);
 
       /* Release any ready-to-run tasks that have collected in
        * g_pendingtasks.
@@ -131,7 +121,7 @@ int sched_unlock(void)
        * BEFORE it clears IRQ lock.
        */
 
-      if (!nxsched_islocked_global() &&
+      if (!nxsched_islocked_tcb(rtcb) &&
           g_pendingtasks.head != NULL)
         {
           if (nxsched_merge_pending())

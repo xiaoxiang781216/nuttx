@@ -261,7 +261,7 @@ const struct tasklist_s g_tasklisttable[NUM_TASK_STATES] =
  * hardware resources may not yet be available to the kernel logic.
  */
 
-uint8_t g_nx_initstate;  /* See enum nx_initstate_e */
+volatile uint8_t g_nx_initstate;  /* See enum nx_initstate_e */
 
 /****************************************************************************
  * Private Data
@@ -344,6 +344,7 @@ void nx_start(void)
       memset((void *)&g_idletcb[i], 0, sizeof(struct task_tcb_s));
       g_idletcb[i].cmn.pid        = i;
       g_idletcb[i].cmn.task_state = TSTATE_TASK_RUNNING;
+      g_idletcb[i].cmn.lockcount  = 1;
 
       /* Set the entry point.  This is only for debug purposes.  NOTE: that
        * the start_t entry point is not saved.  That is acceptable, however,
@@ -564,13 +565,6 @@ void nx_start(void)
   /* Initialize tasking data structures */
 
   task_initialize();
-
-  /* Disables context switching because we need take the memory manager
-   * semaphore on this CPU so that it will not be available on the other
-   * CPUs until we have finished initialization.
-   */
-
-  sched_lock();
 
   /* Initialize the instrument function */
 
