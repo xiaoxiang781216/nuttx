@@ -45,7 +45,7 @@ struct simple_addrenv_s g_addrenv =
 {
   .va   = X86_64_LOAD_OFFSET,
   .pa   = 0,
-  .size = 0xffffffffffffffff
+  .size = 0x100000000
 };
 #endif
 
