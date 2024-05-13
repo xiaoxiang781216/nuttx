@@ -24,6 +24,7 @@
 
 #include <nuttx/binfmt/binfmt.h>
 #include <nuttx/coredump.h>
+#include <nuttx/mm/kasan.h>
 #include <syslog.h>
 #include <debug.h>
 
@@ -257,6 +258,10 @@ int coredump_initialize(void)
 
 void coredump_dump(pid_t pid)
 {
+  /* Disable KASAN to avoid false positive */
+
+  kasan_init_early();
+
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
   coredump_dump_syslog(pid);
 #endif
