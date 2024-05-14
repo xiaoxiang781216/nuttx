@@ -691,7 +691,8 @@ def auto_parse_log_file(logfile):
 
             if (
                 "up_dump_register" in line
-                or "stack" in line
+                or "dump_stack" in line
+                or "stack_dump" in line
             ):
                 start = True
             else:
