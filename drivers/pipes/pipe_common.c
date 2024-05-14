@@ -72,10 +72,26 @@ static void pipecommon_wakeup(FAR sem_t *sem)
 {
   int sval;
 
+  /* Protect wakeup operation will not be interrupted, consider this case:
+   * 1. A high-priority thread X is reading from the pipe,
+   *      and wait on the d_rdsem
+   * 2. A low-priority thread Y is writing to the pipe,
+   *      and post the d_rdsem by pipecommon_wakeup
+   * 3. Task switched from Y to X by post d_rdsem
+   * 4. Task X read out the context and the wait again
+   * 5. Task switch back to the Y, but still in the
+   *      while loop of pipecommon_wakeup
+   * 6. Then there is a dead lock, Y will post d_rdsem, and goto 3
+   */
+
+  sched_lock();
+
   while (nxsem_get_value(sem, &sval) == OK && sval <= 0)
     {
       nxsem_post(sem);
     }
+
+  sched_unlock();
 }
 
 /****************************************************************************
