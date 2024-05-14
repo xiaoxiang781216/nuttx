@@ -306,9 +306,11 @@ class DumpELFFile:
                 continue
 
             if is_audio:
-                addr &= 0x7fffffff
+                addr &= 0x7FFFFFFF
 
-            res = self._parse_addr2line(addr2line, ["-Cfe", self.elffile, "-a"], hex(addr))
+            res = self._parse_addr2line(
+                addr2line, ["-Cfe", self.elffile, "-a"], hex(addr)
+            )
             matches = re.findall(r"\?\?:", res)
             if matches:
                 continue
@@ -760,7 +762,9 @@ def main(args):
         gdbserver.bind(("", args.port))
     except OSError:
         gdbserver.bind(("", 0))
-        logger.info(f"Port {args.port} is already in use, using port {gdbserver.getsockname()[1]} instead.")
+        logger.info(
+            f"Port {args.port} is already in use, using port {gdbserver.getsockname()[1]} instead."
+        )
         args.port = gdbserver.getsockname()[1]
 
     gdbserver.listen(1)
