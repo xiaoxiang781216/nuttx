@@ -60,10 +60,8 @@
  * It's hard to tell how many spare buffers is needed, for now it's set to 8.
  */
 
-#define IGC_RX_SPARE           8
-
 #define IGC_TX_QUOTA           IGC_TX_DESC
-#define IGC_RX_QUOTA           (IGC_RX_DESC + IGC_RX_SPARE)
+#define IGC_RX_QUOTA           (IGC_RX_DESC + CONFIG_NET_IGC_RXSPARE)
 
 /* NOTE: CONFIG_IOB_ALIGNMENT must match system D-CACHE line size */
 

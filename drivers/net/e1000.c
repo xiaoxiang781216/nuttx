@@ -60,10 +60,8 @@
  * It's hard to tell how many spare buffers is needed, for now it's set to 8.
  */
 
-#define E1000_RX_SPARE        8
-
 #define E1000_TX_QUOTA        E1000_TX_DESC
-#define E1000_RX_QUOTA        (E1000_RX_DESC + E1000_RX_SPARE)
+#define E1000_RX_QUOTA        (E1000_RX_DESC + CONFIG_NET_E1000_RXSPARE)
 
 /* NOTE: CONFIG_IOB_ALIGNMENT must match system D-CACHE line size */
 
