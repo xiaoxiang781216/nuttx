@@ -260,7 +260,7 @@ void coredump_dump(pid_t pid)
 {
   /* Disable KASAN to avoid false positive */
 
-  kasan_init_early();
+  kasan_stop();
 
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
   coredump_dump_syslog(pid);
