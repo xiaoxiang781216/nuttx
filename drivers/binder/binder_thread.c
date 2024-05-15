@@ -271,19 +271,21 @@ static void binder_free_proc(FAR struct binder_proc *proc)
       binder_debug(BINDER_DEBUG_WARNING,
                    "%s: Unexpected outstanding_txns %d\n", __func__,
                    proc->outstanding_txns);
-      device = container_of(proc->context, struct binder_device, context);
-      nxmutex_lock(&device->binder_procs_lock);
-      device->ref_count--;
-      if (device->ref_count == 0)
-        {
-          nxmutex_unlock(&device->binder_procs_lock);
-          kmm_free(device);
-        }
-      else
-        {
-          nxmutex_unlock(&device->binder_procs_lock);
-        }
     }
+
+  device = container_of(proc->context, struct binder_device, context);
+  nxmutex_lock(&device->binder_procs_lock);
+  device->ref_count--;
+  if (device->ref_count == 0)
+    {
+      nxmutex_unlock(&device->binder_procs_lock);
+      kmm_free(device);
+    }
+  else
+    {
+      nxmutex_unlock(&device->binder_procs_lock);
+    }
+
   binder_alloc_deferred_release(&proc->alloc);
   kmm_free(proc);
 }
