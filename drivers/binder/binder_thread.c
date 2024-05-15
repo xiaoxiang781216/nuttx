@@ -252,7 +252,9 @@ static struct binder_thread * binder_get_txn_from(
   from = t->from;
   if (from)
     {
+      binder_inner_proc_lock(from->proc);
       from->tmp_ref++;
+      binder_inner_proc_unlock(from->proc);
     }
   nxmutex_unlock(&t->lock);
   return from;
