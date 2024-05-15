@@ -883,7 +883,6 @@ static int fatfs_truncate(FAR struct file *filep, off_t length)
             }
 
           length -= size;
-          filep->f_pos += size;
         }
 
       ret = fatfs_convert_result(f_truncate(&fp->f));
