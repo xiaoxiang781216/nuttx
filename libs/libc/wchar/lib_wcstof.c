@@ -48,7 +48,9 @@
  *
  ****************************************************************************/
 
+#ifdef CONFIG_HAVE_FLAOT
 float wcstof(FAR const wchar_t *nptr, FAR wchar_t **endptr)
 {
   return strtof((FAR const char *)nptr, (FAR char **)endptr);
 }
+#endif

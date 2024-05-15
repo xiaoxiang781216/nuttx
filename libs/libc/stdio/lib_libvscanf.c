@@ -971,7 +971,10 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
 #ifdef CONFIG_HAVE_DOUBLE
               FAR double *pd = NULL;
 #endif
+
+#ifdef CONFIG_HAVE_FLOAT
               FAR float *pf = NULL;
+#endif
 
               linfo("Performing floating point conversion\n");
 
@@ -994,10 +997,12 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                     }
                   else
 #endif
+#ifdef CONFIG_HAVE_FLOAT
                     {
                       pf = next_arg(varg, vabuf, FAR float *);
                       *pf = 0.0;
                     }
+#endif
                 }
 
 #ifdef CONFIG_LIBC_FLOATINGPOINT
@@ -1015,7 +1020,9 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
 
               if (c > 0)
                 {
+#  if defined(CONFIG_HAVE_DOUBLE) || defined(CONFIG_HAVE_FLOAT)
                   FAR char *endptr;
+#  endif
                   bool expnt;
                   bool dot;
                   bool sign;
@@ -1024,8 +1031,9 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
 #  ifdef CONFIG_HAVE_DOUBLE
                   double dvalue;
 #  endif
+#  ifdef CONFIG_HAVE_FLOAT
                   float fvalue;
-
+#  endif
                   /* Was a fieldwidth specified? */
 
                   if (!width || width > sizeof(tmp) - 1)
@@ -1114,17 +1122,21 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                     }
                   else
 #  endif
+#  ifdef CONFIG_HAVE_FLOAT
                     {
                       fvalue = strtof(tmp, &endptr);
                     }
+#  endif
 
                   /* Check if the number was successfully converted */
 
+#  if defined(CONFIG_HAVE_DOUBLE) || defined(CONFIG_HAVE_FLOAT)
                   if (tmp == endptr || get_errno() == ERANGE)
                     {
                       *lastc = c;
                       return assigncount;
                     }
+#endif
 
                   set_errno(errsave);
 
@@ -1147,8 +1159,10 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                         {
                           /* Return the float value */
 
+#  ifdef CONFIG_HAVE_FLOAT
                           linfo("Return %f to %p\n", (double)fvalue, pf);
                           *pf = fvalue;
+#  endif
                         }
 
                       assigncount++;

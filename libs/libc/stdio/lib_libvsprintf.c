@@ -129,7 +129,9 @@ union arg_u
 #ifdef CONFIG_HAVE_LONG_LONG
   unsigned long long ull;
 #endif
+#ifdef CONFIG_HAVE_DOUBLE
   double d;
+#endif
   FAR char *cp;
 };
 struct arg_s
@@ -1367,9 +1369,11 @@ int lib_vsprintf(FAR struct lib_outstream_s *stream,
           arglist.value[i].u = va_arg(ap, unsigned int);
           break;
 
+#ifdef CONFIG_HAVE_DOUBLE
         case TYPE_DOUBLE:
           arglist.value[i].d = va_arg(ap, double);
           break;
+#endif
 
         case TYPE_CHAR_POINTER:
           arglist.value[i].cp = va_arg(ap, FAR char *);
