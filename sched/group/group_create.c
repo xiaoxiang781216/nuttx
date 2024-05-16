@@ -48,8 +48,10 @@
 #define GROUP_INITIAL_MEMBERS 4
 
 /****************************************************************************
- * Public Data
+ * Private Data
  ****************************************************************************/
+
+static struct task_group_s  g_kthread_group;   /* Shared among kthreads     */
 
 /****************************************************************************
  * Private Functions
@@ -127,12 +129,26 @@ int group_allocate(FAR struct task_tcb_s *tcb, uint8_t ttype)
 
   DEBUGASSERT(tcb && !tcb->cmn.group);
 
-  /* Allocate the group structure and assign it to the TCB */
+  ttype &= TCB_FLAG_TTYPE_MASK;
 
-  group = kmm_zalloc(sizeof(struct task_group_s));
-  if (!group)
+  /* Initialize group pointer and assign to TCB */
+
+  if (ttype == TCB_FLAG_TTYPE_KERNEL)
     {
-      return -ENOMEM;
+      group = &g_kthread_group;
+      tcb->cmn.group = group;
+      if (group->tg_info)
+        {
+          return OK;
+        }
+    }
+  else
+    {
+      group = kmm_zalloc(sizeof(struct task_group_s));
+      if (!group)
+        {
+          return -ENOMEM;
+        }
     }
 
 #if defined(CONFIG_MM_KERNEL_HEAP)
@@ -249,7 +265,10 @@ void group_initialize(FAR struct task_tcb_s *tcb)
    * task has exited.
    */
 
-  group->tg_pid = tcb->cmn.pid;
+  if (group != &g_kthread_group)
+    {
+      group->tg_pid = tcb->cmn.pid;
+    }
 
   /* Mark that there is one member in the group, the main task */
 

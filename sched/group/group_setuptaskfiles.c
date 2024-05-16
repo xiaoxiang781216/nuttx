@@ -64,7 +64,7 @@ int group_setuptaskfiles(FAR struct task_tcb_s *tcb,
   FAR struct task_group_s *group = tcb->cmn.group;
   int ret = OK;
 #ifndef CONFIG_FDCLONE_DISABLE
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
 #endif
 
   sched_trace_begin();
@@ -81,20 +81,15 @@ int group_setuptaskfiles(FAR struct task_tcb_s *tcb,
    * thread should be chosen.
    */
 
-  if ((tcb->cmn.flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_KERNEL)
-    {
-      rtcb = &g_idletcb[this_cpu()].cmn;
-    }
-  else
-    {
-      rtcb = this_task();
-    }
-
   /* Duplicate the parent task's file descriptors */
 
   DEBUGASSERT(rtcb->group);
-  ret = files_duplist(&rtcb->group->tg_filelist,
-                      &group->tg_filelist, actions, cloexec);
+  if (group != rtcb->group)
+    {
+      ret = files_duplist(&rtcb->group->tg_filelist,
+                    &group->tg_filelist, actions, cloexec);
+    }
+
   if (ret >= 0 && actions != NULL)
     {
       ret = spawn_file_actions(&tcb->cmn, actions);

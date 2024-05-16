@@ -237,7 +237,8 @@ void group_leave(FAR struct tcb_s *tcb)
 
       /* Have all of the members left the group? */
 
-      if (group->tg_nmembers == 0)
+      if (group->tg_nmembers == 0 &&
+          (group->tg_flags & GROUP_FLAG_PRIVILEGED) == 0)
         {
           /* Yes.. Release all of the resource held by the task group */
 
@@ -333,7 +334,8 @@ void group_drop(FAR struct task_group_s *group)
 
   /* Finally, if no one needs the group and it has been deleted, remove it */
 
-  if (group->tg_flags & GROUP_FLAG_DELETED)
+  if (group->tg_flags & GROUP_FLAG_DELETED &&
+      (group->tg_flags & GROUP_FLAG_PRIVILEGED) == 0)
     {
       /* Release the group container itself */
 
