@@ -69,6 +69,7 @@ struct goldfish_gpu_fb_s
   struct fb_videoinfo_s videoinfo;
   struct file pipe;
   int colorbuffer;
+  int power;
 };
 
 /****************************************************************************
@@ -84,6 +85,10 @@ static int goldfish_gpu_fb_getvideoinfo(FAR struct fb_vtable_s *vtable,
 static int goldfish_gpu_fb_getplaneinfo(FAR struct fb_vtable_s *vtable,
                                         int planeno,
                                         FAR struct fb_planeinfo_s *pinfo);
+static int goldfish_gpu_fb_set_power(FAR struct fb_vtable_s *vtable,
+                                     int power);
+static int goldfish_gpu_fb_get_power(FAR struct fb_vtable_s *vtable);
+
 static int goldfish_gpu_fb_vsync_thread(int argc, FAR char** argv);
 static int goldfish_gpu_fb_init_pipe(FAR struct file *filep,
                                      FAR const char *ns,
@@ -435,6 +440,30 @@ static int goldfish_gpu_fb_getplaneinfo(FAR struct fb_vtable_s *vtable,
 
   gerr("ERROR: Returning EINVAL\n");
   return -EINVAL;
+}
+
+/****************************************************************************
+ * Name: goldfish_gpu_fb_set_power
+ ****************************************************************************/
+
+static int goldfish_gpu_fb_set_power(FAR struct fb_vtable_s *vtable,
+                                     int power)
+{
+  FAR struct goldfish_gpu_fb_s *fb = (FAR struct goldfish_gpu_fb_s *)vtable;
+
+  fb->power = power;
+  return OK;
+}
+
+/****************************************************************************
+ * Name: goldfish_gpu_fb_get_power
+ ****************************************************************************/
+
+static int goldfish_gpu_fb_get_power(FAR struct fb_vtable_s *vtable)
+{
+  FAR struct goldfish_gpu_fb_s *fb = (FAR struct goldfish_gpu_fb_s *)vtable;
+
+  return fb->power;
 }
 
 /****************************************************************************
