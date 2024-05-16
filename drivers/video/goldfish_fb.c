@@ -80,6 +80,7 @@ struct goldfish_fb_s
   struct fb_videoinfo_s videoinfo;
   FAR void *base;
   int irq;
+  int power;
 };
 
 /****************************************************************************
@@ -96,6 +97,9 @@ static int goldfish_getvideoinfo(FAR struct fb_vtable_s *vtable,
                                  FAR struct fb_videoinfo_s *vinfo);
 static int goldfish_getplaneinfo(FAR struct fb_vtable_s *vtable, int planeno,
                                  FAR struct fb_planeinfo_s *pinfo);
+static int goldfish_set_power(FAR struct fb_vtable_s *vtable, int power);
+static int goldfish_get_power(FAR struct fb_vtable_s *vtable);
+
 static int goldfish_fb_interrupt(int irq, FAR void *dev_id, FAR void *arg);
 static void goldfish_fb_vsync_irq(FAR struct goldfish_fb_s *fb);
 static void goldfish_fb_framedone_irq(FAR struct goldfish_fb_s *fb);
@@ -221,6 +225,29 @@ static int goldfish_getplaneinfo(FAR struct fb_vtable_s *vtable, int planeno,
 }
 
 /****************************************************************************
+ * Name: goldfish_set_power
+ ****************************************************************************/
+
+static int goldfish_set_power(FAR struct fb_vtable_s *vtable, int power)
+{
+  FAR struct goldfish_fb_s *fb = (FAR struct goldfish_fb_s *)vtable;
+
+  fb->power = power;
+  return OK;
+}
+
+/****************************************************************************
+ * Name: goldfish_get_power
+ ****************************************************************************/
+
+static int goldfish_get_power(FAR struct fb_vtable_s *vtable)
+{
+  FAR struct goldfish_fb_s *fb = (FAR struct goldfish_fb_s *)vtable;
+
+  return fb->power;
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -286,6 +313,8 @@ int goldfish_fb_register(int display, FAR void *regs, int irq)
 
   fb->vtable.getplaneinfo = goldfish_getplaneinfo;
   fb->vtable.getvideoinfo = goldfish_getvideoinfo;
+  fb->vtable.setpower     = goldfish_set_power;
+  fb->vtable.getpower     = goldfish_get_power;
 
   ret = irq_attach(fb->irq, goldfish_fb_interrupt, fb);
   if (ret < 0)
