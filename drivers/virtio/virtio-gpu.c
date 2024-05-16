@@ -63,6 +63,7 @@ struct virtio_gpu_priv_s
   fb_coord_t yres;                  /* Vertical resolution in pixel rows */
   fb_coord_t stride;                /* Width of a row in bytes */
   uint8_t display;                  /* Display number */
+  int power;                        /* Current power setting */
 };
 
 struct virtio_gpu_cookie_s
@@ -112,6 +113,8 @@ static int virtio_gpu_getplaneinfo(FAR struct fb_vtable_s *vtable,
                                    FAR struct fb_planeinfo_s *pinfo);
 static int virtio_gpu_updatearea(FAR struct fb_vtable_s *vtable,
                                  FAR const struct fb_area_s *area);
+static int virtio_set_power(FAR struct fb_vtable_s *vtable, int power);
+static int virtio_get_power(FAR struct fb_vtable_s *vtable);
 
 /****************************************************************************
  * Private Data
@@ -515,6 +518,8 @@ static int virtio_gpu_probe(FAR struct virtio_device *vdev)
   priv->vtable.getvideoinfo = virtio_gpu_getvideoinfo,
   priv->vtable.getplaneinfo = virtio_gpu_getplaneinfo,
   priv->vtable.updatearea   = virtio_gpu_updatearea,
+  priv->vtable.getpower     = virtio_get_power,
+  priv->vtable.setpower     = virtio_set_power,
 
   /* Allocate (and clear) the framebuffer */
 
@@ -674,6 +679,29 @@ static int virtio_gpu_updatearea(FAR struct fb_vtable_s *vtable,
   ret = virtio_gpu_flush_resource(priv, 1, area->x, area->y,
                                   area->w, area->h);
   return ret;
+}
+
+/****************************************************************************
+ * Name: virtio_set_power
+ ****************************************************************************/
+
+static int virtio_set_power(FAR struct fb_vtable_s *vtable, int power)
+{
+  FAR struct virtio_gpu_priv_s *priv =
+    (FAR struct virtio_gpu_priv_s *)vtable;
+  priv->power = power;
+  return OK;
+}
+
+/****************************************************************************
+ * Name: virtio_get_power
+ ****************************************************************************/
+
+static int virtio_get_power(FAR struct fb_vtable_s *vtable)
+{
+  FAR struct virtio_gpu_priv_s *priv =
+    (FAR struct virtio_gpu_priv_s *)vtable;
+  return priv->power;
 }
 
 /****************************************************************************
