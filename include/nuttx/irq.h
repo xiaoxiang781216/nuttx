@@ -70,6 +70,14 @@
 
 #endif /* __ASSEMBLY__ */
 
+/* interrupt was handled by this device */
+
+#define IRQ_HANDLED     0
+
+/* handler requests to wake the handler thread */
+
+#define IRQ_WAKE_THREAD 1
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -147,6 +155,32 @@ extern "C"
  ****************************************************************************/
 
 int irq_attach(int irq, xcpt_t isr, FAR void *arg);
+
+/****************************************************************************
+ * Name: irq_attach_thread
+ *
+ * Description:
+ *   Configure the IRQ subsystem so that IRQ number 'irq' is dispatched to
+ *   'isrthread'
+ *
+ * Input Parameters:
+ *   irq - Irq num
+ *   isr - Function to be called when the IRQ occurs, called in interrupt
+ *   context.
+ *   If isr is NULL the default handler is installed(irq_default_handler).
+ *   isrthread - called in thread context, If the isrthread is NULL,
+ *   then the ISR is being detached.
+ *   arg - privdate data
+ *   priority   - Priority of the new task
+ *   stack_size - size (in bytes) of the stack needed
+ *
+ * Returned Value:
+ *   Zero on success; a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
+                      int priority, int stack_size);
 
 #ifdef CONFIG_IRQCHAIN
 int irqchain_detach(int irq, xcpt_t isr, FAR void *arg);
