@@ -47,25 +47,11 @@
 
 void inode_release(FAR struct inode *inode)
 {
-  int ret;
-
   if (inode)
     {
       /* Decrement the references of the inode */
 
-      do
-        {
-          ret = inode_lock();
-
-          /* This only possible error is due to cancellation of the thread.
-           * We need to try again anyway in this case, otherwise the
-           * reference count would be wrong.
-           */
-
-          DEBUGASSERT(ret == OK || ret == -ECANCELED);
-        }
-      while (ret < 0);
-
+      inode_lock();
       if (inode->i_crefs)
         {
           inode->i_crefs--;

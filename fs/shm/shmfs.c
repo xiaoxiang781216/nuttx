@@ -184,21 +184,16 @@ static int shmfs_release(FAR struct inode *inode)
    * The inode is released after this call, hence checking if i_crefs <= 1.
    */
 
-  int ret = inode_lock();
-  if (ret >= 0)
+  inode_lock();
+  if (inode->i_parent == NULL &&
+      inode->i_crefs <= 1)
     {
-      if (inode->i_parent == NULL &&
-          inode->i_crefs <= 1)
-        {
-          shmfs_free_object(inode->i_private);
-          inode->i_private = NULL;
-          ret = OK;
-        }
-
-      inode_unlock();
+      shmfs_free_object(inode->i_private);
+      inode->i_private = NULL;
     }
 
-  return ret;
+  inode_unlock();
+  return OK;
 }
 
 /****************************************************************************
@@ -222,35 +217,31 @@ static int shmfs_close(FAR struct file *filep)
 static int shmfs_truncate(FAR struct file *filep, off_t length)
 {
   FAR struct shmfs_object_s *object;
-  int ret;
+  int ret = 0;
 
   if (length == 0)
     {
       return -EINVAL;
     }
 
-  ret = inode_lock();
-  if (ret >= 0)
+  inode_lock();
+  object = filep->f_inode->i_private;
+  if (!object)
     {
-      object = filep->f_inode->i_private;
-      if (!object)
+      filep->f_inode->i_private = shmfs_alloc_object(length);
+      if (!filep->f_inode->i_private)
         {
-          filep->f_inode->i_private = shmfs_alloc_object(length);
-          if (!filep->f_inode->i_private)
-            {
-              ret = -EFAULT;
-            }
+          ret = -EFAULT;
         }
-      else if (object->length != length)
-        {
-          /* This doesn't support resize */
+    }
+  else if (object->length != length)
+    {
+      /* This doesn't support resize */
 
-          ret = -EINVAL;
-        }
-
-      inode_unlock();
+      ret = -EINVAL;
     }
 
+  inode_unlock();
   return ret;
 }
 
@@ -261,20 +252,15 @@ static int shmfs_truncate(FAR struct file *filep, off_t length)
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
 static int shmfs_unlink(FAR struct inode *inode)
 {
-  int ret = inode_lock();
-
-  if (ret >= 0)
+  inode_lock();
+  if (inode->i_crefs <= 1)
     {
-      if (inode->i_crefs <= 1)
-        {
-          shmfs_free_object(inode->i_private);
-          inode->i_private = NULL;
-        }
-
-      inode_unlock();
+      shmfs_free_object(inode->i_private);
+      inode->i_private = NULL;
     }
 
-  return ret;
+  inode_unlock();
+  return OK;
 }
 #endif
 
