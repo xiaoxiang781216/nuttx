@@ -592,7 +592,7 @@ static FAR netpkt_t *e1000_receive(FAR struct netdev_lowerhalf_s *dev)
   if (rx->errors)
     {
       nerr("RX error reported (%"PRIu8")\n", rx->errors);
-      NETDEV_RXERRORS(&priv->dev);
+      NETDEV_RXERRORS(&priv->dev.netdev);
       netpkt_free(dev, pkt, NETPKT_RX);
       return NULL;
     }
@@ -631,7 +631,7 @@ static void e1000_txdone(FAR struct netdev_lowerhalf_s *dev)
       if (!(priv->tx[priv->tx_done].status & E1000_TDESC_STATUS_DD))
         {
           nerr("tx failed: 0x%" PRIx32 "\n", priv->tx[priv->tx_done].status);
-          NETDEV_TXERRORS(priv->dev);
+          NETDEV_TXERRORS(&priv->dev.netdev);
         }
 
       /* Free net packet */
