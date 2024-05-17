@@ -80,6 +80,10 @@ Running QEMU
 
     qemu-system-x86_64 -cpu host -enable-kvm -m 2G -cdrom boot.iso -nographic -serial mon:stdio
 
+  If the NuttX configuration has CONFIG_ARCH_PVHBOOT enabled, you can boot NuttX using the QEMU kernel loader:
+
+    qemu-system-x86_64 -cpu host -enable-kvm -m 2G -kernel nuttx.elf -nographic -serial mon:stdio
+
   This multiplex the qemu console and COM1 to your console.
   Use control-a 1 and 2 to switch between.
   Use control-a x to terminate the emulation.
