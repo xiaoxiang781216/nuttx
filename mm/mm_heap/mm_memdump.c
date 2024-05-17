@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <debug.h>
+#include <syslog.h>
 
 #include <nuttx/mm/mm.h>
 #include <nuttx/sched.h>
@@ -146,8 +147,10 @@ void mm_memdump(FAR struct mm_heap_s *heap,
     {
       FAR struct tcb_s *tcb = nxsched_get_tcb(dump->pid);
       FAR const char *name = tcb ? tcb->name : "Unknown";
-
-      syslog(LOG_INFO, "Dump %s all used memory node info:\n", name);
+      syslog(LOG_INFO, "Memdump task name: %s,"
+                       " stack_alloc_ptr: %p,"
+                       " adj_stack_size: %zu\n",
+                       name, tcb->stack_alloc_ptr, tcb->adj_stack_size);
 #if CONFIG_MM_BACKTRACE < 0
       syslog(LOG_INFO, "%12s%*s\n", "Size", MM_PTR_FMT_WIDTH, "Address");
 #else
