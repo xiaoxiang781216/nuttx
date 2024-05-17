@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/rwsem.h>
+#include <nuttx/sched.h>
 
 /****************************************************************************
  * Private Functions
@@ -160,9 +161,11 @@ void up_read(FAR rw_semaphore_t *rwsem)
 
 int down_write_trylock(FAR rw_semaphore_t *rwsem)
 {
+  pid_t tid = _SCHED_GETTID();
+
   nxmutex_lock(&rwsem->protected);
 
-  if (rwsem->writer > 0 || rwsem->reader > 0)
+  if (rwsem->reader > 0 || (rwsem->writer > 0 && tid != rwsem->holder))
     {
       nxmutex_unlock(&rwsem->protected);
       return 0;
@@ -171,6 +174,7 @@ int down_write_trylock(FAR rw_semaphore_t *rwsem)
   /* The check passes, then we just need the writer reference + 1 */
 
   rwsem->writer++;
+  rwsem->holder = tid;
 
   nxmutex_unlock(&rwsem->protected);
 
@@ -190,9 +194,11 @@ int down_write_trylock(FAR rw_semaphore_t *rwsem)
 
 void down_write(FAR rw_semaphore_t *rwsem)
 {
+  pid_t tid = _SCHED_GETTID();
+
   nxmutex_lock(&rwsem->protected);
 
-  while (rwsem->reader > 0 || rwsem->writer > 0)
+  while (rwsem->reader > 0 || (rwsem->writer > 0 && rwsem->holder != tid))
     {
       rwsem->waiter++;
       nxmutex_unlock(&rwsem->protected);
@@ -204,6 +210,7 @@ void down_write(FAR rw_semaphore_t *rwsem)
   /* The check passes, then we just need the writer reference + 1 */
 
   rwsem->writer++;
+  rwsem->holder = tid;
 
   nxmutex_unlock(&rwsem->protected);
 }
@@ -224,8 +231,12 @@ void up_write(FAR rw_semaphore_t *rwsem)
   nxmutex_lock(&rwsem->protected);
 
   DEBUGASSERT(rwsem->writer > 0);
+  DEBUGASSERT(rwsem->holder == _SCHED_GETTID());
 
-  rwsem->writer--;
+  if (--rwsem->writer <= 0)
+    {
+      rwsem->holder = RWSEM_NO_HOLDER;
+    }
 
   up_wait(rwsem);
 
@@ -269,6 +280,7 @@ int init_rwsem(FAR rw_semaphore_t *rwsem)
   rwsem->reader = 0;
   rwsem->writer = 0;
   rwsem->waiter = 0;
+  rwsem->holder = RWSEM_NO_HOLDER;
 
   return OK;
 }
@@ -290,7 +302,7 @@ void destroy_rwsem(FAR rw_semaphore_t *rwsem)
   /* Need to check if there is still an unlocked or waiting state */
 
   DEBUGASSERT(rwsem->waiter == 0 && rwsem->reader == 0 &&
-              rwsem->writer == 0);
+              rwsem->writer == 0 && rwsem->holder == RWSEM_NO_HOLDER);
 
   nxmutex_destroy(&rwsem->protected);
   nxsem_destroy(&rwsem->waiting);
