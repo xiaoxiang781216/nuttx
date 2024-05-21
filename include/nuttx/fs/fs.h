@@ -473,6 +473,10 @@ struct file
 #ifdef CONFIG_FDCHECK
   uint8_t           f_tag_fdcheck; /* File owner fdcheck tag, init to 0 */
 #endif
+
+#if CONFIG_FS_BACKTRACE > 0
+  FAR void         *backtrace[CONFIG_FS_BACKTRACE]; /* Backtrace for caller */
+#endif
 };
 
 /* This defines a two layer array of files indexed by the file descriptor.
