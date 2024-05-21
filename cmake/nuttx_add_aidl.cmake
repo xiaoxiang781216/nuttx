@@ -51,6 +51,7 @@ function(nuttx_add_aidl)
     nuttx_add_aidl
     ONE_VALUE
     TARGET
+    AIDL_BASE_DIR
     AIDL_INCLUDE_DIR
     AIDL_HEADER_DIR
     AIDL_OUT_DIR
@@ -73,21 +74,27 @@ function(nuttx_add_aidl)
   endif()
 
   foreach(aidl_file ${AIDLS})
+    get_filename_component(aidl_file_full ${aidl_file} ABSOLUTE)
+    file(RELATIVE_PATH REL_PATH ${AIDL_BASE_DIR} ${aidl_file_full})
+    get_filename_component(REL_DIR ${REL_PATH} DIRECTORY)
     # the generated source code and AIDL file have the same name
     get_filename_component(FILE_NAME ${aidl_file} NAME_WE)
     separate_arguments(AIDL_CMD UNIX_COMMAND ${AIDL_CMD_STR})
     # the target source needs to be scanned during the cmake configtre phase, so
     # this is a placeholder.
-    file(WRITE ${AIDL_OUT_DIR}/${FILE_NAME}.cpp )
+    file(MAKE_DIRECTORY ${AIDL_OUT_DIR}/${REL_DIR})
+    file(WRITE ${AIDL_OUT_DIR}/${REL_DIR}/${FILE_NAME}.cpp )
 
     add_custom_target(
       ${FILE_NAME}
       COMMAND ${AIDL_CMD} ${aidl_file}
       WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
-      COMMENT "AIDL:Gen and Updating ${AIDL_OUT_DIR}/${FILE_NAME}.cpp")
+      COMMENT
+        "AIDL:Gen and Updating ${AIDL_OUT_DIR}/${REL_DIR}/${FILE_NAME}.cpp")
 
     add_dependencies(${TARGET} ${FILE_NAME})
-    target_sources(${TARGET} PRIVATE ${AIDL_OUT_DIR}/${FILE_NAME}.cpp)
+    target_sources(${TARGET}
+                   PRIVATE ${AIDL_OUT_DIR}/${REL_DIR}/${FILE_NAME}.cpp)
     target_include_directories(${TARGET} PRIVATE ${AIDL_HEADER_DIR})
   endforeach()
 
