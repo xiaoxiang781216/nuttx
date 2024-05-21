@@ -655,21 +655,13 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
        */
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
-      irqstate_t flags = enter_critical_section();
-      size_t tmp;
-
-retry:
-      num = 0;
       nxsched_foreach(procfs_thread_number, &num);
-      tmp = num;
 #endif
+
       level0 = (FAR struct procfs_level0_s *)
          kmm_zalloc(sizeof(struct procfs_level0_s) + sizeof(pid_t) * num) ;
       if (!level0)
         {
-#ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
-          leave_critical_section(flags);
-#endif
           ferr("ERROR: Failed to allocate the level0 directory structure\n");
           return -ENOMEM;
         }
@@ -682,18 +674,7 @@ retry:
        */
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
-      /* Handle conner case: context siwtch happened when kmm_malloc */
-
-      num = 0;
-      nxsched_foreach(procfs_thread_number, &num);
-      if (tmp != num)
-        {
-          kmm_free(level0);
-          goto retry;
-        }
-
       nxsched_foreach(procfs_enum, level0);
-      leave_critical_section(flags);
       procfs_sort_pid(level0);
 #else
       level0->base.index = 0;
