@@ -122,7 +122,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                */
 
               tcb->xcp.saved_rip    = up_current_regs()[REG_RIP];
-              tcb->xcp.saved_rsp    = tcb->xcp.regs[REG_RSP];
+              tcb->xcp.saved_rsp    = up_current_regs()[REG_RSP];
               tcb->xcp.saved_rflags = up_current_regs()[REG_RFLAGS];
 
               /* Then set up to vector to the trampoline with interrupts
@@ -260,7 +260,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    */
 
                   tcb->xcp.saved_rip         = up_current_regs()[REG_RIP];
-                  tcb->xcp.saved_rsp         = tcb->xcp.regs[REG_RSP];
+                  tcb->xcp.saved_rsp         = up_current_regs()[REG_RSP];
                   tcb->xcp.saved_rflags      = up_current_regs()[REG_RFLAGS];
 
                   /* Then set up to vector to the trampoline with interrupts
