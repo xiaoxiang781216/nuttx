@@ -368,7 +368,7 @@ int file_open(FAR struct file *filep, FAR const char *path, int oflags, ...)
 
   if (ret >= 0)
     {
-      FS_ADD_BACKTRACE(filep->backtrace);
+      FS_ADD_BACKTRACE(filep);
     }
 
   return ret;

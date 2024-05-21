@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <debug.h>
+#include <stdio.h>
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
@@ -369,9 +370,8 @@ void files_dumplist(FAR struct filelist *list)
     {
       FAR struct file *filep = files_fget(list, i);
       char path[PATH_MAX];
-
 #if CONFIG_FS_BACKTRACE > 0
-      char buf[CONFIG_FS_BACKTRACE * BACKTRACE_PTR_FMT_WIDTH + 1] = "";
+      char buf[BACKTRACE_BUFFER_SIZE(CONFIG_FS_BACKTRACE)];
 #endif
 
       /* Is there an inode associated with the file descriptor? */
@@ -387,7 +387,7 @@ void files_dumplist(FAR struct filelist *list)
         }
 
 #if CONFIG_FS_BACKTRACE > 0
-      backtrace_format(buf, sizeof(buf), filep->backtrace,
+      backtrace_format(buf, sizeof(buf), filep->f_backtrace,
                        CONFIG_FS_BACKTRACE);
 #endif
 
@@ -558,7 +558,7 @@ found:
       inode_addref(inode);
     }
 
-  FS_ADD_BACKTRACE(filep->backtrace);
+  FS_ADD_BACKTRACE(filep);
 
 #ifdef CONFIG_FDCHECK
   return fdcheck_protect(i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK + j);
@@ -585,6 +585,17 @@ int file_allocate(FAR struct inode *inode, int oflags, off_t pos,
 {
   return file_allocate_from_tcb(nxsched_self(), inode, oflags,
                                 pos, priv, minfd, addref);
+}
+
+FAR char *file_dump_backtrace(FAR struct file *filep, FAR char *buffer,
+                              size_t len)
+{
+#if CONFIG_FS_BACKTRACE > 0
+  backtrace_format(buffer, len, filep->f_backtrace, CONFIG_FS_BACKTRACE);
+#else
+  buffer[0] = '\0';
+#endif
+  return buffer;
 }
 
 /****************************************************************************

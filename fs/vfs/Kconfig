@@ -76,4 +76,4 @@ config FS_BACKTRACE_SKIP
 	default 2
 	depends on FS_BACKTRACE > 0
 	---help---
-		Skip how many backtrace.
+		Skip depth of backtrace.

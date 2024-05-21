@@ -67,20 +67,21 @@
   while (0)
 
 #if CONFIG_FS_BACKTRACE > 0
-#  define FS_ADD_BACKTRACE(buffer) \
+#  define FS_ADD_BACKTRACE(filep) \
      do \
        { \
-          int n = sched_backtrace(_SCHED_GETTID(), buffer, \
+          int n = sched_backtrace(_SCHED_GETTID(), \
+                                  (filep)->f_backtrace, \
                                   CONFIG_FS_BACKTRACE, \
                                   CONFIG_FS_BACKTRACE_SKIP); \
           if (n < CONFIG_FS_BACKTRACE) \
             { \
-              (buffer)[n] = NULL; \
+              (filep)->f_backtrace[n] = NULL; \
             } \
        } \
      while (0)
 #else
-#  define FS_ADD_BACKTRACE(buffer)
+#  define FS_ADD_BACKTRACE(filep)
 #endif
 
 /****************************************************************************

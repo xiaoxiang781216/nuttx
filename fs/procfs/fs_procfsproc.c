@@ -1250,6 +1250,9 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
                             size_t buflen, off_t offset)
 {
   FAR struct task_group_s *group = tcb->group;
+  FAR struct file *filep;
+  char backtrace[BACKTRACE_BUFFER_SIZE(CONFIG_FS_BACKTRACE)];
+  char path[PATH_MAX];
   size_t remaining;
   size_t linesize;
   size_t copysize;
@@ -1269,8 +1272,14 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
   totalsize = 0;
 
   linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                               "\n%-3s %-7s %-4s %-9s %s\n",
-                               "FD", "OFLAGS", "TYPE", "POS", "PATH");
+                               "\n%-3s %-7s %-4s %-9s %-14s %s\n",
+                               "FD", "OFLAGS", "TYPE", "POS", "PATH",
+#if CONFIG_FS_BACKTRACE > 0
+                               "BACKTRACE"
+#else
+                               ""
+#endif
+                               );
   copysize   = procfs_memcpy(procfile->line, linesize, buffer, remaining,
                              &offset);
 
@@ -1287,9 +1296,7 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
 
   for (i = 0; i < count; i++)
     {
-      FAR struct file *filep = files_fget(&group->tg_filelist, i);
-      char path[PATH_MAX];
-      char buf[CONFIG_FS_BACKTRACE * BACKTRACE_PTR_FMT_WIDTH + 1] = "";
+      filep = files_fget(&group->tg_filelist, i);
 
       /* Is there an inode associated with the file descriptor? */
 
@@ -1303,16 +1310,15 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
           path[0] = '\0';
         }
 
-#if CONFIG_FS_BACKTRACE > 0
-      backtrace_format(buf, sizeof(buf), filep->backtrace,
-                       CONFIG_FS_BACKTRACE);
-#endif
-
       linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                                   "%-3d %-7d %-4x %-9ld %s%s\n",
+                                   "%-3d %-7d %-4x %-9ld %-14s %s\n",
                                    i, filep->f_oflags,
                                    INODE_GET_TYPE(filep->f_inode),
-                                   (long)filep->f_pos, path, buf);
+                                   (long)filep->f_pos, path,
+                                   file_dump_backtrace(filep,
+                                                       backtrace,
+                                                       sizeof(backtrace)
+                                                      ));
       fs_putfilep(filep);
       copysize   = procfs_memcpy(procfile->line, linesize,
                                  buffer, remaining, &offset);
