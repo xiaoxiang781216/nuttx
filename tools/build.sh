@@ -89,6 +89,7 @@ function setup_environment()
       "gcc-multilib" \
       "g++-multilib" \
       "gettext" \
+      "mtools" \
       )
 
   for (( i = 0; i < ${#PACKAGES[*]}; i++)); do
