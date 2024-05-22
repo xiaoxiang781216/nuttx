@@ -84,7 +84,7 @@ void x86_64_timer_calibrate_freq(void)
 
   if (numerator == 0 || denominator == 0 || crystal_freq == 0)
     {
-      PANIC(0);
+      PANIC();
     }
   else
     {
