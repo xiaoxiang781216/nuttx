@@ -361,9 +361,14 @@ static void procfs_enum(FAR struct tcb_s *tcb, FAR void *arg)
 
   /* Add the PID to the list */
 
-  index = dir->base.nentries;
+  if (dir->base.index >= dir->base.nentries)
+    {
+      return;
+    }
+
+  index = dir->base.index;
   dir->pid[index] = tcb->pid;
-  dir->base.nentries = index + 1;
+  dir->base.index = index + 1;
 }
 
 /****************************************************************************
@@ -674,7 +679,11 @@ static int procfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
        */
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
+      level0->base.index = 0;
+      level0->base.nentries = num;
       nxsched_foreach(procfs_enum, level0);
+      level0->base.nentries = level0->base.index;
+      level0->base.index = 0;
       procfs_sort_pid(level0);
 #else
       level0->base.index = 0;
