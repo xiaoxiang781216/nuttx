@@ -22,4 +22,20 @@ config FS_NOTIFY_FD_POLLWAITERS
 	int "Max pollwaiters in one notify devcie"
 	default 2
 
+config FS_NOTIFY_OPEN_MONITOR
+	bool "Enable notify_open"
+	default n
+
+config FS_NOTIFY_CLOSE_MONITOR
+	bool "Enable notify_close"
+	default n
+
+config FS_NOTIFY_WRITE_MONITOR
+	bool "Enable notify_write"
+	default n
+
+config FS_NOTIFY_READ_MONITOR
+	bool "Enable notify_read"
+	default n
+
 endif # FS_NOTIFY
