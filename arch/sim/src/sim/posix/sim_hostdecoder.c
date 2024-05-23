@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/sim/src/sim/sim_hostdecoder.c
+ * arch/sim/src/sim/posix/sim_hostdecoder.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
