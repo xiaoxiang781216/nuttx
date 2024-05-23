@@ -123,13 +123,11 @@ struct arm_pmu_s
 
   /* Corresponds to common event n identification */
 
-  unsigned long pmceid_bitmap [ARMPMU_MAX_COMMON_EVENTS /
-                               (sizeof(unsigned long) * 8)];
+  uint64_t      pmceid_bitmap;
 
   /* Corresponds to common event (0x4000 + n) identification */
 
-  unsigned long pmceid_ext_bitmap [ARMPMU_MAX_COMMON_EVENTS /
-                                   (sizeof(unsigned long) * 8)];
+  uint64_t      pmceid_ext_bitmap;
 
   /* percpu hw_events */
 

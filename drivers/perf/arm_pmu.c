@@ -251,8 +251,6 @@ static int armpmu_event_init(FAR struct perf_event_s *event)
 
   if (mapping < 0)
     {
-      _err("ERROR: event %x:%"PRIx64" not supported\n", event->attr.type,
-                  event->attr.config);
       return mapping;
     }
 

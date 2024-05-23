@@ -83,6 +83,23 @@ static const unsigned int pmuv3_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
                       = PMUV3_PERFCTR_BR_MIS_PRED,
 };
 
+#ifdef CONFIG_ARCH_CORTEX_R82
+static const unsigned armr82_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
+                                           [PERF_COUNT_HW_CACHE_OP_MAX]
+                                           [PERF_COUNT_HW_CACHE_RESULT_MAX] =
+{
+  PERF_CACHE_MAP_ALL_UNSUPPORTED,
+
+  [C(L1D)][C(OP_PREFETCH)][C(RESULT_MISS)]
+                          = ARMR82_IMPDEF_L1D_CACHE_REFILL_PREFETCH,
+
+  [C(NODE)][C(OP_READ)][C(RESULT_ACCESS)]
+                          = PMUV3_IMPDEF_PERFCTR_BUS_ACCESS_RD,
+  [C(NODE)][C(OP_WRITE)][C(RESULT_ACCESS)]
+                          = PMUV3_IMPDEF_PERFCTR_BUS_ACCESS_WR,
+};
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -393,13 +410,13 @@ static int pmuv3_map_event_id(FAR struct arm_pmu_s *armpmu,
       event->attr.config == PERF_COUNT_HW_BRANCH_INSTRUCTIONS)
     {
       if (test_bit(PMUV3_PERFCTR_PC_WRITE_RETIRED,
-                   armpmu->pmceid_bitmap))
+                   &armpmu->pmceid_bitmap))
         {
           return PMUV3_PERFCTR_PC_WRITE_RETIRED;
         }
 
       if (test_bit(PMUV3_PERFCTR_BR_RETIRED,
-                   armpmu->pmceid_bitmap))
+                   &armpmu->pmceid_bitmap))
         {
           return PMUV3_PERFCTR_BR_RETIRED;
         }
@@ -431,12 +448,14 @@ static int pmuv3_map_extra_event(FAR struct perf_event_s *event,
     }
 
   if (pmuv3_event_is_64bit(event))
-    event->hw.flags |= ARMPMU_EVT_64BIT;
+    {
+      event->hw.flags |= ARMPMU_EVT_64BIT;
+    }
 
   event->hw.flags |= PERF_EVENT_FLAG_USER_READ_CNT;
 
   if ((hw_event_id > 0) && (hw_event_id < ARMPMU_MAX_COMMON_EVENTS)
-       && test_bit(hw_event_id, armpmu->pmceid_bitmap))
+       && test_bit(hw_event_id, &armpmu->pmceid_bitmap))
     {
       return hw_event_id;
     }
@@ -445,16 +464,22 @@ static int pmuv3_map_extra_event(FAR struct perf_event_s *event,
                           PMU_EVTYPE_EVENT);
 }
 
+#ifdef CONFIG_ARCH_CORTEX_R82
+static int armr82_map_event(FAR struct perf_event_s *event)
+{
+  return pmuv3_map_extra_event(event, NULL, &armr82_perf_cache_map);
+}
+#else
 static int pmuv3_map_event(FAR struct perf_event_s *event)
 {
   return pmuv3_map_extra_event(event, NULL, NULL);
 }
+#endif
 
 static int pmuv3_common_pmu_init(FAR struct arm_pmu_s *cpu_pmu, char *name,
                           FAR int (*map_event)(struct perf_event_s *event))
 {
-  uint64_t pmceid_raw[2];
-  uint32_t pmceid[2];
+  uint64_t pmceid[2];
   int pmuver;
   int cpu;
 
@@ -470,15 +495,11 @@ static int pmuv3_common_pmu_init(FAR struct arm_pmu_s *cpu_pmu, char *name,
                          & PMU_PMCR_N_MASK;
   cpu_pmu->num_events += 1;
 
-  pmceid[0] = pmceid_raw[0] = read_pmceid0();
-  pmceid[1] = pmceid_raw[1] = read_pmceid1();
-  bitmap_from_arr32(cpu_pmu->pmceid_bitmap,
-                    pmceid, ARMPMU_MAX_COMMON_EVENTS);
-
-  pmceid[0] = pmceid_raw[0] >> 32;
-  pmceid[1] = pmceid_raw[1] >> 32;
-  bitmap_from_arr32(cpu_pmu->pmceid_ext_bitmap,
-                    pmceid, ARMPMU_MAX_COMMON_EVENTS);
+  pmceid[0] = read_pmceid0();
+  pmceid[1] = read_pmceid1();
+  cpu_pmu->pmceid_bitmap = (pmceid[0] & 0xffffffff) | (pmceid[1] << 32);
+  cpu_pmu->pmceid_ext_bitmap = (pmceid[0] >> 32) |
+                               (pmceid[1] & 0xffffffff00000000);
 
   cpu_pmu->handle_irq         = pmuv3_handle_irq;
   cpu_pmu->enable             = pmuv3_enable_event;
@@ -509,7 +530,12 @@ static int pmuv3_common_pmu_init(FAR struct arm_pmu_s *cpu_pmu, char *name,
 
 static int pmuv3_pmu_init(FAR struct arm_pmu_s *cpu_pmu)
 {
-  return pmuv3_common_pmu_init(cpu_pmu, "arm-pmuv3", pmuv3_map_event);
+#ifdef CONFIG_ARCH_CORTEX_R82
+  return pmuv3_common_pmu_init(cpu_pmu, "arm,cortex-r82-pmu",
+                               armr82_map_event);
+#else
+  return pmuv3_common_pmu_init(cpu_pmu, "arm,arm-pmuv3", pmuv3_map_event);
+#endif
 }
 
 /****************************************************************************
