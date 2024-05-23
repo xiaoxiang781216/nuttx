@@ -103,6 +103,7 @@
 #define _PINCTRLBASE    (0x3e00) /* Pinctrl driver ioctl commands */
 #define _FFIOCBASE      (0x3f00) /* Force feedback ioctl commands */
 #define _PERFBASE       (0x4000) /* Perf ioctl commands */
+#define _PCIBASE        (0x4100) /* Pci ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 
 /* boardctl() commands share the same number space */
@@ -737,6 +738,11 @@
 
 #define _PERFIOCVALID(c)  (_IOC_TYPE(c)==_PERFBASE)
 #define _PERFIOC(nr)      _IOC(_PERFBASE,nr)
+
+/* Pci controller drivers ***************************************************/
+
+#define _PCIIOCVALID(c)   (_IOC_TYPE(c)==_PCIBASE)
+#define _PCIIOC(nr)       _IOC(_PCIBASE,nr)
 
 /****************************************************************************
  * Public Type Definitions

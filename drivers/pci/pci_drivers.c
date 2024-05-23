@@ -131,6 +131,8 @@ int pci_register_drivers(void)
     }
 #endif
 
+  pci_dev_register();
+
   UNUSED(ret);
   return ret;
 }
