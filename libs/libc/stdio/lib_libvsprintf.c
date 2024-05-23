@@ -40,18 +40,11 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <limits.h>
-
-#include <nuttx/compiler.h>
 #include <nuttx/streams.h>
+#ifdef CONFIG_ALLSYMS
 #include <nuttx/allsyms.h>
 #include <nuttx/symtab.h>
+#endif
 #include <sys/param.h>
 
 #include "lib_dtoa_engine.h"

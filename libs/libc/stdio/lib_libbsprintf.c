@@ -22,14 +22,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
 #include <nuttx/streams.h>
-#include <nuttx/compiler.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 
 /****************************************************************************
  * Public Functions
