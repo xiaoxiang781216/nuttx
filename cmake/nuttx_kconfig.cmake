@@ -137,23 +137,24 @@ function(nuttx_generate_kconfig)
   endif()
 
   file(
-    GLOB sub_cmakescripts
+    GLOB SUB_CMAKESCRIPTS
     LIST_DIRECTORIES false
     ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_DIR}/*/CMakeLists.txt)
 
-  # we need to recursively generate the Kconfig menu of multi-level directories
-  foreach(sub_cmakescript ${sub_cmakescripts})
-    string(REPLACE "CMakeLists.txt" "Kconfig" sub_kconfig ${sub_cmakescript})
-    string(REPLACE "/" "_" MENUCONFIG ${sub_kconfig})
-    file(READ "${sub_cmakescript}" FILE_CONTENTS)
-    # check if the subdirectory is marked as a gen directory
-    string(FIND "${FILE_CONTENTS}" "nuttx_generate_kconfig" STRING_POSITION)
-    if(NOT STRING_POSITION EQUAL -1 AND EXISTS
-                                        ${NUTTX_APPS_BINDIR}/${MENUCONFIG})
+  # we need to recursively generate the Kconfig menus of multi-level
+  # directories.
+  #
+  # when generating a Kconfig file for the current directory, it should include
+  # and invoke all the Kconfig files gathered from its subdirectories.
+  foreach(SUB_CMAKESCRIPT ${SUB_CMAKESCRIPTS})
+    string(REPLACE "CMakeLists.txt" "Kconfig" SUB_KCONFIG ${SUB_CMAKESCRIPT})
+    string(REPLACE "/" "_" MENUCONFIG ${SUB_KCONFIG})
+    # check whether the subdirectory will include a generated Kconfig file.
+    if(EXISTS ${NUTTX_APPS_BINDIR}/${MENUCONFIG})
       file(APPEND ${KCONFIG_OUTPUT_FILE}
            "source \"${NUTTX_APPS_BINDIR}/${MENUCONFIG}\"\n")
-    elseif(EXISTS ${sub_kconfig})
-      file(APPEND ${KCONFIG_OUTPUT_FILE} "source \"${sub_kconfig}\"\n")
+    elseif(EXISTS ${SUB_KCONFIG})
+      file(APPEND ${KCONFIG_OUTPUT_FILE} "source \"${SUB_KCONFIG}\"\n")
     endif()
   endforeach()
 
