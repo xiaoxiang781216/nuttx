@@ -100,6 +100,68 @@ static const unsigned armr82_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
 };
 #endif
 
+#ifdef CONFIG_ARCH_CORTEX_A53
+static const unsigned int arma53_perf_map[PERF_COUNT_HW_MAX] =
+{
+  PERF_MAP_ALL_UNSUPPORTED,
+  [PERF_COUNT_HW_CPU_CYCLES]       = PMUV3_PERFCTR_CPU_CYCLES,
+  [PERF_COUNT_HW_INSTRUCTIONS]     = PMUV3_PERFCTR_INST_RETIRED,
+  [PERF_COUNT_HW_CACHE_REFERENCES] = PMUV3_PERFCTR_L1D_CACHE,
+  [PERF_COUNT_HW_CACHE_MISSES]     = PMUV3_PERFCTR_L1D_CACHE_REFILL,
+  [PERF_COUNT_HW_BRANCH_MISSES]    = PMUV3_PERFCTR_BR_MIS_PRED,
+  [PERF_COUNT_HW_BUS_CYCLES]       = PMUV3_PERFCTR_BUS_CYCLES,
+  [PERF_COUNT_HW_STALLED_CYCLES_FRONTEND]
+                                   = PMUV3_PERFCTR_STALL_FRONTEND,
+  [PERF_COUNT_HW_STALLED_CYCLES_BACKEND]
+                                   = PMUV3_PERFCTR_STALL_BACKEND,
+};
+
+static const unsigned arma53_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
+                                           [PERF_COUNT_HW_CACHE_OP_MAX]
+                                           [PERF_COUNT_HW_CACHE_RESULT_MAX] =
+{
+  PERF_CACHE_MAP_ALL_UNSUPPORTED,
+
+  [C(L1D)][C(OP_READ)][C(RESULT_ACCESS)]
+                      = PMUV3_PERFCTR_L1D_CACHE,
+  [C(L1D)][C(OP_READ)][C(RESULT_MISS)]
+                      = PMUV3_PERFCTR_L1D_CACHE_REFILL,
+
+  [C(L1I)][C(OP_READ)][C(RESULT_ACCESS)]
+                      = PMUV3_PERFCTR_L1I_CACHE,
+  [C(L1I)][C(OP_READ)][C(RESULT_MISS)]
+                      = PMUV3_PERFCTR_L1I_CACHE_REFILL,
+
+  [C(DTLB)][C(OP_READ)][C(RESULT_MISS)]
+                      = PMUV3_PERFCTR_L1D_TLB_REFILL,
+  [C(DTLB)][C(OP_READ)][C(RESULT_ACCESS)]
+                      = PMUV3_PERFCTR_L1D_TLB,
+
+  [C(ITLB)][C(OP_READ)][C(RESULT_MISS)]
+                      = PMUV3_PERFCTR_L1I_TLB_REFILL,
+  [C(ITLB)][C(OP_READ)][C(RESULT_ACCESS)]
+                      = PMUV3_PERFCTR_L1I_TLB,
+
+  [C(LL)][C(OP_READ)][C(RESULT_MISS)]
+                      = PMUV3_PERFCTR_LL_CACHE_MISS_RD,
+  [C(LL)][C(OP_READ)][C(RESULT_ACCESS)]
+                      = PMUV3_PERFCTR_LL_CACHE_RD,
+
+  [C(BPU)][C(OP_READ)][C(RESULT_ACCESS)]
+                      = PMUV3_PERFCTR_BR_PRED,
+  [C(BPU)][C(OP_READ)][C(RESULT_MISS)]
+                      = PMUV3_PERFCTR_BR_MIS_PRED,
+
+  [C(L1D)][C(OP_PREFETCH)][C(RESULT_MISS)]
+                      = ARMA53_IMPDEF_PERFCTR_PREF_LINEFILL,
+
+  [C(NODE)][C(OP_READ)][C(RESULT_ACCESS)]
+                      = PMUV3_IMPDEF_PERFCTR_BUS_ACCESS_RD,
+  [C(NODE)][C(OP_WRITE)][C(RESULT_ACCESS)]
+                      = PMUV3_IMPDEF_PERFCTR_BUS_ACCESS_WR,
+};
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -469,6 +531,12 @@ static int armr82_map_event(FAR struct perf_event_s *event)
 {
   return pmuv3_map_extra_event(event, NULL, &armr82_perf_cache_map);
 }
+#elif CONFIG_ARCH_CORTEX_A53
+static int arma53_map_event(FAR struct perf_event_s *event)
+{
+  return pmuv3_map_extra_event(event, &arma53_perf_map,
+                               &arma53_perf_cache_map);
+}
 #else
 static int pmuv3_map_event(FAR struct perf_event_s *event)
 {
@@ -533,6 +601,9 @@ static int pmuv3_pmu_init(FAR struct arm_pmu_s *cpu_pmu)
 #ifdef CONFIG_ARCH_CORTEX_R82
   return pmuv3_common_pmu_init(cpu_pmu, "arm,cortex-r82-pmu",
                                armr82_map_event);
+#elif CONFIG_ARCH_CORTEX_A53
+  return pmuv3_common_pmu_init(cpu_pmu, "arm,cortex-a53-pmu",
+                               arma53_map_event);
 #else
   return pmuv3_common_pmu_init(cpu_pmu, "arm,arm-pmuv3", pmuv3_map_event);
 #endif

@@ -206,6 +206,10 @@
 #define PMUV3_IMPDEF_PERFCTR_L3D_CACHE_WB_CLEAN     0x00A7
 #define PMUV3_IMPDEF_PERFCTR_L3D_CACHE_INVAL        0x00A8
 
+/* ARMv8 Cortex-A53 specific event types. */
+
+#define ARMA53_IMPDEF_PERFCTR_PREF_LINEFILL         0x00C2
+
 /* ARMv8 Cortex-R82 specific event types. */
 
 #define ARMR82_IMPDEF_L2D_CACHE_REFILL_PREFETCH     0x00C1

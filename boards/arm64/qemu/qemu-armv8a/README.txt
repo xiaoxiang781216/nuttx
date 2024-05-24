@@ -392,6 +392,13 @@ SPI
  IMX6 use GPT which is a SPI rather than generic timer to handle
  timer interrupt
 
+PMU Support
+===========
+Using PMU in qemu can be unreliable for several reasons:
+1. The arm virt board has limited support for PMU
+2. Only cycles event has valid data
+3. No event is available by reading the pmceid register, including cycels event
+
 References
 ===========
 
