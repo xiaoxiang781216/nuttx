@@ -210,6 +210,13 @@
 
 #define get_current_mm()             (get_group_mm(nxsched_self()->group))
 
+/* Task Switching Interfaces (non-standard).
+ * These two macros can be called in interrupt context.
+ */
+
+#define nxsched_lock_irq() (up_interrupt_context() ? OK : sched_lock())
+#define nxsched_unlock_irq() (up_interrupt_context() ? OK : sched_unlock())
+
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
