@@ -185,4 +185,24 @@ uintptr_t fdt_get_reg_base_by_path(FAR const void *fdt,
 int fdt_pci_ecam_register(FAR const void *fdt);
 #endif
 
+/****************************************************************************
+ * Name: fdt_virtio_mmio_devices_register
+ *
+ * Description:
+ *   This function is used to register the virtio mmio devices from the
+ *   device tree
+ *
+ * Input Parameters:
+ *   fdt      - Device tree handle
+ *   irqbase  - Interrupt base number
+ *
+ * Returned Value:
+ *   Return 0 if success, nageative if failed
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_DRIVERS_VIRTIO_MMIO
+int fdt_virtio_mmio_devices_register(FAR const void *fdt, int irqbase);
+#endif
+
 #endif /* __INCLUDE_NUTTX_FDT_H */
