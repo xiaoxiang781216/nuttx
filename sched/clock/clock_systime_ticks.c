@@ -90,7 +90,7 @@ clock_t clock_systime_ticks(void)
            * then in clock tick units.
            */
 
-          return timespec_to_tick(&ts);
+          return clock_time2ticks(&ts);
         }
       else
         {
@@ -118,7 +118,7 @@ clock_t clock_systime_ticks(void)
       struct timespec ts;
       if (up_timer_gettime(&ts) == OK)
         {
-          return timespec_to_tick(&ts);
+          return clock_time2ticks(&ts);
         }
       else
         {
