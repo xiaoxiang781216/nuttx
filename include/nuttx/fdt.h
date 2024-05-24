@@ -167,4 +167,22 @@ uintptr_t fdt_get_reg_size(FAR const void *fdt, int offset);
 uintptr_t fdt_get_reg_base_by_path(FAR const void *fdt,
                                    FAR const char *path);
 
+/****************************************************************************
+ * Name: pci_ecam_register_from_fdt
+ *
+ * Description:
+ *   This function is used to register an ecam driver from the device tree
+ *
+ * Input Parameters:
+ *   fdt      - Device tree handle
+ *
+ * Returned Value:
+ *   Return 0 if success, nageative if failed
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_PCI
+int fdt_pci_ecam_register(FAR const void *fdt);
+#endif
+
 #endif /* __INCLUDE_NUTTX_FDT_H */
