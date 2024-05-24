@@ -31,6 +31,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/virtio/virtio-mmio.h>
 
+#include "chip.h"
 #include "qemu-armv7a.h"
 
 /****************************************************************************
@@ -38,36 +39,6 @@
  ****************************************************************************/
 
 #if defined(CONFIG_LIBC_FDT) && defined(CONFIG_DEVICE_TREE)
-#ifdef CONFIG_DRIVERS_VIRTIO_MMIO
-
-/****************************************************************************
- * Name: register_virtio_devices_from_fdt
- ****************************************************************************/
-
-static void register_virtio_devices_from_fdt(const void *fdt)
-{
-  uintptr_t addr;
-  int offset = -1;
-  int irqnum;
-
-  for (; ; )
-    {
-      offset = fdt_node_offset_by_compatible(fdt, offset, "virtio,mmio");
-      if (offset == -FDT_ERR_NOTFOUND)
-        {
-          break;
-        }
-
-      addr = fdt_get_reg_base(fdt, offset);
-      irqnum = fdt_get_irq(fdt, offset, QEMU_SPI_IRQ_BASE);
-      if (addr > 0 && irqnum >= 0)
-        {
-          virtio_register_mmio_device((void *)addr, irqnum);
-        }
-    }
-}
-
-#endif
 
 /****************************************************************************
  * Name: register_devices_from_fdt
@@ -84,7 +55,12 @@ static void register_devices_from_fdt(void)
     }
 
 #ifdef CONFIG_DRIVERS_VIRTIO_MMIO
-  register_virtio_devices_from_fdt(fdt);
+  ret = fdt_virtio_mmio_devices_register(fdt, QEMU_SPI_IRQ_BASE);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "fdt_virtio_mmio_devices_register failed, ret=%d\n",
+             ret);
+    }
 #endif
 
 #ifdef CONFIG_PCI
