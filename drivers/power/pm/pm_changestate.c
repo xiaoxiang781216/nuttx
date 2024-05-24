@@ -42,10 +42,16 @@
 #ifdef CONFIG_PM_PROCFS
 static void pm_stats(FAR struct pm_domain_s *dom, int curstate, int newstate)
 {
+  struct timespec now;
   struct timespec ts;
 
-  clock_systime_timespec(&ts);
+  clock_systime_timespec(&now);
+  ts = now;
   clock_timespec_subtract(&ts, &dom->start, &ts);
+
+  /* Update start */
+
+  dom->start = now;
 
   if (newstate == PM_RESTORE)
     {
@@ -61,10 +67,6 @@ static void pm_stats(FAR struct pm_domain_s *dom, int curstate, int newstate)
       clock_timespec_add(&ts, &dom->wake[curstate], &dom->wake[curstate]);
       dom->in_sleep = true;
     }
-
-  /* Update start */
-
-  clock_systime_timespec(&dom->start);
 }
 
 static void pm_stats_preparefail(int domain,
