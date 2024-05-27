@@ -797,8 +797,6 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct sensor_user_s *user = filep->f_priv;
   int ret = 0;
 
-  sninfo("cmd=%x arg=%08lx\n", cmd, arg);
-
   switch (cmd)
     {
       case SNIOC_GET_STATE:
