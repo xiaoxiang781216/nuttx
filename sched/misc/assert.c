@@ -571,17 +571,6 @@ void _assert(FAR const char *filename, int linenum,
       goto reset;
     }
 
-  if (fatal)
-    {
-      /* Disable KASAN to avoid false positive */
-
-      kasan_stop();
-
-#ifdef CONFIG_SMP
-      pause_all_cpu();
-#endif
-    }
-
   /* try to save current context if regs is null */
 
   if (regs == NULL)
@@ -604,6 +593,17 @@ void _assert(FAR const char *filename, int linenum,
 #endif
     {
       g_fatal_assert = true;
+    }
+
+  if (fatal)
+    {
+      /* Disable KASAN to avoid false positive */
+
+      kasan_stop();
+
+#ifdef CONFIG_SMP
+      pause_all_cpu();
+#endif
     }
 
   notifier_data.rtcb = rtcb;
