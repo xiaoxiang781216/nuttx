@@ -79,6 +79,13 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
   size_t nodesize;
   size_t prevsize;
 
+#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
+  if (mempool_multiple_free(heap->mm_mpool, mem) >= 0)
+    {
+      return;
+    }
+#endif
+
   if (mm_lock(heap) < 0)
     {
       /* Meet -ESRCH return, which means we are in situations
@@ -231,13 +238,6 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
     }
 
   DEBUGASSERT(mm_heapmember(heap, mem));
-
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  if (mempool_multiple_free(heap->mm_mpool, mem) >= 0)
-    {
-      return;
-    }
-#endif
 
   mm_delayfree(heap, mem, CONFIG_MM_FREE_DELAYCOUNT_MAX > 0);
 }
