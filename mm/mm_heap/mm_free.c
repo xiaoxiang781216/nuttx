@@ -31,6 +31,7 @@
 #include <nuttx/mm/mm.h>
 #include <nuttx/mm/kasan.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/spinlock.h>
 
 #include "mm_heap/mm.h"
 
@@ -42,7 +43,12 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
 {
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   FAR struct mm_delaynode_s *tmp = mem;
+  FAR struct mm_freenode_s *node;
   irqstate_t flags;
+
+  node = (FAR struct mm_freenode_s *)
+         ((FAR char *)kasan_reset_tag(mem) - MM_SIZEOF_ALLOCNODE);
+  DEBUGASSERT(MM_NODE_IS_ALLOC(node));
 
   /* Delay the deallocation until a more appropriate time. */
 
