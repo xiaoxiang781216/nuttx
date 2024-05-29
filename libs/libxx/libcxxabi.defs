@@ -52,7 +52,7 @@ CXXFLAGS += -I $(TOPDIR)/libs/libxx/libcxxabi/include
 # It results in a recursive call:
 # cxxabiv1::__dynamic_case -> is_equal -> __ubsan::checkDynamic -> cxxabiv1::__dynamic_case
 
-ifneq ($(CONFIG_UBSAN)${CONFIG_MM_UBSAN},)
+ifneq ($(CONFIG_SIM_UBSAN)${CONFIG_MM_UBSAN},)
 CXXFLAGS += -fno-sanitize=vptr
 endif
 endif

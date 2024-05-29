@@ -98,6 +98,10 @@ foreach(src ${SRCS})
   list(APPEND TARGET_SRCS ${src})
 endforeach()
 
+if(CONFIG_SIM_UBSAN OR CONFIG_MM_UBSAN)
+  target_compile_options(libcxxabi PRIVATE -fno-sanitize=vptr)
+endif()
+
 target_sources(libcxxabi PRIVATE ${TARGET_SRCS})
 target_compile_options(libcxxabi PRIVATE -frtti)
 target_include_directories(libcxxabi BEFORE
