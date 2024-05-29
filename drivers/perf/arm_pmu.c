@@ -205,7 +205,7 @@ static int armpmu_add(FAR struct perf_event_s *event, int flags)
   FAR struct hw_perf_event_s *hwc = &event->hw;
   int idx;
 
-  if (!cpumask_test_cpu(up_cpu_index(), armpmu->supported_cpus))
+  if (!cpumask_test_cpu(this_cpu(), armpmu->supported_cpus))
     {
       return -ENOENT;
     }
@@ -274,7 +274,7 @@ static void armpmu_enable(FAR struct pmu_s *pmu)
   FAR struct arm_pmu_s *armpmu = to_arm_pmu(pmu);
   FAR struct pmu_hw_events_s *hw_events = this_cpu_ptr(armpmu->hw_events);
 
-  if (!cpumask_test_cpu(up_cpu_index(), armpmu->supported_cpus))
+  if (!cpumask_test_cpu(this_cpu(), armpmu->supported_cpus))
     {
       return;
     }
@@ -289,7 +289,7 @@ static void armpmu_disable(FAR struct pmu_s *pmu)
 {
   FAR struct arm_pmu_s *armpmu = to_arm_pmu(pmu);
 
-  if (!cpumask_test_cpu(up_cpu_index(), armpmu->supported_cpus))
+  if (!cpumask_test_cpu(this_cpu(), armpmu->supported_cpus))
     return;
 
   armpmu->stop(armpmu);

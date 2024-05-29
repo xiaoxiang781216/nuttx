@@ -151,7 +151,7 @@ static int rmt_setup(struct rmt_dev_s *dev)
       up_disable_irq(dev->cpuint);
     }
 
-  dev->cpu = up_cpu_index();
+  dev->cpu = this_cpu();
   dev->cpuint = esp32_setup_irq(dev->cpu, dev->periph,
                                 1, ESP32_CPUINT_LEVEL);
   if (dev->cpuint < 0)

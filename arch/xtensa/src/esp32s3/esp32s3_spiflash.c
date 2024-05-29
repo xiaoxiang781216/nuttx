@@ -250,7 +250,7 @@ static struct spiflash_cachestate_s g_state;
 static IRAM_ATTR void spiflash_start(void)
 {
   g_state.flags = enter_critical_section();
-  g_state.cpu = up_cpu_index();
+  g_state.cpu = this_cpu();
 #ifdef CONFIG_SMP
   g_state.other = g_state.cpu ? 0 : 1;
 #endif

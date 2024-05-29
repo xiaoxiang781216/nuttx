@@ -105,7 +105,7 @@ Status
   I would also disable debug output from CPU0 so that I could better see the
   debug output from CPU1.  In drivers/syslog/vsyslog.c:
 
-    +if (up_cpu_index() == 0) return 17; // REMOVE ME
+    +if (this_cpu() == 0) return 17; // REMOVE ME
 
 2016-11-26: With regard to SMP, the major issue is cache coherency.  I added
   some special build logic to move spinlock data into the separate, non-

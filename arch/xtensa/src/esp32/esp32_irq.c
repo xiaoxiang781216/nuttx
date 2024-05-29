@@ -284,7 +284,7 @@ static int esp32_getcpuint(uint32_t intmask)
    * available.
    */
 
-  cpu = up_cpu_index();
+  cpu = this_cpu();
 #ifdef CONFIG_SMP
   if (cpu != 0)
     {
@@ -414,7 +414,7 @@ static void esp32_free_cpuint(int cpuint)
   bitmask = 1ul << cpuint;
 
 #ifdef CONFIG_SMP
-  if (up_cpu_index() != 0)
+  if (this_cpu() != 0)
     {
       freeints = &g_cpu1_freeints;
     }
@@ -547,7 +547,7 @@ void up_disable_irq(int irq)
        */
 
 #ifdef CONFIG_SMP
-      int me = up_cpu_index();
+      int me = this_cpu();
       if (me != cpu)
         {
           /* It was the other CPU that enabled this interrupt. */
@@ -608,7 +608,7 @@ void up_enable_irq(int irq)
        * we are just overwriting the cpu part of the map.
        */
 
-      int cpu = up_cpu_index();
+      int cpu = this_cpu();
 
       /* Enable the CPU interrupt now for internal CPU. */
 
@@ -698,7 +698,7 @@ int esp32_cpuint_initialize(void)
 #ifdef CONFIG_SMP
   /* Which CPU are we initializing */
 
-  cpu = up_cpu_index();
+  cpu = this_cpu();
   DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
 #endif
 
@@ -921,7 +921,7 @@ uint32_t *xtensa_int_decode(uint32_t cpuints, uint32_t *regs)
 #ifdef CONFIG_SMP
   /* Select PRO or APP CPU interrupt mapping table */
 
-  cpu = up_cpu_index();
+  cpu = this_cpu();
   if (cpu != 0)
     {
       intmap = g_cpu1_intmap;

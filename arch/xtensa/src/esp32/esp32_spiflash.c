@@ -461,7 +461,7 @@ esp32_spiflash_opstart(struct spiflash_cachestate_s *state)
 {
   state->flags = enter_critical_section();
 
-  state->cpu = up_cpu_index();
+  state->cpu = this_cpu();
 #ifdef CONFIG_SMP
   state->other = state->cpu ? 0 : 1;
 #endif

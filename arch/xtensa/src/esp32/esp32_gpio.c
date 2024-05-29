@@ -467,7 +467,7 @@ void esp32_gpioirqenable(int irq, gpio_intrtype_t intrtype)
   uintptr_t regaddr;
   uint32_t regval;
   int pin;
-  int cpu = up_cpu_index();
+  int cpu = this_cpu();
 
   DEBUGASSERT(irq >= ESP32_FIRST_GPIOIRQ && irq <= ESP32_LAST_GPIOIRQ);
 
@@ -528,7 +528,7 @@ void esp32_gpioirqdisable(int irq)
   uintptr_t regaddr;
   uint32_t regval;
   int pin;
-  int cpu = up_cpu_index();
+  int cpu = this_cpu();
 
   DEBUGASSERT(irq >= ESP32_FIRST_GPIOIRQ && irq <= ESP32_LAST_GPIOIRQ);
 

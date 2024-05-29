@@ -66,7 +66,7 @@ extern uint8_t _vector_start[]; /* Beginning of vector block */
  *
  * Input Parameters:
  *   cpu - The CPU index.  This is the same value that would be obtained by
- *      calling up_cpu_index();
+ *      calling this_cpu();
  *
  * Returned Value:
  *   Does not return.

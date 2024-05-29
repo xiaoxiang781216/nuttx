@@ -65,7 +65,7 @@
 
 #define per_cpu_ptr(ptr, cpu) ((typeof(*ptr)*) ((ptr) + (cpu)))
 
-#define this_cpu_ptr(ptr) per_cpu_ptr(ptr, up_cpu_index())
+#define this_cpu_ptr(ptr) per_cpu_ptr(ptr, this_cpu())
 
 /****************************************************************************
  * Public Types

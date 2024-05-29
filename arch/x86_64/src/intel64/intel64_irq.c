@@ -432,7 +432,7 @@ static inline void up_idtinit(void)
 
 void up_irqinitialize(void)
 {
-  int cpu = up_cpu_index();
+  int cpu = this_cpu();
 
   /* Initialize the TSS */
 
@@ -498,7 +498,7 @@ void up_disable_irq(int irq)
       return;
     }
 
-  CPU_CLR(up_cpu_index(), &g_irq_priv[irq].busy);
+  CPU_CLR(this_cpu(), &g_irq_priv[irq].busy);
 
   if (CPU_COUNT(&g_irq_priv[irq].busy) == 0)
     {
@@ -530,7 +530,7 @@ void up_enable_irq(int irq)
 #  ifndef CONFIG_IRQCHAIN
   /* Check if IRQ is free if we don't support IRQ chains */
 
-  if (CPU_ISSET(up_cpu_index(), &g_irq_priv[irq].busy))
+  if (CPU_ISSET(this_cpu(), &g_irq_priv[irq].busy))
     {
       ASSERT(0);
     }
@@ -561,7 +561,7 @@ void up_enable_irq(int irq)
         }
     }
 
-  CPU_SET(up_cpu_index(), &g_irq_priv[irq].busy);
+  CPU_SET(this_cpu(), &g_irq_priv[irq].busy);
 
   spin_unlock_irqrestore(&g_irq_spin, flags);
 #endif

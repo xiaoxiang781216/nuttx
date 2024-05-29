@@ -210,6 +210,12 @@
 
 #define get_current_mm()             (get_group_mm(nxsched_self()->group))
 
+#ifdef CONFIG_SMP
+#  define this_cpu()                 up_cpu_index()
+#else
+#  define this_cpu()                 0
+#endif
+
 /* Task Switching Interfaces (non-standard).
  * These two macros can be called in interrupt context.
  */
