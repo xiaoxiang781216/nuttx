@@ -1,0 +1,67 @@
+cc_library_headers {
+    name: "nuttx_libc_headers",
+    generated_headers: [
+        "nuttx_headers_gen",
+    ],
+    export_generated_headers: ["nuttx_headers_gen"],
+    proprietary: true,
+}
+
+cc_defaults {
+    name: "nuttx_libc_defaults",
+    cflags: [
+        "-DCONFIG_DISABLE_MOUNTPOINT",
+        "-DCONFIG_HAVE_DOUBLE",
+        "-DCONFIG_HAVE_FLOAT",
+        "-DCONFIG_HAVE_LONG_DOUBLE",
+        "-DCONFIG_HAVE_LONG_LONG",
+        "-DCONFIG_LIBC_FLOATINGPOINT",
+        "-DCONFIG_LIBC_SCANSET",
+        "-DCONFIG_LIBC_NUMBERED_ARGS",
+        "-DCONFIG_STDIO_DISABLE_BUFFERING",
+        "-DCONFIG_STREAM_BASE64_BUFFER_SIZE=128",
+        "-DCONFIG_STREAM_HEXDUMP_BUFFER_SIZE=128",
+        "-DCONFIG_STREAM_OUT_BUFFER_SIZE=64",
+        "-DDEBUGASSERT=assert",
+        "-Dget_errno()=errno",
+        "-Dset_errno(e)=do{errno = (int)(e);}while(0)",
+        "-D_NX_GETERRVAL(r)=(-errno)",
+        "-DOK=0"
+    ],
+    proprietary: true,
+}
+
+genrule {
+    name: "nuttx_headers_gen",
+    srcs: [
+        "include/nuttx/streams.h",
+        "include/nuttx/compiler.h",
+    ],
+    cmd: "mkdir $(genDir)/nuttx; touch $(out); cp $(in) $(genDir)/nuttx",
+    out: [
+        "nuttx/streams.h",
+        "nuttx/compiler.h",
+        "nuttx/config.h",
+        "nuttx/lib/lib.h",
+    ],
+}
+
+cc_library {
+    name: "libnuttx_libc",
+    header_libs: ["nuttx_libc_headers"],
+    srcs: [
+        "libs/libc/stdio/lib_dtoa_data.c",
+        "libs/libc/stdio/lib_dtoa_engine.c",
+        "libs/libc/stdio/lib_libbsprintf.c",
+        "libs/libc/stdio/lib_libsprintf.c",
+        "libs/libc/stdio/lib_libvscanf.c",
+        "libs/libc/stdio/lib_libvsprintf.c",
+        "libs/libc/stdio/lib_ultoa_invert.c",
+        "libs/libc/stream/lib_libnoflush.c",
+        "libs/libc/stream/lib_meminstream.c",
+        "libs/libc/stream/lib_stdoutstream.c",
+    ],
+    defaults : [ "nuttx_libc_defaults" ],
+    local_include_dirs:["libs/libc/"],
+    proprietary: true,
+}
