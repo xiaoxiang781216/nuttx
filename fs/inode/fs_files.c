@@ -691,6 +691,32 @@ int fs_getfilep(int fd, FAR struct file **filep)
 }
 
 /****************************************************************************
+ * Name: fs_reffilep
+ *
+ * Description:
+ *   To specify filep increase the reference count.
+ *
+ * Input Parameters:
+ *   None.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void fs_reffilep(FAR struct file *filep)
+{
+  /* This interface is used to increase the reference count of filep */
+
+  irqstate_t flags;
+
+  DEBUGASSERT(filep);
+  flags = spin_lock_irqsave(NULL);
+  filep->f_refs++;
+  spin_unlock_irqrestore(NULL, flags);
+}
+
+/****************************************************************************
  * Name: fs_putfilep
  *
  * Description:

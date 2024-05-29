@@ -56,6 +56,9 @@ struct mm_map_entry_s
     int i;
   } priv;
 
+  int (*msync)(FAR struct mm_map_entry_s *entry, FAR void *start,
+               size_t length, int flags);
+
   /* Drivers which register mappings may also
    * implement the unmap function to undo anything done in mmap.
    * Nb. Implementation must NOT use "this_task()->group" since
