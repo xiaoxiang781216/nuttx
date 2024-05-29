@@ -70,6 +70,7 @@ static void up_handle_irq(int irq, siginfo_t *info, void *context)
  *
  ****************************************************************************/
 
+__attribute__((no_sanitize_address))
 uint64_t up_irq_flags(void)
 {
   union sigset_u omask;
@@ -110,6 +111,7 @@ uint64_t up_irq_save(void)
  *
  ****************************************************************************/
 
+__attribute__((no_sanitize_address))
 void up_irq_restore(uint64_t flags)
 {
   union sigset_u nmask;
@@ -156,6 +158,7 @@ void up_irqinitialize(void)
  *
  ****************************************************************************/
 
+__attribute__((no_sanitize_address))
 void up_enable_irq(int irq)
 {
   struct sigaction act;
