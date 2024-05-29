@@ -109,28 +109,31 @@ if(CONFIG_SCHED_GCOV)
   add_compile_options(-fprofile-generate -ftest-coverage)
 endif()
 
-set(ARCHCFLAGS
-    "-Wstrict-prototypes -fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas"
-)
-set(ARCHCXXFLAGS
-    "-nostdinc++ -fno-common -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas"
-)
+add_compile_options(
+  -fno-common
+  -Wall
+  -Wshadow
+  -Wundef
+  -Wno-attributes
+  -Wno-unknown-pragmas
+  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
+  $<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
 
 if(NOT ${CONFIG_ARCH_TOOLCHAIN_CLANG})
-  string(APPEND ARCHCFLAGS " -Wno-psabi")
-  string(APPEND ARCHCXXFLAGS " -Wno-psabi")
+  add_compile_options(-Wno-psabi)
 endif()
 
-if(${CONFIG_CXX_STANDARD})
-  string(APPEND ARCHCXXFLAGS " -std=${CONFIG_CXX_STANDARD}")
+if(CONFIG_CXX_STANDARD)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-std=${CONFIG_CXX_STANDARD}>)
 endif()
 
-if(NOT ${CONFIG_CXX_EXCEPTION})
-  string(APPEND ARCHCXXFLAGS " -fno-exceptions -fcheck-new")
+if(NOT CONFIG_CXX_EXCEPTION)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
+                      $<$<COMPILE_LANGUAGE:CXX>:-fcheck-new>)
 endif()
 
-if(NOT ${CONFIG_CXX_RTTI})
-  string(APPEND ARCHCXXFLAGS " -fno-rtti")
+if(NOT CONFIG_CXX_RTTI)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
 endif()
 
 if(CONFIG_ARCH_RV32)
@@ -159,22 +162,6 @@ endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
   add_compile_options(-g3)
-endif()
-
-if(NOT "${CMAKE_C_FLAGS}" STREQUAL "")
-  string(REGEX MATCH "${ARCHCFLAGS}" EXISTS_FLAGS "${CMAKE_C_FLAGS}")
-endif()
-
-if(NOT EXISTS_FLAGS)
-  set(CMAKE_ASM_FLAGS
-      "${CMAKE_ASM_FLAGS} ${ARCHCFLAGS}"
-      CACHE STRING "" FORCE)
-  set(CMAKE_C_FLAGS
-      "${CMAKE_C_FLAGS} ${ARCHCFLAGS}"
-      CACHE STRING "" FORCE)
-  set(CMAKE_CXX_FLAGS
-      "${CMAKE_CXX_FLAGS} ${ARCHCXXFLAGS}"
-      CACHE STRING "" FORCE)
 endif()
 
 # Generic GNU RVG toolchain
