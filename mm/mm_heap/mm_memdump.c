@@ -146,7 +146,12 @@ void mm_memdump(FAR struct mm_heap_s *heap,
   if (dump->pid >= PID_MM_ALLOC)
     {
       FAR struct tcb_s *tcb = nxsched_get_tcb(dump->pid);
+#if CONFIG_TASK_NAME_SIZE > 0
       FAR const char *name = tcb ? tcb->name : "Unknown";
+#else
+      FAR const char *name = "Unknown";
+#endif
+
       syslog(LOG_INFO, "Memdump task name: %s,"
                        " stack_alloc_ptr: %p,"
                        " adj_stack_size: %zu\n",
