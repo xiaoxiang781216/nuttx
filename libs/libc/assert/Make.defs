@@ -18,11 +18,7 @@
 #
 ############################################################################
 
-CSRCS += lib_assert.c
-
-ifeq ($(CONFIG_STACK_CANARIES),y)
-CSRCS += lib_stackchk.c
-endif
+CSRCS += lib_assert.c lib_stackchk.c
 
 ifneq ($(CONFIG_LTO_NONE),y)
   assert/lib_assert.c_CFLAGS += -fno-lto

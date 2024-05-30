@@ -18,11 +18,7 @@
 #
 # ##############################################################################
 
-set(SRCS lib_assert.c)
-
-if(CONFIG_STACK_CANARIES)
-  list(APPEND SRCS lib_stackchk.c)
-endif()
+set(SRCS lib_assert.c lib_stackchk.c)
 
 set_source_files_properties(lib_assert.c PROPERTIES COMPILE_FLAGS -fno-lto)
 set_source_files_properties(lib_stackchk.c PROPERTIES COMPILE_FLAGS -fno-lto)
