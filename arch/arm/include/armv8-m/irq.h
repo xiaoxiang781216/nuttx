@@ -549,6 +549,7 @@ int up_cpu_index(void) noinstrument_function;
 #  define up_cpu_index() 0
 #endif /* CONFIG_SMP */
 
+noinstrument_function
 static inline_function uint32_t *up_current_regs(void)
 {
   return (uint32_t *)g_current_regs[up_cpu_index()];
