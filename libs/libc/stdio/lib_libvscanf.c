@@ -22,21 +22,13 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/compiler.h>
-
-#include <stdarg.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <errno.h>
-#include <debug.h>
-
-#include <nuttx/compiler.h>
 #include <nuttx/streams.h>
 
-#include "libc.h"
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <ctype.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -248,10 +240,6 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
   unsigned char set[32];        /* Bit field (256 / 8) */
 #endif
 
-  /* keep this for future reference:
-   * linfo("buf=\"%s\" fmt=\"%s\"\n", buf, fmt);
-   */
-
   /* Parse the format, extracting values from the input buffer as needed */
 
   assigncount = 0;
@@ -299,15 +287,11 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
 
       if (fmt_char(fmt) == '%')
         {
-          linfo("Specifier found\n");
-
           /* Check for qualifiers on the conversion specifier */
 
           fmt++;
           for (; fmt_char(fmt); fmt++)
             {
-              linfo("Processing %c\n", fmt_char(fmt));
-
 #ifdef CONFIG_LIBC_SCANSET
               if (strchr("dibouxXcseEfFgGaAn[%", fmt_char(fmt)))
 #else
@@ -399,8 +383,6 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
 
           if (fmt_char(fmt) == 's')
             {
-              linfo("Performing string conversion\n");
-
               /* Get a pointer to the char * value.  We need to do this even
                * of we have reached the end of the input data in order to
                * update the 'ap' variable.
@@ -459,8 +441,6 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
 
           if (fmt_char(fmt) == '[')
             {
-              linfo("Performing scanset conversion\n");
-
               fmt = findscanset(fmt, set);      /* find scanset */
 
               /* Get a pointer to the char * value.  We need to do this even
@@ -520,8 +500,6 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
 
           else if (fmt_char(fmt) == 'c')
             {
-              linfo("Performing character conversion\n");
-
               /* Get a pointer to the char * value.  We need to do this even
                * if we have reached the end of the input data in order to
                * update the 'ap' variable.
@@ -583,8 +561,6 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
           else if (strchr("dobxXui", fmt_char(fmt)))
             {
               bool sign;
-
-              linfo("Performing integer conversion\n");
 
               /* Get a pointer to the integer value.  We need to do this even
                * if we have reached the end of the input data in order to
@@ -856,8 +832,6 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
 
                   tmp[fwidth] = 0;
 
-                  linfo("tmp[]=\"%s\"\n", tmp);
-
                   /* Perform the integer conversion */
 
                   /* Preserve the errno value */
@@ -924,17 +898,14 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                       switch (modifier)
                         {
                         case HH_MOD:
-                          linfo("Return %ld to %p\n", tmplong, pchar);
                           *pchar = (unsigned char)tmplong;
                           break;
 
                         case H_MOD:
-                          linfo("Return %ld to %p\n", tmplong, pshort);
                           *pshort = (unsigned short)tmplong;
                           break;
 
                         case NO_MOD:
-                          linfo("Return %ld to %p\n", tmplong, pint);
                           *pint = (unsigned int)tmplong;
                           break;
 
@@ -942,14 +913,11 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                         case L_MOD:
 #endif
                         default:
-                          linfo("Return %ld to %p\n", tmplong, plong);
                           *plong = tmplong;
                           break;
 
 #ifdef CONFIG_HAVE_LONG_LONG
                         case LL_MOD:
-                          linfo("Return %lld to %p\n", tmplonglong,
-                                plonglong);
                           *plonglong = tmplonglong;
                           break;
 #endif
@@ -975,8 +943,6 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
 #ifdef CONFIG_HAVE_FLOAT
               FAR float *pf = NULL;
 #endif
-
-              linfo("Performing floating point conversion\n");
 
               /* Get a pointer to the double value.  We need to do this even
                * if we have reached the end of the input data in order to
@@ -1104,8 +1070,6 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
 
                   tmp[fwidth] = 0;
 
-                  linfo("tmp[]=\"%s\"\n", tmp);
-
                   /* Perform the floating point conversion */
 
                   /* Preserve the errno value */
@@ -1151,7 +1115,6 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                         {
                           /* Return the double value */
 
-                          linfo("Return %f to %p\n", dvalue, pd);
                           *pd = dvalue;
                         }
                       else
@@ -1160,7 +1123,6 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                           /* Return the float value */
 
 #  ifdef CONFIG_HAVE_FLOAT
-                          linfo("Return %f to %p\n", (double)fvalue, pf);
                           *pf = fvalue;
 #  endif
                         }
@@ -1177,8 +1139,6 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
 
           else if (fmt_char(fmt) == 'n')
             {
-              linfo("Performing character count\n");
-
               if (!noassign)
                 {
                   size_t nchars = (size_t) (stream->nget - ngetstart);
