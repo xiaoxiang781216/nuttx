@@ -405,7 +405,7 @@ mempool_info_task(FAR struct mempool_s *pool,
                   FAR const struct malltask *task)
 {
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
-  irqstate_t flags = spin_lock_irqsave(&pool->lock);
+  irqstate_t flags;
   struct mallinfo_task info =
     {
       0, 0
@@ -413,8 +413,10 @@ mempool_info_task(FAR struct mempool_s *pool,
 
   if (task->pid == PID_MM_FREE)
     {
+      flags = spin_lock_irqsave(&pool->lock);
       size_t count = sq_count(&pool->queue) +
                      sq_count(&pool->iqueue);
+      spin_unlock_irqrestore(&pool->lock, flags);
       info.aordblks += count;
       info.uordblks += count * blocksize;
     }
@@ -428,10 +430,21 @@ mempool_info_task(FAR struct mempool_s *pool,
   else
     {
       FAR struct mempool_backtrace_s *buf;
+      struct list_node list;
 
-      list_for_every_entry(&pool->alist, buf,
-                           struct mempool_backtrace_s, node)
+      flags = spin_lock_irqsave(&pool->lock);
+      list_move(&pool->alist, &list);
+      while (!list_is_empty(&list))
         {
+          buf = list_first_entry(&list, struct mempool_backtrace_s, node);
+          list_delete(&buf->node);
+          list_add_tail(&pool->alist, &buf->node);
+          spin_unlock_irqrestore(&pool->lock, flags);
+
+          /* MM_DUMP_LEAK needs to be called to enter_critical_section,
+           * we should not call it in spinlock.
+           */
+
           if ((MM_DUMP_ASSIGN(task->pid, buf->pid) ||
                MM_DUMP_ALLOC(task->pid, buf->pid) ||
                MM_DUMP_LEAK(task->pid, buf->pid)) &&
@@ -440,11 +453,14 @@ mempool_info_task(FAR struct mempool_s *pool,
               info.aordblks++;
               info.uordblks += blocksize;
             }
+
+          flags = spin_lock_irqsave(&pool->lock);
         }
+
+      spin_unlock_irqrestore(&pool->lock, flags);
     }
 #endif
 
-  spin_unlock_irqrestore(&pool->lock, flags);
   return info;
 }
 
@@ -492,10 +508,22 @@ void mempool_memdump(FAR struct mempool_s *pool,
   else
     {
       FAR struct mempool_backtrace_s *buf;
+      struct list_node list;
+      irqstate_t flags;
 
-      list_for_every_entry(&pool->alist, buf,
-                           struct mempool_backtrace_s, node)
+      flags = spin_lock_irqsave(&pool->lock);
+      list_move(&pool->alist, &list);
+      while (!list_is_empty(&list))
         {
+          buf = list_first_entry(&list, struct mempool_backtrace_s, node);
+          list_delete(&buf->node);
+          list_add_tail(&pool->alist, &buf->node);
+
+          /* MM_DUMP_LEAK needs to be called to enter_critical_section,
+           * we should not call it in spinlock.
+           */
+
+          spin_unlock_irqrestore(&pool->lock, flags);
           if ((MM_DUMP_ASSIGN(dump->pid, buf->pid) ||
                MM_DUMP_ALLOC(dump->pid, buf->pid) ||
                MM_DUMP_LEAK(dump->pid, buf->pid)) &&
@@ -519,7 +547,11 @@ void mempool_memdump(FAR struct mempool_s *pool,
                      buf->pid, blocksize, buf->seqno,
                      MM_PTR_FMT_WIDTH, ((FAR char *)buf - blocksize), tmp);
             }
+
+          spin_lock_irqsave(&pool->lock);
         }
+
+      spin_unlock_irqrestore(&pool->lock, flags);
     }
 #endif
 }
