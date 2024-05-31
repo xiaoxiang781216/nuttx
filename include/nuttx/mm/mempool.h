@@ -115,12 +115,7 @@ struct mempool_s
 #else
   size_t     nalloc;    /* The number of used block in mempool */
 #endif
-  union
-    {
-      spinlock_t lock;  /* The protect lock to mempool used in irq */
-      mutex_t    mutex; /* The mutex of mempool used in normal */
-    } u;
-
+  spinlock_t lock;      /* The protect lock to mempool */
   sem_t      waitsem;   /* The semaphore of waiter get free block */
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
   struct mempool_procfs_entry_s procfs; /* The entry of procfs */
@@ -209,13 +204,9 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool);
  * Input Parameters:
  *   pool - Address of the memory pool to be used.
  *   blk  - The pointer of memory block.
- *
- * Returned Value:
- *   OK on success; A negated errno value on any failure.
- *
  ****************************************************************************/
 
-int mempool_release(FAR struct mempool_s *pool, FAR void *blk);
+void mempool_release(FAR struct mempool_s *pool, FAR void *blk);
 
 /****************************************************************************
  * Name: mempool_info

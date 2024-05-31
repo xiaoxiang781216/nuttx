@@ -636,7 +636,8 @@ int mempool_multiple_free(FAR struct mempool_multiple_s *mpool,
   blk = (FAR char *)blk - (((FAR char *)blk -
                            ((FAR char *)dict->addr + mpool->minpoolsize)) %
                            MEMPOOL_REALBLOCKSIZE(dict->pool));
-  return mempool_release(dict->pool, blk);
+  mempool_release(dict->pool, blk);
+  return 0;
 }
 
 /****************************************************************************
