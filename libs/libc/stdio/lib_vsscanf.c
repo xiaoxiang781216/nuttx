@@ -22,7 +22,13 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
+#include <stdio.h>
+
 #include <nuttx/streams.h>
+
+#include "libc.h"
 
 /****************************************************************************
  * Public Functions
