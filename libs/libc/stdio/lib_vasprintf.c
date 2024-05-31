@@ -22,7 +22,12 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/streams.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <assert.h>
+
+#include "libc.h"
 
 /****************************************************************************
  * Pre-processor Definitions

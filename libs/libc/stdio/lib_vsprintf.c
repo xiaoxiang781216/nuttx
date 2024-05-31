@@ -22,7 +22,11 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/streams.h>
+#include <nuttx/config.h>
+
+#include <stdio.h>
+
+#include "libc.h"
 
 /****************************************************************************
  * Public Functions
@@ -40,6 +44,6 @@ int vsprintf(FAR char *dest, FAR const IPTR char *src, va_list ap)
    * libs/libc/stdio/lib_vsprintf do the work.
    */
 
-  lib_memoutstream(&memoutstream, dest, INT_MAX);
+  lib_memoutstream(&memoutstream, dest, LIB_BUFLEN_UNKNOWN);
   return lib_vsprintf(&memoutstream.common, src, ap);
 }
