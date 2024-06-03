@@ -967,10 +967,11 @@ int modlib_bind(FAR struct module_s *modp,
 
   for (i = 0; i < symhdr->sh_size / sizeof(Elf_Sym); i++)
     {
-      FAR Elf_Shdr *s = &loadinfo->shdr[sym[i].st_shndx];
-
-      if (sym[i].st_shndx != SHN_UNDEF)
+      if (sym[i].st_shndx != SHN_UNDEF &&
+          sym[i].st_shndx < loadinfo->ehdr.e_shnum)
         {
+          FAR Elf_Shdr *s = &loadinfo->shdr[sym[i].st_shndx];
+
           sym[i].st_value = sym[i].st_value + s->sh_addr;
         }
     }
