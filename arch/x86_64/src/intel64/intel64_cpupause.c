@@ -288,9 +288,11 @@ int up_pause_async_handler(int irq, void *c, void *arg)
   int cpu = up_cpu_index();
 
   tcb = current_task(cpu);
+  nxsched_suspend_scheduler(tcb);
   x86_64_savestate(tcb->xcp.regs);
   nxsched_process_delivered(cpu);
   tcb = current_task(cpu);
+  nxsched_resume_scheduler(tcb);
   x86_64_restorestate(tcb->xcp.regs);
 
   return OK;

@@ -245,9 +245,11 @@ int arm64_pause_async_handler(int irq, void *context, void *arg)
   int cpu = this_cpu();
 
   tcb = current_task(cpu);
+  nxsched_suspend_scheduler(tcb);
   arm64_savestate(tcb->xcp.regs);
   nxsched_process_delivered(cpu);
   tcb = current_task(cpu);
+  nxsched_resume_scheduler(tcb);
   arm64_restorestate(tcb->xcp.regs);
 
   return OK;
