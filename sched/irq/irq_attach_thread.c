@@ -189,7 +189,10 @@ int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
       return OK;
     }
 
-  DEBUGASSERT(g_irq_thread_vector[ndx].threadid == 0);
+  if (g_irq_thread_vector[ndx].threadid != 0)
+    {
+      return -EINVAL;
+    }
 
   g_irq_thread_vector[ndx].isrthread = isrthread;
   g_irq_thread_vector[ndx].handler   = isr;
