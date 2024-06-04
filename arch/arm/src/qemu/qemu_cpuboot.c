@@ -32,6 +32,7 @@
 #include <arch/irq.h>
 #include <debug.h>
 
+#include "init/init.h"
 #include "arm_internal.h"
 #include "sctlr.h"
 #include "scu.h"
@@ -113,13 +114,7 @@ void arm_cpu_boot(int cpu)
   up_irq_enable();
 #endif
 
-  /* The next thing that we expect to happen is for logic running on CPU0
-   * to call up_cpu_start() which generate an SGI and a context switch to
-   * the configured NuttX IDLE task.
-   */
+  /* Then transfer control to the IDLE task */
 
-  for (; ; )
-    {
-      asm("WFI");
-    }
+  nx_idle_trampoline();
 }
