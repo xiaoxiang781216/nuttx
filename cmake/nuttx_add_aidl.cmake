@@ -92,6 +92,7 @@ function(nuttx_add_aidl)
       COMMENT
         "AIDL:Gen and Updating ${AIDL_OUT_DIR}/${REL_DIR}/${FILE_NAME}.cpp")
 
+    add_dependencies(apps_context ${FILE_NAME})
     add_dependencies(${TARGET} ${FILE_NAME})
     target_sources(${TARGET}
                    PRIVATE ${AIDL_OUT_DIR}/${REL_DIR}/${FILE_NAME}.cpp)

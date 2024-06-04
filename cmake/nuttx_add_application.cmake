@@ -163,6 +163,10 @@ function(nuttx_add_application)
     endif()
   endif()
 
+  # apps applications need to depends on apps_context by default
+
+  add_dependencies(${TARGET} apps_context)
+
   # store parameters into properties (used during builtin list generation)
 
   set_target_properties(${TARGET} PROPERTIES APP_MAIN ${NAME}_main)
