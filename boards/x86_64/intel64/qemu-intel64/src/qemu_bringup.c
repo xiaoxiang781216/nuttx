@@ -43,6 +43,19 @@
 #include "qemu_intel64.h"
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_INTEL64_HPET_ALARM
+#  if CONFIG_ARCH_INTEL64_HPET_ALARM_CHAN != 0
+#    error this logic requires that HPET_ALARM_CHAN is set to 0
+#  endif
+#  define ONESHOOT_TIMER 1
+#else
+#  define ONESHOOT_TIMER 0
+#endif
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -75,7 +88,7 @@ int qemu_bringup(void)
 #endif
 
 #ifdef CONFIG_ONESHOT
-  os = oneshot_initialize(0, 10);
+  os = oneshot_initialize(ONESHOOT_TIMER, 10);
   if (os)
     {
       oneshot_register("/dev/oneshot", os);
