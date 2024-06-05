@@ -665,7 +665,7 @@ inline_function void leave_critical_section_nonirq(irqstate_t flags)
       /* Note that we have left the critical section */
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-      nxsched_critmon_csection(rtcb, false, return_address(0);
+      nxsched_critmon_csection(rtcb, false, return_address(0));
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
       sched_note_csection(rtcb, false);
