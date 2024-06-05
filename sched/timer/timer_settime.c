@@ -292,7 +292,7 @@ int timer_settime(timer_t timerid, int flags,
     {
       /* Calculate a delay corresponding to the absolute time in 'value' */
 
-      ret = clock_abstime2ticks(timer->pt_clock, &value->it_value, &delay);
+      clock_abstime2ticks(timer->pt_clock, &value->it_value, &delay);
     }
   else
     {
@@ -302,11 +302,6 @@ int timer_settime(timer_t timerid, int flags,
        */
 
       delay = clock_time2ticks(&value->it_value);
-    }
-
-  if (ret < 0)
-    {
-      goto errout;
     }
 
   /* If the specified time has already passed, the function shall succeed
@@ -325,7 +320,6 @@ int timer_settime(timer_t timerid, int flags,
       ret = wd_start(&timer->pt_wdog, delay, timer_timeout, (wdparm_t)timer);
     }
 
-errout:
   leave_critical_section(intflags);
 
   if (ret < 0)

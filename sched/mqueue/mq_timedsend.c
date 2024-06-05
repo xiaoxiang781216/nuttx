@@ -222,22 +222,15 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
    * disabled here so that this time stays valid until the wait begins.
    */
 
-  ret = clock_abstime2ticks(CLOCK_REALTIME, abstime, &ticks);
+  clock_abstime2ticks(CLOCK_REALTIME, abstime, &ticks);
 
   /* If the time has already expired and the message queue is empty,
    * return immediately.
    */
 
-  if (ret == OK && ticks <= 0)
+  if (ticks <= 0)
     {
-      ret = ETIMEDOUT;
-    }
-
-  /* Handle any time-related errors */
-
-  if (ret != OK)
-    {
-      ret = -ret;
+      ret = -ETIMEDOUT;
       nxmq_free_msg(mqmsg);
       goto errout_in_critical_section;
     }
