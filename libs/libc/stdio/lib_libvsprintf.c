@@ -46,6 +46,7 @@
 #include <nuttx/symtab.h>
 #endif
 
+#include <assert.h>
 #include <string.h>
 #include <sys/param.h>
 
