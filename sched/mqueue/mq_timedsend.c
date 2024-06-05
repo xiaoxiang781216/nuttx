@@ -147,6 +147,15 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
   sclock_t ticks;
   int ret;
 
+  /* The message queue is full... We are going to wait.  Now we must have a
+   * valid time value.
+   */
+
+  if (!abstime || abstime->tv_nsec < 0 || abstime->tv_nsec >= 1000000000)
+    {
+      return -EINVAL;
+    }
+
   /* Verify the input parameters on any failures to verify. */
 
   ret = nxmq_verify_send(mq, msg, msglen, prio);
@@ -162,19 +171,6 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
   flags = enter_critical_section();
   rtcb = this_task();
 
-  /* Pre-allocate a message structure */
-
-  mqmsg = nxmq_alloc_msg();
-  if (mqmsg == NULL)
-    {
-      /* Failed to allocate the message. nxmq_alloc_msg() does not set the
-       * errno value.
-       */
-
-      ret = -ENOMEM;
-      goto errout_in_critical_section;
-    }
-
   /* OpenGroup.org: "Under no circumstance shall the operation fail with a
    * timeout if there is sufficient room in the queue to add the message
    * immediately. The validity of the abstime parameter need not be checked
@@ -189,63 +185,85 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
    * exceeded in that case.
    */
 
-  if (msgq->nmsgs < msgq->maxmsgs || up_interrupt_context())
+  if (msgq->nmsgs >= msgq->maxmsgs && !up_interrupt_context())
     {
       /* Do the send with no further checks (possibly exceeding maxmsgs)
        * Currently nxmq_do_send() always returns OK.
        */
 
-      goto out_send_message;
+      leave_critical_section(flags);
+
+      /* We are not in an interrupt handler and the message queue is full.
+       * Set up a timed wait for the message queue to become non-full.
+       *
+       * Convert the timespec to clock ticks.  We must have interrupts
+       * disabled here so that this time stays valid until the wait begins.
+       */
+
+      clock_abstime2ticks(CLOCK_REALTIME, abstime, &ticks);
+
+      /* If the time has already expired and the message queue is empty,
+       * return immediately.
+       */
+
+      if (ticks <= 0)
+        {
+          return -ETIMEDOUT;
+        }
+
+      /* Start the wdog */
+
+      wd_start(&rtcb->waitdog, ticks, nxmq_sndtimeout, (wdparm_t)rtcb);
+
+      flags = enter_critical_section();
+
+      /* Skip switch context when setup wdog but already expired */
+
+      if (WDOG_ISACTIVE(&rtcb->waitdog))
+        {
+          /* And wait for the message queue to be non-empty */
+
+          ret = nxmq_wait_send(msgq, mq->f_oflags);
+
+          /* This may return with an error and errno set to either EINTR
+           * or ETIMEDOUT.  Cancel the watchdog timer in any event.
+           */
+
+          wd_cancel(&rtcb->waitdog);
+
+          /* Check if nxmq_wait_send() failed */
+
+          if (ret < 0)
+            {
+              goto out;
+            }
+        }
+      else
+        {
+          /* Timeout & try again */
+
+          if (msgq->nmsgs >= msgq->maxmsgs)
+            {
+              /* The message queue is still full */
+
+              ret = -ETIMEDOUT;
+              goto out;
+            }
+        }
     }
 
-  /* The message queue is full... We are going to wait.  Now we must have a
-   * valid time value.
-   */
+  /* Pre-allocate a message structure */
 
-  if (!abstime || abstime->tv_nsec < 0 || abstime->tv_nsec >= 1000000000)
+  mqmsg = nxmq_alloc_msg();
+  if (mqmsg == NULL)
     {
-      ret = -EINVAL;
-      nxmq_free_msg(mqmsg);
-      goto errout_in_critical_section;
+      /* Failed to allocate the message. nxmq_alloc_msg() does not set the
+       * errno value.
+       */
+
+      ret = -ENOMEM;
     }
-
-  /* We are not in an interrupt handler and the message queue is full.
-   * Set up a timed wait for the message queue to become non-full.
-   *
-   * Convert the timespec to clock ticks.  We must have interrupts
-   * disabled here so that this time stays valid until the wait begins.
-   */
-
-  clock_abstime2ticks(CLOCK_REALTIME, abstime, &ticks);
-
-  /* If the time has already expired and the message queue is empty,
-   * return immediately.
-   */
-
-  if (ticks <= 0)
-    {
-      ret = -ETIMEDOUT;
-      nxmq_free_msg(mqmsg);
-      goto errout_in_critical_section;
-    }
-
-  /* Start the watchdog and begin the wait for MQ not full */
-
-  wd_start(&rtcb->waitdog, ticks, nxmq_sndtimeout, (wdparm_t)rtcb);
-
-  /* And wait for the message queue to be non-empty */
-
-  ret = nxmq_wait_send(msgq, mq->f_oflags);
-
-  /* This may return with an error and errno set to either EINTR
-   * or ETIMEDOUT.  Cancel the watchdog timer in any event.
-   */
-
-  wd_cancel(&rtcb->waitdog);
-
-  /* Check if nxmq_wait_send() failed */
-
-  if (ret == OK)
+  else
     {
       /* If any of the above failed, set the errno.  Otherwise, there should
        * be space for another message in the message queue.  NOW we can
@@ -254,7 +272,6 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
        * Currently nxmq_do_send() always returns OK.
        */
 
-out_send_message:
       ret = nxmq_do_send(msgq, mqmsg, msg, msglen, prio);
     }
 
@@ -262,9 +279,8 @@ out_send_message:
    * wdog allocated, and (4) interrupts disabled.
    */
 
-errout_in_critical_section:
+out:
   leave_critical_section(flags);
-
   return ret;
 }
 

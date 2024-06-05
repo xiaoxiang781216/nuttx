@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <mqueue.h>
 #include <debug.h>
+#include <fcntl.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
@@ -100,20 +101,38 @@ ssize_t file_mq_receive(FAR struct file *mq, FAR char *msg, size_t msglen,
 
   /* Get the message from the message queue */
 
-  ret = nxmq_wait_receive(msgq, mq->f_oflags, &mqmsg);
-
-  /* Check if we got a message from the message queue.  We might
-   * not have a message if:
-   *
-   * - The message queue is empty and O_NONBLOCK is set in the mq
-   * - The wait was interrupted by a signal
-   */
-
-  if (ret == OK)
+  mqmsg = (FAR struct mqueue_msg_s *)list_remove_head(&msgq->msglist);
+  if (mqmsg == NULL)
     {
-      ret = nxmq_do_receive(msgq, mqmsg, msg, prio);
+      if ((mq->f_oflags & O_NONBLOCK) != 0)
+        {
+          ret = -EAGAIN;
+          goto out;
+        }
+
+      /* Wait & get the message from the message queue */
+
+      ret = nxmq_wait_receive(msgq, &mqmsg);
+      if (ret < 0)
+        {
+          goto out;
+        }
     }
 
+  /* If we got message, then decrement the number of messages in
+   * the queue while we are still in the critical section
+   */
+
+  if (msgq->nmsgs-- == msgq->maxmsgs)
+    {
+      nxmq_pollnotify(msgq, POLLOUT);
+    }
+
+  /* We have the message, now copy the message data into the user buffer */
+
+  ret = nxmq_do_receive(msgq, mqmsg, msg, prio);
+
+out:
   leave_critical_section_nonirq(flags);
 
   return ret;

@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <mqueue.h>
 #include <debug.h>
+#include <fcntl.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
@@ -162,15 +163,20 @@ ssize_t file_mq_timedreceive(FAR struct file *mq, FAR char *msg,
    */
 
   flags = enter_critical_section_nonirq();
-  rtcb = this_task();
 
-  /* Check if the message queue is empty.  If it is NOT empty, then we
-   * will not need to start timer.
-   */
+  /* Get the message from the message queue */
 
-  if (list_is_empty(&msgq->msglist))
+  mqmsg = (FAR struct mqueue_msg_s *)list_remove_head(&msgq->msglist);
+  if (mqmsg == NULL)
     {
       sclock_t ticks;
+
+      leave_critical_section(flags);
+
+      if ((mq->f_oflags & O_NONBLOCK) != 0)
+        {
+          return -EAGAIN;
+        }
 
       /* Convert the timespec to clock ticks.  We must have interrupts
        * disabled here so that this time stays valid until the wait begins.
@@ -184,44 +190,61 @@ ssize_t file_mq_timedreceive(FAR struct file *mq, FAR char *msg,
 
       if (ticks <= 0)
         {
-          ret = -ETIMEDOUT;
-          goto errout_in_critical_section;
+          return -ETIMEDOUT;
         }
 
-      /* Start the watchdog */
+      /* Start the wdog */
 
+      rtcb = this_task();
       wd_start(&rtcb->waitdog, ticks, nxmq_rcvtimeout, (wdparm_t)rtcb);
+
+      flags = enter_critical_section();
+
+      /* Skip switch context when setup wdog but already expired */
+
+      if (WDOG_ISACTIVE(&rtcb->waitdog))
+        {
+          /* Wait & get the message from the message queue */
+
+          ret = nxmq_wait_receive(msgq, &mqmsg);
+          wd_cancel(&rtcb->waitdog);
+
+          if (ret < 0)
+            {
+              leave_critical_section(flags);
+              return ret;
+            }
+        }
+      else
+        {
+          /* Timeout & try again */
+
+          mqmsg = (FAR struct mqueue_msg_s *)
+                  list_remove_head(&msgq->msglist);
+          if (mqmsg == NULL)
+            {
+              /* The message queue is still empty */
+
+              leave_critical_section(flags);
+              return -ETIMEDOUT;
+            }
+        }
     }
 
-  /* Get the message from the message queue */
-
-  ret = nxmq_wait_receive(msgq, mq->f_oflags, &mqmsg);
-
-  /* Stop the watchdog timer (this is not harmful in the case where
-   * it was never started)
+  /* If we got message, then decrement the number of messages in
+   * the queue while we are still in the critical section
    */
 
-  wd_cancel(&rtcb->waitdog);
-
-  /* Check if we got a message from the message queue.  We might
-   * not have a message if:
-   *
-   * - The message queue is empty and O_NONBLOCK is set in the mqdes
-   * - The wait was interrupted by a signal
-   * - The watchdog timeout expired
-   */
-
-  if (ret == OK)
+  if (msgq->nmsgs-- == msgq->maxmsgs)
     {
-      DEBUGASSERT(mqmsg != NULL);
-      ret = nxmq_do_receive(msgq, mqmsg, msg, prio);
+      nxmq_pollnotify(msgq, POLLOUT);
     }
 
-  /* We can now restore interrupts */
+  /* We have the message, now copy the message data into the user buffer */
 
-errout_in_critical_section:
+  ret = nxmq_do_receive(msgq, mqmsg, msg, prio);
+
   leave_critical_section_nonirq(flags);
-
   return ret;
 }
 

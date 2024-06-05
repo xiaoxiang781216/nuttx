@@ -114,7 +114,6 @@ int nxmq_verify_receive(FAR struct file *mq, FAR char *msg, size_t msglen)
  *
  * Input Parameters:
  *   msgq   - Message queue descriptor
- *   oflags - flags from user set
  *   rcvmsg - The caller-provided location in which to return the newly
  *            received message.
  *
@@ -132,12 +131,10 @@ int nxmq_verify_receive(FAR struct file *mq, FAR char *msg, size_t msglen)
  ****************************************************************************/
 
 int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
-                      int oflags, FAR struct mqueue_msg_s **rcvmsg)
+                      FAR struct mqueue_msg_s **rcvmsg)
 {
   FAR struct mqueue_msg_s *newmsg;
-  FAR struct tcb_s *rtcb;
-
-  DEBUGASSERT(rcvmsg != NULL);
+  FAR struct tcb_s *rtcb = this_task();
 
 #ifdef CONFIG_CANCELLATION_POINTS
   /* nxmq_wait_receive() is not a cancellation point, but it may be called
@@ -159,73 +156,37 @@ int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
   while ((newmsg = (FAR struct mqueue_msg_s *)
                    list_remove_head(&msgq->msglist)) == NULL)
     {
-      /* The queue is empty!  Should we block until there the above condition
-       * has been satisfied?
+      msgq->cmn.nwaitnotempty++;
+
+      /* Initialize the 'errcode" used to communication wake-up error
+       * conditions.
        */
 
-      if ((oflags & O_NONBLOCK) == 0)
+      rtcb->waitobj = msgq;
+      rtcb->errcode = OK;
+
+      /* Remove the tcb task from the running list. */
+
+      nxsched_remove_running(rtcb);
+
+      /* Add the task to the specified blocked task list */
+
+      rtcb->task_state = TSTATE_WAIT_MQNOTEMPTY;
+      nxsched_add_prioritized(rtcb, MQ_WNELIST(msgq->cmn));
+
+      /* Now, perform the context switch */
+
+      up_switch_context(this_task(), rtcb);
+
+      /* When we resume at this point, either (1) the message queue
+       * is no longer empty, or (2) the wait has been interrupted by
+       * a signal.  We can detect the latter case be examining the
+       * errno value (should be either EINTR or ETIMEDOUT).
+       */
+
+      if (rtcb->errcode != OK)
         {
-          /* Yes.. Block and try again */
-
-          rtcb          = this_task();
-          rtcb->waitobj = msgq;
-          msgq->cmn.nwaitnotempty++;
-
-          /* Initialize the 'errcode" used to communication wake-up error
-           * conditions.
-           */
-
-          rtcb->errcode  = OK;
-
-          /* Make sure this is not the idle task, descheduling that
-           * isn't going to end well.
-           */
-
-          DEBUGASSERT(!is_idle_task(rtcb));
-
-          /* Remove the tcb task from the running list. */
-
-          nxsched_remove_running(rtcb);
-
-          /* Add the task to the specified blocked task list */
-
-          rtcb->task_state = TSTATE_WAIT_MQNOTEMPTY;
-          nxsched_add_prioritized(rtcb, MQ_WNELIST(msgq->cmn));
-
-          /* Now, perform the context switch */
-
-          up_switch_context(this_task(), rtcb);
-
-          /* When we resume at this point, either (1) the message queue
-           * is no longer empty, or (2) the wait has been interrupted by
-           * a signal.  We can detect the latter case be examining the
-           * errno value (should be either EINTR or ETIMEDOUT).
-           */
-
-          if (rtcb->errcode != OK)
-            {
-              return -rtcb->errcode;
-            }
-        }
-      else
-        {
-          /* The queue was empty, and the O_NONBLOCK flag was set for the
-           * message queue description.
-           */
-
-          return -EAGAIN;
-        }
-    }
-
-  /* If we got message, then decrement the number of messages in
-   * the queue while we are still in the critical section
-   */
-
-  if (newmsg)
-    {
-      if (msgq->nmsgs-- == msgq->maxmsgs)
-        {
-          nxmq_pollnotify(msgq, POLLOUT);
+          return -rtcb->errcode;
         }
     }
 

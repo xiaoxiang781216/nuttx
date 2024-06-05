@@ -121,7 +121,7 @@ int nxmq_verify_receive(FAR struct file *mq, FAR char *msg, size_t msglen);
 #  define nxmq_verify_receive(msgq, msg, msglen) OK
 #endif
 int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
-                      int oflags, FAR struct mqueue_msg_s **rcvmsg);
+                      FAR struct mqueue_msg_s **rcvmsg);
 ssize_t nxmq_do_receive(FAR struct mqueue_inode_s *msgq,
                         FAR struct mqueue_msg_s *mqmsg,
                         FAR char *ubuffer, FAR unsigned int *prio);
