@@ -144,6 +144,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
       if (newsize < oldsize)
         {
+          heap->mm_curused += newsize - oldsize;
           mm_shrinkchunk(heap, oldnode, newsize);
           kasan_poison((FAR char *)oldnode + MM_SIZEOF_NODE(oldnode) +
                        sizeof(mmsize_t), oldsize - MM_SIZEOF_NODE(oldnode));
@@ -260,7 +261,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
           if (prevsize < takeprev + MM_MIN_CHUNK)
             {
-              takeprev = prevsize;
+              heap->mm_curused += prevsize - takeprev;
+              takeprev          = prevsize;
             }
 
           /* Extend the node into the previous free chunk */
@@ -333,7 +335,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
           if (nextsize < takenext + MM_MIN_CHUNK)
             {
-              takenext = nextsize;
+              heap->mm_curused += nextsize - takenext;
+              takenext          = nextsize;
             }
 
           /* Extend the node into the next chunk */
