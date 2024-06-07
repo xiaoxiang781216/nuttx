@@ -531,12 +531,6 @@ static int binder_alloc_do_buffer_copy(
   FAR struct binder_buffer *buffer, binder_size_t buffer_offset,
   FAR void *ptr, size_t bytes)
 {
-  unsigned long      size;
-  FAR void          *page;
-  unsigned long      pgoff;
-  FAR void          *tmpptr;
-  FAR void          *base_ptr;
-
   /* All copies must be 32-bit aligned and 32-bit size */
 
   if (!check_buffer(alloc, buffer, buffer_offset, bytes))
@@ -546,17 +540,25 @@ static int binder_alloc_do_buffer_copy(
 
   while (bytes)
     {
+      unsigned long      size;
+      FAR void          *page;
+      unsigned long      pgoff;
+      FAR void          *tmpptr;
+      FAR void          *base_ptr;
+
       page      = binder_alloc_get_page(alloc, buffer,
                                         buffer_offset, &pgoff);
-      size      = min(bytes, PAGE_SIZE - pgoff);
+      size      = min(bytes, (size_t)(PAGE_SIZE - pgoff));
       base_ptr  = page;
       tmpptr    = base_ptr + pgoff;
       if (to_buffer)
         {
+          BUG_ON(pgoff + size > PAGE_SIZE);
           memcpy(tmpptr, ptr, size);
         }
       else
         {
+          BUG_ON(pgoff + size > PAGE_SIZE);
           memcpy(ptr, tmpptr, size);
         }
 
