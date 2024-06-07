@@ -70,18 +70,17 @@ int local_release(FAR struct local_conn_s *conn)
   if (conn->lc_state == LOCAL_STATE_LISTENING)
     {
       FAR struct local_conn_s *accept;
-      FAR dq_entry_t *waiter;
+      FAR dq_entry_t *waiter = dq_peek(&conn->u.server.lc_waiters);
 
       DEBUGASSERT(conn->lc_proto == SOCK_STREAM);
 
       /* Are there still clients waiting for a connection to the server? */
 
-      for (waiter = dq_peek(&conn->u.server.lc_waiters);
-           waiter != NULL;
-           waiter = dq_next(&accept->u.accept.lc_waiter))
+      while (waiter != NULL)
         {
           accept = container_of(waiter, struct local_conn_s,
                                 u.accept.lc_waiter);
+          waiter = dq_next(&accept->u.accept.lc_waiter);
           local_subref(accept);
         }
 
