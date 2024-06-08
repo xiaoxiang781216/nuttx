@@ -60,6 +60,7 @@ include fatfs/Make.defs
 include zipfs/Make.defs
 include yaffs/Make.defs
 include notify/Make.defs
+include v9fs/Make.defs
 endif
 
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)fs
