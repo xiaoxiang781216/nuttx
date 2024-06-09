@@ -279,20 +279,9 @@ struct task_tcb_s g_idletcb[CONFIG_SMP_NCPUS];
 
 /* This is the name of the idle task */
 
-#if CONFIG_TASK_NAME_SIZE <= 0 || !defined(CONFIG_SMP)
-#  ifdef CONFIG_SMP
-static const char g_idlename[] = "CPU_Idle";
-#  else
+#if CONFIG_TASK_NAME_SIZE > 0 && !defined(CONFIG_SMP)
 static const char g_idlename[] = "Idle_Task";
-#  endif
 #endif
-
-/* This is IDLE threads argument list.  NOTE: Normally the argument
- * list is created on the stack prior to starting the task.  We have to
- * do things little differently here for the IDLE tasks.
- */
-
-static FAR char *g_idleargv[CONFIG_SMP_NCPUS][2];
 
 /****************************************************************************
  * Public Functions
@@ -393,17 +382,6 @@ void nx_start(void)
       strlcpy(g_idletcb[i].cmn.name, g_idlename, CONFIG_TASK_NAME_SIZE);
 #  endif
 
-      /* Configure the task name in the argument list.  The IDLE task does
-       * not really have an argument list, but this name is still useful
-       * for things like the NSH PS command.
-       *
-       * In the kernel mode build, the arguments are saved on the task's
-       * stack and there is no support that yet.
-       */
-
-      g_idleargv[i][0] = g_idletcb[i].cmn.name;
-#else
-      g_idleargv[i][0] = (FAR char *)g_idlename;
 #endif /* CONFIG_TASK_NAME_SIZE */
 
       /* Then add the idle task's TCB to the head of the current ready to
@@ -532,7 +510,6 @@ void nx_start(void)
       /* Allocate the IDLE group */
 
       DEBUGVERIFY(group_allocate(&g_idletcb[i], g_idletcb[i].cmn.flags));
-      g_idletcb[i].cmn.group->tg_info->ta_argv = &g_idleargv[i][0];
 
 #ifdef CONFIG_SMP
       /* Create a stack for all CPU IDLE threads (except CPU0 which already
