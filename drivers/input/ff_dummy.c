@@ -112,7 +112,7 @@ int ff_dummy_initialize(int devno)
       return -ENOMEM;
     }
 
-  lower           = &ff_dummy_dev->lower;
+  lower           = &dev->lower;
   lower->upload   = ff_dummy_haptics_upload_effect;
   lower->playback = ff_dummy_haptics_playback;
   lower->set_gain = ff_dummy_haptics_set_gain;
