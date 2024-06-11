@@ -48,6 +48,8 @@
  *
  ****************************************************************************/
 
+#ifndef CONFIG_LIBC_ARCH_RAWMEMCHR
+#undef rawmemchr /* See mm/README.txt */
 FAR void *rawmemchr(FAR const void *s, int c)
 {
   if (c != '\0')
@@ -57,3 +59,4 @@ FAR void *rawmemchr(FAR const void *s, int c)
 
   return (FAR char *)s + strlen(s);
 }
+#endif
