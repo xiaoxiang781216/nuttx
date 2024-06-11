@@ -250,14 +250,14 @@ struct mm_heap_s *mm_initialize(const char *name,
  *
  ****************************************************************************/
 
-void mm_uninitialize(FAR struct mm_heap_s *heap)
+void mm_uninitialize(struct mm_heap_s *heap)
 {
   sched_note_heap(NOTE_HEAP_REMOVE, heap, NULL, 0, 0);
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   procfs_unregister_meminfo(&heap->mm_procfs);
 #endif
-  mm_free_delaylist(heap, true);
+  mm_free_delaylist(heap);
   host_free(heap);
 }
 
