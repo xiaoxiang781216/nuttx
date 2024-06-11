@@ -309,6 +309,13 @@ unsigned int arm64_gic_get_active_fiq(void)
 
   intid = read_sysreg(ICC_IAR0_EL1);
 
+  /* The ARM GICv3 specification states in 4.1.1 Physical CPU Interface:
+   * The effects of reading ICC_IAR0_EL1 and ICC_IAR1_EL1
+   * on the state of a returned INTID are not guaranteed
+   * to be visible until after the execution of a DSB.
+   */
+
+  ARM64_DSB();
   return intid;
 }
 #endif
