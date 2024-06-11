@@ -543,11 +543,7 @@ static inline void setcontrol(uint32_t control)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SMP
 int up_cpu_index(void) noinstrument_function;
-#else
-#  define up_cpu_index() 0
-#endif /* CONFIG_SMP */
 
 noinstrument_function
 static inline_function uint32_t *up_current_regs(void)
