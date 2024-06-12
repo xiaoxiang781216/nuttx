@@ -140,10 +140,6 @@ static void mempool_foreach(FAR struct mempool_s *pool,
         {
           buf = (FAR struct mempool_backtrace_s *)
                   pool->ibase + nblks * blocksize + pool->blocksize;
-          if (buf->magic == MEMPOOL_MAGIC_FREE)
-            {
-              continue;
-            }
 
           callback(pool, buf, input, output);
         }
@@ -158,11 +154,6 @@ static void mempool_foreach(FAR struct mempool_s *pool,
         {
           buf = (FAR struct mempool_backtrace_s *)
                   (base + nblks * blocksize + pool->blocksize);
-          if (buf->magic == MEMPOOL_MAGIC_FREE)
-            {
-              continue;
-            }
-
           callback(pool, buf, input, output);
         }
     }
@@ -176,6 +167,11 @@ static void mempool_info_task_callback(FAR struct mempool_s *pool,
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
   FAR const struct malltask *task = input;
   FAR struct mallinfo_task *info = output;
+
+  if (buf->magic == MEMPOOL_MAGIC_FREE)
+    {
+      return;
+    }
 
   if ((MM_DUMP_ASSIGN(task->pid, buf->pid) ||
        MM_DUMP_ALLOC(task->pid, buf->pid) ||
@@ -193,6 +189,11 @@ static void mempool_memdump_callback(FAR struct mempool_s *pool,
 {
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
   FAR const struct mm_memdump_s *dump = input;
+
+  if (buf->magic == MEMPOOL_MAGIC_FREE)
+    {
+      return;
+    }
 
   if ((MM_DUMP_ASSIGN(dump->pid, buf->pid) ||
        MM_DUMP_ALLOC(dump->pid, buf->pid) ||
@@ -219,6 +220,20 @@ static void mempool_memdump_callback(FAR struct mempool_s *pool,
              buf->pid, blocksize, buf->seqno,
              MM_PTR_FMT_WIDTH,
              ((FAR char *)buf - blocksize), tmp);
+    }
+}
+
+static void
+mempool_memdump_free_callback(FAR struct mempool_s *pool,
+                              FAR struct mempool_backtrace_s *buf,
+                              FAR const void *input, FAR void *output)
+{
+  size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
+
+  if (buf->magic == MEMPOOL_MAGIC_FREE)
+    {
+      syslog(LOG_INFO, "%12zu%*p\n",
+             blocksize, MM_PTR_FMT_WIDTH, ((FAR char *)buf - blocksize));
     }
 }
 #endif
@@ -570,29 +585,22 @@ mempool_info_task(FAR struct mempool_s *pool,
 void mempool_memdump(FAR struct mempool_s *pool,
                      FAR const struct mm_memdump_s *dump)
 {
-  size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
-
+#if CONFIG_MM_BACKTRACE >= 0
   if (dump->pid == PID_MM_FREE)
     {
-      FAR sq_entry_t *entry;
-
-      sq_for_every(&pool->queue, entry)
-        {
-          syslog(LOG_INFO, "%12zu%*p\n",
-                 blocksize, MM_PTR_FMT_WIDTH, (FAR char *)entry);
-        }
-
-      sq_for_every(&pool->iqueue, entry)
-        {
-          syslog(LOG_INFO, "%12zu%*p\n",
-                 blocksize, MM_PTR_FMT_WIDTH, (FAR char *)entry);
-        }
+      mempool_foreach(pool, mempool_memdump_free_callback, NULL, NULL);
     }
-#if CONFIG_MM_BACKTRACE >= 0
   else
     {
       mempool_foreach(pool, mempool_memdump_callback, dump, NULL);
     }
+#else
+  size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
+
+  /* Avoid race condition */
+
+  syslog(LOG_INFO, "%12zu%*p skip block dump\n",
+         blocksize, MM_PTR_FMT_WIDTH, pool);
 #endif
 }
 
