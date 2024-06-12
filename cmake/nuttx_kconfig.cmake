@@ -149,6 +149,9 @@ function(nuttx_generate_kconfig)
   foreach(SUB_CMAKESCRIPT ${SUB_CMAKESCRIPTS})
     string(REPLACE "CMakeLists.txt" "Kconfig" SUB_KCONFIG ${SUB_CMAKESCRIPT})
     string(REPLACE "/" "_" MENUCONFIG ${SUB_KCONFIG})
+    if(WIN32)
+      string(REPLACE ":" "_" MENUCONFIG ${MENUCONFIG})
+    endif()
     # check whether the subdirectory will include a generated Kconfig file.
     if(EXISTS ${NUTTX_APPS_BINDIR}/${MENUCONFIG})
       file(APPEND ${KCONFIG_OUTPUT_FILE}
