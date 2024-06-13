@@ -152,7 +152,8 @@ FAR void *memmem(FAR const void *haystack, size_t haystacklen,
           {
             last_haystack_chars <<= 8;
             last_haystack_chars ^= *haystack_ptr;
-            sums_diff -= *(FAR const unsigned char *)haystack++;
+            sums_diff -= *(FAR const unsigned char *)haystack;
+            haystack = (FAR const unsigned char *)haystack + 1;
             sums_diff += *haystack_ptr++;
             /* if sums_diff == 0, we know that the sums are equal, so it is
              * enough to compare all but the last characters.
@@ -201,7 +202,8 @@ FAR void *memmem(FAR const void *haystack, size_t haystacklen,
 
         for (i = haystacklen - needlelen; i > 0; --i)
           {
-            sums_diff -= *(FAR const unsigned char *)haystack++;
+            sums_diff -= *(FAR const unsigned char *)haystack;
+            haystack = (FAR const unsigned char *)haystack + 1;
             sums_diff += *haystack_ptr++;
             /* if sums_diff == 0, we know that the sums are equal, so it is
              * enough to compare all but the last characters.
