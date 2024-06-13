@@ -444,7 +444,7 @@ static int goldfish_gpu_fb_getplaneinfo(FAR struct fb_vtable_s *vtable,
 static int goldfish_gpu_fb_vsync_thread(int argc, FAR char** argv)
 {
   FAR struct goldfish_gpu_fb_s *fb = (FAR struct goldfish_gpu_fb_s *)
-                                ((uintptr_t)strtoul(argv[1], NULL, 0));
+                                ((uintptr_t)strtoul(argv[1], NULL, 16));
   union fb_paninfo_u info;
   clock_t last = 0;
 

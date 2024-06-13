@@ -331,7 +331,7 @@ static int rptun_thread(int argc, FAR char *argv[])
 {
   FAR struct rptun_priv_s *priv;
 
-  priv = (FAR struct rptun_priv_s *)((uintptr_t)strtoul(argv[2], NULL, 0));
+  priv = (FAR struct rptun_priv_s *)((uintptr_t)strtoul(argv[2], NULL, 16));
   priv->tid = nxsched_gettid();
 
   if (RPTUN_IS_AUTOSTART(priv->dev))
