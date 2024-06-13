@@ -81,7 +81,7 @@ static int irq_default_handler(int irq, FAR void *regs, FAR void *arg)
 
   if (vector)
     {
-      ret = vector(irq, regs, regs);
+      ret = vector(irq, regs, arg);
     }
 
   if (ret == IRQ_WAKE_THREAD)
