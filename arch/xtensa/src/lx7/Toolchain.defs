@@ -29,15 +29,15 @@
 #                   reliable code generation.
 #
 
-ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCC), y)
+ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCC),y)
   CROSSDEV = xt-
 endif
 
-ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCLANG), y)
+ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCLANG),y)
   CROSSDEV = xt-
 endif
 
-ifeq ($(CONFIG_XTENSA_TOOLCHAIN_ESP), y)
+ifeq ($(CONFIG_XTENSA_TOOLCHAIN_ESP),y)
   CROSSDEV = xtensa-$(CONFIG_ARCH_CHIP)-elf-
 endif
 
@@ -154,13 +154,15 @@ ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
 endif
 
 # Default toolchain
-ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCC), y)
+ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCC),y)
   ARCHCFLAGS += -Wno-atomic-alignment
   ARCHCXXFLAGS += -Wno-atomic-alignment
   CC = $(CROSSDEV)xcc
   CXX = $(CROSSDEV)xc++
   CPP = $(CROSSDEV)xcc -E -P -x c
-else ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCLANG), y)
+else ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCLANG),y)
+  ARCHCFLAGS += -Wno-atomic-alignment
+  ARCHCXXFLAGS += -Wno-atomic-alignment
   CC = $(CROSSDEV)clang
   CXX = $(CROSSDEV)clang++
   CPP = $(CROSSDEV)clang -E -P -x c
@@ -177,9 +179,26 @@ NM = $(CROSSDEV)nm
 OBJCOPY = $(CROSSDEV)objcopy
 OBJDUMP = $(CROSSDEV)objdump
 
+ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCLANG),y)
+  ARCHCFLAGS += -mtext-section-literals
+  ARCHPICFLAGS = -fpic
+endif
+
 # Add the builtin library
 
 EXTRA_LIBS += $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name))
+
+ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCLANG),y)
+  EXTRA_LIBPATHS += -L $(addsuffix /xtensa-elf/lib/xcc, $(shell $(CC) --show-config=config))
+  EXTRA_LIBS += -lgcc
+  ifeq ($(CONFIG_LIBSUPCXX),y)
+    EXTRA_LIBS += -lsupc++
+  endif
+  ifeq ($(CONFIG_LIBM_TOOLCHAIN),y)
+    EXTRA_LIBPATHS += -L $(addsuffix /xtensa-elf/lib, $(shell $(CC) --show-config=config))
+    EXTRA_LIBS += -lm
+  endif
+endif
 
 ifeq ($(CONFIG_LIBM_TOOLCHAIN),y)
   EXTRA_LIBS += $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libm.a))
