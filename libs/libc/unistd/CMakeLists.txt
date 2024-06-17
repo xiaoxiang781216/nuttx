@@ -62,6 +62,7 @@ set(SRCS
     lib_getpgrp.c
     lib_getpgid.c
     lib_lockf.c
+    lib_flock.c
     lib_getpass.c)
 
 if(NOT CONFIG_SCHED_USER_IDENTITY)
