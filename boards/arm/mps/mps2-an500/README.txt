@@ -28,6 +28,15 @@ Getting Started
    Running with qemu
    $ qemu-system-arm -M mps2-an500 -nographic -kernel nuttx.bin
 
+  2.2 Kernel protected mode
+  Configuring NuttX and compile:
+  $ ./tools/configure.sh -l mps2-an500:knsh
+  $ make
+  Runing with qemu
+  $ qemu-system-arm -M mps2-an500 -nographic -chardev stdio,id=con,mux=on \
+    -serial chardev:con -mon chardev=con,mode=readline -kernel ./nuttx \
+    -device loader,file=./nuttx_user.elf,addr=0x20000000
+
 Debugging with QEMU
 ===================
 
