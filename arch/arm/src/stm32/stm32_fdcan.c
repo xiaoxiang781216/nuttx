@@ -2766,7 +2766,7 @@ static void fdcan_error(struct can_dev_s *dev, uint32_t status)
 #ifdef CONFIG_CAN_EXTID
       hdr.ch_extid  = 0;
 #endif
-      hdr.ch_unused = 0;
+      hdr.ch_tcf    = 0;
 
       /* And provide the error report to the upper half logic */
 
@@ -2811,7 +2811,7 @@ static void fdcan_receive(struct can_dev_s *dev,
 #ifdef CONFIG_CAN_ERRORS
   hdr.ch_error  = 0;
 #endif
-  hdr.ch_unused = 0;
+  hdr.ch_tcf    = 0;
 
   /* Extract the RTR bit */
 
