@@ -45,22 +45,22 @@
  *   sockfd   - Any socket descriptor
  *   target   - Target address on the remote network (required)
  *   netmask  - Network mask defining the external network (required)
+ *   len      - The address struct length.
  *
  * Returned Value:
  *   OK on success; -1 on failure with the errno variable set appropriately.
  *
  ****************************************************************************/
 
-int delroute(int sockfd, FAR struct sockaddr_storage *target,
-             FAR struct sockaddr_storage *netmask)
+int delroute(int sockfd, FAR void *target, FAR void *netmask, socklen_t len)
 {
   struct rtentry entry;
 
   /* Set up the rtentry structure */
 
   memset(&entry, 0, sizeof(struct rtentry));
-  memcpy(&entry.rt_dst, target, sizeof(struct sockaddr_storage));
-  memcpy(&entry.rt_genmask, netmask, sizeof(struct sockaddr_storage));
+  memcpy(&entry.rt_dst, target, len);
+  memcpy(&entry.rt_genmask, netmask, len);
 
   /* Then perform the ioctl */
 
