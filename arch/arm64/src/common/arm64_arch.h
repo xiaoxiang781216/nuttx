@@ -26,6 +26,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <arch/arch.h>
 
 /* Unsigned integer with bit position n set (signed in
  * assembly language).
@@ -385,47 +386,6 @@ static inline void arch_nop(void)
                       : "=r" (__el));     \
     __ret = GET_EL(__el);                 \
     __ret;                                \
-  })
-
-/****************************************************************************
- * Name:
- *   read_/write_/zero_ sysreg
- *
- * Description:
- *
- *   ARMv8 Architecture Registers access method
- *   All the macros need a memory clobber
- *
- ****************************************************************************/
-
-#define read_sysreg(reg)                         \
-  ({                                             \
-    uint64_t __val;                              \
-    __asm__ volatile ("mrs %0, " STRINGIFY(reg)  \
-                    : "=r" (__val) :: "memory"); \
-    __val;                                       \
-  })
-
-#define read_sysreg_dump(reg)                    \
-  ({                                             \
-    uint64_t __val;                              \
-    __asm__ volatile ("mrs %0, " STRINGIFY(reg)  \
-                    : "=r" (__val) :: "memory"); \
-    sinfo("%s, regval=0x%llx\n",                 \
-          STRINGIFY(reg), __val);                \
-    __val;                                       \
-  })
-
-#define write_sysreg(__val, reg)                   \
-  ({                                               \
-    __asm__ volatile ("msr " STRINGIFY(reg) ", %0" \
-                      : : "r" (__val) : "memory"); \
-  })
-
-#define zero_sysreg(reg)                            \
-  ({                                                \
-    __asm__ volatile ("msr " STRINGIFY(reg) ", xzr" \
-                      ::: "memory");                \
   })
 
 #define modreg8(v,m,a)  putreg8((getreg8(a) & ~(m)) | ((v) & (m)), (a))
