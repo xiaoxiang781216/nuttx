@@ -415,7 +415,7 @@ static int pmuv3_get_event_idx(FAR struct pmu_hw_events_s *cpuc,
 static void pmuv3_clear_event_idx(FAR struct pmu_hw_events_s *cpuc,
                                      FAR struct perf_event_s *event)
 {
-  __clear_bit(event->hw.idx, &cpuc->used_mask);
+  clear_bit(event->hw.idx, &cpuc->used_mask);
 }
 
 static int pmuv3_event_idx(FAR struct perf_event_s *event)
