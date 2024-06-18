@@ -33,9 +33,29 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define backtrace(buffer, size) sched_backtrace(_SCHED_GETTID(), \
+/* 3: ' 0x' prefix */
+
+#define BACKTRACE_PTR_FMT_WIDTH ((int)sizeof(uintptr_t) * 2 + 3)
+
+#define backtrace(buffer, size) sched_backtrace(_SCHED_GETTID(),      \
                                                 buffer, size, 0)
 #define dump_stack()            sched_dumpstack(_SCHED_GETTID())
+
+/* Format a backtrace into a buffer for dumping. */
+
+#define backtrace_format(buf, buflen, backtrace, depth)               \
+do                                                                    \
+  {                                                                   \
+    FAR const char *format = " %0*p";                                 \
+    int i;                                                            \
+    for (i = 0; i < depth && backtrace[i]; i++)                       \
+      {                                                               \
+        snprintf(buf + i * BACKTRACE_PTR_FMT_WIDTH,                   \
+                 buflen - i * BACKTRACE_PTR_FMT_WIDTH,                \
+                 format, BACKTRACE_PTR_FMT_WIDTH - 1, backtrace[i]);  \
+      }                                                               \
+  }                                                                   \
+while(0)
 
 /****************************************************************************
  * Public Function Prototypes
