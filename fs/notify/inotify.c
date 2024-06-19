@@ -86,6 +86,14 @@ struct inotify_watch_s
   FAR struct inotify_watch_list_s *list;    /* Associated watch list */
 };
 
+struct inotify_global_s
+{
+  mutex_t lock;               /* Enforces global exclusive access */
+  int     event_cookie;       /* Event cookie */
+  int     watch_cookie;       /* Watch cookie */
+  struct  hsearch_data hash;  /* Hash table for watch lists */
+};
+
 /****************************************************************************
  * Private Functions Prototypes
  ****************************************************************************/
@@ -128,10 +136,10 @@ static struct inode g_inotify_inode =
   }
 };
 
-static int g_inotify_event_cookie;
-static int g_inotify_watch_cookie;
-static struct hsearch_data g_inotify_hash;
-static mutex_t g_inotify_hash_lock = NXMUTEX_INITIALIZER;
+static struct inotify_global_s g_inotify =
+{
+  .lock = NXMUTEX_INITIALIZER,
+};
 
 /****************************************************************************
  * Private Functions
@@ -260,7 +268,7 @@ inotify_remove_watch_no_event(FAR struct inotify_watch_s *watch)
     {
       ENTRY item;
       item.key = list->path;
-      hsearch_r(item, DELETE, NULL, &g_inotify_hash);
+      hsearch_r(item, DELETE, NULL, &g_inotify.hash);
     }
 }
 
@@ -498,12 +506,12 @@ static int inotify_close(FAR struct file *filep)
 {
   FAR struct inotify_device_s *dev = filep->f_priv;
 
-  nxmutex_lock(&g_inotify_hash_lock);
+  nxmutex_lock(&g_inotify.lock);
   nxmutex_lock(&dev->lock);
   if (--dev->count > 0)
     {
       nxmutex_unlock(&dev->lock);
-      nxmutex_unlock(&g_inotify_hash_lock);
+      nxmutex_unlock(&g_inotify.lock);
       return OK;
     }
 
@@ -527,7 +535,7 @@ static int inotify_close(FAR struct file *filep)
     }
 
   nxmutex_unlock(&dev->lock);
-  nxmutex_unlock(&g_inotify_hash_lock);
+  nxmutex_unlock(&g_inotify.lock);
   nxmutex_destroy(&dev->lock);
   nxsem_destroy(&dev->sem);
   kmm_free(dev);
@@ -607,7 +615,7 @@ inotify_alloc_watch(FAR struct inotify_device_s *dev,
 
   watch->dev = dev;
   watch->mask = mask;
-  watch->wd = ++g_inotify_watch_cookie;
+  watch->wd = ++g_inotify.watch_cookie;
   watch->list = list;
   list_add_tail(&dev->watches, &watch->d_node);
   list_add_tail(&list->watches, &watch->l_node);
@@ -700,7 +708,7 @@ inotify_alloc_watch_list(FAR const char *path)
 
   item.key = list->path;
   item.data = list;
-  if (hsearch_r(item, ENTER, &result, &g_inotify_hash) == 0)
+  if (hsearch_r(item, ENTER, &result, &g_inotify.hash) == 0)
     {
       lib_free(list->path);
       kmm_free(list);
@@ -725,7 +733,7 @@ inotify_get_watch_list(FAR const char *path)
   ENTRY item;
 
   item.key = (FAR char *)path;
-  if (hsearch_r(item, FIND, &result, &g_inotify_hash) == 0)
+  if (hsearch_r(item, FIND, &result, &g_inotify.hash) == 0)
     {
       return NULL;
     }
@@ -841,10 +849,10 @@ static void notify_queue_path_event(FAR const char *path, uint32_t mask)
     {
       if (mask & IN_MOVED_FROM)
         {
-          ++g_inotify_event_cookie;
+          ++g_inotify.event_cookie;
         }
 
-      cookie = g_inotify_event_cookie;
+      cookie = g_inotify.event_cookie;
     }
 
   list = inotify_get_watch_list(abspath);
@@ -941,10 +949,10 @@ static inline void notify_queue_filep_event(FAR struct file *filep,
       mask |= IN_ISDIR;
     }
 
-  nxmutex_lock(&g_inotify_hash_lock);
+  nxmutex_lock(&g_inotify.lock);
   notify_queue_path_event(pathbuffer, mask);
   lib_put_pathbuffer(pathbuffer);
-  nxmutex_unlock(&g_inotify_hash_lock);
+  nxmutex_unlock(&g_inotify.lock);
 }
 
 /****************************************************************************
@@ -1015,7 +1023,7 @@ int inotify_add_watch(int fd, FAR const char *pathname, uint32_t mask)
       goto out_free;
     }
 
-  nxmutex_lock(&g_inotify_hash_lock);
+  nxmutex_lock(&g_inotify.lock);
   nxmutex_lock(&dev->lock);
   list = inotify_get_watch_list(abspath);
   if (list == NULL)
@@ -1054,7 +1062,7 @@ int inotify_add_watch(int fd, FAR const char *pathname, uint32_t mask)
         {
           ENTRY item;
           item.key = list->path;
-          hsearch_r(item, DELETE, NULL, &g_inotify_hash);
+          hsearch_r(item, DELETE, NULL, &g_inotify.hash);
           ret = -ENOMEM;
           goto out;
         }
@@ -1064,7 +1072,7 @@ int inotify_add_watch(int fd, FAR const char *pathname, uint32_t mask)
 
 out:
   nxmutex_unlock(&dev->lock);
-  nxmutex_unlock(&g_inotify_hash_lock);
+  nxmutex_unlock(&g_inotify.lock);
 
 out_free:
   fs_putfilep(filep);
@@ -1108,13 +1116,13 @@ int inotify_rm_watch(int fd, int wd)
       return ERROR;
     }
 
-  nxmutex_lock(&g_inotify_hash_lock);
+  nxmutex_lock(&g_inotify.lock);
   nxmutex_lock(&dev->lock);
   watch = inotify_find_watch(dev, wd);
   if (watch == NULL)
     {
       nxmutex_unlock(&dev->lock);
-      nxmutex_unlock(&g_inotify_hash_lock);
+      nxmutex_unlock(&g_inotify.lock);
       fs_putfilep(filep);
       set_errno(EINVAL);
       return ERROR;
@@ -1122,7 +1130,7 @@ int inotify_rm_watch(int fd, int wd)
 
   inotify_remove_watch(dev, watch);
   nxmutex_unlock(&dev->lock);
-  nxmutex_unlock(&g_inotify_hash_lock);
+  nxmutex_unlock(&g_inotify.lock);
   fs_putfilep(filep);
   return OK;
 }
@@ -1217,7 +1225,7 @@ void notify_initialize(void)
 {
   int ret;
 
-  ret = hcreate_r(CONFIG_FS_NOTIFY_BUCKET_SIZE, &g_inotify_hash);
+  ret = hcreate_r(CONFIG_FS_NOTIFY_BUCKET_SIZE, &g_inotify.hash);
   if (ret != 1)
     {
       ferr("Failed to create hash table\n");
@@ -1246,9 +1254,9 @@ void notify_open(FAR const char *path, int oflags)
       mask |= IN_CREATE;
     }
 
-  nxmutex_lock(&g_inotify_hash_lock);
+  nxmutex_lock(&g_inotify.lock);
   notify_queue_path_event(path, mask);
-  nxmutex_unlock(&g_inotify_hash_lock);
+  nxmutex_unlock(&g_inotify.lock);
 }
 
 /****************************************************************************
@@ -1289,14 +1297,14 @@ void notify_close2(FAR struct inode *inode)
       return;
     }
 
-  nxmutex_lock(&g_inotify_hash_lock);
+  nxmutex_lock(&g_inotify.lock);
   if (inode_getpath(inode, pathbuffer, PATH_MAX) >= 0)
     {
       notify_queue_path_event(pathbuffer, IN_CLOSE_WRITE);
     }
 
   lib_put_pathbuffer(pathbuffer);
-  nxmutex_unlock(&g_inotify_hash_lock);
+  nxmutex_unlock(&g_inotify.lock);
 }
 
 /****************************************************************************
@@ -1348,9 +1356,9 @@ void notify_chstat(FAR struct file *filep)
 
 void notify_unlink(FAR const char *path)
 {
-  nxmutex_lock(&g_inotify_hash_lock);
+  nxmutex_lock(&g_inotify.lock);
   notify_queue_path_event(path, IN_DELETE);
-  nxmutex_unlock(&g_inotify_hash_lock);
+  nxmutex_unlock(&g_inotify.lock);
 }
 
 /****************************************************************************
@@ -1363,9 +1371,9 @@ void notify_unlink(FAR const char *path)
 
 void notify_unmount(FAR const char *path)
 {
-  nxmutex_lock(&g_inotify_hash_lock);
+  nxmutex_lock(&g_inotify.lock);
   notify_queue_path_event(path, IN_DELETE | IN_UNMOUNT);
-  nxmutex_unlock(&g_inotify_hash_lock);
+  nxmutex_unlock(&g_inotify.lock);
 }
 
 /****************************************************************************
@@ -1378,9 +1386,9 @@ void notify_unmount(FAR const char *path)
 
 void notify_mkdir(FAR const char *path)
 {
-  nxmutex_lock(&g_inotify_hash_lock);
+  nxmutex_lock(&g_inotify.lock);
   notify_queue_path_event(path, IN_CREATE | IN_ISDIR);
-  nxmutex_unlock(&g_inotify_hash_lock);
+  nxmutex_unlock(&g_inotify.lock);
 }
 
 /****************************************************************************
@@ -1393,9 +1401,9 @@ void notify_mkdir(FAR const char *path)
 
 void notify_create(FAR const char *path)
 {
-  nxmutex_lock(&g_inotify_hash_lock);
+  nxmutex_lock(&g_inotify.lock);
   notify_queue_path_event(path, IN_CREATE);
-  nxmutex_unlock(&g_inotify_hash_lock);
+  nxmutex_unlock(&g_inotify.lock);
 }
 
 /****************************************************************************
@@ -1422,8 +1430,8 @@ void notify_rename(FAR const char *oldpath, bool oldisdir,
       oldmask |= IN_ISDIR;
     }
 
-  nxmutex_lock(&g_inotify_hash_lock);
+  nxmutex_lock(&g_inotify.lock);
   notify_queue_path_event(oldpath, oldmask);
   notify_queue_path_event(newpath, newmask);
-  nxmutex_unlock(&g_inotify_hash_lock);
+  nxmutex_unlock(&g_inotify.lock);
 }
