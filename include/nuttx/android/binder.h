@@ -171,7 +171,7 @@ struct binder_object_header
  * between processes.
  */
 
-struct flat_binder_object
+begin_packed_struct struct flat_binder_object
 {
   struct binder_object_header hdr;
   uint32_t flags;
@@ -187,7 +187,7 @@ struct flat_binder_object
   /* Extra data associated with local object */
 
   binder_uintptr_t cookie;
-};
+} end_packed_struct;
 
 /**
  * struct binder_fd_object - describes a filedescriptor to be fixed up.
@@ -398,7 +398,7 @@ enum transaction_flags
   TF_UPDATE_TXN  = 0x40, /* Update the outdated pending async txn */
 };
 
-struct binder_transaction_data
+begin_packed_struct struct binder_transaction_data
 {
   /* The first two are only used for bcTRANSACTION and brTRANSACTION,
    * identifying the target and contents of the transaction.
@@ -444,7 +444,7 @@ struct binder_transaction_data
     } ptr;
     uint8_t buf[8];
   } data;
-};
+} end_packed_struct;
 
 struct binder_transaction_data_secctx
 {
