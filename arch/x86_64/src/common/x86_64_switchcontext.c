@@ -57,6 +57,8 @@
 
 void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 {
+  int cpu;
+
   /* Update scheduler parameters */
 
   nxsched_suspend_scheduler(rtcb);
@@ -110,6 +112,13 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
       /* Restore the cpu lock */
 
       restore_critical_section(tcb, this_cpu());
+
+      /* Record the new "running" task.  g_running_tasks[] is only used by
+       * assertion logic for reporting crashes.
+       */
+
+      cpu = this_cpu();
+      g_running_tasks[cpu] = current_task(cpu);
 
       /* Then switch contexts */
 
