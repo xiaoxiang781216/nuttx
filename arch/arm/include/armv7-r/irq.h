@@ -501,8 +501,10 @@ static inline_function int up_cpu_index(void)
 
   return (mpidr & MPIDR_CPUID_MASK) >> MPIDR_CPUID_SHIFT;
 }
+#  define this_cpu() up_cpu_index()
 #else
 int up_cpu_index(void);
+#  define this_cpu() 0
 #endif /* CONFIG_SMP */
 
 noinstrument_function

@@ -105,6 +105,8 @@ int up_cpu_index(void);
 #  define up_cpu_index() (0)
 #endif
 
+#define this_cpu() up_cpu_index()
+
 /* Name: up_irq_save, up_irq_restore, and friends.
  *
  * NOTE: These functions should never be called from application code and,

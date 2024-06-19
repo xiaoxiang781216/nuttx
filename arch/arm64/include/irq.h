@@ -422,6 +422,8 @@ static inline void up_irq_restore(irqstate_t flags)
 #  define up_cpu_index() (0)
 #endif
 
+#define this_cpu() up_cpu_index()
+
 static inline_function uint64_t *up_current_regs(void)
 {
   uint64_t *regs;

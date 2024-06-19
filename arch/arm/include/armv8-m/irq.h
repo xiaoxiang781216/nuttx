@@ -545,15 +545,21 @@ static inline void setcontrol(uint32_t control)
 
 int up_cpu_index(void) noinstrument_function;
 
+#ifdef CONFIG_SMP
+#  define this_cpu() up_cpu_index()
+#else
+#  define this_cpu() 0
+#endif
+
 noinstrument_function
 static inline_function uint32_t *up_current_regs(void)
 {
-  return (uint32_t *)g_current_regs[up_cpu_index()];
+  return (uint32_t *)g_current_regs[this_cpu()];
 }
 
 static inline_function void up_set_current_regs(uint32_t *regs)
 {
-  g_current_regs[up_cpu_index()] = regs;
+  g_current_regs[this_cpu()] = regs;
 }
 
 noinstrument_function

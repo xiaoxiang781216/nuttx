@@ -98,6 +98,8 @@ int up_cpu_index(void) noinstrument_function;
 #  define up_cpu_index() (0)
 #endif
 
+#define this_cpu() up_cpu_index()
+
 /****************************************************************************
  * Name: up_irq_enable
  *
