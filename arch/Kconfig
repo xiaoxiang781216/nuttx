@@ -290,6 +290,10 @@ config ARCH_TOOLCHAIN_TASKING
 	bool
 	default n
 
+config ARCH_TOOLCHAIN_GHS
+    bool
+    default n
+
 choice
 	prompt "Link Time Optimization (LTO)"
 	default LTO_NONE
