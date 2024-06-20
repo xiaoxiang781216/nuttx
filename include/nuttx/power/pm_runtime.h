@@ -28,7 +28,7 @@
 #include <nuttx/config.h>
 
 #include <nuttx/wqueue.h>
-#include <nuttx/spinlock.h>
+#include <nuttx/mutex.h>
 
 #ifdef CONFIG_PM_RUNTIME
 
@@ -50,7 +50,7 @@ typedef enum
 struct pm_runtime_ops_s;
 struct pm_runtime_s
 {
-  spinlock_t lock;
+  rmutex_t lock;
   unsigned int use_count;
   rpm_state_e state;
   unsigned int suspend_delay;
