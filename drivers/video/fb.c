@@ -941,11 +941,12 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
           memcpy(&paninfo, pinfo, sizeof(*pinfo));
 
-          ret = fb_add_paninfo(fb, &paninfo, FB_NO_OVERLAY);
           if (fb->vtable->pandisplay != NULL)
             {
               fb->vtable->pandisplay(fb->vtable, pinfo);
             }
+
+          ret = fb_add_paninfo(fb, &paninfo, FB_NO_OVERLAY);
         }
         break;
 
