@@ -53,6 +53,11 @@ ifeq ($(CONFIG_FRAME_POINTER),y)
   ARCHOPTIMIZATION += -fno-omit-frame-pointer -fno-optimize-sibling-calls
 endif
 
+ifeq ($(CONFIG_ARCH_INTEL64_DISABLE_CET),y)
+  ARCHOPTIMIZATION += -fcf-protection=none
+endif
+
+
 ARCHCFLAGS += -fno-common -Wno-attributes
 ARCHCXXFLAGS += -fno-common -Wno-attributes -nostdinc++
 
