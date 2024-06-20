@@ -25,6 +25,11 @@ include $(TOPDIR)/arch/xtensa/src/lx7/Toolchain.defs
 LDSCRIPT = elf32xtensa.x
 ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
 
+ARCHCFLAGS += -mtext-section-literals
+
+EXTRA_LIBPATHS += -L $(addsuffix /xtensa-elf/lib/xcc, $(shell $(CC) --show-config=config))
+EXTRA_LIBS += -lgcc
+
 CFLAGS := $(ARCHCFLAGS) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS) -pipe
 CPICFLAGS = $(ARCHPICFLAGS) $(CFLAGS)
 CXXFLAGS := $(ARCHCXXFLAGS) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) $(ARCHXXINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS) -pipe
