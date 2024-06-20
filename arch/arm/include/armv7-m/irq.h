@@ -591,7 +591,7 @@ static inline_function bool up_interrupt_context(void)
 
 static inline_function uint32_t up_getsp(void)
 {
-  register uint32_t sp;
+  uint32_t sp;
 
   __asm__ __volatile__
   (
