@@ -146,10 +146,18 @@ void mm_memdump(FAR struct mm_heap_s *heap,
       FAR const char *name = "Unknown";
 #endif
 
-      syslog(LOG_INFO, "Memdump task name: %s,"
-                       " stack_alloc_ptr: %p,"
-                       " adj_stack_size: %zu\n",
-                       name, tcb->stack_alloc_ptr, tcb->adj_stack_size);
+      if (tcb == NULL)
+        {
+          syslog(LOG_INFO, "Memdump task name: %s", name);
+        }
+      else
+        {
+          syslog(LOG_INFO, "Memdump task name: %s,"
+                           " stack_alloc_ptr: %p,"
+                           " adj_stack_size: %zu\n",
+                           name, tcb->stack_alloc_ptr, tcb->adj_stack_size);
+        }
+
 #if CONFIG_MM_BACKTRACE < 0
       syslog(LOG_INFO, "%12s%*s\n", "Size", BACKTRACE_PTR_FMT_WIDTH,
              "Address");
