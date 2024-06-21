@@ -6,7 +6,7 @@
  * macros, etc.) for this specific Xtensa processor's TIE extensions
  * and options.  It is customized to this Xtensa processor configuration.
  *
- * Customer ID=20226; Build=0xb1e50;
+ * Customer ID=20226; Build=0xb2b8e;
  * Copyright (c) 1999-2024 Cadence Design Systems Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
