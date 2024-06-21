@@ -185,13 +185,23 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
    * exceeded in that case.
    */
 
-  if (msgq->nmsgs >= msgq->maxmsgs && !up_interrupt_context())
+  if (msgq->nmsgs >= msgq->maxmsgs)
     {
       /* Do the send with no further checks (possibly exceeding maxmsgs)
        * Currently nxmq_do_send() always returns OK.
        */
 
       leave_critical_section(flags);
+
+      if (up_interrupt_context())
+        {
+          /* In an interrupt handler and the message queue is full.
+           * We cannot wait for the message queue to become non-full
+           * We will have to fail.
+           */
+
+          return -EAGAIN;
+        }
 
       /* We are not in an interrupt handler and the message queue is full.
        * Set up a timed wait for the message queue to become non-full.

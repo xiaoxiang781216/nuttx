@@ -97,18 +97,22 @@ int file_mq_send(FAR struct file *mq, FAR const char *msg, size_t msglen,
 
   flags = enter_critical_section();
 
-  if (!up_interrupt_context())           /* In an interrupt handler? */
+  if (msgq->nmsgs >= msgq->maxmsgs)
     {
-      /* No.. Not in an interrupt handler.  Is the message queue FULL? */
-
-      if (msgq->nmsgs >= msgq->maxmsgs)
+      if (up_interrupt_context())
         {
-          /* Yes.. the message queue is full.  Wait for space to become
-           * available in the message queue.
+          /* In an interrupt handler and the message queue is full.
+           * We cannot wait for the message queue to become non-full
+           * We will have to fail.
            */
 
-          ret = nxmq_wait_send(msgq, mq->f_oflags);
+          leave_critical_section(flags);
+          return -EAGAIN;
         }
+
+      /* Wait for space to become available in the message queue.  */
+
+      ret = nxmq_wait_send(msgq, mq->f_oflags);
     }
 
   /* ret can only be negative if nxmq_wait_send failed */
