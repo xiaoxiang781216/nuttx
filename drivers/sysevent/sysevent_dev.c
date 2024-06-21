@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/lib/math32.h>
 #include <sched.h>
 #include <poll.h>
 #include <strings.h>
@@ -86,11 +87,6 @@ static const struct file_operations g_sysevent_dev_fops =
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
-
-static inline unsigned int roundup_pow_of_two(unsigned int n)
-{
-  return 1 << fls(n - 1);
-}
 
 static inline unsigned int kfifo_avail(FAR struct kfifo_s *fifo)
 {
