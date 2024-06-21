@@ -65,7 +65,6 @@ function setup_environment()
       "libasound2-plugins:i386" \
       "libusb-1.0-0-dev" \
       "libusb-1.0-0-dev:i386" \
-      "libmad0-dev:i386" \
       "libv4l-dev" \
       "libv4l-dev:i386" \
       "libuv1-dev" \
