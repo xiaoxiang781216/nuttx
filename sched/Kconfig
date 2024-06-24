@@ -774,7 +774,6 @@ config SCHED_DUMP_LEAK
 config SCHED_DUMP_ON_EXIT
 	bool "Dump all tasks state on exit"
 	default n
-	depends on DEBUG_SCHED_INFO
 	---help---
 		Dump all tasks state on exit()
 
