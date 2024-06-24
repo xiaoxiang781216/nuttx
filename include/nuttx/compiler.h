@@ -962,6 +962,7 @@
 #  define scanf_like(a, b)
 #  define strftime_like(a)
 #  define object_size(o, t) ((size_t)-1)
+#  define typeof __typeof__
 
 #  define FAR
 #  define NEAR
