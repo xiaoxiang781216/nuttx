@@ -882,6 +882,10 @@ int nx_close_from_tcb(FAR struct tcb_s *tcb, int fd)
 
   list = nxsched_get_files_from_tcb(tcb);
 
+  /* Check the close file after group release */
+
+  DEBUGASSERT(list);
+
   /* Perform the protected close operation */
 
   if (fd < 0 || fd >= files_countlist(list))
