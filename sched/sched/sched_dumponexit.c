@@ -33,7 +33,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_DUMP_ON_EXIT
+#ifdef CONFIG_SCHED_DUMP_ON_EXIT
 
 /****************************************************************************
  * Private Functions
@@ -94,4 +94,4 @@ void nxsched_dumponexit(void)
   nxsched_foreach(dumphandler, NULL);
 }
 
-#endif /* CONFIG_DUMP_ON_EXIT */
+#endif /* CONFIG_SCHED_DUMP_ON_EXIT */
