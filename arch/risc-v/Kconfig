@@ -87,6 +87,7 @@ config ARCH_CHIP_ESP32C3
 	select ARCH_HAVE_TEXT_HEAP
 	select ARCH_HAVE_BOOTLOADER
 	select ARCH_HAVE_PERF_EVENTS
+	select ARCH_HAVE_DEBUG
 	---help---
 		Espressif ESP32-C3 (RV32IMC).
 
@@ -174,6 +175,7 @@ config ARCH_CHIP_QEMU_RV
 	select ARCH_HAVE_S_MODE
 	select ONESHOT
 	select ALARM_ARCH
+	select ARCH_HAVE_DEBUG
 	---help---
 		QEMU Generic RV32/RV64 processor
 
