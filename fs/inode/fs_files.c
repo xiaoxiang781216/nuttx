@@ -27,6 +27,7 @@
 #include <sys/types.h>
 #include <string.h>
 #include <assert.h>
+#include <execinfo.h>
 #include <sched.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -35,6 +36,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/cancelpt.h>
+#include <nuttx/fs/ioctl.h>
 #include <nuttx/mutex.h>
 #include <nuttx/sched.h>
 #include <nuttx/spawn.h>
@@ -348,6 +350,60 @@ void files_initlist(FAR struct filelist *list)
   list->fl_rows = 1;
   list->fl_files = &list->fl_prefile;
   list->fl_prefile = list->fl_prefiles;
+}
+
+/****************************************************************************
+ * Name: files_dumplist
+ *
+ * Description:
+ *   Dump the list of files.
+ *
+ ****************************************************************************/
+
+void files_dumplist(FAR struct filelist *list)
+{
+  int count = files_countlist(list);
+  int i;
+
+  for (i = 0; i < count; i++)
+    {
+      FAR struct file *filep = files_fget(list, i);
+      char path[PATH_MAX];
+
+#if CONFIG_FS_BACKTRACE > 0
+      char buf[CONFIG_FS_BACKTRACE * BACKTRACE_PTR_FMT_WIDTH + 1] = "";
+#endif
+
+      /* Is there an inode associated with the file descriptor? */
+
+      if (!filep)
+        {
+          continue;
+        }
+
+      if (file_ioctl(filep, FIOC_FILEPATH, path) < 0)
+        {
+          path[0] = '\0';
+        }
+
+#if CONFIG_FS_BACKTRACE > 0
+      backtrace_format(buf, sizeof(buf), filep->backtrace,
+                       CONFIG_FS_BACKTRACE);
+#endif
+
+      syslog(LOG_INFO, "fd: %-3d, oflags: %-7d type: %-4x pos: %-9ld"
+             "path: %s"
+#if CONFIG_FS_BACKTRACE > 0
+            " BACKTRACE: %s"
+#endif
+            "\n", i, filep->f_oflags, INODE_GET_TYPE(filep->f_inode),
+            (long)filep->f_pos, path
+#if CONFIG_FS_BACKTRACE > 0
+            , buf
+#endif
+            );
+      fs_putfilep(filep);
+    }
 }
 
 /****************************************************************************
