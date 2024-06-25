@@ -261,7 +261,7 @@ static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
 #endif
                      );
 
-      tcbstack_sp = up_current_regs() ?
+      tcbstack_sp = up_interrupt_context() ?
                     up_getusrsp((FAR void *)up_current_regs()) : 0;
       if (tcbstack_sp < tcbstack_base || tcbstack_sp >= tcbstack_top)
         {
