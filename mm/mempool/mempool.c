@@ -527,7 +527,6 @@ mempool_info_task(FAR struct mempool_s *pool,
                   FAR const struct malltask *task)
 {
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
-  irqstate_t flags = spin_lock_irqsave(&pool->lock);
   struct mallinfo_task info =
     {
       0, 0
@@ -535,8 +534,11 @@ mempool_info_task(FAR struct mempool_s *pool,
 
   if (task->pid == PID_MM_FREE)
     {
+      irqstate_t flags = spin_lock_irqsave(&pool->lock);
       size_t count = sq_count(&pool->queue) +
                      sq_count(&pool->iqueue);
+
+      spin_unlock_irqrestore(&pool->lock, flags);
       info.aordblks += count;
       info.uordblks += count * blocksize;
     }
@@ -552,7 +554,6 @@ mempool_info_task(FAR struct mempool_s *pool,
     }
 #endif
 
-  spin_unlock_irqrestore(&pool->lock, flags);
   return info;
 }
 
