@@ -57,10 +57,14 @@ endif()
 
 if(CONFIG_ARCH_HAVE_MPU)
   list(APPEND SRCS arm64_mpu.c)
+  set_source_files_properties(
+    arm64_mpu.c TARGET_DIRECTORY arch
+    PROPERTIES COMPILE_FLAGS -fno-sanitize=kernel-hwaddress
+               -fno-sanitize=kernel-address)
 endif()
 
 if(CONFIG_ARM64_PSCI)
-  list(APPEND SRCS arm64_cpu_psci.c arm64_systemreset.c)
+  list(APPEND SRCS arm64_cpu_psci.c)
 endif()
 
 if(CONFIG_SMP)
