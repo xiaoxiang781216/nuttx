@@ -22,6 +22,10 @@ ifeq ($(CONFIG_LIBC_ARCH_ELF),y)
 CSRCS += arch_elf64.c
 endif
 
+ifeq ($(CONFIG_ARCH_SETJMP_H),y)
+ASRCS += arch_setjmp_x86_64.S
+endif
+
 ifeq ($(CONFIG_X86_64_MEMCHR),y)
   ifeq ($(CONFIG_ARCH_X86_64_AVX),y)
     ASRCS += arch_memchr_avx2.S
