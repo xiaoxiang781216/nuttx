@@ -66,7 +66,7 @@ int sysdiag_write(enum diagnosis_tag_e diag_id, FAR const char *fmt, ...)
 
   event.header.id = diag_id;
   event.header.type = EVENT_TYPE_KERNEL;
-  memcpy(event.header.format, fmt, strlen(fmt));
+  strlcpy(event.header.format, fmt, EVENT_MAX_FORMART_SIZE);
   strcpy(event.header.core, "local");
   clock_gettime(CLOCK_REALTIME, &timestamp);
   event.header.time = timestamp.tv_sec;
