@@ -27,6 +27,8 @@
 
 #include <nuttx/sched.h>
 
+#include <assert.h>
+#include <stdio.h>
 #include <sys/types.h>
 
 /****************************************************************************
@@ -35,26 +37,32 @@
 
 /* 3: ' 0x' prefix */
 
-#define BACKTRACE_PTR_FMT_WIDTH ((int)sizeof(uintptr_t) * 2 + 3)
+#define BACKTRACE_PTR_FMT_WIDTH  ((int)sizeof(uintptr_t) * 2 + 3)
 
-#define backtrace(buffer, size) sched_backtrace(_SCHED_GETTID(),      \
-                                                buffer, size, 0)
-#define dump_stack()            sched_dumpstack(_SCHED_GETTID())
+/* Buffer size needed to hold formatted `depth` backtraces */
+
+#define BACKTRACE_BUFFER_SIZE(d) (BACKTRACE_PTR_FMT_WIDTH * (d) + 1)
+
+#define backtrace(b, s) sched_backtrace(_SCHED_GETTID(), b, s, 0)
+#define dump_stack()    sched_dumpstack(_SCHED_GETTID())
 
 /* Format a backtrace into a buffer for dumping. */
 
-#define backtrace_format(buf, buflen, backtrace, depth)               \
-do                                                                    \
-  {                                                                   \
-    FAR const char *format = " %0*p";                                 \
-    int i;                                                            \
-    for (i = 0; i < depth && backtrace[i]; i++)                       \
-      {                                                               \
-        snprintf(buf + i * BACKTRACE_PTR_FMT_WIDTH,                   \
-                 buflen - i * BACKTRACE_PTR_FMT_WIDTH,                \
-                 format, BACKTRACE_PTR_FMT_WIDTH - 1, backtrace[i]);  \
-      }                                                               \
-  }                                                                   \
+#define backtrace_format(buf, buflen, backtrace, depth)              \
+do                                                                   \
+  {                                                                  \
+    FAR const char *format = "%0*p ";                                \
+    int i;                                                           \
+                                                                     \
+    DEBUGASSERT(buflen >= BACKTRACE_BUFFER_SIZE(depth));             \
+    buf[0] = '\0';                                                   \
+    for (i = 0; i < depth && backtrace[i]; i++)                      \
+      {                                                              \
+        snprintf(buf + i * BACKTRACE_PTR_FMT_WIDTH,                  \
+                 buflen - i * BACKTRACE_PTR_FMT_WIDTH,               \
+                 format, BACKTRACE_PTR_FMT_WIDTH - 1, backtrace[i]); \
+      }                                                              \
+  }                                                                  \
 while(0)
 
 /****************************************************************************
