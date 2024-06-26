@@ -79,7 +79,7 @@ static void memdump_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
            MM_DUMP_LEAK(dump->pid, node->pid)) &&
           node->seqno >= dump->seqmin && node->seqno <= dump->seqmax)
         {
-          char buf[CONFIG_MM_BACKTRACE * BACKTRACE_PTR_FMT_WIDTH + 1] = "";
+          char buf[BACKTRACE_BUFFER_SIZE(CONFIG_MM_BACKTRACE)];
 
           backtrace_format(buf, sizeof(buf), node->backtrace,
                            CONFIG_MM_BACKTRACE);

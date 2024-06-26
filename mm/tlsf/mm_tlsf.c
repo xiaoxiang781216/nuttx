@@ -463,7 +463,7 @@ static void memdump_handler(FAR void *ptr, size_t size, int used,
            MM_DUMP_LEAK(dump->pid, buf->pid)) &&
           buf->seqno >= dump->seqmin && buf->seqno <= dump->seqmax)
         {
-          char tmp[CONFIG_MM_BACKTRACE * BACKTRACE_PTR_FMT_WIDTH + 1] = "";
+          char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_MM_BACKTRACE)];
 
           backtrace_format(tmp, sizeof(tmp), buf->backtrace,
                            CONFIG_MM_BACKTRACE);
