@@ -986,20 +986,6 @@ int file_allocate(FAR struct inode *inode, int oflags, off_t pos,
                   FAR void *priv, int minfd, bool addref);
 
 /****************************************************************************
- * Name: file_dump_backtrace
- *
- * Description:
- *   Dump the backtrace of the file open to given buffer.
- *
- * Returned Value:
- *     Returns the backtrace string, it could be empty.
- *
- ****************************************************************************/
-
-FAR char *file_dump_backtrace(FAR struct file *filep, FAR char *buffer,
-                              size_t len);
-
-/****************************************************************************
  * Name: file_dup
  *
  * Description:
