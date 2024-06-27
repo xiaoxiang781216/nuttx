@@ -59,6 +59,7 @@ header:
 bin_start:
     .incbin             "../../../nuttx.bin"
 
+.align 8
 bin_size:
     .long               . - bin_start
 
@@ -79,7 +80,7 @@ _start:
 
     /* memcpy(ENTRY_ADDR, bin_start, bin_size) */
 
-    movl                $bin_size, %ecx
+    movl                (bin_size), %ecx
     movl                $bin_start, %esi
     movl                $ENTRY_ADDR, %edi
 
