@@ -116,7 +116,7 @@ config ARCH_X86_64_SSE4A
 
 config ARCH_X86_64_FMA
 	bool "FMA support"
-	depends on ARCH_HAVE_FMA
+	depends on ARCH_HAVE_FMA && ARCH_X86_64_AVX
 	default n
 
 config ARCH_X86_64_AVX
