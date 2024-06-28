@@ -394,10 +394,37 @@ int pci_bus_read_config(FAR struct pci_bus_s *bus,
                         int size, FAR uint32_t *val);
 
 /****************************************************************************
+ * Name: pci_bus_read_config_xxx
+ *
+ * Description:
+ *  Read pci device config space
+ *
+ * Input Parameters:
+ *   bus   - The PCI device to belong to
+ *   devfn - The PCI device number and function number
+ *   where - The register address
+ *   val   - The data buf
+ *
+ * Returned Value:
+ *   Zero if success, otherwise nagative
+ *
+ ****************************************************************************/
+
+int pci_bus_read_config_byte(FAR struct pci_bus_s *bus,
+                             unsigned int devfn, int where,
+                             FAR uint8_t *val);
+int pci_bus_read_config_word(FAR struct pci_bus_s *bus,
+                              unsigned int devfn, int where,
+                              FAR uint16_t *val);
+int pci_bus_read_config_dword(FAR struct pci_bus_s *bus,
+                              unsigned int devfn, int where,
+                              FAR uint32_t *val);
+
+/****************************************************************************
  * Name: pci_bus_write_config
  *
  * Description:
- *  read pci device config space
+ *  Write pci device config space
  *
  * Input Parameters:
  *   bus   - The PCI device to belong to
@@ -413,6 +440,33 @@ int pci_bus_read_config(FAR struct pci_bus_s *bus,
 int pci_bus_write_config(FAR struct pci_bus_s *bus,
                          unsigned int devfn, int where,
                          int size, uint32_t val);
+
+/****************************************************************************
+ * Name: pci_bus_write_config_xxx
+ *
+ * Description:
+ *  Write pci device config space
+ *
+ * Input Parameters:
+ *   bus   - The PCI device to belong to
+ *   devfn - The PCI device number and function number
+ *   where - The register address
+ *   val   - The data
+ *
+ * Returned Value:
+ *   Zero if success, otherwise nagative
+ *
+ ****************************************************************************/
+
+int pci_bus_write_config_byte(FAR struct pci_bus_s *bus,
+                              unsigned int devfn, int where,
+                              uint8_t val);
+int pci_bus_write_config_word(FAR struct pci_bus_s *bus,
+                              unsigned int devfn, int where,
+                              uint16_t val);
+int pci_bus_write_config_dword(FAR struct pci_bus_s *bus,
+                               unsigned int devfn, int where,
+                               uint32_t val);
 
 /****************************************************************************
  * Name: pci_bus_read_io
@@ -434,10 +488,33 @@ int pci_bus_read_io(FAR struct pci_bus_s *bus, uintptr_t addr,
                     int size, FAR uint32_t *val);
 
 /****************************************************************************
- * Name: pci_bus_write_io
+ * Name: pci_bus_read_io_xxx
  *
  * Description:
  *  Read pci device io space
+ *
+ * Input Parameters:
+ *   bus   - The PCI device belong to
+ *   where - The address to read
+ *   val   - The data buffer
+ *
+ * Returned Value:
+ *   Zero if success, otherwise nagative
+ *
+ ****************************************************************************/
+
+int pci_bus_read_io_byte(FAR struct pci_bus_s *bus, uintptr_t where,
+                         FAR uint8_t *val);
+int pci_bus_read_io_word(FAR struct pci_bus_s *bus, uintptr_t where,
+                          FAR uint16_t *val);
+int pci_bus_read_io_dword(FAR struct pci_bus_s *bus, uintptr_t where,
+                          FAR uint32_t *val);
+
+/****************************************************************************
+ * Name: pci_bus_write_io
+ *
+ * Description:
+ *  Write pci device io space
  *
  * Input Parameters:
  *   bus   - The PCI device belong to
@@ -451,6 +528,29 @@ int pci_bus_read_io(FAR struct pci_bus_s *bus, uintptr_t addr,
 
 int pci_bus_write_io(FAR struct pci_bus_s *bus, uintptr_t addr,
                      int size, uint32_t val);
+
+/****************************************************************************
+ * Name: pci_bus_write_io_xxx
+ *
+ * Description:
+ *  Write pci device io space
+ *
+ * Input Parameters:
+ *   bus   - The PCI device belong to
+ *   where - The address to write
+ *   val   - The data
+ *
+ * Returned Value:
+ *   Zero if success, otherwise nagative
+ *
+ ****************************************************************************/
+
+int pci_bus_write_io_byte(FAR struct pci_bus_s *bus, uintptr_t where,
+                          uint8_t value);
+int pci_bus_write_io_word(FAR struct pci_bus_s *bus, uintptr_t where,
+                          uint16_t value);
+int pci_bus_write_io_dword(FAR struct pci_bus_s *bus, uintptr_t where,
+                          uint32_t value);
 
 /****************************************************************************
  * Name: pci_set_master

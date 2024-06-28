@@ -468,7 +468,7 @@ static uart_datawidth_t pci_u16550_getreg_io(FAR struct u16550_s *priv,
 {
   FAR struct pci_u16550_priv_s *p    = (FAR struct pci_u16550_priv_s *)priv;
   uintptr_t                     addr = priv->uartbase + offset;
-  uint32_t                      ret  = 0;
+  uint8_t                       ret  = 0;
 
   pci_read_io_byte(p->pcidev, addr, &ret);
   return ret;
