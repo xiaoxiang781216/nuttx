@@ -342,6 +342,7 @@ void touch_event(FAR void *priv, FAR const struct touch_sample_s *sample)
 
   list_for_every_entry(&upper->head, openpriv, struct touch_openpriv_s, node)
     {
+      nxmutex_lock(&openpriv->lock);
       circbuf_overwrite(&openpriv->circbuf, sample,
                         SIZEOF_TOUCH_SAMPLE_S(sample->npoints));
 
@@ -352,6 +353,7 @@ void touch_event(FAR void *priv, FAR const struct touch_sample_s *sample)
         }
 
       poll_notify(&openpriv->fds, 1, POLLIN);
+      nxmutex_unlock(&openpriv->lock);
     }
 
   nxmutex_unlock(&upper->lock);
