@@ -536,7 +536,7 @@ static inline uint64_t rdtsc(void)
   uint32_t lo;
   uint32_t hi;
 
-  asm volatile("rdtscp" : "=a" (lo), "=d" (hi)::"memory");
+  asm volatile("rdtscp" : "=a" (lo), "=d" (hi)::"ecx", "memory");
   return (uint64_t)lo | (((uint64_t)hi) << 32);
 }
 
