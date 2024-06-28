@@ -468,7 +468,7 @@ static void memdump_handler(FAR void *ptr, size_t size, int used,
           backtrace_format(tmp, sizeof(tmp), buf->backtrace,
                            CONFIG_MM_BACKTRACE);
 
-          syslog(LOG_INFO, "%6d%12zu%12lu%*p%s\n",
+          syslog(LOG_INFO, "%6d%12zu%12lu%*p %s\n",
                  buf->pid, size, buf->seqno, BACKTRACE_PTR_FMT_WIDTH,
                  ptr, tmp);
         }

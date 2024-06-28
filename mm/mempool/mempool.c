@@ -201,14 +201,16 @@ static void mempool_memdump_callback(FAR struct mempool_s *pool,
        MM_DUMP_LEAK(dump->pid, buf->pid)) &&
       buf->seqno >= dump->seqmin && buf->seqno <= dump->seqmax)
     {
+#  if CONFIG_MM_BACKTRACE > 0
       char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_MM_BACKTRACE)];
 
-#  if CONFIG_MM_BACKTRACE > 0
       backtrace_format(tmp, sizeof(tmp), buf->backtrace,
                        CONFIG_MM_BACKTRACE);
+#  else
+      char *tmp = "";
 #  endif
 
-      syslog(LOG_INFO, "%6d%12zu%12lu%*p%s\n",
+      syslog(LOG_INFO, "%6d%12zu%12lu%*p %s\n",
              buf->pid, blocksize, buf->seqno,
              BACKTRACE_PTR_FMT_WIDTH,
              ((FAR char *)buf - blocksize), tmp);

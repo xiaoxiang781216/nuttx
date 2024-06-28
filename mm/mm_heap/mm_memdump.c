@@ -84,7 +84,7 @@ static void memdump_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
           backtrace_format(buf, sizeof(buf), node->backtrace,
                            CONFIG_MM_BACKTRACE);
 
-          syslog(LOG_INFO, "%6d%12zu%12lu%*p%s\n",
+          syslog(LOG_INFO, "%6d%12zu%12lu%*p %s\n",
                  node->pid, nodesize, node->seqno,
                  BACKTRACE_PTR_FMT_WIDTH,
                  ((FAR char *)node + MM_SIZEOF_ALLOCNODE), buf);
