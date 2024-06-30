@@ -23,6 +23,7 @@ if(CONFIG_LIBC_MODLIB)
   list(
     APPEND
     SRCS
+    modlib_addrenv.c
     modlib_bind.c
     modlib_depend.c
     modlib_init.c

@@ -56,6 +56,13 @@ int modlib_unload(FAR struct mod_loadinfo_s *loadinfo)
 
   modlib_freebuffers(loadinfo);
 
+#ifdef CONFIG_ARCH_ADDRENV
+  if (loadinfo->addrenv != NULL)
+    {
+      modlib_freeaddrenv(loadinfo);
+    }
+  else
+#endif
   /* Release memory holding the relocated ELF image */
 
   /* ET_DYN has a single allocation so we only free textalloc */
