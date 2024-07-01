@@ -44,6 +44,7 @@ define POSTBUILD
     cp nuttx ap.elf;
     cp nuttx.bin ap.bin;
     cp nuttx.map ap.map;
+    $(STRIP) --remove-section=.rel.text --remove-section=.comment --strip-unneeded  ap.elf -o boot
 endef
 endif
 
