@@ -447,11 +447,37 @@ static int binder_poll(FAR struct file *filp,
 
   if (setup)
     {
-      init_waitqueue_entry(&thread->wq_entry, (void *)fds,
-                           poll_wake_function);
-      prepare_to_wait(&thread->wait, &thread->wq_entry);
-      list_add_tail(&proc->waiting_threads,
-                    &thread->waiting_thread_node);
+      int i;
+      irqstate_t flags;
+
+      flags = enter_critical_section();
+
+      for (i = 0; i < CONFIG_DRIVERS_BINDER_NPOLLWAITERS; ++i)
+        {
+          if (!thread->wq_entry[i].private)
+            {
+              init_waitqueue_entry(&thread->wq_entry[i], fds,
+                                   poll_wake_function);
+              if (list_is_empty(&thread->wq_entry[i].entry))
+                {
+                  list_add_tail(&thread->wait, &(thread->wq_entry[i].entry));
+                }
+
+              fds->priv = &thread->wq_entry[i];
+              break;
+            }
+        }
+
+      leave_critical_section(flags);
+
+      if (i >= CONFIG_DRIVERS_BINDER_NPOLLWAITERS)
+        {
+          binder_debug(BINDER_DEBUG_ERROR,
+                       "all poll slots has been used!\n");
+          fds->priv = NULL;
+          return -EBUSY;
+        }
+
       binder_debug(BINDER_DEBUG_SCHED, "%d:%d poll setup\n",
                    proc->pid, thread->tid);
 
@@ -467,10 +493,12 @@ static int binder_poll(FAR struct file *filp,
     }
   else
     {
+      struct wait_queue_entry *wq_entry =
+                       (struct wait_queue_entry *)fds->priv;
       binder_debug(BINDER_DEBUG_SCHED, "%d:%d poll finish\n",
                    proc->pid, thread->tid);
-      list_delete_init(&thread->waiting_thread_node);
-      finish_wait(&thread->wq_entry);
+      finish_wait(wq_entry);
+      fds->priv = NULL;
     }
 
   return OK;

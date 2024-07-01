@@ -31,3 +31,8 @@ config DRIVERS_BINDER_MAX_THREADS
 	int "Drivers binder max thread"
 	default 4
 	depends on DRIVERS_BINDER
+
+config DRIVERS_BINDER_NPOLLWAITERS
+	int "Driver binder number of poll waiters"
+	default 4
+	depends on DRIVERS_BINDER

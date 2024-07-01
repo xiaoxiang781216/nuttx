@@ -339,7 +339,7 @@ struct binder_thread
   int looper;
   FAR struct binder_transaction *transaction_stack;
 
-  struct wait_queue_entry wq_entry;
+  struct wait_queue_entry wq_entry[CONFIG_DRIVERS_BINDER_NPOLLWAITERS];
   unsigned int tmp_ref;
   bool process_todo;
   bool is_dead;

@@ -150,12 +150,15 @@ void wait_wake_up(FAR struct list_node *wq_head, int sync)
 void wake_up_pollfree(FAR struct binder_thread *thread)
 {
   FAR struct wait_queue_entry  *wq_entry;
+  int i;
 
-  wq_entry  = &thread->wq_entry;
-
-  if (wq_entry->func)
+  for (i = 0; i < CONFIG_DRIVERS_BINDER_NPOLLWAITERS; ++i)
     {
-      wq_entry->func(wq_entry, 0);
+      wq_entry  = &thread->wq_entry[i];
+      if (wq_entry->private != NULL && wq_entry->func)
+        {
+          wq_entry->func(wq_entry, 0);
+        }
     }
 
   binder_debug(BINDER_DEBUG_SCHED, "%d:%d wake up\n",
