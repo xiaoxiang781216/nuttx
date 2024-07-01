@@ -132,7 +132,7 @@ void up_alarm_expire(void);
 
 void up_timer_initialize(void)
 {
-  g_last_stop_time = g_start_tsc = rdtsc();
+  g_last_stop_time = g_start_tsc = rdtscp();
 
 #ifndef CONFIG_SCHED_TICKLESS_ALARM
   irq_attach(TMR_IRQ, (xcpt_t)up_timer_expire, NULL);
@@ -213,7 +213,7 @@ static inline void up_tmr_sync_down(void)
 
 int up_timer_gettime(struct timespec *ts)
 {
-  uint64_t diff = (rdtsc() - g_start_tsc);
+  uint64_t diff = (rdtscp() - g_start_tsc);
   up_tick2ts(diff, ts);
   return OK;
 }
@@ -261,7 +261,7 @@ int up_timer_cancel(struct timespec *ts)
     {
       if (g_timer_active)
         {
-          up_tick2ts(g_goal_time - rdtsc(), ts);
+          up_tick2ts(g_goal_time - rdtscp(), ts);
         }
       else
         {
@@ -310,7 +310,7 @@ int up_timer_start(const struct timespec *ts)
 
   up_unmask_tmr();
 
-  ticks = up_ts2tick(ts) + rdtsc();
+  ticks = up_ts2tick(ts) + rdtscp();
 
   g_timer_active = 1;
 
