@@ -48,6 +48,8 @@
 
 #  define irq_detach(irq) irq_attach(irq, NULL, NULL)
 #  define irq_detach_wqueue(irq) irq_detach_wqueue(irq, NULL, NULL, NULL, 0)
+#  define irq_detach_thread(irq) \
+     irq_attach_thread(irq, NULL, NULL, NULL, 0, 0)
 
 /* Maximum/minimum values of IRQ integer types */
 
