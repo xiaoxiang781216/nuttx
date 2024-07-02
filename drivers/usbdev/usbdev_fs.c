@@ -989,7 +989,9 @@ static int usbdev_fs_ep_bind(FAR struct usbdev_s *dev, uint8_t epno,
                              FAR const struct usbdev_epinfo_s *epinfo,
                              FAR struct usbdev_fs_ep_s *fs_ep)
 {
-#ifdef CONFIG_USBDEV_DUALSPEED
+#if defined(CONFIG_USBDEV_SUPERSPEED)
+  uint16_t reqsize = epinfo->sssize;
+#elif defined(CONFIG_USBDEV_DUALSPEED)
   uint16_t reqsize = epinfo->hssize;
 #else
   uint16_t reqsize = epinfo->fssize;
@@ -1234,7 +1236,6 @@ static int usbdev_fs_classsetconfig(FAR struct usbdev_fs_dev_s *fs,
 {
   FAR struct usbdev_devinfo_s *devinfo = &fs->devinfo;
   struct usb_epdesc_s epdesc;
-  bool hispeed = false;
   uint16_t i;
   uint16_t j;
   int ret;
@@ -1251,16 +1252,12 @@ static int usbdev_fs_classsetconfig(FAR struct usbdev_fs_dev_s *fs,
       return 0;
     }
 
-#ifdef CONFIG_USBDEV_DUALSPEED
-  hispeed = (fs->cdev->usbdev->speed == USB_SPEED_HIGH);
-#endif
-
   for (i = 0; i < devinfo->nendpoints; i++)
     {
       FAR struct usbdev_fs_ep_s *fs_ep = &fs->eps[i + 1];
 
       usbdev_copy_epdesc(&epdesc, devinfo->epno[i],
-                         hispeed, devinfo->epinfos[i]);
+                         fs->cdev->usbdev->speed, devinfo->epinfos[i]);
       ret = EP_CONFIGURE(fs_ep->ep, &epdesc,
                          (i == (devinfo->nendpoints - 1)));
       if (ret < 0)
@@ -1348,6 +1345,9 @@ static int usbdev_fs_classbind(FAR struct usbdevclass_driver_s *driver,
   ep0info.fssize = fs->cdev->cfgdescsize;
 #ifdef CONFIG_USBDEV_DUALSPEED
   ep0info.hssize = fs->cdev->cfgdescsize;
+#endif
+#ifdef CONFIG_USBDEV_SUPERSPEED
+  ep0info.sssize = fs->cdev->cfgdescsize;
 #endif
   ep0info.reqnum = CONFIG_USBDEV_FS_NEP0REQS;
   fs->eps[0].dev = fs;
