@@ -491,6 +491,7 @@ struct file
 struct filelist
 {
   uint8_t           fl_rows;    /* The number of rows of fl_files array */
+  uint8_t           fl_crefs;   /* The references to filelist */
   FAR struct file **fl_files;   /* The pointer of two layer file descriptors array */
 
   /* Pre-allocated files to avoid allocator access during thread creation
@@ -500,7 +501,7 @@ struct filelist
    */
 
   FAR struct file  *fl_prefile;
-  FAR struct file   fl_prefiles[CONFIG_NFILE_DESCRIPTORS_PER_BLOCK];
+  struct file       fl_prefiles[CONFIG_NFILE_DESCRIPTORS_PER_BLOCK];
 };
 
 /* The following structure defines the list of files used for standard C I/O.
@@ -862,20 +863,30 @@ int nx_umount2(FAR const char *target, unsigned int flags);
 void files_initlist(FAR struct filelist *list);
 
 /****************************************************************************
- * Name: files_dumplist
+ * Name: files_getlist
  *
  * Description:
- *   Dump the list of files.
+ *   Get the list of files by tcb.
  *
  ****************************************************************************/
 
-void files_releaselist(FAR struct filelist *list);
+FAR struct filelist *files_getlist(FAR struct tcb_s *tcb);
+
+/****************************************************************************
+ * Name: files_putlist
+ *
+ * Description:
+ *   Release the list of files.
+ *
+ ****************************************************************************/
+
+void files_putlist(FAR struct filelist * list);
 
 /****************************************************************************
  * Name: files_dumplist
  *
  * Description:
- *   Release a reference to the file list
+ *   Dump the list of files.
  *
  ****************************************************************************/
 
