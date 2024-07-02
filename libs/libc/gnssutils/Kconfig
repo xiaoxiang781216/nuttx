@@ -3,7 +3,7 @@
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
 
-config GPSUTILS_MINMEA_LIB
+config GNSSUTILS_MINMEA_LIB
 	bool "MINMEA NMEA Library"
 	default n
 	---help---
@@ -13,14 +13,14 @@ config GPSUTILS_MINMEA_LIB
 		at include/nuttx.  There are some different ways to accomplish
 		this.  See the discussion in the top-level nuttx/README.txt file.
 
-if GPSUTILS_MINMEA_LIB
+if GNSSUTILS_MINMEA_LIB
 
-config GPSUTILS_MINMEA_VERSION_4_10
+config GNSSUTILS_MINMEA_VERSION_4_10
 	bool "MINMEAD NMEA version 4.10"
 	default n
 	---help---
 		Enable support for nmea version 4.10.
-		NOTE: This library depends on gps gpsutils/minmea.
+		NOTE: This library depends on GNSS gnssutils/minmea.
 		Open when get nmea data with version 4.10
 
 endif
