@@ -15,7 +15,7 @@ config X86_64_MEMCHR
 config X86_64_MEMCMP
 	bool "Enable optimized memcmp() for X86_64"
 	select LIBC_ARCH_MEMCMP
-	depends on ARCH_HAVE_SSE4
+	depends on ARCH_HAVE_SSE41
 	---help---
 		Enable optimized X86_64 specific memcmp() library function
 
