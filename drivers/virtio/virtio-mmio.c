@@ -214,7 +214,8 @@ static int virtio_mmio_create_virtqueues(FAR struct virtio_device *vdev,
                                          unsigned int flags,
                                          unsigned int nvqs,
                                          FAR const char *names[],
-                                         vq_callback callbacks[]);
+                                         vq_callback callbacks[],
+                                         FAR void *callback_args[]);
 static void virtio_mmio_delete_virtqueues(FAR struct virtio_device *vdev);
 static void virtio_mmio_set_status(FAR struct virtio_device *vdev,
                                    uint8_t status);
@@ -430,7 +431,8 @@ static int virtio_mmio_create_virtqueues(FAR struct virtio_device *vdev,
                                          unsigned int flags,
                                          unsigned int nvqs,
                                          FAR const char *names[],
-                                         vq_callback callbacks[])
+                                         vq_callback callbacks[],
+                                         FAR void *callback_args[])
 {
   FAR struct virtio_mmio_device_s *vmdev =
     (FAR struct virtio_mmio_device_s *)vdev;
