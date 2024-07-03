@@ -1035,6 +1035,7 @@ int modlib_bind(FAR struct module_s *modp,
         }
     }
 
+  modp->xipbase = loadinfo->xipbase;
   symhdr = &loadinfo->shdr[loadinfo->symtabidx];
   sym = lib_malloc(symhdr->sh_size);
 
