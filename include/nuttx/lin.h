@@ -42,7 +42,7 @@
 #define LIN_CTRL_FLAG             CAN_EFF_FLAG  /* Describe control information(such as wirte et.) */
 #define LIN_RTR_FLAG              CAN_RTR_FLAG  /* Describe the direction of sending and receiving */
 #define LIN_ERR_FLAG              CAN_ERR_FLAG  /* The flag indicate  this is LIN err_frame */
-#define LIN_EVT_FLAG              LIN_EVT_FLAG  /* Lower_half use this flags to report state switch event */
+#define LIN_EVT_FLAG              CAN_EVT_FLAG  /* Lower_half use this flags to report state switch event */
 
 /* When slave response to master, slave node should send  frame immediately
  * which already be cached in last transmission in case of response interval
