@@ -248,7 +248,7 @@ static void nxsig_abnormal_termination(int signo)
 
       /* Exit to terminate the task. */
 
-      _exit(EXIT_FAILURE);
+      exit(EXIT_FAILURE);
     }
 }
 #endif
