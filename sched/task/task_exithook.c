@@ -443,6 +443,10 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
 
   nxtask_exitwakeup(tcb, status);
 
+  /* dump thread information when the thread exits */
+
+  nxsched_dumponexit();
+
   /* Leave the task group.  Perhaps discarding any un-reaped child
    * status (no zombies here!)
    */
