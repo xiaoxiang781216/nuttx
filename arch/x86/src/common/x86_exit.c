@@ -63,8 +63,6 @@ void up_exit(int status)
 
   sinfo("TCB=%p exiting\n", this_task_irq());
 
-  nxsched_dumponexit();
-
   /* Destroy the task at the head of the ready to run list. */
 
   nxtask_exit();

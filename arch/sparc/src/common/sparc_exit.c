@@ -64,8 +64,6 @@ void up_exit(int status)
 
   sinfo("TCB=%p exiting\n", this_task_irq());
 
-  nxsched_dumponexit();
-
   /* Update scheduler parameters */
 
   nxsched_suspend_scheduler(tcb);

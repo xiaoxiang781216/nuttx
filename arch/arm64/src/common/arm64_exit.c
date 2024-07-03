@@ -66,8 +66,6 @@ void up_exit(int status)
 
   enter_critical_section();
 
-  nxsched_dumponexit();
-
   nxtask_exit();
 
   /* Now, perform the context switch to the new ready-to-run task at the
