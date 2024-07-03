@@ -451,6 +451,10 @@ void files_putlist(FAR struct filelist *list)
       return;
     }
 
+#ifdef CONFIG_SCHED_DUMP_ON_EXIT
+  files_dumplist(list);
+#endif
+
   /* Close each file descriptor .. Normally, you would need take the list
    * mutex, but it is safe to ignore the mutex in this context
    * because there should not be any references in this context.
