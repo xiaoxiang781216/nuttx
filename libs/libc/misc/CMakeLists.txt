@@ -46,7 +46,8 @@ list(
   lib_utimensat.c
   lib_mallopt.c
   lib_memoryregion.c
-  lib_pathbuffer.c)
+  lib_pathbuffer.c
+  lib_getnprocs.c)
 
 # Support for platforms that do not have long long types
 
