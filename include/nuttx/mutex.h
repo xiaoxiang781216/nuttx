@@ -318,7 +318,7 @@ void nxmutex_reset(FAR mutex_t *mutex);
  *
  ****************************************************************************/
 
-int nxmutex_breaklock(FAR mutex_t *mutex, FAR bool *locked);
+int nxmutex_breaklock(FAR mutex_t *mutex, FAR unsigned int *locked);
 
 /****************************************************************************
  * Name: nxmutex_restorelock
@@ -337,7 +337,7 @@ int nxmutex_breaklock(FAR mutex_t *mutex, FAR bool *locked);
  *
  ****************************************************************************/
 
-int nxmutex_restorelock(FAR mutex_t *mutex, bool locked);
+int nxmutex_restorelock(FAR mutex_t *mutex, unsigned int locked);
 
 /****************************************************************************
  * Name: nxrmutex_init
