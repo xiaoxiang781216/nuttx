@@ -316,6 +316,7 @@ static int binder_put_node_cmd(FAR struct binder_proc *proc,
   put_value(node_cookie, (binder_uintptr_t *)ptr);
   ptr += sizeof(binder_uintptr_t);
 
+  binder_debug(BINDER_DEBUG_THREADS, "Send %s", BINDER_BR_STR(cmd));
   binder_debug(BINDER_DEBUG_USER_REFS, "%s %d %" PRIx64 " %" PRIx64 "\n",
                cmd_name, node_debug_id, node_ptr, node_cookie);
 
@@ -733,6 +734,10 @@ int binder_thread_write(FAR struct binder_proc *proc,
 
       get_value(cmd, (uint32_t *)ptr);
       ptr += sizeof(uint32_t);
+
+     binder_debug(BINDER_DEBUG_THREADS,
+                  "Handling %s\n", BINDER_BC_STR(cmd));
+
       switch (cmd)
       {
         case BC_INCREFS:
@@ -901,8 +906,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
           WARN_ON(binder_dec_node_nilocked(node, cmd == BC_ACQUIRE_DONE, 0));
           binder_debug(BINDER_DEBUG_USER_REFS,
                        "%s node %d ls %d lw %d tr %d\n",
-                       cmd == BC_INCREFS_DONE ?
-                       "BC_INCREFS_DONE" : "BC_ACQUIRE_DONE",
+                       BINDER_BC_STR(cmd),
                        node->debug_id, node->local_strong_refs,
                        node->local_weak_refs, node->tmp_refs);
           binder_node_inner_unlock(node);
@@ -955,7 +959,6 @@ int binder_thread_write(FAR struct binder_proc *proc,
 
         case BC_REGISTER_LOOPER:
         {
-          binder_debug(BINDER_DEBUG_THREADS, "BC_REGISTER_LOOPER\n");
           binder_inner_proc_lock(proc);
           if (thread->looper & BINDER_LOOPER_STATE_ENTERED)
             {
@@ -984,7 +987,6 @@ int binder_thread_write(FAR struct binder_proc *proc,
 
         case BC_ENTER_LOOPER:
         {
-          binder_debug(BINDER_DEBUG_THREADS, "BC_ENTER_LOOPER\n");
           if (thread->looper & BINDER_LOOPER_STATE_REGISTERED)
             {
               thread->looper |= BINDER_LOOPER_STATE_INVALID;
@@ -999,7 +1001,6 @@ int binder_thread_write(FAR struct binder_proc *proc,
 
         case BC_EXIT_LOOPER:
         {
-          binder_debug(BINDER_DEBUG_THREADS, "BC_EXIT_LOOPER\n");
           thread->looper |= BINDER_LOOPER_STATE_EXITED;
           break;
         }
@@ -1043,10 +1044,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
           if (ref == NULL)
             {
               binder_debug(BINDER_DEBUG_ERROR, "%s invalid ref %"PRId32"\n",
-                           cmd == BC_REQUEST_DEATH_NOTIFICATION ?
-                           "BC_REQUEST_DEATH_NOTIFICATION"
-                            :"BC_CLEAR_DEATH_NOTIFICATION",
-                           target);
+                           BINDER_BC_STR(cmd), target);
               binder_proc_unlock(proc);
               kmm_free(death);
               break;
@@ -1055,9 +1053,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
           binder_debug(BINDER_DEBUG_DEATH_NOTIFICATION,
                        "%s %"PRIx64" ref %d desc %"PRId32" "
                        "s %d w %d for node %d\n",
-                       cmd == BC_REQUEST_DEATH_NOTIFICATION ?
-                       "BC_REQUEST_DEATH_NOTIFICATION" :
-                       "BC_CLEAR_DEATH_NOTIFICATION",
+                       BINDER_BC_STR(cmd),
                        cookie, ref->data.debug_id, ref->data.desc,
                        ref->data.strong, ref->data.weak,
                        ref->node->debug_id);
@@ -1231,6 +1227,7 @@ int binder_thread_read(FAR struct binder_proc *proc,
     {
       put_value(BR_NOOP, (uint32_t *)ptr);
       ptr += sizeof(uint32_t);
+      binder_debug(BINDER_DEBUG_THREADS, "Send BR_NOOP\n");
     }
 
 retry:
@@ -1310,6 +1307,7 @@ retry:
           if (ptr - buffer == 4 && thread->looper_need_return)
             {
               put_value(BR_FINISHED, (FAR uint32_t *)buffer);
+              binder_debug(BINDER_DEBUG_THREADS, "Send BR_FINISHED\n");
             }
           break;
         }
@@ -1346,6 +1344,8 @@ retry:
           cmd       = e->cmd;
           e->cmd    = BR_OK;
           ptr       += sizeof(uint32_t);
+          binder_debug(BINDER_DEBUG_THREADS,
+                       "Send %s\n", BINDER_BR_STR(cmd));
         }
         break;
 
@@ -1357,10 +1357,8 @@ retry:
           kmm_free(w);
           put_value(cmd, (uint32_t *)ptr);
           ptr += sizeof(uint32_t);
-
-          binder_debug(BINDER_DEBUG_TRANSACTION_COMPLETE,
-                       "%d:%d BR_TRANSACTION_COMPLETE\n",
-                       proc->pid, thread->tid);
+          binder_debug(BINDER_DEBUG_THREADS,
+                       "Send BR_TRANSACTION_COMPLETE\n");
         }
         break;
 
@@ -1500,11 +1498,10 @@ retry:
 
           cookie = death->cookie;
 
+          binder_debug(BINDER_DEBUG_THREADS,
+                       "Send %s\n", BINDER_BR_STR(cmd));
           binder_debug(BINDER_DEBUG_DEATH_NOTIFICATION, "%s %"PRIx64"\n",
-                       cmd == BR_DEAD_BINDER ?
-                       "BR_DEAD_BINDER" :
-                       "BR_CLEAR_DEATH_NOTIFICATION_DONE",
-                       cookie);
+                       BINDER_BR_STR(cmd), cookie);
           if (w->type == BINDER_WORK_CLEAR_DEATH_NOTIFICATION)
             {
               binder_inner_proc_unlock(proc);
@@ -1559,6 +1556,8 @@ retry:
           cmd               = BR_REPLY;
         }
 
+      binder_debug(BINDER_DEBUG_THREADS, "Send %s", BINDER_BR_STR(cmd));
+
       trd->code         = t->code;
       trd->flags        = t->flags;
       trd->sender_euid  = geteuid();
@@ -1596,6 +1595,7 @@ retry:
               cmd = BR_FAILED_REPLY;
               put_value(cmd, (uint32_t *)ptr);
               ptr += sizeof(uint32_t);
+              binder_debug(BINDER_DEBUG_THREADS, "Send BR_FAILED_REPLY\n");
               break;
             }
 
@@ -1613,6 +1613,8 @@ retry:
         {
           cmd       = BR_TRANSACTION_SEC_CTX;
           trsize    = sizeof(tr);
+          binder_debug(BINDER_DEBUG_THREADS,
+                       "Send BR_TRANSACTION_SEC_CTX\n");
         }
 
       put_value(cmd, (uint32_t *)ptr);
@@ -1621,14 +1623,13 @@ retry:
       memcpy(ptr, &tr, trsize);
       ptr += trsize;
       binder_debug(BINDER_DEBUG_TRANSACTION,
-                   "%s %d %d:%d, cmd %"PRId32" size"
+                   "%s %d %d:%d, size"
                    " %d-%d ptr %"PRIx64"-%"PRIx64"\n",
-                   (cmd == BR_TRANSACTION) ?"BR_TRANSACTION" :
                    (cmd == BR_TRANSACTION_SEC_CTX) ?
-                   "BR_TRANSACTION_SEC_CTX" : "BR_REPLY",
+                   "BR_TRANSACTION_SEC_CTX" : BINDER_BR_STR(cmd),
                    t->debug_id, t_from ? t_from->proc->pid : 0,
                    t_from ? t_from->tid : 0,
-                   cmd, t->buffer->data_size, t->buffer->offsets_size,
+                   t->buffer->data_size, t->buffer->offsets_size,
                    trd->data.ptr.buffer, trd->data.ptr.offsets);
 
       if (t_from)
@@ -1665,8 +1666,8 @@ done:
       proc->requested_threads++;
 
       binder_inner_proc_unlock(proc);
-      binder_debug(BINDER_DEBUG_THREADS, "BR_SPAWN_LOOPER\n");
       put_value(BR_SPAWN_LOOPER, (uint32_t *)buffer);
+      binder_debug(BINDER_DEBUG_THREADS, "Send BR_SPAWN_LOOPER\n");
     }
   else
     {
@@ -1709,8 +1710,8 @@ void binder_release_work(FAR struct binder_proc *proc,
           struct binder_error *e =
                    container_of(w, struct binder_error, work);
           binder_debug(BINDER_DEBUG_DEAD_TRANSACTION,
-                       "undelivered TRANSACTION_ERROR: %" PRIu32 "\n",
-                       e->cmd);
+                       "undelivered TRANSACTION_ERROR: %s\n",
+                        BINDER_BR_STR(e->cmd));
 #endif
         }
         break;

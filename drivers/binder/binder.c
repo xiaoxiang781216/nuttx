@@ -74,6 +74,75 @@ void binder_syslog(FAR char *buff, int pos, FAR const char *fmt, ...)
   syslog(LOG_INFO, "%s", buff);
 }
 
+const char *g_binder_ioctl_str[] =
+{
+  NULL,
+  "BINDER_WRITE_READ",
+  NULL,
+  "BINDER_SET_IDLE_TIMEOUT",
+  NULL,
+  "BINDER_SET_MAX_THREADS",
+  "BINDER_SET_IDLE_PRIORITY",
+  "BINDER_SET_CONTEXT_MGR",
+  "BINDER_THREAD_EXIT",
+  "BINDER_VERSION",
+  NULL,
+  "BINDER_GET_NODE_DEBUG_INFO",
+  "BINDER_GET_NODE_INFO_FOR_REF",
+  "BINDER_SET_CONTEXT_MGR_EXT",
+  "BINDER_FREEZE",
+  "BINDER_GET_FROZEN_INFO",
+  "BINDER_ENABLE_ONEWAY_SPAM_DETECTION",
+  "BINDER_GET_EXTENDED_ERROR",
+};
+
+const char *g_binder_command_str[] =
+{
+  "BC_TRANSACTION",
+  "BC_REPLY",
+  "BC_ACQUIRE_RESULT",
+  "BC_FREE_BUFFER",
+  "BC_INCREFS",
+  "BC_ACQUIRE",
+  "BC_RELEASE",
+  "BC_DECREFS",
+  "BC_INCREFS_DONE",
+  "BC_ACQUIRE_DONE",
+  "BC_ATTEMPT_ACQUIRE",
+  "BC_REGISTER_LOOPER",
+  "BC_ENTER_LOOPER",
+  "BC_EXIT_LOOPER",
+  "BC_REQUEST_DEATH_NOTIFICATION",
+  "BC_CLEAR_DEATH_NOTIFICATION",
+  "BC_DEAD_BINDER_DONE",
+  "BC_TRANSACTION_SG",
+  "BC_REPLY_SG",
+};
+
+const char *g_binder_return_str[] =
+{
+  "BR_ERROR",
+  "BR_OK",
+  "BR_TRANSACTION",
+  "BR_REPLY",
+  "BR_ACQUIRE_RESULT",
+  "BR_DEAD_REPLY",
+  "BR_TRANSACTION_COMPLETE",
+  "BR_INCREFS",
+  "BR_ACQUIRE",
+  "BR_RELEASE",
+  "BR_DECREFS",
+  "BR_ATTEMPT_ACQUIRE",
+  "BR_NOOP",
+  "BR_SPAWN_LOOPER",
+  "BR_FINISHED",
+  "BR_DEAD_BINDER",
+  "BR_CLEAR_DEATH_NOTIFICATION_DONE",
+  "BR_FAILED_REPLY",
+  "BR_FROZEN_REPLY",
+  "BR_ONEWAY_SPAM_SUSPECT",
+};
+
 #endif /* CONFIG_BINDER_DRIVER_DEBUG */
 
 unsigned int binder_last_debug_id = 1;
@@ -268,8 +337,8 @@ static int binder_ioctl(FAR struct file *filp, int cmd, unsigned long arg)
       return -EFAULT;
     }
 
-  binder_debug(BINDER_DEBUG_READ_WRITE, "%d:%d %d\n",
-               proc->pid, thread->tid, _IOC_NR(cmd));
+  binder_debug(BINDER_DEBUG_READ_WRITE,
+               "Received %s\n", BINDER_IO_STR(cmd));
 
   switch (cmd)
   {

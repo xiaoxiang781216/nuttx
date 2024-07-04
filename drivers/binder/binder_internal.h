@@ -88,6 +88,14 @@ enum
   BINDER_DEBUG_TRANSACTION_COMPLETE = 1U << 17,
 };
 
+extern const char *g_binder_ioctl_str[];
+extern const char *g_binder_command_str[];
+extern const char *g_binder_return_str[];
+
+#define BINDER_IO_STR(cmd) g_binder_ioctl_str[_IOC_NR(cmd)]
+#define BINDER_BC_STR(cmd) g_binder_command_str[_IOC_NR(cmd)]
+#define BINDER_BR_STR(cmd) g_binder_return_str[_IOC_NR(cmd)]
+
 #define BINDER_LOG_BUFSIZE  256
 extern char binder_debug_log[BINDER_LOG_BUFSIZE];
 
