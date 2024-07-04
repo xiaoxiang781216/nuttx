@@ -23,7 +23,7 @@ set(SRCS arm64_head.S)
 # TODO: support kernel startup obj ctr0
 
 list(APPEND SRCS arm64_vector_table.S arm64_vectors.S arm64_smccc.S)
-list(APPEND SRCS arm64_cpu_idle.S arm64_fork_func.S)
+list(APPEND SRCS arm64_fork_func.S)
 
 # Common C source files ( OS call up_xxx)
 list(APPEND SRCS arm64_initialize.c arm64_initialstate.c arm64_boot.c)
