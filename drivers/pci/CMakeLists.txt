@@ -50,6 +50,10 @@ if(CONFIG_PCI_ENDPOINT)
     list(APPEND SRCS pci_ep_test.c)
   endif() # CONFIG_PCI_ENDPOINT_TEST
 
+  if(CONFIG_PCI_QEMU_EPC)
+    list(APPEND SRCS pci_qemu_epc.c)
+  endif() # CONFIG_PCI_QEMU_EPC
+
   target_sources(drivers PRIVATE ${SRCS})
 
 endif() # CONFIG_PCI_ENDPOINT

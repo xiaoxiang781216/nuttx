@@ -87,5 +87,10 @@ config PCI_EP_TEST
 	---help---
 		pci endpoint test driver
 
+config PCI_QEMU_EPC
+	bool "QEMU Ep Controller Support"
+	---help---
+		Enable qemu ep controller
+
 endif # PCI_ENDPOINT
 
