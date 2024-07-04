@@ -287,13 +287,6 @@ int pipecommon_close(FAR struct file *filep)
   dev->d_crefs--;
   if (dev->d_crefs > 0)
     {
-      /* Don't switch out (by poll_notify or pipecommon_wakeup)
-       * during closing, consider if we are closing server and client is
-       * writing to the server.
-       */
-
-      sched_lock();
-
       /* More references.. If opened for writing, decrement the count of
        * writers on the pipe instance.
        */
@@ -331,8 +324,6 @@ int pipecommon_close(FAR struct file *filep)
                 }
             }
         }
-
-        sched_unlock();
     }
 
   /* What is the buffer management policy?  Do we free the buffer when the
