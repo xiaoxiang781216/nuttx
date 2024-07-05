@@ -293,7 +293,7 @@ int nx_mount(FAR const char *source, FAR const char *target,
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   struct inode_search_s desc;
 #endif
-  void *fshandle;
+  FAR void *fshandle;
   int ret;
 
   /* Verify required pointer arguments */
@@ -453,6 +453,8 @@ int nx_mount(FAR const char *source, FAR const char *target,
     }
 #endif
 
+  inode_unlock();
+
   /* On failure, the bind method returns -errorcode */
 
 #if defined(BDFS_SUPPORT) || defined(MDFS_SUPPORT)
@@ -460,6 +462,7 @@ int nx_mount(FAR const char *source, FAR const char *target,
 #else
   ret = mops->bind(NULL, data, &fshandle);
 #endif
+  DEBUGVERIFY(inode_lock() >= 0);
   if (ret < 0)
     {
       /* The inode is unhappy with the driver for some reason.  Back out
