@@ -117,11 +117,7 @@ int up_cpu_paused_save(void)
   sched_note_cpu_paused(tcb);
 #endif
 
-  /* Save the current context at current_regs into the TCB at the head
-   * of the assigned task list for this CPU.
-   */
-
-  arm_savestate(tcb->xcp.regs);
+  UNUSED(tcb);
 
   return OK;
 }
@@ -207,11 +203,7 @@ int up_cpu_paused_restore(void)
 
   nxsched_resume_scheduler(tcb);
 
-  /* Then switch contexts.  Any necessary address environment changes
-   * will be made when the interrupt returns.
-   */
-
-  arm_restorestate(tcb->xcp.regs);
+  UNUSED(tcb);
 
   return OK;
 }
@@ -238,6 +230,8 @@ int up_cpu_paused_restore(void)
 
 int arm_pause_handler(int irq, void *context, void *arg)
 {
+  int cpu = this_cpu();
+
   /* Check for false alarms.  Such false could occur as a consequence of
    * some deadlock breaking logic that might have already serviced the SG2
    * interrupt by calling up_cpu_paused().  If the pause event has already
@@ -292,11 +286,12 @@ int arm_pause_async_handler(int irq, void *context, void *arg)
 
   tcb = current_task(cpu);
   nxsched_suspend_scheduler(tcb);
-  arm_savestate(tcb->xcp.regs);
   nxsched_process_delivered(cpu);
   tcb = current_task(cpu);
   nxsched_resume_scheduler(tcb);
-  arm_restorestate(tcb->xcp.regs);
+
+  UNUSED(tcb);
+  return OK;
 }
 
 /****************************************************************************

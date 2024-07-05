@@ -53,6 +53,8 @@
 
 uint32_t *arm_decodeirq(uint32_t *regs)
 {
+  struct tcb_s *tcb = this_task();
+
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   board_autoled_on(LED_INIRQ);
   up_set_current_regs(regs);
@@ -82,6 +84,7 @@ uint32_t *arm_decodeirq(uint32_t *regs)
 
       savestate = up_current_regs();
       up_set_current_regs(regs);
+      tcb->xcp.regs = regs;
 
       /* Acknowledge the interrupt */
 
