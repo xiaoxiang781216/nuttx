@@ -310,10 +310,10 @@ static int binder_put_node_cmd(FAR struct binder_proc *proc,
   put_value(cmd, (uint32_t  *)ptr);
   ptr += sizeof(uint32_t);
 
-  put_value(node_ptr, (binder_uintptr_t *)ptr);
+  put_value(node_ptr, (binder_unaligned_uintptr_t *)ptr);
   ptr += sizeof(binder_uintptr_t);
 
-  put_value(node_cookie, (binder_uintptr_t *)ptr);
+  put_value(node_cookie, (binder_unaligned_uintptr_t *)ptr);
   ptr += sizeof(binder_uintptr_t);
 
   binder_debug(BINDER_DEBUG_THREADS, "Send %s", BINDER_BR_STR(cmd));
@@ -844,9 +844,9 @@ int binder_thread_write(FAR struct binder_proc *proc,
           binder_uintptr_t           cookie;
           FAR struct binder_node    *node;
 
-          get_value(node_ptr, (binder_uintptr_t *)ptr);
+          get_value(node_ptr, (binder_unaligned_uintptr_t *)ptr);
           ptr += sizeof(binder_uintptr_t);
-          get_value(cookie, (binder_uintptr_t *)ptr);
+          get_value(cookie, (binder_unaligned_uintptr_t *)ptr);
           ptr += sizeof(binder_uintptr_t);
           node = binder_get_node(proc, node_ptr);
           if (node == NULL)
@@ -926,7 +926,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
           binder_uintptr_t          data_ptr;
           FAR struct binder_buffer  *b_buffer;
 
-          get_value(data_ptr, (binder_uintptr_t *)ptr);
+          get_value(data_ptr, (binder_unaligned_uintptr_t *)ptr);
           ptr     += sizeof(binder_uintptr_t);
           b_buffer = binder_alloc_prepare_to_free(&proc->alloc, data_ptr);
           if (b_buffer == NULL)
@@ -1015,7 +1015,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
 
           get_value(target, (uint32_t *)ptr);
           ptr += sizeof(uint32_t);
-          get_value(cookie, (binder_uintptr_t *)ptr);
+          get_value(cookie, (binder_unaligned_uintptr_t *)ptr);
           ptr += sizeof(binder_uintptr_t);
 
           if (cmd == BC_REQUEST_DEATH_NOTIFICATION)
@@ -1147,7 +1147,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
           binder_uintptr_t               cookie;
           FAR struct binder_ref_death   *death = NULL;
 
-          get_value(cookie, (binder_uintptr_t *)ptr);
+          get_value(cookie, (binder_unaligned_uintptr_t *)ptr);
           ptr += sizeof(binder_uintptr_t);
 
           binder_inner_proc_lock(proc);
@@ -1516,7 +1516,7 @@ retry:
           put_value(cmd, (uint32_t *)ptr);
           ptr += sizeof(uint32_t);
 
-          put_value(cookie, (binder_uintptr_t *)ptr);
+          put_value(cookie, (binder_unaligned_uintptr_t *)ptr);
           ptr += sizeof(binder_uintptr_t);
 
           if (cmd == BR_DEAD_BINDER)
