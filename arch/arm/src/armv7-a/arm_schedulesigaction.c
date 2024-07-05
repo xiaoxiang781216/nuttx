@@ -92,10 +92,10 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to task that is currently executing on this CPU.
        */
 
-      sinfo("rtcb=%p current_regs=%p\n", this_task_irq(),
+      sinfo("rtcb=%p current_regs=%p\n", this_task(),
             up_current_regs());
 
-      if (tcb == this_task_irq())
+      if (tcb == this_task())
         {
           /* CASE 1:  We are not in an interrupt handler and a task is
            * signaling itself for some reason.
@@ -223,7 +223,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to task that is currently executing on any CPU.
        */
 
-      sinfo("rtcb=%p current_regs=%p\n", this_task_irq(),
+      sinfo("rtcb=%p current_regs=%p\n", this_task(),
             up_current_regs());
 
       if (tcb->task_state == TSTATE_TASK_RUNNING)

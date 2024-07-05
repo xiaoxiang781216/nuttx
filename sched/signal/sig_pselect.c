@@ -77,7 +77,7 @@ int pselect(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
    */
 
   flags = enter_critical_section();
-  rtcb  = this_task_irq();
+  rtcb  = this_task();
 
   /* Save a copy of the old sigprocmask and install
    * the new (temporary) sigprocmask

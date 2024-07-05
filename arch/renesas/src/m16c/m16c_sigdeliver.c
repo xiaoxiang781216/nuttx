@@ -52,7 +52,7 @@
 
 void renesas_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task_irq();
+  struct tcb_s *rtcb = this_task();
   uint8_t regs[XCPTCONTEXT_SIZE];
 
   board_autoled_on(LED_SIGNAL);

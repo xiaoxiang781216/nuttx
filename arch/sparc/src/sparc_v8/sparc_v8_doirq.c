@@ -106,7 +106,7 @@ uint32_t *sparc_doirq(int irq, uint32_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task_irq();
+      g_running_tasks[this_cpu()] = this_task();
     }
 
   /* If a context switch occurred while processing the interrupt then

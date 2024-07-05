@@ -100,7 +100,7 @@ int setitimer(int which, FAR const struct itimerval *value,
     }
 
   flags = enter_critical_section();
-  rtcb = this_task_irq();
+  rtcb = this_task();
   if (!rtcb->group->itimer)
     {
       if (!rtcb->group->itimer)

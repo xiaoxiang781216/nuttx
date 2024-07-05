@@ -107,7 +107,7 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
    */
 
   flags = enter_critical_section_nonirq();
-  rtcb = this_task_irq();
+  rtcb = this_task();
 
   /* Try to take the semaphore without waiting. */
 

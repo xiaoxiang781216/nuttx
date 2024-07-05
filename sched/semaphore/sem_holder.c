@@ -479,7 +479,7 @@ static int nxsem_restoreholderprio(FAR struct semholder_s *pholder,
 static int nxsem_restoreholderprio_others(FAR struct semholder_s *pholder,
                                           FAR sem_t *sem, FAR void *arg)
 {
-  FAR struct tcb_s *rtcb = this_task_irq();
+  FAR struct tcb_s *rtcb = this_task();
   if (pholder->htcb != rtcb)
     {
       return nxsem_restoreholderprio(pholder, sem, arg);
@@ -499,7 +499,7 @@ static int nxsem_restoreholderprio_others(FAR struct semholder_s *pholder,
 static int nxsem_restoreholderprio_self(FAR struct semholder_s *pholder,
                                         FAR sem_t *sem, FAR void *arg)
 {
-  FAR struct tcb_s *rtcb = this_task_irq();
+  FAR struct tcb_s *rtcb = this_task();
 
   if (pholder->htcb == rtcb)
     {
@@ -600,7 +600,7 @@ void nxsem_destroyholder(FAR sem_t *sem)
   /* There may be an issue if there are multiple holders of the semaphore. */
 
   DEBUGASSERT(sem->holder.htcb == NULL
-              || sem->holder.htcb == this_task_irq());
+              || sem->holder.htcb == this_task());
 
 #endif
 
@@ -670,7 +670,7 @@ void nxsem_add_holder_tcb(FAR struct tcb_s *htcb, FAR sem_t *sem)
 
 void nxsem_add_holder(FAR sem_t *sem)
 {
-  nxsem_add_holder_tcb(this_task_irq(), sem);
+  nxsem_add_holder_tcb(this_task(), sem);
 }
 
 /****************************************************************************
@@ -691,7 +691,7 @@ void nxsem_add_holder(FAR sem_t *sem)
 
 void nxsem_boost_priority(FAR sem_t *sem)
 {
-  FAR struct tcb_s *rtcb = this_task_irq();
+  FAR struct tcb_s *rtcb = this_task();
 
   /* Boost the priority of every thread holding counts on this semaphore
    * that are lower in priority than the new thread that is waiting for a
@@ -724,7 +724,7 @@ void nxsem_boost_priority(FAR sem_t *sem)
 
 void nxsem_release_holder(FAR sem_t *sem)
 {
-  FAR struct tcb_s *rtcb = this_task_irq();
+  FAR struct tcb_s *rtcb = this_task();
   uint8_t prioinherit = sem->flags & SEM_PRIO_MASK;
 
   /* If priority inheritance is disabled for this thread or it is IDLE
@@ -841,7 +841,7 @@ void nxsem_restore_baseprio(FAR struct tcb_s *stcb, FAR sem_t *sem)
        * the older owner when posted the count.
        */
 
-      nxsem_restore_priority(this_task_irq());
+      nxsem_restore_priority(this_task());
 #endif
     }
   else

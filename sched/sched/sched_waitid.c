@@ -200,7 +200,7 @@ int waitid(idtype_t idtype, id_t id, FAR siginfo_t *info, int options)
   sigemptyset(&set);
   nxsig_addset(&set, SIGCHLD);
   flags = enter_critical_section();
-  rtcb = this_task_irq();
+  rtcb = this_task();
 
   /* Verify that this task actually has children and that the requested
    * TCB is actually a child of this task.

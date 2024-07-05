@@ -71,7 +71,7 @@ volatile static spinlock_t g_cpu_boot;
 
 void s698pm_cpu_boot(void)
 {
-  struct tcb_s *tcb = this_task_irq();
+  struct tcb_s *tcb = this_task();
 
   _info("CPU%d Started\n", this_cpu());
 
@@ -138,7 +138,7 @@ int up_cpu_start(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the start event */
 
-  sched_note_cpu_start(this_task_irq(), cpu);
+  sched_note_cpu_start(this_task(), cpu);
 #endif
 
   /* Set the start up address */

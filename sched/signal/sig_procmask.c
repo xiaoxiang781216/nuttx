@@ -96,7 +96,7 @@ int nxsig_procmask(int how, FAR const sigset_t *set, FAR sigset_t *oset)
    */
 
   flags = enter_critical_section();
-  rtcb = this_task_irq();
+  rtcb = this_task();
 
   /* Return the old signal mask if requested */
 

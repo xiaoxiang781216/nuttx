@@ -55,7 +55,7 @@
 
 void minerva_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task_irq();
+  struct tcb_s *rtcb = this_task();
   uint32_t regs[XCPTCONTEXT_REGS];
   sig_deliver_t sigdeliver;
 

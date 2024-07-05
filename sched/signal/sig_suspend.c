@@ -92,7 +92,7 @@ int sigsuspend(FAR const sigset_t *set)
    */
 
   flags = enter_critical_section();
-  rtcb = this_task_irq();
+  rtcb = this_task();
 
   /* Save a copy of the old sigprocmask and install
    * the new (temporary) sigprocmask
@@ -135,7 +135,7 @@ int sigsuspend(FAR const sigset_t *set)
 
       /* Now, perform the context switch */
 
-      up_switch_context(this_task_irq(), rtcb);
+      up_switch_context(this_task(), rtcb);
 
       /* We are running again, restore the original sigprocmask */
 

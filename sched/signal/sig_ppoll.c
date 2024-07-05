@@ -80,7 +80,7 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
    */
 
   flags = enter_critical_section();
-  rtcb = this_task_irq();
+  rtcb = this_task();
 
   /* Save a copy of the old sigprocmask and install
    * the new (temporary) sigprocmask

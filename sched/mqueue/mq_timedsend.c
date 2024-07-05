@@ -160,7 +160,7 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
   /* Disable interruption */
 
   flags = enter_critical_section();
-  rtcb = this_task_irq();
+  rtcb = this_task();
 
   /* Pre-allocate a message structure */
 

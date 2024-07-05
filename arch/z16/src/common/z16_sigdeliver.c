@@ -53,7 +53,7 @@
 
 void z16_sigdeliver(void)
 {
-  FAR struct tcb_s *rtcb = this_task_irq();
+  FAR struct tcb_s *rtcb = this_task();
   chipreg_t regs[XCPTCONTEXT_REGS];
   FAR uint32_t *regs32 = (FAR uint32_t *)regs;
 

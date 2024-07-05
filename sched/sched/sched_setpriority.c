@@ -68,7 +68,7 @@ static FAR struct tcb_s *nxsched_nexttcb(FAR struct tcb_s *tcb)
    * then use the 'nxttcb' which will probably be the IDLE thread.
    */
 
-  if (!nxsched_islocked_tcb(this_task_irq()))
+  if (!nxsched_islocked_tcb(this_task()))
     {
       /* Search for the highest priority task that can run on tcb->cpu. */
 
@@ -140,7 +140,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 
   if (sched_priority <= nxttcb->sched_priority)
     {
-      FAR struct tcb_s *rtcb = this_task_irq();
+      FAR struct tcb_s *rtcb = this_task();
 
       if (rtcb->lockcount > 0)
         {
@@ -173,7 +173,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 
           if (nxsched_reprioritize_rtr(tcb, sched_priority))
             {
-              up_switch_context(this_task_irq(), rtcb);
+              up_switch_context(this_task(), rtcb);
             }
         }
     }
@@ -210,13 +210,13 @@ static void nxsched_readytorun_setpriority(FAR struct tcb_s *tcb,
 {
   FAR struct tcb_s *rtcb;
 
-  rtcb = this_task_irq();
+  rtcb = this_task();
 
   /* A context switch will occur. */
 
   if (nxsched_reprioritize_rtr(tcb, sched_priority))
     {
-      up_switch_context(this_task_irq(), rtcb);
+      up_switch_context(this_task(), rtcb);
     }
 }
 

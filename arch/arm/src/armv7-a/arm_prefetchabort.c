@@ -83,7 +83,7 @@ uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
        * paging logic for both prefetch and data aborts.
        */
 
-      struct tcb_s *tcb = this_task_irq();
+      struct tcb_s *tcb = this_task();
       tcb->xcp.far  = regs[REG_R15];
 
       /* Call pg_miss() to schedule the page fill.  A consequences of this

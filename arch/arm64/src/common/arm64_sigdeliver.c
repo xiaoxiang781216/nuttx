@@ -54,7 +54,7 @@
 
 void arm64_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task_irq();
+  struct tcb_s *rtcb = this_task();
 
 #ifdef CONFIG_SMP
   /* In the SMP case, we must terminate the critical section while the signal

@@ -78,7 +78,7 @@ void nxsched_suspend(FAR struct tcb_s *tcb)
     }
   else
     {
-      FAR struct tcb_s *rtcb = this_task_irq();
+      FAR struct tcb_s *rtcb = this_task();
 
       /* The task was running or runnable before being stopped.  Simply
        * block it in the stopped state.  If tcb refers to this task, then
@@ -100,7 +100,7 @@ void nxsched_suspend(FAR struct tcb_s *tcb)
 
       /* Now, perform the context switch */
 
-      up_switch_context(this_task_irq(), rtcb);
+      up_switch_context(this_task(), rtcb);
     }
 
   leave_critical_section(flags);

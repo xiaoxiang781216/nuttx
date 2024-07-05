@@ -125,7 +125,7 @@ static void appdsp_boot(void)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify that this CPU has started */
 
-  sched_note_cpu_started(this_task_irq());
+  sched_note_cpu_started(this_task());
 #endif
 
   /* Then transfer control to the IDLE task */
@@ -174,7 +174,7 @@ int up_cpu_start(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the start event */
 
-  sched_note_cpu_start(this_task_irq(), cpu);
+  sched_note_cpu_start(this_task(), cpu);
 #endif
 
   /* Reset APP_DSP(cpu) */

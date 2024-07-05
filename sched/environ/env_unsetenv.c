@@ -75,7 +75,7 @@ int unsetenv(FAR const char *name)
   /* Check if the variable exists */
 
   flags = enter_critical_section();
-  rtcb = this_task_irq();
+  rtcb = this_task();
   group = rtcb->group;
   DEBUGASSERT(group);
 

@@ -115,7 +115,7 @@ static void flush_boot_params(void)
 
 static void arm64_smp_init_top(void *arg)
 {
-  struct tcb_s *tcb = this_task_irq();
+  struct tcb_s *tcb = this_task();
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
   /* And finally, enable interrupts */
@@ -153,7 +153,7 @@ static void arm64_start_cpu(int cpu_num, char *stack, int stack_sz,
 
   /* Notify of the start event */
 
-  sched_note_cpu_start(this_task_irq(), cpu_num);
+  sched_note_cpu_start(this_task(), cpu_num);
 #endif
 
   cpu_boot_params.boot_sp   = stack;
@@ -227,7 +227,7 @@ int up_cpu_start(int cpu)
 
   /* Notify of the start event */
 
-  sched_note_cpu_start(this_task_irq(), cpu);
+  sched_note_cpu_start(this_task(), cpu);
 #endif
 
   cpu_boot_params.cpu_ready_flag = 0;

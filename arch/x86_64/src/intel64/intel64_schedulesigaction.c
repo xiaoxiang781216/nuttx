@@ -74,7 +74,7 @@
 void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 {
   sinfo("tcb=%p sigdeliver=%p\n", tcb, sigdeliver);
-  sinfo("rtcb=%p current_regs=%p\n", this_task_irq(), up_current_regs());
+  sinfo("rtcb=%p current_regs=%p\n", this_task(), up_current_regs());
 
   /* Refuse to handle nested signal actions */
 
@@ -86,7 +86,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to the currently executing task.
        */
 
-      if (tcb == this_task_irq())
+      if (tcb == this_task())
         {
           /* CASE 1:  We are not in an interrupt handler and a task is
            * signalling itself for some reason.
@@ -184,7 +184,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to task that is currently executing on any CPU.
        */
 
-      sinfo("rtcb=0x%p CURRENT_REGS=0x%p\n", this_task_irq(),
+      sinfo("rtcb=0x%p CURRENT_REGS=0x%p\n", this_task(),
             up_current_regs());
 
       if (tcb->task_state == TSTATE_TASK_RUNNING)

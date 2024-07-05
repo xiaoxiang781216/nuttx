@@ -41,7 +41,7 @@
 
 static void pre_start(void)
 {
-  struct tcb_s *tcb = this_task_irq();
+  struct tcb_s *tcb = this_task();
 
   /* Enable signal delivery */
 

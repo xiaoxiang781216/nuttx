@@ -67,7 +67,7 @@
 #ifndef CONFIG_SMP
 bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 {
-  FAR struct tcb_s *rtcb = this_task_irq();
+  FAR struct tcb_s *rtcb = this_task();
   bool ret;
 
   /* Check if pre-emption is disabled for the current running task and if
@@ -197,7 +197,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
    * situation.
    */
 
-  if (nxsched_islocked_tcb(this_task_irq()))
+  if (nxsched_islocked_tcb(this_task()))
     {
       /* Add the new ready-to-run task to the g_pendingtasks task list for
        * now.

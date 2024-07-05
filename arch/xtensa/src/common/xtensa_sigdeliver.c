@@ -53,7 +53,7 @@
 
 void xtensa_sig_deliver(void)
 {
-  struct tcb_s *rtcb = this_task_irq();
+  struct tcb_s *rtcb = this_task();
   uint32_t *regs = rtcb->xcp.saved_regs;
 
 #ifdef CONFIG_SMP

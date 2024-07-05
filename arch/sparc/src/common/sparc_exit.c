@@ -62,7 +62,7 @@ void up_exit(int status)
 
   (void)enter_critical_section();
 
-  sinfo("TCB=%p exiting\n", this_task_irq());
+  sinfo("TCB=%p exiting\n", this_task());
 
   /* Update scheduler parameters */
 
@@ -76,7 +76,7 @@ void up_exit(int status)
    * head of the list.
    */
 
-  tcb = this_task_irq();
+  tcb = this_task();
 
   /* Reset scheduler parameters */
 
