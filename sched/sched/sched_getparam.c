@@ -122,7 +122,7 @@ int nxsched_get_param(pid_t pid, FAR struct sched_param *param)
               clock_ticks2time(&param->sched_ss_repl_period,
                                sporadic->repl_period);
               clock_ticks2time(&param->sched_ss_init_budget,
-                               sporadic->budget;
+                               sporadic->budget);
             }
           else
             {
