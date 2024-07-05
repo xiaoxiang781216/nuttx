@@ -117,11 +117,7 @@ int up_cpu_paused_save(void)
   sched_note_cpu_paused(tcb);
 #endif
 
-  /* Save the current context at current_regs into the TCB at the head
-   * of the assigned task list for this CPU.
-   */
-
-  riscv_savecontext(tcb);
+  UNUSED(tcb);
 
   return OK;
 }
@@ -201,11 +197,7 @@ int up_cpu_paused_restore(void)
 
   nxsched_resume_scheduler(tcb);
 
-  /* Then switch contexts.  Any necessary address environment changes
-   * will be made when the interrupt returns.
-   */
-
-  riscv_restorecontext(tcb);
+  UNUSED(tcb);
 
   return OK;
 }
@@ -226,7 +218,6 @@ int up_cpu_paused_restore(void)
 
 int riscv_pause_handler(int irq, void *c, void *arg)
 {
-  struct tcb_s *tcb;
   int cpu = this_cpu();
 
   /* Clear IPI (Inter-Processor-Interrupt) */
@@ -256,11 +247,7 @@ int riscv_pause_handler(int irq, void *c, void *arg)
       leave_critical_section(flags);
     }
 
-  tcb = current_task(cpu);
-  riscv_savecontext(tcb);
   nxsched_process_delivered(cpu);
-  tcb = current_task(cpu);
-  riscv_restorecontext(tcb);
 
   return OK;
 }

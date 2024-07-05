@@ -89,13 +89,6 @@
 #  define PRIxREG "016" PRIxPTR
 #endif
 
-/* In the RISC-V model, the state is saved in stack,
- * only a reference stored in TCB.
- */
-
-#define riscv_savestate(regs) (regs = up_current_regs())
-#define riscv_restorestate(regs) up_set_current_regs(regs)
-
 /* Determine which (if any) console driver to use.  If a console is enabled
  * and no other console device is specified, then a serial console is
  * assumed.
@@ -250,8 +243,6 @@ static inline uintptr_t *riscv_fpuregs(struct tcb_s *tcb)
 
 static inline void riscv_savecontext(struct tcb_s *tcb)
 {
-  tcb->xcp.regs = up_current_regs();
-
 #ifdef CONFIG_ARCH_FPU
   /* Save current process FPU state to TCB */
 
@@ -261,8 +252,6 @@ static inline void riscv_savecontext(struct tcb_s *tcb)
 
 static inline void riscv_restorecontext(struct tcb_s *tcb)
 {
-  up_set_current_regs((uintptr_t *)tcb->xcp.regs);
-
 #ifdef CONFIG_ARCH_FPU
   /* Restore FPU state for next process */
 

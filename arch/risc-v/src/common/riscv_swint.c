@@ -40,6 +40,7 @@
 #  include <syscall.h>
 #endif
 
+#include "sched/sched.h"
 #include "signal/signal.h"
 #include "riscv_internal.h"
 #include "addrenv.h"
@@ -115,8 +116,7 @@ static void dispatch_syscall(void)
 int riscv_swint(int irq, void *context, void *arg)
 {
   uintptr_t *regs = (uintptr_t *)context;
-
-  DEBUGASSERT(regs && regs == up_current_regs());
+  uintptr_t *new_regs = regs;
 
   /* Software interrupt 0 is invoked with REG_A0 (REG_X10) = system call
    * command and REG_A1-6 = variable number of
@@ -141,11 +141,6 @@ int riscv_swint(int irq, void *context, void *arg)
        *
        *   A0 = SYS_restore_context
        *   A1 = next
-       *
-       * In this case, we simply need to set current_regs to restore register
-       * area referenced in the saved A1. context == current_regs is the
-       * normal exception return.  By setting current_regs = context[A1], we
-       * force the return to the saved context referenced in $a1.
        */
 
       case SYS_restore_context:
@@ -153,6 +148,7 @@ int riscv_swint(int irq, void *context, void *arg)
           struct tcb_s *next = (struct tcb_s *)regs[REG_A1];
 
           DEBUGASSERT(regs[REG_A1] != 0);
+          new_regs = next->xcp.regs;
           riscv_restorecontext(next);
         }
         break;
@@ -169,9 +165,7 @@ int riscv_swint(int irq, void *context, void *arg)
        *   A2 = next
        *
        * In this case, we save the context registers to the save register
-       * area referenced by the saved contents of R5 and then set
-       * current_regs to the save register area referenced by the saved
-       * contents of R6.
+       * area referenced by the saved contents of R5.
        */
 
       case SYS_switch_context:
@@ -180,7 +174,9 @@ int riscv_swint(int irq, void *context, void *arg)
           struct tcb_s *next = (struct tcb_s *)regs[REG_A2];
 
           DEBUGASSERT(regs[REG_A1] != 0 && regs[REG_A2] != 0);
+          prev->xcp.regs = regs;
           riscv_savecontext(prev);
+          new_regs = next->xcp.regs;
           riscv_restorecontext(next);
         }
         break;
@@ -467,7 +463,7 @@ int riscv_swint(int irq, void *context, void *arg)
 
           /* Verify that the SYS call number is within range */
 
-          DEBUGASSERT(up_current_regs()[REG_A0] < SYS_maxsyscall);
+          DEBUGASSERT(rtcb->xcp.regs[REG_A0] < SYS_maxsyscall);
 
           /* Make sure that we got here that there is a no saved syscall
            * return address.  We cannot yet handle nested system calls.
@@ -522,16 +518,18 @@ int riscv_swint(int irq, void *context, void *arg)
    */
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
-  if (regs != up_current_regs())
+  if (regs != new_regs)
     {
       svcinfo("SWInt Return: Context switch!\n");
-      up_dump_register(up_current_regs());
+      up_dump_register(new_regs);
     }
   else
     {
       svcinfo("SWInt Return: %" PRIxPTR "\n", regs[REG_A0]);
     }
 #endif
+
+  UNUSED(new_regs);
 
   return OK;
 }
