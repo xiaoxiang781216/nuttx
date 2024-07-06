@@ -51,7 +51,6 @@ function(generate_common_defs)
       INCDIR := @CMAKE_BINARY_DIR@/bin/incdir
       MKDEP  := @CMAKE_BINARY_DIR@/bin/mkdeps
       EXTRAFLAGS := -I @CMAKE_BINARY_DIR@/include
-      EXTRAFLAGS += -I @CMAKE_BINARY_DIR@/include_arch
       DEPCONFIG := @CMAKE_BINARY_DIR@/.config
 
       include @CMAKE_BINARY_DIR@/.config
