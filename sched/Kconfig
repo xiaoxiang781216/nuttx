@@ -1993,3 +1993,14 @@ config SCHED_PERF_EVENTS
 	default n
 	---help---
 		Enable to support perf events.
+
+config COREDUMP
+	bool "Coredump support"
+	depends on ARCH_HAVE_TCBINFO
+	default n
+	---help---
+		Generate ELF core dump to provide information about the CPU state and the
+		memory state of program.
+		The memory state embeds a snapshot of all segments mapped in the
+		memory space of the program. The CPU state contains register values
+		when the core dump has been generated.
