@@ -85,6 +85,46 @@ static struct instrument_s g_note_instrument =
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: note_early_initialize
+ *
+ * Description:
+ *   Registers note drivers early, without depending on system features
+ *   such as heap memory.
+ *
+ * Input Parameters:
+ *   None.
+ *
+ * Returned Value:
+ *   Zero on success. A negated errno value is returned on a failure.
+ *
+ ****************************************************************************/
+
+int note_early_initialize(void)
+{
+  int ret = 0;
+
+#ifdef CONFIG_SEGGER_SYSVIEW
+  ret = note_sysview_initialize();
+  if (ret < 0)
+    {
+      serr("note_sysview_initialize failed %d\n", ret);
+      return ret;
+    }
+#endif
+
+#ifdef CONFIG_DRIVERS_NOTESNAP
+  ret = notesnap_register();
+  if (ret < 0)
+    {
+      serr("notesnap_register failed %d\n", ret);
+      return ret;
+    }
+#endif
+
+  return ret;
+}
+
+/****************************************************************************
  * Name: note_initialize
  *
  * Description:
@@ -95,7 +135,7 @@ static struct instrument_s g_note_instrument =
  *   None.
  *
  * Returned Value:
- *   Zero on succress. A negated errno value is returned on a failure.
+ *   Zero on success. A negated errno value is returned on a failure.
  *
  ****************************************************************************/
 
@@ -139,24 +179,6 @@ int note_initialize(void)
   if (ret < 0)
     {
       serr("notectl_register failed %d\n", ret);
-      return ret;
-    }
-#endif
-
-#ifdef CONFIG_SEGGER_SYSVIEW
-  ret = note_sysview_initialize();
-  if (ret < 0)
-    {
-      serr("note_sysview_initialize failed %d\n", ret);
-      return ret;
-    }
-#endif
-
-#ifdef CONFIG_DRIVERS_NOTESNAP
-  ret = notesnap_register();
-  if (ret < 0)
-    {
-      serr("notesnap_register failed %d\n", ret);
       return ret;
     }
 #endif
