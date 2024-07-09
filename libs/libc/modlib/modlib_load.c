@@ -234,7 +234,7 @@ static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo)
  *
  ****************************************************************************/
 
-static int modlib_vma2lma(FAR struct elf_loadinfo_s *loadinfo,
+static int modlib_vma2lma(FAR struct mod_loadinfo_s *loadinfo,
                           FAR Elf_Shdr *shdr, FAR Elf_Addr *lma)
 {
   int i;
