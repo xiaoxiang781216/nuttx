@@ -84,12 +84,12 @@
 static void exec_ctors(FAR void *arg)
 {
   FAR const struct binary_s *binp = (FAR const struct binary_s *)arg;
-  binfmt_ctor_t *ctor = binp->ctors;
+  binfmt_ctor_t *ctor = binp->mod.initarr;
   int i;
 
   /* Execute each constructor */
 
-  for (i = 0; i < binp->nctors; i++)
+  for (i = 0; i < binp->mod.ninit; i++)
     {
       binfo("Calling ctor %d at %p\n", i, ctor);
 
@@ -345,7 +345,7 @@ int exec_module(FAR struct binary_s *binp,
    * must be the first allocated address space.
    */
 
-  tcb->cmn.dspace = binp->alloc[0];
+  tcb->cmn.dspace = binp->picbase;
 
   /* Re-initialize the task's initial state to account for the new PIC base */
 
