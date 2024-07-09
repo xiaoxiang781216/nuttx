@@ -522,7 +522,7 @@ static void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem,
           /* Update heap statistics */
 
           heap->mm_curused -= mm_malloc_size(heap, mem);
-          sched_note_heap(false, heap, mem, size);
+          sched_note_heap(NOTE_HEAP_FREE, heap, mem, size);
           tlsf_free(heap->mm_tlsf, mem);
         }
 
@@ -1204,7 +1204,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 #endif
 
       ret = kasan_unpoison(ret, nodesize);
-      sched_note_heap(true, heap, ret, nodesize);
+      sched_note_heap(NOTE_HEAP_ALLOC, heap, ret, nodesize);
 
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
       memset(ret, MM_ALLOC_MAGIC, nodesize);
@@ -1284,7 +1284,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
       memdump_backtrace(heap, buf);
 #endif
       ret = kasan_unpoison(ret, nodesize);
-      sched_note_heap(true, heap, ret, nodesize);
+      sched_note_heap(NOTE_HEAP_ALLOC, heap, ret, nodesize);
     }
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
@@ -1414,8 +1414,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
       memdump_backtrace(heap, buf);
 #endif
 
-      sched_note_heap(false, heap, oldmem, oldsize);
-      sched_note_heap(true, heap, newmem, newsize);
+      sched_note_heap(NOTE_HEAP_FREE, heap, oldmem, oldsize);
+      sched_note_heap(NOTE_HEAP_ALLOC, heap, newmem, newsize);
     }
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0

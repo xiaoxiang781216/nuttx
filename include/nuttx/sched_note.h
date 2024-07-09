@@ -256,8 +256,8 @@ enum note_type_e
   NOTE_SYSCALL_LEAVE,
   NOTE_IRQ_ENTER,
   NOTE_IRQ_LEAVE,
-  NOTE_ALLOC,
-  NOTE_FREE,
+  NOTE_HEAP_ALLOC,
+  NOTE_HEAP_FREE,
   NOTE_DUMP_PRINTF,
   NOTE_DUMP_BEGIN,
   NOTE_DUMP_END,
@@ -453,6 +453,14 @@ struct note_irqhandler_s
   uint8_t nih_irq;              /* IRQ number */
 };
 
+struct note_heap_s
+{
+  struct note_common_s nmm_cmn;      /* Common note parameters */
+  FAR void *heap;
+  FAR void *mem;
+  size_t size;
+};
+
 struct note_printf_s
 {
   struct note_common_s npt_cmn; /* Common note parameters */
@@ -474,14 +482,6 @@ struct note_event_s
 
 #define SIZEOF_NOTE_EVENT(n) (sizeof(struct note_event_s) + \
                              ((n) - 1) * sizeof(uint8_t))
-
-struct note_heap_s
-{
-  struct note_common_s nmm_cmn;      /* Common note parameters */
-  FAR void *heap;
-  FAR void *mem;
-  size_t size;
-};
 
 struct note_counter_s
 {
@@ -648,9 +648,10 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter);
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
-void sched_note_heap(bool alloc, FAR void *heap, FAR void *mem, size_t size);
+void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
+                     size_t size);
 #else
-#  define sched_note_heap(a,h,m,s)
+#  define sched_note_heap(e,h,m,s)
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
