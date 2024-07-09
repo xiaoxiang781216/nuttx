@@ -18,13 +18,25 @@
  *
  ****************************************************************************/
 
-ENTRY(_start)
+ENTRY(bin_start)
 
 SECTIONS {
-	. = 1M;
+
+	/* 1M - 0x30 */
+
+	. = 0xFFFD0;
+
+	/* multiboot header 0x30 */
+
+	.multiboot : {
+		*(.multiboot)
+	}
+
+	/* 1M */
+
+	. = 0x100000;
 
 	.text : {
-		*(.multiboot)
 		*(.bin)
 		*(.text)
 		*(.note.gnu.*)
