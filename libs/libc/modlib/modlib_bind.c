@@ -174,7 +174,8 @@ static inline int modlib_readrelas(FAR struct mod_loadinfo_s *loadinfo,
  ****************************************************************************/
 
 static int modlib_relocate(FAR struct module_s *modp,
-                           FAR struct mod_loadinfo_s *loadinfo, int relidx)
+                           FAR struct mod_loadinfo_s *loadinfo, int relidx,
+                           FAR const struct symtab_s *exports, int nexports)
 {
   FAR Elf_Shdr     *relsec = &loadinfo->shdr[relidx];
   FAR Elf_Shdr     *dstsec = &loadinfo->shdr[relsec->sh_info];
@@ -289,7 +290,8 @@ static int modlib_relocate(FAR struct module_s *modp,
           /* Get the value of the symbol (in sym.st_value) */
 
           ret = modlib_symvalue(modp, loadinfo, sym,
-                           loadinfo->shdr[loadinfo->strtabidx].sh_offset);
+                           loadinfo->shdr[loadinfo->strtabidx].sh_offset,
+                            exports, nexports);
           if (ret < 0)
             {
               /* The special error -ESRCH is returned only in one condition:
@@ -365,7 +367,9 @@ static int modlib_relocate(FAR struct module_s *modp,
 
 static int modlib_relocateadd(FAR struct module_s *modp,
                               FAR struct mod_loadinfo_s *loadinfo,
-                              int relidx)
+                              int relidx,
+                              FAR const struct symtab_s *exports,
+                              int nexports)
 {
   FAR Elf_Shdr     *relsec = &loadinfo->shdr[relidx];
   FAR Elf_Shdr     *dstsec = &loadinfo->shdr[relsec->sh_info];
@@ -481,7 +485,8 @@ static int modlib_relocateadd(FAR struct module_s *modp,
           /* Get the value of the symbol (in sym.st_value) */
 
           ret = modlib_symvalue(modp, loadinfo, sym,
-                           loadinfo->shdr[loadinfo->strtabidx].sh_offset);
+                           loadinfo->shdr[loadinfo->strtabidx].sh_offset,
+                           exports, nexports);
           if (ret < 0)
             {
               /* The special error -ESRCH is returned only in one condition:
@@ -836,6 +841,8 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
  * Input Parameters:
  *   modp     - Module state information
  *   loadinfo - Load state information
+ *   exports  - The table of exported symbols
+ *   nexports - The number of symbols in the exports table
  *
  * Returned Value:
  *   0 (OK) is returned on success and a negated errno is returned on
@@ -844,7 +851,8 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
  ****************************************************************************/
 
 int modlib_bind(FAR struct module_s *modp,
-                FAR struct mod_loadinfo_s *loadinfo)
+                FAR struct mod_loadinfo_s *loadinfo,
+                FAR const struct symtab_s *exports, int nexports)
 {
   FAR Elf_Shdr *symhdr;
   FAR Elf_Sym *sym;
@@ -940,7 +948,7 @@ int modlib_bind(FAR struct module_s *modp,
                     continue;
                   }
 
-                ret = modlib_relocate(modp, loadinfo, i);
+                ret = modlib_relocate(modp, loadinfo, i, exports, nexports);
                 break;
               case SHT_RELA:
                 if ((loadinfo->shdr[infosec].sh_flags & SHF_ALLOC) == 0)
@@ -948,7 +956,8 @@ int modlib_bind(FAR struct module_s *modp,
                     continue;
                   }
 
-                ret = modlib_relocateadd(modp, loadinfo, i);
+                ret = modlib_relocateadd(modp, loadinfo, i, exports,
+                                         nexports);
                 break;
               case SHT_INIT_ARRAY:
                 loadinfo->initarr = loadinfo->shdr[i].sh_addr;
