@@ -526,8 +526,8 @@
 
 /* CAN bit timing support ***************************************************/
 
-#define CAN_BITTIMING_NOMINAL     0  /* Specifies nominal bittiming */
-#define CAN_BITTIMING_DATA        1  /* Specifies data bittiming */
+#define CAN_BITTIMING_DATA        0  /* Specifies nominal bittiming */
+#define CAN_BITTIMING_NOMINAL     1  /* Specifies data bittiming */
 
 /****************************************************************************
  * Public Types
@@ -877,6 +877,13 @@ struct canioc_bittiming_s
   uint8_t               bt_tseg1;        /* TSEG1 in time quanta */
   uint8_t               bt_tseg2;        /* TSEG2 in time quanta */
   uint8_t               bt_sjw;          /* Synchronization Jump Width in time quanta */
+#ifdef CONFIG_CAN_FD
+  uint8_t               bt_type;         /* Nominal/Data bit timing. This is
+                                          * used to specify which bit timing
+                                          * should be set/obtained. Applies
+                                          * only if CAN FD is configured.
+                                          */
+#endif
 };
 
 /* CANIOC_GET_CONNMODES/CANIOC_SET_CONNMODES:
