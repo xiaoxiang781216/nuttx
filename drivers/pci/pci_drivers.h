@@ -116,4 +116,16 @@ int pci_register_ep_test_driver(void);
 int pci_register_qemu_epc_driver(void);
 #endif
 
+/****************************************************************************
+ * Name: pci_register_epf_test_driver
+ *
+ * Description:
+ *  Init a epf test driver
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_PCI_EPF_TEST
+int pci_register_epf_test_driver(void);
+#endif
+
 #endif /* __DRIVERS_PCI_PCI_DRIVERS_H */

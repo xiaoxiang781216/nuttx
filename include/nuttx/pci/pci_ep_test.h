@@ -56,4 +56,17 @@ struct pci_ep_test_param_s
   unsigned int flags;
 };
 
+#ifdef CONFIG_PCI_EPF_TEST
+
+/****************************************************************************
+ * Name: pci_register_epf_test_device
+ *
+ * Description:
+ *  Init a epf device test
+ *
+ ****************************************************************************/
+
+int pci_register_epf_test_device(FAR const char *epc_name);
+#endif
+
 #endif /* __INCLUDE_NUTTX_PCI_EP_TEST_H */
