@@ -52,28 +52,4 @@ int coredump_set_memory_region(FAR const struct memory_region_s *region);
 
 int coredump_add_memory_region(FAR const void *ptr, size_t size);
 
-/****************************************************************************
- * Name: coredump_initialize
- *
- * Description:
- *   Initialize the coredump facility.  Called once and only from
- *   nx_start_application.
- *
- ****************************************************************************/
-
-int coredump_initialize(void);
-
-/****************************************************************************
- * Name: coredump_dump
- *
- * Description:
- *   Do coredump of the task specified by pid.
- *
- * Input Parameters:
- *   pid - The task/thread ID of the thread to dump
- *
- ****************************************************************************/
-
-void coredump_dump(pid_t pid);
-
 #endif /* __INCLUDE_NUTTX_COREDUMP_H */
