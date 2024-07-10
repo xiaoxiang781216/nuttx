@@ -185,7 +185,7 @@ cp "${TOPDIR}/tools/incdir.c" "${EXPORTDIR}/tools/."
 if [ -f "${BOARDDIR}/scripts/gnu-elf.ld" ]; then
   cp -f "${BOARDDIR}/scripts/gnu-elf.ld" "${EXPORTDIR}/scripts/."
 else
-  cp -f "${TOPDIR}/binfmt/libelf/gnu-elf.ld" "${EXPORTDIR}/scripts/."
+  cp -f "${TOPDIR}/libs/libc/modlib/gnu-elf.ld" "${EXPORTDIR}/scripts/."
 fi
 
 # Copy the board config script
