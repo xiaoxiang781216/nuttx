@@ -479,6 +479,10 @@ struct file
 #if CONFIG_FS_BACKTRACE > 0
   FAR void         *f_backtrace[CONFIG_FS_BACKTRACE]; /* Backtrace to while file opens */
 #endif
+
+#if CONFIG_FS_LOCK_BUCKET_SIZE > 0
+  bool              locked; /* Filelock state: false - unlocked, true - locked */
+#endif
 };
 
 /* This defines a two layer array of files indexed by the file descriptor.

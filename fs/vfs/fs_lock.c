@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include <nuttx/fs/fs.h>
 #include <nuttx/lib/lib.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
@@ -716,6 +717,10 @@ retry:
       goto out;
     }
 
+  /* Update filep lock state */
+
+  filep->locked = true;
+
   /* When there is a lock change, we need to wake up the blocking lock */
 
   if (bucket->nwaiter > 0)
@@ -752,6 +757,11 @@ void file_closelk(FAR struct file *filep)
   bool deleted = false;
   int ret;
 
+  if (filep->locked == false)
+    {
+      return;
+    }
+
   path = lib_get_pathbuffer();
   if (path == NULL)
     {
@@ -785,6 +795,7 @@ void file_closelk(FAR struct file *filep)
         {
           deleted = true;
           file_lock_delete(file_lock);
+          filep->locked = false;
         }
     }
 
