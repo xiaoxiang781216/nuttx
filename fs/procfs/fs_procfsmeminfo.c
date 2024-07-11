@@ -430,6 +430,9 @@ static ssize_t memdump_read(FAR struct file *filep, FAR char *buffer,
                               "used: dump all allocated node\n"
                               "free: dump all free node\n"
                               "leak: dump all leaked node\n"
+#  if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD > 0
+                              "mempool: dump all mempool alloc node\n"
+#  endif
                               "The current sequence number %lu\n",
                               g_mm_seqno);
 #else
@@ -554,6 +557,17 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
         goto dump;
 #endif
         break;
+
+#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD > 0
+      case 'm':
+        dump.pid = PID_MM_MEMPOOL;
+
+#  if CONFIG_MM_BACKTRACE >= 0
+        p = (FAR char *)buffer + 7;
+        goto dump;
+#  endif
+        break;
+#endif
 
 #if CONFIG_MM_BACKTRACE >= 0
       default:
