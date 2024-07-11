@@ -17,7 +17,7 @@
 # the License.
 #
 # ##############################################################################
-set(SRCS goldfish_boot.c goldfish_serial.c)
+set(SRCS goldfish_boot.c goldfish_serial.c goldfish_timer.c)
 
 if(CONFIG_ARCH_EARLY_PRINT)
   list(APPEND SRCS goldfish_lowputc.S)
