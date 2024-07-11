@@ -22,7 +22,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/android/binder.h>
 #include <nuttx/clk/clk_provider.h>
 #include <nuttx/crypto/crypto.h>
 #include <nuttx/drivers/drivers.h>
@@ -58,6 +57,9 @@
 
 #ifdef CONFIG_SCHED_PERF_EVENTS
 #  include <perf/pmu.h>
+#endif
+#ifdef CONFIG_DRIVERS_BINDER
+#  include <nuttx/android/binder.h>
 #endif
 
 /****************************************************************************
