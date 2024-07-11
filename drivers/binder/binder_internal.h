@@ -684,23 +684,6 @@ static inline void binder_enqueue_work_ilocked(
 }
 
 /**
- * binder_enqueue_thread_work_ilocked() - Add an item to the thread work list
- * thread:       thread to queue work to
- * work:         struct binder_work to add to list
- *
- * Adds the work to the todo list of the thread, and enables processing
- * of the todo queue.
- */
-
-static inline void binder_enqueue_thread_work_ilocked(
-  FAR struct binder_thread *thread, FAR struct binder_work *work)
-{
-  WARN_ON(!list_is_empty(&thread->waiting_thread_node));
-  binder_enqueue_work_ilocked(work, &thread->todo);
-  thread->process_todo = true;
-}
-
-/**
  * binder_enqueue_deferred_thread_work_ilocked() - Add deferred thread work
  * thread:       thread to queue work to
  * work:         struct binder_work to add to list
@@ -880,5 +863,32 @@ void _binder_inner_proc_assert_locked(FAR struct binder_proc *proc,
                                       int line);
 void _binder_node_inner_assert_locked(FAR struct binder_node *node,
                                       int line);
+
+/**
+ * binder_enqueue_thread_work_ilocked() - Add an item to the thread work list
+ * thread:       thread to queue work to
+ * work:         struct binder_work to add to list
+ *
+ * Adds the work to the todo list of the thread, and enables processing
+ * of the todo queue.
+ */
+
+static inline void binder_enqueue_thread_work_ilocked(
+  FAR struct binder_thread *thread, FAR struct binder_work *work)
+{
+  WARN_ON(!list_is_empty(&thread->waiting_thread_node));
+  binder_enqueue_work_ilocked(work, &thread->todo);
+
+  /* (e)poll-based threads require an explicit wakeup signal when
+   * queuing their own work; they rely on these events to consume
+   * messages without I/O block. Without it, threads risk waiting
+   * indefinitely without handling the work.
+   */
+  if (thread->looper & BINDER_LOOPER_STATE_POLL &&
+      thread->tid == gettid() && !thread->process_todo)
+    wait_wake_up(&thread->wait, 1);
+
+  thread->process_todo = true;
+}
 
 #endif /* __DRIVERS_BINDER_BINDER_INTERNAL_H__ */
