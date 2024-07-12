@@ -33,6 +33,7 @@
 #include <errno.h>
 
 #include <nuttx/fs/fs.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/binfmt/elf.h>
 
 /****************************************************************************
