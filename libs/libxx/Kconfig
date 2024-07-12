@@ -36,7 +36,6 @@ config LIBCXXMINI
 config LIBCXX
 	bool "LLVM libc++ C++ Standard Library"
 	select HAVE_CXXINITIALIZE
-	select LIBC_LOCALE
 	select PTHREAD_MUTEX_TYPES
 	---help---
 		LLVM "libc++" C++ Standard Library
@@ -104,6 +103,10 @@ config CXX_RTTI
 
 config CXX_WCHAR
 	bool "Enable Wide Character Support"
+
+config CXX_LOCALIZATION
+	bool "Enable Locale and Stream Support"
+	depends on LIBC_LOCALE
 
 if UCLIBCXX
 
