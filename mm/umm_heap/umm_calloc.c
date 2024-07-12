@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <errno.h>
 #include <stdlib.h>
 
 #include <nuttx/mm/mm.h>

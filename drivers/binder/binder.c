@@ -38,6 +38,8 @@
 #include <assert.h>
 #include <debug.h>
 #include <sched.h>
+
+#include <nuttx/sched.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/android/binder.h>
 #include <nuttx/mutex.h>

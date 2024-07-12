@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/sched_note.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/mm/kasan.h>
 

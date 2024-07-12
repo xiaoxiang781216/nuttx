@@ -33,6 +33,7 @@
 #include <nuttx/atomic.h>
 #include <nuttx/crc16.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/wqueue.h>
 #include <nuttx/net/bluetooth.h>
 #include <nuttx/semaphore.h>
 

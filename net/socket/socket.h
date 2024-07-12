@@ -32,6 +32,7 @@
 #include <stdint.h>
 #include <time.h>
 
+#include <nuttx/fs/fs.h>
 #include <nuttx/clock.h>
 #include <nuttx/net/net.h>
 
