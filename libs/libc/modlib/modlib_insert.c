@@ -135,7 +135,7 @@ void modlib_dumpmodule(FAR struct module_s *modp)
   for (int i = 0; i < modp->dependents; i++)
     {
       binfo("%d    %s\n", i, modp->dependencies[i]->modname);
-      modlib_dumpmodp(modp->dependencies[i]);
+      modlib_dumpmodule(modp->dependencies[i]);
     }
 #endif
 
