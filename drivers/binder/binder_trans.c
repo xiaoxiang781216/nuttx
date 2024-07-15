@@ -1605,6 +1605,15 @@ err_invalid_target_handle:
       binder_proc_dec_tmpref(target_proc);
     }
 
+  binder_debug(BINDER_DEBUG_FAILED_TRANSACTION,
+               "%d:%d transaction %s to %d:%d failed %d,"
+               "size %"PRId64"-%"PRId64"\n",
+               proc->pid, thread->tid, reply ? "reply" :
+               (tr->flags & TF_ONE_WAY ? "async" : "call"),
+               target_proc ? target_proc->pid : 0,
+               target_thread ? target_thread->tid : 0,
+               return_error, tr->data_size, tr->offsets_size);
+
   if (return_error != BR_FROZEN_REPLY)
     {
       binder_debug(BINDER_DEBUG_WARNING,
