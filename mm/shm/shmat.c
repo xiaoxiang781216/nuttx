@@ -222,7 +222,7 @@ FAR void *shmat(int shmid, FAR const void *shmaddr, int shmflg)
 
   /* Get the TCB and group containing our virtual memory allocator */
 
-  tcb = nxsched_self();
+  tcb = this_task();
   DEBUGASSERT(tcb && tcb->group);
 
   group = tcb->group;

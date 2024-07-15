@@ -118,7 +118,7 @@ void nxclock_gettime(clockid_t clock_id, struct timespec *tp)
 
       if (pid == 0)
         {
-          tcb = nxsched_self();
+          tcb = this_task();
         }
       else
         {

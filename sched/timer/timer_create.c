@@ -35,6 +35,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/spinlock.h>
 
+#include "sched/sched.h"
 #include "timer/timer.h"
 
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
@@ -156,7 +157,7 @@ int timer_create(clockid_t clockid, FAR struct sigevent *evp,
                  FAR timer_t *timerid)
 {
   FAR struct posix_timer_s *ret;
-  FAR struct tcb_s *tcb = nxsched_self();
+  FAR struct tcb_s *tcb = this_task();
 
   /* Sanity checks. */
 

@@ -38,6 +38,7 @@
 #include <nuttx/sched.h>
 
 #include "fs_rammap.h"
+#include "sched/sched.h"
 
 #ifdef CONFIG_FS_RAMMAP
 

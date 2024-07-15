@@ -32,5 +32,5 @@
 
 uintptr_t riscv_current_ksp(void)
 {
-  return (uintptr_t)nxsched_self()->xcp.kstkptr;
+  return (uintptr_t)this_task()->xcp.kstkptr;
 }

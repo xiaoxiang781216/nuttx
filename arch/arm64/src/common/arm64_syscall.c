@@ -207,7 +207,7 @@ uint64_t *arm64_syscall(uint64_t *regs)
 #ifdef CONFIG_LIB_SYSCALL
       case SYS_syscall_return:
         {
-          struct tcb_s *rtcb = nxsched_self();
+          struct tcb_s *rtcb = this_task();
           int index = (int)rtcb->xcp.nsyscalls - 1;
 
           /* Make sure that there is a saved SYSCALL return address. */
@@ -341,7 +341,7 @@ uint64_t *arm64_syscall(uint64_t *regs)
 
       case SYS_signal_handler:
         {
-          struct tcb_s *rtcb = nxsched_self();
+          struct tcb_s *rtcb = this_task();
 
           /* Remember the caller's return address */
 
@@ -418,7 +418,7 @@ uint64_t *arm64_syscall(uint64_t *regs)
 
       case SYS_signal_handler_return:
         {
-          struct tcb_s *rtcb = nxsched_self();
+          struct tcb_s *rtcb = this_task();
 
           /* Set up to return to the kernel-mode signal dispatching logic. */
 
@@ -455,7 +455,7 @@ uint64_t *arm64_syscall(uint64_t *regs)
       default:
         {
 #ifdef CONFIG_LIB_SYSCALL
-          struct tcb_s *rtcb = nxsched_self();
+          struct tcb_s *rtcb = this_task();
           int index = rtcb->xcp.nsyscalls;
 
           /* Verify that the SYS call number is within range */

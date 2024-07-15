@@ -196,7 +196,7 @@ int riscv_swint(int irq, void *context, void *arg)
 #ifdef CONFIG_LIB_SYSCALL
       case SYS_syscall_return:
         {
-          struct tcb_s *rtcb = nxsched_self();
+          struct tcb_s *rtcb = this_task();
           int index = (int)rtcb->xcp.nsyscalls - 1;
 
           /* Make sure that there is a saved syscall return address. */
@@ -268,7 +268,7 @@ int riscv_swint(int irq, void *context, void *arg)
 #ifdef CONFIG_ARCH_KERNEL_STACK
           /* Set the user stack pointer as we are about to return to user */
 
-          struct tcb_s *tcb  = nxsched_self();
+          struct tcb_s *tcb  = this_task();
           regs[REG_SP]       = (uintptr_t)tcb->xcp.ustkptr;
           tcb->xcp.ustkptr   = NULL;
 #endif
@@ -314,7 +314,7 @@ int riscv_swint(int irq, void *context, void *arg)
 #ifdef CONFIG_ARCH_KERNEL_STACK
           /* Set the user stack pointer as we are about to return to user */
 
-          struct tcb_s *tcb  = nxsched_self();
+          struct tcb_s *tcb  = this_task();
           regs[REG_SP]       = (uintptr_t)tcb->xcp.ustkptr;
           tcb->xcp.ustkptr   = NULL;
 #endif
@@ -349,7 +349,7 @@ int riscv_swint(int irq, void *context, void *arg)
 #ifndef CONFIG_BUILD_FLAT
       case SYS_signal_handler:
         {
-          struct tcb_s *rtcb   = nxsched_self();
+          struct tcb_s *rtcb   = this_task();
 
           /* Remember the caller's return address */
 
@@ -423,7 +423,7 @@ int riscv_swint(int irq, void *context, void *arg)
 #ifndef CONFIG_BUILD_FLAT
       case SYS_signal_handler_return:
         {
-          struct tcb_s *rtcb   = nxsched_self();
+          struct tcb_s *rtcb   = this_task();
 
           /* Set up to return to the kernel-mode signal dispatching logic. */
 
@@ -458,7 +458,7 @@ int riscv_swint(int irq, void *context, void *arg)
       default:
         {
 #ifdef CONFIG_LIB_SYSCALL
-          struct tcb_s *rtcb = nxsched_self();
+          struct tcb_s *rtcb = this_task();
           int index = rtcb->xcp.nsyscalls;
 
           /* Verify that the SYS call number is within range */

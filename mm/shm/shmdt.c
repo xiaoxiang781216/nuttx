@@ -72,7 +72,7 @@ int shmdt(FAR const void *shmaddr)
 
   /* Get the TCB and group containing our virtual memory allocator */
 
-  tcb = nxsched_self();
+  tcb = this_task();
   DEBUGASSERT(tcb && tcb->group);
   group = tcb->group;
 
