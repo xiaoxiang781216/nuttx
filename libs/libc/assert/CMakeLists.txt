@@ -20,7 +20,10 @@
 
 set(SRCS lib_assert.c lib_stackchk.c)
 
-set_source_files_properties(lib_assert.c PROPERTIES COMPILE_FLAGS -fno-lto)
-set_source_files_properties(lib_stackchk.c PROPERTIES COMPILE_FLAGS -fno-lto)
-
+if(NOT CONFIG_LTO_NONE)
+  set_source_files_properties(lib_assert.c DIRECTORY .. PROPERTIES COMPILE_FLAGS
+                                                                   -fno-lto)
+  set_source_files_properties(lib_stackchk.c DIRECTORY ..
+                              PROPERTIES COMPILE_FLAGS -fno-lto)
+endif()
 target_sources(c PRIVATE ${SRCS})
