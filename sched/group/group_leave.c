@@ -182,6 +182,7 @@ static inline void group_removemember(FAR struct task_group_s *group,
 
           flags = enter_critical_section();
           group->tg_members[i] = group->tg_members[group->tg_nmembers - 1];
+          group->tg_members[group->tg_nmembers - 1] = INVALID_PROCESS_ID;
           group->tg_nmembers--;
           leave_critical_section(flags);
         }

@@ -67,10 +67,13 @@ int group_foreachchild(FAR struct task_group_s *group,
 
   for (i = group->tg_nmembers - 1; i >= 0; i--)
     {
-      ret = handler(group->tg_members[i], arg);
-      if (ret != 0)
+      if (group->tg_members[i] != INVALID_PROCESS_ID)
         {
-          return ret;
+          ret = handler(group->tg_members[i], arg);
+          if (ret != 0)
+            {
+              return ret;
+            }
         }
     }
 
