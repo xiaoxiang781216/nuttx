@@ -95,7 +95,6 @@ config SIM_GPROF
 
 config SIM_GCOV_ALL
 	bool "Enable code coverage for the entire image"
-	depends on COVERAGE
 	default n
 	---help---
 		This option activates code coverage instrumentation for the
