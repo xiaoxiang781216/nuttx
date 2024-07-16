@@ -18,6 +18,15 @@
 #
 # ##############################################################################
 
+if(APPLE)
+  find_program(CMAKE_C_ELF_COMPILER x86_64-elf-gcc)
+  find_program(CMAKE_CXX_ELF_COMPILER x86_64-elf-g++)
+endif()
+
+if(WIN32)
+  return()
+endif()
+
 add_compile_options(
   -U_AIX
   -U_WIN32
@@ -28,15 +37,6 @@ add_compile_options(
   -U__sun__
   -U__unix__
   -U__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
-
-if(APPLE)
-  find_program(CMAKE_C_ELF_COMPILER x86_64-elf-gcc)
-  find_program(CMAKE_CXX_ELF_COMPILER x86_64-elf-g++)
-endif()
-
-if(WIN32)
-  return()
-endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
   add_compile_options(-g3)
