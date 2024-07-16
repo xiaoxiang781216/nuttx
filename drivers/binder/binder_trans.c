@@ -676,17 +676,15 @@ static struct binder_node *binder_get_node_refs_for_txn(
 void binder_transaction_buffer_release(FAR struct binder_proc *proc,
                                        FAR struct binder_thread *thread,
                                        FAR struct binder_buffer *buffer,
-                                       binder_size_t failed_at,
+                                       binder_size_t off_end_offset,
                                        bool is_failure)
 {
-  binder_size_t off_start_offset;
-  binder_size_t buffer_offset;
-  binder_size_t off_end_offset;
+  binder_size_t off_start_offset, buffer_offset;
 
   binder_debug(BINDER_DEBUG_TRANSACTION,
                "buffer release %d, size %d-%d, failed at %" PRIx64 "\n",
                buffer->debug_id, buffer->data_size, buffer->offsets_size,
-               failed_at);
+               off_end_offset);
 
   if (buffer->target_node)
     {
@@ -694,9 +692,7 @@ void binder_transaction_buffer_release(FAR struct binder_proc *proc,
     }
 
   off_start_offset  = ALIGN(buffer->data_size, sizeof(void *));
-  off_end_offset    = is_failure &&
-                      failed_at ? failed_at :off_start_offset +
-                      buffer->offsets_size;
+
   for (buffer_offset = off_start_offset; buffer_offset < off_end_offset;
        buffer_offset += sizeof(binder_size_t))
     {
@@ -799,6 +795,28 @@ void binder_transaction_buffer_release(FAR struct binder_proc *proc,
         }
       }
     }
+}
+
+/****************************************************************************
+ * Name: binder_release_entire_buffer
+ *
+ * Description:
+ *   Clean up all the objects in the buffer
+ *
+ ****************************************************************************/
+
+void binder_release_entire_buffer(FAR struct binder_proc *proc,
+                                  FAR struct binder_thread *thread,
+                                  FAR struct binder_buffer *buffer,
+                                  bool is_failure)
+{
+  binder_size_t off_end_offset;
+
+  off_end_offset = ALIGN(buffer->data_size, sizeof(void *));
+  off_end_offset += buffer->offsets_size;
+
+  binder_transaction_buffer_release(proc, thread, buffer,
+                                    off_end_offset, is_failure);
 }
 
 /****************************************************************************

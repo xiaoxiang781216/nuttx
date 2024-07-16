@@ -844,6 +844,10 @@ void binder_transaction_buffer_release(FAR struct binder_proc *proc,
                                        FAR struct binder_buffer *buffer,
                                        binder_size_t failed_at,
                                        bool is_failure);
+void binder_release_entire_buffer(FAR struct binder_proc *proc,
+                                  FAR struct binder_thread *thread,
+                                  FAR struct binder_buffer *buffer,
+                                  bool is_failure);
 void binder_transaction_priority(FAR struct binder_thread *thread,
                                  FAR struct binder_transaction *t,
                                  FAR struct binder_node *node);
@@ -884,6 +888,7 @@ static inline void binder_enqueue_thread_work_ilocked(
    * messages without I/O block. Without it, threads risk waiting
    * indefinitely without handling the work.
    */
+
   if (thread->looper & BINDER_LOOPER_STATE_POLL &&
       thread->tid == gettid() && !thread->process_todo)
     wait_wake_up(&thread->wait, 1);
