@@ -31,6 +31,7 @@
 #include <nuttx/kmalloc.h>
 
 #include <sys/mman.h>
+#include <sys/param.h>
 
 #include "modlib.h"
 
@@ -196,7 +197,7 @@ int modlib_addrenv_select(FAR struct mod_loadinfo_s *loadinfo)
  *
  ****************************************************************************/
 
-int modlib_addrenv_restore(FAR struct modlib_loadinfo_s *loadinfo)
+int modlib_addrenv_restore(FAR struct mod_loadinfo_s *loadinfo)
 {
   int ret;
 

@@ -315,7 +315,7 @@ int modlib_addrenv_select(FAR struct mod_loadinfo_s *loadinfo);
  *
  ****************************************************************************/
 
-int modlib_addrenv_restore(FAR struct modlib_loadinfo_s *loadinfo);
+int modlib_addrenv_restore(FAR struct mod_loadinfo_s *loadinfo);
 
 /****************************************************************************
  * Name: modlib_addrenv_free

@@ -59,7 +59,7 @@ int modlib_unload(FAR struct mod_loadinfo_s *loadinfo)
 #ifdef CONFIG_ARCH_ADDRENV
   if (loadinfo->addrenv != NULL)
     {
-      modlib_freeaddrenv(loadinfo);
+      modlib_addrenv_free(loadinfo);
     }
   else
 #endif
