@@ -293,9 +293,9 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
           for (; fmt_char(fmt); fmt++)
             {
 #ifdef CONFIG_LIBC_SCANSET
-              if (strchr("dibouxXcseEfFgGaAn[%", fmt_char(fmt)))
+              if (strchr("diboupxXcseEfFgGaAn[%", fmt_char(fmt)))
 #else
-              if (strchr("dibouxXcseEfFgGaAn%", fmt_char(fmt)))
+              if (strchr("diboupxXcseEfFgGaAn%", fmt_char(fmt)))
 #endif
                 {
                   if (fmt_char(fmt) != '%')
@@ -556,9 +556,9 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                 }
             }
 
-          /* Process %d, %o, %b, %x, %u: Various integer conversions */
+          /* Process %d, %o, %b, %p, %x, %u: Various integer conversions */
 
-          else if (strchr("dobxXui", fmt_char(fmt)))
+          else if (strchr("dobpxXui", fmt_char(fmt)))
             {
               bool sign;
 
@@ -676,6 +676,7 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                       base = 10;
                       break;
 
+                    case 'p':
                     case 'x':
                     case 'X':
                       while (fwidth < width && !stopconv)
