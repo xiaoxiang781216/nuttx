@@ -52,6 +52,8 @@
  *
  ****************************************************************************/
 
+#ifdef HAVE_MODLIB_NAMES
+
 FAR void *modlib_gethandle(FAR const char *name)
 {
   FAR struct module_s *modp;
@@ -74,3 +76,5 @@ FAR void *modlib_gethandle(FAR const char *name)
   modlib_registry_unlock();
   return modp;
 }
+
+#endif /* HAVE_MODLIB_NAMES */

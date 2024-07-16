@@ -248,11 +248,14 @@ FAR void *modlib_insert(FAR const char *filename, FAR const char *modname)
 
   /* Check if this module is already installed */
 
+#ifdef HAVE_MODLIB_NAMES
   if (modlib_registry_find(modname) != NULL)
     {
-      ret = -EEXIST;
-      goto errout_with_lock;
+      modlib_registry_unlock();
+      set_errno(EEXIST);
+      return NULL;
     }
+#endif
 
   /* Initialize the ELF library to load the program binary. */
 
@@ -359,7 +362,6 @@ errout_with_registry_entry:
   lib_free(modp);
 errout_with_loadinfo:
   modlib_uninitialize(&loadinfo);
-errout_with_lock:
   modlib_registry_unlock();
   set_errno(-ret);
   return NULL;

@@ -744,6 +744,10 @@ int modlib_remove(FAR void *handle);
  *
  ****************************************************************************/
 
+#ifdef HAVE_MODLIB_NAMES
 FAR void *modlib_gethandle(FAR const char *name);
+#else
+#  define modlib_gethandle(n) NULL
+#endif
 
 #endif /* __INCLUDE_NUTTX_LIB_MODLIB_H */
