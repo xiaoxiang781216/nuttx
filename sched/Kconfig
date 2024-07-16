@@ -2012,3 +2012,11 @@ config COREDUMP
 		The memory state embeds a snapshot of all segments mapped in the
 		memory space of the program. The CPU state contains register values
 		when the core dump has been generated.
+
+config ASSERT_PAUSE_CPU_TIMEOUT
+	int "Timeout in milisecond to pause another CPU when assert"
+	default 2000
+	depends on SMP_CALL
+	---help---
+		Timeout in milisecond to pause another CPU when assert. Only available
+		when SMP_CALL is enabled.
