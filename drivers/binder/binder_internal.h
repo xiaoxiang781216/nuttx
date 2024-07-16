@@ -65,6 +65,11 @@
     val = *(__p);                     \
   })
 
+/* debug info output mask */
+
+extern uint32_t binder_debug_mask;
+extern unsigned int binder_last_debug_id;
+
 #ifdef CONFIG_DRIVERS_BINDER_DEBUG
 enum
 {
@@ -99,23 +104,26 @@ extern const char *g_binder_return_str[];
 #define BINDER_LOG_BUFSIZE  256
 extern char binder_debug_log[BINDER_LOG_BUFSIZE];
 
-void binder_syslog(FAR char * buff, int pos,
-      FAR const char *fmt, ...) syslog_like(3, 4);
+static void binder_debug(int mask, FAR const char *fmt, ...)
+{
+  if (binder_debug_mask & mask)
+    {
+      int pos;
+      va_list ap;
+      pos = snprintf(binder_debug_log, 256,
+                     "[%s (%d)][%d:%d][%s]:",
+                     LOG_TAG, __LINE__,
+                     getpid(), gettid(),
+                     __func__);
 
-#define binder_debug(mask, x ...)                  \
-  do                                               \
-    {                                              \
-      if (binder_debug_mask & mask)                \
-        {                                          \
-          int pos;                                 \
-          pos = snprintf(binder_debug_log, 256,    \
-                         "[%s (%d)][%d:%d][%s]:",  \
-                         LOG_TAG, __LINE__,        \
-                         getpid(), gettid(),       \
-                         __func__);                \
-          binder_syslog(binder_debug_log, pos, x); \
-        }                                          \
-    } while ( 0 )
+      va_start(ap, fmt);
+      vsnprintf(binder_debug_log + pos,
+                BINDER_LOG_BUFSIZE - pos -1, fmt, ap);
+      va_end(ap);
+
+      syslog(LOG_INFO, "%s", binder_debug_log);
+    }
+}
 
 #else
 #define binder_debug(mask, x ...)
@@ -153,12 +161,6 @@ void binder_syslog(FAR char * buff, int pos,
 #define binder_node_inner_unlock(node)        _binder_node_inner_unlock(node, __LINE__)
 #define binder_inner_proc_assert_locked(proc) _binder_inner_proc_assert_locked(proc, __LINE__)
 #define binder_node_inner_assert_locked(node) _binder_node_inner_assert_locked(node, __LINE__)
-
-/* debug info output mask */
-
-extern uint32_t     binder_debug_mask;
-
-extern unsigned int binder_last_debug_id;
 
 /****************************************************************************
  * Public Types

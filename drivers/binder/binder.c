@@ -65,17 +65,6 @@ uint32_t binder_debug_mask = BINDER_DEBUG_WARNING |
 
 char binder_debug_log[BINDER_LOG_BUFSIZE];
 
-void binder_syslog(FAR char *buff, int pos, FAR const char *fmt, ...)
-{
-  va_list ap;
-
-  va_start(ap, fmt);
-  vsnprintf(buff + pos, BINDER_LOG_BUFSIZE - pos -1, fmt, ap);
-  va_end(ap);
-
-  syslog(LOG_INFO, "%s", buff);
-}
-
 const char *g_binder_ioctl_str[] =
 {
   NULL,
