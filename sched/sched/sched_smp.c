@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
 #include <nuttx/arch.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/queue.h>
@@ -59,6 +60,7 @@ struct smp_call_data_s
 
 static sq_queue_t g_smp_call_queue[CONFIG_SMP_NCPUS];
 static struct smp_call_data_s g_smp_call_data;
+static spinlock_t g_smp_call_lock;
 
 /****************************************************************************
  * Private Functions
@@ -84,9 +86,9 @@ static void nxsched_smp_call_add(int cpu,
 {
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_smp_call_lock);
   sq_addlast(&call_data->node[cpu], &g_smp_call_queue[cpu]);
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_smp_call_lock, flags);
 }
 
 /****************************************************************************
@@ -117,7 +119,7 @@ int nxsched_smp_call_handler(int irq, FAR void *context,
   FAR sq_entry_t *next;
   int cpu = this_cpu();
 
-  irqstate_t flags = enter_critical_section();
+  irqstate_t flags = spin_lock_irqsave(&g_smp_call_lock);
 
   call_queue = &g_smp_call_queue[cpu];
 
@@ -129,11 +131,11 @@ int nxsched_smp_call_handler(int irq, FAR void *context,
 
       sq_rem(&call_data->node[cpu], call_queue);
 
-      leave_critical_section(flags);
+      spin_unlock_irqrestore(&g_smp_call_lock, flags);
 
       ret = call_data->func(call_data->arg);
 
-      flags = enter_critical_section();
+      flags = spin_lock_irqsave(&g_smp_call_lock);
       if (spin_is_locked(&call_data->lock))
         {
           if (--call_data->refcount == 0)
@@ -153,7 +155,7 @@ int nxsched_smp_call_handler(int irq, FAR void *context,
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_smp_call_lock, flags);
   return OK;
 }
 
@@ -215,13 +217,20 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
     };
 
   FAR struct smp_call_data_s *call_data;
-  int remote_cpus = 0;
+  int remote_cpus;
   int ret = OK;
   int i;
 
+  /* Cannot wait in interrupt context. */
+
+  DEBUGASSERT(!(wait && up_interrupt_context()));
+
   /* Prevent reschedule on another processor */
 
-  sched_lock();
+  if (!up_interrupt_context())
+    {
+      sched_lock();
+    }
 
   if (CPU_ISSET(this_cpu(), &cpuset))
     {
@@ -289,6 +298,10 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
     }
 
 out:
-  sched_unlock();
+  if (!up_interrupt_context())
+    {
+      sched_unlock();
+    }
+
   return ret;
 }
