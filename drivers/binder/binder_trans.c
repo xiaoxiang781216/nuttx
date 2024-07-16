@@ -1589,6 +1589,12 @@ err_bad_call_stack:
 err_empty_call_stack:
 err_dead_binder:
 err_invalid_target_handle:
+  if (target_node)
+    {
+      binder_dec_node(target_node, 1, 0);
+      binder_dec_node_tmpref(target_node);
+    }
+
   if (target_thread)
     {
       binder_thread_dec_tmpref(target_thread);
@@ -1597,12 +1603,6 @@ err_invalid_target_handle:
   if (target_proc)
     {
       binder_proc_dec_tmpref(target_proc);
-    }
-
-  if (target_node)
-    {
-      binder_dec_node(target_node, 1, 0);
-      binder_dec_node_tmpref(target_node);
     }
 
   if (return_error != BR_FROZEN_REPLY)
