@@ -2007,7 +2007,11 @@ int uart_register(FAR const char *path, FAR uart_dev_t *dev)
 #ifdef CONFIG_SERIAL_GDBSTUB
   if (strcmp(path, CONFIG_SERIAL_GDBSTUB_PATH) == 0)
     {
-      return uart_gdbstub_register(dev);
+#ifdef CONFIG_SERIAL_GDBSTUB_AUTO_ATTACH
+      uart_gdbstub_register(dev, false);
+#else
+      return uart_gdbstub_register(dev, true);
+#endif
     }
 #endif
 

@@ -53,6 +53,16 @@ config SERIAL_GDBSTUB_PATH
 	---help---
 		The path to the serial device that will be used for GDB stub.
 
+config SERIAL_GDBSTUB_AUTO_ATTACH
+	bool "GDBSTUB only use in panic"
+	depends on SERIAL_GDBSTUB
+	default n
+	---help---
+		Attach the serial port to gdbstub by default.
+		Deselect it to attach only when an assertion occurs.
+		This allows reuse of the normal serial port,
+		such as the console as the gdbstub port.
+
 config UART_HOSTFS
 	bool "Use hostfs read/write on stdio as uart console"
 	depends on FS_HOSTFS

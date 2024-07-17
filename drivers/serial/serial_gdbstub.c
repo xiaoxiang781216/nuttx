@@ -24,6 +24,7 @@
 
 #include <nuttx/serial/serial.h>
 #include <nuttx/panic_notifier.h>
+#include <nuttx/syslog/syslog.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/gdbstub.h>
 #include <nuttx/nuttx.h>
@@ -32,7 +33,7 @@
 #include <debug.h>
 
 /****************************************************************************
- * Private Data
+ * Private Types
  ****************************************************************************/
 
 struct uart_gdbstub_s
@@ -41,14 +42,40 @@ struct uart_gdbstub_s
   FAR struct gdb_state_s *state;
   FAR const struct uart_ops_s *org_ops;
   struct uart_ops_s ops;
+  bool attached;
   struct notifier_block nb;
 };
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
 
 static FAR struct uart_gdbstub_s *g_uart_gdbstub;
 
 /****************************************************************************
+ * Private Functions prototypes
+ ****************************************************************************/
+
+static int uart_gdbstub_ctrlc(FAR struct uart_dev_s *dev,
+                              FAR unsigned int *status);
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static void uart_gdbstub_attach(FAR struct uart_gdbstub_s *uart_gdbstub)
+{
+  FAR uart_dev_t *dev = uart_gdbstub->dev;
+
+  memcpy(&uart_gdbstub->ops, dev->ops, sizeof(struct uart_ops_s));
+  uart_gdbstub->org_ops = dev->ops;
+  uart_gdbstub->ops.receive = uart_gdbstub_ctrlc;
+  dev->ops = &uart_gdbstub->ops;
+  uart_setup(dev);
+  uart_attach(dev);
+  uart_enablerxint(dev);
+  uart_gdbstub->attached = true;
+}
 
 /****************************************************************************
  * Name: uart_gdbstub_panic_callback
@@ -70,13 +97,48 @@ static int uart_gdbstub_panic_callback(FAR struct notifier_block *nb,
       return 0;
     }
 
+  if (uart_gdbstub->attached)
+    {
+      gdb_console_message(uart_gdbstub->state,
+                          "Enter panic gdbstub mode!\n");
+    }
+  else
+    {
+      unsigned int status;
+      clock_t base;
+      char ch;
+
+      _alert("Press Y/y key in 10 seconds to enter gdb debug mode,"
+             "or any other key to reboot.\n");
+      syslog_flush();
+
+      base = clock_systime_ticks();
+      while (!uart_rxavailable(uart_gdbstub->dev))
+        {
+          if ((clock_systime_ticks()) - base >= SEC2TICK(10))
+            {
+              _alert("10 seconds passed, exit now\n");
+              return 0;
+            }
+        }
+
+      ch = uart_gdbstub->dev->ops->receive(uart_gdbstub->dev, &s);
+      if (ch != 'Y' && ch != 'y')
+        {
+          _alert("Skip gdb debugging process\n");
+          return 0;
+        }
+
+      uart_gdbstub_attach(uart_gdbstub);
+    }
+
   _alert("Enter panic gdbstub mode, plase use gdb connect to debug\n");
   _alert("Please use gdb of the corresponding architecture to "
          "connect to nuttx");
   _alert("such as: arm-none-eabi-gdb nuttx -ex \"set "
          "target-charset ASCII\" -ex \"target remote /dev/ttyUSB0\"\n");
 
-  gdb_console_message(uart_gdbstub->state, "Enter panic gdbstub mode!\n");
+  syslog_flush();
   gdb_process(uart_gdbstub->state, GDB_STOPREASON_CTRLC, NULL);
   return 0;
 }
@@ -120,7 +182,7 @@ static ssize_t uart_gdbstub_receive(FAR void *priv, FAR void *buf,
     {
       if (uart_gdbstub->org_ops->rxavailable(dev))
         {
-          ptr[i++] = g_uart_gdbstub->org_ops->receive(dev, &state);
+          ptr[i++] = uart_gdbstub->org_ops->receive(dev, &state);
         }
     }
 
@@ -165,11 +227,11 @@ static ssize_t uart_gdbstub_send(FAR void *priv, FAR void *buf, size_t len)
  *
  ****************************************************************************/
 
-int uart_gdbstub_register(FAR uart_dev_t *dev)
+int uart_gdbstub_register(FAR uart_dev_t *dev, bool attach)
 {
   FAR struct uart_gdbstub_s *uart_gdbstub;
 
-  uart_gdbstub = kmm_malloc(sizeof(struct uart_gdbstub_s));
+  uart_gdbstub = kmm_zalloc(sizeof(struct uart_gdbstub_s));
   if (uart_gdbstub == NULL)
     {
       return -ENOMEM;
@@ -185,15 +247,11 @@ int uart_gdbstub_register(FAR uart_dev_t *dev)
     }
 
   g_uart_gdbstub = uart_gdbstub;
-
-  memcpy(&uart_gdbstub->ops, dev->ops, sizeof(struct uart_ops_s));
   uart_gdbstub->dev = dev;
-  uart_gdbstub->org_ops = dev->ops;
-  uart_gdbstub->ops.receive = uart_gdbstub_ctrlc;
-  dev->ops = &uart_gdbstub->ops;
-  uart_setup(dev);
-  uart_attach(dev);
-  uart_enablerxint(dev);
+  if (attach)
+    {
+      uart_gdbstub_attach(uart_gdbstub);
+    }
 
   uart_gdbstub->nb.notifier_call = uart_gdbstub_panic_callback;
   panic_notifier_chain_register(&uart_gdbstub->nb);
