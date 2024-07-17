@@ -206,8 +206,8 @@ free_range:
 }
 
 static FAR struct binder_buffer *binder_alloc_new_buf_locked(
-  FAR struct binder_alloc *alloc, size_t data_size, size_t offsets_size,
-  int secctx_sz, int is_async, int pid, FAR int * p_ret)
+  FAR struct binder_alloc *alloc, size_t size,
+  int is_async, int pid, FAR int * p_ret)
 {
   FAR struct binder_buffer  *buffer = NULL;
   FAR struct binder_buffer  *tmp;
@@ -215,30 +215,9 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
   FAR void                  *has_page_addr;
   FAR void                  *end_page_addr;
   FAR void                  *page_range;
-  size_t                     size;
-  size_t                     data_offsets_size;
   int                        ret;
 
   BUG_ON((alloc->buffer_data_size == 0));
-
-  data_offsets_size = ALIGN(data_size, sizeof(void *));
-  data_offsets_size += ALIGN(offsets_size, sizeof(void *));
-
-  if (data_offsets_size < data_size || data_offsets_size < offsets_size)
-    {
-      binder_debug(BINDER_DEBUG_ALLOC_BUFFER,
-                   "alloc->pid=%d: got transaction with "
-                   "invalid size %zd-%zd\n",
-                   alloc->pid, data_size, offsets_size);
-      *p_ret = -EINVAL;
-      return NULL;
-    }
-
-  /* Pad 0-size buffers so they get assigned unique addresses */
-
-  size      = data_offsets_size + ALIGN(secctx_sz, sizeof(void *));
-  size      = max(size, sizeof(void *));
-  buffer    = NULL;
 
   list_for_every_entry(&alloc->free_buffers_list, tmp,
                        struct binder_buffer, rb_node)
@@ -315,8 +294,6 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
   list_delete_init(&buffer->rb_node);
   buffer->free                  = 0;
   buffer->allow_user_free       = 0;
-  buffer->data_size             = data_size;
-  buffer->offsets_size          = offsets_size;
   buffer->async_transaction     = is_async;
   buffer->pid                   = pid;
   buffer->oneway_spam_suspect   = false;
@@ -335,6 +312,37 @@ err_alloc_buf_struct_failed:
   binder_update_page_range(alloc, 0, page_range, end_page_addr);
   *p_ret = -ENOMEM;
   return NULL;
+}
+
+/* Calculate the sanitized total size, returns 0 for invalid request */
+
+static inline size_t sanitized_size(size_t data_size,
+                                    size_t offsets_size,
+                                    size_t secctx_sz)
+{
+  size_t total;
+  size_t tmp;
+
+  /* Align to pointer size and check for overflows */
+
+  tmp = ALIGN(data_size, sizeof(void *)) +
+        ALIGN(offsets_size, sizeof(void *));
+  if (tmp < data_size || tmp < offsets_size)
+    {
+      return 0;
+    }
+
+  total = tmp + ALIGN(secctx_sz, sizeof(void *));
+  if (total < tmp || total < secctx_sz)
+    {
+      return 0;
+    }
+
+  /* Pad 0-sized buffers so they get a unique address */
+
+  total = max(total, sizeof(void *));
+
+  return total;
 }
 
 static void delete_free_buffer(FAR struct binder_alloc *alloc,
@@ -616,7 +624,7 @@ FAR struct binder_buffer *binder_alloc_prepare_to_free(
  *   alloc              - binder_alloc for this proc
  *   data_size          - size of user data buffer
  *   offsets_size       - user specified buffer offset
- *   extra_buffers_size - size of extra space for meta-data
+ *   secctx_sz          - size of extra space for meta-data
  *                        (eg, security context)
  *   is_async           - buffer for async transaction
  *   pid                - pid to attribute allocation to (used for debugging)
@@ -631,10 +639,30 @@ FAR struct binder_buffer *binder_alloc_new_buf(
   size_t secctx_sz, int is_async, int pid, FAR int *ret)
 {
   FAR struct binder_buffer *buffer;
+  size_t size;
+
+  size = sanitized_size(data_size, offsets_size, secctx_sz);
+  if (!size)
+    {
+      binder_debug(BINDER_DEBUG_ALLOC_BUFFER,
+                   "alloc->pid=%d: got transaction with "
+                   "invalid size %zd-%zd\n",
+                   alloc->pid, data_size, offsets_size);
+      *ret = -EINVAL;
+      return NULL;
+    }
 
   nxmutex_lock(&alloc->alloc_lock);
-  buffer = binder_alloc_new_buf_locked(alloc, data_size, offsets_size,
-                                       secctx_sz, is_async, pid, ret);
+  buffer = binder_alloc_new_buf_locked(alloc, size, is_async, pid, ret);
+  if (buffer == NULL)
+    {
+      goto out;
+    }
+
+  buffer->data_size = data_size;
+  buffer->offsets_size = offsets_size;
+
+out:
   nxmutex_unlock(&alloc->alloc_lock);
   return buffer;
 }
