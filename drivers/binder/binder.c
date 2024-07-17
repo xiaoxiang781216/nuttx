@@ -808,7 +808,7 @@ int binder_initialize(void)
 
 void _binder_proc_lock(FAR struct binder_proc *proc, int line)
 {
-  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  binder_debug(BINDER_DEBUG_LOCKS, "line=%d\n", line);
   nxmutex_lock(&proc->outer_lock);
 }
 
@@ -825,7 +825,7 @@ void _binder_proc_lock(FAR struct binder_proc *proc, int line)
 
 void _binder_proc_unlock(FAR struct binder_proc *proc, int line)
 {
-  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  binder_debug(BINDER_DEBUG_LOCKS, "line=%d\n", line);
   nxmutex_unlock(&proc->outer_lock);
 }
 
@@ -842,7 +842,7 @@ void _binder_proc_unlock(FAR struct binder_proc *proc, int line)
 
 void _binder_inner_proc_lock(FAR struct binder_proc *proc, int line)
 {
-  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  binder_debug(BINDER_DEBUG_LOCKS, "line=%d\n", line);
   nxmutex_lock(&proc->inner_lock);
 }
 
@@ -859,7 +859,7 @@ void _binder_inner_proc_lock(FAR struct binder_proc *proc, int line)
 
 void _binder_inner_proc_unlock(FAR struct binder_proc *proc, int line)
 {
-  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  binder_debug(BINDER_DEBUG_LOCKS, "line=%d\n", line);
   nxmutex_unlock(&proc->inner_lock);
 }
 
@@ -876,7 +876,7 @@ void _binder_inner_proc_unlock(FAR struct binder_proc *proc, int line)
 
 void _binder_node_lock(FAR struct binder_node *node, int line)
 {
-  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  binder_debug(BINDER_DEBUG_LOCKS, "line=%d\n", line);
   nxmutex_lock(&node->lock);
 }
 
@@ -893,7 +893,7 @@ void _binder_node_lock(FAR struct binder_node *node, int line)
 
 void _binder_node_unlock(FAR struct binder_node *node, int line)
 {
-  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  binder_debug(BINDER_DEBUG_LOCKS, "line=%d\n", line);
   nxmutex_unlock(&node->lock);
 }
 
@@ -911,7 +911,7 @@ void _binder_node_unlock(FAR struct binder_node *node, int line)
 
 void _binder_node_inner_lock(FAR struct binder_node *node, int line)
 {
-  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  binder_debug(BINDER_DEBUG_LOCKS, "line=%d\n", line);
   nxmutex_lock(&node->lock);
   if (node->proc)
     {
@@ -932,7 +932,7 @@ void _binder_node_inner_lock(FAR struct binder_node *node, int line)
 
 void _binder_node_inner_unlock(FAR struct binder_node *node, int line)
 {
-  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  binder_debug(BINDER_DEBUG_LOCKS, "line=%d\n", line);
   if (node->proc)
     {
       binder_inner_proc_unlock(node->proc);
@@ -954,7 +954,7 @@ void _binder_node_inner_unlock(FAR struct binder_node *node, int line)
 
 void _binder_inner_proc_assert_locked(FAR struct binder_proc *proc, int line)
 {
-  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  binder_debug(BINDER_DEBUG_LOCKS, "line=%d\n", line);
   BUG_ON(!nxmutex_is_locked(&proc->inner_lock));
 }
 
@@ -971,7 +971,7 @@ void _binder_inner_proc_assert_locked(FAR struct binder_proc *proc, int line)
 
 void _binder_node_inner_assert_locked(FAR struct binder_node *node, int line)
 {
-  binder_debug(BINDER_DEBUG_LOCKS, "%s: line=%d\n", __func__, line);
+  binder_debug(BINDER_DEBUG_LOCKS, "line=%d\n", line);
   BUG_ON(!nxmutex_is_locked(&node->lock));
 
   if (node->proc)
