@@ -35,6 +35,7 @@
 #include "chip.h"
 #include "signal/signal.h"
 #include "xtensa.h"
+#include "sched/sched.h"
 
 /****************************************************************************
  * Private Functions
@@ -427,17 +428,19 @@ int xtensa_swint(int irq, void *context, void *arg)
    * switch.
    */
 
-#ifdef CONFIG_DEBUG_SYSCALL_INFO
   if (regs != up_current_regs())
     {
+      restore_critical_section(this_task(), this_cpu());
+
+#ifdef CONFIG_DEBUG_SYSCALL_INFO
       svcinfo("SYSCALL Return: Context switch!\n");
       up_dump_register(up_current_regs());
+#endif
     }
   else
     {
       svcinfo("SYSCALL Return: %" PRIu32 "\n", cmd);
     }
-#endif
 
   return OK;
 }
