@@ -1959,7 +1959,9 @@ int gdb_process(FAR struct gdb_state_s *state, int stopreason,
         }
     }
 
+#ifdef CONFIG_ARCH_HAVE_DEBUG
 out:
+#endif
   state->last_stopreason = stopreason;
   state->last_stopaddr = stopaddr;
   return ret;
