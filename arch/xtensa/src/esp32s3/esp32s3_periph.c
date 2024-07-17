@@ -417,7 +417,7 @@ static inline uint32_t IRAM_ATTR esp32s3_periph_ll_get_rst_en_mask(
 
 void esp32s3_periph_module_enable(esp32s3_periph_module_t periph)
 {
-  irqstate_t flags = enter_critical_section();
+  irqstate_t flags = spin_lock_irqsave(NULL);
 
   ASSERT(periph < PERIPH_MODULE_MAX);
   if (ref_counts[periph] == 0)
@@ -430,7 +430,7 @@ void esp32s3_periph_module_enable(esp32s3_periph_module_t periph)
 
   ref_counts[periph]++;
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(NULL, flags);
 }
 
 /****************************************************************************
