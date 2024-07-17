@@ -46,7 +46,7 @@ genrule {
     ],
 }
 
-cc_library {
+cc_library_static {
     name: "libnuttx_libc",
     header_libs: ["nuttx_libc_headers"],
     srcs: [
