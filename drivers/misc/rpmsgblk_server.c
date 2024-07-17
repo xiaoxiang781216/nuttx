@@ -223,8 +223,12 @@ static int rpmsgblk_read_handler(FAR struct rpmsg_endpoint *ept,
       ret = server->bops->read(server->blknode, (unsigned char *)rsp->buf,
                                msg->startsector, nsectors);
       rsp->header.result = ret;
-      rpmsg_send_nocopy(ept, rsp, (ret < 0 ? 0 : ret * msg->sectorsize) +
-                        sizeof(*rsp) - 1);
+      if (rpmsg_send_nocopy(ept, rsp, (ret < 0 ? 0 : ret * msg->sectorsize) +
+                                      sizeof(*rsp) - 1) < 0)
+        {
+          rpmsg_release_tx_buffer(ept, rsp);
+        }
+
       if (ret <= 0)
         {
           ferr("mtd block read failed\n");
@@ -326,6 +330,7 @@ static int rpmsgblk_mmc_cmd_handler(FAR struct rpmsg_endpoint *ept,
   size_t rsplen;
   size_t arglen;
   uint32_t space;
+  int ret;
 
   arglen = sizeof(struct mmc_ioc_cmd);
   if (!ioc->write_flag)
@@ -357,8 +362,13 @@ static int rpmsgblk_mmc_cmd_handler(FAR struct rpmsg_endpoint *ept,
 
   rsp->header.result = server->bops->ioctl(server->blknode, rsp->request,
                                            (unsigned long)rsp->buf);
+  ret = rpmsg_send_nocopy(ept, rsp, rsplen);
+  if (ret < 0)
+    {
+      rpmsg_release_tx_buffer(ept, rsp);
+    }
 
-  return rpmsg_send_nocopy(ept, rsp, rsplen);
+  return ret;
 }
 
 /****************************************************************************
@@ -379,6 +389,7 @@ static int rpmsgblk_mmc_multi_cmd_handler(FAR struct rpmsg_endpoint *ept,
   size_t rsp_off;
   uint32_t space;
   uint64_t i;
+  int ret;
 
   arglen = sizeof(struct mmc_ioc_multi_cmd) +
            mioc->num_of_cmds * sizeof(struct mmc_ioc_cmd);
@@ -426,8 +437,13 @@ static int rpmsgblk_mmc_multi_cmd_handler(FAR struct rpmsg_endpoint *ept,
 
   rsp->header.result = server->bops->ioctl(server->blknode, rsp->request,
                                            (unsigned long)rsp->buf);
+  ret = rpmsg_send_nocopy(ept, rsp, rsplen);
+  if (ret < 0)
+    {
+      rpmsg_release_tx_buffer(ept, rsp);
+    }
 
-  return rpmsg_send_nocopy(ept, rsp, rsplen);
+  return ret;
 }
 
 /****************************************************************************

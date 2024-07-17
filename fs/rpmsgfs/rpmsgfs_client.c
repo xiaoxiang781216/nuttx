@@ -372,6 +372,11 @@ static int rpmsgfs_send_recv(FAR struct rpmsgfs_s *priv,
 
   if (ret < 0)
     {
+      if (copy == false)
+        {
+          rpmsg_release_tx_buffer(&priv->ept, msg);
+        }
+
       goto fail;
     }
 
@@ -549,6 +554,7 @@ ssize_t rpmsgfs_client_write(FAR void *handle, int fd,
       ret = rpmsg_send_nocopy(&priv->ept, msg, sizeof(*msg) + space);
       if (ret < 0)
         {
+          rpmsg_release_tx_buffer(&priv->ept, msg);
           goto out;
         }
 
