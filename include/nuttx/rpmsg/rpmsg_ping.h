@@ -39,7 +39,7 @@ struct rpmsg_ping_s
 {
   int  times;
   int  len;
-  int  ack;
+  int  cmd;
   int  sleep; /* unit: ms */
 };
 
