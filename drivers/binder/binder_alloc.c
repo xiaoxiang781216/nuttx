@@ -205,9 +205,11 @@ free_range:
   return 0;
 }
 
+/* Callers preallocate @new_buffer, it is freed by this function if unused */
+
 static FAR struct binder_buffer *binder_alloc_new_buf_locked(
-  FAR struct binder_alloc *alloc, size_t size,
-  int is_async, FAR int * p_ret)
+  FAR struct binder_alloc *alloc, struct binder_buffer *new_buffer,
+  size_t size, int is_async, FAR int * p_ret)
 {
   FAR struct binder_buffer  *buffer = NULL;
   FAR struct binder_buffer  *tmp;
@@ -230,6 +232,8 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
       }
   }
 
+  WARN_ON(buffer == NULL && buffer_size != size);
+
   if (buffer == NULL)
     {
       binder_debug(BINDER_DEBUG_ERROR,
@@ -240,6 +244,22 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
       return NULL;
     }
 
+  if (buffer_size != size)
+    {
+      list_initialize(&new_buffer->entry);
+      new_buffer->user_data = (unsigned char *)buffer->user_data + size;
+      list_add_head(&buffer->entry, &new_buffer->entry);
+      list_initialize(&new_buffer->rb_node);
+      new_buffer->free = 1;
+      insert_free_buffer(alloc, new_buffer);
+      binder_debug(BINDER_DEBUG_ALLOC_BUFFER,
+                   "alloc new buffer alloc->pid=%d buffer %p "
+                   "success data %p size %d\n",
+                   alloc->pid, new_buffer, new_buffer->user_data,
+                   buffer->data_size);
+      new_buffer = NULL;
+    }
+
   binder_debug(BINDER_DEBUG_ALLOC_BUFFER,
                "alloc buffer begin alloc->pid=%d: alloc size %zd "
                "got buffer %p data %p buffer_size %zd\n",
@@ -248,7 +268,6 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
 
   has_page_addr =
     (void  *)(((uintptr_t)buffer->user_data + buffer_size) & PAGE_MASK);
-  WARN_ON(buffer == NULL && buffer_size != size);
   end_page_addr = (void  *)PAGE_ALIGN((uintptr_t)buffer->user_data + size);
   if (end_page_addr > has_page_addr)
     {
@@ -265,32 +284,6 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
       return NULL;
     }
 
-  if (buffer_size != size)
-    {
-      struct binder_buffer *new_buffer;
-
-      new_buffer = kmm_zalloc(sizeof(struct binder_buffer));
-      if (!new_buffer)
-        {
-          binder_debug(BINDER_DEBUG_ERROR,
-                       "alloc->pid=%d failed to alloc new buffer struct\n",
-                       alloc->pid);
-          goto err_alloc_buf_struct_failed;
-        }
-
-      list_initialize(&new_buffer->entry);
-      new_buffer->user_data = (unsigned char *)buffer->user_data + size;
-      list_add_head(&buffer->entry, &new_buffer->entry);
-      list_initialize(&new_buffer->rb_node);
-      new_buffer->free = 1;
-      insert_free_buffer(alloc, new_buffer);
-      binder_debug(BINDER_DEBUG_ALLOC_BUFFER,
-                   "alloc new buffer alloc->pid=%d buffer %p "
-                   "success data %p size %d\n",
-                   alloc->pid, new_buffer, new_buffer->user_data,
-                   buffer->data_size);
-    }
-
   list_delete_init(&buffer->rb_node);
   buffer->free                  = 0;
   buffer->allow_user_free       = 0;
@@ -305,12 +298,6 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
                buffer->data_size);
 
   return buffer;
-
-err_alloc_buf_struct_failed:
-  page_range = (void  *)PAGE_ALIGN((uintptr_t)buffer->user_data);
-  binder_update_page_range(alloc, 0, page_range, end_page_addr);
-  *p_ret = -ENOMEM;
-  return NULL;
 }
 
 /* Calculate the sanitized total size, returns 0 for invalid request */
@@ -637,6 +624,7 @@ FAR struct binder_buffer *binder_alloc_new_buf(
   size_t secctx_sz, int is_async, FAR int *ret)
 {
   FAR struct binder_buffer *buffer;
+  FAR struct binder_buffer *next;
   size_t size;
 
   size = sanitized_size(data_size, offsets_size, secctx_sz);
@@ -650,8 +638,17 @@ FAR struct binder_buffer *binder_alloc_new_buf(
       return NULL;
     }
 
+  next = kmm_zalloc(sizeof(struct binder_buffer));
+  if (!next)
+    {
+      binder_debug(BINDER_DEBUG_ERROR,
+                    "alloc->pid=%d failed to alloc new buffer struct\n",
+                    alloc->pid);
+      return NULL;
+    }
+
   nxmutex_lock(&alloc->alloc_lock);
-  buffer = binder_alloc_new_buf_locked(alloc, size, is_async, ret);
+  buffer = binder_alloc_new_buf_locked(alloc, next, size, is_async, ret);
   if (buffer == NULL)
     {
       goto out;
