@@ -223,6 +223,9 @@
     } \
   while (0)
 
+#define pci_is_bridge(dev) ((dev)->hdr_type == PCI_HEADER_TYPE_BRIDGE || \
+                            (dev)->hdr_type == PCI_HEADER_TYPE_CARDBUS)
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
