@@ -252,11 +252,6 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
       list_initialize(&new_buffer->rb_node);
       new_buffer->free = 1;
       insert_free_buffer(alloc, new_buffer);
-      binder_debug(BINDER_DEBUG_ALLOC_BUFFER,
-                   "alloc new buffer alloc->pid=%d buffer %p "
-                   "success data %p size %d\n",
-                   alloc->pid, new_buffer, new_buffer->user_data,
-                   buffer->data_size);
       new_buffer = NULL;
     }
 
