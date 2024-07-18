@@ -1304,7 +1304,7 @@ void binder_transaction(FAR struct binder_proc *proc,
     binder_alloc_new_buf(&target_proc->alloc, tr->data_size,
                          tr->offsets_size, secctx_sz,
                          !reply && (t->flags & TF_ONE_WAY),
-                         gettid(), &ret);
+                         &ret);
   if (ret < 0)
     {
       /* -ESRCH indicates VMA cleared. The target is dying. */

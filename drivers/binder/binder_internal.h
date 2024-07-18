@@ -732,7 +732,7 @@ int binder_alloc_copy_to_buffer(FAR struct binder_alloc *alloc,
 
 FAR struct binder_buffer *binder_alloc_new_buf(
   FAR struct binder_alloc *alloc, size_t data_size, size_t secctx_sz,
-  size_t offsets_size, int is_async, int pid, FAR int *ret);
+  size_t offsets_size, int is_async, FAR int *ret);
 
 void binder_alloc_free_buf(FAR struct binder_alloc *alloc,
                            FAR struct binder_buffer *buffer);

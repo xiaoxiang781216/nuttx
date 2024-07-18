@@ -207,7 +207,7 @@ free_range:
 
 static FAR struct binder_buffer *binder_alloc_new_buf_locked(
   FAR struct binder_alloc *alloc, size_t size,
-  int is_async, int pid, FAR int * p_ret)
+  int is_async, FAR int * p_ret)
 {
   FAR struct binder_buffer  *buffer = NULL;
   FAR struct binder_buffer  *tmp;
@@ -295,7 +295,6 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
   buffer->free                  = 0;
   buffer->allow_user_free       = 0;
   buffer->async_transaction     = is_async;
-  buffer->pid                   = pid;
   buffer->oneway_spam_suspect   = false;
   list_add_tail(&alloc->allocated_buffers_list, &buffer->rb_node);
 
@@ -627,7 +626,6 @@ FAR struct binder_buffer *binder_alloc_prepare_to_free(
  *   secctx_sz          - size of extra space for meta-data
  *                        (eg, security context)
  *   is_async           - buffer for async transaction
- *   pid                - pid to attribute allocation to (used for debugging)
  *
  * Returned Value:
  *   The allocated buffer or NULL if error
@@ -636,7 +634,7 @@ FAR struct binder_buffer *binder_alloc_prepare_to_free(
 
 FAR struct binder_buffer *binder_alloc_new_buf(
   FAR struct binder_alloc *alloc, size_t data_size, size_t offsets_size,
-  size_t secctx_sz, int is_async, int pid, FAR int *ret)
+  size_t secctx_sz, int is_async, FAR int *ret)
 {
   FAR struct binder_buffer *buffer;
   size_t size;
@@ -653,7 +651,7 @@ FAR struct binder_buffer *binder_alloc_new_buf(
     }
 
   nxmutex_lock(&alloc->alloc_lock);
-  buffer = binder_alloc_new_buf_locked(alloc, size, is_async, pid, ret);
+  buffer = binder_alloc_new_buf_locked(alloc, size, is_async, ret);
   if (buffer == NULL)
     {
       goto out;
