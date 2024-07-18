@@ -220,8 +220,7 @@ int devmem_register(void)
       kmm_free(region);
       return len;
     }
-#endif
-
+#else
   if (len + (4 - merge) > DEVMEM_REGION)
     {
       len = DEVMEM_REGION - (4 - merge);
@@ -244,6 +243,7 @@ int devmem_register(void)
       region[len].start = (uintptr_t)_sbss;
       region[len++].end = (uintptr_t)_ebss;
     }
+#endif
 
   /* register the new MEM driver */
 
