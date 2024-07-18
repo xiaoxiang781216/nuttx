@@ -785,36 +785,28 @@ struct sensor_device_info_s
   uint32_t      version;
 
   /* Rough estimate of this sensor's power consumption in mA.
-   *
-   * Note: Divide the current data by 100 to get the real data.
+   * Divide the current data by 1000 to get the real data.
    */
 
   uint32_t      power;
 
-  /* Maximum range of this sensor's value in SI units.
-   *
-   * Note: Divide the current data by 100 to get the real data.
-   */
+  /* Maximum range of this sensor's value in SI units. */
 
-  int32_t       max_range;
+  float         max_range;
 
-  /* Smallest difference between two values reported by this sensor.
-   *
-   * Note: Divide the current data by 100 to get the real data.
-   */
+  /* Smallest difference between two values reported by this sensor. */
 
-  int32_t       resolution;
+  float         resolution;
 
   /* This value depends on the reporting mode:
    *
-   * Note: Divide the current data by 100 to get the real data.
    *   continuous: minimum sample period allowed in microseconds
    *   on-change : 0
    *   one-shot  :-1
    *   special   : 0, unless otherwise noted
    */
 
-  int32_t       min_delay;
+  long          min_delay;
 
   /* This value is defined only for continuous mode and on-change sensors.
    * it is the delay between two sensor events corresponding to the lowest
@@ -824,7 +816,7 @@ struct sensor_device_info_s
    * applications to estimate when the batch FIFO may be full.
    */
 
-  uint32_t      max_delay;
+  unsigned long max_delay;
 
   /* Number of events reserved for this sensor in the batch mode FIFO.
    * if there is a dedicated FIFO for this sensor, then this is the
