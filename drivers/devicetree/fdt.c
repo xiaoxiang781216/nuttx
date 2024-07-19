@@ -122,6 +122,28 @@ int fdt_get_irq_by_path(FAR const void *fdt, const char *path, int irqbase)
 }
 
 /****************************************************************************
+ * Name: fdt_get_bankwidth
+ *
+ * Description:
+ *   Get the value of bankwidth
+ *
+ ****************************************************************************/
+
+uint32_t fdt_get_bankwidth(FAR const void *fdt, int offset)
+{
+  FAR const void *reg;
+  uint32_t bankwidth = 0;
+
+  reg = fdt_getprop(fdt, offset, "bank-width", NULL);
+  if (reg != NULL)
+    {
+      bankwidth = fdt32_ld(reg);
+    }
+
+  return bankwidth;
+}
+
+/****************************************************************************
  * Name: fdt_get_parent_address_cells
  *
  * Description:
@@ -185,6 +207,28 @@ uintptr_t fdt_ld_by_cells(FAR const void *value, int cells)
 }
 
 /****************************************************************************
+ * Name: fdt_get_reg_count
+ *
+ * Description:
+ *   Get the count (in bytes) of the register space
+ *
+ ****************************************************************************/
+
+uint32_t fdt_get_reg_count(FAR const void *fdt, int offset)
+{
+  FAR const struct fdt_property *reg;
+  uint32_t count = 0;
+
+  reg = fdt_get_property(fdt, offset, "reg", NULL);
+  if (reg != NULL)
+    {
+      count = fdt32_ld(&reg->len);
+    }
+
+  return count;
+}
+
+/****************************************************************************
  * Name: fdt_get_reg_base
  *
  * Description:
@@ -207,6 +251,36 @@ uintptr_t fdt_get_reg_base(FAR const void *fdt, int offset)
 }
 
 /****************************************************************************
+ * Name: fdt_get_reg_base_by_index
+ *
+ * Description:
+ *   Get the base address of the register space by index
+ *
+ ****************************************************************************/
+
+uintptr_t fdt_get_reg_base_by_index(FAR const void *fdt, int offset,
+                                    int index)
+{
+  FAR const void *reg;
+  uintptr_t addr = 0;
+
+  reg = fdt_getprop(fdt, offset, "reg", NULL);
+  if (reg != NULL)
+    {
+      int address_cell;
+      int size_cell;
+
+      address_cell = fdt_get_parent_address_cells(fdt, offset);
+      size_cell = fdt_get_parent_size_cells(fdt, offset);
+      addr = fdt_ld_by_cells((FAR fdt32_t *)reg +
+                             (address_cell + size_cell) * index,
+                             address_cell);
+    }
+
+  return addr;
+}
+
+/****************************************************************************
  * Name: fdt_get_reg_size
  *
  * Description:
@@ -214,17 +288,45 @@ uintptr_t fdt_get_reg_base(FAR const void *fdt, int offset)
  *
  ****************************************************************************/
 
-uintptr_t fdt_get_reg_size(FAR const void *fdt, int offset)
+size_t fdt_get_reg_size(FAR const void *fdt, int offset)
 {
   FAR const void *reg;
-  uintptr_t size = 0;
+  size_t size = 0;
 
   reg = fdt_getprop(fdt, offset, "reg", NULL);
   if (reg != NULL)
     {
-      size = fdt_ld_by_cells((fdt32_t *)reg +
+      size = fdt_ld_by_cells((FAR fdt32_t *)reg +
                              fdt_get_parent_address_cells(fdt, offset),
                              fdt_get_parent_size_cells(fdt, offset));
+    }
+
+  return size;
+}
+
+/****************************************************************************
+ * Name: fdt_get_reg_size_by_index
+ *
+ * Description:
+ *   Get the size of the register space by index
+ *
+ ****************************************************************************/
+
+size_t fdt_get_reg_size_by_index(FAR const void *fdt, int offset, int index)
+{
+  FAR const void *reg;
+  size_t size = 0;
+
+  reg = fdt_getprop(fdt, offset, "reg", NULL);
+  if (reg != NULL)
+    {
+      int address_cell;
+      int size_cell;
+
+      address_cell = fdt_get_parent_address_cells(fdt, offset);
+      size_cell = fdt_get_parent_size_cells(fdt, offset);
+      size = fdt_ld_by_cells((FAR fdt32_t *)reg +
+             (address_cell + size_cell) * index + address_cell, size_cell);
     }
 
   return size;
