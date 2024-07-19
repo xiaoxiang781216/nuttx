@@ -634,6 +634,7 @@ static ssize_t gdb_hex2bin(FAR void *buf, size_t buf_len,
           in[pos], in[pos + 1], 0
         };
 
+      set_errno(0)
       out[pos / 2] = strtoul(ch, NULL, 16); /* Decode high nibble */
       if (out[pos / 2] == 0 && get_errno())
         {
@@ -726,7 +727,7 @@ static bool gdb_is_valid_region(FAR struct gdb_state_s *state,
   while (region->start != 0)
     {
       if (addr >= region->start &&
-          addr + len < region->end &&
+          addr < region->end - len &&
           (region->flags & flags) == flags)
         {
           return true;
