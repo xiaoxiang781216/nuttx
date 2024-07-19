@@ -36,8 +36,6 @@
 
 #include "shm/shm.h"
 
-#ifdef CONFIG_MM_SHM
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -111,4 +109,3 @@ int shmdt(FAR const void *shmaddr)
   return ret;
 }
 
-#endif /* CONFIG_MM_SHM */
