@@ -122,7 +122,7 @@ static int uart_gdbstub_panic_callback(FAR struct notifier_block *nb,
             }
         }
 
-      ch = uart_gdbstub->dev->ops->receive(uart_gdbstub->dev, &s);
+      ch = uart_gdbstub->dev->ops->receive(uart_gdbstub->dev, &status);
       if (ch != 'Y' && ch != 'y')
         {
           _alert("Skip gdb debugging process\n");
