@@ -160,7 +160,8 @@ static size_t binder_get_object(FAR struct binder_proc *proc,
   size_t                             object_size = 0;
 
   read_size = min(sizeof(*object), buffer->data_size - offset);
-  if (offset > buffer->data_size || read_size < sizeof(*hdr))
+  if (offset > buffer->data_size || read_size < sizeof(*hdr) ||
+      !IS_ALIGNED(offset, sizeof(uint32_t)))
     {
       return 0;
     }
