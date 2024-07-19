@@ -25,6 +25,8 @@ set(CMAKE_SYSTEM_VERSION 1)
 
 set(ARCH_SUBDIR intel64)
 
+set(CMAKE_PREPROCESSOR gcc -E -x c)
+
 # override the ARCHIVE command
 
 set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> rcs <TARGET> <LINK_FLAGS> <OBJECTS>")

@@ -27,6 +27,11 @@ if(WIN32)
   return()
 endif()
 
+find_program(CMAKE_C_COMPILER gcc)
+find_program(CMAKE_CXX_COMPILER g++)
+
+set(CMAKE_PREPROCESSOR cc -E -P -x c)
+
 add_compile_options(
   -U_AIX
   -U_WIN32
