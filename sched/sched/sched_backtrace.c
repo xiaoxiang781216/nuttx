@@ -44,16 +44,21 @@
 int sched_backtrace(pid_t tid, FAR void **buffer, int size, int skip)
 {
   FAR struct tcb_s *rtcb = NULL;
+  irqstate_t flags;
+  int ret = 0;
 
+  flags = enter_critical_section();
   if (tid >= 0)
     {
       rtcb = nxsched_get_tcb(tid);
-      if (rtcb == NULL)
-        {
-          return 0;
-        }
     }
 
-  return up_backtrace(rtcb, buffer, size, skip);
+  if (rtcb != NULL)
+    {
+      ret = up_backtrace(rtcb, buffer, size, skip);
+    }
+
+  leave_critical_section(flags);
+  return ret;
 }
 #endif
