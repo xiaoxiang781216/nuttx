@@ -25,9 +25,11 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <sys/mount.h>
 #include <syslog.h>
 
 #include <nuttx/fs/fs.h>
+#include <nuttx/drivers/ramdisk.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -57,6 +59,23 @@ static int mps3_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: Failed to mount procfs at /proc: %d\n", ret);
+    }
+
+#endif
+
+#ifdef CONFIG_FS_ROMFS
+  ret = romdisk_register(1, 0x60000000, 4096, 512);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: romdisk_register failed: %d\n", -ret);
+    }
+  else
+    {
+      ret = nx_mount("/dev/ram1", "/pic", "romfs", MS_RDONLY, NULL);
+      if (ret < 0)
+        {
+          syslog(LOG_ERR, "ERROR: Failed to mount romfs at /mnt: %d\n", ret);
+        }
     }
 
 #endif
