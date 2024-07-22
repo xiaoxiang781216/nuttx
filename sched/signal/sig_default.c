@@ -28,10 +28,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 #include <signal.h>
 #include <assert.h>
 
+#include <nuttx/cancelpt.h>
+#include <nuttx/pthread.h>
 #include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/signal.h>
@@ -210,6 +211,7 @@ static void nxsig_null_action(int signo)
 static void nxsig_abnormal_termination(int signo)
 {
   FAR struct tcb_s *rtcb = this_task();
+  FAR struct tls_info_s *info = tls_get_info();
 
   /* Careful:  In the multi-threaded task, the signal may be handled on a
    * child pthread.
@@ -225,21 +227,40 @@ static void nxsig_abnormal_termination(int signo)
 #endif
 
 #ifndef CONFIG_DISABLE_PTHREAD
+  if ((rtcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_PTHREAD &&
+      (info->flags & TLS_THREAD_EIXT) != 0)
+    {
+      /* The currently running task is a pthread.  This means that the
+       * thread has already been marked for termination and we should not
+       * do it again.
+       */
+
+      return;
+    }
+#endif
+
+  info->flags |= TLS_THREAD_EIXT;
+
+  /* Mark the pthread as non-cancelable to avoid additional calls to
+   * nx_pthread_exit() due to any cancellation point logic that might
+   * get kicked off by actions taken during pthread_exit processing.
+   */
+
+  info->tl_cpstate |= CANCEL_FLAG_NONCANCELABLE;
+
+  tls_cleanup_popall(info);
+
+#ifndef CONFIG_DISABLE_PTHREAD
   /* Check if the currently running task is actually a pthread */
 
   if ((rtcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_PTHREAD)
     {
-      FAR struct tls_info_s *info = tls_get_info();
-
       /* Exit the final thread of the task group.
        *
        * REVISIT:  This will not work if HAVE_GROUP_MEMBERS is not set.
        */
 
-      if ((info->flags & TLS_THREAD_EIXT) == 0)
-        {
-          pthread_exit(NULL);
-        }
+      nx_pthread_exit(NULL);
     }
   else
 #endif
