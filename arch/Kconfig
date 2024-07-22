@@ -38,6 +38,7 @@ config ARCH_ARM64
 	select ARCH_HAVE_TCBINFO
 	select ARCH_HAVE_THREAD_LOCAL
 	select ARCH_HAVE_PERF_EVENTS
+	select LIBC_ARCH_ELF_64BIT if LIBC_ARCH_ELF
 	select ONESHOT
 	---help---
 		The ARM64 architectures
