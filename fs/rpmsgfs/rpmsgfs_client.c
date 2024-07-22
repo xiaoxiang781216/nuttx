@@ -749,6 +749,7 @@ int rpmsgfs_client_bind(FAR void **handle, FAR const char *cpuname)
       return -ENOMEM;
     }
 
+  nxsem_init(&priv->wait, 0, 0);
   strlcpy(priv->cpuname, cpuname, sizeof(priv->cpuname));
   ret = rpmsg_register_callback(priv,
                                 rpmsgfs_device_created,
@@ -761,7 +762,6 @@ int rpmsgfs_client_bind(FAR void **handle, FAR const char *cpuname)
       return ret;
     }
 
-  nxsem_init(&priv->wait, 0, 0);
   *handle = priv;
 
   return 0;
