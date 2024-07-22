@@ -243,13 +243,11 @@ struct netdev_varaddr_s
 };
 #endif
 
-#ifdef CONFIG_NET_IPv6
 struct netdev_ifaddr6_s
 {
   net_ipv6addr_t addr; /* Host IPv6 address */
   net_ipv6addr_t mask; /* Network IPv6 subnet mask */
 };
-#endif
 
 #ifdef CONFIG_NETDEV_RSS
 struct netdev_rss_s
