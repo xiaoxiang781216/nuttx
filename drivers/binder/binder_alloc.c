@@ -292,6 +292,7 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
                alloc->pid, buffer, buffer->user_data,
                buffer->data_size);
 
+  kmm_free(new_buffer);
   return buffer;
 }
 
