@@ -445,6 +445,7 @@ int uart_rpmsg_init(FAR const char *cpuname, FAR const char *devname,
       goto fail;
     }
 
+  nxmutex_init(&priv->lock);
   priv->cpuname = cpuname;
   priv->devname = devname;
 
@@ -457,10 +458,10 @@ int uart_rpmsg_init(FAR const char *cpuname, FAR const char *devname,
                                 NULL);
   if (ret < 0)
     {
+      nxmutex_destroy(&priv->lock);
       goto fail;
     }
 
-  nxmutex_init(&priv->lock);
   snprintf(dev_name, sizeof(dev_name), "%s%s",
            UART_RPMSG_DEV_PREFIX, devname);
   uart_register(dev_name, dev);
