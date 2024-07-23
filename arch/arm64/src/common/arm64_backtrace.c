@@ -116,7 +116,6 @@ int up_backtrace(struct tcb_s *tcb,
                  void **buffer, int size, int skip)
 {
   struct tcb_s *rtcb = running_task();
-  irqstate_t flags;
   int ret;
 
   if (size <= 0 || !buffer)
@@ -159,15 +158,11 @@ int up_backtrace(struct tcb_s *tcb,
     }
   else
     {
-      flags = enter_critical_section();
-
       ret = backtrace(tcb->stack_base_ptr,
                       tcb->stack_base_ptr + tcb->adj_stack_size,
-                      (void *)up_current_regs()[REG_X29],
-                      (void *)up_current_regs()[REG_ELR],
+                      (void *)tcb->xcp.regs[REG_X29],
+                      (void *)tcb->xcp.regs[REG_ELR],
                       buffer, size, &skip);
-
-      leave_critical_section(flags);
     }
 
   return ret;
