@@ -241,7 +241,7 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
                    "no address space\n",
                    alloc->pid, size);
       *p_ret = -ENOSPC;
-      return NULL;
+      goto out;
     }
 
   if (buffer_size != size)
@@ -276,7 +276,8 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
   if (ret)
     {
       *p_ret = -ret;
-      return NULL;
+      buffer = NULL;
+      goto out;
     }
 
   list_delete_init(&buffer->rb_node);
@@ -291,6 +292,10 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
                "data %p size %d\n",
                alloc->pid, buffer, buffer->user_data,
                buffer->data_size);
+
+out:
+
+  /* Discard possibly unused new_buffer */
 
   kmm_free(new_buffer);
   return buffer;
