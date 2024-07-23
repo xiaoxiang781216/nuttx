@@ -60,6 +60,7 @@
 
 #include <sys/param.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/clock.h>
 #include <nuttx/init.h>

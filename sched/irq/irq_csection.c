@@ -276,6 +276,10 @@ try_again_in_irq:
                     }
 
                   DEBUGVERIFY(up_cpu_paused(cpu));
+
+                  /* After resume current_task may change */
+
+                  up_update_task(current_task(cpu));
                   DEBUGASSERT((g_cpu_irqset & (1 << cpu)) == 0);
                   paused = true;
 

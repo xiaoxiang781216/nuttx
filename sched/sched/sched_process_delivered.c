@@ -77,6 +77,10 @@ void nxsched_process_delivered(int cpu)
           if (up_cpu_pausereq(cpu))
             {
               up_cpu_paused(cpu);
+
+              /* After resume current_task may change */
+
+              up_update_task(current_task(cpu));
             }
         }
 
@@ -128,6 +132,7 @@ void nxsched_process_delivered(int cpu)
       tasklist->head = (FAR dq_entry_t *)btcb;
       btcb->cpu = cpu;
       btcb->task_state = TSTATE_TASK_RUNNING;
+      up_update_task(btcb);
 
       DEBUGASSERT(btcb->flink != NULL);
       next = btcb->flink;

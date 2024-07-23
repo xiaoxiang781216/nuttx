@@ -420,6 +420,11 @@ void nx_start(void)
       /* Mark the idle task as the running task */
 
       g_running_tasks[i] = &g_idletcb[i].cmn;
+
+      if (i == 0)
+        {
+          up_update_task(&g_idletcb[0].cmn); /* Init idle task to percpu reg */
+        }
     }
 
   /* Task lists are initialized */

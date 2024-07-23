@@ -131,6 +131,7 @@ bool nxsched_merge_pending(void)
               g_readytorun.head = (FAR dq_entry_t *)ptcb;
               rtcb->task_state  = TSTATE_TASK_READYTORUN;
               ptcb->task_state  = TSTATE_TASK_RUNNING;
+              up_update_task(ptcb);
               ret               = true;
             }
           else

@@ -51,7 +51,6 @@
 #  define current_task(cpu)      ((FAR struct tcb_s *)g_assignedtasks[cpu].head)
 #else
 #  define current_task(cpu)      ((FAR struct tcb_s *)g_readytorun.head)
-#  define this_task()            (current_task(this_cpu()))
 #endif
 
 #define is_idle_task(t)          ((t)->pid < CONFIG_SMP_NCPUS)
@@ -382,7 +381,11 @@ void nxsched_sporadic_lowpriority(FAR struct tcb_s *tcb);
 void nxsched_suspend(FAR struct tcb_s *tcb);
 #endif
 
-#ifdef CONFIG_SMP
+#if defined(up_this_task)
+#  define this_task()            up_this_task()
+#elif !defined(CONFIG_SMP)
+#  define this_task()            ((FAR struct tcb_s *)g_readytorun.head)
+#else
 noinstrument_function
 static inline_function FAR struct tcb_s *this_task(void)
 {
@@ -396,7 +399,7 @@ static inline_function FAR struct tcb_s *this_task(void)
 
   flags = up_irq_save();
 
-  /* Obtain the TCB which is currently running on this CPU */
+  /* Obtain the TCB which is current running on this CPU */
 
   tcb = current_task(this_cpu());
 
@@ -405,7 +408,9 @@ static inline_function FAR struct tcb_s *this_task(void)
   up_irq_restore(flags);
   return tcb;
 }
+#endif
 
+#ifdef CONFIG_SMP
 int  nxsched_pause_cpu(FAR struct tcb_s *tcb);
 void nxsched_process_delivered(int cpu);
 #else

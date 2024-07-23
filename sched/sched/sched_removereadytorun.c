@@ -84,6 +84,7 @@ inline_function void nxsched_remove_running(FAR struct tcb_s *rtcb)
    */
 
   dq_rem((FAR dq_entry_t *)rtcb, tasklist);
+  up_update_task(nxttcb);
 
   /* Since the TCB is not in any list, it is now invalid */
 
@@ -272,6 +273,7 @@ void nxsched_remove_running_without_merge(FAR struct tcb_s *rtcb)
 inline_function void nxsched_remove_running(FAR struct tcb_s *rtcb)
 {
   nxsched_remove_running_without_merge(rtcb);
+  up_update_task(current_task(rtcb->cpu));
   if (g_pendingtasks.head)
     {
       nxsched_merge_pending();
