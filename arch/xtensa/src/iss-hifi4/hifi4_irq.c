@@ -58,10 +58,10 @@ void up_irqinitialize(void)
   /* Hard code special cases. */
 
   g_irqmap[HIFI4_IRQ_TIMER2] = HIFI4_CPUINT_TIMER2;
-  g_irqmap[HIFI4_IRQ_SOFTWARE0] = HIFI4_CPUINT_SOFTWARE0;
+  g_irqmap[XTENSA_IRQ_SWINT] = HIFI4_CPUINT_SOFTWARE0;
 
   g_cpu_intmap[HIFI4_CPUINT_TIMER2] = HIFI4_IRQ_TIMER2;
-  g_cpu_intmap[HIFI4_CPUINT_SOFTWARE0] = HIFI4_IRQ_SOFTWARE0;
+  g_cpu_intmap[HIFI4_CPUINT_SOFTWARE0] = XTENSA_IRQ_SWINT;
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
   /* And finally, enable interrupts.  Also clears PS.EXCM */
@@ -71,11 +71,11 @@ void up_irqinitialize(void)
 
   /* Attach the software interrupt */
 
-  irq_attach(HIFI4_IRQ_SOFTWARE0, (xcpt_t)xtensa_swint, NULL);
+  irq_attach(XTENSA_IRQ_SWINT, (xcpt_t)xtensa_swint, NULL);
 
   /* Enable the software interrupt. */
 
-  up_enable_irq(HIFI4_IRQ_SOFTWARE0);
+  up_enable_irq(XTENSA_IRQ_SWINT);
 }
 
 /****************************************************************************
