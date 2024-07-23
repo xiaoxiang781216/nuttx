@@ -424,30 +424,14 @@ static inline void up_irq_restore(irqstate_t flags)
 
 #define this_cpu() up_cpu_index()
 
-static inline_function uint64_t *up_current_regs(void)
-{
-  uint64_t *regs;
-  __asm__ volatile ("mrs %0, " "tpidr_el1" : "=r" (regs));
-  return regs;
-}
-
-static inline_function void up_set_current_regs(uint64_t *regs)
-{
-  __asm__ volatile ("msr " "tpidr_el1" ", %0" : : "r" (regs));
-}
-
 /****************************************************************************
- * Name: up_interrupt_context
- *
- * Description: Return true is we are currently executing in
- * the interrupt handler context.
- *
+ * Schedule acceleration macros
  ****************************************************************************/
 
-static inline_function bool up_interrupt_context(void)
-{
-  return up_current_regs() != NULL;
-}
+#define up_current_regs()      (this_task()->xcp.regs)
+#define up_this_task()         ((struct tcb_s *)(read_sysreg(tpidr_el1) & ~1ul))
+#define up_update_task(t)      modify_sysreg(t, ~1ul, tpidr_el1)
+#define up_interrupt_context() (read_sysreg(tpidr_el1) & 1)
 
 /****************************************************************************
  * Name: up_getusrpc

@@ -115,7 +115,11 @@ static void flush_boot_params(void)
 
 static void arm64_smp_init_top(void *arg)
 {
-  struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb = current_task(this_cpu());
+
+  /* Init idle task to percpu reg */
+
+  up_update_task(tcb);
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
   /* And finally, enable interrupts */
