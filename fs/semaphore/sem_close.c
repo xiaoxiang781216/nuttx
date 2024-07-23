@@ -80,23 +80,13 @@ int nxsem_close(FAR sem_t *sem)
   DEBUGASSERT(nsem->ns_inode);
   inode = nsem->ns_inode;
 
-  /* Decrement the reference count on the inode */
-
-  inode_lock();
-  if (inode->i_crefs > 0)
-    {
-      inode->i_crefs--;
-    }
-
   /* If the semaphore was previously unlinked and the reference count has
    * decremented to zero, then release the semaphore and delete the inode
    * now.
    */
 
-  if (inode->i_crefs <= 0)
+  if (atomic_fetch_sub(&inode->i_crefs, 1) <= 1)
     {
-      /* Destroy the semaphore and free the container */
-
       nxsem_destroy(&nsem->ns_sem);
       group_free(NULL, nsem);
 
@@ -104,7 +94,6 @@ int nxsem_close(FAR sem_t *sem)
        * unlinked, then the peer pointer should be NULL.
        */
 
-      inode_unlock();
 #ifdef CONFIG_FS_NOTIFY
       notify_close2(inode);
 #endif
@@ -113,7 +102,6 @@ int nxsem_close(FAR sem_t *sem)
       return OK;
     }
 
-  inode_unlock();
   return OK;
 }
 

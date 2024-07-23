@@ -183,8 +183,7 @@ static int shmfs_release(FAR struct inode *inode)
    */
 
   inode_lock();
-  if (inode->i_parent == NULL &&
-      inode->i_crefs <= 1)
+  if (inode->i_parent == NULL && atomic_load(&inode->i_crefs) <= 1)
     {
       shmfs_free_object(inode->i_private);
       inode->i_private = NULL;
@@ -251,7 +250,7 @@ static int shmfs_truncate(FAR struct file *filep, off_t length)
 static int shmfs_unlink(FAR struct inode *inode)
 {
   inode_lock();
-  if (inode->i_crefs <= 1)
+  if (atomic_load(&inode->i_crefs) <= 1)
     {
       shmfs_free_object(inode->i_private);
       inode->i_private = NULL;

@@ -51,31 +51,10 @@ void inode_release(FAR struct inode *inode)
     {
       /* Decrement the references of the inode */
 
-      inode_lock();
-      if (inode->i_crefs)
+      if (atomic_fetch_sub(&inode->i_crefs, 1) <= 1)
         {
-          inode->i_crefs--;
-        }
-
-      /* If the subtree was previously deleted and the reference
-       * count has decrement to zero,  then delete the inode
-       * now.
-       */
-
-      if (inode->i_crefs <= 0)
-        {
-          /* If the inode has been properly unlinked, then the peer pointer
-           * should be NULL.
-           */
-
-          inode_unlock();
-
           DEBUGASSERT(inode->i_peer == NULL);
           inode_free(inode);
-        }
-      else
-        {
-          inode_unlock();
         }
     }
 }

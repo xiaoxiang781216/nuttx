@@ -45,9 +45,7 @@ int inode_addref(FAR struct inode *inode)
 {
   if (inode)
     {
-      inode_lock();
-      inode->i_crefs++;
-      inode_unlock();
+      atomic_fetch_add(&inode->i_crefs, 1);
     }
 
   return OK;

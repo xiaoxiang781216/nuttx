@@ -357,7 +357,7 @@ static int pseudofile_munmap(FAR struct task_group_s *group,
 
   inode_lock();
   if (inode->i_parent == NULL &&
-      inode->i_crefs <= 1)
+      atomic_load(&inode->i_crefs) <= 1)
     {
       /* Delete the inode metadata */
 
@@ -503,7 +503,6 @@ int pseudofile_create(FAR struct inode **node, FAR const char *path,
       goto reserve_err;
     }
 
-  (*node)->i_crefs = 0;
   (*node)->i_flags = 1;
   (*node)->u.i_ops = &g_pseudofile_ops;
   (*node)->i_private = pf;

@@ -444,7 +444,7 @@ int nx_mount(FAR const char *source, FAR const char *target,
   if (drvr_inode != NULL)
 #endif
     {
-      drvr_inode->i_crefs++;
+      atomic_fetch_add(&drvr_inode->i_crefs, 1);
     }
 #endif
 
@@ -472,7 +472,7 @@ int nx_mount(FAR const char *source, FAR const char *target,
       if (drvr_inode != NULL)
 #endif
         {
-          drvr_inode->i_crefs--;
+          atomic_fetch_sub(&drvr_inode->i_crefs, 1);
         }
 #endif
 
