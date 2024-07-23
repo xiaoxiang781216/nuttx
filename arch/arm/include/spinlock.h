@@ -114,7 +114,7 @@ typedef uint8_t spinlock_t;
  *
  ****************************************************************************/
 
-#if defined(CONFIG_ARCH_HAVE_TESTSET)
+#if defined(CONFIG_ARCH_HAVE_TESTSET) && defined(CONFIG_SMP)
 static inline_function spinlock_t up_testset(FAR volatile spinlock_t *lock)
 {
   spinlock_t ret = SP_UNLOCKED;
