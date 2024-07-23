@@ -541,7 +541,7 @@ spin_unlock_wo_note(FAR volatile spinlock_t *lock)
 
 /* void spin_initialize(FAR spinlock_t *lock, spinlock_t state); */
 
-#define spin_initialize(l,s) do { *(l) = (s); } while (0)
+#define spin_initialize(l,s) do { SP_DMB(); *(l) = (s); } while (0)
 
 /****************************************************************************
  * Name: spin_lock_irqsave
