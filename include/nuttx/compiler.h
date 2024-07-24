@@ -94,6 +94,7 @@
 #  pragma weak __gh_long_long_printf
 #  pragma weak __gh_float_printf
 #  pragma weak __gh_fputs_stdout
+#  pragma weak exp2
 
 #endif
 
