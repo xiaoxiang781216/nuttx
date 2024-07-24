@@ -462,7 +462,6 @@ nosanitize_address
 int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
 {
   struct tcb_s *rtcb = running_task();
-  irqstate_t flags;
   void *sp;
   int ret = 0;
 
@@ -519,8 +518,6 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
     }
   else
     {
-      flags = enter_critical_section();
-
       if (skip-- <= 0)
         {
           buffer[ret++] = (void *)tcb->xcp.regs[REG_PC];
@@ -541,8 +538,6 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
                                       &buffer[ret], size - ret, &skip);
             }
         }
-
-      leave_critical_section(flags);
     }
 
   return ret;
