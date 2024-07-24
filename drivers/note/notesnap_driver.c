@@ -49,8 +49,8 @@ struct notesnap_s
 {
   struct note_driver_s driver;
   struct notifier_block nb;
-  size_t index;
-  bool dumping;
+  atomic_int index;
+  atomic_bool dumping;
   struct notesnap_chunk_s buffer[CONFIG_DRIVERS_NOTESNAP_NBUFFERS];
 };
 
