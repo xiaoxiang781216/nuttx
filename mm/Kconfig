@@ -297,6 +297,14 @@ config MM_HEAP_MEMPOOL_BACKTRACE_SKIP
 	---help---
 		This number is the skipped backtrace depth for mempool.
 
+config MM_HEAP_BIGGEST_COUNT
+	int "The largest malloc element dump count"
+	default 30
+	---help---
+		The dump support for largest allocated memory.
+		If too big, should take care of stack usage.
+		Define 0 to disable largest allocated element dump feature.
+
 config FS_PROCFS_EXCLUDE_MEMPOOL
 	bool "Exclude mempool"
 	default DEFAULT_SMALL

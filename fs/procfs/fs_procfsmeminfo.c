@@ -426,6 +426,9 @@ static ssize_t memdump_read(FAR struct file *filep, FAR char *buffer,
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD > 0
                  "/mempool"
 #endif
+#if CONFIG_MM_HEAP_BIGGEST_COUNT > 0
+                  "/biggest"
+#endif
 #if CONFIG_MM_BACKTRACE > 0
                   "/on/off"
 #endif
@@ -437,6 +440,9 @@ static ssize_t memdump_read(FAR struct file *filep, FAR char *buffer,
                  "free: dump all free node\n"
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD > 0
                  "mempool: dump all mempool alloc node\n"
+#endif
+#if CONFIG_MM_HEAP_BIGGEST_COUNT > 0
+                  "biggest: dump allocated top n node\n"
 #endif
 #if CONFIG_MM_BACKTRACE > 0
                  "on/off: set backtrace enabled state\n"
@@ -569,6 +575,16 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
       case 'm':
         dump.pid = PID_MM_MEMPOOL;
 
+#  if CONFIG_MM_BACKTRACE >= 0
+        p = (FAR char *)buffer + 7;
+        goto dump;
+#  endif
+        break;
+#endif
+
+#if CONFIG_MM_HEAP_BIGGEST_COUNT > 0
+      case 'b':
+        dump.pid = PID_MM_BIGGEST;
 #  if CONFIG_MM_BACKTRACE >= 0
         p = (FAR char *)buffer + 7;
         goto dump;
