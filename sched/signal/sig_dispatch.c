@@ -32,7 +32,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
-#include <execinfo.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
@@ -296,43 +295,6 @@ static void nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
 }
 
 /****************************************************************************
- * Name: nxsig_dispatch_dump
- *
- * Description:
- *   When specified signal happen, dump the information of signal, and the
- *   callstack of signal sender and reciever.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_DEBUG_FEATURES
-static inline_function
-void nxsig_dispatch_dump(FAR const char *label, FAR struct tcb_s *stcb,
-                         FAR siginfo_t *info)
-{
-  FAR struct tcb_s *rtcb = this_task();
-  FAR const char   *name = "";
-
-  _warn("%s signo=%d code=%d value=%d masked=%s\n",
-        label, info->si_signo, info->si_code, info->si_value.sival_int,
-        sigismember(&stcb->sigprocmask, info->si_signo) == 1 ? "YES" : "NO");
-
-#if CONFIG_TASK_NAME_SIZE > 0
-  name = rtcb->name;
-#endif
-  _warn("from TCB=%p tid=%d pid=%d name=%s\n", rtcb, rtcb->pid,
-                                               rtcb->group->tg_pid, name);
-  dump_stack();
-
-#if CONFIG_TASK_NAME_SIZE > 0
-  name = stcb->name;
-#endif
-  _warn("TCB=%p tid=%d pid=%d name=%s\n", stcb, stcb->pid,
-                                          stcb->group->tg_pid, name);
-  sched_dumpstack(stcb->pid);
-}
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -358,28 +320,19 @@ void nxsig_dispatch_dump(FAR const char *label, FAR struct tcb_s *stcb,
  *
  ****************************************************************************/
 
-int nxsig_tcbdispatch(FAR struct tcb_s *stcb, FAR siginfo_t *info)
+int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 {
   FAR struct tcb_s *rtcb;
   irqstate_t flags;
   int masked;
   int ret = OK;
 
-  DEBUGASSERT(stcb != NULL && info != NULL);
-
-#ifdef CONFIG_DEBUG_FEATURES
-  if (nxsig_isabort(stcb, info->si_signo))
-    {
-      nxsig_dispatch_dump("abnormal_terminate", stcb, info);
-    }
-  else
-#endif
-    {
-      sinfo("TCB=%p pid=%d signo=%d code=%d value=%d masked=%s\n",
+  sinfo("TCB=%p pid=%d signo=%d code=%d value=%d masked=%s\n",
         stcb, stcb->pid, info->si_signo, info->si_code,
         info->si_value.sival_int,
         sigismember(&stcb->sigprocmask, info->si_signo) == 1 ? "YES" : "NO");
-    }
+
+  DEBUGASSERT(stcb != NULL && info != NULL);
 
   /* Return ESRCH when thread was in exit processing */
 

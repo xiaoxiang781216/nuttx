@@ -451,41 +451,6 @@ bool nxsig_isdefault(FAR struct tcb_s *tcb, int signo)
 }
 
 /****************************************************************************
- * Name: nxsig_isabort
- *
- * Description:
- *   Return true if the specified signal is set to the default abnormal
- *   termination action.
- *
- * Input Parameters:
- *   tcb   - Identifies the thread associated with the default handler
- *   signo - The signal number to be queried
- *
- * Returned Value:
- *   true  - The signo handler is default aborormal termination action.
- *   false - The signo is catched by user, or is default but not abnormal
- *           termination action.
- *
- ****************************************************************************/
-
-bool nxsig_isabort(FAR struct tcb_s *tcb, int signo)
-{
-  FAR sigactq_t *sigact;
-
-  DEBUGASSERT(tcb != NULL && tcb->group != NULL && GOOD_SIGNO(signo));
-
-  sigact = nxsig_find_action(tcb->group, signo);
-  if (sigact != NULL)
-    {
-      return sigact->act.sa_u._sa_handler == nxsig_abnormal_termination;
-    }
-  else
-    {
-      return false;
-    }
-}
-
-/****************************************************************************
  * Name: nxsig_iscatchable
  *
  * Description:
