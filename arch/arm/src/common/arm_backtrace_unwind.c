@@ -61,6 +61,10 @@ struct unwind_frame_s
 
   unsigned long *lr_addr;
 
+  /* Lowest value of sp allowed */
+
+  unsigned long stack_base;
+
   /* Highest value of sp allowed */
 
   unsigned long stack_top;
@@ -588,7 +592,7 @@ int unwind_frame(struct unwind_frame_s *frame)
           return urc;
         }
 
-      if (ctrl.vrs[SP] < frame->sp ||
+      if (ctrl.vrs[SP] < frame->stack_base ||
           ctrl.vrs[SP] > ctrl.stack_top)
         {
           return -1;
@@ -728,11 +732,14 @@ int up_backtrace(struct tcb_s *tcb,
       frame.sp = frame.fp;
       frame.stack_top = (unsigned long)rtcb->stack_base_ptr +
                                        rtcb->adj_stack_size;
+      frame.stack_base = (unsigned long)rtcb->stack_base_ptr;
+
       if (up_interrupt_context())
         {
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
           frame.stack_top = up_get_intstackbase(this_cpu()) +
                             INTSTACK_SIZE;
+          frame.stack_base = up_get_intstackbase(this_cpu());
 #endif /* CONFIG_ARCH_INTERRUPTSTACK > 7 */
 
           ret = backtrace_unwind(&frame, buffer, size, &skip);
@@ -744,6 +751,7 @@ int up_backtrace(struct tcb_s *tcb,
               frame.lr = up_current_regs()[REG_LR];
               frame.stack_top = (unsigned long)rtcb->stack_base_ptr +
                                                rtcb->adj_stack_size;
+              frame.stack_base = (unsigned long)rtcb->stack_base_ptr;
               ret += backtrace_unwind(&frame, &buffer[ret],
                                       size - ret, &skip);
             }
@@ -761,6 +769,7 @@ int up_backtrace(struct tcb_s *tcb,
       frame.pc = tcb->xcp.regs[REG_PC];
       frame.stack_top = (unsigned long)tcb->stack_base_ptr +
                                        tcb->adj_stack_size;
+      frame.stack_base = (unsigned long)tcb->stack_base_ptr;
 
       ret = backtrace_unwind(&frame, buffer, size, &skip);
     }
