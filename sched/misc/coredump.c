@@ -546,7 +546,6 @@ static void elf_emit_tcb_phdr(FAR struct elf_dumpinfo_s *cinfo,
   phdr->p_paddr  = phdr->p_vaddr;
   phdr->p_memsz  = phdr->p_filesz;
   phdr->p_flags  = PF_X | PF_W | PF_R;
-  phdr->p_align  = ELF_PAGESIZE;
   *offset       += ROUNDUP(phdr->p_memsz, ELF_PAGESIZE);
 
   elf_emit(cinfo, phdr, sizeof(*phdr));
@@ -573,6 +572,7 @@ static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo,
   phdr.p_type   = PT_NOTE;
   phdr.p_offset = offset;
   phdr.p_filesz = elf_get_note_size(stksegs);
+  phdr.p_align  = ELF_PAGESIZE;
   offset       += phdr.p_filesz;
 
   elf_emit(cinfo, &phdr, sizeof(phdr));
@@ -604,7 +604,6 @@ static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo,
       phdr.p_filesz = cinfo->regions[i].end - cinfo->regions[i].start;
       phdr.p_memsz  = phdr.p_filesz;
       phdr.p_flags  = cinfo->regions[i].flags;
-      phdr.p_align  = ELF_PAGESIZE;
       offset       += ROUNDUP(phdr.p_memsz, ELF_PAGESIZE);
       elf_emit(cinfo, &phdr, sizeof(phdr));
     }
