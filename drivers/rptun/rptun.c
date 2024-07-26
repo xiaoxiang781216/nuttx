@@ -48,9 +48,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define RPTUNIOC_NONE               0
-
 #define RPTUN_TIMEOUT_MS            20
+
+#define RPTUN_CMD_PANIC             0x1
 
 /****************************************************************************
  * Private Types
@@ -360,6 +360,30 @@ static bool rptun_is_recursive(FAR struct rptun_priv_s *priv)
   return nxsched_gettid() == priv->tid;
 }
 
+static void rptun_command(struct rptun_priv_s *priv)
+{
+  FAR struct rptun_rsc_s *rsc = priv->rproc.rsc_table;
+  uint32_t cmd;
+
+  if (RPTUN_IS_MASTER(priv->dev))
+    {
+      cmd = rsc->cmd_slave;
+      rsc->cmd_slave = 0;
+    }
+  else
+    {
+      cmd = rsc->cmd_master;
+      rsc->cmd_master = 0;
+    }
+
+  switch (cmd)
+    {
+      case RPTUN_CMD_PANIC:
+        PANIC();
+        break;
+    }
+}
+
 static int rptun_callback(FAR void *arg, uint32_t vqid)
 {
   FAR struct rptun_priv_s *priv = arg;
@@ -367,6 +391,8 @@ static int rptun_callback(FAR void *arg, uint32_t vqid)
   FAR struct virtio_device *vdev = rvdev->vdev;
   FAR struct virtqueue *svq = rvdev->svq;
   FAR struct virtqueue *rvq = rvdev->rvq;
+
+  rptun_command(priv);
 
   if (vqid == RPTUN_NOTIFY_ALL ||
       vqid == vdev->vrings_info[rvq->vq_queue_index].notifyid)
@@ -641,8 +667,24 @@ static int rptun_ioctl(FAR struct rpmsg_s *rpmsg, int cmd, unsigned long arg)
 static void rptun_panic(FAR struct rpmsg_s *rpmsg)
 {
   FAR struct rptun_priv_s *priv = (FAR struct rptun_priv_s *)rpmsg;
+  FAR struct rptun_rsc_s *rsc = priv->rproc.rsc_table;
 
-  RPTUN_PANIC(priv->dev);
+  if (priv->dev->ops->panic != NULL)
+    {
+      RPTUN_PANIC(priv->dev);
+      return;
+    }
+
+  if (RPTUN_IS_MASTER(priv->dev))
+    {
+      rsc->cmd_master = RPTUN_CMD_PANIC;
+    }
+  else
+    {
+      rsc->cmd_slave = RPTUN_CMD_PANIC;
+    }
+
+  rptun_notify(&priv->rproc, RPTUN_NOTIFY_ALL);
 }
 
 static void rptun_dump(FAR struct rpmsg_s *rpmsg)
