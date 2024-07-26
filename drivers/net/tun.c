@@ -1015,9 +1015,8 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
                          size_t buflen)
 {
   FAR struct tun_device_s *priv = filep->f_priv;
-  ssize_t nwritten = 0;
   uint8_t llhdrlen;
-  int ret;
+  ssize_t ret;
 
   if (priv == NULL || buflen > CONFIG_NET_TUN_PKTSIZE)
     {
@@ -1035,7 +1034,7 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
       ret = nxmutex_lock(&priv->lock);
       if (ret < 0)
         {
-          return nwritten == 0 ? (ssize_t)ret : nwritten;
+          return ret;
         }
 
       /* Check if there are free space to write */
@@ -1048,7 +1047,6 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
           priv->dev.d_buf = NULL;
           if (ret < 0)
             {
-              nwritten = (nwritten == 0) ? ret : nwritten;
               net_unlock();
               break;
             }
@@ -1057,7 +1055,6 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
                               buflen, -llhdrlen, false);
           if (ret < 0)
             {
-              nwritten = (nwritten == 0) ? ret : nwritten;
               net_unlock();
               break;
             }
@@ -1067,7 +1064,7 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
           tun_net_receive(priv);
           net_unlock();
 
-          nwritten = buflen;
+          ret = buflen;
           break;
         }
 
@@ -1075,7 +1072,7 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
 
       if ((filep->f_oflags & O_NONBLOCK) != 0)
         {
-          nwritten = -EAGAIN;
+          ret = -EAGAIN;
           break;
         }
 
@@ -1085,7 +1082,7 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
     }
 
   nxmutex_unlock(&priv->lock);
-  return nwritten;
+  return ret;
 }
 
 /****************************************************************************
@@ -1096,9 +1093,8 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
                         size_t buflen)
 {
   FAR struct tun_device_s *priv = filep->f_priv;
-  ssize_t nread = 0;
   uint8_t llhdrlen;
-  int ret;
+  ssize_t ret;
 
   if (priv == NULL)
     {
@@ -1116,7 +1112,7 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
       ret = nxmutex_lock(&priv->lock);
       if (ret < 0)
         {
-          return nread == 0 ? (ssize_t)ret : nread;
+          return ret;
         }
 
       /* Check if there are data to read in write buffer */
@@ -1125,13 +1121,13 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
         {
           if (buflen < priv->write_d_len)
             {
-              nread = -EINVAL;
+              ret = -EINVAL;
               break;
             }
 
           iob_copyout((FAR uint8_t *)buffer, priv->write_buf,
                       priv->write_d_len, -llhdrlen);
-          nread = priv->write_d_len;
+          ret = priv->write_d_len;
 
           iob_free_chain(priv->write_buf);
           priv->write_buf   = NULL;
@@ -1148,13 +1144,13 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
         {
           if (buflen < priv->read_d_len)
             {
-              nread = -EINVAL;
+              ret = -EINVAL;
               break;
             }
 
           iob_copyout((FAR uint8_t *)buffer, priv->read_buf,
                       priv->read_d_len, -llhdrlen);
-          nread = priv->read_d_len;
+          ret = priv->read_d_len;
 
           iob_free_chain(priv->read_buf);
           priv->read_buf   = NULL;
@@ -1170,7 +1166,7 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
 
       if ((filep->f_oflags & O_NONBLOCK) != 0)
         {
-          nread = -EAGAIN;
+          ret = -EAGAIN;
           break;
         }
 
@@ -1180,7 +1176,7 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
     }
 
   nxmutex_unlock(&priv->lock);
-  return nread;
+  return ret;
 }
 
 /****************************************************************************
