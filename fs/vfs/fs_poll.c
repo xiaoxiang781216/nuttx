@@ -343,6 +343,11 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
           /* Yes, it does... Setup the poll */
 
           ret = inode->u.i_ops->poll(filep, fds, setup);
+          if (ret < 0)
+            {
+              ferr("poll failed:%p, setup:%d, ret:%d\n",
+                   inode->u.i_ops->poll, setup, ret);
+            }
         }
 
 #ifndef CONFIG_DISABLE_MOUNTPOINT
@@ -350,6 +355,11 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
                inode->u.i_mops->poll != NULL)
         {
           ret = inode->u.i_mops->poll(filep, fds, setup);
+          if (ret < 0)
+            {
+              ferr("poll failed:%p, setup:%d, ret:%d\n",
+                   inode->u.i_ops->poll, setup, ret);
+            }
         }
 #endif
 
