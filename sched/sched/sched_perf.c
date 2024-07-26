@@ -28,8 +28,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
-#include <stdatomic.h>
 
+#include <nuttx/atomic.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/perf.h>

@@ -27,10 +27,10 @@
 
 #include <nuttx/config.h>
 
-#include <stdatomic.h>
 #include <stdio.h>
 #include <time.h>
 
+#include <nuttx/atomic.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/input/ff.h>
 #include <nuttx/wqueue.h>

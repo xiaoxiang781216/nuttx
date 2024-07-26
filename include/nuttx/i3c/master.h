@@ -26,8 +26,8 @@
  ****************************************************************************/
 
 #include <stdint.h>
-#include <stdatomic.h>
 
+#include <nuttx/atomic.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/list.h>
 #include <nuttx/mutex.h>

@@ -23,8 +23,8 @@
  ****************************************************************************/
 
 #include <debug.h>
-#include <stdatomic.h>
 
+#include <nuttx/atomic.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/irq.h>
 #include <nuttx/perf.h>
