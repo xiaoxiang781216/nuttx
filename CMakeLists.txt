@@ -417,6 +417,7 @@ include(platform)
 add_executable(nuttx)
 if(CONFIG_BUILD_PROTECTED)
   add_executable(nuttx_user)
+  nuttx_add_library_internal(nuttx_user)
 endif()
 
 if(CONFIG_ALLSYMS)
