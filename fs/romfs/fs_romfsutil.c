@@ -514,6 +514,26 @@ static int romfs_alloc_spareregion(FAR struct list_node *list,
 }
 
 /****************************************************************************
+ * Name: romfs_devmemcpy
+ ****************************************************************************/
+
+static void romfs_devmemcpy(FAR struct romfs_mountpt_s *rm,
+                            int ndx, FAR const void *buf, size_t len)
+{
+  memcpy(rm->rm_devbuffer + ndx, buf, len);
+}
+
+/****************************************************************************
+ * Name: romfs_devstrcpy
+ ****************************************************************************/
+
+static void romfs_devstrcpy(FAR struct romfs_mountpt_s *rm,
+                            int ndx, FAR const char *buf)
+{
+  strcpy((FAR char *)rm->rm_devbuffer + ndx, buf);
+}
+
+/****************************************************************************
  * Name: romfs_devwrite32
  *
  * Description:
@@ -950,7 +970,7 @@ int romfs_fsconfigure(FAR struct romfs_mountpt_s *rm, FAR const void *data)
 
   /* Verify the magic number at that identifies this as a ROMFS filesystem */
 
-  if (memcmp(rm->rm_buffer, ROMFS_VHDR_MAGIC, 8) != 0)
+  if (memcmp(rm->rm_buffer, ROMFS_VHDR_MAGIC, ROMFS_VHDR_SIZE) != 0)
     {
       return -EINVAL;
     }
@@ -1439,8 +1459,7 @@ int romfs_mkfs(FAR struct romfs_mountpt_s *rm)
 {
   /* Write the magic number at that identifies this as a ROMFS filesystem */
 
-  memcpy(rm->rm_devbuffer + ROMFS_VHDR_ROM1FS, ROMFS_VHDR_MAGIC,
-         ROMFS_VHDR_SIZE);
+  romfs_devmemcpy(rm, ROMFS_VHDR_ROM1FS, ROMFS_VHDR_MAGIC, ROMFS_VHDR_SIZE);
 
   /* Init the ROMFS volume to zero */
 
@@ -1448,7 +1467,7 @@ int romfs_mkfs(FAR struct romfs_mountpt_s *rm)
 
   /* Write the volume name */
 
-  memcpy(rm->rm_devbuffer + ROMFS_VHDR_VOLNAME, "romfs", 6);
+  romfs_devstrcpy(rm, ROMFS_VHDR_VOLNAME, "romfs");
 
   /* Write the root node . */
 
@@ -1456,7 +1475,7 @@ int romfs_mkfs(FAR struct romfs_mountpt_s *rm)
   romfs_devwrite32(rm, 0x20 + ROMFS_FHDR_INFO, 0x20);
   romfs_devwrite32(rm, 0x20 + ROMFS_FHDR_SIZE, 0);
   romfs_devwrite32(rm, 0x20 + ROMFS_FHDR_CHKSUM, 0);
-  memcpy(rm->rm_devbuffer + 0x20 + ROMFS_FHDR_NAME, ".", 2);
+  romfs_devstrcpy(rm, 0x20 + ROMFS_FHDR_NAME, ".");
 
   /* Write the root node .. */
 
@@ -1464,7 +1483,7 @@ int romfs_mkfs(FAR struct romfs_mountpt_s *rm)
   romfs_devwrite32(rm, 0x40 + ROMFS_FHDR_INFO, 0x20);
   romfs_devwrite32(rm, 0x40 + ROMFS_FHDR_SIZE, 0);
   romfs_devwrite32(rm, 0x40 + ROMFS_FHDR_CHKSUM, 0);
-  memcpy(rm->rm_devbuffer + 0x40 + ROMFS_FHDR_NAME, "..", 3);
+  romfs_devstrcpy(rm, 0x40 + ROMFS_FHDR_NAME, "..");
 
   /* Write the buffer to sector zero */
 
