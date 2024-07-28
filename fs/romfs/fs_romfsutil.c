@@ -416,7 +416,7 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
   char childname[NAME_MAX + 1];
   uint32_t linkoffset;
   uint32_t info;
-  uint8_t num = 0;
+  uint16_t count = 0;
   size_t nsize;
   int ret;
 
@@ -461,21 +461,21 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
 
       if (strcmp(childname, ".") != 0 && strcmp(childname, "..") != 0)
         {
-          if (child == NULL || nodeinfo->rn_count == num - 1)
+          if (child == NULL || nodeinfo->rn_count == count - 1)
             {
               FAR void *tmp;
 
               tmp = fs_heap_realloc(nodeinfo->rn_child,
-                    (num + NODEINFO_NINCR) * sizeof(*nodeinfo->rn_child));
+                    (count + NODEINFO_NINCR) * sizeof(*nodeinfo->rn_child));
               if (tmp == NULL)
                 {
                   return -ENOMEM;
                 }
 
               nodeinfo->rn_child = tmp;
-              memset(nodeinfo->rn_child + num, 0, NODEINFO_NINCR *
+              memset(nodeinfo->rn_child + count, 0, NODEINFO_NINCR *
                      sizeof(*nodeinfo->rn_child));
-              num += NODEINFO_NINCR;
+              count += NODEINFO_NINCR;
             }
 
           child = &nodeinfo->rn_child[nodeinfo->rn_count++];
