@@ -22,7 +22,6 @@ config ARCH_CHIP_ESP32
 	select ARCH_HAVE_TEXT_HEAP
 	select ARCH_VECNOTIRQ
 	select LIBC_PREVENT_STRING_KERNEL
-	select LIBC_ARCH_ATOMIC
 	select LIBC_ARCH_MEMCPY if BUILD_FLAT
 	select LIBC_ARCH_MEMCHR if BUILD_FLAT
 	select LIBC_ARCH_MEMCMP if BUILD_FLAT
@@ -54,7 +53,6 @@ config ARCH_CHIP_ESP32S2
 	select ARCH_HAVE_BOOTLOADER
 	select ARCH_HAVE_RESET
 	select ARCH_VECNOTIRQ
-	select LIBC_ARCH_ATOMIC
 	select LIBC_ARCH_MEMCPY
 	select LIBC_ARCH_MEMCHR
 	select LIBC_ARCH_MEMCMP
@@ -107,7 +105,6 @@ config ARCH_CHIP_ISS_HIFI4
 	bool "ISS HIFI4"
 	select ARCH_FAMILY_LX7
 	select XTENSA_HAVE_INTERRUPTS
-	select LIBC_ARCH_ATOMIC
 	select ARCH_HAVE_RESET
 	---help---
 		hifi4 simulation on Xtensa Instruction Set Simulator (ISS)
@@ -116,7 +113,6 @@ config ARCH_CHIP_ISS_HIFI3Z
 	bool "ISS HIFI3Z"
 	select ARCH_FAMILY_LX7
 	select XTENSA_HAVE_INTERRUPTS
-	select LIBC_ARCH_ATOMIC
 	select ARCH_HAVE_RESET
 	---help---
 		hifi3z simulation on Xtensa Instruction Set Simulator (ISS)
