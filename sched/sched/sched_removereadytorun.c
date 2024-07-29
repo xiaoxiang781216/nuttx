@@ -338,25 +338,9 @@ bool nxsched_remove(FAR struct tcb_s *tcb)
 {
   if (tcb->task_state == TSTATE_TASK_RUNNING)
     {
-      int me = this_cpu();
-      int cpu = tcb->cpu;
-      if (cpu != me)
-        {
-          up_cpu_pause(tcb->cpu);
-          nxsched_remove_running_without_merge(tcb);
-          up_cpu_resume(tcb->cpu);
-          if (g_pendingtasks.head)
-            {
-              nxsched_merge_pending();
-            }
-
-          return false;
-        }
-      else
-        {
-          nxsched_remove_running(tcb);
-          return true;
-        }
+      DEBUGASSERT(tcb->cpu == this_cpu());
+      nxsched_remove_running(tcb);
+      return true;
     }
   else
     {

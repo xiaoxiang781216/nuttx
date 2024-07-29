@@ -307,6 +307,7 @@ void leave_critical_section(irqstate_t flags) noinstrument_function;
       SP_DMB(); \
       g_cpu_irqlock = SP_UNLOCKED; \
       SP_DSB(); \
+      SP_SEV(); \
     } \
   while (0)
 
