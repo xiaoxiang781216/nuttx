@@ -354,7 +354,10 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
     {
       /* Lock the scheduler do NOT switch out */
 
-      sched_lock();
+      if (!up_interrupt_context())
+        {
+          sched_lock();
+        }
 
 #ifndef CONFIG_RAMLOG_NONBLOCKING
       /* Are there threads waiting for read data? */
@@ -367,7 +370,10 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
 
       /* Unlock the scheduler */
 
-      sched_unlock();
+      if (!up_interrupt_context())
+        {
+          sched_unlock();
+        }
     }
 
   /* We always have to return the number of bytes requested and NOT the
