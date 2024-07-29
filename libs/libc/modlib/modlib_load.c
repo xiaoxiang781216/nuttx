@@ -349,6 +349,14 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
               loadinfo->ehdr.e_type == ET_EXEC)
             {
               pptr = (FAR uint8_t **)&loadinfo->sectalloc[i];
+              if (*pptr == NULL)
+                {
+                  /* Mark the section as not loaded */
+
+                  shdr->sh_offset = (uintptr_t)shdr->sh_addr;
+                  shdr->sh_addr = 0;
+                  continue;
+                }
             }
 #endif
 

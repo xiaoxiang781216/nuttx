@@ -987,7 +987,8 @@ int modlib_bind(FAR struct module_s *modp,
                */
 
               case SHT_REL:
-                if ((loadinfo->shdr[infosec].sh_flags & SHF_ALLOC) == 0)
+                if ((loadinfo->shdr[infosec].sh_flags & SHF_ALLOC) == 0 ||
+                    loadinfo->shdr[infosec].sh_addr == 0)
                   {
                     continue;
                   }
