@@ -752,6 +752,11 @@ static int dns_query_callback(FAR void *arg, FAR struct sockaddr *addr,
         }
       else if (query->result != -EAGAIN)
         {
+          if (query->result == -EINTR)
+            {
+              nerr("ERROR: dns query cancel");
+              return 1;
+            }
           break;
         }
     }
