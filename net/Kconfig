@@ -458,4 +458,10 @@ endmenu # Network Topologies
 
 source "net/route/Kconfig"
 
+config NET_NO_LTO
+	bool "Support no-lto option for the network Makefile"
+	default n
+	---help---
+		network protocol stack supports the "no-lto" option with Makefile
+
 endif # NET
