@@ -26,6 +26,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
+#include <nuttx/cache.h>
 #include <nuttx/compiler.h>
 #include <nuttx/irq.h>
 #include <nuttx/init.h>
@@ -582,6 +583,7 @@ static noreturn_function int pause_cpu_handler(FAR void *arg)
 {
   memcpy(g_last_regs[this_cpu()], up_current_regs(), sizeof(g_last_regs[0]));
   g_cpu_paused[this_cpu()] = true;
+  up_flush_dcache_all();
   while (1);
 }
 
@@ -785,6 +787,7 @@ static void dump_fatal_info(FAR struct tcb_s *rtcb,
 static void reset_board(void)
 {
 #if CONFIG_BOARD_RESET_ON_ASSERT >= 1
+  up_flush_dcache_all();
   board_reset(CONFIG_BOARD_ASSERT_RESET_VALUE);
 #else
   for (; ; )
