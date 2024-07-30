@@ -19,6 +19,7 @@
 ############################################################################
 
 import re
+from typing import List
 
 import gdb
 from macros import fetch_macro_info, try_expand
@@ -26,6 +27,22 @@ from macros import fetch_macro_info, try_expand
 g_symbol_cache = {}
 g_type_cache = {}
 g_macro_ctx = None
+
+
+def backtrace(addresses: List[gdb.Value]) -> List[str]:
+    """Convert addresses to backtrace"""
+    backtrace = []
+
+    for addr in addresses:
+        if not addr:
+            break
+
+        func = addr.format_string(symbols=True, address=False)
+        sym = gdb.find_pc_line(int(addr))
+        source = str(sym.symtab) + ":" + str(sym.line)
+        backtrace.append((int(addr), func, source))
+
+    return backtrace
 
 
 def lookup_type(name, block=None) -> gdb.Type:
