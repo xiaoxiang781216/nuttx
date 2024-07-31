@@ -237,11 +237,14 @@ static FAR struct inode *fatfs_free_slot(BYTE pdrv)
 
 static int fatfs_convert_result(FRESULT ret)
 {
+  if (ret == FR_OK)
+    {
+      return 0;
+    }
+
+  ferr("ERROR: fatfs_convert_result %p return %d\n", return_address(0), ret);
   switch (ret)
     {
-      case FR_OK:
-        return 0;
-
       case FR_DISK_ERR:
       case FR_NOT_READY:
       case FR_MKFS_ABORTED:
