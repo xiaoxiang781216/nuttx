@@ -271,6 +271,12 @@ function build_board()
     exit 1
   fi
 
+  GHS_OPTS_STRING="CONFIG_ARCH_TOOLCHAIN_GHS=y"
+  if grep -q "^${GHS_OPTS_STRING}$" "${NUTTXDIR}/.config"; then
+    echo "EXTRA_FLAGS are required to update the when using the GHS toolchain."
+    EXTRA_FLAGS=$(echo "$EXTRA_FLAGS" | sed 's/-Wno-cpp//' | xargs)
+  fi
+
   if ! ${BEAR} make -C ${NUTTXDIR} EXTRAFLAGS="$EXTRA_FLAGS" ${@:2}; then
     echo "Error: ############# build ${1} fail ##############"
     exit 2
