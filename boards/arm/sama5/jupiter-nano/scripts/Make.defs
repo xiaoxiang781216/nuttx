@@ -56,5 +56,5 @@ LDNXFLATFLAGS = -s 2048
 #  LDFLAGS += --nostartfiles -nodefaultlibs
 #endif
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
-  LDFLAGS += -g3
+  LDFLAGS += $(CONFG_DEBUG_SYMBOLS_LEVEL)
 endif

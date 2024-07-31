@@ -71,7 +71,7 @@ if(CONFIG_SCHED_GCOV)
 endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(-g3)
+  add_compile_options(${CONFG_DEBUG_SYMBOLS_LEVEL})
 endif()
 
 # Architecture flags
