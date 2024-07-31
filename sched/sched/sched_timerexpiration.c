@@ -561,6 +561,9 @@ void nxsched_reassess_timer(void)
   clock_t nexttime;
   clock_t ticks;
   clock_t elapsed;
+  irqstate_t flags;
+
+  flags = enter_critical_section();
 
 #ifdef CONFIG_SCHED_TICKLESS_ALARM
   /* Cancel the alarm and get the current time */
@@ -592,6 +595,8 @@ void nxsched_reassess_timer(void)
 
   nexttime = nxsched_timer_process(ticks, elapsed, true);
   g_timer_interval = nxsched_timer_start(ticks, nexttime);
+
+  leave_critical_section(flags);
 }
 
 /****************************************************************************

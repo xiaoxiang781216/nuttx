@@ -271,6 +271,8 @@ int wd_start_absolute(FAR struct wdog_s *wdog, clock_t ticks,
       return -EINVAL;
     }
 
+  sched_note_wdog(NOTE_WDOG_START, wdentry, (FAR void *)(uintptr_t)ticks);
+
   /* NOTE:  There is a race condition here... the caller may receive
    * the watchdog between the time that wd_start_absolute is called and
    * the critical section is established.
@@ -292,12 +294,15 @@ int wd_start_absolute(FAR struct wdog_s *wdog, clock_t ticks,
   reassess |= list_is_head(&g_wdactivelist, &wdog->node);
   if (!g_wdtimernested && reassess)
     {
+      leave_critical_section(flags);
+
       /* Resume the interval timer that will generate the next
        * interval event. If the timer at the head of the list changed,
        * then this will pick that new delay.
        */
 
       nxsched_reassess_timer();
+      return OK;
     }
 #else
   UNUSED(reassess);
@@ -314,7 +319,6 @@ int wd_start_absolute(FAR struct wdog_s *wdog, clock_t ticks,
 #endif
   leave_critical_section(flags);
 
-  sched_note_wdog(NOTE_WDOG_START, wdentry, (FAR void *)(uintptr_t)ticks);
   return OK;
 }
 
