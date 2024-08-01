@@ -95,7 +95,7 @@ def compare_dump_line(dump_line_list, str):
 
 def multi_thread_executer(cmd):
     result = ""
-    p = os.popen(cmd, 'r')
+    p = os.popen(cmd, "r")
     while True:
         line = p.readline()
         if line == "":
@@ -104,7 +104,7 @@ def multi_thread_executer(cmd):
     return result
 
 
-class addr2line_db():
+class addr2line_db:
     def __init__(self, mem=[], ncpu=1, prefix="", file="nuttx.elf", batch_max=1):
         self.mem = mem
         self.ncpu = ncpu
@@ -116,7 +116,10 @@ class addr2line_db():
 
     def split_array(self, arr, num_splits):
         k, m = divmod(len(arr), num_splits)
-        return [arr[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(num_splits)]
+        return [
+            arr[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)]
+            for i in range(num_splits)
+        ]
 
     def parse_all(self):
         cmds = []
@@ -126,13 +129,16 @@ class addr2line_db():
         segments = self.split_array(self.mem, batch_cnt)
 
         for seg in segments:
-            addrs = ' '.join(seg)
-            cmds.append(f'{self.prefix}addr2line -Cfe {self.file} {addrs}')
+            addrs = " ".join(seg)
+            cmds.append(f"{self.prefix}addr2line -Cfe {self.file} {addrs}")
 
         with ThreadPoolExecutor(max_workers=self.ncpu) as executor:
             for keys, v in zip(segments, executor.map(multi_thread_executer, cmds)):
-                lines = v.split('\n')
-                values = [lines[i] + '\n' + lines[i + 1] + '\n' for i in range(0, len(lines) - 1, 2)]
+                lines = v.split("\n")
+                values = [
+                    lines[i] + "\n" + lines[i + 1] + "\n"
+                    for i in range(0, len(lines) - 1, 2)
+                ]
                 for i in range(len(keys)):
                     self.db[keys[i]] = values[i]
 
@@ -151,8 +157,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "-p", "--prefix", help="addr2line program prefix", nargs=1, default=""
     )
-    parser.add_argument("-j", "--ncpu", help="multi thread count, default all", type=int, default=0, required=False)
-
+    parser.add_argument(
+        "-j",
+        "--ncpu",
+        help="multi thread count, default all",
+        type=int,
+        default=0,
+        required=False,
+    )
     parser.add_argument(
         "-e",
         "--elffile",
