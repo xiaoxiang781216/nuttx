@@ -839,13 +839,18 @@ static void sensor_rpmsg_push_event_one(FAR struct sensor_rpmsg_dev_s *dev,
       if (!sre->buffer ||
           sre->written + sizeof(*cell) + state.esize > sre->space)
         {
+          uint32_t space = 0;
+
           if (sre->buffer)
             {
               rpmsg_send_nocopy(&sre->ept, sre->buffer, sre->written);
               sre->buffer = NULL;
             }
 
-          msg = rpmsg_get_tx_payload_buffer(&sre->ept, &sre->space, true);
+          nxrmutex_unlock(&sre->lock);
+          msg = rpmsg_get_tx_payload_buffer(&sre->ept, &space, true);
+          nxrmutex_lock(&sre->lock);
+          sre->space = space;
           sre->buffer = msg;
           if (!msg)
             {
