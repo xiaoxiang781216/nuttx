@@ -28,6 +28,7 @@
 #include <syslog.h>
 
 #include <nuttx/fdt.h>
+#include <nuttx/fs/fs.h>
 #include <nuttx/pci/pci_ecam.h>
 #include <nuttx/virtio/virtio-mmio.h>
 
