@@ -63,6 +63,13 @@
 
 void nxsched_suspend_scheduler(FAR struct tcb_s *tcb)
 {
+  /* Handle the task exiting case */
+
+  if (!tcb)
+    {
+      return;
+    }
+
 #ifdef CONFIG_SCHED_SPORADIC
   /* Perform sporadic schedule operations */
 
