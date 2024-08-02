@@ -98,7 +98,7 @@ static void mm_add_delaylist(struct mm_heap_s *heap, void *mem)
 #endif
 }
 
-static bool mm_free_delaylist(struct mm_heap_s *heap, bool force)
+static bool free_delaylist(struct mm_heap_s *heap, bool force)
 {
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   struct mm_delaynode_s *tmp;
@@ -324,6 +324,22 @@ void mm_free(struct mm_heap_s *heap, void *mem)
 }
 
 /****************************************************************************
+ * Name: mm_free_delaylist
+ *
+ * Description:
+ *   force freeing the delaylist of this heap.
+ *
+ ****************************************************************************/
+
+void mm_free_delaylist(FAR struct mm_heap_s *heap)
+{
+  if (heap)
+    {
+       free_delaylist(heap, true);
+    }
+}
+
+/****************************************************************************
  * Name: mm_realloc
  *
  * Description:
@@ -355,7 +371,7 @@ void *mm_realloc(struct mm_heap_s *heap, void *oldmem,
   int newsize;
   int oldsize;
 
-  mm_free_delaylist(heap, false);
+  free_delaylist(heap, false);
 
   oldsize = host_mallocsize(oldmem);
   atomic_fetch_sub(&heap->uordblks, oldsize);
@@ -386,7 +402,7 @@ void *mm_realloc(struct mm_heap_s *heap, void *oldmem,
   while (atomic_compare_exchange_weak(&heap->usmblks, &usmblks, uordblks));
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  if (mem == NULL && mm_free_delaylist(heap, true))
+  if (mem == NULL && free_delaylist(heap, true))
     {
       return mm_realloc(heap, oldmem, size);
     }
@@ -455,7 +471,7 @@ void *mm_memalign(struct mm_heap_s *heap, size_t alignment, size_t size)
   int uordblks;
   int usmblks;
 
-  mm_free_delaylist(heap, false);
+  free_delaylist(heap, false);
   mem = host_memalign(alignment, size);
 
   if (mem == NULL)
@@ -480,7 +496,7 @@ void *mm_memalign(struct mm_heap_s *heap, size_t alignment, size_t size)
   while (atomic_compare_exchange_weak(&heap->usmblks, &usmblks, uordblks));
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  if (mem == NULL && mm_free_delaylist(heap, true))
+  if (mem == NULL && free_delaylist(heap, true))
     {
       return mm_memalign(heap, alignment, size);
     }
