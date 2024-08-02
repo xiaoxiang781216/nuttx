@@ -114,12 +114,14 @@ endif
 
 # Link Time Optimization
 
-ifeq ($(CONFIG_LTO_THIN),y)
-  ARCHOPTIMIZATION += -flto=thin
-else ifeq ($(CONFIG_LTO_FULL),y)
-  ARCHOPTIMIZATION += -flto
-else ifeq ($(CONFIG_LTO_FAT), y)
-  ARCHOPTIMIZATION += -flto -ffat-lto-objects
+ifneq ($(CONFIG_ARCH_TOOLCHAIN_GHS),y)
+  ifeq ($(CONFIG_LTO_THIN),y)
+    ARCHOPTIMIZATION += -flto=thin
+  else ifeq ($(CONFIG_LTO_FULL),y)
+    ARCHOPTIMIZATION += -flto
+  else ifeq ($(CONFIG_LTO_FAT), y)
+    ARCHOPTIMIZATION += -flto -ffat-lto-objects
+  endif
 endif
 
 # The arm clang toolchain requires to pass the linker option will
@@ -129,6 +131,10 @@ endif
 ifneq ($(CONFIG_LTO_NONE),y)
   ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
     LDFLAGS += --lto
+  endif
+
+  ifeq ($(CONFIG_ARCH_TOOLCHAIN_GHS),y)
+    LDFLAGS += -Olink
   endif
 
   # For gcc, use the linker plugin to extract objects with GIMPLE
