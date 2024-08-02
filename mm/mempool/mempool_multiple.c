@@ -22,25 +22,16 @@
  * Included Files
  ****************************************************************************/
 
+#include <assert.h>
 #include <strings.h>
 #include <syslog.h>
 #include <sys/param.h>
 
 #include <nuttx/mutex.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mm/mempool.h>
 #include <nuttx/mm/kasan.h>
-
-#include <assert.h>
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#undef  ALIGN_UP
-#define ALIGN_UP(x, a)        ((((size_t)x) + ((a) - 1)) & (~((a) - 1)))
-#undef  ALIGN_DOWN
-#define ALIGN_DOWN(x, a)      ((size_t)(x) & (~((a) - 1)))
 
 /****************************************************************************
  * Private Types
@@ -195,7 +186,7 @@ retry:
       sq_addfirst(&chunk->entry, &mpool->chunk_queue);
     }
 
-  ret = (FAR void *)ALIGN_UP(chunk->next, align);
+  ret = (FAR void *)ALIGN_UP((uintptr_t)chunk->next, align);
   if ((uintptr_t)chunk->end - (uintptr_t)ret < size)
     {
       goto retry;
@@ -317,7 +308,7 @@ mempool_multiple_get_dict(FAR struct mempool_multiple_s *mpool,
       return NULL;
     }
 
-  addr = (FAR void *)ALIGN_DOWN(blk, mpool->expandsize);
+  addr = (FAR void *)ALIGN_DOWN((uintptr_t)blk, mpool->expandsize);
   if (blk == addr)
     {
       /* It is not a memory block allocated by mempool
@@ -728,7 +719,7 @@ FAR void *mempool_multiple_memalign(FAR struct mempool_multiple_s *mpool,
       FAR char *blk = mempool_allocate(pool);
       if (blk != NULL)
         {
-          return (FAR void *)ALIGN_UP(blk, alignment);
+          return (FAR void *)ALIGN_UP((uintptr_t)blk, alignment);
         }
     }
   while (++pool < end);

@@ -33,6 +33,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/irq.h>
+#include <nuttx/nuttx.h>
 
 #include <sys/types.h>
 #ifndef __ASSEMBLY__
@@ -67,10 +68,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#ifndef ALIGN_UP
-#  define ALIGN_UP(num, align) (((num) + ((align) - 1)) & ~((align) - 1))
-#endif
 
 /* IRQ Stack Frame Format.  Each value is a uint32_t register index */
 

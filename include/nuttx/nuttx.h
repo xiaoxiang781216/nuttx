@@ -27,11 +27,35 @@
 
 #include <nuttx/config.h>
 
-#include <stddef.h>
+#ifndef __ASSEMBLY__
+#  include <stddef.h>
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+/* Align definitions */
+
+#ifndef ALIGN_MASK
+#  define ALIGN_MASK(s)        ((1 << (s)) - 1)
+#endif
+
+#ifndef ALIGN_UP
+#  define ALIGN_UP(x,a)        (((x) + ((a) - 1)) & ~((a) - 1))
+#endif
+
+#ifndef ALIGN_UP_MASK
+#  define ALIGN_UP_MASK(x,m)   (((x) + (m)) & ~(m))
+#endif
+
+#ifndef ALIGN_DOWN
+#  define ALIGN_DOWN(x,a)      ((x) & (~((a) - 1)))
+#endif
+
+#ifndef ALIGN_DOWN_MASK
+#  define ALIGN_DOWN_MASK(x,m) ((x) & ~(m))
+#endif
 
 /* Name: container_of
  *

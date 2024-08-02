@@ -35,6 +35,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
+#include <nuttx/nuttx.h>
 #include <arch/irq.h>
 
 #include "xtensa.h"
@@ -43,14 +44,6 @@
 #include "hardware/esp32s3_dma.h"
 #include "hardware/esp32s3_soc.h"
 #include "hardware/esp32s3_system.h"
-
-/****************************************************************************
- * Pre-processor Macros
- ****************************************************************************/
-
-#ifndef ALIGN_UP
-#  define ALIGN_UP(num, align) (((num) + ((align) - 1)) & ~((align) - 1))
-#endif
 
 /****************************************************************************
  * Private Data
