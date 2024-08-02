@@ -44,7 +44,7 @@ add_compile_options(
   -U__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(${CONFG_DEBUG_SYMBOLS_LEVEL})
+  add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
 endif()
 
 if(CONFIG_DEBUG_CUSTOMOPT)

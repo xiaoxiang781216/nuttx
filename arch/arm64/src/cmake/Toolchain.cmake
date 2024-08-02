@@ -156,7 +156,7 @@ if(CONFIG_DEBUG_LINK_MAP)
 endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(${CONFG_DEBUG_SYMBOLS_LEVEL})
+  add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
 endif()
 
 if(CONFIG_ARCH_TOOLCHAIN_GNU)
