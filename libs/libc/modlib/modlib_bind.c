@@ -794,20 +794,6 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
                 }
             }
 
-          /* Calculate the relocation address. */
-
-          if (rel->r_offset < 0)
-            {
-              berr("ERROR: Section %d reloc %d:"
-                   "Relocation address out of range, offset %u\n",
-                   relidx, i, (int)rel->r_offset);
-              ret = -EINVAL;
-              lib_free(sym);
-              lib_free(rels);
-              lib_free(dyn);
-              return ret;
-            }
-
           /* Now perform the architecture-specific relocation */
 
           if ((idx_sym = ELF_R_SYM(rel->r_info)) != 0)
