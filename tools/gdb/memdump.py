@@ -18,10 +18,10 @@
 #
 ############################################################################
 
-import gdb
-import utils
 import argparse
-from lists import list_for_each_entry, sq_for_every, sq_queue
+
+import gdb
+from lists import sq_for_every, sq_queue
 from utils import get_symbol_value
 
 MM_ALLOC_BIT = 0x1
@@ -34,9 +34,11 @@ PID_MM_ALLOC = -3
 PID_MM_LEAK = -2
 PID_MM_MEMPOOL = -1
 
+
 def align_up(size, align) -> int:
     """Align the size to the specified alignment"""
     return (size + (align - 1)) & ~(align - 1)
+
 
 def mm_nodesize(size) -> int:
     """Return the real size of a memory node"""
@@ -67,6 +69,7 @@ def mempool_multiple_foreach(mpool):
         yield pool
         i += 1
 
+
 def mempool_realblocksize(pool):
     """Return the real block size of a mempool"""
 
@@ -79,6 +82,7 @@ def mempool_realblocksize(pool):
         return align_up(pool["blocksize"] + gdb.lookup_type("struct mempool_backtrace_s").sizeof, mempool_align)
     else:
         return pool["blocksize"]
+
 
 def mempool_foreach(pool):
     """Iterate over all block in a mempool"""
@@ -101,7 +105,6 @@ def mempool_foreach(pool):
             buf = bufaddr.cast(gdb.lookup_type("struct mempool_backtrace_s").pointer())
             yield buf
             nblk -= 1
-
 
 
 class Nxmemdump(gdb.Command):
@@ -127,7 +130,7 @@ class Nxmemdump(gdb.Command):
                     self.uordblks += pool["blocksize"]
             else:
                 for buf in mempool_foreach(pool):
-                    if (pid == buf["pid"] or pid == PID_MM_ALLOC ) and (
+                    if (pid == buf["pid"] or pid == PID_MM_ALLOC) and (
                         buf["seqno"] >= seqmin and buf["seqno"] < seqmax
                     ) and buf["magic"] == MEMPOOL_MAGIC_ALLOC:
                         charnode = gdb.Value(buf).cast(
@@ -149,7 +152,7 @@ class Nxmemdump(gdb.Command):
                                 gdb.write(" ")
                                 gdb.write(
                                     buf["backtrace"][x].format_string(
-                                       raw=False, symbols=True, address=False
+                                        raw=False, symbols=True, address=False
                                     )
                                 )
 
