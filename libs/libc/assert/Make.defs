@@ -21,8 +21,13 @@
 CSRCS += lib_assert.c lib_stackchk.c
 
 ifneq ($(CONFIG_LTO_NONE),y)
-  assert/lib_assert.c_CFLAGS += -fno-lto
-  assert/lib_stackchk.c_CFLAGS += -fno-lto
+  ifeq ($(CONFIG_ARCH_TOOLCHAIN_GHS),y)
+    assert/lib_assert.c_CFLAGS += -Onolink
+    assert/lib_stackchk.c_CFLAGS += -Onolink
+  else
+    assert/lib_assert.c_CFLAGS += -fno-lto
+    assert/lib_stackchk.c_CFLAGS += -fno-lto
+  endif
 endif
 
 # Add the assert directory to the build
