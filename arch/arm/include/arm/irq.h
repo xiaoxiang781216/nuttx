@@ -251,21 +251,23 @@ static inline irqstate_t up_irq_enable(void)
 
 int up_cpu_index(void) noinstrument_function;
 
-#ifdef CONFIG_SMP
-#  define this_cpu() up_cpu_index()
-#else
-#  define this_cpu() 0
-#endif
-
 noinstrument_function
 static inline_function uint32_t *up_current_regs(void)
 {
-  return (uint32_t *)g_current_regs[this_cpu()];
+#ifdef CONFIG_SMP
+  return (uint32_t *)g_current_regs[up_cpu_index()];
+#else
+  return (uint32_t *)g_current_regs[0];
+#endif
 }
 
 static inline_function void up_set_current_regs(uint32_t *regs)
 {
-  g_current_regs[this_cpu()] = regs;
+#ifdef CONFIG_SMP
+  g_current_regs[up_cpu_index()] = regs;
+#else
+  g_current_regs[0] = regs;
+#endif
 }
 
 noinstrument_function

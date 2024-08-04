@@ -1695,6 +1695,28 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
                      FAR void *arg, bool wait);
 #endif
 
+/****************************************************************************
+ * Name: this_cpu
+ *
+ * Description:
+ *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
+ *   corresponds to the currently executing CPU.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
+ *   corresponds to the currently executing CPU.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+#  define this_cpu() up_cpu_index()
+#else
+#  define this_cpu() 0
+#endif
+
 #undef EXTERN
 #if defined(__cplusplus)
 }

@@ -422,8 +422,6 @@ static inline void up_irq_restore(irqstate_t flags)
 #  define up_cpu_index() (0)
 #endif
 
-#define this_cpu() up_cpu_index()
-
 /****************************************************************************
  * Schedule acceleration macros
  ****************************************************************************/

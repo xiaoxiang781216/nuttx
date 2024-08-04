@@ -428,8 +428,6 @@ int up_cpu_index(void);
 #  define up_cpu_index() (0)
 #endif
 
-#define this_cpu() up_cpu_index()
-
 static inline_function uint32_t *up_current_regs(void)
 {
   return (uint32_t *)g_current_regs[up_cpu_index()];
