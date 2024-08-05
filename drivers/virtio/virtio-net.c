@@ -162,6 +162,7 @@ static int virtio_net_rmmac(FAR struct netdev_lowerhalf_s *dev,
 static int virtio_net_ioctl(FAR struct netdev_lowerhalf_s *dev,
                             int cmd, unsigned long arg);
 #endif
+static void virtio_net_txfree(FAR struct netdev_lowerhalf_s *dev);
 
 static int  virtio_net_probe(FAR struct virtio_device *vdev);
 static void virtio_net_remove(FAR struct virtio_device *vdev);
@@ -191,6 +192,7 @@ static const struct netdev_ops_s g_virtio_net_ops =
 #ifdef CONFIG_NETDEV_IOCTL
   virtio_net_ioctl,
 #endif
+  virtio_net_txfree
 };
 
 #ifdef CONFIG_DRIVERS_WIFI_SIM
@@ -473,14 +475,6 @@ static netpkt_t *virtio_net_recv(FAR struct netdev_lowerhalf_s *dev)
 
       virtqueue_enable_cb(vq);
       spin_unlock_irqrestore(&priv->lock[VIRTIO_NET_RX], flags);
-
-      /* We do transmit after recv, now it's time to free TX buffer.
-       * Depends on upper-half order (Call TX after RX).
-       *
-       * TODO: Find a better way to free TX buffer.
-       */
-
-      virtio_net_txfree((FAR struct netdev_lowerhalf_s *)priv);
 
       vrtinfo("get NULL buffer\n");
       return NULL;
