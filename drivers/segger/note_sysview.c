@@ -80,6 +80,11 @@ static void note_sysview_wdog(FAR struct note_driver_s *drv, uint8_t event,
                               FAR void *handler, FAR const void *arg);
 #endif
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+static void note_sysview_vprintf(FAR struct note_driver_s *drv, uintptr_t ip,
+                                 FAR const char *fmt, va_list va);
+#endif
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -124,6 +129,11 @@ static const struct note_driver_ops_s g_note_sysview_ops =
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
   note_sysview_heap,          /* heap */
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+  NULL,                       /* event */
+  note_sysview_vprintf,       /* vprintf */
 #endif
 };
 
@@ -383,6 +393,14 @@ static void note_sysview_wdog(FAR struct note_driver_s *drv, uint8_t event,
     {
       SEGGER_SYSVIEW_RecordExitTimer();
     }
+}
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+static void note_sysview_vprintf(FAR struct note_driver_s *drv, uintptr_t ip,
+                                 FAR const char *fmt, va_list va)
+{
+  SEGGER_SYSVIEW_VPrintfHost(fmt, &va);
 }
 #endif
 
