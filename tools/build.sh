@@ -458,12 +458,12 @@ board_config=$1
 shift
 
 EXTRA_FLAGS="-Wno-cpp"
-if [ "$1" == "-e" ]; then
+while [[ "$1" == "-e" ]]; do
   shift
   EXTRA_FLAGS+=" $1"
   echo "extraflags: $EXTRA_FLAGS"
   shift
-fi
+done
 
 if [ "$1" == "--cmake" ]; then
   CMAKE_BUILD="cmake"
