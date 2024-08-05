@@ -183,10 +183,12 @@ int board_boot_image(const char *path, uint32_t hdr_size)
 
   /* Set main and process stack pointers */
 
-  __asm__ __volatile__("\tmsr msp, %0\n" : : "r" (vt.spr));
-  setcontrol(0x00);
-  ARM_ISB();
-  ((void (*)(void))vt.reset)();
+  __asm__ __volatile__("\tmsr msp, %0\n"
+                       "\tmsr control, %1\n"
+                       "\tisb\n"
+                       "\tmov pc, %2\n"
+                       :
+                       : "r" (vt.spr), "r" (0), "r" (vt.reset));
 
 #else
   /* Non-secure entry point */
@@ -197,16 +199,14 @@ int board_boot_image(const char *path, uint32_t hdr_size)
 
   putreg32(VECTOR_TABLE_NS, (NVIC_VECTAB + ARMV8M_NS_OFFSET));
 
-  /* Set non-secure stack pointers */
+  /* Set non-secure stack pointers and jump to non-secure entry point */
 
-  __asm__ __volatile__("\tmsr msp_ns, %0\n" : : "r" (vt.spr));
+  __asm__ __volatile__("\tmsr msp_ns, %0\n"
+                       "\tisb\n"
+                       "\tmov pc, %1\n"
+                       :
+                       : "r" (vt.spr), "r" (vt.reset));
 
-  ARM_ISB();
-
-  /* Jump to non-secure entry point */
-
-  nsfunc *ns_reset = (nsfunc *)(vt.reset);
-  ns_reset();
 #endif
 
   return 0;
