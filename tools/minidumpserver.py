@@ -423,6 +423,9 @@ class RawMemoryFile:
     def __init__(self, rawfile):
         self.__memories = list()
 
+        if rawfile is None:
+            return
+
         for raw in rawfile:
             file,start = raw.split(':')
             start = int(start, 0)
@@ -692,7 +695,7 @@ def arg_parser():
     parser.add_argument(
         "-r",
         "--rawfile",
-        nargs="*",
+        nargs="?",
         help="rawfile is a binary file, args format like ram.bin:0x10000 ...",
     )
     parser.add_argument(
