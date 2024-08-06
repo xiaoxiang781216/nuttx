@@ -34,6 +34,7 @@
 
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
+#  include <arch/syscall.h>
 #endif
 
 /* Include NuttX-specific IRQ definitions */
@@ -430,6 +431,15 @@ static inline void up_irq_restore(irqstate_t flags)
 #define up_this_task()         ((struct tcb_s *)(read_sysreg(tpidr_el1) & ~1ul))
 #define up_update_task(t)      modify_sysreg(t, ~1ul, tpidr_el1)
 #define up_interrupt_context() (read_sysreg(tpidr_el1) & 1)
+
+#define up_switch_context(tcb, rtcb)                              \
+  do {                                                            \
+    if (!up_interrupt_context())                                  \
+      {                                                           \
+        sys_call2(SYS_switch_context, (uintptr_t)&rtcb->xcp.regs, \
+                  (uintptr_t)tcb->xcp.regs);                      \
+      }                                                           \
+  } while (0)
 
 /****************************************************************************
  * Name: up_getusrpc

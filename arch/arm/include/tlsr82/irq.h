@@ -314,6 +314,14 @@ static inline_function uint32_t up_getsp(void)
   return sp;
 }
 
+#define up_switch_context(tcb, rtcb)                        \
+  do {                                                      \
+    if (!up_interrupt_context())                            \
+      {                                                     \
+        tc32_switchcontext(&rtcb->xcp.regs, tcb->xcp.regs); \
+      }                                                     \
+  } while (0)
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
