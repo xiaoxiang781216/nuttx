@@ -33,6 +33,7 @@
 #include <unistd.h>
 #include <debug.h>
 
+#include <nuttx/spinlock.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/pci/pci.h>
 #include <nuttx/serial/uart_16550.h>
