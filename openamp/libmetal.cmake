@@ -71,8 +71,7 @@ function(libmetal_hdrs_sedexp input_header output_header)
       -e "s/@PROJECT_SYSTEM_UPPER@/nuttx/g"
       -e "s/@PROJECT_PROCESSOR_UPPER@/${LIBMETAL_ARCH}/g"
       -e "s/@PROJECT_MACHINE_UPPER@/${CONFIG_ARCH_CHIP}/g"
-      -e "s/cmakedefine HAVE_STDATOMIC_H/include <nuttx\\/compiler.h>/g"
-      -e "s/defined(HAVE_STDATOMIC_H)/defined(CONFIG_HAVE_ATOMICS)/g"
+      -e "s/cmakedefine HAVE_STDATOMIC_H/define HAVE_STDATOMIC_H/g"
       -e "s/cmakedefine/undef/g" ${input_header}
     OUTPUT_FILE ${output_header})
 endfunction()
