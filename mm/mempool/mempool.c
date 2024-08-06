@@ -207,7 +207,7 @@ static void mempool_memdump_callback(FAR struct mempool_s *pool,
       syslog(LOG_INFO, "%6d%12zu%12lu%*p %s\n",
              buf->pid, blocksize, buf->seqno,
              BACKTRACE_PTR_FMT_WIDTH,
-             ((FAR char *)buf - blocksize), tmp);
+             ((FAR char *)buf - pool->blocksize), tmp);
     }
 }
 
@@ -222,7 +222,7 @@ mempool_memdump_free_callback(FAR struct mempool_s *pool,
     {
       syslog(LOG_INFO, "%12zu%*p\n",
              blocksize, BACKTRACE_PTR_FMT_WIDTH,
-             ((FAR char *)buf - blocksize));
+             ((FAR char *)buf - pool->blocksize));
     }
 }
 #endif
