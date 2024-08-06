@@ -307,12 +307,12 @@ function build_board()
 function build_board_cmake()
 {
   # first check if the command target is `distclean`
-  # cmake is built for out-of-tree, so delete the cmake_out directory directly
+  # cmake is built for out-of-tree, so delete the CMAKE_BINARY_DIR directory directly
   if echo "${@:2}" | grep -q "distclean"; then
     echo -e "Build target distclean:"
-    echo -e "  there is no need to distclean in cmake, delete 'cmake_out' directly"
-    if [ -d "cmake_out" ]; then
-      rm -rf cmake_out
+    echo -e "  there is no need to distclean in cmake, delete '${CMAKE_BINARY_DIR}' directly"
+    if [ -d "${CMAKE_BINARY_DIR}" ]; then
+      rm -rf $CMAKE_BINARY_DIR
     fi
     return 0
   fi
@@ -320,11 +320,13 @@ function build_board_cmake()
   j_arg=$(echo ${@:2} |grep -oP '\-j[0-9]+')
   # import environmeni
   setup_toolchain $1
+  # cmake verbose
+  v_arg=""
   # check if cmake configuration is required
-  if [ ! -d "cmake_out" ]; then
+  if [ ! -d "${CMAKE_BINARY_DIR}" ]; then
     echo -e "Build CMake configuration:"
-    echo -e "  cmake -B cmake_out -S ${NUTTXDIR} -DBOARD_CONFIG=$1 -GNinja"
-    if ! cmake -B cmake_out -S ${NUTTXDIR} -DBOARD_CONFIG=$1 -GNinja; then
+    echo -e "  cmake -B ${CMAKE_BINARY_DIR} -S ${NUTTXDIR} -DBOARD_CONFIG=$1 -DEXTRA_FLAGS=\"${EXTRA_FLAGS}\" ${CMAKE_GENERATOR}"
+    if ! cmake -B ${CMAKE_BINARY_DIR} -S ${NUTTXDIR} -DBOARD_CONFIG=$1 -DEXTRA_FLAGS="${EXTRA_FLAGS}" ${CMAKE_GENERATOR}; then
       echo "Error: ############# config ${1} fail ##############"
       exit 1
     fi
@@ -333,18 +335,21 @@ function build_board_cmake()
   for arg in "${@:2}"
   do
     if [[ $arg == *config ]]; then
-      echo -e "  cmake --build cmake_out -t $arg"
-      if ! cmake --build cmake_out -t $arg; then
+      echo -e "  cmake --build ${CMAKE_BINARY_DIR} -t $arg"
+      if ! cmake --build ${CMAKE_BINARY_DIR} -t $arg; then
         echo "Error: ############# CMake -t $arg fail ##############"
         exit 2
       else
         return 0
       fi
     fi
+    if [[ "$arg" =~ ^V=1$ ]]; then
+      v_arg+="-v"
+    fi
   done
   # do cmake build
-  echo -e "  cmake --build cmake_out $j_arg"
-  if ! ${BEAR} cmake --build cmake_out $j_arg; then
+  echo -e "  cmake --build ${CMAKE_BINARY_DIR} $j_arg $v_arg"
+  if ! ${BEAR} cmake --build ${CMAKE_BINARY_DIR} $j_arg $v_arg; then
     echo "Error: ############# build ${1} fail ##############"
     exit 2
   else
@@ -407,13 +412,35 @@ function pack_sdk()
   rm `basename $exportzip`
 }
 
+function setup_cmake_binary_dir()
+{
+  local boardconfig=$1
+  if [ -d ${ROOTDIR}/${boardconfig} ]; then
+    # parse path config
+    config_name=$(basename "$boardconfig")
+    board_name=$(basename $(dirname $(dirname "$boardconfig")))
+  else
+    # parse nuttx config pair
+    config_name=`echo ${boardconfig} | cut -s -d':' -f2`
+    if [ -z "${config_name}" ]; then
+      board_name=`echo ${boardconfig} | cut -d'/' -f1`
+      config_name=`echo ${boardconfig} | cut -d'/' -f2`
+    else
+      board_name=`echo ${boardconfig} | cut -d':' -f1`
+    fi
+  fi
+  CMAKE_BINARY_DIR+="/${board_name}_${config_name}"
+}
+
 if [ $# == 0 ]; then
-  echo "Usage: $0 [-m] <board-name>:<config-name> [-e <extraflags>] [--cmake] [make options]"
+  echo "Usage: $0 [-m] <board-name>:<config-name> [-e <extraflags>] [--cmake] [-b <cmake_binary_dir>] [--dis-ninja] [make options]"
   echo ""
   echo "Where:"
   echo "  -m: out of tree build. Or default in tree build without it."
   echo "  -e: pass extra c/c++ flags such as -Werror via make command line"
   echo "  --cmake: switch the build mode to CMake compilation."
+  echo "  -b: set custom binary directory for CMake."
+  echo "  --dis-ninja: disable CMake Ninja generator fo default."
   exit 1
 fi
 
@@ -466,7 +493,22 @@ while [[ "$1" == "-e" ]]; do
 done
 
 if [ "$1" == "--cmake" ]; then
+  CMAKE_BINARY_DIR="cmake_out"
+  CMAKE_GENERATOR="-GNinja"
   CMAKE_BUILD="cmake"
+  setup_cmake_binary_dir $board_config
+  shift
+fi
+
+if [ "$1" == "-b" ]; then
+  shift
+  CMAKE_BINARY_DIR="$1"
+  echo "custom CMake binary dir: $CMAKE_BINARY_DIR"
+  shift
+fi
+
+if [ "$1" == "--dis-ninja" ]; then
+  CMAKE_GENERATOR=""
   shift
 fi
 
