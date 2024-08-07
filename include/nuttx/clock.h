@@ -493,6 +493,37 @@ EXTERN volatile clock_t g_system_ticks;
   while (0)
 
 /****************************************************************************
+ * Name: clock_realtime2absticks
+ *
+ * Description:
+ *   Convert real time to monotonic ticks.
+ *
+ * Input Parameters:
+ *   mono - Return the converted time here.
+ *   absticks - The absolute time to convert.
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions:
+ *   Interrupts should be disabled so that the time is not changing during
+ *   the calculation
+ *
+ ****************************************************************************/
+
+#ifndef CONFIG_CLOCK_TIMEKEEPING
+# define clock_realtime2absticks(reltime, absticks) \
+   do \
+     { \
+       extern struct timespec g_basetime; \
+       struct timespec _mono; \
+       clock_timespec_subtract(reltime, &g_basetime, &_mono); \
+       *(absticks) = clock_time2ticks(&_mono); \
+     } \
+   while (0)
+#endif
+
+/****************************************************************************
  * Name: clock_compare
  *
  * Description:
