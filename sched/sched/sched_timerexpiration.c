@@ -337,14 +337,6 @@ static clock_t nxsched_timer_process(clock_t ticks, clock_t elapsed,
   clock_update_wall_time();
 #endif
 
-#ifdef CONFIG_SCHED_CPULOAD_SYSCLK
-  /* Perform CPU load measurements (before any timer-initiated context
-   * switches can occur)
-   */
-
-  nxsched_process_cpuload_ticks(elapsed);
-#endif
-
   /* Process watchdogs */
 
   tmp = wd_timer(ticks, noswitches);
