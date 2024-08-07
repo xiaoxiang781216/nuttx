@@ -281,14 +281,14 @@ typedef uint32_t can_err_mask_t;
  * data:    CAN frame payload (up to 8 byte)
  */
 
-struct can_frame
+begin_packed_struct struct can_frame
 {
   canid_t can_id;   /* 32 bit CAN_ID + EFF/RTR/ERR flags */
   uint8_t can_dlc;  /* frame payload length in byte (0 .. CAN_MAX_DLEN) */
   uint16_t flags;   /* additional flags for special frame */
   uint8_t __res1;   /* reserved / padding */
   uint8_t data[CAN_MAX_DLEN];
-}__attribute__((packed));
+} end_packed_struct;
 
 /* struct canfd_frame - CAN flexible data rate frame structure
  * can_id: CAN ID of the frame and CAN_*_FLAG flags, see canid_t definition
@@ -299,14 +299,14 @@ struct can_frame
  * data:   CAN FD frame payload (up to CANFD_MAX_DLEN byte)
  */
 
-struct canfd_frame
+begin_packed_struct struct canfd_frame
 {
   canid_t can_id;  /* 32 bit CAN_ID + EFF/RTR/ERR flags */
   uint8_t len;     /* frame payload length in byte */
   uint16_t flags;  /* additional flags for CAN FD and special frame */
   uint8_t __res1;  /* reserved / padding */
   uint8_t data[CANFD_MAX_DLEN];
-}__attribute__((packed));
+} end_packed_struct;
 
 /* The sockaddr structure for CAN sockets
  *
