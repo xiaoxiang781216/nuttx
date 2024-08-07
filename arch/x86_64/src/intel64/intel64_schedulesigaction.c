@@ -220,7 +220,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * to PAUSE the other CPU.
                */
 
-              if (cpu != me)
+              if (cpu != me && tcb->task_state == TSTATE_TASK_RUNNING)
                 {
                   /* Pause the CPU */
 
@@ -280,7 +280,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
               /* RESUME the other CPU if it was PAUSED */
 
-              if (cpu != me)
+              if (cpu != me && tcb->task_state == TSTATE_TASK_RUNNING)
                 {
                   up_cpu_resume(cpu);
                 }
