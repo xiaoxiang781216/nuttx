@@ -72,9 +72,8 @@
 #define REG_R9              (7)  /* R9 */
 #define REG_R10             (8)  /* R10 */
 #define REG_R11             (9)  /* R11 */
-#define REG_CONTROL         (10) /* CONTROL */
-#define REG_EXC_RETURN      (11) /* EXC_RETURN */
-#define SW_INT_REGS         (12)
+#define REG_EXC_RETURN      (10) /* EXC_RETURN */
+#define SW_INT_REGS         (11)
 
 #ifdef CONFIG_ARCH_FPU
 
@@ -208,7 +207,6 @@ struct xcpt_syscall_s
 {
   uint32_t excreturn;   /* The EXC_RETURN value */
   uint32_t sysreturn;   /* The return PC */
-  uint32_t ctrlreturn;  /* The return CONTROL value */
 };
 #endif
 

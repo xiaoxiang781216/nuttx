@@ -150,8 +150,6 @@ void up_initial_state(struct tcb_s *tcb)
 
   xcp->regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
 
-  xcp->regs[REG_CONTROL] = getcontrol() & ~CONTROL_NPRIV;
-
 #ifdef CONFIG_ARCH_FPU
   xcp->regs[REG_FPSCR]   = 0; /* REVISIT: Initial FPSCR should be configurable */
 #endif /* CONFIG_ARCH_FPU */
