@@ -572,11 +572,11 @@ static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo,
   phdr.p_type   = PT_NOTE;
   phdr.p_offset = offset;
   phdr.p_filesz = elf_get_note_size(stksegs);
-  phdr.p_align  = ELF_PAGESIZE;
   offset       += phdr.p_filesz;
 
   elf_emit(cinfo, &phdr, sizeof(phdr));
 
+  phdr.p_align  = ELF_PAGESIZE;
   if (cinfo->pid == INVALID_PROCESS_ID)
     {
       for (i = 0; i < g_npidhash; i++)
