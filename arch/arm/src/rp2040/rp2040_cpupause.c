@@ -272,6 +272,8 @@ int arm_pause_handler(int irq, void *c, void *arg)
   int irqreq;
   uint32_t stat;
 
+  nxsched_smp_call_handler(irq, c, arg);
+
   stat = getreg32(RP2040_SIO_FIFO_ST);
   if (stat & (RP2040_SIO_FIFO_ST_ROE | RP2040_SIO_FIFO_ST_WOF))
     {
@@ -355,6 +357,31 @@ inline_function int up_cpu_pause_async(int cpu)
   putreg32(0, RP2040_SIO_FIFO_WR);
 
   return OK;
+}
+
+/****************************************************************************
+ * Name: up_send_smp_call
+ *
+ * Description:
+ *   Send smp call to target cpu.
+ *
+ * Input Parameters:
+ *   cpuset - The set of CPUs to receive the SGI.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void up_send_smp_call(cpu_set_t cpuset)
+{
+  int cpu;
+
+  for (; cpuset != 0; cpuset &= ~(1 << cpu))
+    {
+      cpu = ffs(cpuset) - 1;
+      up_cpu_pause_async(cpu);
+    }
 }
 
 /****************************************************************************

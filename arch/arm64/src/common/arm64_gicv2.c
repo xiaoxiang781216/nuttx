@@ -923,11 +923,8 @@ static void arm_gic0_initialize(void)
   DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE, arm64_pause_handler, NULL));
   DEBUGVERIFY(irq_attach(GIC_SMP_CPUPAUSE_ASYNC,
                          arm64_pause_async_handler, NULL));
-
-#  ifdef CONFIG_SMP_CALL
   DEBUGVERIFY(irq_attach(GIC_SMP_CPUCALL,
                          nxsched_smp_call_handler, NULL));
-#  endif
 #endif
 }
 
@@ -1498,7 +1495,21 @@ void arm64_gic_raise_sgi(unsigned int sgi, uint16_t cpuset)
   arm_cpu_sgi(sgi, cpuset);
 }
 
-#  ifdef CONFIG_SMP_CALL
+#  ifdef CONFIG_SMP
+/****************************************************************************
+ * Name: up_send_smp_call
+ *
+ * Description:
+ *   Send smp call to target cpu.
+ *
+ * Input Parameters:
+ *   cpuset - The set of CPUs to receive the SGI.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
 void up_send_smp_call(cpu_set_t cpuset)
 {
   up_trigger_irq(GIC_SMP_CPUCALL, cpuset);

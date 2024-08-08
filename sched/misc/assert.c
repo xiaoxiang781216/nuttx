@@ -90,7 +90,7 @@
  * Private Data
  ****************************************************************************/
 
-#ifdef CONFIG_SMP_CALL
+#ifdef CONFIG_SMP
 static bool g_cpu_paused[CONFIG_SMP_NCPUS];
 #endif
 
@@ -573,7 +573,7 @@ static void dump_deadlock(void)
 }
 #endif
 
-#ifdef CONFIG_SMP_CALL
+#ifdef CONFIG_SMP
 
 /****************************************************************************
  * Name: pause_cpu_handler
@@ -719,7 +719,7 @@ static void dump_fatal_info(FAR struct tcb_s *rtcb,
                             FAR const char *filename, int linenum,
                             FAR const char *msg, FAR void *regs)
 {
-#ifdef CONFIG_SMP_CALL
+#ifdef CONFIG_SMP
   int cpu;
 
   /* Dump other CPUs registers, running task stack and backtrace. */

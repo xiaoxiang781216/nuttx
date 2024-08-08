@@ -220,6 +220,8 @@ int riscv_pause_handler(int irq, void *c, void *arg)
 {
   int cpu = this_cpu();
 
+  nxsched_smp_call_handler(irq, c, arg);
+
   /* Clear IPI (Inter-Processor-Interrupt) */
 
   putreg32(0, (uintptr_t)RISCV_IPI + (4 * cpu));
@@ -278,6 +280,31 @@ inline_function int up_cpu_pause_async(int cpu)
   putreg32(1, (uintptr_t)RISCV_IPI + (4 * cpu));
 
   return OK;
+}
+
+/****************************************************************************
+ * Name: up_send_smp_call
+ *
+ * Description:
+ *   Send smp call to target cpu.
+ *
+ * Input Parameters:
+ *   cpuset - The set of CPUs to receive the SGI.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void up_send_smp_call(cpu_set_t cpuset)
+{
+  int cpu;
+
+  for (; cpuset != 0; cpuset &= ~(1 << cpu))
+    {
+      cpu = ffs(cpuset) - 1;
+      up_cpu_pause_async(cpu);
+    }
 }
 
 /****************************************************************************

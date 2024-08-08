@@ -401,12 +401,6 @@ config SMP_DEFAULT_CPUSET
 		Set the Default CPU bits. The way to use the unset CPU is to call the
 		sched_setaffinity function to bind a task to the CPU. bit0 means CPU0.
 
-config SMP_CALL
-	bool "Support SMP function call"
-	default n
-	---help---
-		Enable to support SMP function call.
-
 endif # SMP
 
 choice
@@ -2013,7 +2007,7 @@ config COREDUMP
 config ASSERT_PAUSE_CPU_TIMEOUT
 	int "Timeout in milisecond to pause another CPU when assert"
 	default 2000
-	depends on SMP_CALL
+	depends on SMP
 	---help---
 		Timeout in milisecond to pause another CPU when assert. Only available
-		when SMP_CALL is enabled.
+		when SMP is enabled.

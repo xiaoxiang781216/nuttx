@@ -477,7 +477,7 @@ int up_cpu_resume(int cpu)
   return OK;
 }
 
-#ifdef CONFIG_SMP_CALL
+#ifdef CONFIG_SMP
 
 /****************************************************************************
  * Name: sim_init_func_call_ipi
@@ -510,12 +510,10 @@ void up_send_smp_call(cpu_set_t cpuset)
 {
   int cpu;
 
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (; cpuset != 0; cpuset &= ~(1 << cpu))
     {
-      if (CPU_ISSET(cpu, &cpuset))
-        {
-          host_send_func_call_ipi(cpu);
-        }
+      cpu = ffs(cpuset) - 1;
+      host_send_func_call_ipi(cpu);
     }
 }
 #endif

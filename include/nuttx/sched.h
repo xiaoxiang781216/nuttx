@@ -1634,7 +1634,7 @@ void nxsched_dumponexit(void);
 #  define nxsched_dumponexit()
 #endif /* CONFIG_SCHED_DUMP_ON_EXIT */
 
-#ifdef CONFIG_SMP_CALL
+#ifdef CONFIG_SMP
 /****************************************************************************
  * Name: nxsched_smp_call_handler
  *
