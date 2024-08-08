@@ -76,7 +76,7 @@
 clock_t clock_systime_ticks(void)
 {
 #ifdef CONFIG_RTC_HIRES
-  struct timespec ts;
+  struct timespec ts =
     {
       0
     };
