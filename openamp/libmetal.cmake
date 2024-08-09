@@ -150,4 +150,8 @@ target_sources(
           libmetal/lib/shmem.c
           libmetal/lib/version.c)
 
+if(CONFIG_OPENAMP_CACHE)
+  target_compile_definitions(lib_metal PRIVATE METAL_CACHE)
+endif()
+
 target_compile_definitions(lib_metal PRIVATE METAL_INTERNAL)
