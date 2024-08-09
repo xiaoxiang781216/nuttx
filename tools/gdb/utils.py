@@ -203,6 +203,14 @@ class Hexdump(gdb.Command):
 Hexdump()
 
 
+def nitems(array):
+    array_type = array.type
+    element_type = array_type.target()
+    element_size = element_type.sizeof
+    array_size = array_type.sizeof // element_size
+    return array_size
+
+
 # Machine Specific Helper Functions
 
 
