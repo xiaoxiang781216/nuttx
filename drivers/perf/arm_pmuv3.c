@@ -26,6 +26,7 @@
 #include <perf/arm_pmu.h>
 
 #include <arm64_pmuv3.h>
+#include <nuttx/sched.h>
 
 /****************************************************************************
  * Private Data
