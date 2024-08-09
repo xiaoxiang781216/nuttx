@@ -194,10 +194,26 @@ endfunction()
 #
 # nuttx_add_extra_library
 #
-# Add extra library to extra attribute
+# Add extra library to extra attribute, extra library will be treated as an
+# import target and have a complete full path this will be used to avoid adding
+# the -l prefix to the link target between different cmake versions and
+# platformss
 #
 function(nuttx_add_extra_library)
-  set_property(GLOBAL APPEND PROPERTY NUTTX_EXTRA_LIBRARIES ${ARGN})
+  foreach(extra_lib ${ARGN})
+    if(IS_ABSOLUTE "${extra_lib}" AND EXISTS "${extra_lib}")
+      # define the target name of the extra library
+      string(REGEX REPLACE "[^a-zA-Z0-9]" "_" extra_target "${extra_lib}")
+      # set the absolute path of the library for the import target
+      nuttx_library_import(${extra_target} ${extra_lib})
+      set_property(GLOBAL APPEND PROPERTY NUTTX_EXTRA_LIBRARIES ${extra_target})
+    else()
+      message(
+        WARNING
+          "extra_library ${extra_lib} does NOT exist or the path is NOT absolute"
+      )
+    endif()
+  endforeach()
 endfunction()
 
 # Import static library
