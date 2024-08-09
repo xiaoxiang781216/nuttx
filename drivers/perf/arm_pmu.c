@@ -28,6 +28,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/irq.h>
 #include <nuttx/perf.h>
+#include <nuttx/arch.h>
 
 #include <perf/arm_pmu.h>
 
