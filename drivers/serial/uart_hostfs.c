@@ -29,6 +29,7 @@
 
 #include <debug.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 /****************************************************************************
  * Pre-processor Definitions
