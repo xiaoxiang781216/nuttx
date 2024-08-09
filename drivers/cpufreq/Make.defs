@@ -42,6 +42,12 @@ CSRCS += cpufreq_ondemand.c
 
 endif
 
+ifeq ($(CONFIG_CPUFREQ_PROCFS),y)
+
+CSRCS += cpufreq_procfs.c
+
+endif
+
 DEPPATH += --dep-path cpufreq
 VPATH += cpufreq
 

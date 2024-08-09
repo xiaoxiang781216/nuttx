@@ -33,5 +33,9 @@ if(CONFIG_CPUFREQ)
     list(APPEND SRCS cpufreq_ondemand.c)
   endif()
 
+  if(CONFIG_CPUFREQ_PROCFS)
+    list(APPEND SRCS cpufreq_procfs.c)
+  endif()
+
   target_sources(drivers PRIVATE ${SRCS})
 endif()

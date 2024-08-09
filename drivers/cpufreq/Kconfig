@@ -11,6 +11,13 @@ config CPUFREQ
 
 if CPUFREQ
 
+config CPUFREQ_PROCFS
+	bool "cpufreq_procfs"
+	default n
+	depends on FS_PROCFS
+	---help---
+		CPUFREQ_PROCFS
+
 choice
 	prompt "CPUFREQ_DEFAULT_GOVERNOR"
 	default CPUFREQ_DEFAULT_GOV_PERFORMANCE
