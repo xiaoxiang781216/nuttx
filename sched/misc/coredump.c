@@ -678,6 +678,7 @@ static void coredump_dump_blkdev(pid_t pid)
 {
   FAR void *stream = &g_blockstream;
   FAR struct coredump_info_s *info;
+  blkcnt_t nsectors;
   int ret;
 
   if (g_blockstream.inode == NULL)
@@ -686,8 +687,12 @@ static void coredump_dump_blkdev(pid_t pid)
       return;
     }
 
+  nsectors = (sizeof(struct coredump_info_s) +
+              g_blockstream.geo.geo_sectorsize - 1) /
+             g_blockstream.geo.geo_sectorsize;
+
   ret = g_blockstream.inode->u.i_bops->read(g_blockstream.inode,
-                      g_blockinfo, g_blockstream.geo.geo_nsectors - 1, 1);
+           g_blockinfo, g_blockstream.geo.geo_nsectors - nsectors, nsectors);
   if (ret < 0)
     {
       _alert("Coredump information read fail\n");
@@ -711,10 +716,10 @@ static void coredump_dump_blkdev(pid_t pid)
 
   info->magic = COREDUMP_MAGIC;
   info->size  = g_blockstream.common.nput;
-  info->time = time(NULL);
+  info->time  = time(NULL);
   uname(&info->name);
   ret = g_blockstream.inode->u.i_bops->write(g_blockstream.inode,
-                (FAR void *)info, g_blockstream.geo.geo_nsectors - 1, 1);
+      (FAR void *)info, g_blockstream.geo.geo_nsectors - nsectors, nsectors);
   if (ret < 0)
     {
       _alert("Coredump information write fail\n");
@@ -837,6 +842,7 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size)
 
 int coredump_initialize(void)
 {
+  blkcnt_t nsectors;
   int ret = 0;
 
   if (CONFIG_BOARD_MEMORY_RANGE[0] != '\0')
@@ -862,7 +868,11 @@ int coredump_initialize(void)
       return ret;
     }
 
-  g_blockinfo = kmm_malloc(g_blockstream.geo.geo_sectorsize);
+  nsectors = (sizeof(struct coredump_info_s) +
+              g_blockstream.geo.geo_sectorsize - 1) /
+             g_blockstream.geo.geo_sectorsize;
+
+  g_blockinfo = kmm_malloc(g_blockstream.geo.geo_sectorsize * nsectors);
   if (g_blockinfo == NULL)
     {
       _alert("Coredump device memory alloc fail\n");
@@ -873,6 +883,7 @@ int coredump_initialize(void)
     }
 #endif
 
+  UNUSED(nsectors);
   return ret;
 }
 
