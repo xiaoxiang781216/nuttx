@@ -326,6 +326,7 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
 
       if ((up_interrupt_context() || (mq->f_oflags & O_NONBLOCK) != 0))
         {
+          ret = -EAGAIN;
           goto out;
         }
 
