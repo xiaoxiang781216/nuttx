@@ -18,10 +18,11 @@
 #
 ############################################################################
 
+from enum import Enum, auto
+
 import gdb
 import utils
 from stack import Stack
-from enum import Enum, auto
 
 UINT16_MAX = 0xFFFF
 SEM_TYPE_MUTEX = 4
@@ -494,18 +495,6 @@ class Ps(gdb.Command):
             self.parse_and_show_info(tcb)
 
 
-# We can't use a user command to rename continue it will recursion
-
-gdb.execute("define c\n nxcontinue \n end\n")
-gdb.execute("define s\n nxstep \n end\n")
-gdb.write(
-    "\n\x1b[31;1m if use thread command, please don't use 'continue', use 'c' instead !!!\x1b[m\n"
-)
-gdb.write(
-    "\x1b[31;1m if use thread command, please don't use 'step', use 's' instead !!!\x1b[m\n"
-)
-
-
 def register_commands():
     Nxsetregs()
     Ps()
@@ -520,6 +509,16 @@ def register_commands():
         Nxthread()
         Nxcontinue()
         Nxstep()
+
+        # We can't use a user command to rename continue it will recursion
+        gdb.execute("define c\n nxcontinue \n end\n")
+        gdb.execute("define s\n nxstep \n end\n")
+        gdb.write(
+            "\n\x1b[31;1m if use thread command, please don't use 'continue', use 'c' instead !!!\x1b[m\n"
+        )
+        gdb.write(
+            "\x1b[31;1m if use thread command, please don't use 'step', use 's' instead !!!\x1b[m\n"
+        )
 
 
 register_commands()
