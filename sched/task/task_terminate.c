@@ -38,6 +38,42 @@
 #include "task/task.h"
 
 /****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+static int terminat_handler(FAR void *cookie)
+{
+  pid_t pid = (pid_t)(uintptr_t)cookie;
+  FAR struct tcb_s *tcb;
+  irqstate_t flags;
+
+  flags = enter_critical_section();
+  tcb = nxsched_get_tcb(pid);
+
+  if (!tcb)
+    {
+      /* There is no TCB with this pid or, if there is, it is not a task. */
+
+      leave_critical_section(flags);
+      return -ESRCH;
+    }
+
+  DEBUGASSERT(tcb->cpu == this_cpu());
+
+  nxsched_remove(tcb);
+
+  leave_critical_section(flags);
+  return OK;
+}
+#endif
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -103,7 +139,38 @@ int nxtask_terminate(pid_t pid)
   /* Remove dtcb from tasklist, let remove_readtorun() do the job */
 
   task_state = dtcb->task_state;
-  nxsched_remove(dtcb);
+#ifdef CONFIG_SMP
+  if (dtcb->task_state == TSTATE_TASK_RUNNING &&
+      dtcb->cpu != this_cpu())
+    {
+      cpu_set_t affinity;
+      uint16_t tcb_flags;
+      int ret;
+
+      tcb_flags = dtcb->flags;
+      dtcb->flags |= TCB_FLAG_CPU_LOCKED;
+      affinity = dtcb->affinity;
+      CPU_SET(dtcb->cpu, &dtcb->affinity);
+
+      ret = nxsched_smp_call_single(dtcb->cpu, terminat_handler,
+                                    (FAR void *)(uintptr_t)pid,
+                                    true);
+
+      if (ret < 0)
+        {
+          leave_critical_section(flags);
+          return ret;
+        }
+
+      dtcb->flags = tcb_flags;
+      dtcb->affinity = affinity;
+    }
+  else
+#endif
+    {
+      nxsched_remove(dtcb);
+    }
+
   dtcb->task_state = task_state;
 
   leave_critical_section(flags);
