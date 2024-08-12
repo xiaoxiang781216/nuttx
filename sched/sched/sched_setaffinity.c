@@ -76,7 +76,7 @@ int nxsched_set_affinity(pid_t pid, size_t cpusetsize,
   irqstate_t flags;
   int ret = OK;
 
-  DEBUGASSERT(cpusetsize == sizeof(cpu_set_t) && mask != NULL);
+  DEBUGASSERT(cpusetsize == sizeof(cpu_set_t) && mask != NULL && *mask != 0);
 
   /* Don't permit changing the affinity mask of any task locked to a CPU
    * (i.e., an IDLE task)
