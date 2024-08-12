@@ -22,6 +22,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/arch.h>
 #include <nuttx/clk/clk.h>
 #include <nuttx/clk/clk_provider.h>
 #include <nuttx/fs/fs.h>
