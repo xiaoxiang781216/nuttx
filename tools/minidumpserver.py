@@ -419,6 +419,7 @@ class DumpLogFile:
     def get_memories(self):
         return self.__memories
 
+
 class RawMemoryFile:
     def __init__(self, rawfile):
         self.__memories = list()
@@ -427,7 +428,7 @@ class RawMemoryFile:
             return
 
         for raw in rawfile:
-            file,start = raw.split(':')
+            file, start = raw.split(":")
             start = int(start, 0)
 
             size = os.path.getsize(file)
@@ -440,13 +441,18 @@ class RawMemoryFile:
 
 
 class GDBStub:
-    def __init__(self, logfile: DumpLogFile, elffile: DumpELFFile, rawfile: RawMemoryFile):
+    def __init__(
+        self, logfile: DumpLogFile, elffile: DumpELFFile, rawfile: RawMemoryFile
+    ):
         self.logfile = logfile
         self.elffile = elffile
         self.socket = None
         self.gdb_signal = GDB_SIGNAL_DEFAULT
-        self.mem_regions = self.elffile.get_memories() + self.logfile.get_memories() + \
-                           rawfile.get_memories()
+        self.mem_regions = (
+            self.elffile.get_memories()
+            + self.logfile.get_memories()
+            + rawfile.get_memories()
+        )
 
         self.mem_regions.sort(key=lambda x: x["start"])
 
@@ -552,15 +558,15 @@ class GDBStub:
     def handle_register_single_write_packet(self, pkt):
         # the 'P' packet for writing to registers
 
-        index,value = pkt[1:].split(b"=")
+        index, value = pkt[1:].split(b"=")
         reg_val = 0
         for i in range(0, len(value), 2):
-            data = value[i:i+2]
+            data = value[i : i + 2]
             reg_val = reg_val + (int("0x" + data.decode("utf8"), 16) << (i * 4))
 
         reg = int("0x" + index.decode("utf8"), 16)
         if reg < len(self.logfile.registers):
-            self.logfile.registers[reg]= reg_val
+            self.logfile.registers[reg] = reg_val
 
         self.put_gdb_packet(b"OK")
 
