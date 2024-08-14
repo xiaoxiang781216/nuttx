@@ -483,8 +483,6 @@ class CoreDumpFile:
                         segment["p_paddr"], segment["p_paddr"] + len(data), data
                     )
                 )
-            else:
-                logger.debug("This CoreDump does not have program headers.")
 
     def get_memories(self):
         return self.__memories
@@ -516,8 +514,9 @@ class GDBStub:
         self.current_thread = 0
         try:
             self.parse_thread()
+            logger.debug(f"Have {len(self.threadinfo)} threads to debug.")
         except TypeError:
-            pass
+            logger.debug("No thread info to debug.")
 
     def get_gdb_packet(self):
         socket = self.socket
@@ -801,7 +800,7 @@ class GDBStub:
 
         for tcbptr in tcbptr_list:
             if tcbptr == 0:
-                break
+                continue
             thread_dict = {}
             tcb = parse_tcb(tcbptr)
             thread_dict["tcb"] = tcb
