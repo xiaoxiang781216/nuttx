@@ -193,6 +193,20 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
 
   totalsize = 0;
 
+  /* Generate output for CPU Serial Number */
+
+  linesize = procfs_snprintf(attr->line, CRITMON_LINELEN, "%d", cpu);
+  copysize = procfs_memcpy(attr->line, linesize, buffer, buflen, offset);
+
+  totalsize += copysize;
+  buffer    += copysize;
+  buflen    -= copysize;
+
+  if (buflen <= 0)
+    {
+      return totalsize;
+    }
+
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
   /* Convert the for maximum time pre-emption disabled */
 
@@ -212,15 +226,16 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
 
   /* Generate output for maximum time pre-emption disabled */
 
-  linesize = procfs_snprintf(attr->line, CRITMON_LINELEN, "%d,%lu.%09lu,",
-                             cpu, (unsigned long)maxtime.tv_sec,
+  linesize = procfs_snprintf(attr->line, CRITMON_LINELEN, ",%lu.%09lu",
+                             (unsigned long)maxtime.tv_sec,
                              (unsigned long)maxtime.tv_nsec);
   copysize = procfs_memcpy(attr->line, linesize, buffer, buflen, offset);
 
   totalsize += copysize;
   buffer    += copysize;
+  buflen    -= copysize;
 
-  if (totalsize >= buflen)
+  if (buflen <= 0)
     {
       return totalsize;
     }
@@ -245,13 +260,25 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
 
   /* Generate output for maximum time in a critical section */
 
-  linesize = procfs_snprintf(attr->line, CRITMON_LINELEN, "%lu.%09lu\n",
+  linesize = procfs_snprintf(attr->line, CRITMON_LINELEN, ",%lu.%09lu",
                              (unsigned long)maxtime.tv_sec,
                              (unsigned long)maxtime.tv_nsec);
   copysize = procfs_memcpy(attr->line, linesize, buffer, buflen, offset);
 
   totalsize += copysize;
+  buffer    += copysize;
+  buflen    -= copysize;
+
+  if (buflen <= 0)
+    {
+      return totalsize;
+    }
 #endif
+
+  linesize = procfs_snprintf(attr->line, CRITMON_LINELEN, "\n");
+  copysize = procfs_memcpy(attr->line, linesize, buffer, buflen, offset);
+
+  totalsize += copysize;
 
   return totalsize;
 }
@@ -290,8 +317,6 @@ static ssize_t critmon_read(FAR struct file *filep, FAR char *buffer,
         {
           break;
         }
-
-      offset += nbytes;
     }
 
   if (ret > 0)
