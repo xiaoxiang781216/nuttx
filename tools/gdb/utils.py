@@ -19,7 +19,6 @@
 ############################################################################
 
 import re
-import struct
 
 import gdb
 
@@ -237,28 +236,63 @@ def read_memoryview(inf, start, length):
     return memoryview(m)
 
 
-def read_u16(buffer, offset):
-    """Read a 16-bit unsigned integer from a buffer"""
-    if get_target_endianness() == LITTLE_ENDIAN:
-        return struct.unpack_from("<H", buffer, offset)[0]
-    else:
-        return struct.unpack_from(">H", buffer, offset)[0]
+try:
+    # For some prebuilt GDB, the python builtin module `struct` is not available
+    import struct
 
+    def read_u16(buffer, offset):
+        """Read a 16-bit unsigned integer from a buffer"""
+        if get_target_endianness() == LITTLE_ENDIAN:
+            return struct.unpack_from("<H", buffer, offset)[0]
+        else:
+            return struct.unpack_from(">H", buffer, offset)[0]
 
-def read_u32(buffer, offset):
-    """Read a 32-bit unsigned integer from a buffer"""
-    if get_target_endianness() == LITTLE_ENDIAN:
-        return struct.unpack_from("<I", buffer, offset)[0]
-    else:
-        return struct.unpack_from(">I", buffer, offset)[0]
+    def read_u32(buffer, offset):
+        """Read a 32-bit unsigned integer from a buffer"""
+        if get_target_endianness() == LITTLE_ENDIAN:
+            return struct.unpack_from("<I", buffer, offset)[0]
+        else:
+            return struct.unpack_from(">I", buffer, offset)[0]
 
+    def read_u64(buffer, offset):
+        """Read a 64-bit unsigned integer from a buffer"""
+        if get_target_endianness() == LITTLE_ENDIAN:
+            return struct.unpack_from("<Q", buffer, offset)[0]
+        else:
+            return struct.unpack_from(">Q", buffer, offset)[0]
 
-def read_u64(buffer, offset):
-    """Read a 64-bit unsigned integer from a buffer"""
-    if get_target_endianness() == LITTLE_ENDIAN:
-        return struct.unpack_from("<Q", buffer, offset)[0]
-    else:
-        return struct.unpack_from(">Q", buffer, offset)[0]
+except ModuleNotFoundError:
+
+    def read_u16(buffer, offset):
+        """Read a 16-bit unsigned integer from a buffer"""
+        buffer_val = buffer[offset : offset + 2]
+        value = [0, 0]
+
+        if type(buffer_val[0]) is str:
+            value[0] = ord(buffer_val[0])
+            value[1] = ord(buffer_val[1])
+        else:
+            value[0] = buffer_val[0]
+            value[1] = buffer_val[1]
+
+        if get_target_endianness() == LITTLE_ENDIAN:
+            return value[0] + (value[1] << 8)
+        else:
+            return value[1] + (value[0] << 8)
+
+    def read_u32(buffer, offset):
+        """Read a 32-bit unsigned integer from a buffer"""
+        if get_target_endianness() == LITTLE_ENDIAN:
+            return read_u16(buffer, offset) + (read_u16(buffer, offset + 2) << 16)
+        else:
+            return read_u16(buffer, offset + 2) + (read_u16(buffer, offset) << 16)
+
+    def read_u64(buffer, offset):
+        """Read a 64-bit unsigned integer from a buffer"""
+        if get_target_endianness() == LITTLE_ENDIAN:
+            return read_u32(buffer, offset) + (read_u32(buffer, offset + 4) << 32)
+        else:
+            return read_u32(buffer, offset + 4) + (read_u32(buffer, offset) << 32)
 
 
 def read_ulong(buffer, offset):
