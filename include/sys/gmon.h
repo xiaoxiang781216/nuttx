@@ -22,6 +22,13 @@
 #define __INCLUDE_SYS_GMON_H
 
 /****************************************************************************
+ * Included Files
+ ****************************************************************************/
+
+#include <nuttx/compiler.h>
+#include <stdint.h>
+
+/****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
@@ -45,6 +52,9 @@ void monstartup(unsigned long lowpc, unsigned long highpc);
 /* Clean up profiling and write out gmon.out. */
 
 void _mcleanup(void);
+
+noinstrument_function
+void mcount_internal(uintptr_t frompc, uintptr_t selfpc);
 
 #undef EXTERN
 #if defined(__cplusplus)
