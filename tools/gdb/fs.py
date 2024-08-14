@@ -26,7 +26,7 @@ FSNODEFLAG_TYPE_MOUNTPT = utils.get_symbol_value("FSNODEFLAG_TYPE_MOUNTPT")
 
 
 def get_inode_name(inode):
-    ptr = inode["i_name"].cast(gdb.lookup_type("char").pointer())
+    ptr = inode["i_name"].cast(utils.lookup_type("char").pointer())
     return ptr.string()
 
 
