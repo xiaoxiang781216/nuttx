@@ -110,7 +110,8 @@ static void collect_deadlock(FAR struct tcb_s *tcb, FAR void *arg)
         }
 
       info->pid[index] = tcb->pid;
-      mutex = getmutex(nxsched_get_tcb(next));
+      tcb = nxsched_get_tcb(next);
+      mutex = getmutex(tcb);
       if (mutex == NULL)
         {
           break;
