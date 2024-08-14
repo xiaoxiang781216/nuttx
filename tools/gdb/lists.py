@@ -238,12 +238,12 @@ class ListCheck(gdb.Command):
             raise gdb.GdbError("Invalid argument type: {}".format(obj.type))
 
 
-class ListForEveryEntry(gdb.Command):
+class ForeachListEntry(gdb.Command):
     """Dump list members for a given list"""
 
     def __init__(self):
-        super(ListForEveryEntry, self).__init__(
-            "list_for_every_entry", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION
+        super(ForeachListEntry, self).__init__(
+            "foreach_list_entry", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION
         )
 
     def invoke(self, arg, from_tty):
@@ -266,4 +266,4 @@ class ListForEveryEntry(gdb.Command):
 
 
 ListCheck()
-ListForEveryEntry()
+ForeachListEntry()
