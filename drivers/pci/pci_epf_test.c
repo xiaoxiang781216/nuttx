@@ -743,7 +743,7 @@ err:
   nxmutex_destroy(&epf[i].lock);
   while (i-- > 0)
     {
-      pci_epf_device_unregister((&epf[i]);
+      pci_epf_device_unregister(&epf[i]);
       nxmutex_destroy(&epf[i].lock);
     }
 

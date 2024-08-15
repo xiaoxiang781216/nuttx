@@ -106,6 +106,7 @@ int pci_register_drivers(void)
   if (ret < 0)
     {
       pcierr("pci_register_ep_test_driver failed, ret=%d\n", ret);
+    }
 #endif
 
 #ifdef CONFIG_PCI_QEMU_EPC
