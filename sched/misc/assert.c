@@ -615,24 +615,6 @@ static void pause_all_cpu(void)
         }
     }
 }
-#elif defined(CONFIG_SMP)
-
-/****************************************************************************
- * Name: pause_all_cpu
- ****************************************************************************/
-
-static void pause_all_cpu(void)
-{
-  int cpu;
-
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
-    {
-      if (cpu != this_cpu())
-        {
-          up_cpu_pause(cpu);
-        }
-    }
-}
 #endif
 
 static void dump_running_task(FAR struct tcb_s *rtcb, FAR void *regs)
