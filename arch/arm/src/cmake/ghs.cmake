@@ -65,6 +65,8 @@ set(CMAKE_C_ARCHIVE_APPEND ${CMAKE_ARCHIVE_COMMAND})
 set(CMAKE_CXX_ARCHIVE_APPEND ${CMAKE_ARCHIVE_COMMAND})
 set(CMAKE_ASM_ARCHIVE_APPEND ${CMAKE_ARCHIVE_COMMAND})
 
+set(NO_LTO "-Onolink")
+
 if(CONFIG_ENDIAN_BIG)
   add_compile_options(-mbig-endian)
 endif()
@@ -77,7 +79,7 @@ add_compile_options(--no_commons -Wall -Wshadow -Wundef -nostdlib)
 if(CONFIG_DEBUG_CUSTOMOPT)
   add_compile_options(${CONFIG_DEBUG_OPTLEVEL})
 elseif(CONFIG_DEBUG_FULLOPT)
-  add_compile_options(-Os)
+  add_compile_options(-Osize)
 endif()
 
 if(NOT CONFIG_DEBUG_NOOPT)
@@ -147,12 +149,11 @@ endif()
 # Link Time Optimization
 
 if(CONFIG_LTO_THIN)
-  add_compile_options(-flto=thin)
+  add_compile_options(-Olink -Ogeneral)
 elseif(CONFIG_LTO_FULL)
-  add_compile_options(-flto)
-  add_compile_options(-fuse-linker-plugin)
+  add_compile_options(-Olink -Osize)
 elseif(CONFIG_LTO_FAT)
-  add_compile_options(-flto -ffat-lto-objects)
+  add_compile_options(-Olink -Ospeed)
 endif()
 
 if(CONFIG_ARM_THUMB)

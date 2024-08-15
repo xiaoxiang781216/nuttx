@@ -77,6 +77,8 @@ set(CMAKE_C_ARCHIVE_FINISH ${CMAKE_RANLIB_COMMAND})
 set(CMAKE_CXX_ARCHIVE_FINISH ${CMAKE_RANLIB_COMMAND})
 set(CMAKE_ASM_ARCHIVE_FINISH ${CMAKE_RANLIB_COMMAND})
 
+set(NO_LTO "-fno-lto")
+
 add_compile_options(-mlongcalls)
 
 add_compile_options(-mtext-section-literals)

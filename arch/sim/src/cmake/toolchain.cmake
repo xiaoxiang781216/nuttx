@@ -43,6 +43,8 @@ add_compile_options(
   -U__unix__
   -U__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
 
+set(NO_LTO "-fno-lto")
+
 if(CONFIG_DEBUG_SYMBOLS)
   add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
 endif()

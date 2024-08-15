@@ -51,6 +51,8 @@ else()
   set(CMAKE_RANLIB ${TOOLCHAIN_PREFIX}-ranlib)
 endif()
 
+set(NO_LTO "-fno-lto")
+
 if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 4.9)
   # force color for gcc > 4.9
   add_compile_options(-fdiagnostics-color=always)
