@@ -107,6 +107,8 @@ if(CONFIG_ARCH_ARM)
                              PRIVATE _URC_FATAL_PHASE2_ERROR=_URC_FAILURE)
   target_compile_definitions(libcxxabi
                              PRIVATE _URC_FATAL_PHASE1_ERROR=_URC_FAILURE)
+  target_compile_definitions(libcxxabi
+                             PRIVATE LIBCXXABI_NON_DEMANGLING_TERMINATE)
 endif()
 
 target_sources(libcxxabi PRIVATE ${TARGET_SRCS})
