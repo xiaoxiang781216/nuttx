@@ -148,7 +148,11 @@ void up_initial_state(struct tcb_s *tcb)
    * mode before transferring control to the user task.
    */
 
+#ifdef CONFIG_BUILD_PROTECTED
+  xcp->regs[REG_EXC_RETURN] = EXC_RETURN_PRIVTHR;
+#else
   xcp->regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+#endif
 
 #ifdef CONFIG_ARCH_FPU
   xcp->regs[REG_FPSCR]   = 0; /* REVISIT: Initial FPSCR should be configurable */
