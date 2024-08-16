@@ -141,7 +141,11 @@ void up_initial_state(struct tcb_s *tcb)
    * mode before transferring control to the user task.
    */
 
+#ifdef CONFIG_BUILD_PROTECTED
+  xcp->regs[REG_EXC_RETURN] = EXC_RETURN_PRIVTHR;
+#else
   xcp->regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+#endif
 
   /* Enable or disable interrupts, based on user configuration */
 

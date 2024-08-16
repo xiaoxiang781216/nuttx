@@ -370,7 +370,7 @@ int arm_svcall(int irq, void *context, void *arg)
           DEBUGASSERT(rtcb->xcp.sigreturn != 0);
 
           regs[REG_PC]         = rtcb->xcp.sigreturn;
-          regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+          regs[REG_EXC_RETURN] = EXC_RETURN_PRIVTHR;
 
           rtcb->xcp.sigreturn  = 0;
         }
@@ -405,7 +405,7 @@ int arm_svcall(int irq, void *context, void *arg)
           rtcb->xcp.nsyscalls  = index + 1;
 
           regs[REG_PC]         = (uint32_t)dispatch_syscall;
-          regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+          regs[REG_EXC_RETURN] = EXC_RETURN_PRIVTHR;
 
           /* Offset R0 to account for the reserved values */
 
