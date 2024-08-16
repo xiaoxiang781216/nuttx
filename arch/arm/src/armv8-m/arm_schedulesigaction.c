@@ -169,7 +169,6 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 #ifdef CONFIG_BUILD_PROTECTED
           tcb->xcp.regs[REG_LR]         = EXC_RETURN_THREAD;
           tcb->xcp.regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
-          tcb->xcp.regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
 #endif
 
 #ifdef CONFIG_SMP
