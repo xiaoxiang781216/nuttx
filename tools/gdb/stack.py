@@ -23,9 +23,7 @@ import traceback
 import gdb
 import utils
 
-STACK_COLORATION_PATTERN = utils.get_symbol_value(
-    "STACK_COLOR", locspec="up_create_stack"
-)
+STACK_COLORATION_PATTERN = utils.get_symbol_value("STACK_COLOR")
 
 
 class Stack(object):
