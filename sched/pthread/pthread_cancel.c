@@ -30,6 +30,7 @@
 #include <assert.h>
 #include <errno.h>
 
+#include <nuttx/pthread.h>
 #include <nuttx/tls.h>
 
 #include "sched/sched.h"
@@ -92,7 +93,7 @@ int pthread_cancel(pthread_t thread)
 
   if (tcb == this_task())
     {
-      pthread_exit(PTHREAD_CANCELED);
+      nx_pthread_exit(PTHREAD_CANCELED);
     }
 
   /* Refer to tls_get_info() */
