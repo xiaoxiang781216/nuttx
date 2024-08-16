@@ -678,7 +678,7 @@ class GDBStub:
 
     def get_mem_region(self, addr):
         for mem in self.mem_regions:
-            if mem["start"] <= addr <= mem["end"]:
+            if mem["start"] <= addr < mem["end"]:
                 return mem
 
         return None
