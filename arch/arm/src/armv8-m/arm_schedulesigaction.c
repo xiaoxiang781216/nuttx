@@ -167,8 +167,8 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 #endif
           tcb->xcp.regs[REG_XPSR]       = ARMV8M_XPSR_T;
 #ifdef CONFIG_BUILD_PROTECTED
-          tcb->xcp.regs[REG_LR]         = EXC_RETURN_THREAD;
-          tcb->xcp.regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+          tcb->xcp.regs[REG_LR]         = EXC_RETURN_PRIVTHR;
+          tcb->xcp.regs[REG_EXC_RETURN] = EXC_RETURN_PRIVTHR;
 #endif
 
 #ifdef CONFIG_SMP
