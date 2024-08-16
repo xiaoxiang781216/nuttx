@@ -498,15 +498,6 @@ else()
     $<$<COMPILE_LANGUAGE:ASM>:-D__ASSEMBLY__>)
 endif()
 
-if(NOT CONFIG_CXX_EXCEPTION)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
-                      $<$<COMPILE_LANGUAGE:CXX>:-fcheck-new>)
-endif()
-
-if(CONFIG_STACK_CANARIES)
-  add_compile_options(-fstack-protector-all)
-endif()
-
 if(CONFIG_NDEBUG)
   add_compile_options(-DNDEBUG)
 endif()
