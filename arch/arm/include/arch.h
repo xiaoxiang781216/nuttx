@@ -77,10 +77,11 @@ do { \
 
 #endif /* CONFIG_PIC */
 
-#ifdef CONFIG_ARCH_ADDRENV
-#if CONFIG_MM_PGSIZE != 4096
-#  error Only pages sizes of 4096 are currently supported (CONFIG_ARCH_ADDRENV)
-#endif
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_USE_MMU)
+
+#  if CONFIG_MM_PGSIZE != 4096
+#    error Only pages sizes of 4096 are currently supported (CONFIG_ARCH_USE_MMU)
+#  endif
 
 /* Convert 4KiB pages to 1MiB sections */
 
@@ -101,7 +102,7 @@ do { \
 #  ifdef CONFIG_ARCH_STACK_DYNAMIC
 #    define ARCH_STACK_NSECTS ARCH_PG2SECT(CONFIG_ARCH_STACK_NPAGES)
 #  endif
-#endif /* CONFIG_ARCH_ADDRENV */
+#endif /* CONFIG_ARCH_ADDRENV && CONFIG_ARCH_USE_MMU */
 
 /* Redefine the linker symbols as armlink style */
 
@@ -129,17 +130,18 @@ do { \
  * memory until mappings in the level 2 page table are required.
  */
 
+#ifdef CONFIG_ARCH_USE_MMU
 struct arch_addrenv_s
 {
   /* Level 1 page table entries for each group section */
 
   uintptr_t *text[ARCH_TEXT_NSECTS];
   uintptr_t *data[ARCH_DATA_NSECTS];
-#ifdef CONFIG_BUILD_KERNEL
+#  ifdef CONFIG_BUILD_KERNEL
   uintptr_t *heap[ARCH_HEAP_NSECTS];
-#ifdef CONFIG_ARCH_VMA_MAPPING
+#    ifdef CONFIG_ARCH_VMA_MAPPING
   uintptr_t *shm[ARCH_SHM_NSECTS];
-#endif
+#    endif
 
   /* Initial heap allocation (in bytes).  This exists only provide an
    * indirect path for passing the size of the initial heap to the heap
@@ -148,8 +150,26 @@ struct arch_addrenv_s
    */
 
   size_t heapsize;
-#endif
+#  endif
 };
+
+#elif defined(CONFIG_ARCH_USE_MPU)
+struct arch_addrenv_s
+{
+  uintptr_t text;
+  size_t textsize;
+  uintptr_t data;
+  size_t datasize;
+#  ifdef CONFIG_BUILD_PROTECTED
+  uintptr_t heap;
+  size_t heapsize;
+#    ifdef CONFIG_ARCH_VMA_MAPPING
+  uintptr_t shm;
+  size_t shmsize;
+#    endif
+#  endif
+};
+#endif
 
 typedef struct arch_addrenv_s arch_addrenv_t;
 #endif
