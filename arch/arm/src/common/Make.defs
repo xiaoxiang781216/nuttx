@@ -82,3 +82,7 @@ CMN_ASRCS += fork.S
 ifeq ($(CONFIG_ARCH_HAVE_FETCHADD),y)
   CMN_ASRCS += arm_fetchadd.S
 endif
+
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_GHS),y)
+  CMN_CSRCS += lib_dummy.c
+endif
