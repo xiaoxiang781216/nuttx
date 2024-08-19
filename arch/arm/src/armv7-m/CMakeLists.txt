@@ -73,4 +73,8 @@ if(CONFIG_ARM_COREDUMP_REGION)
   list(APPEND SRCS arm_dumpnvic.c)
 endif()
 
+if(CONFIG_ARCH_ADDRENV)
+  list(APPEND SRCS arm_addrenv.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})
