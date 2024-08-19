@@ -242,7 +242,12 @@ static int fatfs_convert_result(FRESULT ret)
       return 0;
     }
 
-  ferr("ERROR: fatfs_convert_result %p return %d\n", return_address(0), ret);
+  if (ret != FR_NO_FILE && ret != FR_NO_PATH && ret != FR_EXIST)
+    {
+      ferr("ERROR: fatfs_convert_result %p return %d\n", return_address(0),
+           ret);
+    }
+
   switch (ret)
     {
       case FR_DISK_ERR:
