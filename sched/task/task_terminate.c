@@ -64,8 +64,6 @@ static int terminat_handler(FAR void *cookie)
       return -ESRCH;
     }
 
-  DEBUGASSERT(tcb->cpu == this_cpu());
-
   nxsched_remove(tcb);
 
   leave_critical_section(flags);
@@ -119,28 +117,22 @@ int nxtask_terminate(pid_t pid)
 
   /* Find for the TCB associated with matching PID */
 
+  flags = enter_critical_section();
+
   dtcb = nxsched_get_tcb(pid);
-  if (!dtcb)
+  if (!dtcb || dtcb->flags & TCB_FLAG_EXIT_PROCESSING)
     {
+      leave_critical_section(flags);
       return -ESRCH;
     }
 
-  flags = enter_critical_section();
-
-  /* Perform common task termination logic.  We need to do
-   * this as early as possible so that higher level clean-up logic
-   * can run in a healthy tasking environment.
-   *
-   * I suppose EXIT_SUCCESS is an appropriate return value???
-   */
-
-  nxtask_exithook(dtcb, EXIT_SUCCESS);
+  dtcb->flags |= TCB_FLAG_EXIT_PROCESSING;
 
   /* Remove dtcb from tasklist, let remove_readtorun() do the job */
 
   task_state = dtcb->task_state;
 #ifdef CONFIG_SMP
-  if (dtcb->task_state == TSTATE_TASK_RUNNING &&
+  if (task_state == TSTATE_TASK_RUNNING &&
       dtcb->cpu != this_cpu())
     {
       cpu_set_t affinity;
@@ -158,6 +150,8 @@ int nxtask_terminate(pid_t pid)
 
       if (ret < 0)
         {
+          /* Already terminate */
+
           leave_critical_section(flags);
           return ret;
         }
@@ -172,6 +166,15 @@ int nxtask_terminate(pid_t pid)
     }
 
   dtcb->task_state = task_state;
+
+  /* Perform common task termination logic.  We need to do
+   * this as early as possible so that higher level clean-up logic
+   * can run in a healthy tasking environment.
+   *
+   * I suppose EXIT_SUCCESS is an appropriate return value???
+   */
+
+  nxtask_exithook(dtcb, EXIT_SUCCESS);
 
   leave_critical_section(flags);
 

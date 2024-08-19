@@ -418,22 +418,13 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
    * called.  If that bit is set, then just exit doing nothing more..
    */
 
-  if ((tcb->flags & TCB_FLAG_EXIT_PROCESSING) != 0)
-    {
-      return;
-    }
+  DEBUGASSERT((tcb->flags & TCB_FLAG_EXIT_PROCESSING) != 0);
 
   /* If the task was terminated by another task, it may be in an unknown
    * state.  Make some feeble effort to recover the state.
    */
 
   nxtask_recover(tcb);
-
-  /* NOTE: signal handling needs to be done in a criticl section */
-
-#ifdef CONFIG_SMP
-  irqstate_t flags = enter_critical_section();
-#endif
 
   /* Send the SIGCHLD signal to the parent task group */
 
@@ -470,16 +461,5 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
 
 #ifdef CONFIG_SCHED_PERF_EVENTS
   perf_event_task_exit(tcb);
-#endif
-
-  /* This function can be re-entered in certain cases.  Set a flag
-   * bit in the TCB to not that we have already completed this exit
-   * processing.
-   */
-
-  tcb->flags |= TCB_FLAG_EXIT_PROCESSING;
-
-#ifdef CONFIG_SMP
-  leave_critical_section(flags);
 #endif
 }

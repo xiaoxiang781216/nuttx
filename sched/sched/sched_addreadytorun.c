@@ -160,10 +160,6 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
   int cpu;
   int me;
 
-  /* Only idle TCB has TCB_FLAG_CPU_LOCKED，btcb will not be the idle task */
-
-  DEBUGASSERT((btcb->flags & TCB_FLAG_CPU_LOCKED) == 0);
-
   cpu = nxsched_select_cpu(btcb->affinity);
 
   /* Get the task currently running on the CPU (may be the IDLE task) */

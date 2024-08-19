@@ -60,12 +60,6 @@ void up_exit(int status)
   struct tcb_s *tcb;
   UNUSED(status);
 
-  /* Make sure that we are in a critical section with local interrupts.
-   * The IRQ state will be restored when the next task is started.
-   */
-
-  enter_critical_section();
-
   nxtask_exit();
 
   /* Now, perform the context switch to the new ready-to-run task at the
