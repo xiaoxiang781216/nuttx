@@ -602,6 +602,10 @@ begin_packed_struct struct can_hdr_s
   uint8_t      ch_esi    : 1; /* Error State Indicator */
 #endif
   uint8_t      ch_tcf    : 1; /* Tx confirmation flag */
+#ifdef CONFIG_CAN_TIMESTAMP
+                              /* record the timestamp of each frame */
+  struct timeval ch_ts;
+#endif
 } end_packed_struct;
 #endif
 
