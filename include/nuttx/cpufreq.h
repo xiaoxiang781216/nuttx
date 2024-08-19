@@ -26,6 +26,7 @@
  ****************************************************************************/
 
 #include <nuttx/cpufreq/qos.h>
+#include <nuttx/list.h>
 #include <nuttx/notifier.h>
 #include <sys/types.h>
 
@@ -83,6 +84,9 @@ struct cpufreq_policy
   struct notifier_block nb_min;
   struct notifier_block nb_max;
   FAR void *governor_data;
+#ifdef CONFIG_CPUFREQ_PROCFS_QOS
+  FAR struct list_node qos_list;
+#endif
 };
 
 struct cpufreq_governor

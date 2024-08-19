@@ -22,7 +22,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <stdio.h>
 #include <debug.h>
 
 #include <nuttx/kmalloc.h>
@@ -36,16 +35,6 @@
  ****************************************************************************/
 
 #define KHZ_PER_MHZ      1000ul
-
-/****************************************************************************
- * Private Types
- ****************************************************************************/
-
-struct cpufreq_qos
-{
-  struct freq_qos_request min;
-  struct freq_qos_request max;
-};
 
 /****************************************************************************
  * Private Data
@@ -319,6 +308,9 @@ static FAR struct cpufreq_policy *cpufreq_policy_alloc(void)
 
   nxmutex_init(&policy->lock);
   BLOCKING_INIT_NOTIFIER_HEAD(&policy->notifier_list);
+#ifdef CONFIG_CPUFREQ_PROCFS_QOS
+  list_initialize(&policy->qos_list);
+#endif
 
   return policy;
 
@@ -624,6 +616,11 @@ FAR struct cpufreq_qos *cpufreq_qos_add_request(
       goto out;
     }
 
+#ifdef CONFIG_CPUFREQ_PROCFS_QOS
+  qos->caller = return_address(0);
+  list_add_tail(&policy->qos_list, &qos->node);
+#endif
+
   return qos;
 
 out:
@@ -665,6 +662,10 @@ int cpufreq_qos_remove_request(FAR struct cpufreq_qos *qos)
 
   freq_qos_remove_request(&qos->min);
   freq_qos_remove_request(&qos->max);
+
+#ifdef CONFIG_CPUFREQ_PROCFS_QOS
+  list_delete(&qos->node);
+#endif
 
   kmm_free(qos);
   return 0;

@@ -18,6 +18,16 @@ config CPUFREQ_PROCFS
 	---help---
 		CPUFREQ_PROCFS
 
+if CPUFREQ_PROCFS
+
+config CPUFREQ_PROCFS_QOS
+	bool "Print cpufreq QOS request"
+	default n
+	---help---
+		Print cpufreq QOS request
+
+endif
+
 choice
 	prompt "CPUFREQ_DEFAULT_GOVERNOR"
 	default CPUFREQ_DEFAULT_GOV_PERFORMANCE

@@ -45,6 +45,16 @@ struct cpufreq_verify
   unsigned int max;                     /* in kHz */
 };
 
+struct cpufreq_qos
+{
+#ifdef CONFIG_CPUFREQ_PROCFS_QOS
+  struct list_node node;
+  FAR void *caller;
+#endif
+  struct freq_qos_request min;
+  struct freq_qos_request max;
+};
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/

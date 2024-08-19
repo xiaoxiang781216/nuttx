@@ -34,6 +34,8 @@
 #include <nuttx/fs/procfs.h>
 #include <nuttx/cpufreq.h>
 
+#include "cpufreq_internal.h"
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -160,6 +162,9 @@ static ssize_t cpufreq_read(FAR struct file *filep,
   off_t offset;
   char line[CPUFREQ_LINELEN];
   FAR struct cpufreq_policy *policy;
+#ifdef CONFIG_CPUFREQ_PROCFS_QOS
+  FAR struct cpufreq_qos *qos;
+#endif
 
   policy = cpufreq_policy_get();
   if (policy == NULL)
@@ -183,6 +188,24 @@ static ssize_t cpufreq_read(FAR struct file *filep,
                       policy->min,
                       policy->max,
                       policy->governor->name);
+
+#ifdef CONFIG_CPUFREQ_PROCFS_QOS
+
+  linesize += snprintf(line + linesize, CPUFREQ_LINELEN - linesize,
+                       "request list:\n");
+  list_for_every_entry(&policy->qos_list, qos,
+                       struct cpufreq_qos, node)
+    {
+      linesize += snprintf(line + linesize,
+                           CPUFREQ_LINELEN - linesize,
+                           "%p: %d, %d\n",
+                           qos->caller,
+                           freq_qos_read_value(qos->min.qos, FREQ_QOS_MIN),
+                           freq_qos_read_value(qos->max.qos, FREQ_QOS_MAX));
+    }
+
+#endif /* CONFIG_CPUFREQ_PROCFS_QOS */
+
   copysize = procfs_memcpy(line, linesize, buffer, buflen, &offset);
   filep->f_pos += copysize;
 
