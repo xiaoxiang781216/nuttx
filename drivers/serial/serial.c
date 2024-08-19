@@ -936,7 +936,11 @@ static ssize_t uart_read(FAR struct file *filep,
                       uart_putxmitchar(dev, '\b', true);
                       uart_putxmitchar(dev, ' ', true);
                       uart_putxmitchar(dev, '\b', true);
-                      echoed = true;
+
+#ifdef CONFIG_SERIAL_TXDMA
+                      uart_dmatxavail(dev);
+#endif
+                      uart_enabletxint(dev);
                     }
                 }
 
@@ -998,7 +1002,17 @@ static ssize_t uart_read(FAR struct file *filep,
                    * sequence received, but enable the tx interrupt.
                    */
 
-                  echoed = true;
+                  if (dev->tc_lflag & ICANON)
+                    {
+#ifdef CONFIG_SERIAL_TXDMA
+                      uart_dmatxavail(dev);
+#endif
+                      uart_enabletxint(dev);
+                    }
+                  else
+                    {
+                      echoed = true;
+                    }
                 }
             }
 
