@@ -694,6 +694,13 @@ config ARCH_USE_COPY_SECTION
 		dynamic code loading. For example, Ambiq has MRAM regions
 		for instruction which can't load by the memcpy directly.
 
+config ARCH_STACK_PROTECT
+	bool "Protect user stack"
+	default n
+	select TLS_ALIGNED if BUILD_PROTECTED
+	---help---
+		Select this option if the user thread stack self-access only.
+
 if ARCH_ADDRENV && ARCH_NEED_ADDRENV_MAPPING
 
 config ARCH_TEXT_VBASE

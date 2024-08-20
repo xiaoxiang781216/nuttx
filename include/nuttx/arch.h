@@ -1346,6 +1346,25 @@ int up_addrenv_mprot(FAR arch_addrenv_t *addrenv, uintptr_t addr,
 #endif
 
 /****************************************************************************
+ * Name: up_addrenv_ustackswitch
+ *
+ * Description:
+ *   This function may be called to config the mpu for each thread after
+ *   each context switch.
+ *
+ * Input Parameters:
+ *   tcb - The TCB of the thread that requires the stack address environment.
+ *
+ * Returned Value:
+ *   Zero (OK) on success; a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_STACK_PROTECT)
+int up_addrenv_ustackswitch(FAR struct tcb_s *tcb);
+#endif
+
+/****************************************************************************
  * Name: up_addrenv_ustackalloc
  *
  * Description:
