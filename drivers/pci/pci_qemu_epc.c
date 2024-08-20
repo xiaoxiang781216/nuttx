@@ -69,6 +69,7 @@
 
 #define QEMU_EPC_CONFIG_SPACE_SIZE       0x1000
 #define QEMU_EPC_MAX_FUNCTIONS           0x8
+#define QEMU_EPC_ALIGN_PAGE_SIZE         0x1000
 
 /****************************************************************************
  * Private Types
@@ -832,7 +833,7 @@ static int qemu_epc_probe(FAR struct pci_device_s *dev)
   phys = qemu_epc_ctl_read64(qep, QEMU_EPC_CTRL_OFF_WIN_START);
   size = qemu_epc_ctl_read64(qep, QEMU_EPC_CTRL_OFF_WIN_SIZE);
   virt = pci_map_region(dev, phys, size);
-  ret = pci_epc_mem_init(epc, virt, phys, size, PAGE_SIZE);
+  ret = pci_epc_mem_init(epc, virt, phys, size, QEMU_EPC_ALIGN_PAGE_SIZE);
   if (ret < 0)
     {
       pcierr("epc mem init error\n");
