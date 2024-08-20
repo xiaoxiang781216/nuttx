@@ -293,14 +293,19 @@ function build_board()
     return;
   fi
 
-   if ! make -C ${NUTTXDIR} savedefconfig; then
+  if ! make -C ${NUTTXDIR} savedefconfig; then
     echo "Error: ############# save ${1} fail ##############"
     exit 3
   fi
+
   if [ ! -d $1 ]; then
     cp ${NUTTXDIR}/defconfig ${ROOTDIR}/nuttx/boards/*/*/${1/[:|\/]//configs/}
   else
-    cp ${NUTTXDIR}/defconfig $1
+    if grep -q "#include" "$1/defconfig"; then
+      echo "Note: skipping savedefconfig for debug defconfig."
+    else
+      cp ${NUTTXDIR}/defconfig $1
+    fi
   fi
 }
 
