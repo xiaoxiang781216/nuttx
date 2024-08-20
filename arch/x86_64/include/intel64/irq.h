@@ -519,7 +519,7 @@ static inline void setgdt(void *gdt, int size)
   gdt_ptr.limit = size;
   gdt_ptr.base = (uintptr_t)gdt;
 
-  asm volatile ("lgdt %0"::"m"(gdt_ptr):"memory");
+  __asm__ volatile ("lgdt %0"::"m"(gdt_ptr):"memory");
 }
 
 static inline void setidt(void *idt, int size)
@@ -528,7 +528,7 @@ static inline void setidt(void *idt, int size)
   idt_ptr.limit = size;
   idt_ptr.base = (uintptr_t)idt;
 
-  asm volatile ("lidt %0"::"m"(idt_ptr):"memory");
+  __asm__ volatile ("lidt %0"::"m"(idt_ptr):"memory");
 }
 
 static inline uint64_t rdtscp(void)
@@ -536,7 +536,7 @@ static inline uint64_t rdtscp(void)
   uint32_t lo;
   uint32_t hi;
 
-  asm volatile("rdtscp" : "=a" (lo), "=d" (hi)::"ecx", "memory");
+  __asm__ volatile("rdtscp" : "=a" (lo), "=d" (hi)::"ecx", "memory");
   return (uint64_t)lo | (((uint64_t)hi) << 32);
 }
 
@@ -545,29 +545,29 @@ static inline uint64_t rdtsc(void)
   uint32_t lo;
   uint32_t hi;
 
-  asm volatile("rdtsc" : "=a" (lo), "=d" (hi)::"memory");
+  __asm__ volatile("rdtsc" : "=a" (lo), "=d" (hi)::"memory");
   return (uint64_t)lo | (((uint64_t)hi) << 32);
 }
 
 static inline void set_pcid(uint64_t pcid)
 {
-    if (pcid < 4095)
-      {
-        asm volatile("mov %%cr3, %%rbx; andq $-4096, %%rbx; or %0, "
-                     "%%rbx; mov %%rbx, %%cr3;"
-                     ::"g"(pcid):"memory", "rbx", "rax");
-      }
+  if (pcid < 4095)
+    {
+      __asm__ volatile("mov %%cr3, %%rbx; andq $-4096, %%rbx; or %0, "
+                       "%%rbx; mov %%rbx, %%cr3;"
+                       ::"g"(pcid):"memory", "rbx", "rax");
+    }
 }
 
 static inline void set_cr3(uint64_t cr3)
 {
-  asm volatile("mov %0, %%cr3" : "=rm"(cr3) : : "memory");
+  __asm__ volatile("mov %0, %%cr3" : "=rm"(cr3) : : "memory");
 }
 
 static inline uint64_t get_cr3(void)
 {
   uint64_t cr3;
-  asm volatile("mov %%cr3, %0" : "=rm"(cr3) : : "memory");
+  __asm__ volatile("mov %%cr3, %0" : "=rm"(cr3) : : "memory");
   return cr3;
 }
 
@@ -583,54 +583,54 @@ static inline unsigned long read_msr(unsigned int msr)
   uint32_t low;
   uint32_t high;
 
-  asm volatile("rdmsr" : "=a" (low), "=d" (high) : "c" (msr));
+  __asm__ volatile("rdmsr" : "=a" (low), "=d" (high) : "c" (msr));
   return low | ((unsigned long)high << 32);
 }
 
 static inline void write_msr(unsigned int msr, unsigned long val)
 {
-  asm volatile("wrmsr"
-    : /* no output */
-    : "c" (msr), "a" (val), "d" (val >> 32)
-    : "memory");
+  __asm__ volatile("wrmsr"
+                   : /* no output */
+                   : "c" (msr), "a" (val), "d" (val >> 32)
+                   : "memory");
 }
 
 static inline uint64_t read_fsbase(void)
 {
-    uint64_t val;
-  asm volatile("rdfsbase %0"
-    : "=r" (val)
-    : /* no output */
-    : "memory");
+  uint64_t val;
+  __asm__ volatile("rdfsbase %0"
+                   : "=r" (val)
+                   : /* no output */
+                   : "memory");
 
-    return val;
+  return val;
 }
 
 static inline void write_fsbase(unsigned long val)
 {
-  asm volatile("wrfsbase %0"
-    : /* no output */
-    : "r" (val)
-    : "memory");
+  __asm__ volatile("wrfsbase %0"
+                   : /* no output */
+                   : "r" (val)
+                   : "memory");
 }
 
 static inline uint64_t read_gsbase(void)
 {
-    uint64_t val;
-  asm volatile("rdgsbase %0"
-    : "=r" (val)
-    : /* no output */
-    : "memory");
+  uint64_t val;
+  __asm__ volatile("rdgsbase %0"
+                   : "=r" (val)
+                   : /* no output */
+                   : "memory");
 
-    return val;
+  return val;
 }
 
 static inline void write_gsbase(unsigned long val)
 {
-  asm volatile("wrgsbase %0"
-    : /* no output */
-    : "r" (val)
-    : "memory");
+  __asm__ volatile("wrgsbase %0"
+                   : /* no output */
+                   : "r" (val)
+                   : "memory");
 }
 
 /* Return stack pointer */
@@ -639,7 +639,7 @@ static inline uint64_t up_getsp(void)
 {
   uint64_t regval;
 
-  asm volatile(
+  __asm__ volatile(
     "\tmovq %%rsp, %0\n"
     : "=rm" (regval)
     :
@@ -653,7 +653,7 @@ static inline uint32_t up_getds(void)
 {
   uint32_t regval;
 
-  asm volatile(
+  __asm__ volatile(
     "\tmov %%ds, %0\n"
     : "=rm" (regval)
     :
@@ -665,7 +665,7 @@ static inline uint32_t up_getcs(void)
 {
   uint32_t regval;
 
-  asm volatile(
+  __asm__ volatile(
     "\tmov %%cs, %0\n"
     : "=rm" (regval)
     :
@@ -677,7 +677,7 @@ static inline uint32_t up_getss(void)
 {
   uint32_t regval;
 
-  asm volatile(
+  __asm__ volatile(
     "\tmov %%ss, %0\n"
     : "=rm" (regval)
     :
@@ -689,7 +689,7 @@ static inline uint32_t up_getes(void)
 {
   uint32_t regval;
 
-  asm volatile(
+  __asm__ volatile(
     "\tmov %%es, %0\n"
     : "=rm" (regval)
     :
@@ -701,7 +701,7 @@ static inline uint32_t up_getfs(void)
 {
   uint32_t regval;
 
-  asm volatile(
+  __asm__ volatile(
     "\tmov %%fs, %0\n"
     : "=rm" (regval)
     :
@@ -713,7 +713,7 @@ static inline uint32_t up_getgs(void)
 {
   uint32_t regval;
 
-  asm volatile(
+  __asm__ volatile(
     "\tmov %%gs, %0\n"
     : "=rm" (regval)
     :
@@ -736,7 +736,7 @@ static inline irqstate_t irqflags()
 {
   irqstate_t flags;
 
-  asm volatile(
+  __asm__ volatile(
     "\tpushfq\n"
     "\tpopq %0\n"
     : "=rm" (flags)
@@ -764,14 +764,14 @@ static inline bool up_irq_enabled(irqstate_t flags)
 
 static inline void up_irq_disable(void)
 {
-  asm volatile("cli": : :"memory");
+  __asm__ volatile("cli": : :"memory");
 }
 
 /* Enable interrupts unconditionally */
 
 static inline void up_irq_enable(void)
 {
-  asm volatile("sti": : :"memory");
+  __asm__ volatile("sti": : :"memory");
 }
 
 /* Disable interrupts, but return previous interrupt state */
