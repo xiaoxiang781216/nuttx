@@ -621,7 +621,7 @@ out:
 
 out_free:
   lib_put_pathbuffer(path);
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -767,7 +767,7 @@ void file_closelk(FAR struct file *filep)
   bool deleted = false;
   int ret;
 
-  if (filep->locked == false)
+  if (!filep->locked)
     {
       return;
     }
@@ -785,7 +785,7 @@ void file_closelk(FAR struct file *filep)
        * it.
        */
 
-      goto out;
+      goto out_free;
     }
 
   nxmutex_lock(&g_protect_lock);
@@ -794,7 +794,6 @@ void file_closelk(FAR struct file *filep)
     {
       /* There is no bucket here, so we don't need to free it. */
 
-      nxmutex_unlock(&g_protect_lock);
       goto out;
     }
 
@@ -818,8 +817,9 @@ void file_closelk(FAR struct file *filep)
       file_lock_delete_bucket(bucket, path);
     }
 
-  nxmutex_unlock(&g_protect_lock);
 out:
+  nxmutex_unlock(&g_protect_lock);
+out_free:
   lib_put_pathbuffer(path);
 }
 
