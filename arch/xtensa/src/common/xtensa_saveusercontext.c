@@ -29,6 +29,8 @@
 
 #include <arch/syscall.h>
 
+#include "sched/sched.h"
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -51,9 +53,8 @@ int up_saveusercontext(void *saveregs)
 {
   if (up_interrupt_context())
     {
-      /* TODO: save interrupt context */
-
-      memset(saveregs, 0x0, XCPTCONTEXT_SIZE);
+      struct tcb_s *tcb = this_task();
+      memcpy(saveregs, tcb->xcp.regs, XCPTCONTEXT_SIZE);
       return 0;
     }
 
