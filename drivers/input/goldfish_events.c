@@ -245,6 +245,8 @@ static void goldfish_events_worker(FAR void *arg)
   FAR struct goldfish_events_s *events = (FAR struct goldfish_events_s *)arg;
   struct goldfish_input_event evt;
 
+  up_enable_irq(events->irq);
+
   evt.type = getreg32(events->base + GOLDFISH_EVENTS_READ);
   putreg32(GOLDFISH_EVENTS_PAGE_ABSDATA,
            events->base + GOLDFISH_EVENTS_SET_PAGE);
@@ -260,18 +262,15 @@ static void goldfish_events_worker(FAR void *arg)
 
   if (goldfish_events_send_touch_event(events, &evt))
     {
-      goto out;
+      return;
     }
 
   if (goldfish_events_send_mouse_event(events, &evt))
     {
-      goto out;
+      return;
     }
 
   goldfish_events_send_keyboard_event(events, &evt);
-
-out:
-  up_enable_irq(events->irq);
 }
 
 /****************************************************************************
