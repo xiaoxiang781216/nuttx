@@ -30,6 +30,7 @@
 #include <stdio.h>
 
 #include <nuttx/addrenv.h>
+#include <nuttx/irq.h>
 #include <nuttx/tls.h>
 
 #include "sched/sched.h"
@@ -58,16 +59,20 @@
 
 size_t group_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size)
 {
+  irqstate_t flags;
   size_t n = 0;
 #ifdef CONFIG_ARCH_ADDRENV
   FAR struct addrenv_s *oldenv;
 #endif
+
+  flags = enter_critical_section();
 
   /* Sanity checks and idle tasks */
 
   if (!tcb || !tcb->group || !tcb->group->tg_info || size < 1 ||
       is_idle_task(tcb))
     {
+      leave_critical_section(flags);
       *args = '\0';
       return 0;
     }
@@ -103,6 +108,8 @@ size_t group_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size)
       addrenv_restore(oldenv);
     }
 #endif
+
+  leave_critical_section(flags);
 
   return n < size - 1 ? n : size - 1;
 }
