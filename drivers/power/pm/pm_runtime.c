@@ -157,7 +157,7 @@ static int rpm_changestate(FAR struct pm_runtime_s *rpm, rpm_state_e state)
 
   default:
     break;
-    }
+  }
 
   return ret;
 }
