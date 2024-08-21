@@ -65,13 +65,11 @@ static int file_munmap_(FAR void *start, size_t length,
     {
       entry = mm_map_find(mm, start, length);
 
-      /* If the mapping created by certain FS driver, the corresponding
-       * entry will not be added to the queue.In this case entry == NULL
-       * should not set an errno.
-       */
+      /* If entry don't find, the start and length is invalid. */
 
       if (entry == NULL)
         {
+          ret = -EINVAL;
           goto unlock;
         }
 
