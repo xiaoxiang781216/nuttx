@@ -36,16 +36,15 @@
 #include "semaphore/semaphore.h"
 
 /****************************************************************************
- * Public Functions
+ * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: nxsem_wait
+ * Name: nxsem_wait_slow
  *
  * Description:
- *   This function attempts to lock the semaphore referenced by 'sem'.  If
- *   the semaphore value is (<=) zero, then the calling task will not return
- *   until it successfully acquires the lock.
+ *   This function attempts to lock the semaphore referenced by 'sem' in
+ *   slow mode.
  *
  *   This is an internal OS interface.  It is functionally equivalent to
  *   sem_wait except that:
@@ -67,16 +66,11 @@
  *
  ****************************************************************************/
 
-int nxsem_wait(FAR sem_t *sem)
+static int nxsem_wait_slow(FAR sem_t *sem)
 {
   FAR struct tcb_s *rtcb;
   irqstate_t flags;
   int ret;
-
-  /* This API should not be called from interrupt handlers & idleloop */
-
-  DEBUGASSERT(sem != NULL && up_interrupt_context() == false);
-  DEBUGASSERT(!OSINIT_IDLELOOP() || !sched_idletask());
 
   /* The following operations must be performed with interrupts
    * disabled because nxsem_post() may be called from an interrupt
@@ -221,6 +215,62 @@ int nxsem_wait(FAR sem_t *sem)
 
   leave_critical_section_nonirq(flags);
   return ret;
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: nxsem_wait
+ *
+ * Description:
+ *   This function attempts to lock the semaphore referenced by 'sem'.  If
+ *   the semaphore value is (<=) zero, then the calling task will not return
+ *   until it successfully acquires the lock.
+ *
+ *   This is an internal OS interface.  It is functionally equivalent to
+ *   sem_wait except that:
+ *
+ *   - It is not a cancellation point, and
+ *   - It does not modify the errno value.
+ *
+ * Input Parameters:
+ *   sem - Semaphore descriptor.
+ *
+ * Returned Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
+ *   Possible returned errors:
+ *
+ *   - EINVAL:  Invalid attempt to get the semaphore
+ *   - EINTR:   The wait was interrupted by the receipt of a signal.
+ *
+ ****************************************************************************/
+
+int nxsem_wait(FAR sem_t *sem)
+{
+  /* This API should not be called from interrupt handlers & idleloop */
+
+  DEBUGASSERT(sem != NULL && up_interrupt_context() == false);
+  DEBUGASSERT(!OSINIT_IDLELOOP() || !sched_idletask());
+
+  /* If this is a mutex, we can try to get the mutex in fast mode,
+   * else try to get it in slow mode.
+   */
+
+#if !defined(CONFIG_PRIORITY_INHERITANCE) && !defined(CONFIG_PRIORITY_PROTECT)
+  if (sem->flags & SEM_TYPE_MUTEX)
+    {
+      if (nxsem_trywait_fast(sem))
+        {
+          return OK;
+        }
+    }
+#endif
+
+  return nxsem_wait_slow(sem);
 }
 
 /****************************************************************************

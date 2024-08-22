@@ -29,6 +29,7 @@
 #include <nuttx/compiler.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/sched.h>
+#include <nuttx/atomic.h>
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -64,6 +65,12 @@ void nxsem_timeout(wdparm_t arg);
 /* Recover semaphore resources with a task or thread is destroyed */
 
 void nxsem_recover(FAR struct tcb_s *tcb);
+
+/* Retry lock semaphore in fast mode */
+
+#if !defined(CONFIG_PRIORITY_INHERITANCE) && !defined(CONFIG_PRIORITY_PROTECT)
+bool nxsem_trywait_fast(FAR sem_t *sem);
+#endif
 
 /* Special logic needed only by priority inheritance to manage collections of
  * holders of semaphores.
