@@ -243,7 +243,7 @@ static int ff_upload(FAR struct ff_upperhalf_s *upper,
   int ret = 0;
   int id;
 
-  if (effect->type < FF_EFFECT_MIN || effect->type > FF_EFFECT_MAX)
+  if (effect->type > FF_EFFECT_MAX)
     {
       return -EINVAL;
     }
