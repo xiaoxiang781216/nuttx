@@ -187,7 +187,7 @@ irqstate_t enter_critical_section(void)
    * lists are valid.
    */
 
-  DEBUGASSERT(g_nx_initstate >= OSINIT_TASKLISTS);
+  DEBUGASSERT(OSINIT_TASK_READY());
 
   /* If called from an interrupt handler, then just take the spinlock.
    * If we are already in a critical section, this will lock the CPU
@@ -337,7 +337,7 @@ try_again:
    * lists are valid.
    */
 
-  DEBUGASSERT(g_nx_initstate >= OSINIT_TASKLISTS);
+  DEBUGASSERT(OSINIT_TASK_READY());
   DEBUGASSERT(!up_interrupt_context());
 
   /* Normal tasking environment.
@@ -447,7 +447,7 @@ irqstate_t enter_critical_section(void)
    * lists are valid.
    */
 
-  DEBUGASSERT(g_nx_initstate >= OSINIT_TASKLISTS);
+  DEBUGASSERT(OSINIT_TASK_READY());
 
   /* Check if we were called from an interrupt handler */
 
@@ -474,7 +474,7 @@ inline_function irqstate_t enter_critical_section_nonirq(void)
    * lists are valid.
    */
 
-  DEBUGASSERT(g_nx_initstate >= OSINIT_TASKLISTS);
+  DEBUGASSERT(OSINIT_TASK_READY());
   DEBUGASSERT(!up_interrupt_context());
 
   rtcb = this_task();
@@ -522,7 +522,7 @@ void leave_critical_section(irqstate_t flags)
    * lists are valid.
    */
 
-  DEBUGASSERT(g_nx_initstate >= OSINIT_TASKLISTS);
+  DEBUGASSERT(OSINIT_TASK_READY());
 
   /* If called from an interrupt handler, then just release the
    * spinlock.  The interrupt handling logic should already hold the
@@ -577,7 +577,7 @@ inline_function void leave_critical_section_nonirq(irqstate_t flags)
   FAR struct tcb_s *rtcb;
   int cpu;
 
-  DEBUGASSERT(g_nx_initstate >= OSINIT_TASKLISTS);
+  DEBUGASSERT(OSINIT_TASK_READY());
   DEBUGASSERT(!up_interrupt_context());
 
   /* Get the TCB of the currently executing task on this CPU (avoid
@@ -641,7 +641,7 @@ void leave_critical_section(irqstate_t flags)
    * lists are valid.
    */
 
-  DEBUGASSERT(g_nx_initstate >= OSINIT_TASKLISTS);
+  DEBUGASSERT(OSINIT_TASK_READY());
 
   /* Check if we were called from an interrupt handler */
 
@@ -655,7 +655,7 @@ inline_function void leave_critical_section_nonirq(irqstate_t flags)
 {
   FAR struct tcb_s *rtcb = this_task();
 
-  DEBUGASSERT(g_nx_initstate >= OSINIT_TASKLISTS);
+  DEBUGASSERT(OSINIT_TASK_READY());
   DEBUGASSERT(!up_interrupt_context());
   DEBUGASSERT(rtcb != NULL);
 
