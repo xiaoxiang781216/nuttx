@@ -65,9 +65,8 @@ static void start(void)
 {
   /* Zero lr to mark the end of backtrace */
 
-  asm volatile ("mov lr, #0\n\t");
-
-  __start();
+  asm volatile ("mov lr, #0\n\t"
+                "b  __start\n\t");
 }
 
 /****************************************************************************
