@@ -77,6 +77,9 @@
                                              *      erased state of the MTD cell */
 #define MTDIOC_ERASESECTORS _MTDIOC(0x000c) /* IN: Pointer to mtd_erase_s structure
                                              * OUT: None */
+#define MTDIOC_ISBAD        _MTDIOC(0x000d) /* IN: Erase block number
+                                             * OUT: 0=A good block
+                                             *      1=A bad block */
 
 /* Macros to hide implementation */
 
@@ -148,6 +151,14 @@ struct mtd_erase_s
 {
   uint32_t startblock;  /* First block to be erased */
   uint32_t nblocks;     /* Number of blocks to be erased */
+};
+
+/* This structure store the bad block information of a block */
+
+struct mtd_bad_block_s
+{
+  off_t block_num;
+  int bad_flag;
 };
 
 /* This structure defines the interface to a simple memory technology device.
