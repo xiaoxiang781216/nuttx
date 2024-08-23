@@ -29,6 +29,7 @@
 
 #include <arch/arch.h>
 #include <arch/irq.h>
+#include <arch/spinlock.h>
 #include <nuttx/arch.h>
 
 #include "init/init.h"
