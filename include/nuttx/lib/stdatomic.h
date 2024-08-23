@@ -27,6 +27,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 /****************************************************************************
  * Pre-processor Definitions
