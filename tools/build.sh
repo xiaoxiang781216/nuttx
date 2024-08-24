@@ -286,7 +286,7 @@ function build_board()
     fi
   fi
 
-  if [ "${2}" == "distclean" ]; then
+  if echo "${@:2}" | grep -q "distclean"; then
     if [ -f "${COMPILE_COMMANDS}" ]; then
       rm -rf ${COMPILE_COMMANDS}
     fi
