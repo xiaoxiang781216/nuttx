@@ -1030,6 +1030,24 @@
 #  define csinfo     _none
 #endif
 
+#ifdef CONFIG_DEBUG_RPTUN_ERROR
+#  define rptunerr     _err
+#else
+#  define rptunerr     _none
+#endif
+
+#ifdef CONFIG_DEBUG_RPTUN_WARN
+#  define rptunwarn    _warn
+#else
+#  define rptunwarn    _none
+#endif
+
+#ifdef CONFIG_DEBUG_RPTUN_INFO
+#  define rptuninfo    _info
+#else
+#  define rptuninfo    _none
+#endif
+
 /* Buffer dumping macros do not depend on varargs */
 
 #ifdef CONFIG_DEBUG_ERROR
