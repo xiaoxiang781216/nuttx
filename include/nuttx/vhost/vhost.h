@@ -88,6 +88,9 @@ int vhost_register_device(FAR struct vhost_device *hdev);
 int vhost_register_driver(FAR struct vhost_driver *hdrv);
 int vhost_unregister_driver(FAR struct vhost_driver *hdrv);
 int vhost_unregister_device(FAR struct vhost_device *hdev);
+FAR void *vhost_get_next_buffer(FAR struct virtqueue *vq, uint16_t idx,
+                                FAR uint16_t *next_idx,
+                                FAR uint32_t *next_len);
 
 /****************************************************************************
  * Name: vhost_register_drivers

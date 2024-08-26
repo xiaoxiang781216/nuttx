@@ -157,6 +157,39 @@ static void vhost_defered_probe_work(FAR void *arg)
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: vhost_get_next_buffer
+ ****************************************************************************/
+
+FAR void *vhost_get_next_buffer(FAR struct virtqueue *vq, uint16_t idx,
+                                FAR uint16_t *next_idx,
+                                FAR uint32_t *next_len)
+{
+  FAR void *buffer;
+  uint16_t next;
+
+  VRING_INVALIDATE(vq->vq_ring.desc[idx], sizeof(vq->vq_ring.desc[idx]));
+  if (((vq->vq_ring.desc[idx].flags) & VRING_DESC_F_NEXT) == 0)
+    {
+      return NULL;
+    }
+
+  next = vq->vq_ring.desc[idx].next;
+  if (next_idx != NULL)
+    {
+      *next_idx = next;
+    }
+
+  VRING_INVALIDATE(vq->vq_ring.desc[next], sizeof(vq->vq_ring.desc[next]));
+  buffer = virtqueue_phys_to_virt(vq, vq->vq_ring.desc[next].addr);
+  if (next_len != NULL)
+    {
+      *next_len = vq->vq_ring.desc[next].len;
+    }
+
+  return buffer;
+}
+
+/****************************************************************************
  * Name: vhost_register_driver
  ****************************************************************************/
 
