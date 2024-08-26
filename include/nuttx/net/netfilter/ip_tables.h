@@ -294,7 +294,7 @@ struct ipt_icmp
 static inline FAR struct xt_entry_target *
 ipt_get_target(FAR struct ipt_entry *e)
 {
-  return (FAR char *)e + e->target_offset;
+  return (FAR struct xt_entry_target *)((FAR char *)e + e->target_offset);
 }
 
 #endif /* __INCLUDE_NUTTX_NET_NETFILTER_IP_TABLES_H */
