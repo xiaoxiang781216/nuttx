@@ -130,7 +130,7 @@ static int nxmq_verify_send(FAR FAR struct file *mq, FAR const char *msg,
  *
  ****************************************************************************/
 
-static FAR struct mqueue_msg_s *nxmq_alloc_msg(void)
+static FAR struct mqueue_msg_s *nxmq_alloc_msg(uint16_t maxmsgsize)
 {
   FAR struct mqueue_msg_s *mqmsg;
   irqstate_t flags;
@@ -164,7 +164,7 @@ static FAR struct mqueue_msg_s *nxmq_alloc_msg(void)
            * allocate one.
            */
 
-          mqmsg = kmm_malloc((sizeof (struct mqueue_msg_s)));
+          mqmsg = kmm_malloc(MQ_MSG_SIZE(maxmsgsize));
 
           /* Check if we allocated the message */
 
@@ -306,7 +306,7 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
 
   /* Pre-allocate a message structure */
 
-  mqmsg = nxmq_alloc_msg();
+  mqmsg = nxmq_alloc_msg(msgq->maxmsgsize);
   if (!mqmsg)
     {
       return -ENOMEM;

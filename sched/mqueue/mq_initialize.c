@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/trace.h>
 
 #include "mqueue/mqueue.h"
@@ -67,22 +68,26 @@ mq_msgblockalloc(FAR struct list_node *list, uint16_t nmsgs,
                  uint8_t alloc_type)
 {
   FAR struct mqueue_msg_s *mqmsgblock;
+  FAR uint8_t *block;
+  size_t block_size;
 
   /* The list must be loaded at initialization time to hold the
    * configured number of messages.
    */
 
-  mqmsgblock = (FAR struct mqueue_msg_s *)
-    kmm_malloc(sizeof(struct mqueue_msg_s) * nmsgs);
+  block_size = ALIGN_UP(MQ_MSG_SIZE(MQ_MAX_BYTES), sizeof(void *));
+  block = kmm_malloc(block_size * nmsgs);
 
-  if (mqmsgblock)
+  if (block)
     {
       int i;
       for (i = 0; i < nmsgs; i++)
         {
+          mqmsgblock = (FAR struct mqueue_msg_s *)block;
+
           mqmsgblock->type = alloc_type;
           list_add_tail(list, &mqmsgblock->node);
-          mqmsgblock++;
+          block += block_size;
         }
     }
 }
