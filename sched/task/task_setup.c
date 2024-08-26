@@ -170,7 +170,16 @@ retry:
 
   for (i = 0; i < g_npidhash / 2; i++)
     {
-      DEBUGASSERT(g_pidhash[i] != NULL);
+      if (g_pidhash[i] == NULL)
+        {
+          /* If the pid is not used, skip it.
+           * This may be triggered when a context switch occurs
+           * during mm_malloc and a thread is destroyed.
+           */
+
+          continue;
+        }
+
       hash_ndx = PIDHASH(g_pidhash[i]->pid);
       DEBUGASSERT(pidhash[hash_ndx] == NULL);
       pidhash[hash_ndx] = g_pidhash[i];
