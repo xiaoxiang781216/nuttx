@@ -460,6 +460,10 @@ int up_addrenv_create(size_t textsize, size_t datasize, size_t heapsize,
   UP_DSB();
   UP_DMB();
 
+#ifdef CONFIG_SMP
+  x86_64_tlb_shootdown();
+#endif
+
   return OK;
 
 errout:
@@ -553,6 +557,10 @@ int up_addrenv_destroy(arch_addrenv_t *addrenv)
 
   UP_DSB();
   UP_DMB();
+
+#ifdef CONFIG_SMP
+  x86_64_tlb_shootdown();
+#endif
 
   memset(addrenv, 0, sizeof(arch_addrenv_t));
   return OK;
