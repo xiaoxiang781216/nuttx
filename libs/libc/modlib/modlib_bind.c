@@ -973,6 +973,11 @@ int modlib_bind(FAR struct module_s *modp,
                                   sizeof(uintptr_t);
                 break;
             }
+
+          if (ret < 0)
+            {
+              return ret;
+            }
         }
       else
         {
@@ -1019,7 +1024,7 @@ int modlib_bind(FAR struct module_s *modp,
 
       if (ret < 0)
         {
-          break;
+          return ret;
         }
     }
 
