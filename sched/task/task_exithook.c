@@ -426,6 +426,10 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
 
   nxtask_recover(tcb);
 
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  perf_event_task_exit(tcb);
+#endif
+
   /* Send the SIGCHLD signal to the parent task group */
 
   nxtask_signalparent(tcb, status);
@@ -457,9 +461,5 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
     {
       umm_memdump(&dump);
     }
-#endif
-
-#ifdef CONFIG_SCHED_PERF_EVENTS
-  perf_event_task_exit(tcb);
 #endif
 }
