@@ -199,14 +199,26 @@ int board_boot_image(const char *path, uint32_t hdr_size)
 
   putreg32(VECTOR_TABLE_NS, (NVIC_VECTAB + ARMV8M_NS_OFFSET));
 
-  /* Set non-secure stack pointers and jump to non-secure entry point */
+  /* Set non-secure stack pointers */
 
-  __asm__ __volatile__("\tmsr msp_ns, %0\n"
-                       "\tisb\n"
-                       "\tmov pc, %1\n"
-                       :
-                       : "r" (vt.spr), "r" (vt.reset));
+  __asm__ __volatile__("\tmsr msp_ns, %0\n" : : "r" (vt.spr));
 
+  ARM_ISB();
+
+  /* Check if reset is valid */
+
+  if (vt.reset == 0xffffffff)
+    {
+      syslog(LOG_ERR, "Not found image to boot!");
+      PANIC();
+    }
+
+  syslog(LOG_INFO, "Jump to 0x%" PRIx32 "\n", vt.reset);
+
+  /* Jump to non-secure entry point */
+
+  nsfunc *ns_reset = (nsfunc *)(vt.reset);
+  ns_reset();
 #endif
 
   return 0;
