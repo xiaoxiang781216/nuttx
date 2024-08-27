@@ -1054,6 +1054,7 @@ static void mmcsd_decode_scr(FAR struct mmcsd_state_s *priv, uint32_t scr[2])
 #endif
 }
 
+#ifdef CONFIG_MMCSD_IOCSUPPORT
 /****************************************************************************
  * Name: mmcsd_switch
  *
@@ -1108,6 +1109,7 @@ static int mmcsd_switch(FAR struct mmcsd_state_s *priv, uint32_t arg)
   priv->wrbusy = true;
   return mmcsd_recv_r1(priv, MMCSD_CMD6);
 }
+#endif
 
 /****************************************************************************
  * Name: mmcsd_get_r1
