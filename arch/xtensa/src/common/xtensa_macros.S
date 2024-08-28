@@ -43,7 +43,11 @@
 
 #if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 15
 	.macro	setintstack tmp1 tmp2
+	movi		\tmp1, g_current_regs
+	l32i		\tmp1, \tmp1, 0
+	bnez		\tmp1, 1f
 	movi		a1, g_intstacktop
+1:
 	.endm
 #endif
 
