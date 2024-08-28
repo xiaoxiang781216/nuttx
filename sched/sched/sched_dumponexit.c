@@ -53,11 +53,7 @@
 void nxsched_dumponexit(void)
 {
   FAR struct tcb_s *tcb = this_task();
-#if CONFIG_TASK_NAME_SIZE > 0
-  FAR const char *name = tcb->name;
-#else
-  FAR const char *name = "<noname>";
-#endif
+  FAR const char *name = get_task_name(tcb);
 
   syslog(LOG_INFO, "task exit! tcb=%p name=%s, tid:%d, priority=%d "
          "entry:%p pid: %d, stack_alloc_ptr: %p, adj_stack_size: %zu\n",

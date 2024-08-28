@@ -210,6 +210,12 @@
 
 #define get_current_mm()             (get_group_mm(nxsched_self()->group))
 
+#if CONFIG_TASK_NAME_SIZE > 0
+#  define get_task_name(tcb)         ((tcb) ? (tcb)->name : "<null>")
+#else
+#  define get_task_name(tcb)         "<noname>"
+#endif
+
 /* Task Switching Interfaces (non-standard).
  * These two macros can be called in interrupt context.
  */

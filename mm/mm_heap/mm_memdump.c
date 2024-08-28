@@ -262,9 +262,7 @@ void mm_memdump(FAR struct mm_heap_s *heap,
         }
       else
         {
-#if CONFIG_TASK_NAME_SIZE > 0
-          name = tcb->name;
-#endif
+          name = get_task_name(tcb);
           syslog(LOG_INFO, "Memdump task stack_alloc_ptr: %p,"
                            " adj_stack_size: %zu, name: %s\n",
                            tcb->stack_alloc_ptr, tcb->adj_stack_size, name);
