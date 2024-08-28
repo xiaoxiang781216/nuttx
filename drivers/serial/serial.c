@@ -2044,13 +2044,11 @@ int uart_register(FAR const char *path, FAR uart_dev_t *dev)
   /* Register the serial driver */
 
 #ifdef CONFIG_SERIAL_GDBSTUB
-  if (strcmp(path, CONFIG_SERIAL_GDBSTUB_PATH) == 0)
+  if (uart_gdbstub_register(dev, path) == 0)
     {
-#ifdef CONFIG_SERIAL_GDBSTUB_AUTO_ATTACH
-      uart_gdbstub_register(dev, false);
-#else
-      return uart_gdbstub_register(dev, true);
-#endif
+      /* No need register the device if it is used by gdbstub */
+
+      return 0;
     }
 #endif
 

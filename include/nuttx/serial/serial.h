@@ -561,7 +561,7 @@ int uart_check_special(FAR uart_dev_t *dev, const char *buf, size_t size);
  ****************************************************************************/
 
 #ifdef CONFIG_SERIAL_GDBSTUB
-int uart_gdbstub_register(FAR uart_dev_t *dev, bool attach);
+int uart_gdbstub_register(FAR uart_dev_t *dev, FAR const char *path);
 #endif
 
 #undef EXTERN
