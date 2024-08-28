@@ -1,5 +1,5 @@
 # ##############################################################################
-# arch/arm/src/cmake/ToolchainGnuc.cmake
+# arch/arm/src/cmake/armclang.cmake
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -23,52 +23,65 @@
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_VERSION 1)
 
-set(TOOLCHAIN_PREFIX arm-none-eabi)
-set(CMAKE_LIBRARY_ARCHITECTURE ${TOOLCHAIN_PREFIX})
-set(CMAKE_C_COMPILER_TARGET ${TOOLCHAIN_PREFIX})
-set(CMAKE_CXX_COMPILER_TARGET ${TOOLCHAIN_PREFIX})
+set(CMAKE_ASM_COMPILER armclang)
+set(CMAKE_C_COMPILER armclang)
+set(CMAKE_CXX_COMPILER armclang)
+set(CMAKE_PREPROCESSOR armclang -E -P -x c)
+set(CMAKE_STRIP llvm-strip --strip-unneeded)
+set(CMAKE_OBJCOPY llvm-objcopy)
+set(CMAKE_OBJDUMP llvm-objdump)
+set(CMAKE_LINKER armlink)
+set(CMAKE_LD armlink)
+set(CMAKE_AR armar -rcs)
+set(CMAKE_NM llvm-nm)
+set(CMAKE_RANLIB llvm-ranlib)
 
-set(CMAKE_ASM_COMPILER ${CMAKE_C_COMPILER})
-set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)
-set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++)
-set(CMAKE_PREPROCESSOR ${TOOLCHAIN_PREFIX}-gcc -E -P -x c)
-set(CMAKE_STRIP ${TOOLCHAIN_PREFIX}-strip --strip-unneeded)
-set(CMAKE_OBJCOPY ${TOOLCHAIN_PREFIX}-objcopy)
-set(CMAKE_OBJDUMP ${TOOLCHAIN_PREFIX}-objdump)
+# Since the no_builtin attribute is not fully supported on Clang disable the
+# built-in functions, refer: https://github.com/apache/nuttx/pull/5971
 
-if(NOT CONFIG_LTO_NONE AND CONFIG_ARM_TOOLCHAIN_GNU_EABI)
-  set(CMAKE_LINKER ${TOOLCHAIN_PREFIX}-gcc)
-  set(CMAKE_LD ${TOOLCHAIN_PREFIX}-gcc)
-  set(CMAKE_AR ${TOOLCHAIN_PREFIX}-gcc-ar)
-  set(CMAKE_NM ${TOOLCHAIN_PREFIX}-gcc-nm)
-  set(CMAKE_RANLIB ${TOOLCHAIN_PREFIX}-gcc-ranlib)
-  add_compile_options(-fno-builtin)
-else()
-  set(CMAKE_LINKER ${TOOLCHAIN_PREFIX}-ld)
-  set(CMAKE_LD ${TOOLCHAIN_PREFIX}-ld)
-  set(CMAKE_AR ${TOOLCHAIN_PREFIX}-ar)
-  set(CMAKE_NM ${TOOLCHAIN_PREFIX}-nm)
-  set(CMAKE_RANLIB ${TOOLCHAIN_PREFIX}-ranlib)
-endif()
+add_compile_options(-fno-builtin --target=arm-arm-none-eabi)
 
-# Workaround to skip -Warray-bounds check due to bug of GCC-12: Wrong warning
-# array subscript [0] is outside array bounds:
-# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105523
+# Suppress license warning
 
-execute_process(COMMAND ${CMAKE_C_COMPILER} --version
-                OUTPUT_VARIABLE GCC_VERSION_OUTPUT)
-string(REGEX MATCH "\\+\\+.* ([0-9]+)\\.[0-9]+" GCC_VERSION_REGEX
-             "${GCC_VERSION_OUTPUT}")
-set(GCCVER ${CMAKE_MATCH_1})
+add_compile_options(-Wno-license-management)
+add_link_options(-Wl,--diag_suppress=9931)
+# Input sections are specified even though there will be no such sections found
+# in the libraries linked. Warning: L6314W: No section matches pattern *(xxx).
 
-if(GCCVER EQUAL 12)
-  add_compile_options(--param=min-pagesize=0)
-  if(CONFIG_ARCH_RAMFUNCS)
-    add_link_options(-Wl,--no-warn-rwx-segments)
-  endif()
-endif()
+add_link_options(-Wl,--diag_suppress=6314)
+
+# Allow Empty Execution region declared on scatter Warning: L6312W: Empty
+# Execution region description for region xxx
+
+add_link_options(-Wl,--diag_suppress=6312)
+
+# Match pattern for an unused section that is being removed. Warning: L6329W:
+# Pattern xxx only matches removed unused sections.
+
+add_link_options(-Wl,--diag_suppress=6329)
+
+# define function to generate the bin
+
+function(generate_bin rcpath source_etc_prefix source_etc_suffix)
+  add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${source_etc_suffix}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${rcpath}
+    COMMAND
+      ${CMAKE_PREPROCESSOR} -I${CMAKE_BINARY_DIR}/include
+      ${source_etc_prefix}/${source_etc_suffix} >
+      ${CMAKE_CURRENT_BINARY_DIR}/${source_etc_suffix}
+    DEPENDS nuttx_context ${source_etc_prefix}/${source_etc_suffix})
+endfunction()
+
+macro(link_target target)
+  target_link_libraries(
+    ${target}
+    PRIVATE ${NUTTX_EXTRA_FLAGS} -Wl,--script=${ldscript} -Wl,--start-group
+            ${nuttx_libs} ${nuttx_extra_libs} -Wl,--end-group)
+endmacro()
 
 # override the ARCHIVE command
+
 set(CMAKE_ARCHIVE_COMMAND "<CMAKE_AR> rcs <TARGET> <LINK_FLAGS> <OBJECTS>")
 set(CMAKE_RANLIB_COMMAND "<CMAKE_RANLIB> <TARGET>")
 set(CMAKE_C_ARCHIVE_CREATE ${CMAKE_ARCHIVE_COMMAND})
@@ -169,7 +182,7 @@ if(CONFIG_LTO_THIN)
   add_compile_options(-flto=thin)
 elseif(CONFIG_LTO_FULL)
   add_compile_options(-flto)
-  add_compile_options(-fuse-linker-plugin)
+
 elseif(CONFIG_LTO_FAT)
   add_compile_options(-flto -ffat-lto-objects)
 endif()
@@ -179,11 +192,7 @@ endif()
 # compiled with flto
 
 if(NOT CONFIG_LTO_NONE)
-
-  # For gcc, use the linker plugin to extract objects with GIMPLE info from the
-  # lib archive
-
-  add_compile_options(-fuse-linker-plugin)
+  add_link_options(-Wl,--lto)
 endif()
 
 if(CONFIG_ARM_THUMB)
@@ -201,27 +210,24 @@ if(CONFIG_ARM_THUMB)
   add_compile_options(-Wa,-mimplicit-it=always)
 endif()
 
-# Optimization of unused sections
-
-if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
-  add_link_options(-Wl,--gc-sections)
-  add_compile_options(-ffunction-sections -fdata-sections)
-endif()
-
-# Debug --whole-archive
-
-if(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE)
-  add_link_options(-Wl,--whole-archive)
-endif()
-
 # Debug link map
 
 if(CONFIG_DEBUG_LINK_MAP)
-  add_link_options(-Wl,--cref -Wl,-Map=nuttx.map)
+  add_link_options(
+    -Wl,--strict
+    -Wl,--map
+    -Wl,--xref
+    -Wl,--symbols
+    -Wl,--info=unused
+    -Wl,--info=veneers
+    -Wl,--info=summarysizes
+    -Wl,--info=summarystack)
 endif()
 
 if(CONFIG_DEBUG_SYMBOLS)
   add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
+
+  add_link_options(-Wl,--debug)
 endif()
 
 add_compile_options(
@@ -250,3 +256,39 @@ if(NOT CONFIG_CXX_RTTI)
 endif()
 
 set(CMAKE_EXE_LINKER_FLAGS_INIT "--specs=nosys.specs")
+
+set(PREPROCES ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)
+
+function(pre_compile_ldscript src_ld_script ld_script_tmp nx_chip_abs_dir
+         work_dir)
+  add_custom_command(
+    OUTPUT ${ld_script_tmp}
+    DEPENDS ${src_ld_script}
+    COMMAND ${PREPROCES} -I${CMAKE_BINARY_DIR}/include -I${nx_chip_abs_dir}
+            ${src_ld_script} > ${ld_script_tmp}
+    WORKING_DIRECTORY ${work_dir})
+endfunction()
+
+function(find_extra_lib extra_library)
+  execute_process(
+    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
+            --print-libgcc-file-name
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    OUTPUT_VARIABLE tmp_list)
+
+  set(${extra_library}
+      "${tmp_list}"
+      PARENT_SCOPE)
+endfunction()
+
+function(find_toolchain_lib extra_library)
+  execute_process(
+    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
+            --print-file-name=libm.a
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    OUTPUT_VARIABLE tmp_list)
+
+  set(${extra_library}
+      "${tmp_list}"
+      PARENT_SCOPE)
+endfunction()

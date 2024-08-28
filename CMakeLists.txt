@@ -388,7 +388,7 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/arch/${CONFIG_ARCH}/src/cmake)
 set(CMAKE_TOOLCHAIN_FILE
-    "${CMAKE_SOURCE_DIR}/arch/${CONFIG_ARCH}/src/cmake/Toolchain.cmake")
+    "${CMAKE_SOURCE_DIR}/arch/${CONFIG_ARCH}/src/cmake/toolchain.cmake")
 
 # Define project #############################################################
 # This triggers configuration
@@ -465,15 +465,6 @@ else()
     PRIVATE $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx,NUTTX_COMPILE_DEFINITIONS>>)
   target_compile_options(
     nuttx PRIVATE $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx,NUTTX_COMPILE_OPTIONS>>)
-endif()
-
-# Compiler options TODO: move elsewhere
-
-if("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
-  if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 4.9)
-    # force color for gcc > 4.9
-    add_compile_options(-fdiagnostics-color=always)
-  endif()
 endif()
 
 if(WIN32)
@@ -571,12 +562,8 @@ if(DEFINED PREPROCES)
   get_filename_component(LD_SCRIPT_NAME ${ldscript} NAME)
   set(LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/${LD_SCRIPT_NAME}.tmp")
 
-  add_custom_command(
-    OUTPUT ${LD_SCRIPT_TMP}
-    DEPENDS ${ldscript}
-    COMMAND ${PREPROCES} -I${CMAKE_BINARY_DIR}/include -I${NUTTX_CHIP_ABS_DIR}
-            ${ldscript} > ${LD_SCRIPT_TMP}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  pre_compile_ldscript(${ldscript} ${LD_SCRIPT_TMP} ${NUTTX_CHIP_ABS_DIR}
+                       ${CMAKE_CURRENT_SOURCE_DIR})
 
   add_custom_target(ldscript_tmp DEPENDS ${LD_SCRIPT_TMP})
   add_dependencies(nuttx ldscript_tmp)
@@ -614,10 +601,7 @@ set(nuttx_libs ${nuttx_kernel_libs} ${nuttx_system_libs} ${nuttx_apps_libs}
 if(NOT CONFIG_ARCH_SIM)
 
   # TODO: nostart/nodefault not applicable to nuttx toolchain
-  target_link_libraries(
-    nuttx PRIVATE ${NUTTX_EXTRA_FLAGS} -Wl,--script=${ldscript}
-                  -Wl,--start-group ${nuttx_libs} -Wl,--end-group)
-
+  link_target(nuttx)
   # generate binary outputs in different formats (.bin, .hex, etc)
   nuttx_generate_outputs(nuttx)
 

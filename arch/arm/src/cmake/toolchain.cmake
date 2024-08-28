@@ -1,5 +1,5 @@
 # ##############################################################################
-# arch/arm/src/cmake/Toolchain.cmake
+# arch/arm/src/cmake/toolchain.cmake
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -48,11 +48,11 @@ include(${ARCH_SUBDIR})
 set(TOOLCHAIN_FILE)
 
 if(CONFIG_ARCH_TOOLCHAIN_CLANG) # clang
-  set(TOOLCHAIN_FILE ToolchainClang)
+  set(TOOLCHAIN_FILE clang)
 elseif(CONFIG_ARCH_TOOLCHAIN_ARMCLANG) # arm clang
-  set(TOOLCHAIN_FILE ToolchainArmclang)
+  set(TOOLCHAIN_FILE armclang)
 else() # gcc
-  set(TOOLCHAIN_FILE ToolchainGnuc)
+  set(TOOLCHAIN_FILE gcc)
 endif()
 
 include(${TOOLCHAIN_FILE})
