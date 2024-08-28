@@ -263,7 +263,7 @@ int arm_svcall(int irq, void *context, void *arg)
            */
 
           regs[REG_PC]         = (uint32_t)USERSPACE->task_startup;
-          regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+          regs[REG_EXC_RETURN] = EXC_RETURN_UNPRIVTHR;
 
           /* Change the parameter ordering to match the expectation of struct
            * userpace_s task_startup:
@@ -296,7 +296,7 @@ int arm_svcall(int irq, void *context, void *arg)
            */
 
           regs[REG_PC]         = (uint32_t)regs[REG_R1]; /* startup */
-          regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+          regs[REG_EXC_RETURN] = EXC_RETURN_UNPRIVTHR;
 
           /* Change the parameter ordering to match the expectation of the
            * user space pthread_startup:
@@ -337,7 +337,7 @@ int arm_svcall(int irq, void *context, void *arg)
            */
 
           regs[REG_PC]         = (uint32_t)USERSPACE->signal_handler;
-          regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
+          regs[REG_EXC_RETURN] = EXC_RETURN_UNPRIVTHR;
 
           /* Change the parameter ordering to match the expectation of struct
            * userpace_s signal_handler.
