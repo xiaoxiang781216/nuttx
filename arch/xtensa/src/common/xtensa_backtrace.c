@@ -250,6 +250,7 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
                                 (void *)up_getsp(), NULL,
                                 buffer, size, &skip);
 #else
+          xtensa_window_spill();
           ret = backtrace_stack(rtcb->stack_base_ptr,
                                 rtcb->stack_base_ptr + rtcb->adj_stack_size,
                                 (void *)up_getsp(), NULL,
