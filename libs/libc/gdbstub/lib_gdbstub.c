@@ -726,7 +726,7 @@ static bool gdb_is_valid_region(FAR struct gdb_state_s *state,
       return true;
     }
 
-  while (region->start != 0)
+  while (region->start < region->end)
     {
       if (addr >= region->start &&
           addr <= region->end - len &&
