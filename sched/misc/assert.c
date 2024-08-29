@@ -792,6 +792,7 @@ static void reset_board(void)
 void _assert(FAR const char *filename, int linenum,
              FAR const char *msg, FAR void *regs)
 {
+  const bool os_ready = OSINIT_OS_READY();
   FAR struct tcb_s *rtcb = running_task();
   struct panic_notifier_s notifier_data;
   irqstate_t flags;
@@ -803,7 +804,11 @@ void _assert(FAR const char *filename, int linenum,
       reset_board(); /* Should not return. */
     }
 
-  flags = enter_critical_section();
+  flags = 0; /* suppress GCC warning */
+  if (os_ready)
+    {
+      flags = enter_critical_section();
+    }
 
 #if CONFIG_BOARD_RESET_ON_ASSERT < 2
   if (up_interrupt_context() ||
@@ -819,7 +824,10 @@ void _assert(FAR const char *filename, int linenum,
       kasan_stop();
 
 #ifdef CONFIG_SMP
-      pause_all_cpu();
+      if (os_ready)
+        {
+          pause_all_cpu();
+        }
 #endif
     }
 
@@ -868,5 +876,8 @@ void _assert(FAR const char *filename, int linenum,
       reset_board(); /* Should not return. */
     }
 
-  leave_critical_section(flags);
+  if (os_ready)
+    {
+      leave_critical_section(flags);
+    }
 }
