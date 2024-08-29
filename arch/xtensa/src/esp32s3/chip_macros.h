@@ -105,9 +105,14 @@
 #if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 15
     .macro setintstack tmp1 tmp2
     getcoreid \tmp1                   /* tmp1 = Core ID (0 or 1) */
+    movi  \tmp2, g_current_regs
+    addx4 \tmp2, \tmp1, \tmp2
+    l32i  \tmp2, \tmp2, 0
+    bnez  \tmp2, 1f
     movi  \tmp2, g_cpu_intstack_top   /* tmp2 = Array of stack pointers */
     addx4 \tmp2, \tmp1, \tmp2         /* tmp2 = tmp2 + (tmp1 << 2) */
     l32i  a1, \tmp2, 0                /* a1   = *tmp2 */
+1:
     .endm
 #endif
 
