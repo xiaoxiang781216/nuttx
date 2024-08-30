@@ -71,28 +71,17 @@
 
 #define EXC_RETURN_HANDLER       0xfffffff1
 
-#ifdef CONFIG_BUILD_PROTECTED
-#  define EXC_RETURN_STACK       EXC_RETURN_PROCESS_STACK
-#elif CONFIG_ARCH_INTERRUPTSTACK > 7
-#  define EXC_RETURN_STACK       EXC_RETURN_PROCESS_STACK
+#if CONFIG_ARCH_INTERRUPTSTACK > 3
+
+/* Execution uses PSP after return */
+
+#  define EXC_RETURN_THREAD      0xfffffffd
 #else
-#  define EXC_RETURN_STACK       0
+
+/* Execution uses MSP after return */
+
+#  define EXC_RETURN_THREAD      0xfffffff9
 #endif
-
-/* EXC_RETURN_PRIVTHR: Return to privileged thread mode. Exception return
- * gets state from the main stack. Execution uses MSP after return.
- */
-
-#define EXC_RETURN_PRIVTHR       (EXC_RETURN_BASE | \
-                                  EXC_RETURN_THREAD_MODE)
-
-/* EXC_RETURN_THREAD: Return to thread mode. Exception return
- * gets state from the process stack.
- */
-
-#define EXC_RETURN_THREAD        (EXC_RETURN_BASE | \
-                                  EXC_RETURN_THREAD_MODE | \
-                                  EXC_RETURN_STACK)
 
 /****************************************************************************
  * Inline Functions
