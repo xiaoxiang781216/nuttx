@@ -92,7 +92,6 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
 {
   FAR struct tcb_s *rtcb;
   irqstate_t flags;
-  sclock_t ticks;
   int ret = ERROR;
 
   DEBUGASSERT(sem != NULL && abstime != NULL);
@@ -131,26 +130,16 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
     }
 #endif
 
-  /* Convert the timespec to clock ticks.  We must have interrupts
-   * disabled here so that this time stays valid until the wait begins.
-   *
-   * clock_abstime2ticks() returns zero on success or a POSITIVE errno
-   * value on failure.
-   */
-
-  clock_abstime2ticks(clockid, abstime, &ticks);
-
-  /* If the time has already expired return immediately. */
-
-  if (ticks <= 0)
+  if (clockid == CLOCK_REALTIME)
     {
-      ret = -ETIMEDOUT;
-      goto out;
+      wd_start_realtime(&rtcb->waitdog, abstime,
+                        nxsem_timeout, (wdparm_t)rtcb);
     }
-
-  /* Start the watchdog */
-
-  wd_start(&rtcb->waitdog, ticks, nxsem_timeout, (wdparm_t)rtcb);
+  else
+    {
+      wd_start_abstime(&rtcb->waitdog, abstime,
+                       nxsem_timeout, (wdparm_t)rtcb);
+    }
 
   /* Now perform the blocking wait.  If nxsem_wait() fails, the
    * negated errno value will be returned below.
