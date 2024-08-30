@@ -10,6 +10,22 @@ menuconfig DRIVERS_VHOST
 
 if DRIVERS_VHOST
 
+config DRIVERS_VHOST_BLK
+	bool "Virtual Host Blk Device Support"
+	default n
+
+if DRIVERS_VHOST_BLK
+
+config DRIVERS_VHOST_BLK_PRIORITY
+	int "vhost blk thread priority"
+	default 224
+
+config DRIVERS_VHOST_BLK_STACKSIZE
+	int "vhost blk stack size"
+	default 4096
+
+endif # DRIVERS_VHOST_BLK
+
 config DRIVERS_VHOST_RNG
 	bool "Virtual Host Rng Device Support"
 	default n

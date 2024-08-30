@@ -31,6 +31,7 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/vhost/vhost.h>
 
+#include "vhost-blk.h"
 #include "vhost-rng.h"
 
 /****************************************************************************
@@ -414,6 +415,14 @@ void vhost_register_drivers(void)
     {
       vhosterr("metal_init failed, ret=%d\n", ret);
     }
+
+#ifdef CONFIG_DRIVERS_VHOST_BLK
+  ret = vhost_register_blk_driver();
+  if (ret < 0)
+    {
+      vhosterr("vhost_register_blk_driver failed, ret=%d\n", ret);
+    }
+#endif
 
 #ifdef CONFIG_DRIVERS_VHOST_RNG
   ret = vhost_register_rng_driver();
