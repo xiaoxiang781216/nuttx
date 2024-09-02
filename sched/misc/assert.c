@@ -99,7 +99,7 @@ static bool g_cpu_paused[CONFIG_SMP_NCPUS];
 static uintptr_t g_last_regs[CONFIG_SMP_NCPUS][XCPTCONTEXT_REGS]
                  aligned_data(XCPTCONTEXT_ALIGN);
 
-static FAR const char *g_policy[4] =
+static FAR const char * const g_policy[4] =
 {
   "FIFO", "RR", "SPORADIC"
 };
