@@ -227,6 +227,7 @@ function(find_extra_lib extra_library)
   string(STRIP "${GHS_ROOT_PATH}" GHS_ROOT_PATH)
 
   list(APPEND tmp_list ${GHS_ROOT_PATH}/lib/thumb2/libarch.a)
+  list(APPEND tmp_list ${GHS_ROOT_PATH}/lib/thumb2/libsys.a)
   if(CONFIG_ARCH_FPU)
     if(CONFIG_ARM_FPU_ABI_SOFT)
       list(APPEND tmp_list ${GHS_ROOT_PATH}/lib/thumb2/libind_sf.a)
