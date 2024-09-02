@@ -28,6 +28,7 @@ import socket
 import struct
 import subprocess
 import sys
+import traceback
 
 import elftools
 from elftools.elf.elffile import ELFFile
@@ -242,7 +243,7 @@ class DumpELFFile:
         self.elffile = elffile
         self.__memories = []
 
-    def parse(self):
+    def parse(self, load_symbol: bool):
         self.__memories = []
         elf = ELFFile.load_from_path(self.elffile)
 
@@ -285,26 +286,27 @@ class DumpELFFile:
 
                 self.__memories.append(memory)
 
-        symtab = elf.get_section_by_name(".symtab")
-        self.symbol = {}
-        for symbol in symtab.iter_symbols():
-            if symbol["st_info"]["type"] != "STT_OBJECT":
-                continue
+        self.load_symbol = load_symbol
+        if load_symbol:
+            symtab = elf.get_section_by_name(".symtab")
+            self.symbol = {}
+            for symbol in symtab.iter_symbols():
+                if symbol["st_info"]["type"] != "STT_OBJECT":
+                    continue
 
-            if symbol.name in (
-                "g_tcbinfo",
-                "g_pidhash",
-                "g_npidhash",
-                "g_last_regs",
-                "g_running_tasks",
-            ):
-                self.symbol[symbol.name] = symbol
-                logger.debug(
-                    f"name:{symbol.name} size:{symbol['st_size']} value:{hex(symbol['st_value'])}"
-                )
+                if symbol.name in (
+                    "g_tcbinfo",
+                    "g_pidhash",
+                    "g_npidhash",
+                    "g_last_regs",
+                    "g_running_tasks",
+                ):
+                    self.symbol[symbol.name] = symbol
+                    logger.debug(
+                        f"name:{symbol.name} size:{symbol['st_size']} value:{hex(symbol['st_value'])}"
+                    )
 
         elf.close()
-
         return True
 
     def _parse_addr2line(self, addr2line: str, args: list, addr: str) -> str:
@@ -520,25 +522,30 @@ class GDBStub:
 
         self.threadinfo = []
         self.current_thread = 0
-        try:
-            self.parse_thread()
-            logger.debug(f"Have {len(self.threadinfo)} threads to debug.")
-            if len(self.threadinfo) == 0:
-                logger.critical(
-                    "Check if your coredump or raw file matches the ELF file"
-                )
-                sys.exit(1)
+        if elffile.load_symbol:
+            try:
+                self.parse_thread()
+                logger.debug(f"Have {len(self.threadinfo)} threads to debug.")
+                if len(self.threadinfo) == 0:
+                    logger.critical(
+                        "Check if your coredump or raw file matches the ELF file"
+                    )
+                    sys.exit(1)
 
-            if arch in reg_fix_value.keys():
-                self.regfix = True
-                logger.info(f"Current arch is {arch}, need reg index fix.")
+                if arch in reg_fix_value.keys():
+                    self.regfix = True
+                    logger.info(f"Current arch is {arch}, need reg index fix.")
 
-        except TypeError:
-            if not self.registers:
-                logger.critical(
-                    "Logfile, coredump, or rawfile do not contain register. Please check if the files are correct."
-                )
-                sys.exit(1)
+            except TypeError:
+                if not self.registers:
+                    logger.critical(
+                        "Logfile, coredump, or rawfile do not contain register,"
+                        "Please check if the files are correct."
+                    )
+
+                    stack_trace = traceback.format_exc()
+                    logger.debug(stack_trace)
+                    sys.exit(1)
 
     def get_gdb_packet(self):
         socket = self.socket
@@ -1002,6 +1009,15 @@ def arg_parser():
     )
 
     parser.add_argument(
+        "-s",
+        "--symbol",
+        action="store_true",
+        help="Analyze the symbol table in the ELF file, use in thread awareness"
+        "if use logfile input, this option will is false by default"
+        "if use rawfile or coredump input, this option will is true by default",
+    )
+
+    parser.add_argument(
         "--debug",
         action="store_true",
         default=False,
@@ -1096,7 +1112,12 @@ def main(args):
         log = DumpLogFile(None)
 
     elf = DumpELFFile(args.elffile)
-    elf.parse()
+
+    if args.symbol is False:
+        if args.rawfile or args.coredump:
+            args.symbol = True
+
+    elf.parse(args.symbol)
 
     if args.logfile is not None:
         elf.parse_addr2line(args.arch, args.addr2line, log.stack_data)
