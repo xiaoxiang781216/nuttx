@@ -343,6 +343,7 @@ void work_notifier_signal(enum work_evtype_e evtype,
    */
 
   flags = enter_critical_section();
+  sched_lock();
 
   /* Process the notification at the head of the pending list until the
    * pending list is empty
@@ -385,6 +386,7 @@ void work_notifier_signal(enum work_evtype_e evtype,
         }
     }
 
+  sched_unlock();
   leave_critical_section(flags);
 }
 
