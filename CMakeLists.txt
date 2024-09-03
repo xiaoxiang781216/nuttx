@@ -558,18 +558,16 @@ endif()
 get_property(ldscript GLOBAL PROPERTY LD_SCRIPT)
 
 # Pre-compile linker script
-if(DEFINED PREPROCES)
-  get_filename_component(LD_SCRIPT_NAME ${ldscript} NAME)
-  set(LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/${LD_SCRIPT_NAME}.tmp")
+get_filename_component(LD_SCRIPT_NAME ${ldscript} NAME)
+set(LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/${LD_SCRIPT_NAME}.tmp")
 
-  pre_compile_ldscript(${ldscript} ${LD_SCRIPT_TMP} ${NUTTX_CHIP_ABS_DIR}
-                       ${CMAKE_CURRENT_SOURCE_DIR})
+pre_compile_ldscript(${ldscript} ${LD_SCRIPT_TMP} ${NUTTX_CHIP_ABS_DIR}
+                     ${CMAKE_CURRENT_SOURCE_DIR})
 
-  add_custom_target(ldscript_tmp DEPENDS ${LD_SCRIPT_TMP})
-  add_dependencies(nuttx ldscript_tmp)
+add_custom_target(ldscript_tmp DEPENDS ${LD_SCRIPT_TMP})
+add_dependencies(nuttx ldscript_tmp)
 
-  set(ldscript ${LD_SCRIPT_TMP})
-endif()
+set(ldscript ${LD_SCRIPT_TMP})
 
 # Perform link
 
@@ -710,6 +708,16 @@ if(CONFIG_BUILD_PROTECTED)
   get_property(nuttx_apps_libs GLOBAL PROPERTY NUTTX_APPS_LIBRARIES)
 
   get_property(user_ldscript GLOBAL PROPERTY LD_SCRIPT_USER)
+
+  # Pre-compile linker script
+  get_filename_component(LD_SCRIPT_USER_NAME ${user_ldscript} NAME)
+  set(LD_SCRIPT_USER_TMP "${CMAKE_BINARY_DIR}/${LD_SCRIPT_USER_NAME}.tmp")
+  pre_compile_ldscript(${user_ldscript} ${LD_SCRIPT_USER_TMP}
+                       ${NUTTX_CHIP_ABS_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+  add_custom_target(user_ldscript_tmp DEPENDS ${LD_SCRIPT_USER_TMP})
+  add_dependencies(nuttx_user user_ldscript_tmp)
+  set(user_ldscript ${LD_SCRIPT_USER_TMP})
+
   list(TRANSFORM user_ldscript PREPEND "-Wl,--script=")
 
   execute_process(
@@ -718,13 +726,12 @@ if(CONFIG_BUILD_PROTECTED)
     OUTPUT_STRIP_TRAILING_WHITESPACE
     OUTPUT_VARIABLE nuttx_user_libgcc)
 
-  # reset link options for userspace to prevent sections from being accidentally
-  # deleted Toolchain link options
+  # reset link options that don't fit userspace
   get_target_property(nuttx_user_LINK_OPTIONS nuttx_user LINK_OPTIONS)
-  list(REMOVE_ITEM nuttx_user_LINK_OPTIONS "-Wl,--gc-sections")
   list(REMOVE_ITEM nuttx_user_LINK_OPTIONS "-Wl,--cref")
   list(REMOVE_ITEM nuttx_user_LINK_OPTIONS "-Wl,-Map=nuttx.map")
   list(REMOVE_ITEM nuttx_user_LINK_OPTIONS "-Wl,--entry=__start")
+  list(APPEND nuttx_user_LINK_OPTIONS "-Wl,-Map=nuttx_user.map")
   set_target_properties(nuttx_user PROPERTIES LINK_OPTIONS
                                               "${nuttx_user_LINK_OPTIONS}")
 
