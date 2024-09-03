@@ -109,6 +109,10 @@
 #define SW_XCPT_REGS        (SW_INT_REGS + SW_FPU_REGS)
 #define SW_XCPT_SIZE        (4 * SW_XCPT_REGS)
 
+#if SW_XCPT_SIZE % 8 != 0
+#  error "SW_XCPT_SIZE must be a multiple of 8"
+#endif
+
 /* On entry into an IRQ, the hardware automatically saves the following
  * registers on the stack in this (address) order:
  */
