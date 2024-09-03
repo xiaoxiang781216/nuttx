@@ -776,7 +776,7 @@ ssize_t psock_tcp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
            */
 
           info.tc_conn = conn;
-          info.tc_cb   = state.ir_cb;
+          info.tc_cb   = &state.ir_cb;
           info.tc_sem  = &state.ir_sem;
           tls_cleanup_push(tls_get_info(), tcp_callback_cleanup, &info);
 
