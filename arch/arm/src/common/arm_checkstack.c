@@ -59,11 +59,8 @@
 #if defined(CONFIG_ARCH_INTERRUPTSTACK) && CONFIG_ARCH_INTERRUPTSTACK > 3
 void arm_color_intstack(void)
 {
-#ifdef CONFIG_SMP
-  arm_stack_color((void *)up_get_intstackbase(this_cpu()), INTSTACK_SIZE);
-#else
-  arm_stack_color((void *)g_intstackalloc, INTSTACK_SIZE);
-#endif
+  arm_stack_color((void *)up_get_intstackbase(this_cpu()),
+                  INTSTACK_SIZE);
 }
 #endif
 

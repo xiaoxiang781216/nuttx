@@ -49,7 +49,8 @@
 
 /* The available region bitmap */
 
-static unsigned int g_mpu_region;
+static DEFINE_PER_CPU_BSS_BMP(unsigned int, g_mpu_region);
+#define g_mpu_region this_cpu_var_bmp(g_mpu_region)
 
 /****************************************************************************
  * Private Functions

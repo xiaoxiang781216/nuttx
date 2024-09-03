@@ -29,6 +29,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
+#include <nuttx/init.h>
 #include <arch/irq.h>
 
 #include "init/init.h"
@@ -39,6 +40,8 @@
 #ifdef CONFIG_ARM_MPU
 #  include "mpu.h"
 #endif
+#include "smp.h"
+#include "qemu_userspace.h"
 
 /* Symbols defined via the linker script */
 
@@ -69,7 +72,6 @@ extern uint8_t _vector_start[]; /* Beginning of vector block */
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SMP
 void arm_cpu_boot(int cpu)
 {
   /* Initialize the FPU */
@@ -90,14 +92,35 @@ void arm_cpu_boot(int cpu)
 
   arm_enable_smp(cpu);
 
+#ifdef CONFIG_PERCPU_SECTION
+  memcpy((void *)((uintptr_t)_sdata_percpu + PERCPU_OFFSET * cpu),
+         (void *)_ldata_percpu,
+         (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
+  memset((void *)(uintptr_t)_sbss_percpu + PERCPU_OFFSET * cpu,
+         0, (uintptr_t)_ebss_percpu - (uintptr_t)_sbss_percpu);
+#endif
+
   /* Initialize the Generic Interrupt Controller (GIC) for CPUn (n != 0) */
 
   up_irqinitialize();
 
-  arm_timer_secondary_init(0);
-
   /* Then transfer control to the IDLE task */
 
+#ifdef CONFIG_BMP
+#  undef g_nx_initstate
+  while (OSINIT_OS_INITIALIZING());
+
+#  ifdef CONFIG_BUILD_PROTECTED
+  qemu_userspace();
+#  endif
+
+  nx_start();
+#else
+
+  /* Only SMP need secondary timer, for bmp cpu-N use timer as main timer */
+
+  arm_timer_secondary_init(0);
+
   nx_idle_trampoline();
+#endif
 }
-#endif /* CONFIG_SMP */
