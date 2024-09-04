@@ -181,6 +181,7 @@ int up_relocateadd(const Elf64_Rela *rel, const Elf64_Sym *sym,
 
         *(uint32_t *)addr = value;
         break;
+#ifdef CONFIG_ARCH_ADDRENV
       case R_X86_64_REX_GOTPCRELX:
 
         /* Handle like R_X86_64_PC32 but with load offset */
@@ -199,6 +200,7 @@ int up_relocateadd(const Elf64_Rela *rel, const Elf64_Sym *sym,
         *(uint8_t *)(addr - 2) = OPCODE_LEA;
         *(uint32_t *)(addr)    = value;
         break;
+#endif
       default:
         berr("ERROR: Unsupported relocation: %d\n", relotype);
         return -EINVAL;
