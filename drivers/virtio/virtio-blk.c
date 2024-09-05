@@ -161,9 +161,9 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
 {
   FAR struct virtio_device *vdev = priv->vdev;
   FAR struct virtqueue *vq = vdev->vrings_info[0].vq;
-  FAR struct virtqueue_buf vb[3];
-  struct virtio_blk_resp_s resp;
-  struct virtio_blk_req_s req;
+  FAR struct virtio_blk_resp_s *resp;
+  FAR struct virtio_blk_req_s *req;
+  struct virtqueue_buf vb[3];
   irqstate_t flags;
   sem_t respsem;
   ssize_t ret;
@@ -171,26 +171,43 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
 
   nxsem_init(&respsem, 0, 0);
 
-  /* Build the block request */
-
-  req.type     = write ? VIRTIO_BLK_T_OUT : VIRTIO_BLK_T_IN;
-  req.reserved = 0;
-  req.sector   = startsector * priv->block_size >> VIRTIO_BLK_SECTOR_BITS;
-  resp.status  = VIRTIO_BLK_S_IOERR;
-
   /* Fill the virtqueue buffer:
    * Buffer 0: the block out header;
    * Buffer 1: the read/write buffer;
    * Buffer 2: the block in header, return the status.
    */
 
-  vb[0].buf = &req;
   vb[0].len = VIRTIO_BLK_REQ_HEADER_SIZE;
-  vb[1].buf = buffer;
   vb[1].len = nsectors * priv->block_size;
-  vb[2].buf = &resp;
   vb[2].len = VIRTIO_BLK_RESP_HEADER_SIZE;
-  readnum = write ? 2 : 1;
+  req = virtio_alloc_buf(vdev, vb[0].len + vb[1].len + vb[2].len, 16);
+  if (req == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  vb[0].buf = req;
+  vb[1].buf = vb[0].buf + vb[0].len;
+  vb[2].buf = vb[1].buf + vb[1].len;
+  resp = vb[2].buf;
+
+  if (write)
+    {
+      readnum = 2;
+      req->type = VIRTIO_BLK_T_OUT;
+      memcpy(vb[1].buf, buffer, vb[1].len);
+    }
+  else
+    {
+      readnum = 1;
+      req->type = VIRTIO_BLK_T_IN;
+    }
+
+  /* Build the block request */
+
+  req->reserved = 0;
+  req->sector   = startsector * priv->block_size >> VIRTIO_BLK_SECTOR_BITS;
+  resp->status  = VIRTIO_BLK_S_IOERR;
 
   if (up_interrupt_context())
     {
@@ -221,11 +238,16 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
   /* Wait for the request completion */
 
   virtio_blk_wait_complete(vq, &respsem);
-
-  if (resp.status != VIRTIO_BLK_S_OK)
+  if (resp->status != VIRTIO_BLK_S_OK)
     {
       vrterr("%s Error\n", write ? "Write" : "Read");
       ret = -EIO;
+      goto err;
+    }
+
+  if (!write)
+    {
+      memcpy(buffer, vb[1].buf, vb[1].len);
     }
 
 err:
@@ -234,6 +256,7 @@ err:
       virtqueue_enable_cb_lock(vq, &priv->lock);
     }
 
+  virtio_free_buf(vdev, req);
   return ret >= 0 ? nsectors : ret;
 }
 
@@ -346,26 +369,33 @@ static int virtio_blk_flush(FAR struct virtio_blk_priv_s *priv)
 {
   FAR struct virtio_device *vdev = priv->vdev;
   FAR struct virtqueue *vq = vdev->vrings_info[0].vq;
-  FAR struct virtqueue_buf vb[2];
-  struct virtio_blk_resp_s resp;
-  struct virtio_blk_req_s req;
+  FAR struct virtio_blk_resp_s *resp;
+  FAR struct virtio_blk_req_s *req;
+  struct virtqueue_buf vb[2];
   irqstate_t flags;
   sem_t respsem;
   int ret;
 
   nxsem_init(&respsem, 0, 0);
 
+  vb[0].len = VIRTIO_BLK_REQ_HEADER_SIZE;
+  vb[1].len = VIRTIO_BLK_RESP_HEADER_SIZE;
+  req = virtio_alloc_buf(vdev, vb[0].len + vb[1].len, 16);
+  if (req == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  vb[0].buf = req;
+  vb[1].buf = vb[0].buf + vb[0].len;
+  resp = vb[1].buf;
+
   /* Build the block request */
 
-  req.type     = VIRTIO_BLK_T_FLUSH;
-  req.reserved = 0;
-  req.sector   = 0;
-  resp.status  = VIRTIO_BLK_S_IOERR;
-
-  vb[0].buf = &req;
-  vb[0].len = VIRTIO_BLK_REQ_HEADER_SIZE;
-  vb[1].buf = &resp;
-  vb[1].len = VIRTIO_BLK_RESP_HEADER_SIZE;
+  req->type     = VIRTIO_BLK_T_FLUSH;
+  req->reserved = 0;
+  req->sector   = 0;
+  resp->status  = VIRTIO_BLK_S_IOERR;
 
   flags = spin_lock_irqsave(&priv->lock);
   ret = virtqueue_add_buffer(vq, vb, 1, 1, &respsem);
@@ -390,12 +420,13 @@ static int virtio_blk_flush(FAR struct virtio_blk_priv_s *priv)
   /* Wait for the request completion */
 
   nxsem_wait_uninterruptible(&respsem);
-  if (resp.status != VIRTIO_BLK_S_OK)
+  if (resp->status != VIRTIO_BLK_S_OK)
     {
       vrterr("Flush Error\n");
       ret = -EIO;
     }
 
+  virtio_free_buf(vdev, vb[0].buf);
   return ret;
 }
 
