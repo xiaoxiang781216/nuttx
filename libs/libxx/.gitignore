@@ -1,11 +1,9 @@
 /uClibc++
 /libcxx
 /libcxxabi
-/libsupc++
+/libstdc++
 /libcxx-*.src.tar.xz
 /libcxxabi-*.src.tar.xz
-/libsupc++-*.src.tar.xz
 /etl
 /.libcxx_patch
 /.libcxxabi_patch
-/.libsupc++_patch
