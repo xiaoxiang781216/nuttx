@@ -81,6 +81,18 @@ extern "C"
 FAR char **backtrace_symbols(FAR void *const *buffer, int size);
 void backtrace_symbols_fd(FAR void *const *buffer, int size, int fd);
 
+#  if CONFIG_LIBC_BACKTRACE_BUFFSIZE > 0
+int backtrace_record(int skip);
+int backtrace_remove(int index);
+FAR void **backtrace_get(int index, FAR int *size);
+void backtrace_dump(void);
+#  else
+#    define backtrace_record(skip) (-ENOSYS)
+#    define backtrace_remove(index) (-ENOSYS)
+#    define backtrace_get(index, size) (*(size)=0)
+#    define backtrace_dump()
+#  endif
+
 #undef EXTERN
 #if defined(__cplusplus)
 }
