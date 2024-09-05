@@ -467,7 +467,6 @@ ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
 else ifeq ($(CONFIG_ARCH_TOOLCHAIN_GHS),y)
   GHS_ROOT_PATH = $(shell which $(CC) | awk -F '/[^/]*$$' '{print $$1}')
   COMPILER_RT_LIB := -l$(GHS_ROOT_PATH)/lib/thumb2/libarch
-  COMPILER_RT_LIB += -l$(GHS_ROOT_PATH)/lib/thumb2/libsys
   ifeq ($(CONFIG_ARCH_FPU),y)
     ifeq ($(CONFIG_ARM_FPU_ABI_SOFT),y)
         COMPILER_RT_LIB += -l$(GHS_ROOT_PATH)/lib/thumb2/libind_sf
