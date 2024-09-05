@@ -31,6 +31,7 @@ set(SRCS
     arm_initialstate.c
     arm_itm.c
     arm_memfault.c
+    arm_perf.c
     arm_schedulesigaction.c
     arm_sigdeliver.c
     arm_svcall.c
@@ -40,10 +41,6 @@ set(SRCS
     arm_usagefault.c
     arm_vectors.c
     arm_dbgmonitor.c)
-
-if(CONFIG_ARCH_PERF_EVENTS)
-  list(APPEND SRCS arm_perf.c)
-endif()
 
 if(CONFIG_ARMV7M_SYSTICK)
   list(APPEND SRCS arm_systick.c)

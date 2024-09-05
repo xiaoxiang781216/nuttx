@@ -46,11 +46,8 @@ list(
   arm_syscall.c
   arm_tcbinfo.c
   arm_undefinedinsn.c
+  arm_perf.c
   cp15_cacheops.c)
-
-if(CONFIG_ARCH_PERF_EVENTS)
-  list(APPEND SRCS arm_perf.c)
-endif()
 
 if(CONFIG_ARMV7A_GICv2M)
   list(APPEND SRCS arm_gicv2m.c)
@@ -75,6 +72,10 @@ if(CONFIG_PAGING)
     arm_pghead.S)
 else()
   list(APPEND SRCS arm_head.S)
+endif()
+
+if(CONFIG_ARCH_TRUSTZONE_SECURE)
+  list(APPEND SRCS arm_sm_runtime.c arm_sm_vector.S)
 endif()
 
 if(CONFIG_ARCH_ADDRENV)
