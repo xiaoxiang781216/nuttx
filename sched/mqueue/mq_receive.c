@@ -157,6 +157,18 @@ ssize_t file_mq_timedreceive(FAR struct file *mq, FAR char *msg,
 
   DEBUGASSERT(up_interrupt_context() == false);
 
+  /* Verify the input parameters */
+
+  if (abstime && (abstime->tv_nsec < 0 || abstime->tv_nsec >= 1000000000))
+    {
+      return -EINVAL;
+    }
+
+  if (mq == NULL)
+    {
+      return -EINVAL;
+    }
+
 #ifdef CONFIG_DEBUG_FEATURES
   /* Verify the input parameters and, in case of an error, set
    * errno appropriately.

@@ -292,7 +292,17 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
   irqstate_t flags;
   int ret = 0;
 
-  msgq = mq->f_inode->i_private;
+  /* Verify the input parameters */
+
+  if (abstime && (abstime->tv_nsec < 0 || abstime->tv_nsec >= 1000000000))
+    {
+      return -EINVAL;
+    }
+
+  if (mq == NULL)
+    {
+      return -EINVAL;
+    }
 
 #ifdef CONFIG_DEBUG_FEATURES
   /* Verify the input parameters on any failures to verify. */
@@ -303,6 +313,8 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
       return ret;
     }
 #endif
+
+  msgq = mq->f_inode->i_private;
 
   /* Pre-allocate a message structure */
 
