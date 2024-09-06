@@ -65,7 +65,6 @@ CPPSRCS += stdlib_exception.cpp stdlib_new_delete.cpp stdlib_stdexcept.cpp stdli
 # Internal files
 CPPSRCS += abort_message.cpp fallback_malloc.cpp private_typeinfo.cpp
 
-# Always compile libcxxabi with exception
 ifeq ($(CONFIG_CXX_EXCEPTION),y)
 CPPSRCS += cxa_exception.cpp cxa_personality.cpp
 endif

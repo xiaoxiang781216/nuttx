@@ -80,7 +80,6 @@ list(APPEND SRCS stdlib_exception.cpp stdlib_new_delete.cpp
 # Internal files
 list(APPEND SRCS abort_message.cpp fallback_malloc.cpp private_typeinfo.cpp)
 
-# Always compile libcxxabi with exception
 if(CONFIG_CXX_EXCEPTION)
   list(APPEND SRCS cxa_exception.cpp cxa_personality.cpp)
 endif()
