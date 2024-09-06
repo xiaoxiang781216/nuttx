@@ -558,16 +558,18 @@ endif()
 get_property(ldscript GLOBAL PROPERTY LD_SCRIPT)
 
 # Pre-compile linker script
-get_filename_component(LD_SCRIPT_NAME ${ldscript} NAME)
-set(LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/${LD_SCRIPT_NAME}.tmp")
+if(NOT CONFIG_ARCH_SIM)
+  get_filename_component(LD_SCRIPT_NAME ${ldscript} NAME)
+  set(LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/${LD_SCRIPT_NAME}.tmp")
 
-pre_compile_ldscript(${ldscript} ${LD_SCRIPT_TMP} ${NUTTX_CHIP_ABS_DIR}
-                     ${CMAKE_CURRENT_SOURCE_DIR})
+  pre_compile_ldscript(${ldscript} ${LD_SCRIPT_TMP} ${NUTTX_CHIP_ABS_DIR}
+                       ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_custom_target(ldscript_tmp DEPENDS ${LD_SCRIPT_TMP})
-add_dependencies(nuttx ldscript_tmp)
+  add_custom_target(ldscript_tmp DEPENDS ${LD_SCRIPT_TMP})
+  add_dependencies(nuttx ldscript_tmp)
 
-set(ldscript ${LD_SCRIPT_TMP})
+  set(ldscript ${LD_SCRIPT_TMP})
+endif()
 
 # Perform link
 
