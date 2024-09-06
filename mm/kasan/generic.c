@@ -90,7 +90,8 @@ extern const unsigned char g_globals_region[];
  ****************************************************************************/
 
 static FAR uintptr_t *kasan_mem_to_shadow(FAR const void *ptr, size_t size,
-                                          unsigned int *bit)
+                                          FAR unsigned int *bit,
+                                          FAR size_t *align)
 {
   FAR struct kasan_region_s *region;
   uintptr_t addr = (uintptr_t)ptr;
@@ -101,6 +102,7 @@ static FAR uintptr_t *kasan_mem_to_shadow(FAR const void *ptr, size_t size,
         {
           DEBUGASSERT(addr + size <= region->end);
           addr -= region->begin;
+          *align = KASAN_SHADOW_SCALE;
           addr /= KASAN_SHADOW_SCALE;
           *bit  = addr % KASAN_BITS_PER_WORD;
           return &region->shadow[addr / KASAN_BITS_PER_WORD];
@@ -116,6 +118,7 @@ static FAR uintptr_t *kasan_mem_to_shadow(FAR const void *ptr, size_t size,
         {
           DEBUGASSERT(addr + size <= region->end);
           addr -= region->begin;
+          *align = KASAN_GLOBAL_SHADOW_SCALE;
           addr /= KASAN_GLOBAL_SHADOW_SCALE;
           *bit  = addr % KASAN_BITS_PER_WORD;
           return &region->shadow[addr / KASAN_BITS_PER_WORD];
@@ -134,8 +137,9 @@ static void kasan_set_poison(FAR const void *addr, size_t size,
   unsigned int bit;
   unsigned int nbit;
   uintptr_t mask;
+  size_t align;
 
-  p = kasan_mem_to_shadow(addr, size, &bit);
+  p = kasan_mem_to_shadow(addr, size, &bit, &align);
   if (p == NULL)
     {
       return;
@@ -143,7 +147,7 @@ static void kasan_set_poison(FAR const void *addr, size_t size,
 
   nbit = KASAN_BITS_PER_WORD - bit % KASAN_BITS_PER_WORD;
   mask = KASAN_FIRST_WORD_MASK(bit);
-  size /= KASAN_SHADOW_SCALE;
+  size /= align;
 
   flags = spin_lock_irqsave(&g_lock);
   while (size >= nbit)
@@ -195,22 +199,23 @@ bool kasan_is_poisoned(FAR const void *addr, size_t size)
   unsigned int bit;
   unsigned int nbit;
   uintptr_t mask;
+  size_t align;
 
-  p = kasan_mem_to_shadow(addr, size, &bit);
+  p = kasan_mem_to_shadow(addr, size, &bit, &align);
   if (p == NULL)
     {
       return false;
     }
 
-  if (size <= KASAN_SHADOW_SCALE)
+  if (size <= align)
     {
       return ((*p >> bit) & 1);
     }
 
   nbit = KASAN_BITS_PER_WORD - bit % KASAN_BITS_PER_WORD;
   mask = KASAN_FIRST_WORD_MASK(bit);
-  size = ALIGN_UP(size, KASAN_SHADOW_SCALE);
-  size /= KASAN_SHADOW_SCALE;
+  size = ALIGN_UP(size, align);
+  size /= align;
 
   while (size >= nbit)
     {
