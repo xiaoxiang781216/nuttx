@@ -220,6 +220,7 @@ static int elf_loadbinary(FAR struct binary_s *binp,
         }
 
       dspaces->region = (FAR void *)loadinfo.shdr[loadinfo.gotindex].sh_addr;
+      dspaces->crefs = 1;
       binp->picbase = (FAR void *)dspaces;
     }
 #endif
