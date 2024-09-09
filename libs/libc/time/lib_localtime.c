@@ -296,8 +296,8 @@ static FAR const char *g_utc = g_etc_utc + sizeof("Etc/") - 1;
 static char g_lcl_tzname[MY_TZNAME_MAX + 1];
 static int g_lcl_isset;
 static int g_gmt_isset;
-static FAR struct state_s *g_lcl_ptr;
-static FAR struct state_s *g_gmt_ptr;
+static FAR struct state_s g_lcl_st;
+static FAR struct state_s g_gmt_st;
 static rmutex_t g_lcl_lock = NXRMUTEX_INITIALIZER;
 static rmutex_t g_gmt_lock = NXRMUTEX_INITIALIZER;
 
@@ -523,7 +523,7 @@ static void scrub_abbrs(struct state_s *sp)
 
 static void settzname(void)
 {
-  FAR struct state_s * const sp = g_lcl_ptr;
+  FAR struct state_s * const sp = &g_lcl_st;
   int i;
 
   tzname[0] = tzname[1] = (FAR char *)g_wildabbr;
@@ -1919,7 +1919,7 @@ static FAR struct tm *localsub(FAR const time_t *timep,
   FAR struct tm *result;
   const time_t t = *timep;
 
-  sp = g_lcl_ptr;
+  sp = &g_lcl_st;
   if (sp == NULL)
     {
       return gmtsub(timep, offset, tmp);
@@ -2056,20 +2056,16 @@ static FAR struct tm *gmtsub(FAR const time_t *timep,
 
       if (!g_gmt_isset)
         {
-          g_gmt_ptr = lib_malloc(sizeof(*g_gmt_ptr));
-          if (g_gmt_ptr != NULL)
-            {
-              gmtload(g_gmt_ptr);
-              g_gmt_isset = 1;
-            }
+          gmtload(&g_gmt_st);
+          g_gmt_isset = 1;
         }
 
       tz_unlock(&g_gmt_lock);
     }
 
   tmp->tm_zone = ((FAR char *)(offset ? g_wildabbr :
-                               g_gmt_ptr ? g_gmt_ptr->chars : g_utc));
-  return timesub(timep, offset, g_gmt_ptr, tmp);
+                               g_gmt_st.chars));
+  return timesub(timep, offset, &g_gmt_st, tmp);
 }
 
 /* Return the number of leap years through the end of the given year
@@ -2547,7 +2543,7 @@ static time_t time2sub(FAR struct tm *tmp,
        */
 
       sp = (FAR const struct state_s *)
-        ((funcp == localsub) ? g_lcl_ptr : g_gmt_ptr);
+        ((funcp == localsub) ? &g_lcl_st : &g_gmt_st);
       if (sp == NULL)
         {
           return -1;
@@ -2670,7 +2666,7 @@ static time_t time1(FAR struct tm *tmp,
    * type they need.
    */
 
-  sp = ((funcp == localsub) ? g_lcl_ptr : g_gmt_ptr);
+  sp = ((funcp == localsub) ? &g_lcl_st : &g_gmt_st);
   if (sp == NULL)
     {
       return -1;
@@ -2731,35 +2727,37 @@ static time_t time1(FAR struct tm *tmp,
 
 static int zoneinit(FAR const char *name)
 {
+  FAR struct state_s *lcl_ptr = &g_lcl_st;
+
   if (name != NULL && name[0] == '\0')
     {
       /* User wants it fast rather than right */
 
-      g_lcl_ptr->leapcnt = 0; /* so, we're off a little */
-      g_lcl_ptr->timecnt = 0;
-      g_lcl_ptr->typecnt = 0;
-      g_lcl_ptr->charcnt = 0;
-      g_lcl_ptr->goback  = 0;
-      g_lcl_ptr->goahead = 0;
-      init_ttinfo(&g_lcl_ptr->ttis[0], 0, FALSE, 0);
-      strlcpy(g_lcl_ptr->chars, g_utc, sizeof(g_lcl_ptr->chars));
-      g_lcl_ptr->defaulttype = 0;
+      lcl_ptr->leapcnt = 0; /* so, we're off a little */
+      lcl_ptr->timecnt = 0;
+      lcl_ptr->typecnt = 0;
+      lcl_ptr->charcnt = 0;
+      lcl_ptr->goback  = 0;
+      lcl_ptr->goahead = 0;
+      init_ttinfo(&lcl_ptr->ttis[0], 0, FALSE, 0);
+      strlcpy(lcl_ptr->chars, g_utc, sizeof(lcl_ptr->chars));
+      lcl_ptr->defaulttype = 0;
       return 0;
     }
   else
     {
       int err;
 
-      err = tzload(name, g_lcl_ptr, TRUE);
+      err = tzload(name, lcl_ptr, TRUE);
       if (err != 0 && name != NULL && name[0] == ':' &&
-          tzparse(name, g_lcl_ptr, NULL) != 0)
+          tzparse(name, lcl_ptr, NULL) != 0)
         {
           err = 0;
         }
 
       if (err == 0)
         {
-          scrub_abbrs(g_lcl_ptr);
+          scrub_abbrs(lcl_ptr);
         }
 
       return err;
@@ -2792,15 +2790,6 @@ void tzset(void)
 
   tz_lock(&g_lcl_lock);
 
-  if (g_lcl_ptr == NULL)
-    {
-      g_lcl_ptr = lib_malloc(sizeof(*g_lcl_ptr));
-      if (g_lcl_ptr == NULL)
-        {
-          goto tzname;
-        }
-    }
-
   if (zoneinit(name) != 0)
     {
       zoneinit("");
@@ -2808,7 +2797,6 @@ void tzset(void)
 
   strlcpy(g_lcl_tzname, name, sizeof(g_lcl_tzname));
 
-tzname:
   settzname();
   g_lcl_isset = 1;
   tz_unlock(&g_lcl_lock);
