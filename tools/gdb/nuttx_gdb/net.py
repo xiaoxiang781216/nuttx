@@ -1,5 +1,5 @@
 ############################################################################
-# tools/gdb/net.py
+# tools/gdb/nuttx_gdb/net.py
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -19,8 +19,9 @@
 ############################################################################
 
 import gdb
-import utils
-from lists import NxDQueue, NxSQueue
+
+from . import utils
+from .lists import NxDQueue, NxSQueue
 
 socket = utils.import_check(
     "socket", errmsg="No socket module found, please try gdb-multiarch instead.\n"
@@ -108,7 +109,8 @@ class NetStats(gdb.Command):
     """
 
     def __init__(self):
-        super().__init__("netstats", gdb.COMMAND_USER)
+        if utils.get_symbol_value("CONFIG_NET") and socket:
+            super().__init__("netstats", gdb.COMMAND_USER)
 
     def iob_stats(self):
         try:
@@ -242,7 +244,3 @@ class NetStats(gdb.Command):
         if utils.get_symbol_value("CONFIG_NET_UDP") and "udp" in args:
             self.udp_stats()
             gdb.write("\n")
-
-
-if utils.get_symbol_value("CONFIG_NET") and socket:
-    NetStats()

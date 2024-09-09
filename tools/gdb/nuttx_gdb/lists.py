@@ -1,5 +1,5 @@
 ############################################################################
-# tools/gdb/lists.py
+# tools/gdb/nuttx_gdb/lists.py
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -21,7 +21,8 @@
 import argparse
 
 import gdb
-import utils
+
+from . import utils
 
 list_node_type = utils.lookup_type("struct list_node")
 sq_queue_type = utils.lookup_type("sq_queue_t")
@@ -307,7 +308,3 @@ class ForeachListEntry(gdb.Command):
         for i, entry in enumerate(list):
             entry = entry.dereference()
             gdb.write(f"{i}: {entry.format_string(styling=True)}\n")
-
-
-ListCheck()
-ForeachListEntry()

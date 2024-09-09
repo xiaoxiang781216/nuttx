@@ -1,5 +1,5 @@
 ############################################################################
-# tools/gdb/dmesg.py
+# tools/gdb/nuttx_gdb/dmesg.py
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -19,14 +19,16 @@
 ############################################################################
 
 import gdb
-import utils
+
+from . import utils
 
 CONFIG_RAMLOG_SYSLOG = utils.get_symbol_value("CONFIG_RAMLOG_SYSLOG")
 
 
 class Dmesg(gdb.Command):
     def __init__(self):
-        super().__init__("dmesg", gdb.COMMAND_USER)
+        if CONFIG_RAMLOG_SYSLOG:
+            super().__init__("dmesg", gdb.COMMAND_USER)
 
     def invoke(self, args, from_tty):
         sysdev = utils.gdb_eval_or_none("g_sysdev")
@@ -43,7 +45,3 @@ class Dmesg(gdb.Command):
         clean_data = bytes(buf).replace(b"\x00", "␀".encode("utf-8"))
         gdb.write(clean_data.decode("utf-8"))
         gdb.write("\n")
-
-
-if CONFIG_RAMLOG_SYSLOG:
-    Dmesg()

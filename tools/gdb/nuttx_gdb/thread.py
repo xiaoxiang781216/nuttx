@@ -1,5 +1,5 @@
 ############################################################################
-# tools/gdb/thread.py
+# tools/gdb/nuttx_gdb/thread.py
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -23,12 +23,20 @@ import re
 from enum import Enum, auto
 
 import gdb
-import utils
-from stack import Stack
+
+from . import utils
+from .stack import Stack
 
 UINT16_MAX = 0xFFFF
 SEM_TYPE_MUTEX = 4
 TSTATE_TASK_RUNNING = utils.get_symbol_value("TSTATE_TASK_RUNNING")
+CONFIG_SMP_NCPUS = utils.get_symbol_value("CONFIG_SMP_NCPUS") or 1
+
+
+def is_thread_command_supported():
+    # Check if the native thread command is available by compare the number of threads.
+    # It should have at least CONFIG_SMP_NCPUS of idle threads.
+    return len(gdb.selected_inferior().threads()) > CONFIG_SMP_NCPUS
 
 
 class Registers:
@@ -205,6 +213,8 @@ class Nxinfothreads(gdb.Command):
 
     def __init__(self):
         super().__init__("info nxthreads", gdb.COMMAND_USER)
+        if not is_thread_command_supported():
+            gdb.execute("define info threads\n info nxthreads \n end\n")
 
     def invoke(self, args, from_tty):
         npidhash = gdb.parse_and_eval("g_npidhash")
@@ -296,6 +306,8 @@ class Nxthread(gdb.Command):
 
     def __init__(self):
         super().__init__("nxthread", gdb.COMMAND_USER)
+        if not is_thread_command_supported():
+            gdb.execute("define thread\n nxthread \n end\n")
 
     def invoke(self, args, from_tty):
         npidhash = gdb.parse_and_eval("g_npidhash")
@@ -373,6 +385,11 @@ class Nxcontinue(gdb.Command):
 
     def __init__(self):
         super().__init__("nxcontinue", gdb.COMMAND_USER)
+        if not is_thread_command_supported():
+            gdb.execute("define c\n nxcontinue \n end\n")
+            gdb.write(
+                "\n\x1b[31;1m if use thread command, please don't use 'continue', use 'c' instead !!!\x1b[m\n"
+            )
 
     def invoke(self, args, from_tty):
         g_registers.restore()
@@ -384,6 +401,11 @@ class Nxstep(gdb.Command):
 
     def __init__(self):
         super().__init__("nxstep", gdb.COMMAND_USER)
+        if not is_thread_command_supported():
+            gdb.execute("define s\n nxstep \n end\n")
+            gdb.write(
+                "\x1b[31;1m if use thread command, please don't use 'step', use 's' instead !!!\x1b[m\n"
+            )
 
     def invoke(self, args, from_tty):
         g_registers.restore()
@@ -635,36 +657,3 @@ class DeadLock(gdb.Command):
             gdb.write("No deadlock detected.")
 
         gdb.write("\n")
-
-
-def register_commands():
-    DeadLock()
-    SetRegs()
-    Ps()
-    Nxcontinue()
-    Nxinfothreads()
-    Nxstep()
-    Nxthread()
-
-    # Use custom command for thread if current target does not support it.
-    # The recognized threads count is less than or equal to the number of CPUs in this case.
-    # For coredump and gdb-stub, use native thread commands.
-    ncpus = utils.get_symbol_value("CONFIG_SMP_NCPUS") or 1
-    nthreads = len(gdb.selected_inferior().threads())
-    if nthreads <= ncpus:
-        # Native threads command is not available, override the threads command
-        gdb.execute("define info threads\n info nxthreads \n end\n")
-        gdb.execute("define thread\n nxthread \n end\n")
-
-        # We can't use a user command to rename continue it will recursion
-        gdb.execute("define c\n nxcontinue \n end\n")
-        gdb.execute("define s\n nxstep \n end\n")
-        gdb.write(
-            "\n\x1b[31;1m if use thread command, please don't use 'continue', use 'c' instead !!!\x1b[m\n"
-        )
-        gdb.write(
-            "\x1b[31;1m if use thread command, please don't use 'step', use 's' instead !!!\x1b[m\n"
-        )
-
-
-register_commands()

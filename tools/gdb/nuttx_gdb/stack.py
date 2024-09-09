@@ -1,5 +1,5 @@
 ############################################################################
-# tools/gdb/stack.py
+# tools/gdb/nuttx_gdb/stack.py
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -21,7 +21,8 @@
 import traceback
 
 import gdb
-import utils
+
+from . import utils
 
 STACK_COLORATION_PATTERN = utils.get_symbol_value(
     "STACK_COLOR", locspec="up_create_stack"
@@ -215,6 +216,3 @@ class StackUsage(gdb.Command):
                 continue
 
             self.format_print(pid, stack)
-
-
-StackUsage()

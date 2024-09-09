@@ -1,5 +1,5 @@
 ############################################################################
-# tools/gdb/memdump.py
+# tools/gdb/nuttx_gdb/memdump.py
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -23,9 +23,10 @@ import bisect
 import time
 
 import gdb
-import utils
-from lists import NxSQueue
-from utils import get_long_type, get_symbol_value, lookup_type, read_ulong
+
+from . import utils
+from .lists import NxSQueue
+from .utils import get_long_type, get_symbol_value, lookup_type, read_ulong
 
 MM_ALLOC_BIT = 0x1
 MM_PREVFREE_BIT = 0x2
@@ -1012,9 +1013,3 @@ class Memfrag(gdb.Command):
             f"heap size: {heapsize}, free size: {freesize}, uordblks:"
             f"{info.__len__()} largest block: {info[0]['size']} \n"
         )
-
-
-Memfrag()
-Memdump()
-Memleak()
-Memmap()

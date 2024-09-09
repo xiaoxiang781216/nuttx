@@ -1,5 +1,5 @@
 ############################################################################
-# tools/gdb/gcore.py
+# tools/gdb/nuttx_gdb/gcore.py
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -23,7 +23,8 @@ import os
 import shutil
 
 import gdb
-import utils
+
+from . import utils
 
 
 def create_file_with_size(filename, size):
@@ -131,6 +132,3 @@ class NXGcore(gdb.Command):
         tmpfile.close()
 
         print(f"Please run gdbserver.py to parse {corefile}")
-
-
-NXGcore()
