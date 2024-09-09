@@ -45,6 +45,7 @@
 
 #include "inode/inode.h"
 #include "hostfs.h"
+#include "fs_heap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -270,7 +271,7 @@ static int hostfs_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Allocate memory for the open file */
 
-  hf = kmm_malloc(sizeof(*hf) + strlen(relpath));
+  hf = fs_heap_malloc(sizeof(*hf) + strlen(relpath));
   if (hf == NULL)
     {
       ret = -ENOMEM;
@@ -329,7 +330,7 @@ static int hostfs_open(FAR struct file *filep, FAR const char *relpath,
   goto errout_with_lock;
 
 errout_with_buffer:
-  kmm_free(hf);
+  fs_heap_free(hf);
 
 errout_with_lock:
   nxmutex_unlock(&g_lock);
@@ -423,7 +424,7 @@ static int hostfs_close(FAR struct file *filep)
   /* Now free the pointer */
 
   filep->f_priv = NULL;
-  kmm_free(hf);
+  fs_heap_free(hf);
 
 okout:
   nxmutex_unlock(&g_lock);
@@ -854,7 +855,7 @@ static int hostfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
   /* Recover our private data from the inode instance */
 
   fs = mountpt->i_private;
-  hdir = kmm_zalloc(sizeof(struct hostfs_dir_s));
+  hdir = fs_heap_zalloc(sizeof(struct hostfs_dir_s));
   if (hdir == NULL)
     {
       return -ENOMEM;
@@ -889,7 +890,7 @@ errout_with_lock:
   nxmutex_unlock(&g_lock);
 
 errout_with_hdir:
-  kmm_free(hdir);
+  fs_heap_free(hdir);
   return ret;
 }
 
@@ -927,7 +928,7 @@ static int hostfs_closedir(FAR struct inode *mountpt,
   host_closedir(hdir->dir);
 
   nxmutex_unlock(&g_lock);
-  kmm_free(hdir);
+  fs_heap_free(hdir);
   return OK;
 }
 
@@ -1037,7 +1038,7 @@ static int hostfs_bind(FAR struct inode *blkdriver, FAR const void *data,
   /* Create an instance of the mountpt state structure */
 
   fs = (FAR struct hostfs_mountpt_s *)
-    kmm_zalloc(sizeof(struct hostfs_mountpt_s));
+    fs_heap_zalloc(sizeof(struct hostfs_mountpt_s));
 
   if (fs == NULL)
     {
@@ -1051,7 +1052,7 @@ static int hostfs_bind(FAR struct inode *blkdriver, FAR const void *data,
   options = strdup(data);
   if (!options)
     {
-      kmm_free(fs);
+      fs_heap_free(fs);
       return -ENOMEM;
     }
 
@@ -1073,7 +1074,7 @@ static int hostfs_bind(FAR struct inode *blkdriver, FAR const void *data,
   ret = nxmutex_lock(&g_lock);
   if (ret < 0)
     {
-      kmm_free(fs);
+      fs_heap_free(fs);
       return ret;
     }
 
@@ -1147,7 +1148,7 @@ static int hostfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
     }
 
   nxmutex_unlock(&g_lock);
-  kmm_free(fs);
+  fs_heap_free(fs);
   return ret;
 }
 

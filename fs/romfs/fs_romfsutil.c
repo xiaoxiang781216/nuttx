@@ -38,6 +38,7 @@
 #include <nuttx/fs/ioctl.h>
 
 #include "fs_romfs.h"
+#include "fs_heap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -407,7 +408,7 @@ static FAR struct romfs_sparenode_s *
 romfs_alloc_sparenode(uint32_t start, uint32_t end)
 {
   FAR struct romfs_sparenode_s *node;
-  node = kmm_malloc(sizeof(struct romfs_sparenode_s));
+  node = fs_heap_malloc(sizeof(struct romfs_sparenode_s));
   if (node == NULL)
     {
       ferr("romfs_alloc_sparenode: no memory\n");
@@ -473,7 +474,7 @@ static int romfs_alloc_spareregion(FAR struct list_node *list,
           /* Delete the node */
 
           list_delete(&node->node);
-          kmm_free(node);
+          fs_heap_free(node);
           return 0;
         }
       else if (start == node->start)
@@ -630,7 +631,7 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
   int ret;
 
   nsize = strlen(name);
-  nodeinfo = kmm_zalloc(sizeof(struct romfs_nodeinfo_s) + nsize);
+  nodeinfo = fs_heap_zalloc(sizeof(struct romfs_nodeinfo_s) + nsize);
   if (nodeinfo == NULL)
     {
       return -ENOMEM;
@@ -693,8 +694,8 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
         {
           FAR void *tmp;
 
-          tmp = kmm_realloc(nodeinfo->rn_child, (count + NODEINFO_NINCR) *
-                            sizeof(*nodeinfo->rn_child));
+          tmp = fs_heap_realloc(nodeinfo->rn_child, (count +
+                NODEINFO_NINCR) * sizeof(*nodeinfo->rn_child));
           if (tmp == NULL)
             {
               return -ENOMEM;
@@ -890,7 +891,7 @@ int romfs_hwconfigure(FAR struct romfs_mountpt_s *rm)
 
   /* Allocate the device cache buffer for normal sector accesses */
 
-  rm->rm_devbuffer = kmm_malloc(rm->rm_hwsectorsize);
+  rm->rm_devbuffer = fs_heap_malloc(rm->rm_hwsectorsize);
   if (!rm->rm_devbuffer)
     {
       return -ENOMEM;
@@ -936,7 +937,7 @@ void romfs_free_sparelist(FAR struct list_node *list)
   list_for_every_entry_safe(list, node, tmp, struct romfs_sparenode_s, node)
     {
       list_delete(&node->node);
-      kmm_free(node);
+      fs_heap_free(node);
     }
 }
 #endif
@@ -1064,7 +1065,8 @@ int romfs_fileconfigure(FAR struct romfs_mountpt_s *rm,
 
       /* Create a file buffer to support partial sector accesses */
 
-      rf->rf_buffer = kmm_malloc(rm->rm_hwsectorsize * rf->rf_ncachesector);
+      rf->rf_buffer = fs_heap_malloc(rm->rm_hwsectorsize *
+                      rf->rf_ncachesector);
       if (!rf->rf_buffer)
         {
           return -ENOMEM;
@@ -1138,10 +1140,10 @@ void romfs_freenode(FAR struct romfs_nodeinfo_s *nodeinfo)
           romfs_freenode(nodeinfo->rn_child[i]);
         }
 
-      kmm_free(nodeinfo->rn_child);
+      fs_heap_free(nodeinfo->rn_child);
     }
 
-  kmm_free(nodeinfo);
+  fs_heap_free(nodeinfo);
 }
 #endif
 

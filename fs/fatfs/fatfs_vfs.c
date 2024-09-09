@@ -40,6 +40,7 @@
 #include <sys/statfs.h>
 
 #include "inode/inode.h"
+#include "fs_heap.h"
 
 #define DIR DIR_
 #include "ff.h"
@@ -334,7 +335,7 @@ static int fatfs_open(FAR struct file *filep, FAR const char *relpath,
   int ret;
 
   fs = filep->f_inode->i_private;
-  fp = kmm_malloc(sizeof(*fp) - FF_MAX_SS + SS(&fs->fat));
+  fp = fs_heap_malloc(sizeof(*fp) - FF_MAX_SS + SS(&fs->fat));
   if (!fp)
     {
       return -ENOMEM;
@@ -343,7 +344,7 @@ static int fatfs_open(FAR struct file *filep, FAR const char *relpath,
   ret = nxmutex_lock(&fs->lock);
   if (ret < 0)
     {
-      kmm_free(fp);
+      fs_heap_free(fp);
       return ret;
     }
 
@@ -355,7 +356,7 @@ static int fatfs_open(FAR struct file *filep, FAR const char *relpath,
   ret = fatfs_convert_result(f_open(&fp->f, fp->path, oflags));
   if (ret < 0)
     {
-      kmm_free(fp);
+      fs_heap_free(fp);
       goto errsem;
     }
 
@@ -406,7 +407,7 @@ static int fatfs_close(FAR struct file *filep)
   nxmutex_unlock(&fs->lock);
   if (crefs <= 0 && ret >= 0)
     {
-      kmm_free(fp);
+      fs_heap_free(fp);
     }
 
   return ret;
@@ -865,7 +866,7 @@ static int fatfs_truncate(FAR struct file *filep, off_t length)
         }
 
       length -= f_size(&fp->f);
-      buffer = kmm_zalloc(SS(&fs->fat));
+      buffer = fs_heap_zalloc(SS(&fs->fat));
       if (buffer == NULL)
         {
           goto errbuf;
@@ -897,7 +898,7 @@ static int fatfs_truncate(FAR struct file *filep, off_t length)
     }
 
 errbuf:
-  kmm_free(buffer);
+  fs_heap_free(buffer);
 errsem:
   nxmutex_unlock(&fs->lock);
   return ret;
@@ -925,7 +926,7 @@ static int fatfs_opendir(FAR struct inode *mountpt,
 
   /* Allocate memory for the open directory */
 
-  fdir = kmm_malloc(sizeof(*fdir));
+  fdir = fs_heap_malloc(sizeof(*fdir));
   if (fdir == NULL)
     {
       return -ENOMEM;
@@ -934,7 +935,7 @@ static int fatfs_opendir(FAR struct inode *mountpt,
   ret = nxmutex_lock(&fs->lock);
   if (ret < 0)
     {
-      kmm_free(fdir);
+      fs_heap_free(fdir);
       return ret;
     }
 
@@ -950,7 +951,7 @@ static int fatfs_opendir(FAR struct inode *mountpt,
   nxmutex_unlock(&fs->lock);
   if (ret < 0)
     {
-      kmm_free(fdir);
+      fs_heap_free(fdir);
     }
 
   return ret;
@@ -984,7 +985,7 @@ static int fatfs_closedir(FAR struct inode *mountpt,
   nxmutex_unlock(&fs->lock);
   if (ret >= 0)
     {
-      kmm_free(fdir);
+      fs_heap_free(fdir);
     }
 
   return ret;
@@ -1105,7 +1106,7 @@ static int fatfs_bind(FAR struct inode *driver, FAR const void *data,
 
   /* Create an instance of the mountpt state structure */
 
-  fs = kmm_zalloc(sizeof(*fs));
+  fs = fs_heap_zalloc(sizeof(*fs));
   if (!fs)
     {
       return -ENOMEM;
@@ -1142,7 +1143,7 @@ static int fatfs_bind(FAR struct inode *driver, FAR const void *data,
           goto errout_with_open;
         }
 
-      sector = kmm_malloc(geo.geo_sectorsize);
+      sector = fs_heap_malloc(geo.geo_sectorsize);
       if (sector == NULL)
         {
           ret = -ENOMEM;
@@ -1153,7 +1154,7 @@ static int fatfs_bind(FAR struct inode *driver, FAR const void *data,
       if (ret < 0)
         {
           ferr("Read failed: %d\n", ret);
-          kmm_free(sector);
+          fs_heap_free(sector);
           goto errout_with_open;
         }
 
@@ -1166,7 +1167,7 @@ static int fatfs_bind(FAR struct inode *driver, FAR const void *data,
           g_drv[fs->pdrv].ratio = CONFIG_FS_FATFS_SECTOR_RATIO;
         }
 
-      kmm_free(sector);
+      fs_heap_free(sector);
     }
 
   nxmutex_init(&fs->lock); /* Initialize the access control semaphore */
@@ -1251,7 +1252,7 @@ errout_with_open:
 errout_with_pdrv:
   fatfs_free_slot(fs->pdrv);
 errout_with_fs:
-  kmm_free(fs);
+  fs_heap_free(fs);
   return ret;
 }
 
@@ -1290,7 +1291,7 @@ static int fatfs_unbind(FAR void *handle, FAR struct inode **driver,
   /* Release the mountpoint private data */
 
   nxmutex_destroy(&fs->lock);
-  kmm_free(fs);
+  fs_heap_free(fs);
   return ret;
 }
 
@@ -1773,7 +1774,7 @@ DWORD get_fattime(void)
 
 void *ff_memalloc(UINT msize)
 {
-  return kmm_malloc(msize);
+  return fs_heap_malloc(msize);
 }
 
 /****************************************************************************
@@ -1786,6 +1787,6 @@ void *ff_memalloc(UINT msize)
 
 void ff_memfree(void *mblock)
 {
-  kmm_free(mblock);
+  fs_heap_free(mblock);
 }
 #endif

@@ -43,6 +43,7 @@
 #include <nuttx/fs/ioctl.h>
 
 #include "cromfs.h"
+#include "fs_heap.h"
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_CROMFS)
 
@@ -781,7 +782,7 @@ static int cromfs_open(FAR struct file *filep, FAR const char *relpath,
    * file.
    */
 
-  ff = kmm_zalloc(sizeof(struct cromfs_file_s));
+  ff = fs_heap_zalloc(sizeof(struct cromfs_file_s));
   if (ff == NULL)
     {
       return -ENOMEM;
@@ -789,10 +790,10 @@ static int cromfs_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Create a file buffer to support partial sector accesses */
 
-  ff->ff_buffer = kmm_malloc(fs->cv_bsize);
+  ff->ff_buffer = fs_heap_malloc(fs->cv_bsize);
   if (!ff->ff_buffer)
     {
-      kmm_free(ff);
+      fs_heap_free(ff);
       return -ENOMEM;
     }
 
@@ -825,8 +826,8 @@ static int cromfs_close(FAR struct file *filep)
 
   /* Free all resources consumed by the opened file */
 
-  kmm_free(ff->ff_buffer);
-  kmm_free(ff);
+  fs_heap_free(ff->ff_buffer);
+  fs_heap_free(ff);
 
   return OK;
 }
@@ -1110,7 +1111,7 @@ static int cromfs_dup(FAR const struct file *oldp, FAR struct file *newp)
    * same node.
    */
 
-  newff = kmm_zalloc(sizeof(struct cromfs_file_s));
+  newff = fs_heap_zalloc(sizeof(struct cromfs_file_s));
   if (newff == NULL)
     {
       return -ENOMEM;
@@ -1118,10 +1119,10 @@ static int cromfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 
   /* Create a file buffer to support partial sector accesses */
 
-  newff->ff_buffer = kmm_malloc(fs->cv_bsize);
+  newff->ff_buffer = fs_heap_malloc(fs->cv_bsize);
   if (newff->ff_buffer == NULL)
     {
-      kmm_free(newff);
+      fs_heap_free(newff);
       return -ENOMEM;
     }
 
@@ -1228,7 +1229,7 @@ static int cromfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
       return -ENOTDIR;
     }
 
-  cdir = kmm_zalloc(sizeof(*cdir));
+  cdir = fs_heap_zalloc(sizeof(*cdir));
   if (cdir == NULL)
     {
       return -ENOMEM;
@@ -1253,7 +1254,7 @@ static int cromfs_closedir(FAR struct inode *mountpt,
                            FAR struct fs_dirent_s *dir)
 {
   DEBUGASSERT(mountpt != NULL);
-  kmm_free(dir);
+  fs_heap_free(dir);
   return 0;
 }
 

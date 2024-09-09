@@ -28,6 +28,8 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 
+#include "fs_heap.h"
+
 #include "yportenv.h"
 #include "yaffs_trace.h"
 
@@ -73,12 +75,12 @@ int yaffsfs_GetLastError(void)
 
 FAR void *yaffsfs_malloc(size_t size)
 {
-  return kmm_malloc(size);
+  return fs_heap_malloc(size);
 }
 
 void yaffsfs_free(FAR void *ptr)
 {
-  return kmm_free(ptr);
+  return fs_heap_free(ptr);
 }
 
 int yaffsfs_CheckMemRegion(FAR const void *addr, size_t size,

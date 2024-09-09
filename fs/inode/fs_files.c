@@ -53,6 +53,7 @@
 
 #include "sched/sched.h"
 #include "inode/inode.h"
+#include "fs_heap.h"
 
 /****************************************************************************
  * Private Functions
@@ -129,7 +130,7 @@ static int files_extend(FAR struct filelist *list, size_t row)
       return -EMFILE;
     }
 
-  files = kmm_malloc(sizeof(FAR struct file *) * row);
+  files = fs_heap_malloc(sizeof(FAR struct file *) * row);
   DEBUGASSERT(files);
   if (files == NULL)
     {
@@ -139,16 +140,16 @@ static int files_extend(FAR struct filelist *list, size_t row)
   i = orig_rows;
   do
     {
-      files[i] = kmm_zalloc(sizeof(struct file) *
+      files[i] = fs_heap_zalloc(sizeof(struct file) *
                             CONFIG_NFILE_DESCRIPTORS_PER_BLOCK);
       if (files[i] == NULL)
         {
           while (--i >= orig_rows)
             {
-              kmm_free(files[i]);
+              fs_heap_free(files[i]);
             }
 
-          kmm_free(files);
+          fs_heap_free(files);
           return -ENFILE;
         }
     }
@@ -167,10 +168,10 @@ static int files_extend(FAR struct filelist *list, size_t row)
 
       for (j = orig_rows; j < i; j++)
         {
-          kmm_free(files[j]);
+          fs_heap_free(files[j]);
         }
 
-      kmm_free(files);
+      fs_heap_free(files);
 
       return OK;
     }
@@ -189,7 +190,7 @@ static int files_extend(FAR struct filelist *list, size_t row)
 
   if (tmp != NULL && tmp != &list->fl_prefile)
     {
-      kmm_free(tmp);
+      fs_heap_free(tmp);
     }
 
   return OK;
@@ -483,14 +484,14 @@ void files_putlist(FAR struct filelist *list)
 
       if (i != 0)
         {
-          kmm_free(list->fl_files[i]);
+          fs_heap_free(list->fl_files[i]);
           list->fl_rows--;
         }
     }
 
   if (list->fl_files != &list->fl_prefile)
     {
-      kmm_free(list->fl_files);
+      fs_heap_free(list->fl_files);
     }
 }
 

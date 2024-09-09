@@ -39,6 +39,7 @@
 #include <nuttx/fs/ioctl.h>
 
 #include "smartfs.h"
+#include "fs_heap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -242,8 +243,8 @@ int smartfs_mount(struct smartfs_mountpt_s *fs, bool writeable)
 
   if (nextfs == NULL)
     {
-      fs->fs_rwbuffer = kmm_malloc(fs->fs_llformat.availbytes);
-      fs->fs_workbuffer = kmm_malloc(WORKBUFFER_SIZE);
+      fs->fs_rwbuffer = fs_heap_malloc(fs->fs_llformat.availbytes);
+      fs->fs_workbuffer = fs_heap_malloc(WORKBUFFER_SIZE);
     }
 
   /* Now add ourselves to the linked list of SMART mounts */
@@ -266,8 +267,8 @@ int smartfs_mount(struct smartfs_mountpt_s *fs, bool writeable)
   g_mounthead = fs;
 #endif
 
-  fs->fs_rwbuffer = kmm_malloc(fs->fs_llformat.availbytes);
-  fs->fs_workbuffer = kmm_malloc(WORKBUFFER_SIZE);
+  fs->fs_rwbuffer = fs_heap_malloc(fs->fs_llformat.availbytes);
+  fs->fs_workbuffer = fs_heap_malloc(WORKBUFFER_SIZE);
   fs->fs_rootsector = SMARTFS_ROOT_DIR_SECTOR;
 
 #endif /* CONFIG_SMARTFS_MULTI_ROOT_DIRS */
@@ -382,8 +383,8 @@ int smartfs_unmount(struct smartfs_mountpt_s *fs)
 
       /* Free the buffers */
 
-      kmm_free(fs->fs_rwbuffer);
-      kmm_free(fs->fs_workbuffer);
+      fs_heap_free(fs->fs_rwbuffer);
+      fs_heap_free(fs->fs_workbuffer);
 
       /* Set the buffer's to invalid value to catch program bugs */
 
@@ -420,8 +421,8 @@ int smartfs_unmount(struct smartfs_mountpt_s *fs)
 
   /* Release the mountpoint private data */
 
-  kmm_free(fs->fs_rwbuffer);
-  kmm_free(fs->fs_workbuffer);
+  fs_heap_free(fs->fs_rwbuffer);
+  fs_heap_free(fs->fs_workbuffer);
 #endif
 
   return ret;
@@ -647,7 +648,7 @@ int smartfs_finddirentry(struct smartfs_mountpt_s *fs,
                           if (direntry->name == NULL)
                             {
                               direntry->name = (FAR char *)
-                                kmm_malloc(fs->fs_llformat.namesize + 1);
+                                fs_heap_malloc(fs->fs_llformat.namesize + 1);
                             }
 
                           strlcpy(direntry->name, entry->name,
@@ -1077,7 +1078,7 @@ int smartfs_createentry(FAR struct smartfs_mountpt_s *fs,
   direntry->datlen = 0;
   if (direntry->name == NULL)
     {
-      direntry->name = kmm_malloc(fs->fs_llformat.namesize + 1);
+      direntry->name = fs_heap_malloc(fs->fs_llformat.namesize + 1);
     }
 
   memset(direntry->name, 0, fs->fs_llformat.namesize + 1);
@@ -1913,7 +1914,7 @@ int smartfs_extendfile(FAR struct smartfs_mountpt_s *fs,
    * will, unfortunately, need to allocate one.
    */
 
-  buffer = kmm_malloc(SMARTFS_TRUNCBUFFER_SIZE);
+  buffer = fs_heap_malloc(SMARTFS_TRUNCBUFFER_SIZE);
   if (buffer == NULL)
     {
       return -ENOMEM;
@@ -2110,7 +2111,7 @@ errout_with_buffer:
 #ifndef CONFIG_SMARTFS_USE_SECTOR_BUFFER
   /* Release the allocated buffer */
 
-  kmm_free(buffer);
+  fs_heap_free(buffer);
 #endif
   /* Restore the original file position */
 

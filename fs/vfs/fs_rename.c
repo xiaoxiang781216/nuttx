@@ -37,6 +37,7 @@
 
 #include "notify/notify.h"
 #include "inode/inode.h"
+#include "fs_heap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -391,7 +392,7 @@ next_subdir:
                                  subdirname);
                   if (tmp != NULL)
                     {
-                      kmm_free(tmp);
+                      fs_heap_free(tmp);
                     }
 
                   if (ret < 0)

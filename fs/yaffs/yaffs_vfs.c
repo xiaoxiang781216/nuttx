@@ -39,6 +39,7 @@
 #include <sys/statfs.h>
 
 #include "inode/inode.h"
+#include "fs_heap.h"
 
 #include "yaffs_guts.h"
 #include "direct/yaffsfs.h"
@@ -219,7 +220,7 @@ static int yaffs_vfs_open(FAR struct file *filep,
 
   /* Allocate memory for the open file */
 
-  priv = kmm_zalloc(sizeof(*priv));
+  priv = fs_heap_zalloc(sizeof(*priv));
   if (priv == NULL)
     {
       return -ENOMEM;
@@ -256,7 +257,7 @@ static int yaffs_vfs_open(FAR struct file *filep,
 errout_with_file:
   yaffs_close(handle);
 errout:
-  kmm_free(priv);
+  fs_heap_free(priv);
 
   return yaffsfs_GetLastError();
 }
@@ -274,7 +275,7 @@ static int yaffs_vfs_close(FAR struct file *filep)
   ret = yaffs_close(priv->handle);
   if (ret >= 0)
     {
-      kmm_free(priv);
+      fs_heap_free(priv);
       return 0;
     }
 
@@ -419,7 +420,7 @@ static int yaffs_vfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 
   /* Allocate memory for the new file */
 
-  newpriv = kmm_zalloc(sizeof(*newpriv));
+  newpriv = fs_heap_zalloc(sizeof(*newpriv));
   if (newpriv == NULL)
     {
       return -ENOMEM;
@@ -441,7 +442,7 @@ static int yaffs_vfs_dup(FAR const struct file *oldp, FAR struct file *newp)
   return 0;
 
 errout:
-  kmm_free(newpriv);
+  fs_heap_free(newpriv);
   return yaffsfs_GetLastError();
 }
 
@@ -588,7 +589,7 @@ static int yaffs_vfs_opendir(FAR struct inode *mountpt,
 
   /* Allocate memory for the open directory */
 
-  ydir = kmm_zalloc(sizeof(*ydir));
+  ydir = fs_heap_zalloc(sizeof(*ydir));
   if (ydir == NULL)
     {
       return -ENOMEM;
@@ -606,7 +607,7 @@ static int yaffs_vfs_opendir(FAR struct inode *mountpt,
   return 0;
 
 errout:
-  kmm_free(ydir);
+  fs_heap_free(ydir);
   return yaffsfs_GetLastError();
 }
 
@@ -627,7 +628,7 @@ static int yaffs_vfs_closedir(FAR struct inode *mountpt,
   ret = yaffs_closedir(ydir->dir);
   if (ret >= 0)
     {
-      kmm_free(ydir);
+      fs_heap_free(ydir);
       return 0;
     }
 
@@ -1081,7 +1082,7 @@ static int yaffs_vfs_bind(FAR struct inode *driver, FAR const void *data,
 
   /* Create an instance of the mountpt state structure */
 
-  fs = kmm_zalloc(sizeof(*fs));
+  fs = fs_heap_zalloc(sizeof(*fs));
   if (!fs)
     {
       return -ENOMEM;
@@ -1103,7 +1104,7 @@ static int yaffs_vfs_bind(FAR struct inode *driver, FAR const void *data,
 
   /* Initialize yaffs_dev structure */
 
-  dev = kmm_zalloc(sizeof(*dev));
+  dev = fs_heap_zalloc(sizeof(*dev));
   if (!dev)
     {
       ret = -ENOMEM;
@@ -1194,12 +1195,12 @@ static int yaffs_vfs_bind(FAR struct inode *driver, FAR const void *data,
   return OK;
 
 errout_with_name:
-  kmm_free((FAR void *)(p->name));
+  fs_heap_free((FAR void *)(p->name));
   yaffs_remove_device(dev);
 errout_with_dev:
-  kmm_free(dev);
+  fs_heap_free(dev);
 errout_with_fs:
-  kmm_free(fs);
+  fs_heap_free(fs);
   return ret;
 }
 
@@ -1231,8 +1232,8 @@ static int yaffs_vfs_unbind(FAR void *handle, FAR struct inode **driver,
       /* Remove and release dev */
 
       yaffs_remove_device(dev);
-      kmm_free((FAR void *)(dev->param.name));
-      kmm_free(dev);
+      fs_heap_free((FAR void *)(dev->param.name));
+      fs_heap_free(dev);
 
       /* We hold a reference to the driver but should not but
        * mucking with inodes in this context. So, we will just return
@@ -1247,7 +1248,7 @@ static int yaffs_vfs_unbind(FAR void *handle, FAR struct inode **driver,
 
       /* Release the mountpoint private data */
 
-      kmm_free(fs);
+      fs_heap_free(fs);
     }
 
   return ret;
