@@ -21,7 +21,7 @@
 import gdb
 import utils
 
-CONFIG_RAMLOG = utils.get_symbol_value("CONFIG_RAMLOG")
+CONFIG_RAMLOG_SYSLOG = utils.get_symbol_value("CONFIG_RAMLOG_SYSLOG")
 
 
 class Dmesg(gdb.Command):
@@ -29,7 +29,11 @@ class Dmesg(gdb.Command):
         super(Dmesg, self).__init__("dmesg", gdb.COMMAND_USER)
 
     def invoke(self, args, from_tty):
-        sysdev = gdb.parse_and_eval("g_sysdev")
+        sysdev = utils.gdb_eval_or_none("g_sysdev")
+        if not sysdev:
+            gdb.write("RAM log not available.\n")
+            return
+
         rl_head = sysdev["rl_header"]
         rl_bufsize = sysdev["rl_bufsize"]
         gdb.write("Ramlog have %d bytes to show\n" % rl_bufsize)
@@ -41,5 +45,5 @@ class Dmesg(gdb.Command):
         gdb.write("\n")
 
 
-if CONFIG_RAMLOG:
+if CONFIG_RAMLOG_SYSLOG:
     Dmesg()
