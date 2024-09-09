@@ -22,6 +22,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/nuttx.h>
 #include <nuttx/mm/kasan.h>
 #include <nuttx/spinlock.h>
 
@@ -208,6 +209,7 @@ bool kasan_is_poisoned(FAR const void *addr, size_t size)
 
   nbit = KASAN_BITS_PER_WORD - bit % KASAN_BITS_PER_WORD;
   mask = KASAN_FIRST_WORD_MASK(bit);
+  size = ALIGN_UP(size, KASAN_SHADOW_SCALE);
   size /= KASAN_SHADOW_SCALE;
 
   while (size >= nbit)
