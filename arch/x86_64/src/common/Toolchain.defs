@@ -64,7 +64,7 @@ endif
 ARCHCFLAGS += -fno-common -Wno-attributes
 ARCHCXXFLAGS += -fno-common -Wno-attributes -nostdinc++
 
-ARCHCPUFLAGS = -fPIC -mno-red-zone -mrdrnd
+ARCHCPUFLAGS = -fno-pic -mcmodel=large -mno-red-zone -mrdrnd
 ARCHPICFLAGS = -fPIC
 ARCHWARNINGS = -Wall -Wstrict-prototypes -Wshadow -Wundef
 
