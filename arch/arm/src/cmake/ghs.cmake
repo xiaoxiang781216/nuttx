@@ -37,22 +37,6 @@ set(CMAKE_NM gnm)
 set(CMAKE_RANLIB echo)
 set(CMAKE_PREPROCESSOR ccarm -E -P)
 
-function(generate_bin rcpath source_etc_prefix source_etc_suffix)
-  add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${source_etc_suffix}
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${rcpath}
-    COMMAND
-      ${CMAKE_PREPROCESSOR} -I${CMAKE_BINARY_DIR}/include -filetype.cpp
-      ${source_etc_prefix}/${source_etc_suffix} -o
-      ${CMAKE_CURRENT_BINARY_DIR}/${source_etc_suffix}
-    DEPENDS nuttx_context ${source_etc_prefix}/${source_etc_suffix})
-endfunction()
-
-macro(link_target target)
-  target_link_libraries(${target} PRIVATE ${NUTTX_EXTRA_FLAGS} -T ${ldscript}
-                                          ${nuttx_libs} ${nuttx_extra_libs})
-endmacro()
-
 # override the ARCHIVE command
 
 set(CMAKE_ARCHIVE_COMMAND
@@ -210,58 +194,64 @@ endif()
 
 set(PREPROCES ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P)
 
-function(pre_compile_ldscript src_ld_script ld_script_tmp nx_chip_abs_dir
-         work_dir)
+# override nuttx_generate_preproces_target
+
+set(NUTTX_TOOLCHAIN_PREPROCES_DEFINED true)
+
+function(nuttx_generate_preproces_target)
+
+  # parse arguments into variables
+
+  nuttx_parse_function_args(
+    FUNC
+    nuttx_generate_preproces_target
+    ONE_VALUE
+    SOURCE_FILE
+    TARGET_FILE
+    MULTI_VALUE
+    DEPENDS
+    REQUIRED
+    SOURCE_FILE
+    TARGET_FILE
+    ARGN
+    ${ARGN})
+
   add_custom_command(
-    OUTPUT ${ld_script_tmp}
-    DEPENDS ${src_ld_script}
-    COMMAND ${PREPROCES} -I${CMAKE_BINARY_DIR}/include -I${nx_chip_abs_dir}
-            -filetype.cpp ${src_ld_script} -o ${ld_script_tmp}
-    WORKING_DIRECTORY ${work_dir})
+    OUTPUT ${TARGET_FILE}
+    COMMAND ${PREPROCES} -I${CMAKE_BINARY_DIR}/include -filetype.cpp
+            ${SOURCE_FILE} -o ${TARGET_FILE}
+    DEPENDS ${SOURCE_FILE} ${DEPENDS})
+
 endfunction()
 
-function(find_extra_lib extra_library)
+# override nuttx_find_toolchain_lib
+
+set(NUTTX_FIND_TOOLCHAIN_LIB_DEFINED true)
+
+function(nuttx_find_toolchain_lib)
   execute_process(
     COMMAND bash -c "which ${CMAKE_C_COMPILER} | awk -F '/[^/]*$' '{print $1}'"
     OUTPUT_VARIABLE GHS_ROOT_PATH)
   string(STRIP "${GHS_ROOT_PATH}" GHS_ROOT_PATH)
-
-  list(APPEND tmp_list ${GHS_ROOT_PATH}/lib/thumb2/libarch.a)
-  if(CONFIG_ARCH_FPU)
-    if(CONFIG_ARM_FPU_ABI_SOFT)
-      list(APPEND tmp_list ${GHS_ROOT_PATH}/lib/thumb2/libind_sf.a)
-    elseif(CONFIG_ARCH_DPFPU)
-      list(APPEND tmp_list ${GHS_ROOT_PATH}/lib/thumb2/libind_fp.a)
+  if(NOT ARGN)
+    nuttx_add_extra_library(${GHS_ROOT_PATH}/lib/thumb2/libarch.a)
+    if(CONFIG_ARCH_FPU)
+      if(CONFIG_ARM_FPU_ABI_SOFT)
+        nuttx_add_extra_library(${GHS_ROOT_PATH}/lib/thumb2/libind_sf.a)
+        nuttx_add_extra_library(${GHS_ROOT_PATH}/lib/thumb2/libmath_sf.a)
+      elseif(CONFIG_ARCH_DPFPU)
+        nuttx_add_extra_library(${GHS_ROOT_PATH}/lib/thumb2/libind_fp.a)
+        nuttx_add_extra_library(${GHS_ROOT_PATH}/lib/thumb2/libmath_fp.a)
+      else()
+        nuttx_add_extra_library(${GHS_ROOT_PATH}/lib/thumb2/libind_sd.a)
+        nuttx_add_extra_library(${GHS_ROOT_PATH}/lib/thumb2/libmath_sd.a)
+      endif()
     else()
-      list(APPEND tmp_list ${GHS_ROOT_PATH}/lib/thumb2/libind_sd.a)
+      nuttx_add_extra_library(${GHS_ROOT_PATH}/lib/thumb2/libind_sf.a)
+      nuttx_add_extra_library(${GHS_ROOT_PATH}/lib/thumb2/libmath_sf.a)
     endif()
-  else()
-    list(APPEND tmp_list ${GHS_ROOT_PATH}/lib/thumb2/libind_sf.a)
   endif()
-
-  set(${extra_library}
-      "${tmp_list}"
-      PARENT_SCOPE)
 endfunction()
 
-function(find_toolchain_lib extra_library)
-  execute_process(
-    COMMAND bash -c "which ${CMAKE_C_COMPILER} | awk -F '/[^/]*$' '{print $1}'"
-    OUTPUT_VARIABLE GHS_ROOT_PATH)
-  string(STRIP "${GHS_ROOT_PATH}" GHS_ROOT_PATH)
-  list(APPEND tmp_list ${GHS_ROOT_PATH}/lib/thumb2/libarch.a)
-  if(CONFIG_ARCH_FPU)
-    if(CONFIG_ARM_FPU_ABI_SOFT)
-      list(APPEND tmp_list ${GHS_ROOT_PATH}/lib/thumb2/libmath_sf.a)
-    elseif(CONFIG_ARCH_DPFPU)
-      list(APPEND tmp_list ${GHS_ROOT_PATH}/lib/thumb2/libind_fp.a)
-    else()
-      list(APPEND tmp_list ${GHS_ROOT_PATH}/lib/thumb2/libmath_sd.a)
-    endif()
-  else()
-    list(APPEND tmp_list ${GHS_ROOT_PATH}/lib/thumb2/libmath_sf.a)
-  endif()
-  set(${extra_library}
-      "${tmp_list}"
-      PARENT_SCOPE)
-endfunction()
+# disable nuttx cmake link group otption
+set(DISABLE_LINK_GROUP true)

@@ -96,7 +96,12 @@ function(nuttx_add_romfs)
     endif()
 
     get_filename_component(rcpath ${SOURCE_ETC_SUFFIX} DIRECTORY)
-    generate_bin(${rcpath} ${SOURCE_ETC_PREFIX} ${SOURCE_ETC_SUFFIX})
+    if(NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/${rcpath})
+      file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${rcpath})
+    endif()
+    nuttx_generate_preproces_target(
+      SOURCE_FILE ${SOURCE_ETC_PREFIX}/${SOURCE_ETC_SUFFIX} TARGET_FILE
+      ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX} DEPENDS nuttx_context)
     list(APPEND DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${SOURCE_ETC_SUFFIX})
   endforeach()
 

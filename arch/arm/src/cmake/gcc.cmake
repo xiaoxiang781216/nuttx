@@ -75,26 +75,6 @@ if(GCCVER EQUAL 12)
   endif()
 endif()
 
-# define function to generate the bin
-
-function(generate_bin rcpath source_etc_prefix source_etc_suffix)
-  add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${source_etc_suffix}
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${rcpath}
-    COMMAND
-      ${CMAKE_PREPROCESSOR} -I${CMAKE_BINARY_DIR}/include
-      ${source_etc_prefix}/${source_etc_suffix} >
-      ${CMAKE_CURRENT_BINARY_DIR}/${source_etc_suffix}
-    DEPENDS nuttx_context ${source_etc_prefix}/${source_etc_suffix})
-endfunction()
-
-macro(link_target target)
-  target_link_libraries(
-    ${target}
-    PRIVATE ${NUTTX_EXTRA_FLAGS} -Wl,--script=${ldscript} -Wl,--start-group
-            ${nuttx_libs} ${nuttx_extra_libs} -Wl,--end-group)
-endmacro()
-
 # override the ARCHIVE command
 
 set(CMAKE_ARCHIVE_COMMAND "<CMAKE_AR> rcs <TARGET> <LINK_FLAGS> <OBJECTS>")
@@ -280,37 +260,3 @@ endif()
 set(CMAKE_EXE_LINKER_FLAGS_INIT "--specs=nosys.specs")
 
 set(PREPROCES ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)
-
-function(pre_compile_ldscript src_ld_script ld_script_tmp nx_chip_abs_dir
-         work_dir)
-  add_custom_command(
-    OUTPUT ${ld_script_tmp}
-    DEPENDS ${src_ld_script}
-    COMMAND ${PREPROCES} -I${CMAKE_BINARY_DIR}/include -I${nx_chip_abs_dir}
-            ${src_ld_script} > ${ld_script_tmp}
-    WORKING_DIRECTORY ${work_dir})
-endfunction()
-
-function(find_extra_lib extra_library)
-  execute_process(
-    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-            --print-libgcc-file-name
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    OUTPUT_VARIABLE tmp_list)
-
-  set(${extra_library}
-      "${tmp_list}"
-      PARENT_SCOPE)
-endfunction()
-
-function(find_toolchain_lib extra_library)
-  execute_process(
-    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-            --print-file-name=libm.a
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    OUTPUT_VARIABLE tmp_list)
-
-  set(${extra_library}
-      "${tmp_list}"
-      PARENT_SCOPE)
-endfunction()

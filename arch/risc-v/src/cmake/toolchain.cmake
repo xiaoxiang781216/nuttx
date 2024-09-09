@@ -328,20 +328,3 @@ endif()
 if(CONFIG_ARCH_INSTRUMENT_ALL)
   add_compile_options(-finstrument-functions)
 endif()
-
-macro(link_target target)
-  target_link_libraries(
-    ${target}
-    PRIVATE ${NUTTX_EXTRA_FLAGS} -Wl,--script=${ldscript} -Wl,--start-group
-            ${nuttx_libs} ${nuttx_extra_libs} -Wl,--end-group)
-endmacro()
-
-function(pre_compile_ldscript src_ld_script ld_script_tmp nx_chip_abs_dir
-         work_dir)
-  add_custom_command(
-    OUTPUT ${ld_script_tmp}
-    DEPENDS ${src_ld_script}
-    COMMAND ${PREPROCES} -I${CMAKE_BINARY_DIR}/include -I${nx_chip_abs_dir}
-            ${src_ld_script} > ${ld_script_tmp}
-    WORKING_DIRECTORY ${work_dir})
-endfunction()
