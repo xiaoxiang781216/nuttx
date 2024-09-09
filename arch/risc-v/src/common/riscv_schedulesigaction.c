@@ -100,18 +100,6 @@ void up_schedule_sigaction(struct tcb_s *tcb)
     }
   else
     {
-#ifdef CONFIG_SMP
-      int cpu = tcb->cpu;
-      int me  = this_cpu();
-
-      if (cpu != me && tcb->task_state == TSTATE_TASK_RUNNING)
-        {
-          /* Pause the CPU */
-
-          up_cpu_pause(cpu);
-        }
-#endif
-
       /* Save the return EPC and STATUS registers.  These will be
        * by the signal trampoline after the signal has been delivered.
        */
@@ -148,13 +136,5 @@ void up_schedule_sigaction(struct tcb_s *tcb)
 #endif
 
       tcb->xcp.regs[REG_INT_CTX] = int_ctx;
-#ifdef CONFIG_SMP
-      /* RESUME the other CPU if it was PAUSED */
-
-      if (cpu != me && tcb->task_state == TSTATE_TASK_RUNNING)
-        {
-          up_cpu_resume(cpu);
-        }
-#endif
     }
 }
