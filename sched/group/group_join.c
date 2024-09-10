@@ -70,7 +70,7 @@
  ****************************************************************************/
 
 #ifdef HAVE_GROUP_MEMBERS
-static inline int group_addmember(FAR struct task_group_s *group, pid_t pid)
+int group_addmember(FAR struct task_group_s *group, pid_t pid)
 {
   FAR pid_t *oldmembers = NULL;
   irqstate_t flags;

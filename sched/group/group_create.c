@@ -244,6 +244,9 @@ errout_with_group:
 void group_initialize(FAR struct task_tcb_s *tcb)
 {
   FAR struct task_group_s *group;
+#ifndef HAVE_GROUP_MEMBERS
+  irqstate_t flags;
+#endif
 
   DEBUGASSERT(tcb && tcb->cmn.group);
   group = tcb->cmn.group;
@@ -268,9 +271,21 @@ void group_initialize(FAR struct task_tcb_s *tcb)
   if (group != &g_kthread_group)
     {
       group->tg_pid = tcb->cmn.pid;
+
+      /* Mark that there is one member in the group, the main task */
+
+      group->tg_nmembers = 1;
     }
+  else
+    {
+      /* As Kernel thread shared group, do group add member */
 
-  /* Mark that there is one member in the group, the main task */
-
-  group->tg_nmembers = 1;
+#ifdef HAVE_GROUP_MEMBERS
+      DEBUGASSERT(group_addmember(group, tcb->cmn.pid) == OK);
+#else
+      flags = spin_lock_irqsave(NULL);
+      group->tg_nmembers++;
+      spin_unlock_irqrestore(NULL, flags);
+#endif
+    }
 }
