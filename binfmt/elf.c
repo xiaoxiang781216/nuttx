@@ -177,7 +177,7 @@ static int elf_loadbinary(FAR struct binary_s *binp,
   if (loadinfo.ehdr.e_type == ET_REL)
     {
       binp->mod.sectalloc = (FAR void *)loadinfo.sectalloc;
-      binp->mod.sect     = loadinfo.ehdr.e_shnum;
+      binp->mod.nsect     = loadinfo.ehdr.e_shnum;
     }
 #  endif
 
