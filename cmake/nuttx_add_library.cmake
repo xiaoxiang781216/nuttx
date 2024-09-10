@@ -201,18 +201,11 @@ endfunction()
 #
 function(nuttx_add_extra_library)
   foreach(extra_lib ${ARGN})
-    if(IS_ABSOLUTE "${extra_lib}" AND EXISTS "${extra_lib}")
-      # define the target name of the extra library
-      string(REGEX REPLACE "[^a-zA-Z0-9]" "_" extra_target "${extra_lib}")
-      # set the absolute path of the library for the import target
-      nuttx_library_import(${extra_target} ${extra_lib})
-      set_property(GLOBAL APPEND PROPERTY NUTTX_EXTRA_LIBRARIES ${extra_target})
-    else()
-      message(
-        WARNING
-          "extra_library ${extra_lib} does NOT exist or the path is NOT absolute"
-      )
-    endif()
+    # define the target name of the extra library
+    string(REGEX REPLACE "[^a-zA-Z0-9]" "_" extra_target "${extra_lib}")
+    # set the absolute path of the library for the import target
+    nuttx_library_import(${extra_target} ${extra_lib})
+    set_property(GLOBAL APPEND PROPERTY NUTTX_EXTRA_LIBRARIES ${extra_target})
   endforeach()
 endfunction()
 
