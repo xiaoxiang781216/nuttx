@@ -36,6 +36,21 @@
 
 #include "riscv_macros.S"
 
+/*
+ * The riscv_extctx.S should be placed in the chip directory, for example:
+ *   arch/risc-v/src/qemu-rv/riscv_extctx.S
+ *
+ * These macros should be provided by the chip-specific code:
+ *   * save_extctx (extended context save)
+ *   * load_extctx (extended context restore)
+ *
+ * Refer to the riscv_macros.S for implementation details.
+ */
+
+#ifdef CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS
+#  include "riscv_extctx.S"
+#endif
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -97,6 +112,12 @@ exception_common:
 
   addi       sp, sp, -XCPTCONTEXT_SIZE
   save_ctx   sp
+
+  /* Save the extended context */
+
+#ifdef CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS
+  save_extctx sp
+#endif
 
   csrr       s0, CSR_STATUS
   REGSTORE   s0, REG_INT_CTX(sp)  /* status */
@@ -166,6 +187,12 @@ exception_common:
   REGSTORE   a0, RISCV_PERCPU_KSP(s0)
 
 1:
+#endif
+
+  /* Restore the extended context */
+
+#ifdef CONFIG_ARCH_RISCV_INTXCPT_EXTENSIONS
+  load_extctx sp
 #endif
 
   load_ctx   sp
