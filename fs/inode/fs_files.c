@@ -1014,6 +1014,14 @@ int nx_close_from_tcb(FAR struct tcb_s *tcb, int fd)
       return -EBADF;
     }
 
+#ifdef CONFIG_DEBUG_FS_WARN
+  if (fd >= 0 && fd <= 2)
+    {
+      fwarn("Attempt to close fd %d\n", fd);
+      sched_dumpstack(gettid());
+    }
+#endif
+
   filep = files_fget(list, fd);
 
   /* If the file was properly opened, there should be an inode assigned */
