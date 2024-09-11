@@ -118,7 +118,7 @@ config LIBC_MAX_PATHBUFFER
 		This value is the maximum size of the buffer that will hold the full
 		file path.
 
-config CONFIG_LIBC_PATHBUFFER_ALLOCATION
+config LIBC_PATHBUFFER_ALLOCATION
 	bool "Path buffer allocation"
 	default y
 	---help---
