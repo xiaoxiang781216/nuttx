@@ -686,6 +686,11 @@ struct tcb_s
 
   struct xcptcontext xcp;                /* Interrupt register save area    */
 
+  /* The following function pointer is non-zero if there are pending signals
+   * to be processed.
+   */
+
+  CODE void *sigdeliver;                 /* Actual type is sig_deliver_t */
 #if CONFIG_TASK_NAME_SIZE > 0
   char name[CONFIG_TASK_NAME_SIZE + 1];  /* Task name (with NUL terminator  */
 #endif

@@ -381,7 +381,7 @@ uint64_t *arm64_syscall(uint64_t *regs)
 
               /* Copy "info" into user stack */
 
-              if (rtcb->xcp.sigdeliver)
+              if (rtcb->sigdeliver)
                 {
                   usp = rtcb->xcp.saved_regs[REG_SP];
                 }
