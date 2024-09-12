@@ -711,6 +711,8 @@ if(CONFIG_BUILD_PROTECTED)
 
   get_property(nuttx_apps_libs GLOBAL PROPERTY NUTTX_APPS_LIBRARIES)
 
+  get_property(nuttx_user_extra_libs GLOBAL PROPERTY NUTTX_USER_EXTRA_LIBRARIES)
+
   get_property(user_ldscript GLOBAL PROPERTY LD_SCRIPT_USER)
 
   # Pre-compile linker script
@@ -722,37 +724,42 @@ if(CONFIG_BUILD_PROTECTED)
   add_dependencies(nuttx_user user_ldscript_tmp)
   set(user_ldscript ${LD_SCRIPT_USER_TMP})
 
-  list(TRANSFORM user_ldscript PREPEND "-Wl,--script=")
-
-  execute_process(
-    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAGS} ${NUTTX_EXTRA_FLAGS}
-            --print-libgcc-file-name
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    OUTPUT_VARIABLE nuttx_user_libgcc)
-
   # reset link options that don't fit userspace
   get_target_property(nuttx_user_LINK_OPTIONS nuttx_user LINK_OPTIONS)
   list(REMOVE_ITEM nuttx_user_LINK_OPTIONS "-Wl,--cref")
   list(REMOVE_ITEM nuttx_user_LINK_OPTIONS "-Wl,-Map=nuttx.map")
-  list(REMOVE_ITEM nuttx_user_LINK_OPTIONS "-Wl,--entry=__start")
-  list(APPEND nuttx_user_LINK_OPTIONS "-Wl,-Map=nuttx_user.map")
+  if(CONFIG_ARCH_TOOLCHAIN_GHS)
+    list(REMOVE_ITEM nuttx_user_LINK_OPTIONS "-entry=__start")
+    list(REMOVE_ITEM nuttx_user_LINK_OPTIONS "-map=nuttx.map")
+    list(APPEND nuttx_user_LINK_OPTIONS "-map=nuttx_user.map")
+  else()
+    list(REMOVE_ITEM nuttx_user_LINK_OPTIONS "-Wl,--entry=__start")
+    list(APPEND nuttx_user_LINK_OPTIONS "-Wl,-Map=nuttx_user.map")
+  endif()
+
   set_target_properties(nuttx_user PROPERTIES LINK_OPTIONS
                                               "${nuttx_user_LINK_OPTIONS}")
 
-  target_link_options(
-    nuttx_user PRIVATE -nostartfiles -nodefaultlibs
-    -Wl,--entry=${CONFIG_INIT_ENTRYPOINT}
-    -Wl,--undefined=${CONFIG_INIT_ENTRYPOINT})
+  if(CONFIG_ARCH_TOOLCHAIN_GHS)
+    target_link_options(nuttx_user PRIVATE -nostartfiles -minlib
+                        -entry=${CONFIG_INIT_ENTRYPOINT})
+  else()
+    target_link_options(
+      nuttx_user PRIVATE -nostartfiles -nodefaultlibs
+      -Wl,--entry=${CONFIG_INIT_ENTRYPOINT}
+      -Wl,--undefined=${CONFIG_INIT_ENTRYPOINT})
+  endif()
 
   target_link_libraries(
     nuttx_user
-    PRIVATE ${user_ldscript}
-            $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group>
+    PRIVATE -T
+            ${user_ldscript}
+            $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--start-group>
             ${nuttx_system_libs}
             ${nuttx_apps_libs}
-            ${nuttx_user_libgcc}
+            ${nuttx_user_extra_libs}
             $<$<BOOL:${CONFIG_HAVE_CXX}>:supc++>
-            $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group>)
+            $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--end-group>)
 
   add_custom_command(
     OUTPUT User.map

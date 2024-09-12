@@ -206,6 +206,10 @@ function(nuttx_add_extra_library)
     # set the absolute path of the library for the import target
     nuttx_library_import(${extra_target} ${extra_lib})
     set_property(GLOBAL APPEND PROPERTY NUTTX_EXTRA_LIBRARIES ${extra_target})
+    if(CONFIG_BUILD_PROTECTED)
+      set_property(GLOBAL APPEND PROPERTY NUTTX_USER_EXTRA_LIBRARIES
+                                          ${extra_target})
+    endif()
   endforeach()
 endfunction()
 
