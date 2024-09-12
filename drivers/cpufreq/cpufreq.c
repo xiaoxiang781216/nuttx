@@ -226,6 +226,7 @@ static int cpufreq_verify_current_freq(FAR struct cpufreq_policy *policy)
     {
       if (abs(policy->cur - new_freq) >= KHZ_PER_MHZ)
         {
+          policy->cur = new_freq;
           return cpufreq_refresh_limits(policy);
         }
     }
