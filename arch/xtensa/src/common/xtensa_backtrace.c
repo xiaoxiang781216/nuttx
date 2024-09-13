@@ -176,14 +176,14 @@ static int backtrace_stack(uintptr_t *base, uintptr_t *limit,
       ra = (uintptr_t *)*(sp - 4);
       sp = (uintptr_t *)*(sp - 3);
 
+      if ((*skip)-- <= 0 && ra != NULL)
+        {
+          buffer[i++] = MAKE_PC_FROM_RA((uintptr_t)ra);
+        }
+
       if (sp >= limit || sp < base || ra == NULL)
         {
           break;
-        }
-
-      if ((*skip)-- <= 0)
-        {
-          buffer[i++] = MAKE_PC_FROM_RA((uintptr_t)ra);
         }
     }
 
