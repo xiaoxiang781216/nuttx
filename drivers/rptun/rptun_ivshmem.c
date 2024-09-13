@@ -309,7 +309,9 @@ static void rptun_ivshmem_check_cmd(FAR struct rptun_ivshmem_dev_s *priv)
   switch (cmd)
     {
       case RPTUN_CMD_RESTART:
+#ifdef CONFIG_BOARDCTL_RESET
         board_reset(0);
+#endif
         break;
       default:
         break;
