@@ -135,7 +135,7 @@ static const struct pci_u16550_type_s g_pci_u16550_qemu_x2 =
   .portincr = 8,
 };
 
-static const struct pci_u16550_type_s g_pci_u16550_qemu_x3 =
+static const struct pci_u16550_type_s g_pci_u16550_qemu_x4 =
 {
   .ports    = 4,
   .regincr  = 1,
@@ -564,7 +564,7 @@ static int pci_u16550_initialize(FAR struct pci_u16550_priv_s       *priv,
   ret = pci_alloc_irq(dev, &priv->common.irq, 1);
   if (ret != 1)
     {
-      nerr("Failed to allocate MSI %d\n", ret);
+      pcierr("Failed to allocate MSI %d\n", ret);
       goto legacy_irq;
     }
 
@@ -581,6 +581,14 @@ legacy_irq:
   /* Get legacy IRQ if MSI not supported */
 
   priv->common.irq = pci_get_irq(dev);
+
+  /* Attach interrupts early to prevent unexpected isr fault */
+
+  ret = irq_attach(priv->common.irq, priv->common.ops->isr, dev);
+  if (ret != OK)
+    {
+      pcierr("Failed to attach irq %d\n", ret);
+    }
 
   return OK;
 }

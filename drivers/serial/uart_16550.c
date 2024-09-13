@@ -1745,11 +1745,7 @@ int u16550_bind(FAR uart_dev_t *dev)
 #ifdef CONFIG_16550_PCI_CONSOLE
   if (dev->isconsole)
     {
-      /* Attach interrupts early to prevent unexpected isr fault */
-
-      u16550_attach(dev);
-
-      /* And configure */
+      /* Setup console device */
 
       u16550_setup(dev);
     }
