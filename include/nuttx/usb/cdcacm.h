@@ -423,6 +423,27 @@ struct composite_devdesc_s;
 void cdcacm_get_composite_devdesc(struct composite_devdesc_s *dev);
 #endif
 
+/****************************************************************************
+ * Name: cdcacm_write
+ *
+ * Description:
+ *   This provides a cdcacm write method for syslog devices that support
+ *   multiple byte writes.
+ *
+ * Input Parameters:
+ *   buffer - The buffer containing the data to be output
+ *   buflen - The number of bytes in the buffer
+ *
+ * Returned Value:
+ *   On success, the number of characters written is returned.  A negated
+ *   errno value is returned on any failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SYSLOG_CDCACM
+ssize_t cdcacm_write(FAR const char *buffer, size_t buflen);
+#endif
+
 #undef EXTERN
 #if defined(__cplusplus)
 }
