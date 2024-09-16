@@ -58,7 +58,7 @@ class NXGcore(gdb.Command):
         if not self.tempfile:
             return
 
-        super(NXGcore, self).__init__("nxgcore", gdb.COMMAND_USER)
+        super().__init__("nxgcore", gdb.COMMAND_USER)
 
     def invoke(self, args, from_tty):
         try:
