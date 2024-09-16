@@ -20,7 +20,7 @@
 
 import gdb
 import utils
-from lists import NxSQueue, dq_for_every
+from lists import NxDQueue, NxSQueue
 
 socket = utils.import_check(
     "socket", errmsg="No socket module found, please try gdb-multiarch instead.\n"
@@ -66,17 +66,14 @@ def socket_for_each_entry(proto):
         readahead = conn["readahead"]
     """
 
-    sock_gdbtype = gdb.lookup_type("struct socket_conn_s").pointer()
-    conn_gdbtype = gdb.lookup_type("struct %s_conn_s" % proto).pointer()
-
-    for node in dq_for_every(gdb.parse_and_eval("g_active_%s_connections" % proto)):
+    g_active_connections = gdb.parse_and_eval("g_active_%s_connections" % proto)
+    for node in NxDQueue(g_active_connections, "struct socket_conn_s", "node"):
+        # udp_conn_s::socket_conn_s sconn
         yield utils.container_of(
-            utils.container_of(
-                node, sock_gdbtype, "node"
-            ),  # struct socket_conn_s::dq_entry_t node
-            conn_gdbtype,
+            node,
+            "struct %s_conn_s" % proto,
             "sconn",
-        )  # udp_conn_s::socket_conn_s sconn
+        )
 
 
 def wrbuffer_inqueue_size(queue=None, protocol="tcp"):

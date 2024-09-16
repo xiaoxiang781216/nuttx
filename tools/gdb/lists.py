@@ -84,6 +84,34 @@ class NxSQueue:
         )
 
 
+class NxDQueue:
+    def __init__(self, queue, container_type=None, member=None):
+        """Initialize the doubly linked list iterator. Optionally specify the container type and member name."""
+        self.queue = queue
+        if container_type and not member:
+            raise ValueError("Must specify the member name in container.")
+
+        self.current = queue["head"]
+        self.tail = queue["tail"]
+        self.container_type = container_type
+        self.member = member
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self.current:
+            raise StopIteration
+
+        node = self.current
+        self.current = self.current["flink"]
+        return (
+            utils.container_of(node, self.container_type, self.member)
+            if self.container_type
+            else node
+        )
+
+
 def list_check(head):
     """Check the consistency of a list"""
     nb = 0
