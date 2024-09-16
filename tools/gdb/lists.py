@@ -18,6 +18,8 @@
 #
 ############################################################################
 
+import argparse
+
 import gdb
 import utils
 
@@ -26,31 +28,31 @@ sq_queue_type = utils.lookup_type("sq_queue_t")
 dq_queue_type = utils.lookup_type("dq_queue_t")
 
 
-def list_for_each(head):
-    """Iterate over a list"""
-    if head.type == list_node_type.pointer():
-        head = head.dereference()
-    elif head.type != list_node_type:
-        raise TypeError("Must be struct list_node not {}".format(head.type))
+class NxList:
+    def __init__(self, head, container_type=None, member=None):
+        """Initialize the list iterator. Optionally specify the container type and member name."""
+        self.head = head
+        if container_type and not member:
+            raise ValueError("Must specify the member name in container.")
 
-    if head["next"] == 0:
-        gdb.write(
-            "list_for_each: Uninitialized list '{}' treated as empty\n".format(
-                head.address
-            )
+        self.current = head["next"]
+        self.container_type = container_type
+        self.member = member
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.current == self.head:
+            raise StopIteration
+
+        node = self.current
+        self.current = self.current["next"]
+        return (
+            utils.container_of(node, self.container_type, self.member)
+            if self.container_type
+            else node
         )
-        return
-
-    node = head["next"].dereference()
-    while node.address != head.address:
-        yield node.address
-        node = node["next"].dereference()
-
-
-def list_for_each_entry(head, gdbtype, member):
-    """Iterate over a list of structs"""
-    for node in list_for_each(head):
-        yield utils.container_of(node, gdbtype, member)
 
 
 def list_check(head):
@@ -252,20 +254,23 @@ class ForeachListEntry(gdb.Command):
     def invoke(self, arg, from_tty):
         argv = gdb.string_to_argv(arg)
 
-        if len(argv) != 3:
-            gdb.write(
-                "list_for_every_entry takes three arguments" "head, type, member\n"
-            )
-            gdb.write("eg: list_for_every_entry &g_list 'struct type' 'node '\n")
+        parser = argparse.ArgumentParser(description="Iterate the items in list")
+        parser.add_argument("head", type=str, help="List head")
+        parser.add_argument("type", type=str, help="Container type")
+        parser.add_argument("member", type=str, help="Member name in container")
+        try:
+            args = parser.parse_args(argv)
+        except SystemExit:
+            gdb.write("Invalid arguments\n")
             return
 
-        i = 0
-        for entry in list_for_each_entry(
-            gdb.parse_and_eval(argv[0]), gdb.lookup_type(argv[1]).pointer(), argv[2]
-        ):
-            gdb.write(f"{i}: ({argv[1]} *){entry}\n")
-            gdb.execute(f"print *({argv[1]} *){entry}")
-            i += 1
+        pointer = gdb.parse_and_eval(args.head)
+        container_type = gdb.lookup_type(args.type)
+        member = args.member
+        list = NxList(pointer, container_type, member)
+        for i, entry in enumerate(list):
+            entry = entry.dereference()
+            gdb.write(f"{i}: {entry.format_string(styling=True)}\n")
 
 
 ListCheck()
