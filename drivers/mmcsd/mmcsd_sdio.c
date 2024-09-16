@@ -162,7 +162,9 @@ static bool    mmcsd_wrprotected(FAR struct mmcsd_state_s *priv);
 static int     mmcsd_eventwait(FAR struct mmcsd_state_s *priv,
                                sdio_eventset_t failevents);
 static int     mmcsd_transferready(FAR struct mmcsd_state_s *priv);
-
+#if MMCSD_MULTIBLOCK_LIMIT != 1
+static int     mmcsd_stoptransmission(FAR struct mmcsd_state_s *priv);
+#endif
 static int     mmcsd_setblocklen(FAR struct mmcsd_state_s *priv,
                                  uint32_t blocklen);
 static int     mmcsd_setblockcount(FAR struct mmcsd_state_s *priv,
@@ -476,7 +478,7 @@ static int mmcsd_recv_r6(FAR struct mmcsd_state_s *priv, uint32_t cmd)
  *   Obtain the SD card's Configuration Register (SCR)
  *
  * Returned Value:
- *   OK on success; a negated ernno on failure.
+ *   OK on success; a negated errno on failure.
  *
  ****************************************************************************/
 
@@ -1003,13 +1005,16 @@ static void mmcsd_decode_scr(FAR struct mmcsd_state_s *priv, uint32_t scr[2])
    *   DATA_STATE_AFTER_ERASE 55:55 1-bit erase status
    *   SD_SECURITY            54:52 3-bit SD security support level
    *   SD_BUS_WIDTHS          51:48 4-bit bus width indicator
-   *   Reserved               47:32 16-bit SD reserved space
+   *   Reserved               47:34 14-bit SD reserved space
+   *   CMD_SUPPORT            33:32 2-bit command supported (bit33 for cmd23)
    */
 
 #ifdef CONFIG_ENDIAN_BIG  /* Card transfers SCR in big-endian order */
   priv->buswidth     = (scr[0] >> 16) & 15;
+  priv->cmd23support =  scr[0]        & 2;
 #else
-  priv->buswidth     = (scr[0] >> 8) & 15;
+  priv->buswidth     = (scr[0] >> 8)  & 15;
+  priv->cmd23support = (scr[0] >> 24) & 2;
 #endif
 
 #ifdef CONFIG_DEBUG_FS_INFO
@@ -1369,6 +1374,32 @@ static int mmcsd_transferready(FAR struct mmcsd_state_s *priv)
 }
 
 /****************************************************************************
+ * Name: mmcsd_stoptransmission
+ *
+ * Description:
+ *   Send STOP_TRANSMISSION
+ *
+ ****************************************************************************/
+
+#if MMCSD_MULTIBLOCK_LIMIT != 1
+static int mmcsd_stoptransmission(FAR struct mmcsd_state_s *priv)
+{
+  int ret;
+
+  /* Send CMD12, STOP_TRANSMISSION, and verify good R1 return status  */
+
+  mmcsd_sendcmdpoll(priv, MMCSD_CMD12, 0);
+  ret = mmcsd_recv_r1(priv, MMCSD_CMD12);
+  if (ret != OK)
+    {
+      ferr("ERROR: mmcsd_recv_r1 for CMD12 failed: %d\n", ret);
+    }
+
+  return ret;
+}
+#endif
+
+/****************************************************************************
  * Name: mmcsd_setblocklen
  *
  * Description:
@@ -1416,7 +1447,7 @@ static int mmcsd_setblocklen(FAR struct mmcsd_state_s *priv,
 static int mmcsd_setblockcount(FAR struct mmcsd_state_s *priv,
                                uint32_t nblocks)
 {
-  int ret = OK;
+  int ret;
 
   mmcsd_sendcmdpoll(priv, MMCSD_CMD23, nblocks);
   ret = mmcsd_recv_r1(priv, MMCSD_CMD23);
@@ -1699,10 +1730,17 @@ static ssize_t mmcsd_readmultiple(FAR struct mmcsd_part_s *part,
       SDIO_RECVSETUP(priv->dev, buffer, nbytes);
     }
 
-  ret = mmcsd_setblockcount(priv, nblocks);
-  if (ret != OK)
+#ifdef CONFIG_MMCSD_MMCSUPPORT
+  if (IS_MMC(priv->type) || (IS_SD(priv->type) && priv->cmd23support))
+#else
+  if (IS_SD(priv->type) && priv->cmd23support)
+#endif
     {
-      return ret;
+      ret = mmcsd_setblockcount(priv, nblocks);
+      if (ret != OK)
+        {
+          return ret;
+        }
     }
 
   /* Send CMD18, READ_MULT_BLOCK: Read a block of the size selected by
@@ -1725,6 +1763,18 @@ static ssize_t mmcsd_readmultiple(FAR struct mmcsd_part_s *part,
     {
       ferr("ERROR: CMD18 transfer failed: %d\n", ret);
       return ret;
+    }
+
+  if (IS_SD(priv->type) && !priv->cmd23support)
+    {
+      /* Send STOP_TRANSMISSION */
+
+      ret = mmcsd_stoptransmission(priv);
+
+      if (ret != OK)
+        {
+          ferr("ERROR: mmcsd_stoptransmission failed: %d\n", ret);
+        }
     }
 
   /* On success, return the number of blocks read */
@@ -1934,6 +1984,7 @@ static ssize_t mmcsd_writemultiple(FAR struct mmcsd_part_s *part,
   uint32_t partnum = part - priv->part;
   off_t  offset;
   int ret;
+  int evret = OK;
 
   finfo("startblock=%jd nblocks=%zu\n", (intmax_t)startblock, nblocks);
   DEBUGASSERT(priv != NULL && buffer != NULL);
@@ -2054,11 +2105,25 @@ static ssize_t mmcsd_writemultiple(FAR struct mmcsd_part_s *part,
    * programming access.
    */
 
-  ret = mmcsd_setblockcount(priv,
-       priv->partnum == MMCSD_PART_RPMB ? ((1 << 31) | nblocks) : nblocks);
-  if (ret != OK)
+#ifdef CONFIG_MMCSD_MMCSUPPORT
+  if (IS_MMC(priv->type))
     {
-      return ret;
+      ret = mmcsd_setblockcount(priv, priv->partnum == MMCSD_PART_RPMB ?
+                                ((1 << 31) | nblocks) : nblocks);
+      if (ret != OK)
+        {
+          return ret;
+        }
+    }
+  else
+#endif
+  if (IS_SD(priv->type) && priv->cmd23support)
+    {
+      ret = mmcsd_setblockcount(priv, nblocks);
+      if (ret != OK)
+        {
+          return ret;
+        }
     }
 
   /* If Controller does not need DMA setup before the write then send CMD25
@@ -2124,18 +2189,40 @@ static ssize_t mmcsd_writemultiple(FAR struct mmcsd_part_s *part,
 
   /* Wait for the transfer to complete */
 
-  ret = mmcsd_eventwait(priv, SDIOWAIT_TIMEOUT | SDIOWAIT_ERROR);
-  if (ret != OK)
+  evret = mmcsd_eventwait(priv, SDIOWAIT_TIMEOUT | SDIOWAIT_ERROR);
+  if (evret != OK)
     {
-      ferr("ERROR: CMD25 transfer failed: %d\n", ret);
+      ferr("ERROR: CMD25 transfer failed: %d\n", evret);
 
       /* If we return from here, we probably leave the sd-card in
        * Receive-data State. Instead, we will remember that
        * an error occurred and try to execute the STOP_TRANSMISSION
        * to put the sd-card back into Transfer State.
        */
+    }
 
-      return ret;
+  if (IS_SD(priv->type) && !priv->cmd23support)
+    {
+      /* Send STOP_TRANSMISSION */
+
+      ret = mmcsd_stoptransmission(priv);
+      if (evret != OK)
+        {
+          return evret;
+        }
+
+      if (ret != OK)
+        {
+          ferr("ERROR: mmcsd_stoptransmission failed: %d\n", ret);
+          return ret;
+        }
+    }
+  else
+    {
+      if (evret != OK)
+        {
+          return evret;
+        }
     }
 
   /* Flag that a write transfer is pending that we will have to check for
