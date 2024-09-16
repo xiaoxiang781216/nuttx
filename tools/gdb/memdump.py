@@ -24,7 +24,7 @@ import time
 
 import gdb
 import utils
-from lists import sq_for_every
+from lists import NxSQueue
 from utils import get_long_type, get_symbol_value, lookup_type, read_ulong
 
 MM_ALLOC_BIT = 0x1
@@ -225,7 +225,7 @@ def mempool_foreach(pool):
             yield buf
             nblk -= 1
 
-    for entry in sq_for_every(pool["equeue"]):
+    for entry in NxSQueue(pool["equeue"]):
         nblk = (pool["expandsize"] - sq_entry_type.sizeof) / blocksize
         base = int(entry) - nblk * blocksize
         while nblk > 0:
@@ -352,12 +352,12 @@ class Memdump(gdb.Command):
         """Dump the mempool memory"""
         for pool in mempool_multiple_foreach(mpool):
             if pid == PID_MM_FREE:
-                for entry in sq_for_every(pool["queue"]):
+                for entry in NxSQueue(pool["queue"]):
                     gdb.write("%12u%#*x\n" % (pool["blocksize"], self.align, entry))
                     self.aordblks += 1
                     self.uordblks += mempool_realblocksize(pool)
 
-                for entry in sq_for_every(pool["iqueue"]):
+                for entry in NxSQueue(pool["iqueue"]):
                     gdb.write("%12u%#*x\n" % (pool["blocksize"], self.align, entry))
                     self.aordblks += 1
                     self.uordblks += mempool_realblocksize(pool)

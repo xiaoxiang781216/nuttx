@@ -55,6 +55,35 @@ class NxList:
         )
 
 
+class NxSQueue:
+    def __init__(self, queue, container_type=None, member=None):
+        """Initialize the singly linked list iterator. Optionally specify the container type and member name."""
+        self.queue = queue
+        if container_type and not member:
+            raise ValueError("Must specify the member name in container.")
+
+        self.current = queue["head"]
+        self.tail = queue["tail"]
+        self.container_type = container_type
+        self.member = member
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        current = self.current
+        if not current:
+            raise StopIteration
+
+        node = current
+        self.current = current["flink"]
+        return (
+            utils.container_of(node, self.container_type, self.member)
+            if self.container_type
+            else node
+        )
+
+
 def list_check(head):
     """Check the consistency of a list"""
     nb = 0
@@ -119,25 +148,6 @@ def list_check(head):
         if c == head:
             gdb.write("list is consistent: {} node(s)\n".format(nb))
             return
-
-
-def sq_for_every(sq, entry=None):
-    """Iterate over a singly linked list from the head or specified entry"""
-    if sq.type == sq_queue_type.pointer():
-        sq = sq.dereference()
-    elif sq.type != sq_queue_type:
-        gdb.write("Must be struct sq_queue not {}".format(sq.type))
-        return
-
-    if sq["head"] == 0:
-        return
-
-    if not entry:
-        entry = sq["head"].dereference()
-
-    while entry.address:
-        yield entry.address
-        entry = entry["flink"].dereference()
 
 
 def sq_is_empty(sq):
