@@ -239,7 +239,7 @@ class ForeachInode(gdb.Command):
     """Dump each inode info"""
 
     def __init__(self):
-        super().__init__("foreach_inode", gdb.COMMAND_USER)
+        super().__init__("foreach inode", gdb.COMMAND_USER)
         self.level = 4096
 
     def get_root_inode(self, addr_or_expr):
@@ -251,7 +251,7 @@ class ForeachInode(gdb.Command):
             return utils.gdb_eval_or_none(addr_or_expr)
 
     def parse_arguments(self, argv):
-        parser = argparse.ArgumentParser(description="foreach_inode command")
+        parser = argparse.ArgumentParser(description="foreach inode command")
         parser.add_argument(
             "-L",
             "--level",
