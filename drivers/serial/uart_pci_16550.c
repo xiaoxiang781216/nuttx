@@ -542,6 +542,7 @@ static int pci_u16550_initialize(FAR struct pci_u16550_priv_s       *priv,
                                  bool                                mmio)
 {
   int ret = 0;
+  int offset;
 
   /* Configure UART PCI */
 
@@ -558,6 +559,14 @@ static int pci_u16550_initialize(FAR struct pci_u16550_priv_s       *priv,
 
   priv->common.regincr = type->regincr;
   priv->pcidev         = dev;
+
+  /* Make sure that all interrupts are disabled otherwise spurious MSI
+   * interrupt can happen just after we connect MSI.
+   */
+
+  offset = (priv->common.regincr * sizeof(uart_datawidth_t) *
+            UART_IER_OFFSET);
+  priv->common.ops->putreg(&priv->common, offset, 0);
 
   /* Allocate and connect MSI if supported */
 
@@ -581,14 +590,6 @@ legacy_irq:
   /* Get legacy IRQ if MSI not supported */
 
   priv->common.irq = pci_get_irq(dev);
-
-  /* Attach interrupts early to prevent unexpected isr fault */
-
-  ret = irq_attach(priv->common.irq, priv->common.ops->isr, dev);
-  if (ret != OK)
-    {
-      pcierr("Failed to attach irq %d\n", ret);
-    }
 
   return OK;
 }
