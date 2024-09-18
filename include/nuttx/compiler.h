@@ -244,6 +244,13 @@
 
 #  define noinstrument_function __attribute__((no_instrument_function))
 
+/* The no_profile_instrument_function attribute on functions is used to
+ * inform the compiler that it should not process any profile feedback
+ * based optimization code instrumentation.
+ */
+
+#  define noprofile_function __attribute__((no_profile_instrument_function))
+
 /* The nooptimiziation_function attribute no optimize */
 
 #  if defined(__clang__)
@@ -579,6 +586,7 @@
 #  define inline_function inline
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
 #  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
@@ -725,6 +733,7 @@
 #  define inline_function inline
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
 #  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
@@ -839,6 +848,7 @@
 #  define inline_function inline
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
 #  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
@@ -932,6 +942,7 @@
 #  define inline_function __forceinline
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
 #  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
@@ -1013,6 +1024,7 @@
 #  define always_inline_function        __attribute__((always_inline))
 #  define noinline_function             __attribute__((noinline))
 #  define noinstrument_function
+#  define noprofile_function
 #  define nooptimiziation_function      __attribute__((optimize(0)))
 #  define nosanitize_address
 #  define nosanitize_undefined
@@ -1080,6 +1092,7 @@
 #  define inline_function
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
 #  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
