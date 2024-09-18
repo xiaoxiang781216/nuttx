@@ -1,5 +1,5 @@
 ############################################################################
-# tools/gdb/nuttx_gdb/utils.py
+# tools/gdb/nuttxgdb/utils.py
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with

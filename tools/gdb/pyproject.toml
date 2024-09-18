@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 version = "0.0.1"
-name = 'nuttx-gdb'
+name = 'nuttxgdb'
 description = 'NuttX RTOS GDB extensions'
 readme = "README.md"
 license = { file = 'LICENSE' }
@@ -19,4 +19,4 @@ dependencies = ["matplotlib", "numpy", "pyelftools"]
 requires-python = ">=3.8"
 
 [tool.setuptools.package-dir]
-nuttx_gdb = "nuttx_gdb"
+nuttxgdb = "nuttxgdb"

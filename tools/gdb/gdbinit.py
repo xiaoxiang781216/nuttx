@@ -27,7 +27,7 @@ if __name__ == "__main__":
     if here not in sys.path:
         sys.path.insert(0, here)
 
-    if "nuttx_gdb" in sys.modules:
-        del sys.modules["nuttx_gdb"]
+    if "nuttxgdb" in sys.modules:
+        del sys.modules["nuttxgdb"]
 
-    import nuttx_gdb  # noqa: F401
+    import nuttxgdb  # noqa: F401

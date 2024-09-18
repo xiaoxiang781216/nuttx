@@ -1,5 +1,5 @@
 ############################################################################
-# tools/gdb/nuttx_gdb/dmesg.py
+# tools/gdb/nuttxgdb/dmesg.py
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
