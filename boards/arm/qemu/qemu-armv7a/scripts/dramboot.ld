@@ -32,16 +32,18 @@ MEMORY
 SECTIONS
 {
 
-  /* where the global variable out-of-bounds detection information located */
+  /* Where the global variable out-of-bounds detection information located */
+
 #ifdef CONFIG_MM_KASAN_GLOBAL
-  .kasan.unused :
-  {
+  .kasan.unused : {
     *(.data..LASANLOC*)
   } > ROM
-  .kasan.global :
-  {
+  .kasan.global : {
     KEEP (*(.data..LASAN0))
     KEEP (*(.data.rel.local..LASAN0))
+  } > ROM
+  .kasan.shadows : {
+    *(.kasan.shadows)
   } > ROM
 #endif
 
@@ -66,16 +68,14 @@ SECTIONS
       _sztext = _etext - _stext;
   } > ROM
 
-  .ARM.extab :
-  {
+  .ARM.extab : {
       *(.ARM.extab*)
   } > ROM
 
   /* .ARM.exidx is sorted, so has to go in its own output section.  */
 
   PROVIDE_HIDDEN (__exidx_start = .);
-  .ARM.exidx :
-  {
+  .ARM.exidx : {
       *(.ARM.exidx* .gnu.linkonce.armexidx.*)
   } > ROM
   PROVIDE_HIDDEN (__exidx_end = .);
