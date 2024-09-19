@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/xtensa/src/common/xtensa_cpupause.c
+ * arch/risc-v/src/common/riscv_smpcall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -26,19 +26,20 @@
 
 #include <stdint.h>
 #include <assert.h>
+#include <debug.h>
+#include <string.h>
+#include <stdio.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/sched_note.h>
 
-#include "xtensa.h"
 #include "sched/sched.h"
-
-#ifdef CONFIG_SMP
+#include "riscv_internal.h"
+#include "chip.h"
 
 /****************************************************************************
- * Private Data
+ * Public Data
  ****************************************************************************/
 
 /****************************************************************************
@@ -46,34 +47,30 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: xtensa_pause_handler
+ * Name: riscv_smp_call_handler
  *
  * Description:
- *   This is the handler for CPU_INTCODE_PAUSE CPU interrupt.  This
- *   implements up_cpu_pause() by performing the following operations:
- *
- *   1. The current task state at the head of the current assigned task
- *      list was saved when the interrupt was entered.
- *   2. This function simply waits on a spinlock, then returns.
- *   3. Upon return, the interrupt exit logic will restore the state of
- *      the new task at the head of the ready to run list.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
+ *   This is the handler for SMP_CALL.
  *
  ****************************************************************************/
 
-void xtensa_pause_handler(int irq, void *context, void *arg)
+int riscv_smp_call_handler(int irq, void *c, void *arg)
 {
-  nxsched_smp_call_handler(irq, context, arg);
-  nxsched_process_delivered(this_cpu());
+  int cpu = this_cpu();
+
+  nxsched_smp_call_handler(irq, c, arg);
+
+  /* Clear IPI (Inter-Processor-Interrupt) */
+
+  putreg32(0, (uintptr_t)RISCV_IPI + (4 * cpu));
+
+  nxsched_process_delivered(cpu);
+
+  return OK;
 }
 
 /****************************************************************************
- * Name: up_cpu_pause_async
+ * Name: up_send_smp_sched
  *
  * Description:
  *   pause task execution on the CPU
@@ -91,11 +88,11 @@ void xtensa_pause_handler(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-inline_function int up_cpu_pause_async(int cpu)
+int up_send_smp_sched(int cpu)
 {
-  /* Execute the intercpu interrupt */
+  /* Execute Pause IRQ to CPU(cpu) */
 
-  xtensa_intercpu_interrupt(cpu, CPU_INTCODE_PAUSE);
+  putreg32(1, (uintptr_t)RISCV_IPI + (4 * cpu));
 
   return OK;
 }
@@ -121,8 +118,7 @@ void up_send_smp_call(cpu_set_t cpuset)
   for (; cpuset != 0; cpuset &= ~(1 << cpu))
     {
       cpu = ffs(cpuset) - 1;
-      up_cpu_pause_async(cpu);
+      up_send_smp_sched(cpu);
     }
 }
 
-#endif /* CONFIG_SMP */

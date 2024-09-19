@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm64/src/common/arm64_cpupause.c
+ * arch/arm64/src/common/arm64_smpcall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -46,10 +46,10 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm64_pause_async_handler
+ * Name: arm64_smp_sched_handler
  *
  * Description:
- *   This is the handler for async pause.
+ *   This is the handler for sched.
  *
  *   1. It saves the current task state at the head of the current assigned
  *      task list.
@@ -65,7 +65,7 @@
  *
  ****************************************************************************/
 
-int arm64_pause_async_handler(int irq, void *context, void *arg)
+int arm64_smp_sched_handler(int irq, void *context, void *arg)
 {
   struct tcb_s *tcb;
   int cpu = this_cpu();
@@ -82,7 +82,7 @@ int arm64_pause_async_handler(int irq, void *context, void *arg)
 }
 
 /****************************************************************************
- * Name: up_cpu_pause_async
+ * Name: up_send_smp_sched
  *
  * Description:
  *   pause task execution on the CPU
@@ -100,11 +100,30 @@ int arm64_pause_async_handler(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-inline_function int up_cpu_pause_async(int cpu)
+int up_send_smp_sched(int cpu)
 {
   /* Execute SGI2 */
 
-  arm64_gic_raise_sgi(GIC_SMP_CPUPAUSE_ASYNC, (1 << cpu));
+  arm64_gic_raise_sgi(GIC_SMP_SCHED, (1 << cpu));
 
   return OK;
+}
+
+/****************************************************************************
+ * Name: up_send_smp_call
+ *
+ * Description:
+ *   Send smp call to target cpu.
+ *
+ * Input Parameters:
+ *   cpuset - The set of CPUs to receive the SGI.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void up_send_smp_call(cpu_set_t cpuset)
+{
+  up_trigger_irq(GIC_SMP_CALL, cpuset);
 }

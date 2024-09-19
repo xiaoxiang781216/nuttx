@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/sparc/src/s698pm/s698pm_cpupause.c
+ * arch/x86_64/src/intel64/intel64_smpcall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -30,13 +30,15 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <arch/irq.h>
+
 #include <nuttx/arch.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/sched_note.h>
 
 #include "sched/sched.h"
-#include "sparc_internal.h"
-#include "chip.h"
+
+#include "x86_64_internal.h"
 
 /****************************************************************************
  * Public Data
@@ -47,40 +49,65 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: s698pm_pause_handler
+ * Name: x86_64_smp_call_handler
  *
  * Description:
- *   Inter-CPU interrupt handler
- *
- * Input Parameters:
- *   Standard interrupt handler inputs
- *
- * Returned Value:
- *   Should always return OK
+ *   This is the handler for SMP_CALL.
  *
  ****************************************************************************/
 
-int s698pm_pause_handler(int irq, void *c, void *arg)
+int x86_64_smp_call_handler(int irq, void *c, void *arg)
 {
   struct tcb_s *tcb;
   int cpu = this_cpu();
 
-  /* Clear IPI (Inter-Processor-Interrupt) */
-
-  putreg32(1 << S698PM_IPI_VECTOR, S698PM_IRQREG_ICLEAR);
-
   tcb = current_task(cpu);
-  sparc_savestate(tcb->xcp.regs);
+  x86_64_savestate(tcb->xcp.regs);
   nxsched_smp_call_handler(irq, c, arg);
-  nxsched_process_delivered(cpu);
   tcb = current_task(cpu);
-  sparc_restorestate(tcb->xcp.regs);
+  x86_64_restorestate(tcb->xcp.regs);
 
   return OK;
 }
 
 /****************************************************************************
- * Name: up_cpu_pause_async
+ * Name: x86_64_smp_sched_handler
+ *
+ * Description:
+ *   This is the handler for smp.
+ *
+ *   1. It saves the current task state at the head of the current assigned
+ *      task list.
+ *   2. It porcess g_delivertasks
+ *   3. Returns from interrupt, restoring the state of the new task at the
+ *      head of the ready to run list.
+ *
+ * Input Parameters:
+ *   Standard interrupt handling
+ *
+ * Returned Value:
+ *   Zero on success; a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+int x86_64_smp_sched_handler(int irq, void *c, void *arg)
+{
+  struct tcb_s *tcb;
+  int cpu = this_cpu();
+
+  tcb = current_task(cpu);
+  nxsched_suspend_scheduler(tcb);
+  x86_64_savestate(tcb->xcp.regs);
+  nxsched_process_delivered(cpu);
+  tcb = current_task(cpu);
+  nxsched_resume_scheduler(tcb);
+  x86_64_restorestate(tcb->xcp.regs);
+
+  return OK;
+}
+
+/****************************************************************************
+ * Name: up_send_smp_sched
  *
  * Description:
  *   pause task execution on the CPU
@@ -98,14 +125,14 @@ int s698pm_pause_handler(int irq, void *c, void *arg)
  *
  ****************************************************************************/
 
-inline_function int up_cpu_pause_async(int cpu)
+int up_send_smp_sched(int cpu)
 {
-  uintptr_t regaddr;
+  cpu_set_t cpuset;
 
-  /* Execute Pause IRQ to CPU(cpu) */
+  CPU_ZERO(&cpuset);
+  CPU_SET(cpu, &cpuset);
 
-  regaddr = (uintptr_t)S698PM_IRQREG_P0_FORCE + (4 * cpu);
-  putreg32(1 << S698PM_IPI_VECTOR, regaddr);
+  up_trigger_irq(SMP_IPI_SCHED_IRQ, cpuset);
 
   return OK;
 }
@@ -126,12 +153,5 @@ inline_function int up_cpu_pause_async(int cpu)
 
 void up_send_smp_call(cpu_set_t cpuset)
 {
-  int cpu;
-
-  for (; cpuset != 0; cpuset &= ~(1 << cpu))
-    {
-      cpu = ffs(cpuset) - 1;
-      up_cpu_pause_async(cpu);
-    }
+  up_trigger_irq(SMP_IPI_CALL_IRQ, cpuset);
 }
-

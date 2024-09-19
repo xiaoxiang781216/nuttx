@@ -93,7 +93,7 @@ if(CONFIG_SCHED_BACKTRACE)
 endif()
 
 if(CONFIG_SMP)
-  list(APPEND SRCS xtensa_cpupause.c)
+  list(APPEND SRCS xtensa_smpcall.c)
 endif()
 
 if(CONFIG_STACK_COLORATION)

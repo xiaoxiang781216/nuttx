@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/x86_64/src/intel64/intel64_cpupause.c
+ * arch/arm/src/armv7-r/arm_smpcall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -26,22 +26,20 @@
 
 #include <stdint.h>
 #include <assert.h>
-#include <debug.h>
-#include <string.h>
-#include <stdio.h>
-
-#include <arch/irq.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/sched_note.h>
 
+#include "arm_internal.h"
+#include "gic.h"
 #include "sched/sched.h"
 
-#include "x86_64_internal.h"
+#ifdef CONFIG_SMP
 
 /****************************************************************************
- * Public Data
+ * Private Data
  ****************************************************************************/
 
 /****************************************************************************
@@ -49,38 +47,10 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_pause_handler
+ * Name: arm_smp_sched_handler
  *
  * Description:
- *   Inter-CPU interrupt handler
- *
- * Input Parameters:
- *   Standard interrupt handler inputs
- *
- * Returned Value:
- *   Should always return OK
- *
- ****************************************************************************/
-
-int up_pause_handler(int irq, void *c, void *arg)
-{
-  struct tcb_s *tcb;
-  int cpu = this_cpu();
-
-  tcb = current_task(cpu);
-  x86_64_savestate(tcb->xcp.regs);
-  nxsched_smp_call_handler(irq, c, arg);
-  tcb = current_task(cpu);
-  x86_64_restorestate(tcb->xcp.regs);
-
-  return OK;
-}
-
-/****************************************************************************
- * Name: up_pause_async_handler
- *
- * Description:
- *   This is the handler for async pause.
+ *   This is the handler for sched.
  *
  *   1. It saves the current task state at the head of the current assigned
  *      task list.
@@ -96,24 +66,23 @@ int up_pause_handler(int irq, void *c, void *arg)
  *
  ****************************************************************************/
 
-int up_pause_async_handler(int irq, void *c, void *arg)
+int arm_smp_sched_handler(int irq, void *context, void *arg)
 {
   struct tcb_s *tcb;
   int cpu = this_cpu();
 
   tcb = current_task(cpu);
   nxsched_suspend_scheduler(tcb);
-  x86_64_savestate(tcb->xcp.regs);
   nxsched_process_delivered(cpu);
   tcb = current_task(cpu);
   nxsched_resume_scheduler(tcb);
-  x86_64_restorestate(tcb->xcp.regs);
 
+  UNUSED(tcb);
   return OK;
 }
 
 /****************************************************************************
- * Name: up_cpu_pause_async
+ * Name: up_send_smp_sched
  *
  * Description:
  *   pause task execution on the CPU
@@ -131,14 +100,9 @@ int up_pause_async_handler(int irq, void *c, void *arg)
  *
  ****************************************************************************/
 
-inline_function int up_cpu_pause_async(int cpu)
+int up_send_smp_sched(int cpu)
 {
-  cpu_set_t cpuset;
-
-  CPU_ZERO(&cpuset);
-  CPU_SET(cpu, &cpuset);
-
-  up_trigger_irq(SMP_IPI_ASYNC_IRQ, cpuset);
+  arm_cpu_sgi(GIC_SMP_SCHED, (1 << cpu));
 
   return OK;
 }
@@ -159,5 +123,7 @@ inline_function int up_cpu_pause_async(int cpu)
 
 void up_send_smp_call(cpu_set_t cpuset)
 {
-  up_trigger_irq(SMP_IPI_IRQ, cpuset);
+  up_trigger_irq(GIC_SMP_CALL, cpuset);
 }
+
+#endif /* CONFIG_SMP */

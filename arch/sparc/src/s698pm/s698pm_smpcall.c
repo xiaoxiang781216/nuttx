@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/arm_cpupause.c
+ * arch/sparc/src/s698pm/s698pm_smpcall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -26,20 +26,20 @@
 
 #include <stdint.h>
 #include <assert.h>
+#include <debug.h>
+#include <string.h>
+#include <stdio.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/sched_note.h>
 
-#include "arm_internal.h"
-#include "gic.h"
 #include "sched/sched.h"
-
-#ifdef CONFIG_SMP
+#include "sparc_internal.h"
+#include "chip.h"
 
 /****************************************************************************
- * Private Data
+ * Public Data
  ****************************************************************************/
 
 /****************************************************************************
@@ -47,42 +47,34 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm_pause_async_handler
+ * Name: s698pm_smp_call_handler
  *
  * Description:
- *   This is the handler for async pause.
- *
- *   1. It saves the current task state at the head of the current assigned
- *      task list.
- *   2. It porcess g_delivertasks
- *   3. Returns from interrupt, restoring the state of the new task at the
- *      head of the ready to run list.
- *
- * Input Parameters:
- *   Standard interrupt handling
- *
- * Returned Value:
- *   Zero on success; a negated errno value on failure.
+ *   This is the handler for SMP_CALL.
  *
  ****************************************************************************/
 
-int arm_pause_async_handler(int irq, void *context, void *arg)
+int s698pm_smp_call_handler(int irq, void *c, void *arg)
 {
   struct tcb_s *tcb;
   int cpu = this_cpu();
 
+  /* Clear IPI (Inter-Processor-Interrupt) */
+
+  putreg32(1 << S698PM_IPI_VECTOR, S698PM_IRQREG_ICLEAR);
+
   tcb = current_task(cpu);
-  nxsched_suspend_scheduler(tcb);
+  sparc_savestate(tcb->xcp.regs);
+  nxsched_smp_call_handler(irq, c, arg);
   nxsched_process_delivered(cpu);
   tcb = current_task(cpu);
-  nxsched_resume_scheduler(tcb);
+  sparc_restorestate(tcb->xcp.regs);
 
-  UNUSED(tcb);
   return OK;
 }
 
 /****************************************************************************
- * Name: up_cpu_pause_async
+ * Name: up_send_smp_sched
  *
  * Description:
  *   pause task execution on the CPU
@@ -100,11 +92,40 @@ int arm_pause_async_handler(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-inline_function int up_cpu_pause_async(int cpu)
+int up_send_smp_sched(int cpu)
 {
-  arm_cpu_sgi(GIC_SMP_CPUPAUSE_ASYNC, (1 << cpu));
+  uintptr_t regaddr;
+
+  /* Execute Pause IRQ to CPU(cpu) */
+
+  regaddr = (uintptr_t)S698PM_IRQREG_P0_FORCE + (4 * cpu);
+  putreg32(1 << S698PM_IPI_VECTOR, regaddr);
 
   return OK;
 }
 
-#endif /* CONFIG_SMP */
+/****************************************************************************
+ * Name: up_send_smp_call
+ *
+ * Description:
+ *   Send smp call to target cpu.
+ *
+ * Input Parameters:
+ *   cpuset - The set of CPUs to receive the SGI.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void up_send_smp_call(cpu_set_t cpuset)
+{
+  int cpu;
+
+  for (; cpuset != 0; cpuset &= ~(1 << cpu))
+    {
+      cpu = ffs(cpuset) - 1;
+      up_send_smp_sched(cpu);
+    }
+}
+

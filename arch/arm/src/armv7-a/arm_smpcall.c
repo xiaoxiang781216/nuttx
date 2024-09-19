@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/sam34/sam4cm_cpupause.c
+ * arch/arm/src/armv7-a/arm_smpcall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -26,29 +26,17 @@
 
 #include <stdint.h>
 #include <assert.h>
-#include <debug.h>
-#include <string.h>
-#include <stdio.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/sched_note.h>
 
-#include "sched/sched.h"
 #include "arm_internal.h"
-#include "hardware/sam4cm_ipc.h"
+#include "gic.h"
+#include "sched/sched.h"
 
 #ifdef CONFIG_SMP
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#if 0
-#  define DPRINTF(fmt, args...) _err(fmt, ##args)
-#else
-#  define DPRINTF(fmt, args...) do {} while (0)
-#endif
 
 /****************************************************************************
  * Private Data
@@ -59,47 +47,42 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm_pause_handler
+ * Name: arm_smp_sched_handler
  *
  * Description:
- *   Inter-CPU interrupt handler
+ *   This is the handler for sched.
+ *
+ *   1. It saves the current task state at the head of the current assigned
+ *      task list.
+ *   2. It porcess g_delivertasks
+ *   3. Returns from interrupt, restoring the state of the new task at the
+ *      head of the ready to run list.
  *
  * Input Parameters:
- *   Standard interrupt handler inputs
+ *   Standard interrupt handling
  *
  * Returned Value:
- *   Should always return OK
+ *   Zero on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
-int arm_pause_handler(int irq, void *c, void *arg)
+int arm_smp_sched_handler(int irq, void *context, void *arg)
 {
+  struct tcb_s *tcb;
   int cpu = this_cpu();
 
-  nxsched_smp_call_handler(irq, c, arg);
-
-  /* Clear : Pause IRQ */
-
-  /* IPC Interrupt Clear Command Register (write-only) */
-
-  if (1 == cpu)
-    {
-      DPRINTF("CPU0 -> CPU1\n");
-      putreg32(0x1, SAM_IPC1_ICCR);
-    }
-  else
-    {
-      DPRINTF("CPU1 -> CPU0\n");
-      putreg32(0x1, SAM_IPC0_ICCR);
-    }
-
+  tcb = current_task(cpu);
+  nxsched_suspend_scheduler(tcb);
   nxsched_process_delivered(cpu);
+  tcb = current_task(cpu);
+  nxsched_resume_scheduler(tcb);
 
+  UNUSED(tcb);
   return OK;
 }
 
 /****************************************************************************
- * Name: up_cpu_pause_async
+ * Name: up_send_smp_sched
  *
  * Description:
  *   pause task execution on the CPU
@@ -117,20 +100,9 @@ int arm_pause_handler(int irq, void *c, void *arg)
  *
  ****************************************************************************/
 
-inline_function int up_cpu_pause_async(int cpu)
+int up_send_smp_sched(int cpu)
 {
-  /* Execute Pause IRQ to CPU(cpu) */
-
-  /* Set IPC Interrupt (IRQ0) (write-only) */
-
-  if (cpu == 1)
-    {
-      putreg32(0x1, SAM_IPC1_ISCR);
-    }
-  else
-    {
-      putreg32(0x1, SAM_IPC0_ISCR);
-    }
+  arm_cpu_sgi(GIC_SMP_SCHED, (1 << cpu));
 
   return OK;
 }
@@ -151,13 +123,7 @@ inline_function int up_cpu_pause_async(int cpu)
 
 void up_send_smp_call(cpu_set_t cpuset)
 {
-  int cpu;
-
-  for (; cpuset != 0; cpuset &= ~(1 << cpu))
-    {
-      cpu = ffs(cpuset) - 1;
-      up_cpu_pause_async(cpu);
-    }
+  up_trigger_irq(GIC_SMP_CALL, cpuset);
 }
 
 #endif /* CONFIG_SMP */

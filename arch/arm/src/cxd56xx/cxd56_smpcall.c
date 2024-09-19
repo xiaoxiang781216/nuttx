@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/cxd56xx/cxd56_cpupause.c
+ * arch/arm/src/cxd56xx/cxd56_smpcall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -129,20 +129,14 @@ static bool handle_irqreq(int cpu)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm_pause_handler
+ * Name: arm_smp_call_handler
  *
  * Description:
- *   Inter-CPU interrupt handler
- *
- * Input Parameters:
- *   Standard interrupt handler inputs
- *
- * Returned Value:
- *   Should always return OK
+ *   This is the handler for SMP_CALL.
  *
  ****************************************************************************/
 
-int arm_pause_handler(int irq, void *c, void *arg)
+int arm_smp_call_handler(int irq, void *c, void *arg)
 {
   int cpu = this_cpu();
   int ret = OK;
@@ -161,7 +155,7 @@ int arm_pause_handler(int irq, void *c, void *arg)
 }
 
 /****************************************************************************
- * Name: up_cpu_pause_async
+ * Name: up_send_smp_sched
  *
  * Description:
  *   pause task execution on the CPU
@@ -179,7 +173,7 @@ int arm_pause_handler(int irq, void *c, void *arg)
  *
  ****************************************************************************/
 
-inline_function int up_cpu_pause_async(int cpu)
+int up_send_smp_sched(int cpu)
 {
   /* Generate IRQ for CPU(cpu) */
 
@@ -209,7 +203,7 @@ void up_send_smp_call(cpu_set_t cpuset)
   for (; cpuset != 0; cpuset &= ~(1 << cpu))
     {
       cpu = ffs(cpuset) - 1;
-      up_cpu_pause_async(cpu);
+      up_send_smp_sched(cpu);
     }
 }
 
