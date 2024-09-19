@@ -242,10 +242,14 @@ class DumpELFFile:
     def __init__(self, elffile: str):
         self.elffile = elffile
         self.__memories = []
+        self.__arch = None
+        self.__xlen = None
 
     def parse(self, load_symbol: bool):
         self.__memories = []
         elf = ELFFile.load_from_path(self.elffile)
+        self.__arch = elf.get_machine_arch().lower().replace("-", "")
+        self.__xlen = elf.elfclass
 
         for section in elf.iter_sections():
             # REALLY NEED to match exact type as all other sections
@@ -342,6 +346,12 @@ class DumpELFFile:
     def get_memories(self):
         return self.__memories
 
+    def arch(self):
+        return self.__arch
+
+    def xlen(self):
+        return self.__xlen
+
 
 class DumpLogFile:
     def __init__(self, logfile):
@@ -350,6 +360,7 @@ class DumpLogFile:
         self.stack_data = []
         self.__memories = list()
         self.reg_table = dict()
+        self.reg_len = 32
 
     def _init_register(self):
         self.registers = [b"x"] * (max(self.reg_table.values()) + 1)
@@ -367,6 +378,8 @@ class DumpLogFile:
             if reg_name in self.reg_table:
                 reg_index = self.reg_table[reg_name]
                 self.registers[reg_index] = int(reg_val, 16)
+                self.reg_len = max(self.reg_len, len(reg_val) * 4)
+
         return True
 
     def _parse_fix_register(self, arch):
@@ -399,8 +412,9 @@ class DumpLogFile:
                 data = b""
                 start = addr_start
 
+        reg_fmt = "<I"  # Stack is printed always in 32bit
         for val in match_res.groupdict()["VALS"].split():
-            data = data + struct.pack("<I", int(val, 16))
+            data = data + struct.pack(reg_fmt, int(val, 16))
 
         return start, data
 
@@ -510,6 +524,8 @@ class GDBStub:
         self.socket = None
         self.gdb_signal = GDB_SIGNAL_DEFAULT
         self.arch = arch
+        self.reg_fmt = "<I" if elffile.xlen() <= 32 else "<Q"
+        self.reg_digits = elffile.xlen() // 4
 
         # new list oreder is coredump, rawfile, logfile, elffile
 
@@ -522,6 +538,7 @@ class GDBStub:
 
         self.threadinfo = []
         self.current_thread = 0
+        self.regfix = False
         if elffile.load_symbol:
             try:
                 self.parse_thread()
@@ -617,7 +634,7 @@ class GDBStub:
     def handle_register_group_read_packet(self):
 
         def put_register_packet(regs):
-            reg_fmt = "<I"
+            reg_fmt = self.reg_fmt
             pkt = b""
 
             for reg in regs:
@@ -627,7 +644,7 @@ class GDBStub:
                 else:
                     # Register not in coredump -> unknown value
                     # Send in "xxxxxxxx"
-                    pkt += b"x" * 8
+                    pkt += b"x" * self.reg_digits
 
             self.put_gdb_packet(pkt)
 
@@ -647,7 +664,7 @@ class GDBStub:
 
         def put_one_register_packet(regs):
 
-            reg_fmt = "<I"
+            reg_fmt = self.reg_fmt
             reg = int(pkt[1:].decode("utf8"), 16)
             regval = None
 
@@ -671,7 +688,7 @@ class GDBStub:
                 bval = struct.pack(reg_fmt, regval)
                 self.put_gdb_packet(binascii.hexlify(bval))
             else:
-                self.put_gdb_packet(b"x" * 8)
+                self.put_gdb_packet(b"x" * self.reg_digits)
 
         if not self.threadinfo:
             put_one_register_packet(self.registers)
