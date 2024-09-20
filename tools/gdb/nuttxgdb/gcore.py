@@ -109,7 +109,7 @@ class NXGcore(gdb.Command):
 
             # Create a random section name
 
-            section = tmpfile.name + f"{i//3}"
+            section = tmpfile.name + f"{i // 3}"
 
             # Add objcopy insertion segment command and modify segment start address command
 
