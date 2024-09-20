@@ -744,19 +744,26 @@ static void coredump_dump_blkdev(pid_t pid)
 #endif
 
 /****************************************************************************
- * Name: coredump_set_memory_region
+ * Name: coredump_initialize_memory_region
  *
  * Description:
- *   Set do coredump memory region.
+ *   initialize the memory region with board memory range specified in config
  *
  ****************************************************************************/
 
-int coredump_set_memory_region(FAR const struct memory_region_s *region)
+static int coredump_initialize_memory_region(void)
 {
-  /* Not free g_regions, because allow call this fun when crash */
+  if (g_regions == NULL && CONFIG_BOARD_MEMORY_RANGE[0] != '\0')
+    {
+      g_regions = alloc_memory_region(CONFIG_BOARD_MEMORY_RANGE);
+      if (g_regions == NULL)
+        {
+          _alert("Coredump memory region alloc fail\n");
+          return -ENOMEM;
+        }
+    }
 
-  g_regions = region;
-  return 0;
+  return OK;
 }
 
 /****************************************************************************
@@ -772,6 +779,13 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size,
 {
   FAR struct memory_region_s *region;
   size_t count = 1; /* 1 for end flag */
+  int ret;
+
+  ret = coredump_initialize_memory_region();
+  if (ret < 0)
+    {
+      return ret;
+    }
 
   if (g_regions != NULL)
     {
@@ -851,15 +865,10 @@ int coredump_initialize(void)
   blkcnt_t nsectors;
   int ret = 0;
 
-  if (CONFIG_BOARD_MEMORY_RANGE[0] != '\0')
+  ret = coredump_initialize_memory_region();
+  if (ret < 0)
     {
-      coredump_set_memory_region(
-         alloc_memory_region(CONFIG_BOARD_MEMORY_RANGE));
-      if (g_regions == NULL)
-        {
-          _alert("Coredump memory region alloc fail\n");
-          return -ENOMEM;
-        }
+      return ret;
     }
 
 #ifdef CONFIG_BOARD_COREDUMP_BLKDEV
@@ -867,8 +876,8 @@ int coredump_initialize(void)
                               CONFIG_BOARD_COREDUMP_BLKDEV_PATH);
   if (ret < 0)
     {
-      _alert("%s Coredump device not found\n",
-             CONFIG_BOARD_COREDUMP_BLKDEV_PATH);
+      _alert("%s Coredump device not found (%d)\n",
+             CONFIG_BOARD_COREDUMP_BLKDEV_PATH, ret);
       free_memory_region(g_regions);
       g_regions = NULL;
       return ret;
