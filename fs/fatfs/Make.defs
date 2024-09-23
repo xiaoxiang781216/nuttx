@@ -33,7 +33,7 @@ VPATH += :fatfs
 
 CSRCS += ff.c ffunicode.c
 
-DEPPATH += --dep-path fatfs/fatfs/source
+DEPPATH += --dep-path fatfs/fatfs/sorce
 VPATH += : fatfs/fatfs/source
 
 CFLAGS += ${INCDIR_PREFIX}fatfs
