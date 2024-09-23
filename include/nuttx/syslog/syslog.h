@@ -96,16 +96,21 @@
 
 /* Forward declaration */
 
-struct syslog_channel_s;
+#if defined(CONFIG_SYSLOG_IOCTL) || defined(CONFIG_SYSLOG_CONSOLE) || \
+    defined(CONFIG_SYSLOG_CHAR) || defined(CONFIG_SYSLOG_FILE)
+typedef struct syslog_channel_s syslog_channel_t;
+#else
+typedef const struct syslog_channel_s syslog_channel_t;
+#endif
 
 /* SYSLOG I/O redirection methods */
 
-typedef CODE ssize_t (*syslog_write_t)(FAR struct syslog_channel_s *channel,
+typedef CODE ssize_t (*syslog_write_t)(FAR syslog_channel_t *channel,
                                        FAR const char *buf, size_t buflen);
-typedef CODE int (*syslog_putc_t)(FAR struct syslog_channel_s *channel,
+typedef CODE int (*syslog_putc_t)(FAR syslog_channel_t *channel,
                                   int ch);
-typedef CODE int (*syslog_flush_t)(FAR struct syslog_channel_s *channel);
-typedef CODE void (*syslog_close_t)(FAR struct syslog_channel_s *channel);
+typedef CODE int (*syslog_flush_t)(FAR syslog_channel_t *channel);
+typedef CODE void (*syslog_close_t)(FAR syslog_channel_t *channel);
 
 /* SYSLOG device operations */
 
@@ -180,7 +185,7 @@ extern "C"
  *
  ****************************************************************************/
 
-int syslog_channel_register(FAR struct syslog_channel_s *channel);
+int syslog_channel_register(FAR syslog_channel_t *channel);
 
 /****************************************************************************
  * Name: syslog_channel_unregister
@@ -198,7 +203,7 @@ int syslog_channel_register(FAR struct syslog_channel_s *channel);
  *
  ****************************************************************************/
 
-int syslog_channel_unregister(FAR struct syslog_channel_s *channel);
+int syslog_channel_unregister(FAR syslog_channel_t *channel);
 
 /****************************************************************************
  * Name: syslog_initialize
@@ -270,7 +275,7 @@ int syslog_initialize(void);
  ****************************************************************************/
 
 #ifdef CONFIG_SYSLOG_FILE
-FAR struct syslog_channel_s *syslog_file_channel(FAR const char *devpath);
+FAR syslog_channel_t *syslog_file_channel(FAR const char *devpath);
 #endif
 
 /****************************************************************************
@@ -294,7 +299,7 @@ FAR struct syslog_channel_s *syslog_file_channel(FAR const char *devpath);
  ****************************************************************************/
 
 #ifdef CONFIG_SYSLOG_STREAM
-FAR struct syslog_channel_s *
+FAR syslog_channel_t *
 syslog_stream_channel(FAR struct lib_outstream_s *stream);
 #endif
 
