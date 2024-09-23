@@ -128,7 +128,7 @@ def fetch_macro_info(file):
     cache = os.path.splitext(file)[0] + ".macro"
     if not os.path.isfile(cache):
         start = time.time()
-        os.system(f"readelf -wm {file} > {cache}")
+        os.system(f'readelf -wm "{file}" > "{cache}"')
         print(f"readelf took {time.time() - start:.1f} seconds")
 
     p = re.compile(".*macro[ ]*:[ ]*([\S]+\(.*?\)|[\w]+)[ ]*(.*)")
