@@ -49,8 +49,10 @@ endif
 
 # System logging to a character device (or file)
 
-ifeq ($(CONFIG_SYSLOG),y)
-CSRCS += syslog_device.c
+ifneq ($(CONFIG_SYSLOG_CONSOLE)$(CONFIG_SYSLOG_CHAR)$(CONFIG_SYSLOG_FILE),)
+  ifeq ($(CONFIG_SYSLOG),y)
+    CSRCS += syslog_device.c
+  endif
 endif
 
 ifeq ($(CONFIG_SYSLOG_CHAR),y)
