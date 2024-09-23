@@ -25,7 +25,7 @@ import time
 import gdb
 
 from . import utils
-from .lists import NxSQueue
+from .lists import NxSQueue, sq_count
 from .utils import get_long_type, get_symbol_value, lookup_type, read_ulong
 
 MM_ALLOC_BIT = 0x1
@@ -42,7 +42,10 @@ PID_MM_MEMPOOL = -1
 
 mm_allocnode_type = lookup_type("struct mm_allocnode_s")
 sizeof_size_t = lookup_type("size_t").sizeof
+sizeof_sq_entry_t = lookup_type("sq_entry_t").sizeof
 mempool_backtrace_type = lookup_type("struct mempool_backtrace_s")
+mempool_s_type = utils.lookup_type("struct mempool_s")
+mempool_procfs_entry_type = utils.lookup_type("struct mempool_procfs_entry_s")
 
 CONFIG_MM_BACKTRACE = get_symbol_value("CONFIG_MM_BACKTRACE")
 CONFIG_MM_DFAULT_ALIGNMENT = get_symbol_value("CONFIG_MM_DFAULT_ALIGNMENT")
@@ -162,18 +165,21 @@ def mempool_multiple_foreach(mpool):
         i += 1
 
 
+def mempool_align() -> int:
+    if CONFIG_MM_DFAULT_ALIGNMENT:
+        align = CONFIG_MM_DFAULT_ALIGNMENT
+    else:
+        align = 2 * sizeof_size_t
+    return align
+
+
 def mempool_realblocksize(pool):
     """Return the real block size of a mempool"""
-
-    if CONFIG_MM_DFAULT_ALIGNMENT:
-        mempool_align = CONFIG_MM_DFAULT_ALIGNMENT
-    else:
-        mempool_align = 2 * sizeof_size_t
 
     if CONFIG_MM_BACKTRACE >= 0:
         return align_up(
             pool["blocksize"] + mempool_backtrace_type.sizeof,
-            mempool_align,
+            mempool_align(),
         )
     else:
         return pool["blocksize"]
@@ -1021,3 +1027,92 @@ class Memfrag(gdb.Command):
             f"heap size: {heapsize}, free size: {freesize}, uordblks:"
             f"{info.__len__()} largest block: {info[0]['size']} \n"
         )
+
+
+class MempoolProc:
+    def __init__(self, entry):
+        ptr = utils.container_of(entry, mempool_s_type, "procfs")
+        pool = ptr.dereference()
+        blocksize = self.real_blocksize(pool)
+        ordblks = sq_count(pool["queue"])
+        iordblks = sq_count(pool["iqueue"])
+        aordblks = int(pool["nalloc"])
+        narena = sq_count(pool["equeue"])
+        name = str(entry["name"])
+        if '"' in name:
+            # strip the name
+            name_split = name.split('"')
+            if len(name_split) == 3:
+                name = name_split[1]
+        self.pool = pool
+        self.name = name
+        self.arena = int(
+            narena * sizeof_sq_entry_t + (aordblks + ordblks + iordblks) * blocksize
+        )
+        self.sizeblks = blocksize
+        self.ordblks = ordblks
+        self.iordblks = iordblks
+        self.aordblks = aordblks
+        if pool["wait"] and pool["expandsize"] == 0:
+            self.nwaiter = -int(self.pool["waitsem"]["semcount"])
+        else:
+            self.nwaiter = 0
+
+    def real_blocksize(self, pool) -> int:
+        bsize = pool["blocksize"]
+        if CONFIG_MM_BACKTRACE > 0:
+            bsize = align_up(bsize + mempool_backtrace_type.sizeof, mempool_align())
+        return int(bsize)
+
+    def __str__(self) -> str:
+        return self.__class__.format(
+            self.name + ":",
+            self.arena,
+            self.sizeblks,
+            self.aordblks,
+            self.ordblks,
+            self.iordblks,
+            self.nwaiter,
+        )
+
+    @staticmethod
+    def format(*args):
+        return "{:>13}{:>11}{:>9}{:>9}{:>9}{:>9}{:>9}".format(*args)
+
+    @staticmethod
+    def get_title():
+        return MempoolProc.format(
+            "", "total", "bsize", "nused", "nfree", "nifree", "nwaiter"
+        )
+
+
+class Mempool(gdb.Command):
+    def __init__(self):
+        super().__init__("mempool", gdb.COMMAND_USER)
+
+    def parse(self) -> dict:
+        pools = {}
+        try:
+            entry = gdb.parse_and_eval("g_mempool_procfs")
+        except gdb.error:
+            return pools
+
+        while entry:
+            entry = entry.dereference()
+            mempool = MempoolProc(entry)
+            key = int(entry.address)
+            if key in pools:
+                raise ValueError(f"mempool deadloop {pools}")
+            pools[key] = mempool
+            entry = entry["next"]
+
+        return pools
+
+    def invoke(self, args, from_tty):
+        pools = self.parse()
+        if len(pools) == 0:
+            gdb.write("mempool not found\n")
+        else:
+            gdb.write(f"{MempoolProc.get_title()}\n")
+            for pool in pools.values():
+                gdb.write(f"{pool}\n")
