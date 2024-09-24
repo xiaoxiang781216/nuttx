@@ -470,9 +470,7 @@ typedef struct cookie_io_functions_t
 struct file
 {
   int               f_oflags;   /* Open mode flags */
-#ifdef CONFIG_FS_REFCOUNT
   int               f_refs;     /* Reference count */
-#endif
   off_t             f_pos;      /* File position */
   FAR struct inode *f_inode;    /* Driver or file system interface */
   FAR void         *f_priv;     /* Per file driver private data */
@@ -1203,11 +1201,7 @@ void fs_reffilep(FAR struct file *filep);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_FS_REFCOUNT
 int fs_putfilep(FAR struct file *filep);
-#else
-#  define fs_putfilep(f)
-#endif
 
 /****************************************************************************
  * Name: file_close
