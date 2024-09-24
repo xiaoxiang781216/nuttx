@@ -26,7 +26,7 @@ import gdb
 
 from . import utils
 from .lists import NxSQueue, sq_count
-from .utils import get_long_type, get_symbol_value, lookup_type, read_ulong
+from .utils import get_long_type, get_symbol_value, get_tcb, lookup_type, read_ulong
 
 MM_ALLOC_BIT = 0x1
 MM_PREVFREE_BIT = 0x2
@@ -296,6 +296,14 @@ def mempool_dumpbuf(buf, blksize, count, align, simple, detail, alive):
     gdb.write("\n")
 
 
+def check_node_alive(node) -> bool:
+    if CONFIG_MM_BACKTRACE <= 0:
+        return True
+    else:
+        tcb = get_tcb(node["pid"])
+        return tcb is not None
+
+
 class HeapNode:
     def __init__(self, gdb_node, nextfree=False):
         self.gdb_node = gdb_node
@@ -316,6 +324,7 @@ class HeapNode:
         self.alloc = mm_node_is_alloc(record_size)
         self.seqno = seqno
         self.pid = node_pid
+        self.alive = check_node_alive(gdb_node)
         self.base = int(gdb_node)
         self.prevfree = mm_prevnode_is_free(record_size)
         self.nextfree = nextfree
@@ -332,7 +341,7 @@ class HeapNode:
     def is_orphan(self):
         return self.prevfree or self.nextfree
 
-    def dump(self, detail, simple, align, check_alive, backtrace_dict):
+    def dump(self, detail, simple, align, backtrace_dict):
         if detail:
             mm_dumpnode(
                 self.gdb_node,
@@ -340,7 +349,7 @@ class HeapNode:
                 align,
                 simple,
                 detail,
-                check_alive(self.pid),
+                self.alive,
             )
         else:
             backtrace_dict = record_backtrace(self.gdb_node, self.size, backtrace_dict)
@@ -351,9 +360,6 @@ class Memdump(gdb.Command):
 
     def __init__(self):
         super().__init__("memdump", gdb.COMMAND_USER)
-
-    def check_alive(self, pid):
-        return self.pidhash[pid & self.npidhash - 1] != 0
 
     def mempool_dump(self, mpool, pid, seqmin, seqmax, address, simple, detail):
         """Dump the mempool memory"""
@@ -384,7 +390,7 @@ class Memdump(gdb.Command):
                                 self.align,
                                 simple,
                                 detail,
-                                self.check_alive(buf["pid"]),
+                                check_node_alive(buf),
                             )
                         else:
                             self.backtrace_dict = record_backtrace(
@@ -401,7 +407,7 @@ class Memdump(gdb.Command):
                                 self.align,
                                 simple,
                                 detail,
-                                self.check_alive(buf["pid"]),
+                                check_node_alive(buf),
                             )
                             gdb.write(
                                 "\nThe address 0x%x found belongs to"
@@ -425,7 +431,6 @@ class Memdump(gdb.Command):
             detail=self.detail,
             simple=self.simple,
             align=self.align,
-            check_alive=self.check_alive,
             backtrace_dict=self.backtrace_dict,
         )
 
@@ -441,7 +446,7 @@ class Memdump(gdb.Command):
                         self.align,
                         simple,
                         detail,
-                        self.check_alive(node["pid"]),
+                        check_node_alive(node),
                     )
                 else:
                     mempool_dumpbuf(
@@ -451,7 +456,7 @@ class Memdump(gdb.Command):
                         self.align,
                         simple,
                         detail,
-                        self.check_alive(node["pid"]),
+                        check_node_alive(node),
                     )
 
         gdb.write("%12s%12s\n" % ("Total Blks", "Total Size"))
@@ -634,8 +639,6 @@ class Memdump(gdb.Command):
         self.aordblks = 0
         self.uordblks = 0
         self.backtrace_dict = {}
-        self.npidhash = gdb.parse_and_eval("g_npidhash")
-        self.pidhash = gdb.parse_and_eval("g_pidhash")
         self.memdump(
             pid,
             arg["seqmin"],
@@ -658,9 +661,6 @@ class Memleak(gdb.Command):
             return
 
         super().__init__("memleak", gdb.COMMAND_USER)
-
-    def check_alive(self, pid):
-        return self.pidhash[pid & self.npidhash - 1] != 0
 
     def next_ptr(self):
         inf = gdb.selected_inferior()
@@ -828,9 +828,6 @@ class Memleak(gdb.Command):
             % ("PID", "Size", "Sequence", align, "Address", "Callstack")
         )
 
-        self.npidhash = gdb.parse_and_eval("g_npidhash")
-        self.pidhash = gdb.parse_and_eval("g_pidhash")
-
         if CONFIG_MM_BACKTRACE > 0 and not arg["detail"]:
 
             # Filter same backtrace
@@ -858,7 +855,7 @@ class Memleak(gdb.Command):
                         align,
                         arg["simple"],
                         arg["detail"],
-                        self.check_alive(node["pid"]),
+                        check_node_alive(node),
                     )
                 else:
                     mempool_dumpbuf(
@@ -868,7 +865,7 @@ class Memleak(gdb.Command):
                         align,
                         arg["simple"],
                         arg["detail"],
-                        self.check_alive(node["pid"]),
+                        check_node_alive(node),
                     )
 
                 leaksize += node["count"] * node["size"]
@@ -888,7 +885,7 @@ have {i} some backtrace leak, total leak memory is {int(leaksize)} bytes\n"
                         align,
                         arg["simple"],
                         True,
-                        self.check_alive(node["pid"]),
+                        check_node_alive(node),
                     )
                 else:
                     mempool_dumpbuf(
@@ -898,7 +895,7 @@ have {i} some backtrace leak, total leak memory is {int(leaksize)} bytes\n"
                         align,
                         arg["simple"],
                         True,
-                        self.check_alive(node["pid"]),
+                        check_node_alive(node),
                     )
                 leaksize += node["size"]
 
