@@ -27,5 +27,9 @@ if(CONFIG_NET_VSOCK)
     list(APPEND SRCS vsock_virtio.c)
   endif()
 
+  if(CONFIG_NET_VSOCK_VHOST)
+    list(APPEND SRCS vsock_vhost.c)
+  endif()
+
   target_sources(net PRIVATE ${SRCS})
 endif()

@@ -2434,5 +2434,13 @@ int vsock_initialize(void)
     }
 #endif
 
+#ifdef CONFIG_NET_VSOCK_VHOST
+  ret = vsock_vhost_initialize();
+  if (ret < 0)
+    {
+      vhosterr("ERROR: vsock_vhost_initialize failed, ret=%d\n", ret);
+    }
+#endif
+
   return ret;
 }

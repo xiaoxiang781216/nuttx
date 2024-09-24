@@ -146,6 +146,10 @@ int vsock_initialize(void);
 int vsock_virtio_initialize(void);
 #endif
 
+#ifdef CONFIG_NET_VSOCK_VHOST
+int vsock_vhost_initialize(void);
+#endif
+
 #undef EXTERN
 #ifdef __cplusplus
 }
