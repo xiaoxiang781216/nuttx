@@ -1621,7 +1621,7 @@ static ssize_t tmpfs_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Handle attempts to write beyond the end of the file */
 
-  if ((filep->f_oflags & O_APPEND) != 0)
+  if ((filep->f_oflags & O_APPEND) == O_APPEND)
     {
       startpos = tfo->tfo_size;
     }
