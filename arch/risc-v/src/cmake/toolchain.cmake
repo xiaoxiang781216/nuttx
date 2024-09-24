@@ -219,16 +219,7 @@ if(${CONFIG_RISCV_TOOLCHAIN} STREQUAL GNU_RVG)
   endif()
 
   if(CONFIG_ARCH_RV_ISA_ZICSR_ZIFENCEI)
-    if(NOT DEFINED GCCVER)
-      execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version
-                      OUTPUT_VARIABLE GCC_VERSION_OUTPUT)
-      string(REGEX MATCH "\\+\\+.* ([0-9]+)\\.[0-9]+" GCC_VERSION_REGEX
-                   "${GCC_VERSION_OUTPUT}")
-      set(GCCVER ${CMAKE_MATCH_1})
-    endif()
-    if(GCCVER GREATER_EQUAL 12)
-      set(ARCHCPUEXTFLAGS ${ARCHCPUEXTFLAGS}_zicsr_zifencei)
-    endif()
+    set(ARCHCPUEXTFLAGS ${ARCHCPUEXTFLAGS}_zicsr_zifencei)
   endif()
 
   if(CONFIG_ARCH_RV_ISA_VENDOR_EXTENSIONS)
