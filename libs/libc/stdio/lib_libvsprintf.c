@@ -1121,7 +1121,7 @@ str_lpad:
               break;
 
             case 'p':
-#ifdef LIBC_PRINT_EXTENSION
+#ifdef CONFIG_LIBC_PRINT_EXTENSION
               c = fmt_char(fmt);
               switch (c)
                 {
