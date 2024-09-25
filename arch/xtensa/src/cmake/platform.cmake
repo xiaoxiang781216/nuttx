@@ -66,4 +66,4 @@ if(CONFIG_SCHED_GCOV)
 endif()
 
 nuttx_add_extra_library(${EXTRA_LIB})
-set(PREPROCES ${CMAKE_PREPROCESSOR})
+set(PREPROCESS ${CMAKE_PREPROCESSOR})

@@ -192,7 +192,7 @@ if(NOT CONFIG_CXX_RTTI)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
 endif()
 
-set(PREPROCES ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P)
+set(PREPROCESS ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P)
 
 # override nuttx_generate_preproces_target
 
@@ -218,7 +218,7 @@ function(nuttx_generate_preproces_target)
 
   add_custom_command(
     OUTPUT ${TARGET_FILE}
-    COMMAND ${PREPROCES} -I${CMAKE_BINARY_DIR}/include -filetype.cpp
+    COMMAND ${PREPROCESS} -I${CMAKE_BINARY_DIR}/include -filetype.cpp
             ${SOURCE_FILE} -o ${TARGET_FILE}
     DEPENDS ${SOURCE_FILE} ${DEPENDS})
 
