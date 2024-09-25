@@ -42,10 +42,17 @@ struct tcb_s; /* Forward reference */
 /* Task start-up */
 
 void nxtask_start(void);
-int  nxtask_setup_scheduler(FAR struct task_tcb_s *tcb, int priority,
-       start_t start, main_t main, uint8_t ttype, FAR struct tcb_s *rtcb);
-int  nxtask_setup_arguments(FAR struct task_tcb_s *tcb,
-       FAR const char *name, FAR char * const argv[]);
+int nxtask_setup_stackargs(FAR struct task_tcb_s *tcb,
+                           FAR const char *name,
+                           FAR char * const argv[]);
+int nxtask_setup_scheduler(FAR struct task_tcb_s *tcb, int priority,
+                           start_t start, main_t main, uint8_t ttype,
+                           FAR struct tcb_s *rtcb);
+#if CONFIG_TASK_NAME_SIZE > 0
+void nxtask_setup_name(FAR struct task_tcb_s *tcb, FAR const char *name);
+#else
+# define nxtask_setup_name(tcb, name)
+#endif
 
 /* Task exit */
 

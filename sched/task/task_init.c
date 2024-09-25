@@ -134,6 +134,10 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
       goto errout_with_group;
     }
 
+  /* Set the task name */
+
+  nxtask_setup_name(tcb, name);
+
   if (stack)
     {
       /* Use pre-allocated stack */
@@ -171,7 +175,7 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
 
   /* Setup to pass parameters to the new task */
 
-  ret = nxtask_setup_arguments(tcb, name, argv);
+  ret = nxtask_setup_stackargs(tcb, name, argv);
   if (ret < OK)
     {
       goto errout_with_group;
