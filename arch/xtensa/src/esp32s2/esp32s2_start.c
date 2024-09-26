@@ -345,10 +345,12 @@ static void noreturn_function IRAM_ATTR __esp32s2_start(void)
    * certain that there are no issues with the state of global variables.
    */
 
+#  ifndef CONFIG_ARCH_SKIP_ZERO_BSS
   for (uint32_t *dest = (uint32_t *)_sbss; dest < (uint32_t *)_ebss; )
     {
       *dest++ = 0;
     }
+#  endif
 #endif
 
   /* Initialize peripherals parameters */

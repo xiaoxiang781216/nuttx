@@ -188,7 +188,9 @@ static noreturn_function void __esp32_start(void)
 
   /* Set .bss to zero */
 
+#  ifndef CONFIG_ARCH_SKIP_ZERO_BSS
   memset(_sbss, 0, _ebss - _sbss);
+#  endif
 
 #endif
 
