@@ -48,7 +48,11 @@ extern "C"
  */
 
 #ifdef CONFIG_SYSLOG
-EXTERN FAR syslog_channel_t *g_syslog_channel[CONFIG_SYSLOG_MAX_CHANNELS];
+EXTERN FAR syslog_channel_t *
+#ifndef CONFIG_SYSLOG_REGISTER
+const
+#endif
+g_syslog_channel[CONFIG_SYSLOG_MAX_CHANNELS];
 
 /****************************************************************************
  * Public Function Prototypes

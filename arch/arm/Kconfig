@@ -1357,6 +1357,7 @@ config DEBUG_SECUREFAULT
 
 config ARM_SEMIHOSTING_SYSLOG
 	bool "Semihosting SYSLOG support"
+	select SYSLOG_REGISTER
 	---help---
 		Enable hooks to support semihosting syslog output.
 
