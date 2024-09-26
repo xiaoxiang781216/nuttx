@@ -41,8 +41,6 @@
 #include "sched/sched.h"
 #include "fs_heap.h"
 
-#ifdef CONFIG_FS_RAMMAP
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -357,5 +355,3 @@ errout_with_region:
 
   return ret;
 }
-
-#endif /* CONFIG_FS_RAMMAP */
