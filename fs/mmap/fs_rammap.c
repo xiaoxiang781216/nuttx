@@ -265,7 +265,8 @@ int rammap(FAR struct file *filep, FAR struct mm_map_entry_s *entry,
 
   /* Allocate a region of memory of the specified size */
 
-  rdbuffer = type == MAP_KERNEL ? fs_heap_malloc(length) : kumm_malloc(length);
+  rdbuffer = type == MAP_KERNEL ? fs_heap_malloc(length)
+                                : kumm_malloc(length);
   if (!rdbuffer)
     {
       ferr("ERROR: Region allocation failed, length: %zu\n", length);
