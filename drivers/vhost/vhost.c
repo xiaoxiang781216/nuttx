@@ -191,6 +191,52 @@ FAR void *vhost_get_next_buffer(FAR struct virtqueue *vq, uint16_t idx,
 }
 
 /****************************************************************************
+ * Name: vhost_get_vq_buf
+ ****************************************************************************/
+
+int vhost_get_vq_buffers(FAR struct virtqueue *vq,
+                         FAR struct virtqueue_buf *vb, size_t vbsize,
+                         FAR size_t *vbcnt)
+{
+  FAR void *buf;
+  uint16_t head;
+  uint16_t idx;
+  uint32_t len;
+  size_t i;
+
+  DEBUGASSERT(vb != NULL && vbsize >= 1 && vbcnt != NULL);
+
+  buf = virtqueue_get_available_buffer(vq, &head, &len);
+  if (buf == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  vb[0].buf = buf;
+  vb[0].len = len;
+
+  for (i = 1, idx = head; ; i++)
+    {
+      buf = vhost_get_next_buffer(vq, idx, &idx, &len);
+      if (buf == NULL)
+        {
+          break;
+        }
+      else if (i >= vbsize)
+        {
+          vhosterr("vbsize %zu is not enough\n", vbsize);
+          return -EINVAL;
+        }
+
+      vb[i].buf = buf;
+      vb[i].len = len;
+    }
+
+  *vbcnt = i;
+  return head;
+}
+
+/****************************************************************************
  * Name: vhost_register_driver
  ****************************************************************************/
 
