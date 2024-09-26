@@ -128,7 +128,7 @@ config FS_HEAPBUF_SECTION
 
 config FS_REFCOUNT
 	bool "File reference count"
-	default !DEFAULT_SMALL
+	default y
 	---help---
 		Enable will Records the number of filep references. The file is
 		actually closed when the count reaches 0
