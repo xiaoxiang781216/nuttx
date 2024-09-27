@@ -99,12 +99,16 @@ if(NOT CONFIG_CXX_LOCALIZATION)
   list(REMOVE_ITEM SRCS ${SRCSTMP})
 endif()
 
+set(FLAGS -Wno-attributes -Wno-deprecated-declarations -Wno-shadow
+          -Wno-sign-compare)
+
+if(NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
+  list(APPEND FLAGS -Wno-maybe-uninitialized -Wno-alloc-size-larger-than)
+endif()
+
 nuttx_add_system_library(libcxx)
 target_sources(libcxx PRIVATE ${SRCS})
-target_compile_options(
-  libcxx
-  PRIVATE -Wno-maybe-uninitialized -Wno-alloc-size-larger-than -Wno-attributes
-          -Wno-deprecated-declarations -Wno-shadow -Wno-sign-compare)
+target_compile_options(libcxx PRIVATE ${FLAGS})
 
 target_include_directories(libcxx BEFORE
                            PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)

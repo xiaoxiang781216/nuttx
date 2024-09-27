@@ -53,8 +53,12 @@ ifeq ($(CONFIG_LIBSUPCXX), y)
 CXXFLAGS += ${DEFINE_PREFIX}__GLIBCXX__
 endif
 
-CXXFLAGS += -Wno-shadow -Wno-maybe-uninitialized -Wno-alloc-size-larger-than
-CXXFLAGS += -Wno-sign-compare -Wno-attributes -Wno-deprecated-declarations
+CXXFLAGS += -Wno-shadow -Wno-sign-compare
+CXXFLAGS += -Wno-attributes -Wno-deprecated-declarations
+
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),)
+CXXFLAGS += -Wno-maybe-uninitialized -Wno-alloc-size-larger-than
+endif
 
 CPPSRCS += $(wildcard libcxx/src/*.cpp)
 CPPSRCS += $(wildcard libcxx/src/experimental/*.cpp)
