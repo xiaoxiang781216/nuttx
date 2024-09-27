@@ -421,6 +421,7 @@ add_executable(nuttx)
 add_custom_target(nuttx_post)
 if(CONFIG_BUILD_PROTECTED)
   add_executable(nuttx_user)
+  add_dependencies(nuttx_post nuttx_user)
   nuttx_add_library_internal(nuttx_user)
 endif()
 
@@ -701,6 +702,7 @@ if(NOT WIN32)
       | sort > System.map
     DEPENDS nuttx)
   add_custom_target(systemmap ALL DEPENDS System.map)
+  add_dependencies(nuttx_post systemmap)
 endif()
 
 # Userspace portion ##########################################################
@@ -766,6 +768,7 @@ if(CONFIG_BUILD_PROTECTED)
     COMMAND ${CMAKE_NM} nuttx_user > User.map
     DEPENDS nuttx_user)
   add_custom_target(usermap ALL DEPENDS User.map)
+  add_dependencies(nuttx_post usermap)
 
   # generate binary outputs in different formats (.bin, .hex, etc)
   nuttx_generate_outputs(nuttx_user)
