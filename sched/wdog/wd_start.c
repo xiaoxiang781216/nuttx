@@ -185,7 +185,10 @@ static inline_function void wd_expiration(clock_t ticks)
       /* Execute the watchdog function */
 
       up_setpicbase(wdog->picbase);
+
+      leave_critical_section(flags);
       CALL_FUNC(func, arg);
+      flags = enter_critical_section();
     }
 
 #ifdef CONFIG_SCHED_TICKLESS
