@@ -89,18 +89,8 @@ SECTION_FUNC(text, up_saveusercontext)
 
 GTEXT(arm64_sync_exc)
 SECTION_FUNC(text, arm64_sync_exc)
-    /* Switch to IRQ stack and save current sp on it. */
-#ifdef CONFIG_SMP
-    get_cpu_id x0
-    ldr    x1, =(g_cpu_int_stacktop)
-    lsl    x0, x0, #3
-    ldr    x1, [x1, x0]
-#else
-    ldr    x1, =(g_interrupt_stack + CONFIG_ARCH_INTERRUPTSTACK)
-#endif
 
     mov    x0, sp
-    mov    sp, x1
 
     /* checking the EC value to see which exception need to be handle */
 
