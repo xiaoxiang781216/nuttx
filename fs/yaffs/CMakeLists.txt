@@ -39,4 +39,9 @@ if(CONFIG_FS_YAFFS)
   target_sources(fs PRIVATE ${YAFFS_CSRCS} ${DIRECT_CSRCS})
 
   target_include_directories(fs PRIVATE ${CMAKE_CURRENT_LIST_DIR}/yaffs)
+
+  if(CONFIG_TRACE_LITTLEFS_FS)
+    set_source_files_properties(yaffs_vfs.c DIRECTORY ..
+                                PROPERTIES COMPILE_FLAGS -finstrument-functions)
+  endif()
 endif()
