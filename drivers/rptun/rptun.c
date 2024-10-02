@@ -355,7 +355,7 @@ static bool rptun_is_recursive(FAR struct rptun_priv_s *priv)
   return nxsched_gettid() == priv->tid;
 }
 
-static void rptun_command(struct rptun_priv_s *priv)
+static void rptun_command(FAR struct rptun_priv_s *priv)
 {
   FAR struct rptun_cmd_s *rptun_cmd = RPTUN_RSC2CMD(priv->rproc.rsc_table);
   uint32_t cmd;
@@ -375,6 +375,9 @@ static void rptun_command(struct rptun_priv_s *priv)
     {
       case RPTUN_CMD_PANIC:
         PANIC();
+        break;
+
+      default:
         break;
     }
 }
@@ -1148,8 +1151,6 @@ int rptun_initialize(FAR struct rptun_dev_s *dev)
   snprintf(name, sizeof(name), "rptun-%s", RPTUN_GET_CPUNAME(dev));
   pm_wakelock_init(&priv->wakelock, name, PM_IDLE_DOMAIN, PM_IDLE);
 #endif
-
-  /* Add priv to list */
 
   return OK;
 

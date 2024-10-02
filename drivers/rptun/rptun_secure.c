@@ -50,9 +50,9 @@ struct rptun_secure_dev_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static const char *rptun_secure_get_cpuname(FAR struct rptun_dev_s *dev);
+static FAR const char *rptun_secure_get_cpuname(FAR struct rptun_dev_s *dev);
 static struct
-rptun_rsc_s *rptun_secure_get_resource(FAR struct rptun_dev_s *dev);
+FAR rptun_rsc_s *rptun_secure_get_resource(FAR struct rptun_dev_s *dev);
 static bool rptun_secure_is_autostart(FAR struct rptun_dev_s *dev);
 static bool rptun_secure_is_master(FAR struct rptun_dev_s *dev);
 static int rptun_secure_start(FAR struct rptun_dev_s *dev);
@@ -83,13 +83,13 @@ static const struct rptun_ops_s g_rptun_secure_ops =
  * Private Functions
  ****************************************************************************/
 
-static const char *rptun_secure_get_cpuname(FAR struct rptun_dev_s *dev)
+static FAR const char *rptun_secure_get_cpuname(FAR struct rptun_dev_s *dev)
 {
   FAR struct rptun_secure_dev_s *priv = (FAR struct rptun_secure_dev_s *)dev;
   return priv->cpuname;
 }
 
-static struct rptun_rsc_s *
+static FAR struct rptun_rsc_s *
 rptun_secure_get_resource(FAR struct rptun_dev_s *dev)
 {
   FAR struct rptun_secure_dev_s *priv = (FAR struct rptun_secure_dev_s *)dev;
