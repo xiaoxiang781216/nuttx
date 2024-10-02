@@ -170,13 +170,20 @@ static const struct rpmsg_ops_s g_rptun_rpmsg_ops =
 static int rptun_buffer_nused(FAR struct rpmsg_virtio_device *rvdev, bool rx)
 {
   FAR struct virtqueue *vq = rx ? rvdev->rvq : rvdev->svq;
+  bool is_host = rpmsg_virtio_get_role(rvdev) == RPMSG_HOST;
   uint16_t nused;
 
-  RPTUN_INVALIDATE(vq->vq_ring.avail->idx);
-  RPTUN_INVALIDATE(vq->vq_ring.used->idx);
-  nused = vq->vq_ring.avail->idx - vq->vq_ring.used->idx;
+  if (is_host)
+    {
+      RPTUN_INVALIDATE(vq->vq_ring.used->idx);
+    }
+  else
+    {
+      RPTUN_INVALIDATE(vq->vq_ring.avail->idx);
+    }
 
-  if ((rpmsg_virtio_get_role(rvdev) == RPMSG_HOST) ^ rx)
+  nused = vq->vq_ring.avail->idx - vq->vq_ring.used->idx;
+  if (is_host ^ rx)
     {
       return nused;
     }
