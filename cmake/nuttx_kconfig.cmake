@@ -165,3 +165,44 @@ function(nuttx_generate_kconfig)
     file(APPEND ${KCONFIG_OUTPUT_FILE} "endmenu # ${MENUDESC}\n")
   endif()
 endfunction()
+
+function(nuttx_olddefconfig)
+  execute_process(
+    COMMAND olddefconfig
+    ERROR_VARIABLE KCONFIG_ERROR
+    OUTPUT_VARIABLE KCONFIG_OUTPUT
+    RESULT_VARIABLE KCONFIG_STATUS
+    WORKING_DIRECTORY ${NUTTX_DIR})
+
+  if(KCONFIG_ERROR)
+    message(WARNING "Kconfig Configuration Error: ${KCONFIG_ERROR}")
+  endif()
+
+  if(KCONFIG_STATUS AND NOT KCONFIG_STATUS EQUAL 0)
+    message(
+      FATAL_ERROR
+        "nuttx_olddefconfig: Failed to initialize Kconfig configuration: ${KCONFIG_OUTPUT}"
+    )
+  endif()
+endfunction()
+
+function(nuttx_setconfig)
+  set(ENV{KCONFIG_CONFIG} ${CMAKE_BINARY_DIR}/.config)
+  execute_process(
+    COMMAND setconfig ${ARGN} --kconfig ${NUTTX_DIR}/Kconfig
+    ERROR_VARIABLE KCONFIG_ERROR
+    OUTPUT_VARIABLE KCONFIG_OUTPUT
+    RESULT_VARIABLE KCONFIG_STATUS
+    WORKING_DIRECTORY ${NUTTX_DIR})
+
+  if(KCONFIG_ERROR)
+    message(WARNING "Kconfig Configuration Error: ${KCONFIG_ERROR}")
+  endif()
+
+  if(KCONFIG_STATUS AND NOT KCONFIG_STATUS EQUAL 0)
+    message(
+      FATAL_ERROR
+        "nuttx_setconfig: Failed to initialize Kconfig configuration: ${KCONFIG_OUTPUT}"
+    )
+  endif()
+endfunction()
