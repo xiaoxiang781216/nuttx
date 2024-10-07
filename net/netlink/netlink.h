@@ -110,10 +110,10 @@
  * remaining: number of bytes remaining in attribute stream
  */
 
-#define nla_ok(nla, remaining)        \
-  ((remaining) >= sizeof(*(nla)) &&   \
-  (nla)->nla_len >= sizeof(*(nla)) && \
-  (nla)->nla_len <= (remaining))
+#define nla_ok(nla, remaining)         \
+  ((remaining) >= sizeof(*(nla)) &&    \
+   (nla)->nla_len >= sizeof(*(nla)) && \
+   (nla)->nla_len <= (remaining))
 
 /* nlmsg_msg_size - length of netlink message not including padding
  * payload: length of message payload
