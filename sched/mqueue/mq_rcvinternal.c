@@ -126,7 +126,8 @@ static void nxmq_rcvtimeout(wdparm_t arg)
 
 int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
                       FAR struct mqueue_msg_s **rcvmsg,
-                      FAR const struct timespec *abstime)
+                      FAR const struct timespec *abstime,
+                      sclock_t ticks)
 {
   FAR struct mqueue_msg_s *newmsg;
   FAR struct tcb_s *rtcb = this_task();
@@ -150,6 +151,11 @@ int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
     {
       wd_start_realtime(&rtcb->waitdog, abstime,
                         nxmq_rcvtimeout, (wdparm_t)rtcb);
+    }
+  else if (ticks >= 0)
+    {
+      wd_start(&rtcb->waitdog, ticks,
+               nxmq_rcvtimeout, (wdparm_t)rtcb);
     }
 
   /* Get the message from the head of the queue */
@@ -191,7 +197,7 @@ int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
         }
     }
 
-  if (abstime)
+  if (abstime || ticks >= 0)
     {
       wd_cancel(&rtcb->waitdog);
     }

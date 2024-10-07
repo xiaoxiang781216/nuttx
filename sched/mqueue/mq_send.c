@@ -240,27 +240,11 @@ static void nxmq_add_queue(FAR struct mqueue_inode_s *msgq,
 }
 
 /****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: file_mq_timedsend
+ * Name: file_mq_timedsend_internal
  *
  * Description:
- *   This function adds the specified message (msg) to the message queue
- *   (mq).  file_mq_timedsend() behaves just like mq_send(), except that if
- *   the queue is full and the O_NONBLOCK flag is not enabled for the
- *   message queue description, then abstime points to a structure which
- *   specifies a ceiling on the time for which the call will block.
- *
- *   file_mq_timedsend() is functionally equivalent to mq_timedsend() except
- *   that:
- *
- *   - It is not a cancellation point, and
- *   - It does not modify the errno value.
- *
- *  See comments with mq_timedsend() for a more complete description of the
- *  behavior of this function
+ *   This is an internal function of file_mq_timedsend()/file_mq_ticksend(),
+ *   please refer to the detailed description for more information.
  *
  * Input Parameters:
  *   mq      - Message queue descriptor
@@ -268,6 +252,8 @@ static void nxmq_add_queue(FAR struct mqueue_inode_s *msgq,
  *   msglen  - The length of the message in bytes
  *   prio    - The priority of the message
  *   abstime - the absolute time to wait until a timeout is decleared
+ *   ticks   - Ticks to wait from the start time until the semaphore is
+ *             posted.
  *
  * Returned Value:
  *   This is an internal OS interface and should not be used by applications.
@@ -285,9 +271,11 @@ static void nxmq_add_queue(FAR struct mqueue_inode_s *msgq,
  *
  ****************************************************************************/
 
-int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
-                      size_t msglen, unsigned int prio,
-                      FAR const struct timespec *abstime)
+static
+int file_mq_timedsend_internal(FAR struct file *mq, FAR const char *msg,
+                               size_t msglen, unsigned int prio,
+                               FAR const struct timespec *abstime,
+                               sclock_t ticks)
 {
   FAR struct mqueue_inode_s *msgq;
   FAR struct mqueue_msg_s *mqmsg;
@@ -348,7 +336,7 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
        * queue to become non-full.
        */
 
-      ret = nxmq_wait_send(msgq, abstime);
+      ret = nxmq_wait_send(msgq, abstime, ticks);
       if (ret < 0)
         {
           goto out;
@@ -379,6 +367,108 @@ out:
     }
 
   return ret;
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: file_mq_timedsend
+ *
+ * Description:
+ *   This function adds the specified message (msg) to the message queue
+ *   (mq).  file_mq_timedsend() behaves just like mq_send(), except that if
+ *   the queue is full and the O_NONBLOCK flag is not enabled for the
+ *   message queue description, then abstime points to a structure which
+ *   specifies a ceiling on the time for which the call will block.
+ *
+ *   file_mq_timedsend() is functionally equivalent to mq_timedsend() except
+ *   that:
+ *
+ *   - It is not a cancellation point, and
+ *   - It does not modify the errno value.
+ *
+ *  See comments with mq_timedsend() for a more complete description of the
+ *  behavior of this function
+ *
+ * Input Parameters:
+ *   mq      - Message queue descriptor
+ *   msg     - Message to send
+ *   msglen  - The length of the message in bytes
+ *   prio    - The priority of the message
+ *   abstime - the absolute time to wait until a timeout is decleared
+ *
+ * Returned Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
+ *   (see mq_timedsend() for the list list valid return values).
+ *
+ *   EAGAIN   The queue was empty, and the O_NONBLOCK flag was set for the
+ *            message queue description referred to by mq.
+ *   EINVAL   Either msg or mq is NULL or the value of prio is invalid.
+ *   EBADF    Message queue opened not opened for writing.
+ *   EMSGSIZE 'msglen' was greater than the maxmsgsize attribute of the
+ *            message queue.
+ *   EINTR    The call was interrupted by a signal handler.
+ *
+ ****************************************************************************/
+
+int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
+                      size_t msglen, unsigned int prio,
+                      FAR const struct timespec *abstime)
+{
+  return file_mq_timedsend_internal(mq, msg, msglen, prio, abstime, -1);
+}
+
+/****************************************************************************
+ * Name: file_mq_ticksend
+ *
+ * Description:
+ *   This function adds the specified message (msg) to the message queue
+ *   (mq).  file_mq_ticksend() behaves just like mq_send(), except that if
+ *   the queue is full and the O_NONBLOCK flag is not enabled for the
+ *   message queue description, then abstime points to a structure which
+ *   specifies a ceiling on the time for which the call will block.
+ *
+ *   file_mq_ticksend() is functionally equivalent to mq_timedsend() except
+ *   that:
+ *
+ *   - It is not a cancellation point, and
+ *   - It does not modify the errno value.
+ *
+ *  See comments with mq_timedsend() for a more complete description of the
+ *  behavior of this function
+ *
+ * Input Parameters:
+ *   mq      - Message queue descriptor
+ *   msg     - Message to send
+ *   msglen  - The length of the message in bytes
+ *   prio    - The priority of the message
+ *   ticks   - Ticks to wait from the start time until the semaphore is
+ *             posted.
+ *
+ * Returned Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
+ *   (see mq_timedsend() for the list list valid return values).
+ *
+ *   EAGAIN   The queue was empty, and the O_NONBLOCK flag was set for the
+ *            message queue description referred to by mq.
+ *   EINVAL   Either msg or mq is NULL or the value of prio is invalid.
+ *   EBADF    Message queue opened not opened for writing.
+ *   EMSGSIZE 'msglen' was greater than the maxmsgsize attribute of the
+ *            message queue.
+ *   EINTR    The call was interrupted by a signal handler.
+ *
+ ****************************************************************************/
+
+int file_mq_ticksend(FAR struct file *mq, FAR const char *msg,
+                     size_t msglen, unsigned int prio, sclock_t ticks)
+{
+  return file_mq_timedsend_internal(mq, msg, msglen, prio, NULL, ticks);
 }
 
 /****************************************************************************
@@ -435,7 +525,7 @@ int nxmq_timedsend(mqd_t mqdes, FAR const char *msg, size_t msglen,
       return ret;
     }
 
-  ret = file_mq_timedsend(filep, msg, msglen, prio, abstime);
+  ret = file_mq_timedsend_internal(filep, msg, msglen, prio, abstime, -1);
   fs_putfilep(filep);
   return ret;
 }
@@ -544,7 +634,7 @@ int mq_timedsend(mqd_t mqdes, FAR const char *msg, size_t msglen,
 int file_mq_send(FAR struct file *mq, FAR const char *msg, size_t msglen,
                  unsigned int prio)
 {
-  return file_mq_timedsend(mq, msg, msglen, prio, NULL);
+  return file_mq_timedsend_internal(mq, msg, msglen, prio, NULL, -1);
 }
 
 /****************************************************************************
@@ -587,7 +677,7 @@ int nxmq_send(mqd_t mqdes, FAR const char *msg, size_t msglen,
       return ret;
     }
 
-  ret = file_mq_timedsend(filep, msg, msglen, prio, NULL);
+  ret = file_mq_timedsend_internal(filep, msg, msglen, prio, NULL, -1);
   fs_putfilep(filep);
   return ret;
 }

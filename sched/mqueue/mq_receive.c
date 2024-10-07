@@ -105,26 +105,12 @@ static int nxmq_verify_receive(FAR struct file *mq,
 #endif
 
 /****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: file_mq_timedreceive
+ * Name: file_mq_timedreceive_internal
  *
  * Description:
- *   This function receives the oldest of the highest priority messages from
- *   the message queue specified by "mq."  If the message queue is empty
- *   and O_NONBLOCK was not set, file_mq_timedreceive() will block until a
- *   message is added to the message queue (or until a timeout occurs).
- *
- *   file_mq_timedreceive() is an internal OS interface.  It is functionally
- *   equivalent to mq_timedreceive() except that:
- *
- *   - It is not a cancellation point, and
- *   - It does not modify the errno value.
- *
- *  See comments with mq_timedreceive() for a more complete description of
- *  the behavior of this function
+ *   This is an internal function of file_mq_timedreceive()/
+ *   file_mq_tickreceive(), please refer to the detailed description for
+ *   more information.
  *
  * Input Parameters:
  *   mq      - Message Queue Descriptor
@@ -148,9 +134,11 @@ static int nxmq_verify_receive(FAR struct file *mq,
  *
  ****************************************************************************/
 
-ssize_t file_mq_timedreceive(FAR struct file *mq, FAR char *msg,
-                             size_t msglen, FAR unsigned int *prio,
-                             FAR const struct timespec *abstime)
+static
+ssize_t file_mq_timedreceive_internal(FAR struct file *mq, FAR char *msg,
+                                      size_t msglen, FAR unsigned int *prio,
+                                      FAR const struct timespec *abstime,
+                                      sclock_t ticks)
 {
   FAR struct mqueue_inode_s *msgq;
   FAR struct mqueue_msg_s *mqmsg;
@@ -204,7 +192,7 @@ ssize_t file_mq_timedreceive(FAR struct file *mq, FAR char *msg,
 
       /* Wait & get the message from the message queue */
 
-      ret = nxmq_wait_receive(msgq, &mqmsg, abstime);
+      ret = nxmq_wait_receive(msgq, &mqmsg, abstime, ticks);
       if (ret < 0)
         {
           leave_critical_section(flags);
@@ -242,6 +230,98 @@ ssize_t file_mq_timedreceive(FAR struct file *mq, FAR char *msg,
   nxmq_free_msg(mqmsg);
 
   return ret;
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: file_mq_timedreceive
+ *
+ * Description:
+ *   This function receives the oldest of the highest priority messages from
+ *   the message queue specified by "mq."  If the message queue is empty
+ *   and O_NONBLOCK was not set, file_mq_timedreceive() will block until a
+ *   message is added to the message queue (or until a timeout occurs).
+ *
+ *   file_mq_timedreceive() is an internal OS interface.  It is functionally
+ *   equivalent to mq_timedreceive() except that:
+ *
+ *   - It is not a cancellation point, and
+ *   - It does not modify the errno value.
+ *
+ *  See comments with mq_timedreceive() for a more complete description of
+ *  the behavior of this function
+ *
+ * Input Parameters:
+ *   mq      - Message Queue Descriptor
+ *   msg     - Buffer to receive the message
+ *   msglen  - Size of the buffer in bytes
+ *   prio    - If not NULL, the location to store message priority.
+ *   abstime - the absolute time to wait until a timeout is declared.
+ *
+ * Returned Value:
+ *   On success, the length of the selected message in bytes is returned.
+ *   On failure, -1 (ERROR) is returned and the errno is set appropriately:
+ *
+ *   EAGAIN    The queue was empty, and the O_NONBLOCK flag was set
+ *             for the message queue description referred to by 'mqdes'.
+ *   EPERM     Message queue opened not opened for reading.
+ *   EMSGSIZE  'msglen' was less than the maxmsgsize attribute of the
+ *             message queue.
+ *   EINTR     The call was interrupted by a signal handler.
+ *   EINVAL    Invalid 'msg' or 'mqdes' or 'abstime'
+ *   ETIMEDOUT The call timed out before a message could be transferred.
+ *
+ ****************************************************************************/
+
+ssize_t file_mq_timedreceive(FAR struct file *mq, FAR char *msg,
+                             size_t msglen, FAR unsigned int *prio,
+                             FAR const struct timespec *abstime)
+{
+  return file_mq_timedreceive_internal(mq, msg, msglen, prio, abstime, -1);
+}
+
+/****************************************************************************
+ * Name: file_mq_tickreceive
+ *
+ * Description:
+ *   This function receives the oldest of the highest priority messages from
+ *   the message queue specified by "mq."  If the message queue is empty
+ *   and O_NONBLOCK was not set, file_mq_tickreceive() will block until a
+ *   message is added to the message queue (or until a timeout occurs).
+ *
+ *   file_mq_tickreceive() is an internal OS interface.  It is functionally
+ *   equivalent to mq_timedreceive() except that:
+ *
+ *   - It is not a cancellation point, and
+ *   - It does not modify the errno value.
+ *
+ *  See comments with mq_timedreceive() for a more complete description of
+ *  the behavior of this function
+ *
+ * Input Parameters:
+ *   mq      - Message Queue Descriptor
+ *   msg     - Buffer to receive the message
+ *   msglen  - Size of the buffer in bytes
+ *   prio    - If not NULL, the location to store message priority.
+ *   ticks   - Ticks to wait from the start time until the semaphore is
+ *             posted.
+ *
+ * Returned Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
+ *   (see mq_timedreceive() for the list list valid return values).
+ *
+ ****************************************************************************/
+
+ssize_t file_mq_tickreceive(FAR struct file *mq, FAR char *msg,
+                            size_t msglen, FAR unsigned int *prio,
+                            sclock_t ticks)
+{
+  return file_mq_timedreceive_internal(mq, msg, msglen, prio, NULL, ticks);
 }
 
 /****************************************************************************
@@ -297,7 +377,7 @@ ssize_t nxmq_timedreceive(mqd_t mqdes, FAR char *msg, size_t msglen,
       return ret;
     }
 
-  ret = file_mq_timedreceive(filep, msg, msglen, prio, abstime);
+  ret = file_mq_timedreceive_internal(filep, msg, msglen, prio, abstime, -1);
   fs_putfilep(filep);
   return ret;
 }
@@ -404,7 +484,7 @@ ssize_t mq_timedreceive(mqd_t mqdes, FAR char *msg, size_t msglen,
 ssize_t file_mq_receive(FAR struct file *mq, FAR char *msg, size_t msglen,
                         FAR unsigned int *prio)
 {
-  return file_mq_timedreceive(mq, msg, msglen, prio, NULL);
+  return file_mq_timedreceive_internal(mq, msg, msglen, prio, NULL, -1);
 }
 
 /****************************************************************************
