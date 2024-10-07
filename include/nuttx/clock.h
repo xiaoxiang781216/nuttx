@@ -502,10 +502,10 @@ EXTERN volatile clock_t g_system_ticks;
  *
  * Input Parameters:
  *   mono - Return the converted time here.
- *   absticks - The absolute time to convert.
+ *   abstime - Convert this absolute time to ticks
  *
  * Returned Value:
- *   None
+ *   OK (0) on success; a negated errno value on failure.
  *
  * Assumptions:
  *   Interrupts should be disabled so that the time is not changing during
@@ -513,17 +513,8 @@ EXTERN volatile clock_t g_system_ticks;
  *
  ****************************************************************************/
 
-#ifndef CONFIG_CLOCK_TIMEKEEPING
-# define clock_realtime2absticks(reltime, absticks) \
-   do \
-     { \
-       extern struct timespec g_basetime; \
-       struct timespec _mono; \
-       clock_timespec_subtract(reltime, &g_basetime, &_mono); \
-       *(absticks) = clock_time2ticks(&_mono); \
-     } \
-   while (0)
-#endif
+int clock_realtime2absticks(FAR const struct timespec *reltime,
+                            FAR clock_t *absticks);
 
 /****************************************************************************
  * Name: clock_compare
@@ -833,7 +824,7 @@ void nxclock_settime(clockid_t clock_id, FAR const struct timespec *tp);
  *
  ****************************************************************************/
 
-void nxclock_gettime(clockid_t clock_id, struct timespec *tp);
+void nxclock_gettime(clockid_t clock_id, FAR struct timespec *tp);
 
 #undef EXTERN
 #ifdef __cplusplus
