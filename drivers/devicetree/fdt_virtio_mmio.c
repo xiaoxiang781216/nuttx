@@ -69,8 +69,8 @@ int fdt_virtio_mmio_devices_register(FAR const void *fdt, int irqbase)
           break;
         }
 
-      addr = fdt_get_reg_base(fdt, offset);
-      irqnum = fdt_get_irq(fdt, offset, irqbase);
+      addr = fdt_get_reg_base(fdt, offset, 0);
+      irqnum = fdt_get_irq(fdt, offset, 1, irqbase);
       if (addr <= 0 || irqnum < 0)
         {
           return -EINVAL;

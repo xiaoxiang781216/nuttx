@@ -75,8 +75,8 @@ static void register_virtio_devices_from_fdt(const void *fdt)
           break;
         }
 
-      addr = fdt_get_reg_base(fdt, offset);
-      irqnum = fdt_get_irq(fdt, offset, QEMU_SPI_IRQ_BASE);
+      addr = fdt_get_reg_base(fdt, offset, 0);
+      irqnum = fdt_get_irq(fdt, offset, 1, QEMU_SPI_IRQ_BASE);
       if (addr > 0 && irqnum >= 0)
         {
           virtio_register_mmio_device((void *)addr, irqnum);
@@ -131,7 +131,7 @@ static void register_pci_host_from_fdt(const void *fdt)
 
   /* Get the reg address, 64 or 32 */
 
-  cfg.start = fdt_get_reg_base(fdt, offset);
+  cfg.start = fdt_get_reg_base(fdt, offset, 0);
   cfg.end = cfg.start + fdt_get_reg_size(fdt, offset);
 
   /* Get the ranges address */
