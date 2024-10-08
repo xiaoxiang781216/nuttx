@@ -149,7 +149,7 @@ static int pressure_close(FAR struct file *filep)
   flags = spin_lock_irqsave(&g_pressure_lock);
   dq_rem(&priv->entry, &g_pressure_memory_queue);
   spin_unlock_irqrestore(&g_pressure_lock, flags);
-  free(priv);
+  fs_heap_free(priv);
   return OK;
 }
 
