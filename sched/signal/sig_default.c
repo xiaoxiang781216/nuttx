@@ -228,21 +228,6 @@ static void nxsig_abnormal_termination(int signo)
   group_kill_children(rtcb);
 #endif
 
-#ifndef CONFIG_DISABLE_PTHREAD
-  if ((rtcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_PTHREAD &&
-      (info->flags & TLS_THREAD_EIXT) != 0)
-    {
-      /* The currently running task is a pthread.  This means that the
-       * thread has already been marked for termination and we should not
-       * do it again.
-       */
-
-      return;
-    }
-#endif
-
-  info->flags |= TLS_THREAD_EIXT;
-
   /* Mark the pthread as non-cancelable to avoid additional calls to
    * nx_pthread_exit() due to any cancellation point logic that might
    * get kicked off by actions taken during pthread_exit processing.
