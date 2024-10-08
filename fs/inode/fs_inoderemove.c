@@ -57,7 +57,7 @@
 static FAR struct inode *inode_unlink(FAR const char *path)
 {
   struct inode_search_s desc;
-  FAR struct inode *node = NULL;
+  FAR struct inode *inode = NULL;
   int ret;
 
   /* Verify parameters.  Ignore null paths */
@@ -74,8 +74,8 @@ static FAR struct inode *inode_unlink(FAR const char *path)
   ret = inode_search(&desc);
   if (ret >= 0)
     {
-      node = desc.node;
-      DEBUGASSERT(node != NULL);
+      inode = desc.node;
+      DEBUGASSERT(inode != NULL);
 
       /* If peer is non-null, then remove the node from the right of
        * of that peer node.
@@ -83,7 +83,7 @@ static FAR struct inode *inode_unlink(FAR const char *path)
 
       if (desc.peer != NULL)
         {
-          desc.peer->i_peer = node->i_peer;
+          desc.peer->i_peer = inode->i_peer;
         }
 
       /* Then remove the node from head of the list of children. */
@@ -91,16 +91,16 @@ static FAR struct inode *inode_unlink(FAR const char *path)
       else
         {
           DEBUGASSERT(desc.parent != NULL);
-          desc.parent->i_child = node->i_peer;
+          desc.parent->i_child = inode->i_peer;
         }
 
-      node->i_peer   = NULL;
-      node->i_parent = NULL;
-      atomic_fetch_sub(&node->i_crefs, 1);
+      inode->i_peer   = NULL;
+      inode->i_parent = NULL;
+      atomic_fetch_sub(&inode->i_crefs, 1);
     }
 
   RELEASE_SEARCH(&desc);
-  return node;
+  return inode;
 }
 
 /****************************************************************************
