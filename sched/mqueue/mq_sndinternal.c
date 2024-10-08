@@ -186,7 +186,7 @@ int nxmq_wait_send(FAR struct mqueue_inode_s *msgq,
 
       /* Remove the tcb task from the running list. */
 
-      nxsched_remove_running(rtcb);
+      nxsched_remove_self(rtcb);
 
       /* Add the task to the specified blocked task list */
 

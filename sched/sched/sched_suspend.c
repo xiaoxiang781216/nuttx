@@ -77,7 +77,7 @@ static int nxsched_suspend_handler(FAR void *cookie)
       tcb->flags = arg->saved_flags;
     }
 
-  nxsched_remove(tcb);
+  nxsched_remove_readytorun(tcb, false);
 
   tcb->task_state = TSTATE_TASK_STOPPED;
   dq_addlast((FAR dq_entry_t *)tcb, &g_stoppedtasks);
@@ -102,6 +102,7 @@ static int nxsched_suspend_handler(FAR void *cookie)
 
 void nxsched_suspend(FAR struct tcb_s *tcb)
 {
+  bool switch_needed;
   irqstate_t flags;
 
   DEBUGASSERT(tcb != NULL);
@@ -144,49 +145,46 @@ void nxsched_suspend(FAR struct tcb_s *tcb)
 
       /* Remove the tcb task from the running list. */
 
-      if (tcb->task_state == TSTATE_TASK_RUNNING)
-        {
 #ifdef CONFIG_SMP
-          if (tcb->cpu != this_cpu())
+      if (tcb->task_state == TSTATE_TASK_RUNNING && tcb->cpu != this_cpu())
+        {
+          struct suspend_arg_s arg;
+
+          if ((tcb->flags & TCB_FLAG_CPU_LOCKED) != 0)
             {
-              struct suspend_arg_s arg;
-
-              if ((tcb->flags & TCB_FLAG_CPU_LOCKED) != 0)
-                {
-                  arg.pid = tcb->pid;
-                  arg.need_restore = false;
-                }
-              else
-                {
-                  arg.pid = tcb->pid;
-                  arg.saved_flags = tcb->flags;
-                  arg.saved_affinity = tcb->affinity;
-                  arg.need_restore = true;
-
-                  tcb->flags |= TCB_FLAG_CPU_LOCKED;
-                  CPU_SET(tcb->cpu, &tcb->affinity);
-                }
-
-              nxsched_smp_call_single(tcb->cpu, nxsched_suspend_handler,
-                                      &arg, true);
+              arg.pid = tcb->pid;
+              arg.need_restore = false;
             }
           else
-#endif
             {
-              nxsched_remove_running(tcb);
-              tcb->task_state = TSTATE_TASK_STOPPED;
-              dq_addlast((FAR dq_entry_t *)tcb, &g_stoppedtasks);
+              arg.pid = tcb->pid;
+              arg.saved_flags = tcb->flags;
+              arg.saved_affinity = tcb->affinity;
+              arg.need_restore = true;
 
-              /* Now, perform the context switch */
-
-              up_switch_context(this_task(), rtcb);
+              tcb->flags |= TCB_FLAG_CPU_LOCKED;
+              CPU_SET(tcb->cpu, &tcb->affinity);
             }
+
+          nxsched_smp_call_single(tcb->cpu, nxsched_suspend_handler,
+                                  &arg, true);
         }
       else
+#endif
         {
-          nxsched_remove_not_running(tcb);
+          switch_needed = nxsched_remove_readytorun(tcb, true);
+
+          /* Add the task to the specified blocked task list */
+
           tcb->task_state = TSTATE_TASK_STOPPED;
           dq_addlast((FAR dq_entry_t *)tcb, &g_stoppedtasks);
+
+          /* Now, perform the context switch if one is needed */
+
+          if (switch_needed)
+            {
+              up_switch_context(this_task(), rtcb);
+            }
         }
     }
 

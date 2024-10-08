@@ -130,7 +130,7 @@ static int msgrcv_wait(FAR struct msgq_s *msgq, FAR struct msgbuf_s **rcvmsg,
 
       /* Remove the tcb task from the running list. */
 
-      nxsched_remove_running(rtcb);
+      nxsched_remove_self(rtcb);
 
       /* Add the task to the specified blocked task list */
 

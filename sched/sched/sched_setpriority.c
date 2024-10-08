@@ -200,7 +200,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 
           do
             {
-              nxsched_remove_not_running(nxttcb);
+              nxsched_remove_readytorun(nxttcb, false);
 
               nxsched_add_prioritized(nxttcb, &g_pendingtasks);
               nxttcb->task_state = TSTATE_TASK_PENDING;

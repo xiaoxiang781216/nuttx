@@ -102,7 +102,7 @@ int nxtask_exit(void)
    * ready-to-run with state == TSTATE_TASK_RUNNING
    */
 
-  nxsched_remove_running(dtcb);
+  nxsched_remove_self(dtcb);
 
   /* Get the new task at the head of the ready to run list */
 

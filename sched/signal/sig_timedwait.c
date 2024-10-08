@@ -317,7 +317,7 @@ int nxsig_clockwait(int clockid, int flags,
 
   /* Remove the tcb task from the ready-to-run list. */
 
-  nxsched_remove_running(rtcb);
+  nxsched_remove_self(rtcb);
 
   /* Add the task to the specified blocked task list */
 

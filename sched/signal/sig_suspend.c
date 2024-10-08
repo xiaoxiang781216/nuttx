@@ -128,7 +128,7 @@ int sigsuspend(FAR const sigset_t *set)
 
       /* Remove the tcb task from the running list. */
 
-      nxsched_remove_running(rtcb);
+      nxsched_remove_self(rtcb);
 
       /* Add the task to the specified blocked task list */
 

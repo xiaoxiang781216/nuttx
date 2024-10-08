@@ -64,7 +64,7 @@ bool nxsched_reprioritize_rtr(FAR struct tcb_s *tcb, int priority)
    * remove the head of the ready to run list.
    */
 
-  switch_needed = nxsched_remove(tcb);
+  switch_needed = nxsched_remove_readytorun(tcb, false);
 
   /* Setup up the new task priority */
 

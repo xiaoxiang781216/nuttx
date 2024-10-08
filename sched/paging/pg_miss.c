@@ -138,7 +138,7 @@ void pg_miss(FAR struct tcb_s *ftcb)
 
   /* Remove the tcb task from the running list. */
 
-  nxsched_remove_running(ftcb);
+  nxsched_remove_self(ftcb);
 
   /* Add the task to the specified blocked task list */
 
