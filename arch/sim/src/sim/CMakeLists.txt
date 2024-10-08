@@ -165,6 +165,9 @@ endif()
 
 if(CONFIG_SMP)
   list(APPEND SRCS sim_smpsignal.c sim_cpuidlestack.c)
+endif()
+
+if(CONFIG_ARCH_HAVE_MULTICPU)
   list(APPEND HOSTSRCS sim_hostsmp.c)
 endif()
 

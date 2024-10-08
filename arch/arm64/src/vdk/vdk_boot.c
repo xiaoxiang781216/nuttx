@@ -119,7 +119,7 @@ void arm64_el_init(void)
   write_sysreg(reg, s3_0_c15_c0_5); /* Enable SPP */
 }
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_HAVE_MULTICPU
 
 /****************************************************************************
  * Public Functions
@@ -154,7 +154,7 @@ int arm64_get_cpuid(uint64_t mpid)
   return MPID_TO_CORE(mpid);
 }
 
-#endif /* CONFIG_SMP */
+#endif /* CONFIG_ARCH_HAVE_MULTICPU */
 
 /****************************************************************************
  * Name: arm64_chip_boot

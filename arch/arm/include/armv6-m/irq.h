@@ -342,19 +342,26 @@ static inline void setcontrol(uint32_t control)
  * Name: up_cpu_index
  *
  * Description:
- *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
+ *   Return the real core number regardless CONFIG_SMP setting
  *
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_HAVE_MULTICPU
 int up_cpu_index(void) noinstrument_function;
+#endif /* CONFIG_ARCH_HAVE_MULTICPU */
+
+static inline_function uint32_t up_getsp(void)
+{
+  register uint32_t sp;
+
+  __asm__ __volatile__
+  (
+    "mov %0, sp\n"
+    : "=r" (sp)
+  );
+
+  return sp;
+}
 
 noinstrument_function
 static inline_function uint32_t *up_current_regs(void)
@@ -366,6 +373,7 @@ static inline_function uint32_t *up_current_regs(void)
 #endif
 }
 
+noinstrument_function
 static inline_function void up_set_current_regs(uint32_t *regs)
 {
 #ifdef CONFIG_SMP
@@ -379,19 +387,6 @@ noinstrument_function
 static inline_function bool up_interrupt_context(void)
 {
   return getipsr() != 0;
-}
-
-static inline_function uint32_t up_getsp(void)
-{
-  register uint32_t sp;
-
-  __asm__ __volatile__
-  (
-    "mov %0, sp\n"
-    : "=r" (sp)
-  );
-
-  return sp;
 }
 
 /****************************************************************************

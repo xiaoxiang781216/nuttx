@@ -247,19 +247,13 @@ static inline uint32_t getcontrol(void)
  * Name: up_cpu_index
  *
  * Description:
- *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
+ *   Return the real core number regardless CONFIG_SMP setting
  *
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_HAVE_MULTICPU
 int up_cpu_index(void) noinstrument_function;
+#endif /* CONFIG_ARCH_HAVE_MULTICPU */
 
 static inline_function uint32_t *up_current_regs(void)
 {
