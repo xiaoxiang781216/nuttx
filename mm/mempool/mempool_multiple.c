@@ -428,11 +428,17 @@ mempool_multiple_init(FAR const char *name,
         }
     }
 
-  mpool = alloc(arg, sizeof(uintptr_t), sizeof(struct mempool_multiple_s));
+  mpool = alloc(arg, sizeof(uintptr_t),
+                sizeof(struct mempool_multiple_s) +
+                npools * sizeof(struct mempool_s));
+
   if (mpool == NULL)
     {
       return NULL;
     }
+
+  pools = (FAR struct mempool_s *)
+          ((uintptr_t)mpool + sizeof(struct mempool_multiple_s));
 
   mpool->alloc_size = alloc_size;
   mpool->expandsize = expandsize;
@@ -442,12 +448,6 @@ mempool_multiple_init(FAR const char *name,
   mpool->arg = arg;
   mpool->alloced = alloc_size(arg, mpool);
   sq_init(&mpool->chunk_queue);
-  pools = alloc(arg, sizeof(uintptr_t), npools * sizeof(struct mempool_s));
-  if (pools == NULL)
-    {
-      goto err_with_mpool;
-    }
-
   mpool->pools = pools;
   mpool->npools = npools;
   mpool->minpoolsize = minpoolsize;
@@ -511,8 +511,6 @@ err_with_pools:
     }
 
   mempool_multiple_free_chunk(mpool, pools);
-err_with_mpool:
-  free(arg, mpool);
   return NULL;
 }
 
@@ -892,6 +890,5 @@ void mempool_multiple_deinit(FAR struct mempool_multiple_s *mpool)
   mempool_multiple_free_chunk(mpool, mpool->dict);
   mpool->dict = NULL;
   nxrmutex_destroy(&mpool->lock);
-  mpool->free(mpool->arg, mpool->pools);
   mpool->free(mpool->arg, mpool);
 }
