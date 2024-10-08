@@ -587,6 +587,14 @@ static ssize_t rpmsgmtd_ioctl_arglen(int cmd)
 {
   switch (cmd)
     {
+      case BIOC_XIPBASE:
+        return sizeof(FAR void *);
+      case MTDIOC_ERASESTATE:
+        return sizeof(uint8_t);
+      case MTDIOC_BULKERASE:
+        return 0;
+      case BIOC_PARTINFO:
+        return sizeof(struct partition_info_s);
       case MTDIOC_PROTECT:
       case MTDIOC_UNPROTECT:
         return sizeof(struct mtd_protect_s);
