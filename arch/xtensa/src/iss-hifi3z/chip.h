@@ -31,4 +31,34 @@
 
 #define HANDLER_SECTION .sram.text
 
+/****************************************************************************
+ * Inline Functions
+ ****************************************************************************/
+
+#ifndef __ASSEMBLY__
+
+#if defined(__cplusplus)
+#define EXTERN extern "C"
+extern "C"
+{
+#else
+#define EXTERN extern
+#endif
+
+static inline bool xtensa_ptr_exec(const void *p)
+{
+  return p != NULL;
+}
+
+static inline bool xtensa_sp_sane(uint32_t sp)
+{
+  return true;
+}
+
+#undef EXTERN
+#if defined(__cplusplus)
+}
+#endif
+
+#endif /* __ASSEMBLY__ */
 #endif /* __ARCH_XTENSA_SRC_ISS_HIFI3Z_CHIP_H */
