@@ -233,7 +233,7 @@ uint32_t *xtensa_user(int exccause, uint32_t *regs);
 /* Software interrupt handler */
 
 #ifdef CONFIG_SMP
-void xtensa_intercpu_interrupt(int tocpu, int intcode);
+int xtensa_intercpu_interrupt(int tocpu, int intcode);
 void xtensa_smp_call_handler(int irq, void *context, void *arg);
 #endif
 

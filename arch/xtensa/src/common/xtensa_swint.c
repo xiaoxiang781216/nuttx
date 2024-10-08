@@ -431,18 +431,21 @@ int xtensa_swint(int irq, void *context, void *arg)
    * switch.
    */
 
+#ifdef CONFIG_DEBUG_SYSCALL_INFO
   if (regs != tcb->xcp.regs)
     {
-      restore_critical_section(this_task(), this_cpu());
-
-#ifdef CONFIG_DEBUG_SYSCALL_INFO
       svcinfo("SYSCALL Return: Context switch!\n");
       up_dump_register(tcb->xcp.regs);
-#endif
     }
   else
     {
       svcinfo("SYSCALL Return: %" PRIu32 "\n", cmd);
+    }
+#endif
+
+  if (regs != tcb->xcp.regs)
+    {
+      restore_critical_section(this_task(), this_cpu());
     }
 
   return OK;
