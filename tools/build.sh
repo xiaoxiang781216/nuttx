@@ -164,6 +164,7 @@ function setup_toolchain()
       "arm" \
       "arm64" \
       "risc-v" \
+      "x86_64" \
       "tc32" )
 
   TOOLCHAIN=(\
