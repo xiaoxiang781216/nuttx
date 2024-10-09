@@ -135,8 +135,8 @@ def mm_dumpnode(node, count, align, simple, detail, alive):
                             backtrace.format_string(
                                 raw=False, symbols=True, address=False
                             ),
-                            gdb.find_pc_line(backtrace).symtab,
-                            gdb.find_pc_line(backtrace).line,
+                            gdb.find_pc_line(int(backtrace)).symtab,
+                            gdb.find_pc_line(int(backtrace)).line,
                         )
                     )
 
@@ -282,12 +282,12 @@ def mempool_dumpbuf(buf, blksize, count, align, simple, detail, alive):
                     "  [%0#*x] %-20s %s:%d\n"
                     % (
                         align,
-                        backtrace,
+                        int(backtrace),
                         buf["backtrace"][x].format_string(
                             raw=False, symbols=True, address=False
                         ),
-                        gdb.find_pc_line(backtrace).symtab,
-                        gdb.find_pc_line(backtrace).line,
+                        gdb.find_pc_line(int(backtrace)).symtab,
+                        gdb.find_pc_line(int(backtrace)).line,
                     )
                 )
 
@@ -1026,8 +1026,7 @@ class Memfrag(gdb.Command):
 
 class MempoolProc:
     def __init__(self, entry):
-        ptr = utils.container_of(entry, mempool_s_type, "procfs")
-        pool = ptr.dereference()
+        pool = utils.container_of(entry, mempool_s_type, "procfs")
         blocksize = self.real_blocksize(pool)
         ordblks = sq_count(pool["queue"])
         iordblks = sq_count(pool["iqueue"])
@@ -1093,7 +1092,6 @@ class Mempool(gdb.Command):
             return pools
 
         while entry:
-            entry = entry.dereference()
             mempool = MempoolProc(entry)
             key = int(entry.address)
             if key in pools:
