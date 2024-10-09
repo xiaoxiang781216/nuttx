@@ -31,3 +31,7 @@ endif
 ifeq ($(CONFIG_ARCH_IDLE_CUSTOM),y)
 CHIP_CSRCS += qemu_idle.c
 endif
+
+ifeq ($(CONFIG_PM),y)
+CHIP_CSRCS += qemu_initialize.c
+endif

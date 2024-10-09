@@ -23,7 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
+#include <nuttx/power/pm.h>
 #include <nuttx/arch.h>
 #include "arm_internal.h"
 
@@ -52,8 +52,90 @@
 extern volatile uint32_t g_ap_entry;
 #endif
 
+#ifdef CONFIG_PM
+
+#ifdef CONFIG_SMP
+static bool pm_idle_handler(int cpu,
+                            enum pm_state_e cpu_state,
+                            enum pm_state_e system_state)
+{
+  bool first = false;
+  switch (cpu_state)
+    {
+      case PM_NORMAL:
+      case PM_IDLE:
+      case PM_STANDBY:
+      case PM_SLEEP:
+
+        /* do cpu domain pm enter operations */
+
+        asm("NOP");
+
+        if (system_state >= PM_NORMAL)
+          {
+            switch (system_state)
+              {
+                case PM_NORMAL:
+                case PM_IDLE:
+                case PM_STANDBY:
+                case PM_SLEEP:
+
+                  /* do system domain pm enter operations */
+
+                  asm("NOP");
+
+                  break;
+                default:
+                  break;
+              }
+          }
+
+        pm_idle_unlock();
+
+        /* do no cross-core relative operations */
+
+        asm("WFI");
+
+        first = pm_idle_lock(cpu);
+        if (first)
+          {
+            /* do system domain pm leave operations */
+
+            asm("NOP");
+          }
+
+        /* do cpu domain pm leave operations */
+
+        asm("NOP");
+
+        break;
+      default:
+        break;
+    }
+
+  return first;
+}
+#else
+
+static void pm_idle_handler(enum pm_state_e state)
+{
+  switch (state)
+    {
+      default:
+        asm("WFI");
+        break;
+    }
+}
+#endif
+
+#endif
+
 void up_idle(void)
 {
+#ifdef CONFIG_PM
+  pm_idle(pm_idle_handler);
+#endif
+
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
   if (g_ap_entry != 0)
     {
