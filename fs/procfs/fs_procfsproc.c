@@ -1812,8 +1812,8 @@ static int proc_opendir(FAR const char *relpath,
     }
 
   /* Allocate the directory structure.  Note that the index and procentry
-   * pointer are implicitly nullified by fs_heap_zalloc().  Only the remaining,
-   * non-zero entries will need be initialized.
+   * pointer are implicitly nullified by fs_heap_zalloc().
+   * Only the remaining, non-zero entries will need be initialized.
    */
 
   procdir = fs_heap_zalloc(sizeof(struct proc_dir_s));
