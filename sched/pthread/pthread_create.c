@@ -444,16 +444,16 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 #endif
     }
 
-  /* Then activate the task */
-
-  nxtask_activate((FAR struct tcb_s *)ptcb);
-
   /* Return the thread information to the caller */
 
   if (thread != NULL)
     {
       *thread = (pthread_t)ptcb->cmn.pid;
     }
+
+  /* Then activate the task */
+
+  nxtask_activate((FAR struct tcb_s *)ptcb);
 
   return OK;
 
