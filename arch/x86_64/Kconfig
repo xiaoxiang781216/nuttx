@@ -50,15 +50,14 @@ config ARCH_CHIP_X86_64_CUSTOM
 endchoice
 
 if SCHED_BACKTRACE
-
 choice
 	prompt "Choose x86_64 unwinder"
-	default x86_64_UNWINDER_FRAME_POINTER
+	default X86_64_UNWINDER_FRAME_POINTER
 	---help---
 		This determines which method will be used for unwinding nuttx stack
 		traces for debug.
 
-config x86_64_UNWINDER_FRAME_POINTER
+config X86_64_UNWINDER_FRAME_POINTER
 	bool "Frame pointer unwinder"
 	select FRAME_POINTER
 	---help---
@@ -66,7 +65,6 @@ config x86_64_UNWINDER_FRAME_POINTER
 		nuttx stack traces.
 
 endchoice # Choose x86_64 unwinder
-
 endif
 
 # CPU features
@@ -146,8 +144,8 @@ config MULTBOOT2_FB_TERM
 	bool "Multiboot2 framebuffer terminal"
 	default n
 	depends on NXFONTS
-    ---help---
-	Enable a framebuffer terminal for early debug printing
+	---help---
+		Enable a framebuffer terminal for early debug printing
 
 endif # ARCH_MULTIBOOT2
 

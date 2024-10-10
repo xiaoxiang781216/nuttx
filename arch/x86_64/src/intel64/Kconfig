@@ -71,6 +71,10 @@ config ARCH_INTEL64_TSC
 config ARCH_INTEL64_HPET_ALARM
 	bool "HPET timer alarm support"
 	depends on ALARM_ARCH
+	---help---
+		With this option you can enable ALARM_ARCH features that works on top of
+		the HPET timer instance. This is an alternative method to TSC timer to
+		provide the system clock.
 
 endchoice # System Timer Source
 

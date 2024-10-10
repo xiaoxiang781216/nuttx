@@ -99,7 +99,7 @@ static void up_calibratedelay(void)
  *
  ****************************************************************************/
 
-static void up_addrenv_init(void)
+static void x86_64_addrenv_init(void)
 {
 #ifdef CONFIG_DEV_SIMPLE_ADDRENV
   simple_addrenv_initialize(g_addrenv);
@@ -135,7 +135,7 @@ void up_initialize(void)
 
   /* Initialzie addrenv */
 
-  up_addrenv_init();
+  x86_64_addrenv_init();
 
 #ifdef CONFIG_PM
   /* Initialize the power management subsystem.  This MCU-specific function
