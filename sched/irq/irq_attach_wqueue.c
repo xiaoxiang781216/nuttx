@@ -70,19 +70,20 @@ static struct irq_work_info_s g_irq_work_vector[NR_IRQS];
 
 static mutex_t g_irq_wqueue_lock = NXMUTEX_INITIALIZER;
 static FAR struct kwork_wqueue_s *g_irq_wqueue[CONFIG_IRQ_NWORKS];
-static int g_irq_wqueue_count = 0;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-static inline_function struct kwork_wqueue_s *irq_get_wqueue(int priority)
+static
+inline_function FAR struct kwork_wqueue_s *irq_get_wqueue(int priority)
 {
   FAR struct kwork_wqueue_s *queue;
   int wqueue_priority;
+  int i;
 
   nxmutex_lock(&g_irq_wqueue_lock);
-  for (int i = 0; i < g_irq_wqueue_count; i++)
+  for (i = 0; g_irq_wqueue[i] != NULL && i < CONFIG_IRQ_NWORKS; i++)
     {
       wqueue_priority = work_queue_priority_wq(g_irq_wqueue[i]);
       DEBUGASSERT(wqueue_priority >= SCHED_PRIORITY_MIN &&
@@ -95,12 +96,12 @@ static inline_function struct kwork_wqueue_s *irq_get_wqueue(int priority)
         }
     }
 
-  DEBUGASSERT(g_irq_wqueue_count < CONFIG_IRQ_NWORKS);
+  DEBUGASSERT(i < CONFIG_IRQ_NWORKS);
 
   queue = work_queue_create("isrwork", priority,
                             CONFIG_IRQ_WORK_STACKSIZE, 1);
 
-  g_irq_wqueue[g_irq_wqueue_count++] = queue;
+  g_irq_wqueue[i] = queue;
   nxmutex_unlock(&g_irq_wqueue_lock);
   return queue;
 }
@@ -111,30 +112,17 @@ static inline_function struct kwork_wqueue_s *irq_get_wqueue(int priority)
 
 static void irq_work_handler(FAR void *arg)
 {
-  FAR struct irq_work_info_s *info = (FAR struct irq_work_info_s *)arg;
+  FAR struct irq_work_info_s *info = arg;
 
   info->isrwork(info->irq, NULL, info->arg);
 }
 
 static int irq_default_handler(int irq, FAR void *regs, FAR void *arg)
 {
-  FAR struct irq_work_info_s *info;
-  int ret = IRQ_WAKE_THREAD;
-  int ndx = IRQ_TO_NDX(irq);
-  xcpt_t vector;
+  FAR struct irq_work_info_s *info = arg;
+  int ret;
 
-  if (ndx < 0)
-    {
-      return ndx;
-    }
-
-  info = &g_irq_work_vector[ndx];
-  vector = info->handler;
-
-  if (vector)
-    {
-      ret = vector(irq, regs, arg);
-    }
+  ret = info->handler(irq, regs, arg);
 
   if (ret == IRQ_WAKE_THREAD)
     {
@@ -213,7 +201,7 @@ int irq_attach_wqueue(int irq, xcpt_t isr, xcpt_t isrwork,
       info->wqueue = irq_get_wqueue(priority);
     }
 
-  irq_attach(irq, irq_default_handler, arg);
+  irq_attach(irq, irq_default_handler, info);
 #endif /* NR_IRQS */
 
   return OK;
