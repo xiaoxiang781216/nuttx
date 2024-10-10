@@ -421,9 +421,13 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
 int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
 {
   FAR struct pollfd *kfds;
-  sem_t sem;
+  FAR sem_t *sem;
   int count = 0;
   int ret = OK;
+#if !defined(CONFIG_BUILD_KERNEL) && !defined(CONFIG_BUILD_PROTECTED)
+  sem_t local_sem;
+  sem = &local_sem;
+#endif
 
   DEBUGASSERT(nfds == 0 || fds != NULL);
 
@@ -431,10 +435,10 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
 
   enter_cancellation_point();
 
-#ifdef CONFIG_BUILD_KERNEL
+#if defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)
   /* Allocate kernel memory for the fds */
 
-  kfds = fs_heap_malloc(nfds * sizeof(struct pollfd));
+  kfds = fs_heap_malloc(nfds * sizeof(struct pollfd) + sizeof(sem_t));
   if (!kfds)
     {
       /* Out of memory */
@@ -446,6 +450,7 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
   /* Copy the user fds to neutral kernel memory */
 
   memcpy(kfds, fds, nfds * sizeof(struct pollfd));
+  sem = (FAR sem_t *)((uintptr_t)kfds + nfds * sizeof(struct pollfd));
 #else
   /* Can use the user fds directly */
 
@@ -454,13 +459,13 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
 
   /* Set up the poll structure */
 
-  nxsem_init(&sem, 0, 0);
+  nxsem_init(sem, 0, 0);
 
   /* If there are already events available in poll_setup,
    * we return immediately
    */
 
-  count = poll_setup(kfds, nfds, &sem);
+  count = poll_setup(kfds, nfds, sem);
   if (count == 0)
     {
       struct pollfd_s fdsinfo;
@@ -492,7 +497,7 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
            * will return immediately.
            */
 
-          ret = nxsem_tickwait(&sem, MSEC2TICK((clock_t)timeout));
+          ret = nxsem_tickwait(sem, MSEC2TICK((clock_t)timeout));
           if (ret < 0)
             {
               if (ret == -ETIMEDOUT)
@@ -509,7 +514,7 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
         {
           /* Wait for the poll event or signal with no timeout */
 
-          ret = nxsem_wait(&sem);
+          ret = nxsem_wait(sem);
         }
 
       /* Teardown the poll operation and get the count of events.  Zero will
@@ -525,9 +530,9 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
       tls_cleanup_pop(tls_get_info(), 0);
     }
 
-  nxsem_destroy(&sem);
+  nxsem_destroy(sem);
 
-#ifdef CONFIG_BUILD_KERNEL
+#if defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)
   /* Copy the events back to user */
 
   if (ret == OK)
