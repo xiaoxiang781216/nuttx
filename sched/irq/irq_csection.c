@@ -38,7 +38,6 @@
 #include "irq/irq.h"
 
 #ifdef CONFIG_IRQCOUNT
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -110,12 +109,6 @@ irqstate_t enter_critical_section(void)
    */
 
   ret = up_irq_save();
-
-  /* Verify that the system has sufficiently initialized so that the task
-   * lists are valid.
-   */
-
-  DEBUGASSERT(OSINIT_TASK_READY());
 
   /* If called from an interrupt handler, then just take the spinlock.
    * If we are already in a critical section, this will lock the CPU
@@ -195,6 +188,7 @@ irqstate_t enter_critical_section(void)
           /* In any event, the nesting count is now one */
 
           g_cpu_nestcount[cpu] = 1;
+
           DEBUGASSERT(spin_is_locked(&g_cpu_irqlock) &&
                       (g_cpu_irqset & (1 << cpu)) != 0);
         }
@@ -279,12 +273,6 @@ irqstate_t enter_critical_section(void)
 
   ret = up_irq_save();
 
-  /* Verify that the system has sufficiently initialized so that the task
-   * lists are valid.
-   */
-
-  DEBUGASSERT(OSINIT_TASK_READY());
-
   /* Check if we were called from an interrupt handler */
 
   if (!up_interrupt_context())
@@ -329,12 +317,6 @@ irqstate_t enter_critical_section(void)
 void leave_critical_section(irqstate_t flags)
 {
   int cpu;
-
-  /* Verify that the system has sufficiently initialized so that the task
-   * lists are valid.
-   */
-
-  DEBUGASSERT(OSINIT_TASK_READY());
 
   /* If called from an interrupt handler, then just release the
    * spinlock.  The interrupt handling logic should already hold the
@@ -444,13 +426,9 @@ void leave_critical_section(irqstate_t flags)
 
 void leave_critical_section(irqstate_t flags)
 {
-  /* Verify that the system has sufficiently initialized so that the task
-   * lists are valid.
+  /* Check if we were called from an interrupt handler and that the tasks
+   * lists have been initialized.
    */
-
-  DEBUGASSERT(OSINIT_TASK_READY());
-
-  /* Check if we were called from an interrupt handler */
 
   if (!up_interrupt_context())
     {
