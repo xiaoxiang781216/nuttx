@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/group/group_argvstr.c
+ * sched/task/task_argvstr.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -27,7 +27,6 @@
 #include <nuttx/config.h>
 
 #include <sched.h>
-#include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
 
@@ -36,14 +35,13 @@
 #include <nuttx/tls.h>
 
 #include "sched/sched.h"
-#include "group/group.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: group_argvstr
+ * Name: nxtask_argvstr
  *
  * Description:
  *   Safely read the contents of a task's argument vector, into a a safe
@@ -59,7 +57,7 @@
  *
  ****************************************************************************/
 
-size_t group_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size)
+size_t nxtask_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size)
 {
   irqstate_t flags;
   size_t n = 0;
