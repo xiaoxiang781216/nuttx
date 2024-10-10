@@ -31,6 +31,7 @@
 
 #include "irq/irq.h"
 #include "sched/sched.h"
+#include "sched/queue.h"
 
 /****************************************************************************
  * Public Functions
@@ -116,26 +117,20 @@ void nxsched_process_delivered(int cpu)
       /* Special case:  Insert at the head of the list */
 
       tasklist = &g_assignedtasks[cpu];
-      btcb->flink = next;
-      btcb->blink = NULL;
-      next->blink = btcb;
-      tasklist->head = (FAR dq_entry_t *)btcb;
+      dq_addfirst_nonempty((FAR dq_entry_t *)btcb, tasklist);
       btcb->cpu = cpu;
       btcb->task_state = TSTATE_TASK_RUNNING;
       up_update_task(btcb);
 
       DEBUGASSERT(btcb->flink != NULL);
-      next = btcb->flink;
+      DEBUGASSERT(next == btcb->flink);
       next->task_state = TSTATE_TASK_ASSIGNED;
     }
   else
     {
       /* Insert in the middle of the list */
 
-      btcb->flink = next;
-      btcb->blink = prev;
-      prev->flink = btcb;
-      next->blink = btcb;
+      dq_insert_mid(prev, btcb, next);
       btcb->cpu = cpu;
       btcb->task_state = TSTATE_TASK_ASSIGNED;
     }

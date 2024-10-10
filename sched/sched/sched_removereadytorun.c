@@ -29,10 +29,10 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#include <nuttx/queue.h>
 #include <nuttx/sched_note.h>
 
 #include "irq/irq.h"
+#include "sched/queue.h"
 #include "sched/sched.h"
 
 /****************************************************************************
@@ -254,7 +254,7 @@ void nxsched_remove_running(FAR struct tcb_s *tcb)
        */
 
       dq_rem((FAR dq_entry_t *)rtrtcb, &g_readytorun);
-      dq_addfirst_notempty((FAR dq_entry_t *)rtrtcb, tasklist);
+      dq_addfirst_nonempty((FAR dq_entry_t *)rtrtcb, tasklist);
 
       rtrtcb->cpu = cpu;
       nxttcb = rtrtcb;

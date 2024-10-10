@@ -29,9 +29,8 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#include <nuttx/queue.h>
-
 #include "irq/irq.h"
+#include "sched/queue.h"
 #include "sched/sched.h"
 
 /****************************************************************************
@@ -245,11 +244,14 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
                   g_delivertasks[cpu] = btcb;
                   btcb->cpu = cpu;
                   btcb->task_state = TSTATE_TASK_ASSIGNED;
-                  btcb = rtcb;
+                  nxsched_add_prioritized(rtcb, &g_readytorun);
+                  rtcb->task_state = TSTATE_TASK_READYTORUN;
                 }
-
-              nxsched_add_prioritized(btcb, &g_readytorun);
-              btcb->task_state = TSTATE_TASK_READYTORUN;
+              else
+                {
+                  nxsched_add_prioritized(btcb, &g_readytorun);
+                  btcb->task_state = TSTATE_TASK_READYTORUN;
+                }
             }
 
           return false;
@@ -267,7 +269,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
        * task list and mark it as running
        */
 
-      dq_addfirst_notempty((FAR dq_entry_t *)btcb, tasklist);
+      dq_addfirst_nonempty((FAR dq_entry_t *)btcb, tasklist);
       up_update_task(btcb);
 
       DEBUGASSERT(task_state == TSTATE_TASK_RUNNING);
