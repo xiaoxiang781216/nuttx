@@ -176,12 +176,6 @@ void group_leave(FAR struct tcb_s *tcb)
   group = tcb->group;
   if (group)
     {
-      /* In any event, we can detach the group from the TCB so that we won't
-       * do this again.
-       */
-
-      tcb->group = NULL;
-
       /* Remove the member from group. */
 
 #ifdef HAVE_GROUP_MEMBERS
@@ -201,6 +195,12 @@ void group_leave(FAR struct tcb_s *tcb)
               group_release(group, tcb->flags & TCB_FLAG_TTYPE_MASK);
             }
         }
+
+      /* In any event, we can detach the group from the TCB so that we won't
+       * do this again.
+       */
+
+      tcb->group = NULL;
     }
 }
 
