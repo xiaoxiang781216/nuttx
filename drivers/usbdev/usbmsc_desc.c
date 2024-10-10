@@ -404,12 +404,13 @@ int16_t usbmsc_mkcfgdesc(uint8_t *buf,
                          FAR struct usbdev_devinfo_s *devinfo,
                          uint8_t speed, uint8_t type)
 {
+  FAR struct usb_cfgdesc_s *cfgdesc = NULL;
   int16_t totallen = 0;
   int ret;
 
   /* Check for switches between high and full speed */
 
-  if (type == USB_DESC_TYPE_OTHERSPEEDCONFIG && speed != USB_SPEED_HIGH)
+  if (type == USB_DESC_TYPE_OTHERSPEEDCONFIG && speed < USB_SPEED_SUPER)
     {
       speed = speed == USB_SPEED_HIGH ? USB_SPEED_FULL : USB_SPEED_HIGH;
     }
@@ -428,19 +429,17 @@ int16_t usbmsc_mkcfgdesc(uint8_t *buf,
        * descriptor will be provided by the composite device logic.
        */
 
-      FAR struct usb_cfgdesc_s *dest = (FAR struct usb_cfgdesc_s *)buf;
+      cfgdesc = (FAR struct usb_cfgdesc_s *)buf;
 
-      dest->len         = USB_SIZEOF_CFGDESC;               /* Descriptor length */
-      dest->type        = type;                             /* Descriptor type */
-      dest->totallen[0] = LSBYTE(SIZEOF_USBMSC_CFGDESC);    /* LS Total length */
-      dest->totallen[1] = MSBYTE(SIZEOF_USBMSC_CFGDESC);    /* MS Total length */
-      dest->ninterfaces = USBMSC_NINTERFACES;               /* Number of interfaces */
-      dest->cfgvalue    = USBMSC_CONFIGID;                  /* Configuration value */
-      dest->icfg        = USBMSC_CONFIGSTRID;               /* Configuration */
-      dest->attr        = USB_CONFIG_ATTR_ONE |             /* Attributes */
-                          USBMSC_SELFPOWERED |
-                          USBMSC_REMOTEWAKEUP;
-      dest->mxpower     = (CONFIG_USBDEV_MAXPOWER + 1) / 2; /* Max power (mA/2) */
+      cfgdesc->len         = USB_SIZEOF_CFGDESC;               /* Descriptor length */
+      cfgdesc->type        = type;                             /* Descriptor type */
+      cfgdesc->ninterfaces = USBMSC_NINTERFACES;               /* Number of interfaces */
+      cfgdesc->cfgvalue    = USBMSC_CONFIGID;                  /* Configuration value */
+      cfgdesc->icfg        = USBMSC_CONFIGSTRID;               /* Configuration */
+      cfgdesc->attr        = USB_CONFIG_ATTR_ONE |             /* Attributes */
+                             USBMSC_SELFPOWERED |
+                             USBMSC_REMOTEWAKEUP;
+      cfgdesc->mxpower     = (CONFIG_USBDEV_MAXPOWER + 1) / 2; /* Max power (mA/2) */
 
       buf += sizeof(struct usb_cfgdesc_s);
       totallen += sizeof(struct usb_cfgdesc_s);
@@ -485,12 +484,20 @@ int16_t usbmsc_mkcfgdesc(uint8_t *buf,
 
     {
       ret = usbmsc_copy_epdesc(USBMSC_EPBULKOUT,
-                               (FAR struct usb_epdesc_s *)buf, devinfo,
-                               speed);
+                               (FAR struct usb_epdesc_s *)buf,
+                               devinfo, speed);
 
       buf += ret;
       totallen += ret;
     }
+
+#ifndef CONFIG_USBMSC_COMPOSITE
+  if (cfgdesc)
+    {
+      cfgdesc->totallen[0] = LSBYTE(totallen);
+      cfgdesc->totallen[1] = MSBYTE(totallen);
+    }
+#endif
 
   return totallen;
 }

@@ -1247,7 +1247,9 @@ static int cdcecm_mkepdesc(int epidx,
   int len = sizeof(struct usb_epdesc_s);
 
 #ifdef CONFIG_USBDEV_SUPERSPEED
-  if (speed == USB_SPEED_SUPER || speed == USB_SPEED_SUPER_PLUS)
+  if (speed == USB_SPEED_SUPER ||
+      speed == USB_SPEED_SUPER_PLUS ||
+      speed == USB_SPEED_UNKNOWN)
     {
       /* Maximum packet size (super speed) */
 
@@ -1542,11 +1544,13 @@ static int16_t cdcecm_mkcfgdesc(FAR uint8_t *desc,
 
   len += ret;
 
+#ifndef CONFIG_CDCECM_COMPOSITE
   if (cfgdesc)
     {
       cfgdesc->totallen[0] = LSBYTE(len);
       cfgdesc->totallen[1] = MSBYTE(len);
     }
+#endif
 
   DEBUGASSERT(len <= CDCECM_MXDESCLEN);
   return len;
