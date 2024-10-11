@@ -105,14 +105,12 @@ static void arm64_init_signal_process(struct tcb_s *tcb, uint64_t *regs)
 
 void up_schedule_sigaction(struct tcb_s *tcb)
 {
-  sinfo("tcb=%p\n", tcb);
-
-  /* First, handle some special cases when the signal is being delivered
-   * to task that is currently executing on any CPU.
-   */
-
-  sinfo("rtcb=%p current_regs=%p\n", this_task(),
+  sinfo("tcb=%p, rtcb=%p current_regs=%p\n", tcb, this_task(),
         this_task()->xcp.regs);
+
+  /* First, handle some special cases when the signal is
+   * being delivered to the currently executing task.
+   */
 
   if (tcb == this_task() && !up_interrupt_context())
     {
@@ -120,7 +118,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
        * REVISIT:  Signal handler will run in a critical section!
        */
 
-      ((sig_deliver_t)tcb->sigdeliver)(tcb);
+      (tcb->sigdeliver)(tcb);
       tcb->sigdeliver = NULL;
     }
   else

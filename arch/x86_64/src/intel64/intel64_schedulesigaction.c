@@ -73,8 +73,8 @@
 #ifndef CONFIG_SMP
 void up_schedule_sigaction(struct tcb_s *tcb)
 {
-  sinfo("tcb=%p\n", tcb);
-  sinfo("rtcb=%p current_regs=%p\n", this_task(), up_current_regs());
+  sinfo("tcb=%p, rtcb=%p current_regs=%p\n", tcb,
+        this_task(), up_current_regs());
 
   /* First, handle some special cases when the signal is being delivered
    * to the currently executing task.
@@ -92,7 +92,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
            * now.
            */
 
-          ((sig_deliver_t)tcb->sigdeliver)(tcb);
+          (tcb->sigdeliver)(tcb);
           tcb->sigdeliver = NULL;
         }
 
@@ -104,7 +104,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
        * Hmmm... there looks like a latent bug here: The following logic
        * would fail in the strange case where we are in an interrupt
        * handler, the thread is signalling itself, but a context switch
-       * to another task has occurred so that CURRENT_REGS does not
+       * to another task has occurred so that current_regs does not
        * refer to the thread of this_task()!
        */
 
@@ -161,14 +161,12 @@ void up_schedule_sigaction(struct tcb_s *tcb)
   int cpu;
   int me;
 
-  sinfo("tcb=0x%p\n", tcb);
+  sinfo("tcb=%p, rtcb=%p current_regs=%p\n", tcb,
+        this_task(), up_current_regs());
 
   /* First, handle some special cases when the signal is being delivered
    * to task that is currently executing on any CPU.
    */
-
-  sinfo("rtcb=0x%p CURRENT_REGS=0x%p\n", this_task(),
-        up_current_regs());
 
   if (tcb->task_state == TSTATE_TASK_RUNNING)
     {
@@ -185,7 +183,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
            * REVISIT:  Signal handler will run in a critical section!
            */
 
-          ((sig_deliver_t)tcb->sigdeliver)(tcb);
+          (tcb->sigdeliver)(tcb);
           tcb->sigdeliver = NULL;
         }
 
@@ -218,11 +216,8 @@ void up_schedule_sigaction(struct tcb_s *tcb)
           up_current_regs()[REG_RSP]    = up_current_regs()[REG_RSP] - 8;
           up_current_regs()[REG_RFLAGS] = 0;
 
-          /* Mark that full context switch is necessary when we
-           * return from interrupt handler.
-           * In that case RIP, RSP and RFLAGS are changed, but
-           * register area pointer remains the same, so we need an
-           * additional variable to signal the need for full context switch
+          /* And make sure that the saved context in the TCB
+           * is the same as the interrupt return context.
            */
 
           tcb->xcp.regs[REG_AUX] = REG_AUX_FULLCONTEXT;

@@ -74,15 +74,12 @@
 
 void up_schedule_sigaction(struct tcb_s *tcb)
 {
-  sinfo("tcb=%p\n", tcb);
-  DEBUGASSERT(tcb != NULL);
+  sinfo("tcb=%p, rtcb=%p current_regs=%p\n", tcb,
+        this_task(), up_current_regs());
 
   /* First, handle some special cases when the signal is being delivered
    * to task that is currently executing on any CPU.
    */
-
-  sinfo("rtcb=%p current_regs=%p\n", this_task(),
-        up_current_regs());
 
   if (tcb->task_state == TSTATE_TASK_RUNNING)
     {
@@ -101,7 +98,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
         {
           /* In this case just deliver the signal now. */
 
-          ((sig_deliver_t)tcb->sigdeliver)(tcb);
+          (tcb->sigdeliver)(tcb);
           tcb->sigdeliver = NULL;
         }
 
@@ -160,7 +157,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
 
       tcb->xcp.regs -= XCPTCONTEXT_REGS;
       memcpy(tcb->xcp.regs, tcb->xcp.regs +
-              XCPTCONTEXT_REGS, XCPTCONTEXT_SIZE);
+             XCPTCONTEXT_REGS, XCPTCONTEXT_SIZE);
 
       tcb->xcp.regs[REG_SP]  = (uint32_t)tcb->xcp.regs;
 

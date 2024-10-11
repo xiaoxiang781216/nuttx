@@ -80,7 +80,7 @@ void avr_sigdeliver(void)
 
   /* Deliver the signal */
 
-  ((sig_deliver_t)rtcb->sigdeliver)(rtcb);
+  (rtcb->sigdeliver)(rtcb);
 
   /* Output any debug messages BEFORE restoring errno (because they may
    * alter errno), then disable interrupts again and restore the original

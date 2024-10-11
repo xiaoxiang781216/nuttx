@@ -74,14 +74,12 @@
 #ifndef CONFIG_SMP
 void up_schedule_sigaction(struct tcb_s *tcb)
 {
-  sinfo("tcb=%p\n", tcb);
+  sinfo("tcb=%p, rtcb=%p current_regs=%p\n", tcb,
+        this_task(), up_current_regs());
 
   /* First, handle some special cases when the signal is
    * being delivered to the currently executing task.
    */
-
-  sinfo("rtcb=%p current_regs=%p\n", this_task(),
-        up_current_regs());
 
   if (tcb == this_task())
     {
@@ -93,7 +91,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
         {
           /* In this case just deliver the signal now. */
 
-          ((sig_deliver_t)tcb->sigdeliver)(tcb);
+          (tcb->sigdeliver)(tcb);
           tcb->sigdeliver = NULL;
         }
 
@@ -170,14 +168,12 @@ void up_schedule_sigaction(struct tcb_s *tcb)
   int cpu;
   int me;
 
-  sinfo("tcb=0x%p\n", tcb);
+  sinfo("tcb=%p, rtcb=%p current_regs=%p\n", tcb,
+        this_task(), up_current_regs());
 
   /* First, handle some special cases when the signal is being delivered
    * to task that is currently executing on any CPU.
    */
-
-  sinfo("rtcb=0x%p current_regs=0x%p\n",
-        this_task(), up_current_regs());
 
   if (tcb->task_state == TSTATE_TASK_RUNNING)
     {
@@ -194,7 +190,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
            * REVISIT:  Signal handler will run in a critical section!
            */
 
-          ((sig_deliver_t)tcb->sigdeliver)(tcb);
+          (tcb->sigdeliver)(tcb);
           tcb->sigdeliver = NULL;
         }
 

@@ -163,11 +163,11 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
 
           if (!stcb->sigdeliver)
             {
-              stcb->sigdeliver = nxsig_deliver;
 #ifdef CONFIG_SMP
               int cpu = stcb->cpu;
               int me  = this_cpu();
 
+              stcb->sigdeliver = nxsig_deliver;
               if (cpu != me && stcb->task_state == TSTATE_TASK_RUNNING)
                 {
                   struct sig_arg_s arg;
@@ -193,6 +193,7 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
               else
 #endif
                 {
+                  stcb->sigdeliver = nxsig_deliver;
                   up_schedule_sigaction(stcb);
                 }
             }

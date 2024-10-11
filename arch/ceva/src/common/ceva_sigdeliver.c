@@ -70,7 +70,7 @@ void ceva_sigdeliver(void)
    * more signal deliveries while processing the current pending signals.
    */
 
-  sigdeliver       = (sig_deliver_t)rtcb->sigdeliver;
+  sigdeliver       = rtcb->sigdeliver;
   rtcb->sigdeliver = NULL;
 
   /* Deliver the signal */

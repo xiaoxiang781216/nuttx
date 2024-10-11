@@ -79,7 +79,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
 
   if (tcb == this_task())
     {
-      ((sig_deliver_t)tcb->sigdeliver)(tcb);
+      (tcb->sigdeliver)(tcb);
       tcb->sigdeliver = NULL;
     }
 }

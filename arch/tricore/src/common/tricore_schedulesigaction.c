@@ -92,7 +92,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
         {
           /* In this case just deliver the signal now. */
 
-          ((sig_deliver_t)tcb->sigdeliver)(tcb);
+          (tcb->sigdeliver)(tcb);
           tcb->sigdeliver = NULL;
         }
 
@@ -122,9 +122,9 @@ void up_schedule_sigaction(struct tcb_s *tcb)
            */
 
           up_set_current_regs(tricore_alloc_csa((uintptr_t)
-              tricore_sigdeliver,
-              STACK_ALIGN_DOWN(up_getusrsp(tcb->xcp.regs)),
-              PSW_IO_SUPERVISOR | PSW_CDE, true));
+            tricore_sigdeliver,
+            STACK_ALIGN_DOWN(up_getusrsp(tcb->xcp.regs)),
+            PSW_IO_SUPERVISOR | PSW_CDE, true));
         }
     }
 
@@ -150,7 +150,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
        */
 
       tcb->xcp.regs = tricore_alloc_csa((uintptr_t)tricore_sigdeliver,
-          STACK_ALIGN_DOWN(up_getusrsp(tcb->xcp.regs)),
-          PSW_IO_SUPERVISOR | PSW_CDE, true);
+        STACK_ALIGN_DOWN(up_getusrsp(tcb->xcp.regs)),
+        PSW_IO_SUPERVISOR | PSW_CDE, true);
     }
 }
