@@ -26,34 +26,8 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/compiler.h>
-
-#include <sys/types.h>
-#include <stdint.h>
-#include <stdbool.h>
-
-#include "x86_64_internal.h"
-#include "chip.h"
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* Configuration ************************************************************/
-
-/****************************************************************************
- * Public Types
- ****************************************************************************/
-
-/****************************************************************************
- * Inline Functions
- ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
 
 #undef EXTERN
 #if defined(__cplusplus)
@@ -72,7 +46,7 @@ extern "C"
  * Name: intel64_lowsetup
  *
  * Description:
- *   Called at the very beginning of _nxstart.
+ *   Called at the very beginning of _nxstart or up_ap_boot.
  *   Performs low level initializationincluding setup of the console UART.
  *   This UART done early so that the serial console is available for
  *   debugging very early in the boot sequence.
