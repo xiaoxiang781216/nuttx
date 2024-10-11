@@ -60,5 +60,6 @@ add_custom_command(
     $<$<BOOL:${CONFIG_SIM_M32}>:-m32> -Wl,-verbose 2> /dev/null > nuttx-orig.ld
     || true
   COMMAND sh process_sim_ld_script.sh nuttx-orig.ld nuttx.ld
+  COMMAND sed -i '/\\.data *:/i " ${CONFIG_SIM_CUSTOM_DATA_SECTION} " ' nuttx.ld
   COMMENT "Generating sim linker script nuttx.ld"
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
