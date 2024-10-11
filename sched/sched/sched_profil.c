@@ -109,7 +109,7 @@ static void profil_timer_handler(wdparm_t arg)
  *   This routine provides a means to find out in what areas your
  *   program spends most of its time.  The argument buf points to
  *   bufsiz bytes of core.  the user's program counter (PC) is
- *   examined SCHED_PROFIL_TICKSPERSEC times in every second:
+ *   examined SCHED_PROFILE_TICKSPERSEC times in every second:
  *   offset is subtracted and the result is multiplied by scale
  *   and divided by 65536.  If the resulting value is less than
  *   bufsiz, then the corresponding entry in buf is incremented.

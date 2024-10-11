@@ -400,7 +400,7 @@ static inline_function FAR struct tcb_s *this_task(void)
 
   flags = up_irq_save();
 
-  /* Obtain the TCB which is current running on this CPU */
+  /* Obtain the TCB which is currently running on this CPU */
 
   tcb = current_task(this_cpu());
 

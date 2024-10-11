@@ -148,7 +148,7 @@ static void exited_child(FAR struct tcb_s *rtcb,
 
 int waitid(idtype_t idtype, id_t id, FAR siginfo_t *info, int options)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   FAR struct tcb_s *ctcb;
 #ifdef CONFIG_SCHED_CHILD_STATUS
   FAR struct child_status_s *child;
@@ -202,7 +202,6 @@ int waitid(idtype_t idtype, id_t id, FAR siginfo_t *info, int options)
   sigemptyset(&set);
   nxsig_addset(&set, SIGCHLD);
   flags = enter_critical_section();
-  rtcb = this_task();
 
   /* Verify that this task actually has children and that the requested
    * TCB is actually a child of this task.

@@ -80,6 +80,7 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
 {
   FAR struct tcb_s *rtcb;
   FAR struct tcb_s *tcb;
+  int ret;
 
   /* Verify that the requested priority is in the valid range */
 
@@ -87,6 +88,12 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
     {
       return -EINVAL;
     }
+
+  /* Prohibit modifications to the head of the ready-to-run task
+   * list while adjusting the priority
+   */
+
+  sched_lock();
 
   /* Check if the task to reprioritize is the calling task */
 
@@ -105,7 +112,8 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
         {
           /* No task with this PID was found */
 
-          return -ESRCH;
+          ret = -ESRCH;
+          goto errout_with_lock;
         }
     }
 
@@ -118,12 +126,12 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
       irqstate_t flags;
       sclock_t repl_ticks;
       sclock_t budget_ticks;
-      int ret;
 
       if (param->sched_ss_max_repl < 1 ||
           param->sched_ss_max_repl > CONFIG_SCHED_SPORADIC_MAXREPL)
         {
-          return -EINVAL;
+          ret = -EINVAL;
+          goto errout_with_lock;
         }
 
       /* Convert timespec values to system clock ticks */
@@ -157,7 +165,8 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
       if (repl_ticks < budget_ticks)
 #endif
         {
-          return -EINVAL;
+          ret = -EINVAL;
+          goto errout_with_lock;
         }
 
       /* Stop/reset current sporadic scheduling */
@@ -191,14 +200,18 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
       leave_critical_section(flags);
       if (ret < 0)
         {
-          return ret;
+          goto errout_with_lock;
         }
     }
 #endif
 
   /* Then perform the reprioritization */
 
-  return nxsched_reprioritize(tcb, param->sched_priority);
+  ret = nxsched_reprioritize(tcb, param->sched_priority);
+
+errout_with_lock:
+  sched_unlock();
+  return ret;
 }
 
 /****************************************************************************

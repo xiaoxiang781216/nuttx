@@ -214,7 +214,7 @@ errout:
 #else
 pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   FAR struct tcb_s *ctcb;
 #ifdef CONFIG_SCHED_CHILD_STATUS
   FAR struct child_status_s *child = NULL;
@@ -230,7 +230,6 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
   sigemptyset(&set);
   nxsig_addset(&set, SIGCHLD);
   flags = enter_critical_section();
-  rtcb = this_task();
 
   /* Verify that this task actually has children and that the requested PID
    * is actually a child of this task.

@@ -102,8 +102,8 @@ static int nxsched_suspend_handler(FAR void *cookie)
 
 void nxsched_suspend(FAR struct tcb_s *tcb)
 {
-  bool switch_needed;
   irqstate_t flags;
+  bool switch_needed;
 
   DEBUGASSERT(tcb != NULL);
 
@@ -143,7 +143,7 @@ void nxsched_suspend(FAR struct tcb_s *tcb)
 
       DEBUGASSERT(!is_idle_task(tcb));
 
-      /* Remove the tcb task from the running list. */
+      /* Remove the tcb task from the ready-to-run list. */
 
 #ifdef CONFIG_SMP
       if (tcb->task_state == TSTATE_TASK_RUNNING && tcb->cpu != this_cpu())
