@@ -174,7 +174,6 @@ int riscv_swint(int irq, void *context, void *arg)
           struct tcb_s *next = (struct tcb_s *)regs[REG_A2];
 
           DEBUGASSERT(regs[REG_A1] != 0 && regs[REG_A2] != 0);
-          prev->xcp.regs = regs;
           riscv_savecontext(prev);
           new_regs = next->xcp.regs;
           riscv_restorecontext(next);
@@ -530,8 +529,6 @@ int riscv_swint(int irq, void *context, void *arg)
     {
       svcinfo("SWInt Return: %" PRIxPTR "\n", regs[REG_A0]);
     }
-
-  UNUSED(new_regs);
 
   return OK;
 }
