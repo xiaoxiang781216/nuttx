@@ -435,7 +435,7 @@ static void rpmsg_virtio_wakeup_rx(FAR struct rpmsg_virtio_priv_s *priv)
     }
 }
 
-static void rpmsg_virtio_command(struct rpmsg_virtio_priv_s *priv)
+static void rpmsg_virtio_command(FAR struct rpmsg_virtio_priv_s *priv)
 {
   FAR struct rpmsg_virtio_cmd_s *rpmsg_virtio_cmd =
     RPMSG_VIRTIO_RSC2CMD(priv->rsc);
@@ -456,6 +456,9 @@ static void rpmsg_virtio_command(struct rpmsg_virtio_priv_s *priv)
     {
       case RPMSG_VIRTIO_CMD_PANIC:
         PANIC();
+        break;
+
+      default:
         break;
     }
 }
