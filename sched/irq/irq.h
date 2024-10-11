@@ -46,7 +46,7 @@
 #  error CONFIG_ARCH_NUSER_INTERRUPTS is not defined
 #endif
 
-#if defined(CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMINC)
+#if defined(CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMIC)
 #  define IRQ_TO_NDX(irq) (g_irqmap[irq] ? g_irqmap[irq] : irq_to_ndx(irq))
 #elif defined(CONFIG_ARCH_MINIMAL_VECTORTABLE)
 #  define IRQ_TO_NDX(irq) \
@@ -107,7 +107,7 @@ extern struct irq_info_s g_irqvector[NR_IRQS];
  * declaration is here for the time being.
  */
 
-#if defined(CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMINC)
+#if defined(CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMIC)
 extern irq_mapped_t g_irqmap[NR_IRQS];
 int irq_to_ndx(int irq);
 #elif defined(CONFIG_ARCH_MINIMAL_VECTORTABLE)
