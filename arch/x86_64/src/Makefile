@@ -167,6 +167,7 @@ else
 	$(Q) $(call LINK_ALLSYMS_KASAN)
 	$(Q) $(call LINK_ALLSYMS_KASAN)
 endif
+	$(Q) $(call DELFILE, $(addsuffix .tmp,$(ARCHSCRIPT)))
 
 ifeq ($(CONFIG_ARCH_MULTIBOOT1),y)
 	@echo "Generating: nuttx32 in ELF32/multiboot1"
