@@ -49,8 +49,6 @@
 #define MQ_MAX_MSGS    16
 #define MQ_PRIO_MAX    _POSIX_MQ_PRIO_MAX
 
-#define MQ_MSG_SIZE(n) (sizeof(struct mqueue_msg_s) + (n) - 1)
-
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
@@ -74,7 +72,7 @@ struct mqueue_msg_s
 #else
   uint16_t msglen;         /* Message data length */
 #endif
-  char mail[1];            /* Message data */
+  char mail[MQ_MAX_BYTES]; /* Message data */
 };
 
 /****************************************************************************
