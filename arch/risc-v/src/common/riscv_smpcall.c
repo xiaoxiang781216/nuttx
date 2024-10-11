@@ -56,6 +56,7 @@
 
 int riscv_smp_call_handler(int irq, void *c, void *arg)
 {
+  struct tcb_s *tcb;
   int cpu = this_cpu();
 
   nxsched_smp_call_handler(irq, c, arg);
@@ -64,7 +65,11 @@ int riscv_smp_call_handler(int irq, void *c, void *arg)
 
   putreg32(0, (uintptr_t)RISCV_IPI + (4 * cpu));
 
+  tcb = current_task(cpu);
+  riscv_savecontext(tcb);
   nxsched_process_delivered(cpu);
+  tcb = current_task(cpu);
+  riscv_restorecontext(tcb);
 
   return OK;
 }
@@ -121,4 +126,3 @@ void up_send_smp_call(cpu_set_t cpuset)
       up_send_smp_sched(cpu);
     }
 }
-
