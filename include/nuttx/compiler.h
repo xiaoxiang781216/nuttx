@@ -79,6 +79,15 @@
 #  define CONFIG_HAVE_CXX14 1
 #endif
 
+/* Green Hills Software definitions *****************************************/
+
+#if defined(__ghs__)
+
+#  define __extension__
+#  define register
+
+#endif
+
 #undef offsetof
 
 /* GCC-specific definitions *************************************************/
