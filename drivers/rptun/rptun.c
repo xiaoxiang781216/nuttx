@@ -38,7 +38,7 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/rptun/rptun.h>
-#include <nuttx/syslog/syslog.h>
+#include <nuttx/semaphore.h>
 #include <metal/utilities.h>
 #include <openamp/remoteproc_loader.h>
 #include <openamp/remoteproc_virtio.h>
@@ -170,8 +170,8 @@ static const struct rpmsg_ops_s g_rptun_rpmsg_ops =
 static int rptun_buffer_nused(FAR struct rpmsg_virtio_device *rvdev, bool rx)
 {
   FAR struct virtqueue *vq = rx ? rvdev->rvq : rvdev->svq;
-  bool is_host = rpmsg_virtio_get_role(rvdev) == RPMSG_HOST;
   uint16_t nused;
+  bool is_host = rpmsg_virtio_get_role(rvdev) == RPMSG_HOST;
 
   if (is_host)
     {
