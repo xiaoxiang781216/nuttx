@@ -51,10 +51,6 @@
 #endif
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-/****************************************************************************
  * Name: rp2040_handle_irqreq
  *
  * Description:
@@ -70,14 +66,6 @@ static void rp2040_handle_irqreq(int irqreq)
 {
   DEBUGASSERT(this_cpu() == 0);
 
-  /* Unlock the spinlock first */
-
-  spin_unlock(&g_cpu_paused[0]);
-
-  /* Then wait for the spinlock to be released */
-
-  spin_lock(&g_cpu_wait[0]);
-
   if (irqreq > 0)
     {
       up_enable_irq(irqreq);
@@ -86,10 +74,6 @@ static void rp2040_handle_irqreq(int irqreq)
     {
       up_disable_irq(-irqreq);
     }
-
-  /* Finally unlock the spinlock */
-
-  spin_unlock(&g_cpu_wait[0]);
 }
 
 /****************************************************************************
@@ -97,14 +81,14 @@ static void rp2040_handle_irqreq(int irqreq)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm_smp_call_handler
+ * Name: rp2040_smp_call_handler
  *
  * Description:
  *   This is the handler for SMP_CALL.
  *
  ****************************************************************************/
 
-int arm_smp_call_handler(int irq, void *c, void *arg)
+int rp2040_smp_call_handler(int irq, void *c, void *arg)
 {
   int cpu = this_cpu();
   int irqreq;
@@ -216,31 +200,11 @@ void up_send_smp_call(cpu_set_t cpuset)
 
 void rp2040_send_irqreq(int irqreq)
 {
-  /* Wait for the spinlocks to be released */
-
-  spin_lock(&g_cpu_wait[0]);
-  spin_lock(&g_cpu_paused[0]);
-
   /* Send IRQ number to Core #0 */
 
   while (!(getreg32(RP2040_SIO_FIFO_ST) & RP2040_SIO_FIFO_ST_RDY))
     ;
   putreg32(irqreq, RP2040_SIO_FIFO_WR);
-
-  /* Wait for the handler is executed on cpu */
-
-  spin_lock(&g_cpu_paused[0]);
-  spin_unlock(&g_cpu_paused[0]);
-
-  /* Finally unlock the spinlock to proceed the handler */
-
-  spin_unlock(&g_cpu_wait[0]);
-
-  /* Ensure the CPU has been resumed to avoid causing a deadlock */
-
-  spin_lock(&g_cpu_resumed[0]);
-
-  spin_unlock(&g_cpu_resumed[0]);
 }
 
 #endif /* CONFIG_SMP */

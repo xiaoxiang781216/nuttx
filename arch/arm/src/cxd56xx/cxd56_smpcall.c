@@ -91,14 +91,6 @@ static bool handle_irqreq(int cpu)
 
       if (irqreq)
         {
-          /* Unlock the spinlock first */
-
-          spin_unlock(&g_cpu_paused[cpu]);
-
-          /* Then wait for the spinlock to be released */
-
-          spin_lock(&g_cpu_wait[cpu]);
-
           /* Clear g_irq_to_handle[cpu][i] */
 
           g_irq_to_handle[cpu][i] = 0;
@@ -112,9 +104,6 @@ static bool handle_irqreq(int cpu)
               up_disable_irq(irqreq);
             }
 
-          /* Finally unlock the spinlock */
-
-          spin_unlock(&g_cpu_wait[cpu]);
           handled = true;
 
           break;
@@ -129,17 +118,19 @@ static bool handle_irqreq(int cpu)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm_smp_call_handler
+ * Name: cxd56_smp_call_handler
  *
  * Description:
  *   This is the handler for SMP_CALL.
  *
  ****************************************************************************/
 
-int arm_smp_call_handler(int irq, void *c, void *arg)
+int cxd56_smp_call_handler(int irq, void *c, void *arg)
 {
   int cpu = this_cpu();
   int ret = OK;
+
+  handle_irqreq(cpu);
 
   nxsched_smp_call_handler(irq, c, arg);
 
@@ -228,11 +219,6 @@ void up_send_irqreq(int idx, int irq, int cpu)
 {
   DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS && cpu != this_cpu());
 
-  /* Wait for the spinlocks to be released */
-
-  spin_lock(&g_cpu_wait[cpu]);
-  spin_lock(&g_cpu_paused[cpu]);
-
   /* Set irq for the cpu */
 
   g_irq_to_handle[cpu][idx] = irq;
@@ -240,21 +226,6 @@ void up_send_irqreq(int idx, int irq, int cpu)
   /* Generate IRQ for CPU(cpu) */
 
   putreg32(1, CXD56_CPU_P2_INT + (4 * cpu));
-
-  /* Wait for the handler is executed on cpu */
-
-  spin_lock(&g_cpu_paused[cpu]);
-  spin_unlock(&g_cpu_paused[cpu]);
-
-  /* Finally unlock the spinlock to proceed the handler */
-
-  spin_unlock(&g_cpu_wait[cpu]);
-
-  /* Ensure the CPU has been resumed to avoid causing a deadlock */
-
-  spin_lock(&g_cpu_resumed[cpu]);
-
-  spin_unlock(&g_cpu_resumed[cpu]);
 }
 
 #endif /* CONFIG_SMP */
