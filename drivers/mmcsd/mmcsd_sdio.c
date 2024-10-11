@@ -1488,9 +1488,9 @@ static ssize_t mmcsd_readsingle(FAR struct mmcsd_part_s *part,
 
   if (priv->partnum != partnum)
     {
-      ret = mmcsd_switch(priv, MMCSD_CMD6_MODE_WRITE_BYTE |
-                               MMCSD_CMD6_PARTITION_CONFIG |
-                               MMCSD_CMD6_PARTITION(partnum));
+      ret = mmcsd_switch(priv, MMC_CMD6_MODE(MMC_CMD6_MODE_WRITE_BYTE) |
+                               MMC_CMD6_INDEX(EXT_CSD_PART_CONF) |
+                               MMC_CMD6_VALUE(partnum));
       if (ret != OK)
         {
           ferr("ERROR: mmcsd_switch failed: %d\n", ret);
@@ -1639,9 +1639,9 @@ static ssize_t mmcsd_readmultiple(FAR struct mmcsd_part_s *part,
 
   if (priv->partnum != partnum)
     {
-      ret = mmcsd_switch(priv, MMCSD_CMD6_MODE_WRITE_BYTE |
-                               MMCSD_CMD6_PARTITION_CONFIG |
-                               MMCSD_CMD6_PARTITION(partnum));
+      ret = mmcsd_switch(priv, MMC_CMD6_MODE(MMC_CMD6_MODE_WRITE_BYTE) |
+                               MMC_CMD6_INDEX(EXT_CSD_PART_CONF) |
+                               MMC_CMD6_VALUE(partnum));
       if (ret != OK)
         {
           ferr("ERROR: mmcsd_switch failed: %d\n", ret);
@@ -1814,9 +1814,9 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_part_s *part,
 
   if (priv->partnum != partnum)
     {
-      ret = mmcsd_switch(priv, MMCSD_CMD6_MODE_WRITE_BYTE |
-                               MMCSD_CMD6_PARTITION_CONFIG |
-                               MMCSD_CMD6_PARTITION(partnum));
+      ret = mmcsd_switch(priv, MMC_CMD6_MODE(MMC_CMD6_MODE_WRITE_BYTE) |
+                               MMC_CMD6_INDEX(EXT_CSD_PART_CONF) |
+                               MMC_CMD6_VALUE(partnum));
       if (ret != OK)
         {
           ferr("ERROR: mmcsd_switch failed: %d\n", ret);
@@ -2001,9 +2001,9 @@ static ssize_t mmcsd_writemultiple(FAR struct mmcsd_part_s *part,
 
   if (priv->partnum != partnum)
     {
-      ret = mmcsd_switch(priv, MMCSD_CMD6_MODE_WRITE_BYTE |
-                               MMCSD_CMD6_PARTITION_CONFIG |
-                               MMCSD_CMD6_PARTITION(partnum));
+      ret = mmcsd_switch(priv, MMC_CMD6_MODE(MMC_CMD6_MODE_WRITE_BYTE) |
+                               MMC_CMD6_INDEX(EXT_CSD_PART_CONF) |
+                               MMC_CMD6_VALUE(partnum));
       if (ret != OK)
         {
           ferr("ERROR: mmcsd_switch failed: %d\n", ret);
@@ -2782,8 +2782,7 @@ static int mmcsd_widebus(FAR struct mmcsd_state_s *priv)
        */
 
       mmcsd_sendcmdpoll(priv, MMCSD_CMD6,
-                        MMCSD_CMD6_MODE_WRITE_BYTE | MMCSD_CMD6_BUSWIDTH_RW |
-                        MMCSD_CMD6_BUS_WIDTH_4);
+                        MMC_CMD6_BUSWIDTH(EXT_CSD_BUS_WIDTH_4));
       ret = mmcsd_recv_r1(priv, MMCSD_CMD6);
 
       if (ret != OK)
