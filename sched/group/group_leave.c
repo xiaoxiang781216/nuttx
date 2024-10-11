@@ -176,6 +176,12 @@ void group_leave(FAR struct tcb_s *tcb)
   group = tcb->group;
   if (group)
     {
+      /* In any event, we can detach the group from the TCB so that we won't
+       * do this again.
+       */
+
+      tcb->group = NULL;
+
       /* Remove the member from group. */
 
 #ifdef HAVE_GROUP_MEMBERS
@@ -190,17 +196,8 @@ void group_leave(FAR struct tcb_s *tcb)
         {
           /* Yes.. Release all of the resource held by the task group */
 
-          if ((group->tg_flags & GROUP_FLAG_PRIVILEGED) == 0)
-            {
-              group_release(group, tcb->flags & TCB_FLAG_TTYPE_MASK);
-            }
+          group_release(group, tcb->flags & TCB_FLAG_TTYPE_MASK);
         }
-
-      /* In any event, we can detach the group from the TCB so that we won't
-       * do this again.
-       */
-
-      tcb->group = NULL;
     }
 }
 
@@ -245,8 +242,7 @@ void group_drop(FAR struct task_group_s *group)
 #endif
   /* Finally, if no one needs the group and it has been deleted, remove it */
 
-  if (group->tg_flags & GROUP_FLAG_DELETED &&
-      (group->tg_flags & GROUP_FLAG_PRIVILEGED) == 0)
+  if (group->tg_flags & GROUP_FLAG_DELETED)
     {
       tcb = container_of(group, struct task_tcb_s, group);
 
