@@ -376,7 +376,7 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/arch/${CONFIG_ARCH}/src/cmake)
 set(CMAKE_TOOLCHAIN_FILE
-    "${CMAKE_SOURCE_DIR}/arch/${CONFIG_ARCH}/src/cmake/toolchain.cmake")
+    "${CMAKE_SOURCE_DIR}/arch/${CONFIG_ARCH}/src/cmake/Toolchain.cmake")
 
 # include common toolchain setting
 include(nuttx_toolchain)
