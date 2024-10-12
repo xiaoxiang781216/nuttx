@@ -210,7 +210,7 @@ static inline void notesnap_common(FAR struct note_driver_s *drv,
   FAR struct notesnap_chunk_s *note;
   size_t index;
 
-  if (snap->dumping)
+  if (atomic_load(&snap->dumping))
     {
       return;
     }

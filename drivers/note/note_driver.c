@@ -93,11 +93,10 @@
 #define note_irqhandler(drv, irq, handler, enter)                            \
   ((drv)->ops->irqhandler &&                                                 \
   ((drv)->ops->irqhandler(drv, irq, handler, enter), true))
+#define note_heap(drv, event, data, mem, size, used)                         \
+  ((drv)->ops->heap && ((drv)->ops->heap(drv, event, data, mem, size, used), true))
 #define note_wdog(drv, event, handler, arg)                                  \
   ((drv)->ops->wdog && ((drv)->ops->wdog(drv, event, handler, arg), true))
-#define note_heap(drv, event, data, mem, size, used)                         \
-  ((drv)->ops->heap && ((drv)->ops->heap(drv, event, data, mem, size,        \
-                                         used), true))
 #define note_event(drv, ip, event, buf, len)                                 \
   ((drv)->ops->event && ((drv)->ops->event(drv, ip, event, buf, len), true))
 #define note_vprintf(drv, ip, fmt, va)                                       \
@@ -203,7 +202,7 @@ static void note_common(FAR struct tcb_s *tcb,
 
   note->nc_length = length;
   note->nc_type   = type;
-  note->nc_cpu = this_cpu();
+  note->nc_cpu    = this_cpu();
 
   if (tcb == NULL)
     {
@@ -1190,6 +1189,7 @@ void sched_note_spinlock(FAR struct tcb_s *tcb,
       note_add(*driver, &note, sizeof(struct note_spinlock_s));
     }
 }
+
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
@@ -1199,7 +1199,7 @@ void sched_note_syscall_enter(int nr, int argc, ...)
   FAR struct note_driver_s **driver;
   bool formatted = false;
   FAR struct tcb_s *tcb = this_task();
-  unsigned int length;
+  unsigned int length = 0;
   uintptr_t arg;
   va_list ap;
   int argc_bak = argc;
@@ -1377,11 +1377,6 @@ void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
 
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled(*driver))
-        {
-          continue;
-        }
-
       if (note_wdog(*driver, event, handler, arg))
         {
           continue;
@@ -1395,7 +1390,7 @@ void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
       if (!formatted)
         {
           formatted = true;
-          note_common(tcb, &note.nmm_cmn, sizeof(note), event);
+          note_common(tcb, &note.nwd_cmn, sizeof(note), event);
           note.handler = (uintptr_t)handler;
           note.arg = (uintptr_t)arg;
         }
@@ -1436,7 +1431,7 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
       if (!formatted)
         {
           formatted = true;
-          note_common(tcb, &note.nmm_cmn, sizeof(note), event);
+          note_common(tcb, &note.nhp_cmn, sizeof(note), event);
           note.heap = heap;
           note.mem = mem;
           note.size = size;
@@ -1556,7 +1551,7 @@ void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
             }
 
           end_packed_struct *var;
-          ssize_t next = 0;
+          size_t next = 0;
           formatted = true;
           note = (FAR struct note_printf_s *)data;
           length = sizeof(data) - SIZEOF_NOTE_PRINTF(0);

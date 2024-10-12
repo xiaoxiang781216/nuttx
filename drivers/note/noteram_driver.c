@@ -141,8 +141,11 @@ static const struct file_operations g_noteram_fops =
   noteram_poll,  /* poll */
 };
 
-static uint8_t g_ramnote_buffer[CONFIG_DRIVERS_NOTERAM_BUFSIZE]
-  locate_data(CONFIG_DRIVERS_NOTERAM_SECTION);
+static
+#ifdef DRIVERS_NOTERAM_SECTION
+locate_data(DRIVERS_NOTERAM_SECTION)
+#endif
+uint8_t g_ramnote_buffer[CONFIG_DRIVERS_NOTERAM_BUFSIZE];
 
 static const struct note_driver_ops_s g_noteram_ops =
 {
@@ -1214,7 +1217,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
             "add", "remove", "malloc", "free"
           };
 
-        ret += noteram_dump_header(s, &nmm->nmm_cmn, ctx);
+        ret += noteram_dump_header(s, &nmm->nhp_cmn, ctx);
         ret += lib_sprintf(s, "tracing_mark_write: C|%d|Heap Usage|%d|%s"
                            ": heap: %p size:%" PRIiPTR ", address: %p\n",
                            pid, nmm->used,

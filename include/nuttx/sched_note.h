@@ -463,14 +463,14 @@ struct note_irqhandler_s
 
 struct note_wdog_s
 {
-  struct note_common_s nmm_cmn;      /* Common note parameters */
+  struct note_common_s nwd_cmn;      /* Common note parameters */
   uintptr_t handler;
   uintptr_t arg;
 };
 
 struct note_heap_s
 {
-  struct note_common_s nmm_cmn;      /* Common note parameters */
+  struct note_common_s nhp_cmn;      /* Common note parameters */
   FAR void *heap;
   FAR void *mem;
   size_t size;
@@ -497,7 +497,7 @@ struct note_event_s
 };
 
 #define SIZEOF_NOTE_EVENT(n) (sizeof(struct note_event_s) + \
-                             ((n) - 1) * sizeof(uint8_t))
+                             ((n)) * sizeof(uint8_t))
 
 struct note_counter_s
 {
