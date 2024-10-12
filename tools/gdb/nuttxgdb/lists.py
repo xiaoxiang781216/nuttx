@@ -31,25 +31,45 @@ dq_queue_type = utils.lookup_type("dq_queue_t")
 
 
 class NxList:
-    def __init__(self, head, container_type=None, member=None):
+    def __init__(self, list, container_type=None, member=None, reverse=False):
         """Initialize the list iterator. Optionally specify the container type and member name."""
-        self.head = head
-        if container_type and not member:
-            raise ValueError("Must specify the member name in container.")
 
-        self.current = head["next"]
+        if not list:
+            raise ValueError("The head cannot be None.\n")
+
+        if container_type and not member:
+            raise ValueError("Must specify the member name in container.\n")
+
+        self.list = list
+        self.reverse = reverse
         self.container_type = container_type
         self.member = member
+        self.current = self._get_first()
+
+    def _get_first(self):
+        """Get the initial node based on the direction of traversal."""
+
+        blink = self.list["blink"]
+        flink = self.list["flink"]
+
+        first = blink if self.reverse else flink
+        return first if first != self.list else None
+
+    def _get_next(self, node):
+        return node["flink"] if node != self.list else None
+
+    def _get_prev(self, node):
+        return node["blink"] if node != self.list else None
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        if self.current == self.head:
+        if self.current is None:
             raise StopIteration
 
         node = self.current
-        self.current = self.current["next"]
+        self.current = self._get_prev(node) if self.reverse else self._get_next(node)
         return (
             utils.container_of(node, self.container_type, self.member)
             if self.container_type
@@ -57,61 +77,28 @@ class NxList:
         )
 
 
-class NxSQueue:
-    def __init__(self, queue, container_type=None, member=None):
+class NxSQueue(NxList):
+    def __init__(self, list, container_type=None, member=None, reverse=False):
         """Initialize the singly linked list iterator. Optionally specify the container type and member name."""
-        self.queue = queue
-        if container_type and not member:
-            raise ValueError("Must specify the member name in container.")
-
-        self.current = queue["head"]
-        self.tail = queue["tail"]
-        self.container_type = container_type
-        self.member = member
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        current = self.current
-        if not current:
-            raise StopIteration
-
-        node = current
-        self.current = current["flink"]
-        return (
-            utils.container_of(node, self.container_type, self.member)
-            if self.container_type
-            else node
-        )
+        if reverse:
+            raise ValueError(
+                "Reverse iteration is not supported for singly linked lists.\n"
+            )
+        super().__init__(list["head"], container_type, member, reverse)
 
 
-class NxDQueue:
-    def __init__(self, queue, container_type=None, member=None):
+class NxDQueue(NxList):
+    def __init__(self, list, container_type=None, member=None, reverse=False):
         """Initialize the doubly linked list iterator. Optionally specify the container type and member name."""
-        self.queue = queue
-        if container_type and not member:
-            raise ValueError("Must specify the member name in container.")
 
-        self.current = queue["head"]
-        self.tail = queue["tail"]
-        self.container_type = container_type
-        self.member = member
+        super().__init__(list, container_type, member, reverse)
 
-    def __iter__(self):
-        return self
+    def _get_first(self):
+        head = self.list["head"]
+        tail = self.list["tail"]
 
-    def __next__(self):
-        if not self.current:
-            raise StopIteration
-
-        node = self.current
-        self.current = self.current["flink"]
-        return (
-            utils.container_of(node, self.container_type, self.member)
-            if self.container_type
-            else node
-        )
+        first = tail if self.reverse else head
+        return first if first != self.list else None
 
 
 def list_check(head):
@@ -342,3 +329,25 @@ class ForeachListEntry(gdb.Command):
         for i, entry in enumerate(list):
             entry = entry.dereference()
             gdb.write(f"{i}: {entry.format_string(styling=True)}\n")
+
+
+class MetalList(NxList):
+    def __init__(
+        self, list: gdb.Value, container_type=None, member=None, reverse=False
+    ):
+        if list.type.code != gdb.TYPE_CODE_PTR:
+            list = list.address
+        super().__init__(list["head"], container_type, member, reverse)
+
+    def _get_first(self):
+        next = self.list["next"]
+        prev = self.list["prev"]
+
+        first = prev if self.reverse else next
+        return first if first != self.list else None
+
+    def _get_next(self, node):
+        return node["next"] if node != self.list else None
+
+    def _get_prev(self, node):
+        return node["prev"] if node != self.list else None
