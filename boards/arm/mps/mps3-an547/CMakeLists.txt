@@ -1,5 +1,5 @@
 # ##############################################################################
-# boards/arm/mps3/mps3-an547/CMakeLists.txt
+# boards/arm/mps/mps3-an547/CMakeLists.txt
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
