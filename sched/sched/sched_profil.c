@@ -35,7 +35,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define PROFTICK NSEC2TICK(NSEC_PER_SEC / CONFIG_SCHED_PROFIL_TICKSPERSEC)
+#define PROFTICK NSEC2TICK(NSEC_PER_SEC / CONFIG_SCHED_PROFILE_TICKSPERSEC)
 
 /****************************************************************************
  * Private Types

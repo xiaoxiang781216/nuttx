@@ -219,7 +219,7 @@ static int write_gmon(FAR struct gmonparam *p, FAR const char *output)
   gmonhdr.hpc = p->highpc;
   gmonhdr.ncnt = sizeof(gmonhdr) + p->kcountsize;
   gmonhdr.version = GMONVERSION;
-  gmonhdr.profrate = CONFIG_SCHED_PROFIL_TICKSPERSEC;
+  gmonhdr.profrate = CONFIG_SCHED_PROFILE_TICKSPERSEC;
 
   ret = file_write(&file, &gmonhdr, sizeof(gmonhdr));
   if (ret != sizeof(gmonhdr))
