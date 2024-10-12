@@ -25,8 +25,10 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/cache.h>
 
 #include <sys/types.h>
+#include <sys/param.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -57,35 +59,38 @@
 
 int apb_alloc(FAR struct audio_buf_desc_s *bufdesc)
 {
-  uint32_t            bufsize;
-  int                 ret;
-  struct ap_buffer_s  *apb;
+  int                    ret;
+  FAR struct ap_buffer_s *apb;
+  FAR uint8_t            *samp;
 
   DEBUGASSERT(bufdesc->u.pbuffer != NULL);
 
   /* Perform a user mode allocation */
 
-  bufsize = sizeof(struct ap_buffer_s) + bufdesc->numbytes;
-  apb = lib_umalloc(bufsize);
+  apb  = lib_umalloc(sizeof(struct ap_buffer_s));
+  samp = lib_umemalign(MAX(up_get_dcache_linesize(), 1), bufdesc->numbytes);
+
   *bufdesc->u.pbuffer = apb;
 
   /* Test if the allocation was successful or not */
 
-  if (*bufdesc->u.pbuffer == NULL)
+  if (apb == NULL || samp == NULL)
     {
       ret = -ENOMEM;
+      lib_ufree(apb);
+      lib_ufree(samp);
     }
   else
     {
       /* Populate the buffer contents */
 
-      memset(apb, 0, bufsize);
+      memset(apb, 0, sizeof(struct ap_buffer_s));
       apb->i.channels = 1;
       apb->crefs      = 1;
       apb->nmaxbytes  = bufdesc->numbytes;
       apb->nbytes     = 0;
       apb->flags      = 0;
-      apb->samp       = (FAR uint8_t *)(apb + 1);
+      apb->samp       = samp;
 #ifdef CONFIG_AUDIO_MULTI_SESSION
       apb->session    = bufdesc->session;
 #endif
@@ -118,6 +123,7 @@ void apb_free(FAR struct ap_buffer_s *apb)
     {
       audinfo("Freeing %p\n", apb);
       nxmutex_destroy(&apb->lock);
+      lib_ufree(apb->samp);
       lib_ufree(apb);
     }
 }
