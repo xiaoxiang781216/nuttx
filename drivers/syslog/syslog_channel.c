@@ -93,6 +93,7 @@ static const struct syslog_channel_ops_s g_ramlog_channel_ops =
   ramlog_putc,
   ramlog_putc,
   NULL,
+  ramlog_write,
   ramlog_write
 };
 
