@@ -461,32 +461,32 @@
       defined(CONFIG_ARCH_ARMV7M) || \
       defined(CONFIG_ARCH_ARMV8M)
 
-#    define smh_call(nbr, parm1)                             \
-({                                                           \
-  register uintptr_t reg1 __asm__("r1") = (uintptr_t)(parm); \
-  register uintptr_t reg0 __asm__("r0") = (uintptr_t)(nbr);  \
-  __asm__ __volatile__                                       \
-  (                                                          \
-    "bkpt %1"                                                \
-    : "=r"(reg0)                                             \
-    : "i"(SYS_smhcall), "r"(reg0), "r"(reg1)                 \
-    : "memory"                                               \
-  );                                                         \
-  reg0;                                                      \
+#    define smh_call(nbr, parm1)                              \
+({                                                            \
+  register uintptr_t reg1 __asm__("r1") = (uintptr_t)(parm1); \
+  register uintptr_t reg0 __asm__("r0") = (uintptr_t)(nbr);   \
+  __asm__ __volatile__                                        \
+  (                                                           \
+    "bkpt %1"                                                 \
+    : "=r"(reg0)                                              \
+    : "i"(SYS_smhcall), "r"(reg0), "r"(reg1)                  \
+    : "memory"                                                \
+  );                                                          \
+  reg0;                                                       \
 })
 #  else
-#    define smh_call(nbr, parm1)                             \
-({                                                           \
-  register uintptr_t reg1 __asm__("r1") = (uintptr_t)(parm); \
-  register uintptr_t reg0 __asm__("r0") = (uintptr_t)(nbr);  \
-  __asm__ __volatile__                                       \
-  (                                                          \
-    "svc %1"                                                 \
-    : "=r"(reg0)                                             \
-    : "i"(SYS_smhcall), "r"(reg0), "r"(reg1)                 \
-    : "memory"                                               \
-  );                                                         \
-  reg0;                                                      \
+#    define smh_call(nbr, parm1)                              \
+({                                                            \
+  register uintptr_t reg1 __asm__("r1") = (uintptr_t)(parm1); \
+  register uintptr_t reg0 __asm__("r0") = (uintptr_t)(nbr);   \
+  __asm__ __volatile__                                        \
+  (                                                           \
+    "svc %1"                                                  \
+    : "=r"(reg0)                                              \
+    : "i"(SYS_smhcall), "r"(reg0), "r"(reg1)                  \
+    : "memory"                                                \
+  );                                                          \
+  reg0;                                                       \
 })
 #  endif
 #endif
