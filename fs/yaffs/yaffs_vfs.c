@@ -1114,7 +1114,7 @@ static int yaffs_vfs_bind(FAR struct inode *driver, FAR const void *data,
   dev->driver_context = mtd;
 
   p = &dev->param;
-  p->name = strdup(mtd->name);
+  p->name = fs_heap_strdup(mtd->name);
   if (p->name == NULL)
     {
       ret = -ENOMEM;
@@ -1195,7 +1195,7 @@ static int yaffs_vfs_bind(FAR struct inode *driver, FAR const void *data,
   return OK;
 
 errout_with_name:
-  lib_free((FAR void *)(p->name));
+  fs_heap_free((FAR void *)(p->name));
   yaffs_remove_device(dev);
 errout_with_dev:
   fs_heap_free(dev);
@@ -1232,7 +1232,7 @@ static int yaffs_vfs_unbind(FAR void *handle, FAR struct inode **driver,
       /* Remove and release dev */
 
       yaffs_remove_device(dev);
-      lib_free((FAR void *)(dev->param.name));
+      fs_heap_free((FAR void *)(dev->param.name));
       fs_heap_free(dev);
 
       /* We hold a reference to the driver but should not but
