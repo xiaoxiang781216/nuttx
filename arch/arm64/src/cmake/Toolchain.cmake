@@ -32,7 +32,6 @@ set(CMAKE_CXX_COMPILER_TARGET ${TOOLCHAIN_PREFIX})
 set(CMAKE_ASM_COMPILER ${CMAKE_C_COMPILER})
 set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)
 set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++)
-set(CMAKE_PREPROCESSOR ${TOOLCHAIN_PREFIX}-gcc -E -P -x c)
 set(CMAKE_STRIP ${TOOLCHAIN_PREFIX}-strip --strl dunneeded)
 set(CMAKE_OBJCOPY ${TOOLCHAIN_PREFIX}-objcopy)
 set(CMAKE_OBJDUMP ${TOOLCHAIN_PREFIX}-objdump)
@@ -152,8 +151,11 @@ add_compile_options(
   -Wno-attributes
   -Wno-unknown-pragmas
   $<$<COMPILE_LANGUAGE:C>:-Werror>
-  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
-  $<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
+  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>)
+
+if(NOT CONFIG_LIBCXXTOOLCHAIN)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
+endif()
 
 if(NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
   add_compile_options(-Wno-psabi)
