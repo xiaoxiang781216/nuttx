@@ -43,7 +43,7 @@
   container_of(ivshmem_get_driver(dev), struct rptun_ivshmem_dev_s, drv)
 
 #define RPTUN_IVSHMEM_SHMEM_BAR   2
-#define RPTUN_IVSHMEM_WDOG_DELAY  MSEC2TICK(1)
+#define RPTUN_IVSHMEM_WDOG_DELAY  USEC2TICK(100)
 
 /****************************************************************************
  * Private Types
