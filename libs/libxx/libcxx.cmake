@@ -106,7 +106,7 @@ endif()
 set(FLAGS -Wno-attributes -Wno-deprecated-declarations -Wno-shadow
           -Wno-sign-compare)
 
-if(NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
+if(GCCVER GREATER_EQUAL 12)
   list(APPEND FLAGS -Wno-maybe-uninitialized -Wno-alloc-size-larger-than)
 endif()
 

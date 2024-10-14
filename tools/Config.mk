@@ -687,6 +687,11 @@ endif
 
 ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)include
 
+# Get the GCC version number
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_GNU),y)
+  export GCCVER = $(shell $(CXX) --version | grep ++ | sed -E 's/.* ([0-9]+\.[0-9]+).*/\1/' | cut -d'.' -f1)
+endif
+
 # Convert filepaths to their proper system format (i.e. Windows/Unix)
 
 ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
@@ -695,7 +700,7 @@ else
   CONVERT_PATH = $1
 endif
 
-# Upper/Lower case string, add the `UL` prefix to private function 
+# Upper/Lower case string, add the `UL` prefix to private function
 
 ULPOP = $(wordlist 3,$(words $(1)),$(1))
 ULSUB = $(subst $(word 1,$(1)),$(word 2,$(1)),$(2))
