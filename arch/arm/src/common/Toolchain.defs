@@ -410,19 +410,21 @@ endif
 
 ZIGFLAGS = -target $(ZARCH)-freestanding-$(ZEABI) $(ZARCHCPUFLAGS)
 
+# Optimization of unused sections
+
 ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),)
-  # Optimization of unused sections
   ifeq ($(CONFIG_DEBUG_OPT_UNUSED_SECTIONS),y)
     ifeq ($(CONFIG_ARCH_TOOLCHAIN_GHS),)
       LDFLAGS          += --gc-sections
       ARCHOPTIMIZATION += -ffunction-sections -fdata-sections
     endif
   endif
+endif
 
-  # Debug --whole-archive
-  ifeq ($(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE),y)
-    LDFLAGS += --whole-archive
-  endif
+# Debug --whole-archive
+
+ifeq ($(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE),y)
+  LDFLAGS += --whole-archive
 endif
 
 # Debug link map
