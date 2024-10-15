@@ -608,7 +608,7 @@ static int rpmsgblk_mmc_multi_cmd_ioctl(FAR struct inode *inode,
         }
     }
 
-  /* When multi cmds are read cmd, it also need to be split if the rsp
+  /* When multi cmds are read cmd, it also needs to be split if the rsp
    * msg is too large.
    */
 
