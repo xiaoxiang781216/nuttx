@@ -98,6 +98,9 @@
 #define TSIOC_GETMAXPOINTS   _TSIOC(0x000f) /* arg: Pointer to
                                              * uint8_t max touch point
                                              */
+#define TSIOC_GETRESOLUTION  _TSIOC(0x0010) /* arg: Pointer to
+                                             * struct touch_resolution_s
+                                             */
 
 #define TSC_FIRST            0x0001          /* First common command */
 #define TSC_NCMDS            15              /* Fifteenth common commands */
@@ -192,11 +195,21 @@
     b16_t offset_y;
   };
 
+/* This struct is used to get touchscreen resolution data for use by
+ * application.
+ */
+
+begin_packed_struct struct touch_resolution_s
+{
+  uint16_t res_x;
+  uint16_t res_y;
+} end_packed_struct;
+
 /* This structure contains information about a single touch point.
  * Positional units are device specific.
  */
 
-struct touch_point_s
+begin_packed_struct struct touch_point_s
 {
   uint8_t  id;        /* Unique identifies contact; Same in all reports for the contact */
   uint8_t  flags;     /* See TOUCH_* definitions above */
@@ -206,8 +219,9 @@ struct touch_point_s
   int16_t  w;         /* Width of touch point (uncalibrated) */
   uint16_t gesture;   /* Gesture of touchscreen contact */
   uint16_t pressure;  /* Touch pressure */
+  uint16_t dummy;     /* Padded with 2 bytes here */
   uint64_t timestamp; /* Touch event time stamp, in microseconds */
-};
+} end_packed_struct;
 
 /* The typical touchscreen driver is a read-only, input character device
  * driver.the driver write() method is not supported and any attempt to
@@ -223,11 +237,12 @@ struct touch_point_s
  * identifies a touch from first contact until the end of the contact.
  */
 
-struct touch_sample_s
+begin_packed_struct struct touch_sample_s
 {
-  int npoints;                   /* The number of touch points in point[] */
+  int32_t npoints;               /* The number of touch points in point[] */
+  int32_t dummy;                 /* Padded with 4 bytes here */
   struct touch_point_s point[1]; /* Actual dimension is npoints */
-};
+} end_packed_struct;
 
 #define SIZEOF_TOUCH_SAMPLE_S(n) \
   (sizeof(struct touch_sample_s) + ((n) - 1) * sizeof(struct touch_point_s))

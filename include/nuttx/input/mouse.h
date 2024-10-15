@@ -108,16 +108,14 @@ struct mouse_vendor_cmd_s
  * and determined by mouseconfiguration settings.
  */
 
-struct mouse_report_s
+begin_packed_struct struct mouse_report_s
 {
   uint8_t buttons;  /* See MOUSE_* definitions above */
-                    /* Possibly padded with 1 byte here */
+  uint8_t dummy;    /* Padded with 1 byte here */
   int16_t x;        /* X coordinate of the mouse position */
   int16_t y;        /* Y coordinate of the mouse position */
-#ifdef CONFIG_INPUT_MOUSE_WHEEL
   int16_t wheel;    /* Mouse wheel position */
-#endif
-};
+} end_packed_struct;
 
 /* This structure is for mouse lower half driver */
 

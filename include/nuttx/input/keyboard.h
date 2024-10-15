@@ -43,11 +43,11 @@
  * Public Types
  ****************************************************************************/
 
-struct keyboard_event_s
+begin_packed_struct struct keyboard_event_s
 {
   uint32_t type;
   uint32_t code;
-};
+} end_packed_struct;
 
 struct keyboard_lowerhalf_s
 {
