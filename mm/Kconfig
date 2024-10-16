@@ -148,6 +148,54 @@ config MM_FREE_DELAYCOUNT_MAX
 		the value decides the maximum number of memory nodes that
 		will be delayed to free.
 
+config MM_HEAP_BIGGEST_COUNT
+	int "The largest malloc element dump count"
+	default 30
+	---help---
+		The dump support for largest allocated memory.
+		If too big, should take care of stack usage.
+		Define 0 to disable largest allocated element dump feature.
+
+config MM_HEAP_MEMPOOL_THRESHOLD
+	int "Threshold for malloc size to use multi-level mempool"
+	default -1
+	---help---
+		If the size of the memory requested by the user is less
+		than the threshold, the memory will be requested from the
+		multiple mempool by default.
+		 > 0 Enable pool feature, and set umm/kmm pool threshold size.
+		== 0 Enable pool feature, but disable the umm/kmm pool function.
+		 < 0 Disable pool feature.
+
+if MM_HEAP_MEMPOOL_THRESHOLD > 0
+
+config MM_HEAP_MEMPOOL_EXPAND_SIZE
+	int "The expand size for each mempool in multiple mempool"
+	default 4096
+	---help---
+		This size describes the size of each expansion of each memory
+		pool with insufficient memory in the multi-level memory pool.
+
+config MM_HEAP_MEMPOOL_DICTIONARY_EXPAND_SIZE
+	int "The expand size for multiple mempool's dictionary"
+	default MM_HEAP_MEMPOOL_EXPAND_SIZE
+	---help---
+		This size describes the multiple mempool dictionary expand.
+
+config MM_HEAP_MEMPOOL_CHUNK_SIZE
+	int "The multiples pool chunk size"
+	default 0
+	---help---
+		This size describes the multiple mempool chunk size.
+
+config MM_MIN_BLKSIZE
+	int "Minimum memory block size"
+	default 0
+	---help---
+		Users can configure the minimum memory block size as needed
+
+endif # MM_HEAP_MEMPOOL_THRESHOLD > 0
+
 config ARCH_HAVE_HEAP2
 	bool
 	default n
@@ -252,46 +300,6 @@ config MM_KMAP
 		kernel virtual memory. This includes pages that are already mapped
 		for user.
 
-config MM_HEAP_MEMPOOL_THRESHOLD
-	int "The default size of threshold to avoid using multiple mempool in heap"
-	default -1
-	---help---
-		If the size of the memory requested by the user is less
-		than the threshold, the memory will be requested from the
-		multiple mempool by default.
-		 > 0 Enable pool feature, and set umm/kmm pool threshold size.
-		== 0 Enable pool feature, but disable the umm/kmm pool function.
-		 < 0 Disable pool feature.
-
-if MM_HEAP_MEMPOOL_THRESHOLD > 0
-
-config MM_HEAP_MEMPOOL_EXPAND_SIZE
-	int "The expand size for each mempool in multiple mempool"
-	default 4096
-	---help---
-		This size describes the size of each expansion of each memory
-		pool with insufficient memory in the multi-level memory pool.
-
-config MM_HEAP_MEMPOOL_DICTIONARY_EXPAND_SIZE
-	int "The expand size for multiple mempool's dictionary"
-	default MM_HEAP_MEMPOOL_EXPAND_SIZE
-	---help---
-		This size describes the multiple mempool dictionary expand.
-
-config MM_HEAP_MEMPOOL_CHUNK_SIZE
-	int "The multiples pool chunk size"
-	default 0
-	---help---
-		This size describes the multiple mempool chunk size.
-
-config MM_MIN_BLKSIZE
-	int "Minimum memory block size"
-	default 0
-	---help---
-		Users can configure the minimum memory block size as needed
-
-endif # MM_HEAP_MEMPOOL_THRESHOLD > 0
-
 config MM_HEAP_MEMPOOL_BACKTRACE_SKIP
 	int "The skip depth of backtrace for mempool"
 	default 6
@@ -299,18 +307,10 @@ config MM_HEAP_MEMPOOL_BACKTRACE_SKIP
 	---help---
 		This number is the skipped backtrace depth for mempool.
 
-config MM_HEAP_BIGGEST_COUNT
-	int "The largest malloc element dump count"
-	default 30
-	---help---
-		The dump support for largest allocated memory.
-		If too big, should take care of stack usage.
-		Define 0 to disable largest allocated element dump feature.
-
 config FS_PROCFS_EXCLUDE_MEMPOOL
-	bool "Exclude mempool"
+	bool "Exclude mempool from procfs"
 	default DEFAULT_SMALL
-	depends on FS_PROCFS
+	depends on FS_PROCFS && MM_HEAP_MEMPOOL_THRESHOLD > 0
 
 config MM_KASAN
 	bool "Kernel Address Sanitizer"
@@ -374,7 +374,7 @@ config MM_KASAN_DISABLE_READS_CHECK
 	bool "Disable reads check"
 	default n
 	---help---
-		This option disable kasan reads check. It speeds up performance
+		This option disables kasan reads check. It speeds up performance
 		compared with default read/write check. Only disable it when you are
 		sure there's no need to do so. Or performance is too bad and only focus
 		on writes check.
@@ -383,13 +383,27 @@ config MM_KASAN_DISABLE_WRITES_CHECK
 	bool "Disable writes check"
 	default n
 	---help---
-		This option disable kasan writes check.
+		This option disables kasan writes check.
+
+config MM_KASAN_DISABLE_READ_PANIC
+	bool "Disable panic on kasan read error"
+	default n
+	---help---
+		This option disables panic on kasan read error. It will print error info
+		and continue to run.
+
+config MM_KASAN_DISABLE_WRITE_PANIC
+	bool "Disable panic on kasan write error"
+	default n
+	---help---
+		This option disables panic on kasan write error. It will print error info
+		and continue to run.
 
 config MM_KASAN_SKIP_ZERO_TAGS
 	bool "Enable skip check zero tags"
 	default LIBC_MODLIB
 	---help---
-		This option enables not checking for zero tags.
+		This option disables checking for zero tags.
 
 config MM_KASAN_GLOBAL
 	bool "Enable global data check"
@@ -406,30 +420,13 @@ config MM_KASAN_GLOBAL
 		KEEP ( *(. data. rel. local.. LASAN0))
 		}", used to extract data generated by the compiler
 
-if MM_KASAN_GLOBAL
-
 config MM_KASAN_GLOBAL_ALIGN
 	int "KASan global alignment"
 	default 1
-	--help
+	depends on MM_KASAN_GLOBAL
+	---help---
 		It is recommended to use 1, 2, 4, 8, 16, 32.
 		The maximum value is 32.
-
-endif # MM_KASAN_GLOBAL
-
-config MM_KASAN_DISABLE_READ_PANIC
-	bool "Disable panic on kasan read error"
-	default n
-	---help---
-		This option disable panic on kasan read error. It will print error info
-		and continue to run.
-
-config MM_KASAN_DISABLE_WRITE_PANIC
-	bool "Disable panic on kasan write error"
-	default n
-	---help---
-		This option disable panic on kasan write error. It will print error info
-		and continue to run.
 
 endif # MM_KASAN
 
@@ -473,7 +470,7 @@ config MM_UBSAN_DUMMY
 	bool "Bypass Undefined Behaviour Sanitizer Runtime Actions"
 	default n
 	---help---
-		Keep UBSAN compile time but disable runtime actions.
+		Allow to compile with UBSAN enabled but disables runtime actions.
 
 endif # MM_UBSAN
 
