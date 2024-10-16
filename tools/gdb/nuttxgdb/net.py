@@ -279,12 +279,13 @@ class NetCheck(gdb.Command):
             result = max(result, ret)
             message.extend(msg)
 
-        return {
-            "title": "Netcheck Report",
-            "command": "netcheck",
-            "result": result.name,
-            "message": message,
-        }
+            return {
+                "title": "Netcheck Report",
+                "summary": "Net status check",
+                "result": "pass" if result else "fail",
+                "command": "netcheck",
+                "data": message,
+            }
 
     def check_iob(self):
         result = NetCheckResult.PASS
