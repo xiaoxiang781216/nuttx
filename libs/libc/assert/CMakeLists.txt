@@ -20,7 +20,7 @@
 
 set(SRCS lib_assert.c lib_stackchk.c)
 
-if(NOT CONFIG_LTO_NONE)
+if(CONFIG_ARCH_TOOLCHAIN_GNU AND NOT CONFIG_LTO_NONE)
   set_source_files_properties(lib_assert.c DIRECTORY .. PROPERTIES COMPILE_FLAGS
                                                                    ${NO_LTO})
   set_source_files_properties(lib_stackchk.c DIRECTORY ..

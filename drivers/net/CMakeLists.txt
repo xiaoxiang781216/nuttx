@@ -75,6 +75,10 @@ if(CONFIG_NET)
     list(APPEND SRCS w5500.c)
   endif()
 
+  if(CONFIG_NET_LAN9250)
+    list(APPEND SRCS lan9250.c)
+  endif()
+
   if(CONFIG_NET_E1000)
     list(APPEND SRCS e1000.c)
   endif()
