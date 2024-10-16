@@ -225,7 +225,7 @@ static uint8_t adxl372_read_register(FAR struct adxl372_dev_s *dev,
 
   /* Transmit the register address from where we want to read. */
 
-  SPI_SEND(dev->spi, reg_addr | ADXL372_READ);
+  SPI_SEND(dev->spi, (reg_addr << 1) | ADXL372_READ);
 
   /* Write an idle byte while receiving the requested data */
 
@@ -266,7 +266,7 @@ static void adxl372_read_registerblk(FAR struct adxl372_dev_s *dev,
 
   /* Transmit the register address from where we want to start reading */
 
-  SPI_SEND(dev->spi, reg_addr | ADXL372_READ);
+  SPI_SEND(dev->spi, (reg_addr << 1) | ADXL372_READ);
 
   /* Write idle bytes while receiving the requested data */
 
@@ -306,7 +306,7 @@ static void adxl372_write_register(FAR struct adxl372_dev_s *dev,
 
   /* Transmit the register address to where we want to write */
 
-  SPI_SEND(dev->spi, reg_addr | ADXL372_WRITE);
+  SPI_SEND(dev->spi, (reg_addr << 1) | ADXL372_WRITE);
 
   /* Transmit the content which should be written into the register */
 
@@ -345,7 +345,7 @@ static void adxl372_write_registerblk(FAR struct adxl372_dev_s *dev,
 
   /* Transmit the register address to where we want to start writing */
 
-  SPI_SEND(dev->spi, reg_addr | ADXL372_WRITE);
+  SPI_SEND(dev->spi, (reg_addr << 1) | ADXL372_WRITE);
 
   /* Transmit the content which should be written in the register block */
 
@@ -565,7 +565,7 @@ static ssize_t adxl372_dvr_read(FAR void *instance, FAR char *buffer,
 
   DEBUGASSERT(priv != NULL);
 
-  adxl372_read_registerblk(priv, priv->seek_address, (uint8_t *)buffer,
+  adxl372_read_registerblk(priv, priv->seek_address, (FAR uint8_t *)buffer,
                           buflen);
 
   /* Permute accelerometer data out fields */
@@ -602,7 +602,7 @@ static ssize_t adxl372_dvr_write(FAR void *instance,
       return -EROFS;
     }
 
-  adxl372_write_registerblk(priv, priv->seek_address, (uint8_t *)buffer,
+  adxl372_write_registerblk(priv, priv->seek_address, (FAR uint8_t *)buffer,
                             buflen);
 
   return buflen;
@@ -877,7 +877,7 @@ int adxl372_register(FAR const char *devpath,
 
   priv->flink         = g_adxl372_list;
   g_adxl372_list      = priv;
-  config->leaf_handle = (void *) priv;
+  config->leaf_handle = (FAR void *)priv;
   config->sc_ops      = &g_adxl372_dops;
 
   return OK;

@@ -41,8 +41,8 @@ typedef CODE void (instrument_fun_t)(FAR void *this_fn,
 struct instrument_s
 {
   sq_entry_t entry;
-  instrument_fun_t *enter;
-  instrument_fun_t *leave;
+  FAR instrument_fun_t *enter;
+  FAR instrument_fun_t *leave;
   FAR void *arg;
 };
 

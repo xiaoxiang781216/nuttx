@@ -39,12 +39,12 @@
 #define V4L2_CTRL_CLASS_JPEG      (0x0400) /* JPEG-compression controls */
 #define V4L2_CTRL_CLASS_CODEC     (0x0500) /* Stateful codec controls */
 
-#define USER_CID(v)   (V4L2_CTRL_CLASS_USER +   (v))
-#define CAMERA_CID(v) (V4L2_CTRL_CLASS_CAMERA + (v))
-#define FLASH_CID(v)  (V4L2_CTRL_CLASS_FLASH +  (v))
-#define JPEG_CID(v)   (V4L2_CTRL_CLASS_JPEG +   (v))
-
 #define V4L2_CTRL_CLASS_MPEG      V4L2_CTRL_CLASS_CODEC
+
+#define USER_CID(v)   (V4L2_CTRL_CLASS_USER   + (v))
+#define CAMERA_CID(v) (V4L2_CTRL_CLASS_CAMERA + (v))
+#define FLASH_CID(v)  (V4L2_CTRL_CLASS_FLASH  + (v))
+#define JPEG_CID(v)   (V4L2_CTRL_CLASS_JPEG   + (v))
 
 /* User-class control IDs */
 
@@ -128,6 +128,7 @@ enum v4l2_exposure_auto_type
 
   V4L2_EXPOSURE_APERTURE_PRIORITY  = 3
 };
+
 #define V4L2_CID_EXPOSURE_ABSOLUTE    CAMERA_CID(1) /* Exposure time */
 
 #define V4L2_CID_FOCUS_ABSOLUTE       CAMERA_CID(2) /* Focus */
@@ -169,6 +170,7 @@ enum v4l2_auto_n_preset_white_balance
 #define V4L2_CID_ISO_SENSITIVITY      CAMERA_CID(13) /* ISO sensitivity */
 
 /* Auto ISO sensitivity */
+
 #define V4L2_CID_ISO_SENSITIVITY_AUTO CAMERA_CID(14)
 
 /* Enumeration for V4L2_CID_ISO_SENSITIVITY_AUTO */
@@ -179,7 +181,7 @@ enum v4l2_iso_sensitivity_auto_type
   V4L2_ISO_SENSITIVITY_AUTO    = 1,  /* Automatic */
 };
 
-#define V4L2_CID_EXPOSURE_METERING    (15)    /* Exposure metering */
+#define V4L2_CID_EXPOSURE_METERING    CAMERA_CID(15) /* Exposure metering */
 
 /* Enumeration for V4L2_CID_EXPOSURE_METERING */
 

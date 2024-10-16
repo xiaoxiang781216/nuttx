@@ -60,14 +60,14 @@ static int sim_smp_call_handler(int irq, void *context, void *arg)
 }
 
 /****************************************************************************
- * Name: sim_sched_handler
+ * Name: sim_smp_sched_handler
  *
  * Description:
  *   This is the handler for smp.
  *
  ****************************************************************************/
 
-static int sim_sched_handler(int irq, void *context, void *arg)
+static int sim_smp_sched_handler(int irq, void *context, void *arg)
 {
   struct tcb_s *tcb;
   int cpu = this_cpu();
@@ -164,7 +164,7 @@ int up_cpu_start(int cpu)
 int sim_init_ipi(int irq)
 {
   up_enable_irq(irq);
-  return irq_attach(irq, sim_sched_handler, NULL);
+  return irq_attach(irq, sim_smp_sched_handler, NULL);
 }
 
 /****************************************************************************

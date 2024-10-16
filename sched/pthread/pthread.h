@@ -98,8 +98,7 @@ struct pthread_tcb_s; /* Forward reference */
 struct task_group_s;  /* Forward reference */
 
 int pthread_setup_scheduler(FAR struct pthread_tcb_s *tcb, int priority,
-                            start_t start, pthread_startroutine_t entry,
-                            FAR struct tcb_s *rtcb);
+                            start_t start, pthread_startroutine_t entry);
 
 int pthread_completejoin(pid_t pid, FAR void *exit_value);
 void pthread_destroyjoin(FAR struct task_group_s *group,

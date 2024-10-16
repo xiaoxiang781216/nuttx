@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/string/lib_strchrnul.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -50,8 +52,20 @@
 #undef strchrnul /* See mm/README.txt */
 FAR char *strchrnul(FAR const char *s, int c)
 {
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
   FAR char *s1 = strchr(s, c);
 
   return s1 ? s1 : (FAR char *)s + strlen(s);
+#else
+  if (s)
+    {
+      while (*s != '\0' && *s != c)
+        {
+          s++;
+        }
+    }
+
+  return (FAR char *)s;
+#endif
 }
 #endif

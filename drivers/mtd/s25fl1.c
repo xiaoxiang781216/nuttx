@@ -36,6 +36,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
+#include <inttypes.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/signal.h>
@@ -391,10 +392,10 @@ static int  s25fl1_write_page(FAR struct s25fl1_dev_s *priv,
                               off_t address,
                               size_t nbytes);
 #ifdef CONFIG_S25FL1_SECTOR512
-static int  s25fl1_flush_cache(struct s25fl1_dev_s *priv);
-static FAR uint8_t *s25fl1_read_cache(struct s25fl1_dev_s *priv,
+static int  s25fl1_flush_cache(FAR struct s25fl1_dev_s *priv);
+static FAR uint8_t *s25fl1_read_cache(FAR struct s25fl1_dev_s *priv,
                                       off_t sector);
-static void s25fl1_erase_cache(struct s25fl1_dev_s *priv,
+static void s25fl1_erase_cache(FAR struct s25fl1_dev_s *priv,
                                off_t sector);
 static int  s25fl1_write_cache(FAR struct s25fl1_dev_s *priv,
                                FAR const uint8_t *buffer,
@@ -636,7 +637,7 @@ static void s25fl1_write_status(FAR struct s25fl1_dev_s *priv)
  * Name: s25fl1_readid
  ****************************************************************************/
 
-static inline int s25fl1_readid(struct s25fl1_dev_s *priv)
+static inline int s25fl1_readid(FAR struct s25fl1_dev_s *priv)
 {
   /* Lock the QuadSPI bus and configure the bus. */
 
@@ -862,7 +863,7 @@ static bool s25fl1_isprotected(FAR struct s25fl1_dev_s *priv, uint8_t status,
  * Name:  s25fl1_erase_sector
  ****************************************************************************/
 
-static int s25fl1_erase_sector(struct s25fl1_dev_s *priv, off_t sector)
+static int s25fl1_erase_sector(FAR struct s25fl1_dev_s *priv, off_t sector)
 {
   off_t address;
   uint8_t status;
@@ -904,7 +905,7 @@ static int s25fl1_erase_sector(struct s25fl1_dev_s *priv, off_t sector)
  * Name:  s25fl1_erase_chip
  ****************************************************************************/
 
-static int s25fl1_erase_chip(struct s25fl1_dev_s *priv)
+static int s25fl1_erase_chip(FAR struct s25fl1_dev_s *priv)
 {
   uint8_t status;
 
@@ -969,7 +970,7 @@ static int s25fl1_read_byte(FAR struct s25fl1_dev_s *priv,
  * Name:  s25fl1_write_page
  ****************************************************************************/
 
-static int s25fl1_write_page(struct s25fl1_dev_s *priv,
+static int s25fl1_write_page(FAR struct s25fl1_dev_s *priv,
                              FAR const uint8_t *buffer,
                              off_t address,
                              size_t buflen)
@@ -1008,7 +1009,7 @@ static int s25fl1_write_page(struct s25fl1_dev_s *priv,
       /* Set up varying parts of the transfer description */
 
       meminfo.addr   = address;
-      meminfo.buffer = (void *)buffer;
+      meminfo.buffer = (FAR void *)buffer;
 
       /* Write one page */
 
@@ -1018,7 +1019,7 @@ static int s25fl1_write_page(struct s25fl1_dev_s *priv,
 
       if (ret < 0)
         {
-          ferr("ERROR: QSPI_MEMORY failed writing address=%06x\n",
+          ferr("ERROR: QSPI_MEMORY failed writing address=%06" PRIxOFF "\n",
                address);
           return ret;
         }
@@ -1043,7 +1044,7 @@ static int s25fl1_write_page(struct s25fl1_dev_s *priv,
  ****************************************************************************/
 
 #ifdef CONFIG_S25FL1_SECTOR512
-static int s25fl1_flush_cache(struct s25fl1_dev_s *priv)
+static int s25fl1_flush_cache(FAR struct s25fl1_dev_s *priv)
 {
   int ret = OK;
 
@@ -1086,7 +1087,7 @@ static int s25fl1_flush_cache(struct s25fl1_dev_s *priv)
  ****************************************************************************/
 
 #ifdef CONFIG_S25FL1_SECTOR512
-static FAR uint8_t *s25fl1_read_cache(struct s25fl1_dev_s *priv,
+static FAR uint8_t *s25fl1_read_cache(FAR struct s25fl1_dev_s *priv,
                                       off_t sector)
 {
   off_t esectno;
@@ -1154,7 +1155,7 @@ static FAR uint8_t *s25fl1_read_cache(struct s25fl1_dev_s *priv,
  ****************************************************************************/
 
 #ifdef CONFIG_S25FL1_SECTOR512
-static void s25fl1_erase_cache(struct s25fl1_dev_s *priv, off_t sector)
+static void s25fl1_erase_cache(FAR struct s25fl1_dev_s *priv, off_t sector)
 {
   FAR uint8_t *dest;
 
@@ -1443,7 +1444,8 @@ static int s25fl1_ioctl(FAR struct mtd_dev_s *dev,
 #endif
               ret               = OK;
 
-              finfo("blocksize: %d erasesize: %d neraseblocks: %d\n",
+              finfo("blocksize: %" PRIu32 " erasesize: %" PRIu32
+                    " neraseblocks: %" PRIu32 "\n",
                     geo->blocksize, geo->erasesize, geo->neraseblocks);
             }
         }

@@ -33,12 +33,10 @@
 #include <signal.h>
 #include <assert.h>
 
-#include <nuttx/cancelpt.h>
 #include <nuttx/pthread.h>
 #include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/signal.h>
-#include <nuttx/tls.h>
 
 #include "group/group.h"
 #include "sched/sched.h"
@@ -213,7 +211,6 @@ static void nxsig_null_action(int signo)
 static void nxsig_abnormal_termination(int signo)
 {
   FAR struct tcb_s *rtcb = this_task();
-  FAR struct tls_info_s *info = tls_get_info();
 
   /* Careful:  In the multi-threaded task, the signal may be handled on a
    * child pthread.
@@ -228,14 +225,7 @@ static void nxsig_abnormal_termination(int signo)
   group_kill_children(rtcb);
 #endif
 
-  /* Mark the pthread as non-cancelable to avoid additional calls to
-   * nx_pthread_exit() due to any cancellation point logic that might
-   * get kicked off by actions taken during pthread_exit processing.
-   */
-
-  info->tl_cpstate |= CANCEL_FLAG_NONCANCELABLE;
-
-  tls_cleanup_popall(info);
+  tls_cleanup_popall(tls_get_info());
 
 #ifndef CONFIG_DISABLE_PTHREAD
   /* Check if the currently running task is actually a pthread */
@@ -279,7 +269,6 @@ static void nxsig_abnormal_termination(int signo)
 static void nxsig_stop_task(int signo)
 {
   FAR struct tcb_s *rtcb = this_task();
-  irqstate_t flags;
 #if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
   FAR struct task_group_s *group;
 
@@ -300,7 +289,12 @@ static void nxsig_stop_task(int signo)
   group_suspend_children(rtcb);
 #endif
 
-  flags = enter_critical_section();
+  /* Lock the scheduler so this thread is not pre-empted until after we
+   * call nxsched_suspend().
+   */
+
+  sched_lock();
+
 #if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
   /* Notify via waitpid if any parent is waiting for this task to EXIT
    * or STOP.  This action is only performed if WUNTRACED is set in the
@@ -337,7 +331,7 @@ static void nxsig_stop_task(int signo)
   /* Then, finally, suspend this the final thread of the task group */
 
   nxsched_suspend(rtcb);
-  leave_critical_section(flags);
+  sched_unlock();
 }
 #endif
 

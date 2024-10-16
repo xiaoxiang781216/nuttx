@@ -27,10 +27,10 @@
 #include <sys/types.h>
 #include <syslog.h>
 
-#include <nuttx/fdt.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/pci/pci_ecam.h>
 #include <nuttx/virtio/virtio-mmio.h>
+#include <nuttx/fdt.h>
+#include <nuttx/pci/pci_ecam.h>
 
 #ifdef CONFIG_LIBC_FDT
 #  include <libfdt.h>
@@ -42,7 +42,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define QEMU_SPI_IRQ_BASE            32
+#ifndef QEMU_SPI_IRQ_BASE
+#define QEMU_SPI_IRQ_BASE     32
+#endif
 
 #define FDT_PCI_TYPE_IO              0x01000000
 #define FDT_PCI_TYPE_MEM32           0x02000000
@@ -131,7 +133,7 @@ static void register_pci_host_from_fdt(const void *fdt)
 
   /* Get the reg address, 64 or 32 */
 
-  cfg.start = fdt_get_reg_base(fdt, offset, 0);
+  cfg.start = fdt_get_reg_base(fdt, offset);
   cfg.end = cfg.start + fdt_get_reg_size(fdt, offset);
 
   /* Get the ranges address */

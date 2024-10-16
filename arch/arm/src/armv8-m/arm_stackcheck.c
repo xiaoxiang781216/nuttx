@@ -48,6 +48,7 @@
 
 #include <stdint.h>
 
+#include <nuttx/instrument.h>
 #include "arm_internal.h"
 #include "nvic.h"
 

@@ -69,8 +69,7 @@ size_t nxtask_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size)
 
   /* Sanity checks and idle tasks */
 
-  if (!tcb || !tcb->group || !tcb->group->tg_info || size < 1 ||
-      is_idle_task(tcb))
+  if (!tcb || size < 1 || is_idle_task(tcb))
     {
       leave_critical_section(flags);
       *args = '\0';

@@ -63,7 +63,7 @@ extern "C"
 chipreg_t up_getsp(void);
 
 /* This holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during
+ * register storage structure.  It is non-NULL only during
  * interrupt processing.
  */
 

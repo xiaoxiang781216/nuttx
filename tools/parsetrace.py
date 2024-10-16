@@ -2,6 +2,8 @@
 ############################################################################
 # tools/parsetrace.py
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -531,7 +533,6 @@ class TraceDecoder(SymbolTables):
     patterns = {re.compile(pattern): func for pattern, func in conversions.items()}
 
     def printf(self, format, data):
-
         try:
             fmt = []
             values = []

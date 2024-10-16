@@ -29,7 +29,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: i3c_device_do_priv_xfers()
+ * Name: i3c_device_do_priv_xfers
  *
  * Description:
  *   Do I3C SDR private transfers directed to a specific device.
@@ -76,7 +76,7 @@ int i3c_device_do_priv_xfers(FAR const struct i3c_device *dev,
 }
 
 /****************************************************************************
- * Name: i3c_device_get_info()
+ * Name: i3c_device_get_info
  *   Get I3C device information, Retrieve I3C dev info.
  *
  * Input Parameters:
@@ -103,7 +103,7 @@ void i3c_device_get_info(FAR const struct i3c_device *dev,
 }
 
 /****************************************************************************
- * Name: i3c_device_disable_ibi()
+ * Name: i3c_device_disable_ibi
  *
  * Description:
  *   Disable IBIs coming from a specific device.
@@ -137,7 +137,7 @@ int i3c_device_disable_ibi(FAR const struct i3c_device *dev)
 }
 
 /****************************************************************************
- * Name: i3c_device_enable_ibi()
+ * Name: i3c_device_enable_ibi
  *
  * Description:
  *   Enable IBIs coming from a specific device.
@@ -175,7 +175,7 @@ int i3c_device_enable_ibi(FAR const struct i3c_device *dev)
 }
 
 /****************************************************************************
- * Name: i3c_device_request_ibi()
+ * Name: i3c_device_request_ibi
  *
  * Description:
  *   Request an IBI.
@@ -217,7 +217,7 @@ int i3c_device_request_ibi(FAR const struct i3c_device *dev,
 }
 
 /****************************************************************************
- * Name: i3c_device_free_ibi()
+ * Name: i3c_device_free_ibi
  *
  * Description:
  *   Free all resources needed for IBI handling.
@@ -245,7 +245,7 @@ void i3c_device_free_ibi(FAR const struct i3c_device *dev)
 }
 
 /****************************************************************************
- * Name: i3c_device_send_ccc_cmd()
+ * Name: i3c_device_send_ccc_cmd
  *
  * Description:
  *   This function is used to send a common ccc command.
@@ -281,7 +281,7 @@ int i3c_device_send_ccc_cmd(FAR const struct i3c_device *dev,
 }
 
 /****************************************************************************
- * Name: i3c_master_find_i3c_dev()
+ * Name: i3c_master_find_i3c_dev
  *
  * Description:
  *   This function is used to be find a i3c_device address by master handle

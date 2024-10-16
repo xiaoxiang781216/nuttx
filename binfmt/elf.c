@@ -185,7 +185,7 @@ static int elf_loadbinary(FAR struct binary_s *binp,
   binp->mod.dataalloc = (FAR void *)loadinfo.datastart;
 #  ifdef CONFIG_BINFMT_CONSTRUCTORS
   binp->mod.initarr = loadinfo.initarr;
-  binp->mod.fniarr = loadinfo.finiarr;
+  binp->mod.finiarr = loadinfo.finiarr;
 #  endif
 #endif
 
@@ -195,8 +195,8 @@ static int elf_loadbinary(FAR struct binary_s *binp,
   binp->mod.initarr = loadinfo.initarr;
   binp->mod.ninit   = loadinfo.ninit;
 
-  binp->mod.fniarr = loadinfo.finiarr;
-  binp->mod.fini   = loadinfo.fini;
+  binp->mod.finiarr = loadinfo.finiarr;
+  binp->mod.nfini   = loadinfo.nfini;
 #endif
 
 #ifdef CONFIG_SCHED_USER_IDENTITY

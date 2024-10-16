@@ -68,13 +68,18 @@
 #  error SHMEM base addres must be word-aligned (4 bytes)
 #endif
 
-#ifdef CONFIG_ARCH_FPU
-#  error missing FPU configuration - FPU must be activated in SPE and NSPE
-#endif
-
 /****************************************************************************
  * Public Functions Prototypes
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: nrf91_modem_board_init
+ *
+ * This function must be provided by board-spcific logic.
+ *
+ ****************************************************************************/
+
+int nrf91_modem_board_init(void);
 
 /****************************************************************************
  * Name: nrf91_modem_initialize

@@ -20,16 +20,23 @@
 
 set(SRCS qemu_rv_appinit.c)
 
+if(CONFIG_ARCH_LEDS)
+  list(APPEND SRCS qemu_rv_autoleds.c)
+endif()
+
+if(CONFIG_USERLED)
+  list(APPEND SRCS qemu_rv_userleds.c)
+endif()
+
 target_sources(board PRIVATE ${SRCS})
 
 if(CONFIG_ARCH_CHIP_QEMU_RV)
-
-  if(CONFIG_BUILD_KERNEL)
-    if(CONFIG_ARCH_CHIP_QEMU_RV64)
-      set(LDFILE ld-kernel64.script)
-    else()
-      set(LDFILE ld-kernel32.script)
-    endif()
+  if(CONFIG_NUTTSBI)
+    set(LDFILE ld-nuttsbi.script)
+  elseif(CONFIG_BUILD_KERNEL)
+    set(LDFILE ld-kernel.script)
+  elseif(CONFIG_BUILD_PROTECTED)
+    set(LDFILE ld-protected.script)
   else()
     set(LDFILE ld.script)
   endif()

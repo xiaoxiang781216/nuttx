@@ -58,6 +58,9 @@
 #include "mpfs_dsn.h"
 #include "mpfs_i2c.h"
 
+#include "hardware/mpfs_ethernet.h"
+#include "hardware/mpfs_mpucfg.h"
+
 #if defined(CONFIG_MPFS_ETH0_PHY_KSZ9477) ||\
     defined(CONFIG_MPFS_ETH1_PHY_KSZ9477)
 #  if !defined(CONFIG_MPFS_MAC_SGMII)
@@ -77,15 +80,6 @@
 #endif
 
 #if defined(CONFIG_NET) && defined(CONFIG_MPFS_ETHMAC)
-
-#define MPFS_PMPCFG_ETH0_0   (MPFS_MPUCFG_BASE + 0x400)
-#define MPFS_PMPCFG_ETH0_1   (MPFS_MPUCFG_BASE + 0x408)
-#define MPFS_PMPCFG_ETH0_2   (MPFS_MPUCFG_BASE + 0x410)
-#define MPFS_PMPCFG_ETH0_3   (MPFS_MPUCFG_BASE + 0x418)
-#define MPFS_PMPCFG_ETH1_0   (MPFS_MPUCFG_BASE + 0x500)
-#define MPFS_PMPCFG_ETH1_1   (MPFS_MPUCFG_BASE + 0x508)
-#define MPFS_PMPCFG_ETH1_2   (MPFS_MPUCFG_BASE + 0x510)
-#define MPFS_PMPCFG_ETH1_3   (MPFS_MPUCFG_BASE + 0x518)
 
 #if defined(CONFIG_MPFS_ETHMAC_0) && defined(CONFIG_MPFS_ETHMAC_1)
 #  warning "Using 2 MACs is not yet supported."
@@ -418,7 +412,7 @@ static void mpfs_interrupt_work(void *arg);
 static inline void mac_putreg(struct mpfs_ethmac_s *priv,
                               uint32_t offset, uint32_t val)
 {
-  uint32_t *addr = (uint32_t *)(priv->regbase + offset);
+  uintptr_t addr = (uintptr_t)(priv->regbase + offset);
 #if defined(CONFIG_DEBUG_NET) && defined(CONFIG_MPFS_ETHMAC_REGDEBUG)
   ninfo("0x%08x <- 0x%08x\n", addr, val);
 #endif
@@ -443,7 +437,7 @@ static inline void mac_putreg(struct mpfs_ethmac_s *priv,
 static inline uint32_t mac_getreg(struct mpfs_ethmac_s *priv,
                                   uint32_t offset)
 {
-  uint32_t *addr = (uint32_t *)(priv->regbase + offset);
+  uintptr_t addr = (uintptr_t)(priv->regbase + offset);
   uint32_t value = getreg32(addr);
 #if defined(CONFIG_DEBUG_NET) && defined(CONFIG_MPFS_ETHMAC_REGDEBUG)
   ninfo("0x%08x -> 0x%08x\n", addr, value);
@@ -1177,6 +1171,13 @@ static void mpfs_txreset(struct mpfs_ethmac_s *priv)
       priv->queue[qi].txhead = 0;
       priv->queue[qi].txtail = 0;
 
+      if (!txdesc || !txbuffer)
+        {
+          /* The queue index is not set up */
+
+          continue;
+        }
+
       for (ndx = 0; ndx < CONFIG_MPFS_ETHMAC_NTXBUFFERS; ndx++)
         {
           bufaddr = (uintptr_t)&txbuffer[ndx * GMAC_TX_UNITSIZE];
@@ -1251,6 +1252,13 @@ static void mpfs_rxreset(struct mpfs_ethmac_s *priv)
       rxbuffer = priv->queue[qi].rxbuffer;
       rxdesc   = priv->queue[qi].rx_desc_tab;
       priv->queue[qi].rxndx = 0;
+
+      if (!rxdesc || !rxbuffer)
+        {
+          /* The queue index is not set up */
+
+          continue;
+        }
 
       for (ndx = 0; ndx < CONFIG_MPFS_ETHMAC_NRXBUFFERS; ndx++)
         {
@@ -2782,10 +2790,10 @@ static void mpfs_buffer_free(struct mpfs_ethmac_s *priv, unsigned int queue)
 #ifndef CONFIG_MPFS_GMAC_PREALLOCATE
   /* Free allocated buffers */
 
-  if (priv->queue[queue].rx_desc_tab != NULL)
+  if (priv->queue[queue].tx_desc_tab != NULL)
     {
-      kmm_free(priv->queue[queue].rx_desc_tab);
-      priv->queue[queue].rx_desc_tab = NULL;
+      kmm_free(priv->queue[queue].tx_desc_tab);
+      priv->queue[queue].tx_desc_tab = NULL;
     }
 
   if (priv->queue[queue].rx_desc_tab != NULL)
@@ -2800,10 +2808,10 @@ static void mpfs_buffer_free(struct mpfs_ethmac_s *priv, unsigned int queue)
       priv->queue[queue].txbuffer = NULL;
     }
 
-  if (priv->queue[queue].txbuffer != NULL)
+  if (priv->queue[queue].rxbuffer != NULL)
     {
-      kmm_free(priv->queue[queue].txbuffer);
-      priv->queue[queue].txbuffer = NULL;
+      kmm_free(priv->queue[queue].rxbuffer);
+      priv->queue[queue].rxbuffer = NULL;
     }
 #endif
 }
@@ -3603,17 +3611,6 @@ int mpfs_ethinitialize(int intf)
   /* Read the next 5 bytes from the S/N */
 
   mpfs_read_dsn(&priv->dev.d_mac.ether.ether_addr_octet[1], 5);
-
-  /* MPU hack for ETH DMA if not enabled by bootloader */
-
-#ifdef CONFIG_MPFS_MPU_DMA_ENABLE
-#  ifdef CONFIG_MPFS_ETHMAC_0
-  putreg64(0x1f00000fffffffff, MPFS_PMPCFG_ETH0_0);
-#  endif
-#  ifdef CONFIG_MPFS_ETHMAC_1
-  putreg64(0x1f00000fffffffff, MPFS_PMPCFG_ETH1_0);
-#  endif
-#endif
 
   /* Allocate buffers */
 

@@ -492,6 +492,18 @@ struct net_driver_s
   struct netdev_statistics_s d_statistics;
 #endif
 
+#if defined(CONFIG_NET_TIMESTAMP)
+  /* Reception timestamp of packet being currently processed.
+   * If CONFIG_ARCH_HAVE_NETDEV_TIMESTAMP is true, the timestamp is provided
+   * by hardware driver. Otherwise it is filled in by kernel when packet
+   * enters ipv4_input or ipv6_input.
+   *
+   * The timestamp is in CLOCK_REALTIME.
+   */
+
+  struct timespec d_rxtime;
+#endif
+
   /* Application callbacks:
    *
    * Network device event handlers are retained in a 'list' and are called
@@ -518,16 +530,16 @@ struct net_driver_s
 
   /* Driver callbacks */
 
-  int (*d_ifup)(FAR struct net_driver_s *dev);
-  int (*d_ifdown)(FAR struct net_driver_s *dev);
-  int (*d_txavail)(FAR struct net_driver_s *dev);
+  CODE int (*d_ifup)(FAR struct net_driver_s *dev);
+  CODE int (*d_ifdown)(FAR struct net_driver_s *dev);
+  CODE int (*d_txavail)(FAR struct net_driver_s *dev);
 #ifdef CONFIG_NET_MCASTGROUP
-  int (*d_addmac)(FAR struct net_driver_s *dev, FAR const uint8_t *mac);
-  int (*d_rmmac)(FAR struct net_driver_s *dev, FAR const uint8_t *mac);
+  CODE int (*d_addmac)(FAR struct net_driver_s *dev, FAR const uint8_t *mac);
+  CODE int (*d_rmmac)(FAR struct net_driver_s *dev, FAR const uint8_t *mac);
 #endif
 #ifdef CONFIG_NETDEV_IOCTL
-  int (*d_ioctl)(FAR struct net_driver_s *dev, int cmd,
-                 unsigned long arg);
+  CODE int (*d_ioctl)(FAR struct net_driver_s *dev, int cmd,
+                      unsigned long arg);
 #endif
 
   /* Drivers may attached device-specific, private information */

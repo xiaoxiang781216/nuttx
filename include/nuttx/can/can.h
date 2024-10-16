@@ -326,7 +326,7 @@
 #define CANIOC_GET_TRANSVSTATE    _CANIOC(19)
 
 #define CAN_FIRST                 0x0001         /* First common command */
-#define CAN_NCMDS                 15             /* 16 common commands   */
+#define CAN_NCMDS                 19             /* 20 common commands   */
 
 /* User defined ioctl commands are also supported. These will be forwarded
  * by the upper-half CAN driver to the lower-half CAN driver via the
@@ -525,8 +525,8 @@
 
 /* CAN bit timing support ***************************************************/
 
-#define CAN_BITTIMING_DATA        0  /* Specifies nominal bittiming */
-#define CAN_BITTIMING_NOMINAL     1  /* Specifies data bittiming */
+#define CAN_BITTIMING_NOMINAL     0  /* Specifies nominal bittiming */
+#define CAN_BITTIMING_DATA        1  /* Specifies data bittiming */
 
 /****************************************************************************
  * Public Types
@@ -648,14 +648,50 @@ struct can_rxfifo_s
   struct can_msg_s rx_buffer[CONFIG_CAN_RXFIFOSIZE];
 };
 
-struct can_txfifo_s
+#ifdef CONFIG_CAN_TXPRIORITY
+struct can_msg_node_s
 {
-  sem_t         tx_sem;                  /* Counting semaphore */
-  uint8_t       tx_head;                 /* Index to the head [IN] in the circular buffer */
-  uint8_t       tx_queue;                /* Index to next message to send */
-  uint8_t       tx_tail;                 /* Index to the tail [OUT] in the circular buffer */
-                                         /* Circular buffer of CAN messages */
+  struct list_node  list;
+  struct can_msg_s  msg;
+};
+#endif
+
+struct can_txcache_s
+{
+  sem_t             tx_sem;             /* Counting semaphore */
+#ifdef CONFIG_CAN_TXPRIORITY
+  /* tx_buffer   - Buffer of CAN message. And this buffer is managed by
+   *               tx_free/tx_pending/tx_sending
+   * tx_free     - Link all buffer node in the initial step
+   * tx_pending  - Get node from tx_free. Message to send, in order of can_id
+   * tx_sending  - Get node from tx_pending. CAN message write to H/W, but
+   *               not confirmed. Release node to tx_free when the message
+   *               confirmed
+   *
+   * tx_free -> tx_pending -> tx_sending -> tx_free
+   */
+
+  struct list_node  tx_free;
+  struct list_node  tx_pending;
+  struct list_node  tx_sending;
+  struct can_msg_node_s tx_buffer[CONFIG_CAN_TXFIFOSIZE];
+#else
+  /* tx_buffer - Circular buffer of CAN messages. And this buffer is managed
+   *             by tx_head/tx_queue/tx_tail.
+   * tx_head   - Index to the head [IN] in the circular buffer
+   * tx_queue  - Index to next message to send
+   * tx_tail   - Index to the tail [OUT] in the circular buffer
+   * tx_buffer | 0 | 1 | 2 |   |   | ... |   |   | ... |   | ... |TXFIFOSIZE|
+   *                             |         |             |
+   *                            \|/       \|/           \|/
+   *                           tx_head  tx_queue      tx_tail
+   */
+
+  uint8_t           tx_head;
+  uint8_t           tx_queue;
+  uint8_t           tx_tail;
   struct can_msg_s tx_buffer[CONFIG_CAN_TXFIFOSIZE];
+#endif
 };
 
 /* The following structure define the logic to handle
@@ -780,7 +816,7 @@ struct can_dev_s
   struct list_node     cd_readers;       /* List of readers */
   mutex_t              cd_closelock;     /* Locks out new opens while close is in progress */
   mutex_t              cd_polllock;      /* Manages exclusive access to cd_fds[] */
-  struct can_txfifo_s  cd_xmit;          /* Describes transmit FIFO */
+  struct can_txcache_s cd_sender;        /* Describes transmit cache */
 #ifdef CONFIG_CAN_TXREADY
   struct work_s        cd_work;          /* Use to manage can_txready() work */
 #endif
@@ -826,17 +862,17 @@ struct canioc_rtr_s
 
 struct canioc_bittiming_s
 {
-  uint32_t              bt_baud;         /* Bit rate = 1 / bit time */
-  uint8_t               bt_tseg1;        /* TSEG1 in time quanta */
-  uint8_t               bt_tseg2;        /* TSEG2 in time quanta */
-  uint8_t               bt_sjw;          /* Synchronization Jump Width in time quanta */
 #ifdef CONFIG_CAN_FD
-  uint8_t               bt_type;         /* Nominal/Data bit timing. This is
+  uint8_t               type;            /* Nominal/Data bit timing. This is
                                           * used to specify which bit timing
                                           * should be set/obtained. Applies
                                           * only if CAN FD is configured.
                                           */
 #endif
+  uint32_t              bt_baud;         /* Bit rate = 1 / bit time */
+  uint8_t               bt_tseg1;        /* TSEG1 in time quanta */
+  uint8_t               bt_tseg2;        /* TSEG2 in time quanta */
+  uint8_t               bt_sjw;          /* Synchronization Jump Width in time quanta */
 };
 
 /* CANIOC_GET_CONNMODES/CANIOC_SET_CONNMODES:

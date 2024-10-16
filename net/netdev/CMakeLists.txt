@@ -48,12 +48,12 @@ if(CONFIG_NET_IPv6)
   list(APPEND SRCS netdev_ipv6.c)
 endif()
 
-if(CONFIG_NETDEV_RSS)
-  list(APPEND SRCS netdev_notify_recvcpu.c)
-endif()
-
 if(CONFIG_NETDEV_STATISTICS)
   list(APPEND SRCS netdev_stats.c)
+endif()
+
+if(CONFIG_NETDEV_RSS)
+  list(APPEND SRCS netdev_notify_recvcpu.c)
 endif()
 
 target_sources(net PRIVATE ${SRCS})

@@ -119,18 +119,6 @@ ssize_t host_read(int fd, void *buf, size_t count)
   up_invalidate_dcache(buf, buf + count);
 #endif
 
-  if (fd == STDIN_FILENO)
-    {
-      static int ifd = -1;
-
-      if (ifd < 0)
-        {
-          ifd = host_open("/dev/tty", O_RDWR | O_NONBLOCK, 0666);
-        }
-
-      return host_call(SIMCALL_SYS_READ, ifd, (int)buf, count);
-    }
-
   return host_call(SIMCALL_SYS_READ, fd, (int)buf, count);
 }
 

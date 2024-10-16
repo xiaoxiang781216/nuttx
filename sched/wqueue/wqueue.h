@@ -67,7 +67,7 @@ struct kwork_wqueue_s
   struct dq_queue_s q;         /* The queue of pending work */
   sem_t             sem;       /* The counting semaphore of the wqueue */
   sem_t             exsem;     /* Sync waiting for thread exit */
-  int               nthreads;  /* Number of worker threads */
+  uint8_t           nthreads;  /* Number of worker threads */
   bool              exit;      /* A flag to request the thread to exit */
   struct kworker_s  worker[0]; /* Describes a worker thread */
 };
@@ -82,7 +82,7 @@ struct hp_wqueue_s
   struct dq_queue_s q;         /* The queue of pending work */
   sem_t             sem;       /* The counting semaphore of the wqueue */
   sem_t             exsem;     /* Sync waiting for thread exit */
-  int               nthreads;  /* Number of worker threads */
+  uint8_t           nthreads;  /* Number of worker threads */
   bool              exit;      /* A flag to request the thread to exit */
 
   /* Describes each thread in the high priority queue's thread pool */
@@ -101,7 +101,7 @@ struct lp_wqueue_s
   struct dq_queue_s q;         /* The queue of pending work */
   sem_t             sem;       /* The counting semaphore of the wqueue */
   sem_t             exsem;     /* Sync waiting for thread exit */
-  int               nthreads;  /* Number of worker threads */
+  uint8_t           nthreads;  /* Number of worker threads */
   bool              exit;      /* A flag to request the thread to exit */
 
   /* Describes each thread in the low priority queue's thread pool */

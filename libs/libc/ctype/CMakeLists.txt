@@ -1,6 +1,8 @@
 # ##############################################################################
 # libs/libc/ctype/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -34,4 +36,5 @@ target_sources(
           lib_isupper.c
           lib_isxdigit.c
           lib_tolower.c
-          lib_toupper.c)
+          lib_toupper.c
+          lib_ctype.c)

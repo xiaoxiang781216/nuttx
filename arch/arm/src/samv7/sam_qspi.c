@@ -1549,8 +1549,8 @@ static int qspi_memory(struct qspi_dev_s *dev,
 
   if (priv->candma &&
       meminfo->buflen > CONFIG_SAMV7_QSPI_DMATHRESHOLD &&
-      IS_ALIGNED((uintptr_t)meminfo->buffer) &&
-      IS_ALIGNED(meminfo->buflen))
+      IS_ALIGNED((uintptr_t)meminfo->buffer, 4) &&
+      IS_ALIGNED(meminfo->buflen, 4))
     {
       return qspi_memory_dma(priv, meminfo);
     }

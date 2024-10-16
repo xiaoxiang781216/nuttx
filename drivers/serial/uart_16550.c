@@ -224,6 +224,7 @@ static struct u16550_s g_uart0priv =
   .flow           = true,
 #endif
 #endif
+  .rxtrigger      = CONFIG_16550_UART0_RX_TRIGGER,
 };
 
 static uart_dev_t g_uart0port =
@@ -279,6 +280,7 @@ static struct u16550_s g_uart1priv =
   .flow           = true,
 #endif
 #endif
+  .rxtrigger      = CONFIG_16550_UART1_RX_TRIGGER,
 };
 
 static uart_dev_t g_uart1port =
@@ -334,6 +336,7 @@ static struct u16550_s g_uart2priv =
   .flow           = true,
 #endif
 #endif
+  .rxtrigger      = CONFIG_16550_UART2_RX_TRIGGER,
 };
 
 static uart_dev_t g_uart2port =
@@ -389,6 +392,7 @@ static struct u16550_s g_uart3priv =
   .flow           = true,
 #endif
 #endif
+  .rxtrigger      = CONFIG_16550_UART3_RX_TRIGGER,
 };
 
 static uart_dev_t g_uart3port =
@@ -712,17 +716,6 @@ static inline void u16550_disableuartint(FAR struct u16550_s *priv,
 }
 
 /****************************************************************************
- * Name: u16550_restoreuartint
- ****************************************************************************/
-
-static inline void u16550_restoreuartint(FAR struct u16550_s *priv,
-                                         uint32_t ier)
-{
-  priv->ier |= ier & UART_IER_ALLIE;
-  u16550_serialout(priv, UART_IER_OFFSET, priv->ier);
-}
-
-/****************************************************************************
  * Name: u16550_enablebreaks
  ****************************************************************************/
 
@@ -814,11 +807,6 @@ static int u16550_setup(FAR struct uart_dev_s *dev)
   u16550_serialout(priv, UART_FCR_OFFSET,
                    (UART_FCR_RXRST | UART_FCR_TXRST));
 
-  /* Set trigger */
-
-  u16550_serialout(priv, UART_FCR_OFFSET,
-                   (UART_FCR_FIFOEN | UART_FCR_RXTRIGGER_8));
-
   /* Set up the IER */
 
   priv->ier = u16550_serialin(priv, UART_IER_OFFSET);
@@ -900,7 +888,8 @@ static int u16550_setup(FAR struct uart_dev_s *dev)
   /* Configure the FIFOs */
 
   u16550_serialout(priv, UART_FCR_OFFSET,
-                   (UART_FCR_RXTRIGGER_8 | UART_FCR_TXRST | UART_FCR_RXRST |
+                   (priv->rxtrigger << UART_FCR_RXTRIGGER_SHIFT |
+                    UART_FCR_TXRST | UART_FCR_RXRST |
                     UART_FCR_FIFOEN));
 
 #ifdef CONFIG_16550_SET_MCR_OUT2
@@ -1060,6 +1049,7 @@ static int u16550_ioctl(struct file *filep, int cmd, unsigned long arg)
 
 #ifdef CONFIG_SERIAL_UART_ARCH_IOCTL
   ret = priv->ops->ioctl(priv, cmd, arg);
+
   if (ret != -ENOTTY)
     {
       return ret;
@@ -1491,7 +1481,7 @@ static void u16550_dmarxfree(FAR struct uart_dev_s *dev)
 
   if (priv->chanrx == NULL)
     {
-      priv->chanrx = priv->ops->dmachan(priv, priv->dmarx);
+      priv->chanrx = priv->ops->dmachan(priv, priv->dmarx)
       if (priv->chanrx == NULL)
         {
           return; /* Fail to get DMA channel */
@@ -1706,7 +1696,7 @@ void u16550_serialinit(void)
  * Name: up_putc
  *
  * Description:
- *   Provide priority, low-level access to support OS debug writes.
+ *   Provide priority, low-level access to support OS debug writes
  *
  ****************************************************************************/
 
@@ -1714,15 +1704,6 @@ void u16550_serialinit(void)
 int up_putc(int ch)
 {
   FAR struct u16550_s *priv = (FAR struct u16550_s *)CONSOLE_DEV.priv;
-
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      u16550_putc(priv, '\r');
-    }
 
   u16550_putc(priv, ch);
 
@@ -1867,12 +1848,8 @@ int u16550_interrupt(int irq, FAR void *context, FAR void *arg)
 
 void u16550_putc(FAR struct u16550_s *priv, int ch)
 {
-  irqstate_t flags;
-
-  flags = spin_lock_irqsave(NULL);
   while ((u16550_serialin(priv, UART_LSR_OFFSET) & UART_LSR_THRE) == 0);
   u16550_serialout(priv, UART_THR_OFFSET, (uart_datawidth_t)ch);
-  spin_unlock_irqrestore(NULL, flags);
 }
 
 #endif /* CONFIG_16550_UART */

@@ -48,6 +48,11 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
   cmake_policy(SET CMP0135 NEW)
 endif()
 
+if(POLICY CMP0169)
+  # allow to call FetchContent_Populate directly
+  cmake_policy(SET CMP0169 OLD)
+endif()
+
 # Basic CMake configuration ##################################################
 
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -67,6 +72,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Process board config & directory locations #################################
 
 set(NUTTX_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
+# unceaned previous make build can cause various types of cmake error
+if(EXISTS "${NUTTX_DIR}/.config")
+  message(
+    FATAL_ERROR "Please distclean previous make build with `make distclean`")
+endif()
 
 if(NOT DEFINED BOARD_CONFIG)
   message(FATAL_ERROR "Please define configuration with BOARD_CONFIG")
@@ -149,7 +160,7 @@ endif()
 include(nuttx_kconfig)
 nuttx_export_kconfig_by_value(${NUTTX_DEFCONFIG} "CONFIG_APPS_DIR")
 
-if(NOT CONFIG_APPS_DIR)
+if((NOT NUTTX_APPS_DIR) AND (NOT CONFIG_APPS_DIR))
   if(EXISTS "${NUTTX_DIR}/../apps")
     set(NUTTX_APPS_DIR "${NUTTX_DIR}/../apps")
   elseif(EXISTS "${NUTTX_DIR}/../nuttx-apps")
@@ -169,6 +180,7 @@ if(NOT EXISTS "${NUTTX_APPS_DIR}")
   message(FATAL_ERROR "Application directory ${NUTTX_APPS_DIR} is not found")
 endif()
 
+get_filename_component(NUTTX_APPS_DIR ${NUTTX_APPS_DIR} ABSOLUTE)
 get_filename_component(apps_dir ${NUTTX_APPS_DIR} NAME)
 set(NUTTX_APPS_BINDIR "${CMAKE_BINARY_DIR}/${apps_dir}")
 
@@ -188,6 +200,7 @@ set(ENV{DRIVERS_PLATFORM_DIR} dummy) # TODO
 
 set(ENV{HOST_LINUX} n)
 set(ENV{HOST_MACOS} n)
+set(ENV{HOST_BSD} n)
 set(ENV{HOST_WINDOWS} n)
 set(ENV{HOST_OTHER} n)
 
@@ -385,6 +398,7 @@ include(nuttx_toolchain)
 # This triggers configuration
 
 project(NuttX LANGUAGES C CXX ASM)
+
 if(WIN32)
   enable_language(ASM_MASM)
 endif()
@@ -442,6 +456,7 @@ if(CONFIG_ARCH_SIM)
     TARGET nuttx
     PROPERTY NUTTX_KERNEL_COMPILE_OPTIONS)
   target_compile_options(sim_head PRIVATE ${options})
+  target_compile_options(sim_head PRIVATE -fvisibility=default)
 
   # We need the relocatable object to be first in the list of libraries to be
   # linked against final nuttx binary
@@ -479,6 +494,22 @@ endif()
 
 if(CONFIG_NDEBUG)
   add_compile_options(-DNDEBUG)
+endif()
+
+# Cmake build provide absolute paths to compile files. If __FILE__ macros are
+# used in the source code(ASSERT), the binary will contain many invalid paths.
+# This saves some memory, stops exposing build systems locations in binaries,
+# make failure logs more deterministic and most importantly makes builds more
+# failure logs more deterministic and most importantly makes builds more
+# deterministic. Debuggers usually have a path mapping feature to ensure the
+# files are still found.
+if(NOT MSVC)
+  if(CONFIG_OUTPUT_STRIP_PATHS)
+    add_compile_options(-fmacro-prefix-map=${NUTTX_DIR}=)
+    add_compile_options(-fmacro-prefix-map=${NUTTX_APPS_DIR}=)
+    add_compile_options(-fmacro-prefix-map=${NUTTX_BOARD_ABS_DIR}=)
+    add_compile_options(-fmacro-prefix-map=${NUTTX_CHIP_ABS_DIR}=)
+  endif()
 endif()
 
 add_definitions(-D__NuttX__)

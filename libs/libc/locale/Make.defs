@@ -1,6 +1,8 @@
 ############################################################################
 # libs/libc/locale/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -25,6 +27,7 @@ ifeq ($(CONFIG_LIBC_LOCALE),y)
 CSRCS += lib_duplocale.c lib_freelocale.c lib_localeconv.c
 CSRCS += lib_newlocale.c lib_setlocale.c lib_uselocale.c
 CSRCS += lib_catalog.c lib_gettext.c lib_langinfo.c lib_iconv.c
+CSRCS += lib_maxlocale.c
 
 # Add the locale directory to the build
 

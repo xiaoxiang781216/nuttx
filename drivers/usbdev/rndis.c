@@ -2081,7 +2081,7 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
   FAR struct rndis_dev_s *priv = ((FAR struct rndis_driver_s *)driver)->dev;
   FAR struct rndis_req_s *reqcontainer;
   irqstate_t flags;
-  uint32_t reqlen;
+  size_t reqlen;
   int ret;
   int i;
 

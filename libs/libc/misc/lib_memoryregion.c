@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/misc/lib_memoryregion.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -38,11 +40,11 @@
  *   format - The format string to parse. <start>,<end>,<flags>,...
  *            start - The start address of the memory region
  *            end   - The end address of the memory region
- *            flags - Readable 0x1, writable 0x2, executable 0x4
+ *            flags - Executable 0x1, Writable 0x2, Readable 0x4
  *  region - The memory region to populate
  *  num    - The number of memory regions to parse
  *
- *  example: 0x1000,0x2000,0x1,0x2000,0x3000,0x3,0x3000,0x4000,0x7
+ *  example: 0x1000,0x2000,0x4,0x2000,0x3000,0x6,0x3000,0x4000,0x7
  *
  ****************************************************************************/
 

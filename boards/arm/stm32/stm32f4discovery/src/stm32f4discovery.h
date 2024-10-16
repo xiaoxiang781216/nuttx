@@ -289,6 +289,9 @@
 #define GPIO_ENC28J60_INTR  (GPIO_INPUT|GPIO_FLOAT|GPIO_EXTI|\
                              GPIO_OPENDRAIN|GPIO_PORTE|GPIO_PIN4)
 
+#define GPIO_CS_MFRC522      (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|\
+                            GPIO_OUTPUT_SET|GPIO_PORTE|GPIO_PIN3)
+
 /* Use same pins as ENC28J60 to W5500 */
 
 #define GPIO_W5500_CS      (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|\
@@ -520,18 +523,6 @@ int nunchuck_initialize(char *devname);
 
 #ifdef CONFIG_LEDS_MAX7219
 int stm32_max7219init(const char *devpath);
-#endif
-
-/****************************************************************************
- * Name: stm32_ds1307_init
- *
- * Description:
- *   Initialize and register the DS1307 RTC
- *
- ****************************************************************************/
-
-#ifdef CONFIG_RTC_DS1307
-int stm32_ds1307_init(void);
 #endif
 
 /****************************************************************************

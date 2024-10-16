@@ -24,8 +24,9 @@
 
 #include <nuttx/config.h>
 
+#include <arch/irq.h>
+
 #include "arm.h"
-#include "cp15.h"
 #include "sctlr.h"
 #include "mmu.h"
 #include "chip.h"
@@ -41,7 +42,7 @@
 
 #define IDLE_STACK_TOP  (IDLE_STACK_BASE + CONFIG_IDLETHREAD_STACKSIZE)
 
-#ifndef CONFIG_PAGING
+#ifndef CONFIG_LEGACY_PAGING
 
 	.file	"arm_head.S"
 

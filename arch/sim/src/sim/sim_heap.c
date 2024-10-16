@@ -100,10 +100,10 @@ static void mm_add_delaylist(struct mm_heap_s *heap, void *mem)
 
 static bool free_delaylist(struct mm_heap_s *heap, bool force)
 {
+  bool ret = false;
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   struct mm_delaynode_s *tmp;
   irqstate_t flags;
-  bool ret = false;
 
   /* Move the delay list to local */
 
@@ -146,8 +146,8 @@ static bool free_delaylist(struct mm_heap_s *heap, bool force)
       mm_delayfree(heap, address, false);
     }
 
-  return ret;
 #endif
+  return ret;
 }
 
 /****************************************************************************
@@ -331,7 +331,7 @@ void mm_free(struct mm_heap_s *heap, void *mem)
  *
  ****************************************************************************/
 
-void mm_free_delaylist(FAR struct mm_heap_s *heap)
+void mm_free_delaylist(struct mm_heap_s *heap)
 {
   if (heap)
     {
@@ -372,6 +372,11 @@ void *mm_realloc(struct mm_heap_s *heap, void *oldmem,
   int oldsize;
 
   free_delaylist(heap, false);
+
+  if (size == 0)
+    {
+      size = 1;
+    }
 
   oldsize = host_mallocsize(oldmem);
   atomic_fetch_sub(&heap->uordblks, oldsize);

@@ -54,9 +54,7 @@
 
 void up_exit(int status)
 {
-  struct tcb_s *tcb;
-
-  sinfo("TCB=%p exiting\n", this_task());
+  struct tcb_s *tcb = this_task();
 
   /* Update scheduler parameters */
 

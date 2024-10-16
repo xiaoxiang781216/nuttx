@@ -275,11 +275,11 @@
  *   synchronization by several words.
  *
  * Input Parameters:
- *   dev  - SPI Slave device interface instance
- *   data - Pointer to the new data that has been shifted in
- *   len  - Length of the new data in units of nbits wide,
- *          nbits being the data width previously provided to the bind()
- *          method.
+ *   dev    - SPI Slave device interface instance
+ *   data   - Pointer to the new data that has been shifted in
+ *   nwords - Length of the new data in units of nbits wide,
+ *            nbits being the data width previously provided to the bind()
+ *            method.
  *
  * Returned Value:
  *   Number of units accepted by the device. In other words,
@@ -293,7 +293,7 @@
  *
  ****************************************************************************/
 
-#define SPIS_DEV_RECEIVE(d,v,l)  ((d)->ops->receive(d,v,l))
+#define SPIS_DEV_RECEIVE(d,v,n)  ((d)->ops->receive(d,v,n))
 
 /****************************************************************************
  * Name: SPIS_DEV_NOTIFY
@@ -390,8 +390,7 @@
  *
  * 4) When the first word from the master is shifted in, the SPI
  *    controller driver will call the device's receive() method to
- *    provide the master with the command word that was just shifted
- *    in.
+ *    provide the master command word that was just shifted in.
  *
  *    For the case of bi-directional data transfer or of a transfer of
  *    data from the SPI device to the master, the SPI device driver

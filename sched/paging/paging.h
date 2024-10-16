@@ -31,7 +31,7 @@
 
 #include <signal.h>
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -104,5 +104,5 @@ extern FAR struct tcb_s *g_pftcb;
 int pg_worker(int argc, FAR char *argv[]);
 
 #endif /* __ASSEMBLY__ */
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */
 #endif /* __SCHED_PAGING_PAGING_H */

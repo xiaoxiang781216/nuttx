@@ -111,9 +111,9 @@ void up_schedule_sigaction(struct tcb_s *tcb)
        * delivered.
        */
 
-      tcb->xcp.regs              = (uintptr_t *)
-                                    ((uintptr_t)tcb->xcp.regs -
-                                                XCPTCONTEXT_SIZE);
+      tcb->xcp.regs              = (uintreg_t *)
+                                   ((uintptr_t)tcb->xcp.regs -
+                                               XCPTCONTEXT_SIZE);
 
       memcpy(tcb->xcp.regs, tcb->xcp.saved_regs, XCPTCONTEXT_SIZE);
 

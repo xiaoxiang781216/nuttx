@@ -24,11 +24,12 @@
  * Included Files
  ****************************************************************************/
 
-#include  <nuttx/config.h>
+#include <nuttx/config.h>
 
-#include  <sched.h>
+#include <sched.h>
+#include <debug.h>
 
-#include  "sched/sched.h"
+#include "sched/sched.h"
 
 #ifdef CONFIG_SMP
 #  include "irq/irq.h"
@@ -89,6 +90,9 @@ int nxtask_exit(void)
 #else
   dtcb = this_task();
 #endif
+
+  sinfo("%s pid=%d,TCB=%p\n", get_task_name(dtcb),
+        dtcb->pid, dtcb);
 
   /* Update scheduler parameters */
 

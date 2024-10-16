@@ -118,7 +118,7 @@ config MM_BACKTRACE
 config MM_BACKTRACE_SKIP
 	int "The skip depth of backtrace"
 	depends on MM_BACKTRACE > 0
-	default 5
+	default 3
 
 config MM_BACKTRACE_DEFAULT
 	bool "Enable the backtrace record by default"

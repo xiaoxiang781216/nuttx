@@ -101,8 +101,8 @@ static uint32_t g_monitor_stack[ROUNDUP(
 void arm_sm_init(void)
 {
 #ifdef CONFIG_SMP
-  arm_sm_init_stack(((int)&g_monitor_stack[this_cpu()]
-                + sizeof(g_monitor_stack[this_cpu()]))
+  arm_sm_init_stack(((int)&g_monitor_stack[up_cpu_index()]
+                + sizeof(g_monitor_stack[up_cpu_index()]))
                 - MONITOR_STACK_OFFS);
 #else
   arm_sm_init_stack(((int)&g_monitor_stack + sizeof(g_monitor_stack))

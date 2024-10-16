@@ -24,6 +24,10 @@ if(CONFIG_SENSORS_BMP180)
   list(APPEND SRCS stm32_bmp180.c)
 endif()
 
+if(CONFIG_SENSORS_BMP280)
+  list(APPEND SRCS stm32_bmp280.c)
+endif()
+
 if(CONFIG_LEDS_APA102)
   list(APPEND SRCS stm32_apa102.c)
 endif()
@@ -54,6 +58,10 @@ endif()
 
 if(CONFIG_LCD_SSD1306)
   list(APPEND SRCS stm32_ssd1306.c)
+endif()
+
+if(CONFIG_RTC_DS1307)
+  list(APPEND SRCS stm32_ds1307.c)
 endif()
 
 if(CONFIG_SENSORS_LM75)
@@ -112,6 +120,18 @@ if(CONFIG_SENSORS_MAX31855)
   list(APPEND SRCS stm32_max31855.c)
 endif()
 
+if(CONFIG_LCD_MAX7219)
+  list(APPEND SRCS stm32_max7219_matrix.c)
+endif()
+
+if(CONFIG_CL_MFRC522)
+  list(APPEND SRCS stm32_mfrc522.c)
+endif()
+
+if(CONFIG_SENSORS_AMG88XX)
+  list(APPEND SRCS stm32_amg88xx.c)
+endif()
+
 if(CONFIG_LIS3DSH)
   list(APPEND SRCS stm32_lis3dsh.c)
 endif()
@@ -126,6 +146,10 @@ endif()
 
 if(CONFIG_BOARD_STM32_IHM16M1)
   list(APPEND SRCS stm32_ihm16m1.c)
+endif()
+
+if(CONFIG_STEPPER_DRV8825)
+  list(APPEND SRCS stm32_drv8825.c)
 endif()
 
 target_sources(board PRIVATE ${SRCS})

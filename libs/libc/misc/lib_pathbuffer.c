@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/misc/lib_pathbuffer.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -99,7 +101,7 @@ FAR char *lib_get_pathbuffer(void)
    * CONFIG_LIBC_PATHBUFFER_MALLOC is enabled
    */
 
-#ifdef CONFIG_LIBC_PATHBUFFER_ALLOCATION
+#ifdef CONFIG_LIBC_PATHBUFFER_MALLOC
   return lib_malloc(PATH_MAX);
 #else
   return NULL;
@@ -140,7 +142,7 @@ void lib_put_pathbuffer(FAR char *buffer)
 
   /* Free the buffer if it was dynamically allocated */
 
-#ifdef CONFIG_LIBC_PATHBUFFER_ALLOCATION
-  return lib_free(buffer);
+#ifdef CONFIG_LIBC_PATHBUFFER_MALLOC
+  lib_free(buffer);
 #endif
 }

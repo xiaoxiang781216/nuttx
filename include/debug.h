@@ -868,6 +868,24 @@
 #  define mtrinfo     _none
 #endif
 
+#ifdef CONFIG_DEBUG_STEPPER_ERROR
+#  define stperr      _err
+#else
+#  define stperr      _none
+#endif
+
+#ifdef CONFIG_DEBUG_STEPPER_WARN
+#  define stpwarn     _warn
+#else
+#  define stpwarn     _none
+#endif
+
+#ifdef CONFIG_DEBUG_STEPPER_INFO
+#  define stpinfo     _info
+#else
+#  define stpinfo     _none
+#endif
+
 #ifdef CONFIG_DEBUG_VIDEO_ERROR
 #  define verr        _err
 #else
@@ -976,6 +994,24 @@
 #  define pciinfo     _none
 #endif
 
+#ifdef CONFIG_DEBUG_RPMSG_ERROR
+#  define rpmsgerr       _err
+#else
+#  define rpmsgerr      _none
+#endif
+
+#ifdef CONFIG_DEBUG_RPMSG_WARN
+#  define rpmsgwarn     _warn
+#else
+#  define rpmsgwarn     _none
+#endif
+
+#ifdef CONFIG_DEBUG_RPMSG_INFO
+#  define rpmsginfo     _info
+#else
+#  define rpmsginfo     _none
+#endif
+
 #ifdef CONFIG_DEBUG_CORESIGHT_ERROR
 #  define cserr       _err
 #else
@@ -992,24 +1028,6 @@
 #  define csinfo     _info
 #else
 #  define csinfo     _none
-#endif
-
-#ifdef CONFIG_DEBUG_RPMSG_ERROR
-#  define rpmsgerr     _err
-#else
-#  define rpmsgerr     _none
-#endif
-
-#ifdef CONFIG_DEBUG_RPMSG_WARN
-#  define rpmsgwarn    _warn
-#else
-#  define rpmsgwarn    _none
-#endif
-
-#ifdef CONFIG_DEBUG_RPMSG_INFO
-#  define rpmsginfo    _info
-#else
-#  define rpmsginfo    _none
 #endif
 
 /* Buffer dumping macros do not depend on varargs */

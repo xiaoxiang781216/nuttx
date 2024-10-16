@@ -115,9 +115,9 @@ void up_schedule_sigaction(struct tcb_s *tcb)
            * have been delivered.
            */
 
-          tcb->xcp.saved_rip    = up_current_regs()[REG_RIP];
-          tcb->xcp.saved_rsp    = up_current_regs()[REG_RSP];
-          tcb->xcp.saved_rflags = up_current_regs()[REG_RFLAGS];
+          tcb->xcp.saved_rip            = up_current_regs()[REG_RIP];
+          tcb->xcp.saved_rsp            = up_current_regs()[REG_RSP];
+          tcb->xcp.saved_rflags         = up_current_regs()[REG_RFLAGS];
 
           /* Then set up to vector to the trampoline with interrupts
            * disabled
@@ -204,9 +204,9 @@ void up_schedule_sigaction(struct tcb_s *tcb)
            * the signals have been delivered.
            */
 
-          tcb->xcp.saved_rip         = up_current_regs()[REG_RIP];
-          tcb->xcp.saved_rsp         = up_current_regs()[REG_RSP];
-          tcb->xcp.saved_rflags      = up_current_regs()[REG_RFLAGS];
+          tcb->xcp.saved_rip            = up_current_regs()[REG_RIP];
+          tcb->xcp.saved_rsp            = up_current_regs()[REG_RSP];
+          tcb->xcp.saved_rflags         = up_current_regs()[REG_RFLAGS];
 
           /* Then set up to vector to the trampoline with interrupts
            * disabled
@@ -216,8 +216,11 @@ void up_schedule_sigaction(struct tcb_s *tcb)
           up_current_regs()[REG_RSP]    = up_current_regs()[REG_RSP] - 8;
           up_current_regs()[REG_RFLAGS] = 0;
 
-          /* And make sure that the saved context in the TCB
-           * is the same as the interrupt return context.
+          /* Mark that full context switch is necessary when we
+           * return from interrupt handler.
+           * In that case RIP, RSP and RFLAGS are changed, but
+           * register area pointer remains the same, so we need an
+           * additional variable to signal the need for full context switch
            */
 
           tcb->xcp.regs[REG_AUX] = REG_AUX_FULLCONTEXT;

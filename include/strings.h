@@ -28,6 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/compiler.h>
 
 #include <string.h>
 

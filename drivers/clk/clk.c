@@ -22,12 +22,10 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/arch.h>
 #include <nuttx/clk/clk.h>
 #include <nuttx/clk/clk_provider.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
-#include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
 #include <nuttx/mutex.h>
@@ -100,7 +98,7 @@ static ssize_t clk_procfs_read(FAR struct file *filep, FAR char *buffer,
                                size_t buflen);
 static int clk_procfs_dup(FAR const struct file *oldp,
                           FAR struct file *newp);
-static int clk_procfs_stat(const char *relpath, struct stat *buf);
+static int clk_procfs_stat(FAR const char *relpath, FAR struct stat *buf);
 
 #endif /* !defined(CONFIG_FS_PROCFS_EXCLUDE_CLK) && defined(CONFIG_FS_PROCFS) */
 
@@ -166,7 +164,7 @@ static int clk_procfs_close(FAR struct file *filep)
 }
 
 static size_t clk_procfs_printf(FAR char *buffer, size_t buflen,
-                                off_t *pos, FAR const char *fmt,
+                                FAR off_t *pos, FAR const char *fmt,
                                 ...)
 {
   char tmp[CLK_PROCFS_LINELEN];
@@ -182,7 +180,7 @@ static size_t clk_procfs_printf(FAR char *buffer, size_t buflen,
 
 static size_t clk_procfs_show_subtree(FAR struct clk_s *clk, int level,
                                       FAR char *buffer, size_t buflen,
-                                      off_t *pos, FAR irqstate_t *flags)
+                                      FAR off_t *pos, FAR irqstate_t *flags)
 {
   FAR struct clk_s *child;
   size_t oldlen = buflen;
@@ -225,7 +223,7 @@ static size_t clk_procfs_show_subtree(FAR struct clk_s *clk, int level,
 }
 
 static size_t clk_procfs_showtree(FAR char *buffer,
-                                  size_t buflen, off_t *pos)
+                                  size_t buflen, FAR off_t *pos)
 {
   FAR struct clk_s *clk;
   size_t oldlen = buflen;
@@ -307,7 +305,7 @@ static int clk_procfs_dup(FAR const struct file *oldp,
   return OK;
 }
 
-static int clk_procfs_stat(const char *relpath, struct stat *buf)
+static int clk_procfs_stat(FAR const char *relpath, FAR struct stat *buf)
 {
   /* File/directory size, access block size */
 
@@ -428,7 +426,7 @@ static void clk_calc_subtree(FAR struct clk_s *clk, uint32_t new_rate,
 }
 
 static FAR struct clk_s *clk_calc_new_rates(FAR struct clk_s *clk,
-                                      uint32_t rate)
+                                            uint32_t rate)
 {
   FAR struct clk_s *top = clk;
   FAR struct clk_s *old_parent;
@@ -1260,7 +1258,7 @@ FAR struct clk_s *clk_register(FAR const char *name,
   size_t len;
   int i;
 
-  off = len = sizeof(struct clk_s) + num_parents * sizeof(char *);
+  off = len = sizeof(struct clk_s) + num_parents * sizeof(FAR char *);
   if (!(flags & CLK_PARENT_NAME_IS_STATIC))
     {
       for (i = 0; i < num_parents; i++)
@@ -1290,8 +1288,8 @@ FAR struct clk_s *clk_register(FAR const char *name,
           return NULL;
         }
 
-      clk->name = (char *)clk + len;
-      strlcpy((char *)clk->name, name, size);
+      clk->name = (FAR char *)clk + len;
+      strlcpy((FAR char *)clk->name, name, size);
     }
 
   clk->ops = ops;
@@ -1300,7 +1298,7 @@ FAR struct clk_s *clk_register(FAR const char *name,
 
   if (private_data)
     {
-      clk->private_data = (char *)clk + off;
+      clk->private_data = (FAR char *)clk + off;
       memcpy(clk->private_data, private_data, private_size);
       off += private_size;
     }
@@ -1313,8 +1311,9 @@ FAR struct clk_s *clk_register(FAR const char *name,
         }
       else
         {
-          clk->parent_names[i] = (char *)clk + off;
-          strlcpy((char *)clk->parent_names[i], parent_names[i], len - off);
+          clk->parent_names[i] = (FAR char *)clk + off;
+          strlcpy((FAR char *)clk->parent_names[i], parent_names[i],
+                  len - off);
           off += strlen(parent_names[i]) + 1;
         }
     }
@@ -1338,8 +1337,8 @@ FAR struct clk_s *clk_register(FAR const char *name,
       return clk;
     }
 
-  clk_list_unlock(irqflags);
 out:
+  clk_list_unlock(irqflags);
   if (clk->parents)
     {
       kmm_free(clk->parents);

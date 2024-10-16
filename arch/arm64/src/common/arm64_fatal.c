@@ -548,7 +548,7 @@ void arm64_fatal_handler(uint64_t *regs)
 
   DEBUGASSERT(!up_interrupt_context());
 
-  tcb->xcp.regs = regs;
+  tcb->xcp.regs = (uint64_t *)regs;
 
   /* Set irq flag */
 

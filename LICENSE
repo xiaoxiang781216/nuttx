@@ -3842,6 +3842,7 @@ arch/arm/src/rp2040/rp2040_pio.h
 arch/arm/src/rp2040/rp2040_pio_instructions.h
 arch/arm/src/rp2040/rp2040_pll.c
 arch/arm/src/rp2040/rp2040_xosc.c
+boards/arm/rp2040/common/src/rp2040_uniqueid.c
 ==========================================================
 Based upon the software originally developed by
   Raspberry Pi (Trading) Ltd.
@@ -5896,6 +5897,7 @@ libs/libm/libm/scalbnf.c
 libs/libm/libm/scalbn.c
 libs/libm/libm/scalbnl.c
 libs/libc/stdlib/lib_strtof.c
+libs/libc/time/lib_strptime.c
 ======================
 
    Copyright © 2005-2020 Rich Felker, et al.
@@ -6331,6 +6333,7 @@ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGE.
 
+libs/libc/string/lib_memmem.c
 libs/libc/string/lib_strstr.c
 ===============================
 The MIT License (MIT)
@@ -6396,29 +6399,6 @@ AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
-
-libs/libc/time/lib_strptime.c
-=======================================
-
-  Copyright (c) 1997, 1998 The NetBSD Foundation, Inc. All rights reserved.
-
-  This code was contributed to The NetBSD Foundation by Klaus Klein.
-
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions
-  are met:
-  1. Redistributions of source code must retain the above copyright
-     notice, this list of conditions and the following disclaimer.
-  2. Redistributions in binary form must reproduce the above copyright
-     notice, this list of conditions and the following disclaimer in the
-     documentation and/or other materials provided with the distribution.
-  3. All advertising materials mentioning features or use of this software
-     must display the following acknowledgement:
-         This product includes software developed by the NetBSD
-         Foundation, Inc. and its contributors.
-  4. Neither the name of The NetBSD Foundation nor the names of its
-     contributors may be used to endorse or promote products derived
-     from this software without specific prior written permission.
 
 libs/libc/unistd/lib_gethostname.c
 libs/libc/unistd/lib_sethostname.c
@@ -8469,6 +8449,101 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ----------------------------------------------------------------------
 
+drivers/misc/optee_msg.h
+======================
+PDX-License-Identifier: BSD-2-Clause
+Copyright (c) 2015-2020, Linaro Limited
+
+include/nuttx/tee.h
+======================
+Copyright (c) 2015-2016, Linaro Limited
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following
+conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Documentation/_extensions/warnings_filter.py
+============================================
+Copyright (c) 2021 Nordic Semiconductor ASA
+SPDX-License-Identifier: Apache-2.0
+
+arch/arm/src/rp2040/rp2040_clock.c
+arch/arm/src/rp2040/rp2040_pll.c
+arch/arm/src/rp2040/rp2040_xosc.c
+arch/arm/src/rp2040/rp2040_pio.c
+arch/arm/src/rp2040/rp2040_pio.h
+arch/arm/src/rp2040/rp2040_pio_instructions.h
+arch/arm/src/rp2040/hardware/*.h
+=============================================
+
+Copyright 2020 (c) 2020 Raspberry Pi (Trading) Ltd.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+this list of conditions and the following disclaimer in the documentation
+and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors
+may be used to endorse or promote products derived from this software without
+specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGE.
+
+.github/actions/free-disk-space/action.yaml
+=============================================
+Copyright (c) 2022 Jérémie Lumbroso
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 include/search.h
 ======================
 $NetBSD: search.h,v 1.12 1999/02/22 10:34:28 christos Exp $
@@ -8578,3 +8653,45 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
 ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+drivers/i3c/device.c
+drivers/i3c/i3c_driver.c
+drivers/i3c/master.c
+drivers/i3c/internals.h
+======================
+
+ Copyright (C) 2018 Cadence Design Systems Inc.
+ Author: Boris Brezillon <boris.brezillon@bootlin.com>
+
+ SPDX-License-Identifier: Apache-2.0
+
+libs/libc/string/lib_memccpy.c
+libs/libc/string/lib_memchr.c
+libs/libc/string/lib_memcmp.c
+libs/libc/string/lib_memcpy.c
+libs/libc/string/lib_memrchr.c
+libs/libc/string/lib_stpcpy.c
+libs/libc/string/lib_stpncpy.c
+libs/libc/string/lib_strcat.c
+libs/libc/string/lib_strchr.c
+libs/libc/string/lib_strchrnul.c
+libs/libc/string/lib_strcmp.c
+libs/libc/string/lib_strcpy.c
+libs/libc/string/lib_strlen.c
+libs/libc/string/lib_strncmp.c
+libs/libc/string/lib_strncpy.c
+libs/libc/string/lib_strrchr.c
+======================
+
+Copyright (c) 1994-2009  Red Hat, Inc. All rights reserved.
+
+This copyrighted material is made available to anyone wishing to use,
+modify, copy, or redistribute it subject to the terms and conditions
+of the BSD License.   This program is distributed in the hope that
+it will be useful, but WITHOUT ANY WARRANTY expressed or implied,
+including the implied warranties of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE.  A copy of this license is available at
+http://www.opensource.org/licenses. Any Red Hat trademarks that are
+incorporated in the source code or documentation are not subject to
+the BSD License and may only be used or replicated with the express
+permission of Red Hat, Inc.

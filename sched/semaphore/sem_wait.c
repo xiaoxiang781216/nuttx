@@ -71,7 +71,7 @@
 
 int nxsem_wait(FAR sem_t *sem)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   irqstate_t flags;
   int ret;
 
@@ -86,7 +86,6 @@ int nxsem_wait(FAR sem_t *sem)
    */
 
   flags = enter_critical_section();
-  rtcb = this_task();
 
   /* Make sure we were supplied with a valid semaphore. */
 

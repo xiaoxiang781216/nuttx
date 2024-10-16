@@ -128,7 +128,7 @@ static int     uart_unlink(FAR struct inode *inode);
 #ifdef CONFIG_TTY_LAUNCH_ENTRY
 /* Lanch program entry, this must be supplied by the application. */
 
-int CONFIG_TTY_LAUNCH_ENTRYPOINT(int argc, char *argv[]);
+int CONFIG_TTY_LAUNCH_ENTRYPOINT(int argc, FAR char *argv[]);
 #endif
 
 /****************************************************************************
@@ -181,7 +181,7 @@ static bool uart_is_termios_hw_change(FAR struct file *filep,
     }
 
   memset(&old, 0, sizeof(old));
-  ret = dev->ops->ioctl(filep, TCGETS, (unsigned long)&old);
+  ret = dev->ops->ioctl(filep, TCGETS, (unsigned long)(uintptr_t)&old);
   if (ret >= 0)
     {
       if (old.c_speed != new->c_speed)
@@ -801,7 +801,10 @@ static int uart_close(FAR struct file *filep)
 
   flags = enter_critical_section();  /* Disable interrupts */
   uart_detach(dev);                  /* Detach interrupts */
-  if (!dev->isconsole)               /* Check for the serial console UART */
+
+  /* Check for the serial console UART */
+
+  if (!dev->isconsole)
     {
       uart_shutdown(dev);            /* Disable the UART */
     }
@@ -1922,7 +1925,7 @@ static void uart_launch_foreach(FAR struct tcb_s *tcb, FAR void *arg)
   if (!strcmp(get_task_name(tcb), CONFIG_TTY_LAUNCH_FILEPATH))
 #endif
     {
-      *(int *)arg = 1;
+      *(FAR int *)arg = 1;
     }
 }
 
@@ -2207,7 +2210,7 @@ void uart_reset_sem(FAR uart_dev_t *dev)
 
 #if defined(CONFIG_TTY_SIGINT) || defined(CONFIG_TTY_SIGTSTP) || \
     defined(CONFIG_TTY_FORCE_PANIC) || defined(CONFIG_TTY_LAUNCH)
-int uart_check_special(FAR uart_dev_t *dev, const char *buf, size_t size)
+int uart_check_special(FAR uart_dev_t *dev, FAR const char *buf, size_t size)
 {
   size_t i;
 

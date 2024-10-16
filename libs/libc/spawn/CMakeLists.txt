@@ -1,6 +1,8 @@
 # ##############################################################################
 # libs/libc/spawn/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -39,7 +41,7 @@ set(SRCS
     lib_psa_destroy.c)
 
 if(NOT CONFIG_BUILD_KERNEL)
-  list(APPEND SRCS lib_psa_getstackaddr.c lib_psa_setstackaddr.c)
+  list(APPEND SRCS lib_psa_getstacksize.c lib_psa_setstacksize.c)
 endif()
 
 if(CONFIG_DEBUG_FEATURES)

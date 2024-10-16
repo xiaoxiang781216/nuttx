@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/stdio/lib_fopen.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -98,16 +100,7 @@ FAR FILE *fdopen(int fd, FAR const char *mode)
           goto errout;
         }
 
-      if (list->sl_tail)
-        {
-          list->sl_tail->fs_next = filep;
-          list->sl_tail = filep;
-        }
-      else
-        {
-          list->sl_head = filep;
-          list->sl_tail = filep;
-        }
+      sq_addlast(&filep->fs_entry, &list->sl_queue);
 
       nxmutex_unlock(&list->sl_lock);
 

@@ -54,11 +54,11 @@ include eeprom/Make.defs
 include efuse/Make.defs
 include net/Make.defs
 include note/Make.defs
-include perf/Make.defs
+include pinctrl/Make.defs
 include pipes/Make.defs
 include power/Make.defs
 include regmap/Make.defs
-include pinctrl/Make.defs
+include rmt/Make.defs
 include rpmsg/Make.defs
 include rptun/Make.defs
 include sensors/Make.defs

@@ -32,23 +32,10 @@ PHDRS
 SECTIONS
 {
   . = 0x00000000;  /* load address */
-
-  /* where the global variable out-of-bounds detection information located */
-#ifdef CONFIG_MM_KASAN_GLOBAL
-  .kasan.unused :
-  {
-    *(.data..LASANLOC*)
-  }
-  .kasan.global :
-  {
-    KEEP (*(.data..LASAN0))
-    KEEP (*(.data.rel.local..LASAN0))
-  }
-#endif
-
   _start = .;
   .text : {
         _stext = .;            /* Text section */
+       *(.start .start.*)      /* Place __start here */
        *(.text)
        *(.text.cold)
        *(.text.unlikely)

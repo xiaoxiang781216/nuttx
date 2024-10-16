@@ -39,6 +39,10 @@
 
 /* Align definitions */
 
+#ifndef IS_ALIGNED
+#  define IS_ALIGNED(x,a)      (((x) & ((a) - 1)) == 0)
+#endif
+
 #ifndef ALIGN_MASK
 #  define ALIGN_MASK(s)        ((1 << (s)) - 1)
 #endif

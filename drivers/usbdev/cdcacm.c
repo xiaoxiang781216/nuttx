@@ -265,12 +265,18 @@ static const struct uart_ops_s g_uartops =
 #ifdef CONFIG_SERIAL_IFLOWCONTROL
   cdcuart_rxflowcontrol, /* rxflowcontrol */
 #endif
+#ifdef CONFIG_SERIAL_TXDMA
   cdcuart_dmasend,       /* dmasend */
+#endif
+#ifdef CONFIG_SERIAL_RXDMA
   cdcuart_dmareceive,    /* dmareceive */
   NULL,                  /* dmarxfree */
+#endif
+#ifdef CONFIG_SERIAL_TXDMA
   NULL,                  /* dmatxavail */
+#endif
   NULL,                  /* send */
-  cdcuart_txint,         /* txinit */
+  cdcuart_txint,         /* txint */
   cdcuart_txready,       /* txready */
   cdcuart_txempty,       /* txempty */
   cdcuart_release,       /* release */
@@ -327,7 +333,7 @@ static ssize_t cdcuart_sendbuf(FAR struct uart_dev_s *dev,
 
   /* Get the maximum number of bytes that will fit into one bulk IN request */
 
-  reqlen = MAX(CONFIG_CDCACM_BULKIN_REQLEN, ep->maxpacket);
+  reqlen = MIN(CONFIG_CDCACM_BULKIN_REQLEN, ep->maxpacket);
 
   /* Peek at the request in the container at the head of the list */
 
@@ -500,7 +506,7 @@ static int cdcacm_requeue_rdrequest(FAR struct cdcacm_dev_s *priv,
   /* Requeue the read request */
 
   ep       = priv->epbulkout;
-  req->len = MAX(CONFIG_CDCACM_BULKOUT_REQLEN, ep->maxpacket);
+  req->len = MIN(CONFIG_CDCACM_BULKOUT_REQLEN, ep->maxpacket);
   ret      = EP_SUBMIT(ep, req);
   if (ret != OK)
     {
@@ -834,7 +840,7 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
   /* Configure the IN interrupt endpoint */
 
   ret = cdcacm_epconfigure(priv->epintin, CDCACM_EPINTIN, false,
-                            &priv->devinfo, priv->usbdev->speed);
+                           &priv->devinfo, priv->usbdev->speed);
 
   if (ret < 0)
     {
@@ -848,7 +854,7 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
   /* Configure the IN bulk endpoint */
 
   ret = cdcacm_epconfigure(priv->epbulkin, CDCACM_EPBULKIN, false,
-                            &priv->devinfo, priv->usbdev->speed);
+                           &priv->devinfo, priv->usbdev->speed);
 
   if (ret < 0)
     {
@@ -861,7 +867,7 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
   /* Configure the OUT bulk endpoint */
 
   ret = cdcacm_epconfigure(priv->epbulkout, CDCACM_EPBULKOUT, true,
-                            &priv->devinfo, priv->usbdev->speed);
+                           &priv->devinfo, priv->usbdev->speed);
 
   if (ret < 0)
     {
@@ -870,6 +876,8 @@ static int cdcacm_setconfig(FAR struct cdcacm_dev_s *priv, uint8_t config)
     }
 
   priv->epbulkout->priv = priv;
+
+  /* Queue read requests in the bulk OUT endpoint */
 
   DEBUGASSERT(priv->nrdq == 0);
   for (i = 0; i < CONFIG_CDCACM_NRDREQS; i++)
@@ -982,7 +990,10 @@ static void cdcacm_rdcomplete(FAR struct usbdev_ep_s *ep,
     case -ESHUTDOWN: /* Disconnection */
       {
         usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDSHUTDOWN), 0);
-        priv->nrdq--;
+        if (priv->nrdq != 0)
+          {
+            priv->nrdq--;
+          }
       }
       break;
 
@@ -1084,7 +1095,7 @@ static int cdcacm_bind(FAR struct usbdevclass_driver_s *driver,
   FAR struct cdcacm_wrreq_s *wrcontainer;
   FAR struct cdcacm_rdreq_s *rdcontainer;
   irqstate_t flags;
-  uint32_t reqlen;
+  size_t reqlen;
   int ret;
   int i;
 
@@ -1693,7 +1704,9 @@ static int cdcacm_setup(FAR struct usbdevclass_driver_s *driver,
                  * with the setup command.
                  */
 
-                if (dataout && len <= SIZEOF_CDC_LINECODING) /* REVISIT */
+                /* REVISIT */
+
+                if (dataout && len <= SIZEOF_CDC_LINECODING)
                   {
                     memcpy(&priv->linecoding,
                            dataout, SIZEOF_CDC_LINECODING);
@@ -2660,7 +2673,7 @@ static void cdcuart_dmasend(FAR struct uart_dev_s *dev)
 
   /* Get the maximum number of bytes that will fit into one bulk IN request */
 
-  reqlen = MAX(CONFIG_CDCACM_BULKIN_REQLEN, ep->maxpacket);
+  reqlen = MIN(CONFIG_CDCACM_BULKIN_REQLEN, ep->maxpacket);
 
   /* Peek at the request in the container at the head of the list */
 
@@ -2872,7 +2885,7 @@ int cdcacm_classobject(int minor, FAR struct usbdev_devinfo_s *devinfo,
 
   /* Register the CDC/ACM TTY device */
 
-  snprintf(devname, CDCACM_DEVNAME_SIZE, CDCACM_DEVNAME_FORMAT, minor);
+  snprintf(devname, sizeof(devname), CDCACM_DEVNAME_FORMAT, minor);
   ret = uart_register(devname, &priv->serdev);
   if (ret < 0)
     {
@@ -3003,7 +3016,7 @@ void cdcacm_uninitialize(FAR struct usbdevclass_driver_s *classdev)
 
   /* Un-register the CDC/ACM TTY device */
 
-  snprintf(devname, CDCACM_DEVNAME_SIZE, CDCACM_DEVNAME_FORMAT, priv->minor);
+  snprintf(devname, sizeof(devname), CDCACM_DEVNAME_FORMAT, priv->minor);
   ret = unregister_driver(devname);
   if (ret < 0)
     {

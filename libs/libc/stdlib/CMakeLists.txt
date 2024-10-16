@@ -1,6 +1,8 @@
 # ##############################################################################
 # libs/libc/stdlib/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -39,6 +41,7 @@ set(SRCS
     lib_bsearch.c
     lib_rand.c
     lib_rand48.c
+    lib_reallocarray.c
     lib_qsort.c
     lib_srand.c
     lib_strtol.c

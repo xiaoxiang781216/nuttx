@@ -23,6 +23,10 @@ config ARCH_HAVE_NETDEV_STATISTICS
 	bool
 	default n
 
+config ARCH_HAVE_NETDEV_TIMESTAMP
+	bool
+	default n
+
 config NET_WRITE_BUFFERS
 	bool
 	default n
@@ -133,6 +137,7 @@ config NET_GUARDSIZE
 
 config NET_LL_GUARDSIZE
 	int "Data Link Layer(L2) Guard size of Network buffer(IOB)"
+	default 50 if RNDIS
 	default 16 if NET_CAN && NET_TIMESTAMP
 	default 14 if NET_ETHERNET
 	default 0
@@ -410,7 +415,7 @@ choice
 	depends on NET_STAR
 	default NET_STARPOINT
 	---help---
-		Specifies the role of this not in the star configuration.
+		Specifies the role of this node in the star configuration.
 
 config NET_STARPOINT
 	bool "Point node in star"

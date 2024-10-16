@@ -33,6 +33,7 @@
 #include <string.h>
 #include <debug.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/clock.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
@@ -123,7 +124,7 @@ static struct inode g_epoll_inode =
   NULL,                   /* i_parent */
   NULL,                   /* i_peer */
   NULL,                   /* i_child */
-  ATOMIC_VAR_INIT(1),     /* i_crefs */
+  1,                      /* i_crefs */
   FSNODEFLAG_TYPE_DRIVER, /* i_flags */
   {
     &g_epoll_ops          /* u */

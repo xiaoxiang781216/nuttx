@@ -17,8 +17,8 @@
 # the License.
 #
 # ##############################################################################
-set(SRCS qemu_boot.c qemu_irq.c qemu_memorymap.c qemu_pgalloc.c qemu_serial.c
-         qemu_timer.c)
+
+set(SRCS qemu_boot.c qemu_serial.c qemu_irq.c qemu_timer.c qemu_memorymap.c)
 
 if(CONFIG_SMP)
   list(APPEND SRCS qemu_cpuboot.c)

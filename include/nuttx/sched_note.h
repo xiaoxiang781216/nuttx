@@ -267,6 +267,7 @@ enum note_type_e
   NOTE_HEAP_ALLOC,
   NOTE_HEAP_FREE,
   NOTE_DUMP_PRINTF,
+
   NOTE_DUMP_BEGIN,
   NOTE_DUMP_END,
   NOTE_DUMP_MARK,
@@ -304,7 +305,6 @@ enum note_tag_e
   NOTE_TAG_SCHED,
   NOTE_TAG_VIDEO,
   NOTE_TAG_WIRLESS,
-  NOTE_TAG_CPUFREQ,
 
   /* Always last */
 

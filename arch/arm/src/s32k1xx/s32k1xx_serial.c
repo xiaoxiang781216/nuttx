@@ -658,7 +658,7 @@ static int s32k1xx_dma_nextrx(struct s32k1xx_uart_s *priv)
 {
   int dmaresidual = s32k1xx_dmach_getcount(priv->rxdma);
 
-  return RXDMA_BUFFER_SIZE - dmaresidual;
+  return (RXDMA_BUFFER_SIZE - dmaresidual) % RXDMA_BUFFER_SIZE;
 }
 #endif
 
@@ -1149,7 +1149,9 @@ static int s32k1xx_interrupt(int irq, void *context, void *arg)
 
 static int s32k1xx_ioctl(struct file *filep, int cmd, unsigned long arg)
 {
-#if defined(CONFIG_SERIAL_TIOCSERGSTRUCT) || defined(CONFIG_SERIAL_TERMIOS)
+#if defined(CONFIG_SERIAL_TIOCSERGSTRUCT) \
+  || defined(CONFIG_SERIAL_TERMIOS) \
+  || defined(CONFIG_S32K1XX_LPUART_INVERT)
   struct inode *inode = filep->f_inode;
   struct uart_dev_s *dev = inode->i_private;
   irqstate_t flags;
@@ -1347,7 +1349,6 @@ static int s32k1xx_ioctl(struct file *filep, int cmd, unsigned long arg)
         uint32_t ctrl;
         uint32_t stat;
         uint32_t regval;
-        irqstate_t flags;
         struct s32k1xx_uart_s *priv = (struct s32k1xx_uart_s *)dev->priv;
 
         flags  = spin_lock_irqsave(NULL);
@@ -1767,9 +1768,12 @@ static void s32k1xx_dma_txavailable(struct uart_dev_s *dev)
 
   /* Only send when the DMA is idle */
 
-  nxsem_wait(&priv->txdmasem);
+  int rv = nxsem_trywait(&priv->txdmasem);
 
-  uart_xmitchars_dma(dev);
+  if (rv == OK)
+    {
+      uart_xmitchars_dma(dev);
+    }
 }
 #endif
 
@@ -2548,16 +2552,6 @@ int up_putc(int ch)
   uint32_t ie;
 
   s32k1xx_disableuartint(priv, &ie);
-
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      s32k1xx_lowputc('\r');
-    }
-
   s32k1xx_lowputc(ch);
   s32k1xx_restoreuartint(priv, ie);
 #endif
@@ -2578,15 +2572,6 @@ int up_putc(int ch)
 int up_putc(int ch)
 {
 #if CONSOLE_LPUART > 0
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      arm_lowputc('\r');
-    }
-
   arm_lowputc(ch);
 #endif
 

@@ -231,7 +231,7 @@ static int copy_kernel_mappings(arch_addrenv_t *addrenv)
  ****************************************************************************/
 
 static int create_region(arch_addrenv_t *addrenv, uintptr_t vaddr,
-                         size_t size, uint32_t mmuflags)
+                         size_t size, uint64_t mmuflags)
 {
   uintptr_t ptlast;
   uintptr_t ptprev;
@@ -282,7 +282,13 @@ static int create_region(arch_addrenv_t *addrenv, uintptr_t vaddr,
 
       /* Then allocate memory for the region data */
 
-      for (j = 0; j < ENTRIES_PER_PGT && nmapped < size; j++)
+      for (j = 0;
+#ifdef CONFIG_PAGING
+           j < 1;
+#else
+           j < ENTRIES_PER_PGT && nmapped < size;
+#endif
+           j++)
         {
           paddr = mm_pgalloc(1);
           if (!paddr)
@@ -533,7 +539,10 @@ int up_addrenv_destroy(arch_addrenv_t *addrenv)
   ptprev = (uintptr_t *)riscv_pgvaddr(addrenv->spgtables[ARCH_SPGTS - 1]);
   if (ptprev)
     {
-      for (i = 0; i < ENTRIES_PER_PGT; i++, vaddr += pgsize)
+      /* walk user space only */
+
+      i = (ARCH_SPGTS < 2) ? vaddr / pgsize : 0;
+      for (; i < ENTRIES_PER_PGT; i++, vaddr += pgsize)
         {
           ptlast = (uintptr_t *)riscv_pgvaddr(mmu_pte_to_paddr(ptprev[i]));
           if (ptlast)

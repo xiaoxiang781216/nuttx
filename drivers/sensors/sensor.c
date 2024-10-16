@@ -474,8 +474,8 @@ static ssize_t sensor_do_samples(FAR struct sensor_upperhalf_s *upper,
       if (buffer != NULL)
         {
           ret = circbuf_peekat(&upper->buffer,
-                        user->bufferpos * upper->state.esize,
-                        buffer, len);
+                               user->bufferpos * upper->state.esize,
+                               buffer, len);
         }
       else
         {

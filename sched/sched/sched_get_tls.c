@@ -26,8 +26,6 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/tls.h>
-
 #include "nuttx/sched.h"
 #include "sched/sched.h"
 

@@ -18,7 +18,7 @@
 #
 ############################################################################
 
--include $(TOPDIR)/Make.defs
+include $(TOPDIR)/tools/apps-or-nuttx-Make.defs
 
 ARCH_SRCDIR = $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src
 APPSDIR     = $(TOPDIR)$(DELIM)$(CONFIG_APPS_DIR)
@@ -284,6 +284,7 @@ endif
 ifeq ($(CONFIG_SIM_VIDEO_ENCODER),y)
   CSRCS += sim_encoder.c
   CSRCS += sim_x264encoder.c
+  CFLAGS += -D_STDINT_H
 endif
 
 COBJS = $(CSRCS:.c=$(OBJEXT))
@@ -397,10 +398,13 @@ EXTRALD_OBJ += allsyms$(OBJEXT)
 endif
 
 define LINK_ALLSYMS_KASAN
-	$(if $(CONFIG_ALLSYMS),
-	$(Q) $(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp --orderbyname $(CONFIG_SYMTAB_ORDEREDBYNAME)
-	$(Q) $(call COMPILE, allsyms.tmp, allsyms$(OBJEXT), -x c)
-	$(Q) $(call DELFILE, allsyms.tmp))
+	$(if $(CONFIG_ALLSYMS), \
+		$(if $(CONFIG_HOST_MACOS), \
+			$(Q) $(TOPDIR)/tools/mkallsyms.sh noconst $(NUTTX) $(CROSSDEV) > allsyms.tmp, \
+			$(Q) $(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp --orderbyname $(CONFIG_SYMTAB_ORDEREDBYNAME)))
+	$(if $(CONFIG_ALLSYMS), \
+		$(Q) $(call COMPILE, allsyms.tmp, allsyms$(OBJEXT), -x c)
+		$(Q) $(call DELFILE, allsyms.tmp))
 	$(if $(CONFIG_MM_KASAN_GLOBAL),
 	$(Q) $(TOPDIR)/tools/kasan_global.py -e $(NUTTX) -o kasan_globals.tmp -a $(CONFIG_MM_KASAN_GLOBAL_ALIGN)
 	$(Q) $(call COMPILE, kasan_globals.tmp, kasan_globals$(OBJEXT) -fno-sanitize=kernel-address, -x c)
@@ -435,6 +439,9 @@ ifeq ($(CONFIG_MM_KASAN_GLOBAL),y)
 	$(Q) sed -i 's/\s*\.interp\s*:\s*{\s*\*(\.interp)\s*}/  \
 	            .kasan.global : {KEEP(*(.data..LASAN0)) KEEP (*(.data.rel.local..LASAN0)) }\n  \
 	            .interp : {*(.interp)}/g' nuttx.ld
+endif
+ifneq ($(CONFIG_SIM_CUSTOM_DATA_SECTION),"")
+	$(Q) sed -i '/\.data *:/i $(subst ",, $(CONFIG_SIM_CUSTOM_DATA_SECTION))' nuttx.ld
 endif
 ifeq ($(CONFIG_ALLSYMS)$(CONFIG_MM_KASAN_GLOBAL),)
 	$(if $(CONFIG_HAVE_CXX),\

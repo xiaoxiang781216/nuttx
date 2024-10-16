@@ -126,14 +126,6 @@
 
 /* Configuration ************************************************************/
 
-/* If this is a kernel build, how many nested system calls should we
- * support?
- */
-
-#ifndef CONFIG_SYS_NNEST
-#  define CONFIG_SYS_NNEST  2
-#endif
-
 /* Processor PC */
 
 #define REG_EPC_NDX         0
@@ -287,6 +279,29 @@
 #define XCPTCONTEXT_SIZE    (INT_XCPT_SIZE + FPU_XCPT_SIZE)
 #endif
 
+#ifdef CONFIG_ARCH_RV_ISA_V
+#  define REG_VSTART_NDX    (0)
+#  define REG_VTYPE_NDX     (1)
+#  define REG_VL_NDX        (2)
+#  define REG_VCSR_NDX      (3)
+#  define REG_VLENB_NDX     (4)
+
+#  define VPU_XCPT_REGS     (5)
+#  define VPU_XCPT_SIZE     (INT_REG_SIZE * VPU_XCPT_REGS)
+
+#  if CONFIG_ARCH_RV_VECTOR_BYTE_LENGTH > 0
+
+/* There are 32 vector registers(v0 - v31) with vlenb length. */
+
+#    define VPU_XCPTC_SIZE  (CONFIG_ARCH_RV_VECTOR_BYTE_LENGTH * 32 + VPU_XCPT_SIZE)
+
+#  endif
+#else /* !CONFIG_ARCH_RV_ISA_V */
+#  define VPU_XCPT_REGS     (0)
+#  define VPU_XCPT_SIZE     (0)
+#  define VPU_XCPTC_SIZE    (0)
+#endif /* CONFIG_ARCH_RV_ISA_V */
+
 /* In assembly language, values have to be referenced as byte address
  * offsets.  But in C, it is more convenient to reference registers as
  * register save table offsets.
@@ -363,6 +378,14 @@
 #  define REG_FCSR          (INT_REG_SIZE*REG_FCSR_NDX)
 #endif
 
+#ifdef CONFIG_ARCH_RV_ISA_V
+#  define REG_VSTART        (INT_REG_SIZE*REG_VSTART_NDX)
+#  define REG_VTYPE         (INT_REG_SIZE*REG_VTYPE_NDX)
+#  define REG_VL            (INT_REG_SIZE*REG_VL_NDX)
+#  define REG_VCSR          (INT_REG_SIZE*REG_VCSR_NDX)
+#  define REG_VLENB         (INT_REG_SIZE*REG_VLENB_NDX)
+#endif
+
 #else
 #  define REG_EPC           REG_EPC_NDX
 #  define REG_X1            REG_X1_NDX
@@ -432,6 +455,14 @@
 #  define REG_F30           REG_F30_NDX
 #  define REG_F31           REG_F31_NDX
 #  define REG_FCSR          REG_FCSR_NDX
+#endif
+
+#ifdef CONFIG_ARCH_RV_ISA_V
+#  define REG_VSTART        REG_VSTART_NDX
+#  define REG_VTYPE         REG_VTYPE_NDX
+#  define REG_VL            REG_VL_NDX
+#  define REG_VCSR          REG_VCSR_NDX
+#  define REG_VLENB         REG_VLENB_NDX
 #endif
 
 #endif
@@ -530,18 +561,6 @@
 
 #ifndef __ASSEMBLY__
 
-/* This structure represents the return state from a system call */
-
-#ifdef CONFIG_LIB_SYSCALL
-struct xcpt_syscall_s
-{
-  uintptr_t sysreturn;   /* The return PC */
-#ifndef CONFIG_BUILD_FLAT
-  uintptr_t int_ctx;     /* Interrupt context (i.e. m-/sstatus) */
-#endif
-};
-#endif
-
 /* The following structure is included in the TCB and defines the complete
  * state of the thread.
  */
@@ -557,7 +576,7 @@ struct xcptcontext
    * another signal handler is executing will be ignored!
    */
 
-  uintptr_t *saved_regs;
+  uintreg_t *saved_regs;
 
 #ifndef CONFIG_BUILD_FLAT
   /* This is the saved address to use when returning from a user-space
@@ -565,16 +584,6 @@ struct xcptcontext
    */
 
   uintptr_t sigreturn;
-#endif
-
-#ifdef CONFIG_LIB_SYSCALL
-  /* The following array holds information needed to return from each nested
-   * system call.
-   */
-
-  uint8_t nsyscalls;
-  struct xcpt_syscall_s syscall[CONFIG_SYS_NNEST];
-
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
@@ -596,12 +605,31 @@ struct xcptcontext
 
   /* Integer register save area */
 
-  uintptr_t *regs;
+  uintreg_t *regs;
+#ifndef CONFIG_BUILD_FLAT
+  uintreg_t *initregs;
+#endif
+
+#ifdef CONFIG_LIB_SYSCALL
+  /* User integer registers upon system call entry */
+
+  uintreg_t *sregs;
+#endif
 
   /* FPU register save area */
 
 #if defined(CONFIG_ARCH_FPU) && defined(CONFIG_ARCH_LAZYFPU)
-  uintptr_t fregs[FPU_XCPT_REGS];
+  uintreg_t fregs[FPU_XCPT_REGS];
+#endif
+
+#ifdef CONFIG_ARCH_RV_ISA_V
+#  if CONFIG_ARCH_RV_VECTOR_BYTE_LENGTH > 0
+  /* There are 32 vector registers(v0 - v31) with vlenb length. */
+
+  uintreg_t vregs[VPU_XCPTC_SIZE];
+#  else
+  uintreg_t *vregs;
+#  endif
 #endif
 };
 
@@ -653,7 +681,7 @@ extern "C"
  * such value for each processor that can receive an interrupt.
  */
 
-EXTERN volatile uintptr_t *g_current_regs[CONFIG_SMP_NCPUS];
+EXTERN volatile uintreg_t *g_current_regs[CONFIG_SMP_NCPUS];
 
 /****************************************************************************
  * Public Function Prototypes
@@ -682,22 +710,33 @@ int up_cpu_index(void) noinstrument_function;
 #endif /* CONFIG_ARCH_HAVE_MULTICPU */
 
 /****************************************************************************
+ * Name: up_this_cpu
+ *
+ * Description:
+ *   Return the logical core number. Default implementation is 1:1 mapping,
+ *   i.e. physical=logical.
+ *
+ ****************************************************************************/
+
+int up_this_cpu(void);
+
+/****************************************************************************
  * Inline Functions
  ****************************************************************************/
 
-static inline_function uintptr_t *up_current_regs(void)
+static inline_function uintreg_t *up_current_regs(void)
 {
 #ifdef CONFIG_SMP
-  return (uintptr_t *)g_current_regs[up_cpu_index()];
+  return (uintreg_t *)g_current_regs[up_this_cpu()];
 #else
-  return (uintptr_t *)g_current_regs[0];
+  return (uintreg_t *)g_current_regs[0];
 #endif
 }
 
-static inline_function void up_set_current_regs(uintptr_t *regs)
+static inline_function void up_set_current_regs(uintreg_t *regs)
 {
 #ifdef CONFIG_SMP
-  g_current_regs[up_cpu_index()] = regs;
+  g_current_regs[up_this_cpu()] = regs;
 #else
   g_current_regs[0] = regs;
 #endif
@@ -760,7 +799,7 @@ noinstrument_function static inline void up_irq_restore(irqstate_t flags)
  *
  ****************************************************************************/
 
-noinstrument_function static inline_function bool up_interrupt_context(void)
+noinstrument_function static inline bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();

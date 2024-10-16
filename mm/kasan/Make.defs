@@ -1,6 +1,8 @@
 ############################################################################
 # mm/kasan/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -24,13 +26,14 @@ ifeq ($(CONFIG_MM_KASAN),y)
   CFLAGS += -fno-builtin
   CFLAGS += -fno-sanitize=kernel-address
 
-  ifneq ($(CONFIG_LTO_NONE),y)
+  ifeq ($(CONFIG_LTO_NONE),n)
     CFLAGS += -fno-lto
   endif
-
 endif
 
 # Add the core heap directory to the build
 
 DEPPATH += --dep-path kasan
 VPATH += :kasan
+
+

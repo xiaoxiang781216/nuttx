@@ -1,8 +1,8 @@
 /****************************************************************************
  * libs/libc/machine/arm/armv8-m/gnu/arch_memcpy.S
  *
- * Copyright (c) 2013 ARM Ltd
- * All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2013 ARM Ltd
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -119,7 +119,7 @@ ARCH_LIBCFUN(memcpy):
 #  else
 	pac	ip, lr, sp
 #  endif /* __ARM_FEATURE_BTI_DEFAULT */
-	push {ip}
+	push	{ip}
 #endif /* __ARM_FEATURE_PAC_DEFAULT */
 #ifdef __ARM_FEATURE_MVE
 	mov	r3, lr
@@ -131,7 +131,7 @@ ARCH_LIBCFUN(memcpy):
 	letp	lr, 1b
 2:
 #if __ARM_FEATURE_PAC_DEFAULT
-	pop {ip}
+	pop	{ip}
 	aut	ip, lr, sp
 #endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	r3
@@ -245,7 +245,7 @@ ARCH_LIBCFUN(memcpy):
 	pop	{r0}
 #endif
 #if __ARM_FEATURE_PAC_DEFAULT
-	pop {ip}
+	pop	{ip}
 	aut	ip, lr, sp
 #endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
@@ -390,7 +390,7 @@ ARCH_LIBCFUN(memcpy):
 	pop	{r0}
 #endif
 #if __ARM_FEATURE_PAC_DEFAULT
-	pop {ip}
+	pop	{ip}
 	aut	ip, lr, sp
 #endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr

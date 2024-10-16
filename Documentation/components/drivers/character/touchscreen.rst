@@ -30,9 +30,37 @@ found in the following locations:
    touchscreen drivers reside in the directory ``drivers/input``.
 -  **"Lower Half" Drivers**. Platform-specific touchscreen drivers
    reside in either: (1) The
-   ``arch/``\ *<architecture>*\ ``/src/``\ *<hardware>* directory
+   ``arch/<architecture>/src/<hardware>`` directory
    for the processor architectures that have build in touchscreen
    controllers or (2) the
-   ``boards/``\ *<arch>*\ ``/``\ *<chip>*\ ``/``\ *<board>*\ ``/src/``
+   ``boards/<arch>/<chip>/<board>/src/``
    directory for boards that use an external touchscreen
    controller chip.
+
+Application Programming Interface
+=================================
+
+The first thing to be done in order to use the touchscreen driver from an
+application is to include the correct header filer. It contains the 
+Application Programming Interface to the driver. To do so, include
+
+.. code-block:: c
+
+  #include <nuttx/input/touchscreen.h>
+
+Touchscreen driver is registered as a POSIX character device file into 
+``/dev`` namespace. It is necessary to open the device to get a file descriptor
+for further operations. This can be done with standard POSIX ``open()`` call.
+
+The driver is accessed through ``read``, ``write``, ``poll`` and ``ioctl``
+interface, Following ``ioctl`` commands are available:
+
+ * :c:macro:`TSIOC_GRAB`
+
+.. c:macro:: TSIOC_GRAB
+
+This command let the current handle has the device grabbed. When a handle grabs
+a device it becomes sole recipient for all touchscreen events coming from the
+device. An argument is an ``int32_t`` variable to enable or disable the grab.
+
+

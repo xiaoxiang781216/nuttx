@@ -24,13 +24,24 @@
 /****************************************************************************
  * Included Files
  ****************************************************************************/
+#include <semaphore.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #include <nuttx/config.h>
+#include <nuttx/list.h>
 
-#include "xtensa_attr.h"
+#include "esp_attr.h"
 #include "esp32s3_rt_timer.h"
 
-#include "esp_hal_wifi.h"
+#include "esp_log.h"
+#include "esp_mac.h"
+#include "esp_private/phy.h"
+#include "esp_private/wifi.h"
+#include "esp_random.h"
+#include "esp_timer.h"
+#include "rom/ets_sys.h"
+#include "soc/soc_caps.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -40,95 +51,76 @@
  * headers
  */
 
-#define CONFIG_ESP32_SUPPORT_MULTIPLE_PHY_INIT_DATA_BIN     0
-#define CONFIG_MAC_BB_PD                                    0
-
+#define CONFIG_MAC_BB_PD                              (0)
 #define MAC_LEN                                       (6)
+
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
+/* Semaphore Cache Data */
+
+struct esp_semcache_s
+{
+  struct list_node node;
+
+  sem_t *sem;
+  uint32_t count;
+};
+
+/* Queue Cache Data */
+
+struct esp_queuecache_s
+{
+  struct list_node node;
+
+  struct file *mq_ptr;
+  size_t size;
+  uint8_t *buffer;
+};
+
+/****************************************************************************
+ * Inline Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: nuttx_err_to_freertos
+ *
+ * Description:
+ *   Transform from Nuttx OS error code to FreeRTOS's pdTRUE or pdFALSE.
+ *
+ * Input Parameters:
+ *   ret - NuttX error code
+ *
+ * Returned Value:
+ *   Wi-Fi adapter error code
+ *
+ ****************************************************************************/
+
+static inline int32_t nuttx_err_to_freertos(int ret)
+{
+  return ret >= 0;
+}
 
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
 /****************************************************************************
- * Name: esp_read_mac
+ * Name: esp_wifi_to_errno
  *
  * Description:
- *   Read MAC address from efuse
+ *   Transform from ESP Wi-Fi error code to NuttX error code
  *
  * Input Parameters:
- *   mac  - MAC address buffer pointer
- *   type - MAC address type
+ *   err - ESP Wi-Fi error code
  *
  * Returned Value:
- *   0 if success or -1 if fail
+ *   NuttX error code defined in errno.h
  *
  ****************************************************************************/
 
-int32_t esp_read_mac(uint8_t *mac, esp_mac_type_t type);
-
-/****************************************************************************
- * Name: esp32s3_phy_enable
- *
- * Description:
- *   Initialize PHY hardware
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void esp32s3_phy_enable(void);
-
-/****************************************************************************
- * Name: esp32s3_phy_disable
- *
- * Description:
- *   Deinitialize PHY hardware
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void IRAM_ATTR esp32s3_phy_disable(void);
-
-/****************************************************************************
- * Name: esp32s3_phy_enable_clock
- *
- * Description:
- *   Enable PHY clock
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void IRAM_ATTR esp32s3_phy_enable_clock(void);
-
-/****************************************************************************
- * Name: esp32s3_phy_disable_clock
- *
- * Description:
- *   Disable PHY clock
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void esp32s3_phy_disable_clock(void);
+int32_t esp_wifi_to_errno(int err);
 
 /****************************************************************************
  * Functions needed by libphy.a
@@ -165,22 +157,6 @@ uint32_t IRAM_ATTR esp_dport_access_reg_read(uint32_t reg);
  ****************************************************************************/
 
 int phy_printf(const char *format, ...) printf_like(1, 2);
-
-/****************************************************************************
- * Name: esp_wifi_bt_power_domain_on
- *
- * Description:
- *   Initialize Bluetooth and Wi-Fi power domain
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void IRAM_ATTR esp_wifi_bt_power_domain_on(void);
 
 /****************************************************************************
  * Name: esp_timer_create
@@ -265,5 +241,130 @@ int32_t esp_timer_stop(esp_timer_handle_t timer);
  ****************************************************************************/
 
 int32_t esp_timer_delete(esp_timer_handle_t timer);
+
+/****************************************************************************
+ * Name: esp32s3_phy_update_country_info
+ *
+ * Description:
+ *   Update PHY init data according to country code
+ *
+ * Input Parameters:
+ *   country - PHY init data type
+ *
+ * Returned Value:
+ *   OK on success; a negated errno on failure
+ *
+ ****************************************************************************/
+
+int esp32s3_phy_update_country_info(const char *country);
+
+/****************************************************************************
+ * Name: esp_init_semcache
+ *
+ * Description:
+ *   Initialize semaphore cache.
+ *
+ * Parameters:
+ *   sc  - Semaphore cache data pointer
+ *   sem - Semaphore data pointer
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void esp_init_semcache(struct esp_semcache_s *sc, sem_t *sem);
+
+/****************************************************************************
+ * Name: esp_post_semcache
+ *
+ * Description:
+ *   Store posting semaphore action into semaphore cache.
+ *
+ * Parameters:
+ *   sc  - Semaphore cache data pointer
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void esp_post_semcache(struct esp_semcache_s *sc);
+
+/****************************************************************************
+ * Name: esp_init_queuecache
+ *
+ * Description:
+ *   Initialize queue cache.
+ *
+ * Parameters:
+ *   qc     - Queue cache data pointer
+ *   mq_ptr - Queue data pointer
+ *   buffer - Queue cache buffer pointer
+ *   size   - Queue cache buffer size
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void esp_init_queuecache(struct esp_queuecache_s *qc,
+                         struct file *mq_ptr,
+                         uint8_t *buffer,
+                         size_t size);
+
+/****************************************************************************
+ * Name: esp32_wl_send_queuecache
+ *
+ * Description:
+ *   Store posting queue action and data into queue cache.
+ *
+ * Parameters:
+ *   qc     - Queue cache data pointer
+ *   buffer - Data buffer
+ *   size   - Buffer size
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void esp_send_queuecache(struct esp_queuecache_s *qc,
+                         uint8_t *buffer,
+                         int size);
+
+/****************************************************************************
+ * Name: esp_wireless_init
+ *
+ * Description:
+ *   Initialize ESP32 wireless common components for both BT and Wi-Fi.
+ *
+ * Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success. A negated errno value is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+int esp_wireless_init(void);
+
+/****************************************************************************
+ * Name: esp_wireless_deinit
+ *
+ * Description:
+ *   De-initialize ESP32 wireless common components.
+ *
+ * Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success. A negated errno value is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+int esp_wireless_deinit(void);
 
 #endif /* __ARCH_XTENSA_SRC_ESP32S3_ESP32S3_WIRELESS_H */

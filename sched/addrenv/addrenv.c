@@ -140,6 +140,17 @@ int addrenv_switch(FAR struct tcb_s *tcb)
   DEBUGASSERT(tcb);
   next = tcb->addrenv_curr;
 
+  /* Does the group have an address environment? */
+
+  if (!next)
+    {
+      /* No... just return perhaps leaving a different address environment
+       * intact.
+       */
+
+      return OK;
+    }
+
   flags = enter_critical_section();
 
   cpu = this_cpu();
@@ -160,25 +171,20 @@ int addrenv_switch(FAR struct tcb_s *tcb)
           up_addrenv_coherent(&curr->addrenv);
         }
 
-      if (next)
+      /* While the address environment is instantiated, it cannot be freed */
+
+      addrenv_take(next);
+
+      /* Instantiate the new address environment (removing the old
+       * environment in the process).  For the case of kernel threads,
+       * the old mappings will be removed and no new mappings will be
+       * instantiated.
+       */
+
+      ret = up_addrenv_select(&next->addrenv);
+      if (ret < 0)
         {
-          /* While the address environment is instantiated, it cannot
-           * be freed.
-           */
-
-          addrenv_take(next);
-
-          /* Instantiate the new address environment (removing the old
-           * environment in the process).  For the case of kernel threads,
-           * the old mappings will be removed and no new mappings will be
-           * instantiated.
-           */
-
-          ret = up_addrenv_select(&next->addrenv);
-          if (ret < 0)
-            {
-              berr("ERROR: up_addrenv_select failed: %d\n", ret);
-            }
+          berr("ERROR: up_addrenv_select failed: %d\n", ret);
         }
 
       /* This is a safe spot to drop the current address environment */
@@ -192,13 +198,6 @@ int addrenv_switch(FAR struct tcb_s *tcb)
 
       g_addrenv[cpu] = next;
     }
-
-#ifdef CONFIG_ARCH_STACK_PROTECT
-  if ((tcb->flags & TCB_FLAG_TTYPE_MASK) != TCB_FLAG_TTYPE_KERNEL)
-    {
-      up_addrenv_ustackswitch(tcb);
-    }
-#endif
 
   leave_critical_section(flags);
   return OK;

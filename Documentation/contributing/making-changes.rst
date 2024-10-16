@@ -1,6 +1,7 @@
 .. include:: /substitutions.rst
 .. _making-changes:
 
+========================
 Making Changes Using Git
 ========================
 
@@ -65,7 +66,7 @@ Here's how to do it:
        $ git push
 
 Git Workflow With an Upstream Repository
-----------------------------------------
+========================================
 
 The main NuttX git repository is called an "upstream" repository - this is because it's the main source of truth, and
 its changes flow downstream to people who've forked that repository, like us.
@@ -160,7 +161,7 @@ maybe doing that several times. Then when everything works, I get my branch read
        $ git push
 
 Submitting Your Changes to NuttX
---------------------------------
+================================
 
   Pull requests let you tell others about changes you've pushed to a branch in a repository on GitHub. Once a pull
   request is opened, you can discuss and review the potential changes with collaborators and add follow-up commits
@@ -205,6 +206,47 @@ squash before submitting the Pull Request:
 
    Here's `GitHub's instructions for creating a Pull Request <https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request>`_.
 
+   It is important to include an informative commit title and a commit message.
+
+   In the commit title please include the subsystem/area related to your contribution,
+   followed by a descriptive message. Some examples:
+
+    Adding or fixing a platform
+
+    .. code-block:: bash
+
+       arch/arm/stm32/: Add arch support for stm32 platform
+
+       This patch adds initial support for stm32 platform. Please read
+       the documentation included for more details how to wire the display.
+
+       Signed-off-by: Your Name <you@whoareyou.com>
+
+    Adding or fixing a board
+
+    .. code-block:: bash
+
+       arm/stm32f4discover: Add board initialization for SSD1306 OLED Display
+
+       This patch adds support to use the display SSD1306 on I2C1, please read
+       the documentation included for more details how to wire the display.
+
+       Signed-off-by: Your Name <you@whoareyou.com>
+
+   Another example, submitting a commit to fix an issue in the fictional sensor xyz123:
+
+    .. code-block:: bash
+
+       sensors/xyz123: Fix a pressure conversion resolution issue
+
+       I found an issue in the XYZ123 sensor when converting the
+       pressure. The raw value should be divided by 4.25 instead
+       of 4.52.
+
+       Signed-off-by: Your Name <you@whoareyou.com>
+
+   You can search in the github commit history for more examples.
+
 #. Get Pull Request feedback and implement changes
 
    Get suggestions for improvements from reviewers, make changes, and push them to the branch. Once the reviewers are
@@ -212,7 +254,7 @@ squash before submitting the Pull Request:
    1 through 6.
 
 How to Include the Suggestions on Your Pull Request?
-----------------------------------------------------
+====================================================
 
 If you submitted your first PR (Pull Request) and received some feedbacks
 to modify your commit, then probably you already modified it and created a
@@ -344,7 +386,7 @@ Now you can look at your PR at NuttX's github to confirm that
 this squashed commit is there.
 
 Git Resources
--------------
+=============
 
 * `Git Cheat Sheet (by GitHub) <https://github.github.com/training-kit/downloads/github-git-cheat-sheet.pdf>`_
 * `Git Book (online) <https://git-scm.com/book/en/v2>`_

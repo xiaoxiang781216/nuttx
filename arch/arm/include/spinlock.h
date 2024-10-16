@@ -114,8 +114,11 @@ typedef uint8_t spinlock_t;
  *
  ****************************************************************************/
 
-#if defined(CONFIG_ARCH_HAVE_TESTSET) && defined(CONFIG_SMP)
-static inline_function spinlock_t up_testset(FAR volatile spinlock_t *lock)
+#if defined(CONFIG_ARCH_HAVE_TESTSET) \
+    && !defined(CONFIG_ARCH_CHIP_LC823450) \
+    && !defined(CONFIG_ARCH_CHIP_CXD56XX) \
+    && !defined(CONFIG_ARCH_CHIP_RP2040)
+static inline_function spinlock_t up_testset(volatile spinlock_t *lock)
 {
   spinlock_t ret = SP_UNLOCKED;
 

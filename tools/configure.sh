@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # tools/configure.sh
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -21,14 +23,16 @@ set -e
 
 WD=`test -d ${0%/*} && cd ${0%/*}; pwd`
 TOPDIR="${WD}/.."
+WSDIR=`cd "${TOPDIR}/.." && pwd -P`
 MAKECMD="make"
 USAGE="
 
-USAGE: ${0} [-E] [-e] [-l|m|c|g|n|B] [L] [-a <app-dir>] <board-selection> [make-opts]
+USAGE: ${0} [-E] [-e] [-S] [-l|m|c|g|n|B] [-L [boardname]] [-a <app-dir>] <board-selection> [make-opts]
 
 Where:
   -E enforces distclean if already configured.
   -e performs distclean if configuration changed.
+  -S adds the nxtmpdir folder for third-party packages.
   -l selects the Linux (l) host environment.
   -m selects the macOS (m) host environment.
   -c selects the Windows host and Cygwin (c) environment.
@@ -37,7 +41,8 @@ Where:
   -B selects the *BSD (B) host environment.
   Default: Use host setup in the defconfig file
   Default Windows: Cygwin
-  -L  Lists all available configurations.
+  -L lists available configurations for given boards, or all boards if no
+     board is given. board name can be partial here.
   -a <app-dir> is the path to the apps/ directory, relative to the nuttx
      directory
   <board-selection> is either:
@@ -67,10 +72,17 @@ unset appdir
 unset host
 unset enforce_distclean
 unset distclean
+unset store_nxtmpdir
 
 function dumpcfgs
 {
-  configlist=`find ${TOPDIR}/boards -name defconfig`
+  if [ -n "$1" ]; then
+    local boards=$(find ${TOPDIR}/boards -mindepth 3 -maxdepth 3 -type d -name "*$1*")
+    [ -z "$boards" ] && { echo board "$1" not found; return ;}
+    configlist=$(find $boards -name defconfig -type f)
+  else
+    configlist=$(find ${TOPDIR}/boards -name defconfig -type f)
+  fi
   for defconfig in ${configlist}; do
     config=`dirname ${defconfig} | sed -e "s,${TOPDIR}/boards/,,g"`
     boardname=`echo ${config} | cut -d'/' -f3`
@@ -109,8 +121,12 @@ while [ ! -z "$1" ]; do
     exit 0
     ;;
   -L )
-    dumpcfgs
+    shift
+    dumpcfgs $1
     exit 0
+    ;;
+  -S )
+    store_nxtmpdir=y
     ;;
   *)
     boardconfig=$1
@@ -207,6 +223,19 @@ if [ -r ${dest_config} ]; then
   fi
 fi
 
+if [ "X${store_nxtmpdir}" = "Xy" ]; then
+  if [ ! -d "${WSDIR}/nxtmpdir" ]; then
+    mkdir -p "${WSDIR}/nxtmpdir"
+    echo "Folder ${WSDIR}/nxtmpdir created."
+  fi
+else
+  if [ -d "${WSDIR}/nxtmpdir" ]; then
+    rm -rf "${WSDIR}/nxtmpdir"
+    echo "Folder ${WSDIR}/nxtmpdir clean."
+  fi
+fi
+
+
 # Okay... Everything looks good.  Setup the configuration
 
 echo "  Copy files"
@@ -269,14 +298,18 @@ if [ -z "${appdir}" ]; then
 
   if [ -d "${TOPDIR}/../apps" ]; then
     appdir="../apps"
+  elif [ -d "${TOPDIR}/../nuttx-apps" ]; then
+    appdir="../nuttx-apps"
+  elif [ -d "${TOPDIR}/../nuttx-apps.git" ]; then
+    appdir="../nuttx-apps.git"
   else
     # Check for a versioned apps/ directory
 
     if [ -d "${TOPDIR}/../apps-${CONFIG_VERSION_STRING}" ]; then
       appdir="../apps-${CONFIG_VERSION_STRING}"
     else
-        echo "ERROR: Could not find the path to the appdir"
-        exit 7
+      echo "ERROR: Could not find the path to the appdir"
+      exit 7
     fi
   fi
 fi

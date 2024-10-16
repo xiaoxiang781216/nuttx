@@ -50,6 +50,10 @@
 #  include "esp32s2_tim_lowerhalf.h"
 #endif
 
+#ifdef CONFIG_ESPRESSIF_WIFI
+#  include "esp32s2_board_wlan.h"
+#endif
+
 #ifdef CONFIG_ESP32S2_I2C
 #  include "esp32s2_i2c.h"
 #endif
@@ -72,6 +76,28 @@
 
 #ifdef CONFIG_SENSORS_MAX6675
 #  include "esp32s2_max6675.h"
+#endif
+
+#ifdef CONFIG_SPI_DRIVER
+#  include "esp32s2_spi.h"
+#  include "esp32s2_board_spidev.h"
+#endif
+
+#ifdef CONFIG_SPI_SLAVE_DRIVER
+#  include "esp32s2_spi.h"
+#  include "esp32s2_board_spislavedev.h"
+#endif
+
+#ifdef CONFIG_RTC_DRIVER
+#  include "esp32s2_rtc_lowerhalf.h"
+#endif
+
+#ifdef CONFIG_ESP_RMT
+#  include "esp32s2_board_rmt.h"
+#endif
+
+#ifdef CONFIG_ESPRESSIF_TEMP
+#  include "espressif/esp_temperature_sensor.h"
 #endif
 
 #include "esp32s2-saola-1.h"
@@ -145,7 +171,7 @@ int esp32s2_bringup(void)
     }
 #endif /* CONFIG_ESP32S2_LEDC */
 
-#ifdef CONFIG_ESP32S2_SPIFLASH
+#ifdef CONFIG_ESPRESSIF_SPIFLASH
   ret = board_spiflash_init();
   if (ret)
     {
@@ -159,6 +185,33 @@ int esp32s2_bringup(void)
     {
       syslog(LOG_ERR, "Failed to initialize GPIO Driver: %d\n", ret);
       return ret;
+    }
+#endif
+
+#ifdef CONFIG_ESP32S2_SPI2
+# ifdef CONFIG_SPI_DRIVER
+  ret = board_spidev_initialize(ESP32S2_SPI2);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize SPI%d driver: %d\n",
+             ESP32S2_SPI2, ret);
+    }
+# elif defined(CONFIG_SPI_SLAVE_DRIVER) && defined(CONFIG_ESP32S2_SPI2_SLAVE)
+  ret = board_spislavedev_initialize(ESP32S2_SPI2);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize SPI%d Slave driver: %d\n",
+              ESP32S2_SPI2, ret);
+    }
+# endif
+#endif
+
+#if defined(CONFIG_SPI_SLAVE_DRIVER) && defined(CONFIG_ESP32S2_SPI3_SLAVE)
+  ret = board_spislavedev_initialize(ESP32S2_SPI3);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize SPI%d Slave driver: %d\n",
+              ESP32S2_SPI3, ret);
     }
 #endif
 
@@ -242,6 +295,30 @@ int esp32s2_bringup(void)
     }
 #endif
 
+#ifdef CONFIG_ESP32S2_TWAI
+
+  /* Initialize TWAI and register the TWAI driver. */
+
+  ret = board_twai_setup();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: board_twai_setup failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_ESPRESSIF_WIRELESS
+
+#ifdef CONFIG_ESPRESSIF_WIFI
+  ret = board_wlan_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize wireless subsystem=%d\n",
+             ret);
+    }
+#endif
+
+#endif
+
 #ifdef CONFIG_SENSORS_BMP180
   /* Try to register BMP180 device in I2C0 */
 
@@ -309,6 +386,41 @@ int esp32s2_bringup(void)
 #endif /* CONFIG_AUDIO_CS4344 */
 
 #endif /* CONFIG_ESP32S2_I2S */
+
+#ifdef CONFIG_ESP_RMT
+  ret = board_rmt_txinitialize(RMT_TXCHANNEL, RMT_OUTPUT_PIN);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: board_rmt_txinitialize() failed: %d\n", ret);
+    }
+
+  ret = board_rmt_rxinitialize(RMT_RXCHANNEL, RMT_INPUT_PIN);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: board_rmt_txinitialize() failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_ESPRESSIF_TEMP
+  struct esp_temp_sensor_config_t cfg = TEMPERATURE_SENSOR_CONFIG(10, 50);
+  ret = esp_temperature_sensor_initialize(cfg);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize temperature sensor driver: %d\n",
+             ret);
+    }
+#endif
+
+#ifdef CONFIG_RTC_DRIVER
+  /* Instantiate the ESP32 RTC driver */
+
+  ret = esp32s2_rtc_driverinit();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR,
+             "ERROR: Failed to Instantiate the RTC driver: %d\n", ret);
+    }
+#endif
 
   /* If we got here then perhaps not all initialization was successful, but
    * at least enough succeeded to bring-up NSH with perhaps reduced

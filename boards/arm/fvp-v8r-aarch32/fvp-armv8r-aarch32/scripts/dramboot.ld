@@ -85,6 +85,15 @@ SECTIONS
         _edata = ABSOLUTE(.);
     } > RAM AT > FLASH
 
+    /* Uninitialized data */
+
+    .noinit :
+    {
+        _snoinit = ABSOLUTE(.);
+        *(.noinit*)
+        _enoinit = ABSOLUTE(.);
+    } > RAM
+
     .bss :
     {
         _sbss = ABSOLUTE(.);
@@ -93,15 +102,6 @@ SECTIONS
         *(COMMON)
         . = ALIGN(4);
         _ebss = ABSOLUTE(.);
-    } > RAM
-
-    /* Uninitialized data */
-
-    .noinit :
-    {
-        _snoinit = ABSOLUTE(.);
-        *(.noinit*)
-        _enoinit = ABSOLUTE(.);
     } > RAM
 
     /* Stabs debugging sections. */

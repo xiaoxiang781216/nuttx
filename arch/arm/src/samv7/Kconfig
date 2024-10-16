@@ -275,11 +275,19 @@ config SAMV7_DAC
 	bool
 	default n
 
+config SAMV7_QENCODER
+	bool
+	default n
+
 config SAMV7_HAVE_DAC1
 	bool
 	default n
 
 config SAMV7_HAVE_EBI
+	bool
+	default n
+
+config SAMV7_EEFC
 	bool
 	default n
 
@@ -357,6 +365,14 @@ config SAMV7_HAVE_USBHS
 	default n
 
 config SAMV7_1WIREDRIVER
+	bool
+	default n
+
+config SAMV7_LIN_SOCKET
+	bool
+	default n
+
+config SAMV7_USART_IS_SPI_MASTER
 	bool
 	default n
 
@@ -661,14 +677,31 @@ menuconfig SAMV7_PWM0
 
 if SAMV7_PWM0
 
+config SAMV7_PWM0_SYNC
+	bool "PWM0 synchronous channels"
+	depends on PWM_MULTICHAN
+	default n
+	---help---
+		This option makes the synchronization between channels possible.
+		This means every synchronized channel has the same clock, the
+		same period and the same alignment. If any channel is defined
+		as synchronous, channel 0 is defined as synchronous too because
+		channel 0's counter is used by other synchronous channels.
+		This option automatically defines channel 0 as synchronous.
+
 config SAMV7_PWM0_CH0
 	bool "PWM0 Channel 0"
 	default n
 
 if SAMV7_PWM0_CH0
 
+config SAMV7_PWM0_CH0_LONLY
+	bool "Use only L output"
+	default n
+
 config SAMV7_PWM0_CH0_COMP
 	bool "Use complementary output"
+	depends on !SAMV7_PWM0_CH0_LONLY
 	default n
 
 endif
@@ -679,8 +712,18 @@ config SAMV7_PWM0_CH1
 
 if SAMV7_PWM0_CH1
 
+config SAMV7_PWM0_CH1_LONLY
+	bool "Use only L output"
+	default n
+
 config SAMV7_PWM0_CH1_COMP
 	bool "Use complementary output"
+	depends on !SAMV7_PWM0_CH1_LONLY
+	default n
+
+config SAMV7_PWM0_CH1_SYNC
+	bool "Synchronous channel"
+	depends on SAMV7_PWM0_SYNC
 	default n
 
 endif
@@ -691,8 +734,18 @@ config SAMV7_PWM0_CH2
 
 if SAMV7_PWM0_CH2
 
+config SAMV7_PWM0_CH2_LONLY
+	bool "Use only L output"
+	default n
+
 config SAMV7_PWM0_CH2_COMP
 	bool "Use complementary output"
+	depends on !SAMV7_PWM0_CH2_LONLY
+	default n
+
+config SAMV7_PWM0_CH2_SYNC
+	bool "Synchronous channel"
+	depends on SAMV7_PWM0_SYNC
 	default n
 
 endif
@@ -703,8 +756,18 @@ config SAMV7_PWM0_CH3
 
 if SAMV7_PWM0_CH3
 
+config SAMV7_PWM0_CH3_LONLY
+	bool "Use only L output"
+	default n
+
 config SAMV7_PWM0_CH3_COMP
 	bool "Use complementary output"
+	depends on !SAMV7_PWM0_CH3_LONLY
+	default n
+
+config SAMV7_PWM0_CH3_SYNC
+	bool "Synchronous channel"
+	depends on SAMV7_PWM0_SYNC
 	default n
 
 endif
@@ -785,9 +848,9 @@ config SAMV7_PWM0_PA9
 	bool "External fault input from PA9"
 	default n
 
-if SAMV7_PWM1_PA9
+if SAMV7_PWM0_PA9
 
-config SAMV7_PWM1_PA9_POL
+config SAMV7_PWM0_PA9_POL
 	bool "Inverted polarity"
 	default n
 	---help---
@@ -800,9 +863,9 @@ config SAMV7_PWM0_PD8
 	bool "External fault input from PD8"
 	default n
 
-if SAMV7_PWM1_PD8
+if SAMV7_PWM0_PD8
 
-config SAMV7_PWM1_PD8_POL
+config SAMV7_PWM0_PD8_POL
 	bool "Inverted polarity"
 	default n
 	---help---
@@ -815,9 +878,9 @@ config SAMV7_PWM0_PD9
 	bool "External fault input from PD9"
 	default n
 
-if SAMV7_PWM1_PD9
+if SAMV7_PWM0_PD9
 
-config SAMV7_PWM1_PD9_POL
+config SAMV7_PWM0_PD9_POL
 	bool "Inverted polarity"
 	default n
 	---help---
@@ -877,14 +940,31 @@ menuconfig SAMV7_PWM1
 
 if SAMV7_PWM1
 
+config SAMV7_PWM1_SYNC
+	bool "PWM1 synchronous channels"
+	depends on PWM_MULTICHAN
+	default n
+	---help---
+		This option makes the synchronization between channels possible.
+		This means every synchronized channel has the same clock, the
+		same period and the same alignment. If any channel is defined
+		as synchronous, channel 0 is defined as synchronous too because
+		channel 0's counter is used by other synchronous channels.
+		This option automatically defines channel 0 as synchronous.
+
 config SAMV7_PWM1_CH0
 	bool "PWM1 Channel 0"
 	default n
 
 if SAMV7_PWM1_CH0
 
+config SAMV7_PWM1_CH0_LONLY
+	bool "Use only L output"
+	default n
+
 config SAMV7_PWM1_CH0_COMP
 	bool "Use complementary output"
+	depends on !SAMV7_PWM1_CH0_LONLY
 	default n
 
 endif
@@ -895,8 +975,18 @@ config SAMV7_PWM1_CH1
 
 if SAMV7_PWM1_CH1
 
+config SAMV7_PWM1_CH1_LONLY
+	bool "Use only L output"
+	default n
+
 config SAMV7_PWM1_CH1_COMP
 	bool "Use complementary output"
+	depends on !SAMV7_PWM1_CH1_LONLY
+	default n
+
+config SAMV7_PWM1_CH1_SYNC
+	bool "Synchronous channel"
+	depends on SAMV7_PWM1_SYNC
 	default n
 
 endif
@@ -907,8 +997,18 @@ config SAMV7_PWM1_CH2
 
 if SAMV7_PWM1_CH2
 
+config SAMV7_PWM1_CH2_LONLY
+	bool "Use only L output"
+	default n
+
 config SAMV7_PWM1_CH2_COMP
 	bool "Use complementary output"
+	depends on !SAMV7_PWM1_CH2_LONLY
+	default n
+
+config SAMV7_PWM1_CH2_SYNC
+	bool "Synchronous channel"
+	depends on SAMV7_PWM1_SYNC
 	default n
 
 endif
@@ -919,8 +1019,18 @@ config SAMV7_PWM1_CH3
 
 if SAMV7_PWM1_CH3
 
+config SAMV7_PWM1_CH3_LONLY
+	bool "Use only L output"
+	default n
+
 config SAMV7_PWM1_CH3_COMP
 	bool "Use complementary output"
+	depends on !SAMV7_PWM1_CH3_LONLY
+	default n
+
+config SAMV7_PWM1_CH3_SYNC
+	bool "Synchronous channel"
+	depends on SAMV7_PWM1_SYNC
 	default n
 
 endif
@@ -1339,6 +1449,26 @@ config SAMV7_USART0_1WIREDRIVER
 	bool "1-Wire driver"
 	select SAMV7_1WIREDRIVER
 
+config SAMV7_USART0_LIN_SOCKET
+	bool "LIN driver over SocketCAN"
+	select SAMV7_LIN_SOCKET
+	depends on NET_CAN
+
+config SAMV7_USART0_SPI_MASTER
+	bool "USART0 as SPI Master driver"
+	select SAMV7_USART_IS_SPI_MASTER
+	---help---
+		Switch USART0 to SPI master (host) mode. In this mode USART is used
+		to emulate SPI peripheral. Pin configuration is following:
+
+			TXD - MOSI
+			RXD - MISO
+			SCK - SCK
+			RTS - NSS (chip select)
+
+		There is only one chip select therefore SPI master can be used to
+		communicate only with one slave device.
+
 endchoice # "USART0 Driver Configuration"
 
 if SAMV7_USART0_SERIALDRIVER
@@ -1353,6 +1483,17 @@ config SAMV7_USART0_RS485MODE
 		opened for the first time.
 
 endif # SAMV7_USART0_SERIALDRIVER
+
+if SAMV7_USART0_LIN_SOCKET
+
+config SAMV7_USART0_LIN_BAUD
+	int "BAUD rate"
+	default 19200
+	---help---
+		The configured BAUD of the LIN bus.
+
+endif # SAMV7_USART0_LIN_SOCKET
+
 endif # SAMV7_USART0
 
 menuconfig SAMV7_USART1
@@ -1376,6 +1517,26 @@ config SAMV7_USART1_1WIREDRIVER
 	bool "1-Wire driver"
 	select SAMV7_1WIREDRIVER
 
+config SAMV7_USART1_LIN_SOCKET
+	bool "LIN driver over SocketCAN"
+	select SAMV7_LIN_SOCKET
+	depends on NET_CAN
+
+config SAMV7_USART1_SPI_MASTER
+	bool "USART1 as SPI Master driver"
+	select SAMV7_USART_IS_SPI_MASTER
+	---help---
+		Switch USART1 to SPI master (host) mode. In this mode USART is used
+		to emulate SPI peripheral. Pin configuration is following:
+
+			TXD - MOSI
+			RXD - MISO
+			SCK - SCK
+			RTS - NSS (chip select)
+
+		There is only one chip select therefore SPI master can be used to
+		communicate only with one slave device.
+
 endchoice # "USART1 Driver Configuration"
 
 if SAMV7_USART1_SERIALDRIVER
@@ -1390,6 +1551,17 @@ config SAMV7_USART1_RS485MODE
 		opened for the first time.
 
 endif # SAMV7_USART1_SERIALDRIVER
+
+if SAMV7_USART1_LIN_SOCKET
+
+config SAMV7_USART1_LIN_BAUD
+	int "BAUD rate"
+	default 19200
+	---help---
+		The configured BAUD of the LIN bus.
+
+endif # SAMV7_USART1_LIN_SOCKET
+
 endif # SAMV7_USART1
 
 menuconfig SAMV7_USART2
@@ -1413,6 +1585,26 @@ config SAMV7_USART2_1WIREDRIVER
 	bool "1-Wire driver"
 	select SAMV7_1WIREDRIVER
 
+config SAMV7_USART2_LIN_SOCKET
+	bool "LIN driver over SocketCAN"
+	select SAMV7_LIN_SOCKET
+	depends on NET_CAN
+
+config SAMV7_USART2_SPI_MASTER
+	bool "USART2 as SPI Master driver"
+	select SAMV7_USART_IS_SPI_MASTER
+	---help---
+		Switch USART2 to SPI master (host) mode. In this mode USART is used
+		to emulate SPI peripheral. Pin configuration is following:
+
+			TXD - MOSI
+			RXD - MISO
+			SCK - SCK
+			RTS - NSS (chip select)
+
+		There is only one chip select therefore SPI master can be used to
+		communicate only with one slave device.
+
 endchoice # "USART2 Driver Configuration"
 
 if SAMV7_USART2_SERIALDRIVER
@@ -1427,7 +1619,28 @@ config SAMV7_USART2_RS485MODE
 		opened for the first time.
 
 endif # SAMV7_USART2_SERIALDRIVER
+
+if SAMV7_USART2_LIN_SOCKET
+
+config SAMV7_USART2_LIN_BAUD
+	int "BAUD rate"
+	default 19200
+	---help---
+		The configured BAUD of the LIN bus.
+
+endif # SAMV7_USART2_LIN_SOCKET
+
 endif # SAMV7_USART2
+
+if SAMV7_LIN_SOCKET
+config SAMV7_LIN_REGDEBUG
+	bool "Register level debug"
+	default n
+	depends on DEBUG_NET_INFO
+	---help---
+		Output detailed register-level LIN device debug information.
+		Requires also CONFIG_DEBUG_NET_INFO.
+endif # SAMV7_LIN_SOCKET
 
 config SAMV7_WDT
 	bool "Watchdog Timer (WDT)"
@@ -1639,6 +1852,7 @@ menuconfig SAMV7_PROGMEM
 	bool "FLASH program memory"
 	default n
 	select ARCH_HAVE_PROGMEM
+	select SAMV7_EEFC
 	---help---
 		Enable support FLASH interfaces as defined in include/nuttx/progmem.h
 
@@ -1656,6 +1870,16 @@ config SAMV7_PROGMEM_NSECTORS
 		prototyped in include/nuttx/progmem.h
 
 endif # SAMV7_PROGMEM
+
+config SAMV7_USER_SIGNATURE
+	bool "FLASH user signature"
+	default n
+	select SAMV7_EEFC
+	---help---
+		Each SAMv7 product contains a user signature area of 512 bytes in
+		embedded flash. It is possible to read, write and erase this area.
+		Data stored in this area are not erased by asserting ERASE pin or by
+		software ERASE command.
 
 menu "SDRAM Configuration"
 	depends on SAMV7_SDRAMC
@@ -1824,7 +2048,7 @@ config SAMV7_SPI_REGDEBUG
 endmenu # SPI device driver options
 
 menu "QSPI Device Driver Configuration"
-	depends on SAMV7_QSPI && !SAMV7_QSPI_IS_SPI
+	depends on SAMV7_QSPI && !SAMV7_QSPI_SPI_MODE
 
 config SAMV7_QSPI_DLYBS
 	int "Delay Before QSCK (nsec)"
@@ -3705,6 +3929,7 @@ config SAMV7_TC0_QE
 	bool "TC0"
 	default n
 	depends on SAMV7_TC0
+	select SAMV7_QENCODER
 	select SAMV7_TC0_TIOA0
 	select SAMV7_TC0_TIOB0
 	---help---
@@ -3714,6 +3939,7 @@ config SAMV7_TC1_QE
 	bool "TC1"
 	default n
 	depends on SAMV7_TC1
+	select SAMV7_QENCODER
 	select SAMV7_TC1_TIOA3
 	select SAMV7_TC1_TIOB3
 	---help---
@@ -3723,6 +3949,7 @@ config SAMV7_TC2_QE
 	bool "TC2"
 	default n
 	depends on SAMV7_TC2
+	select SAMV7_QENCODER
 	select SAMV7_TC2_TIOA6
 	select SAMV7_TC2_TIOB6
 	---help---
@@ -3732,10 +3959,24 @@ config SAMV7_TC3_QE
 	bool "TC3"
 	default n
 	depends on SAMV7_TC3
+	select SAMV7_QENCODER
 	select SAMV7_TC3_TIOA9
 	select SAMV7_TC3_TIOB9
 	---help---
 		Reserve TC3 for use by QEncoder.
+
+config SAMV7_QENCODER_ENABLE_GETINDEX
+	bool "Support ioctl GETINDEX call"
+	default n
+	---help---
+		Index signal does not reset the internal counter.
+		However, each time index is hit, capture A and B registers
+		are used to save the counter's value instead of
+		resetting it.
+
+		This provides support for the GETINDEX ioctl call
+		with the qe_index_s struct. The 16 to 32 bit extension
+		of the driver's counter is also done.
 
 config SAMV7_QENCODER_FILTER
 	bool "Enable filtering on SAMV7 QEncoder input"

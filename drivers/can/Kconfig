@@ -37,7 +37,7 @@ config CAN_TIMESTAMP
 	bool "CAN timestamp reporting"
 	default n
 	---help---
-		Support CAN timestamp reporoting. if this option is selected then
+		Support CAN timestamp reporting. if this option is selected then
 		CAN timestamp reporting is enabled. in the CAN message the ch_ts
 		member variable will record the timestamp of each frame.
 
@@ -50,14 +50,16 @@ config CAN_FD
 config CAN_TXFIFOSIZE
 	int "CAN driver I/O tx buffer size"
 	default 8
+	range 1 255
 	---help---
 		The size of the circular tx buffer of CAN messages. Default: 8
 
 config CAN_RXFIFOSIZE
 	int "CAN driver I/O rx buffer size"
 	default 8
+	range 1 255
 	---help---
-		The size of the circular rx buffer of CAN messages. Default: 32
+		The size of the circular rx buffer of CAN messages. Default: 8
 
 config CAN_NPENDINGRTR
 	int "Number of pending RTRs"
@@ -123,6 +125,12 @@ config CAN_TXREADY
 		completes.  This is a sure indication that the H/W FIFO is
 		no longer full.  can_txready() will then awaken the
 		can_write() logic and the hang condition is avoided.
+
+config CAN_TXPRIORITY
+	bool "Prioritize sending based on canid"
+	default n
+	---help---
+		Prioritize sending based on canid.
 
 choice
 	prompt "TX Ready Work Queue"
@@ -218,4 +226,44 @@ config MCP2515_SPI_SCK_FREQUENCY
 
 endif # CAN_MCP2515
 
-endif
+menuconfig CAN_SJA1000
+	tristate "Philips/NXP SJA1000 devices"
+
+if CAN_SJA1000
+
+config CAN_SJA1000_BITRATE
+	int "SJA1000 bitrate"
+	default 1000000
+	---help---
+		SJA1000 bit rate.
+
+config CAN_SJA1000_SJW
+	int "SJA1000 Synchronization Jump Width"
+	default 1
+	range 1 4
+	---help---
+		The duration of a synchronization jump is SJW.
+
+config CAN_SJA1000_SAM
+	bool "The CAN bus is sampled 3 times"
+	default false
+	---help---
+		Recommended for low to medium speed buses
+		to filter spikes on the bus-line.
+
+config CAN_SJA1000_SAMPLEP
+	int "SJA1000 CAN sample point (Percentage)"
+	default 87
+	range 0 100
+
+config CANBUS_REGDEBUG
+	bool "CAN BUS register debug enable."
+	default false
+
+config CAN_SJA1000_DEBUG
+	bool "SJA1000 CAN BUS trace debug enable."
+	default false
+
+endif # CAN_SJA1000
+
+endif # CAN

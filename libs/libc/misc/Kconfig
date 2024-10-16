@@ -87,6 +87,15 @@ config LIBC_FTOK_VFS_PATH
 	---help---
 		The relative path to where ftok will exist in the root namespace.
 
+config LIBC_UNAME_DISABLE_TIMESTAMP
+	bool "Disable uname timestamp support"
+	default n
+	---help---
+		Currently uname command will print the timestamp
+		when the binary was built, and it generates an issue
+		because two identical built binaries will have differents
+		hashes/CRC.
+
 choice
 	prompt "Select memfd implementation"
 
@@ -118,11 +127,11 @@ config LIBC_MAX_PATHBUFFER
 		This value is the maximum size of the buffer that will hold the full
 		file path.
 
-config LIBC_PATHBUFFER_ALLOCATION
-	bool "Path buffer allocation"
+config LIBC_PATHBUFFER_MALLOC
+	bool "Enable malloc pathbuffer"
 	default y
 	---help---
-		Enable allocation path buffer from the heap when pathbuffer is insufficient.
+		Enable malloc path buffer from the heap when pathbuffer is insufficient.
 
 config LIBC_BACKTRACE_BUFFSIZE
 	int "The size of backtrace record buffer"

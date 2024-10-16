@@ -37,6 +37,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/serial/serial.h>
+#include <nuttx/spinlock.h>
 
 #ifdef CONFIG_SERIAL_TERMIOS
 #  include <termios.h>
@@ -2147,16 +2148,6 @@ int up_putc(int ch)
   uint8_t ie;
 
   up_disableuartint(priv, &ie);
-
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      arm_lowputc('\r');
-    }
-
   arm_lowputc(ch);
   up_restoreuartint(priv, ie);
 #endif
@@ -2178,15 +2169,6 @@ int up_putc(int ch)
 int up_putc(int ch)
 {
 #ifdef HAVE_UART_CONSOLE
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      arm_lowputc('\r');
-    }
-
   arm_lowputc(ch);
 #endif
   return ch;

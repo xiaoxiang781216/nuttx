@@ -62,6 +62,14 @@ config USBDEV_MAXPOWER
 		the device is bus powered (USBDEV_BUSPOWERED).  It is, however, used
 		unconditionally in several USB device drivers.
 
+config USBDEV_SOFINTERRUPT
+	bool "Enable USB device SOF interrupts"
+	default n
+	---help---
+		Enable USB start-of-frame interrupts.
+		Can be used for synchronizing to host clock rate.
+		Board logic must provide usbdev_sof_irq() function.
+
 config USBDEV_DMA
 	bool "Enable DMA methods"
 	default n
@@ -1475,9 +1483,10 @@ endif # CDCECM
 menuconfig NET_CDCNCM
 	bool "CDC-NCM Ethernet-over-USB"
 	default n
-	select NETDEVICES
-	select NET
-	select NET_ETHERNET
+	depends on SCHED_WORKQUEUE
+	depends on NETDEVICES
+	depends on NET
+	depends on NET_ETHERNET
 	---help---
 		References:
 		- "Universal Serial Bus - Communications Class - Subclass
@@ -1733,6 +1742,7 @@ endif # CDCNCM
 config USBDEV_FS
 	bool
 	default n
+	select SCHED_HPWORK
 	---help---
 		Enables USBDEV FS support, userspace can use fs to control USB device.
 

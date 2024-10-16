@@ -145,6 +145,7 @@
 #define REG_ELR             (32)
 #define REG_SPSR            (33)
 #define REG_SP_EL0          (34)
+#define REG_EXE_DEPTH       (35)
 
 /* In Armv8-A Architecture, the stack must align with 16 byte */
 
@@ -223,6 +224,14 @@
 #define REG_FP              REG_X29
 #define REG_LR              REG_X30
 
+#ifdef CONFIG_ARM64_DECODEFIQ
+#  define IRQ_DAIF_MASK (3)
+#else
+#  define IRQ_DAIF_MASK (2)
+#endif
+
+#define IRQ_SPSR_MASK (IRQ_DAIF_MASK << 6)
+
 #ifndef __ASSEMBLY__
 
 #ifdef __cplusplus
@@ -250,6 +259,9 @@ struct xcptcontext
   /* task stack reg context */
 
   uint64_t *regs;
+#ifndef CONFIG_BUILD_FLAT
+  uint64_t *initregs;
+#endif
 
   /* task context, for signal process */
 
@@ -266,7 +278,7 @@ struct xcptcontext
    * address register (FAR) at the time of data abort exception.
    */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
   uintptr_t far;
 #endif
 
@@ -292,7 +304,6 @@ struct xcptcontext
 
   uintptr_t *ustkptr;  /* Saved user stack pointer */
   uintptr_t *kstack;   /* Allocate base of the (aligned) kernel stack */
-  uintptr_t *kstkptr;  /* Saved kernel stack pointer */
 #  endif
 #endif
 };
@@ -326,13 +337,9 @@ static inline irqstate_t up_irq_save(void)
   __asm__ __volatile__
     (
       "mrs %0, daif\n"
-#ifdef CONFIG_ARM64_DECODEFIQ
-      "msr daifset, #3\n"
-#else
-      "msr daifset, #2\n"
-#endif
+      "msr daifset, %1\n"
       : "=r" (flags)
-      :
+      : "i" (IRQ_DAIF_MASK)
       : "memory"
     );
 
@@ -348,13 +355,9 @@ static inline irqstate_t up_irq_enable(void)
   __asm__ __volatile__
     (
       "mrs %0, daif\n"
-#ifdef CONFIG_ARM64_DECODEFIQ
-      "msr daifclr, #3\n"
-#else
-      "msr daifclr, #2\n"
-#endif
+      "msr daifclr, %1\n"
       : "=r" (flags)
-      :
+      : "i" (IRQ_DAIF_MASK)
       : "memory"
     );
   return flags;
@@ -385,6 +388,10 @@ static inline void up_irq_restore(irqstate_t flags)
 
 /****************************************************************************
  * Schedule acceleration macros
+ *
+ * The lsbit of tpidr_el1 stores information about whether the current
+ * execution is in an interrupt context, where 1 indicates being in an
+ * interrupt context and 0 indicates being in a thread context.
  ****************************************************************************/
 
 #define up_current_regs()      (this_task()->xcp.regs)

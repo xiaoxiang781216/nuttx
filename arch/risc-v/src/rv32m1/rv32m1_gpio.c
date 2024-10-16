@@ -32,6 +32,7 @@
 #include <nuttx/arch.h>
 #include <arch/board/board.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
 
@@ -482,7 +483,7 @@ void rv32m1_gpio_write(uint32_t cfgset, bool value)
   port = (cfgset & GPIO_PORT_MASK) >> GPIO_PORT_SHIFT;
   if (port >= RV32M1_NGPIO_PORTS)
     {
-      return ;
+      return;
     }
 
   /* Get the gpio base address */
@@ -516,7 +517,7 @@ void rv32m1_gpio_toggle(uint32_t cfgset)
   port = (cfgset & GPIO_PORT_MASK) >> GPIO_PORT_SHIFT;
   if (port >= RV32M1_NGPIO_PORTS)
     {
-      return ;
+      return;
     }
 
   /* Get the gpio base address */
@@ -567,7 +568,7 @@ void rv32m1_gpio_irqenable(uint32_t cfgset)
   port = (cfgset & GPIO_PORT_MASK) >> GPIO_PORT_SHIFT;
   if (port >= RV32M1_NGPIO_PORTS)
     {
-      return ;
+      return;
     }
 
   /* Get the irq */
@@ -596,7 +597,7 @@ void rv32m1_gpio_irqdisable(uint32_t cfgset)
   port = (cfgset & GPIO_PORT_MASK) >> GPIO_PORT_SHIFT;
   if (port >= RV32M1_NGPIO_PORTS)
     {
-      return ;
+      return;
     }
 
   /* Get the port base address */

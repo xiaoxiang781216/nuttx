@@ -1,19 +1,11 @@
 /****************************************************************************
  * libs/libc/netdb/lib_dnsquery.c
- * DNS host name to IP address resolver.
  *
- * The DNS resolver functions are used to lookup a hostname and map it to a
- * numerical IP address.
- *
- *   Copyright (C) 2007, 2009, 2012, 2014-2018 Gregory Nutt. All rights
- *     reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * Based heavily on portions of uIP:
- *
- *   Author: Adam Dunkels <adam@dunkels.com>
- *   Copyright (c) 2002-2003, Adam Dunkels.
- *   All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-License-Identifier: 2007, 2009, 2012, 2014-2018 Gregory Nutt.
+ * SPDX-License-Identifier:  2002-2003, Adam Dunkels. All rights reserved.
+ * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
+ * SPDX-FileContributor: Adam Dunkels <adam@dunkels.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -669,7 +661,8 @@ static int dns_query_callback(FAR void *arg, FAR struct sockaddr *addr,
               /* Obtain the IPv6 response */
 
               ret = dns_recv_response(sd, &query->addr[next],
-                                      *query->naddr - next, &qdata->qinfo,
+                                      CONFIG_NETDB_MAX_IPv6ADDR,
+                                      &qdata->qinfo,
                                       &query->ttl, qdata->buffer);
               if (ret >= 0)
                 {
@@ -718,7 +711,8 @@ static int dns_query_callback(FAR void *arg, FAR struct sockaddr *addr,
                 }
 
               ret = dns_recv_response(sd, &query->addr[next],
-                                      *query->naddr - next, &qdata->qinfo,
+                                      CONFIG_NETDB_MAX_IPv4ADDR,
+                                      &qdata->qinfo,
                                       &query->ttl, qdata->buffer);
               if (ret >= 0)
                 {

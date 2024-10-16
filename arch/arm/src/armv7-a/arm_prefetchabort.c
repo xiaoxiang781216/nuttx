@@ -29,7 +29,7 @@
 #include <debug.h>
 
 #include <nuttx/irq.h>
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 #  include <nuttx/page.h>
 #endif
 
@@ -50,7 +50,7 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 
 uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
 {
@@ -98,7 +98,7 @@ uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
        *     execute immediately when we return from this exception.
        */
 
-      pg_miss(tcb);
+      pg_miss();
 
       /* Restore the previous value of current_regs.
        * NULL would indicate thatwe are no longer in an interrupt handler.
@@ -117,7 +117,7 @@ uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
   return regs;
 }
 
-#else /* CONFIG_PAGING */
+#else /* CONFIG_LEGACY_PAGING */
 
 uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
 {
@@ -135,4 +135,4 @@ uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr)
   return regs; /* To keep the compiler happy */
 }
 
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */

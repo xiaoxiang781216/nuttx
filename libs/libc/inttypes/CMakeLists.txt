@@ -1,6 +1,8 @@
 # ##############################################################################
 # libs/libc/inttypes/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -18,4 +20,5 @@
 #
 # ##############################################################################
 
-target_sources(c PRIVATE lib_imaxabs.c lib_strtoimax.c lib_strtoumax.c)
+target_sources(c PRIVATE lib_imaxabs.c lib_imaxdiv.c lib_strtoimax.c
+                         lib_strtoumax.c)

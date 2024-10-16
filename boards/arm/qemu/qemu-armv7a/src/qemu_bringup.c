@@ -27,12 +27,23 @@
 #include <sys/types.h>
 #include <syslog.h>
 
-#include <nuttx/fdt.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/virtio/virtio-mmio.h>
+#include <nuttx/fdt.h>
+
+#ifdef CONFIG_LIBC_FDT
+#  include <libfdt.h>
+#endif
 
 #include "chip.h"
 #include "qemu-armv7a.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef QEMU_SPI_IRQ_BASE
+#define QEMU_SPI_IRQ_BASE     32
+#endif
 
 /****************************************************************************
  * Private Functions

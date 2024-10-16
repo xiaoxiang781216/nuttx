@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/string/lib_memrchr.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,9 +32,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
 /* Nonzero if x is not aligned on a "long" boundary. */
 
-#define UNALIGNED(x) ((long)((x) + 1) & (sizeof(long) - 1))
+#define UNALIGNED(x) ((long)(uintptr_t)((x) + 1) & (sizeof(long) - 1))
 
 /* How many bytes are loaded each iteration of the word copy loop. */
 
@@ -53,6 +56,8 @@
 #endif
 
 #define DETECTCHAR(x, mask) (DETECTNULL((x) ^ (mask)))
+
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -75,6 +80,7 @@
 #undef memrchr /* See mm/README.txt */
 FAR void *memrchr(FAR const void *s, int c, size_t n)
 {
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
   FAR const unsigned char *src0 =
             (FAR const unsigned char *)s + n - 1;
   FAR unsigned long *asrc;
@@ -144,6 +150,17 @@ FAR void *memrchr(FAR const void *s, int c, size_t n)
 
       src0--;
     }
+#else
+  FAR const unsigned char *p = (FAR const unsigned char *)s + n;
+
+  while (n--)
+    {
+      if (*--p == (unsigned char)c)
+        {
+          return (FAR void *)p;
+        }
+    }
+#endif
 
   return NULL;
 }

@@ -22,7 +22,11 @@ include $(TOPDIR)/.config
 include $(TOPDIR)/tools/Config.mk
 include $(TOPDIR)/arch/arm64/src/Toolchain.defs
 
-LDSCRIPT = dramboot.ld
+ifeq ($(CONFIG_BUILD_KERNEL),y)
+  LDSCRIPT = ld-kernel.script
+else
+  LDSCRIPT = dramboot.ld
+endif
 
 ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
 
@@ -38,3 +42,15 @@ AFLAGS := $(CFLAGS) -D__ASSEMBLY__
 NXFLATLDFLAGS1 = -r -d -warn-common
 NXFLATLDFLAGS2 = $(NXFLATLDFLAGS1) -T$(TOPDIR)$(DELIM)binfmt$(DELIM)libnxflat$(DELIM)gnu-nxflat-pcrel.ld -no-check-sections
 LDNXFLATFLAGS = -e main -s 2048
+
+# ELF module definitions
+
+CMODULEFLAGS = $(CFLAGS)
+
+LDMODULEFLAGS = -r -e module_initialize
+LDMODULEFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/modlib/gnu-elf.ld)
+
+SHMODULEFLAGS = -Bsymbolic -G -Bdynamic
+
+CELFFLAGS = $(CFLAGS) -mlong-calls # --target1-abs
+CXXELFFLAGS = $(CXXFLAGS) -mlong-calls # --target1-abs

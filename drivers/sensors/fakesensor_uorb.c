@@ -105,7 +105,7 @@ static struct gnss_ops_s g_fakegnss_ops =
  ****************************************************************************/
 
 static int fakesensor_read_csv_line(FAR struct file *file,
-                                    char *buffer, int len, int start)
+                                    FAR char *buffer, int len, int start)
 {
   int i;
 

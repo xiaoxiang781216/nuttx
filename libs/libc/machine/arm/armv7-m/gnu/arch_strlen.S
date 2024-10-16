@@ -1,8 +1,8 @@
 /****************************************************************************
  * libs/libc/machine/arm/armv7-m/gnu/arch_strlen.S
  *
- * Copyright (c) 2010-2011,2013 Linaro Limited
- *  All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2010-2011,2013 Linaro Limited, 2015 ARM Ltd.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -70,6 +70,7 @@
 
 	.macro def_fn f p2align=0
 	.text
+	.section .text.strlen
 	.p2align \p2align
 	.global \f
 	.type \f, %function

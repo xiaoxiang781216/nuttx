@@ -66,6 +66,7 @@
 #include "cxd56_rpr0521rs.h"
 #include "cxd56_scd41.h"
 #include "cxd56_sensors.h"
+#include "cxd56_gnss_addon.h"
 
 #ifdef CONFIG_VIDEO_ISX012
 #  include "cxd56_isx012.h"
@@ -200,7 +201,13 @@ enum board_power_device
   POWER_AUDIO_MUTE      = PMIC_GPO(6),
   POWER_IMAGE_SENSOR    = PMIC_GPO(4),
 
+#if defined(CONFIG_CXD56_BLE1507_RESET_PIN_I2S0_DATA_IN)
+  POWER_BTBLE           = CHIP_GPIO(PIN_I2S0_DATA_IN),
+#elif defined(CONFIG_CXD56_BLE1507_RESET_PIN_EMMC_DATA2)
+  POWER_BTBLE           = CHIP_GPIO(PIN_EMMC_DATA2),
+#else
   POWER_BTBLE           = PMIC_NONE,
+#endif
   POWER_SENSOR          = PMIC_NONE,
 #if defined(CONFIG_CXD56_EMMC_POWER_PIN_I2S0_BCK)
   POWER_EMMC            = CHIP_GPIO(PIN_I2S0_BCK),

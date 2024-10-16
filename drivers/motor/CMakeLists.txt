@@ -17,10 +17,23 @@
 # the License.
 #
 # ##############################################################################
+
 if(CONFIG_MOTOR_FOC)
   nuttx_add_subdirectory()
 endif()
 
 if(CONFIG_MOTOR_UPPER)
   target_sources(drivers PRIVATE motor.c)
+endif()
+
+if(CONFIG_STEPPER_UPPER)
+  target_sources(drivers PRIVATE stepper.c)
+endif()
+
+if(CONFIG_STEPPER_A4988)
+  target_sources(drivers PRIVATE a4988.c)
+endif()
+
+if(CONFIG_STEPPER_DRV8825)
+  target_sources(drivers PRIVATE drv8825.c)
 endif()

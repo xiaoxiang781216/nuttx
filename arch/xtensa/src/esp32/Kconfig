@@ -99,6 +99,15 @@ config ARCH_CHIP_ESP32PICOD4
 
 endchoice # ESP32 Chip Selection
 
+config ESPRESSIF_CHIP_SERIES
+	string
+	default "esp32"
+
+config ESPRESSIF_NUM_CPUS
+	int
+	default 1 if ESP32_SINGLE_CPU
+	default 2 if ESP32_DUAL_CPU
+
 config ESP32_SINGLE_CPU
 	bool
 	default n
@@ -198,7 +207,18 @@ config ESP32_RUN_IRAM
 		This loads all of NuttX inside IRAM.  Used to test somewhat small
 		images that can fit entirely in IRAM.
 
+config ESP32_EXCEPTION_ENABLE_CACHE
+	bool
+	default y
+	depends on ESP32_SPIFLASH
+	---help---
+		When an exception triggers, the panic function reenables the SPI Flash
+		cache to allow functions that are located in SPI Flash to run.
+		Disable this option to save IRAM space.
+
 menu "ESP32 Peripheral Selection"
+
+source "arch/xtensa/src/common/espressif/Kconfig"
 
 config ESP32_UART
 	bool
@@ -232,6 +252,26 @@ config ESP32_EMAC
 	---help---
 		Enable ESP32 ethernet support.
 
+config ESP32_OPENETH
+	bool "Opencores Ethernet MAC"
+	default n
+	depends on !ESP32_EMAC
+	select NET
+	select SCHED_WORKQUEUE
+	---help---
+		Enable ESP32 ethernet opencores support for use with QEMU.
+		Disable this if you are using the real device.
+
+if ESP32_OPENETH
+config ESP32_OPENETH_DMA_RX_BUFFER_NUM
+	int "Number of Ethernet DMA Rx buffers"
+	range 1 64
+	default 4
+	---help---
+		Number of DMA receive buffers, each buffer is 1600 bytes.
+
+endif # ESP32_OPENETH
+
 config ESP32_I2C
 	bool
 	default n
@@ -255,14 +295,6 @@ config ESP32_PCNT
 	---help---
 		Pulse Counter is currently used to implement Quadracture
 		Encoder.
-
-config ESP32_RMT
-	bool "Remote Control Module (RMT)"
-	default n
-	depends on EXPERIMENTAL
-	---help---
-		Remote Control Module is currently used to control WS2812
-		RGB LED normally used on LED strips.
 
 config ESP32_RNG
 	bool "Random Number Generator (RNG)"
@@ -720,6 +752,7 @@ config ESP32_BLE
 	bool "BLE"
 	default n
 	select ESP32_WIRELESS
+	select BLUETOOTH_TXCMD_PINNED_TO_CORE if SMP
 	---help---
 		Enable BLE support
 
@@ -754,8 +787,23 @@ endmenu # ESP32 Peripheral Selection
 
 config ESP32_WIFI_BT_COEXIST
 	bool "Wi-Fi and BT coexist"
+	default y if ESP32_WIFI && ESP32_BLE
 	default n
 	depends on ESP32_WIFI && ESP32_BLE
+	select ESP32_WIFI_STA_DISCONNECT_PM
+
+menu "Interrupt Configuration"
+
+config ESP32_IRAM_ISR_DEBUG
+	bool "Enable debugging of the IRAM-enabled interrupts"
+	default n
+	---help---
+		This option enables keeping track of the IRAM-enabled interrupts by
+		registering its execution when non-IRAM interrupts are disabled. It
+		keeps track of the IRQ executed and register how many times since
+		boot it was executed.
+
+endmenu # Interrupt Configuration
 
 menu "Memory Configuration"
 
@@ -1857,6 +1905,17 @@ config ESP32_PARTITION_MOUNTPT
 
 endif # ESP32_PARTITION_TABLE
 
+config ESP32_SPIFLASH_OP_TASK_STACKSIZE
+	int "The SPI flash operation task stack size"
+	default 768
+	depends on SMP
+	---help---
+		When SMP is enabled, it is needed to create two tasks (one for each
+		core) to be able to run IRAM-enabled interrupts. These tasks ensures
+		that the core that isn't performing the SPI flash operation is able
+		to disable non-IRAM interrupts and wait for the SPI flash operation
+		to be finished.
+
 endif # ESP32_SPIFLASH
 
 endmenu # SPI Flash configuration
@@ -2092,7 +2151,7 @@ choice EXAMPLE_POWER_SAVE_MODE
 
 config EXAMPLE_POWER_SAVE_NONE
 	bool "none"
-	
+
 config EXAMPLE_POWER_SAVE_MIN_MODEM
 	bool "minimum modem"
 
@@ -2123,6 +2182,12 @@ config ESP32_BLE_TASK_STACK_SIZE
 config ESP32_BLE_TASK_PRIORITY
 	int "Controller task priority"
 	default 110
+
+config ESP32_BLE_INTERRUPT_SAVE_STATUS
+	int "Number of interrupt save status"
+	default 3
+	---help---
+		Number of interrupt save status variables to keep track. Increase it if any related bug is found.
 
 config ESP32_BLE_MAX_CONN
 	int "Maximum BLE simultaneous connections"
@@ -2309,6 +2374,35 @@ config ESP32_RTC_CLK_SRC_INT_8MD256
 endchoice
 endmenu # "RTC Configuration"
 
+menu "DAC Configuration"
+	depends on ANALOG && DAC
+
+config ESP32_DAC_DEVPATH
+	string "DAC device path"
+	default "/dev/dac0"
+
+choice ESP32_DAC_MODE
+	prompt "DAC mode of operation"
+	default ESP32_DAC_MODE_ONE_SHOT
+	---help---
+		One-shot mode requires to write every single value with a write call while
+		retaining the last value on output.
+
+		Following modes are not implemented yet.
+		Timer mode utilizes timer IRQs to call handler which can manage the write.
+		DMA is using a ring buffer accessed directly by the driver.
+		Cosine Wave Generator can output preset wave without the need to generate
+		the data and write in memory.
+
+config ESP32_DAC_MODE_ONE_SHOT
+	bool "One-shot mode"
+	---help---
+		One-shot mode requires to write every single value with a write call while
+		retaining the last value on output.
+
+endchoice # "DAC mode of operation"
+endmenu # "DAC Configuration"
+
 menu "LEDC Configuration"
 	depends on ESP32_LEDC
 
@@ -2394,59 +2488,198 @@ config ESP32_LEDC_CHANNEL7_PIN
 
 endmenu # LEDC configuration
 
+menu "MCPWM Configuration"
+	depends on ESP_MCPWM
+
+config ESP_MCPWM_MOTOR
+	bool "MCPWM Motor Support"
+	default n
+
+menu "MCPWM Motor Configuration"
+	depends on ESP_MCPWM_MOTOR
+
+config ESP_MCPWM_MOTOR_BDC
+	bool "Brushed DC Motor Control"
+	depends on ESP_MCPWM
+	depends on ESP_MCPWM_MOTOR
+	select MOTOR
+	select MOTOR_UPPER
+	select MOTOR_UPPER_HAVE_SPEED
+	default n
+	---help---
+		Enables the use of the MCPWM submodule for control of brushed DC
+		motor.
+
+if ESP_MCPWM_MOTOR_BDC
+
+config ESP_MCPWM_MOTOR_CH0
+	bool "Motor Control Channel 0"
+	default n
+	---help---
+		Enables motor control on channel 0.
+
+if ESP_MCPWM_MOTOR_CH0
+
+config ESP_MCPWM_MOTOR_CH0_PWMA_GPIO
+	int "Output Pin PWM_A"
+	default 15
+	---help---
+		Output pin assigned to channel 0 PWM output PWM_A.
+
+config ESP_MCPWM_MOTOR_CH0_PWMB_GPIO
+	int "Output Pin PWM_B"
+	default 16
+	---help---
+		Output pin assigned to channel 0 PWM output PWM_B.
+
+config ESP_MCPWM_MOTOR_CH0_PWM_FREQ
+	int "PWM output frequency for channel 0 [Hz]"
+	default 1000
+	---help---
+		Select PWM frequency for channel 0.
+		Minimum is 25 Hz and maximum is 3000 Hz.
+
+config ESP_MCPMW_MOTOR_CH0_FAULT
+	bool "Enable fault for channel 0"
+	default n
+	---help---
+		Enables the use of a fault pin to quickly stop the motor when
+		a GPIO pin pulled high.
+
+if ESP_MCPMW_MOTOR_CH0_FAULT
+
+config ESP_MCPMW_MOTOR_CH0_FAULT_GPIO
+	int "GPIO Pin for fault detection"
+	default 10
+	---help---
+		Input pin assigned to channel 0 fault indicator.
+
+endif # ESP_MCPMW_MOTOR_CH0_FAULT
+
+endif # ESP_MCPWM_MOTOR_CH0
+
+config ESP_MCPWM_MOTOR_CH1
+	bool "Motor Control Channel 1"
+	default n
+	---help---
+		Enables motor control on channel 1.
+
+if ESP_MCPWM_MOTOR_CH1
+
+config ESP_MCPWM_MOTOR_CH1_PWMA_GPIO
+	int "Output Pin CH1 PWM_A"
+	default 15
+	---help---
+		Output pin assigned to channel 1 PWM output PWM_A.
+
+config ESP_MCPWM_MOTOR_CH1_PWMB_GPIO
+	int "Output Pin CH1 PWM_B"
+	default 16
+	---help---
+		Output pin assigned to channel 1 PWM output PWM_B.
+
+endif # ESP_MCPWM_MOTOR_CH1
+
+endif # ESP_MCPWM_MOTOR_BDC
+
+endmenu # MCPWM Motor Settings
+
+config ESP_MCPWM_CAPTURE
+	bool "MCPWM Capture Submodule"
+	depends on ESP_MCPWM
+	select CAPTURE
+	default n
+	---help---
+		Enables the use of the MCPWM capture submodule.
+
+if ESP_MCPWM_CAPTURE
+
+config ESP_MCPWM_CAPTURE_CH0
+	bool "Capture Channel 0"
+	default n
+	---help---
+		Enables capture on channel 0.
+
+if ESP_MCPWM_CAPTURE_CH0
+
+config ESP_MCPWM_CAPTURE_CH0_GPIO
+	int "GPIO Pin"
+	default 12
+	---help---
+		GPIO pin assigned to capture channel 0.
+
+endif # ESP_MCPWM_CAPTURE_CH0
+
+config ESP_MCPWM_CAPTURE_CH1
+	bool "Capture Channel 1"
+	default n
+	---help---
+		Enables capture on channel 1.
+
+if ESP_MCPWM_CAPTURE_CH1
+
+config ESP_MCPWM_CAPTURE_CH1_GPIO
+	int "GPIO Pin"
+	default 15
+	---help---
+		GPIO pin assigned to capture channel 1.
+
+endif # ESP_MCPWM_CAPTURE_CH1
+
+config ESP_MCPWM_CAPTURE_CH2
+	bool "Capture Channel 2"
+	default n
+	---help---
+		Enables capture on channel 2.
+
+if ESP_MCPWM_CAPTURE_CH2
+
+config ESP_MCPWM_CAPTURE_CH2_GPIO
+	int "GPIO Pin"
+	default 16
+	---help---
+		GPIO pin assigned to capture channel 2.
+
+endif # ESP_MCPWM_CAPTURE_CH2
+
+endif # ESP_MCPWM_CAPTURE
+
+config ESP_MCPWM_TEST_LOOPBACK
+	bool "MCPWM loopback test mode"
+	depends on EXPERIMENTAL
+	default n
+	---help---
+		This enables a lower-half driver-specific loopback test
+		mode that attaches a capture device to the PWM output on
+		motor tests.
+
+endmenu # MCPWM Configuration
+
 config ESP32_HAVE_OTA_PARTITION
 	bool
 	default n
 
-menu "Application Image Configuration"
+menu "Bootloader and Image Configuration"
 
-choice
-	prompt "Application Image Format"
-	default ESP32_APP_FORMAT_LEGACY
-	---help---
-		Depending on the chosen 2nd stage bootloader, the application may
-		be required to be perform a specific startup routine. Furthermore,
-		the image binary must be formatted according to the definition from
-		the 2nd stage bootloader.
+config ESPRESSIF_SIMPLE_BOOT
+	bool
+	depends on !ESP32_APP_FORMAT_MCUBOOT && !ESP32_APP_FORMAT_LEGACY
+	default y
 
 config ESP32_APP_FORMAT_LEGACY
-	bool "Legacy format"
+	bool "Enable legacy IDF bootloader format"
+	default y if BUILD_PROTECTED
 	---help---
 		This is the legacy application image format, as supported by the ESP-IDF
 		2nd stage bootloader.
 
 config ESP32_APP_FORMAT_MCUBOOT
-	bool "MCUboot-bootable format"
+	bool "Enable MCUboot-bootable format"
+	depends on !MCUBOOT_BOOTLOADER
+	default n
 	select ESP32_HAVE_OTA_PARTITION
 	---help---
-		The ESP32 port of MCUboot supports the loading of unsegmented firmware
-		images.
-
-endchoice # Application Image Format
-
-choice
-	prompt "Source for bootloader binaries"
-	default ESP32_BOOTLOADER_DOWNLOAD_PREBUILT
-	---help---
-		Select the action to be taken by the build system for the
-		"make bootloader" target.
-
-config ESP32_BOOTLOADER_DOWNLOAD_PREBUILT
-	bool "Download prebuilt binaries"
-	---help---
-		The build system will download the prebuilt binaries from
-		https://github.com/espressif/esp-nuttx-bootloader according to the chosen
-		Application Image Format (ESP32_APP_FORMAT_LEGACY or ESP32_APP_FORMAT_MCUBOOT)
-
-config ESP32_BOOTLOADER_BUILD_FROM_SOURCE
-	bool "Build binaries from source"
-	---help---
-		The build system will build all the required binaries from source. It will clone
-		the https://github.com/espressif/esp-nuttx-bootloader repository and build a
-		custom bootloader according to the chosen Application Image Format
-		(ESP32_APP_FORMAT_LEGACY or ESP32_APP_FORMAT_MCUBOOT) and partition information.
-
-endchoice
+		Enables the Espressif port of MCUboot to be used as 2nd stage bootloader.
 
 choice
 	prompt "Target slot for image flashing"
@@ -2483,10 +2716,35 @@ config ESP32_APP_MCUBOOT_HEADER_SIZE
 	default 32
 	depends on ESP32_APP_FORMAT_MCUBOOT
 
-config ESP32_PARTITION_TABLE_OFFSET
-	hex "Partition Table offset"
+config ESP32_PARTITION_TABLE_OFFSET_DEFAULT
+	hex
 	default 0x8000
 	depends on ESP32_APP_FORMAT_LEGACY
+
+config ESP32_CUSTOM_PARTITION_TABLE_OFFSET
+	bool "Customize partition table offset"
+	default n
+	depends on ESP32_APP_FORMAT_LEGACY
+	---help---
+		Enable to select the offset of the partition table in the flash.
+
+if ESP32_CUSTOM_PARTITION_TABLE_OFFSET
+
+config ESP32_PARTITION_TABLE_OFFSET
+	hex "Partition Table offset"
+	default ESP32_PARTITION_TABLE_OFFSET_DEFAULT
+	depends on ESP32_APP_FORMAT_LEGACY
+
+endif # ESP32_CUSTOM_PARTITION_TABLE_OFFSET
+
+if !ESP32_CUSTOM_PARTITION_TABLE_OFFSET
+
+config ESP32_PARTITION_TABLE_OFFSET
+	hex
+	default ESP32_PARTITION_TABLE_OFFSET_DEFAULT
+	depends on ESP32_APP_FORMAT_LEGACY
+
+endif # !ESP32_CUSTOM_PARTITION_TABLE_OFFSET
 
 if BUILD_PROTECTED
 

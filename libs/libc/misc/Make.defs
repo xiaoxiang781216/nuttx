@@ -1,6 +1,8 @@
 ############################################################################
 # libs/libc/misc/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -21,11 +23,11 @@
 # Add the internal C files to the build
 
 CSRCS += lib_bitmap.c lib_circbuf.c lib_mknod.c lib_umask.c lib_utsname.c
-CSRCS += lib_getrandom.c lib_xorshift128.c lib_tea_encrypt.c
-CSRCS += lib_tea_decrypt.c lib_cxx_initialize.c lib_idr.c lib_impure.c
-CSRCS += lib_memfd.c lib_mutex.c lib_fchmodat.c lib_fstatat.c
-CSRCS += lib_getfullpath.c lib_openat.c lib_mkdirat.c lib_utimensat.c
-CSRCS += lib_mallopt.c lib_memoryregion.c lib_pathbuffer.c lib_getnprocs.c
+CSRCS += lib_getrandom.c lib_xorshift128.c lib_tea_encrypt.c lib_tea_decrypt.c
+CSRCS += lib_cxx_initialize.c lib_impure.c lib_memfd.c lib_mutex.c
+CSRCS += lib_fchmodat.c lib_fstatat.c lib_getfullpath.c lib_openat.c
+CSRCS += lib_mkdirat.c lib_utimensat.c lib_mallopt.c lib_memoryregion.c
+CSRCS += lib_idr.c lib_getnprocs.c lib_pathbuffer.c
 
 # Support for platforms that do not have long long types
 
@@ -76,7 +78,9 @@ endif
 # To ensure uname information is newest,
 # add lib_utsname.o to phony target for force rebuild
 
+#if !defined(CONFIG_LIBC_UNAME_DISABLE_TIMESTAMP)
 .PHONY: bin$(DELIM)lib_utsname$(OBJEXT) kbin$(DELIM)lib_utsname$(OBJEXT)
+#endif
 
 # Add the misc directory to the build
 

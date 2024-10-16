@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <debug.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/list.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
@@ -534,7 +535,8 @@ void sensor_rpmsg_push_event_persist(FAR struct sensor_rpmsg_dev_s *dev,
 
   msg->command = SENSOR_RPMSG_PUBLISH;
   cell = (FAR struct sensor_rpmsg_cell_s *)(msg + 1);
-  ret = file_read(&stub->file, cell->data, space - sizeof(*msg) - sizeof(*cell));
+  ret = file_read(&stub->file, cell->data, space - sizeof(*msg) -
+                  sizeof(*cell));
   if (ret > 0)
     {
       cell->len     = ret;

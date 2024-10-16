@@ -557,7 +557,7 @@ int up_cpu_index(void) noinstrument_function;
 
 static inline_function uint32_t up_getsp(void)
 {
-  uint32_t sp;
+  register uint32_t sp;
 
   __asm__ __volatile__
   (

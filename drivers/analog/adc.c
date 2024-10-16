@@ -61,7 +61,7 @@ static int     adc_receive_batch(FAR struct adc_dev_s *dev,
                                  FAR const uint32_t *data,
                                  size_t count);
 static void    adc_notify(FAR struct adc_dev_s *dev);
-static int     adc_poll(FAR struct file *filep, struct pollfd *fds,
+static int     adc_poll(FAR struct file *filep, FAR struct pollfd *fds,
                         bool setup);
 static int     adc_reset_fifo(FAR struct adc_dev_s *dev);
 static int     adc_samples_on_read(FAR struct adc_dev_s *dev);
@@ -596,7 +596,8 @@ static void adc_notify(FAR struct adc_dev_s *dev)
  * Name: adc_poll
  ****************************************************************************/
 
-static int adc_poll(FAR struct file *filep, struct pollfd *fds, bool setup)
+static int adc_poll(FAR struct file *filep, FAR struct pollfd *fds,
+                    bool setup)
 {
   FAR struct inode     *inode = filep->f_inode;
   FAR struct adc_dev_s *dev   = inode->i_private;
@@ -656,7 +657,7 @@ static int adc_poll(FAR struct file *filep, struct pollfd *fds, bool setup)
     {
       /* This is a request to tear down the poll. */
 
-      struct pollfd **slot = (struct pollfd **)fds->priv;
+      FAR struct pollfd **slot = (FAR struct pollfd **)fds->priv;
 
       /* Remove all memory of the poll setup */
 

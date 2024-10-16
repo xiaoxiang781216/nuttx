@@ -1,6 +1,8 @@
 /****************************************************************************
  * mm/iob/iob_free.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -207,7 +209,7 @@ FAR struct iob_s *iob_free(FAR struct iob_s *iob)
 
       nxsem_post(&g_throttle_sem);
       DEBUGASSERT(g_throttle_sem.semcount <=
-                  (CONFIG_IOB_NBUFFERS - CONFIG_IOB_THROTTLE));
+              (CONFIG_IOB_NBUFFERS - CONFIG_IOB_THROTTLE));
     }
   else
     {

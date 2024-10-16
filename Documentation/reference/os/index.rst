@@ -17,7 +17,6 @@ in other header files.
   iob.rst
   led.rst
   mutex.rst
-  nat.rst
   newreno.rst
   notifier.rst
   nuttx.rst

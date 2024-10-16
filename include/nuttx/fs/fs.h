@@ -42,6 +42,8 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/mm/map.h>
 #include <nuttx/spawn.h>
+#include <nuttx/queue.h>
+#include <nuttx/irq.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -229,10 +231,11 @@ struct file_operations
                        FAR struct mm_map_entry_s *map);
   CODE int     (*truncate)(FAR struct file *filep, off_t length);
 
-  /* The two structures need not be common after this point */
-
   CODE int     (*poll)(FAR struct file *filep, FAR struct pollfd *fds,
                        bool setup);
+
+  /* The two structures need not be common after this point */
+
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   CODE int     (*unlink)(FAR struct inode *inode);
 #endif
@@ -416,11 +419,11 @@ struct inode
   FAR struct inode *i_parent;   /* Link to parent level inode */
   FAR struct inode *i_peer;     /* Link to same level inode */
   FAR struct inode *i_child;    /* Link to lower level inode */
-  atomic_int        i_crefs;    /* References to inode */
+  atomic_short      i_crefs;    /* References to inode */
   uint16_t          i_flags;    /* Flags for inode */
   union inode_ops_u u;          /* Inode operations */
   ino_t             i_ino;      /* Inode serial number */
-#ifdef CONFIG_PSEUDOFS_FILE
+#if defined(CONFIG_PSEUDOFS_FILE) || defined(CONFIG_FS_SHMFS)
   size_t            i_size;     /* The size of per inode driver */
 #endif
 #ifdef CONFIG_PSEUDOFS_ATTRIBUTES
@@ -557,7 +560,7 @@ struct filelist
 #ifdef CONFIG_FILE_STREAM
 struct file_struct
 {
-  FAR struct file_struct *fs_next;      /* Pointer to next file stream */
+  sq_entry_t              fs_entry;     /* Entry of file stream */
   rmutex_t                fs_lock;      /* Recursive lock */
   cookie_io_functions_t   fs_iofunc;    /* Callbacks to user / system functions */
   FAR void               *fs_cookie;    /* Pointer to file descriptor / cookie struct */
@@ -582,8 +585,7 @@ struct streamlist
 {
   mutex_t                 sl_lock;   /* For thread safety */
   struct file_struct      sl_std[3];
-  FAR struct file_struct *sl_head;
-  FAR struct file_struct *sl_tail;
+  sq_queue_t              sl_queue;
 };
 #endif /* CONFIG_FILE_STREAM */
 
@@ -877,6 +879,20 @@ int nx_umount2(FAR const char *target, unsigned int flags);
 void files_initlist(FAR struct filelist *list);
 
 /****************************************************************************
+ * Name: files_dumplist
+ *
+ * Description:
+ *   Dump the list of files.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_DUMP_ON_EXIT
+void files_dumplist(FAR struct filelist *list);
+#else
+#  define files_dumplist(l)
+#endif
+
+/****************************************************************************
  * Name: files_getlist
  *
  * Description:
@@ -895,16 +911,6 @@ FAR struct filelist *files_getlist(FAR struct tcb_s *tcb);
  ****************************************************************************/
 
 void files_putlist(FAR struct filelist * list);
-
-/****************************************************************************
- * Name: files_dumplist
- *
- * Description:
- *   Dump the list of files.
- *
- ****************************************************************************/
-
-void files_dumplist(FAR struct filelist *list);
 
 /****************************************************************************
  * Name: files_countlist

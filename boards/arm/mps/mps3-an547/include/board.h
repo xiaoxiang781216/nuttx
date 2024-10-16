@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __BOARDS_ARM_MSP_MSP3_AN547_INCLUDE_BOARD_H
-#define __BOARDS_ARM_MSP_MSP3_AN547_INCLUDE_BOARD_H
+#ifndef __BOARDS_ARM_MPS_MPS3_AN547_INCLUDE_BOARD_H
+#define __BOARDS_ARM_MPS_MPS3_AN547_INCLUDE_BOARD_H
 
 /****************************************************************************
  * Included Files
@@ -58,4 +58,4 @@ extern "C"
 #endif
 
 #endif /* __ASSEMBLY__ */
-#endif /* __BOARDS_ARM_MSP_MSP3_AN547_INCLUDE_BOARD_H */
+#endif /* __BOARDS_ARM_MPS_MPS3_AN547_INCLUDE_BOARD_H */

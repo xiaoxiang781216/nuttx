@@ -25,8 +25,6 @@ set(CMAKE_SYSTEM_VERSION 1)
 
 set(ARCH_SUBDIR intel64)
 
-set(CMAKE_PREPROCESSOR gcc -E -x c)
-
 # override the ARCHIVE command
 set(CMAKE_ARCHIVE_COMMAND "<CMAKE_AR> rcs <TARGET> <LINK_FLAGS> <OBJECTS>")
 set(CMAKE_RANLIB_COMMAND "<CMAKE_RANLIB> <TARGET>")
@@ -94,8 +92,6 @@ add_link_options(-Wl,--no-relax)
 add_compile_options(-fno-pic -mcmodel=large)
 add_compile_options(-mno-red-zone)
 
-# Libcxx flags
-
 add_compile_options(
   -U_AIX
   -U_WIN32
@@ -118,21 +114,19 @@ add_compile_options(
   -Wundef
   -Wno-attributes
   -Wno-unknown-pragmas
-  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
-  $<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
+  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>)
 
 if(CONFIG_CXX_STANDARD)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-std=${CONFIG_CXX_STANDARD}>)
 endif()
 
 if(CONFIG_LIBCXX)
+  add_compile_options(-D__GLIBCXX__)
   add_compile_options(-D_LIBCPP_DISABLE_AVAILABILITY)
 endif()
 
-if(CONFIG_STACK_CANARIES)
-  add_compile_options(-fstack-protector-all)
-else()
-  add_compile_options(-fno-stack-protector)
+if(NOT CONFIG_LIBCXXTOOLCHAIN)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
 endif()
 
 if(NOT CONFIG_CXX_EXCEPTION)

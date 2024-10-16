@@ -29,8 +29,12 @@
 #include <nuttx/serial/uart_16550.h>
 #include <arch/board/board.h>
 
+#include <debug.h>
 #include "riscv_internal.h"
+#include "riscv_sbi.h"
 #include "chip.h"
+
+#include "qemu_rv_userspace.h"
 
 #ifdef CONFIG_BUILD_KERNEL
 #  include "qemu_rv_mm_init.h"
@@ -43,6 +47,12 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifdef CONFIG_NUTTSBI_LATE_INIT
+#  define NAPOT_RWX     (PMPCFG_A_NAPOT | PMPCFG_RWX_MASK)
+#  define NAPOT_RW      (PMPCFG_A_NAPOT | PMPCFG_R | PMPCFG_W)
+#  define SIZE_HALF     (UINT32_C(1) << 31)
+#endif
 
 #ifdef CONFIG_DEBUG_FEATURES
 #define showprogress(c) up_putc(c)
@@ -58,17 +68,15 @@
  * Extern Function Declarations
  ****************************************************************************/
 
-#ifdef CONFIG_BUILD_KERNEL
-extern void __trap_vec(void);
-extern void __trap_vec_m(void);
-extern void up_mtimer_initialize(void);
+#ifdef CONFIG_ARCH_USE_S_MODE
+extern void __start(void);
 #endif
 
 /****************************************************************************
  * Name: qemu_rv_clear_bss
  ****************************************************************************/
 
-void qemu_rv_clear_bss(void)
+static void qemu_rv_clear_bss(void)
 {
   uint32_t *dest;
 
@@ -82,15 +90,59 @@ void qemu_rv_clear_bss(void)
     }
 }
 
+#ifdef CONFIG_BUILD_PROTECTED
+static void qemu_rv_copy_data(void)
+{
+  const uint32_t *src;
+  uint32_t *dest;
+
+  /* Move the initialized data from their temporary holding spot at FLASH
+   * into the correct place in SRAM.  The correct place in SRAM is given
+   * by _sdata and _edata.  The temporary location is in FLASH at the
+   * end of all of the other read-only data (.text, .rodata) at _eronly.
+   */
+
+  for (src = (const uint32_t *)_eronly,
+       dest = (uint32_t *)_sdata; dest < (uint32_t *)_edata;
+      )
+    {
+      *dest++ = *src++;
+    }
+}
+#endif
+
+#ifdef CONFIG_ARCH_USE_S_MODE
+static void qemu_boot_secondary(int mhartid, uintptr_t dtb)
+{
+  int i;
+
+  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+    {
+      if (i == mhartid)
+        {
+          continue;
+        }
+
+#ifndef CONFIG_NUTTSBI
+      riscv_sbi_boot_secondary(i, (uintptr_t)&__start, dtb);
+#else
+      sinfo("TBD\n");
+#endif
+    }
+}
+#endif
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_USE_S_MODE
+static bool boot_secondary = false;
+#endif
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
-
-/* NOTE: g_idle_topstack needs to point the top of the idle stack
- * for CPU0 and this value is used in up_initial_state()
- */
-
-uintptr_t g_idle_topstack = QEMU_RV_IDLESTACK_TOP;
 
 /****************************************************************************
  * Public Functions
@@ -100,12 +152,18 @@ uintptr_t g_idle_topstack = QEMU_RV_IDLESTACK_TOP;
  * Name: qemu_rv_start
  ****************************************************************************/
 
-#ifdef CONFIG_BUILD_KERNEL
-void qemu_rv_start_s(int mhartid, const char *dtb)
-#else
 void qemu_rv_start(int mhartid, const char *dtb)
-#endif
 {
+#ifdef CONFIG_ARCH_USE_S_MODE
+  /* Boot other cores */
+
+  if (!boot_secondary)
+    {
+      boot_secondary = true;
+      qemu_boot_secondary(mhartid, (uintptr_t)dtb);
+    }
+#endif
+
   /* Configure FPU */
 
   riscv_fpuconfig();
@@ -115,8 +173,14 @@ void qemu_rv_start(int mhartid, const char *dtb)
       goto cpux;
     }
 
-#ifndef CONFIG_BUILD_KERNEL
   qemu_rv_clear_bss();
+
+#ifdef CONFIG_BUILD_PROTECTED
+  qemu_rv_copy_data();
+#endif
+
+#ifdef CONFIG_RISCV_PERCPU_SCRATCH
+  riscv_percpu_add_hart(mhartid);
 #endif
 
 #ifdef CONFIG_DEVICE_TREE
@@ -134,6 +198,17 @@ void qemu_rv_start(int mhartid, const char *dtb)
   /* Do board initialization */
 
   showprogress('C');
+
+  /* For the case of the separate user-/kernel-space build, perform whatever
+   * platform specific initialization of the user memory is required.
+   * Normally this just means initializing the user space .data and .bss
+   * segments.
+   */
+
+#ifdef CONFIG_BUILD_PROTECTED
+  qemu_rv_userspace();
+  showprogress('D');
+#endif
 
 #ifdef CONFIG_BUILD_KERNEL
   /* Setup page tables for kernel and enable MMU */
@@ -157,83 +232,26 @@ cpux:
     }
 }
 
-#ifdef CONFIG_BUILD_KERNEL
-
-/****************************************************************************
- * Name: qemu_rv_start
- ****************************************************************************/
-
-void qemu_rv_start(int mhartid, const char *dtb)
-{
-  /* NOTE: still in M-mode */
-
-  if (0 == mhartid)
-    {
-      qemu_rv_clear_bss();
-
-      /* Initialize the per CPU areas */
-
-      riscv_percpu_add_hart(mhartid);
-    }
-
-  /* Disable MMU and enable PMP */
-
-  WRITE_CSR(satp, 0x0);
-  WRITE_CSR(pmpaddr0, 0x3fffffffffffffull);
-  WRITE_CSR(pmpcfg0, 0xf);
-
-  /* Set exception and interrupt delegation for S-mode */
-
-  WRITE_CSR(medeleg, 0xffff);
-  WRITE_CSR(mideleg, 0xffff);
-
-  /* Allow to write satp from S-mode */
-
-  CLEAR_CSR(mstatus, MSTATUS_TVM);
-
-  /* Set mstatus to S-mode and enable SUM */
-
-  CLEAR_CSR(mstatus, ~MSTATUS_MPP_MASK);
-  SET_CSR(mstatus, MSTATUS_MPPS | SSTATUS_SUM);
-
-  /* Set the trap vector for S-mode */
-
-  WRITE_CSR(stvec, (uintptr_t)__trap_vec);
-
-  /* Set the trap vector for M-mode */
-
-  WRITE_CSR(mtvec, (uintptr_t)__trap_vec_m);
-
-  if (0 == mhartid)
-    {
-      /* Only the primary CPU needs to initialize mtimer
-       * before entering to S-mode
-       */
-
-      up_mtimer_initialize();
-    }
-
-  /* Set mepc to the entry */
-
-  WRITE_CSR(mepc, (uintptr_t)qemu_rv_start_s);
-
-  /* Set a0 to mhartid and a1 to dtb explicitly and enter to S-mode */
-
-  asm volatile (
-      "mv a0, %0 \n"
-      "mv a1, %1 \n"
-      "mret \n"
-      :: "r" (mhartid), "r" (dtb)
-  );
-}
-#endif
-
 void riscv_earlyserialinit(void)
 {
+#ifdef CONFIG_16550_UART
   u16550_earlyserialinit();
+#endif
 }
 
 void riscv_serialinit(void)
 {
+#ifdef CONFIG_16550_UART
   u16550_serialinit();
+#endif
 }
+
+#ifdef CONFIG_NUTTSBI_LATE_INIT
+void sbi_late_initialize(void)
+{
+  /* QEMU 6.2 doesn't support 0 size, so we do it explicitly here */
+
+  riscv_append_pmp_region(NAPOT_RW, 0, SIZE_HALF);
+  riscv_append_pmp_region(NAPOT_RWX, SIZE_HALF, SIZE_HALF);
+}
+#endif

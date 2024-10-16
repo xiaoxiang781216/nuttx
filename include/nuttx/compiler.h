@@ -210,8 +210,8 @@
 
 /* Branch prediction */
 
-#  define predict_true(x) __builtin_expect(!!(x), 1)
-#  define predict_false(x) __builtin_expect((x), 0)
+#  define predict_true(x)  __builtin_expect(!!(x), 1)
+#  define predict_false(x) __builtin_expect(!!(x), 0)
 
 /* Code locate */
 
@@ -266,17 +266,21 @@
 
 #  if defined(__clang__)
 #    define nooptimiziation_function __attribute__((optnone))
-#  elif !defined(__ghs__)
-#    define nooptimiziation_function __attribute__((optimize("O0")))
 #  else
-#    define nooptimiziation_function
+#    define nooptimiziation_function __attribute__((optimize("O0")))
 #  endif
 
 /* The nosanitize_address attribute informs GCC don't sanitize it */
 
-#  if !defined(__ghs__)
-#    define nosanitize_address __attribute__((no_sanitize_address))
-#  else
+#  define nosanitize_address __attribute__((no_sanitize_address))
+
+/* the Greenhills compiler do not support the following atttributes */
+
+#  if defined(__ghs__)
+#    undef nooptimiziation_function
+#    define nooptimiziation_function
+
+#    undef nosanitize_address
 #    define nosanitize_address
 #  endif
 
@@ -307,6 +311,27 @@
 #    endif
 #  endif
 
+/* The constructor attribute causes the function to be called
+ * automatically before execution enters main ().
+ * Similarly, the destructor attribute causes the function to
+ * be called automatically after main () has completed or
+ * exit () has been called. Functions with these attributes are
+ * useful for initializing data that will be used implicitly
+ * during the execution of the program.
+ * See https://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Function-Attributes.html
+ */
+
+#  define constructor_fuction __attribute__((constructor))
+#  define destructor_function __attribute__((destructor))
+
+/* Use visibility_hidden to hide symbols by default
+ * Use visibility_default to make symbols visible
+ * See https://gcc.gnu.org/wiki/Visibility
+ */
+
+#  define visibility_hidden __attribute__((visibility("hidden")))
+#  define visibility_default __attribute__((visibility("default")))
+
 /* The unused code or data */
 
 #  define unused_code __attribute__((unused))
@@ -323,6 +348,7 @@
 #    define malloc_like1(a) __attribute__((__malloc__(__builtin_free, 1))) __attribute__((__alloc_size__(a)))
 #    define malloc_like2(a, b) __attribute__((__malloc__(__builtin_free, 1))) __attribute__((__alloc_size__(a, b)))
 #    define realloc_like(a) __attribute__((__alloc_size__(a)))
+#    define realloc_like2(a, b) __attribute__((__alloc_size__(a, b)))
 #  else
 #    define fopen_like __attribute__((__malloc__))
 #    define popen_like __attribute__((__malloc__))
@@ -330,6 +356,7 @@
 #    define malloc_like1(a) __attribute__((__malloc__)) __attribute__((__alloc_size__(a)))
 #    define malloc_like2(a, b) __attribute__((__malloc__)) __attribute__((__alloc_size__(a, b)))
 #    define realloc_like(a) __attribute__((__alloc_size__(a)))
+#    define realloc_like2(a, b) __attribute__((__alloc_size__(a, b)))
 #  endif
 
 /* Some versions of GCC have a separate __syslog__ format.
@@ -519,8 +546,8 @@
 /* CMSE extention */
 
 #  ifdef CONFIG_ARCH_HAVE_TRUSTZONE
-#    define cmse_nonsecure_entry __attribute__((cmse_nonsecure_entry))
-#    define cmse_nonsecure_call __attribute__((cmse_nonsecure_call))
+#    define tz_nonsecure_entry __attribute__((cmse_nonsecure_entry))
+#    define tz_nonsecure_call  __attribute__((cmse_nonsecure_call))
 #  endif
 
 /* GCC support expression statement, a compound statement enclosed in
@@ -602,6 +629,11 @@
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
+#  define constructor_fuction
+#  define destructor_function
+
+#  define visibility_hidden
+#  define visibility_default
 
 #  define unused_code
 #  define unused_data
@@ -614,6 +646,7 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
+#  define realloc_like2(a, b)
 
 #  define format_like(a)
 #  define printf_like(a, b)
@@ -749,6 +782,10 @@
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
+#  define constructor_fuction
+#  define destructor_function
+#  define visibility_hidden
+#  define visibility_default
 #  define unused_code
 #  define unused_data
 #  define used_code
@@ -759,6 +796,7 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
+#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
@@ -864,6 +902,10 @@
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
+#  define constructor_fuction
+#  define destructor_function
+#  define visibility_hidden
+#  define visibility_default
 #  define unused_code
 #  define unused_data
 #  define used_code
@@ -874,6 +916,7 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
+#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
@@ -958,6 +1001,10 @@
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
+#  define constructor_fuction
+#  define destructor_function
+#  define visibility_hidden
+#  define visibility_default
 #  define unused_code
 #  define unused_data
 #  define used_code
@@ -968,6 +1015,7 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
+#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
@@ -1032,7 +1080,8 @@
 #  define end_packed_struct             __attribute__((packed))
 #  define reentrant_function
 #  define naked_function
-#  define always_inline_function        __attribute__((always_inline))
+#  define always_inline_function        __attribute__((always_inline,no_instrument_function))
+#  define inline_function               __attribute__((always_inline)) inline
 #  define noinline_function             __attribute__((noinline))
 #  define noinstrument_function
 #  define noprofile_function
@@ -1040,6 +1089,10 @@
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
+#  define constructor_fuction
+#  define destructor_function
+#  define visibility_hidden
+#  define visibility_default
 #  define unused_code                   __attribute__((unused))
 #  define unused_data                   __attribute__((unused))
 #  define used_code                     __attribute__((used))
@@ -1050,11 +1103,13 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
+#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
 
 #  define FAR
 #  define NEAR
@@ -1108,6 +1163,10 @@
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
+#  define constructor_fuction
+#  define destructor_function
+#  define visibility_hidden
+#  define visibility_default
 #  define unused_code
 #  define unused_data
 #  define used_code
@@ -1118,6 +1177,7 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
+#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)

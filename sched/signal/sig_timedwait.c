@@ -101,18 +101,21 @@ static void nxsig_timeout(wdparm_t arg)
     {
       FAR struct tcb_s *rtcb = this_task();
 
-      wtcb->sigunbinfo.si_signo           = SIG_WAIT_TIMEOUT;
-      wtcb->sigunbinfo.si_code            = SI_TIMER;
-      wtcb->sigunbinfo.si_errno           = ETIMEDOUT;
-      wtcb->sigunbinfo.si_value.sival_int = 0;
+      if (wtcb->sigunbinfo != NULL)
+        {
+          wtcb->sigunbinfo->si_signo           = SIG_WAIT_TIMEOUT;
+          wtcb->sigunbinfo->si_code            = SI_TIMER;
+          wtcb->sigunbinfo->si_errno           = ETIMEDOUT;
+          wtcb->sigunbinfo->si_value.sival_int = 0;
 #ifdef CONFIG_SCHED_HAVE_PARENT
-      wtcb->sigunbinfo.si_pid             = 0;  /* Not applicable */
-      wtcb->sigunbinfo.si_status          = OK;
+          wtcb->sigunbinfo->si_pid             = 0;  /* Not applicable */
+          wtcb->sigunbinfo->si_status          = OK;
 #endif
+        }
 
       /* Remove the task from waitting list */
 
-      dq_rem((FAR dq_entry_t *)wtcb, &g_waitingforsignal);
+      dq_rem((FAR dq_entry_t *)wtcb, list_waitingforsignal());
 
       /* Add the task to ready-to-run task list, and
        * perform the context switch if one is needed
@@ -168,18 +171,21 @@ void nxsig_wait_irq(FAR struct tcb_s *wtcb, int errcode)
     {
       FAR struct tcb_s *rtcb = this_task();
 
-      wtcb->sigunbinfo.si_signo           = SIG_CANCEL_TIMEOUT;
-      wtcb->sigunbinfo.si_code            = SI_USER;
-      wtcb->sigunbinfo.si_errno           = errcode;
-      wtcb->sigunbinfo.si_value.sival_int = 0;
+      if (wtcb->sigunbinfo != NULL)
+        {
+          wtcb->sigunbinfo->si_signo           = SIG_CANCEL_TIMEOUT;
+          wtcb->sigunbinfo->si_code            = SI_USER;
+          wtcb->sigunbinfo->si_errno           = errcode;
+          wtcb->sigunbinfo->si_value.sival_int = 0;
 #ifdef CONFIG_SCHED_HAVE_PARENT
-      wtcb->sigunbinfo.si_pid             = 0;  /* Not applicable */
-      wtcb->sigunbinfo.si_status          = OK;
+          wtcb->sigunbinfo->si_pid             = 0;  /* Not applicable */
+          wtcb->sigunbinfo->si_status          = OK;
 #endif
+        }
 
       /* Remove the task from waitting list */
 
-      dq_rem((FAR dq_entry_t *)wtcb, &g_waitingforsignal);
+      dq_rem((FAR dq_entry_t *)wtcb, list_waitingforsignal());
 
       /* Add the task to ready-to-run task list, and
        * perform the context switch if one is needed
@@ -234,8 +240,7 @@ void nxsig_wait_irq(FAR struct tcb_s *wtcb, int errcode)
  *   This is an internal OS interface and should not be used by applications.
  *   A negated errno value is returned on failure.
  *
- *   EAGAIN - No signal specified by set was generated within the specified
- *            timeout period.
+ *   EAGAIN - wait time is zero.
  *   EINTR  - The wait was interrupted by an unblocked, caught signal.
  *
  * Notes:
@@ -272,7 +277,7 @@ int nxsig_clockwait(int clockid, int flags,
   if (rqtp && rqtp->tv_sec == 0 && rqtp->tv_nsec == 0)
     {
       sched_yield();
-      return OK;
+      return -EAGAIN;
     }
 
 #ifdef CONFIG_CANCELLATION_POINTS
@@ -301,17 +306,17 @@ int nxsig_clockwait(int clockid, int flags,
         {
           expect = clock_systime_ticks() + clock_time2ticks(rqtp);
           wd_start_abstick(&rtcb->waitdog, expect,
-                           nxsig_timeout, (wdparm_t)rtcb);
+                           nxsig_timeout, (uintptr_t)rtcb);
         }
       else if (clockid == CLOCK_REALTIME)
         {
           wd_start_realtime(&rtcb->waitdog, rqtp,
-                            nxsig_timeout, (wdparm_t)rtcb);
+                            nxsig_timeout, (uintptr_t)rtcb);
         }
       else
         {
           wd_start_abstime(&rtcb->waitdog, rqtp,
-                           nxsig_timeout, (wdparm_t)rtcb);
+                           nxsig_timeout, (uintptr_t)rtcb);
         }
     }
 
@@ -389,10 +394,11 @@ int nxsig_clockwait(int clockid, int flags,
 int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
                     FAR const struct timespec *timeout)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   sigset_t intersection;
   FAR sigpendq_t *sigpend;
   irqstate_t flags;
+  siginfo_t unbinfo;
   int ret;
 
   DEBUGASSERT(set != NULL);
@@ -404,7 +410,6 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
    */
 
   flags = enter_critical_section();
-  rtcb = this_task();
 
   /* Check if there is a pending signal corresponding to one of the
    * signals in the pending signal set argument.
@@ -443,6 +448,8 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
 
   else
     {
+      rtcb->sigunbinfo = (info == NULL) ? &unbinfo : info;
+
       /* Save the set of pending signals to wait for */
 
       rtcb->sigwaitmask = *set;
@@ -452,6 +459,7 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
       ret = nxsig_clockwait(CLOCK_REALTIME, 0, timeout, NULL);
       if (ret < 0)
         {
+          rtcb->sigunbinfo = NULL;
           return ret;
         }
 
@@ -465,26 +473,19 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
        * or timeout) that awakened us.
        */
 
-      if (GOOD_SIGNO(rtcb->sigunbinfo.si_signo))
+      if (GOOD_SIGNO(rtcb->sigunbinfo->si_signo))
         {
           /* We were awakened by a signal... but is it one of the signals
            * that we were waiting for?
            */
 
-          if (nxsig_ismember(set, rtcb->sigunbinfo.si_signo))
+          if (nxsig_ismember(set, rtcb->sigunbinfo->si_signo))
             {
-              /* Return the signal info to the caller if so requested */
-
-              if (info != NULL)
-                {
-                  memcpy(info, &rtcb->sigunbinfo, sizeof(struct siginfo));
-                }
-
               /* Yes.. the return value is the number of the signal that
                * awakened us.
                */
 
-              ret = rtcb->sigunbinfo.si_signo;
+              ret = rtcb->sigunbinfo->si_signo;
             }
           else
             {
@@ -500,11 +501,11 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
            */
 
 #ifdef CONFIG_CANCELLATION_POINTS
-          if (rtcb->sigunbinfo.si_signo == SIG_CANCEL_TIMEOUT)
+          if (rtcb->sigunbinfo->si_signo == SIG_CANCEL_TIMEOUT)
             {
               /* The wait was canceled */
 
-              ret = -rtcb->sigunbinfo.si_errno;
+              ret = -rtcb->sigunbinfo->si_errno;
               DEBUGASSERT(ret < 0);
             }
           else
@@ -514,10 +515,12 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
                * error.
                */
 
-              DEBUGASSERT(rtcb->sigunbinfo.si_signo == SIG_WAIT_TIMEOUT);
+              DEBUGASSERT(rtcb->sigunbinfo->si_signo == SIG_WAIT_TIMEOUT);
               ret = -EAGAIN;
             }
         }
+
+      rtcb->sigunbinfo = NULL;
     }
 
   leave_critical_section(flags);

@@ -85,7 +85,7 @@
     { \
       savestate = up_current_regs(); \
       savecbr = current_cbr; \
-      set_current_resg(regs) \
+      up_set_current_regs(regs) \
       current_cbr = inp(Z180_MMU_CBR); \
     } \
   while (0)
@@ -170,7 +170,7 @@
 
 #ifndef __ASSEMBLY__
 /* This holds a references to the current interrupt level register
- * storage structure.  If is non-NULL only during interrupt processing.
+ * storage structure.  It is non-NULL only during interrupt processing.
  */
 
 extern volatile chipreg_t *g_current_regs;

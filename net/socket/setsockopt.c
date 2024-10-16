@@ -35,6 +35,7 @@
 #include <assert.h>
 #include <arch/irq.h>
 
+#include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
 #include <netdev/netdev.h>

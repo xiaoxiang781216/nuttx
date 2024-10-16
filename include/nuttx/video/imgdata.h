@@ -115,7 +115,7 @@ struct imgdata_ops_s
   CODE int (*stop_capture)(FAR struct imgdata_s *data);
 
   /* This is a pair of user define frame memory allocation interface.
-   * If both are NULL, just using system memory optrations.
+   * If both are NULL, just using system memory operations.
    */
 
   CODE void *(*alloc)(FAR struct imgdata_s *data,

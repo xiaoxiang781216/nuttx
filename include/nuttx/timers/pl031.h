@@ -20,8 +20,8 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_TIMER_PL031_H
-#define __INCLUDE_NUTTX_TIMER_PL031_H
+#ifndef __INCLUDE_NUTTX_TIMERS_PL031_H
+#define __INCLUDE_NUTTX_TIMERS_PL031_H
 
 /****************************************************************************
  * Public Function Prototypes
@@ -37,4 +37,4 @@
 
 FAR struct rtc_lowerhalf_s *pl031_initialize(uintptr_t base, int irq);
 
-#endif  //__INCLUDE_NUTTX_TIMER_PL031_H
+#endif  /* __INCLUDE_NUTTX_TIMERS_PL031_H */

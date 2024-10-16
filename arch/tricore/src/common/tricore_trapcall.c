@@ -63,5 +63,5 @@ void tricore_trapcall(volatile void *trap)
   up_set_current_regs(regs);
 
   up_irq_save();
-  PANIC_WITH_REGS("Trap", regs);
+  PANIC_WITH_REGS("Trap", up_current_regs());
 }

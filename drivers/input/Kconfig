@@ -30,6 +30,7 @@ config INPUT_FF
 	default n
 	---help---
 		Enable support for force feedback devices.
+		The doc link: https://www.kernel.org/doc/html/v4.19/input/ff.html.
 
 if INPUT_FF
 
@@ -86,7 +87,7 @@ config INPUT_UINPUT
 		Enable support virtual input device driver
 
 config UINPUT_RPMSG
-	bool "Enable uinput rpmsg"
+	bool "Enable uinput RPMSG"
 	depends on INPUT_UINPUT
 	depends on RPMSG
 	default n

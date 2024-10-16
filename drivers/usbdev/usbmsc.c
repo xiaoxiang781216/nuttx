@@ -207,7 +207,7 @@ static int usbmsc_bind(FAR struct usbdevclass_driver_s *driver,
    * const, canned descriptors.
    */
 
-#ifndef CONFIG_USBDEV_SUPERSPEED
+#if !defined(CONFIG_USBDEV_SUPERSPEED) && !defined(CONFIG_USBMSC_COMPOSITE)
   DEBUGASSERT(CONFIG_USBMSC_EP0MAXPACKET == dev->ep0->maxpacket);
 #endif
 
@@ -1264,7 +1264,7 @@ static int usbmsc_sync_wait(FAR struct usbmsc_dev_s *priv)
  *
  ****************************************************************************/
 
-int usbmsc_configure(unsigned int nluns, void **handle)
+int usbmsc_configure(unsigned int nluns, FAR void **handle)
 {
   FAR struct usbmsc_alloc_s  *alloc;
   FAR struct usbmsc_dev_s    *priv;

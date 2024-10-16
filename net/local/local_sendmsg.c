@@ -77,9 +77,9 @@ static int local_sendctl(FAR struct local_conn_s *conn,
   FAR struct local_conn_s *peer;
   FAR struct file *filep2;
   FAR struct file *filep;
-  struct cmsghdr *cmsg;
+  FAR struct cmsghdr *cmsg;
   int count = 0;
-  int *fds;
+  FAR int *fds;
   int ret;
   int i = 0;
 
@@ -100,7 +100,7 @@ static int local_sendctl(FAR struct local_conn_s *conn,
           goto fail;
         }
 
-      fds = (int *)CMSG_DATA(cmsg);
+      fds = (FAR int *)CMSG_DATA(cmsg);
       count = (cmsg->cmsg_len - sizeof(struct cmsghdr)) / sizeof(int);
 
       if (count + peer->lc_cfpcount >= LOCAL_NCONTROLFDS)
@@ -431,12 +431,20 @@ errout_with_lock:
 ssize_t local_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
                       int flags)
 {
+  FAR struct local_conn_s *conn = psock->s_conn;
   FAR const struct sockaddr *to = msg->msg_name;
   FAR const struct iovec *buf = msg->msg_iov;
   socklen_t tolen = msg->msg_namelen;
-  ssize_t len = msg->msg_iovlen;
+  size_t len = msg->msg_iovlen;
+
+  /* Check shutdown state */
+
+  if (conn->lc_outfile.f_inode == NULL)
+    {
+      return -EPIPE;
+    }
+
 #ifdef CONFIG_NET_LOCAL_SCM
-  FAR struct local_conn_s *conn = psock->s_conn;
   int count = 0;
 
   if (msg->msg_control &&

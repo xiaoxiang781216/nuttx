@@ -111,7 +111,7 @@ static ssize_t cryptof_write(FAR struct file *filep,
 static int cryptof_ioctl(FAR struct file *filep,
                          int cmd, unsigned long arg);
 static int cryptof_poll(FAR struct file *filep,
-                        struct pollfd *fds, bool setup);
+                        FAR struct pollfd *fds, bool setup);
 static int cryptof_open(FAR struct file *filep);
 static int cryptof_close(FAR struct file *filep);
 
@@ -797,7 +797,7 @@ static int cryptodev_getkeystatus(struct fcrypt *fcr, struct crypt_kop *ret)
 /* ARGSUSED */
 
 static int cryptof_poll(FAR struct file *filep,
-                        struct pollfd *fds, bool setup)
+                        FAR struct pollfd *fds, bool setup)
 {
   FAR struct fcrypt *fcr = filep->f_priv;
 
@@ -880,8 +880,17 @@ static int cryptof_open(FAR struct file *filep)
 
   if (fcr == NULL)
     {
-      return 0;
+      return -EINVAL;
     }
+
+  /* A 'struct fcrypt' is bound to the fd of the cryptodev,
+   * which stores a list of sessions. Each encryption operation
+   * would create a context and get a session id, which can be
+   * used to find the specific encryption operation. Therefore,
+   * in order to complete the copy operation, it is necessary to
+   * create same session based on the copy fd and obtain the newly
+   * generated session id.
+   */
 
   fcrd = kmm_zalloc(sizeof(struct fcrypt));
   if (fcrd == NULL)

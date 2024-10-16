@@ -112,7 +112,7 @@ int openh264_decoder_streamoff(struct openh264_decoder_s *decoder)
 }
 
 int openh264_decoder_enqueue(struct openh264_decoder_s *decoder,
-                         void *data, int64_t pts, int size)
+                             void *data, int64_t pts, int size)
 {
   DECODING_STATE state;
 
@@ -167,7 +167,7 @@ int openh264_decoder_enqueue(struct openh264_decoder_s *decoder,
 }
 
 int openh264_decoder_dequeue(struct openh264_decoder_s *decoder,
-                         void *data, int64_t *pts, uint32_t *size)
+                             void *data, int64_t *pts, uint32_t *size)
 {
   uint8_t *dst_addr = data;
   int plane;
@@ -203,3 +203,4 @@ int openh264_decoder_dequeue(struct openh264_decoder_s *decoder,
 
   return decoder->remaining_frames;
 }
+

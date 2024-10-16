@@ -42,8 +42,24 @@
 #  include "esp32s3_board_tim.h"
 #endif
 
+#ifdef CONFIG_ESP32S3_WIFI
+#  include "esp32s3_board_wlan.h"
+#endif
+
+#ifdef CONFIG_ESP32S3_BLE
+#  include "esp32s3_ble.h"
+#endif
+
+#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+#  include "esp32s3_wifi_adapter.h"
+#endif
+
 #ifdef CONFIG_ESP32S3_RT_TIMER
 #  include "esp32s3_rt_timer.h"
+#endif
+
+#ifdef CONFIG_ESP32S3_I2C
+#  include "esp32s3_i2c.h"
 #endif
 
 #ifdef CONFIG_WATCHDOG
@@ -52,6 +68,19 @@
 
 #ifdef CONFIG_INPUT_BUTTONS
 #  include <nuttx/input/buttons.h>
+#endif
+
+#ifdef CONFIG_ESP32S3_SPI
+#  include "esp32s3_spi.h"
+#endif
+
+#ifdef CONFIG_LCD_DEV
+#  include <nuttx/board.h>
+#  include <nuttx/lcd/lcd_dev.h>
+#endif
+
+#ifdef CONFIG_ESP32S3_SDMMC
+#include "esp32s3_board_sdmmc.h"
 #endif
 
 #include "esp32s3-eye.h"
@@ -127,6 +156,16 @@ int esp32s3_bringup(void)
     }
 #endif
 
+#ifdef CONFIG_I2C_DRIVER
+  /* Configure I2C peripheral interfaces */
+
+  ret = board_i2c_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize I2C driver: %d\n", ret);
+    }
+#endif
+
 #ifdef CONFIG_INPUT_BUTTONS
   /* Register the BUTTON driver */
 
@@ -142,6 +181,77 @@ int esp32s3_bringup(void)
   if (ret)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize SPI Flash\n");
+    }
+#endif
+
+#ifdef CONFIG_ESP32S3_WIRELESS
+
+#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+  ret = esp32s3_wifi_bt_coexist_init();
+  if (ret)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize Wi-Fi and BT coexist\n");
+    }
+#endif
+
+#ifdef CONFIG_ESP32S3_BLE
+  ret = esp32s3_ble_initialize();
+  if (ret)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize BLE\n");
+    }
+#endif
+
+#ifdef CONFIG_ESP32S3_WIFI
+  ret = board_wlan_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize wireless subsystem=%d\n",
+             ret);
+    }
+#endif
+
+#endif
+
+#ifdef CONFIG_DEV_GPIO
+  ret = esp32s3_gpio_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize GPIO Driver: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_ESP32S3_EYE_LCD
+
+#ifdef CONFIG_VIDEO_FB
+  ret = fb_register(0, 0);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize Frame Buffer Driver.\n");
+      return ret;
+    }
+#elif defined(CONFIG_LCD)
+  ret = board_lcd_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize LCD.\n");
+      return ret;
+    }
+
+  ret = lcddev_register(0);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: lcddev_register() failed: %d\n", ret);
+    }
+#endif
+
+#endif
+
+#ifdef CONFIG_ESP32S3_SDMMC
+  ret = board_sdmmc_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize SDMMC: %d\n", ret);
     }
 #endif
 

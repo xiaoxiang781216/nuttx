@@ -283,8 +283,9 @@ int inode_stat(FAR struct inode *inode, FAR struct stat *buf, int resolve)
 
   if (INODE_IS_SHM(inode))
     {
-      buf->st_mode  = S_IFSHM;
+      buf->st_mode = S_IFSHM;
       buf->st_mode |= S_IRUSR | S_IWUSR;
+      buf->st_size = inode->i_size;
     }
   else
 #endif

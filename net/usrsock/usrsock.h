@@ -50,6 +50,8 @@
 #define USRSOCK_EVENT_INTERNAL_MASK (USRSOCK_EVENT_CONNECT_READY | \
                                      USRSOCK_EVENT_REQ_COMPLETE)
 
+#define USRSOCK_USOCKID_INVALID     (-1)
+
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
@@ -65,7 +67,7 @@ enum usrsock_conn_state_e
 struct usrsock_poll_s
 {
   FAR struct usrsock_conn_s *conn; /* Needed to handle loss of connection */
-  struct pollfd *fds;              /* Needed to handle poll events */
+  FAR struct pollfd *fds;          /* Needed to handle poll events */
   FAR struct devif_callback_s *cb; /* Needed to teardown the poll */
 };
 
@@ -80,9 +82,9 @@ struct usrsock_conn_s
   uint8_t    crefs;                  /* Reference counts on this instance */
 
   enum usrsock_conn_state_e state;   /* State of kernel<->daemon link for conn */
-  bool          connected;           /* Socket has been connected */
-  int16_t       usockid;             /* Connection number used for kernel<->daemon */
-  uint16_t      flags;               /* Socket state flags */
+  bool       connected;              /* Socket has been connected */
+  int16_t    usockid;                /* Connection number used for kernel<->daemon */
+  uint16_t   flags;                  /* Socket state flags */
 
   struct
   {

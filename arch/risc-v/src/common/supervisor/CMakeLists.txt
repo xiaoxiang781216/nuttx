@@ -1,5 +1,5 @@
 # ##############################################################################
-# arch/arm/src/common/supervisor/CMakeLists.txt
+# arch/risc-v/src/common/supervisor/CMakeLists.txt
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -18,8 +18,7 @@
 #
 # ##############################################################################
 
-if(CONFIG_BUILD_KERNEL)
-
+if(CONFIG_ARCH_USE_S_MODE)
   set(SRCS)
 
   list(APPEND SRCS riscv_syscall.S riscv_perform_syscall.c riscv_sbi.c)

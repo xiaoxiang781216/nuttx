@@ -121,6 +121,7 @@
  */
 
 	.text
+	.section    .text.exception_common
 #ifdef __ghs__
 	.type	exception_common, $function
 #else

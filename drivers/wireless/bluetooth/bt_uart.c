@@ -152,7 +152,7 @@ static void btuart_rxwork(FAR void *arg)
           break;
         }
 
-      hdr = (void *)(data + H4_HEADER_SIZE);
+      hdr = (FAR void *)(data + H4_HEADER_SIZE);
 
       if (data[0] == H4_EVT)
         {

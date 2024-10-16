@@ -1,6 +1,8 @@
 ############################################################################
 # tools/Zig.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -39,4 +41,6 @@ endif
 
 # Convert cortex-xxx/sifive-exx to cortex_xxx/sifive_exx
 
+ifneq ($(LLVM_CPUTYPE),)
 ZIGFLAGS += -mcpu $(subst -,_,$(LLVM_CPUTYPE))
+endif

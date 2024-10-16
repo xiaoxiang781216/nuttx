@@ -184,11 +184,11 @@ struct sim_netdev_s
 
 struct wireless_event_s
 {
-  struct nlmsghdr  hdr;                 /* netlink message header */
-  struct ifinfomsg iface;               /* interface info */
+  struct nlmsghdr  hdr;         /* netlink message header */
+  struct ifinfomsg iface;       /* interface info */
 
-  struct rtattr    attrevent;           /* IFLA_WIRELESS */
-  struct iw_event  event;               /* wireless event */
+  struct rtattr    attrevent;   /* IFLA_WIRELESS */
+  struct iw_event  event;       /* wireless event */
 };
 
 struct wireless_event_list_s
@@ -863,7 +863,7 @@ get_scan:
       goto get_scan;
     }
 
-  /* Add a terminator fot the rbuf */
+  /* Add a terminator for the rbuf */
 
   rbuf[ret] = '\0';
 
@@ -1019,11 +1019,11 @@ static int freq_to_channel(uint16_t freq)
   return OK;
 }
 
-static int wifi_send_event(FAR struct net_driver_s *dev,
-                           unsigned int cmd, FAR union iwreq_data *wrqu)
+static int wifi_send_event(struct net_driver_s *dev, unsigned int cmd,
+                           union iwreq_data *wrqu)
 {
-  FAR struct wireless_event_list_s *alloc;
-  FAR struct wireless_event_s *wev;
+  struct wireless_event_list_s *alloc;
+  struct wireless_event_s *wev;
 
   DEBUGASSERT(dev != NULL);
 
@@ -1031,7 +1031,7 @@ static int wifi_send_event(FAR struct net_driver_s *dev,
 
   /* Allocate the response buffer */
 
-  alloc = (FAR struct wireless_event_list_s *)
+  alloc = (struct wireless_event_list_s *)
           kmm_zalloc(RTA_SPACE(sizeof(struct wireless_event_list_s)));
   if (alloc == NULL)
     {
@@ -1065,10 +1065,10 @@ static int wifi_send_event(FAR struct net_driver_s *dev,
   wev->event.cmd          = cmd;
 
   memset(&wev->event.u, 0, sizeof(union iwreq_data));
-  memcpy(&wev->event.u, ((FAR char *)wrqu), sizeof(union iwreq_data));
+  memcpy(&wev->event.u, ((char *)wrqu), sizeof(union iwreq_data));
 
   netlink_add_broadcast(RTNLGRP_LINK,
-                        (FAR struct netlink_response_s *)alloc);
+                        (struct netlink_response_s *)alloc);
   return OK;
 }
 
@@ -1442,10 +1442,10 @@ static int wifidriver_set_bssid(struct sim_netdev_s *wifidev,
 }
 
 static int wifidriver_get_bssid(struct sim_netdev_s *wifidev,
-                                FAR struct iwreq *pwrq)
+                                struct iwreq *pwrq)
 {
-  FAR struct sockaddr *sockaddr = &pwrq->u.ap_addr;
-  FAR unsigned char *bssid = (FAR unsigned char *)sockaddr->sa_data;
+  struct sockaddr *sockaddr = &pwrq->u.ap_addr;
+  unsigned char *bssid = (unsigned char *)sockaddr->sa_data;
   int ret;
 
   switch (wifidev->mode)

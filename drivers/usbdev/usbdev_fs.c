@@ -991,11 +991,11 @@ static int usbdev_fs_ep_bind(FAR struct usbdev_s *dev, uint8_t epno,
                              FAR struct usbdev_fs_ep_s *fs_ep)
 {
 #if defined(CONFIG_USBDEV_SUPERSPEED)
-  uint32_t reqsize = epinfo->sssize;
+  size_t reqsize = epinfo->sssize;
 #elif defined(CONFIG_USBDEV_DUALSPEED)
-  uint32_t reqsize = epinfo->hssize;
+  size_t reqsize = epinfo->hssize;
 #else
-  uint32_t reqsize = epinfo->fssize;
+  size_t reqsize = epinfo->fssize;
 #endif
   uint16_t i;
 
@@ -1021,43 +1021,43 @@ static int usbdev_fs_ep_bind(FAR struct usbdev_s *dev, uint8_t epno,
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EPBULKINALLOCFAIL), 0);
           return -ENODEV;
         }
-
-#ifdef CONFIG_USBDEV_SUPERSPEED
-      if (dev->speed == USB_SPEED_SUPER ||
-          dev->speed == USB_SPEED_SUPER_PLUS)
-        {
-          uint8_t transtpye;
-
-          transtpye = epinfo->desc.attr & USB_EP_ATTR_XFERTYPE_MASK;
-          if (transtpye == USB_EP_ATTR_XFER_BULK)
-            {
-              if (epinfo->compdesc.mxburst >= USB_SS_BULK_EP_MAXBURST)
-                {
-                  reqsize = reqsize * USB_SS_BULK_EP_MAXBURST;
-                }
-              else
-                {
-                  reqsize = reqsize * (epinfo->compdesc.mxburst + 1);
-                }
-            }
-          else if (transtpye == USB_EP_ATTR_XFER_INT)
-            {
-              if (epinfo->compdesc.mxburst >= USB_SS_INT_EP_MAXBURST)
-                {
-                  reqsize = reqsize * USB_SS_INT_EP_MAXBURST;
-                }
-              else
-                {
-                  reqsize = reqsize * (epinfo->compdesc.mxburst + 1);
-                }
-            }
-        }
-#endif
     }
   else
     {
       fs_ep->ep = dev->ep0;
     }
+
+#ifdef CONFIG_USBDEV_SUPERSPEED
+  if (dev->speed == USB_SPEED_SUPER ||
+      dev->speed == USB_SPEED_SUPER_PLUS)
+    {
+      uint8_t transtpye;
+
+      transtpye = epinfo->desc.attr & USB_EP_ATTR_XFERTYPE_MASK;
+      if (transtpye == USB_EP_ATTR_XFER_BULK)
+        {
+          if (epinfo->compdesc.mxburst >= USB_SS_BULK_EP_MAXBURST)
+            {
+              reqsize = reqsize * USB_SS_BULK_EP_MAXBURST;
+            }
+          else
+            {
+              reqsize = reqsize * (epinfo->compdesc.mxburst + 1);
+            }
+        }
+      else if (transtpye == USB_EP_ATTR_XFER_INT)
+        {
+          if (epinfo->compdesc.mxburst >= USB_SS_INT_EP_MAXBURST)
+            {
+              reqsize = reqsize * USB_SS_INT_EP_MAXBURST;
+            }
+          else
+            {
+              reqsize = reqsize * (epinfo->compdesc.mxburst + 1);
+            }
+        }
+    }
+#endif
 
   fs_ep->ep->fs = fs_ep;
 
@@ -1499,7 +1499,6 @@ static int usbdev_fs_classsetup(FAR struct usbdevclass_driver_s *driver,
 
           sq_addlast(&container->node, &ep0->ctrlreqq);
           usbdev_fs_notify(ep0, POLLIN);
-
           ret = OK;
         }
       else

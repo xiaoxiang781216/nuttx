@@ -339,6 +339,13 @@ config RTC_MCP794XX
 
 if RTC_MCP794XX
 
+config MCP794XX_DATETIME_UTC
+	bool "Store datetime in UTC"
+	default n
+	---help---
+		If set, the datetime is stored in UTC timezone instead of timezone
+		defined by local time.
+
 config MCP794XX_I2C_FREQUENCY
 	int "MCP794XX I2C frequency"
 	default 400000
@@ -365,20 +372,20 @@ config RX8010SJ_I2C_FREQUENCY
 endif # RTC_RX8010SJ
 
 config RTC_RPMSG
-	bool "Rpmsg RTC Driver"
+	bool "RPMSG RTC Driver"
 	default n
 	depends on RPMSG
 	select ARCH_HAVE_RTC_SUBSECONDS
 
 config RTC_RPMSG_SERVER
-	bool "The RTC Rpmsg Role"
+	bool "The RTC RPMSG Role"
 	depends on RPMSG
 
 config RTC_RPMSG_SERVER_NAME
-	string "The name of RTC Rpmsg Server"
+	string "The name of RTC RPMSG Server"
 	depends on RTC_RPMSG
 	---help---
-		The proc name of rtc server. Client requests time from
+		The proc name of RTC server. Client requests time from
 		specified name of remote proc.
 
 config RTC_RPMSG_SYNC_BASETIME
@@ -512,5 +519,9 @@ endif # TIMERS_CS2100CP
 config GOLDFISH_TIMER
 	bool "Enable GOLDFISH_TIMER"
 	default n
+	---help---
+		Goldfish timer is a virtual timer device that is used in the Android
+		emulator. It is used to provide a virtual timer to the guest OS.
+		See: https://android.googlesource.com/platform/external/qemu/+/master/docs/GOLDFISH-VIRTUAL-HARDWARE.TXT
 
 endmenu # Timer Driver Support

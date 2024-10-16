@@ -79,7 +79,7 @@
 
 int sigsuspend(FAR const sigset_t *set)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   sigset_t saved_sigprocmask;
   irqstate_t flags;
 
@@ -93,8 +93,8 @@ int sigsuspend(FAR const sigset_t *set)
    * can only be eliminated by disabling interrupts!
    */
 
+  sched_lock();  /* Not necessary */
   flags = enter_critical_section();
-  rtcb = this_task();
 
   /* Save a copy of the old sigprocmask and install
    * the new (temporary) sigprocmask
@@ -133,7 +133,7 @@ int sigsuspend(FAR const sigset_t *set)
       /* Add the task to the specified blocked task list */
 
       rtcb->task_state = TSTATE_WAIT_SIG;
-      dq_addlast((FAR dq_entry_t *)rtcb, &g_waitingforsignal);
+      dq_addlast((FAR dq_entry_t *)rtcb, list_waitingforsignal());
 
       /* Now, perform the context switch */
 
@@ -152,6 +152,7 @@ int sigsuspend(FAR const sigset_t *set)
       nxsig_unmask_pendingsignal();
     }
 
+  sched_unlock();
   leave_cancellation_point();
   set_errno(EINTR);
   return ERROR;

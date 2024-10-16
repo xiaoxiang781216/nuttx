@@ -153,5 +153,6 @@ void up_dump_register(void *dumpregs)
   _alert("R14: %016" PRIx64 ", R15: %016" PRIx64 "\n",
          regs[REG_R14], regs[REG_R15]);
   _alert("Dumping Stack (+-64 bytes):\n");
+
   _alert("-----------------------------------------\n");
 }

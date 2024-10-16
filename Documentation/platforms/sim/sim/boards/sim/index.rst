@@ -692,6 +692,7 @@ NOTES
      running C++ static initializers until NuttX has been initialized.
 
 fb
+--
 
 A simple configuration used for some basic (non-graphic) debug of the
 framebuffer character drivers using apps/examples/fb.
@@ -848,16 +849,7 @@ NOTES:
 
            apps/examples/hello.
 
-  2. This version has password protection enabled.  Here is the login info::
-
-           USERNAME:  admin
-           PASSWORD:  Administrator
-
-     The encrypted password is retained in /etc/passwd.  I am sure that
-     you will find this annoying.  You can disable the password protection
-     by de-selecting CONFIG_NSH_CONSOLE_LOGIN=y.
-
-  3. This configuration has BINFS enabled so that the builtin applications can
+  2. This configuration has BINFS enabled so that the builtin applications can
      be made visible in the file system.  Because of that, the builtin
      applications do not work as other examples.
 
@@ -1043,7 +1035,7 @@ NOTES
          @@ -117,7 +117,8 @@
             /* Execute the startup script */
 
-          #ifdef CONFIG_NSH_ROMFSETC
+          #ifdef CONFIG_ETC_ROMFS
          -  nsh_script(&pstate->cn_vtbl, "init", NSH_INITPATH);
          +// REMOVE ME
          +//  nsh_script(&pstate->cn_vtbl, "init", NSH_INITPATH);
@@ -1115,14 +1107,14 @@ rpproxy and rpserver
 
   rpserver: Remote master(host) server process.
             rpserver contains all the real hardware configuration, such as:
-              1.Universal Asynchronous Receiver/Transmitter (UART).
-              2.Specific File System.
-              3.Network protocol stack and real network card device.
-              4....
+              1. Universal Asynchronous Receiver/Transmitter (UART).
+              2. Specific File System.
+              3. Network protocol stack and real network card device.
+              4. ...
 
 Rpmsg driver used in this example include:
 
-1.Rpmsg Syslog
+1. Rpmsg Syslog
 
     Source::
 
@@ -1250,6 +1242,8 @@ To use this example:
               1     1 224 FIFO     Kthread --- Waiting  Signal    00000000 002032 hpwork
               3     3 100 FIFO     Task    --- Running            00000000 004080 init
 
+      To switch back the console, type ``"~."`` in the cu session.
+
 3. RpmsgFS:
 
    Mount the remote file system via RPMSGFS, cu to proxy first::
@@ -1370,6 +1364,33 @@ This is a configuration to test CONFIG_LIBC_MODLIB with CONFIG_SIM_M32
 and 32-bit modules.
 This has apps/examples/sotest enabled.
 This configuration is intended for 64-bit host OS.
+
+sqlite
+-------
+
+This configuration is used to test sqlite. Since hostfs does not support
+FIOC_FILEPATH, it cannot currently be used in hostfs.
+
+Basic usage example::
+
+    nsh> cd tmp
+    nsh> sqlite3 test.db
+    SQLite version 3.45.1 2024-01-30 16:01:20
+    Enter ".help" for usage hints.
+    sqlite>
+    CREATE TABLE COMPANY(
+      ID INT PRIMARY KEY     sqlite> (x1...> NOT NULL,
+      NAME           TEXT    NOT NULL,
+      AGE            (x1...> (x1...> INT     NOT NULL,
+      ADDRESS        CHAR(50),
+      SALARY         (x1...> (x1...> REAL
+    );(x1...>
+    sqlite> .quit
+    sqlite>
+    nsh>
+    nsh> ls -l
+    /tmp:
+    -rwxrwxrwx       12288 test.db
 
 tcploop
 -------
@@ -1635,7 +1656,7 @@ This is a configuration with sim usbdev support.
 
   Make Raw Gadget:
   Run make in the raw_gadget and dummy_hcd directory. If raw_gadget build
-  fail, you need to check which register interface meets your kenel version,
+  fail, you need to check which register interface meets your kernel version,
   usb_gadget_probe_driver or usb_gadget_register_driver.
 
   Install Raw Gadget:
@@ -1647,6 +1668,8 @@ This is a configuration with sim usbdev support.
 
     conn0: adb & rndis
     conn1: cdcacm & cdcecm
+    conn2: cdcncm
+    conn3: cdcmbim
 
   You can use the sim:usbdev configuration::
 
@@ -1679,7 +1702,7 @@ This is a configuration with sim usbdev support.
   Then you can use commands such as adb shell, adb push, adb pull as normal.
 
     2> Run RNDIS:
-  
+
   NuttX enter command::
 
       $ conn 0
@@ -1723,7 +1746,7 @@ This is a configuration with sim usbdev support.
       $ cat /dev/ttyACM0
       hello
 
-    3> Run CDCECM:
+    4> Run CDCECM:
 
   NuttX enter command::
 
@@ -1746,6 +1769,76 @@ This is a configuration with sim usbdev support.
               RX errors 0  dropped 0  overruns 0  frame 0
               TX packets 58  bytes 9143 (9.1 KB)
               TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+  Then you can test the network connection using the ping command or telnet.
+
+    5> Run CDCNCM:
+
+  NuttX enter command::
+
+      $ conn 2
+      $ ifconfig
+      eth0    Link encap:Ethernet HWaddr 42:67:c6:69:73:51 at UP
+              inet addr:10.0.1.2 DRaddr:10.0.1.1 Mask:255.255.255.0
+      eth1    Link encap:Ethernet HWaddr 00:e0:de:ad:be:ef at UP
+              inet addr:0.0.0.0 DRaddr:0.0.0.0 Mask:0.0.0.0
+      $ dhcpd_start eth1
+      $ ifconfig
+      eth0    Link encap:Ethernet HWaddr 42:67:c6:69:73:51 at UP
+              inet addr:10.0.1.2 DRaddr:10.0.1.1 Mask:255.255.255.0
+      eth1    Link encap:Ethernet HWaddr 00:e0:de:ad:be:ef at UP
+              inet addr:10.0.0.1 DRaddr:10.0.0.1 Mask:255.255.255.0
+
+  Host PC, you can see the network device named enx020000112233::
+
+      $ ifconfig
+      enx020000112233: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 576
+              inet 10.0.0.2  netmask 255.255.255.0  broadcast 10.0.0.255
+              ether 02:00:00:11:22:33  txqueuelen 1000  (以太网)
+              RX packets 0  bytes 0 (0.0 B)
+              RX errors 0  dropped 0  overruns 0  frame 0
+              TX packets 58  bytes 9143 (9.1 KB)
+              TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+  Then you can test the network connection using the ping command or telnet.
+
+    6> Run CDCMBIM:
+
+  NuttX enter command::
+
+      $ conn 3
+      $ ifconfig
+      eth0    Link encap:Ethernet HWaddr 42:67:c6:69:73:51 at RUNNING mtu 1500
+              inet addr:10.0.1.2 DRaddr:10.0.1.1 Mask:255.255.255.0
+      wwan0   Link encap:UNSPEC at RUNNING mtu 1200
+              inet addr:0.0.0.0 DRaddr:0.0.0.0 Mask:0.0.0.0
+      $ ifconfig wwan0 10.0.0.1 netmask 255.255.255.0
+      $ ifconfig
+      eth0    Link encap:Ethernet HWaddr 42:67:c6:69:73:51 at RUNNING mtu 1500
+              inet addr:10.0.1.2 DRaddr:10.0.1.1 Mask:255.255.255.0
+      wwan0   Link encap:UNSPEC at RUNNING mtu 1200
+              inet addr:10.0.0.1 DRaddr:10.0.0.1 Mask:255.255.255.0
+
+      $ echo -n "hello from nuttx" > /dev/cdc-wdm2
+      $ cat /dev/cdc-wdm2
+      hello from linux
+
+  Host PC, you can see the network device named wwx020000112233::
+
+      $ sudo ifconfig wwx020000112233
+      $ sudo ifconfig wwx020000112233 10.0.0.2 netmask 255.255.255.0
+      $ ifconfig
+      wwx020000112233: flags=4226<BROADCAST,NOARP,MULTICAST>  mtu 1500
+              inet 10.0.0.2  netmask 255.255.255.0  broadcast 10.0.0.255
+              ether 02:00:00:11:22:33  txqueuelen 1000  (以太网)
+              RX packets 0  bytes 0 (0.0 B)
+              RX errors 0  dropped 0  overruns 0  frame 0
+              TX packets 58  bytes 9143 (9.1 KB)
+              TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+      $ sudo cat /dev/cdc-wdm1
+      hello from nuttx
+      $ sudo bash -c "echo -n hello from linux > /dev/cdc-wdm1"
 
   Then you can test the network connection using the ping command or telnet.
 
@@ -1776,3 +1869,25 @@ This is a configuration with sim usbhost support.
 
    Run sim usbhost with root mode, run sim usbdev or plug-in cdcacm usb device.
    Then you can use /dev/ttyACM to transfer data.
+
+login
+-----
+
+This is a configuration with login password protection for nuttx shell.
+
+NOTES:
+
+  This config has password protection enabled.  Here is the login info::
+
+           USERNAME:  admin
+           PASSWORD:  Administrator
+
+  The encrypted password is retained in /etc/passwd.  I am sure that
+  you will find this annoying.  You can disable the password protection
+  by de-selecting CONFIG_NSH_CONSOLE_LOGIN=y.
+
+README.txt
+==========
+
+.. include:: README.txt
+   :literal:

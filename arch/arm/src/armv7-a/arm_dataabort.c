@@ -33,7 +33,7 @@
 #include "sched/sched.h"
 #include "arm_internal.h"
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 #  include <nuttx/page.h>
 #  include "arm.h"
 #endif
@@ -48,8 +48,8 @@
  * Input Parameters:
  *   regs - The standard, ARM register save array.
  *
- * If CONFIG_PAGING is selected in the NuttX configuration file, then these
- * additional input values are expected:
+ * If CONFIG_LEGACY_PAGING is selected in the NuttX configuration file, then
+ * these additional input values are expected:
  *
  *   dfar - Fault address register.  On a data abort, the ARM MMU places the
  *     miss virtual address (MVA) into the DFAR register.  This is the
@@ -64,7 +64,7 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 uint32_t *arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr)
 {
   struct tcb_s *tcb = this_task();
@@ -127,7 +127,7 @@ uint32_t *arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr)
    *     execute immediately when we return from this exception.
    */
 
-  pg_miss(tcb);
+  pg_miss();
 
   /* Restore the previous value of current_regs.  NULL would indicate that
    * we are no longer in an interrupt handler.  It will be non-NULL if we
@@ -144,7 +144,7 @@ segfault:
   return regs; /* To keep the compiler happy */
 }
 
-#else /* CONFIG_PAGING */
+#else /* CONFIG_LEGACY_PAGING */
 
 uint32_t *arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr)
 {
@@ -162,4 +162,4 @@ uint32_t *arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr)
   return regs; /* To keep the compiler happy */
 }
 
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */

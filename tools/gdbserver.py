@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # tools/gdbserver.py
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -46,7 +48,6 @@ UINT16_MAX = 65535
 
 
 DEFAULT_GDB_INIT_CMD = "-ex 'bt full' -ex 'info reg' -ex 'display /40i $pc-40'"
-
 
 logger = logging.getLogger()
 

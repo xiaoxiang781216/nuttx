@@ -37,6 +37,8 @@
 
 #include <errno.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/himem/himem.h>
+#include <arch/board/board.h>
 
 #ifdef CONFIG_ESP32S3_TIMER
 #  include "esp32s3_board_tim.h"
@@ -90,6 +92,39 @@
 #  include "esp32s3_ledc.h"
 #endif
 
+#ifdef CONFIG_ESP32S3_PARTITION_TABLE
+#  include "esp32s3_partition.h"
+#endif
+
+#ifdef CONFIG_ESP_RMT
+#  include "esp32s3_board_rmt.h"
+#endif
+
+#ifdef CONFIG_ESP_MCPWM
+#  include "esp32s3_board_mcpwm.h"
+#endif
+
+#ifdef CONFIG_ESP32S3_SPI
+#include "esp32s3_spi.h"
+#include "esp32s3_board_spidev.h"
+#endif
+
+#ifdef CONFIG_ESP32S3_SDMMC
+#include "esp32s3_board_sdmmc.h"
+#endif
+
+#ifdef CONFIG_ESP32S3_AES_ACCELERATOR
+#  include "esp32s3_aes.h"
+#endif
+
+#ifdef CONFIG_ESP32S3_ADC
+#include "esp32s3_board_adc.h"
+#endif
+
+#ifdef CONFIG_ESPRESSIF_TEMP
+#  include "espressif/esp_temperature_sensor.h"
+#endif
+
 #include "esp32s3-devkit.h"
 
 /****************************************************************************
@@ -117,6 +152,33 @@ int esp32s3_bringup(void)
     defined(CONFIG_ESP32S3_I2S1)
   bool i2s_enable_tx;
   bool i2s_enable_rx;
+#endif
+
+#if defined(CONFIG_ESP32S3_SPIRAM) && \
+    defined(CONFIG_ESP32S3_SPIRAM_BANKSWITCH_ENABLE)
+  ret = esp_himem_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to init HIMEM: %d\n", ret);
+    }
+#endif
+
+#if defined(CONFIG_ESP32S3_SPI) && defined(CONFIG_SPI_DRIVER)
+  #ifdef CONFIG_ESP32S3_SPI2
+  ret = board_spidev_initialize(ESP32S3_SPI2);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to init spidev 2: %d\n", ret);
+    }
+  #endif
+
+  #ifdef CONFIG_ESP32S3_SPI3
+  ret = board_spidev_initialize(ESP32S3_SPI3);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to init spidev 3: %d\n", ret);
+    }
+  #endif
 #endif
 
 #if defined(CONFIG_ESP32S3_EFUSE)
@@ -166,11 +228,52 @@ int esp32s3_bringup(void)
     }
 #endif
 
+#ifdef CONFIG_ESP32S3_SPIFLASH
+  ret = board_spiflash_init();
+  if (ret)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize SPI Flash\n");
+    }
+#endif
+
+#ifdef CONFIG_ESP32S3_PARTITION_TABLE
+  ret = esp32s3_partition_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize partition error=%d\n",
+             ret);
+    }
+#endif
+
 #ifdef CONFIG_ESP32S3_RT_TIMER
   ret = esp32s3_rt_timer_init();
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize RT timer: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_ESP_RMT
+  ret = board_rmt_txinitialize(RMT_TXCHANNEL, RMT_OUTPUT_PIN);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: board_rmt_txinitialize() failed: %d\n", ret);
+    }
+
+  ret = board_rmt_rxinitialize(RMT_RXCHANNEL, RMT_INPUT_PIN);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: board_rmt_txinitialize() failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_ESPRESSIF_TEMP
+  struct esp_temp_sensor_config_t cfg = TEMPERATURE_SENSOR_CONFIG(10, 50);
+  ret = esp_temperature_sensor_initialize(cfg);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize temperature sensor driver: %d\n",
+             ret);
     }
 #endif
 
@@ -284,7 +387,7 @@ int esp32s3_bringup(void)
              CONFIG_ESP32S3_I2S1, ret);
     }
 
-#endif  /* CONFIG_ESP32S3_I2S1 */
+#endif /* CONFIG_ESP32S3_I2S1 */
 
 #endif /* CONFIG_ESP32S3_I2S */
 
@@ -303,14 +406,6 @@ int esp32s3_bringup(void)
   if (ret != OK)
     {
       syslog(LOG_ERR, "Failed to register djoystick driver: %d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_ESP32S3_SPIFLASH
-  ret = board_spiflash_init();
-  if (ret)
-    {
-      syslog(LOG_ERR, "ERROR: Failed to initialize SPI Flash\n");
     }
 #endif
 
@@ -343,6 +438,14 @@ int esp32s3_bringup(void)
 
 #endif
 
+#ifdef CONFIG_ESP32S3_OPENETH
+  ret = esp_openeth_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize Open ETH ethernet.\n");
+    }
+#endif
+
 #ifdef CONFIG_DEV_GPIO
   ret = esp32s3_gpio_init();
   if (ret < 0)
@@ -362,6 +465,62 @@ int esp32s3_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize LCD.\n");
+    }
+#endif
+
+#ifdef CONFIG_NET_LAN9250
+  ret = esp32s3_lan9250_initialize(LAN9250_SPI);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize SPI ethernet LAN9250.\n");
+    }
+#endif
+
+#ifdef CONFIG_ESP32S3_SDMMC
+  ret = board_sdmmc_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize SDMMC: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_ESP32S3_AES_ACCELERATOR
+  ret = esp32s3_aes_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize AES: %d\n", ret);
+    }
+#ifdef CONFIG_ESP32S3_AES_ACCELERATOR_TEST
+  else
+    {
+      esp32s3_aes_test();
+    }
+#endif
+#endif
+
+#ifdef CONFIG_ESP32S3_ADC
+  /* Configure ADC */
+
+  ret = board_adc_init();
+  if (ret)
+    {
+      syslog(LOG_ERR, "ERROR: board_adc_init() failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_ESP_MCPWM_CAPTURE
+  ret = board_capture_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: board_capture_initialize failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_ESP_MCPWM_MOTOR_BDC
+  ret = board_motor_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: board_motor_initialize failed: %d\n", ret);
     }
 #endif
 

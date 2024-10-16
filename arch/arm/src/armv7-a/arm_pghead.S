@@ -25,14 +25,15 @@
 #include <nuttx/config.h>
 #include <nuttx/page.h>
 
+#include <arch/irq.h>
+
 #include "arm.h"
-#include "cp15.h"
 #include "sctlr.h"
 #include "mmu.h"
 #include "chip.h"
 #include "arm_internal.h"
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 
 	.file	"arm_pghead.S"
 
@@ -50,7 +51,7 @@
 /* The page table cannot be in ROM if we are going to do pagin! */
 
 #ifndef CONFIG_ARCH_ROMPGTABLE
-#  error CONFIG_PAGING and CONFIG_ARCH_ROMPGTABLE are incompatible options
+#  error CONFIG_LEGACY_PAGING and CONFIG_ARCH_ROMPGTABLE are incompatible options
 #endif
 
 /* There are three operational memory configurations:

@@ -514,7 +514,9 @@ void bignum_div(FAR struct bn *a, FAR struct bn *b, FAR struct bn *c)
 
   while (!bignum_is_zero(&current))             /* while (current != 0) */
     {
-      if (bignum_cmp_abs(&tmp, &denom) != SMALLER) /*   if (dividend >= denom) */
+      /* if (dividend >= denom) */
+
+      if (bignum_cmp_abs(&tmp, &denom) != SMALLER)
         {
           bignum_sub_abs(&tmp, &denom, &tmp); /*     dividend -= denom; */
           bignum_or(c, &current, c);          /*     answer |= current; */
@@ -872,7 +874,9 @@ void pow_mod_faster(FAR struct bn *a, FAR struct bn *b,
 
   while (1)
     {
-      if (tmpb.array[0] & 1)            /* if (b % 2) */
+      /* if (b % 2) */
+
+      if (tmpb.array[0] & 1)
         {
           bignum_mul(res, &tmpa, &tmp); /*   r = r * a % m */
           bignum_mod(&tmp, n, res);

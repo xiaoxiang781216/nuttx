@@ -123,6 +123,13 @@ if(CONFIG_CXD56_CHARGER)
   list(APPEND SRCS cxd56_charger.c)
 endif()
 
+if(CONFIG_AUDIO_CXD56)
+  list(APPEND SRCS cxd56_nxaudio.c)
+  if(CONFIG_AUDIO_CXD56_SRC)
+    list(APPEND SRCS cxd56_nxaudio_src.c)
+  endif()
+endif()
+
 if(CONFIG_CXD56_GE2D)
   list(APPEND SRCS cxd56_ge2d.c)
 endif()
@@ -164,6 +171,10 @@ endif()
 
 if(CONFIG_CXD56_HOSTIF)
   list(APPEND SRCS cxd56_hostif.c)
+endif()
+
+if(CONFIG_CXD56_GNSS_HEAP)
+  list(APPEND SRCS cxd56_gnssheap.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})

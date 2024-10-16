@@ -26,6 +26,13 @@ choice
 	prompt "C++ Library"
 	default LIBCXXMINI
 
+config LIBCXXTOOLCHAIN
+	bool "Toolchain C++ support"
+	select HAVE_CXXINITIALIZE
+	select LIBC_LOCALE
+	---help---
+		Use Standard C++ library from toolchain.
+
 config LIBCXXMINI
 	bool "Basic C++ support"
 	---help---
@@ -37,6 +44,7 @@ config LIBCXX
 	bool "LLVM libc++ C++ Standard Library"
 	select HAVE_CXXINITIALIZE
 	select PTHREAD_MUTEX_TYPES
+	depends on TLS_NELEM > 0
 	---help---
 		LLVM "libc++" C++ Standard Library
 		https://libcxx.llvm.org/
@@ -44,6 +52,7 @@ config LIBCXX
 config UCLIBCXX
 	bool "uClibc++ Standard C++ Library"
 	select HAVE_CXXINITIALIZE
+	depends on ALLOW_GPL_COMPONENTS
 	---help---
 		uClibc++ C++ library
 		https://cxx.uclibc.org/

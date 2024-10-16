@@ -43,7 +43,7 @@ config SERIAL_CONSOLE
 
 config SERIAL_GDBSTUB
 	bool "GDBSTUB Serial support"
-	depends on LIB_GDBSTUB
+	depends on ARCH_HAVE_DEBUG
 	default n
 
 config SERIAL_GDBSTUB_PATH
@@ -71,11 +71,16 @@ config SERIAL_GDBSTUB_PANIC_TIMEOUT
 		0 will disable the timeout.
 
 config UART_HOSTFS
-	bool "Use hostfs read/write on stdio as uart console"
+	bool "Use hostfs read/write on UART_HOSTFS_DEVPATH as uart console"
 	depends on FS_HOSTFS
 	default n
 	select SERIAL_RXDMA
 	select SERIAL_TXDMA
+
+config UART_HOSTFS_DEVPATH
+	string "The host device node that will be used by"
+	depends on UART_HOSTFS
+	default "/dev/tty"
 
 config UART_HOSTFS_RXBUFSIZE
 	int "Uart hostfs receive buffer size"
@@ -136,7 +141,7 @@ config MCU_SERIAL
 	default n
 
 config RPMSG_UART
-	bool "UART rpmsg support"
+	bool "UART RPMSG support"
 	default n
 	depends on RPMSG
 	select ARCH_HAVE_SERIAL_TERMIOS
@@ -146,11 +151,11 @@ config RPMSG_UART
 	select SERIAL_IFLOWCONTROL
 
 config RPMSG_UART_CONSOLE
-	bool "UART rpmsg console support"
+	bool "UART RPMSG console support"
 	default n
 	depends on RPMSG_UART
 	---help---
-		Register the UART rpmsg device as /dev/console so that is will be used
+		Register the UART RPMSG device as /dev/console so that is will be used
 		as the console device.
 		NOTE: support for this option must be implemented in the board logic by
 		setting the \"isconsole\" argument in the uart_rpmsg_init() function to true.
@@ -900,11 +905,40 @@ endif # UART_BTH4
 menuconfig UART_BTH5
 	bool "BT H5 UART Pseudo Device"
 	default n
-	depends on UART_BTH4 && BLUETOOTH_SLIP
+	depends on DRIVERS_BLUETOOTH
 	---help---
 		Enable support for Bluetooth H5 UART Pseudo Device(eg. /dev/ttyHCI).
 		This instantiates a serial-like interface over an existing bluetooth
 		controller via HCI interface. Useful for external Bluetooth
 		stacks working this way instead of the socket based interface.
+
+if UART_BTH5
+
+config UART_BTH5_TXBUFSIZE
+	int "BT H5 UART TX Buffer Size"
+	default 2048
+	---help---
+		H5 UART TX Buffer Size.  Default: 2048
+
+config UART_BTH5_TXWIN
+	int "BT H5 Uart TX Window Size"
+	default 4
+	---help---
+		H5 UART TX Window Size.  Default: 4
+
+config UART_BTH5_RXBUFSIZE
+	int "BT H5 Uart RX Buffer Size"
+	default 8096
+	---help---
+		H5 UART RX Buffer Size.  Default: 8096
+
+config UART_BTH5_NPOLLWAITERS
+	int "Number Of Poll Threads"
+	default 2
+	---help---
+		Maximum number of threads than can be waiting for POLL events.
+		Default: 2
+
+endif # UART_BTH5
 
 endif # SERIAL

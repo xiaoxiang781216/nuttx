@@ -117,9 +117,9 @@ int nxtask_terminate(pid_t pid)
   uint8_t task_state;
   irqstate_t flags;
 
-  /* Find for the TCB associated with matching PID */
-
   flags = enter_critical_section();
+
+  /* Find for the TCB associated with matching PID */
 
   dtcb = nxsched_get_tcb(pid);
   if (!dtcb || dtcb->flags & TCB_FLAG_EXIT_PROCESSING)
@@ -179,7 +179,6 @@ int nxtask_terminate(pid_t pid)
   nxtask_exithook(dtcb, EXIT_SUCCESS);
 
   leave_critical_section(flags);
-
   /* Since all tasks pass through this function as the final step in their
    * exit sequence, this is an appropriate place to inform any
    * instrumentation layer that the task no longer exists.

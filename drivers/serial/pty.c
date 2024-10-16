@@ -162,7 +162,7 @@ static void pty_destroy(FAR struct pty_devpair_s *devpair)
 
       /* Un-register the slave device */
 
-      snprintf(devname, 16, "/dev/pts/%d", devpair->pp_minor);
+      snprintf(devname, sizeof(devname), "/dev/pts/%u", devpair->pp_minor);
     }
   else
     {
@@ -170,12 +170,12 @@ static void pty_destroy(FAR struct pty_devpair_s *devpair)
        * unlinked).
        */
 
-      snprintf(devname, 16, "/dev/pty%d", (int)devpair->pp_minor);
+      snprintf(devname, sizeof(devname), "/dev/pty%u", devpair->pp_minor);
       unregister_driver(devname);
 
       /* Un-register the slave device */
 
-      snprintf(devname, 16, "/dev/ttyp%d", devpair->pp_minor);
+      snprintf(devname, sizeof(devname), "/dev/ttyp%u", devpair->pp_minor);
     }
 
   unregister_driver(devname);
@@ -336,7 +336,7 @@ static int pty_close(FAR struct file *filep)
 
   /* Check if the decremented inode reference count would go to zero */
 
-  if (inode->i_crefs == 1)
+  if (atomic_load(&inode->i_crefs) == 1)
     {
       /* Did the (single) master just close its reference? */
 
@@ -1090,7 +1090,7 @@ int pty_register2(int minor, bool susv1)
    * Where N is the minor number
    */
 
-  snprintf(devname, 16, "/dev/pty%d", minor);
+  snprintf(devname, sizeof(devname), "/dev/pty%d", minor);
 
   ret = register_driver(devname, &g_pty_fops, 0666, &devpair->pp_master);
   if (ret < 0)
@@ -1108,11 +1108,11 @@ int pty_register2(int minor, bool susv1)
 
   if (susv1)
     {
-      snprintf(devname, 16, "/dev/pts/%d", minor);
+      snprintf(devname, sizeof(devname), "/dev/pts/%d", minor);
     }
   else
     {
-      snprintf(devname, 16, "/dev/ttyp%d", minor);
+      snprintf(devname, sizeof(devname), "/dev/ttyp%d", minor);
     }
 
   ret = register_driver(devname, &g_pty_fops, 0666, &devpair->pp_slave);
@@ -1124,7 +1124,7 @@ int pty_register2(int minor, bool susv1)
   return OK;
 
 errout_with_master:
-  snprintf(devname, 16, "/dev/pty%d", minor);
+  snprintf(devname, sizeof(devname), "/dev/pty%d", minor);
   unregister_driver(devname);
 
 errout_with_devpair:

@@ -39,15 +39,18 @@ Usage
 -----
 
 To enable Generic KASAN, configure the kernel with::
+
     CONFIG_MM_KASAN=y
     CONFIG_MM_KASAN_ALL=y
     CONFIG_MM_KASAN_GENERIC=y
 
 If you want to enable global variable out of bounds detection,
 you can add configurations based on the above::
+
     CONFIG_MM_KASAN_GLOBAL=y
 
 To enable Software Tag-Based KASAN, configure the kernel with::
+
     CONFIG_MM_KASAN=y
     CONFIG_MM_KASAN_ALL=y
     CONFIG_MM_KASAN_SW_TAGS=y

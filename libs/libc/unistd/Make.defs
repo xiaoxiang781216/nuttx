@@ -1,6 +1,8 @@
 ############################################################################
 # libs/libc/unistd/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -51,10 +53,10 @@ endif
 
 ifeq ($(CONFIG_ARCH_HAVE_FORK),y)
 CSRCS += lib_fork.c
+endif
 
 ifeq ($(CONFIG_CRYPTO),y)
 CSRCS += lib_crypt.c lib_crypt_r.c
-endif
 endif
 
 # Add the unistd directory to the build

@@ -44,7 +44,7 @@
  */
 
 #define avr_savestate(regs)    avr_copystate(regs, up_current_regs())
-#define avr_restorestate(regs) set_current_resg(regs)
+#define avr_restorestate(regs) up_set_current_regs(regs)
 
 /****************************************************************************
  * Public Types

@@ -44,15 +44,31 @@
 
 #define PIDHASH(pid)             ((pid) & (g_npidhash - 1))
 
+/* The state of a task is indicated both by the task_state field of the TCB
+ * and by a series of task lists.  All of these tasks lists are declared
+ * below. Although it is not always necessary, most of these lists are
+ * prioritized so that common list handling logic can be used (only the
+ * g_readytorun, the g_pendingtasks, and the g_waitingforsemaphore lists
+ * need to be prioritized).
+ */
+
+#define list_readytorun()        (&g_readytorun)
+#define list_pendingtasks()      (&g_pendingtasks)
+#define list_waitingforsignal()  (&g_waitingforsignal)
+#define list_waitingforfill()    (&g_waitingforfill)
+#define list_stoppedtasks()      (&g_stoppedtasks)
+#define list_inactivetasks()     (&g_inactivetasks)
+#define list_assignedtasks(cpu)  (&g_assignedtasks[cpu])
+
 /* These are macros to access the current CPU and the current task on a CPU.
  * These macros are intended to support a future SMP implementation.
  * NOTE: this_task() for SMP is implemented in sched_thistask.c
  */
 
 #ifdef CONFIG_SMP
-#  define current_task(cpu)      ((FAR struct tcb_s *)g_assignedtasks[cpu].head)
+#  define current_task(cpu)      ((FAR struct tcb_s *)list_assignedtasks(cpu)->head)
 #else
-#  define current_task(cpu)      ((FAR struct tcb_s *)g_readytorun.head)
+#  define current_task(cpu)      ((FAR struct tcb_s *)list_readytorun()->head)
 #endif
 
 #define is_idle_task(t)          ((t)->pid < CONFIG_SMP_NCPUS)
@@ -88,30 +104,6 @@
 #else
 #  define TLIST_HEAD(t)          __TLIST_HEAD(t)
 #  define TLIST_BLOCKED(t)       __TLIST_HEAD(t)
-#endif
-
-#ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD
-#  define CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD -1
-#endif
-
-#ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE
-#  define CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE -1
-#endif
-
-#ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION
-#  define CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION -1
-#endif
-
-#ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION
-#  define CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION -1
-#endif
-
-#ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ
-#  define CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ -1
-#endif
-
-#ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG
-#  define CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG -1
 #endif
 
 #ifdef CONFIG_SCHED_CRITMONITOR_MAXTIME_PANIC
@@ -211,16 +203,6 @@ extern FAR struct tcb_s *g_delivertasks[CONFIG_SMP_NCPUS];
 
 extern FAR struct tcb_s *g_running_tasks[CONFIG_SMP_NCPUS];
 
-/* This is an array of task control block (TCB) for the IDLE thread of each
- * CPU.  For the non-SMP case, this is a a single TCB; For the SMP case,
- * there is one TCB per CPU.  NOTE: The system boots on CPU0 into the IDLE
- * task.  The IDLE task later starts the other CPUs and spawns the user
- * initialization task.  That user initialization task is responsible for
- * bringing up the rest of the system.
- */
-
-extern struct task_tcb_s g_idletcb[CONFIG_SMP_NCPUS];
-
 /* This is the list of all tasks that are ready-to-run, but cannot be placed
  * in the g_readytorun list because:  (1) They are higher priority than the
  * currently active task at the head of the g_readytorun list, and (2) the
@@ -235,7 +217,7 @@ extern dq_queue_t g_waitingforsignal;
 
 /* This is the list of all tasks that are blocking waiting for a page fill */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 extern dq_queue_t g_waitingforfill;
 #endif
 
@@ -274,7 +256,7 @@ extern volatile int g_npidhash;
  * ordered list or not.
  */
 
-extern const struct tasklist_s g_tasklisttable[NUM_TASK_STATES];
+extern struct tasklist_s g_tasklisttable[NUM_TASK_STATES];
 
 #ifndef CONFIG_SCHED_CPULOAD_NONE
 /* This is the total number of clock tick counts.  Essentially the
@@ -400,7 +382,7 @@ static inline_function FAR struct tcb_s *this_task(void)
 
   flags = up_irq_save();
 
-  /* Obtain the TCB which is currently running on this CPU */
+  /* Obtain the TCB which is current running on this CPU */
 
   tcb = current_task(this_cpu());
 
@@ -433,6 +415,7 @@ void nxsched_process_cpuload_ticks(clock_t ticks);
 #ifdef CONFIG_SCHED_CRITMONITOR
 void nxsched_resume_critmon(FAR struct tcb_s *tcb);
 void nxsched_suspend_critmon(FAR struct tcb_s *tcb);
+void nxsched_update_critmon(FAR struct tcb_s *tcb);
 #endif
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0

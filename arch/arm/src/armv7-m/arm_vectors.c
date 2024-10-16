@@ -49,10 +49,6 @@
 
 #define IDLE_STACK      (_ebss + CONFIG_IDLETHREAD_STACKSIZE)
 
-#ifndef ARMV7M_PERIPHERAL_INTERRUPTS
-#  error ARMV7M_PERIPHERAL_INTERRUPTS must be defined to the number of I/O interrupts to be supported
-#endif
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/

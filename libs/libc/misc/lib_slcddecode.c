@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/misc/lib_slcddecode.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -87,7 +89,7 @@ static uint8_t slcd_nibble(uint8_t ascii)
     }
   else
     {
-      return ascii - 'a';
+      return ascii - 'a' + 10;
     }
 }
 

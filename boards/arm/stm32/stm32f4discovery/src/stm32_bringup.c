@@ -58,6 +58,10 @@
 #include "stm32_apds9960.h"
 #endif
 
+#ifdef CONFIG_CL_MFRC522
+#include "stm32_mfrc522.h"
+#endif
+
 #include "stm32f4discovery.h"
 
 /* Conditional logic in stm32f4discovery.h will determine if certain features
@@ -76,7 +80,11 @@
 #include "stm32_bmp180.h"
 #endif
 
-#ifdef CONFIG_SENSORS_MS5611
+#ifdef CONFIG_RTC_DS1307
+#include "stm32_ds1307.h"
+#endif
+
+#ifdef CONFIG_SENSORS_MS56XX
 #include "stm32_ms5611.h"
 #endif
 
@@ -217,7 +225,7 @@ int stm32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_SENSORS_MS5611
+#ifdef CONFIG_SENSORS_MS56XX
   /* Initialize the MS5611 pressure sensor. */
 
   ret = board_ms5611_initialize(0, 1);
@@ -454,7 +462,7 @@ int stm32_bringup(void)
 #endif
 
 #ifdef CONFIG_RTC_DS1307
-  ret = stm32_ds1307_init();
+  ret = board_ds1307_initialize(1);
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize DS1307 RTC driver: %d\n", ret);
@@ -603,6 +611,14 @@ int stm32_bringup(void)
 
 #ifdef CONFIG_USBADB
   usbdev_adb_initialize();
+#endif
+
+#ifdef CONFIG_CL_MFRC522
+  ret = stm32_mfrc522initialize("/dev/rfid0");
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_mfrc522initialize() failed: %d\n", ret);
+    }
 #endif
 
   return ret;

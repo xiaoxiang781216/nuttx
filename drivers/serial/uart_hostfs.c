@@ -43,8 +43,9 @@
 
 struct uart_hostfs_priv_s
 {
-  bool          rxint;
-  struct wdog_s wdog;
+  int             fd;
+  bool            rxint;
+  struct wdog_s   wdog;
 };
 
 /****************************************************************************
@@ -125,11 +126,22 @@ static struct uart_dev_s g_uart_hostfs_dev =
 
 static int uart_hostfs_setup(FAR struct uart_dev_s *dev)
 {
-  return OK;
+  FAR struct uart_hostfs_priv_s *priv = dev->priv;
+
+  priv->fd = host_open(CONFIG_UART_HOSTFS_DEVPATH, O_RDWR | O_NONBLOCK,
+                       0666);
+  return priv->fd;
 }
 
 static void uart_hostfs_shutdown(FAR struct uart_dev_s *dev)
 {
+  FAR struct uart_hostfs_priv_s *priv = dev->priv;
+
+  if (priv->fd > 0)
+    {
+      host_close(priv->fd);
+      priv->fd = -1;
+    }
 }
 
 static int  uart_hostfs_attach(FAR struct uart_dev_s *dev)
@@ -186,7 +198,7 @@ static bool uart_hostfs_rxflowcontrol(FAR struct uart_dev_s *dev,
 {
   FAR struct uart_buffer_s *rxbuf = &dev->recv;
 
-  return nbuffered == rxbuf->size
+  return nbuffered == rxbuf->size;
 }
 #endif
 
@@ -197,18 +209,19 @@ static void uart_hostfs_dmatxavail(FAR struct uart_dev_s *dev)
 
 static void uart_hostfs_dmasend(FAR struct uart_dev_s *dev)
 {
+  FAR struct uart_hostfs_priv_s *priv = dev->priv;
   FAR struct uart_dmaxfer_s *xfer = &dev->dmatx;
   int ret;
 
   xfer->nbytes = 0;
-  ret = host_write(STDOUT_FILENO, xfer->buffer, xfer->length);
+  ret = host_write(priv->fd, xfer->buffer, xfer->length);
   if (ret > 0)
     {
       xfer->nbytes = ret;
 
       if (ret == xfer->length && xfer->nlength > 0)
         {
-          ret = host_write(STDOUT_FILENO, xfer->nbuffer, xfer->nlength);
+          ret = host_write(priv->fd, xfer->nbuffer, xfer->nlength);
           if (ret > 0)
             {
               xfer->nbytes += ret;
@@ -226,18 +239,19 @@ static void uart_hostfs_dmarxfree(FAR struct uart_dev_s *dev)
 
 static void uart_hostfs_dmareceive(FAR struct uart_dev_s *dev)
 {
+  FAR struct uart_hostfs_priv_s *priv = dev->priv;
   FAR struct uart_dmaxfer_s *xfer = &dev->dmarx;
   ssize_t ret;
 
   xfer->nbytes = 0;
-  ret = host_read(STDIN_FILENO, xfer->buffer, xfer->length);
+  ret = host_read(priv->fd, xfer->buffer, xfer->length);
   if (ret > 0)
     {
       xfer->nbytes = ret;
 
       if (ret == xfer->length && xfer->nlength > 0)
         {
-          ret = host_read(STDIN_FILENO, xfer->nbuffer, xfer->nlength);
+          ret = host_read(priv->fd, xfer->nbuffer, xfer->nlength);
           if (ret > 0)
             {
               xfer->nbytes += ret;
@@ -250,9 +264,10 @@ static void uart_hostfs_dmareceive(FAR struct uart_dev_s *dev)
 
 static void uart_hostfs_send(FAR struct uart_dev_s *dev, int ch)
 {
+  FAR struct uart_hostfs_priv_s *priv = dev->priv;
   char c = ch;
 
-  host_write(STDOUT_FILENO, &c, 1);
+  host_write(priv->fd, &c, 1);
 }
 
 static void uart_hostfs_txint(FAR struct uart_dev_s *dev, bool enable)
@@ -278,13 +293,10 @@ void uart_hostfs_init(void)
   uart_register("/dev/console", &g_uart_hostfs_dev);
 }
 
-void up_nputs(const char *str, size_t len)
-{
-  host_write(STDOUT_FILENO, str, len);
-}
-
 int up_putc(int ch)
 {
-  uart_hostfs_send(NULL, ch);
+  FAR struct uart_dev_s *dev = &g_uart_hostfs_dev;
+
+  uart_hostfs_send(dev, ch);
   return ch;
 }

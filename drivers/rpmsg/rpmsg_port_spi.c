@@ -396,7 +396,7 @@ rpmsg_port_spi_process_packet(FAR struct rpmsg_port_spi_s *rpspi,
 static int rpmsg_port_spi_thread(int argc, FAR char *argv[])
 {
   FAR struct rpmsg_port_spi_s *rpspi =
-    (FAR struct rpmsg_port_spi_s *)((uintptr_t)strtoul(argv[2], NULL, 16));
+    (FAR struct rpmsg_port_spi_s *)((uintptr_t)strtoul(argv[2], NULL, 0));
   FAR struct rpmsg_port_queue_s *queue = &rpspi->port.rxq;
   FAR struct rpmsg_port_header_s *rxhdr;
 

@@ -26,13 +26,13 @@
 
 #include "fs_heap.h"
 
-#if CONFIG_FS_HEAPSIZE > 0
+#if defined(CONFIG_FS_HEAPSIZE) && CONFIG_FS_HEAPSIZE > 0
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static struct mm_heap_s *g_fs_heap = NULL;
+static FAR struct mm_heap_s *g_fs_heap;
 
 /****************************************************************************
  * Public Functions
@@ -73,6 +73,48 @@ FAR void *fs_heap_realloc(FAR void *oldmem, size_t size)
 void fs_heap_free(FAR void *mem)
 {
   mm_free(g_fs_heap, mem);
+}
+
+FAR char *fs_heap_strdup(FAR const char *s)
+{
+  size_t len = strlen(s) + 1;
+  FAR char *copy = fs_heap_malloc(len);
+  if (copy != NULL)
+    {
+      memcpy(copy, s, len);
+    }
+
+  return copy;
+}
+
+int fs_heap_asprintf(FAR char **strp, FAR const char *fmt, ...)
+{
+  va_list ap;
+  int len;
+
+  /* Calculates the length required to format the string */
+
+  va_start(ap, fmt);
+  len = vsnprintf(NULL, 0, fmt, ap);
+  va_end(ap);
+
+  if (len < 0)
+    {
+      *strp = NULL;
+      return len;
+    }
+
+  *strp = fs_heap_malloc(len + 1);
+  if (*strp == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  va_start(ap, fmt);
+  vsnprintf(*strp, len + 1, fmt, ap);
+  va_end(ap);
+
+  return len;
 }
 
 #endif

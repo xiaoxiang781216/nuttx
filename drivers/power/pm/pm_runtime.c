@@ -31,8 +31,7 @@
 #include <nuttx/clock.h>
 #include <nuttx/arch.h>
 #include <nuttx/power/pm_runtime.h>
-
-#include "pm.h"
+#include <sched/sched.h>
 
 /****************************************************************************
  * Private Function Prototypes

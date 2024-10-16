@@ -76,21 +76,41 @@ SECTIONS
 #ifdef CONFIG_STACK_CANARIES
     *libc.a:lib_stackchk.*(.literal .text .literal.* .text.*)
 #endif
+    *libarch.a:esp32_cpuindex.*(.literal .text .literal.* .text.*)
+    *libarch.a:esp32_irq.*(.literal .text .literal.* .text.*)
+    *libarch.a:esp32_spicache.*(.literal .text .literal.* .text.*)
     *libarch.a:esp32_spiflash.*(.literal .text .literal.* .text.*)
+    *libarch.a:esp32_user.*(.literal .text .literal.* .text.*)
+    *libarch.a:xtensa_assert.*(.literal .text .literal.* .text.*)
+    *libarch.a:xtensa_cpuint.*(.literal .text .literal.* .text.*)
     *libarch.a:xtensa_cpupause.*(.literal .text .literal.* .text.*)
-    *libarch.a:xtensa_copystate.*(.literal .text .literal.* .text.*)
-    *libarch.a:xtensa_interruptcontext.*(.literal .text .literal.* .text.*)
+    *libarch.a:xtensa_irqdispatch.*(.literal .text .literal.* .text.*)
+    *libarch.a:xtensa_modifyreg32.*(.literal .text .literal.* .text.*)
+    *libarch.a:xtensa_saveusercontext.*(.literal .text .literal.* .text.*)
     *libarch.a:xtensa_testset.*(.literal .text .literal.* .text.*)
 
-    *libsched.a:sched_suspendscheduler.*(.literal .text .literal.* .text.*)
-    *libsched.a:sched_note.*(.literal .text .literal.* .text.*)
-    *libsched.a:sched_thistask.*(.literal .text .literal.* .text.*)
-    *libsched.a:spinlock.*(.literal .text .literal.* .text.*)
+    *libc.a:lib_assert.*(.literal .text .literal.* .text.*)
+    *libc.a:lib_utsname.*(.literal .text .literal.* .text.*)
+    *libc.a:sq_remlast.*(.literal .text .literal.* .text.*)
+
+    *libdrivers.a:syslog_flush.*(.literal .text .literal.* .text.*)
+
+    *libsched.a:assert.*(.literal .text .literal.* .text.*)
     *libsched.a:irq_csection.*(.literal .text .literal.* .text.*)
     *libsched.a:irq_dispatch.*(.literal .text .literal.* .text.*)
+    *libsched.a:irq_spinlock.*(.literal .text .literal.* .text.*)
+    *libsched.a:panic_notifier.*(.literal.panic_notifier_call_chain .text.panic_notifier_call_chain)
+    *libsched.a:sched_gettcb.*(.literal .text .literal.* .text.*)
+    *libsched.a:sched_lock.*(.literal .text .literal.* .text.*)
+    *libsched.a:sched_note.*(.literal .text .literal.* .text.*)
+    *libsched.a:sched_suspendscheduler.*(.literal .text .literal.* .text.*)
+    *libsched.a:sched_thistask.*(.literal .text .literal.* .text.*)
+    *libsched.a:sched_unlock.*(.literal .text .literal.* .text.*)
+    *libsched.a:spinlock.*(.literal .text .literal.* .text.*)
 
     *(.wifirxiram .wifirxiram.*)
     *(.wifi0iram  .wifi0iram.*)
+    *(.wifiorslpiram .wifiorslpiram.*)
     *(.wifislpiram .wifislpiram.*)
     *(.wifislprxiram .wifislprxiram.*)
     *(.phyiram .phyiram.*)
@@ -111,15 +131,39 @@ SECTIONS
     . = ALIGN (8);
     _sbss = ABSOLUTE(.);
     _bss_start = ABSOLUTE(.);
+    *(EXCLUDE_FILE(*libble_app.a *libbt.a *libbtdm_app.a *libnimble.a) .bss EXCLUDE_FILE(*libble_app.a *libbt.a *libbtdm_app.a *libnimble.a) .bss.*)
     *(.ext_ram.bss*)
+    *(EXCLUDE_FILE(*libble_app.a *libbt.a *libbtdm_app.a *libnimble.a) COMMON)
+    . = ALIGN(4);
+    _bt_controller_bss_start = ABSOLUTE(.);
+    *libble_app.a:(.bss .bss.*)
+    . = ALIGN(4);
+    _bt_controller_bss_end = ABSOLUTE(.);
+    . = ALIGN(4);
+    _bt_controller_common_start = ABSOLUTE(.);
+    *libble_app.a:(COMMON)
+    . = ALIGN(4);
+    _bt_controller_common_end = ABSOLUTE(.);
+    . = ALIGN(4);
     _bt_bss_start = ABSOLUTE(.);
-    *libbt.a:(.bss .bss.* COMMON)
-    . = ALIGN (4);
+    *libbt.a:(.bss .bss.*)
+    . = ALIGN(4);
     _bt_bss_end = ABSOLUTE(.);
+    . = ALIGN(4);
+    _bt_common_start = ABSOLUTE(.);
+    *libbt.a:(COMMON)
+    . = ALIGN(4);
+    _bt_common_end = ABSOLUTE(.);
+    . = ALIGN(4);
     _btdm_bss_start = ABSOLUTE(.);
-    *libbtdm_app.a:(.bss .bss.* COMMON)
-    . = ALIGN (4);
+    *libbtdm_app.a:(.bss .bss.*)
+    . = ALIGN(4);
     _btdm_bss_end = ABSOLUTE(.);
+    . = ALIGN(4);
+    _btdm_common_start = ABSOLUTE(.);
+    *libbtdm_app.a:(COMMON)
+    . = ALIGN(4);
+    _btdm_common_end = ABSOLUTE(.);
     . = ALIGN (8);
     *(.dynsbss)
     *(.sbss)
@@ -195,10 +239,12 @@ SECTIONS
     *libc.a:lib_stackchk.*(.rodata  .rodata.*)
 #endif
     *libarch.a:esp32_spiflash.*(.rodata  .rodata.*)
-    *libarch.a:xtensa_cpupause.*(.rodata  .rodata.*)
+    *libarch.a:xtensa_context.*(.rodata  .rodata.*)
     *libarch.a:xtensa_copystate.*(.rodata  .rodata.*)
-    *libarch.a:xtensa_interruptcontext.*(.rodata  .rodata.*)
+    *libarch.a:xtensa_cpupause.*(.rodata  .rodata.*)
     *libarch.a:xtensa_testset.*(.rodata  .rodata.*)
+
+    *libdrivers.a:syslog_channel.*(.rodata  .rodata.*)
 
     *libsched.a:sched_suspendscheduler.*(.rodata  .rodata.*)
     *libsched.a:sched_thistask.*(.rodata  .rodata.*)
@@ -230,6 +276,13 @@ SECTIONS
     _srodata = ABSOLUTE(.);
     *(.rodata)
     *(.rodata.*)
+#ifdef CONFIG_ESP32_WIRELESS
+    *(.rodata_wlog_verbose.*)
+    *(.rodata_wlog_debug.*)
+    *(.rodata_wlog_info.*)
+    *(.rodata_wlog_warning.*)
+    *(.rodata_wlog_error.*)
+#endif
     *(.irom1.text) /* catch stray ICACHE_RODATA_ATTR */
     *(.gnu.linkonce.r.*)
     *(.rodata1)
@@ -265,6 +318,13 @@ SECTIONS
     *(.xt_except_desc_end)
     *(.dynamic)
     *(.gnu.version_d)
+
+    /* Addresses of memory regions reserved via SOC_RESERVE_MEMORY_REGION() */
+
+    soc_reserved_memory_region_start = ABSOLUTE(.);
+    KEEP (*(.reserved_memory_address))
+    soc_reserved_memory_region_end = ABSOLUTE(.);
+
     _erodata = ABSOLUTE(.);
     /* Literals are also RO data. */
     _lit4_start = ABSOLUTE(.);
@@ -297,7 +357,9 @@ SECTIONS
   .rtc.data :
   {
     *(.rtc.data)
+    *(.rtc.data.*)
     *(.rtc.rodata)
+    *(.rtc.rodata.*)
 
    /* Whatever is left from the RTC memory is used as a special heap. */
 

@@ -275,6 +275,7 @@ config BASE_DEFCONFIG
 
 config MODULES
 	bool
+	option modules
 	---help---
 		Automatically selected if KERNEL build is selected.
 		This selection marks the implementation of Kconfig
@@ -420,6 +421,12 @@ config RAW_BINARY
 		different loaders using the GNU objcopy program.  This option
 		should not be selected if you are not using the GNU toolchain.
 
+config RAW_DISASSEMBLY
+	bool "Create a disassembly file"
+	default n
+	---help---
+		Create the nuttx.asm in the disassembly format using the objdump program.
+
 menuconfig UBOOT_UIMAGE
 	bool "U-Boot uImage"
 	select RAW_BINARY
@@ -457,6 +464,22 @@ config DFU_PID
 	hex "PID to use for DFU image"
 
 endif # DFU_BINARY
+
+config OUTPUT_STRIP_PATHS
+	bool "Strip absolute paths from binaries"
+	default y
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Cmake build provide absolute paths to compile files. If __FILE__
+		macros are used in the source code(ASSERT), the binary will contain
+		many invalid paths.
+		This saves some memory, stops exposing build systems locations in binaries,
+		make failure logs more deterministic and most importantly makes builds more
+		failure logs more deterministic and most importantly makes builds more
+		deterministic.
+		Debuggers usually have a path mapping feature to ensure the files are
+		still found.
+
 endmenu # Binary Output Formats
 
 menu "Customize Header Files"
@@ -1778,7 +1801,7 @@ endif # DEBUG_REGMAP
 config DEBUG_RMT
 	bool "RMT Debug Features"
 	default n
-	depends on ESP32_RMT
+	depends on RMT
 	---help---
 		Enable RMT debug features.
 
@@ -2123,6 +2146,39 @@ config DEBUG_MOTOR_INFO
 
 endif # DEBUG_MOTOR
 
+config DEBUG_STEPPER
+	bool "Stepper Motor Debug Features"
+	default n
+	depends on STEPPER
+	---help---
+		Enable motor debug features.
+
+if DEBUG_STEPPER
+
+config DEBUG_STEPPER_ERROR
+	bool "Stepper Motor Error Output"
+	default n
+	depends on DEBUG_ERROR
+	---help---
+		Enable motor error output to SYSLOG.
+
+config DEBUG_STEPPER_WARN
+	bool "Stepper Motor Warnings Output"
+	default n
+	depends on DEBUG_WARN
+	---help---
+		Enable motor warning output to SYSLOG.
+
+config DEBUG_STEPPER_INFO
+	bool "Stepper Motor Informational Output"
+	default n
+	depends on DEBUG_INFO
+	---help---
+		Enable motor informational output to SYSLOG.
+
+endif # DEBUG_STEPPER
+
+
 config DEBUG_VIDEO
 	bool "Video Debug Features"
 	default n
@@ -2308,7 +2364,39 @@ config DEBUG_PCI_INFO
 	---help---
 		Enable PCI driver informational output to SYSLOG.
 
-endif # DEBUG_PCIE
+endif # DEBUG_PCI
+
+config DEBUG_RPMSG
+	bool "RPMSG Debug Features"
+	default n
+	depends on RPMSG
+	---help---
+		Enable RPMSG driver debug features.
+
+if DEBUG_RPMSG
+
+config DEBUG_RPMSG_ERROR
+	bool "RPMSG Error Output"
+	default n
+	depends on DEBUG_ERROR
+	---help---
+		Enable RPMSG driver error output to SYSLOG.
+
+config DEBUG_RPMSG_WARN
+	bool "RPMSG Warnings Output"
+	default n
+	depends on DEBUG_WARN
+	---help---
+		Enable RPMSG driver warning output to SYSLOG.
+
+config DEBUG_RPMSG_INFO
+	bool "RPMSG Informational Output"
+	default n
+	depends on DEBUG_INFO
+	---help---
+		Enable RPMSG driver informational output to SYSLOG.
+
+endif # DEBUG_RPMSG
 
 config DEBUG_CORESIGHT
 	bool "Coresight Debug Features"
@@ -2341,38 +2429,6 @@ config DEBUG_CORESIGHT_INFO
 		Enable coresight driver informational output to SYSLOG.
 
 endif # DEBUG_CORESIGHT
-
-config DEBUG_RPMSG
-	bool "Rpmsg Debug Features"
-	default n
-	depends on RPMSG
-	---help---
-		Enable rpmsg debug features.
-
-if DEBUG_RPMSG
-
-config DEBUG_RPMSG_ERROR
-	bool "Rpmsg Error Output"
-	default n
-	depends on DEBUG_ERROR
-	---help---
-		Enable rpmsg driver error output to SYSLOG.
-
-config DEBUG_RPMSG_WARN
-	bool "Rpmsg Warnings Output"
-	default n
-	depends on DEBUG_WARN
-	---help---
-		Enable rpmsg warning output to SYSLOG.
-
-config DEBUG_RPMSG_INFO
-	bool "Rpmsg Informational Output"
-	default n
-	depends on DEBUG_INFO
-	---help---
-		Enable rpmsg driver informational output to SYSLOG.
-
-endif # DEBUG_RPMSG
 
 endif # DEBUG_FEATURES
 
@@ -2479,10 +2535,6 @@ config TRACE_BOARDS
 	bool "Enable tracepoints in boards"
 	default n
 
-config TRACE_CPUFREQ
-	bool "Enable tracepoints in cpufreq"
-	default n
-
 config TRACE_CRYPTO
 	bool "Enable tracepoints in crypto"
 	default n
@@ -2498,16 +2550,8 @@ config TRACE_FS
 if TRACE_FS
 menu "Trace Fs Support"
 
-config TRACE_FATFS_FS
-	bool "Enable tracepoints in fatfs"
-	default n
-
 config TRACE_LITTLEFS_FS
 	bool "Enable tracepoints in littlefs"
-	default n
-
-config TRACE_YAFFS_FS
-	bool "Enable tracepoints in yaffs"
 	default n
 
 config TRACE_ROMFS_FS
@@ -2592,6 +2636,44 @@ config DEBUG_OPTLEVEL
 	---help---
 		This string represents the custom optimization level that will be
 		used if DEBUG_CUSTOMOPT.
+
+choice
+	prompt "Link Time Optimization (LTO)"
+	default LTO_NONE
+	---help---
+		This option enables Link Time Optimization (LTO), which allows the
+		compiler to optimize binaries globally.
+
+		If unsure, select LTO_NONE. Note that LTO is very resource-intensive
+		so it's disabled by default.
+
+config LTO_NONE
+	bool "None"
+	---help---
+		Build the kernel normally, without Link Time Optimization (LTO).
+
+config LTO_FULL
+	bool "GNU Full LTO (EXPERIMENTAL)"
+	depends on ARCH_TOOLCHAIN_GNU
+	---help---
+		Link time optimization is implemented as a GCC front end for a bytecode
+		bytecode representation of GIMPLE that is emitted in special sections
+		of .o files. Currently, LTO support is enabled in most ELF-based systems,
+		as well as darwin, cygwin and mingw systems.
+
+config LTO_THIN
+	bool "Clang ThinLTO (EXPERIMENTAL)"
+	depends on ARCH_TOOLCHAIN_CLANG
+	---help---
+		This option enables Clang's ThinLTO, which allows for parallel
+		optimization and faster incremental compiles compared to the
+		CONFIG_LTO_FULL option. More information can be found
+		from Clang's documentation:
+
+		https://clang.llvm.org/docs/ThinLTO.html
+
+		If unsure, say Y.
+endchoice
 
 config DEBUG_OPT_UNUSED_SECTIONS
 	bool "Optimization to eliminate the unused input sections"

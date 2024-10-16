@@ -47,6 +47,7 @@
  *
  * Returned Value:
  *   Return 0 if success, nageative if failed
+ *
  ****************************************************************************/
 
 int pci_ecam_register(FAR const struct pci_resource_s *cfg,

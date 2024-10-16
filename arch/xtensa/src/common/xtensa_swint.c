@@ -32,11 +32,11 @@
 #include <nuttx/arch.h>
 #include <sys/syscall.h>
 
+#include "sched/sched.h"
 #include "chip.h"
 #include "signal/signal.h"
 #include "sched/sched.h"
 #include "xtensa.h"
-#include "sched/sched.h"
 
 /****************************************************************************
  * Private Functions

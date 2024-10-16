@@ -21,6 +21,10 @@
 #ifndef ___ARCH_RISC_V_SRC_COMMON_RISCV_MMU_H_
 #define ___ARCH_RISC_V_SRC_COMMON_RISCV_MMU_H_
 
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
 /* RV32/64 page size */
 
 #define RV_MMU_PAGE_SHIFT       (12)
@@ -42,6 +46,22 @@
 #define PTE_A                   (1 << 6) /* Page has been accessed */
 #define PTE_D                   (1 << 7) /* Page is dirty */
 
+/* T-Head MMU needs Text and Data to be Shareable, Bufferable, Cacheable */
+
+#ifdef CONFIG_ARCH_MMU_EXT_THEAD
+#  define PTE_SEC         (1UL << 59) /* Security */
+#  define PTE_SHARE       (1UL << 60) /* Shareable */
+#  define PTE_BUF         (1UL << 61) /* Bufferable */
+#  define PTE_CACHE       (1UL << 62) /* Cacheable */
+#  define PTE_SO          (1UL << 63) /* Strong Order */
+
+#  define EXT_UTEXT_FLAGS (PTE_SHARE | PTE_BUF | PTE_CACHE)
+#  define EXT_UDATA_FLAGS (PTE_SHARE | PTE_BUF | PTE_CACHE)
+#else
+#  define EXT_UTEXT_FLAGS (0)
+#  define EXT_UDATA_FLAGS (0)
+#endif
+
 /* Check if leaf PTE entry or not (if X/W/R are set it is) */
 
 #define PTE_LEAF_MASK           (7 << 1)
@@ -52,8 +72,8 @@
 
 /* Flags for user FLASH (RX) and user RAM (RW) */
 
-#define MMU_UTEXT_FLAGS         (PTE_R | PTE_X | PTE_U)
-#define MMU_UDATA_FLAGS         (PTE_R | PTE_W | PTE_U)
+#define MMU_UTEXT_FLAGS         (PTE_R | PTE_X | PTE_U | EXT_UTEXT_FLAGS)
+#define MMU_UDATA_FLAGS         (PTE_R | PTE_W | PTE_U | EXT_UDATA_FLAGS)
 
 /* I/O region flags */
 
@@ -151,6 +171,16 @@
 extern uintptr_t g_kernel_pgt_pbase;
 
 /****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
+void weak_function mmu_flush_cache(uintptr_t);
+
+/****************************************************************************
+ * Inline Functions
+ ****************************************************************************/
+
+/****************************************************************************
  * Name: mmu_satp_reg
  *
  * Description:
@@ -197,6 +227,13 @@ static inline void mmu_write_satp(uintptr_t reg)
       : "rK" (reg)
       : "memory"
     );
+
+  /* Flush the MMU Cache if needed (T-Head C906) */
+
+  if (mmu_flush_cache != NULL)
+    {
+      mmu_flush_cache(reg);
+    }
 }
 
 /****************************************************************************
@@ -367,7 +404,7 @@ static inline uintptr_t mmu_get_satp_pgbase(void)
  ****************************************************************************/
 
 void mmu_ln_setentry(uint32_t ptlevel, uintptr_t lnvaddr, uintptr_t paddr,
-                     uintptr_t vaddr, uint32_t mmuflags);
+                     uintptr_t vaddr, uint64_t mmuflags);
 
 /****************************************************************************
  * Name: mmu_ln_getentry
@@ -448,7 +485,7 @@ void mmu_ln_restore(uint32_t ptlevel, uintptr_t lnvaddr, uintptr_t vaddr,
  ****************************************************************************/
 
 void mmu_ln_map_region(uint32_t ptlevel, uintptr_t lnvaddr, uintptr_t paddr,
-                       uintptr_t vaddr, size_t size, uint32_t mmuflags);
+                       uintptr_t vaddr, size_t size, uint64_t mmuflags);
 
 /****************************************************************************
  * Name: mmu_get_region_size

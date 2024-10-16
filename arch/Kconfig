@@ -28,7 +28,6 @@ config ARCH_ARM64
 	select ALARM_ARCH
 	select ARCH_HAVE_BACKTRACE
 	select ARCH_HAVE_INTERRUPTSTACK
-	select ARCH_HAVE_FORK
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_CUSTOMOPT
 	select ARCH_HAVE_STDARG_H
@@ -38,8 +37,8 @@ config ARCH_ARM64
 	select ARCH_HAVE_TCBINFO
 	select ARCH_HAVE_THREAD_LOCAL
 	select ARCH_HAVE_PERF_EVENTS
-	select LIBC_ARCH_ELF_64BIT if LIBC_ARCH_ELF
 	select ONESHOT
+	select LIBC_ARCH_ELF_64BIT if LIBC_ARCH_ELF
 	---help---
 		The ARM64 architectures
 
@@ -94,7 +93,9 @@ config ARCH_RISCV
 	select ARCH_HAVE_RDWR_MEM_CPU_RUN
 	select ARCH_HAVE_TCBINFO
 	select ARCH_HAVE_THREAD_LOCAL
+	select ARCH_HAVE_POWEROFF
 	select ARCH_HAVE_LAZYFPU if ARCH_HAVE_FPU
+	select ARCH_HAVE_CPUID_MAPPING if ARCH_HAVE_MULTICPU
 	---help---
 		RISC-V 32 and 64-bit RV32 / RV64 architectures.
 
@@ -120,14 +121,12 @@ config ARCH_SIM
 	select SERIAL_IFLOWCONTROL
 	select SCHED_HPWORK
 	select ARCH_HAVE_CPUINFO
-	select ARCH_MATH_H if LIBCXX
 	---help---
 		Linux/Cygwin user-mode simulation.
 
 config ARCH_X86
 	bool "x86"
 	select ARCH_HAVE_TCBINFO
-	select ARCH_TOOLCHAIN_GNU
 	---help---
 		Intel x86 architectures.
 
@@ -300,52 +299,6 @@ config ARCH_TOOLCHAIN_GHS
 	select ARCH_TOOLCHAIN_GNU
 	default n
 
-choice
-	prompt "Link Time Optimization (LTO)"
-	default LTO_NONE
-	---help---
-		This option enables Link Time Optimization (LTO), which allows the
-		compiler to optimize binaries globally.
-
-		If unsure, select LTO_NONE. Note that LTO is very resource-intensive
-		so it's disabled by default.
-
-config LTO_NONE
-	bool "None"
-	---help---
-		Build the kernel normally, without Link Time Optimization (LTO).
-
-config LTO_FAT
-	bool "GNU/CLANG Fat LTO (EXPERIMENTAL)"
-	depends on ARCH_TOOLCHAIN_GNU || ARCH_TOOLCHAIN_CLANG
-	---help---
-		This option allows the linker to decide whether to use LTO at all down to the
-		linktime. So that the internal IR code will be embedded into the object files
-		to provide compatibility.
-
-config LTO_FULL
-	bool "GNU Full LTO (EXPERIMENTAL)"
-	depends on ARCH_TOOLCHAIN_GNU
-	---help---
-		Link time optimization is implemented as a GCC front end for a bytecode
-		bytecode representation of GIMPLE that is emitted in special sections
-		of .o files. Currently, LTO support is enabled in most ELF-based systems,
-		as well as darwin, cygwin and mingw systems.
-
-config LTO_THIN
-	bool "Clang ThinLTO (EXPERIMENTAL)"
-	depends on ARCH_TOOLCHAIN_CLANG
-	---help---
-		This option enables Clang's ThinLTO, which allows for parallel
-		optimization and faster incremental compiles compared to the
-		CONFIG_LTO_FULL option. More information can be found
-		from Clang's documentation:
-
-		https://clang.llvm.org/docs/ThinLTO.html
-
-		If unsure, say Y.
-endchoice
-
 config ARCH_GNU_NO_WEAKFUNCTIONS
 	bool
 	depends on ARCH_TOOLCHAIN_GNU
@@ -384,6 +337,10 @@ config ARCH_HAVE_IRQTRIGGER
 	depends on !ARCH_NOINTC
 
 config ARCH_DMA
+	bool
+	default n
+
+config ARCH_DMA_NO_FLASH_TRANSFER
 	bool
 	default n
 
@@ -432,6 +389,18 @@ config ARCH_HAVE_TEXT_HEAP
 	default n
 	---help---
 		Special memory region for dynamic code loading
+
+config ARCH_HAVE_TEXT_HEAP_SEPARATE_DATA_ADDRESS
+	bool
+	default n
+	---help---
+		Textheap might have separate instruction/data mappings
+
+config ARCH_HAVE_TEXT_HEAP_WORD_ALIGNED_READ
+	bool
+	default n
+	---help---
+		Loads from the instruction mapping of textheap need to be word-aligned
 
 config ARCH_HAVE_DATA_HEAP
 	bool
@@ -534,7 +503,7 @@ config ARCH_HAVE_BACKTRACE
 	default n
 
 config ARCH_HAVE_DEBUG
-	bool "architecture have debug support"
+	bool "Architecture have debug support"
 	default n
 
 config ARCH_HAVE_PERF_EVENTS
@@ -545,7 +514,7 @@ config ARCH_HAVE_PERF_EVENTS
 
 config ARCH_PERF_EVENTS
 	bool "Configure hardware performance counting"
-	default y if SCHED_CRITMONITOR || SCHED_IRQMONITOR || RPTUN_PING || SEGGER_SYSVIEW
+	default y if SCHED_CRITMONITOR || SCHED_IRQMONITOR || RPMSG_PING || SEGGER_SYSVIEW
 	default n
 	depends on ARCH_HAVE_PERF_EVENTS
 	---help---
@@ -720,13 +689,6 @@ config ARCH_USE_COPY_SECTION
 		dynamic code loading. For example, Ambiq has MRAM regions
 		for instruction which can't load by the memcpy directly.
 
-config ARCH_STACK_PROTECT
-	bool "Protect user stack"
-	default n
-	select TLS_ALIGNED if BUILD_PROTECTED
-	---help---
-		Select this option if the user thread stack self-access only.
-
 if ARCH_ADDRENV && ARCH_NEED_ADDRENV_MAPPING
 
 config ARCH_TEXT_VBASE
@@ -816,11 +778,6 @@ config ARCH_KMAP_NPAGES
 	---help---
 		The maximum amount of pages that a kernel can use for dynamically
 		mapping physical pages to itself.
-
-		The size of the virtual shared memory address space is then
-		determined by the product of the maximum number of regions, the
-		maximum number of pages per region, and the configured size of
-		each page.
 
 config ARCH_STACK_DYNAMIC
 	bool "Dynamic user stack"
@@ -927,16 +884,26 @@ config ARCH_PGPOOL_SIZE
 endif # ARCH_PGPOOL_MAPPING
 endif # ARCH_ADDRENV && ARCH_NEED_ADDRENV_MAPPING
 
-menuconfig PAGING
+config PAGING
 	bool "On-demand paging"
 	default n
-	depends on ARCH_USE_MMU && !ARCH_ROMPGTABLE
+	depends on BUILD_KERNEL && ARCH_USE_MMU && !ARCH_ROMPGTABLE && !LEGACY_PAGING
 	---help---
-		If set =y in your configation file, this setting will enable the on-demand
-		paging feature as described in
+		If set =y in your configation file, this setting will enable on-demand
+		paging, which relies on a MMU to enable larger virtual memory spaces
+		and map it to physical memory on-demand (usually during a page-fault
+		exception).
+
+menuconfig LEGACY_PAGING
+	bool "Legacy On-demand paging"
+	default n
+	depends on EXPERIMENTAL && ARCH_USE_MMU && !ARCH_ROMPGTABLE
+	---help---
+		If set =y in your configation file, this setting will enable lazy loading
+		backed up by the experimental on-demand paging feature as described in
 		https://nuttx.apache.org/docs/latest/components/paging.html.
 
-if PAGING
+if LEGACY_PAGING
 
 config PAGING_PAGESIZE
 	int "Page size (bytes)"
@@ -1054,7 +1021,7 @@ config PAGING_TIMEOUT_TICKS
 		number if microseconds, then a fatal error will be declared.
 		Default: No timeouts monitored
 
-endif # PAGING
+endif # LEGACY_PAGING
 
 config ARCH_IRQPRIO
 	bool "Prioritized interrupt support"

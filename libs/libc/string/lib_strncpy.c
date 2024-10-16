@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/string/lib_strncpy.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -32,12 +34,14 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+
 #define LBLOCKSIZE (sizeof(long))
 
 /* Nonzero if either x or y is not aligned on a "long" boundary. */
 
 #define UNALIGNED(x, y) \
-  (((long)(x) & (sizeof(long) - 1)) | ((long)(y) & (sizeof(long) - 1)))
+  (((long)(uintptr_t)(x) & (sizeof(long) - 1)) | ((long)(uintptr_t)(y) & (sizeof(long) - 1)))
 
 /* Macros for detecting endchar */
 
@@ -50,6 +54,8 @@
 #endif
 
 #define TOO_SMALL(len) ((len) < sizeof(long))
+
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -81,6 +87,7 @@
 nosanitize_address
 FAR char *strncpy(FAR char *dest, FAR const char *src, size_t n)
 {
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
   FAR char *dst0 = dest;
   FAR const char *src0 = src;
   FAR long *aligned_dst;
@@ -122,5 +129,28 @@ FAR char *strncpy(FAR char *dest, FAR const char *src, size_t n)
     }
 
   return dest;
+#else
+  FAR char *ret = dest;     /* Value to be returned */
+  FAR char *end = dest + n; /* End of dest buffer + 1 byte */
+
+  /* Copy up n bytes, breaking out of the loop early if a NUL terminator is
+   * encountered.
+   */
+
+  while ((dest != end) && (*dest++ = *src++) != '\0')
+    {
+    }
+
+  /* Note that there may be no NUL terminator in 'dest' */
+
+  /* Pad the remainder of the array pointer to 'dest' with NULs */
+
+  while (dest != end)
+    {
+      *dest++ = '\0';
+    }
+
+  return ret;
+#endif
 }
 #endif

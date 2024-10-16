@@ -104,18 +104,22 @@
 
 #define MMCSD_CAPACITY(b, s)    ((s) >= 10 ? (b) << ((s) - 10) : (b) >> (10 - (s)))
 
-#define MMCSD_USLEEP(usec) \
-  do \
-  { \
-    if (up_interrupt_context()) \
-      { \
-        up_udelay(usec); \
-      } \
-    else \
-      { \
-        nxsig_usleep(usec); \
-      } \
-  } while (0)
+#ifdef CONFIG_BOARD_COREDUMP_BLKDEV
+#  define MMCSD_USLEEP(usec) \
+    do \
+    { \
+      if (up_interrupt_context()) \
+        { \
+          up_udelay(usec); \
+        } \
+      else \
+        { \
+          nxsig_usleep(usec); \
+        } \
+    } while (0)
+#else
+#  define MMCSD_USLEEP(usec) nxsig_usleep(usec)
+#endif
 
 /****************************************************************************
  * Private Types
@@ -167,8 +171,10 @@ static int     mmcsd_stoptransmission(FAR struct mmcsd_state_s *priv);
 #endif
 static int     mmcsd_setblocklen(FAR struct mmcsd_state_s *priv,
                                  uint32_t blocklen);
+#if MMCSD_MULTIBLOCK_LIMIT != 1
 static int     mmcsd_setblockcount(FAR struct mmcsd_state_s *priv,
                                    uint32_t nblocks);
+#endif
 static ssize_t mmcsd_readsingle(FAR struct mmcsd_part_s *part,
                                 FAR uint8_t *buffer, off_t startblock);
 #if MMCSD_MULTIBLOCK_LIMIT != 1
@@ -1059,7 +1065,6 @@ static void mmcsd_decode_scr(FAR struct mmcsd_state_s *priv, uint32_t scr[2])
 #endif
 }
 
-#ifdef CONFIG_MMCSD_IOCSUPPORT
 /****************************************************************************
  * Name: mmcsd_switch
  *
@@ -1114,7 +1119,6 @@ static int mmcsd_switch(FAR struct mmcsd_state_s *priv, uint32_t arg)
   priv->wrbusy = true;
   return mmcsd_recv_r1(priv, MMCSD_CMD6);
 }
-#endif
 
 /****************************************************************************
  * Name: mmcsd_get_r1
@@ -1360,7 +1364,13 @@ static int mmcsd_transferready(FAR struct mmcsd_state_s *priv)
 
       /* Do not hog the CPU */
 
+#ifdef CONFIG_MMCSD_CHECK_READY_STATUS_WITHOUT_SLEEP
+      /* Use sched_yield when tick is big to avoid low writing speed */
+
+      sched_yield();
+#else
       MMCSD_USLEEP(1000);
+#endif
 
       /* We are still in the programming state. Calculate the elapsed
        * time... we can't stay in this loop forever!
@@ -1436,6 +1446,7 @@ static int mmcsd_setblocklen(FAR struct mmcsd_state_s *priv,
   return ret;
 }
 
+#if MMCSD_MULTIBLOCK_LIMIT != 1
 /****************************************************************************
  * Name: mmcsd_setblockcount
  *
@@ -1458,6 +1469,7 @@ static int mmcsd_setblockcount(FAR struct mmcsd_state_s *priv,
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: mmcsd_readsingle
@@ -2807,8 +2819,9 @@ static int mmcsd_widebus(FAR struct mmcsd_state_s *priv)
 
   /* Configure the SDIO peripheral */
 
-  if ((IS_MMC(priv->type) && ((priv->caps & SDIO_CAPS_1BIT_ONLY) == 0)) ||
-      ((priv->buswidth & MMCSD_SCR_BUSWIDTH_4BIT) != 0))
+  if ((priv->caps & SDIO_CAPS_1BIT_ONLY) == 0 &&
+      (IS_MMC(priv->type) ||
+       (priv->buswidth & MMCSD_SCR_BUSWIDTH_4BIT) != 0))
     {
       /* JEDEC specs: A.8.3 Changing the data bus width: 'Bus testing
        * procedure' shows how mmc bus width may be detected.  This driver
@@ -2843,6 +2856,20 @@ static int mmcsd_widebus(FAR struct mmcsd_state_s *priv)
 #ifdef CONFIG_MMCSD_MMCSUPPORT
   else
     {
+      if (priv->caps & SDIO_CAPS_MMC_HS_MODE)
+        {
+          mmcsd_sendcmdpoll(priv, MMCSD_CMD6,
+                            MMC_CMD6_HS_TIMING(EXT_CSD_HS_TIMING_HS));
+          ret = mmcsd_recv_r1(priv, MMCSD_CMD6);
+          if (ret != OK)
+            {
+              ferr("ERROR: (MMCSD_CMD6) Setting MMC speed mode: %d\n", ret);
+              return ret;
+            }
+
+          priv->mode = EXT_CSD_HS_TIMING_HS;
+        }
+
       SDIO_CLOCK(priv->dev, CLOCK_MMC_TRANSFER);
     }
 #endif /* #ifdef CONFIG_MMCSD_MMCSUPPORT */
@@ -3534,6 +3561,7 @@ static int mmcsd_iocmd(FAR struct mmcsd_part_s *part,
           }
       }
       break;
+#if MMCSD_MULTIBLOCK_LIMIT != 1
     case MMCSD_CMDIDX18: /* Read multi blocks commands */
       {
         if (ic_ptr->blocks > 0)
@@ -3580,6 +3608,7 @@ static int mmcsd_iocmd(FAR struct mmcsd_part_s *part,
           }
       }
       break;
+#endif
     case MMCSD_CMDIDX56: /* General commands */
       {
         if (ic_ptr->write_flag)
@@ -3799,7 +3828,7 @@ static int mmcsd_sdinitialize(FAR struct mmcsd_state_s *priv)
 
   mmcsd_decode_scr(priv, scr);
 
-  if ((priv->caps & SDIO_CAPS_4BIT_ONLY) != 0)
+  if ((priv->caps & SDIO_CAPS_4BIT) != 0)
     {
       /* Select width (4-bit) bus operation (if the card supports it) */
 
@@ -3854,16 +3883,16 @@ static int mmcsd_cardidentify(FAR struct mmcsd_state_s *priv)
       return -ENODEV;
     }
 
+  /* Set ID mode clocking (<400KHz) */
+
+  SDIO_CLOCK(priv->dev, CLOCK_IDMODE);
+
   /* For eMMC, Send CMD0 with argument 0xf0f0f0f0 as per JEDEC v4.41
    * for pre-idle. No effect for SD.
    */
 
   mmcsd_sendcmdpoll(priv, MMCSD_CMD0, 0xf0f0f0f0);
   MMCSD_USLEEP(MMCSD_IDLE_DELAY);
-
-  /* Set ID mode clocking (<400KHz) */
-
-  SDIO_CLOCK(priv->dev, CLOCK_IDMODE);
 
   /* After power up at least 74 clock cycles are required prior to starting
    * bus communication
@@ -3904,6 +3933,7 @@ static int mmcsd_cardidentify(FAR struct mmcsd_state_s *priv)
 
       finfo("MMC card detected\n");
       priv->type = MMCSD_CARDTYPE_MMC;
+      priv->buswidth |= MMCSD_SCR_BUSWIDTH_4BIT;
 
       /* Now, check if this is a MMC card/chip that supports block
        * addressing
@@ -4487,6 +4517,24 @@ static int mmcsd_hwinitialize(FAR struct mmcsd_state_s *priv)
   return ret;
 }
 
+static FAR const char *mmc_get_mode_name(uint8_t mode)
+{
+  switch (mode)
+    {
+      case EXT_CSD_HS_TIMING_BC:
+        return "backwards compatibility";
+      case EXT_CSD_HS_TIMING_HS:
+        return "high speed";
+      case EXT_CSD_HS_TIMING_HS200:
+        return "HS200";
+      case EXT_CSD_HS_TIMING_HS400:
+        return "HS400";
+      default:
+        ferr("Unknown mode: %u\n", mode);
+        return "Unknown";
+    }
+}
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -4508,6 +4556,7 @@ static int mmcsd_hwinitialize(FAR struct mmcsd_state_s *priv)
 int mmcsd_slotinitialize(int minor, FAR struct sdio_dev_s *dev)
 {
   FAR struct mmcsd_state_s *priv;
+  char devname[16];
   int ret = -ENOMEM;
 
   finfo("minor: %d\n", minor);
@@ -4576,6 +4625,15 @@ int mmcsd_slotinitialize(int minor, FAR struct sdio_dev_s *dev)
 #ifdef CONFIG_MMCSD_PROCFS
   mmcsd_initialize_procfs();
 #endif
+
+  /* Create a MMCSD device name */
+
+  snprintf(devname, sizeof(devname), "/dev/mmcsd%d", minor);
+
+  finfo("MMC: %s %" PRIu64 "KB %s %s mode\n", devname,
+         ((uint64_t)priv->part[0].nblocks << priv->blockshift) >> 10,
+         priv->widebus ? "4-bits" : "1-bit",
+         mmc_get_mode_name(priv->mode));
 
   return OK;
 

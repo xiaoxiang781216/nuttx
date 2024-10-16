@@ -1112,8 +1112,8 @@ static void stm32_i2c_traceevent(struct stm32_i2c_priv_s *priv,
 
       /* Initialize the new trace entry */
 
-      trace->event  = event;
-      trace->parm   = parm;
+      trace->event = event;
+      trace->parm  = parm;
 
       /* Bump up the trace index (unless we are out of trace entries) */
 
@@ -1990,9 +1990,9 @@ static int stm32_i2c_isr_process(struct stm32_i2c_priv_s *priv)
               i2cinfo("TCR: DISABLE RELOAD: NBYTES = dcnt = %i msgc = %i\n",
                       priv->dcnt, priv->msgc);
 
-              stm32_i2c_disable_reload(priv);
-
               stm32_i2c_set_bytes_to_transfer(priv, priv->dcnt);
+
+              stm32_i2c_disable_reload(priv);
             }
 
           i2cinfo("TCR: EXIT dcnt = %i msgc = %i status 0x%08" PRIx32 "\n",

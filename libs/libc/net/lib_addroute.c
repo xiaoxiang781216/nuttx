@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/net/lib_addroute.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -24,6 +26,7 @@
 
 #include <nuttx/config.h>
 
+#include <errno.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <stdint.h>
@@ -58,6 +61,11 @@ int addroute(int sockfd, FAR void *target, FAR void *netmask,
              FAR void *router, socklen_t len)
 {
   struct rtentry entry;
+
+  if (len < sizeof(struct in_addr) || len > sizeof(struct sockaddr_storage))
+    {
+      return -EINVAL;
+    }
 
   /* Set up the rtentry structure */
 

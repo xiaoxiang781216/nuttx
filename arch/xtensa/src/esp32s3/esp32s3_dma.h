@@ -54,17 +54,21 @@ extern "C"
 #define SET_GDMA_CH_BITS(_r, _ch, _b)   modifyreg32((_r) + (_ch) * GDMA_REG_OFFSET, 0, (_b))
 #define CLR_GDMA_CH_BITS(_r, _ch, _b)   modifyreg32((_r) + (_ch) * GDMA_REG_OFFSET, (_b), 0)
 
-/* DMA max data length */
+/* Maximum size of the buffer that can be attached to DMA descriptor  */
 
-#define ESP32S3_DMA_DATALEN_MAX       (0x1000 - 4)
+#define ESP32S3_DMA_BUFFER_MAX_SIZE       (0x1000 - 1)
+
+/* DMA max data length, and aligned to 4Bytes */
+
+#define ESP32S3_DMA_BUFLEN_MAX_4B_ALIGNED (0x1000 - 4)
 
 /* DMA max buffer length */
 
-#define ESP32S3_DMA_BUFLEN_MAX        ESP32S3_DMA_DATALEN_MAX
+#define ESP32S3_DMA_BUFLEN_MAX        ESP32S3_DMA_BUFFER_MAX_SIZE
 
 /* DMA channel number */
 
-#define ESP32S3_DMA_CHAN_MAX          (3)
+#define ESP32S3_DMA_CHAN_MAX          (5)
 
 /* DMA RX MAX priority */
 
@@ -146,6 +150,22 @@ int32_t esp32s3_dma_request(enum esp32s3_dma_periph_e periph,
                             bool burst_en);
 
 /****************************************************************************
+ * Name: esp32s3_dma_release
+ *
+ * Description:
+ *   Release DMA channel from peripheral.
+ *
+ * Input Parameters:
+ *   chan - Peripheral for which the DMA channel request was made
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void esp32s3_dma_release(int chan);
+
+/****************************************************************************
  * Name: esp32s3_dma_setup
  *
  * Description:
@@ -158,6 +178,7 @@ int32_t esp32s3_dma_request(enum esp32s3_dma_periph_e periph,
  *   pbuf    - RX/TX buffer pointer
  *   len     - RX/TX buffer length
  *   tx      - true: TX mode (transmitter); false: RX mode (receiver)
+ *   chan    - DMA channel of the receiver/transmitter
  *
  * Returned Value:
  *   Bound pbuf data bytes
@@ -165,7 +186,7 @@ int32_t esp32s3_dma_request(enum esp32s3_dma_periph_e periph,
  ****************************************************************************/
 
 uint32_t esp32s3_dma_setup(struct esp32s3_dmadesc_s *dmadesc, uint32_t num,
-                           uint8_t *pbuf, uint32_t len, bool tx);
+                           uint8_t *pbuf, uint32_t len, bool tx, int chan);
 
 /****************************************************************************
  * Name: esp32s3_dma_load

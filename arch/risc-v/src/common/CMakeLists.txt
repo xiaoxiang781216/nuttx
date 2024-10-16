@@ -62,7 +62,9 @@ endif()
 if(NOT CONFIG_BUILD_FLAT)
   list(APPEND SRCS riscv_task_start.c riscv_pthread_start.c
        riscv_signal_dispatch.c)
-  target_sources(arch_interface PRIVATE riscv_signal_handler.S)
+  if(CONFIG_BUILD_PROTECTED)
+    target_sources(arch_interface PRIVATE riscv_signal_handler.S)
+  endif()
 endif()
 
 if(CONFIG_SCHED_BACKTRACE)
@@ -85,6 +87,18 @@ if(CONFIG_ARCH_FPU)
   list(APPEND SRCS riscv_fpu.S riscv_fpucmp.c)
 endif()
 
+if(CONFIG_ARCH_RV_ISA_V)
+  list(APPEND SRCS riscv_vpu.S)
+endif()
+
+if(CONFIG_ARCH_RV_HAVE_APLIC)
+  list(APPEND SRCS riscv_aplic.c)
+endif()
+
+if(CONFIG_ARCH_RV_HAVE_IMSIC)
+  list(APPEND SRCS riscv_imsic.c)
+endif()
+
 if(CONFIG_RISCV_SEMIHOSTING_HOSTFS)
   list(APPEND SRCS riscv_semihost.S riscv_hostfs.c)
 endif()
@@ -98,7 +112,7 @@ if(CONFIG_ARCH_USE_MMU)
 endif()
 
 if(CONFIG_ARCH_KERNEL_STACK)
-  list(APPEND SRCS riscv_addrenv_kstack.c riscv_ksp.c)
+  list(APPEND SRCS riscv_addrenv_kstack.c)
 endif()
 
 if(CONFIG_ARCH_ADDRENV)
@@ -106,8 +120,11 @@ if(CONFIG_ARCH_ADDRENV)
   list(APPEND SRCS riscv_addrenv_utils.c riscv_addrenv_shm.c)
 endif()
 
-if(CONFIG_BUILD_KERNEL)
+if(CONFIG_RISCV_PERCPU_SCRATCH)
   list(APPEND SRCS riscv_percpu.c)
+endif()
+
+if(CONFIG_ARCH_USE_S_MODE)
   add_subdirectory(supervisor)
 endif()
 

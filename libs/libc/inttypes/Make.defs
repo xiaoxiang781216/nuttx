@@ -1,6 +1,8 @@
 ############################################################################
 # libs/libc/inttypes/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -20,7 +22,7 @@
 
 # Add the inttypes C files to the build
 
-CSRCS += lib_imaxabs.c lib_strtoimax.c lib_strtoumax.c
+CSRCS += lib_imaxabs.c lib_imaxdiv.c lib_strtoimax.c lib_strtoumax.c
 
 # Add the inttypes directory to the build
 

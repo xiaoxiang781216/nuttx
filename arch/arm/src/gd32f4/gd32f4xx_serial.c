@@ -37,6 +37,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/serial/serial.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/power/pm.h>
 
 #ifdef CONFIG_SERIAL_TERMIOS
@@ -118,7 +119,7 @@ struct up_dev_s
   bool            oflow;         /* output flow control (CTS) enabled */
 #  endif
 
-  uint16_t        oversamp       /* USART oversample mode */
+  uint16_t        oversamp;      /* USART oversample mode */
   uintptr_t       usartbase;     /* Base address of UART registers */
   uint32_t        baud;          /* Configured baud */
   uint32_t        clock;         /* Frequency of the UART */
@@ -1214,14 +1215,6 @@ static void gd32_usart_configure(struct uart_dev_s *dev)
   uint32_t fradiv;
   uint32_t regval;
 
-  /* Reset USART */
-
-  gd32_usart_reset(priv->usartbase);
-
-  /* Enable USART clock */
-
-  gd32_usart_clock_enable(priv->usartbase);
-
   /* Configure the USART oversample mode. */
 
   regval = up_serialin(priv, GD32_USART_CTL0_OFFSET);
@@ -1334,6 +1327,10 @@ static int up_setup(struct uart_dev_s *dev)
 
 #ifndef CONFIG_SUPPRESS_UART_CONFIG
   uint32_t regval;
+
+  /* Enable USART clock */
+
+  gd32_usart_clock_enable(priv->usartbase);
 
   /* Configure pins for USART use */
 
@@ -2105,6 +2102,8 @@ static void up_rxint(struct uart_dev_s *dev, bool enable)
     {
       ie &= ~(USART_CFG_CTL0_INT_RBNEIE | USART_CFG_CTL0_INT_PERRIE |
               USART_CFG_CTL2_INT_ERRIE);
+      ie |= ((USART_CFG_CTL0_INT << USART_CFG_SHIFT) |
+             (USART_CFG_CTL2_INT << USART_CFG_SHIFT));
     }
 
   /* Then set the new interrupt state */
@@ -2938,16 +2937,6 @@ int up_putc(int ch)
   uint32_t ie;
 
   up_disableusartint(priv, &ie);
-
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      arm_lowputc('\r');
-    }
-
   arm_lowputc(ch);
   up_restoreusartint(priv, ie);
 #endif
@@ -2967,15 +2956,6 @@ int up_putc(int ch)
 int up_putc(int ch)
 {
 #ifdef CONSOLE_UART
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      arm_lowputc('\r');
-    }
-
   arm_lowputc(ch);
 #endif
   return ch;

@@ -1,5 +1,5 @@
 # ##############################################################################
-# arch/sim/cmake/Toolchain.cmake
+# arch/sim/src/cmake/Toolchain.cmake
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -98,6 +98,7 @@ endif()
 
 if(CONFIG_SIM_ASAN)
   add_compile_options(-fsanitize=address)
+  add_link_options(-fsanitize=address)
   add_compile_options(-fsanitize-address-use-after-scope)
   add_compile_options(-fsanitize=pointer-compare)
   add_compile_options(-fsanitize=pointer-subtract)
@@ -111,6 +112,7 @@ if(CONFIG_MM_KASAN_GLOBAL)
 endif()
 
 if(CONFIG_SIM_UBSAN)
+  add_link_options(-fsanitize=undefined)
   add_compile_options(-fsanitize=undefined)
   add_link_options(-fsanitize=undefined)
 else()

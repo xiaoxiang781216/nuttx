@@ -185,6 +185,7 @@ pid_t arm64_fork(const struct fork_s *context)
 #endif
 
   child->cmn.xcp.regs             = (void *)(newsp - XCPTCONTEXT_SIZE);
+
   child->cmn.xcp.regs[REG_X0]     = 0;
   child->cmn.xcp.regs[REG_X8]     = context->regs[FORK_REG_X8];
   child->cmn.xcp.regs[REG_X9]     = context->regs[FORK_REG_X9];
@@ -208,15 +209,26 @@ pid_t arm64_fork(const struct fork_s *context)
   child->cmn.xcp.regs[REG_X27]    = context->regs[FORK_REG_X27];
   child->cmn.xcp.regs[REG_X28]    = context->regs[FORK_REG_X28];
   child->cmn.xcp.regs[REG_FP]     = newfp;
+
+#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
+  child->cmn.xcp.regs[REG_SPSR]   = SPSR_MODE_EL3H;
+#else
   child->cmn.xcp.regs[REG_SPSR]   = SPSR_MODE_EL1H;
+#endif
 
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   child->cmn.xcp.regs[REG_SPSR]  |= (DAIF_IRQ_BIT | DAIF_FIQ_BIT);
 #endif /* CONFIG_SUPPRESS_INTERRUPTS */
 
   child->cmn.xcp.regs[REG_ELR]    = (uint64_t)context->lr;
-  child->cmn.xcp.regs[REG_SP_ELX] = newsp - XCPTCONTEXT_SIZE;
-  child->cmn.xcp.regs[REG_SP_EL0] = newsp - XCPTCONTEXT_SIZE;
+
+  child->cmn.xcp.regs[REG_EXE_DEPTH] = 0;
+  child->cmn.xcp.regs[REG_SP_ELX]    = newsp - XCPTCONTEXT_SIZE;
+#ifdef CONFIG_ARCH_KERNEL_STACK
+  child->cmn.xcp.regs[REG_SP_EL0]    = (uint64_t)child->cmn.xcp.ustkptr;
+#else
+  child->cmn.xcp.regs[REG_SP_EL0]    = newsp - XCPTCONTEXT_SIZE;
+#endif
 
   /* And, finally, start the child task.  On a failure, nxtask_start_fork()
    * will discard the TCB by calling nxtask_abort_fork().

@@ -1,6 +1,8 @@
 /****************************************************************************
  * tools/configure.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -1447,6 +1449,7 @@ static void set_host(const char *destconfig)
                 printf("  Select Windows native host\n");
                 disable_feature(destconfig, "CONFIG_WINDOWS_CYGWIN");
                 disable_feature(destconfig, "CONFIG_WINDOWS_MSYS");
+                enable_feature(destconfig, "CONFIG_EXPERIMENTAL");
                 enable_feature(destconfig, "CONFIG_WINDOWS_NATIVE");
                 break;
 

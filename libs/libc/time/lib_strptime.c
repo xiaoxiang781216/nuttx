@@ -76,12 +76,12 @@ FAR char *strptime(FAR const char *restrict s, FAR const char *restrict f,
   int want_century = 0;
   int century = 0;
   int relyear = 0;
-#ifdef CONFIG_LIBC_LOCALE
+  #ifdef CONFIG_LIBC_LOCALE
   FAR const char *ex;
 #endif
 #if defined(CONFIG_LIBC_LOCALE) || defined(CONFIG_LIBC_LOCALTIME)
   size_t len;
-#endif
+  #endif
 
   if (!s || !f || !tm)
     {

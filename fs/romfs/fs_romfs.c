@@ -1312,6 +1312,7 @@ static int romfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
       /* Release the mountpoint private data */
 
       fs_heap_free(rm->rm_devbuffer);
+
 #ifdef CONFIG_FS_ROMFS_CACHE_NODE
       romfs_freenode(rm->rm_root);
 #endif

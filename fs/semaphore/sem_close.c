@@ -99,7 +99,6 @@ int nxsem_close(FAR sem_t *sem)
 #endif
       DEBUGASSERT(inode->i_peer == NULL);
       inode_free(inode);
-      return OK;
     }
 
   return OK;

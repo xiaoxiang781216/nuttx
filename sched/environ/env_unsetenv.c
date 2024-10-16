@@ -61,10 +61,12 @@
 
 int unsetenv(FAR const char *name)
 {
-  FAR struct task_group_s *group;
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
+  FAR struct task_group_s *group = rtcb->group;
   irqstate_t flags;
   ssize_t idx;
+
+  DEBUGASSERT(group);
 
   /* Check the incoming parameter */
 
@@ -77,10 +79,6 @@ int unsetenv(FAR const char *name)
   /* Check if the variable exists */
 
   flags = enter_critical_section();
-  rtcb = this_task();
-  group = rtcb->group;
-  DEBUGASSERT(group);
-
   if (group && (idx = env_findvar(group, name)) >= 0)
     {
       /* It does!  Remove the name=value pair from the environment. */

@@ -131,6 +131,8 @@
 #define SPSR_MODE_EL1H      (0x5)
 #define SPSR_MODE_EL2T      (0x8)
 #define SPSR_MODE_EL2H      (0x9)
+#define SPSR_MODE_EL3T      (0xc)
+#define SPSR_MODE_EL3H      (0xd)
 #define SPSR_MODE_MASK      (0xf)
 
 /* CurrentEL: Current Exception Level */
@@ -268,23 +270,6 @@
 
 #define CONFIG_MAX_XLAT_TABLES      10
 
-/* Virtual address space size
- * Allows choosing one of multiple possible virtual address
- * space sizes. The level of translation table is determined by
- * a combination of page size and virtual address space size.
- *
- * The choice could be: 32, 36, 42, 48
- */
-
-#define CONFIG_ARM64_VA_BITS        48
-/* Physical address space size
- * Choose the maximum physical address range that the kernel will support.
- *
- * The choice could be: 32, 36, 42, 48
- */
-
-#define CONFIG_ARM64_PA_BITS        48
-
 #define L1_CACHE_SHIFT              (6)
 #define L1_CACHE_BYTES              BIT(L1_CACHE_SHIFT)
 
@@ -384,7 +369,7 @@ static inline void arch_nop(void)
  *
  * Description:
  *
- *   Get current execute level
+ *   Get current execution level
  *
  ****************************************************************************/
 
@@ -402,19 +387,25 @@ static inline void arch_nop(void)
 #define modreg16(v,m,a) putreg16((getreg16(a) & ~(m)) | ((v) & (m)), (a))
 #define modreg32(v,m,a) putreg32((getreg32(a) & ~(m)) | ((v) & (m)), (a))
 
+/* Atomic modification of registers */
+
+void modifyreg8(unsigned int addr, uint8_t clearbits, uint8_t setbits);
+void modifyreg16(unsigned int addr, uint16_t clearbits, uint16_t setbits);
+void modifyreg32(unsigned int addr, uint32_t clearbits, uint32_t setbits);
+
 /****************************************************************************
  * Name:
- *   arch_get_current_tcb
+ *   arch_get_exception_depth
  *
  * Description:
- *   tpidr_el0 is used to record TCB at present, it's used for fpu and task
- * switch propose
+ *   tpidrro_el0 is used to record exception depth, it's used for fpu trap
+ * happened at exception context (like IRQ).
  *
  ****************************************************************************/
 
-static inline uint64_t arch_get_current_tcb(void)
+static inline int arch_get_exception_depth(void)
 {
-  return read_sysreg(tpidr_el0);
+  return read_sysreg(tpidrro_el0);
 }
 
 void arch_cpu_idle(void);

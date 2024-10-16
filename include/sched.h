@@ -259,7 +259,7 @@ int    sched_getaffinity(pid_t pid, size_t cpusetsize, FAR cpu_set_t *mask);
 int    sched_cpucount(FAR const cpu_set_t *set);
 #else
 #  define sched_setaffinity(p, c, m) 0
-#  define sched_getaffinity(p, c, m) (*(m) |= (1 << (c)), 0)
+#  define sched_getaffinity(p, c, m) (*(m) |= (1 << 0), 0)
 #  define sched_cpucount(s) 1
 #endif /* CONFIG_SMP */
 

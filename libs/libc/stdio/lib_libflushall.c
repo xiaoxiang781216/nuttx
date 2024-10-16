@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/stdio/lib_libflushall.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -28,6 +30,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/fs/fs.h>
 
 #include "libc.h"
@@ -47,6 +50,7 @@
 
 int lib_flushall_unlocked(FAR struct streamlist *list)
 {
+  FAR sq_entry_t *entry;
   int lasterrno = OK;
   int ret;
 
@@ -64,8 +68,10 @@ int lib_flushall_unlocked(FAR struct streamlist *list)
           lib_fflush_unlocked(&list->sl_std[i]);
         }
 
-      for (stream = list->sl_head; stream != NULL; stream = stream->fs_next)
+      sq_for_every(&list->sl_queue, entry)
         {
+          stream = container_of(entry, struct file_struct, fs_entry);
+
           /* If the stream is opened for writing, then flush all of
            * the pending write data in the stream.
            */
@@ -95,6 +101,7 @@ int lib_flushall_unlocked(FAR struct streamlist *list)
 
 int lib_flushall(FAR struct streamlist *list)
 {
+  FAR sq_entry_t *entry;
   int lasterrno = OK;
   int ret;
 
@@ -114,8 +121,10 @@ int lib_flushall(FAR struct streamlist *list)
           lib_fflush(&list->sl_std[i]);
         }
 
-      for (stream = list->sl_head; stream != NULL; stream = stream->fs_next)
+      sq_for_every(&list->sl_queue, entry)
         {
+          stream = container_of(entry, struct file_struct, fs_entry);
+
           /* If the stream is opened for writing, then flush all of
            * the pending write data in the stream.
            */

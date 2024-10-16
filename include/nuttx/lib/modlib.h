@@ -155,7 +155,7 @@ struct module_s
 {
   FAR struct module_s *flink;          /* Supports a singly linked list */
 #ifdef HAVE_MODLIB_NAMES
-  FAR char modname[MODLIB_NAMEMAX];    /* Module name */
+  char modname[MODLIB_NAMEMAX];        /* Module name */
 #endif
   struct mod_info_s modinfo;           /* Module information */
   FAR void *textalloc;                 /* Allocated kernel text memory */
@@ -203,7 +203,7 @@ struct mod_loadinfo_s
    */
 
 #ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
-  uintptr_t    *sectalloc;   /* All sections memory allocated when ELF file was loaded */
+  FAR uintptr_t *sectalloc;  /* All sections memory allocated when ELF file was loaded */
 #endif
 
   uintptr_t     textalloc;   /* .text memory allocated when module was loaded */
@@ -220,7 +220,7 @@ struct mod_loadinfo_s
   FAR Elf_Phdr *phdr;        /* Buffered module program headers */
   FAR Elf_Shdr *shdr;        /* Buffered module section headers */
   FAR void     *exported;    /* Module exports */
-  uint8_t      *iobuffer;    /* File I/O buffer */
+  FAR uint8_t  *iobuffer;    /* File I/O buffer */
   uintptr_t     datasec;     /* ET_DYN - data area start from Phdr */
   uintptr_t     segpad;      /* Padding between text and data */
   uintptr_t     initarr;     /* .init_array */

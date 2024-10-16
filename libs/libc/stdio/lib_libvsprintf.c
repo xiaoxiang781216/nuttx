@@ -1,11 +1,11 @@
 /****************************************************************************
  * libs/libc/stdio/lib_libvsprintf.c
  *
- *   Copyright (c) 2002, Alexander Popov (sasho@vip.bg)
- *   Copyright (c) 2002,2004,2005 Joerg Wunsch
- *   Copyright (c) 2005, Helmut Wallner
- *   Copyright (c) 2007, Dmitry Xmelkov
- *   All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2002, Alexander Popov (sasho@vip.bg)
+ * SPDX-FileCopyrightText: 2002,2004,2005 Joerg Wunsch
+ * SPDX-FileCopyrightText: 2005, Helmut Wallner
+ * SPDX-FileCopyrightText: 2007, Dmitry Xmelkov
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -125,9 +125,7 @@ union arg_u
 #ifdef CONFIG_HAVE_LONG_LONG
   unsigned long long ull;
 #endif
-#ifdef CONFIG_HAVE_DOUBLE
   double d;
-#endif
   FAR char *cp;
 };
 struct arg_s
@@ -485,13 +483,13 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
           flags &= ~(FL_LONG | FL_REPD_TYPE);
 
 #ifdef CONFIG_HAVE_LONG_LONG
-          if (sizeof(void *) == sizeof(unsigned long long))
+          if (sizeof(FAR void *) == sizeof(unsigned long long))
             {
               flags |= (FL_LONG | FL_REPD_TYPE);
             }
           else
 #endif
-          if (sizeof(void *) == sizeof(unsigned long))
+          if (sizeof(FAR void *) == sizeof(unsigned long))
             {
               flags |= FL_LONG;
             }

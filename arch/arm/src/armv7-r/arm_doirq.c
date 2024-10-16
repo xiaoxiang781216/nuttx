@@ -57,7 +57,9 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
    * and we will use this_task(). Therefore, it cannot be overridden.
    */
 
+#ifdef CONFIG_SMP
   if (irq != GIC_SMP_CPUSTART)
+#endif
     {
       tcb->xcp.regs = regs;
     }

@@ -31,6 +31,7 @@
 *.ddc
 *.dds
 *.su
+*.pyc
 *.mapfile
 *.SystemMap
 *~
@@ -41,6 +42,7 @@
 /.config\ *
 /.cproject
 /.gdbinit
+/.gdb_history
 /.project
 /.version
 /_SAVED_APPS_config
@@ -48,8 +50,10 @@
 /defconfig
 /Make.defs
 /nuttx
+/nuttx32
 /nuttx-*
 /nuttx.*
+/nuttx_user*
 /staging
 /tags
 /TAGS
@@ -62,7 +66,15 @@ uImage
 .context\ *
 # $(TOPDIR)/Makefile.[unix|win]::$(DIRLINKS_EXTERNAL_DIRS)
 .dirlinks
+.fakelnk
 .vscode
 .DS_Store
 tools/gdb/__pycache__
 /build
+.ccls-cache
+compile_commands.json
+imx9-sdimage.img
+kwarning
+SAVEMake.defs
+SAVEconfig
+.aider*

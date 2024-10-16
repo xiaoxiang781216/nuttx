@@ -22,15 +22,36 @@ following section.
 .. toctree::
   :caption: Supported Drivers
 
-  syslog.rst
-  spi.rst
-  i2c.rst
-  ethernet.rst
-  socketcan.rst
+  audio.rst
+  clk.rst
+  devicetree.rst
+  devmem.rst
+  dma.rst
   framebuffer.rst
+  i2c.rst
+  i3c.rst
+  ioexpander.rst
   lcd.rst
   mtd.rst
+  regmap.rst
+  reset.rst
+  rptun.rst
+  rwbuffer.rst
+  sensors.rst
+  segger.rst
+  spi.rst
+  syslog.rst
   sdio.rst
-  usbhost.rst
   usbdev.rst
-
+  usbhost.rst
+  usbmisc.rst
+  usbmonitor.rst
+  usrsock.rst
+  mmcsd.rst
+  net/index.rst
+  pinctrl.rst
+  pipes.rst
+  power/index.rst
+  virtio.rst
+  video.rst
+  wireless.rst

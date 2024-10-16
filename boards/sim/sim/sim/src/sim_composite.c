@@ -230,8 +230,6 @@ static void *board_composite1_connect(int port)
 static void *board_composite2_connect(int port)
 {
   struct composite_devdesc_s dev[1];
-  int ifnobase = 0;
-  int strbase = COMPOSITE_NSTRIDS - 1;
   int dev_idx = 0;
 
 #ifdef CONFIG_NET_CDCNCM
@@ -241,23 +239,18 @@ static void *board_composite2_connect(int port)
 
   /* Interfaces */
 
-  dev[dev_idx].devinfo.ifnobase = ifnobase;
+  dev[dev_idx].devinfo.ifnobase = 0;
   dev[dev_idx].minor = 0;
 
   /* Strings */
 
-  dev[dev_idx].devinfo.strbase = strbase;
+  dev[dev_idx].devinfo.strbase = COMPOSITE_NSTRIDS - 1;
 
   /* Endpoints */
 
   dev[dev_idx].devinfo.epno[CDCNCM_EP_INTIN_IDX] = 5;
   dev[dev_idx].devinfo.epno[CDCNCM_EP_BULKIN_IDX] = 6;
   dev[dev_idx].devinfo.epno[CDCNCM_EP_BULKOUT_IDX] = 7;
-
-  /* Count up the base numbers */
-
-  ifnobase += dev[dev_idx].devinfo.ninterfaces;
-  strbase += dev[dev_idx].devinfo.nstrings;
 
   dev_idx += 1;
 #endif
@@ -266,11 +259,11 @@ static void *board_composite2_connect(int port)
 }
 
 /****************************************************************************
- * Name:  board_composite2_connect
+ * Name:  board_composite3_connect
  *
  * Description:
  *   Connect the USB composite device on the specified USB device port for
- *   configuration 2.
+ *   configuration 3.
  *
  * Input Parameters:
  *   port     - The USB device port.
@@ -284,8 +277,6 @@ static void *board_composite2_connect(int port)
 static void *board_composite3_connect(int port)
 {
   struct composite_devdesc_s dev[1];
-  int ifnobase = 0;
-  int strbase = COMPOSITE_NSTRIDS - 1;
   int dev_idx = 0;
 
 #ifdef CONFIG_NET_CDCMBIM
@@ -295,23 +286,18 @@ static void *board_composite3_connect(int port)
 
   /* Interfaces */
 
-  dev[dev_idx].devinfo.ifnobase = ifnobase;
+  dev[dev_idx].devinfo.ifnobase = 0;
   dev[dev_idx].minor = 0;
 
   /* Strings */
 
-  dev[dev_idx].devinfo.strbase = strbase;
+  dev[dev_idx].devinfo.strbase = COMPOSITE_NSTRIDS - 1;
 
   /* Endpoints */
 
   dev[dev_idx].devinfo.epno[CDCNCM_EP_INTIN_IDX] = 5;
   dev[dev_idx].devinfo.epno[CDCNCM_EP_BULKIN_IDX] = 6;
   dev[dev_idx].devinfo.epno[CDCNCM_EP_BULKOUT_IDX] = 7;
-
-  /* Count up the base numbers */
-
-  ifnobase += dev[dev_idx].devinfo.ninterfaces;
-  strbase += dev[dev_idx].devinfo.nstrings;
 
   dev_idx += 1;
 #endif

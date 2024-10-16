@@ -1,5 +1,5 @@
 ############################################################################
-# drivers/rptun/Make.defs
+# drivers/rpmsg/Make.defs
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -43,14 +43,6 @@ endif
 
 ifeq ($(CONFIG_RPMSG_PORT_SPI_SLAVE),y)
 CSRCS += rpmsg_port_spi_slave.c
-endif
-
-ifeq ($(CONFIG_RPMSG_PORT_DBGSPI),y)
-CSRCS += rpmsg_port_dbgspi.c
-endif
-
-ifeq ($(CONFIG_RPMSG_PORT_DBGSPI_SLAVE),y)
-CSRCS += rpmsg_port_dbgspi_slave.c
 endif
 
 ifeq ($(CONFIG_RPMSG_PORT_UART),y)

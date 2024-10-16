@@ -43,7 +43,6 @@ ifeq ($(CONFIG_CRYPTO_SW_AES),y)
 endif
 CRYPTO_CSRCS += blake2s.c
 CRYPTO_CSRCS += blf.c
-CRYPTO_CSRCS += bn.c
 CRYPTO_CSRCS += cast.c
 CRYPTO_CSRCS += chachapoly.c
 CRYPTO_CSRCS += ecb_enc.c
@@ -65,6 +64,7 @@ endif
 CRYPTO_CSRCS += key_wrap.c
 CRYPTO_CSRCS += siphash.c
 CRYPTO_CSRCS += hmac_buff.c
+CRYPTO_CSRCS += bn.c
 
 # Entropy pool random number generator
 

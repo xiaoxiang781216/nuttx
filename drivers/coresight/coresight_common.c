@@ -136,6 +136,13 @@ out:
 
 /****************************************************************************
  * Name: coresight_disclaim_device
+ *
+ * Description:
+ *   Disclaim the device, then an external tool can touch the device.
+ *
+ * Input Parameters:
+ *   addr  - Base addr of the coresight device.
+ *
  ****************************************************************************/
 
 void coresight_disclaim_device(uintptr_t addr)
@@ -161,6 +168,9 @@ void coresight_disclaim_device(uintptr_t addr)
  * Description:
  *   Used to get an unique trace id associated with cpu id of an ETM
  *   coresight device.
+ *
+ * Input Parameters:
+ *   cpu  - CPU index to generate an unique trace id.
  *
  * Returned Value:
  *   Unique trace id on success; a negative value on failure.
@@ -229,6 +239,9 @@ int coresight_get_system_trace_id(void)
  * Description:
  *    Release an allocated system trace ID.
  *
+ * Input Parameters:
+ *   traceid  - Traceid to be released.
+ *
  ****************************************************************************/
 
 void coresight_put_system_trace_id(int traceid)
@@ -245,6 +258,15 @@ void coresight_put_system_trace_id(int traceid)
  *
  * Description:
  *   Loop until a bitmask of register has changed to a specific value.
+ *
+ * Input Parameters:
+ *   addr    - Base addr of the coresight device.
+ *   off     - Register offset of the coresight device.
+ *   bitmask - Bitmask to be checked.
+ *   val     - Value to be matched.
+ *
+ * Returned Value:
+ *   Zero on success; a negative value on failure.
  *
  ****************************************************************************/
 
@@ -273,6 +295,9 @@ int coresight_timeout(uint32_t val, uint32_t mask, uintptr_t addr)
  *   When losing synchronisation a new barrier packet needs to be inserted at
  *   the beginning of the data collected in a buffer.  That way the decoder
  *   knows that it needs to look for another sync sequence.
+ *
+ * Input Parameters:
+ *   buf  - buffer that a new barrier packet inserts to.
  *
  ****************************************************************************/
 

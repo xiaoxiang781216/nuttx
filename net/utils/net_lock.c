@@ -63,7 +63,7 @@ static rmutex_t g_netlock = NXRMUTEX_INITIALIZER;
  ****************************************************************************/
 
 static int
-_net_timedwait(sem_t *sem, bool interruptible, unsigned int timeout)
+_net_timedwait(FAR sem_t *sem, bool interruptible, unsigned int timeout)
 {
   unsigned int count;
   int          blresult;
@@ -233,7 +233,7 @@ int net_restorelock(unsigned int count)
  *
  ****************************************************************************/
 
-int net_sem_timedwait(sem_t *sem, unsigned int timeout)
+int net_sem_timedwait(FAR sem_t *sem, unsigned int timeout)
 {
   return _net_timedwait(sem, true, timeout);
 }
@@ -260,7 +260,7 @@ int net_sem_timedwait(sem_t *sem, unsigned int timeout)
  *
  ****************************************************************************/
 
-int net_mutex_timedlock(mutex_t *mutex, unsigned int timeout)
+int net_mutex_timedlock(FAR mutex_t *mutex, unsigned int timeout)
 {
   unsigned int count;
   int          blresult;
@@ -315,7 +315,7 @@ int net_mutex_timedlock(mutex_t *mutex, unsigned int timeout)
  *
  ****************************************************************************/
 
-int net_sem_wait(sem_t *sem)
+int net_sem_wait(FAR sem_t *sem)
 {
   return net_sem_timedwait(sem, UINT_MAX);
 }
@@ -340,7 +340,7 @@ int net_sem_wait(sem_t *sem)
  *
  ****************************************************************************/
 
-int net_mutex_lock(mutex_t *mutex)
+int net_mutex_lock(FAR mutex_t *mutex)
 {
   return net_mutex_timedlock(mutex, UINT_MAX);
 }
@@ -362,7 +362,7 @@ int net_mutex_lock(mutex_t *mutex)
  *
  ****************************************************************************/
 
-int net_sem_timedwait_uninterruptible(sem_t *sem, unsigned int timeout)
+int net_sem_timedwait_uninterruptible(FAR sem_t *sem, unsigned int timeout)
 {
   return _net_timedwait(sem, false, timeout);
 }
@@ -383,7 +383,7 @@ int net_sem_timedwait_uninterruptible(sem_t *sem, unsigned int timeout)
  *
  ****************************************************************************/
 
-int net_sem_wait_uninterruptible(sem_t *sem)
+int net_sem_wait_uninterruptible(FAR sem_t *sem)
 {
   return net_sem_timedwait_uninterruptible(sem, UINT_MAX);
 }

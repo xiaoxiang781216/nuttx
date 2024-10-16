@@ -137,19 +137,6 @@ static inline void up_color_intstack(void)
 
 void up_initialize(void)
 {
-#ifdef CONFIG_SMP
-  int i;
-
-  /* Initialize global variables */
-
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
-    {
-      up_current_regs()[i] = NULL;
-    }
-#else
-  up_set_current_regs(NULL);
-#endif
-
   /* Colorize the interrupt stack */
 
   up_color_intstack();

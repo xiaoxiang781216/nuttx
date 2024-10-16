@@ -348,8 +348,8 @@ static int cdcecm_txpoll(FAR struct net_driver_s *dev)
  *
  * Description:
  *   After a packet has been received and dispatched to the network, it
- *   may return return with an outgoing packet.  This function checks for
- *   that case and performs the transmission if necessary.
+ *   may return with an outgoing packet.  This function checks for that
+ *   case and performs the transmission if necessary.
  *
  * Input Parameters:
  *   priv - Reference to the driver state structure
@@ -401,7 +401,7 @@ static void cdcecm_receive(FAR struct cdcecm_driver_s *self)
    * configuration.
    */
 
-  /* Copy the data data from the hardware to self->dev.d_buf.  Set
+  /* Copy the data from the hardware to self->dev.d_buf.  Set
    * amount of data in self->dev.d_len
    */
 
@@ -829,7 +829,7 @@ static void cdcecm_ep0incomplete(FAR struct usbdev_ep_s *ep,
 {
   if (req->result || req->xfrd != req->len)
     {
-      uerr("result: %hd, xfrd: %hu\n", req->result, req->xfrd);
+      uerr("result: %hd, xfrd: %zu\n", req->result, req->xfrd);
     }
 }
 
@@ -846,7 +846,7 @@ static void cdcecm_rdcomplete(FAR struct usbdev_ep_s *ep,
 {
   FAR struct cdcecm_driver_s *self = (FAR struct cdcecm_driver_s *)ep->priv;
 
-  uinfo("buf: %p, flags 0x%hhx, len %hu, xfrd %hu, result %hd\n",
+  uinfo("buf: %p, flags 0x%hhx, len %zu, xfrd %zu, result %hd\n",
         req->buf, req->flags, req->len, req->xfrd, req->result);
 
   switch (req->result)
@@ -887,7 +887,7 @@ static void cdcecm_wrcomplete(FAR struct usbdev_ep_s *ep,
   FAR struct cdcecm_driver_s *self = (FAR struct cdcecm_driver_s *)ep->priv;
   int rc;
 
-  uinfo("buf: %p, flags 0x%hhx, len %hu, xfrd %hu, result %hd\n",
+  uinfo("buf: %p, flags 0x%hhx, len %zu, xfrd %zu, result %hd\n",
         req->buf, req->flags, req->len, req->xfrd, req->result);
 
   /* The single USB device write request is available for upcoming
@@ -1149,7 +1149,7 @@ static void cdcecm_mkepcompdesc(int epidx,
         epcompdesc->len  = USB_SIZEOF_SS_EPCOMPDESC;                      /* Descriptor length */
         epcompdesc->type = USB_DESC_TYPE_ENDPOINT_COMPANION;              /* Descriptor type */
 
-        if (CONFIG_CDCECM_EPINTIN_MAXBURST >= USB_SS_INT_EP_MAXBURST)     /* Max burst */
+        if (CONFIG_CDCECM_EPINTIN_MAXBURST >= USB_SS_INT_EP_MAXBURST)
           {
             epcompdesc->mxburst = USB_SS_INT_EP_MAXBURST - 1;
           }
@@ -1171,7 +1171,7 @@ static void cdcecm_mkepcompdesc(int epidx,
         epcompdesc->len  = USB_SIZEOF_SS_EPCOMPDESC;                      /* Descriptor length */
         epcompdesc->type = USB_DESC_TYPE_ENDPOINT_COMPANION;              /* Descriptor type */
 
-        if (CONFIG_CDCECM_EPBULKOUT_MAXBURST >= USB_SS_BULK_EP_MAXBURST)  /* Max burst */
+        if (CONFIG_CDCECM_EPBULKOUT_MAXBURST >= USB_SS_BULK_EP_MAXBURST)
           {
             epcompdesc->mxburst = USB_SS_BULK_EP_MAXBURST - 1;
           }
@@ -1180,7 +1180,7 @@ static void cdcecm_mkepcompdesc(int epidx,
             epcompdesc->mxburst = CONFIG_CDCECM_EPBULKOUT_MAXBURST;
           }
 
-        if (CONFIG_CDCECM_EPBULKOUT_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM) /* Max stream */
+        if (CONFIG_CDCECM_EPBULKOUT_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM)
           {
             epcompdesc->attr = USB_SS_BULK_EP_MAXSTREAM;
           }
@@ -1199,7 +1199,7 @@ static void cdcecm_mkepcompdesc(int epidx,
         epcompdesc->len  = USB_SIZEOF_SS_EPCOMPDESC;                      /* Descriptor length */
         epcompdesc->type = USB_DESC_TYPE_ENDPOINT_COMPANION;              /* Descriptor type */
 
-        if (CONFIG_CDCECM_EPBULKIN_MAXBURST >= USB_SS_BULK_EP_MAXBURST)   /* Max burst */
+        if (CONFIG_CDCECM_EPBULKIN_MAXBURST >= USB_SS_BULK_EP_MAXBURST)
           {
             epcompdesc->mxburst = USB_SS_BULK_EP_MAXBURST - 1;
           }
@@ -1208,7 +1208,7 @@ static void cdcecm_mkepcompdesc(int epidx,
             epcompdesc->mxburst = CONFIG_CDCECM_EPBULKIN_MAXBURST;
           }
 
-        if (CONFIG_CDCECM_EPBULKIN_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM)  /* Max stream */
+        if (CONFIG_CDCECM_EPBULKIN_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM)
           {
             epcompdesc->attr = USB_SS_BULK_EP_MAXSTREAM;
           }
@@ -1343,7 +1343,9 @@ static int16_t cdcecm_mkcfgdesc(FAR uint8_t *desc,
                                 FAR struct usbdev_devinfo_s *devinfo,
                                 uint8_t speed, uint8_t type)
 {
+#ifndef CONFIG_CDCECM_COMPOSITE
   FAR struct usb_cfgdesc_s *cfgdesc = NULL;
+#endif
   int16_t len = 0;
   int ret;
 
@@ -1942,7 +1944,7 @@ static int cdcecm_classobject(int minor,
 
   /* Network device initialization */
 
-  self->dev.d_buf     = (uint8_t *)self->pktbuf;
+  self->dev.d_buf     = (FAR uint8_t *)self->pktbuf;
   self->dev.d_ifup    = cdcecm_ifup;     /* I/F up (new IP address) callback */
   self->dev.d_ifdown  = cdcecm_ifdown;   /* I/F down callback */
   self->dev.d_txavail = cdcecm_txavail;  /* New TX data callback */

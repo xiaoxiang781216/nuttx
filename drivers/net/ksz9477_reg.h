@@ -67,6 +67,14 @@
 #define KSZ9477_PORT_ADDRESS(p)            KSZ9477_PORT_REG(p, 0x200)
 #define KSZ9477_PORT_DATA(p)               KSZ9477_PORT_REG(p, 0x204)
 
+/* Switch queue management registers */
+
+#define KSZ9477_Q_MGMT_CONTROL0            0x0390
+#define KSZ9477_Q_MGMT_PORT_VLAN_ENABLE    (1 << 1)
+
+#define KSZ9477_Q_MGMT_PORT_CONTROL0(p)    KSZ9477_PORT_REG(p, 0xA00)
+#define KSZ9477_Q_MGMT_PORT_CONTROL1(p)    KSZ9477_PORT_REG(p, 0xA04)
+
 #define KSZ9477_SGMII_PORT_ADDRESS         KSZ9477_PORT_ADDRESS(7)
 #define KSZ9477_SGMII_PORT_DATA            KSZ9477_PORT_DATA(7)
 
@@ -109,6 +117,18 @@
 #define SGMII_AUTONEG_CONTROL_PCS_SGMII    (2 << 1)
 #define SGMII_AUTONEG_CONTROL_TC_MASTER    (1 << 3)
 #define SGMII_AUTONEG_CONTROL_LINK_STATUS  (1 << 4)
+
+/* Port Mirroring Control Register */
+
+#define KSZ9477_PORT_MIRROR_CONTROL(p)     KSZ9477_PORT_REG(p, 0x800)
+#define KSZ9477_PORT_MIRROR_SNIFFER_PORT   (1 << 1)
+#define KSZ9477_PORT_MIRROR_TX_SNIFF       (1 << 5)
+#define KSZ9477_PORT_MIRROR_RX_SNIFF       (1 << 6)
+
+/* Global Port Mirroring and Snooping Control Register */
+
+#define KSZ9477_GLOBAL_PORT_MIRROR_CONTROL 0x0370
+#define KSZ9477_GLOBAL_PORT_SNIFF_MODE     (1 << 0)
 
 /****************************************************************************
  * Public Types

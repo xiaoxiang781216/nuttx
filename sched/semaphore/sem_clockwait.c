@@ -92,7 +92,7 @@
 int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
                     FAR const struct timespec *abstime)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   irqstate_t flags;
   int ret = ERROR;
 
@@ -108,7 +108,6 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
    */
 
   flags = enter_critical_section();
-  rtcb = this_task();
 
   /* Try to take the semaphore without waiting. */
 
@@ -135,12 +134,12 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
   if (clockid == CLOCK_REALTIME)
     {
       wd_start_realtime(&rtcb->waitdog, abstime,
-                        nxsem_timeout, (wdparm_t)rtcb);
+                        nxsem_timeout, (uintptr_t)rtcb);
     }
   else
     {
       wd_start_abstime(&rtcb->waitdog, abstime,
-                       nxsem_timeout, (wdparm_t)rtcb);
+                       nxsem_timeout, (uintptr_t)rtcb);
     }
 
   /* Now perform the blocking wait.  If nxsem_wait() fails, the

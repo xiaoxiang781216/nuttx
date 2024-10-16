@@ -111,7 +111,7 @@ unsigned char romfs_img[] =
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00
 };
-unsigned int romfs_img = 1024;
+unsigned int romfs_img_len = 1024;
 
 /***************************************************************************
  * Public Functions

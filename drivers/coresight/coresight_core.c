@@ -444,6 +444,15 @@ static int coresight_validate_source(FAR struct coresight_dev_s *csdev)
  * Description:
  *   Build path from srcdev to destdev.
  *
+ * Input Parameters:
+ *   srcdev  - Pointer to the source device.
+ *   destdev - Pointer to the destination device.
+ *   path    - Pointer to the path which will save all the coresight devices
+ *             through source device to destination device.
+ *
+ * Returned Value:
+ *   Zero on success; a negative value on failure.
+ *
  ****************************************************************************/
 
 static int coresight_build_path(FAR struct coresight_dev_s *srcdev,

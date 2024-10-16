@@ -30,12 +30,13 @@
 #include "esp32s3_gpio.h"
 #include "esp32s3_psram.h"
 #include "esp32s3_spi_timing.h"
-#include "hardware/esp32s3_spi_mem_reg.h"
 #include "hardware/esp32s3_iomux.h"
 #include "hardware/esp32s3_gpio.h"
 #include "hardware/esp32s3_gpio_sigmap.h"
 #include "rom/esp32s3_spiflash.h"
-#include "rom/esp32s3_opi_flash.h"
+#include "rom/opi_flash.h"
+
+#include "soc/spi_mem_reg.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -54,7 +55,7 @@
 #endif
 
 #if defined(CONFIG_ESP32S3_FLASH_SAMPLE_MODE_DTR)
-#  if defined(CONFIG_ESP32S3_FLASH_FREQ_80M) 
+#  if defined(CONFIG_ESP32S3_FLASH_FREQ_80M)
 #    define ESP32S3_SPI_TIMING_FLASH_CORE_CLK       160
 #  elif defined(CONFIG_ESP32S3_FLASH_FREQ_120M)
 #    define ESP32S3_SPI_TIMING_FLASH_CORE_CLK       240
@@ -171,7 +172,7 @@
 #define MSPI_TIMING_FLASH_DTR_MODE           CONFIG_ESP32S3_FLASH_SAMPLE_MODE_DTR
 #define MSPI_TIMING_FLASH_STR_MODE           CONFIG_ESP32S3_FLASH_SAMPLE_MODE_STR
 
-#define MSPI_TIMING_TEST_DATA_LEN            64
+#define MSPI_TIMING_TEST_DATA_LEN            1024
 #define MSPI_TIMING_PSRAM_TEST_DATA_ADDR     0
 #define MSPI_TIMING_FLASH_TEST_DATA_ADDR     0
 
@@ -1356,7 +1357,7 @@ static void do_tuning(const uint8_t *reference_data,
  *
  ****************************************************************************/
 
-void esp32s3_spi_timing_set_pin_drive_strength(void)
+void IRAM_ATTR esp32s3_spi_timing_set_pin_drive_strength(void)
 {
   const uint32_t regs[] =
     {

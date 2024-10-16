@@ -1325,7 +1325,7 @@ static void stm32l4_epin_request(struct stm32l4_usbdev_s *priv,
       return;
     }
 
-  uinfo("EP%d req=%p: len=%d xfrd=%d zlp=%d\n",
+  uinfo("EP%d req=%p: len=%zu xfrd=%zu zlp=%d\n",
         privep->epphy, privreq, privreq->req.len,
         privreq->req.xfrd, privep->zlp);
 
@@ -1610,7 +1610,7 @@ static void stm32l4_epout_complete(struct stm32l4_usbdev_s *priv,
       return;
     }
 
-  uinfo("EP%d: len=%d xfrd=%d\n",
+  uinfo("EP%d: len=%zu xfrd=%zu\n",
         privep->epphy, privreq->req.len, privreq->req.xfrd);
 
   /* Return the completed read request to the class driver and mark the state
@@ -1742,7 +1742,7 @@ static inline void stm32l4_epout_receive(struct stm32l4_ep_s *privep,
       return;
     }
 
-  uinfo("EP%d: len=%d xfrd=%d\n",
+  uinfo("EP%d: len=%zu xfrd=%zu\n",
          privep->epphy, privreq->req.len, privreq->req.xfrd);
   usbtrace(TRACE_READ(privep->epphy), bcnt);
 
@@ -3811,6 +3811,7 @@ static int stm32l4_usbinterrupt(int irq, void *context, void *arg)
         {
           usbtrace(TRACE_INTDECODE(STM32L4_TRACEINTID_SOF),
                   (uint16_t)regval);
+          usbdev_sof_irq(&priv->usbdev, stm32l4_getframe(&priv->usbdev));
         }
 #endif
 

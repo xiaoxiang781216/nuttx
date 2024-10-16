@@ -41,8 +41,8 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
 
-#include "sched/sched.h"
 #include "fs_heap.h"
+#include "sched/sched.h"
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS) && \
     defined(CONFIG_ARCH_HAVE_TCBINFO) && !defined(CONFIG_FS_PROCFS_EXCLUDE_TCBINFO)

@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/modlib/modlib_symtab.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -62,7 +64,7 @@ extern int CONFIG_MODLIB_NSYMBOLS_VAR;
  ****************************************************************************/
 
 static FAR const struct symtab_s *g_modlib_symtab;
-static FAR int g_modlib_nsymbols;
+static int g_modlib_nsymbols;
 
 /****************************************************************************
  * Public Functions

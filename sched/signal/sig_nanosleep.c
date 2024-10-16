@@ -93,7 +93,11 @@
 int nxsig_nanosleep(FAR const struct timespec *rqtp,
                     FAR struct timespec *rmtp)
 {
-  return nxsig_clockwait(CLOCK_REALTIME, 0, rqtp, rmtp);
+  int ret;
+
+  ret = nxsig_clockwait(CLOCK_REALTIME, 0, rqtp, rmtp);
+
+  return ret == -EAGAIN ? 0 : ret;
 }
 
 /****************************************************************************
@@ -193,7 +197,11 @@ int clock_nanosleep(clockid_t clockid, int flags,
 
   /* Check if nxsig_clockwait() succeeded */
 
-  if (ret < 0)
+  if (ret == -EAGAIN)
+    {
+      ret = OK;
+    }
+  else if (ret < 0)
     {
       /* If not return the errno */
 

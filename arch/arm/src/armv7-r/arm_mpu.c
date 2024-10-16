@@ -206,7 +206,7 @@ static inline uint32_t mpu_subregion_ls(size_t offset, uint8_t l2size)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_MPU_RESET) || defined(CONFIG_ARM_MPU_EARLY_RESET)
+#if defined(CONFIG_ARM_MPU_RESET) || defined(CONFIG_ARM_MPU_EARLY_RESET)
 static void mpu_reset_internal(void)
 {
   int region;
@@ -569,8 +569,8 @@ void mpu_dump_region(void)
  *   None.
  *
  ****************************************************************************/
-#if defined(CONFIG_MPU_RESET)
-void mpu_reset()
+#if defined(CONFIG_ARM_MPU_RESET)
+void mpu_reset(void)
 {
   mpu_reset_internal();
 }
@@ -593,6 +593,6 @@ void mpu_reset()
 #if defined(CONFIG_ARM_MPU_EARLY_RESET)
 void mpu_early_reset(void)
 {
-  mpu_reset_internal(void);
+  mpu_reset_internal();
 }
 #endif

@@ -11,9 +11,10 @@ a method based on the running state to track the deepest call stack of all tasks
 
 Configuration
 =============
-.. code-block:: c
-    CONFIG_SCHED_STACKRECORD=32
-    CONFIG_ARCH_INSTRUMENT_ALL=y
+   .. code-block:: c
+
+      CONFIG_SCHED_STACKRECORD=32
+      CONFIG_ARCH_INSTRUMENT_ALL=y
 
 ```CONFIG_SCHED_STACKRECORD``` is used to record the maximum stack usage of all tasks
 ```CONFIG_ARCH_INSTRUMENT_ALL``` is used to instrument all code.
@@ -28,31 +29,31 @@ Example
 1. ```./tools/configure.sh esp32c3-devkit:stack```
 2. ```make -j20```
 3. flash the image to your board
-4.
-.. code-block :: bash
-    nsh> cat /proc/1/stack
-    StackAlloc: 0x3fc8b5b0
-    StackBase:  0x3fc8b5e0
-    StackSize:  2000
-    MaxStackUsed:1344
-      Backtrace        Size
-     0x42009198          32
-     0x42009200          48
-     0x420081a0         128
-     0x42008d18          64
-     0x4201da60          80
-     0x420199e0          80
-     0x42018c6c          48
-     0x420194f4          48
-     0x42017d30          32
-     0x4201634c          32
-     0x420163ac          48
-     0x42016408          32
-     0x420132c0          48
-     0x42010598          32
-     0x4200fd98          48
-     0x4200f5dc          80
-     0x4200f8e0         160
+   .. code-block :: bash
+
+      nsh> cat /proc/1/stack
+      StackAlloc: 0x3fc8b5b0
+      StackBase:  0x3fc8b5e0
+      StackSize:  2000
+      MaxStackUsed:1344
+      Backtrace         Size
+      0x42009198          32
+      0x42009200          48
+      0x420081a0         128
+      0x42008d18          64
+      0x4201da60          80
+      0x420199e0          80
+      0x42018c6c          48
+      0x420194f4          48
+      0x42017d30          32
+      0x4201634c          32
+      0x420163ac          48
+      0x42016408          32
+      0x420132c0          48
+      0x42010598          32
+      0x4200fd98          48
+      0x4200f5dc          80
+      0x4200f8e0         160
 
 Implementation details
 ======================

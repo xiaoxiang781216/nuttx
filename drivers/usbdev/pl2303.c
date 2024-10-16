@@ -636,7 +636,7 @@ static int usbclass_sndpacket(FAR struct pl2303_dev_s *priv)
 
   /* Get the maximum number of bytes that will fit into one bulk IN request */
 
-  reqlen = MAX(CONFIG_PL2303_BULKIN_REQLEN, ep->maxpacket);
+  reqlen = MIN(CONFIG_PL2303_BULKIN_REQLEN, ep->maxpacket);
 
   while (!sq_empty(&priv->reqlist))
     {
@@ -1376,9 +1376,9 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
 {
   FAR struct pl2303_dev_s *priv =
                          ((FAR struct pl2303_driver_s *)driver)->dev;
+  size_t reqlen = CONFIG_PL2303_EPBULK_FSSIZE;
   FAR struct pl2303_req_s *reqcontainer;
   irqstate_t flags;
-  uint32_t reqlen = CONFIG_PL2303_EPBULK_FSSIZE;
   int ret;
   int i;
 

@@ -39,6 +39,8 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/lib/lib.h>
 
+#include "fs_heap.h"
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -61,7 +63,7 @@
     { \
       if ((d)->buffer != NULL) \
         { \
-          lib_free((d)->buffer); \
+          fs_heap_free((d)->buffer); \
           (d)->buffer  = NULL; \
         } \
     } \
@@ -393,7 +395,7 @@ int inode_remove(FAR const char *path);
  *
  ****************************************************************************/
 
-int inode_addref(FAR struct inode *inode);
+void inode_addref(FAR struct inode *inode);
 
 /****************************************************************************
  * Name: inode_release

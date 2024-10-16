@@ -1,6 +1,8 @@
 /****************************************************************************
  * wireless/ieee802154/mac802154_assoc.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -146,7 +148,9 @@ int mac802154_req_associate(MACHANDLE mac,
       return ret;
     }
 
-  /* Get a uin16_t reference to the first two bytes. ie frame control field */
+  /* Get a uint16_t reference to the first two bytes. ie frame control
+   * field
+   */
 
   iob->io_data[0] = 0;
   iob->io_data[1] = 0;
@@ -879,7 +883,7 @@ static void mac802154_assoctimeout(FAR void *arg)
 }
 
 /****************************************************************************
- * Name: mac802154_extract_assocrespj
+ * Name: mac802154_extract_assocresp
  *
  * Description:
  *   Create and send a Data request command to extract the Association

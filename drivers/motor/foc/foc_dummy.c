@@ -44,8 +44,11 @@
 
 /* Board HW configuration */
 
-#define FOC_DUMMY_HW_PWM_NS      (500)
-#define FOC_DUMMY_HW_PWM_MAX     (0.95f)
+#define FOC_DUMMY_HW_PWM_NS       (500)
+#define FOC_DUMMY_HW_PWM_MAX      (0.95f)
+#define FOC_DUMMY_HW_BEMF_SCALE   (1000)
+#define FOC_DUMMY_HW_IPHASE_SCALE (1000)
+#define FOC_DUMMY_HW_IPHASE_MAX   (40000)
 
 /* Helper macros ************************************************************/
 
@@ -107,7 +110,9 @@ static int foc_dummy_shutdown(FAR struct foc_dev_s *dev);
 static int foc_dummy_start(FAR struct foc_dev_s *dev, bool state);
 static int foc_dummy_pwm_duty_set(FAR struct foc_dev_s *dev,
                                   FAR foc_duty_t *duty);
-static int foc_pwm_off(struct foc_dev_s *dev, bool off);
+static int foc_dummy_pwm_off(FAR struct foc_dev_s *dev, bool off);
+static int foc_dummy_info_get(FAR struct foc_dev_s *dev,
+                              FAR struct foc_info_s *info);
 static int foc_dummy_ioctl(FAR struct foc_dev_s *dev, int cmd,
                            unsigned long arg);
 static int foc_dummy_bind(FAR struct foc_dev_s *dev,
@@ -123,7 +128,6 @@ static void foc_dummy_notifier_handler(FAR struct foc_dev_s *dev);
 
 /* Helpers */
 
-static void foc_dummy_hw_config_get(FAR struct foc_dev_s *dev);
 static int foc_dummy_notifier_cfg(FAR struct foc_dev_s *dev, uint32_t freq);
 static int foc_dummy_pwm_setup(FAR struct foc_dev_s *dev, uint32_t freq);
 static int foc_dummy_pwm_start(FAR struct foc_dev_s *dev, bool state);
@@ -147,8 +151,9 @@ static struct foc_lower_ops_s g_foc_dummy_ops =
   foc_dummy_setup,
   foc_dummy_shutdown,
   foc_dummy_pwm_duty_set,
-  foc_pwm_off,
+  foc_dummy_pwm_off,
   foc_dummy_start,
+  foc_dummy_info_get,
   foc_dummy_ioctl,
   foc_dummy_bind,
   foc_dummy_fault_clear,
@@ -396,10 +401,6 @@ static int foc_dummy_setup(FAR struct foc_dev_s *dev)
 
   mtrinfo("[FOC_SETUP]\n");
 
-  /* Get HW configuration */
-
-  foc_dummy_hw_config_get(dev);
-
   return OK;
 }
 
@@ -473,7 +474,7 @@ static void foc_dummy_notifier_handler(FAR struct foc_dev_s *dev)
       /* Call FOC notifier */
 
 #ifdef CONFIG_MOTOR_FOC_BEMF_SENSE
-      sim->cb->notifier(dev, sim->current, sim->voltage);
+      sim->cb->notifier(dev, sim->current, sim->volt);
 #else
       sim->cb->notifier(dev, sim->current, NULL);
 #endif
@@ -521,14 +522,14 @@ static int foc_dummy_pwm_duty_set(FAR struct foc_dev_s *dev,
 }
 
 /****************************************************************************
- * Name: foc_pwm_off
+ * Name: foc_dummy_pwm_off
  *
  * Description:
  *   Set the 3-phase bridge switches in off state.
  *
  ****************************************************************************/
 
-static int foc_pwm_off(struct foc_dev_s *dev, bool off)
+static int foc_dummy_pwm_off(FAR struct foc_dev_s *dev, bool off)
 {
   mtrinfo("[PWM_OFF] %d\n", off);
 
@@ -536,21 +537,27 @@ static int foc_pwm_off(struct foc_dev_s *dev, bool off)
 }
 
 /****************************************************************************
- * Name: foc_dummy_hw_config_get
+ * Name: foc_dummy_info_get
  *
  * Description:
- *   Get HW configuration for FOC controller
+ *   Get HW configuration for FOC device
  *
  ****************************************************************************/
 
-static void foc_dummy_hw_config_get(FAR struct foc_dev_s *dev)
+static int foc_dummy_info_get(FAR struct foc_dev_s *dev,
+                              FAR struct foc_info_s *info)
 {
-  DEBUGASSERT(dev);
-
   /* Get HW configuration */
 
-  dev->info.hw_cfg.pwm_dt_ns = FOC_DUMMY_HW_PWM_NS;
-  dev->info.hw_cfg.pwm_max   = ftob16(FOC_DUMMY_HW_PWM_MAX);
+  info->hw_cfg.pwm_dt_ns    = FOC_DUMMY_HW_PWM_NS;
+  info->hw_cfg.pwm_max      = ftob16(FOC_DUMMY_HW_PWM_MAX);
+#ifdef CONFIG_MOTOR_FOC_BEMF_SENSE
+  info->hw_cfg.bemf_scale   = FOC_DUMMY_HW_IPHASE_SCALE;
+#endif
+  info->hw_cfg.iphase_max   = FOC_DUMMY_HW_IPHASE_MAX;
+  info->hw_cfg.iphase_scale = FOC_DUMMY_HW_IPHASE_SCALE;
+
+  return OK;
 }
 
 /****************************************************************************
@@ -687,13 +694,18 @@ void foc_dummy_update(void)
 
       dev = &g_foc_dev[i];
 
-      /* Get SIM data */
+      /* Update dummy driver state only if device opened */
 
-      sim = FOC_DUMMY_DATA_FROM_DEV_GET(dev);
-
-      if (sim->state == true)
+      if (dev->ocount > 0)
         {
-          foc_dummy_notifier_handler(dev);
+          /* Get SIM data */
+
+          sim = FOC_DUMMY_DATA_FROM_DEV_GET(dev);
+
+          if (sim->state == true)
+            {
+              foc_dummy_notifier_handler(dev);
+            }
         }
     }
 

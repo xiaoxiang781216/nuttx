@@ -50,7 +50,11 @@
 
 uintptr_t up_getusrsp(void *regs)
 {
+#ifndef CONFIG_BUILD_KERNEL
   return ((uint64_t *)regs)[REG_SP_ELX];
+#else
+  return ((uint64_t *)regs)[REG_SP_EL0];
+#endif
 }
 
 /****************************************************************************
@@ -100,4 +104,5 @@ void up_dump_register(void *dumpregs)
   _alert("ELR:       0x%-16"PRIx64"\n", regs[REG_ELR]);
   _alert("SP_EL0:    0x%-16"PRIx64"\n", regs[REG_SP_EL0]);
   _alert("SP_ELX:    0x%-16"PRIx64"\n", regs[REG_SP_ELX]);
+  _alert("EXE_DEPTH: 0x%-16"PRIx64"\n", regs[REG_EXE_DEPTH]);
 }

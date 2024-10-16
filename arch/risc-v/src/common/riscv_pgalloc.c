@@ -37,6 +37,7 @@
 
 #include <arch/barriers.h>
 
+#include "sched/sched.h"
 #include "addrenv.h"
 #include "pgalloc.h"
 #include "riscv_mmu.h"

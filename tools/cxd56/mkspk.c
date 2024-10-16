@@ -1,6 +1,8 @@
 /****************************************************************************
  * tools/cxd56/mkspk.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -243,7 +245,7 @@ static void *create_image(struct elf_file *elf, int core, char *savename,
   psize = 0;
   for (i = 0, ph = elf->phdr; i < elf->ehdr->e_phnum; i++, ph++)
     {
-      if (ph->p_type != PT_LOAD || ph->p_filesz == 0)
+      if (ph->p_type != PT_LOAD || ph->p_memsz == 0)
         {
           continue;
         }
@@ -297,7 +299,7 @@ static void *create_image(struct elf_file *elf, int core, char *savename,
   offset = ((char *)pi - img) + (nphs * sizeof(*pi));
   for (i = 0; i < elf->ehdr->e_phnum; i++, ph++)
     {
-      if (ph->p_type != PT_LOAD || ph->p_filesz == 0)
+      if (ph->p_type != PT_LOAD || ph->p_memsz == 0)
         continue;
       pi->load_address = ph->p_paddr;
       pi->offset = offset;

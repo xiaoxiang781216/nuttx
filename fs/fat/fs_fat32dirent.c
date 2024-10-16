@@ -146,7 +146,7 @@ static int fat_putsfdirentry(FAR struct fat_mountpt_s *fs,
                              uint8_t attributes, uint32_t fattime);
 
 #if defined(CONFIG_FAT_LFN) && defined(CONFIG_FAT_LFN_UTF8)
-static int fat_utf8toucs(FAR const char **str, lfnchar *ucs);
+static int fat_utf8toucs(FAR const char **str, FAR lfnchar *ucs);
 static int fat_ucstoutf8(FAR uint8_t *dest, uint8_t offset, lfnchar ucs);
 #endif
 
@@ -162,7 +162,7 @@ static int fat_ucstoutf8(FAR uint8_t *dest, uint8_t offset, lfnchar ucs);
  *
  ****************************************************************************/
 #if defined(CONFIG_FAT_LFN) && defined(CONFIG_FAT_LFN_UTF8)
-static int fat_utf8toucs(FAR const char **str, lfnchar *ucs)
+static int fat_utf8toucs(FAR const char **str, FAR lfnchar *ucs)
 {
   uint8_t chr;
   lfnchar tucs;
@@ -286,7 +286,7 @@ static uint8_t fat_lfnchecksum(FAR const uint8_t *sfname)
  *     0x2a-0x2c = '*', '+', ','
  *     0x2e-0x2f = '.', '/'
  *     0x3a-0x3f = ':', ';', '<', '=', '>', '?'
- *     0x5b-0x5d = '[', '\\', ;]'
+ *     0x5b-0x5d = '[', '\\', ']'
  *     0x7c      = '|'
  *
  *   '.' May only occur once within string and only within the first 9
@@ -296,7 +296,7 @@ static uint8_t fat_lfnchecksum(FAR const uint8_t *sfname)
  *   Lower case characters are not allowed in directory names (without some
  *   poorly documented operations on the NTRes directory byte).  Lower case
  *   codes may represent different characters in other character sets ("DOS
- *   code pages".  The logic below does not, at present, support any other
+ *   code pages").  The logic below does not, at present, support any other
  *   character sets.
  *
  * Returned Value:
@@ -669,14 +669,14 @@ errout:
 #ifdef CONFIG_FAT_LFN
 static inline int fat_createalias(FAR struct fat_dirinfo_s *dirinfo)
 {
-  uint8_t  ch;        /* Current character being processed */
-  lfnchar *ext;       /* Pointer to the extension substring */
-  lfnchar *src;       /* Pointer to the long file name source */
-  int      len;       /* Total length of the long file name */
-  int      namechars; /* Number of characters available in long name */
-  int      extchars;  /* Number of characters available in long name extension */
-  int      endndx;    /* Maximum index into the short name array */
-  int      ndx;       /* Index to store next character */
+  uint8_t      ch;        /* Current character being processed */
+  FAR lfnchar *ext;       /* Pointer to the extension substring */
+  FAR lfnchar *src;       /* Pointer to the long file name source */
+  int          len;       /* Total length of the long file name */
+  int          namechars; /* Number of characters available in long name */
+  int          extchars;  /* Number of characters available in long name extension */
+  int          endndx;    /* Maximum index into the short name array */
+  int          ndx;       /* Index to store next character */
 
   /* First, let's decide what is name and what is extension */
 
@@ -2556,7 +2556,7 @@ int fat_finddirentry(FAR struct fat_mountpt_s *fs,
     }
 
   /* fd_index is the index into the current directory table. It is set to the
-   * the first, entry in the root directory.
+   * the first entry in the root directory.
    */
 
   dirinfo->dir.fd_index = 0;
@@ -2641,7 +2641,7 @@ int fat_finddirentry(FAR struct fat_mountpt_s *fs,
 
       if (terminator == '\0')
         {
-          /* Return success meaning that the description the matching
+          /* Return success meaning that the description matching the
            * directory entry is in dirinfo.
            */
 
@@ -3109,7 +3109,7 @@ int fat_remove(FAR struct fat_mountpt_s *fs, FAR const char *relpath,
 {
   struct fat_dirinfo_s dirinfo;
   uint32_t             dircluster;
-  uint8_t             *direntry;
+  FAR uint8_t         *direntry;
   int                  ret;
 
   /* Find the directory entry referring to the entry to be deleted */

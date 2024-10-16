@@ -63,11 +63,6 @@
 
 void nxsched_resume_scheduler(FAR struct tcb_s *tcb)
 {
-  if (!tcb)
-    {
-      return;
-    }
-
 #ifdef CONFIG_SCHED_SPORADIC
   if ((tcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_SPORADIC)
     {

@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/string/lib_memcmp.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -32,10 +34,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
 /* Nonzero if either x or y is not aligned on a "long" boundary. */
 
 #define UNALIGNED(x, y) \
-  (((long)(x) & (sizeof(long) - 1)) | ((long)(y) & (sizeof(long) - 1)))
+  (((long)(uintptr_t)(x) & (sizeof(long) - 1)) | ((long)(uintptr_t)(y) & (sizeof(long) - 1)))
 
 /* How many bytes are copied each iteration of the word copy loop. */
 
@@ -44,6 +47,8 @@
 /* Threshhold for punting to the byte copier. */
 
 #define TOO_SMALL(len) ((len) < LBLOCKSIZE)
+
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -54,6 +59,7 @@
 no_builtin("memcmp")
 int memcmp(FAR const void *s1, FAR const void *s2, size_t n)
 {
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
   FAR unsigned char *p1 = (FAR unsigned char *)s1;
   FAR unsigned char *p2 = (FAR unsigned char *)s2;
   FAR unsigned long *a1;
@@ -100,6 +106,25 @@ int memcmp(FAR const void *s1, FAR const void *s2, size_t n)
       p1++;
       p2++;
     }
+#else
+  FAR unsigned char *p1 = (FAR unsigned char *)s1;
+  FAR unsigned char *p2 = (FAR unsigned char *)s2;
+
+  while (n-- > 0)
+    {
+      if (*p1 < *p2)
+        {
+          return -1;
+        }
+      else if (*p1 > *p2)
+        {
+          return 1;
+        }
+
+      p1++;
+      p2++;
+    }
+#endif
 
   return 0;
 }

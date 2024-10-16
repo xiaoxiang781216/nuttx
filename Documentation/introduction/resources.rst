@@ -20,3 +20,8 @@ Here's a list of Apache NuttX resources that you might find helpful:
    * `Git Cheat Sheet (by GitHub) <https://github.github.com/training-kit/downloads/github-git-cheat-sheet.pdf>`_
    * `Git Book (online) <https://git-scm.com/book/en/v2>`_
 
+Legacy README
+=============
+
+.. include:: ../legacy_README.md
+   :parser: myst_parser.sphinx_

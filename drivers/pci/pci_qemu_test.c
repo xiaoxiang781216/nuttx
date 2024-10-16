@@ -22,6 +22,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <assert.h>
+#include <errno.h>
 #include <debug.h>
 #include <stdint.h>
 

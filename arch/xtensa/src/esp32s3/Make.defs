@@ -20,6 +20,8 @@
 
 include common/Make.defs
 
+STORAGETMP = $(if $(wildcard $(NXTMPDIR)/.*),y,)
+
 # The start-up, "head", file.  May be either a .S or a .c file.
 
 HEAD_CSRC  = esp32s3_start.c
@@ -30,7 +32,6 @@ CHIP_CSRCS  = esp32s3_irq.c esp32s3_clockconfig.c esp32s3_region.c
 CHIP_CSRCS += esp32s3_systemreset.c esp32s3_user.c esp32s3_allocateheap.c
 CHIP_CSRCS += esp32s3_wdt.c esp32s3_gpio.c esp32s3_lowputc.c esp32s3_serial.c
 CHIP_CSRCS += esp32s3_rtc_gpio.c esp32s3_libc_stubs.c esp32s3_spi_timing.c
-CHIP_CSRCS += esp32s3_periph.c
 
 # Configuration-dependent ESP32-S3 files
 
@@ -108,6 +109,10 @@ ifeq ($(CONFIG_ESP32S3_RT_TIMER),y)
 CHIP_CSRCS += esp32s3_rt_timer.c
 endif
 
+ifeq ($(CONFIG_ESP32S3_ADC),y)
+CHIP_CSRCS += esp32s3_adc.c
+endif
+
 ifeq ($(CONFIG_ESP32S3_I2C),y)
 CHIP_CSRCS += esp32s3_i2c.c
 endif
@@ -135,8 +140,13 @@ CHIP_CSRCS += esp32s3_spiflash_mtd.c
 endif
 endif
 
+ifeq ($(CONFIG_ESP32S3_PARTITION_TABLE),y)
+CHIP_CSRCS += esp32s3_partition.c
+endif
+
 ifeq ($(CONFIG_ESP32S3_SPIRAM),y)
 CHIP_CSRCS += esp32s3_spiram.c
+CHIP_CSRCS += esp32s3_himem.c
 
 ifeq ($(CONFIG_ESP32S3_SPIRAM_MODE_QUAD),y)
 CHIP_CSRCS += esp32s3_psram_quad.c
@@ -145,6 +155,22 @@ endif
 ifeq ($(CONFIG_ESP32S3_SPIRAM_MODE_OCT),y)
 CHIP_CSRCS += esp32s3_psram_octal.c
 endif
+endif
+
+ifeq ($(CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP),y)
+CHIP_CSRCS += esp32s3_imm.c
+endif
+
+ifeq ($(CONFIG_ARCH_HAVE_EXTRA_HEAPS),y)
+CHIP_CSRCS += esp32s3_extraheaps.c
+endif
+
+ifeq ($(CONFIG_ESP32S3_RTC_HEAP),y)
+CHIP_CSRCS += esp32s3_rtcheap.c
+endif
+
+ifeq ($(CONFIG_ARCH_USE_TEXT_HEAP),y)
+CHIP_CSRCS += esp32s3_textheap.c
 endif
 
 ifeq ($(CONFIG_ESP32S3_TOUCH),y)
@@ -165,13 +191,32 @@ ifeq ($(CONFIG_ESP32S3_LCD),y)
 CHIP_CSRCS += esp32s3_lcd.c
 endif
 
+ifeq ($(CONFIG_ESP32S3_SDMMC),y)
+CHIP_CSRCS += esp32s3_sdmmc.c
+endif
+
+ifeq ($(CONFIG_ESP32S3_AES_ACCELERATOR),y)
+CHIP_CSRCS += esp32s3_aes.c
+endif
+
+ifeq ($(CONFIG_PM),y)
+ifneq ($(CONFIG_ARCH_CUSTOM_PMINIT),y)
+CHIP_CSRCS += esp32s3_pminitialize.c
+endif
+CHIP_CSRCS += esp32s3_pm.c
+endif
+
+ifeq ($(CONFIG_ESP32S3_OPENETH),y)
+CHIP_CSRCS += esp_openeth.c
+endif
+
 #############################################################################
 # Espressif HAL for 3rd Party Platforms
 #############################################################################
 
 # Fetch source files and add them to build
 
-ESP_HAL_3RDPARTY_REPO   = esp-hal-3rdparty
+ESP_HAL_3RDPARTY_REPO = esp-hal-3rdparty
 ifndef ESP_HAL_3RDPARTY_VERSION
 	ESP_HAL_3RDPARTY_VERSION = b4c723a119344b4b71d69819019d55637fb570fd
 endif
@@ -180,19 +225,59 @@ ifndef ESP_HAL_3RDPARTY_URL
 	ESP_HAL_3RDPARTY_URL = https://github.com/espressif/esp-hal-3rdparty.git
 endif
 
+ifndef DISABLE_GIT_DEPTH
+ifndef GIT_DEPTH
+	GIT_DEPTH=1
+endif
+	GIT_DEPTH_PARAMETER = --depth=$(GIT_DEPTH)
+endif
+
+ifeq ($(STORAGETMP),y)
+define CLONE_ESP_HAL_3RDPARTY_REPO
+	$(call CHECK_COMMITSHA, $(NXTMPDIR)/$(ESP_HAL_3RDPARTY_REPO),$(ESP_HAL_3RDPARTY_VERSION))
+	$(call CLONE, $(ESP_HAL_3RDPARTY_URL),chip/$(ESP_HAL_3RDPARTY_REPO),$(NXTMPDIR)/$(ESP_HAL_3RDPARTY_REPO))
+endef
+else
+define CLONE_ESP_HAL_3RDPARTY_REPO
+	$(call CLONE, $(ESP_HAL_3RDPARTY_URL),chip/$(ESP_HAL_3RDPARTY_REPO))
+endef
+endif
+
 chip/$(ESP_HAL_3RDPARTY_REPO):
 	$(Q) echo "Cloning Espressif HAL for 3rd Party Platforms"
-	$(Q) git clone --quiet $(ESP_HAL_3RDPARTY_URL) chip/$(ESP_HAL_3RDPARTY_REPO)
+	$(Q) $(call CLONE_ESP_HAL_3RDPARTY_REPO)
 	$(Q) echo "Espressif HAL for 3rd Party Platforms: ${ESP_HAL_3RDPARTY_VERSION}"
 	$(Q) git -C chip/$(ESP_HAL_3RDPARTY_REPO) checkout --quiet $(ESP_HAL_3RDPARTY_VERSION)
 
 # Silent preprocessor warnings
 
 CFLAGS += -Wno-undef -Wno-unused-variable -fno-jump-tables -fno-tree-switch-conversion
+CFLAGS += ${DEFINE_PREFIX}_RETARGETABLE_LOCKING
+
+# Enable strict volatile bitfield access
+
+CFLAGS += -fstrict-volatile-bitfields
+
+AFLAGS += $(CFLAGS)
 
 # Files that require the HAL recipe
 
 include chip/Bootloader.mk
+
+CHIP_SERIES = $(patsubst "%",%,$(CONFIG_ESPRESSIF_CHIP_SERIES))
+
+include chip/hal.mk
+
+include common/espressif/Make.defs
+
+context:: chip/$(ESP_HAL_3RDPARTY_REPO)
+ifeq ($(CONFIG_ESP32S3_WIRELESS),y)
+	$(Q) echo "Espressif HAL for 3rd Party Platforms: initializing submodules..."
+	$(Q) git -C chip/$(ESP_HAL_3RDPARTY_REPO) submodule --quiet update --init $(GIT_DEPTH_PARAMETER) components/mbedtls/mbedtls components/esp_phy/lib components/esp_wifi/lib components/bt/controller/lib_esp32c3_family components/esp_coex/lib
+	$(Q) git -C chip/$(ESP_HAL_3RDPARTY_REPO)/components/mbedtls/mbedtls reset --quiet --hard
+	$(Q) echo "Applying patches..."
+	$(Q) cd chip/$(ESP_HAL_3RDPARTY_REPO)/components/mbedtls/mbedtls && git apply ../../../nuttx/patches/components/mbedtls/mbedtls/*.patch
+endif
 
 ifeq ($(CONFIG_ESP32S3_WIRELESS),y)
 include chip/Wireless.mk

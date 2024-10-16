@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/misc/lib_fdcheck.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -58,32 +60,6 @@ static uint8_t    g_fdcheck_tag = 0;
  * Public Functions
  ****************************************************************************/
 
-/****************************************************************************
- * Name: fdcheck_restore
- *
- * Description: Obtain original fd information
- *
- * Val carries the pid, tag and fd information.
- * The original fd information is stored in low bit of val.
- * The pid and tag information is stored in the high bit of val.
- * For ease of understanding, let's give an example where
- * the following information is represented in 32-bit binary format
- *
- *  val       00000000 01010101 00000001 10001010
- *  fd        00000000 00000000 00000000 10001010
- *  pid       00000000 00000000 00000000 01010101
- *  tag       00000000 00000000 00000000 00000001
- *
- * In this function, we also check if the pid and tag information is correct.
- * If there is an error, it will panic.
- *
- * Input Parameters:
- *   val - this val carrying pid, tag and original fd information
- *
- * Returned Value: The original fd is returned.
- *
- ****************************************************************************/
-
 int fdcheck_restore(int val)
 {
   uint8_t tag_store;
@@ -111,29 +87,6 @@ int fdcheck_restore(int val)
 
   return fd;
 }
-
-/****************************************************************************
- * Name: fdcheck_protect
- *
- * Description: Obtain the combined value of fd, pid and tag
- *
- * the return value carries the pid, tag and fd information.
- * The original fd information is stored in low bit of val.
- * The pid and tag information is stored in high bit of val.
- * For ease of understanding, let's give an example where
- * the following information is represented in 32-bit binary format
- *
- *  fd        00000000 00000000 00000000 10001010
- *  pid       00000000 00000000 00000000 01010101
- *  tag       00000000 00000000 00000000 00000001
- *  val       00000000 01010101 00000001 10001010
- *
- * Input Parameters:
- *   fd - original fd
- *
- * Returned Value: the combined value of fd and pid
- *
- ****************************************************************************/
 
 int fdcheck_protect(int fd)
 {

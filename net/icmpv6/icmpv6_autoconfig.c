@@ -395,7 +395,7 @@ got_lladdr:
       if (ret < 0)
         {
           /* Remove our wait structure from the list (we may no longer be
-           * at the head of the list).
+           *  at the head of the list).
            */
 
           icmpv6_rwait_cancel(&notify);

@@ -96,7 +96,7 @@
                                              */
 
 #define TSC_FIRST            0x0001          /* First common command */
-#define TSC_NCMDS            14              /* Thirteen common commands */
+#define TSC_NCMDS            14              /* Fourteen common commands */
 
 /* Backward compatible IOCTL */
 

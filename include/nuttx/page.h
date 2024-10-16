@@ -34,7 +34,7 @@
 #  include <nuttx/sched.h>
 #endif
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -456,5 +456,5 @@ int up_fillpage(FAR struct tcb_s *tcb, FAR void *vpage,
 #endif
 
 #endif /* __ASSEMBLY__ */
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */
 #endif /* __INCLUDE_NUTTX_PAGE_H */

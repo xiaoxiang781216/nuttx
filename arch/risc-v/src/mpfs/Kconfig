@@ -46,6 +46,16 @@ config MPFS_BOOTLOADER
 	---help---
 		This NuttX image is used as a bootloader, which will boot only on one hart, putting the others in WFI
 
+config MPFS_BOARD_PMP
+	bool "Enable board specific PMP configuration"
+	depends on ARCH_USE_MPU && MPFS_BOOTLOADER
+	default n
+	---help---
+		If true, the board must provide "mpfs_board_pmp_setup" for PMP
+		configuration and "mpfs_board_pmp_error" for PMP error handling.
+		If false, set ALL memory accessible for every
+		configured HART. Only the bootloader should do this.
+
 config MPFS_OPENSBI
 	bool "Use OpenSBI"
 	depends on MPFS_BOOTLOADER && OPENSBI
@@ -568,12 +578,6 @@ config MPFS_COREPWM0_BASE
 	default 0x44000000
 	depends on MPFS_COREPWM0
 
-config MPFS_COREPWM0_PWMCLK
-	int "Clock frequency of the CorePWM0 block (Hz)"
-	default 25000000
-	range 1000000 100000000
-	depends on MPFS_COREPWM0
-
 config MPFS_COREPWM0_REGWIDTH
 	int "Width of the PWM register (8, 16 or 32 bits)"
 	default 32
@@ -595,12 +599,6 @@ config MPFS_COREPWM1
 config MPFS_COREPWM1_BASE
 	hex "Base address for the instance"
 	default 0x45000000
-	depends on MPFS_COREPWM1
-
-config MPFS_COREPWM1_PWMCLK
-	int "Clock frequency of the CorePWM1 block (Hz)"
-	default 25000000
-	range 1000000 100000000
 	depends on MPFS_COREPWM1
 
 config MPFS_COREPWM1_REGWIDTH
@@ -780,14 +778,13 @@ config MPFS_ETHMAC_REGDEBUG
 		Enable very low-level register access debug.  Depends on
 		CONFIG_DEBUG_FEATURES.
 
-config MPFS_MPU_DMA_ENABLE
-	bool "Enable ALL memory access for eth DMA"
+endmenu
+
+config MPFS_MPUCFG
+	bool "Enable MPUCFG driver"
 	default n
 	---help---
-		Set ALL memory accessible for Ethernet DMA.
-		This should be done on bootloader. This is mostly for testing only.
-
-endmenu
+		Enable driver to set MPUCFG entries.
 
 config MPFS_HAVE_CORERMII
 	bool "CoreRMII FPGA IP block configured"

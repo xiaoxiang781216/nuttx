@@ -323,7 +323,8 @@ static int touch_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
  * Name: touch_poll
  ****************************************************************************/
 
-static int touch_poll(FAR struct file *filep, struct pollfd *fds, bool setup)
+static int touch_poll(FAR struct file *filep, FAR struct pollfd *fds,
+                      bool setup)
 {
   FAR struct touch_openpriv_s *openpriv = filep->f_priv;
   pollevent_t eventset = 0;
@@ -365,6 +366,10 @@ errout:
   nxmutex_unlock(&openpriv->lock);
   return ret;
 }
+
+/****************************************************************************
+ * Name: touch_event_notify
+ ****************************************************************************/
 
 static void touch_event_notify(FAR struct touch_openpriv_s  *openpriv,
                                FAR const struct touch_sample_s *sample)

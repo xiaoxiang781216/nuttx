@@ -33,13 +33,14 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/irq.h>
 #include <nuttx/kthread.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/semaphore.h>
 
 #include "xtensa.h"
-#include "xtensa_attr.h"
+#include "esp_attr.h"
 
 #include "hardware/esp32s2_soc.h"
 #include "hardware/esp32s2_system.h"

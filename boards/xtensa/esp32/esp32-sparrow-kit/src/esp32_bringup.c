@@ -80,6 +80,10 @@
 #  include "esp32_board_i2c.h"
 #endif
 
+#ifdef CONFIG_ESP32_I2S
+#  include "esp32_i2s.h"
+#endif
+
 #ifdef CONFIG_SENSORS_BMP180
 #  include "esp32_bmp180.h"
 #endif
@@ -190,7 +194,7 @@ int esp32_bringup(void)
 #endif
 
 #ifdef CONFIG_ESP32_SPIFLASH
-  ret = esp32_spiflash_init();
+  ret = board_spiflash_init();
   if (ret)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize SPI Flash\n");
@@ -342,6 +346,23 @@ int esp32_bringup(void)
 #endif
 
 #endif
+
+#ifdef CONFIG_ESP32_I2S
+
+#ifdef CONFIG_ESP32_I2S0
+
+  /* Configure I2S generic audio on I2S0 */
+
+  ret = board_i2sdev_initialize(ESP32_I2S0);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize I2S%d driver: %d\n",
+             CONFIG_ESP32_I2S0, ret);
+    }
+
+#endif  /* CONFIG_ESP32_I2S0 */
+
+#endif /* CONFIG_ESP32_I2S */
 
 #ifdef CONFIG_SENSORS_BMP180
   /* Try to register BMP180 device in I2C0 */

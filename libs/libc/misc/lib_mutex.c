@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/misc/lib_mutex.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -553,7 +555,7 @@ int nxmutex_set_protocol(FAR mutex_t *mutex, int protocol)
  ****************************************************************************/
 
 #ifdef CONFIG_PRIORITY_PROTECT
-int nxmutex_getprioceiling(FAR const mutex_t *mutex, int *prioceiling)
+int nxmutex_getprioceiling(FAR const mutex_t *mutex, FAR int *prioceiling)
 {
   return nxsem_getprioceiling(&mutex->sem, prioceiling);
 }

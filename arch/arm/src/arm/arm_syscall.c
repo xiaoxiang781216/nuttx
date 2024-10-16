@@ -95,7 +95,7 @@ uint32_t *arm_syscall(uint32_t *regs)
            * set will determine the restored context.
            */
 
-          tcb->xcp.regs = regs[REG_R1];
+          tcb->xcp.regs = (uint32_t *)regs[REG_R1];
           DEBUGASSERT(up_current_regs());
         }
         break;

@@ -92,7 +92,7 @@ struct mmcsd_state_s
   uint8_t dma:1;                   /* true: hardware supports DMA */
 #endif
 
-  uint8_t mode:2;                  /* (See MMCSDMODE_* definitions) */
+  uint8_t mode:4;                  /* (See MMCSDMODE_* definitions) */
   uint8_t type:4;                  /* Card type (See MMCSD_CARDTYPE_* definitions) */
   uint8_t buswidth:4;              /* Bus widths supported (SD only) */
   uint8_t cmd23support:1;          /* CMD23 supported (SD only) */

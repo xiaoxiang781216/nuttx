@@ -237,7 +237,7 @@ cdcacm_copy_epcompdesc(enum cdcacm_epdesc_e epid,
         epcompdesc->len  = USB_SIZEOF_SS_EPCOMPDESC;                      /* Descriptor length */
         epcompdesc->type = USB_DESC_TYPE_ENDPOINT_COMPANION;              /* Descriptor type */
 
-        if (CONFIG_CDCACM_EPINTIN_MAXBURST >= USB_SS_INT_EP_MAXBURST)     /* Max burst */
+        if (CONFIG_CDCACM_EPINTIN_MAXBURST >= USB_SS_INT_EP_MAXBURST)
           {
             epcompdesc->mxburst = USB_SS_INT_EP_MAXBURST - 1;
           }
@@ -260,7 +260,7 @@ cdcacm_copy_epcompdesc(enum cdcacm_epdesc_e epid,
         epcompdesc->len  = USB_SIZEOF_SS_EPCOMPDESC;                      /* Descriptor length */
         epcompdesc->type = USB_DESC_TYPE_ENDPOINT_COMPANION;              /* Descriptor type */
 
-        if (CONFIG_CDCACM_EPBULKOUT_MAXBURST >= USB_SS_BULK_EP_MAXBURST)  /* Max burst */
+        if (CONFIG_CDCACM_EPBULKOUT_MAXBURST >= USB_SS_BULK_EP_MAXBURST)
           {
             epcompdesc->mxburst = USB_SS_BULK_EP_MAXBURST - 1;
           }
@@ -269,7 +269,7 @@ cdcacm_copy_epcompdesc(enum cdcacm_epdesc_e epid,
             epcompdesc->mxburst = CONFIG_CDCACM_EPBULKOUT_MAXBURST;
           }
 
-        if (CONFIG_CDCACM_EPBULKOUT_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM) /* Max stream */
+        if (CONFIG_CDCACM_EPBULKOUT_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM)
           {
             epcompdesc->attr = USB_SS_BULK_EP_MAXSTREAM;
           }
@@ -288,7 +288,7 @@ cdcacm_copy_epcompdesc(enum cdcacm_epdesc_e epid,
         epcompdesc->len  = USB_SIZEOF_SS_EPCOMPDESC;                      /* Descriptor length */
         epcompdesc->type = USB_DESC_TYPE_ENDPOINT_COMPANION;              /* Descriptor type */
 
-        if (CONFIG_CDCACM_EPBULKIN_MAXBURST >= USB_SS_BULK_EP_MAXBURST)   /* Max burst */
+        if (CONFIG_CDCACM_EPBULKIN_MAXBURST >= USB_SS_BULK_EP_MAXBURST)
           {
             epcompdesc->mxburst = USB_SS_BULK_EP_MAXBURST - 1;
           }
@@ -297,7 +297,7 @@ cdcacm_copy_epcompdesc(enum cdcacm_epdesc_e epid,
             epcompdesc->mxburst = CONFIG_CDCACM_EPBULKIN_MAXBURST;
           }
 
-        if (CONFIG_CDCACM_EPBULKIN_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM)  /* Max stream */
+        if (CONFIG_CDCACM_EPBULKIN_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM)
           {
             epcompdesc->attr = USB_SS_BULK_EP_MAXSTREAM;
           }
@@ -592,9 +592,9 @@ int16_t cdcacm_mkcfgdesc(FAR uint8_t *buf,
       dest->ifno     = devinfo->ifnobase;                    /* Interface number */
       dest->alt      = CDCACM_NOTALTIFID;                    /* Alternate setting */
 #ifdef CONFIG_CDCACM_HAVE_EPINTIN
-      dest->neps = 1;                                        /* Number of endpoints */
+      dest->neps     = 1;                                    /* Number of endpoints */
 #else
-      dest->neps = 0;                                        /* Number of endpoints */
+      dest->neps     = 0;                                    /* Number of endpoints */
 #endif
       dest->classid  = USB_CLASS_CDC;                        /* Interface class */
       dest->subclass = CDC_SUBCLASS_ACM;                     /* Interface sub-class */

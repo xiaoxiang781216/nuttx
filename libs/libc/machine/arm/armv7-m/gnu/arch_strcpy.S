@@ -1,6 +1,8 @@
 /***************************************************************************
  * libs/libc/machine/arm/armv7-m/gnu/arch_strcpy.S
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -58,6 +60,7 @@
 
     .syntax unified
     .text
+    .section .text.strcpy
     .align  2
     .global ARCH_LIBCFUN(strcpy)
     .thumb

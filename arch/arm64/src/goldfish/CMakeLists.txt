@@ -19,6 +19,10 @@
 # ##############################################################################
 set(SRCS goldfish_boot.c goldfish_serial.c goldfish_timer.c)
 
+if(CONFIG_RTC_PL031)
+  list(APPEND SRCS goldfish_rtc.c)
+endif()
+
 if(CONFIG_ARCH_EARLY_PRINT)
   list(APPEND SRCS goldfish_lowputc.S)
 endif()

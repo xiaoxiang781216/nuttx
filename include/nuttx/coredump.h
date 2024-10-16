@@ -32,7 +32,10 @@
 
 #include <nuttx/streams.h>
 #include <nuttx/memoryregion.h>
-#include <nuttx/elf.h>
+
+#ifdef CONFIG_ARM_COREDUMP_REGION
+#  include <nuttx/elf.h>
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -59,6 +62,16 @@ struct coredump_info_s
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: coredump_set_memory_region
+ *
+ * Description:
+ *   Set do coredump memory region.
+ *
+ ****************************************************************************/
+
+int coredump_set_memory_region(FAR const struct memory_region_s *region);
+
+/****************************************************************************
  * Name: coredump_add_memory_region
  *
  * Description:
@@ -66,8 +79,7 @@ struct coredump_info_s
  *
  ****************************************************************************/
 
-int coredump_add_memory_region(FAR const void *ptr, size_t size,
-                               uint32_t flags);
+int coredump_add_memory_region(FAR const void *ptr, size_t size);
 
 /****************************************************************************
  * Name: coredump

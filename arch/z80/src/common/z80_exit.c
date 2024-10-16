@@ -54,9 +54,7 @@
 
 void up_exit(int status)
 {
-  FAR struct tcb_s *tcb;
-
-  sinfo("TCB=%p exiting\n", this_task());
+  FAR struct tcb_s *tcb = this_task();
 
   /* Destroy the task at the head of the ready to run list. */
 

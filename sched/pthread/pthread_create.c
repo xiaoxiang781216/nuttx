@@ -233,7 +233,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 #ifdef CONFIG_ARCH_ADDRENV
   /* Share the address environment of the parent task group. */
 
-  ret = addrenv_join(parent, (FAR struct tcb_s *)ptcb);
+  ret = addrenv_join(this_task(), (FAR struct tcb_s *)ptcb);
   if (ret < 0)
     {
       errcode = -ret;
@@ -388,7 +388,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
   /* Initialize the task control block */
 
   ret = pthread_setup_scheduler(ptcb, param.sched_priority, pthread_start,
-                                entry, parent);
+                                entry);
   if (ret != OK)
     {
       errcode = EBUSY;

@@ -31,16 +31,16 @@ config CMSDK_UART0_BAUD
 	default 115200
 
 config CMSDK_UART0_RXBUFSIZE
-	int "CMSDK UART0 Rx buffer size"
+	int "CMSDK UART0 RX buffer size"
 	default 256
 	---help---
-		CMSDK UART0 Rx buffer size.  Default: 256
+		CMSDK UART0 RX buffer size.  Default: 256
 
 config CMSDK_UART0_TXBUFSIZE
-	int "CMSDK UART0 Tx buffer size"
+	int "CMSDK UART0 TX buffer size"
 	default 256
 	---help---
-		CMSDK UART0 Tx buffer size.  Default: 256
+		CMSDK UART0 TX buffer size.  Default: 256
 
 endif # CMSDK_UART0
 
@@ -70,16 +70,16 @@ config CMSDK_UART1_BAUD
 	default 115200
 
 config CMSDK_UART1_RXBUFSIZE
-	int "CMSDK UART1 Rx buffer size"
+	int "CMSDK UART1 RX buffer size"
 	default 256
 	---help---
-		CMSDK UART1 Rx buffer size.  Default: 256
+		CMSDK UART1 RX buffer size.  Default: 256
 
 config CMSDK_UART1_TXBUFSIZE
-	int "CMSDK UART1 Tx buffer size"
+	int "CMSDK UART1 TX buffer size"
 	default 256
 	---help---
-		CMSDK UART1 Tx buffer size.  Default: 256
+		CMSDK UART1 TX buffer size.  Default: 256
 
 endif # CMSDK_UART1
 
@@ -109,16 +109,16 @@ config CMSDK_UART2_BAUD
 	default 115200
 
 config CMSDK_UART2_RXBUFSIZE
-	int "CMSDK UART2 Rx buffer size"
+	int "CMSDK UART2 RX buffer size"
 	default 256
 	---help---
-		CMSDK UART2 Rx buffer size.  Default: 256
+		CMSDK UART2 RX buffer size.  Default: 256
 
 config CMSDK_UART2_TXBUFSIZE
-	int "CMSDK UART2 Tx buffer size"
+	int "CMSDK UART2 TX buffer size"
 	default 256
 	---help---
-		CMSDK UART2 Tx buffer size.  Default: 256
+		CMSDK UART2 TX buffer size.  Default: 256
 
 endif # CMSDK_UART2
 

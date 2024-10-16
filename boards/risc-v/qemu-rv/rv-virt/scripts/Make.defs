@@ -23,14 +23,14 @@ include $(TOPDIR)/tools/Config.mk
 include $(TOPDIR)/arch/risc-v/src/common/Toolchain.defs
 
 ifeq ($(CONFIG_ARCH_CHIP_QEMU_RV),y)
-ifeq ($(CONFIG_BUILD_KERNEL),y)
-ifeq ($(CONFIG_ARCH_CHIP_QEMU_RV64),y)
-  LDSCRIPT = ld-kernel64.script
-else
-  LDSCRIPT = ld-kernel32.script
-endif
-else
   LDSCRIPT = ld.script
+ifeq ($(CONFIG_BUILD_KERNEL),y)
+  LDSCRIPT = ld-kernel.script
+  ifeq ($(CONFIG_NUTTSBI),y)
+    LDSCRIPT = ld-nuttsbi.script
+  endif
+else ifeq ($(CONFIG_BUILD_PROTECTED),y)
+  LDSCRIPT = ld-protected.script
 endif
 endif
 
@@ -44,10 +44,21 @@ CXXPICFLAGS = $(ARCHPICFLAGS) $(CXXFLAGS)
 CPPFLAGS := $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS)
 AFLAGS += $(CFLAGS) -D__ASSEMBLY__
 
-# ELF module definitions
+# POSTBUILD management
 
-ifeq ($(CONFIG_ARCH_RV32),y)
-  LDELFFLAGS += --oformat elf32-littleriscv
+# KERNEL builds need real ROMFS
+
+ifeq ($(CONFIG_BUILD_KERNEL),y)
+ifeq ($(CONFIG_RISCV_SEMIHOSTING_HOSTFS),)
+ifeq ($(wildcard $(BOARD_DIR)$(DELIM)src$(DELIM)romfs_boot.c),)
+define POSTBUILD
+  $(Q) echo "Please replace stub ROMFS with real one."
+  $(Q) rm $(BOARD_DIR)$(DELIM)src$(DELIM)libboard.a
+endef
 else
-  LDELFFLAGS += --oformat elf64-littleriscv
+define POSTBUILD
+  $(Q) echo "Please try nuttx.bin on target."
+endef
+endif
+endif
 endif

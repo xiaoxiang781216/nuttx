@@ -48,7 +48,7 @@ config I2C_SLAVE_WRITEBUFSIZE
 
 config I2C_SLAVE_NPOLLWAITERS
 	int "Number of i2c slave poll waiters"
-	default 2
+	default 1
 	depends on I2C_SLAVE_DRIVER
 	---help---
 		Number of waiters to i2c slave poll

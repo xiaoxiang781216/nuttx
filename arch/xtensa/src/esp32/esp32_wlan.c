@@ -31,6 +31,7 @@
 #include <debug.h>
 #include <arpa/inet.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/crc64.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
@@ -200,7 +201,7 @@ struct wlan_priv_s
 
 /* Reference count of register Wi-Fi handler */
 
-static uint8_t g_callback_register_ref = 0;
+static uint8_t g_callback_register_ref;
 
 static struct wlan_priv_s g_wlan_priv[ESP32_WLAN_DEVS];
 
@@ -978,7 +979,7 @@ static void wlan_dopoll(struct wlan_priv_s *priv)
   pktbuf = wlan_alloc_buffer(priv);
   if (!pktbuf)
     {
-      return ;
+      return;
     }
 
   dev->d_buf = pktbuf->buffer;
@@ -1513,7 +1514,7 @@ static int wlan_ioctl(struct net_driver_s *dev,
 
   return ret;
 }
-#endif  /* CONFIG_NETDEV_IOCTL */
+#endif /* CONFIG_NETDEV_IOCTL */
 
 /****************************************************************************
  * Name: esp32_net_initialize
@@ -1841,4 +1842,4 @@ int esp32_wlan_softap_initialize(void)
 }
 #endif /* ESP32_WLAN_HAS_SOFTAP */
 
-#endif  /* CONFIG_ESP32_WIFI */
+#endif /* CONFIG_ESP32_WIFI */

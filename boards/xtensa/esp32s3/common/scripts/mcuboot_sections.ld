@@ -61,16 +61,29 @@ SECTIONS
   _image_drom_lma = LOADADDR(.flash.rodata);
   _image_drom_size = LOADADDR(.flash.rodata) + SIZEOF(.flash.rodata) - _image_drom_lma;
 
-  .flash.rodata :
+  .flash.rodata : ALIGN(4)
   {
     _rodata_reserved_start = .;
 
     _srodata = ABSOLUTE(.);
-    *(EXCLUDE_FILE (esp32s3_start.*) .rodata)
-    *(EXCLUDE_FILE (esp32s3_start.*) .rodata.*)
+    *(EXCLUDE_FILE (esp32s3_start.* esp32s3_region.*
+                    *libarch.a:*esp_loader.*
+                    *libarch.a:esp32s3_spiflash.*
+                    *libarch.a:*cache_hal.* *libarch.a:*mmu_hal.*
+                    *libarch.a:*mpu_hal.*) .rodata)
+    *(EXCLUDE_FILE (esp32s3_start.* esp32s3_region.*
+                    *libarch.a:*esp_loader.*
+                    *libarch.a:esp32s3_spiflash.*
+                    *libarch.a:*cache_hal.* *libarch.a:*mmu_hal.*
+                    *libarch.a:*mpu_hal.*) .rodata.*)
 
-    *(.rodata)
-    *(.rodata.*)
+#ifdef CONFIG_ESP32S3_WIRELESS
+    *(.rodata_wlog_verbose.*)
+    *(.rodata_wlog_debug.*)
+    *(.rodata_wlog_info.*)
+    *(.rodata_wlog_warning.*)
+    *(.rodata_wlog_error.*)
+#endif
     *(.irom1.text) /* catch stray ICACHE_RODATA_ATTR */
     *(.gnu.linkonce.r.*)
     *(.rodata1)
@@ -121,7 +134,7 @@ SECTIONS
 
   /* Send .iram0 code to iram */
 
-  .iram0.vectors :
+  .iram0.vectors : ALIGN(4)
   {
     _iram_start = ABSOLUTE(.);
 
@@ -161,12 +174,85 @@ SECTIONS
     *(.init)
   } >iram0_0_seg AT>ROM
 
-  .iram0.text :
+  .iram0.text : ALIGN(4)
   {
     /* Code marked as running out of IRAM */
 
     *(.iram1 .iram1.*)
     esp32s3_start.*(.literal .text .literal.* .text.*)
+    esp32s3_region.*(.literal .text .literal.* .text.*)
+
+    *libarch.a:*esp_loader.*(.text .text.* .literal .literal.*)
+    *libarch.a:esp32s3_cpuindex.*(.literal .text .literal.* .text.*)
+    *libarch.a:esp32s3_irq.*(.literal .text .literal.* .text.*)
+    *libarch.a:esp32s3_user.*(.literal .text .literal.* .text.*)
+    *libarch.a:esp32s3_spiflash.*(.literal .text .literal.* .text.*)
+    *libarch.a:xtensa_assert.*(.literal .text .literal.* .text.*)
+    *libarch.a:xtensa_cpuint.*(.literal .text .literal.* .text.*)
+    *libarch.a:xtensa_cpupause.*(.literal .text .literal.* .text.*)
+    *libarch.a:xtensa_irqdispatch.*(.literal .text .literal.* .text.*)
+    *libarch.a:xtensa_modifyreg32.*(.literal .text .literal.* .text.*)
+    *libarch.a:xtensa_testset.*(.literal .text .literal.* .text.*)
+    *libarch.a:*cache_hal.*(.text .text.* .literal .literal.*)
+    *libarch.a:*uart_hal.*(.text .text.* .literal .literal.*)
+    *libarch.a:*mpu_hal.*(.text .text.* .literal .literal.*)
+    *libarch.a:*mmu_hal.*(.text .text.* .literal .literal.*)
+
+    *libc.a:sq_remlast.*(.literal .text .literal.* .text.*)
+
+    *libdrivers.a:syslog_flush.*(.literal .text .literal.* .text.*)
+
+    *libsched.a:assert.*(.literal .text .literal.* .text.*)
+    *libsched.a:irq_csection.*(.literal .text .literal.* .text.*)
+    *libsched.a:irq_dispatch.*(.literal .text .literal.* .text.*)
+    *libsched.a:irq_spinlock.*(.literal .text .literal.* .text.*)
+    *libsched.a:sched_note.*(.literal .text .literal.* .text.*)
+    *libsched.a:sched_suspendscheduler.*(.literal .text .literal.* .text.*)
+    *libsched.a:sched_thistask.*(.literal .text .literal.* .text.*)
+    *libsched.a:spinlock.*(.literal .text .literal.* .text.*)
+    *libsched.a:stack_record.*(.literal .text .literal.* .text.*)
+
+#ifdef CONFIG_ESP32S3_SPEED_UP_ISR
+    *libarch.a:xtensa_switchcontext.*(.literal.up_switch_context .text.up_switch_context)
+
+    *libarch.a:esp32s3_timerisr.*(.literal.systimer_isr .text.systimer_isr)
+    *libarch.a:esp32s3_idle.*(.literal.up_idle .text.up_idle)
+    *libarch.a:esp32s3_dma.*(.literal.esp32s3_dma_load .text.esp32s3_dma_load \
+                             .literal.esp32s3_dma_enable .text.esp32s3_dma_enable)
+
+    *libsched.a:sched_processtimer.*(.literal.nxsched_process_timer .text.nxsched_process_timer)
+    *libsched.a:clock_initialize.*(.literal.clock_timer .text.clock_timer)
+    *libsched.a:wd_start.*(.literal.wd_timer .text.wd_timer)
+    *libsched.a:sched_roundrobin.*(.literal.nxsched_process_roundrobin .text.nxsched_process_roundrobin)
+    *libsched.a:sched_reprioritizertr.*(.literal.nxsched_reprioritize_rtr .text.nxsched_reprioritize_rtr)
+    *libsched.a:sched_removereadytorun.*(.literal.nxsched_remove_readytorun .text.nxsched_remove_readytorun)
+    *libsched.a:sched_addreadytorun.*(.literal.nxsched_add_readytorun .text.nxsched_add_readytorun)
+    *libsched.a:sched_addprioritized.*(.literal.nxsched_add_prioritized .text.nxsched_add_prioritized)
+    *libsched.a:sched_mergepending.*(.literal.nxsched_merge_pending .text.nxsched_merge_pending)
+    *libsched.a:sched_resumescheduler.*(.literal.nxsched_resume_scheduler .text.nxsched_resume_scheduler)
+
+    *libc.a:sq_remfirst.*(.literal.sq_remfirst .text.sq_remfirst)
+#endif
+
+    *libarch.a:esp32s3_spi_timing.*(.literal .text .literal.* .text.*)
+#ifdef CONFIG_ESP32S3_SPIRAM_MODE_QUAD
+    *libarch.a:esp32s3_psram_quad.*(.literal .text .literal.* .text.*)
+#endif
+#ifdef CONFIG_ESP32S3_SPIRAM_MODE_OCT
+    *libarch.a:esp32s3_psram_octal.*(.literal .text .literal.* .text.*)
+#endif
+#if defined(CONFIG_STACK_CANARIES) && \
+    (defined(CONFIG_ESP32S3_SPIFLASH) || \
+     defined(CONFIG_ESP32S3_SPIRAM))
+    *libc.a:lib_stackchk.*(.literal .text .literal.* .text.*)
+#endif
+
+    *(.wifirxiram .wifirxiram.*)
+    *(.wifi0iram  .wifi0iram.*)
+    *(.wifiorslpiram .wifiorslpiram.*)
+    *(.wifislpiram .wifislpiram.*)
+    *(.wifislprxiram .wifislprxiram.*)
+    *(.phyiram .phyiram.*)
 
     /* align + add 16B for CPU dummy speculative instr. fetch */
 
@@ -224,7 +310,7 @@ SECTIONS
     . = ALIGN(4);
   } >dram0_0_seg
 
-  .dram0.data :
+  .dram0.data : ALIGN(4)
   {
     /* .data initialized on power-up in ROMed configurations. */
 
@@ -242,6 +328,23 @@ SECTIONS
     KEEP (*(.jcr))
     *(.dram1 .dram1.*)
     esp32s3_start.*(.rodata .rodata.*)
+    esp32s3_region.*(.rodata .rodata.*)
+
+    *libphy.a:(.rodata  .rodata.*)
+    *libarch.a:*esp_loader.*(.rodata .rodata.*)
+    *libarch.a:xtensa_context.*(.rodata  .rodata.*)
+    *libarch.a:esp32s3_spiflash.*(.rodata  .rodata.*)
+    *libarch.a:*cache_hal.*(.rodata .rodata.*)
+    *libarch.a:*uart_hal.*(.rodata .rodata.*)
+    *libarch.a:*mpu_hal.*(.rodata .rodata.*)
+    *libarch.a:*mmu_hal.*(.rodata .rodata.*)
+
+#if defined(CONFIG_STACK_CANARIES) && \
+    (defined(CONFIG_ESP32S3_SPIFLASH) || \
+     defined(CONFIG_ESP32S3_SPIRAM))
+    *libc.a:lib_stackchk.*(.rodata  .rodata.*)
+#endif
+
     _edata = ABSOLUTE(.);
     . = ALIGN(4);
 
@@ -260,6 +363,25 @@ SECTIONS
 
     . += 16;
     . = ALIGN(256);
+    _iram_end = ABSOLUTE(.);
+  } >iram0_0_seg
+
+  .iram0.data :
+  {
+    . = ALIGN(4);
+
+    *(.iram.data)
+    *(.iram.data.*)
+  } >iram0_0_seg
+
+  .iram0.bss (NOLOAD) :
+  {
+    . = ALIGN(4);
+
+    *(.iram.bss)
+    *(.iram.bss.*)
+
+    . = ALIGN(4);
     _iram_end = ABSOLUTE(.);
   } >iram0_0_seg
 
@@ -290,11 +412,20 @@ SECTIONS
   .flash.text : ALIGN(0x00010000)
   {
     _stext = .;
+    _instruction_reserved_start = ABSOLUTE(.);
+
     *(.literal .text .literal.* .text.* .stub .gnu.warning .gnu.linkonce.literal.* .gnu.linkonce.t.*.literal .gnu.linkonce.t.*)
     *(.irom0.text) /* catch stray ICACHE_RODATA_ATTR */
     *(.fini.literal)
     *(.fini)
     *(.gnu.version)
+
+    *(EXCLUDE_FILE(*libnet80211.a *libpp.a) .wifi0iram EXCLUDE_FILE(*libnet80211.a *libpp.a) .wifi0iram.*)
+    *(.wifiextrairam .wifiextrairam.*)
+    *(EXCLUDE_FILE(*libpp.a) .wifiorslpiram EXCLUDE_FILE(*libpp.a) .wifiorslpiram.*)
+    *(EXCLUDE_FILE(*libnet80211.a *libpp.a) .wifirxiram EXCLUDE_FILE(*libnet80211.a *libpp.a) .wifirxiram.*)
+    *(.wifislpiram .wifislpiram.*)
+    *(EXCLUDE_FILE(*libnet80211.a *libpp.a) .wifislprxiram EXCLUDE_FILE(*libnet80211.a *libpp.a) .wifislprxiram.*)
 
     /* CPU will try to prefetch up to 16 bytes of instructions.
      * This means that any configuration (e.g. MMU, PMS) must allow
@@ -304,6 +435,7 @@ SECTIONS
 
     . += 16;
 
+    _instruction_reserved_end = ABSOLUTE(.);
     _etext = .;
   } >irom0_0_seg AT>ROM
 
@@ -332,6 +464,13 @@ SECTIONS
   .rtc.data :
   {
     *(.rtc.data)
+    *(.rtc.data.*)
     *(.rtc.rodata)
+    *(.rtc.rodata.*)
+
+   /* Whatever is left from the RTC memory is used as a special heap. */
+
+    . = ALIGN (4);
+    _srtcheap = ABSOLUTE(.);
   } >rtc_data_seg AT>ROM
 }

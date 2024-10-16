@@ -318,14 +318,20 @@
 /* DMA configuration flags */
 
 #ifdef CONFIG_SAMA5_ADC_DMA
+#  ifdef ATSAMA5D2
+#    define DMACH_FLAG_PERIPHAHB_AHB DMACH_FLAG_PERIPHAHB_AHB_IF1
+#  else
+#    define DMACH_FLAG_PERIPHAHB_AHB DMACH_FLAG_PERIPHAHB_AHB_IF2
+#  endif
+
 #  define DMA_FLAGS \
-     DMACH_FLAG_FIFOCFG_LARGEST | \
-     DMACH_FLAG_PERIPHPID(SAM_IRQ_ADC) | DMACH_FLAG_PERIPHAHB_AHB_IF2 | \
-     DMACH_FLAG_PERIPHH2SEL | DMACH_FLAG_PERIPHISPERIPH |  \
-     DMACH_FLAG_PERIPHWIDTH_16BITS | DMACH_FLAG_PERIPHCHUNKSIZE_1 | \
-     DMACH_FLAG_MEMPID_MAX | DMACH_FLAG_MEMAHB_AHB_IF0 | \
-     DMACH_FLAG_MEMWIDTH_16BITS | DMACH_FLAG_MEMINCREMENT | \
-     DMACH_FLAG_MEMCHUNKSIZE_1 | DMACH_FLAG_MEMBURST_4)
+      DMACH_FLAG_FIFOCFG_LARGEST   | DMACH_FLAG_PERIPHPID(SAM_IRQ_ADC) | \
+      DMACH_FLAG_PERIPHAHB_AHB     | DMACH_FLAG_PERIPHH2SEL            | \
+      DMACH_FLAG_PERIPHISPERIPH    | DMACH_FLAG_PERIPHWIDTH_16BITS     | \
+      DMACH_FLAG_PERIPHCHUNKSIZE_1 | DMACH_FLAG_MEMPID_MAX             | \
+      DMACH_FLAG_MEMAHB_AHB_IF0    | DMACH_FLAG_MEMWIDTH_16BITS        | \
+      DMACH_FLAG_MEMINCREMENT      | DMACH_FLAG_MEMCHUNKSIZE_1         | \
+      DMACH_FLAG_MEMBURST_4
 #endif
 
 /* Pick an unused channel number */
@@ -475,7 +481,9 @@ static void sam_adc_gain(struct sam_adc_s *priv);
 static void sam_adc_analogchange(struct sam_adc_s *priv);
 static void sam_adc_sequencer(struct sam_adc_s *priv);
 static void sam_adc_channels(struct sam_adc_s *priv);
+#if defined(CONFIG_SAMA5_ADC_PERIODIC_TRIG)
 static void sam_adc_trigperiod(struct sam_adc_s *priv, uint32_t period);
+#endif
 #endif
 
 /****************************************************************************
@@ -852,7 +860,7 @@ static int sam_adc_dmasetup(struct sam_adc_s *priv, uint8_t *buffer,
  *   None
  *
  ****************************************************************************/
-
+#if defined(CONFIG_SAMA5_ADC_PERIODIC_TRIG)
 static void sam_adc_trigperiod(struct sam_adc_s *priv, uint32_t period)
 {
   uint32_t trigper;
@@ -903,6 +911,7 @@ static void sam_adc_trigperiod(struct sam_adc_s *priv, uint32_t period)
   regval |=  ADC_TRGR_TRGPER(trigper);
   sam_adc_putreg(priv, SAM_ADC_TRGR, regval);
 }
+#endif
 
 /****************************************************************************
  * ADC interrupt handling
@@ -1097,7 +1106,11 @@ static int sam_adc_bind(struct adc_dev_s *dev,
 
 static void sam_adc_reset(struct adc_dev_s *dev)
 {
+#if defined(CONFIG_SAMA5_ADC_REGDEBUG) || \
+    defined(CONFIG_SAMA5_ADC_DMA)      || \
+    defined(CONFIG_SAMA5_ADC_TIOATRIG)
   struct sam_adc_s *priv = (struct sam_adc_s *)dev->ad_priv;
+#endif
   uint32_t regval;
 
   ainfo("Resetting..\n");
@@ -1244,10 +1257,6 @@ static int sam_adc_setup(struct adc_dev_s *dev)
 
 static void sam_adc_shutdown(struct adc_dev_s *dev)
 {
-#ifdef CONFIG_SAMA5_ADC_DMA
-  struct sam_adc_s *priv = (struct sam_adc_s *)dev->ad_priv;
-#endif
-
   ainfo("Shutdown\n");
 
   /* Reset the ADC peripheral */
@@ -1331,7 +1340,11 @@ static int sam_adc_ioctl(struct adc_dev_s *dev, int cmd, unsigned long arg)
 {
 #ifdef CONFIG_SAMA5_ADC_SWTRIG
   struct sam_adc_s *priv = (struct sam_adc_s *)dev->ad_priv;
+#  ifndef CONFIG_SAMA5_ADC_REGDEBUG
+  UNUSED(priv);
+#  endif
 #endif
+
   int ret = OK;
 
   ainfo("cmd=%d arg=%ld\n", cmd, arg);

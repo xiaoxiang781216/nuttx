@@ -1214,7 +1214,7 @@ static void stm32_epin_request(struct stm32_usbdev_s *priv,
       return;
     }
 
-  uinfo("EP%d req=%p: len=%d xfrd=%d zlp=%d\n",
+  uinfo("EP%d req=%p: len=%zu xfrd=%zu zlp=%d\n",
         privep->epphy, privreq, privreq->req.len,
         privreq->req.xfrd, privep->zlp);
 
@@ -1497,7 +1497,7 @@ static void stm32_epout_complete(struct stm32_usbdev_s *priv,
       return;
     }
 
-  uinfo("EP%d: len=%d xfrd=%d\n",
+  uinfo("EP%d: len=%zu xfrd=%zu\n",
         privep->epphy, privreq->req.len, privreq->req.xfrd);
 
   /* Return the completed read request to the class driver and mark the state
@@ -1629,7 +1629,7 @@ static inline void stm32_epout_receive(struct stm32_ep_s *privep,
       return;
     }
 
-  uinfo("EP%d: len=%d xfrd=%d\n",
+  uinfo("EP%d: len=%zu xfrd=%zu\n",
         privep->epphy, privreq->req.len, privreq->req.xfrd);
   usbtrace(TRACE_READ(privep->epphy), bcnt);
 
@@ -4364,7 +4364,7 @@ static void stm32_ep_freereq(struct usbdev_ep_s *ep,
 #ifdef CONFIG_USBDEV_DMA
 static void *stm32_ep_allocbuffer(struct usbdev_ep_s *ep, uint16_t bytes)
 {
-  usbtrace(TRACE_EPALLOCBUFFER, privep->epphy);
+  usbtrace(TRACE_EPALLOCBUFFER, ((struct stm32_ep_s *)ep)->epphy);
 
 #ifdef CONFIG_USBDEV_DMAMEMORY
   return usbdev_dma_alloc(bytes);
@@ -4385,7 +4385,7 @@ static void *stm32_ep_allocbuffer(struct usbdev_ep_s *ep, uint16_t bytes)
 #ifdef CONFIG_USBDEV_DMA
 static void stm32_ep_freebuffer(struct usbdev_ep_s *ep, void *buf)
 {
-  usbtrace(TRACE_EPFREEBUFFER, privep->epphy);
+  usbtrace(TRACE_EPFREEBUFFER, ((struct stm32_ep_s *)ep)->epphy);
 
 #ifdef CONFIG_USBDEV_DMAMEMORY
   usbdev_dma_free(buf);

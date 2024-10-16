@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/misc/lib_backtrace.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -447,4 +449,40 @@ void backtrace_symbols_fd(FAR void *const *buffer, int size, int fd)
     {
       dprintf(fd, "%pS\n", buffer[i]);
     }
+}
+
+/****************************************************************************
+ * Name: backtrace_format
+ *
+ * Description:
+ *  Format a backtrace into a buffer for dumping.
+ *
+ ****************************************************************************/
+
+int backtrace_format(FAR char *buffer, int size,
+                     FAR void *backtrace[], int depth)
+{
+  FAR const char *format = "%0*p ";
+  int len = 0;
+  int i;
+
+  if (size < 1)
+    {
+      return 0;
+    }
+
+  buffer[0] = '\0';
+  for (i = 0; i < depth && backtrace[i]; i++)
+    {
+      if (i * BACKTRACE_PTR_FMT_WIDTH >= size)
+        {
+          break;
+        }
+
+      len += snprintf(buffer + i * BACKTRACE_PTR_FMT_WIDTH,
+                      size - i * BACKTRACE_PTR_FMT_WIDTH,
+                      format, BACKTRACE_PTR_FMT_WIDTH - 1, backtrace[i]);
+    }
+
+  return len;
 }

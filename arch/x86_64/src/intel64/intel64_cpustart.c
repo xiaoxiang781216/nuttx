@@ -147,6 +147,7 @@ void x86_64_ap_boot(void)
   x86_64_cpu_priv_set(cpu);
 
   tcb = this_task();
+  UNUSED(tcb);
 
   /* Configure interrupts */
 

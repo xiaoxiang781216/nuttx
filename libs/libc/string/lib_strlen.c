@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/string/lib_strlen.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -32,8 +34,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+
 #define LBLOCKSIZE (sizeof(long))
-#define UNALIGNED(x) ((long)(x) & (LBLOCKSIZE - 1))
+#define UNALIGNED(x) ((long)(uintptr_t)(x) & (LBLOCKSIZE - 1))
 
 /* Macros for detecting endchar */
 
@@ -45,6 +49,8 @@
 #  define DETECTNULL(x) (((x) - 0x0101010101010101) & ~(x) & 0x8080808080808080)
 #endif
 
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -54,6 +60,7 @@
 nosanitize_address
 size_t strlen(FAR const char *s)
 {
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
   FAR const char *start = s;
   FAR unsigned long *aligned_addr;
 
@@ -90,5 +97,10 @@ size_t strlen(FAR const char *s)
     }
 
   return s - start;
+#else
+  FAR const char *sc;
+  for (sc = s; *sc != '\0'; ++sc);
+  return sc - s;
+#endif
 }
 #endif

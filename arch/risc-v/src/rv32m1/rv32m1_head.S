@@ -34,6 +34,7 @@
   /* Exported Symbols */
 
   .global exception_common
+  .global return_from_exception
   .global __start
 
   .section .text
@@ -47,14 +48,14 @@ __start:
 
   /* Disable all interrupts (i.e. timer, external) in mie */
 
-  csrci mstatus, 0x8
-  csrw mie, zero
+  csrci CSR_MSTATUS, 0x8
+  csrw CSR_MIE, zero
 
   /* Initialize the Machine Trap Vector */
 
   lui  t0, %hi(_svector)
   addi t0, t0, %lo(_svector)
-  csrw mtvec, t0
+  csrw CSR_MTVEC, t0
 
   /* Jump to __rv32m1_start */
 
@@ -130,7 +131,7 @@ exception_common:
   sw x30, 38*4(sp)
 #endif
 
-  csrr s0, mstatus
+  csrr s0, CSR_MSTATUS
   sw   s0,  32*4(sp)  /* mstatus */
 
   addi s0, sp, XCPTCONTEXT_SIZE
@@ -138,8 +139,8 @@ exception_common:
 
   /* Setup arg0(exception cause), arg1(context) */
 
-  csrr a0, mcause  /* exception cause */
-  csrr s0, mepc
+  csrr a0, CSR_MCAUSE /* exception cause */
+  csrr s0, CSR_MEPC
   sw   s0, 0(sp)   /* exception PC */
 
   mv   a1, sp      /* context = sp */
@@ -155,14 +156,16 @@ exception_common:
 
   jal  x1, rv32m1_dispatch_irq
 
+return_from_exception:
+
   /* If context switch is needed, return a new sp */
 
   mv   sp, a0
   lw   s0, 0(sp)    /* restore mepc */
-  csrw mepc, s0
+  csrw CSR_MEPC, s0
 
   lw   s0, 32*4(sp) /* restore mstatus */
-  csrw mstatus, s0
+  csrw CSR_MSTATUS, s0
 
 #if defined(INT_XCPT_REGS) && INT_XCPT_REGS >= 39
   lw x28, 36*4(sp)

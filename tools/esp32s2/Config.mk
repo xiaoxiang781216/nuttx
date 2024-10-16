@@ -1,6 +1,8 @@
 ############################################################################
 # tools/esp32s2/Config.mk
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -32,23 +34,23 @@ else ifeq ($(CONFIG_ESP32S2_FLASH_16M),y)
 	FLASH_SIZE := 16MB
 endif
 
-ifeq ($(CONFIG_ESP32S2_FLASH_MODE_DIO),y)
+ifeq ($(CONFIG_ESPRESSIF_FLASH_MODE_DIO),y)
 	FLASH_MODE := dio
-else ifeq ($(CONFIG_ESP32S2_FLASH_MODE_DOUT),y)
+else ifeq ($(CONFIG_ESPRESSIF_FLASH_MODE_DOUT),y)
 	FLASH_MODE := dout
-else ifeq ($(CONFIG_ESP32S2_FLASH_MODE_QIO),y)
+else ifeq ($(CONFIG_ESPRESSIF_FLASH_MODE_QIO),y)
 	FLASH_MODE := qio
-else ifeq ($(CONFIG_ESP32S2_FLASH_MODE_QOUT),y)
+else ifeq ($(CONFIG_ESPRESSIF_FLASH_MODE_QOUT),y)
 	FLASH_MODE := qout
 endif
 
-ifeq ($(CONFIG_ESP32S2_FLASH_FREQ_80M),y)
+ifeq ($(CONFIG_ESPRESSIF_FLASH_FREQ_80M),y)
 	FLASH_FREQ := 80m
-else ifeq ($(CONFIG_ESP32S2_FLASH_FREQ_40M),y)
+else ifeq ($(CONFIG_ESPRESSIF_FLASH_FREQ_40M),y)
 	FLASH_FREQ := 40m
-else ifeq ($(CONFIG_ESP32S2_FLASH_FREQ_26M),y)
+else ifeq ($(CONFIG_ESPRESSIF_FLASH_FREQ_26M),y)
 	FLASH_FREQ := 26m
-else ifeq ($(CONFIG_ESP32S2_FLASH_FREQ_20M),y)
+else ifeq ($(CONFIG_ESPRESSIF_FLASH_FREQ_20M),y)
 	FLASH_FREQ := 20m
 endif
 
@@ -66,16 +68,10 @@ ESPTOOL_FLASH_OPTS := -fs $(FLASH_SIZE) -fm $(FLASH_MODE) -ff $(FLASH_FREQ)
 
 # Configure the variables according to build environment
 
+ESPTOOL_MIN_VERSION := 4.8.0
+
 ifdef ESPTOOL_BINDIR
-	ifeq ($(CONFIG_ESP32S2_APP_FORMAT_LEGACY),y)
-		BL_OFFSET       := 0x1000
-		PT_OFFSET       := $(CONFIG_ESP32S2_PARTITION_TABLE_OFFSET)
-		BOOTLOADER      := $(ESPTOOL_BINDIR)/bootloader-esp32s2.bin
-		PARTITION_TABLE := $(ESPTOOL_BINDIR)/partition-table-esp32s2.bin
-		FLASH_BL        := $(BL_OFFSET) $(BOOTLOADER)
-		FLASH_PT        := $(PT_OFFSET) $(PARTITION_TABLE)
-		ESPTOOL_BINS    := $(FLASH_BL) $(FLASH_PT)
-	else ifeq ($(CONFIG_ESP32S2_APP_FORMAT_MCUBOOT),y)
+	ifeq ($(CONFIG_ESP32S2_APP_FORMAT_MCUBOOT),y)
 		BL_OFFSET        := 0x1000
 
 		ifeq ($(CONFIG_ESP32S2_SECURE_BOOT),y)
@@ -94,17 +90,13 @@ ifdef ESPTOOL_BINDIR
 	endif
 endif
 
-ifeq ($(CONFIG_ESP32S2_APP_FORMAT_LEGACY),y)
-	APP_OFFSET     := 0x10000
-	APP_IMAGE      := nuttx.bin
-	FLASH_APP      := $(APP_OFFSET) $(APP_IMAGE)
-else ifeq ($(CONFIG_ESP32S2_APP_FORMAT_MCUBOOT),y)
+ifeq ($(CONFIG_ESP32S2_APP_FORMAT_MCUBOOT),y)
 	ifeq ($(CONFIG_ESP32S2_ESPTOOL_TARGET_PRIMARY),y)
 		VERIFIED   := --confirm
-		APP_OFFSET := $(CONFIG_ESP32S2_OTA_PRIMARY_SLOT_OFFSET)
+		APP_OFFSET := $(CONFIG_ESPRESSIF_OTA_PRIMARY_SLOT_OFFSET)
 	else ifeq ($(CONFIG_ESP32S2_ESPTOOL_TARGET_SECONDARY),y)
 		VERIFIED   :=
-		APP_OFFSET := $(CONFIG_ESP32S2_OTA_SECONDARY_SLOT_OFFSET)
+		APP_OFFSET := $(CONFIG_ESPRESSIF_OTA_SECONDARY_SLOT_OFFSET)
 	endif
 
 	ifeq ($(CONFIG_ESP32S2_SECURE_BOOT),y)
@@ -123,7 +115,14 @@ else ifeq ($(CONFIG_ESP32S2_APP_FORMAT_MCUBOOT),y)
 
 	IMGTOOL_SIGN_ARGS := --pad $(VERIFIED) $(IMGTOOL_ALIGN_ARGS) -v 0 -s auto \
 		-H $(CONFIG_ESP32S2_APP_MCUBOOT_HEADER_SIZE) --pad-header \
-		-S $(CONFIG_ESP32S2_OTA_SLOT_SIZE)
+		-S $(CONFIG_ESPRESSIF_OTA_SLOT_SIZE)
+else
+#   CONFIG_ESPRESSIF_SIMPLE_BOOT
+
+	APP_OFFSET     := 0x1000
+	APP_IMAGE      := nuttx.bin
+	FLASH_APP      := $(APP_OFFSET) $(APP_IMAGE)
+	ESPTOOL_BINDIR := .
 endif
 
 ESPTOOL_BINS += $(FLASH_APP)
@@ -156,6 +155,7 @@ endef
 # MERGEBIN -- Merge raw binary files into a single file
 
 define MERGEBIN
+	@python3 tools/espressif/check_esptool.py -v $(ESPTOOL_MIN_VERSION)
 	$(Q) if [ -z $(ESPTOOL_BINDIR) ]; then \
 		echo "MERGEBIN error: Missing argument for binary files directory."; \
 		echo "USAGE: make ESPTOOL_BINDIR=<dir>"; \
@@ -209,25 +209,7 @@ define MKIMAGE
 	$(if $(CONFIG_ESP32S2_SECURE_BOOT_BUILD_SIGNED_BINARIES),$(call SIGNBIN),$(call HELP_SIGN_APP))
 endef
 else
-ifeq ($(CONFIG_ESP32S2_APP_FORMAT_LEGACY),y)
-define MKIMAGE
-	$(Q) echo "MKIMAGE: ESP32-S2 binary"
-	$(Q) if ! esptool.py version 1>/dev/null 2>&1; then \
-		echo ""; \
-		echo "esptool.py not found.  Please run: \"pip install esptool\""; \
-		echo ""; \
-		echo "Run make again to create the nuttx.bin image."; \
-		exit 1; \
-	fi
-	$(Q) if [ -z $(FLASH_SIZE) ]; then \
-		echo "Missing Flash memory size configuration for the ESP32-S2 chip."; \
-		exit 1; \
-	fi
-	esptool.py -c esp32s2 elf2image $(ESPTOOL_FLASH_OPTS) -o nuttx.bin nuttx
-	$(Q) echo nuttx.bin >> nuttx.manifest
-	$(Q) echo "Generated: nuttx.bin (ESP32-S2 compatible)"
-endef
-else ifeq ($(CONFIG_ESP32S2_APP_FORMAT_MCUBOOT),y)
+ifeq ($(CONFIG_ESP32S2_APP_FORMAT_MCUBOOT),y)
 define MKIMAGE
 	$(Q) echo "MKIMAGE: ESP32-S2 binary"
 	$(Q) if ! imgtool version 1>/dev/null 2>&1; then \
@@ -240,6 +222,19 @@ define MKIMAGE
 	imgtool sign $(IMGTOOL_SIGN_ARGS) nuttx.hex nuttx.bin
 	$(Q) echo nuttx.bin >> nuttx.manifest
 	$(Q) echo "Generated: nuttx.bin (MCUboot compatible)"
+endef
+else
+define MKIMAGE
+	$(Q) echo "MKIMAGE: ESP32-S2 binary"
+	@python3 tools/espressif/check_esptool.py -v $(ESPTOOL_MIN_VERSION)
+	$(Q) if [ -z $(FLASH_SIZE) ]; then \
+		echo "Missing Flash memory size configuration."; \
+		exit 1; \
+	fi
+	$(eval ELF2IMAGE_OPTS := $(if $(CONFIG_ESPRESSIF_SIMPLE_BOOT),--ram-only-header) -fs $(FLASH_SIZE) -fm $(FLASH_MODE) -ff $(FLASH_FREQ))
+	esptool.py -c esp32s2 elf2image $(ELF2IMAGE_OPTS) -o nuttx.bin nuttx
+	$(Q) echo nuttx.bin >> nuttx.manifest
+	$(Q) echo "Generated: nuttx.bin"
 endef
 endif
 endif

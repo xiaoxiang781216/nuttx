@@ -137,9 +137,9 @@ struct mtd_protect_s
 
 struct mtd_byte_write_s
 {
-  uint32_t offset;        /* Offset within the device to write to */
-  uint16_t count;         /* Number of bytes to write */
-  const uint8_t *buffer;  /* Pointer to the data to write */
+  uint32_t offset;           /* Offset within the device to write to */
+  uint16_t count;            /* Number of bytes to write */
+  FAR const uint8_t *buffer; /* Pointer to the data to write */
 };
 
 /* This structure describes a range of erase sectors to be erased. */
@@ -166,14 +166,15 @@ struct mtd_dev_s
    * or subsector.
    */
 
-  int (*erase)(FAR struct mtd_dev_s *dev, off_t startblock, size_t nblocks);
+  CODE int (*erase)(FAR struct mtd_dev_s *dev, off_t startblock,
+                    size_t nblocks);
 
   /* Read/write from the specified read/write blocks */
 
-  ssize_t (*bread)(FAR struct mtd_dev_s *dev, off_t startblock,
-                   size_t nblocks, FAR uint8_t *buffer);
-  ssize_t (*bwrite)(FAR struct mtd_dev_s *dev, off_t startblock,
-                    size_t nblocks, FAR const uint8_t *buffer);
+  CODE ssize_t (*bread)(FAR struct mtd_dev_s *dev, off_t startblock,
+                        size_t nblocks, FAR uint8_t *buffer);
+  CODE ssize_t (*bwrite)(FAR struct mtd_dev_s *dev, off_t startblock,
+                         size_t nblocks, FAR const uint8_t *buffer);
 
   /* Some devices may support byte oriented reads (optional).  Most MTD
    * devices are inherently block oriented so byte-oriented writing is not
@@ -181,11 +182,11 @@ struct mtd_dev_s
    * if it requires buffering.
    */
 
-  ssize_t (*read)(FAR struct mtd_dev_s *dev, off_t offset, size_t nbytes,
-                  FAR uint8_t *buffer);
+  CODE ssize_t (*read)(FAR struct mtd_dev_s *dev, off_t offset,
+                       size_t nbytes, FAR uint8_t *buffer);
 #ifdef CONFIG_MTD_BYTE_WRITE
-  ssize_t (*write)(FAR struct mtd_dev_s *dev, off_t offset, size_t nbytes,
-                   FAR const uint8_t *buffer);
+  CODE ssize_t (*write)(FAR struct mtd_dev_s *dev, off_t offset,
+                        size_t nbytes, FAR const uint8_t *buffer);
 #endif
 
   /* Support other, less frequently used commands:
@@ -196,12 +197,12 @@ struct mtd_dev_s
    * (see include/nuttx/fs/ioctl.h)
    */
 
-  int (*ioctl)(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg);
+  CODE int (*ioctl)(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg);
 
   /* Check/Mark bad block for the specified block number */
 
-  int (*isbad)(FAR struct mtd_dev_s *dev, off_t block);
-  int (*markbad)(FAR struct mtd_dev_s *dev, off_t block);
+  CODE int (*isbad)(FAR struct mtd_dev_s *dev, off_t block);
+  CODE int (*markbad)(FAR struct mtd_dev_s *dev, off_t block);
 
   /* Name of this MTD device */
 
@@ -397,6 +398,28 @@ FAR struct mtd_dev_s *at24c_initialize(FAR struct i2c_master_s *dev,
 #else
 FAR struct mtd_dev_s *at24c_initialize(FAR struct i2c_master_s *dev);
 #endif
+
+/****************************************************************************
+ * Name: at25xx_initialize
+ *
+ * Description:
+ *   Create an initialized MTD device instance for an AT25 SPI EEPROM
+ *   MTD devices are not registered in the file system, but are created
+ *   as instances that can be bound to other functions
+ *   (such as a block or character driver front end).
+ *
+ * Input Parameters:
+ *   dev        - a reference to the spi device structure
+ *   devtype    - device type, from include/nuttx/eeprom/spi_xx25xx.h
+ *   readonly   - sets block driver to be readonly
+ *
+ * Returned Value:
+ *   Initialised device structure (success) of NULL (fail)
+ *
+ ****************************************************************************/
+
+FAR struct mtd_dev_s *at25ee_initialize(FAR struct spi_dev_s *dev,
+                                        int devtype, int readonly);
 
 /****************************************************************************
  * Name: at24c_uninitialize

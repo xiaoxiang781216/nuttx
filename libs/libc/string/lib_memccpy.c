@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/string/lib_memccpy.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,10 +32,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
 /* Nonzero if either x or y is not aligned on a "long" boundary. */
 
 #define UNALIGNED(x, y) \
-  (((long)(x) & (sizeof(long) - 1)) | ((long)(y) & (sizeof(long) - 1)))
+  (((long)(uintptr_t)(x) & (sizeof(long) - 1)) | ((long)(uintptr_t)(y) & (sizeof(long) - 1)))
 
 /* How many bytes are copied each iteration of the word copy loop. */
 
@@ -51,6 +54,8 @@
 /* Nonzero if x (a long int) contains a NULL byte. */
 
 #  define DETECTNULL(x) (((x) - 0x0101010101010101) & ~(x) & 0x8080808080808080)
+#endif
+
 #endif
 
 /****************************************************************************
@@ -76,6 +81,7 @@
 #undef memccpy /* See mm/README.txt */
 FAR void *memccpy(FAR void *s1, FAR const void *s2, int c, size_t n)
 {
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
   FAR void *ptr = NULL;
   FAR unsigned char *pout = (FAR unsigned char *)s1;
   FAR const unsigned char *pin = (FAR const unsigned char *)s2;
@@ -139,4 +145,30 @@ FAR void *memccpy(FAR void *s1, FAR const void *s2, int c, size_t n)
     }
 
   return ptr;
+#else
+  FAR unsigned char *pout = (FAR unsigned char *)s1;
+  FAR unsigned char *pin  = (FAR unsigned char *)s2;
+
+  /* Copy at most n bytes */
+
+  while (n-- > 0)
+    {
+      /* Copy one byte */
+
+      *pout = *pin++;
+
+      /* Did we just copy the terminating byte c? */
+
+      if (*pout++ == (unsigned char)c)
+        {
+          /* Yes return a pointer to the byte after the copy of c into s1 */
+
+          return (FAR void *)pout;
+        }
+    }
+
+  /* C was not found in the first n bytes of s2 */
+
+  return NULL;
+#endif
 }

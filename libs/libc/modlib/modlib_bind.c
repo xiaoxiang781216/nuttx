@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/modlib/modlib_bind.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -358,7 +360,7 @@ static int modlib_relocate(FAR struct module_s *modp,
           /* Use the GOT to store the address */
 
           if (rel->r_offset - dstsec->sh_offset >
-              dstsec->sh_size - sizeof(uint32_t))
+              dstsec->sh_size)
             {
               berr("ERROR: Section %d reloc %d: "
                    "Relocation address out of range, "
@@ -388,7 +390,7 @@ static int modlib_relocate(FAR struct module_s *modp,
         }
       else
         {
-          if (rel->r_offset > dstsec->sh_size - sizeof(uint32_t))
+          if (rel->r_offset > dstsec->sh_size)
             {
               berr("ERROR: Section %d reloc %d: "
                    "Relocation address out of range, "
@@ -584,7 +586,8 @@ static int modlib_relocateadd(FAR struct module_s *modp,
 
       /* Calculate the relocation address. */
 
-      if (rela->r_offset + sizeof(uint32_t) > dstsec->sh_size)
+      if (rela->r_offset < 0 ||
+          rela->r_offset > dstsec->sh_size)
         {
           berr("ERROR: Section %d reloc %d: "
                "Relocation address out of range, "
@@ -678,7 +681,7 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
       return -ENOMEM;
     }
 
-  memset((void *)&reldata, 0, sizeof(reldata));
+  memset((FAR void *)&reldata, 0, sizeof(reldata));
   relas = (FAR Elf_Rela *)rels;
 
   for (i = 0; dyn[i].d_tag != DT_NULL; i++)
@@ -805,7 +808,9 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
 
           if ((idx_sym = ELF_R_SYM(rel->r_info)) != 0)
             {
-              if (sym[idx_sym].st_shndx == SHN_UNDEF) /* We have an external reference */
+              /* We have an external reference */
+
+              if (sym[idx_sym].st_shndx == SHN_UNDEF)
                 {
                     FAR void *ep;
 
@@ -908,8 +913,6 @@ int modlib_bind(FAR struct module_s *modp,
                 FAR struct mod_loadinfo_s *loadinfo,
                 FAR const struct symtab_s *exports, int nexports)
 {
-  FAR Elf_Shdr *symhdr;
-  FAR Elf_Sym *sym;
   int ret;
   int i;
 
@@ -993,17 +996,22 @@ int modlib_bind(FAR struct module_s *modp,
         {
           modp->dynamic = 0;
 
+          /* Make sure that the section is allocated.  We can't
+           * relocate sections that were not loaded into memory.
+           */
+
+          if ((loadinfo->shdr[i].sh_flags & SHF_ALLOC) == 0 &&
+              (loadinfo->shdr[i].sh_flags & SHF_INFO_LINK) == 0)
+            {
+              continue;
+            }
+
           /* Process the relocations by type */
 
           switch (loadinfo->shdr[i].sh_type)
             {
-              /* Make sure that the section is allocated.  We can't
-               * relocate sections that were not loaded into memory.
-               */
-
               case SHT_REL:
-                if ((loadinfo->shdr[infosec].sh_flags & SHF_ALLOC) == 0 ||
-                    loadinfo->shdr[infosec].sh_addr == 0)
+                if ((loadinfo->shdr[infosec].sh_flags & SHF_ALLOC) == 0)
                   {
                     continue;
                   }
@@ -1039,37 +1047,6 @@ int modlib_bind(FAR struct module_s *modp,
     }
 
   modp->xipbase = loadinfo->xipbase;
-  symhdr = &loadinfo->shdr[loadinfo->symtabidx];
-  sym = lib_malloc(symhdr->sh_size);
-
-  ret = modlib_read(loadinfo, (FAR uint8_t *)sym, symhdr->sh_size,
-                    symhdr->sh_offset);
-
-  if (ret < 0)
-    {
-      berr("Failed to read symbol table\n");
-      lib_free(sym);
-      return ret;
-    }
-
-  for (i = 0; i < symhdr->sh_size / sizeof(Elf_Sym); i++)
-    {
-      if (sym[i].st_shndx != SHN_UNDEF &&
-          sym[i].st_shndx < loadinfo->ehdr.e_shnum)
-        {
-          FAR Elf_Shdr *s = &loadinfo->shdr[sym[i].st_shndx];
-
-          sym[i].st_value = sym[i].st_value + s->sh_addr;
-        }
-    }
-
-  ret = modlib_insertsymtab(modp, loadinfo, symhdr, sym);
-  lib_free(sym);
-  if (ret != 0)
-    {
-      binfo("Failed to export symbols program binary: %d\n", ret);
-      return ret;
-    }
 
   /* Ensure that the I and D caches are coherent before starting the newly
    * loaded module by cleaning the D cache (i.e., flushing the D cache

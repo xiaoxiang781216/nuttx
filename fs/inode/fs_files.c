@@ -378,22 +378,32 @@ void files_initlist(FAR struct filelist *list)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_SCHED_DUMP_ON_EXIT
 void files_dumplist(FAR struct filelist *list)
 {
   int count = files_countlist(list);
   int i;
 
+  syslog(LOG_INFO, "%-4s%-4s%-8s%-5s%-10s%-14s"
+#if CONFIG_FS_BACKTRACE > 0
+        " BACKTRACE"
+#endif
+        "\n",
+        "PID", "FD", "FLAGS", "TYPE", "POS", "PATH"
+        );
+
   for (i = 0; i < count; i++)
     {
       FAR struct file *filep = files_fget(list, i);
       char path[PATH_MAX];
+
 #if CONFIG_FS_BACKTRACE > 0
       char buf[BACKTRACE_BUFFER_SIZE(CONFIG_FS_BACKTRACE)];
 #endif
 
       /* Is there an inode associated with the file descriptor? */
 
-      if (!filep)
+      if (filep == NULL || filep->f_inode == NULL)
         {
           continue;
         }
@@ -408,12 +418,12 @@ void files_dumplist(FAR struct filelist *list)
                        CONFIG_FS_BACKTRACE);
 #endif
 
-      syslog(LOG_INFO, "fd: %-3d, oflags: %-7d type: %-4x pos: %-9ld"
-             "path: %s"
+      syslog(LOG_INFO, "%-4d%-4d%-8d%-5x%-10ld%-14s"
 #if CONFIG_FS_BACKTRACE > 0
-            " BACKTRACE: %s"
+            " %s"
 #endif
-            "\n", i, filep->f_oflags, INODE_GET_TYPE(filep->f_inode),
+            "\n", getpid(), i, filep->f_oflags,
+            INODE_GET_TYPE(filep->f_inode),
             (long)filep->f_pos, path
 #if CONFIG_FS_BACKTRACE > 0
             , buf
@@ -422,6 +432,7 @@ void files_dumplist(FAR struct filelist *list)
       fs_putfilep(filep);
     }
 }
+#endif
 
 /****************************************************************************
  * Name: files_getlist
@@ -473,10 +484,6 @@ void files_putlist(FAR struct filelist *list)
       return;
     }
 
-#ifdef CONFIG_SCHED_DUMP_ON_EXIT
-  files_dumplist(list);
-#endif
-
   /* Close each file descriptor .. Normally, you would need take the list
    * mutex, but it is safe to ignore the mutex in this context
    * because there should not be any references in this context.
@@ -492,7 +499,6 @@ void files_putlist(FAR struct filelist *list)
       if (i != 0)
         {
           fs_heap_free(list->fl_files[i]);
-          list->fl_rows--;
         }
     }
 
@@ -1004,24 +1010,12 @@ int nx_close_from_tcb(FAR struct tcb_s *tcb, int fd)
 
   list = nxsched_get_files_from_tcb(tcb);
 
-  /* Check the close file after group release */
-
-  DEBUGASSERT(list);
-
   /* Perform the protected close operation */
 
   if (fd < 0 || fd >= files_countlist(list))
     {
       return -EBADF;
     }
-
-#ifdef CONFIG_DEBUG_FS_WARN
-  if (fd >= 0 && fd <= 2)
-    {
-      fwarn("Attempt to close fd %d\n", fd);
-      sched_dumpstack(gettid());
-    }
-#endif
 
   filep = files_fget(list, fd);
 

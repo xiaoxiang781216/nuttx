@@ -38,6 +38,7 @@
 #include <nuttx/mutex.h>
 
 #include "driver/driver.h"
+#include "fs_heap.h"
 
 /****************************************************************************
  * Private Data
@@ -96,7 +97,8 @@ static FAR char *unique_blkdev(void)
       /* Construct the full device number */
 
       devno &= 0xffffff;
-      snprintf(devbuf, 16, "/dev/tmpb%06lx", (unsigned long)devno);
+      snprintf(devbuf, sizeof(devbuf), "/dev/tmpb%06lx",
+               (unsigned long)devno);
 
       /* Make sure that file name is not in use */
 
@@ -104,7 +106,7 @@ static FAR char *unique_blkdev(void)
       if (ret < 0)
         {
           DEBUGASSERT(ret == -ENOENT);
-          return strdup(devbuf);
+          return fs_heap_strdup(devbuf);
         }
 
       /* It is in use, try again */
@@ -187,6 +189,6 @@ int mtd_proxy(FAR const char *mtddev, int mountflags,
 out_with_fltdev:
   nx_unlink(blkdev);
 out_with_blkdev:
-  lib_free(blkdev);
+  fs_heap_free(blkdev);
   return ret;
 }

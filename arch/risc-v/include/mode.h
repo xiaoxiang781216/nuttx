@@ -45,6 +45,12 @@
 #  define CSR_TVAL          CSR_STVAL        /* Trap value register */
 #  define CSR_TVEC          CSR_STVEC        /* Trap vector base addr register */
 #  define CSR_ENVCFG        CSR_SENVCFG      /* Env configuration register */
+#  define CSR_IEH           CSR_SIEH
+#  define CSR_ISELECT       CSR_SISELECT     /* Indirect select register */
+#  define CSR_IREG          CSR_SIREG        /* Indirect alias register */
+#  define CSR_IPH           CSR_SIPH
+#  define CSR_TOPEI         CSR_STOPEI       /* Top external interrupt register */
+#  define CSR_TOPI          CSR_STOPI        /* Top interrupt register */
 
 /* In status register */
 
@@ -58,6 +64,12 @@
 #  define IE_EIE            SIE_SEIE         /* External interrupt enable */
 #  define IE_SIE            SIE_SSIE         /* Software interrupt enable */
 #  define IE_TIE            SIE_STIE         /* Timer interrupt enable */
+
+/* Interrupt pending bits */
+
+#  define IP_EIP            SIP_SEIP         /* External interrupt pending */
+#  define IP_SIP            SIP_SSIP         /* Software interrupt pending */
+#  define IP_TIP            SIP_STIP         /* Timer interrupt pending */
 
 /* External, timer and software interrupt */
 
@@ -82,6 +94,12 @@
 #  define CSR_TVAL          CSR_MTVAL        /* Trap value register */
 #  define CSR_TVEC          CSR_MTVEC        /* Trap vector base addr register */
 #  define CSR_ENVCFG        CSR_MENVCFG      /* Env configuration register */
+#  define CSR_IEH           CSR_MIEH
+#  define CSR_ISELECT       CSR_MISELECT     /* Indirect select register */
+#  define CSR_IREG          CSR_MIREG        /* Indirect alias register */
+#  define CSR_IPH           CSR_MIPH
+#  define CSR_TOPEI         CSR_MTOPEI       /* Top external interrupt register */
+#  define CSR_TOPI          CSR_MTOPI        /* Top interrupt register */
 
 /* In status register */
 
@@ -95,6 +113,12 @@
 #  define IE_EIE            MIE_MEIE         /* External interrupt enable */
 #  define IE_SIE            MIE_MSIE         /* Software interrupt enable */
 #  define IE_TIE            MIE_MTIE         /* Timer interrupt enable */
+
+/* Interrupt pending bits */
+
+#  define IP_EIP            MIP_MEIP         /* External interrupt pending */
+#  define IP_SIP            MIP_MSIP         /* Software interrupt pending */
+#  define IP_TIP            MIP_MTIP         /* Timer interrupt pending */
 
 /* External, timer and software interrupt */
 

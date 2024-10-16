@@ -42,7 +42,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifdef  CONFIG_BMP280_I2C_ADDR_76
 #define BMP280_ADDR         0x76
+#else
+#define BMP280_ADDR         0x77
+#endif
 #define BMP280_FREQ         CONFIG_BMP280_I2C_FREQUENCY
 #define DEVID               0x58
 
@@ -161,7 +165,7 @@ static int bmp280_putreg8(FAR struct bmp280_dev_s *priv, uint8_t regaddr,
 
 static int bmp280_set_interval(FAR struct sensor_lowerhalf_s *lower,
                                FAR struct file *filep,
-                               FAR unsigned long *period_us);
+                               FAR uint32_t *period_us);
 static int bmp280_activate(FAR struct sensor_lowerhalf_s *lower,
                            FAR struct file *filep,
                            bool enable);
@@ -508,7 +512,7 @@ static uint32_t bmp280_compensate_press(FAR struct bmp280_dev_s *priv,
 
 static int bmp280_set_interval(FAR struct sensor_lowerhalf_s *lower,
                                FAR struct file *filep,
-                               FAR unsigned long *period_us)
+                               FAR uint32_t *period_us)
 {
   FAR struct bmp280_dev_s *priv = container_of(lower,
                                                FAR struct bmp280_dev_s,

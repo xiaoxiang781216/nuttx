@@ -58,9 +58,19 @@ static void arm64_init_signal_process(struct tcb_s *tcb, uint64_t *regs)
 
   /* Keep using SP_EL1 */
 
+#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
+  tcb->xcp.regs[REG_SPSR]   = SPSR_MODE_EL3H | DAIF_FIQ_BIT | DAIF_IRQ_BIT;
+#else
   tcb->xcp.regs[REG_SPSR]   = SPSR_MODE_EL1H | DAIF_FIQ_BIT | DAIF_IRQ_BIT;
-  tcb->xcp.regs[REG_SP_ELX] = regs[REG_SP_ELX] - XCPTCONTEXT_SIZE;
+#endif
+
+#ifdef CONFIG_ARCH_KERNEL_STACK
+  tcb->xcp.regs[REG_SP_EL0] = regs[REG_SP_EL0];
+#else
   tcb->xcp.regs[REG_SP_EL0] = regs[REG_SP_ELX] - XCPTCONTEXT_SIZE * 2;
+#endif
+  tcb->xcp.regs[REG_SP_ELX] = regs[REG_SP_ELX] - XCPTCONTEXT_SIZE;
+  tcb->xcp.regs[REG_EXE_DEPTH]  = 1;
 }
 
 /****************************************************************************

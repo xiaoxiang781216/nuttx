@@ -1,6 +1,8 @@
 # ##############################################################################
 # cmake/nuttx_generate_outputs.cmake
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -47,5 +49,14 @@ function(nuttx_generate_outputs target)
     add_custom_target(${target}-bin ALL DEPENDS ${target}.bin)
     add_dependencies(nuttx_post ${target}-bin)
     file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest "${target}.bin\n")
+  endif()
+
+  if(CONFIG_RAW_DISASSEMBLY)
+    add_custom_command(
+      OUTPUT ${target}.asm
+      COMMAND ${CMAKE_OBJDUMP} -d ${target} > ${target}.asm
+      DEPENDS ${target})
+    add_custom_target(${target}-asm ALL DEPENDS ${target}.asm)
+    file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest "${target}.asm\n")
   endif()
 endfunction(nuttx_generate_outputs)

@@ -142,20 +142,20 @@ static int arm_watchpoint_add(int type, uint32_t addr, size_t size)
 
   for (i = 0; i < num; i++)
     {
-      uint32_t fun = 0;
+      uint32_t fun;
 
       if (getreg32(DWT_COMP0 + 16 * i) == 0)
         {
           switch (type)
             {
               case DEBUGPOINT_WATCHPOINT_RO:
-                fun |= DWT_FUNCTION_WATCHPOINT_RO;
+                fun = DWT_FUNCTION_WATCHPOINT_RO;
                 break;
               case DEBUGPOINT_WATCHPOINT_WO:
-                fun |= DWT_FUNCTION_WATCHPOINT_WO;
+                fun = DWT_FUNCTION_WATCHPOINT_WO;
                 break;
               case DEBUGPOINT_WATCHPOINT_RW:
-                fun |= DWT_FUNCTION_WATCHPOINT_RW;
+                fun = DWT_FUNCTION_WATCHPOINT_RW;
                 break;
               default:
                 return -EINVAL;
@@ -258,7 +258,7 @@ static void arm_watchpoint_match(void)
   for (i = 0; i < num; i++)
     {
       uint32_t fun = getreg32(DWT_FUNCTION0 + 16 * i);
-      if (fun & DWT_FUNCTION_MATCHED_MASK)
+      if ((fun & DWT_FUNCTION_MATCHED_MASK) != 0)
         {
           uint32_t fun_type = (fun & DWT_FUNCTION_FUNCTION_MASK) >>
                               DWT_FUNCTION_FUNCTION_SHIFT;
@@ -267,14 +267,14 @@ static void arm_watchpoint_match(void)
           switch (fun_type)
             {
               case DWT_FUNCTION_WATCHPOINT_RO:
-                  type = DEBUGPOINT_WATCHPOINT_RO;
-                  break;
+                type = DEBUGPOINT_WATCHPOINT_RO;
+                break;
               case DWT_FUNCTION_WATCHPOINT_WO:
-                  type = DEBUGPOINT_WATCHPOINT_WO;
-                  break;
+                type = DEBUGPOINT_WATCHPOINT_WO;
+                break;
               case DWT_FUNCTION_WATCHPOINT_RW:
-                  type = DEBUGPOINT_WATCHPOINT_RW;
-                  break;
+                type = DEBUGPOINT_WATCHPOINT_RW;
+                break;
 
               default:
                 continue;
@@ -420,7 +420,7 @@ static void arm_breakpoint_match(uint32_t pc)
     {
       if (g_arm_debug[i].type == DEBUGPOINT_BREAKPOINT &&
           g_arm_debug[i].addr == (void *)pc &&
-          g_arm_debug[i].callback)
+          g_arm_debug[i].callback != NULL)
         {
           g_arm_debug[i].callback(g_arm_debug[i].type,
                                   g_arm_debug[i].addr,
@@ -474,7 +474,7 @@ static void arm_steppoint_match(void)
   for (i = 0; i < ARM_DEBUG_MAX; i++)
     {
       if (g_arm_debug[i].type == DEBUGPOINT_STEPPOINT &&
-          g_arm_debug[i].callback)
+          g_arm_debug[i].callback != NULL)
         {
           g_arm_debug[i].callback(g_arm_debug[i].type,
                                   g_arm_debug[i].addr,
@@ -661,17 +661,17 @@ int arm_dbgmonitor(int irq, void *context, void *arg)
   uint32_t dfsr = getreg32(NVIC_DFAULTS);
   uint32_t *regs = (uint32_t *)context;
 
-  if (dfsr & NVIC_DFAULTS_HALTED)
+  if ((dfsr & NVIC_DFAULTS_HALTED) != 0)
     {
       arm_steppoint_match();
     }
 
-  if (dfsr & NVIC_DFAULTS_BKPT)
+  if ((dfsr & NVIC_DFAULTS_BKPT) != 0)
     {
       arm_breakpoint_match(regs[REG_PC]);
     }
 
-  if (dfsr & NVIC_DFAULTS_DWTTRAP)
+  if ((dfsr & NVIC_DFAULTS_DWTTRAP) != 0)
     {
       arm_watchpoint_match();
     }

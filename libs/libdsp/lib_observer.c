@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libdsp/lib_observer.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -170,7 +172,7 @@ void motor_aobserver_smo_init(FAR struct motor_aobserver_smo_f32_s *smo,
  *
  *  and get correction factor (z):
  *
- *    sign = sing(err)
+ *    sign = sign(err)
  *    z = sign*K_SLIDE
  *
  *  Once the digitalized model is compensated, we estimate BEMF (e_s.) by
@@ -612,10 +614,10 @@ void motor_aobserver_nfo(FAR struct motor_aobserver_f32_s *o,
    * as that makes the angle very unstable.
    */
 
-  if (vector2d_mag(nfo->x1, nfo->x2) < (phy->flux_link * 0.5))
+  if (vector2d_mag(nfo->x1, nfo->x2) < (phy->flux_link * 0.5f))
     {
-      nfo->x1 *= 1.1;
-      nfo->x2 *= 1.1;
+      nfo->x1 *= 1.1f;
+      nfo->x2 *= 1.1f;
     }
 
   angle = fast_atan2(nfo->x2 - l_ib, nfo->x1 - l_ia);

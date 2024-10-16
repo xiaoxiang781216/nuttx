@@ -694,8 +694,8 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
         {
           FAR void *tmp;
 
-          tmp = fs_heap_realloc(nodeinfo->rn_child, (count +
-                NODEINFO_NINCR) * sizeof(*nodeinfo->rn_child));
+          tmp = fs_heap_realloc(nodeinfo->rn_child,
+                (count + NODEINFO_NINCR) * sizeof(*nodeinfo->rn_child));
           if (tmp == NULL)
             {
               return -ENOMEM;

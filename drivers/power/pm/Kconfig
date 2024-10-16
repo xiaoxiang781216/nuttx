@@ -55,7 +55,7 @@ config PM_GOVERNOR_STABILITY
 		This governor will hold power state to ensure the request is stable
 		enough, other behavior is similar with greedy.
 		only when stay in WFI for enough time allow goto target state, or
-		will backward to the last state used
+		will backward to the last state used.
 		considering any states locked by calls to pm_stay() (accessible
 		via BOARDIOC_PM_STAY boardctl calls).
 
@@ -95,36 +95,33 @@ config PM_GOVERNOR_STABILITY_IDLE_THRESH
 	int "Enter idle thresh >= (ticks)"
 	default 0
 	---help---
-		only if first time try goto idle, can remain wfi for (ticks)
+		Only if first time try goto idle, can remain wfi for (ticks)
 		and second time still try goto this state, goto idle,
-		otherwise keep last state
-
-		only if remained for >=(ticks), allow goto idle state
-		set to 0 disable stability check for idle state
+		otherwise keep last state.
+		only if remained for >=(ticks), allow goto idle state.
+		set to 0 disable stability check for idle state.
 
 config PM_GOVERNOR_STABILITY_STANDBY_THRESH
 	int "Enter standby thresh >= (ticks)"
 	default 0
 	---help---
-		only if first time try goto standby, can remain wfi for (ticks)
+		Only if first time try goto standby, can remain wfi for (ticks)
 		and second time still try goto this state, goto standby,
-		otherwise keep last state
-
-		only if remained for >=(ticks), allow goto standby state
-		set to 0 disable stability check for standby state
+		otherwise keep last state.
+		only if remained for >=(ticks), allow goto standby state.
+		set to 0 disable stability check for standby state.
 
 config PM_GOVERNOR_STABILITY_SLEEP_THRESH
 	int "Enter sleep thresh >= (ticks)"
 	default 0
 	---help---
-		only if first time try goto sleep, can remain wfi for (ticks)
+		Only if first time try goto sleep, can remain wfi for (ticks)
 		and second time still try goto this state, goto sleep,
-		otherwise keep last state
+		otherwise keep last state.
+		only if remained for >=(ticks), allow goto sleep state.
+		set to 0 disable stability check for sleep state.
 
-		only if remained for >=(ticks), allow goto sleep state
-		set to 0 disable stability check for sleep state
-
-endif #  PM_GOVERNOR_STABILITY
+endif # PM_GOVERNOR_STABILITY
 
 if PM_GOVERNOR_ACTIVITY
 

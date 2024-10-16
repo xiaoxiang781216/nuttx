@@ -408,11 +408,12 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
   /* Receive R4 response */
 
   ret = SDIO_RECVR4(dev, SDIO_CMD5, &data);
-
   if (ret != OK)
     {
       goto err;
     }
+
+  /* Get the maximun and minimum values for VDD */
 
   bit = ffs(data);
   if (bit)
@@ -422,7 +423,7 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
     }
   else
     {
-      ret = ERROR;
+      ret = -EINVAL;
       goto err;
     }
 

@@ -160,8 +160,8 @@ int up_backtrace(struct tcb_s *tcb,
     {
       ret = backtrace(tcb->stack_base_ptr,
                       tcb->stack_base_ptr + tcb->adj_stack_size,
-                      (void *)tcb->xcp.regs[REG_X29],
-                      (void *)tcb->xcp.regs[REG_ELR],
+                      (void *)up_current_regs()[REG_X29],
+                      (void *)up_current_regs()[REG_ELR],
                       buffer, size, &skip);
     }
 

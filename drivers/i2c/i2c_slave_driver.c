@@ -381,6 +381,7 @@ static int i2c_slave_poll(FAR struct file *filep, FAR struct pollfd *fds,
 {
   FAR struct i2c_slave_driver_s *priv;
   int ret = OK;
+  int i;
 
   DEBUGASSERT(filep->f_inode->i_private != NULL);
 
@@ -394,7 +395,6 @@ static int i2c_slave_poll(FAR struct file *filep, FAR struct pollfd *fds,
   if (setup)
     {
       pollevent_t eventset = 0;
-      int i;
 
       for (i = 0; i < CONFIG_I2C_SLAVE_NPOLLWAITERS; i++)
         {
@@ -559,7 +559,7 @@ int i2c_slave_register(FAR struct i2c_slave_s *dev, int bus, int addr,
       return -ENOMEM;
     }
 
-  snprintf(devname, DEVNAME_FMTLEN, DEVNAME_FMT, bus);
+  snprintf(devname, sizeof(devname), DEVNAME_FMT, bus);
   ret = register_driver(devname, &g_i2cslavefops, 0666, priv);
   if (ret < 0)
     {

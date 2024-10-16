@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/stdlib/lib_exit.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -45,7 +47,10 @@
  ****************************************************************************/
 
 extern FAR void *__dso_handle weak_data;
+
+#ifndef CONFIG_HOST_WINDOWS
 FAR void *__dso_handle = &__dso_handle;
+#endif
 
 /****************************************************************************
  * Public Functions

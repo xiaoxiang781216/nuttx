@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/string/lib_stpcpy.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,10 +32,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
 /* Nonzero if either x or y is not aligned on a "long" boundary. */
 
 #define UNALIGNED(x, y) \
-  (((long)(x) & (sizeof(long) - 1)) | ((long)(y) & (sizeof(long) - 1)))
+  (((long)(uintptr_t)(x) & (sizeof(long) - 1)) | ((long)(uintptr_t)(y) & (sizeof(long) - 1)))
 
 /* Macros for detecting endchar */
 
@@ -43,6 +46,8 @@
 /* Nonzero if x (a long int) contains a NULL byte. */
 
 #  define DETECTNULL(x) (((x) - 0x0101010101010101) & ~(x) & 0x8080808080808080)
+#endif
+
 #endif
 
 /****************************************************************************
@@ -67,6 +72,7 @@
 nosanitize_address
 FAR char *stpcpy(FAR char *dest, FAR const char *src)
 {
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
   FAR long *aligned_dst;
   FAR const long *aligned_src;
 
@@ -89,6 +95,7 @@ FAR char *stpcpy(FAR char *dest, FAR const char *src)
       dest = (FAR char *)aligned_dst;
       src = (FAR char *)aligned_src;
     }
+#endif
 
   while ((*dest++ = *src++) != '\0');
 

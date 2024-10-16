@@ -81,13 +81,8 @@
 #define STACK_ALIGN_DOWN(a) ((a) & ~STACK_ALIGN_MASK)
 #define STACK_ALIGN_UP(a)   (((a) + STACK_ALIGN_MASK) & ~STACK_ALIGN_MASK)
 
-/* Format output with register width and hex */
-
-#ifdef CONFIG_ARCH_RV32
-#  define PRIxREG "08" PRIxPTR
-#else
-#  define PRIxREG "016" PRIxPTR
-#endif
+/* Interrupt Stack macros */
+#define INT_STACK_SIZE  (STACK_ALIGN_DOWN(CONFIG_ARCH_INTERRUPTSTACK))
 
 /* Determine which (if any) console driver to use.  If a console is enabled
  * and no other console device is specified, then a serial console is
@@ -115,27 +110,68 @@
 
 #ifndef __ASSEMBLY__
 
-#define getreg8(a)          (*(volatile uint8_t *)(a))
-#define putreg8(v,a)        (*(volatile uint8_t *)(a) = (v))
-#define getreg16(a)         (*(volatile uint16_t *)(a))
-#define putreg16(v,a)       (*(volatile uint16_t *)(a) = (v))
-#define getreg32(a)         (*(volatile uint32_t *)(a))
-#define putreg32(v,a)       (*(volatile uint32_t *)(a) = (v))
-#define getreg64(a)         (*(volatile uint64_t *)(a))
-#define putreg64(v,a)       (*(volatile uint64_t *)(a) = (v))
+/* Use ASM as rv64ilp32 compiler generated address is limited */
+
+static inline uint8_t getreg8(const volatile uintreg_t a)
+{
+  uint8_t v;
+  __asm__ __volatile__("lb %0, 0(%1)" : "=r" (v) : "r" (a));
+  return v;
+}
+
+static inline void putreg8(uint8_t v, const volatile uintreg_t a)
+{
+  __asm__ __volatile__("sb %0, 0(%1)" : : "r" (v), "r" (a));
+}
+
+static inline uint16_t getreg16(const volatile uintreg_t a)
+{
+  uint16_t v;
+  __asm__ __volatile__("lh %0, 0(%1)" : "=r" (v) : "r" (a));
+  return v;
+}
+
+static inline void putreg16(uint16_t v, const volatile uintreg_t a)
+{
+  __asm__ __volatile__("sh %0, 0(%1)" : : "r" (v), "r" (a));
+}
+
+static inline uint32_t getreg32(const volatile uintreg_t a)
+{
+  uint32_t v;
+  __asm__ __volatile__("lw %0, 0(%1)" : "=r" (v) : "r" (a));
+  return v;
+}
+
+static inline void putreg32(uint32_t v, const volatile uintreg_t a)
+{
+  __asm__ __volatile__("sw %0, 0(%1)" : : "r" (v), "r" (a));
+}
+
+static inline uint64_t getreg64(const volatile uintreg_t a)
+{
+  uint64_t v;
+  __asm__ __volatile__("ld %0, 0(%1)" : "=r" (v) : "r" (a));
+  return v;
+}
+
+static inline void putreg64(uint64_t v, const volatile uintreg_t a)
+{
+  __asm__ __volatile__("sd %0, 0(%1)" : : "r" (v), "r" (a));
+}
 
 #define READ_CSR(reg) \
   ({ \
-     uintptr_t reg##_val; \
-     __asm__ __volatile__("csrr %0, " __STR(reg) : "=r"(reg##_val)); \
-     reg##_val; \
+     uintreg_t __regval; \
+     __asm__ __volatile__("csrr %0, " __STR(reg) : "=r"(__regval)); \
+     __regval; \
   })
 
 #define READ_AND_SET_CSR(reg, bits) \
   ({ \
-     uintptr_t reg##_val; \
-     __asm__ __volatile__("csrrs %0, " __STR(reg) ", %1": "=r"(reg##_val) : "rK"(bits)); \
-     reg##_val; \
+     uintreg_t __regval; \
+     __asm__ __volatile__("csrrs %0, " __STR(reg) ", %1": "=r"(__regval) : "rK"(bits)); \
+     __regval; \
   })
 
 #define WRITE_CSR(reg, val) \
@@ -153,25 +189,42 @@
      __asm__ __volatile__("csrc " __STR(reg) ", %0" :: "rK"(bits)); \
   })
 
+#define SWAP_CSR(reg, val) \
+  ({ \
+     uintptr_t regval; \
+     __asm__ __volatile__("csrrw %0, " __STR(reg) ", %1" : "=r"(regval) \
+                                                         : "rK"(val)); \
+     regval; \
+  })
+
+#define WRITE_INDIRECT_CSR_REG0(reg, val) \
+  ({ \
+     WRITE_CSR(CSR_ISELECT, reg); \
+     WRITE_CSR(CSR_IREG, val); \
+  })
+
+#define READ_INDIRECT_CSR_REG0(reg, val) \
+  ({ \
+     WRITE_CSR(CSR_ISELECT, reg); \
+     READ_CSR(CSR_IREG, val); \
+  })
+
+#define SET_INDIRECT_CSR_REG0(reg, val) \
+  ({ \
+     WRITE_CSR(CSR_ISELECT, reg); \
+     SET_CSR(CSR_IREG, val); \
+  })
+
+#define CLEAR_INDIRECT_CSR_REG0(reg, val) \
+  ({ \
+     WRITE_CSR(CSR_ISELECT, reg); \
+     CLEAR_CSR(CSR_IREG, val); \
+  })
+
+#define riscv_append_pmp_region(a, b, s) \
+  riscv_config_pmp_region(riscv_next_free_pmp_region(), a, b, s)
+
 #endif
-
-/* SBI Extension IDs */
-
-#define SBI_EXT_HSM             0x48534D
-#define SBI_EXT_IPI             0x735049
-#define SBI_EXT_TIME            0x54494D45
-
-/* SBI function IDs for TIME extension */
-
-#define SBI_EXT_TIME_SET_TIMER  0x0
-
-/* SBI function IDs for HSM extension */
-
-#define SBI_EXT_HSM_HART_START  0x0
-
-/* SBI function IDs for IPI extension */
-
-#define SBI_EXT_IPI_SEND_IPI  0x0
 
 /****************************************************************************
  * Public Types
@@ -193,7 +246,7 @@ extern "C"
 #ifndef __ASSEMBLY__
 /* Atomic modification of registers */
 
-void modifyreg32(uintptr_t addr, uint32_t clearbits, uint32_t setbits);
+void modifyreg32(uintreg_t addr, uint32_t clearbits, uint32_t setbits);
 
 /* Memory allocation ********************************************************/
 
@@ -215,12 +268,12 @@ void riscv_exception_attach(void);
 
 #ifdef CONFIG_ARCH_FPU
 void riscv_fpuconfig(void);
-void riscv_savefpu(uintptr_t *regs, uintptr_t *fregs);
-void riscv_restorefpu(uintptr_t *regs, uintptr_t *fregs);
+void riscv_savefpu(uintreg_t *regs, uintreg_t *fregs);
+void riscv_restorefpu(uintreg_t *regs, uintreg_t *fregs);
 
 /* Get FPU register save area */
 
-static inline uintptr_t *riscv_fpuregs(struct tcb_s *tcb)
+static inline uintreg_t *riscv_fpuregs(struct tcb_s *tcb)
 {
 #ifdef CONFIG_ARCH_LAZYFPU
   /* With lazy FPU the registers are simply in tcb */
@@ -229,7 +282,7 @@ static inline uintptr_t *riscv_fpuregs(struct tcb_s *tcb)
 #else
   /* Otherwise they are after the integer registers */
 
-  return (uintptr_t *)((uintptr_t)tcb->xcp.regs + INT_XCPT_SIZE);
+  return (uintreg_t *)((uintptr_t)tcb->xcp.regs + INT_XCPT_SIZE);
 #endif
 }
 #else
@@ -237,6 +290,24 @@ static inline uintptr_t *riscv_fpuregs(struct tcb_s *tcb)
 #  define riscv_savefpu(regs, fregs)
 #  define riscv_restorefpu(regs, fregs)
 #  define riscv_fpuregs(tcb)
+#endif
+
+#ifdef CONFIG_ARCH_RV_ISA_V
+void riscv_vpuconfig(void);
+void riscv_savevpu(uintptr_t *regs, uintptr_t *vregs);
+void riscv_restorevpu(uintptr_t *regs, uintptr_t *vregs);
+
+/* Get VPU register save area */
+
+static inline uintptr_t *riscv_vpuregs(struct tcb_s *tcb)
+{
+  return tcb->xcp.vregs;
+}
+#else
+#  define riscv_vpuconfig()
+#  define riscv_savevpu(regs, vregs)
+#  define riscv_restorevpu(regs, vregs)
+#  define riscv_vpuregs(tcb)
 #endif
 
 /* Save / restore context of task */
@@ -248,6 +319,12 @@ static inline void riscv_savecontext(struct tcb_s *tcb)
 
   riscv_savefpu(tcb->xcp.regs, riscv_fpuregs(tcb));
 #endif
+
+#ifdef CONFIG_ARCH_RV_ISA_V
+  /* Save current process VPU state to TCB */
+
+  riscv_savevpu(tcb->xcp.regs, riscv_vpuregs(tcb));
+#endif
 }
 
 static inline void riscv_restorecontext(struct tcb_s *tcb)
@@ -256,6 +333,12 @@ static inline void riscv_restorecontext(struct tcb_s *tcb)
   /* Restore FPU state for next process */
 
   riscv_restorefpu(tcb->xcp.regs, riscv_fpuregs(tcb));
+#endif
+
+#ifdef CONFIG_ARCH_RV_ISA_V
+  /* Restore VPU state for next process */
+
+  riscv_restorevpu(tcb->xcp.regs, riscv_vpuregs(tcb));
 #endif
 }
 
@@ -271,14 +354,6 @@ int riscv_config_pmp_region(uintptr_t region, uintptr_t attr,
 int riscv_check_pmp_access(uintptr_t attr, uintptr_t base, uintptr_t size);
 int riscv_configured_pmp_regions(void);
 int riscv_next_free_pmp_region(void);
-
-/* RISC-V SBI wrappers ******************************************************/
-
-#ifdef CONFIG_ARCH_USE_S_MODE
-uintptr_t riscv_sbi_send_ipi(uint32_t hmask, uintptr_t hbase);
-void riscv_sbi_set_timer(uint64_t stime_value);
-uint64_t riscv_sbi_get_time(void);
-#endif
 
 /* Power management *********************************************************/
 
@@ -322,8 +397,9 @@ void riscv_netinitialize(void);
 
 /* Exception Handler ********************************************************/
 
-uintptr_t *riscv_doirq(int irq, uintptr_t *regs);
+uintreg_t *riscv_doirq(int irq, uintreg_t *regs);
 int riscv_exception(int mcause, void *regs, void *args);
+int riscv_fillpage(int mcause, void *regs, void *args);
 int riscv_misaligned(int irq, void *context, void *arg);
 
 /* Debug ********************************************************************/
@@ -351,11 +427,37 @@ int riscv_smp_call_handler(int irq, void *c, void *arg);
 
 uintptr_t riscv_mhartid(void);
 
+/****************************************************************************
+ * Name: riscv_hartid_to_cpuid
+ *
+ * Description:
+ *   Convert physical core number to logical core number. Default
+ *   implementation is 1:1 mapping, i.e. physical=logical.
+ *
+ ****************************************************************************/
+
+int riscv_hartid_to_cpuid(int cpu);
+
+/****************************************************************************
+ * Name: riscv_cpuid_to_hartid
+ *
+ * Description:
+ *   Convert logical core number to physical core number. Default
+ *   implementation is 1:1 mapping, i.e. physical=logical.
+ *
+ ****************************************************************************/
+
+int riscv_cpuid_to_hartid(int cpu);
+
 /* If kernel runs in Supervisor mode, a system call trampoline is needed */
 
 #ifdef CONFIG_ARCH_USE_S_MODE
-void *riscv_perform_syscall(uintptr_t *regs);
+void *riscv_perform_syscall(uintreg_t *regs);
 #endif
+
+void riscv_jump_to_user(uintptr_t entry, uintreg_t a0, uintreg_t a1,
+                        uintreg_t a2, uintreg_t sp,
+                        uintreg_t *regs) noreturn_function;
 
 /* Context switching via system calls ***************************************/
 
@@ -374,16 +476,6 @@ void *riscv_perform_syscall(uintptr_t *regs);
 
 #define riscv_switchcontext(prev, next) \
   sys_call2(SYS_switch_context, (uintptr_t)prev, (uintptr_t)next)
-
-#ifdef CONFIG_BUILD_KERNEL
-/* SYS call 3:
- *
- * void riscv_syscall_return(void);
- */
-
-#define riscv_syscall_return() sys_call0(SYS_syscall_return)
-
-#endif /* CONFIG_BUILD_KERNEL */
 
 #undef EXTERN
 #ifdef __cplusplus

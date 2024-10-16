@@ -100,7 +100,7 @@ struct udp_poll_s
 {
   FAR struct udp_conn_s *conn;     /* Needed to handle loss of connection */
   FAR struct net_driver_s *dev;    /* Needed to free the callback structure */
-  struct pollfd *fds;              /* Needed to handle poll events */
+  FAR struct pollfd *fds;          /* Needed to handle poll events */
   FAR struct devif_callback_s *cb; /* Needed to teardown the poll */
 };
 
@@ -160,6 +160,10 @@ struct udp_conn_s
    */
 
   struct udp_poll_s pollinfo[CONFIG_NET_UDP_NPOLLWAITERS];
+
+#ifdef CONFIG_NET_TIMESTAMP
+  int timestamp; /* Nonzero when SO_TIMESTAMP is enabled */
+#endif
 };
 
 /* This structure supports UDP write buffering.  It is simply a container
@@ -171,7 +175,7 @@ struct udp_wrbuffer_s
 {
   sq_entry_t wb_node;              /* Supports a singly linked list */
   struct sockaddr_storage wb_dest; /* Destination address */
-  struct iob_s *wb_iob;            /* Head of the I/O buffer chain */
+  FAR struct iob_s *wb_iob;        /* Head of the I/O buffer chain */
 };
 #endif
 

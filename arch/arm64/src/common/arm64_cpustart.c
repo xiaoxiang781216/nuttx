@@ -134,7 +134,8 @@ static void arm64_smp_init_top(void)
 
   /* core n, idle n */
 
-  write_sysreg(tcb, tpidr_el0);
+  write_sysreg(0, tpidrro_el0);
+  UNUSED(tcb);
 
   nx_idle_trampoline();
 }

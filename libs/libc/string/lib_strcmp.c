@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/string/lib_strcmp.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -32,10 +34,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
 /* Nonzero if either x or y is not aligned on a "long" boundary. */
 
 #define UNALIGNED(x, y) \
-  (((long)(x) & (sizeof(long) - 1)) | ((long)(y) & (sizeof(long) - 1)))
+  (((long)(uintptr_t)(x) & (sizeof(long) - 1)) | ((long)(uintptr_t)(y) & (sizeof(long) - 1)))
 
 /* Macros for detecting endchar */
 
@@ -47,6 +50,8 @@
 #  define DETECTNULL(x) (((x) - 0x0101010101010101) & ~(x) & 0x8080808080808080)
 #endif
 
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -56,6 +61,7 @@
 nosanitize_address
 int strcmp(FAR const char *cs, FAR const char *ct)
 {
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
   FAR unsigned long *a1;
   FAR unsigned long *a2;
 
@@ -97,5 +103,18 @@ int strcmp(FAR const char *cs, FAR const char *ct)
     }
 
   return (*(FAR unsigned char *)cs) - (*(FAR unsigned char *)ct);
+#else
+  register int result;
+  for (; ; )
+    {
+      if ((result = (unsigned char)*cs - (unsigned char)*ct++) != 0 ||
+          *cs++ == '\0')
+        {
+          break;
+        }
+    }
+
+  return result;
+#endif
 }
 #endif

@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/string/lib_strcat.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -32,8 +34,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+
 #define ALIGNED(x) \
-  (((long)(x) & (sizeof(long) - 1)) == 0)
+  (((long)(uintptr_t)(x) & (sizeof(long) - 1)) == 0)
 
 /* Macros for detecting endchar */
 
@@ -45,6 +49,8 @@
 #  define DETECTNULL(x) (((x) - 0x0101010101010101) & ~(x) & 0x8080808080808080)
 #endif
 
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -54,6 +60,7 @@
 nosanitize_address
 FAR char *strcat(FAR char *dest, FAR const char *src)
 {
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
   FAR char *ret = dest;
 
   /* Skip over the data in dest as quickly as possible. */
@@ -83,6 +90,17 @@ FAR char *strcat(FAR char *dest, FAR const char *src)
    */
 
   strcpy(dest, src);
+#else
+  FAR char *ret = dest;
+
+  dest += strlen(dest);
+  while (*src != '\0')
+    {
+      *dest++ = *src++;
+    }
+
+  *dest = '\0';
+#endif
 
   return ret;
 }

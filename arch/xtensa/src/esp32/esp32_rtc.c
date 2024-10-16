@@ -34,6 +34,7 @@
 #include "esp32_clockconfig.h"
 #include "esp32_rt_timer.h"
 
+#include "hardware/esp32_apb_ctrl.h"
 #include "hardware/esp32_rtccntl.h"
 #include "hardware/esp32_rtc_io.h"
 #include "hardware/esp32_dport.h"
@@ -864,9 +865,6 @@ uint32_t IRAM_ATTR esp32_rtc_clk_cal(enum esp32_rtc_cal_sel_e cal_clk,
   return period;
 }
 
-enum esp32_rtc_xtal_freq_e rtc_get_xtal(void)
-                __attribute__((alias("esp32_rtc_clk_xtal_freq_get")));
-
 /****************************************************************************
  * Name: esp32_rtc_clk_xtal_freq_get
  *
@@ -1153,7 +1151,7 @@ void esp32_rtc_clk_set(void)
   enum esp32_rtc_fast_freq_e fast_freq = RTC_FAST_FREQ_8M;
   enum esp32_slow_clk_sel_e slow_clk = SLOW_CLK_150K;
 
-#if defined(CONFIG_ESP32_RTC_CLK_SRC_EXT_CRYS)
+#if defined(CONFIG_ESP32_RTC_CLK_SRC_EXT_XTAL)
   slow_clk = SLOW_CLK_32K_XTAL;
 #elif defined(CONFIG_ESP32_RTC_CLK_SRC_EXT_OSC)
   slow_clk = SLOW_CLK_32K_EXT_OSC;

@@ -129,6 +129,7 @@ static int gpio_open(FAR struct file *filep)
 {
   FAR struct inode *inode;
   FAR struct gpio_dev_s *dev;
+
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private != NULL);
   dev = inode->i_private;
@@ -373,7 +374,7 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             (FAR enum gpio_pintype_e *)((uintptr_t)arg);
           DEBUGASSERT(ptr != NULL);
 
-          *ptr = (FAR enum gpio_pintype_e)dev->gp_pintype;
+          *ptr = (enum gpio_pintype_e)dev->gp_pintype;
         }
         break;
 
@@ -599,13 +600,13 @@ static int gpio_poll(FAR struct file *filep,
   FAR struct gpio_dev_s *dev = inode->i_private;
   int i;
 #endif
-  int ret = OK;
+
   irqstate_t flags;
+  int ret = OK;
 
   /* Are we setting up the poll?  Or tearing it down? */
 
   flags = enter_critical_section();
-
   if (setup)
     {
 #if CONFIG_DEV_GPIO_NPOLLWAITERS > 0

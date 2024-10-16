@@ -37,12 +37,12 @@ ifeq ($(CONFIG_PCI_UIO_IVSHMEM),y)
 CSRCS += pci_uio_ivshmem.c
 endif
 
-ifeq ($(CONFIG_PCI_ENDPOINT),y)
-CSRCS += pci_epc.c pci_epc_mem.c pci_epf.c
-endif
-
 ifeq ($(CONFIG_PCI_EP_TEST),y)
 CSRCS += pci_ep_test.c
+endif
+
+ifeq ($(CONFIG_PCI_ENDPOINT),y)
+CSRCS += pci_epc.c pci_epc_mem.c pci_epf.c
 endif
 
 ifeq ($(CONFIG_PCI_QEMU_EPC),y)
@@ -58,4 +58,5 @@ endif
 DEPPATH += --dep-path pci
 VPATH += :pci
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)pci
+
 endif # CONFIG_PCI

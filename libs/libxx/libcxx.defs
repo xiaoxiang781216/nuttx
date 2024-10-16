@@ -1,6 +1,8 @@
 ############################################################################
 # libs/libxx/libcxx.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -59,8 +61,8 @@ endif
 CXXFLAGS += -Wno-shadow -Wno-sign-compare
 CXXFLAGS += -Wno-attributes -Wno-deprecated-declarations
 
-ifeq ($(shell expr $(GCCVER) \>= 12), 1)
-CXXFLAGS += -Wno-maybe-uninitialized -Wno-alloc-size-larger-than
+ifeq ($(shell expr "$(GCCVER)" \>= 12), 1)
+  CXXFLAGS += -Wno-maybe-uninitialized -Wno-alloc-size-larger-than
 endif
 
 CPPSRCS += $(wildcard libcxx/src/*.cpp)

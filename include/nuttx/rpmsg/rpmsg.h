@@ -62,9 +62,9 @@ struct rpmsg_s
 
 /**
  * struct rpmsg_ops_s - Rpmsg device operations
- * @wait: wait sem.
- * @post: post sem.
- * @get_cpuname: get cpu name.
+ * wait: wait sem.
+ * post: post sem.
+ * get_cpuname: get cpu name.
  */
 
 struct rpmsg_ops_s

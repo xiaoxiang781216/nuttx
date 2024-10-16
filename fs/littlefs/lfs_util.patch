@@ -1,6 +1,6 @@
 --- ./littlefs/littlefs/lfs_util.h	2022-11-11 03:32:30.000000000 +1100
 +++ ./littlefs/littlefs/lfs_util.h	2023-04-21 12:25:27.987084276 +1000
-@@ -28,6 +28,7 @@
+@@ -28,6 +28,8 @@
 
  #ifndef LFS_NO_MALLOC
  #include <stdlib.h>

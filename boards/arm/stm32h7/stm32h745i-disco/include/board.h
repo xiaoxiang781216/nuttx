@@ -236,7 +236,7 @@
 
 /* ADC 1 2 3 clock source - pll2_pclk */
 
-#define STM32_RCC_D3CCIPR_ADCSEL     RCC_D3CCIPR_ADCSEL_PLL2
+#define STM32_RCC_D3CCIPR_ADCSRC     RCC_D3CCIPR_ADCSEL_PLL2
 
 /* FLASH wait states
  *
@@ -501,6 +501,11 @@
 
 #define GPIO_USART3_RX   (GPIO_USART3_RX_1 | GPIO_SPEED_100MHz)  /* PB11 */
 #define GPIO_USART3_TX   (GPIO_USART3_TX_1 | GPIO_SPEED_100MHz)  /* PB10 */
+
+/* UART7 (Discovery Virtual Console) */
+
+#define GPIO_UART7_RX   (GPIO_UART7_RX_1 | GPIO_SPEED_100MHz)  /* PA8 */
+#define GPIO_UART7_TX   (GPIO_UART7_TX_2 | GPIO_SPEED_100MHz)  /* PB4 */
 
 /* I2C4 - Used by Touchscreen and Audio Codec */
 

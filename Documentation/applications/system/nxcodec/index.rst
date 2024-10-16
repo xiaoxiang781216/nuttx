@@ -23,7 +23,7 @@ just run ``nxcodec -h``::
  [-i | --infile]  Input filename for M2M devices
  [-o | --outfile] Outputs stream to filename
 
-By default, it is the decoding mode, with a default parameter size of
+By default, it is the decodeing mode, with a default parameter size of
 640x480, input format of H264, and output format of YUV420. The ``-i``
 parameter corresponds to the input parameter before it, and the ``-i``
 parameter corresponds to the output parameter after it.
@@ -31,7 +31,7 @@ parameter corresponds to the output parameter after it.
 Examples
 --------
 
-Decode an H264 stream file into a yuv420 file:::
+Decode an H264 stream file into a yuv420 file::
 
  mount -t hostfs -o fs=/path/from/ /stream
  nxcodec -d /dev/video1 -s 256x144 -i /stream/256x144.h264 -o /stream/256x144-yuv420p.yuv

@@ -39,3 +39,11 @@ endif
 ifeq ($(CONFIG_I2C),y)
 CHIP_CSRCS += mx8mp_i2c.c
 endif
+
+ifeq ($(CONFIG_SPI),y)
+CHIP_CSRCS += mx8mp_ecspi.c
+endif
+
+ifeq ($(CONFIG_MX8MP_RPMSG),y)
+CHIP_CSRCS += mx8mp_rptun.c mx8mp_ipc.c mx8mp_rsctable.c
+endif

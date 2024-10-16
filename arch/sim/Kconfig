@@ -15,18 +15,22 @@ config HOST_X86_64
 	select ARCH_HAVE_STACKCHECK
 	select LIBC_ARCH_ELF_64BIT if LIBC_ARCH_ELF && !SIM_M32
 	select ARCH_HAVE_MATH_H
+	select ARCH_TOOLCHAIN_GNU
 
 config HOST_X86
 	bool "x86"
 	select ARCH_HAVE_STACKCHECK
+	select ARCH_TOOLCHAIN_GNU
 
 config HOST_ARM
 	bool "arm"
 	select ARCH_HAVE_STACKCHECK
+	select ARCH_TOOLCHAIN_GNU
 
 config HOST_ARM64
 	bool "arm64"
 	select ARCH_HAVE_STACKCHECK
+	select ARCH_TOOLCHAIN_GNU
 
 endchoice # Host CPU Type
 
@@ -86,19 +90,19 @@ config SIM_UBSAN_DUMMY
 	---help---
 		Keep SIM_UBSAN compile time but disable runtime actions.
 
-config SIM_GPROF
-	bool "Enable gprof"
-	depends on !SCHED_GPROF
-	default n
-	---help---
-		Enable support gprof profiling tool.
-
 config SIM_GCOV_ALL
 	bool "Enable code coverage for the entire image"
 	default n
 	---help---
 		This option activates code coverage instrumentation for the
 		entire image.
+
+config SIM_GPROF
+	bool "Enable gprof"
+	depends on !SCHED_GPROF
+	default n
+	---help---
+		Enable support gprof profiling tool.
 
 choice
 	prompt "X64_64 ABI"
@@ -241,12 +245,12 @@ config SIM_NETDEV_VPNKIT
 endchoice
 
 config SIM_NETDEV_MTU
-    int "The MTU of Simulated Network Device"
-    default 1500
-    range 1280 65535 if NET_IPv6
-    range 576 65535 if !NET_IPv6
-    ---help---
-        The MTU of the network devices.
+	int "The MTU of Simulated Network Device"
+	default 1500
+	range 1280 65535 if NET_IPv6
+	range 576 65535 if !NET_IPv6
+	---help---
+		The MTU of the network devices.
 
 config SIM_NETDEV_NUMBER
 	int "Number of Simulated Network Device"
@@ -839,5 +843,12 @@ config SIM_USB_PRIO
 	default 100
 
 endif
+
+config SIM_CUSTOM_DATA_SECTION
+	string "Custom data section name for Simulator"
+	default ""
+	---help---
+		Custom data section name for Simulator to allow
+		developer to define special data sections.
 
 endif # ARCH_SIM

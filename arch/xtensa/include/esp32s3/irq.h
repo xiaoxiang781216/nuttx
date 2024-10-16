@@ -37,6 +37,16 @@
 
 #define ESP32S3_INT_PRIO_DEF        1
 
+/* CPU interrupt flags:
+ *   These flags can be used to specify which interrupt qualities the
+ *   code calling esp32s3_setup_irq needs.
+ */
+
+#define ESP32S3_CPUINT_FLAG_LEVEL   (1 << 0) /* Level-triggered interrupt */
+#define ESP32S3_CPUINT_FLAG_EDGE    (1 << 1) /* Edge-triggered interrupt */
+#define ESP32S3_CPUINT_FLAG_SHARED  (1 << 2) /* Interrupt can be shared between ISRs */
+#define ESP32S3_CPUINT_FLAG_IRAM    (1 << 3) /* ISR can be called if cache is disabled */
+
 /* Interrupt Matrix
  *
  * The Interrupt Matrix embedded in the ESP32-S3 independently allocates
@@ -127,17 +137,19 @@
 #define ESP32S3_PERIPH_DCACHE_SYNC                         63
 #define ESP32S3_PERIPH_ICACHE_SYNC                         64
 #define ESP32S3_PERIPH_APB_ADC                             65
+
 #define ESP32S3_PERIPH_DMA_IN_CH0                          66
 #define ESP32S3_PERIPH_DMA_IN_CH1                          67
 #define ESP32S3_PERIPH_DMA_IN_CH2                          68
 #define ESP32S3_PERIPH_DMA_IN_CH3                          69
-
 #define ESP32S3_PERIPH_DMA_IN_CH4                          70
+
 #define ESP32S3_PERIPH_DMA_OUT_CH0                         71
 #define ESP32S3_PERIPH_DMA_OUT_CH1                         72
 #define ESP32S3_PERIPH_DMA_OUT_CH2                         73
 #define ESP32S3_PERIPH_DMA_OUT_CH3                         74
 #define ESP32S3_PERIPH_DMA_OUT_CH4                         75
+
 #define ESP32S3_PERIPH_RSA                                 76
 #define ESP32S3_PERIPH_AES                                 77
 #define ESP32S3_PERIPH_SHA                                 78
@@ -386,17 +398,13 @@
  * 26 can be mapped to peripheral interrupts:
  *
  *   Level triggered peripherals (21 total):
- *     0-5, 8-9, 12-13, 17-18 - Priority 1
- *     19-21                  - Priority 2
- *     23, 27                 - Priority 3
- *     24-25                  - Priority 4
- *     26, 31                 - Priority 5
- *   Edge triggered peripherals (4 total):
- *     10                     - Priority 1
- *     22                     - Priority 3
- *     28, 30                 - Priority 4
+ *     0-5, 8-10, 12-13, 17-18 - Priority 1
+ *     19-21                   - Priority 2
+ *     22-23, 27               - Priority 3
+ *     24-25, 28, 30           - Priority 4
+ *     26, 31                  - Priority 5
  *   NMI (1 total):
- *     14                     - NMI
+ *     14                      - NMI
  *
  * CPU peripheral interrupts can be a assigned to a CPU interrupt using the
  * PRO_*_MAP_REG or APP_*_MAP_REG.  There are a pair of these registers for

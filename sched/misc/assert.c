@@ -29,7 +29,9 @@
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
 #include <nuttx/cache.h>
+#include <nuttx/coredump.h>
 #include <nuttx/compiler.h>
+#include <nuttx/fs/fs.h>
 #include <nuttx/irq.h>
 #include <nuttx/init.h>
 #include <nuttx/fs/fs.h>
@@ -545,7 +547,7 @@ static void dump_lockholder(pid_t tid)
   backtrace_format(buf, sizeof(buf), mutex->backtrace,
                    CONFIG_LIBC_MUTEX_BACKTRACE);
 
-  _alert("Mutex holder(%d) backtrace: %s\n", mutex->holder, buf);
+  _alert("Mutex holder(%d) backtrace:%s\n", mutex->holder, buf);
 }
 #else
 #  define dump_lockholder(tid)

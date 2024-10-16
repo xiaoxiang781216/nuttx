@@ -962,7 +962,7 @@ static void i3c_master_detach_free_devs(
 }
 
 /****************************************************************************
- * Name: i3c_master_bus_init()
+ * Name: i3c_master_bus_init
  *
  * Description:
  *   Initialize an I3C bus
@@ -1212,7 +1212,7 @@ static int i3c_master_check_ops(
 }
 
 /****************************************************************************
- * Name: i2c_unregister_driver()
+ * Name: i2c_unregister_driver
  *
  * Description:
  *   Perform an I2C driver unregister operation.
@@ -1227,12 +1227,12 @@ static void i2c_unregister_driver(FAR struct i3c_master_controller *master)
   char devname[12];
   int i2c_bus_id = i3c_master_to_i2c_bus_number(master);
 
-  snprintf(devname, 12, "/dev/i2c%d", i2c_bus_id);
+  snprintf(devname, sizeof(devname), "/dev/i2c%d", i2c_bus_id);
   nx_unlink(devname);
 }
 
 /****************************************************************************
- * Name: i3c_unregister_driver()
+ * Name: i3c_unregister_driver
  *
  * Description:
  *   Perform an I3C driver unregister operation.
@@ -1246,7 +1246,8 @@ static void i3c_unregister_driver(FAR struct i3c_master_controller *master)
 {
   char devname[12];
 
-  snprintf(devname, 12, "/dev/i3c%d", i3c_master_to_i3c_bus_number(master));
+  snprintf(devname, sizeof(devname), "/dev/i3c%d",
+           i3c_master_to_i3c_bus_number(master));
   nx_unlink(devname);
 }
 
@@ -1350,7 +1351,7 @@ void i3c_bus_normaluse_unlock(FAR struct i3c_bus *bus)
 }
 
 /****************************************************************************
- * Name: i3c_master_get_free_addr()
+ * Name: i3c_master_get_free_addr
  *
  * Description:
  *   Get a free address on the bus.
@@ -1374,7 +1375,7 @@ int i3c_master_get_free_addr(FAR struct i3c_master_controller *master,
 }
 
 /****************************************************************************
- * Name: i3c_master_do_daa()
+ * Name: i3c_master_do_daa
  *
  * Description:
  *   Do a DAA (Dynamic Address Assignment)
@@ -1417,7 +1418,7 @@ int i3c_master_do_daa(FAR struct i3c_master_controller *master)
 }
 
 /****************************************************************************
- * Name: i3c_master_enec_locked()
+ * Name: i3c_master_enec_locked
  *
  * Description:
  *   Send an ENEC CCC command
@@ -1445,7 +1446,7 @@ int i3c_master_enec_locked(FAR struct i3c_master_controller *master,
 }
 
 /****************************************************************************
- * Name: i3c_master_entdaa_locked()
+ * Name: i3c_master_entdaa_locked
  *
  * Description:
  *   Start a DAA (Dynamic Address Assignment) procedure
@@ -1480,7 +1481,7 @@ int i3c_master_entdaa_locked(FAR struct i3c_master_controller *master)
 }
 
 /****************************************************************************
- * Name: i3c_master_disec_locked()
+ * Name: i3c_master_disec_locked
  *
  * Description:
  *   Send a DISEC CCC command
@@ -1508,7 +1509,7 @@ int i3c_master_disec_locked(FAR struct i3c_master_controller *master,
 }
 
 /****************************************************************************
- * Name: i3c_master_set_info()
+ * Name: i3c_master_set_info
  *
  * Description:
  *   Set master device information
@@ -1585,7 +1586,7 @@ err_free_dev:
 }
 
 /****************************************************************************
- * Name: i3c_master_add_i3c_dev_locked()
+ * Name: i3c_master_add_i3c_dev_locked
  *
  * Description:
  *   Add an I3C slave to the bus
@@ -1780,7 +1781,7 @@ err_free_dev:
 }
 
 /****************************************************************************
- * Name: i3c_master_queue_ibi()
+ * Name: i3c_master_queue_ibi
  *
  * Description:
  *   Queue an IBI
@@ -1802,7 +1803,7 @@ void i3c_master_queue_ibi(FAR struct i3c_dev_desc *dev,
 }
 
 /****************************************************************************
- * Name: i3c_generic_ibi_free_pool()
+ * Name: i3c_generic_ibi_free_pool
  *
  * Description:
  *   Free a generic IBI pool
@@ -1842,7 +1843,7 @@ void i3c_generic_ibi_free_pool(FAR struct i3c_generic_ibi_pool *pool)
 }
 
 /****************************************************************************
- * Name: i3c_generic_ibi_alloc_pool()
+ * Name: i3c_generic_ibi_alloc_pool
  *
  * Description:
  *   Create a generic IBI pool
@@ -1917,7 +1918,7 @@ err_free_pool:
 }
 
 /****************************************************************************
- * Name: i3c_generic_ibi_get_free_slot()
+ * Name: i3c_generic_ibi_get_free_slot
  *
  * Description:
  *   Get a free slot from a generic IBI pool
@@ -1958,7 +1959,7 @@ i3c_generic_ibi_get_free_slot(FAR struct i3c_generic_ibi_pool *pool)
 }
 
 /****************************************************************************
- * Name: i3c_generic_ibi_recycle_slot()
+ * Name: i3c_generic_ibi_recycle_slot
  *
  * Description:
  *   Return a slot to a generic IBI pool
@@ -2151,7 +2152,7 @@ void i3c_master_detach_i2c_dev(FAR struct i3c_master_controller *master,
 }
 
 /****************************************************************************
- * Name: i3c_master_register()
+ * Name: i3c_master_register
  *
  * Description:
  *   Register an I3C master.
@@ -2261,7 +2262,7 @@ err_cleanup_bus:
 }
 
 /****************************************************************************
- * Name: i3c_master_unregister()
+ * Name: i3c_master_unregister
  *
  * Description:
  *  Unregister an I3C master.

@@ -294,8 +294,10 @@ void arm64_fpu_disable(void)
 
 bool up_fpucmp(const void *saveregs1, const void *saveregs2)
 {
-  const uint64_t *regs1 = saveregs1 + ARM64_CONTEXT_SIZE;
-  const uint64_t *regs2 = saveregs2 + ARM64_CONTEXT_SIZE;
+  const uint64_t *regs1 = (uint64_t *)((uintptr_t)saveregs1 +
+                                       ARM64_CONTEXT_SIZE);
+  const uint64_t *regs2 = (uint64_t *)((uintptr_t)saveregs2 +
+                                       ARM64_CONTEXT_SIZE);
 
   /* Only compare callee-saved registers, caller-saved registers do not
    * need to be preserved.

@@ -28,7 +28,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
 #include <nuttx/spinlock.h>
-
 #include "sched/sched.h"
 
 /****************************************************************************
@@ -85,7 +84,7 @@ static int profil_timer_handler_cpu(FAR void *arg)
 
 static void profil_timer_handler(wdparm_t arg)
 {
-  FAR struct profinfo_s *prof = (FAR struct profinfo_s *)arg;
+  FAR struct profinfo_s *prof = (FAR struct profinfo_s *)(uintptr_t)arg;
 
 #ifdef CONFIG_SMP
   cpu_set_t cpus = (1 << CONFIG_SMP_NCPUS) - 1;
@@ -156,6 +155,7 @@ int profil(FAR unsigned short *buf, size_t bufsiz,
   prof->scale   = scale;
   spin_unlock_irqrestore(&prof->lock, flags);
 
-  wd_start(&prof->timer, PROFTICK, profil_timer_handler, (wdparm_t)prof);
+  wd_start(&prof->timer, PROFTICK, profil_timer_handler,
+           (wdparm_t)(uintptr_t)prof);
   return OK;
 }

@@ -24,7 +24,11 @@ ifeq ($(CONFIG_SENSORS_BMP180),y)
   CSRCS += stm32_bmp180.c
 endif
 
-ifeq ($(CONFIG_SENSORS_MS5611),y)
+ifeq ($(CONFIG_SENSORS_BMP280),y)
+  CSRCS += stm32_bmp280.c
+endif
+
+ifeq ($(CONFIG_SENSORS_MS56XX),y)
   CSRCS += stm32_ms5611.c
 endif
 
@@ -58,6 +62,10 @@ endif
 
 ifeq ($(CONFIG_LCD_SSD1306),y)
   CSRCS += stm32_ssd1306.c
+endif
+
+ifeq ($(CONFIG_RTC_DS1307),y)
+  CSRCS += stm32_ds1307.c
 endif
 
 ifeq ($(CONFIG_SENSORS_LM75),y)
@@ -120,6 +128,18 @@ ifeq ($(CONFIG_SENSORS_MAX31855),y)
   CSRCS += stm32_max31855.c
 endif
 
+ifeq ($(CONFIG_LCD_MAX7219),y)
+  CSRCS += stm32_max7219_matrix.c
+endif
+
+ifeq ($(CONFIG_CL_MFRC522),y)
+  CSRCS += stm32_mfrc522.c
+endif
+
+ifeq ($(CONFIG_SENSORS_AMG88XX),y)
+  CSRCS+= stm32_amg88xx.c
+endif
+
 ifeq ($(CONFIG_LIS3DSH),y)
   CSRCS += stm32_lis3dsh.c
 endif
@@ -134,6 +154,10 @@ endif
 
 ifeq ($(CONFIG_BOARD_STM32_IHM16M1),y)
   CSRCS += stm32_ihm16m1.c
+endif
+
+ifeq ($(CONFIG_STEPPER_DRV8825),y)
+  CSRCS += stm32_drv8825.c
 endif
 
 DEPPATH += --dep-path src

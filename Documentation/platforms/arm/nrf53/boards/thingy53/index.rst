@@ -22,11 +22,11 @@ Battery monitoring                 No
 Buzzer                             No
 PDM microphone (VM3011)            No
 Front End Module (nRF21540)        No
-Low power accelerometer (ADXL362)  No
-IMU (BMI270)                       No
-Magnetometer (BMM150)              No
-Air quality sensor (HBME688)       No
-Color sensor (VM3011)              No
+Low power accelerometer (ADXL362)  Yes     SPI
+IMU (BMI270)                       Yes     SPI or I2C 0x68
+Magnetometer (BMM150)              Yes     I2C 0x10
+Color sensor (BH1749NUC)           Yes     I2C 0x38
+Air quality sensor (BME688)        No      I2C 0x76
 ================================== ======= =============
 
 Serial Console
@@ -79,4 +79,4 @@ exposed via J-Link VCOM1, at 115200 bps).
 Flash & Debug
 =============
 
-Both flashing and debuing is possible only with an external debug proble.
+Both flashing and debuing is possible only with an external debug probe.

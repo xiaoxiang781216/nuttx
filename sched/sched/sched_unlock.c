@@ -129,7 +129,7 @@ int sched_unlock(void)
            */
 
           if (!nxsched_islocked_tcb(rtcb) &&
-              g_pendingtasks.head != NULL)
+              list_pendingtasks()->head != NULL)
             {
               if (nxsched_merge_pending())
                 {
@@ -263,7 +263,7 @@ int sched_unlock(void)
            * fully independently.
            */
 
-          if (g_pendingtasks.head != NULL)
+          if (list_pendingtasks()->head != NULL)
             {
               if (nxsched_merge_pending())
                 {

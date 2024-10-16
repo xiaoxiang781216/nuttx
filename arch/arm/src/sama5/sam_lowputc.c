@@ -28,6 +28,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
+#include <nuttx/spinlock.h>
 
 #include "arm_internal.h"
 #include "sam_pio.h"
@@ -318,14 +319,6 @@ int up_putc(int ch)
 {
 #if defined(SAMA5_HAVE_UART_CONSOLE) || defined(SAMA5_HAVE_USART_CONSOLE) || \
     defined(SAMA5_HAVE_FLEXCOM_CONSOLE) || defined(CONFIG_SAMA5_DBGU_CONSOLE)
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      arm_lowputc('\r');
-    }
 
   arm_lowputc(ch);
 #endif

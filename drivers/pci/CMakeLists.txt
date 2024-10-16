@@ -38,6 +38,10 @@ if(CONFIG_PCI)
     list(APPEND SRCS pci_uio_ivshmem.c)
   endif()
 
+  if(CONFIG_PCI_EP_TEST)
+    list(APPEND SRCS pci_ep_test.c)
+  endif()
+
   target_sources(drivers PRIVATE ${SRCS})
 
 endif() # CONFIG_PCI
@@ -45,10 +49,6 @@ endif() # CONFIG_PCI
 if(CONFIG_PCI_ENDPOINT)
 
   set(SRCS pci_epc.c pci_epc_mem.c pci_epf.c)
-
-  if(CONFIG_PCI_EP_TEST)
-    list(APPEND SRCS pci_ep_test.c)
-  endif() # CONFIG_PCI_ENDPOINT_TEST
 
   if(CONFIG_PCI_QEMU_EPC)
     list(APPEND SRCS pci_qemu_epc.c)

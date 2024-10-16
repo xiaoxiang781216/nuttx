@@ -54,8 +54,7 @@ static void task_init_stream(FAR struct streamlist *list)
   /* Initialize the list access mutex */
 
   nxmutex_init(&list->sl_lock);
-  list->sl_head = NULL;
-  list->sl_tail = NULL;
+  sq_init(&list->sl_queue);
 
   /* Initialize stdin, stdout and stderr stream */
 
@@ -121,11 +120,15 @@ int task_init_info(FAR struct task_group_s *group)
 
   /* Allocate task info for group */
 
+#ifdef CONFIG_MM_KERNEL_HEAP
   info = group_zalloc(group, sizeof(struct task_info_s));
   if (info == NULL)
     {
       return -ENOMEM;
     }
+#else
+  info = &group->tg_info_;
+#endif
 
   /* Initialize user space mutex */
 

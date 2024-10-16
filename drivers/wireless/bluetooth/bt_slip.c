@@ -25,15 +25,14 @@
 #include <assert.h>
 #include <debug.h>
 #include <fcntl.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/param.h>
 #include <sys/types.h>
 
-#include <nuttx/atomic.h>
 #include <nuttx/crc16.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/wqueue.h>
 #include <nuttx/net/bluetooth.h>
 #include <nuttx/semaphore.h>
 

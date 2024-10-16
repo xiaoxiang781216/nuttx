@@ -1,6 +1,8 @@
 /****************************************************************************
  * mm/mempool/mempool.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -23,10 +25,10 @@
  ****************************************************************************/
 
 #include <assert.h>
+#include <execinfo.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <syslog.h>
-#include <execinfo.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/mm/kasan.h>
@@ -195,16 +197,23 @@ static void mempool_memdump_callback(FAR struct mempool_s *pool,
   if ((MM_DUMP_ASSIGN(dump, buf) || MM_DUMP_ALLOC(dump, buf) ||
        MM_DUMP_LEAK(dump, buf)) && MM_DUMP_SEQNO(dump, buf))
     {
-#  if CONFIG_MM_BACKTRACE > 0
       char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_MM_BACKTRACE)];
 
-      backtrace_format(tmp, sizeof(tmp), buf->backtrace,
-                       CONFIG_MM_BACKTRACE);
-#  else
-      char *tmp = "";
+#  if CONFIG_MM_BACKTRACE > 0
+      FAR const char *format = " %0*p";
+      int i;
+
+      for (i = 0; i < CONFIG_MM_BACKTRACE &&
+                      buf->backtrace[i]; i++)
+        {
+          snprintf(tmp + i * BACKTRACE_PTR_FMT_WIDTH,
+                   sizeof(tmp) - i * BACKTRACE_PTR_FMT_WIDTH,
+                   format, BACKTRACE_PTR_FMT_WIDTH - 1,
+                   buf->backtrace[i]);
+        }
 #  endif
 
-      syslog(LOG_INFO, "%6d%12zu%12lu%*p %s\n",
+      syslog(LOG_INFO, "%6d%12zu%12lu%*p%s\n",
              buf->pid, blocksize, buf->seqno,
              BACKTRACE_PTR_FMT_WIDTH,
              ((FAR char *)buf - pool->blocksize), tmp);
@@ -310,8 +319,6 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
   mempool_procfs_register(&pool->procfs, name);
 #  ifdef CONFIG_MM_BACKTRACE_DEFAULT
   pool->procfs.backtrace = true;
-#  elif CONFIG_MM_BACKTRACE > 0
-  pool->procfs.backtrace = false;
 #  endif
 #endif
 
@@ -351,7 +358,7 @@ retry:
           if (blk == NULL)
             {
               spin_unlock_irqrestore(&pool->lock, flags);
-              return NULL;
+              return blk;
             }
         }
       else
@@ -392,7 +399,6 @@ retry:
     }
 
   pool->nalloc++;
-
   spin_unlock_irqrestore(&pool->lock, flags);
   blk = kasan_unpoison(blk, pool->blocksize);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
@@ -403,7 +409,6 @@ retry:
   mempool_add_backtrace(pool, (FAR struct mempool_backtrace_s *)
                               ((FAR char *)blk + pool->blocksize));
 #endif
-
   return blk;
 }
 

@@ -196,7 +196,7 @@ static bool part_bytecheck(FAR struct mtd_partition_s *priv, off_t byoff)
 {
   off_t readend;
 
-  readend = (byoff + priv->geo.erasesize - 1) / priv->geo.erasesize;
+  readend   = (byoff + priv->geo.erasesize - 1) / priv->geo.erasesize;
   return readend <= priv->geo.neraseblocks;
 }
 

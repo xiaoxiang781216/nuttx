@@ -66,7 +66,7 @@
 
 FAR const void *modlib_getsymbol(FAR void *handle, FAR const char *name)
 {
-  FAR struct module_s *modp = (FAR struct module_s *)handle;
+  FAR struct module_s *modp = handle;
   FAR const struct symtab_s *symbol;
   int err;
   int ret;
@@ -95,16 +95,17 @@ FAR const void *modlib_getsymbol(FAR void *handle, FAR const char *name)
 
   symbol = symtab_findbyname(modp->modinfo.exports, name,
                              modp->modinfo.nexports);
+
+  modlib_registry_unlock();
   if (symbol == NULL)
     {
       berr("ERROR: Failed to find symbol in symbol \"%s\" in table\n", name);
-      err = ENOENT;
-      goto errout_with_lock;
+      set_errno(ENOENT);
+      return NULL;
     }
 
   /* Return the address within the module associated with the symbol */
 
-  modlib_registry_unlock();
   DEBUGASSERT(symbol->sym_value != NULL);
   return symbol->sym_value;
 

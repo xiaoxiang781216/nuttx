@@ -5,8 +5,9 @@
 Installing
 ==========
 
-The first step to get started with NuttX is to install a series of required tools, a toolchain for the architecture
-you will be working with and, finally, download NuttX source code itself.
+The first step to get started with NuttX is to install a series of required tools,
+a toolchain for the architecture you will be working with and, finally, download
+NuttX source code itself.
 
 Prerequisites
 =============
@@ -23,11 +24,11 @@ First, install the following set of system dependencies according to your Operat
 
       $ sudo apt install \
       $ bison flex gettext texinfo libncurses5-dev libncursesw5-dev xxd \
-      $ gperf automake libtool pkg-config build-essential gperf genromfs \
+      $ git gperf automake libtool pkg-config build-essential gperf genromfs \
       $ libgmp-dev libmpc-dev libmpfr-dev libisl-dev binutils-dev libelf-dev \
-      $ libexpat-dev gcc-multilib g++-multilib picocom u-boot-tools util-linux
+      $ libexpat1-dev gcc-multilib g++-multilib picocom u-boot-tools util-linux
 
-  .. tab:: Linux (Fdora / RPM based)
+  .. tab:: Linux (Fedora / RPM based)
 
     Run the following command to install packages:
 
@@ -35,7 +36,7 @@ First, install the following set of system dependencies according to your Operat
 
       $ sudo dnf install \
       $ bison flex gettext texinfo ncurses-devel ncurses ncurses-compat-libs \
-      $ gperf automake libtool pkgconfig @development-tools gperf genromfs \
+      $ git gperf automake libtool pkgconfig @development-tools gperf genromfs \
       $ gmp-devel mpfr-devel libmpc-devel isl-devel binutils-devel elfutils-libelf-devel \
       $ expat-devel gcc-c++ g++ picocom uboot-tools util-linux
 
@@ -75,7 +76,11 @@ First, install the following set of system dependencies according to your Operat
 KConfig frontend
 ----------------
 
-NuttX configuration system uses `KConfig <https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt>`_ which is exposed via a series of interactive menu-based *frontends*, part of the ``kconfig-frontends`` package. Depending on your OS you may use a precompiled package or you will have to build it from source, which is available in the `NuttX tools repository <https://bitbucket.org/nuttx/tools/src/master/kconfig-frontends/>`_:
+NuttX configuration system uses `KConfig <https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt>`_
+which is exposed via a series of interactive menu-based *frontends*, part of the
+``kconfig-frontends`` package. Depending on your OS you may use a precompiled
+package or you will have to build it from source, which is available in the
+`NuttX tools repository <https://bitbucket.org/nuttx/tools/src/master/kconfig-frontends/>`_:
 
 .. tabs::
 
@@ -101,16 +106,21 @@ NuttX configuration system uses `KConfig <https://www.kernel.org/doc/Documentati
     $ make
     $ sudo make install
 
-  .. code-tab:: console MacOS
+  .. code-tab:: console macOS
 
     $ git clone https://bitbucket.org/nuttx/tools.git
     $ cd tools/kconfig-frontends
     $ patch < ../kconfig-macos.diff -p 1
     $ ./configure --enable-mconf --disable-shared --enable-static --disable-gconf --disable-qconf --disable-nconf
     $ make
-    $ make install
+    $ sudo make install
 
-NuttX also supports `kconfiglib <https://github.com/ulfalizer/Kconfiglib>` by default, which is a Kconfig tool implemented in Python 2/3. Compared with kconfig-frontends, kconfiglib provides NuttX with the possibility of multi-platform support(configure NuttX in Winodws native/Visual Studio), and also kconfiglib has a stronger Kconfig syntax check, this will help developers to avoid some Kconfig syntax errors.  Install kconfiglib via following command:
+NuttX also supports `kconfiglib <https://github.com/ulfalizer/Kconfiglib>`_ by
+default, which is a Kconfig tool implemented in Python 2/3. Compared with
+``kconfig-frontends``, kconfiglib provides NuttX with the possibility of
+multi-platform support(configure NuttX in Windows native/Visual Studio), and also
+``kconfiglib`` has a stronger Kconfig syntax check, this will help developers to avoid
+some Kconfig syntax errors.  Install kconfiglib via following command:
 
 .. code-block:: shell
 
@@ -122,11 +132,6 @@ If you are a working on Windows, which also need the support of windows-curses:
 
   pip install windows-curses
 
-.. tip::
-  It should be noted that kconfiglib does not support **modules** attributes.
-  (<https://github.com/ulfalizer/Kconfiglib/blob/master/kconfiglib.py#L3239-L3254>,
-  the community seems to have stopped updating), if the features depends on
-  ``CONFIG_BUILD_LOADABLE``, kconfiglib may not be a good choice.
 
 Toolchain
 =========
@@ -148,6 +153,20 @@ ARM architecture:
 
     $ sudo apt install gcc-arm-none-eabi binutils-arm-none-eabi
 
+  .. tab:: macOS
+
+    For 32 bit ARM targets, such as STM32:
+
+    .. code-block:: console
+      
+      $ brew install --cask gcc-arm-embedded
+
+    For 64 bit ARM targets, such as Allwinner A64:
+
+    .. code-block:: console
+      
+      $ brew install --cask gcc-aarch64-embedded
+
   .. tab:: From arm.com
 
     First, create a directory to hold the toolchain:
@@ -166,16 +185,16 @@ ARM architecture:
 
     .. code-block:: console
 
-      $ HOST_PLATFORM=x86_64-linux   # use "mac" for macOS.
-      $ # For Windows there is a zip instead (gcc-arm-none-eabi-9-2019-q4-major-win32.zip)
-      $ curl -L -O https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2019q4/gcc-arm-none-eabi-9-2019-q4-major-${HOST_PLATFORM}.tar.bz2
-      $ tar xf gcc-arm-none-eabi-9-2019-q4-major-${HOST_PLATFORM}.tar.bz2
+      $ HOST_PLATFORM=x86_64-linux   # use 'aarch64-linux' for ARM64 Linux, or 'mac' for Intel macOS
+      $ # For Windows there is a zip instead (gcc-arm-none-eabi-10.3-2021.10-win32.zip)
+      $ curl -L -O https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-${HOST_PLATFORM}.tar.bz2
+      $ tar xf gcc-arm-none-eabi-10.3-2021.10-${HOST_PLATFORM}.tar.bz2
 
     Add the toolchain to your `PATH`:
 
     .. code-block:: console
 
-      $ echo "export PATH=/opt/gcc/gcc-arm-none-eabi-9-2019-q4-major/bin:$PATH" >> ~/.bashrc
+      $ echo "export PATH=/opt/gcc/gcc-arm-none-eabi-10.3-2021.10/bin:$PATH" >> ~/.bashrc
 
     You can edit your shell's rc files if you don't use bash.
 
@@ -191,7 +210,13 @@ ARM architecture:
 Download NuttX
 ==============
 
-Apache NuttX is actively developed on GitHub. There are two main repositories, `nuttx <https://github.com/apache/nuttx>`_ and `apps <https://github.com/apache/nuttx-apps>`_, where the latter is technically optional (but recommended for complete set of features). If you intend to contribute changes, you need the absolute latest version or you simply prefer to work using git, you should clone these repositories (recommended). Otherwise you can choose to download any `stable release <https://nuttx.apache.org/download/>`_ archive.
+Apache NuttX is actively developed on GitHub. There are two main repositories,
+`nuttx <https://github.com/apache/nuttx>`_ and `apps <https://github.com/apache/nuttx-apps>`_,
+where the latter is technically optional (but recommended for complete set of
+features). If you intend to contribute changes, you need the absolute latest
+version or you simply prefer to work using git, you should clone these
+repositories (recommended). Otherwise you can choose to download any
+`stable release <https://nuttx.apache.org/download/>`_ archive.
 
 .. tabs::
 

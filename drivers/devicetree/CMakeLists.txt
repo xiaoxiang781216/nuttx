@@ -28,7 +28,7 @@ if(CONFIG_DEVICE_TREE)
     list(APPEND SRCS fdt_virtio_mmio.c)
   endif()
 
-  target_sources(drivers PRIVATE ${SRCS})
   target_include_directories(drivers
                              PRIVATE ${NUTTX_DIR}/libs/libc/fdt/dtc/libfdt)
+  target_sources(drivers PRIVATE ${SRCS})
 endif()

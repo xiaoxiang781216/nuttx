@@ -379,7 +379,7 @@ int i3c_register(FAR struct i3c_master_controller *master, int bus)
 
   /* Create the character device name */
 
-  snprintf(devname, DEVNAME_FMTLEN, DEVNAME_FMT, bus);
+  snprintf(devname, sizeof(devname), DEVNAME_FMT, bus);
   ret = register_driver(devname, &g_i3cdrvr_fops, 0666, priv);
   if (ret < 0)
     {

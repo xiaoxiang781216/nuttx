@@ -24,17 +24,29 @@
 
 #include <nuttx/config.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/mqueue.h>
 
 #include <debug.h>
 #include <assert.h>
+#include <netinet/in.h>
+#include <sys/param.h>
 
 #include "xtensa.h"
+#include "hardware/esp32s3_efuse.h"
 #include "hardware/esp32s3_rtccntl.h"
 #include "hardware/esp32s3_soc.h"
 #include "hardware/esp32s3_syscon.h"
-#include "hardware/esp32s3_efuse.h"
-#include "esp32s3_periph.h"
+#include "hardware/esp32s3_system.h"
+#include "esp32s3_irq.h"
+#include "esp32s3_partition.h"
 
+#include "esp_private/phy.h"
+#ifdef CONFIG_ESP32S3_WIFI
+#  include "esp_private/wifi.h"
+#  include "esp_wpa.h"
+#endif
+#include "private/esp_coexist_internal.h"
+#include "periph_ctrl.h"
 #include "esp_phy_init.h"
 #include "phy_init_data.h"
 
@@ -44,8 +56,26 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define MAC_ADDR0_REG EFUSE_RD_MAC_SPI_SYS_0_REG
-#define MAC_ADDR1_REG EFUSE_RD_MAC_SPI_SYS_1_REG
+/* Software Interrupt */
+
+#define SWI_IRQ       ESP32S3_IRQ_INT_FROM_CPU2
+#define SWI_PERIPH    ESP32S3_PERIPH_INT_FROM_CPU2
+
+/****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+/* Wireless Private Data */
+
+struct esp_wireless_priv_s
+{
+  volatile int ref;               /* Reference count */
+
+  int cpuint;                     /* CPU interrupt assigned to SWI */
+
+  struct list_node sc_list;       /* Semaphore cache list */
+  struct list_node qc_list;       /* Queue cache list */
+};
 
 /****************************************************************************
  * Private Function Prototypes
@@ -53,12 +83,12 @@
 
 static inline void phy_digital_regs_store(void);
 static inline void phy_digital_regs_load(void);
+static int esp_swi_irq(int irq, void *context, void *arg);
 
 /****************************************************************************
  * Extern Functions declaration
  ****************************************************************************/
 
-extern void coex_pti_v2(void);
 extern uint8_t esp_crc8(const uint8_t *p, uint32_t len);
 extern void phy_wakeup_init(void);
 extern void phy_close_rf(void);
@@ -66,6 +96,7 @@ extern uint8_t phy_dig_reg_backup(bool init, uint32_t *regs);
 extern int  register_chipv7_phy(const esp_phy_init_data_t *init_data,
                                 esp_phy_calibration_data_t *cal_data,
                                 esp_phy_calibration_mode_t cal_mode);
+extern uint32_t crc32_le(uint32_t crc, uint8_t const *buf, uint32_t len);
 
 /****************************************************************************
  * Private Data
@@ -87,9 +118,86 @@ static uint32_t *g_phy_digital_regs_mem = NULL;
 
 static bool g_is_phy_calibrated = false;
 
-/* Reference count of power on of wifi and bt power domain */
+/* Private data of the wireless common interface */
 
-static uint8_t g_wifi_bt_pd_controller;
+static struct esp_wireless_priv_s g_esp_wireless_priv;
+
+#ifdef CONFIG_ESP32S3_PHY_INIT_DATA_IN_PARTITION
+static const char *phy_partion_label = "phy_init";
+#endif
+
+#ifdef CONFIG_ESP32S3_SUPPORT_MULTIPLE_PHY_INIT_DATA
+
+static phy_init_data_type_t g_phy_init_data_type;
+
+static phy_init_data_type_t g_current_apply_phy_init_data;
+
+static char g_phy_current_country[PHY_COUNTRY_CODE_LEN];
+
+/* Whether it is a new bin */
+
+static bool g_multiple_phy_init_data_bin;
+
+/* PHY init data type array */
+
+static const char *g_phy_type[ESP_PHY_INIT_DATA_TYPE_NUMBER] =
+{
+  "DEFAULT", "SRRC", "FCC", "CE", "NCC", "KCC", "MIC", "IC",
+  "ACMA", "ANATEL", "ISED", "WPC", "OFCA", "IFETEL", "RCM"
+};
+
+/* Country and PHY init data type map */
+
+static phy_country_to_bin_type_t g_country_code_map_type_table[] =
+{
+  {"01", ESP_PHY_INIT_DATA_TYPE_DEFAULT},
+  {"AT", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"AU", ESP_PHY_INIT_DATA_TYPE_ACMA},
+  {"BE", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"BG", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"BR", ESP_PHY_INIT_DATA_TYPE_ANATEL},
+  {"CA", ESP_PHY_INIT_DATA_TYPE_ISED},
+  {"CH", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"CN", ESP_PHY_INIT_DATA_TYPE_SRRC},
+  {"CY", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"CZ", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"DE", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"DK", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"EE", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"ES", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"FI", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"FR", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"GB", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"GR", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"HK", ESP_PHY_INIT_DATA_TYPE_OFCA},
+  {"HR", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"HU", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"IE", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"IN", ESP_PHY_INIT_DATA_TYPE_WPC},
+  {"IS", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"IT", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"JP", ESP_PHY_INIT_DATA_TYPE_MIC},
+  {"KR", ESP_PHY_INIT_DATA_TYPE_KCC},
+  {"LI", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"LT", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"LU", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"LV", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"MT", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"MX", ESP_PHY_INIT_DATA_TYPE_IFETEL},
+  {"NL", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"NO", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"NZ", ESP_PHY_INIT_DATA_TYPE_RCM},
+  {"PL", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"PT", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"RO", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"SE", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"SI", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"SK", ESP_PHY_INIT_DATA_TYPE_CE},
+  {"TW", ESP_PHY_INIT_DATA_TYPE_NCC},
+  {"US", ESP_PHY_INIT_DATA_TYPE_FCC},
+};
+
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -133,8 +241,182 @@ static inline void phy_digital_regs_load(void)
 }
 
 /****************************************************************************
+ * Name: esp_swi_irq
+ *
+ * Description:
+ *   Wireless software interrupt callback function.
+ *
+ * Parameters:
+ *   cpuint  - CPU interrupt index
+ *   context - Context data from the ISR
+ *   arg     - NULL
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success. A negated errno value is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+static int esp_swi_irq(int irq, void *context, void *arg)
+{
+  int i;
+  int ret;
+  struct esp_semcache_s *sc;
+  struct esp_semcache_s *sc_tmp;
+  struct esp_queuecache_s *qc;
+  struct esp_queuecache_s *qc_tmp;
+  struct esp_wireless_priv_s *priv = &g_esp_wireless_priv;
+
+  modifyreg32(SYSTEM_CPU_INTR_FROM_CPU_2_REG, SYSTEM_CPU_INTR_FROM_CPU_2, 0);
+
+  list_for_every_entry_safe(&priv->sc_list, sc, sc_tmp,
+                            struct esp_semcache_s, node)
+    {
+      for (i = 0; i < sc->count; i++)
+        {
+          ret = nxsem_post(sc->sem);
+          if (ret < 0)
+            {
+              wlerr("ERROR: Failed to post sem ret=%d\n", ret);
+            }
+        }
+
+      sc->count = 0;
+      list_delete(&sc->node);
+    }
+
+  list_for_every_entry_safe(&priv->qc_list, qc, qc_tmp,
+                            struct esp_queuecache_s, node)
+    {
+      ret = file_mq_send(qc->mq_ptr, (const char *)qc->buffer, qc->size, 0);
+      if (ret < 0)
+        {
+          wlerr("ERROR: Failed to send queue ret=%d\n", ret);
+        }
+
+      list_delete(&qc->node);
+    }
+
+  return OK;
+}
+
+#ifdef CONFIG_ESP32S3_WIFI
+
+/****************************************************************************
+ * Name: esp_wifi_set_log_level
+ *
+ * Description:
+ *   Sets the log level for the ESP32 WiFi module based on preprocessor
+ *   definitions. The log level can be verbose, warning, or error.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static void esp_wifi_set_log_level(void)
+{
+  wifi_log_level_t wifi_log_level = WIFI_LOG_NONE;
+
+  /* set WiFi log level */
+
+#if defined(CONFIG_DEBUG_WIRELESS_INFO)
+  wifi_log_level = WIFI_LOG_VERBOSE;
+#elif defined(CONFIG_DEBUG_WIRELESS_WARN)
+  wifi_log_level = WIFI_LOG_WARNING;
+#elif defined(CONFIG_LOG_MAXIMUM_LEVEL)
+  wifi_log_level = WIFI_LOG_ERROR;
+#endif
+
+  esp_wifi_internal_set_log_level(wifi_log_level);
+}
+#endif /* CONFIG_ESP32S3_WIFI */
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: esp_wifi_to_errno
+ *
+ * Description:
+ *   Transform from ESP Wi-Fi error code to NuttX error code
+ *
+ * Input Parameters:
+ *   err - ESP Wi-Fi error code
+ *
+ * Returned Value:
+ *   NuttX error code defined in errno.h
+ *
+ ****************************************************************************/
+
+int32_t esp_wifi_to_errno(int err)
+{
+  int ret;
+
+  if (err < ESP_ERR_WIFI_BASE)
+    {
+      /* Unmask component error bits */
+
+      ret = err & 0xfff;
+
+      switch (ret)
+        {
+          case ESP_OK:
+            ret = OK;
+            break;
+          case ESP_ERR_NO_MEM:
+            ret = -ENOMEM;
+            break;
+
+          case ESP_ERR_INVALID_ARG:
+            ret = -EINVAL;
+            break;
+
+          case ESP_ERR_INVALID_STATE:
+            ret = -EIO;
+            break;
+
+          case ESP_ERR_INVALID_SIZE:
+            ret = -EINVAL;
+            break;
+
+          case ESP_ERR_NOT_FOUND:
+            ret = -ENOSYS;
+            break;
+
+          case ESP_ERR_NOT_SUPPORTED:
+            ret = -ENOSYS;
+            break;
+
+          case ESP_ERR_TIMEOUT:
+            ret = -ETIMEDOUT;
+            break;
+
+          case ESP_ERR_INVALID_MAC:
+            ret = -EINVAL;
+            break;
+
+          default:
+            ret = ERROR;
+            break;
+        }
+    }
+  else
+    {
+      ret = ERROR;
+    }
+
+  if (ret != OK)
+    {
+      wlerr("ERROR: %s\n", esp_err_to_name(err));
+    }
+
+  return ret;
+}
 
 /****************************************************************************
  * Functions needed by libphy.a
@@ -186,293 +468,529 @@ int phy_printf(const char *format, ...)
   return 0;
 }
 
+#ifdef CONFIG_ESP32S3_SUPPORT_MULTIPLE_PHY_INIT_DATA
+
 /****************************************************************************
- * Name: esp32s3_phy_enable_clock
+ * Name: phy_crc_check
  *
  * Description:
- *   Enable PHY hardware clock
+ *   Check the checksum value of data
  *
  * Input Parameters:
- *   None
+ *   data     - Data buffer pointer
+ *   length   - Data length
+ *   checksum - Checksum pointer
  *
  * Returned Value:
- *   None
+ *   OK on success; a negated errno on failure
  *
  ****************************************************************************/
 
-void IRAM_ATTR esp32s3_phy_enable_clock(void)
+static int phy_crc_check(uint8_t *data, const uint8_t *checksum,
+                         size_t length)
 {
-  esp32s3_periph_wifi_bt_common_module_enable();
+  uint32_t crc_data = crc32_le(0, data, length);
+  uint32_t crc_size_conversion = HTONL(crc_data);
+  uint32_t tmp_crc = checksum[0] | (checksum[1] << 8) | (checksum[2] << 16) |
+                     (checksum[3] << 24);
+  if (crc_size_conversion != tmp_crc)
+    {
+      return ERROR;
+    }
+
+  return OK;
 }
 
 /****************************************************************************
- * Name: esp32s3_phy_disable_clock
+ * Name: phy_find_bin_type_according_country
  *
  * Description:
- *   Disable PHY hardware clock
+ *   Find the PHY initialization data type according to country code
  *
  * Input Parameters:
- *   None
+ *   country - Country code pointer
  *
  * Returned Value:
- *   None
+ *   PHY initialization data type
  *
  ****************************************************************************/
 
-void IRAM_ATTR esp32s3_phy_disable_clock(void)
+static uint8_t phy_find_bin_type_according_country(const char *country)
 {
-  esp32s3_periph_wifi_bt_common_module_disable();
+  uint8_t i;
+  uint8_t phy_init_data_type;
+  uint8_t num = nitems(g_country_code_map_type_table);
+  for (i = 0; i < num; i++)
+    {
+      if (memcmp(country, g_country_code_map_type_table[i].cc,
+                 sizeof(g_phy_current_country)) == 0)
+        {
+          phy_init_data_type = g_country_code_map_type_table[i].type;
+          wlinfo("Current country is %c%c, PHY init data type is %s\n",
+                  g_country_code_map_type_table[i].cc[0],
+                  g_country_code_map_type_table[i].cc[1],
+                  g_phy_type[g_country_code_map_type_table[i].type]);
+          break;
+        }
+    }
+
+  if (i == num)
+    {
+      phy_init_data_type = ESP_PHY_INIT_DATA_TYPE_DEFAULT;
+      wlerr("Use the default certification code beacuse %c%c doesn't "
+            "have a certificate\n", country[0], country[1]);
+    }
+
+  return phy_init_data_type;
 }
 
 /****************************************************************************
- * Name: esp_read_mac
+ * Name: phy_find_bin_data_according_type
  *
  * Description:
- *   Read MAC address from efuse
+ *   Find the PHY initialization data according to PHY init data type
  *
  * Input Parameters:
- *   mac  - MAC address buffer pointer
- *   type - MAC address type
+ *   output_data    - Output data buffer pointer
+ *   control_info   - PHY init data control infomation
+ *   input_data     - Input data buffer pointer
+ *   init_data_type - PHY init data type
  *
  * Returned Value:
- *   0 if success or -1 if fail
+ *   OK on success; a negated errno on failure
  *
  ****************************************************************************/
 
-int32_t esp_read_mac(uint8_t *mac, esp_mac_type_t type)
+static int phy_find_bin_data_according_type(uint8_t *output_data,
+        const phy_control_info_data_t *control_info,
+        const esp_phy_init_data_t *input_data,
+        phy_init_data_type_t init_data_type)
 {
-  uint32_t regval[2];
-  uint8_t tmp;
-  uint8_t *data = (uint8_t *)regval;
   int i;
-
-  if (mac == NULL)
+  for (i = 0; i < control_info->number; i++)
     {
-      wlerr("mac address param is NULL");
-      return -1;
-    }
-
-  if (type > ESP_MAC_BT)
-    {
-      wlerr("Input type is error=%d\n", type);
-      return -1;
-    }
-
-  regval[0] = getreg32(MAC_ADDR0_REG);
-  regval[1] = getreg32(MAC_ADDR1_REG);
-
-  for (i = 0; i < MAC_LEN; i++)
-    {
-      mac[i] = data[5 - i];
-    }
-
-  if (type == ESP_MAC_WIFI_SOFTAP)
-    {
-      tmp = mac[0];
-      for (i = 0; i < 64; i++)
+      if (init_data_type == *((uint8_t *)(input_data + i)
+                              + PHY_INIT_DATA_TYPE_OFFSET))
         {
-          mac[0] = tmp | 0x02;
-          mac[0] ^= i << 2;
-
-          if (mac[0] != tmp)
-            {
-              break;
-            }
-        }
-
-      if (i >= 64)
-        {
-          wlerr("Failed to generate SoftAP MAC\n");
-          return -1;
+          memcpy(output_data + sizeof(phy_init_magic_pre),
+                 (input_data + i), sizeof(esp_phy_init_data_t));
+          break;
         }
     }
 
-  if (type == ESP_MAC_BT)
+  if (i == control_info->number)
     {
-      tmp = mac[0];
-      for (i = 0; i < 64; i++)
-        {
-          mac[0] = tmp | 0x02;
-          mac[0] ^= i << 2;
-
-          if (mac[0] != tmp)
-            {
-              break;
-            }
-        }
-
-      mac[5] += 1;
+      return ERROR;
     }
 
-  return 0;
+  return OK;
 }
 
 /****************************************************************************
- * Name: esp32s3_phy_disable
+ * Name: phy_get_multiple_init_data
  *
  * Description:
- *   Deinitialize PHY hardware
+ *   Get multiple PHY init data according to PHY init data type
  *
  * Input Parameters:
- *   None
+ *   data           - Data buffer pointer
+ *   length         - Data length
+ *   init_data_type - PHY init data type
  *
  * Returned Value:
- *   None
+ *   OK on success; a negated errno on failure
  *
  ****************************************************************************/
 
-void esp32s3_phy_disable(void)
+static int phy_get_multiple_init_data(uint8_t *data, size_t length,
+                                      phy_init_data_type_t init_data_type)
 {
-  irqstate_t flags;
-  flags = enter_critical_section();
-
-  g_phy_access_ref--;
-
-  if (g_phy_access_ref == 0)
+  phy_control_info_data_t *control_info = (phy_control_info_data_t *)
+                                kmm_malloc(sizeof(phy_control_info_data_t));
+  if (control_info == NULL)
     {
-      phy_digital_regs_store();
-
-      /* Disable PHY and RF. */
-
-      phy_close_rf();
-
-      /* Disable PHY temperature sensor */
-
-      phy_xpd_tsens();
-
-      /* Disable Wi-Fi/BT common peripheral clock.
-       * Do not disable clock for hardware RNG.
-       */
-
-      esp32s3_phy_disable_clock();
+      wlerr("ERROR: Failed to allocate memory for\
+            PHY init data control info\n");
+      return -ENOMEM;
     }
 
-  leave_critical_section(flags);
+  int ret = esp32s3_partition_read(phy_partion_label,
+                                   length,
+                                   control_info,
+                                   sizeof(phy_control_info_data_t));
+  if (ret != OK)
+    {
+      kmm_free(control_info);
+      wlerr("ERROR: Failed to read PHY control info data partition\n");
+      return ret;
+    }
+
+  if ((control_info->check_algorithm) == PHY_CRC_ALGORITHM)
+    {
+      ret = phy_crc_check(control_info->multiple_bin_checksum,
+                          control_info->control_info_checksum,
+                          sizeof(phy_control_info_data_t) -
+                          sizeof(control_info->control_info_checksum));
+      if (ret != OK)
+        {
+          kmm_free(control_info);
+          wlerr("ERROR: PHY init data control info check error\n");
+          return ret;
+        }
+    }
+  else
+    {
+      kmm_free(control_info);
+      wlerr("ERROR: Check algorithm not CRC, PHY init data update failed\n");
+      return ERROR;
+    }
+
+  uint8_t *init_data_multiple = (uint8_t *)
+        kmm_malloc(sizeof(esp_phy_init_data_t) * control_info->number);
+  if (init_data_multiple == NULL)
+    {
+      kmm_free(control_info);
+      wlerr("ERROR: Failed to allocate memory for PHY init data\n");
+      return -ENOMEM;
+    }
+
+  ret = esp32s3_partition_read(phy_partion_label, length +
+          sizeof(phy_control_info_data_t), init_data_multiple,
+          sizeof(esp_phy_init_data_t) * control_info->number);
+  if (ret != OK)
+    {
+      kmm_free(init_data_multiple);
+      kmm_free(control_info);
+      wlerr("ERROR: Failed to read PHY init data multiple bin partition\n");
+      return ret;
+    }
+
+  if ((control_info->check_algorithm) == PHY_CRC_ALGORITHM)
+    {
+      ret = phy_crc_check(init_data_multiple,
+              control_info->multiple_bin_checksum,
+              sizeof(esp_phy_init_data_t) * control_info->number);
+      if (ret != OK)
+        {
+          kmm_free(init_data_multiple);
+          kmm_free(control_info);
+          wlerr("ERROR: PHY init data multiple bin check error\n");
+          return ret;
+        }
+    }
+  else
+    {
+      kmm_free(init_data_multiple);
+      kmm_free(control_info);
+      wlerr("ERROR: Check algorithm not CRC, PHY init data update failed\n");
+      return ERROR;
+    }
+
+  ret = phy_find_bin_data_according_type(data, control_info,
+          (const esp_phy_init_data_t *)init_data_multiple, init_data_type);
+  if (ret != OK)
+    {
+      wlerr("ERROR: %s has not been certified, use DEFAULT PHY init data\n",
+            g_phy_type[init_data_type]);
+      g_phy_init_data_type = ESP_PHY_INIT_DATA_TYPE_DEFAULT;
+    }
+  else
+    {
+      g_phy_init_data_type = init_data_type;
+    }
+
+  kmm_free(init_data_multiple);
+  kmm_free(control_info);
+  return OK;
 }
 
 /****************************************************************************
- * Name: esp32s3_phy_enable
+ * Name: phy_update_init_data
  *
  * Description:
- *   Initialize PHY hardware
+ *   Update PHY init data according to PHY init data type
  *
  * Input Parameters:
- *   None
+ *   init_data_type - PHY init data type
  *
  * Returned Value:
- *   None
+ *   OK on success; a negated errno on failure
  *
  ****************************************************************************/
 
-void esp32s3_phy_enable(void)
+static int phy_update_init_data(phy_init_data_type_t init_data_type)
 {
-  static bool debug = false;
-  irqstate_t flags;
-  esp_phy_calibration_data_t *cal_data;
-
-  if (debug == false)
+  int ret;
+  size_t length = sizeof(phy_init_magic_pre) +
+      sizeof(esp_phy_init_data_t) + sizeof(phy_init_magic_post);
+  uint8_t *init_data_store = kmm_malloc(length);
+  if (init_data_store == NULL)
     {
-      char *phy_version = get_phy_version_str();
-      wlinfo("phy_version %s\n", phy_version);
-      debug = true;
+      wlerr("ERROR: Failed to allocate memory for updated country code "
+            "PHY init data\n");
+      return -ENOMEM;
     }
 
-  flags = enter_critical_section();
-
-  if (g_phy_access_ref == 0)
+  ret = esp32s3_partition_read(phy_partion_label, 0, init_data_store,
+                               length);
+  if (ret != OK)
     {
-      esp32s3_phy_enable_clock();
+      kmm_free(init_data_store);
+      wlerr("ERROR: Failed to read updated country code PHY data\n");
+      return ret;
+    }
 
-      if (g_is_phy_calibrated == false)
+  if (memcmp(init_data_store, PHY_INIT_MAGIC,
+             sizeof(phy_init_magic_pre)) != 0 ||
+      memcmp(init_data_store + length - sizeof(phy_init_magic_post),
+             PHY_INIT_MAGIC, sizeof(phy_init_magic_post)) != 0)
+    {
+      kmm_free(init_data_store);
+      wlerr("ERROR: Failed to validate updated country code PHY data\n");
+      return ERROR;
+    }
+
+  /* find init data bin according init data type */
+
+  if (init_data_type != ESP_PHY_INIT_DATA_TYPE_DEFAULT)
+    {
+      ret = phy_get_multiple_init_data(init_data_store, length,
+                                       init_data_type);
+      if (ret != OK)
         {
-          cal_data = kmm_zalloc(sizeof(esp_phy_calibration_data_t));
-          if (cal_data == NULL)
-            {
-              wlerr("ERROR: Failed to allocate PHY"
-                    "calibration data buffer.");
-              abort();
-            }
-
-#if CONFIG_ESP_PHY_ENABLE_USB
-          phy_bbpll_en_usb(true);
+          kmm_free(init_data_store);
+#ifdef CONFIG_ESP32S3_PHY_INIT_DATA_ERROR
+          abort();
+#else
+          return ret;
 #endif
-          wlinfo("calibrating");
-          register_chipv7_phy(&phy_init_data, cal_data, PHY_RF_CAL_FULL);
-          g_is_phy_calibrated = true;
-          kmm_free(cal_data);
         }
-      else
+    }
+  else
+    {
+      g_phy_init_data_type = ESP_PHY_INIT_DATA_TYPE_DEFAULT;
+    }
+
+  if (g_current_apply_phy_init_data != g_phy_init_data_type)
+    {
+      ret = esp_phy_apply_phy_init_data(init_data_store +
+                                        sizeof(phy_init_magic_pre));
+      if (ret != OK)
         {
-          phy_wakeup_init();
-          phy_digital_regs_load();
+          wlerr("ERROR: PHY init data failed to load\n");
+          kmm_free(init_data_store);
+          return ret;
         }
+
+      wlinfo("PHY init data type updated from %s to %s\n",
+             g_phy_type[g_current_apply_phy_init_data],
+             g_phy_type[g_phy_init_data_type]);
+      g_current_apply_phy_init_data = g_phy_init_data_type;
     }
 
-  g_phy_access_ref++;
-
-  leave_critical_section(flags);
+  kmm_free(init_data_store);
+  return OK;
 }
 
+#endif
+
+#ifdef CONFIG_ESP32S3_PHY_INIT_DATA_IN_PARTITION
+
 /****************************************************************************
- * Name: esp_wifi_bt_power_domain_on
+ * Name: esp_phy_get_init_data
  *
  * Description:
- *   Initialize Bluetooth and Wi-Fi power domain
+ *   Get PHY init data
  *
  * Input Parameters:
  *   None
+ *
+ * Returned Value:
+ *   Pointer to PHY init data structure
+ *
+ ****************************************************************************/
+
+const esp_phy_init_data_t *esp_phy_get_init_data(void)
+{
+  int ret;
+  size_t length = sizeof(phy_init_magic_pre) +
+                  sizeof(esp_phy_init_data_t) + sizeof(phy_init_magic_post);
+  uint8_t *init_data_store = kmm_malloc(length);
+  if (init_data_store == NULL)
+    {
+      wlerr("ERROR: Failed to allocate memory for PHY init data\n");
+      return NULL;
+    }
+
+  ret = esp32s3_partition_read(phy_partion_label, 0, init_data_store,
+                               length);
+  if (ret != OK)
+    {
+      wlerr("ERROR: Failed to get read data from MTD\n");
+      kmm_free(init_data_store);
+      return NULL;
+    }
+
+  if (memcmp(init_data_store, PHY_INIT_MAGIC, sizeof(phy_init_magic_pre))
+      != 0 || memcmp(init_data_store + length - sizeof(phy_init_magic_post),
+              PHY_INIT_MAGIC, sizeof(phy_init_magic_post)) != 0)
+    {
+#ifdef CONFIG_ESP32S3_PHY_DEFAULT_INIT_IF_INVALID
+      wlerr("ERROR: Failed to validate PHY data partition, restoring "
+            "default data into flash...");
+      memcpy(init_data_store, PHY_INIT_MAGIC, sizeof(phy_init_magic_pre));
+      memcpy(init_data_store + sizeof(phy_init_magic_pre),
+             &phy_init_data, sizeof(phy_init_data));
+      memcpy(init_data_store + sizeof(phy_init_magic_pre) +
+             sizeof(phy_init_data), PHY_INIT_MAGIC,
+             sizeof(phy_init_magic_post));
+      DEBUGASSERT(memcmp(init_data_store, PHY_INIT_MAGIC,
+                  sizeof(phy_init_magic_pre)) == 0);
+      DEBUGASSERT(memcmp(init_data_store + length -
+                  sizeof(phy_init_magic_post), PHY_INIT_MAGIC,
+                  sizeof(phy_init_magic_post)) == 0);
+
+      /* write default data */
+
+      ret = esp32s3_partition_write(phy_partion_label, 0, init_data_store,
+                                    length);
+      if (ret != OK)
+        {
+          wlerr("ERROR: Failed to write default PHY data partition\n");
+          kmm_free(init_data_store);
+          return NULL;
+        }
+#else /* CONFIG_ESP32S3_PHY_DEFAULT_INIT_IF_INVALID */
+      wlerr("ERROR: Failed to validate PHY data partition\n");
+      kmm_free(init_data_store);
+      return NULL;
+#endif
+    }
+
+#ifdef CONFIG_ESP32S3_SUPPORT_MULTIPLE_PHY_INIT_DATA
+  if (*(init_data_store + (sizeof(phy_init_magic_pre) +
+      PHY_SUPPORT_MULTIPLE_BIN_OFFSET)))
+    {
+      g_multiple_phy_init_data_bin = true;
+      wlinfo("Support multiple PHY init data bins\n");
+    }
+  else
+    {
+      wlinfo("Does not support multiple PHY init data bins\n");
+    }
+#endif
+
+  wlinfo("PHY data partition validated\n");
+  return (const esp_phy_init_data_t *)
+         (init_data_store + sizeof(phy_init_magic_pre));
+}
+
+/****************************************************************************
+ * Name: esp_phy_release_init_data
+ *
+ * Description:
+ *   Release PHY init data
+ *
+ * Input Parameters:
+ *   init_data - Pointer to PHY init data structure
  *
  * Returned Value:
  *   None
  *
  ****************************************************************************/
 
-void IRAM_ATTR esp_wifi_bt_power_domain_on(void)
+void esp_phy_release_init_data(const esp_phy_init_data_t *init_data)
 {
-  irqstate_t flags;
-
-  flags = enter_critical_section();
-
-  if (g_wifi_bt_pd_controller++ == 0)
-    {
-      modifyreg32(RTC_CNTL_DIG_PWC_REG, RTC_CNTL_WIFI_FORCE_PD, 0);
-
-      modifyreg32(SYSCON_WIFI_RST_EN_REG, 0, MODEM_RESET_FIELD_WHEN_PU);
-      modifyreg32(SYSCON_WIFI_RST_EN_REG, MODEM_RESET_FIELD_WHEN_PU, 0);
-
-      modifyreg32(RTC_CNTL_DIG_ISO_REG, RTC_CNTL_WIFI_FORCE_ISO, 0);
-    }
-
-  leave_critical_section(flags);
+  kmm_free((uint8_t *)init_data - sizeof(phy_init_magic_pre));
 }
 
+#else /* CONFIG_ESP32S3_PHY_INIT_DATA_IN_PARTITION */
+
 /****************************************************************************
- * Name: esp_wifi_bt_power_domain_off
+ * Name: esp_phy_get_init_data
  *
  * Description:
- *   Deinitialize Bluetooth and Wi-Fi power domain
+ *   Get PHY init data
  *
  * Input Parameters:
  *   None
+ *
+ * Returned Value:
+ *   Pointer to PHY init data structure
+ *
+ ****************************************************************************/
+
+const esp_phy_init_data_t *esp_phy_get_init_data(void)
+{
+  wlinfo("Loading PHY init data from application binary\n");
+  return &phy_init_data;
+}
+
+/****************************************************************************
+ * Name: esp_phy_release_init_data
+ *
+ * Description:
+ *   Release PHY init data
+ *
+ * Input Parameters:
+ *   init_data - Pointer to PHY init data structure
  *
  * Returned Value:
  *   None
  *
  ****************************************************************************/
 
-void esp_wifi_bt_power_domain_off(void)
+void esp_phy_release_init_data(const esp_phy_init_data_t *init_data)
 {
-  irqstate_t flags;
+}
+#endif
 
-  flags = enter_critical_section();
+/****************************************************************************
+ * Name: esp32s3_phy_update_country_info
+ *
+ * Description:
+ *   Update PHY init data according to country code
+ *
+ * Input Parameters:
+ *   country - PHY init data type
+ *
+ * Returned Value:
+ *   OK on success; a negated errno on failure
+ *
+ ****************************************************************************/
 
-  if (--g_wifi_bt_pd_controller == 0)
+int esp32s3_phy_update_country_info(const char *country)
+{
+#ifdef CONFIG_ESP32S3_SUPPORT_MULTIPLE_PHY_INIT_DATA
+  uint8_t phy_init_data_type_map = 0;
+  if (memcmp(country, g_phy_current_country, sizeof(g_phy_current_country))
+      == 0)
     {
-      modifyreg32(RTC_CNTL_DIG_ISO_REG, 0, RTC_CNTL_WIFI_FORCE_ISO);
-      modifyreg32(RTC_CNTL_DIG_PWC_REG, 0, RTC_CNTL_WIFI_FORCE_PD);
+      return OK;
     }
 
-  leave_critical_section(flags);
+  memcpy(g_phy_current_country, country, sizeof(g_phy_current_country));
+  if (!g_multiple_phy_init_data_bin)
+    {
+      wlerr("ERROR: Does not support multiple PHY init data bins\n");
+      return ERROR;
+    }
+
+  phy_init_data_type_map = phy_find_bin_type_according_country(country);
+  if (phy_init_data_type_map == g_phy_init_data_type)
+    {
+      return OK;
+    }
+
+  int ret =  phy_update_init_data(phy_init_data_type_map);
+  if (ret != OK)
+    {
+      wlerr("ERROR: Failed to update PHY init data\n");
+      return ret;
+    }
+#endif
+
+  return OK;
 }
 
 /****************************************************************************
@@ -605,3 +1123,318 @@ int32_t esp_timer_delete(esp_timer_handle_t timer)
 
   return 0;
 }
+
+/****************************************************************************
+ * Name: esp_init_semcache
+ *
+ * Description:
+ *   Initialize semaphore cache.
+ *
+ * Parameters:
+ *   sc  - Semaphore cache data pointer
+ *   sem - Semaphore data pointer
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void esp_init_semcache(struct esp_semcache_s *sc, sem_t *sem)
+{
+  sc->sem   = sem;
+  sc->count = 0;
+  list_initialize(&sc->node);
+}
+
+/****************************************************************************
+ * Name: esp_post_semcache
+ *
+ * Description:
+ *   Store posting semaphore action into semaphore cache.
+ *
+ * Parameters:
+ *   sc  - Semaphore cache data pointer
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+IRAM_ATTR void esp_post_semcache(struct esp_semcache_s *sc)
+{
+  struct esp_wireless_priv_s *priv = &g_esp_wireless_priv;
+
+  if (!sc->count)
+    {
+      list_add_tail(&priv->sc_list, &sc->node);
+    }
+
+  sc->count++;
+
+  /* Enable CPU 2 interrupt. This will generate an IRQ as soon as non-IRAM
+   * are (re)enabled.
+   */
+
+  modifyreg32(SYSTEM_CPU_INTR_FROM_CPU_2_REG, 0, SYSTEM_CPU_INTR_FROM_CPU_2);
+}
+
+/****************************************************************************
+ * Name: esp_init_queuecache
+ *
+ * Description:
+ *   Initialize queue cache.
+ *
+ * Parameters:
+ *   qc     - Queue cache data pointer
+ *   mq_ptr - Queue data pointer
+ *   buffer - Queue cache buffer pointer
+ *   size   - Queue cache buffer size
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void esp_init_queuecache(struct esp_queuecache_s *qc,
+                         struct file *mq_ptr,
+                         uint8_t *buffer,
+                         size_t size)
+{
+  qc->mq_ptr = mq_ptr;
+  qc->size   = size;
+  qc->buffer = buffer;
+  list_initialize(&qc->node);
+}
+
+/****************************************************************************
+ * Name: esp_send_queuecache
+ *
+ * Description:
+ *   Store posting queue action and data into queue cache.
+ *
+ * Parameters:
+ *   qc     - Queue cache data pointer
+ *   buffer - Data buffer
+ *   size   - Buffer size
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+IRAM_ATTR void esp_send_queuecache(struct esp_queuecache_s *qc,
+                                   uint8_t *buffer,
+                                   int size)
+{
+  struct esp_wireless_priv_s *priv = &g_esp_wireless_priv;
+
+  DEBUGASSERT(qc->size == size);
+
+  list_add_tail(&priv->qc_list, &qc->node);
+  memcpy(qc->buffer, buffer, size);
+
+  /* Enable CPU 0 interrupt. This will generate an IRQ as soon as non-IRAM
+   * are (re)enabled.
+   */
+
+  modifyreg32(SYSTEM_CPU_INTR_FROM_CPU_2_REG, 0, SYSTEM_CPU_INTR_FROM_CPU_2);
+}
+
+/****************************************************************************
+ * Name: esp_wireless_init
+ *
+ * Description:
+ *   Initialize ESP32 wireless common components for both BT and Wi-Fi.
+ *
+ * Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success. A negated errno value is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+int esp_wireless_init(void)
+{
+  int ret;
+  irqstate_t flags;
+  struct esp_wireless_priv_s *priv = &g_esp_wireless_priv;
+
+  flags = enter_critical_section();
+  if (priv->ref != 0)
+    {
+      priv->ref++;
+      leave_critical_section(flags);
+      return OK;
+    }
+
+  priv->cpuint = esp32s3_setup_irq(0, SWI_PERIPH, ESP32S3_INT_PRIO_DEF, 0);
+  if (priv->cpuint < 0)
+    {
+      /* Failed to allocate a CPU interrupt of this type. */
+
+      wlerr("ERROR: Failed to attach IRQ ret=%d\n", ret);
+      ret = priv->cpuint;
+      leave_critical_section(flags);
+
+      return ret;
+    }
+
+  ret = irq_attach(SWI_IRQ, esp_swi_irq, NULL);
+  if (ret < 0)
+    {
+      esp32s3_teardown_irq(0, SWI_PERIPH, priv->cpuint);
+      leave_critical_section(flags);
+      wlerr("ERROR: Failed to attach IRQ ret=%d\n", ret);
+
+      return ret;
+    }
+
+  list_initialize(&priv->sc_list);
+  list_initialize(&priv->qc_list);
+
+  up_enable_irq(SWI_IRQ);
+
+  priv->ref++;
+
+  leave_critical_section(flags);
+
+  return OK;
+}
+
+/****************************************************************************
+ * Name: esp_wireless_deinit
+ *
+ * Description:
+ *   De-initialize ESP32 wireless common components.
+ *
+ * Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success. A negated errno value is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+int esp_wireless_deinit(void)
+{
+  irqstate_t flags;
+  struct esp_wireless_priv_s *priv = &g_esp_wireless_priv;
+
+  flags = enter_critical_section();
+
+  if (priv->ref > 0)
+    {
+      priv->ref--;
+      if (priv->ref == 0)
+        {
+          up_disable_irq(SWI_IRQ);
+          irq_detach(SWI_IRQ);
+          esp32s3_teardown_irq(0, SWI_PERIPH, priv->cpuint);
+        }
+    }
+
+  leave_critical_section(flags);
+
+  return OK;
+}
+
+#ifdef CONFIG_ESP32S3_WIFI
+
+/****************************************************************************
+ * Name: esp_wifi_init
+ *
+ * Description:
+ *   Initialize Wi-Fi
+ *
+ * Input Parameters:
+ *   config - Initialization config parameters
+ *
+ * Returned Value:
+ *   0 if success or others if fail
+ *
+ ****************************************************************************/
+
+int32_t esp_wifi_init(const wifi_init_config_t *config)
+{
+  int32_t ret;
+  uint32_t min_active_time_us =
+              CONFIG_ESP_WIFI_SLP_DEFAULT_MIN_ACTIVE_TIME * 1000;
+  uint32_t keep_alive_time_us =
+              CONFIG_ESP_WIFI_SLP_DEFAULT_MAX_ACTIVE_TIME * 1000 * 1000;
+  uint32_t wait_broadcast_data_time_us =
+              CONFIG_ESP_WIFI_SLP_DEFAULT_WAIT_BROADCAST_DATA_TIME * 1000;
+
+  esp_wifi_set_sleep_min_active_time(min_active_time_us);
+  esp_wifi_set_keep_alive_time(keep_alive_time_us);
+  esp_wifi_set_sleep_wait_broadcast_data_time(wait_broadcast_data_time_us);
+
+#ifdef CONFIG_ESP32S3_WIFI_BT_COEXIST
+  ret = coex_init();
+  if (ret)
+    {
+      wlerr("ERROR: Failed to initialize coex error=%d\n", ret);
+      return ret;
+    }
+#endif /* CONFIG_ESP32S3_WIFI_BT_COEXIST */
+
+  esp_wifi_set_log_level();
+  esp_wifi_power_domain_on();
+
+  ret = esp_wifi_init_internal(config);
+  if (ret)
+    {
+      wlerr("Failed to initialize Wi-Fi error=%d\n", ret);
+      return ret;
+    }
+
+  esp_phy_modem_init();
+
+  ret = esp_supplicant_init();
+  if (ret)
+    {
+      wlerr("Failed to initialize WPA supplicant error=%d\n", ret);
+      esp_wifi_deinit_internal();
+      return ret;
+    }
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: esp_wifi_deinit
+ *
+ * Description:
+ *   Deinitialize Wi-Fi and free resource
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   0 if success or others if fail
+ *
+ ****************************************************************************/
+
+int32_t esp_wifi_deinit(void)
+{
+  int ret;
+
+  ret = esp_supplicant_deinit();
+  if (ret)
+    {
+      wlerr("Failed to deinitialize supplicant\n");
+      return ret;
+    }
+
+  ret = esp_wifi_deinit_internal();
+  if (ret != 0)
+    {
+      wlerr("Failed to deinitialize Wi-Fi\n");
+      return ret;
+    }
+
+  return ret;
+}
+#endif /* CONFIG_ESP32S3_WIFI */

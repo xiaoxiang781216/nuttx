@@ -52,12 +52,12 @@
  *
  ****************************************************************************/
 
-uart_datawidth_t uart_getreg(FAR struct u16550_s *priv, unsigned int offset)
+uart_datawidth_t uart_getreg(struct u16550_s *priv, unsigned int offset)
 {
   return inb(priv->uartbase + offset);
 }
 
-void uart_putreg(FAR struct u16550_s *priv,
+void uart_putreg(struct u16550_s *priv,
                  unsigned int offset, uart_datawidth_t value)
 {
   outb(value, priv->uartbase + offset);
@@ -75,15 +75,6 @@ void uart_putreg(FAR struct u16550_s *priv,
 
 int up_putc(int ch)
 {
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      x86_lowputc('\r');
-    }
-
   x86_lowputc(ch);
   return ch;
 }

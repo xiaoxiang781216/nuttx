@@ -31,5 +31,7 @@ config BCH_BUFFER_ALIGNMENT
 config BCH_DEVICE_READONLY
 	bool "Set BCH device readonly"
 	default n
+	---help---
+		Set bch devices read-only
 
 endif # BCH

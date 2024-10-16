@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/uuid/lib_uuid_create.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -70,7 +72,7 @@ static int uuid_getrandom(FAR void *buf, size_t size, int flags)
  *
  ****************************************************************************/
 
-void uuid_create(uuid_t *u, uint32_t *status)
+void uuid_create(FAR uuid_t *u, FAR uint32_t *status)
 {
   int ret;
 
@@ -82,8 +84,8 @@ void uuid_create(uuid_t *u, uint32_t *status)
 
   if (ret < 0)
     {
-      unsigned long *beg = (unsigned long *)u;
-      unsigned long *end = (unsigned long *)(u + 1);
+      FAR unsigned long *beg = (FAR unsigned long *)u;
+      FAR unsigned long *end = (FAR unsigned long *)(u + 1);
 
       while (beg < end)
         {

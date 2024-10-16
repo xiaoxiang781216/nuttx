@@ -53,12 +53,12 @@
  *
  ****************************************************************************/
 
-uart_datawidth_t uart_getreg(FAR struct u16550_s *priv, unsigned int offset)
+uart_datawidth_t uart_getreg(struct u16550_s *priv, unsigned int offset)
 {
   return inb(priv->uartbase + offset);
 }
 
-void uart_putreg(FAR struct u16550_s *priv, unsigned int offset,
+void uart_putreg(struct u16550_s *priv, unsigned int offset,
                  uart_datawidth_t value)
 {
   /* Intel x86 platform require OUT2 of MCR being set
@@ -90,15 +90,6 @@ void up_lowputc(char ch)
 
 int up_putc(int ch)
 {
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      up_lowputc('\r');
-    }
-
   up_lowputc(ch);
   return ch;
 }

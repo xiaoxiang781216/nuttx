@@ -29,7 +29,6 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/sched.h>
 
-#include "sched/sched.h"
 #include "inode/inode.h"
 #include "fs_rammap.h"
 

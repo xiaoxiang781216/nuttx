@@ -22,12 +22,18 @@ ARCHCPUFLAGS += -march=armv8-r
 
 ifeq ($(CONFIG_ARCH_FPU),y)
   LLVM_ABITYPE := eabihf
-  ARCHCPUFLAGS += -mfpu=vfpv3-d16
+
+  ifeq ($(CONFIG_ARM_NEON),y)
+    ARCHCPUFLAGS += -mfpu=neon-fp-armv8
+  else
+    ARCHCPUFLAGS += -mfpu=fp-armv8
+  endif
   ifeq ($(CONFIG_ARM_FPU_ABI_SOFT),y)
     ARCHCPUFLAGS += -mfloat-abi=softfp
   else
     ARCHCPUFLAGS += -mfloat-abi=hard
   endif
+
 else
   LLVM_ABITYPE := eabi
   ARCHCPUFLAGS += -mfloat-abi=soft

@@ -3938,7 +3938,7 @@ void arm_netinitialize(void)
 
 #ifdef CONFIG_AT32_CAN2
   at32_cansockinitialize(2);
-#endif  
+#endif
 
 #endif
 }

@@ -29,7 +29,6 @@ LDSCRIPT = ld.script
 ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
 
 ARCHCPUFLAGS += -mno-relax
-ARCHCXXFLAGS +=
 ARCHPICFLAGS = -fpic -msingle-pic-base -mpic-register=r10
 
 ifeq ($(CONFIG_STACK_OVERFLOW_CHECK),y)

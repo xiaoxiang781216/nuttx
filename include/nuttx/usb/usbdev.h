@@ -260,11 +260,11 @@ struct composite_devdesc_s
 struct usbdev_ep_s;
 struct usbdev_req_s
 {
-  uint8_t *buf;    /* Call: Buffer used for data; Return: Unchanged */
-  uint8_t  flags;  /* See USBDEV_REQFLAGS_* definitions */
-  uint32_t len;    /* Call: Total length of data in buf; Return: Unchanged */
-  uint16_t xfrd;   /* Call: zero; Return: Bytes transferred so far */
-  int16_t  result; /* Call: zero; Return: Result of transfer (O or -errno) */
+  FAR uint8_t *buf; /* Call: Buffer used for data; Return: Unchanged */
+  uint8_t  flags;   /* See USBDEV_REQFLAGS_* definitions */
+  size_t len;       /* Call: Total length of data in buf; Return: Unchanged */
+  size_t xfrd;      /* Call: zero; Return: Bytes transferred so far */
+  int16_t  result;  /* Call: zero; Return: Result of transfer (O or -errno) */
 
   /* Callback when the transfer completes */
 
@@ -280,14 +280,14 @@ struct usbdev_epops_s
   /* Configure/enable and disable endpoint */
 
   CODE int (*configure)(FAR struct usbdev_ep_s *ep,
-          FAR const struct usb_epdesc_s *desc, bool last);
+                        FAR const struct usb_epdesc_s *desc, bool last);
   CODE int (*disable)(FAR struct usbdev_ep_s *ep);
 
   /* Allocate and free I/O requests */
 
   CODE FAR struct usbdev_req_s *(*allocreq)(FAR struct usbdev_ep_s *ep);
   CODE void (*freereq)(FAR struct usbdev_ep_s *ep,
-          FAR struct usbdev_req_s *req);
+                       FAR struct usbdev_req_s *req);
 
   /* Allocate and free I/O buffers */
 
@@ -299,9 +299,9 @@ struct usbdev_epops_s
   /* Submit and cancel I/O requests */
 
   CODE int (*submit)(FAR struct usbdev_ep_s *ep,
-          FAR struct usbdev_req_s *req);
+                     FAR struct usbdev_req_s *req);
   CODE int (*cancel)(FAR struct usbdev_ep_s *ep,
-          FAR struct usbdev_req_s *req);
+                     FAR struct usbdev_req_s *req);
 
   /* Stall or resume an endpoint */
 
@@ -333,7 +333,8 @@ struct usbdev_ops_s
   /* Allocate and free endpoints */
 
   CODE FAR struct usbdev_ep_s *(*allocep)(FAR struct usbdev_s *dev,
-          uint8_t epphy, bool in, uint8_t eptype);
+                                          uint8_t epphy, bool in,
+                                          uint8_t eptype);
   CODE void (*freeep)(FAR struct usbdev_s *dev, FAR struct usbdev_ep_s *ep);
 
   /* Get the frame number from the last SOF */
@@ -365,18 +366,19 @@ struct usbdev_s
 struct usbdevclass_driverops_s
 {
   CODE int  (*bind)(FAR struct usbdevclass_driver_s *driver,
-          FAR struct usbdev_s *dev);
+                    FAR struct usbdev_s *dev);
   CODE void (*unbind)(FAR struct usbdevclass_driver_s *driver,
-          FAR struct usbdev_s *dev);
+                      FAR struct usbdev_s *dev);
   CODE int  (*setup)(FAR struct usbdevclass_driver_s *driver,
-          FAR struct usbdev_s *dev, FAR const struct usb_ctrlreq_s *ctrl,
-          FAR uint8_t *dataout, size_t outlen);
+                     FAR struct usbdev_s *dev,
+                     FAR const struct usb_ctrlreq_s *ctrl,
+                     FAR uint8_t *dataout, size_t outlen);
   CODE void (*disconnect)(FAR struct usbdevclass_driver_s *driver,
-          FAR struct usbdev_s *dev);
+                          FAR struct usbdev_s *dev);
   CODE void (*suspend)(FAR struct usbdevclass_driver_s *driver,
-          FAR struct usbdev_s *dev);
+                       FAR struct usbdev_s *dev);
   CODE void (*resume)(FAR struct usbdevclass_driver_s *driver,
-          FAR struct usbdev_s *dev);
+                      FAR struct usbdev_s *dev);
 };
 
 struct usbdevclass_driver_s
@@ -411,7 +413,7 @@ extern "C"
  ****************************************************************************/
 
 FAR struct usbdev_req_s *usbdev_allocreq(FAR struct usbdev_ep_s *ep,
-                                         uint32_t len);
+                                         size_t len);
 
 /****************************************************************************
  * Name: usbdev_freereq
@@ -505,6 +507,19 @@ int usbdev_unregister(FAR struct usbdevclass_driver_s *driver);
 #if defined(CONFIG_USBDEV_DMA) && defined(CONFIG_USBDEV_DMAMEMORY)
 FAR void *usbdev_dma_alloc(size_t size);
 void usbdev_dma_free(FAR void *memory);
+#endif
+
+/****************************************************************************
+ * Name: up_usbdev_sof_irq
+ *
+ * Description:
+ *   If CONFIG_USBDEV_SOFINTERRUPT is enabled, board logic must provide
+ *   this function. It gets called in interrupt mode by USB device code
+ *   every time start-of-frame USB packet is received from host.
+ *
+ ****************************************************************************/
+#ifdef CONFIG_USBDEV_SOFINTERRUPT
+void usbdev_sof_irq(FAR struct usbdev_s *dev, uint16_t frameno);
 #endif
 
 #undef EXTERN

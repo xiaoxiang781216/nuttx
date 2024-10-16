@@ -37,6 +37,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/serial/serial.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/power/pm.h>
 
 #ifdef CONFIG_SERIAL_TERMIOS
@@ -2013,16 +2014,6 @@ int up_putc(int ch)
   uint16_t ie;
 
   up_disableusartint(priv, &ie);
-
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      arm_lowputc('\r');
-    }
-
   arm_lowputc(ch);
   up_restoreusartint(priv, ie);
 
@@ -2043,15 +2034,6 @@ int up_putc(int ch)
 int up_putc(int ch)
 {
 #if CONSOLE_USART > 0
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      arm_lowputc('\r');
-    }
-
   arm_lowputc(ch);
 #endif
   return ch;

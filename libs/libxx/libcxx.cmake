@@ -1,6 +1,8 @@
 # ##############################################################################
 # libs/libxx/libcxx.cmake
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -113,6 +115,5 @@ endif()
 nuttx_add_system_library(libcxx)
 target_sources(libcxx PRIVATE ${SRCS})
 target_compile_options(libcxx PRIVATE ${FLAGS})
-
 target_include_directories(libcxx BEFORE
                            PRIVATE ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)

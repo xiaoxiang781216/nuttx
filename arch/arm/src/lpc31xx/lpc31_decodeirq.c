@@ -34,7 +34,7 @@
 
 #include "chip.h"
 #include "arm_internal.h"
-
+#include "sched/sched.h"
 #include "lpc31_intc.h"
 
 /****************************************************************************

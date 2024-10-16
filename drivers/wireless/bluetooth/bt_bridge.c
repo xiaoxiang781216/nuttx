@@ -447,9 +447,9 @@ static int bt_bridge_send_reset_response(FAR struct bt_driver_s *driver)
                            sizeof(reset_response));
 }
 
-static inline bool bt_bridge_filter_command(FAR struct bt_bridge_s *bridge,
-                                            FAR struct bt_driver_s *driver,
-                                            uint8_t *data)
+static bool bt_bridge_filter_command(FAR struct bt_bridge_s *bridge,
+                                     FAR struct bt_driver_s *driver,
+                                     FAR uint8_t *data)
 {
   uint16_t opcode = BT_LE162HOST(((uint16_t *)data)[0]);
 

@@ -126,6 +126,10 @@ if(CONFIG_NRF91_MODEM)
     list(APPEND SRCS nrf91_modem_at.c)
   endif()
 
+  if(CONFIG_NRF91_MODEM_GNSS)
+    list(APPEND SRCS nrf91_modem_gnss.c)
+  endif()
+
   set(NRFXLIB_DIR "${NUTTX_CHIP_ABS_DIR}/sdk-nrfxlib")
 
   if(CONFIG_ARCH_FPU)
@@ -140,14 +144,10 @@ if(CONFIG_NRF91_MODEM)
     set(MODEM_LIB_VARIANT libmodem.a)
   endif()
 
-  nuttx_library_import(
-    modem
+  nuttx_add_extra_library(
     ${NRFXLIB_DIR}/nrf_modem/lib/cortex-m33/${NRFXLIB_LIB_VARIANT}/${MODEM_LIB_VARIANT}
   )
   target_include_directories(arch PRIVATE ${NRFXLIB_DIR}/nrf_modem/include)
-
-  target_link_libraries(arch PRIVATE modem)
-  target_link_libraries(modem INTERFACE arch c net)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})

@@ -57,4 +57,4 @@ int up_cpu_index(void)
 
   return cpu;
 }
-#endif /* CONFIG_ARCH_HAVE_MULTICPU */
+#endif

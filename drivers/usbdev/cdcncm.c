@@ -54,12 +54,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Work queue support is required. */
-
-#if !defined(CONFIG_SCHED_WORKQUEUE)
-#  error Work queue support is required in this configuration (CONFIG_SCHED_WORKQUEUE)
-#endif
-
 /* The low priority work queue is preferred.  If it is not enabled, LPWORK
  * will be the same as HPWORK. NOTE: Use of the high priority work queue will
  * have a negative impact on interrupt handling latency and overall system
@@ -1025,7 +1019,7 @@ static void cdcncm_receive(FAR struct cdcncm_driver_s *self)
 
   if (GETUINT32(tmp) != opts->nthsign)
     {
-      uerr("Wrong NTH SIGN, skblen %d\n", self->rdreq->xfrd);
+      uerr("Wrong NTH SIGN, skblen %zu\n", self->rdreq->xfrd);
       return;
     }
 
@@ -1179,13 +1173,17 @@ static void cdcncm_interrupt_work(FAR void *arg)
    * are no pending transmissions.
    */
 
+  flags = enter_critical_section();
   if (self->txdone)
     {
-      flags = enter_critical_section();
       self->txdone = false;
       leave_critical_section(flags);
 
       cdcncm_txdone(self);
+    }
+  else
+    {
+      leave_critical_section(flags);
     }
 }
 
@@ -1353,12 +1351,6 @@ static FAR netpkt_t *cdcncm_recv(FAR struct netdev_lowerhalf_s *dev)
 static int cdcncm_addmac(FAR struct netdev_lowerhalf_s *dev,
                          FAR const uint8_t *mac)
 {
-  FAR struct cdcncm_driver_s *priv =
-    container_of(dev, struct cdcncm_driver_s, dev);
-
-  /* Add the MAC address to the hardware multicast routing table */
-
-  UNUSED(priv); /* Not yet implemented */
   return OK;
 }
 #endif
@@ -1383,12 +1375,6 @@ static int cdcncm_addmac(FAR struct netdev_lowerhalf_s *dev,
 static int cdcncm_rmmac(FAR struct netdev_lowerhalf_s *dev,
                         FAR const uint8_t *mac)
 {
-  FAR struct cdcncm_driver_s *priv =
-    container_of(dev, struct cdcncm_driver_s, dev);
-
-  /* Add the MAC address to the hardware multicast routing table */
-
-  UNUSED(priv); /* Not yet implemented */
   return OK;
 }
 #endif
@@ -1416,18 +1402,7 @@ static int cdcncm_rmmac(FAR struct netdev_lowerhalf_s *dev,
 static int cdcncm_ioctl(FAR struct netdev_lowerhalf_s *dev, int cmd,
                         unsigned long arg)
 {
-  /* Decode and dispatch the driver-specific IOCTL command */
-
-  switch (cmd)
-    {
-      /* Add cases here to support the IOCTL commands */
-
-      default:
-        nerr("ERROR: Unrecognized IOCTL command: %d\n", cmd);
-        return -ENOTTY;  /* Special return value for this case */
-    }
-
-  return OK;
+  return -ENOTTY;
 }
 #endif
 
@@ -1448,7 +1423,7 @@ static void cdcncm_ep0incomplete(FAR struct usbdev_ep_s *ep,
 {
   if (req->result || req->xfrd != req->len)
     {
-      uerr("result: %hd, xfrd: %hu\n", req->result, req->xfrd);
+      uerr("result: %hd, xfrd: %zu\n", req->result, req->xfrd);
     }
 }
 
@@ -1468,7 +1443,7 @@ static void cdcncm_intcomplete(FAR struct usbdev_ep_s *ep,
 
   if (req->result || req->xfrd != req->len)
     {
-      uerr("result: %hd, xfrd: %hu\n", req->result, req->xfrd);
+      uerr("result: %hd, xfrd: %zu\n", req->result, req->xfrd);
     }
 
   if (self->notify != NCM_NOTIFY_NONE)
@@ -1498,7 +1473,7 @@ static void cdcncm_rdcomplete(FAR struct usbdev_ep_s *ep,
 {
   FAR struct cdcncm_driver_s *self = (FAR struct cdcncm_driver_s *)ep->priv;
 
-  uinfo("buf: %p, flags 0x%hhx, len %hu, xfrd %hu, result %hd\n",
+  uinfo("buf: %p, flags 0x%hhx, len %zu, xfrd %zu, result %hd\n",
         req->buf, req->flags, req->len, req->xfrd, req->result);
 
   switch (req->result)
@@ -1539,7 +1514,7 @@ static void cdcncm_wrcomplete(FAR struct usbdev_ep_s *ep,
   FAR struct cdcncm_driver_s *self = (FAR struct cdcncm_driver_s *)ep->priv;
   int rc;
 
-  uinfo("buf: %p, flags 0x%hhx, len %hu, xfrd %hu, result %hd\n",
+  uinfo("buf: %p, flags 0x%hhx, len %zu, xfrd %zu, result %hd\n",
         req->buf, req->flags, req->len, req->xfrd, req->result);
 
   /* The single USB device write request is available for upcoming
@@ -1607,7 +1582,7 @@ static void cdcncm_resetconfig(FAR struct cdcncm_driver_s *self)
 static int cdcncm_setconfig(FAR struct cdcncm_driver_s *self, uint8_t config)
 {
   struct usb_ss_epdesc_s epdesc;
-  int ret = OK;
+  int ret;
 
   if (config == self->config)
     {
@@ -1681,7 +1656,10 @@ static int cdcncm_setconfig(FAR struct cdcncm_driver_s *self, uint8_t config)
 
   /* Report link up to networking layer */
 
-  cdcncm_ifup(&self->dev);
+  if (cdcncm_ifup(&self->dev) == OK)
+    {
+      self->dev.netdev.d_flags |= IFF_UP;
+    }
 
   return OK;
 
@@ -1781,7 +1759,7 @@ static void cdcncm_notify_worker(FAR void *arg)
       notifyreq->len   = ret;
       notifyreq->flags = USBDEV_REQFLAGS_NULLPKT;
 
-      ret = EP_SUBMIT(self->epint, notifyreq);
+      EP_SUBMIT(self->epint, notifyreq);
     }
 }
 
@@ -1942,7 +1920,7 @@ static void cdcncm_mkepcompdesc(int epidx,
         epcompdesc->len  = USB_SIZEOF_SS_EPCOMPDESC;                      /* Descriptor length */
         epcompdesc->type = USB_DESC_TYPE_ENDPOINT_COMPANION;              /* Descriptor type */
 
-        if (CONFIG_CDCNCM_EPINTIN_MAXBURST >= USB_SS_INT_EP_MAXBURST)     /* Max burst */
+        if (CONFIG_CDCNCM_EPINTIN_MAXBURST >= USB_SS_INT_EP_MAXBURST)
           {
             epcompdesc->mxburst = USB_SS_INT_EP_MAXBURST - 1;
           }
@@ -1964,7 +1942,7 @@ static void cdcncm_mkepcompdesc(int epidx,
         epcompdesc->len  = USB_SIZEOF_SS_EPCOMPDESC;                      /* Descriptor length */
         epcompdesc->type = USB_DESC_TYPE_ENDPOINT_COMPANION;              /* Descriptor type */
 
-        if (CONFIG_CDCNCM_EPBULKOUT_MAXBURST >= USB_SS_BULK_EP_MAXBURST)  /* Max burst */
+        if (CONFIG_CDCNCM_EPBULKOUT_MAXBURST >= USB_SS_BULK_EP_MAXBURST)
           {
             epcompdesc->mxburst = USB_SS_BULK_EP_MAXBURST - 1;
           }
@@ -1973,7 +1951,7 @@ static void cdcncm_mkepcompdesc(int epidx,
             epcompdesc->mxburst = CONFIG_CDCNCM_EPBULKOUT_MAXBURST;
           }
 
-        if (CONFIG_CDCNCM_EPBULKOUT_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM) /* Max stream */
+        if (CONFIG_CDCNCM_EPBULKOUT_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM)
           {
             epcompdesc->attr = USB_SS_BULK_EP_MAXSTREAM;
           }
@@ -1992,7 +1970,7 @@ static void cdcncm_mkepcompdesc(int epidx,
         epcompdesc->len  = USB_SIZEOF_SS_EPCOMPDESC;                      /* Descriptor length */
         epcompdesc->type = USB_DESC_TYPE_ENDPOINT_COMPANION;              /* Descriptor type */
 
-        if (CONFIG_CDCNCM_EPBULKIN_MAXBURST >= USB_SS_BULK_EP_MAXBURST)   /* Max burst */
+        if (CONFIG_CDCNCM_EPBULKIN_MAXBURST >= USB_SS_BULK_EP_MAXBURST)
           {
             epcompdesc->mxburst = USB_SS_BULK_EP_MAXBURST - 1;
           }
@@ -2001,7 +1979,7 @@ static void cdcncm_mkepcompdesc(int epidx,
             epcompdesc->mxburst = CONFIG_CDCNCM_EPBULKIN_MAXBURST;
           }
 
-        if (CONFIG_CDCNCM_EPBULKIN_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM)  /* Max stream */
+        if (CONFIG_CDCNCM_EPBULKIN_MAXSTREAM > USB_SS_BULK_EP_MAXSTREAM)
           {
             epcompdesc->attr = USB_SS_BULK_EP_MAXSTREAM;
           }
@@ -2135,7 +2113,9 @@ static int16_t cdcnm_mkcfgdesc(FAR uint8_t *desc,
                                FAR struct usbdev_devinfo_s *devinfo,
                                uint8_t speed, uint8_t type, bool isncm)
 {
+#ifndef CONFIG_CDCNCM_COMPOSITE
   FAR struct usb_cfgdesc_s *cfgdesc = NULL;
+#endif
   int16_t len = 0;
   int ret;
 
@@ -3036,7 +3016,7 @@ static int cdcmbim_classobject(int minor,
 #ifdef CONFIG_NETDEV_IFINDEX
       index = self->ncmdriver.dev.netdev.d_ifindex;
 #endif
-      snprintf(devname, CDC_MBIM_DEVNAMELEN, CDC_MBIM_DEVFORMAT, index);
+      snprintf(devname, sizeof(devname), CDC_MBIM_DEVFORMAT, index);
       ret = register_driver(devname, &g_usbdevfops, 0666, self);
       if (ret < 0)
         {

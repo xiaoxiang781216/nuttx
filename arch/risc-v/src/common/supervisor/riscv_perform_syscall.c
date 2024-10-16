@@ -35,7 +35,7 @@
  * Public Functions
  ****************************************************************************/
 
-void *riscv_perform_syscall(uintptr_t *regs)
+void *riscv_perform_syscall(uintreg_t *regs)
 {
   struct tcb_s **running_task = &g_running_tasks[this_cpu()];
   struct tcb_s *tcb;

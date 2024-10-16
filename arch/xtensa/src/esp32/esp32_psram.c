@@ -44,7 +44,7 @@
 
 #include "rom/esp32_efuse.h"
 #include "rom/esp32_spiflash.h"
-#include "hardware/efuse_reg.h"
+#include "hardware/esp32_efuse.h"
 
 #ifdef CONFIG_ESP32_SPIRAM
 
@@ -188,6 +188,16 @@
 #  define PSRAM_CLK_SIGNAL    SPICLK_OUT_IDX
 #  define PSRAM_SPI_NUM       PSRAM_SPI_1
 #  define PSRAM_SPICLKEN      DPORT_SPI01_CLK_EN
+#endif
+
+/* Let's to assume SPIFLASH SPEED == SPIRAM SPEED for now */
+
+#if defined(CONFIG_ESP32_SPIRAM_SPEED_40M)
+#  define PSRAM_CS_HOLD_TIME 0
+#elif defined(CONFIG_ESP32_SPIRAM_SPEED_80M)
+#  define PSRAM_CS_HOLD_TIME 1
+#else
+#  error "FLASH speed can only be equal to or higher than SRAM speed while SRAM is enabled!"
 #endif
 
 /****************************************************************************
@@ -381,25 +391,22 @@ static int IRAM_ATTR esp32_get_vddsdio_config(
 
   efuse_reg = getreg32(EFUSE_BLK0_RDATA4_REG);
 
-  if (efuse_reg & EFUSE_RD_SDIO_FORCE)
+  if (efuse_reg & EFUSE_RD_XPD_SDIO_FORCE)
     {
       /* Get configuration from EFUSE */
 
       result->force = 0;
       result->enable = (efuse_reg & EFUSE_RD_XPD_SDIO_REG_M)
                                   >> EFUSE_RD_XPD_SDIO_REG_S;
-      result->tieh = (efuse_reg & EFUSE_RD_SDIO_TIEH_M)
-                                >> EFUSE_RD_SDIO_TIEH_S;
+      result->tieh = (efuse_reg & EFUSE_RD_XPD_SDIO_TIEH_M)
+                                >> EFUSE_RD_XPD_SDIO_TIEH_S;
 
       if (REG_GET_FIELD(EFUSE_BLK0_RDATA3_REG,
               EFUSE_RD_BLK3_PART_RESERVE) == 0)
         {
-          result->drefh = (efuse_reg & EFUSE_RD_SDIO_DREFH_M)
-                                     >> EFUSE_RD_SDIO_DREFH_S;
-          result->drefm = (efuse_reg & EFUSE_RD_SDIO_DREFM_M)
-                                     >> EFUSE_RD_SDIO_DREFM_S;
-          result->drefl = (efuse_reg & EFUSE_RD_SDIO_DREFL_M)
-                                     >> EFUSE_RD_SDIO_DREFL_S;
+          result->drefh = (efuse_reg >> 8) & 0x3;
+          result->drefm = (efuse_reg >> 10) & 0x3;
+          result->drefl = (efuse_reg >> 12) & 0x3;
         }
 
       return OK;
@@ -587,7 +594,7 @@ static void IRAM_ATTR
         }
     }
 
-  /* use Dram1 to visit ext sram. */
+  /* use DRAM1 to visit ext sram. */
 
   modifyreg32(DPORT_PRO_CACHE_CTRL1_REG,
               DPORT_PRO_CACHE_MASK_DRAM1 | DPORT_PRO_CACHE_MASK_OPSDRAM, 0);
@@ -595,10 +602,8 @@ static void IRAM_ATTR
   /* cache page mode :
    * 1 -->16k
    * 4 -->2k
-   * 0 -->32k,(accord with the settings in cache_sram_mmu_set)
+   * 0 -->32k, (accord with the settings in cache_sram_mmu_set)
    */
-
-  /* get into unknown exception if not comment */
 
   regval  = getreg32(DPORT_PRO_CACHE_CTRL1_REG);
   regval &= ~(DPORT_PRO_CMMU_SRAM_PAGE_MODE <<
@@ -608,8 +613,7 @@ static void IRAM_ATTR
   /* use DRAM1 to visit ext sram. */
 
   modifyreg32(DPORT_APP_CACHE_CTRL1_REG,
-              DPORT_APP_CACHE_MASK_DRAM1 |
-              DPORT_APP_CACHE_MASK_OPSDRAM, 0);
+              DPORT_APP_CACHE_MASK_DRAM1 | DPORT_APP_CACHE_MASK_OPSDRAM, 0);
 
   /* cache page mode :
    * 1 -->16k
@@ -1263,8 +1267,8 @@ void psram_set_cs_timing(psram_spi_num_t spi_num, psram_clk_mode_t clk_mode)
 
       /* Set cs time. */
 
-      SET_PERI_REG_BITS(SPI_CTRL2_REG(spi_num), SPI_HOLD_TIME_V, 1,
-                        SPI_HOLD_TIME_S);
+      SET_PERI_REG_BITS(SPI_CTRL2_REG(spi_num), SPI_HOLD_TIME_V,
+                        PSRAM_CS_HOLD_TIME, SPI_HOLD_TIME_S);
       SET_PERI_REG_BITS(SPI_CTRL2_REG(spi_num), SPI_SETUP_TIME_V, 0,
                         SPI_SETUP_TIME_S);
     }
@@ -1514,8 +1518,10 @@ psram_enable(int mode, int vaddrmode)   /* psram init */
                           0
                         };
 
-  uint32_t chip_ver = REG_GET_FIELD(EFUSE_BLK0_RDATA3_REG,
-                                    EFUSE_RD_CHIP_VER_PKG);
+  uint32_t chip_ver = (REG_GET_FIELD(EFUSE_BLK0_RDATA3_REG,
+                                    EFUSE_RD_CHIP_PACKAGE_4BIT) << 3) |
+                      REG_GET_FIELD(EFUSE_BLK0_RDATA3_REG,
+                                    EFUSE_RD_CHIP_PACKAGE);
   uint32_t pkg_ver = chip_ver & 0x7;
   uint32_t spiconfig;
 

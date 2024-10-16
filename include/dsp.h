@@ -29,6 +29,7 @@
 
 #include <nuttx/compiler.h>
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -38,7 +39,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Disable DEBUGASSERT macro if LIBDSP debug is not enabled */
+/* Disable DEBUGASSER macro if LIBDSP debug is not enabled */
 
 #ifdef CONFIG_LIBDSP_DEBUG
 #  ifndef CONFIG_DEBUG_ASSERTIONS
@@ -104,6 +105,7 @@
  *     filter = T * (2*PI) * f_c
  *
  *     phase shift = -arctan(f_in/f_c)
+ *     time constant = -T / (ln(1 - filter))
  *
  *     T    - period at which the digital filter is being calculated
  *     f_in - input frequency of the filter
@@ -522,7 +524,7 @@ void phase_angle_update(FAR struct phase_angle_f32_s *angle, float val);
 void svm3_init(FAR struct svm3_state_f32_s *s);
 void svm3(FAR struct svm3_state_f32_s *s, FAR ab_frame_f32_t *ab);
 void svm3_current_correct(FAR struct svm3_state_f32_s *s,
-                          float *c0, float *c1, float *c2);
+                          FAR float *c0, FAR float *c1, FAR float *c2);
 
 /* Field Oriented Control */
 

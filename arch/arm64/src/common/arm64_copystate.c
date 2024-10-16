@@ -35,6 +35,7 @@
 #include <arch/irq.h>
 
 #include "arm64_internal.h"
+#include "sched/sched.h"
 
 #ifdef CONFIG_ARCH_FPU
 #include "arm64_fpu.h"
@@ -60,14 +61,14 @@
 int arch_save_fpucontext(void *saveregs)
 {
   irqstate_t    flags;
-  uint64_t      *p_save;
+  uintptr_t     p_save;
 
   /* Take a snapshot of the thread context right now */
 
   flags = enter_critical_section();
 
-  p_save = saveregs + ARM64_CONTEXT_SIZE;
-  arm64_fpu_save(p_save);
+  p_save = (uintptr_t)saveregs + ARM64_CONTEXT_SIZE;
+  arm64_fpu_save((uint64_t *)p_save);
   ARM64_DSB();
 
   leave_critical_section(flags);
@@ -83,8 +84,7 @@ int arm64_syscall_save_context(uint64_t * regs)
 #ifdef CONFIG_ARCH_FPU
   uint64_t              *p_fpu;
   struct tcb_s          *rtcb;
-  struct tcb_s          *rtcb_cur =
-                           (struct tcb_s *)arch_get_current_tcb();
+  struct tcb_s          *rtcb_cur = running_task();
 #endif
 
   DEBUGASSERT(regs);
@@ -107,7 +107,8 @@ int arm64_syscall_save_context(uint64_t * regs)
     }
   else
     {
-      p_fpu = (uint64_t *)rtcb->xcp.fpu_regs;
+      p_fpu = (uint64_t *)rtcb->xcp.regs;
+      p_fpu += ARM64_CONTEXT_REGS;
       for (i = 0; i < FPU_CONTEXT_REGS; i++)
         {
           p_save[i] = p_fpu[i];
