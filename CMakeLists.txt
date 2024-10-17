@@ -156,6 +156,9 @@ if(NOT EXISTS "${NUTTX_DEFCONFIG}")
   message(FATAL_ERROR "No config file found at ${NUTTX_DEFCONFIG}")
 endif()
 
+# Preprocess DEFCONFIG if necessary
+include(nuttx_preprocess_defconfig)
+
 # Generate inital .config ###################################################
 # This is needed right before any other configure step so that we can source
 # Kconfig variables into CMake variables
