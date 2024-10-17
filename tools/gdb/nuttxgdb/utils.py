@@ -25,15 +25,39 @@ import os
 import re
 import shlex
 from enum import Enum
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import gdb
 
 from .macros import fetch_macro_info, try_expand
+from .protocols.thread import Tcb
 
 g_symbol_cache = {}
 g_type_cache = {}
 g_macro_ctx = None
+
+
+class Value(gdb.Value):
+    def __init__(self, obj: gdb.Value):
+        super().__init__(obj)
+
+    def __getattr__(self, key):
+        if hasattr(super(), key):
+            return Value(super().__getattribute__(key))
+        else:
+            return Value(super().__getitem__(key))
+
+    def __getitem__(self, key):
+        return Value(super().__getitem__(key))
+
+    def cast(self, type: str | gdb.Type, ptr: bool = False) -> Optional["Value"]:
+        try:
+            gdb_type = gdb.lookup_type(type) if isinstance(type, str) else type
+            if ptr:
+                gdb_type = gdb_type.pointer()
+            return Value(super().cast(gdb_type))
+        except gdb.error:
+            return None
 
 
 class Backtrace:
@@ -241,10 +265,16 @@ class MacroCtx:
         return self._file
 
 
+def parse_and_eval(expression: str, global_context: bool = False):
+    """Equivalent to gdb.parse_and_eval, but returns a Value object"""
+    gdb_value = gdb.parse_and_eval(expression)
+    return Value(gdb_value)
+
+
 def gdb_eval_or_none(expresssion):
     """Evaluate an expression and return None if it fails"""
     try:
-        return gdb.parse_and_eval(expresssion)
+        return parse_and_eval(expresssion)
     except gdb.error:
         return None
 
@@ -386,7 +416,7 @@ def parse_arg(arg: str) -> Union[gdb.Value, int]:
         return int(arg, 16)
 
     try:
-        return gdb.parse_and_eval(f"{arg}")
+        return parse_and_eval(f"{arg}")
     except gdb.error:
         return None
 
@@ -613,19 +643,19 @@ def get_pc(tcb=None):
     return get_register_byname("pc", tcb)
 
 
-def get_tcbs():
+def get_tcbs() -> List[Tcb]:
     # In case we have created/deleted tasks at runtime, the tcbs will change
     # so keep it as fresh as possible
-    pidhash = gdb.parse_and_eval("g_pidhash")
-    npidhash = gdb.parse_and_eval("g_npidhash")
+    pidhash = parse_and_eval("g_pidhash")
+    npidhash = parse_and_eval("g_npidhash")
 
     return [pidhash[i] for i in range(0, npidhash) if pidhash[i]]
 
 
-def get_tcb(pid):
+def get_tcb(pid) -> Tcb:
     """get tcb from pid"""
-    g_pidhash = gdb.parse_and_eval("g_pidhash")
-    g_npidhash = gdb.parse_and_eval("g_npidhash")
+    g_pidhash = parse_and_eval("g_pidhash")
+    g_npidhash = parse_and_eval("g_npidhash")
     tcb = g_pidhash[pid & (g_npidhash - 1)]
     if not tcb or pid != tcb["pid"]:
         return None
