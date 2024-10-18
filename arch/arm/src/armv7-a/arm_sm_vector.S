@@ -29,8 +29,9 @@
  * Included Files
  ****************************************************************************/
 
+#include <arch/irq.h>
+
 #include "arm.h"
-#include "cp15.h"
 #include "sctlr.h"
 
 	.file	"arm_vectorsm.S"
