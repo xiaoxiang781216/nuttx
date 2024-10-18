@@ -101,23 +101,21 @@ int setitimer(int which, FAR const struct itimerval *value,
       return ERROR;
     }
 
-  flags = enter_critical_section();
   rtcb = this_task();
+
+  flags = enter_critical_section();
+
   if (!rtcb->group->itimer)
     {
-      if (!rtcb->group->itimer)
-        {
-          ret = timer_create(CLOCK_REALTIME, NULL, &rtcb->group->itimer);
-        }
-
-      if (ret != OK)
-        {
-          leave_critical_section(flags);
-          return ret;
-        }
+      ret = timer_create(CLOCK_REALTIME, NULL, &rtcb->group->itimer);
     }
 
   leave_critical_section(flags);
+
+  if (ret != OK)
+    {
+      return ret;
+    }
 
   TIMEVAL_TO_TIMESPEC(&value->it_value, &spec.it_value);
   TIMEVAL_TO_TIMESPEC(&value->it_interval, &spec.it_interval);
