@@ -390,9 +390,12 @@ int addrenv_restore(FAR struct addrenv_s *addrenv)
 
 void addrenv_take(FAR struct addrenv_s *addrenv)
 {
-  irqstate_t flags = enter_critical_section();
-  addrenv->refs++;
-  leave_critical_section(flags);
+  if (addrenv)
+    {
+      irqstate_t flags = enter_critical_section();
+      addrenv->refs++;
+      leave_critical_section(flags);
+    }
 }
 
 /****************************************************************************
@@ -413,11 +416,14 @@ void addrenv_take(FAR struct addrenv_s *addrenv)
 int addrenv_give(FAR struct addrenv_s *addrenv)
 {
   irqstate_t flags;
-  int refs;
+  int refs = 0;
 
-  flags = enter_critical_section();
-  refs = --addrenv->refs;
-  leave_critical_section(flags);
+  if (addrenv)
+    {
+      flags = enter_critical_section();
+      refs = --addrenv->refs;
+      leave_critical_section(flags);
+    }
 
   return refs;
 }
