@@ -710,6 +710,51 @@ config ARCH_USE_SEPARATED_SECTION
 		This option enables loading different sections into different
 		memory areas, allowing for different speeds.
 
+config TLS_ALIGNED
+	bool "Require stack alignment by TLS"
+	default BUILD_KERNEL
+	---help---
+		Aligned TLS works by fetching thread information from the beginning
+		of the stack memory allocation.  In order to do this, the memory
+		must be aligned in such a way that the executing logic can simply
+		mask the current stack pointer to get the beginning of the stack
+		allocation.
+
+		The advantage of using an aligned stack is no OS interface need
+		be called to get the beginning of the stack.  It is simply an
+		AND operation on the current stack pointer.  The disadvantages
+		are that the alignment (1) causes memory fragmentation which can
+		be a serious problem for memory limited systems, and (2) limits
+		the maximum size of the stack.  Any mask places a limit on the
+		maximum size of the stack; stack sizes about that would map to
+		an incorrect address.
+
+		In general, CONFIG_TLS_ALIGNED is preferred for the KERNEL
+		build where the virtualized stack address can be aligned with
+		no implications to physical memory.  In other builds, the
+		unaligned stack implementation is usually superior.
+
+config TLS_LOG2_MAXSTACK
+	int "Maximum stack size (log2)"
+	default 13
+	range 11 24
+	depends on TLS_ALIGNED
+	---help---
+		This setting specifies the alignment of the stack as a power of 2:
+		11=2KB, 12=4KB, 13=8KB, etc.  The exact alignment is not so critical
+		except that (1) a very large value can cause you to run out of
+		alignable memory (and fail memory allocations), and (2) smaller
+		values will limit the maximum size of the stack (hence the naming
+		of this configuration value).
+
+config STACK_ALIGN_SIZE
+	int "Require stack alignment by align size"
+	default 0
+	depends on !TLS_ALIGNED
+	---help---
+		This option enables stack alignment by align size, which is required
+		for mpu stack protect.
+
 menuconfig ARCH_ADDRENV
 	bool "Address environments"
 	default n
@@ -727,14 +772,15 @@ config ARCH_USE_COPY_SECTION
 		dynamic code loading. For example, Ambiq has MRAM regions
 		for instruction which can't load by the memcpy directly.
 
+if ARCH_ADDRENV
+
 config ARCH_STACK_PROTECT
 	bool "Protect user stack"
 	default n
-	select TLS_ALIGNED if BUILD_PROTECTED
 	---help---
 		Select this option if the user thread stack self-access only.
 
-if ARCH_ADDRENV && ARCH_NEED_ADDRENV_MAPPING
+if ARCH_NEED_ADDRENV_MAPPING
 
 config ARCH_TEXT_VBASE
 	hex "Virtual .text base"
@@ -927,7 +973,8 @@ config ARCH_PGPOOL_SIZE
 		in order to modularize the common address environment logic.
 
 endif # ARCH_PGPOOL_MAPPING
-endif # ARCH_ADDRENV && ARCH_NEED_ADDRENV_MAPPING
+endif # ARCH_NEED_ADDRENV_MAPPING
+endif # ARCH_ADDRENV
 
 config PAGING
 	bool "On-demand paging"

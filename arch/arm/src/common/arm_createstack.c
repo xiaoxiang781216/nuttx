@@ -84,6 +84,8 @@
 int up_create_stack(struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
 {
 #ifdef CONFIG_TLS_ALIGNED
+  size_t alignment = TLS_STACK_ALIGN;
+
   /* The allocated stack size must not exceed the maximum possible for the
    * TLS feature.
    */
@@ -93,6 +95,8 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
     {
       stack_size = TLS_MAXSTACK;
     }
+#elif CONFIG_STACK_ALIGN_SIZE > 0
+  size_t alignment = CONFIG_STACK_ALIGN_SIZE;
 #endif
 
   /* Is there already a stack allocated of a different size? */
@@ -113,23 +117,23 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
        * If TLS is enabled, then we must allocate aligned stacks.
        */
 
-#ifdef CONFIG_TLS_ALIGNED
+#if defined(CONFIG_TLS_ALIGNED) || (CONFIG_STACK_ALIGN_SIZE > 0)
 #ifdef CONFIG_MM_KERNEL_HEAP
       /* Use the kernel allocator if this is a kernel thread */
 
       if (ttype == TCB_FLAG_TTYPE_KERNEL)
         {
-          tcb->stack_alloc_ptr = kmm_memalign(TLS_STACK_ALIGN, stack_size);
+          tcb->stack_alloc_ptr = kmm_memalign(alignment, stack_size);
         }
       else
 #endif
         {
           /* Use the user-space allocator if this is a task or pthread */
 
-          tcb->stack_alloc_ptr = kumm_memalign(TLS_STACK_ALIGN, stack_size);
+          tcb->stack_alloc_ptr = kumm_memalign(alignment, stack_size);
         }
 
-#else /* CONFIG_TLS_ALIGNED */
+#else /* CONFIG_TLS_ALIGNED || CONFIG_STACK_ALIGN_SIZE > 0 */
 #ifdef CONFIG_MM_KERNEL_HEAP
       /* Use the kernel allocator if this is a kernel thread */
 
