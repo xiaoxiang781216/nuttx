@@ -23,7 +23,7 @@
 import unittest
 
 import gdb
-from stack import fetch_stacks
+from nuttxgdb.stack import fetch_stacks
 
 # The following test cases require running the program as
 # we need to access the memory of the program

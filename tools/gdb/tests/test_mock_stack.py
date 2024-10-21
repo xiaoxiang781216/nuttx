@@ -22,7 +22,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import gdb
-from stack import Stack, fetch_stacks
+from nuttxgdb.stack import Stack, fetch_stacks
 
 
 class TestStack(unittest.TestCase):
@@ -122,7 +122,7 @@ class TestStack(unittest.TestCase):
 
         self.assertTrue("pls check your stack size!" in str(context.exception))
 
-    @patch("utils.get_symbol_value")
+    @patch("nuttxgdb.utils.get_symbol_value")
     def test_stack_check_max_usage_no_color(self, mock_utils_get_symbol_value):
         name = "test_thread"
         entry = hex(0xABCD)
@@ -139,13 +139,15 @@ class TestStack(unittest.TestCase):
 
 
 class TestFetchStacks(unittest.TestCase):
-    @patch("utils.is_target_arch")
-    @patch("utils.in_interrupt_context")
-    @patch("utils.get_register_byname")
-    @patch("utils.get_arch_sp_name")
-    @patch("utils.get_tcbs")
+    @patch("nuttxgdb.utils.is_target_arch")
+    @patch("nuttxgdb.utils.in_interrupt_context")
+    @patch("nuttxgdb.utils.get_register_byname")
+    @patch("nuttxgdb.utils.get_arch_sp_name")
+    @patch("nuttxgdb.utils.get_tcbs")
+    @patch("nuttxgdb.utils.get_task_name")
     def test_fetch_stacks(self, *args):
         (
+            mock_get_task_name,
             mock_get_tcbs,
             mock_get_arch_sp_name,
             mock_get_register_byname,
@@ -153,19 +155,18 @@ class TestFetchStacks(unittest.TestCase):
             mock_is_target_arch,
         ) = args
 
-        mock_name = MagicMock()
-        mock_name.string().__str__.return_value = "test"
         mock_get_tcbs.return_value = [
             {
                 "task_state": 3,
                 "pid": 123,
-                "name": mock_name,
+                "name": "test",
                 "entry": {"pthread": 0x1000},
                 "stack_base_ptr": 0x2000,
                 "stack_alloc_ptr": 0x1000,
                 "adj_stack_size": 0x4000,
             }
         ]
+        mock_get_task_name.return_value = "test"
         mock_is_target_arch.return_value = True
         mock_in_interrupt_context.return_value = False
         mock_get_arch_sp_name.return_value = "sp"

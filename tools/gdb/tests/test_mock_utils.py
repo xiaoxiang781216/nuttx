@@ -22,7 +22,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import gdb
-import utils
+from nuttxgdb import utils
 
 # Loading gdb/__init__.py will append the parent directory to sys.path
 # Hence we don't need to do importing manually here
@@ -110,7 +110,7 @@ class TestIsTargetArch(unittest.TestCase):
         self.assertTrue(utils.is_target_arch("x86"))
         self.assertFalse(utils.is_target_arch("arm"))
 
-    @patch("utils.target_arch", None)
+    @patch("nuttxgdb.utils.target_arch", None)
     def test_is_target_arch_no_attr_architecture_auto(self):
         del self._mock_frame.architecture
 
@@ -119,7 +119,7 @@ class TestIsTargetArch(unittest.TestCase):
         )
         self.assertTrue(utils.is_target_arch("arm"))
 
-    @patch("utils.target_arch", None)
+    @patch("nuttxgdb.utils.target_arch", None)
     def test_is_target_arch_no_attr_architecture_specific(self):
         del self._mock_frame.architecture
 

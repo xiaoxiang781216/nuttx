@@ -21,7 +21,7 @@
 import unittest
 
 import gdb
-import utils
+from nuttxgdb import utils
 
 # The following test cases require running the program as
 # we need to access the memory of the program

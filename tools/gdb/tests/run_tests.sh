@@ -129,7 +129,7 @@ ${elffile} \
 -ex="b up_idle" \
 -ex="${EXTRA_CMD}" \
 -ex="c" \
--ex="source ${GDB_TOOLS}/__init__.py" \
+-ex="source ${GDB_TOOLS}/gdbinit.py" \
 -ex="source ${GDB_TOOLS}/tests/runner.py" \
 
 result=$?
