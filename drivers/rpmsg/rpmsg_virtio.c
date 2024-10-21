@@ -55,6 +55,12 @@
 #  define RPMSG_VIRTIO_INVALIDATE(x)
 #endif
 
+#ifdef CONFIG_OPENAMP_CACHE
+#  define RPMSG_VIRTIO_INVALIDATE(x) metal_cache_invalidate(&x, sizeof(x))
+#else
+#  define RPMSG_VIRTIO_INVALIDATE(x)
+#endif
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
