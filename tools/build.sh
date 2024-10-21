@@ -328,6 +328,16 @@ function build_board_cmake()
   setup_toolchain $1
   # cmake verbose
   v_arg=""
+
+  # remove the -Wno-cpp build option from ghs build options
+  GHS_OPTS_STRING="CONFIG_ARM_TOOLCHAIN_GHS=y"
+  defconfig_path=$1/defconfig
+  valid_defconfig_path=$(echo ${defconfig_path} | sed 's/^.\{3\}//')
+  if grep -q "^${GHS_OPTS_STRING}$" "${valid_defconfig_path}"; then
+    echo "EXTRA_FLAGS are required to update the when using the GHS toolchain."
+    EXTRA_FLAGS=$(echo "$EXTRA_FLAGS" | sed 's/-Wno-cpp//' | xargs)
+  fi
+
   # check if cmake configuration is required
   if [ ! -d "${CMAKE_BINARY_DIR}" ]; then
     echo -e "Build CMake configuration:"
