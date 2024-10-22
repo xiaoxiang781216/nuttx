@@ -37,6 +37,9 @@ class NxList:
         if not list:
             raise ValueError("The head cannot be None.\n")
 
+        if list.type.code != gdb.TYPE_CODE_PTR:
+            list = list.address  # Make sure list is a pointer.
+
         if container_type and not member:
             raise ValueError("Must specify the member name in container.\n")
 
@@ -84,13 +87,18 @@ class NxSQueue(NxList):
             raise ValueError(
                 "Reverse iteration is not supported for singly linked lists.\n"
             )
-        super().__init__(list["head"], container_type, member, reverse)
+        super().__init__(list, container_type, member, reverse)
+
+    def _get_first(self):
+        return self.list["head"]
+
+    def _get_next(self, node):
+        return node["flink"] if node["flink"] else None
 
 
 class NxDQueue(NxList):
     def __init__(self, list, container_type=None, member=None, reverse=False):
         """Initialize the doubly linked list iterator. Optionally specify the container type and member name."""
-
         super().__init__(list, container_type, member, reverse)
 
     def _get_first(self):
@@ -335,8 +343,6 @@ class MetalList(NxList):
     def __init__(
         self, list: gdb.Value, container_type=None, member=None, reverse=False
     ):
-        if list.type.code != gdb.TYPE_CODE_PTR:
-            list = list.address
         super().__init__(list["head"], container_type, member, reverse)
 
     def _get_first(self):
