@@ -373,6 +373,9 @@ class Memdump(gdb.Command):
                     self.aordblks += 1
                     self.uordblks += mempool_realblocksize(pool)
             else:
+                if not mempool_backtrace_type:
+                    return True
+
                 for buf in mempool_foreach(pool):
                     if (
                         (pid == buf["pid"] or pid == PID_MM_ALLOC)
