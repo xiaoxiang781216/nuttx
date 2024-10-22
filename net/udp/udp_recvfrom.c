@@ -687,6 +687,11 @@ ssize_t psock_udp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
 
   /* Perform the UDP recvfrom() operation */
 
+  if (msg->msg_iovlen != 1)
+    {
+      return -ENOTSUP;
+    }
+
   /* Initialize the state structure.  This is done with the network locked
    * because we don't want anything to happen until we are ready.
    */
