@@ -142,14 +142,12 @@ class TestFetchStacks(unittest.TestCase):
     @patch("nuttxgdb.utils.is_target_arch")
     @patch("nuttxgdb.utils.in_interrupt_context")
     @patch("nuttxgdb.utils.get_register_byname")
-    @patch("nuttxgdb.utils.get_arch_sp_name")
     @patch("nuttxgdb.utils.get_tcbs")
     @patch("nuttxgdb.utils.get_task_name")
     def test_fetch_stacks(self, *args):
         (
             mock_get_task_name,
             mock_get_tcbs,
-            mock_get_arch_sp_name,
             mock_get_register_byname,
             mock_in_interrupt_context,
             mock_is_target_arch,
@@ -169,7 +167,6 @@ class TestFetchStacks(unittest.TestCase):
         mock_get_task_name.return_value = "test"
         mock_is_target_arch.return_value = True
         mock_in_interrupt_context.return_value = False
-        mock_get_arch_sp_name.return_value = "sp"
         mock_get_register_byname.return_value = 0x5000
         gdb.parse_and_eval = MagicMock(
             side_effect=(
