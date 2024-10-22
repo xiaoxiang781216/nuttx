@@ -108,6 +108,9 @@ class NxDQueue(NxList):
         first = tail if self.reverse else head
         return first if first != self.list else None
 
+    def _get_next(self, node):
+        return node["flink"] if node["flink"] else None
+
 
 def list_check(head):
     """Check the consistency of a list"""
