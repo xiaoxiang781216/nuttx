@@ -378,6 +378,7 @@ else
     endif
   endif
 
+  LDFLAGS += --print-memory-usage
 endif
 
 ifeq ($(CONFIG_ARCH_TOOLCHAIN_GNU),y)

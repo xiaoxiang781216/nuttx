@@ -200,4 +200,6 @@ if(CONFIG_ARCH_TOOLCHAIN_GNU AND NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
   if(GCCVER GREATER_EQUAL 12)
     add_link_options(-Wl,--no-warn-rwx-segments)
   endif()
+
+  add_link_options(-Wl,--print-memory-usage)
 endif()
