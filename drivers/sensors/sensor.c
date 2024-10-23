@@ -1005,13 +1005,10 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
      case SNIOC_FLUSH:
         {
-          nxrmutex_lock(&upper->lock);
-
           /* If the sensor is not activated, return -EINVAL. */
 
           if (upper->state.nsubscribers == 0)
             {
-              nxrmutex_unlock(&upper->lock);
               return -EINVAL;
             }
 
@@ -1049,8 +1046,6 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                   ret = 0;
                 }
             }
-
-          nxrmutex_unlock(&upper->lock);
         }
         break;
 
