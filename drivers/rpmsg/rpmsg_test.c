@@ -27,6 +27,8 @@
 #include <string.h>
 #include <syslog.h>
 #include <time.h>
+#include <sys/param.h>
+#include <sys/random.h>
 
 #include <nuttx/clock.h>
 #include <nuttx/kmalloc.h>
@@ -47,19 +49,27 @@
 
 /* Rpmsg test type,value and cmd definition  */
 
-#define RPMSG_TEST_TYPE_HOLD_RX       1
-#define RPMSG_TEST_VAL_HOLD_RX        0
-#define RPMSG_TEST_VAL_HOLD_RX_END    1
+#define RPMSG_TEST_TYPE_HOLD_RX        1
+#define RPMSG_TEST_VAL_HOLD_RX         0
+#define RPMSG_TEST_VAL_HOLD_RX_END     1
 
-#define RPMSG_TEST_CMD_HOLD_RX        \
+#define RPMSG_TEST_TYPE_SEND_NOCOPY    2
+#define RPMSG_TEST_VAL_SEND_NOCOPY     0
+#define RPMSG_TEST_VAL_SEND_NOCOPY_RSP 1
+
+#define RPMSG_TEST_TYPE_SEND           3
+#define RPMSG_TEST_VAL_SEND            0
+#define RPMSG_TEST_VAL_SEND_RSP        1
+
+#define RPMSG_TEST_CMD_HOLD_RX         \
   RPMSG_TEST_CMD(RPMSG_TEST_TYPE_HOLD_RX, RPMSG_TEST_VAL_HOLD_RX)
-#define RPMSG_TEST_CMD_HOLD_RX_END    \
+#define RPMSG_TEST_CMD_HOLD_RX_END     \
   RPMSG_TEST_CMD(RPMSG_TEST_TYPE_HOLD_RX, RPMSG_TEST_VAL_HOLD_RX_END)
 
 /* Magic number used in test case */
 
-#define RPMSG_TEST_MAGIC1             0x55
-#define RPMSG_TEST_MAGIC2             0xaa
+#define RPMSG_TEST_MAGIC1              0x55
+#define RPMSG_TEST_MAGIC2              0xaa
 
 /****************************************************************************
  * Private Types
@@ -77,6 +87,7 @@ begin_packed_struct struct rpmsg_test_msg_s
   uint32_t node[4]; /* Used for the list node */
   uint32_t cmd;
   uint32_t len;
+  uint64_t cookie;
   uint8_t  data[1];
 } end_packed_struct;
 
@@ -167,6 +178,69 @@ static void rpmsg_test_hold_rx_cb(FAR struct rpmsg_endpoint *ept,
 }
 
 /****************************************************************************
+ * Name: rpmsg_test_send_nocopy_cb
+ ****************************************************************************/
+
+static int rpmsg_test_send_nocopy_cb(FAR struct rpmsg_endpoint *ept,
+                                     FAR void *data, size_t len,
+                                     uint32_t src, FAR void *priv)
+{
+  FAR struct rpmsg_test_msg_s *msg = data;
+  FAR sem_t *sem = (FAR sem_t *)(uintptr_t)msg->cookie;
+  FAR struct rpmsg_test_msg_s *rmsg;
+  uint32_t space;
+  int ret;
+
+  if ((RPMSG_TEST_GET_VALUE(msg->cmd) == RPMSG_TEST_VAL_SEND_NOCOPY_RSP))
+    {
+      ret = rpmsg_test_memcmp(msg->data, RPMSG_TEST_MAGIC1, msg->len);
+      DEBUGASSERT(ret);
+      syslog(LOG_EMERG, "Rpmsg Test: Test rpmsg send nocopy success!\n");
+      nxsem_post(sem);
+      return ret;
+    }
+
+  rmsg = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  DEBUGASSERT(rmsg != NULL);
+
+  memcpy(rmsg, msg, space);
+  rmsg->cmd = RPMSG_TEST_CMD(RPMSG_TEST_TYPE_SEND_NOCOPY,
+                             RPMSG_TEST_VAL_SEND_NOCOPY_RSP);
+  ret = rpmsg_send_nocopy(ept, rmsg, space);
+  if (ret < 0)
+    {
+      rpmsg_release_tx_buffer(ept, msg);
+    }
+
+  return ret;
+}
+
+/****************************************************************************
+ * Name: rpmsg_test_send_cb
+ ****************************************************************************/
+
+static int rpmsg_test_send_cb(FAR struct rpmsg_endpoint *ept,
+                                    FAR void *data, size_t len,
+                                    uint32_t src, FAR void *priv)
+{
+  FAR struct rpmsg_test_msg_s *msg = data;
+  FAR sem_t *sem = (FAR sem_t *)(uintptr_t)msg->cookie;
+  int ret;
+
+  if (RPMSG_TEST_GET_VALUE(msg->cmd) == RPMSG_TEST_VAL_SEND_RSP)
+    {
+      ret = rpmsg_test_memcmp(msg->data, RPMSG_TEST_MAGIC1, msg->len);
+      DEBUGASSERT(ret);
+      syslog(LOG_EMERG, "Rpmsg Test: Test rpmsg send success!\n");
+      nxsem_post(sem);
+      return ret;
+    }
+
+  msg->cmd = RPMSG_TEST_CMD(RPMSG_TEST_TYPE_SEND, RPMSG_TEST_VAL_SEND_RSP);
+  return rpmsg_send(ept, msg, len);
+}
+
+/****************************************************************************
  * Name: rpmsg_test_ept_cb
  ****************************************************************************/
 
@@ -180,6 +254,12 @@ static int rpmsg_test_ept_cb(FAR struct rpmsg_endpoint *ept,
     {
       case RPMSG_TEST_TYPE_HOLD_RX:
         rpmsg_test_hold_rx_cb(ept, data, len, src, priv);
+        break;
+      case RPMSG_TEST_TYPE_SEND_NOCOPY:
+        rpmsg_test_send_nocopy_cb(ept, data, len, src, priv);
+        break;
+      case RPMSG_TEST_TYPE_SEND:
+        rpmsg_test_send_cb(ept, data, len, src, priv);
         break;
       default:
         break;
@@ -241,6 +321,138 @@ static int rpmsg_test_hold_rx(FAR struct rpmsg_test_priv_s *priv)
 }
 
 /****************************************************************************
+ * Name: rpmsg_test_send_nocopy
+ ****************************************************************************/
+
+static int rpmsg_test_send_nocopy(FAR struct rpmsg_test_priv_s *priv)
+{
+  FAR struct rpmsg_test_msg_s *msg;
+  uint32_t space;
+  sem_t sem;
+  int ret;
+
+  msg = rpmsg_get_tx_payload_buffer(priv->ept, &space, true);
+  DEBUGASSERT(msg != NULL);
+
+  memset(msg, RPMSG_TEST_MAGIC1, space);
+  msg->cmd = RPMSG_TEST_CMD(RPMSG_TEST_TYPE_SEND_NOCOPY,
+                            RPMSG_TEST_VAL_SEND_NOCOPY);
+  msg->len = space - sizeof(struct rpmsg_test_msg_s) + 1;
+  msg->cookie = (uint64_t)(uintptr_t)&sem;
+  nxsem_init(&sem, 0, 0);
+
+  ret = rpmsg_send_nocopy(priv->ept, msg, space);
+  if (ret >= 0)
+    {
+      nxsem_wait_uninterruptible(&sem);
+    }
+  else
+    {
+      rpmsg_release_tx_buffer(priv->ept, msg);
+    }
+
+  nxsem_destroy(&sem);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: rpmsg_test_send
+ ****************************************************************************/
+
+static int rpmsg_test_send(FAR struct rpmsg_test_priv_s *priv)
+{
+  FAR struct rpmsg_test_msg_s *msg;
+  FAR void *data;
+  sem_t sem;
+  int datalen;
+  int ret;
+
+  datalen = rpmsg_get_tx_buffer_size(priv->ept);
+  data = kmm_malloc(datalen);
+  DEBUGASSERT(data != NULL);
+
+  msg = (FAR struct rpmsg_test_msg_s *)data;
+  memset(msg, RPMSG_TEST_MAGIC1, datalen);
+  msg->cmd = RPMSG_TEST_CMD(RPMSG_TEST_TYPE_SEND, RPMSG_TEST_VAL_SEND);
+  msg->len = datalen - sizeof(struct rpmsg_test_msg_s) + 1;
+  msg->cookie = (uint64_t)(uintptr_t)&sem;
+  nxsem_init(&sem, 0, 0);
+
+  ret = rpmsg_send(priv->ept, msg, datalen);
+  DEBUGASSERT(ret >= 0);
+  nxsem_wait_uninterruptible(&sem);
+  nxsem_destroy(&sem);
+  kmm_free(data);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: rpmsg_test_release_tx
+ ****************************************************************************/
+
+static void rpmsg_test_release_tx(FAR struct rpmsg_test_priv_s *priv)
+{
+  FAR struct rpmsg_endpoint *ept = priv->ept;
+  FAR struct list_node *node;
+  struct list_node txhead;
+  FAR void **bufs;
+  uint32_t space;
+  int num = 0;
+  int i;
+
+  list_initialize(&txhead);
+  while ((node = rpmsg_get_tx_payload_buffer(ept, &space, false)) != NULL)
+    {
+      num++;
+      list_add_tail(&txhead, node);
+    }
+
+  syslog(LOG_EMERG, "Rpmsg Test: tx buffer num=%d\n", num);
+
+  bufs = kmm_malloc(num * sizeof(FAR void *));
+  DEBUGASSERT(bufs != NULL);
+
+  for (i = 0; i < num; i++)
+    {
+      bufs[i] = list_remove_head(&txhead);
+      rpmsg_release_tx_buffer(priv->ept, bufs[i]);
+    }
+
+  /* Restart get tx buffer */
+
+  while ((node = rpmsg_get_tx_payload_buffer(ept, &space, false)) != NULL)
+    {
+      list_add_tail(&txhead, node);
+      for (i = 0; i < num; i++)
+        {
+          if (node == bufs[i])
+            {
+              break;
+            }
+        }
+
+      if (i >= num)
+        {
+          syslog(LOG_EMERG, "Rpmsg Test: release buffer fail!");
+          goto out;
+        }
+    }
+
+  syslog(LOG_EMERG, "Rpmsg Test: release buffer success!");
+
+  /* Final release tx buffer */
+
+out:
+  while ((node = list_remove_head(&txhead)) != NULL)
+    {
+      rpmsg_release_tx_buffer(priv->ept, node);
+    }
+
+  kmm_free(bufs);
+  return;
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -248,9 +460,23 @@ int rpmsg_test(FAR struct rpmsg_endpoint *ept, unsigned long arg)
 {
   FAR struct rpmsg_test_priv_s *priv = ept->priv;
 
-  /* Only support rx hold buffer test case for now */
+  /* Test rx hold buffer case */
 
-  return rpmsg_test_hold_rx(priv);
+  rpmsg_test_hold_rx(priv);
+
+  /* Test send nocopy case */
+
+  rpmsg_test_send_nocopy(priv);
+
+  /* Test send case */
+
+  rpmsg_test_send(priv);
+
+  /* Test release tx case */
+
+  rpmsg_test_release_tx(priv);
+
+  return OK;
 }
 
 int rpmsg_test_init(FAR struct rpmsg_device *rdev,
