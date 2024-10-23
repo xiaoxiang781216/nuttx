@@ -26,6 +26,7 @@
 
 #include <nuttx/config.h>
 
+#include <debug.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -468,15 +469,32 @@ int uart_rpmsg_init(FAR const char *cpuname, FAR const char *devname,
 
   snprintf(dev_name, sizeof(dev_name), "%s%s",
            UART_RPMSG_DEV_PREFIX, devname);
-  uart_register(dev_name, dev);
+  ret = uart_register(dev_name, dev);
+  if (ret < 0)
+    {
+      rpmsgerr("uart register failed, ret=%d\n", ret);
+      goto fail_with_rpmsg;
+    }
 
   if (dev->isconsole)
     {
-      uart_register(UART_RPMSG_DEV_CONSOLE, dev);
+      ret = uart_register(UART_RPMSG_DEV_CONSOLE, dev);
+      if (ret < 0)
+        {
+          rpmsgerr("uart register console failed, ret=%d\n", ret);
+          goto fail_with_rpmsg;
+        }
     }
 
   return OK;
 
+fail_with_rpmsg:
+  nxmutex_destroy(&priv->lock);
+  rpmsg_unregister_callback(dev,
+                            uart_rpmsg_device_created,
+                            uart_rpmsg_device_destroy,
+                            NULL,
+                            NULL);
 fail:
   kmm_free(dev->recv.buffer);
   kmm_free(dev->xmit.buffer);
