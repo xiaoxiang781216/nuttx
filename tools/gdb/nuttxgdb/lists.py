@@ -56,7 +56,7 @@ class NxList:
         next = self.list["next"]
 
         first = prev if self.reverse else next
-        return first if first != self.list else None
+        return first if first and first != self.list else None
 
     def _get_next(self, node):
         #   for(node = (list)->next; node != (list); node = node->next)
