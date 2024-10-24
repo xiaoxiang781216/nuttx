@@ -58,7 +58,10 @@
 #include "irq/irq.h"
 #include "sched/sched.h"
 #include "group/group.h"
-#include "coredump.h"
+
+#ifdef CONFIG_COREDUMP
+#  include "coredump.h"
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions

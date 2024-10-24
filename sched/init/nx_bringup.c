@@ -51,7 +51,10 @@
 #include "sched/sched.h"
 #include "wqueue/wqueue.h"
 #include "init/init.h"
-#include "misc/coredump.h"
+
+#ifdef CONFIG_COREDUMP
+#  include "misc/coredump.h"
+#endif
 
 #ifdef CONFIG_ETC_ROMFS
 #  include <nuttx/drivers/ramdisk.h>
