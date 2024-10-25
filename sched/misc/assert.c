@@ -98,6 +98,14 @@
 #endif
 
 /****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+static noreturn_function int pause_cpu_handler(FAR void *arg);
+#endif
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -120,6 +128,11 @@ static FAR const char * const g_ttypenames[4] =
   "Kthread",
   "Invalid"
 };
+
+#ifdef CONFIG_SMP
+static struct smp_call_data_s g_call_data =
+SMP_CALL_INITIALIZER(pause_cpu_handler, NULL);
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -603,7 +616,7 @@ static void pause_all_cpu(void)
   int delay = CONFIG_ASSERT_PAUSE_CPU_TIMEOUT;
 
   CPU_CLR(this_cpu(), &cpus);
-  nxsched_smp_call(cpus, pause_cpu_handler, NULL, false);
+  nxsched_smp_call_async(cpus, &g_call_data);
   g_cpu_paused[this_cpu()] = true;
 
   /* Check if all CPUs paused with timeout */
