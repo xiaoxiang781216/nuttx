@@ -205,7 +205,8 @@ function setup_toolchain()
       "arm64" \
       "risc-v" \
       "x86_64" \
-      "tc32" )
+      "tc32" \
+      "tricore")
 
   TOOLCHAIN=(\
             "gcc" \
