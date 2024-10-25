@@ -121,6 +121,19 @@ if ! [ -z "$use_qemu" ]; then
     echo "Using the qemu as the testing platform"
 fi
 
+echo "##############################"
+# figure out where we are running at?
+
+echo `whoami`
+echo `id`
+echo `ifconfig`
+echo `which python`
+echo $(realpath `which python`)
+python -c "import sys; print(sys.version); print(sys.path)"
+
+echo "##############################"
+
+
 # Test requires running the ELF without Qemu
 gdb-multiarch \
 -batch \
@@ -129,6 +142,7 @@ ${elffile} \
 -ex="b up_idle" \
 -ex="${EXTRA_CMD}" \
 -ex="c" \
+-ex="python import sys; print(sys.version); print(sys.executable); print(sys.path)"
 -ex="source ${GDB_TOOLS}/gdbinit.py" \
 -ex="source ${GDB_TOOLS}/tests/runner.py" \
 
