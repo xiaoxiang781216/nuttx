@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/sched_note.h>
 
 #include <sys/types.h>
 #include <sched.h>
@@ -333,6 +334,10 @@ void nxsched_suspend_critmon(FAR struct tcb_s *tcb)
 #ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
   clock_t tick = elapsed * CLOCKS_PER_SEC / perf_getfreq();
   nxsched_critmon_cpuload(tcb, current, tick);
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_THREADTIME
+  sched_note_threadtime(elapsed);
 #endif
 
   UNUSED(cpu);
