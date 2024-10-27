@@ -108,9 +108,6 @@
 #define xtensa_context_restore(regs)\
   sys_call1(SYS_restore_context, (uintptr_t)regs)
 
-#define xtensa_switchcontext(saveregs, restoreregs)\
-  sys_call2(SYS_switch_context, (uintptr_t)saveregs, (uintptr_t)restoreregs)
-
 /* Interrupt codes from other CPUs: */
 
 #define CPU_INTCODE_NONE  0
