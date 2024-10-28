@@ -40,7 +40,8 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mutex.h>
 
-#ifdef CONFIG_CAN_TXREADY
+#if defined CONFIG_CAN_TXREADY \
+  || defined CONFIG_CAN_ERROR_POLLING
 #  include <nuttx/wqueue.h>
 #endif
 
@@ -368,6 +369,7 @@
 #define dev_txready(dev)          (dev)->cd_ops->co_txready(dev)
 #define dev_txempty(dev)          (dev)->cd_ops->co_txempty(dev)
 #define dev_cancel(dev,m)         (dev)->cd_ops->co_cancel(dev,m)
+#define dev_errhandle(dev)        (dev)->cd_ops->co_errhandle(dev)
 
 /* CAN message support ******************************************************/
 
@@ -790,6 +792,7 @@ struct can_ops_s
 
   CODE bool (*co_cancel)(FAR struct can_dev_s *dev,
                          FAR struct can_msg_s *msg);
+  CODE void (*co_errhandle)(FAR struct can_dev_s *dev);
 };
 
 /* This is the device structure used by the driver.  The caller of
@@ -823,6 +826,10 @@ struct can_dev_s
   struct can_txcache_s cd_sender;        /* Describes transmit cache */
 #ifdef CONFIG_CAN_TXREADY
   struct work_s        cd_work;          /* Use to manage can_txready() work */
+#endif
+
+#ifdef CONFIG_CAN_ERROR_POLLING
+  struct work_s        cd_errp_work;     /* Use to manage can_errpolling work */
 #endif
                                          /* List of pending RTR requests */
   struct can_rtrwait_s cd_rtr[CONFIG_CAN_NPENDINGRTR];

@@ -54,6 +54,18 @@
 
 /* Configuration ************************************************************/
 
+#ifdef CONFIG_CAN_ERROR_POLLING
+#  if !defined(CONFIG_SCHED_WORKQUEUE)
+#    error Work queue support required in this configuration
+#    undef CONFIG_CAN_ERROR_POLLING
+#  elif defined(CONFIG_SCHED_LPWORK)
+#    define CEPWORK LPWORK
+#  else
+#    error No work queue selection
+#    undef CONFIG_CAN_ERROR_POLLING
+#  endif
+#endif
+
 #ifdef CONFIG_CAN_TXREADY
 #  if !defined(CONFIG_SCHED_WORKQUEUE)
 #    error Work queue support required in this configuration
@@ -96,6 +108,10 @@
 static void           can_txready_work(FAR void *arg);
 #endif
 
+#ifdef CONFIG_CAN_ERROR_POLLING
+static void           can_errpolling_work(FAR void *arg);
+#endif
+
 /* Character driver methods */
 
 static int            can_open(FAR struct file *filep);
@@ -133,6 +149,40 @@ static const struct file_operations g_canops =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: can_errpolling_work
+ *
+ * Description:
+ *   This function performs in specfic cycle that is specified by
+ *   CONFIG_CAN_ERROR_POLLING_CYCLE. it call dev_errhandle() to
+ *   check error status. if error status is occured, dev_errhandle() will
+ *   encapsulate error information into can msg and call can_receive()
+ *   to take this msg into rx fifo.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_CAN_ERROR_POLLING
+static void can_errpolling_work(FAR void *arg)
+{
+  irqstate_t flags;
+  FAR struct can_dev_s *dev   = (FAR struct can_dev_s *)arg;
+
+  flags = enter_critical_section();
+
+  if (dev->cd_ops->co_errhandle != NULL)
+    {
+      dev_errhandle(dev);
+    }
+
+  /* trigger can_errpolling_work as cycle task  */
+
+  work_queue(CEPWORK, &dev->cd_errp_work, can_errpolling_work,
+             dev, MSEC2TICK(CONFIG_CAN_ERROR_POLLING_CYCLE));
+
+  leave_critical_section(flags);
+}
+#endif
 
 /****************************************************************************
  * Name: can_txready_work
@@ -266,6 +316,11 @@ static int can_open(FAR struct file *filep)
             }
         }
 
+      /* setup can_errpolling_work function */
+
+#ifdef CONFIG_CAN_ERROR_POLLING
+      work_queue(CEPWORK, &dev->cd_errp_work, can_errpolling_work, dev, 0);
+#endif
       leave_critical_section(flags);
     }
 
@@ -303,6 +358,7 @@ static int can_close(FAR struct file *filep)
 
   flags = enter_critical_section(); /* Disable interrupts */
 
+  work_cancel(CEPWORK, &dev->cd_errp_work);
   list_for_every(&dev->cd_readers, node)
     {
       if (((FAR struct can_reader_s *)node) ==

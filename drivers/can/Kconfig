@@ -33,6 +33,29 @@ config CAN_ERRORS
 		bit will be set in the CAN message and the following message payload
 		will include a more detailed description of certain errors.
 
+config CAN_ERROR_POLLING
+	bool "CAN error polling"
+	default n
+	depends on CAN_ERRORS
+	---help---
+		this section enables the CAN error polling ability.
+
+		Enabling this feature adds support for can_errpolling_work().
+		can_errpolling_work performs in specfic cycle that is specified
+		by CONFIG_CAN_ERROR_POLLING_CYCLE. it call dev_errhandle() to
+		check error status. if error status is occured, dev_errhandle()
+		will encapsulate error information into can msg and call
+		can_receive() to take this msg into rx fifo.
+
+if CAN_ERROR_POLLING
+config CAN_ERROR_POLLING_CYCLE
+	int "CAN error polling cycle, in milliseconds"
+	default 4
+	---help---
+		Support CAN error polling cycle.  This option determines the
+		can_errpolling_work() execution cycle.
+endif
+
 config CAN_TIMESTAMP
 	bool "CAN timestamp reporting"
 	default n
