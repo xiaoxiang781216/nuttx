@@ -52,17 +52,19 @@ class NxList:
     def _get_first(self):
         """Get the initial node based on the direction of traversal."""
 
-        blink = self.list["blink"]
-        flink = self.list["flink"]
+        prev = self.list["prev"]
+        next = self.list["next"]
 
-        first = blink if self.reverse else flink
+        first = prev if self.reverse else next
         return first if first != self.list else None
 
     def _get_next(self, node):
-        return node["flink"] if node != self.list else None
+        #   for(node = (list)->next; node != (list); node = node->next)
+        return node["next"] if node["next"] != self.list else None
 
     def _get_prev(self, node):
-        return node["blink"] if node != self.list else None
+        #   for(node = (list)->next; node != (list); node = node->prev)
+        return node["prev"] if node["prev"] != self.list else None
 
     def __iter__(self):
         return self
@@ -90,10 +92,12 @@ class NxSQueue(NxList):
         super().__init__(list, container_type, member, reverse)
 
     def _get_first(self):
-        return self.list["head"]
+        #   for ((p) = (q)->head; (p) != NULL; (p) = (p)->flink)
+        return self.list["head"] or None
 
     def _get_next(self, node):
-        return node["flink"] if node["flink"] else None
+        # if not node["flink"], then return None, to indicate end of list
+        return node["flink"] or None
 
 
 class NxDQueue(NxList):
@@ -105,11 +109,16 @@ class NxDQueue(NxList):
         head = self.list["head"]
         tail = self.list["tail"]
 
-        first = tail if self.reverse else head
-        return first if first != self.list else None
+        first = head if not self.reverse else tail
+        return first or None
 
     def _get_next(self, node):
-        return node["flink"] if node["flink"] else None
+        #   for ((p) = (q)->head; (p) != NULL; (p) = (p)->flink)
+        return node["flink"] or None
+
+    def _get_prev(self, node):
+        #   for ((p) = (q)->tail; (p) != NULL; (p) = (p)->blink)
+        return node["blink"] or None
 
 
 def list_check(head):
@@ -340,23 +349,3 @@ class ForeachListEntry(gdb.Command):
         for i, entry in enumerate(list):
             entry = entry.dereference()
             gdb.write(f"{i}: {entry.format_string(styling=True)}\n")
-
-
-class MetalList(NxList):
-    def __init__(
-        self, list: gdb.Value, container_type=None, member=None, reverse=False
-    ):
-        super().__init__(list["head"], container_type, member, reverse)
-
-    def _get_first(self):
-        next = self.list["next"]
-        prev = self.list["prev"]
-
-        first = prev if self.reverse else next
-        return first if first != self.list else None
-
-    def _get_next(self, node):
-        return node["next"] if node != self.list else None
-
-    def _get_prev(self, node):
-        return node["prev"] if node != self.list else None
