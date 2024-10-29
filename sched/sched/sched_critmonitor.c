@@ -409,16 +409,28 @@ void nxsched_suspend_critmon(FAR struct tcb_s *tcb)
   clock_t elapsed = current - tcb->run_start;
   int cpu = this_cpu();
 
+#if defined(CONFIG_SCHED_CPULOAD_CRITMONITOR) || \
+    defined(CONFIG_SCHED_INSTRUMENTATION_THREADTIME)
+  struct timespec ts;
+  clock_t tick;
+
+  perf_convert(elapsed, &ts);
+#endif
+
 #ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
-  clock_t tick = elapsed * CLOCKS_PER_SEC / perf_getfreq();
+  tick = clock_time2ticks(&ts);
   nxsched_critmon_cpuload(tcb, current, tick);
 #endif
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_THREADTIME
-  sched_note_threadtime(elapsed);
-#endif
-
   UNUSED(cpu);
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_THREADTIME
+  tick = clock_time2usec(&ts);
+  if (tick > CONFIG_SCHED_INSTRUMENTATION_THREAD_RUNTIME_DURATION)
+    {
+      sched_note_threadtime(tick);
+    }
+#endif
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD >= 0
   tcb->run_time += elapsed;
