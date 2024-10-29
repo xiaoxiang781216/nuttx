@@ -180,7 +180,7 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
   vb[0].len = VIRTIO_BLK_REQ_HEADER_SIZE;
   vb[1].len = nsectors * priv->block_size;
   vb[2].len = VIRTIO_BLK_RESP_HEADER_SIZE;
-  req = virtio_alloc_buf(vdev, vb[0].len + vb[1].len + vb[2].len, 16);
+  req = virtio_malloc_buf(vdev, vb[0].len + vb[1].len + vb[2].len, 16);
   if (req == NULL)
     {
       return -ENOMEM;
@@ -380,7 +380,7 @@ static int virtio_blk_flush(FAR struct virtio_blk_priv_s *priv)
 
   vb[0].len = VIRTIO_BLK_REQ_HEADER_SIZE;
   vb[1].len = VIRTIO_BLK_RESP_HEADER_SIZE;
-  req = virtio_alloc_buf(vdev, vb[0].len + vb[1].len, 16);
+  req = virtio_malloc_buf(vdev, vb[0].len + vb[1].len, 16);
   if (req == NULL)
     {
       return -ENOMEM;
