@@ -383,7 +383,7 @@ static int aw86225_request_firmware(FAR struct aw86225_firmware *fw,
       return -ENOMEM;
     }
 
-  snprintf(file_path, sizeof(file_path), "%s/%s",
+  snprintf(file_path, PATH_MAX, "%s/%s",
            CONFIG_AW86225_RTP_FILE_PATH, filename);
   ret = file_open(&file, file_path, O_RDONLY);
   lib_put_pathbuffer(file_path);
@@ -1416,7 +1416,12 @@ static void aw86225_ram_loaded(FAR struct aw86225_firmware *cont,
   load_cont++;
 #endif
   ierr("%s enter\n", __func__);
-  aw86225_request_firmware(cont, g_aw86225_ram_name);
+  ret = aw86225_request_firmware(cont, g_aw86225_ram_name);
+  if (ret < 0)
+    {
+      ierr("failed to request firmware %s\n", g_aw86225_ram_name);
+      return;
+    }
 
   if (!cont)
     {
