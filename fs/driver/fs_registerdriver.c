@@ -30,7 +30,7 @@
 #include <errno.h>
 
 #include <nuttx/fs/fs.h>
-#include <nuttx/sched_note.h>
+#include <nuttx/trace.h>
 
 #include "inode/inode.h"
 #include "notify/notify.h"
@@ -69,7 +69,7 @@ int register_driver(FAR const char *path,
   FAR struct inode *node;
   int ret;
 
-  sched_note_mark(NOTE_TAG_DRIVERS, path);
+  drivers_trace_mark(path);
 
   /* Insert a dummy node -- we need to hold the inode semaphore because we
    * will have a momentarily bad structure.
