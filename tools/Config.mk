@@ -620,7 +620,7 @@ define DOWNLOAD
 	$(ECHO_END)
 endef
 
-# CLONE - Git clone repository. Initializes a new Git repository in the 
+# CLONE - Git clone repository. Initializes a new Git repository in the
 #         folder on your local machine and populates it with the contents
 #         of the central repository.
 #         The third argument is an storage path. The second argument is used
