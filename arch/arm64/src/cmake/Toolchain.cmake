@@ -161,6 +161,10 @@ add_compile_options(
   $<$<COMPILE_LANGUAGE:C>:-Werror>
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>)
 
+if(GCCVER GREATER_EQUAL 12)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-alloc-size-larger-than>)
+endif()
+
 if(NOT CONFIG_LIBCXXTOOLCHAIN)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
 endif()
