@@ -216,6 +216,8 @@ struct cryptop
 #define CRYPTO_F_CBIMM 0x0020   /* Do callback immediately */
 #define CRYPTO_F_CANCEL 0x0040  /* Cancel the current crypto operation */
 
+#define CRYPTO_F_NOT_EXPORTABLE 0x0080 /* Mark key unexportable from secure module */
+
   FAR void *crp_buf;               /* Data to be processed */
   FAR void *crp_opaque;            /* Opaque pointer, passed along */
   FAR struct cryptodesc *crp_desc; /* Linked list of processing descriptors */
