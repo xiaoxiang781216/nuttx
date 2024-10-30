@@ -234,27 +234,27 @@ static void mpu_reset_internal(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: mpu_allocregion
+ * Name: mpu_allocregions
  *
  * Description:
- *   Allocate the next region
+ *   Allocate the regions
  *
  * Input Parameters:
- *   None
+ *   nregions - The number of regions to be allocated.
  *
  * Returned Value:
  *   The index of the allocated region.
  *
  ****************************************************************************/
 
-unsigned int mpu_allocregion(void)
+unsigned int mpu_allocregions(unsigned int nregions)
 {
   unsigned int i = ffs(~g_mpu_region) - 1;
 
   /* There are not enough regions to apply */
 
-  DEBUGASSERT(i < CONFIG_ARM_MPU_NREGIONS);
-  g_mpu_region |= 1 << i;
+  DEBUGASSERT((i + nregions - 1) < CONFIG_ARM_MPU_NREGIONS);
+  g_mpu_region |= ((1 << nregions) - 1) << i;
   return i;
 }
 
@@ -521,6 +521,63 @@ void mpu_modify_region(unsigned int region, uintptr_t base, size_t size,
   /* Ensure MPU setting take effects */
 
   UP_MB();
+}
+
+/****************************************************************************
+ * Name: mpu_modify_regions
+ *
+ * Description:
+ *   Configure multi regions for privileged, strongly ordered memory
+ *
+ * Input Parameters:
+ *   region  - First region number to modify.
+ *   base    - Base address of the region.
+ *   size    - Size of the region.
+ *   flags   - Flags to configure the region.
+ *
+ ****************************************************************************/
+
+void mpu_modify_regions(unsigned int region, uintptr_t base, size_t size,
+                        uint32_t flags)
+{
+  uintptr_t    alignedbase;
+  uint8_t      l2size;
+  size_t       region1_size;
+  size_t       region2_size;
+
+  alignedbase  = base & MPU_RBAR_ADDR_MASK;
+  l2size       = mpu_log2regionceil(size + base - alignedbase);
+  alignedbase &= ~((1 << l2size) - 1);
+  l2size       = mpu_log2regionceil(size + base - alignedbase);
+  alignedbase &= ~((1 << l2size) - 1);
+
+  if (alignedbase + (1 << l2size) < base + size)
+    {
+      region1_size = alignedbase + (1 << l2size) - base;
+      region2_size = size - region1_size;
+    }
+  else
+    {
+      region1_size = size;
+      region2_size = 0;
+    }
+
+  mpu_modify_region(region, base, region1_size, flags);
+
+  if (region2_size != 0)
+    {
+      mpu_modify_region(region + 1, base + region1_size,
+                        region2_size, flags);
+    }
+  else
+    {
+      putreg32(region + 1, MPU_RNR);
+      putreg32(0, MPU_RASR);
+      putreg32(0, MPU_RBAR);
+
+      ARM_DSB();
+      ARM_ISB();
+    }
 }
 
 /****************************************************************************

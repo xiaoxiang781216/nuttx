@@ -427,19 +427,13 @@ int up_addrenv_ustackswitch(struct tcb_s *tcb)
 
   if (g_addrenv_stack_region == 0)
     {
-      g_addrenv_stack_region =
-        mpu_configure_region((uintptr_t)tcb->stack_alloc_ptr,
-                              tcb->adj_stack_size + tls->tl_size,
-                              flags);
-    }
-  else
-    {
-      mpu_modify_region(g_addrenv_stack_region,
-                        (uintptr_t)tcb->stack_alloc_ptr,
-                        tcb->adj_stack_size + tls->tl_size,
-                        flags);
+      g_addrenv_stack_region = mpu_allocregions(2);
     }
 
+  mpu_modify_regions(g_addrenv_stack_region,
+                     (uintptr_t)tcb->stack_alloc_ptr,
+                     tcb->adj_stack_size + tls->tl_size,
+                     flags);
   return OK;
 }
 #endif
