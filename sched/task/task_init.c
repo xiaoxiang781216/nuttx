@@ -246,11 +246,15 @@ errout_with_group:
 
 void nxtask_uninit(FAR struct task_tcb_s *tcb)
 {
+  irqstate_t flags;
+
   /* The TCB was added to the inactive task list by
    * nxtask_setup_scheduler().
    */
 
+  flags = enter_critical_section();
   dq_rem((FAR dq_entry_t *)tcb, list_inactivetasks());
+  leave_critical_section(flags);
 
   /* Release all resources associated with the TCB... Including the TCB
    * itself.
