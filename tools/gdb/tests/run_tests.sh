@@ -142,7 +142,7 @@ ${elffile} \
 -ex="b up_idle" \
 -ex="${EXTRA_CMD}" \
 -ex="c" \
--ex="python import sys; print(sys.version); print(sys.executable); print(sys.path)"
+-ex="python import sys; print(sys.version); print(sys.executable); print(sys.path)" \
 -ex="source ${GDB_TOOLS}/gdbinit.py" \
 -ex="source ${GDB_TOOLS}/tests/runner.py" \
 
