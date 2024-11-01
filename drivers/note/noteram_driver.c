@@ -609,6 +609,11 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         break;
 
+      case NOTE_GETFREQ:
+        *(FAR unsigned long *)arg = perf_getfreq();
+        ret = OK;
+        break;
+
       default:
           break;
     }
