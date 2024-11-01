@@ -146,7 +146,7 @@ class NXGcore(gdb.Command):
         if args.trust_readonly:
             gdb.execute("set trust-readonly-sections on")
 
-        gdb.execute(f'gcore "{corefile}"')
+        gdb.execute(f"gcore {corefile}")
 
         if args.trust_readonly:
             # Restore trust-readonly-sections to default off state
