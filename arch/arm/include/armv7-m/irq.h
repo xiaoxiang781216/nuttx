@@ -42,6 +42,13 @@
  * Pre-processor Prototypes
  ****************************************************************************/
 
+#ifdef __ghs__
+#  define __ARM_ARCH 7
+#  ifdef __ARM_DSP__
+#    define __ARM_FEATURE_DSP 1
+#  endif
+#endif
+
 /* Configuration ************************************************************/
 
 /* If this is a kernel build, how many nested system calls should we
