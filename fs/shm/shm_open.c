@@ -117,6 +117,7 @@ static int file_shm_open(FAR struct file *shm, FAR const char *name,
         {
           shmfs_free_object(inode->i_private);
           inode->i_private = NULL;
+          inode->i_size = 0;
         }
     }
   else
