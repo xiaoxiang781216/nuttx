@@ -673,7 +673,8 @@ static int fatfs_dup(FAR const struct file *oldp, FAR struct file *newp)
  * Name: fatfs_stat_i
  ****************************************************************************/
 
-static int fatfs_stat_i(FAR const char *path, FAR struct stat *buf)
+static int fatfs_stat_i(FAR struct fatfs_mountpt_s *fs,
+                        FAR const char *path, FAR struct stat *buf)
 {
   struct tm gm;
   FILINFO fno;
@@ -705,15 +706,18 @@ static int fatfs_stat_i(FAR const char *path, FAR struct stat *buf)
   buf->st_size  = fno.fsize;
 
   memset(&gm, 0, sizeof(gm));
-  gm.tm_year    = 80 + (fno.fdate >> 9);
-  gm.tm_mon     = ((fno.fdate >> 5) & 0xf) - 1;
-  gm.tm_mday    = fno.fdate & 0x1f;
-  gm.tm_hour    = fno.ftime >> 11;
-  gm.tm_min     = (fno.ftime >> 5) & 0x3f;
-  gm.tm_sec     = (fno.ftime & 0x1f) << 1;
-  buf->st_mtime = timegm(&gm);
-  buf->st_atime = buf->st_mtime;
-  buf->st_ctime = buf->st_mtime;
+  gm.tm_year      = 80 + (fno.fdate >> 9);
+  gm.tm_mon       = ((fno.fdate >> 5) & 0xf) - 1;
+  gm.tm_mday      = fno.fdate & 0x1f;
+  gm.tm_hour      = fno.ftime >> 11;
+  gm.tm_min       = (fno.ftime >> 5) & 0x3f;
+  gm.tm_sec       = (fno.ftime & 0x1f) << 1;
+  buf->st_mtime   = timegm(&gm);
+  buf->st_atime   = buf->st_mtime;
+  buf->st_ctime   = buf->st_mtime;
+  buf->st_blksize = SS(&fs->fat);
+  buf->st_blocks  = (buf->st_size + buf->st_blksize - 1) /
+                     buf->st_blksize;
 
   return ret;
 }
@@ -751,7 +755,7 @@ static int fatfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
       goto errsem;
     }
 
-  ret = fatfs_stat_i(fp->path, buf);
+  ret = fatfs_stat_i(fs, fp->path, buf);
 
 errsem:
   nxmutex_unlock(&fs->lock);
@@ -1515,7 +1519,7 @@ static int fatfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
   path[0] = '0' + fs->pdrv;
   path[1] = ':';
   path[2] = '\0';
-  ret = fatfs_stat_i(strcat(path, relpath), buf);
+  ret = fatfs_stat_i(fs, strcat(path, relpath), buf);
   nxmutex_unlock(&fs->lock);
 
   return ret;
