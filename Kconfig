@@ -2562,6 +2562,10 @@ config TRACE_RPMSGFS_FS
 	bool "Enable tracepoints in rpmsgfs"
 	default n
 
+config TRACE_LROFS_FS
+	bool "Enable tracepoints in lrofs"
+	default n
+
 endmenu # Trace Fs Support
 endif
 
