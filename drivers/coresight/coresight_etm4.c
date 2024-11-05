@@ -386,7 +386,10 @@
   ETM4_READ_CASE(res, TRCIDR2, trcidr2)                \
   ETM4_READ_CASE(res, TRCIDR3, trcidr3)                \
   ETM4_READ_CASE(res, TRCIDR5, trcidr5)                \
-  ETM4_READ_CASE(res, TRCIDR6, trcidr6)
+  ETM4_READ_CASE(res, TRCIDR6, trcidr6)                \
+  ETM4_READ_CASE(res, TRCAUTHSTATUS, trcauthstatus)    \
+  ETM4_READ_CASE(res, TRCDEVARCH, trcdevarch)          \
+  ETM4_READ_CASE(res, TRCDEVID, trcdevid)
 
 #define ETM4_WRITE_ONLY_SYSREG_CASES(val)              \
   ETM4_WRITE_CASE(val, TRCOSLAR, trcoslar)
@@ -558,9 +561,6 @@
   ETM4_##op##_CASE(val, TRCVMIDCCTLR1, trcvmidcctlr1)  \
   ETM4_##op##_CASE(val, TRCCLAIMSET, trcclaimset)      \
   ETM4_##op##_CASE(val, TRCCLAIMCLR, trcclaimclr)      \
-  ETM4_##op##_CASE(val, TRCAUTHSTATUS, trcauthstatus)  \
-  ETM4_##op##_CASE(val, TRCDEVARCH, trcdevarch)        \
-  ETM4_##op##_CASE(val, TRCDEVID, trcdevid)            \
   ETM4_##op##_CASE(val, TRCPROCSELR, trcprocselr)      \
   ETM4_##op##_CASE(val, TRCVDCTLR, trcvdctlr)          \
   ETM4_##op##_CASE(val, TRCVDSACCTLR, trcvdsacctlr)    \
@@ -1170,6 +1170,7 @@ static void etm4_disable(FAR struct coresight_dev_s *csdev)
 
 static void etm4_enable_trace_filtering(struct coresight_etm4_dev_s *etmdev)
 {
+#ifdef CONFIG_ARCH_HAVE_ETM4_TRACE_FILTER
   uint64_t dfr0 = read_sysreg(id_aa64dfr0_el1);
 
   if (!ID_AA64DFR0_EL1_TRACEFILT(dfr0))
@@ -1193,6 +1194,7 @@ static void etm4_enable_trace_filtering(struct coresight_etm4_dev_s *etmdev)
     }
 
   write_sysreg(etmdev->trfcr, trfcr_el1);
+#endif
 }
 
 /****************************************************************************

@@ -37,6 +37,12 @@ config CORESIGHT_ETM_USE_COPROCESSOR
 	bool "Whether use coprocessor to access ETM registers"
 	default n
 
+config CORESIGHT_HAVE_TRACE_FILTER
+	bool
+	default n
+	---help---
+		Whether to support the use of trfcr_el1 register
+
 endif # CORESIGHT_ETM
 
 config CORESIGHT_FUNNEL
