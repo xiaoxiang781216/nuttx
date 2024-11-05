@@ -24,8 +24,19 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
 #include <sys/types.h>
+
+#ifdef CONFIG_UINPUT_TOUCH
+#  include <nuttx/input/touchscreen.h>
+#endif
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifdef CONFIG_UINPUT_TOUCH
+#  define UINPUT_TSIOC_SETRESOLUTION _TSIOC(TSC_NCMDS + 1)
+#endif
 
 /****************************************************************************
  * Public Function Prototypes

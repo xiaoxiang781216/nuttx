@@ -79,10 +79,11 @@ struct uinput_context_s
 struct uinput_touch_lowerhalf_s
 {
 #ifdef CONFIG_UINPUT_RPMSG
-  struct uinput_context_s ctx;
+  struct uinput_context_s   ctx;
 #endif
 
-  struct touch_lowerhalf_s lower;
+  struct touch_lowerhalf_s  lower;
+  struct touch_resolution_s resolution;
 };
 #endif
 
@@ -350,6 +351,50 @@ static ssize_t uinput_touch_write(FAR struct touch_lowerhalf_s *lower,
   return uinput_touch_notify(utcs_lower, buffer, buflen);
 }
 
+/****************************************************************************
+ * Name: uinput_touch_control
+ ****************************************************************************/
+
+static int uinput_touch_control(FAR struct touch_lowerhalf_s *lower,
+                                int cmd, unsigned long arg)
+{
+  FAR struct uinput_touch_lowerhalf_s *utcs_lower =
+    container_of(lower, struct uinput_touch_lowerhalf_s, lower);
+  int ret = OK;
+
+  switch (cmd)
+    {
+      case TSIOC_GETRESOLUTION:
+        {
+          /* get resolution of the touchscreen */
+
+          struct touch_resolution_s *ptr =
+                               (struct touch_resolution_s *)((uintptr_t)arg);
+          DEBUGASSERT(ptr != NULL);
+          ptr->res_x = utcs_lower->resolution.res_x;
+          ptr->res_y = utcs_lower->resolution.res_y;
+        }
+        break;
+      case UINPUT_TSIOC_SETRESOLUTION:
+        {
+          /* set resolution for the touchscreen */
+
+          struct touch_resolution_s *ptr =
+                               (struct touch_resolution_s *)((uintptr_t)arg);
+          DEBUGASSERT(ptr != NULL);
+
+          utcs_lower->resolution.res_x = ptr->res_x;
+          utcs_lower->resolution.res_y = ptr->res_y;
+        }
+        break;
+      default:
+        ret = -ENOTTY;
+        break;
+    }
+
+  return ret;
+}
+
 #endif /* CONFIG_UINPUT_TOUCH */
 
 #ifdef CONFIG_UINPUT_BUTTONS
@@ -552,6 +597,7 @@ int uinput_touch_initialize(void)
 
   utcs_lower->lower.write    = uinput_touch_write;
   utcs_lower->lower.maxpoint = CONFIG_UINPUT_TOUCH_MAXPOINT;
+  utcs_lower->lower.control  = uinput_touch_control;
 #ifdef CONFIG_UINPUT_RPMSG
   utcs_lower->ctx.notify     = uinput_touch_notify;
 #endif
