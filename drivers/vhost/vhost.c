@@ -84,10 +84,17 @@ static struct vhost_bus_s g_vhost_bus =
 
 static bool vhost_status_driver_ok(FAR struct vhost_device *hdev)
 {
-  uint8_t status = vhost_get_status(hdev);
+  uint8_t status;
   bool driver_ok = false;
+  int ret;
 
   /* Busy wait until the remote is ready */
+
+  ret = vhost_get_status(hdev, &status);
+  if (ret < 0)
+    {
+      return false;
+    }
 
   if (status & VIRTIO_CONFIG_STATUS_NEEDS_RESET)
     {
