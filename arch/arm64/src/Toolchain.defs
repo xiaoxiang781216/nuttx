@@ -197,13 +197,11 @@ ifeq ($(CONFIG_ARCH_TOOLCHAIN_GNU),y)
       LDFLAGS += --no-warn-rwx-segments
     endif
 
-    LDFLAGS += --print-memory-usage
   endif
   ifeq ($(shell expr "$(GCCVER)" \>= 12), 1)
     LDFLAGS += --no-warn-rwx-segments
+    LDFLAGS += --print-memory-usage
   endif
-
-  LDFLAGS += --print-memory-usage
 endif
 
 # Add the builtin library
