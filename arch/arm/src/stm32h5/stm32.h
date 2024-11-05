@@ -36,5 +36,10 @@
 
 #include "chip.h"
 #include "stm32_flash.h"
-
+#include "stm32_dbgmcu.h"
+#include "stm32_gpio.h"
+#include "stm32_pwr.h"
+#include "stm32_rcc.h"
+#include "stm32_uart.h"
+#include "stm32_lowputc.h"
 #endif /* __ARCH_ARM_SRC_STM32H5_STM32_H */
