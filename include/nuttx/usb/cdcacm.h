@@ -432,6 +432,20 @@ void cdcacm_get_composite_devdesc(struct composite_devdesc_s *dev);
 ssize_t cdcacm_write(FAR const char *buffer, size_t buflen);
 #endif
 
+/****************************************************************************
+ * Name: cdcacm_disable_syslog
+ *
+ * Description:
+ *   Disable CDCACM syslog channel by clearing the globle pointer.
+ *   This function is used in specific situation, such as must disable
+ *   cdcacm log printing when usb re-enumeration.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SYSLOG_CDCACM
+void cdcacm_disable_syslog(void);
+#endif
+
 #undef EXTERN
 #if defined(__cplusplus)
 }

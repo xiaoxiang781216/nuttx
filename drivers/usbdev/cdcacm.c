@@ -2801,6 +2801,21 @@ ssize_t cdcacm_write(FAR const char *buffer, size_t buflen)
 
   return buflen;
 }
+
+/****************************************************************************
+ * Name: cdcacm_disable_syslog
+ *
+ * Description:
+ *   Disable CDCACM syslog channel by clearing the globle pointer.
+ *   This function is used in specific situation, such as must disable
+ *   cdcacm log printing when usb re-enumeration.
+ *
+ ****************************************************************************/
+
+void cdcacm_disable_syslog(void)
+{
+  g_syslog_cdcacm = NULL;
+}
 #endif
 
 /****************************************************************************
