@@ -617,7 +617,7 @@ int dir_allocate(FAR struct file *filep, FAR const char *relpath)
     }
 
   inode_getpath(inode, path_prefix, PATH_MAX);
-  ret = asprintf(&dir->fd_path, "%s%s/", path_prefix, relpath);
+  ret = fs_heap_asprintf(&dir->fd_path, "%s%s/", path_prefix, relpath);
   if (ret < 0)
     {
       dir->fd_path = NULL;
