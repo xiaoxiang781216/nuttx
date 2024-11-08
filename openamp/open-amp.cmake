@@ -99,6 +99,8 @@ else()
   add_compile_definitions(VIRTIO_DRIVER_SUPPORT=0)
 endif()
 
+add_compile_definitions(DVQ_RX_EMPTY_NOTIFY=1)
+
 set(WITH_LIBMETAL_FIND OFF)
 set(WITH_PROXY OFF)
 

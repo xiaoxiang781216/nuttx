@@ -44,6 +44,7 @@ else
   CFLAGS += -DVIRTIO_DRIVER_SUPPORT=0
 endif
 
+CFLAGS += -DVQ_RX_EMPTY_NOTIFY=1
 CFLAGS += -Iopen-amp/lib/include
 
 # avoid multiple definitions in other file
