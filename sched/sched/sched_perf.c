@@ -45,6 +45,7 @@
 
 #define PERF_GET_COUNT(event) ((event)->count + (event)->child_count)
 #define PERF_DEFAULT_PERIOD 1000
+#define PERF_RECORD_MISC_USER (2 << 0)
 
 /****************************************************************************
  * Private Types
@@ -264,6 +265,7 @@ static int perf_event_data_overflow(FAR struct perf_event_s *event,
   space = circbuf_space(&(event->buf->rb));
   event->count++;
   header.size = perf_prepare_sample(data, event, ip);
+  header.misc = PERF_RECORD_MISC_USER;
   header.type = PERF_RECORD_SAMPLE;
 
   if (space < circbuf_size(&(event->buf->rb)) / 5 && event->pfd)

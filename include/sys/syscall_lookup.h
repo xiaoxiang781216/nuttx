@@ -402,3 +402,7 @@ SYSCALL_LOOKUP(settimeofday,               2)
 /* ANSI C signal handling */
 
 SYSCALL_LOOKUP(signal,                     2)
+
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  SYSCALL_LOOKUP(perf_event_open,          5)
+#endif
