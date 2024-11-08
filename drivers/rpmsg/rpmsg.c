@@ -573,13 +573,37 @@ static int rpmsg_ioctl_foreach_cb(FAR struct rpmsg_s *rpmsg, FAR void *arg)
 
 int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg)
 {
-  struct rpmsg_ioctl_s info;
+  FAR struct metal_list *node;
+  bool needlock;
+  int ret = OK;
 
-  info.cpuname = cpuname;
-  info.cmd = cmd;
-  info.arg = arg;
+  needlock = !up_interrupt_context() && !sched_idletask();
+  if (needlock)
+    {
+      nxrmutex_lock(&g_rpmsg_lock);
+    }
 
-  return rpmsg_foreach(rpmsg_ioctl_foreach_cb, &info);
+  metal_list_for_each(&g_rpmsg, node)
+    {
+      FAR struct rpmsg_s *rpmsg =
+        metal_container_of(node, struct rpmsg_s, node);
+
+      if (!cpuname || !strcmp(rpmsg_get_cpuname(rpmsg->rdev), cpuname))
+        {
+          ret = rpmsg_dev_ioctl_(rpmsg, cmd, arg);
+          if (ret < 0)
+            {
+              break;
+            }
+        }
+    }
+
+  if (needlock)
+    {
+      nxrmutex_unlock(&g_rpmsg_lock);
+    }
+
+  return ret;
 }
 
 int rpmsg_panic(FAR const char *cpuname)
