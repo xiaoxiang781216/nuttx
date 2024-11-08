@@ -93,9 +93,9 @@
 #define MPS_SRAM2_START    0x21000000
 #define MPS_SRAM2_SIZE     0x00400000
 
-/* External storage (2GB) */
-#define MPS_EXTMEM_START   0x60000000
-#define MPS_EXTMEM_SIZE    0x80000000
+/* External storage (1GB) */
+#define MPS_EXTMEM_START   0xa0000000
+#define MPS_EXTMEM_SIZE    0x40000000
 
 #define PRIMARY_RAM_START  MPS_SRAM2_START
 #define PRIMARY_RAM_SIZE   MPS_SRAM2_SIZE
