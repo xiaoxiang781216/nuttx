@@ -323,8 +323,9 @@ function build_board()
   fi
 
   GHS_OPTS_STRING="CONFIG_ARCH_TOOLCHAIN_GHS=y"
-  if grep -q "^${GHS_OPTS_STRING}$" "${NUTTXDIR}/.config"; then
-    echo "EXTRA_FLAGS are required to update the when using the GHS toolchain."
+  TASKING_OPTS_STRING="CONFIG_TRICORE_TOOLCHAIN_TASKING=y"
+  if grep -qE "^(${GHS_OPTS_STRING}|${TASKING_OPTS_STRING})$" "${NUTTXDIR}/.config"; then
+    echo "EXTRA_FLAGS are required to update the when using the GHS or Tasking toolchain."
     EXTRA_FLAGS=$(echo "$EXTRA_FLAGS" | sed 's/-Wno-cpp//' | xargs)
   fi
 
@@ -381,9 +382,10 @@ function build_board_cmake()
 
   # remove the -Wno-cpp build option from ghs build options
   GHS_OPTS_STRING="CONFIG_ARM_TOOLCHAIN_GHS=y"
+  TASKING_OPTS_STRING="CONFIG_TRICORE_TOOLCHAIN_TASKING=y"
   defconfig_path=$1/defconfig
   valid_defconfig_path=$(echo ${defconfig_path} | sed 's/^.\{3\}//')
-  if grep -q "^${GHS_OPTS_STRING}$" "${valid_defconfig_path}"; then
+  if grep -qE "^(${GHS_OPTS_STRING}|${TASKING_OPTS_STRING})$" "${valid_defconfig_path}"; then
     echo "EXTRA_FLAGS are required to update the when using the GHS toolchain."
     EXTRA_FLAGS=$(echo "$EXTRA_FLAGS" | sed 's/-Wno-cpp//' | xargs)
   fi
