@@ -20,7 +20,33 @@
 #
 # ##############################################################################
 
-set(SRCS)
+if(CONFIG_ARCH_TOOLCHAIN_GNU)
+  set(ARCH_TOOLCHAIN_DIR gnu)
+endif()
+
+if(CONFIG_ARMV8R_MEMCHR)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_DIR}/arch_memchr.S)
+endif()
+
+if(CONFIG_ARMV8R_MEMCPY)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_DIR}/arch_memcpy.S)
+endif()
+
+if(CONFIG_ARMV8R_MEMMOVE)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_DIR}/arch_memmove.S)
+endif()
+
+if(CONFIG_ARMV8R_MEMSET)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_DIR}/arch_memset.S)
+endif()
+
+if(CONFIG_ARMV8R_STRCMP)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_DIR}/arch_strcmp.S)
+endif()
+
+if(CONFIG_ARMV8R_STRLEN)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_DIR}/arch_strlen.S)
+endif()
 
 if(CONFIG_LIBC_ARCH_ELF)
   list(APPEND SRCS arch_elf.c)
