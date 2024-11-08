@@ -322,6 +322,10 @@ function build_board()
     exit 1
   fi
 
+  if [[ ${CUSTOM_COMPILER} == "tasking" ]]; then
+    kconfig-tweak --file ${NUTTXDIR}/.config --enable CONFIG_TRICORE_TOOLCHAIN_TASKING
+  fi
+
   GHS_OPTS_STRING="CONFIG_ARCH_TOOLCHAIN_GHS=y"
   TASKING_OPTS_STRING="CONFIG_TRICORE_TOOLCHAIN_TASKING=y"
   if grep -qE "^(${GHS_OPTS_STRING}|${TASKING_OPTS_STRING})$" "${NUTTXDIR}/.config"; then
@@ -509,6 +513,7 @@ if [ $# == 0 ]; then
   echo "  --cmake: switch the build mode to CMake compilation."
   echo "  -b: set custom binary directory for CMake."
   echo "  --dis-ninja: disable CMake Ninja generator fo default."
+  echo "  -c: set custom toolchain."
   exit 1
 fi
 
@@ -577,6 +582,13 @@ fi
 
 if [ "$1" == "--dis-ninja" ]; then
   CMAKE_GENERATOR=""
+  shift
+fi
+
+if [ "$1" == "-c" ]; then
+  shift
+  CUSTOM_COMPILER="$1"
+  echo "custom toolchain: $CUSTOM_COMPILER"
   shift
 fi
 
