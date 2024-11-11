@@ -92,6 +92,10 @@
 #  define CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION -1
 #endif
 
+#ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT
+#  define CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT -1
+#endif
+
 #ifndef CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ
 #  define CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ -1
 #endif
@@ -718,6 +722,14 @@ struct tcb_s
   void   *crit_max_caller;               /* Caller of max critical section  */
 #endif
 
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0
+  clock_t busywait_start;                /* Time when thread busywait       */
+  clock_t busywait_max;                  /* Max time of busywait            */
+  clock_t busywait_total;                /* Total time of busywait          */
+  void   *busywait_caller;               /* Caller of busywait              */
+  void   *busywait_max_caller;           /* Caller of max busywait          */
+#endif
+
   /* Perf support ***********************************************************/
 
 #ifdef CONFIG_SCHED_PERF_EVENTS
@@ -893,6 +905,11 @@ EXTERN clock_t g_premp_max[CONFIG_SMP_NCPUS];
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
 EXTERN clock_t g_crit_max[CONFIG_SMP_NCPUS];
 #endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 */
+
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0
+EXTERN clock_t g_busywait_max[CONFIG_SMP_NCPUS];
+EXTERN clock_t g_busywait_total[CONFIG_SMP_NCPUS];
+#endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0 */
 
 /* g_running_tasks[] holds a references to the running task for each CPU.
  * It is valid only when up_interrupt_context() returns true.
