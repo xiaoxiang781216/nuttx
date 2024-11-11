@@ -739,7 +739,7 @@ void sched_note_stop(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(struct note_stop_s));
+      note_add(*driver, &note, note.nsp_cmn.nc_length);
     }
 }
 
@@ -778,7 +778,7 @@ void sched_note_suspend(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(struct note_suspend_s));
+      note_add(*driver, &note, note.nsu_cmn.nc_length);
     }
 }
 
@@ -816,7 +816,7 @@ void sched_note_resume(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(struct note_resume_s));
+      note_add(*driver, &note, note.nre_cmn.nc_length);
     }
 }
 
@@ -856,7 +856,7 @@ void sched_note_cpu_start(FAR struct tcb_s *tcb, int cpu)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(struct note_cpu_start_s));
+      note_add(*driver, &note, note.ncs_cmn.nc_length);
     }
 }
 
@@ -894,7 +894,7 @@ void sched_note_cpu_started(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(struct note_cpu_started_s));
+      note_add(*driver, &note, note.ncs_cmn.nc_length);
     }
 }
 
@@ -933,7 +933,7 @@ void sched_note_cpu_pause(FAR struct tcb_s *tcb, int cpu)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(struct note_cpu_pause_s));
+      note_add(*driver, &note, note.ncp_cmn.nc_length);
     }
 }
 
@@ -971,7 +971,7 @@ void sched_note_cpu_paused(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(struct note_cpu_paused_s));
+      note_add(*driver, &note, note.ncp_cmn.nc_length);
     }
 }
 
@@ -1010,7 +1010,7 @@ void sched_note_cpu_resume(FAR struct tcb_s *tcb, int cpu)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(struct note_cpu_resume_s));
+      note_add(*driver, &note, note.ncr_cmn.nc_length);
     }
 }
 
@@ -1048,7 +1048,7 @@ void sched_note_cpu_resumed(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(struct note_cpu_resumed_s));
+      note_add(*driver, &note, note.ncr_cmn.nc_length);
     }
 }
 #endif /* CONFIG_SMP */
@@ -1090,7 +1090,7 @@ void sched_note_premption(FAR struct tcb_s *tcb, bool locked)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(struct note_preempt_s));
+      note_add(*driver, &note, note.npr_cmn.nc_length);
     }
 }
 #endif
@@ -1133,7 +1133,7 @@ void sched_note_csection(FAR struct tcb_s *tcb, bool enter)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(struct note_csection_s));
+      note_add(*driver, &note, note.ncs_cmn.nc_length);
     }
 }
 #endif
@@ -1192,7 +1192,7 @@ void sched_note_spinlock(FAR struct tcb_s *tcb,
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(struct note_spinlock_s));
+      note_add(*driver, &note, note.nsp_cmn.nc_length);
     }
 }
 
@@ -1346,7 +1346,7 @@ void sched_note_syscall_leave(int nr, uintptr_t result)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(struct note_syscall_leave_s));
+      note_add(*driver, &note, note.nsc_cmn.nc_length);
     }
 }
 #endif
@@ -1388,7 +1388,7 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(struct note_irqhandler_s));
+      note_add(*driver, &note, note.nih_cmn.nc_length);
     }
 }
 #endif
@@ -1423,7 +1423,7 @@ void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(note));
+      note_add(*driver, &note, note.nwd_cmn.nc_length);
     }
 }
 #endif
@@ -1466,7 +1466,7 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, sizeof(note));
+      note_add(*driver, &note, note.nhp_cmn.nc_length);
     }
 }
 #endif
