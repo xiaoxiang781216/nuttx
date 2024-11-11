@@ -29,6 +29,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 /* Include architecture-specific limits */
 
 #ifdef CONFIG_ARCH_INTEL64
