@@ -129,6 +129,7 @@ static FAR struct myifaddrs *getmutil_ipv6addr(int fd, struct lifreq *req,
       ifaddr->addrs.ifa_data = (FAR struct sockaddr *)&ifaddr->hwaddr;
     }
 
+  ifaddr->addrs.ifa_next = NULL;
   return ifaddr;
 }
 #endif
