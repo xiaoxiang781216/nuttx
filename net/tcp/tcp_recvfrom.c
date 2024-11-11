@@ -851,7 +851,7 @@ ssize_t psock_tcp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
   FAR socklen_t         *fromlen = &msg->msg_namelen;
   FAR struct tcp_conn_s *conn;
   ssize_t                nrecv   = 0;
-  int                    ret     = 0;
+  ssize_t                ret     = 0;
   int                    i;
 
   net_lock();
