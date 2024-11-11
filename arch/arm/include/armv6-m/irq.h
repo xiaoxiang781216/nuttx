@@ -45,9 +45,6 @@
 
 #ifdef __ghs__
 #  define __ARM_ARCH 6
-#  ifdef __ARM_DSP__
-#    define __ARM_FEATURE_DSP 1
-#  endif
 #endif
 
 /* Configuration ************************************************************/

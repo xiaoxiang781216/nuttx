@@ -51,9 +51,6 @@
 
 #ifdef __ghs__
 #  define __ARM_ARCH 8
-#  ifdef __ARM_DSP__
-#    define __ARM_FEATURE_DSP 1
-#  endif
 #endif
 
 #define up_getsp()          (uintptr_t)__builtin_frame_address(0)
