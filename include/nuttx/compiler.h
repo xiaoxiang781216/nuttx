@@ -244,7 +244,7 @@
 #    define naked_function __attribute__((naked,no_instrument_function))
 #  else
 #    define naked_function
-#endif
+#  endif
 
 /* The always_inline_function attribute informs GCC that the function should
  * always be inlined, regardless of the level of optimization.  The
