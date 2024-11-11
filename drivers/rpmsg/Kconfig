@@ -41,6 +41,22 @@ config RPMSG_TEST
 	bool "rpmsg test support"
 	default n
 
+config RPMSG_DEFER_WORK_COUNT
+	int "Rpmsg defer work count"
+	default 0
+
+if RPMSG_DEFER_WORK_COUNT > 0
+
+config RPMSG_DEFER_WORK_PRIORITY
+	int "rpmsg thread priority"
+	default 223
+
+config RPMSG_DEFER_WORK_STACKSIZE
+	int "rpmsg stack size"
+	default DEFAULT_TASK_STACKSIZE
+
+endif # RPMSG_DEFER_WORK_COUNT > 0
+
 config RPMSG_PROCFS
 	bool "Include rpmsg info in procfs"
 	depends on FS_PROCFS_REGISTER

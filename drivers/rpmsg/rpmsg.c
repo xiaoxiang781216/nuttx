@@ -26,6 +26,10 @@
 
 #include <nuttx/config.h>
 
+#include <debug.h>
+#include <stdio.h>
+#include <sys/param.h>
+
 #include <metal/sys.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
@@ -161,6 +165,59 @@ static int rpmsg_dev_ioctl(FAR struct file *filep, int cmd,
   return rpmsg_dev_ioctl_(rpmsg, cmd, arg);
 }
 
+#if CONFIG_RPMSG_DEFER_WORK_COUNT > 0
+static void rpmsg_defer_worker(FAR void *arg)
+{
+  FAR struct rpmsg_s *rpmsg = arg;
+  FAR struct rpmsg_device *rdev = rpmsg_get_rdev_by_rpmsg(rpmsg);
+  FAR struct rpmsg_defer_node_s *defer_node;
+  FAR struct metal_list *node;
+  irqstate_t flags;
+  int ret;
+
+  flags = spin_lock_irqsave(&rpmsg->defer_lock);
+  while ((node = metal_list_first(&rpmsg->defer_used)) != NULL)
+    {
+      metal_list_del(node);
+      spin_unlock_irqrestore(&rpmsg->defer_lock, flags);
+
+      /* Get one defer_node form defer list rpmsg->defer */
+
+      defer_node = metal_container_of(node, struct rpmsg_defer_node_s,
+                                      node);
+
+      /* Process the defer handler */
+
+      ret = defer_node->handler(defer_node->ept, defer_node->data,
+                                defer_node->len, defer_node->src,
+                                defer_node->priv);
+      if (ret < 0)
+        {
+          rpmsgerr("Handle failed: ept: %p, data: %p, priv: %p, len: %zu,"
+                   "src: 0x%" PRIx32 ", handler: %p\n",
+                   defer_node->ept , defer_node->data, defer_node->priv,
+                   defer_node->len, defer_node->src, defer_node->handler);
+          PANIC();
+        }
+
+      rpmsg_release_rx_buffer(defer_node->ept, defer_node->data);
+
+      /* Need decrease the endpoint reference count */
+
+      metal_mutex_acquire(&rdev->lock);
+      rpmsg_ept_decref(defer_node->ept);
+      metal_mutex_release(&rdev->lock);
+
+      /* Add the defer_node to defer_free list */
+
+      flags = spin_lock_irqsave(&rpmsg->defer_lock);
+      metal_list_add_tail(&rpmsg->defer_free, &defer_node->node);
+    }
+
+  spin_unlock_irqrestore(&rpmsg->defer_lock, flags);
+}
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -232,6 +289,71 @@ int rpmsg_get_signals(FAR struct rpmsg_device *rdev)
   FAR struct rpmsg_s *rpmsg = rpmsg_get_by_rdev(rdev);
 
   return atomic_load(&rpmsg->signals);
+}
+
+int rpmsg_defer_work(FAR struct rpmsg_endpoint *ept, FAR void *data,
+                     size_t len, uint32_t src, FAR void *priv,
+                     rpmsg_ept_cb handler)
+{
+  int ret;
+#if CONFIG_RPMSG_DEFER_WORK_COUNT > 0
+  FAR struct rpmsg_device *rdev = ept->rdev;
+  FAR struct rpmsg_s *rpmsg = rpmsg_get_by_rdev(rdev);
+  FAR struct rpmsg_defer_node_s *defer_node;
+  FAR struct metal_list *node;
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(&rpmsg->defer_lock);
+  node = metal_list_first(&rpmsg->defer_free);
+  if (node == NULL)
+    {
+      rpmsgwarn("Defer list is full, drop the defer work\n");
+      goto handle;
+    }
+
+  metal_list_del(node);
+  spin_unlock_irqrestore(&rpmsg->defer_lock, flags);
+
+  /* Need increase ept reference count and hold rx buffer */
+
+  metal_mutex_acquire(&rdev->lock);
+  rpmsg_ept_incref(ept);
+  metal_mutex_release(&rdev->lock);
+
+  defer_node = metal_container_of(node, struct rpmsg_defer_node_s, node);
+  defer_node->ept = ept;
+  defer_node->data = data;
+  defer_node->len = len;
+  defer_node->src =  src;
+  defer_node->priv = priv;
+  defer_node->handler = handler;
+
+  /* Add to the defer_used list */
+
+  flags = spin_lock_irqsave(&rpmsg->defer_lock);
+  metal_list_add_tail(&rpmsg->defer_used, &defer_node->node);
+  spin_unlock_irqrestore(&rpmsg->defer_lock, flags);
+
+  /* Wake up the defer thread/workqueue to process the defer work */
+
+  work_queue_wq(rpmsg->defer_wqueue, &rpmsg->defer_work,
+                rpmsg_defer_worker, rpmsg, 0);
+  return RPMSG_SUCCESS_BUFFER_NONEED_RELEASE;
+
+handle:
+  spin_unlock_irqrestore(&rpmsg->defer_lock, flags);
+#endif
+
+  ret = handler(ept, data, len, src, priv);
+  if (ret < 0)
+    {
+      rpmsgerr("Handle failed: ept: %p, data: %p, priv: %p, len: %zu,"
+               "src: 0x%" PRIx32 ", handler: %p\n",
+               ept, data, priv, len, src, handler);
+      PANIC();
+    }
+
+  return ret;
 }
 
 int rpmsg_register_callback(FAR void *priv,
@@ -512,6 +634,11 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
                    FAR const struct rpmsg_ops_s *ops)
 {
   struct metal_init_params params = METAL_INIT_DEFAULTS;
+#if CONFIG_RPMSG_DEFER_WORK_COUNT > 0
+  FAR struct rpmsg_device *rdev = rpmsg_get_rdev_by_rpmsg(rpmsg);
+  char name[32];
+  size_t i;
+#endif
   int ret;
 
   ret = metal_init(&params);
@@ -526,6 +653,30 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
       metal_finish();
       return ret;
     }
+
+#if CONFIG_RPMSG_DEFER_WORK_COUNT > 0
+  spin_lock_init(&rpmsg->defer_lock);
+  metal_list_init(&rpmsg->defer_free);
+  metal_list_init(&rpmsg->defer_used);
+  for (i = 0; i < nitems(rpmsg->defer_nodes); i++)
+    {
+      metal_list_add_tail(&rpmsg->defer_free, &rpmsg->defer_nodes[i].node);
+    }
+
+  snprintf(name, sizeof(name), "rpmsg_defer_worker_%s",
+           rpmsg_get_cpuname(rdev));
+  rpmsg->defer_wqueue = work_queue_create(name,
+                                          CONFIG_RPMSG_DEFER_WORK_PRIORITY,
+                                          NULL,
+                                          CONFIG_RPMSG_DEFER_WORK_STACKSIZE,
+                                          1);
+  if (rpmsg->defer_wqueue == NULL)
+    {
+      rpmsgerr("rpmsg defer work queue create failed\n");
+      unregister_driver(path);
+      return -ENOMEM;
+    }
+#endif
 
   metal_list_init(&rpmsg->bind);
   nxrmutex_init(&rpmsg->lock);
@@ -543,6 +694,11 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
 
 void rpmsg_unregister(FAR const char *path, FAR struct rpmsg_s *rpmsg)
 {
+#if CONFIG_RPMSG_DEFER_WORK_COUNT > 0
+  work_cancel_sync_wq(rpmsg->defer_wqueue, &rpmsg->defer_work);
+  rpmsg_defer_worker(rpmsg);
+#endif
+
   down_write(&g_rpmsg_lock);
   metal_list_del(&rpmsg->node);
   up_write(&g_rpmsg_lock);
