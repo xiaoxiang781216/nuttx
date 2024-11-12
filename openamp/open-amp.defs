@@ -44,12 +44,18 @@ else
   CFLAGS += -DVIRTIO_DRIVER_SUPPORT=0
 endif
 
+CFLAGS += -Iopen-amp/lib/include
+
+# avoid multiple definitions in other file
+CFLAGS += -Dsafe_strcpy=openamp_safe_strcpy
+
 CSRCS += open-amp/lib/remoteproc/elf_loader.c
 CSRCS += open-amp/lib/remoteproc/remoteproc.c
 CSRCS += open-amp/lib/remoteproc/remoteproc_virtio.c
 CSRCS += open-amp/lib/remoteproc/rsc_table_parser.c
 CSRCS += open-amp/lib/rpmsg/rpmsg.c
 CSRCS += open-amp/lib/rpmsg/rpmsg_virtio.c
+CSRCS += open-amp/lib/utils/utilities.c
 CSRCS += open-amp/lib/virtio/virtio.c
 CSRCS += open-amp/lib/virtio/virtqueue.c
 
