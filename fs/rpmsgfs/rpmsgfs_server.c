@@ -980,21 +980,14 @@ static int rpmsgfs_ept_cb(FAR struct rpmsg_endpoint *ept,
 {
   struct rpmsgfs_header_s *header = data;
   uint32_t command = header->command;
-  int ret;
 
   if (command >= nitems(g_rpmsgfs_handler))
     {
       return -EINVAL;
     }
 
-  ret = g_rpmsgfs_handler[command](ept, data, len, src, priv);
-  if (ret < 0)
-    {
-      ferr("ERROR: handle failed, ept=%p cmd=%" PRIu32 " ret=%d\n",
-           ept, command, ret);
-    }
-
-  return ret;
+  return rpmsg_defer_work(ept, data, len, src, priv,
+                          g_rpmsgfs_handler[command]);
 }
 
 int rpmsgfs_server_init(void)

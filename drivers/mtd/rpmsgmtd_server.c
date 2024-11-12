@@ -423,12 +423,13 @@ static int rpmsgmtd_ept_cb(FAR struct rpmsg_endpoint *ept,
   FAR struct rpmsgmtd_header_s *header = data;
   uint32_t command = header->command;
 
-  if (command < nitems(g_rpmsgmtd_handler))
+  if (command >= nitems(g_rpmsgmtd_handler))
     {
-      return g_rpmsgmtd_handler[command](ept, data, len, src, priv);
+      return -EINVAL;
     }
 
-  return -EINVAL;
+  return rpmsg_defer_work(ept, data, len, src, priv,
+                          g_rpmsgmtd_handler[command]);
 }
 
 /****************************************************************************
