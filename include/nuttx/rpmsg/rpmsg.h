@@ -102,17 +102,17 @@ extern "C"
 #define EXTERN extern
 #endif
 
-static inline_function bool rpmsg_is_running(FAR struct rpmsg_endpoint *ept)
-{
-  return rpmsg_get_signals(ept) & RPMSG_SIGNAL_RUNNING;
-}
-
 int rpmsg_wait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem);
 int rpmsg_post(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem);
 
 FAR const char *rpmsg_get_local_cpuname(FAR struct rpmsg_device *rdev);
 FAR const char *rpmsg_get_cpuname(FAR struct rpmsg_device *rdev);
 int rpmsg_get_signals(FAR struct rpmsg_endpoint *ept);
+
+static inline_function bool rpmsg_is_running(FAR struct rpmsg_endpoint *ept)
+{
+  return rpmsg_get_signals(ept) & RPMSG_SIGNAL_RUNNING;
+}
 
 int rpmsg_register_callback(FAR void *priv,
                             rpmsg_dev_cb_t device_created,
