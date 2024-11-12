@@ -171,6 +171,12 @@ FAR const char *fs_gettype(FAR struct statfs *statbuf)
         break;
 #endif
 
+#ifdef CONFIG_FS_LROFS
+      case LROFS_MAGIC:
+        fstype = "lrofs";
+        break;
+#endif
+
       default:
         fstype = "Unrecognized";
         break;
