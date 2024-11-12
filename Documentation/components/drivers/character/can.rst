@@ -31,10 +31,6 @@ Files supporting CAN can be found in the following locations:
 ``can_hdr_s`` structure depends on ``CONFIG_CAN_TIMESTAMP`` and
 is used to store the timestamp of the CAN message.
 
-``struct timeval ch_ts``: This member variable that store in the
-``can_hdr_s`` structure depends on ``CONFIG_CAN_TIMESTAMP`` and
-is used to store the timestamp of the CAN message.
-
 **Usage Note**: When reading from the CAN driver multiple messages
 may be returned, depending on (1) the size the returned can
 messages, and (2) the size of the buffer provided to receive CAN
