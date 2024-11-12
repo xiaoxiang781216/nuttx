@@ -110,6 +110,7 @@
 #define _PCIBASE        (0x4100) /* Pci ioctl commands */
 #define _I3CBASE        (0x4200) /* I3C driver ioctl commands */
 #define _MSIOCBASE      (0x4300) /* Mouse ioctl commands */
+#define _PERFBASE       (0x4400) /* Perf ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 
 /* boardctl() commands share the same number space */
@@ -761,6 +762,13 @@
 
 #define _PINCTRLIOCVALID(c) (_IOC_TYPE(c)==_PINCTRLBASE)
 #define _PINCTRLIOC(nr)     _IOC(_PINCTRLBASE,nr)
+
+/* Perf driver ioctl definitions ********************************************/
+
+/* see nuttx/include/perf.h */
+
+#define _PERFIOCVALID(c)  (_IOC_TYPE(c)==_PERFBASE)
+#define _PERFIOC(nr)      _IOC(_PERFBASE,nr)
 
 /****************************************************************************
  * Public Type Definitions

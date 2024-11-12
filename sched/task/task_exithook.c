@@ -37,6 +37,10 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/mm/mm.h>
 
+#ifdef CONFIG_SCHED_PERF_EVENTS
+#  include <nuttx/perf.h>
+#endif
+
 #include "sched/sched.h"
 #include "group/group.h"
 #include "signal/signal.h"
@@ -427,6 +431,10 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
    */
 
   nxtask_recover(tcb);
+
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  perf_event_task_exit(tcb);
+#endif
 
   /* Disable the scheduling function to prevent other tasks from
    * being deleted after they are awakened
