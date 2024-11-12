@@ -186,7 +186,7 @@ void __start(void)
 #endif
 
 #ifdef CONFIG_ARCH_PERF_EVENTS
-  up_perf_init((void *)STM32_SYSCLK_FREQUENCY);
+  up_perf_init((void *)STM32L5_SYSCLK_FREQUENCY);
 #endif
 
   /* Perform early serial initialization */
