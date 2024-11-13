@@ -404,6 +404,7 @@ retry:
   mempool_add_backtrace(pool, (FAR struct mempool_backtrace_s *)
                               ((FAR char *)blk + pool->blocksize));
 #endif
+
   return blk;
 }
 

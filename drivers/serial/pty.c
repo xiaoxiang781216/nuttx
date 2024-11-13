@@ -621,7 +621,7 @@ static ssize_t pty_write(FAR struct file *filep,
 #ifdef CONFIG_TTY_SIGINT
           if (pid > 0 && ch == CONFIG_TTY_SIGINT_CHAR)
             {
-              nxsig_tgkill(-1, pid, SIGINT);
+              nxsig_kill(pid, SIGINT);
               return 1;
             }
 #endif
@@ -629,7 +629,7 @@ static ssize_t pty_write(FAR struct file *filep,
 #ifdef CONFIG_TTY_SIGTSTP
           if (pid > 0 && ch == CONFIG_TTY_SIGTSTP_CHAR)
             {
-              nxsig_tgkill(-1, pid, SIGTSTP);
+              nxsig_kill(pid, SIGTSTP);
               return 1;
             }
 #endif

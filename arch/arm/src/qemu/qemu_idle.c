@@ -61,19 +61,16 @@ void up_idle(void)
       arm_sm_boot_nsec(g_ap_entry);
       arm_sm_switch_nsec();
     }
-#else
-  #if defined(CONFIG_SUPPRESS_INTERRUPTS) || defined(CONFIG_SUPPRESS_TIMER_INTS)
+#elif defined(CONFIG_SUPPRESS_INTERRUPTS) || defined(CONFIG_SUPPRESS_TIMER_INTS)
   /* If the system is idle and there are no timer interrupts, then process
    * "fake" timer interrupts. Hopefully, something will wake up.
    */
 
-    nxsched_process_timer();
-
-  #else
+  nxsched_process_timer();
+#else
 
   /* Sleep until an interrupt occurs to save power */
 
-    asm("WFI");
-  #endif
+  asm("WFI");
 #endif
 }

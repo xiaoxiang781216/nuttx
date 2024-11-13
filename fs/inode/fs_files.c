@@ -381,6 +381,14 @@ void files_dumplist(FAR struct filelist *list)
   int count = files_countlist(list);
   int i;
 
+  syslog(LOG_INFO, "%-4s%-4s%-8s%-5s%-10s%-14s"
+#if CONFIG_FS_BACKTRACE > 0
+        " BACKTRACE"
+#endif
+        "\n",
+        "PID", "FD", "FLAGS", "TYPE", "POS", "PATH"
+        );
+
   path = lib_get_pathbuffer();
   if (path == NULL)
     {
@@ -390,6 +398,7 @@ void files_dumplist(FAR struct filelist *list)
   for (i = 0; i < count; i++)
     {
       FAR struct file *filep = files_fget(list, i);
+
 #if CONFIG_FS_BACKTRACE > 0
       char buf[BACKTRACE_BUFFER_SIZE(CONFIG_FS_BACKTRACE)];
 #endif
