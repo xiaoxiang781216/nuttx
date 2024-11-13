@@ -143,79 +143,11 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: isr_handler
- *
- * Description:
- *   This gets called from ISR vector handling logic in broadwell_vectors.S
- *
- ****************************************************************************/
-
-uint64_t *isr_handler(uint64_t *regs, uint64_t irq)
-{
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
-
-  if (*running_task != NULL)
-    {
-      (*running_task)->xcp.regs = regs;
-    }
-
-  board_autoled_on(LED_INIRQ);
-
-#ifdef CONFIG_SUPPRESS_INTERRUPTS
-  /* Doesn't return */
-
-  PANIC();
-
-  /* To keep the compiler happy */
-
-  return regs;
-#else
-
-  DEBUGASSERT(up_current_regs() == NULL);
-  up_set_current_regs(regs);
-
-  switch (irq)
-    {
-      case 0:
-      case 16:
-        __asm__ volatile("fnclex":::"memory");
-        nxsig_kill(this_task()->pid, SIGFPE);
-        break;
-
-      default:
-        /* Let's say, all ISR are asserted when REALLY BAD things happened.
-         * Don't even brother to recover, just dump the regs and PANIC.
-         */
-
-        _alert("PANIC:\n");
-        _alert("Exception %" PRId64 " occurred "
-               "with error code %" PRId64 ":\n",
-               irq, regs[REG_ERRCODE]);
-
-        PANIC_WITH_REGS("panic", regs);
-
-        up_trash_cpu();
-        break;
-  }
-
-  /* Maybe we need a context switch */
-
-  regs = (uint64_t *)up_current_regs();
-
-  /* Set g_current_regs to NULL to indicate that we are no longer in an
-   * interrupt handler.
-   */
-
-  up_set_current_regs(NULL);
-  return regs;
-#endif
-}
-
-/****************************************************************************
  * Name: irq_handler
  *
  * Description:
- *   This gets called from IRQ vector handling logic in intel64_vectors.S
+ *   This gets called from IRQ or ISR vector handling logic in
+ *   intel64_vectors.S
  *
  ****************************************************************************/
 
