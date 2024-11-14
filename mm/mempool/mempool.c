@@ -442,7 +442,7 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
   memset(blk, MM_FREE_MAGIC, pool->blocksize);
 #endif
 
-  if (pool->interruptsize > blocksize)
+  if (pool->ibase)
     {
       if ((FAR char *)blk >= pool->ibase &&
           (FAR char *)blk < pool->ibase + pool->interruptsize - blocksize)
