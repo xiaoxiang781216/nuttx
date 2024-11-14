@@ -358,7 +358,10 @@ static int can_close(FAR struct file *filep)
 
   flags = enter_critical_section(); /* Disable interrupts */
 
+#ifdef CONFIG_CAN_ERROR_POLLING
   work_cancel(CEPWORK, &dev->cd_errp_work);
+#endif
+
   list_for_every(&dev->cd_readers, node)
     {
       if (((FAR struct can_reader_s *)node) ==
