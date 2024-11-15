@@ -89,7 +89,7 @@ void up_enable_irq(int irq)
 {
   volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
 
-  IfxSrc_init(src, IfxSrc_Tos_cpu0, irq);
+  IfxSrc_init(src, IfxSrc_Tos_cpu0, IRQ_TO_NDX(irq));
   IfxSrc_enable(src);
 }
 

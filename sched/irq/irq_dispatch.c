@@ -107,7 +107,8 @@ void irq_dispatch(int irq, FAR void *context)
 #if NR_IRQS > 0
   if ((unsigned)irq < NR_IRQS)
     {
-#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE
+#if defined(CONFIG_ARCH_MINIMAL_VECTORTABLE) && \
+    !defined(CONFIG_ARCH_MINIMAL_VECTORTABLE_SKIP_TRANSFORM)
       ndx = g_irqmap[irq];
       if (ndx < CONFIG_ARCH_NUSER_INTERRUPTS)
         {

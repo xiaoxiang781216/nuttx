@@ -85,7 +85,8 @@ static int irqchain_dispatch(int irq, FAR void *context, FAR void *arg)
   int ndx;
   int ret = 0;
 
-#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE
+#if defined(CONFIG_ARCH_MINIMAL_VECTORTABLE) && \
+    !defined(CONFIG_ARCH_MINIMAL_VECTORTABLE_SKIP_TRANSFORM)
   ndx = g_irqmap[irq];
 #else
   ndx = irq;
