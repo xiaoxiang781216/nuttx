@@ -209,13 +209,13 @@ FAR const char *rpmsg_get_cpuname(FAR struct rpmsg_device *rdev)
   return rpmsg ? rpmsg->ops->get_cpuname(rpmsg) : NULL;
 }
 
-int rpmsg_get_signals(FAR struct rpmsg_endpoint *ept)
+int rpmsg_get_signals(FAR struct rpmsg_device *rdev)
 {
-  FAR struct rpmsg_s *rpmsg = rpmsg_get_by_rdev(ept->rdev);
+  FAR struct rpmsg_s *rpmsg = rpmsg_get_by_rdev(rdev);
 
   if (rpmsg->ops->get_signals)
     {
-      return rpmsg->ops->get_signals(ept);
+      return rpmsg->ops->get_signals(rpmsg);
     }
 
   return 0;
