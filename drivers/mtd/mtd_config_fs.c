@@ -582,9 +582,9 @@ static int nvs_flash_erase_block(FAR struct nvs_fs *fs, uint32_t addr)
 
   finfo("Erasing addr %" PRIx32 "\n", addr);
   rc = MTD_ERASE(fs->mtd,
-                 CONFIG_MTD_BLOCKSIZE_MULTIPLE *
+                 CONFIG_MTD_CONFIG_BLOCKSIZE_MULTIPLE *
                  (addr >> NVS_ADDR_BLOCK_SHIFT),
-                 CONFIG_MTD_BLOCKSIZE_MULTIPLE);
+                 CONFIG_MTD_CONFIG_BLOCKSIZE_MULTIPLE);
   if (rc < 0)
     {
       ferr("Erasing failed %d\n", rc);
@@ -1209,8 +1209,8 @@ static int nvs_startup(FAR struct nvs_fs *fs)
       return rc;
     }
 
-  fs->blocksize = CONFIG_MTD_BLOCKSIZE_MULTIPLE * geo.erasesize;
-  fs->nblocks   = geo.neraseblocks / CONFIG_MTD_BLOCKSIZE_MULTIPLE;
+  fs->blocksize = CONFIG_MTD_CONFIG_BLOCKSIZE_MULTIPLE * geo.erasesize;
+  fs->nblocks   = geo.neraseblocks / CONFIG_MTD_CONFIG_BLOCKSIZE_MULTIPLE;
   fs->progsize  = geo.blocksize;
 
   size_t ate_size = nvs_ate_size(fs);
