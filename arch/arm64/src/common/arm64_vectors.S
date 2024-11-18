@@ -72,12 +72,13 @@ SECTION_FUNC(text, up_saveusercontext)
     mov    x4,  sp
     stp    x30, x4,  [x0, #8 * REG_X30]
 
+    /* Always save LR as ELR, so ELR alone is enough to restore PC */
+    mov    x4,  x30
+
     /* ELR and SPSR */
 #if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
-    mrs    x4,  elr_el3
     mrs    x5,  spsr_el3
 #else
-    mrs    x4,  elr_el1
     mrs    x5,  spsr_el1
 #endif
     stp    x4,  x5,  [x0, #8 * REG_ELR]
