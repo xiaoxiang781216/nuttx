@@ -58,7 +58,7 @@ endif()
 # Architecture flags
 
 add_link_options(-entry=__start)
-add_compile_options(--no_commons -Wall -Wshadow -Wundef -nostdlib)
+add_compile_options(--no_commons --ghstd=last -Wshadow -Wundef -nostdlib)
 
 if(CONFIG_DEBUG_CUSTOMOPT)
   add_compile_options(${CONFIG_DEBUG_OPTLEVEL})
