@@ -75,6 +75,11 @@ static ssize_t file_writev_compat(FAR struct file *filep,
           continue;
         }
 
+      if (iov[i].iov_base == NULL)
+        {
+          return -EINVAL;
+        }
+
       buffer    = iov[i].iov_base;
       remaining = iov[i].iov_len;
 
