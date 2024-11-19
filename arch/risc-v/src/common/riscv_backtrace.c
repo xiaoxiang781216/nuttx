@@ -77,7 +77,7 @@ static int backtrace(uintptr_t *base, uintptr_t *limit,
 
   for (; i < size; fp = (uintptr_t *)*(fp - 2))
     {
-      if (fp > limit || fp < base)
+      if (fp == NULL || fp > limit || fp < base)
         {
           break;
         }
