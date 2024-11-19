@@ -42,7 +42,12 @@
  * Public Functions
  ****************************************************************************/
 
+#ifndef CONFIG_ARCH_HAVE_MULTICPU
 IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
+#else
+#define IFX_INT_WRAPPER(COREID) IFX_INTERRUPT_INTERNAL(tricore_doirq, COREID, 255)
+IFX_INT_WRAPPER(CONFIG_CPU_COREID)
+#endif
 {
   struct tcb_s **running_task = &g_running_tasks[this_cpu()];
   struct tcb_s *tcb;

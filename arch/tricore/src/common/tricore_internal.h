@@ -167,17 +167,17 @@ typedef void (*up_vector_t)(void);
  * end of the heap is CONFIG_RAM_END
  */
 
-extern uintptr_t        __USTACK0_END[];
-extern uintptr_t        __USTACK0[];
-#define g_idle_topstack __USTACK0
+extern uintptr_t        __USTACK_END[];
+extern uintptr_t        __USTACK[];
+#define g_idle_topstack __USTACK
 
 /* Address of the saved user stack pointer */
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
-extern uintptr_t        __ISTACK0_END[];
-extern uintptr_t        __ISTACK0[];
-#define g_intstackalloc __ISTACK0_END
-#define g_intstacktop   __ISTACK0
+extern uintptr_t        __ISTACK_END[];
+extern uintptr_t        __ISTACK[];
+#define g_intstackalloc __ISTACK_END
+#define g_intstacktop   __ISTACK
 #endif
 
 /* These symbols are setup by the linker script. */
@@ -187,13 +187,13 @@ extern uintptr_t        _lc_gb_data[]; /* Start of .data */
 extern uintptr_t        _lc_ge_data[]; /* End+1 of .data */
 #define _sdata          _lc_gb_data
 #define _edata          _lc_ge_data
-#define _eheap          __USTACK0_END
+#define _eheap          __USTACK_END
 #else
 extern uintptr_t        __HEAP[];      /* End+1 of .data */
 extern uintptr_t        __A0_MEM[];    /* End+1 of .data */
-#define _sdata          LCF_DSPR0_START
+#define _sdata          LCF_DSPR_START
 #define _edata          __HEAP
-#define _eheap          __USTACK0_END
+#define _eheap          __USTACK_END
 #endif
 
 #endif
