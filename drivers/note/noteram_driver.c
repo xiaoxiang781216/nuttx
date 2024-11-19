@@ -1224,6 +1224,16 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
                            pid, counter->name, counter->value);
       }
       break;
+    case NOTE_DUMP_THREADTIME:
+      {
+        FAR struct note_event_s *nev = (FAR struct note_event_s *)p;
+        FAR struct note_threadtime_s *nts = (FAR struct note_threadtime_s *)
+                                            nev->nev_data;
+        ret += noteram_dump_header(s, &nev->nev_cmn, ctx);
+        ret += lib_sprintf(s, "tracing_mark_write: I|%d|elapsed:%llu\n",
+                          pid, (unsigned long long)nts->elapsed);
+      }
+      break;
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
     case NOTE_HEAP_ADD:
