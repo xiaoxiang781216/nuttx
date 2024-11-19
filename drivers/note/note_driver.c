@@ -1224,7 +1224,7 @@ void sched_note_syscall_enter(int nr, int argc, ...)
   struct note_syscall_enter_s note;
   FAR struct note_driver_s **driver;
   bool formatted = false;
-  FAR struct tcb_s *tcb = this_task();
+  FAR struct tcb_s *tcb = running_task();
   unsigned int length = 0;
   uintptr_t arg;
   va_list ap;
@@ -1312,7 +1312,7 @@ void sched_note_syscall_leave(int nr, uintptr_t result)
   struct note_syscall_leave_s note;
   FAR struct note_driver_s **driver;
   bool formatted = false;
-  FAR struct tcb_s *tcb = this_task();
+  FAR struct tcb_s *tcb = running_task();
 
   for (driver = g_note_drivers; *driver; driver++)
     {
@@ -1357,7 +1357,7 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter)
   struct note_irqhandler_s note;
   FAR struct note_driver_s **driver;
   bool formatted = false;
-  FAR struct tcb_s *tcb = this_task();
+  FAR struct tcb_s *tcb = running_task();
 
   for (driver = g_note_drivers; *driver; driver++)
     {
@@ -1435,7 +1435,7 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
   FAR struct note_driver_s **driver;
   struct note_heap_s note;
   bool formatted = false;
-  FAR struct tcb_s *tcb = this_task();
+  FAR struct tcb_s *tcb = running_task();
 
   for (driver = g_note_drivers; *driver; driver++)
     {
@@ -1480,7 +1480,7 @@ void sched_note_event_ip(uint32_t tag, uintptr_t ip, uint8_t event,
   bool formatted = false;
   char data[BUFFER_SIZE];
   unsigned int length;
-  FAR struct tcb_s *tcb = this_task();
+  FAR struct tcb_s *tcb = running_task();
 
   for (driver = g_note_drivers; *driver; driver++)
     {
@@ -1533,7 +1533,7 @@ void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
   bool formatted = false;
   uint8_t data[BUFFER_SIZE];
   size_t length = 0;
-  FAR struct tcb_s *tcb = this_task();
+  FAR struct tcb_s *tcb = running_task();
 
   for (driver = g_note_drivers; *driver; driver++)
     {
