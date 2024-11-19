@@ -90,10 +90,12 @@ function(nuttx_add_application)
     DEFINITIONS
     OPTIONS
     NO_MAIN_ALIAS
-    REQUIRED
-    NAME
     ARGN
     ${ARGN})
+
+  if(NOT NAME)
+    return()
+  endif()
 
   # check if SRCS exist
   if(SRCS)
