@@ -29,7 +29,7 @@
 
 #include <stdbool.h>
 
-#include <metal/atomic.h>
+#include <nuttx/atomic.h>
 
 #include <nuttx/list.h>
 #include <nuttx/spinlock.h>
@@ -241,7 +241,7 @@ void rpmsg_port_queue_add_buffer(FAR struct rpmsg_port_queue_s *queue,
 static inline_function
 uint16_t rpmsg_port_queue_navail(FAR struct rpmsg_port_queue_s *queue)
 {
-  return atomic_load(&queue->free.num);
+  return atomic_read(&queue->free.num);
 }
 
 /****************************************************************************
@@ -261,7 +261,7 @@ uint16_t rpmsg_port_queue_navail(FAR struct rpmsg_port_queue_s *queue)
 static inline_function
 uint16_t rpmsg_port_queue_nused(FAR struct rpmsg_port_queue_s *queue)
 {
-  return atomic_load(&queue->ready.num);
+  return atomic_read(&queue->ready.num);
 }
 
 /****************************************************************************
