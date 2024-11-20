@@ -30,8 +30,8 @@
  *
  ****************************************************************************/
 
-#ifndef _XTENSA_CORE_TIE_ASM_H
-#define _XTENSA_CORE_TIE_ASM_H
+#ifndef __ARCH_XTENSA_INCLUDE_ISS_HIFI3Z_TIE_ASM_H
+#define __ARCH_XTENSA_INCLUDE_ISS_HIFI3Z_TIE_ASM_H
 
 /*  Selection parameter values for save-area save/restore macros:  */
 
@@ -274,4 +274,4 @@
     .macro xchal_cp7_store   p a b c d continue=0 ofs=-1 select=-1 ; .endm
     .macro xchal_cp7_load    p a b c d continue=0 ofs=-1 select=-1 ; .endm
 
-#endif /* _XTENSA_CORE_TIE_ASM_H */
+#endif /* __ARCH_XTENSA_INCLUDE_ISS_HIFI3Z_TIE_ASM_H */

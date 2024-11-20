@@ -25,8 +25,8 @@
  *
  ****************************************************************************/
 
-#ifndef XTENSA_CORE_CONFIGURATION_H_
-#define XTENSA_CORE_CONFIGURATION_H_
+#ifndef __ARCH_XTENSA_INCLUDE_ISS_HIFI3Z_CORE_ISA_H
+#define __ARCH_XTENSA_INCLUDE_ISS_HIFI3Z_CORE_ISA_H
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -819,4 +819,4 @@
 #define XCHAL_HAVE_WWDT                 0
 #endif /* !XTENSA_HAL_NON_PRIVILEGED_ONLY */
 
-#endif /* XTENSA_CORE_CONFIGURATION_H_ */
+#endif /* __ARCH_XTENSA_INCLUDE_ISS_HIFI3Z_CORE_ISA_H */

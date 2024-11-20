@@ -32,8 +32,8 @@
  *
  ****************************************************************************/
 
-#ifndef XTENSA_CORE_TIE_H
-#define XTENSA_CORE_TIE_H
+#ifndef __ARCH_XTENSA_INCLUDE_ISS_HIFI4_TIE_H
+#define __ARCH_XTENSA_INCLUDE_ISS_HIFI4_TIE_H
 
 /* parasoft-begin-suppress ALL "This file not MISRA checked." */
 
@@ -193,4 +193,4 @@
 
 /* parasoft-end-suppress ALL "This file not MISRA checked." */
 
-#endif /* XTENSA_CORE_TIE_H */
+#endif /* __ARCH_XTENSA_INCLUDE_ISS_HIFI4_TIE_H */
