@@ -63,9 +63,7 @@ uint32_t *arm_syscall(uint32_t *regs)
 
   DEBUGASSERT(!up_interrupt_context());
 
-  /* Current regs non-zero indicates that we are processing an interrupt;
-   * current_regs is also used to manage interrupt level context switches.
-   */
+  /* Set irq flag */
 
   up_set_interrupt_context(true);
 
