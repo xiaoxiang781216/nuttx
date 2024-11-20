@@ -45,6 +45,10 @@ set(SRCS
     tricore_systimer.c
     tricore_usestack.c)
 
+if(CONFIG_SCHED_BACKTRACE)
+  list(APPEND SRCS tricore_backtrace.c)
+endif()
+
 if(CONFIG_SPINLOCK)
   list(APPEND SRCS tricore_testset.c)
 endif()
