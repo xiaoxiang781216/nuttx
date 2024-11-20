@@ -244,6 +244,7 @@ int rpmsg_register_callback(FAR void *priv,
   cb->ns_bind        = ns_bind;
 
   nxrmutex_lock(&g_rpmsg_lock);
+  metal_list_add_tail(&g_rpmsg_cb, &cb->node);
   metal_list_for_each(&g_rpmsg, node)
     {
       FAR struct rpmsg_s *rpmsg =
@@ -287,7 +288,6 @@ again:
        nxrmutex_unlock(&rpmsg->lock);
     }
 
-  metal_list_add_tail(&g_rpmsg_cb, &cb->node);
   nxrmutex_unlock(&g_rpmsg_lock);
 
   return 0;
@@ -430,6 +430,7 @@ void rpmsg_device_destory(FAR struct rpmsg_s *rpmsg)
 {
   FAR struct metal_list *node;
   FAR struct metal_list *tmp;
+  FAR struct rpmsg_endpoint *ept;
 
 #ifdef CONFIG_RPMSG_PING
   rpmsg_ping_deinit(&rpmsg->ping);
@@ -462,6 +463,21 @@ void rpmsg_device_destory(FAR struct rpmsg_s *rpmsg)
     }
 
   nxrmutex_unlock(&g_rpmsg_lock);
+
+  /* Release all ept attached to current rpmsg device */
+
+  metal_list_for_each_safe(&rpmsg->rdev->endpoints, tmp, node)
+    {
+      ept = metal_container_of(node, struct rpmsg_endpoint, node);
+      if (ept->ns_unbind_cb)
+        {
+          ept->ns_unbind_cb(ept);
+        }
+      else
+        {
+          rpmsg_destroy_ept(ept);
+        }
+    }
 }
 
 int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
