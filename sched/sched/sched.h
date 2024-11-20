@@ -73,12 +73,9 @@
 
 #define is_idle_task(t)          ((t)->pid < CONFIG_SMP_NCPUS)
 
-/* This macro returns the running task which may different from this_task()
- * during interrupt level context switches.
- */
+/* This macro returns the running task. */
 
-#define running_task() \
-  (up_interrupt_context() ? g_running_tasks[this_cpu()] : this_task())
+#define running_task()           (g_running_tasks[this_cpu()])
 
 /* List attribute flags */
 
