@@ -51,7 +51,7 @@
  ****************************************************************************/
 
 static ssize_t file_writev_compat(FAR struct file *filep,
-                                  FAR const struct uio *uio)
+                                  FAR struct uio *uio)
 {
   FAR const struct iovec *iov = uio->uio_iov;
   int iovcnt = uio->uio_iovcnt;
@@ -107,6 +107,11 @@ static ssize_t file_writev_compat(FAR struct file *filep,
       remaining -= nwritten;
     }
 
+  if (ntotal >= 0)
+    {
+      uio_advance(uio, ntotal);
+    }
+
   return ntotal;
 }
 
@@ -138,7 +143,7 @@ static ssize_t file_writev_compat(FAR struct file *filep,
  *
  ****************************************************************************/
 
-ssize_t file_writev(FAR struct file *filep, FAR const struct uio *uio)
+ssize_t file_writev(FAR struct file *filep, FAR struct uio *uio)
 {
   FAR struct inode *inode;
   ssize_t ret = -EBADF;
@@ -207,11 +212,16 @@ ssize_t file_write(FAR struct file *filep, FAR const void *buf,
 {
   struct iovec iov;
   struct uio uio;
+  ssize_t ret;
 
   iov.iov_base = (FAR void *)buf;
   iov.iov_len = nbytes;
-  uio.uio_iov = &iov;
-  uio.uio_iovcnt = 1;
+  ret = uio_init(&uio, &iov, 1);
+  if (ret != 0)
+    {
+      return ret;
+    }
+
   return file_writev(filep, &uio);
 }
 
@@ -257,9 +267,12 @@ ssize_t nx_writev(int fd, FAR const struct iovec *iov, int iovcnt)
        * index.  Note that file_write() will return the errno on failure.
        */
 
-      uio.uio_iov = iov;
-      uio.uio_iovcnt = iovcnt;
-      ret = file_writev(filep, &uio);
+      ret = uio_init(&uio, iov, iovcnt);
+      if (ret == 0)
+        {
+          ret = file_writev(filep, &uio);
+        }
+
       fs_putfilep(filep);
     }
 
