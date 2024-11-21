@@ -56,9 +56,9 @@ static int sock_file_poll(FAR struct file *filep, struct pollfd *fds,
                           bool setup);
 static int sock_file_truncate(FAR struct file *filep, off_t length);
 static ssize_t sock_file_readv(FAR struct file *filep,
-                               FAR const struct uio *uio);
+                               FAR struct uio *uio);
 static ssize_t sock_file_writev(FAR struct file *filep,
-                                FAR const struct uio *uio);
+                                FAR struct uio *uio);
 
 /****************************************************************************
  * Private Data
@@ -156,7 +156,7 @@ static int sock_file_truncate(FAR struct file *filep, off_t length)
 }
 
 static ssize_t sock_file_readv(FAR struct file *filep,
-                               FAR const struct uio *uio)
+                               FAR struct uio *uio)
 {
   struct msghdr msg;
 
@@ -168,7 +168,7 @@ static ssize_t sock_file_readv(FAR struct file *filep,
 }
 
 static ssize_t sock_file_writev(FAR struct file *filep,
-                                FAR const struct uio *uio)
+                                FAR struct uio *uio)
 {
   struct msghdr msg;
 
