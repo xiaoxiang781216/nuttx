@@ -120,6 +120,7 @@
  *   EAI_SYSTEM      - A system error occurred. The error code can be found
  *                     in errno.
  *   EAI_OVERFLOW    - An argument buffer overflowed.
+ *   EAI_NODATA      - No address associated with hostname
  */
 
 #define EAI_AGAIN       1
@@ -132,6 +133,7 @@
 #define EAI_SOCKTYPE    8
 #define EAI_SYSTEM      9
 #define EAI_OVERFLOW    10
+#define EAI_NODATA      11
 
 /* h_errno values that may be returned by gethosbyname(), gethostbyname_r(),
  * gethostbyaddr(), or gethostbyaddr_r()
