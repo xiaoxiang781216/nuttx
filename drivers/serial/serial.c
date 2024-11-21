@@ -129,6 +129,8 @@ static int     uart_putxmitchar(FAR uart_dev_t *dev, int ch,
 static inline ssize_t uart_irqwrite(FAR uart_dev_t *dev,
                                     FAR const char *buffer,
                                     size_t buflen);
+static inline ssize_t uart_irqwritev(FAR uart_dev_t *dev,
+                                     FAR struct uio *uio);
 static int     uart_tcdrain(FAR uart_dev_t *dev,
                             bool cancelable, clock_t timeout);
 
@@ -140,11 +142,8 @@ static int     uart_tcsendbreak(FAR uart_dev_t *dev,
 
 static int     uart_open(FAR struct file *filep);
 static int     uart_close(FAR struct file *filep);
-static ssize_t uart_read(FAR struct file *filep,
-                         FAR char *buffer, size_t buflen);
-static ssize_t uart_write(FAR struct file *filep,
-                          FAR const char *buffer,
-                          size_t buflen);
+static ssize_t uart_readv(FAR struct file *filep, FAR struct uio *uio);
+static ssize_t uart_writev(FAR struct file *filep, FAR struct uio *uio);
 static int     uart_ioctl(FAR struct file *filep,
                           int cmd, unsigned long arg);
 static int     uart_poll(FAR struct file *filep,
@@ -171,14 +170,14 @@ static const struct file_operations g_serialops =
 {
   uart_open,    /* open */
   uart_close,   /* close */
-  uart_read,    /* read */
-  uart_write,   /* write */
+  NULL,         /* read */
+  NULL,         /* write */
   NULL,         /* seek */
   uart_ioctl,   /* ioctl */
   NULL,         /* truncate */
   uart_poll,    /* poll */
-  NULL,         /* readv */
-  NULL          /* writev */
+  uart_readv,   /* readv */
+  uart_writev   /* writev */
 #ifdef CONFIG_FS_FILEMAP
   , NULL        /* mmap */
 #endif
@@ -474,6 +473,50 @@ static inline ssize_t uart_irqwrite(FAR uart_dev_t *dev,
 
   uart_putchars(dev, &buffer[tail], head - tail);
   return buflen;
+}
+
+/****************************************************************************
+ * Name: uart_irqwritev
+ ****************************************************************************/
+
+static inline ssize_t uart_irqwritev(FAR uart_dev_t *dev,
+                                     FAR struct uio *uio)
+{
+  ssize_t error = 0;
+  ssize_t total = 0;
+  int iovcnt = uio->uio_iovcnt;
+  int i;
+
+  for (i = 0; i < iovcnt; i++)
+    {
+      const struct iovec *iov = &uio->uio_iov[i];
+      if (iov->iov_len == 0)
+        {
+          continue;
+        }
+
+      ssize_t written = uart_irqwrite(dev, iov->iov_base, iov->iov_len);
+      if (written < 0)
+        {
+          error = written;
+          break;
+        }
+
+      if (SSIZE_MAX - total < written)
+        {
+          error = -EOVERFLOW;
+          break;
+        }
+
+      total += written;
+    }
+
+  if (error != 0 && total == 0)
+    {
+      return error;
+    }
+
+  return total;
 }
 
 /****************************************************************************
@@ -900,11 +943,10 @@ static int uart_close(FAR struct file *filep)
 }
 
 /****************************************************************************
- * Name: uart_read
+ * Name: uart_readv
  ****************************************************************************/
 
-static ssize_t uart_read(FAR struct file *filep,
-                         FAR char *buffer, size_t buflen)
+static ssize_t uart_readv(FAR struct file *filep, FAR struct uio *uio)
 {
   FAR struct inode *inode = filep->f_inode;
   FAR uart_dev_t *dev = inode->i_private;
@@ -916,6 +958,7 @@ static ssize_t uart_read(FAR struct file *filep,
 #endif
   irqstate_t flags;
   ssize_t recvd = 0;
+  ssize_t buflen;
   bool echoed = false;
   sbuf_size_t tail;
   char ch;
@@ -939,7 +982,8 @@ static ssize_t uart_read(FAR struct file *filep,
    * data from the end of the buffer.
    */
 
-  while ((size_t)recvd < buflen)
+  buflen = uio->uio_resid;
+  while (recvd < buflen)
     {
 #ifdef CONFIG_SERIAL_REMOVABLE
       /* If the removable device is no longer connected, refuse to read any
@@ -1019,7 +1063,8 @@ static ssize_t uart_read(FAR struct file *filep,
             {
               if (recvd > 0)
                 {
-                  *buffer-- = '\0';
+                  static const char zero = '\0';
+                  uio_copyfrom(uio, recvd, &zero, 1);
                   recvd--;
                   if (dev->tc_lflag & ECHO)
                     {
@@ -1052,7 +1097,7 @@ static ssize_t uart_read(FAR struct file *filep,
 
           /* Store the received character */
 
-          *buffer++ = ch;
+          uio_copyfrom(uio, recvd, &ch, 1);
           recvd++;
 
           if (dev->tc_lflag & ECHO)
@@ -1441,19 +1486,24 @@ static ssize_t uart_read(FAR struct file *filep,
 #endif
 
   nxmutex_unlock(&dev->recv.lock);
+  if (recvd >= 0)
+    {
+      uio_advance(uio, recvd);
+    }
+
   return recvd;
 }
 
 /****************************************************************************
- * Name: uart_write
+ * Name: uart_writev
  ****************************************************************************/
 
-static ssize_t uart_write(FAR struct file *filep, FAR const char *buffer,
-                          size_t buflen)
+static ssize_t uart_writev(FAR struct file *filep, FAR struct uio *uio)
 {
   FAR struct inode *inode    = filep->f_inode;
   FAR uart_dev_t   *dev      = inode->i_private;
-  ssize_t           nwritten = buflen;
+  ssize_t           nwritten;
+  ssize_t           buflen;
   bool              oktoblock;
   irqstate_t        flags;
   int               ret;
@@ -1500,11 +1550,13 @@ static ssize_t uart_write(FAR struct file *filep, FAR const char *buffer,
             }
         }
 
-      ret = uart_irqwrite(dev, buffer, buflen);
+      ret = uart_irqwritev(dev, uio);
       uart_spinunlock(dev, false, flags);
 
       return ret;
     }
+
+  buflen = nwritten = uio->uio_resid;
 
   /* Only one user can access dev->xmit.head at a time */
 
@@ -1545,9 +1597,9 @@ static ssize_t uart_write(FAR struct file *filep, FAR const char *buffer,
    */
 
   uart_disabletxint(dev);
-  for (; buflen; buflen--)
+  for (; buflen; uio_advance(uio, 1), buflen--)
     {
-      ch  = *buffer++;
+      uio_copyto(uio, 0, &ch, 1);
       ret = OK;
 
       /* Do output post-processing */
