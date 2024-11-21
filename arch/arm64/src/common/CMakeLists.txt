@@ -116,4 +116,8 @@ if(CONFIG_ARM64_SEMIHOSTING_HOSTFS)
   list(APPEND SRCS arm64_hostfs.c)
 endif()
 
+if(CONFIG_SCHED_PERF_EVENTS)
+  list(APPEND SRCS arm64_pmuv3.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})

@@ -57,9 +57,6 @@
 #include <nuttx/virtio/virtio.h>
 #include <nuttx/drivers/optee.h>
 
-#ifdef CONFIG_SCHED_PERF_EVENTS
-#  include <perf/pmu.h>
-#endif
 #ifdef CONFIG_DRIVERS_BINDER
 #  include <nuttx/android/binder.h>
 #endif
@@ -204,10 +201,6 @@ void drivers_initialize(void)
   /* Register the master pseudo-terminal multiplexor device */
 
   ptmx_register();
-#endif
-
-#ifdef CONFIG_SCHED_PERF_EVENTS
-  pmu_initialize();
 #endif
 
 #if defined(CONFIG_CRYPTO)
