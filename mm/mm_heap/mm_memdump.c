@@ -60,7 +60,7 @@ struct mm_memdump_priv_s
 static void memdump_allocnode(FAR struct mm_allocnode_s *node)
 {
   size_t nodesize = MM_SIZEOF_NODE(node);
-  size_t overhead = MM_ALLOCNODE_OVERHEAD;
+  size_t overhead = MM_SIZEOF_ALLOCNODE;
 #if CONFIG_MM_BACKTRACE < 0
   syslog(LOG_INFO, "%12zu%9zu%*p\n",
          nodesize, overhead, BACKTRACE_PTR_FMT_WIDTH,
