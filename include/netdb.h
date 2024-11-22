@@ -287,7 +287,6 @@ int rexec_af(FAR char **ahost, int inport, FAR const char *user,
              FAR const char *passwd, FAR const char *cmd, FAR int *fd2p,
              sa_family_t af);
 
-#ifdef CONFIG_LIBC_NETDB
 #if 0 /* None of these are yet supported */
 
 void                 endhostent(void);
@@ -362,8 +361,6 @@ int getprotobyname_r(FAR const char *name,
 int getprotobynumber_r(int proto,
                        FAR struct protoent *result_buf, FAR char *buf,
                        size_t buflen, FAR struct protoent **result);
-
-#endif /* CONFIG_LIBC_NETDB */
 
 #undef EXTERN
 #ifdef __cplusplus
