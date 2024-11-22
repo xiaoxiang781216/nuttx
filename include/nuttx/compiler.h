@@ -292,6 +292,11 @@
 #    define nosanitize_address
 #  endif
 
+#  if defined(__TRICORE__)
+#    undef nooptimiziation_function
+#    define nooptimiziation_function
+#  endif
+
 /* The nosanitize_undefined attribute informs GCC don't sanitize it */
 
 #  define nosanitize_undefined __attribute__((no_sanitize("undefined")))
