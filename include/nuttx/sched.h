@@ -248,7 +248,7 @@
 #  define this_cpu()                 (0)
 #endif
 
-#define running_regs()               ((void *)(g_running_tasks[this_cpu()]->xcp.regs))
+#define running_regs()               ((FAR void **)(g_running_tasks[this_cpu()]->xcp.regs))
 
 #define REGINFO_OFFSET_INVALID       -2 /* Special value for N/A offset value */
 #define REGINFO_OFFSET_AUTO          -1 /* Calculate the offset in GDB g/G packet automatically */
