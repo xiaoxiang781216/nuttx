@@ -300,8 +300,7 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg)
       return;
     }
 
-  if (!up_interrupt_context() && !sched_idletask() &&
-      !metal_mutex_is_acquired(&rdev->lock))
+  if (!up_interrupt_context() && !sched_idletask())
     {
       metal_mutex_acquire(&rdev->lock);
       needunlock = true;
