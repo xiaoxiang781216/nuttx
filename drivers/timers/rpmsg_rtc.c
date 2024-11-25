@@ -752,6 +752,11 @@ static void rpmsg_rtc_server_ns_bound(FAR struct rpmsg_endpoint *ept)
 
   client = container_of(ept, struct rpmsg_rtc_client_s, ept);
   server = client->ept.priv;
+
+  nxmutex_lock(&server->lock);
+  list_add_tail(&server->list, &client->node);
+  nxmutex_unlock(&server->lock);
+
   rpmsg_rtc_server_sync(server, client);
 }
 
@@ -779,10 +784,6 @@ static void rpmsg_rtc_server_created(FAR struct rpmsg_device *rdev,
       kmm_free(client);
       return;
     }
-
-  nxmutex_lock(&server->lock);
-  list_add_tail(&server->list, &client->node);
-  nxmutex_unlock(&server->lock);
 }
 #endif
 
