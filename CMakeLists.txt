@@ -582,8 +582,10 @@ if(NOT CONFIG_BUILD_KERNEL)
 
 endif()
 
-# after we traverse all build directories unify all target dependencies
+# after we traverse all build directories unify all target dependencies and all
+# romfs target
 process_all_target_dependencies()
+process_all_directory_romfs()
 
 # Link step ##################################################################
 
