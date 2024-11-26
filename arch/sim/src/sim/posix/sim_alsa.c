@@ -276,12 +276,6 @@ static int sim_audio_open(struct sim_audio_s *priv)
       goto fail;
     }
 
-  ret = host_uninterruptible(snd_pcm_start, pcm);
-  if (ret < 0)
-    {
-      goto fail;
-    }
-
   priv->pcm = pcm;
 
   return 0;
@@ -854,7 +848,8 @@ static int sim_audio_process_playback(struct sim_audio_s *priv,
 
       ret  = host_uninterruptible(snd_pcm_writei, priv->pcm, out,
                                   outsize / priv->frame_size);
-      ret *= priv->frame_size;
+      if (ret > 0)
+        ret *= priv->frame_size;
     }
 
   /* 6, whether send DEQUEUE msg to apps. */
