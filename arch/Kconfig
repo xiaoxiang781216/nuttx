@@ -490,6 +490,10 @@ config ARCH_HAVE_TESTSET
 	bool
 	default n
 
+config ARCH_HAVE_CUSTOM_TESTSET
+	bool
+	default n
+
 config ARCH_HAVE_THREAD_LOCAL
 	bool
 	default n
