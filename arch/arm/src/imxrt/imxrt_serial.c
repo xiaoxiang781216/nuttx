@@ -2463,9 +2463,12 @@ static int imxrt_interrupt(int irq, void *context, void *arg)
 
 static int imxrt_ioctl(struct file *filep, int cmd, unsigned long arg)
 {
-#if defined(CONFIG_SERIAL_TIOCSERGSTRUCT) || defined(CONFIG_SERIAL_TERMIOS)
+#if defined(CONFIG_SERIAL_TIOCSERGSTRUCT)    || \
+    defined(CONFIG_SERIAL_TERMIOS)           || \
+    defined(CONFIG_IMXRT_LPUART_SINGLEWIRE ) || \
+    defined(CONFIG_IMXRT_LPUART_INVERT )
   struct inode *inode = filep->f_inode;
-  struct uart_dev_s *dev   = inode->i_private;
+  struct uart_dev_s *dev = inode->i_private;
   irqstate_t flags;
 #endif
   int ret   = OK;
@@ -2662,7 +2665,6 @@ static int imxrt_ioctl(struct file *filep, int cmd, unsigned long arg)
     case TIOCSSINGLEWIRE:
       {
         uint32_t regval;
-        irqstate_t flags;
         struct imxrt_uart_s *priv = (struct imxrt_uart_s *)dev;
 
         flags  = spin_lock_irqsave(&priv->lock);
@@ -2710,7 +2712,6 @@ static int imxrt_ioctl(struct file *filep, int cmd, unsigned long arg)
         uint32_t ctrl;
         uint32_t stat;
         uint32_t regval;
-        irqstate_t flags;
         struct imxrt_uart_s *priv = (struct imxrt_uart_s *)dev;
 
         flags  = spin_lock_irqsave(&priv->lock);
