@@ -127,3 +127,42 @@ FAR char *getcwd(FAR char *buf, size_t size)
   strlcpy(buf, pwd, size);
   return buf;
 }
+
+/****************************************************************************
+ * Name: get_current_dir_name
+ *
+ * Description:
+ *   get_current_dir_name() function will malloc an array big enough to
+ *   hold the absolute pathname of the current working directory.  If the
+ *   environment variable PWD is set, and its value is correct, then
+ *   that value will be returned. The caller should free the returned
+ *   buffer.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   On success, get_current_dir_nametcwd() returns a pointer to a string
+ *   containing the pathname of the current working directory.
+ *   Otherwise, get_current_dir_nametcwd() returns a null pointer and
+ *   sets errno to indicate the error:
+ *
+ *   EACCES
+ *     Read or search permission was denied for a component of the pathname.
+ *   ENOMEM
+ *     Insufficient storage space is available.
+ *
+ ****************************************************************************/
+
+FAR char *get_current_dir_name(void)
+{
+  FAR char *buf = lib_malloc(PATH_MAX + 1);
+  if (!buf)
+    {
+      set_errno(ENOMEM);
+      return NULL;
+    }
+
+  getcwd(buf, PATH_MAX);
+  return buf;
+}
