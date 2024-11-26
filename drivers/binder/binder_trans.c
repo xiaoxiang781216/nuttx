@@ -22,7 +22,7 @@
  * Included Files
  ****************************************************************************/
 
-#define LOG_TAG  "BinderTrans"
+#define LOG_TAG "BinderTrans"
 
 #include <nuttx/config.h>
 #include <sys/types.h>
@@ -113,8 +113,8 @@ static uid_t geteuid_bypid(pid_t pid)
 
 static int file_tx_get(unsigned int fd, FAR struct file *filep)
 {
-  FAR struct file   *file;
-  int                ret;
+  FAR struct file *file;
+  int ret;
 
   ret = fs_getfilep(fd, &file);
   if (ret < 0)
@@ -156,11 +156,11 @@ static size_t binder_get_object(FAR struct binder_proc *proc,
                                 unsigned long offset,
                                 FAR struct binder_object *object)
 {
-  size_t                             read_size;
-  FAR struct binder_object_header   *hdr;
-  size_t                             object_size = 0;
+  size_t read_size;
+  FAR struct binder_object_header *hdr;
+  size_t object_size = 0;
 
-  read_size = min(sizeof(*object), buffer->data_size - offset);
+  read_size = MIN(sizeof(*object), buffer->data_size - offset);
   if (offset > buffer->data_size || read_size < sizeof(*hdr) ||
       !IS_ALIGNED(offset, sizeof(uint32_t)))
     {
@@ -291,7 +291,7 @@ static void binder_pop_transaction_ilocked(
 static struct binder_thread *binder_get_txn_from_and_acq_inner(
   FAR struct binder_transaction *t)
 {
-  FAR struct binder_thread  *from;
+  FAR struct binder_thread *from;
 
   from = binder_get_txn_from(t);
   if (!from)
@@ -341,9 +341,9 @@ static int binder_proc_transaction(FAR struct binder_transaction *t,
                                    FAR struct binder_proc *proc,
                                    FAR struct binder_thread *thread)
 {
-  FAR struct binder_node    *node           = t->buffer->target_node;
-  bool                      oneway          = !!(t->flags & TF_ONE_WAY);
-  bool                      pending_async   = false;
+  FAR struct binder_node *node = t->buffer->target_node;
+  bool oneway = !!(t->flags & TF_ONE_WAY);
+  bool pending_async = false;
 
   BUG_ON(!node);
   binder_node_lock(node);
@@ -364,8 +364,8 @@ static int binder_proc_transaction(FAR struct binder_transaction *t,
   binder_inner_proc_lock(proc);
   if (proc->is_frozen)
     {
-      proc->sync_recv   |= !oneway;
-      proc->async_recv  |= oneway;
+      proc->sync_recv |= !oneway;
+      proc->async_recv |= oneway;
     }
 
   if ((proc->is_frozen && !oneway) || proc->is_dead ||
@@ -418,11 +418,11 @@ static int binder_translate_binder(FAR struct flat_binder_object *fp,
                                    FAR struct binder_transaction *t,
                                    FAR struct binder_thread *thread)
 {
-  FAR struct binder_node    *node;
-  FAR struct binder_proc    *proc           = thread->proc;
-  FAR struct binder_proc    *target_proc    = t->to_proc;
-  struct binder_ref_data     rdata;
-  int                        ret = 0;
+  FAR struct binder_node *node;
+  FAR struct binder_proc *proc = thread->proc;
+  FAR struct binder_proc *target_proc = t->to_proc;
+  int ret = 0;
+  struct binder_ref_data rdata;
 
   node = binder_get_node(proc, fp->binder);
   if (!node)
@@ -462,15 +462,15 @@ static int binder_translate_binder(FAR struct flat_binder_object *fp,
       fp->hdr.type = BINDER_TYPE_WEAK_HANDLE;
     }
 
-  fp->binder    = 0;
-  fp->handle    = rdata.desc;
-  fp->cookie    = 0;
+  fp->binder = 0;
+  fp->handle = rdata.desc;
+  fp->cookie = 0;
 
   binder_debug(BINDER_DEBUG_TRANSACTION,
-               "node %d %" PRIx64 " -> ref %d desc %d\n", node->debug_id,
-               node->ptr, rdata.debug_id, (int)rdata.desc);
+               "node %d %" PRIx64 " -> ref %d desc %" PRIu32 "\n",
+               node->debug_id, node->ptr, rdata.debug_id, rdata.desc);
 done:
-  binder_put_node(node);
+  binder_dec_node_tmpref(node);
   return ret;
 }
 
@@ -478,11 +478,11 @@ static int binder_translate_handle(struct flat_binder_object *fp,
                                    struct binder_transaction *t,
                                    struct binder_thread *thread)
 {
-  FAR struct binder_proc        *proc           = thread->proc;
-  FAR struct binder_proc        *target_proc    = t->to_proc;
-  FAR struct binder_node        *node;
-  struct binder_ref_data         src_rdata;
-  int                            ret = 0;
+  FAR struct binder_proc *proc = thread->proc;
+  FAR struct binder_proc *target_proc = t->to_proc;
+  FAR struct binder_node *node;
+  int ret = 0;
+  struct binder_ref_data src_rdata;
 
   node = binder_get_node_from_ref(proc, fp->handle,
                                   fp->hdr.type == BINDER_TYPE_HANDLE,
@@ -507,8 +507,8 @@ static int binder_translate_handle(struct flat_binder_object *fp,
           fp->hdr.type = BINDER_TYPE_WEAK_BINDER;
         }
 
-      fp->binder    = node->ptr;
-      fp->cookie    = node->cookie;
+      fp->binder = node->ptr;
+      fp->cookie = node->cookie;
       if (node->proc)
         {
           binder_inner_proc_lock(node->proc);
@@ -522,8 +522,8 @@ static int binder_translate_handle(struct flat_binder_object *fp,
         }
 
       binder_debug(BINDER_DEBUG_TRANSACTION,
-                   "ref %d desc %d -> node %d %" PRIx64 "\n",
-                   src_rdata.debug_id, (int)src_rdata.desc, node->debug_id,
+                   "ref %d desc %" PRIu32 " -> node %d %" PRIx64 "\n",
+                   src_rdata.debug_id, src_rdata.desc, node->debug_id,
                    node->ptr);
       binder_node_unlock(node);
     }
@@ -540,18 +540,19 @@ static int binder_translate_handle(struct flat_binder_object *fp,
           goto done;
         }
 
-      fp->binder    = 0;
-      fp->handle    = dest_rdata.desc;
-      fp->cookie    = 0;
+      fp->binder = 0;
+      fp->handle = dest_rdata.desc;
+      fp->cookie = 0;
       binder_debug(BINDER_DEBUG_TRANSACTION,
-                   "ref %d desc %d -> ref %d desc %d (node %d)\n",
-                   src_rdata.debug_id, (int)src_rdata.desc,
-                   dest_rdata.debug_id, (int)dest_rdata.desc,
+                   "ref %d desc %"PRIu32" -> ref %d "
+                   "desc %"PRIu32"(node %d)\n",
+                   src_rdata.debug_id, src_rdata.desc,
+                   dest_rdata.debug_id, dest_rdata.desc,
                    node->debug_id);
     }
 
 done:
-  binder_put_node(node);
+  binder_dec_node_tmpref(node);
   return ret;
 }
 
@@ -560,9 +561,9 @@ static int binder_translate_fd(uint32_t fd, binder_size_t fd_offset,
                                FAR struct binder_thread *thread,
                                FAR struct binder_transaction *in_reply_to)
 {
-  FAR struct binder_txn_fd_fixup    *fixup;
-  int                                ret = 0;
-  bool                               target_allows_fd;
+  bool target_allows_fd;
+  FAR struct binder_txn_fd_fixup *fixup;
+  int ret = 0;
 
   if (in_reply_to)
     {
@@ -698,10 +699,10 @@ void binder_transaction_buffer_release(FAR struct binder_proc *proc,
   for (buffer_offset = off_start_offset; buffer_offset < off_end_offset;
        buffer_offset += sizeof(binder_size_t))
     {
-      struct binder_object_header   *hdr;
-      size_t                        object_size = 0;
-      struct binder_object          object;
-      binder_size_t                 object_offset;
+      struct binder_object_header *hdr;
+      size_t object_size = 0;
+      struct binder_object object;
+      binder_size_t object_offset;
 
       if (!binder_alloc_copy_from_buffer(
                &proc->alloc, &object_offset, buffer,
@@ -728,10 +729,10 @@ void binder_transaction_buffer_release(FAR struct binder_proc *proc,
         case BINDER_TYPE_WEAK_BINDER:
         {
           FAR struct flat_binder_object *fp;
-          FAR struct binder_node        *node;
+          FAR struct binder_node *node;
 
-          fp    = to_flat_binder_object(hdr);
-          node  = binder_get_node(proc, fp->binder);
+          fp = to_flat_binder_object(hdr);
+          node = binder_get_node(proc, fp->binder);
           if (node == NULL)
             {
               binder_debug(BINDER_DEBUG_ERROR,
@@ -743,7 +744,7 @@ void binder_transaction_buffer_release(FAR struct binder_proc *proc,
           binder_debug(BINDER_DEBUG_TRANSACTION, "node %d %" PRIx64 "\n",
                        node->debug_id, node->ptr);
           binder_dec_node(node, hdr->type == BINDER_TYPE_BINDER, 0);
-          binder_put_node(node);
+          binder_dec_node_tmpref(node);
           break;
         }
 
@@ -751,11 +752,11 @@ void binder_transaction_buffer_release(FAR struct binder_proc *proc,
         case BINDER_TYPE_WEAK_HANDLE:
         {
           FAR struct flat_binder_object *fp;
-          struct binder_ref_data         rdata;
-          int                            ret;
+          int ret;
+          struct binder_ref_data rdata;
 
-          fp    = to_flat_binder_object(hdr);
-          ret   = binder_dec_ref_for_handle(proc, fp->handle,
+          fp = to_flat_binder_object(hdr);
+          ret = binder_dec_ref_for_handle(proc, fp->handle,
                                             hdr->type == BINDER_TYPE_HANDLE,
                                             &rdata);
           if (ret)
@@ -767,8 +768,8 @@ void binder_transaction_buffer_release(FAR struct binder_proc *proc,
               break;
             }
 
-          binder_debug(BINDER_DEBUG_TRANSACTION, "ref %d desc %d\n",
-                       rdata.debug_id, (int)rdata.desc);
+          binder_debug(BINDER_DEBUG_TRANSACTION, "ref %d desc %" PRIu32 "\n",
+                       rdata.debug_id, rdata.desc);
           break;
         }
 
@@ -791,8 +792,8 @@ void binder_transaction_buffer_release(FAR struct binder_proc *proc,
         default:
         {
           binder_debug(BINDER_DEBUG_ERROR,
-                       "transaction release %d bad object type %d\n",
-                       buffer->debug_id, (int)hdr->type);
+                       "transaction release %d bad object type %"PRIu32"\n",
+                       buffer->debug_id, hdr->type);
           break;
         }
       }
@@ -847,15 +848,15 @@ void binder_transaction_priority(FAR struct binder_thread *thread,
                                  FAR struct binder_transaction *t,
                                  FAR struct binder_node *node)
 {
-  struct binder_priority        desired =
+  struct binder_priority desired =
   {
-    .sched_policy   = t->priority.sched_policy,
-    .sched_prio     = t->priority.sched_prio,
+    .sched_policy = t->priority.sched_policy,
+    .sched_prio = t->priority.sched_prio,
   };
 
-  const struct binder_priority  node_prio =
+  const struct binder_priority node_prio =
   {
-    .sched_policy   = node->sched_policy,
+    .sched_policy = node->sched_policy,
     .sched_prio = node->min_priority,
   };
 
@@ -881,7 +882,7 @@ void binder_transaction_priority(FAR struct binder_thread *thread,
 void binder_send_failed_reply(FAR struct binder_transaction *t,
                               uint32_t error_code)
 {
-  FAR struct binder_thread      *target_thread;
+  FAR struct binder_thread *target_thread;
   FAR struct binder_transaction *next;
 
   BUG_ON(t->flags & TF_ONE_WAY);
@@ -912,8 +913,8 @@ void binder_send_failed_reply(FAR struct binder_transaction *t,
                */
 
               binder_debug(BINDER_DEBUG_WARNING,
-                           "Unexpected reply error: %d\n",
-                           (int)target_thread->reply_error.cmd);
+                           "Unexpected reply error: %" PRIu32 "\n",
+                           target_thread->reply_error.cmd);
             }
 
           binder_inner_proc_unlock(target_thread->proc);
@@ -1006,22 +1007,22 @@ void binder_transaction(FAR struct binder_proc *proc,
                         FAR struct binder_thread *thread,
                         FAR struct binder_transaction_data *tr, int reply)
 {
-  int                            ret                = 0;
+  binder_size_t buffer_offset = 0;
+  binder_size_t off_min;
+  binder_size_t user_offset = 0;
   FAR struct binder_transaction *t;
-  FAR struct binder_work        *w;
-  FAR struct binder_work        *tcomplete;
-  binder_size_t                  buffer_offset      = 0;
-  binder_size_t                  off_min;
-  binder_size_t                  user_offset        = 0;
-  FAR struct binder_proc        *target_proc        = NULL;
-  FAR struct binder_thread      *target_thread      = NULL;
-  FAR struct binder_node        *target_node        = NULL;
-  FAR struct binder_transaction *in_reply_to        = NULL;
-  int                            return_error       = 0;
-  FAR struct binder_context     *context            = proc->context;
+  FAR struct binder_work *w;
+  FAR struct binder_work *tcomplete;
+  FAR struct binder_proc *target_proc = NULL;
+  FAR struct binder_thread *target_thread = NULL;
+  FAR struct binder_node *target_node = NULL;
+  FAR struct binder_transaction *in_reply_to = NULL;
+  FAR struct binder_context *context = proc->context;
   FAR const void *user_buffer = (const void *)(uintptr_t)tr->data.ptr.buffer;
-  FAR char *secctx            = NULL;
-  uint32_t secctx_sz          = 0;
+  FAR char *secctx = NULL;
+  int ret = 0;
+  int return_error = 0;
+  uint32_t secctx_sz = 0;
 
   if (reply)
     {
@@ -1034,7 +1035,7 @@ void binder_transaction(FAR struct binder_proc *proc,
                        "[%s][%d:%d]:"
                        "got reply transaction with no transaction stack\n",
                        LOG_TAG, getpid(), gettid());
-          return_error          = BR_FAILED_REPLY;
+          return_error = BR_FAILED_REPLY;
           goto err_empty_call_stack;
         }
 
@@ -1051,8 +1052,8 @@ void binder_transaction(FAR struct binder_proc *proc,
                        in_reply_to->to_thread->tid : 0);
           nxmutex_unlock(&in_reply_to->lock);
           binder_inner_proc_unlock(proc);
-          return_error          = BR_FAILED_REPLY;
-          in_reply_to           = NULL;
+          return_error = BR_FAILED_REPLY;
+          in_reply_to = NULL;
           goto err_bad_call_stack;
         }
 
@@ -1063,7 +1064,7 @@ void binder_transaction(FAR struct binder_proc *proc,
         {
           /* annotation for sparse */
 
-          return_error      = BR_DEAD_REPLY;
+          return_error = BR_DEAD_REPLY;
           goto err_dead_binder;
         }
 
@@ -1079,9 +1080,9 @@ void binder_transaction(FAR struct binder_proc *proc,
           BUG_ON(!nxmutex_is_hold(&target_thread->proc->inner_lock));
 
           binder_inner_proc_unlock(target_thread->proc);
-          return_error          = BR_FAILED_REPLY;
-          in_reply_to           = NULL;
-          target_thread         = NULL;
+          return_error = BR_FAILED_REPLY;
+          in_reply_to = NULL;
+          target_thread = NULL;
           goto err_dead_binder;
         }
 
@@ -1142,7 +1143,7 @@ void binder_transaction(FAR struct binder_proc *proc,
                            "got transaction to context manager "
                            "from process owning it\n",
                            LOG_TAG, getpid(), gettid());
-              return_error          = BR_FAILED_REPLY;
+              return_error = BR_FAILED_REPLY;
               goto err_invalid_target_handle;
             }
         }
@@ -1157,7 +1158,7 @@ void binder_transaction(FAR struct binder_proc *proc,
       if (proc == target_proc)
         {
           WARN_ON(1);
-          return_error          = BR_FAILED_REPLY;
+          return_error = BR_FAILED_REPLY;
           goto err_invalid_target_handle;
         }
 
@@ -1231,7 +1232,7 @@ void binder_transaction(FAR struct binder_proc *proc,
   t = kmm_zalloc(sizeof(struct binder_transaction));
   if (t == NULL)
     {
-      return_error          = BR_FAILED_REPLY;
+      return_error = BR_FAILED_REPLY;
       goto err_alloc_t_failed;
     }
 
@@ -1241,7 +1242,7 @@ void binder_transaction(FAR struct binder_proc *proc,
   tcomplete = kmm_zalloc(sizeof(struct binder_work));
   if (tcomplete == NULL)
     {
-      return_error          = BR_FAILED_REPLY;
+      return_error = BR_FAILED_REPLY;
       goto err_alloc_tcomplete_failed;
     }
 
@@ -1278,11 +1279,11 @@ void binder_transaction(FAR struct binder_proc *proc,
       t->from = NULL;
     }
 
-  t->sender_euid    = geteuid_bypid(proc->pid);
-  t->to_proc        = target_proc;
-  t->to_thread      = target_thread;
-  t->code           = tr->code;
-  t->flags          = tr->flags;
+  t->sender_euid = geteuid_bypid(proc->pid);
+  t->to_proc = target_proc;
+  t->to_thread = target_thread;
+  t->code = tr->code;
+  t->flags = tr->flags;
 
   if (!(t->flags & TF_ONE_WAY) && binder_supported_policy(gettid()))
     {
@@ -1292,8 +1293,8 @@ void binder_transaction(FAR struct binder_proc *proc,
     {
       /* Otherwise, fall back to the default priority */
 
-      t->priority.sched_policy  = target_proc->default_priority.sched_policy;
-      t->priority.sched_prio    = target_proc->default_priority.sched_prio;
+      t->priority.sched_policy = target_proc->default_priority.sched_policy;
+      t->priority.sched_prio = target_proc->default_priority.sched_prio;
     }
 
   if (target_node && target_node->txn_security_ctx)
@@ -1302,7 +1303,7 @@ void binder_transaction(FAR struct binder_proc *proc,
       secctx_sz = 1;
     }
 
-  t->buffer             =
+  t->buffer =
     binder_alloc_new_buf(&target_proc->alloc, tr->data_size,
                          tr->offsets_size, secctx_sz,
                          !reply && (t->flags & TF_ONE_WAY),
@@ -1313,7 +1314,7 @@ void binder_transaction(FAR struct binder_proc *proc,
 
       return_error = ret ==
                      -ESRCH ?BR_DEAD_REPLY : BR_FAILED_REPLY;
-      t->buffer         = NULL;
+      t->buffer = NULL;
       goto err_binder_alloc_buf_failed;
     }
 
@@ -1334,10 +1335,10 @@ void binder_transaction(FAR struct binder_proc *proc,
         }
     }
 
-  t->buffer->debug_id       = t->debug_id;
-  t->buffer->transaction    = t;
-  t->buffer->target_node    = target_node;
-  t->buffer->clear_on_free  = !!(t->flags & TF_CLEAR_BUF);
+  t->buffer->debug_id = t->debug_id;
+  t->buffer->transaction = t;
+  t->buffer->target_node = target_node;
+  t->buffer->clear_on_free = !!(t->flags & TF_CLEAR_BUF);
 
   if (binder_alloc_copy_to_buffer(&target_proc->alloc, t->buffer,
                       ALIGN(tr->data_size, sizeof(void *)),
@@ -1348,7 +1349,7 @@ void binder_transaction(FAR struct binder_proc *proc,
                    "[%s][%d:%d]:"
                    "got transaction with invalid offsets ptr\n",
                    LOG_TAG, getpid(), gettid());
-      return_error          = BR_FAILED_REPLY;
+      return_error = BR_FAILED_REPLY;
       goto err_copy_data_failed;
     }
 
@@ -1357,27 +1358,27 @@ void binder_transaction(FAR struct binder_proc *proc,
       binder_debug(BINDER_DEBUG_ERROR,
                    "got transaction with invalid offsets size, "
                    "%"PRId64"\n", tr->offsets_size);
-      return_error          = BR_FAILED_REPLY;
+      return_error = BR_FAILED_REPLY;
       goto err_bad_offset;
     }
 
-  off_min           = 0;
+  off_min = 0;
   for (buffer_offset = ALIGN(tr->data_size, sizeof(void *));
        buffer_offset <
        ALIGN(tr->data_size, sizeof(void *)) + tr->offsets_size;
        buffer_offset += sizeof(binder_size_t))
     {
-      FAR struct binder_object_header   *hdr;
-      size_t                             object_size;
-      struct binder_object               object;
-      binder_size_t                      object_offset;
-      binder_size_t                      copy_size;
+      FAR struct binder_object_header *hdr;
+      size_t object_size;
+      struct binder_object object;
+      binder_size_t object_offset;
+      binder_size_t copy_size;
 
       if (binder_alloc_copy_from_buffer(&target_proc->alloc, &object_offset,
                                         t->buffer, buffer_offset,
                                         sizeof(object_offset)))
         {
-          return_error          = BR_FAILED_REPLY;
+          return_error = BR_FAILED_REPLY;
           goto err_bad_offset;
         }
 
@@ -1397,7 +1398,7 @@ void binder_transaction(FAR struct binder_proc *proc,
                        "[%s][%d:%d]:"
                        "got transaction with invalid data ptr\n",
                        LOG_TAG, getpid(), gettid());
-          return_error          = BR_FAILED_REPLY;
+          return_error = BR_FAILED_REPLY;
           goto err_copy_data_failed;
         }
 
@@ -1409,28 +1410,28 @@ void binder_transaction(FAR struct binder_proc *proc,
                        "got transaction with invalid offset "
                        "(%"PRId64", min %"PRId64" max %d) or object.\n",
                        object_offset, off_min, t->buffer->data_size);
-          return_error          = BR_FAILED_REPLY;
+          return_error = BR_FAILED_REPLY;
           goto err_bad_offset;
         }
 
       /* Set offset to the next buffer fragment to be copied */
 
-      user_offset   = object_offset + object_size;
-      hdr           = &object.hdr;
-      off_min       = object_offset + object_size;
+      user_offset = object_offset + object_size;
+      hdr = &object.hdr;
+      off_min = object_offset + object_size;
       switch (hdr->type)
       {
         case BINDER_TYPE_BINDER:
         case BINDER_TYPE_WEAK_BINDER:
         {
           FAR struct flat_binder_object *fp;
-          fp    = to_flat_binder_object(hdr);
-          ret   = binder_translate_binder(fp, t, thread);
+          fp = to_flat_binder_object(hdr);
+          ret = binder_translate_binder(fp, t, thread);
           if (ret < 0 ||
               binder_alloc_copy_to_buffer(&target_proc->alloc, t->buffer,
                                           object_offset, fp, sizeof(*fp)))
             {
-              return_error          = BR_FAILED_REPLY;
+              return_error = BR_FAILED_REPLY;
               goto err_translate_failed;
             }
           break;
@@ -1440,13 +1441,13 @@ void binder_transaction(FAR struct binder_proc *proc,
         case BINDER_TYPE_WEAK_HANDLE:
         {
           FAR struct flat_binder_object *fp;
-          fp    = to_flat_binder_object(hdr);
-          ret   = binder_translate_handle(fp, t, thread);
+          fp = to_flat_binder_object(hdr);
+          ret = binder_translate_handle(fp, t, thread);
           if (ret < 0 ||
               binder_alloc_copy_to_buffer(&target_proc->alloc, t->buffer,
                                           object_offset, fp, sizeof(*fp)))
             {
-              return_error          = BR_FAILED_REPLY;
+              return_error = BR_FAILED_REPLY;
               goto err_translate_failed;
             }
 
@@ -1455,20 +1456,17 @@ void binder_transaction(FAR struct binder_proc *proc,
 
         case BINDER_TYPE_FD:
         {
-          FAR struct binder_fd_object   *fp     = to_binder_fd_object(hdr);
-          binder_size_t             fd_offset   = object_offset +
-                                                  (uintptr_t)&fp->fd -
-                                                  (uintptr_t)fp;
-          int ret_local = binder_translate_fd(fp->fd,
-                                              fd_offset,
-                                              t, thread,
-                                              in_reply_to);
+          FAR struct binder_fd_object *fp = to_binder_fd_object(hdr);
+          binder_size_t fd_offset = object_offset +
+                                    (uintptr_t)&fp->fd - (uintptr_t)fp;
+          int ret_local = binder_translate_fd(fp->fd, fd_offset, t,
+                                              thread, in_reply_to);
           fp->pad_binder = 0;
           if (ret_local < 0 ||
               binder_alloc_copy_to_buffer(&target_proc->alloc, t->buffer,
                                           object_offset, fp, sizeof(*fp)))
             {
-              return_error          = BR_FAILED_REPLY;
+              return_error = BR_FAILED_REPLY;
               goto err_translate_failed;
             }
           break;
@@ -1490,7 +1488,7 @@ void binder_transaction(FAR struct binder_proc *proc,
           binder_debug(BINDER_DEBUG_ERROR,
                        "got transaction with invalid object type, "
                        "%" PRIx32 "\n", hdr->type);
-          return_error          = BR_FAILED_REPLY;
+          return_error = BR_FAILED_REPLY;
           goto err_bad_object_type;
         }
       }
@@ -1506,12 +1504,12 @@ void binder_transaction(FAR struct binder_proc *proc,
                    "[%s][%d:%d]:"
                    "got transaction with invalid data ptr\n",
                    LOG_TAG, getpid(), gettid());
-      return_error          = BR_FAILED_REPLY;
+      return_error = BR_FAILED_REPLY;
       goto err_copy_data_failed;
     }
 
-  tcomplete->type   = BINDER_WORK_TRANSACTION_COMPLETE;
-  t->work.type      = BINDER_WORK_TRANSACTION;
+  tcomplete->type = BINDER_WORK_TRANSACTION_COMPLETE;
+  t->work.type = BINDER_WORK_TRANSACTION;
   if (reply)
     {
       binder_enqueue_thread_work(thread, tcomplete);
@@ -1546,8 +1544,8 @@ void binder_transaction(FAR struct binder_proc *proc,
        */
 
       binder_enqueue_deferred_thread_work_ilocked(thread, tcomplete);
-      t->need_reply             = 1;
-      t->from_parent            = thread->transaction_stack;
+      t->need_reply = 1;
+      t->from_parent = thread->transaction_stack;
       thread->transaction_stack = t;
       binder_inner_proc_unlock(proc);
       return_error = binder_proc_transaction(t, target_proc, target_thread);
@@ -1596,8 +1594,8 @@ err_copy_data_failed:
       binder_dec_node_tmpref(target_node);
     }
 
-  target_node               = NULL;
-  t->buffer->transaction    = NULL;
+  target_node = NULL;
+  t->buffer->transaction = NULL;
   binder_alloc_free_buf(&target_proc->alloc, t->buffer);
 err_binder_alloc_buf_failed:
   kmm_free(tcomplete);

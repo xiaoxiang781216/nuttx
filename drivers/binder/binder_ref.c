@@ -22,7 +22,7 @@
  * Included Files
  ****************************************************************************/
 
-#define LOG_TAG  "BinderRef"
+#define LOG_TAG "BinderRef"
 
 #include <nuttx/config.h>
 #include <sys/types.h>
@@ -114,10 +114,10 @@ binder_get_ref_for_node_olocked(FAR struct binder_proc *proc,
                                 FAR struct binder_node *node,
                                 FAR struct binder_ref *new_ref)
 {
-  bool                       insert_ref = false;
-  FAR struct binder_context *context    = proc->context;
-  FAR struct binder_ref     *ref        = NULL;
-  FAR struct binder_ref     *n          = NULL;
+  bool insert_ref = false;
+  FAR struct binder_context *context = proc->context;
+  FAR struct binder_ref *ref = NULL;
+  FAR struct binder_ref *n = NULL;
 
   list_for_every_entry(&proc->refs_by_node, ref, struct binder_ref,
                        rb_node_node)
@@ -133,9 +133,9 @@ binder_get_ref_for_node_olocked(FAR struct binder_proc *proc,
       return NULL;
     }
 
-  new_ref->data.debug_id    = binder_last_debug_id++;
-  new_ref->proc             = proc;
-  new_ref->node             = node;
+  new_ref->data.debug_id = binder_last_debug_id++;
+  new_ref->proc = proc;
+  new_ref->node = node;
   list_add_head(&proc->refs_by_node, &new_ref->rb_node_node);
 
   new_ref->data.desc = (node == context->mgr_node) ? 0 : 1;
@@ -161,8 +161,8 @@ binder_get_ref_for_node_olocked(FAR struct binder_proc *proc,
   list_add_head(&node->refs, &new_ref->node_entry);
 
   binder_debug(BINDER_DEBUG_INTERNAL_REFS,
-               "%d new ref %d desc %d for node %d\n", proc->pid,
-               new_ref->data.debug_id, (int)new_ref->data.desc,
+               "%d new ref %d desc %" PRIu32 "for node %d\n", proc->pid,
+               new_ref->data.debug_id, new_ref->data.desc,
                node->debug_id);
   binder_node_unlock(node);
   return new_ref;
@@ -170,11 +170,12 @@ binder_get_ref_for_node_olocked(FAR struct binder_proc *proc,
 
 void binder_cleanup_ref_olocked(FAR struct binder_ref *ref)
 {
-  bool                       delete_node = false;
+  bool delete_node = false;
 
   binder_debug(BINDER_DEBUG_INTERNAL_REFS,
-               "%d delete ref %d desc %d for node %d\n", ref->proc->pid,
-               ref->data.debug_id, (int)ref->data.desc, ref->node->debug_id);
+               "%d delete ref %d desc %" PRIu32 " for node %d\n",
+               ref->proc->pid, ref->data.debug_id,
+               ref->data.desc, ref->node->debug_id);
 
   list_delete_init(&ref->rb_node_desc);
   list_delete_init(&ref->rb_node_node);
@@ -204,8 +205,9 @@ void binder_cleanup_ref_olocked(FAR struct binder_ref *ref)
   if (ref->death)
     {
       binder_debug(BINDER_DEBUG_DEAD_BINDER,
-                   "%d delete ref %d desc %d has death notification\n",
-                   ref->proc->pid, ref->data.debug_id, (int)ref->data.desc);
+                   "%d delete ref %d desc %" PRIu32 ""
+                   "has death notification\n",
+                   ref->proc->pid, ref->data.debug_id, ref->data.desc);
       binder_dequeue_work(ref->proc, &ref->death->work);
     }
 }
@@ -286,9 +288,9 @@ static bool binder_dec_ref_olocked(FAR struct binder_ref *ref, int strong)
         {
           binder_debug(BINDER_DEBUG_ERROR,
                        "%d invalid dec strong, "
-                       "ref %d desc %d s %d w %d\n",
+                       "ref %d desc %" PRIu32 " strong: %d weak: %d\n",
                        ref->proc->pid, ref->data.debug_id,
-                       (int)ref->data.desc, ref->data.strong,
+                       ref->data.desc, ref->data.strong,
                        ref->data.weak);
           return false;
         }
@@ -305,9 +307,9 @@ static bool binder_dec_ref_olocked(FAR struct binder_ref *ref, int strong)
         {
           binder_debug(BINDER_DEBUG_ERROR,
                        "%d invalid dec weak, "
-                       "ref %d desc %d s %d w %d\n",
+                       "ref %d desc %" PRIu32 " strong: %d weak: %d\n",
                        ref->proc->pid, ref->data.debug_id,
-                       (int)ref->data.desc, ref->data.strong,
+                       ref->data.desc, ref->data.strong,
                        ref->data.weak);
           return false;
         }
@@ -332,7 +334,7 @@ static bool binder_dec_ref_olocked(FAR struct binder_ref *ref, int strong)
  *   (if non-NULL) and the binder_ref_death indicated by ref->death.
  *
  * Input Parameters:
- *   ref:  ref to free
+ *   ref - ref to free
  *
  ****************************************************************************/
 
@@ -377,8 +379,8 @@ int binder_inc_ref_for_node(FAR struct binder_proc *proc,
                             FAR struct binder_ref_data *rdata)
 {
   FAR struct binder_ref *ref;
-  FAR struct binder_ref *new_ref     = NULL;
-  int                    ret         = 0;
+  FAR struct binder_ref *new_ref = NULL;
+  int ret = 0;
 
   binder_proc_lock(proc);
   ref = binder_get_ref_for_node_olocked(proc, node, NULL);
@@ -398,8 +400,8 @@ int binder_inc_ref_for_node(FAR struct binder_proc *proc,
       ref = binder_get_ref_for_node_olocked(proc, node, new_ref);
     }
 
-  ret       = binder_inc_ref_olocked(ref, strong, target_list);
-  *rdata    = ref->data;
+  ret = binder_inc_ref_olocked(ref, strong, target_list);
+  *rdata = ref->data;
 
   if (ret && ref == new_ref)
     {
@@ -451,9 +453,9 @@ int binder_update_ref_for_handle(FAR struct binder_proc *proc, uint32_t desc,
                                  bool increment, bool strong,
                                  FAR struct binder_ref_data *rdata)
 {
-  int                    ret = 0;
+  bool delete_ref = false;
   FAR struct binder_ref *ref;
-  bool                   delete_ref = false;
+  int ret = 0;
 
   binder_proc_lock(proc);
   ref = binder_get_ref_olocked(proc, desc, strong);

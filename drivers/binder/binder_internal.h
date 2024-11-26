@@ -26,6 +26,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <sys/param.h>
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -35,23 +36,17 @@
 #include <nuttx/android/binder.h>
 #include <nuttx/list.h>
 #include <nuttx/mutex.h>
+#include <nuttx/nuttx.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define PAGE_SHIFT          12U
-#define PAGE_SIZE           (1U << PAGE_SHIFT)
-#define PAGE_MASK           (~((1 << PAGE_SHIFT) - 1))
-
-#define __ALIGN_MASK(x, mask)   (((x) + (mask)) & ~(mask))
-#define ALIGN(x, a)             __ALIGN_MASK((x), ((typeof(x))(a) - 1))
-#define IS_ALIGNED(x, a)        (((x) & ((a) - 1)) == 0)
-
-#define SZ_4M               0x00400000
-
-#define max(a, b)               ((a) > (b) ? (a) : (b))
-#define min(a, b)               (((a) < (b)) ? (a) : (b))
+#define SZ_4M 0x00400000
+#define PAGE_SHIFT 12U
+#define PAGE_SIZE (1U << PAGE_SHIFT)
+#define PAGE_MASK (~((1 << PAGE_SHIFT) - 1))
+#define ALIGN(x, a) ALIGN_UP_MASK((x), ((typeof(x))(a) - 1))
 
 #define put_value(val, ptr)           \
   ({                                  \
@@ -101,7 +96,7 @@ extern const char *g_binder_return_str[];
 #define BINDER_BC_STR(cmd) g_binder_command_str[_IOC_NR(cmd)]
 #define BINDER_BR_STR(cmd) g_binder_return_str[_IOC_NR(cmd)]
 
-#define BINDER_LOG_BUFSIZE  256
+#define BINDER_LOG_BUFSIZE 256
 extern char binder_debug_log[BINDER_LOG_BUFSIZE];
 
 static void binder_debug(int mask, FAR const char *fmt, ...)
@@ -143,7 +138,7 @@ static void binder_debug(int mask, FAR const char *fmt, ...)
         }                                    \
     } while ( 0 )
 
-#define BUG_ON(condition)  DEBUGASSERT(!(condition))
+#define BUG_ON(condition) DEBUGASSERT(!(condition))
 
 #define list_first_entry_or_null(list, type, member) \
   ({                                                 \
@@ -168,60 +163,42 @@ static void binder_debug(int mask, FAR const char *fmt, ...)
 
 enum binder_deferred_state
 {
-  BINDER_DEFERRED_FLUSH = 0x01, BINDER_DEFERRED_RELEASE      = 0x02,
+  BINDER_DEFERRED_FLUSH = 0x01,
+  BINDER_DEFERRED_RELEASE = 0x02
 };
 
 enum
 {
-  BINDER_LOOPER_STATE_REGISTERED    = 0x01,
-  BINDER_LOOPER_STATE_ENTERED       = 0x02,
-  BINDER_LOOPER_STATE_EXITED        = 0x04,
-  BINDER_LOOPER_STATE_INVALID       = 0x08,
-  BINDER_LOOPER_STATE_WAITING       = 0x10,
-  BINDER_LOOPER_STATE_POLL          = 0x20,
+  BINDER_LOOPER_STATE_REGISTERED = 0x01,
+  BINDER_LOOPER_STATE_ENTERED    = 0x02,
+  BINDER_LOOPER_STATE_EXITED     = 0x04,
+  BINDER_LOOPER_STATE_INVALID    = 0x08,
+  BINDER_LOOPER_STATE_WAITING    = 0x10,
+  BINDER_LOOPER_STATE_POLL       = 0x20,
 };
 
 typedef int (*wait_queue_func_t)(FAR void *arg, unsigned mode);
 
 struct wait_queue_entry
 {
-  FAR void       *private;
+  FAR void *private;
   wait_queue_func_t func;
   struct list_node entry;
 };
 
-/**
- * struct binder_buffer - buffer used for binder transactions
- * entry:              entry alloc->buffers
- * rb_node:            node for allocated_buffers/free_buffers rb trees
- * free:               true if buffer is free
- * clear_on_free:      true if buffer must be zeroed after use
- * allow_user_free:    true if user is allowed to free buffer
- * async_transaction:  true if buffer is in use for an async txn
- * oneway_spam_suspect: true if total async allocate size just exceed
- * spamming detect threshold
- * debug_id:           unique ID for debugging
- * transaction:        pointer to associated struct binder_transaction
- * target_node:        struct binder_node associated with this buffer
- * data_size:          size of transaction data
- * offsets_size:       size of array of offsets
- * extra_buffers_size: size of space for other objects (like sg lists)
- * user_data:          user pointer to base of buffer space
- * pid:                pid to attribute the buffer to (caller)
- *
- * Bookkeeping structure for binder transaction buffers
- */
+/* struct binder_buffer - buffer used for binder transactions */
 
 struct binder_buffer
 {
-  struct list_node entry;   /* free and allocated entries by address */
-  struct list_node rb_node; /* free entry by size or allocated entry */
-  unsigned free : 1;
-  unsigned clear_on_free : 1;
-  unsigned allow_user_free : 1;
-  unsigned async_transaction : 1;
-  unsigned oneway_spam_suspect : 1;
-  unsigned debug_id : 27;
+  struct list_node entry;           /* free and allocated entries by address */
+  struct list_node rb_node;         /* free entry by size or allocated entry */
+  unsigned free : 1;                /* true if buffer is free */
+  unsigned clear_on_free : 1;       /* true if buffer must be zeroed after use */
+  unsigned allow_user_free : 1;     /* true if user is allowed to free buffer */
+  unsigned async_transaction : 1;   /* true if buffer is in use for an async txn */
+  unsigned oneway_spam_suspect : 1; /* true if total async allocate size just
+                                     * exceed spamming detect threshold */
+  unsigned debug_id : 27;           /* unique ID for debugging */
 
   FAR struct binder_transaction *transaction;
 
@@ -232,28 +209,15 @@ struct binder_buffer
   int pid;
 };
 
-/**
- * struct binder_page - page data object used for binder
- * page_ptr: pointer to page address in mmap'd area
- */
+/* struct binder_page - page data object used for binder */
 
 struct binder_page
 {
-  FAR void * page_ptr;
+  FAR void * page_ptr; /* pointer to page address in mmap'd area */
 };
 
 /**
  * struct binder_alloc - per-binder proc state for binder allocator
- * pid:                   pid for associated binder_proc
- *                         (invariant after init)
- * alloc_lock:            Protected lock for associated binder_proc
- * buffer_data:           base of per-proc address space mapped via mmap
- * buffer_data_size:      size of address space specified via mmap
- * buffers_list:          list of all buffers for this proc
- * free_buffers_list:     list of buffers available for allocation
- *                         sorted by size
- * allocated_buffers_list:rb tree of allocated buffers sorted by address
- * pages_array:           array of binder_lru_page
  *
  * Bookkeeping structure for per-proc address space management for binder
  * buffers. It is normally initialized during binder_init() and binder_mmap()
@@ -262,16 +226,14 @@ struct binder_page
 
 struct binder_alloc
 {
-  pid_t pid;
-  mutex_t alloc_lock;
-  FAR void *buffer_data;
-  size_t buffer_data_size;
-
-  struct list_node buffers_list;
-  struct list_node free_buffers_list;
-  struct list_node allocated_buffers_list;
-
-  FAR struct binder_page *pages_array;
+  pid_t pid;                               /* pid for associated binder_proc */
+  mutex_t alloc_lock;                      /* Protected lock for associated binder_proc */
+  FAR void *buffer_data;                   /* base of per-proc address space mapped via mmap */
+  size_t buffer_data_size;                 /* size of address space specified via mmap */
+  struct list_node buffers_list;           /* list of all buffers for this proc */
+  struct list_node free_buffers_list;      /* list of buffers available for allocation */
+  struct list_node allocated_buffers_list; /* allocated buffers sorted by address */
+  FAR struct binder_page *pages_array;     /* array of binder_lru_page */
 };
 
 /**
@@ -284,19 +246,15 @@ struct binder_priority
   int sched_prio;
 };
 
-/**
- * struct binder_context - information about a binder context node
- */
+/* struct binder_context - information about a binder context node */
 
 struct binder_context
 {
-  FAR struct binder_node * mgr_node;
+  FAR struct binder_node *mgr_node;
   mutex_t context_lock;
 };
 
-/**
- * struct binder_device - information about a binder device node
- */
+/* struct binder_device - information about a binder device node */
 
 struct binder_device
 {
@@ -334,9 +292,7 @@ struct binder_error
   uint32_t cmd;
 };
 
-/**
- * struct binder_thread - Bookkeeping structure for binder threads.
- */
+/* struct binder_thread - Bookkeeping structure for binder threads. */
 
 struct binder_thread
 {
@@ -348,7 +304,6 @@ struct binder_thread
   struct list_node todo;
   int looper;
   FAR struct binder_transaction *transaction_stack;
-
   struct wait_queue_entry wq_entry[CONFIG_DRIVERS_BINDER_NPOLLWAITERS];
   unsigned int tmp_ref;
   bool process_todo;
@@ -358,9 +313,7 @@ struct binder_thread
   struct binder_error reply_error;
 };
 
-/**
- * struct binder_proc - binder process bookkeeping
- */
+/* struct binder_proc - binder process bookkeeping */
 
 struct binder_proc
 {
@@ -408,108 +361,60 @@ struct binder_proc
   int tmp_ref;
 };
 
-/**
- * struct binder_node - Bookkeeping structure for binder nodes.
- *
- * debug_id:             unique ID for debugging
- *                        (invariant after initialized)
- * lock:                 lock for node fields
- * work:                 worklist element for node work
- * rb_node:              element for proc->nodes list
- * dead_node:            element for binder_dead_nodes list
- *                        (protected by binder_dead_nodes_lock)
- * proc:                 binder_proc that owns this node
- *                        (invariant after initialized)
- * refs:                 list of references on this node
- *                        (protected by lock)
- * internal_strong_refs: used to take strong references when
- *                        initiating a transaction
- * local_weak_refs:      weak user refs from local process
- * local_strong_refs:    strong user refs from local process
- *                        (protected by proc->inner_lock if proc
- *                        and by lock)
- * tmp_refs:             temporary kernel refs
- *                        (protected by proc->inner_lock while proc
- *                        is valid, and by binder_dead_nodes_lock
- *                        if proc is NULL. During inc/dec and node release
- *                        it is also protected by lock to provide safety
- *                        as the node dies and proc becomes NULL)
- * ptr:                  pointer for node
- *                        (invariant, no lock needed)
- * cookie:               cookie for node
- *                        (invariant, no lock needed)
- * has_strong_ref:       userspace notified of strong ref
- * pending_strong_ref:   userspace has acked notification of strong ref
- * has_weak_ref:         userspace notified of weak ref
- * pending_weak_ref:     userspace has acked notification of weak ref
- * has_async_transaction: async transaction to node in progress
- *                        (protected by node_lock)
- * sched_policy:         minimum scheduling policy for node
- *                        (invariant after initialized)
- * accept_fds:           file descriptor operations supported for node
- *                        (invariant after initialized)
- * min_priority:         minimum scheduling priority
- *                        (invariant after initialized)
- * inherit_rt:           inherit RT scheduling policy from caller
- * txn_security_ctx:     require sender's security context
- *                        (invariant after initialized)
- * async_todo:           list of async work items
- *                        (protected by proc->inner_lock)
- */
+/* struct binder_node - Bookkeeping structure for binder nodes. */
 
 struct binder_node
 {
-  int debug_id;
-  mutex_t lock;
-  struct binder_work work;
+  int debug_id;            /* unique ID for debugging (invariant after initialized) */
+  mutex_t lock;            /* lock for node fields */
+  struct binder_work work; /* worklist element for node work */
   union
   {
-    struct list_node rb_node;
-    struct list_node dead_node;
+    struct list_node rb_node;   /* element for proc->nodes list */
+    struct list_node dead_node; /* element for binder_dead_nodes list */
   };
 
-  FAR struct binder_proc *proc;
-  struct list_node refs;
-  int internal_strong_refs;
-  int local_weak_refs;
-  int local_strong_refs;
-  int tmp_refs;
-  binder_uintptr_t ptr;
-  binder_uintptr_t cookie;
+  FAR struct binder_proc *proc; /* binder_proc that owns this node (invariant after initialized) */
+  struct list_node refs;        /* list of references on this node (protected by lock) */
+  int internal_strong_refs;     /* used to take strong references when initiating a transaction */
+  int local_weak_refs;          /* weak user refs from local process */
+  int local_strong_refs;        /* strong user refs from local process
+                                 * (protected by proc->inner_lock if proc and by lock) */
+  int tmp_refs;                 /* temporary kernel refs (protected by proc->inner_lock while
+                                 * proc is valid, and by binder_dead_nodes_lock if proc is NULL.
+                                 * During inc/dec and node release it is also protected by lock
+                                 * to provide safetyas the node dies and proc becomes NULL) */
+  binder_uintptr_t ptr;         /* pointer for node (invariant, no lock needed) */
+  binder_uintptr_t cookie;      /* cookie for node (invariant, no lock needed) */
   struct
   {
     /* bitfield elements protected by proc lock */
 
-    _uint8_t has_strong_ref : 1;
-    _uint8_t pending_strong_ref : 1;
-    _uint8_t has_weak_ref : 1;
-    _uint8_t pending_weak_ref : 1;
+    _uint8_t has_strong_ref : 1;     /* userspace notified of strong ref */
+    _uint8_t pending_strong_ref : 1; /* userspace has acked notification of strong ref */
+    _uint8_t has_weak_ref : 1;       /* userspace notified of weak ref */
+    _uint8_t pending_weak_ref : 1;   /* userspace has acked notification of weak ref */
   };
 
   struct
   {
     /* invariant after initialization */
 
-    _uint8_t sched_policy : 2;
-    _uint8_t inherit_rt : 1;
-    _uint8_t accept_fds : 1;
-    _uint8_t txn_security_ctx : 1;
-    _uint8_t min_priority;
+    _uint8_t sched_policy : 2;     /* minimum scheduling policy for node */
+    _uint8_t inherit_rt : 1;       /* inherit RT scheduling policy from caller */
+    _uint8_t accept_fds : 1;       /* file descriptor operations supported for node */
+    _uint8_t txn_security_ctx : 1; /* require sender's security context */
+    _uint8_t min_priority;         /* minimum scheduling priority */
   };
 
-  bool has_async_transaction;
-  struct list_node async_todo;
+  bool has_async_transaction;  /* async transaction to node in progress (protected by node_lock) */
+  struct list_node async_todo; /* list of async work items (protected by proc->inner_lock) */
 };
 
 struct binder_ref_death
 {
-  /**
-   * work: worklist element for death notifications
-   *        (protected by inner_lock of the proc that
-   *        this ref belongs to)
-   */
-
-  struct binder_work work;
+  struct binder_work work; /* worklist element for death notifications
+                            * (protected by inner_lock of the proc that this ref belongs to) */
   binder_uintptr_t cookie;
 };
 
@@ -540,9 +445,9 @@ struct binder_ref_data
 struct binder_ref
 {
   /* Lookups needed:
-   *   node + proc => ref (transaction)
-   *   desc + proc => ref (transaction, inc/dec ref)
-   *   node => refs + procs (proc exit)
+   *  node + proc => ref (transaction)
+   *  desc + proc => ref (transaction, inc/dec ref)
+   *  node => refs + procs (proc exit)
    */
 
   struct binder_ref_data data;
@@ -565,7 +470,7 @@ struct binder_transaction
   FAR struct binder_transaction *to_parent;
   unsigned need_reply : 1;
 
-  /* unsigned is_dead:1; */       /* not used at the moment */
+  /* unsigned is_dead:1; not used at the moment */
 
   FAR struct binder_buffer *buffer;
   unsigned int code;
@@ -578,7 +483,7 @@ struct binder_transaction
   binder_uintptr_t security_ctx;
 
   /**
-   * lock:  protects from, to_proc, and to_thread
+   * lock: protects from, to_proc, and to_thread
    *
    * from, to_proc, and to_thread can be set to NULL
    * during thread teardown
@@ -587,34 +492,22 @@ struct binder_transaction
   mutex_t lock;
 };
 
-/**
- * struct binder_object - union of flat binder object types
- * hdr:   generic object header
- * fbo:   binder object (nodes and refs)
- * fdo:   file descriptor object
- * bbo:   binder buffer pointer (TODO: support this object)
- * fdao:  file descriptor array (TODO: support this object)
- *
- * Used for type-independent object copies
- */
+/* struct binder_object - union of flat binder object types */
 
 struct binder_object
 {
   union
   {
-    struct binder_object_header hdr;
-    struct flat_binder_object fbo;
-    struct binder_fd_object fdo;
-    struct binder_buffer_object bbo;
-    struct binder_fd_array_object fdao;
+    struct binder_object_header hdr;    /* generic object header */
+    struct flat_binder_object fbo;      /* binder object */
+    struct binder_fd_object fdo;        /* file descriptor object */
+    struct binder_buffer_object bbo;    /* binder buffer pointer */
+    struct binder_fd_array_object fdao; /* file descriptor array */
   };
 };
 
 /**
  * struct binder_txn_fd_fixup - transaction fd fixup list element
- * fixup_entry:          list entry
- * file:                 struct file to be associated with new fd
- * offset:               offset in buffer data to this fixup
  *
  * List element for fd fixups in a transaction. Since file
  * descriptors need to be allocated in the context of the
@@ -624,18 +517,18 @@ struct binder_object
 
 struct binder_txn_fd_fixup
 {
-  struct list_node fixup_entry;
-  struct file file;
-  size_t offset;
+  struct list_node fixup_entry; /* list entry */
+  struct file file;             /* struct file to be associated with new fd */
+  size_t offset;                /* offset in buffer data to this fixup */
 };
 
 /* binder allocator */
 
 struct binder_mmap_area
 {
-  FAR void     *area_start;
-  size_t        area_size;
-  uint32_t      map_flag;
+  FAR void *area_start;
+  size_t area_size;
+  uint32_t map_flag;
 };
 
 /****************************************************************************
@@ -646,8 +539,7 @@ static inline void binder_inc_node_tmpref_ilocked(
   FAR struct binder_node *node)
 {
   /* No call to binder_inc_node() is needed since we
-   * don't need to inform userspace of any changes to
-   * tmp_refs
+   * don't need to inform userspace of any changes to tmp_refs
    */
 
   node->tmp_refs++;
@@ -670,8 +562,8 @@ static inline bool binder_worklist_empty_ilocked(FAR struct list_node *list)
 
 /**
  * binder_enqueue_work_ilocked() - Add an item to the work list
- * work:         struct binder_work to add to list
- * target_list:  list to add work to
+ * work: struct binder_work to add to list
+ * target_list: list to add work to
  *
  * Adds the work to the specified list. Asserts that work
  * is not already on a list.
@@ -687,8 +579,8 @@ static inline void binder_enqueue_work_ilocked(
 
 /**
  * binder_enqueue_deferred_thread_work_ilocked() - Add deferred thread work
- * thread:       thread to queue work to
- * work:         struct binder_work to add to list
+ * thread: thread to queue work to
+ * work: struct binder_work to add to list
  *
  * Adds the work to the todo list of the thread. Doesn't set the process_todo
  * flag, which means that (if it wasn't already set) the thread will go to
@@ -761,7 +653,6 @@ FAR struct binder_node *binder_new_node(FAR struct binder_proc *proc,
                                         FAR struct flat_binder_object *fp);
 FAR struct binder_node *binder_get_node(FAR struct binder_proc *proc,
                                         binder_uintptr_t ptr);
-void binder_put_node(FAR struct binder_node *node);
 bool binder_dec_node_nilocked(FAR struct binder_node *node, int strong,
                               int internal);
 int binder_inc_node_nilocked(FAR struct binder_node *node,
@@ -872,8 +763,8 @@ void _binder_node_inner_assert_locked(FAR struct binder_node *node,
 
 /**
  * binder_enqueue_thread_work_ilocked() - Add an item to the thread work list
- * thread:       thread to queue work to
- * work:         struct binder_work to add to list
+ * thread: thread to queue work to
+ * work: struct binder_work to add to list
  *
  * Adds the work to the todo list of the thread, and enables processing
  * of the todo queue.

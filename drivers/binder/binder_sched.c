@@ -22,7 +22,7 @@
  * Included Files
  ****************************************************************************/
 
-#define LOG_TAG  "BinderSched"
+#define LOG_TAG "BinderSched"
 
 #include <nuttx/config.h>
 #include <sys/types.h>
@@ -55,11 +55,11 @@
 
 int binder_get_priority(pid_t pid, FAR struct binder_priority * priority)
 {
-  int                   ret;
-  struct sched_param    params;
+  int ret;
+  struct sched_param params;
 
-  ret                   = sched_getparam(pid, &params);
-  priority->sched_prio  = params.sched_priority;
+  ret = sched_getparam(pid, &params);
+  priority->sched_prio = params.sched_priority;
   if (ret != 0)
     {
       return ret;
@@ -89,7 +89,7 @@ void init_waitqueue_entry(FAR struct wait_queue_entry *wq_entry,
                           FAR void * arg, wait_queue_func_t func)
 {
   wq_entry->private = arg;
-  wq_entry->func    = func;
+  wq_entry->func = func;
   list_initialize(&wq_entry->entry);
 
   binder_debug(BINDER_DEBUG_SCHED, "wq_entry=%p\n", wq_entry);
@@ -122,7 +122,7 @@ void finish_wait(FAR struct wait_queue_entry *wq_entry)
     {
       list_delete_init(&wq_entry->entry);
       wq_entry->private = 0;
-      wq_entry->func    = 0;
+      wq_entry->func = 0;
     }
 
   leave_critical_section(flags);
@@ -130,9 +130,9 @@ void finish_wait(FAR struct wait_queue_entry *wq_entry)
 
 void wait_wake_up(FAR struct list_node *wq_head, int sync)
 {
-  struct wait_queue_entry   *curr;
-  struct wait_queue_entry   *next;
-  int                        ret;
+  FAR struct wait_queue_entry *curr;
+  FAR struct wait_queue_entry *next;
+  int ret;
   irqstate_t flags;
 
   flags = enter_critical_section();
@@ -151,12 +151,12 @@ void wait_wake_up(FAR struct list_node *wq_head, int sync)
 
 void wake_up_pollfree(FAR struct binder_thread *thread)
 {
-  FAR struct wait_queue_entry  *wq_entry;
+  FAR struct wait_queue_entry *wq_entry;
   int i;
 
   for (i = 0; i < CONFIG_DRIVERS_BINDER_NPOLLWAITERS; ++i)
     {
-      wq_entry  = &thread->wq_entry[i];
+      wq_entry = &thread->wq_entry[i];
       if (wq_entry->private != NULL && wq_entry->func)
         {
           wq_entry->func(wq_entry, 0);

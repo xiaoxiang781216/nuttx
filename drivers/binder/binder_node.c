@@ -22,7 +22,7 @@
  * Included Files
  ****************************************************************************/
 
-#define LOG_TAG  "BinderNode"
+#define LOG_TAG "BinderNode"
 
 #include <nuttx/config.h>
 #include <sys/types.h>
@@ -53,7 +53,7 @@
 
 static struct list_node binder_dead_nodes = LIST_INITIAL_VALUE(
   binder_dead_nodes);
-static mutex_t          binder_dead_nodes_lock = NXMUTEX_INITIALIZER;
+static mutex_t binder_dead_nodes_lock = NXMUTEX_INITIALIZER;
 
 /****************************************************************************
  * Private Functions
@@ -63,11 +63,11 @@ static struct binder_node *binder_init_node_ilocked(
   FAR struct binder_proc *proc, FAR struct binder_node *new_node,
   FAR struct flat_binder_object *fp)
 {
-  binder_uintptr_t  ptr     = fp ? fp->binder : 0;
-  binder_uintptr_t  cookie  = fp ? fp->cookie : 0;
-  uint32_t          flags   = fp ? fp->flags : 0;
-  FAR struct binder_node    *node;
-  signed char       priority;
+  signed char priority;
+  FAR struct binder_node *node;
+  uint32_t flags = fp ? fp->flags : 0;
+  binder_uintptr_t ptr = fp ? fp->binder : 0;
+  binder_uintptr_t cookie = fp ? fp->cookie : 0;
 
   binder_inner_proc_assert_locked(proc);
 
@@ -87,30 +87,30 @@ static struct binder_node *binder_init_node_ilocked(
 
   node = new_node;
   node->tmp_refs++;
-  node->debug_id        = binder_last_debug_id++;
-  node->proc            = proc;
-  node->ptr             = ptr;
-  node->cookie          = cookie;
-  node->work.type       = BINDER_WORK_NODE;
-  priority              = flags & FLAT_BINDER_FLAG_PRIORITY_MASK;
-  node->sched_policy    = (flags & FLAT_BINDER_FLAG_SCHED_POLICY_MASK) >>
-                          FLAT_BINDER_FLAG_SCHED_POLICY_SHIFT;
+  node->debug_id = binder_last_debug_id++;
+  node->proc = proc;
+  node->ptr = ptr;
+  node->cookie = cookie;
+  node->work.type = BINDER_WORK_NODE;
+  priority = flags & FLAT_BINDER_FLAG_PRIORITY_MASK;
+  node->sched_policy = (flags & FLAT_BINDER_FLAG_SCHED_POLICY_MASK) >>
+                        FLAT_BINDER_FLAG_SCHED_POLICY_SHIFT;
 
   if (node->sched_policy == 0)
     {
       struct binder_priority proc_priority;
       binder_get_priority(proc->pid, &proc_priority);
-      node->sched_policy    = proc_priority.sched_policy;
-      node->min_priority    = proc_priority.sched_prio;
+      node->sched_policy = proc_priority.sched_policy;
+      node->min_priority = proc_priority.sched_prio;
     }
   else
     {
       node->min_priority = priority;
     }
 
-  node->accept_fds          = !!(flags & FLAT_BINDER_FLAG_ACCEPTS_FDS);
-  node->inherit_rt          = !!(flags & FLAT_BINDER_FLAG_INHERIT_RT);
-  node->txn_security_ctx    = !!(flags & FLAT_BINDER_FLAG_TXN_SECURITY_CTX);
+  node->accept_fds = !!(flags & FLAT_BINDER_FLAG_ACCEPTS_FDS);
+  node->inherit_rt = !!(flags & FLAT_BINDER_FLAG_INHERIT_RT);
+  node->txn_security_ctx = !!(flags & FLAT_BINDER_FLAG_TXN_SECURITY_CTX);
   nxmutex_init(&node->lock);
   list_initialize(&node->work.entry_node);
   list_initialize(&node->async_todo);
@@ -133,8 +133,8 @@ static struct binder_node *binder_init_node_ilocked(
 FAR struct binder_node *binder_get_node(FAR struct binder_proc *proc,
                                         binder_uintptr_t ptr)
 {
-  FAR struct binder_node    *itr;
-  FAR struct binder_node    *node;
+  FAR struct binder_node *itr;
+  FAR struct binder_node *node;
 
   binder_inner_proc_lock(proc);
   node = NULL;
@@ -143,7 +143,7 @@ FAR struct binder_node *binder_get_node(FAR struct binder_proc *proc,
       if (ptr == itr->ptr)
         {
           /* take an implicit weak reference to ensure
-           * node stays alive until call to binder_put_node()
+           * node stays alive until call to binder_dec_node_tmpref()
            */
 
           node = itr;
@@ -207,8 +207,6 @@ int binder_inc_node_nilocked(FAR struct binder_node *node, int strong,
                            "invalid inc weak node for %d\n", node->debug_id);
               return -EINVAL;
             }
-
-          /* See comment above */
 
           binder_enqueue_work_ilocked(&node->work, target_list);
         }
@@ -291,9 +289,7 @@ bool binder_dec_node_nilocked(FAR struct binder_node *node, int strong,
               BUG_ON(!list_is_empty(&node->work.entry_node));
               nxmutex_lock(&binder_dead_nodes_lock);
 
-              /* tmp_refs could have changed so
-               * check it again
-               */
+              /* tmp_refs could have changed so check it again */
 
               if (node->tmp_refs)
                 {
@@ -331,23 +327,21 @@ void binder_dec_node(FAR struct binder_node *node, int strong, int internal)
  * Name: binder_inc_node_tmpref
  *
  * Description:
- *    Take reference on node to prevent the node from being freed while
- *    referenced only by a local variable. The inner lock is needed to
- *    serialize with the node work on the queue (which isn't needed after
- *    the node is dead).
+ *   Take reference on node to prevent the node from being freed while
+ *   referenced only by a local variable. The inner lock is needed to
+ *   serialize with the node work on the queue (which isn't needed after
+ *   the node is dead).
  *
- *    If the node is dead (node->proc is NULL), use
- *    binder_dead_nodes_lock to protect node->tmp_refs against
- *    dead-node-only cases where the node lock cannot be acquired
- *    (eg traversing the dead node list to print nodes)
+ *   If the node is dead (node->proc is NULL), use
+ *   binder_dead_nodes_lock to protect node->tmp_refs against
+ *   dead-node-only cases where the node lock cannot be acquired
+ *   (eg traversing the dead node list to print nodes)
  *
  ****************************************************************************/
 
 static void binder_inc_node_tmpref(FAR struct binder_node *node)
 {
-  FAR struct binder_proc *proc;
-
-  proc = node->proc;
+  FAR struct binder_proc *proc = node->proc;
 
   binder_node_lock(node);
   if (proc != NULL)
@@ -413,16 +407,11 @@ void binder_dec_node_tmpref(FAR struct binder_node *node)
     }
 }
 
-void binder_put_node(FAR struct binder_node *node)
-{
-  binder_dec_node_tmpref(node);
-}
-
 FAR struct binder_node *binder_new_node(FAR struct binder_proc *proc,
                                         FAR struct flat_binder_object *fp)
 {
-  FAR struct binder_node    *node;
-  FAR struct binder_node    *new_node;
+  FAR struct binder_node *node;
+  FAR struct binder_node *new_node;
 
   new_node = kmm_zalloc(sizeof(struct binder_node));
   if (new_node == NULL)
@@ -451,10 +440,10 @@ FAR struct binder_node *binder_new_node(FAR struct binder_proc *proc,
  *   get the node from the given proc/desc
  *
  * Input Parameters:
- *   proc            - proc containing the ref
- *   desc            - the handle associated with the ref
+ *   proc - proc containing the ref
+ *   desc - the handle associated with the ref
  *   need_strong_ref - if true, only return node if ref is strong
- *   rdata           - the id/refcount data for the ref
+ *   rdata - the id/refcount data for the ref
  *
  * Returned Value:
  *   a binder_node or NULL if not found or not strong when strong required
@@ -466,8 +455,8 @@ binder_get_node_from_ref(FAR struct binder_proc *proc,
                          uint32_t desc, bool need_strong_ref,
                          FAR struct binder_ref_data *rdata)
 {
-  FAR struct binder_node    *node;
-  FAR struct binder_ref     *ref;
+  FAR struct binder_node *node;
+  FAR struct binder_ref *ref;
 
   binder_proc_lock(proc);
   ref = binder_get_ref_olocked(proc, desc, need_strong_ref);
@@ -479,7 +468,7 @@ binder_get_node_from_ref(FAR struct binder_proc *proc,
   node = ref->node;
 
   /* Take an implicit reference on the node to ensure
-   * it stays alive until the call to binder_put_node()
+   * it stays alive until the call to binder_dec_node_tmpref()
    */
 
   binder_inc_node_tmpref(node);
@@ -500,9 +489,9 @@ err_no_ref:
 
 int binder_node_release(FAR struct binder_node *node, int refs)
 {
-  FAR struct binder_ref     *ref;
-  int                        death   = 0;
-  FAR struct binder_proc    *proc   = node->proc;
+  int death = 0;
+  FAR struct binder_ref *ref;
+  FAR struct binder_proc *proc = node->proc;
 
   binder_release_work(proc, &node->async_todo);
 
@@ -522,9 +511,9 @@ int binder_node_release(FAR struct binder_node *node, int refs)
       return refs;
     }
 
-  node->proc                = NULL;
-  node->local_strong_refs   = 0;
-  node->local_weak_refs     = 0;
+  node->proc = NULL;
+  node->local_strong_refs = 0;
+  node->local_weak_refs = 0;
 
   binder_inner_proc_unlock(proc);
 
@@ -560,7 +549,7 @@ int binder_node_release(FAR struct binder_node *node, int refs)
                "node %d now dead, refs %d, death %d\n", node->debug_id, refs,
                death);
   binder_node_unlock(node);
-  binder_put_node(node);
+  binder_dec_node_tmpref(node);
 
   return refs;
 }

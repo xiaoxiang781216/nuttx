@@ -22,7 +22,7 @@
  * Included Files
  ****************************************************************************/
 
-#define LOG_TAG  "Binder"
+#define LOG_TAG "Binder"
 
 #include <nuttx/config.h>
 #include <sys/types.h>
@@ -145,10 +145,10 @@ unsigned int binder_last_debug_id = 1;
 static int binder_set_ctx_mgr(FAR struct binder_proc * proc,
                               FAR struct flat_binder_object *fbo)
 {
-  int                       ret = 0;
+  int ret = 0;
 
   FAR struct binder_context *context = proc->context;
-  FAR struct binder_node    *new_node;
+  FAR struct binder_node *new_node;
 
   nxmutex_lock(&context->context_lock);
   if (context->mgr_node)
@@ -169,11 +169,11 @@ static int binder_set_ctx_mgr(FAR struct binder_proc * proc,
   binder_node_lock(new_node);
   new_node->local_weak_refs++;
   new_node->local_strong_refs++;
-  new_node->has_strong_ref  = 1;
-  new_node->has_weak_ref    = 1;
-  context->mgr_node         = new_node;
+  new_node->has_strong_ref = 1;
+  new_node->has_weak_ref = 1;
+  context->mgr_node = new_node;
   binder_node_unlock(new_node);
-  binder_put_node(new_node);
+  binder_dec_node_tmpref(new_node);
 out:
   nxmutex_unlock(&context->context_lock);
   return ret;
@@ -183,9 +183,8 @@ static int binder_write_read(FAR struct binder_proc *proc,
                              FAR struct binder_thread *thread,
                              unsigned long arg, int oflag)
 {
-  int                           ret = 0;
-  FAR struct binder_write_read  * bwr;
-  bwr = (struct binder_write_read *)arg;
+  FAR struct binder_write_read * bwr = (FAR struct binder_write_read *)arg;
+  int ret = 0;
 
   binder_debug(BINDER_DEBUG_READ_WRITE,
                "write %d at %"PRIx64" read %d at %"PRIx64"\n",
@@ -229,7 +228,7 @@ static int binder_write_read(FAR struct binder_proc *proc,
   binder_debug(BINDER_DEBUG_READ_WRITE,
                "binder_rw wrote %d of %d, read return %d of %d\n",
                (int)bwr->write_consumed, (int)bwr->write_size,
-               (int)bwr->read_consumed,  (int)bwr->read_size);
+               (int)bwr->read_consumed, (int)bwr->read_size);
 
 out:
   return ret;
@@ -239,9 +238,9 @@ static int binder_get_node_info_for_ref(
   FAR struct binder_proc *proc,
   FAR struct binder_node_info_for_ref *info)
 {
-  FAR struct binder_node    *node;
-  FAR struct binder_context *context    = proc->context;
-  uint32_t                  handle      = info->handle;
+  FAR struct binder_node *node;
+  FAR struct binder_context *context = proc->context;
+  uint32_t handle = info->handle;
 
   if (info->strong_count || info->weak_count || info->reserved1 ||
       info->reserved2 || info->reserved3)
@@ -274,7 +273,7 @@ static int binder_get_node_info_for_ref(
                        node->internal_strong_refs;
   info->weak_count = node->local_weak_refs;
 
-  binder_put_node(node);
+  binder_dec_node_tmpref(node);
 
   return 0;
 }
@@ -282,8 +281,8 @@ static int binder_get_node_info_for_ref(
 static int binder_flush(FAR struct file *filp)
 {
   FAR struct binder_proc *proc = filp->f_priv;
-  FAR struct binder_thread  *thread;
-  FAR struct binder_thread  *thread_itr;
+  FAR struct binder_thread *thread;
+  FAR struct binder_thread *thread_itr;
   int wake_count = 0;
 
   binder_inner_proc_lock(proc);
@@ -310,10 +309,9 @@ static int binder_flush(FAR struct file *filp)
 
 static int binder_ioctl(FAR struct file *filp, int cmd, unsigned long arg)
 {
-  int                       ret;
-
-  FAR struct binder_proc    *proc = filp->f_priv;
-  FAR struct binder_thread  *thread;
+  FAR struct binder_proc *proc = filp->f_priv;
+  FAR struct binder_thread *thread;
+  int ret = 0;
 
   thread = binder_get_thread(proc);
   if (thread == NULL)
@@ -352,7 +350,7 @@ static int binder_ioctl(FAR struct file *filp, int cmd, unsigned long arg)
       p_int = (int *)arg;
       binder_inner_proc_lock(proc);
       proc->max_threads = MIN(*p_int, CONFIG_DRIVERS_BINDER_MAX_THREADS);
-      ret               = 0;
+      ret = 0;
       binder_inner_proc_unlock(proc);
       break;
     }
@@ -389,9 +387,9 @@ static int binder_ioctl(FAR struct file *filp, int cmd, unsigned long arg)
     case BINDER_VERSION:
     {
       FAR struct binder_version *ver;
-      ver                   = (FAR struct binder_version *)arg;
+      ver = (FAR struct binder_version *)arg;
       ver->protocol_version = BINDER_CURRENT_PROTOCOL_VERSION;
-      ret                   = 0;
+      ret = 0;
       break;
     }
 
@@ -399,7 +397,7 @@ static int binder_ioctl(FAR struct file *filp, int cmd, unsigned long arg)
     {
       FAR struct binder_node_info_for_ref *pinfo;
       pinfo = (FAR struct binder_node_info_for_ref *)arg;
-      ret   = binder_get_node_info_for_ref(proc, pinfo);
+      ret = binder_get_node_info_for_ref(proc, pinfo);
       break;
     }
 
@@ -445,11 +443,11 @@ static int binder_ioctl(FAR struct file *filp, int cmd, unsigned long arg)
 
 static int poll_wake_function(FAR void * arg, unsigned mode)
 {
-  FAR struct wait_queue_entry  *wq_entry;
-  int                           ret = 0;
-  FAR struct pollfd            *fds;
+  FAR struct wait_queue_entry *wq_entry;
+  FAR struct pollfd *fds;
+  int ret = 0;
 
-  wq_entry  = (FAR struct wait_queue_entry *)arg;
+  wq_entry = (FAR struct wait_queue_entry *)arg;
   fds = (FAR struct pollfd *)wq_entry->private;
   poll_notify(&fds, 1, POLLIN | POLLOUT);
 
@@ -461,8 +459,8 @@ static int binder_munmap(FAR struct task_group_s *group,
                          FAR struct mm_map_entry_s *entry,
                          FAR void *start, size_t length)
 {
-  FAR struct binder_proc   *proc = entry->priv.p;
-  struct binder_mmap_area   vma;
+  FAR struct binder_proc *proc = entry->priv.p;
+  struct binder_mmap_area vma;
 
   vma.area_start = start;
   vma.area_size  = length;
@@ -473,17 +471,17 @@ static int binder_munmap(FAR struct task_group_s *group,
 static int binder_mmap(FAR struct file *filep,
                        FAR struct mm_map_entry_s *map)
 {
-  FAR struct binder_proc    *proc = filep->f_priv;
-  struct binder_mmap_area   vma;
+  FAR struct binder_proc *proc = filep->f_priv;
+  struct binder_mmap_area vma;
 
   vma.area_start = map->vaddr;
-  vma.area_size  = MIN(map->length, CONFIG_DRIVERS_BINDER_MAX_VMSIZE);
+  vma.area_size = MIN(map->length, CONFIG_DRIVERS_BINDER_MAX_VMSIZE);
 
   binder_alloc_mmap(&proc->alloc, &vma);
 
   map->munmap = binder_munmap;
   map->priv.p = (void *)proc;
-  map->vaddr  = vma.area_start;
+  map->vaddr = vma.area_start;
   map->length = vma.area_size;
 
   mm_map_add(get_current_mm(), map);
@@ -495,9 +493,9 @@ static int binder_poll(FAR struct file *filp,
                        FAR struct pollfd *fds,
                        bool setup)
 {
-  FAR struct binder_proc    *proc   = filp->f_priv;
-  FAR struct binder_thread  *thread = NULL;
-  bool                      wait_for_proc_work;
+  FAR struct binder_proc *proc = filp->f_priv;
+  FAR struct binder_thread *thread = NULL;
+  bool wait_for_proc_work;
 
   thread = binder_get_thread(proc);
   if (!thread)
@@ -542,8 +540,8 @@ static int binder_poll(FAR struct file *filp,
                    proc->pid, thread->tid);
 
       binder_inner_proc_lock(thread->proc);
-      thread->looper        |= BINDER_LOOPER_STATE_POLL;
-      wait_for_proc_work    = binder_available_for_proc_work_ilocked(thread);
+      thread->looper |= BINDER_LOOPER_STATE_POLL;
+      wait_for_proc_work = binder_available_for_proc_work_ilocked(thread);
       binder_inner_proc_unlock(thread->proc);
 
       if (binder_has_work(thread, wait_for_proc_work))
@@ -566,9 +564,9 @@ static int binder_poll(FAR struct file *filp,
 
 static int binder_open(FAR struct file *filep)
 {
-  FAR struct binder_proc    *proc;
-  FAR struct inode          *inode      = filep->f_inode;
-  FAR struct binder_device  *binder_dev = inode->i_private;
+  FAR struct binder_proc *proc;
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct binder_device *binder_dev = inode->i_private;
 
   binder_debug(BINDER_DEBUG_OPEN_CLOSE, "pid=%d\n", getpid());
 
@@ -614,21 +612,21 @@ static int binder_open(FAR struct file *filep)
 
 static int binder_close(FAR struct file *filep)
 {
-  FAR struct binder_proc    *proc       = filep->f_priv;
-  FAR struct inode          *inode      = filep->f_inode;
-  FAR struct binder_device  *binder_dev = inode->i_private;
-  FAR struct binder_context *context    = proc->context;
-  FAR struct binder_thread  *thread;
-  FAR struct binder_node    *node;
-  FAR struct binder_ref     *ref;
-  FAR struct binder_thread  *thread_itr;
-  FAR struct binder_node    *node_itr;
-  FAR struct binder_ref     *ref_itr;
-  int                       threads;
-  int                       nodes;
-  int                       incoming_refs;
-  int                       outgoing_refs;
-  int                       active_transactions;
+  FAR struct binder_proc *proc = filep->f_priv;
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct binder_device *binder_dev = inode->i_private;
+  FAR struct binder_context *context = proc->context;
+  FAR struct binder_thread *thread;
+  FAR struct binder_node *node;
+  FAR struct binder_ref *ref;
+  FAR struct binder_thread *thread_itr;
+  FAR struct binder_node *node_itr;
+  FAR struct binder_ref *ref_itr;
+  int threads;
+  int nodes;
+  int incoming_refs;
+  int outgoing_refs;
+  int active_transactions;
 
   if (binder_flush(filep) < 0)
     {
@@ -658,12 +656,12 @@ static int binder_close(FAR struct file *filep)
 
   proc->tmp_ref++;
 
-  proc->is_dead         = true;
-  proc->is_frozen       = false;
-  proc->sync_recv       = false;
-  proc->async_recv      = false;
-  threads               = 0;
-  active_transactions   = 0;
+  proc->is_dead = true;
+  proc->is_frozen = false;
+  proc->sync_recv = false;
+  proc->async_recv = false;
+  threads = 0;
+  active_transactions = 0;
 
   list_for_every_entry_safe(&proc->threads, thread, thread_itr,
                             struct binder_thread, thread_node)
@@ -674,7 +672,7 @@ static int binder_close(FAR struct file *filep)
     binder_inner_proc_lock(proc);
   }
 
-  nodes         = 0;
+  nodes = 0;
   incoming_refs = 0;
 
   list_for_every_entry_safe(&proc->nodes, node, node_itr,
@@ -740,15 +738,15 @@ static ssize_t binder_write(FAR struct file *filep, FAR const char *buffer,
 
 static const struct file_operations g_binder_fops =
 {
-  binder_open,      /* open */
-  binder_close,     /* close */
-  binder_read,      /* read */
-  binder_write,     /* write */
-  NULL,             /* seek */
-  binder_ioctl,     /* ioctl */
-  binder_mmap,      /* mmap */
-  NULL,             /* truncate */
-  binder_poll,      /* poll */
+  binder_open,
+  binder_close,
+  binder_read,
+  binder_write,
+  NULL,
+  binder_ioctl,
+  binder_mmap,
+  NULL,
+  binder_poll,
 };
 
 /****************************************************************************
@@ -757,8 +755,8 @@ static const struct file_operations g_binder_fops =
 
 int binder_initialize(void)
 {
-  FAR struct binder_device  * device;
-  int                       ret = OK;
+  FAR struct binder_device *device;
+  int ret = OK;
 
   device = kmm_zalloc(sizeof(struct binder_device));
   if (!device)
@@ -793,7 +791,7 @@ int binder_initialize(void)
  *   structures associated with the given proc.
  *
  * Input Parameters:
- *   proc       - struct binder_proc to acquire
+ *   proc - struct binder_proc to acquire
  *
  ****************************************************************************/
 
@@ -810,7 +808,7 @@ void _binder_proc_lock(FAR struct binder_proc *proc, int line)
  *   Release lock acquired via binder_proc_lock()
  *
  * Input Parameters:
- *   proc       - struct binder_proc to acquire
+ *   proc - struct binder_proc to acquire
  *
  ****************************************************************************/
 
@@ -827,7 +825,7 @@ void _binder_proc_unlock(FAR struct binder_proc *proc, int line)
  *   Acquires proc->inner_lock. Used to protect todo lists
  *
  * Input Parameters:
- *   proc       - struct binder_proc to acquire
+ *   proc - struct binder_proc to acquire
  *
  ****************************************************************************/
 
@@ -844,7 +842,7 @@ void _binder_inner_proc_lock(FAR struct binder_proc *proc, int line)
  *   Release lock acquired via binder_inner_proc_lock()
  *
  * Input Parameters:
- *   proc       - struct binder_proc to acquire
+ *   proc - struct binder_proc to acquire
  *
  ****************************************************************************/
 
@@ -861,7 +859,7 @@ void _binder_inner_proc_unlock(FAR struct binder_proc *proc, int line)
  *   Acquires node->lock. Used to protect binder_node fields
  *
  * Input Parameters:
- *   node       - struct binder_node to acquire
+ *   node - struct binder_node to acquire
  *
  ****************************************************************************/
 
@@ -878,7 +876,7 @@ void _binder_node_lock(FAR struct binder_node *node, int line)
  *   Release lock acquired via binder_node_lock()
  *
  * Input Parameters:
- *   node       - struct binder_node to acquire
+ *   node - struct binder_node to acquire
  *
  ****************************************************************************/
 
@@ -896,7 +894,7 @@ void _binder_node_unlock(FAR struct binder_node *node, int line)
  *   proc->inner_lock. Used to protect binder_node fields
  *
  * Input Parameters:
- *   node       - struct binder_node to acquire
+ *   node - struct binder_node to acquire
  *
  ****************************************************************************/
 
@@ -917,7 +915,7 @@ void _binder_node_inner_lock(FAR struct binder_node *node, int line)
  *   Release lock acquired via binder_node_lock()
  *
  * Input Parameters:
- *   node       - struct binder_node to acquire
+ *   node - struct binder_node to acquire
  *
  ****************************************************************************/
 
@@ -939,7 +937,7 @@ void _binder_node_inner_unlock(FAR struct binder_node *node, int line)
  *   Assert if the proc inner_lock is not in locked state.
  *
  * Input Parameters:
- *   proc       - struct binder_proc to acquire
+ *   proc - struct binder_proc to acquire
  *
  ****************************************************************************/
 
@@ -956,7 +954,7 @@ void _binder_inner_proc_assert_locked(FAR struct binder_proc *proc, int line)
  *   Assert if the node lock & proc inner_lock is not in locked state.
  *
  * Input Parameters:
- *   node       - struct binder_node to acquire
+ *   node - struct binder_node to acquire
  *
  ****************************************************************************/
 

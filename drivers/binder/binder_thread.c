@@ -22,7 +22,7 @@
  * Included Files
  ****************************************************************************/
 
-#define LOG_TAG  "BinderThread"
+#define LOG_TAG "BinderThread"
 
 #include <nuttx/config.h>
 
@@ -103,13 +103,13 @@ static void binder_wakeup_poll_threads_ilocked(FAR struct binder_proc *proc,
 
 static int binder_wake_function(FAR void * arg, unsigned mode)
 {
-  FAR struct wait_queue_entry   *wq_entry;
-  int                            ret;
-  FAR sem_t                     *waitsem;
+  FAR struct wait_queue_entry *wq_entry;
+  FAR sem_t *waitsem;
+  int ret;
 
-  wq_entry  = (FAR struct wait_queue_entry *)arg;
-  waitsem   = (FAR sem_t *)wq_entry->private;
-  ret       = nxsem_post(waitsem);
+  wq_entry = (FAR struct wait_queue_entry *)arg;
+  waitsem = (FAR sem_t *)wq_entry->private;
+  ret = nxsem_post(waitsem);
 
   binder_debug(BINDER_DEBUG_SCHED, "wq_entry=%p, ret=%d\n", wq_entry, ret);
   return ret;
@@ -118,10 +118,10 @@ static int binder_wake_function(FAR void * arg, unsigned mode)
 static int binder_wait_for_work(FAR struct binder_thread *thread,
                                 bool do_proc_work)
 {
-  struct wait_queue_entry      wait;
-  FAR struct binder_proc      *proc   = thread->proc;
-  int                          ret     = 0;
-  sem_t                        waitsem;
+  FAR struct binder_proc *proc = thread->proc;
+  int ret = 0;
+  sem_t waitsem;
+  struct wait_queue_entry wait;
 
   nxsem_init(&waitsem, 0, 0);
   init_waitqueue_entry(&wait, (void *)&waitsem, binder_wake_function);
@@ -194,15 +194,15 @@ static void binder_free_buf(FAR struct binder_proc *proc,
   binder_inner_proc_lock(proc);
   if (buffer->transaction)
     {
-      buffer->transaction->buffer   = NULL;
-      buffer->transaction           = NULL;
+      buffer->transaction->buffer = NULL;
+      buffer->transaction = NULL;
     }
 
   binder_inner_proc_unlock(proc);
   if (buffer->async_transaction && buffer->target_node)
     {
-      FAR struct binder_node    *buf_node;
-      FAR struct binder_work    *w;
+      FAR struct binder_node *buf_node;
+      FAR struct binder_work *w;
 
       buf_node = buffer->target_node;
       binder_node_inner_lock(buf_node);
@@ -269,7 +269,7 @@ static void binder_free_proc(FAR struct binder_proc *proc)
   if (proc->outstanding_txns)
     {
       binder_debug(BINDER_DEBUG_WARNING,
-                   "%s: Unexpected outstanding_txns %d\n", __func__,
+                   "Unexpected outstanding_txns %d\n",
                    proc->outstanding_txns);
     }
 
@@ -307,7 +307,7 @@ static int binder_put_node_cmd(FAR struct binder_proc *proc,
 {
   FAR void *ptr = *ptrp;
 
-  put_value(cmd, (uint32_t  *)ptr);
+  put_value(cmd, (uint32_t *)ptr);
   ptr += sizeof(uint32_t);
 
   put_value(node_ptr, (binder_unaligned_uintptr_t *)ptr);
@@ -351,11 +351,11 @@ static int binder_put_node_cmd(FAR struct binder_proc *proc,
 static int binder_apply_fd_fixups(FAR struct binder_proc *proc,
                                   FAR struct binder_transaction *t)
 {
-  FAR struct binder_txn_fd_fixup    *fixup;
-  FAR struct binder_txn_fd_fixup    *tmp;
-  int                               ret = 0;
-  int                               fd;
-  int                               err;
+  FAR struct binder_txn_fd_fixup *fixup;
+  FAR struct binder_txn_fd_fixup *tmp;
+  int ret = 0;
+  int fd;
+  int err;
 
   list_for_every_entry(&t->fd_fixups, fixup, struct binder_txn_fd_fixup,
                        fixup_entry)
@@ -648,9 +648,9 @@ FAR static struct binder_thread *binder_get_thread_ilocked(
             FAR struct binder_proc *proc,
             FAR struct binder_thread *new_thread)
 {
-  FAR struct binder_thread  *itr        = NULL;
-  FAR struct binder_thread  *thread     = NULL;
-  pid_t                      thread_pid  = gettid();
+  FAR struct binder_thread *itr = NULL;
+  FAR struct binder_thread *thread = NULL;
+  pid_t thread_pid = gettid();
 
   list_for_every_entry(&proc->threads, itr,
                        struct binder_thread, thread_node)
@@ -668,20 +668,20 @@ FAR static struct binder_thread *binder_get_thread_ilocked(
     }
 
   thread = new_thread;
-  thread->proc      = proc;
-  thread->tid       = thread_pid;
-  thread->tmp_ref   = 0;
+  thread->proc = proc;
+  thread->tid = thread_pid;
+  thread->tmp_ref = 0;
   list_initialize(&thread->thread_node);
   list_initialize(&thread->wait);
   list_initialize(&thread->todo);
   list_initialize(&thread->waiting_thread_node);
 
   thread->return_error.work.type = BINDER_WORK_RETURN_ERROR;
-  thread->return_error.cmd       = BR_OK;
+  thread->return_error.cmd = BR_OK;
   list_initialize(&thread->return_error.work.entry_node);
 
   thread->reply_error.work.type = BINDER_WORK_RETURN_ERROR;
-  thread->reply_error.cmd       = BR_OK;
+  thread->reply_error.cmd = BR_OK;
   list_initialize(&thread->reply_error.work.entry_node);
   list_add_head(&proc->threads, &thread->thread_node);
 
@@ -690,8 +690,8 @@ FAR static struct binder_thread *binder_get_thread_ilocked(
 
 FAR struct binder_thread *binder_get_thread(FAR struct binder_proc *proc)
 {
-  FAR struct binder_thread  *thread;
-  FAR struct binder_thread  *new_thread;
+  FAR struct binder_thread *thread;
+  FAR struct binder_thread *new_thread;
 
   binder_inner_proc_lock(proc);
   thread = binder_get_thread_ilocked(proc, NULL);
@@ -722,11 +722,11 @@ int binder_thread_write(FAR struct binder_proc *proc,
                         binder_uintptr_t binder_buffer, size_t size,
                         FAR binder_size_t *consumed)
 {
-  uint32_t                   cmd;
+  uint32_t cmd;
   FAR struct binder_context *context = proc->context;
-  FAR void                  *buffer  = (FAR void *)(uintptr_t)binder_buffer;
-  FAR void                  *ptr     = buffer + *consumed;
-  FAR void                  *end     = buffer + size;
+  FAR void *buffer = (FAR void *)(uintptr_t)binder_buffer;
+  FAR void *ptr = buffer + *consumed;
+  FAR void *end = buffer + size;
 
   while (ptr < end && thread->return_error.cmd == BR_OK)
     {
@@ -745,17 +745,16 @@ int binder_thread_write(FAR struct binder_proc *proc,
         case BC_RELEASE:
         case BC_DECREFS:
         {
-          uint32_t                  target;
-          FAR __attribute__((unused)) const char *debug_string;
-          bool                      strong =
-            (cmd == BC_ACQUIRE || cmd == BC_RELEASE);
-          bool                      increment =
-            (cmd == BC_INCREFS || cmd == BC_ACQUIRE);
-          struct binder_ref_data    rdata;
+          uint32_t target;
+          FAR const char *debug_string;
+          bool strong = (cmd == BC_ACQUIRE || cmd == BC_RELEASE);
+          bool increment = (cmd == BC_INCREFS || cmd == BC_ACQUIRE);
+          struct binder_ref_data rdata;
 
+          UNUSED(debug_string);
           get_value(target, (uint32_t *)ptr);
-          ptr   += sizeof(uint32_t);
-          ret   = -1;
+          ptr += sizeof(uint32_t);
+          ret = -1;
           if (increment && !target)
             {
               FAR struct binder_node *ctx_mgr_node;
@@ -831,7 +830,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
             }
 
           binder_debug(BINDER_DEBUG_USER_REFS,
-                       "%s ref %d desc %"PRId32" s %d w %d\n",
+                       "%s ref %d desc %" PRId32 " strong %d weak %d\n",
                        debug_string, rdata.debug_id,
                        rdata.desc, rdata.strong, rdata.weak);
           break;
@@ -840,9 +839,9 @@ int binder_thread_write(FAR struct binder_proc *proc,
         case BC_INCREFS_DONE:
         case BC_ACQUIRE_DONE:
         {
-          binder_uintptr_t           node_ptr;
-          binder_uintptr_t           cookie;
-          FAR struct binder_node    *node;
+          binder_uintptr_t node_ptr;
+          binder_uintptr_t cookie;
+          FAR struct binder_node *node;
 
           get_value(node_ptr, (binder_unaligned_uintptr_t *)ptr);
           ptr += sizeof(binder_uintptr_t);
@@ -867,7 +866,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
                            "BC_INCREFS_DONE" : "BC_ACQUIRE_DONE",
                            node_ptr, node->debug_id, cookie,
                            node->cookie);
-              binder_put_node(node);
+              binder_dec_node_tmpref(node);
               break;
             }
 
@@ -881,7 +880,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
                                "pending acquire request\n",
                                node->debug_id);
                   binder_node_inner_unlock(node);
-                  binder_put_node(node);
+                  binder_dec_node_tmpref(node);
                   break;
                 }
 
@@ -896,7 +895,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
                                "increfs request\n",
                                node->debug_id);
                   binder_node_inner_unlock(node);
-                  binder_put_node(node);
+                  binder_dec_node_tmpref(node);
                   break;
                 }
 
@@ -910,7 +909,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
                        node->debug_id, node->local_strong_refs,
                        node->local_weak_refs, node->tmp_refs);
           binder_node_inner_unlock(node);
-          binder_put_node(node);
+          binder_dec_node_tmpref(node);
           break;
         }
 
@@ -923,11 +922,11 @@ int binder_thread_write(FAR struct binder_proc *proc,
 
         case BC_FREE_BUFFER:
         {
-          binder_uintptr_t          data_ptr;
-          FAR struct binder_buffer  *b_buffer;
+          binder_uintptr_t data_ptr;
+          FAR struct binder_buffer *b_buffer;
 
           get_value(data_ptr, (binder_unaligned_uintptr_t *)ptr);
-          ptr     += sizeof(binder_uintptr_t);
+          ptr += sizeof(binder_uintptr_t);
           b_buffer = binder_alloc_prepare_to_free(&proc->alloc, data_ptr);
           if (b_buffer == NULL)
             {
@@ -952,7 +951,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
           FAR struct binder_transaction_data *binder_tr;
 
           binder_tr = (struct binder_transaction_data *)ptr;
-          ptr       += sizeof(struct binder_transaction_data);
+          ptr += sizeof(struct binder_transaction_data);
           binder_transaction(proc, thread, binder_tr, cmd == BC_REPLY);
           break;
         }
@@ -1008,10 +1007,10 @@ int binder_thread_write(FAR struct binder_proc *proc,
         case BC_REQUEST_DEATH_NOTIFICATION:
         case BC_CLEAR_DEATH_NOTIFICATION:
         {
-          uint32_t                       target;
-          binder_uintptr_t               cookie;
-          FAR struct binder_ref         *ref;
-          FAR struct binder_ref_death   *death = NULL;
+          uint32_t target;
+          binder_uintptr_t cookie;
+          FAR struct binder_ref *ref;
+          FAR struct binder_ref_death *death = NULL;
 
           get_value(target, (uint32_t *)ptr);
           ptr += sizeof(uint32_t);
@@ -1072,7 +1071,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
                 }
 
               death->cookie = cookie;
-              ref->death    = death;
+              ref->death = death;
               if (ref->node->proc == NULL)
                 {
                   ref->death->work.type = BINDER_WORK_DEAD_BINDER;
@@ -1143,9 +1142,9 @@ int binder_thread_write(FAR struct binder_proc *proc,
 
         case BC_DEAD_BINDER_DONE:
         {
-          FAR struct binder_work        *w;
-          binder_uintptr_t               cookie;
-          FAR struct binder_ref_death   *death = NULL;
+          FAR struct binder_work *w;
+          binder_uintptr_t cookie;
+          FAR struct binder_ref_death *death = NULL;
 
           get_value(cookie, (binder_unaligned_uintptr_t *)ptr);
           ptr += sizeof(binder_uintptr_t);
@@ -1217,11 +1216,11 @@ int binder_thread_read(FAR struct binder_proc *proc,
                        binder_uintptr_t binder_buffer, size_t size,
                        FAR binder_size_t *consumed, int non_block)
 {
-  FAR void  *buffer = (void *)(uintptr_t)binder_buffer;
-  FAR void  *ptr    = buffer + *consumed;
-  FAR void  *end    = buffer + size;
-  int        ret    = 0;
-  int        wait_for_proc_work;
+  FAR void *buffer = (void *)(uintptr_t)binder_buffer;
+  FAR void *ptr = buffer + *consumed;
+  FAR void *end = buffer + size;
+  int ret = 0;
+  int wait_for_proc_work;
 
   if (*consumed == 0)
     {
@@ -1273,14 +1272,14 @@ retry:
 
   while (1)
     {
-      struct binder_transaction_data_secctx  tr;
-      FAR struct binder_transaction_data    *trd    = &tr.transaction_data;
-      FAR struct binder_work                *w      = NULL;
-      FAR struct list_node                  *list   = NULL;
-      FAR struct binder_transaction         *t      = NULL;
-      FAR struct binder_thread              *t_from;
-      size_t                                 trsize = sizeof(*trd);
-      uint32_t                               cmd;
+      struct binder_transaction_data_secctx tr;
+      FAR struct binder_transaction_data *trd = &tr.transaction_data;
+      FAR struct binder_work *w = NULL;
+      FAR struct list_node *list = NULL;
+      FAR struct binder_transaction *t = NULL;
+      FAR struct binder_thread *t_from;
+      size_t trsize = sizeof(*trd);
+      uint32_t cmd;
 
       memset(&tr, 0x0, sizeof(struct binder_transaction_data_secctx));
       binder_inner_proc_lock(proc);
@@ -1341,9 +1340,9 @@ retry:
           WARN_ON(e->cmd == BR_OK);
           binder_inner_proc_unlock(proc);
           put_value(e->cmd, (uint32_t *)ptr);
-          cmd       = e->cmd;
-          e->cmd    = BR_OK;
-          ptr       += sizeof(uint32_t);
+          cmd = e->cmd;
+          e->cmd = BR_OK;
+          ptr += sizeof(uint32_t);
           binder_debug(BINDER_DEBUG_THREADS,
                        "Send %s\n", BINDER_BR_STR(cmd));
         }
@@ -1364,36 +1363,35 @@ retry:
 
         case BINDER_WORK_NODE:
         {
-          FAR struct binder_node    *node =
+          FAR struct binder_node *node =
                   container_of(w, struct binder_node, work);
-          int                        strong;
-          int                        weak;
-          binder_uintptr_t           node_ptr        = node->ptr;
-          binder_uintptr_t           node_cookie     = node->cookie;
-          int                        node_debug_id   = node->debug_id;
-          int                        has_weak_ref;
-          int                        has_strong_ref;
-          FAR void                  *orig_ptr = ptr;
+          int strong;
+          int weak;
+          binder_uintptr_t node_ptr = node->ptr;
+          binder_uintptr_t node_cookie = node->cookie;
+          int node_debug_id = node->debug_id;
+          int has_weak_ref;
+          int has_strong_ref;
+          FAR void *orig_ptr = ptr;
 
           BUG_ON(proc != node->proc);
-          strong = node->internal_strong_refs ||
-                   node->local_strong_refs;
+          strong = node->internal_strong_refs || node->local_strong_refs;
           weak = !list_is_empty(&node->refs) ||
                  node->local_weak_refs || node->tmp_refs || strong;
-          has_strong_ref    = node->has_strong_ref;
-          has_weak_ref      = node->has_weak_ref;
+          has_strong_ref = node->has_strong_ref;
+          has_weak_ref = node->has_weak_ref;
 
           if (weak && !has_weak_ref)
             {
-              node->has_weak_ref        = 1;
-              node->pending_weak_ref    = 1;
+              node->has_weak_ref = 1;
+              node->pending_weak_ref = 1;
               node->local_weak_refs++;
             }
 
           if (strong && !has_strong_ref)
             {
-              node->has_strong_ref      = 1;
-              node->pending_strong_ref  = 1;
+              node->has_strong_ref = 1;
+              node->pending_strong_ref = 1;
               node->local_strong_refs++;
             }
 
@@ -1426,7 +1424,6 @@ retry:
                * this thread frees while the other thread
                * is unlocking the node after the final
                * decrement)
-               * TODO: it is need for NuttX??
                */
 
               binder_node_unlock(node);
@@ -1544,23 +1541,23 @@ retry:
         {
           FAR struct binder_node *target_node = t->buffer->target_node;
 
-          trd->target.ptr   = target_node->ptr;
-          trd->cookie       =  target_node->cookie;
+          trd->target.ptr = target_node->ptr;
+          trd->cookie = target_node->cookie;
           binder_transaction_priority(thread, t, target_node);
           cmd = BR_TRANSACTION;
         }
       else
         {
-          trd->target.ptr   = 0;
-          trd->cookie       = 0;
-          cmd               = BR_REPLY;
+          trd->target.ptr = 0;
+          trd->cookie = 0;
+          cmd = BR_REPLY;
         }
 
       binder_debug(BINDER_DEBUG_THREADS, "Send %s", BINDER_BR_STR(cmd));
 
-      trd->code         = t->code;
-      trd->flags        = t->flags;
-      trd->sender_euid  = geteuid();
+      trd->code = t->code;
+      trd->flags = t->flags;
+      trd->sender_euid = geteuid();
 
       t_from = binder_get_txn_from(t);
       if (t_from)
@@ -1602,17 +1599,17 @@ retry:
           continue;
         }
 
-      trd->data_size        = t->buffer->data_size;
-      trd->offsets_size     = t->buffer->offsets_size;
-      trd->data.ptr.buffer  = (uintptr_t)t->buffer->user_data;
+      trd->data_size = t->buffer->data_size;
+      trd->offsets_size = t->buffer->offsets_size;
+      trd->data.ptr.buffer = (uintptr_t)t->buffer->user_data;
       trd->data.ptr.offsets = trd->data.ptr.buffer +
                       ALIGN(t->buffer->data_size, sizeof(void *));
 
       tr.secctx = t->security_ctx;
       if (t->security_ctx)
         {
-          cmd       = BR_TRANSACTION_SEC_CTX;
-          trsize    = sizeof(tr);
+          cmd = BR_TRANSACTION_SEC_CTX;
+          trsize = sizeof(tr);
           binder_debug(BINDER_DEBUG_THREADS,
                        "Send BR_TRANSACTION_SEC_CTX\n");
         }
@@ -1641,8 +1638,8 @@ retry:
       if (cmd != BR_REPLY && !(t->flags & TF_ONE_WAY))
         {
           binder_inner_proc_lock(thread->proc);
-          t->to_parent              = thread->transaction_stack;
-          t->to_thread              = thread;
+          t->to_parent = thread->transaction_stack;
+          t->to_thread = thread;
           thread->transaction_stack = t;
           binder_inner_proc_unlock(thread->proc);
         }
@@ -1680,12 +1677,12 @@ done:
 void binder_release_work(FAR struct binder_proc *proc,
                          FAR struct list_node *list)
 {
-  FAR struct binder_work    *w;
+  FAR struct binder_work *w;
 
   while (1)
     {
       binder_inner_proc_lock(proc);
-      w     = binder_dequeue_work_head_ilocked(list);
+      w = binder_dequeue_work_head_ilocked(list);
       binder_inner_proc_unlock(proc);
       if (!w)
         {
@@ -1756,9 +1753,9 @@ int binder_thread_release(FAR struct binder_proc *proc,
                           FAR struct binder_thread *thread)
 {
   FAR struct binder_transaction *t;
-  FAR struct binder_transaction *send_reply         = NULL;
-  int                            active_transactions = 0;
-  FAR struct binder_transaction *last_t             = NULL;
+  FAR struct binder_transaction *send_reply = NULL;
+  int active_transactions = 0;
+  FAR struct binder_transaction *last_t = NULL;
 
   binder_inner_proc_lock(thread->proc);
 
@@ -1801,20 +1798,20 @@ int binder_thread_release(FAR struct binder_proc *proc,
       if (t->to_thread == thread)
         {
           thread->proc->outstanding_txns--;
-          t->to_proc    = NULL;
-          t->to_thread  = NULL;
+          t->to_proc = NULL;
+          t->to_thread = NULL;
           if (t->buffer)
             {
-              t->buffer->transaction    = NULL;
-              t->buffer                 = NULL;
+              t->buffer->transaction = NULL;
+              t->buffer = NULL;
             }
 
           t = t->to_parent;
         }
       else if (t->from == thread)
         {
-          t->from   = NULL;
-          t         = t->from_parent;
+          t->from = NULL;
+          t = t->from_parent;
         }
       else
         {
