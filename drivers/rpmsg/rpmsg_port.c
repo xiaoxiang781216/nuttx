@@ -51,6 +51,7 @@ static FAR const char *
 rpmsg_port_get_local_cpuname(FAR struct rpmsg_s *rpmsg);
 static FAR const char *rpmsg_port_get_cpuname(FAR struct rpmsg_s *rpmsg);
 static void rpmsg_port_dump(FAR struct rpmsg_s *rpmsg);
+static int rpmsg_port_get_signals(FAR struct rpmsg_s *rpmsg);
 
 /****************************************************************************
  * Private Data
@@ -65,6 +66,7 @@ static const struct rpmsg_ops_s g_rpmsg_port_ops =
   rpmsg_port_dump,
   rpmsg_port_get_local_cpuname,
   rpmsg_port_get_cpuname,
+  rpmsg_port_get_signals,
 };
 
 /****************************************************************************
@@ -562,6 +564,17 @@ static FAR const char *rpmsg_port_get_cpuname(FAR struct rpmsg_s *rpmsg)
   FAR struct rpmsg_port_s *port = (FAR struct rpmsg_port_s *)rpmsg;
 
   return port->cpuname;
+}
+
+/****************************************************************************
+ * Name: rpmsg_port_get_signals
+ ****************************************************************************/
+
+static int rpmsg_port_get_signals(FAR struct rpmsg_s *rpmsg)
+{
+  FAR struct rpmsg_port_s *port = (FAR struct rpmsg_port_s *)rpmsg;
+
+  return atomic_load(&port->signals);
 }
 
 /****************************************************************************
