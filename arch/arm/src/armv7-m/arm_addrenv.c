@@ -436,4 +436,45 @@ int up_addrenv_ustackswitch(struct tcb_s *tcb)
                      flags);
   return OK;
 }
+
+#  ifdef CONFIG_ARCH_KSTACK_PROTECT
+/****************************************************************************
+ * Name: up_addrenv_kstackswitch
+ *
+ * Description:
+ *   After an address environment has been established for a task's stack
+ *   (via up_addrenv_kstackswitch().  This function may be called to
+ *   instantiate that address environment in the virtual address space.
+ *   This is a necessary step before each context switch to the newly created
+ *   thread (including the initial thread startup).
+ *
+ * Input Parameters:
+ *   tcb - The TCB of the thread with the stack address environment to be
+ *     instantiated.
+ *
+ * Returned Value:
+ *   Zero (OK) on success; a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+int up_addrenv_kstackswitch(struct tcb_s *tcb)
+{
+  struct tls_info_s *tls = nxsched_get_tls(tcb);
+  uint32_t flags;
+
+  flags = MPU_RASR_TEX_SO | MPU_RASR_C |
+          MPU_RASR_AP_RWRO;
+
+  if (g_addrenv_stack_region == 0)
+    {
+      g_addrenv_stack_region = mpu_allocregions(2);
+    }
+
+  mpu_modify_regions(g_addrenv_stack_region,
+                     (uintptr_t)tcb->stack_alloc_ptr,
+                     tcb->adj_stack_size + tls->tl_size,
+                     flags);
+  return OK;
+}
+#  endif
 #endif

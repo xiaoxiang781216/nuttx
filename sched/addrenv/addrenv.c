@@ -188,6 +188,12 @@ int addrenv_switch(FAR struct tcb_s *tcb)
     {
       up_addrenv_ustackswitch(tcb);
     }
+#  ifdef CONFIG_ARCH_KSTACK_PROTECT
+  else
+    {
+      up_addrenv_kstackswitch(tcb);
+    }
+#  endif
 #endif
 
   leave_critical_section(flags);
