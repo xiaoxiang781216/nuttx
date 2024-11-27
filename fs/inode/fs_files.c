@@ -361,9 +361,16 @@ static int nx_dup3_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2,
  *
  ****************************************************************************/
 
-void files_initlist(FAR struct filelist *list)
+int files_initlist(FAR struct filelist **list)
 {
-  list->fl_crefs = 1;
+  *list = kmm_zalloc(sizeof(struct filelist));
+  if (*list == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  (*list)->fl_crefs = 1;
+  return OK;
 }
 
 /****************************************************************************
@@ -455,7 +462,7 @@ FAR struct filelist *files_getlist(FAR struct tcb_s *tcb)
 
   if (tcb->group != NULL)
     {
-      list = &tcb->group->tg_filelist;
+      list = tcb->group->tg_filelist;
       if (list->fl_crefs > 0)
         {
           list->fl_crefs++;
@@ -505,6 +512,7 @@ void files_putlist(FAR struct filelist *list)
     }
 
   fs_heap_free(list->fl_files);
+  fs_heap_free(list);
 }
 
 /****************************************************************************
