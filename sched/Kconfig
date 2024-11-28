@@ -930,7 +930,7 @@ config SCHED_CRITMONITOR
 	depends on FS_PROCFS
 	select SCHED_SUSPENDSCHEDULER
 	select SCHED_RESUMESCHEDULER
-	select IRQCOUNT
+	select IRQCOUNT if SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
 	---help---
 		Enables logic that monitors the duration of time that a thread keeps
 		interrupts or pre-emption disabled.  These global locks can have
