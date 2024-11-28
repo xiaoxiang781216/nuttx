@@ -493,6 +493,7 @@ config ARCH_HAVE_TESTSET
 config ARCH_HAVE_CUSTOM_TESTSET
 	bool
 	default n
+	select ARCH_HAVE_TESTSET
 
 config ARCH_HAVE_THREAD_LOCAL
 	bool
