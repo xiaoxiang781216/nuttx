@@ -46,6 +46,7 @@ all: $(BIN)
 .PHONY : context depend clean distclean gensources gen1bppsources gen2bppsource \
 	 gen4bppsource gen8bppsource gen16bppsource gen24bppsource gen32bppsources genfontsources
 
+ifeq ($(CONFIG_NXFONTS),y)
 gen1bppsources:
 	$(Q) $(MAKE) -C nxfonts -f Makefile.sources NXFONTS_BITSPERPIXEL=1 EXTRAFLAGS="$(EXTRAFLAGS)"
 
@@ -66,6 +67,7 @@ gen24bppsource:
 
 gen32bppsources:
 	$(Q) $(MAKE) -C nxfonts -f Makefile.sources NXFONTS_BITSPERPIXEL=32 EXTRAFLAGS="$(EXTRAFLAGS)"
+endif
 
 genfontsources:
 ifeq ($(CONFIG_NXFONT_MONO5X8),y)
