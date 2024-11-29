@@ -687,7 +687,7 @@ static void coredump_dump_syslog(pid_t pid)
 static void coredump_dump_dev(pid_t pid)
 {
   FAR void *stream = &g_devstream;
-  FAR struct coredump_info_s info;
+  struct coredump_info_s info;
   int ret;
 
   if (g_devstream.inode == NULL)
