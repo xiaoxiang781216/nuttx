@@ -399,21 +399,41 @@ void riscv_jump_to_user(uintptr_t entry, uintreg_t a0, uintreg_t a1,
 
 /* Context switching via system calls ***************************************/
 
-/* SYS call 1:
+/****************************************************************************
+ * Name: riscv_fullcontextrestore
  *
- * void riscv_fullcontextrestore(struct tcb_s *next) noreturn_function;
- */
-
-#define riscv_fullcontextrestore(next) \
-  sys_call1(SYS_restore_context, (uintptr_t)next)
-
-/* SYS call 2:
+ * Description:
+ *   Restores the full context.
  *
- * riscv_switchcontext(struct tcb_s *prev, struct tcb_s *next);
- */
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
 
-#define riscv_switchcontext(prev, next) \
-  sys_call2(SYS_switch_context, (uintptr_t)prev, (uintptr_t)next)
+#define riscv_fullcontextrestore()    \
+  do                                  \
+    {                                 \
+      sys_call0(SYS_restore_context); \
+    }                                 \
+  while (1)
+
+/****************************************************************************
+ * Name: riscv_switchcontext
+ *
+ * Description:
+ *   Switches the context.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#define riscv_switchcontext()        \
+  do                                 \
+    {                                \
+      sys_call0(SYS_switch_context); \
+    }                                \
+  while (0)
 
 #undef EXTERN
 #ifdef __cplusplus
