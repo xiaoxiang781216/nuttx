@@ -23,14 +23,7 @@
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_VERSION 1)
 
-set(ARCH_SUBDIR)
-
-if(CONFIG_ARCH_TC3XX) # TC3XX
-  set(ARCH_SUBDIR tc3xx)
-else()
-  set(ARCH_SUBDIR tc3xx)
-endif()
-
+set(ARCH_SUBDIR chip)
 include(${ARCH_SUBDIR})
 
 set(TOOLCHAIN_PREFIX tricore-elf)
