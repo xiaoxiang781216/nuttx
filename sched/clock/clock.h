@@ -67,6 +67,7 @@ extern volatile clock_t g_system_ticks;
 
 #ifndef CONFIG_CLOCK_TIMEKEEPING
 extern struct timespec  g_basetime;
+extern struct timespec  g_monotonic_basetime;
 extern spinlock_t g_basetime_lock;
 #endif
 
