@@ -711,6 +711,7 @@ config ARCH_CHIP_GOLDFISH_ARM
 	select ARCH_HAVE_RESET
 	select ARM_HAVE_PSCI
 	select ARM_HAVE_NEON
+	select ARCH_IDLE_CUSTOM
 	---help---
 		GOLDFISH virt platform (ARMv7a)
 

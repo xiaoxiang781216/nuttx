@@ -28,3 +28,7 @@ CHIP_CSRCS += goldfish_memorymap.c goldfish_serial.c goldfish_timer.c
 ifeq ($(CONFIG_SMP),y)
 CHIP_CSRCS += goldfish_cpuboot.c
 endif
+
+ifeq ($(CONFIG_ARCH_IDLE_CUSTOM),y)
+CHIP_CSRCS += goldfish_idle.c
+endif
