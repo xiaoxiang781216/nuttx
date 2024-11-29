@@ -196,7 +196,11 @@ uint64_t *arm64_syscall(uint64_t *regs)
         /* Restore the cpu lock */
 
         restore_critical_section(tcb, cpu);
+#ifdef CONFIG_ARCH_ADDRENV
+        addrenv_switch(tcb);
+#endif
         break;
+
       case SYS_switch_context:
 
         /* Update scheduler parameters */
@@ -208,6 +212,9 @@ uint64_t *arm64_syscall(uint64_t *regs)
         /* Restore the cpu lock */
 
         restore_critical_section(tcb, cpu);
+#ifdef CONFIG_ARCH_ADDRENV
+        addrenv_switch(tcb);
+#endif
         break;
 
 #ifdef CONFIG_BUILD_KERNEL
@@ -322,19 +329,6 @@ uint64_t *arm64_syscall(uint64_t *regs)
         }
         break;
     }
-
-#ifdef CONFIG_ARCH_ADDRENV
-  /* Make sure that the address environment for the previously
-   * running task is closed down gracefully (data caches dump,
-   * MMU flushed) and set up the address environment for the new
-   * thread at the head of the ready-to-run list.
-   */
-
-  if (SYS_restore_context == cmd || SYS_switch_context == cmd)
-    {
-      addrenv_switch(NULL);
-    }
-#endif
 
   /* Clear irq flag */
 
