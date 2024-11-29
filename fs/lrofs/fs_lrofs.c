@@ -134,6 +134,8 @@ const struct mountpt_operations g_lrofs_operations =
   lrofs_mmap,      /* mmap */
   lrofs_truncate,  /* truncate */
   NULL,            /* poll */
+  NULL,            /* readv */
+  NULL,            /* writev */
 
   lrofs_sync,      /* sync */
   lrofs_dup,       /* dup */
