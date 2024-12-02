@@ -132,7 +132,7 @@ static void arm64_fpu_access_trap_enable(void)
   cpacr &= ~CPACR_EL1_FPEN_NOTRAP;
   write_sysreg(cpacr, cpacr_el1);
 
-  ARM64_ISB();
+  __ISB();
 }
 
 /* disable FPU access trap */
@@ -145,7 +145,7 @@ static void arm64_fpu_access_trap_disable(void)
   cpacr |= CPACR_EL1_FPEN_NOTRAP;
   write_sysreg(cpacr, cpacr_el1);
 
-  ARM64_ISB();
+  __ISB();
 }
 
 #ifdef CONFIG_FS_PROCFS_REGISTER

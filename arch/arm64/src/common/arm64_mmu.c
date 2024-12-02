@@ -574,8 +574,8 @@ static void enable_mmu_el3(unsigned int flags)
 
   /* Ensure these changes are seen before MMU is enabled */
 
-  ARM64_DSB();
-  ARM64_ISB();
+  __MB();
+  __ISB();
 
   /* Enable the MMU and data cache */
 
@@ -588,7 +588,7 @@ static void enable_mmu_el3(unsigned int flags)
 
   /* Ensure the MMU enable takes effect immediately */
 
-  ARM64_ISB();
+  __ISB();
 #ifdef CONFIG_MMU_DEBUG
   sinfo("MMU enabled with dcache\n");
 #endif
@@ -607,8 +607,8 @@ static void enable_mmu_el1(unsigned int flags)
 
   /* Ensure these changes are seen before MMU is enabled */
 
-  ARM64_DSB();
-  ARM64_ISB();
+  __MB();
+  __ISB();
 
   /* Enable the MMU and data cache */
 
@@ -621,7 +621,7 @@ static void enable_mmu_el1(unsigned int flags)
 
   /* Ensure the MMU enable takes effect immediately */
 
-  ARM64_ISB();
+  __ISB();
 #ifdef CONFIG_MMU_DEBUG
   sinfo("MMU enabled with dcache\n");
 #endif

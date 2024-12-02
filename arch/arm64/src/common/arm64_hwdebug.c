@@ -173,7 +173,7 @@ static void write_wb_reg(int reg, int n, uint64_t val)
     }
   }
 
-  arm64_isb();
+  __ISB();
 }
 
 static uint8_t hw_breakpoint_count(void)
@@ -978,7 +978,7 @@ static int arm64_clear_os_lock(unsigned int cpu)
   write_sysreg(0, osdlr_el1);
   write_sysreg(0, oslar_el1);
 
-  arm64_isb();
+  __ISB();
   return 0;
 }
 
