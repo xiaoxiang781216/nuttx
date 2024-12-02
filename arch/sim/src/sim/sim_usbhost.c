@@ -677,6 +677,16 @@ int sim_usbhost_initialize(void)
   ret = usbhost_cdcacm_initialize();
 #endif
 
+#ifdef CONFIG_USBHOST_HIDKBD
+  /* Initialize the HID keyboard class */
+
+  ret = usbhost_kbdinit();
+  if (ret != OK)
+    {
+      uerr("ERROR: Failed to register the HID keyboard class\n");
+    }
+#endif
+
   /* Initialize the device operations */
 
   priv->drvr.ep0configure   = sim_usbhost_ep0configure;
