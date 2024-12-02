@@ -648,9 +648,15 @@ static int imx9_transmit(struct imx9_driver_s *priv, uint32_t *buf_swap)
    * is safe to clean the cache
    */
 
+<<<<<<< HEAD
   UP_DMB();
   txdesc->status1 = TXDESC_R;
   UP_DSB();
+=======
+  __DMB();
+  txdesc->status1 = TXDESC_R;
+  __MB();
+>>>>>>> 86fa99e3a47 (arch/arm64: mem barrier interface Align with riscv)
 
   /* Make sure the descriptors are written from cache to memory */
 
@@ -997,9 +1003,15 @@ static void imx9_receive(struct imx9_driver_s *priv)
                * to this descriptor pair.
                */
 
+<<<<<<< HEAD
               UP_DMB();
               rxdesc->status1  = RXDESC_E;
               UP_DSB();
+=======
+              __DMB();
+              rxdesc->status1  = RXDESC_E;
+              __MB();
+>>>>>>> 86fa99e3a47 (arch/arm64: mem barrier interface Align with riscv)
 
               up_clean_dcache((uintptr_t)&rxdesc[(-1)],
                               (uintptr_t)&rxdesc[(-1)] +
@@ -2953,7 +2965,11 @@ static void imx9_initbuffers(struct imx9_driver_s *priv)
   priv->txdesc[IMX9_ENET_NTXBUFFERS - 1].d2.status1 |= TXDESC_W;
   priv->rxdesc[IMX9_ENET_NRXBUFFERS - 1].status1 |= RXDESC_W;
 
+<<<<<<< HEAD
   UP_DSB();
+=======
+  __MB();
+>>>>>>> 86fa99e3a47 (arch/arm64: mem barrier interface Align with riscv)
 
   up_clean_dcache((uintptr_t)priv->txdesc,
                   (uintptr_t)priv->txdesc +
