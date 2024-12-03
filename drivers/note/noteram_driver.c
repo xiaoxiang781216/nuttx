@@ -760,7 +760,11 @@ static void noteram_add(FAR struct note_driver_s *driver,
   memcpy(drv->ni_buffer, buf + space, notelen - space);
   drv->ni_head = noteram_next(drv, head, NOTE_ALIGN(notelen));
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
-  poll_notify(&drv->pfd, 1, POLLIN);
+
+  if (drv->pfd)
+    {
+      poll_notify(&drv->pfd, 1, POLLIN);
+    }
 }
 
 /****************************************************************************
