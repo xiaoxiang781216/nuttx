@@ -105,7 +105,7 @@ uintreg_t *riscv_doirq(int irq, uintreg_t *regs)
        * thread at the head of the ready-to-run list.
        */
 
-      addrenv_switch(NULL);
+      addrenv_switch(tcb);
 #endif
 
       /* Update scheduler parameters */

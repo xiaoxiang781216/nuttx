@@ -45,6 +45,7 @@
 IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
 {
   struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s *tcb;
 
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   PANIC();
@@ -85,6 +86,8 @@ IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
 
   if (regs != up_current_regs())
     {
+      tcb = this_task();
+
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
        * running task is closed down gracefully (data caches dump,
@@ -92,7 +95,7 @@ IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
        * thread at the head of the ready-to-run list.
        */
 
-      addrenv_switch(NULL);
+      addrenv_switch(tcb);
 #endif
 
       /* Record the new "running" task when context switch occurred.
@@ -100,7 +103,7 @@ IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
        * crashes.
        */
 
-      *running_task = this_task();
+      *running_task = tcb;
 
       __mtcr(CPU_PCXI, tricore_addr2csa(up_current_regs()));
       __isync();
