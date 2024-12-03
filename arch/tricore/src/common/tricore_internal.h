@@ -192,7 +192,7 @@ extern uintptr_t        _lc_ge_data[]; /* End+1 of .data */
 extern uintptr_t        __HEAP[];      /* End+1 of .data */
 extern uintptr_t        __A0_MEM[];    /* End+1 of .data */
 #define _sdata          LCF_DSPR0_START
-#define _edata          __A0_MEM
+#define _edata          __HEAP
 #define _eheap          __USTACK0_END
 #endif
 
