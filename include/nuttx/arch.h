@@ -1984,17 +1984,9 @@ void up_timer_initialize(void);
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SCHED_TICKLESS) && !defined(CONFIG_SCHED_TICKLESS_TICK_ARGUMENT)
 int up_timer_gettime(FAR struct timespec *ts);
-#endif
-
-#if defined(CONFIG_SCHED_TICKLESS_TICK_ARGUMENT) || defined(CONFIG_CLOCK_TIMEKEEPING)
 int up_timer_gettick(FAR clock_t *ticks);
-#endif
-
-#ifdef CONFIG_CLOCK_TIMEKEEPING
 void up_timer_getmask(FAR clock_t *mask);
-#endif
 
 /****************************************************************************
  * Name: up_alarm_cancel
