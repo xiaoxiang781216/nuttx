@@ -43,10 +43,7 @@ uint32_t *or1k_doirq(int irq, uint32_t *regs)
 {
   struct tcb_s **running_task = &g_running_tasks[this_cpu()];
 
-  if (*running_task != NULL)
-    {
-      or1k_copyfullstate((*running_task)->xcp.regs, regs);
-    }
+  or1k_copyfullstate((*running_task)->xcp.regs, regs);
 
   board_autoled_on(LED_INIRQ);
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
@@ -84,7 +81,7 @@ uint32_t *or1k_doirq(int irq, uint32_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task();
+      *running_task = this_task();
     }
 
   regs = up_current_regs();

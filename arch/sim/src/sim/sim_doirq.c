@@ -65,10 +65,7 @@ void *sim_doirq(int irq, void *context)
     {
       struct tcb_s **running_task = &g_running_tasks[this_cpu()];
 
-      if (*running_task != NULL)
-        {
-          sim_copyfullstate((*running_task)->xcp.regs, regs);
-        }
+      sim_copyfullstate((*running_task)->xcp.regs, regs);
 
       up_set_current_regs(regs);
 
@@ -89,7 +86,7 @@ void *sim_doirq(int irq, void *context)
            * crashes.
            */
 
-          g_running_tasks[this_cpu()] = this_task();
+          *running_task = this_task();
         }
 
       regs = up_current_regs();

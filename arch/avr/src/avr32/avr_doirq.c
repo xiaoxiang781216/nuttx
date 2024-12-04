@@ -61,10 +61,7 @@ uint32_t *avr_doirq(int irq, uint32_t *regs)
   struct tcb_s **running_task = &g_running_tasks[this_cpu()];
   struct tcb_s *tcb;
 
-  if (*running_task != NULL)
-    {
-      avr_copystate((*running_task)->xcp.regs, regs);
-    }
+  avr_copystate((*running_task)->xcp.regs, regs);
 
   board_autoled_on(LED_INIRQ);
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
@@ -115,7 +112,7 @@ uint32_t *avr_doirq(int irq, uint32_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = tcb;
+      *running_task = tcb;
     }
 
   /* If a context switch occurred while processing the interrupt then
