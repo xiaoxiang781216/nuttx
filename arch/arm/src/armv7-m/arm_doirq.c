@@ -57,11 +57,11 @@ void exception_direct(void)
 uint32_t *arm_doirq(int irq, uint32_t *regs)
 {
   struct tcb_s **running_task = &g_running_tasks[this_cpu()];
-  FAR struct tcb_s *tcb;
+  struct tcb_s *tcb           = *running_task;
 
   if (*running_task != NULL)
     {
-      (*running_task)->xcp.regs = regs;
+      tcb->xcp.regs = regs;
     }
 
   board_autoled_on(LED_INIRQ);
@@ -84,6 +84,12 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
       irq_dispatch(irq, regs);
 #endif
+      if (tcb->sigdeliver)
+        {
+          /* Pendsv able to access running tcb with no critical section */
+
+          up_schedule_sigaction(tcb);
+        }
 
       up_irq_save();
     }
