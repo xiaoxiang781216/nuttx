@@ -43,8 +43,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define RPMSG_VIRTIO_LITE_TIMEOUT_MS 20
-#define RPMSG_VIRTIO_LITE_NOTIFYID   0
+#define RPMSG_VIRTIO_LITE_TIMEOUT_MS      20
+
+#define RPMSG_VIRTIO_LITE_VDEV_NOTIFYID   0
+#define RPMSG_VIRTIO_LITE_VRING0_NOTIFYID 1
+#define RPMSG_VIRTIO_LITE_VRING1_NOTIFYID 2
 
 #ifdef CONFIG_OPENAMP_CACHE
 #  define RPMSG_VIRTIO_INVALIDATE(x) metal_cache_invalidate(&x, sizeof(x))
@@ -358,15 +361,14 @@ static void rpmsg_virtio_lite_notify(FAR struct virtqueue *vq)
   FAR struct virtio_device *vdev = vq->vq_dev;
   FAR struct rpmsg_virtio_lite_priv_s *priv =
     rpmsg_virtio_lite_get_priv(vdev);
-  FAR struct virtqueue *svq = priv->rvdev.svq;
 
-  if (vdev->vrings_info->notifyid ==
-      vdev->vrings_info[svq->vq_queue_index].notifyid)
+  if (priv->rvdev.svq == vq)
     {
       rpmsg_virtio_lite_pm_action(priv, true);
     }
 
-  RPMSG_VIRTIO_LITE_NOTIFY(priv->dev, vdev->vrings_info->notifyid);
+  RPMSG_VIRTIO_LITE_NOTIFY(priv->dev,
+                           vdev->vrings_info[vq->vq_queue_index].notifyid);
 }
 
 static bool
@@ -680,7 +682,7 @@ static int rpmsg_virtio_lite_start(FAR struct rpmsg_virtio_lite_priv_s *priv)
 
   priv->rsc = rsc;
 
-  vdev->notifyid = RPMSG_VIRTIO_LITE_NOTIFYID;
+  vdev->notifyid = RPMSG_VIRTIO_LITE_VDEV_NOTIFYID;
   vdev->vrings_num = rsc->rpmsg_vdev.num_of_vrings;
   vdev->role = RPMSG_VIRTIO_LITE_IS_MASTER(priv->dev) ?
                RPMSG_HOST : RPMSG_REMOTE;
@@ -701,7 +703,7 @@ static int rpmsg_virtio_lite_start(FAR struct rpmsg_virtio_lite_priv_s *priv)
   rvrings[0].info.vaddr = (FAR char *)rsc + tbsz;
   rvrings[0].info.num_descs = rsc->rpmsg_vring0.num;
   rvrings[0].info.align = rsc->rpmsg_vring0.align;
-  rvrings[0].notifyid = RPMSG_VIRTIO_VRING0_NOTIFYID;
+  rvrings[0].notifyid = RPMSG_VIRTIO_LITE_VRING0_NOTIFYID;
   rvrings[0].vq = virtqueue_allocate(rsc->rpmsg_vring0.num);
   if (rvrings[0].vq == NULL)
     {
@@ -712,7 +714,7 @@ static int rpmsg_virtio_lite_start(FAR struct rpmsg_virtio_lite_priv_s *priv)
   rvrings[1].info.vaddr = (FAR char *)rsc + tbsz + v0sz;
   rvrings[1].info.num_descs = rsc->rpmsg_vring1.num;
   rvrings[1].info.align = rsc->rpmsg_vring1.align;
-  rvrings[1].notifyid = RPMSG_VIRTIO_VRING1_NOTIFYID;
+  rvrings[1].notifyid = RPMSG_VIRTIO_LITE_VRING1_NOTIFYID;
   rvrings[1].vq = virtqueue_allocate(rsc->rpmsg_vring1.num);
   if (rvrings[1].vq == NULL)
     {
