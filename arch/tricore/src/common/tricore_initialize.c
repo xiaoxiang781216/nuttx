@@ -24,6 +24,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
+#include <nuttx/cache.h>
 #include <arch/board/board.h>
 
 #include "tricore_internal.h"
@@ -89,6 +90,14 @@ void up_initialize(void)
 {
 #ifdef CONFIG_ARCH_PERF_EVENTS
   up_perf_init((void *)IFX_CFG_CPU_CLOCK_FREQUENCY);
+#endif
+
+#ifdef CONFIG_ARCH_ICACHE
+  up_enable_icache();
+#endif
+
+#ifdef CONFIG_ARCH_DCACHE
+  up_enable_dcache();
 #endif
 
   /* Colorize the interrupt stack */
