@@ -85,7 +85,11 @@ EXTERN volatile uintptr_t *g_current_regs[CONFIG_SMP_NCPUS];
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_HAVE_MULTICPU
-int up_cpu_index(void) noinstrument_function;
+noinstrument_function
+static inline_function int up_cpu_index(void)
+{
+  return IfxCpu_getCoreId();
+}
 #endif /* CONFIG_ARCH_HAVE_MULTICPU */
 
 /****************************************************************************
