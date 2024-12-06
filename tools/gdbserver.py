@@ -1205,8 +1205,6 @@ def main(args):
     else:
         log = DumpLogFile(None)
 
-    elf = DumpELFFile(args.elffile)
-
     if args.logfile is not None:
         elf.parse_addr2line(arch, args.addr2line, log.stack_data)
 
