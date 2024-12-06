@@ -371,6 +371,76 @@ static inline int wd_cancel_period(FAR struct wdog_period_s *wdog_period)
 }
 
 /****************************************************************************
+ * Name: wd_get_period
+ *
+ * Description:
+ *   This function get the period value of watchdog timer.
+ *
+ * Input Parameters:
+ *   wdog_period - Pointer of the periodic watchdog.
+ *
+ * Returned Value:
+ *   Returns the period of the watchdog.
+ *
+ ****************************************************************************/
+
+static inline clock_t wd_get_period(FAR struct wdog_period_s *wdog_period)
+{
+  return wdog_period->period;
+}
+
+/****************************************************************************
+ * Name: wd_set_period
+ *
+ * Description:
+ *   This function set the period value of watchdog timer.
+ *
+ * Input Parameters:
+ *   wdog_period - Pointer of the periodic watchdog.
+ *
+ ****************************************************************************/
+
+static inline void wd_set_period(FAR struct wdog_period_s *wdog_period,
+                                 clock_t period)
+{
+  wdog_period->period = period;
+}
+
+/****************************************************************************
+ * Name: wd_update_period
+ *
+ * Description:
+ *   This function update a periodical watchdog timer.
+ *
+ * Input Parameters:
+ *   wdog     - Pointer of the periodic watchdog.
+ *   period   - Period in system ticks.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; a negated errno value is return to
+ *   indicate the nature of any failure.
+ *
+ * Assumptions:
+ *   The watchdog routine runs in the context of the timer interrupt handler
+ *   and is subject to all ISR restrictions.
+ *
+ ****************************************************************************/
+
+static inline int wd_update_period(FAR struct wdog_period_s *wdog,
+                                   clock_t period)
+{
+  int ret = wd_cancel_period(wdog);
+
+  if (ret == OK)
+    {
+      ret = wd_start_period(wdog, period, period,
+                            wdog->func, wdog->wdog.arg);
+    }
+
+  return ret;
+}
+
+/****************************************************************************
  * Name: wd_gettime
  *
  * Description:
