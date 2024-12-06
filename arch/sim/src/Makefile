@@ -432,6 +432,9 @@ ifneq ($(CONFIG_HOST_MACOS),y)
 	         -e 's/__fini_array_start/_sfini/g' -e 's/__fini_array_end/_efini/g' >nuttx.ld
 	$(Q) echo "__init_array_start = .; __init_array_end = .; __fini_array_start = .; __fini_array_end = .;" >>nuttx.ld
 endif
+ifeq ($(CONFIG_OPTEE_OS),y)
+	$(Q) sed -i 's/\*(.text.hot .text.hot.*)/KEEP(*(SORT(.scattered_array*)))\n    *(.text.hot .text.hot.*)/g' nuttx.ld
+endif
 ifeq ($(CONFIG_MM_KASAN_GLOBAL),y)
 	$(Q) sed -i 's/\s*\.interp\s*:\s*{\s*\*(\.interp)\s*}/  \
 	            .kasan.global : {KEEP(*(.data..LASAN0)) KEEP (*(.data.rel.local..LASAN0)) }\n  \
