@@ -151,7 +151,7 @@ void x86_64_ap_boot(void)
 
   x86_64_cpu_priv_set(cpu);
 
-  tcb = this_task();
+  tcb = current_task(cpu);
   UNUSED(tcb);
   up_update_task(tcb);
 
@@ -217,6 +217,8 @@ void x86_64_ap_boot(void)
 #ifdef CONFIG_ARCH_HAVE_HWP
   intel64_hwp_init();
 #endif
+
+  up_update_task(tcb);
 
   /* Then transfer control to the IDLE task */
 
