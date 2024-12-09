@@ -363,7 +363,7 @@ static int nx_dup3_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2,
 
 int files_initlist(FAR struct filelist **list)
 {
-  *list = fs_heap_zalloc(sizeof(struct filelist));
+  *list = kmm_zalloc(sizeof(struct filelist));
   if (*list == NULL)
     {
       return -ENOMEM;
