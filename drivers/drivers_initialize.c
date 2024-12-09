@@ -61,6 +61,7 @@
 #include <nuttx/virtio/virtio.h>
 #include <nuttx/drivers/optee.h>
 #include <nuttx/audio/audio_fake.h>
+#include <nuttx/usb/usbhost.h>
 
 #ifdef CONFIG_DRIVERS_BINDER
 #  include <nuttx/android/binder.h>
@@ -300,6 +301,10 @@ void drivers_initialize(void)
 
 #ifdef CONFIG_DRIVERS_BINDER
   binder_initialize();
+#endif
+
+#ifdef CONFIG_USBHOST_WAITER
+  usbhost_drivers_initialize();
 #endif
 
 #if defined(CONFIG_PCI) && !defined(CONFIG_PCI_LATE_DRIVERS_REGISTER)
