@@ -56,6 +56,7 @@ static int g_irqmap_count = 1;
  */
 
 irq_mapped_t g_irqmap[NR_IRQS];
+int g_irqrevmap[CONFIG_ARCH_NUSER_INTERRUPTS];
 #endif
 
 /****************************************************************************
@@ -70,11 +71,28 @@ int irq_to_ndx(int irq)
   irqstate_t flags = spin_lock_irqsave(NULL);
   if (g_irqmap[irq] == 0)
     {
-      g_irqmap[irq] = g_irqmap_count++;
+      int ndx = g_irqmap_count++;
+      g_irqmap[irq] = ndx;
+      g_irqrevmap[ndx] = irq;
     }
 
   spin_unlock_irqrestore(NULL, flags);
   return g_irqmap[irq];
+}
+#elif defined(CONFIG_ARCH_MINIMAL_VECTORTABLE)
+int ndx_to_irq(int ndx)
+{
+  int i;
+
+  for (i = 0; i < NR_IRQS; i++)
+    {
+      if (g_irqmap[i] == ndx)
+        {
+          return i;
+        }
+    }
+
+  return -EINVAL;
 }
 #endif
 
