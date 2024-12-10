@@ -87,6 +87,10 @@ static inline void up_color_intstack(void)
 
 void up_initialize(void)
 {
+#ifdef CONFIG_ARCH_PERF_EVENTS
+  up_perf_init((void *)IFX_CFG_CPU_CLOCK_FREQUENCY);
+#endif
+
   /* Colorize the interrupt stack */
 
   up_color_intstack();

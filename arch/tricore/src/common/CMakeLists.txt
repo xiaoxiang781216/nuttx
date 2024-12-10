@@ -32,6 +32,7 @@ set(SRCS
     tricore_main.c
     tricore_mdelay.c
     tricore_nputs.c
+    tricore_perf.c
     tricore_registerdump.c
     tricore_releasestack.c
     tricore_saveusercontext.c
@@ -40,9 +41,9 @@ set(SRCS
     tricore_stackframe.c
     tricore_svcall.c
     tricore_switchcontext.c
+    tricore_systimer.c
     tricore_tcbinfo.c
     tricore_trapcall.c
-    tricore_systimer.c
     tricore_usestack.c)
 
 if(CONFIG_SCHED_BACKTRACE)
