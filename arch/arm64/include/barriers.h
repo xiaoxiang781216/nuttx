@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm64/src/common/barriers.h
+ * arch/arm64/include/barriers.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef ___ARCH_ARM64_SRC_COMMON_BARRIERS_H
-#define ___ARCH_ARM64_SRC_COMMON_BARRIERS_H
+#ifndef ___ARCH_ARM64_INCLUDE_BARRIERS_H
+#define ___ARCH_ARM64_INCLUDE_BARRIERS_H
 
 /****************************************************************************
  * Included Files
@@ -35,20 +35,28 @@
  * ARM DDI 0487E.a C6.2.81
  */
 
-#define __MB() __asm__ volatile ("dsb sy" : : : "memory");
+#define UP_DSB() __asm__ volatile ("dsb sy" : : : "memory");
 
 /* See Arm® Architecture Reference Manual
  * ARM DDI 0487E.a C6.2.79
  */
 
-#define __DMB() __asm__ volatile ("dmb sy" : : : "memory");
+#define UP_DMB() __asm__ volatile ("dmb sy" : : : "memory");
 
 /* See Arm® Architecture Reference Manual
  * ARM DDI 0487E.a C6.2.96
  */
 
-#define __ISB()    __asm__ volatile ("isb" : : : "memory");
+#define UP_ISB() __asm__ volatile ("isb" : : : "memory");
+
+#define UP_MB() \
+  do            \
+    {           \
+      UP_DSB(); \
+      UP_ISB(); \
+    }           \
+  while (0)
 
 #endif /* __ASSEMBLY__ */
 
-#endif /* ___ARCH_ARM64_SRC_COMMON_BARRIERS_H */
+#endif /* ___ARCH_ARM64_INCLUDE_BARRIERS_H */
