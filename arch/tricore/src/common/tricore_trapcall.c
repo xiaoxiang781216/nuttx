@@ -286,7 +286,7 @@ void tricore_trapcall(volatile void *trap)
 
   regs = tricore_csa2addr(__mfcr(CPU_PCXI));
 
-  up_set_current_regs(regs);
+  up_set_interrupt_context(true);
 
   if (tclass == IfxCpu_Trap_Class_memoryManagement)
     {
@@ -325,5 +325,5 @@ void tricore_trapcall(volatile void *trap)
     }
 
   up_irq_save();
-  PANIC_WITH_REGS("Trap", up_current_regs());
+  PANIC_WITH_REGS("Trap", regs);
 }

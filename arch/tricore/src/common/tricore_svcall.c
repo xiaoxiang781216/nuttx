@@ -66,7 +66,9 @@ void tricore_svcall(volatile void *trap)
 
   regs = tricore_csa2addr((uintptr_t)regs);
 
-  up_set_current_regs(regs);
+  /* Set irq flag */
+
+  up_set_interrupt_context(true);
 
   cmd = regs[REG_D8];
 
@@ -126,5 +128,7 @@ void tricore_svcall(volatile void *trap)
       __isync();
     }
 
-  up_set_current_regs(NULL);
+  /* Set irq flag */
+
+  up_set_interrupt_context(false);
 }

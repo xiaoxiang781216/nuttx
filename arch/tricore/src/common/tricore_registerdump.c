@@ -63,7 +63,7 @@ uintptr_t up_getusrsp(void *regs)
 
 void up_dump_register(void *dumpregs)
 {
-  volatile uint32_t *regs = dumpregs ? dumpregs : up_current_regs();
+  volatile uint32_t *regs = dumpregs ? dumpregs : running_regs();
 
   _alert("PCXI:%08x  PSW:%08x  SP:%08x  PC:%08x\n",
          regs[REG_UPCXI], regs[REG_PSW], regs[REG_A10], regs[REG_UA11]);

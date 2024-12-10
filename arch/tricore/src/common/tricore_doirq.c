@@ -70,13 +70,11 @@ IFX_INT_WRAPPER(CONFIG_CPU_COREID)
 
   /* Nested interrupts are not supported */
 
-  DEBUGASSERT(up_current_regs() == NULL);
+  DEBUGASSERT(!up_interrupt_context());
 
-  /* Current regs non-zero indicates that we are processing an interrupt;
-   * current_regs is also used to manage interrupt level context switches.
-   */
+  /* Set irq flag */
 
-  up_set_current_regs(regs);
+  up_set_interrupt_context(true);
 
   /* Deliver the IRQ */
 
@@ -84,12 +82,7 @@ IFX_INT_WRAPPER(CONFIG_CPU_COREID)
 
   tcb = this_task();
 
-  /* Check for a context switch.  If a context switch occurred, then
-   * g_current_regs will have a different value than it did on entry.  If an
-   * interrupt level context switch has occurred, then restore the floating
-   * point state and the establish the correct address environment before
-   * returning from the interrupt.
-   */
+  /* Check for a context switch. */
 
   if (regs != tcb->xcp.regs)
     {
@@ -118,11 +111,9 @@ IFX_INT_WRAPPER(CONFIG_CPU_COREID)
       __isync();
     }
 
-  /* Set current_regs to NULL to indicate that we are no longer in an
-   * interrupt handler.
-   */
+  /* Set irq flag */
 
-  up_set_current_regs(NULL);
+  up_set_interrupt_context(false);
 
   board_autoled_off(LED_INIRQ);
 #endif
