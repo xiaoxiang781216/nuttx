@@ -54,6 +54,7 @@
 
 void tricore_svcall(volatile void *trap)
 {
+  struct tcb_s *tcb = this_task();
   uintptr_t *regs;
   uint32_t cmd;
 
@@ -93,14 +94,14 @@ void tricore_svcall(volatile void *trap)
       case SYS_restore_context:
         {
           tricore_reclaim_csa(regs[REG_UPCXI]);
-          up_set_current_regs((uintptr_t *)regs[REG_D9]);
+          tcb->xcp.regs = (uintptr_t *)regs[REG_D9];
         }
         break;
 
       case SYS_switch_context:
         {
           *(uintptr_t **)regs[REG_D9] = tricore_csa2addr(regs[REG_UPCXI]);
-          up_set_current_regs((uintptr_t *)regs[REG_D10]);
+          tcb->xcp.regs = (uintptr_t *)regs[REG_D10];
         }
         break;
 
@@ -111,7 +112,7 @@ void tricore_svcall(volatile void *trap)
         break;
     }
 
-  if (regs != up_current_regs())
+  if (regs != tcb->xcp.regs)
     {
       /* Record the new "running" task when context switch occurred.
        * g_running_tasks[] is only used by assertion logic for reporting
@@ -120,7 +121,7 @@ void tricore_svcall(volatile void *trap)
 
       g_running_tasks[this_cpu()] = this_task();
 
-      regs[REG_UPCXI] = tricore_addr2csa(up_current_regs());
+      regs[REG_UPCXI] = tricore_addr2csa(tcb->xcp.regs);
 
       __isync();
     }
