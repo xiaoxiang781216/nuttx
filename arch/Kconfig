@@ -1214,15 +1214,6 @@ config ARCH_MINIMAL_VECTORTABLE_DYNAMIC
 	---help---
 		Use a minimum amount of RAM for the vector table.
 
-config ARCH_MINIMAL_VECTORTABLE_SKIP_TRANSFORM
-	bool "Disable IRQ transformation during IRQ dispatch"
-	default n
-	depends on ARCH_MINIMAL_VECTORTABLE_DYNAMIC
-	---help---
-		Disables IRQ transformation during IRQ dispatch, even when using
-		a minimal dynamic vector table. This can be useful for systems
-		where IRQ vector mapping is handled in a different way.
-
 config ARCH_NUSER_INTERRUPTS
 	int "Number of interrupts"
 	default 0
