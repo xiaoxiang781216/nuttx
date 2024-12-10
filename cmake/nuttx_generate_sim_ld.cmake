@@ -53,6 +53,12 @@ file(
   DESTINATION ${CMAKE_BINARY_DIR}
   FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ)
 
+if(CONFIG_OPTEE_OS)
+  set(SIM_LD_ADD_SCATTERED_ARRAY_SECTION
+      " 's/\*\(.text.hot .text.hot.*\)/KEEP\(*\(SORT\(.scattered_array*\)\)\)\\n    *\(.text.hot .text.hot.*\)/g' "
+  )
+endif()
+
 add_custom_command(
   OUTPUT nuttx.ld
   COMMAND
@@ -61,5 +67,6 @@ add_custom_command(
     || true
   COMMAND sh process_sim_ld_script.sh nuttx-orig.ld nuttx.ld
   COMMAND sed -i '/\\.data *:/i " ${CONFIG_SIM_CUSTOM_DATA_SECTION} " ' nuttx.ld
+  COMMAND sed -i " ${SIM_LD_ADD_SCATTERED_ARRAY_SECTION} " nuttx.ld
   COMMENT "Generating sim linker script nuttx.ld"
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
