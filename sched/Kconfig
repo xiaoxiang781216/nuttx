@@ -1182,9 +1182,10 @@ config SCHED_PROFILE_TICKSPERSEC
 		This is the frequency at which the profil functon will sample the
 		running program. The default is 1000Hz.
 
-menuconfig SCHED_INSTRUMENTATION
-	bool "System performance monitor hooks"
-	default n
+menu "System performance monitor hooks"
+
+config SCHED_INSTRUMENTATION
+	bool
 	select SCHED_SUSPENDSCHEDULER
 	select SCHED_RESUMESCHEDULER
 	---help---
@@ -1201,18 +1202,10 @@ menuconfig SCHED_INSTRUMENTATION
 			void sched_note_cpu_start(FAR struct tcb_s *tcb, int cpu);
 			void sched_note_cpu_started(FAR struct tcb_s *tcb);
 
-if SCHED_INSTRUMENTATION
-
-config SCHED_INSTRUMENTATION_CPUSET
-	hex "CPU bit set"
-	default 0xffff
-	depends on SMP && SCHED_INSTRUMENTATION_FILTER
-	---help---
-		Monitor only CPUs in the bitset.  Bit 0=CPU0, Bit1=CPU1, etc.
-
 config SCHED_INSTRUMENTATION_FILTER
 	bool "Instrumentation filter"
-	default n
+	depends on SCHED_INSTRUMENTATION
+	default y
 	---help---
 		Enables the filter logic for the instrumentation. If this option
 		is enabled, the instrumentation data passed to sched_note_add()
@@ -1233,9 +1226,17 @@ config SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
 			Bit 4 = Enable dump instrumentation
 			Bit 5 = Enable collecting syscall arguments
 
+config SCHED_INSTRUMENTATION_CPUSET
+	hex "CPU bit set"
+	default 0xffff
+	depends on SMP && SCHED_INSTRUMENTATION_FILTER
+	---help---
+		Monitor only CPUs in the bitset.  Bit 0=CPU0, Bit1=CPU1, etc.
+
 config SCHED_INSTRUMENTATION_SWITCH
 	bool "Use note switch for instrumentation"
 	default n
+	select SCHED_INSTRUMENTATION
 	---help---
 		Use note switch for instrumentation.
 
@@ -1258,6 +1259,7 @@ config SCHED_INSTRUMENTATION_SWITCH
 config SCHED_INSTRUMENTATION_PREEMPTION
 	bool "Preemption monitor hooks"
 	default n
+	select SCHED_INSTRUMENTATION
 	---help---
 		Enables additional hooks for changes to pre-emption state.  Board-
 		specific logic must provide this additional logic.
@@ -1267,6 +1269,7 @@ config SCHED_INSTRUMENTATION_PREEMPTION
 config SCHED_INSTRUMENTATION_CSECTION
 	bool "Critical section monitor hooks"
 	default n
+	select SCHED_INSTRUMENTATION
 	select IRQCOUNT
 	---help---
 		Enables additional hooks for entry and exit from critical sections.
@@ -1278,6 +1281,7 @@ config SCHED_INSTRUMENTATION_CSECTION
 config SCHED_INSTRUMENTATION_SPINLOCKS
 	bool "Spinlock monitor hooks"
 	default n
+	select SCHED_INSTRUMENTATION
 	---help---
 		Enables additional hooks for spinlock state.  Board-specific logic
 		must provide this additional logic.
@@ -1287,6 +1291,7 @@ config SCHED_INSTRUMENTATION_SPINLOCKS
 config SCHED_INSTRUMENTATION_SYSCALL
 	bool "System call monitor hooks"
 	default n
+	select SCHED_INSTRUMENTATION
 	depends on ARCH_HAVE_SYSCALL_HOOKS
 	---help---
 		Enables additional hooks for entry and exit from system call.
@@ -1298,6 +1303,7 @@ config SCHED_INSTRUMENTATION_SYSCALL
 config SCHED_INSTRUMENTATION_IRQHANDLER
 	bool "Interrupt handler monitor hooks"
 	default n
+	select SCHED_INSTRUMENTATION
 	---help---
 		Enables additional hooks for interrupt handler. Board-specific logic
 		must provide this additional logic.
@@ -1307,6 +1313,7 @@ config SCHED_INSTRUMENTATION_IRQHANDLER
 config SCHED_INSTRUMENTATION_HEAP
 	bool "Heap monitor hooks"
 	default n
+	select SCHED_INSTRUMENTATION
 	---help---
 		Enables additional hooks for heap allocation.
 
@@ -1315,6 +1322,7 @@ config SCHED_INSTRUMENTATION_HEAP
 config SCHED_INSTRUMENTATION_WDOG
 	bool "Watchdog timer monitor hooks"
 	default n
+	select SCHED_INSTRUMENTATION
 	---help---
 		Enables additional hooks for watchdog timer.
 
@@ -1323,6 +1331,7 @@ config SCHED_INSTRUMENTATION_WDOG
 config SCHED_INSTRUMENTATION_DUMP
 	bool "Use note dump for instrumentation"
 	default n
+	select SCHED_INSTRUMENTATION
 	---help---
 		Use note dump for instrumentation.
 
@@ -1334,6 +1343,7 @@ config SCHED_INSTRUMENTATION_THREADTIME
 	bool "Enable thread runtime instrumentation"
 	depends on SCHED_INSTRUMENTATION_DUMP
 	depends on SCHED_CRITMONITOR
+	select SCHED_INSTRUMENTATION
 	default n
 	---help---
 		Enable thread runtime instrumentation.
@@ -1348,6 +1358,7 @@ config SCHED_INSTRUMENTATION_THREAD_RUNTIME_DURATION
 config SCHED_INSTRUMENTATION_FUNCTION
 	bool "Enable function auto-tracing"
 	default n
+	select SCHED_INSTRUMENTATION
 	---help---
 		After enabling this option, you can automatically trace the function instrumentation without adding tracepoint manually.
 		This is similar to the Function Trace effect of the linux kernel
@@ -1359,7 +1370,8 @@ config SCHED_INSTRUMENTATION_FUNCTION
 		For a more detailed description of compilation options,
 		refer to the "Program Instrumentation Options" chapter in the gcc documentation
 
-endif # SCHED_INSTRUMENTATION
+endmenu # System performance monitor hooks
+
 endmenu # Performance Monitoring
 
 menu "System Auto Instrumentation"

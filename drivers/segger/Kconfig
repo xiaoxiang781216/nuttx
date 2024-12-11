@@ -190,10 +190,10 @@ config SERIAL_RTT_CONSOLE_CHANNEL
 		The buffer size of RTT channel 0 is configured by SEGGER_RTT_BUFFER_SIZE_UP/DOWN
 		You need to turn off other console devices before using Segger RTT console
 
-if DRIVERS_NOTE
-
 config NOTE_RTT
 	bool "Note RTT driver, write note into Segger J-Link RTTLog"
+	select DRIVERS_NOTE
+	select STREAM_RTT
 	default n
 	---help---
 		If this option is selected, then jlink rtt is enabled to capture
@@ -231,6 +231,7 @@ endif # NOTE_RTT
 
 config SEGGER_SYSVIEW
 	bool "Note SEGGER SystemView driver"
+	select DRIVERS_NOTE
 	select SEGGER_RTT
 	---help---
 		SystemView is a real-time recording and visualization tool for embedded
@@ -275,7 +276,5 @@ config SEGGER_SYSVIEW_RAM_BASE
 		The lowest RAM address used for IDs
 
 endif # SEGGER_SYSVIEW
-
-endif # DRIVERS_NOTE
 
 endmenu # Segger RTT drivers
