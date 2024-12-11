@@ -348,12 +348,10 @@ void up_enable_dcache(void)
 
   /* Check if the D-Cache is enabled */
 
-  if ((memctl & MEMCTL_INV_EN) != 0)
+  if ((memctl & (MEMCTL_DCWA_MASK | MEMCTL_DCWU_MASK)) != 0)
     {
       return;
     }
-
-  up_invalidate_dcache_all();
 
   /* set ways allocatable & ways use */
 
