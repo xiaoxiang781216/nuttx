@@ -452,6 +452,7 @@ static int esp_motor_setup(struct motor_lowerhalf_s *dev)
   if ((priv->state.state == MOTOR_STATE_FAULT) ||
       (priv->state.state == MOTOR_STATE_CRITICAL))
     {
+      spin_unlock_irqrestore(&g_mcpwm_common.mcpwm_spinlock, flags);
       mtrerr("Motor is in fault state. Clear faults first\n");
       return ERROR;
     }
@@ -577,6 +578,7 @@ static int esp_motor_stop(struct motor_lowerhalf_s *dev)
   flags = spin_lock_irqsave(&g_mcpwm_common.mcpwm_spinlock);
   if (priv->state.state == MOTOR_STATE_IDLE)
     {
+      spin_unlock_irqrestore(&g_mcpwm_common.mcpwm_spinlock, flags);
       mtrerr("Motor already stopped\n");
       return -EPERM;
     }
@@ -593,6 +595,7 @@ static int esp_motor_stop(struct motor_lowerhalf_s *dev)
   ret = esp_motor_set_duty_cycle(priv, 0.0);
   if (ret < 0)
     {
+      spin_unlock_irqrestore(&g_mcpwm_common.mcpwm_spinlock, flags);
       mtrerr("Failed setting duty cycle to 0 on stop: %d\n", ret);
       return ret;
     }
@@ -647,6 +650,7 @@ static int esp_motor_start(struct motor_lowerhalf_s *dev)
   flags = spin_lock_irqsave(&g_mcpwm_common.mcpwm_spinlock);
   if (priv->state.state == MOTOR_STATE_RUN)
     {
+      spin_unlock_irqrestore(&g_mcpwm_common.mcpwm_spinlock, flags);
       mtrerr("Motor already running\n");
       return -EINVAL;
     }
@@ -654,6 +658,7 @@ static int esp_motor_start(struct motor_lowerhalf_s *dev)
   if ((priv->state.state == MOTOR_STATE_CRITICAL) ||
        (priv->state.state == MOTOR_STATE_FAULT))
     {
+      spin_unlock_irqrestore(&g_mcpwm_common.mcpwm_spinlock, flags);
       mtrerr("Motor is in fault state\n");
       return -EINVAL;
     }
@@ -661,6 +666,7 @@ static int esp_motor_start(struct motor_lowerhalf_s *dev)
   ret = esp_motor_pwm_config(priv);
   if (ret < 0)
     {
+      spin_unlock_irqrestore(&g_mcpwm_common.mcpwm_spinlock, flags);
       mtrerr("Failed setting PWM configuration\n");
       return ret;
     }
@@ -680,6 +686,7 @@ static int esp_motor_start(struct motor_lowerhalf_s *dev)
       ret = esp_motor_set_duty_cycle(priv, duty);
       if (ret < 0)
         {
+          spin_unlock_irqrestore(&g_mcpwm_common.mcpwm_spinlock, flags);
           mtrerr("Failed starting motor\n");
           return ret;
         }
@@ -1054,6 +1061,7 @@ static int esp_motor_fault_configure(struct mcpwm_motor_lowerhalf_s *lower,
       mcpwm_ll_intr_enable(hal->dev,
                            MCPWM_LL_EVENT_FAULT_EXIT(lower->fault_id),
                            false);
+      spin_unlock_irqrestore(&g_mcpwm_common.mcpwm_spinlock, flags);
       return OK;
     }
 
