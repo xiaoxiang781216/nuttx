@@ -125,7 +125,6 @@
  */
 
 #define STACK_COLOR    0xdeadbeef
-#define INTSTACK_COLOR 0xdeadbeef
 #define HEAP_COLOR     'h'
 
 #define getreg8(a)     (*(volatile uint8_t *)(a))

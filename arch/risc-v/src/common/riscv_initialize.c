@@ -57,7 +57,7 @@ static inline void up_color_intstack(void)
        size > 0;
        size -= sizeof(uint32_t))
     {
-      *ptr++ = INTSTACK_COLOR;
+      *ptr++ = STACK_COLOR;
     }
 }
 #else

@@ -54,7 +54,6 @@
  */
 
 #define STACK_COLOR    's'
-#define INTSTACK_COLOR 's'
 #define HEAP_COLOR     'h'
 
 #define getreg8(a)     (*(volatile uint8_t *)(a))
