@@ -135,6 +135,22 @@ static int file_vioctl(FAR struct file *filep, int req, va_list ap)
           }
         break;
 
+      case FIOC_GETFLAGS:
+      if (ret == -ENOTTY)
+        {
+          *(FAR int *)(uintptr_t)arg = filep->f_oflags;
+          ret = OK;
+        }
+        break;
+
+      case FIOC_SETFLAGS:
+        if (ret == -ENOTTY)
+          {
+            filep->f_oflags = *(FAR int *)(uintptr_t)arg;
+            ret = OK;
+          }
+        break;
+
 #ifdef CONFIG_FDSAN
       case FIOC_SETTAG_FDSAN:
         filep->f_tag_fdsan = *(FAR uint64_t *)arg;
