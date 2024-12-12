@@ -188,7 +188,10 @@ def resolve_type(dwarfinfo, die):
         name, _ = resolve_type(dwarfinfo, base_type_die)
         size = 0
         for child in die.iter_children():
-            if child.tag == "DW_TAG_subrange_type":
+            if (
+                child.tag == "DW_TAG_subrange_type"
+                and "DW_AT_upper_bound" in child.attributes
+            ):
                 size = child.attributes["DW_AT_upper_bound"].value + 1
                 break
 
