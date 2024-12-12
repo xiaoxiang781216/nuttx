@@ -41,7 +41,6 @@ set(SRCS
     tricore_sigdeliver.c
     tricore_stackframe.c
     tricore_svcall.c
-    tricore_switchcontext.c
     tricore_systimer.c
     tricore_tcbinfo.c
     tricore_trapcall.c
