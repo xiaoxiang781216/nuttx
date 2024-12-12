@@ -348,7 +348,9 @@ void clock_synchronize_monotonic(FAR const struct timespec *tp)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_RTC) && !defined(CONFIG_SCHED_TICKLESS) && !defined(CONFIG_CLOCK_TIMEKEEPING)
+#if defined(CONFIG_RTC) && !defined(CONFIG_SCHED_TICKLESS) && \
+    !defined(CONFIG_CLOCK_TIMEKEEPING) && !defined(CONFIG_ALARM_ARCH) && \
+    !defined(CONFIG_TIMER_ARCH)
 void clock_resynchronize(FAR struct timespec *rtc_diff)
 {
   struct timespec rtc_time;
@@ -437,7 +439,8 @@ void clock_resynchronize(FAR struct timespec *rtc_diff)
  *
  ****************************************************************************/
 
-#ifndef CONFIG_SCHED_TICKLESS
+#if !defined(CONFIG_SCHED_TICKLESS) && \
+    !defined(CONFIG_ALARM_ARCH) && !defined(CONFIG_TIMER_ARCH)
 void clock_timer(void)
 {
   irqstate_t flags;
