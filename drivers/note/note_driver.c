@@ -1624,6 +1624,7 @@ void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
                           next += len;
                         }
                       break;
+#ifdef CONFIG_HAVE_DOUBLE
                       case NOTE_PRINTF_DOUBLE:
                         {
                           var->d = va_arg(va, double);
@@ -1635,6 +1636,7 @@ void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
                           next += sizeof(var->d);
                         }
                       break;
+#endif
                     }
                 }
             }
