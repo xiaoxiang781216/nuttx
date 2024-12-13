@@ -62,5 +62,4 @@ class FileList(Value):
     """struct filelist_s"""
 
     fl_rows: Value
-    fl_crefs: Value
     fl_files: Value
