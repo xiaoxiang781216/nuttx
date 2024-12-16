@@ -443,6 +443,7 @@ void rpmsg_device_created(FAR struct rpmsg_s *rpmsg)
         }
     }
 
+  upgrade_read(&g_rpmsg_lock);
   rpmsg->init = true;
   up_write(&g_rpmsg_lock);
 
@@ -580,7 +581,7 @@ int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg)
   needlock = !up_interrupt_context() && !sched_idletask();
   if (needlock)
     {
-      nxrmutex_lock(&g_rpmsg_lock);
+      down_read(&g_rpmsg_lock);
     }
 
   metal_list_for_each(&g_rpmsg, node)
@@ -600,7 +601,7 @@ int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg)
 
   if (needlock)
     {
-      nxrmutex_unlock(&g_rpmsg_lock);
+      up_read(&g_rpmsg_lock);
     }
 
   return ret;
