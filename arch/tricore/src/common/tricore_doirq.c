@@ -84,7 +84,7 @@ IFX_INT_WRAPPER(CONFIG_CPU_COREID)
 
   /* Check for a context switch. */
 
-  if (regs != tcb->xcp.regs)
+  if (*running_task != tcb)
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
