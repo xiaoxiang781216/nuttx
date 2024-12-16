@@ -146,7 +146,13 @@ function setup_environment()
   echo "*************************************************************************************"
   echo "The environment of Vela depends on above tools, Run the following command to install:"
   echo ""
-  echo " sudo dpkg --add-architecture i386"
+
+  for (( i = 0; i < ${#INSTALLS[*]}; i++)); do
+    if [[ "${INSTALLS[$i]}" == *":i386" ]]; then
+      echo " sudo dpkg --add-architecture i386"
+      break
+    fi
+  done
 
   for (( i = 0; i < ${#INSTALLS[*]}; i++)); do
     result=`apt-cache search ${INSTALLS[$i]}`
