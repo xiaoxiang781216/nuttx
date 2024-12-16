@@ -111,27 +111,31 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   tcb = this_task();
 
+  if (tcb != *running_task)
+    {
 #ifdef CONFIG_ARCH_ADDRENV
-  /* Make sure that the address environment for the previously
-   * running task is closed down gracefully (data caches dump,
-   * MMU flushed) and set up the address environment for the new
-   * thread at the head of the ready-to-run list.
-   */
+      /* Make sure that the address environment for the previously
+       * running task is closed down gracefully (data caches dump,
+       * MMU flushed) and set up the address environment for the new
+       * thread at the head of the ready-to-run list.
+       */
 
-  addrenv_switch(NULL);
+      addrenv_switch(NULL);
 #endif
 
-  /* Update scheduler parameters */
+      /* Update scheduler parameters */
 
-  nxsched_suspend_scheduler(*running_task);
-  nxsched_resume_scheduler(tcb);
+      nxsched_suspend_scheduler(*running_task);
+      nxsched_resume_scheduler(tcb);
 
-  /* Record the new "running" task when context switch occurred.
-   * g_running_tasks[] is only used by assertion logic for reporting
-   * crashes.
-   */
+      /* Record the new "running" task when context switch occurred.
+       * g_running_tasks[] is only used by assertion logic for reporting
+       * crashes.
+       */
 
-  *running_task = tcb;
+      *running_task = tcb;
+    }
+
   regs = tcb->xcp.regs;
 #endif
 
