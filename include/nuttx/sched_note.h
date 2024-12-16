@@ -479,27 +479,36 @@ struct note_heap_s
   size_t used;
 };
 
+/* Mannually aligned to the
+ * 4-byte boundary as some compilers
+ * like GHS prefers alignment and it's
+ * no harm anyway.
+ * Without packing the struct, implicitly
+ * alignment will lead to an incorrect result
+ * from SIZEOF_NOTE_PRINTF/SIZEOF_NOTE_EVENT
+ */
+
 struct note_printf_s
 {
   struct note_common_s npt_cmn; /* Common note parameters */
   uintptr_t npt_ip;             /* Instruction pointer called from */
   FAR const char *npt_fmt;      /* Printf format string */
   uint32_t npt_type;            /* Printf parameter type */
-  char npt_data[1];             /* Print arguments */
+  char npt_data[4];             /* Print arguments */
 };
 
 #define SIZEOF_NOTE_PRINTF(n) (sizeof(struct note_printf_s) + \
-                              ((n) - 1) * sizeof(uint8_t))
+                              ((n) - 4) * sizeof(uint8_t))
 
 struct note_event_s
 {
   struct note_common_s nev_cmn;      /* Common note parameters */
   uintptr_t nev_ip;                  /* Instruction pointer called from */
-  uint8_t nev_data[1];               /* Event data */
+  uint8_t nev_data[4];               /* Event data */
 };
 
 #define SIZEOF_NOTE_EVENT(n) (sizeof(struct note_event_s) + \
-                             ((n)) * sizeof(uint8_t))
+                             ((n - 4)) * sizeof(uint8_t))
 
 struct note_counter_s
 {
