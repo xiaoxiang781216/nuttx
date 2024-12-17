@@ -466,6 +466,10 @@
 
 #define XMMAREA_REGS                (26)
 
+/* Aux register used by implementation */
+
+#define REG_AUX                     (27 + XMMAREA_REG_OFFSET)
+
 /* NOTE 2: This is not really state data.  Rather, this is just a convenient
  *   way to pass parameters from the interrupt handler to C code.
  */
