@@ -76,11 +76,11 @@ static struct mm_map_s g_kmm_map;
  *
  ****************************************************************************/
 
-static int get_user_pages(FAR void **pages, size_t npages, uintptr_t vaddr)
+static int get_user_pages(FAR struct tcb_s *tcb, FAR void **pages,
+                          size_t npages, uintptr_t vaddr)
 {
-  FAR struct tcb_s *tcb = this_task();
-  uintptr_t         page;
-  int               i;
+  uintptr_t page;
+  int       i;
 
   /* Find the pages associated with the user virtual address space */
 
@@ -171,19 +171,18 @@ errout_with_vaddr:
  *   Map a single user page into kernel memory.
  *
  * Input Parameters:
- *   pages  - Pointer to buffer that contains the physical page addresses.
- *   npages - Amount of pages.
- *   prot   - Access right flags.
+ *   tcb   - The tcb of the task whose address environment the mapping
+ *           belongs to.
+ *   vaddr - The virtual address of the page to map.
  *
  * Returned Value:
  *   Pointer to the mapped virtual memory on success; NULL on failure
  *
  ****************************************************************************/
 
-static FAR void *map_single_user_page(uintptr_t vaddr)
+static FAR void *map_single_user_page(FAR struct tcb_s *tcb, uintptr_t vaddr)
 {
-  FAR struct tcb_s *tcb = this_task();
-  uintptr_t         page;
+  uintptr_t page;
 
   /* Find the page associated with this virtual address */
 
@@ -406,6 +405,8 @@ void kmm_unmap(FAR void *kaddr)
  *   a continuous virtual memory area.
  *
  * Input Parameters:
+ *   tcb   - The tcb of the task whose address environment the mapping
+ *           belongs to.
  *   uaddr - The user virtual address where mapping begins.
  *   size  - Size of the region.
  *
@@ -414,7 +415,7 @@ void kmm_unmap(FAR void *kaddr)
  *
  ****************************************************************************/
 
-FAR void *kmm_map_user(FAR void *uaddr, size_t size)
+FAR void *kmm_map_user(FAR struct tcb_s *tcb, FAR void *uaddr, size_t size)
 {
   FAR void **pages;
   uintptr_t vaddr;
@@ -447,7 +448,7 @@ FAR void *kmm_map_user(FAR void *uaddr, size_t size)
     {
       /* Yes, can simply return the kernel addressable virtual address */
 
-      vaddr = (uintptr_t)map_single_user_page(vaddr);
+      vaddr = (uintptr_t)map_single_user_page(tcb, vaddr);
       return (FAR void *)(vaddr + offset);
     }
 
@@ -461,7 +462,7 @@ FAR void *kmm_map_user(FAR void *uaddr, size_t size)
 
   /* Fetch the physical pages for the user virtual address range */
 
-  ret = get_user_pages(pages, npages, vaddr);
+  ret = get_user_pages(tcb, pages, npages, vaddr);
   if (ret < 0)
     {
       goto errout_with_pages;
@@ -493,6 +494,8 @@ errout_with_pages:
  *   returns the kernel addressable page pool virtual address.
  *
  * Input Parameters:
+ *   tcb   - The tcb of the task whose address environment the mapping
+ *           belongs to.
  *   uaddr - The virtual address of the user page.
  *
  * Returned Value:
@@ -500,7 +503,7 @@ errout_with_pages:
  *
  ****************************************************************************/
 
-FAR void *kmm_map_user_page(FAR void *uaddr)
+FAR void *kmm_map_user_page(FAR struct tcb_s *tcb, FAR void *uaddr)
 {
   uintptr_t vaddr;
   uintptr_t offset;
@@ -523,7 +526,7 @@ FAR void *kmm_map_user_page(FAR void *uaddr)
   offset = vaddr & MM_PGMASK;
   vaddr = MM_PGALIGNDOWN(vaddr);
 
-  vaddr = (uintptr_t)map_single_user_page(vaddr);
+  vaddr = (uintptr_t)map_single_user_page(tcb, vaddr);
   if (!vaddr)
     {
       return NULL;
