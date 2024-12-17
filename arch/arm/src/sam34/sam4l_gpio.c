@@ -31,6 +31,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
+#include <nuttx/spinlock.h>
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
@@ -43,6 +44,8 @@
  ****************************************************************************/
 
 #ifdef CONFIG_DEBUG_GPIO_INFO
+static spinlock_t g_configgpio_lock = SP_UNLOCKED;
+
 static const char g_portchar[4]   =
 {
   'A', 'B', 'C', 'D'
@@ -527,7 +530,7 @@ int sam_dumpgpio(uint32_t pinset, const char *msg)
 
   /* The following requires exclusive access to the GPIO registers */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_configgpio_lock);
 
   gpioinfo("GPIO%c pinset: %08x base: %08x -- %s\n",
            g_portchar[port], pinset, base, msg);
@@ -557,7 +560,7 @@ int sam_dumpgpio(uint32_t pinset, const char *msg)
            getreg32(base + SAM_GPIO_PARAMETER_OFFSET),
            getreg32(base + SAM_GPIO_VERSION_OFFSET));
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_configgpio_lock, flags);
   return OK;
 }
 #endif

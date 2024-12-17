@@ -30,6 +30,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
+#include <nuttx/spinlock.h>
 #include <arch/board/board.h>
 
 #include "mips_internal.h"
@@ -48,6 +49,8 @@
 /****************************************************************************
  * Private Data
  ****************************************************************************/
+
+static spinlock_t g_configgpio_lock = SP_UNLOCKED;
 
 static const uintptr_t g_gpiobase[CHIP_NPORTS] =
 {
@@ -148,7 +151,7 @@ int pic32mx_configgpio(uint16_t cfgset)
 
       /* Is this an input or an output? */
 
-      flags = enter_critical_section();
+      flags = spin_lock_irqsave(&g_configgpio_lock);
       if (pic32mx_output(cfgset))
         {
           /* Not analog */
@@ -204,7 +207,7 @@ int pic32mx_configgpio(uint16_t cfgset)
 #endif
         }
 
-      leave_critical_section(flags);
+      spin_unlock_irqrestore(&g_configgpio_lock, flags);
       return OK;
     }
 

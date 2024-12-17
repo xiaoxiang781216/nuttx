@@ -44,6 +44,12 @@
  ****************************************************************************/
 
 /****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static spinlock_t g_configgpio_lock = SP_UNLOCKED;
+
+/****************************************************************************
  * Public Data
  ****************************************************************************/
 
@@ -171,7 +177,7 @@ int pic32mz_configgpio(pinset_t cfgset)
 
       base = g_gpiobase[port];
 
-      flags = spin_lock_irqsave(NULL);
+      flags = spin_lock_irqsave(&g_configgpio_lock);
 
       /* Is Slew Rate control enabled? */
 
@@ -241,7 +247,7 @@ int pic32mz_configgpio(pinset_t cfgset)
             }
         }
 
-      spin_unlock_irqrestore(NULL, flags);
+      spin_unlock_irqrestore(&g_configgpio_lock, flags);
       return OK;
     }
 

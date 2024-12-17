@@ -31,6 +31,7 @@
 #include <debug.h>
 
 #include <nuttx/irq.h>
+#include <nuttx/spinlock.h>
 
 #include "arm_internal.h"
 #include "chip.h"
@@ -40,6 +41,12 @@
 #if defined(CONFIG_STM32_USE_LEGACY_PINMAP)
 #  pragma message "CONFIG_STM32_USE_LEGACY_PINMAP will be deprecated migrate board.h see tools/stm32_pinmap_tool.py"
 #endif
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static spinlock_t g_configgpio_lock = SP_UNLOCKED;
 
 /****************************************************************************
  * Public Data
@@ -297,7 +304,7 @@ int stm32_configgpio(uint32_t cfgset)
    * exclusive access to all of the GPIO configuration registers.
    */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_configgpio_lock);
 
   /* Decode the mode and configuration */
 
@@ -337,7 +344,7 @@ int stm32_configgpio(uint32_t cfgset)
         {
           /* Its an alternate function pin... we can return early */
 
-          leave_critical_section(flags);
+          spin_unlock_irqrestore(&g_configgpio_lock, flags);
           return OK;
         }
     }
@@ -364,7 +371,7 @@ int stm32_configgpio(uint32_t cfgset)
         {
           /* Neither... we can return early */
 
-          leave_critical_section(flags);
+          spin_unlock_irqrestore(&g_configgpio_lock, flags);
           return OK;
         }
     }
@@ -391,7 +398,7 @@ int stm32_configgpio(uint32_t cfgset)
   regval |= (1 << pin);
   putreg32(regval, regaddr);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_configgpio_lock, flags);
   return OK;
 }
 #endif
@@ -466,7 +473,7 @@ int stm32_configgpio(uint32_t cfgset)
    * exclusive access to all of the GPIO configuration registers.
    */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_configgpio_lock);
 
   /* Determine the alternate function (Only alternate function pins) */
 
@@ -682,7 +689,7 @@ int stm32_configgpio(uint32_t cfgset)
       putreg32(regval, regaddr);
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_configgpio_lock, flags);
   return OK;
 }
 #endif
