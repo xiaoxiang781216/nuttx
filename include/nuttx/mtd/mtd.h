@@ -124,6 +124,17 @@ struct mtd_geometry_s
   char     model[NAME_MAX + 1];
 };
 
+struct rammtd_config_s
+{
+  FAR void *start;              /* Start of RAM */
+  size_t    size;               /* Size of RAM */
+  uint32_t  blocksize;          /* Size of one read/write block. */
+  uint32_t  erasesize;          /* Size of one erase blocks -- must be a multiple
+                                 * of blocksize. */
+  uint8_t   erase_state;
+  char      name[NAME_MAX + 1]; /* Name of the device */
+};
+
 /* This structure describes a range of sectors to be protected or
  * unprotected.
  */
@@ -500,6 +511,22 @@ FAR struct mtd_dev_s *mx35_initialize(FAR struct spi_dev_s *dev);
  ****************************************************************************/
 
 FAR struct mtd_dev_s *rammtd_initialize(FAR uint8_t *start, size_t size);
+
+/****************************************************************************
+ * Name: rammtd_initialize_with_config
+ *
+ * Description:
+ *   Create and initialize a RAM MTD device instance.
+ *
+ * Input Parameters:
+ *   start - Address of the beginning of the allocated RAM regions.
+ *   size  - The size in bytes of the allocated RAM region.
+ *   config - Configuration structure
+ *
+ ****************************************************************************/
+
+FAR struct mtd_dev_s *
+rammtd_initialize_with_config(FAR const struct rammtd_config_s *config);
 
 /****************************************************************************
  * Name: rammtd_uninitialize

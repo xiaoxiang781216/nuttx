@@ -56,21 +56,6 @@
 #  define CONFIG_RAMMTD_ERASESTATE 0xff
 #endif
 
-#if CONFIG_RAMMTD_ERASESTATE != 0xff && CONFIG_RAMMTD_ERASESTATE != 0x00
-#  error "Unsupported value for CONFIG_RAMMTD_ERASESTATE"
-#endif
-
-#if CONFIG_RAMMTD_BLOCKSIZE > CONFIG_RAMMTD_ERASESIZE
-#  error "Must have CONFIG_RAMMTD_BLOCKSIZE <= CONFIG_RAMMTD_ERASESIZE"
-#endif
-
-#undef  RAMMTD_BLKPER
-#define RAMMTD_BLKPER (CONFIG_RAMMTD_ERASESIZE/CONFIG_RAMMTD_BLOCKSIZE)
-
-#if RAMMTD_BLKPER*CONFIG_RAMMTD_BLOCKSIZE != CONFIG_RAMMTD_ERASESIZE
-#  error "CONFIG_RAMMTD_ERASESIZE must be an even multiple of CONFIG_RAMMTD_BLOCKSIZE"
-#endif
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -82,9 +67,10 @@
 
 struct ram_dev_s
 {
-  struct mtd_dev_s mtd;      /* MTD device */
-  FAR uint8_t     *start;    /* Start of RAM */
-  size_t           nblocks;  /* Number of erase blocks */
+  struct mtd_dev_s       mtd;      /* MTD device */
+  struct rammtd_config_s config;   /* Geometry of the device */
+  size_t                 nblocks;  /* Number of erase blocks */
+  size_t                 blkper;   /* Number of blocks per erase */
 };
 
 /****************************************************************************
@@ -156,11 +142,14 @@ static void *ram_write(FAR void *dest, FAR const void *src, size_t len)
        * changes because they are not in the erased state.
        */
 
-#if CONFIG_RAMMTD_ERASESTATE == 0xff
-      newvalue = oldvalue & srcvalue; /* We can only clear bits */
-#else /* CONFIG_RAMMTD_ERASESTATE == 0x00 */
-      newvalue = oldvalue | srcvalue; /* We can only set bits */
-#endif
+      if (oldvalue == 0xff)
+        {
+          newvalue = oldvalue & srcvalue; /* We can only clear bits */
+        }
+      else /* oldvalue == 0x00 */
+        {
+          newvalue = oldvalue | srcvalue; /* We can only set bits */
+        }
 
       /* Report any attempt to change the value of bits that are not in the
        * erased state.
@@ -208,23 +197,12 @@ static int ram_erase(FAR struct mtd_dev_s *dev, off_t startblock,
       nblocks = priv->nblocks - startblock;
     }
 
-  /* Convert the erase block to a logical block and the number of blocks
-   * in logical block numbers
-   */
-
-  startblock *= RAMMTD_BLKPER;
-  nblocks    *= RAMMTD_BLKPER;
-
-  /* Get the offset corresponding to the first block and the size
-   * corresponding to the number of blocks.
-   */
-
-  offset = startblock * CONFIG_RAMMTD_BLOCKSIZE;
-  nbytes = nblocks * CONFIG_RAMMTD_BLOCKSIZE;
+  offset = startblock * priv->config.erasesize;
+  nbytes = nblocks * priv->config.erasesize;
 
   /* Then erase the data in RAM */
 
-  memset(&priv->start[offset], CONFIG_RAMMTD_ERASESTATE, nbytes);
+  memset(priv->config.start + offset, priv->config.erase_state, nbytes);
   return OK;
 }
 
@@ -246,7 +224,7 @@ static ssize_t ram_bread(FAR struct mtd_dev_s *dev,
 
   /* Don't let the read exceed the size of the ram buffer */
 
-  maxblock = priv->nblocks * RAMMTD_BLKPER;
+  maxblock = priv->nblocks * priv->blkper;
   if (startblock >= maxblock)
     {
       return 0;
@@ -261,12 +239,12 @@ static ssize_t ram_bread(FAR struct mtd_dev_s *dev,
    * corresponding to the number of blocks.
    */
 
-  offset = startblock * CONFIG_RAMMTD_BLOCKSIZE;
-  nbytes = nblocks * CONFIG_RAMMTD_BLOCKSIZE;
+  offset = startblock * priv->config.blocksize;
+  nbytes = nblocks * priv->config.blocksize;
 
   /* Then read the data frp, RAM */
 
-  ram_read(buf, &priv->start[offset], nbytes);
+  ram_read(buf, priv->config.start + offset, nbytes);
   return nblocks;
 }
 
@@ -286,7 +264,7 @@ static ssize_t ram_bwrite(FAR struct mtd_dev_s *dev, off_t startblock,
 
   /* Don't let the write exceed the size of the ram buffer */
 
-  maxblock = priv->nblocks * RAMMTD_BLKPER;
+  maxblock = priv->nblocks * priv->blkper;
   if (startblock >= maxblock)
     {
       return 0;
@@ -301,12 +279,12 @@ static ssize_t ram_bwrite(FAR struct mtd_dev_s *dev, off_t startblock,
    * corresponding to the number of blocks.
    */
 
-  offset = startblock * CONFIG_RAMMTD_BLOCKSIZE;
-  nbytes = nblocks * CONFIG_RAMMTD_BLOCKSIZE;
+  offset = startblock * priv->config.blocksize;
+  nbytes = nblocks * priv->config.blocksize;
 
   /* Then write the data to RAM */
 
-  ram_write(&priv->start[offset], buf, nbytes);
+  ram_write(priv->config.start + offset, buf, nbytes);
   return nblocks;
 }
 
@@ -324,7 +302,7 @@ static ssize_t ram_byteread(FAR struct mtd_dev_s *dev, off_t offset,
 
   /* Don't let the read exceed the size of the ram buffer */
 
-  maxoffset = priv->nblocks * CONFIG_RAMMTD_ERASESIZE;
+  maxoffset = priv->nblocks * priv->config.erasesize;
   if (offset >= maxoffset)
     {
       return 0;
@@ -335,7 +313,7 @@ static ssize_t ram_byteread(FAR struct mtd_dev_s *dev, off_t offset,
       nbytes = maxoffset - offset;
     }
 
-  ram_read(buf, &priv->start[offset], nbytes);
+  ram_read(buf, priv->config.start + offset, nbytes);
   return nbytes;
 }
 
@@ -354,7 +332,7 @@ static ssize_t ram_bytewrite(FAR struct mtd_dev_s *dev, off_t offset,
 
   /* Don't let the write exceed the size of the ram buffer */
 
-  maxoffset = priv->nblocks * CONFIG_RAMMTD_ERASESIZE;
+  maxoffset = priv->nblocks * priv->config.erasesize;
   if (offset >= maxoffset)
     {
       return 0;
@@ -367,7 +345,7 @@ static ssize_t ram_bytewrite(FAR struct mtd_dev_s *dev, off_t offset,
 
   /* Then write the data to RAM */
 
-  ram_write(&priv->start[offset], buf, nbytes);
+  ram_write(priv->config.start + offset, buf, nbytes);
   return nbytes;
 }
 #endif
@@ -395,8 +373,8 @@ static int ram_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
                * know the capacity and how to access the device.
                */
 
-              geo->blocksize    = CONFIG_RAMMTD_BLOCKSIZE;
-              geo->erasesize    = CONFIG_RAMMTD_ERASESIZE;
+              geo->blocksize    = priv->config.blocksize;
+              geo->erasesize    = priv->config.erasesize;
               geo->neraseblocks = priv->nblocks;
               ret               = OK;
           }
@@ -410,7 +388,7 @@ static int ram_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
             {
               /* Return (void*) base address of device memory */
 
-              *ppv = (FAR void *)priv->start;
+              *ppv = priv->config.start;
               ret  = OK;
             }
         }
@@ -423,9 +401,9 @@ static int ram_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
           if (info != NULL)
             {
               info->numsectors  = priv->nblocks *
-                                  CONFIG_RAMMTD_ERASESIZE /
-                                  CONFIG_RAMMTD_BLOCKSIZE;
-              info->sectorsize  = CONFIG_RAMMTD_BLOCKSIZE;
+                                  priv->config.erasesize /
+                                  priv->config.blocksize;
+              info->sectorsize  = priv->config.blocksize;
               info->startsector = 0;
               info->parent[0]   = '\0';
               ret               = OK;
@@ -435,11 +413,11 @@ static int ram_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
 
       case MTDIOC_BULKERASE:
         {
-            size_t size = priv->nblocks * CONFIG_RAMMTD_ERASESIZE;
+            size_t size = priv->nblocks * priv->config.erasesize;
 
             /* Erase the entire device */
 
-            memset(priv->start, CONFIG_RAMMTD_ERASESTATE, size);
+            memset(priv->config.start, priv->config.erase_state, size);
             ret = OK;
         }
         break;
@@ -447,7 +425,7 @@ static int ram_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
       case MTDIOC_ERASESTATE:
         {
           FAR uint8_t *result = (FAR uint8_t *)arg;
-          *result = CONFIG_RAMMTD_ERASESTATE;
+          *result = priv->config.erase_state;
 
           ret = OK;
         }
@@ -466,7 +444,7 @@ static int ram_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: rammtd_initialize
+ * Name: rammtd_initialize_with_config
  *
  * Description:
  *   Create and initialize a RAM MTD device instance.
@@ -474,13 +452,20 @@ static int ram_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
  * Input Parameters:
  *   start - Address of the beginning of the allocated RAM regions.
  *   size  - The size in bytes of the allocated RAM region.
+ *   config - Configuration structure
  *
  ****************************************************************************/
 
-FAR struct mtd_dev_s *rammtd_initialize(FAR uint8_t *start, size_t size)
+FAR struct mtd_dev_s *
+rammtd_initialize_with_config(FAR const struct rammtd_config_s *config)
 {
   FAR struct ram_dev_s *priv;
   size_t nblocks;
+
+  DEBUGASSERT(config->erasesize >= config->blocksize);
+  DEBUGASSERT(config->erase_state == 0xff || config->erase_state == 0x00);
+  DEBUGASSERT(config->blocksize != 0 &&
+              config->erasesize % config->blocksize == 0);
 
   /* Create an instance of the RAM MTD device state structure */
 
@@ -491,9 +476,11 @@ FAR struct mtd_dev_s *rammtd_initialize(FAR uint8_t *start, size_t size)
       return NULL;
     }
 
+  memcpy(&priv->config, config, sizeof(struct rammtd_config_s));
+
   /* Force the size to be an even number of the erase block size */
 
-  nblocks = size / CONFIG_RAMMTD_ERASESIZE;
+  nblocks = priv->config.size / priv->config.erasesize;
   if (nblocks < 1)
     {
       ferr("ERROR: Need to provide at least one full erase block\n");
@@ -513,12 +500,39 @@ FAR struct mtd_dev_s *rammtd_initialize(FAR uint8_t *start, size_t size)
   priv->mtd.write  = ram_bytewrite;
 #endif
   priv->mtd.ioctl  = ram_ioctl;
-  priv->mtd.name   = "rammtd";
+  priv->mtd.name   = priv->config.name;
 
-  priv->start      = start;
   priv->nblocks    = nblocks;
+  priv->blkper = priv->config.erasesize / priv->config.blocksize;
 
   return &priv->mtd;
+}
+
+/****************************************************************************
+ * Name: rammtd_initialize
+ *
+ * Description:
+ *   Create and initialize a RAM MTD device instance.
+ *
+ * Input Parameters:
+ *   start - Address of the beginning of the allocated RAM regions.
+ *   size  - The size in bytes of the allocated RAM region.
+ *
+ ****************************************************************************/
+
+FAR struct mtd_dev_s *rammtd_initialize(FAR uint8_t *start, size_t size)
+{
+  const struct rammtd_config_s config =
+    {
+      start,
+      size,
+      CONFIG_RAMMTD_BLOCKSIZE,
+      CONFIG_RAMMTD_ERASESIZE,
+      CONFIG_RAMMTD_ERASESTATE,
+      "rammtd",
+    };
+
+  return rammtd_initialize_with_config(&config);
 }
 
 /****************************************************************************
