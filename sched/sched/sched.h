@@ -403,6 +403,8 @@ void nxsched_process_cpuload_ticks(clock_t ticks);
 
 /* Critical section monitor */
 
+void nxsched_switch_context(FAR struct tcb_s *from, FAR struct tcb_s *to);
+
 #ifdef CONFIG_SCHED_CRITMONITOR
 void nxsched_resume_critmon(FAR struct tcb_s *tcb);
 void nxsched_suspend_critmon(FAR struct tcb_s *tcb);
@@ -512,7 +514,7 @@ static inline_function bool nxsched_add_prioritized(FAR struct tcb_s *tcb,
   return ret;
 }
 
-#  ifdef CONFIG_SMP
+#ifdef CONFIG_SMP
 static inline_function int nxsched_select_cpu(cpu_set_t affinity)
 {
   uint8_t minprio;
@@ -556,5 +558,5 @@ static inline_function int nxsched_select_cpu(cpu_set_t affinity)
   DEBUGASSERT(cpu != 0xff);
   return cpu;
 }
-#  endif
+#endif
 #endif /* __SCHED_SCHED_SCHED_H */
