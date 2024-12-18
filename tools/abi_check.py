@@ -304,66 +304,71 @@ def find_function_signature(elf_path, function_list, die_check):
 
         dwarf_info = elffile.get_dwarf_info()
 
-        for die in (
-            die
-            for CU in dwarf_info.iter_CUs()
-            for die in CU.iter_DIEs()
-            if die_check(die)
-        ):
-            name = die.attributes["DW_AT_name"].value.decode("utf-8")
-            if "DW_AT_linkage_name" in die.attributes:
+        for CU in dwarf_info.iter_CUs():
+            for die in (die for die in CU.iter_DIEs() if die_check(die)):
+                name = die.attributes["DW_AT_name"].value.decode("utf-8")
+                if "DW_AT_linkage_name" in die.attributes:
+                    if name not in function_list:
+                        name = die.attributes["DW_AT_linkage_name"].value.decode(
+                            "utf-8"
+                        )
+
                 if name not in function_list:
-                    name = die.attributes["DW_AT_linkage_name"].value.decode("utf-8")
-
-            if name not in function_list:
-                continue
-
-            prototype = {}
-
-            return_type = "void"
-            return_type_size = 0
-            retrun_type_field = []
-
-            if "DW_AT_type" in die.attributes:
-                return_type_ref = resolve_referenced_die(dwarf_info, die)
-                return_type, return_type_size = resolve_type(
-                    dwarf_info, return_type_ref
-                )
-                retrun_type_field = resolve_combination_type(
-                    dwarf_info, return_type_ref
-                )
-
-            prototype["return"] = {
-                "type": return_type,
-                "size": return_type_size,
-                "field": retrun_type_field,
-            }
-            prototype["parameters"] = []
-            for child in die.iter_children():
-                if child.tag != "DW_TAG_formal_parameter":
                     continue
 
-                param_type_ref = resolve_referenced_die(dwarf_info, child)
-                param_type, param_type_size = resolve_type(dwarf_info, param_type_ref)
-                param_name = (
-                    child.attributes["DW_AT_name"].value.decode("utf-8")
-                    if "DW_AT_name" in child.attributes
-                    else "unnamed"
-                )
+                prototype = {}
 
-                param_type_field = resolve_combination_type(dwarf_info, param_type_ref)
-                prototype["parameters"].append(
-                    {
-                        "name": param_name,
-                        "type": param_type,
-                        "size": param_type_size,
-                        "field": param_type_field,
-                    }
-                )
+                return_type = "void"
+                return_type_size = 0
+                retrun_type_field = []
 
-            prototype["file_path"] = get_die_file_path(die, dwarf_info)
-            signature.append((name, prototype))
-            function_list.remove(name)
+                if "DW_AT_type" in die.attributes:
+                    return_type_ref = resolve_referenced_die(dwarf_info, die)
+                    return_type, return_type_size = resolve_type(
+                        dwarf_info, return_type_ref
+                    )
+                    retrun_type_field = resolve_combination_type(
+                        dwarf_info, return_type_ref
+                    )
+
+                prototype["return"] = {
+                    "type": return_type,
+                    "size": return_type_size,
+                    "field": retrun_type_field,
+                }
+                prototype["parameters"] = []
+                for child in die.iter_children():
+                    if child.tag != "DW_TAG_formal_parameter":
+                        continue
+
+                    param_type_ref = resolve_referenced_die(dwarf_info, child)
+                    param_type, param_type_size = resolve_type(
+                        dwarf_info, param_type_ref
+                    )
+                    param_name = (
+                        child.attributes["DW_AT_name"].value.decode("utf-8")
+                        if "DW_AT_name" in child.attributes
+                        else "unnamed"
+                    )
+
+                    param_type_field = resolve_combination_type(
+                        dwarf_info, param_type_ref
+                    )
+                    prototype["parameters"].append(
+                        {
+                            "name": param_name,
+                            "type": param_type,
+                            "size": param_type_size,
+                            "field": param_type_field,
+                        }
+                    )
+
+                prototype["file_path"] = get_die_file_path(die, dwarf_info)
+                signature.append((name, prototype))
+                function_list.remove(name)
+
+            dwarf_info._cu_cache.clear()
+            dwarf_info._cu_offsets_map.clear()
 
     return (signature, function_list)
 
