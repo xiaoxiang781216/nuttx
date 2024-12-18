@@ -20,37 +20,33 @@
 
 # Toolchain
 
+set(CMAKE_C_COMPILER_FORCED TRUE)
+set(CMAKE_CXX_COMPILER_FORCED TRUE)
+
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_VERSION 1)
 
-set(ARCH_SUBDIR)
-
-if(CONFIG_ARCH_TC3XX) # TC3XX
-  set(ARCH_SUBDIR tc3xx)
-else()
-  set(ARCH_SUBDIR tc3xx)
-endif()
-
+set(ARCH_SUBDIR chip)
 include(${ARCH_SUBDIR})
 
 set(CMAKE_ASM_COMPILER cctc)
 set(CMAKE_C_COMPILER ${CMAKE_ASM_COMPILER})
-set(CMAKE_CXX_COMPILER cctc)
+set(CMAKE_CXX_COMPILER cptc)
 set(CMAKE_STRIP strip --strip-unneeded)
-set(CMAKE_OBJCOPY echo)
+set(CMAKE_OBJCOPY objcopy)
 set(CMAKE_OBJDUMP elfdump)
 
 set(CMAKE_LINKER cctc)
 set(CMAKE_LD cctc)
-set(CMAKE_AR artc -r)
+set(CMAKE_AR artc)
 set(CMAKE_NM nm)
 set(CMAKE_RANLIB ranlib)
 
 # override the ARCHIVE command
 
-set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> rcs <TARGET> <LINK_FLAGS> <OBJECTS>")
-set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> rcs <TARGET> <LINK_FLAGS> <OBJECTS>")
-set(CMAKE_ASM_ARCHIVE_CREATE "<CMAKE_AR> rcs <TARGET> <LINK_FLAGS> <OBJECTS>")
+set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> -r <TARGET> <LINK_FLAGS> <OBJECTS>")
+set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> -r <TARGET> <LINK_FLAGS> <OBJECTS>")
+set(CMAKE_ASM_ARCHIVE_CREATE "<CMAKE_AR> -r <TARGET> <LINK_FLAGS> <OBJECTS>")
 
 # Architecture flags
 
@@ -136,3 +132,36 @@ set(TASKING_WARNINGS
     500,507,508,525,526,527,529,544,549,553,560,562,557,558,587,588,589)
 
 add_compile_options(--pass-c=--no-warnings=${TASKING_WARNINGS})
+
+set(NUTTX_TOOLCHAIN_PREPROCESS_DEFINED true)
+
+function(nuttx_generate_preprocess_target)
+
+  # parse arguments into variables
+
+  nuttx_parse_function_args(
+    FUNC
+    nuttx_generate_preprocess_target
+    ONE_VALUE
+    SOURCE_FILE
+    TARGET_FILE
+    MULTI_VALUE
+    DEPENDS
+    REQUIRED
+    SOURCE_FILE
+    TARGET_FILE
+    ARGN
+    ${ARGN})
+
+  get_filename_component(TARGET_DIR ${TARGET_FILE} DIRECTORY)
+  get_filename_component(SOURCE_FILE_NAME ${SOURCE_FILE} NAME_WE)
+  set(TARGET_FILE_TEMP "${TARGET_DIR}/${SOURCE_FILE_NAME}.cpp")
+
+  add_custom_command(
+    OUTPUT ${TARGET_FILE}
+    COMMAND ${CMAKE_COMMAND} -E copy ${SOURCE_FILE} ${TARGET_FILE_TEMP}
+    COMMAND ${PREPROCESS} --preprocess=+noline, -I${CMAKE_BINARY_DIR}/include
+            ${TARGET_FILE_TEMP} -o ${TARGET_FILE}
+    COMMAND ${CMAKE_COMMAND} -E remove ${TARGET_FILE_TEMP}
+    DEPENDS ${SOURCE_FILE} ${DEPENDS})
+endfunction()

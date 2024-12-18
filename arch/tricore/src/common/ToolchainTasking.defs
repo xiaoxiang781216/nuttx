@@ -43,13 +43,13 @@ endif
 # Tasking toolchain
 
 CC                = cctc
-CXX               = cctc
-CPP               = cctc $(ARCHOPTIMIZATION)
+CXX               = cptc
+CPP               = cptc $(ARCHOPTIMIZATION)
 LD                = cctc
 STRIP             = strip --strip-unneeded
 AR                = artc -r
 NM                = nm
-OBJCOPY           = echo
+OBJCOPY           = objcopy
 OBJDUMP           = elfdump
 
 ARCHOPTIMIZATION += --lsl-core=vtc
