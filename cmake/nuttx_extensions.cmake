@@ -127,7 +127,7 @@ endfunction()
 # Usage: nuttx_include_directories("include/path1" "include/path2")
 function(nuttx_include_directories)
   if(TARGET ${NX_CURRENT_LIBRARY})
-    target_include_directories(${NX_CURRENT_LIBRARY} PRIVATE ${ARGN})
+    target_include_directories(${NX_CURRENT_LIBRARY} PUBLIC ${ARGN})
   endif()
 endfunction()
 
