@@ -56,10 +56,6 @@
 
 void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 {
-  /* Update scheduler parameters */
-
-  nxsched_suspend_scheduler(rtcb);
-
   /* Are we in an interrupt handler? */
 
 #if 0  /* REVISIT */
@@ -73,10 +69,6 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
        */
 
       or1k_savestate(rtcb->xcp.regs);
-
-      /* Update scheduler parameters */
-
-      nxsched_resume_scheduler(tcb);
 
       /* Then switch contexts.  Any necessary address environment
        * changes will be made when the interrupt returns.
@@ -104,7 +96,7 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 #endif
       /* Update scheduler parameters */
 
-      nxsched_resume_scheduler(tcb);
+      nxsched_switch_context(rtcb, tcb);
 
       /* Record the new "running" task */
 
