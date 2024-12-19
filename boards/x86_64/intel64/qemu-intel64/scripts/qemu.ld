@@ -100,9 +100,13 @@ SECTIONS
         *(.got)
         *(.gcc_except_table)
         *(.gnu.linkonce.r.*)
-        *(.eh_frame)
         *(.note.gnu.*)
         _erodata = ABSOLUTE(.);
+    }
+
+    .eh_frame ALIGN(0x1000) :
+    {
+        KEEP(*(.eh_frame))
     }
 
     .tdata_tbss ALIGN(0x1000) :
