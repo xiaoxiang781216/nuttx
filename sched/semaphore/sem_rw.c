@@ -189,6 +189,41 @@ out:
 }
 
 /****************************************************************************
+ * Name: upgrade_read
+ *
+ * Description:
+ *   Upgrade read lock to write lock on a read-write-lock object.
+ *
+ * Input Parameters:
+ *   rwsem  - Pointer to the read-write-lock descriptor.
+ *
+ ****************************************************************************/
+
+void upgrade_read(FAR rw_semaphore_t *rwsem)
+{
+  nxmutex_lock(&rwsem->protected);
+
+  DEBUGASSERT(rwsem->writer == 0);
+  DEBUGASSERT(rwsem->reader > 0);
+  DEBUGASSERT(rwsem->holder == RWSEM_NO_HOLDER);
+
+  while (rwsem->reader > 1)
+    {
+      rwsem->waiter++;
+      nxmutex_unlock(&rwsem->protected);
+      nxsem_wait(&rwsem->waiting);
+      nxmutex_lock(&rwsem->protected);
+      rwsem->waiter--;
+    }
+
+  rwsem->reader--;
+  rwsem->writer++;
+  rwsem->holder = _SCHED_GETTID();
+
+  nxmutex_unlock(&rwsem->protected);
+}
+
+/****************************************************************************
  * Name: down_write_trylock
  *
  * Description:
