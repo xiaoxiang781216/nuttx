@@ -276,6 +276,15 @@ static int sim_audio_open(struct sim_audio_s *priv)
       goto fail;
     }
 
+  if (!priv->playback)
+    {
+      ret = host_uninterruptible(snd_pcm_start, pcm);
+      if (ret < 0)
+        {
+          goto fail;
+        }
+    }
+
   priv->pcm = pcm;
 
   return 0;
