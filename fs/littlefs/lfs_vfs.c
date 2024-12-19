@@ -756,7 +756,7 @@ static int littlefs_fstat(FAR const struct file *filep, FAR struct stat *buf)
 
   /* Call LFS to get file size */
 
-  path = lib_get_pathbuffer();
+  path = lib_get_tempbuffer(PATH_MAX);
   if (path == NULL)
     {
       return -ENOMEM;
@@ -766,14 +766,14 @@ static int littlefs_fstat(FAR const struct file *filep, FAR struct stat *buf)
                                               PATH_MAX));
   if (ret < 0)
     {
-      lib_put_pathbuffer(path);
+      lib_put_tempbuffer(path);
       return ret;
     }
 
   ret = nxmutex_lock(&fs->lock);
   if (ret < 0)
     {
-      lib_put_pathbuffer(path);
+      lib_put_tempbuffer(path);
       return ret;
     }
 
@@ -812,7 +812,7 @@ static int littlefs_fstat(FAR const struct file *filep, FAR struct stat *buf)
                          buf->st_blksize;
 
 errout:
-  lib_put_pathbuffer(path);
+  lib_put_tempbuffer(path);
   nxmutex_unlock(&fs->lock);
   return ret;
 }
@@ -834,7 +834,7 @@ static int littlefs_fchstat(FAR const struct file *filep,
   inode = filep->f_inode;
   fs    = inode->i_private;
 
-  path = lib_get_pathbuffer();
+  path = lib_get_tempbuffer(PATH_MAX);
   if (path == NULL)
     {
       return -ENOMEM;
@@ -846,14 +846,14 @@ static int littlefs_fchstat(FAR const struct file *filep,
                                               PATH_MAX));
   if (ret < 0)
     {
-      lib_put_pathbuffer(path);
+      lib_put_tempbuffer(path);
       return ret;
     }
 
   ret = nxmutex_lock(&fs->lock);
   if (ret < 0)
     {
-      lib_put_pathbuffer(path);
+      lib_put_tempbuffer(path);
       return ret;
     }
 
@@ -908,7 +908,7 @@ static int littlefs_fchstat(FAR const struct file *filep,
     }
 
 errout:
-  lib_put_pathbuffer(path);
+  lib_put_tempbuffer(path);
   nxmutex_unlock(&fs->lock);
   return ret;
 }
@@ -1551,7 +1551,7 @@ static int littlefs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
 
   if (len > 0 && relpath[len - 1] == '/')
     {
-      path = lib_get_pathbuffer();
+      path = lib_get_tempbuffer(PATH_MAX);
       if (path == NULL)
         {
           return -ENOMEM;
@@ -1603,7 +1603,7 @@ static int littlefs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
 errout:
   if (path != relpath)
     {
-      lib_put_pathbuffer(path);
+      lib_put_tempbuffer(path);
     }
 
   return ret;
