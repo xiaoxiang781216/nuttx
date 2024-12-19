@@ -1356,7 +1356,7 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
       return totalsize;
     }
 
-  path = lib_get_pathbuffer();
+  path = lib_get_tempbuffer(PATH_MAX);
   if (path == NULL)
     {
       return totalsize;
@@ -1406,12 +1406,12 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
 
       if (totalsize >= buflen)
         {
-          lib_put_pathbuffer(path);
+          lib_put_tempbuffer(path);
           return totalsize;
         }
     }
 
-  lib_put_pathbuffer(path);
+  lib_put_tempbuffer(path);
   return totalsize;
 }
 

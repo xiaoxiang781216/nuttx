@@ -571,7 +571,7 @@ int file_getlk(FAR struct file *filep, FAR struct flock *flock)
 
   /* We need to get the unique identifier (Path) via filep */
 
-  path = lib_get_pathbuffer();
+  path = lib_get_tempbuffer(PATH_MAX);
   if (path == NULL)
     {
       return -ENOMEM;
@@ -626,7 +626,7 @@ out:
     }
 
 out_free:
-  lib_put_pathbuffer(path);
+  lib_put_tempbuffer(path);
   return ret;
 }
 
@@ -655,7 +655,7 @@ int file_setlk(FAR struct file *filep, FAR struct flock *flock,
   struct flock request;
   int ret;
 
-  path = lib_get_pathbuffer();
+  path = lib_get_tempbuffer(PATH_MAX);
   if (path == NULL)
     {
       return -ENOMEM;
@@ -749,7 +749,7 @@ out:
 out_lock:
   nxmutex_unlock(&g_protect_lock);
 out_free:
-  lib_put_pathbuffer(path);
+  lib_put_tempbuffer(path);
   return ret;
 }
 
@@ -778,7 +778,7 @@ void file_closelk(FAR struct file *filep)
       return;
     }
 
-  path = lib_get_pathbuffer();
+  path = lib_get_tempbuffer(PATH_MAX);
   if (path == NULL)
     {
       return;
@@ -826,7 +826,7 @@ void file_closelk(FAR struct file *filep)
 out:
   nxmutex_unlock(&g_protect_lock);
 out_free:
-  lib_put_pathbuffer(path);
+  lib_put_tempbuffer(path);
 }
 
 /****************************************************************************

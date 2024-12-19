@@ -1241,7 +1241,7 @@ int sensor_register(FAR struct sensor_lowerhalf_s *lower, int devno)
 
   DEBUGASSERT(lower != NULL);
 
-  path = lib_get_pathbuffer();
+  path = lib_get_tempbuffer(PATH_MAX);
   if (path == NULL)
     {
       return -ENOMEM;
@@ -1253,7 +1253,7 @@ int sensor_register(FAR struct sensor_lowerhalf_s *lower, int devno)
            devno);
   ret = sensor_custom_register(lower, path,
                                g_sensor_meta[lower->type].esize);
-  lib_put_pathbuffer(path);
+  lib_put_tempbuffer(path);
   return ret;
 }
 
@@ -1389,7 +1389,7 @@ void sensor_unregister(FAR struct sensor_lowerhalf_s *lower, int devno)
 {
   FAR char *path;
 
-  path = lib_get_pathbuffer();
+  path = lib_get_tempbuffer(PATH_MAX);
   if (path == NULL)
     {
       return;
@@ -1400,7 +1400,7 @@ void sensor_unregister(FAR struct sensor_lowerhalf_s *lower, int devno)
            lower->uncalibrated ? DEVNAME_UNCAL : "",
            devno);
   sensor_custom_unregister(lower, path);
-  lib_put_pathbuffer(path);
+  lib_put_tempbuffer(path);
 }
 
 /****************************************************************************
