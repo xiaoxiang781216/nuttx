@@ -511,6 +511,10 @@
 
 #define CAN_STATE_START           1
 
+/* Indicates that the can controller is in the sleep state */
+
+#define CAN_STATE_SLEEP           2
+
 /* Indicates that the can transceiver is in the sleep state */
 
 #define CAN_TRANSVSTATE_SLEEP     0
