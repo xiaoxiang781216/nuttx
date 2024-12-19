@@ -504,7 +504,7 @@ int sim_bringup(void)
 #endif
 
 #ifdef CONFIG_RPMSGMTD
-  rpmsgmtd_register("server", "/dev/rammtd", NULL);
+  rpmsgmtd_register("server", "/dev/rammtd", "/dev/server-rammtd");
 #endif
 
 #ifdef CONFIG_SIM_WTGAHRS2_UARTN
