@@ -177,11 +177,22 @@ irqstate_t enter_critical_section(void)
 
           if ((g_cpu_irqset & (1 << cpu)) == 0)
             {
+              /* If CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0,
+               * start counting time of busy-waiting.
+               */
+
+              nxsched_critmon_busywait(true, return_address(0));
+
               /* Wait until we can get the spinlock (meaning that we are
                * no longer blocked by the critical section).
                */
 
               spin_lock_wo_note(&g_cpu_irqlock);
+
+              /* Get the lock, end counting busy-waiting */
+
+              nxsched_critmon_busywait(false, return_address(0));
+
               cpu_irqlock_set(cpu);
             }
 
@@ -232,7 +243,17 @@ irqstate_t enter_critical_section(void)
 
           DEBUGASSERT((g_cpu_irqset & (1 << cpu)) == 0);
 
+          /* If CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0,
+           * start counting time of busy-waiting.
+           */
+
+          nxsched_critmon_busywait(true, return_address(0));
+
           spin_lock_wo_note(&g_cpu_irqlock);
+
+          /* Get the lock, end counting busy-waiting */
+
+          nxsched_critmon_busywait(false, return_address(0));
 
           /* Then set the lock count to 1.
            *
