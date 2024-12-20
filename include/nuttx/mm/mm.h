@@ -142,8 +142,12 @@
 #  define MM_DUMP_ALLOC(dump, node) \
     ((node) != NULL && (dump)->pid == PID_MM_ALLOC && \
      (node)->pid != PID_MM_MEMPOOL)
+#ifdef CONFIG_MM_BACKTRACE_SEQNO
 #  define MM_DUMP_SEQNO(dump, node) \
     ((node)->seqno >= (dump)->seqmin && (node)->seqno <= (dump)->seqmax)
+#else
+#  define MM_DUMP_SEQNO(dump,node)  (true)
+#endif
 #  define MM_DUMP_ASSIGN(dump, node) \
     ((node) != NULL && (dump)->pid == (node)->pid)
 #  define MM_DUMP_LEAK(dump, node) \
@@ -159,6 +163,12 @@
 #define MM_INIT_MAGIC    0xcc
 #define MM_ALLOC_MAGIC   0xaa
 #define MM_FREE_MAGIC    0x55
+
+#ifdef CONFIG_MM_BACKTRACE_SEQNO
+#  define MM_INCSEQNO(p) ((p)->seqno = g_mm_seqno++)
+#else
+#  define MM_INCSEQNO(p)
+#endif
 
 /****************************************************************************
  * Public Types
@@ -189,7 +199,7 @@ extern "C"
 #define EXTERN extern
 #endif
 
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_BACKTRACE_SEQNO
 extern unsigned long g_mm_seqno;
 #endif
 
