@@ -71,6 +71,7 @@ struct imxrt_wdog_lower
   const struct watchdog_ops_s  *ops;  /* Lower half operations */
   uint32_t     timeout;
   uint32_t     enabled;
+  spinlock_t   lock;
 };
 
 /****************************************************************************
@@ -237,12 +238,14 @@ static int imxrt_wdog_stop(struct watchdog_lowerhalf_s *lower)
 
 static int imxrt_wdog_keepalive(struct watchdog_lowerhalf_s *lower)
 {
-  irqstate_t flags = spin_lock_irqsave(NULL);
+  struct imxrt_wdog_lower *priv = (struct imxrt_wdog_lower *)lower;
+
+  irqstate_t flags = spin_lock_irqsave(&priv->lock);
 
   putreg16(WDOG_KEEP_ALIVE_KEY1, IMXRT_WDOG1_WSR);
   putreg16(WDOG_KEEP_ALIVE_KEY2, IMXRT_WDOG1_WSR);
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   return OK;
 }
@@ -312,7 +315,7 @@ static int imxrt_wdog_settimeout(struct watchdog_lowerhalf_s *lower,
 
   priv->timeout = timeout;
 
-  irqstate_t flags = spin_lock_irqsave(NULL);
+  irqstate_t flags = spin_lock_irqsave(&priv->lock);
 
   /* write timer value to WCR WT register */
 
@@ -326,7 +329,7 @@ static int imxrt_wdog_settimeout(struct watchdog_lowerhalf_s *lower,
   putreg16(WDOG_KEEP_ALIVE_KEY1, IMXRT_WDOG1_WSR);
   putreg16(WDOG_KEEP_ALIVE_KEY2, IMXRT_WDOG1_WSR);
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   return OK;
 }
@@ -358,13 +361,13 @@ void imxrt_wdog_initialize(void)
   priv->ops = &g_wdgops;
   priv->timeout = WDOG_MIN;
 
+  spin_lock_init(&g_wdgdev.lock);
+
   /* Register the watchdog driver at the path */
 
   wdinfo("Entry: devpath=%s\n", DEVPATH);
   watchdog_register(DEVPATH, (struct watchdog_lowerhalf_s *)priv);
 }
-
-#endif /* CONFIG_WATCHDOG && CONFIG_IMXRT_WDOG */
 
 /****************************************************************************
  * Name: imxrt_wdog_disable
@@ -393,9 +396,11 @@ void imxrt_wdog_disable_all(void)
       putreg16(reg, IMXRT_WDOG2_WCR);
     }
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_wdgdev.lock);
   putreg32(RTWDOG_UPDATE_KEY, IMXRT_RTWDOG_CNT);
   putreg32(0xffff, IMXRT_RTWDOG_TOVAL);
   modifyreg32(IMXRT_RTWDOG_CS, RTWDOG_CS_EN, RTWDOG_CS_UPDATE);
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_wdgdev.lock, flags);
 }
+
+#endif /* CONFIG_WATCHDOG && CONFIG_IMXRT_WDOG */

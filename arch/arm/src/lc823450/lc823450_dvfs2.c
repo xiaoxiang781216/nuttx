@@ -66,6 +66,8 @@
  * Private Data
  ****************************************************************************/
 
+static spinlock_t g_dvfs_lock = SP_UNLOCKED;
+
 typedef struct freq_entry
 {
   uint16_t freq;
@@ -426,7 +428,7 @@ static void lc823450_dvfs_do_auto(uint32_t idle[])
 
 void lc823450_dvfs_get_idletime(uint64_t idletime[])
 {
-  irqstate_t flags = spin_lock_irqsave(NULL);
+  irqstate_t flags = spin_lock_irqsave(&g_dvfs_lock);
 
   /* First, copy g_idle_totaltime to the caller */
 
@@ -446,7 +448,7 @@ void lc823450_dvfs_get_idletime(uint64_t idletime[])
     }
 #endif
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&g_dvfs_lock, flags);
 }
 
 /****************************************************************************
@@ -502,7 +504,7 @@ void lc823450_dvfs_tick_callback(void)
 
 void lc823450_dvfs_enter_idle(void)
 {
-  irqstate_t flags = spin_lock_irqsave(NULL);
+  irqstate_t flags = spin_lock_irqsave(&g_dvfs_lock);
 
   int me = this_cpu();
 
@@ -542,7 +544,7 @@ void lc823450_dvfs_enter_idle(void)
   lc823450_dvfs_set_div(_dvfs_cur_idx, 1);
 
 exit_with_error:
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&g_dvfs_lock, flags);
 }
 
 /****************************************************************************
@@ -552,7 +554,7 @@ exit_with_error:
 
 void lc823450_dvfs_exit_idle(int irq)
 {
-  irqstate_t flags = spin_lock_irqsave(NULL);
+  irqstate_t flags = spin_lock_irqsave(&g_dvfs_lock);
 
   int me = this_cpu();
   uint64_t d;
@@ -594,7 +596,7 @@ exit_with_error:
 
   _dvfs_cpu_is_active[me] = 1;
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&g_dvfs_lock, flags);
 }
 
 /****************************************************************************
@@ -626,7 +628,7 @@ int lc823450_dvfs_set_freq(int freq)
       return -1;
     }
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave(&g_dvfs_lock);
 
   switch (freq)
     {
@@ -654,6 +656,6 @@ int lc823450_dvfs_set_freq(int freq)
       lc823450_dvfs_set_div(idx, 0);
     }
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&g_dvfs_lock, flags);
   return ret;
 }
