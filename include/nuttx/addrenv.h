@@ -303,7 +303,6 @@ struct mm_heap_s; /* Forward reference */
 struct addrenv_reserve_s
 {
   addrenv_sigtramp_t ar_sigtramp;  /* Signal trampoline */
-  struct mm_heap_s  *ar_usrheap;   /* User space heap structure */
 };
 
 /* Each instance of this structure resides at the beginning of the user-

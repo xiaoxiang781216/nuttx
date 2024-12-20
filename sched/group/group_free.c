@@ -34,7 +34,7 @@
 #include "sched/sched.h"
 #include "group/group.h"
 
-#ifdef CONFIG_MM_KERNEL_HEAP
+#if defined(CONFIG_MM_KERNEL_HEAP) || defined(CONFIG_MM_TASK_HEAP)
 
 /****************************************************************************
  * Public Functions
@@ -74,8 +74,12 @@ void group_free(FAR struct task_group_s *group, FAR void *mem)
        * allocator.
        */
 
+#ifdef CONFIG_MM_TASK_HEAP
+      mm_free(group->tg_heap, mem);
+#else
       kumm_free(mem);
+#endif
     }
 }
 
-#endif /* CONFIG_MM_KERNEL_HEAP */
+#endif /* defined(CONFIG_MM_KERNEL_HEAP) || defined(CONFIG_MM_TASK_HEAP) */

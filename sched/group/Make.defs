@@ -39,9 +39,13 @@ ifeq ($(CONFIG_SIG_SIGSTOP_ACTION),y)
 CSRCS += group_suspendchildren.c group_continue.c
 endif
 
-ifeq ($(CONFIG_MM_KERNEL_HEAP),y)
+ifneq ($(CONFIG_MM_KERNEL_HEAP)$(CONFIG_MM_TASK_HEAP),)
 CSRCS += group_malloc.c group_realloc.c group_zalloc.c group_free.c
 CSRCS += group_memalign.c
+endif
+
+ifeq ($(CONFIG_MM_TASK_HEAP),y)
+CSRCS += group_heap.c
 endif
 
 # Include group build support

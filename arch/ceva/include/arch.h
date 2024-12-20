@@ -52,7 +52,7 @@
  * ARCH_DATA_RESERVE_SIZE
  */
 
-#  define UMM_HEAP(i) ((i) ? NULL : &ARCH_DATA_RESERVE->ar_usrheap)
+#  define UMM_HEAP(i) ((i) ? NULL : task_get_info()->ta_heap)
 
 #elif defined(CONFIG_BUILD_PROTECTED) && defined(__KERNEL__)
 /* In the protected mode, there are two heaps:  A kernel heap and a single

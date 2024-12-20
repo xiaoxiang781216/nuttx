@@ -30,6 +30,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 
+#include "sched/sched.h"
 #include "tls.h"
 
 /****************************************************************************
@@ -143,6 +144,10 @@ int task_init_info(FAR struct task_group_s *group)
   /* Initialize file streams for the task group */
 
   task_init_stream(&info->ta_streamlist);
+#endif
+
+#ifdef CONFIG_MM_TASK_HEAP
+  info->ta_heap = group->tg_heap;
 #endif
 
   return OK;

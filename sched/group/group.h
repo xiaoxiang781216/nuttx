@@ -58,6 +58,17 @@ void task_initialize(void);
 
 /* Task group data structure management */
 
+#ifdef CONFIG_MM_TASK_HEAP
+int group_heap_initialize(FAR struct mm_heap_s **heap,
+                          size_t alignment, size_t heapsize);
+int group_heap_size(FAR struct mm_heap_s *heap);
+void group_heap_uninitialize(FAR struct mm_heap_s *heap);
+#else
+#  define group_heap_initialize(heap, alignment, heapsize) (0)
+#  define group_heap_malloc_size(heap) (0)
+#  define group_heap_uninitialize(heap)
+#endif
+
 int  group_initialize(FAR struct tcb_s *tcb, uint8_t ttype);
 void group_postinitialize(FAR struct tcb_s *tcb);
 #ifndef CONFIG_DISABLE_PTHREAD

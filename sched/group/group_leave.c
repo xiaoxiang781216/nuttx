@@ -47,6 +47,7 @@
 #include "pthread/pthread.h"
 #include "mqueue/mqueue.h"
 #include "group/group.h"
+#include "task/task.h"
 #include "tls/tls.h"
 
 /****************************************************************************
@@ -248,6 +249,15 @@ void group_drop(FAR struct task_group_s *group)
 
       if (atomic_read(&tcb->flags) & TCB_FLAG_FREE_TCB)
         {
+          if ((tcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_TASK)
+            {
+#ifndef CONFIG_BUILD_KERNEL
+              /* Kernel build not use group_heap_initialize */
+
+              group_heap_uninitialize(group->tg_heap);
+#endif
+            }
+
           kmm_free(tcb);
         }
     }

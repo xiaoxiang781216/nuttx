@@ -318,6 +318,7 @@ config BUILD_KERNEL
 	depends on ARCH_USE_MMU && ARCH_ADDRENV
 	select LIB_SYSCALL
 	select MODULES
+	select MM_TASK_HEAP
 	---help---
 		Builds NuttX as a separately compiled kernel.  No applications are
 		built.  All user applications must reside in a file system where

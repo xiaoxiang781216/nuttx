@@ -34,6 +34,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/mm/mm.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/sched.h>
 
@@ -140,6 +141,18 @@ int group_initialize(FAR struct tcb_s *tcb, uint8_t ttype)
     {
       tcb->group = (FAR struct task_group_s *)(tcb + 1);
       group = tcb->group;
+#if defined(CONFIG_BUILD_KERNEL)
+      up_addrenv_vheap(&group->tg_addrenv_own->addrenv,
+                       (FAR void **)&group->tg_heap);
+#elif defined(CONFIG_MM_TASK_HEAP)
+      ret = group_heap_initialize(&group->tg_heap,
+                                  CONFIG_MM_TASK_HEAP_DEFAULT_ALIGN,
+                                  CONFIG_MM_TASK_HEAP_DEFAULT_SIZE);
+      if (ret < 0)
+        {
+          return ret;
+        }
+#endif
     }
   else
     {

@@ -194,6 +194,15 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, uint8_t ttype)
 
       if (atomic_read(&tcb->flags) & TCB_FLAG_FREE_TCB)
         {
+          if ((tcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_TASK)
+            {
+#ifndef CONFIG_BUILD_KERNEL
+              /* Kernel build not use group_heap_initialize */
+
+              group_heap_uninitialize(tcb->group->tg_heap);
+#endif
+            }
+
           kmm_free(tcb);
         }
     }

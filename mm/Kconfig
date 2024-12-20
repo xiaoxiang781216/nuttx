@@ -389,4 +389,27 @@ config MM_UBSAN_DUMMY
 
 endif # MM_UBSAN
 
+config MM_TASK_HEAP
+	bool "support task heap"
+	default n
+	---help---
+		Support task heap.
+
+if MM_TASK_HEAP
+
+config MM_TASK_HEAP_DEFAULT_SIZE
+	int "Task heap default size"
+	default 65536
+	---help---
+		Use this option to set the default heap size for tasks. Zero means
+		use the default user heap.
+
+config MM_TASK_HEAP_DEFAULT_ALIGN
+	int "Task heap default alignment"
+	default 32
+	---help---
+		Task heap base alignment.
+
+endif # MM_TASK_HEAP
+
 source "mm/iob/Kconfig"

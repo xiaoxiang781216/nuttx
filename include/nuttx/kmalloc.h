@@ -113,7 +113,7 @@ extern "C"
 
 #endif
 
-#ifdef CONFIG_MM_KERNEL_HEAP
+#if defined(CONFIG_MM_KERNEL_HEAP) || defined(CONFIG_MM_TASK_HEAP)
 /****************************************************************************
  * Group memory management
  *

@@ -34,7 +34,7 @@
 #include "sched/sched.h"
 #include "group/group.h"
 
-#ifdef CONFIG_MM_KERNEL_HEAP
+#if defined(CONFIG_MM_KERNEL_HEAP) || defined(CONFIG_MM_TASK_HEAP)
 
 /****************************************************************************
  * Public Functions
@@ -77,8 +77,12 @@ FAR void *group_malloc(FAR struct task_group_s *group, size_t nbytes)
        * allocator.
        */
 
+#ifdef CONFIG_MM_TASK_HEAP
+      return mm_malloc(group->tg_heap, nbytes);
+#else
       return kumm_malloc(nbytes);
+#endif
     }
 }
 
-#endif /* CONFIG_MM_KERNEL_HEAP */
+#endif /* defined(CONFIG_MM_KERNEL_HEAP) || defined(CONFIG_MM_TASK_HEAP) */

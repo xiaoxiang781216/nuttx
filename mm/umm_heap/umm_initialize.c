@@ -86,10 +86,23 @@
 
 void umm_initialize(FAR void *heap_start, size_t heap_size)
 {
-#ifdef CONFIG_BUILD_KERNEL
-  USR_HEAP = mm_initialize_pool(NULL, heap_start, heap_size, NULL);
+#if defined(CONFIG_BUILD_PROTECTED) && defined(__KERNEL__)
+/* In the protected mode, there are two heaps:  A kernel heap and a single
+ * user heap.  Kernel code must obtain the address of the user heap data
+ * structure from the userspace interface.
+ */
+
+  FAR struct mm_heap_s **heap = &(*USERSPACE->us_heap);
 #else
-  USR_HEAP = mm_initialize_pool("Umem", heap_start, heap_size, NULL);
+  /* Otherwise, the user heap data structures are in common .bss */
+
+  FAR struct mm_heap_s **heap = &g_mmheap;
+#endif
+
+#ifdef CONFIG_BUILD_KERNEL
+  *heap = mm_initialize_pool(NULL, heap_start, heap_size, NULL);
+#else
+  *heap = mm_initialize_pool("Umem", heap_start, heap_size, NULL);
 #endif
 }
 

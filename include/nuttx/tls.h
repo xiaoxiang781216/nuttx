@@ -149,6 +149,9 @@ struct task_info_s
 #ifdef CONFIG_PTHREAD_ATFORK
   struct list_node ta_atfork; /* Holds the pthread_atfork_s list */
 #endif
+#ifdef CONFIG_MM_TASK_HEAP
+  FAR struct mm_heap_s *ta_heap;
+#endif
 };
 
 /* struct tls_cleanup_s *****************************************************/

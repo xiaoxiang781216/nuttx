@@ -47,6 +47,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
 #include <nuttx/mm/map.h>
+#include <nuttx/mm/mm.h>
 #include <nuttx/tls.h>
 #include <nuttx/spinlock_type.h>
 
@@ -559,6 +560,12 @@ struct task_group_s
 #ifdef CONFIG_ARCH_ADDRENV
   FAR struct addrenv_s *tg_addrenv_own;  /* Task(group) own memory mappings */
   FAR struct addrenv_s *tg_addrenv_curr; /* Task(group) own memory mappings */
+#endif
+
+  /* Task group heap ********************************************************/
+
+#ifdef CONFIG_MM_TASK_HEAP
+  FAR struct mm_heap_s *tg_heap;    /* Task group heap */
 #endif
 };
 

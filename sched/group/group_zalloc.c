@@ -30,7 +30,7 @@
 
 #include "group/group.h"
 
-#ifdef CONFIG_MM_KERNEL_HEAP
+#if defined(CONFIG_MM_KERNEL_HEAP) || defined(CONFIG_MM_TASK_HEAP)
 
 /****************************************************************************
  * Public Functions

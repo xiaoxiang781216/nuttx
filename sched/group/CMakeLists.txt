@@ -54,7 +54,7 @@ if(CONFIG_SIG_SIGSTOP_ACTION)
   list(APPEND SRCS group_suspendchildren.c group_continue.c)
 endif()
 
-if(CONFIG_MM_KERNEL_HEAP)
+if(CONFIG_MM_KERNEL_HEAP OR CONFIG_MM_TASK_HEAP)
   list(
     APPEND
     SRCS
@@ -65,4 +65,7 @@ if(CONFIG_MM_KERNEL_HEAP)
     group_memalign.c)
 endif()
 
+if(CONFIG_MM_TASK_HEAP)
+  list(APPEND SRCS group_heap.c)
+endif()
 target_sources(sched PRIVATE ${SRCS})
