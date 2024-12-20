@@ -744,6 +744,7 @@ int rpmsg_port_register(FAR struct rpmsg_port_s *port,
       return ret;
     }
 
+  atomic_fetch_or(&port->signals, RPMSG_SIGNAL_RUNNING);
   rpmsg_register_endpoint(&port->rdev, &port->rdev.ns_ept, "NS",
                           RPMSG_NS_EPT_ADDR, RPMSG_NS_EPT_ADDR,
                           rpmsg_port_ns_callback, NULL, port);
