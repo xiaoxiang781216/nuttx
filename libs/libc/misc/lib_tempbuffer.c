@@ -91,7 +91,7 @@ FAR char *lib_get_tempbuffer(size_t nbytes)
   irqstate_t flags;
   int index;
 
-  if (nbytes < TEMP_MAX_SIZE)
+  if (nbytes <= TEMP_MAX_SIZE)
     {
       /* Try to find a free buffer */
 
