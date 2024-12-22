@@ -38,8 +38,13 @@
 
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
+#include <nuttx/bits.h>
+#include <nuttx/lib/math32.h>
+#include <sys/endian.h>
 
 #include <netinet/if_ether.h>
+#include <stdbool.h>
+#include <strings.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -397,7 +402,7 @@ struct ieee80211_qos_hdr
 
 static inline bool ieee80211_has_tods(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_TODS)) != 0;
+  return (fc & htole16(IEEE80211_FCTL_TODS)) != 0;
 }
 
 /* ieee80211_has_fromds - check if IEEE80211_FCTL_FROMDS is set
@@ -406,7 +411,7 @@ static inline bool ieee80211_has_tods(uint16_t fc)
 
 static inline bool ieee80211_has_fromds(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FROMDS)) != 0;
+  return (fc & htole16(IEEE80211_FCTL_FROMDS)) != 0;
 }
 
 /* ieee80211_has_a4 - check if IEEE80211_FCTL_TODS and
@@ -416,7 +421,7 @@ static inline bool ieee80211_has_fromds(uint16_t fc)
 
 static inline bool ieee80211_has_a4(uint16_t fc)
 {
-  uint16_t tmp = cpu_to_le16(IEEE80211_FCTL_TODS | IEEE80211_FCTL_FROMDS);
+  uint16_t tmp = htole16(IEEE80211_FCTL_TODS | IEEE80211_FCTL_FROMDS);
   return (fc & tmp) == tmp;
 }
 
@@ -426,7 +431,7 @@ static inline bool ieee80211_has_a4(uint16_t fc)
 
 static inline bool ieee80211_has_morefrags(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_MOREFRAGS)) != 0;
+  return (fc & htole16(IEEE80211_FCTL_MOREFRAGS)) != 0;
 }
 
 /* ieee80211_has_retry - check if IEEE80211_FCTL_RETRY is set
@@ -435,7 +440,7 @@ static inline bool ieee80211_has_morefrags(uint16_t fc)
 
 static inline bool ieee80211_has_retry(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_RETRY)) != 0;
+  return (fc & htole16(IEEE80211_FCTL_RETRY)) != 0;
 }
 
 /* ieee80211_has_pm - check if IEEE80211_FCTL_PM is set
@@ -444,7 +449,7 @@ static inline bool ieee80211_has_retry(uint16_t fc)
 
 static inline bool ieee80211_has_pm(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_PM)) != 0;
+  return (fc & htole16(IEEE80211_FCTL_PM)) != 0;
 }
 
 /* ieee80211_has_moredata - check if IEEE80211_FCTL_MOREDATA is set
@@ -453,7 +458,7 @@ static inline bool ieee80211_has_pm(uint16_t fc)
 
 static inline bool ieee80211_has_moredata(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_MOREDATA)) != 0;
+  return (fc & htole16(IEEE80211_FCTL_MOREDATA)) != 0;
 }
 
 /* ieee80211_has_protected - check if IEEE80211_FCTL_PROTECTED is set
@@ -462,7 +467,7 @@ static inline bool ieee80211_has_moredata(uint16_t fc)
 
 static inline bool ieee80211_has_protected(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_PROTECTED)) != 0;
+  return (fc & htole16(IEEE80211_FCTL_PROTECTED)) != 0;
 }
 
 /* ieee80211_has_order - check if IEEE80211_FCTL_ORDER is set
@@ -471,7 +476,7 @@ static inline bool ieee80211_has_protected(uint16_t fc)
 
 static inline bool ieee80211_has_order(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_ORDER)) != 0;
+  return (fc & htole16(IEEE80211_FCTL_ORDER)) != 0;
 }
 
 /* ieee80211_is_mgmt - check if type is IEEE80211_FTYPE_MGMT
@@ -480,8 +485,8 @@ static inline bool ieee80211_has_order(uint16_t fc)
 
 static inline bool ieee80211_is_mgmt(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_MGMT);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE)) ==
+    htole16(IEEE80211_FTYPE_MGMT);
 }
 
 /* ieee80211_is_ctl - check if type is IEEE80211_FTYPE_CTL
@@ -490,8 +495,8 @@ static inline bool ieee80211_is_mgmt(uint16_t fc)
 
 static inline bool ieee80211_is_ctl(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_CTL);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE)) ==
+    htole16(IEEE80211_FTYPE_CTL);
 }
 
 /* ieee80211_is_data - check if type is IEEE80211_FTYPE_DATA
@@ -500,8 +505,8 @@ static inline bool ieee80211_is_ctl(uint16_t fc)
 
 static inline bool ieee80211_is_data(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_DATA);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE)) ==
+    htole16(IEEE80211_FTYPE_DATA);
 }
 
 /* ieee80211_is_ext - check if type is IEEE80211_FTYPE_EXT
@@ -510,8 +515,8 @@ static inline bool ieee80211_is_data(uint16_t fc)
 
 static inline bool ieee80211_is_ext(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_EXT);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE)) ==
+    htole16(IEEE80211_FTYPE_EXT);
 }
 
 /* ieee80211_is_data_qos - check if type is IEEE80211_FTYPE_DATA
@@ -525,9 +530,9 @@ static inline bool ieee80211_is_data_qos(uint16_t fc)
    * to check the one bit
    */
 
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE |
+  return (fc & htole16(IEEE80211_FCTL_FTYPE |
                            IEEE80211_STYPE_QOS_DATA)) ==
-    cpu_to_le16(IEEE80211_FTYPE_DATA | IEEE80211_STYPE_QOS_DATA);
+    htole16(IEEE80211_FTYPE_DATA | IEEE80211_STYPE_QOS_DATA);
 }
 
 /* ieee80211_is_data_present - check if type is IEEE80211_FTYPE_DATA
@@ -541,8 +546,8 @@ static inline bool ieee80211_is_data_present(uint16_t fc)
    * for the data-containing substypes.
    */
 
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | 0x40)) ==
-    cpu_to_le16(IEEE80211_FTYPE_DATA);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | 0x40)) ==
+    htole16(IEEE80211_FTYPE_DATA);
 }
 
 /* ieee80211_is_assoc_req - check if IEEE80211_FTYPE_MGMT &&
@@ -552,8 +557,8 @@ static inline bool ieee80211_is_data_present(uint16_t fc)
 
 static inline bool ieee80211_is_assoc_req(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_ASSOC_REQ);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_ASSOC_REQ);
 }
 
 /* ieee80211_is_assoc_resp - check if IEEE80211_FTYPE_MGMT &&
@@ -563,8 +568,8 @@ static inline bool ieee80211_is_assoc_req(uint16_t fc)
 
 static inline bool ieee80211_is_assoc_resp(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_ASSOC_RESP);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_ASSOC_RESP);
 }
 
 /* ieee80211_is_reassoc_req - check if IEEE80211_FTYPE_MGMT &&
@@ -574,8 +579,8 @@ static inline bool ieee80211_is_assoc_resp(uint16_t fc)
 
 static inline bool ieee80211_is_reassoc_req(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_REASSOC_REQ);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_REASSOC_REQ);
 }
 
 /* ieee80211_is_reassoc_resp - check if IEEE80211_FTYPE_MGMT &&
@@ -585,8 +590,8 @@ static inline bool ieee80211_is_reassoc_req(uint16_t fc)
 
 static inline bool ieee80211_is_reassoc_resp(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_REASSOC_RESP);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_REASSOC_RESP);
 }
 
 /* ieee80211_is_probe_req - check if IEEE80211_FTYPE_MGMT &&
@@ -596,8 +601,8 @@ static inline bool ieee80211_is_reassoc_resp(uint16_t fc)
 
 static inline bool ieee80211_is_probe_req(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_PROBE_REQ);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_PROBE_REQ);
 }
 
 /* ieee80211_is_probe_resp - check if IEEE80211_FTYPE_MGMT &&
@@ -607,8 +612,8 @@ static inline bool ieee80211_is_probe_req(uint16_t fc)
 
 static inline bool ieee80211_is_probe_resp(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_PROBE_RESP);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_PROBE_RESP);
 }
 
 /* ieee80211_is_beacon - check if IEEE80211_FTYPE_MGMT &&
@@ -618,8 +623,8 @@ static inline bool ieee80211_is_probe_resp(uint16_t fc)
 
 static inline bool ieee80211_is_beacon(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_BEACON);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_BEACON);
 }
 
 /* ieee80211_is_s1g_beacon - check if IEEE80211_FTYPE_EXT &&
@@ -629,9 +634,9 @@ static inline bool ieee80211_is_beacon(uint16_t fc)
 
 static inline bool ieee80211_is_s1g_beacon(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE |
+  return (fc & htole16(IEEE80211_FCTL_FTYPE |
         IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_EXT | IEEE80211_STYPE_S1G_BEACON);
+    htole16(IEEE80211_FTYPE_EXT | IEEE80211_STYPE_S1G_BEACON);
 }
 
 /* ieee80211_next_tbtt_present - check if IEEE80211_FTYPE_EXT &&
@@ -641,9 +646,9 @@ static inline bool ieee80211_is_s1g_beacon(uint16_t fc)
 
 static inline bool ieee80211_next_tbtt_present(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_EXT | IEEE80211_STYPE_S1G_BEACON) &&
-    fc & cpu_to_le16(IEEE80211_S1G_BCN_NEXT_TBTT);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_EXT | IEEE80211_STYPE_S1G_BEACON) &&
+    fc & htole16(IEEE80211_S1G_BCN_NEXT_TBTT);
 }
 
 /* ieee80211_is_s1g_short_beacon - check if next tbtt present bit is set.
@@ -662,8 +667,8 @@ static inline bool ieee80211_is_s1g_short_beacon(uint16_t fc)
 
 static inline bool ieee80211_is_atim(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_ATIM);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_ATIM);
 }
 
 /* ieee80211_is_disassoc - check if IEEE80211_FTYPE_MGMT &&
@@ -673,8 +678,8 @@ static inline bool ieee80211_is_atim(uint16_t fc)
 
 static inline bool ieee80211_is_disassoc(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_DISASSOC);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_DISASSOC);
 }
 
 /* ieee80211_is_auth - check if IEEE80211_FTYPE_MGMT && IEEE80211_STYPE_AUTH
@@ -683,8 +688,8 @@ static inline bool ieee80211_is_disassoc(uint16_t fc)
 
 static inline bool ieee80211_is_auth(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_AUTH);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_AUTH);
 }
 
 /* ieee80211_is_deauth - check if IEEE80211_FTYPE_MGMT &&
@@ -694,8 +699,8 @@ static inline bool ieee80211_is_auth(uint16_t fc)
 
 static inline bool ieee80211_is_deauth(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_DEAUTH);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_DEAUTH);
 }
 
 /* ieee80211_is_action - check if IEEE80211_FTYPE_MGMT &&
@@ -705,8 +710,8 @@ static inline bool ieee80211_is_deauth(uint16_t fc)
 
 static inline bool ieee80211_is_action(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_ACTION);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_MGMT | IEEE80211_STYPE_ACTION);
 }
 
 /* ieee80211_is_back_req - check if IEEE80211_FTYPE_CTL &&
@@ -716,8 +721,8 @@ static inline bool ieee80211_is_action(uint16_t fc)
 
 static inline bool ieee80211_is_back_req(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_BACK_REQ);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_BACK_REQ);
 }
 
 /* ieee80211_is_back - check if IEEE80211_FTYPE_CTL &&
@@ -727,8 +732,8 @@ static inline bool ieee80211_is_back_req(uint16_t fc)
 
 static inline bool ieee80211_is_back(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_BACK);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_BACK);
 }
 
 /* ieee80211_is_pspoll - check if IEEE80211_FTYPE_CTL &&
@@ -738,8 +743,8 @@ static inline bool ieee80211_is_back(uint16_t fc)
 
 static inline bool ieee80211_is_pspoll(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_PSPOLL);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_PSPOLL);
 }
 
 /* ieee80211_is_rts - check if IEEE80211_FTYPE_CTL && IEEE80211_STYPE_RTS
@@ -748,8 +753,8 @@ static inline bool ieee80211_is_pspoll(uint16_t fc)
 
 static inline bool ieee80211_is_rts(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_RTS);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_RTS);
 }
 
 /* ieee80211_is_cts - check if IEEE80211_FTYPE_CTL && IEEE80211_STYPE_CTS
@@ -758,8 +763,8 @@ static inline bool ieee80211_is_rts(uint16_t fc)
 
 static inline bool ieee80211_is_cts(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_CTS);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_CTS);
 }
 
 /* ieee80211_is_ack - check if IEEE80211_FTYPE_CTL && IEEE80211_STYPE_ACK
@@ -768,8 +773,8 @@ static inline bool ieee80211_is_cts(uint16_t fc)
 
 static inline bool ieee80211_is_ack(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_ACK);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_ACK);
 }
 
 /* ieee80211_is_cfend - check if IEEE80211_FTYPE_CTL && IEEE80211_STYPE_CFEND
@@ -778,8 +783,8 @@ static inline bool ieee80211_is_ack(uint16_t fc)
 
 static inline bool ieee80211_is_cfend(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_CFEND);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_CFEND);
 }
 
 /* ieee80211_is_cfendack - check if IEEE80211_FTYPE_CTL &&
@@ -789,8 +794,8 @@ static inline bool ieee80211_is_cfend(uint16_t fc)
 
 static inline bool ieee80211_is_cfendack(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_CFENDACK);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_CTL | IEEE80211_STYPE_CFENDACK);
 }
 
 /* ieee80211_is_nullfunc - check if frame is a regular
@@ -800,8 +805,8 @@ static inline bool ieee80211_is_cfendack(uint16_t fc)
 
 static inline bool ieee80211_is_nullfunc(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_DATA | IEEE80211_STYPE_NULLFUNC);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_DATA | IEEE80211_STYPE_NULLFUNC);
 }
 
 /* ieee80211_is_qos_nullfunc - check if frame is a QoS nullfunc frame
@@ -810,8 +815,8 @@ static inline bool ieee80211_is_nullfunc(uint16_t fc)
 
 static inline bool ieee80211_is_qos_nullfunc(uint16_t fc)
 {
-  return (fc & cpu_to_le16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
-    cpu_to_le16(IEEE80211_FTYPE_DATA | IEEE80211_STYPE_QOS_NULLFUNC);
+  return (fc & htole16(IEEE80211_FCTL_FTYPE | IEEE80211_FCTL_STYPE)) ==
+    htole16(IEEE80211_FTYPE_DATA | IEEE80211_STYPE_QOS_NULLFUNC);
 }
 
 /* ieee80211_is_any_nullfunc - check if frame is regular or QoS
@@ -846,7 +851,7 @@ static inline bool ieee80211_is_bufferable_mmpdu(uint16_t fc)
 
 static inline bool ieee80211_is_first_frag(uint16_t seq_ctrl)
 {
-  return (seq_ctrl & cpu_to_le16(IEEE80211_SCTL_FRAG)) == 0;
+  return (seq_ctrl & htole16(IEEE80211_SCTL_FRAG)) == 0;
 }
 
 /* ieee80211_is_frag - check if a frame is a fragment
@@ -856,7 +861,7 @@ static inline bool ieee80211_is_first_frag(uint16_t seq_ctrl)
 static inline bool ieee80211_is_frag(FAR struct ieee80211_hdr *hdr)
 {
   return ieee80211_has_morefrags(hdr->frame_control) ||
-    hdr->seq_ctrl & cpu_to_le16(IEEE80211_SCTL_FRAG);
+    hdr->seq_ctrl & htole16(IEEE80211_SCTL_FRAG);
 }
 
 struct ieee80211s_hdr
@@ -2517,7 +2522,7 @@ ieee80211_he_ppe_size(uint8_t ppe_thres_hdr, FAR const uint8_t *phy_cap_info)
         IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT) == 0)
     return 0;
 
-  n = hweight8(ppe_thres_hdr &
+  n = popcount(ppe_thres_hdr &
       IEEE80211_PPE_THRES_RU_INDEX_BITMASK_MASK);
   n *= (1 + ((ppe_thres_hdr & IEEE80211_PPE_THRES_NSS_MASK) >>
         IEEE80211_PPE_THRES_NSS_POS));
@@ -2593,7 +2598,7 @@ ieee80211_he_oper_size(FAR const uint8_t *he_oper_ie)
 
   /* Calc required length */
 
-  he_oper_params = le32_to_cpu(he_oper->he_oper_params);
+  he_oper_params = le32toh(he_oper->he_oper_params);
   if (he_oper_params & IEEE80211_HE_OPERATION_VHT_OPER_INFO)
     oper_len += 3;
   if (he_oper_params & IEEE80211_HE_OPERATION_CO_HOSTED_BSS)
@@ -2624,7 +2629,7 @@ ieee80211_he_6ghz_oper(FAR const struct ieee80211_he_operation *he_oper)
   if (!he_oper)
     return NULL;
 
-  he_oper_params = le32_to_cpu(he_oper->he_oper_params);
+  he_oper_params = le32toh(he_oper->he_oper_params);
 
   if (!(he_oper_params & IEEE80211_HE_OPERATION_6GHZ_OP_INFO))
     return NULL;
