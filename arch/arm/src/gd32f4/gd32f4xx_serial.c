@@ -129,6 +129,7 @@ struct up_dev_s
   uint8_t         stop_2bits;    /* True: Configure with 2 stop bits instead of 1 */
   uint32_t        tx_gpio;       /* USART TX GPIO pin configuration */
   uint32_t        rx_gpio;       /* USART RX GPIO pin configuration */
+  spinlock_t      lock;          /* Spinlock */
 
 #  ifdef CONFIG_SERIAL_IFLOWCONTROL
   uint32_t        rts_gpio;      /* UART RTS GPIO pin configuration */
@@ -435,6 +436,7 @@ static struct up_dev_s g_usart0priv =
 
   .tx_gpio       = GPIO_USART0_TX,
   .rx_gpio       = GPIO_USART0_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_USART0_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_USART0_RTS,
@@ -507,6 +509,7 @@ static struct up_dev_s g_usart1priv =
 
   .tx_gpio       = GPIO_USART1_TX,
   .rx_gpio       = GPIO_USART1_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_USART1_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_USART1_RTS,
@@ -579,6 +582,7 @@ static struct up_dev_s g_usart2priv =
 
   .tx_gpio       = GPIO_USART2_TX,
   .rx_gpio       = GPIO_USART2_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_USART2_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_USART2_RTS,
@@ -651,6 +655,7 @@ static struct up_dev_s g_usart5priv =
 
   .tx_gpio       = GPIO_USART5_TX,
   .rx_gpio       = GPIO_USART5_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_USART5_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_USART5_RTS,
@@ -723,6 +728,7 @@ static struct up_dev_s g_uart3priv =
 
   .tx_gpio       = GPIO_UART3_TX,
   .rx_gpio       = GPIO_UART3_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_UART3_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_UART3_RTS,
@@ -795,6 +801,7 @@ static struct up_dev_s g_uart4priv =
 
   .tx_gpio       = GPIO_UART4_TX,
   .rx_gpio       = GPIO_UART4_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_UART4_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_UART4_RTS,
@@ -867,6 +874,7 @@ static struct up_dev_s g_uart6priv =
 
   .tx_gpio       = GPIO_UART6_TX,
   .rx_gpio       = GPIO_UART6_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_UART6_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_UART6_RTS,
@@ -939,6 +947,7 @@ static struct up_dev_s g_uart7priv =
 
   .tx_gpio       = GPIO_UART7_TX,
   .rx_gpio       = GPIO_UART7_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_UART7_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_UART7_RTS,
@@ -1125,7 +1134,7 @@ static void up_disableusartint(struct up_dev_s *priv, uint32_t *ie)
   irqstate_t flags;
   uint32_t ctl_ie;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave(&priv->lock);
 
   if (ie)
     {
@@ -1159,7 +1168,7 @@ static void up_disableusartint(struct up_dev_s *priv, uint32_t *ie)
   ctl_ie = (USART_CFG_CTL_MASK << USART_CFG_SHIFT);
   up_setusartint(priv, ctl_ie);
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -1170,11 +1179,11 @@ static void up_restoreusartint(struct up_dev_s *priv, uint32_t ie)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave(&priv->lock);
 
   up_setusartint(priv, ie);
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
