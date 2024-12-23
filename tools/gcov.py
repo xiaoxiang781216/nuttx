@@ -139,6 +139,9 @@ def main():
     result_dir = os.path.join(gcov_dir, "result")
     gcov_data_dir = os.path.join(gcov_dir, "data")
 
+    # Ensure the directory exists
+    os.makedirs(gcov_dir, exist_ok=True)
+
     if args.debug:
         debug_file = os.path.join(gcov_dir, "debug.log")
         sys.stdout = open(debug_file, "w+")
