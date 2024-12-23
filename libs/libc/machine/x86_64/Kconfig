@@ -5,6 +5,23 @@
 
 if ARCH_TOOLCHAIN_GNU && ALLOW_BSD_COMPONENTS
 
+config X86_64_STRING_FUNCTION
+	bool "Enable optimized X86_64 specific string function"
+	default n
+	select X86_64_MEMCMP
+	select X86_64_MEMMOVE
+	select X86_64_MEMSET
+	select X86_64_STPCPY
+	select X86_64_STPNCPY
+	select X86_64_STRCAT
+	select X86_64_STRCMP
+	select X86_64_STRNCMP
+	select X86_64_STRCPY
+	select X86_64_STRLEN
+	select X86_64_STRNCPY
+	select X86_64_STRLEN
+	select X86_64_STRLEN
+
 config X86_64_MEMCMP
 	bool "Enable optimized memcmp() for X86_64"
 	select LIBC_ARCH_MEMCMP
