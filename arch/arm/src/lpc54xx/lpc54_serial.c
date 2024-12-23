@@ -376,6 +376,7 @@ struct lpc54_dev_s
 {
   uintptr_t uartbase;  /* Base address of USART registers */
   uint8_t   irq;       /* IRQ associated with this USART */
+  spinlock_t lock;     /* Spinlock */
 
   /* USART configuration */
 
@@ -457,6 +458,7 @@ static struct lpc54_dev_s g_uart0priv =
 {
   .uartbase       = LPC54_FLEXCOMM0_BASE,
   .irq            = LPC54_IRQ_FLEXCOMM0,
+  .lock           = SP_UNLOCKED,
   .config         =
   {
     .baud         = CONFIG_USART0_BAUD,
@@ -499,6 +501,7 @@ static struct lpc54_dev_s g_uart1priv =
 {
   .uartbase       = LPC54_FLEXCOMM1_BASE,
   .irq            = LPC54_IRQ_FLEXCOMM1,
+  .lock           = SP_UNLOCKED,
   .config         =
   {
     .baud         = CONFIG_USART1_BAUD,
@@ -541,6 +544,7 @@ static struct lpc54_dev_s g_uart2priv =
 {
   .uartbase       = LPC54_FLEXCOMM2_BASE,
   .irq            = LPC54_IRQ_FLEXCOMM2,
+  .lock           = SP_UNLOCKED,
   .config         =
   {
     .baud         = CONFIG_USART2_BAUD,
@@ -583,6 +587,7 @@ static struct lpc54_dev_s g_uart3priv =
 {
   .uartbase       = LPC54_FLEXCOMM3_BASE,
   .irq            = LPC54_IRQ_FLEXCOMM3,
+  .lock           = SP_UNLOCKED,
   .config         =
   {
     .baud         = CONFIG_USART3_BAUD,
@@ -625,6 +630,7 @@ static struct lpc54_dev_s g_uart4priv =
 {
   .uartbase       = LPC54_FLEXCOMM4_BASE,
   .irq            = LPC54_IRQ_FLEXCOMM4,
+  .lock           = SP_UNLOCKED,
   .config         =
   {
     .baud         = CONFIG_USART4_BAUD,
@@ -667,6 +673,7 @@ static struct lpc54_dev_s g_uart5priv =
 {
   .uartbase       = LPC54_FLEXCOMM5_BASE,
   .irq            = LPC54_IRQ_FLEXCOMM5,
+  .lock           = SP_UNLOCKED,
   .config         =
   {
     .baud         = CONFIG_USART5_BAUD,
@@ -709,6 +716,7 @@ static struct lpc54_dev_s g_uart6priv =
 {
   .uartbase       = LPC54_FLEXCOMM6_BASE,
   .irq            = LPC54_IRQ_FLEXCOMM6,
+  .lock           = SP_UNLOCKED,
   .config         =
   {
     .baud         = CONFIG_USART6_BAUD,
@@ -751,6 +759,7 @@ static struct lpc54_dev_s g_uart7priv =
 {
   .uartbase       = LPC54_FLEXCOMM7_BASE,
   .irq            = LPC54_IRQ_FLEXCOMM7,
+  .lock           = SP_UNLOCKED,
   .config         =
   {
     .baud         = CONFIG_USART7_BAUD,
@@ -793,6 +802,7 @@ static struct lpc54_dev_s g_uart8priv =
 {
   .uartbase       = LPC54_FLEXCOMM8_BASE,
   .irq            = LPC54_IRQ_FLEXCOMM8,
+  .lock           = SP_UNLOCKED,
   .config         =
   {
     .baud         = CONFIG_USART8_BAUD,
@@ -835,6 +845,7 @@ static struct lpc54_dev_s g_uart9priv =
 {
   .uartbase       = LPC54_FLEXCOMM9_BASE,
   .irq            = LPC54_IRQ_FLEXCOMM9,
+  .lock           = SP_UNLOCKED,
   .config         =
   {
     .baud         = CONFIG_USART9_BAUD,
@@ -923,14 +934,14 @@ static void lpc54_fifoint_disableall(struct lpc54_dev_s *priv,
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave(&priv->lock);
   if (intset)
     {
       *intset = lpc54_serialin(priv, LPC54_USART_FIFOINTENCLR_OFFSET);
     }
 
   lpc54_serialout(priv, LPC54_USART_FIFOINTENCLR_OFFSET, USART_FIFOINT_ALL);
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************

@@ -37,6 +37,12 @@
 #include "nrf52_gpio.h"
 
 /****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static spinlock_t g_nrf52_gpio_lock = SP_UNLOCKED;
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -273,7 +279,7 @@ int nrf52_gpio_config(nrf52_pinset_t cfgset)
 
       pin = GPIO_PIN_DECODE(cfgset);
 
-      flags = spin_lock_irqsave(NULL);
+      flags = spin_lock_irqsave(&g_nrf52_gpio_lock);
 
       /* First, configure the port as a generic input so that we have a
        * known starting point and consistent behavior during the re-
@@ -308,7 +314,7 @@ int nrf52_gpio_config(nrf52_pinset_t cfgset)
           ret = -EINVAL;
         }
 
-      spin_unlock_irqrestore(NULL, flags);
+      spin_unlock_irqrestore(&g_nrf52_gpio_lock, flags);
     }
   else
     {

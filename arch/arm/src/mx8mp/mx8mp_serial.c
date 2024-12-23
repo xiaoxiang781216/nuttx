@@ -161,6 +161,7 @@ struct mx8mp_uart_s
   uint32_t uartbase;    /* Base address of UART registers */
   uint32_t baud;        /* Configured baud */
   uint32_t ie;          /* Saved enabled interrupts */
+  spinlock_t lock;      /* Spinlock */
   uint32_t ucr1;        /* Saved UCR1 value */
   uint8_t  irq;         /* IRQ associated with this UART */
   uint8_t  parity;      /* 0=none, 1=odd, 2=even */
@@ -256,6 +257,7 @@ static struct mx8mp_uart_s g_uart1priv =
   .clock          = UART1_CLK_ROOT,
   .uartbase       = MX8M_UART1,
   .baud           = CONFIG_UART1_BAUD,
+  .lock           = SP_UNLOCKED,
   .irq            = MX8MP_IRQ_UART1,
   .parity         = CONFIG_UART1_PARITY,
   .bits           = CONFIG_UART1_BITS,
@@ -285,6 +287,7 @@ static struct mx8mp_uart_s g_uart2priv =
   .clock          = UART2_CLK_ROOT,
   .uartbase       = MX8M_UART2,
   .baud           = CONFIG_UART2_BAUD,
+  .lock           = SP_UNLOCKED,
   .irq            = MX8MP_IRQ_UART2,
   .parity         = CONFIG_UART2_PARITY,
   .bits           = CONFIG_UART2_BITS,
@@ -314,6 +317,7 @@ static struct mx8mp_uart_s g_uart3priv =
   .clock          = UART3_CLK_ROOT,
   .uartbase       = MX8M_UART3,
   .baud           = CONFIG_UART3_BAUD,
+  .lock           = SP_UNLOCKED,
   .irq            = MX8MP_IRQ_UART3,
   .parity         = CONFIG_UART3_PARITY,
   .bits           = CONFIG_UART3_BITS,
@@ -343,6 +347,7 @@ static struct mx8mp_uart_s g_uart4priv =
   .clock          = UART4_CLK_ROOT,
   .uartbase       = MX8M_UART4,
   .baud           = CONFIG_UART4_BAUD,
+  .lock           = SP_UNLOCKED,
   .irq            = MX8MP_IRQ_UART4,
   .parity         = CONFIG_UART4_PARITY,
   .bits           = CONFIG_UART4_BITS,
@@ -813,7 +818,7 @@ static int mx8mp_ioctl(struct file *filep, int cmd, unsigned long arg)
              * implement TCSADRAIN / TCSAFLUSH
              */
 
-            flags  = spin_lock_irqsave(NULL);
+            flags  = spin_lock_irqsave(&priv->lock);
             mx8mp_disableuartint(priv, &ie);
             ret = mx8mp_setup(dev);
 
@@ -821,7 +826,7 @@ static int mx8mp_ioctl(struct file *filep, int cmd, unsigned long arg)
 
             mx8mp_restoreuartint(priv, ie);
             priv->ie = ie;
-            spin_unlock_irqrestore(NULL, flags);
+            spin_unlock_irqrestore(&priv->lock, flags);
           }
       }
       break;
