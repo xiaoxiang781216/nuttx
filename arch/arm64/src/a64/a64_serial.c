@@ -268,6 +268,12 @@ struct a64_uart_port_s
 };
 
 /***************************************************************************
+ * Private Data
+ ***************************************************************************/
+
+static spinlock_t g_a64_serial_lock = SP_UNLOCKED;
+
+/***************************************************************************
  * Private Function Prototypes
  ***************************************************************************/
 
@@ -966,7 +972,7 @@ static int a64_uart_init(uint32_t gating, uint32_t rst, pio_pinset_t tx,
   irqstate_t flags;
   int ret = OK;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave(&g_a64_serial_lock);
 
   /* Enable clocking to UART */
 
@@ -992,7 +998,7 @@ static int a64_uart_init(uint32_t gating, uint32_t rst, pio_pinset_t tx,
         }
     }
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&g_a64_serial_lock, flags);
   return ret;
 };
 
