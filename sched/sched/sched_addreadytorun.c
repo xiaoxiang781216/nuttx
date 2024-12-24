@@ -217,6 +217,9 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 
       nxsched_add_prioritized(btcb, list_readytorun());
 
+      /* In some cases, such as setaffinity, cpu need to be used. */
+
+      btcb->cpu        = cpu;
       btcb->task_state = TSTATE_TASK_READYTORUN;
       doswitch         = false;
     }
