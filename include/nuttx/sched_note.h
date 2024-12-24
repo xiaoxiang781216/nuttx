@@ -38,95 +38,12 @@
 #include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
 
-/* For system call numbers definition */
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
-#ifdef CONFIG_LIB_SYSCALL
-#include <syscall.h>
-#else
-#define CONFIG_LIB_SYSCALL
-#include <syscall.h>
-#undef CONFIG_LIB_SYSCALL
-#endif
-#endif
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
 #define NOTE_ALIGN(a) (((a) + sizeof(uintptr_t) - 1) & \
                        ~(sizeof(uintptr_t) - 1))
-
-/* Provide defaults for some configuration settings (could be undefined with
- * old configuration files)
- */
-
-#ifndef CONFIG_SCHED_INSTRUMENTATION_CPUSET
-#  define CONFIG_SCHED_INSTRUMENTATION_CPUSET 0xffff
-#endif
-
-/* Note filter mode flag definitions */
-
-#define NOTE_FILTER_MODE_FLAG_ENABLE       (1 << 0) /* Enable instrumentation */
-#define NOTE_FILTER_MODE_FLAG_SWITCH       (1 << 1) /* Enable syscall instrumentation */
-#define NOTE_FILTER_MODE_FLAG_SYSCALL      (1 << 2) /* Enable syscall instrumentation */
-#define NOTE_FILTER_MODE_FLAG_IRQ          (1 << 3) /* Enable IRQ instrumentaiton */
-#define NOTE_FILTER_MODE_FLAG_DUMP         (1 << 4) /* Enable dump instrumentaiton */
-#define NOTE_FILTER_MODE_FLAG_SYSCALL_ARGS (1 << 5) /* Enable collecting syscall arguments */
-
-/* Helper macros for syscall instrumentation filter */
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
-#  define NOTE_FILTER_SYSCALLMASK_SET(nr, s) \
-          ((s)->syscall_mask[(nr) / 8] |= (1 << ((nr) % 8)))
-#  define NOTE_FILTER_SYSCALLMASK_CLR(nr, s) \
-          ((s)->syscall_mask[(nr) / 8] &= ~(1 << ((nr) % 8)))
-#  define NOTE_FILTER_SYSCALLMASK_ISSET(nr, s) \
-          ((s)->syscall_mask[(nr) / 8] & (1 << ((nr) % 8)))
-#  define NOTE_FILTER_SYSCALLMASK_ZERO(s) \
-          memset((s), 0, sizeof(struct note_filter_syscall_s))
-#else
-#  define NOTE_FILTER_SYSCALLMASK_SET(nr, s)
-#  define NOTE_FILTER_SYSCALLMASK_CLR(nr, s)
-#  define NOTE_FILTER_SYSCALLMASK_ISSET(nr, s) (0)
-#  define NOTE_FILTER_SYSCALLMASK_ZERO(s)
-#endif
-
-/* Helper macros for IRQ instrumentation filter */
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
-#  define NOTE_FILTER_IRQMASK_SET(nr, s) \
-          ((s)->irq_mask[(nr) / 8] |= (1 << ((nr) % 8)))
-#  define NOTE_FILTER_IRQMASK_CLR(nr, s) \
-          ((s)->irq_mask[(nr) / 8] &= ~(1 << ((nr) % 8)))
-#  define NOTE_FILTER_IRQMASK_ISSET(nr, s) \
-          ((s)->irq_mask[(nr) / 8] & (1 << ((nr) % 8)))
-#  define NOTE_FILTER_IRQMASK_ZERO(s) \
-          memset((s), 0, sizeof(struct note_filter_irq_s))
-#else
-#  define NOTE_FILTER_IRQMASK_SET(nr, s)
-#  define NOTE_FILTER_IRQMASK_CLR(nr, s)
-#  define NOTE_FILTER_IRQMASK_ISSET(nr, s) (0)
-#  define NOTE_FILTER_IRQMASK_ZERO(s)
-#endif
-
-/* Helper macros for dump instrumentation filter */
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-#  define NOTE_FILTER_TAGMASK_SET(tag, s) \
-          ((s)->tag_mask[(tag) / 8] |= (1 << ((tag) % 8)))
-#  define NOTE_FILTER_TAGMASK_CLR(tag, s) \
-          ((s)->tag_mask[(tag) / 8] &= ~(1 << ((tag) % 8)))
-#  define NOTE_FILTER_TAGMASK_ISSET(tag, s) \
-          ((s)->tag_mask[(tag) / 8] & (1 << ((tag) % 8)))
-#  define NOTE_FILTER_TAGMASK_ZERO(s) \
-          memset((s), 0, sizeof(struct note_filter_tag_s));
-#else
-#  define NOTE_FILTER_TAGMASK_SET(tag, s)
-#  define NOTE_FILTER_TAGMASK_CLR(tag, s)
-#  define NOTE_FILTER_TAGMASK_ISSET(tag, s) (0)
-#  define NOTE_FILTER_TAGMASK_ZERO(s)
-#endif
 
 /* Printf argument type */
 
@@ -521,67 +438,6 @@ struct note_threadtime_s
   clock_t elapsed;
 };
 
-/* This is the type of the argument passed to the NOTECTL_GETMODE and
- * NOTECTL_SETMODE ioctls
- */
-
-struct note_filter_mode_s
-{
-  unsigned int flag;          /* Filter mode flag */
-#ifdef CONFIG_SMP
-  cpu_set_t cpuset;           /* The set of monitored CPUs */
-#endif
-};
-
-struct note_filter_named_mode_s
-{
-  char name[NAME_MAX];
-  struct note_filter_mode_s mode;
-};
-
-/* This is the type of the argument passed to the NOTECTL_GETSYSCALLFILTER
- * and NOTECTL_SETSYSCALLFILTER ioctls
- */
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
-struct note_filter_syscall_s
-{
-  uint8_t syscall_mask[(SYS_nsyscalls + 7) / 8];
-};
-
-struct note_filter_named_syscall_s
-{
-  char name[NAME_MAX];
-  struct note_filter_syscall_s syscall_mask;
-};
-#endif
-
-/* This is the type of the argument passed to the NOTECTL_GETIRQFILTER and
- * NOTECTL_SETIRQFILTER ioctls
- */
-
-struct note_filter_irq_s
-{
-  uint8_t irq_mask[(NR_IRQS + 7) / 8];
-};
-
-struct note_filter_named_irq_s
-{
-  char name[NAME_MAX];
-  struct note_filter_irq_s irq_mask;
-};
-
-struct note_filter_tag_s
-{
-  uint8_t tag_mask[(NOTE_TAG_MAX + 7) / 8];
-};
-
-struct note_filter_named_tag_s
-{
-  char name[NAME_MAX];
-  struct note_filter_tag_s tag_mask;
-};
-
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -704,93 +560,6 @@ void sched_note_printf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
 #  define sched_note_vprintf_ip(t,ip,f,p,v)
 #  define sched_note_printf_ip(t,ip,f,p,...)
 #endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP */
-
-#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
-
-/****************************************************************************
- * Name: sched_note_filter_mode
- *
- * Description:
- *   Set and get note filter mode.
- *   (Same as NOTECTL_GETMODE / NOTECTL_SETMODE ioctls)
- *
- * Input Parameters:
- *   oldm - A writable pointer to struct note_filter_mode_s to get current
- *          filter mode
- *          If 0, no data is written.
- *   newm - A read-only pointer to struct note_filter_mode_s which holds the
- *          new filter mode
- *          If 0, the filter mode is not updated.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-void sched_note_filter_mode(FAR struct note_filter_named_mode_s *oldm,
-                            FAR struct note_filter_named_mode_s *newm);
-#endif
-
-/****************************************************************************
- * Name: sched_note_filter_syscall
- *
- * Description:
- *   Set and get syscall filter setting
- *   (Same as NOTECTL_GETSYSCALLFILTER / NOTECTL_SETSYSCALLFILTER ioctls)
- *
- * Input Parameters:
- *   oldf - A writable pointer to struct note_filter_syscall_s to get
- *          current syscall filter setting
- *          If 0, no data is written.
- *   newf - A read-only pointer to struct note_filter_syscall_s of the
- *          new syscall filter setting
- *          If 0, the setting is not updated.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
-    defined(CONFIG_SCHED_INSTRUMENTATION_SYSCALL)
-void sched_note_filter_syscall(FAR struct note_filter_named_syscall_s *oldf,
-                               FAR struct note_filter_named_syscall_s *newf);
-#endif
-
-/****************************************************************************
- * Name: sched_note_filter_irq
- *
- * Description:
- *   Set and get IRQ filter setting
- *   (Same as NOTECTL_GETIRQFILTER / NOTECTL_SETIRQFILTER ioctls)
- *
- * Input Parameters:
- *   oldf - A writable pointer to struct note_filter_irq_s to get
- *          current IRQ filter setting
- *          If 0, no data is written.
- *   newf - A read-only pointer to struct note_filter_irq_s of the new
- *          IRQ filter setting
- *          If 0, the setting is not updated.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
-    defined(CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER)
-void sched_note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
-                           FAR struct note_filter_named_irq_s *newf);
-#endif
-
-#if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
-    defined(CONFIG_SCHED_INSTRUMENTATION_DUMP)
-void sched_note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
-                           FAR struct note_filter_named_tag_s *newf);
-#endif
-
-#endif /* defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT) */
 
 #undef EXTERN
 #if defined(__cplusplus)
