@@ -834,6 +834,9 @@ void _assert(FAR const char *filename, int linenum,
     {
       /* Already in fatal state, reset board directly. */
 
+#ifdef CONFIG_ARCH_LOWPUTC
+      up_puts("Reset board on recursive assert.\n");
+#endif
       reset_board(); /* Should not return. */
     }
 
