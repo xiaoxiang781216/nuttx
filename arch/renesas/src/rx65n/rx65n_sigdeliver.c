@@ -35,6 +35,7 @@
 #include <arch/board/board.h>
 
 #include "sched/sched.h"
+#include "signal/signal.h"
 #include "renesas_internal.h"
 
 /****************************************************************************
@@ -55,13 +56,12 @@ void renesas_sigdeliver(void)
 {
   struct tcb_s *rtcb = this_task();
   uint32_t regs[XCPTCONTEXT_REGS];
-  sig_deliver_t sigdeliver;
 
   board_autoled_on(LED_SIGNAL);
 
-  sinfo("rtcb=%p sigdeliver=%p sigpendactionq.head=%p\n",
-        rtcb, rtcb->sigdeliver, rtcb->sigpendactionq.head);
-  DEBUGASSERT(rtcb->sigdeliver != NULL);
+  sinfo("rtcb=%p sigpendactionq.head=%p\n",
+        rtcb, rtcb->sigpendactionq.head);
+  DEBUGASSERT((rtcb->flags & TCB_FLAG_SIGDELIVER) != 0);
 
   /* Save the real return state on the stack. */
 
@@ -75,8 +75,7 @@ void renesas_sigdeliver(void)
    * signals.
    */
 
-  sigdeliver       = rtcb->sigdeliver;
-  rtcb->sigdeliver = NULL;
+  rtcb->flags &= ~TCB_FLAG_SIGDELIVER;
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
   /* Then make sure that interrupts are enabled.  Signal handlers must always
@@ -88,7 +87,7 @@ void renesas_sigdeliver(void)
 
   /* Deliver the signals */
 
-  sigdeliver(rtcb);
+  nxsig_deliver(rtcb);
 
   /* Output any debug messages BEFORE restoring errno (because they may
    * alter errno), then disable interrupts again and restore the original

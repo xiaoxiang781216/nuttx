@@ -35,6 +35,7 @@
 #include <arch/board/board.h>
 
 #include "sched/sched.h"
+#include "signal/signal.h"
 #include "x86_64_internal.h"
 
 /****************************************************************************
@@ -68,9 +69,9 @@ void x86_64_sigdeliver(void)
 
   board_autoled_on(LED_SIGNAL);
 
-  sinfo("rtcb=%p sigdeliver=%p sigpendactionq.head=%p\n",
-        rtcb, rtcb->sigdeliver, rtcb->sigpendactionq.head);
-  DEBUGASSERT(rtcb->sigdeliver != NULL);
+  sinfo("rtcb=%p sigpendactionq.head=%p\n",
+        rtcb, rtcb->sigpendactionq.head);
+  DEBUGASSERT((rtcb->flags & TCB_FLAG_SIGDELIVER) != 0);
 
   /* Align regs to 64 byte boundary for XSAVE */
 
@@ -113,7 +114,7 @@ void x86_64_sigdeliver(void)
 
   /* Deliver the signals */
 
-  (rtcb->sigdeliver)(rtcb);
+  nxsig_deliver(rtcb);
 
   /* Output any debug messages BEFORE restoring errno (because they may
    * alter errno), then disable interrupts again and restore the original
@@ -141,7 +142,10 @@ void x86_64_sigdeliver(void)
   regs[REG_RIP]    = rtcb->xcp.saved_rip;
   regs[REG_RSP]    = rtcb->xcp.saved_rsp;
   regs[REG_RFLAGS] = rtcb->xcp.saved_rflags;
-  rtcb->sigdeliver = NULL;  /* Allows next handler to be scheduled */
+
+  /* Allows next handler to be scheduled */
+
+  rtcb->flags &= ~TCB_FLAG_SIGDELIVER;
 
 #ifdef CONFIG_SMP
   /* Restore the saved 'irqcount' and recover the critical section

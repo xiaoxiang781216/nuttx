@@ -35,6 +35,7 @@
 #include <arch/board/board.h>
 
 #include "sched/sched.h"
+#include "signal/signal.h"
 #include "z16_internal.h"
 
 /****************************************************************************
@@ -59,9 +60,9 @@ void z16_sigdeliver(void)
 
   board_autoled_on(LED_SIGNAL);
 
-  sinfo("rtcb=%p sigdeliver=%p sigpendactionq.head=%p\n",
-        rtcb, rtcb->sigdeliver, rtcb->sigpendactionq.head);
-  DEBUGASSERT(rtcb->sigdeliver != NULL);
+  sinfo("rtcb=%p sigpendactionq.head=%p\n",
+        rtcb, rtcb->sigpendactionq.head);
+  DEBUGASSERT((rtcb->flags & TCB_FLAG_SIGDELIVER) != 0);
 
   /* Save the return state on the stack. */
 
@@ -77,7 +78,7 @@ void z16_sigdeliver(void)
 
   /* Deliver the signals */
 
-  (rtcb->sigdeliver)(rtcb);
+  nxsig_deliver(rtcb);
 
   /* Output any debug messages BEFORE restoring errno (because they may
    * alter errno), then disable interrupts again and restore the original
@@ -99,7 +100,7 @@ void z16_sigdeliver(void)
 
   regs32[REG_PC / 2] = rtcb->xcp.saved_pc;
   regs[REG_FLAGS]    = rtcb->xcp.saved_i;
-  rtcb->sigdeliver   = NULL;  /* Allows next handler to be scheduled */
+  rtcb->flags &= ~TCB_FLAG_SIGDELIVER;
 
   /* Then restore the correct state for this thread of execution. */
 

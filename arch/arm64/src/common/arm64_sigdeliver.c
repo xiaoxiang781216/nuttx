@@ -33,6 +33,7 @@
 #include <nuttx/arch.h>
 
 #include "sched/sched.h"
+#include "signal/signal.h"
 #include "arm64_internal.h"
 #include "arm64_arch.h"
 #include "irq/irq.h"
@@ -67,9 +68,9 @@ void arm64_sigdeliver(void)
   flags = (rtcb->xcp.saved_regs[REG_SPSR] & SPSR_DAIF_MASK);
 #endif
 
-  sinfo("rtcb=%p sigdeliver=%p sigpendactionq.head=%p\n",
-        rtcb, rtcb->sigdeliver, rtcb->sigpendactionq.head);
-  DEBUGASSERT(rtcb->sigdeliver != NULL);
+  sinfo("rtcb=%p sigpendactionq.head=%p\n",
+        rtcb, rtcb->sigpendactionq.head);
+  DEBUGASSERT((rtcb->flags & TCB_FLAG_SIGDELIVER) != 0);
 
 retry:
 #ifdef CONFIG_SMP
@@ -101,7 +102,7 @@ retry:
 
   /* Deliver the signal */
 
-  (rtcb->sigdeliver)(rtcb);
+  nxsig_deliver(rtcb);
 
   /* Output any debug messages BEFORE restoring errno (because they may
    * alter errno), then disable interrupts again and restore the original
@@ -148,7 +149,9 @@ retry:
    * could be modified by a hostile program.
    */
 
-  rtcb->sigdeliver = NULL;  /* Allows next handler to be scheduled */
+  /* Allows next handler to be scheduled */
+
+  rtcb->flags &= ~TCB_FLAG_SIGDELIVER;
   rtcb->xcp.regs = rtcb->xcp.saved_regs;
 
   /* Then restore the correct state for this thread of execution. */
