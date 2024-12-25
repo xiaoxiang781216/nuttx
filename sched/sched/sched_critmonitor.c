@@ -369,8 +369,7 @@ void nxsched_switch_critmon(FAR struct tcb_s *from, FAR struct tcb_s *to)
   clock_t elapsed = current - from->run_start;
 
 #ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
-  clock_t tick = elapsed * CLOCKS_PER_SEC / perf_getfreq();
-  nxsched_critmon_cpuload(from, current, tick);
+  nxsched_critmon_cpuload(from, current, elapsed);
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_THREADTIME
