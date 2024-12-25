@@ -27,4 +27,12 @@ if(CONFIG_ARCH_EARLY_PRINT)
   list(APPEND SRCS goldfish_lowputc.S)
 endif()
 
+if(CONFIG_PM)
+  list(APPEND SRCS goldfish_pminitialize.c)
+endif()
+
+if(CONFIG_ARCH_IDLE_CUSTOM)
+  list(APPEND SRCS goldfish_idle.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})
