@@ -22,3 +22,17 @@ set_property(GLOBAL PROPERTY LD_SCRIPT
                              "${NUTTX_BOARD_DIR}/scripts/elf32xtensa.x")
 
 add_subdirectory(src)
+
+list(APPEND EXTRA_LIB libgcc.a)
+
+execute_process(
+  COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
+          --show-config=config
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  OUTPUT_VARIABLE xt_path)
+
+foreach(lib ${EXTRA_LIB})
+  file(GLOB_RECURSE find_lib ${xt_path}/xtensa-elf/lib/${lib}
+       ${xt_path}/xtensa-elf/lib/*/${lib})
+  nuttx_add_extra_library(${find_lib})
+endforeach()
