@@ -78,6 +78,8 @@ IFX_INT_WRAPPER(CONFIG_CPU_COREID)
 
   /* Deliver the IRQ */
 
+  tricore_ack_irq(NDX_TO_IRQ(icr.B.CCPN));
+
   irq_dispatch(NDX_TO_IRQ(icr.B.CCPN), regs);
 
   tcb = this_task();
