@@ -826,6 +826,7 @@ struct sensor_impd          /* Type: Impedance */
   uint64_t timestamp;       /* Unit is microseconds */
   float real;               /* Real part, unit is Ohm(Ω) */
   float imag;               /* Imaginary part, unit is Ohm(Ω) */
+  float contact[4];         /* Impedance value of electrode unit is Ohm(Ω) */
 };
 
 struct sensor_ots           /* Type: OTS */
