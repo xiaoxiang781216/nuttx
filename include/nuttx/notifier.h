@@ -46,6 +46,13 @@
 #define ATOMIC_NOTIFIER_HEAD(name) \
   struct atomic_notifier_head name = ATOMIC_NOTIFIER_INIT(name)
 
+#define ATOMIC_INIT_NOTIFIER_HEAD(name) \
+  do \
+    { \
+      (name)->head = NULL; \
+    } \
+  while (0)
+
 #define BLOCKING_NOTIFIER_INIT(name) { \
     NXMUTEX_INITIALIZER, \
     NULL \
