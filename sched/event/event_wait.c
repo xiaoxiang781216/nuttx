@@ -138,6 +138,7 @@ nxevent_mask_t nxevent_tickwait(FAR nxevent_t *event, nxevent_mask_t events,
       /* Destroy local variables */
 
       nxsem_destroy(&wait.sem);
+      list_delete(&wait.node);
 
       flags = spin_lock_irqsave(&event->lock);
 
