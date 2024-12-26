@@ -839,6 +839,7 @@ void _assert(FAR const char *filename, int linenum,
   if (os_ready)
     {
       flags = enter_critical_section();
+      sched_lock();
     }
 
 #if CONFIG_BOARD_RESET_ON_ASSERT < 2
@@ -912,5 +913,6 @@ void _assert(FAR const char *filename, int linenum,
   if (os_ready)
     {
       leave_critical_section(flags);
+      sched_unlock();
     }
 }
