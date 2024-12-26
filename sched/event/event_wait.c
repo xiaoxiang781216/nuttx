@@ -131,11 +131,11 @@ nxevent_mask_t nxevent_tickwait_core(FAR nxevent_t *event,
 
       if (delay == UINT32_MAX)
         {
-          ret = nxsem_wait(&wait->sem);
+          ret = nxsem_wait_uninterruptible(&wait->sem);
         }
       else
         {
-          ret = nxsem_tickwait(&wait->sem, delay);
+          ret = nxsem_tickwait_uninterruptible(&wait->sem, delay);
         }
 
       /* Destroy local variables */
@@ -143,6 +143,12 @@ nxevent_mask_t nxevent_tickwait_core(FAR nxevent_t *event,
       nxsem_destroy(&wait->sem);
 
       flags = spin_lock_irqsave(&event->lock);
+
+      if (list_in_list(&wait->node))
+        {
+          list_delete(&wait->node);
+        }
+
       if (ret == 0)
         {
           events = wait->expect;
@@ -150,11 +156,6 @@ nxevent_mask_t nxevent_tickwait_core(FAR nxevent_t *event,
         }
       else
         {
-          if (list_in_list(&wait->node))
-            {
-              list_delete(&wait->node);
-            }
-
           events = 0;
         }
     }
