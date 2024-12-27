@@ -96,6 +96,13 @@
 #define sparc_syscall_return() sys_call0(SYS_syscall_return)
 
 #endif
+
+/* SYS call 4:
+ *
+ * void _assert(const char *filename, int linenum, const char *msg);
+ */
+
+#define SYS_assert_handler (4)
 #endif /* __ASSEMBLY__ */
 
 /****************************************************************************

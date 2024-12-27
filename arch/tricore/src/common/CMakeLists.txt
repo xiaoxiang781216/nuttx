@@ -44,7 +44,8 @@ set(SRCS
     tricore_systimer.c
     tricore_tcbinfo.c
     tricore_trapcall.c
-    tricore_usestack.c)
+    tricore_usestack.c
+    tricore_assert.c)
 
 if(CONFIG_SCHED_BACKTRACE)
   list(APPEND SRCS tricore_backtrace.c)

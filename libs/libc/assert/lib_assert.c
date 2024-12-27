@@ -35,6 +35,20 @@
 
 void __assert(FAR const char *filename, int linenum, FAR const char *msg)
 {
-  _assert(filename, linenum, msg, NULL);
+#ifdef CONFIG_BUILD_FLAT
+  if (up_interrupt_context())
+    {
+      _assert(filename, linenum, msg, NULL, true);
+    }
+  else
+#endif
+    {
+#ifdef CONFIG_ARCH_HAVE_SYSCALL
+      up_assert(filename, linenum, msg);
+#else
+      _assert(filename, linenum, msg, NULL, false);
+#endif
+    }
+
   abort();
 }

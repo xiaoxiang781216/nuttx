@@ -46,6 +46,7 @@ CMN_CSRCS += tricore_systimer.c
 CMN_CSRCS += tricore_tcbinfo.c
 CMN_CSRCS += tricore_trapcall.c
 CMN_CSRCS += tricore_usestack.c
+CMN_CSRCS += tricore_assert.c
 
 ifeq ($(CONFIG_SCHED_BACKTRACE),y)
   CMN_CSRCS += tricore_backtrace.c

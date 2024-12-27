@@ -82,6 +82,13 @@
 
 #endif /* !CONFIG_BUILD_FLAT */
 
+/* SYS call 4:
+ *
+ * void _assert(const char *filename, int linenum, const char *msg);
+ */
+
+#define SYS_assert_handler          (4)
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/

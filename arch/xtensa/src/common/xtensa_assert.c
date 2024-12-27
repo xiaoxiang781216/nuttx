@@ -188,3 +188,13 @@ void xtensa_user_panic(int exccause, uint32_t *regs)
   PANIC_WITH_REGS("user panic", regs); /* Should not return */
   for (; ; );
 }
+
+/****************************************************************************
+ * Name: up_assert
+ ****************************************************************************/
+
+void up_assert(const char *filename, int linenum, const char *msg)
+{
+  sys_call3(SYS_assert_handler, (uintptr_t)filename, (uintptr_t)linenum,
+            (uintptr_t)msg);
+}

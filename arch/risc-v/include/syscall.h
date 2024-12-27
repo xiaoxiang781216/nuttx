@@ -95,6 +95,13 @@
 #define SYS_signal_handler_return (5)
 #endif /* !CONFIG_BUILD_FLAT */
 
+/* SYS call 6:
+ *
+ * void _assert(const char *filename, int linenum, const char *msg);
+ */
+
+#define SYS_assert_handler        (6)
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
