@@ -111,6 +111,7 @@
 #define _MSIOCBASE      (0x4300) /* Mouse ioctl commands */
 #define _PERFBASE       (0x4400) /* Perf ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
+#define _SAFETYBASE     (0x8c00) /* Safety modules ioctl commands */
 
 /* boardctl() commands share the same number space */
 
@@ -780,6 +781,11 @@
 
 #define _PERFIOCVALID(c)      (_IOC_TYPE(c)==_PERFBASE)
 #define _PERFIOC(nr)          _IOC(_PERFBASE,nr)
+
+/* Safety driver ioctl definitions ******************************************/
+
+#define _SAFETYIOCVALID(c) (_IOC_TYPE(c)==_SAFETYBASE)
+#define _SAFETYIOC(nr)     _IOC(_SAFETYBASE,nr)
 
 /****************************************************************************
  * Public Type Definitions
