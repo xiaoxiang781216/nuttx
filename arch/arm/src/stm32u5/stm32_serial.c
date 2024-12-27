@@ -499,7 +499,7 @@ static struct stm32_serial_s g_lpuart1priv =
   .rs485_dir_polarity = true,
 #    endif
 #  endif
-  .lock =             = SP_UNLOCKED,
+  .lock               = SP_UNLOCKED,
 };
 #endif
 
@@ -621,7 +621,7 @@ static struct stm32_serial_s g_usart2priv =
   .rs485_dir_polarity = true,
 #    endif
 #  endif
-  .lock =             = SP_UNLOCKED,
+  .lock               = SP_UNLOCKED,
 };
 #endif
 
@@ -683,7 +683,7 @@ static struct stm32_serial_s g_usart3priv =
   .rs485_dir_polarity = true,
 #    endif
 #  endif
-  .lock =             = SP_UNLOCKED,
+  .lock               = SP_UNLOCKED,
 };
 #endif
 
@@ -745,7 +745,7 @@ static struct stm32_serial_s g_uart4priv =
   .rs485_dir_polarity = true,
 #    endif
 #  endif
-  .lock =             = SP_UNLOCKED,
+  .lock               = SP_UNLOCKED,
 };
 #endif
 
@@ -807,7 +807,7 @@ static struct stm32_serial_s g_uart5priv =
   .rs485_dir_polarity = true,
 #    endif
 #  endif
-  .lock =             = SP_UNLOCKED,
+  .lock               = SP_UNLOCKED,
 };
 #endif
 
