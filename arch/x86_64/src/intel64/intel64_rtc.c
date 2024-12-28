@@ -26,6 +26,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/timers/rtc.h>
+#include <nuttx/spinlock.h>
 #include <arch/board/board.h>
 
 #include <stdlib.h>
@@ -62,6 +63,10 @@
  * Private Data
  ****************************************************************************/
 
+#ifdef CONFIG_RTC_HIRES
+static spinlock_t g_rtc_lock = SP_UNLOCKED;
+#endif
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -83,14 +88,18 @@ static unsigned long rtc_last;
 static unsigned long rtc_read(void)
 {
   uint64_t  tmr = rdtscp();
+  irqstate_t flags;
 
+  flags = spin_lock_irqsave(&g_rtc_lock);
   if (tmr < rtc_last)
     {
       tmr += (0xffffffffffffffffull - rtc_last);
     }
 
   rtc_last = tmr;
+  spin_unlock_irqrestore(&g_rtc_lock, flags);
   tmr = (tmr / (g_x86_64_timer_freq / 1000000ul)) * 1000l;
+
   return tmr;
 }
 

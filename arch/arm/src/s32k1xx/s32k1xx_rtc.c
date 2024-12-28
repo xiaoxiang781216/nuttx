@@ -35,6 +35,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/timers/rtc.h>
+#include <nuttx/spinlock.h>
 
 #include <arch/board/board.h>
 
@@ -57,6 +58,12 @@
  */
 
 volatile bool g_rtc_enabled = false;
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static spinlock_t g_rtc_lock = SP_UNLOCKED;
 
 /****************************************************************************
  * Private Functions
@@ -245,7 +252,7 @@ int up_rtc_gettime(struct timespec *tp)
    * wrapped-around.
    */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_rtc_lock);
   do
     {
       prescaler = getreg32(S32K1XX_RTC_TPR);
@@ -254,7 +261,7 @@ int up_rtc_gettime(struct timespec *tp)
     }
   while (prescaler > prescaler2);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_rtc_lock, flags);
 
   /* Build seconds + nanoseconds from seconds and prescaler register */
 
@@ -294,7 +301,7 @@ int up_rtc_settime(const struct timespec *ts)
   prescaler = 0;
 #endif
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_rtc_lock);
 
   s32k1xx_rtc_disable();
 
@@ -303,7 +310,7 @@ int up_rtc_settime(const struct timespec *ts)
 
   s32k1xx_rtc_enable();
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_rtc_lock, flags);
 
   return OK;
 }

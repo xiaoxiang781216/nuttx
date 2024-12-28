@@ -44,6 +44,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/timers/rtc.h>
+#include <nuttx/spinlock.h>
 #include <arch/board/board.h>
 
 #include <stdlib.h>
@@ -148,6 +149,8 @@ struct rtc_regvals_s
 /****************************************************************************
  * Private Data
  ****************************************************************************/
+
+static spinlock_t g_rtc_lock = SP_UNLOCKED;
 
 /* Callback to use when the alarm expires */
 
@@ -522,7 +525,7 @@ time_t up_rtc_time(void)
    * interrupts will prevent suspensions and interruptions:
    */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_rtc_lock);
 
   /* And the following loop will handle any clock rollover events that may
    * happen between samples.  Most of the time (like 99.9%), the following
@@ -544,7 +547,7 @@ time_t up_rtc_time(void)
    */
 
   while (cntl < tmp);
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_rtc_lock, flags);
 
   /* Okay.. the samples should be as close together in time as possible and
    * we can be assured that no clock rollover occurred between the samples.
@@ -591,7 +594,7 @@ int up_rtc_gettime(struct timespec *tp)
    * interrupts will prevent suspensions and interruptions:
    */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_rtc_lock);
 
   /* And the following loop will handle any clock rollover events that may
    * happen between samples.  Most of the time (like 99.9%), the following
@@ -614,7 +617,7 @@ int up_rtc_gettime(struct timespec *tp)
    */
 
   while (cntl < tmp);
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_rtc_lock, flags);
 
   /* Okay.. the samples should be as close together in time as possible and
    * we can be assured that no clock rollover occurred between the samples.
@@ -662,7 +665,7 @@ int up_rtc_settime(const struct timespec *tp)
 
   /* Enable write access to the backup domain */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_rtc_lock);
   stm32_pwr_enablebkp(true);
 
   /* Then write the broken out values to the RTC counter and BKP overflow
@@ -680,7 +683,7 @@ int up_rtc_settime(const struct timespec *tp)
 #endif
 
   stm32_pwr_enablebkp(false);
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_rtc_lock, flags);
   return OK;
 }
 
@@ -707,7 +710,7 @@ int stm32_rtc_setalarm(const struct timespec *tp, alarmcb_t callback)
   uint16_t cr;
   int ret = -EBUSY;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_rtc_lock);
 
   /* Is there already something waiting on the ALARM? */
 
@@ -741,7 +744,7 @@ int stm32_rtc_setalarm(const struct timespec *tp, alarmcb_t callback)
       ret = OK;
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_rtc_lock, flags);
 
   return ret;
 }
@@ -767,7 +770,7 @@ int stm32_rtc_cancelalarm(void)
   irqstate_t flags;
   int ret = -ENODATA;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_rtc_lock);
 
   if (g_alarmcb != NULL)
     {
@@ -787,7 +790,7 @@ int stm32_rtc_cancelalarm(void)
       ret = OK;
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_rtc_lock, flags);
 
   return ret;
 }

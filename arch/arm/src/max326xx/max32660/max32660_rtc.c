@@ -401,10 +401,13 @@ time_t up_rtc_time(void)
 #ifdef CONFIG_RTC_HIRES
 int up_rtc_gettime(struct timespec *tp)
 {
+  irqstate_t flags;
   uint64_t tmp;
   uint32_t sec;
   uint32_t ssec;
   uint32_t verify;
+
+  flags = spin_lock_irqsave(&g_rtc_lock);
 
   /* Read the time handling rollover to full seconds */
 
@@ -415,6 +418,8 @@ int up_rtc_gettime(struct timespec *tp)
       verify = getreg32(MAX326_RTC_SEC);
     }
   while (verify != sec);
+
+  spin_unlock_irqrestore(&g_rtc_lock, flags);
 
   /* Format as a tm */
 
