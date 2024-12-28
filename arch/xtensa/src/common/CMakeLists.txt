@@ -18,32 +18,16 @@
 #
 # ##############################################################################
 
-# The start-up, "head", file.  May be either a .S or a .c file.
-add_library(xtensa_head OBJECT)
-nuttx_add_library_internal(xtensa_head)
-get_property(
-  definitions
-  TARGET nuttx
-  PROPERTY NUTTX_KERNEL_DEFINITIONS)
-target_compile_definitions(xtensa_head PRIVATE ${definitions})
-
-get_property(
-  options
-  TARGET nuttx
-  PROPERTY NUTTX_KERNEL_COMPILE_OPTIONS)
-
-set(HEAD_SRCS xtensa_vectors.S xtensa_window_vector.S xtensa_windowspill.S
-              xtensa_int_handlers.S xtensa_user_handler.S)
-
-target_sources(xtensa_head PRIVATE ${HEAD_SRCS})
-target_include_directories(xtensa_head BEFORE PUBLIC ${NUTTX_CHIP_ABS_DIR})
-target_link_libraries(nuttx PRIVATE $<TARGET_OBJECTS:xtensa_head>)
-
 # Common Xtensa files (arch/xtensa/src/common)
 
 list(
   APPEND
   SRCS
+  xtensa_vectors.S
+  xtensa_window_vector.S
+  xtensa_windowspill.S
+  xtensa_int_handlers.S
+  xtensa_user_handler.S
   xtensa_context.S
   xtensa_cpuint.S
   xtensa_panic.S
