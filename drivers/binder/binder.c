@@ -295,6 +295,7 @@ static int binder_flush(FAR struct file *filp)
     {
       wait_wake_up(&thread->wait, 0);
       wake_count++;
+      thread->looper_need_return = false;
     }
   }
 
