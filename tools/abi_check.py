@@ -65,7 +65,7 @@ def print_struct(name, member, fileinfo):
 
 def struct_check(elf):
     p = subprocess.Popen(
-        ["pahole", "-M", "--sort", "-I", elf[0]],
+        ["pahole", "-M", "--sort", "-I", elf],
         env=os.environ.copy(),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -553,7 +553,10 @@ and output the result to lib_<json> file
     parser.add_argument("-i", "--input_json", nargs=2, help="Diff two json files")
 
     args = parser.parse_args()
-    if not args.input_json and (args.elf is None or args.lib is None):
+
+    if (not args.input_json and not args.struct_check) and (
+        args.elf is None or args.lib is None
+    ):
         print("Error: elf and lib must be provided")
         exit(1)
 
