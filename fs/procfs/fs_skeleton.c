@@ -108,8 +108,6 @@ static int     skel_readdir(FAR struct fs_dirent_s *dir,
                             FAR struct dirent *entry);
 static int     skel_rewinddir(FAR struct fs_dirent_s *dir);
 
-static int     skel_stat(FAR const char *relpath, FAR struct stat *buf);
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -144,8 +142,6 @@ const struct procfs_operations skel_procfsoperations =
   skel_closedir,   /* closedir */
   skel_readdir,    /* readdir */
   skel_rewinddir,  /* rewinddir */
-
-  skel_stat        /* stat */
 };
 
 /****************************************************************************
@@ -467,39 +463,5 @@ static int skel_rewinddir(FAR struct fs_dirent_s *dir)
   priv->base.index = 0;
   return OK;
 }
-
-/****************************************************************************
- * Name: skel_stat
- *
- * Description: Return information about a file or directory
- *
- ****************************************************************************/
-
-static int skel_stat(FAR const char *relpath, FAR struct stat *buf)
-{
-  int ret = -ENOENT;
-
-  /* TODO:  Decide if the relpath is valid and if it is a file
-   *        or a directory and set it's permissions.
-   */
-
-  memset(buf, 0, sizeof(struct stat));
-  buf->st_mode = S_IFDIR | S_IROTH | S_IRGRP | S_IRUSR;
-
-  /* TODO:  Set S_IFREG if the relpath refers to a file.
-   * TODO:  If the skel_write() method is supported, then stat must also
-   *        report S_IWOTH | S_IWGRP | S_IWUSR for files (but not for
-   *        directories) as well.
-   * TODO:  Other 'struct buf' settings may be appropriate (optional)
-   */
-
-  ret = OK;
-
-  return ret;
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 #endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS */

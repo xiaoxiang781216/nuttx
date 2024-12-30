@@ -88,8 +88,6 @@ static ssize_t version_read(FAR struct file *filep, FAR char *buffer,
 static int     version_dup(FAR const struct file *oldp,
                  FAR struct file *newp);
 
-static int     version_stat(FAR const char *relpath, FAR struct stat *buf);
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -108,13 +106,6 @@ const struct procfs_operations g_version_operations =
   NULL,               /* poll */
 
   version_dup,        /* dup */
-
-  NULL,               /* opendir */
-  NULL,               /* closedir */
-  NULL,               /* readdir */
-  NULL,               /* rewinddir */
-
-  version_stat        /* stat */
 };
 
 /****************************************************************************
@@ -267,26 +258,6 @@ static int version_dup(FAR const struct file *oldp, FAR struct file *newp)
   newp->f_priv = (FAR void *)newattr;
   return OK;
 }
-
-/****************************************************************************
- * Name: version_stat
- *
- * Description: Return information about a file or directory
- *
- ****************************************************************************/
-
-static int version_stat(FAR const char *relpath, FAR struct stat *buf)
-{
-  /* "version" is the name for a read-only file */
-
-  memset(buf, 0, sizeof(struct stat));
-  buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
-  return OK;
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 #endif /* CONFIG_FS_PROCFS_EXCLUDE_PROCESS */
 #endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS */

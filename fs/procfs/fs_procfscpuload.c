@@ -88,7 +88,6 @@ static ssize_t cpuload_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
 static int     cpuload_dup(FAR const struct file *oldp,
                  FAR struct file *newp);
-static int     cpuload_stat(FAR const char *relpath, FAR struct stat *buf);
 
 /****************************************************************************
  * Public Data
@@ -108,13 +107,6 @@ const struct procfs_operations g_cpuload_operations =
   NULL,               /* poll */
 
   cpuload_dup,        /* dup */
-
-  NULL,              /* opendir */
-  NULL,              /* closedir */
-  NULL,              /* readdir */
-  NULL,              /* rewinddir */
-
-  cpuload_stat        /* stat */
 };
 
 /****************************************************************************
@@ -320,26 +312,6 @@ static int cpuload_dup(FAR const struct file *oldp, FAR struct file *newp)
   newp->f_priv = (FAR void *)newattr;
   return OK;
 }
-
-/****************************************************************************
- * Name: cpuload_stat
- *
- * Description: Return information about a file or directory
- *
- ****************************************************************************/
-
-static int cpuload_stat(const char *relpath, struct stat *buf)
-{
-  /* "cpuload" is the name for a read-only file */
-
-  memset(buf, 0, sizeof(struct stat));
-  buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
-  return OK;
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 #endif /* CONFIG_FS_PROCFS_EXCLUDE_CPULOAD */
 #endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS */

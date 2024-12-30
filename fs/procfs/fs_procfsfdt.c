@@ -72,7 +72,6 @@ static ssize_t fdt_read(FAR struct file *filep, FAR char *buffer,
                         size_t buflen);
 static int     fdt_dup(FAR const struct file *oldp,
                        FAR struct file *newp);
-static int     fdt_stat(FAR const char *relpath, FAR struct stat *buf);
 
 /****************************************************************************
  * Public Data
@@ -91,11 +90,6 @@ const struct procfs_operations g_fdt_operations =
   NULL,           /* write */
   NULL,           /* poll */
   fdt_dup,        /* dup */
-  NULL,           /* opendir */
-  NULL,           /* closedir */
-  NULL,           /* readdir */
-  NULL,           /* rewinddir */
-  fdt_stat        /* stat */
 };
 
 /****************************************************************************
@@ -239,25 +233,5 @@ static int fdt_dup(FAR const struct file *oldp, FAR struct file *newp)
   newp->f_priv = newattr;
   return OK;
 }
-
-/****************************************************************************
- * Name: fdt_stat
- *
- * Description: Return information about a file or directory
- *
- ****************************************************************************/
-
-static int fdt_stat(FAR const char *relpath, FAR struct stat *buf)
-{
-  /* "fdt" is the name for a read-only file */
-
-  memset(buf, 0, sizeof(struct stat));
-  buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
-  return OK;
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 #endif /* CONFIG_DEVICE_TREE && CONFIG_FS_PROCFS_EXCLUDE_FDT */

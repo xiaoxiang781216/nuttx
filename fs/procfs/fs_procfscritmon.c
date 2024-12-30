@@ -87,7 +87,6 @@ static ssize_t critmon_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
 static int     critmon_dup(FAR const struct file *oldp,
                  FAR struct file *newp);
-static int     critmon_stat(FAR const char *relpath, FAR struct stat *buf);
 
 /****************************************************************************
  * Public Data
@@ -107,13 +106,6 @@ const struct procfs_operations g_critmon_operations =
   NULL,               /* poll */
 
   critmon_dup,        /* dup */
-
-  NULL,              /* opendir */
-  NULL,              /* closedir */
-  NULL,              /* readdir */
-  NULL,              /* rewinddir */
-
-  critmon_stat        /* stat */
 };
 
 /****************************************************************************
@@ -442,25 +434,5 @@ static int critmon_dup(FAR const struct file *oldp, FAR struct file *newp)
   newp->f_priv = (FAR void *)newattr;
   return OK;
 }
-
-/****************************************************************************
- * Name: critmon_stat
- *
- * Description: Return information about a file or directory
- *
- ****************************************************************************/
-
-static int critmon_stat(const char *relpath, struct stat *buf)
-{
-  /* "critmon" is the name for a read-only file */
-
-  memset(buf, 0, sizeof(struct stat));
-  buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
-  return OK;
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 #endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS && CONFIG_SCHED_CRITMONITOR */

@@ -66,7 +66,6 @@ static ssize_t cpuinfo_read(FAR struct file *filep, FAR char *buffer,
                             size_t buflen);
 static int     cpuinfo_dup(FAR const struct file *oldp,
                            FAR struct file *newp);
-static int     cpuinfo_stat(FAR const char *relpath, FAR struct stat *buf);
 
 /****************************************************************************
  * Public Data
@@ -85,11 +84,6 @@ const struct procfs_operations g_cpuinfo_operations =
   NULL,           /* write */
   NULL,           /* poll */
   cpuinfo_dup,    /* dup */
-  NULL,           /* opendir */
-  NULL,           /* closedir */
-  NULL,           /* readdir */
-  NULL,           /* rewinddir */
-  cpuinfo_stat    /* stat */
 };
 
 /****************************************************************************
@@ -209,19 +203,4 @@ static int cpuinfo_dup(FAR const struct file *oldp, FAR struct file *newp)
   return OK;
 }
 
-/****************************************************************************
- * Name: cpuinfo_stat
- *
- * Description: Return information about a file or directory
- *
- ****************************************************************************/
-
-static int cpuinfo_stat(FAR const char *relpath, FAR struct stat *buf)
-{
-  /* "cpuinfo" is the name for a read-only file */
-
-  memset(buf, 0, sizeof(struct stat));
-  buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
-  return OK;
-}
 #endif /* !CONFIG_FS_PROCFS_EXCLUDE_CPUINFO */

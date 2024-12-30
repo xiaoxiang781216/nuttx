@@ -84,7 +84,6 @@ static int     pressure_closedir(FAR struct fs_dirent_s *dir);
 static int     pressure_readdir(FAR struct fs_dirent_s *dir,
                                 FAR struct dirent *entry);
 static int     pressure_rewinddir(FAR struct fs_dirent_s *dir);
-static int     pressure_stat(FAR const char *relpath, FAR struct stat *buf);
 
 /****************************************************************************
  * Public Data
@@ -102,7 +101,6 @@ const struct procfs_operations g_pressure_operations =
   pressure_closedir,   /* closedir */
   pressure_readdir,    /* readdir */
   pressure_rewinddir,  /* rewinddir */
-  pressure_stat        /* stat */
 };
 
 /****************************************************************************
@@ -381,32 +379,6 @@ static int pressure_rewinddir(FAR struct fs_dirent_s *dir)
   DEBUGASSERT(dir);
   level        = (FAR struct procfs_dir_priv_s *)dir;
   level->index = 0;
-  return OK;
-}
-
-/****************************************************************************
- * Name: pressure_stat
- ****************************************************************************/
-
-static int pressure_stat(const char *relpath, struct stat *buf)
-{
-  memset(buf, 0, sizeof(struct stat));
-
-  if (strcmp(relpath, "pressure") == 0 || strcmp(relpath, "pressure/") == 0)
-    {
-      buf->st_mode = S_IFDIR | S_IROTH | S_IRGRP | S_IRUSR;
-    }
-  else if (strcmp(relpath, "pressure/memory") == 0)
-    {
-      buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR | S_IWOTH |
-                     S_IWGRP | S_IWUSR;
-    }
-  else
-    {
-      ferr("ERROR: No such file or directory: %s\n", relpath);
-      return -ENOENT;
-    }
-
   return OK;
 }
 

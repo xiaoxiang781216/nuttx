@@ -85,7 +85,6 @@ static ssize_t iobinfo_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
 static int     iobinfo_dup(FAR const struct file *oldp,
                  FAR struct file *newp);
-static int     iobinfo_stat(FAR const char *relpath, FAR struct stat *buf);
 
 /****************************************************************************
  * Public Data
@@ -104,11 +103,6 @@ const struct procfs_operations g_iobinfo_operations =
   NULL,           /* write */
   NULL,           /* poll */
   iobinfo_dup,    /* dup */
-  NULL,           /* opendir */
-  NULL,           /* closedir */
-  NULL,           /* readdir */
-  NULL,           /* rewinddir */
-  iobinfo_stat    /* stat */
 };
 
 /****************************************************************************
@@ -266,22 +260,6 @@ static int iobinfo_dup(FAR const struct file *oldp, FAR struct file *newp)
   /* Save the new attributes in the new file structure */
 
   newp->f_priv = (FAR void *)newattr;
-  return OK;
-}
-
-/****************************************************************************
- * Name: iobinfo_stat
- *
- * Description: Return information about a file or directory
- *
- ****************************************************************************/
-
-static int iobinfo_stat(FAR const char *relpath, FAR struct stat *buf)
-{
-  /* "iobinfo" is the name for a read-only file */
-
-  memset(buf, 0, sizeof(struct stat));
-  buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
   return OK;
 }
 

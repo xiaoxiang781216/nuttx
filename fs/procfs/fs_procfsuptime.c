@@ -88,8 +88,6 @@ static ssize_t uptime_read(FAR struct file *filep, FAR char *buffer,
 static int     uptime_dup(FAR const struct file *oldp,
                  FAR struct file *newp);
 
-static int     uptime_stat(FAR const char *relpath, FAR struct stat *buf);
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -108,13 +106,6 @@ const struct procfs_operations g_uptime_operations =
   NULL,              /* poll */
 
   uptime_dup,        /* dup */
-
-  NULL,              /* opendir */
-  NULL,              /* closedir */
-  NULL,              /* readdir */
-  NULL,              /* rewinddir */
-
-  uptime_stat        /* stat */
 };
 
 /****************************************************************************
@@ -317,26 +308,6 @@ static int uptime_dup(FAR const struct file *oldp, FAR struct file *newp)
   newp->f_priv = (FAR void *)newattr;
   return OK;
 }
-
-/****************************************************************************
- * Name: uptime_stat
- *
- * Description: Return information about a file or directory
- *
- ****************************************************************************/
-
-static int uptime_stat(FAR const char *relpath, FAR struct stat *buf)
-{
-  /* "uptime" is the name for a read-only file */
-
-  memset(buf, 0, sizeof(struct stat));
-  buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
-  return OK;
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 #endif /* CONFIG_FS_PROCFS_EXCLUDE_PROCESS */
 #endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS */

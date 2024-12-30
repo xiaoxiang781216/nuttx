@@ -129,8 +129,6 @@ static ssize_t mount_read(FAR struct file *filep, FAR char *buffer,
 static int     mount_dup(FAR const struct file *oldp,
                          FAR struct file *newp);
 
-static int     mount_stat(FAR const char *relpath, FAR struct stat *buf);
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -148,13 +146,6 @@ const struct procfs_operations g_mount_operations =
   NULL,                /* write */
   NULL,                /* poll */
   mount_dup,           /* dup */
-
-  NULL,                /* opendir */
-  NULL,                /* closedir */
-  NULL,                /* readdir */
-  NULL,                /* rewinddir */
-
-  mount_stat           /* stat */
 };
 
 /****************************************************************************
@@ -558,24 +549,6 @@ static int mount_dup(FAR const struct file *oldp, FAR struct file *newp)
   newp->f_priv = (FAR void *)newfile;
   return OK;
 }
-
-/****************************************************************************
- * Name: mount_stat
- *
- * Description: Return information about a file or directory
- *
- ****************************************************************************/
-
-static int mount_stat(FAR const char *relpath, FAR struct stat *buf)
-{
-  memset(buf, 0, sizeof(struct stat));
-  buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
-  return OK;
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 #endif /* !CONFIG_FS_PROCFS_EXCLUDE_MOUNT || \
         * !CONFIG_FS_PROCFS_EXCLUDE_BLOCKS || \
