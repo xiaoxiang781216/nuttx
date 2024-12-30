@@ -201,23 +201,24 @@ struct perf_event_attr_s
     };
   uint64_t sample_type;
   uint64_t read_format;
-  uint64_t disabled:1,
-           inherit:1,
-           pinned:1,
-           exclusive:1,
-           exclude_user:1,
-           exclude_kernel:1,
-           exclude_hv:1,
-           exclude_idle:1,
-           mmap:1,
-           comm:1,
-           freq:1,
-           inherit_stat:1,
-           enable_on_exec:1,
-           task:1,
-           watermark:1,
-           context_switch:1,
-           reserved_1:48;
+  uint32_t disabled:1;
+  uint32_t inherit:1;
+  uint32_t pinned:1;
+  uint32_t exclusive:1;
+  uint32_t exclude_user:1;
+  uint32_t exclude_kernel:1;
+  uint32_t exclude_hv:1;
+  uint32_t exclude_idle:1;
+  uint32_t mmap:1;
+  uint32_t comm:1;
+  uint32_t freq:1;
+  uint32_t inherit_stat:1;
+  uint32_t enable_on_exec:1;
+  uint32_t task:1;
+  uint32_t watermark:1;
+  uint32_t context_switch:1;
+  uint32_t reserved_1:16;
+  uint32_t reserved_2;
   union
     {
       uint32_t wakeup_events;
