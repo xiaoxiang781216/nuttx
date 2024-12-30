@@ -141,6 +141,8 @@ struct rpmsg_socket_conn_s
 
   uint32_t                       recvpos;
   uint32_t                       lastpos;
+
+  uint8_t                        priority;
 };
 
 /****************************************************************************
@@ -534,6 +536,7 @@ static void rpmsg_socket_device_created(FAR struct rpmsg_device *rdev,
       rpmsg_create_ept(&conn->ept, rdev, namebuf,
                        RPMSG_ADDR_ANY, RPMSG_ADDR_ANY,
                        rpmsg_socket_ept_cb, rpmsg_socket_ns_unbind);
+      rpmsg_set_priority(&conn->ept, conn->priority);
     }
 }
 
@@ -589,6 +592,13 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
   ret = rpmsg_create_ept(&new->ept, rdev, name,
                          RPMSG_ADDR_ANY, dest,
                          rpmsg_socket_ept_cb, rpmsg_socket_ns_unbind);
+  if (ret < 0)
+    {
+      rpmsg_socket_free(new);
+      return;
+    }
+
+  ret = rpmsg_set_priority(&new->ept, server->priority);
   if (ret < 0)
     {
       rpmsg_socket_free(new);
@@ -1497,6 +1507,17 @@ static int rpmsg_socket_getsockopt(FAR struct socket *psock, int level,
               *(FAR int *)value = conn->sendsize;
               return OK;
             }
+
+          case SO_PRIORITY:
+            {
+              if (*value_len != sizeof(uint8_t))
+                {
+                  return -EINVAL;
+                }
+
+              *(FAR uint8_t *)value = conn->priority;
+              return OK;
+            }
         }
     }
 
@@ -1509,20 +1530,42 @@ static int rpmsg_socket_setsockopt(FAR struct socket *psock, int level,
 {
   FAR struct rpmsg_socket_conn_s *conn = psock->s_conn;
 
-  if (level == SOL_SOCKET && option == SO_RCVBUF)
+  if (level == SOL_SOCKET)
     {
-      if (value_len < sizeof(int))
-        {
-          return -EINVAL;
-        }
+      switch (option)
+      {
+        case SO_RCVBUF:
+          {
+            if (value_len < sizeof(int))
+              {
+                return -EINVAL;
+              }
 
-      if (_SS_ISCONNECTED(conn->sconn.s_flags))
-        {
-          return -EISCONN;
-        }
+            if (_SS_ISCONNECTED(conn->sconn.s_flags))
+              {
+                return -EISCONN;
+              }
 
-      conn->recvsize = *(FAR const int *)value;
-      return OK;
+            conn->recvsize = *(FAR const int *)value;
+            return OK;
+          }
+
+        case SO_PRIORITY:
+          {
+            if (value_len != sizeof(uint8_t))
+              {
+                return -EINVAL;
+              }
+
+            if (_SS_ISCONNECTED(conn->sconn.s_flags))
+              {
+                return -EISCONN;
+              }
+
+            conn->priority = *(FAR const uint8_t *)value;
+            return OK;
+          }
+      }
     }
 
   return -ENOPROTOOPT;

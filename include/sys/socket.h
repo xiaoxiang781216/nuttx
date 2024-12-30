@@ -220,6 +220,12 @@
 #define SO_PEERCRED     18 /* Return the credentials of the peer process
                             * connected to this socket.
                             */
+#define SO_PRIORITY     19 /* Set the priority for all packets to be sent on this
+                            * socket.  Nuttx uses this value to order the
+                            * networking queues: packets with a higher priority
+                            * may be processed first depending on the selected
+                            * device queueing discipline.
+                            */
 
 /* The options are unsupported but included for compatibility
  * and portability
