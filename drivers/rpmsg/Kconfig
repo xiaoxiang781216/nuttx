@@ -10,6 +10,22 @@ config RPMSG
 
 if RPMSG
 
+config RPMSG_NOTE
+	bool "rpmsg note"
+	default n
+	depends on DRIVERS_NOTERAM
+	---help---
+		This is for note and record all message passed through
+		rpmsg channel, including the type,src,dst and recored the ept.
+
+config RPMSG_NOTE_BUFSIZE
+	int "rpmsg note buffer size"
+	default 16384
+	depends on RPMSG_NOTE
+	---help---
+		This macro sets the note buffer size corresponding to rpmsg.
+		It can be customized and the dafault value is 16384.
+
 config RPMSG_LOCAL_CPUNAME
 	string "Rpmsg Local Cpuname"
 	default LIBC_HOSTNAME

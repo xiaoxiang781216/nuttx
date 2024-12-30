@@ -32,6 +32,7 @@
 #include <nuttx/rwsem.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/rpmsg/rpmsg_note.h>
 
 #include "rpmsg_ping.h"
 #include "rpmsg_test.h"
@@ -158,6 +159,7 @@ static int rpmsg_dev_ioctl(FAR struct file *filep, int cmd,
 
 void rpmsg_initialize(void)
 {
+  rpmsg_note_initialize();
 }
 
 int rpmsg_wait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
