@@ -101,117 +101,117 @@ static const struct procfs_entry_s g_procfs_entries[] =
 #endif
 {
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
-  { "[0-9]*/**",    &g_proc_operations,     PROCFS_UNKOWN_TYPE },
-  { "[0-9]*",       &g_proc_operations,     PROCFS_DIR_TYPE    },
+  { "[0-9]*/**",    &g_proc_operations,     PROCFS_UNKOWN_TYPE, 0    },
+  { "[0-9]*",       &g_proc_operations,     PROCFS_DIR_TYPE,    0444 },
 #endif
 
 #if defined(CONFIG_CLK) && !defined(CONFIG_FS_PROCFS_EXCLUDE_CLK)
-  { "clk",          &g_clk_operations,      PROCFS_FILE_TYPE   },
+  { "clk",          &g_clk_operations,      PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #if defined(CONFIG_ARCH_HAVE_CPUINFO) && !defined(CONFIG_FS_PROCFS_EXCLUDE_CPUINFO)
-  { "cpuinfo",      &g_cpuinfo_operations,  PROCFS_FILE_TYPE   },
+  { "cpuinfo",      &g_cpuinfo_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #if !defined(CONFIG_SCHED_CPULOAD_NONE) && \
     !defined(CONFIG_FS_PROCFS_EXCLUDE_CPULOAD)
-  { "cpuload",      &g_cpuload_operations,  PROCFS_FILE_TYPE   },
+  { "cpuload",      &g_cpuload_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #if defined(CONFIG_CPUFREQ) && defined(CONFIG_CPUFREQ_PROCFS)
-  { "cpufreq",      &g_cpufreq_operations,  PROCFS_FILE_TYPE   },
+  { "cpufreq",      &g_cpufreq_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #ifdef CONFIG_SCHED_CRITMONITOR
-  { "critmon",      &g_critmon_operations,  PROCFS_FILE_TYPE   },
+  { "critmon",      &g_critmon_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #if defined(CONFIG_DEVICE_TREE) && !defined(CONFIG_FS_PROCFS_EXCLUDE_FDT)
-  { "fdt",          &g_fdt_operations,      PROCFS_FILE_TYPE   },
+  { "fdt",          &g_fdt_operations,      PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_BLOCKS
-  { "fs/blocks",    &g_mount_operations,    PROCFS_FILE_TYPE   },
+  { "fs/blocks",    &g_mount_operations,    PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_MOUNT
-  { "fs/mount",     &g_mount_operations,    PROCFS_FILE_TYPE   },
+  { "fs/mount",     &g_mount_operations,    PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #if defined(CONFIG_FS_SMARTFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_SMARTFS)
-  { "fs/smartfs**", &g_smartfs_procfs_operations,  PROCFS_UNKOWN_TYPE },
+  { "fs/smartfs**", &g_smartfs_procfs_operations,  PROCFS_UNKOWN_TYPE, 0 },
 #endif
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_USAGE
-  { "fs/usage",     &g_mount_operations,    PROCFS_FILE_TYPE   },
+  { "fs/usage",     &g_mount_operations,    PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #if defined(CONFIG_MM_IOB) && !defined(CONFIG_FS_PROCFS_EXCLUDE_IOBINFO)
-  { "iobinfo",      &g_iobinfo_operations,  PROCFS_FILE_TYPE   },
+  { "iobinfo",      &g_iobinfo_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #ifdef CONFIG_SCHED_IRQMONITOR
-  { "irqs",         &g_irq_operations,      PROCFS_FILE_TYPE   },
+  { "irqs",         &g_irq_operations,      PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_MEMINFO
 #  ifndef CONFIG_FS_PROCFS_EXCLUDE_MEMDUMP
-  { "memdump",      &g_memdump_operations,  PROCFS_FILE_TYPE   },
+  { "memdump",      &g_memdump_operations,  PROCFS_FILE_TYPE,   0666 },
 #  endif
-  { "meminfo",      &g_meminfo_operations,  PROCFS_FILE_TYPE   },
+  { "meminfo",      &g_meminfo_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #if defined(CONFIG_MM_HEAP_MEMPOOL) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
-  { "mempool",      &g_mempool_operations,  PROCFS_FILE_TYPE   },
+  { "mempool",      &g_mempool_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #if defined(CONFIG_MODULE) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MODULE)
-  { "modules",      &g_module_operations,   PROCFS_FILE_TYPE   },
+  { "modules",      &g_module_operations,  PROCFS_FILE_TYPE,    0444 },
 #endif
 
 #if defined(CONFIG_NET) && !defined(CONFIG_FS_PROCFS_EXCLUDE_NET)
-  { "net",          &g_net_operations,      PROCFS_DIR_TYPE    },
+  { "net",          &g_net_operations,      PROCFS_DIR_TYPE,    0444 },
 #  if defined(CONFIG_NET_ROUTE) && !defined(CONFIG_FS_PROCFS_EXCLUDE_ROUTE)
-  { "net/route",    &g_netroute_operations, PROCFS_DIR_TYPE    },
-  { "net/route/**", &g_netroute_operations, PROCFS_UNKOWN_TYPE },
+  { "net/route",    &g_netroute_operations, PROCFS_DIR_TYPE,    0444 },
+  { "net/route/**", &g_netroute_operations, PROCFS_UNKOWN_TYPE, 0    },
 #  endif
-  { "net/**",       &g_net_operations,      PROCFS_UNKOWN_TYPE },
+  { "net/**",       &g_net_operations,      PROCFS_UNKOWN_TYPE, 0    },
 #endif
 
 #if defined(CONFIG_MTD_PARTITION) && !defined(CONFIG_FS_PROCFS_EXCLUDE_PARTITIONS)
-  { "partitions",   &g_part_operations,     PROCFS_FILE_TYPE   },
+  { "partitions",   &g_part_operations,     PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #if defined(CONFIG_PM) && defined(CONFIG_PM_PROCFS)
-  { "pm",           &g_pm_operations,       PROCFS_DIR_TYPE    },
-  { "pm/**",        &g_pm_operations,       PROCFS_UNKOWN_TYPE },
+  { "pm",           &g_pm_operations,       PROCFS_DIR_TYPE,    0444 },
+  { "pm/**",        &g_pm_operations,       PROCFS_UNKOWN_TYPE, 0    },
 #endif
 
 #ifdef CONFIG_FS_PROCFS_INCLUDE_PRESSURE
-  { "pressure",     &g_pressure_operations, PROCFS_DIR_TYPE    },
-  { "pressure/**",  &g_pressure_operations, PROCFS_FILE_TYPE   },
+  { "pressure",     &g_pressure_operations, PROCFS_DIR_TYPE,    0444 },
+  { "pressure/**",  &g_pressure_operations, PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
-  { "self",         &g_proc_operations,     PROCFS_DIR_TYPE    },
-  { "self/**",      &g_proc_operations,     PROCFS_UNKOWN_TYPE },
+  { "self",         &g_proc_operations,     PROCFS_DIR_TYPE,    0444 },
+  { "self/**",      &g_proc_operations,     PROCFS_UNKOWN_TYPE, 0  },
 #endif
 
 #if defined(CONFIG_ARCH_HAVE_TCBINFO) && !defined(CONFIG_FS_PROCFS_EXCLUDE_TCBINFO)
-  { "tcbinfo",      &g_tcbinfo_operations,  PROCFS_FILE_TYPE   },
+  { "tcbinfo",      &g_tcbinfo_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #ifdef CONFIG_THERMAL_PROCFS
-  { "thermal",      &g_thermal_operations,  PROCFS_DIR_TYPE    },
-  { "thermal/**",   &g_thermal_operations,  PROCFS_UNKOWN_TYPE },
+  { "thermal",      &g_thermal_operations,  PROCFS_DIR_TYPE,    0444 },
+  { "thermal/**",   &g_thermal_operations,  PROCFS_UNKOWN_TYPE, 0    },
 #endif
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_UPTIME
-  { "uptime",       &g_uptime_operations,   PROCFS_FILE_TYPE   },
+  { "uptime",       &g_uptime_operations,   PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_VERSION
-  { "version",      &g_version_operations,  PROCFS_FILE_TYPE   },
+  { "version",      &g_version_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif
 };
 
@@ -431,9 +431,23 @@ static int procfs_open(FAR struct file *filep, FAR const char *relpath,
 
       if (fnmatch(g_procfs_entries[x].pathpattern, relpath, 0) == 0)
         {
+          mode = g_procfs_entries[x].mode;
           if (g_procfs_entries[x].type == PROCFS_DIR_TYPE)
             {
               return -EISDIR;
+            }
+
+          /* Check if the mode is set and if the user has the right
+           * to read or write.
+           */
+
+          if (mode != 0 &&
+              ((((oflags & O_RDOK) && !(mode & S_IRUSR)) &&
+                !g_procfs_entries[x].ops->read) ||
+               (((oflags & O_WROK) && !(mode & S_IWUSR)) &&
+                !g_procfs_entries[x].ops->write)))
+            {
+              return -EACCES;
             }
 
           /* Match found!  Stat using this procfs entry */
@@ -1158,10 +1172,21 @@ static int procfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
             {
               /* Match found!  Stat using this procfs entry */
 
-              DEBUGASSERT(g_procfs_entries[x].ops &&
-                          g_procfs_entries[x].ops->stat);
+              if (g_procfs_entries[x].mode != 0)
+                {
+                  buf->st_mode = g_procfs_entries[x].mode;
+                  buf->st_mode |= g_procfs_entries[x].type ==
+                      PROCFS_DIR_TYPE ? S_IFDIR : S_IFREG;
+                  ret = OK;
+                  break;
+                }
+              else
+                {
+                  DEBUGASSERT(g_procfs_entries[x].ops &&
+                              g_procfs_entries[x].ops->stat);
 
-              return g_procfs_entries[x].ops->stat(relpath, buf);
+                  return g_procfs_entries[x].ops->stat(relpath, buf);
+                }
             }
 
           /* Test for an internal subdirectory stat */
@@ -1171,8 +1196,16 @@ static int procfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
             {
               /* It's an internal subdirectory */
 
-              buf->st_mode = S_IFDIR | S_IROTH | S_IRGRP | S_IRUSR;
-              ret = OK;
+              if (g_procfs_entries[x].pathpattern[len] == '/')
+                {
+                  buf->st_mode = S_IFDIR | S_IROTH | S_IRGRP | S_IRUSR;
+                  ret = OK;
+                }
+              else
+                {
+                  ret = -ENOENT;
+                }
+
               break;
             }
         }
