@@ -194,6 +194,28 @@ static inline_function bool up_interrupt_context(void)
       UNUSED(rtcb);                                               \
   } while (0)
 
+/****************************************************************************
+ * Name: up_getusrsp
+ ****************************************************************************/
+
+static inline_function uintptr_t up_getusrsp(void *regs)
+{
+  uintptr_t *csaregs = regs;
+
+  /* enter this funtion means that the regs is lowcsa */
+
+  if (csaregs[REG_LPCXI] & PCXI_UL)
+    {
+      csaregs = tricore_csa2addr(csaregs[REG_LPCXI]);
+    }
+  else
+    {
+       csaregs += TC_CONTEXT_REGS;
+    }
+
+  return csaregs[REG_SP];
+}
+
 #endif /* __ASSEMBLY__ */
 
 /****************************************************************************
