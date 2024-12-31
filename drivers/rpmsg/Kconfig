@@ -69,6 +69,7 @@ endif # RPMSG
 config RPMSG_ROUTER
 	bool "rpmsg router support"
 	default n
+	select RPMSG
 	---help---
 		Rpmsg router driver for enabling communication
 		without physical channels.
@@ -118,7 +119,7 @@ config RPMSG_PORT_SPI_PM_TIMEOUT
 	default 1
 	depends on PM
 
-endif # RPMSG_PORT_SPI
+endif # RPMSG_PORT_SPI || RPMSG_PORT_SPI_SLAVE
 
 config RPMSG_PORT_UART
 	bool "Rpmsg Uart Port Driver Support"
@@ -194,7 +195,7 @@ config RPMSG_VIRTIO_PM_AUTORELAX
 endif # RPMSG_VIRTIO
 
 config RPMSG_VIRTIO_LITE
-	bool "rpmsg virtio transport support"
+	bool
 	default n
 	select RPMSG
 
@@ -207,13 +208,6 @@ config RPMSG_VIRTIO_LITE_PRIORITY
 config RPMSG_VIRTIO_LITE_STACKSIZE
 	int "rpmsg virtio lite rx thread stack size"
 	default DEFAULT_TASK_STACKSIZE
-
-config RPMSG_VIRTIO_IVSHMEM
-	bool "rpmsg virtio lite ivshmem support"
-	default n
-	depends on PCI_IVSHMEM
-	---help---
-		This is rpmsg virtio driver based on pci ivshmem.
 
 config RPMSG_VIRTIO_LITE_PM
 	bool "rpmsg virtio lite power management"
@@ -232,9 +226,23 @@ config RPMSG_VIRTIO_LITE_PM_AUTORELAX
 	---help---
 		use wd_timer to auto relax pm
 
+endif # RPMSG_VIRTIO_LITE
+
 config RPMSG_VIRTIO_BMP
 	bool "rpmsg virtio lite bmp (Bound Multi-Processing) support"
+	select RPMSG_VIRTIO_LITE
 	default n
+	---help---
+		Enable Bound Multi-Processing (BMP) support for RPMSG VirtIO Lite.
+		This feature is only available for RPMSG VirtIO Lite.
+
+config RPMSG_VIRTIO_IVSHMEM
+	bool "rpmsg virtio lite ivshmem support"
+	default n
+	depends on PCI_IVSHMEM
+	select RPMSG_VIRTIO_LITE
+	---help---
+		This is rpmsg virtio driver based on pci ivshmem.
 
 if RPMSG_VIRTIO_IVSHMEM
 
@@ -260,7 +268,5 @@ config RPMSG_VIRTIO_IVSHMEM_BUFFNUM
 	---help---
 		The rpmsg virtio buffer number in share memory, the RX and TX buffer number
 		are same for now.
-
-endif
 
 endif
