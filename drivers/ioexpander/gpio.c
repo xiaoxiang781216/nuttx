@@ -576,6 +576,31 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         }
         break;
 
+      /* Command:     GPIOC_SETDEBOUNCE
+       * Description: Set the GPIO pin debounce duration.
+       * Argument:    The duration of the channel debounce, uint is ns.
+       */
+
+      case GPIOC_SETDEBOUNCE:
+        {
+          DEBUGASSERT(dev->gp_ops->go_setdebounce != NULL);
+          ret = dev->gp_ops->go_setdebounce(dev, arg);
+          break;
+        }
+
+      /* Command:     GPIOC_SETMASK
+       * Description: Set the GPIO pin type.
+       * Argument:    Whether to enable interrupt mask.
+       */
+
+    case GPIOC_SETMASK:
+        {
+          bool mask = (bool)arg;
+          DEBUGASSERT(dev->gp_ops->go_setmask != NULL);
+          ret = dev->gp_ops->go_setmask(dev, mask);
+          break;
+        }
+
       /* Unrecognized command */
 
       default:
