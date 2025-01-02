@@ -29,8 +29,15 @@ config PM_NDOMAINS
 config PM_PROCFS
 	bool "PM proc fs support"
 	depends on FS_PROCFS_REGISTER
+	select PM_STAT
 	---help---
 		Enable procfs for pm.
+
+config PM_STAT
+	bool "PM statistic support"
+	default n
+	---help---
+		Enable PM statistic that can get PM_STAT
 
 config PM_RUNTIME
 	bool "PM runtime support"

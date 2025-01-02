@@ -205,7 +205,7 @@ typedef bool (*pm_idle_handler_t)(int cpu,
 typedef void (*pm_idle_handler_t)(enum pm_state_e systemstate);
 #endif
 
-#ifdef CONFIG_PM_PROCFS
+#ifdef CONFIG_PM_STAT
 struct pm_preparefail_s
 {
   enum pm_state_e state;
@@ -281,7 +281,7 @@ struct pm_callback_s
   CODE void (*notify)(FAR struct pm_callback_s *cb, int domain,
                       enum pm_state_e pmstate);
 
-#ifdef CONFIG_PM_PROCFS
+#ifdef CONFIG_PM_STAT
   struct pm_preparefail_s preparefail;
 #endif
 };
@@ -379,7 +379,7 @@ struct pm_wakelock_s
   struct dq_entry_s node;
   struct wdog_s wdog;
 
-#ifdef CONFIG_PM_PROCFS
+#ifdef CONFIG_PM_STAT
   struct dq_entry_s fsnode;
   struct timespec start;
   struct timespec elapse;

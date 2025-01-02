@@ -65,7 +65,7 @@ struct pm_domain_s
 
   struct dq_queue_s wakelock[PM_COUNT];
 
-#ifdef CONFIG_PM_PROCFS
+#ifdef CONFIG_PM_STAT
   struct dq_queue_s wakelockall;
   struct timespec start;
   struct timespec wake[PM_COUNT];
