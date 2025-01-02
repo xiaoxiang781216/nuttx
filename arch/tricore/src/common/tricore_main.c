@@ -41,15 +41,6 @@ static void core_main(void)
    * Enable the watchdogs and service them periodically if it is required
    */
 
-  /* TODO: Add watchdog driver support */
-
-  IfxScuWdt_disableCpuWatchdog(IfxScuWdt_getCpuWatchdogPassword());
-  IfxScuWdt_disableSafetyWatchdog(IfxScuWdt_getSafetyWatchdogPassword());
-
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4XX
-  IfxWtu_disableSystemWatchdog(IfxWtu_getSystemWatchdogPassword());
-#endif
-
   /* Wait for CPU sync event */
 
   IfxCpu_emitEvent(&g_sync_event);
