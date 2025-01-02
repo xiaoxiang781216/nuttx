@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef _DRIVERS_CPUFREQ_QOS_H
-#define _DRIVERS_CPUFREQ_QOS_H
+#ifndef __INCLUDE_NUTTX_CPUFREQ_QOS_H
+#define __INCLUDE_NUTTX_CPUFREQ_QOS_H
 
 /****************************************************************************
  * Included Files
@@ -158,4 +158,4 @@ int freq_qos_remove_notifier(FAR struct freq_constraints *qos,
 }
 #endif
 
-#endif /* _DRIVERS_CPUFREQ_QOS_H */
+#endif /* __INCLUDE_NUTTX_CPUFREQ_QOS_H */

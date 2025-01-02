@@ -48,6 +48,12 @@ CSRCS += cpufreq_procfs.c
 
 endif
 
+ifeq ($(CONFIG_CPUFREQ_DEFAULT_GOV_QLEARNING),y)
+
+include cpufreq/qlearning/Make.defs
+
+endif
+
 DEPPATH += --dep-path cpufreq
 VPATH += cpufreq
 

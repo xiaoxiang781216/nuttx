@@ -18,6 +18,8 @@
 #
 # ##############################################################################
 
+nuttx_add_subdirectory()
+
 if(CONFIG_CPUFREQ)
   set(SRCS qos.c cpufreq.c freq_table.c)
 
@@ -35,6 +37,10 @@ if(CONFIG_CPUFREQ)
 
   if(CONFIG_CPUFREQ_PROCFS)
     list(APPEND SRCS cpufreq_procfs.c)
+  endif()
+
+  if(CONFIG_CPUFREQ_DEFAULT_GOV_QLEARNING)
+    list(APPEND SRCS cpufreq_qlearning.c)
   endif()
 
   target_sources(drivers PRIVATE ${SRCS})
