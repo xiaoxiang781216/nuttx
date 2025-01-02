@@ -26,6 +26,7 @@
 
 #include <nuttx/config.h>
 
+#include <execinfo.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -138,6 +139,10 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
   DEBUGVERIFY(mm_lock(heap));
   DEBUGASSERT(MM_NODE_IS_ALLOC(oldnode));
+
+#ifdef CONFIG_MM_RECORD_STACK
+  backtrace_remove(oldnode->stack);
+#endif
 
   /* Check if this is a request to reduce the size of the allocation. */
 

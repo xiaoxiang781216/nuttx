@@ -79,7 +79,7 @@ struct mempool_procfs_entry_s
 {
   FAR const char *name;
   FAR struct mempool_procfs_entry_s *next;
-#if CONFIG_MM_RECORD_STACK > 0
+#ifdef CONFIG_MM_RECORD_STACK
 
   /* This is dynamic control flag whether to turn on backtrace in the heap,
    * you can set it by /proc/mempool.
@@ -130,8 +130,8 @@ struct mempool_record_s
 #  ifdef CONFIG_MM_RECORD_SEQNO
   unsigned long seqno; /* The sequence of memory malloc */
 #  endif
-#  if CONFIG_MM_RECORD_STACK > 0
-  FAR void *backtrace[CONFIG_MM_RECORD_STACK];
+#  ifdef CONFIG_MM_RECORD_STACK
+  FAR void *stack;
 #  endif
 };
 #endif

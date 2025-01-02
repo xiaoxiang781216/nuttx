@@ -123,8 +123,8 @@ struct memdump_record_s
 #ifdef CONFIG_MM_RECORD_SEQNO
   unsigned long seqno;                      /* The sequence of memory malloc */
 #endif
-#if CONFIG_MM_RECORD_STACK > 0
-  FAR void *backtrace[CONFIG_MM_RECORD_STACK]; /* The backtrace buffer for caller */
+#ifdef CONFIG_MM_RECORD_STACK
+  FAR void *stack;                          /* The backtrace buffer for caller */
 #endif
 };
 #endif
@@ -219,10 +219,16 @@ static void memdump_allocnode(FAR void *ptr, size_t size)
   FAR struct memdump_record_s *buf =
     ptr + size - sizeof(struct memdump_record_s);
 #endif
-#if CONFIG_MM_RECORD_STACK > 0
-  char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_MM_RECORD_STACK)];
-  backtrace_format(tmp, sizeof(tmp), buf->backtrace,
-                   CONFIG_MM_RECORD_STACK);
+#ifdef CONFIG_MM_RECORD_STACK
+  char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_LIBC_BACKTRACE_DEPTH)] = "";
+  FAR void **stack;
+  int stacksize;
+
+  stack = backtrace_get(buf->stack, &stacksize);
+  if (stacksize)
+    {
+      backtrace_format(tmp, sizeof(tmp), stack, stacksize);
+    }
 #else
   const char *tmp = "";
 #endif
@@ -306,7 +312,7 @@ static void memdump_dump_biggestnodes(FAR struct mm_memdump_priv_s *priv)
 static void memdump_backtrace(FAR struct mm_heap_s *heap,
                               FAR struct memdump_record_s *buf)
 {
-#  if CONFIG_MM_RECORD_STACK > 0
+#  ifdef CONFIG_MM_RECORD_STACK
   FAR struct tcb_s *tcb;
 #  endif
 
@@ -314,18 +320,12 @@ static void memdump_backtrace(FAR struct mm_heap_s *heap,
   buf->pid = _SCHED_GETTID();
 #endif
   MM_INCSEQNO(buf);
-#if CONFIG_MM_RECORD_STACK > 0
+#ifdef CONFIG_MM_RECORD_STACK
   tcb = nxsched_get_tcb(buf->pid);
   if (heap->mm_procfs.backtrace ||
       (tcb && atomic_read(&tcb->flags) & TCB_FLAG_HEAP_DUMP))
     {
-      int ret = sched_backtrace(buf->pid, buf->backtrace,
-                                CONFIG_MM_RECORD_STACK,
-                                CONFIG_MM_RECORD_STACK_SKIP);
-      if (ret < CONFIG_MM_RECORD_STACK)
-        {
-          buf->backtrace[ret] = NULL;
-        }
+      buf->stack = backtrace_record(CONFIG_LIBC_BACKTRACE_DEPTH);
     }
 
   nxsched_put_tcb(tcb);
@@ -1300,7 +1300,7 @@ void mm_memdump(FAR struct mm_heap_s *heap,
         "%12s"
 #endif
         "%*s "
-#if CONFIG_MM_RECORD_STACK > 0
+#ifdef CONFIG_MM_RECORD_STACK
         "%s"
 #endif
         "\n",
@@ -1312,7 +1312,7 @@ void mm_memdump(FAR struct mm_heap_s *heap,
         "Sequence",
 #endif
         BACKTRACE_PTR_FMT_WIDTH, "Address"
-#if CONFIG_MM_RECORD_STACK > 0
+#ifdef CONFIG_MM_RECORD_STACK
         , "Backtrace"
 #endif
         );

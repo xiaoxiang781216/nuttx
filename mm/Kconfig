@@ -127,8 +127,9 @@ config MM_RECORD_SEQNO
 		Enable the sequence number record in memory block.
 
 config MM_RECORD_STACK
-	int "Record backtrace depth for memory block"
-	default 0
+	bool "Record backtrace for memory block"
+	default n
+	depends on LIBC_BACKTRACE_DEPTH > 0
 	---help---
 		Config the depth of backtrace stack in memory block by specified
 		this config.

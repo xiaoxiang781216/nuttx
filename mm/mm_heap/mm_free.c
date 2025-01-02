@@ -28,6 +28,7 @@
 
 #include <assert.h>
 #include <debug.h>
+#include <execinfo.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
@@ -130,6 +131,10 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
   node = (FAR struct mm_freenode_s *)
          ((FAR char *)kasan_clear_tag(mem) - MM_SIZEOF_ALLOCNODE);
   nodesize = MM_SIZEOF_NODE(node);
+
+#ifdef CONFIG_MM_RECORD_STACK
+  backtrace_remove(node->stack);
+#endif
 
   /* Sanity check against double-frees */
 

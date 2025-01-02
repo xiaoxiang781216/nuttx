@@ -46,7 +46,7 @@
 #endif
 
 #if defined(CONFIG_MM_RECORD_PID) || defined(CONFIG_MM_RECORD_SEQNO) || \
-    CONFIG_MM_RECORD_STACK > 0
+    defined(CONFIG_MM_RECORD_STACK)
 #  define CONFIG_MM_RECORD
 #endif
 

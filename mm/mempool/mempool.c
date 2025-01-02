@@ -115,20 +115,15 @@ static inline void mempool_record(FAR struct mempool_s *pool,
 
   MM_INCSEQNO(record);
 
-#  if CONFIG_MM_RECORD_STACK > 0
+#  ifdef CONFIG_MM_RECORD_STACK
   if (pool->procfs.backtrace)
     {
-      int result = sched_backtrace(pid, record->backtrace,
-                                   CONFIG_MM_RECORD_STACK,
-                                   CONFIG_MM_HEAP_MEMPOOL_RECORD_STACK_SKIP);
-      if (result < CONFIG_MM_RECORD_STACK)
-        {
-          record->backtrace[result] = NULL;
-        }
+      record->stack = backtrace_record(
+          CONFIG_MM_HEAP_MEMPOOL_RECORD_STACK_SKIP);
     }
   else
     {
-      record->backtrace[0] = NULL;
+      record->stack = NULL;
     }
 #  endif
 }
@@ -209,11 +204,16 @@ static void mempool_memdump_callback(FAR struct mempool_s *pool,
   if ((MM_DUMP_ASSIGN(dump, record) || MM_DUMP_ALLOC(dump, record) ||
        MM_DUMP_LEAK(dump, record)) && MM_DUMP_SEQNO(dump, record))
     {
-#  if CONFIG_MM_RECORD_STACK > 0
-      char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_MM_RECORD_STACK)];
+#  ifdef CONFIG_MM_RECORD_STACK
+      char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_LIBC_BACKTRACE_DEPTH)] = "";
+      FAR void **stack;
+      int stacksize;
 
-      backtrace_format(tmp, sizeof(tmp), record->backtrace,
-                       CONFIG_MM_RECORD_STACK);
+      stack = backtrace_get(record->stack, &stacksize);
+      if (stacksize)
+        {
+          backtrace_format(tmp, sizeof(tmp), stack, stacksize);
+        }
 #  else
       FAR const char *tmp = "";
 #  endif
@@ -339,7 +339,7 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
   mempool_procfs_register(&pool->procfs, name);
 #  ifdef CONFIG_MM_RECORD_STACK_DEFAULT
   pool->procfs.backtrace = true;
-#  elif CONFIG_MM_RECORD_STACK > 0
+#  elif defined(CONFIG_MM_RECORD_STACK)
   pool->procfs.backtrace = false;
 #  endif
 #endif
@@ -464,6 +464,9 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
 
   DEBUGASSERT(record->magic == MEMPOOL_MAGIC_ALLOC);
   record->magic = MEMPOOL_MAGIC_FREE;
+#  ifdef CONFIG_MM_RECORD_STACK
+  backtrace_remove(record->stack);
+#  endif
 #endif
 
   pool->nalloc--;

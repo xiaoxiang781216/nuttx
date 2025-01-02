@@ -429,7 +429,7 @@ static ssize_t memdump_read(FAR struct file *filep, FAR char *buffer,
 #if CONFIG_MM_HEAP_BIGGEST_COUNT > 0
                   "/biggest"
 #endif
-#if CONFIG_MM_RECORD_STACK > 0
+#ifdef CONFIG_MM_RECORD_STACK
                   "/on/off"
 #endif
 #ifdef CONFIG_MM_RECORD_PID
@@ -448,7 +448,7 @@ static ssize_t memdump_read(FAR struct file *filep, FAR char *buffer,
 #if CONFIG_MM_HEAP_BIGGEST_COUNT > 0
                   "biggest: dump allocated top n node\n"
 #endif
-#if CONFIG_MM_RECORD_STACK > 0
+#ifdef CONFIG_MM_RECORD_STACK
                  "on/off: set backtrace enabled state\n"
 #endif
 #ifdef CONFIG_MM_RECORD_PID
@@ -490,7 +490,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
 #ifdef CONFIG_MM_RECORD
   FAR char *p;
 #endif
-#if CONFIG_MM_RECORD_STACK > 0
+#ifdef CONFIG_MM_RECORD_STACK
   FAR struct tcb_s *tcb;
 #endif
 
@@ -501,7 +501,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
   procfile = filep->f_priv;
   DEBUGASSERT(procfile);
 
-#if CONFIG_MM_RECORD_STACK > 0
+#ifdef CONFIG_MM_RECORD_STACK
   if (strcmp(buffer, "on") == 0)
     {
       for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)

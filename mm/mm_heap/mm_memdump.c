@@ -62,10 +62,16 @@ static void memdump_allocnode(FAR struct mm_allocnode_s *node)
   size_t nodesize = MM_SIZEOF_NODE(node);
   size_t overhead = MM_SIZEOF_ALLOCNODE;
 
-#if CONFIG_MM_RECORD_STACK > 0
-  char buf[BACKTRACE_BUFFER_SIZE(CONFIG_MM_RECORD_STACK)];
-  backtrace_format(buf, sizeof(buf), node->backtrace,
-                   CONFIG_MM_RECORD_STACK);
+#ifdef CONFIG_MM_RECORD_STACK
+  char buf[BACKTRACE_BUFFER_SIZE(CONFIG_LIBC_BACKTRACE_DEPTH)] = "";
+  FAR void **stack;
+  int stacksize;
+
+  stack = backtrace_get(node->stack, &stacksize);
+  if (stacksize)
+    {
+      backtrace_format(buf, sizeof(buf), stack, stacksize);
+    }
 #else
   const char *buf = "";
 #endif
@@ -313,7 +319,7 @@ void mm_memdump(FAR struct mm_heap_s *heap,
                    "%12s"
 #  endif
                    "%*s "
-#if CONFIG_MM_RECORD_STACK > 0
+#ifdef CONFIG_MM_RECORD_STACK
                    "%s"
 #endif
                    "\n",
@@ -326,7 +332,7 @@ void mm_memdump(FAR struct mm_heap_s *heap,
 #  endif
                     BACKTRACE_PTR_FMT_WIDTH,
                    "Address"
-#if CONFIG_MM_RECORD_STACK > 0
+#ifdef CONFIG_MM_RECORD_STACK
                    , " Backtrace"
 #endif
                   );

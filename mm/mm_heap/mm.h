@@ -37,6 +37,7 @@
 #include <nuttx/mm/mm.h>
 
 #include <assert.h>
+#include <execinfo.h>
 #include <sys/types.h>
 #include <stdbool.h>
 #include <string.h>
@@ -78,7 +79,7 @@
 #  define MM_RECORD_PID(node, tid)
 #endif
 
-#if CONFIG_MM_RECORD_STACK > 0
+#ifdef CONFIG_MM_RECORD_STACK
 #  define MM_RECORD_STACK(node, tid) \
     do \
       { \
@@ -86,17 +87,11 @@
         if ((heap)->mm_procfs.backtrace || \
             (tcb && tcb->flags & TCB_FLAG_HEAP_DUMP)) \
           { \
-            int n = sched_backtrace(tid, (node)->backtrace, \
-                                    CONFIG_MM_RECORD_STACK, \
-                                    CONFIG_MM_RECORD_STACK_SKIP); \
-            if (n < CONFIG_MM_RECORD_STACK) \
-              { \
-                (node)->backtrace[n] = NULL; \
-              } \
+            (node)->stack = backtrace_record(CONFIG_MM_RECORD_STACK_SKIP); \
           } \
         else \
           { \
-            (node)->backtrace[0] = NULL; \
+            (node)->stack = NULL; \
           } \
         nxsched_put_tcb(tcb); \
       } \
@@ -194,9 +189,9 @@ struct mm_allocnode_s
 #ifdef CONFIG_MM_RECORD_SEQNO
   unsigned long seqno;                      /* The sequence of memory malloc */
 #endif
-#if CONFIG_MM_RECORD_STACK > 0
-  FAR void *backtrace[CONFIG_MM_RECORD_STACK]; /* The backtrace buffer for caller */
-#endif
+#ifdef CONFIG_MM_RECORD_STACK
+  FAR void *stack;                          /* The backtrace buffer for caller */
+# endif
 };
 
 /* This describes a free chunk */
@@ -211,8 +206,8 @@ struct mm_freenode_s
 #ifdef CONFIG_MM_RECORD_SEQNO
   unsigned long seqno;                      /* The sequence of memory malloc */
 #endif
-#if CONFIG_MM_RECORD_STACK > 0
-  FAR void *backtrace[CONFIG_MM_RECORD_STACK]; /* The backtrace buffer for caller */
+#ifdef CONFIG_MM_RECORD_STACK
+  FAR void *stack;                          /* The backtrace buffer for caller */
 #endif
   FAR struct mm_freenode_s *flink;          /* Supports a doubly linked list */
   FAR struct mm_freenode_s *blink;
