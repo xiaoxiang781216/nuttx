@@ -693,10 +693,10 @@ static int rpmsgfs_sync(FAR struct file *filep)
       return ret;
     }
 
-  rpmsgfs_client_sync(fs->handle, hf->fd);
+  ret = rpmsgfs_client_sync(fs->handle, hf->fd);
 
   nxmutex_unlock(&fs->fs_lock);
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
