@@ -183,7 +183,7 @@ struct xcptcontext
 
 /* Get the current value of the CCR */
 
-static inline irqstate_t up_getccr(void)
+static inline_function irqstate_t up_getccr(void)
 {
   irqstate_t ccr;
   __asm__
@@ -197,7 +197,7 @@ static inline irqstate_t up_getccr(void)
 
 /* Save the current interrupt enable state & disable IRQs */
 
-static inline irqstate_t up_irq_save(void)
+static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t ccr;
   __asm__
@@ -212,7 +212,7 @@ static inline irqstate_t up_irq_save(void)
 
 /* Restore saved interrupt state */
 
-static inline void up_irq_restore(irqstate_t flags)
+static inline_function void up_irq_restore(irqstate_t flags)
 {
   /* Should interrupts be enabled? */
 
@@ -226,8 +226,9 @@ static inline void up_irq_restore(irqstate_t flags)
 
 /* System call */
 
-static inline void system_call3(unsigned int nbr, uintptr_t parm1,
-                                uintptr_t parm2, uintptr_t parm3)
+static inline_function
+void system_call3(unsigned int nbr, uintptr_t parm1,
+                  uintptr_t parm2, uintptr_t parm3)
 {
   /* To be provided */
 

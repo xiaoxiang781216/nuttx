@@ -324,7 +324,7 @@ struct xcptcontext
 
 /* Return the current IRQ state */
 
-static inline irqstate_t irqstate(void)
+static inline_function irqstate_t irqstate(void)
 {
   irqstate_t flags;
 
@@ -335,7 +335,7 @@ static inline irqstate_t irqstate(void)
 
 /* Disable IRQs and return the previous IRQ state */
 
-static inline irqstate_t up_irq_save(void)
+static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t flags;
 
@@ -353,7 +353,7 @@ static inline irqstate_t up_irq_save(void)
 
 /* Enable IRQs and return the previous IRQ state */
 
-static inline irqstate_t up_irq_enable(void)
+static inline_function irqstate_t up_irq_enable(void)
 {
   irqstate_t flags;
 
@@ -370,7 +370,7 @@ static inline irqstate_t up_irq_enable(void)
 
 /* Restore saved IRQ & FIQ state */
 
-static inline void up_irq_restore(irqstate_t flags)
+static inline_function void up_irq_restore(irqstate_t flags)
 {
   __asm__ __volatile__("msr daif, %0" :: "r" (flags): "memory");
 }

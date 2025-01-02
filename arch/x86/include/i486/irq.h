@@ -177,7 +177,7 @@ struct xcptcontext
 
 /* Return stack pointer */
 
-static inline uint32_t up_getsp(void)
+static inline_function uint32_t up_getsp(void)
 {
   uint32_t regval;
 
@@ -191,7 +191,7 @@ static inline uint32_t up_getsp(void)
 
 /* Get segment registers */
 
-static inline uint32_t up_getds(void)
+static inline_function uint32_t up_getds(void)
 {
   uint32_t regval;
 
@@ -203,7 +203,7 @@ static inline uint32_t up_getds(void)
   return regval;
 }
 
-static inline uint32_t up_getcs(void)
+static inline_function uint32_t up_getcs(void)
 {
   uint32_t regval;
 
@@ -215,7 +215,7 @@ static inline uint32_t up_getcs(void)
   return regval;
 }
 
-static inline uint32_t up_getss(void)
+static inline_function uint32_t up_getss(void)
 {
   uint32_t regval;
 
@@ -238,7 +238,7 @@ static inline uint32_t up_getss(void)
 
 /* Get the current FLAGS register contents */
 
-static inline irqstate_t irqflags()
+static inline_function irqstate_t irqflags()
 {
   irqstate_t flags;
 
@@ -256,33 +256,33 @@ static inline irqstate_t irqflags()
  * if the X86_FLAGS_IF is set by sti, then interrupts are enable.
  */
 
-static inline bool up_irq_disabled(irqstate_t flags)
+static inline_function bool up_irq_disabled(irqstate_t flags)
 {
   return ((flags & X86_FLAGS_IF) == 0);
 }
 
-static inline bool up_irq_enabled(irqstate_t flags)
+static inline_function bool up_irq_enabled(irqstate_t flags)
 {
   return ((flags & X86_FLAGS_IF) != 0);
 }
 
 /* Disable interrupts unconditionally */
 
-static inline void up_irq_disable(void)
+static inline_function void up_irq_disable(void)
 {
   asm volatile("cli": : :"memory");
 }
 
 /* Enable interrupts unconditionally */
 
-static inline void up_irq_enable(void)
+static inline_function void up_irq_enable(void)
 {
   asm volatile("sti": : :"memory");
 }
 
 /* Disable interrupts, but return previous interrupt state */
 
-static inline irqstate_t up_irq_save(void)
+static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t flags = irqflags();
   up_irq_disable();
@@ -291,7 +291,7 @@ static inline irqstate_t up_irq_save(void)
 
 /* Conditionally disable interrupts */
 
-static inline void up_irq_restore(irqstate_t flags)
+static inline_function void up_irq_restore(irqstate_t flags)
 {
   if (up_irq_enabled(flags))
     {
@@ -299,8 +299,8 @@ static inline void up_irq_restore(irqstate_t flags)
     }
 }
 
-static inline void system_call3(unsigned int nbr, uintptr_t parm1,
-                                uintptr_t parm2, uintptr_t parm3)
+static inline_function void system_call3(unsigned int nbr, uintptr_t parm1,
+                                         uintptr_t parm2, uintptr_t parm3)
 {
   /* To be provided */
 }

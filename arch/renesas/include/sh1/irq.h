@@ -487,7 +487,7 @@ extern "C"
 
 /* Get the current value of the SR */
 
-static inline irqstate_t __getsr(void)
+static inline_function irqstate_t __getsr(void)
 {
   irqstate_t flags;
 
@@ -497,14 +497,14 @@ static inline irqstate_t __getsr(void)
 
 /* Set the new value of the SR */
 
-static inline void __setsr(irqstate_t sr)
+static inline_function void __setsr(irqstate_t sr)
 {
   __asm__ __volatile__ ("ldc %0, sr" : : "r" (sr));
 }
 
 /* Return the current value of the stack pointer */
 
-static inline uint32_t up_getsp(void)
+static inline_function uint32_t up_getsp(void)
 {
   uint32_t sp;
 
@@ -520,7 +520,7 @@ static inline uint32_t up_getsp(void)
 
 /* Return the current interrupt enable state and disable interrupts */
 
-static inline irqstate_t up_irq_save(void)
+static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t flags = __getsr();
   __setsr(flags | 0x000000f0);
@@ -529,7 +529,7 @@ static inline irqstate_t up_irq_save(void)
 
 /* Disable interrupts */
 
-static inline void up_irq_disable(void)
+static inline_function void up_irq_disable(void)
 {
   uint32_t flags = __getsr();
   __setsr(flags | 0x000000f0);
@@ -537,7 +537,7 @@ static inline void up_irq_disable(void)
 
 /* Enable interrupts */
 
-static inline void up_irq_enable(void)
+static inline_function void up_irq_enable(void)
 {
   uint32_t flags = __getsr();
   __setsr(flags & ~0x000000f0);
@@ -545,7 +545,7 @@ static inline void up_irq_enable(void)
 
 /* Restore saved interrupt state */
 
-static inline void up_irq_restore(irqstate_t flags)
+static inline_function void up_irq_restore(irqstate_t flags)
 {
   if ((flags & 0x000000f0) != 0x000000f0)
     {

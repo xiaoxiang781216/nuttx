@@ -375,7 +375,7 @@ struct xcptcontext
  *
  ****************************************************************************/
 
-static inline irqstate_t cp0_getstatus(void)
+static inline_function irqstate_t cp0_getstatus(void)
 {
   register irqstate_t status;
   __asm__ __volatile__
@@ -406,7 +406,7 @@ static inline irqstate_t cp0_getstatus(void)
  *
  ****************************************************************************/
 
-static inline void cp0_putstatus(irqstate_t status)
+static inline_function void cp0_putstatus(irqstate_t status)
 {
   __asm__ __volatile__
     (
@@ -439,7 +439,7 @@ static inline void cp0_putstatus(irqstate_t status)
  *
  ****************************************************************************/
 
-static inline uint32_t cp0_getcause(void)
+static inline_function uint32_t cp0_getcause(void)
 {
   register uint32_t cause;
   __asm__ __volatile__
@@ -470,7 +470,7 @@ static inline uint32_t cp0_getcause(void)
  *
  ****************************************************************************/
 
-static inline void cp0_putcause(uint32_t cause)
+static inline_function void cp0_putcause(uint32_t cause)
 {
   __asm__ __volatile__
     (

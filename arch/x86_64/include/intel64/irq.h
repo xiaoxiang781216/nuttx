@@ -569,7 +569,7 @@ struct xcptcontext
 
 #ifndef __ASSEMBLY__
 
-static inline void setgdt(void *gdt, int size)
+static inline_function void setgdt(void *gdt, int size)
 {
   struct gdt_ptr_s gdt_ptr;
   gdt_ptr.limit = size;
@@ -578,7 +578,7 @@ static inline void setgdt(void *gdt, int size)
   __asm__ volatile ("lgdt %0"::"m"(gdt_ptr):"memory");
 }
 
-static inline void setidt(void *idt, int size)
+static inline_function void setidt(void *idt, int size)
 {
   struct idt_ptr_s idt_ptr;
   idt_ptr.limit = size;
@@ -587,26 +587,26 @@ static inline void setidt(void *idt, int size)
   __asm__ volatile ("lidt %0"::"m"(idt_ptr):"memory");
 }
 
-static inline void set_cr3(uint64_t cr3)
+static inline_function void set_cr3(uint64_t cr3)
 {
   __asm__ volatile("mov %0, %%cr3" :: "r"(cr3));
 }
 
-static inline uint64_t get_cr3(void)
+static inline_function uint64_t get_cr3(void)
 {
   uint64_t cr3;
   __asm__ volatile("mov %%cr3, %0" : "=rm"(cr3) : : "memory");
   return cr3;
 }
 
-static inline uint64_t get_pml4(void)
+static inline_function uint64_t get_pml4(void)
 {
   /* Aligned to a 4-KByte boundary */
 
   return get_cr3() & 0xfffffffffffff000;
 }
 
-static inline uint64_t read_fsbase(void)
+static inline_function uint64_t read_fsbase(void)
 {
   uint64_t val;
   __asm__ volatile("rdfsbase %0"
@@ -617,8 +617,8 @@ static inline uint64_t read_fsbase(void)
   return val;
 }
 
-nostackprotect_function
-static inline void write_fsbase(unsigned long val)
+static nostackprotect_function
+inline_function void write_fsbase(unsigned long val)
 {
   __asm__ volatile("wrfsbase %0"
                    : /* no output */
@@ -626,7 +626,7 @@ static inline void write_fsbase(unsigned long val)
                    : "memory");
 }
 
-static inline uint64_t read_gsbase(void)
+static inline_function uint64_t read_gsbase(void)
 {
   uint64_t val;
   __asm__ volatile("rdgsbase %0"
@@ -637,7 +637,7 @@ static inline uint64_t read_gsbase(void)
   return val;
 }
 
-static inline void write_gsbase(unsigned long val)
+static inline_function void write_gsbase(unsigned long val)
 {
   __asm__ volatile("wrgsbase %0"
                    : /* no output */
@@ -647,7 +647,7 @@ static inline void write_gsbase(unsigned long val)
 
 /* Return stack pointer */
 
-static inline uint64_t up_getsp(void)
+static inline_function uint64_t up_getsp(void)
 {
   uint64_t regval;
 
@@ -661,7 +661,7 @@ static inline uint64_t up_getsp(void)
 
 /* Get segment registers */
 
-static inline uint32_t up_getds(void)
+static inline_function uint32_t up_getds(void)
 {
   uint32_t regval;
 
@@ -673,7 +673,7 @@ static inline uint32_t up_getds(void)
   return regval;
 }
 
-static inline uint32_t up_getcs(void)
+static inline_function uint32_t up_getcs(void)
 {
   uint32_t regval;
 
@@ -685,7 +685,7 @@ static inline uint32_t up_getcs(void)
   return regval;
 }
 
-static inline uint32_t up_getss(void)
+static inline_function uint32_t up_getss(void)
 {
   uint32_t regval;
 
@@ -697,7 +697,7 @@ static inline uint32_t up_getss(void)
   return regval;
 }
 
-static inline uint32_t up_getes(void)
+static inline_function uint32_t up_getes(void)
 {
   uint32_t regval;
 
@@ -709,7 +709,7 @@ static inline uint32_t up_getes(void)
   return regval;
 }
 
-static inline uint32_t up_getfs(void)
+static inline_function uint32_t up_getfs(void)
 {
   uint32_t regval;
 
@@ -721,7 +721,7 @@ static inline uint32_t up_getfs(void)
   return regval;
 }
 
-static inline uint32_t up_getgs(void)
+static inline_function uint32_t up_getgs(void)
 {
   uint32_t regval;
 
@@ -762,33 +762,33 @@ static inline_function irqstate_t irqflags(void)
  * if the X86_FLAGS_IF is set by sti, then interrupts are enable.
  */
 
-static inline bool up_irq_disabled(irqstate_t flags)
+static inline_function bool up_irq_disabled(irqstate_t flags)
 {
   return ((flags & X86_64_RFLAGS_IF) == 0);
 }
 
-static inline bool up_irq_enabled(irqstate_t flags)
+static inline_function bool up_irq_enabled(irqstate_t flags)
 {
   return ((flags & X86_64_RFLAGS_IF) != 0);
 }
 
 /* Disable interrupts unconditionally */
 
-static inline void up_irq_disable(void)
+static inline_function void up_irq_disable(void)
 {
   __asm__ volatile("cli": : :"memory");
 }
 
 /* Enable interrupts unconditionally */
 
-static inline void up_irq_enable(void)
+static inline_function void up_irq_enable(void)
 {
   __asm__ volatile("sti": : :"memory");
 }
 
 /* Disable interrupts, but return previous interrupt state */
 
-static inline irqstate_t up_irq_save(void)
+static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t flags = irqflags();
   up_irq_disable();
@@ -797,7 +797,7 @@ static inline irqstate_t up_irq_save(void)
 
 /* Conditionally disable interrupts */
 
-static inline void up_irq_restore(irqstate_t flags)
+static inline_function void up_irq_restore(irqstate_t flags)
 {
   if (up_irq_enabled(flags))
     {

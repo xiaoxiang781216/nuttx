@@ -251,7 +251,7 @@ struct xcptcontext
 
 /* Return the current value of the stack pointer */
 
-static inline uint16_t up_getsp(void)
+static inline_function uint16_t up_getsp(void)
 {
   uint16_t sp;
 
@@ -295,7 +295,7 @@ extern "C"
 
 /* Return the current interrupt enable state and disable IRQs */
 
-static inline irqstate_t up_irq_save(void)
+static inline_function irqstate_t up_irq_save(void)
 {
   irqstate_t flags;
   __asm__ __volatile__
@@ -310,7 +310,7 @@ static inline irqstate_t up_irq_save(void)
 
 /* Restore saved IRQ state */
 
-static inline void up_irq_restore(irqstate_t flags)
+static inline_function void up_irq_restore(irqstate_t flags)
 {
   __asm__ __volatile__
     (
@@ -322,7 +322,7 @@ static inline void up_irq_restore(irqstate_t flags)
 
 /* Return the current interrupt enable state and enable IRQs */
 
-static inline irqstate_t up_irq_enable(void)
+static inline_function irqstate_t up_irq_enable(void)
 {
   irqstate_t flags;
   __asm__ __volatile__
