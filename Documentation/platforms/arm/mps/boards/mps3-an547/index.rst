@@ -50,6 +50,18 @@ Configuring and Running (Single Core)
      bl> boot /pic/boot
      ap> ostest
 
+5. Gdbstub demo::
+
+     ./tools/configure.sh mps3-an547:gdbstub
+     make -j20
+     qemu-system-arm -M mps3-an547 -m 2G -nographic -kernel nuttx  -serial pty -serial pty
+     QEMU 8.2.0 monitor - type 'help' for more information
+     char device redirected to /dev/pts/14 (label serial0)
+     char device redirected to /dev/pts/20 (label serial1)
+     arm-none-eabi-gdb nuttx -ex "target remot /dev/pts/20"
+     (gdb) c
+     sudo minicom -b 115200 -D /dev/pts/14
+
 Debugging with QEMU
 ===================
 
