@@ -49,11 +49,9 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_PM
 void arm_pminitialize(void)
 {
   /* Initialize the NuttX power management subsystem proper */
 
   pm_initialize();
 }
-#endif /* CONFIG_PM */

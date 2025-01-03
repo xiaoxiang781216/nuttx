@@ -46,6 +46,73 @@
  ****************************************************************************/
 
 #ifdef CONFIG_PM
+
+#  ifdef CONFIG_SMP
+static bool pm_idle_handler(int cpu,
+                            enum pm_state_e cpu_state,
+                            enum pm_state_e system_state)
+{
+  bool first = false;
+  switch (cpu_state)
+    {
+      case PM_NORMAL:
+      case PM_IDLE:
+      case PM_STANDBY:
+      case PM_SLEEP:
+
+        /* do cpu domain pm enter operations */
+
+        asm("NOP");
+
+        if (system_state >= PM_NORMAL)
+          {
+            switch (system_state)
+              {
+                case PM_NORMAL:
+                case PM_IDLE:
+                case PM_STANDBY:
+                case PM_SLEEP:
+
+                  /* do system domain pm enter operations */
+
+                  asm("NOP");
+
+                  break;
+                default:
+                  break;
+              }
+          }
+
+        pm_idle_unlock();
+
+        /* do no cross-core relative operations */
+
+        if (cpu_state > PM_NORMAL)
+          {
+            asm("WFI");
+          }
+
+        first = pm_idle_lock(cpu);
+        if (first)
+          {
+            /* do system domain pm leave operations */
+
+            asm("NOP");
+          }
+
+        /* do cpu domain pm leave operations */
+
+        asm("NOP");
+
+        break;
+      default:
+        break;
+    }
+
+  return first;
+}
+#  else
+
 static void pm_idle_handler(enum pm_state_e state)
 {
   switch (state)
@@ -61,6 +128,8 @@ static void pm_idle_handler(enum pm_state_e state)
         break;
     }
 }
+#  endif
+
 #endif /* CONFIG_PM */
 
 void up_idle(void)
