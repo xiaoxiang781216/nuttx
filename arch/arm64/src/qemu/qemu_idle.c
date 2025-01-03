@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm64/src/qemu/qemu_initialize.c
+ * arch/arm64/src/qemu/qemu_idle.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -29,11 +29,6 @@
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-void arm64_pminitialize(void)
-{
-  pm_initialize();
-}
 
 #ifdef CONFIG_SMP
 static bool pm_idle_handler(int cpu,

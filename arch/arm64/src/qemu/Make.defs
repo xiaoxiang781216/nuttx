@@ -34,5 +34,9 @@ CHIP_CSRCS += qemu_textheap.c
 endif
 
 ifeq ($(CONFIG_PM), y)
-CHIP_CSRCS += qemu_initialize.c
+CHIP_CSRCS += qemu_pminitialize.c
+endif
+
+ifeq ($(CONFIG_ARCH_IDLE_CUSTOM),y)
+CHIP_CSRCS +=  qemu_idle.c
 endif
