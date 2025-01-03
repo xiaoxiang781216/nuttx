@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/power/pm.h>
 #include "arm_internal.h"
 
 /****************************************************************************
@@ -44,6 +45,24 @@
  *
  ****************************************************************************/
 
+#ifdef CONFIG_PM
+static void pm_idle_handler(enum pm_state_e state)
+{
+  switch (state)
+    {
+      case PM_NORMAL:
+        break;
+
+      case PM_IDLE:
+      case PM_STANDBY:
+      case PM_SLEEP:
+      default:
+        asm("WFI");
+        break;
+    }
+}
+#endif /* CONFIG_PM */
+
 void up_idle(void)
 {
 #if defined(CONFIG_SUPPRESS_INTERRUPTS) || defined(CONFIG_SUPPRESS_TIMER_INTS)
@@ -56,6 +75,11 @@ void up_idle(void)
 
   /* Sleep until an interrupt occurs to save power */
 
+#ifdef CONFIG_PM
+  pm_idle(pm_idle_handler);
+#else
   asm("WFI");
+#endif /* CONFIG_PM */
+
 #endif
 }

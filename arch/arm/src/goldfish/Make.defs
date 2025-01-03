@@ -30,5 +30,5 @@ CHIP_CSRCS += goldfish_cpuboot.c
 endif
 
 ifeq ($(CONFIG_ARCH_IDLE_CUSTOM),y)
-CHIP_CSRCS += goldfish_idle.c
+CHIP_CSRCS += goldfish_idle.c goldfish_pminitialize.c
 endif

@@ -25,7 +25,7 @@ if(CONFIG_SMP)
 endif()
 
 if(CONFIG_ARCH_IDLE_CUSTOM)
-  list(APPEND SRCS goldfish_idle.c)
+  list(APPEND SRCS goldfish_idle.c goldfish_pminitialize.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})
