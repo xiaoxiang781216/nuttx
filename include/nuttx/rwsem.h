@@ -101,19 +101,6 @@ void down_read(FAR rw_semaphore_t *rwsem);
 void up_read(FAR rw_semaphore_t *rwsem);
 
 /****************************************************************************
- * Name: upgrade_read
- *
- * Description:
- *   Upgrade read lock to write lock on a read-write-lock object.
- *
- * Input Parameters:
- *   rwsem  - Pointer to the read-write-lock descriptor.
- *
- ****************************************************************************/
-
-void upgrade_read(FAR rw_semaphore_t *rwsem);
-
-/****************************************************************************
  * Name: down_write_trylock
  *
  * Description:
