@@ -443,7 +443,6 @@ void rpmsg_device_created(FAR struct rpmsg_s *rpmsg)
         }
     }
 
-  upgrade_read(&g_rpmsg_lock);
   rpmsg->init = true;
   up_write(&g_rpmsg_lock);
 
