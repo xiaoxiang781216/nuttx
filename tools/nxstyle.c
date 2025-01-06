@@ -619,6 +619,14 @@ static const char *g_white_content_list[] =
   "unzGetCurrentFileInfo64",
   "unzGoToNextFile",
   "unzGoToFirstFile",
+
+  /* Ref:
+   * libs/libc/machine/tricore/arch_setjmp.c
+   */
+
+  "__getA11",
+  "__moveToDataParamRet",
+  "__jumpToFunctionWithLink",
   NULL
 };
 
