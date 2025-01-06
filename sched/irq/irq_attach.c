@@ -36,6 +36,7 @@
  * Private Data
  ****************************************************************************/
 
+static spinlock_t g_irqlock = SP_UNLOCKED;
 #ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMIC
 static int g_irqmap_count = 1;
 #endif
@@ -68,7 +69,7 @@ int irq_to_ndx(int irq)
 {
   DEBUGASSERT(g_irqmap_count < CONFIG_ARCH_NUSER_INTERRUPTS);
 
-  irqstate_t flags = spin_lock_irqsave(NULL);
+  irqstate_t flags = spin_lock_irqsave(&g_irqlock);
   if (g_irqmap[irq] == 0)
     {
       int ndx = g_irqmap_count++;
@@ -76,7 +77,7 @@ int irq_to_ndx(int irq)
       g_irqrevmap[ndx] = irq;
     }
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&g_irqlock, flags);
   return g_irqmap[irq];
 }
 #elif defined(CONFIG_ARCH_MINIMAL_VECTORTABLE)
@@ -125,7 +126,7 @@ int irq_attach(int irq, xcpt_t isr, FAR void *arg)
        * to the unexpected interrupt handler.
        */
 
-      flags = spin_lock_irqsave(NULL);
+      flags = spin_lock_irqsave(&g_irqlock);
       if (isr == NULL)
         {
           /* Disable the interrupt if we can before detaching it.  We might
@@ -159,7 +160,7 @@ int irq_attach(int irq, xcpt_t isr, FAR void *arg)
       if (is_irqchain(ndx, isr))
         {
           ret = irqchain_attach(ndx, isr, arg);
-          spin_unlock_irqrestore(NULL, flags);
+          spin_unlock_irqrestore(&g_irqlock, flags);
           return ret;
         }
 #endif
@@ -174,7 +175,7 @@ int irq_attach(int irq, xcpt_t isr, FAR void *arg)
       g_irqvector[ndx].count   = 0;
 #endif
 
-      spin_unlock_irqrestore(NULL, flags);
+      spin_unlock_irqrestore(&g_irqlock, flags);
       ret = OK;
     }
 
