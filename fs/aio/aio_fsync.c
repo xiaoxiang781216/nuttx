@@ -98,7 +98,7 @@ static void aio_fsync_worker(FAR void *arg)
 
   aio_signal(pid, aiocbp);
 
-#if defined (CONFIG_PRIORITY_INHERITANCE) && defined (CONFIG_SCHED_LPWORK)
+#if defined(CONFIG_PRIORITY_INHERITANCE) && defined(CONFIG_SCHED_LPWORK)
   /* Restore the low priority worker thread default priority */
 
   lpwork_restorepriority(prio);
