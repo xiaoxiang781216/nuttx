@@ -1,5 +1,5 @@
 /**************************************************************************
- * libs/libc/machine/x86_64/arch_setjmp_x86_64.S
+ * libs/libc/machine/x86_64/gpu/arch_setjmp_x86_64.S
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
