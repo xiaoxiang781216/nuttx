@@ -32,4 +32,8 @@ if(CONFIG_ARCH_SETJMP_H)
   list(APPEND SRCS arch_setjmp_x86_64.S)
 endif()
 
+if(CONFIG_PROFILE_MINI)
+  list(APPEND SRCS gnu/mcount.S)
+endif()
+
 target_sources(c PRIVATE ${SRCS})
