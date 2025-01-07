@@ -1365,7 +1365,7 @@ void arm64_gic_secondary_init(void)
  *
  ****************************************************************************/
 
-void up_trigger_irq(int irq, uint16_t cpuset)
+void up_trigger_irq(int irq, cpu_set_t cpuset)
 {
   uint32_t regval;
 
