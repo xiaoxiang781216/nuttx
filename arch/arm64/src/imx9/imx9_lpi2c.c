@@ -2411,7 +2411,7 @@ int imx9_i2cbus_uninitialize(struct i2c_master_s *dev)
 
   if (--priv->refs > 0)
     {
-      leave_critical_section(flags);
+      spin_unlock_irqrestore(&priv->spinlock, flags);
       return OK;
     }
 
