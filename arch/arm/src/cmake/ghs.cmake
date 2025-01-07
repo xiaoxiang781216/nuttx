@@ -36,6 +36,12 @@ set(CMAKE_GMEMFILE gmemfile)
 set(CMAKE_NM gnm)
 set(CMAKE_RANLIB echo)
 set(CMAKE_PREPROCESSOR ccarm -E -P)
+# override the responsible file flag
+if(CMAKE_GENERATOR MATCHES "Ninja")
+  set(CMAKE_C_RESPONSE_FILE_FLAG "$DEFINES $INCLUDES $FLAGS @")
+  set(CMAKE_CXX_RESPONSE_FILE_FLAG "$DEFINES $INCLUDES $FLAGS @")
+  set(CMAKE_ASM_RESPONSE_FILE_FLAG "$DEFINES $INCLUDES $FLAGS @")
+endif()
 
 # override the ARCHIVE command
 
@@ -275,6 +281,9 @@ function(nuttx_find_toolchain_lib)
     COMMAND bash -c "which ${CMAKE_C_COMPILER} | awk -F '/[^/]*$' '{print $1}'"
     OUTPUT_VARIABLE GHS_ROOT_PATH)
   string(STRIP "${GHS_ROOT_PATH}" GHS_ROOT_PATH)
+  string(REGEX REPLACE "^/([a-zA-Z])/(.*)$" "\\1:/\\2" GHS_ROOT_TEMP_PATH
+                       "${GHS_ROOT_PATH}")
+  string(STRIP "${GHS_ROOT_TEMP_PATH}" GHS_ROOT_PATH)
   if(NOT ARGN)
     nuttx_add_extra_library(${GHS_ROOT_PATH}/lib/thumb2/libarch.a)
     if(CONFIG_ARCH_FPU)
