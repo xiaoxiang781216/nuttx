@@ -29,6 +29,7 @@ import json
 import math
 import re
 import shlex
+import sys
 from enum import Enum
 from pathlib import Path
 from typing import List, Optional, Union
@@ -567,11 +568,24 @@ def get_bytes(val, size):
 def import_check(module, name="", errmsg=""):
     try:
         module = __import__(module, fromlist=[name])
-    except ImportError:
+    except ImportError as e:
+        gdb.write(f"import_error: {e}\n")
         gdb.write(errmsg if errmsg else f"Error to import {module}\n")
         return None
 
     return getattr(module, name) if name else module
+
+
+def import_reload(module, name="", errmsg=""):
+    """Clear and reload the module from sys.modules"""
+    if module in sys.modules:
+        module = importlib.reload(sys.modules[module])
+    else:
+        module = import_check(
+            module,
+            errmsg=errmsg,
+        )
+    return module
 
 
 def hexdump(address, size):
