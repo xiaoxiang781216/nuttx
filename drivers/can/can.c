@@ -1071,18 +1071,6 @@ static int can_poll(FAR struct file *filep, FAR struct pollfd *fds,
   DEBUGASSERT(filep->f_priv != NULL);
   reader = (FAR struct can_reader_s *)filep->f_priv;
 
-  /* Get exclusive access to the poll structures */
-
-  ret = nxmutex_lock(&dev->cd_polllock);
-  if (ret < 0)
-    {
-      /* A signal received while waiting for access to the poll data
-       * will abort the operation
-       */
-
-      goto return_with_irqdisabled;
-    }
-
   /* Are we setting up the poll?  Or tearing it down? */
 
   if (setup)
@@ -1109,7 +1097,7 @@ static int can_poll(FAR struct file *filep, FAR struct pollfd *fds,
         {
           fds->priv = NULL;
           ret       = -EBUSY;
-          goto errout;
+          goto return_with_irqdisabled;
         }
 
       /* Should we immediately notify on any of the requested events?
@@ -1146,7 +1134,7 @@ static int can_poll(FAR struct file *filep, FAR struct pollfd *fds,
       if (slot == NULL)
         {
           ret = -EIO;
-          goto errout;
+          goto return_with_irqdisabled;
         }
 #endif
 
@@ -1156,8 +1144,6 @@ static int can_poll(FAR struct file *filep, FAR struct pollfd *fds,
       fds->priv = NULL;
     }
 
-errout:
-  nxmutex_unlock(&dev->cd_polllock);
 return_with_irqdisabled:
   leave_critical_section(flags);
   return ret;
@@ -1190,7 +1176,6 @@ int can_register(FAR const char *path, FAR struct can_dev_s *dev)
 
   nxsem_init(&dev->cd_sender.tx_sem, 0, 0);
   nxmutex_init(&dev->cd_closelock);
-  nxmutex_init(&dev->cd_polllock);
 
   for (i = 0; i < CONFIG_CAN_NPENDINGRTR; i++)
     {

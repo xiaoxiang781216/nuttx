@@ -827,7 +827,6 @@ struct can_dev_s
   volatile uint8_t     cd_ntxwaiters;    /* Number of threads waiting to enqueue a message */
   struct list_node     cd_readers;       /* List of readers */
   mutex_t              cd_closelock;     /* Locks out new opens while close is in progress */
-  mutex_t              cd_polllock;      /* Manages exclusive access to cd_fds[] */
   struct can_txcache_s cd_sender;        /* Describes transmit cache */
 #ifdef CONFIG_CAN_TXREADY
   struct work_s        cd_work;          /* Use to manage can_txready() work */
