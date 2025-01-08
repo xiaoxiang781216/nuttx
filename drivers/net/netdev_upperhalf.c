@@ -1803,6 +1803,46 @@ void netpkt_reset_reserved(FAR struct netdev_lowerhalf_s *dev,
 }
 
 /****************************************************************************
+ * Name: netpkt_realloc_reserved
+ *
+ * Description:
+ *   Reallocate the reserved length of netpkt
+ *
+ * Input Parameters:
+ *   dev    - The lower half device driver structure
+ *   pkt    - The net packet
+ *   len    - The reserved length
+ *
+ * Returned Value:
+ *   Pointer to the new netpkt, NULL on failure
+ *
+ ****************************************************************************/
+
+FAR netpkt_t *netpkt_realloc_reserved(FAR struct netdev_lowerhalf_s *dev,
+                                      FAR netpkt_t *pkt, unsigned int len)
+{
+  FAR netpkt_t *newpkt = iob_tryalloc(false);
+  int llhdrlen = NET_LL_HDRLEN(&dev->netdev);
+  int reserved = MAX(CONFIG_NET_LL_GUARDSIZE, len + llhdrlen);
+
+  if (newpkt == NULL)
+    {
+      return NULL;
+    }
+
+  iob_reserve(newpkt, reserved);
+  if (iob_clone_partial(pkt, pkt->io_pktlen + llhdrlen, -llhdrlen,
+                        newpkt, -llhdrlen, false, false) < 0)
+    {
+      iob_free_chain(newpkt);
+      return NULL;
+    }
+
+  iob_free_chain(pkt);
+  return newpkt;
+}
+
+/****************************************************************************
  * Name: netpkt_is_fragmented
  *
  * Description:

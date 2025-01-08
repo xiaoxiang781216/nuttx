@@ -516,6 +516,25 @@ void netpkt_reset_reserved(FAR struct netdev_lowerhalf_s *dev,
                            FAR netpkt_t *pkt, unsigned int len);
 
 /****************************************************************************
+ * Name: netpkt_realloc_reserved
+ *
+ * Description:
+ *   Reallocate the reserved length of netpkt
+ *
+ * Input Parameters:
+ *   dev    - The lower half device driver structure
+ *   pkt    - The net packet
+ *   len    - The reserved length
+ *
+ * Returned Value:
+ *   Pointer to the new netpkt, NULL on failure
+ *
+ ****************************************************************************/
+
+FAR netpkt_t *netpkt_realloc_reserved(FAR struct netdev_lowerhalf_s *dev,
+                                      FAR netpkt_t *pkt, unsigned int len);
+
+/****************************************************************************
  * Name: netpkt_is_fragmented
  *
  * Description:
