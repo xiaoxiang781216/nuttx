@@ -69,7 +69,7 @@ int fchmodat(int dirfd, FAR const char *path, mode_t mode, int flags)
   FAR char *fullpath;
   int ret;
 
-  fullpath = lib_get_tempbuffer(PATH_MAX);
+  fullpath = lib_get_pathbuffer();
   if (fullpath == NULL)
     {
       set_errno(ENOMEM);
@@ -79,7 +79,7 @@ int fchmodat(int dirfd, FAR const char *path, mode_t mode, int flags)
   ret = lib_getfullpath(dirfd, path, fullpath, PATH_MAX);
   if (ret < 0)
     {
-      lib_put_tempbuffer(fullpath);
+      lib_put_pathbuffer(fullpath);
       set_errno(-ret);
       return ERROR;
     }
@@ -93,6 +93,6 @@ int fchmodat(int dirfd, FAR const char *path, mode_t mode, int flags)
       ret = chmod(fullpath, mode);
     }
 
-  lib_put_tempbuffer(fullpath);
+  lib_put_pathbuffer(fullpath);
   return ret;
 }

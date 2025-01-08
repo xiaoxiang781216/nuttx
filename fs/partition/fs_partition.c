@@ -95,7 +95,7 @@ static void register_partition(FAR struct partition_s *part, FAR void *arg)
       FAR struct partition_state_s *state = reg->state;
       FAR char *path;
 
-      path = lib_get_tempbuffer(PATH_MAX);
+      path = lib_get_pathbuffer();
       if (path == NULL)
         {
           return;
@@ -115,7 +115,7 @@ static void register_partition(FAR struct partition_s *part, FAR void *arg)
         }
 #endif
 
-      lib_put_tempbuffer(path);
+      lib_put_pathbuffer(path);
     }
 }
 

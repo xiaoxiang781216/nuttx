@@ -117,10 +117,10 @@ FAR struct file_struct *lib_get_stream(int fd);
 
 unsigned long nrand(unsigned long limit);
 
-/* Functions defined in lib_tempbuffer.c ************************************/
+/* Functions defined in lib_pathbuffer.c ************************************/
 
-FAR char *lib_get_tempbuffer(size_t nbytes);
-void lib_put_tempbuffer(FAR char *buffer);
+FAR char *lib_get_pathbuffer(void);
+void lib_put_pathbuffer(FAR char *buffer);
 
 /* Functions defined in lib_realpath.c **************************************/
 

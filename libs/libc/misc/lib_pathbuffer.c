@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/misc/lib_tempbuffer.c
+ * libs/libc/misc/lib_pathbuffer.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -36,30 +36,30 @@
  ****************************************************************************/
 
 #if CONFIG_PATH_MAX > CONFIG_LINE_MAX
-#  define TEMP_MAX_SIZE CONFIG_PATH_MAX
+#  define PATH_MAX_SIZE CONFIG_PATH_MAX
 #else
-#  define TEMP_MAX_SIZE CONFIG_LINE_MAX
+#  define PATH_MAX_SIZE CONFIG_LINE_MAX
 #endif
 
 /****************************************************************************
  * Private Types
  ****************************************************************************/
 
-struct tempbuffer_s
+struct pathbuffer_s
 {
   spinlock_t lock;           /* Lock for the buffer */
   unsigned long free_bitmap; /* Bitmap of free buffer */
-  char buffer[CONFIG_LIBC_MAX_TEMPBUFFER][TEMP_MAX_SIZE];
+  char buffer[CONFIG_LIBC_MAX_PATHBUFFER][PATH_MAX_SIZE];
 };
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static struct tempbuffer_s g_tempbuffer =
+static struct pathbuffer_s g_pathbuffer =
 {
   SP_UNLOCKED,
-  (1u << CONFIG_LIBC_MAX_TEMPBUFFER) - 1,
+  (1u << CONFIG_LIBC_MAX_PATHBUFFER) - 1,
 };
 
 /****************************************************************************
@@ -71,59 +71,56 @@ static struct tempbuffer_s g_tempbuffer =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: lib_get_tempbuffer
+ * Name: lib_get_pathbuffer
  *
  * Description:
- *   The lib_get_tempbuffer() function returns a pointer to a temporary
+ *   The lib_get_pathbuffer() function returns a pointer to a temporary
  *   buffer.  The buffer is allocated from a pool of pre-allocated buffers
  *   and if the pool is exhausted, a new buffer is allocated through
  *   kmm_malloc(). The size of the buffer is PATH_MAX, and must freed by
- *   calling lib_put_tempbuffer().
+ *   calling lib_put_pathbuffer().
  *
  * Returned Value:
- *   On success, lib_get_tempbuffer() returns a pointer to a temporary
+ *   On success, lib_get_pathbuffer() returns a pointer to a temporary
  *   buffer.  On failure, NULL is returned.
  *
  ****************************************************************************/
 
-FAR char *lib_get_tempbuffer(size_t nbytes)
+FAR char *lib_get_pathbuffer(void)
 {
   irqstate_t flags;
   int index;
 
-  if (nbytes <= TEMP_MAX_SIZE)
+  /* Try to find a free buffer */
+
+  flags = spin_lock_irqsave(&g_pathbuffer.lock);
+  index = ffsl(g_pathbuffer.free_bitmap) - 1;
+  if (index >= 0 && index < CONFIG_LIBC_MAX_PATHBUFFER)
     {
-      /* Try to find a free buffer */
-
-      flags = spin_lock_irqsave(&g_tempbuffer.lock);
-      index = ffsl(g_tempbuffer.free_bitmap) - 1;
-      if (index >= 0 && index < CONFIG_LIBC_MAX_TEMPBUFFER)
-        {
-          g_tempbuffer.free_bitmap &= ~(1u << index);
-          spin_unlock_irqrestore(&g_tempbuffer.lock, flags);
-          return g_tempbuffer.buffer[index];
-        }
-
-      spin_unlock_irqrestore(&g_tempbuffer.lock, flags);
+      g_pathbuffer.free_bitmap &= ~(1u << index);
+      spin_unlock_irqrestore(&g_pathbuffer.lock, flags);
+      return g_pathbuffer.buffer[index];
     }
 
+  spin_unlock_irqrestore(&g_pathbuffer.lock, flags);
+
   /* If no free buffer is found, allocate a new one if
-   * CONFIG_LIBC_TEMPBUFFER_MALLOC is enabled
+   * CONFIG_LIBC_PATHBUFFER_MALLOC is enabled
    */
 
-#ifdef CONFIG_LIBC_TEMPBUFFER_MALLOC
-  return lib_malloc(nbytes);
+#ifdef CONFIG_LIBC_PATHBUFFER_MALLOC
+  return lib_malloc(PATH_MAX_SIZE);
 #else
   return NULL;
 #endif
 }
 
 /****************************************************************************
- * Name: lib_put_tempbuffer
+ * Name: lib_put_pathbuffer
  *
  * Description:
- *   The lib_put_tempbuffer() function frees a temporary buffer that was
- *   allocated by lib_get_tempbuffer(). If the buffer was allocated
+ *   The lib_put_pathbuffer() function frees a temporary buffer that was
+ *   allocated by lib_get_pathbuffer(). If the buffer was allocated
  *   dynamically, it is freed by calling kmm_free(). Otherwise, the buffer
  *   is marked as free in the pool of pre-allocated buffers.
  *
@@ -132,25 +129,25 @@ FAR char *lib_get_tempbuffer(size_t nbytes)
  *
  ****************************************************************************/
 
-void lib_put_tempbuffer(FAR char *buffer)
+void lib_put_pathbuffer(FAR char *buffer)
 {
   irqstate_t flags;
   int index;
 
-  index = (buffer - &g_tempbuffer.buffer[0][0]) / TEMP_MAX_SIZE;
-  if (index >= 0 && index < CONFIG_LIBC_MAX_TEMPBUFFER)
+  index = (buffer - &g_pathbuffer.buffer[0][0]) / PATH_MAX_SIZE;
+  if (index >= 0 && index < CONFIG_LIBC_MAX_PATHBUFFER)
     {
       /* Mark the corresponding bit as free */
 
-      flags = spin_lock_irqsave(&g_tempbuffer.lock);
-      g_tempbuffer.free_bitmap |= 1u << index;
-      spin_unlock_irqrestore(&g_tempbuffer.lock, flags);
+      flags = spin_lock_irqsave(&g_pathbuffer.lock);
+      g_pathbuffer.free_bitmap |= 1u << index;
+      spin_unlock_irqrestore(&g_pathbuffer.lock, flags);
       return;
     }
 
   /* Free the buffer if it was dynamically allocated */
 
-#ifdef CONFIG_LIBC_TEMPBUFFER_MALLOC
+#ifdef CONFIG_LIBC_PATHBUFFER_MALLOC
   lib_free(buffer);
 #endif
 }

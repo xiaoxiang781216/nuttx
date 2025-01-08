@@ -119,18 +119,19 @@ config LIBC_MEM_FD_VFS_PATH
 	---help---
 		The relative path to where memfd will exist in the tmpfs namespace.
 
-config LIBC_MAX_TEMPBUFFER
-	int "Maximum size of a temporary file temp buffer array"
+config LIBC_MAX_PATHBUFFER
+	int "Maximum size of a temporary file path buffer array"
 	range 0 32
 	default 2
 	---help---
-		This value is the maximum size of the buffer that will hold the full line.
+		This value is the maximum size of the buffer that will hold the full
+		file path.
 
-config LIBC_TEMPBUFFER_MALLOC
-	bool "Enable malloc tempbuffer"
+config LIBC_PATHBUFFER_MALLOC
+	bool "Enable malloc pathbuffer"
 	default y
 	---help---
-		Enable malloc temp buffer from the heap when tempbuffer is insufficient.
+		Enable malloc path buffer from the heap when pathbuffer is insufficient.
 
 config LIBC_BACKTRACE_BUFFSIZE
 	int "The size of backtrace record buffer"

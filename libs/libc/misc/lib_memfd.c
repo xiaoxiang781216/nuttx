@@ -58,7 +58,7 @@ int memfd_create(FAR const char *name, unsigned int flags)
   FAR char *path;
   int ret;
 
-  path = lib_get_tempbuffer(PATH_MAX);
+  path = lib_get_pathbuffer();
   if (path == NULL)
     {
       set_errno(ENOMEM);
@@ -81,7 +81,7 @@ int memfd_create(FAR const char *name, unsigned int flags)
     }
 #  endif
 
-  lib_put_tempbuffer(path);
+  lib_put_pathbuffer(path);
   return ret;
 #endif
 }

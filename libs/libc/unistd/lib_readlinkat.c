@@ -73,7 +73,7 @@ ssize_t readlinkat(int dirfd, FAR const char *path, FAR char *buf,
   FAR char *fullpath;
   int ret;
 
-  fullpath = lib_get_tempbuffer(PATH_MAX);
+  fullpath = lib_get_pathbuffer();
   if (fullpath == NULL)
     {
       set_errno(ENOMEM);
@@ -83,13 +83,13 @@ ssize_t readlinkat(int dirfd, FAR const char *path, FAR char *buf,
   ret = lib_getfullpath(dirfd, path, fullpath, PATH_MAX);
   if (ret < 0)
     {
-      lib_put_tempbuffer(fullpath);
+      lib_put_pathbuffer(fullpath);
       set_errno(-ret);
       return ERROR;
     }
 
   ret = readlink(fullpath, buf, bufsize);
-  lib_put_tempbuffer(fullpath);
+  lib_put_pathbuffer(fullpath);
   return ret;
 }
 

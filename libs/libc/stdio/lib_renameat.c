@@ -74,17 +74,17 @@ int renameat(int olddirfd, FAR const char *oldpath,
   FAR char *newfullpath;
   int ret;
 
-  oldfullpath = lib_get_tempbuffer(PATH_MAX);
+  oldfullpath = lib_get_pathbuffer();
   if (oldfullpath == NULL)
     {
       set_errno(ENOMEM);
       return ERROR;
     }
 
-  newfullpath = lib_get_tempbuffer(PATH_MAX);
+  newfullpath = lib_get_pathbuffer();
   if (newfullpath == NULL)
     {
-      lib_put_tempbuffer(oldfullpath);
+      lib_put_pathbuffer(oldfullpath);
       set_errno(ENOMEM);
       return ERROR;
     }
@@ -99,14 +99,14 @@ int renameat(int olddirfd, FAR const char *oldpath,
 
   if (ret < 0)
     {
-      lib_put_tempbuffer(oldfullpath);
-      lib_put_tempbuffer(newfullpath);
+      lib_put_pathbuffer(oldfullpath);
+      lib_put_pathbuffer(newfullpath);
       set_errno(-ret);
       return ERROR;
     }
 
   ret = rename(oldfullpath, newfullpath);
-  lib_put_tempbuffer(oldfullpath);
-  lib_put_tempbuffer(newfullpath);
+  lib_put_pathbuffer(oldfullpath);
+  lib_put_pathbuffer(newfullpath);
   return ret;
 }
