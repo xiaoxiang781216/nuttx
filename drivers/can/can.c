@@ -994,8 +994,7 @@ static int can_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             }
           else
             {
-              canerr("dev->cd_transv->cts_ops is NULL!");
-              ret = -ENOTTY;
+              caninfo("dev->cd_transv->cts_ops is NULL!");
             }
         }
         break;
@@ -1018,8 +1017,8 @@ static int can_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             }
           else
             {
-              canerr("dev->cd_transv->cts_ops is NULL!");
-              ret = -ENOTTY;
+              *(FAR int *)arg = CAN_TRANSVSTATE_NORMAL;
+              caninfo("dev->cd_transv->cts_ops is NULL!");
             }
         }
         break;
