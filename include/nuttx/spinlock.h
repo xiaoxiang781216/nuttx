@@ -112,14 +112,6 @@ void nxsched_critmon_busywait(bool state, FAR void *caller);
  * Public Data Types
  ****************************************************************************/
 
-/* Used for access control */
-
-extern volatile spinlock_t g_irq_spin;
-
-/* Handles nested calls to spin_lock_irqsave and spin_unlock_irqrestore */
-
-extern volatile uint8_t g_irq_spin_count[CONFIG_SMP_NCPUS];
-
 /****************************************************************************
  * Name: up_testset
  *
@@ -462,26 +454,12 @@ static inline_function void spin_unlock(FAR volatile spinlock_t *lock)
 static inline_function
 irqstate_t spin_lock_irqsave_wo_note(FAR volatile spinlock_t *lock)
 {
-  irqstate_t ret;
-  ret = up_irq_save();
+  irqstate_t flags;
+  flags = up_irq_save();
 
-  if (NULL == lock)
-    {
-      int me = this_cpu();
-      if (0 == g_irq_spin_count[me])
-        {
-          spin_lock_wo_note(&g_irq_spin);
-        }
+  spin_lock_wo_note(lock);
 
-      g_irq_spin_count[me]++;
-      DEBUGASSERT(0 != g_irq_spin_count[me]);
-    }
-  else
-    {
-      spin_lock_wo_note(lock);
-    }
-
-  return ret;
+  return flags;
 }
 #else
 #  define spin_lock_irqsave_wo_note(l) ((void)(l), up_irq_save())
@@ -492,14 +470,7 @@ irqstate_t spin_lock_irqsave_wo_note(FAR volatile spinlock_t *lock)
  *
  * Description:
  *   If SMP is enabled:
- *     If the argument lock is not specified (i.e. NULL),
- *     disable local interrupts and take the global spinlock (g_irq_spin)
- *     if the call counter (g_irq_spin_count[cpu]) equals to 0. Then the
- *     counter on the CPU is incremented to allow nested calls and return
- *     the interrupt state.
- *
- *     If the argument lock is specified,
- *     disable local interrupts and take the lock spinlock and return
+ *     Disable local interrupts and take the lock spinlock and return
  *     the interrupt state.
  *
  *     NOTE: This API is very simple to protect data (e.g. H/W register
@@ -510,9 +481,7 @@ irqstate_t spin_lock_irqsave_wo_note(FAR volatile spinlock_t *lock)
  *     This function is equivalent to up_irq_save().
  *
  * Input Parameters:
- *   lock - Caller specific spinlock. If specified NULL, g_irq_spin is used
- *          and can be nested. Otherwise, nested call for the same lock
- *          would cause a deadlock
+ *   lock - Caller specific spinlock. not NULL.
  *
  * Returned Value:
  *   An opaque, architecture-specific value that represents the state of
@@ -673,21 +642,7 @@ static inline_function
 void spin_unlock_irqrestore_wo_note(FAR volatile spinlock_t *lock,
                                     irqstate_t flags)
 {
-  if (NULL == lock)
-    {
-      int me = this_cpu();
-      DEBUGASSERT(0 < g_irq_spin_count[me]);
-      g_irq_spin_count[me]--;
-
-      if (0 == g_irq_spin_count[me])
-        {
-          spin_unlock_wo_note(&g_irq_spin);
-        }
-    }
-  else
-    {
-      spin_unlock_wo_note(lock);
-    }
+  spin_unlock_wo_note(lock);
 
   up_irq_restore(flags);
 }
@@ -700,21 +655,14 @@ void spin_unlock_irqrestore_wo_note(FAR volatile spinlock_t *lock,
  *
  * Description:
  *   If SMP is enabled:
- *     If the argument lock is not specified (i.e. NULL),
- *     decrement the call counter (g_irq_spin_count[cpu]) and if it
- *     decrements to zero then release the spinlock (g_irq_spin) and
- *     restore the interrupt state as it was prior to the previous call to
- *     spin_lock_irqsave(NULL).
- *
- *     If the argument lock is specified, release the lock and
- *     restore the interrupt state as it was prior to the previous call to
- *     spin_lock_irqsave(lock).
+ *     Release the lock and restore the interrupt state as it was prior
+ *     to the previous call to spin_lock_irqsave(lock).
  *
  *   If SMP is not enabled:
  *     This function is equivalent to up_irq_restore().
  *
  * Input Parameters:
- *   lock - Caller specific spinlock. If specified NULL, g_irq_spin is used.
+ *   lock - Caller specific spinlock. not NULL
  *
  *   flags - The architecture-specific value that represents the state of
  *           the interrupts prior to the call to spin_lock_irqsave(lock);
