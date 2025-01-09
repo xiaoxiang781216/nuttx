@@ -324,6 +324,12 @@ static int can_close(FAR struct file *filep)
       goto errout;
     }
 
+#ifdef CONFIG_CAN_ERROR_POLLING
+  work_cancel(CEPWORK, &dev->cd_errp_work);
+#endif
+
+  /* reset poll fds */
+
   /* Stop accepting input */
 
   dev_rxint(dev, false);
