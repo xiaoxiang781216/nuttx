@@ -538,8 +538,8 @@ CXXELFFLAGS = $(CXXFLAGS)-fvisibility=hidden
 
 ifeq ($(CONFIG_PIC),y)
   CFLAGS += --fixed-r10
-  CELFFLAGS += $(PICFLAGS) -mpic-register=r10
-  CXXELFFLAGS += $(PICFLAGS) -mpic-register=r10
+  CELFFLAGS += $(PICFLAGS) -mpic-register=r10 -fno-unwind-tables -fno-asynchronous-unwind-tables
+  CXXELFFLAGS += $(PICFLAGS) -mpic-register=r10 -fno-unwind-tables -fno-asynchronous-unwind-tables
 
   # Generate an executable elf, need to ignore undefined symbols
   LDELFFLAGS += --unresolved-symbols=ignore-in-object-files --emit-relocs
