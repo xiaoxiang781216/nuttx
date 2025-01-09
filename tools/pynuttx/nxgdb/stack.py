@@ -21,7 +21,6 @@
 ############################################################################
 
 import traceback
-import warnings
 
 import gdb
 
@@ -64,10 +63,7 @@ class Stack(object):
                 size: {hex(self._stack_size)}, sp: {hex(self._cur_sp)}\n"
             )
 
-            warnings.warn(
-                "Inconsistant stack size...Maybe memory corruption?",
-                category=RuntimeWarning,
-            )
+            gdb.write("Inconsistant stack size...Maybe memory corruption?\n")
 
         # TODO: check if stack ptr is located at a sane address range!
 
