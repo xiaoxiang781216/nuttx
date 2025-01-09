@@ -626,6 +626,14 @@ static int ctucanfd_chrdev_send(FAR struct can_dev_s *dev,
 
   fmt.s.rtr = msg->cm_hdr.ch_rtr;
 
+#ifdef CONFIG_CAN_FD
+  /* Set flags */
+
+  fmt.s.fdf = msg->cm_hdr.ch_edl;
+  fmt.s.brs = msg->cm_hdr.ch_brs;
+  fmt.s.esi_rsv = msg->cm_hdr.ch_esi;
+#endif
+
 #ifdef CONFIG_NET_CAN_EXTID
   if (msg->cm_hdr.ch_extid)
     {
@@ -800,7 +808,7 @@ static void ctucanfd_chardev_receive(FAR struct ctucanfd_can_s *priv)
 
 #ifdef CONFIG_CAN_FD
       hdr.ch_esi = frame.fmt.esi_rsv;
-      hdr.ch_edl = 0;
+      hdr.ch_edl = frame.fmt.fdf;
       hdr.ch_brs = frame.fmt.brs;
 #else
       if (frame.fmt.fdf)
@@ -937,7 +945,8 @@ static void ctucanfd_chardev_interrupt(FAR struct ctucanfd_driver_s *priv)
 
                   regval = (CTUCANFD_TXCMD_TXCE +
                             (1 << (CTUCANFD_TXCMD_TXB_SHIFT + txidx)));
-                  ctucanfd_putreg(&priv->devs[i], CTUCANFD_TXINFOCMD, regval);
+                  ctucanfd_putreg(&priv->devs[i],
+                                  CTUCANFD_TXINFOCMD, regval);
                 }
             }
         }
@@ -1277,7 +1286,7 @@ static int ctucanfd_sock_send(FAR struct ctucanfd_can_s *priv)
 
       /* CAN FD frame */
 
-      fmt.s.fdf = 1;
+      fmt.s.fdf = (frame->flags & CANFD_FDF);
 
       /* Set up the DLC */
 
@@ -1643,7 +1652,8 @@ static void ctucanfd_sock_interrupt_work(FAR void *arg)
 
                   regval = (CTUCANFD_TXCMD_TXCE +
                             (1 << (CTUCANFD_TXCMD_TXB_SHIFT + txidx)));
-                  ctucanfd_putreg(&priv->devs[i], CTUCANFD_TXINFOCMD, regval);
+                  ctucanfd_putreg(&priv->devs[i],
+                                  CTUCANFD_TXINFOCMD, regval);
                 }
             }
         }
