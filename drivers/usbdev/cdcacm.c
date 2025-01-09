@@ -3118,6 +3118,16 @@ static bool cdcuart_txempty(FAR struct uart_dev_s *dev)
     }
 #endif
 
+  flags = spin_lock_irqsave(&priv->lock);
+
+  if (dev->disconnected)
+    {
+      spin_unlock_irqrestore(&priv->lock, flags);
+      return true;
+    }
+
+  spin_unlock_irqrestore(&priv->lock, flags);
+
   priv->ispolling = true;
   EP_POLL(ep);
   priv->ispolling = false;
@@ -3740,6 +3750,10 @@ int cdcacm_uninitialize_instance(int minor,
       g_syslog_cdcacm = NULL;
     }
 #endif
+
+  /* Disconnect in case we are connected */
+
+  cdcacm_disconnect(classdev, priv->usbdev);
 
 #ifndef CONFIG_CDCACM_COMPOSITE
   usbdev_unregister(classdev);
