@@ -24,14 +24,15 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/clock.h>
 #include <nuttx/config.h>
 
+#include <nuttx/clock.h>
+#include <nuttx/power/pm.h>
+#include <nuttx/sched.h>
 #include <nuttx/wdog.h>
+
 #include <sys/types.h>
 #include <stdbool.h>
-
-#include <nuttx/power/pm.h>
 
 #include "pm.h"
 
@@ -41,10 +42,6 @@
 
 struct pm_stability_governor_domain_s
 {
-  /* Timer to wakeup system, delay the sleep request */
-
-  struct wdog_s wdog;
-
   /* The Idle is wakeup from the governor wdog itself */
 
   bool wdog_wakeup;
@@ -52,6 +49,18 @@ struct pm_stability_governor_domain_s
   /* This state has not been maintained long enough to meet the threshold. */
 
   enum pm_state_e state_pending;
+
+#ifdef CONFIG_SMP
+
+  /* SMP call data to wake self up */
+
+  struct smp_call_delay_data_s call_data;
+#else
+
+  /* Timer to wakeup system, delay the sleep request */
+
+  struct wdog_s wdog;
+#endif
 };
 
 struct pm_stability_governor_s
@@ -98,10 +107,20 @@ static struct pm_stability_governor_s g_stability_governor;
  * Private Functions
  ****************************************************************************/
 
-/* Timer cb only to make sure system will wake from WFI */
+/****************************************************************************
+ * Name: stability_governor_cb
+ ****************************************************************************/
 
-static void stability_governor_timer_cb(wdparm_t arg)
+static int stability_governor_cb(void *arg)
 {
+  /* Timer cb only to make sure system will wake from WFI
+   * For SMP, cb maybe called in smp async callback.
+   */
+
+  FAR struct pm_stability_governor_domain_s *dom;
+  dom = (FAR struct pm_stability_governor_domain_s *)arg;
+  dom->wdog_wakeup = true;
+  return 0;
 }
 
 /****************************************************************************
@@ -111,37 +130,55 @@ static void stability_governor_timer_cb(wdparm_t arg)
 static void stability_governor_statechanged(int domain,
                                             enum pm_state_e newstate)
 {
+  FAR struct pm_stability_governor_domain_s *gdom;
+  FAR struct wdog_s *wdog;
+
+  gdom = &g_stability_governor.domain[domain];
+
+#ifdef CONFIG_SMP
+  wdog = &gdom->call_data.delay;
+#else
+  wdog = &gdom->wdog;
+#endif
+
   if (newstate == PM_RESTORE)
     {
-      if (WDOG_ISACTIVE(&g_stability_governor.domain[domain].wdog))
+      if (WDOG_ISACTIVE(wdog))
         {
-          sclock_t left;
-
           /* The left tick from wdog, if >0 should be other irq source */
 
-          left = wd_gettime(&g_stability_governor.domain[domain].wdog);
+          sclock_t left = wd_gettime(wdog);
           if (left <= 0)
             {
-              g_stability_governor.domain[domain].wdog_wakeup = true;
+              gdom->wdog_wakeup = true;
             }
 
-          /* Don't have to execute callback */
+          /* Don't have to execute callback if already wakeup by wdog
+           * For SMP case, the wdog should cb should be executing when wokeup
+           * so active wdog can always be canceled.
+           */
 
-          wd_cancel(&g_stability_governor.domain[domain].wdog);
+          wd_cancel(wdog);
         }
     }
   else
     {
-      enum pm_state_e state;
-      clock_t thresh;
+      /* PM_NORMAL always no detect, if thresh 0, also no detect */
 
-      state = g_stability_governor.domain[domain].state_pending;
-      thresh = g_stability_governor_thresh[state];
-
+      enum pm_state_e state = gdom->state_pending;
+      clock_t thresh        = g_stability_governor_thresh[state];
       if (thresh > 0 && state != newstate)
         {
-          wd_start(&g_stability_governor.domain[domain].wdog, thresh,
-                   stability_governor_timer_cb, 0);
+#ifdef CONFIG_SMP
+          nxsched_smp_call_delay_init(&gdom->call_data,
+                                      stability_governor_cb,
+                                      gdom);
+
+          nxsched_smp_call_single_delay(this_cpu(), thresh,
+                                        &gdom->call_data);
+#else
+          wd_start(wdog, thresh, (wdentry_t)stability_governor_cb, 0);
+#endif
         }
     }
 }
