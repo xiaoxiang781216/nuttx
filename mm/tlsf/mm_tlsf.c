@@ -181,6 +181,34 @@ static void mm_delayfree(struct mm_heap_s *heap, void *mem, bool delay);
  * Private Functions
  ****************************************************************************/
 
+/****************************************************************************
+ * Name: mm_lock_irq
+ *
+ * Description:
+ *   Locking by pausing interruption
+ *
+ ****************************************************************************/
+
+static irqstate_t mm_lock_irq(FAR struct mm_heap_s *heap)
+{
+  UNUSED(heap);
+  return up_irq_save();
+}
+
+/****************************************************************************
+ * Name: mm_unlock_irq
+ *
+ * Description:
+ *   Release the lock by resuming the interrupt
+ *
+ ****************************************************************************/
+
+static void mm_unlock_irq(FAR struct mm_heap_s *heap, irqstate_t state)
+{
+  UNUSED(heap);
+  up_irq_restore(state);
+}
+
 static void memdump_allocnode(FAR void *ptr, size_t size)
 {
 #if CONFIG_MM_BACKTRACE < 0
@@ -317,7 +345,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
 
   /* Delay the deallocation until a more appropriate time. */
 
-  flags = up_irq_save();
+  flags = mm_lock_irq(heap);
 
   tmp->flink = heap->mm_delaylist[this_cpu()];
   heap->mm_delaylist[this_cpu()] = tmp;
@@ -326,7 +354,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
   heap->mm_delaycount[this_cpu()]++;
 #endif
 
-  up_irq_restore(flags);
+  mm_unlock_irq(heap, flags);
 #endif
 }
 
@@ -343,7 +371,7 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
 
   /* Move the delay list to local */
 
-  flags = up_irq_save();
+  flags = mm_lock_irq(heap);
 
   tmp = heap->mm_delaylist[this_cpu()];
 
@@ -352,7 +380,7 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
       (!force &&
         heap->mm_delaycount[this_cpu()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
     {
-      up_irq_restore(flags);
+      mm_unlock_irq(heap, flags);
       return false;
     }
 
@@ -361,7 +389,7 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
 
   heap->mm_delaylist[this_cpu()] = NULL;
 
-  up_irq_restore(flags);
+  mm_unlock_irq(heap, flags);
 
   /* Test if the delayed is empty */
 
