@@ -1045,13 +1045,13 @@ static int can_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 static int can_poll(FAR struct file *filep, FAR struct pollfd *fds,
                     bool setup)
 {
-  FAR struct inode *inode = filep->f_inode;
-  FAR struct can_dev_s *dev = inode->i_private;
-  FAR struct can_reader_s *reader = NULL;
-  pollevent_t eventset = 0;
-  irqstate_t flags;
-  int ret;
-  int i;
+  FAR struct inode        *inode    = filep->f_inode;
+  FAR struct can_dev_s    *dev      = inode->i_private;
+  FAR struct can_reader_s *reader   = NULL;
+  pollevent_t              eventset = 0;
+  int                      ret      = OK;
+  irqstate_t               flags;
+  int                      i;
 
   /* Some sanity checking */
 
