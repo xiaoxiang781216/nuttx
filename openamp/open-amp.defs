@@ -86,6 +86,7 @@ else
 .openamp_headers:
 endif
 	$(eval headers := $(wildcard open-amp/lib/include/openamp/*.h))
+	$(eval headers += open-amp/lib/remoteproc/rsc_table_parser.h)
 	$(eval headers += open-amp/lib/rpmsg/rpmsg_internal.h)
 	$(shell mkdir -p $(TOPDIR)$(DELIM)include$(DELIM)openamp$(DELIM))
 	$(foreach header,$(headers),$(shell cp -rf $(header) $(TOPDIR)$(DELIM)include$(DELIM)openamp$(DELIM)))

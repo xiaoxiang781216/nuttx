@@ -113,7 +113,8 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/open-amp
 
 # install nuttx openamp binary dir headers
 set(OPENAMP_HEADER_DIR ${CMAKE_BINARY_DIR}/include/openamp)
-file(GLOB headers open-amp/lib/include/openamp/*.h open-amp/lib/rpmsg/*h)
+file(GLOB headers open-amp/lib/include/openamp/*.h open-amp/lib/remoteproc/*.h
+     open-amp/lib/rpmsg/*h)
 file(MAKE_DIRECTORY ${OPENAMP_HEADER_DIR})
 
 foreach(header ${headers})
