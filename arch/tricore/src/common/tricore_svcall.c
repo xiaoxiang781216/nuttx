@@ -59,6 +59,15 @@ void tricore_svcall(volatile void *trap)
   uintptr_t *regs;
   uint32_t cmd;
 
+#ifdef CONFIG_LIB_SYSCALL
+  uint32_t  arg1;
+  uint32_t  arg2;
+  uint32_t  arg3;
+  uint32_t  arg4;
+  uint32_t  arg5;
+  uint32_t  arg6;
+#endif
+
   regs = (uintptr_t *)__mfcr(CPU_PCXI);
 
   /* DSYNC instruction should be executed immediately prior to the MTCR */
@@ -96,7 +105,48 @@ void tricore_svcall(volatile void *trap)
         break;
 
       default:
+        {
+#ifdef CONFIG_LIB_SYSCALL
+          int ret;
+          int nbr = cmd - CONFIG_SYS_RESERVED;
+          uintptr_t * low_csa = tricore_csa2addr(regs[REG_UPCXI]);
+          uintptr_t * up_csa = tricore_csa2addr(low_csa[REG_UPCXI]);
+          struct tcb_s *rtcb = nxsched_self();
+          syscall_stub_t stub;
+
+          DEBUGASSERT(nbr < SYS_nsyscalls);
+          DEBUGASSERT(rtcb->xcp.nsyscalls < CONFIG_SYS_NNEST);
+
+          stub = (syscall_stub_t)g_stublookup[nbr];
+
+          arg1 = regs[REG_D9];
+          arg2 = regs[REG_D10];
+          arg3 = regs[REG_D11];
+          arg4 = regs[REG_D12];
+          arg5 = regs[REG_D13];
+          arg6 = regs[REG_D14];
+
+          /* Setup nested syscall */
+
+          rtcb->xcp.nsyscalls += 1;
+
+          /* Call syscall function */
+
+          ret = stub(nbr, arg1, arg2, arg3, arg4, arg5, arg6);
+
+          /* Setup return from nested syscall */
+
+          rtcb->xcp.nsyscalls -= 1;
+
+          /* Find the first UP CSA block, then assign the return value to the
+           * D8 register.
+           */
+
+          up_csa[REG_D8] = ret;
+#else
         svcerr("ERROR: Bad SYS call: %d\n", (int)regs[REG_D0]);
+#endif
+        }
         break;
     }
 
