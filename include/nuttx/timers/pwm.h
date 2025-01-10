@@ -52,6 +52,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifndef CONFIG_PWM_NCHANNELS
+#  define CONFIG_PWM_NCHANNELS 1
+#endif
+
 /* Configuration ************************************************************/
 
 /* CONFIG_PWM - Enables because PWM driver support
@@ -59,9 +63,6 @@
  *   number of pulses.  This might be used, for example to support a stepper
  *   motor.  If the hardware will support a fixed pulse count, then this
  *   configuration should be set to enable the capability.
- * CONFIG_PWM_MULTICHAN - Enables support for multiple output channels per
- *   timer.  If selected, then CONFIG_PWM_NCHANNELS must be provided to
- *   indicated the maximum number of supported PWM output channels.
  * CONFIG_DEBUG_PWM_INFO - This will generate output that can be use to
  *   debug the PWM driver.
  */
@@ -181,7 +182,6 @@ struct pwm_notify_s
  * structure describes the output state on one channel.
  */
 
-#ifdef CONFIG_PWM_MULTICHAN
 struct pwm_chan_s
 {
   ub16_t duty;
@@ -196,8 +196,12 @@ struct pwm_chan_s
   uint8_t cpol;
   uint8_t dcpol;
   int8_t channel;                    /* Channel number: 1~N=active, 0=skip, -1=end */
-};
+
+#ifdef CONFIG_PWM_PULSECOUNT
+  uint32_t           count;     /* The number of pulse to generate.  0 means to
+                                 * generate an indefinite number of pulses */
 #endif
+};
 
 #if defined(CONFIG_PWM_FREQUENCY_FIXED) && defined(CONFIG_HAVE_LONG_LONG)
 typedef ub32_t pwm_freq_t;
@@ -211,26 +215,9 @@ struct pwm_info_s
 {
   pwm_freq_t         frequency; /* Frequency of the pulse train */
 
-#ifdef CONFIG_PWM_MULTICHAN
-                                /* Per-channel output state */
+  /* Per-channel output state */
 
   struct pwm_chan_s  channels[CONFIG_PWM_NCHANNELS];
-
-#else
-  ub16_t             duty;      /* Duty of the pulse train, "1"-to-"0" duration.
-                                 * Maximum: 65535/65536 (0x0000ffff)
-                                 * Minimum:     1/65536 (0x00000001) */
-#ifdef CONFIG_PWM_DEADTIME
-  ub16_t dead_time_a;           /* Dead time value for main output */
-  ub16_t dead_time_b;           /* Dead time value for complementary output */
-#endif
-#  ifdef CONFIG_PWM_PULSECOUNT
-  uint32_t           count;     /* The number of pulse to generate.  0 means to
-                                 * generate an indefinite number of pulses */
-#  endif
-  uint8_t cpol;                 /* Channel polarity */
-  uint8_t dcpol;                /* Disabled channel polarity */
-#endif /* CONFIG_PWM_MULTICHAN */
 
   FAR void           *arg;      /* User provided argument to be used in the
                                  * lower half */

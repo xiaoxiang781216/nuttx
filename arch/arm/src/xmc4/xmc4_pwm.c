@@ -849,7 +849,7 @@ static int pwm_compute_config(struct xmc4_pwm_s *priv,
   uint32_t crs = 0;
 
   uint32_t f_pwm = info->frequency;
-  float duty_cycle = (1.0 - b16tof(info->duty));
+  float duty_cycle = (1.0 - b16tof(info->channels[0].duty));
 
   do
     {
@@ -917,7 +917,7 @@ static int pwm_timer(struct xmc4_pwm_s *priv, const struct pwm_info_s *info)
 
               pwm_set_period_match(priv, prs);
               pwm_set_compare_match(priv, crs);
-              pwm_set_passive_level(priv, info->cpol);
+              pwm_set_passive_level(priv, info->channels[0].cpol);
               pwm_shadow_transfert(priv);
             }
           else
@@ -931,7 +931,7 @@ static int pwm_timer(struct xmc4_pwm_s *priv, const struct pwm_info_s *info)
 
               pwm_set_compare_match(priv, crs);
               pwm_set_period_match(priv, prs);
-              pwm_set_passive_level(priv, info->cpol);
+              pwm_set_passive_level(priv, info->channels[0].cpol);
               pwm_shadow_transfert(priv);
 
               pwm_enable_slice_clock(priv);
@@ -946,7 +946,7 @@ static int pwm_timer(struct xmc4_pwm_s *priv, const struct pwm_info_s *info)
 
           pwm_set_compare_match(priv, crs);
           pwm_set_period_match(priv, prs);
-          pwm_set_passive_level(priv, info->cpol);
+          pwm_set_passive_level(priv, info->channels[0].cpol);
           pwm_shadow_transfert(priv);
 
           pwm_enable_slice_clock(priv);
@@ -954,17 +954,17 @@ static int pwm_timer(struct xmc4_pwm_s *priv, const struct pwm_info_s *info)
         }
 
       priv->frequency = info->frequency;
-      priv->duty = info->duty;
+      priv->duty = info->channels[0].duty;
     }
   else
     {
       /* Frequency doesn't change, update shadow transfert */
 
       pwm_set_compare_match(priv, crs);
-      pwm_set_passive_level(priv, info->cpol);
+      pwm_set_passive_level(priv, info->channels[0].cpol);
       pwm_shadow_transfert(priv);
 
-      priv->duty = info->duty;
+      priv->duty = info->channels[0].duty;
     }
 
   return OK;
