@@ -38,7 +38,7 @@ ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)sdram.ld
 
 CROSSDEV = sh-nuttx-elf-
 CC = $(CROSSDEV)gcc
-CPP = $(CROSSDEV)gcc -E
+CPP = $(CROSSDEV)gcc -E -P -x c
 LD = $(CROSSDEV)ld
 STRIP = $(CROSSDEV)strip --strip-unneeded
 AR = $(CROSSDEV)ar rcs
