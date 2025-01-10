@@ -105,6 +105,15 @@ void *sim_doirq(int irq, void *context)
 
       sim_fullcontextrestore(regs);
     }
+  else
+    {
+      /* The way that we handle signals in the simulation is kind of
+       * a kludge.  This would be unsafe in a truly multi-threaded,
+       * interrupt driven environment.
+       */
+
+      sim_sigdeliver();
+    }
 
   return NULL;
 }
