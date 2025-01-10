@@ -53,6 +53,7 @@
  */
 
 #undef strstr /* See mm/README.txt */
+no_builtin("strstr")
 FAR char *strstr(FAR const char *haystack, FAR const char *needle)
 {
 #ifdef CONFIG_ALLOW_MIT_COMPONENTS

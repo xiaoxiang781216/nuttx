@@ -49,6 +49,7 @@
 
 #if !defined(CONFIG_LIBC_ARCH_STRCAT) && defined(LIBC_BUILD_STRCAT)
 #undef strcat /* See mm/README.txt */
+no_builtin("strcat")
 nosanitize_address
 FAR char *strcat(FAR char *dest, FAR const char *src)
 {
