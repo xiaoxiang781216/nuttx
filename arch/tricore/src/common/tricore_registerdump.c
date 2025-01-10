@@ -43,7 +43,7 @@
 
 void tricore_upcsa_register(volatile uint32_t *regs)
 {
-  _alert("UPCXI:%08x  PSW:%08x  SP:%08x   PC:%08x\n",
+  _alert("UPCXI:%08x  PSW:%08x  SP:%08x   A11:%08x\n",
          regs[REG_UPCXI], regs[REG_PSW], regs[REG_A10], regs[REG_UA11]);
   _alert("D8:%08x     D9:%08x   D10:%08x  D11:%08x\n",
          regs[REG_D8], regs[REG_D9], regs[REG_D10], regs[REG_D11]);
@@ -59,7 +59,7 @@ void tricore_upcsa_register(volatile uint32_t *regs)
 
 void tricore_lowcsa_register(volatile uint32_t *regs)
 {
-  _alert("LPCXI:%08x  A11:%08x   A2:%08x  A3:%08x\n",
+  _alert("LPCXI:%08x  PC:%08x   A2:%08x  A3:%08x\n",
          regs[REG_LPCXI] | PCXI_UL, regs[REG_LA11],
          regs[REG_A2], regs[REG_A3]);
   _alert("D0:%08x     D1:%08x    D2:%08x  D3:%08x\n",

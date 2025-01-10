@@ -34,24 +34,24 @@
  * Pre-processor Prototypes
  ****************************************************************************/
 
-#define JB_LPCXI    0
-#define JB_LA11     1
-#define JB_A2       2
-#define JB_A3       3
-#define JB_D0       4
-#define JB_D1       5
-#define JB_D2       6
-#define JB_D3       7
-#define JB_A4       8
-#define JB_A5       9
-#define JB_A6       10
-#define JB_A7       11
-#define JB_D4       12
-#define JB_D5       13
-#define JB_D6       14
-#define JB_D7       15
-#define JB_UA11     16
-#define JB_REG_NUM  17
+#define JB_UPCXI     0
+#define JB_PSW       1
+#define JB_SP        2
+#define JB_A11       3
+#define JB_D8        4
+#define JB_D9        5
+#define JB_D10       6
+#define JB_D11       7
+#define JB_A12       8
+#define JB_A13       9
+#define JB_A14       10
+#define JB_A15       11
+#define JB_D12       12
+#define JB_D13       13
+#define JB_D14       14
+#define JB_D15       15
+#define JB_PC        16
+#define JB_REG_NUM   17
 
 /****************************************************************************
  * Public Types

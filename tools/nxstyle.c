@@ -625,6 +625,7 @@ static const char *g_white_content_list[] =
    */
 
   "__getA11",
+  "__setA11",
   "__moveToDataParamRet",
   "__jumpToFunctionWithLink",
   NULL

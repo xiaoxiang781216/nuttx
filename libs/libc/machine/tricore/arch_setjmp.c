@@ -41,7 +41,7 @@ int setjmp(jmp_buf env)
   uintptr_t *regs;
   uintptr_t pcxi;
 
-  env->regs[JB_UA11] = (uintptr_t)__getA11();
+  env->regs[JB_PC] = (uintptr_t)__getA11();
 
   pcxi = __mfcr(CPU_PCXI);
   regs = tricore_csa2addr(pcxi);
@@ -51,7 +51,7 @@ int setjmp(jmp_buf env)
 
 void longjmp(jmp_buf env, int val)
 {
-  void *func = (void *)env->regs[JB_UA11];
+  void *func = (void *)env->regs[JB_PC];
   uintptr_t *regs;
   uintptr_t pcxi;
 
@@ -65,5 +65,5 @@ void longjmp(jmp_buf env, int val)
     }
 
   __moveToDataParamRet(val);
-  __jumpToFunctionWithLink(func);
+  __setA11(func);
 }
