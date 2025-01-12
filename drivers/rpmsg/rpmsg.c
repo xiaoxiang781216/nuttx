@@ -236,12 +236,7 @@ int rpmsg_get_signals(FAR struct rpmsg_device *rdev)
 {
   FAR struct rpmsg_s *rpmsg = rpmsg_get_by_rdev(rdev);
 
-  if (rpmsg->ops->get_signals)
-    {
-      return rpmsg->ops->get_signals(rpmsg);
-    }
-
-  return 0;
+  return atomic_load(&rpmsg->signals);
 }
 
 int rpmsg_register_callback(FAR void *priv,
@@ -536,6 +531,7 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
   metal_list_init(&rpmsg->bind);
   nxrmutex_init(&rpmsg->lock);
   rpmsg->ops = ops;
+  atomic_store(&rpmsg->signals, RPMSG_SIGNAL_RUNNING);
 
   /* Add priv to list */
 
@@ -616,33 +612,9 @@ void rpmsg_dump_all(void)
   rpmsg_ioctl(NULL, RPMSGIOC_DUMP, 0);
 }
 
-int rpmsg_foreach(rpmsg_foreach_t handler, FAR void *args)
+void rpmsg_modify_signals(FAR struct rpmsg_s *rpmsg,
+                          int setflags, int clrflags)
 {
-  FAR struct metal_list *node;
-  bool needlock = !up_interrupt_context() && !sched_idletask();
-  int ret = OK;
-
-  if (needlock)
-    {
-      down_read(&g_rpmsg_lock);
-    }
-
-  metal_list_for_each(&g_rpmsg, node)
-    {
-      FAR struct rpmsg_s *rpmsg =
-        metal_container_of(node, struct rpmsg_s, node);
-
-      ret = handler(rpmsg, args);
-      if (ret < 0)
-        {
-          break;
-        }
-    }
-
-  if (needlock)
-    {
-      up_read(&g_rpmsg_lock);
-    }
-
-  return ret;
+  atomic_fetch_and(&rpmsg->signals, ~clrflags);
+  atomic_fetch_or(&rpmsg->signals, setflags);
 }

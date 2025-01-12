@@ -51,7 +51,6 @@ static FAR const char *
 rpmsg_port_get_local_cpuname(FAR struct rpmsg_s *rpmsg);
 static FAR const char *rpmsg_port_get_cpuname(FAR struct rpmsg_s *rpmsg);
 static void rpmsg_port_dump(FAR struct rpmsg_s *rpmsg);
-static int rpmsg_port_get_signals(FAR struct rpmsg_s *rpmsg);
 
 /****************************************************************************
  * Private Data
@@ -66,7 +65,6 @@ static const struct rpmsg_ops_s g_rpmsg_port_ops =
   rpmsg_port_dump,
   rpmsg_port_get_local_cpuname,
   rpmsg_port_get_cpuname,
-  rpmsg_port_get_signals,
 };
 
 /****************************************************************************
@@ -568,17 +566,6 @@ static FAR const char *rpmsg_port_get_cpuname(FAR struct rpmsg_s *rpmsg)
 }
 
 /****************************************************************************
- * Name: rpmsg_port_get_signals
- ****************************************************************************/
-
-static int rpmsg_port_get_signals(FAR struct rpmsg_s *rpmsg)
-{
-  FAR struct rpmsg_port_s *port = (FAR struct rpmsg_port_s *)rpmsg;
-
-  return atomic_load(&port->signals);
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -770,7 +757,6 @@ int rpmsg_port_register(FAR struct rpmsg_port_s *port,
       return ret;
     }
 
-  atomic_fetch_or(&port->signals, RPMSG_SIGNAL_RUNNING);
   rpmsg_register_endpoint(&port->rdev, &port->rdev.ns_ept, "NS",
                           RPMSG_NS_EPT_ADDR, RPMSG_NS_EPT_ADDR,
                           rpmsg_port_ns_callback, NULL, port);
