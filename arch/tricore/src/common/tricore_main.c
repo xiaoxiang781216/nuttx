@@ -55,6 +55,10 @@ static void core_main(void)
   while (1);
 }
 
+void weak_function tricore_apu_init(void)
+{
+}
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -73,6 +77,12 @@ void core0_main(void)
   IfxWtu_disableCpuWatchdog(IfxWtu_getCpuWatchdogPassword());
   IfxWtu_disableSystemWatchdog(IfxWtu_getSystemWatchdogPassword());
 #endif
+
+  /* Before start we need configure access regs, only core0 can
+   * do this. This is done in tricore_apu_init() function.
+   */
+
+  tricore_apu_init();
 
   core_main();
 }
