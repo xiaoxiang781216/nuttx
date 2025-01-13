@@ -2044,10 +2044,10 @@ void sched_note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
 void sched_note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
                            FAR struct note_filter_named_tag_s *newf)
 {
-  irqstate_t falgs;
   FAR struct note_driver_s **driver;
+  irqstate_t irq_mask;
 
-  falgs = spin_lock_irqsave_wo_note(&g_note_lock);
+  irq_mask = spin_lock_irqsave_wo_note(&g_note_lock);
 
   if (oldf != NULL)
     {
@@ -2083,7 +2083,7 @@ void sched_note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
         }
     }
 
-  spin_unlock_irqrestore_wo_note(&g_note_lock, falgs);
+  spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
 }
 #endif
 
