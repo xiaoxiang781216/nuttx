@@ -78,7 +78,7 @@ struct mallinfo
 struct malltask
 {
   pid_t pid; /* Process id */
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_BACKTRACE_SEQNO
   unsigned long seqmin; /* The minimum sequence */
   unsigned long seqmax; /* The maximum sequence */
 #endif

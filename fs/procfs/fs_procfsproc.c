@@ -960,8 +960,10 @@ static ssize_t proc_heap(FAR struct proc_file_s *procfile,
   struct malltask task;
 
   task.pid = tcb->pid;
+#ifdef CONFIG_MM_BACKTRACE_SEQNO
   task.seqmin = 0;
   task.seqmax = ULONG_MAX;
+#endif
 #ifdef CONFIG_MM_KERNEL_HEAP
   if ((tcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_KERNEL)
     {

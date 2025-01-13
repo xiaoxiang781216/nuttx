@@ -433,7 +433,10 @@ static ssize_t memdump_read(FAR struct file *filep, FAR char *buffer,
                   "/on/off"
 #endif
 #if CONFIG_MM_BACKTRACE >= 0
-                 "/leak/pid> <seqmin> <seqmax"
+                 "/leak/pid"
+#endif
+#ifdef CONFIG_MM_BACKTRACE_SEQNO
+                 "> <seqmin> <seqmax"
 #endif
                  ">\n"
                  "used: dump all allocated node\n"
@@ -478,7 +481,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
   struct mm_memdump_s dump =
     {
       PID_MM_ALLOC,
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_BACKTRACE_SEQNO
       0,
       ULONG_MAX
 #endif
@@ -550,7 +553,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
       case 'u':
         dump.pid = PID_MM_ALLOC;
 
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_BACKTRACE_SEQNO
         p = (FAR char *)buffer + 4;
         goto dump;
 #endif
@@ -559,7 +562,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
       case 'f':
         dump.pid = PID_MM_FREE;
 
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_BACKTRACE_SEQNO
         p = (FAR char *)buffer + 4;
         goto dump;
 #endif
@@ -569,8 +572,10 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
       case 'l':
         dump.pid = PID_MM_LEAK;
 
+#  ifdef CONFIG_MM_BACKTRACE_SEQNO
         p = (FAR char *)buffer + 4;
         goto dump;
+#  endif
         break;
 #endif
 
@@ -578,7 +583,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
       case 'm':
         dump.pid = PID_MM_MEMPOOL;
 
-#  if CONFIG_MM_BACKTRACE >= 0
+#  ifdef CONFIG_MM_BACKTRACE_SEQNO
         p = (FAR char *)buffer + 7;
         goto dump;
 #  endif
@@ -588,7 +593,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
 #if CONFIG_MM_HEAP_BIGGEST_COUNT > 0
       case 'b':
         dump.pid = PID_MM_BIGGEST;
-#  if CONFIG_MM_BACKTRACE >= 0
+#  ifdef CONFIG_MM_BACKTRACE_SEQNO
         p = (FAR char *)buffer + 7;
         goto dump;
 #  endif
@@ -597,10 +602,10 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
 
       case 'o':
         dump.pid = PID_MM_ORPHAN;
-#  if CONFIG_MM_BACKTRACE >= 0
+#if CONFIG_MM_BACKTRACE >= 0
         p = (FAR char *)buffer + 6;
         goto dump;
-#  endif
+#endif
         break;
 
 #if CONFIG_MM_BACKTRACE >= 0
@@ -616,6 +621,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
             break;
           }
 
+#  ifdef CONFIG_MM_BACKTRACE_SEQNO
 dump:
         dump.seqmin = strtoul(p + 1, &p, 0);
         if (!isdigit(*(p + 1)))
@@ -624,6 +630,7 @@ dump:
           }
 
         dump.seqmax = strtoul(p + 1, &p, 0);
+#  endif
 #endif
     }
 

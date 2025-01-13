@@ -118,7 +118,9 @@ struct mm_heap_s
 struct memdump_backtrace_s
 {
   pid_t pid;                                /* The pid for caller */
+#if CONFIG_MM_BACKTRACE_SEQNO
   unsigned long seqno;                      /* The sequence of memory malloc */
+#endif
 #if CONFIG_MM_BACKTRACE > 0
   FAR void *backtrace[CONFIG_MM_BACKTRACE]; /* The backtrace buffer for caller */
 #endif
