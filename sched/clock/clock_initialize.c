@@ -166,6 +166,8 @@ static void clock_inittime(FAR const struct timespec *tp)
   struct timespec ts;
   irqstate_t flags;
 
+  clock_systime_timespec(&ts);
+
   flags = spin_lock_irqsave(&g_basetime_lock);
   if (tp)
     {
@@ -175,12 +177,6 @@ static void clock_inittime(FAR const struct timespec *tp)
     {
       clock_basetime(&g_basetime);
     }
-
-  spin_unlock_irqrestore(&g_basetime_lock, flags);
-
-  clock_systime_timespec(&ts);
-
-  flags = spin_lock_irqsave(&g_basetime_lock);
 
   /* Adjust base time to hide initial timer ticks. */
 
