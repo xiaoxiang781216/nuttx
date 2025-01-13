@@ -37,7 +37,6 @@
 #include "sched/sched.h"
 #include "irq/irq.h"
 
-#ifdef CONFIG_IRQCOUNT
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -80,7 +79,7 @@ volatile uint8_t g_cpu_nestcount[CONFIG_SMP_NCPUS];
  ****************************************************************************/
 
 /****************************************************************************
- * Name: enter_critical_section
+ * Name: enter_critical_section_wo_note
  *
  * Description:
  *   Take the CPU IRQ lock and disable interrupts on all CPUs.  A thread-
@@ -90,7 +89,7 @@ volatile uint8_t g_cpu_nestcount[CONFIG_SMP_NCPUS];
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-irqstate_t enter_critical_section(void)
+irqstate_t enter_critical_section_wo_note(void)
 {
   FAR struct tcb_s *rtcb;
   irqstate_t ret;
@@ -177,21 +176,11 @@ irqstate_t enter_critical_section(void)
 
           if ((g_cpu_irqset & (1 << cpu)) == 0)
             {
-              /* If CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0,
-               * start counting time of busy-waiting.
-               */
-
-              nxsched_critmon_busywait(true, return_address(0));
-
               /* Wait until we can get the spinlock (meaning that we are
                * no longer blocked by the critical section).
                */
 
               spin_lock_wo_note(&g_cpu_irqlock);
-
-              /* Get the lock, end counting busy-waiting */
-
-              nxsched_critmon_busywait(false, return_address(0));
 
               cpu_irqlock_set(cpu);
             }
@@ -243,17 +232,7 @@ irqstate_t enter_critical_section(void)
 
           DEBUGASSERT((g_cpu_irqset & (1 << cpu)) == 0);
 
-          /* If CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0,
-           * start counting time of busy-waiting.
-           */
-
-          nxsched_critmon_busywait(true, return_address(0));
-
           spin_lock_wo_note(&g_cpu_irqlock);
-
-          /* Get the lock, end counting busy-waiting */
-
-          nxsched_critmon_busywait(false, return_address(0));
 
           /* Then set the lock count to 1.
            *
@@ -267,15 +246,6 @@ irqstate_t enter_critical_section(void)
 
           cpu_irqlock_set(cpu);
           rtcb->irqcount = 1;
-
-          /* Note that we have entered the critical section */
-
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-          nxsched_critmon_csection(rtcb, true, return_address(0));
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-          sched_note_csection(rtcb, true);
-#endif
         }
     }
 
@@ -286,7 +256,7 @@ irqstate_t enter_critical_section(void)
 
 #else
 
-irqstate_t enter_critical_section(void)
+irqstate_t enter_critical_section_wo_note(void)
 {
   irqstate_t ret;
 
@@ -306,17 +276,7 @@ irqstate_t enter_critical_section(void)
        */
 
       DEBUGASSERT(rtcb->irqcount >= 0 && rtcb->irqcount < INT16_MAX);
-      if (++rtcb->irqcount == 1)
-        {
-          /* Note that we have entered the critical section */
-
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-          nxsched_critmon_csection(rtcb, true, return_address(0));
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-          sched_note_csection(rtcb, true);
-#endif
-        }
+      rtcb->irqcount++;
     }
 
   /* Return interrupt status */
@@ -325,8 +285,41 @@ irqstate_t enter_critical_section(void)
 }
 #endif
 
+#undef enter_critical_section
+irqstate_t enter_critical_section(void)
+{
+  irqstate_t flags;
+
+  /* If CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0,
+   * start counting time of busy-waiting.
+   */
+
+  nxsched_critmon_busywait(true, return_address(0));
+
+  flags = enter_critical_section_wo_note();
+
+  /* Get the lock, end counting busy-waiting */
+
+  nxsched_critmon_busywait(false, return_address(0));
+
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 || \
+    defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
+  if (!up_interrupt_context())
+    {
+      FAR struct tcb_s *rtcb = this_task();
+      if (rtcb->irqcount == 1)
+        {
+          nxsched_critmon_csection(rtcb, true, return_address(0));
+          sched_note_csection(rtcb, true);
+        }
+    }
+#endif
+
+  return flags;
+}
+
 /****************************************************************************
- * Name: leave_critical_section
+ * Name: leave_critical_section_wo_note
  *
  * Description:
  *   Decrement the IRQ lock count and if it decrements to zero then release
@@ -335,7 +328,7 @@ irqstate_t enter_critical_section(void)
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-void leave_critical_section(irqstate_t flags)
+void leave_critical_section_wo_note(irqstate_t flags)
 {
   int cpu;
 
@@ -409,14 +402,6 @@ void leave_critical_section(irqstate_t flags)
         }
       else
         {
-          /* No.. Note that we have left the critical section */
-
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-          nxsched_critmon_csection(rtcb, false, return_address(0));
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-          sched_note_csection(rtcb, false);
-#endif
           /* Decrement our count on the lock.  If all CPUs have
            * released, then unlock the spinlock.
            */
@@ -442,10 +427,8 @@ void leave_critical_section(irqstate_t flags)
 
   up_irq_restore(flags);
 }
-
 #else
-
-void leave_critical_section(irqstate_t flags)
+void leave_critical_section_wo_note(irqstate_t flags)
 {
   /* Check if we were called from an interrupt handler and that the tasks
    * lists have been initialized.
@@ -461,17 +444,7 @@ void leave_critical_section(irqstate_t flags)
        */
 
       DEBUGASSERT(rtcb->irqcount > 0);
-      if (--rtcb->irqcount <= 0)
-        {
-          /* Note that we have left the critical section */
-
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-          nxsched_critmon_csection(rtcb, false, return_address(0));
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-          sched_note_csection(rtcb, false);
-#endif
-        }
+      --rtcb->irqcount;
     }
 
   /* Restore the previous interrupt state. */
@@ -479,4 +452,22 @@ void leave_critical_section(irqstate_t flags)
   up_irq_restore(flags);
 }
 #endif
-#endif /* CONFIG_IRQCOUNT */
+
+#undef leave_critical_section
+void leave_critical_section(irqstate_t flags)
+{
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 || \
+    defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
+  if (!up_interrupt_context())
+    {
+      FAR struct tcb_s *rtcb = this_task();
+      if (rtcb->irqcount == 1)
+        {
+          nxsched_critmon_csection(rtcb, false, return_address(0));
+          sched_note_csection(rtcb, false);
+        }
+    }
+#endif
+
+  leave_critical_section_wo_note(flags);
+}
