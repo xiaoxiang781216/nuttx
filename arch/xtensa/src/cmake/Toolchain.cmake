@@ -81,7 +81,7 @@ set(NO_LTO "-fno-lto")
 
 add_compile_options(-mlongcalls)
 
-if(CONFIG_MM_KASAN_ALL)
+if(CONFIG_MM_KASAN_INSTRUMENT_ALL)
   add_compile_options(-fsanitize=kernel-address)
 endif()
 
