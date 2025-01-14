@@ -2,7 +2,8 @@
  * include/nuttx/net/netdev.h
  *
  * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 2007, 2009, 2011-2018 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2007, 2009, 2011-2018 Gregory Nutt.
+ * All rights reserved.
  * SPDX-FileCopyrightText: 2001-2003, Adam Dunkels. All rights reserved.
  * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
  *
@@ -1148,10 +1149,10 @@ void netdev_iob_prepare_dynamic(FAR struct net_driver_s *dev, uint16_t size);
 #endif
 
 /****************************************************************************
- * Name: netdev_iob_replace
+ * Name: netdev_iob_replace / netdev_iob_replace_l2
  *
  * Description:
- *   Replace buffer resources for a given NIC
+ *   Replace IOB for a given NIC, used by net stack (l3-4) / net driver (l2).
  *
  * Assumptions:
  *   The caller has locked the network and new iob is prepared with
@@ -1160,6 +1161,8 @@ void netdev_iob_prepare_dynamic(FAR struct net_driver_s *dev, uint16_t size);
  ****************************************************************************/
 
 void netdev_iob_replace(FAR struct net_driver_s *dev, FAR struct iob_s *iob);
+void netdev_iob_replace_l2(FAR struct net_driver_s *dev,
+                           FAR struct iob_s *iob);
 
 /****************************************************************************
  * Name: netdev_iob_clear
