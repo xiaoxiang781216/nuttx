@@ -74,8 +74,6 @@ static ssize_t mmcsd_read_type(FAR struct file *filep, FAR char *buffer,
                               size_t buflen, FAR struct mmcsd_state_s *priv);
 static ssize_t mmcsd_read(FAR struct file *filep, FAR char *buffer,
                           size_t buflen);
-static int     mmcsd_dup(FAR const struct file *oldp,
-                         FAR struct file *newp);
 
 static int     mmcsd_opendir(FAR const char *relpath,
                              FAR struct fs_dirent_s **dir);
@@ -115,8 +113,6 @@ static const struct procfs_operations g_mmcsd_operations =
   mmcsd_read,       /* read */
   NULL,             /* write */
   NULL,             /* poll */
-
-  mmcsd_dup,        /* dup */
 
   mmcsd_opendir,    /* opendir */
   mmcsd_closedir,   /* closedir */
@@ -353,43 +349,6 @@ static ssize_t mmcsd_read(FAR struct file *filep, FAR char *buffer,
   close_blockdriver(inode);
 
   return ret;
-}
-
-/****************************************************************************
- * Name: mmcsd_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int mmcsd_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct mmcsd_file_s *oldattr;
-  FAR struct mmcsd_file_s *newattr;
-
-  /* Recover our private data from the old struct file instance */
-
-  oldattr = oldp->f_priv;
-  DEBUGASSERT(oldattr);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newattr = kmm_malloc(sizeof(struct mmcsd_file_s));
-  if (newattr == NULL)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newattr, oldattr, sizeof(struct mmcsd_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = newattr;
-  return OK;
 }
 
 /****************************************************************************

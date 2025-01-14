@@ -62,15 +62,6 @@ struct procfs_operations
   CODE int     (*poll)(FAR struct file *filep, FAR struct pollfd *fds,
                        bool setup);
 
-  /* The two structures need not be common after this point. The following
-   * are extended methods needed to deal with the unique needs of mounted
-   * file systems.
-   *
-   * Additional open-file-specific procfs operations:
-   */
-
-  CODE int     (*dup)(FAR const struct file *oldp, FAR struct file *newp);
-
   /* Directory operations */
 
   CODE int     (*opendir)(FAR const char *relpath,

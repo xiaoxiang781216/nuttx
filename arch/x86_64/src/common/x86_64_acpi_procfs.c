@@ -90,7 +90,6 @@ const struct procfs_operations g_acpi_operations =
   acpi_read,       /* read */
   NULL,            /* write */
   NULL,            /* poll */
-  NULL,            /* dup */
 
   acpi_opendir,    /* opendir */
   acpi_closedir,   /* closedir */

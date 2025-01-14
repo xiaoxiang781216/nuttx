@@ -111,9 +111,6 @@ static ssize_t pm_read_preparefail(FAR struct file *filep, FAR char *buffer,
                                    size_t buflen);
 static ssize_t pm_read(FAR struct file *filep, FAR char *buffer,
                        size_t buflen);
-static int     pm_dup(FAR const struct file *oldp,
-                      FAR struct file *newp);
-
 static int     pm_opendir(FAR const char *relpath,
                           FAR struct fs_dirent_s **dir);
 static int     pm_closedir(FAR struct fs_dirent_s *dir);
@@ -141,8 +138,6 @@ const struct procfs_operations g_pm_operations =
   pm_read,       /* read */
   NULL,          /* write */
   NULL,          /* poll */
-
-  pm_dup,        /* dup */
 
   pm_opendir,    /* opendir */
   pm_closedir,   /* closedir */
@@ -545,45 +540,6 @@ static ssize_t pm_read(FAR struct file *filep, FAR char *buffer,
   pmfile = (FAR struct pm_file_s *)filep->f_priv;
 
   return pmfile->read(filep, buffer, buflen);
-}
-
-/****************************************************************************
- * Name: pm_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int pm_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct pm_file_s *oldattr;
-  FAR struct pm_file_s *newattr;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldattr = (FAR struct pm_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldattr);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newattr = kmm_malloc(sizeof(struct pm_file_s));
-  if (!newattr)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newattr, oldattr, sizeof(struct pm_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = (FAR void *)newattr;
-  return OK;
 }
 
 /****************************************************************************

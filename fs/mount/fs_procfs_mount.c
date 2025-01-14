@@ -126,9 +126,6 @@ static int     mount_close(FAR struct file *filep);
 static ssize_t mount_read(FAR struct file *filep, FAR char *buffer,
                           size_t buflen);
 
-static int     mount_dup(FAR const struct file *oldp,
-                         FAR struct file *newp);
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -143,9 +140,6 @@ const struct procfs_operations g_mount_operations =
   mount_open,          /* open */
   mount_close,         /* close */
   mount_read,          /* read */
-  NULL,                /* write */
-  NULL,                /* poll */
-  mount_dup,           /* dup */
 };
 
 /****************************************************************************
@@ -508,46 +502,6 @@ static ssize_t mount_read(FAR struct file *filep, FAR char *buffer,
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: mount_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int mount_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct mount_file_s *oldfile;
-  FAR struct mount_file_s *newfile;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldfile = (FAR struct mount_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldfile);
-
-  /* Allocate a new container to hold the task and node selection */
-
-  newfile = (FAR struct mount_file_s *)
-    fs_heap_malloc(sizeof(struct mount_file_s));
-  if (!newfile)
-    {
-      ferr("ERROR: Failed to allocate file container\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file information from the old container to the new */
-
-  memcpy(newfile, oldfile, sizeof(struct mount_file_s));
-
-  /* Save the new container in the new file structure */
-
-  newp->f_priv = (FAR void *)newfile;
-  return OK;
 }
 
 #endif /* !CONFIG_FS_PROCFS_EXCLUDE_MOUNT || \

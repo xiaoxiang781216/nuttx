@@ -86,8 +86,6 @@ static int     cpuload_open(FAR struct file *filep, FAR const char *relpath,
 static int     cpuload_close(FAR struct file *filep);
 static ssize_t cpuload_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
-static int     cpuload_dup(FAR const struct file *oldp,
-                 FAR struct file *newp);
 
 /****************************************************************************
  * Public Data
@@ -103,10 +101,6 @@ const struct procfs_operations g_cpuload_operations =
   cpuload_open,       /* open */
   cpuload_close,      /* close */
   cpuload_read,       /* read */
-  NULL,               /* write */
-  NULL,               /* poll */
-
-  cpuload_dup,        /* dup */
 };
 
 /****************************************************************************
@@ -272,45 +266,6 @@ static ssize_t cpuload_read(FAR struct file *filep, FAR char *buffer,
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: cpuload_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int cpuload_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct cpuload_file_s *oldattr;
-  FAR struct cpuload_file_s *newattr;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldattr = (FAR struct cpuload_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldattr);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newattr = fs_heap_malloc(sizeof(struct cpuload_file_s));
-  if (!newattr)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newattr, oldattr, sizeof(struct cpuload_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = (FAR void *)newattr;
-  return OK;
 }
 
 #endif /* CONFIG_FS_PROCFS_EXCLUDE_CPULOAD */

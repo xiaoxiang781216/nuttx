@@ -504,8 +504,6 @@ static int cxd56_usbdev_open(struct file *filep, const char *relpath,
 static int cxd56_usbdev_close(struct file *filep);
 static ssize_t cxd56_usbdev_read(struct file *filep, char *buffer,
                                  size_t buflen);
-static int cxd56_usbdev_dup(const struct file *oldp,
-                            struct file *newp);
 static int cxd56_usbdev_stat(const char *relpath, struct stat *buf);
 
 #endif
@@ -619,7 +617,6 @@ const struct procfs_operations cxd56_usbdev_operations =
   cxd56_usbdev_read,  /* read */
   NULL,               /* write */
   NULL,               /* poll */
-  cxd56_usbdev_dup,   /* dup */
 
   NULL,               /* opendir */
   NULL,               /* closedir */
@@ -3467,42 +3464,6 @@ static ssize_t cxd56_usbdev_read(struct file *filep, char *buffer,
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: cxd56_usbdev_dup
- ****************************************************************************/
-
-static int cxd56_usbdev_dup(const struct file *oldp,
-                            struct file *newp)
-{
-  struct cxd56_usbdev_file_s *oldattr;
-  struct cxd56_usbdev_file_s *newattr;
-
-  uinfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldattr = (struct cxd56_usbdev_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldattr);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newattr = kmm_malloc(sizeof(struct cxd56_usbdev_file_s));
-  if (!newattr)
-    {
-      uerr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newattr, oldattr, sizeof(struct cxd56_usbdev_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = (void *)newattr;
-  return OK;
 }
 
 /****************************************************************************

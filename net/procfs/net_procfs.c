@@ -86,9 +86,6 @@ static int     netprocfs_close(FAR struct file *filep);
 static ssize_t netprocfs_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
 
-static int     netprocfs_dup(FAR const struct file *oldp,
-                 FAR struct file *newp);
-
 static int     netprocfs_opendir(FAR const char *relpath,
                  FAR struct fs_dirent_s **dir);
 static int     netprocfs_closedir(FAR struct fs_dirent_s *dir);
@@ -172,7 +169,6 @@ const struct procfs_operations g_net_operations =
   netprocfs_read,       /* read */
   NULL,                 /* write */
   NULL,                 /* poll */
-  netprocfs_dup,        /* dup */
 
   netprocfs_opendir,    /* opendir */
   netprocfs_closedir,   /* closedir */
@@ -330,46 +326,6 @@ static ssize_t netprocfs_read(FAR struct file *filep, FAR char *buffer,
     }
 
   return nreturned;
-}
-
-/****************************************************************************
- * Name: netprocfs_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int netprocfs_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct netprocfs_file_s *oldpriv;
-  FAR struct netprocfs_file_s *newpriv;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldpriv = (FAR struct netprocfs_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldpriv);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newpriv = (FAR struct netprocfs_file_s *)
-    kmm_zalloc(sizeof(struct netprocfs_file_s));
-  if (!newpriv)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attribute from the old attributes to the new */
-
-  memcpy(newpriv, oldpriv, sizeof(struct netprocfs_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = (FAR void *)newpriv;
-  return OK;
 }
 
 /****************************************************************************

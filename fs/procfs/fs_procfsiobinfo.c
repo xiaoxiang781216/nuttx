@@ -83,8 +83,6 @@ static int     iobinfo_open(FAR struct file *filep, FAR const char *relpath,
 static int     iobinfo_close(FAR struct file *filep);
 static ssize_t iobinfo_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
-static int     iobinfo_dup(FAR const struct file *oldp,
-                 FAR struct file *newp);
 
 /****************************************************************************
  * Public Data
@@ -100,9 +98,6 @@ const struct procfs_operations g_iobinfo_operations =
   iobinfo_open,   /* open */
   iobinfo_close,  /* close */
   iobinfo_read,   /* read */
-  NULL,           /* write */
-  NULL,           /* poll */
-  iobinfo_dup,    /* dup */
 };
 
 /****************************************************************************
@@ -221,46 +216,6 @@ static ssize_t iobinfo_read(FAR struct file *filep, FAR char *buffer,
 
   filep->f_pos += totalsize;
   return totalsize;
-}
-
-/****************************************************************************
- * Name: iobinfo_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int iobinfo_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct iobinfo_file_s *oldattr;
-  FAR struct iobinfo_file_s *newattr;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldattr = (FAR struct iobinfo_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldattr);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newattr = (FAR struct iobinfo_file_s *)
-    fs_heap_malloc(sizeof(struct iobinfo_file_s));
-  if (!newattr)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newattr, oldattr, sizeof(struct iobinfo_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = (FAR void *)newattr;
-  return OK;
 }
 
 #endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS &&

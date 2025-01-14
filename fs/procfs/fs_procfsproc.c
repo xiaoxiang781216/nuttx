@@ -229,8 +229,6 @@ static ssize_t proc_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
 static ssize_t proc_write(FAR struct file *filep, FAR const char *buffer,
                  size_t buflen);
-static int     proc_dup(FAR const struct file *oldp,
-                 FAR struct file *newp);
 
 static int     proc_opendir(const char *relpath,
                  FAR struct fs_dirent_s **dir);
@@ -261,8 +259,6 @@ const struct procfs_operations g_proc_operations =
   proc_read,          /* read */
   proc_write,         /* write */
   NULL,               /* poll */
-
-  proc_dup,           /* dup */
 
   proc_opendir,       /* opendir */
   proc_closedir,      /* closedir */
@@ -1786,45 +1782,6 @@ static ssize_t proc_write(FAR struct file *filep, FAR const char *buffer,
 
   nxsched_put_tcb(tcb);
   return ret;
-}
-
-/****************************************************************************
- * Name: proc_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int proc_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct proc_file_s *oldfile;
-  FAR struct proc_file_s *newfile;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldfile = (FAR struct proc_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldfile != NULL);
-
-  /* Allocate a new container to hold the task and node selection */
-
-  newfile = fs_heap_malloc(sizeof(struct proc_file_s));
-  if (newfile == NULL)
-    {
-      ferr("ERROR: Failed to allocate file container\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file information from the old container to the new */
-
-  memcpy(newfile, oldfile, sizeof(struct proc_file_s));
-
-  /* Save the new container in the new file structure */
-
-  newp->f_priv = (FAR void *)newfile;
-  return OK;
 }
 
 /****************************************************************************

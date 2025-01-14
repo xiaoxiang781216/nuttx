@@ -76,8 +76,6 @@ static ssize_t cpufreq_read (FAR struct file *filep,
 static ssize_t cpufreq_write(FAR struct file *filep,
                              FAR const char *buffer,
                              size_t buflen);
-static int     cpufreq_dup  (FAR const struct file *oldp,
-                             FAR struct file *newp);
 
 /****************************************************************************
  * Public Data
@@ -89,8 +87,6 @@ const struct procfs_operations g_cpufreq_operations =
   .close      = cpufreq_close,        /* close */
   .read       = cpufreq_read,         /* read */
   .write      = cpufreq_write,        /* write */
-  .poll       = NULL,                 /* poll */
-  .dup        = cpufreq_dup,          /* dup */
 };
 
 /****************************************************************************
@@ -247,45 +243,6 @@ static ssize_t cpufreq_write(FAR struct file *filep,
 
   ret = buflen;
   return ret;
-}
-
-/****************************************************************************
- * Name: cpufreq_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int cpufreq_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct cpufreq_file_s *oldattr;
-  FAR struct cpufreq_file_s *newattr;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldattr = (FAR struct cpufreq_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldattr);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newattr = kmm_malloc(sizeof(struct cpufreq_file_s));
-  if (!newattr)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newattr, oldattr, sizeof(struct cpufreq_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = newattr;
-  return OK;
 }
 
 /****************************************************************************

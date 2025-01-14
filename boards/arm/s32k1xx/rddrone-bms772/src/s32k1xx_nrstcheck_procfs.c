@@ -81,8 +81,6 @@ static int s32k1xx_nrstcheck_procfs_open(struct file *filep,
 static int s32k1xx_nrstcheck_procfs_close(struct file *filep);
 static ssize_t s32k1xx_nrstcheck_procfs_read(struct file *filep,
                                              char *buffer, size_t buflen);
-static int s32k1xx_nrstcheck_procfs_dup(const struct file *oldp,
-                                        struct file *newp);
 static int s32k1xx_nrstcheck_procfs_stat(const char *relpath,
                                          struct stat *buf);
 
@@ -97,7 +95,6 @@ const struct procfs_operations s32k1xx_nrstcheck_procfs_ops =
   s32k1xx_nrstcheck_procfs_read,  /* read */
   NULL,                           /* write */
   NULL,                           /* poll */
-  s32k1xx_nrstcheck_procfs_dup,   /* dup */
   NULL,                           /* opendir */
   NULL,                           /* closedir */
   NULL,                           /* readdir */
@@ -204,46 +201,6 @@ static ssize_t s32k1xx_nrstcheck_procfs_read(struct file *filep,
   offset = filep->f_pos;
 
   return procfs_memcpy(attr->line, attr->linesize, buffer, buflen, &offset);
-}
-
-/****************************************************************************
- * Name: s32k1xx_nrstcheck_procfs_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int s32k1xx_nrstcheck_procfs_dup(const struct file *oldp,
-                                        struct file *newp)
-{
-  struct s32k1xx_nrstcheck_procfs_file_s *oldattr;
-  struct s32k1xx_nrstcheck_procfs_file_s *newattr;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldattr = (struct s32k1xx_nrstcheck_procfs_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldattr);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newattr = kmm_malloc(sizeof(struct s32k1xx_nrstcheck_procfs_file_s));
-  if (!newattr)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newattr, oldattr, sizeof(struct s32k1xx_nrstcheck_procfs_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = (void *)newattr;
-  return OK;
 }
 
 /****************************************************************************

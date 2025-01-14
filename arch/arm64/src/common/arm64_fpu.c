@@ -103,7 +103,6 @@ const struct procfs_operations arm64_fpu_procfs_operations =
   arm64_fpu_procfs_read,  /* read */
   NULL,                   /* write */
   NULL,                   /* poll */
-  NULL,                   /* dup */
   NULL,                   /* opendir */
   NULL,                   /* closedir */
   NULL,                   /* readdir */

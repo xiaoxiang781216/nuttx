@@ -73,8 +73,6 @@ static ssize_t devfreq_read(FAR struct file *filep,
 static ssize_t devfreq_write(FAR struct file *filep,
                              FAR const char *buffer,
                              size_t buflen);
-static int     devfreq_dup(FAR const struct file *oldp,
-                           FAR struct file *newp);
 static int     devfreq_opendir(FAR const char *relpath,
                                FAR struct fs_dirent_s **dir);
 static int     devfreq_readdir(FAR struct fs_dirent_s *dir,
@@ -94,7 +92,6 @@ static const struct procfs_operations g_devfreq_operations =
   .read       = devfreq_read,         /* read */
   .write      = devfreq_write,        /* write */
   .poll       = NULL,                 /* poll */
-  .dup        = devfreq_dup,          /* dup */
 
   .opendir    = devfreq_opendir,      /* opendir */
   .closedir   = devfreq_closedir,     /* closedir */
@@ -245,20 +242,6 @@ static ssize_t devfreq_write(FAR struct file *filep,
                              FAR const char *buffer, size_t buflen)
 {
   return buflen;
-}
-
-/****************************************************************************
- * Name: devfreq_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int devfreq_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  newp->f_priv = oldp->f_priv;
-  return 0;
 }
 
 /****************************************************************************

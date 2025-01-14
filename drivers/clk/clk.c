@@ -99,8 +99,6 @@ static int clk_procfs_open(FAR struct file *filep, FAR const char *relpath,
 static int clk_procfs_close(FAR struct file *filep);
 static ssize_t clk_procfs_read(FAR struct file *filep, FAR char *buffer,
                                size_t buflen);
-static int clk_procfs_dup(FAR const struct file *oldp,
-                          FAR struct file *newp);
 #endif /* !defined(CONFIG_FS_PROCFS_EXCLUDE_CLK) && defined(CONFIG_FS_PROCFS) */
 
 /****************************************************************************
@@ -114,10 +112,6 @@ const struct procfs_operations g_clk_operations =
   clk_procfs_open,       /* open */
   clk_procfs_close,      /* close */
   clk_procfs_read,       /* read */
-  NULL,                  /* write */
-  NULL,                  /* poll */
-
-  clk_procfs_dup,        /* dup */
 };
 
 #endif /* !defined(CONFIG_FS_PROCFS_EXCLUDE_CLK) && defined(CONFIG_FS_PROCFS) */
@@ -277,26 +271,6 @@ static ssize_t clk_procfs_read(FAR struct file *filep,
 
   filep->f_pos += oldlen - buflen;
   return oldlen - buflen;
-}
-
-static int clk_procfs_dup(FAR const struct file *oldp,
-                          FAR struct file *newp)
-{
-  FAR struct procfs_file_s *oldpriv;
-  FAR struct procfs_file_s *newpriv;
-
-  oldpriv = oldp->f_priv;
-  DEBUGASSERT(oldpriv);
-
-  newpriv = kmm_zalloc(sizeof(struct procfs_file_s));
-  if (!newpriv)
-    {
-      return -ENOMEM;
-    }
-
-  memcpy(newpriv, oldpriv, sizeof(struct procfs_file_s));
-  newp->f_priv = newpriv;
-  return OK;
 }
 
 #endif /* !defined(CONFIG_FS_PROCFS_EXCLUDE_CLK) && defined(CONFIG_FS_PROCFS) */

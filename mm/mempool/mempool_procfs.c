@@ -64,8 +64,6 @@ struct mempool_file_s
 static int     mempool_open(FAR struct file *filep, FAR const char *relpath,
                             int oflags, mode_t mode);
 static int     mempool_close(FAR struct file *filep);
-static int     mempool_dup(FAR const struct file *oldp,
-                           FAR struct file *newp);
 static ssize_t mempool_read(FAR struct file *filep, FAR char *buffer,
                             size_t buflen);
 
@@ -78,9 +76,6 @@ const struct procfs_operations g_mempool_operations =
   mempool_open,   /* open */
   mempool_close,  /* close */
   mempool_read,   /* read */
-  NULL,           /* write */
-  NULL,           /* poll */
-  mempool_dup,    /* dup */
 };
 
 static FAR struct mempool_procfs_entry_s *g_mempool_procfs = NULL;
@@ -170,31 +165,6 @@ static ssize_t mempool_read(FAR struct file *filep, FAR char *buffer,
 
   filep->f_pos += totalsize;
   return totalsize;
-}
-
-/****************************************************************************
- * Name: mempool_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int mempool_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct mempool_file_s *oldattr;
-  FAR struct mempool_file_s *newattr;
-
-  oldattr = oldp->f_priv;
-  newattr = kmm_malloc(sizeof(struct mempool_file_s));
-  if (newattr == NULL)
-    {
-      return -ENOMEM;
-    }
-
-  memcpy(newattr, oldattr, sizeof(struct mempool_file_s));
-  newp->f_priv = newattr;
-  return 0;
 }
 
 /****************************************************************************

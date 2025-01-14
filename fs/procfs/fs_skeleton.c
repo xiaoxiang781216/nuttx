@@ -98,8 +98,6 @@ static ssize_t skel_read(FAR struct file *filep, FAR char *buffer,
 
 static ssize_t skel_write(FAR struct file *filep, FAR const char *buffer,
                  size_t buflen);
-static int     skel_dup(FAR const struct file *oldp,
-                 FAR struct file *newp);
 
 static int     skel_opendir(FAR const char *relpath,
                  FAR struct fs_dirent_s **dir);
@@ -135,8 +133,6 @@ const struct procfs_operations skel_procfsoperations =
   skel_write,      /* write */
 #endif
   NULL,            /* poll */
-
-  skel_dup,        /* dup */
 
   skel_opendir,    /* opendir */
   skel_closedir,   /* closedir */
@@ -288,45 +284,6 @@ static ssize_t skel_write(FAR struct file *filep, FAR const char *buffer,
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: skel_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int skel_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct skel_file_s *oldpriv;
-  FAR struct skel_file_s *newpriv;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldpriv = (FAR struct skel_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldpriv);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newpriv = fs_heap_zalloc(sizeof(struct skel_file_s));
-  if (!newpriv)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attribute from the old attributes to the new */
-
-  memcpy(newpriv, oldpriv, sizeof(struct skel_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = (FAR void *)newpriv;
-  return OK;
 }
 
 /****************************************************************************

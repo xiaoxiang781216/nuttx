@@ -60,8 +60,6 @@ static ssize_t thermal_procfs_read     (FAR struct file *filep,
 static ssize_t thermal_procfs_write    (FAR struct file *filep,
                                         FAR const char *buffer,
                                         size_t buflen);
-static int     thermal_procfs_dup      (FAR const struct file *oldp,
-                                        FAR struct file *newp);
 static int     thermal_procfs_opendir  (FAR const char *relpath,
                                         FAR struct fs_dirent_s **dir);
 static int     thermal_procfs_closedir (FAR struct fs_dirent_s *dir);
@@ -90,7 +88,6 @@ const struct procfs_operations g_thermal_operations =
   .read      = thermal_procfs_read,
   .write     = thermal_procfs_write,
   .poll      = NULL,
-  .dup       = thermal_procfs_dup,
   .opendir   = thermal_procfs_opendir,
   .closedir  = thermal_procfs_closedir,
   .readdir   = thermal_procfs_readdir,
@@ -197,13 +194,6 @@ static ssize_t thermal_procfs_write(FAR struct file *filep,
     }
 
   return buflen;
-}
-
-static int thermal_procfs_dup(FAR const struct file *oldp,
-                              FAR struct file *newp)
-{
-  newp->f_priv = oldp->f_priv;
-  return OK;
 }
 
 static int thermal_procfs_opendir(FAR const char *relpath,

@@ -70,8 +70,6 @@ static int     fdt_open(FAR struct file *filep, FAR const char *relpath,
 static int     fdt_close(FAR struct file *filep);
 static ssize_t fdt_read(FAR struct file *filep, FAR char *buffer,
                         size_t buflen);
-static int     fdt_dup(FAR const struct file *oldp,
-                       FAR struct file *newp);
 
 /****************************************************************************
  * Public Data
@@ -87,9 +85,6 @@ const struct procfs_operations g_fdt_operations =
   fdt_open,       /* open */
   fdt_close,      /* close */
   fdt_read,       /* read */
-  NULL,           /* write */
-  NULL,           /* poll */
-  fdt_dup,        /* dup */
 };
 
 /****************************************************************************
@@ -193,45 +188,6 @@ static ssize_t fdt_read(FAR struct file *filep, FAR char *buffer,
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: fdt_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int fdt_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct fdt_file_s *oldattr;
-  FAR struct fdt_file_s *newattr;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldattr = oldp->f_priv;
-  DEBUGASSERT(oldattr);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newattr = fs_heap_malloc(sizeof(struct fdt_file_s));
-  if (newattr == NULL)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newattr, oldattr, sizeof(struct fdt_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = newattr;
-  return OK;
 }
 
 #endif /* CONFIG_DEVICE_TREE && CONFIG_FS_PROCFS_EXCLUDE_FDT */

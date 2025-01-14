@@ -76,8 +76,6 @@ static ssize_t pressure_write(FAR struct file *filep, FAR const char *buffer,
                               size_t buflen);
 static int     pressure_poll(FAR struct file *filep, FAR struct pollfd *fds,
                              bool setup);
-static int     pressure_dup(FAR const struct file *oldp,
-                            FAR struct file *newp);
 static int     pressure_opendir(FAR const char *relpath,
                                 FAR struct fs_dirent_s **dir);
 static int     pressure_closedir(FAR struct fs_dirent_s *dir);
@@ -96,7 +94,6 @@ const struct procfs_operations g_pressure_operations =
   pressure_read,       /* read */
   pressure_write,      /* write */
   pressure_poll,       /* poll */
-  pressure_dup,        /* dup */
   pressure_opendir,    /* opendir */
   pressure_closedir,   /* closedir */
   pressure_readdir,    /* readdir */
@@ -280,31 +277,6 @@ static int pressure_poll(FAR struct file *filep, FAR struct pollfd *fds,
       fds->priv = NULL;
     }
 
-  spin_unlock_irqrestore(&g_pressure_lock, flags);
-  return OK;
-}
-
-/****************************************************************************
- * Name: pressure_dup
- ****************************************************************************/
-
-static int pressure_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct pressure_file_s *oldpriv = oldp->f_priv;
-  FAR struct pressure_file_s *newpriv;
-  uint32_t flags;
-
-  newpriv = fs_heap_zalloc(sizeof(struct pressure_file_s));
-  if (newpriv == NULL)
-    {
-      return -ENOMEM;
-    }
-
-  flags = spin_lock_irqsave(&g_pressure_lock);
-  memcpy(newpriv, oldpriv, sizeof(struct pressure_file_s));
-  dq_addfirst(&newpriv->entry, &g_pressure_memory_queue);
-  newpriv->fds = NULL;
-  newp->f_priv = newpriv;
   spin_unlock_irqrestore(&g_pressure_lock, flags);
   return OK;
 }

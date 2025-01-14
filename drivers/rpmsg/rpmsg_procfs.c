@@ -87,8 +87,6 @@ static ssize_t rpmsg_procfs_read(FAR struct file *filep, FAR char *buffer,
                                  size_t buflen);
 static ssize_t rpmsg_procfs_write(FAR struct file *filep,
                                   FAR const char *buffer, size_t buflen);
-static int     rpmsg_procfs_dup(FAR const struct file *oldp,
-                                FAR struct file *newp);
 
 /****************************************************************************
  * Private Data
@@ -100,8 +98,6 @@ static const struct procfs_operations g_rpmsg_procfs_ops =
   rpmsg_procfs_close,  /* close */
   rpmsg_procfs_read,   /* read */
   rpmsg_procfs_write,  /* write */
-  NULL,                /* poll */
-  rpmsg_procfs_dup,    /* dup */
 };
 
 static const struct procfs_entry_s g_rpmsg_procfs_root =
@@ -233,46 +229,6 @@ static ssize_t rpmsg_procfs_write(FAR struct file *filep,
   g_rpmsg_procfs_filter[buflen] = '\0';
 
   return buflen;
-}
-
-/****************************************************************************
- * Name: rpmsg_procfs_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int
-rpmsg_procfs_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct rpmsg_procfs_file_s *oldattr;
-  FAR struct rpmsg_procfs_file_s *newattr;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldattr = oldp->f_priv;
-  DEBUGASSERT(oldattr);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newattr = kmm_malloc(sizeof(struct rpmsg_procfs_file_s));
-  if (newattr == NULL)
-    {
-      rpmsgerr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newattr, oldattr, sizeof(struct rpmsg_procfs_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = newattr;
-  return OK;
 }
 
 /****************************************************************************

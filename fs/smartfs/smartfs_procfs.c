@@ -114,9 +114,6 @@ static ssize_t  smartfs_read(FAR struct file *filep, FAR char *buffer,
 static ssize_t  smartfs_write(FAR struct file *filep, FAR const char *buffer,
                   size_t buflen);
 
-static int      smartfs_dup(FAR const struct file *oldp,
-                 FAR struct file *newp);
-
 static int      smartfs_opendir(const char *relpath,
                   FAR struct fs_dirent_s **dir);
 static int      smartfs_closedir(FAR struct fs_dirent_s *dir);
@@ -181,8 +178,6 @@ const struct procfs_operations g_smartfs_procfs_operations =
 
   smartfs_write,      /* write */
   NULL,               /* poll */
-
-  smartfs_dup,        /* dup */
 
   smartfs_opendir,    /* opendir */
   smartfs_closedir,   /* closedir */
@@ -488,45 +483,6 @@ static ssize_t smartfs_write(FAR struct file *filep, FAR const char *buffer,
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: smartfs_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int smartfs_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct smartfs_file_s *oldpriv;
-  FAR struct smartfs_file_s *newpriv;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldpriv = (FAR struct smartfs_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldpriv);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newpriv = fs_heap_malloc(sizeof(struct smartfs_file_s));
-  if (!newpriv)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attribute from the old attributes to the new */
-
-  memcpy(newpriv, oldpriv, sizeof(struct smartfs_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = (FAR void *)newpriv;
-  return OK;
 }
 
 /****************************************************************************

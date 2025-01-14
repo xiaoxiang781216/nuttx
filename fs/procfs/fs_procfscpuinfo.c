@@ -64,8 +64,6 @@ static int     cpuinfo_open(FAR struct file *filep, FAR const char *relpath,
 static int     cpuinfo_close(FAR struct file *filep);
 static ssize_t cpuinfo_read(FAR struct file *filep, FAR char *buffer,
                             size_t buflen);
-static int     cpuinfo_dup(FAR const struct file *oldp,
-                           FAR struct file *newp);
 
 /****************************************************************************
  * Public Data
@@ -81,9 +79,6 @@ const struct procfs_operations g_cpuinfo_operations =
   cpuinfo_open,   /* open */
   cpuinfo_close,  /* close */
   cpuinfo_read,   /* read */
-  NULL,           /* write */
-  NULL,           /* poll */
-  cpuinfo_dup,    /* dup */
 };
 
 /****************************************************************************
@@ -162,45 +157,6 @@ static ssize_t cpuinfo_read(FAR struct file *filep, FAR char *buffer,
     }
 
   return copylen;
-}
-
-/****************************************************************************
- * Name: cpuinfo_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int cpuinfo_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct cpuinfo_file_s *oldattr;
-  FAR struct cpuinfo_file_s *newattr;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldattr = oldp->f_priv;
-  DEBUGASSERT(oldattr);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newattr = fs_heap_malloc(sizeof(struct cpuinfo_file_s));
-  if (newattr == NULL)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newattr, oldattr, sizeof(struct cpuinfo_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = newattr;
-  return OK;
 }
 
 #endif /* !CONFIG_FS_PROCFS_EXCLUDE_CPUINFO */

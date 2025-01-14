@@ -84,9 +84,6 @@ static int     tcbinfo_close(FAR struct file *filep);
 static ssize_t tcbinfo_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
 
-static int     tcbinfo_dup(FAR const struct file *oldp,
-                 FAR struct file *newp);
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -101,10 +98,6 @@ const struct procfs_operations g_tcbinfo_operations =
   tcbinfo_open,       /* open */
   tcbinfo_close,      /* close */
   tcbinfo_read,       /* read */
-  NULL,               /* write */
-  NULL,               /* poll */
-
-  tcbinfo_dup,        /* dup */
 };
 
 /****************************************************************************
@@ -213,47 +206,6 @@ static ssize_t tcbinfo_read(FAR struct file *filep, FAR char *buffer,
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: tcbinfo_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int tcbinfo_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct tcbinfo_file_s *oldattr;
-  FAR struct tcbinfo_file_s *newattr;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldattr = (FAR struct tcbinfo_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldattr);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newattr = (FAR struct tcbinfo_file_s *)
-    fs_heap_malloc(sizeof(struct tcbinfo_file_s));
-
-  if (!newattr)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newattr, oldattr, sizeof(struct tcbinfo_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = (FAR void *)newattr;
-  return OK;
 }
 
 #endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS */

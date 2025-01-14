@@ -77,8 +77,6 @@ static ssize_t dvfs_read(struct file *filep, char *buffer,
                          size_t buflen);
 static ssize_t dvfs_write(struct file *filep, const char *buffer,
                           size_t buflen);
-static int     dvfs_dup(const struct file *oldp,
-                        struct file *newp);
 static int     dvfs_stat(const char *relpath, struct stat *buf);
 
 /****************************************************************************
@@ -91,8 +89,6 @@ static const struct procfs_operations dvfs_procfsoperations =
   dvfs_close,     /* close */
   dvfs_read,      /* read */
   dvfs_write,     /* write */
-  NULL,           /* poll */
-  dvfs_dup,       /* dup */
   NULL,           /* opendir */
   NULL,           /* closedir */
   NULL,           /* readdir */
@@ -295,41 +291,6 @@ static ssize_t dvfs_write(struct file *filep, const char *buffer,
     }
 
   return buflen;
-}
-
-/****************************************************************************
- * Name: dvfs_dup
- ****************************************************************************/
-
-static int dvfs_dup(const struct file *oldp, struct file *newp)
-{
-  struct dvfs_file_s *oldpriv;
-  struct dvfs_file_s *newpriv;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldpriv = (struct dvfs_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldpriv);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newpriv = kmm_zalloc(sizeof(struct dvfs_file_s));
-  if (!newpriv)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newpriv, oldpriv, sizeof(struct dvfs_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = (void *)newpriv;
-  return OK;
 }
 
 /****************************************************************************

@@ -85,8 +85,6 @@ static int     critmon_open(FAR struct file *filep, FAR const char *relpath,
 static int     critmon_close(FAR struct file *filep);
 static ssize_t critmon_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
-static int     critmon_dup(FAR const struct file *oldp,
-                 FAR struct file *newp);
 
 /****************************************************************************
  * Public Data
@@ -102,10 +100,6 @@ const struct procfs_operations g_critmon_operations =
   critmon_open,       /* open */
   critmon_close,      /* close */
   critmon_read,       /* read */
-  NULL,               /* write */
-  NULL,               /* poll */
-
-  critmon_dup,        /* dup */
 };
 
 /****************************************************************************
@@ -394,45 +388,6 @@ static ssize_t critmon_read(FAR struct file *filep, FAR char *buffer,
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: critmon_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int critmon_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct critmon_file_s *oldattr;
-  FAR struct critmon_file_s *newattr;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldattr = (FAR struct critmon_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldattr);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newattr = fs_heap_malloc(sizeof(struct critmon_file_s));
-  if (!newattr)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newattr, oldattr, sizeof(struct critmon_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = (FAR void *)newattr;
-  return OK;
 }
 
 #endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS && CONFIG_SCHED_CRITMONITOR */

@@ -128,9 +128,6 @@ static int     part_procfs_close(FAR struct file *filep);
 static ssize_t part_procfs_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
 
-static int     part_procfs_dup(FAR const struct file *oldp,
-                 FAR struct file *newp);
-
 #if 0 /* Not implemented */
 static int     part_procfs_opendir(const char *relpath,
                  FAR struct fs_dirent_s *dir);
@@ -154,10 +151,6 @@ const struct procfs_operations g_part_operations =
   part_procfs_open,       /* open */
   part_procfs_close,      /* close */
   part_procfs_read,       /* read */
-  NULL,                   /* write */
-  NULL,                   /* poll */
-
-  part_procfs_dup,        /* dup */
 };
 #endif
 
@@ -730,47 +723,6 @@ static ssize_t part_procfs_read(FAR struct file *filep, FAR char *buffer,
     }
 
   return total;
-}
-
-/****************************************************************************
- * Name: part_procfs_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int part_procfs_dup(FAR const struct file *oldp,
-                           FAR struct file *newp)
-{
-  FAR struct part_procfs_file_s *oldattr;
-  FAR struct part_procfs_file_s *newattr;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldattr = (FAR struct part_procfs_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldattr);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newattr = (FAR struct part_procfs_file_s *)
-            kmm_zalloc(sizeof(struct part_procfs_file_s));
-  if (!newattr)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attribute from the old attributes to the new */
-
-  memcpy(newattr, oldattr, sizeof(struct part_procfs_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = (FAR void *)newattr;
-  return OK;
 }
 
 #endif

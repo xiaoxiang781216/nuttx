@@ -156,9 +156,6 @@ static int     route_close(FAR struct file *filep);
 static ssize_t route_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
 
-static int     route_dup(FAR const struct file *oldp,
-                 FAR struct file *newp);
-
 static int     route_opendir(const char *relpath,
                  FAR struct fs_dirent_s **dir);
 static int     route_closedir(FAR struct fs_dirent_s *dir);
@@ -184,8 +181,6 @@ const struct procfs_operations g_netroute_operations =
   route_read,          /* read */
   NULL,                /* write */
   NULL,                /* poll */
-
-  route_dup,           /* dup */
 
   route_opendir,       /* opendir */
   route_closedir,      /* closedir */
@@ -561,46 +556,6 @@ static ssize_t route_read(FAR struct file *filep, FAR char *buffer,
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: route_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int route_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct route_file_s *oldfile;
-  FAR struct route_file_s *newfile;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldfile = (FAR struct route_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldfile);
-
-  /* Allocate a new container to hold the task and node selection */
-
-  newfile = (FAR struct route_file_s *)
-    kmm_malloc(sizeof(struct route_file_s));
-  if (!newfile)
-    {
-      ferr("ERROR: Failed to allocate file container\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file information from the old container to the new */
-
-  memcpy(newfile, oldfile, sizeof(struct route_file_s));
-
-  /* Save the new container in the new file structure */
-
-  newp->f_priv = (FAR void *)newfile;
-  return OK;
 }
 
 /****************************************************************************

@@ -89,8 +89,6 @@ static int     modprocfs_close(FAR struct file *filep);
 static ssize_t modprocfs_read(FAR struct file *filep,
                               FAR char *buffer,
                               size_t buflen);
-static int     modprocfs_dup(FAR const struct file *oldp,
-                             FAR struct file *newp);
 
 /****************************************************************************
  * Public Data
@@ -106,9 +104,6 @@ const struct procfs_operations g_module_operations =
   modprocfs_open,       /* open */
   modprocfs_close,      /* close */
   modprocfs_read,       /* read */
-  NULL,                 /* write */
-  NULL,                 /* poll */
-  modprocfs_dup,        /* dup */
 };
 
 /****************************************************************************
@@ -240,46 +235,6 @@ static ssize_t modprocfs_read(FAR struct file *filep, FAR char *buffer,
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: modprocfs_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int modprocfs_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct modprocfs_file_s *oldpriv;
-  FAR struct modprocfs_file_s *newpriv;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldpriv = (FAR struct modprocfs_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldpriv);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newpriv = (FAR struct modprocfs_file_s *)
-    kmm_zalloc(sizeof(struct modprocfs_file_s));
-  if (!newpriv)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newpriv, oldpriv, sizeof(struct modprocfs_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = newpriv;
-  return OK;
 }
 
 /****************************************************************************

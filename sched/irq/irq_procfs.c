@@ -110,8 +110,6 @@ static int     irq_open(FAR struct file *filep, FAR const char *relpath,
 static int     irq_close(FAR struct file *filep);
 static ssize_t irq_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
-static int     irq_dup(FAR const struct file *oldp,
-                 FAR struct file *newp);
 
 #ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
 static ssize_t irq_write(FAR struct file *filep, FAR const char *buffer,
@@ -134,12 +132,7 @@ const struct procfs_operations g_irq_operations =
   irq_read,       /* read */
 #ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
   irq_write,      /* write */
-#else
-  NULL,           /* write */
 #endif
-  NULL,           /* poll */
-
-  irq_dup,        /* dup */
 };
 
 /****************************************************************************
@@ -402,45 +395,6 @@ static ssize_t irq_write(FAR struct file *filep, FAR const char *buffer,
   return buflen;
 }
 #endif
-
-/****************************************************************************
- * Name: irq_dup
- *
- * Description:
- *   Duplicate open file data in the new file structure.
- *
- ****************************************************************************/
-
-static int irq_dup(FAR const struct file *oldp, FAR struct file *newp)
-{
-  FAR struct irq_file_s *oldattr;
-  FAR struct irq_file_s *newattr;
-
-  finfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldattr = (FAR struct irq_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldattr);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newattr = kmm_malloc(sizeof(struct irq_file_s));
-  if (!newattr)
-    {
-      ferr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newattr, oldattr, sizeof(struct irq_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = (FAR void *)newattr;
-  return OK;
-}
 
 /****************************************************************************
  * Public Functions

@@ -93,8 +93,6 @@ static int cxd56_powermgr_procfs_open(struct file *filep,
 static int cxd56_powermgr_procfs_close(struct file *filep);
 static ssize_t cxd56_powermgr_procfs_read(struct file *filep,
                                           char *buffer, size_t buflen);
-static int cxd56_powermgr_procfs_dup(const struct file *oldp,
-                                     struct file *newp);
 static int cxd56_powermgr_procfs_opendir(const char *relpath,
                                          struct fs_dirent_s **dir);
 static int cxd56_powermgr_procfs_closedir(struct fs_dirent_s *dir);
@@ -115,7 +113,6 @@ const struct procfs_operations cxd56_powermgr_procfs_operations =
   cxd56_powermgr_procfs_read,      /* read */
   NULL,                            /* write */
   NULL,                            /* poll */
-  cxd56_powermgr_procfs_dup,       /* dup */
   cxd56_powermgr_procfs_opendir,   /* opendir */
   cxd56_powermgr_procfs_closedir,  /* closedir */
   cxd56_powermgr_procfs_readdir,   /* readdir */
@@ -595,47 +592,6 @@ static ssize_t cxd56_powermgr_procfs_read(struct file *filep,
     }
 
   return len;
-}
-
-/****************************************************************************
- * Name: cxd56_powermgr_procfs_dup
- *
- * Description:
- *   Request Dup power manager procfs
- *
- ****************************************************************************/
-
-static int cxd56_powermgr_procfs_dup(const struct file *oldp,
-                                     struct file *newp)
-{
-  void *oldpriv;
-  void *newpriv;
-
-  pminfo("Dup %p->%p\n", oldp, newp);
-
-  /* Recover our private data from the old struct file instance */
-
-  oldpriv = oldp->f_priv;
-  DEBUGASSERT(oldpriv);
-
-  /* Allocate a new container to hold the task and attribute selection */
-
-  newpriv = kmm_malloc(sizeof(struct cxd56_powermgr_procfs_file_s));
-  if (!newpriv)
-    {
-      pmerr("ERROR: Failed to allocate file attributes\n");
-      return -ENOMEM;
-    }
-
-  /* The copy the file attributes from the old attributes to the new */
-
-  memcpy(newpriv, oldpriv, sizeof(struct cxd56_powermgr_procfs_file_s));
-
-  /* Save the new attributes in the new file structure */
-
-  newp->f_priv = newpriv;
-
-  return OK;
 }
 
 /****************************************************************************
