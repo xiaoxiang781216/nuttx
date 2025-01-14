@@ -87,13 +87,16 @@ def correct_content_path(file, newpath):
             f.write(new_content)
 
 
-def copy_file_endswith(endswith, source_dir, target_dir):
+def copy_file_endswith(endswith, source_dir, target_dir, skip_dir):
     print(f"Collect {endswith} files {source_dir} -> {target_dir}")
 
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
 
     for root, _, files in os.walk(source_dir):
+        if skip_dir in root:
+            continue
+
         for file in files:
             if file.endswith(endswith):
                 source_file = os.path.join(root, file)
@@ -154,9 +157,6 @@ def main():
     coverage_file = os.path.join(gcov_dir, "coverage.info")
     result_dir = os.path.join(gcov_dir, "result")
 
-    # Ensure the directory exists
-    os.makedirs(gcov_dir, exist_ok=True)
-
     if args.debug:
         debug_file = os.path.join(gcov_dir, "debug.log")
         sys.stdout = open(debug_file, "w+")
@@ -173,8 +173,8 @@ def main():
         gcov_data_dir.append(dir)
         os.makedirs(dir)
 
-        copy_file_endswith(".gcno", gcno_dir, dir)
-        copy_file_endswith(".gcda", i, dir)
+        copy_file_endswith(".gcno", gcno_dir, dir, gcov_dir)
+        copy_file_endswith(".gcda", i, dir, gcov_dir)
 
     # Only copy files
     if args.only_copy:
