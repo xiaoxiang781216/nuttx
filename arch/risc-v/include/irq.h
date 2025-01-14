@@ -689,7 +689,6 @@ EXTERN volatile bool g_interrupt_context[CONFIG_SMP_NCPUS];
 
 irqstate_t up_irq_enable(void);
 
-#ifdef CONFIG_ARCH_RV_CPUID_MAP
 /****************************************************************************
  * Name: up_cpu_index
  *
@@ -698,7 +697,16 @@ irqstate_t up_irq_enable(void);
  *
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_HAVE_MULTICPU
+#ifdef CONFIG_ARCH_USE_S_MODE
 int up_cpu_index(void) noinstrument_function;
+#else
+noinstrument_function static inline int up_cpu_index(void)
+{
+  return READ_CSR(CSR_MHARTID);
+}
+#endif /* CONFIG_ARCH_USE_S_MODE */
+#endif /* CONFIG_ARCH_HAVE_MULTICPU */
 
 /****************************************************************************
  * Name: up_this_cpu
@@ -709,13 +717,9 @@ int up_cpu_index(void) noinstrument_function;
  *
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_RV_CPUID_MAP
 int up_this_cpu(void);
 #else
-noinstrument_function static inline int up_cpu_index(void)
-{
-  return READ_CSR(CSR_MHARTID);
-}
-
 #define up_this_cpu() up_cpu_index()
 #endif /* CONFIG_ARCH_RV_CPUID_MAP */
 
