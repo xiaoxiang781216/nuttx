@@ -94,7 +94,7 @@ static ssize_t    inet_sendto(FAR struct socket *psock, FAR const void *buf,
                               FAR const struct sockaddr *to,
                               socklen_t tolen);
 static ssize_t    inet_sendmsg(FAR struct socket *psock,
-                               FAR struct msghdr *msg, int flags);
+                               FAR const struct msghdr *msg, int flags);
 static ssize_t    inet_recvmsg(FAR struct socket *psock,
                                FAR struct msghdr *msg, int flags);
 static int        inet_ioctl(FAR struct socket *psock,
@@ -1941,7 +1941,7 @@ static ssize_t inet_sendto(FAR struct socket *psock, FAR const void *buf,
  ****************************************************************************/
 
 static ssize_t inet_sendmsg(FAR struct socket *psock,
-                            FAR struct msghdr *msg, int flags)
+                            FAR const struct msghdr *msg, int flags)
 {
   FAR void *buf = msg->msg_iov->iov_base;
   size_t len = msg->msg_iov->iov_len;

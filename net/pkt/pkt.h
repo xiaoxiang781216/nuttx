@@ -289,7 +289,7 @@ void pkt_poll(FAR struct net_driver_s *dev, FAR struct pkt_conn_s *conn);
  *
  ****************************************************************************/
 
-ssize_t pkt_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
+ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
                     int flags);
 
 #undef EXTERN
