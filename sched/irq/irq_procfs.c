@@ -104,7 +104,6 @@ static ssize_t irq_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
 static int     irq_dup(FAR const struct file *oldp,
                  FAR struct file *newp);
-static int     irq_stat(FAR const char *relpath, FAR struct stat *buf);
 
 /****************************************************************************
  * Public Data
@@ -124,13 +123,6 @@ const struct procfs_operations g_irq_operations =
   NULL,           /* poll */
 
   irq_dup,        /* dup */
-
-  NULL,           /* opendir */
-  NULL,           /* closedir */
-  NULL,           /* readdir */
-  NULL,           /* rewinddir */
-
-  irq_stat        /* stat */
 };
 
 /****************************************************************************
@@ -403,22 +395,6 @@ static int irq_dup(FAR const struct file *oldp, FAR struct file *newp)
   /* Save the new attributes in the new file structure */
 
   newp->f_priv = (FAR void *)newattr;
-  return OK;
-}
-
-/****************************************************************************
- * Name: irq_stat
- *
- * Description: Return information about a file or directory
- *
- ****************************************************************************/
-
-static int irq_stat(const char *relpath, struct stat *buf)
-{
-  /* "irqs" is the name for a read-only file */
-
-  memset(buf, 0, sizeof(struct stat));
-  buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
   return OK;
 }
 

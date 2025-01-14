@@ -140,8 +140,6 @@ static int     part_procfs_readdir(FAR struct fs_dirent_s *dir,
 static int     part_procfs_rewinddir(FAR struct fs_dirent_s *dir);
 #endif
 
-static int     part_procfs_stat(FAR const char *relpath,
-                 FAR struct stat *buf);
 #endif
 
 /****************************************************************************
@@ -160,13 +158,6 @@ const struct procfs_operations g_part_operations =
   NULL,                   /* poll */
 
   part_procfs_dup,        /* dup */
-
-  NULL,                   /* opendir */
-  NULL,                   /* closedir */
-  NULL,                   /* readdir */
-  NULL,                   /* rewinddir */
-
-  part_procfs_stat        /* stat */
 };
 #endif
 
@@ -782,23 +773,6 @@ static int part_procfs_dup(FAR const struct file *oldp,
   return OK;
 }
 
-/****************************************************************************
- * Name: part_procfs_stat
- *
- * Description: Return information about a file or directory
- *
- ****************************************************************************/
-
-static int part_procfs_stat(const char *relpath, struct stat *buf)
-{
-  /* File/directory size, access block size */
-
-  buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
-  buf->st_size    = 0;
-  buf->st_blksize = 0;
-  buf->st_blocks  = 0;
-  return OK;
-}
 #endif
 
 /****************************************************************************

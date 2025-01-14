@@ -78,8 +78,6 @@ static ssize_t cpufreq_write(FAR struct file *filep,
                              size_t buflen);
 static int     cpufreq_dup  (FAR const struct file *oldp,
                              FAR struct file *newp);
-static int     cpufreq_stat (FAR const char *relpath,
-                             FAR struct stat *buf);
 
 /****************************************************************************
  * Public Data
@@ -93,11 +91,6 @@ const struct procfs_operations g_cpufreq_operations =
   .write      = cpufreq_write,        /* write */
   .poll       = NULL,                 /* poll */
   .dup        = cpufreq_dup,          /* dup */
-  .opendir    = NULL,                 /* opendir */
-  .closedir   = NULL,                 /* closedir */
-  .readdir    = NULL,                 /* readdir */
-  .rewinddir  = NULL,                 /* rewinddir */
-  .stat       = cpufreq_stat          /* stat */
 };
 
 /****************************************************************************
@@ -287,22 +280,6 @@ static int cpufreq_dup(FAR const struct file *oldp, FAR struct file *newp)
   /* Save the new attributes in the new file structure */
 
   newp->f_priv = newattr;
-  return OK;
-}
-
-/****************************************************************************
- * Name: cpufreq_stat
- *
- * Description: Return information about a file or directory
- *
- ****************************************************************************/
-
-static int cpufreq_stat(const char *relpath, struct stat *buf)
-{
-  /* "cpufreq" is the name for a read-only file */
-
-  memset(buf, 0, sizeof(struct stat));
-  buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
   return OK;
 }
 

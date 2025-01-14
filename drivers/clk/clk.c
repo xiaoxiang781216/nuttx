@@ -100,8 +100,6 @@ static ssize_t clk_procfs_read(FAR struct file *filep, FAR char *buffer,
                                size_t buflen);
 static int clk_procfs_dup(FAR const struct file *oldp,
                           FAR struct file *newp);
-static int clk_procfs_stat(FAR const char *relpath, FAR struct stat *buf);
-
 #endif /* !defined(CONFIG_FS_PROCFS_EXCLUDE_CLK) && defined(CONFIG_FS_PROCFS) */
 
 /****************************************************************************
@@ -119,13 +117,6 @@ const struct procfs_operations g_clk_operations =
   NULL,                  /* poll */
 
   clk_procfs_dup,        /* dup */
-
-  NULL,                  /* opendir */
-  NULL,                  /* closedir */
-  NULL,                  /* readdir */
-  NULL,                  /* rewinddir */
-
-  clk_procfs_stat,       /* stat */
 };
 
 #endif /* !defined(CONFIG_FS_PROCFS_EXCLUDE_CLK) && defined(CONFIG_FS_PROCFS) */
@@ -304,17 +295,6 @@ static int clk_procfs_dup(FAR const struct file *oldp,
 
   memcpy(newpriv, oldpriv, sizeof(struct procfs_file_s));
   newp->f_priv = newpriv;
-  return OK;
-}
-
-static int clk_procfs_stat(FAR const char *relpath, FAR struct stat *buf)
-{
-  /* File/directory size, access block size */
-
-  buf->st_mode    = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
-  buf->st_size    = 0;
-  buf->st_blksize = 0;
-  buf->st_blocks  = 0;
   return OK;
 }
 

@@ -66,7 +66,6 @@ static int     mempool_open(FAR struct file *filep, FAR const char *relpath,
 static int     mempool_close(FAR struct file *filep);
 static int     mempool_dup(FAR const struct file *oldp,
                            FAR struct file *newp);
-static int     mempool_stat(FAR const char *relpath, FAR struct stat *buf);
 static ssize_t mempool_read(FAR struct file *filep, FAR char *buffer,
                             size_t buflen);
 
@@ -82,11 +81,6 @@ const struct procfs_operations g_mempool_operations =
   NULL,           /* write */
   NULL,           /* poll */
   mempool_dup,    /* dup */
-  NULL,           /* opendir */
-  NULL,           /* closedir */
-  NULL,           /* readdir */
-  NULL,           /* rewinddir */
-  mempool_stat    /* stat */
 };
 
 static FAR struct mempool_procfs_entry_s *g_mempool_procfs = NULL;
@@ -200,20 +194,6 @@ static int mempool_dup(FAR const struct file *oldp, FAR struct file *newp)
 
   memcpy(newattr, oldattr, sizeof(struct mempool_file_s));
   newp->f_priv = newattr;
-  return 0;
-}
-
-/****************************************************************************
- * Name: mempool_stat
- *
- * Description: Return information about a file or directory
- *
- ****************************************************************************/
-
-static int mempool_stat(FAR const char *relpath, FAR struct stat *buf)
-{
-  memset(buf, 0, sizeof(struct stat));
-  buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
   return 0;
 }
 

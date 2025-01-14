@@ -91,7 +91,6 @@ static ssize_t modprocfs_read(FAR struct file *filep,
                               size_t buflen);
 static int     modprocfs_dup(FAR const struct file *oldp,
                              FAR struct file *newp);
-static int     modprocfs_stat(FAR const char *relpath, FAR struct stat *buf);
 
 /****************************************************************************
  * Public Data
@@ -110,13 +109,6 @@ const struct procfs_operations g_module_operations =
   NULL,                 /* write */
   NULL,                 /* poll */
   modprocfs_dup,        /* dup */
-
-  NULL,                 /* opendir */
-  NULL,                 /* closedir */
-  NULL,                 /* readdir */
-  NULL,                 /* rewinddir */
-
-  modprocfs_stat        /* stat */
 };
 
 /****************************************************************************
@@ -287,20 +279,6 @@ static int modprocfs_dup(FAR const struct file *oldp, FAR struct file *newp)
   /* Save the new attributes in the new file structure */
 
   newp->f_priv = newpriv;
-  return OK;
-}
-
-/****************************************************************************
- * Name: modprocfs_stat
- *
- * Description: Return information about a file or directory
- *
- ****************************************************************************/
-
-static int modprocfs_stat(FAR const char *relpath, FAR struct stat *buf)
-{
-  memset(buf, 0, sizeof(struct stat));
-  buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
   return OK;
 }
 
