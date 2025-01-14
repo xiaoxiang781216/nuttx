@@ -125,6 +125,10 @@ if(CONFIG_RPTUN)
   list(APPEND SRCS sim_rptun.c)
 endif()
 
+if(CONFIG_SCHED_BACKTRACE)
+  list(APPEND STDLIBS unwind)
+endif()
+
 if(CONFIG_SIM_SOUND_ALSA)
   list(APPEND SRCS posix/sim_alsa.c)
   list(APPEND SRCS sim_offload.c)
