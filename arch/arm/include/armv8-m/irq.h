@@ -287,7 +287,7 @@ struct xcptcontext
 
 /* Get/set the PRIMASK register */
 
-static always_inline_function uint8_t getprimask(void)
+static inline_function uint8_t getprimask(void)
 {
   uint32_t primask;
   __asm__ __volatile__
@@ -300,7 +300,7 @@ static always_inline_function uint8_t getprimask(void)
   return (uint8_t)primask;
 }
 
-static always_inline_function void setprimask(uint32_t primask)
+static inline_function void setprimask(uint32_t primask)
 {
   __asm__ __volatile__
     (
@@ -310,12 +310,12 @@ static always_inline_function void setprimask(uint32_t primask)
       : "memory");
 }
 
-static always_inline_function void cpsie(void)
+static inline_function void cpsie(void)
 {
   __asm__ __volatile__ ("\tcpsie  i\n");
 }
 
-static always_inline_function void cpsid(void)
+static inline_function void cpsid(void)
 {
   __asm__ __volatile__ ("\tcpsid  i\n");
 }
@@ -326,7 +326,7 @@ static always_inline_function void cpsid(void)
  * lower priority level as the BASEPRI value.
  */
 
-static always_inline_function uint8_t getbasepri(void)
+static inline_function uint8_t getbasepri(void)
 {
   uint32_t basepri;
 
@@ -340,7 +340,7 @@ static always_inline_function uint8_t getbasepri(void)
   return (uint8_t)basepri;
 }
 
-static always_inline_function void setbasepri(uint32_t basepri)
+static inline_function void setbasepri(uint32_t basepri)
 {
   __asm__ __volatile__
     (
@@ -354,7 +354,7 @@ static always_inline_function void setbasepri(uint32_t basepri)
 
 /* Disable IRQs */
 
-static always_inline_function void up_irq_disable(void)
+static inline_function void up_irq_disable(void)
 {
   /* Probably raising priority */
 
@@ -363,7 +363,7 @@ static always_inline_function void up_irq_disable(void)
 
 /* Save the current primask state & disable IRQs */
 
-static always_inline_function irqstate_t up_irq_save(void)
+static inline_function irqstate_t up_irq_save(void)
 {
   /* Probably raising priority */
 
@@ -374,7 +374,7 @@ static always_inline_function irqstate_t up_irq_save(void)
 
 /* Enable IRQs */
 
-static always_inline_function void up_irq_enable(void)
+static inline_function void up_irq_enable(void)
 {
   /* In this case, we are always retaining or lowering the priority value */
 
@@ -384,7 +384,7 @@ static always_inline_function void up_irq_enable(void)
 
 /* Restore saved primask state */
 
-static always_inline_function
+static inline_function
 void up_irq_restore(irqstate_t flags)
 {
   /* In this case, we are always retaining or lowering the priority value */
@@ -394,7 +394,7 @@ void up_irq_restore(irqstate_t flags)
 
 /* Get/set IPSR */
 
-static always_inline_function uint32_t getipsr(void)
+static inline_function uint32_t getipsr(void)
 {
   uint32_t ipsr;
   __asm__ __volatile__
@@ -409,7 +409,7 @@ static always_inline_function uint32_t getipsr(void)
 
 /* Get/set FAULTMASK */
 
-static always_inline_function uint32_t getfaultmask(void)
+static inline_function uint32_t getfaultmask(void)
 {
   uint32_t faultmask;
   __asm__ __volatile__
@@ -422,7 +422,7 @@ static always_inline_function uint32_t getfaultmask(void)
   return faultmask;
 }
 
-static always_inline_function void setfaultmask(uint32_t faultmask)
+static inline_function void setfaultmask(uint32_t faultmask)
 {
   __asm__ __volatile__
     (
@@ -434,7 +434,7 @@ static always_inline_function void setfaultmask(uint32_t faultmask)
 
 /* Get/set CONTROL */
 
-static always_inline_function uint32_t getcontrol(void)
+static inline_function uint32_t getcontrol(void)
 {
   uint32_t control;
   __asm__ __volatile__
@@ -447,7 +447,7 @@ static always_inline_function uint32_t getcontrol(void)
   return control;
 }
 
-static always_inline_function void setcontrol(uint32_t control)
+static inline_function void setcontrol(uint32_t control)
 {
   __asm__ __volatile__
     (
@@ -457,7 +457,7 @@ static always_inline_function void setcontrol(uint32_t control)
       : "memory");
 }
 
-static always_inline_function uint32_t getpsp(void)
+static inline_function uint32_t getpsp(void)
 {
   uint32_t psp;
 
@@ -483,7 +483,7 @@ static always_inline_function uint32_t getpsp(void)
 int up_cpu_index(void) noinstrument_function;
 #endif /* CONFIG_ARCH_HAVE_MULTICPU */
 
-static always_inline_function uint32_t up_getsp(void)
+static inline_function uint32_t up_getsp(void)
 {
   uint32_t sp;
 
@@ -496,13 +496,13 @@ static always_inline_function uint32_t up_getsp(void)
   return sp;
 }
 
-static always_inline_function uintptr_t up_getusrsp(void *regs)
+static inline_function uintptr_t up_getusrsp(void *regs)
 {
   uint32_t *ptr = (uint32_t *)regs;
   return ptr[REG_SP];
 }
 
-static always_inline_function bool up_interrupt_context(void)
+static inline_function bool up_interrupt_context(void)
 {
   if (OSINIT_IS_PANIC())
     {
