@@ -591,18 +591,37 @@ static int procfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
 static int procfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 {
-  FAR struct procfs_file_s *oldattr;
+  FAR struct procfs_file_s *handler;
+  int ret;
 
   finfo("Dup %p->%p\n", oldp, newp);
 
   /* Recover our private data from the old struct file instance */
 
-  oldattr = (FAR struct procfs_file_s *)oldp->f_priv;
-  DEBUGASSERT(oldattr);
+  handler = (FAR struct procfs_file_s *)oldp->f_priv;
+  DEBUGASSERT(handler);
 
-  /* Allow lower-level handler do the dup to get it's extra data */
+  if (handler->procfsentry->ops->open)
+    {
+      ret = handler->procfsentry->ops->open(newp,
+                  handler->procfsentry->pathpattern, oldp->f_oflags,
+                  handler->procfsentry->mode);
+      if (ret == OK)
+        {
+          FAR struct procfs_file_s *newhandler;
+          newhandler = (FAR struct procfs_file_s *)newp->f_priv;
 
-  return oldattr->procfsentry->ops->dup(oldp, newp);
+          DEBUGASSERT(newhandler);
+          newhandler->procfsentry = handler->procfsentry;
+          return ret;
+        }
+      else
+        {
+          return ret;
+        }
+    }
+
+  return -ENOSYS;
 }
 
 /****************************************************************************
