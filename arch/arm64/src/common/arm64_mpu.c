@@ -241,7 +241,7 @@ void arm64_mpu_disable(void)
 
   /* Force any outstanding transfers to complete before disabling MPU */
 
-  UP_DMP();
+  UP_DMB();
 
   val = read_sysreg(sctlr_el1);
   val &= ~(SCTLR_M_BIT | SCTLR_C_BIT);
