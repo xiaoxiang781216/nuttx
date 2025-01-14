@@ -528,7 +528,7 @@ config AUDIO_FAKE
 
 if AUDIO_FAKE
 
-config FAKE_AUDIO_DEVICE_PARAMS
+config AUDIO_FAKE_DEVICE_PARAMS
 	string "fake audio device params"
 	default ""
 	---help---
@@ -546,7 +546,7 @@ config FAKE_AUDIO_DEVICE_PARAMS
 			{"pcm2c", false, {8000, 16000, 44100}, {1, 2}, {16}, 100, 4},
 			{"pcm2p", true, {8000, 16000, 44100}, {1, 2}, {16}, 100, 4},
 
-config FAKE_AUDIO_DATA_PATH
+config AUDIO_FAKE_DATA_PATH
 	string "fake audio device data path"
 	default "/data/"
 	---help---
@@ -562,7 +562,11 @@ config AUDIO_FAKE_MSG_PRIO
 
 config AUDIO_FAKE_WORKER_STACKSIZE
 	int "Fake audio device worker thread stack size"
-	default 768
+	default DEFAULT_TASK_STACKSIZE
+
+config AUDIO_FAKE_WORKER_PRIORITY
+	int "Fake audio device worker thread priority"
+	default 252
 
 endif # AUDIO_FAKE
 

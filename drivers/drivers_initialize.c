@@ -58,6 +58,7 @@
 #include <nuttx/vhost/vhost.h>
 #include <nuttx/virtio/virtio.h>
 #include <nuttx/drivers/optee.h>
+#include <nuttx/audio/audio_fake.h>
 
 #ifdef CONFIG_DRIVERS_BINDER
 #  include <nuttx/android/binder.h>
@@ -309,6 +310,12 @@ void drivers_initialize(void)
 
 #ifdef CONFIG_THERMAL
   thermal_init();
+#endif
+
+#ifdef CONFIG_AUDIO_FAKE
+  /* Register fake audio driver */
+
+  audio_fake_initialize();
 #endif
 
   drivers_trace_end();

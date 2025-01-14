@@ -52,6 +52,8 @@ endif()
 
 set(DEQUOTELIST
     # NuttX
+    "CONFIG_AUDIO_FAKE_DEVICE_PARAMS" # Arguments for the fake audio device
+    "CONFIG_BOARD_MEMORY_RANGE" # Memory range for board
     "CONFIG_DEBUG_OPTLEVEL" # Custom debug level
     "CONFIG_EXECFUNCS_NSYMBOLS_VAR" # Variable holding number of symbols in the
                                     # table
@@ -68,8 +70,6 @@ set(DEQUOTELIST
     "CONFIG_PASS1_OBJECT" # Pass1 build object
     "CONFIG_TTY_LAUNCH_ENTRYPOINT" # Name of entry point from tty launch
     "CONFIG_TTY_LAUNCH_ARGS" # Argument list of entry point from tty launch
-    "CONFIG_BOARD_MEMORY_RANGE" # Memory range for board
-    "CONFIG_FAKE_AUDIO_DEVICE_PARAMS" # Arguments for the fake audio device
     # NxWidgets/NxWM
     "CONFIG_NXWM_BACKGROUND_IMAGE" # Name of bitmap image class
     "CONFIG_NXWM_CALIBRATION_ICON" # Name of bitmap image class
