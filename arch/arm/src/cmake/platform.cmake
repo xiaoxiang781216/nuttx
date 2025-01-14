@@ -76,7 +76,7 @@ separate_arguments(CMAKE_C_FLAG_ARGS NATIVE_COMMAND ${CMAKE_C_FLAGS})
 
 nuttx_find_toolchain_lib()
 
-if(NOT CONFIG_LIBM)
+if(CONFIG_LIBM_TOOLCHAIN)
   nuttx_find_toolchain_lib(libm.a)
 endif()
 
@@ -86,4 +86,8 @@ endif()
 
 if(CONFIG_COVERAGE_TOOLCHAIN)
   nuttx_find_toolchain_lib(libgcov.a)
+endif()
+
+if(CONFIG_LIBCXXTOOLCHAIN)
+  nuttx_find_toolchain_lib(libstdc++.a)
 endif()
