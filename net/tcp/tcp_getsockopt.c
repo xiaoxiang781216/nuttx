@@ -135,6 +135,23 @@ int tcp_getsockopt(FAR struct socket *psock, int option,
           }
         break;
 
+      case TCP_CORK:     /* coalescing of small segments. */
+        if (*value_len < sizeof(int))
+          {
+            ret                = -EINVAL;
+          }
+        else
+          {
+            FAR int *nodelay   = (FAR int *)value;
+
+            /* Always true here since we do not support Nagle. */
+
+            *nodelay           = option == TCP_NODELAY ? 1 : 0;
+            *value_len         = sizeof(int);
+            ret                = OK;
+          }
+        break;
+
       case TCP_KEEPIDLE:  /* Start keepalives after this IDLE period */
       case TCP_KEEPINTVL: /* Interval between keepalives */
         {

@@ -132,6 +132,25 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
           }
         break;
 
+      case TCP_CORK:    /* coalescing of small segments. */
+        if (value_len != sizeof(int))
+          {
+            ret = -EDOM;
+          }
+        else
+          {
+            int nodelay = *(FAR int *)value;
+
+            if ((!nodelay && option == TCP_NODELAY) ||
+                (nodelay && option == TCP_CORK))
+              {
+                nerr("ERROR: %s not supported\n",
+                     option == TCP_NODELAY ? "TCP_NODELAY" : "TCP_CORK");
+                ret = -ENOSYS;
+              }
+          }
+        break;
+
       case TCP_KEEPIDLE:  /* Start keepalives after this IDLE period */
       case TCP_KEEPINTVL: /* Interval between keepalives */
         {
