@@ -97,6 +97,10 @@ struct ctucanfd_can_s
 {
 #ifdef CONFIG_CAN_CTUCANFD_CHARDEV
   struct can_dev_s   dev;
+
+#ifdef CONFIG_CAN_TXCONFIRM
+  uint32_t           tx_idbuf[CTUCANFD_TXBUF_CNT];
+#endif
 #endif
 
 #ifdef CONFIG_CAN_CTUCANFD_SOCKET
@@ -181,6 +185,11 @@ static int  ctucanfd_chrdev_send(FAR struct can_dev_s *dev,
                                  FAR struct can_msg_s *msg);
 static bool ctucanfd_chrdev_txready(FAR struct can_dev_s *dev);
 static bool ctucanfd_chrdev_txempty(FAR struct can_dev_s *dev);
+
+#ifdef CONFIG_CAN_TXCONFIRM
+static int  ctucanfd_chrdev_txconfirm(FAR struct can_dev_s *dev, int idx);
+#endif
+
 static void ctucanfd_chardev_receive(FAR struct ctucanfd_can_s *priv);
 static void ctucanfd_chardev_interrupt(FAR struct ctucanfd_driver_s *priv);
 #endif
@@ -671,12 +680,24 @@ static int ctucanfd_chrdev_send(FAR struct can_dev_s *dev,
     {
       fmt.s.ide   = 1;
       id.s.id_ext = msg->cm_hdr.ch_id;
+
+      /* Set txbuf record used for txconfirm */
+
+#  ifdef CONFIG_CAN_TXCONFIRM
+      priv->tx_idbuf[txidx] = CAN_EFF_FLAG | msg->cm_hdr.ch_id;
+#  endif
     }
   else
 #endif
     {
       fmt.s.ide = 0;
       id.s.id   = msg->cm_hdr.ch_id;
+
+      /* Set txbuf record used for txconfirm */
+
+#ifdef CONFIG_CAN_TXCONFIRM
+      priv->tx_idbuf[txidx] = msg->cm_hdr.ch_id;
+#endif
     }
 
   /* Write frame */
@@ -760,6 +781,54 @@ static bool ctucanfd_chrdev_txempty(FAR struct can_dev_s *dev)
 
   return ret;
 }
+
+#ifdef CONFIG_CAN_TXCONFIRM
+/*****************************************************************************
+ * Name: ctucanfd_chrdev_txconfirm
+ *
+ * Description:
+ *   Get the can id when tx interrupt occured.
+ *
+ * Input Parameters:
+ *   dev  - Reference to the can device structure.
+ *   idx - msg buf index.
+ *
+ * Returned Value:
+ *   OK(0) on success; Negated errno on failure.
+ *
+ *****************************************************************************/
+
+static int ctucanfd_chrdev_txconfirm(struct can_dev_s *dev, int idx)
+{
+  FAR struct ctucanfd_can_s *priv = (FAR struct ctucanfd_can_s *)dev;
+  struct can_hdr_s hdr =
+  {
+    0
+  };
+
+  hdr.ch_dlc = 0;
+  hdr.ch_tcf = 1;
+
+#ifdef CONFIG_CAN_EXTID
+  if (priv->tx_idbuf[idx] & CAN_EFF_FLAG)
+    {
+      hdr.ch_id = priv->tx_idbuf[idx] & ~CAN_EFF_FLAG;
+      hdr.ch_extid = true;
+    }
+  else
+    {
+      hdr.ch_id = priv->tx_idbuf[idx];
+      hdr.ch_extid = false;
+    }
+#else
+  hdr.ch_id = priv->tx_idbuf[idx];
+#endif
+
+  priv->tx_idbuf[idx] = 0;
+
+  return can_receive(dev, &hdr, NULL);
+}
+#endif
 
 /*****************************************************************************
  * Name: ctucanfd_chardev_receive
@@ -972,6 +1041,9 @@ static void ctucanfd_chardev_interrupt(FAR struct ctucanfd_driver_s *priv)
               if (CTUCANFD_TXSTAT_GET(regval, txidx) ==
                   CTUCANFD_TXSTAT_TOK)
                 {
+#ifdef CONFIG_CAN_TXCONFIRM
+                  ctucanfd_chrdev_txconfirm(&priv->devs[i].dev, txidx);
+#endif
                   can_txdone(&priv->devs[i].dev);
 
                   /* Mark buffer as empty */
