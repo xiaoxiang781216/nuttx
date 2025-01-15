@@ -143,6 +143,8 @@ static void cpuload_callback(wdparm_t arg)
 
 void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
 {
+  irqstate_t flags = enter_critical_section();
+
   tcb->ticks += ticks;
   g_cpuload_total += ticks;
 
@@ -168,6 +170,8 @@ void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
 
       g_cpuload_total = total;
     }
+
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
