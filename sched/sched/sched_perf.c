@@ -2418,7 +2418,7 @@ static int perf_cpuclock_event_add(FAR struct perf_event_s *event,
 static void perf_cpuclock_event_del(FAR struct perf_event_s *event,
                                     int flags)
 {
-  wd_cancel_irq(&event->hw.waitdog);
+  wd_cancel(&event->hw.waitdog);
 }
 
 /****************************************************************************
@@ -2467,7 +2467,7 @@ static int perf_cpuclock_event_start(FAR struct perf_event_s *event,
 static int perf_cpuclock_event_stop(FAR struct perf_event_s *event,
                                     int flags)
 {
-  wd_cancel_irq(&event->hw.waitdog);
+  wd_cancel(&event->hw.waitdog);
   return 0;
 }
 
