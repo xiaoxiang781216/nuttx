@@ -363,6 +363,21 @@ static int can_close(FAR struct file *filep)
       if (((FAR struct can_reader_s *)node) ==
           ((FAR struct can_reader_s *)filep->f_priv))
         {
+          FAR struct can_reader_s *reader = (FAR struct can_reader_s *)node;
+          FAR struct can_rxfifo_s *fifo   = &reader->fifo;
+
+          /* Unlock the binary semaphore, waking up can_read if it
+           * is blocked.
+           */
+
+          nxsem_post(&fifo->rx_sem);
+
+          /* Notify specfic poll/select waiter that they can read from the
+           * cd_recv buffer
+           */
+
+          poll_notify(&reader->cd_fds, 1, POLLHUP);
+          reader->cd_fds = NULL;
           list_delete(node);
           kmm_free(node);
           break;
@@ -1047,7 +1062,6 @@ static int can_poll(FAR struct file *filep, FAR struct pollfd *fds,
   pollevent_t              eventset = 0;
   int                      ret      = OK;
   irqstate_t               flags;
-  int                      i;
 
   /* Some sanity checking */
 
@@ -1075,26 +1089,19 @@ static int can_poll(FAR struct file *filep, FAR struct pollfd *fds,
        * slot for the poll structure reference.
        */
 
-      for (i = 0; i < CONFIG_CAN_NPOLLWAITERS; i++)
-        {
-          /* Find an available slot */
-
-          if (dev->cd_fds[i] == NULL)
-            {
-              /* Bind the poll structure and this slot */
-
-              dev->cd_fds[i] = fds;
-              fds->priv       = &dev->cd_fds[i];
-              break;
-            }
-        }
-
-      if (i >= CONFIG_CAN_NPOLLWAITERS)
+      if (reader->cd_fds != NULL)
         {
           fds->priv = NULL;
           ret       = -EBUSY;
           goto return_with_irqdisabled;
         }
+
+      /* Have found an available slot,
+       * bind the poll structure and this slot
+       */
+
+      reader->cd_fds = fds;
+      fds->priv      = &reader->cd_fds;
 
       /* Should we immediately notify on any of the requested events?
        * First, check if the sender is full.
@@ -1341,6 +1348,11 @@ int can_receive(FAR struct can_dev_s *dev, FAR struct can_hdr_s *hdr,
               nxsem_post(&fifo->rx_sem);
             }
 
+          /* Notify specfic poll/select waiter that they can read from the
+           * cd_recv buffer
+           */
+
+          poll_notify(&reader->cd_fds, 1, POLLIN);
           ret = OK;
         }
 #ifdef CONFIG_CAN_ERRORS
@@ -1351,15 +1363,6 @@ int can_receive(FAR struct can_dev_s *dev, FAR struct can_hdr_s *hdr,
           fifo->rx_error |= CAN_ERROR5_RXOVERFLOW;
         }
 #endif
-    }
-
-  /* Notify all poll/select waiters that they can read from the
-   * cd_recv buffer
-   */
-
-  if (ret == OK)
-    {
-      poll_notify(dev->cd_fds, CONFIG_CAN_NPOLLWAITERS, POLLIN);
     }
 
   leave_critical_section(flags);
@@ -1438,6 +1441,7 @@ int can_receive(FAR struct can_dev_s *dev, FAR struct can_hdr_s *hdr,
 
 int can_txdone(FAR struct can_dev_s *dev)
 {
+  FAR struct list_node *node;
   int ret = -ENOENT;
   irqstate_t flags;
 
@@ -1471,7 +1475,11 @@ int can_txdone(FAR struct can_dev_s *dev)
        * buffer
        */
 
-      poll_notify(dev->cd_fds, CONFIG_CAN_NPOLLWAITERS, POLLOUT);
+      list_for_every(&dev->cd_readers, node)
+        {
+          FAR struct can_reader_s *reader = (FAR struct can_reader_s *)node;
+          poll_notify(&reader->cd_fds, 1, POLLOUT);
+        }
 
       /* Are there any threads waiting for space in the sender? */
 

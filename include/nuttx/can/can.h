@@ -813,6 +813,7 @@ struct can_reader_s
 {
   struct list_node     list;
   struct can_rxfifo_s  fifo;             /* Describes receive FIFO */
+  FAR struct pollfd   *cd_fds;
 };
 
 struct can_transv_s
@@ -838,9 +839,8 @@ struct can_dev_s
                                          /* List of pending RTR requests */
   struct can_rtrwait_s cd_rtr[CONFIG_CAN_NPENDINGRTR];
   FAR const struct can_ops_s *cd_ops;    /* Arch-specific operations */
-  FAR void            *cd_priv;          /* Used by the arch-specific logic */
-  FAR struct can_transv_s *cd_transv;    /* Describes CAN transceiver */
-  FAR struct pollfd   *cd_fds[CONFIG_CAN_NPOLLWAITERS];
+  FAR void                   *cd_priv;   /* Used by the arch-specific logic */
+  FAR struct can_transv_s    *cd_transv; /* Describes CAN transceiver */
 };
 
 /* Structures used with ioctl calls */
