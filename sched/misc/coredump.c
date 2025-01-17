@@ -60,6 +60,8 @@
 #  define XCPTCONTEXT_ALIGN 16
 #endif
 
+#define PID0_REPLACE  INT32_MAX
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -319,7 +321,16 @@ static void elf_emit_tcb_note(FAR struct elf_dumpinfo_s *cinfo,
   elf_emit(cinfo, &nhdr, sizeof(nhdr));
   elf_emit(cinfo, name, sizeof(name));
 
-  status.pr_pid = tcb->pid;
+  /* PID 0 means special to GDB, in both GDB stub and core file, replace 0
+   * with a special value.
+   * For core file, if process ID is zero, GDB assign a not used id to it.
+   * For GDB stub, 0 is used to indicate ANY thread, thus also not available.
+   *
+   * Unify the value to PID0_REPLACE to make python script post analysis
+   * easier.
+   */
+
+  status.pr_pid = tcb->pid == 0 ? PID0_REPLACE : tcb->pid;
 
   if (running_task() == tcb)
     {
