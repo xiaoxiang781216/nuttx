@@ -166,7 +166,6 @@ static int ptmx_minor_allocate(void)
 
 static int ptmx_open(FAR struct file *filep)
 {
-  struct file temp;
   char devname[32];
   int minor;
   int ret;
@@ -203,17 +202,16 @@ static int ptmx_open(FAR struct file *filep)
       return ret;
     }
 
+  /* Close the multiplexor device: /dev/ptmx */
+
+  ret = file_close(filep);
+  DEBUGASSERT(ret >= 0);  /* file_close() should never fail */
+
   /* Open the master device:  /dev/ptyN, where N=minor */
 
   snprintf(devname, sizeof(devname), "/dev/pty%d", minor);
-  memcpy(&temp, filep, sizeof(temp));
   ret = file_open(filep, devname, O_RDWR | O_CLOEXEC);
   DEBUGASSERT(ret >= 0);  /* file_open() should never fail */
-
-  /* Close the multiplexor device: /dev/ptmx */
-
-  ret = file_close(&temp);
-  DEBUGASSERT(ret >= 0);  /* file_close() should never fail */
 
   /* Now unlink the master.  This will remove it from the VFS namespace,
    * the driver will still persist because of the open count on the
