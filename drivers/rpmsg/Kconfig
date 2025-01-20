@@ -210,6 +210,9 @@ config RPMSG_VIRTIO_LITE_PM_AUTORELAX
 	---help---
 		use wd_timer to auto relax pm
 
+config RPMSG_VIRTIO_BMP
+	bool "rpmsg virtio lite bmp (Bound Multi-Processing) support"
+	default n
 
 if RPMSG_VIRTIO_IVSHMEM
 

@@ -57,6 +57,10 @@ if(CONFIG_RPMSG)
     list(APPEND SRCS rpmsg_virtio_lite.c)
   endif()
 
+  if(CONFIG_RPMSG_VIRTIO_BMP)
+    list(APPEND SRCS rpmsg_virtio_bmp.c)
+  endif()
+
   if(CONFIG_RPMSG_VIRTIO_IVSHMEM)
     list(APPEND SRCS rpmsg_virtio_ivshmem.c)
   endif()
