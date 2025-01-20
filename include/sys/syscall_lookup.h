@@ -109,6 +109,10 @@ SYSCALL_LOOKUP(nxsem_wait,                 1)
   SYSCALL_LOOKUP(pgalloc,                  2)
 #endif
 
+#ifdef CONFIG_ARCH_HAVE_SYSCALL
+  SYSCALL_LOOKUP(up_assert,                3)
+#endif
+
 /* The following can be individually enabled */
 
 #ifdef CONFIG_ARCH_HAVE_FORK
