@@ -2894,7 +2894,7 @@ void perf_event_task_exit(FAR struct tcb_s *tcb)
         {
           perf_context_detach(event, ctx);
 
-          if (event->buf->ref_count > 1)
+          if (event->buf && event->buf->ref_count > 1)
             {
               perf_free_event(event);
             }
