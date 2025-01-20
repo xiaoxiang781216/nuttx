@@ -797,9 +797,8 @@ static int
 goldfish_register_sensor(FAR struct goldfish_lowerhalf_s *lower,
                          FAR const struct sensor_device_info_s *info,
                          int type, int devno, uint32_t batch_number,
-                         bool uncalibrated, intptr_t offset)
+                         intptr_t offset)
 {
-  lower->lower.uncalibrated = uncalibrated;
   lower->lower.type = type;
   lower->lower.ops = &g_goldfish_sensor_ops;
   lower->lower.nbuffer = batch_number;
@@ -908,102 +907,102 @@ int goldfish_sensor_init(int devno, uint32_t batch_number)
             &sensor->lower_accel,
             &g_goldfish_sensor_accel,
             SENSOR_TYPE_ACCELEROMETER,
-            devno, batch_number, false,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_accel)) |
          goldfish_register_sensor(
             &sensor->lower_gyro,
             &g_goldfish_sensor_gyro,
             SENSOR_TYPE_GYROSCOPE,
-            devno, batch_number, false,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_gyro)) |
          goldfish_register_sensor(
             &sensor->lower_mag,
             &g_goldfish_sensor_mag,
             SENSOR_TYPE_MAGNETIC_FIELD,
-            devno, batch_number, false,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_mag)) |
           goldfish_register_sensor(
             &sensor->lower_orient,
             &g_goldfish_sensor_orient,
             SENSOR_TYPE_ORIENTATION,
-            devno, batch_number, false,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_orient)) |
           goldfish_register_sensor(
             &sensor->lower_temp,
             &g_goldfish_sensor_temp,
             SENSOR_TYPE_AMBIENT_TEMPERATURE,
-            devno, batch_number, false,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_temp)) |
           goldfish_register_sensor(
             &sensor->lower_prox,
             &g_goldfish_sensor_prox,
             SENSOR_TYPE_PROXIMITY,
-            devno, batch_number, false,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_prox)) |
           goldfish_register_sensor(
             &sensor->lower_light,
             &g_goldfish_sensor_light,
             SENSOR_TYPE_LIGHT,
-            devno, batch_number, false,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_light)) |
           goldfish_register_sensor(
             &sensor->lower_baro,
             &g_goldfish_sensor_baro,
             SENSOR_TYPE_BAROMETER,
-            devno, batch_number, false,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_baro)) |
           goldfish_register_sensor(
             &sensor->lower_humi,
             &g_goldfish_sensor_humi,
             SENSOR_TYPE_RELATIVE_HUMIDITY,
-            devno, batch_number, false,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_humi)) |
           goldfish_register_sensor(
             &sensor->lower_mag_uncalibrated,
             &g_goldfish_sensor_mag_uncal,
-            SENSOR_TYPE_MAGNETIC_FIELD,
-            devno, batch_number, true,
+            SENSOR_TYPE_MAGNETIC_FIELD_UNCALIBRATED,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_mag_uncalibrated)) |
           goldfish_register_sensor(
             &sensor->lower_gyro_uncalibrated,
             &g_goldfish_sensor_gyro_uncal,
-            SENSOR_TYPE_GYROSCOPE,
-            devno, batch_number, true,
+            SENSOR_TYPE_GYROSCOPE_UNCALIBRATED,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_gyro_uncalibrated)) |
           goldfish_register_sensor(
             &sensor->lower_hinge_angle0,
             &g_goldfish_sensor_hinge_angle0,
             SENSOR_TYPE_HINGE_ANGLE,
-            devno, batch_number, false,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_hinge_angle0)) |
           goldfish_register_sensor(
             &sensor->lower_hinge_angle1,
             &g_goldfish_sensor_hinge_angle1,
             SENSOR_TYPE_HINGE_ANGLE,
-            devno + 1, batch_number, false,
+            devno + 1, batch_number,
             offsetof(struct goldfish_sensor_s, lower_hinge_angle1)) |
           goldfish_register_sensor(
             &sensor->lower_hinge_angle2,
             &g_goldfish_sensor_hinge_angle2,
             SENSOR_TYPE_HINGE_ANGLE,
-            devno + 2, batch_number, false,
+            devno + 2, batch_number,
             offsetof(struct goldfish_sensor_s, lower_hinge_angle2)) |
           goldfish_register_sensor(
             &sensor->lower_hrate,
             &g_goldfish_sensor_hrate,
             SENSOR_TYPE_HEART_RATE,
-            devno, batch_number, false,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_hrate)) |
           goldfish_register_sensor(
             &sensor->lower_wrist_tilt,
             &g_goldfish_sensor_wrist_tilt,
             SENSOR_TYPE_WRIST_TILT_GESTURE,
-            devno, batch_number, false,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_wrist_tilt)) |
           goldfish_register_sensor(
             &sensor->lower_accel_uncalibrated,
             &g_goldfish_sensor_accel_uncal,
-            SENSOR_TYPE_ACCELEROMETER,
-            devno, batch_number, true,
+            SENSOR_TYPE_ACCELEROMETER_UNCALIBRATED,
+            devno, batch_number,
             offsetof(struct goldfish_sensor_s, lower_accel_uncalibrated));
 }
