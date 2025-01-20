@@ -52,7 +52,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define SIM_USBHOST_BUFSIZE     256
+/* Use 2KB buffer for BTHCI to fit full HCI packets(ACL/ISO) */
+#define SIM_USBHOST_BUFSIZE     2048
 #define SIM_USBHOST_PERIOD      MSEC2TICK(CONFIG_SIM_LOOP_INTERVAL)
 
 #define RHPNDX(rh)              ((rh)->hport.hport.port)
@@ -807,6 +808,14 @@ int sim_usbhost_initialize(void)
 
 #ifdef CONFIG_USBHOST_CDCACM
   ret = usbhost_cdcacm_initialize();
+#endif
+
+#ifdef CONFIG_USBHOST_BTHCI
+  ret = usbhost_bthci_initialize();
+  if (ret != OK)
+    {
+      uerr("ERROR: Failed to register the bt controller: %d\n", ret);
+    }
 #endif
 
 #ifdef CONFIG_USBHOST_HIDKBD
