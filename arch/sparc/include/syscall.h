@@ -50,9 +50,9 @@
  */
 
 #ifndef CONFIG_BUILD_FLAT
-#  define CONFIG_SYS_RESERVED 4
+#  define CONFIG_SYS_RESERVED 5
 #else
-#  define CONFIG_SYS_RESERVED 3
+#  define CONFIG_SYS_RESERVED 4
 #endif
 
 /* sys_call macros **********************************************************/
@@ -86,23 +86,22 @@
 #define sparc_switchcontext(saveregs, restoreregs) \
   sys_call2(SYS_switch_context, (uintptr_t)saveregs, (uintptr_t)restoreregs)
 
-#ifdef CONFIG_BUILD_KERNEL
 /* SYS call 3:
- *
- * void sparc_syscall_return(void);
- */
-
-#define SYS_syscall_return (3)
-#define sparc_syscall_return() sys_call0(SYS_syscall_return)
-
-#endif
-
-/* SYS call 4:
  *
  * void _assert(const char *filename, int linenum, const char *msg);
  */
 
-#define SYS_assert_handler (4)
+#define SYS_assert_handler (3)
+#ifdef CONFIG_BUILD_KERNEL
+/* SYS call 4:
+ *
+ * void sparc_syscall_return(void);
+ */
+
+#define SYS_syscall_return (4)
+#define sparc_syscall_return() sys_call0(SYS_syscall_return)
+
+#endif
 #endif /* __ASSEMBLY__ */
 
 /****************************************************************************
