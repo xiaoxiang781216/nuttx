@@ -466,7 +466,7 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
   if (ctx->mode == NOTE_MODE_READ_BINARY)
     {
       size_t nread = 0;
-      flags = spin_lock_irqsave_wo_note(&drv->lock);
+      flags = raw_spin_lock_irqsave(&drv->lock);
       while (nread < buflen)
         {
           ret = noteram_get(drv, (FAR uint8_t *)buffer + nread,
@@ -479,7 +479,7 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
           nread += ret;
         }
 
-      spin_unlock_irqrestore_wo_note(&drv->lock, flags);
+      raw_spin_unlock_irqrestore(&drv->lock, flags);
       return nread;
     }
   else
@@ -492,9 +492,9 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
 
           /* Get the next note (removing it from the buffer) */
 
-          flags = spin_lock_irqsave_wo_note(&drv->lock);
+          flags = raw_spin_lock_irqsave(&drv->lock);
           ret = noteram_get(drv, note, sizeof(note));
-          spin_unlock_irqrestore_wo_note(&drv->lock, flags);
+          raw_spin_unlock_irqrestore(&drv->lock, flags);
           if (ret <= 0)
             {
               return ret;
@@ -519,7 +519,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
   int ret = -ENOSYS;
   FAR struct noteram_driver_s *drv = filep->f_inode->i_private;
-  irqstate_t flags = spin_lock_irqsave_wo_note(&drv->lock);
+  irqstate_t flags = raw_spin_lock_irqsave(&drv->lock);
 
   /* Handle the ioctl commands */
 
@@ -616,7 +616,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           break;
     }
 
-  spin_unlock_irqrestore_wo_note(&drv->lock, flags);
+  raw_spin_unlock_irqrestore(&drv->lock, flags);
   return ret;
 }
 
@@ -638,7 +638,7 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
   DEBUGASSERT(inode != NULL && inode->i_private != NULL);
   drv = inode->i_private;
 
-  flags = spin_lock_irqsave_wo_note(&drv->lock);
+  flags = raw_spin_lock_irqsave(&drv->lock);
 
   /* Ignore waits that do not include POLLIN */
 
@@ -671,7 +671,7 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       if (noteram_unread_length(drv) > 0)
         {
-          spin_unlock_irqrestore_wo_note(&drv->lock, flags);
+          raw_spin_unlock_irqrestore(&drv->lock, flags);
           poll_notify(&drv->pfd, 1, POLLIN);
           return ret;
         }
@@ -682,7 +682,7 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
     }
 
 errout:
-  spin_unlock_irqrestore_wo_note(&drv->lock, flags);
+  raw_spin_unlock_irqrestore(&drv->lock, flags);
   return ret;
 }
 
@@ -714,11 +714,11 @@ static void noteram_add(FAR struct note_driver_s *driver,
   unsigned int space;
   irqstate_t flags;
 
-  flags = spin_lock_irqsave_wo_note(&drv->lock);
+  flags = raw_spin_lock_irqsave(&drv->lock);
 
   if (drv->ni_overwrite == NOTE_MODE_OVERWRITE_OVERFLOW)
     {
-      spin_unlock_irqrestore_wo_note(&drv->lock, flags);
+      raw_spin_unlock_irqrestore(&drv->lock, flags);
       return;
     }
 
@@ -732,7 +732,7 @@ static void noteram_add(FAR struct note_driver_s *driver,
           /* Stop recording if not in overwrite mode */
 
           drv->ni_overwrite = NOTE_MODE_OVERWRITE_OVERFLOW;
-          spin_unlock_irqrestore_wo_note(&drv->lock, flags);
+          raw_spin_unlock_irqrestore(&drv->lock, flags);
           return;
         }
 
@@ -753,7 +753,7 @@ static void noteram_add(FAR struct note_driver_s *driver,
   memcpy(drv->ni_buffer + head, note, space);
   memcpy(drv->ni_buffer, buf + space, notelen - space);
   drv->ni_head = noteram_next(drv, head, NOTE_ALIGN(notelen));
-  spin_unlock_irqrestore_wo_note(&drv->lock, flags);
+  raw_spin_unlock_irqrestore(&drv->lock, flags);
   poll_notify(&drv->pfd, 1, POLLIN);
 }
 

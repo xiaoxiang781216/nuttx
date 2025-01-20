@@ -1847,7 +1847,7 @@ void sched_note_filter_mode(FAR struct note_filter_named_mode_s *oldm,
   irqstate_t irq_mask;
   FAR struct note_driver_s **driver;
 
-  irq_mask = spin_lock_irqsave_wo_note(&g_note_lock);
+  irq_mask = raw_spin_lock_irqsave(&g_note_lock);
 
   if (oldm != NULL)
     {
@@ -1883,7 +1883,7 @@ void sched_note_filter_mode(FAR struct note_filter_named_mode_s *oldm,
         }
     }
 
-  spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
+  raw_spin_unlock_irqrestore(&g_note_lock, irq_mask);
 }
 
 /****************************************************************************
@@ -1913,7 +1913,7 @@ void sched_note_filter_syscall(FAR struct note_filter_named_syscall_s *oldf,
   irqstate_t irq_mask;
   FAR struct note_driver_s **driver;
 
-  irq_mask = spin_lock_irqsave_wo_note(&g_note_lock);
+  irq_mask = raw_spin_lock_irqsave(&g_note_lock);
 
   if (oldf != NULL)
     {
@@ -1949,7 +1949,7 @@ void sched_note_filter_syscall(FAR struct note_filter_named_syscall_s *oldf,
         }
     }
 
-  spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
+  raw_spin_unlock_irqrestore(&g_note_lock, irq_mask);
 }
 #endif
 
@@ -1980,7 +1980,7 @@ void sched_note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
   irqstate_t irq_mask;
   FAR struct note_driver_s **driver;
 
-  irq_mask = spin_lock_irqsave_wo_note(&g_note_lock);
+  irq_mask = raw_spin_lock_irqsave(&g_note_lock);
 
   if (oldf != NULL)
     {
@@ -2016,7 +2016,7 @@ void sched_note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
         }
     }
 
-  spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
+  raw_spin_unlock_irqrestore(&g_note_lock, irq_mask);
 }
 #endif
 
@@ -2047,7 +2047,7 @@ void sched_note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
   FAR struct note_driver_s **driver;
   irqstate_t irq_mask;
 
-  irq_mask = spin_lock_irqsave_wo_note(&g_note_lock);
+  irq_mask = raw_spin_lock_irqsave(&g_note_lock);
 
   if (oldf != NULL)
     {
@@ -2083,7 +2083,7 @@ void sched_note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
         }
     }
 
-  spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
+  raw_spin_unlock_irqrestore(&g_note_lock, irq_mask);
 }
 #endif
 
