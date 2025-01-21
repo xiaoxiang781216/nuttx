@@ -49,7 +49,18 @@ struct pm_idle_s
   spinlock_t lock;
   cpu_set_t running;
   cpu_set_t firstdone;
+#if CONFIG_PM_SMP_LAST_CPU_INDEX >= 0
+  struct smp_call_data_s smp_call_data;
+#endif
 };
+
+/****************************************************************************
+ * Private Function Prototypes
+ ****************************************************************************/
+
+#if CONFIG_PM_SMP_LAST_CPU_INDEX >= 0
+static int pm_idle_smp_call_cb(FAR void *arg);
+#endif
 
 /****************************************************************************
  * Private Data
@@ -60,7 +71,21 @@ static struct pm_idle_s g_pm_idle =
   SP_UNLOCKED,
   PM_SMP_ALL_CPUS,
   0,
+#if CONFIG_PM_SMP_LAST_CPU_INDEX >= 0
+  SMP_CALL_INITIALIZER(pm_idle_smp_call_cb, NULL),
+#endif
 };
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+#if CONFIG_PM_SMP_LAST_CPU_INDEX >= 0
+static int pm_idle_smp_call_cb(FAR void *arg)
+{
+  return 0;
+}
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -180,6 +205,16 @@ void pm_idle(pm_idle_handler_t handler)
   spin_lock(&g_pm_idle.lock);
   CPU_CLR(cpu, &g_pm_idle.running);
   last = (g_pm_idle.running == 0);
+
+#if CONFIG_PM_SMP_LAST_CPU_INDEX >= 0
+  if (last && cpu != CONFIG_PM_SMP_LAST_CPU_INDEX)
+    {
+      nxsched_smp_call_single_async(CONFIG_PM_SMP_LAST_CPU_INDEX,
+                                    &g_pm_idle.smp_call_data);
+      last = false;
+    }
+#endif
+
   if (last)
     {
       systemstate = pm_checkstate(PM_IDLE_DOMAIN);

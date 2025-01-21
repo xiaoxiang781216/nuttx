@@ -49,6 +49,17 @@ config PM_RUNTIME
 		needed again, the driver can call the framework to wake up
 		the device.
 
+config PM_SMP_LAST_CPU_INDEX
+	int "Last low power cpu index"
+	depends on SMP
+	range -1 SMP_NCPUS
+	default -1
+	---help---
+		Enable the last core for SMP, if >= 0, the specified core will
+		be the last core to sleep when all cores are going to sleep.
+		This is to allow the last core to handle global critical tasks,
+		such as power-off.
+
 config PM_GOVERNOR_GREEDY
 	bool "Greedy governor"
 	---help---
