@@ -282,6 +282,7 @@ ifeq ($(CONFIG_RPTUN),y)
 endif
 
 ifeq ($(CONFIG_SIM_SOUND_ALSA),y)
+  HOSTSRCS += sim_hostalsa.c
   CSRCS += sim_alsa.c
   CSRCS += sim_offload.c
   STDLIBS += -lasound
