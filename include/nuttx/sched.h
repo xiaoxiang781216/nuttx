@@ -857,6 +857,13 @@ struct smp_call_data_s
   FAR struct smp_call_cookie_s *cookie;
   sq_entry_t                    node[CONFIG_SMP_NCPUS];
 };
+
+struct smp_call_delay_data_s
+{
+  struct smp_call_data_s call;
+  struct wdog_s          delay;
+  cpu_set_t              cpuset;
+};
 #endif
 
 #endif /* __ASSEMBLY__ */
@@ -1707,6 +1714,31 @@ void nxsched_smp_call_init(FAR struct smp_call_data_s *data,
                            nxsched_smp_call_t func, FAR void *arg);
 
 /****************************************************************************
+ * Name: nxsched_smp_call_delay_init
+ *
+ * Description:
+ *   Init call_data
+ *
+ * Input Parameters:
+ *   data  - Call data
+ *   func  - Function
+ *   arg   - Function args
+ *
+ * Returned Value:
+ *   Result
+ *
+ ****************************************************************************/
+
+static inline_function
+void nxsched_smp_call_delay_init(FAR struct smp_call_delay_data_s *data,
+                                 nxsched_smp_call_t func, FAR void *arg)
+{
+  nxsched_smp_call_init(&data->call, func, arg);
+  wd_init(&data->delay);
+  CPU_ZERO(&data->cpuset);
+}
+
+/****************************************************************************
  * Name: nxsched_smp_call_single
  *
  * Description:
@@ -1763,6 +1795,25 @@ int nxsched_smp_call_single_async(int cpuid,
                                   FAR struct smp_call_data_s *data);
 
 /****************************************************************************
+ * Name: nxsched_smp_call_single_delay
+ *
+ * Description:
+ *   Call function on single processor async after ticks delay
+ *
+ * Input Parameters:
+ *   cpuset - Target cpuset
+ *   delay  - Delay ticks
+ *   data   - Call data
+ *
+ * Returned Value:
+ *   Result
+ *
+ ****************************************************************************/
+
+int nxsched_smp_call_single_delay(int cpuid, sclock_t delay,
+                                  FAR struct smp_call_delay_data_s *data);
+
+/****************************************************************************
  * Name: nxsched_smp_call_async
  *
  * Description:
@@ -1779,6 +1830,26 @@ int nxsched_smp_call_single_async(int cpuid,
 
 int nxsched_smp_call_async(cpu_set_t cpuset,
                            FAR struct smp_call_data_s *data);
+
+/****************************************************************************
+ * Name: nxsched_smp_call_delay
+ *
+ * Description:
+ *   Call function on multi processors async after ticks delay
+ *
+ * Input Parameters:
+ *   cpuset - Target cpuset
+ *   delay  - Delay ticks
+ *   data   - Call data
+ *
+ * Returned Value:
+ *   Result
+ *
+ ****************************************************************************/
+
+int nxsched_smp_call_delay(cpu_set_t cpuset, sclock_t delay,
+                           FAR struct smp_call_delay_data_s *data);
+
 #endif
 
 #undef EXTERN

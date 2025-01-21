@@ -87,6 +87,27 @@ static void nxsched_smp_call_add(int cpu,
 }
 
 /****************************************************************************
+ * Name: nxsched_smp_call_delay_cb
+ *
+ * Description:
+ *   The delay finished callback, do phase 2 call other processors
+ *
+ * Input Parameters:
+ *   arg  - Delay Call Instance data
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static void nxsched_smp_call_delay_cb(wdparm_t arg)
+{
+  FAR struct smp_call_delay_data_s *data;
+  data = (FAR struct smp_call_delay_data_s *)arg;
+  nxsched_smp_call_async(data->cpuset, &data->call);
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -286,6 +307,32 @@ int nxsched_smp_call_single_async(int cpuid,
 }
 
 /****************************************************************************
+ * Name: nxsched_smp_call_single_delay
+ *
+ * Description:
+ *   Call function on single processor async after ticks delay
+ *
+ * Input Parameters:
+ *   cpuset - Target cpuset
+ *   delay  - Delay ticks
+ *   data   - Call data
+ *
+ * Returned Value:
+ *   Result
+ *
+ ****************************************************************************/
+
+int nxsched_smp_call_single_delay(int cpuid, sclock_t delay,
+                                  FAR struct smp_call_delay_data_s *data)
+{
+  cpu_set_t cpuset;
+
+  CPU_ZERO(&cpuset);
+  CPU_SET(cpuid, &cpuset);
+  return nxsched_smp_call_delay(cpuset, delay, data);
+}
+
+/****************************************************************************
  * Name: nxsched_smp_call_async
  *
  * Description:
@@ -357,4 +404,28 @@ out:
     }
 
   return ret;
+}
+
+/****************************************************************************
+ * Name: nxsched_smp_call_delay
+ *
+ * Description:
+ *   Call function on multi processors async after ticks delay
+ *
+ * Input Parameters:
+ *   cpuset - Target cpuset
+ *   delay  - Delay ticks
+ *   data   - Call data
+ *
+ * Returned Value:
+ *   Result
+ *
+ ****************************************************************************/
+
+int nxsched_smp_call_delay(cpu_set_t cpuset, sclock_t delay,
+                           FAR struct smp_call_delay_data_s *data)
+{
+  data->cpuset = cpuset;
+  return wd_start(&data->delay, delay, nxsched_smp_call_delay_cb,
+                  (wdparm_t)data);
 }
