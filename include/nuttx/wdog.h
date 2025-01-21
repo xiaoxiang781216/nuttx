@@ -110,6 +110,28 @@ extern "C"
 #endif
 
 /****************************************************************************
+ * Name: wd_init
+ *
+ * Description:
+ *   For the static zi initialized wdog, the wdog is ready to use, but for
+ *   some reason, wdog is allocated by malloc, not zalloc, should manually
+ *   call wd_init() to initialize it.
+ *
+ ****************************************************************************/
+
+static inline_function void wd_init(FAR struct wdog_s *wdog)
+{
+  wdog->node.prev = NULL;
+  wdog->node.next = NULL;
+  wdog->arg       = 0;
+  wdog->func      = NULL;
+#ifdef CONFIG_PIC
+  wdog->picbase   = NULL;
+#endif
+  wdog->expired   = 0;
+}
+
+/****************************************************************************
  * Name: wd_start
  *
  * Description:
