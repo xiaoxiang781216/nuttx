@@ -173,7 +173,7 @@ void weak_function up_allocate_kheap(void **heap_start, size_t *heap_size)
   /* CONFIG_BUILD_KERNEL && !CONFIG_ARCH_PGPOOL_PBASE */
 
   uintptr_t base = g_idle_topstack;
-  uintptr_t size = CONFIG_RAM_END - ubase;
+  uintptr_t size = CONFIG_RAM_END - base;
 #endif
 
   /* Return the kernel-space heap settings */
