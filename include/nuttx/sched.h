@@ -252,6 +252,12 @@
 
 #define running_regs()               ((FAR void **)(g_running_tasks[this_cpu()]->xcp.regs))
 
+#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+#  define is_idle_task(t)            ((t)->pid < CONFIG_SMP_NCPUS)
+#else
+#  define is_idle_task(t)            false
+#endif
+
 #define REGINFO_OFFSET_INVALID       -2 /* Special value for N/A offset value */
 #define REGINFO_OFFSET_AUTO          -1 /* Calculate the offset in GDB g/G packet automatically */
 
