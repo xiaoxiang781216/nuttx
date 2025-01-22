@@ -330,8 +330,16 @@ uint64_t *arm64_syscall(uint64_t *regs)
         break;
     }
 
+  regs = tcb->xcp.regs;
+
+  /* (*running_task)->xcp.regs is about to become invalid
+   * and will be marked as NULL to avoid misusage.
+   */
+
+  (*running_task)->xcp.regs = NULL;
+
   /* Clear irq flag */
 
   write_sysreg((uintptr_t)tcb & ~1ul, tpidr_el1);
-  return tcb->xcp.regs;
+  return regs;
 }

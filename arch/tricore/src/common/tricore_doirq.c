@@ -117,6 +117,11 @@ IFX_INT_WRAPPER(CONFIG_CPU_COREID)
 
   up_set_interrupt_context(false);
 
+  /* (*running_task)->xcp.regs is about to become invalid
+   * and will be marked as NULL to avoid misusage.
+   */
+
+  (*running_task)->xcp.regs = NULL;
   board_autoled_off(LED_INIRQ);
 #endif
 }
