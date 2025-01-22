@@ -220,6 +220,11 @@ int binder_inc_node(FAR struct binder_node *node, int strong, int internal,
 {
   int ret;
 
+  if (node == NULL)
+    {
+      return -EINVAL;
+    }
+
   binder_node_inner_lock(node);
   ret = binder_inc_node_nilocked(node, strong, internal, target_list);
   binder_node_inner_unlock(node);
@@ -314,6 +319,11 @@ void binder_dec_node(FAR struct binder_node *node, int strong, int internal)
 {
   bool free_node;
 
+  if (node == NULL)
+    {
+      return;
+    }
+
   binder_node_inner_lock(node);
   free_node = binder_dec_node_nilocked(node, strong, internal);
   binder_node_inner_unlock(node);
@@ -342,6 +352,11 @@ void binder_dec_node(FAR struct binder_node *node, int strong, int internal)
 static void binder_inc_node_tmpref(FAR struct binder_node *node)
 {
   FAR struct binder_proc *proc = node->proc;
+
+  if (node == NULL)
+    {
+      return;
+    }
 
   binder_node_lock(node);
   if (proc != NULL)
@@ -379,6 +394,11 @@ static void binder_inc_node_tmpref(FAR struct binder_node *node)
 void binder_dec_node_tmpref(FAR struct binder_node *node)
 {
   bool free_node;
+
+  if (node == NULL)
+    {
+      return;
+    }
 
   binder_node_inner_lock(node);
   if (!node->proc)
