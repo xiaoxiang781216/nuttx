@@ -218,6 +218,7 @@ errout_with_group:
 
   nxtask_joindestroy(&tcb->cmn);
 
+  env_release(tcb->cmn.group);
   group_leave(&tcb->cmn);
 
   sched_trace_end();
