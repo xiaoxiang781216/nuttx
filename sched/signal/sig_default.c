@@ -227,6 +227,15 @@ static void nxsig_abnormal_termination(int signo)
 
   tls_cleanup_popall(tls_get_info());
 
+  if (rtcb->flags & TCB_FLAG_EXIT_PROCESSING)
+    {
+      /* If we are already in the process of terminating, then we should
+       * not be here.  We should have already exited.
+       */
+
+      return;
+    }
+
 #ifndef CONFIG_DISABLE_PTHREAD
   /* Check if the currently running task is actually a pthread */
 
