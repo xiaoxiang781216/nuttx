@@ -87,10 +87,7 @@ static bool pm_idle_handler(int cpu,
 
         /* do no cross-core relative operations */
 
-        if (cpu_state > PM_NORMAL)
-          {
-            asm("WFI");
-          }
+        asm("WFI");
 
         first = pm_idle_lock(cpu);
         if (first)
@@ -118,8 +115,6 @@ static void pm_idle_handler(enum pm_state_e state)
   switch (state)
     {
       case PM_NORMAL:
-        break;
-
       case PM_IDLE:
       case PM_STANDBY:
       case PM_SLEEP:
