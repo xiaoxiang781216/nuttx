@@ -163,6 +163,9 @@ static struct pmu_s g_perf_swevent =
   .ops = &g_perf_swevent_ops,
 };
 
+#ifdef CONFIG_SMP
+static struct smp_call_data_s g_perf_call_data;
+#endif
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -1406,7 +1409,7 @@ static int perf_task_function_call(FAR struct tcb_s *tcb,
 #ifdef CONFIG_SMP
   if (tcb->cpu != this_cpu())
     {
-      return nxsched_smp_call_single(tcb->cpu, func, event, true);
+      return nxsched_smp_call_single(tcb->cpu, func, event);
     }
 #endif
 
@@ -1436,7 +1439,7 @@ static int perf_cpu_function_call(int cpu, FAR struct perf_event_s *event,
 #ifdef CONFIG_SMP
   if (cpu != this_cpu())
     {
-      return nxsched_smp_call_single(cpu, func, event, true);
+      return nxsched_smp_call_single(cpu, func, event);
     }
 #endif
 
@@ -2343,8 +2346,9 @@ static void perf_swevent_timer_handle(wdparm_t arg)
 
   if (event->cpu != -1 && event->cpu != cpu)
     {
-       nxsched_smp_call_single(event->cpu,
-                  perf_swevent_timer_handle_cpu, event, false);
+       nxsched_smp_call_init(&g_perf_call_data,
+                             perf_swevent_timer_handle_cpu, event);
+       nxsched_smp_call_single_async(event->cpu, &g_perf_call_data);
     }
     else
     {
