@@ -50,6 +50,10 @@ static void core_main(void)
   tricore_earlyserialinit();
 #endif
 
+#ifdef CONFIG_BUILD_PROTECTED
+  tricore_userspace();
+#endif
+
   nx_start();
 
   while (1);

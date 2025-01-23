@@ -227,6 +227,10 @@ void tricore_serialinit(void);
 void tricore_earlyserialinit(void);
 #endif
 
+#ifdef CONFIG_BUILD_PROTECTED
+void tricore_userspace(void);
+#endif
+
 /* System Timer *************************************************************/
 
 struct oneshot_lowerhalf_s *
