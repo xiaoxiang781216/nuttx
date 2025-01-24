@@ -89,26 +89,23 @@ static FAR char *file_get_path(FAR struct file *filep)
 int file_close_without_clear(FAR struct file *filep)
 {
   struct inode *inode;
-#ifdef CONFIG_FS_NOTIFY
-  FAR char *path;
-#endif
   int ret = OK;
 
   DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
 
-#ifdef CONFIG_FS_NOTIFY
-  /* We lose the path and inode during close and release, so obtain it
-   * in advance. Then we pass it to notify_close function.
-   */
-
-  path = file_get_path(filep);
-#endif
-
   /* Check if the struct file is open (i.e., assigned an inode) */
 
   if (inode)
     {
+#ifdef CONFIG_FS_NOTIFY
+      /* We lose the path and inode during close and release, so obtain it
+       * in advance. Then we pass it to notify_close function.
+       */
+
+      FAR char *path = file_get_path(filep);
+#endif
+
       file_closelk(filep);
 
       /* Close the file, driver, or mountpoint. */
@@ -128,12 +125,18 @@ int file_close_without_clear(FAR struct file *filep)
           if (path != NULL)
             {
               notify_close(path, filep->f_oflags);
-              lib_put_pathbuffer(path);
             }
 #endif
 
           inode_release(inode);
         }
+
+#ifdef CONFIG_FS_NOTIFY
+      if (path != NULL)
+        {
+          lib_put_pathbuffer(path);
+        }
+#endif
     }
 
   return ret;
