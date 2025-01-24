@@ -69,7 +69,6 @@ static void work_timer_expiry(wdparm_t arg)
   FAR struct work_s *work = (FAR struct work_s *)arg;
 
   irqstate_t flags = spin_lock_irqsave(&work->wq->lock);
-  sched_lock();
 
   /* We have being canceled */
 
@@ -79,7 +78,6 @@ static void work_timer_expiry(wdparm_t arg)
     }
 
   spin_unlock_irqrestore(&work->wq->lock, flags);
-  sched_unlock();
 }
 
 static bool work_is_canceling(FAR struct kworker_s *kworkers, int nthreads,
