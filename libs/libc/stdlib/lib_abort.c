@@ -28,6 +28,7 @@
 
 #include <stdlib.h>
 #include <pthread.h>
+#include <execinfo.h>
 
 /****************************************************************************
  * Public Functions
@@ -60,6 +61,10 @@
 
 void abort(void)
 {
+#ifdef CONFIG_DEBUG_FEATURES
+  dump_stack();
+#endif
+
   /* NuttX does not support standard signal functionality (like the
    * behavior of the SIGABRT signal).  So no attempt is made to provide
    * a conformant version of abort() at this time.  This version does not
