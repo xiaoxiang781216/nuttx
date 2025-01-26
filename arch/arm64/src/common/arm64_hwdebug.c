@@ -173,7 +173,7 @@ static void write_wb_reg(int reg, int n, uint64_t val)
     }
   }
 
-  __ISB();
+  UP_ISB();
 }
 
 static uint8_t hw_breakpoint_count(void)
@@ -978,7 +978,7 @@ static int arm64_clear_os_lock(unsigned int cpu)
   write_sysreg(0, osdlr_el1);
   write_sysreg(0, oslar_el1);
 
-  __ISB();
+  UP_ISB();
   return 0;
 }
 
@@ -1256,9 +1256,9 @@ void arm64_hwdebug_init(void)
 
   list_initialize(&g_break_inst_hook_list_el0);
   list_initialize(&g_break_inst_hook_list_el1);
-  spin_initialize(&g_debug_hook_lock, SP_UNLOCKED);
+  spin_lock_init(&g_debug_hook_lock);
 
-  spin_initialize(&g_debugpoint_slots_lock, SP_UNLOCKED);
+  spin_lock_init(&g_debugpoint_slots_lock);
 
   bp_ctx->disabled = 0;
   wp_ctx->disabled = 0;
