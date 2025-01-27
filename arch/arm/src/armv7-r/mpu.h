@@ -90,6 +90,10 @@
 
 #define MPU_RACR_XN              (1 << 12) /* Bit 12: Instruction access disable */
 
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
 /* MPU Region Number Register */
 
 #if defined(CONFIG_ARM_MPU_NREGIONS)
@@ -103,6 +107,21 @@
 #  error "FIXME: Unsupported number of MPU regions"
 #  endif
 #endif
+
+struct mpu_region_s
+{
+  /* Region Base Address */
+
+  uintptr_t base;
+
+  /* Region Size */
+
+  size_t size;
+
+  /* Region Attributes */
+
+  uint32_t flags;
+};
 
 /****************************************************************************
  * Public Function Prototypes
