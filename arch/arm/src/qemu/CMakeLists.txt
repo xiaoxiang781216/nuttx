@@ -36,4 +36,8 @@ if(CONFIG_PM)
   list(APPEND SRCS qemu_initialize.c)
 endif()
 
+if(CONFIG_BUILD_PROTECTED)
+  list(APPEND SRCS qemu_userspace.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})

@@ -44,3 +44,7 @@ endif
 ifeq ($(CONFIG_PM),y)
 CHIP_CSRCS += qemu_initialize.c
 endif
+
+ifeq ($(CONFIG_BUILD_PROTECTED),y)
+CHIP_CSRCS += qemu_userspace.c
+endif
