@@ -79,7 +79,7 @@ void nxsched_process_delivered(int cpu)
 
       nxsched_critmon_busywait(true, return_address(0));
 
-      raw_spin_lock(&g_cpu_irqlock);
+      spin_lock_notrace(&g_cpu_irqlock);
 
       /* Get the lock, end counting busy-waiting */
 

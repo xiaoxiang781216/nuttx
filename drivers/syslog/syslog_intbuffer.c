@@ -105,7 +105,7 @@ static void syslog_flush_internal(bool force, size_t buflen)
    * concurrent modification by other tasks.
    */
 
-  flags = spin_lock_irqsave_wo_note(&g_syslog_intbuffer.splock);
+  flags = spin_lock_irqsave_notrace(&g_syslog_intbuffer.splock);
   if (g_syslog_intbuffer.reading == false)
     {
       g_syslog_intbuffer.reading = true;
@@ -116,10 +116,10 @@ static void syslog_flush_internal(bool force, size_t buflen)
           if (size > 0)
             {
               size = (size >= buflen) ? buflen : size;
-              spin_unlock_irqrestore_wo_note(&g_syslog_intbuffer.splock,
+              spin_unlock_irqrestore_notrace(&g_syslog_intbuffer.splock,
                                              flags);
               syslog_write_foreach(buffer, size, force);
-              flags = spin_lock_irqsave_wo_note(&g_syslog_intbuffer.splock);
+              flags = spin_lock_irqsave_notrace(&g_syslog_intbuffer.splock);
               circbuf_readcommit(&g_syslog_intbuffer.circ, size);
               buflen -= size;
             }
@@ -128,7 +128,7 @@ static void syslog_flush_internal(bool force, size_t buflen)
       g_syslog_intbuffer.reading = false;
     }
 
-  spin_unlock_irqrestore_wo_note(&g_syslog_intbuffer.splock, flags);
+  spin_unlock_irqrestore_notrace(&g_syslog_intbuffer.splock, flags);
 }
 
 /****************************************************************************
@@ -164,18 +164,18 @@ void syslog_add_intbuffer(FAR const char *buffer, size_t buflen)
 
   /* Disable concurrent modification from interrupt handling logic */
 
-  flags = spin_lock_irqsave_wo_note(&g_syslog_intbuffer.splock);
+  flags = spin_lock_irqsave_notrace(&g_syslog_intbuffer.splock);
 
   space = circbuf_space(&g_syslog_intbuffer.circ);
 
   if (space >= buflen)
     {
       circbuf_write(&g_syslog_intbuffer.circ, buffer, buflen);
-      spin_unlock_irqrestore_wo_note(&g_syslog_intbuffer.splock, flags);
+      spin_unlock_irqrestore_notrace(&g_syslog_intbuffer.splock, flags);
     }
   else
     {
-      spin_unlock_irqrestore_wo_note(&g_syslog_intbuffer.splock, flags);
+      spin_unlock_irqrestore_notrace(&g_syslog_intbuffer.splock, flags);
       syslog_flush_internal(true, sizeof(g_syslog_intbuffer.buffer));
       syslog_write_foreach(buffer, buflen, true);
     }
