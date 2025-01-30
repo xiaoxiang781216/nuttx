@@ -66,6 +66,7 @@
 
 #define USRAM_START     (uintptr_t)__usram_start
 #define USRAM_SIZE      (uintptr_t)__usram_size
+#define USRAM_END       (USRAM_START + USRAM_SIZE)
 
 /****************************************************************************
  * Public Data

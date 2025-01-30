@@ -46,5 +46,5 @@ CHIP_CSRCS += qemu_initialize.c
 endif
 
 ifeq ($(CONFIG_BUILD_PROTECTED),y)
-CHIP_CSRCS += qemu_userspace.c
+CHIP_CSRCS += qemu_userspace.c qemu_allocateheap.c
 endif
