@@ -195,8 +195,8 @@ int sparc_swint1(int irq, void *context, void *arg)
 #endif
       case SYS_assert_handler:
         {
-          _assert((const char *)regs[REG_A1], (int)regs[REG_A2],
-                  (const char *)regs[REG_A3], (void *)running_regs(), false);
+          _assert((const char *)regs[REG_I1], (int)regs[REG_I2],
+                  (const char *)regs[REG_I3], (void *)running_regs(), false);
         }
         break;
       default:
