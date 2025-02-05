@@ -148,6 +148,7 @@ static int work_thread(int argc, FAR char *argv[])
             ((uintptr_t)strtoul(argv[2], NULL, 16));
 
   flags = spin_lock_irqsave(&wqueue->lock);
+  sched_lock();
 
   /* Loop forever */
 
@@ -190,10 +191,11 @@ static int work_thread(int argc, FAR char *argv[])
            */
 
           spin_unlock_irqrestore(&wqueue->lock, flags);
+          sched_unlock();
 
           CALL_WORKER(worker, arg);
-
           flags = spin_lock_irqsave(&wqueue->lock);
+          sched_lock();
 
           /* Mark the thread un-busy */
 
@@ -214,18 +216,19 @@ static int work_thread(int argc, FAR char *argv[])
        */
 
       wqueue->wait_count++;
-
       spin_unlock_irqrestore(&wqueue->lock, flags);
+      sched_unlock();
 
       nxsem_wait_uninterruptible(&wqueue->sem);
-
       flags = spin_lock_irqsave(&wqueue->lock);
+      sched_lock();
     }
 
   spin_unlock_irqrestore(&wqueue->lock, flags);
+  sched_unlock();
 
   nxsem_post(&wqueue->exsem);
-  return 0;
+  return OK;
 }
 
 /****************************************************************************
@@ -288,7 +291,7 @@ static int work_thread_create(FAR const char *name, int priority,
     }
 
   sched_unlock();
-  return 0;
+  return OK;
 }
 
 /****************************************************************************
@@ -404,7 +407,7 @@ int work_queue_free(FAR struct kwork_wqueue_s *wqueue)
   nxsem_destroy(&wqueue->exsem);
   kmm_free(wqueue);
 
-  return 0;
+  return OK;
 }
 
 /****************************************************************************
