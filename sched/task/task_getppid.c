@@ -77,7 +77,7 @@ pid_t nxsched_getppid(void)
    */
 
   rtcb = this_task();
-  if (rtcb != NULL)
+  if (rtcb->group != NULL)
     {
       /* Check if the task is actually running */
 

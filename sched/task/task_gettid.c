@@ -52,44 +52,31 @@
 
 pid_t nxsched_gettid(void)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
 
   /* Get the TCB at the head of the ready-to-run task list.  That
-   * will usually be the currently executing task.  There are two
+   * will usually be the currently executing task.  There are one
    * exceptions to this:
    *
-   * 1. Early in the start-up sequence, the ready-to-run list may be
-   *    empty!  In this case, of course, the CPU0 start-up/IDLE thread with
-   *    pid == 0 must be running, and
-   * 2. As described above, during certain context-switching conditions the
+   * 1. As described above, during certain context-switching conditions the
    *    task at the head of the ready-to-run list may not actually be
    *    running.
    */
 
-  rtcb = this_task();
-  if (rtcb != NULL)
+  /* Check if the task is actually running */
+
+  if (rtcb->task_state == TSTATE_TASK_RUNNING)
     {
-      /* Check if the task is actually running */
+      /* Yes.. Return the task ID from the TCB at the head of the
+       * ready-to-run task list
+       */
 
-      if (rtcb->task_state == TSTATE_TASK_RUNNING)
-        {
-          /* Yes.. Return the task ID from the TCB at the head of the
-           * ready-to-run task list
-           */
-
-          return rtcb->pid;
-        }
-
-      /* No.. return -ESRCH to indicate this condition */
-
-      return (pid_t)-ESRCH;
+      return rtcb->pid;
     }
 
-  /* We must have been called earlier in the start up sequence from the
-   * start-up/IDLE thread before the ready-to-run list has been initialized.
-   */
+  /* No.. return -ESRCH to indicate this condition */
 
-  return 0;
+  return (pid_t)-ESRCH;
 }
 
 /****************************************************************************
