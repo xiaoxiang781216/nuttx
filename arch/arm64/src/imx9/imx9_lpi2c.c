@@ -36,7 +36,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/clock.h>
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
@@ -205,7 +204,6 @@ struct imx9_lpi2c_priv_s
 
   int refs;                    /* Reference count */
   mutex_t lock;                /* Mutual exclusion mutex */
-  spinlock_t spinlock;         /* Spinlock */
 #ifndef CONFIG_I2C_POLLED
   sem_t sem_isr;               /* Interrupt wait semaphore */
 #endif
@@ -364,7 +362,6 @@ static struct imx9_lpi2c_priv_s imx9_lpi2c1_priv =
   .config        = &imx9_lpi2c1_config,
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
-  .spinlock      = SP_UNLOCKED,
 #ifndef CONFIG_I2C_POLLED
   .sem_isr       = SEM_INITIALIZER(0),
 #endif
@@ -413,7 +410,6 @@ static struct imx9_lpi2c_priv_s imx9_lpi2c2_priv =
   .config        = &imx9_lpi2c2_config,
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
-  .spinlock      = SP_UNLOCKED,
 #ifndef CONFIG_I2C_POLLED
   .sem_isr       = SEM_INITIALIZER(0),
 #endif
@@ -462,7 +458,6 @@ static struct imx9_lpi2c_priv_s imx9_lpi2c3_priv =
   .config        = &imx9_lpi2c3_config,
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
-  .spinlock      = SP_UNLOCKED,
 #ifndef CONFIG_I2C_POLLED
   .sem_isr       = SEM_INITIALIZER(0),
 #endif
@@ -511,7 +506,6 @@ static struct imx9_lpi2c_priv_s imx9_lpi2c4_priv =
   .config        = &imx9_lpi2c4_config,
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
-  .spinlock      = SP_UNLOCKED,
 #ifndef CONFIG_I2C_POLLED
   .sem_isr       = SEM_INITIALIZER(0),
 #endif
@@ -560,7 +554,6 @@ static struct imx9_lpi2c_priv_s imx9_lpi2c5_priv =
   .config        = &imx9_lpi2c5_config,
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
-  .spinlock      = SP_UNLOCKED,
 #ifndef CONFIG_I2C_POLLED
   .sem_isr       = SEM_INITIALIZER(0),
 #endif
@@ -609,7 +602,6 @@ static struct imx9_lpi2c_priv_s imx9_lpi2c6_priv =
   .config        = &imx9_lpi2c6_config,
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
-  .spinlock      = SP_UNLOCKED,
 #ifndef CONFIG_I2C_POLLED
   .sem_isr       = SEM_INITIALIZER(0),
 #endif
@@ -658,7 +650,6 @@ static struct imx9_lpi2c_priv_s imx9_lpi2c7_priv =
   .config        = &imx9_lpi2c7_config,
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
-  .spinlock      = SP_UNLOCKED,
 #ifndef CONFIG_I2C_POLLED
   .sem_isr       = SEM_INITIALIZER(0),
 #endif
@@ -707,7 +698,6 @@ static struct imx9_lpi2c_priv_s imx9_lpi2c8_priv =
   .config        = &imx9_lpi2c8_config,
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
-  .spinlock      = SP_UNLOCKED,
 #ifndef CONFIG_I2C_POLLED
   .sem_isr       = SEM_INITIALIZER(0),
 #endif
@@ -1596,7 +1586,7 @@ static int imx9_lpi2c_isr_process(struct imx9_lpi2c_priv_s *priv)
        */
 
 #ifdef CONFIG_I2C_POLLED
-      irqstate_t flags = spin_lock_irqsave(&priv->spinlock);
+      irqstate_t flags = enter_critical_section();
 #endif
 
       /* Receive a byte */
@@ -1611,7 +1601,7 @@ static int imx9_lpi2c_isr_process(struct imx9_lpi2c_priv_s *priv)
         }
 
 #ifdef CONFIG_I2C_POLLED
-      spin_unlock_irqrestore(&priv->spinlock, flags);
+      leave_critical_section(flags);
 #endif
     }
 
@@ -2359,7 +2349,7 @@ struct i2c_master_s *imx9_i2cbus_initialize(int port)
    * power-up hardware and configure GPIOs.
    */
 
-  flags = spin_lock_irqsave(&priv->spinlock);
+  flags = enter_critical_section();
 
   if ((volatile int)priv->refs++ == 0)
     {
@@ -2380,7 +2370,7 @@ struct i2c_master_s *imx9_i2cbus_initialize(int port)
 #endif
     }
 
-  spin_unlock_irqrestore(&priv->spinlock, flags);
+  leave_critical_section(flags);
 
   return (struct i2c_master_s *)priv;
 }
@@ -2407,7 +2397,7 @@ int imx9_i2cbus_uninitialize(struct i2c_master_s *dev)
       return ERROR;
     }
 
-  flags = spin_lock_irqsave(&priv->spinlock);
+  flags = enter_critical_section();
 
   if (--priv->refs > 0)
     {
@@ -2415,7 +2405,7 @@ int imx9_i2cbus_uninitialize(struct i2c_master_s *dev)
       return OK;
     }
 
-  spin_unlock_irqrestore(&priv->spinlock, flags);
+  leave_critical_section(flags);
 
   /* Disable power and other HW resource (GPIO's) */
 
