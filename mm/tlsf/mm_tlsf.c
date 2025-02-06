@@ -212,7 +212,8 @@ static void mm_unlock_irq(FAR struct mm_heap_s *heap, irqstate_t state)
 static void memdump_allocnode(FAR void *ptr, size_t size)
 {
 #if CONFIG_MM_BACKTRACE < 0
-  syslog(LOG_INFO, "%12zu%*p\n", size, BACKTRACE_PTR_FMT_WIDTH, ptr);
+  syslog(LOG_INFO, "%12zu%9zu%*p\n", size,
+         sizeof(struct mempool_backtrace_s), BACKTRACE_PTR_FMT_WIDTH, ptr);
 
 #elif CONFIG_MM_BACKTRACE == 0
   FAR struct memdump_backtrace_s *buf =
@@ -236,12 +237,12 @@ static void memdump_allocnode(FAR void *ptr, size_t size)
   backtrace_format(tmp, sizeof(tmp), buf->backtrace,
                    CONFIG_MM_BACKTRACE);
 
-  syslog(LOG_INFO, "%6d%12zu"
+  syslog(LOG_INFO, "%6d%12zu%9zu"
 #  ifdef CONFIG_MM_BACKTRACE_SEQNO
          "%12lu"
 #  endif
          "%*p %s\n",
-         buf->pid, size,
+         buf->pid, size, sizeof(struct mempool_backtrace_s),
 #  ifdef CONFIG_MM_BACKTRACE_SEQNO
          buf->seqno,
 #  endif
@@ -312,22 +313,24 @@ static void memdump_backtrace(FAR struct mm_heap_s *heap,
 {
 #  if CONFIG_MM_BACKTRACE > 0
   FAR struct tcb_s *tcb;
+  int ret = 0;
 #  endif
 
   buf->pid = _SCHED_GETTID();
-  MM_INCSEQNO(buf)
+  MM_INCSEQNO(buf);
 #  if CONFIG_MM_BACKTRACE > 0
   tcb = nxsched_get_tcb(buf->pid);
   if (heap->mm_procfs.backtrace ||
       (tcb && tcb->flags & TCB_FLAG_HEAP_DUMP))
     {
-      int ret = sched_backtrace(buf->pid, buf->backtrace,
-                                CONFIG_MM_BACKTRACE,
-                                CONFIG_MM_BACKTRACE_SKIP);
-      if (ret < CONFIG_MM_BACKTRACE)
-        {
-          buf->backtrace[ret] = NULL;
-        }
+      ret = sched_backtrace(buf->pid, buf->backtrace,
+                            CONFIG_MM_BACKTRACE,
+                            CONFIG_MM_BACKTRACE_SKIP);
+    }
+
+  if (ret < CONFIG_MM_BACKTRACE)
+    {
+      buf->backtrace[ret] = NULL;
     }
 #  endif
 }
@@ -1280,8 +1283,8 @@ void mm_memdump(FAR struct mm_heap_s *heap,
 #if CONFIG_MM_BACKTRACE < 0
   syslog(LOG_INFO, "%12s%*s\n", "Size", BACKTRACE_PTR_FMT_WIDTH, "Address");
 #else
-  syslog(LOG_INFO, "%6s%12s%12s%*s %s\n", "PID", "Size", "Sequence",
-                   BACKTRACE_PTR_FMT_WIDTH, "Address", "Backtrace");
+  syslog(LOG_INFO, "%6s%12s%9s%12s%*s %s\n", "PID", "Size", "OVERHEAD",
+         "Sequence", BACKTRACE_PTR_FMT_WIDTH, "Address", "Backtrace");
 #endif
 
   memdump_dump_pool(&priv, heap);
