@@ -1791,6 +1791,8 @@ struct spi_dev_s *imx9_lpspibus_initialize(int bus)
 {
   struct imx9_lpspidev_s *priv = NULL;
 
+  irqstate_t flags = enter_critical_section();
+
 #ifdef CONFIG_IMX9_LPSPI1
   if (bus == 1)
     {
@@ -2048,6 +2050,7 @@ struct spi_dev_s *imx9_lpspibus_initialize(int bus)
   else
 #endif
     {
+      leave_critical_section(flags);
       spierr("ERROR: Unsupported SPI bus: %d\n", bus);
     }
 
@@ -2081,6 +2084,7 @@ struct spi_dev_s *imx9_lpspibus_initialize(int bus)
     }
 #endif
 
+  leave_critical_section(flags);
   return (struct spi_dev_s *)priv;
 }
 

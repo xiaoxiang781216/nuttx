@@ -27,20 +27,12 @@
 #include <assert.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/spinlock.h>
 
 #include "arm_internal.h"
 #include "sctlr.h"
 
 #include "am335x_gpio.h"
 #include "am335x_irq.h"
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-#ifdef CONFIG_ARCH_IRQPRIO
-static spinlock_t g_irq_lock = SP_UNLOCKED;
-#endif
 
 /****************************************************************************
  * Public Data
@@ -334,7 +326,7 @@ int up_prioritize_irq(int irq, int priority)
     {
       /* These operations must be atomic */
 
-      flags = spin_lock_irqsave(&g_irq_lock);
+      flags = enter_critical_section();
 
 #if 0 // TODO
       /* Set the new priority */
@@ -346,7 +338,7 @@ int up_prioritize_irq(int irq, int priority)
       putreg32(regval, regaddr);
 #endif
 
-      spin_unlock_irqrestore(&g_irq_lock, flags);
+      leave_critical_section(flags);
       return OK;
     }
 
