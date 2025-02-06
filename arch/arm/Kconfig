@@ -957,6 +957,7 @@ config ARCH_ARMV7R
 	default n
 	select ARCH_HAVE_CPUINFO
 	select ARCH_HAVE_PERF_EVENTS
+	select ARM_THUMB
 
 config ARCH_CORTEXR4
 	bool
