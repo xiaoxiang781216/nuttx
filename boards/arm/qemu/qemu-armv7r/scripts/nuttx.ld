@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/qemu/qemu-armv7a/scripts/dramboot.ld
+ * boards/arm/qemu/qemu-armv7a/scripts/nuttx.ld
  *
  * SPDX-License-Identifier: Apache-2.0
  *
