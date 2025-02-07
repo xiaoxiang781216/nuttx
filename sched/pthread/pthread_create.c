@@ -185,7 +185,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
                       FAR const pthread_attr_t *attr,
                       pthread_startroutine_t entry, pthread_addr_t arg)
 {
-  pthread_attr_t default_attr = g_default_pthread_attr;
+  pthread_attr_t default_attr;
   FAR struct tcb_s *ptcb;
   struct sched_param param;
   FAR struct tcb_s *parent;
@@ -202,13 +202,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 
   if (!attr)
     {
-      /* Inherit parent priority by default. except idle */
-
-      if (!is_idle_task(parent))
-        {
-          default_attr.priority = parent->sched_priority;
-        }
-
+      pthread_attr_init(&default_attr);
       attr = &default_attr;
     }
 

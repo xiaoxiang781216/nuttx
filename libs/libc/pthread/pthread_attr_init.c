@@ -71,6 +71,7 @@ const pthread_attr_t g_default_pthread_attr = PTHREAD_ATTR_INITIALIZER;
 
 int pthread_attr_init(FAR pthread_attr_t *attr)
 {
+  struct sched_param param;
   int ret = OK;
 
   linfo("attr=%p\n", attr);
@@ -86,6 +87,24 @@ int pthread_attr_init(FAR pthread_attr_t *attr)
        */
 
       memcpy(attr, &g_default_pthread_attr, sizeof(pthread_attr_t));
+
+      /* Inherit parent priority by default. */
+
+      ret = sched_getparam(0, &param);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      attr->priority            = param.sched_priority;
+#ifdef CONFIG_SCHED_SPORADIC
+      attr->low_priority        = param.sched_ss_low_priority;
+      attr->max_repl            = param.sched_ss_max_repl;
+      attr->repl_period.tv_sec  = param.sched_ss_repl_period.tv_sec;
+      attr->repl_period.tv_nsec = param.sched_ss_repl_period.tv_nsec;
+      attr->budget.tv_sec       = param.sched_ss_init_budget.tv_sec;
+      attr->budget.tv_nsec      = param.sched_ss_init_budget.tv_nsec;
+#endif
     }
 
   linfo("Returning %d\n", ret);
