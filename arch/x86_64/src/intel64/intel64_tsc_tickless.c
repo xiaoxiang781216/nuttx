@@ -145,7 +145,7 @@ void up_timer_initialize(void)
 {
   uint64_t tsc = rdtscp();
 #ifdef CONFIG_ARCH_INTEL64_HAVE_TSC_ADJUST
-  write_msr(MSR_IA32_TSC_ADJUST, tsc);
+  write_msr(MSR_IA32_TSC_ADJUST, 0 - tsc);
 #else
   g_start_tsc = tsc;
 #endif
