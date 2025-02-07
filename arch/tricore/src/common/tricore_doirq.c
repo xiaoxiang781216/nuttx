@@ -32,6 +32,7 @@
 #include <nuttx/addrenv.h>
 #include <nuttx/board.h>
 
+#include <arch/barriers.h>
 #include <arch/board/board.h>
 
 #include <sched/sched.h>
@@ -110,7 +111,7 @@ IFX_INT_WRAPPER(CONFIG_CPU_COREID)
       *running_task = tcb;
 
       __mtcr(CPU_PCXI, tricore_addr2csa(tcb->xcp.regs));
-      __isync();
+      UP_ISB();
     }
 
   /* Set irq flag */

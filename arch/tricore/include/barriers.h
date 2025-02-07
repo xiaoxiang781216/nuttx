@@ -23,6 +23,7 @@
 
 #define UP_DSB() __dsync()
 #define UP_DMB() __asm("":::"memory")
+#define UP_ISB() __isync()
 
 #endif /* __ARCH_TRICORE_INCLUDE_BARRIERS_H */
 

@@ -26,6 +26,8 @@
 
 #include <stdint.h>
 
+#include <arch/barriers.h>
+
 #include "tricore_internal.h"
 
 /****************************************************************************
@@ -115,7 +117,7 @@ void up_enable_icache(void)
   pcon0.B.PCBYP = 0;
   __mtcr(CPU_PCON0, pcon0.U);
 
-  __isync();
+  UP_ISB();
 }
 
 /****************************************************************************
@@ -140,7 +142,7 @@ void up_disable_icache(void)
   pcon0.B.PCBYP = 1;
   __mtcr(CPU_PCON0, pcon0.U);
 
-  __isync();
+  UP_ISB();
 }
 
 /****************************************************************************
@@ -185,7 +187,7 @@ void up_invalidate_icache_all(void)
   pcon1.B.PCINV = 1;
   __mtcr(CPU_PCON1, pcon1.U);
 
-  __isync();
+  UP_ISB();
 }
 #endif
 
@@ -266,8 +268,8 @@ void up_enable_dcache(void)
   dcon0.B.DCBYP = 0;
   __mtcr(CPU_DCON0, dcon0.U);
 
-  __dsync();
-  __isync();
+  UP_DSB();
+  UP_ISB();
 }
 
 /****************************************************************************
@@ -291,8 +293,8 @@ void up_disable_dcache(void)
   dcon0.B.DCBYP = 1;
   __mtcr(CPU_DCON0, dcon0.U);
 
-  __dsync();
-  __isync();
+  UP_DSB();
+  UP_ISB();
 }
 
 /****************************************************************************
@@ -337,8 +339,8 @@ void up_invalidate_dcache(uintptr_t start, uintptr_t end)
       start += line_size;
     }
 
-  __dsync();
-  __isync();
+  UP_DSB();
+  UP_ISB();
 }
 
 /****************************************************************************
@@ -363,8 +365,8 @@ void up_invalidate_dcache_all(void)
   dcon1.B.DCINV = 1;
   __mtcr(CPU_DCON1, dcon1.U);
 
-  __dsync();
-  __isync();
+  UP_DSB();
+  UP_ISB();
 }
 
 /****************************************************************************
@@ -395,8 +397,8 @@ void up_clean_dcache(uintptr_t start, uintptr_t end)
       start += line_size;
     }
 
-  __dsync();
-  __isync();
+  UP_DSB();
+  UP_ISB();
 }
 
 /****************************************************************************
@@ -427,8 +429,8 @@ void up_clean_dcache_all(void)
       cache_addr += line_size;
     }
 
-  __dsync();
-  __isync();
+  UP_DSB();
+  UP_ISB();
 }
 
 /****************************************************************************
@@ -459,8 +461,8 @@ void up_flush_dcache(uintptr_t start, uintptr_t end)
       start += line_size;
     }
 
-  __dsync();
-  __isync();
+  UP_DSB();
+  UP_ISB();
 }
 
 /****************************************************************************
@@ -490,8 +492,8 @@ void up_flush_dcache_all(void)
       cache_addr += line_size;
     }
 
-  __dsync();
-  __isync();
+  UP_DSB();
+  UP_ISB();
 }
 
 /****************************************************************************
