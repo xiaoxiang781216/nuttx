@@ -52,7 +52,7 @@ static const struct reginfo_s g_reginfo[] =
   {"sp",    4,    13,     TCB_REG_OFF(REG_R13),   REGINFO_OFFSET_AUTO},
   {"lr",    4,    14,     TCB_REG_OFF(REG_R14),   REGINFO_OFFSET_AUTO},
   {"pc",    4,    15,     TCB_REG_OFF(REG_R15),   REGINFO_OFFSET_AUTO},
-  {"cpsr",  4,    25,     TCB_REG_OFF(REG_XPSR),  REGINFO_OFFSET_AUTO},
+  {"cpsr",  4,    25,     TCB_REG_OFF(REG_CPSR),  REGINFO_OFFSET_AUTO},
 };
 
 /****************************************************************************
