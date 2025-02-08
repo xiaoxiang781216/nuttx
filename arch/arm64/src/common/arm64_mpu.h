@@ -44,11 +44,11 @@
 /* MPU RBAR Register attribute msk Definitions */
 
 #define MPU_RBAR_BASE_POS   6U
-#define MPU_RBAR_BASE_MSK   (0x3FFFFFFFFFFFFFFUL << MPU_RBAR_BASE_POS)
+#define MPU_RBAR_BASE_MSK   (0x3FFFFFFFFFFFFFFULL << MPU_RBAR_BASE_POS)
 #define MPU_RBAR_SH_POS     4U
-#define MPU_RBAR_SH_MSK     (0x3UL << MPU_RBAR_SH_POS)
+#define MPU_RBAR_SH_MSK     (0x3ULL << MPU_RBAR_SH_POS)
 #define MPU_RBAR_AP_POS     2U
-#define MPU_RBAR_AP_MSK     (0x3UL << MPU_RBAR_AP_POS)
+#define MPU_RBAR_AP_MSK     (0x3ULL << MPU_RBAR_AP_POS)
 
 /* TCR_EL1 */
 
@@ -61,15 +61,15 @@
 /* RBAR_EL1 XN */
 
 #define MPU_RBAR_XN_POS     1U
-#define MPU_RBAR_XN_MSK     (0x1UL << MPU_RBAR_XN_POS)
+#define MPU_RBAR_XN_MSK     (0x1ULL << MPU_RBAR_XN_POS)
 
 /* MPU PLBAR_ELx Register Definitions */
 
 #define MPU_RLAR_LIMIT_POS     6U
-#define MPU_RLAR_LIMIT_MSK     (0x3FFFFFFFFFFFFFFUL << MPU_RLAR_LIMIT_POS)
+#define MPU_RLAR_LIMIT_MSK     (0x3FFFFFFFFFFFFFFULL << MPU_RLAR_LIMIT_POS)
 #define MPU_RLAR_ATTRINDX_POS  1U
-#define MPU_RLAR_ATTRINDX_MSK  (0x7UL << MPU_RLAR_ATTRINDX_POS)
-#define MPU_RLAR_EN_MSK        (0x1UL)
+#define MPU_RLAR_ATTRINDX_MSK  (0x7ULL << MPU_RLAR_ATTRINDX_POS)
+#define MPU_RLAR_EN_MSK        (0x1ULL)
 
 /* PRBAR_ELx: Attribute flag for not-allowing
  * execution (eXecute Never)
