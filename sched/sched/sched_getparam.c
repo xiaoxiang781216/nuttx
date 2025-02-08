@@ -104,8 +104,6 @@ int nxsched_get_param(pid_t pid, FAR struct sched_param *param)
         }
       else
         {
-#ifdef CONFIG_SCHED_SPORADIC
-#endif
           /* Return the priority of the task */
 
           param->sched_priority = (int)tcb->sched_priority;

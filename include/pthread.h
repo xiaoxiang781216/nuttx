@@ -226,10 +226,6 @@ struct pthread_attr_s
   uint8_t policy;              /* Pthread scheduler policy */
   uint8_t inheritsched;        /* Inherit parent priority/policy? */
   uint8_t detachstate;         /* Initialize to the detach state */
-#ifdef CONFIG_SCHED_SPORADIC
-  uint8_t low_priority;        /* Low scheduling priority */
-  uint8_t max_repl;            /* Maximum pending replenishments */
-#endif
 
 #ifdef CONFIG_SMP
   cpu_set_t affinity;          /* Set of permitted CPUs for the thread */
@@ -239,6 +235,8 @@ struct pthread_attr_s
   size_t stacksize;            /* Size of the stack allocated for the pthread */
 
 #ifdef CONFIG_SCHED_SPORADIC
+  uint8_t low_priority;        /* Low scheduling priority */
+  uint8_t max_repl;            /* Maximum pending replenishments */
   struct timespec repl_period; /* Replenishment period */
   struct timespec budget;      /* Initial budget */
 #endif
