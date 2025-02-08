@@ -59,6 +59,10 @@ static void core_main(void)
   tricore_userspace();
 #endif
 
+#ifdef CONFIG_ARCH_USE_MPU
+  tricore_mpuinit();
+#endif
+
   nx_start();
 
   while (1);

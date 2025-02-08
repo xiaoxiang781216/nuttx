@@ -216,6 +216,10 @@ void tricore_earlyserialinit(void);
 void tricore_userspace(void);
 #endif
 
+#ifdef CONFIG_ARCH_USE_MPU
+void tricore_mpuinit(void);
+#endif
+
 /* System Timer *************************************************************/
 
 struct oneshot_lowerhalf_s *
