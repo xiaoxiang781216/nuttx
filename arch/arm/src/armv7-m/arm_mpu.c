@@ -254,6 +254,7 @@ unsigned int mpu_allocregions(unsigned int nregions)
   /* There are not enough regions to apply */
 
   DEBUGASSERT((i + nregions - 1) < CONFIG_ARM_MPU_NREGIONS);
+  DEBUGASSERT(((g_mpu_region >> i) & ((1 << nregions) - 1)) == 0);
   g_mpu_region |= ((1 << nregions) - 1) << i;
   return i;
 }
