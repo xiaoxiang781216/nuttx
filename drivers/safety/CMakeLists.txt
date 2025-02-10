@@ -27,5 +27,9 @@ if(CONFIG_SAFETY)
     list(APPEND SRCS reg_monitor.c)
   endif()
 
+  if(CONFIG_SAFETY_MPU_MONITOR)
+    list(APPEND SRCS mpu_monitor.c)
+  endif()
+
   target_sources(drivers PRIVATE ${SRCS})
 endif()

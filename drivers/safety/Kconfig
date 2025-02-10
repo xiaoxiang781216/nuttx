@@ -23,6 +23,12 @@ config SAFETY_REGISTER_MONITOR
 		If the register has been changed, the Register Monitor will send a
 		message to the Safety driver.
 
+config SAFETY_MPU_MONITOR
+	bool "MPU Monitor Support"
+	default n
+	---help---
+		use the MPU Monitor to check whether the MPU work properly.
+
 endif # SAFETY
 
 endmenu # Safety Driver Support
