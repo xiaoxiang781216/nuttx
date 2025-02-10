@@ -1033,6 +1033,13 @@ static ssize_t rpmsg_socket_send_continuous(FAR struct socket *psock,
 
       if (block == 0)
         {
+          if (written > 0)
+            {
+              /* return sent data if remote has no space */
+
+              break;
+            }
+
           if (nonblock)
             {
               ret = -EAGAIN;
