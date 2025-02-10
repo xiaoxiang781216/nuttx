@@ -143,7 +143,6 @@ static void cpuload_callback(wdparm_t arg)
 
 void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
 {
-  irqstate_t flags;
 #ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
   static clock_t threshold = CLOCK_MAX;
   if (threshold == CLOCK_MAX)
@@ -154,8 +153,6 @@ void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
 #else
   static clock_t threshold = CPULOAD_TIMECONSTANT;
 #endif
-
-  flags = enter_critical_section();
 
   tcb->ticks += ticks;
   g_cpuload_total += ticks;
@@ -182,8 +179,6 @@ void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
 
       g_cpuload_total = total;
     }
-
-  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -270,12 +265,6 @@ int clock_cpuload(int pid, FAR struct cpuload_s *cpuload)
    * while we are doing these operations and (2) the tick counts to be
    * synchronized when read.
    */
-
-#ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
-  /* Update critmon in case of the target thread busyloop */
-
-  nxsched_update_critmon(nxsched_get_tcb(pid));
-#endif
 
   hash_index = PIDHASH(pid);
 
