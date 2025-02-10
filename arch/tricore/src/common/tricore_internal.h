@@ -243,4 +243,12 @@ size_t tricore_stack_check(uintptr_t alloc, size_t size);
 void tricore_stack_color(void *stackbase, size_t nbytes);
 #endif
 
+/* Memory management ********************************************************/
+
+#if CONFIG_MM_REGIONS > 1
+void tricore_addregion(void);
+#else
+#  define tricore_addregion()
+#endif
+
 #endif /* __ARCH_TRICORE_SRC_COMMON_TRICORE_INTERNAL_H */
