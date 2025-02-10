@@ -87,15 +87,6 @@ void nxtask_start(void)
     }
 #endif
 
-  /* Execute the start hook if one has been registered */
-
-#ifdef CONFIG_SCHED_STARTHOOK
-  if (ttype != TCB_FLAG_TTYPE_KERNEL && ttcb->starthook != NULL)
-    {
-      ttcb->starthook(ttcb->starthookarg);
-    }
-#endif
-
   /* Take args from stack, as group is shared for kthreads */
 
   argv = nxsched_get_stackargs(tcb);

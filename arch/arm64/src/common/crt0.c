@@ -32,8 +32,6 @@
 
 #include <arch/syscall.h>
 
-#ifdef CONFIG_BUILD_KERNEL
-
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -67,6 +65,7 @@ int main(int argc, char *argv[]);
  *
  ****************************************************************************/
 
+#ifdef CONFIG_BUILD_KERNEL
 static void sig_trampoline(void) naked_function;
 static void sig_trampoline(void)
 {
@@ -89,6 +88,7 @@ static void sig_trampoline(void)
     :
   );
 }
+#endif
 
 /****************************************************************************
  * Public Data
@@ -105,7 +105,7 @@ extern initializer_t _edtors[];
  * Private Functions
  ****************************************************************************/
 
-#ifdef CONFIG_HAVE_CXX
+#ifdef CONFIG_HAVE_CXXINITIALIZE
 
 /****************************************************************************
  * Name: exec_ctors
@@ -173,25 +173,31 @@ void __start(int argc, char *argv[])
    * that is visible to the RTOS.
    */
 
+#ifdef CONFIG_BUILD_KERNEL
   ARCH_DATA_RESERVE->ar_sigtramp = (addrenv_sigtramp_t)sig_trampoline;
+#endif
 
-#ifdef CONFIG_HAVE_CXX
+#ifdef CONFIG_HAVE_CXXINITIALIZE
   /* Call C++ constructors */
 
   exec_ctors();
 
   /* Setup so that C++ destructors called on task exit */
 
+#  if CONFIG_LIBC_MAX_EXITFUNS > 0
   atexit(exec_dtors);
+#  endif
 #endif
 
   /* Call the main() entry point passing argc and argv. */
 
   ret = main(argc, argv);
 
+#if defined(CONFIG_HAVE_CXXINITIALIZE) && CONFIG_LIBC_MAX_EXITFUNS <= 0
+  exec_dtors();
+#endif
+
   /* Call exit() if/when the main() returns */
 
   exit(ret);
 }
-
-#endif /* CONFIG_BUILD_KERNEL */

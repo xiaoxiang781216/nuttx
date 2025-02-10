@@ -52,15 +52,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* If C++ constructors are used, then CONFIG_SCHED_STARTHOOK must also be
- * selected be the start hook is used to schedule execution of the
- * constructors.
- */
-
-#if defined(CONFIG_BINFMT_CONSTRUCTORS) && !defined(CONFIG_SCHED_STARTHOOK)
-#  error "CONFIG_SCHED_STARTHOOK must be defined to use constructors"
-#endif
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -353,18 +344,6 @@ int exec_module(FAR struct binary_s *binp,
     {
       berr("ERROR: addrenv_attach() failed: %d\n", ret);
       goto errout_with_tcbinit;
-    }
-#endif
-
-#ifdef CONFIG_BINFMT_CONSTRUCTORS
-  /* Setup a start hook that will execute all of the C++ static constructors
-   * on the newly created thread.  The struct binary_s must persist at least
-   * until the new task has been started.
-   */
-
-  if (binp->mod.ninit > 0)
-    {
-      nxtask_starthook(tcb, exec_ctors, binp);
     }
 #endif
 
