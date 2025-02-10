@@ -90,7 +90,7 @@ void pm_initialize(void)
 #endif
       pm_set_governor(i, gov);
 
-#if defined(CONFIG_PM_PROCFS)
+#if defined(CONFIG_PM_STAT)
       clock_systime_timespec(&g_pmdomains[i].start);
 #endif
 

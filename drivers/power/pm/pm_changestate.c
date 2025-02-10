@@ -56,7 +56,7 @@
  *   None.
  *
  ****************************************************************************/
-#ifdef CONFIG_PM_PROCFS
+#ifdef CONFIG_PM_STAT
 static void pm_stats(FAR struct pm_domain_s *dom, int curstate, int newstate)
 {
   struct timespec now;

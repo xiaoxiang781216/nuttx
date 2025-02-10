@@ -53,7 +53,7 @@ static void pm_waklock_cb(wdparm_t arg)
   pm_wakelock_relax((FAR struct pm_wakelock_s *)arg);
 }
 
-#ifdef CONFIG_PM_PROCFS
+#ifdef CONFIG_PM_STAT
 static void pm_wakelock_stats_rm(FAR struct pm_wakelock_s *wakelock)
 {
   FAR struct pm_domain_s *pdom = &g_pmdomains[wakelock->domain];

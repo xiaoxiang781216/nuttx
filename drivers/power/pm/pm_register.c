@@ -70,7 +70,7 @@ int pm_domain_register(int domain, FAR struct pm_callback_s *cb)
   /* Add the new entry to the end of the list of registered callbacks */
 
   dq_addlast(&cb->entry, &pdom->registry);
-#if defined (CONFIG_PM_PROCFS)
+#if defined (CONFIG_PM_STAT)
   cb->preparefail.state = PM_RESTORE;
 #endif
   spin_unlock_irqrestore(&pdom->lock, flags);
