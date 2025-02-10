@@ -26,7 +26,7 @@ OUTPUT_ARCH(arm)
 SECTIONS
 {
     .userspace : {
-        *(.userspace)
+        KEEP(*(.userspace))
     } > uflash
 
     .text : {
