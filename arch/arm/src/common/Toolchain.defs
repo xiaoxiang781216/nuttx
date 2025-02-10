@@ -577,7 +577,7 @@ LDMODULEFLAGS = -r -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/modlib/gnu-elf.ld)
 # ELF module definitions
 
 CELFFLAGS = $(CFLAGS) -fvisibility=hidden -mlong-calls # --target1-abs
-CXXELFFLAGS = $(CXXFLAGS)-fvisibility=hidden
+CXXELFFLAGS = $(CXXFLAGS)-fvisibility=hidden -mlong-calls
 
 ifeq ($(CONFIG_UNWINDER_ARM),y)
   CELFFLAGS += -fno-unwind-tables -fno-asynchronous-unwind-tables
