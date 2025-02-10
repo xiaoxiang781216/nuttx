@@ -827,7 +827,6 @@ if(CONFIG_BUILD_PROTECTED)
             ${nuttx_system_libs}
             ${nuttx_apps_libs}
             ${nuttx_user_extra_libs}
-            $<$<BOOL:${CONFIG_HAVE_CXX}>:supc++>
             $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--end-group>)
 
   target_include_directories(
