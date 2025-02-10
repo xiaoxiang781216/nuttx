@@ -143,8 +143,6 @@ static void cpuload_callback(wdparm_t arg)
 
 void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
 {
-  irqstate_t flags = enter_critical_section();
-
   tcb->ticks += ticks;
   g_cpuload_total += ticks;
 
@@ -170,8 +168,6 @@ void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
 
       g_cpuload_total = total;
     }
-
-  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -197,15 +193,19 @@ void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
 
 void nxsched_process_cpuload_ticks(clock_t ticks)
 {
+  irqstate_t flags;
   int i;
 
   /* Perform scheduler operations on all CPUs. */
 
+  flags = enter_critical_section();
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
       FAR struct tcb_s *rtcb = current_task(i);
       nxsched_process_taskload_ticks(rtcb, ticks);
     }
+
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -230,13 +230,15 @@ void nxsched_process_cpuload_ticks(clock_t ticks)
 
 int clock_cpuload(int pid, FAR struct cpuload_s *cpuload)
 {
+  FAR struct tcb_s *tcb;
   irqstate_t flags;
   int hash_index;
   int ret = -ESRCH;
 
-#ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
-  FAR struct tcb_s *tcb;
+  UNUSED(tcb);
+  flags = enter_critical_section();
 
+#ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
   /* Update critmon in case of the target thread busyloop */
 
   tcb = nxsched_get_tcb(pid);
@@ -253,7 +255,12 @@ int clock_cpuload(int pid, FAR struct cpuload_s *cpuload)
    * synchronized when read.
    */
 
-  flags = enter_critical_section();
+#ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
+  /* Update critmon in case of the target thread busyloop */
+
+  nxsched_update_critmon(nxsched_get_tcb(pid));
+#endif
+
   hash_index = PIDHASH(pid);
 
   /* Make sure that the entry is valid (TCB field is not NULL) and matches

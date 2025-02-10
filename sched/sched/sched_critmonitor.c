@@ -124,11 +124,13 @@ clock_t g_crit_max[CONFIG_SMP_NCPUS];
 static void nxsched_critmon_cpuload(FAR struct tcb_s *tcb, clock_t current,
                                     clock_t tick)
 {
+  irqstate_t flags;
   int i;
   UNUSED(i);
 
   /* Update the cpuload of the thread ready to be suspended */
 
+  flags = enter_critical_section();
   nxsched_process_taskload_ticks(tcb, tick);
 
   /* Update the cpuload of threads running on other CPUs */
@@ -150,6 +152,8 @@ static void nxsched_critmon_cpuload(FAR struct tcb_s *tcb, clock_t current,
       rtcb->run_start = current;
     }
 #  endif
+
+  leave_critical_section(flags);
 }
 #endif
 
