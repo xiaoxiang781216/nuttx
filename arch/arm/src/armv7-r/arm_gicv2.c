@@ -30,6 +30,7 @@
 #include <errno.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/pci/pci.h>
 #include <arch/irq.h>
 
 #include "arm_internal.h"
@@ -661,6 +662,29 @@ int up_set_irq_type(int irq, int mode)
     }
 
   return -EINVAL;
+}
+
+/****************************************************************************
+ * Name: up_get_legacy_irq
+ *
+ * Description:
+ *   Reserve vector for legacy
+ *
+ ****************************************************************************/
+
+int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin)
+{
+#if CONFIG_ARMV7R_GICV2_LEGACY_IRQ0 >= 0
+  uint8_t slot;
+  uint8_t tmp;
+
+  UNUSED(line);
+  slot = PCI_SLOT(devfn);
+  tmp = (pin - 1 + slot) % 4;
+  return CONFIG_ARMV7R_GICV2_LEGACY_IRQ0 + tmp;
+#else
+  return -ENOTSUP;
+#endif
 }
 
 #endif /* CONFIG_ARMV7R_HAVE_GICv2 */
