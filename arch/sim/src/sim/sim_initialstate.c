@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <alloca.h>
 #include <stdint.h>
 #include <string.h>
 #ifdef CONFIG_SIM_ASAN
@@ -74,12 +75,18 @@ void up_initial_state(struct tcb_s *tcb)
 {
   if (tcb->pid == IDLE_PROCESS_ID)
     {
-      tcb->stack_alloc_ptr = (void *)(up_getsp() -
-                                      CONFIG_IDLETHREAD_STACKSIZE -
-                                      CONFIG_SIM_STACKSIZE_ADJUSTMENT);
-      tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
       tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE +
                              CONFIG_SIM_STACKSIZE_ADJUSTMENT;
+
+      /* Allocate the stack for the idle task, avoid using unallocated
+       * addresses directly, otherwise it may cause asan to report an error:
+       *
+       * AddressSanitizer:DEADLYSIGNAL
+       * ==9060==ERROR: AddressSanitizer: SEGV on unknown address 0xff77d000
+       */
+
+      tcb->stack_alloc_ptr = alloca(tcb->adj_stack_size);
+      tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
 
 #ifdef CONFIG_STACK_COLORATION
       /* If stack debug is enabled, then fill the stack with a
@@ -87,7 +94,7 @@ void up_initial_state(struct tcb_s *tcb)
        * water marks.
        */
 
-      sim_stack_color(tcb->stack_alloc_ptr, 0);
+      sim_stack_color(tcb->stack_alloc_ptr, tcb->adj_stack_size);
 #endif /* CONFIG_STACK_COLORATION */
     }
 
