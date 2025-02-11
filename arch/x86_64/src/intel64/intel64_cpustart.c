@@ -151,6 +151,7 @@ void x86_64_ap_boot(void)
 
   tcb = this_task();
   UNUSED(tcb);
+  up_update_task(tcb);
 
 #ifdef CONFIG_SCHED_THREAD_LOCAL
   /* Make sure that FS_BASE is not null */
