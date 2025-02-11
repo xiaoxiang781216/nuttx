@@ -218,8 +218,6 @@ void x86_64_ap_boot(void)
   intel64_hwp_init();
 #endif
 
-  up_update_task(tcb);
-
   /* Then transfer control to the IDLE task */
 
   nx_idle_trampoline();
