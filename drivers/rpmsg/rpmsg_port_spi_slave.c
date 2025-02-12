@@ -815,7 +815,7 @@ rpmsg_port_spi_slave_initialize(FAR const struct rpmsg_port_config_s *cfg,
   pm_register(&rpspi->pmcb);
   spin_lock_init(&rpspi->pmlock);
   pm_wakelock_init(&rpspi->wakelock, cfg->remotecpu,
-                   PM_IDLE_DOMAIN, PM_IDLE);
+                   PM_IDLE_DOMAIN, PM_NORMAL);
 #endif
 
   return 0;
