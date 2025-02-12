@@ -22,7 +22,7 @@ config ARMV7R_GIC_EOIMODE
 		Enable GICC_CTLR.EOImode, this will separates the priority drop and interrupt
 		deactivation operations.
 
-endif # ARMV7R_GIC_EOIMODE
+endif # ARMV7R_HAVE_GICv2
 
 config ARMV7R_HAVE_PTM
 	bool
