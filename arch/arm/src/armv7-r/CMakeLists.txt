@@ -49,6 +49,10 @@ if(NOT CONFIG_ARCH_CHIP STREQUAL tms570)
   list(APPEND SRCS arm_gicv2.c arm_gicv2_dump.c)
 endif()
 
+if(CONFIG_ARMV7R_GICv2M)
+  list(APPEND SRCS arm_gicv2m.c)
+endif()
+
 if(CONFIG_ARMV7R_HAVE_PTM)
   list(APPEND SRCS arm_timer.c)
 endif()

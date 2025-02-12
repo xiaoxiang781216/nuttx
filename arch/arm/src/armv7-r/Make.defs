@@ -40,6 +40,10 @@ CMN_CSRCS += arm_schedulesigaction.c arm_sigdeliver.c
 CMN_CSRCS += arm_syscall.c arm_tcbinfo.c arm_undefinedinsn.c
 CMN_CSRCS += arm_perf.c cp15_cacheops.c
 
+ifeq ($(CONFIG_ARMV7R_GICv2M),y)
+  CMN_CSRCS += arm_gicv2m.c
+endif
+
 ifeq ($(CONFIG_ARMV7R_HAVE_PTM), y)
   CMN_CSRCS += arm_timer.c
 endif

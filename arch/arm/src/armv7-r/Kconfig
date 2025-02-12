@@ -28,6 +28,11 @@ config ARMV7R_GICV2_LEGACY_IRQ0
 	---help---
 		QEMU PCI legacy irq0 default is 35, -1 means disable.
 
+config ARMV7R_GICv2M
+	bool "gic support msi irq"
+	depends on PCI_MSIX
+	default n
+
 endif # ARMV7R_HAVE_GICv2
 
 config ARMV7R_HAVE_PTM
