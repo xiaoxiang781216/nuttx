@@ -641,6 +641,7 @@ struct sensor_accel         /* Type: Accerometer */
   float y;                  /* Axis Y in m/s^2 */
   float z;                  /* Axis Z in m/s^2 */
   float temperature;        /* Temperature in degrees celsius */
+  int32_t status;           /* Status of calibration */
 };
 
 struct sensor_accel_uncal   /* Type: Accerometer Uncalibrated */
@@ -653,6 +654,7 @@ struct sensor_accel_uncal   /* Type: Accerometer Uncalibrated */
   float y_bias;             /* Axis Y bias in m/s^2 */
   float z_bias;             /* Axis Z bias in m/s^2 */
   float temperature;        /* Temperature in degrees celsius */
+  int32_t status;           /* Status of calibration */
 };
 
 struct sensor_mag           /* Type: Magnetic Field */
@@ -693,6 +695,7 @@ struct sensor_gyro          /* Type: Gyroscope */
   float y;                  /* Axis Y in rad/s */
   float z;                  /* Axis Z in rad/s */
   float temperature;        /* Temperature in degrees celsius */
+  int32_t status;           /* Status of calibration */
 };
 
 struct sensor_gyro_uncal    /* Type: Gyroscope Uncalibrated */
@@ -705,6 +708,7 @@ struct sensor_gyro_uncal    /* Type: Gyroscope Uncalibrated */
   float y_bias;             /* Axis Y bias in rad/s */
   float z_bias;             /* Axis Z bias in rad/s */
   float temperature;        /* Temperature in degrees celsius */
+  int32_t status;           /* Status of calibration */
 };
 
 struct sensor_light         /* Type: Light */
@@ -798,6 +802,7 @@ struct sensor_hrate         /* Type: Heart Rate */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float bpm;                /* is SI units BPM */
+  int32_t status;           /* Status of calibration */
 };
 
 struct sensor_pose_6dof     /* Type: Pose 6dof */
@@ -830,6 +835,7 @@ struct sensor_hbeat         /* Type: Heart Beat */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float beat;               /* Units is times/minutes */
+  int32_t status;           /* Status of calibration */
 };
 
 struct sensor_force         /* Type: Force */
@@ -943,6 +949,22 @@ struct sensor_eng           /* Type: ENG */
   uint64_t timestamp;       /* Unit is microseconds */
   float voltage[4];         /* Voltage unit in mV */
   uint32_t stat;            /* Status. bit3:0 - value 3:0 is valid or not */
+};
+
+/* Used to indicate the accuracy of sensor data. The type is consistent
+ * with Android.
+ * https://cs.android.com/android/_/android/platform/hardware/libhardware/+/\
+ * 0e67aa0caee9500b61b9c1c8b6e5cab18301364c:include_all/hardware/\
+ * sensors-base.h
+ */
+
+enum sensor_accuracy_status
+{
+  SENSOR_TYPE_STATUS_NO_CONTACT        = -1,   /* -1 */
+  SENSOR_TYPE_STATUS_UNRELIABLE        = 0,
+  SENSOR_TYPE_STATUS_ACCURACY_LOW      = 1,
+  SENSOR_TYPE_STATUS_ACCURACY_MEDIUM   = 2,
+  SENSOR_TYPE_STATUS_ACCURACY_HIGH     = 3,
 };
 
 struct sensor_gnss          /* Type: GNSS */
