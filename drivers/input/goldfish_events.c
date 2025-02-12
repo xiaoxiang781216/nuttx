@@ -70,7 +70,7 @@ struct goldfish_input_event
 {
   uint32_t type;
   uint32_t code;
-  uint32_t value;
+  int32_t  value;
 };
 
 struct goldfish_events_s
@@ -82,7 +82,9 @@ struct goldfish_events_s
   struct mouse_report_s         mousesample;    /* Mouse event */
   struct keyboard_lowerhalf_s   keyboardlower;  /* Keyboard device lowerhalf instance */
   struct touch_lowerhalf_s      touchlower;     /* Touchpad device lowerhalf instance */
-  struct touch_sample_s         touchsample;    /* Touchpad event */
+  int                           currentslot;    /* Multi touch point number */
+  bool                          validevent;     /* Touch point valid */
+  struct touch_sample_s         touchsample[0]; /* Touchpad event */
 };
 
 /****************************************************************************
@@ -187,25 +189,167 @@ static bool
 goldfish_events_send_touch_event(FAR struct goldfish_events_s *events,
                                  FAR struct goldfish_input_event *evt)
 {
+  FAR struct touch_sample_s *touchsample = &events->touchsample[0];
+
   if (evt->type == EV_ABS)
     {
+      /* Single touch event sequence example:
+       * events(EV_ABS, ABS_X,      952)
+       * events(EV_ABS, ABS_Y,      473)
+       * events(EV_ABS, ABS_Z,      0)
+       * events(EV_KEY, BTN_TOUCH,  TOUCH_DOWN)
+       * events(EV_SYN, SYN_REPORT, 0)
+       * events(EV_SYN, SYN_REPORT, 0)
+       *
+       * events(EV_ABS, ABS_X,      957)
+       * events(EV_ABS, ABS_Y,      462)
+       * events(EV_ABS, ABS_Z,      0)
+       * events(EV_KEY, BTN_TOUCH,  TOUCH_UP)
+       * events(EV_SYN, SYN_REPORT, 0)
+       * events(EV_SYN, SYN_REPORT, 0)
+       *
+       * validevent flag is used to:
+       * Filter consecutive invalid SYN events
+       * */
+
       switch (evt->code)
         {
+          /* Single touch events */
+
           case ABS_PRESSURE:
-            events->touchsample.point[0].flags |= TOUCH_PRESSURE_VALID;
-            events->touchsample.point[0].pressure = evt->value;
-            return true;
+            touchsample->point[0].flags |= TOUCH_PRESSURE_VALID;
+            touchsample->point[0].pressure = evt->value;
+            break;
 
           case ABS_X:
-            events->touchsample.point[0].flags |= TOUCH_POS_VALID;
-            events->touchsample.point[0].x = evt->value;
-            return true;
+            touchsample->point[0].flags = TOUCH_POS_VALID;
+            touchsample->point[0].x = evt->value;
+            break;
 
           case ABS_Y:
-            events->touchsample.point[0].flags |= TOUCH_POS_VALID;
-            events->touchsample.point[0].y = evt->value;
-            return true;
+            touchsample->point[0].flags = TOUCH_POS_VALID;
+            touchsample->point[0].y = evt->value;
+            break;
+
+          /* Multi-touch event sequence example:
+           *
+           * // one touch down event sequence:
+           * events(EV_ABS, ABS_MT_SLOT,        0)
+           * events(EV_ABS, ABS_MT_TRACKING_ID, 0)
+           * events(EV_ABS, ABS_MT_POSITION_X,  508)
+           * events(EV_ABS, ABS_MT_POSITION_Y,  475)
+           * events(EV_ABS, ABS_MT_TOOL_TYPE,   0)
+           * events(EV_ABS, ABS_MT_PRESSURE,    1024)
+           * events(EV_ABS, ABS_MT_ORIENTATION, 0)
+           * events(EV_ABS, ABS_MT_TOUCH_MAJOR, 1280)
+           * events(EV_ABS, ABS_MT_TOUCH_MINOR, 1280)
+           *
+           * events(EV_SYN, SYN_REPORT, 0)
+           * events(EV_SYN, SYN_REPORT, 0)
+           *
+           * // one touch move event sequence:
+           * events(EV_ABS, ABS_MT_POSITION_X,  888)
+           * events(EV_SYN, SYN_REPORT, 0)
+           * events(EV_SYN, SYN_REPORT, 0)
+           *
+           * events(EV_ABS, ABS_MT_POSITION_Y,  268)
+           * events(EV_SYN, SYN_REPORT, 0)
+           * events(EV_SYN, SYN_REPORT, 0)
+           *
+           * // one touch up event sequence:
+           * events(EV_ABS, ABS_MT_PRESSURE,    0)
+           * events(EV_ABS, ABS_MT_TRACKING_ID, -1)
+           * events(EV_SYN, SYN_REPORT, 0)
+           * events(EV_SYN, SYN_REPORT, 0)
+           *
+           * // two touch down event sequence:
+           * events(EV_ABS, ABS_MT_SLOT,        0)
+           * events(EV_ABS, ABS_MT_TRACKING_ID, 0)
+           * events(EV_ABS, ABS_MT_POSITION_X,  508)
+           * events(EV_ABS, ABS_MT_POSITION_Y,  475)
+           * events(EV_ABS, ABS_MT_TOOL_TYPE,   0)
+           * events(EV_ABS, ABS_MT_PRESSURE,    1024)
+           * events(EV_ABS, ABS_MT_ORIENTATION, 0)
+           * events(EV_ABS, ABS_MT_TOUCH_MAJOR, 1280)
+           * events(EV_ABS, ABS_MT_TOUCH_MINOR, 1280)
+           *
+           * events(EV_ABS, ABS_MT_SLOT,        1)
+           * events(EV_ABS, ABS_MT_TRACKING_ID, 1)
+           * events(EV_ABS, ABS_MT_POSITION_X,  829)
+           * events(EV_ABS, ABS_MT_POSITION_Y,  265)
+           * events(EV_ABS, ABS_MT_TOOL_TYPE,   0)
+           * events(EV_ABS, ABS_MT_PRESSURE,    1024)
+           * events(EV_ABS, ABS_MT_ORIENTATION, 0)
+           * events(EV_ABS, ABS_MT_TOUCH_MAJOR, 1280)
+           * events(EV_ABS, ABS_MT_TOUCH_MINOR, 1280)
+           *
+           * events(EV_SYN, SYN_REPORT, 0)
+           * events(EV_SYN, SYN_REPORT, 0)
+           * events(EV_SYN, SYN_REPORT, 0)
+           *
+           * // two touch move event sequence:
+           * events(EV_ABS, ABS_MT_SLOT,        0)
+           * events(EV_ABS, ABS_MT_POSITION_X,  888)
+           * events(EV_ABS, ABS_MT_SLOT,        1)
+           * events(EV_ABS, ABS_MT_POSITION_Y,  268)
+           * events(EV_SYN, SYN_REPORT, 0)
+           * events(EV_SYN, SYN_REPORT, 0)
+           *
+           * // two touch up event sequence:
+           * events(EV_ABS, ABS_MT_SLOT,        0)
+           * events(EV_ABS, ABS_MT_PRESSURE,    0)
+           * events(EV_ABS, ABS_MT_TRACKING_ID, -1)
+           *
+           * events(EV_ABS, ABS_MT_SLOT,        1)
+           * events(EV_ABS, ABS_MT_PRESSURE,    0)
+           * events(EV_ABS, ABS_MT_TRACKING_ID, -1)
+           *
+           * events(EV_SYN, SYN_REPORT, 0)
+           * events(EV_SYN, SYN_REPORT, 0)
+           * */
+
+          case ABS_MT_SLOT:
+            events->currentslot = evt->value;
+            break;
+
+          case ABS_MT_TRACKING_ID:
+            touchsample->point[events->currentslot].id = events->currentslot;
+            if (evt->value >= 0)
+              {
+                touchsample->point[events->currentslot].flags = TOUCH_DOWN;
+              }
+            else
+              {
+                touchsample->point[events->currentslot].flags = TOUCH_UP;
+                touchsample->point[events->currentslot].x = 0;
+                touchsample->point[events->currentslot].y = 0;
+                touchsample->point[events->currentslot].pressure = 0;
+              }
+
+            break;
+
+          case ABS_MT_POSITION_X:
+            touchsample->point[events->currentslot].flags |= TOUCH_POS_VALID;
+            touchsample->point[events->currentslot].x = evt->value;
+            break;
+
+          case ABS_MT_POSITION_Y:
+            touchsample->point[events->currentslot].flags |= TOUCH_POS_VALID;
+            touchsample->point[events->currentslot].y = evt->value;
+            break;
+
+          case ABS_MT_PRESSURE:
+            touchsample->point[events->currentslot].flags |=
+              TOUCH_PRESSURE_VALID;
+            touchsample->point[events->currentslot].pressure = evt->value;
+              break;
+
+          default:
+              return false;
         }
+
+      events->validevent = true;
+      return true;
     }
   else if (evt->type == EV_KEY)
     {
@@ -213,26 +357,24 @@ goldfish_events_send_touch_event(FAR struct goldfish_events_s *events,
         {
           if (evt->value)
             {
-              events->touchsample.point[0].flags |= TOUCH_DOWN;
+              touchsample->point[0].flags |= TOUCH_DOWN;
             }
           else
             {
-              events->touchsample.point[0].flags |= TOUCH_UP;
+              touchsample->point[0].flags |= TOUCH_UP;
             }
 
+          events->validevent = true;
           return true;
         }
     }
   else if (evt->type == EV_SYN && evt->code == SYN_REPORT &&
-           ((events->touchsample.point[0].pressure != 0) ||
-           (events->touchsample.point[0].x != 0) ||
-           (events->touchsample.point[0].y != 0)))
+           events->validevent)
     {
-      events->touchsample.npoints = 1;
-      events->touchsample.point[0].timestamp = touch_get_time();
+      events->validevent = false;
+      touchsample->point[events->currentslot].timestamp = touch_get_time();
 
-      touch_event(events->touchlower.priv, &events->touchsample);
-      memset(&events->touchsample, 0, sizeof(events->touchsample));
+      touch_event(events->touchlower.priv, touchsample);
     }
 
   return false;
@@ -350,14 +492,64 @@ static void goldfish_drivers_register(FAR struct goldfish_events_s *events)
 int goldfish_events_register(FAR void *base, int irq)
 {
   FAR struct goldfish_events_s *events;
+  uint32_t max_slot;
   int ret;
 
-  events = (FAR struct goldfish_events_s *)kmm_zalloc(sizeof(*events));
+  putreg32(GOLDFISH_EVENTS_PAGE_EVBITS | EV_ABS,
+           base + GOLDFISH_EVENTS_SET_PAGE);
+
+  /* Since each 32-bit (4-byte) block can represent 32 event codes, dividing
+   * ABS_MT_SLOT by 32 gives the block index,
+   * then multiplying by 4 converts it to a byte offset.
+   *
+   * For example, if ABS_MT_SLOT is 47:
+   *   47/32 = 1 (block index)
+   *   1*4 = 4 bytes offset
+   *
+   * This means the data needs to cover at least 5 bytes (from 0 to 4 bytes
+   * offset) to include the bit position for this event code.
+   *
+   * Each EV_ABS event code corresponds to an ABSEntry structure
+   * The structure is defined as follows:
+   *
+   * typedef struct ABSEntry
+   * {
+   *   uint32_t min;
+   *   uint32_t max;
+   *   uint32_t fuzz;
+   *   uint32_t flat;
+   * };
+   * so abs_slot_offset = ABS_MT_SLOT << 4;
+   *
+   * The offset of the max value is 4 bytes after the min value.
+   * so max_slot_offset = abs_slot_offset + 4;
+   * */
+
+  if (getreg32(base + GOLDFISH_EVENTS_LEN) > ABS_MT_SLOT / 32 * 4)
+    {
+      const int abs_slot_offset = ABS_MT_SLOT << 4;
+
+      putreg32(GOLDFISH_EVENTS_PAGE_ABSDATA,
+               base + GOLDFISH_EVENTS_SET_PAGE);
+
+      max_slot = getreg32(base + GOLDFISH_EVENTS_DATA + abs_slot_offset + 4);
+      iinfo("Multi-touch enabled, maxpoint:%" PRIu32 ".\n", max_slot);
+    }
+  else
+    {
+      max_slot = 1;
+      iinfo("Single-touch mode.\n");
+    }
+
+  events = kmm_zalloc(sizeof(*events) + (SIZEOF_TOUCH_SAMPLE_S(max_slot)));
+
   if (events == NULL)
     {
       return -ENOMEM;
     }
 
+  events->touchlower.maxpoint = max_slot;
+  events->touchsample->npoints = events->touchlower.maxpoint;
   events->base = base;
   events->irq = irq;
 
