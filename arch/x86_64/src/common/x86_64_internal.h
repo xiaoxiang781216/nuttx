@@ -255,7 +255,7 @@ uint64_t *x86_64_syscall(uint64_t *regs);
 
 #ifdef CONFIG_ARCH_MULTIBOOT2
 void x86_64_mb2_fbinitialize(struct multiboot_tag_framebuffer *tag);
-void fb_putc(char ch);
+int fb_putc(int ch);
 #endif
 
 /* Defined in up_allocateheap.c */
