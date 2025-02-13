@@ -40,6 +40,7 @@
 
 #include "rpmsg_ping.h"
 #include "rpmsg_test.h"
+#include "rpmsg_router.h"
 #include "rpmsg_procfs.h"
 
 /****************************************************************************
@@ -226,7 +227,9 @@ void rpmsg_initialize(void)
 {
   rpmsg_note_initialize();
 
+#ifdef CONFIG_RPMSG_PROCFS
   rpmsg_procfs_initialize();
+#endif
 }
 
 int rpmsg_wait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
@@ -687,6 +690,11 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
 
   down_write(&g_rpmsg_lock);
   metal_list_add_tail(&g_rpmsg, &rpmsg->node);
+
+#ifdef CONFIG_RPMSG_PROCFS
+  rpmsg_procfs_register(&rpmsg->procfs, path);
+#endif
+
   up_write(&g_rpmsg_lock);
 
   return ret;
@@ -700,6 +708,9 @@ void rpmsg_unregister(FAR const char *path, FAR struct rpmsg_s *rpmsg)
 #endif
 
   down_write(&g_rpmsg_lock);
+#ifdef CONFIG_RPMSG_PROCFS
+  rpmsg_procfs_unregister(&rpmsg->procfs);
+#endif
   metal_list_del(&rpmsg->node);
   up_write(&g_rpmsg_lock);
 

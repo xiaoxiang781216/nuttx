@@ -57,19 +57,10 @@
 
 /* This structure describes one open "file" */
 
-struct rpmsg_procfs_file_s
+struct rpmsginfo_file_s
 {
-  struct procfs_file_s base;                         /* Base open file structure */
-  char                 line[RPMSG_PROCFS_LINELEN];   /* Pre-allocated buffer for formatted lines */
-};
-
-struct rpmsg_procfs_info_s
-{
-  FAR struct rpmsg_procfs_file_s *procfile;
-  size_t                          totalsize;
-  FAR char                       *buffer;
-  size_t                          buflen;
-  off_t                           offset;
+  struct procfs_file_s base;                      /* Base open file structure */
+  char                 line[RPMSGINFO_LINELEN];   /* Pre-allocated buffer for formatted lines */
 };
 
 /****************************************************************************
@@ -78,55 +69,57 @@ struct rpmsg_procfs_info_s
 
 /* File system methods */
 
-static int     rpmsg_procfs_open(FAR struct file *filep,
-                                 FAR const char *relpath,
-                                 int oflags, mode_t mode);
-static int     rpmsg_procfs_close(FAR struct file *filep);
-static ssize_t rpmsg_procfs_read(FAR struct file *filep, FAR char *buffer,
-                                 size_t buflen);
-static int     rpmsg_procfs_dup(FAR const struct file *oldp,
-                                FAR struct file *newp);
+static int     rpmsginfo_open(FAR struct file *filep,
+                              FAR const char *relpath,
+                              int oflags, mode_t mode);
+static int     rpmsginfo_close(FAR struct file *filep);
+static ssize_t rpmsginfo_read(FAR struct file *filep, FAR char *buffer,
+                              size_t buflen);
+static int     rpmsginfo_dup(FAR const struct file *oldp,
+                             FAR struct file *newp);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static const struct procfs_operations g_rpmsg_procfs_ops =
+static const struct procfs_operations g_rpmsginfo_operations =
 {
-  rpmsg_procfs_open,   /* open */
-  rpmsg_procfs_close,  /* close */
-  rpmsg_procfs_read,   /* read */
-  NULL,                /* write */
-  NULL,                /* poll */
-  rpmsg_procfs_dup,    /* dup */
+  rpmsginfo_open,   /* open */
+  rpmsginfo_close,  /* close */
+  rpmsginfo_read,   /* read */
+  NULL,             /* write */
+  NULL,             /* poll */
+  rpmsginfo_dup,    /* dup */
 };
 
 static const struct procfs_entry_s g_rpmsg_procfs_root =
 {
-  "rpmsg", &g_rpmsg_procfs_ops, PROCFS_FILE_TYPE
+  "rpmsg", &g_rpmsginfo_operations, PROCFS_FILE_TYPE, 0444
 };
+
+static FAR struct rpmsg_procfs_entry_s *g_rpmsg_procfs_entry = NULL;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: rpmsg_procfs_open
+ * Name: rpmsginfo_open
  ****************************************************************************/
 
-static int rpmsg_procfs_open(FAR struct file *filep, FAR const char *relpath,
-                             int oflags, mode_t mode)
+static int rpmsginfo_open(FAR struct file *filep, FAR const char *relpath,
+                          int oflags, mode_t mode)
 {
-  FAR struct rpmsg_procfs_file_s *procfile;
+  FAR struct rpmsginfo_file_s *procfile;
 
   finfo("Open '%s'\n", relpath);
 
   /* Allocate a container to hold the file attributes */
 
-  procfile = kmm_zalloc(sizeof(struct rpmsg_procfs_file_s));
+  procfile = kmm_zalloc(sizeof(struct rpmsginfo_file_s));
   if (procfile == NULL)
     {
-      rpmsgerr("ERROR: Failed to allocate file attributes\n");
+      ferr("ERROR: Failed to allocate file attributes\n");
       return -ENOMEM;
     }
 
@@ -137,12 +130,12 @@ static int rpmsg_procfs_open(FAR struct file *filep, FAR const char *relpath,
 }
 
 /****************************************************************************
- * Name: rpmsg_procfs_close
+ * Name: rpmsginfo_close
  ****************************************************************************/
 
-static int rpmsg_procfs_close(FAR struct file *filep)
+static int rpmsginfo_close(FAR struct file *filep)
 {
-  FAR struct rpmsg_procfs_file_s *procfile;
+  FAR struct rpmsginfo_file_s *procfile;
 
   /* Recover our private data from the struct file instance */
 
@@ -157,79 +150,66 @@ static int rpmsg_procfs_close(FAR struct file *filep)
 }
 
 /****************************************************************************
- * Name: rpmsg_procfs_close
+ * Name: rpmsginfo_read
  ****************************************************************************/
 
-static int rpmsg_procfs_handler(FAR struct rpmsg_s *rpmsg, FAR void *args)
+static ssize_t rpmsginfo_read(FAR struct file *filep, FAR char *buffer,
+                              size_t buflen)
 {
-  FAR struct rpmsg_procfs_info_s *procinfo =
-    (FAR struct rpmsg_procfs_info_s *)args;
+  FAR const struct rpmsg_procfs_entry_s *entry;
+  FAR struct rpmsginfo_file_s *procfile;
+  size_t totalsize = 0;
+  size_t copysize = 0;
   size_t linesize;
-  size_t copysize;
+  off_t offset;
 
-  if (procinfo->buflen > 0)
+  offset = filep->f_pos;
+  procfile = filep->f_priv;
+
+  linesize = procfs_snprintf(procfile->line, RPMSGINFO_LINELEN,
+                             "%-15s%-15s\n",
+                             "Local CPU", "Remote CPU");
+  copysize = procfs_memcpy(procfile->line, linesize, buffer,
+                           buflen, &offset);
+  totalsize = copysize;
+
+  for (entry = g_rpmsg_procfs_entry; entry != NULL; entry = entry->next)
     {
-      linesize = procfs_snprintf(procinfo->procfile->line,
-                                 RPMSG_PROCFS_LINELEN,
-                                 "%-15s%-15s\n",
-                                 rpmsg_get_local_cpuname(rpmsg->rdev),
-                                 rpmsg_get_cpuname(rpmsg->rdev));
-      copysize = procfs_memcpy(procinfo->procfile->line, linesize,
-                               procinfo->buffer, procinfo->buflen,
-                               &procinfo->offset);
-      procinfo->totalsize += copysize;
-      procinfo->buffer += copysize;
-      procinfo->buflen -= copysize;
+      if (buflen > 0)
+        {
+          FAR struct rpmsg_s *rpmsg = container_of(entry, struct rpmsg_s,
+                                                   procfs);
+          FAR struct rpmsg_device *rdev = rpmsg_get_rdev_by_rpmsg(rpmsg);
+
+          buffer += copysize;
+          buflen -= copysize;
+
+          linesize = procfs_snprintf(procfile->line, RPMSGINFO_LINELEN,
+                                     "%-15s%-15s\n",
+                                     rpmsg_get_local_cpuname(rdev),
+                                     rpmsg_get_cpuname(rdev));
+          copysize = procfs_memcpy(procfile->line, linesize, buffer,
+                                   buflen, &offset);
+          totalsize += copysize;
+        }
     }
 
-  return OK;
+  filep->f_pos += totalsize;
+  return totalsize;
 }
 
 /****************************************************************************
- * Name: rpmsg_procfs_read
- ****************************************************************************/
-
-static ssize_t rpmsg_procfs_read(FAR struct file *filep, FAR char *buffer,
-                                 size_t buflen)
-{
-  FAR struct rpmsg_procfs_info_s procinfo;
-  size_t copysize;
-  size_t linesize;
-
-  procinfo.offset = filep->f_pos;
-  procinfo.procfile = filep->f_priv;
-  linesize = procfs_snprintf(procinfo.procfile->line, RPMSG_PROCFS_LINELEN,
-                             "Local CPU      Remote CPU\n");
-  copysize = procfs_memcpy(procinfo.procfile->line, linesize,
-                           buffer, buflen,
-                           &procinfo.offset);
-
-  buffer += copysize;
-  buflen -= copysize;
-
-  procinfo.totalsize = copysize;
-  procinfo.buffer = buffer;
-  procinfo.buflen = buflen;
-
-  rpmsg_foreach(rpmsg_procfs_handler, &procinfo);
-
-  filep->f_pos += procinfo.totalsize;
-  return procinfo.totalsize;
-}
-
-/****************************************************************************
- * Name: rpmsg_procfs_dup
+ * Name: rpmsginfo_dup
  *
  * Description:
  *   Duplicate open file data in the new file structure.
  *
  ****************************************************************************/
 
-static int
-rpmsg_procfs_dup(FAR const struct file *oldp, FAR struct file *newp)
+static int rpmsginfo_dup(FAR const struct file *oldp, FAR struct file *newp)
 {
-  FAR struct rpmsg_procfs_file_s *oldattr;
-  FAR struct rpmsg_procfs_file_s *newattr;
+  FAR struct rpmsginfo_file_s *oldattr;
+  FAR struct rpmsginfo_file_s *newattr;
 
   finfo("Dup %p->%p\n", oldp, newp);
 
@@ -240,16 +220,16 @@ rpmsg_procfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 
   /* Allocate a new container to hold the task and attribute selection */
 
-  newattr = kmm_malloc(sizeof(struct rpmsg_procfs_file_s));
+  newattr = kmm_malloc(sizeof(struct rpmsginfo_file_s));
   if (newattr == NULL)
     {
-      rpmsgerr("ERROR: Failed to allocate file attributes\n");
+      ferr("ERROR: Failed to allocate file attributes\n");
       return -ENOMEM;
     }
 
   /* The copy the file attributes from the old attributes to the new */
 
-  memcpy(newattr, oldattr, sizeof(struct rpmsg_procfs_file_s));
+  memcpy(newattr, oldattr, sizeof(struct rpmsginfo_file_s));
 
   /* Save the new attributes in the new file structure */
 
@@ -262,6 +242,50 @@ rpmsg_procfs_dup(FAR const struct file *oldp, FAR struct file *newp)
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: rpmsg_procfs_register
+ *
+ * Description:
+ *   Add a new rpmsg entry to the procfs file system.
+ *
+ * Input Parameters:
+ *   entry - Describes the entry to be registered.
+ *
+ ****************************************************************************/
+
+void rpmsg_procfs_register(FAR struct rpmsg_procfs_entry_s *entry,
+                           FAR const char *name)
+{
+  entry->name = name;
+  entry->next = g_rpmsg_procfs_entry;
+  g_rpmsg_procfs_entry = entry;
+}
+
+/****************************************************************************
+ * Name: rpmsg_procfs_unregister
+ *
+ * Description:
+ *   Remove a rpmsg entry from the procfs file system.
+ *
+ * Input Parameters:
+ *   entry - Describes the entry to be unregistered.
+ *
+ ****************************************************************************/
+
+void rpmsg_procfs_unregister(FAR struct rpmsg_procfs_entry_s *entry)
+{
+  FAR struct rpmsg_procfs_entry_s **cur;
+
+  for (cur = &g_rpmsg_procfs_entry; *cur != NULL; cur = &(*cur)->next)
+    {
+      if (*cur == entry)
+        {
+          *cur = entry->next;
+          break;
+        }
+    }
+}
+
+/****************************************************************************
  * Name: rpmsg_procfs_initialize
  ****************************************************************************/
 
@@ -272,6 +296,6 @@ void rpmsg_procfs_initialize(void)
   ret = procfs_register(&g_rpmsg_procfs_root);
   if (ret != OK)
     {
-      rpmsgerr("ERROR: Failed to register rpmsg procfs %d\n", ret);
+      ferr("ERROR: Failed to register rpmsg procfs\n");
     }
 }

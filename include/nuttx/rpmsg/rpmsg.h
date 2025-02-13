@@ -67,6 +67,14 @@ struct rpmsg_defer_node_s
 };
 #endif
 
+#ifdef CONFIG_RPMSG_PROCFS
+struct rpmsg_procfs_entry_s
+{
+  FAR const char *name;
+  FAR struct rpmsg_procfs_entry_s *next;
+};
+#endif
+
 struct rpmsg_s
 {
   bool                         init;
@@ -90,6 +98,10 @@ struct rpmsg_s
   struct metal_list            defer_used;
   struct rpmsg_defer_node_s    defer_nodes[CONFIG_RPMSG_DEFER_WORK_COUNT];
   spinlock_t                   defer_lock;
+#endif
+
+#ifdef CONFIG_RPMSG_PROCFS
+  struct rpmsg_procfs_entry_s  procfs; /* The entry of procfs */
 #endif
 };
 
