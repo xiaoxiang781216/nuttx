@@ -27,46 +27,19 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/config.h>
 
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
-#ifdef CONFIG_RPMSG_PROCFS
-
-/****************************************************************************
- * Name: rpmsg_procfs_register
- *
- * Description:
- *   Add a new rpmsg entry to the procfs file system.
- *
- * Input Parameters:
- *   entry - Describes the entry to be registered.
- *
- ****************************************************************************/
-
-void rpmsg_procfs_register(FAR struct rpmsg_procfs_entry_s *entry,
-                           FAR const char *name);
-
-/****************************************************************************
- * Name: rpmsg_procfs_unregister
- *
- * Description:
- *   Remove a rpmsg entry from the procfs file system.
- *
- * Input Parameters:
- *   entry - Describes the entry to be unregistered.
- *
- ****************************************************************************/
-
-void rpmsg_procfs_unregister(FAR struct rpmsg_procfs_entry_s *entry);
-
 /****************************************************************************
  * Name: rpmsg_procfs_initialize
  ****************************************************************************/
 
+#ifdef CONFIG_RPMSG_PROCFS
 void rpmsg_procfs_initialize(void);
-
+#else
+#  define rpmsg_procfs_initialize()
 #endif /* CONFIG_RPMSG_PROCFS */
 #endif /* __DRIVERS_RPMSG_RPMSG_PROCFS_H */
