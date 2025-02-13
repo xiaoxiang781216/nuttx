@@ -36,6 +36,7 @@
 
 #include "rpmsg_ping.h"
 #include "rpmsg_test.h"
+#include "rpmsg_procfs.h"
 
 /****************************************************************************
  * Private Types
@@ -167,6 +168,8 @@ static int rpmsg_dev_ioctl(FAR struct file *filep, int cmd,
 void rpmsg_initialize(void)
 {
   rpmsg_note_initialize();
+
+  rpmsg_procfs_initialize();
 }
 
 int rpmsg_wait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)

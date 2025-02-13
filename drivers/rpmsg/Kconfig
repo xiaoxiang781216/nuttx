@@ -41,6 +41,13 @@ config RPMSG_TEST
 	bool "rpmsg test support"
 	default n
 
+config RPMSG_PROCFS
+	bool "Include rpmsg info in procfs"
+	depends on FS_PROCFS_REGISTER
+	default !DEFAULT_SMALL
+	---help---
+		Use RPMSG file system to cat rpmsg info
+
 endif # RPMSG
 
 config RPMSG_ROUTER
