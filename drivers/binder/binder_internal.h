@@ -108,10 +108,8 @@ static void binder_debug(int mask, FAR const char *fmt, ...)
       int pos;
       va_list ap;
       pos = snprintf(binder_debug_log, 256,
-                     "[%s (%d)][%d:%d][%s]:",
-                     LOG_TAG, __LINE__,
-                     getpid(), gettid(),
-                     __func__);
+                     "[%s][%d:%d]:",
+                     LOG_TAG, getpid(), gettid());
 
       va_start(ap, fmt);
       vsnprintf(binder_debug_log + pos,
