@@ -124,7 +124,7 @@ static void exec_swap(FAR struct tcb_s *ptcb, FAR struct tcb_s *chtcb)
   DEBUGASSERT(ptcb);
   DEBUGASSERT(chtcb);
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_pidhashlock);
 
   pndx  = PIDHASH(ptcb->pid);
   chndx = PIDHASH(chtcb->pid);
@@ -165,7 +165,7 @@ static void exec_swap(FAR struct tcb_s *ptcb, FAR struct tcb_s *chtcb)
 #  endif
 #endif
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_pidhashlock, flags);
 }
 
 /****************************************************************************

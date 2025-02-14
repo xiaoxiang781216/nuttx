@@ -416,6 +416,7 @@ volatile pid_t g_lastpid;
 
 FAR struct tcb_s **g_pidhash;
 volatile int g_npidhash;
+spinlock_t g_pidhashlock = SP_UNLOCKED;
 
 /* This is a table of task lists.  This table is indexed by the task state
  * enumeration type (tstate_t) and provides a pointer to the associated

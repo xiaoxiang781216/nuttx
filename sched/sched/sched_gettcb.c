@@ -53,8 +53,7 @@ FAR struct tcb_s *nxsched_get_tcb(pid_t pid)
   irqstate_t flags;
   int hash_ndx;
 
-  flags = enter_critical_section();
-
+  flags = spin_lock_irqsave(&g_pidhashlock);
   if (g_pidhash != NULL && pid >= 0)
     {
       /* The test and the return setup should be atomic.  This still does
@@ -95,7 +94,7 @@ FAR struct tcb_s *nxsched_get_tcb(pid_t pid)
       atomic_fetch_add(&ret->refs, 1);
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_pidhashlock, flags);
 
   return ret;
 }

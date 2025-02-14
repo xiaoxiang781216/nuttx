@@ -59,14 +59,12 @@
 
 void nxsched_foreach(nxsched_foreach_t handler, FAR void *arg)
 {
-  irqstate_t flags;
+  int npidhash = g_npidhash;
   int ndx;
 
   /* Visit each active task */
 
-  flags = enter_critical_section();
-  sched_lock();
-  for (ndx = 0; ndx < g_npidhash; ndx++)
+  for (ndx = 0; ndx < npidhash; ndx++)
     {
       /* This test and the function call must be atomic */
 
@@ -77,7 +75,4 @@ void nxsched_foreach(nxsched_foreach_t handler, FAR void *arg)
           nxsched_put_tcb(tcb);
         }
     }
-
-  sched_unlock();
-  leave_critical_section(flags);
 }

@@ -243,7 +243,7 @@ static int elf_get_ntcb(void)
 
   for (i = 0; i < g_npidhash; i++)
     {
-      if (g_pidhash[i] != NULL)
+      if (nxsched_verify_pid(i))
         {
           count++;
         }
@@ -374,23 +374,29 @@ static void elf_emit_tcb_note(FAR struct elf_dumpinfo_s *cinfo,
 
 static void elf_emit_note(FAR struct elf_dumpinfo_s *cinfo)
 {
+  FAR struct tcb_s *tcb;
   int i;
 
   if (cinfo->pid == INVALID_PROCESS_ID)
     {
       for (i = 0; i < g_npidhash; i++)
         {
-          if (g_pidhash[i] != NULL)
+          tcb = nxsched_get_tcb(i);
+          if (tcb)
             {
-              elf_emit_tcb_note(cinfo, g_pidhash[i]);
+              elf_emit_tcb_note(cinfo, tcb);
+              nxsched_put_tcb(tcb);
             }
         }
     }
   else
     {
-      FAR struct tcb_s *tcb = nxsched_get_tcb(cinfo->pid);
-      elf_emit_tcb_note(cinfo, tcb);
-      nxsched_put_tcb(tcb);
+      tcb = nxsched_get_tcb(cinfo->pid);
+      if (tcb)
+        {
+          elf_emit_tcb_note(cinfo, tcb);
+          nxsched_put_tcb(tcb);
+        }
     }
 }
 
@@ -458,23 +464,29 @@ static void elf_emit_tcb_stack(FAR struct elf_dumpinfo_s *cinfo,
 
 static void elf_emit_stack(FAR struct elf_dumpinfo_s *cinfo)
 {
+  FAR struct tcb_s *tcb;
   int i;
 
   if (cinfo->pid == INVALID_PROCESS_ID)
     {
       for (i = 0; i < g_npidhash; i++)
         {
-          if (g_pidhash[i] != NULL)
+          tcb = nxsched_get_tcb(i);
+          if (tcb)
             {
-              elf_emit_tcb_stack(cinfo, g_pidhash[i]);
+              elf_emit_tcb_stack(cinfo, tcb);
+              nxsched_put_tcb(tcb);
             }
         }
     }
   else
     {
-      FAR struct tcb_s *tcb = nxsched_get_tcb(cinfo->pid);
-      elf_emit_tcb_stack(cinfo, tcb);
-      nxsched_put_tcb(tcb);
+      tcb = nxsched_get_tcb(cinfo->pid);
+      if (tcb)
+        {
+          elf_emit_tcb_stack(cinfo, tcb);
+          nxsched_put_tcb(tcb);
+        }
     }
 }
 
@@ -632,6 +644,7 @@ static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo,
 {
   off_t offset = cinfo->stream->nput +
                  (stksegs + memsegs + 1 + 1) * sizeof(Elf_Phdr);
+  FAR struct tcb_s *tcb;
   Elf_Phdr phdr;
   int i;
 
@@ -649,17 +662,22 @@ static void elf_emit_phdr(FAR struct elf_dumpinfo_s *cinfo,
     {
       for (i = 0; i < g_npidhash; i++)
         {
-          if (g_pidhash[i] != NULL)
+          tcb = nxsched_get_tcb(i);
+          if (tcb)
             {
-              elf_emit_tcb_phdr(cinfo, g_pidhash[i], &phdr, &offset);
+              elf_emit_tcb_phdr(cinfo, tcb, &phdr, &offset);
+              nxsched_put_tcb(tcb);
             }
         }
     }
   else
     {
-      FAR struct tcb_s *tcb = nxsched_get_tcb(cinfo->pid);
-      elf_emit_tcb_phdr(cinfo, tcb, &phdr, &offset);
-      nxsched_put_tcb(tcb);
+      tcb = nxsched_get_tcb(cinfo->pid);
+      if (tcb)
+        {
+          elf_emit_tcb_phdr(cinfo, tcb, &phdr, &offset);
+          nxsched_put_tcb(tcb);
+        }
     }
 
   /* Write program headers for segments dump */
@@ -967,7 +985,6 @@ int coredump(FAR const struct memory_region_s *regions,
              pid_t pid)
 {
   struct elf_dumpinfo_s cinfo;
-  irqstate_t flags;
   int memsegs = 0;
   int stksegs;
 
@@ -975,13 +992,10 @@ int coredump(FAR const struct memory_region_s *regions,
   cinfo.stream  = stream;
   cinfo.pid     = pid;
 
-  flags = enter_critical_section();
-
   if (cinfo.pid != INVALID_PROCESS_ID)
     {
       if (!nxsched_verify_pid(cinfo.pid))
         {
-          leave_critical_section(flags);
           return -EINVAL;
         }
 
@@ -1038,8 +1052,6 @@ int coredump(FAR const struct memory_region_s *regions,
   /* Flush the dump */
 
   elf_flush(&cinfo);
-
-  leave_critical_section(flags);
 
   return OK;
 }

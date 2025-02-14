@@ -51,7 +51,7 @@
 
 void nxsched_release_pid(pid_t pid)
 {
-  irqstate_t flags = enter_critical_section();
+  irqstate_t flags = spin_lock_irqsave(&g_pidhashlock);
   int hash_ndx = PIDHASH(pid);
   FAR struct tcb_s *tcb = g_pidhash[hash_ndx];
 
@@ -70,10 +70,10 @@ void nxsched_release_pid(pid_t pid)
    */
 
   g_pidhash[hash_ndx] = NULL;
+  spin_unlock_irqrestore(&g_pidhashlock, flags);
+
   DEBUGASSERT(atomic_read(&tcb->refs) > 0);
   atomic_fetch_sub(&tcb->refs, 1);
-
-  leave_critical_section(flags);
 
   /* Wait tcb->refs to be 0 */
 

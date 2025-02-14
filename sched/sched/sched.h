@@ -237,6 +237,7 @@ extern volatile pid_t g_lastpid;
 
 extern FAR struct tcb_s **g_pidhash;
 extern volatile int g_npidhash;
+extern spinlock_t g_pidhashlock;
 
 /* This is a table of task lists.  This table is indexed by the task stat
  * enumeration type (tstate_t) and provides a pointer to the associated

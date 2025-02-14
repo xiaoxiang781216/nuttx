@@ -103,7 +103,7 @@ retry:
    * because g_pidhash is accessed from an interrupt context
    */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_pidhashlock);
 
   /* Get the next process ID candidate */
 
@@ -132,7 +132,7 @@ retry:
           atomic_set(&tcb->refs, 1);
           g_lastpid = next_pid;
 
-          leave_critical_section(flags);
+          spin_unlock_irqrestore(&g_pidhashlock, flags);
           return OK;
         }
 
@@ -151,7 +151,7 @@ retry:
    * and if successful, return directly
    */
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_pidhashlock, flags);
   pidhash = kmm_zalloc(g_npidhash * 2 * sizeof(*pidhash));
   if (pidhash == NULL)
     {
@@ -160,10 +160,10 @@ retry:
 
   /* Handle conner case: context siwtch happened when kmm_malloc */
 
-  flags = enter_critical_section();
+  spin_lock_irqsave(&g_pidhashlock);
   if (temp != g_pidhash)
     {
-      leave_critical_section(flags);
+      spin_unlock_irqrestore(&g_pidhashlock, flags);
       kmm_free(pidhash);
       goto retry;
     }
@@ -194,7 +194,7 @@ retry:
   /* Release resource for original g_pidhash, using new g_pidhash */
 
   g_pidhash = pidhash;
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_pidhashlock, flags);
   kmm_free(temp);
 
   /* Let's try every allowable pid again */

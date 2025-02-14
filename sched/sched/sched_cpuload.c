@@ -143,6 +143,8 @@ static void cpuload_callback(wdparm_t arg)
 
 void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
 {
+  irqstate_t flags;
+
 #ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
   static clock_t threshold = CLOCK_MAX;
   if (threshold == CLOCK_MAX)
@@ -166,6 +168,7 @@ void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
        * total.
        */
 
+      flags = spin_lock_irqsave(&g_pidhashlock);
       for (i = 0; i < g_npidhash; i++)
         {
           if (g_pidhash[i])
@@ -174,6 +177,8 @@ void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
               total += g_pidhash[i]->ticks;
             }
         }
+
+      spin_unlock_irqrestore(&g_pidhashlock, flags);
 
       /* Save the new total. */
 
@@ -247,7 +252,6 @@ int clock_cpuload(int pid, FAR struct cpuload_s *cpuload)
   int ret = -ESRCH;
 
   UNUSED(tcb);
-  flags = enter_critical_section();
 
 #ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
   /* Update critmon in case of the target thread busyloop */
@@ -267,6 +271,7 @@ int clock_cpuload(int pid, FAR struct cpuload_s *cpuload)
    * synchronized when read.
    */
 
+  flags = spin_lock_irqsave(&g_pidhashlock);
   hash_index = PIDHASH(pid);
 
   /* Make sure that the entry is valid (TCB field is not NULL) and matches
@@ -289,7 +294,7 @@ int clock_cpuload(int pid, FAR struct cpuload_s *cpuload)
       ret = OK;
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_pidhashlock, flags);
   return ret;
 }
 
