@@ -22,8 +22,11 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/timers/arch_alarm.h>
+#include <nuttx/config.h>
 
+#ifndef CONFIG_ARCH_ARMV8R
+
+#include <nuttx/timers/arch_alarm.h>
 #include "arm_timer.h"
 
 /****************************************************************************
@@ -34,3 +37,5 @@ void up_timer_initialize(void)
 {
   up_alarm_set_lowerhalf(arm_timer_initialize(0));
 }
+
+#endif /* CONFIG_ARCH_ARMV8R */
