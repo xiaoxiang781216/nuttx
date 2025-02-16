@@ -212,7 +212,7 @@
 #define SO_TYPE         15 /* Reports the socket type (get only).
                             * return: int
                             */
-#define SO_TIMESTAMP    16 /* Generates a timestamp for each incoming packet
+#define SO_TIMESTAMP    16 /* Generates a timestamp in us for each incoming packet
                             * arg: integer value
                             */
 #define SO_BINDTODEVICE 17 /* Bind this socket to a specific network device.
@@ -225,6 +225,9 @@
                             * networking queues: packets with a higher priority
                             * may be processed first depending on the selected
                             * device queueing discipline.
+                            */
+#define SO_TIMESTAMPNS  20 /* Generates a timestamp in ns for each incoming packet
+                            * arg: integer value
                             */
 
 /* The options are unsupported but included for compatibility
