@@ -30,6 +30,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <execinfo.h>
+#include <sys/prctl.h>
 #include <nuttx/mm/mm.h>
 
 #include "mm_heap/mm.h"
@@ -287,18 +288,17 @@ void mm_memdump(FAR struct mm_heap_s *heap,
       default:
         if (pid >= 0)
           {
-            FAR struct tcb_s *tcb = nxsched_get_tcb(pid);
+            char name[CONFIG_TASK_NAME_SIZE + 1];
 
-            if (tcb == NULL)
+            memset(name, 0, sizeof(name));
+
+            if (prctl(PR_GET_NAME_EXT, name, pid) < 0)
               {
-                syslog(LOG_INFO, "Memdump task Unknown\n");
+                syslog(LOG_INFO, "Memdump task Unknown %d\n", get_errno());
               }
             else
               {
-                syslog(LOG_INFO, "Memdump task stack_alloc_ptr: %p,"
-                                " adj_stack_size: %zu, name: %s\n",
-                                tcb->stack_alloc_ptr, tcb->adj_stack_size,
-                                get_task_name(tcb));
+                syslog(LOG_INFO, "Memdump task %s\n", name);
               }
 
             memdump_info_pool(&priv, heap);
