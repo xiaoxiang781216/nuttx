@@ -246,10 +246,13 @@ int rpmsg_virtio_bmp_init(FAR const char *cpuname, bool master,
       return ret;
     }
 
+  up_enable_irq(dev->irq_event);
+
   ret = rpmsg_virtio_lite_initialize(&dev->rpmsg);
   if (ret < 0)
     {
       rpmsgerr("Rpmsg virtio lite intialize failed, ret = %d\n", ret);
+      up_disable_irq(dev->irq_event);
       irq_detach(dev->irq_event);
       kmm_free(dev);
       return ret;
