@@ -121,7 +121,7 @@ void up_irqinitialize(void)
 
 void up_disable_irq(int irq)
 {
-  volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + up_cpu_index() + irq;
+  volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
 
   IfxSrc_disable(src);
 }
@@ -136,7 +136,7 @@ void up_disable_irq(int irq)
 
 void up_enable_irq(int irq)
 {
-  volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + up_cpu_index() + irq;
+  volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
 
 #ifdef CONFIG_ARCH_CHIP_AURIX_TC3XX
   IfxSrc_init(src, IfxSrc_Tos_cpu0 + up_cpu_index(), IRQ_TO_NDX(irq));
@@ -157,7 +157,7 @@ void up_enable_irq(int irq)
 
 void tricore_ack_irq(int irq)
 {
-  volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + up_cpu_index() + irq;
+  volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
   IfxSrc_clearRequest(src);
 }
 
