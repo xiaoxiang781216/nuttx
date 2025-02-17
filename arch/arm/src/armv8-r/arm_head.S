@@ -236,9 +236,7 @@ __cpu0_start:
 	mcr		CP15_VBAR(r0)
 
 	bl		sctlr_initialize
-#ifdef CONFIG_ARCH_FPU
-	bl		arm_fpuconfig
-#endif
+
 	bl		arm_boot
 
 	mov		lr, #0				/* LR = return address (none) */
