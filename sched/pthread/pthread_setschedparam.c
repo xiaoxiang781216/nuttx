@@ -97,7 +97,7 @@ int pthread_setschedparam(pthread_t thread, int policy,
 
   /* Let nxsched_set_scheduler do all of the work */
 
-  ret = nxsched_set_scheduler((pid_t)thread, policy, param);
+  ret = nxsched_set_scheduler(thread, policy, param);
   if (ret < 0)
     {
       /* If nxsched_set_scheduler() fails, return the positive errno value */

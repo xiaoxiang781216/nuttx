@@ -327,7 +327,7 @@ int work_usrstart(void)
 
   pthread_detach(usrwork);
 
-  return (pid_t)usrwork;
+  return usrwork;
 #endif
 }
 

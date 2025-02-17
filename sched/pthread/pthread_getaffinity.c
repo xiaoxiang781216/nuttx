@@ -79,7 +79,7 @@ int pthread_getaffinity_np(pthread_t thread, size_t cpusetsize,
 
   /* Let nxsched_get_affinity do all of the work */
 
-  ret = nxsched_get_affinity((pid_t)thread, cpusetsize, cpuset);
+  ret = nxsched_get_affinity(thread, cpusetsize, cpuset);
   if (ret < 0)
     {
       /* If nxsched_get_affinity() fails, return the positive errno */

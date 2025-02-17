@@ -986,7 +986,7 @@ int bcmf_bus_gspi_active(FAR struct bcmf_dev_s *priv,
       goto exit_uninit_hw;
     }
 
-  gbus->thread_id = (pid_t)ret;
+  gbus->thread_id = ret;
 
   ret = gspi->set_isr(gspi, bcmf_gspi_thread_isr, gbus);
 

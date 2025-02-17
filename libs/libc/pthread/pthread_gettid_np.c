@@ -46,5 +46,5 @@
 
 pid_t pthread_gettid_np(pthread_t thread)
 {
-  return (pid_t)thread;
+  return thread;
 }

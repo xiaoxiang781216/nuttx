@@ -83,7 +83,7 @@ int pthread_setaffinity_np(pthread_t thread, size_t cpusetsize,
    * value.
    */
 
-  ret = nxsched_set_affinity((pid_t)thread, cpusetsize, cpuset);
+  ret = nxsched_set_affinity(thread, cpusetsize, cpuset);
   return ret < 0 ? -ret : OK;
 }
 

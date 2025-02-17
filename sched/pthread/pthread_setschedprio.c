@@ -74,7 +74,7 @@ int pthread_setschedprio(pthread_t thread, int prio)
    * modified.
    */
 
-  ret = nxsched_get_param((pid_t)thread, &param);
+  ret = nxsched_get_param(thread, &param);
   if (ret < 0)
     {
       return -ret;
@@ -84,7 +84,7 @@ int pthread_setschedprio(pthread_t thread, int prio)
   /* Call nxsched_set_param() to change the priority */
 
   param.sched_priority = prio;
-  ret = nxsched_set_param((pid_t)thread, &param);
+  ret = nxsched_set_param(thread, &param);
   if (ret < 0)
     {
       return -ret;

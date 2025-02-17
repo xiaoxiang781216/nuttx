@@ -48,7 +48,7 @@ int pthread_cancel(pthread_t thread)
 
   /* First, make sure that the handle references a valid thread */
 
-  if ((pid_t)thread == IDLE_PROCESS_ID)
+  if (thread == IDLE_PROCESS_ID)
     {
       /* pid == 0 is the IDLE task (in a single CPU configuration).  Callers
        * cannot cancel the IDLE task.
@@ -57,7 +57,7 @@ int pthread_cancel(pthread_t thread)
       return ESRCH;
     }
 
-  tcb = nxsched_get_tcb((pid_t)thread);
+  tcb = nxsched_get_tcb(thread);
   if (tcb == NULL)
     {
       /* The pid does not correspond to any known thread.  The thread
@@ -103,9 +103,9 @@ int pthread_cancel(pthread_t thread)
 
   /* Complete pending join operations */
 
-  pthread_completejoin((pid_t)thread, PTHREAD_CANCELED);
+  pthread_completejoin(thread, PTHREAD_CANCELED);
 
   /* Then let nxtask_terminate do the real work */
 
-  return nxtask_terminate((pid_t)thread);
+  return nxtask_terminate(thread);
 }

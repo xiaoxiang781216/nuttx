@@ -85,10 +85,10 @@ int pthread_join(pthread_t thread, FAR pthread_addr_t *pexit_value)
 
   nxrmutex_lock(&group->tg_mutex);
 
-  tcb = nxsched_get_tcb((pid_t)thread);
+  tcb = nxsched_get_tcb(thread);
   if (tcb == NULL || (tcb->flags & TCB_FLAG_JOIN_COMPLETED) != 0)
     {
-      ret = pthread_findjoininfo(group, (pid_t)thread, &join, false);
+      ret = pthread_findjoininfo(group, thread, &join, false);
       if (ret == OK)
         {
           /* Destroy the join information after obtain the exit value */

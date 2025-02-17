@@ -711,7 +711,7 @@ static int bcmf_bus_sdio_initialize(FAR struct bcmf_dev_s *priv,
       goto exit_free_bus;
     }
 
-  sbus->thread_id = (pid_t)ret;
+  sbus->thread_id = ret;
 
   return OK;
 

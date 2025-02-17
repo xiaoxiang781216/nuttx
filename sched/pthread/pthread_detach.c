@@ -72,12 +72,12 @@ int pthread_detach(pthread_t thread)
 
   nxrmutex_lock(&group->tg_mutex);
 
-  tcb = nxsched_get_tcb((pid_t)thread);
+  tcb = nxsched_get_tcb(thread);
   if (tcb == NULL || (tcb->flags & TCB_FLAG_JOIN_COMPLETED) != 0)
     {
       /* Destroy the join information */
 
-      ret = pthread_findjoininfo(group, (pid_t)thread, &join, false);
+      ret = pthread_findjoininfo(group, thread, &join, false);
       if (ret == OK)
         {
           pthread_destroyjoin(group, join);
