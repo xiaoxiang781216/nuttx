@@ -31,6 +31,7 @@ if(CONFIG_COVERAGE_TOOLCHAIN)
   list(APPEND STDLIBS gcov)
 endif()
 
+list(APPEND STDLIBS unwind)
 list(APPEND HOST_DEFINITIONS -D__SIM__)
 
 # common guest sources
@@ -123,10 +124,6 @@ endif()
 
 if(CONFIG_RPTUN)
   list(APPEND SRCS sim_rptun.c)
-endif()
-
-if(CONFIG_SCHED_BACKTRACE)
-  list(APPEND STDLIBS unwind)
 endif()
 
 if(CONFIG_SIM_SOUND_ALSA)

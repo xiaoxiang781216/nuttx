@@ -86,7 +86,6 @@ CSRCS += sim_checkhostfstypes.c
 
 ifeq ($(CONFIG_SCHED_BACKTRACE),y)
 CSRCS += sim_backtrace.c
-STDLIBS += -lunwind
 endif
 
 ifeq ($(CONFIG_ARCH_HAVE_FORK),y)
@@ -125,7 +124,7 @@ hostfs.h: $(TOPDIR)/include/nuttx/fs/hostfs.h
 
 sim_hostfs.c: hostfs.h
 
-STDLIBS += -lpthread
+STDLIBS += -lpthread -lunwind
 ifeq ($(CONFIG_HOST_MACOS),y)
 ifeq ($(CONFIG_HAVE_CXXINITIALIZE),y)
   # Note: sim_macho_init.c is not in CSRCS because it's picky about
