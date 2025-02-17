@@ -30,7 +30,6 @@
 #include <assert.h>
 #include <debug.h>
 #include <execinfo.h>
-
 #include <nuttx/mm/mm.h>
 
 #include "mm_heap/mm.h"
@@ -259,59 +258,57 @@ void mm_memdump(FAR struct mm_heap_s *heap,
     }
 #endif
 
-  if (pid == PID_MM_MEMPOOL)
+  switch (pid)
     {
-      syslog(LOG_INFO, "Memdump mempool\n");
-    }
-  else if (pid == PID_MM_LEAK)
-    {
-      syslog(LOG_INFO, "Memdump leak\n");
-      memdump_info_pool(&priv, heap);
-    }
-  else if (pid == PID_MM_ALLOC || pid >= 0)
-    {
-      FAR struct tcb_s *tcb = NULL;
-      FAR const char   *name;
-
-      if (pid == PID_MM_ALLOC)
-        {
-          name = "ALL";
-        }
-      else
-        {
-          name = "Unkown";
-          tcb  = nxsched_get_tcb(pid);
-        }
-
-      if (tcb == NULL)
-        {
-          syslog(LOG_INFO, "Memdump task %s\n", name);
-        }
-      else
-        {
-          name = get_task_name(tcb);
-          syslog(LOG_INFO, "Memdump task stack_alloc_ptr: %p,"
-                           " adj_stack_size: %zu, name: %s\n",
-                           tcb->stack_alloc_ptr, tcb->adj_stack_size, name);
-        }
-
-      memdump_info_pool(&priv, heap);
-    }
-  else if (pid == PID_MM_FREE)
-    {
-      syslog(LOG_INFO, "Dump all free memory node info\n");
-      memdump_info_pool(&priv, heap);
-    }
+      case PID_MM_MEMPOOL:
+        syslog(LOG_INFO, "Memdump mempool\n");
+        break;
+      case PID_MM_LEAK:
+        syslog(LOG_INFO, "Memdump leak\n");
+        memdump_info_pool(&priv, heap);
+        break;
+      case PID_MM_ALLOC:
+        syslog(LOG_INFO, "Dump all used memory node info\n");
+        memdump_info_pool(&priv, heap);
+        break;
+      case PID_MM_FREE:
+        syslog(LOG_INFO, "Dump all free memory node info\n");
+        break;
 #if CONFIG_MM_HEAP_BIGGEST_COUNT > 0
-  else if (pid == PID_MM_BIGGEST)
-    {
-      syslog(LOG_INFO, "Memdump biggest allocated top %d\n",
-                       CONFIG_MM_HEAP_BIGGEST_COUNT);
-    }
+      case PID_MM_BIGGEST:
+        syslog(LOG_INFO, "Memdump biggest allocated top %d\n",
+                        CONFIG_MM_HEAP_BIGGEST_COUNT);
+        break;
 #endif
-  else if (pid == PID_MM_ORPHAN)
-    {
-      syslog(LOG_INFO, "Dump allocated orphan nodes\n");
+      case PID_MM_ORPHAN:
+        syslog(LOG_INFO, "Dump allocated orphan node\n");
+        break;
+
+      default:
+        if (pid >= 0)
+          {
+            FAR struct tcb_s *tcb = nxsched_get_tcb(pid);
+
+            if (tcb == NULL)
+              {
+                syslog(LOG_INFO, "Memdump task Unknown\n");
+              }
+            else
+              {
+                syslog(LOG_INFO, "Memdump task stack_alloc_ptr: %p,"
+                                " adj_stack_size: %zu, name: %s\n",
+                                tcb->stack_alloc_ptr, tcb->adj_stack_size,
+                                get_task_name(tcb));
+              }
+
+            memdump_info_pool(&priv, heap);
+          }
+        else
+          {
+            syslog(LOG_INFO, "Memdump no support %d\n", pid);
+          }
+
+        break;
     }
 
 #if CONFIG_MM_BACKTRACE < 0
