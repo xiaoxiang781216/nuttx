@@ -64,7 +64,6 @@ static void tricore_gpsrinitialize(void)
                   IRQ_TO_NDX(TRICORE_SRC2IRQ(src)),
                   IfxSrc_VmId_none);
 #endif
-      IfxSrc_enable(src);
 
       src += TRICORE_SRCNUM_PER_GPSR;
     }
