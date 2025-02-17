@@ -1089,7 +1089,6 @@ config ARCH_ARMV8R
 	select ONESHOT
 	select ALARM_ARCH
 
-
 config ARM_GIC_VERSION
 	int "GIC version"
 	default 3 if ARCH_ARMV8R
