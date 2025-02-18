@@ -96,3 +96,5 @@ if(CONFIG_ARCH_TOOLCHAIN_GHS)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})
+
+nuttx_add_aux_library(STARTUP_OBJS crt0.c)

@@ -111,6 +111,13 @@ function(nuttx_add_system_library target)
 
   # add to list of libraries to link to final nuttx binary
   set_property(GLOBAL APPEND PROPERTY NUTTX_SYSTEM_LIBRARIES ${target})
+
+  set_property(
+    TARGET nuttx_global
+    APPEND
+    PROPERTY NUTTX_ELF_LINK_LIBRARIES $<TARGET_FILE:${target}>)
+
+  add_dependencies(nuttx_post ${target})
 endfunction()
 
 # Kernel Libraries
@@ -189,6 +196,14 @@ function(nuttx_add_library target)
   add_library(${target} ${ARGN})
   add_dependencies(${target} apps_context)
   set_property(GLOBAL APPEND PROPERTY NUTTX_SYSTEM_LIBRARIES ${target})
+
+  set_property(
+    TARGET nuttx_global
+    APPEND
+    PROPERTY NUTTX_ELF_LINK_LIBRARIES $<TARGET_FILE:${target}>)
+
+  add_dependencies(nuttx_post ${target})
+
   # Set apps global compile options & definitions hold by nuttx_apps_interface
   target_compile_options(
     ${target}
@@ -229,6 +244,12 @@ function(nuttx_add_extra_library)
         set_property(GLOBAL APPEND PROPERTY NUTTX_USER_EXTRA_LIBRARIES
                                             ${extra_target})
       endif()
+      if(CONFIG_BUILD_KERNEL)
+        set_property(
+          TARGET nuttx_global
+          APPEND
+          PROPERTY NUTTX_ELF_LINK_LIBRARIES $<TARGET_FILE:${extra_target}>)
+      endif()
     endif()
   endforeach()
 endfunction()
@@ -252,6 +273,11 @@ function(nuttx_add_external_library target)
   cmake_parse_arguments(ARGS "" MODE "" ${ARGN})
   if(NOT ARGS_MODE)
     set_property(GLOBAL APPEND PROPERTY NUTTX_SYSTEM_LIBRARIES ${target})
+    set_property(
+      TARGET nuttx_global
+      APPEND
+      PROPERTY NUTTX_ELF_LINK_LIBRARIES $<TARGET_FILE:${target}>)
+    add_dependencies(nuttx_post ${target})
   elseif("${ARGS_MODE}" STREQUAL "APPS")
     set_property(GLOBAL APPEND PROPERTY NUTTX_APPS_LIBRARIES ${target})
   elseif("${ARGS_MODE}" STREQUAL "KERNEL")
