@@ -124,3 +124,9 @@ void core5_main(void)
 {
   core_main();
 }
+
+void core6_main(void)
+{
+  tricore_apu_init();
+  core_main();
+}
