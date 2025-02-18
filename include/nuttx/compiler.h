@@ -1159,7 +1159,7 @@
 #    define UNUSED(a) ((void)(1 || &(a)))
 #  endif
 
-#  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
+#  define offsetof(a, b) __builtin_offsetof(a, b)
 #  define return_address(x) 0
 
 #  define no_builtin(n)
