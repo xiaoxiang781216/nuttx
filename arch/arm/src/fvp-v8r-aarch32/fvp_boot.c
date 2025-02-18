@@ -34,7 +34,7 @@
 
 #include "arm_internal.h"
 
-#include "arm_gic.h"
+#include "gic.h"
 #include "chip.h"
 #include "fvp_boot.h"
 

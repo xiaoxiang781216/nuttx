@@ -34,7 +34,7 @@
 #include <nuttx/spinlock.h>
 #include <nuttx/timers/arch_alarm.h>
 
-#include "arm_gic.h"
+#include "gic.h"
 #include "arm_arch_timer.h"
 
 /****************************************************************************

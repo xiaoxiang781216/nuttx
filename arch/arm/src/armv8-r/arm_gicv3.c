@@ -33,7 +33,7 @@
 #include <sched/sched.h>
 
 #include "arm_internal.h"
-#include "arm_gic.h"
+#include "gic.h"
 
 /***************************************************************************
  * Pre-processor Definitions
