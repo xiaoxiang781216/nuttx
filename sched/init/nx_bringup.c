@@ -43,6 +43,7 @@
 #include <nuttx/kthread.h>
 #include <nuttx/userspace.h>
 #include <nuttx/binfmt/binfmt.h>
+#include <nuttx/lib/lib.h>
 
 #ifdef CONFIG_LEGACY_PAGING
 #  include "paging/paging.h"
@@ -510,6 +511,10 @@ int nx_bringup(void)
   setenv("LD_LIBRARY_PATH", CONFIG_LDPATH_INITIAL, 1);
 #endif
 #endif
+
+  /* Call C++ static constructors */
+
+  lib_cxx_initialize();
 
   /* Start the page fill worker kernel thread that will resolve page faults.
    * This should always be the first thread started because it may have to

@@ -138,6 +138,10 @@ void lib_put_tempbuffer(FAR char *buffer);
 FAR char *lib_realpath(FAR const char *path, FAR char *resolved,
                        bool notfollow);
 
+/* Functions defined in lib_cxx_initialize.c ********************************/
+
+void lib_cxx_initialize(void);
+
 #undef EXTERN
 #ifdef __cplusplus
 }

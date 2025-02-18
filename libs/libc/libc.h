@@ -263,10 +263,6 @@ ssize_t lib_parse_hostfile(FAR FILE *stream, FAR struct hostent *host,
 int lib_restoredir(void);
 #endif
 
-/* Defined in lib_cxx_initialize.c */
-
-void lib_cxx_initialize(void);
-
 #undef EXTERN
 #if defined(__cplusplus)
 }
