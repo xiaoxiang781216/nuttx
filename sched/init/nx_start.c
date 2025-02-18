@@ -108,6 +108,8 @@ static struct tcb_s g_idletcb[CONFIG_SMP_NCPUS] =
       .name     = "CPU0 IDLE",
   #endif
 #endif
+      .refs     = 1,
+      .exit_sem = SEM_INITIALIZER(0),
   },
 #if CONFIG_SMP_NCPUS > 1
   {
@@ -122,6 +124,8 @@ static struct tcb_s g_idletcb[CONFIG_SMP_NCPUS] =
 #if CONFIG_TASK_NAME_SIZE > 0
     .name       = "CPU1 IDLE",
 #endif
+    .refs     = 1,
+    .exit_sem = SEM_INITIALIZER(0),
   },
 #endif
 #if CONFIG_SMP_NCPUS > 2
@@ -137,6 +141,8 @@ static struct tcb_s g_idletcb[CONFIG_SMP_NCPUS] =
 #if CONFIG_TASK_NAME_SIZE > 0
     .name       = "CPU2 IDLE",
 #endif
+    .refs       = 1,
+    .exit_sem = SEM_INITIALIZER(0),
   },
 #endif
 #if CONFIG_SMP_NCPUS > 3
@@ -152,6 +158,8 @@ static struct tcb_s g_idletcb[CONFIG_SMP_NCPUS] =
 #if CONFIG_TASK_NAME_SIZE > 0
     .name       = "CPU3 IDLE",
 #endif
+    .refs       = 1,
+    .exit_sem = SEM_INITIALIZER(0),
   },
 #endif
 #if CONFIG_SMP_NCPUS > 4
@@ -167,6 +175,8 @@ static struct tcb_s g_idletcb[CONFIG_SMP_NCPUS] =
 #if CONFIG_TASK_NAME_SIZE > 0
     .name       = "CPU4 IDLE",
 #endif
+    .refs       = 1,
+    .exit_sem = SEM_INITIALIZER(0),
   },
 #endif
 #if CONFIG_SMP_NCPUS > 5
@@ -182,6 +192,8 @@ static struct tcb_s g_idletcb[CONFIG_SMP_NCPUS] =
 #if CONFIG_TASK_NAME_SIZE > 0
     .name       = "CPU5 IDLE",
 #endif
+    .refs       = 1,
+    .exit_sem = SEM_INITIALIZER(0),
   },
 #endif
 #if CONFIG_SMP_NCPUS > 6
@@ -197,6 +209,8 @@ static struct tcb_s g_idletcb[CONFIG_SMP_NCPUS] =
 #if CONFIG_TASK_NAME_SIZE > 0
     .name       = "CPU6 IDLE",
 #endif
+    .refs       = 1,
+    .exit_sem = SEM_INITIALIZER(0),
   },
 #endif
 #if CONFIG_SMP_NCPUS > 7
@@ -212,6 +226,8 @@ static struct tcb_s g_idletcb[CONFIG_SMP_NCPUS] =
 #if CONFIG_TASK_NAME_SIZE > 0
     .name       = "CPU7 IDLE",
 #endif
+    .refs       = 1,
+    .exit_sem = SEM_INITIALIZER(0),
   },
 #endif
 #if CONFIG_SMP_NCPUS > 8

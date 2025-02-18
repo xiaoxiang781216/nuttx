@@ -145,7 +145,11 @@ int prctl(int option, ...)
               name[CONFIG_TASK_NAME_SIZE - 1] = '\0';
             }
 
-           leave_critical_section(flags);
+          leave_critical_section(flags);
+          if (pid != 0)
+            {
+              nxsched_put_tcb(tcb);
+            }
         }
         break;
 #else

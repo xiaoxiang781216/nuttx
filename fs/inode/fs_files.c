@@ -228,11 +228,13 @@ static void task_fssync(FAR struct tcb_s *tcb, FAR void *arg)
           ctcb = nxsched_get_tcb(pid);
           if (ctcb == NULL || ctcb->group == NULL || ctcb != tcb)
             {
+              nxsched_put_tcb(ctcb);
               return;
             }
 
           filep = files_fget_by_index(&ctcb->group->tg_filelist,
                                       i, j, NULL);
+          nxsched_put_tcb(ctcb);
           if (filep != NULL)
             {
               file_fsync(filep);
@@ -241,6 +243,8 @@ static void task_fssync(FAR struct tcb_s *tcb, FAR void *arg)
                 {
                   fs_putfilep(filep);
                 }
+
+              nxsched_put_tcb(ctcb);
             }
         }
     }

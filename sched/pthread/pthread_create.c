@@ -226,6 +226,8 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 
   nxtask_joininit(ptcb);
 
+  nxsem_init(&ptcb->exit_sem, 0, 0);
+
 #ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
   spin_lock_init(&ptcb->mutex_lock);
 #endif

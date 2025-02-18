@@ -36,6 +36,7 @@
 #include <nuttx/streams.h>
 #include <nuttx/syslog/syslog.h>
 
+#include "sched/sched.h"
 #include "syslog.h"
 
 /****************************************************************************
@@ -86,7 +87,7 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
   struct lib_syslograwstream_s stream;
   int ret = 0;
 #ifdef CONFIG_SYSLOG_PROCESS_NAME
-  FAR struct tcb_s *tcb = nxsched_get_tcb(nxsched_gettid());
+  FAR struct tcb_s *tcb = this_task();
 #endif
 #ifdef CONFIG_SYSLOG_TIMESTAMP
   struct timespec ts;

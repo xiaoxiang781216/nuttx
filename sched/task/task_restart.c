@@ -73,6 +73,7 @@ static int restart_handler(FAR void *cookie)
       /* There is no TCB with this pid or, if there is, it is not a task. */
 
       leave_critical_section(flags);
+      nxsched_put_tcb(tcb);
       return -ESRCH;
     }
 
@@ -85,6 +86,8 @@ static int restart_handler(FAR void *cookie)
   nxsched_remove_readytorun(tcb);
 
   leave_critical_section(flags);
+
+  nxsched_put_tcb(tcb);
 
   return OK;
 }
@@ -183,7 +186,7 @@ static void nxtask_reset_task(FAR struct tcb_s *tcb, bool remove)
 static int nxtask_restart(pid_t pid)
 {
   FAR struct tcb_s *rtcb;
-  FAR struct tcb_s *tcb;
+  FAR struct tcb_s *tcb = NULL;
   irqstate_t flags;
   int ret;
 
@@ -228,6 +231,7 @@ static int nxtask_restart(pid_t pid)
       tcb->cpu != this_cpu())
     {
       struct restart_arg_s arg;
+      int cpu = tcb->cpu;
 
       if ((tcb->flags & TCB_FLAG_CPU_LOCKED) != 0)
         {
@@ -244,7 +248,8 @@ static int nxtask_restart(pid_t pid)
           CPU_SET(tcb->cpu, &tcb->affinity);
         }
 
-      nxsched_smp_call_single(tcb->cpu, restart_handler, &arg);
+      nxsched_put_tcb(tcb);
+      nxsched_smp_call_single(cpu, restart_handler, &arg);
 
       tcb = nxsched_get_tcb(pid);
       if (!tcb || tcb->task_state != TSTATE_TASK_INVALID ||
@@ -261,7 +266,7 @@ static int nxtask_restart(pid_t pid)
       /* Activate the task. */
 
       nxtask_activate(tcb);
-
+      nxsched_put_tcb(tcb);
       return OK;
     }
 #endif /* CONFIG_SMP */
@@ -272,9 +277,11 @@ static int nxtask_restart(pid_t pid)
   /* Activate the task. */
 
   nxtask_activate(tcb);
+  nxsched_put_tcb(tcb);
   return OK;
 
 errout_with_lock:
+  nxsched_put_tcb(tcb);
   leave_critical_section(flags);
   return ret;
 }

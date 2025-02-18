@@ -256,6 +256,7 @@ int clock_cpuload(int pid, FAR struct cpuload_s *cpuload)
   if (tcb)
     {
       nxsched_update_critmon(tcb);
+      nxsched_put_tcb(tcb);
     }
 #endif
 

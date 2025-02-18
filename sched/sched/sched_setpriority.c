@@ -69,6 +69,7 @@ static int reprioritize_handler(FAR void *cookie)
       (tcb->flags & TCB_FLAG_EXIT_PROCESSING) != 0)
     {
       leave_critical_section(flags);
+      nxsched_put_tcb(tcb);
       return OK;
     }
 
@@ -84,6 +85,7 @@ static int reprioritize_handler(FAR void *cookie)
     }
 
   leave_critical_section(flags);
+  nxsched_put_tcb(tcb);
   return OK;
 }
 #endif

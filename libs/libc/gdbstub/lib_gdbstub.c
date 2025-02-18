@@ -1086,6 +1086,7 @@ static void gdb_update_regcache(FAR struct gdb_state_s *state)
     }
 
   state->xcpregs = reg;
+  nxsched_put_tcb(tcb);
 }
 
 static FAR const struct reginfo_s * gdb_find_reginfo(int regnum)
@@ -1611,6 +1612,7 @@ static int gdb_query(FAR struct gdb_state_s *state)
                 get_task_name(tcb), thread_state, tcb->sched_priority,
                 tcb->adj_stack_size);
 
+      nxsched_put_tcb(tcb);
       ret = gdb_bin2hex(state->pkt_buf, sizeof(state->pkt_buf),
                         thread_info, strlen(thread_info));
 
@@ -1692,6 +1694,7 @@ static int gdb_is_thread_active(FAR struct gdb_state_s *state)
       return -EINVAL;
     }
 
+  nxsched_put_tcb(tcb);
   state->pid = pid;
   gdb_send_ok_packet(state);
   return ret;
@@ -1755,6 +1758,7 @@ static int gdb_thread_context(FAR struct gdb_state_s *state)
       return -EINVAL;
     }
 
+  nxsched_put_tcb(tcb);
   state->pid = pid;
 
   gdb_update_regcache(state);

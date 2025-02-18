@@ -115,6 +115,7 @@ int nxsig_tgkill(pid_t pid, pid_t tid, int signo)
    */
 
   ret = nxsig_tcbdispatch(stcb, &info);
+  nxsched_put_tcb(stcb);
 
   if (ret < 0)
     {

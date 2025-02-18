@@ -111,6 +111,7 @@
 #define TCB_FLAG_FREE_TCB          (1 << 14)                     /* Bit 14: Free tcb after exit */
 #define TCB_FLAG_SIGDELIVER        (1 << 15)                     /* Bit 15: Deliver pending signals */
 #define TCB_FLAG_PREEMPT_SCHED     (1 << 16)                     /* Bit 16: tcb is PREEMPT_SCHED */
+#define TCB_FLAG_KILL_PROCESSING   (1 << 17)                     /* Bit 17: tcb is killed */
 
 /* Values for struct task_group tg_flags */
 
@@ -735,6 +736,16 @@ struct tcb_s
 #ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
   spinlock_t mutex_lock;
 #endif
+
+  /* The total number that we are referenced by other tasks and
+   * The total number of other tasks that we referenced.
+   */
+
+  atomic_t refs;
+
+  /* When we exit, we need post this sem. */
+
+  sem_t    exit_sem;
 };
 
 /* struct pthread_tcb_s *****************************************************/
@@ -907,25 +918,21 @@ FAR struct tcb_s *nxsched_self(void);
 void nxsched_foreach(nxsched_foreach_t handler, FAR void *arg);
 
 /****************************************************************************
- * Name: nxsched_get_tcb
+ * Name: nxsched_get_tcb/nxsched_put_tcb
  *
  * Description:
- *   Given a task ID, this function will return the a pointer to the
- *   corresponding TCB (or NULL if there is no such task ID).
- *
- *   NOTE:  This function holds a critical section while examining TCB data
- *   data structures but releases that critical section before returning.
- *   When it is released, the TCB may become unstable.  If the caller
- *   requires absolute stability while using the TCB, then the caller
- *   should establish the critical section BEFORE calling this function and
- *   hold that critical section as long as necessary.
+ *   Given a task ID,
+ *   Obtain a valid TCB and increment the corresponding reference count to
+ *   prevent it from being released. nxsched_get_tcb and nxsched_put_tcb
+ *   must be called in pairs to ensure the proper release of the TCB.
  *
  ****************************************************************************/
 
 FAR struct tcb_s *nxsched_get_tcb(pid_t pid);
+void nxsched_put_tcb(FAR struct tcb_s *tcb);
 
 /****************************************************************************
- * Name:  nxsched_releasepid
+ * Name:  nxsched_release_tcb
  *
  * Description:
  *   When a task is destroyed, this function must be called to make its

@@ -82,9 +82,13 @@ static uid_t geteuid_bypid(pid_t pid)
 
   FAR struct tcb_s *tcb = nxsched_get_tcb(pid);
   FAR struct task_group_s *rgroup = tcb->group;
+  uid_t uid;
 
   DEBUGASSERT(rgroup != NULL);
-  return rgroup->tg_euid;
+  uid = rgroup->tg_euid;
+  nxsched_put_tcb(tcb);
+
+  return uid;
 #else
   /* Return user identity 'root' with a uid value of 0. */
 

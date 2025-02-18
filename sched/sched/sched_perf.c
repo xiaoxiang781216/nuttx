@@ -2701,25 +2701,17 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
 
       if (tcb == NULL)
         {
-          if (group_file != NULL)
-            {
-              fs_putfilep(group_file);
-            }
-
           serr("perf event pid fail:%d\n", pid);
-          return -ESRCH;
+          ret = -ESRCH;
+          goto err_with_event;
         }
     }
 
   event = perf_event_alloc(attr, cpu, tcb, group_leader, NULL);
   if (event == NULL)
     {
-      if (group_file != NULL)
-        {
-          fs_putfilep(group_file);
-        }
-
-      return -ENOMEM;
+      ret = -ENOMEM;
+      goto err_with_event;
     }
 
   if (attr->disabled)
@@ -2757,6 +2749,11 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
       goto err_with_event;
     }
 
+  if (pid > 0)
+    {
+      nxsched_put_tcb(tcb);
+    }
+
   if (group_file != NULL)
     {
       fs_putfilep(group_file);
@@ -2766,6 +2763,11 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
   return event_fd;
 
 err_with_event:
+  if (pid > 0)
+    {
+      nxsched_put_tcb(tcb);
+    }
+
   if (group_file != NULL)
     {
       fs_putfilep(group_file);

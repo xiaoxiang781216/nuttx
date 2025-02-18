@@ -423,6 +423,7 @@ int work_queue_free(FAR struct kwork_wqueue_s *wqueue)
 int work_queue_priority_wq(FAR struct kwork_wqueue_s *wqueue)
 {
   FAR struct tcb_s *tcb;
+  int pri;
 
   if (wqueue == NULL)
     {
@@ -437,7 +438,10 @@ int work_queue_priority_wq(FAR struct kwork_wqueue_s *wqueue)
       return -ESRCH;
     }
 
-  return tcb->sched_priority;
+  pri = tcb->sched_priority;
+  nxsched_put_tcb(tcb);
+
+  return pri;
 }
 
 int work_queue_priority(int qid)
