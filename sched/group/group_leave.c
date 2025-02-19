@@ -246,7 +246,8 @@ void group_drop(FAR struct task_group_s *group)
 
   if (group->tg_flags & GROUP_FLAG_DELETED)
     {
-      tcb = container_of(group, struct tcb_s, group);
+      tcb = (FAR struct tcb_s *)
+        ((uintptr_t)group - sizeof(struct tcb_s));
 
       /* Release the group container itself */
 
