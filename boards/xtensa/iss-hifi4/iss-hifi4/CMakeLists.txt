@@ -25,6 +25,7 @@ add_subdirectory(src)
 
 list(APPEND EXTRA_LIB libgcc.a)
 
+get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
 execute_process(
   COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
           --show-config=config

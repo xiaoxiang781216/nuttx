@@ -643,6 +643,7 @@ if(NOT CONFIG_ARCH_SIM)
     # Remove executable suffix
     set(CMAKE_EXECUTABLE_SUFFIX "")
   else()
+    get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
     target_link_libraries(
       nuttx
       PRIVATE ${NUTTX_EXTRA_FLAGS}

@@ -93,6 +93,7 @@ endif()
 # ~~~
 
 if(NOT NUTTX_FIND_TOOLCHAIN_LIB_DEFINED)
+  get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
   function(nuttx_find_toolchain_lib)
     if(NOT ARGN)
       execute_process(
