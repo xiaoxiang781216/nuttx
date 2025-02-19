@@ -340,6 +340,8 @@ void arm_pminitialize(void);
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
 void weak_function arm_initialize_stack(void);
+#else
+#  define arm_initialize_stack()
 #endif
 
 /* Interrupt acknowledge and dispatch */

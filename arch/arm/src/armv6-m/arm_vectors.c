@@ -68,6 +68,10 @@ extern void __start(void);
 
 static void start(void)
 {
+  /* Set MSP & PSP to the value at reset */
+
+  arm_initialize_stack();
+
   /* Zero lr to mark the end of backtrace */
 
   asm volatile ("mov lr, %0\n\t"
