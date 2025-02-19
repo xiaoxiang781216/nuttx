@@ -118,6 +118,9 @@ static int backtrace_branch(unsigned long top, unsigned long sp,
   unsigned long addr;
   uint16_t ins16;
   int i;
+  irqstate_t flags;
+
+  flags = enter_critical_section();
 
   for (i = 0; i < size && sp < top; sp += sizeof(unsigned long))
     {
@@ -167,6 +170,8 @@ static int backtrace_branch(unsigned long top, unsigned long sp,
             }
         }
     }
+
+  leave_critical_section(flags);
 
   return i;
 }
