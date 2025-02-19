@@ -37,6 +37,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/usb/usb.h>
 #include <nuttx/usb/usbdev.h>
 #include <nuttx/usb/usbdev_trace.h>
@@ -154,6 +155,7 @@ struct sim_usbdev_s
   uint8_t                       selfpowered:1;        /* 1: Device is self powered */
   uint16_t                      epavail;              /* Bitset of available endpoints */
   struct sim_ep_s               eps[SIM_USB_EPNUM];
+  spinlock_t                    lock;                 /* Spinlock */
 };
 
 struct sim_req_s
@@ -276,8 +278,10 @@ const struct trace_msg_t g_usb_trace_strings_intdecode[] =
  * Name: sim_rqdequeue
  ****************************************************************************/
 
-static struct sim_req_s *sim_rqdequeue(struct sim_rqhead_s *queue)
+static struct sim_req_s *sim_rqdequeue(struct sim_usbdev_s *priv,
+                                       struct sim_rqhead_s *queue)
 {
+  irqstate_t flags = spin_lock_irqsave(&priv->lock);
   struct sim_req_s *ret = queue->head;
 
   if (ret)
@@ -291,6 +295,7 @@ static struct sim_req_s *sim_rqdequeue(struct sim_rqhead_s *queue)
       ret->flink = NULL;
     }
 
+  spin_unlock_irqrestore(&priv->lock, flags);
   return ret;
 }
 
@@ -298,9 +303,12 @@ static struct sim_req_s *sim_rqdequeue(struct sim_rqhead_s *queue)
  * Name: sim_rqenqueue
  ****************************************************************************/
 
-static void sim_rqenqueue(struct sim_rqhead_s *queue,
-                           struct sim_req_s *req)
+static void sim_rqenqueue(struct sim_usbdev_s *priv,
+                          struct sim_rqhead_s *queue,
+                          struct sim_req_s *req)
 {
+  irqstate_t flags = spin_lock_irqsave(&priv->lock);
+
   req->flink = NULL;
   if (!queue->head)
     {
@@ -312,6 +320,8 @@ static void sim_rqenqueue(struct sim_rqhead_s *queue,
       queue->tail->flink = req;
       queue->tail        = req;
     }
+
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -341,13 +351,10 @@ static void sim_reqabort(struct sim_ep_s *privep,
 static void sim_reqcomplete(struct sim_ep_s *privep, int16_t result)
 {
   struct sim_req_s *privreq;
-  irqstate_t flags;
 
   /* Remove the completed request at the head of the endpoint request list */
 
-  flags = enter_critical_section();
-  privreq = sim_rqdequeue(&privep->reqq);
-  leave_critical_section(flags);
+  privreq = sim_rqdequeue(privep->dev, &privep->reqq);
 
   if (privreq)
     {
@@ -638,7 +645,7 @@ static int sim_ep_disable(struct usbdev_ep_s *ep)
 
   /* Cancel any ongoing activity */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&privep->dev->lock);
 
   /* Disable TX; disable RX */
 
@@ -646,7 +653,7 @@ static int sim_ep_disable(struct usbdev_ep_s *ep)
 
   privep->epstate = SIM_EPSTATE_DISABLED;
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&privep->dev->lock, flags);
   return OK;
 }
 
@@ -701,14 +708,15 @@ static int sim_ep_stall(struct usbdev_ep_s *ep, bool resume)
 
   /* STALL or RESUME the endpoint */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&privep->dev->lock);
+
   usbtrace(resume ? TRACE_EPRESUME : TRACE_EPSTALL, epno);
 
   ret = host_usbdev_epstall(epno, resume);
 
   privep->epstate = SIM_EPSTATE_STALLED;
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&privep->dev->lock, flags);
   return ret;
 }
 
@@ -721,7 +729,6 @@ static int sim_ep_submit(struct usbdev_ep_s *ep, struct usbdev_req_s *req)
   struct sim_req_s *privreq = (struct sim_req_s *)req;
   struct sim_ep_s *privep = (struct sim_ep_s *)ep;
   struct sim_usbdev_s *priv;
-  irqstate_t flags;
   uint8_t epno;
   int ret = OK;
 
@@ -736,12 +743,10 @@ static int sim_ep_submit(struct usbdev_ep_s *ep, struct usbdev_req_s *req)
   epno              = USB_EPNO(ep->eplog);
   req->result       = -EINPROGRESS;
   req->xfrd         = 0;
-  flags             = enter_critical_section();
 
   if (privep->epstate == SIM_EPSTATE_STALLED)
     {
       sim_reqabort(privep, privreq, -EBUSY);
-      leave_critical_section(flags);
       return -EPERM;
     }
 
@@ -756,7 +761,7 @@ static int sim_ep_submit(struct usbdev_ep_s *ep, struct usbdev_req_s *req)
 
       /* Add the new request to the request queue for the endpoint */
 
-      sim_rqenqueue(&privep->reqq, privreq);
+      sim_rqenqueue(priv, &privep->reqq, privreq);
 
       /* If the IN endpoint is IDLE, then transfer the data now */
 
@@ -773,10 +778,9 @@ static int sim_ep_submit(struct usbdev_ep_s *ep, struct usbdev_req_s *req)
       /* Add the new request to the request queue for the OUT endpoint */
 
       usbtrace(TRACE_OUTREQQUEUED(epno), req->len);
-      sim_rqenqueue(&privep->reqq, privreq);
+      sim_rqenqueue(priv, &privep->reqq, privreq);
     }
 
-  leave_critical_section(flags);
   return ret;
 }
 
@@ -790,9 +794,7 @@ static int sim_ep_cancel(struct usbdev_ep_s *ep, struct usbdev_req_s *req)
 
   usbtrace(TRACE_EPCANCEL, USB_EPNO(ep->eplog));
 
-  flags = enter_critical_section();
   host_usbdev_epcancel(USB_EPNO(ep->eplog));
-  leave_critical_section(flags);
   return OK;
 }
 
@@ -816,7 +818,7 @@ static struct sim_ep_s *sim_ep_reserve(struct sim_usbdev_s *priv,
   irqstate_t flags;
   int epndx = 0;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
   epset &= priv->epavail;
   if (epset)
     {
@@ -841,7 +843,7 @@ static struct sim_ep_s *sim_ep_reserve(struct sim_usbdev_s *priv,
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
   return privep;
 }
 
@@ -858,9 +860,9 @@ static struct sim_ep_s *sim_ep_reserve(struct sim_usbdev_s *priv,
 static void sim_ep_unreserve(struct sim_usbdev_s *priv,
                              struct sim_ep_s *privep)
 {
-  irqstate_t flags = enter_critical_section();
+  irqstate_t flags = spin_lock_irqsave(&priv->lock);
   priv->epavail |= SIM_EP_BIT(USB_EPNO(privep->ep.eplog));
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -1002,13 +1004,10 @@ static int sim_usbdev_selfpowered(struct usbdev_s *dev, bool selfpowered)
 
 static int sim_usbdev_pullup(struct usbdev_s *dev, bool enable)
 {
-  irqstate_t flags;
-
   usbtrace(TRACE_DEVPULLUP, (uint16_t)enable);
 
-  flags = enter_critical_section();
   host_usbdev_pullup(enable);
-  leave_critical_section(flags);
+
   return OK;
 }
 
@@ -1041,6 +1040,8 @@ static void sim_usbdev_devinit(struct sim_usbdev_s *dev)
   dev->eps[0].epstate = SIM_EPSTATE_IDLE;
 
   dev->epavail = SIM_EPSET_NOEP0;
+
+  spin_lock_init(&dev->lock);
 }
 
 /****************************************************************************
@@ -1130,17 +1131,13 @@ int usbdev_unregister(struct usbdevclass_driver_s *driver)
    * canceled while the class driver is still bound.
    */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
+
   CLASS_DISCONNECT(driver, &priv->usbdev);
-  leave_critical_section(flags);
 
   /* Unbind the class driver */
 
   CLASS_UNBIND(driver, &priv->usbdev);
-
-  /* Disable USB controller interrupts */
-
-  flags = enter_critical_section();
 
   /* Disconnect device */
 
@@ -1150,7 +1147,7 @@ int usbdev_unregister(struct usbdevclass_driver_s *driver)
   /* Unhook the driver */
 
   priv->driver = NULL;
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   return OK;
 }
