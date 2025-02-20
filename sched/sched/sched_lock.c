@@ -66,26 +66,24 @@
 
 void sched_lock(void)
 {
-  /* sched_lock() should have no effect if called from the interrupt level. */
+  FAR struct tcb_s *rtcb = this_task();
 
-  if (!up_interrupt_context())
+  /* Catch attempts to increment the lockcount beyond the range of the
+   * integer type.
+   */
+
+  DEBUGASSERT(rtcb && rtcb->lockcount < MAX_LOCK_COUNT);
+
+  /* A counter is used to support locking. This allows nested lock
+   * operations on this thread (on any CPU)
+   */
+
+  if (rtcb->lockcount++ == 0)
     {
-      FAR struct tcb_s *rtcb = this_task();
-
-      /* Catch attempts to increment the lockcount beyond the range of the
-       * integer type.
-       */
-
-      DEBUGASSERT(rtcb && rtcb->lockcount < MAX_LOCK_COUNT);
-
-      /* A counter is used to support locking. This allows nested lock
-       * operations on this thread (on any CPU)
-       */
-
-      if (rtcb->lockcount++ == 0)
-        {
 #if (CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0) || \
     defined(CONFIG_SCHED_INSTRUMENTATION_PREEMPTION)
+      if (!up_interrupt_context())
+        {
           irqstate_t flags = enter_critical_section_wo_note();
 
           /* Note that we have pre-emption locked */
@@ -93,7 +91,7 @@ void sched_lock(void)
           nxsched_critmon_preemption(rtcb, true, return_address(0));
           sched_note_preemption(rtcb, true);
           leave_critical_section_wo_note(flags);
-#endif
         }
+#endif
     }
 }
