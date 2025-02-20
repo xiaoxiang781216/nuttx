@@ -36,7 +36,6 @@ list(
   arm_cpuinfo.c
   arm_dataabort.c
   arm_doirq.c
-  arm_gicv3.c
   arm_initialstate.c
   arm_prefetchabort.c
   arm_schedulesigaction.c
@@ -46,6 +45,17 @@ list(
   arm_undefinedinsn.c
   arm_perf.c
   cp15_cacheops.c)
+
+if(CONFIG_ARM_GIC_VERSION EQUAL 2)
+  list(APPEND SRCS arm_gicv2.c)
+  if(CONFIG_ARMV8R_GICv2M)
+    list(APPEND SRCS arm_gicv2m.c)
+  endif()
+endif()
+
+if(CONFIG_ARM_GIC_VERSION EQUAL 3)
+  list(APPEND SRCS arm_gicv3.c)
+endif()
 
 if(CONFIG_ARCH_FPU)
   list(APPEND SRCS arm_fpucmp.c arm_fpuconfig.S)

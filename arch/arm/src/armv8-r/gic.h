@@ -16,7 +16,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  *
- *
  ****************************************************************************/
 
 #ifndef __ARCH_ARM_SRC_ARMV8_R_GIC_H
@@ -260,10 +259,6 @@
 #define GIC_DIST_IROUTER            0x6000
 #define IROUTER(base, n)    (base + GIC_DIST_IROUTER + (n) * 8)
 
-/* BIT(0) reserved for IRQ_ZERO_LATENCY */
-#define IRQ_TYPE_LEVEL              BIT(1)
-#define IRQ_TYPE_EDGE               BIT(2)
-
 #define IRQ_DEFAULT_PRIORITY        0xa0
 
 #define GIC_IRQ_SGI0              0
@@ -324,18 +319,20 @@
  * Public Function Prototypes
  ****************************************************************************/
 
+uint32_t *arm_decodeirq(uint32_t *regs);
 bool arm_gic_irq_is_enabled(unsigned int intid);
 int  arm_gic0_initialize(void);  /* For whole GIC */
 void arm_gic_initialize(void);   /* For per CPU interface */
 void arm_gic_irq_set_priority(unsigned int intid, unsigned int prio,
                                 uint32_t flags);
-
 int arm_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list);
 
 #ifdef CONFIG_SMP
-
 int arm_smp_sched_handler(int irq, void *context, void *arg);
+#endif /* CONFIG_SMP */
 
+#ifdef CONFIG_ARMV8R_GICV2M
+int arm_gic_v2m_initialize(void);
 #endif
 
 /****************************************************************************
@@ -350,7 +347,7 @@ int arm_smp_sched_handler(int irq, void *context, void *arg);
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-static inline uint64_t arm_get_mpid(int cpu)
+static inline uint32_t arm_get_mpid(int cpu)
 {
   return CORE_TO_MPID(cpu, 0);
 }
