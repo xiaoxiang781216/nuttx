@@ -36,13 +36,6 @@
 
 #define KASAN_TAG_SHIFT 56
 
-#define kasan_get_tag(addr) \
-  ((uint8_t)((uint64_t)(addr) >> KASAN_TAG_SHIFT))
-
-#define kasan_set_tag(addr, tag) \
-  (FAR void *)((((uint64_t)(addr)) & ~((uint64_t)0xff << KASAN_TAG_SHIFT)) | \
-               (((uint64_t)(tag)) << KASAN_TAG_SHIFT))
-
 #define kasan_random_tag() (1 + rand() % ((1 << (64 - KASAN_TAG_SHIFT)) - 2))
 
 #define KASAN_SHADOW_SCALE (sizeof(uintptr_t))
@@ -159,7 +152,18 @@ static void kasan_set_poison(FAR const void *addr,
 FAR void *kasan_reset_tag(FAR const void *addr)
 {
   return (FAR void *)
-         (((uint64_t)(addr)) & ~((uint64_t)0xff << KASAN_TAG_SHIFT));
+         (((uint64_t)addr) & ~((uint64_t)0xff << KASAN_TAG_SHIFT));
+}
+
+uint8_t kasan_get_tag(FAR const void *addr)
+{
+  return (uint8_t)((uint64_t)addr >> KASAN_TAG_SHIFT);
+}
+
+FAR void *kasan_get_tagged_addr(FAR const void *addr, uint8_t tag)
+{
+  return (FAR void *)((uint64_t)kasan_reset_tag(addr) |
+                      (((uint64_t)tag) << KASAN_TAG_SHIFT));
 }
 
 void kasan_poison(FAR const void *addr, size_t size)
@@ -172,7 +176,7 @@ FAR void *kasan_unpoison(FAR const void *addr, size_t size)
   uint8_t tag = kasan_random_tag();
 
   kasan_set_poison(addr, size, tag);
-  return kasan_set_tag(addr, tag);
+  return kasan_get_tagged_addr(addr, tag);
 }
 
 void kasan_register(FAR void *addr, FAR size_t *size)

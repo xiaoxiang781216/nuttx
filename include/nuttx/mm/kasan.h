@@ -46,6 +46,8 @@
 #  define kasan_stop()
 #  define kasan_debugpoint(t,a,s) 0
 #  define kasan_init_early()
+#  define kasan_get_tag(addr) 0
+#  define kasan_get_tagged_addr(addr, tag) addr
 #else
 
 #  define kasan_init_early() kasan_stop()
@@ -144,6 +146,25 @@ void kasan_unregister(FAR void *addr);
  ****************************************************************************/
 
 FAR void *kasan_reset_tag(FAR const void *addr);
+
+/****************************************************************************
+ * Name: kasan_get_tag
+ *
+ * Input Parameters:
+ *   addr - The address of the memory to get the tag.
+ *
+ * Returned Value:
+ *   address tag
+ *
+ ****************************************************************************/
+
+uint8_t kasan_get_tag(FAR const void *addr);
+
+/****************************************************************************
+ * Name: kasan_get_tagged_addr
+ ****************************************************************************/
+
+FAR void *kasan_get_tagged_addr(FAR const void *addr, uint8_t tag);
 
 /****************************************************************************
  * Name: kasan_start
