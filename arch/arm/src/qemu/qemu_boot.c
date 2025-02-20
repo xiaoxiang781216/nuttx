@@ -154,9 +154,11 @@ int up_cpu_start(int cpu)
 
 void arm_el_init(void)
 {
+#if CONFIG_ARM_GIC_VERSION > 2
   CP15_SET(ICC_HSRE, ICC_SRE_ELX_SRE_BIT | ICC_SRE_ELX_DFB_BIT |
                      ICC_SRE_ELX_DIB_BIT | ICC_SRE_EL3_EN_BIT);
 
   UP_ISB();
+#endif
 }
 #endif
