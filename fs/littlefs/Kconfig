@@ -127,4 +127,10 @@ config FS_LITTLEFS_ATTR_UPDATE
 	---help---
 		Enable support for attributes when create a file.
 
+config FS_LITTLEFS_DEBUG
+	bool "LITTLEFS file system read/write double check"
+	depends on DEBUG_FS_ERROR
+	---help---
+		Enable LITTLEFS file system read/write double check.
+
 endif

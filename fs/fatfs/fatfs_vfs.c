@@ -31,6 +31,7 @@
 #include <debug.h>
 #include <assert.h>
 
+#include <nuttx/crc16.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
@@ -1578,6 +1579,49 @@ static int fatfs_chstat(FAR struct inode *mountpt, FAR const char *relpath,
 }
 
 /****************************************************************************
+ * Name: disk_check
+ ****************************************************************************/
+
+#ifdef CONFIG_FS_FATFS_DEBUG
+static void disk_check(FAR struct inode *drv, LBA_t sector, UINT count,
+                       FAR const BYTE *buff)
+{
+  uint16_t crc16_check;
+  struct geometry geo;
+  uint16_t crc16_ori;
+  ssize_t size;
+  int ret;
+
+  ret = drv->u.i_bops->geometry(drv, &geo);
+  if (ret < 0)
+    {
+      ferr("Geometry failed: %d\n", ret);
+      return;
+    }
+
+  crc16_ori = crc16(buff, geo.geo_sectorsize * count);
+
+  size = drv->u.i_bops->read(drv, (FAR BYTE *)buff, sector, count);
+  if (size != count)
+    {
+      ferr("Read failed: %zd\n", size);
+      lib_dumpbuffer("buff:", buff, geo.geo_sectorsize * count);
+      DEBUGASSERT(0);
+    }
+  else
+    {
+      crc16_check = crc16(buff, geo.geo_sectorsize * count);
+      if (crc16_ori != crc16_check)
+        {
+          ferr("CRC16 check failed\n");
+          lib_dumpbuffer("check:", buff, geo.geo_sectorsize * count);
+          DEBUGASSERT(0);
+        }
+    }
+}
+#endif
+
+/****************************************************************************
  * Name: disk_status
  *
  * Description:
@@ -1654,6 +1698,9 @@ DRESULT disk_read(BYTE pdrv, BYTE *buff, LBA_t sector, UINT count)
       return RES_ERROR;
     }
 
+#ifdef CONFIG_FS_FATFS_DEBUG
+  disk_check(drv, sector * g_drv[pdrv].ratio, count, buff);
+#endif
   return RES_OK;
 }
 
@@ -1690,6 +1737,9 @@ DRESULT disk_write(BYTE pdrv, const BYTE *buff, LBA_t sector, UINT count)
       return RES_ERROR;
     }
 
+#ifdef CONFIG_FS_FATFS_DEBUG
+  disk_check(drv, sector * g_drv[pdrv].ratio, count, buff);
+#endif
   return RES_OK;
 }
 

@@ -56,4 +56,10 @@ config FS_YAFFS_EMPTY_LOST_FOUND
 	default n
 	---help---
 		Flag to delete all files in lost and found on mount.
+
+config FS_YAFFS_DEBUG
+	bool "YAFFS file system read/write double check"
+	depends on DEBUG_FS_ERROR
+	---help---
+		Enable YAFFS file system read/write double check.
 endif

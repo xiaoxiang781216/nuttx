@@ -29,6 +29,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <nuttx/crc16.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/kmalloc.h>
@@ -935,6 +936,39 @@ static int yaffs_deinitialise_fn(FAR struct yaffs_dev *dev)
 }
 
 /****************************************************************************
+ * Name: yaffs_check
+ ****************************************************************************/
+
+#ifdef CONFIG_FS_YAFFS_DEBUG
+static void yaffs_check(FAR struct mtd_dev_s *mtd, int nand_chunk,
+                        int nchunk, FAR const u8 *buffer, u32 per_chunk_size)
+{
+  uint16_t crc16_check;
+  uint16_t crc16_ori;
+  int ret;
+
+  crc16_ori = crc16(buffer, per_chunk_size * nchunk);
+  ret = MTD_BREAD(mtd, nand_chunk, nchunk, (FAR u8 *)buffer);
+  if (ret < 0)
+    {
+      ferr("[%s] read block failed!\n", __func__);
+      lib_dumpbuffer("buffer:", buffer, per_chunk_size * nchunk);
+      DEBUGASSERT(0);
+    }
+  else
+    {
+      crc16_check = crc16(buffer, per_chunk_size * nchunk);
+      if (crc16_ori != crc16_check)
+        {
+          ferr("CRC16 check failed!\n");
+          lib_dumpbuffer("check:", buffer, per_chunk_size * nchunk);
+          DEBUGASSERT(0);
+        }
+    }
+}
+#endif
+
+/****************************************************************************
  * Name: yaffs_read_chunk_fn
  ****************************************************************************/
 
@@ -959,6 +993,10 @@ static int yaffs_read_chunk_fn(FAR struct yaffs_dev *dev, int nand_chunk,
         {
           ecc_status = YAFFS_ECC_RESULT_NO_ERROR;
           ret = YAFFS_OK;
+#ifdef CONFIG_FS_YAFFS_DEBUG
+          yaffs_check(mtd, nand_chunk, nchunk, data,
+                      dev->param.total_bytes_per_chunk);
+#endif
         }
       else
         {
@@ -1025,6 +1063,10 @@ static int yaffs_write_chunk_fn(FAR struct yaffs_dev *dev, int nand_chunk,
       ferr("### write oob? inband tag should not read oob!\n");
     }
 
+#ifdef CONFIG_FS_YAFFS_DEBUG
+  yaffs_check(mtd, nand_chunk, nchunk, data,
+              dev->param.total_bytes_per_chunk);
+#endif
   return ret;
 }
 

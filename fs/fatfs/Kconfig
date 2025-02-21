@@ -20,3 +20,9 @@ config FS_FATFS_ERROR_LOG
 	depends on DEBUG_FS_ERROR
 	---help---
 		Enable FATFS file system detail error log.
+
+config FS_FATFS_DEBUG
+	bool "FATFS file system read/write double check"
+	depends on DEBUG_FS_ERROR
+	---help---
+		Enable FATFS file system read/write double check.
