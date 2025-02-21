@@ -93,6 +93,28 @@ uint16_t crc16ccittpart(FAR const uint8_t *src, size_t len,
 
 uint16_t crc16ccitt(FAR const uint8_t *src, size_t len);
 
+/****************************************************************************
+ * Name: crc16ibmpart
+ *
+ * Description:
+ *   Continue 16-bit CRC-IBM calculation on a part of the buffer using the
+ *   polynomial x^16+x^15+x^2+1.
+ *
+ ****************************************************************************/
+
+uint16_t crc16ibmpart(FAR const uint8_t *src, size_t len, uint16_t crc16val);
+
+/****************************************************************************
+ * Name: crc16ibm
+ *
+ * Description:
+ *   Return a 16-bit CRC-IBM of the contents of the 'src' buffer, length
+ *   'len' using the polynomial x^16+x^15+x^2+1.
+ *
+ ****************************************************************************/
+
+uint16_t crc16ibm(FAR const uint8_t *src, size_t len);
+
 #undef EXTERN
 #ifdef __cplusplus
 }
