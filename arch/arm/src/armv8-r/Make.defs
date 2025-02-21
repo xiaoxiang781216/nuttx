@@ -40,9 +40,9 @@ CMN_CSRCS += arm_schedulesigaction.c arm_sigdeliver.c
 CMN_CSRCS += arm_syscall.c arm_tcbinfo.c arm_undefinedinsn.c
 CMN_CSRCS += arm_perf.c cp15_cacheops.c
 
-# ifeq ($(CONFIG_BUILD_PROTECTED),y)
-#   CMN_CSRCS += arm_mpu.c
-# endif
+ifeq ($(CONFIG_BUILD_PROTECTED),y)
+  CMN_CSRCS += arm_mpu.c
+endif
 
 ifeq ($(CONFIG_ARM_GIC_VERSION),2)
   CMN_CSRCS += arm_gicv2.c
