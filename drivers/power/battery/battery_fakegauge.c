@@ -30,6 +30,7 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/clock.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/power/battery_gauge.h>
 #include <nuttx/power/battery_ioctl.h>
 
@@ -45,7 +46,7 @@
 #define BATTERY_FAKE_CAPACITY_MIN (60)    // we dont want too lower
 #define BATTERY_FAKE_TEMP_MAX     (420)
 #define BATTERY_FAKE_TEMP_MIN     (220)
-#define BATTERY_FAKE_WORK_DELAY   MSEC2TICK(20000)
+#define BATTERY_FAKE_WORK_DELAY   MSEC2TICK(5000)
 #define BATTERY_FAKE_GAUGE        "/dev/charge/fakegauge"
 
 /****************************************************************************
@@ -108,9 +109,6 @@ static const struct battery_gauge_operations_s g_battery_fake_ops =
 static int battery_fake_present(FAR struct battery_gauge_dev_s *dev,
                                 FAR bool *status)
 {
-  FAR struct battery_fake_gauge_s *priv =
-    container_of(dev, struct battery_fake_gauge_s, battery);
-
   /* fake gauge is always keep present */
 
   *status = true;
