@@ -69,7 +69,7 @@ void sched_unlock(void)
 
   if (--rtcb->lockcount == 0)
     {
-      irqstate_t flags = enter_critical_section_wo_note();
+      irqstate_t flags = enter_critical_section_notrace();
 
       /* Note that we no longer have pre-emption disabled. */
 
@@ -163,6 +163,6 @@ void sched_unlock(void)
         }
 #endif
 
-      leave_critical_section_wo_note(flags);
+      leave_critical_section_notrace(flags);
     }
 }

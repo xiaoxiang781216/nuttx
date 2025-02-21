@@ -79,7 +79,7 @@ volatile uint8_t g_cpu_nestcount[CONFIG_SMP_NCPUS];
  ****************************************************************************/
 
 /****************************************************************************
- * Name: enter_critical_section_wo_note
+ * Name: enter_critical_section_notrace
  *
  * Description:
  *   Take the CPU IRQ lock and disable interrupts on all CPUs.  A thread-
@@ -89,7 +89,7 @@ volatile uint8_t g_cpu_nestcount[CONFIG_SMP_NCPUS];
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-irqstate_t enter_critical_section_wo_note(void)
+irqstate_t enter_critical_section_notrace(void)
 {
   FAR struct tcb_s *rtcb;
   irqstate_t ret;
@@ -255,7 +255,7 @@ irqstate_t enter_critical_section_wo_note(void)
 
 #else
 
-irqstate_t enter_critical_section_wo_note(void)
+irqstate_t enter_critical_section_notrace(void)
 {
   irqstate_t ret;
 
@@ -295,7 +295,7 @@ irqstate_t enter_critical_section(void)
 
   nxsched_critmon_busywait(true, return_address(0));
 
-  flags = enter_critical_section_wo_note();
+  flags = enter_critical_section_notrace();
 
   /* Get the lock, end counting busy-waiting */
 
@@ -318,7 +318,7 @@ irqstate_t enter_critical_section(void)
 }
 
 /****************************************************************************
- * Name: leave_critical_section_wo_note
+ * Name: leave_critical_section_notrace
  *
  * Description:
  *   Decrement the IRQ lock count and if it decrements to zero then release
@@ -327,7 +327,7 @@ irqstate_t enter_critical_section(void)
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-void leave_critical_section_wo_note(irqstate_t flags)
+void leave_critical_section_notrace(irqstate_t flags)
 {
   int cpu;
 
@@ -427,7 +427,7 @@ void leave_critical_section_wo_note(irqstate_t flags)
   up_irq_restore(flags);
 }
 #else
-void leave_critical_section_wo_note(irqstate_t flags)
+void leave_critical_section_notrace(irqstate_t flags)
 {
   /* Check if we were called from an interrupt handler and that the tasks
    * lists have been initialized.
@@ -468,5 +468,5 @@ void leave_critical_section(irqstate_t flags)
     }
 #endif
 
-  leave_critical_section_wo_note(flags);
+  leave_critical_section_notrace(flags);
 }
