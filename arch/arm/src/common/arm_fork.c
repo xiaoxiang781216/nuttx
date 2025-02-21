@@ -214,7 +214,7 @@ pid_t arm_fork(const struct fork_s *context)
 
 #  endif
 
-#elif defined(CONFIG_ARCH_ARMV7R)
+#elif defined(CONFIG_ARCH_ARMV7R) || defined(CONFIG_ARCH_ARMV8R)
 #  ifdef CONFIG_BUILD_PROTECTED
 
           child->xcp.syscall[index].cpsr =
