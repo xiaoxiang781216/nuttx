@@ -90,6 +90,15 @@ struct hp_wqueue_s g_hpwork =
   CONFIG_SCHED_HPNTHREADS,
 };
 
+#ifdef SCHED_HPWORKSTACKSECTION
+static uint8_t g_hp_work_stack[CONFIG_SCHED_HPNTHREADS]
+                              [CONFIG_SCHED_HPWORKSTACKSIZE]
+locate_data(CONFIG_SCHED_HPWORKSTACKSECTION);
+#else
+static uint8_t g_hp_work_stack[CONFIG_SCHED_HPNTHREADS]
+                              [CONFIG_SCHED_HPWORKSTACKSIZE];
+#endif
+
 #endif /* CONFIG_SCHED_HPWORK */
 
 #if defined(CONFIG_SCHED_LPWORK)
@@ -103,6 +112,15 @@ struct lp_wqueue_s g_lpwork =
   SP_UNLOCKED,
   CONFIG_SCHED_LPNTHREADS,
 };
+
+#ifdef SCHED_LPWORKSTACKSECTION
+static uint8_t g_lp_work_stack[CONFIG_SCHED_LPNTHREADS]
+                              [CONFIG_SCHED_LPWORKSTACKSIZE]
+locate_data(CONFIG_SCHED_LPWORKSTACKSECTION);
+#else
+static uint8_t g_lp_work_stack[CONFIG_SCHED_LPNTHREADS]
+                              [CONFIG_SCHED_LPWORKSTACKSIZE];
+#endif
 
 #endif /* CONFIG_SCHED_LPWORK */
 
@@ -271,8 +289,9 @@ static int work_thread_create(FAR const char *name, int priority,
       argv[1] = arg1;
       argv[2] = NULL;
 
-      pid = kthread_create_with_stack(name, priority, stack_addr, stack_size,
-                                      work_thread, argv);
+      pid = kthread_create_with_stack(name, priority,
+                                      stack_addr + wndx * stack_size,
+                                      stack_size, work_thread, argv);
 
       DEBUGASSERT(pid > 0);
       if (pid < 0)
@@ -471,7 +490,9 @@ int work_start_highpri(void)
 
   sinfo("Starting high-priority kernel worker thread(s)\n");
 
-  return work_thread_create(HPWORKNAME, CONFIG_SCHED_HPWORKPRIORITY, NULL,
+  return work_thread_create(HPWORKNAME,
+                            CONFIG_SCHED_HPWORKPRIORITY,
+                            g_hp_work_stack,
                             CONFIG_SCHED_HPWORKSTACKSIZE,
                             (FAR struct kwork_wqueue_s *)&g_hpwork);
 }
@@ -499,7 +520,9 @@ int work_start_lowpri(void)
 
   sinfo("Starting low-priority kernel worker thread(s)\n");
 
-  return work_thread_create(LPWORKNAME, CONFIG_SCHED_LPWORKPRIORITY, NULL,
+  return work_thread_create(LPWORKNAME,
+                            CONFIG_SCHED_LPWORKPRIORITY,
+                            g_lp_work_stack,
                             CONFIG_SCHED_LPWORKSTACKSIZE,
                             (FAR struct kwork_wqueue_s *)&g_lpwork);
 }
