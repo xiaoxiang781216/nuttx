@@ -159,13 +159,20 @@ struct mpu9250_config_s
  ****************************************************************************/
 
 /****************************************************************************
- * Name: mpu60x0_register
+ * Name: mpu9250_register
  *
  * Description:
- *   Declares the existence of an mpu9250 chip, wired according to
- *   config; creates an interface to it at path.
+ *   Register the MPU9250 sensor device with the specified device number and
+ *   configuration.
  *
- * Returns 0 on success, or negative errno.
+ * Input Parameters:
+ *   devno  - The device number to identify the MPU9250 instance
+ *            in the system.
+ *   config - Pointer to the MPU9250 configuration structure, which contains
+ *            the necessary settings for initializing the device.
+ *
+ * Returned Value:
+ *   Zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
