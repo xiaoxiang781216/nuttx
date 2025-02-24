@@ -34,6 +34,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
 #include <nuttx/nuttx.h>
+#include <nuttx/panic_notifier.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/rpmsg/rpmsg_virtio_lite.h>
@@ -73,6 +74,8 @@ struct rpmsg_virtio_lite_priv_s
   sem_t                              semrx;
   pid_t                              tid;
   uint16_t                           headrx;
+  struct notifier_block              nb;
+  bool                               rpanic;
 #ifdef CONFIG_RPMSG_VIRTIO_LITE_PM
   struct pm_wakelock_s               wakelock;
   struct wdog_s                      wdog;
@@ -103,6 +106,12 @@ rpmsg_virtio_lite_get_features_(FAR struct virtio_device *dev);
 static void rpmsg_virtio_lite_set_features(FAR struct virtio_device *dev,
                                            uint64_t feature);
 static void rpmsg_virtio_lite_notify(FAR struct virtqueue *vq);
+static void
+rpmsg_virtio_lite_send_command(FAR struct rpmsg_virtio_lite_priv_s *priv,
+                               uint32_t cmd, bool wait);
+static uint32_t
+rpmsg_virtio_lite_recv_command(FAR struct rpmsg_virtio_lite_priv_s *priv,
+                               bool ack);
 
 /****************************************************************************
  * Private Data
@@ -420,21 +429,35 @@ static void rpmsg_virtio_lite_panic(FAR struct rpmsg_s *rpmsg)
 {
   FAR struct rpmsg_virtio_lite_priv_s *priv =
     (FAR struct rpmsg_virtio_lite_priv_s *)rpmsg;
-  FAR struct rpmsg_virtio_lite_cmd_s *cmd =
-    RPMSG_VIRTIO_LITE_RSC2CMD(priv->rsc);
 
-  if (RPMSG_VIRTIO_LITE_IS_MASTER(priv->dev))
+  if (priv->rpanic)
     {
-      cmd->cmd_master = RPMSG_VIRTIO_LITE_CMD(
-        RPMSG_VIRTIO_LITE_CMD_PANIC, 0);
-    }
-  else
-    {
-      cmd->cmd_slave = RPMSG_VIRTIO_LITE_CMD(
-        RPMSG_VIRTIO_LITE_CMD_PANIC, 0);
+      return;
     }
 
-  rpmsg_virtio_lite_notify(priv->vdev.vrings_info->vq);
+  metal_log(METAL_LOG_EMERGENCY, "Panic remote cpu %s:\n",
+    RPMSG_VIRTIO_LITE_GET_CPUNAME(priv->dev));
+
+  rpmsg_virtio_lite_send_command(priv,
+    RPMSG_VIRTIO_LITE_CMD(RPMSG_VIRTIO_LITE_CMD_PANIC, 0), true);
+
+  priv->rpanic = true;
+}
+
+static int rpmsg_virtio_lite_panic_notifier(FAR struct notifier_block *block,
+                                            unsigned long action, void *data)
+{
+  FAR struct rpmsg_virtio_lite_priv_s *priv =
+    container_of(block, struct rpmsg_virtio_lite_priv_s, nb);
+
+  if (action == PANIC_KERNEL_FINAL)
+    {
+      /* PANIC all the remote core */
+
+      rpmsg_virtio_lite_panic(&priv->rpmsg);
+    }
+
+  return 0;
 }
 
 #ifdef CONFIG_OPENAMP_DEBUG
@@ -551,7 +574,45 @@ rpmsg_virtio_lite_wakeup_rx(FAR struct rpmsg_virtio_lite_priv_s *priv)
     }
 }
 
-static void rpmsg_virtio_lite_command(struct rpmsg_virtio_lite_priv_s *priv)
+static void
+rpmsg_virtio_lite_send_command(struct rpmsg_virtio_lite_priv_s *priv,
+                               uint32_t cmd, bool wait)
+{
+  FAR struct rpmsg_virtio_lite_cmd_s *rpmsg_virtio_cmd =
+    RPMSG_VIRTIO_LITE_RSC2CMD(priv->rsc);
+
+  if (RPMSG_VIRTIO_LITE_IS_MASTER(priv->dev))
+    {
+      rpmsg_virtio_cmd->cmd_master = cmd;
+    }
+  else
+    {
+      rpmsg_virtio_cmd->cmd_slave = cmd;
+    }
+
+  rpmsg_virtio_lite_notify(priv->vdev.vrings_info->vq);
+
+  if (wait)
+    {
+      uint32_t timeout = CONFIG_RPMSG_VIRTIO_LITE_CMD_TIMEOUT_MS;
+
+      while (timeout-- > 0)
+        {
+          uint32_t ack = rpmsg_virtio_lite_recv_command(priv, false);
+
+          if (RPMSG_VIRTIO_LITE_GET_CMD(ack) == RPMSG_VIRTIO_LITE_CMD_ACK)
+            {
+              break;
+            }
+
+          up_mdelay(1);
+        }
+    }
+}
+
+static uint32_t
+rpmsg_virtio_lite_recv_command(FAR struct rpmsg_virtio_lite_priv_s *priv,
+                               bool ack)
 {
   FAR struct rpmsg_virtio_lite_cmd_s *rpmsg_virtio_cmd =
     RPMSG_VIRTIO_LITE_RSC2CMD(priv->rsc);
@@ -559,18 +620,43 @@ static void rpmsg_virtio_lite_command(struct rpmsg_virtio_lite_priv_s *priv)
 
   if (RPMSG_VIRTIO_LITE_IS_MASTER(priv->dev))
     {
+      if (rpmsg_virtio_cmd->cmd_slave == RPMSG_VIRTIO_LITE_CMD_DONE)
+        {
+          return RPMSG_VIRTIO_LITE_CMD_DONE;
+        }
+
       cmd = rpmsg_virtio_cmd->cmd_slave;
-      rpmsg_virtio_cmd->cmd_slave = 0;
+      rpmsg_virtio_cmd->cmd_slave = RPMSG_VIRTIO_LITE_CMD_DONE;
     }
   else
     {
+      if (rpmsg_virtio_cmd->cmd_master == RPMSG_VIRTIO_LITE_CMD_DONE)
+        {
+          return RPMSG_VIRTIO_LITE_CMD_DONE;
+        }
+
       cmd = rpmsg_virtio_cmd->cmd_master;
-      rpmsg_virtio_cmd->cmd_master = 0;
+      rpmsg_virtio_cmd->cmd_master = RPMSG_VIRTIO_LITE_CMD_DONE;
     }
+
+  if (ack)
+    {
+      rpmsg_virtio_lite_send_command(priv,
+        RPMSG_VIRTIO_LITE_CMD(RPMSG_VIRTIO_LITE_CMD_ACK, 0), false);
+    }
+
+  return cmd;
+}
+
+static void
+rpmsg_virtio_lite_check_command(FAR struct rpmsg_virtio_lite_priv_s *priv)
+{
+  uint32_t cmd = rpmsg_virtio_lite_recv_command(priv, true);
 
   switch (RPMSG_VIRTIO_LITE_GET_CMD(cmd))
     {
       case RPMSG_VIRTIO_LITE_CMD_PANIC:
+        priv->rpanic = true;
         PANIC();
         break;
 
@@ -587,7 +673,7 @@ static int rpmsg_virtio_lite_callback(FAR void *arg, uint32_t vqid)
   FAR struct virtqueue *rvq = rvdev->rvq;
   FAR struct virtqueue *svq = rvdev->svq;
 
-  rpmsg_virtio_lite_command(priv);
+  rpmsg_virtio_lite_check_command(priv);
 
   if (vqid == RPMSG_VIRTIO_LITE_NOTIFY_ALL ||
       vqid == vdev->vrings_info[rvq->vq_queue_index].notifyid)
@@ -792,6 +878,9 @@ int rpmsg_virtio_lite_initialize(FAR struct rpmsg_virtio_lite_s *dev)
     {
       goto err_driver;
     }
+
+  priv->nb.notifier_call = rpmsg_virtio_lite_panic_notifier;
+  panic_notifier_chain_register(&priv->nb);
 
   snprintf(arg1, sizeof(arg1), "%p", priv);
   argv[0] = (FAR char *)priv->rpmsg.cpuname;
