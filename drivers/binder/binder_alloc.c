@@ -191,7 +191,7 @@ static int binder_update_page_range(FAR struct binder_alloc *alloc,
           continue;
         }
 
-      page->page_ptr = page_addr;
+      page->page_ptr = page_addr + alloc->kbuf_ubuf_offset;
     }
 
   return 0;
@@ -777,6 +777,34 @@ void binder_alloc_deferred_release(FAR struct binder_alloc *alloc)
 }
 
 /****************************************************************************
+ * Name: binder_alloc_unmmap
+ *
+ * Description:
+ *   Description of the operation of the function.
+ *
+ * Input Parameters:
+ *   mm    - A reference to the process mm_map struct
+ *   alloc - alloc structure for this proc
+ *   vma   - vma passed to mmap().
+ *
+ * Returned Value:
+ *   0 = success
+ *
+ ****************************************************************************/
+
+int binder_alloc_unmmap(FAR struct mm_map_s *mm,
+                        FAR struct binder_alloc *alloc,
+                        FAR struct binder_mmap_area *vma)
+{
+  FAR void * kbuf = vma->area_start + alloc->kbuf_ubuf_offset;
+#ifdef CONFIG_BUILD_KERNEL
+  vm_unmap_region(mm, vma->area_start, vma->area_size);
+#endif
+  kmm_free(kbuf);
+  return 0;
+}
+
+/****************************************************************************
  * Name: binder_alloc_mmap
  *
  * Description:
@@ -784,6 +812,7 @@ void binder_alloc_deferred_release(FAR struct binder_alloc *alloc)
  *   space specified in vma for allocating binder buffers
  *
  * Input Parameters:
+ *   mm    - A reference to the process mm_map struct
  *   alloc - alloc structure for this proc
  *   vma   - vma passed to mmap()
  *
@@ -794,11 +823,13 @@ void binder_alloc_deferred_release(FAR struct binder_alloc *alloc)
  *
  ****************************************************************************/
 
-int binder_alloc_mmap(FAR struct binder_alloc *alloc,
+int binder_alloc_mmap(FAR struct mm_map_s *mm,
+                      FAR struct binder_alloc *alloc,
                       FAR struct binder_mmap_area *vma)
 {
   FAR const char *failure_string;
   FAR struct binder_buffer *buffer;
+  FAR void *kbuf;
   int ret;
 
   nxmutex_lock(&alloc->alloc_lock);
@@ -810,14 +841,23 @@ int binder_alloc_mmap(FAR struct binder_alloc *alloc,
       goto err_already_mapped;
     }
 
-  vma->area_start = kmm_memalign(PAGE_SIZE, vma->area_size);
+  kbuf = kmm_memalign(PAGE_SIZE, vma->area_size);
+
+#ifdef CONFIG_BUILD_KERNEL
+  vma->area_start = vm_map_region(mm, (uintptr_t)kbuf,
+                                  ALIGN(vma->area_size, PAGE_SIZE));
+#else
+  vma->area_start = kbuf;
+#endif
+
   if (vma->area_start == NULL)
     {
       ret = -ENOMEM;
-      failure_string = "alloc map area failed";
-      goto err_alloc_maparea_failed;
+      failure_string = "alloc kbuf failed";
+      goto err_alloc_kbuf_failed;
     }
 
+  alloc->kbuf_ubuf_offset = kbuf - vma->area_start;
   alloc->buffer_data_size = MIN(vma->area_size, SZ_4M);
   nxmutex_unlock(&alloc->alloc_lock);
 
@@ -860,11 +900,16 @@ err_alloc_buf_struct_failed:
   kmm_free(alloc->pages_array);
   alloc->pages_array = NULL;
 err_alloc_pages_failed:
+#ifdef CONFIG_BUILD_KERNEL
+  vm_unmap_region(get_current_mm(), vma->area_start,
+                  ALIGN(vma->area_size, PAGE_SIZE));
+#endif
+  kmm_free(kbuf);
   alloc->buffer_data = NULL;
   nxmutex_lock(&alloc->alloc_lock);
   alloc->buffer_data_size = 0;
 err_already_mapped:
-err_alloc_maparea_failed:
+err_alloc_kbuf_failed:
   nxmutex_unlock(&alloc->alloc_lock);
   _err("ERROR: %s: %d %lx-%lx %s failed %d\n",
        __func__, alloc->pid, (unsigned long)vma->area_start,

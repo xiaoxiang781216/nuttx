@@ -230,6 +230,7 @@ struct binder_alloc
   mutex_t alloc_lock;                      /* Protected lock for associated binder_proc */
   FAR void *buffer_data;                   /* base of per-proc address space mapped via mmap */
   size_t buffer_data_size;                 /* size of address space specified via mmap */
+  off_t kbuf_ubuf_offset;                  /* offset between kbuf and ubuf */
   struct list_node buffers_list;           /* list of all buffers for this proc */
   struct list_node free_buffers_list;      /* list of buffers available for allocation */
   struct list_node allocated_buffers_list; /* allocated buffers sorted by address */
@@ -608,8 +609,12 @@ static inline bool binder_available_for_proc_work_ilocked(
 /* function prototype define for binder_alloc.c */
 
 void binder_alloc_init(FAR struct binder_alloc *alloc, pid_t pid);
-int binder_alloc_mmap(FAR struct binder_alloc *alloc,
+int binder_alloc_mmap(FAR struct mm_map_s *mm,
+                      FAR struct binder_alloc *alloc,
                       FAR struct binder_mmap_area *vma);
+int binder_alloc_unmmap(FAR struct mm_map_s *mm,
+                        FAR struct binder_alloc *alloc,
+                        FAR struct binder_mmap_area *vma);
 FAR struct binder_buffer *binder_alloc_prepare_to_free(
   FAR struct binder_alloc *alloc, uintptr_t user_ptr);
 int binder_alloc_copy_from_buffer(FAR struct binder_alloc *alloc,

@@ -462,6 +462,12 @@ static int binder_munmap(FAR struct task_group_s *group,
                          FAR struct mm_map_entry_s *entry,
                          FAR void *start, size_t length)
 {
+  FAR struct binder_proc *proc = entry->priv.p;
+  struct binder_mmap_area vma;
+
+  vma.area_start = start;
+  vma.area_size  = length;
+  binder_alloc_unmmap(get_group_mm(group), &proc->alloc, &vma);
   return mm_map_remove(get_group_mm(group), entry);
 }
 
@@ -474,7 +480,7 @@ static int binder_mmap(FAR struct file *filep,
   vma.area_start = map->vaddr;
   vma.area_size = map->length;
 
-  binder_alloc_mmap(&proc->alloc, &vma);
+  binder_alloc_mmap(get_current_mm(), &proc->alloc, &vma);
 
   map->munmap = binder_munmap;
   map->priv.p = (void *)proc;
