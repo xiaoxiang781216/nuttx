@@ -32,6 +32,7 @@
 #include <nuttx/tls.h>
 #include <arch/barriers.h>
 #include <arch/irq.h>
+#include <sched/sched.h>
 
 #include "tricore_internal.h"
 
@@ -149,3 +150,54 @@ void tricore_reclaim_csa(uintptr_t pcxi)
 
   __mtcr(CPU_FCX, head);
 }
+
+void tricore_get_csainfo(csa_info_t *info)
+{
+  FAR struct tcb_s *rtcb = nxsched_self();
+  uintptr_t fcx, ucx;
+  irqstate_t state;
+  int hash_ndx;
+  int ndx;
+
+  state = enter_critical_section();
+  sched_lock();
+
+  info->used = 0;
+  hash_ndx = PIDHASH(rtcb->pid);
+
+  for (ndx = 0; ndx < g_npidhash; ndx++)
+    {
+      if (g_pidhash[ndx])
+        {
+          if (ndx != hash_ndx)
+            {
+              ucx = tricore_addr2csa(g_pidhash[ndx]->xcp.regs) & FCX_FREE;
+            }
+          else
+            {
+              ucx = __mfcr(CPU_PCXI) & FCX_FREE;
+              UP_DSB();
+            }
+
+          while (ucx != 0)
+            {
+              info->used++;
+              ucx = tricore_csa2addr(ucx)[REG_UPCXI] & FCX_FREE;
+            }
+        }
+    }
+
+  fcx = __mfcr(CPU_FCX) & FCX_FREE;
+  UP_DSB();
+
+  info->free = 0;
+  while (fcx != 0)
+    {
+      info->free++;
+      fcx = tricore_csa2addr(fcx)[REG_UPCXI] & FCX_FREE;
+    }
+
+  sched_unlock();
+  leave_critical_section(state);
+}
+

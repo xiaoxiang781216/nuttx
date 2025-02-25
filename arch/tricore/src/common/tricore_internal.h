@@ -129,6 +129,12 @@ typedef uintptr_t (*syscall_stub_t)(int nbr,
                                     uintptr_t parm5, uintptr_t parm6);
 #endif
 
+typedef struct
+{
+  uint32_t used;
+  uint32_t free;
+} csa_info_t;
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -190,6 +196,8 @@ void tricore_trapcall(volatile void *trap);
 uintptr_t *tricore_alloc_csa(uintptr_t pc, uintptr_t sp,
                              uintptr_t psw, bool irqsave);
 void tricore_reclaim_csa(uintptr_t pcxi);
+
+void tricore_get_csainfo(csa_info_t *info);
 
 /* Low level serial output **************************************************/
 
