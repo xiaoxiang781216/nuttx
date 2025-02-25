@@ -491,7 +491,7 @@
  *
  ****************************************************************************/
 
-inline void pmu_enable(void)
+static inline_function void pmu_enable(void)
 {
   modreg32(PMU_CTRL_ENABLE_MASK, PMU_CTRL_ENABLE_MASK, PMU_CTRL);
 }
@@ -504,7 +504,7 @@ inline void pmu_enable(void)
  *
  ****************************************************************************/
 
-inline void pmu_disable(void)
+static inline_function void pmu_disable(void)
 {
   modreg32(PMU_CTRL_ENABLE_MASK, 0, PMU_CTRL);
 }
@@ -521,7 +521,7 @@ inline void pmu_disable(void)
  *
  ****************************************************************************/
 
-inline void pmu_set_evtyper(uint32_t num, uint32_t type)
+static inline_function void pmu_set_evtyper(uint32_t num, uint32_t type)
 {
   putreg32(type, PMU_EVTYPER + 4 * num);
 }
@@ -534,7 +534,7 @@ inline void pmu_set_evtyper(uint32_t num, uint32_t type)
  *
  ****************************************************************************/
 
-inline void pmu_cyccnt_reset(void)
+static inline_function void pmu_cyccnt_reset(void)
 {
   modreg32(PMU_CTRL_CYCCNT_RESET_MASK, PMU_CTRL_CYCCNT_RESET_MASK, PMU_CTRL);
 }
@@ -547,7 +547,7 @@ inline void pmu_cyccnt_reset(void)
  *
  ****************************************************************************/
 
-inline void pmu_evcntr_reset_all(void)
+static inline_function void pmu_evcntr_reset_all(void)
 {
   modreg32(PMU_CTRL_EVENTCNT_RESET_MASK, PMU_CTRL_EVENTCNT_RESET_MASK,
            PMU_CTRL);
@@ -569,7 +569,7 @@ inline void pmu_evcntr_reset_all(void)
  *
  ****************************************************************************/
 
-inline void pmu_cntr_enable(uint32_t mask)
+static inline_function void pmu_cntr_enable(uint32_t mask)
 {
   putreg32(mask, PMU_CNTENSET);
 }
@@ -590,7 +590,7 @@ inline void pmu_cntr_enable(uint32_t mask)
  *
  ****************************************************************************/
 
-inline void pmu_cntr_disable(uint32_t mask)
+static inline_function void pmu_cntr_disable(uint32_t mask)
 {
   putreg32(mask, PMU_CNTENCLR);
 }
@@ -606,7 +606,7 @@ inline void pmu_cntr_disable(uint32_t mask)
  *
  ****************************************************************************/
 
-inline uint32_t pmu_get_ccntr(void)
+static inline_function uint32_t pmu_get_ccntr(void)
 {
   return getreg32(PMU_CCNTR);
 }
@@ -625,7 +625,7 @@ inline uint32_t pmu_get_ccntr(void)
  *
  ****************************************************************************/
 
-inline uint32_t pmu_get_evcntr(uint32_t num)
+static inline_function uint32_t pmu_get_evcntr(uint32_t num)
 {
   return getreg32(PMU_EVCNTR + 4 * num) & PMU_EVCNTR_CNT_MASK;
 }
@@ -643,7 +643,7 @@ inline uint32_t pmu_get_evcntr(uint32_t num)
  *
  ****************************************************************************/
 
-inline uint32_t pmu_get_cntr_ovs(void)
+static inline_function uint32_t pmu_get_cntr_ovs(void)
 {
   return getreg32(PMU_OVSSET);
 }
@@ -664,7 +664,7 @@ inline uint32_t pmu_get_cntr_ovs(void)
  *
  ****************************************************************************/
 
-inline void pmu_clear_cntr_ovs(uint32_t mask)
+static inline_function void pmu_clear_cntr_ovs(uint32_t mask)
 {
   putreg32(mask, PMU_OVSCLR);
 }
@@ -685,7 +685,7 @@ inline void pmu_clear_cntr_ovs(uint32_t mask)
  *
  ****************************************************************************/
 
-inline void pmu_cntr_irq_enable(uint32_t mask)
+static inline_function void pmu_cntr_irq_enable(uint32_t mask)
 {
   putreg32(mask, PMU_INTENSET);
 }
@@ -706,7 +706,7 @@ inline void pmu_cntr_irq_enable(uint32_t mask)
  *
  ****************************************************************************/
 
-inline void pmu_cntr_irq_disable(uint32_t mask)
+static inline_function void pmu_cntr_irq_disable(uint32_t mask)
 {
   putreg32(mask, PMU_INTENCLR);
 }
@@ -725,7 +725,7 @@ inline void pmu_cntr_irq_disable(uint32_t mask)
  *
  ****************************************************************************/
 
-inline void pmu_cntr_increment(uint32_t mask)
+static inline_function void pmu_cntr_increment(uint32_t mask)
 {
   putreg32(mask, PMU_SWINC);
 }
