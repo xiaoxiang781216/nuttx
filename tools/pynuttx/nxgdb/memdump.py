@@ -354,7 +354,9 @@ class MMDump(gdb.Command):
             else:
                 source = "Pool" if node.from_pool else "Heap"
                 printnode(node, 1)
-                print(f"{addr: #x} found belongs to {source} - {node}")
+                print(
+                    f"{addr: #x} is {'free' if node.is_free else 'used'}, found belongs to {source} - {node}"
+                )
 
                 if node.prevnode:
                     print(f"prevnode: {node.prevnode}")
