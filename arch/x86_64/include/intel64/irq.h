@@ -416,9 +416,9 @@
 /* Align registers to 64-bytes */
 
 #ifdef CONFIG_ARCH_X86_64_AVX512
-#  define XMMAREA_REG_ALIGN         (12)
+#  define XMMAREA_REG_ALIGN         (11)
 #else
-#  define XMMAREA_REG_ALIGN         (6)
+#  define XMMAREA_REG_ALIGN         (5)
 #endif
 
 /* Register offset in XMMAREA */
@@ -463,12 +463,9 @@
 #define REG_RFLAGS                  (23 + XMMAREA_REG_OFFSET)
 #define REG_RSP                     (24 + XMMAREA_REG_OFFSET)
 #define REG_SS                      (25 + XMMAREA_REG_OFFSET)
+#define REG_AUX                     (26 + XMMAREA_REG_OFFSET)
 
-#define XMMAREA_REGS                (26)
-
-/* Aux register used by implementation */
-
-#define REG_AUX                     (27 + XMMAREA_REG_OFFSET)
+#define XMMAREA_REGS                (27)
 
 /* NOTE 2: This is not really state data.  Rather, this is just a convenient
  *   way to pass parameters from the interrupt handler to C code.
