@@ -105,6 +105,12 @@ struct rpmsg_s
 #endif
 };
 
+struct rpmsg_timestamp_s
+{
+  uint64_t tx_nsec;
+  uint64_t rx_nsec;
+};
+
 /**
  * struct rpmsg_ops_s - Rpmsg device operations
  * wait: wait sem.
@@ -119,6 +125,8 @@ struct rpmsg_ops_s
   CODE int (*ioctl)(FAR struct rpmsg_s *rpmsg, int cmd, unsigned long arg);
   CODE void (*panic)(FAR struct rpmsg_s *rpmsg);
   CODE void (*dump)(FAR struct rpmsg_s *rpmsg);
+  CODE int (*get_timestamp)(FAR struct rpmsg_s *rpmsg, FAR const void *data,
+                            FAR struct rpmsg_timestamp_s *ts);
 };
 
 CODE typedef void (*rpmsg_dev_cb_t)(FAR struct rpmsg_device *rdev,
@@ -155,6 +163,9 @@ int rpmsg_defer_work(FAR struct rpmsg_endpoint *ept, FAR void *data,
                      size_t len, uint32_t src, FAR void *priv,
                      rpmsg_ept_cb handler);
 int rpmsg_get_signals(FAR struct rpmsg_device *rdev);
+int rpmsg_get_timestamp(FAR struct rpmsg_device *rdev, FAR const void *data,
+                        FAR struct rpmsg_timestamp_s *ts);
+
 static inline_function bool rpmsg_is_running(FAR struct rpmsg_device *rdev)
 {
   return rpmsg_get_signals(rdev) & RPMSG_SIGNAL_RUNNING;

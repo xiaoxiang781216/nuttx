@@ -359,6 +359,19 @@ handle:
   return ret;
 }
 
+int rpmsg_get_timestamp(FAR struct rpmsg_device *rdev, FAR const void *data,
+                        FAR struct rpmsg_timestamp_s *ts)
+{
+  FAR struct rpmsg_s *rpmsg = rpmsg_get_by_rdev(rdev);
+
+  if (!rpmsg || !data || !ts || !rpmsg->ops->get_timestamp)
+    {
+      return -EINVAL;
+    }
+
+  return rpmsg->ops->get_timestamp(rpmsg, data, ts);
+}
+
 int rpmsg_register_callback(FAR void *priv,
                             rpmsg_dev_cb_t device_created,
                             rpmsg_dev_cb_t device_destroy,
