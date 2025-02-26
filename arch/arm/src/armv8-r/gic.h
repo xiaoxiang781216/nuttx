@@ -26,11 +26,11 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/bits.h>
 #include <arch/irq.h>
 #include <arch/chip/chip.h>
 
 #include "arm_internal.h"
-#include "arm.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -278,6 +278,8 @@
 #define GIC_IRQ_SGI14            14
 #define GIC_IRQ_SGI15            15
 
+#define GIC_IRQ_SPI              32 /* First SPI interrupt ID */
+
 /* register constants */
 #define ICC_SRE_ELX_SRE_BIT         BIT(0)
 #define ICC_SRE_ELX_DFB_BIT         BIT(1)
@@ -331,7 +333,7 @@ int arm_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list);
 int arm_smp_sched_handler(int irq, void *context, void *arg);
 #endif /* CONFIG_SMP */
 
-#ifdef CONFIG_ARMV8R_GICV2M
+#ifdef CONFIG_ARMV8R_GICv2M
 int arm_gic_v2m_initialize(void);
 #endif
 

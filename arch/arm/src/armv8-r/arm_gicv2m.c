@@ -25,11 +25,9 @@
 #include <errno.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/bits.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/spinlock.h>
 
-#include "arm_internal.h"
 #include "gic.h"
 
 /****************************************************************************
