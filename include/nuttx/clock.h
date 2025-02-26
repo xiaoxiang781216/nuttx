@@ -212,6 +212,10 @@
 
 #define MSEC2SEC(usec)        div_const(msec, MSEC_PER_SEC)
 
+/* USEC2MSEC */
+
+#define USEC2MSEC(usec)       div_const(usec, USEC_PER_MSEC)
+
 /* USEC2SEC */
 
 #define USEC2SEC(usec)        div_const(usec, USEC_PER_SEC)
