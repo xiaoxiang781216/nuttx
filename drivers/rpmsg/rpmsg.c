@@ -720,17 +720,21 @@ void rpmsg_unregister(FAR const char *path, FAR struct rpmsg_s *rpmsg)
   metal_finish();
 }
 
-static int rpmsg_ioctl_foreach_cb(FAR struct rpmsg_s *rpmsg, FAR void *arg)
+void rpmsg_dump_epts(FAR struct rpmsg_device *rdev)
 {
-  FAR struct rpmsg_ioctl_s *info = (FAR struct rpmsg_ioctl_s *)arg;
+  FAR struct rpmsg_endpoint *ept;
+  FAR struct metal_list *node;
 
-  if (!info->cpuname ||
-      !strcmp(rpmsg_get_cpuname(rpmsg->rdev), info->cpuname))
+  metal_log(METAL_LOG_EMERGENCY, "  rpmsg ept list:\n");
+  metal_list_for_each(&rdev->endpoints, node)
     {
-      return rpmsg_dev_ioctl_(rpmsg, info->cmd, info->arg);
+      ept = metal_container_of(node, struct rpmsg_endpoint, node);
+      metal_log(METAL_LOG_EMERGENCY, "    ept %s %p: addr=%" PRIu32 " "
+                "dest=%" PRIu32 " refcnt=%" PRIu32 " "
+                "priority=%" PRIu8 " priv=%p\n",
+                ept, ept->name, ept->addr, ept->dest_addr,
+                ept->refcnt, ept->priority, ept->priv);
     }
-
-  return 0;
 }
 
 int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg)
