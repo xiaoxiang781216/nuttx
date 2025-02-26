@@ -133,8 +133,7 @@ static int safety_handler(FAR void *arg, FAR void *result,
       return -EINVAL;
     }
 
-  flags = spin_lock_irqsave(&priv->spinlock);
-  sched_lock();
+  flags = spin_lock_irqsave_nopreempt(&priv->spinlock);
 
   priv->has_data = true;
   memcpy(priv->data + offset, result, len);
@@ -150,8 +149,7 @@ static int safety_handler(FAR void *arg, FAR void *result,
         }
     }
 
-  sched_unlock();
-  spin_unlock_irqrestore(&priv->spinlock, flags);
+  spin_unlock_irqrestore_nopreempt(&priv->spinlock, flags);
   return OK;
 }
 
@@ -384,8 +382,7 @@ static int safety_poll(FAR struct file *filep, FAR struct pollfd *fds,
   FAR struct safety_user_s *user  = filep->f_priv;
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(&priv->spinlock);
-  sched_lock();
+  flags = spin_lock_irqsave_nopreempt(&priv->spinlock);
 
   if (setup)
     {
@@ -393,8 +390,7 @@ static int safety_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       if (user->fds)
         {
-          sched_unlock();
-          spin_unlock_irqrestore(&priv->spinlock, flags);
+          spin_unlock_irqrestore_nopreempt(&priv->spinlock, flags);
           return -EBUSY;
         }
 
@@ -416,8 +412,7 @@ static int safety_poll(FAR struct file *filep, FAR struct pollfd *fds,
       fds->priv = NULL;
     }
 
-  sched_unlock();
-  spin_unlock_irqrestore(&priv->spinlock, flags);
+  spin_unlock_irqrestore_nopreempt(&priv->spinlock, flags);
   return OK;
 }
 

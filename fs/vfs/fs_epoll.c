@@ -235,11 +235,9 @@ static void epoll_notify(FAR epoll_head_t *eph, pollevent_t eventset)
 {
   irqstate_t flags;
 
-  sched_lock();
-  flags = spin_lock_irqsave(&eph->poll_lock);
+  flags = spin_lock_irqsave_nopreempt(&eph->poll_lock);
   poll_notify(eph->fds, CONFIG_EPOLL_NPOLLWAITERS, eventset);
-  spin_unlock_irqrestore(&eph->poll_lock, flags);
-  sched_unlock();
+  spin_unlock_irqrestore_nopreempt(&eph->poll_lock, flags);
 }
 
 static int epoll_do_poll(FAR struct file *filep,
