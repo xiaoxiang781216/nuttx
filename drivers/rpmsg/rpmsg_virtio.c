@@ -435,8 +435,6 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg)
     (FAR struct rpmsg_virtio_priv_s *)rpmsg;
   FAR struct rpmsg_virtio_device *rvdev = &priv->rvdev;
   FAR struct rpmsg_device *rdev = &rvdev->rdev;
-  FAR struct rpmsg_endpoint *ept;
-  FAR struct metal_list *node;
   bool needunlock = false;
 
   metal_log(METAL_LOG_EMERGENCY, "Local: %s Remote: %s Headrx %u\n",
@@ -458,21 +456,14 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg)
             rpmsg_virtio_get_role(rvdev) == RPMSG_HOST ? "yes" : "no",
             priv->rpmsg.local_cpuname, priv->rpmsg.cpuname);
 
+  rpmsg_dump_epts(rdev);
+
   metal_log(METAL_LOG_EMERGENCY, "rpmsg vq RX:\n");
   virtqueue_dump(rvdev->rvq);
   metal_log(METAL_LOG_EMERGENCY, "rpmsg vq TX:\n");
   virtqueue_dump(rvdev->svq);
 
-  metal_log(METAL_LOG_EMERGENCY, "  rpmsg ept list:\n");
-
-  metal_list_for_each(&rdev->endpoints, node)
-    {
-      ept = metal_container_of(node, struct rpmsg_endpoint, node);
-      metal_log(METAL_LOG_EMERGENCY, "    ept %s\n", ept->name);
-    }
-
   metal_log(METAL_LOG_EMERGENCY, "  rpmsg buffer list:\n");
-
   rpmsg_virtio_dump_buffer(rvdev, true);
   rpmsg_virtio_dump_buffer(rvdev, false);
 

@@ -795,8 +795,6 @@ static void rpmsg_port_dump(FAR struct rpmsg_s *rpmsg)
 {
   FAR struct rpmsg_port_s *port = (FAR struct rpmsg_port_s *)rpmsg;
   FAR struct rpmsg_device *rdev = rpmsg->rdev;
-  FAR struct rpmsg_endpoint *ept;
-  FAR struct metal_list *node;
   bool needunlock = false;
 
   if (!up_interrupt_context() && !sched_idletask())
@@ -808,11 +806,7 @@ static void rpmsg_port_dump(FAR struct rpmsg_s *rpmsg)
   metal_log(METAL_LOG_EMERGENCY, "Remote: %s state: %d\n",
             port->rpmsg.cpuname, rpmsg_is_running(rdev));
 
-  metal_list_for_each(&rdev->endpoints, node)
-    {
-      ept = metal_container_of(node, struct rpmsg_endpoint, node);
-      metal_log(METAL_LOG_EMERGENCY, "ept %s\n", ept->name);
-    }
+  rpmsg_dump_epts(rdev);
 
   rpmsg_port_dump_buffer(rdev, &port->rxq, true);
   rpmsg_port_dump_buffer(rdev, &port->txq, false);
