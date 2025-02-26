@@ -39,6 +39,7 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/rpmsg/rpmsg.h>
 
+#include "rpmsg.h"
 #include "rpmsg_procfs.h"
 
 /****************************************************************************
