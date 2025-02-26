@@ -27,7 +27,7 @@
  * Included Files
  ****************************************************************************/
 
- #include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/rpmsg/rpmsg.h>
 
 /****************************************************************************
  * Public Function Prototypes
