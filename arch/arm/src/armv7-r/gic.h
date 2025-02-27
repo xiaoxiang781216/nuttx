@@ -852,6 +852,10 @@ void arm_gic_dump(const char *msg, bool all, int irq);
 #  define arm_gic_dump(m,a,i)
 #endif
 
+#ifdef CONFIG_ARMV7R_GICv2M
+int gic_v2m_initialize(void);
+#endif
+
 #undef EXTERN
 #ifdef __cplusplus
 }
