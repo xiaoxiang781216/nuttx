@@ -706,6 +706,11 @@ except ModuleNotFoundError:
             return read_u32(buffer, offset + 4) + (read_u32(buffer, offset) << 32)
 
 
+def read_uint(addr):
+    buf = gdb.selected_inferior().read_memory(addr, 4)
+    return int.from_bytes(buf, "little", signed=False)
+
+
 def read_ulong(buffer, offset):
     """Read a long from a buffer"""
     if get_long_type().sizeof == 8:
