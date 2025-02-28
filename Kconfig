@@ -1190,6 +1190,15 @@ config DEBUG_SCHED_INFO
 	---help---
 		Enable OS scheduler informational output to SYSLOG.
 
+config DEBUG_INITIAL_SYSTEM_TIMER_TICKS
+	bool "Initial system timer ticks value close to maximum 32-bit value"
+	default y
+	---help---
+		Initial system timer ticks value close to maximum 32-bit value,
+		to test 64-bit system-timer after going over 32-bit value.
+		This is to make errors of casting 64-bit system-timer to 32-bit
+		variables more visible.
+
 endif # DEBUG_SCHED
 
 config DEBUG_SYSCALL
