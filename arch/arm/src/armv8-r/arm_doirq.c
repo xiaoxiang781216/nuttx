@@ -110,7 +110,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
  *
  ****************************************************************************/
 
-void up_irqinitialize(void)
+void weak_function up_irqinitialize(void)
 {
   /* The following operations need to be atomic, but since this function is
    * called early in the initialization sequence, we expect to have exclusive

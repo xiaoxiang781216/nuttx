@@ -331,6 +331,8 @@ int arm_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list);
 
 #ifdef CONFIG_SMP
 int arm_smp_sched_handler(int irq, void *context, void *arg);
+int arm_start_handler(int irq, void *context, void *arg);
+void arm_cpu_sgi(int sgi, unsigned int cpuset);
 #endif /* CONFIG_SMP */
 
 #ifdef CONFIG_ARMV8R_GICv2M

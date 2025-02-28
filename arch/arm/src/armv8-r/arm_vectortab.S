@@ -41,7 +41,7 @@
 	.syntax	unified
 	.arm
 
-	.globl		_sys_vector_start
+	.globl		_sys_vector_start, _vector_start
 	.globl		_sys_vector_end
 
 /****************************************************************************
@@ -57,6 +57,7 @@
 
 	.section	.sys_vectors, "ax"
 
+_vector_start:
 _sys_vector_start:
 	ldr		pc, .Lresethandler		/* 0x00: Reset */
 	ldr		pc, .Lundefinedhandler		/* 0x04: Undefined instruction */

@@ -26,6 +26,7 @@
 #include <nuttx/irq.h>
 
 #include "arm.h"
+#include "chip.h"
 
 	.file	"arm_vectors.S"
 
