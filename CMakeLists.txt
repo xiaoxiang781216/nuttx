@@ -763,13 +763,21 @@ endif()
 # which dump symbols are called nm, though, some compiler toolchain may have a
 # different name.
 if(NOT WIN32)
+  # Note that if we performed the nuttx_multiple_link target, the address
+  # assigned by the linker might change during each linking stage. We should use
+  # the final_nuttx as the target for generating the memory map
+  if(CONFIG_ALLSYMS OR CONFIG_MM_KASAN_GLOBAL)
+    set(FINAL_TARGET final_nuttx)
+  else()
+    set(FINAL_TARGET nuttx)
+  endif()
   add_custom_command(
     OUTPUT System.map
     COMMAND
       ${CMAKE_NM} nuttx | grep -v
       '\(compiled\)\|\(\${CMAKE_C_OUTPUT_EXTENSION}$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)'
       | sort > System.map
-    DEPENDS nuttx)
+    DEPENDS ${FINAL_TARGET})
   add_custom_target(systemmap ALL DEPENDS System.map)
   add_dependencies(nuttx_post systemmap)
 endif()
