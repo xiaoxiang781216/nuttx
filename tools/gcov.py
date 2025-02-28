@@ -73,35 +73,36 @@ def parse_gcda_data(path):
             output += line.strip()
 
 
-def correct_content_path(file, newpath):
+def correct_content_path(file, shield: list, newpath):
     with open(file, "r", encoding="utf-8") as f:
         content = f.read()
 
-    pattern = r"SF:([^\s]*?)/nuttx/include/nuttx"
-    matches = re.findall(pattern, content)
+    for i in shield:
+        content = content.replace(i, "")
 
-    if matches:
-        new_content = content.replace(matches[0], newpath)
+    new_content = content
+    if newpath is not None:
+        pattern = r"SF:([^\s]*?)/nuttx/include/nuttx"
+        matches = re.findall(pattern, content)
 
-        with open(file, "w", encoding="utf-8") as f:
-            f.write(new_content)
+        if matches:
+            new_content = content.replace(matches[0], newpath)
+
+    with open(file, "w", encoding="utf-8") as f:
+        f.write(new_content)
 
 
-def copy_file_endswith(endswith, source_dir, target_dir, skip_dir):
-    print(f"Collect {endswith} files {source_dir} -> {target_dir}")
-
-    if not os.path.exists(target_dir):
-        os.makedirs(target_dir)
-
-    for root, _, files in os.walk(source_dir):
-        if skip_dir in root:
+def copy_file_endswith(endswith, source, target):
+    for root, dirs, files in os.walk(source, topdown=True):
+        if target in root:
             continue
 
         for file in files:
             if file.endswith(endswith):
-                source_file = os.path.join(root, file)
-                target_file = os.path.join(target_dir, file)
-                shutil.copy2(source_file, target_file)
+                src_file = os.path.join(root, file)
+                dst_file = os.path.join(target, os.path.relpath(src_file, source))
+                os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+                shutil.copy2(src_file, dst_file)
 
 
 def arg_parser():
@@ -133,7 +134,7 @@ def arg_parser():
     )
     parser.add_argument(
         "-o",
-        dest="gcov_dir",
+        dest="result_dir",
         default="gcov",
         help="Directory to store gcov data and report",
     )
@@ -145,36 +146,29 @@ def main():
     args = arg_parser()
 
     root_dir = os.getcwd()
-    gcov_dir = os.path.abspath(args.gcov_dir)
     gcno_dir = os.path.abspath(args.gcno_dir)
+    result_dir = os.path.abspath(args.result_dir)
 
-    os.makedirs(gcov_dir, exist_ok=True)
-
-    gcda_dir = []
-    for i in args.gcda_dir:
-        gcda_dir.append(os.path.abspath(i))
-
-    coverage_file = os.path.join(gcov_dir, "coverage.info")
-    result_dir = os.path.join(gcov_dir, "result")
+    os.makedirs(result_dir, exist_ok=True)
+    data_dir = os.path.join(result_dir, "data")
+    report_dir = os.path.join(result_dir, "report")
+    coverage_file = os.path.join(result_dir, "coverage.info")
 
     if args.debug:
-        debug_file = os.path.join(gcov_dir, "debug.log")
+        debug_file = os.path.join(result_dir, "debug.log")
         sys.stdout = open(debug_file, "w+")
 
     if args.input:
         parse_gcda_data(os.path.join(root_dir, args.input))
 
-    gcov_data_dir = []
-
-    # Collect gcno, gcda files
-    for i in gcda_dir:
-
-        dir = os.path.join(gcov_dir + "/data", os.path.basename(i))
-        gcov_data_dir.append(dir)
-        os.makedirs(dir)
-
-        copy_file_endswith(".gcno", gcno_dir, dir, gcov_dir)
-        copy_file_endswith(".gcda", i, dir, gcov_dir)
+    # Copy all data together with the path to the data_dir directory
+    shield = []
+    for i in args.gcda_dir:
+        abs_path = os.path.abspath(i)
+        target_dir = os.path.join(data_dir, os.path.basename(abs_path))
+        shield.append(target_dir)
+        copy_file_endswith(".gcda", abs_path, target_dir)
+        copy_file_endswith(".gcno", gcno_dir, target_dir)
 
     # Only copy files
     if args.only_copy:
@@ -201,10 +195,9 @@ def main():
             args.gcov_tool,
             "--ignore-errors",
             "gcov",
+            "--directory",
+            f"{data_dir}",
         ]
-        for i in gcov_data_dir:
-            command.append("-d")
-            command.append(i)
 
         print(command)
 
@@ -215,8 +208,7 @@ def main():
             stderr=sys.stdout,
         )
 
-        if args.base_dir:
-            correct_content_path(coverage_file, args.base_dir)
+        correct_content_path(coverage_file, shield, args.base_dir)
 
         # genhtml generate coverage report
         subprocess.run(
@@ -224,7 +216,7 @@ def main():
                 "genhtml",
                 "--branch-coverage",
                 "-o",
-                result_dir,
+                report_dir,
                 coverage_file,
                 "--ignore-errors",
                 "source",
@@ -237,7 +229,7 @@ def main():
         print(
             "Copy the following link and open it in the browser to view the coverage report:"
         )
-        print(f"file://{os.path.join(result_dir, 'index.html')}")
+        print(f"file://{os.path.join(report_dir, 'index.html')}")
 
     except subprocess.CalledProcessError:
         print("Failed to generate coverage file.")
