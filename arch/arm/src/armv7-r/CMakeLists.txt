@@ -80,4 +80,8 @@ if(CONFIG_SMP)
     arm_scu.c)
 endif()
 
+if(CONFIG_ARCH_ADDRENV)
+  list(APPEND SRCS arm_addrenv.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})
