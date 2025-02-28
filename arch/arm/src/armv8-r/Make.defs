@@ -61,3 +61,9 @@ endif
 ifeq ($(CONFIG_ARMV8R_L2CC_PL310),y)
   CMN_CSRCS += arm_l2cc_pl310.c
 endif
+
+ifeq ($(CONFIG_SMP),y)
+  CMN_ASRCS += arm_cpuhead.S
+  CMN_CSRCS += arm_cpustart.c arm_smpcall.c
+  CMN_CSRCS += arm_cpuidlestack.c arm_scu.c
+endif
