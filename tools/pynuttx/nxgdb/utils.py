@@ -910,6 +910,20 @@ def get_running_tcbs() -> List[Tcb]:
     return [tcb for tcb in ArrayIterator(running_tasks) if tcb]
 
 
+def get_tcb_type(tcb):
+    """get tcb type"""
+    if not tcb:
+        return None
+
+    mask = get_symbol_value("TCB_FLAG_TTYPE_MASK")
+    if tcb["flags"] & mask == get_symbol_value("TCB_FLAG_TTYPE_PTHREAD"):
+        return "PTHREAD"
+    elif tcb["flags"] & mask == get_symbol_value("TCB_FLAG_TTYPE_KERNEL"):
+        return "KTHREAD"
+    else:
+        return "TASK"
+
+
 def get_tid(tcb):
     """get tid from tcb"""
     if not tcb:
