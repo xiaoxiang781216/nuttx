@@ -44,7 +44,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm_physpgaddr
+ * Name: up_addrenv_va_to_pa
  *
  * Description:
  *   Check if the virtual address lies in the user data area and, if so
@@ -52,8 +52,9 @@
  *
  ****************************************************************************/
 
-uintptr_t arm_physpgaddr(uintptr_t vaddr)
+uintptr_t up_addrenv_va_to_pa(void *va)
 {
+  uintptr_t vaddr = (uintptr_t)va;
   uint32_t *l2table;
   uintptr_t paddr;
   uint32_t l1entry;
@@ -111,7 +112,7 @@ uintptr_t arm_physpgaddr(uintptr_t vaddr)
 
   /* No mapping available */
 
-  return 0;
+  return vaddr;
 }
 
 #endif /* CONFIG_MM_PGALLOC */
