@@ -41,7 +41,7 @@
 #  define kasan_unpoison(addr, size) addr
 #  define kasan_register(addr, size)
 #  define kasan_unregister(addr)
-#  define kasan_reset_tag(addr) addr
+#  define kasan_clear_tag(addr) addr
 #  define kasan_start()
 #  define kasan_stop()
 #  define kasan_debugpoint(t,a,s) 0
@@ -135,7 +135,7 @@ void kasan_register(FAR void *addr, FAR size_t *size);
 void kasan_unregister(FAR void *addr);
 
 /****************************************************************************
- * Name: kasan_reset_tag
+ * Name: kasan_clear_tag
  *
  * Input Parameters:
  *   addr - The address of the memory to reset the tag.
@@ -145,7 +145,7 @@ void kasan_unregister(FAR void *addr);
  *
  ****************************************************************************/
 
-FAR void *kasan_reset_tag(FAR const void *addr);
+FAR void *kasan_clear_tag(FAR const void *addr);
 
 /****************************************************************************
  * Name: kasan_get_tag
