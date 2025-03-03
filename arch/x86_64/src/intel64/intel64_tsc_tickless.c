@@ -90,7 +90,6 @@ static uint64_t g_tsc_start;
 
 static uint32_t g_timer_active;
 
-static irqstate_t g_tmr_sync_count;
 static irqstate_t g_tmr_flags;
 
 /****************************************************************************
@@ -187,25 +186,12 @@ static inline void up_tick2ts(uint64_t tick, struct timespec *ts)
 
 static inline void up_tmr_sync_up(void)
 {
-  if (!g_tmr_sync_count)
-    {
-      g_tmr_flags = enter_critical_section();
-    }
-
-  g_tmr_sync_count++;
+    g_tmr_flags = enter_critical_section();
 }
 
 static inline void up_tmr_sync_down(void)
 {
-  if (g_tmr_sync_count == 1)
-    {
-      leave_critical_section(g_tmr_flags);
-    }
-
-  if (g_tmr_sync_count > 0)
-    {
-      g_tmr_sync_count--;
-    }
+    leave_critical_section(g_tmr_flags);
 }
 
 /****************************************************************************
