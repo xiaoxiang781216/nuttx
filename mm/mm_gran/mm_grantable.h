@@ -69,8 +69,6 @@ struct gran_range_s
 {
   uint16_t  sidx;        /* index of the starting GAT cell */
   uint16_t  eidx;        /* index of the ending GAT cell */
-  uint8_t   soff;        /* offset of bit in starting cell */
-  uint8_t   eoff;        /* offset of bit in ending cell */
   uint16_t width;        /* width of cell in bits */
   uint32_t smask;        /* mask of the starting GAT cell */
   uint32_t emask;        /* mask of the ending GAT cell */

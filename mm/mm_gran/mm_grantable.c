@@ -133,6 +133,9 @@ static void gran_set_(gran_t *gran, gatr_t *rang, bool val)
 int gran_range(const gran_t *gran, size_t posi, size_t size,
                gatr_t *rang)
 {
+  uint8_t soff;        /* offset of bit in starting cell */
+  uint8_t eoff;        /* offset of bit in ending cell */
+
   if (!gran || gran->ngranules < posi + size)
     {
       return -EINVAL;
@@ -146,14 +149,14 @@ int gran_range(const gran_t *gran, size_t posi, size_t size,
   rang->width = GATC_BITS(gran);
 
   rang->sidx = posi / rang->width;
-  rang->soff = posi % rang->width;
+  soff = posi % rang->width;
 
   posi += size - 1;
-  rang->eidx = posi / GATC_BITS(gran);
-  rang->eoff = posi % GATC_BITS(gran);
+  rang->eidx = posi / rang->width;
+  eoff = posi % rang->width;
 
-  rang->smask = ~(BIT(rang->soff) - 1);
-  rang->emask = (BIT(rang->eoff) - 1) | BIT(rang->eoff);
+  rang->smask = ~(BIT(soff) - 1);
+  rang->emask = (BIT(eoff) - 1) | BIT(eoff);
 
   if (rang->sidx == rang->eidx)
     {
@@ -182,7 +185,7 @@ bool gran_match(const gran_t *gran, size_t posi, size_t size, bool used,
   /* check the ending cell */
 
   c = r.eidx;
-  e = used ? r.emask : 0 ;
+  e = used ? r.emask : 0;
   v = gran->gat[c] & r.emask;
   if (v != e)
     {
@@ -210,7 +213,7 @@ bool gran_match(const gran_t *gran, size_t posi, size_t size, bool used,
   /* check the starting cell */
 
   c = r.sidx;
-  e = used ? r.smask : 0 ;
+  e = used ? r.smask : 0;
   v = gran->gat[c] & r.smask;
   if (v != e)
     {
@@ -233,7 +236,7 @@ failure:
       DEBUGASSERT(*mpos < sizeof(DEBRUJIN_LUT));
       *mpos = DEBRUJIN_LUT[*mpos];
 #endif
-      *mpos += c * GATC_BITS(gran);
+      *mpos += c * r.width;
     }
 
   return false;
