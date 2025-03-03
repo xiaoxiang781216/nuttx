@@ -512,9 +512,9 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
                                  ctx);
         }
       while (ret == 0);
-    }
 
-  return ret;
+      return stream.common.nput;
+    }
 }
 
 /****************************************************************************
