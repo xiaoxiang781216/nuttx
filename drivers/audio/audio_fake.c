@@ -286,8 +286,8 @@ static int audio_fake_file_init(FAR struct audio_lowerhalf_s *dev)
 
   if (priv->playback)
     {
-      ret = file_open(&priv->file, filename, O_RDWR | O_CREAT | O_CLOEXEC,
-                      0666);
+      ret = file_open(&priv->file, filename,
+                       O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, 0666);
     }
   else
     {
