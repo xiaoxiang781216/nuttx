@@ -222,6 +222,8 @@ int binder_inc_node(FAR struct binder_node *node, int strong, int internal,
 
   if (node == NULL)
     {
+      binder_debug(BINDER_DEBUG_ERROR,
+                   "line:%d node is an invalid null pointer.", __LINE__);
       return -EINVAL;
     }
 
@@ -321,6 +323,8 @@ void binder_dec_node(FAR struct binder_node *node, int strong, int internal)
 
   if (node == NULL)
     {
+      binder_debug(BINDER_DEBUG_ERROR,
+                   "line:%d node is an invalid null pointer.", __LINE__);
       return;
     }
 
@@ -355,6 +359,8 @@ static void binder_inc_node_tmpref(FAR struct binder_node *node)
 
   if (node == NULL)
     {
+      binder_debug(BINDER_DEBUG_ERROR,
+                   "line:%d node is an invalid null pointer.", __LINE__);
       return;
     }
 
@@ -397,6 +403,8 @@ void binder_dec_node_tmpref(FAR struct binder_node *node)
 
   if (node == NULL)
     {
+      binder_debug(BINDER_DEBUG_ERROR,
+                   "line:%d node is an invalid null pointer.", __LINE__);
       return;
     }
 
