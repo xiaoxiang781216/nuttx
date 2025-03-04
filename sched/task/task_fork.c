@@ -164,7 +164,7 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
 
   nxtask_joininit(child);
 
-  nxsem_init(&ptcb->exit_sem, 0, 0);
+  nxsem_init(&child->exit_sem, 0, 0);
 
 #ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
   spin_lock_init(&child->mutex_lock);
