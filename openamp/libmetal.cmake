@@ -79,6 +79,10 @@ if(CONFIG_OPENAMP_CACHE)
   add_compile_definitions(METAL_CACHE)
 endif()
 
+if(CONFIG_ARCH_TOOLCHAIN_TASKING)
+  set(WITH_NO_PROJECT_EC ON)
+endif()
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/libmetal
                  ${CMAKE_CURRENT_BINARY_DIR}/libmetal EXCLUDE_FROM_ALL)
 

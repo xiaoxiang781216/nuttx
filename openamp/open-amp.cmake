@@ -80,6 +80,10 @@ if(CONFIG_OPENAMP_CACHE)
   set(WITH_DCACHE_VRINGS ON)
 endif()
 
+if(CONFIG_ARCH_TOOLCHAIN_TASKING)
+  set(WITH_NO_PROJECT_EC ON)
+endif()
+
 if(CONFIG_OPENAMP_DEBUG)
   add_compile_definitions(RPMSG_DEBUG)
   add_compile_definitions(VQUEUE_DEBUG)
