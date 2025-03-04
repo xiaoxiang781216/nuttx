@@ -31,6 +31,7 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/fdt.h>
+#include <nuttx/virtio/virtio-mmio.h>
 
 #ifdef CONFIG_LIBC_FDT
 #  include <libfdt.h>
@@ -47,9 +48,29 @@
 #define QEMU_SPI_IRQ_BASE     32
 #endif
 
+#define QEMU_VIRTIO_MMIO_BASE    0x0a000000
+#define QEMU_VIRTIO_MMIO_REGSIZE 0x200
+#define QEMU_VIRTIO_MMIO_IRQ     (QEMU_SPI_IRQ_BASE + 16)
+#define QEMU_VIRTIO_MMIO_NUM     32
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#ifdef CONFIG_DRIVERS_VIRTIO_MMIO
+static void qemu_virtio_register_mmio_devices(void)
+{
+  uintptr_t virtio = (uintptr_t)QEMU_VIRTIO_MMIO_BASE;
+  size_t size = QEMU_VIRTIO_MMIO_REGSIZE;
+  int irq = QEMU_VIRTIO_MMIO_IRQ;
+  int i;
+
+  for (i = 0; i < QEMU_VIRTIO_MMIO_NUM; i++)
+    {
+      virtio_register_mmio_device((void *)(virtio + size * i), irq + i);
+    }
+}
+#endif
 
 #if defined(CONFIG_LIBC_FDT) && defined(CONFIG_DEVICE_TREE)
 
@@ -128,6 +149,8 @@ int qemu_bringup(void)
 
 #if defined(CONFIG_LIBC_FDT) && defined(CONFIG_DEVICE_TREE)
   register_devices_from_fdt();
+#elif defined(CONFIG_DRIVERS_VIRTIO_MMIO)
+  qemu_virtio_register_mmio_devices();
 #endif
 
   UNUSED(ret);
