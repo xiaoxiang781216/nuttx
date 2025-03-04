@@ -573,28 +573,32 @@ void up_enable_dcache(void)
 void up_disable_dcache(void)
 {
   struct
-    {
-      uint32_t ccsidr;
-      uint32_t ccr;
-      uint32_t sshift;
-      uint32_t wshift;
-      uint32_t sw;
-      uint32_t sets;
-      uint32_t ways;
-      uint32_t tmpways;
-    } locals;
+  {
+    uint32_t ccsidr;
+    uint32_t sets;
+    uint32_t ways;
+    uint32_t sshift;
+    uint32_t wshift;
+    uint32_t tmpways;
+    uint32_t sw;
+    uint32_t ccr;
+  } locals;
 
   /* Disable the D-Cache */
 
   locals.ccr = getreg32(NVIC_CFGCON);
   locals.ccr &= ~NVIC_CFGCON_DC;
   putreg32(locals.ccr, NVIC_CFGCON);
-  UP_MB();
+
+  UP_DSB();
+  UP_ISB();
 
   /* Clean and invalidate the local variable cache. */
 
   up_flush_dcache((uintptr_t)&locals, (uintptr_t)&locals + sizeof(locals));
-  UP_MB();
+
+  UP_DSB();
+  UP_ISB();
 
   /* Get the characteristics of the D-Cache */
 
