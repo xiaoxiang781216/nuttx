@@ -486,7 +486,7 @@ rpmsg_virtio_lite_dump_buffer(FAR struct rpmsg_virtio_device *rvdev, bool rx)
       else
         {
           desc_idx = (vq->vq_ring.avail->idx + i) & (vq->vq_nentries - 1);
-          desc_idx = vq->vq_ring.used->ring[desc_idx].id;
+          desc_idx = vq->vq_ring.used->ring[desc_idx].u.id;
         }
 
       addr = metal_io_phys_to_virt(vq->shm_io,
