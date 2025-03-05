@@ -149,6 +149,17 @@ static void kasan_set_poison(FAR const void *addr,
  * Public Functions
  ****************************************************************************/
 
+FAR void *kasan_set_tag(FAR const void *addr, uint8_t tag)
+{
+  return (FAR void *)((uint64_t)kasan_clear_tag(addr) |
+                      (((uint64_t)tag) << KASAN_TAG_SHIFT));
+}
+
+void kasan_poison(FAR const void *addr, size_t size)
+{
+  kasan_set_poison(addr, size, 0xff);
+}
+
 FAR void *kasan_clear_tag(FAR const void *addr)
 {
   return (FAR void *)
@@ -160,15 +171,9 @@ uint8_t kasan_get_tag(FAR const void *addr)
   return (uint8_t)((uint64_t)addr >> KASAN_TAG_SHIFT);
 }
 
-FAR void *kasan_get_tagged_addr(FAR const void *addr, uint8_t tag)
+bool kasan_bypass(bool state)
 {
-  return (FAR void *)((uint64_t)kasan_reset_tag(addr) |
-                      (((uint64_t)tag) << KASAN_TAG_SHIFT));
-}
-
-void kasan_poison(FAR const void *addr, size_t size)
-{
-  kasan_set_poison(addr, size, 0xff);
+  return false;
 }
 
 FAR void *kasan_unpoison(FAR const void *addr, size_t size)
@@ -176,7 +181,7 @@ FAR void *kasan_unpoison(FAR const void *addr, size_t size)
   uint8_t tag = kasan_random_tag();
 
   kasan_set_poison(addr, size, tag);
-  return kasan_get_tagged_addr(addr, tag);
+  return kasan_set_tag(addr, tag);
 }
 
 void kasan_register(FAR void *addr, FAR size_t *size)

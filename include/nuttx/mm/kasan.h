@@ -41,6 +41,8 @@
 #  define kasan_unpoison(addr, size) addr
 #  define kasan_register(addr, size)
 #  define kasan_unregister(addr)
+#  define kasan_get_tag(addr) 0
+#  define kasan_set_tag(addr, tag) addr
 #  define kasan_clear_tag(addr) addr
 #  define kasan_start()
 #  define kasan_stop()
@@ -135,6 +137,12 @@ void kasan_register(FAR void *addr, FAR size_t *size);
 void kasan_unregister(FAR void *addr);
 
 /****************************************************************************
+ * Name: kasan_set_tag
+ ****************************************************************************/
+
+FAR void *kasan_set_tag(FAR const void *addr, uint8_t tag);
+
+/****************************************************************************
  * Name: kasan_clear_tag
  *
  * Input Parameters:
@@ -159,12 +167,6 @@ FAR void *kasan_clear_tag(FAR const void *addr);
  ****************************************************************************/
 
 uint8_t kasan_get_tag(FAR const void *addr);
-
-/****************************************************************************
- * Name: kasan_get_tagged_addr
- ****************************************************************************/
-
-FAR void *kasan_get_tagged_addr(FAR const void *addr, uint8_t tag);
 
 /****************************************************************************
  * Name: kasan_start
