@@ -82,6 +82,7 @@
 
 #include "mpu.h"
 #include "sched/sched.h"
+#include "group/group.h"
 
 /****************************************************************************
  * Private Data
@@ -91,6 +92,10 @@
 
 #ifdef CONFIG_ARCH_STACK_PROTECT
 static unsigned int g_addrenv_stack_region;
+#endif
+
+#ifdef CONFIG_MM_TASK_HEAP
+static unsigned int g_addrenv_heap_region;
 #endif
 
 /****************************************************************************
@@ -261,8 +266,24 @@ int up_addrenv_vdata(arch_addrenv_t *addrenv, uintptr_t textsize,
 
 int up_addrenv_select(const arch_addrenv_t *addrenv)
 {
-  binfo("addrenv=%p\n", addrenv);
-  DEBUGASSERT(addrenv);
+#ifdef CONFIG_MM_TASK_HEAP
+  struct tcb_s *tcb = this_task();
+
+  if (g_addrenv_heap_region == 0)
+    {
+      g_addrenv_heap_region = mpu_allocregion();
+    }
+
+  if (tcb->group->tg_heap)
+    {
+      mpu_modify_region(g_addrenv_heap_region,
+                        (uintptr_t)tcb->group->tg_heap,
+                        group_heap_size((struct mm_heap_s *)
+                                        tcb->group->tg_heap),
+                        MPU_RBAR_AP_RWRW,
+                        MPU_RLAR_NONCACHEABLE);
+    }
+#endif
 
   return OK;
 }
