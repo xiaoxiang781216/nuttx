@@ -40,15 +40,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define BIT(n)          ((1UL) << (n))
-#define BIT64(n)        ((1ULL) << (n))
-
-/* Bit mask with bits 0 through n-1 (inclusive) set,
- * or 0 if n is 0.
- */
-#define BIT_MASK(n)     (BIT(n) - 1)
-#define BIT64_MASK(n)   (BIT64(n) - 1ULL)
-
 /* ARMv8-R ******************************************************************/
 
 /* PSR bits */

@@ -30,8 +30,10 @@
 #include <arch/barriers.h>
 #include <arch/irq.h>
 #include <arch/chip/chip.h>
+#include <nuttx/bits.h>
 #include <sched/sched.h>
 
+#include "arm.h"
 #include "arm_internal.h"
 #include "gic.h"
 
@@ -59,6 +61,8 @@
                                : GIC_DIST_BASE)
 
 #define IGROUPR_VAL  0xFFFFFFFFU
+
+#define INTBITS_ALL  GENMASK(GIC_NUM_INTR_PER_REG - 1, 0)
 
 /***************************************************************************
  * Private Data
@@ -406,7 +410,7 @@ static void gicv3_cpuif_init(void)
 
   /* Disable all sgi ppi */
 
-  putreg32(BIT64_MASK(GIC_NUM_INTR_PER_REG), ICENABLER(base, 0));
+  putreg32(INTBITS_ALL, ICENABLER(base, 0));
 
   /* Any sgi/ppi intid ie. 0-31 will select GICR_CTRL */
 
@@ -414,7 +418,7 @@ static void gicv3_cpuif_init(void)
 
   /* Clear pending */
 
-  putreg32(BIT64_MASK(GIC_NUM_INTR_PER_REG), ICPENDR(base, 0));
+  putreg32(INTBITS_ALL, ICPENDR(base, 0));
 
   /* Configure all SGIs/PPIs as G1S or G1NS depending on Zephyr
    * is run in EL1S or EL1NS respectively.
@@ -422,7 +426,7 @@ static void gicv3_cpuif_init(void)
    */
 
   putreg32(IGROUPR_VAL, IGROUPR(base, 0));
-  putreg32(BIT64_MASK(GIC_NUM_INTR_PER_REG), IGROUPMODR(base, 0));
+  putreg32(INTBITS_ALL, IGROUPMODR(base, 0));
 
   /* Configure default priorities for SGI 0:15 and PPI 0:15. */
 
@@ -502,16 +506,13 @@ static void gicv3_dist_init(void)
 
       /* Disable interrupt */
 
-      putreg32(BIT64_MASK(GIC_NUM_INTR_PER_REG),
-               ICENABLER(base, idx));
+      putreg32(INTBITS_ALL, ICENABLER(base, idx));
 
       /* Clear pending */
 
-      putreg32(BIT64_MASK(GIC_NUM_INTR_PER_REG),
-               ICPENDR(base, idx));
+      putreg32(INTBITS_ALL, ICPENDR(base, idx));
       putreg32(IGROUPR_VAL, IGROUPR(base, idx));
-      putreg32(BIT64_MASK(GIC_NUM_INTR_PER_REG),
-               IGROUPMODR(base, idx));
+      putreg32(INTBITS_ALL, IGROUPMODR(base, idx));
     }
 
   /* wait for rwp on GICD */
