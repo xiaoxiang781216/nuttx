@@ -90,7 +90,7 @@ struct rpmsg_s
 #ifdef CONFIG_RPMSG_TEST
   struct rpmsg_endpoint        test;
 #endif
-  atomic_int                   signals;
+  atomic_t                     signals;
 #if CONFIG_RPMSG_DEFER_WORK_COUNT > 0
   struct work_s                defer_work;
   FAR struct kwork_wqueue_s    *defer_wqueue;
