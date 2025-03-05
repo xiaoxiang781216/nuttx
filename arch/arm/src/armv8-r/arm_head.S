@@ -237,10 +237,9 @@ __cpu0_start:
 
 	bl		sctlr_initialize
 
-	bl		arm_boot
+	/* Branch to arm_boot and never return like armv7-r */
 
-	mov		lr, #0				/* LR = return address (none) */
-	b		nx_start			/* Branch to nx_start */
+	b		arm_boot
 
 	/* .text Data */
 

@@ -31,6 +31,7 @@
 #include <arch/barriers.h>
 #include <arch/irq.h>
 #include <arch/chip/chip.h>
+#include <nuttx/init.h>
 
 #include "arm_internal.h"
 
@@ -99,4 +100,6 @@ void arm_boot(void)
 
   arm_earlyserialinit();
 #endif
+
+  nx_start();
 }

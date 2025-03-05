@@ -45,7 +45,7 @@
 #  include <nuttx/sched_note.h>
 #endif
 
-#ifdef CONFIG_ARCH_ARMV7R
+#ifndef CONFIG_ARCH_ARMV7A
 #  include <nuttx/init.h>
 #endif
 
@@ -119,8 +119,8 @@ void arm_boot(void)
   qemu_userspace();
 #endif
 
-#ifdef CONFIG_ARCH_ARMV7R
-  /* dont return per armv7-r/arm_head.S design */
+#ifndef CONFIG_ARCH_ARMV7A
+  /* dont return per armv7-r/arm_head.S for armv7-r and armv8-r */
 
   nx_start();
 #endif
