@@ -78,11 +78,7 @@
  */
 
 #ifndef IDLE_STACK_BASE
-#  ifdef CONFIG_SMP
-#    define IDLE_STACK_BASE _enoinit
-#  else
-#    define IDLE_STACK_BASE _ebss
-#  endif
+#  define IDLE_STACK_BASE _ebss
 #endif
 
 #define IDLE_STACK_TOP  IDLE_STACK_BASE+CONFIG_IDLETHREAD_STACKSIZE
@@ -141,6 +137,8 @@ __start:
 #if defined(CONFIG_SMP) && CONFIG_SMP_NCPUS > 1
 	beq		__cpu0_start
 	wfe
+	cpsid		if			/* Disable IRQs and FIQs */
+	mov		fp, #0			/* Clear frame pointer */
 	cmp		r0, #1
 	beq		__cpu1_start
 #  if CONFIG_SMP_NCPUS > 2
@@ -152,12 +150,13 @@ __start:
 	beq		__cpu3_start
 #  endif
 #  if CONFIG_SMP_NCPUS > 4
-	cmp		r0, #4
-	beq		__cpu4_start
+#  Warn Need work for CONFIG_SMP_NCPUS > 4
+	b		  __cpux_wfi
 #  endif
 
 #else
 	beq		__cpu0_start
+#endif
 
 __cpux_wfi:
 
@@ -166,8 +165,6 @@ __cpux_wfi:
 	dsb		sy
 	wfi
 	b		__cpux_wfi
-
-#endif
 
 __cpu0_start:
 
