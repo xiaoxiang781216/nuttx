@@ -85,6 +85,8 @@ int modlib_addrenv_alloc(FAR struct mod_loadinfo_s *loadinfo,
 {
 #if defined(CONFIG_ARCH_STACK_DYNAMIC)
   size_t heapsize = ARCH_HEAP_SIZE;
+#elif defined(CONFIG_MM_TASK_HEAP)
+  size_t heapsize = MAX(ARCH_HEAP_SIZE, CONFIG_MM_TASK_HEAP_DEFAULT_SIZE);
 #else
   size_t heapsize = MAX(ARCH_HEAP_SIZE, CONFIG_ELF_STACKSIZE);
 #endif

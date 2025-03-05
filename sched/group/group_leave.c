@@ -251,8 +251,10 @@ void group_drop(FAR struct task_group_s *group)
         {
           if ((tcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_TASK)
             {
-#ifndef CONFIG_BUILD_KERNEL
-              /* Kernel build not use group_heap_initialize */
+#if !defined(CONFIG_BUILD_KERNEL) && !defined(CONFIG_ARCH_ADDRENV)
+              /* Kernel build not use group_heap_initialize.
+               * If use addrenv, it will uninitialized in up_addrenv_destroy.
+               */
 
               group_heap_uninitialize(group->tg_heap);
 #endif

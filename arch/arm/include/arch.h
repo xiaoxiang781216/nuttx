@@ -160,13 +160,11 @@ struct arch_addrenv_s
   size_t textsize;
   uintptr_t data;
   size_t datasize;
-#  ifdef CONFIG_BUILD_PROTECTED
   uintptr_t heap;
   size_t heapsize;
-#    ifdef CONFIG_ARCH_VMA_MAPPING
+#  ifdef CONFIG_ARCH_VMA_MAPPING
   uintptr_t shm;
   size_t shmsize;
-#    endif
 #  endif
 };
 #endif

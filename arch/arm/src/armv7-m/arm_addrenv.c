@@ -79,6 +79,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/cache.h>
 #include <nuttx/tls.h>
+#include <nuttx/mm/mm.h>
 
 #include "mpu.h"
 #include "sched/sched.h"
@@ -143,22 +144,49 @@ int up_addrenv_create(size_t textsize, size_t datasize, size_t heapsize,
   /* When use mpu addrenv info must set by modlib */
 
   addrenv->textsize = textsize;
+  addrenv->datasize = datasize;
+  addrenv->heapsize = heapsize;
+
+#ifdef CONFIG_MM_TASK_HEAP
+  /* Allocate the heap memory */
+
+  group_heap_initialize((struct mm_heap_s **)&addrenv->heap,
+                        CONFIG_MM_TASK_HEAP_DEFAULT_ALIGN, heapsize);
+  if (addrenv->heap != 0)
+    {
+      /* Initialize the memory manager */
+
+      mm_initialize("Module", (void *)addrenv->heap,
+                    CONFIG_MM_TASK_HEAP_DEFAULT_SIZE);
+    }
+  else
+    {
+      return -ENOMEM;
+    }
+
   if (textsize != 0)
     {
-      DEBUGASSERT(addrenv->text);
+      addrenv->text =
+        (uintptr_t)mm_memalign((void *)addrenv->heap,
+                               CONFIG_MM_TASK_HEAP_DEFAULT_ALIGN, textsize);
+      if (addrenv->text == 0)
+        {
+          group_heap_uninitialize((void *)addrenv->heap);
+          return -ENOMEM;
+        }
     }
 
-  addrenv->datasize = datasize;
   if (datasize != 0)
     {
-      DEBUGASSERT(addrenv->data);
-    }
-
-#ifdef CONFIG_BUILD_PROTECTED
-  addrenv->heapsize = heapsize;
-  if (heapsize != 0)
-    {
-      DEBUGASSERT(addrenv->heap);
+      addrenv->data =
+        (uintptr_t)mm_memalign((void *)addrenv->heap,
+                               CONFIG_MM_TASK_HEAP_DEFAULT_ALIGN, datasize);
+      if (addrenv->data == 0)
+        {
+          mm_free((void *)addrenv->heap, (void *)addrenv->text);
+          group_heap_uninitialize((void *)addrenv->heap);
+          return -ENOMEM;
+        }
     }
 #endif
 
@@ -185,6 +213,20 @@ int up_addrenv_destroy(arch_addrenv_t *addrenv)
 {
   binfo("addrenv=%p\n", addrenv);
   DEBUGASSERT(addrenv);
+
+#ifdef CONFIG_MM_TASK_HEAP
+  if ((void *)addrenv->text != NULL)
+    {
+      mm_free((void *)addrenv->heap, (void *)addrenv->text);
+    }
+
+  if ((void *)addrenv->data != NULL)
+    {
+      mm_free((void *)addrenv->heap, (void *)addrenv->data);
+    }
+
+  group_heap_uninitialize((void *)addrenv->heap);
+#endif
 
   memset(addrenv, 0, sizeof(arch_addrenv_t));
   return OK;
@@ -387,9 +429,6 @@ int up_addrenv_attach(struct tcb_s *ptcb, struct tcb_s *tcb)
 int up_addrenv_detach(struct tcb_s *tcb)
 {
   binfo("tcb=%p\n", tcb);
-
-  /* Nothing needs to be done in this implementation */
-
   return OK;
 }
 
