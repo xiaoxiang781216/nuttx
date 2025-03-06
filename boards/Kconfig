@@ -4951,6 +4951,7 @@ config BOARDCTL_USBDEVCTRL
 config BOARDCTL_SPINLOCK
 	bool "spinlock specific operation"
 	default n
+	depends on SPINLOCK
 	---help---
 		Enables support for the BOARDIOC_SPINLOCK boardctl() command.
 
