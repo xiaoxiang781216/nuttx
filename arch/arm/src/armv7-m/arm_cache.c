@@ -598,12 +598,6 @@ void up_disable_dcache(void)
 
   UP_DSB();
 
-  /* Disable the D-Cache */
-
-  ccr = getreg32(NVIC_CFGCON);
-  ccr &= ~NVIC_CFGCON_DC;
-  putreg32(ccr, NVIC_CFGCON);
-
   /* Clean and invalidate the entire D-Cache */
 
   do
@@ -618,6 +612,14 @@ void up_disable_dcache(void)
       while (tmpways--);
     }
   while (sets--);
+
+  UP_MB();
+
+  /* Disable the D-Cache */
+
+  ccr = getreg32(NVIC_CFGCON);
+  ccr &= ~NVIC_CFGCON_DC;
+  putreg32(ccr, NVIC_CFGCON);
 
   UP_MB();
 }
