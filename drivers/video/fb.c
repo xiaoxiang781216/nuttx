@@ -1172,7 +1172,7 @@ static int fb_munmap(FAR struct task_group_s *group,
   if (group && entry)
     {
       ginfo("%p, len=%zu\n", entry->vaddr, entry->length);
-      vm_unmap_region(entry->vaddr, entry->length);
+      vm_unmap_region(get_group_mm(group), entry->vaddr, entry->length);
       mm_map_remove(get_current_mm(), entry);
     }
 
@@ -1211,7 +1211,8 @@ static int fb_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
       map->length && map->offset + map->length <= panelinfo.fblen)
     {
 #ifdef CONFIG_BUILD_KERNEL
-      map->vaddr = vm_map_region((uintptr_t)panelinfo.fbmem + map->offset,
+      map->vaddr = vm_map_region(get_current_mm(),
+                                 (uintptr_t)panelinfo.fbmem + map->offset,
                                  panelinfo.fblen);
       map->length = panelinfo.fblen;
       map->munmap = fb_munmap;
