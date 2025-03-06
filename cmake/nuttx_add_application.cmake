@@ -113,6 +113,8 @@ function(nuttx_add_application)
       # Use ELF capable toolchain, by building manually and overwriting the
       # non-elf output
       if(NOT CMAKE_C_ELF_COMPILER)
+        set(ELF_NAME "${NAME}")
+        set(TARGET "ELF_${TARGET}")
         add_library(${TARGET} ${SRCS})
         add_dependencies(${TARGET} nuttx_post)
         add_custom_command(
@@ -125,7 +127,7 @@ function(nuttx_add_application)
             $<TARGET_OBJECTS:STARTUP_OBJS> --start-group
             $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_LINK_LIBRARIES>>
             $<TARGET_FILE:${TARGET}> --end-group -o
-            ${CMAKE_BINARY_DIR}/bin/${TARGET}
+            ${CMAKE_BINARY_DIR}/bin/${ELF_NAME}
           COMMAND_EXPAND_LISTS)
       else()
         add_executable(${TARGET} ${SRCS})
