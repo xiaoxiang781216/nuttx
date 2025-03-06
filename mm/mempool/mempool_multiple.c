@@ -88,7 +88,8 @@ struct mempool_multiple_s
 
   rmutex_t                      lock;
   sq_queue_t                    chunk_queue;
-  size_t                        chunk_size;
+  size_t                        chunksize;
+  size_t                        init_chunksize;
   size_t                        dict_used;
   size_t                        dict_col_num_log2;
   size_t                        dict_row_num;
@@ -150,10 +151,11 @@ mempool_multiple_alloc_chunk(FAR struct mempool_multiple_s *mpool,
                              size_t align, size_t size)
 {
   FAR struct mpool_chunk_s *chunk;
+  size_t chunksize;
   FAR char *tmp;
   FAR void *ret;
 
-  if (mpool->chunk_size < mpool->expandsize)
+  if (mpool->chunksize < mpool->expandsize)
     {
       ret = mpool->alloc(mpool->arg, align, size);
       if (ret)
@@ -168,18 +170,20 @@ mempool_multiple_alloc_chunk(FAR struct mempool_multiple_s *mpool,
   if (chunk == NULL)
     {
 retry:
+      chunksize = mpool->init_chunksize != mpool->chunksize ?
+                   mpool->init_chunksize : mpool->chunksize;
       tmp = mpool->alloc(mpool->arg, mpool->expandsize,
-                         mpool->chunk_size +
-                         sizeof(struct mpool_chunk_s));
+                         chunksize + sizeof(struct mpool_chunk_s));
 
       if (tmp == NULL)
         {
           return NULL;
         }
 
+      mpool->init_chunksize = mpool->chunksize;
       mpool->alloced += mpool->alloc_size(mpool->arg, tmp);
-      chunk = (FAR struct mpool_chunk_s *)(tmp + mpool->chunk_size);
-      chunk->end = tmp + mpool->chunk_size;
+      chunk = (FAR struct mpool_chunk_s *)(tmp + chunksize);
+      chunk->end = tmp + chunksize;
       chunk->start = tmp;
       chunk->next = tmp;
       chunk->used = 0;
@@ -204,7 +208,7 @@ mempool_multiple_free_chunk(FAR struct mempool_multiple_s *mpool,
   FAR struct mpool_chunk_s *chunk;
   FAR sq_entry_t *entry;
 
-  if (mpool->chunk_size < mpool->expandsize)
+  if (mpool->chunksize < mpool->expandsize)
     {
       mpool->free(mpool->arg, ptr);
       return;
@@ -396,10 +400,10 @@ FAR struct mempool_multiple_s *
 mempool_multiple_init(FAR const char *name,
                       FAR const size_t *poolsize, size_t npools,
                       mempool_multiple_alloc_t alloc,
-                      mempool_multiple_alloc_size_t alloc_size,
+                      mempool_multiple_alloc_size_t allocsize,
                       mempool_multiple_free_t free, FAR void *arg,
-                      size_t chunksize, size_t expandsize,
-                      size_t dict_expendsize)
+                      size_t chunksize, size_t init_chunksize,
+                      size_t expandsize, size_t dict_expendsize)
 {
   FAR struct mempool_multiple_s *mpool;
   FAR struct mempool_s *pools;
@@ -440,13 +444,14 @@ mempool_multiple_init(FAR const char *name,
   pools = (FAR struct mempool_s *)
           ((uintptr_t)mpool + sizeof(struct mempool_multiple_s));
 
-  mpool->alloc_size = alloc_size;
+  mpool->alloc_size = allocsize;
   mpool->expandsize = expandsize;
-  mpool->chunk_size = chunksize;
+  mpool->chunksize = chunksize;
+  mpool->init_chunksize = init_chunksize;
   mpool->alloc = alloc;
   mpool->free = free;
   mpool->arg = arg;
-  mpool->alloced = alloc_size(arg, mpool);
+  mpool->alloced = allocsize(arg, mpool);
   sq_init(&mpool->chunk_queue);
   mpool->pools = pools;
   mpool->npools = npools;
@@ -760,7 +765,7 @@ mempool_multiple_mallinfo(FAR struct mempool_multiple_s *mpool)
   nxrmutex_lock(&mpool->lock);
   info.arena = mpool->alloced;
 
-  if (mpool->chunk_size >= mpool->expandsize)
+  if (mpool->chunksize >= mpool->expandsize)
     {
       FAR struct mpool_chunk_s *chunk;
 

@@ -193,6 +193,14 @@ config MM_HEAP_MEMPOOL_CHUNK_SIZE
 	---help---
 		This size describes the multiple mempool chunk size.
 
+config MM_HEAP_MEMPOOL_INIT_CHUNK_SIZE
+	int "The multiples pool chunk initial size"
+	default MM_HEAP_MEMPOOL_CHUNK_SIZE
+	---help---
+		This size describes the multiples pool chunk initial size.
+		Set the size of the first allocation when mempool is initialized
+		to avoid fragmentation caused by multiple allocations
+
 config MM_MIN_BLKSIZE
 	int "Minimum memory block size"
 	default 0

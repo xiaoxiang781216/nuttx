@@ -326,6 +326,7 @@ mm_initialize_pool(FAR const char *name,
       def.npools          = MEMPOOL_NPOOLS;
       def.threshold       = CONFIG_MM_HEAP_MEMPOOL_THRESHOLD;
       def.chunksize       = CONFIG_MM_HEAP_MEMPOOL_CHUNK_SIZE;
+      def.init_chunksize  = CONFIG_MM_HEAP_MEMPOOL_INIT_CHUNK_SIZE;
       def.expandsize      = CONFIG_MM_HEAP_MEMPOOL_EXPAND_SIZE;
       def.dict_expendsize = CONFIG_MM_HEAP_MEMPOOL_DICTIONARY_EXPAND_SIZE;
 
@@ -345,8 +346,8 @@ mm_initialize_pool(FAR const char *name,
                                (mempool_multiple_alloc_t)mempool_memalign,
                                (mempool_multiple_alloc_size_t)mm_malloc_size,
                                (mempool_multiple_free_t)mm_free, heap,
-                               init->chunksize, init->expandsize,
-                               init->dict_expendsize);
+                               init->chunksize, init->init_chunksize,
+                               init->expandsize, init->dict_expendsize);
     }
 
   return heap;

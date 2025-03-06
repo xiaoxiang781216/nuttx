@@ -182,6 +182,7 @@ struct mempool_init_s
   size_t            npools;
   size_t            threshold;
   size_t            chunksize;
+  size_t            init_chunksize;
   size_t            expandsize;
   size_t            dict_expendsize;
 };
