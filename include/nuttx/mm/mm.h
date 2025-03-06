@@ -44,6 +44,11 @@
 #  define CONFIG_MM_HEAP_MEMPOOL
 #endif
 
+#if defined(CONFIG_MM_RECORD_PID) || defined(CONFIG_MM_RECORD_SEQNO) || \
+    CONFIG_MM_RECORD_STACK > 0
+#  define CONFIG_MM_RECORD
+#endif
+
 /* If the MCU has a small (16-bit) address capability, then we will use
  * a smaller chunk header that contains 16-bit size/offset information.
  * We will also use the smaller header on MCUs with wider addresses if
@@ -138,26 +143,27 @@
 #  define MM_INTERNAL_HEAP(heap) ((heap) == USR_HEAP)
 #endif
 
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
 #  define MM_DUMP_ALLOC(dump, node) \
     ((node) != NULL && (dump)->pid == PID_MM_ALLOC && \
      (node)->pid != PID_MM_MEMPOOL)
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
-#  define MM_DUMP_SEQNO(dump, node) \
-    ((node)->seqno >= (dump)->seqmin && (node)->seqno <= (dump)->seqmax)
-#else
-#  define MM_DUMP_SEQNO(dump,node)  (true)
-#endif
 #  define MM_DUMP_ASSIGN(dump, node) \
     ((node) != NULL && (dump)->pid == (node)->pid)
 #  define MM_DUMP_LEAK(dump, node) \
     ((node) != NULL && (dump)->pid == PID_MM_LEAK && (node)->pid >= 0 && \
     !nxsched_verify_pid((node)->pid))
 #else
-#  define MM_DUMP_ALLOC(dump,node)  ((dump)->pid == PID_MM_ALLOC)
+#  define MM_DUMP_ALLOC(dump, node) \
+    ((node) != NULL && (dump)->pid == PID_MM_ALLOC)
+#  define MM_DUMP_ASSIGN(dump, node) (false)
+#  define MM_DUMP_LEAK(dump, pid)    (false)
+#endif
+
+#ifdef CONFIG_MM_RECORD_SEQNO
+#  define MM_DUMP_SEQNO(dump, node) \
+    ((node)->seqno >= (dump)->seqmin && (node)->seqno <= (dump)->seqmax)
+#else
 #  define MM_DUMP_SEQNO(dump,node)  (true)
-#  define MM_DUMP_ASSIGN(dump,node) (false)
-#  define MM_DUMP_LEAK(dump,pid)    (false)
 #endif
 
 #if CONFIG_MM_DEFAULT_ALIGNMENT == 0
@@ -170,7 +176,7 @@
 #define MM_ALLOC_MAGIC   0xaa
 #define MM_FREE_MAGIC    0x55
 
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
+#ifdef CONFIG_MM_RECORD_SEQNO
 #  define MM_INCSEQNO(p) ((p)->seqno = g_mm_seqno++)
 #else
 #  define MM_INCSEQNO(p)
@@ -206,7 +212,7 @@ extern "C"
 #define EXTERN extern
 #endif
 
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
+#ifdef CONFIG_MM_RECORD_SEQNO
 extern unsigned long g_mm_seqno;
 #endif
 
@@ -426,7 +432,7 @@ size_t mm_heapfree_largest(FAR struct mm_heap_s *heap);
 
 #ifdef CONFIG_MM_KERNEL_HEAP
 struct mallinfo kmm_mallinfo(void);
-#  if CONFIG_MM_BACKTRACE >= 0
+#  ifdef CONFIG_MM_RECORD_PID
 struct mallinfo_task kmm_mallinfo_task(FAR const struct malltask *task);
 #  endif
 #endif

@@ -791,6 +791,7 @@ config SCHED_WAITPID
 config SCHED_DUMP_LEAK
 	bool "Enable catch task memory leak"
 	default n
+	depends on MM_RECORD_PID
 	---help---
 		When this option is enabled, the task's outstanding memory allocations
 		are printed using syslog. This helps catch any memory allocated by the

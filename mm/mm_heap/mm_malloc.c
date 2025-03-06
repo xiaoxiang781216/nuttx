@@ -109,17 +109,17 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
   return ret;
 }
 
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
 void mm_dump_handler(FAR struct tcb_s *tcb, FAR void *arg)
 {
   struct mallinfo_task info;
   struct malltask task;
 
   task.pid = tcb ? tcb->pid : PID_MM_LEAK;
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
+#  ifdef CONFIG_MM_RECORD_SEQNO
   task.seqmin = 0;
   task.seqmax = ULONG_MAX;
-#endif
+#  endif
   info = mm_mallinfo_task(arg, &task);
   mwarn("pid:%5d, used:%10d, nused:%10d\n",
         task.pid, info.uordblks, info.aordblks);
@@ -334,7 +334,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
   if (ret)
     {
-      MM_ADD_BACKTRACE(heap, node);
+      MM_RECORD(heap, node);
       ret = kasan_unpoison(ret, nodesize - MM_ALLOCNODE_OVERHEAD);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
       memset(ret, MM_ALLOC_MAGIC, alignsize - MM_ALLOCNODE_OVERHEAD);
@@ -361,12 +361,10 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 #  ifdef CONFIG_MM_DUMP_DETAILS_ON_FAILURE
       struct mm_memdump_s dump =
       {
-#  if CONFIG_MM_BACKTRACE >= 0
         PID_MM_ALLOC,
-#    ifdef CONFIG_MM_BACKTRACE_SEQNO
+#    ifdef CONFIG_MM_RECORD_SEQNO
         0, ULONG_MAX
 #    endif
-#  endif
       };
 #  endif
 #endif
@@ -377,7 +375,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       mwarn("Total:%d, used:%d, free:%d, largest:%d, nused:%d, nfree:%d\n",
             minfo.arena, minfo.uordblks, minfo.fordblks,
             minfo.mxordblk, minfo.aordblks, minfo.ordblks);
-#  if CONFIG_MM_BACKTRACE >= 0
+#  ifdef CONFIG_MM_RECORD_PID
       nxsched_foreach(mm_dump_handler, heap);
       mm_dump_handler(NULL, heap);
 #  endif
@@ -398,11 +396,9 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       dump.pid = PID_MM_MEMPOOL;
       mm_memdump(heap, &dump);
 #    endif
-#    if CONFIG_MM_BACKTRACE >= 0
       mwarn("Dump allocated orphan nodes. (neighbor of free nodes):\n");
       dump.pid = PID_MM_ORPHAN;
       mm_memdump(heap, &dump);
-#    endif
 #  endif
 #endif
 #ifdef CONFIG_MM_PANIC_ON_FAILURE

@@ -283,7 +283,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
 
   mm_unlock(heap);
 
-  MM_ADD_BACKTRACE(heap, node);
+  MM_RECORD(heap, node);
 
   alignedchunk = (uintptr_t)kasan_unpoison((FAR const void *)alignedchunk,
                                            size - MM_ALLOCNODE_OVERHEAD);

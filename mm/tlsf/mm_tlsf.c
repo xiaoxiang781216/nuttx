@@ -114,15 +114,17 @@ struct mm_heap_s
 #endif
 };
 
-#if CONFIG_MM_BACKTRACE >= 0
-struct memdump_backtrace_s
+#ifdef CONFIG_MM_RECORD
+struct memdump_record_s
 {
+#ifdef CONFIG_MM_RECORD_PID
   pid_t pid;                                /* The pid for caller */
-#if CONFIG_MM_BACKTRACE_SEQNO
+#endif
+#ifdef CONFIG_MM_RECORD_SEQNO
   unsigned long seqno;                      /* The sequence of memory malloc */
 #endif
-#if CONFIG_MM_BACKTRACE > 0
-  FAR void *backtrace[CONFIG_MM_BACKTRACE]; /* The backtrace buffer for caller */
+#if CONFIG_MM_RECORD_STACK > 0
+  FAR void *backtrace[CONFIG_MM_RECORD_STACK]; /* The backtrace buffer for caller */
 #endif
 };
 #endif
@@ -213,44 +215,35 @@ static void mm_unlock_irq(FAR struct mm_heap_s *heap, irqstate_t state)
 
 static void memdump_allocnode(FAR void *ptr, size_t size)
 {
-#if CONFIG_MM_BACKTRACE < 0
-  syslog(LOG_INFO, "%12zu%9zu%*p\n", size,
-         sizeof(struct mempool_backtrace_s), BACKTRACE_PTR_FMT_WIDTH, ptr);
-
-#elif CONFIG_MM_BACKTRACE == 0
-  FAR struct memdump_backtrace_s *buf =
-    ptr + size - sizeof(struct memdump_backtrace_s);
-
-  syslog(LOG_INFO, "%6d%12zu"
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
-         "%12lu"
-#  endif
-         "%*p\n",
-         buf->pid, size,
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
-         buf->seqno,
-#  endif
-         BACKTRACE_PTR_FMT_WIDTH, ptr);
-#else
-  char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_MM_BACKTRACE)];
-  FAR struct memdump_backtrace_s *buf =
-    ptr + size - sizeof(struct memdump_backtrace_s);
-
-  backtrace_format(tmp, sizeof(tmp), buf->backtrace,
-                   CONFIG_MM_BACKTRACE);
-
-  syslog(LOG_INFO, "%6d%12zu%9zu"
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
-         "%12lu"
-#  endif
-         "%*p %s\n",
-         buf->pid, size, sizeof(struct mempool_backtrace_s),
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
-         buf->seqno,
-#  endif
-         BACKTRACE_PTR_FMT_WIDTH,
-         ptr, tmp);
+#ifdef CONFIG_MM_RECORD
+  FAR struct memdump_record_s *buf =
+    ptr + size - sizeof(struct memdump_record_s);
 #endif
+#if CONFIG_MM_RECORD_STACK > 0
+  char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_MM_RECORD_STACK)];
+  backtrace_format(tmp, sizeof(tmp), buf->backtrace,
+                   CONFIG_MM_RECORD_STACK);
+#else
+  const char *tmp = "";
+#endif
+
+  syslog(LOG_INFO,
+#ifdef CONFIG_MM_RECORD_PID
+         "%6d"
+#endif
+         "%12zu"
+#ifdef CONFIG_MM_RECORD_SEQNO
+         "%12lu"
+#endif
+         "%*p %s\n",
+#ifdef CONFIG_MM_RECORD_PID
+         buf->pid,
+#endif
+         size,
+#ifdef CONFIG_MM_RECORD_SEQNO
+         buf->seqno,
+#endif
+         BACKTRACE_PTR_FMT_WIDTH, ptr, tmp);
 }
 
 #if CONFIG_MM_HEAP_BIGGEST_COUNT > 0
@@ -304,37 +297,38 @@ static void memdump_dump_biggestnodes(FAR struct mm_memdump_priv_s *priv)
 
 #endif
 
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD
 
 /****************************************************************************
  * Name: memdump_backtrace
  ****************************************************************************/
 
 static void memdump_backtrace(FAR struct mm_heap_s *heap,
-                              FAR struct memdump_backtrace_s *buf)
+                              FAR struct memdump_record_s *buf)
 {
-#  if CONFIG_MM_BACKTRACE > 0
+#  if CONFIG_MM_RECORD_STACK > 0
   FAR struct tcb_s *tcb;
-  int ret = 0;
 #  endif
 
+#ifdef CONFIG_MM_RECORD_PID
   buf->pid = _SCHED_GETTID();
+#endif
   MM_INCSEQNO(buf);
-#  if CONFIG_MM_BACKTRACE > 0
+#if CONFIG_MM_RECORD_STACK > 0
   tcb = nxsched_get_tcb(buf->pid);
   if (heap->mm_procfs.backtrace ||
       (tcb && atomic_read(&tcb->flags) & TCB_FLAG_HEAP_DUMP))
     {
-      ret = sched_backtrace(buf->pid, buf->backtrace,
-                            CONFIG_MM_BACKTRACE,
-                            CONFIG_MM_BACKTRACE_SKIP);
+      int ret = sched_backtrace(buf->pid, buf->backtrace,
+                                CONFIG_MM_RECORD_STACK,
+                                CONFIG_MM_RECORD_STACK_SKIP);
+      if (ret < CONFIG_MM_RECORD_STACK)
+        {
+          buf->backtrace[ret] = NULL;
+        }
     }
 
   nxsched_put_tcb(tcb);
-  if (ret < CONFIG_MM_BACKTRACE)
-    {
-      buf->backtrace[ret] = NULL;
-    }
 #  endif
 }
 #endif
@@ -421,8 +415,6 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
   return ret;
 }
 
-#if defined(CONFIG_MM_HEAP_MEMPOOL) && CONFIG_MM_BACKTRACE >= 0
-
 /****************************************************************************
  * Name: mempool_memalign
  *
@@ -431,10 +423,11 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
  *   avoid repeated calculation.
  ****************************************************************************/
 
+#if defined(CONFIG_MM_HEAP_MEMPOOL) && defined(CONFIG_MM_RECORD_PID)
 static FAR void *mempool_memalign(FAR void *arg, size_t alignment,
                                   size_t size)
 {
-  FAR struct memdump_backtrace_s *buf;
+  FAR struct memdump_record_s *buf;
   FAR void *ret;
 
   ret = mm_memalign(arg, alignment, size);
@@ -487,9 +480,9 @@ static void mallinfo_task_handler(FAR void *ptr, size_t size, int used,
 
   if (used)
     {
-#if CONFIG_MM_BACKTRACE >= 0
-      FAR struct memdump_backtrace_s *buf =
-        ptr + size - sizeof(struct memdump_backtrace_s);
+#ifdef CONFIG_MM_RECORD
+      FAR struct memdump_record_s *buf =
+        ptr + size - sizeof(struct memdump_record_s);
 #else
 #  define buf NULL
 #endif
@@ -600,11 +593,18 @@ static void memdump_handler(FAR void *ptr, size_t size, int used,
 
   if (used)
     {
-#if CONFIG_MM_BACKTRACE >= 0
-      FAR struct memdump_backtrace_s *buf =
-        ptr + size - sizeof(struct memdump_backtrace_s);
+#ifdef CONFIG_MM_RECORD
+      FAR struct memdump_record_s *buf =
+        ptr + size - sizeof(struct memdump_record_s);
 #else
 #  define buf NULL
+#endif
+#if CONFIG_MM_HEAP_BIGGEST_COUNT > 0
+      if (dump->pid == PID_MM_BIGGEST && MM_DUMP_SEQNO(dump, buf))
+        {
+          memdump_record_biggest(priv, ptr, size);
+        }
+      else
 #endif
       if ((MM_DUMP_ASSIGN(dump, buf) || MM_DUMP_ALLOC(dump, buf) ||
            MM_DUMP_LEAK(dump, buf)) && MM_DUMP_SEQNO(dump, buf))
@@ -613,12 +613,6 @@ static void memdump_handler(FAR void *ptr, size_t size, int used,
           priv->info.uordblks += size;
           memdump_allocnode(ptr, size);
         }
-#if CONFIG_MM_HEAP_BIGGEST_COUNT > 0
-      else if(dump->pid == PID_MM_BIGGEST && MM_DUMP_SEQNO(dump, buf))
-        {
-          memdump_record_biggest(priv, ptr, size);
-        }
-#endif
 #undef buf
     }
   else if (dump->pid == PID_MM_FREE)
@@ -1051,7 +1045,7 @@ FAR struct mm_heap_s *mm_initialize(FAR const char *name,
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   heap->mm_procfs.name = name;
   heap->mm_procfs.heap = heap;
-#  ifdef CONFIG_MM_BACKTRACE_DEFAULT
+#  ifdef CONFIG_MM_RECORD_STACK_DEFAULT
   heap->mm_procfs.backtrace = true;
 #  endif
   procfs_register_meminfo(&heap->mm_procfs);
@@ -1232,7 +1226,7 @@ void mm_memdump(FAR struct mm_heap_s *heap,
 
   memset(&priv, 0, sizeof(struct mm_memdump_priv_s));
 
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
+#ifdef CONFIG_MM_RECORD_SEQNO
   if (dump->seqmin == 0 && dump->seqmax == 0)
     {
       priv.dump.seqmin = 0;
@@ -1297,12 +1291,31 @@ void mm_memdump(FAR struct mm_heap_s *heap,
     }
 #endif
 
-#if CONFIG_MM_BACKTRACE < 0
-  syslog(LOG_INFO, "%12s%*s\n", "Size", BACKTRACE_PTR_FMT_WIDTH, "Address");
-#else
-  syslog(LOG_INFO, "%6s%12s%9s%12s%*s %s\n", "PID", "Size", "OVERHEAD",
-         "Sequence", BACKTRACE_PTR_FMT_WIDTH, "Address", "Backtrace");
+  syslog(LOG_INFO,
+#ifdef CONFIG_MM_RECORD_PID
+        "%6s"
 #endif
+        "%12s"
+#ifdef CONFIG_MM_RECORD_SEQNO
+        "%12s"
+#endif
+        "%*s "
+#if CONFIG_MM_RECORD_STACK > 0
+        "%s"
+#endif
+        "\n",
+#ifdef CONFIG_MM_RECORD_PID
+        "PID",
+#endif
+        "Size",
+#ifdef CONFIG_MM_RECORD_SEQNO
+        "Sequence",
+#endif
+        BACKTRACE_PTR_FMT_WIDTH, "Address"
+#if CONFIG_MM_RECORD_STACK > 0
+        , "Backtrace"
+#endif
+        );
 
   memdump_dump_pool(&priv, heap);
 
@@ -1345,8 +1358,8 @@ size_t mm_malloc_size(FAR struct mm_heap_s *heap, FAR void *mem)
     }
 #endif
 
-#if CONFIG_MM_BACKTRACE >= 0
-  return tlsf_block_size(mem) - sizeof(struct memdump_backtrace_s);
+#ifdef CONFIG_MM_RECORD
+  return tlsf_block_size(mem) - sizeof(struct memdump_record_s);
 #else
   return tlsf_block_size(mem);
 #endif
@@ -1393,9 +1406,9 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
   /* Allocate from the tlsf pool */
 
   DEBUGVERIFY(mm_lock(heap));
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD
   ret = tlsf_malloc(heap->mm_tlsf, size +
-                    sizeof(struct memdump_backtrace_s));
+                    sizeof(struct memdump_record_s));
 #else
   ret = tlsf_malloc(heap->mm_tlsf, size);
 #endif
@@ -1417,8 +1430,8 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
   if (ret)
     {
-#if CONFIG_MM_BACKTRACE >= 0
-      FAR struct memdump_backtrace_s *buf = ret + nodesize;
+#ifdef CONFIG_MM_RECORD
+      FAR struct memdump_record_s *buf = ret + nodesize;
 
       memdump_backtrace(heap, buf);
 #endif
@@ -1479,9 +1492,9 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
   /* Allocate from the tlsf pool */
 
   DEBUGVERIFY(mm_lock(heap));
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD
   ret = tlsf_memalign(heap->mm_tlsf, alignment, size +
-                      sizeof(struct memdump_backtrace_s));
+                      sizeof(struct memdump_record_s));
 #else
   ret = tlsf_memalign(heap->mm_tlsf, alignment, size);
 #endif
@@ -1503,8 +1516,8 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
 
   if (ret)
     {
-#if CONFIG_MM_BACKTRACE >= 0
-      FAR struct memdump_backtrace_s *buf = ret + nodesize;
+#ifdef CONFIG_MM_RECORD
+      FAR struct memdump_record_s *buf = ret + nodesize;
 
       memdump_backtrace(heap, buf);
 #endif
@@ -1615,9 +1628,9 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
   DEBUGVERIFY(mm_lock(heap));
   oldsize = mm_malloc_size(heap, oldmem);
   heap->mm_curused -= oldsize;
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD
   newmem = tlsf_realloc(heap->mm_tlsf, oldmem, size +
-                        sizeof(struct memdump_backtrace_s));
+                        sizeof(struct memdump_record_s));
 #else
   newmem = tlsf_realloc(heap->mm_tlsf, oldmem, size);
 #endif
@@ -1641,8 +1654,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
   if (newmem)
     {
-#if CONFIG_MM_BACKTRACE >= 0
-      FAR struct memdump_backtrace_s *buf = newmem + newsize;
+#ifdef CONFIG_MM_RECORD
+      FAR struct memdump_record_s *buf = newmem + newsize;
       memdump_backtrace(heap, buf);
 #endif
     }

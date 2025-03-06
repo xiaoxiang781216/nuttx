@@ -428,7 +428,7 @@ void nxtask_exithook(FAR struct tcb_s *tcb, int status)
   struct mm_memdump_s dump =
   {
     tcb->pid,
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
+#  ifdef CONFIG_MM_RECORD_SEQNO
     0,
     ULONG_MAX
 #  endif

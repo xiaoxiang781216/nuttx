@@ -33,7 +33,7 @@
  * Public data
  ****************************************************************************/
 
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
+#ifdef CONFIG_MM_RECORD_SEQNO
 unsigned long g_mm_seqno;
 #endif
 

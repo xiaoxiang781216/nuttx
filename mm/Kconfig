@@ -114,28 +114,39 @@ config MM_FILL_ALLOCATIONS
 		Fill all free() with MM_FREE_MAGIC.
 		This helps detecting uninitialized variable errors.
 
-config MM_BACKTRACE
-	int "The depth of backtrace"
-	default -1
-	---help---
-		Config the depth of backtrace in memory block by specified this
-		config: disable backtrace by -1, only record pid info by zero and
-		enable record backtrace info by 8(fixed depth).
-
-config MM_BACKTRACE_SKIP
-	int "The skip depth of backtrace"
-	depends on MM_BACKTRACE > 0
-	default 3
-
-config MM_BACKTRACE_DEFAULT
-	bool "Enable the backtrace record by default"
+config MM_RECORD_PID
+	bool "Record pid in memory block"
 	default n
-	depends on MM_BACKTRACE > 0
+	---help---
+		Enable the pid record in memory block.
 
-config MM_BACKTRACE_SEQNO
+config MM_RECORD_SEQNO
 	bool "Record sequence number in memory block"
-	default y
-	depends on MM_BACKTRACE >= 0
+	default n
+	---help---
+		Enable the sequence number record in memory block.
+
+config MM_RECORD_STACK
+	int "Record backtrace depth for memory block"
+	default 0
+	---help---
+		Config the depth of backtrace stack in memory block by specified
+		this config.
+
+config MM_RECORD_STACK_SKIP
+	int "Skip depth of backtrace stack"
+	default 3
+	depends on MM_RECORD_STACK > 0
+	---help---
+		Config the skip depth of backtrace stack in memory block by specified
+		this config.
+
+config MM_RECORD_STACK_DEFAULT
+	bool "Enable backtrace record by default"
+	default n
+	depends on MM_RECORD_STACK > 0
+	---help---
+		Enable the backtrace record by default.
 
 config MM_DUMP_ON_FAILURE
 	bool "Dump heap info on allocation failure"
@@ -320,10 +331,10 @@ config MM_KMAP
 		kernel virtual memory. This includes pages that are already mapped
 		for user.
 
-config MM_HEAP_MEMPOOL_BACKTRACE_SKIP
+config MM_HEAP_MEMPOOL_RECORD_STACK_SKIP
 	int "The skip depth of backtrace for mempool"
 	default 6
-	depends on MM_BACKTRACE > 0
+	depends on MM_RECORD_STACK > 0
 	---help---
 		This number is the skipped backtrace depth for mempool.
 

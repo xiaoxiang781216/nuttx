@@ -48,7 +48,7 @@
  * Private Functions
  ****************************************************************************/
 
-#if defined(CONFIG_MM_HEAP_MEMPOOL) && CONFIG_MM_BACKTRACE >= 0
+#if defined(CONFIG_MM_HEAP_MEMPOOL) && defined(CONFIG_MM_RECORD_PID)
 
 /****************************************************************************
  * Name: mempool_memalign
@@ -183,7 +183,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
    */
 
   heap->mm_heapstart[idx]          = (FAR struct mm_allocnode_s *)heapbase;
-  MM_ADD_BACKTRACE(heap, heap->mm_heapstart[idx]);
+  MM_RECORD(heap, heap->mm_heapstart[idx]);
   heap->mm_heapstart[idx]->size    = MM_SIZEOF_ALLOCNODE | MM_ALLOC_BIT;
   node                             = (FAR struct mm_freenode_s *)
                                      (heapbase + MM_SIZEOF_ALLOCNODE);
@@ -194,7 +194,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
   heap->mm_heapend[idx]->size      = MM_SIZEOF_ALLOCNODE | MM_ALLOC_BIT |
                                      MM_PREVFREE_BIT;
   heap->mm_heapend[idx]->preceding = node->size;
-  MM_ADD_BACKTRACE(heap, heap->mm_heapend[idx]);
+  MM_RECORD(heap, heap->mm_heapend[idx]);
 
 #undef idx
 
@@ -275,7 +275,7 @@ FAR struct mm_heap_s *mm_initialize(FAR const char *name,
 #  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   heap->mm_procfs.name = name;
   heap->mm_procfs.heap = heap;
-#    ifdef CONFIG_MM_BACKTRACE_DEFAULT
+#    ifdef CONFIG_MM_RECORD_STACK_DEFAULT
   heap->mm_procfs.backtrace = true;
 #    endif
 #  endif

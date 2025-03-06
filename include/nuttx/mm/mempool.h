@@ -41,9 +41,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD
 #  define MEMPOOL_REALBLOCKSIZE(pool) (ALIGN_UP((pool)->blocksize + \
-                                       sizeof(struct mempool_backtrace_s), \
+                                       sizeof(struct mempool_record_s), \
                                        MM_ALIGN))
 #else
 #  define MEMPOOL_REALBLOCKSIZE(pool) ((pool)->blocksize)
@@ -76,7 +76,7 @@ struct mempool_procfs_entry_s
 {
   FAR const char *name;
   FAR struct mempool_procfs_entry_s *next;
-#if CONFIG_MM_BACKTRACE >= 0
+#if CONFIG_MM_RECORD_STACK > 0
 
   /* This is dynamic control flag whether to turn on backtrace in the heap,
    * you can set it by /proc/mempool.
@@ -115,19 +115,20 @@ struct mempool_s
 #endif
 };
 
-#if CONFIG_MM_BACKTRACE >= 0
-struct mempool_backtrace_s
+#ifdef CONFIG_MM_RECORD
+struct mempool_record_s
 {
   unsigned int magic; /* The guard byte, mark is alloc / free, and check
                        * if there is any out of bounds.
                        */
+#  ifdef CONFIG_MM_RECORD_PID
   pid_t pid;
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
+#  endif
+#  ifdef CONFIG_MM_RECORD_SEQNO
   unsigned long seqno; /* The sequence of memory malloc */
 #  endif
-#  if CONFIG_MM_BACKTRACE > 0
-  FAR void *backtrace[CONFIG_MM_BACKTRACE];
-  FAR void *backtrace_free[CONFIG_MM_BACKTRACE];
+#  if CONFIG_MM_RECORD_STACK > 0
+  FAR void *backtrace[CONFIG_MM_RECORD_STACK];
 #  endif
 };
 #endif

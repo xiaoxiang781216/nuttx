@@ -429,13 +429,13 @@ static ssize_t memdump_read(FAR struct file *filep, FAR char *buffer,
 #if CONFIG_MM_HEAP_BIGGEST_COUNT > 0
                   "/biggest"
 #endif
-#if CONFIG_MM_BACKTRACE > 0
+#if CONFIG_MM_RECORD_STACK > 0
                   "/on/off"
 #endif
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
                  "/leak/pid"
 #endif
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
+#ifdef CONFIG_MM_RECORD_SEQNO
                  "> <seqmin> <seqmax"
 #endif
                  ">\n"
@@ -448,16 +448,16 @@ static ssize_t memdump_read(FAR struct file *filep, FAR char *buffer,
 #if CONFIG_MM_HEAP_BIGGEST_COUNT > 0
                   "biggest: dump allocated top n node\n"
 #endif
-#if CONFIG_MM_BACKTRACE > 0
+#if CONFIG_MM_RECORD_STACK > 0
                  "on/off: set backtrace enabled state\n"
 #endif
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
                  "leak: dump all leaked node\n"
                  "pid: dump pid allocated node\n"
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
+#endif
+#ifdef CONFIG_MM_RECORD_SEQNO
                  "The current sequence number %lu\n",
                  g_mm_seqno
-#  endif
 #endif
                  );
 
@@ -481,16 +481,16 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
   struct mm_memdump_s dump =
     {
       PID_MM_ALLOC,
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
+#ifdef CONFIG_MM_RECORD_SEQNO
       0,
       ULONG_MAX
 #endif
     };
 
-#if CONFIG_MM_BACKTRACE >= 0
+#if defined(CONFIG_MM_RECORD_SEQNO) || defined(CONFIG_MM_RECORD_PID)
   FAR char *p;
 #endif
-#if CONFIG_MM_BACKTRACE > 0
+#if CONFIG_MM_RECORD_STACK > 0
   FAR struct tcb_s *tcb;
 #endif
 
@@ -501,7 +501,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
   procfile = filep->f_priv;
   DEBUGASSERT(procfile);
 
-#if CONFIG_MM_BACKTRACE > 0
+#if CONFIG_MM_RECORD_STACK > 0
   if (strcmp(buffer, "on") == 0)
     {
       for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
@@ -555,7 +555,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
       case 'u':
         dump.pid = PID_MM_ALLOC;
 
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
+#ifdef CONFIG_MM_RECORD_SEQNO
         p = (FAR char *)buffer + 4;
         goto dump;
 #endif
@@ -564,17 +564,17 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
       case 'f':
         dump.pid = PID_MM_FREE;
 
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
+#ifdef CONFIG_MM_RECORD_SEQNO
         p = (FAR char *)buffer + 4;
         goto dump;
 #endif
         break;
 
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
       case 'l':
         dump.pid = PID_MM_LEAK;
 
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
+#  ifdef CONFIG_MM_RECORD_SEQNO
         p = (FAR char *)buffer + 4;
         goto dump;
 #  endif
@@ -585,7 +585,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
       case 'm':
         dump.pid = PID_MM_MEMPOOL;
 
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
+#  ifdef CONFIG_MM_RECORD_SEQNO
         p = (FAR char *)buffer + 7;
         goto dump;
 #  endif
@@ -595,7 +595,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
 #if CONFIG_MM_HEAP_BIGGEST_COUNT > 0
       case 'b':
         dump.pid = PID_MM_BIGGEST;
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
+#  ifdef CONFIG_MM_RECORD_SEQNO
         p = (FAR char *)buffer + 7;
         goto dump;
 #  endif
@@ -604,14 +604,14 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
 
       case 'o':
         dump.pid = PID_MM_ORPHAN;
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_SEQNO
         p = (FAR char *)buffer + 6;
         goto dump;
 #endif
         break;
 
-#if CONFIG_MM_BACKTRACE >= 0
       default:
+#ifdef CONFIG_MM_RECORD_PID
         if (!isdigit(buffer[0]))
           {
             return buflen;
@@ -622,8 +622,11 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
           {
             break;
           }
+#else
+        return buflen;
+#endif
 
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
+#ifdef CONFIG_MM_RECORD_SEQNO
 dump:
         dump.seqmin = strtoul(p + 1, &p, 0);
         if (!isdigit(*(p + 1)))
@@ -632,7 +635,6 @@ dump:
           }
 
         dump.seqmax = strtoul(p + 1, &p, 0);
-#  endif
 #endif
     }
 

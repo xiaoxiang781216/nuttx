@@ -40,7 +40,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD
 #define MEMPOOL_MAGIC_FREE  0xAAAAAAAA
 #define MEMPOOL_MAGIC_ALLOC 0x55555555
 
@@ -49,7 +49,7 @@
  ****************************************************************************/
 
 typedef void (*mempool_callback_t)(FAR struct mempool_s *pool,
-                                   FAR struct mempool_backtrace_s *buf,
+                                   FAR struct mempool_record_s *buf,
                                    FAR const void *input, FAR void *output);
 #endif
 
@@ -87,9 +87,9 @@ static inline void mempool_add_queue(FAR struct mempool_s *pool,
 {
   while (nblks-- > 0)
     {
-#if CONFIG_MM_BACKTRACE >= 0
-      FAR struct mempool_backtrace_s *buf =
-       (FAR struct mempool_backtrace_s *)
+#ifdef CONFIG_MM_RECORD
+      FAR struct mempool_record_s *buf =
+       (FAR struct mempool_record_s *)
        (base + nblks * blocksize + pool->blocksize);
 
       buf->magic = MEMPOOL_MAGIC_FREE;
@@ -98,21 +98,28 @@ static inline void mempool_add_queue(FAR struct mempool_s *pool,
     }
 }
 
-#if CONFIG_MM_BACKTRACE >= 0
-static inline void mempool_add_backtrace(FAR struct mempool_s *pool,
-                                         FAR struct mempool_backtrace_s *buf)
+#ifdef CONFIG_MM_RECORD
+static inline void mempool_record(FAR struct mempool_s *pool,
+                                  FAR struct mempool_record_s *buf)
 {
+#  if defined(CONFIG_MM_RECORD_STACK) || defined(CONFIG_MM_RECORD_PID)
+  pid_t pid = _SCHED_GETTID();
+#  endif
   DEBUGASSERT(buf->magic == MEMPOOL_MAGIC_FREE);
   buf->magic = MEMPOOL_MAGIC_ALLOC;
-  buf->pid = _SCHED_GETTID();
+#  ifdef CONFIG_MM_RECORD_PID
+  buf->pid = pid;
+#  endif
+
   MM_INCSEQNO(buf);
-#  if CONFIG_MM_BACKTRACE > 0
+
+#  if CONFIG_MM_RECORD_STACK > 0
   if (pool->procfs.backtrace)
     {
-      int result = sched_backtrace(buf->pid, buf->backtrace,
-                                   CONFIG_MM_BACKTRACE,
-                                   CONFIG_MM_HEAP_MEMPOOL_BACKTRACE_SKIP);
-      if (result < CONFIG_MM_BACKTRACE)
+      int result = sched_backtrace(pid, buf->backtrace,
+                                   CONFIG_MM_RECORD_STACK,
+                                   CONFIG_MM_HEAP_MEMPOOL_RECORD_STACK_SKIP);
+      if (result < CONFIG_MM_RECORD_STACK)
         {
           buf->backtrace[result] = NULL;
         }
@@ -129,7 +136,7 @@ static void mempool_foreach(FAR struct mempool_s *pool,
                             FAR const void *input, FAR void *output)
 {
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
-  FAR struct mempool_backtrace_s *buf;
+  FAR struct mempool_record_s *buf;
   FAR sq_entry_t *entry;
   FAR char *base ;
   size_t nblks;
@@ -139,7 +146,7 @@ static void mempool_foreach(FAR struct mempool_s *pool,
       nblks = pool->interruptsize / blocksize;
       while (nblks--)
         {
-          buf = (FAR struct mempool_backtrace_s *)
+          buf = (FAR struct mempool_record_s *)
                   pool->ibase + nblks * blocksize + pool->blocksize;
 
           callback(pool, buf, input, output);
@@ -153,15 +160,16 @@ static void mempool_foreach(FAR struct mempool_s *pool,
 
       while (nblks--)
         {
-          buf = (FAR struct mempool_backtrace_s *)
+          buf = (FAR struct mempool_record_s *)
                   (base + nblks * blocksize + pool->blocksize);
           callback(pool, buf, input, output);
         }
     }
 }
 
+#ifdef CONFIG_MM_RECORD_PID
 static void mempool_info_task_callback(FAR struct mempool_s *pool,
-                                       FAR struct mempool_backtrace_s *buf,
+                                       FAR struct mempool_record_s *buf,
                                        FAR const void *input,
                                        FAR void *output)
 {
@@ -181,14 +189,16 @@ static void mempool_info_task_callback(FAR struct mempool_s *pool,
       info->uordblks += blocksize;
     }
 }
+#endif
 
 static void mempool_memdump_callback(FAR struct mempool_s *pool,
-                                     FAR struct mempool_backtrace_s *buf,
+                                     FAR struct mempool_record_s *buf,
                                      FAR const void *input, FAR void *output)
 {
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
   size_t overhead = blocksize - pool->blocksize;
   FAR const struct mm_memdump_s *dump = input;
+  UNUSED(dump);
 
   if (buf->magic == MEMPOOL_MAGIC_FREE)
     {
@@ -198,22 +208,29 @@ static void mempool_memdump_callback(FAR struct mempool_s *pool,
   if ((MM_DUMP_ASSIGN(dump, buf) || MM_DUMP_ALLOC(dump, buf) ||
        MM_DUMP_LEAK(dump, buf)) && MM_DUMP_SEQNO(dump, buf))
     {
-#  if CONFIG_MM_BACKTRACE > 0
-      char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_MM_BACKTRACE)];
+#  if CONFIG_MM_RECORD_STACK > 0
+      char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_MM_RECORD_STACK)];
 
       backtrace_format(tmp, sizeof(tmp), buf->backtrace,
-                       CONFIG_MM_BACKTRACE);
+                       CONFIG_MM_RECORD_STACK);
 #  else
       FAR const char *tmp = "";
 #  endif
 
-      syslog(LOG_INFO, "%6d%12zu%9zu"
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
+      syslog(LOG_INFO,
+#ifdef CONFIG_MM_RECORD_PID
+             "%6d"
+#endif
+             "%12zu%9zu"
+#ifdef CONFIG_MM_RECORD_SEQNO
              "%12lu"
 #endif
              "%*p %s\n",
-             buf->pid, blocksize, overhead,
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
+#ifdef CONFIG_MM_RECORD_PID
+             buf->pid,
+#endif
+             blocksize, overhead,
+#ifdef CONFIG_MM_RECORD_SEQNO
              buf->seqno,
 #endif
              BACKTRACE_PTR_FMT_WIDTH,
@@ -223,7 +240,7 @@ static void mempool_memdump_callback(FAR struct mempool_s *pool,
 
 static void
 mempool_memdump_free_callback(FAR struct mempool_s *pool,
-                              FAR struct mempool_backtrace_s *buf,
+                              FAR struct mempool_record_s *buf,
                               FAR const void *input, FAR void *output)
 {
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
@@ -319,9 +336,9 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
   mempool_procfs_register(&pool->procfs, name);
-#  ifdef CONFIG_MM_BACKTRACE_DEFAULT
+#  ifdef CONFIG_MM_RECORD_STACK_DEFAULT
   pool->procfs.backtrace = true;
-#  elif CONFIG_MM_BACKTRACE > 0
+#  elif CONFIG_MM_RECORD_STACK > 0
   pool->procfs.backtrace = false;
 #  endif
 #endif
@@ -405,8 +422,8 @@ retry:
   pool->nalloc++;
   spin_unlock_irqrestore(&pool->lock, flags);
 
-#if CONFIG_MM_BACKTRACE >= 0
-  mempool_add_backtrace(pool, (FAR struct mempool_backtrace_s *)
+#ifdef CONFIG_MM_RECORD
+  mempool_record(pool, (FAR struct mempool_record_s *)
                               ((FAR char *)blk + pool->blocksize));
 #endif
 
@@ -432,19 +449,14 @@ retry:
 void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
 {
   irqstate_t flags = spin_lock_irqsave(&pool->lock);
-#if CONFIG_MM_BACKTRACE >= 0
-  FAR struct mempool_backtrace_s *buf =
-    (FAR struct mempool_backtrace_s *)((FAR char *)blk + pool->blocksize);
+#ifdef CONFIG_MM_RECORD
+  FAR struct mempool_record_s *buf =
+    (FAR struct mempool_record_s *)((FAR char *)blk + pool->blocksize);
 
   /* Check double free or out of out of bounds */
 
   DEBUGASSERT(buf->magic == MEMPOOL_MAGIC_ALLOC);
   buf->magic = MEMPOOL_MAGIC_FREE;
-
-#if CONFIG_MM_BACKTRACE > 0
-  sched_backtrace(_SCHED_GETTID(), buf->backtrace_free, CONFIG_MM_BACKTRACE,
-                  CONFIG_MM_HEAP_MEMPOOL_BACKTRACE_SKIP);
-#endif
 #endif
 
   pool->nalloc--;
@@ -557,7 +569,7 @@ mempool_info_task(FAR struct mempool_s *pool,
       info.aordblks += pool->nalloc;
       info.uordblks += pool->nalloc * blocksize;
     }
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
   else
     {
       mempool_foreach(pool, mempool_info_task_callback, task, &info);
@@ -589,7 +601,7 @@ mempool_info_task(FAR struct mempool_s *pool,
 void mempool_memdump(FAR struct mempool_s *pool,
                      FAR const struct mm_memdump_s *dump)
 {
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD
   if (dump->pid == PID_MM_FREE)
     {
       mempool_foreach(pool, mempool_memdump_free_callback, NULL, NULL);
@@ -602,7 +614,12 @@ void mempool_memdump(FAR struct mempool_s *pool,
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
   size_t overhead = blocksize - pool->blocksize;
 
-  /* Avoid race condition */
+  /* Avoid race condition.
+   * When backtrace is not enabled, printing all nodes requires traversing
+   * the linked list, but there is no safe way to protect it. So we only
+   * print the block dump when backtrace is enabled, and this is done by
+   * magic to perform a safe traversal.
+   */
 
   syslog(LOG_INFO, "%12zu%9zu%*p skip block dump\n",
          blocksize, overhead, BACKTRACE_PTR_FMT_WIDTH, pool);

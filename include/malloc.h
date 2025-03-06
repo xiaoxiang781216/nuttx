@@ -77,8 +77,10 @@ struct mallinfo
 
 struct malltask
 {
+  /* Negative pid means differently. See include/malloc.h */
+
   pid_t pid; /* Process id */
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
+#ifdef CONFIG_MM_RECORD_SEQNO
   unsigned long seqmin; /* The minimum sequence */
   unsigned long seqmax; /* The maximum sequence */
 #endif

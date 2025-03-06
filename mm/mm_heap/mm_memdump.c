@@ -61,40 +61,33 @@ static void memdump_allocnode(FAR struct mm_allocnode_s *node)
 {
   size_t nodesize = MM_SIZEOF_NODE(node);
   size_t overhead = MM_SIZEOF_ALLOCNODE;
-#if CONFIG_MM_BACKTRACE < 0
-  syslog(LOG_INFO, "%12zu%9zu%*p\n",
-         nodesize, overhead, BACKTRACE_PTR_FMT_WIDTH,
-         (FAR const char *)node + MM_SIZEOF_ALLOCNODE);
-#elif CONFIG_MM_BACKTRACE == 0
-  syslog(LOG_INFO, "%6d%12zu%9zu"
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
-         "%12lu"
-#  endif
-         "%*p\n",
-         node->pid, nodesize, overhead,
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
-         node->seqno,
-#  endif
-         BACKTRACE_PTR_FMT_WIDTH,
-         (FAR const char *)node + MM_SIZEOF_ALLOCNODE);
-#else
-  char buf[BACKTRACE_BUFFER_SIZE(CONFIG_MM_BACKTRACE)];
 
+#if CONFIG_MM_RECORD_STACK > 0
+  char buf[BACKTRACE_BUFFER_SIZE(CONFIG_MM_RECORD_STACK)];
   backtrace_format(buf, sizeof(buf), node->backtrace,
-                   CONFIG_MM_BACKTRACE);
+                   CONFIG_MM_RECORD_STACK);
+#else
+  const char *buf = "";
+#endif
 
-  syslog(LOG_INFO, "%6d%12zu%9zu"
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
+  syslog(LOG_INFO,
+#ifdef CONFIG_MM_RECORD_PID
+         "%6d"
+#endif
+         "%12zu%9zu"
+#ifdef CONFIG_MM_RECORD_SEQNO
          "%12lu"
-#  endif
+#endif
          "%*p %s\n",
-         node->pid, nodesize, overhead,
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
+#ifdef CONFIG_MM_RECORD_PID
+         node->pid,
+#endif
+         nodesize, overhead,
+#ifdef CONFIG_MM_RECORD_SEQNO
          node->seqno,
-#  endif
+#endif
          BACKTRACE_PTR_FMT_WIDTH,
          (FAR const char *)node + MM_SIZEOF_ALLOCNODE, buf);
-#endif
 }
 
 #if CONFIG_MM_HEAP_BIGGEST_COUNT > 0
@@ -177,14 +170,7 @@ static void memdump_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
   if (MM_NODE_IS_ALLOC(node))
     {
       DEBUGASSERT(nodesize >= MM_SIZEOF_ALLOCNODE);
-      if ((MM_DUMP_ASSIGN(dump, node) || MM_DUMP_ALLOC(dump, node) ||
-           MM_DUMP_LEAK(dump, node)) && MM_DUMP_SEQNO(dump, node))
-        {
-          priv->info.aordblks++;
-          priv->info.uordblks += nodesize;
-          memdump_allocnode(node);
-        }
-      else if(dump->pid == PID_MM_ORPHAN && MM_DUMP_SEQNO(dump, node))
+      if (dump->pid == PID_MM_ORPHAN && MM_DUMP_SEQNO(dump, node))
         {
           FAR struct mm_allocnode_s *next = (FAR struct mm_allocnode_s *)
                                             ((FAR char *)node + nodesize);
@@ -199,6 +185,13 @@ static void memdump_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
       else if (dump->pid == PID_MM_BIGGEST && MM_DUMP_SEQNO(dump, node))
         {
           memdump_record_biggest(priv, node);
+        }
+      else if ((MM_DUMP_ASSIGN(dump, node) || MM_DUMP_ALLOC(dump, node) ||
+                MM_DUMP_LEAK(dump, node)) && MM_DUMP_SEQNO(dump, node))
+        {
+          priv->info.aordblks++;
+          priv->info.uordblks += nodesize;
+          memdump_allocnode(node);
         }
 #endif
     }
@@ -247,7 +240,7 @@ void mm_memdump(FAR struct mm_heap_s *heap,
   memset(&priv, 0, sizeof(struct mm_memdump_priv_s));
   priv.dump.pid = pid;
 
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
+#ifdef CONFIG_MM_RECORD_SEQNO
   if (dump->seqmin == 0 && dump->seqmax == 0)
     {
       priv.dump.seqmax = ULONG_MAX;
@@ -311,22 +304,32 @@ void mm_memdump(FAR struct mm_heap_s *heap,
         break;
     }
 
-#if CONFIG_MM_BACKTRACE < 0
-  syslog(LOG_INFO, "%12s%9s%*s\n", "Size", "Overhead",
-                   BACKTRACE_PTR_FMT_WIDTH,
-                   "Address");
-#else
-  syslog(LOG_INFO, "%6s%12s%9s"
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
+  syslog(LOG_INFO,
+#ifdef CONFIG_MM_RECORD_PID
+                   "%6s"
+#endif
+                   "%12s%9s"
+#  ifdef CONFIG_MM_RECORD_SEQNO
                    "%12s"
 #  endif
-                   "%*s %s\n", "PID", "Size", "Overhead",
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
+                   "%*s "
+#if CONFIG_MM_RECORD_STACK > 0
+                   "%s"
+#endif
+                   "\n",
+#ifdef CONFIG_MM_RECORD_PID
+                   "PID",
+#endif
+                   "Size", "Overhead",
+#ifdef CONFIG_MM_RECORD_SEQNO
                    "Sequence",
 #  endif
                     BACKTRACE_PTR_FMT_WIDTH,
-                   "Address", "Backtrace");
+                   "Address"
+#if CONFIG_MM_RECORD_STACK > 0
+                   , " Backtrace"
 #endif
+                  );
 
   memdump_dump_pool(&priv, heap);
 

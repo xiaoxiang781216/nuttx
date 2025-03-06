@@ -100,7 +100,7 @@ enum proc_node_e
 #ifdef CONFIG_SCHED_CRITMONITOR
   PROC_CRITMON,                       /* Critical section monitor */
 #endif
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
   PROC_HEAP,                          /* Task heap info */
 #endif
 #ifdef CONFIG_DEBUG_MM
@@ -191,7 +191,7 @@ static ssize_t proc_critmon(FAR struct proc_file_s *procfile,
                  FAR struct tcb_s *tcb, FAR char *buffer, size_t buflen,
                  off_t offset);
 #endif
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
 static ssize_t proc_heap(FAR struct proc_file_s *procfile,
                          FAR struct tcb_s *tcb, FAR char *buffer,
                          size_t buflen, off_t offset);
@@ -303,7 +303,7 @@ static const struct proc_node_s g_critmon =
 };
 #endif
 
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
 static const struct proc_node_s g_heap =
 {
   "heap",         "heap",   (uint8_t)PROC_HEAP,          DTYPE_FILE        /* Task heap info */
@@ -357,7 +357,7 @@ static FAR const struct proc_node_s * const g_nodeinfo[] =
 #ifdef CONFIG_SCHED_CRITMONITOR
   &g_critmon,      /* Critical section Monitor */
 #endif
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
   &g_heap,         /* Task heap info */
 #endif
 #ifdef CONFIG_DEBUG_MM
@@ -386,7 +386,7 @@ static const struct proc_node_s * const g_level0info[] =
 #ifdef CONFIG_SCHED_CRITMONITOR
   &g_critmon,      /* Critical section monitor */
 #endif
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
   &g_heap,         /* Task heap info */
 #endif
 #ifdef CONFIG_DEBUG_MM
@@ -950,7 +950,7 @@ static ssize_t proc_critmon(FAR struct proc_file_s *procfile,
  * Name: proc_heap
  ****************************************************************************/
 
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
 static ssize_t proc_heap(FAR struct proc_file_s *procfile,
                          FAR struct tcb_s *tcb, FAR char *buffer,
                          size_t buflen, off_t offset)
@@ -963,7 +963,7 @@ static ssize_t proc_heap(FAR struct proc_file_s *procfile,
   struct malltask task;
 
   task.pid = tcb->pid;
-#ifdef CONFIG_MM_BACKTRACE_SEQNO
+#ifdef CONFIG_MM_RECORD_SEQNO
   task.seqmin = 0;
   task.seqmax = ULONG_MAX;
 #endif
@@ -1692,7 +1692,7 @@ static ssize_t proc_read(FAR struct file *filep, FAR char *buffer,
       ret = proc_critmon(procfile, tcb, buffer, buflen, filep->f_pos);
       break;
 #endif
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
     case PROC_HEAP: /* Task heap info */
       ret = proc_heap(procfile, tcb, buffer, buflen, filep->f_pos);
       break;

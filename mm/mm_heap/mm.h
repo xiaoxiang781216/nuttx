@@ -72,43 +72,53 @@
 #  define MM_MAX_SHIFT    (22)  /*  4 Mb */
 #endif
 
-#if CONFIG_MM_BACKTRACE == 0
-#  define MM_ADD_BACKTRACE(heap, ptr) \
+#ifdef CONFIG_MM_RECORD_PID
+#  define MM_RECORD_PID(node, tid) ((node)->pid = tid)
+#else
+#  define MM_RECORD_PID(node, tid)
+#endif
+
+#if CONFIG_MM_RECORD_STACK > 0
+#  define MM_RECORD_STACK(node, tid) \
+    do \
+      { \
+        FAR struct tcb_s *tcb = nxsched_get_tcb(tid); \
+        if ((heap)->mm_procfs.backtrace || \
+            (tcb && tcb->flags & TCB_FLAG_HEAP_DUMP)) \
+          { \
+            int n = sched_backtrace(tid, (node)->backtrace, \
+                                    CONFIG_MM_RECORD_STACK, \
+                                    CONFIG_MM_RECORD_STACK_SKIP); \
+            if (n < CONFIG_MM_RECORD_STACK) \
+              { \
+                (node)->backtrace[n] = NULL; \
+              } \
+          } \
+        else \
+          { \
+            (node)->backtrace[0] = NULL; \
+          } \
+        nxsched_put_tcb(tcb); \
+      } \
+    while (0)
+#else
+#  define MM_RECORD_STACK(node, tid)
+#endif
+
+#ifdef CONFIG_MM_RECORD
+#  define MM_RECORD(heap, ptr) \
      do \
        { \
          FAR struct mm_allocnode_s *tmp = (FAR struct mm_allocnode_s *)(ptr); \
-         tmp->pid = _SCHED_GETTID(); \
+         pid_t tid = _SCHED_GETTID(); \
+         UNUSED(tid); \
          MM_INCSEQNO(tmp); \
-       } \
-     while (0)
-#elif CONFIG_MM_BACKTRACE > 0
-#  define MM_ADD_BACKTRACE(heap, ptr) \
-     do \
-       { \
-         FAR struct mm_allocnode_s *tmp = (FAR struct mm_allocnode_s *)(ptr); \
-         FAR struct tcb_s *tcb; \
-         tmp->pid = _SCHED_GETTID(); \
-         tcb = nxsched_get_tcb(tmp->pid); \
-         if ((heap)->mm_procfs.backtrace || \
-             (tcb && atomic_read(&tcb->flags) & TCB_FLAG_HEAP_DUMP)) \
-           { \
-             int n = sched_backtrace(tmp->pid, tmp->backtrace, CONFIG_MM_BACKTRACE, \
-                                     CONFIG_MM_BACKTRACE_SKIP); \
-             if (n < CONFIG_MM_BACKTRACE) \
-               { \
-                 tmp->backtrace[n] = NULL; \
-               } \
-           } \
-         else \
-           { \
-             tmp->backtrace[0] = NULL; \
-           } \
-         nxsched_put_tcb(tcb); \
-         MM_INCSEQNO(tmp); \
+         MM_RECORD_PID(tmp, tid); \
+         MM_RECORD_STACK(tmp, tid); \
        } \
      while (0)
 #else
-#  define MM_ADD_BACKTRACE(heap, ptr)
+#  define MM_RECORD(heap, ptr)
 #endif
 
 /* All other definitions derive from these two */
@@ -178,15 +188,14 @@ struct mm_allocnode_s
 {
   mmsize_t preceding;                       /* Physical preceding chunk size */
   mmsize_t size;                            /* Size of this chunk */
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
   pid_t pid;                                /* The pid for caller */
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
+#endif
+#ifdef CONFIG_MM_RECORD_SEQNO
   unsigned long seqno;                      /* The sequence of memory malloc */
-#  endif
-#  if CONFIG_MM_BACKTRACE > 0
-  FAR void *backtrace[CONFIG_MM_BACKTRACE]; /* The backtrace buffer for caller */
-  FAR void *backtrace_free[CONFIG_MM_BACKTRACE];
-#  endif
+#endif
+#if CONFIG_MM_RECORD_STACK > 0
+  FAR void *backtrace[CONFIG_MM_RECORD_STACK]; /* The backtrace buffer for caller */
 #endif
 };
 
@@ -196,15 +205,14 @@ struct mm_freenode_s
 {
   mmsize_t preceding;                       /* Physical preceding chunk size */
   mmsize_t size;                            /* Size of this chunk */
-#if CONFIG_MM_BACKTRACE >= 0
+#ifdef CONFIG_MM_RECORD_PID
   pid_t pid;                                /* The pid for caller */
-#  ifdef CONFIG_MM_BACKTRACE_SEQNO
+#endif
+#ifdef CONFIG_MM_RECORD_SEQNO
   unsigned long seqno;                      /* The sequence of memory malloc */
-#  endif
-#  if CONFIG_MM_BACKTRACE > 0
-  FAR void *backtrace[CONFIG_MM_BACKTRACE]; /* The backtrace buffer for caller */
-  FAR void *backtrace_free[CONFIG_MM_BACKTRACE];
-#  endif
+#endif
+#if CONFIG_MM_RECORD_STACK > 0
+  FAR void *backtrace[CONFIG_MM_RECORD_STACK]; /* The backtrace buffer for caller */
 #endif
   FAR struct mm_freenode_s *flink;          /* Supports a doubly linked list */
   FAR struct mm_freenode_s *blink;

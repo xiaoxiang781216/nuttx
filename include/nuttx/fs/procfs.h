@@ -137,7 +137,7 @@ struct procfs_meminfo_entry_s
   FAR const char *name;
   FAR struct mm_heap_s *heap;
   FAR struct procfs_meminfo_entry_s *next;
-#if CONFIG_MM_BACKTRACE >= 0
+#if CONFIG_MM_RECORD_STACK > 0
 
   /* This is dynamic control flag whether to turn on backtrace in the heap,
    * you can set it by /proc/memdump.
