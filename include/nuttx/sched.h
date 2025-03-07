@@ -918,7 +918,7 @@ FAR struct tcb_s *nxsched_self(void);
 void nxsched_foreach(nxsched_foreach_t handler, FAR void *arg);
 
 /****************************************************************************
- * Name: nxsched_get_tcb/nxsched_put_tcb
+ * Name: nxsched_get_tcb/nxsched_put_tcb/nxsched_get_tcb_by_index
  *
  * Description:
  *   Given a task ID,
@@ -929,6 +929,7 @@ void nxsched_foreach(nxsched_foreach_t handler, FAR void *arg);
  ****************************************************************************/
 
 FAR struct tcb_s *nxsched_get_tcb(pid_t pid);
+FAR struct tcb_s *nxsched_get_tcb_by_index(int index);
 void nxsched_put_tcb(FAR struct tcb_s *tcb);
 
 /****************************************************************************

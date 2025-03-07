@@ -37,7 +37,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: nxsched_get_tcb/nxsched_put_tcb
+ * Name: nxsched_get_tcb/nxsched_put_tcb/nxsched_get_tcb_by_index
  *
  * Description:
  *   Given a task ID,
@@ -144,4 +144,35 @@ void nxsched_put_tcb(FAR struct tcb_s *tcb)
           usleep(1000);
         }
     }
+}
+
+FAR struct tcb_s *nxsched_get_tcb_by_index(int index)
+{
+  FAR struct tcb_s *ret = NULL;
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(&g_pidhashlock);
+  ret = g_pidhash[index];
+
+  if (ret)
+    {
+      if (!up_interrupt_context())
+        {
+          /* If we are in the thread context, after obtaining a reference to
+           * another task, we may not be able to release this reference
+           * immediately. The purpose of refs is also to prevent the
+           * situation where this_task is killed and thus unable to release
+           * the references to other tasks. We need to record the total
+           * number of references that this_task makes to other tasks.
+           */
+
+          atomic_fetch_add(&this_task()->refs, 1);
+        }
+
+      atomic_fetch_add(&ret->refs, 1);
+    }
+
+  spin_unlock_irqrestore(&g_pidhashlock, flags);
+
+  return ret;
 }

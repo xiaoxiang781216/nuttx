@@ -49,8 +49,8 @@
  *   calling this function.
  *
  * Input Parameters:
- *   handler - The function to be called with the TCB of
- *     each task
+ *   handler - The function to be called with the TCB of each task
+ *   arg     - A user provided argument that will be passed to the handler
  *
  * Returned Value:
  *   None
@@ -68,7 +68,7 @@ void nxsched_foreach(nxsched_foreach_t handler, FAR void *arg)
     {
       /* This test and the function call must be atomic */
 
-      FAR struct tcb_s *tcb = nxsched_get_tcb(ndx);
+      FAR struct tcb_s *tcb = nxsched_get_tcb_by_index(ndx);
       if (tcb)
         {
           handler(tcb, arg);
