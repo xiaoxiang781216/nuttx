@@ -76,7 +76,7 @@ nxevent_mask_t nxevent_tickwait(FAR nxevent_t *event, nxevent_mask_t events,
       events = ~0;
     }
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&event->lock);
 
   if ((eflags & NXEVENT_WAIT_RESET) != 0)
     {
@@ -122,6 +122,7 @@ nxevent_mask_t nxevent_tickwait(FAR nxevent_t *event, nxevent_mask_t events,
       wait.eflags = eflags;
 
       list_add_tail(&event->list, &wait.node);
+      spin_unlock_irqrestore(&event->lock, flags);
 
       /* Wait for the event */
 
@@ -138,18 +139,24 @@ nxevent_mask_t nxevent_tickwait(FAR nxevent_t *event, nxevent_mask_t events,
 
       nxsem_destroy(&wait.sem);
 
+      flags = spin_lock_irqsave(&event->lock);
       if (ret == 0)
         {
           events = wait.expect;
+          DEBUGASSERT(!list_in_list(&wait.node));
         }
       else
         {
-          list_delete(&wait.node);
+          if (list_in_list(&wait.node))
+            {
+              list_delete(&wait.node);
+            }
+
           events = 0;
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&event->lock, flags);
 
   return events;
 }
