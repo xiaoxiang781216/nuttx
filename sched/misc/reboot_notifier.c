@@ -35,7 +35,7 @@
  * Private Data
  ****************************************************************************/
 
-static ATOMIC_NOTIFIER_HEAD(g_reboot_notifier_list);
+static BLOCKING_NOTIFIER_HEAD(g_reboot_notifier_list);
 
 /****************************************************************************
  * Public Functions
@@ -54,7 +54,7 @@ static ATOMIC_NOTIFIER_HEAD(g_reboot_notifier_list);
 
 void register_reboot_notifier(FAR struct notifier_block *nb)
 {
-  atomic_notifier_chain_register(&g_reboot_notifier_list, nb);
+  blocking_notifier_chain_register(&g_reboot_notifier_list, nb);
 }
 
 /****************************************************************************
@@ -70,7 +70,7 @@ void register_reboot_notifier(FAR struct notifier_block *nb)
 
 void unregister_reboot_notifier(FAR struct notifier_block *nb)
 {
-  atomic_notifier_chain_unregister(&g_reboot_notifier_list, nb);
+  blocking_notifier_chain_unregister(&g_reboot_notifier_list, nb);
 }
 
 /****************************************************************************
@@ -87,5 +87,13 @@ void unregister_reboot_notifier(FAR struct notifier_block *nb)
 
 void reboot_notifier_call_chain(unsigned long action, FAR void *data)
 {
-  atomic_notifier_call_chain(&g_reboot_notifier_list, action, data);
+  if (action == SYS_HALT)
+    {
+      notifier_call_chain(g_reboot_notifier_list.head, action, data,
+                          -1, NULL);
+    }
+  else
+    {
+      blocking_notifier_call_chain(&g_reboot_notifier_list, action, data);
+    }
 }
