@@ -23,7 +23,9 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/init.h>
 
+#include "arm.h"
 #include "arm_internal.h"
 
 #ifdef CONFIG_ARM_PSCI
@@ -43,10 +45,6 @@
 #ifdef CONFIG_SCHED_INSTRUMENTATION
 #  include <sched/sched.h>
 #  include <nuttx/sched_note.h>
-#endif
-
-#ifndef CONFIG_ARCH_ARMV7A
-#  include <nuttx/init.h>
 #endif
 
 #ifdef CONFIG_ARCH_ARMV8R
@@ -119,11 +117,9 @@ void arm_boot(void)
   qemu_userspace();
 #endif
 
-#ifndef CONFIG_ARCH_ARMV7A
-  /* dont return per armv7-r/arm_head.S for armv7-r and armv8-r */
+  arm_finish_busy_wait();
 
   nx_start();
-#endif
 }
 
 #if defined(CONFIG_ARM_PSCI) && defined(CONFIG_SMP)
