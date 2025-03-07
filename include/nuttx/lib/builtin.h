@@ -47,6 +47,9 @@ struct builtin_s
   gid_t       gid;          /* File owner group identity */
   int         mode;         /* File mode added to */
 #endif
+#ifdef CONFIG_MM_TASK_HEAP
+  size_t      heapsize;     /* Task heap size */
+#endif
 };
 
 /****************************************************************************

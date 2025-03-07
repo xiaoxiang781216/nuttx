@@ -35,6 +35,10 @@ ifneq ($(CONFIG_BUILD_KERNEL),y)
 CSRCS += lib_psa_getstackaddr.c lib_psa_setstackaddr.c
 endif
 
+ifeq ($(CONFIG_MM_TASK_HEAP),y)
+CSRCS += lib_psa_getheapsize.c lib_psa_setheapsize.c
+endif
+
 ifeq ($(CONFIG_DEBUG_FEATURES),y)
 CSRCS += lib_psfa_dump.c lib_psa_dump.c
 endif

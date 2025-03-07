@@ -32,5 +32,9 @@ if(CONFIG_BUILTIN)
          lib_builtin_getmode.c)
   endif()
 
+  if(CONFIG_MM_TASK_HEAP)
+    list(APPEND SRCS lib_builtin_getheapsize.c)
+  endif()
+
   target_sources(c PRIVATE ${SRCS})
 endif()

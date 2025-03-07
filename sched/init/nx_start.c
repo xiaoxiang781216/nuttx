@@ -580,7 +580,7 @@ static void idle_group_initialize(void)
       /* Allocate the IDLE group */
 
       DEBUGVERIFY(
-        group_initialize(tcb, tcb->flags));
+        group_initialize(tcb, tcb->flags, 0));
 
       /* Initialize the task join */
 

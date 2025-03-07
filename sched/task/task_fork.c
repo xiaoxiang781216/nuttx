@@ -100,6 +100,7 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
   FAR struct tcb_s *child;
   FAR char **argv;
   size_t stack_size;
+  size_t heap_size;
   uint8_t ttype;
   int priority;
   int ret;
@@ -174,7 +175,13 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
 
   /* Allocate a new task group with the same privileges as the parent */
 
-  ret = group_initialize(child, ttype);
+#if defined(CONFIG_MM_TASK_HEAP) && !defined(CONFIG_BUILD_KERNEL)
+  heap_size = kumm_malloc_size(parent->group->tg_heap);
+#else
+  heap_size = 0;
+#endif
+
+  ret = group_initialize(child, ttype, heap_size);
   if (ret < 0)
     {
       goto errout_with_tcb;

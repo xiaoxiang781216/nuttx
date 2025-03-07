@@ -96,6 +96,11 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
 #else
   FAR void *stack = NULL;
 #endif
+#ifdef CONFIG_MM_TASK_HEAP
+  size_t heapsize = attr->heapsize;
+#else
+  size_t heapsize = 0;
+#endif
   int priority = attr->priority;
   int ret;
 
@@ -132,7 +137,7 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
 
   /* Create a new task group */
 
-  ret = group_initialize(tcb, tcb->flags);
+  ret = group_initialize(tcb, tcb->flags, heapsize);
   if (ret < 0)
     {
       goto errout;

@@ -47,6 +47,10 @@ if(NOT CONFIG_BUILD_KERNEL)
        lib_psa_getstackaddr.c lib_psa_setstackaddr.c)
 endif()
 
+if(CONFIG_MM_TASK_HEAP)
+  list(APPEND SRCS lib_psa_getheapsize.c lib_psa_setheapsize.c)
+endif()
+
 if(CONFIG_DEBUG_FEATURES)
   list(APPEND SRCS lib_psfa_dump.c lib_psa_dump.c)
 endif()

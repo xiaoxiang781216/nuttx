@@ -108,5 +108,9 @@ int posix_spawnattr_init(posix_spawnattr_t *attr)
   attr->stackaddr           = NULL;
 #endif
 
+#ifdef CONFIG_MM_TASK_HEAP
+  attr->heapsize            = CONFIG_MM_TASK_HEAP_DEFAULT_SIZE;
+#endif
+
   return OK;
 }

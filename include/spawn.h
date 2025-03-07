@@ -95,6 +95,10 @@ struct posix_spawnattr_s
   FAR void *stackaddr;           /* Task stack address (non-standard) */
 #endif
 
+#ifdef CONFIG_MM_TASK_HEAP
+  size_t heapsize;               /* Task heap size (non-standard) */
+#endif
+
 #ifdef CONFIG_SCHED_SPORADIC
   struct timespec repl_period;   /* Replenishment period */
   struct timespec budget;        /* Initial budget */
@@ -221,6 +225,16 @@ int posix_spawnattr_setstackaddr(FAR posix_spawnattr_t *attr,
 #else
 #  define posix_spawnattr_getstackaddr(attr, addr) (*(addr) = NULL, 0)
 #  define posix_spawnattr_setstackaddr(attr, addr) (0)
+#endif
+
+#ifdef CONFIG_MM_TASK_HEAP
+int posix_spawnattr_setheapsize(FAR posix_spawnattr_t *attr,
+                                size_t heapsize);
+int posix_spawnattr_getheapsize(FAR const posix_spawnattr_t *attr,
+                                FAR size_t *heapsize);
+#else
+#  define posix_spawnattr_setheapsize(attr, heapsize) (0)
+#  define posix_spawnattr_getheapsize(attr, heapsize) (*(heapsize) = 0, 0)
 #endif
 
 /* Non standard debug functions */

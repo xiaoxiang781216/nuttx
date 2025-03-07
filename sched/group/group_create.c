@@ -105,8 +105,9 @@ static inline void group_inherit_identity(FAR struct task_group_s *group)
  *   the group membership.
  *
  * Input Parameters:
- *   tcb   - The tcb in need of the task group.
- *   ttype - Type of the thread that is the parent of the group
+ *   tcb      - The tcb in need of the task group.
+ *   ttype    - Type of the thread that is the parent of the group
+ *   heapsize - heap size to allocate for the group
  *
  * Returned Value:
  *   0 (OK) on success; a negated errno value on failure.
@@ -117,7 +118,7 @@ static inline void group_inherit_identity(FAR struct task_group_s *group)
  *
  ****************************************************************************/
 
-int group_initialize(FAR struct tcb_s *tcb, uint8_t ttype)
+int group_initialize(FAR struct tcb_s *tcb, uint8_t ttype, size_t heapsize)
 {
   FAR struct task_group_s *group;
   int ret;
@@ -156,7 +157,7 @@ int group_initialize(FAR struct tcb_s *tcb, uint8_t ttype)
     {
       ret = group_heap_initialize(&group->tg_heap,
                                   CONFIG_MM_TASK_HEAP_DEFAULT_ALIGN,
-                                  CONFIG_MM_TASK_HEAP_DEFAULT_SIZE);
+                                  heapsize);
       if (ret < 0)
         {
           return ret;
