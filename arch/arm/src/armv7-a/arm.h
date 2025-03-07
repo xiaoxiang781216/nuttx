@@ -109,6 +109,25 @@ extern "C"
 
 void arm_data_initialize(void);
 
+/****************************************************************************
+ * Name: arm_finish_busy_wait
+ *
+ * Description:
+ *
+ *   Finish armv7a SMP busy wait like in arm_head.S so that we can jump to
+ *   nx_start() directly from arm_boot() in a unified manner.
+ *
+ ****************************************************************************/
+
+static inline_function void arm_finish_busy_wait(void)
+{
+#ifdef CONFIG_ARMV7A_SMP_BUSY_WAIT
+  uintptr_t address = CONFIG_ARMV7A_SMP_BUSY_WAIT_FLAG_ADDR;
+  *(uint32_t *)address = 1;
+  up_flush_dcache(address, address + sizeof(uint32_t));
+#endif
+}
+
 #undef EXTERN
 #ifdef __cplusplus
 }
