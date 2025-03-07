@@ -95,8 +95,12 @@
                                              * int for enable grab
                                              */
 
+#define TSIOC_GETMAXPOINTS   _TSIOC(0x000f) /* arg: Pointer to
+                                             * uint8_t max touch point
+                                             */
+
 #define TSC_FIRST            0x0001          /* First common command */
-#define TSC_NCMDS            14              /* Fourteen common commands */
+#define TSC_NCMDS            15              /* Fifteenth common commands */
 
 /* Backward compatible IOCTL */
 

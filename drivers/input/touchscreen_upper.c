@@ -303,6 +303,18 @@ static int touch_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             }
         }
         break;
+      case TSIOC_GETMAXPOINTS:
+        {
+          if (arg == 0)
+            {
+              ret = -EINVAL;
+              break;
+            }
+
+          FAR uint8_t *ptr = (FAR uint8_t *)((uintptr_t)arg);
+          *ptr = lower->maxpoint;
+        }
+        break;
       default:
         {
           if (lower->control)
