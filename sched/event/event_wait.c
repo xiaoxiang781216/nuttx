@@ -142,22 +142,20 @@ nxevent_mask_t nxevent_tickwait_wait(FAR nxevent_t *event,
       /* Destroy local variables */
 
       nxsem_destroy(&(wait->sem));
-      list_delete(&(wait->node));
 
       flags = spin_lock_irqsave(&event->lock);
-
-      if (list_in_list(&wait->node))
-        {
-          list_delete(&wait->node);
-        }
-
       if (ret == 0)
         {
           events = wait->expect;
-          DEBUGASSERT(!list_in_list(&wait.node));
+          DEBUGASSERT(!list_in_list(&(wait->node)));
         }
       else
         {
+          if (list_in_list(&(wait->node)))
+            {
+              list_delete(&(wait->node));
+            }
+
           events = 0;
         }
     }
