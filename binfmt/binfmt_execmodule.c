@@ -279,6 +279,7 @@ int exec_module(FAR struct binary_s *binp,
       posix_spawnattr_setstackaddr(&tmp, stackaddr);
       posix_spawnattr_setpriority(&tmp, binp->priority);
       posix_spawnattr_setstacksize(&tmp, binp->stacksize);
+      posix_spawnattr_setheapsize(&tmp, binp->heapsize);
       attr = &tmp;
     }
 

@@ -95,6 +95,9 @@ struct binary_s
   gid_t gid;                           /* File owner group user identity */
   int mode;                            /* File mode added to */
 #endif
+#ifdef CONFIG_MM_TASK_HEAP
+  size_t heapsize;                     /* Task Heap size */
+#endif
 
 #ifndef CONFIG_BUILD_KERNEL
   FAR void *stackaddr;                 /* Task stack address */

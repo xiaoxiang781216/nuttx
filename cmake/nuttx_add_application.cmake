@@ -156,6 +156,40 @@ function(nuttx_add_application)
         if(NOT "${CMAKE_LD}" MATCHES "gcc$")
           set(USE_LINKER True)
         endif()
+        if(STACKSIZE)
+          set(SYMBOL_STACKSIZE $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--defsym
+                               nx_stacksize=${STACKSIZE})
+        endif()
+        if(PRIORITY)
+          if(PRIORITY STREQUAL "SCHED_PRIORITY_DEFAULT")
+            set(PRIORITY "0")
+          endif()
+          set(SYMBOL_PRIORITY $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--defsym
+                              nx_priority=${PRIORITY})
+        endif()
+        if(CONFIG_SCHED_USER_IDENTITY)
+          if(UID)
+            set(SYMBOL_UID $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--defsym
+                           nx_uid=${UID})
+          endif()
+          if(GID)
+            set(SYMBOL_GID $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--defsym
+                           nx_gid=${GID})
+          endif()
+          if(MODE)
+            set(SYMBOL_MODE $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--defsym
+                            nx_mode=${MODE})
+          endif()
+        endif()
+        if(CONFIG_MM_TASK_HEAP)
+          if(HEAPSIZE)
+            set(SYMBOL_HEAPSIZE $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--defsym
+                                nx_heapsize=${HEAPSIZE})
+          else()
+            set(SYMBOL_HEAPSIZE $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--defsym
+                                nx_heapsize=${CONFIG_MM_TASK_HEAP_DEFAULT_SIZE})
+          endif()
+        endif()
         add_custom_command(
           TARGET ${TARGET}
           POST_BUILD
@@ -167,7 +201,8 @@ function(nuttx_add_application)
             # add global ELF link option if m&kernel link
             $<$<OR:$<BOOL:${KERNEL_ELF_MODE}>,$<BOOL:${LOADABLE_ELF_MODE}>>:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_APP_LINK_OPTIONS>>
             # add local link option lastest
-            ${LINK_FLAGS}
+            ${LINK_FLAGS} ${SYMBOL_STACKSIZE} ${SYMBOL_PRIORITY} ${SYMBOL_UID}
+            ${SYMBOL_GID} ${SYMBOL_MODE} ${SYMBOL_HEAPSIZE}
             # link startup obj if m&kernel link
             $<$<AND:$<TARGET_EXISTS:STARTUP_OBJS>,$<NOT:$<BOOL:${DYNLIB_ELF_MODE}>>>:$<TARGET_OBJECTS:STARTUP_OBJS>>
             $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--start-group

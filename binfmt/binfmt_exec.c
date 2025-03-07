@@ -117,6 +117,13 @@ static int exec_internal(FAR const char *filename,
           bin->stacksize = attr->stacksize;
         }
 
+#ifdef CONFIG_MM_TASK_HEAP
+      if (attr->heapsize > 0)
+        {
+          bin->heapsize = attr->heapsize;
+        }
+#endif
+
 #ifndef CONFIG_BUILD_KERNEL
       if (attr->stackaddr != NULL)
         {
