@@ -472,7 +472,7 @@ static int binder_mmap(FAR struct file *filep,
   struct binder_mmap_area vma;
 
   vma.area_start = map->vaddr;
-  vma.area_size = MIN(map->length, CONFIG_DRIVERS_BINDER_MAX_VMSIZE);
+  vma.area_size = map->length;
 
   binder_alloc_mmap(&proc->alloc, &vma);
 
