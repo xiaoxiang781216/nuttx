@@ -305,7 +305,7 @@ struct pm_governor_s
    *
    **************************************************************************/
 
-  CODE void (*initialize)(void);
+  CODE void (*initialize)(int domain);
 
   /**************************************************************************
    * Name: deinitialize
@@ -316,7 +316,7 @@ struct pm_governor_s
    *
    **************************************************************************/
 
-  CODE void (*deinitialize)(void);
+  CODE void (*deinitialize)(int domain);
 
   /**************************************************************************
    * Name: statechanged

@@ -80,14 +80,14 @@ int pm_set_governor(int domain, FAR const struct pm_governor_s *gov)
   if (g_pmdomains[domain].governor &&
       g_pmdomains[domain].governor->deinitialize)
     {
-      g_pmdomains[domain].governor->deinitialize();
+      g_pmdomains[domain].governor->deinitialize(domain);
     }
 
   g_pmdomains[domain].governor = gov;
 
   if (g_pmdomains[domain].governor->initialize)
     {
-      g_pmdomains[domain].governor->initialize();
+      g_pmdomains[domain].governor->initialize(domain);
     }
 
   return 0;
