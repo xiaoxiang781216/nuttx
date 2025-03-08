@@ -139,7 +139,7 @@ struct pm_activity_governor_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static void governor_initialize(void);
+static void governor_initialize(int domain);
 static void governor_statechanged(int domain, enum pm_state_e newstate);
 static enum pm_state_e governor_checkstate(int domain);
 static void governor_activity(int domain, int count);
@@ -204,7 +204,7 @@ static const struct pm_governor_s g_pmgovernor =
  * Private Functions
  ****************************************************************************/
 
-static void governor_initialize(void)
+static void governor_initialize(int domain)
 {
   FAR struct pm_domain_state_s *pdomstate;
   int i;
