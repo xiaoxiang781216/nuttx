@@ -41,7 +41,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define ATOMIC_NOTIFIER_INIT(name) {NULL}
+#define ATOMIC_NOTIFIER_INIT(name) {NULL, SP_UNLOCKED}
 
 #define ATOMIC_NOTIFIER_HEAD(name) \
   struct atomic_notifier_head name = ATOMIC_NOTIFIER_INIT(name)
@@ -88,6 +88,7 @@ struct notifier_block
 struct atomic_notifier_head
 {
   FAR struct notifier_block *head;
+  spinlock_t lock;
 };
 
 struct blocking_notifier_head
@@ -186,9 +187,9 @@ extern "C"
     { \
       FAR struct atomic_notifier_head *nh = (nhead); \
       irqstate_t flags; \
-      flags = enter_critical_section(); \
+      flags = spin_lock_irqsave_nopreempt(&nh->lock); \
       notifier_chain_register(nh->head, (nb), false); \
-      leave_critical_section(flags); \
+      spin_unlock_irqrestore_nopreempt(&nh->lock, flags); \
     } \
   while(0)
 
@@ -197,9 +198,9 @@ extern "C"
     { \
       FAR struct atomic_notifier_head *nh = (nhead); \
       irqstate_t flags; \
-      flags = enter_critical_section(); \
+      flags = spin_lock_irqsave_nopreempt(&nh->lock); \
       notifier_chain_register(nh->head, (nb), true); \
-      leave_critical_section(flags); \
+      spin_unlock_irqrestore_nopreempt(&nh->lock, flags); \
     } \
   while(0)
 
@@ -208,9 +209,9 @@ extern "C"
     { \
       FAR struct atomic_notifier_head *nh = (nhead); \
       irqstate_t flags; \
-      flags = enter_critical_section(); \
+      flags = spin_lock_irqsave_nopreempt(&nh->lock); \
       notifier_chain_unregister(nh->head, (nb)); \
-      leave_critical_section(flags); \
+      spin_unlock_irqrestore_nopreempt(&nh->lock, flags); \
     } \
   while(0)
 
@@ -219,9 +220,9 @@ extern "C"
     { \
       FAR struct atomic_notifier_head *nh = (nhead); \
       irqstate_t flags; \
-      flags = enter_critical_section(); \
+      flags = spin_lock_irqsave_nopreempt(&nh->lock); \
       notifier_call_chain(nh->head, (val), (v), -1, NULL); \
-      leave_critical_section(flags); \
+      spin_unlock_irqrestore_nopreempt(&nh->lock, flags); \
     } \
   while(0)
 
