@@ -322,6 +322,10 @@ static inline void nxtask_signalparent(FAR struct tcb_s *ctcb, int status)
 static inline void nxtask_exitwakeup(FAR struct tcb_s *tcb, int status)
 {
   FAR struct task_group_s *group = tcb->group;
+  irqstate_t flags;
+  int nwaiters;
+
+  flags = spin_lock_irqsave_nopreempt(&group->tg_lock);
 
   /* Have we already left the group? */
 
@@ -367,15 +371,20 @@ static inline void nxtask_exitwakeup(FAR struct tcb_s *tcb, int status)
 
           group->tg_statloc   = NULL;
           group->tg_waitflags = 0;
+          nwaiters = group->tg_nwaiters;
 
-          while (group->tg_exitsem.semcount < 0)
+          while (nwaiters > 0)
             {
+              nwaiters--;
+
               /* Wake up the thread */
 
               nxsem_post(&group->tg_exitsem);
             }
         }
     }
+
+  spin_unlock_irqrestore_nopreempt(&group->tg_lock, flags);
 }
 #else
 #  define nxtask_exitwakeup(tcb, status)

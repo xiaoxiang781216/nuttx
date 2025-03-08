@@ -97,21 +97,15 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
   FAR struct tcb_s *ctcb;
   FAR struct task_group_s *group;
   bool mystat = false;
+  irqstate_t flags;
   int ret;
-
-  /* NOTE: sched_lock() is not enough for SMP
-   * because the child task is running on another CPU
-   */
-
-  irqstate_t flags = enter_critical_section();
 
   /* Get the TCB corresponding to this PID */
 
   ctcb = nxsched_get_tcb(pid);
   if (ctcb == NULL)
     {
-      ret = -ECHILD;
-      goto errout;
+      return -ECHILD;
     }
 
   /* Then the task group corresponding to this PID */
@@ -120,13 +114,14 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
   nxsched_put_tcb(ctcb);
   if (group == NULL)
     {
-      ret = -ECHILD;
-      goto errout;
+      return -ECHILD;
     }
 
   /* Lock this group so that it cannot be deleted until the wait completes */
 
-  group_add_waiter(group);
+  flags = spin_lock_irqsave(&group->tg_lock);
+  group->tg_nwaiters++;
+  DEBUGASSERT(group->tg_nwaiters > 0);
 
   /* "If more than one thread is suspended in waitpid() awaiting termination
    * of the same process, exactly one thread will return the process status
@@ -163,10 +158,12 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
     {
       /* Wait if necessary for status to become available */
 
+      spin_unlock_irqrestore(&group->tg_lock, flags);
       ret = nxsem_wait(&group->tg_exitsem);
+      flags = spin_lock_irqsave(&group->tg_lock);
     }
 
-  group_del_waiter(group);
+  group->tg_nwaiters--;
 
   if (ret < 0)
     {
@@ -195,7 +192,8 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
   ret = pid;
 
 errout:
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&group->tg_lock, flags);
+  group_drop(group);
   return ret;
 }
 

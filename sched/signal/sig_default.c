@@ -281,6 +281,8 @@ static void nxsig_stop_task(int signo)
   FAR struct tcb_s *rtcb = this_task();
 #if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
   FAR struct task_group_s *group;
+  irqstate_t flags;
+  int nwaiters;
 
   DEBUGASSERT(rtcb != NULL && rtcb->group != NULL);
   group = rtcb->group;
@@ -299,13 +301,9 @@ static void nxsig_stop_task(int signo)
   group_suspend_children(rtcb);
 #endif
 
-  /* Lock the scheduler so this thread is not pre-empted until after we
-   * call nxsched_suspend().
-   */
-
-  sched_lock();
-
 #if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
+  flags = spin_lock_irqsave_nopreempt(&group->tg_lock);
+
   /* Notify via waitpid if any parent is waiting for this task to EXIT
    * or STOP.  This action is only performed if WUNTRACED is set in the
    * waitpid flags.
@@ -329,19 +327,24 @@ static void nxsig_stop_task(int signo)
 
       /* Wakeup any tasks waiting for this task to exit or stop. */
 
-      while (group->tg_exitsem.semcount < 0)
+      nwaiters = group->tg_nwaiters;
+
+      while (nwaiters > 0)
         {
+          nwaiters--;
+
           /* Wake up the thread */
 
           nxsem_post(&group->tg_exitsem);
         }
     }
+
+  spin_unlock_irqrestore_nopreempt(&group->tg_lock, flags);
 #endif
 
   /* Then, finally, suspend this the final thread of the task group */
 
   nxsched_suspend(rtcb);
-  sched_unlock();
 }
 #endif
 

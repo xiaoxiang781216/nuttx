@@ -34,8 +34,6 @@ if(CONFIG_SCHED_HAVE_PARENT)
   if(CONFIG_SCHED_CHILD_STATUS)
     list(APPEND SRCS group_childstatus.c)
   endif()
-elseif(CONFIG_SCHED_WAITPID)
-  list(APPEND SRCS group_waiter.c)
 endif()
 
 if(CONFIG_SCHED_USER_IDENTITY)

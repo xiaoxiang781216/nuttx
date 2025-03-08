@@ -28,10 +28,6 @@ ifeq ($(CONFIG_SCHED_HAVE_PARENT),y)
 ifeq ($(CONFIG_SCHED_CHILD_STATUS),y)
 CSRCS += group_childstatus.c
 endif
-else
-ifeq ($(CONFIG_SCHED_WAITPID),y)
-CSRCS += group_waiter.c
-endif
 endif
 
 ifeq ($(CONFIG_SCHED_USER_IDENTITY),y)

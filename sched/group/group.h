@@ -66,10 +66,6 @@ void group_join(FAR struct tcb_s *tcb);
 #endif
 void group_leave(FAR struct tcb_s *tcb);
 void group_drop(FAR struct task_group_s *group);
-#if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
-void group_add_waiter(FAR struct task_group_s *group);
-void group_del_waiter(FAR struct task_group_s *group);
-#endif
 
 #ifdef HAVE_GROUP_MEMBERS
 int group_foreachchild(FAR struct task_group_s *group,
