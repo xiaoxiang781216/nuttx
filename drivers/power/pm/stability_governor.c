@@ -93,13 +93,21 @@ static const struct pm_governor_s g_stability_governor_ops =
   NULL                             /* priv */
 };
 
+#ifdef PM_GOVERNOR_STABILITY_THRESH
+static const
+clock_t g_stability_governor_thresh[CONFIG_PM_NDOMAINS][PM_COUNT] =
+{
+  PM_GOVERNOR_STABILITY_THRESH
+};
+#else
 static const clock_t g_stability_governor_thresh[PM_COUNT] =
 {
   0,
   CONFIG_PM_GOVERNOR_STABILITY_IDLE_THRESH,
   CONFIG_PM_GOVERNOR_STABILITY_STANDBY_THRESH,
-  CONFIG_PM_GOVERNOR_STABILITY_SLEEP_THRESH,
+  CONFIG_PM_GOVERNOR_STABILITY_SLEEP_THRESH
 };
+#endif
 
 static struct pm_stability_governor_s g_stability_governor;
 
@@ -166,7 +174,11 @@ static void stability_governor_statechanged(int domain,
       /* PM_NORMAL always no detect, if thresh 0, also no detect */
 
       enum pm_state_e state = gdom->state_pending;
+#ifdef PM_GOVERNOR_STABILITY_THRESH
+      clock_t thresh        = g_stability_governor_thresh[domain][state];
+#else
       clock_t thresh        = g_stability_governor_thresh[state];
+#endif
       if (thresh > 0 && state != newstate)
         {
 #ifdef CONFIG_SMP
@@ -194,6 +206,7 @@ static enum pm_state_e stability_governor_checkstate(int domain)
   enum pm_state_e state_pending;
   enum pm_state_e state;
   bool wdog_wakeup;
+  clock_t thresh;
 
   gdom = &g_stability_governor.domain[domain];
   pdom = &g_pmdomains[domain];
@@ -211,13 +224,18 @@ static enum pm_state_e stability_governor_checkstate(int domain)
   gdom->state_pending = state;
   gdom->wdog_wakeup = false;
 
+#ifdef PM_GOVERNOR_STABILITY_THRESH
+  thresh = g_stability_governor_thresh[domain][state];
+#else
+  thresh = g_stability_governor_thresh[state];
+#endif
   /* If pm stability check disabled state or pm stable enough, do nothing */
 
-  if (g_stability_governor_thresh[state] > 0 &&
+  if (thresh > 0 &&
      (!wdog_wakeup || state_pending != state))
     {
       state = pdom->state;
-      if (g_stability_governor_thresh[state] > 0)
+      if (thresh > 0)
         {
           /* The domain last state can not be backward, need to holding
            * to the lowest power-level with stability check disabled
@@ -225,7 +243,7 @@ static enum pm_state_e stability_governor_checkstate(int domain)
 
           for (; state > PM_NORMAL; state--)
             {
-              if (g_stability_governor_thresh[state] == 0)
+              if (thresh == 0)
                 {
                   break;
                 }

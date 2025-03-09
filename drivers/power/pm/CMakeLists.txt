@@ -50,6 +50,15 @@ if(CONFIG_PM)
 
     list(APPEND SRCS stability_governor.c)
 
+    if(CONFIG_PM_GOVERNOR_STABILITY_THRESH)
+      string(REGEX REPLACE "^\"|\"$" "" CONFIG_PM_GOVERNOR_STABILITY_THRESH
+                           "${CONFIG_PM_GOVERNOR_STABILITY_THRESH}")
+      target_compile_definitions(
+        drivers
+        PRIVATE
+          -DPM_GOVERNOR_STABILITY_THRESH=${CONFIG_PM_GOVERNOR_STABILITY_THRESH})
+    endif()
+
   endif()
 
   if(CONFIG_PM_GOVERNOR_ACTIVITY)

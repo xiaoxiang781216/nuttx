@@ -109,9 +109,17 @@ config PM_GOVERNOR_EXPLICIT_RELAX
 
 if PM_GOVERNOR_STABILITY
 
+config PM_GOVERNOR_STABILITY_THRESH
+	string "Stability governor config domains"
+	---help---
+		Set the config value for each domain.
+		example: normal value, standby value, idle value, sleep value.
+		sample {0,0,1,100}, {0,10,100,1000}
+
 config PM_GOVERNOR_STABILITY_IDLE_THRESH
 	int "Enter idle thresh >= (ticks)"
 	default 0
+	depends on PM_GOVERNOR_STABILITY_THRESH = ""
 	---help---
 		Only if first time try goto idle, can remain wfi for (ticks)
 		and second time still try goto this state, goto idle,
@@ -122,6 +130,7 @@ config PM_GOVERNOR_STABILITY_IDLE_THRESH
 config PM_GOVERNOR_STABILITY_STANDBY_THRESH
 	int "Enter standby thresh >= (ticks)"
 	default 0
+	depends on PM_GOVERNOR_STABILITY_THRESH = ""
 	---help---
 		Only if first time try goto standby, can remain wfi for (ticks)
 		and second time still try goto this state, goto standby,
@@ -132,6 +141,7 @@ config PM_GOVERNOR_STABILITY_STANDBY_THRESH
 config PM_GOVERNOR_STABILITY_SLEEP_THRESH
 	int "Enter sleep thresh >= (ticks)"
 	default 0
+	depends on PM_GOVERNOR_STABILITY_THRESH = ""
 	---help---
 		Only if first time try goto sleep, can remain wfi for (ticks)
 		and second time still try goto this state, goto sleep,
