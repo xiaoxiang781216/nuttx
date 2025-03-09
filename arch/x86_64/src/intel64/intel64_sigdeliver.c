@@ -85,6 +85,7 @@ void x86_64_sigdeliver(void)
 
   x86_64_copystate(regs, rtcb->xcp.regs);
 
+retry:
 #ifdef CONFIG_SMP
   /* In the SMP case, up_schedule_sigaction(0) will have incremented
    * 'irqcount' in order to force us into a critical section.  Save the
@@ -124,10 +125,33 @@ void x86_64_sigdeliver(void)
   sinfo("Resuming\n");
 
 #ifdef CONFIG_SMP
-  enter_critical_section();
-#else
+  /* Restore the saved 'irqcount' and recover the critical section
+   * spinlocks.
+   *
+   * REVISIT:  irqcount should be one from the above call to
+   * enter_critical_section().  Could the saved_irqcount be zero?  That
+   * would be a problem.
+   */
+
+  DEBUGASSERT(rtcb->irqcount == 1);
+  while (rtcb->irqcount < saved_irqcount + 1)
+    {
+      enter_critical_section();
+    }
+#endif
+
+#ifndef CONFIG_SUPPRESS_INTERRUPTS
   up_irq_save();
 #endif
+
+  if (!sq_empty(&rtcb->sigpendactionq) &&
+      (rtcb->flags & TCB_FLAG_SIGNAL_ACTION) == 0)
+    {
+#ifdef CONFIG_SMP
+      leave_critical_section((uint8_t)regs[REG_RFLAGS]);
+#endif
+      goto retry;
+    }
 
   /* Modify the saved return state with the actual saved values in the
    * TCB.  This depends on the fact that nested signal handling is
@@ -139,32 +163,25 @@ void x86_64_sigdeliver(void)
    * could be modified by a hostile program.
    */
 
-  regs[REG_RIP]    = rtcb->xcp.saved_rip;
-  regs[REG_RSP]    = rtcb->xcp.saved_rsp;
-  regs[REG_RFLAGS] = rtcb->xcp.saved_rflags;
-
   /* Allows next handler to be scheduled */
 
   atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SIGDELIVER);
 
-#ifdef CONFIG_SMP
-  /* Restore the saved 'irqcount' and recover the critical section
-   * spinlocks.
-   *
-   * REVISIT:  irqcount should be one from the above call to
-   * enter_critical_section().  Could the saved_irqcount be zero?  That
-   * would be a problem.
-   */
-
-  DEBUGASSERT(rtcb->irqcount == 1);
-  while (rtcb->irqcount < saved_irqcount)
-    {
-      enter_critical_section();
-    }
-#endif
-
   /* Then restore the correct state for this thread of execution. */
 
   board_autoled_off(LED_SIGNAL);
+
+#ifdef CONFIG_SMP
+  /* We need to keep the IRQ lock until task switching */
+
+  rtcb->irqcount++;
+  leave_critical_section((uint8_t)regs[REG_RFLAGS]);
+  rtcb->irqcount--;
+#endif
+
+  regs[REG_RIP]    = rtcb->xcp.saved_rip;
+  regs[REG_RSP]    = rtcb->xcp.saved_rsp;
+  regs[REG_RFLAGS] = rtcb->xcp.saved_rflags;
+
   x86_64_fullcontextrestore(regs);
 }
