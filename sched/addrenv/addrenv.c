@@ -54,6 +54,7 @@
  */
 
 static FAR struct addrenv_s *g_addrenv[CONFIG_SMP_NCPUS];
+static spinlock_t g_addrenv_lock = SP_UNLOCKED;
 
 /****************************************************************************
  * Private Functions
@@ -130,7 +131,7 @@ int addrenv_switch(FAR struct tcb_s *tcb)
 
   next = tcb->addrenv_curr;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_addrenv_lock);
 
   cpu = this_cpu();
   curr = g_addrenv[cpu];
@@ -196,7 +197,7 @@ int addrenv_switch(FAR struct tcb_s *tcb)
 #  endif
 #endif
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_addrenv_lock, flags);
   return OK;
 }
 
@@ -223,7 +224,7 @@ FAR struct addrenv_s *addrenv_allocate(void)
     {
       /* Take reference so this won't get freed */
 
-      addrenv->refs = 1;
+      atomic_set(&addrenv->refs, 1);
     }
 
   return addrenv;
@@ -399,9 +400,7 @@ void addrenv_take(FAR struct addrenv_s *addrenv)
 {
   if (addrenv)
     {
-      irqstate_t flags = enter_critical_section();
-      addrenv->refs++;
-      leave_critical_section(flags);
+      atomic_fetch_add(&addrenv->refs, 1);
     }
 }
 
@@ -422,14 +421,12 @@ void addrenv_take(FAR struct addrenv_s *addrenv)
 
 int addrenv_give(FAR struct addrenv_s *addrenv)
 {
-  irqstate_t flags;
   int refs = 0;
 
   if (addrenv)
     {
-      flags = enter_critical_section();
-      refs = --addrenv->refs;
-      leave_critical_section(flags);
+      refs = atomic_fetch_sub(&addrenv->refs, 1);
+      refs--;
     }
 
   return refs;
