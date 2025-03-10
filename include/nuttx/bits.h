@@ -50,9 +50,7 @@
 # define BITS_PER_LONG_LONG (sizeof(unsigned long long) * BITS_PER_BYTE)
 #endif
 
-#define BIT_BYTE_MASK(nr)  (1ul << ((nr) % BITS_PER_BYTE))
-#define BIT_WORD_MASK(nr)  (1ul << ((nr) % BITS_PER_LONG))
-#define BIT_BYTE(nr)       ((nr) / BITS_PER_BYTE)
+#define BIT_MASK(nr)       (1ul << ((nr) % BITS_PER_LONG))
 #define BIT_WORD(nr)       ((nr) / BITS_PER_LONG)
 #define BIT_ULL_MASK(nr)   (1ull << ((nr) % BITS_PER_LONG_LONG))
 #define BIT_ULL_WORD(nr)   ((nr) / BITS_PER_LONG_LONG)
@@ -88,15 +86,15 @@
 
 #define set_bit(nr, addr) \
         (*(((FAR unsigned long *)(addr)) + BIT_WORD(nr)) |= \
-        BIT_WORD_MASK(nr))
+        BIT_MASK(nr))
 
 #define clear_bit(nr, addr) \
         (*(((FAR unsigned long *)(addr)) + BIT_WORD(nr)) &= \
-        ~BIT_WORD_MASK(nr))
+        ~BIT_MASK(nr))
 
 #define test_bit(nr, addr) \
         (*(((FAR unsigned long *)(addr)) + BIT_WORD(nr)) & \
-        BIT_WORD_MASK(nr))
+        BIT_MASK(nr))
 
 #define find_first_bit(addr, size) find_next_bit(addr, size, 0)
 #define find_first_zero_bit(addr, size) find_next_zero_bit(addr, size, 0)
