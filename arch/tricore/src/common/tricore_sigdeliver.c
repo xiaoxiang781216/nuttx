@@ -116,5 +116,6 @@ retry:
   board_autoled_off(LED_SIGNAL);
 
   rtcb->xcp.regs = regs;
+  rtcb->xcp.saved_regs = NULL;
   tricore_fullcontextrestore();
 }

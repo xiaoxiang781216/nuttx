@@ -184,6 +184,14 @@ void tricore_get_csainfo(csa_info_t *info)
               info->used++;
               ucx = tricore_csa2addr(ucx)[REG_UPCXI] & FCX_FREE;
             }
+
+          ucx = tricore_addr2csa(g_pidhash[ndx]->xcp.saved_regs) & FCX_FREE;
+
+          while (ucx != 0)
+            {
+              info->used++;
+              ucx = tricore_csa2addr(ucx)[REG_UPCXI] & FCX_FREE;
+            }
         }
     }
 
