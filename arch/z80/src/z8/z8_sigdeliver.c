@@ -79,7 +79,7 @@ void z80_sigdeliver(void)
 
   sinfo("rtcb=%p sigpendactionq.head=%p\n",
         rtcb, rtcb->sigpendactionq.head);
-  DEBUGASSERT((rtcb->flags & TCB_FLAG_SIGDELIVER) != 0);
+  DEBUGASSERT((atomic_read(&rtcb->flags) & TCB_FLAG_SIGDELIVER) != 0);
 
   /* Save the return state on the stack. */
 
@@ -120,7 +120,7 @@ void z80_sigdeliver(void)
 
   /* Allows next handler to be scheduled */
 
-  rtcb->flags &= ~TCB_FLAG_SIGDELIVER;
+  atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SIGDELIVER);
 
   /* Then restore the correct state for this thread of execution. */
 

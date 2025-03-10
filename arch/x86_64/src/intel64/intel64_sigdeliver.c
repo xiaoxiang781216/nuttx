@@ -71,7 +71,7 @@ void x86_64_sigdeliver(void)
 
   sinfo("rtcb=%p sigpendactionq.head=%p\n",
         rtcb, rtcb->sigpendactionq.head);
-  DEBUGASSERT((rtcb->flags & TCB_FLAG_SIGDELIVER) != 0);
+  DEBUGASSERT((atomic_read(&rtcb->flags) & TCB_FLAG_SIGDELIVER) != 0);
 
   /* Align regs to 64 byte boundary for XSAVE */
 
@@ -145,7 +145,7 @@ void x86_64_sigdeliver(void)
 
   /* Allows next handler to be scheduled */
 
-  rtcb->flags &= ~TCB_FLAG_SIGDELIVER;
+  atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SIGDELIVER);
 
 #ifdef CONFIG_SMP
   /* Restore the saved 'irqcount' and recover the critical section

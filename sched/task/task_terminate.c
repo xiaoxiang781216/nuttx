@@ -116,16 +116,14 @@ int nxtask_terminate(pid_t pid)
       return -ESRCH;
     }
 
-  flags = enter_critical_section();
-  if (dtcb->flags & TCB_FLAG_EXIT_PROCESSING)
+  if (atomic_fetch_or(&dtcb->flags, TCB_FLAG_EXIT_PROCESSING) &
+                      TCB_FLAG_EXIT_PROCESSING)
     {
-      leave_critical_section(flags);
       nxsched_put_tcb(dtcb);
       return -ESRCH;
     }
 
-  dtcb->flags |= TCB_FLAG_EXIT_PROCESSING | TCB_FLAG_KILL_PROCESSING;
-  leave_critical_section(flags);
+  atomic_fetch_or(&dtcb->flags, TCB_FLAG_KILL_PROCESSING);
 
   /* Even if we decrease the reference count here,
    * dtcb won't be released elsewhere, because TCB already
@@ -145,11 +143,11 @@ int nxtask_terminate(pid_t pid)
       dtcb->cpu != this_cpu())
     {
       cpu_set_t affinity;
-      uint16_t tcb_flags;
+      atomic_t tcb_flags;
       int ret;
 
-      tcb_flags = dtcb->flags;
-      dtcb->flags |= TCB_FLAG_CPU_LOCKED;
+      tcb_flags = atomic_fetch_or(&dtcb->flags, TCB_FLAG_CPU_LOCKED);
+
       affinity = dtcb->affinity;
       CPU_SET(dtcb->cpu, &dtcb->affinity);
 
@@ -164,7 +162,7 @@ int nxtask_terminate(pid_t pid)
           return ret;
         }
 
-      dtcb->flags = tcb_flags;
+      atomic_set(&dtcb->flags, tcb_flags);
       dtcb->affinity = affinity;
     }
   else
@@ -194,5 +192,6 @@ int nxtask_terminate(pid_t pid)
 
   /* Deallocate its TCB */
 
-  return nxsched_release_tcb(dtcb, dtcb->flags & TCB_FLAG_TTYPE_MASK);
+  return nxsched_release_tcb(dtcb, atomic_read(&dtcb->flags) &
+                             TCB_FLAG_TTYPE_MASK);
 }

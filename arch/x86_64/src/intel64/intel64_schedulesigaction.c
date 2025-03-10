@@ -83,7 +83,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
   if (tcb == this_task() && !up_interrupt_context())
     {
       nxsig_deliver(tcb);
-      tcb->flags &= ~TCB_FLAG_SIGDELIVER;
+      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_SIGDELIVER);
     }
 
   /* Otherwise, we are (1) signaling a task is not running from an

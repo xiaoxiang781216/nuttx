@@ -212,10 +212,12 @@ int32_t nx_atomic_exchange_4(FAR volatile void *ptr, int32_t value,
                              int memorder);
 int64_t nx_atomic_exchange_8(FAR volatile void *ptr, int64_t value,
                              int memorder);
-bool nx_atomic_compare_exchange_4(FAR volatile void *ptr, FAR void *expect,
+bool nx_atomic_compare_exchange_4(FAR volatile void *ptr,
+                                  FAR volatile void *expect,
                                   int32_t desired, bool weak,
                                   int success, int failure);
-bool nx_atomic_compare_exchange_8(FAR volatile void *ptr, FAR void *expect,
+bool nx_atomic_compare_exchange_8(FAR volatile void *ptr,
+                                  FAR volatile void *expect,
                                   int64_t desired, bool weak,
                                   int success, int failure);
 int32_t nx_atomic_fetch_add_4(FAR volatile void *ptr, int32_t value,

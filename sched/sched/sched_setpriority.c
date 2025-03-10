@@ -66,7 +66,7 @@ static int reprioritize_handler(FAR void *cookie)
   tcb = nxsched_get_tcb(arg->pid);
 
   if (!tcb || tcb->task_state == TSTATE_TASK_INVALID ||
-      (tcb->flags & TCB_FLAG_EXIT_PROCESSING) != 0)
+      (atomic_read(&tcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
     {
       leave_critical_section(flags);
       nxsched_put_tcb(tcb);
@@ -76,7 +76,7 @@ static int reprioritize_handler(FAR void *cookie)
   if (arg->need_restore)
     {
       tcb->affinity = arg->saved_affinity;
-      tcb->flags &= ~TCB_FLAG_CPU_LOCKED;
+      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_CPU_LOCKED);
     }
 
   if (nxsched_reprioritize_rtr(tcb, arg->sched_priority))
@@ -237,18 +237,16 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
             {
               struct reprioritize_arg_s arg;
 
-              if ((tcb->flags & TCB_FLAG_CPU_LOCKED) != 0)
+              arg.pid = tcb->pid;
+              if (atomic_fetch_or(&tcb->flags, TCB_FLAG_CPU_LOCKED) &
+                  TCB_FLAG_CPU_LOCKED)
                 {
-                  arg.pid = tcb->pid;
                   arg.need_restore = false;
                 }
               else
                 {
-                  arg.pid = tcb->pid;
                   arg.saved_affinity = tcb->affinity;
                   arg.need_restore = true;
-
-                  tcb->flags |= TCB_FLAG_CPU_LOCKED;
                   CPU_SET(tcb->cpu, &tcb->affinity);
                 }
 

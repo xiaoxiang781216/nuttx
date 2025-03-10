@@ -185,7 +185,8 @@ int addrenv_switch(FAR struct tcb_s *tcb)
     }
 
 #ifdef CONFIG_ARCH_STACK_PROTECT
-  if ((tcb->flags & TCB_FLAG_TTYPE_MASK) != TCB_FLAG_TTYPE_KERNEL)
+  if ((atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK) !=
+      TCB_FLAG_TTYPE_KERNEL)
     {
       up_addrenv_ustackswitch(tcb);
     }

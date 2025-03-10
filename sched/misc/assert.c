@@ -421,11 +421,11 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
          , tcb->cpu
 #endif
          , tcb->sched_priority
-         , g_policy[(tcb->flags & TCB_FLAG_POLICY_MASK) >>
+         , g_policy[(atomic_read(&tcb->flags) & TCB_FLAG_POLICY_MASK) >>
                     TCB_FLAG_POLICY_SHIFT]
-         , g_ttypenames[(tcb->flags & TCB_FLAG_TTYPE_MASK)
+         , g_ttypenames[(atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK)
                         >> TCB_FLAG_TTYPE_SHIFT]
-         , tcb->flags & TCB_FLAG_EXIT_PROCESSING ? 'P' : '-'
+         , atomic_read(&tcb->flags) & TCB_FLAG_EXIT_PROCESSING ? 'P' : '-'
          , state
          , SIGSET_ELEM(&tcb->sigprocmask)
          , tcb->stack_base_ptr
@@ -689,7 +689,8 @@ static void dump_assert_info(FAR struct tcb_s *rtcb,
   struct utsname name;
 
   if (rtcb->group &&
-      (rtcb->flags & TCB_FLAG_TTYPE_MASK) != TCB_FLAG_TTYPE_KERNEL)
+      (atomic_read(&rtcb->flags) & TCB_FLAG_TTYPE_MASK) !=
+       TCB_FLAG_TTYPE_KERNEL)
     {
       ptcb = nxsched_get_tcb(rtcb->group->tg_pid);
     }
@@ -863,7 +864,8 @@ void _assert(FAR const char *filename, int linenum,
     }
 
 #if CONFIG_BOARD_RESET_ON_ASSERT < 2
-  if (irq || (rtcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_KERNEL)
+  if (irq || (atomic_read(&rtcb->flags) & TCB_FLAG_TTYPE_MASK) ==
+      TCB_FLAG_TTYPE_KERNEL)
 #endif
     {
       /* Disable KASAN to avoid false positive */

@@ -101,12 +101,13 @@ int riscv_exception(int mcause, void *regs, void *args)
          cause, READ_CSR(CSR_EPC), READ_CSR(CSR_TVAL));
 
 #ifdef CONFIG_ARCH_KERNEL_STACK
-  if ((tcb->flags & TCB_FLAG_TTYPE_MASK) != TCB_FLAG_TTYPE_KERNEL)
+  if ((atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK) !=
+      TCB_FLAG_TTYPE_KERNEL)
     {
       _alert("Segmentation fault in PID %d: %s\n",
              tcb->pid, get_task_name(tcb));
 
-      tcb->flags |= TCB_FLAG_FORCED_CANCEL;
+      atomic_fetch_or(&tcb->flags, TCB_FLAG_FORCED_CANCEL);
 
       /* Return to _exit function in privileged mode with argument SIGSEGV */
 

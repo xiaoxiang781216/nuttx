@@ -62,7 +62,7 @@ void minerva_sigdeliver(void)
 
   sinfo("rtcb=%p sigpendactionq.head=%p\n",
         rtcb, rtcb->sigpendactionq.head);
-  DEBUGASSERT((rtcb->flags & TCB_FLAG_SIGDELIVER) != 0);
+  DEBUGASSERT((atomic_read(&rtcb->flags) & TCB_FLAG_SIGDELIVER) != 0);
 
   /* Save the real return state on the stack. */
 
@@ -75,7 +75,7 @@ void minerva_sigdeliver(void)
    * signals.
    */
 
-  rtcb->flags &= ~TCB_FLAG_SIGDELIVER;
+  atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SIGDELIVER);
 
 #  ifndef CONFIG_SUPPRESS_INTERRUPTS
   /* Then make sure that interrupts are enabled.  Signal handlers must always

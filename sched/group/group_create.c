@@ -233,7 +233,7 @@ void group_postinitialize(FAR struct tcb_s *tcb)
   /* Allocate mm_map list if required */
 
   mm_map_initialize(&group->tg_mm_map,
-                    (tcb->flags & TCB_FLAG_TTYPE_KERNEL) != 0);
+                    (atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_KERNEL) != 0);
 
 #ifdef HAVE_GROUP_MEMBERS
   /* Assign the PID of this new task as a member of the group. */

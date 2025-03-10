@@ -62,7 +62,7 @@ void z16_sigdeliver(void)
 
   sinfo("rtcb=%p sigpendactionq.head=%p\n",
         rtcb, rtcb->sigpendactionq.head);
-  DEBUGASSERT((rtcb->flags & TCB_FLAG_SIGDELIVER) != 0);
+  DEBUGASSERT((atomic_read(&rtcb->flags) & TCB_FLAG_SIGDELIVER) != 0);
 
   /* Save the return state on the stack. */
 
@@ -100,7 +100,7 @@ void z16_sigdeliver(void)
 
   regs32[REG_PC / 2] = rtcb->xcp.saved_pc;
   regs[REG_FLAGS]    = rtcb->xcp.saved_i;
-  rtcb->flags &= ~TCB_FLAG_SIGDELIVER;
+  atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SIGDELIVER);
 
   /* Then restore the correct state for this thread of execution. */
 

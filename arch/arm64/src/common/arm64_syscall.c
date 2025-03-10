@@ -118,7 +118,7 @@ uintptr_t dispatch_syscall(unsigned int nbr, uintptr_t parm1,
 
   /* Indicate that we are in a syscall handler */
 
-  rtcb->flags |= TCB_FLAG_SYSCALL;
+  atomic_fetch_or(&rtcb->flags, TCB_FLAG_SYSCALL);
 
   /* Offset a0 to account for the reserved syscalls */
 
@@ -134,7 +134,7 @@ uintptr_t dispatch_syscall(unsigned int nbr, uintptr_t parm1,
 
   /* System call is now done */
 
-  rtcb->flags &= ~TCB_FLAG_SYSCALL;
+  atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SYSCALL);
 
   /* Unmask any pending signals now */
 

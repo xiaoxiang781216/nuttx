@@ -70,7 +70,7 @@ void xtensa_sig_deliver(void)
 
   sinfo("rtcb=%p sigpendactionq.head=%p\n",
         rtcb, rtcb->sigpendactionq.head);
-  DEBUGASSERT((rtcb->flags & TCB_FLAG_SIGDELIVER) != 0);
+  DEBUGASSERT((atomic_read(&rtcb->flags) & TCB_FLAG_SIGDELIVER) != 0);
 
 retry:
 #ifdef CONFIG_SMP
@@ -129,7 +129,7 @@ retry:
 #endif
 
   if (!sq_empty(&rtcb->sigpendactionq) &&
-      (rtcb->flags & TCB_FLAG_SIGNAL_ACTION) == 0)
+      (atomic_read(&rtcb->flags) & TCB_FLAG_SIGNAL_ACTION) == 0)
     {
 #ifdef CONFIG_SMP
       leave_critical_section((regs[REG_PS]));
@@ -149,7 +149,7 @@ retry:
 
   /* Allows next handler to be scheduled */
 
-  rtcb->flags &= ~TCB_FLAG_SIGDELIVER;
+  atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SIGDELIVER);
 
   /* Then restore the correct state for this thread of execution.
    */

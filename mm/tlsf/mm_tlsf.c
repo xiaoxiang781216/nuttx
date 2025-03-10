@@ -323,7 +323,7 @@ static void memdump_backtrace(FAR struct mm_heap_s *heap,
 #  if CONFIG_MM_BACKTRACE > 0
   tcb = nxsched_get_tcb(buf->pid);
   if (heap->mm_procfs.backtrace ||
-      (tcb && tcb->flags & TCB_FLAG_HEAP_DUMP))
+      (tcb && atomic_read(&tcb->flags) & TCB_FLAG_HEAP_DUMP))
     {
       ret = sched_backtrace(buf->pid, buf->backtrace,
                             CONFIG_MM_BACKTRACE,

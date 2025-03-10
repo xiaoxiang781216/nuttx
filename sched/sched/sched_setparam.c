@@ -120,7 +120,8 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
 #ifdef CONFIG_SCHED_SPORADIC
   /* Update parameters associated with SCHED_SPORADIC */
 
-  if ((rtcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_SPORADIC)
+  if ((atomic_read(&rtcb->flags) & TCB_FLAG_POLICY_MASK) ==
+      TCB_FLAG_SCHED_SPORADIC)
     {
       FAR struct sporadic_s *sporadic;
       irqstate_t flags;

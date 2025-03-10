@@ -81,6 +81,6 @@ void up_schedule_sigaction(struct tcb_s *tcb)
   if (tcb == this_task())
     {
       nxsig_deliver(tcb);
-      tcb->flags &= ~TCB_FLAG_SIGDELIVER;
+      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_SIGDELIVER);
     }
 }

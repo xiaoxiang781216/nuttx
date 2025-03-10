@@ -72,7 +72,7 @@ static int sig_handler(FAR void *cookie)
   tcb = nxsched_get_tcb(arg->pid);
 
   if (!tcb || tcb->task_state == TSTATE_TASK_INVALID ||
-      (tcb->flags & TCB_FLAG_EXIT_PROCESSING) != 0)
+      (atomic_read(&tcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
     {
       /* There is no TCB with this pid or, if there is, it is not a task. */
 
@@ -84,10 +84,10 @@ static int sig_handler(FAR void *cookie)
   if (arg->need_restore)
     {
       tcb->affinity = arg->saved_affinity;
-      tcb->flags &= ~TCB_FLAG_CPU_LOCKED;
+      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_CPU_LOCKED);
     }
 
-  if ((tcb->flags & TCB_FLAG_SIGDELIVER) != 0)
+  if ((atomic_read(&tcb->flags) & TCB_FLAG_SIGDELIVER) != 0)
     {
       up_schedule_sigaction(tcb);
     }
@@ -163,37 +163,36 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
            * up_schedule_sigaction()
            */
 
-          if ((stcb->flags & TCB_FLAG_SIGDELIVER) == 0)
+          if ((atomic_read(&stcb->flags) & TCB_FLAG_SIGDELIVER) == 0)
             {
 #ifdef CONFIG_SMP
               int cpu = stcb->cpu;
               int me  = this_cpu();
 
-              stcb->flags |= TCB_FLAG_SIGDELIVER;
+              atomic_fetch_or(&stcb->flags, TCB_FLAG_SIGDELIVER);
               if (cpu != me && stcb->task_state == TSTATE_TASK_RUNNING)
                 {
                   struct sig_arg_s arg;
 
-                  if ((stcb->flags & TCB_FLAG_CPU_LOCKED) != 0)
+                  arg.pid = stcb->pid;
+                  if (atomic_fetch_or(&stcb->flags, TCB_FLAG_CPU_LOCKED) &
+                      TCB_FLAG_CPU_LOCKED)
                     {
-                      arg.need_restore   = false;
+                      arg.need_restore = false;
                     }
                   else
                     {
                       arg.saved_affinity = stcb->affinity;
                       arg.need_restore   = true;
-
-                      stcb->flags        |= TCB_FLAG_CPU_LOCKED;
                       CPU_SET(stcb->cpu, &stcb->affinity);
                     }
 
-                  arg.pid = stcb->pid;
                   nxsched_smp_call_single(stcb->cpu, sig_handler, &arg);
                 }
               else
 #endif
                 {
-                  stcb->flags |= TCB_FLAG_SIGDELIVER;
+                  atomic_fetch_or(&stcb->flags, TCB_FLAG_SIGDELIVER);
                   up_schedule_sigaction(stcb);
                 }
             }
@@ -421,7 +420,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
   /* Return ESRCH when thread was in exit processing */
 
-  if ((stcb->flags & TCB_FLAG_EXIT_PROCESSING) != 0)
+  if ((atomic_read(&stcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
     {
       return -ESRCH;
     }
@@ -462,7 +461,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
    * signal handlers.
    */
 
-  if ((masked == 1) || (stcb->flags & TCB_FLAG_SYSCALL) != 0)
+  if ((masked == 1) || (atomic_read(&stcb->flags) & TCB_FLAG_SYSCALL) != 0)
 #else
   /* Check if the signal is masked. In that case, it will be added to the
    * list of pending signals.

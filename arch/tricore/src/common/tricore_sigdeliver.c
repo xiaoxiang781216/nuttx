@@ -61,7 +61,7 @@ void tricore_sigdeliver(void)
 
   sinfo("rtcb=%p sigpendactionq.head=%p\n",
         rtcb, rtcb->sigpendactionq.head);
-  DEBUGASSERT((rtcb->flags & TCB_FLAG_SIGDELIVER) != 0);
+  DEBUGASSERT((atomic_read(&rtcb->flags) & TCB_FLAG_SIGDELIVER) != 0);
 
 retry:
 
@@ -92,7 +92,7 @@ retry:
 #endif
 
   if (!sq_empty(&rtcb->sigpendactionq) &&
-      (rtcb->flags & TCB_FLAG_SIGNAL_ACTION) == 0)
+      (atomic_read(&rtcb->flags) & TCB_FLAG_SIGNAL_ACTION) == 0)
     {
       goto retry;
     }
@@ -107,7 +107,7 @@ retry:
    * could be modified by a hostile program.
    */
 
-  rtcb->flags &= ~TCB_FLAG_SIGDELIVER;
+  atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SIGDELIVER);
 
   /* Then restore the correct state for this thread of
    * execution.

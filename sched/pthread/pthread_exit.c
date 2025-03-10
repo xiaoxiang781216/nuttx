@@ -66,8 +66,6 @@
 void nx_pthread_exit(FAR void *exit_value)
 {
   FAR struct tcb_s *tcb = this_task();
-  irqstate_t flags;
-  bool exiting = false;
   sigset_t set;
   int status;
 
@@ -98,12 +96,6 @@ void nx_pthread_exit(FAR void *exit_value)
       _exit(EXIT_FAILURE);
     }
 
-  /* Make sure that we are in a critical section with local interrupts.
-   * The IRQ state will be restored when the next task is started.
-   */
-
-  flags = enter_critical_section();
-
   /* Perform common task termination logic.  This will get called again later
    * through logic kicked off by up_exit().
    *
@@ -116,18 +108,8 @@ void nx_pthread_exit(FAR void *exit_value)
    * once, or does something very naughty.
    */
 
-  if (tcb->flags & TCB_FLAG_EXIT_PROCESSING)
-    {
-      exiting = true;
-    }
-  else
-    {
-      tcb->flags |= TCB_FLAG_EXIT_PROCESSING;
-    }
-
-  leave_critical_section(flags);
-
-  if (exiting)
+  if (atomic_fetch_or(&tcb->flags, TCB_FLAG_EXIT_PROCESSING) &
+      TCB_FLAG_EXIT_PROCESSING)
     {
       /* If the TCB is already in the exiting state, we
        * should allow the killing task to execute normally first.

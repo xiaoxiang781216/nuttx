@@ -198,7 +198,8 @@ void group_leave(FAR struct tcb_s *tcb)
         {
           /* Yes.. Release all of the resource held by the task group */
 
-          group_release(group, tcb->flags & TCB_FLAG_TTYPE_MASK);
+          group_release(group,
+                        atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK);
         }
     }
 }
@@ -251,7 +252,7 @@ void group_drop(FAR struct task_group_s *group)
 
       /* Release the group container itself */
 
-      if (tcb->flags & TCB_FLAG_FREE_TCB)
+      if (atomic_read(&tcb->flags) & TCB_FLAG_FREE_TCB)
         {
           kmm_free(tcb);
         }

@@ -68,7 +68,7 @@ static int restart_handler(FAR void *cookie)
 
   tcb = nxsched_get_tcb(arg->pid);
   if (!tcb || tcb->task_state == TSTATE_TASK_INVALID ||
-      (tcb->flags & TCB_FLAG_EXIT_PROCESSING) != 0)
+      (atomic_read(&tcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
     {
       /* There is no TCB with this pid or, if there is, it is not a task. */
 
@@ -80,7 +80,7 @@ static int restart_handler(FAR void *cookie)
   if (arg->need_restore)
     {
       tcb->affinity = arg->saved_affinity;
-      tcb->flags &= ~TCB_FLAG_CPU_LOCKED;
+      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_CPU_LOCKED);
     }
 
   nxsched_remove_readytorun(tcb);
@@ -214,7 +214,7 @@ static int nxtask_restart(pid_t pid)
 
   tcb = nxsched_get_tcb(pid);
 #ifndef CONFIG_DISABLE_PTHREAD
-  if (!tcb || (tcb->flags & TCB_FLAG_TTYPE_MASK) ==
+  if (!tcb || (atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK) ==
       TCB_FLAG_TTYPE_PTHREAD)
 #else
   if (!tcb)
@@ -233,18 +233,16 @@ static int nxtask_restart(pid_t pid)
       struct restart_arg_s arg;
       int cpu = tcb->cpu;
 
-      if ((tcb->flags & TCB_FLAG_CPU_LOCKED) != 0)
+      arg.pid = tcb->pid;
+      if (atomic_fetch_or(&tcb->flags, TCB_FLAG_CPU_LOCKED) &
+          TCB_FLAG_CPU_LOCKED)
         {
-          arg.pid = tcb->pid;
           arg.need_restore = false;
         }
       else
         {
-          arg.pid = tcb->pid;
           arg.saved_affinity = tcb->affinity;
           arg.need_restore = true;
-
-          tcb->flags |= TCB_FLAG_CPU_LOCKED;
           CPU_SET(tcb->cpu, &tcb->affinity);
         }
 
@@ -253,7 +251,7 @@ static int nxtask_restart(pid_t pid)
 
       tcb = nxsched_get_tcb(pid);
       if (!tcb || tcb->task_state != TSTATE_TASK_INVALID ||
-          (tcb->flags & TCB_FLAG_EXIT_PROCESSING) != 0)
+          (atomic_read(&tcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
         {
           ret = -ESRCH;
           goto errout_with_lock;

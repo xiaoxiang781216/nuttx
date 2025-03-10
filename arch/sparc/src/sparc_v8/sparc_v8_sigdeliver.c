@@ -79,7 +79,7 @@ void sparc_sigdeliver(void)
 
   sinfo("rtcb=%p sigpendactionq.head=%p\n",
         rtcb, rtcb->sigpendactionq.head);
-  DEBUGASSERT((rtcb->flags & TCB_FLAG_SIGDELIVER) != 0);
+  DEBUGASSERT((atomic_read(&rtcb->flags) & TCB_FLAG_SIGDELIVER) != 0);
 
   /* Save the return state on the stack. */
 
@@ -146,7 +146,7 @@ retry:
   set_errno(saved_errno);
 
   if (!sq_empty(&rtcb->sigpendactionq) &&
-      (rtcb->flags & TCB_FLAG_SIGNAL_ACTION) == 0)
+      (atomic_read(&rtcb->flags) & TCB_FLAG_SIGNAL_ACTION) == 0)
     {
 #ifdef CONFIG_SMP
       leave_critical_section((regs[REG_PSR]));
@@ -167,7 +167,7 @@ retry:
   regs[REG_PC]     = rtcb->xcp.saved_pc;
   regs[REG_NPC]    = rtcb->xcp.saved_npc;
   regs[REG_PSR]    = rtcb->xcp.saved_status;
-  rtcb->flags &= ~TCB_FLAG_SIGDELIVER;
+  atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SIGDELIVER);
 
 #ifdef CONFIG_SMP
   /* Restore the saved 'irqcount' and recover the critical section

@@ -93,7 +93,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
           /* In this case just deliver the signal now. */
 
           nxsig_deliver(tcb);
-          tcb->flags &= ~TCB_FLAG_SIGDELIVER;
+          atomic_fetch_and(&tcb->flags, ~TCB_FLAG_SIGDELIVER);
         }
 
       /* CASE 2:  We are in an interrupt handler AND the
@@ -192,7 +192,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
            */
 
           nxsig_deliver(tcb);
-          tcb->flags &= ~TCB_FLAG_SIGDELIVER;
+          atomic_fetch_and(&tcb->flags, ~TCB_FLAG_SIGDELIVER);
         }
 
       /* CASE 2:  The task that needs to receive the signal is running.

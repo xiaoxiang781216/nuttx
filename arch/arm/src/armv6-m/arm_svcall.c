@@ -201,7 +201,7 @@ int arm_svcall(int irq, void *context, void *arg)
            * the system call.
            */
 
-          rtcb->flags          &= ~TCB_FLAG_SYSCALL;
+          atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SYSCALL);
           nxsig_unmask_pendingsignal();
         }
         break;
@@ -404,7 +404,7 @@ int arm_svcall(int irq, void *context, void *arg)
 
           /* Indicate that we are in a syscall handler. */
 
-          rtcb->flags         |= TCB_FLAG_SYSCALL;
+          atomic_fetch_or(&rtcb->flags, TCB_FLAG_SYSCALL);
 #else
           svcerr("ERROR: Bad SYS call: %" PRId32 "\n", regs[REG_R0]);
 #endif

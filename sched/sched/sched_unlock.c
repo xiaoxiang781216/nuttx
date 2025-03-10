@@ -102,8 +102,8 @@ void sched_unlock(void)
        * timer for the next time slice.
        */
 
-      if ((rtcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_RR &&
-          rtcb->timeslice == 0)
+      if ((atomic_read(&rtcb->flags) & TCB_FLAG_POLICY_MASK) ==
+          TCB_FLAG_SCHED_RR && rtcb->timeslice == 0)
         {
           /* Yes.. that is the situation.  But one more thing.  The call
            * to nxsched_merge_pending() above may have actually replaced
@@ -117,11 +117,11 @@ void sched_unlock(void)
               rtcb->timeslice = MSEC2TICK(CONFIG_RR_INTERVAL);
             }
 #  ifdef CONFIG_SCHED_TICKLESS
-          else if ((rtcb->flags & TCB_FLAG_PREEMPT_SCHED) == 0)
+          else if ((atomic_fetch_or(&rtcb->flags, TCB_FLAG_PREEMPT_SCHED) &
+                    TCB_FLAG_PREEMPT_SCHED) == 0)
             {
-              rtcb->flags |= TCB_FLAG_PREEMPT_SCHED;
               nxsched_reassess_timer();
-              rtcb->flags &= ~TCB_FLAG_PREEMPT_SCHED;
+              atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_PREEMPT_SCHED);
             }
 #  endif
         }
@@ -138,8 +138,8 @@ void sched_unlock(void)
        * for the next time slice.
        */
 
-      if ((rtcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_SPORADIC
-          && rtcb->timeslice < 0)
+      if ((atomic_read(&rtcb->flags) & TCB_FLAG_POLICY_MASK) ==
+          TCB_FLAG_SCHED_SPORADIC && rtcb->timeslice < 0)
         {
           /* Yes.. that is the situation.  Force the low-priority state
            * now
@@ -153,11 +153,11 @@ void sched_unlock(void)
            */
 
           if (rtcb == this_task() &&
-              (rtcb->flags & TCB_FLAG_PREEMPT_SCHED) == 0)
+              (atomic_fetch_or(&rtcb->flags, TCB_FLAG_PREEMPT_SCHED) &
+               TCB_FLAG_PREEMPT_SCHED) == 0)
             {
-              rtcb->flags |= TCB_FLAG_PREEMPT_SCHED;
               nxsched_reassess_timer();
-              rtcb->flags &= ~TCB_FLAG_PREEMPT_SCHED;
+              atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_PREEMPT_SCHED);
             }
 #  endif
         }

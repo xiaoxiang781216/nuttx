@@ -84,7 +84,7 @@ static spinlock_t g_atomic_lock = SP_UNLOCKED;
 #define CMP_EXCHANGE(fn, n, type)                                    \
                                                                      \
   bool weak_function CONCATENATE(fn, n)(FAR volatile void *mem,      \
-                                        FAR void *expect,            \
+                                        FAR volatile void *expect,   \
                                         type desired, bool weak,     \
                                         int success, int failure)    \
   {                                                                  \

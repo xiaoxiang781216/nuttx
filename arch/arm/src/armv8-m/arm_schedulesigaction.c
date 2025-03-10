@@ -97,7 +97,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
        */
 
       nxsig_deliver(tcb);
-      tcb->flags &= ~TCB_FLAG_SIGDELIVER;
+      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_SIGDELIVER);
     }
   else if (tcb == rtcb && ipsr != NVIC_IRQ_PENDSV)
     {

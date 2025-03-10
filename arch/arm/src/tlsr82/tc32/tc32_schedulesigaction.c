@@ -90,7 +90,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
       /* In this case just deliver the signal now. */
 
       nxsig_deliver(tcb);
-      tcb->flags &= ~TCB_FLAG_SIGDELIVER;
+      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_SIGDELIVER);
     }
 
   /* Otherwise, we are (1) signaling a task is not running
