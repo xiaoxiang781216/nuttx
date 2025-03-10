@@ -288,10 +288,10 @@ class RPMsgDump(gdb.Command):
             rdev = utils.Value(int(rpmsg) + utils.sizeof("struct rpmsg_s"))
             rdev = rdev.cast(utils.lookup_type("struct rpmsg_device").pointer())
             gdb.write(
-                f"Rpmsg:\n"
-                f"rpmsg:{rpmsg} localcpu:{rpmsg['local_cpuname']} remotecpu:{rpmsg['cpuname']}\n"
+                f"Rpmsg Device: rpmsg:{rpmsg} rdev:{rdev} "
+                f"localcpu:{rpmsg['local_cpuname']} remotecpu:{rpmsg['cpuname']}\n"
             )
-            if args.full:
+            if not transport_only:
                 self.dump_rdev(rdev)
             self.dump_rpmsg_virtio(rdev)
             self.dump_rpmsg_port(rdev)
