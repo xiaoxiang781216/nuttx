@@ -555,9 +555,9 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
         }
     }
 
+errout_with_state:
   net_unlock();
 
-errout_with_state:
   pkt_recvfrom_uninitialize(&state);
 
   return ret;
