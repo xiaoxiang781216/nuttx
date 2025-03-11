@@ -109,6 +109,17 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, int priority,
     {
       tcb->addrenv_own = NULL;
     }
+  else if (tcb->addrenv_own == NULL)
+    {
+      FAR struct addrenv_s *addrenv = addrenv_allocate();
+      if (addrenv == NULL)
+        {
+          ret = -ENOMEM;
+          goto errout;
+        }
+
+      addrenv_attach(tcb, addrenv);
+    }
 #endif
 
   /* Create a new task group */
@@ -116,8 +127,7 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, int priority,
   ret = group_initialize(tcb, tcb->flags);
   if (ret < 0)
     {
-      sched_trace_end();
-      return ret;
+      goto errout;
     }
 
 #ifndef CONFIG_DISABLE_PTHREAD
@@ -228,6 +238,7 @@ errout_with_group:
 
   group_leave(tcb);
 
+errout:
   sched_trace_end();
   return ret;
 }
