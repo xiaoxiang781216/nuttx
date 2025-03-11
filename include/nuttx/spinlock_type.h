@@ -29,6 +29,9 @@
 
 #include <nuttx/config.h>
 #include <sys/types.h>
+#if defined(CONFIG_SPINLOCK_DEBUG)
+#  include <nuttx/queue.h>
+#endif
 
 #undef EXTERN
 #if defined(__cplusplus)
@@ -39,8 +42,26 @@ extern "C"
 #define EXTERN extern
 #endif
 
+#if defined(CONFIG_SPINLOCK_DEBUG)
+typedef struct spinlock_debug_s
+{
+FAR sq_entry_t *flink;
+FAR struct tcb_s *holder;
+FAR void *caller;
+} spinlock_debug_t;
+#  define SPINLOCK_DEBUG_INFO spinlock_debug_t info;
+#  define SPINLOCK_DEBUG_INIT {NULL, NULL, NULL},
+#else
+#  define SPINLOCK_DEBUG_INFO
+#  define SPINLOCK_DEBUG_INIT
+#endif
+
 #if defined(CONFIG_RW_SPINLOCK)
-typedef atomic_t rwlock_t;
+typedef struct rwlock_s
+{
+  SPINLOCK_DEBUG_INFO
+  atomic_t lock;
+} rwlock_t;
 #  define RW_SP_UNLOCKED      0
 #  define RW_SP_READ_LOCKED   1
 #  define RW_SP_WRITE_LOCKED -1
@@ -49,17 +70,23 @@ typedef atomic_t rwlock_t;
 #if defined(CONFIG_TICKET_SPINLOCK)
 typedef struct spinlock_s
 {
+  SPINLOCK_DEBUG_INFO
   atomic_t owner;
   atomic_t next;
 } spinlock_t;
 
-#  define SP_UNLOCKED (spinlock_t){0, 0}
-#  define SP_LOCKED   (spinlock_t){0, 1}
+#  define SP_UNLOCKED (spinlock_t){SPINLOCK_DEBUG_INIT 0, 0}
+#  define SP_LOCKED   (spinlock_t){SPINLOCK_DEBUG_INIT 0, 1}
 #elif defined(CONFIG_SPINLOCK) || !defined(CONFIG_HAVE_ZERO_SIZE_ARRAY)
-typedef atomic_t spinlock_t;
+typedef struct spinlock_s
+{
+  SPINLOCK_DEBUG_INFO
+  atomic_t lock;
+} spinlock_t;
 
-#  define SP_UNLOCKED 0
-#  define SP_LOCKED   1
+#  define SP_UNLOCKED (spinlock_t){SPINLOCK_DEBUG_INIT 0}
+#  define SP_LOCKED   (spinlock_t){SPINLOCK_DEBUG_INIT 1}
+
 #else
 #  define SP_LOCKED      SP_UNLOCKED
 #  define SP_UNLOCKED    \
@@ -77,17 +104,22 @@ typedef struct spinlock_s spinlock_t;
 #endif
 
 #define RSPINLOCK_CPU_INVALID (-1)
-#define RSPINLOCK_INITIALIZER {0}
+#define RSPINLOCK_INITIALIZER (rspinlock_t){SPINLOCK_DEBUG_INIT 0}
 
-typedef union rspinlock_u
+typedef struct rspinlock_s
 {
-  /* Which cpu is holding spinlock, and taking recursive count */
+  SPINLOCK_DEBUG_INFO
 
-  atomic_t val;
-  struct
+  union
     {
-      uint16_t owner;
-      uint16_t count;
+      /* Which cpu is holding spinlock, and taking recursive count */
+
+      atomic_t val;
+      struct
+        {
+          uint16_t owner;
+          uint16_t count;
+        };
     };
 } rspinlock_t;
 

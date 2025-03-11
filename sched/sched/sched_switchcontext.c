@@ -31,6 +31,10 @@
 #  include <nuttx/perf.h>
 #endif
 
+#ifdef CONFIG_SPINLOCK_DEBUG
+#  include <nuttx/spinlock.h>
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -63,6 +67,10 @@ void nxsched_switch_context(FAR struct tcb_s *from, FAR struct tcb_s *to)
 #  if CONFIG_STACKCHECK_MARGIN > 0
     DEBUGASSERT(up_check_tcbstack(from, CONFIG_STACKCHECK_MARGIN) == 0);
 #  endif
+#endif
+
+#ifdef CONFIG_SPINLOCK_DEBUG
+  spinlock_switch_context(from);
 #endif
 
 #ifdef CONFIG_SCHED_SPORADIC
