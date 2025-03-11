@@ -85,6 +85,7 @@ const char *g_binder_ioctl_str[] =
   "BINDER_GET_FROZEN_INFO",
   "BINDER_ENABLE_ONEWAY_SPAM_DETECTION",
   "BINDER_GET_EXTENDED_ERROR",
+  "BINDER_FLUSH",
 };
 
 const char *g_binder_command_str[] =
