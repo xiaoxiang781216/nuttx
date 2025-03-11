@@ -77,10 +77,6 @@ int group_continue(FAR struct tcb_s *tcb);
 #endif
 #endif
 
-/* Convenience functions */
-
-FAR struct task_group_s *task_getgroup(pid_t pid);
-
 /* Signaling group members */
 
 int group_signal(FAR struct task_group_s *group, FAR siginfo_t *siginfo);

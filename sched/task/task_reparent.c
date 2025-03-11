@@ -67,7 +67,9 @@ int task_reparent(pid_t ppid, pid_t chpid)
   FAR struct task_group_s *chgrp;
   FAR struct task_group_s *ogrp;
   FAR struct task_group_s *pgrp;
-  FAR struct tcb_s *tcb;
+  FAR struct tcb_s *chtcb;
+  FAR struct tcb_s *otcb;
+  FAR struct tcb_s *ptcb;
   irqstate_t flags;
   pid_t opid;
   int ret;
@@ -80,29 +82,31 @@ int task_reparent(pid_t ppid, pid_t chpid)
 
   /* Get the child tasks task group */
 
-  tcb = nxsched_get_tcb(chpid);
-  if (!tcb)
+  chtcb = nxsched_get_tcb(chpid);
+  if (!chtcb)
     {
       ret = -ECHILD;
-      goto errout_with_ints;
+      goto errout_with_chtcb;
     }
 
-  DEBUGASSERT(tcb->group);
-  chgrp = tcb->group;
+  chgrp = chtcb->group;
+  DEBUGASSERT(chgrp);
 
   /* Get the PID of the old parent task's task group (opid) */
 
   opid = chgrp->tg_ppid;
-  nxsched_put_tcb(tcb);
 
   /* Get the old parent task's task group (ogrp) */
 
-  ogrp = task_getgroup(opid);
-  if (!ogrp)
+  otcb = nxsched_get_tcb(opid);
+  if (!otcb)
     {
-      ret = -ESRCH;
-      goto errout_with_ints;
+      ret = -ECHILD;
+      goto errout_with_otcb;
     }
+
+  ogrp = otcb->group;
+  DEBUGASSERT(ogrp);
 
   /* If new parent task's PID (ppid) is zero, then new parent is the
    * grandparent will be the new parent, i.e., the parent of the current
@@ -114,29 +118,31 @@ int task_reparent(pid_t ppid, pid_t chpid)
       /* Get the grandparent task's task group (pgrp) */
 
       ppid = ogrp->tg_ppid;
-      pgrp = task_getgroup(ppid);
+      ptcb = nxsched_get_tcb(ppid);
+      if (!ptcb)
+        {
+          ret = -ECHILD;
+          goto errout_with_ptcb;
+        }
+
+      pgrp = ptcb->group;
     }
   else
     {
       /* Get the new parent task's task group (pgrp) */
 
-      tcb = nxsched_get_tcb(ppid);
-      if (!tcb)
+      ptcb = nxsched_get_tcb(ppid);
+      if (!ptcb)
         {
           ret = -ESRCH;
-          goto errout_with_ints;
+          goto errout_with_ptcb;
         }
 
-      pgrp = tcb->group;
+      pgrp = chtcb->group;
       ppid = pgrp->tg_pid;
-      nxsched_put_tcb(tcb);
     }
 
-  if (!pgrp)
-    {
-      ret = -ESRCH;
-      goto errout_with_ints;
-    }
+  DEBUGASSERT(pgrp);
 
   /* Then reparent the child.  Notice that we don't actually change the
    * parent of the task. Rather, we change the parent task group for
@@ -190,7 +196,15 @@ int task_reparent(pid_t ppid, pid_t chpid)
 
 #endif /* CONFIG_SCHED_CHILD_STATUS */
 
-errout_with_ints:
+  nxsched_put_tcb(ptcb);
+
+errout_with_ptcb:
+  nxsched_put_tcb(otcb);
+
+errout_with_otcb:
+  nxsched_put_tcb(chtcb);
+
+errout_with_chtcb:
   leave_critical_section(flags);
   return ret;
 }

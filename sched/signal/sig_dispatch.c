@@ -684,7 +684,7 @@ int nxsig_dispatch(pid_t pid, FAR siginfo_t *info, bool thread)
 {
 #ifdef HAVE_GROUP_MEMBERS
   FAR struct tcb_s *stcb;
-  FAR struct task_group_s *group;
+  FAR struct task_group_s *group = NULL;
 
   /* Get the TCB associated with the pid */
 
@@ -696,15 +696,6 @@ int nxsig_dispatch(pid_t pid, FAR siginfo_t *info, bool thread)
        */
 
       group = stcb->group;
-    }
-  else
-    {
-      /* The task/thread associated with this PID has exited. In the normal
-       * usage model, the PID should correspond to the PID of the task that
-       * created the task group. Try looking it up.
-       */
-
-      group = task_getgroup(pid);
     }
 
   /* Did we locate the group? */

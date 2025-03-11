@@ -142,6 +142,7 @@ static inline void nxtask_groupexit(FAR struct task_group_s *group)
 static inline void nxtask_sigchild(pid_t ppid, FAR struct tcb_s *ctcb,
                                    int status)
 {
+  FAR struct tcb_s *ptcb = nxsched_get_tcb(ppid);
   FAR struct task_group_s *chgrp = ctcb->group;
   FAR struct task_group_s *pgrp;
   siginfo_t info;
@@ -153,8 +154,7 @@ static inline void nxtask_sigchild(pid_t ppid, FAR struct tcb_s *ctcb,
    * this case, the child task group has been orphaned.
    */
 
-  pgrp = task_getgroup(ppid);
-  if (!pgrp)
+  if (!ptcb)
     {
       /* Set the task group ID to an invalid group ID.  The dead parent
        * task group ID could get reused some time in the future.
@@ -163,6 +163,9 @@ static inline void nxtask_sigchild(pid_t ppid, FAR struct tcb_s *ctcb,
       chgrp->tg_ppid = INVALID_PROCESS_ID;
       return;
     }
+
+  pgrp = ptcb->group;
+  DEBUGASSERT(pgrp);
 
   /* Save the exit status now if this is the main thread of the task group
    * that is exiting. Only the exiting main task of a task group carries
@@ -203,6 +206,8 @@ static inline void nxtask_sigchild(pid_t ppid, FAR struct tcb_s *ctcb,
 
       group_signal(pgrp, &info);
     }
+
+  nxsched_put_tcb(ptcb);
 }
 
 #else /* HAVE_GROUP_MEMBERS */
