@@ -30,6 +30,9 @@ def parse_gcda_data(path):
     with open(path, "r") as file:
         lines = file.read().strip().splitlines()
 
+    gcda_path = path + "_covert"
+    os.makedirs(gcda_path, exist_ok=True)
+
     started = False
     filename = ""
     output = ""
@@ -65,12 +68,17 @@ def parse_gcda_data(path):
                     )
                     continue
 
-                with open(filename, "wb") as fp:
+                outfile = os.path.join(gcda_path, "./" + filename)
+                os.makedirs(os.path.dirname(outfile), exist_ok=True)
+
+                with open(outfile, "wb") as fp:
                     fp.write(output)
-                    print(f"write {filename} success")
+                    print(f"write {outfile} success")
             output = ""
         else:
             output += line.strip()
+
+    return gcda_path
 
 
 def correct_content_path(file, shield: list, newpath):
@@ -109,7 +117,6 @@ def arg_parser():
     parser = argparse.ArgumentParser(
         description="Code coverage generation tool.", add_help=False
     )
-    parser.add_argument("-i", "--input", help="Input dump data")
     parser.add_argument("-t", dest="gcov_tool", help="Path to gcov tool")
     parser.add_argument("-b", dest="base_dir", help="Compile base directory")
     parser.add_argument(
@@ -158,12 +165,16 @@ def main():
         debug_file = os.path.join(result_dir, "debug.log")
         sys.stdout = open(debug_file, "w+")
 
-    if args.input:
-        parse_gcda_data(os.path.join(root_dir, args.input))
+    gcda_dirs = []
+    for i in args.gcda_dir:
+        if os.path.isfile(i):
+            gcda_dirs.append(parse_gcda_data(os.path.join(root_dir, i)))
+        else:
+            gcda_dirs.append(os.path.abspath(i))
 
     # Copy all data together with the path to the data_dir directory
     shield = []
-    for i in args.gcda_dir:
+    for i in gcda_dirs:
         abs_path = os.path.abspath(i)
         target_dir = os.path.join(data_dir, os.path.basename(abs_path))
         shield.append(target_dir)
