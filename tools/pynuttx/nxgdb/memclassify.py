@@ -18,6 +18,7 @@
 #
 ############################################################################
 import argparse
+import math
 import os
 import sys
 
@@ -99,6 +100,9 @@ class MemBlock:
 
         pprint(
             f"pid: {self.pid()}, size: {self.total_size()} = {self.block_size()} x {self.count()}"
+        )
+        pprint(
+            f"size: {self.total_size_without_overhead()} = {self.block_size() - self.overhead_size()} x {self.count()}"
         )
 
         for name, pos in self.backtrace():
@@ -228,9 +232,20 @@ def draw_pie(stat):
         return
 
     num_plots = len(datasets)
-    fig, axs = plt.subplots(
-        1, num_plots, figsize=(12, 6), subplot_kw=dict(aspect="equal")
-    )
+
+    def fact_num(n):
+        h = math.floor(math.sqrt(n))
+        min_dlt = n
+        res = []
+        for a in range(1, h + 1):
+            b = math.ceil(n / a)
+            dlt = b - a
+            if dlt < min_dlt:
+                res = [a, b]
+        return res
+
+    row, col = fact_num(num_plots)
+    fig, axs = plt.subplots(row, col, figsize=(12, 6), subplot_kw=dict(aspect="equal"))
     if num_plots == 1:
         axs = [axs]
 
@@ -240,8 +255,9 @@ def draw_pie(stat):
             labels, sizes = zip(*temp)
         else:
             continue
-        axs[i].pie(sizes, labels=labels, autopct="%1.1f%%")
-        axs[i].set_title(title)
+        x, y = i // col, i % col
+        axs[x, y].pie(sizes, labels=labels, autopct="%1.1f%%")
+        axs[x, y].set_title(title)
     plt.tight_layout()
     plt.show()
 
