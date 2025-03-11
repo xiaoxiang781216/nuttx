@@ -165,6 +165,9 @@ int arm_svcall(int irq, void *context, void *arg)
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
           regs = tcb->xcp.regs;
 #endif
+#ifdef CONFIG_ARCH_ADDRENV
+          addrenv_switch(tcb);
+#endif
         }
         break;
 
