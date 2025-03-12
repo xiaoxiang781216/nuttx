@@ -181,25 +181,25 @@
 #define TCR_PS_BITS_256TB           0x5ULL
 
 #define CTR_EL0_DMINLINE_SHIFT      16
-#define CTR_EL0_DMINLINE_MASK       BIT_MASK(4)
+#define CTR_EL0_DMINLINE_MASK       GENMASK(3, 0)
 #define CTR_EL0_CWG_SHIFT           24
-#define CTR_EL0_CWG_MASK            BIT_MASK(4)
+#define CTR_EL0_CWG_MASK            GENMASK(3, 0)
 
 /* clidr_el1 */
 
 #define CLIDR_EL1_LOC_SHIFT          24
-#define CLIDR_EL1_LOC_MASK           BIT_MASK(3)
+#define CLIDR_EL1_LOC_MASK           GENMASK(2, 0)
 #define CLIDR_EL1_CTYPE_SHIFT(level) ((level) * 3)
-#define CLIDR_EL1_CTYPE_MASK         BIT_MASK(3)
+#define CLIDR_EL1_CTYPE_MASK         GENMASK(2, 0)
 
 /* ccsidr_el1 */
 
 #define CCSIDR_EL1_LN_SZ_SHIFT       0
-#define CCSIDR_EL1_LN_SZ_MASK        BIT_MASK(3)
+#define CCSIDR_EL1_LN_SZ_MASK        GENMASK(2, 0)
 #define CCSIDR_EL1_WAYS_SHIFT        3
-#define CCSIDR_EL1_WAYS_MASK         BIT_MASK(10)
+#define CCSIDR_EL1_WAYS_MASK         GENMASK(9, 0)
 #define CCSIDR_EL1_SETS_SHIFT        13
-#define CCSIDR_EL1_SETS_MASK         BIT_MASK(15)
+#define CCSIDR_EL1_SETS_MASK         GENMASK(14, 0)
 
 /* ttbr0/1_el1 */
 

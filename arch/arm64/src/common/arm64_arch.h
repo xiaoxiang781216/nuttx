@@ -45,14 +45,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define BIT64(n)        ((1ULL) << (n))
-
-/* Bit mask with bits 0 through n-1 (inclusive) set,
- * or 0 if n is 0.
- */
-#define BIT_MASK(n)     (BIT(n) - 1)
-#define BIT64_MASK(n)   (BIT64(n) - 1ULL)
-
 #define DAIFSET_FIQ_BIT     BIT(0)
 #define DAIFSET_IRQ_BIT     BIT(1)
 #define DAIFSET_ABT_BIT     BIT(2)

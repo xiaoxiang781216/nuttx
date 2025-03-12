@@ -243,7 +243,7 @@
 #define GICR_SGI_BASE_OFF           0x10000
 
 /* GICD_ICFGR */
-#define GICD_ICFGR_MASK             BIT_MASK(2)
+#define GICD_ICFGR_MASK             GENMASK(1, 0)
 #define GICD_ICFGR_TYPE             BIT(1)
 
 /* BIT(0) reserved for IRQ_ZERO_LATENCY */
