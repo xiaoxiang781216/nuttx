@@ -1,0 +1,15 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+menu "lib_errno custom options"
+
+config LIBC_ERRNO_CUSTOM
+	bool "use custom implemantation of errno"
+	default n
+	---help---
+		If the default implemantation of errno cannot match requirements,
+		Possible remove the default implementation and use a custom one.
+
+endmenu #lib_errno custom options

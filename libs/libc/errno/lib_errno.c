@@ -28,6 +28,7 @@
 
 #include <nuttx/tls.h>
 
+#ifndef CONFIG_LIBC_ERRNO_CUSTOM
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -64,3 +65,4 @@ FAR int *__errno(void)
 
   return tlsinfo ? &tlsinfo->tl_errno : &g_errno;
 }
+#endif
