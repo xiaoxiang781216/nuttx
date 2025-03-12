@@ -93,8 +93,8 @@ static struct tcb_s g_idletcb[CONFIG_SMP_NCPUS] =
     .pid        = 0,
     .task_state = TSTATE_TASK_RUNNING,
     .lockcount  = 1,
-    .start      = nx_start,
-    .entry.main = (main_t)nx_start,
+    .start      = NULL,
+    .entry.main = NULL,
 #if defined(CONFIG_SMP)
     .flags      = (TCB_FLAG_TTYPE_KERNEL | TCB_FLAG_CPU_LOCKED),
     .affinity   = (CONFIG_SMP_DEFAULT_CPUSET & SCHED_ALL_CPUS),
@@ -648,6 +648,14 @@ void nx_start(void)
   g_nx_initstate = OSINIT_BOOT;
 
   /* Init idle task to percpu reg */
+
+  /* Break the relation chain nxstart->g_idletcb->nx_start, make linker not
+   * able to remove both nx_start and g_idletcb when nx_start is called.
+   * For example bootloader case.
+   */
+
+  g_idletcb[0].start      = nx_start;
+  g_idletcb[0].entry.main = (main_t)nx_start;
 
   up_update_task(&g_idletcb[0]);
 
