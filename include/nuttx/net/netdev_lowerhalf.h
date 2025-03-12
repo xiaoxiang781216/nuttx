@@ -40,6 +40,8 @@
 #include <nuttx/net/netdev.h>
 #include <nuttx/wireless/wireless.h>
 
+#ifdef CONFIG_NET
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -619,4 +621,5 @@ int netpkt_to_iov(FAR struct netdev_lowerhalf_s *dev, FAR netpkt_t *pkt,
 
 #define netpkt_free_queue(queue) iob_free_queue(queue)
 
+#endif /* CONFIG_NET */
 #endif /* __INCLUDE_NUTTX_NET_NETDEV_LOWERHALF_H */
