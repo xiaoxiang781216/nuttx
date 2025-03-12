@@ -471,6 +471,18 @@ void sim_usbdev_initialize(void);
 int sim_usbhost_initialize(void);
 #endif
 
+/* sim_canchar.c ************************************************************/
+
+#ifdef CONFIG_SIM_CANDEV_CHAR
+int sim_canchar_initialize(int devidx, int devno);
+#endif
+
+/* sim_cansock.c ************************************************************/
+
+#ifdef CONFIG_SIM_CANDEV_SOCK
+int sim_cansock_initialize(int devidx);
+#endif
+
 /* Debug ********************************************************************/
 
 #ifdef CONFIG_STACK_COLORATION
