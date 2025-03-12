@@ -72,3 +72,7 @@ endif
 ifeq ($(CONFIG_ARCH_ADDRENV),y)
   CMN_CSRCS += arm_addrenv.c
 endif
+
+ifeq ($(CONFIG_LIB_SYSCALL),y)
+  CMN_ASRCS += arm_dispatch_syscall.S
+endif
