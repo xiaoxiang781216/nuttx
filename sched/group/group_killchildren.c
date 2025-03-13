@@ -157,21 +157,15 @@ static int group_cancel_children_handler(pid_t pid, FAR void *arg)
 
 int group_kill_children(FAR struct tcb_s *tcb)
 {
-  irqstate_t flags;
   int ret;
 
   DEBUGASSERT(tcb->group);
 
-  if (tcb->group->tg_flags & GROUP_FLAG_EXITING)
+  if (atomic_fetch_or(&tcb->group->tg_flags, GROUP_FLAG_EXITING) &
+      GROUP_FLAG_EXITING)
     {
       return 0;
     }
-
-  flags = enter_critical_section();
-
-  /* Tell the children that this group has started exiting */
-
-  tcb->group->tg_flags |= GROUP_FLAG_EXITING;
 
 #if defined(CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS) && \
             CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS != 0
@@ -188,12 +182,15 @@ int group_kill_children(FAR struct tcb_s *tcb)
       ret = CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS;
       while (1)
         {
+          irqstate_t flags = spin_lock_irqsave(&tcb->group->tg_lock);
           if (sq_empty(&tcb->group->tg_members) ||
               sq_is_singular(&tcb->group->tg_members))
             {
+              spin_unlock_irqrestore(&tcb->group->tg_lock, flags);
               break;
             }
 
+          spin_unlock_irqrestore(&tcb->group->tg_lock, flags);
           nxsig_usleep(USEC_PER_MSEC);
 
 #  if CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS > 0
@@ -210,7 +207,6 @@ int group_kill_children(FAR struct tcb_s *tcb)
 
   ret = group_foreachchild(tcb->group, group_cancel_children_handler,
                            (FAR void *)((uintptr_t)tcb->pid));
-  leave_critical_section(flags);
 
   return ret;
 }

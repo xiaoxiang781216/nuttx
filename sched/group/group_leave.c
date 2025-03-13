@@ -132,7 +132,7 @@ group_release(FAR struct task_group_s *group, uint8_t ttype)
     {
       /* Mark the group as deleted now */
 
-      group->tg_flags |= GROUP_FLAG_DELETED;
+      atomic_fetch_or(&group->tg_flags, GROUP_FLAG_DELETED);
 
       group_drop(group);
     }
@@ -245,7 +245,7 @@ void group_drop(FAR struct task_group_s *group)
 #endif
   /* Finally, if no one needs the group and it has been deleted, remove it */
 
-  if (group->tg_flags & GROUP_FLAG_DELETED)
+  if (atomic_read(&group->tg_flags) & GROUP_FLAG_DELETED)
     {
       tcb = (FAR struct tcb_s *)
         ((uintptr_t)group - sizeof(struct tcb_s));

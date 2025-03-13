@@ -93,7 +93,7 @@ static void task_uninit_stream(FAR struct task_group_s *group)
        * allocator.
        */
 
-      if ((group->tg_flags & GROUP_FLAG_PRIVILEGED) != 0)
+      if ((atomic_read(&group->tg_flags) & GROUP_FLAG_PRIVILEGED) != 0)
 #endif
         {
           group_free(group, stream);

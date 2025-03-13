@@ -68,7 +68,7 @@ static inline void nxtask_exitstatus(FAR struct task_group_s *group,
    * child exit status information.
    */
 
-  if ((group->tg_flags & GROUP_FLAG_NOCLDWAIT) == 0)
+  if ((atomic_read(&group->tg_flags) & GROUP_FLAG_NOCLDWAIT) == 0)
     {
       /* No.. Find the exit status entry for this task in the parent TCB */
 
@@ -109,7 +109,7 @@ static inline void nxtask_groupexit(FAR struct task_group_s *group)
    * status information.
    */
 
-  if ((group->tg_flags & GROUP_FLAG_NOCLDWAIT) == 0)
+  if ((atomic_read(&group->tg_flags) & GROUP_FLAG_NOCLDWAIT) == 0)
     {
       /* No.. Find the exit status entry for this task in the parent TCB */
 

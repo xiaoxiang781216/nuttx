@@ -32,6 +32,7 @@
 #include <nuttx/queue.h>
 
 #include "group/group.h"
+#include "sched/sched.h"
 
 #ifdef HAVE_GROUP_MEMBERS
 
@@ -62,23 +63,31 @@
 int group_foreachchild(FAR struct task_group_s *group,
                        foreachchild_t handler, FAR void *arg)
 {
-  FAR sq_entry_t *curr;
-  FAR sq_entry_t *next;
+  int npidhash = g_npidhash;
   int ret = OK;
+  int ndx;
 
   DEBUGASSERT(group);
 
-  /* Visit the main thread last (if present) */
+  /* Visit each active task */
 
-  sq_for_every_safe(&group->tg_members, curr, next)
+  for (ndx = 0; ndx < npidhash; ndx++)
     {
-      FAR struct tcb_s *mtcb =
-        container_of(curr, struct tcb_s, member);
-
-      ret = handler(mtcb->pid, arg);
-      if (ret != OK)
+      FAR struct tcb_s *tcb = nxsched_get_tcb_by_index(ndx);
+      if (tcb && tcb->group == group)
         {
-          break;
+          pid_t pid = tcb->pid;
+          nxsched_put_tcb(tcb);
+          ret = handler(pid, arg);
+
+          if (ret != OK)
+            {
+              break;
+            }
+        }
+      else if (tcb)
+        {
+          nxsched_put_tcb(tcb);
         }
     }
 

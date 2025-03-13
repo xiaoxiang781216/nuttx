@@ -454,7 +454,7 @@ struct task_group_s
 {
   pid_t tg_pid;                     /* The ID of the task within the group      */
   pid_t tg_ppid;                    /* This is the ID of the parent thread      */
-  uint8_t tg_flags;                 /* See GROUP_FLAG_* definitions             */
+  atomic_t tg_flags;                /* See GROUP_FLAG_* definitions             */
 
   /* User identity **********************************************************/
 

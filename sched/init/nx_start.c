@@ -614,7 +614,8 @@ static void idle_group_initialize(void)
        */
 
       group_postinitialize(tcb);
-      tcb->group->tg_flags = GROUP_FLAG_NOCLDWAIT | GROUP_FLAG_PRIVILEGED;
+      atomic_set(&tcb->group->tg_flags,
+                 GROUP_FLAG_NOCLDWAIT | GROUP_FLAG_PRIVILEGED);
     }
 }
 

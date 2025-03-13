@@ -66,7 +66,7 @@ FAR void *group_realloc(FAR struct task_group_s *group, FAR void *oldmem,
 
   /* Check the group type */
 
-  if ((group->tg_flags & GROUP_FLAG_PRIVILEGED) != 0)
+  if ((atomic_read(&group->tg_flags) & GROUP_FLAG_PRIVILEGED) != 0)
     {
       /* It is a privileged group... use the kernel mode memory allocator */
 

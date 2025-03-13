@@ -153,7 +153,7 @@ int group_initialize(FAR struct tcb_s *tcb, uint8_t ttype)
 
   if ((ttype & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_KERNEL)
     {
-      group->tg_flags |= GROUP_FLAG_PRIVILEGED;
+      atomic_fetch_or(&group->tg_flags, GROUP_FLAG_PRIVILEGED);
     }
 #endif /* defined(CONFIG_MM_KERNEL_HEAP) */
 

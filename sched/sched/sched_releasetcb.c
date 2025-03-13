@@ -185,7 +185,7 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, uint8_t ttype)
             {
               /* Mark the group as deleted now */
 
-              group->tg_flags |= GROUP_FLAG_DELETED;
+              atomic_fetch_or(&group->tg_flags, GROUP_FLAG_DELETED);
 
               return ret;
             }

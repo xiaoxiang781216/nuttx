@@ -334,7 +334,7 @@ int nxsig_action(int signo, FAR const struct sigaction *act,
 
       /* Mark that status should be not be retained */
 
-      rtcb->group->tg_flags |= GROUP_FLAG_NOCLDWAIT;
+      atomic_fetch_or(&rtcb->group->tg_flags, GROUP_FLAG_NOCLDWAIT);
 
       /* Free all pending exit status */
 

@@ -179,7 +179,8 @@ bool nxnotify_cancellation(FAR struct tcb_s *tcb)
         }
 
 #ifdef HAVE_GROUP_MEMBERS
-      else if (tcb->group && (tcb->group->tg_flags & GROUP_FLAG_EXITING))
+      else if (tcb->group && (atomic_read(&tcb->group->tg_flags) &
+                              GROUP_FLAG_EXITING))
         {
           /* Exit in progress, do asynchronous cancel instead */
 

@@ -288,7 +288,7 @@ static inline void nxtask_save_parent(FAR struct tcb_s *tcb, uint8_t ttype)
        * the SA_NOCLDWAIT flag with sigaction().
        */
 
-      if ((rtcb->group->tg_flags & GROUP_FLAG_NOCLDWAIT) == 0)
+      if ((atomic_read(&rtcb->group->tg_flags) & GROUP_FLAG_NOCLDWAIT) == 0)
         {
           FAR struct child_status_s *child;
 

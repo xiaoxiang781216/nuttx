@@ -102,14 +102,8 @@ static int group_suspend_children_handler(pid_t pid, FAR void *arg)
 
 int group_suspend_children(FAR struct tcb_s *tcb)
 {
-  irqstate_t flags;
-  int ret;
-
-  flags = enter_critical_section();
-  ret = group_foreachchild(tcb->group, group_suspend_children_handler,
-                           (FAR void *)((uintptr_t)tcb->pid));
-  leave_critical_section(flags);
-  return ret;
+  return group_foreachchild(tcb->group, group_suspend_children_handler,
+                            (FAR void *)((uintptr_t)tcb->pid));
 }
 
 #endif /* HAVE_GROUP_MEMBERS */

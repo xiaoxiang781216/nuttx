@@ -110,13 +110,7 @@ static int group_continue_handler(pid_t pid, FAR void *arg)
 
 int group_continue(FAR struct tcb_s *tcb)
 {
-  irqstate_t flags;
-  int ret;
-
-  flags = enter_critical_section();
-  ret = group_foreachchild(tcb->group, group_continue_handler, NULL);
-  leave_critical_section(flags);
-  return ret;
+  return group_foreachchild(tcb->group, group_continue_handler, NULL);
 }
 
 #endif /* HAVE_GROUP_MEMBERS */

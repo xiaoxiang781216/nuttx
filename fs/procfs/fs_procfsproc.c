@@ -1239,8 +1239,8 @@ static ssize_t proc_groupstatus(FAR struct proc_file_s *procfile,
     }
 
   linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                               "%-12s0x%02x\n",
-                               "Flags:", group->tg_flags);
+                               "%-12s0x%02" PRIx32 "\n",
+                               "Flags:", atomic_read(&group->tg_flags));
   copysize   = procfs_memcpy(procfile->line, linesize, buffer,
                              remaining, &offset);
 
