@@ -266,7 +266,16 @@ g_reg_table = {
         ],
     },
     "tricore": {
-        "architecture": "tricore",  # Use tricore-gdb
+        "architecture": [
+            "TriCore:V1.2",
+            "TriCore:V1.1",
+            "TriCore:V1.3",
+            "TriCore:V1.3.1",
+            "Tricore:V1_6",
+            "TriCore:V1_6_1",
+            "TriCore:V1_6_2",
+            "TriCore:V1_8",
+        ],  # Use tricore-gdb
         "feature": "",
         "registers": [
             ("pcx", 34, 136),
