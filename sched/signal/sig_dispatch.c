@@ -295,7 +295,7 @@ nxsig_find_pendingsignal(FAR struct task_group_s *group, int signo)
 
   /* Pending signals can be added from interrupt level. */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&group->tg_lock);
 
   /* Search the list for a action pending on this signal */
 
@@ -303,7 +303,7 @@ nxsig_find_pendingsignal(FAR struct task_group_s *group, int signo)
        (sigpend && sigpend->info.si_signo != signo);
        sigpend = sigpend->flink);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&group->tg_lock, flags);
   return sigpend;
 }
 
@@ -371,9 +371,9 @@ static void nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
 
           /* Add the structure to the group pending signal list */
 
-          flags = enter_critical_section();
+          flags = spin_lock_irqsave(&group->tg_lock);
           sq_addlast((FAR sq_entry_t *)sigpend, &group->tg_sigpendingq);
-          leave_critical_section(flags);
+          spin_unlock_irqrestore(&group->tg_lock, flags);
           nxsig_dispatch_kernel_action(stcb, &sigpend->info);
         }
     }

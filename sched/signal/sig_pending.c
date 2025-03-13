@@ -94,14 +94,14 @@ sigset_t nxsig_pendingset(FAR struct tcb_s *stcb)
 
   sigemptyset(&sigpendset);
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&group->tg_lock);
   for (sigpend = (FAR sigpendq_t *)group->tg_sigpendingq.head;
        (sigpend); sigpend = sigpend->flink)
     {
       nxsig_addset(&sigpendset, sigpend->info.si_signo);
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&group->tg_lock, flags);
 
   return sigpendset;
 }
