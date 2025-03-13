@@ -568,6 +568,7 @@ static void dump_lockholder(pid_t tid)
   FAR mutex_t *mutex;
 
   tcb = nxsched_get_tcb(tid);
+  DEBUGASSERT(tcb != NULL);
   mutex = (FAR mutex_t *)tcb->waitobj;
   nxsched_put_tcb(tcb);
 

@@ -72,6 +72,11 @@ int pthread_completejoin(pid_t pid, FAR void *exit_value)
   FAR sq_entry_t *next;
   int ret = OK;
 
+  if (tcb == NULL)
+    {
+      return -ESRCH;
+    }
+
   sinfo("pid=%d exit_value=%p\n", pid, exit_value);
 
   nxrmutex_lock(&group->tg_mutex);

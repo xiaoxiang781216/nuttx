@@ -26,6 +26,7 @@
 
 #include <nuttx/mutex.h>
 #include <nuttx/sched.h>
+#include <assert.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -121,6 +122,7 @@ static void collect_deadlock(FAR struct tcb_s *tcb, FAR void *arg)
 
       info->holders[index] = tcb->pid;
       tcb = nxsched_get_tcb(holder);
+      DEBUGASSERT(tcb != NULL);
       mutex = getmutex(tcb);
       nxsched_put_tcb(tcb);
       if (mutex == NULL)

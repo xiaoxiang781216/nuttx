@@ -1068,8 +1068,11 @@ static int gdb_send_error_packet(FAR struct gdb_state_s *state,
 
 static void gdb_update_regcache(FAR struct gdb_state_s *state)
 {
-  FAR struct tcb_s *tcb = nxsched_get_tcb(state->pid);
+  FAR struct tcb_s *tcb;
   FAR uint8_t *reg;
+
+  tcb = nxsched_get_tcb(state->pid);
+  DEBUGASSERT(tcb != NULL);
 
   reg = (FAR uint8_t *)tcb->xcp.regs;
   if (state->pid == _SCHED_GETTID())

@@ -80,10 +80,13 @@ static uid_t geteuid_bypid(pid_t pid)
 #ifdef CONFIG_SCHED_USER_IDENTITY
   /* We have effective UID support, then give the effective UID. */
 
-  FAR struct tcb_s *tcb = nxsched_get_tcb(pid);
-  FAR struct task_group_s *rgroup = tcb->group;
+  FAR struct tcb_s *tcb;
+  FAR struct task_group_s *rgroup;
   uid_t uid;
 
+  tcb = nxsched_get_tcb(pid);
+  DEBUGASSERT(tcb != NULL);
+  rgroup = tcb->group;
   DEBUGASSERT(rgroup != NULL);
   uid = rgroup->tg_euid;
   nxsched_put_tcb(tcb);
