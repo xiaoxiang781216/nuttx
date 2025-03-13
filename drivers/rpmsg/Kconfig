@@ -47,6 +47,13 @@ config RPMSG_TEST
 	bool "rpmsg test support"
 	default n
 
+config RPMSG_WAKELOCK
+	bool "rpmsg wakelock support"
+	default n
+	depends on PM
+	---help---
+		rpmsg wakelock enable option, both for client and server.
+
 config RPMSG_DEFER_WORK_COUNT
 	int "Rpmsg defer work count"
 	default 0

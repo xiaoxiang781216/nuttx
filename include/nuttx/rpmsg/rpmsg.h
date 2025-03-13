@@ -48,6 +48,8 @@
 #define RPMSGIOC_PING               _RPMSGIOC(3)
 #define RPMSGIOC_TEST               _RPMSGIOC(4)
 #define RPMSGIOC_RUNNING            _RPMSGIOC(5)
+#define RPMSGIOC_ACQUIRE_WAKELOCK   _RPMSGIOC(6)
+#define RPMSGIOC_RELEASE_WAKELOCK   _RPMSGIOC(7)
 
 #define RPMSG_SIGNAL_RUNNING        TIOCM_CD
 
@@ -82,6 +84,9 @@ struct rpmsg_s
 #endif
 #ifdef CONFIG_RPMSG_TEST
   struct rpmsg_endpoint        test;
+#endif
+#ifdef CONFIG_RPMSG_WAKELOCK
+  struct rpmsg_endpoint        wakelock;
 #endif
   atomic_t                     signals;
 #if CONFIG_RPMSG_DEFER_WORK_COUNT > 0
