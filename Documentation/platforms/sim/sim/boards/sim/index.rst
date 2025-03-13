@@ -1886,6 +1886,21 @@ NOTES:
   you will find this annoying.  You can disable the password protection
   by de-selecting CONFIG_NSH_CONSOLE_LOGIN=y.
 
+can
+---
+
+This is a configuration with simulated CAN support. Both CAN character driver
+and SocketCAN are enabled and use host ``vcan0`` interface.
+
+SocketCAN interface must be up before use with::
+
+  ifup can0
+
+For the CAN character device, there is ``examples/can`` application enabled in
+read-only mode.
+
+Additionally, SocketCAN ``candump`` and ``cansend`` utils are enabled.
+
 README.txt
 ==========
 
