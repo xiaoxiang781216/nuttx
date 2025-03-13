@@ -37,7 +37,7 @@ SECTIONS
     __ld_usram_size = LENGTH(usram);
 
     .userspace : {
-        *(.userspace)
+        KEEP(*(.userspace))
     } > uflash
 
     .text : {
