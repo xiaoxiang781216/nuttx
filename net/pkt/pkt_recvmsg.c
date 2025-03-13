@@ -47,6 +47,7 @@
 #include "devif/devif.h"
 #include "pkt/pkt.h"
 #include "socket/socket.h"
+#include "utils/utils.h"
 #include <netpacket/packet.h>
 
 /****************************************************************************
