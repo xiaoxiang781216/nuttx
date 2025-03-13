@@ -223,6 +223,7 @@ static FAR sigpendq_t *nxsig_alloc_pendingsignal(void)
     {
       /* Try to get the pending signal structure from the free list */
 
+      flags = spin_lock_irqsave(&g_sigspinlock);
       sigpend = (FAR sigpendq_t *)sq_remfirst(&g_sigpendingsignal);
       if (!sigpend)
         {
@@ -233,6 +234,8 @@ static FAR sigpendq_t *nxsig_alloc_pendingsignal(void)
 
           sigpend = (FAR sigpendq_t *)sq_remfirst(&g_sigpendingirqsignal);
         }
+
+      spin_unlock_irqrestore(&g_sigspinlock, flags);
     }
 
   /* If we were not called from an interrupt handler, then we are
@@ -243,9 +246,9 @@ static FAR sigpendq_t *nxsig_alloc_pendingsignal(void)
     {
       /* Try to get the pending signal structure from the free list */
 
-      flags = enter_critical_section();
+      flags = spin_lock_irqsave(&g_sigspinlock);
       sigpend = (FAR sigpendq_t *)sq_remfirst(&g_sigpendingsignal);
-      leave_critical_section(flags);
+      spin_unlock_irqrestore(&g_sigspinlock, flags);
 
       /* Check if we got one. */
 

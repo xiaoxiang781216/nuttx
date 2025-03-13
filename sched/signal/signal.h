@@ -36,6 +36,7 @@
 #include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
+#include <nuttx/spinlock.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -136,6 +137,8 @@ extern sq_queue_t  g_sigpendingsignal;
  */
 
 extern sq_queue_t  g_sigpendingirqsignal;
+
+extern spinlock_t  g_sigspinlock;
 
 /****************************************************************************
  * Public Function Prototypes
