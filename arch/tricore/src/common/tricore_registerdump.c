@@ -107,10 +107,10 @@ void up_dump_register(void *dumpregs)
 }
 
 /****************************************************************************
- * Name: up_regs_memcpy
+ * Name: up_copyusercontext
  ****************************************************************************/
 
-void up_regs_memcpy(FAR void *dest, FAR void *src, size_t count)
+void up_copyusercontext(FAR void *dest, FAR void *src, size_t count)
 {
   int csa_size = TC_CONTEXT_REGS * sizeof(uintptr_t);
   int csa_num = count / csa_size;
