@@ -45,8 +45,9 @@ void arm_earlyserialinit(void)
   /* Enable the console UART.  The other UARTs will be initialized if and
    * when they are first opened.
    */
-
+#ifdef CONFIG_UART_PL011
   pl011_earlyserialinit();
+#endif
 }
 
 /***************************************************************************
