@@ -1068,28 +1068,27 @@ static int gdb_send_error_packet(FAR struct gdb_state_s *state,
 
 static void gdb_update_regcache(FAR struct gdb_state_s *state)
 {
-  FAR struct tcb_s *tcb;
-  FAR uint8_t *reg;
+  FAR struct tcb_s *tcb = nxsched_get_tcb(state->pid);
 
-  tcb = nxsched_get_tcb(state->pid);
-  DEBUGASSERT(tcb != NULL);
-
-  reg = (FAR uint8_t *)tcb->xcp.regs;
   if (state->pid == _SCHED_GETTID())
     {
       if (up_interrupt_context() && running_regs())
         {
-          reg = (FAR uint8_t *)running_regs();
+          up_copyusercontext(state->running_regs, running_regs(),
+                             XCPTCONTEXT_SIZE);
         }
       else
         {
           up_saveusercontext(state->running_regs);
-          reg = state->running_regs;
         }
     }
+  else
+    {
+      up_copyusercontext(state->running_regs, tcb->xcp.regs,
+                         XCPTCONTEXT_SIZE);
+    }
 
-  state->xcpregs = reg;
-  nxsched_put_tcb(tcb);
+  state->xcpregs = state->running_regs;
 }
 
 static FAR const struct reginfo_s * gdb_find_reginfo(int regnum)
