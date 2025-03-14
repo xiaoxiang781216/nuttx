@@ -790,7 +790,9 @@ static void dump_core_info(void)
 {
 #ifdef CONFIG_BOARD_CRASHDUMP_CUSTOM
   board_crashdump(up_getsp(), rtcb, filename, linenum, msg, regs);
-#elif !defined(CONFIG_BOARD_CRASHDUMP_NONE)
+#endif
+
+#ifndef CONFIG_BOARD_CRASHDUMP_NONE
 
   /* Dump core information */
 
