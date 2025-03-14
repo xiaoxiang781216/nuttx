@@ -59,9 +59,6 @@ static int sched_backtrace_handler(FAR void *cookie)
 {
   FAR struct backtrace_arg_s *arg = cookie;
   FAR struct tcb_s *tcb;
-  irqstate_t flags;
-
-  flags = enter_critical_section();
 
   tcb = nxsched_get_tcb(arg->pid);
 
@@ -70,7 +67,6 @@ static int sched_backtrace_handler(FAR void *cookie)
     {
       /* There is no TCB with this pid or, if there is, it is not a task. */
 
-      leave_critical_section(flags);
       nxsched_put_tcb(tcb);
       return -ESRCH;
     }
@@ -82,8 +78,6 @@ static int sched_backtrace_handler(FAR void *cookie)
     }
 
   nxsched_put_tcb(tcb);
-
-  leave_critical_section(flags);
 
   arg->stacksize = up_backtrace(tcb, arg->buffer, arg->size, arg->skip);
 
