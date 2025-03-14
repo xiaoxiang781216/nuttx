@@ -568,20 +568,36 @@ void up_enable_dcache(void)
 #ifdef CONFIG_ARMV7M_DCACHE
 void up_disable_dcache(void)
 {
-  uint32_t ccsidr;
-  uint32_t ccr;
-  uint32_t sshift;
-  uint32_t wshift;
-  uint32_t sw;
-  uint32_t sets;
-  uint32_t ways;
+  struct
+    {
+      uint32_t ccsidr;
+      uint32_t ccr;
+      uint32_t sshift;
+      uint32_t wshift;
+      uint32_t sw;
+      uint32_t sets;
+      uint32_t ways;
+      uint32_t tmpways;
+    } locals;
+
+  /* Disable the D-Cache */
+
+  locals.ccr = getreg32(NVIC_CFGCON);
+  locals.ccr &= ~NVIC_CFGCON_DC;
+  putreg32(locals.ccr, NVIC_CFGCON);
+  UP_MB();
+
+  /* Clean and invalidate the local variable cache. */
+
+  up_flush_dcache((uintptr_t)&locals, (uintptr_t)&locals + sizeof(locals));
+  UP_MB();
 
   /* Get the characteristics of the D-Cache */
 
-  ccsidr = getreg32(NVIC_CCSIDR);
-  sets   = CCSIDR_SETS(ccsidr);          /* (Number of sets) - 1 */
-  sshift = CCSIDR_LSSHIFT(ccsidr) + 4;   /* log2(cache-line-size-in-bytes) */
-  ways   = CCSIDR_WAYS(ccsidr);          /* (Number of ways) - 1 */
+  locals.ccsidr = getreg32(NVIC_CCSIDR);
+  locals.sets   = CCSIDR_SETS(locals.ccsidr);          /* (Number of sets) - 1 */
+  locals.sshift = CCSIDR_LSSHIFT(locals.ccsidr) + 4;   /* log2(cache-line-size-in-bytes) */
+  locals.ways   = CCSIDR_WAYS(locals.ccsidr);          /* (Number of ways) - 1 */
 
   /* Calculate the bit offset for the way field in the DCCISW register by
    * counting the number of leading zeroes.  For example:
@@ -594,7 +610,7 @@ void up_disable_dcache(void)
    *   ...
    */
 
-  wshift = arm_clz(ways) & 0x1f;
+  locals.wshift = arm_clz(locals.ways) & 0x1f;
 
   UP_DSB();
 
@@ -602,24 +618,17 @@ void up_disable_dcache(void)
 
   do
     {
-      int32_t tmpways = ways;
+      locals.tmpways = locals.ways;
 
       do
         {
-          sw = ((tmpways << wshift) | (sets << sshift));
-          putreg32(sw, NVIC_DCCISW);
+          locals.sw = ((locals.tmpways << locals.wshift) |
+                       (locals.sets << locals.sshift));
+          putreg32(locals.sw, NVIC_DCCISW);
         }
-      while (tmpways--);
+      while (locals.tmpways--);
     }
-  while (sets--);
-
-  UP_MB();
-
-  /* Disable the D-Cache */
-
-  ccr = getreg32(NVIC_CFGCON);
-  ccr &= ~NVIC_CFGCON_DC;
-  putreg32(ccr, NVIC_CFGCON);
+  while (locals.sets--);
 
   UP_MB();
 }
