@@ -63,8 +63,8 @@ struct syslog_rpmsg_server_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static void syslog_rpmsg_write(FAR const char *buf1, size_t len1,
-                               FAR const char *buf2, size_t len2);
+static void syslog_rpmsg_write_(FAR const char *buf1, size_t len1,
+                                FAR const char *buf2, size_t len2);
 static bool syslog_rpmsg_ns_match(FAR struct rpmsg_device *rdev,
                                   FAR void *priv_, FAR const char *name,
                                   uint32_t dest);
@@ -131,8 +131,8 @@ static int syslog_rpmsg_file_ioctl(FAR struct file *filep, int cmd,
 }
 #endif
 
-static void syslog_rpmsg_write(FAR const char *buf1, size_t len1,
-                               FAR const char *buf2, size_t len2)
+static void syslog_rpmsg_write_(FAR const char *buf1, size_t len1,
+                                FAR const char *buf2, size_t len2)
 {
   FAR const char *nl;
   size_t len;
@@ -178,7 +178,7 @@ static void syslog_rpmsg_ept_release(FAR struct rpmsg_endpoint *ept)
 
   if (priv->nextpos)
     {
-      syslog_rpmsg_write(priv->tmpbuf, priv->nextpos, "\n", 1);
+      syslog_rpmsg_write_(priv->tmpbuf, priv->nextpos, "\n", 1);
     }
 
 #ifdef CONFIG_SYSLOG_RPMSG_SERVER_CHARDEV
@@ -244,8 +244,8 @@ static int syslog_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
 
           if (priv->nextpos)
             {
-              syslog_rpmsg_write(priv->tmpbuf, priv->nextpos,
-                                 msg->data, printed);
+              syslog_rpmsg_write_(priv->tmpbuf, priv->nextpos,
+                                  msg->data, printed);
               priv->nextpos = 0;
             }
           else
