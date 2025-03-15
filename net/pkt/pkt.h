@@ -75,6 +75,8 @@ struct pkt_conn_s
    */
 
   struct iob_queue_s readahead;   /* Read-ahead buffering */
+
+  FAR struct iob_s  *pendiob;     /* The iob currently being sent */
 };
 
 /****************************************************************************
