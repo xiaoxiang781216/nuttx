@@ -279,6 +279,22 @@ static const struct pci_device_id_s g_e1000_id_table[] =
     .driver_data = (uintptr_t)&g_e1000_i219
   },
   {
+    PCI_DEVICE(0x8086, 0x0d4c),
+    .driver_data = (uintptr_t)&g_e1000_i219
+  },
+  {
+    PCI_DEVICE(0x8086, 0x0d4d),
+    .driver_data = (uintptr_t)&g_e1000_i219
+  },
+  {
+    PCI_DEVICE(0x8086, 0x15b8),
+    .driver_data = (uintptr_t)&g_e1000_i219
+  },
+  {
+    PCI_DEVICE(0x8086, 0x15bb),
+    .driver_data = (uintptr_t)&g_e1000_i219
+  },
+  {
     PCI_DEVICE(0x8086, 0x100e),
     .driver_data = (uintptr_t)&g_e1000_82540em
   },
