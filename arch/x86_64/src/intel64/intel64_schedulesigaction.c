@@ -240,14 +240,6 @@ void up_schedule_sigaction(struct tcb_s *tcb)
           up_current_regs()[REG_RSP] =
             (uint64_t)x86_64_get_ktopstk();
 #endif
-          /* Mark that full context switch is necessary when we
-           * return from interrupt handler.
-           * In that case RIP, RSP and RFLAGS are changed, but
-           * register area pointer remains the same, so we need an
-           * additional variable to signal the need for full context switch
-           */
-
-          tcb->xcp.regs[REG_AUX] = REG_AUX_FULLCONTEXT;
         }
     }
 

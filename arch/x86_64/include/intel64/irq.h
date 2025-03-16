@@ -416,9 +416,9 @@
 /* Align registers to 64-bytes */
 
 #ifdef CONFIG_ARCH_X86_64_AVX512
-#  define XMMAREA_REG_ALIGN         (11)
+#  define XMMAREA_REG_ALIGN         (12)
 #else
-#  define XMMAREA_REG_ALIGN         (5)
+#  define XMMAREA_REG_ALIGN         (6)
 #endif
 
 /* Register offset in XMMAREA */
@@ -463,9 +463,8 @@
 #define REG_RFLAGS                  (23 + XMMAREA_REG_OFFSET)
 #define REG_RSP                     (24 + XMMAREA_REG_OFFSET)
 #define REG_SS                      (25 + XMMAREA_REG_OFFSET)
-#define REG_AUX                     (26 + XMMAREA_REG_OFFSET)
 
-#define XMMAREA_REGS                (27)
+#define XMMAREA_REGS                (26)
 
 /* NOTE 2: This is not really state data.  Rather, this is just a convenient
  *   way to pass parameters from the interrupt handler to C code.
@@ -484,10 +483,6 @@
 #define XCP_ALIGN_MASK              (XCPTCONTEXT_ALIGN - 1)
 #define XCP_ALIGN_DOWN(a)           ((a) & ~XCP_ALIGN_MASK)
 #define XCP_ALIGN_UP(a)             (((a) + XCP_ALIGN_MASK) & ~XCP_ALIGN_MASK)
-
-/* Aux register flags */
-
-#define REG_AUX_FULLCONTEXT         (1 << 0) /* Force full context switch */
 
 /****************************************************************************
  * Public Types
