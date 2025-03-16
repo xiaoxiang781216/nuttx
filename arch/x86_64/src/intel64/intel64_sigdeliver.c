@@ -172,11 +172,8 @@ retry:
   board_autoled_off(LED_SIGNAL);
 
 #ifdef CONFIG_SMP
-  /* We need to keep the IRQ lock until task switching */
-
-  rtcb->irqcount++;
-  leave_critical_section((uint8_t)regs[REG_RFLAGS]);
   rtcb->irqcount--;
+  restore_critical_section(rtcb, this_cpu());
 #endif
 
   regs[REG_RIP]    = rtcb->xcp.saved_rip;
