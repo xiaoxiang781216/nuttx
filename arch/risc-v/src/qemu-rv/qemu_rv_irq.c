@@ -316,3 +316,17 @@ irqstate_t up_irq_enable(void)
 
   return oldstat;
 }
+
+#ifdef CONFIG_ARCH_IRQPRIO
+int up_prioritize_irq(int irq, int priority)
+{
+  if (RISCV_IRQ_EXT < irq && irq < NR_IRQS)
+    {
+      irq -= RISCV_IRQ_EXT;
+      putreg32(priority, (uintptr_t)(QEMU_RV_PLIC_PRIORITY + 4 * irq));
+      return OK;
+    }
+
+  return -EINVAL;
+}
+#endif
