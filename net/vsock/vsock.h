@@ -99,6 +99,17 @@ vsock_pkt2hdr(FAR struct vsock_pkt_s *pkt)
   return (FAR struct vsock_hdr_s *)pkt->vb[0].buf;
 }
 
+inline_function void vsock_post(FAR sem_t *sem)
+{
+  int semcount = 0;
+
+  nxsem_get_value(sem, &semcount);
+  if (semcount < 1)
+    {
+      nxsem_post(sem);
+    }
+}
+
 void vsock_recv_pkt(FAR struct vsock_transport_s *t,
                     FAR struct vsock_pkt_s *pkt);
 
@@ -130,6 +141,10 @@ bool vsock_addr_equal(FAR const struct sockaddr_vm *addr1,
 /* Virtual socket initialize */
 
 int vsock_initialize(void);
+
+#ifdef CONFIG_NET_VSOCK_VIRTIO
+int vsock_virtio_initialize(void);
+#endif
 
 #undef EXTERN
 #ifdef __cplusplus

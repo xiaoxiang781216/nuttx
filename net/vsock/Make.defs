@@ -24,6 +24,10 @@ ifeq ($(CONFIG_NET_VSOCK),y)
 
 SOCK_CSRCS += vsock_sockif.c vsock_addr.c
 
+ifeq ($(CONFIG_NET_VSOCK_VIRTIO),y)
+  SOCK_CSRCS += vsock_virtio.c
+endif
+
 # Include Virtio Socket build support
 
 DEPPATH += --dep-path vsock

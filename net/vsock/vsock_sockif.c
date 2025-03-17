@@ -330,21 +330,6 @@ static void vsock_restorelock(FAR struct vsock_conn_s *conn,
 }
 
 /****************************************************************************
- * Name: vsock_post
- ****************************************************************************/
-
-static inline_function void vsock_post(FAR sem_t *sem)
-{
-  int semcount = 0;
-
-  nxsem_get_value(sem, &semcount);
-  if (semcount < 1)
-    {
-      nxsem_post(sem);
-    }
-}
-
-/****************************************************************************
  * Name: vsock_get_rx_size
  *
  * Description:
@@ -2429,6 +2414,8 @@ void vsock_transport_register(FAR struct vsock_transport_s *t)
 
 int vsock_initialize(void)
 {
+  int ret = OK;
+
   g_vsock_wqueue = work_queue_create("vsock_work",
                                      CONFIG_NET_VSOCK_WORK_PRIORITY,
                                      NULL,
@@ -2439,5 +2426,13 @@ int vsock_initialize(void)
       return -ENOMEM;
     }
 
-  return OK;
+#ifdef CONFIG_NET_VSOCK_VIRTIO
+  ret = vsock_virtio_initialize();
+  if (ret < 0)
+    {
+      vrterr("ERROR: vsock_virtio_initialize failed: %d\n", ret);
+    }
+#endif
+
+  return ret;
 }
