@@ -39,6 +39,10 @@ if(CONFIG_CORESIGHT)
     list(APPEND SRCS coresight_funnel.c)
   endif()
 
+  if(CONFIG_CORESIGHT_ITM)
+    list(APPEND SRCS coresight_itm.c)
+  endif()
+
   if(CONFIG_CORESIGHT_REPLICATOR)
     list(APPEND SRCS coresight_replicator.c)
   endif()

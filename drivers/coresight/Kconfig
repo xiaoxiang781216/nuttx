@@ -49,6 +49,10 @@ config CORESIGHT_FUNNEL
 	bool "Funnel coresight device support"
 	default n
 
+config CORESIGHT_ITM
+	bool "ITM coresight device support"
+	default n
+
 config CORESIGHT_REPLICATOR
 	bool "Replicator coresight device support"
 	default n

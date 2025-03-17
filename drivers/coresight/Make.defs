@@ -42,6 +42,10 @@ ifeq ($(CONFIG_CORESIGHT_FUNNEL),y)
 CSRCS += coresight_funnel.c
 endif
 
+ifeq ($(CONFIG_CORESIGHT_ITM),y)
+CSRCS += coresight_itm.c
+endif
+
 ifeq ($(CONFIG_CORESIGHT_REPLICATOR),y)
 CSRCS += coresight_replicator.c
 endif
