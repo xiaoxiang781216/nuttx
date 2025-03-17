@@ -193,7 +193,19 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
 #endif
                 {
                   atomic_fetch_or(&stcb->flags, TCB_FLAG_SIGDELIVER);
-                  up_schedule_sigaction(stcb);
+                  if (stcb == this_task() && !up_interrupt_context())
+                    {
+                      /* In this case just deliver the signal now. */
+
+                      leave_critical_section(flags);
+                      nxsig_deliver(stcb);
+                      flags = enter_critical_section();
+                      atomic_fetch_and(&stcb->flags, ~TCB_FLAG_SIGDELIVER);
+                    }
+                  else
+                    {
+                      up_schedule_sigaction(stcb);
+                    }
                 }
             }
 
