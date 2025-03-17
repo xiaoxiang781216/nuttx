@@ -136,7 +136,7 @@ static void etb_hw_enable(FAR struct coresight_etb_dev_s *etbdev)
   /* Clear entire RAM buffer. */
 
   coresight_put32(0x0, etbdev->csdev.addr + ETB_RAM_WRITE_POINTER);
-  for (i = 0; i < etbdev->buffer_depth; i++)
+  for (i = 0; i < etbdev->buffer_depth; i += ETB_FRAME_SIZE_WORDS)
     {
       coresight_put32(0x0, etbdev->csdev.addr + ETB_RWD_REG);
     }
@@ -155,6 +155,38 @@ static void etb_hw_enable(FAR struct coresight_etb_dev_s *etbdev)
   /* Enable trace capture. */
 
   coresight_put32(ETB_CTL_CAPT_EN, etbdev->csdev.addr + ETB_CTL_REG);
+  coresight_lock(etbdev->csdev.addr);
+}
+
+/****************************************************************************
+ * Name: etb_hw_disable
+ ****************************************************************************/
+
+static void etb_hw_disable(FAR struct coresight_etb_dev_s *etbdev)
+{
+  coresight_unlock(etbdev->csdev.addr);
+
+  /* Trigger a formatter stop event. */
+
+  coresight_modify32(ETB_FFCR_STOP_FI, ETB_FFCR_STOP_FI,
+                     etbdev->csdev.addr + ETB_FFCR);
+  coresight_modify32(ETB_FFCR_FON_MAN, ETB_FFCR_FON_MAN,
+                     etbdev->csdev.addr + ETB_FFCR);
+  if (coresight_timeout(0x0, ETB_FFCR_FON_MAN,
+                        etbdev->csdev.addr + ETB_FFCR) < 0)
+    {
+      cserr("timeout while waiting for completion of Manual Flush\n");
+    }
+
+  /* Disable trace capture. */
+
+  coresight_put32(0x0, etbdev->csdev.addr + ETB_CTL_REG);
+  if (coresight_timeout(ETB_FFSR_FT_STOPPED, ETB_FFSR_FT_STOPPED,
+                        etbdev->csdev.addr + ETB_FFSR) < 0)
+    {
+      cserr("timeout while waiting for Formatter to Stop\n");
+    }
+
   coresight_lock(etbdev->csdev.addr);
 }
 
@@ -196,6 +228,10 @@ static void etb_hw_read(FAR struct coresight_etb_dev_s *etbdev)
       writeptr += ETB_FRAME_SIZE_WORDS - frameoff;
     }
 
+  etbdev->available = writeptr > readptr ? writeptr - readptr :
+                      etbdev->buffer_depth - readptr + writeptr;
+  csinfo("read: %" PRId32 ", write: %" PRId32 ", available: %" PRId32 "\n",
+         readptr, writeptr, etbdev->available);
   if ((coresight_get32(etbdev->csdev.addr + ETB_STATUS_REG) &
        ETB_STATUS_RAM_FULL) == 0)
     {
@@ -208,7 +244,7 @@ static void etb_hw_read(FAR struct coresight_etb_dev_s *etbdev)
     }
 
   bufptr = etbdev->bufptr;
-  for (i = 0; i < etbdev->buffer_depth; i++)
+  for (i = 0; i < etbdev->available; i += ETB_FRAME_SIZE_WORDS)
     {
       *bufptr = coresight_get32(etbdev->csdev.addr + ETB_RAM_READ_DATA_REG);
       bufptr += 1;
@@ -232,38 +268,6 @@ static void etb_hw_read(FAR struct coresight_etb_dev_s *etbdev)
     }
 
   coresight_put32(readptr, etbdev->csdev.addr + ETB_RAM_READ_POINTER);
-  coresight_lock(etbdev->csdev.addr);
-}
-
-/****************************************************************************
- * Name: etb_hw_disable
- ****************************************************************************/
-
-static void etb_hw_disable(FAR struct coresight_etb_dev_s *etbdev)
-{
-  coresight_unlock(etbdev->csdev.addr);
-
-  /* Trigger a formatter stop event. */
-
-  coresight_modify32(ETB_FFCR_STOP_FI, ETB_FFCR_STOP_FI,
-                     etbdev->csdev.addr + ETB_FFCR);
-  coresight_modify32(ETB_FFCR_FON_MAN, ETB_FFCR_FON_MAN,
-                     etbdev->csdev.addr + ETB_FFCR);
-  if (coresight_timeout(0x0, ETB_FFCR_FON_MAN,
-                        etbdev->csdev.addr + ETB_FFCR) < 0)
-    {
-      cserr("timeout while waiting for completion of Manual Flush\n");
-    }
-
-  /* Disable trace capture. */
-
-  coresight_put32(0x0, etbdev->csdev.addr + ETB_CTL_REG);
-  if (coresight_timeout(ETB_FFSR_FT_STOPPED, ETB_FFSR_FT_STOPPED,
-                        etbdev->csdev.addr + ETB_FFSR) < 0)
-    {
-      cserr("timeout while waiting for Formatter to Stop\n");
-    }
-
   coresight_lock(etbdev->csdev.addr);
 }
 
@@ -323,7 +327,7 @@ static int etb_open(FAR struct file *filep)
     {
       /* Each buffer line is 32bit size. */
 
-      etbdev->bufptr = kmm_zalloc(etbdev->buffer_depth * 4);
+      etbdev->bufptr = kmm_zalloc(etbdev->buffer_depth);
       if (etbdev->bufptr == NULL)
         {
           cserr("malloc buffer failed\n");
@@ -395,14 +399,14 @@ static ssize_t etb_read(FAR struct file *filep, FAR char *buffer,
   DEBUGASSERT(inode->i_private);
   etbdev = (FAR struct coresight_etb_dev_s *)inode->i_private;
 
-  if (filep->f_pos > etbdev->buffer_depth * 4)
+  if (filep->f_pos > etbdev->available)
     {
       return 0;
     }
 
-  if (filep->f_pos + buflen > etbdev->buffer_depth * 4)
+  if (filep->f_pos + buflen > etbdev->available)
     {
-      buflen = etbdev->buffer_depth * 4 - filep->f_pos;
+      buflen = etbdev->available - filep->f_pos;
     }
 
   memcpy(buffer, (char *)etbdev->bufptr + filep->f_pos, buflen);
@@ -453,6 +457,7 @@ etb_register(FAR const struct coresight_desc_s *desc)
       goto buf_err;
     }
 
+  etbdev->buffer_depth *= ETB_FRAME_SIZE_WORDS;
   csdev = &etbdev->csdev;
   csdev->ops = &g_etb_ops;
   ret = coresight_register(csdev, desc);

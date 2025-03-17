@@ -39,6 +39,7 @@ struct coresight_etb_dev_s
   struct coresight_dev_s csdev;
   uint32_t trigger_cntr;             /* Amount of words to store after a trigger */
   uint32_t buffer_depth;             /* ETB buffer depth. */
+  uint32_t available;                /* Available buffer size. */
   FAR uint32_t *bufptr;              /* Buffer that ETB content sends to. */
   mutex_t lock;                      /* Mutex for driver's open/close. */
   uint8_t opencnt;                   /* ETB device's open count. */
