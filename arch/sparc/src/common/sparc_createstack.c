@@ -99,21 +99,7 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
        * then create a zeroed stack to make stack dumps easier to trace.
        */
 
-#if defined(CONFIG_BUILD_KERNEL) && defined(CONFIG_MM_KERNEL_HEAP)
-      /* Use the kernel allocator if this is a kernel thread */
-
-      if (ttype == TCB_FLAG_TTYPE_KERNEL)
-        {
-          tcb->stack_alloc_ptr = kmm_malloc(stack_size);
-        }
-      else
-#endif
-        {
-          /* Use the user-space allocator if this is a task or pthread */
-
-          tcb->stack_alloc_ptr = kumm_malloc(stack_size);
-        }
-
+      tcb->stack_alloc_ptr = group_malloc(tcb->group, stack_size);
 #ifdef CONFIG_DEBUG_FEATURES
       /* Was the allocation successful? */
 

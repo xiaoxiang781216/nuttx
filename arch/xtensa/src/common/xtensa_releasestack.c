@@ -31,7 +31,6 @@
 #include <nuttx/kmalloc.h>
 
 #include "xtensa.h"
-#include "xtensa_mm.h"
 
 /****************************************************************************
  * Public Functions
@@ -75,20 +74,11 @@ void up_release_stack(struct tcb_s *dtcb, uint8_t ttype)
   if (dtcb->stack_alloc_ptr &&
       (atomic_read(&dtcb->flags) & TCB_FLAG_FREE_STACK))
     {
-#ifdef CONFIG_MM_KERNEL_HEAP
-      /* Use the kernel allocator if this is a kernel thread */
-
-      if (ttype == TCB_FLAG_TTYPE_KERNEL)
-        {
-          kmm_free(dtcb->stack_alloc_ptr);
-        }
-      else
+#ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
+      xtensa_imm_free(dtcb->stack_alloc_ptr);
+#else
+      group_free(dtcb->group, dtcb->stack_alloc_ptr);
 #endif
-        {
-          /* Use the user-space allocator if this is a task or pthread */
-
-          UMM_FREE(dtcb->stack_alloc_ptr);
-        }
     }
 
   /* Mark the stack freed */

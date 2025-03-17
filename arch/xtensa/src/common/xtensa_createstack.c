@@ -40,7 +40,6 @@
 #include <arch/board/board.h>
 
 #include "xtensa.h"
-#include "xtensa_mm.h"
 
 /****************************************************************************
  * Public Functions
@@ -118,38 +117,20 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
        * If TLS is enabled, then we must allocate aligned stacks.
        */
 
-#ifdef CONFIG_TLS_ALIGNED
-#ifdef CONFIG_MM_KERNEL_HEAP
-      /* Use the kernel allocator if this is a kernel thread */
-
-      if (ttype == TCB_FLAG_TTYPE_KERNEL)
-        {
-          tcb->stack_alloc_ptr = kmm_memalign(TLS_STACK_ALIGN, stack_size);
-        }
-      else
+       tcb->stack_alloc_ptr =
+#ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
+#  ifdef CONFIG_TLS_ALIGNED
+          xtensa_imm_memalign(TLS_STACK_ALIGN, stack_size);
+#  else
+          xtensa_imm_malloc(stack_size);
+#  endif
+#else
+#  ifdef CONFIG_TLS_ALIGNED
+          group_memalign(tcb->group, TLS_STACK_ALIGN, stack_size);
+#  else
+          group_malloc(tcb->group, stack_size);
+#  endif
 #endif
-        {
-          /* Use the user-space allocator if this is a task or pthread */
-
-          tcb->stack_alloc_ptr = UMM_MEMALIGN(TLS_STACK_ALIGN, stack_size);
-        }
-
-#else /* CONFIG_TLS_ALIGNED */
-#ifdef CONFIG_MM_KERNEL_HEAP
-      /* Use the kernel allocator if this is a kernel thread */
-
-      if (ttype == TCB_FLAG_TTYPE_KERNEL)
-        {
-          tcb->stack_alloc_ptr = kmm_malloc(stack_size);
-        }
-      else
-#endif
-        {
-          /* Use the user-space allocator if this is a task or pthread */
-
-          tcb->stack_alloc_ptr = UMM_MALLOC(stack_size);
-        }
-#endif /* CONFIG_TLS_ALIGNED */
 
 #ifdef CONFIG_DEBUG_FEATURES
       /* Was the allocation successful? */
