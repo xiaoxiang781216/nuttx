@@ -279,6 +279,10 @@ function setup_toolchain()
   TOOLS_DIR=${ROOTDIR}/prebuilts/tools/${SYSTEM}/${SYS_ARCH}
   export PATH="${TOOLS_DIR}:$PATH"
 
+  # Add CMake prebuilt
+  export PATH=${ROOTDIR}/prebuilts/tools/cmake/bin:$PATH
+  export PATH=${ROOTDIR}/prebuilts/tools/ninja/bin:$PATH
+
   # Additional prebuilt GNU tools
   if [ ${SYSTEM} == "darwin" ]; then
     export PATH=${ROOTDIR}/prebuilts/tools/gnu/${SYSTEM}/${SYS_ARCH}:$PATH
