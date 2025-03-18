@@ -222,6 +222,12 @@ struct pm_preparefail_s
 struct pm_callback_s
 {
   struct dq_entry_s entry;   /* Supports a doubly linked list */
+  int prio;                  /* higher priority will earlier be called
+                              * when enter pm state.
+                              * default 0 or same prio will keep sequential,
+                              * first register late be called to handle
+                              * the bus->peripheral like requirements.
+                              */
 
   /**************************************************************************
    * Name: prepare
