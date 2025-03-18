@@ -69,19 +69,31 @@ set(CMAKE_ASM_ARCHIVE_FINISH ${CMAKE_RANLIB_COMMAND})
 
 set(NO_LTO "-fno-lto")
 
+set(LLVM_ARCHTYPE aarch64)
+
 if(CONFIG_ARCH_ARMV8A)
   add_compile_options(-march=armv8-a)
+  # Default to cortex-a53 if no specific CPU is selected
+  set(LLVM_CPUTYPE cortex-a53)
 elseif(CONFIG_ARCH_ARMV8R)
+  # Default to cortex-r82 if no specific CPU is selected
+  set(LLVM_CPUTYPE cortex-r82)
   add_compile_options(-march=armv8-r)
 elseif(CONFIG_ARCH_CORTEX_A53)
+  set(LLVM_CPUTYPE cortex-a53)
   add_compile_options(-mcpu=cortex-a53)
 elseif(CONFIG_ARCH_CORTEX_A57)
+  set(LLVM_CPUTYPE cortex-a57)
   add_compile_options(-mcpu=cortex-a57)
 elseif(CONFIG_ARCH_CORTEX_A72)
+  set(LLVM_CPUTYPE cortex-a72)
   add_compile_options(-mcpu=cortex-a72)
 elseif(CONFIG_ARCH_CORTEX_R82)
+  set(LLVM_CPUTYPE cortex-r82)
   add_compile_options(-mcpu=cortex-r82)
 endif()
+
+set(LLVM_ABITYPE aapcs64)
 
 if(CONFIG_DEBUG_CUSTOMOPT)
   add_compile_options(${CONFIG_DEBUG_OPTLEVEL})
