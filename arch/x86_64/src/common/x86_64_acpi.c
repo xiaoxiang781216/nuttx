@@ -734,7 +734,7 @@ void acpi_dump(void)
   while (true)
     {
       ret = acpi_lapic_get(i, &lapic);
-      if (ret < 0)
+      if (ret < 0 || lapic == NULL)
         {
           break;
         }
