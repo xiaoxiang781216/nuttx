@@ -23,3 +23,11 @@
 if(CONFIG_DEV_URANDOM AND NOT CONFIG_DEV_URANDOM_ARCH)
   target_sources(drivers PRIVATE dev_urandom.c)
 endif()
+
+if(CONFIG_CRYPTO_RPMSG)
+  target_sources(drivers PRIVATE rpmsg_crypto.c)
+endif()
+
+if(CONFIG_CRYPTO_RPMSG_SERVER)
+  target_sources(drivers PRIVATE rpmsg_crypto_server.c)
+endif()

@@ -76,6 +76,16 @@ endchoice # /dev/urandom algorithm
 
 endif # DEV_URANDOM
 
+config CRYPTO_RPMSG
+	bool "RPMSG Crypto Driver Client Support"
+	default n
+	depends on RPMSG && CRYPTO_CRYPTODEV
+
+config CRYPTO_RPMSG_SERVER
+	bool "RPMSG Crypto Driver Server Support"
+	default n
+	depends on RPMSG && CRYPTO_CRYPTODEV
+
 menuconfig DEV_SE05X
 	bool "Enable secure element (SE05X)"
 	depends on I2C
