@@ -29,10 +29,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Map RISC-V exception code to NuttX IRQ */
+/* QEMU riscv/virt.h has 96 IRQs, add it to RISCV_IRQ_EXT */
 
-#define QEMU_RV_IRQ_UART0  (RISCV_IRQ_MEXT + 10)
-
-#define NR_IRQS (QEMU_RV_IRQ_UART0 + 1)
+#define NR_PLIC_IRQS       96
+#define NR_IRQS            (RISCV_IRQ_EXT + NR_PLIC_IRQS)
 
 #endif /* __ARCH_RISCV_INCLUDE_QEMU_RV_IRQ_H */

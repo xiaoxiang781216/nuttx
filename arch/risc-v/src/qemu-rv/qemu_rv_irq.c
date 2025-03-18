@@ -116,7 +116,7 @@ void up_irqinitialize(void)
 #else
   /* Set priority for all global interrupts to 1 (lowest) */
 
-  for (id = 1; id <= 52; id++)
+  for (id = 1; id <= NR_PLIC_IRQS; id++)
     {
       putreg32(1, (uintptr_t)(QEMU_RV_PLIC_PRIORITY + 4 * id));
     }
@@ -204,7 +204,7 @@ void up_disable_irq(int irq)
 
       /* Clear enable bit for the irq */
 
-      if (0 <= extirq && extirq <= 63)
+      if (extirq < NR_PLIC_IRQS)
         {
 #ifndef CONFIG_ARCH_RV_HAVE_APLIC
           modifyreg32(QEMU_RV_PLIC_ENABLE1 + (4 * (extirq / 32)),
@@ -271,7 +271,7 @@ void up_enable_irq(int irq)
 
       /* Set enable bit for the irq */
 
-      if (0 <= extirq && extirq <= 63)
+      if (extirq < NR_PLIC_IRQS)
         {
 #ifndef CONFIG_ARCH_RV_HAVE_APLIC
           modifyreg32(QEMU_RV_PLIC_ENABLE1 + (4 * (extirq / 32)),
