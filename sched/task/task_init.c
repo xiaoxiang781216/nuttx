@@ -68,10 +68,9 @@
  * Input Parameters:
  *   tcb        - Address of the new task's TCB
  *   name       - Name of the new task (not used)
- *   priority   - Priority of the new task
- *   stack      - Start of the pre-allocated stack
- *   stack_size - Size (in bytes) of the stack allocated
  *   entry      - Application start point of the new task
+ *   actions    - File action to be performed.
+ *   attr       - Use attr set stacksize, stackaddr and priority.
  *   argv       - A pointer to an array of input parameters.  The array
  *                should be terminated with a NULL argv[] value. If no
  *                parameters are required, argv may be NULL.
@@ -85,13 +84,19 @@
  *
  ****************************************************************************/
 
-int nxtask_init(FAR struct tcb_s *tcb, const char *name, int priority,
-                FAR void *stack, uint32_t stack_size,
-                main_t entry, FAR char * const argv[],
-                FAR char * const envp[],
-                FAR const posix_spawn_file_actions_t *actions)
+int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
+                FAR const posix_spawn_file_actions_t *actions,
+                FAR const posix_spawnattr_t *attr,
+                FAR char * const argv[], FAR char * const envp[])
 {
   uint8_t ttype = atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK;
+  size_t stacksize = attr->stacksize;
+#ifndef CONFIG_BUILD_KERNEL
+  FAR void *stack = attr->stackaddr;
+#else
+  FAR void *stack = NULL;
+#endif
+  int priority = attr->priority;
   int ret;
 
   sched_trace_begin();
@@ -169,13 +174,13 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, int priority,
     {
       /* Use pre-allocated stack */
 
-      ret = up_use_stack(tcb, stack, stack_size);
+      ret = up_use_stack(tcb, stack, stacksize);
     }
   else
     {
       /* Allocate the stack for the TCB */
 
-      ret = up_create_stack(tcb, stack_size, ttype);
+      ret = up_create_stack(tcb, stacksize, ttype);
     }
 
   if (ret < OK)

@@ -192,13 +192,16 @@ int exec_module(FAR struct binary_s *binp,
                 FAR const posix_spawnattr_t *attr,
                 bool spawn)
 {
+  posix_spawnattr_t tmp;
   FAR struct tcb_s *tcb;
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
   FAR struct arch_addrenv_s *addrenv = &binp->addrenv->addrenv;
   FAR void *vheap;
   char name[CONFIG_PATH_MAX];
 #endif
+#ifndef CONFIG_BUILD_KERNEL
   FAR void *stackaddr = NULL;
+#endif
   pid_t pid;
   int ret;
 
@@ -246,6 +249,12 @@ int exec_module(FAR struct binary_s *binp,
       goto errout_with_envp;
     }
 
+  ret = binfmt_copyattr(&attr, attr);
+  if (ret < 0)
+    {
+      goto errout_with_actions;
+    }
+
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
   /* If there is no argument vector, the process name must be copied here */
 
@@ -261,7 +270,7 @@ int exec_module(FAR struct binary_s *binp,
   if (ret < 0)
     {
       berr("ERROR: addrenv_select() failed: %d\n", ret);
-      goto errout_with_actions;
+      goto errout_with_attr;
     }
 
   ret = up_addrenv_vheap(addrenv, &vheap);
@@ -310,17 +319,29 @@ int exec_module(FAR struct binary_s *binp,
     }
 #endif
 
+  if (!attr)
+    {
+      posix_spawnattr_init(&tmp);
+      posix_spawnattr_setstackaddr(&tmp, stackaddr);
+      posix_spawnattr_setpriority(&tmp, binp->priority);
+      posix_spawnattr_setstacksize(&tmp, binp->stacksize);
+      attr = &tmp;
+    }
+
   if (argv && argv[0])
     {
-      ret = nxtask_init(tcb, argv[0], binp->priority, stackaddr,
-                        binp->stacksize, binp->entrypt, &argv[1],
-                        envp, actions);
+      ret = nxtask_init(tcb, argv[0], binp->entrypt, actions, attr,
+                        &argv[1], envp);
     }
   else
     {
-      ret = nxtask_init(tcb, filename, binp->priority, stackaddr,
-                        binp->stacksize, binp->entrypt, argv,
-                        envp, actions);
+      ret = nxtask_init(tcb, filename, binp->entrypt, actions, attr,
+                        argv, envp);
+    }
+
+  if (attr == &tmp)
+    {
+      posix_spawnattr_destroy(&tmp);
     }
 
   if (ret < 0)
@@ -330,6 +351,11 @@ int exec_module(FAR struct binary_s *binp,
     }
 
   /* The copied argv and envp can now be released */
+
+  if (attr != &tmp)
+    {
+      binfmt_freeattr(attr);
+    }
 
   binfmt_freeactions(actions);
   binfmt_freeargv(argv);
@@ -381,7 +407,7 @@ int exec_module(FAR struct binary_s *binp,
 
   /* Set the attributes */
 
-  if (attr)
+  if (attr != &tmp)
     {
       ret = spawn_execattrs(pid, attr);
       if (ret < 0)
@@ -413,9 +439,15 @@ errout_with_tcbinit:
 errout_with_addrenv:
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
   addrenv_restore(binp->oldenv);
+errout_with_attr:
+  if (attr != &tmp)
+    {
+      binfmt_freeattr(attr);
+    }
+
+#endif
 errout_with_actions:
   binfmt_freeactions(actions);
-#endif
 errout_with_envp:
   binfmt_freeenv(envp);
 errout_with_args:

@@ -60,17 +60,14 @@
  *
  * Input Parameters:
  *   name       - Name of the new task
- *   ttype      - Type of the new task
- *   priority   - Priority of the new task
- *   stack_addr - Address of the stack needed
- *   stack_size - Size (in bytes) of the stack needed
  *   entry      - Entry point of a new task
+ *   actions    - The spawn file actions
+ *   attr       - Use attr set stacksize, stackaddr and priority.
  *   arg        - A pointer to an array of input parameters.  The array
  *                should be terminated with a NULL argv[] value. If no
  *                parameters are required, argv may be NULL.
  *   envp       - A pointer to an array of environment strings. Terminated
  *                with a NULL entry.
- *   actions    - The spawn file actions
  *
  * Returned Value:
  *   Returns the positive, non-zero process ID of the new task or a negated
@@ -79,12 +76,11 @@
  *
  ****************************************************************************/
 
-static int nxtask_spawn_create(FAR const char *name, int priority,
-                              FAR void *stack_addr, int stack_size,
-                              main_t entry, FAR char * const argv[],
-                              FAR char * const envp[],
-                              FAR const posix_spawn_file_actions_t *actions,
-                              FAR const posix_spawnattr_t *attr)
+static int nxtask_spawn_create(FAR const char *name, main_t entry,
+                               FAR const posix_spawn_file_actions_t *actions,
+                               FAR const posix_spawnattr_t *attr,
+                               FAR char * const argv[],
+                               FAR char * const envp[])
 {
   FAR struct tcb_s *tcb;
   pid_t pid;
@@ -105,8 +101,7 @@ static int nxtask_spawn_create(FAR const char *name, int priority,
 
   /* Initialize the task */
 
-  ret = nxtask_init(tcb, name, priority, stack_addr, stack_size,
-                    entry, argv, envp, actions);
+  ret = nxtask_init(tcb, name, entry, actions, attr, argv, envp);
   if (ret < OK)
     {
       kmm_free(tcb);
@@ -189,21 +184,13 @@ static int nxtask_spawn_exec(FAR pid_t *pidp, FAR const char *name,
                              FAR const posix_spawnattr_t *attr,
                              FAR char * const *argv, FAR char * const envp[])
 {
-  FAR void *stackaddr = NULL;
-  size_t stacksize;
-  int priority;
+  posix_spawnattr_t tmp;
   int pid;
   int ret = OK;
 
   /* Use the default priority and stack size if no attributes are provided */
 
-  if (attr)
-    {
-      priority  = attr->priority;
-      stacksize = attr->stacksize;
-      stackaddr = attr->stackaddr;
-    }
-  else
+  if (!attr)
     {
       struct sched_param param;
 
@@ -215,15 +202,22 @@ static int nxtask_spawn_exec(FAR pid_t *pidp, FAR const char *name,
           return ret;
         }
 
-      priority  = param.sched_priority;
-      stacksize = CONFIG_POSIX_SPAWN_DEFAULT_STACKSIZE;
+      posix_spawnattr_init(&tmp);
+      posix_spawnattr_setschedparam(&tmp, &param);
+      posix_spawnattr_setstacksize(&tmp,
+                                   CONFIG_POSIX_SPAWN_DEFAULT_STACKSIZE);
+      attr = &tmp;
     }
 
   /* Start the task */
 
-  pid = nxtask_spawn_create(name, priority, stackaddr,
-                            stacksize, entry, argv,
-                            envp ? envp : environ, actions, attr);
+  pid = nxtask_spawn_create(name, entry, actions, attr, argv,
+                            envp ? envp : environ);
+  if (attr == &tmp)
+    {
+      posix_spawnattr_destroy(&tmp);
+    }
+
   if (pid < 0)
     {
       ret = pid;

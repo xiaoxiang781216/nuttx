@@ -212,6 +212,50 @@ void binfmt_freeactions(FAR const posix_spawn_file_actions_t *copy);
 #  define binfmt_freeactions(copy)
 #endif
 
+/****************************************************************************
+ * Name: binfmt_copyattr
+ *
+ * Description:
+ *   Copies the POSIX spawn attributes to a new memory location to ensure
+ *   accessibility in the new process address environment.
+ *
+ * Input Parameters:
+ *   copy - Pointer to the location where the copied attributes will be
+ *   stored.
+ *   attr - Pointer to the original POSIX spawn attributes.
+ *
+ * Returned Value:
+ *   Returns OK on success, or -ENOMEM if memory allocation fails.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
+int binfmt_copyattr(FAR const posix_spawnattr_t **copy,
+                    FAR const posix_spawnattr_t *attr);
+#else
+#  define binfmt_copyattr(copy, attr) \
+          (*(copy) = (FAR const posix_spawnattr_t *)(attr), 0)
+#endif
+/****************************************************************************
+ * Name: binfmt_freeattr
+ *
+ * Description:
+ *   Release the memory allocated for the copied POSIX spawn attributes.
+ *
+ * Input Parameters:
+ *   copy - Pointer to the copied POSIX spawn attributes.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
+void binfmt_freeattr(FAR const posix_spawnattr_t *copy);
+#else
+#  define binfmt_freeattr(copy)
+#endif
+
 #ifdef CONFIG_BUILTIN
 /****************************************************************************
  * Name: builtin_initialize

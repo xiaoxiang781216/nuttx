@@ -78,9 +78,15 @@ int nxthread_create(FAR const char *name, uint8_t ttype, int priority,
                     FAR void *stack_addr, int stack_size, main_t entry,
                     FAR char * const argv[], FAR char * const envp[])
 {
+  posix_spawnattr_t attr;
   FAR struct tcb_s *tcb;
   pid_t pid;
   int ret;
+
+  posix_spawnattr_init(&attr);
+  posix_spawnattr_setstacksize(&attr, stack_size);
+  posix_spawnattr_setstackaddr(&attr, stack_addr);
+  posix_spawnattr_setpriority(&attr, priority);
 
   /* Allocate a TCB for the new task. */
 
@@ -99,8 +105,8 @@ int nxthread_create(FAR const char *name, uint8_t ttype, int priority,
 
   /* Initialize the task */
 
-  ret = nxtask_init(tcb, name, priority,
-                    stack_addr, stack_size, entry, argv, envp, NULL);
+  ret = nxtask_init(tcb, name, entry, NULL, &attr, argv, envp);
+  posix_spawnattr_destroy(&attr);
   if (ret < OK)
     {
       kmm_free(tcb);

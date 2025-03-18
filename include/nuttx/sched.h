@@ -1013,10 +1013,9 @@ FAR struct filelist *nxsched_get_files(void);
  * Input Parameters:
  *   tcb        - Address of the new task's TCB
  *   name       - Name of the new task (not used)
- *   priority   - Priority of the new task
- *   stack      - Start of the pre-allocated stack
- *   stack_size - Size (in bytes) of the stack allocated
  *   entry      - Application start point of the new task
+ *   actions    - File action to be performed.
+ *   attr       - Use attr set stacksize, stackaddr and priority.
  *   argv       - A pointer to an array of input parameters.  The array
  *                should be terminated with a NULL argv[] value. If no
  *                parameters are required, argv may be NULL.
@@ -1031,10 +1030,10 @@ FAR struct filelist *nxsched_get_files(void);
  *
  ****************************************************************************/
 
-int nxtask_init(FAR struct tcb_s *tcb, const char *name, int priority,
-                FAR void *stack, uint32_t stack_size, main_t entry,
-                FAR char * const argv[], FAR char * const envp[],
-                FAR const posix_spawn_file_actions_t *actions);
+int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
+                FAR const posix_spawn_file_actions_t *actions,
+                FAR const posix_spawnattr_t *attr,
+                FAR char * const argv[], FAR char * const envp[]);
 
 /****************************************************************************
  * Name: nxtask_uninit
