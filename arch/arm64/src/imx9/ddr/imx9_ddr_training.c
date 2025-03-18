@@ -56,7 +56,7 @@
 /* DDR training binaries via incbin */
 
 __asm__ (
-  "   .section .rodata                   \n"
+  "   .section .rodata, \"a\"            \n"
   "   .balign  64                        \n"
   "   .globl   g_dmem1d_begin            \n"
   "g_dmem1d_begin:                       \n"

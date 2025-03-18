@@ -27,7 +27,7 @@
 #include "arm_fork.h"
 
 	MODULE up_fork
-	SECTION .text:CODE:NOROOT(2)
+	SECTION .text:CODE:NOROOT(2), "ax"
 
 /****************************************************************************
  * Pre-processor Definitions
