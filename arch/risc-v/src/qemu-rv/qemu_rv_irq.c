@@ -330,3 +330,16 @@ int up_prioritize_irq(int irq, int priority)
   return -EINVAL;
 }
 #endif
+
+#ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
+void up_trigger_irq(int irq, cpu_set_t cpuset)
+{
+  if (RISCV_IRQ_EXT < irq && irq < NR_IRQS)
+    {
+      irq -= RISCV_IRQ_EXT;
+      modifyreg32(QEMU_RV_PLIC_PENDING + (irq >> 5) * 4, 0, BIT(irq & 31));
+    }
+
+  UNUSED(cpuset);
+}
+#endif

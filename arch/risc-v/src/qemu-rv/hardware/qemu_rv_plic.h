@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 #define QEMU_RV_PLIC_PRIORITY    (QEMU_RV_PLIC_BASE + 0x000000)
-#define QEMU_RV_PLIC_PENDING1    (QEMU_RV_PLIC_BASE + 0x001000)
+#define QEMU_RV_PLIC_PENDING     (QEMU_RV_PLIC_BASE + 0x001000)
 
 #ifdef CONFIG_ARCH_USE_S_MODE
 #  define QEMU_RV_PLIC_ENABLE1   (QEMU_RV_PLIC_BASE + 0x002080)
