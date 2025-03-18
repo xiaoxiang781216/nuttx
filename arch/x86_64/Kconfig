@@ -6,6 +6,24 @@
 if ARCH_X86_64
 comment "x86_64 Configuration Options"
 
+config ARCH
+	string
+	default "x86_64"
+
+choice
+	prompt "x86_64 Toolchain Selection"
+	default X86_64_TOOLCHAIN_GNU_NONE
+
+config X86_64_TOOLCHAIN_GNU_HOST
+	bool "Use host x86_64 toolchain"
+	select ARCH_TOOLCHAIN_GCC
+
+config X86_64_TOOLCHAIN_GNU_NONE
+	bool "Use cross-development x86_64 toolchain"
+	select ARCH_TOOLCHAIN_GCC
+
+endchoice # x86_64 Toolchain Selection
+
 config ARCH_INTEL64
 	bool "Intel x86_64"
 	select ARCH_HAVE_MMU

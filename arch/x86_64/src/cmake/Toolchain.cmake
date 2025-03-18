@@ -25,15 +25,17 @@ set(CMAKE_SYSTEM_VERSION 1)
 
 set(ARCH_SUBDIR intel64)
 
-if(CONFIG_WINDOWS_CYGWIN)
+# cross-development toolchain selection
+
+if(CONFIG_X86_64_TOOLCHAIN_GNU_NONE)
+  set(TOOLCHAIN_PREFIX x86_64-none-linux-gnu)
+elseif(CONFIG_WINDOWS_CYGWIN)
   set(TOOLCHAIN_PREFIX i486-nuttx-elf)
-endif()
-
-if(CONFIG_HOST_MACOS)
+elseif(CONFIG_HOST_MACOS)
   set(TOOLCHAIN_PREFIX x86_64-elf)
+else()
+  set(TOOLCHAIN_PREFIX)
 endif()
-
-set(TOOLCHAIN_PREFIX x86_64-none-linux-gnu)
 
 set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)
 set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++)
