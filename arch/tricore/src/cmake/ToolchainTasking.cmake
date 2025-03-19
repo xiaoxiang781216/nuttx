@@ -171,8 +171,10 @@ function(nuttx_generate_preprocess_target)
   add_custom_command(
     OUTPUT ${TARGET_FILE}
     COMMAND ${CMAKE_COMMAND} -E copy ${SOURCE_FILE} ${TARGET_FILE_TEMP}
-    COMMAND ${PREPROCESS} --preprocess=+noline, -I${CMAKE_BINARY_DIR}/include
-            ${TARGET_FILE_TEMP} -o ${TARGET_FILE}
+    COMMAND ${PREPROCESS} -I${CMAKE_BINARY_DIR}/include ${TARGET_FILE_TEMP} -o
+            ${TARGET_FILE}
+    COMMAND ${CMAKE_COMMAND} ${TARGET_FILE} "__builtin" -P
+            ${NUTTX_DIR}/cmake/nuttx_remove_lines.cmake
     COMMAND ${CMAKE_COMMAND} -E remove ${TARGET_FILE_TEMP}
     DEPENDS ${SOURCE_FILE} ${DEPENDS})
 endfunction()
