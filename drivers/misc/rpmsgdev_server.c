@@ -407,7 +407,7 @@ static int rpmsgdev_ioctl_handler(FAR struct rpmsg_endpoint *ept,
 
   msg->header.result = file_ioctl(filep, msg->request,
                                   msg->arglen == 0 ? msg->arg :
-                                  (unsigned long)msg->buf);
+                                  (unsigned long)(FAR void *)msg->buf);
 
   return rpmsg_send(ept, msg, len);
 }
