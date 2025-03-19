@@ -163,10 +163,6 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, uint8_t ttype)
       ret = addrenv_leave(tcb);
 #endif
 
-      /* Leave the group (if we did not already leave in task_exithook.c) */
-
-      group_leave(tcb);
-
 #ifndef CONFIG_DISABLE_PTHREAD
       /* Destroy the pthread join mutex */
 
@@ -176,7 +172,7 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, uint8_t ttype)
 
       if (ttype == TCB_FLAG_TTYPE_TASK)
         {
-          group = (FAR struct task_group_s *)(tcb + 1);
+          group = tcb->group;
           if (!sq_empty(&group->tg_members)
 #if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
               || group->tg_nwaiters > 0

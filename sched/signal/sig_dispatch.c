@@ -715,7 +715,7 @@ int nxsig_dispatch(pid_t pid, FAR siginfo_t *info, bool thread)
 
   /* Did we locate the group? */
 
-  if (group != NULL)
+  if (group && !(atomic_read(&group->tg_flags) & GROUP_FLAG_EXITING))
     {
       if (thread)
         {

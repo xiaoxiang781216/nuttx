@@ -195,14 +195,6 @@ void group_leave(FAR struct tcb_s *tcb)
           group_release(group,
                         atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK);
         }
-
-      /* In any event, we can detach the group from the TCB so that we won't
-       * do this again.
-       * in group_release, files_putlist may use tcb->group and
-       * tcb will not be freed in group_release()
-       */
-
-       tcb->group = NULL;
     }
 }
 
