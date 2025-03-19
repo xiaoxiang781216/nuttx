@@ -55,7 +55,14 @@ if(CONFIG_SIG_SIGSTOP_ACTION)
 endif()
 
 if(CONFIG_MM_KERNEL_HEAP)
-  list(APPEND SRCS group_malloc.c group_realloc.c group_zalloc.c group_free.c)
+  list(
+    APPEND
+    SRCS
+    group_malloc.c
+    group_realloc.c
+    group_zalloc.c
+    group_free.c
+    group_memalign.c)
 endif()
 
 target_sources(sched PRIVATE ${SRCS})

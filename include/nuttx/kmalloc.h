@@ -142,6 +142,10 @@ FAR void *group_zalloc(FAR struct task_group_s *group, size_t nbytes);
 
 void group_free(FAR struct task_group_s *group, FAR void *mem);
 
+/* Functions defined in group/group_memalign.c ******************************/
+
+FAR void *group_memalign(FAR struct task_group_s *group, size_t alignment,
+                         size_t nbytes);
 #else
   /* In the flat build, there is only one memory allocator and no distinction
    * in privileges.
@@ -151,7 +155,7 @@ void group_free(FAR struct task_group_s *group, FAR void *mem);
 #  define group_realloc(g,p,s)   kumm_realloc((p),(s))
 #  define group_zalloc(g,n)      kumm_zalloc(n)
 #  define group_free(g,m)        kumm_free(m)
-
+#  define group_memalign(g,a,n)  kumm_memalign(a,n)
 #endif
 
 #undef KMALLOC_EXTERN
