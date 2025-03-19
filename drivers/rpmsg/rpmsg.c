@@ -64,6 +64,13 @@ struct rpmsg_cb_s
   struct metal_list node;
 };
 
+struct rpmsg_ioctl_s
+{
+  FAR const char *cpuname;
+  int             cmd;
+  unsigned long   arg;
+};
+
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -211,6 +218,18 @@ static void rpmsg_defer_worker(FAR void *arg)
   spin_unlock_irqrestore(&rpmsg->defer_lock, flags);
 }
 #endif
+
+static int rpmsg_ioctl_foreach_cb(FAR struct rpmsg_s *rpmsg, FAR void *arg)
+{
+  FAR struct rpmsg_ioctl_s *info = (FAR struct rpmsg_ioctl_s *)arg;
+
+  if (!info->cpuname || !strcmp(rpmsg->cpuname, info->cpuname))
+    {
+      return rpmsg_dev_ioctl_(rpmsg, info->cmd, info->arg);
+    }
+
+  return 0;
+}
 
 /****************************************************************************
  * Public Functions
@@ -745,11 +764,21 @@ void rpmsg_dump_epts(FAR struct rpmsg_device *rdev)
 
 int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg)
 {
+  struct rpmsg_ioctl_s info;
+
+  info.cpuname = cpuname;
+  info.cmd = cmd;
+  info.arg = arg;
+
+  return rpmsg_foreach(rpmsg_ioctl_foreach_cb, &info);
+}
+
+int rpmsg_foreach(rpmsg_foreach_t handler, FAR void *arg)
+{
   FAR struct metal_list *node;
-  bool needlock;
+  bool needlock = !up_interrupt_context() && !sched_idletask();
   int ret = OK;
 
-  needlock = !up_interrupt_context() && !sched_idletask();
   if (needlock)
     {
       down_read(&g_rpmsg_lock);
@@ -760,13 +789,10 @@ int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg)
       FAR struct rpmsg_s *rpmsg =
         metal_container_of(node, struct rpmsg_s, node);
 
-      if (!cpuname || !strcmp(rpmsg->cpuname, cpuname))
+      ret = handler(rpmsg, arg);
+      if (ret < 0)
         {
-          ret = rpmsg_dev_ioctl_(rpmsg, cmd, arg);
-          if (ret < 0)
-            {
-              break;
-            }
+          break;
         }
     }
 
