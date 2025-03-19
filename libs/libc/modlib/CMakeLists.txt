@@ -57,5 +57,5 @@ if(CONFIG_LIBC_MODLIB)
 
   add_custom_target(elfldscript_tmp DEPENDS ${ELF_LD_SCRIPT_TMP})
   add_dependencies(nuttx elfldscript_tmp)
-
+  add_dependencies(apps_post elfldscript_tmp)
 endif()

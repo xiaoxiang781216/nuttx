@@ -439,6 +439,11 @@ if(CONFIG_ARCH_BOARD_CUSTOM)
   endif()
 endif()
 
+# Support loadable and kernel options by specific arch
+if(EXISTS ${CMAKE_SOURCE_DIR}/arch/${CONFIG_ARCH}/src/cmake/elf.cmake)
+  include(${CMAKE_SOURCE_DIR}/arch/${CONFIG_ARCH}/src/cmake/elf.cmake)
+endif()
+
 include(platform)
 
 # Setup main nuttx target ####################################################

@@ -131,17 +131,21 @@ function(nuttx_add_application)
           COMMAND
             ${CMAKE_LD}
             $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_APP_LINK_OPTIONS>>
-            -e __start -Bstatic -T ${CMAKE_BINARY_DIR}/gnu-elf.ld
+            -e __start -T ${CMAKE_BINARY_DIR}/gnu-elf.ld
             $<TARGET_OBJECTS:STARTUP_OBJS> --start-group
-            $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_LINK_LIBRARIES>>
+            $<$<BOOL:${CONFIG_BUILD_KERNEL}>:$<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_LINK_LIBRARIES>>>
+            $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_LINK_EXTRA_LIBRARIES>>
             $<TARGET_FILE:${TARGET}> --end-group -o
             ${CMAKE_BINARY_DIR}/bin/${ELF_NAME}
+          COMMENT "Building ELF:${ELF_NAME}"
           COMMAND_EXPAND_LISTS)
       else()
         add_executable(${TARGET} ${SRCS})
         target_link_options(
-          ${TARGET} PRIVATE
-          $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx,NUTTX_ELF_APP_LINK_OPTIONS>>)
+          ${TARGET}
+          PRIVATE
+          $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_APP_LINK_OPTIONS>>
+        )
       endif()
 
       # easy access to final ELF, regardless of how it was created
@@ -153,10 +157,11 @@ function(nuttx_add_application)
       # loadable build requires applying ELF flags to all applications
 
       if(CONFIG_MODULES)
+        add_dependencies(nuttx_apps_mksymtab ${TARGET})
         target_compile_options(
           ${TARGET}
           PRIVATE
-            $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx,NUTTX_ELF_APP_COMPILE_OPTIONS>>
+            $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_APP_COMPILE_OPTIONS>>
         )
       endif()
 
@@ -169,24 +174,6 @@ function(nuttx_add_application)
       # create as library to be archived into libapps.a
       set(TARGET "apps_${NAME}")
       add_library(${TARGET} ${SRCS})
-
-      # Set apps global compile options & definitions hold by
-      # nuttx_apps_interface
-      target_compile_options(
-        ${TARGET}
-        PRIVATE
-          $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_apps_interface,APPS_COMPILE_OPTIONS>>
-      )
-      target_compile_definitions(
-        ${TARGET}
-        PRIVATE
-          $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_apps_interface,APPS_COMPILE_DEFINITIONS>>
-      )
-      target_include_directories(
-        ${TARGET}
-        PRIVATE
-          $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_apps_interface,APPS_INCLUDE_DIRECTORIES>>
-      )
 
       nuttx_add_library_internal(${TARGET})
       # add to list of application libraries
@@ -261,6 +248,23 @@ function(nuttx_add_application)
         target_include_directories(${TARGET} BEFORE PRIVATE ${inc})
       endforeach()
     endif()
+
+    # Set apps global compile options & definitions hold by nuttx_apps_interface
+    target_compile_options(
+      ${TARGET}
+      PRIVATE
+        $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_apps_interface,APPS_COMPILE_OPTIONS>>
+    )
+    target_compile_definitions(
+      ${TARGET}
+      PRIVATE
+        $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_apps_interface,APPS_COMPILE_DEFINITIONS>>
+    )
+    target_include_directories(
+      ${TARGET}
+      PRIVATE
+        $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_apps_interface,APPS_INCLUDE_DIRECTORIES>>
+    )
   endif()
 
   # add supplied dependencies
