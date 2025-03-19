@@ -58,6 +58,13 @@ struct rpmsg_cb_s
   struct metal_list node;
 };
 
+struct rpmsg_ioctl_s
+{
+  FAR const char *cpuname;
+  int             cmd;
+  unsigned long   arg;
+};
+
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -548,37 +555,28 @@ void rpmsg_unregister(FAR const char *path, FAR struct rpmsg_s *rpmsg)
   metal_finish();
 }
 
+static int rpmsg_ioctl_foreach_cb(FAR struct rpmsg_s *rpmsg, FAR void *arg)
+{
+  FAR struct rpmsg_ioctl_s *info = (FAR struct rpmsg_ioctl_s *)arg;
+
+  if (!info->cpuname ||
+      !strcmp(rpmsg_get_cpuname(rpmsg->rdev), info->cpuname))
+    {
+      return rpmsg_dev_ioctl_(rpmsg, info->cmd, info->arg);
+    }
+
+  return 0;
+}
+
 int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg)
 {
-  FAR struct metal_list *node;
-  int ret = OK;
+  struct rpmsg_ioctl_s info;
 
-  if (!up_interrupt_context())
-    {
-      down_read(&g_rpmsg_lock);
-    }
+  info.cpuname = cpuname;
+  info.cmd = cmd;
+  info.arg = arg;
 
-  metal_list_for_each(&g_rpmsg, node)
-    {
-      FAR struct rpmsg_s *rpmsg =
-        metal_container_of(node, struct rpmsg_s, node);
-
-      if (!cpuname || !strcmp(rpmsg_get_cpuname(rpmsg->rdev), cpuname))
-        {
-          ret = rpmsg_dev_ioctl_(rpmsg, cmd, arg);
-          if (ret < 0)
-            {
-              break;
-            }
-        }
-    }
-
-  if (!up_interrupt_context())
-    {
-      up_read(&g_rpmsg_lock);
-    }
-
-  return ret;
+  return rpmsg_foreach(rpmsg_ioctl_foreach_cb, &info);
 }
 
 int rpmsg_panic(FAR const char *cpuname)
@@ -589,4 +587,35 @@ int rpmsg_panic(FAR const char *cpuname)
 void rpmsg_dump_all(void)
 {
   rpmsg_ioctl(NULL, RPMSGIOC_DUMP, 0);
+}
+
+int rpmsg_foreach(rpmsg_foreach_t handler, FAR void *args)
+{
+  FAR struct metal_list *node;
+  bool needlock = !up_interrupt_context() && !sched_idletask();
+  int ret = OK;
+
+  if (needlock)
+    {
+      down_read(&g_rpmsg_lock);
+    }
+
+  metal_list_for_each(&g_rpmsg, node)
+    {
+      FAR struct rpmsg_s *rpmsg =
+        metal_container_of(node, struct rpmsg_s, node);
+
+      ret = handler(rpmsg, args);
+      if (ret < 0)
+        {
+          break;
+        }
+    }
+
+  if (needlock)
+    {
+      up_read(&g_rpmsg_lock);
+    }
+
+  return ret;
 }
