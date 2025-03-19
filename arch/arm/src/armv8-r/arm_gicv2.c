@@ -1336,19 +1336,12 @@ void arm_gic_initialize(void)
   arm_gic_init();
 }
 
-#ifdef CONFIG_SMP
-
 void arm_cpu_sgi(int sgi, unsigned int cpuset)
 {
   uint32_t regval;
 
-#ifdef CONFIG_SMP
   regval = GIC_ICDSGIR_INTID(sgi) | GIC_ICDSGIR_CPUTARGET(cpuset) |
            GIC_ICDSGIR_TGTFILTER_LIST;
-#else
-  regval = GIC_ICDSGIR_INTID(sgi) | GIC_ICDSGIR_CPUTARGET(0) |
-           GIC_ICDSGIR_TGTFILTER_THIS;
-#endif
 
 #if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
   if (sgi >= GIC_IRQ_SGI0 && sgi <= GIC_IRQ_SGI7)
@@ -1404,8 +1397,6 @@ void up_trigger_irq(int irq, cpu_set_t cpuset)
       putreg32(GIC_ICDISPR_INT(irq), regaddr);
     }
 }
-
-#endif /* CONFIG_SMP */
 
 /****************************************************************************
  * Name: up_get_legacy_irq
