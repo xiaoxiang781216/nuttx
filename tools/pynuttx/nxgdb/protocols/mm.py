@@ -114,7 +114,7 @@ class MemPoolMultiple(Value):
 
 
 class MemPoolBlock(Value):
-    """struct mempool_backtrace_s"""
+    """struct mempool_record_s"""
 
     magic: Value
     pid: Value

@@ -340,7 +340,7 @@ class MMClassify(gdb.Command):
                 for node in memdump.parse_memdump_log(args.log)
             )
         else:
-            if not mm.CONFIG_MM_BACKTRACE or mm.CONFIG_MM_BACKTRACE < 8:
+            if not mm.CONFIG_MM_RECORD_STACK < 8:
                 print("memoryclassify: no backtrace")
                 return
 

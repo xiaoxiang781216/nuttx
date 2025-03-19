@@ -277,7 +277,7 @@ class MMLeak(gdb.Command):
                 "backtrace": [],
             }
 
-            if mm.CONFIG_MM_BACKTRACE and node.backtrace and node.backtrace[0]:
+            if mm.CONFIG_MM_RECORD_STACK > 0 and node.backtrace and node.backtrace[0]:
                 info["backtrace"] = utils.Backtrace(node.backtrace)
 
             data.append(info)

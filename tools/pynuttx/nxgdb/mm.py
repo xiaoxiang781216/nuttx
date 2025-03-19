@@ -31,20 +31,14 @@ from . import lists, utils
 from .protocols import mm as p
 from .utils import Value
 
-# Note we use mm_freenode_s to check if CONFIG_MM_BACKTRACE is enabled instead
-# of utils.get_symbol_value("CONFIG_MM_BACKTRACE") because the latter may report
+# Note we use mm_freenode_s to check if CONFIG_MM_RECORD_STACK is enabled instead
+# of utils.get_symbol_value("CONFIG_MM_RECORD_STACK") because the latter may report
 # wrong value on some platforms.
 
-CONFIG_MM_BACKTRACE = utils.get_field_nitems("struct mm_freenode_s", "backtrace")
-CONFIG_MM_BACKTRACE_PID = utils.has_field("struct mm_freenode_s", "pid")
-CONFIG_MM_BACKTRACE_SEQNO = utils.has_field("struct mm_freenode_s", "seqno")
+CONFIG_MM_RECORD_STACK = utils.get_field_nitems("struct mm_freenode_s", "backtrace")
+CONFIG_MM_RECORD_PID = utils.has_field("struct mm_freenode_s", "pid")
+CONFIG_MM_RECORD_SEQNO = utils.has_field("struct mm_freenode_s", "seqno")
 
-if CONFIG_MM_BACKTRACE is None:
-    # For backward compatibility, use 0 to indicate backtrace is disabled
-    # but pid, seqno is used
-    CONFIG_MM_BACKTRACE = (
-        0 if CONFIG_MM_BACKTRACE_PID or CONFIG_MM_BACKTRACE_SEQNO else -1
-    )
 
 PID_MM_INVALID = -100
 PID_MM_MEMPOOL = -1
@@ -57,7 +51,7 @@ class MemPoolBlock:
 
     MAGIC_ALLOC = 0x5555_5555
 
-    mempool_backtrace_s = utils.lookup_type("struct mempool_backtrace_s")
+    mempool_record_s = utils.lookup_type("struct mempool_record_s")
 
     def __init__(self, addr: int, blocksize: int, overhead: int) -> None:
         """
@@ -102,13 +96,13 @@ class MemPoolBlock:
         if not self._blk:
             addr = int(self.address) + self.blocksize
             self._blk = (
-                gdb.Value(addr).cast(self.mempool_backtrace_s.pointer()).dereference()
+                gdb.Value(addr).cast(self.mempool_record_s.pointer()).dereference()
             )
         return self._blk
 
     @property
     def is_free(self) -> bool:
-        if CONFIG_MM_BACKTRACE < 0:
+        if not CONFIG_MM_RECORD_PID or not CONFIG_MM_RECORD_SEQNO:
             return False
 
         if not self._magic:
@@ -120,26 +114,24 @@ class MemPoolBlock:
     def seqno(self) -> int:
         if not self._seqno:
             self._seqno = (
-                int(self.blk["seqno"]) if CONFIG_MM_BACKTRACE_SEQNO else PID_MM_INVALID
+                int(self.blk["seqno"]) if CONFIG_MM_RECORD_SEQNO else PID_MM_INVALID
             )
         return self._seqno
 
     @property
     def pid(self) -> int:
         if not self._pid:
-            self._pid = (
-                int(self.blk["pid"]) if CONFIG_MM_BACKTRACE_PID else PID_MM_INVALID
-            )
+            self._pid = int(self.blk["pid"]) if CONFIG_MM_RECORD_PID else PID_MM_INVALID
         return self._pid
 
     @property
     def backtrace(self) -> Tuple[int]:
-        if CONFIG_MM_BACKTRACE <= 0:
+        if CONFIG_MM_RECORD_STACK <= 0:
             return ()
 
         if not self._backtrace:
             self._backtrace = tuple(
-                int(self.blk["backtrace"][i]) for i in range(CONFIG_MM_BACKTRACE)
+                int(self.blk["backtrace"][i]) for i in range(CONFIG_MM_RECORD_STACK)
             )
         return self._backtrace
 
@@ -217,14 +209,18 @@ class MemPool(Value, p.MemPool):
         """Real block size including backtrace overhead"""
         if not self._blksize:
             blksize = self["blocksize"]
-            if CONFIG_MM_BACKTRACE >= 0:
-                mempool_backtrace_s = utils.lookup_type("struct mempool_backtrace_s")
+            if (
+                CONFIG_MM_RECORD_STACK > 0
+                or CONFIG_MM_RECORD_PID
+                or CONFIG_MM_RECORD_SEQNO
+            ):
+                mempool_record_s = utils.lookup_type("struct mempool_record_s")
                 size_t = utils.lookup_type("size_t")
                 align = (
                     utils.get_symbol_value("CONFIG_MM_DEFAULT_ALIGNMENT")
                     or 2 * size_t.sizeof
                 )
-                blksize = blksize + mempool_backtrace_s.sizeof
+                blksize = blksize + mempool_record_s.sizeof
                 blksize = (blksize + align - 1) & ~(align - 1)
             self._blksize = int(blksize)
         return self._blksize
@@ -482,22 +478,22 @@ class MMNode(gdb.Value, p.MMFreeNode):
 
     @property
     def pid(self) -> int:
-        if CONFIG_MM_BACKTRACE_PID:
+        if CONFIG_MM_RECORD_PID:
             return int(self["pid"])
         return PID_MM_INVALID
 
     @property
     def seqno(self) -> int:
-        return int(self["seqno"]) if CONFIG_MM_BACKTRACE_SEQNO else -1
+        return int(self["seqno"]) if CONFIG_MM_RECORD_SEQNO else -1
 
     @property
     def backtrace(self) -> List[Tuple[int, str, str]]:
-        if CONFIG_MM_BACKTRACE <= 0:
+        if CONFIG_MM_RECORD_STACK <= 0:
             return ()
 
         if not self._backtrace:
             self._backtrace = tuple(
-                int(self["backtrace"][i]) for i in range(CONFIG_MM_BACKTRACE)
+                int(self["backtrace"][i]) for i in range(CONFIG_MM_RECORD_STACK)
             )
         return self._backtrace
 

@@ -239,8 +239,8 @@ class Macro:
 
     Usage:
         macro = Macro("nuttx/nuttx")
-        print(macro.CONFIG_MM_BACKTRACE)
-        if macro.CONFIG_MM_BACKTRACE:
+        print(macro.CONFIG_MM_RECORD_STACK)
+        if macro.CONFIG_MM_RECORD_STACK:
             print("mm backtrace is enabled")
         else:
             print("mm backtrace is disabled")
