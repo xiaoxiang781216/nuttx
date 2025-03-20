@@ -161,7 +161,10 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
   /* Allow user-mode access to the user heap memory */
 
+#ifndef CONFIG_MM_TASK_HEAP
   mpu_user_intsram(ubase, usize);
+#endif
+
 #elif defined(CONFIG_BUILD_PIC)
 
   /* Use different heap useful to debug */
