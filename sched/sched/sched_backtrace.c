@@ -77,9 +77,8 @@ static int sched_backtrace_handler(FAR void *cookie)
       atomic_fetch_and(&tcb->flags, ~TCB_FLAG_CPU_LOCKED);
     }
 
-  nxsched_put_tcb(tcb);
-
   arg->stacksize = up_backtrace(tcb, arg->buffer, arg->size, arg->skip);
+  nxsched_put_tcb(tcb);
 
   return OK;
 }
