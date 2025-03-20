@@ -50,6 +50,10 @@ if(CONFIG_DRIVERS_NOTESNAP)
   list(APPEND SRCS notesnap_driver.c)
 endif()
 
+if(CONFIG_DRIVERS_NOTEITM)
+  list(APPEND SRCS noteitm_driver.c)
+endif()
+
 if(CONFIG_DRIVERS_NOTERPMSG_SERVER)
   list(APPEND SRCS noterpmsg_server.c)
 endif()

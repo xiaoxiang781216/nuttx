@@ -47,6 +47,10 @@ ifeq ($(CONFIG_DRIVERS_NOTESNAP),y)
   CSRCS += notesnap_driver.c
 endif
 
+ifeq ($(CONFIG_DRIVERS_NOTEITM),y)
+  CSRCS += noteitm_driver.c
+endif
+
 ifeq ($(CONFIG_DRIVERS_NOTERPMSG_SERVER),y)
   CSRCS += noterpmsg_server.c
 endif

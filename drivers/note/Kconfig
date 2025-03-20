@@ -196,6 +196,13 @@ config DRIVERS_NOTESNAP_NBUFFERS
 		Number of last scheduling information buffers.
 endif
 
+config DRIVERS_NOTEITM
+	bool "Note ITM driver"
+	depends on CORESIGHT_ITM
+	default n
+	---help---
+		The note driver output to ITM.
+
 config DRIVERS_NOTERPMSG_SERVER
 	bool "Enable RPMSG server for NOTE"
 	select DRIVERS_NOTE

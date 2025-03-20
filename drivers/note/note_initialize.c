@@ -157,6 +157,15 @@ int note_initialize(void)
     }
 #endif
 
+#ifdef CONFIG_DRIVERS_NOTEITM
+  ret = noteitm_register();
+  if (ret < 0)
+    {
+      serr("noteitm_register failed %d\n", ret);
+      return ret;
+    }
+#endif
+
 #ifdef CONFIG_DRIVERS_NOTEFILE
   ret = notefile_register(CONFIG_DRIVERS_NOTEFILE_PATH);
   if (ret < 0)
