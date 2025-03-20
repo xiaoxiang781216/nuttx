@@ -272,7 +272,7 @@ if(CONFIG_ARCH_TOOLCHAIN_GNU AND NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
   if(NOT GCCVER)
     execute_process(COMMAND ${CMAKE_C_COMPILER} --version
                     OUTPUT_VARIABLE GCC_VERSION_OUTPUT)
-    string(REGEX MATCH "([0-9]+)\\.[0-9]+" GCC_VERSION_REGEX
+    string(REGEX MATCH "([0-9]+)\\.([0-9]+)\\.([0-9]+)" _
                  "${GCC_VERSION_OUTPUT}")
     set(GCCVER ${CMAKE_MATCH_1})
     if(GCCVER GREATER_EQUAL 12)
