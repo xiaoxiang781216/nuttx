@@ -23,8 +23,8 @@
 # Add the sched C files to the build
 
 CSRCS += sched_getprioritymax.c sched_getprioritymin.c
-CSRCS += clock_getcpuclockid.c clock_getres.c
-CSRCS += task_cancelpt.c task_setcancelstate.c task_setcanceltype.c
+CSRCS += clock_getcpuclockid.c task_cancelpt.c
+CSRCS += task_setcancelstate.c task_setcanceltype.c
 CSRCS += task_testcancel.c
 
 ifeq ($(CONFIG_SMP),y)
