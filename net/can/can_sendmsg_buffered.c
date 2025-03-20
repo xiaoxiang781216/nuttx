@@ -427,6 +427,10 @@ errout_with_lock:
 
 int psock_can_cansend(FAR struct socket *psock)
 {
+#if CONFIG_NET_SEND_BUFSIZE > 0
+  FAR struct can_conn_s *conn;
+#endif
+
   /* Verify that we received a valid socket */
 
   if (psock == NULL || psock->s_conn == NULL)
@@ -438,6 +442,10 @@ int psock_can_cansend(FAR struct socket *psock)
   /* In order to setup the send, we need to have at least
    * one free IOB to initialize the write buffer head.
    */
+
+#if CONFIG_NET_SEND_BUFSIZE > 0
+  conn = psock->s_conn;
+#endif
 
   if (can_iob_navail() <= 0
 #if CONFIG_NET_SEND_BUFSIZE > 0
