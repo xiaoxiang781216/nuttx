@@ -89,12 +89,15 @@ if(NOT NUTTX_TOOLCHAIN_PREPROCESS_DEFINED)
       TARGET_FILE
       ARGN
       ${ARGN})
-
     add_custom_command(
       OUTPUT ${TARGET_FILE}
-      COMMAND ${PREPROCESS} -I${CMAKE_BINARY_DIR}/include -I${NUTTX_DIR}/include
-              -I${NUTTX_CHIP_ABS_DIR} ${SOURCE_FILE} > ${TARGET_FILE}
-      DEPENDS ${SOURCE_FILE} ${DEPENDS})
+      COMMAND
+        ${PREPROCESS}
+        $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_CPP_COMPILE_OPTIONS>>
+        -I${CMAKE_BINARY_DIR}/include -I${NUTTX_DIR}/include
+        -I${NUTTX_CHIP_ABS_DIR} ${SOURCE_FILE} > ${TARGET_FILE}
+      DEPENDS ${SOURCE_FILE} ${DEPENDS}
+      COMMAND_EXPAND_LISTS)
 
   endfunction()
 endif()

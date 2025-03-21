@@ -296,6 +296,42 @@ add_custom_target(
     "'$<TARGET_PROPERTY:nuttx_target_interface,ALL_TARGETS>'" >> target_dump
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
+# Function: nuttx_cpp_compile_options
+#
+# Adds compile options to preprocessor
+#
+# Usage: nuttx_cpp_compile_options(-DCPP_OPTIONS)
+function(nuttx_cpp_compile_options)
+  set_property(
+    TARGET nuttx_global
+    APPEND
+    PROPERTY NUTTX_CPP_COMPILE_OPTIONS ${ARGN})
+endfunction()
+
+# Function: nuttx_cpp_compile_options_ifdef
+#
+# Conditionally adds preprocessor compile options if the given condition is
+# true.
+#
+# Usage: nuttx_cpp_compile_options_ifdef(MY_CONDITION -DCPP_OPTIONS)
+function(nuttx_cpp_compile_options_ifdef cond)
+  if(${cond})
+    nuttx_cpp_compile_options(${ARGN})
+  endif()
+endfunction()
+
+# Function: nuttx_cpp_compile_options_ifndef
+#
+# Conditionally adds preprocessor compile options if the given condition is
+# false.
+#
+# Usage: nuttx_cpp_compile_options_ifndef(MY_CONDITION -DCPP_OPTIONS)
+function(nuttx_cpp_compile_options_ifndef cond)
+  if(NOT ${cond})
+    nuttx_cpp_compile_options(${ARGN})
+  endif()
+endfunction()
+
 # Genarate host tools CMake binary directory
 execute_process(COMMAND ${CMAKE_COMMAND} -B ${CMAKE_BINARY_DIR}/bin_host -S
                         ${CMAKE_SOURCE_DIR}/tools)
