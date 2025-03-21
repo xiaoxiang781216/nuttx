@@ -374,6 +374,12 @@ class MemPoolMultiple(Value, p.MemPoolMultiple):
     def free(self) -> int:
         return sum(pool.free for pool in self.pools)
 
+    @property
+    def chunks(self) -> Generator[MemPoolBlock, None, None]:
+        mpool_chunk_s = utils.lookup_type("struct mpool_chunk_s")
+        for entry in lists.NxSQueue(self.chunk_queue):
+            yield entry.cast(mpool_chunk_s.pointer())
+
 
 class MMNode(gdb.Value, p.MMFreeNode):
     """
