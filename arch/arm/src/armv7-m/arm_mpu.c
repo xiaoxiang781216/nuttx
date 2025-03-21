@@ -576,8 +576,8 @@ void mpu_modify_regions(unsigned int region, uintptr_t base, size_t size,
       putreg32(0, MPU_RASR);
       putreg32(0, MPU_RBAR);
 
-      ARM_DSB();
-      ARM_ISB();
+      UP_DSB();
+      UP_ISB();
     }
 }
 

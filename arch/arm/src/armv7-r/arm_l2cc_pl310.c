@@ -290,8 +290,8 @@ static void l2cc_disable_nolock(void)
   /* Disable the L2CC-P310 L2 cache by clearing the Control Register (CR) */
 
   putreg32(0, L2CC_CR);
-  ARM_DSB();
-  ARM_ISB();
+  UP_DSB();
+  UP_ISB();
 }
 
 /****************************************************************************
