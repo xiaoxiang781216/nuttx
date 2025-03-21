@@ -103,7 +103,7 @@ static void cleanup_arm_nvic(void)
 
   /* Allow any pending interrupts to be recognized */
 
-  ARM_ISB();
+  UP_ISB();
   cpsid();
 
   /* Disable all interrupts */
@@ -205,7 +205,7 @@ int board_boot_image(const char *path, uint32_t hdr_size)
 
   __asm__ __volatile__("\tmsr msp_ns, %0\n" : : "r" (vt.spr));
 
-  ARM_ISB();
+  UP_ISB();
 
   /* Check if reset is valid */
 

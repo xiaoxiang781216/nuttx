@@ -91,7 +91,7 @@ static void cleanup_arm_nvic(void)
 
   /* Allow any pending interrupts to be recognized */
 
-  ARM_ISB();
+  UP_ISB();
   cpsid();
 
   /* Disable all interrupts */
