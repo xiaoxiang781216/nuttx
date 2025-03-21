@@ -70,7 +70,7 @@ endif()
 
 if(CONFIG_SYSLOG_RPMSG)
   list(APPEND SRCS syslog_rpmsg.c)
-  if(CONFIG_SYSLOG_RPMSG_BUFFER_SECTION)
+  if(NOT "${CONFIG_SYSLOG_RPMSG_BUFFER_SECTION}" STREQUAL "")
     target_compile_definitions(
       drivers
       PRIVATE
