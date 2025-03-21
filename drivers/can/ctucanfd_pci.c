@@ -1076,8 +1076,12 @@ static void ctucanfd_chardev_receive(FAR struct ctucanfd_can_s *priv)
 {
   FAR struct can_dev_s    *dev    = (FAR struct can_dev_s *)priv;
   FAR uint32_t            *ptr    = NULL;
+  struct can_hdr_s         hdr    =
+  {
+    0
+  };
+
   struct ctucanfd_frame_s  frame;
-  struct can_hdr_s         hdr;
   int                      i      = 0;
   int                      ret    = 0;
   uint16_t                 frc    = 0;
