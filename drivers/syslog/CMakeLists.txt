@@ -40,7 +40,7 @@ endif()
 
 if(CONFIG_RAMLOG)
   list(APPEND SRCS ramlog.c)
-  if(CONFIG_RAMLOG_BUFFER_SECTION)
+  if(NOT "${CONFIG_RAMLOG_BUFFER_SECTION}" STREQUAL "")
     target_compile_definitions(
       drivers PRIVATE -DRAMLOG_BUFFER_SECTION="${CONFIG_RAMLOG_BUFFER_SECTION}")
   endif()
