@@ -213,7 +213,7 @@ handle_irq:
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 15
 
-  /* Switch to interrupt stack */
+  /* Switch to interrupt stack if not already done so */
 
   setintstack t0, t1
 

@@ -31,6 +31,7 @@
 #include <nuttx/addrenv.h>
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
+#include <arch/barriers.h>
 #include <arch/board/board.h>
 #include <sched/sched.h>
 
@@ -39,6 +40,38 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
+
+/* This config allows higher priority IRQ to interrupt lower priority ones.
+ * It is mainly for single core MCU devices in FLAT or PROTECTED modes.
+ */
+
+/* Keep exceptions as non-preemptive and mask local interrupts */
+
+#  define IRQ_DISPATCH(irq, regs)                           \
+            {                                               \
+              if (irq > RISCV_MAX_EXCEPTION)                \
+                {                                           \
+                  if (irq < RISCV_IRQ_EXT)                  \
+                    {                                       \
+                      up_disable_irq(irq);                  \
+                    }                                       \
+                  up_irq_enable();                          \
+                }                                           \
+              irq_dispatch(irq, regs);                      \
+              if (irq > RISCV_MAX_EXCEPTION)                \
+                {                                           \
+                  up_irq_save();                            \
+                  if (irq < RISCV_IRQ_EXT)                  \
+                    {                                       \
+                      up_enable_irq(irq);                   \
+                    }                                       \
+                }                                           \
+            }
+#else
+#  define IRQ_DISPATCH(irq, regs)    irq_dispatch(irq, regs)
+#endif
 
 /****************************************************************************
  * Public Data
@@ -52,11 +85,7 @@
  * Private Functions
  ****************************************************************************/
 
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-uintreg_t *riscv_doirq(int irq, uintreg_t *regs)
+static uintreg_t *riscv_doirq_top(int irq, uintreg_t *regs)
 {
   struct tcb_s **running_task = &g_running_tasks[this_cpu()];
   bool restore_context = false;
@@ -89,25 +118,16 @@ uintreg_t *riscv_doirq(int irq, uintreg_t *regs)
   /* Current regs non-zero indicates that we are processing an interrupt;
    * current_regs is also used to manage interrupt level context switches.
    *
-   * Nested interrupts are not supported. But an exception may occur while
-   * processing an interrupt. In this case, current_regs will be non-NULL.
+   * An exception may occur while processing an interrupt. In this case,
+   * current_regs will be non-NULL.
    */
 
-  DEBUGASSERT(((irq > RISCV_MAX_EXCEPTION) && !up_interrupt_context()) ||
-              (irq <= RISCV_MAX_EXCEPTION));
-
-  /* Don't override current regs if it is already set (which is true if
-   * we were in a interrupt handler).
-   */
-
-  if (!up_interrupt_context())
-    {
-      up_set_interrupt_context(true);
-    }
+  up_set_interrupt_context(true);
+  UP_DMB();
 
   /* Deliver the IRQ */
 
-  irq_dispatch(irq, regs);
+  IRQ_DISPATCH(irq, regs);
   tcb = this_task();
 
   /* Check for a context switch. */
@@ -151,4 +171,19 @@ uintreg_t *riscv_doirq(int irq, uintreg_t *regs)
 
   (*running_task)->xcp.regs = NULL;
   return regs;
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+uintreg_t *riscv_doirq(int irq, uintreg_t *regs)
+{
+  if (up_interrupt_context())
+    {
+      IRQ_DISPATCH(irq, regs);
+      return regs;
+    }
+
+  return riscv_doirq_top(irq, regs);
 }
