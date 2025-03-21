@@ -381,9 +381,9 @@ class MemPoolMultiple(Value, p.MemPoolMultiple):
 
     @property
     def chunks(self) -> Generator[MemPoolBlock, None, None]:
-        mpool_chunk_s = utils.lookup_type("struct mpool_chunk_s")
-        for entry in lists.NxSQueue(self.chunk_queue):
-            yield entry.cast(mpool_chunk_s.pointer())
+        for chunk in lists.sq_for_every(self.chunk_queue):
+            chunk = chunk.cast(gdb.lookup_type("struct mpool_chunk_s"))
+            yield chunk
 
 
 class MMNode(gdb.Value, p.MMFreeNode):
