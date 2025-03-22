@@ -46,7 +46,7 @@ struct __lock
   int reserved[8];
 #  endif
 #else
-  int reserved[4];
+  int reserved[5];
 #endif
 };
 
