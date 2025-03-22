@@ -108,8 +108,9 @@
 #define _PINCTRLBASE    (0x4000) /* Pinctrl driver ioctl commands */
 #define _PCIBASE        (0x4100) /* Pci ioctl commands */
 #define _I3CBASE        (0x4200) /* I3C driver ioctl commands */
-#define _MSIOCBASE      (0x4300) /* Mouse ioctl commands */
-#define _PERFBASE       (0x4400) /* Perf ioctl commands */
+#define _PERFBASE       (0x4300) /* Perf ioctl commands */
+#define _MSIOCBASE      (0x4400) /* Mouse ioctl commands */
+#define _PTPBASE        (0x4500) /* PTP ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 #define _SAFETYBASE     (0x8c00) /* Safety modules ioctl commands */
 
@@ -784,8 +785,15 @@
 
 /* Safety driver ioctl definitions ******************************************/
 
-#define _SAFETYIOCVALID(c) (_IOC_TYPE(c)==_SAFETYBASE)
-#define _SAFETYIOC(nr)     _IOC(_SAFETYBASE,nr)
+#define _SAFETYIOCVALID(c)    (_IOC_TYPE(c)==_SAFETYBASE)
+#define _SAFETYIOC(nr)        _IOC(_SAFETYBASE,nr)
+
+/* PTP driver ioctl definitions *********************************************/
+
+/* see nuttx/include/ptp_clock.h */
+
+#define _PTPIOCVALID(c)       (_IOC_TYPE(c)==_PTPBASE)
+#define _PTPIOC(nr)           _IOC(_PTPBASE,nr)
 
 /****************************************************************************
  * Public Type Definitions
