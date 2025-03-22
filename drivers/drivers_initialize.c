@@ -54,6 +54,7 @@
 #include <nuttx/syslog/syslog_console.h>
 #include <nuttx/syslog/syslog_rpmsg.h>
 #include <nuttx/thermal.h>
+#include <nuttx/timers/ptp_clock_dummy.h>
 #include <nuttx/trace.h>
 #include <nuttx/usrsock/usrsock_rpmsg.h>
 #include <nuttx/vhost/vhost.h>
@@ -325,6 +326,9 @@ void drivers_initialize(void)
   /* Register fake audio driver */
 
   audio_fake_initialize();
+
+#ifdef CONFIG_PTP_CLOCK_DUMMY
+  ptp_clock_dummy_initialize(0);
 #endif
 
   drivers_trace_end();
