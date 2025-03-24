@@ -86,15 +86,15 @@ void tricore_dump_trapctrl(void)
 {
   _alert("PSTR:%-14.8" PRIX32 "DSTR:%-14.8" PRIX32
          "DATR:%-14.8" PRIX32 "DEADD:%-13.8" PRIX32 "\n\n",
-         __mfcr(CPU_PSTR), __mfcr(CPU_DSTR),
-         __mfcr(CPU_DATR), __mfcr(CPU_DEADD));
+         (uint32_t)__mfcr(CPU_PSTR), (uint32_t)__mfcr(CPU_DSTR),
+         (uint32_t)__mfcr(CPU_DATR), (uint32_t)__mfcr(CPU_DEADD));
 }
 
 /****************************************************************************
- * Name: tricore_csachain_dump
+ * Name: tricore_dump_csachain
  ****************************************************************************/
 
-void tricore_csachain_dump(uintptr_t pcxi)
+void tricore_dump_csachain(uintptr_t pcxi)
 {
   while (pcxi & FCX_FREE)
     {
