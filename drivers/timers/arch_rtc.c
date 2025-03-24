@@ -131,7 +131,7 @@ int weak_function up_rtc_gettime(FAR struct timespec *tp)
       if (ret == 0)
         {
           tp->tv_sec = timegm((FAR struct tm *)&rtctime);
-          tp->tv_nsec = rtctime.tm_nsec;
+          tp->tv_nsec = 0;
         }
     }
 
