@@ -167,6 +167,8 @@ ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCC), y)
   CXX = $(CROSSDEV)xc++
   CPP = $(CROSSDEV)xcc -E -P -x c
 else ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCLANG), y)
+  ARCHCFLAGS += -Wno-atomic-alignment
+  ARCHCXXFLAGS += -Wno-atomic-alignment
   CC = $(CROSSDEV)clang
   CXX = $(CROSSDEV)clang++
   CPP = $(CROSSDEV)clang -E -P -x c
