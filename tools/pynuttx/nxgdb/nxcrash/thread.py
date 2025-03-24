@@ -63,6 +63,8 @@ class CrashThread(gdb.Command):
                 crashed=True,
             )
 
+        return collected or utils.get_running_tcbs()
+
         collected = []
         pid = 0
         for tcb in tcbs:
