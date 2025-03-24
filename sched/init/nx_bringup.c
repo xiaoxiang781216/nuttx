@@ -334,6 +334,10 @@ static inline void nx_start_application(void)
   attr.priority  = CONFIG_INIT_PRIORITY;
   attr.stacksize = CONFIG_INIT_STACKSIZE;
 
+  /* Call C++ static constructors */
+
+  lib_cxx_initialize();
+
 #if defined(CONFIG_INIT_ENTRY)
 
   /* Start the application initialization task.  In a flat build, this is
@@ -511,10 +515,6 @@ int nx_bringup(void)
   setenv("LD_LIBRARY_PATH", CONFIG_LDPATH_INITIAL, 1);
 #endif
 #endif
-
-  /* Call C++ static constructors */
-
-  lib_cxx_initialize();
 
   /* Start the page fill worker kernel thread that will resolve page faults.
    * This should always be the first thread started because it may have to
