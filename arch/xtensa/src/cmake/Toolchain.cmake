@@ -146,6 +146,7 @@ add_compile_options(
   -Wundef
   -Wno-attributes
   -Wno-unknown-pragmas
+  -Wno-atomic-alignment
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
   $<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
 
