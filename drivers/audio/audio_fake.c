@@ -28,6 +28,7 @@
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/time.h>
+#include <sys/wait.h>
 
 #include <assert.h>
 #include <debug.h>
@@ -38,6 +39,7 @@
 #include <string.h>
 
 #include <nuttx/audio/audio.h>
+#include <nuttx/audio/audio_fake.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/kmalloc.h>
@@ -51,7 +53,7 @@
 
 struct audio_fake_params
 {
-  const char *devname;
+  FAR const char *devname;
   bool       playback;        /* True: playback, False: recording */
   uint32_t   samplerate[4];   /* Array of sample rate,eg. [44100, 48000, 32000, 22050] */
   uint8_t    channels[2];     /* Range of channels, [min_channel, max_channel] */
@@ -70,11 +72,12 @@ struct audio_fake_s
   uint32_t      channels;       /* Request audio channels */
   uint32_t      sample_rate;    /* Request audio sample rate */
   uint32_t      bps;            /* Data bytes to sec bps (bytes per sec) */
-  pid_t         threadid;       /* ID of worker thread */
+  clock_t       start_tick;     /* Start time in microseconds */
+  uint64_t      total_bytes;    /* Total frame datas */
   char          mqname[16];     /* Our message queue name */
   struct file   mq;             /* Message queue for receiving messages */
   struct file   file;           /* Audio file for playback or capture */
-  const struct audio_fake_params *params;
+  FAR const struct audio_fake_params *params;
 };
 
 /****************************************************************************
@@ -100,23 +103,23 @@ static int audio_fake_start(FAR struct audio_lowerhalf_s *dev,
 static int audio_fake_start(FAR struct audio_lowerhalf_s *dev);
 #endif
 #ifndef CONFIG_AUDIO_EXCLUDE_STOP
-# ifdef CONFIG_AUDIO_MULTI_SESSION
+#  ifdef CONFIG_AUDIO_MULTI_SESSION
 static int audio_fake_stop(FAR struct audio_lowerhalf_s *dev,
                            FAR void *session);
-# else
+#  else
 static int audio_fake_stop(FAR struct audio_lowerhalf_s *dev);
-# endif
+#  endif
 #endif
 #ifndef CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME
-# ifdef CONFIG_AUDIO_MULTI_SESSION
+#  ifdef CONFIG_AUDIO_MULTI_SESSION
 static int audio_fake_pause(FAR struct audio_lowerhalf_s *dev,
                             FAR void *session);
 static int audio_fake_resume(FAR struct audio_lowerhalf_s *dev,
                              FAR void *session);
-# else
+#  else
 static int audio_fake_pause(FAR struct audio_lowerhalf_s *dev);
 static int audio_fake_resume(FAR struct audio_lowerhalf_s *dev);
-# endif
+#  endif
 #endif
 static int audio_fake_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
                                     FAR struct ap_buffer_s *apb);
@@ -144,14 +147,12 @@ static int audio_fake_process_buffer(FAR struct audio_lowerhalf_s *dev,
                                      FAR struct ap_buffer_s *apb);
 static uint8_t audio_fake_subfmt_convert(uint8_t format);
 static uint32_t audio_fake_samp_rate_convert(uint32_t samplerate);
-static FAR struct audio_lowerhalf_s *
-audio_fake_init_device(FAR const struct audio_fake_params *params);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static const struct audio_fake_params g_dev_params[] =
+static const struct audio_fake_params g_devparams[] =
 {
 #ifdef CONFIG_AUDIO_FAKE_DEVICE_PARAMS
     CONFIG_AUDIO_FAKE_DEVICE_PARAMS
@@ -225,7 +226,7 @@ static uint32_t audio_fake_samp_rate_convert(uint32_t samplerate)
     }
   else if (samplerate != 0)
     {
-      auderr("ERROR: Unsupported sample rate %d\n", samplerate);
+      auderr("ERROR: Unsupported sample rate %"PRIu32"\n", samplerate);
     }
 
   return 0;
@@ -274,7 +275,7 @@ static int audio_fake_file_init(FAR struct audio_lowerhalf_s *dev)
   char filename[64];
   int ret;
 
-  snprintf(filename, sizeof(filename), "%s/%s_%d_%d_%d.pcm",
+  snprintf(filename, sizeof(filename), "%s/%s_%"PRIu32"_%"PRIu32"_%d.pcm",
            CONFIG_AUDIO_FAKE_DATA_PATH, priv->params->devname,
            priv->sample_rate, priv->channels, priv->format);
 
@@ -368,6 +369,33 @@ static int audio_fake_file_read(FAR struct audio_lowerhalf_s *dev,
 }
 
 /****************************************************************************
+ * Name: audio_fake_frame_delay
+ *
+ * Description: Delay the audio frame.
+ *
+ ****************************************************************************/
+
+static void audio_fake_frame_delay(FAR struct audio_fake_s *priv,
+                                   FAR struct ap_buffer_s *apb)
+{
+  uint64_t total_time;
+  uint64_t diff_time;
+
+  priv->total_bytes += apb->nbytes;
+  total_time = (priv->total_bytes * 1000 * 1000) / priv->bps;
+  diff_time = TICK2USEC(clock_systime_ticks() - priv->start_tick);
+  if (diff_time >= total_time)
+    {
+      audwarn("WARN: diff_time %" PRIu64 " > total_time %" PRIu64 ".\n",
+              diff_time, total_time);
+    }
+  else
+    {
+      nxsig_usleep(total_time - diff_time);
+    }
+}
+
+/****************************************************************************
  * Name: audio_fake_process_buffer
  *
  * Description: Process the audio buffer.
@@ -378,11 +406,6 @@ static int audio_fake_process_buffer(FAR struct audio_lowerhalf_s *dev,
                                      FAR struct ap_buffer_s *apb)
 {
   FAR struct audio_fake_s *priv = (FAR struct audio_fake_s *)dev;
-  int64_t frame_time;
-  int64_t diff_time;
-  int64_t sleep_time;
-  clock_t start;
-  clock_t end;
   int ret;
 
   audinfo("process apb=%p, nbytes=%d\n", apb, apb->nbytes);
@@ -392,15 +415,12 @@ static int audio_fake_process_buffer(FAR struct audio_lowerhalf_s *dev,
   priv->terminate = ((apb->flags & AUDIO_APB_FINAL) != 0);
 #endif
 
-  start = clock_systime_ticks();
-
   if (priv->params->playback)
     {
       ret = audio_fake_file_write(dev, apb);
       if (ret < 0)
         {
           auderr("Error write data, ret %d\n", ret);
-          goto out;
         }
     }
   else
@@ -409,32 +429,11 @@ static int audio_fake_process_buffer(FAR struct audio_lowerhalf_s *dev,
       if (ret < 0)
         {
           auderr("Error read data , ret %d\n", ret);
-          goto out;
         }
     }
 
-  end = clock_systime_ticks();
+  audio_fake_frame_delay(priv, apb);
 
-  frame_time = ((int64_t)apb->nbytes * 1000 * 1000) / priv->bps;
-
-  diff_time = (int64_t)TICK2USEC(end -start);
-
-  if (diff_time >= frame_time)
-    {
-      audwarn("WARN: %s file time %" PRId64 " > frame time %" PRId64 ".\n",
-              priv->params->playback ? "write" : "read",
-              diff_time, frame_time);
-      ret = OK;
-      goto out;
-    }
-
-  sleep_time = frame_time - diff_time;
-
-  nxsig_usleep(sleep_time);
-
-  ret = OK;
-
-out:
 #ifdef CONFIG_AUDIO_MULTI_SESSION
   priv->dev.upper(priv->dev.priv, AUDIO_CALLBACK_DEQUEUE, apb, OK, NULL);
 #else
@@ -619,8 +618,8 @@ static int audio_fake_configure(FAR struct audio_lowerhalf_s *dev,
             caps->ac_controls.hw[0] | (caps->ac_controls.b[3] << 16);
         priv->channels = caps->ac_channels;
         priv->format   = caps->ac_controls.b[2];
-        priv->bps = caps->ac_channels * caps->ac_controls.hw[0] *
-                       caps->ac_controls.b[2] / 8;
+        priv->bps = caps->ac_channels * priv->sample_rate *
+                    priv->format / 8;
 
         audinfo("Audio type: %s\n", (caps->ac_type == AUDIO_TYPE_OUTPUT)
                                         ? "AUDIO_TYPE_OUTPUT"
@@ -684,8 +683,8 @@ static int audio_fake_workerthread(int argc, FAR char **argv)
     {
       /* Wait for messages from our message queue */
 
-      msglen =
-          file_mq_receive(&priv->mq, (FAR char *)&msg, sizeof(msg), &prio);
+      msglen = file_mq_receive(&priv->mq, (FAR char *)&msg,
+                               sizeof(msg), &prio);
 
       /* Handle the case when we return with no message */
 
@@ -796,8 +795,10 @@ static int audio_fake_start(FAR struct audio_lowerhalf_s *dev)
       return ret;
     }
 
+  priv->start_tick = clock_systime_ticks();
+  priv->total_bytes = 0;
 #ifndef CONFIG_AUDIO_EXCLUDE_STOP
-  priv->terminate  = false;
+  priv->terminate = false;
 #endif
 
   /* Start our thread for sending data to the device */
@@ -819,7 +820,6 @@ static int audio_fake_start(FAR struct audio_lowerhalf_s *dev)
   else
     {
       audinfo("Created worker thread\n");
-      priv->threadid = ret;
     }
 
   return OK;
@@ -850,16 +850,6 @@ static int audio_fake_stop(FAR struct audio_lowerhalf_s *dev)
   term_msg.u.data = 0;
   file_mq_send(&priv->mq, (FAR const char *)&term_msg, sizeof(term_msg),
                CONFIG_AUDIO_FAKE_MSG_PRIO);
-
-  /* Delete the worker thread, but need to wait work thread exit */
-
-  while (priv->threadid && !priv->terminate)
-    {
-      nxsig_usleep(1000);
-    }
-
-  kthread_delete(priv->threadid);
-  priv->threadid = 0;
 
   audinfo("Return OK\n");
   return OK;
@@ -903,6 +893,8 @@ static int audio_fake_resume(FAR struct audio_lowerhalf_s *dev)
 #endif
 {
   FAR struct audio_fake_s *priv = (FAR struct audio_fake_s *)dev;
+  priv->start_tick = clock_systime_ticks();
+  priv->total_bytes = 0;
   audinfo("%s resume\n", priv->params->devname);
   return OK;
 }
@@ -931,7 +923,7 @@ static int audio_fake_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
   msg.u.ptr  = apb;
 
   ret = file_mq_send(&priv->mq, (FAR const char *)&msg, sizeof(msg),
-                      CONFIG_AUDIO_FAKE_MSG_PRIO);
+                     CONFIG_AUDIO_FAKE_MSG_PRIO);
   if (ret < 0)
     {
       auderr("ERROR: file_mq_send failed: %d\n", ret);
@@ -951,11 +943,11 @@ static int audio_fake_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
 static int audio_fake_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
                             unsigned long arg)
 {
-  FAR struct audio_fake_s *priv = (FAR struct audio_fake_s *)dev;
-  int ret                       = OK;
 #ifdef CONFIG_AUDIO_DRIVER_SPECIFIC_BUFFERS
+  FAR struct audio_fake_s *priv = (FAR struct audio_fake_s *)dev;
   FAR struct ap_buffer_info_s *bufinfo;
 #endif
+  int ret = OK;
 
   audinfo("cmd=%d arg=%ld\n", cmd, arg);
 
@@ -1028,33 +1020,6 @@ static int audio_fake_release(FAR struct audio_lowerhalf_s *dev)
 }
 
 /****************************************************************************
- * Name: audio_fake_init_device
- *
- * Description: Initialize the audio device.
- *
- ****************************************************************************/
-
-static FAR struct audio_lowerhalf_s *
-audio_fake_init_device(FAR const struct audio_fake_params *params)
-{
-  FAR struct audio_fake_s *priv;
-
-  /* Allocate the fake audio device structure */
-
-  priv = (FAR struct audio_fake_s *)kmm_zalloc(sizeof(struct audio_fake_s));
-  if (!priv)
-    {
-      auderr("ERROR: Failed to allocate fake audio device\n");
-      return NULL;
-    }
-
-  priv->dev.ops = &g_audioops;
-  priv->params  = params;
-
-  return &priv->dev;
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -1072,17 +1037,28 @@ audio_fake_init_device(FAR const struct audio_fake_params *params)
 
 int audio_fake_initialize(void)
 {
+  FAR struct audio_fake_s *priv;
+  size_t i;
   int ret;
-  int i;
 
-  for (i = 0; i < nitems(g_dev_params); i++)
+  for (i = 0; i < nitems(g_devparams); i++)
     {
-      ret = audio_register(g_dev_params[i].devname,
-                           audio_fake_init_device(&g_dev_params[i]));
+      priv = (FAR struct audio_fake_s *)kmm_zalloc(sizeof(*priv));
+      if (!priv)
+        {
+          auderr("ERROR: Failed to allocate fake audio device\n");
+          return -ENOMEM;
+        }
+
+      priv->dev.ops = &g_audioops;
+      priv->params  = &g_devparams[i];
+
+      ret = audio_register(g_devparams[i].devname, &priv->dev);
       if (ret < 0)
         {
           auderr("ERROR: Failed to register (%s) fake audio device.\n",
-                 g_dev_params[i].devname);
+                 g_devparams[i].devname);
+          kmm_free(priv);
           return ret;
         }
     }
