@@ -49,23 +49,23 @@ static int rpm_changestate(FAR struct pm_runtime_s *rpm, rpm_state_e state);
  * Private Functions
  ****************************************************************************/
 
-static irqstate_t pm_runtime_lock(FAR rmutex_t *lock)
+static irqstate_t pm_runtime_lock(FAR struct pm_runtime_s *rpm)
 {
   if (!up_interrupt_context() && !sched_idletask())
     {
-      nxrmutex_lock(lock);
+      nxrmutex_lock(&rpm->mutex);
     }
 
-  return enter_critical_section();
+  return rspin_lock_irqsave_noprempt(&rpm->lock);
 }
 
-static void pm_runtime_unlock(FAR rmutex_t *lock, irqstate_t flags)
+static void pm_runtime_unlock(FAR struct pm_runtime_s *rpm, irqstate_t flags)
 {
-  leave_critical_section(flags);
+  rspin_unlock_irqrestore_noprempt(&rpm->lock, flags);
 
   if (!up_interrupt_context() && !sched_idletask())
     {
-      nxrmutex_unlock(lock);
+      nxrmutex_unlock(&rpm->mutex);
     }
 }
 
@@ -98,7 +98,7 @@ static void rpm_autosuspend_cb(FAR void *arg)
   FAR struct pm_runtime_s *rpm = arg;
   irqstate_t flags;
 
-  flags = pm_runtime_lock(&rpm->lock);
+  flags = pm_runtime_lock(rpm);
 
   if (rpm->state != RPM_SUSPENDING || !work_available(&rpm->suspend_work))
     {
@@ -116,7 +116,7 @@ static void rpm_autosuspend_cb(FAR void *arg)
     }
 
 out:
-  pm_runtime_unlock(&rpm->lock, flags);
+  pm_runtime_unlock(rpm, flags);
 }
 
 static int rpm_changestate(FAR struct pm_runtime_s *rpm, rpm_state_e state)
@@ -187,7 +187,8 @@ void pm_runtime_init(FAR struct pm_runtime_s *rpm, rpm_state_e state,
 {
   DEBUGASSERT(rpm != NULL && ops != NULL);
   DEBUGASSERT(state == RPM_ACTIVE || state == RPM_SUSPENDED);
-  nxrmutex_init(&rpm->lock);
+  nxrmutex_init(&rpm->mutex);
+  rspin_lock_init(&rpm->lock);
   rpm->use_count = 0;
   rpm->suspend_delay = 0;
   rpm->state = state;
@@ -213,7 +214,7 @@ int pm_runtime_get(FAR struct pm_runtime_s *rpm)
   int ret = 0;
 
   DEBUGASSERT(rpm != NULL);
-  flags = pm_runtime_lock(&rpm->lock);
+  flags = pm_runtime_lock(rpm);
 
   if (rpm->use_count++ > 0)
     {
@@ -230,7 +231,7 @@ int pm_runtime_get(FAR struct pm_runtime_s *rpm)
 
   rpm->state = RPM_ACTIVE;
 out:
-  pm_runtime_unlock(&rpm->lock, flags);
+  pm_runtime_unlock(rpm, flags);
   return ret;
 }
 
@@ -253,7 +254,7 @@ int pm_runtime_put(FAR struct pm_runtime_s *rpm)
   int ret = 0;
 
   DEBUGASSERT(rpm != NULL);
-  flags = pm_runtime_lock(&rpm->lock);
+  flags = pm_runtime_lock(rpm);
   if (rpm->use_count == 0)
     {
       ret = -EPERM;
@@ -275,7 +276,7 @@ int pm_runtime_put(FAR struct pm_runtime_s *rpm)
 
   rpm->state = RPM_SUSPENDED;
 out:
-  pm_runtime_unlock(&rpm->lock, flags);
+  pm_runtime_unlock(rpm, flags);
   return ret;
 }
 
@@ -299,7 +300,7 @@ int pm_runtime_put_autosuspend(FAR struct pm_runtime_s *rpm)
   int ret = 0;
 
   DEBUGASSERT(rpm != NULL);
-  flags = pm_runtime_lock(&rpm->lock);
+  flags = pm_runtime_lock(rpm);
   if (rpm->use_count == 0)
     {
       ret = -EPERM;
@@ -321,7 +322,7 @@ int pm_runtime_put_autosuspend(FAR struct pm_runtime_s *rpm)
 
   rpm->state = RPM_SUSPENDING;
 out:
-  pm_runtime_unlock(&rpm->lock, flags);
+  pm_runtime_unlock(rpm, flags);
   return ret;
 }
 
@@ -345,7 +346,7 @@ void pm_runtime_set_autosuspend_delay(FAR struct pm_runtime_s *rpm,
   irqstate_t flags;
 
   DEBUGASSERT(rpm != NULL);
-  flags = pm_runtime_lock(&rpm->lock);
+  flags = pm_runtime_lock(rpm);
   rpm->suspend_delay = delay;
-  pm_runtime_unlock(&rpm->lock, flags);
+  pm_runtime_unlock(rpm, flags);
 }
