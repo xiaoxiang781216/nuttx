@@ -67,13 +67,15 @@ if(CONFIG_LIBCXX)
   nuttx_create_symlink(${CMAKE_CURRENT_LIST_DIR}/libcxx/include
                        ${CMAKE_BINARY_DIR}/include/libcxx)
 
-  configure_file(${CMAKE_CURRENT_LIST_DIR}/../__config_site
-                 ${CMAKE_BINARY_DIR}/include/libcxx/__config_site COPYONLY)
+  nuttx_create_symlink(${CMAKE_CURRENT_LIST_DIR}/../__config_site
+                       ${CMAKE_BINARY_DIR}/include/libcxx_config/__config_site)
 
   set_property(
     TARGET nuttx
     APPEND
-    PROPERTY NUTTX_CXX_INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}/include/libcxx
+    PROPERTY NUTTX_CXX_INCLUDE_DIRECTORIES
+             ${CMAKE_BINARY_DIR}/include/libcxx
+             ${CMAKE_BINARY_DIR}/include/libcxx_config
              ${CMAKE_CURRENT_LIST_DIR}/libcxx/test/support
              ${CMAKE_CURRENT_LIST_DIR}/libcxx/src)
 
