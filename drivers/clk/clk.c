@@ -31,6 +31,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
 #include <nuttx/mutex.h>
+#include <nuttx/spinlock.h>
 
 #include <debug.h>
 #include <fcntl.h>
@@ -47,12 +48,12 @@
  * Private Datas
  ****************************************************************************/
 
-static rmutex_t g_clk_list_lock = NXRMUTEX_INITIALIZER;
-
-static struct list_node g_clk_root_list
-                            = LIST_INITIAL_VALUE(g_clk_root_list);
-static struct list_node g_clk_orphan_list
-                            = LIST_INITIAL_VALUE(g_clk_orphan_list);
+static struct rspinlock_s g_clk_lock = RSPINLOCK_INITIALIZER;
+static rmutex_t g_clk_list_lock      = NXRMUTEX_INITIALIZER;
+static
+struct list_node g_clk_root_list     = LIST_INITIAL_VALUE(g_clk_root_list);
+static
+struct list_node g_clk_orphan_list   = LIST_INITIAL_VALUE(g_clk_orphan_list);
 
 /****************************************************************************
  * Private Function Prototypes
@@ -307,12 +308,12 @@ static irqstate_t clk_list_lock(void)
       nxrmutex_lock(&g_clk_list_lock);
     }
 
-  return enter_critical_section();
+  return rspin_lock_irqsave_noprempt(&g_clk_lock);
 }
 
 static void clk_list_unlock(irqstate_t flags)
 {
-  leave_critical_section(flags);
+  rspin_unlock_irqrestore_noprempt(&g_clk_lock, flags);
 
   if (!up_interrupt_context() && !sched_idletask())
     {
