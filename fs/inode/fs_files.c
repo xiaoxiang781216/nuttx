@@ -865,13 +865,14 @@ void fs_reffilep(FAR struct file *filep)
 
 int fs_putfilep(FAR struct file *filep)
 {
-  int ret = 0;
+  int ret;
 
   DEBUGASSERT(filep);
 
   /* If refs is zero, the close() had called, closing it now. */
 
-  if (atomic_fetch_sub(&filep->f_refs, 1) == 1)
+  ret = atomic_fetch_sub(&filep->f_refs, 1) - 1;
+  if (ret == 0)
     {
       ret = file_close(filep);
       if (ret < 0)
