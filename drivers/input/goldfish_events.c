@@ -345,12 +345,14 @@ goldfish_events_send_touch_event(FAR struct goldfish_events_s *events,
             break;
 
           case ABS_MT_POSITION_X:
-            touchsample->point[events->currentslot].flags |= TOUCH_POS_VALID;
+            touchsample->point[events->currentslot].flags |=
+              (TOUCH_DOWN | TOUCH_POS_VALID);
             touchsample->point[events->currentslot].x = evt->value;
             break;
 
           case ABS_MT_POSITION_Y:
-            touchsample->point[events->currentslot].flags |= TOUCH_POS_VALID;
+            touchsample->point[events->currentslot].flags |=
+              (TOUCH_DOWN | TOUCH_POS_VALID);
             touchsample->point[events->currentslot].y = evt->value;
             break;
 
@@ -387,10 +389,17 @@ goldfish_events_send_touch_event(FAR struct goldfish_events_s *events,
   else if (evt->type == EV_SYN && evt->code == SYN_REPORT &&
            events->validevent)
     {
+      size_t i;
+
       events->validevent = false;
       touchsample->point[events->currentslot].timestamp = touch_get_time();
 
       touch_event(events->touchlower.priv, touchsample);
+
+      for (i = 0; i < events->touchsample->npoints; i++)
+        {
+          touchsample->point[i].flags = 0;
+        }
     }
 
   return false;
