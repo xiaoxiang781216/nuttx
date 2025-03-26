@@ -194,6 +194,42 @@ int esp32s3_bringup(void)
   #endif /* CONFIG_ESPRESSIF_SPI_BITBANG */
 #endif /* CONFIG_ESP32S3_SPI && CONFIG_SPI_DRIVER*/
 
+#if defined(CONFIG_ESP32S3_SPI) && defined(CONFIG_SPI_SLAVE_DRIVER)
+  #ifdef CONFIG_ESP32S3_SPI2
+  struct spi_slave_ctrlr_s *spislave_dev2;
+  spislave_dev2 = esp32s3_spislave_ctrlr_initialize(ESP32S3_SPI2);
+  if (!spislave_dev2)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to init spidev 2: %d\n", ret);
+    }
+  else
+    {
+      ret = spi_slave_register(spislave_dev2, ESP32S3_SPI2);
+      if (ret < 0)
+        {
+          syslog(LOG_ERR, "ERROR: Failed to init slave spidev 2: %d\n", ret);
+        }
+    }
+  #endif
+
+  #ifdef CONFIG_ESP32S3_SPI3
+  struct spi_slave_ctrlr_s *spislave_dev3;
+  spislave_dev3 = esp32s3_spislave_ctrlr_initialize(ESP32S3_SPI3);
+  if (!spislave_dev3)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to init spidev 3: %d\n", ret);
+    }
+  else
+    {
+      ret = spi_slave_register(spislave_dev3, ESP32S3_SPI3);
+      if (ret < 0)
+        {
+          syslog(LOG_ERR, "ERROR: Failed to init slave spidev 3: %d\n", ret);
+        }
+    }
+  #endif
+#endif
+
 #if defined(CONFIG_ESP32S3_EFUSE)
   ret = esp32s3_efuse_initialize("/dev/efuse");
   if (ret < 0)
