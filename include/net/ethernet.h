@@ -46,6 +46,7 @@
 #define ETHERTYPE_VLAN     0x8100    /* IEEE 802.1Q VLAN tagging */
 #define ETHERTYPE_IPX      0x8137    /* IPX */
 #define ETHERTYPE_IPV6     0x86dd    /* IP protocol version 6 */
+#define ETHERTYPE_PTP      0x88f7    /* PTP protocol  */
 #define ETHERTYPE_LOOPBACK 0x9000    /* used to test interfaces */
 
 /****************************************************************************
