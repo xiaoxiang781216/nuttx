@@ -393,7 +393,7 @@ static int rpmsg_rtc_settime(FAR struct rtc_lowerhalf_s *lower,
   struct rpmsg_rtc_set_s msg;
 
   msg.sec = timegm((FAR struct tm *)rtctime);
-  msg.nsec = 0;
+  msg.nsec = rtctime->tm_nsec;
 
   return rpmsg_rtc_send_recv((FAR struct rpmsg_rtc_lowerhalf_s *)lower,
           RPMSG_RTC_SET, (struct rpmsg_rtc_header_s *)&msg, sizeof(msg));
@@ -415,7 +415,7 @@ static int rpmsg_rtc_setalarm(FAR struct rtc_lowerhalf_s *lower_,
 
   msg.id = alarminfo->id;
   msg.sec = timegm((FAR struct tm *)&alarminfo->time);
-  msg.nsec = 0;
+  msg.nsec = alarminfo->time.tm_nsec;
 
   ret = rpmsg_rtc_send_recv(lower, RPMSG_RTC_ALARM_SET,
           (struct rpmsg_rtc_header_s *)&msg, sizeof(msg));
@@ -492,7 +492,7 @@ static int rpmsg_rtc_server_settime(FAR struct rtc_lowerhalf_s *lower,
   if (ret >= 0)
     {
       msg.sec  = timegm((FAR struct tm *)rtctime);
-      msg.nsec = 0;
+      msg.nsec = rtctime->tm_nsec;
       msg.header.command = RPMSG_RTC_SYNC;
 
       if (ret == 0)
@@ -662,7 +662,7 @@ static int rpmsg_rtc_server_ept_cb(FAR struct rpmsg_endpoint *ept,
         header->result = rpmsg_rtc_server_rdtime(priv, &rtctime);
 
         msg->sec = timegm((FAR struct tm *)&rtctime);
-        msg->nsec = 0;
+        msg->nsec = rtctime.tm_nsec;
         return rpmsg_send(ept, msg, sizeof(*msg));
       }
 
@@ -771,7 +771,8 @@ static void rpmsg_rtc_server_ns_bind(FAR struct rpmsg_device *rdev,
   if (server->lower->ops->rdtime(server->lower, &rtctime) >= 0)
     {
       msg.sec  = timegm((FAR struct tm *)&rtctime);
-      msg.nsec = 0;
+      msg.nsec = rtctime.tm_nsec;
+
       flags = spin_lock_irqsave(&g_basetime_lock);
       msg.base_sec = g_basetime.tv_sec;
       msg.base_nsec = g_basetime.tv_nsec;
