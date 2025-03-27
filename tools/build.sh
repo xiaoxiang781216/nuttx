@@ -543,7 +543,7 @@ shift
 
 setup_environment $board_config
 
-EXTRA_FLAGS="-Wno-cpp"
+EXTRA_FLAGS="-Wno-cpp -Wno-deprecated-declarations"
 while [[ "$1" == "-e" ]]; do
   shift
   EXTRA_FLAGS+=" $1"
