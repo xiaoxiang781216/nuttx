@@ -158,18 +158,10 @@ void syslog_add_intbuffer(FAR const char *buffer, size_t buflen)
     {
       circbuf_write(&g_syslog_intbuffer.circ, buffer, buflen);
     }
-  else if (buflen <= sizeof(g_syslog_intbuffer.buffer))
-    {
-      syslog_flush_internal(true, buflen - space);
-      circbuf_write(&g_syslog_intbuffer.circ, buffer, buflen);
-    }
   else
     {
       syslog_flush_internal(true, sizeof(g_syslog_intbuffer.buffer));
-      space = buflen - sizeof(g_syslog_intbuffer.buffer);
-      syslog_write_foreach(buffer, space, true);
-      circbuf_write(&g_syslog_intbuffer.circ,
-                    buffer + space, buflen - space);
+      syslog_write_foreach(buffer, buflen, true);
     }
 
   spin_unlock_irqrestore_wo_note(&g_syslog_intbuffer.splock, flags);
