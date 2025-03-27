@@ -52,9 +52,8 @@
  *
  ****************************************************************************/
 
-uintptr_t up_addrenv_va_to_pa(void *va)
+uintptr_t arm_addrenv_va_to_pa(uintptr_t *l1table, uintptr_t vaddr)
 {
-  uintptr_t vaddr = (uintptr_t)va;
   uintptr_t *l2table;
   uintptr_t paddr;
   uintptr_t l1entry;
@@ -70,7 +69,7 @@ uintptr_t up_addrenv_va_to_pa(void *va)
        * address.
        */
 
-      l1entry = mmu_l1_getentry(vaddr);
+      l1entry = mmu_l1table_getentry(l1table, vaddr);
       if ((l1entry & PMD_TYPE_MASK) == PMD_TYPE_PTE)
         {
           /* Get the physical address of the level 2 page table from the
@@ -113,6 +112,11 @@ uintptr_t up_addrenv_va_to_pa(void *va)
   /* No mapping available */
 
   return vaddr;
+}
+
+uintptr_t up_addrenv_va_to_pa(void *va)
+{
+  return arm_addrenv_va_to_pa(mmu_l1_getpgtable(), (uintptr_t)va);
 }
 
 #endif /* CONFIG_MM_PGALLOC */

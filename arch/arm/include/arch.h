@@ -133,15 +133,15 @@ do { \
 #ifdef CONFIG_ARCH_USE_MMU
 struct arch_addrenv_s
 {
-  /* Level 1 page table entries for each group section */
+  /* Alloc whole l1table to make better context switch performance */
 
-  uintptr_t *text[ARCH_TEXT_NSECTS];
-  uintptr_t *data[ARCH_DATA_NSECTS];
-#  ifdef CONFIG_BUILD_KERNEL
-  uintptr_t *heap[ARCH_HEAP_NSECTS];
-#    ifdef CONFIG_ARCH_VMA_MAPPING
-  uintptr_t *shm[ARCH_SHM_NSECTS];
-#    endif
+  uintptr_t *l1table;
+
+  /* The text, data, heap bases and heap size here */
+
+  uintptr_t textvbase;
+  uintptr_t datavbase;
+  uintptr_t heapvbase;
 
   /* Initial heap allocation (in bytes).  This exists only provide an
    * indirect path for passing the size of the initial heap to the heap
@@ -150,7 +150,10 @@ struct arch_addrenv_s
    */
 
   size_t heapsize;
-#  endif
+
+#ifdef CONFIG_ARCH_VMA_MAPPING
+  uintptr_t shmvbase;
+#endif
 };
 
 #elif defined(CONFIG_ARCH_USE_MPU)
