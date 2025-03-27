@@ -111,6 +111,11 @@ check_file() {
       isort --settings-path "${setupcfg}" "$@"
       fail=1
     fi
+
+    if [ $fail == 1 ]; then
+      echo "Error: python style check failed"
+    fi
+
   elif [ "$(is_rust_file $@)" == "1" ]; then
     if ! command -v rustfmt &> /dev/null; then
       fail=1
