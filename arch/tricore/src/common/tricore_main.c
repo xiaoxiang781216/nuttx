@@ -27,7 +27,12 @@
 
 #include "Ifx_Types.h"
 #include "IfxCpu.h"
-#include "IfxScuWdt.h"
+
+#ifdef CONFIG_ARCH_CHIP_AURIX_TC48X
+#  include "IfxWtu.h"
+#else
+#  include "IfxScuWdt.h"
+#endif
 
 /****************************************************************************
  * Private Functions
