@@ -309,7 +309,7 @@ class Nxthread(gdb.Command):
                     for cmd in arg[2:]:
                         cmd_arg += cmd + " "
 
-                    gdb.execute(f"{cmd_arg}\n")
+                    gdb.write(gdb.execute(f"{cmd_arg}\n", to_string=True))
                     g_registers.restore()
             else:
                 threadlist = []
@@ -339,7 +339,7 @@ class Nxthread(gdb.Command):
                         if not utils.task_is_running(utils.get_tcb(i)):
                             gdb.execute(f"setregs g_pidhash[{i}]->xcp.regs")
 
-                        gdb.execute(f"{cmd}\n")
+                        gdb.write(gdb.execute(f"{cmd}\n", to_string=True))
                         g_registers.restore()
 
         else:
