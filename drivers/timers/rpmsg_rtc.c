@@ -646,7 +646,10 @@ static int rpmsg_rtc_server_ept_cb(FAR struct rpmsg_endpoint *ept,
     case RPMSG_RTC_GET:
       {
         FAR struct rpmsg_rtc_get_s *msg = data;
-        struct rtc_time rtctime;
+        struct rtc_time rtctime =
+          {
+            0
+          };
 
         header->result = rpmsg_rtc_server_rdtime(priv, &rtctime);
 
@@ -658,7 +661,11 @@ static int rpmsg_rtc_server_ept_cb(FAR struct rpmsg_endpoint *ept,
     case RPMSG_RTC_SET:
       {
         FAR struct rpmsg_rtc_set_s *msg = data;
-        struct rtc_time rtctime;
+        struct rtc_time rtctime =
+          {
+            0
+          };
+
         time_t time = msg->sec;
 
         gmtime_r(&time, (FAR struct tm *)&rtctime);
@@ -729,7 +736,10 @@ static void rpmsg_rtc_server_ns_bind(FAR struct rpmsg_device *rdev,
   FAR struct rpmsg_rtc_server_s *server = priv;
   FAR struct rpmsg_rtc_client_s *client;
   struct rpmsg_rtc_set_s msg;
-  struct rtc_time rtctime;
+  struct rtc_time rtctime =
+    {
+      0
+    };
 
   client = kmm_zalloc(sizeof(*client));
   if (client == NULL)
