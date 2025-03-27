@@ -175,7 +175,11 @@ static inline int poll_setup(FAR struct pollfd *fds, nfds_t nfds,
 
           if (ret < 0)
             {
-              poll_teardown(fds, num, &count);
+              if (num >= 0)
+                {
+                  poll_teardown(fds, num, &count);
+                }
+
               fds[i].revents |= POLLERR;
               fds[i].arg = NULL;
               fds[i].cb = NULL;

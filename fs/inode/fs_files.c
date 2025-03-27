@@ -497,7 +497,9 @@ FAR struct filelist *files_getlist(FAR struct tcb_s *tcb)
 
 void files_putlist(FAR struct filelist *list)
 {
+#ifdef CONFIG_FS_REFCOUNT
   bool loop;
+#endif
   int i;
   int j;
 
@@ -512,8 +514,10 @@ void files_putlist(FAR struct filelist *list)
    * because there should not be any references in this context.
    */
 
+#ifdef CONFIG_FS_REFCOUNT
 again:
   loop = false;
+#endif
   for (i = list->fl_rows - 1; i >= 0; i--)
     {
       for (j = CONFIG_NFILE_DESCRIPTORS_PER_BLOCK - 1; j >= 0; j--)
@@ -529,10 +533,12 @@ again:
         }
     }
 
+#ifdef CONFIG_FS_REFCOUNT
   if (loop)
     {
       goto again;
     }
+#endif
 
   for (i = list->fl_rows - 1; i > 0; i--)
     {
