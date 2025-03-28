@@ -409,6 +409,7 @@ struct note_printf_s
 {
   struct note_common_s npt_cmn; /* Common note parameters */
   uintptr_t npt_ip;             /* Instruction pointer called from */
+  uint32_t npt_tag;             /* Printf tag */
   FAR const char *npt_fmt;      /* Printf format string */
   uint32_t npt_type;            /* Printf parameter type */
   char npt_data[4];             /* Print arguments */
@@ -421,6 +422,7 @@ struct note_event_s
 {
   struct note_common_s nev_cmn;      /* Common note parameters */
   uintptr_t nev_ip;                  /* Instruction pointer called from */
+  uint32_t nev_tag;                  /* Event tag */
   uint8_t nev_data[4];               /* Event data */
 };
 
