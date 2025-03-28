@@ -45,6 +45,81 @@
 #define NOTE_ALIGN(a) (((a) + sizeof(uintptr_t) - 1) & \
                        ~(sizeof(uintptr_t) - 1))
 
+/* Provide defaults for some configuration settings (could be undefined with
+ * old configuration files)
+ */
+
+#ifndef CONFIG_SCHED_INSTRUMENTATION_CPUSET
+#  define CONFIG_SCHED_INSTRUMENTATION_CPUSET ~0
+#endif
+
+/* Note filter mode flag definitions */
+
+#define NOTE_FILTER_MODE_FLAG_ENABLE       (1 << 0) /* Enable instrumentation */
+#define NOTE_FILTER_MODE_FLAG_SWITCH       (1 << 1) /* Enable switch instrumentation */
+#define NOTE_FILTER_MODE_FLAG_SYSCALL      (1 << 2) /* Enable syscall instrumentation */
+#define NOTE_FILTER_MODE_FLAG_IRQ          (1 << 3) /* Enable IRQ instrumentaiton */
+#define NOTE_FILTER_MODE_FLAG_DUMP         (1 << 4) /* Enable dump instrumentaiton */
+#define NOTE_FILTER_MODE_FLAG_SYSCALL_ARGS (1 << 5) /* Enable collecting syscall arguments */
+#define NOTE_FILTER_MODE_FLAG_PREEMPTION   (1 << 6) /* Enable preemption instrumentation */
+#define NOTE_FILTER_MODE_FLAG_CSECTION     (1 << 7) /* Enable csection instrumentaiton */
+#define NOTE_FILTER_MODE_FLAG_SPINLOCKS    (1 << 8) /* Enable spinlock instrumentaiton */
+#define NOTE_FILTER_MODE_FLAG_HEAP         (1 << 9) /* Enable heap instrumentaiton */
+
+/* Helper macros for syscall instrumentation filter */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
+#  define NOTE_FILTER_SYSCALLMASK_SET(nr, s) \
+          ((s)->syscall_mask[(nr) / 8] |= (1 << ((nr) % 8)))
+#  define NOTE_FILTER_SYSCALLMASK_CLR(nr, s) \
+          ((s)->syscall_mask[(nr) / 8] &= ~(1 << ((nr) % 8)))
+#  define NOTE_FILTER_SYSCALLMASK_ISSET(nr, s) \
+          ((s)->syscall_mask[(nr) / 8] & (1 << ((nr) % 8)))
+#  define NOTE_FILTER_SYSCALLMASK_ZERO(s) \
+          memset((s), 0, sizeof(struct note_filter_syscall_s))
+#else
+#  define NOTE_FILTER_SYSCALLMASK_SET(nr, s)
+#  define NOTE_FILTER_SYSCALLMASK_CLR(nr, s)
+#  define NOTE_FILTER_SYSCALLMASK_ISSET(nr, s) (0)
+#  define NOTE_FILTER_SYSCALLMASK_ZERO(s)
+#endif
+
+/* Helper macros for IRQ instrumentation filter */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
+#  define NOTE_FILTER_IRQMASK_SET(nr, s) \
+          ((s)->irq_mask[(nr) / 8] |= (1 << ((nr) % 8)))
+#  define NOTE_FILTER_IRQMASK_CLR(nr, s) \
+          ((s)->irq_mask[(nr) / 8] &= ~(1 << ((nr) % 8)))
+#  define NOTE_FILTER_IRQMASK_ISSET(nr, s) \
+          ((s)->irq_mask[(nr) / 8] & (1 << ((nr) % 8)))
+#  define NOTE_FILTER_IRQMASK_ZERO(s) \
+          memset((s), 0, sizeof(struct note_filter_irq_s))
+#else
+#  define NOTE_FILTER_IRQMASK_SET(nr, s)
+#  define NOTE_FILTER_IRQMASK_CLR(nr, s)
+#  define NOTE_FILTER_IRQMASK_ISSET(nr, s) (0)
+#  define NOTE_FILTER_IRQMASK_ZERO(s)
+#endif
+
+/* Helper macros for dump instrumentation filter */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+#  define NOTE_FILTER_TAGMASK_SET(tag, s) \
+          ((s)->tag_mask[(tag) / 8] |= (1 << ((tag) % 8)))
+#  define NOTE_FILTER_TAGMASK_CLR(tag, s) \
+          ((s)->tag_mask[(tag) / 8] &= ~(1 << ((tag) % 8)))
+#  define NOTE_FILTER_TAGMASK_ISSET(tag, s) \
+          ((s)->tag_mask[(tag) / 8] & (1 << ((tag) % 8)))
+#  define NOTE_FILTER_TAGMASK_ZERO(s) \
+          memset((s), 0, sizeof(struct note_filter_tag_s));
+#else
+#  define NOTE_FILTER_TAGMASK_SET(tag, s)
+#  define NOTE_FILTER_TAGMASK_CLR(tag, s)
+#  define NOTE_FILTER_TAGMASK_ISSET(tag, s) (0)
+#  define NOTE_FILTER_TAGMASK_ZERO(s)
+#endif
+
 /* Printf argument type */
 
 #define NOTE_PRINTF_UINT32 0

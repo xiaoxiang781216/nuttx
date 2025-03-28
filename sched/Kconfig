@@ -1216,7 +1216,7 @@ config SCHED_INSTRUMENTATION_FILTER
 config SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
 	hex "Default instrumentation filter mode"
 	depends on SCHED_INSTRUMENTATION_FILTER
-	default 0x3f
+	default 0x3ff
 	---help---
 		Default mode of the instrumentation filter logic.
 			Bit 0 = Enable instrumentation
@@ -1225,6 +1225,10 @@ config SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
 			Bit 3 = Enable IRQ instrumentation
 			Bit 4 = Enable dump instrumentation
 			Bit 5 = Enable collecting syscall arguments
+			Bit 6 = Enable preemption instrumentation
+			Bit 7 = Enable csection instrumentation
+			Bit 8 = Enable spinlock instrumentation
+			Bit 9 = Enable heap instrumentation
 
 config SCHED_INSTRUMENTATION_CPUSET
 	hex "CPU bit set"

@@ -262,6 +262,146 @@ static inline int note_isenabled(FAR struct note_driver_s *driver)
 }
 
 /****************************************************************************
+ * Name: note_isenabled_preemption
+ *
+ * Description:
+ *   Check whether the preemption instrumentation is enabled.
+ *
+ * Input Parameters:
+ *   driver - The channel of note driver
+ *
+ * Returned Value:
+ *   True is returned if the instrumentation is enabled.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
+static inline int note_isenabled_preemption(FAR struct note_driver_s *driver)
+{
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+  if (!note_isenabled(driver))
+    {
+      return false;
+    }
+
+  /* If the preemption trace is disabled, do nothing. */
+
+  if ((driver->filter.mode.flag & NOTE_FILTER_MODE_FLAG_PREEMPTION) == 0)
+    {
+      return false;
+    }
+#endif
+
+  return true;
+}
+#endif /* CONFIG_SCHED_INSTRUMENTATION_PREEMPTION */
+
+/****************************************************************************
+ * Name: note_isenabled_csection
+ *
+ * Description:
+ *   Check whether the csection instrumentation is enabled.
+ *
+ * Input Parameters:
+ *   driver - The channel of note driver
+ *
+ * Returned Value:
+ *   True is returned if the instrumentation is enabled.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
+static inline int note_isenabled_csection(FAR struct note_driver_s *driver)
+{
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+  if (!note_isenabled(driver))
+    {
+      return false;
+    }
+
+  /* If the csection trace is disabled, do nothing. */
+
+  if ((driver->filter.mode.flag & NOTE_FILTER_MODE_FLAG_CSECTION) == 0)
+    {
+      return false;
+    }
+#endif
+
+  return true;
+}
+#endif /* CONFIG_SCHED_INSTRUMENTATION_CSECTION */
+
+/****************************************************************************
+ * Name: note_isenabled_spinlock
+ *
+ * Description:
+ *   Check whether the spinlock instrumentation is enabled.
+ *
+ * Input Parameters:
+ *   driver - The channel of note driver
+ *
+ * Returned Value:
+ *   True is returned if the instrumentation is enabled.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
+static inline int note_isenabled_spinlock(FAR struct note_driver_s *driver)
+{
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+  if (!note_isenabled(driver))
+    {
+      return false;
+    }
+
+  /* If the spinlock trace is disabled, do nothing. */
+
+  if ((driver->filter.mode.flag & NOTE_FILTER_MODE_FLAG_SPINLOCKS) == 0)
+    {
+      return false;
+    }
+#endif
+
+  return true;
+}
+#endif /* CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS */
+
+/****************************************************************************
+ * Name: note_isenabled_heap
+ *
+ * Description:
+ *   Check whether the heap instrumentation is enabled.
+ *
+ * Input Parameters:
+ *   driver - The channel of note driver
+ *
+ * Returned Value:
+ *   True is returned if the instrumentation is enabled.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
+static inline int note_isenabled_heap(FAR struct note_driver_s *driver)
+{
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+  if (!note_isenabled(driver))
+    {
+      return false;
+    }
+
+  /* If the heap trace is disabled, do nothing. */
+
+  if ((driver->filter.mode.flag & NOTE_FILTER_MODE_FLAG_HEAP) == 0)
+    {
+      return false;
+    }
+#endif
+
+  return true;
+}
+#endif /* CONFIG_SCHED_INSTRUMENTATION_HEAP */
+
+/****************************************************************************
  * Name: note_isenabled_switch
  *
  * Description:
@@ -653,7 +793,7 @@ void sched_note_start(FAR struct tcb_s *tcb)
 
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled(*driver))
+      if (!note_isenabled_switch(*driver))
         {
           continue;
         }
@@ -713,7 +853,7 @@ void sched_note_stop(FAR struct tcb_s *tcb)
 
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled(*driver))
+      if (!note_isenabled_switch(*driver))
         {
           continue;
         }
@@ -829,7 +969,7 @@ void sched_note_cpu_start(FAR struct tcb_s *tcb, int cpu)
 
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled(*driver))
+      if (!note_isenabled_switch(*driver))
         {
           continue;
         }
@@ -868,7 +1008,7 @@ void sched_note_cpu_started(FAR struct tcb_s *tcb)
 
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled(*driver))
+      if (!note_isenabled_switch(*driver))
         {
           continue;
         }
@@ -1063,7 +1203,7 @@ void sched_note_preemption(FAR struct tcb_s *tcb, bool locked)
 
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled(*driver))
+      if (!note_isenabled_preemption(*driver))
         {
           continue;
         }
@@ -1104,7 +1244,7 @@ void sched_note_csection(FAR struct tcb_s *tcb, bool enter)
 
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled(*driver))
+      if (!note_isenabled_csection(*driver))
         {
           continue;
         }
@@ -1164,7 +1304,7 @@ void sched_note_spinlock(FAR struct tcb_s *tcb,
 
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled(*driver))
+      if (!note_isenabled_spinlock(*driver))
         {
           continue;
         }
@@ -1443,7 +1583,7 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
 
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled(*driver))
+      if (!note_isenabled_heap(*driver))
         {
           continue;
         }
