@@ -262,6 +262,171 @@ static inline int note_isenabled(FAR struct note_driver_s *driver)
 }
 
 /****************************************************************************
+ * Name: note_isenabled_note
+ *
+ * Description:
+ *   Check whether the instrumentation is enabled.
+ *
+ * Input Parameters:
+ *   driver - The channel of note driver
+ *   note   - The common note structure to use
+ *
+ * Returned Value:
+ *   True is returned if the instrumentation is enabled.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION
+static inline int note_isenabled_note(FAR struct note_driver_s *driver,
+                                      FAR struct note_common_s *note)
+{
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+  if (!note_isenabled(driver))
+    {
+      return false;
+    }
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
+  if (note->nc_type >= NOTE_START &&
+      note->nc_type <= NOTE_CPU_RESUMED)
+    {
+      /* If the switch trace is disabled, do nothing. */
+
+      if ((driver->filter.mode.flag & NOTE_FILTER_MODE_FLAG_SWITCH) == 0)
+        {
+          return false;
+        }
+    }
+#endif /* CONFIG_SCHED_INSTRUMENTATION_SWITCH */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
+  else if (note->nc_type >= NOTE_PREEMPT_LOCK &&
+             note->nc_type <= NOTE_PREEMPT_UNLOCK)
+    {
+      /* If the preemption trace is disabled, do nothing. */
+
+      if ((driver->filter.mode.flag & NOTE_FILTER_MODE_FLAG_PREEMPTION) == 0)
+        {
+          return false;
+        }
+    }
+#endif /* CONFIG_SCHED_INSTRUMENTATION_PREEMPTION */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
+  else if (note->nc_type >= NOTE_CSECTION_ENTER &&
+             note->nc_type <= NOTE_CSECTION_LEAVE)
+    {
+      /* If the csection trace is disabled, do nothing. */
+
+      if ((driver->filter.mode.flag & NOTE_FILTER_MODE_FLAG_CSECTION) == 0)
+        {
+          return false;
+        }
+    }
+#endif /* CONFIG_SCHED_INSTRUMENTATION_CSECTION */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
+  else if (note->nc_type >= NOTE_SPINLOCK_LOCK &&
+             note->nc_type <= NOTE_SPINLOCK_ABORT)
+    {
+      /* If the spinlock trace is disabled, do nothing. */
+
+      if ((driver->filter.mode.flag & NOTE_FILTER_MODE_FLAG_SPINLOCKS) == 0)
+        {
+          return false;
+        }
+    }
+#endif /* CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
+  else if (note->nc_type >= NOTE_HEAP_ADD &&
+             note->nc_type <= NOTE_HEAP_FREE)
+    {
+      /* If the heap trace is disabled, do nothing. */
+
+      if ((driver->filter.mode.flag & NOTE_FILTER_MODE_FLAG_HEAP) == 0)
+        {
+          return false;
+        }
+    }
+#endif /* CONFIG_SCHED_INSTRUMENTATION_HEAP */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+  else if (note->nc_type == NOTE_DUMP_PRINTF)
+    {
+      uint32_t tag = ((struct note_printf_s *)note)->npt_tag;
+
+      /* If the dump trace is disabled or the tag is masked,
+       * do nothing.
+       */
+
+      if (!(driver->filter.mode.flag & NOTE_FILTER_MODE_FLAG_DUMP) ||
+          NOTE_FILTER_TAGMASK_ISSET(tag, &driver->filter.tag_mask))
+        {
+          return false;
+        }
+    }
+  else if (note->nc_type >= NOTE_DUMP_BEGIN &&
+           note->nc_type <= NOTE_DUMP_THREADTIME)
+    {
+      uint32_t tag = ((struct note_event_s *)note)->nev_tag;
+
+      /* If the dump trace is disabled or the tag is masked,
+       * do nothing.
+       */
+
+      if (!(driver->filter.mode.flag & NOTE_FILTER_MODE_FLAG_DUMP) ||
+          NOTE_FILTER_TAGMASK_ISSET(tag, &driver->filter.tag_mask))
+        {
+          return false;
+        }
+    }
+#endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
+  else if (note->nc_type >= NOTE_IRQ_ENTER &&
+           note->nc_type <= NOTE_IRQ_LEAVE)
+    {
+      int irq = ((struct note_irqhandler_s *)note)->nih_irq;
+
+      /* If the IRQ trace is disabled or the IRQ number is masked,
+       * do nothing.
+       */
+
+      if (!(driver->filter.mode.flag & NOTE_FILTER_MODE_FLAG_IRQ) ||
+          NOTE_FILTER_IRQMASK_ISSET(irq, &driver->filter.irq_mask))
+        {
+          return false;
+        }
+    }
+#endif /* CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
+  else if (note->nc_type >= NOTE_SYSCALL_ENTER &&
+           note->nc_type <= NOTE_SYSCALL_LEAVE)
+    {
+      int nr = ((struct note_syscall_enter_s *)note)->nsc_nr;
+
+      /* If the syscall trace is disabled or the syscall number is masked,
+       * do nothing.
+       */
+
+      if (!(driver->filter.mode.flag & NOTE_FILTER_MODE_FLAG_SYSCALL) ||
+          NOTE_FILTER_SYSCALLMASK_ISSET(nr - CONFIG_SYS_RESERVED,
+                                        &driver->filter.syscall_mask))
+        {
+          return false;
+        }
+    }
+#endif /* CONFIG_SCHED_INSTRUMENTATION_SYSCALL */
+
+#endif
+
+  return true;
+}
+#endif
+
+/****************************************************************************
  * Name: note_isenabled_preemption
  *
  * Description:
@@ -745,6 +910,11 @@ void sched_note_add(FAR const void *data, size_t len)
                   len >= notelen);
       for (driver = g_note_drivers; *driver; driver++)
         {
+          if (!note_isenabled_note(*driver, note))
+            {
+              continue;
+            }
+
           if ((*driver)->ops->add == NULL)
             {
               continue;
