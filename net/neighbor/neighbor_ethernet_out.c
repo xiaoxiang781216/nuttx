@@ -161,8 +161,8 @@ void neighbor_ethernet_out(FAR struct net_driver_s *dev)
 
       if (neighbor_lookup(ipaddr, &laddr) < 0)
         {
-#ifdef CONFIG_NET_ICMPv6
-           ninfo("IPv6 Neighbor solicitation for IPv6\n");
+#ifdef NET_ICMPv6_HAVE_STACK
+          ninfo("IPv6 Neighbor solicitation for IPv6\n");
 
           /* The destination address was not in our Neighbor Table, so we
            * overwrite the IPv6 packet with an ICMPv6 Neighbor Solicitation
