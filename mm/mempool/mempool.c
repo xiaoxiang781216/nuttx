@@ -49,7 +49,7 @@
  ****************************************************************************/
 
 typedef void (*mempool_callback_t)(FAR struct mempool_s *pool,
-                                   FAR struct mempool_record_s *buf,
+                                   FAR struct mempool_record_s *record,
                                    FAR const void *input, FAR void *output);
 #endif
 
@@ -87,46 +87,45 @@ static inline void mempool_add_queue(FAR struct mempool_s *pool,
 {
   while (nblks-- > 0)
     {
+      FAR sq_entry_t *node = (FAR sq_entry_t *)(base + blocksize * nblks);
 #ifdef CONFIG_MM_RECORD
-      FAR struct mempool_record_s *buf =
-       (FAR struct mempool_record_s *)
-       (base + nblks * blocksize + pool->blocksize);
-
+      FAR struct mempool_record_s *record;
+      record  = (FAR void *)((FAR char *)node + pool->blocksize);
       buf->magic = MEMPOOL_MAGIC_FREE;
 #endif
-      sq_addlast((FAR sq_entry_t *)(base + blocksize * nblks), queue);
+      sq_addlast(node, queue);
     }
 }
 
 #ifdef CONFIG_MM_RECORD
 static inline void mempool_record(FAR struct mempool_s *pool,
-                                  FAR struct mempool_record_s *buf)
+                                  FAR struct mempool_record_s *record)
 {
 #  if defined(CONFIG_MM_RECORD_STACK) || defined(CONFIG_MM_RECORD_PID)
   pid_t pid = _SCHED_GETTID();
 #  endif
-  DEBUGASSERT(buf->magic == MEMPOOL_MAGIC_FREE);
-  buf->magic = MEMPOOL_MAGIC_ALLOC;
+  DEBUGASSERT(record->magic == MEMPOOL_MAGIC_FREE);
+  record->magic = MEMPOOL_MAGIC_ALLOC;
 #  ifdef CONFIG_MM_RECORD_PID
-  buf->pid = pid;
+  record->pid = pid;
 #  endif
 
-  MM_INCSEQNO(buf);
+  MM_INCSEQNO(record);
 
 #  if CONFIG_MM_RECORD_STACK > 0
   if (pool->procfs.backtrace)
     {
-      int result = sched_backtrace(pid, buf->backtrace,
+      int result = sched_backtrace(pid, record->backtrace,
                                    CONFIG_MM_RECORD_STACK,
                                    CONFIG_MM_HEAP_MEMPOOL_RECORD_STACK_SKIP);
       if (result < CONFIG_MM_RECORD_STACK)
         {
-          buf->backtrace[result] = NULL;
+          record->backtrace[result] = NULL;
         }
     }
   else
     {
-      buf->backtrace[0] = NULL;
+      record->backtrace[0] = NULL;
     }
 #  endif
 }
@@ -136,7 +135,7 @@ static void mempool_foreach(FAR struct mempool_s *pool,
                             FAR const void *input, FAR void *output)
 {
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
-  FAR struct mempool_record_s *buf;
+  FAR struct mempool_record_s *record;
   FAR sq_entry_t *entry;
   FAR char *base ;
   size_t nblks;
@@ -146,10 +145,9 @@ static void mempool_foreach(FAR struct mempool_s *pool,
       nblks = pool->interruptsize / blocksize;
       while (nblks--)
         {
-          buf = (FAR struct mempool_record_s *)
-                  pool->ibase + nblks * blocksize + pool->blocksize;
-
-          callback(pool, buf, input, output);
+          record = (FAR struct mempool_record_s *)
+                   (pool->ibase + nblks * blocksize + pool->blocksize);
+          callback(pool, record, input, output);
         }
     }
 
@@ -160,16 +158,16 @@ static void mempool_foreach(FAR struct mempool_s *pool,
 
       while (nblks--)
         {
-          buf = (FAR struct mempool_record_s *)
-                  (base + nblks * blocksize + pool->blocksize);
-          callback(pool, buf, input, output);
+          record = (FAR struct mempool_record_s *)
+                   (base + nblks * blocksize + pool->blocksize);
+          callback(pool, record, input, output);
         }
     }
 }
 
 #ifdef CONFIG_MM_RECORD_PID
 static void mempool_info_task_callback(FAR struct mempool_s *pool,
-                                       FAR struct mempool_record_s *buf,
+                                       FAR struct mempool_record_s *record,
                                        FAR const void *input,
                                        FAR void *output)
 {
@@ -177,13 +175,13 @@ static void mempool_info_task_callback(FAR struct mempool_s *pool,
   FAR const struct malltask *task = input;
   FAR struct mallinfo_task *info = output;
 
-  if (buf->magic == MEMPOOL_MAGIC_FREE)
+  if (record->magic == MEMPOOL_MAGIC_FREE)
     {
       return;
     }
 
-  if ((MM_DUMP_ASSIGN(task, buf) || MM_DUMP_ALLOC(task, buf) ||
-       MM_DUMP_LEAK(task, buf)) && MM_DUMP_SEQNO(task, buf))
+  if ((MM_DUMP_ASSIGN(task, record) || MM_DUMP_ALLOC(task, record) ||
+       MM_DUMP_LEAK(task, record)) && MM_DUMP_SEQNO(task, record))
     {
       info->aordblks++;
       info->uordblks += blocksize;
@@ -192,7 +190,7 @@ static void mempool_info_task_callback(FAR struct mempool_s *pool,
 #endif
 
 static void mempool_memdump_callback(FAR struct mempool_s *pool,
-                                     FAR struct mempool_record_s *buf,
+                                     FAR struct mempool_record_s *record,
                                      FAR const void *input, FAR void *output)
 {
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
@@ -200,18 +198,18 @@ static void mempool_memdump_callback(FAR struct mempool_s *pool,
   FAR const struct mm_memdump_s *dump = input;
   UNUSED(dump);
 
-  if (buf->magic == MEMPOOL_MAGIC_FREE)
+  if (record->magic == MEMPOOL_MAGIC_FREE)
     {
       return;
     }
 
-  if ((MM_DUMP_ASSIGN(dump, buf) || MM_DUMP_ALLOC(dump, buf) ||
-       MM_DUMP_LEAK(dump, buf)) && MM_DUMP_SEQNO(dump, buf))
+  if ((MM_DUMP_ASSIGN(dump, record) || MM_DUMP_ALLOC(dump, record) ||
+       MM_DUMP_LEAK(dump, record)) && MM_DUMP_SEQNO(dump, record))
     {
 #  if CONFIG_MM_RECORD_STACK > 0
       char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_MM_RECORD_STACK)];
 
-      backtrace_format(tmp, sizeof(tmp), buf->backtrace,
+      backtrace_format(tmp, sizeof(tmp), record->backtrace,
                        CONFIG_MM_RECORD_STACK);
 #  else
       FAR const char *tmp = "";
@@ -227,30 +225,30 @@ static void mempool_memdump_callback(FAR struct mempool_s *pool,
 #endif
              "%*p %s\n",
 #ifdef CONFIG_MM_RECORD_PID
-             buf->pid,
+             record->pid,
 #endif
              blocksize, overhead,
 #ifdef CONFIG_MM_RECORD_SEQNO
-             buf->seqno,
+             record->seqno,
 #endif
              BACKTRACE_PTR_FMT_WIDTH,
-             ((FAR char *)buf - pool->blocksize), tmp);
+             ((FAR char *)record - pool->blocksize), tmp);
     }
 }
 
 static void
 mempool_memdump_free_callback(FAR struct mempool_s *pool,
-                              FAR struct mempool_record_s *buf,
+                              FAR struct mempool_record_s *record,
                               FAR const void *input, FAR void *output)
 {
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
   size_t overhead = blocksize - pool->blocksize;
 
-  if (buf->magic == MEMPOOL_MAGIC_FREE)
+  if (record->magic == MEMPOOL_MAGIC_FREE)
     {
       syslog(LOG_INFO, "%12zu%9zu%*p\n",
              blocksize, overhead, BACKTRACE_PTR_FMT_WIDTH,
-             ((FAR char *)buf - pool->blocksize));
+             ((FAR char *)record - pool->blocksize));
     }
 }
 #endif
@@ -365,6 +363,9 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
 
 FAR void *mempool_allocate(FAR struct mempool_s *pool)
 {
+#ifdef CONFIG_MM_RECORD
+  FAR struct mempool_record_s *record;
+#endif
   FAR sq_entry_t *blk;
   irqstate_t flags;
 
@@ -423,8 +424,8 @@ retry:
   spin_unlock_irqrestore(&pool->lock, flags);
 
 #ifdef CONFIG_MM_RECORD
-  mempool_record(pool, (FAR struct mempool_record_s *)
-                              ((FAR char *)blk + pool->blocksize));
+  record = (FAR void *)((FAR char *)blk + pool->blocksize);
+  mempool_record(pool, record);
 #endif
 
   blk = kasan_unpoison(blk, pool->blocksize);
@@ -450,13 +451,13 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
 {
   irqstate_t flags = spin_lock_irqsave(&pool->lock);
 #ifdef CONFIG_MM_RECORD
-  FAR struct mempool_record_s *buf =
+  FAR struct mempool_record_s *record =
     (FAR struct mempool_record_s *)((FAR char *)blk + pool->blocksize);
 
   /* Check double free or out of out of bounds */
 
-  DEBUGASSERT(buf->magic == MEMPOOL_MAGIC_ALLOC);
-  buf->magic = MEMPOOL_MAGIC_FREE;
+  DEBUGASSERT(record->magic == MEMPOOL_MAGIC_ALLOC);
+  record->magic = MEMPOOL_MAGIC_FREE;
 #endif
 
   pool->nalloc--;
