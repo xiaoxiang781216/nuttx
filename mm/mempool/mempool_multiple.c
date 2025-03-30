@@ -640,6 +640,11 @@ int mempool_multiple_free(FAR struct mempool_multiple_s *mpool,
                             ((FAR char *)kasan_clear_tag(dict->addr) +
                              mpool->minpoolsize)) %
                            MEMPOOL_REALBLOCKSIZE(dict->pool));
+
+#ifdef CONFIG_MM_RECORD
+  blk = mempool_get_block_from_record(blk);
+#endif
+
   mempool_release(dict->pool, blk);
   return 0;
 }

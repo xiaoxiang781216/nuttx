@@ -89,9 +89,12 @@ static inline void mempool_add_queue(FAR struct mempool_s *pool,
     {
       FAR sq_entry_t *node = (FAR sq_entry_t *)(base + blocksize * nblks);
 #ifdef CONFIG_MM_RECORD
-      FAR struct mempool_record_s *record;
-      record  = (FAR void *)((FAR char *)node + pool->blocksize);
-      buf->magic = MEMPOOL_MAGIC_FREE;
+      FAR struct mempool_record_s *record = (FAR void *)node;
+
+      /* Usr mem layout after record payload,  keep record when overlap. */
+
+      node = (FAR void *)mempool_get_block_from_record(record);
+      record->magic = MEMPOOL_MAGIC_FREE;
 #endif
       sq_addlast(node, queue);
     }
@@ -146,7 +149,7 @@ static void mempool_foreach(FAR struct mempool_s *pool,
       while (nblks--)
         {
           record = (FAR struct mempool_record_s *)
-                   (pool->ibase + nblks * blocksize + pool->blocksize);
+                   (pool->ibase + nblks * blocksize);
           callback(pool, record, input, output);
         }
     }
@@ -159,7 +162,7 @@ static void mempool_foreach(FAR struct mempool_s *pool,
       while (nblks--)
         {
           record = (FAR struct mempool_record_s *)
-                   (base + nblks * blocksize + pool->blocksize);
+                   (base + nblks * blocksize);
           callback(pool, record, input, output);
         }
     }
@@ -248,7 +251,7 @@ mempool_memdump_free_callback(FAR struct mempool_s *pool,
     {
       syslog(LOG_INFO, "%12zu%9zu%*p\n",
              blocksize, overhead, BACKTRACE_PTR_FMT_WIDTH,
-             ((FAR char *)record - pool->blocksize));
+             mempool_get_block_from_record(record));
     }
 }
 #endif
@@ -424,7 +427,7 @@ retry:
   spin_unlock_irqrestore(&pool->lock, flags);
 
 #ifdef CONFIG_MM_RECORD
-  record = (FAR void *)((FAR char *)blk + pool->blocksize);
+  record = mempool_get_record_from_block(blk);
   mempool_record(pool, record);
 #endif
 
@@ -451,8 +454,11 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
 {
   irqstate_t flags = spin_lock_irqsave(&pool->lock);
 #ifdef CONFIG_MM_RECORD
-  FAR struct mempool_record_s *record =
-    (FAR struct mempool_record_s *)((FAR char *)blk + pool->blocksize);
+  FAR struct mempool_record_s *record;
+
+  /* Backward to real record, not really free, blk don't have to update */
+
+  record = mempool_get_record_from_block(blk);
 
   /* Check double free or out of out of bounds */
 

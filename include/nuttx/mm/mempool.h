@@ -45,6 +45,9 @@
 #  define MEMPOOL_REALBLOCKSIZE(pool) (ALIGN_UP((pool)->blocksize + \
                                        sizeof(struct mempool_record_s), \
                                        MM_ALIGN))
+#  define MEMPOOL_RECORD_SIZE         (ALIGN_UP( \
+                                       sizeof(struct mempool_record_s), \
+                                       MM_ALIGN))
 #else
 #  define MEMPOOL_REALBLOCKSIZE(pool) ((pool)->blocksize)
 #endif
@@ -525,6 +528,49 @@ mempool_multiple_mallinfo(FAR struct mempool_multiple_s *mpool);
 struct mallinfo_task
 mempool_multiple_info_task(FAR struct mempool_multiple_s *mpool,
                            FAR const struct malltask *task);
+
+/****************************************************************************
+ * Name: mempool_get_block_from_record
+ * Description:
+ *   Get the usr mem blk from record instance, handle alignment correctly.
+ *
+ * Input Parameters:
+ *   record - The struct mempool_record_s already have.
+ *
+ * Returned Value:
+ *   The usr mem blk ptr.
+ ****************************************************************************/
+
+#ifdef CONFIG_MM_RECORD
+static inline_function FAR void *
+mempool_get_block_from_record(FAR struct mempool_record_s *record)
+{
+  FAR void *blk = (FAR char *)record + MEMPOOL_RECORD_SIZE;
+  return blk;
+}
+#endif
+
+/****************************************************************************
+ * Name: mempool_get_record_from_block
+ * Description:
+ *   Get the record from usr mem blk ptr, handle alignment correctly.
+ *
+ * Input Parameters:
+ *   blk - The usr memblk begin address ptr, If ptr is alloc from memalign
+ *         should backward to the address before alignment.
+ *
+ * Returned Value:
+ *   The usr mem blk ptr.
+ ****************************************************************************/
+
+#ifdef CONFIG_MM_RECORD
+static inline_function
+FAR struct mempool_record_s *mempool_get_record_from_block(FAR void *blk)
+{
+  blk = (FAR char *)blk - MEMPOOL_RECORD_SIZE;
+  return blk;
+}
+#endif
 
 #undef EXTERN
 #if defined(__cplusplus)
