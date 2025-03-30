@@ -25,6 +25,8 @@ set(CMAKE_SYSTEM_VERSION 1)
 
 set(ARCH_SUBDIR intel64)
 
+set(CMAKE_C_COMPILER gcc)
+set(CMAKE_CXX_COMPILER g++)
 # override the ARCHIVE command
 set(CMAKE_ARCHIVE_COMMAND "<CMAKE_AR> rcs <TARGET> <LINK_FLAGS> <OBJECTS>")
 set(CMAKE_RANLIB_COMMAND "<CMAKE_RANLIB> <TARGET>")
@@ -218,8 +220,11 @@ if(CONFIG_ARCH_TOOLCHAIN_GNU AND NOT CONFIG_ARCH_TOOLCHAIN_CLANG)
   if(NOT GCCVER)
     execute_process(COMMAND ${CMAKE_C_COMPILER} --version
                     OUTPUT_VARIABLE GCC_VERSION_OUTPUT)
-    string(REGEX MATCH "[0-9]+\\.[0-9]+" GCC_VERSION_REGEX
+    string(REGEX MATCH "([0-9]+)\\.[0-9]+" GCC_VERSION_REGEX
                  "${GCC_VERSION_OUTPUT}")
     set(GCCVER ${CMAKE_MATCH_1})
+    if(GCCVER GREATER_EQUAL 12)
+      add_compile_options(-Wno-alloc-size-larger-than)
+    endif()
   endif()
 endif()
