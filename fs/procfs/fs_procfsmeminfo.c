@@ -487,7 +487,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
 #endif
     };
 
-#if defined(CONFIG_MM_RECORD_SEQNO) || defined(CONFIG_MM_RECORD_PID)
+#ifdef CONFIG_MM_RECORD
   FAR char *p;
 #endif
 #if CONFIG_MM_RECORD_STACK > 0
