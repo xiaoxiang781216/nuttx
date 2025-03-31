@@ -207,6 +207,26 @@ static inline void x86_64_cpuid(uint32_t leaf, uint32_t subleaf,
                    : "memory");
 }
 
+/* Check if HardWare-controlled Performance-state(HWP) is available via
+ * CPUID.06H:EAX[7]
+ */
+
+static inline bool x86_64_hwp_is_available(void)
+{
+  uint32_t eax;
+  uint32_t ebx;
+  uint32_t ecx;
+  uint32_t edx;
+
+  x86_64_cpuid(0x6, 0, &eax, &ebx, &ecx, &edx);
+
+  UNUSED(ebx);
+  UNUSED(ecx);
+  UNUSED(edx);
+
+  return (eax & (1u << 7)) != 0;
+}
+
 #ifdef CONFIG_ARCH_KERNEL_STACK
 static inline_function uint64_t *x86_64_get_ktopstk(void)
 {

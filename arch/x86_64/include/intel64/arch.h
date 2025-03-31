@@ -274,6 +274,15 @@
 #  define MSR_IA32_APIC_X2APIC         0x400
 #  define MSR_IA32_APIC_BSP            0x100
 
+#define MSR_IA32_PM_ENABLE             0x770 /* Enable/disable HWP (R/W) */
+#define MSR_IA32_HWP_CAPABILITIES      0x771 /* HWP Performance Range Enumeration (R/O) */
+#define MSR_IA32_HWP_REQUEST_PKG       0x772 /* Power Management Control Hints for All Logical Processors in a Package (R/W) */
+#define MSR_IA32_HWP_INTERRUPT         0x773 /* Control HWP Native Interrupts (R/W) */
+#define MSR_IA32_HWP_REQUEST           0x774 /* Power Management Control Hints to a Logical Processor (R/W) */
+#define MSR_IA32_PECI_HWP_REQUEST_INFO 0x775
+#define MSR_IA32_HWP_CTL               0x776
+#define MSR_IA32_HWP_STATUS            0x777
+
 #define MSR_X2APIC_ID                  0x802
 #define MSR_X2APIC_VER                 0x803
 #define MSR_X2APIC_TPR                 0x808

@@ -37,6 +37,7 @@
 
 #include "intel64_lowsetup.h"
 #include "intel64_cpu.h"
+#include "intel64_hwp.h"
 
 /****************************************************************************
  * Public Data
@@ -214,6 +215,10 @@ void __nxstart(void)
   /* Configure timer */
 
   x86_64_timer_calibrate_freq();
+
+#ifdef CONFIG_ARCH_HAVE_HWP
+  intel64_hwp_init();
+#endif
 
   /* Store CPU IDs */
 

@@ -47,6 +47,10 @@ set(SRCS
     intel64_check_capability.c
     intel64_cpu.c)
 
+if(CONFIG_ARCH_HAVE_HWP)
+  list(APPEND SRCS intel64_hwp.c)
+endif()
+
 if(CONFIG_BOARDCTL_POWEROFF)
   list(APPEND SRCS intel64_systempoweroff.c)
 endif()

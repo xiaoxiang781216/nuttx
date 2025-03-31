@@ -40,6 +40,7 @@ config ARCH_INTEL64
 	select ARCH_DCACHE
 	select ARCH_HAVE_IRQTRIGGER
 	select ARCH_HAVE_DEBUG
+	select ARCH_HAVE_HWP
 	---help---
 		Intel x86_64 architecture
 
@@ -70,6 +71,13 @@ endchoice # Choose x86_64 unwinder
 endif
 
 # CPU features
+
+config ARCH_HAVE_HWP
+	bool "Intel64 Hardware-Controlled Performance State (HWP)"
+	default n
+	---help---
+		This enables Intel64 Hardware-Controlled Performance State (HWP)
+		support.
 
 config ARCH_HAVE_MMX
 	bool

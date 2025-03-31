@@ -39,6 +39,7 @@
 
 #include "intel64_lowsetup.h"
 #include "intel64_cpu.h"
+#include "intel64_hwp.h"
 #include "x86_64_hwdebug.h"
 
 /****************************************************************************
@@ -211,6 +212,10 @@ void x86_64_ap_boot(void)
   /* Initialize hardware debug interface */
 
   x86_64_hwdebug_init();
+#endif
+
+#ifdef CONFIG_ARCH_HAVE_HWP
+  intel64_hwp_init();
 #endif
 
   /* Then transfer control to the IDLE task */
