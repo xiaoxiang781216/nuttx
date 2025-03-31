@@ -55,6 +55,9 @@ def mm_alignup(size: int) -> int:
     return size
 
 
+mm_record_size = mm_alignup(mempool_record_s.sizeof) if CONFIG_MM_RECORD else 0
+
+
 class MemPoolBlock:
     """
     Memory pool block instance.
@@ -103,7 +106,8 @@ class MemPoolBlock:
     @property
     def record(self) -> p.MemPoolBlock:
         if not self._record:
-            addr = int(self.address) + self.blocksize
+            addr = int(self.address)
+            addr -= mm_record_size
             self._record = (
                 gdb.Value(addr).cast(mempool_record_s.pointer()).dereference()
             )
@@ -277,7 +281,7 @@ class MemPool(Value, p.MemPool):
         def iterate(entry, nblocks):
             base = int(entry) - nblocks * blksize
             while nblocks > 0:
-                yield MemPoolBlock(base, blocksize, self.overhead)
+                yield MemPoolBlock(base + mm_record_size, blocksize, self.overhead)
                 base += blksize
                 nblocks -= 1
 
@@ -314,6 +318,7 @@ class MemPool(Value, p.MemPool):
 
         def get_blk(base):
             blkstart = base + (address - base) // blksize * blksize
+            blkstart += mm_record_size
             return MemPoolBlock(blkstart, blocksize, self.overhead)
 
         if self.ibase:
