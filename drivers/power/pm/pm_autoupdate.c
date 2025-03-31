@@ -43,15 +43,8 @@
 static void pm_auto_updatestate_cb(FAR void *arg)
 {
   int domain = (intptr_t)arg;
-  enum pm_state_e newstate;
-  irqstate_t flags;
 
-  flags = pm_domain_lock(domain);
-
-  newstate = pm_checkstate(domain);
-  pm_changestate(domain, newstate);
-
-  pm_domain_unlock(domain, flags);
+  pm_updatestate(domain);
 }
 
 /****************************************************************************
