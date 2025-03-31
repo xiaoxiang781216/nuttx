@@ -52,6 +52,7 @@ endif()
 #   NAME                : unique name of application
 #   PRIORITY            : priority
 #   STACKSIZE           : stack size
+#   HEAPSIZE            : heap size
 #   COMPILE_FLAGS       : compile flags
 #   INCLUDE_DIRECTORIES : include directories
 #   DEPENDS             : targets which this module depends on
@@ -71,6 +72,7 @@ endif()
 #     NAME test
 #     SRCS file.cpp
 #     STACKSIZE 1024
+#     HEAPSIZE 65536
 #     DEPENDS nshlib
 #     MODULE ${CONFIG_EXAMPLES_TEST})
 # ~~~
@@ -86,6 +88,7 @@ function(nuttx_add_application)
     NAME
     PRIORITY
     STACKSIZE
+    HEAPSIZE
     MODULE
     MULTI_VALUE
     COMPILE_FLAGS
@@ -229,6 +232,14 @@ function(nuttx_add_application)
   else()
     set_target_properties(${TARGET} PROPERTIES APP_STACK
                                                ${CONFIG_DEFAULT_TASK_STACKSIZE})
+  endif()
+
+  if(CONFIG_MM_TASK_HEAP)
+    if(HEAPSIZE)
+      set_target_properties(${TARGET} PROPERTIES APP_HEAP ${HEAPSIZE})
+    else()
+      set_target_properties(${TARGET} PROPERTIES APP_HEAP 0)
+    endif()
   endif()
 
   # call target_ options only target is compilable
