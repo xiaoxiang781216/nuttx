@@ -24,8 +24,6 @@ import re
 import shutil
 import subprocess
 import sys
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 
 
 def parse_gcda_data(path):
@@ -143,7 +141,7 @@ def run_lcov(data_dir, gcov_tool):
     return output
 
 
-def run_genhtml(infos: list[str], report):
+def run_genhtml(info, report):
     cmd = [
         "genhtml",
         "--branch-coverage",
@@ -151,8 +149,9 @@ def run_genhtml(infos: list[str], report):
         report,
         "--ignore-errors",
         "source",
+        info,
     ]
-    cmd += infos
+    print(cmd)
     subprocess.run(
         cmd,
         check=True,
@@ -161,14 +160,22 @@ def run_genhtml(infos: list[str], report):
     )
 
 
-def multithread_lcov(gcda_dir, gcno_dir, gcov_tool, delete):
-    copy_file_endswith(".gcno", gcno_dir, gcda_dir)
-    path = run_lcov(gcda_dir, gcov_tool)
-    if delete:
-        for file in Path(gcda_dir).rglob("*.gcno"):
-            file.unlink()
-
-    return path
+def run_merge(gcda_dir1, gcda_dir2, output, merge_tool):
+    command = [
+        merge_tool,
+        "merge",
+        gcda_dir1,
+        gcda_dir2,
+        "-o",
+        output,
+    ]
+    print(command)
+    subprocess.run(
+        command,
+        check=True,
+        stdout=sys.stdout,
+        stderr=sys.stdout,
+    )
 
 
 def arg_parser():
@@ -216,12 +223,21 @@ def main():
     result_dir = os.path.abspath(args.result_dir)
 
     os.makedirs(result_dir, exist_ok=True)
+    merge_tool = args.gcov_tool + "-tool"
+    data_dir = os.path.join(result_dir, "data")
     report_dir = os.path.join(result_dir, "report")
     coverage_file = os.path.join(result_dir, "coverage.info")
 
     if args.debug:
         debug_file = os.path.join(result_dir, "debug.log")
         sys.stdout = open(debug_file, "w+")
+
+    # lcov tool is required
+    if shutil.which("lcov") is None:
+        print(
+            "Error: Code coverage generation tool is not detected, please install lcov."
+        )
+        sys.exit(1)
 
     gcda_dirs = []
     for i in args.gcda_dir:
@@ -232,34 +248,21 @@ def main():
         else:
             gcda_dirs.append(os.path.abspath(i))
 
-    # lcov tool is required
-    if shutil.which("lcov") is None:
-        print(
-            "Error: Code coverage generation tool is not detected, please install lcov."
-        )
-        sys.exit(1)
+    # Merge all gcda files
+    shutil.copytree(gcda_dirs[0], data_dir)
+    for gcda_dir in gcda_dirs[1:]:
+        run_merge(data_dir, gcda_dir, data_dir, merge_tool)
 
-    cpu = min(os.cpu_count() or 1, len(gcda_dirs))
-    coverage_files = []
-    with ThreadPoolExecutor(max_workers=cpu) as executor:
-        futures = [
-            executor.submit(multithread_lcov, i, gcno_dir, args.gcov_tool, args.delete)
-            for i in gcda_dirs
-        ]
-        coverage_files = [future.result() for future in futures]
+    # Copy gcno files and run lcov generate coverage info file
+    copy_file_endswith(".gcno", gcno_dir, data_dir)
+    coverage_file = run_lcov(data_dir, args.gcov_tool)
 
     # Only copy files
     if args.only_copy:
         sys.exit(0)
 
     try:
-        with ThreadPoolExecutor(max_workers=cpu) as executor:
-            for coverage_file in coverage_files:
-                executor.submit(
-                    correct_content_path, coverage_file, gcda_dirs, args.base_dir
-                )
-
-        run_genhtml(coverage_files, report_dir)
+        run_genhtml(coverage_file, report_dir)
 
         print(
             "Copy the following link and open it in the browser to view the coverage report:"
