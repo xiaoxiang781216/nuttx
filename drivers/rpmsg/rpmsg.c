@@ -341,7 +341,7 @@ int rpmsg_defer_work(FAR struct rpmsg_endpoint *ept, FAR void *data,
 
   work_queue_wq(rpmsg->defer_wqueue, &rpmsg->defer_work,
                 rpmsg_defer_worker, rpmsg, 0);
-  return RPMSG_SUCCESS_BUFFER_NONEED_RELEASE;
+  return RPMSG_SUCCESS_BUFFER_RELEASED;
 
 handle:
   spin_unlock_irqrestore(&rpmsg->defer_lock, flags);

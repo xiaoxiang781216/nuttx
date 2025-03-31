@@ -449,13 +449,13 @@ static void rpmsg_port_rx_callback(FAR struct rpmsg_port_s *port,
         }
 
       status = ept->cb(ept, data, rphdr->len, rphdr->src, ept->priv);
-      if (status < 0 && status != RPMSG_SUCCESS_BUFFER_RETURNED)
+      if (status < 0 && status != RPMSG_SUCCESS_BUFFER_RELEASED)
         {
           RPMSG_ASSERT(0, "unexpected callback status\n");
         }
     }
 
-  if (status != RPMSG_SUCCESS_BUFFER_RETURNED)
+  if (status != RPMSG_SUCCESS_BUFFER_RELEASED)
     {
       rpmsg_port_release_rx_buffer(rdev, data);
     }
