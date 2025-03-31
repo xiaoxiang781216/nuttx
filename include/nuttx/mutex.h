@@ -38,8 +38,10 @@
 
 #define NXMUTEX_NO_HOLDER      ((pid_t)-1)
 #define NXMUTEX_RESET          ((pid_t)-2)
-#define NXMUTEX_INITIALIZER    {NXSEM_INITIALIZER(1, SEM_TYPE_MUTEX | \
-                                SEM_PRIO_INHERIT), NXMUTEX_NO_HOLDER}
+#define NXMUTEX_INITIALIZER    {                                             \
+  NXSEM_INITIALIZER(NXSEM_NO_MHOLDER, SEM_TYPE_MUTEX | SEM_PRIO_INHERIT),  \
+  NXMUTEX_NO_HOLDER}
+
 #define NXRMUTEX_INITIALIZER   {NXMUTEX_INITIALIZER, 0}
 
 /****************************************************************************
