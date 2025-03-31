@@ -41,7 +41,8 @@ set(SRCS
     lib_psa_destroy.c)
 
 if(NOT CONFIG_BUILD_KERNEL)
-  list(APPEND SRCS lib_psa_getstacksize.c lib_psa_setstacksize.c)
+  list(APPEND SRCS lib_psa_getstacksize.c lib_psa_setstacksize.c
+       lib_psa_getstackaddr.c lib_psa_setstackaddr.c)
 endif()
 
 if(CONFIG_DEBUG_FEATURES)
