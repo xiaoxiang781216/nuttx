@@ -38,10 +38,21 @@ from .utils import Value
 CONFIG_MM_RECORD_STACK = utils.get_field_nitems("struct mm_freenode_s", "backtrace")
 CONFIG_MM_RECORD_PID = utils.has_field("struct mm_freenode_s", "pid")
 CONFIG_MM_RECORD_SEQNO = utils.has_field("struct mm_freenode_s", "seqno")
+CONFIG_MM_RECORD = (
+    CONFIG_MM_RECORD_STACK or CONFIG_MM_RECORD_PID or CONFIG_MM_RECORD_SEQNO
+)
 
+mempool_record_s = utils.lookup_type("struct mempool_record_s")
 
 PID_MM_INVALID = -100
 PID_MM_MEMPOOL = -1
+
+
+def mm_alignup(size: int) -> int:
+    size_t = utils.lookup_type("size_t")
+    align = utils.get_symbol_value("CONFIG_MM_DEFAULT_ALIGNMENT") or 2 * size_t.sizeof
+    size = (size + align - 1) & ~(align - 1)
+    return size
 
 
 class MemPoolBlock:
@@ -50,8 +61,6 @@ class MemPoolBlock:
     """
 
     MAGIC_ALLOC = 0x5555_5555
-
-    mempool_record_s = utils.lookup_type("struct mempool_record_s")
 
     def __init__(self, addr: int, blocksize: int, overhead: int) -> None:
         """
@@ -69,7 +78,7 @@ class MemPoolBlock:
         self.usersize = self.blocksize
         self.useraddress = self.address
         # Lazy evaluation
-        self._backtrace = self._pid = self._seqno = self._magic = self._blk = None
+        self._backtrace = self._pid = self._seqno = self._magic = self._record = None
 
     def __repr__(self) -> str:
         return f"block@{hex(self.address)},size:{self.blocksize},seqno:{self.seqno},pid:{self.pid}"
@@ -92,13 +101,13 @@ class MemPoolBlock:
         return self.address <= address < self.address + self.blocksize
 
     @property
-    def blk(self) -> p.MemPoolBlock:
-        if not self._blk:
+    def record(self) -> p.MemPoolBlock:
+        if not self._record:
             addr = int(self.address) + self.blocksize
-            self._blk = (
-                gdb.Value(addr).cast(self.mempool_record_s.pointer()).dereference()
+            self._record = (
+                gdb.Value(addr).cast(mempool_record_s.pointer()).dereference()
             )
-        return self._blk
+        return self._record
 
     @property
     def is_free(self) -> bool:
@@ -106,7 +115,7 @@ class MemPoolBlock:
             return False
 
         if not self._magic:
-            self._magic = int(self.blk["magic"])
+            self._magic = int(self.record["magic"])
 
         return self._magic != self.MAGIC_ALLOC
 
@@ -114,14 +123,16 @@ class MemPoolBlock:
     def seqno(self) -> int:
         if not self._seqno:
             self._seqno = (
-                int(self.blk["seqno"]) if CONFIG_MM_RECORD_SEQNO else PID_MM_INVALID
+                int(self.record["seqno"]) if CONFIG_MM_RECORD_SEQNO else PID_MM_INVALID
             )
         return self._seqno
 
     @property
     def pid(self) -> int:
         if not self._pid:
-            self._pid = int(self.blk["pid"]) if CONFIG_MM_RECORD_PID else PID_MM_INVALID
+            self._pid = (
+                int(self.record["pid"]) if CONFIG_MM_RECORD_PID else PID_MM_INVALID
+            )
         return self._pid
 
     @property
@@ -131,7 +142,7 @@ class MemPoolBlock:
 
         if not self._backtrace:
             self._backtrace = tuple(
-                int(self.blk["backtrace"][i]) for i in range(CONFIG_MM_RECORD_STACK)
+                int(self.record["backtrace"][i]) for i in range(CONFIG_MM_RECORD_STACK)
             )
         return self._backtrace
 
@@ -214,14 +225,7 @@ class MemPool(Value, p.MemPool):
                 or CONFIG_MM_RECORD_PID
                 or CONFIG_MM_RECORD_SEQNO
             ):
-                mempool_record_s = utils.lookup_type("struct mempool_record_s")
-                size_t = utils.lookup_type("size_t")
-                align = (
-                    utils.get_symbol_value("CONFIG_MM_DEFAULT_ALIGNMENT")
-                    or 2 * size_t.sizeof
-                )
-                blksize = blksize + mempool_record_s.sizeof
-                blksize = (blksize + align - 1) & ~(align - 1)
+                blksize = mm_alignup(blksize + mempool_record_s.sizeof)
             self._blksize = int(blksize)
         return self._blksize
 
