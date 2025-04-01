@@ -89,9 +89,9 @@
 #define DUMP_STRIDE    (sizeof(FAR void *) * 8)
 
 #if UINTPTR_MAX <= UINT32_MAX
-#  define DUMP_FORMAT " %08" PRIxPTR ""
+#  define DUMP_FORMAT " %08" PRIxPTR
 #elif UINTPTR_MAX <= UINT64_MAX
-#  define DUMP_FORMAT " %016" PRIxPTR ""
+#  define DUMP_FORMAT " %016" PRIxPTR
 #endif
 
 /* Architecture can overwrite the default XCPTCONTEXT alignment */
@@ -805,6 +805,32 @@ static void dump_core_info(void)
   syslog_flush();
 }
 
+#ifdef CONFIG_ARCH_LOWPUTC
+/****************************************************************************
+ * Name: dump_mini_info
+ ****************************************************************************/
+
+static void dump_mini_info(FAR uintptr_t *regs)
+{
+  char out[32];
+  int i;
+
+  up_puts("Reset board on recursive assert:");
+
+  for (i = 0; i < XCPTCONTEXT_REGS; i++)
+    {
+      if ((i & 7) == 0)
+        {
+          snprintf(out, sizeof(out), "\r\n%p:", (void *)&regs[i]);
+          up_puts(out);
+        }
+
+      snprintf(out, sizeof(out), DUMP_FORMAT, regs[i]);
+      up_puts(out);
+    }
+}
+#endif
+
 /****************************************************************************
  * Name: reset_board
  *
@@ -845,20 +871,33 @@ void _assert(FAR const char *filename, int linenum,
   const bool os_ready = OSINIT_OS_READY();
   FAR struct tcb_s *rtcb = running_task();
   struct panic_notifier_s notifier_data;
-  irqstate_t flags;
+  irqstate_t flags = 0; /* Suppress GCC warning */
+
+  /* Try to save current context if regs is null */
+
+  if (regs == NULL)
+    {
+      up_saveusercontext(g_last_regs[this_cpu()]);
+    }
+  else
+    {
+      up_copyusercontext(g_last_regs[this_cpu()], regs,
+                         sizeof(g_last_regs[0]));
+    }
+
+  regs = g_last_regs[this_cpu()];
 
   if (OSINIT_IS_PANIC())
     {
       /* Already in fatal state, reset board directly. */
 
 #ifdef CONFIG_ARCH_LOWPUTC
-      up_puts("Reset board on recursive assert.\n");
+      dump_mini_info(regs);
 #endif
       panic_notifier_call_chain(PANIC_KERNEL_FINAL, NULL);
       reset_board(); /* Should not return. */
     }
 
-  flags = 0; /* suppress GCC warning */
   if (os_ready)
     {
       flags = spin_lock_irqsave_nopreempt(&g_assert_lock);
@@ -883,27 +922,6 @@ void _assert(FAR const char *filename, int linenum,
           pause_all_cpu();
         }
 #endif
-    }
-
-  /* try to save current context if regs is null */
-
-  if (regs == NULL)
-    {
-      up_saveusercontext(g_last_regs[this_cpu()]);
-      regs = g_last_regs[this_cpu()];
-    }
-  else
-    {
-      up_copyusercontext(g_last_regs[this_cpu()], regs,
-                         sizeof(g_last_regs[0]));
-      regs = g_last_regs[this_cpu()];
-    }
-
-  /* in case of meet up_current_regs() NULL which directly from assert(0) */
-
-  if (up_current_regs() == NULL)
-    {
-      up_set_current_regs(regs);
     }
 
   notifier_data.rtcb = rtcb;
