@@ -29,6 +29,7 @@
 #include <stdbool.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/irq.h>
+#include <nuttx/nuttx.h>
 
 #include <nuttx/coresight/coresight.h>
 
