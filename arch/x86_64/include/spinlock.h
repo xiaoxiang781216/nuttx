@@ -61,11 +61,11 @@
 /* See prototype in nuttx/include/nuttx/spinlock.h */
 
 #if defined(CONFIG_ARCH_HAVE_TESTSET)
-static inline_function spinlock_t up_testset(volatile spinlock_t *lock)
+static inline_function _spinlock_t up_testset(volatile _spinlock_t *lock)
 {
   /* Perform the 32-bit SWAP operation */
 
-  uint32_t val = SP_LOCKED;
+  uint32_t val = UP_SP_LOCKED;
 
   __asm__ volatile ("lock xchgl %[ptr], %[val]"
                     : [ptr] "+m" (*lock), [val] "+a" (val)

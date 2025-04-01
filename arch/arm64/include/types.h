@@ -35,10 +35,10 @@
  * Pre-processor Prototypes
  ****************************************************************************/
 
-/* Spinlock states */
+/* Raw spinlock states */
 
-#define SP_UNLOCKED 0  /* The Un-locked state */
-#define SP_LOCKED   1  /* The Locked state */
+#define UP_SP_UNLOCKED 0  /* The Un-locked state */
+#define UP_SP_LOCKED   1  /* The Locked state */
 
 /****************************************************************************
  * Type Declarations
@@ -120,8 +120,8 @@ typedef unsigned int       _size_t;
  *     clear the state of the Local Exclusive Monitor.
  */
 
-#ifdef CONFIG_SPINLOCK
-typedef _uint64_t          spinlock_t;
+#ifdef CONFIG_ARCH_HAVE_TESTSET
+typedef _uint64_t          _spinlock_t;
 #endif
 
 /* This is the size of the interrupt state save returned by
