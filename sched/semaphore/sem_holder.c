@@ -401,9 +401,9 @@ static void nxsem_restore_priority(FAR struct tcb_s *htcb)
 #ifdef CONFIG_ARCH_ADDRENV
       FAR struct addrenv_s *oldenv;
 
-      if (htcb->addrenv_own)
+      if (htcb->group->tg_addrenv_own)
         {
-          addrenv_select(htcb->addrenv_own, &oldenv);
+          addrenv_select(htcb->group->tg_addrenv_own, &oldenv);
         }
 #endif
 
@@ -425,7 +425,7 @@ static void nxsem_restore_priority(FAR struct tcb_s *htcb)
         }
 
 #ifdef CONFIG_ARCH_ADDRENV
-      if (htcb->addrenv_own)
+      if (htcb->group->tg_addrenv_own)
         {
           addrenv_restore(oldenv);
         }

@@ -72,9 +72,9 @@ size_t nxtask_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size)
     }
 
 #ifdef CONFIG_ARCH_ADDRENV
-  if (tcb->addrenv_own != NULL)
+  if (tcb->group->tg_addrenv_own != NULL)
     {
-      addrenv_select(tcb->addrenv_own, &oldenv);
+      addrenv_select(tcb->group->tg_addrenv_own, &oldenv);
     }
 #endif
 
@@ -102,7 +102,7 @@ size_t nxtask_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size)
     }
 
 #ifdef CONFIG_ARCH_ADDRENV
-  if (tcb->addrenv_own != NULL)
+  if (tcb->group->tg_addrenv_own != NULL)
     {
       addrenv_restore(oldenv);
     }

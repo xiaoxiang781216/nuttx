@@ -88,9 +88,9 @@ void nxsched_get_stateinfo(FAR struct tcb_s *tcb, FAR char *state,
 #ifdef CONFIG_ARCH_ADDRENV
   FAR struct addrenv_s *oldenv;
 
-  if (tcb->addrenv_own)
+  if (tcb->group->tg_addrenv_own)
     {
-      addrenv_select(tcb->addrenv_own, &oldenv);
+      addrenv_select(tcb->group->tg_addrenv_own, &oldenv);
     }
 #endif
 
@@ -113,7 +113,7 @@ void nxsched_get_stateinfo(FAR struct tcb_s *tcb, FAR char *state,
     }
 
 #ifdef CONFIG_ARCH_ADDRENV
-  if (tcb->addrenv_own)
+  if (tcb->group->tg_addrenv_own)
     {
       addrenv_restore(oldenv);
     }

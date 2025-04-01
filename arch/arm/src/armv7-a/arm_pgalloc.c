@@ -190,10 +190,11 @@ uintptr_t pgalloc(uintptr_t brkaddr, unsigned int npages)
   uintptr_t paddr;
   unsigned int index;
 
-  binfo("tcb->pid=%d tcb->group=%p\n", tcb->pid, tcb->addrenv_own);
+  binfo("tcb->pid=%d tcb->group->tg_addrenv_own=%p\n",
+        tcb->pid, tcb->group->tg_addrenv_own);
   binfo("brkaddr=%x npages=%d\n", brkaddr, npages);
-  DEBUGASSERT(tcb && tcb->addrenv_own);
-  addrenv = &tcb->addrenv_own->addrenv;
+  DEBUGASSERT(tcb && tcb->group->tg_addrenv_own);
+  addrenv = &tcb->group->tg_addrenv_own->addrenv;
 
   /* The current implementation only supports extending the user heap
    * region as part of the implementation of user sbrk().  This function

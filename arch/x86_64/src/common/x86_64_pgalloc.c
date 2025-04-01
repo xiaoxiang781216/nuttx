@@ -169,8 +169,8 @@ uintptr_t pgalloc(uintptr_t brkaddr, unsigned int npages)
   uintptr_t              paddr;
   uintptr_t              vaddr;
 
-  DEBUGASSERT(tcb && tcb->addrenv_own);
-  addrenv = &tcb->addrenv_own->addrenv;
+  DEBUGASSERT(tcb && tcb->group->tg_addrenv_own);
+  addrenv = &tcb->group->tg_addrenv_own->addrenv;
 
   /* The current implementation only supports extending the user heap
    * region as part of the implementation of user sbrk().  This function

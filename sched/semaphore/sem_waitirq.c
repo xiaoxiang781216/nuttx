@@ -77,9 +77,9 @@ void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode)
 #ifdef CONFIG_ARCH_ADDRENV
   FAR struct addrenv_s *oldenv;
 
-  if (wtcb->addrenv_own)
+  if (wtcb->group->tg_addrenv_own)
     {
-      addrenv_select(wtcb->addrenv_own, &oldenv);
+      addrenv_select(wtcb->group->tg_addrenv_own, &oldenv);
     }
 #endif
 
@@ -108,7 +108,7 @@ void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode)
   dq_rem((FAR dq_entry_t *)wtcb, SEM_WAITLIST(sem));
 
 #ifdef CONFIG_ARCH_ADDRENV
-  if (wtcb->addrenv_own)
+  if (wtcb->group->tg_addrenv_own)
     {
       addrenv_restore(oldenv);
     }

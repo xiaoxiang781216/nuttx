@@ -68,11 +68,11 @@
 int up_shmat(uintptr_t *pages, unsigned int npages, uintptr_t vaddr)
 {
   struct tcb_s          *tcb     = this_task();
-  struct arch_addrenv_s *addrenv = &tcb->addrenv_own->addrenv;
+  struct arch_addrenv_s *addrenv = &tcb->group->tg_addrenv_own->addrenv;
 
   /* Sanity checks */
 
-  DEBUGASSERT(tcb && tcb->addrenv_own);
+  DEBUGASSERT(tcb && tcb->group->tg_addrenv_own);
   DEBUGASSERT(pages != NULL && npages > 0);
   DEBUGASSERT(vaddr >= CONFIG_ARCH_SHM_VBASE && vaddr < ARCH_SHM_VEND);
   DEBUGASSERT(MM_ISALIGNED(vaddr));
@@ -102,11 +102,11 @@ int up_shmat(uintptr_t *pages, unsigned int npages, uintptr_t vaddr)
 int up_shmdt(uintptr_t vaddr, unsigned int npages)
 {
   struct tcb_s          *tcb     = this_task();
-  struct arch_addrenv_s *addrenv = &tcb->addrenv_own->addrenv;
+  struct arch_addrenv_s *addrenv = &tcb->group->tg_->addrenv;
 
   /* Sanity checks */
 
-  DEBUGASSERT(tcb && tcb->addrenv_own);
+  DEBUGASSERT(tcb && tcb->group->tg_addrenv_own);
   DEBUGASSERT(npages > 0);
   DEBUGASSERT(vaddr >= CONFIG_ARCH_SHM_VBASE && vaddr < ARCH_SHM_VEND);
   DEBUGASSERT(MM_ISALIGNED(vaddr));

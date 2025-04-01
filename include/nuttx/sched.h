@@ -553,6 +553,13 @@ struct task_group_s
 
   spinlock_t tg_lock;               /* SpinLock for group */
   rmutex_t   tg_mutex;              /* Mutex for group */
+
+  /* Address environments ***************************************************/
+
+#ifdef CONFIG_ARCH_ADDRENV
+  FAR struct addrenv_s *tg_addrenv_own;  /* Task(group) own memory mappings */
+  FAR struct addrenv_s *tg_addrenv_curr; /* Task(group) own memory mappings */
+#endif
 };
 
 /* struct tcb_s *************************************************************/
@@ -587,13 +594,6 @@ struct tcb_s
   sq_entry_t     join_entry;             /* List entry of task join         */
   sem_t          join_sem;               /* Semaphore for task join         */
   pthread_addr_t join_val;               /* Returned data                   */
-#endif
-
-  /* Address Environment ****************************************************/
-
-#ifdef CONFIG_ARCH_ADDRENV
-  FAR struct addrenv_s *addrenv_own;     /* Task(group) own memory mappings */
-  FAR struct addrenv_s *addrenv_curr;    /* Current active memory mappings  */
 #endif
 
   /* Task Management Fields *************************************************/
