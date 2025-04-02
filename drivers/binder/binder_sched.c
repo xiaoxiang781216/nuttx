@@ -50,6 +50,12 @@
 #include "binder_internal.h"
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+mutex_t binder_wq_entry_lock = NXMUTEX_INITIALIZER;
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -98,26 +104,23 @@ void init_waitqueue_entry(FAR struct wait_queue_entry *wq_entry,
 void prepare_to_wait(FAR struct list_node *wq_head,
                      FAR struct wait_queue_entry *wq_entry)
 {
-  irqstate_t flags;
-
-  flags = enter_critical_section();
+  nxmutex_lock(&binder_wq_entry_lock);
   if (list_is_empty(&wq_entry->entry))
     {
       list_add_tail(wq_head, &wq_entry->entry);
     }
 
-  leave_critical_section(flags);
+  nxmutex_unlock(&binder_wq_entry_lock);
+
   binder_debug(BINDER_DEBUG_SCHED, "wq_head=%p, wq_entry=%p\n", wq_head,
                wq_entry);
 }
 
 void finish_wait(FAR struct wait_queue_entry *wq_entry)
 {
-  irqstate_t flags;
-
   binder_debug(BINDER_DEBUG_SCHED, "wq_entry=%p\n", wq_entry);
 
-  flags = enter_critical_section();
+  nxmutex_lock(&binder_wq_entry_lock);
   if (!list_is_empty(&wq_entry->entry))
     {
       list_delete_init(&wq_entry->entry);
@@ -125,7 +128,7 @@ void finish_wait(FAR struct wait_queue_entry *wq_entry)
       wq_entry->func = 0;
     }
 
-  leave_critical_section(flags);
+  nxmutex_unlock(&binder_wq_entry_lock);
 }
 
 void wait_wake_up(FAR struct list_node *wq_head, int sync)
@@ -133,9 +136,8 @@ void wait_wake_up(FAR struct list_node *wq_head, int sync)
   FAR struct wait_queue_entry *curr;
   FAR struct wait_queue_entry *next;
   int ret;
-  irqstate_t flags;
 
-  flags = enter_critical_section();
+  nxmutex_lock(&binder_wq_entry_lock);
   list_for_every_entry_safe(wq_head, curr, next,
                             struct wait_queue_entry, entry)
     {
@@ -146,7 +148,7 @@ void wait_wake_up(FAR struct list_node *wq_head, int sync)
         }
     }
 
-  leave_critical_section(flags);
+  nxmutex_unlock(&binder_wq_entry_lock);
 }
 
 void wake_up_pollfree(FAR struct binder_thread *thread)

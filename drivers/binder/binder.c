@@ -137,6 +137,7 @@ const char *g_binder_return_str[] =
 #endif /* CONFIG_BINDER_DRIVER_DEBUG */
 
 unsigned int binder_last_debug_id = 1;
+extern mutex_t binder_wq_entry_lock;
 
 /****************************************************************************
  * Private Functions
@@ -506,10 +507,8 @@ static int binder_poll(FAR struct file *filp,
   if (setup)
     {
       int i;
-      irqstate_t flags;
 
-      flags = enter_critical_section();
-
+      nxmutex_lock(&binder_wq_entry_lock);
       for (i = 0; i < CONFIG_DRIVERS_BINDER_NPOLLWAITERS; ++i)
         {
           if (!thread->wq_entry[i].private)
@@ -526,8 +525,7 @@ static int binder_poll(FAR struct file *filp,
             }
         }
 
-      leave_critical_section(flags);
-
+      nxmutex_unlock(&binder_wq_entry_lock);
       if (i >= CONFIG_DRIVERS_BINDER_NPOLLWAITERS)
         {
           binder_debug(BINDER_DEBUG_ERROR,
