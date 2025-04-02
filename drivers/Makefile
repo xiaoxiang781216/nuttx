@@ -35,6 +35,7 @@ include can/Make.defs
 include clk/Make.defs
 include cpufreq/Make.defs
 include crypto/Make.defs
+include devfreq/Make.defs
 include devicetree/Make.defs
 include dma/Make.defs
 include math/Make.defs
