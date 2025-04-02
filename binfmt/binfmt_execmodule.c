@@ -299,6 +299,17 @@ int exec_module(FAR struct binary_s *binp,
   stackaddr = binp->stackaddr;
 #endif
 
+#ifdef CONFIG_ARCH_ADDRENV
+  /* Attach the address environment to the new task */
+
+  ret = addrenv_attach(tcb, binp->addrenv);
+  if (ret < 0)
+    {
+      berr("ERROR: addrenv_attach() failed: %d\n", ret);
+      goto errout_with_addrenv;
+    }
+#endif
+
   if (argv && argv[0])
     {
       ret = nxtask_init(tcb, argv[0], binp->priority, stackaddr,
@@ -334,17 +345,6 @@ int exec_module(FAR struct binary_s *binp,
   /* Re-initialize the task's initial state to account for the new PIC base */
 
   up_initial_state(tcb);
-#endif
-
-#ifdef CONFIG_ARCH_ADDRENV
-  /* Attach the address environment to the new task */
-
-  ret = addrenv_attach(tcb, binp->addrenv);
-  if (ret < 0)
-    {
-      berr("ERROR: addrenv_attach() failed: %d\n", ret);
-      goto errout_with_tcbinit;
-    }
 #endif
 
 #ifdef CONFIG_SCHED_USER_IDENTITY
