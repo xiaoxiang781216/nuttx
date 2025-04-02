@@ -98,7 +98,8 @@ void init_waitqueue_entry(FAR struct wait_queue_entry *wq_entry,
   wq_entry->func = func;
   list_initialize(&wq_entry->entry);
 
-  binder_debug(BINDER_DEBUG_SCHED, "wq_entry=%p\n", wq_entry);
+  binder_debug(BINDER_DEBUG_SCHED, "init waitqueue entry:"
+               "wq_entry=%p\n", wq_entry);
 }
 
 void prepare_to_wait(FAR struct list_node *wq_head,
@@ -112,13 +113,13 @@ void prepare_to_wait(FAR struct list_node *wq_head,
 
   nxmutex_unlock(&binder_wq_entry_lock);
 
-  binder_debug(BINDER_DEBUG_SCHED, "wq_head=%p, wq_entry=%p\n", wq_head,
-               wq_entry);
+  binder_debug(BINDER_DEBUG_SCHED, "prepare to wait:"
+               "wq_head=%p, wq_entry=%p\n", wq_head, wq_entry);
 }
 
 void finish_wait(FAR struct wait_queue_entry *wq_entry)
 {
-  binder_debug(BINDER_DEBUG_SCHED, "wq_entry=%p\n", wq_entry);
+  binder_debug(BINDER_DEBUG_SCHED, "finish wait:wq_entry=%p\n", wq_entry);
 
   nxmutex_lock(&binder_wq_entry_lock);
   if (!list_is_empty(&wq_entry->entry))

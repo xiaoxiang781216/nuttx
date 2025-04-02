@@ -452,7 +452,8 @@ static int poll_wake_function(FAR void * arg, unsigned mode)
   fds = (FAR struct pollfd *)wq_entry->private;
   poll_notify(&fds, 1, POLLIN | POLLOUT);
 
-  binder_debug(BINDER_DEBUG_SCHED, "wq_entry=%p, ret=%d\n", wq_entry, ret);
+  binder_debug(BINDER_DEBUG_SCHED, "poll wake function:"
+               "wq_entry=%p, ret=%d\n", wq_entry, ret);
   return ret;
 }
 
