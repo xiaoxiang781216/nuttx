@@ -45,6 +45,7 @@
 #include <nuttx/clock.h>
 #include <nuttx/wdog.h>
 #include <nuttx/circbuf.h>
+#include <nuttx/spinlock.h>
 
 /****************************************************************************
  * Pre-processor definitions
@@ -94,6 +95,7 @@ struct fb_chardev_s
   FAR struct fb_priv_s *head;
   FAR struct fb_paninfo_s *paninfo; /* Pan info array */
   size_t paninfo_count;             /* Pan info count */
+  spinlock_t lock;                  /* Lock for this framebuffer */
 };
 
 struct fb_panelinfo_s
@@ -206,19 +208,18 @@ static int fb_add_paninfo(FAR struct fb_chardev_s *fb,
    * thread during the writing process.
    */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&fb->lock);
 
   /* Write planeinfo information to the queue. */
 
   ret = circbuf_write(panbuf, info, sizeof(union fb_paninfo_u));
+
+  spin_unlock_irqrestore(&fb->lock, flags);
   if (ret != sizeof(union fb_paninfo_u))
     {
       gwarn("WARNING: circbuf_write(panbuf) failed\n");
     }
 
-  /* Re-enable interrupts */
-
-  leave_critical_section(flags);
   return ret <= 0 ? -ENOSPC : OK;
 }
 
@@ -245,13 +246,13 @@ static int fb_clear_paninfo(FAR struct fb_chardev_s *fb,
    * thread during the writing process.
    */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&fb->lock);
 
   circbuf_reset(panbuf);
 
   /* Re-enable interrupts */
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&fb->lock, flags);
   return OK;
 }
 
@@ -278,7 +279,12 @@ static int fb_open(FAR struct file *filep)
       return -ENOMEM;
     }
 
-  flags = enter_critical_section();
+  priv->overlay = FB_NO_OVERLAY;
+#ifdef CONFIG_FB_SYNC
+  nxsem_init(&priv->wait, 0, 0);
+#endif
+
+  flags = spin_lock_irqsave(&fb->lock);
 
   if (fb->head == NULL)
     {
@@ -289,23 +295,20 @@ static int fb_open(FAR struct file *filep)
         }
     }
 
-  priv->overlay = FB_NO_OVERLAY;
-#ifdef CONFIG_FB_SYNC
-  nxsem_init(&priv->wait, 0, 0);
-#endif
-
   /* Attach the open structure to the device */
 
   priv->flink = fb->head;
   fb->head = priv;
-
+  spin_unlock_irqrestore(&fb->lock, flags);
   filep->f_priv = priv;
 
-  leave_critical_section(flags);
   return 0;
 
 err_fb:
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&fb->lock, flags);
+#ifdef CONFIG_FB_SYNC
+  nxsem_destroy(&priv->wait);
+#endif
   kmm_free(priv);
   return ret;
 }
@@ -330,7 +333,7 @@ static int fb_close(FAR struct file *filep)
 
   DEBUGASSERT(fb->vtable != NULL && priv != NULL);
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&fb->lock);
 
   DEBUGASSERT(fb->head);
   if (fb->head->flink == NULL)
@@ -340,7 +343,7 @@ static int fb_close(FAR struct file *filep)
           ret = fb->vtable->close(fb->vtable);
           if (ret < 0)
             {
-              leave_critical_section(flags);
+              spin_unlock_irqrestore(&fb->lock, flags);
               return ret;
             }
         }
@@ -367,7 +370,7 @@ static int fb_close(FAR struct file *filep)
       fb->head = priv->flink;
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&fb->lock, flags);
 
 #ifdef CONFIG_FB_SYNC
   nxsem_destroy(&priv->wait);
@@ -1249,7 +1252,7 @@ static int fb_poll(FAR struct file *filep, struct pollfd *fds, bool setup)
 
   DEBUGASSERT(fb->vtable != NULL && priv != NULL);
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&fb->lock);
 
   if (setup)
     {
@@ -1287,7 +1290,7 @@ static int fb_poll(FAR struct file *filep, struct pollfd *fds, bool setup)
     }
 
 errout:
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&fb->lock, flags);
   return ret;
 }
 
@@ -1382,13 +1385,14 @@ static int fb_get_planeinfo(FAR struct fb_chardev_s *fb,
 static void fb_do_pollnotify(wdparm_t arg)
 {
   FAR struct fb_paninfo_s *paninfo = (FAR struct fb_paninfo_s *)arg;
+  FAR struct fb_chardev_s *fb = paninfo->dev;
   FAR struct fb_priv_s * priv;
   irqstate_t flags;
   int overlay;
 
   overlay = paninfo - paninfo->dev->paninfo - 1;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&fb->lock);
   for (priv = paninfo->dev->head; priv; priv = priv->flink)
     {
       if (priv->overlay != overlay)
@@ -1401,7 +1405,7 @@ static void fb_do_pollnotify(wdparm_t arg)
       poll_notify(priv->fds, CONFIG_VIDEO_FB_NPOLLWAITERS, POLLOUT);
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&fb->lock, flags);
 }
 
 #ifdef CONFIG_FB_SYNC
@@ -1414,7 +1418,6 @@ static int fb_sem_wait(FAR struct fb_chardev_s *fb,
                        int overlay)
 {
   struct fb_panelinfo_s panelinfo;
-  irqstate_t flags;
   int ret;
 
   ret = fb_get_panelinfo(fb, &panelinfo, overlay);
@@ -1423,14 +1426,11 @@ static int fb_sem_wait(FAR struct fb_chardev_s *fb,
       return ret;
     }
 
-  flags = enter_critical_section();
-
   if (fb_paninfo_count(fb->vtable, overlay) == panelinfo.fbcount)
     {
       ret = nxsem_wait(&priv->wait);
     }
 
-  leave_critical_section(flags);
   return ret;
 }
 
@@ -1445,7 +1445,7 @@ static void fb_sem_post(FAR struct fb_chardev_s *fb, int overlay)
 
   DEBUGASSERT(fb != NULL);
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&fb->lock);
 
   for (priv = fb->head; priv; priv = priv->flink)
     {
@@ -1470,7 +1470,7 @@ static void fb_sem_post(FAR struct fb_chardev_s *fb, int overlay)
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&fb->lock, flags);
 }
 #endif
 
@@ -1527,7 +1527,7 @@ void fb_notify_vsync(FAR struct fb_vtable_s *vtable)
   fb = vtable->priv;
   if (fb != NULL)
     {
-      flags = enter_critical_section();
+      flags = spin_lock_irqsave_nopreempt(&fb->lock);
       for (priv = fb->head; priv; priv = priv->flink)
         {
           /* Notify that the vsync comes. */
@@ -1535,7 +1535,7 @@ void fb_notify_vsync(FAR struct fb_vtable_s *vtable)
           poll_notify(priv->fds, CONFIG_VIDEO_FB_NPOLLWAITERS, POLLPRI);
         }
 
-      leave_critical_section(flags);
+      spin_unlock_irqrestore_nopreempt(&fb->lock, flags);
     }
 }
 
@@ -1577,7 +1577,7 @@ int fb_peek_paninfo(FAR struct fb_vtable_s *vtable,
       return -EINVAL;
     }
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&fb->lock);
 
   /* Attempt to peek a frame from the vsync queue. */
 
@@ -1586,7 +1586,7 @@ int fb_peek_paninfo(FAR struct fb_vtable_s *vtable,
 
   /* Re-enable interrupts */
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&fb->lock, flags);
   return ret <= 0 ? -ENOSPC : OK;
 }
 
@@ -1624,7 +1624,7 @@ int fb_remove_paninfo(FAR struct fb_vtable_s *vtable, int overlay)
       return -EINVAL;
     }
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&fb->lock);
 
   full = (circbuf_space(panbuf) == 0);
 
@@ -1635,7 +1635,7 @@ int fb_remove_paninfo(FAR struct fb_vtable_s *vtable, int overlay)
 
   /* Re-enable interrupts */
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&fb->lock, flags);
 
   if (ret == sizeof(union fb_paninfo_u))
     {
@@ -1686,11 +1686,11 @@ int fb_paninfo_count(FAR struct fb_vtable_s *vtable, int overlay)
       return -EINVAL;
     }
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&fb->lock);
 
   ret = circbuf_used(panbuf) / sizeof(union fb_paninfo_u);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&fb->lock, flags);
 
   return ret;
 }
@@ -1811,6 +1811,7 @@ int fb_register_device(int display, int plane,
     }
 
   vtable->priv = fb;
+  spin_lock_init(&fb->lock);
   return OK;
 
 errout_with_paninfo:
