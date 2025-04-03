@@ -1171,13 +1171,13 @@ int usbdev_unregister(struct usbdevclass_driver_s *driver)
    * canceled while the class driver is still bound.
    */
 
-  flags = spin_lock_irqsave(&priv->lock);
-
   CLASS_DISCONNECT(driver, &priv->usbdev);
 
   /* Unbind the class driver */
 
   CLASS_UNBIND(driver, &priv->usbdev);
+
+  flags = spin_lock_irqsave(&priv->lock);
 
   /* Disconnect device */
 
