@@ -465,6 +465,8 @@ static void *binder_alloc_get_page(
   pgoff = buffer_space_offset & ~PAGE_MASK;
   index = buffer_space_offset >> PAGE_SHIFT;
 
+  BUG_ON(index >= (alloc->buffer_data_size / PAGE_SIZE));
+
   lru_page = &alloc->pages_array[index];
   *pgoffp = pgoff;
 
