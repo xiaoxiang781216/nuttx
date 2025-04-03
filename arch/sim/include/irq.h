@@ -51,7 +51,8 @@
 
 struct xcptcontext
 {
-  jmp_buf regs;
+  xcpt_reg_t *regs;
+  jmp_buf buf;
 };
 
 #ifdef __cplusplus

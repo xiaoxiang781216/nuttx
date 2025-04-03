@@ -99,6 +99,7 @@ void up_initial_state(struct tcb_s *tcb)
     }
 
   memset(&tcb->xcp, 0, sizeof(struct xcptcontext));
+  tcb->xcp.regs = tcb->xcp.buf;
 
   /* Note: The amd64 ABI requires 16-bytes alignment _before_ a function
    * call.

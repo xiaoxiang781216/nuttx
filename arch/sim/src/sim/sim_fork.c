@@ -164,6 +164,7 @@ pid_t sim_fork(const xcpt_reg_t *context)
    * child thread.
    */
 
+  child->cmn.xcp.regs = child->cmn.xcp.buf;
   memcpy(child->cmn.xcp.regs, context,
          sizeof(xcpt_reg_t) * XCPTCONTEXT_REGS);
   child->cmn.xcp.regs[JB_FP] = newfp; /* Frame pointer */
