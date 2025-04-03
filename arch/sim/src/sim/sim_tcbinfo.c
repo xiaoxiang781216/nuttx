@@ -33,39 +33,39 @@
  ****************************************************************************/
 
 #if defined(CONFIG_HOST_X86_64) && !defined(CONFIG_SIM_M32)
-/* Name,  Size, Regnum, TCB offset,             g/G offset */
+/* Name, Size, Regnum, TCB offset,              g/G offset */
 
 static const struct reginfo_s g_reginfo[] =
 {
-  {"rbx", 8,    1,      TCB_REG_OFF(JB_RBX),    REGINFO_OFFSET_INVALID},
-  {"rbp", 8,    6,      TCB_REG_OFF(JB_RBP),    REGINFO_OFFSET_INVALID},
-  {"rsp", 8,    7,      TCB_REG_OFF(JB_RSP),    REGINFO_OFFSET_INVALID},
-  {"r12", 8,    12,     TCB_REG_OFF(JB_R12),    REGINFO_OFFSET_INVALID},
-  {"r13", 8,    13,     TCB_REG_OFF(JB_R13),    REGINFO_OFFSET_INVALID},
-  {"r14", 8,    14,     TCB_REG_OFF(JB_R14),    REGINFO_OFFSET_INVALID},
-  {"r15", 8,    15,     TCB_REG_OFF(JB_R15),    REGINFO_OFFSET_INVALID},
-  {"rip", 8,    16,     TCB_REG_OFF(JB_RIP),    REGINFO_OFFSET_INVALID},
+  {"rbx", 8,    1,      TCB_REG_OFF(JB_RBX),    8},
+  {"rbp", 8,    6,      TCB_REG_OFF(JB_RBP),    48},
+  {"rsp", 8,    7,      TCB_REG_OFF(JB_RSP),    56},
+  {"r12", 8,    12,     TCB_REG_OFF(JB_R12),    96},
+  {"r13", 8,    13,     TCB_REG_OFF(JB_R13),    104},
+  {"r14", 8,    14,     TCB_REG_OFF(JB_R14),    112},
+  {"r15", 8,    15,     TCB_REG_OFF(JB_R15),    120},
+  {"rip", 8,    16,     TCB_REG_OFF(JB_RIP),    128},
 };
 #elif defined(CONFIG_HOST_X86) || defined(CONFIG_SIM_M32)
 static const struct reginfo_s g_reginfo[] =
 {
-  {"ebx", 4,    1,      TCB_REG_OFF(JB_EBX),    REGINFO_OFFSET_INVALID},
-  {"esp", 4,    2,      TCB_REG_OFF(JB_ESP),    REGINFO_OFFSET_INVALID},
-  {"ebp", 4,    3,      TCB_REG_OFF(JB_EBP),    REGINFO_OFFSET_INVALID},
-  {"esi", 4,    4,      TCB_REG_OFF(JB_ESI),    REGINFO_OFFSET_INVALID},
-  {"edi", 4,    5,      TCB_REG_OFF(JB_EDI),    REGINFO_OFFSET_INVALID},
-  {"eip", 4,    6,      TCB_REG_OFF(JB_EIP),    REGINFO_OFFSET_INVALID},
+  {"ebx", 4,    3,      TCB_REG_OFF(JB_EBX),    12},
+  {"esp", 4,    4,      TCB_REG_OFF(JB_ESP),    16},
+  {"ebp", 4,    5,      TCB_REG_OFF(JB_EBP),    20},
+  {"esi", 4,    6,      TCB_REG_OFF(JB_ESI),    24},
+  {"edi", 4,    7,      TCB_REG_OFF(JB_EDI),    28},
+  {"eip", 4,    8,      TCB_REG_OFF(JB_EIP),    32},
 };
 #elif defined(CONFIG_HOST_ARM64)
 static const struct reginfo_s g_reginfo[] =
 {
-  {"sp", 8,    31,     TCB_REG_OFF(JB_SP),    REGINFO_OFFSET_INVALID},
-  {"pc", 8,    32,     TCB_REG_OFF(JB_PC),    REGINFO_OFFSET_INVALID},
+  {"sp", 8,    31,      TCB_REG_OFF(JB_SP),     REGINFO_OFFSET_INVALID},
+  {"pc", 8,    32,      TCB_REG_OFF(JB_PC),     REGINFO_OFFSET_INVALID},
 };
 #elif defined(CONFIG_HOST_ARM)
 static const struct reginfo_s g_reginfo[] =
 {
-  {"",  4,    0,      UINT16_MAX, REGINFO_OFFSET_INVALID},
+  {"",   4,    0,       REGINFO_OFFSET_INVALID, REGINFO_OFFSET_INVALID},
 };
 #endif
 
