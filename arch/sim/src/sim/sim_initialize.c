@@ -24,6 +24,9 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/audio/audio.h>
+#include <nuttx/audio/audio_tunnel.h>
+#include <nuttx/kthread.h>
+#include <nuttx/motor/foc/foc_dummy.h>
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/spi/spi_flash.h>
@@ -294,6 +297,11 @@ void up_initialize(void)
   /* register independent mixer device, simulate amixer ioctl */
 
   audio_register("mixer", sim_audio_initialize(false, false));
+#endif
+
+#ifdef CONFIG_AUDIO_TUNNEL
+  audio_tunnel_initialize("a2dpsrc"); /* a2dpsrc0c provide format */
+  audio_tunnel_initialize("a2dpsnk"); /* a2dpsnk0p provide format */
 #endif
 
 #ifdef CONFIG_SIM_USB_DEV
