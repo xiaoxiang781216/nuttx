@@ -207,18 +207,18 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
     }
 #endif
 
-  /* Initialize thread local storage */
+  /* Initialize the task control block */
 
-  ret = tls_init_info(tcb);
+  ret = nxtask_setup_scheduler(tcb, priority, nxtask_start,
+                               entry, ttype);
   if (ret < OK)
     {
       goto errout_with_group;
     }
 
-  /* Initialize the task control block */
+  /* Initialize thread local storage */
 
-  ret = nxtask_setup_scheduler(tcb, priority, nxtask_start,
-                               entry, ttype);
+  ret = tls_init_info(tcb);
   if (ret < OK)
     {
       goto errout_with_group;

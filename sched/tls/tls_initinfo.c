@@ -80,5 +80,9 @@ int tls_init_info(FAR struct tcb_s *tcb)
 
   info->tl_argv = NULL;
 
+  /* Thread ID */
+
+  info->tl_tid = tcb->pid;
+
   return OK;
 }

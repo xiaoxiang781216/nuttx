@@ -227,6 +227,7 @@ struct tls_info_s
   uint16_t tl_size;                    /* Actual size with alignments */
   int tl_errno;                        /* Per-thread error number */
   FAR char **tl_argv;                  /* Arguments first string */
+  pid_t tl_tid;                        /* Thread ID */
 };
 
 /****************************************************************************

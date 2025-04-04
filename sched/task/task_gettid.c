@@ -78,22 +78,3 @@ pid_t nxsched_gettid(void)
 
   return (pid_t)-ESRCH;
 }
-
-/****************************************************************************
- * Name: gettid
- *
- * Description:
- *   Get the thread ID of the currently executing thread.
- *
- * Input parameters:
- *   None
- *
- * Returned Value:
- *   On success, returns the thread ID of the calling process.
- *
- ****************************************************************************/
-
-pid_t gettid(void)
-{
-  return nxsched_gettid();
-}
