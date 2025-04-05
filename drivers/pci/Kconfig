@@ -24,9 +24,9 @@ config PCI_MSIX
 	bool "PCI MSI-X support"
 	default n
 	---help---
-		Enables support for PCI MSI-X. When enabled, MSI-X takse priority 
+		Enables support for PCI MSI-X. When enabled, MSI-X takse priority
 		over MSI when a device supports it.
-	
+
 config PCI_ASSIGN_ALL_BUSES
 	bool "Assign resource to all buses"
 	default !ARCH_X86 && !ARCH_X86_64
@@ -86,6 +86,21 @@ config PCI_UIO_IVSHMEM_NPOLLWAITERS
 	int "PCI uio ivshmem poll waiter number"
 	default 2
 	depends on PCI_UIO_IVSHMEM
+
+config PCI_RTT_IVSHMEM
+	bool "PCI RTT ivshmem driver"
+	default n
+	depends on PCI_IVSHMEM && SEGGER_RTT
+	select SEGGER_RTT_UNCACHED_OFF_VARIABLE
+	---help---
+	    Enable rtt ivshemem
+
+config PCI_RTT_IVSHMEM_IDX
+	int "PCI RTT ivshmem idx"
+	default 0
+	depends on PCI_RTT_IVSHMEM
+	---help---
+	    The index of the ivshmem pci device used for syslog rtt
 
 config PCI_EP_TEST
 	bool "PCI endpoint test"

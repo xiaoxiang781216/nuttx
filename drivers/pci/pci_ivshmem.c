@@ -38,6 +38,10 @@
 #include <nuttx/pci/pci.h>
 #include <nuttx/pci/pci_ivshmem.h>
 
+#ifdef CONFIG_PCI_RTT_IVSHMEM
+  #include "SEGGER_RTT.h"
+#endif
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -290,6 +294,13 @@ out:
     {
       goto err_master;
     }
+
+#ifdef CONFIG_PCI_RTT_IVSHMEM
+  if (CONFIG_PCI_RTT_IVSHMEM_IDX == g_ivshmem_next_id)
+    {
+      g_segger_offset = (uintptr_t)ivdev->shmem - (uintptr_t)&_SEGGER_RTT;
+    }
+#endif
 
   g_ivshmem_next_id++;
   return ret;
