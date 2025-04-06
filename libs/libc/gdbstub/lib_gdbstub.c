@@ -1213,10 +1213,13 @@ static int gdb_read_register(FAR struct gdb_state_s *state)
       return -EINVAL;
     }
 
-  memcpy(&value, xcpregs + reg->toffset, reg->size);
-  if (ret < 0)
+  /* If toffset equal to REGINFO_OFFSET_INVALID, return register value zero.
+   * See g_reginfo[] of xtensa arch for an example of this situation.
+   */
+
+  if (reg->toffset != REGINFO_OFFSET_INVALID)
     {
-      return ret;
+      memcpy(&value, xcpregs + reg->toffset, reg->size);
     }
 
   ret = gdb_bin2hex(state->pkt_buf, sizeof(state->pkt_buf),
