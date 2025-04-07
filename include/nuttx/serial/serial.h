@@ -37,6 +37,7 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/power/pm.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -357,6 +358,10 @@ struct uart_dev_s
 #endif
 
   FAR struct pollfd *fds[CONFIG_SERIAL_NPOLLWAITERS];
+
+#if defined(CONFIG_PM) && defined(CONFIG_SERIAL_CONSOLE)
+  FAR struct pm_wakelock_s wakelock;
+#endif
 };
 
 typedef struct uart_dev_s uart_dev_t;

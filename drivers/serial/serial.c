@@ -40,6 +40,7 @@
 #include <errno.h>
 #include <debug.h>
 #include <spawn.h>
+#include <libgen.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/ascii.h>
@@ -2008,6 +2009,10 @@ static void uart_wakeup(FAR sem_t *sem)
 
 int uart_register(FAR const char *path, FAR uart_dev_t *dev)
 {
+#if defined(CONFIG_PM) && defined(CONFIG_SERIAL_CONSOLE)
+  char buf[NAME_MAX];
+#endif
+
 #if defined(CONFIG_TTY_SIGINT) || defined(CONFIG_TTY_SIGTSTP)
   /* Initialize  of the task that will receive SIGINT signals. */
 
@@ -2063,6 +2068,11 @@ int uart_register(FAR const char *path, FAR uart_dev_t *dev)
     }
 #endif
 
+#if defined(CONFIG_PM) && defined(CONFIG_SERIAL_CONSOLE)
+  snprintf(buf, sizeof(buf), "console-%s", basename((char *)path));
+  pm_wakelock_init(&dev->wakelock, buf, PM_IDLE_DOMAIN, PM_NORMAL);
+#endif
+
   sinfo("Registering %s\n", path);
   return register_driver(path, &g_serialops, 0666, dev);
 }
@@ -2088,13 +2098,15 @@ void uart_datareceived(FAR uart_dev_t *dev)
   uart_wakeup(&dev->recvsem);
 
 #if defined(CONFIG_PM) && defined(CONFIG_SERIAL_CONSOLE)
-  /* Call pm_activity when characters are received on the console device */
+  /* Call pm_wakelock_staytimeout when characters are received
+   * on the console device
+   */
 
   if (dev->isconsole)
     {
 #  if CONFIG_SERIAL_PM_ACTIVITY_PRIORITY > 0
-      pm_activity(CONFIG_SERIAL_PM_ACTIVITY_DOMAIN,
-                  CONFIG_SERIAL_PM_ACTIVITY_PRIORITY);
+      pm_wakelock_staytimeout(&dev->wakelock,
+          CONFIG_SERIAL_PM_ACTIVITY_PRIORITY * MSEC_PER_SEC);
 #  endif
     }
 #endif
