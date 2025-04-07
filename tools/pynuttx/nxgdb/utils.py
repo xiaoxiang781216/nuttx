@@ -1271,6 +1271,27 @@ class ArrayIterator:
         return value
 
 
+class BacktraceEntry:
+    backtrace_entry_s = lookup_type("struct backtrace_entry_s")
+
+    def __init__(self, entry):
+        if int(entry) == 0:
+            self.entry = None
+        else:
+            self.entry = Value(entry).cast(self.backtrace_entry_s.pointer())
+
+    def get(self):
+        if not self.entry:
+            return list()
+
+        stack = ArrayIterator(self.entry.stack, self.entry.depth)
+        return [int(addr) for addr in stack]
+
+    def format(self, formatter: str = "{:<5} {:<36} {}\n"):
+        stack = ArrayIterator(self.entry.stack, self.entry.depth)
+        return str(Backtrace(stack))
+
+
 class Hexdump(gdb.Command):
     """hexdump address/symbol <size>"""
 
@@ -1385,6 +1406,51 @@ class Addr2Line(gdb.Command):
                     except gdb.error as e:
                         gdb.write(f"Ignore {arg}: {e}\n")
             self.print_backtrace(addresses)
+
+
+class BacktracePool(gdb.Command):
+    """Display the global backtrace information"""
+
+    def __init__(self):
+        super().__init__("backtracepool", gdb.COMMAND_USER)
+
+    def invoke(self, args, from_tty):
+        g_backtrace_pool = parse_and_eval("g_backtrace_pool")
+        parser = argparse.ArgumentParser(description=self.__doc__)
+        parser.add_argument("-d", "--detail", action="store_true")
+        parser.add_argument("-t", "--top", type=int, help="Display the top N backtrace")
+        args = parser.parse_args(gdb.string_to_argv(args))
+
+        formatter = "{:>8} {:>8} {:>10} {:}\n"
+        btformat = formatter.format("", "", "", "")[:-1] + "{1:<48}{2}\n"
+        gdb.write(formatter.format("slot", "depth", "refcount", "stack"))
+
+        backtrace_pool = []
+        for i in range(g_backtrace_pool.capacity):
+            if not g_backtrace_pool.bucket[i]:
+                continue
+            entry = BacktraceEntry(g_backtrace_pool.bucket[i])
+            entry.index = i
+            backtrace_pool.append(entry)
+
+        backtrace_pool.sort(key=lambda x: x.entry.ref, reverse=True)
+
+        if args.top:
+            backtrace_pool = backtrace_pool[: args.top]
+
+        for entry in backtrace_pool:
+            stack = ""
+            if args.detail:
+                stack = f"\n{entry.format(btformat)}"
+            else:
+                stack = " ".join(hex(addr) for addr in entry.get())
+            gdb.write(
+                formatter.format(entry.index, entry.entry.depth, entry.entry.ref, stack)
+            )
+
+        gdb.write(
+            f"capacity: {g_backtrace_pool.capacity}, used: {g_backtrace_pool.used}\n"
+        )
 
 
 PID0_REPLACE = get_symbol_value("PID0_REPLACE")

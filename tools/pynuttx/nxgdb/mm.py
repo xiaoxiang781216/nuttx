@@ -35,8 +35,10 @@ from .utils import Value
 # of utils.get_symbol_value("CONFIG_MM_RECORD_STACK") because the latter may report
 # wrong value on some platforms.
 
-CONFIG_MM_RECORD_STACK = (
-    utils.get_field_nitems("struct mm_freenode_s", "backtrace") or 0
+CONFIG_MM_RECORD_STACK = utils.get_symbol_value("CONFIG_MM_RECORD_STACK") or 0
+CONFIG_LIBC_BACKTRACE_DEPTH = utils.get_symbol_value("CONFIG_LIBC_BACKTRACE_DEPTH") or 0
+MM_RECORD_STACK_DEPTH = (
+    int(CONFIG_LIBC_BACKTRACE_DEPTH) if int(CONFIG_MM_RECORD_STACK) else 0
 )
 CONFIG_MM_RECORD_PID = utils.has_field("struct mm_freenode_s", "pid")
 CONFIG_MM_RECORD_SEQNO = utils.has_field("struct mm_freenode_s", "seqno")
@@ -143,13 +145,11 @@ class MemPoolBlock:
 
     @property
     def backtrace(self) -> Tuple[int]:
-        if CONFIG_MM_RECORD_STACK <= 0:
+        if MM_RECORD_STACK_DEPTH <= 0:
             return ()
 
         if not self._backtrace:
-            self._backtrace = tuple(
-                int(self.record["backtrace"][i]) for i in range(CONFIG_MM_RECORD_STACK)
-            )
+            self._backtrace = tuple(utils.BacktraceEntry(self.record["stack"]).get())
         return self._backtrace
 
     @property
@@ -495,13 +495,11 @@ class MMNode(gdb.Value, p.MMFreeNode):
 
     @property
     def backtrace(self) -> List[Tuple[int, str, str]]:
-        if CONFIG_MM_RECORD_STACK <= 0:
+        if MM_RECORD_STACK_DEPTH <= 0:
             return ()
 
-        if not self._backtrace:
-            self._backtrace = tuple(
-                int(self["backtrace"][i]) for i in range(CONFIG_MM_RECORD_STACK)
-            )
+        if not self._backtrace and (stack := utils.BacktraceEntry(self["stack"]).get()):
+            self._backtrace = tuple(stack)
         return self._backtrace
 
     @property

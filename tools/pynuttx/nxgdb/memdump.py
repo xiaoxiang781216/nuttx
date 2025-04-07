@@ -125,7 +125,7 @@ def print_node(node: MMNodeDump, alive, count=1, formatter=None, no_backtrace=Fa
         )
     )
 
-    if mm.CONFIG_MM_RECORD_STACK > 0 and not no_backtrace:
+    if mm.MM_RECORD_STACK_DEPTH > 0 and not no_backtrace:
         leading = formatter.format("", "", "", "", "", "", "", "", "")[:-1]
         btformat = leading + "{1:<48}{2}\n"
         if node.backtrace and node.backtrace[0]:
@@ -549,7 +549,7 @@ class MMVisualize(gdb.Command):
     """Generates a memory treemap, showing all backtrace statistics"""
 
     def __init__(self):
-        self.backtrace_depth = mm.CONFIG_MM_RECORD_STACK
+        self.backtrace_depth = mm.MM_RECORD_STACK_DEPTH
         if self.backtrace_depth <= 0:
             gdb.write(
                 "Without mm record backtrace enabled, visualization is not possible"
@@ -605,7 +605,9 @@ class MMVisualize(gdb.Command):
 
         for i in range(self.backtrace_depth):
             df[f"stack_{i}"] = df["backtrace"].apply(
-                lambda x: "Unkown" if not x[i] else utils.Symbol(x[i]).func
+                lambda x: (
+                    "Unkown" if i >= len(x) or not x[i] else utils.Symbol(x[i]).func
+                )
             )
 
         # Drop the backtrace column
