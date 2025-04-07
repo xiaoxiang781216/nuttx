@@ -33,10 +33,10 @@
 #include <sys/boardctl.h>
 #include <nuttx/irq.h>
 #include <nuttx/cache.h>
+#include <arch/barriers.h>
 
 #include "nvic.h"
 #include "arm_internal.h"
-#include "barriers.h"
 
 #ifdef CONFIG_ARM_MPU
 #  include "mpu.h"
