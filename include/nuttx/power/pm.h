@@ -378,7 +378,7 @@ struct pm_user_governor_state_s
 
 struct pm_wakelock_s
 {
-  char name[32];
+  char name[NAME_MAX];
   int domain;
   enum pm_state_e state;
   uint32_t count;
