@@ -35,11 +35,13 @@ from .utils import Value
 # of utils.get_symbol_value("CONFIG_MM_RECORD_STACK") because the latter may report
 # wrong value on some platforms.
 
-CONFIG_MM_RECORD_STACK = utils.get_field_nitems("struct mm_freenode_s", "backtrace")
+CONFIG_MM_RECORD_STACK = (
+    utils.get_field_nitems("struct mm_freenode_s", "backtrace") or 0
+)
 CONFIG_MM_RECORD_PID = utils.has_field("struct mm_freenode_s", "pid")
 CONFIG_MM_RECORD_SEQNO = utils.has_field("struct mm_freenode_s", "seqno")
 CONFIG_MM_RECORD = (
-    CONFIG_MM_RECORD_STACK or CONFIG_MM_RECORD_PID or CONFIG_MM_RECORD_SEQNO
+    CONFIG_MM_RECORD_STACK > 0 or CONFIG_MM_RECORD_PID or CONFIG_MM_RECORD_SEQNO
 )
 
 mempool_record_s = utils.lookup_type("struct mempool_record_s")
@@ -115,7 +117,7 @@ class MemPoolBlock:
 
     @property
     def is_free(self) -> bool:
-        if not CONFIG_MM_RECORD_PID or not CONFIG_MM_RECORD_SEQNO:
+        if not CONFIG_MM_RECORD:
             return False
 
         if not self._magic:
@@ -224,11 +226,7 @@ class MemPool(Value, p.MemPool):
         """Real block size including backtrace overhead"""
         if not self._blksize:
             blksize = self["blocksize"]
-            if (
-                CONFIG_MM_RECORD_STACK > 0
-                or CONFIG_MM_RECORD_PID
-                or CONFIG_MM_RECORD_SEQNO
-            ):
+            if CONFIG_MM_RECORD:
                 blksize = mm_alignup(blksize + mempool_record_s.sizeof)
             self._blksize = int(blksize)
         return self._blksize
