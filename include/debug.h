@@ -1083,6 +1083,7 @@
 #  define rptuninfo    _info
 #else
 #  define rptuninfo    _none
+#endif
 
 #ifdef CONFIG_DEBUG_PTP_ERROR
 #  define ptperr     _err

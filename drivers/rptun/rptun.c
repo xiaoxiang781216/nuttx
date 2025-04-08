@@ -761,8 +761,6 @@ static int rptun_dev_start(FAR struct remoteproc *rproc)
 static int rptun_dev_stop(FAR struct remoteproc *rproc)
 {
   FAR struct rptun_priv_s *priv = rproc->priv;
-  FAR struct rpmsg_device *rdev = &priv->rvdev.rdev;
-  FAR struct virtio_device *vdev = priv->rvdev.vdev;
 
   if (priv->rproc.state == RPROC_OFFLINE)
     {
@@ -775,16 +773,7 @@ static int rptun_dev_stop(FAR struct remoteproc *rproc)
     }
 
   RPTUN_UNREGISTER_CALLBACK(priv->dev);
-
-  rpmsg_device_destory(&priv->rpmsg);
-
-  /* Remote proc remove */
-
-  rpmsg_deinit_vdev(&priv->rvdev);
-  remoteproc_remove_virtio(rproc, vdev);
-
-  /* Remote proc stop and shutdown */
-
+  rptun_remove_devices(priv);
   remoteproc_shutdown(rproc);
 
   return OK;
@@ -1139,42 +1128,6 @@ err_driver:
   return ret;
 }
 
-static int rptun_ioctl_foreach(FAR const char *cpuname, int cmd,
-                               unsigned long value)
-{
-  FAR struct metal_list *node;
-  bool needlock = !up_interrupt_context() && !sched_idletask();
-  int ret = OK;
-
-  if (needlock)
-    {
-      metal_mutex_acquire(&g_rptun_lock);
-    }
-
-  metal_list_for_each(&g_rptun_priv, node)
-    {
-      FAR struct rptun_priv_s *priv;
-
-      priv = metal_container_of(node, struct rptun_priv_s, node);
-
-      if (!cpuname || !strcmp(RPTUN_GET_CPUNAME(priv->dev), cpuname))
-        {
-          ret = rptun_ioctl(&priv->rpmsg, cmd, value);
-          if (ret < 0)
-            {
-              break;
-            }
-        }
-    }
-
-  if (needlock)
-    {
-      metal_mutex_release(&g_rptun_lock);
-    }
-
-  return ret;
-}
-
 int rptun_boot(FAR const char *cpuname)
 {
   return rptun_ioctl_foreach(cpuname, RPTUNIOC_START, 0);
@@ -1188,4 +1141,9 @@ int rptun_poweroff(FAR const char *cpuname)
 int rptun_reset(FAR const char *cpuname, int value)
 {
   return rptun_ioctl_foreach(cpuname, RPTUNIOC_RESET, value);
+}
+
+int rptun_panic(FAR const char *cpuname)
+{
+  return rptun_ioctl_foreach(cpuname, RPTUNIOC_PANIC, 0);
 }

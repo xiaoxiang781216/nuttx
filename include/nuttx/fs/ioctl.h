@@ -383,18 +383,8 @@
 
 /* NuttX mouse ioctl definitions (see nuttx/input/mouse.h) ******************/
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 #define _MSIOCVALID(c)    (_IOC_TYPE(c)==_MSIOCBASE)
 #define _MSIOC(nr)        _IOC(_MSIOCBASE,nr)
-=======
-#define _MSEIOCVALID(c)   (_IOC_TYPE(c)==_MSEIOCBASE)
-#define _MSEIOC(nr)       _IOC(_MSEIOCBASE,nr)
->>>>>>> 25f06d472b3 (drivers/input: Support for the mouse ioctl interface)
-=======
-#define _MSIOCVALID(c)    (_IOC_TYPE(c)==_MSIOCBASE)
-#define _MSIOC(nr)        _IOC(_MSIOCBASE,nr)
->>>>>>> 3da228f1b09 (drivers/input: Support for rpmsgdev custom ioctl)
 
 /* NuttX sensor ioctl definitions (see nuttx/sensor/ioctl.h) ****************/
 

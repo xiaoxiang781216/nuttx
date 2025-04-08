@@ -64,13 +64,6 @@ struct rpmsg_cb_s
   struct metal_list node;
 };
 
-struct rpmsg_ioctl_s
-{
-  FAR const char *cpuname;
-  int             cmd;
-  unsigned long   arg;
-};
-
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/

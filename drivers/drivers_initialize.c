@@ -326,6 +326,7 @@ void drivers_initialize(void)
   /* Register fake audio driver */
 
   audio_fake_initialize();
+#endif
 
 #ifdef CONFIG_PTP_CLOCK_DUMMY
   ptp_clock_dummy_initialize(0);
