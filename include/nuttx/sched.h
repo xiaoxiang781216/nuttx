@@ -233,6 +233,11 @@
 #define REGINFO_OFFSET_INVALID       -2 /* Special value for N/A offset value */
 #define REGINFO_OFFSET_AUTO          -1 /* Calculate the offset in GDB g/G packet automatically */
 
+#define REGINFO(name, size, regnum, toffset, goffset, coffset) \
+  {name, size, regnum, toffset, goffset, coffset}
+#define REGINFO_AUTO(name, size, regnum, toffset) \
+  {name, size, regnum, toffset, REGINFO_OFFSET_AUTO, REGINFO_OFFSET_AUTO}
+
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
@@ -796,7 +801,7 @@ struct reginfo_s
   int16_t     toffset;  /* Register byte offset in context registers. */
                         /* value of REGINFO_OFFSET_INVALID: This register is not provided by NuttX */
   int16_t     goffset;  /* Register byte offset in g/G packet, default to 0 that means register in order. */
-  uint16_t    reserved; /* in order to alignment in 64bytes */
+  int16_t     coffset;  /* Register byte offset in coredump pr_regs */
 };
 
 /* struct tcbinfo_s *********************************************************/

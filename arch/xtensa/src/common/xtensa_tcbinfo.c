@@ -32,28 +32,34 @@
  * Private Data
  ****************************************************************************/
 
-/* Name,    Size, Regnum, TCB offset,           g/G offset */
-
 static const struct reginfo_s g_reginfo[] =
 {
-  {"pc",    4,    0,      TCB_REG_OFF(REG_PC),  REGINFO_OFFSET_AUTO},
-  {"ps",    4,    1,      TCB_REG_OFF(REG_PS),  REGINFO_OFFSET_AUTO},
-  {"a0",    4,    2,      TCB_REG_OFF(REG_A0),  REGINFO_OFFSET_AUTO},
-  {"a1",    4,    3,      TCB_REG_OFF(REG_A1),  REGINFO_OFFSET_AUTO},
-  {"a2",    4,    4,      TCB_REG_OFF(REG_A2),  REGINFO_OFFSET_AUTO},
-  {"a3",    4,    5,      TCB_REG_OFF(REG_A3),  REGINFO_OFFSET_AUTO},
-  {"a4",    4,    6,      TCB_REG_OFF(REG_A4),  REGINFO_OFFSET_AUTO},
-  {"a5",    4,    7,      TCB_REG_OFF(REG_A5),  REGINFO_OFFSET_AUTO},
-  {"a6",    4,    8,      TCB_REG_OFF(REG_A6),  REGINFO_OFFSET_AUTO},
-  {"a7",    4,    9,      TCB_REG_OFF(REG_A7),  REGINFO_OFFSET_AUTO},
-  {"a8",    4,    10,     TCB_REG_OFF(REG_A8),  REGINFO_OFFSET_AUTO},
-  {"a9",    4,    11,     TCB_REG_OFF(REG_A9),  REGINFO_OFFSET_AUTO},
-  {"a10",   4,    12,     TCB_REG_OFF(REG_A10), REGINFO_OFFSET_AUTO},
-  {"a11",   4,    13,     TCB_REG_OFF(REG_A11), REGINFO_OFFSET_AUTO},
-  {"a12",   4,    14,     TCB_REG_OFF(REG_A12), REGINFO_OFFSET_AUTO},
-  {"a13",   4,    15,     TCB_REG_OFF(REG_A13), REGINFO_OFFSET_AUTO},
-  {"a14",   4,    25,     TCB_REG_OFF(REG_A14), REGINFO_OFFSET_AUTO},
-  {"a15",   4,    25,     TCB_REG_OFF(REG_A15), REGINFO_OFFSET_AUTO},
+  REGINFO_AUTO("pc",  4, 0,  TCB_REG_OFF(REG_PC)),
+  REGINFO("a0",       4, 1,  TCB_REG_OFF(REG_A0), REGINFO_OFFSET_AUTO, 256),
+  REGINFO_AUTO("a1",  4, 2,  TCB_REG_OFF(REG_A1)),
+  REGINFO_AUTO("a2",  4, 3,  TCB_REG_OFF(REG_A2)),
+  REGINFO_AUTO("a3",  4, 4,  TCB_REG_OFF(REG_A3)),
+  REGINFO_AUTO("a4",  4, 5,  TCB_REG_OFF(REG_A4)),
+  REGINFO_AUTO("a5",  4, 6,  TCB_REG_OFF(REG_A5)),
+  REGINFO_AUTO("a6",  4, 7,  TCB_REG_OFF(REG_A6)),
+  REGINFO_AUTO("a7",  4, 8,  TCB_REG_OFF(REG_A7)),
+  REGINFO_AUTO("a8",  4, 9,  TCB_REG_OFF(REG_A8)),
+  REGINFO_AUTO("a9",  4, 10, TCB_REG_OFF(REG_A9)),
+  REGINFO_AUTO("a10", 4, 11, TCB_REG_OFF(REG_A10)),
+  REGINFO_AUTO("a11", 4, 12, TCB_REG_OFF(REG_A11)),
+  REGINFO_AUTO("a12", 4, 13, TCB_REG_OFF(REG_A12)),
+  REGINFO_AUTO("a13", 4, 14, TCB_REG_OFF(REG_A13)),
+  REGINFO_AUTO("a14", 4, 15, TCB_REG_OFF(REG_A14)),
+  REGINFO_AUTO("a15", 4, 16, TCB_REG_OFF(REG_A15)),
+#if XCHAL_HAVE_LOOPS != 0
+  REGINFO("lbeg",     4, 65, TCB_REG_OFF(REG_LBEG),   260, 8),
+  REGINFO("lend",     4, 66, TCB_REG_OFF(REG_LEND),   264, 12),
+  REGINFO("lcount",   4, 67, TCB_REG_OFF(REG_LCOUNT), 268, 16),
+#endif
+  REGINFO("sar",      4, 68, TCB_REG_OFF(REG_SAR),    272, 20),
+  REGINFO("windowb",  4, 69, REGINFO_OFFSET_INVALID,  276, 28),
+  REGINFO("windows",  4, 70, REGINFO_OFFSET_INVALID,  280, 24),
+  REGINFO("ps",       4, 73, TCB_REG_OFF(REG_PS),     292, 4),
 };
 
 /****************************************************************************
@@ -69,7 +75,7 @@ const struct tcbinfo_s g_tcbinfo used_data =
   .stack_off      = TCB_STACK_OFF,
   .stack_size_off = TCB_STACK_SIZE_OFF,
   .regs_off       = TCB_REGS_OFF,
-  .regs_num       = COMMON_CTX_REGS,
+  .regs_num       = nitems(g_reginfo),
   {
     .reginfo      = g_reginfo,
   },

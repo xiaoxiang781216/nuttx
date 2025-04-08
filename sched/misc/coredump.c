@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 #include <sys/param.h>
 
+#include <string.h>
 #include <syslog.h>
 #include <debug.h>
 
@@ -351,13 +352,25 @@ static void elf_emit_tcb_note(FAR struct elf_dumpinfo_s *cinfo,
 
   if (regs != NULL)
     {
-      for (i = 0; i < MIN(nitems(status.pr_regs), g_tcbinfo.regs_num); i++)
+      ssize_t offset = 0;
+
+      memset(status.pr_regs, 0, sizeof(status.pr_regs));
+      for (i = 0; i < g_tcbinfo.regs_num; i++)
         {
-          if (g_tcbinfo.u.reginfo[i].toffset != REGINFO_OFFSET_INVALID)
+          FAR const struct reginfo_s *reg = &g_tcbinfo.u.reginfo[i];
+
+          if (reg->coffset != REGINFO_OFFSET_AUTO)
             {
-              status.pr_regs[i] = *(uintptr_t *)((uint8_t *)regs
-                                    + g_tcbinfo.u.reginfo[i].toffset);
+              offset = reg->coffset;
             }
+
+          if (reg->toffset != REGINFO_OFFSET_INVALID)
+            {
+              memcpy((FAR char *)status.pr_regs + offset,
+                     (uint8_t *)regs + reg->toffset, reg->size);
+            }
+
+          offset += reg->size;
         }
     }
 
