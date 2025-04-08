@@ -28,8 +28,6 @@ from nxreg.register import get_arch_name
 
 from . import utils
 
-from . import utils
-
 
 class Target(gdb.Command):
     """Use nxstub to parse crash log dump, core dump or memory dump, as target."""
