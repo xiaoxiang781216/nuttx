@@ -67,3 +67,7 @@ ifeq ($(CONFIG_SMP),y)
   CMN_CSRCS += arm_cpustart.c arm_smpcall.c
   CMN_CSRCS += arm_cpuidlestack.c arm_scu.c
 endif
+
+ifeq ($(CONFIG_LIB_SYSCALL),y)
+  CMN_ASRCS += arm_dispatch_syscall.S
+endif
