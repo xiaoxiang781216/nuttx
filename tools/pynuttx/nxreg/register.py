@@ -496,7 +496,7 @@ class GeneralRegisters:
             else:
                 reply += hexlify(bytes(reg))
 
-            offset += reg.offset + reg.size
+            offset = reg.offset + reg.size
         return reply
 
     def from_g(self, data: bytes):
@@ -508,7 +508,7 @@ class GeneralRegisters:
                 f"Parse {reg.name}({reg.regnum}) from {offset}, data: {data[offset:offset+reg.size]}"
             )
             reg.value = data[offset : offset + reg.size]
-            offset += reg.size
+            offset = reg.offset + reg.size
 
     def __iter__(self):
         return iter(self._registers)
