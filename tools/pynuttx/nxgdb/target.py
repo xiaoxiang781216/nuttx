@@ -26,12 +26,15 @@ import gdb
 import nxstub
 from nxreg.register import get_arch_name
 
+from . import utils
+
 
 class Target(gdb.Command):
     """Use nxstub to parse crash log dump, core dump or memory dump, as target."""
 
     def __init__(self):
         super().__init__("target stub", gdb.COMMAND_USER)
+        utils.alias("target nxstub", "target stub")
         self.process = None
 
     def invoke(self, args, from_tty):
