@@ -44,7 +44,9 @@
 
 #define SZ_4M 0x00400000
 #define PAGE_SHIFT 12U
+#undef PAGE_SIZE
 #define PAGE_SIZE (1U << PAGE_SHIFT)
+#undef PAGE_MASK
 #define PAGE_MASK (~((1 << PAGE_SHIFT) - 1))
 #define ALIGN(x, a) ALIGN_UP_MASK((x), ((typeof(x))(a) - 1))
 
