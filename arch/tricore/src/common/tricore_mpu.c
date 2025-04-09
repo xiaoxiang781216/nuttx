@@ -39,6 +39,13 @@ static unsigned int g_mpu_code_region;
 static unsigned int g_mpu_set;
 
 /****************************************************************************
+ * Public Variables
+ ****************************************************************************/
+
+unsigned int g_mpu_kset;
+unsigned int g_mpu_uset;
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -1187,14 +1194,16 @@ void mpu_set_active_set(unsigned int set)
 void mpu_initialize(const struct mpu_region_s *table, size_t count)
 {
   const struct mpu_region_s *conf;
-  unsigned int kset = mpu_alloc_set();
-#ifdef CONFIG_BUILD_PROTECTED
-  unsigned int uset = mpu_alloc_set();
-#endif
   unsigned int region;
   size_t index;
 
   mpu_control(false);
+
+  g_mpu_kset = mpu_alloc_set();
+#ifdef CONFIG_BUILD_PROTECTED
+  g_mpu_uset = mpu_alloc_set();
+#endif
+
   for (index = 0; index < count; index++)
     {
       conf = &table[index];
@@ -1203,22 +1212,23 @@ void mpu_initialize(const struct mpu_region_s *table, size_t count)
         {
           region = mpu_alloccoderegion();
           mpu_modify_code_region(region, conf->base, conf->size);
-          mpu_modify_code_set(kset, region, conf->kflags);
+          mpu_modify_code_set(g_mpu_kset, region, conf->kflags);
 #ifdef CONFIG_BUILD_PROTECTED
-          mpu_modify_code_set(uset, region, conf->uflags);
+          mpu_modify_code_set(g_mpu_uset, region, conf->uflags);
 #endif
         }
       else
         {
           region = mpu_allocdataregion();
           mpu_modify_data_region(region, conf->base, conf->size);
-          mpu_modify_data_set(kset, region, conf->kflags);
+          mpu_modify_data_set(g_mpu_kset, region, conf->kflags);
     #ifdef CONFIG_BUILD_PROTECTED
-          mpu_modify_data_set(uset, region, conf->uflags);
+          mpu_modify_data_set(g_mpu_uset, region, conf->uflags);
     #endif
         }
     }
 
-  mpu_set_active_set(kset);
+  mpu_set_active_set(g_mpu_kset);
+
   mpu_control(true);
 }
