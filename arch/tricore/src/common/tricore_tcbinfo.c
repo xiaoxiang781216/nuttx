@@ -73,6 +73,13 @@ static const struct reginfo_s g_reginfo[] =
   {"pcx",    4,    34,      TCB_REG_OFF(REG_LPCXI),     REGINFO_OFFSET_AUTO},
   {"psw",    4,    35,      TCB_REG_OFF(16 + REG_PSW),  REGINFO_OFFSET_AUTO},
   {"pc",     4,    36,      TCB_REG_OFF(REG_LA11),      REGINFO_OFFSET_AUTO},
+  {"icr",    4,    37,      REGINFO_OFFSET_INVALID,     REGINFO_OFFSET_AUTO},
+  {"isp",    4,    38,      REGINFO_OFFSET_INVALID,     REGINFO_OFFSET_AUTO},
+  {"btv",    4,    39,      REGINFO_OFFSET_INVALID,     REGINFO_OFFSET_AUTO},
+  {"biv",    4,    40,      REGINFO_OFFSET_INVALID,     REGINFO_OFFSET_AUTO},
+  {"syscon", 4,    41,      REGINFO_OFFSET_INVALID,     REGINFO_OFFSET_AUTO},
+  {"pcon0",  4,    42,      REGINFO_OFFSET_INVALID,     REGINFO_OFFSET_AUTO},
+  {"dcon0",  4,    43,      REGINFO_OFFSET_INVALID,     REGINFO_OFFSET_AUTO},
 };
 
 /****************************************************************************
