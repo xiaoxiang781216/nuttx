@@ -22,7 +22,7 @@
 
 import gdb
 
-from .utils import import_check
+from .utils import dont_repeat_decorator, import_check
 
 
 class Profile(gdb.Command):
@@ -40,6 +40,7 @@ class Profile(gdb.Command):
 
         super().__init__("profile", gdb.COMMAND_USER)
 
+    @dont_repeat_decorator
     def invoke(self, args, from_tty):
         self.cProfile.run(f"gdb.execute('{args}')", sort="cumulative")
 
@@ -53,6 +54,7 @@ class Time(gdb.Command):
     def __init__(self):
         super().__init__("time", gdb.COMMAND_USER)
 
+    @dont_repeat_decorator
     def invoke(self, args, from_tty):
         import time
 

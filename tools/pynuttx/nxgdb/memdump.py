@@ -337,6 +337,7 @@ class MMDump(gdb.Command):
 
         return nodes
 
+    @utils.dont_repeat_decorator
     def invoke(self, arg: str, from_tty: bool) -> None:
         if not (args := self.parse_args(arg)):
             return
@@ -436,6 +437,7 @@ class MMfrag(gdb.Command):
         super().__init__("mm frag", gdb.COMMAND_USER)
         utils.alias("memfrag", "mm frag")
 
+    @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
@@ -523,6 +525,7 @@ class MMMap(gdb.Command):
 
         return args
 
+    @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
         if not (args := self.parse_arguments(gdb.string_to_argv(args))):
             return
@@ -541,6 +544,7 @@ class MMFree(gdb.Command):
         super().__init__("mm free", gdb.COMMAND_USER)
         utils.alias("free", "mm free")
 
+    @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
         heaps = mm.get_heaps()
 
@@ -604,6 +608,7 @@ class NxMemoryRange(gdb.Command):
         super().__init__("mm range", gdb.COMMAND_USER)
         utils.alias("memrange", "mm range")
 
+    @utils.dont_repeat_decorator
     def invoke(self, arg, from_tty):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument("--heap-only", action="store_true", help="Heap only")
@@ -635,6 +640,7 @@ class NxDumpRAM(gdb.Command):
     def __init__(self):
         super().__init__("dump ram", gdb.COMMAND_USER)
 
+    @utils.dont_repeat_decorator
     def invoke(self, arg: str, from_tty: bool) -> None:
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
@@ -682,6 +688,7 @@ class NxMemoryFind(gdb.Command):
         super().__init__("mm find", gdb.COMMAND_USER)
         utils.alias("memfind", "mm find")
 
+    @utils.dont_repeat_decorator
     def invoke(self, arg: str, from_tty: bool) -> None:
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument("pattern", type=str, help="Pattern to search")

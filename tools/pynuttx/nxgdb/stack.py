@@ -198,6 +198,7 @@ class StackUsage(gdb.Command):
         )
         gdb.write("\n")
 
+    @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
         stacks = fetch_stacks()
 

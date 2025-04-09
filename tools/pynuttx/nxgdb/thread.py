@@ -111,6 +111,7 @@ class RegInfoCommand(gdb.Command):
     def __init__(self):
         super().__init__("maintenance reginfo", gdb.COMMAND_USER)
 
+    @utils.dont_repeat_decorator
     def invoke(self, arg: str, from_tty: bool) -> None:
         registers = g_registers.registers
         header = ("Name", "Rmt Nr", "Offset", "Tcb Reg Off")
@@ -147,6 +148,7 @@ class SetRegs(gdb.Command):
     def __init__(self):
         super().__init__("setregs", gdb.COMMAND_USER)
 
+    @utils.dont_repeat_decorator
     def invoke(self, arg, from_tty):
         parser = argparse.ArgumentParser(
             description="Set registers to the specified values"
@@ -191,6 +193,7 @@ class Nxinfothreads(gdb.Command):
     def __init__(self):
         super().__init__("info nxthreads", gdb.COMMAND_USER)
 
+    @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
         npidhash = gdb.parse_and_eval("g_npidhash")
         pidhash = gdb.parse_and_eval("g_pidhash")
@@ -275,6 +278,7 @@ class Nxthread(gdb.Command):
     def __init__(self):
         super().__init__("nxthread", gdb.COMMAND_USER)
 
+    @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
         npidhash = gdb.parse_and_eval("g_npidhash")
         pidhash = gdb.parse_and_eval("g_pidhash")
@@ -363,6 +367,7 @@ class Nxcontinue(gdb.Command):
                 "\n\x1b[31;1m if use thread command, please don't use 'continue', use 'c' instead !!!\x1b[m\n"
             )
 
+    @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
         g_registers.restore()
         gdb.execute("continue")
@@ -555,6 +560,7 @@ class Ps(gdb.Command):
         )
         gdb.write("\n")
 
+    @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
         gdb.write(
             " ".join(

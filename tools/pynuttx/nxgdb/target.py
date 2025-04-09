@@ -37,6 +37,7 @@ class Target(gdb.Command):
         utils.alias("target nxstub", "target stub")
         self.process = None
 
+    @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
         self.dont_repeat()
 
