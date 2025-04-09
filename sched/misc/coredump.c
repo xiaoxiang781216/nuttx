@@ -332,21 +332,21 @@ static void elf_emit_tcb_note(FAR struct elf_dumpinfo_s *cinfo,
 
   status.pr_pid = tcb->pid == 0 ? PID0_REPLACE : tcb->pid;
 
+  regs = (FAR uintptr_t *)g_running_regs;
   if (running_task() == tcb)
     {
       if (up_interrupt_context())
         {
-          regs = (FAR uintptr_t *)running_regs();
+          up_copyusercontext(regs, running_regs(), XCPTCONTEXT_SIZE);
         }
       else
         {
-          up_saveusercontext(g_running_regs);
-          regs = (FAR uintptr_t *)g_running_regs;
+          up_saveusercontext(regs);
         }
     }
   else
     {
-      regs = (FAR uintptr_t *)tcb->xcp.regs;
+      up_copyusercontext(regs, tcb->xcp.regs, XCPTCONTEXT_SIZE);
     }
 
   if (regs != NULL)
