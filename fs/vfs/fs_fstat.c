@@ -31,6 +31,7 @@
 #include <sched.h>
 #include <assert.h>
 #include <errno.h>
+#include <debug.h>
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/mtd/mtd.h>
@@ -275,6 +276,11 @@ int fstat(int fd, FAR struct stat *buf)
   ret = nx_fstat(fd, buf);
   if (ret < 0)
     {
+      if (ret != -ENOENT && ret != -ENOTDIR)
+        {
+          ferr("ERROR: fstat failed: %d, buf %p\n", ret, buf ? buf : NULL);
+        }
+
       set_errno(-ret);
       ret = ERROR;
     }

@@ -32,6 +32,7 @@
 #include <sched.h>
 #include <assert.h>
 #include <errno.h>
+#include <debug.h>
 
 #include "inode/inode.h"
 #include <nuttx/mtd/mtd.h>
@@ -206,6 +207,12 @@ int stat(FAR const char *path, FAR struct stat *buf)
   ret = nx_stat(path, buf, 1);
   if (ret < 0)
     {
+      if (ret != -ENOENT && ret != -ENOTDIR)
+        {
+          ferr("ERROR: stat failed: %d, path %s, buf %p\n",
+                  ret, path ? path : "NULL", buf ? buf : NULL);
+        }
+
       set_errno(-ret);
       ret = ERROR;
     }
@@ -220,6 +227,12 @@ int lstat(FAR const char *path, FAR struct stat *buf)
   ret = nx_stat(path, buf, 0);
   if (ret < 0)
     {
+      if (ret != -ENOENT && ret != -ENOTDIR)
+        {
+          ferr("ERROR: lstat failed: %d, path %s, buf %p\n",
+                  ret, path ? path : "NULL", buf ? buf : NULL);
+        }
+
       set_errno(-ret);
       ret = ERROR;
     }
