@@ -219,16 +219,6 @@ FAR void *kasan_clear_tag(FAR const void *addr)
   return (FAR void *)addr;
 }
 
-uint8_t kasan_get_tag(FAR const void *addr)
-{
-  return 0;
-}
-
-FAR void *kasan_get_tagged_addr(FAR const void *addr, uint8_t tag)
-{
-  return (FAR void *)addr;
-}
-
 void kasan_poison(FAR const void *addr, size_t size)
 {
   kasan_set_poison(addr, size, true);
