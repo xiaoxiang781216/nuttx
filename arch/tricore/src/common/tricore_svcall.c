@@ -103,6 +103,11 @@ void tricore_svcall(volatile void *trap)
         *running_task = tcb;
         regs[REG_UPCXI] = tricore_addr2csa(tcb->xcp.regs);
         UP_ISB();
+
+#ifdef CONFIG_ARCH_ADDRENV
+        addrenv_switch(tcb);
+#endif
+
         break;
 
       case SYS_assert_handler:

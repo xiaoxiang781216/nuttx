@@ -51,6 +51,34 @@
  * Public Types
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_ADDRENV
+/* The task group resources are retained in a single structure, task_group_s
+ * that is defined in the header file nuttx/include/nuttx/sched.h. The type
+ * arch_addrenv_t must be defined by platform specific logic in
+ * nuttx/arch/<architecture>/include/arch.h.
+ *
+ * These tables would hold the physical address of the level 2 page tables.
+ * All would be initially NULL and would not be backed up with physical
+ * memory until mappings in the level 2 page table are required.
+ */
+
+#ifdef CONFIG_ARCH_USE_MPU
+struct arch_addrenv_s
+{
+  uintptr_t text;
+  size_t    textsize;
+  uintptr_t data;
+  size_t    datasize;
+#ifdef CONFIG_BUILD_PROTECTED
+  uintptr_t heap;
+  size_t    heapsize;
+#endif
+};
+#endif
+
+typedef struct arch_addrenv_s arch_addrenv_t;
+#endif
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
