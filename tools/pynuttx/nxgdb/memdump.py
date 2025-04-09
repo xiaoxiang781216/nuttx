@@ -563,6 +563,7 @@ class MMVisualize(gdb.Command):
         )
         self.pd = utils.import_check("pandas", errmsg="Please pip install pandas\n")
 
+    @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
