@@ -1094,7 +1094,7 @@ static int gdb_read_registers(FAR struct gdb_state_s *state)
   size_t i;
   int ret;
 
-  memset(state->pkt_buf, 'x', BUFSIZE);
+  memset(state->pkt_buf, '0', BUFSIZE);
 
   for (i = 0; i < g_tcbinfo.regs_num; i++)
     {
@@ -1110,13 +1110,16 @@ static int gdb_read_registers(FAR struct gdb_state_s *state)
           offset = reg->goffset;
         }
 
-      memcpy(&value, xcpregs + reg->toffset, reg->size);
-      ret = gdb_bin2hex(&state->pkt_buf[offset * 2],
-                        BUFSIZE - offset,
-                        &value, reg->size);
-      if (ret < 0)
+      if (reg->toffset != REGINFO_OFFSET_INVALID)
         {
-          return ret;
+          memcpy(&value, xcpregs + reg->toffset, reg->size);
+          ret = gdb_bin2hex(&state->pkt_buf[offset * 2],
+                            BUFSIZE - offset,
+                            &value, reg->size);
+          if (ret < 0)
+            {
+              return ret;
+            }
         }
 
       offset += reg->size;
