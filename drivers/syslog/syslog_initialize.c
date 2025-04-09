@@ -34,8 +34,6 @@
 
 #include "syslog.h"
 
-#ifndef CONFIG_ARCH_SYSLOG
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -99,5 +97,3 @@ int syslog_initialize(void)
 
   return ret;
 }
-
-#endif /* CONFIG_ARCH_SYSLOG */

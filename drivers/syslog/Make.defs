@@ -23,6 +23,8 @@
 ############################################################################
 # Include SYSLOG Infrastructure
 
+CSRCS += syslog_initialize.c
+
 ifeq ($(CONFIG_SYSLOG),y)
 CSRCS += vsyslog.c syslog_channel.c
 CSRCS += syslog_write.c syslog_flush.c
@@ -30,10 +32,6 @@ endif
 
 ifeq ($(CONFIG_SYSLOG_INTBUFFER),y)
   CSRCS += syslog_intbuffer.c
-endif
-
-ifeq ($(CONFIG_SYSLOG),y)
-  CSRCS += syslog_initialize.c
 endif
 
 # The RAMLOG device is usable as a system logging device or standalone

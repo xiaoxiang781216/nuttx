@@ -239,11 +239,7 @@ int syslog_channel_unregister(FAR syslog_channel_t *channel);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SYSLOG
 int syslog_initialize(void);
-#else
-#  define syslog_initialize()
-#endif
 
 /****************************************************************************
  * Name: syslog_file_channel

@@ -22,7 +22,7 @@
 
 # Include SYSLOG Infrastructure
 
-set(SRCS)
+set(SRCS syslog_initialize.c)
 
 if(CONFIG_SYSLOG)
   list(APPEND SRCS vsyslog.c syslog_channel.c syslog_write.c syslog_flush.c)
@@ -30,10 +30,6 @@ endif()
 
 if(CONFIG_SYSLOG_INTBUFFER)
   list(APPEND SRCS syslog_intbuffer.c)
-endif()
-
-if(NOT CONFIG_ARCH_SYSLOG)
-  list(APPEND SRCS syslog_initialize.c)
 endif()
 
 # The RAMLOG device is usable as a system logging device or standalone
