@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <sys/ioctl.h>
-#include <sys/types.h>
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/wait.h>
@@ -34,7 +33,6 @@
 #include <debug.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -51,17 +49,6 @@
  * Private Types
  ****************************************************************************/
 
-struct audio_fake_params
-{
-  FAR const char *devname;
-  bool       playback;        /* True: playback, False: recording */
-  uint32_t   samplerate[4];   /* Array of sample rate,eg. [44100, 48000, 32000, 22050] */
-  uint8_t    channels[2];     /* Range of channels, [min_channel, max_channel] */
-  uint8_t    format[4];       /* Array of format, eg. [8, 16, 32] */
-  uint32_t   period_time;     /* Period time in milliseconds */
-  uint32_t   periods;         /* Number of periods */
-};
-
 struct audio_fake_s
 {
   struct audio_lowerhalf_s dev; /* Audio lower half (this device) */
@@ -77,7 +64,7 @@ struct audio_fake_s
   char          mqname[16];     /* Our message queue name */
   struct file   mq;             /* Message queue for receiving messages */
   struct file   file;           /* Audio file for playback or capture */
-  FAR const struct audio_fake_params *params;
+  FAR const audio_fake_params_t *params;
 };
 
 /****************************************************************************
@@ -152,7 +139,7 @@ static uint32_t audio_fake_samp_rate_convert(uint32_t samplerate);
  * Private Data
  ****************************************************************************/
 
-static const struct audio_fake_params g_devparams[] =
+static const audio_fake_params_t g_devparams[] =
 {
 #ifdef CONFIG_AUDIO_FAKE_DEVICE_PARAMS
     CONFIG_AUDIO_FAKE_DEVICE_PARAMS
@@ -1037,28 +1024,60 @@ static int audio_fake_release(FAR struct audio_lowerhalf_s *dev)
 
 int audio_fake_initialize(void)
 {
+  return audio_fake_register(g_devparams, nitems(g_devparams));
+}
+
+/****************************************************************************
+ * Name: audio_fake_register
+ *
+ * Description:
+ *   Register audio driver nodes using fake_server
+ *
+ * Input Parameters:
+ *   params - fake audio parameters array
+ *   nparams - number of fake audio parameters
+ *
+ * Returned Value:
+ *   0 is returned on success;
+ *   others is returned on failure.
+ *
+ ****************************************************************************/
+
+int audio_fake_register(FAR const audio_fake_params_t *params,
+                        size_t nparams)
+{
   FAR struct audio_fake_s *priv;
+  FAR audio_fake_params_t *param;
   size_t i;
   int ret;
 
-  for (i = 0; i < nitems(g_devparams); i++)
+  if (!params || !nparams)
+    {
+      auderr("ERROR: Invalid fake audio parameters\n");
+      return EINVAL;
+    }
+
+  for (i = 0; i < nparams; i++)
     {
       priv = (FAR struct audio_fake_s *)kmm_zalloc(sizeof(*priv));
-      if (!priv)
+      param = (audio_fake_params_t *)kmm_zalloc(sizeof(*param));
+      if (!priv || !param)
         {
           auderr("ERROR: Failed to allocate fake audio device\n");
           return -ENOMEM;
         }
 
+      *param = params[i];
       priv->dev.ops = &g_audioops;
-      priv->params  = &g_devparams[i];
+      priv->params  = param;
 
-      ret = audio_register(g_devparams[i].devname, &priv->dev);
+      ret = audio_register(param->devname, &priv->dev);
       if (ret < 0)
         {
           auderr("ERROR: Failed to register (%s) fake audio device.\n",
-                 g_devparams[i].devname);
+                 params->devname);
           kmm_free(priv);
+          kmm_free(param);
           return ret;
         }
     }

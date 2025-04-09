@@ -26,6 +26,9 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <sys/types.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #ifdef CONFIG_AUDIO_FAKE
 
@@ -41,7 +44,20 @@ extern "C"
 #define EXTERN extern
 #endif
 
+typedef struct audio_fake_params
+{
+  FAR const char *devname;
+  bool       playback;        /* True: playback, False: recording */
+  uint32_t   samplerate[4];   /* Array of sample rate,eg. [44100, 48000, 32000, 22050] */
+  uint8_t    channels[2];     /* Range of channels, [min_channel, max_channel] */
+  uint8_t    format[4];       /* Array of format, eg. [8, 16, 32] */
+  uint32_t   period_time;     /* Period time in milliseconds */
+  uint32_t   periods;         /* Number of periods */
+} audio_fake_params_t;
+
 int audio_fake_initialize(void);
+int audio_fake_register(FAR const audio_fake_params_t *params,
+                        size_t nparams);
 
 #undef EXTERN
 #ifdef __cplusplus
