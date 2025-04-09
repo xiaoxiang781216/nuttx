@@ -129,7 +129,7 @@ int addrenv_switch(FAR struct tcb_s *tcb)
   int cpu;
   int ret;
 
-  next = tcb->group->tg_addrenv_curr;
+  next = tcb->addrenv_curr;
 
   flags = spin_lock_irqsave(&g_addrenv_lock);
 
@@ -261,7 +261,7 @@ int addrenv_attach(FAR struct tcb_s *tcb, FAR struct addrenv_s *addrenv)
     }
 
   group->tg_addrenv_own = addrenv;
-  group->tg_addrenv_curr = group->tg_addrenv_own;
+  tcb->addrenv_curr = group->tg_addrenv_own;
 
   return OK;
 }
@@ -301,7 +301,7 @@ int addrenv_join(FAR struct tcb_s *ptcb, FAR struct tcb_s *tcb)
   /* Share the parent's address environment */
 
   tcb->group->tg_addrenv_own = ptcb->group->tg_addrenv_own;
-  tcb->group->tg_addrenv_curr = tcb->group->tg_addrenv_own;
+  tcb->addrenv_curr = tcb->group->tg_addrenv_own;
 
   return OK;
 }
@@ -324,6 +324,7 @@ int addrenv_join(FAR struct tcb_s *ptcb, FAR struct tcb_s *tcb)
 
 int addrenv_leave(FAR struct tcb_s *tcb)
 {
+  uint8_t ttype = atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK;
   int ret;
 
   /* Detach from the address environment */
@@ -333,7 +334,10 @@ int addrenv_leave(FAR struct tcb_s *tcb)
   /* Then drop the address environment */
 
   addrenv_drop(tcb->group->tg_addrenv_own, false);
-  tcb->group->tg_addrenv_own = NULL;
+  if (ttype == TCB_FLAG_TTYPE_TASK)
+    {
+      tcb->group->tg_addrenv_own = NULL;
+    }
 
   return ret;
 }
@@ -361,8 +365,8 @@ int addrenv_select(FAR struct addrenv_s *addrenv,
 {
   FAR struct tcb_s *tcb = this_task();
   addrenv_take(addrenv);
-  *oldenv = tcb->group->tg_addrenv_curr;
-  tcb->group->tg_addrenv_curr = addrenv;
+  *oldenv = tcb->addrenv_curr;
+  tcb->addrenv_curr = addrenv;
   return addrenv_switch(tcb);
 }
 
@@ -385,8 +389,8 @@ int addrenv_select(FAR struct addrenv_s *addrenv,
 int addrenv_restore(FAR struct addrenv_s *addrenv)
 {
   FAR struct tcb_s *tcb = this_task();
-  addrenv_give(tcb->group->tg_addrenv_curr);
-  tcb->group->tg_addrenv_curr = addrenv;
+  addrenv_give(tcb->addrenv_curr);
+  tcb->addrenv_curr = addrenv;
   return addrenv_switch(tcb);
 }
 

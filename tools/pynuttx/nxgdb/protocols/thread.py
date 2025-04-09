@@ -86,6 +86,7 @@ class Tcb(Value):
     join_entry: Value
     join_sem: Value
     join_val: Value
+    addrenv_curr: Value
     pid: Value
     sched_priority: Value
     init_priority: Value

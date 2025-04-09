@@ -559,7 +559,6 @@ struct task_group_s
 
 #ifdef CONFIG_ARCH_ADDRENV
   FAR struct addrenv_s *tg_addrenv_own;  /* Task(group) own memory mappings */
-  FAR struct addrenv_s *tg_addrenv_curr; /* Task(group) own memory mappings */
 #endif
 
   /* Task group heap ********************************************************/
@@ -602,6 +601,8 @@ struct tcb_s
   sem_t          join_sem;               /* Semaphore for task join         */
   pthread_addr_t join_val;               /* Returned data                   */
 #endif
+
+  FAR struct addrenv_s *addrenv_curr;    /* Current active memory mappings  */
 
   /* Task Management Fields *************************************************/
 
