@@ -607,6 +607,10 @@
 
 #  define CONFIG_HAVE_EXPRESSION_STATEMENT 1
 
+/* Warning about usage of deprecated features. */
+
+#  define deprecated_function  __attribute__((deprecated))
+
 /* SDCC-specific definitions ************************************************/
 
 #elif defined(SDCC) || defined(__SDCC)
@@ -780,6 +784,10 @@
 
 #  define no_builtin(n)
 
+/* Warning about usage of deprecated features. */
+
+#  define deprecated_function
+
 /* Zilog-specific definitions ***********************************************/
 
 #elif defined(__ZILOG__)
@@ -937,6 +945,10 @@
 
 #  define no_builtin(n)
 
+/* Warning about usage of deprecated features. */
+
+#  define deprecated_function
+
 /* ICCARM-specific definitions **********************************************/
 
 #elif defined(__ICCARM__)
@@ -1022,6 +1034,10 @@
 #  define return_address(x) 0
 
 #  define no_builtin(n)
+
+/* Warning about usage of deprecated features. */
+
+#  define deprecated_function
 
 /* MSVC(Microsoft Visual C++)-specific definitions **************************/
 
@@ -1117,6 +1133,10 @@
 
 #  define no_builtin(n)
 
+/* Warning about usage of deprecated features. */
+
+#  define deprecated_function
+
 /* TASKING (Infineon AURIX C/C++)-specific definitions **********************/
 
 #elif defined(__TASKING__)
@@ -1210,6 +1230,10 @@
 
 #  define no_builtin(n)
 
+/* Warning about usage of deprecated features. */
+
+#  define deprecated_function
+
 /* Unknown compiler *********************************************************/
 
 #else
@@ -1293,6 +1317,10 @@
 #  define return_address(x) 0
 
 #  define no_builtin(n)
+
+/* Warning about usage of deprecated features. */
+
+#  define deprecated_function
 
 #endif
 
