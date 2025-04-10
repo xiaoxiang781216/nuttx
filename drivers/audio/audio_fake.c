@@ -33,6 +33,7 @@
 #include <debug.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -49,6 +50,12 @@
  * Private Types
  ****************************************************************************/
 
+#ifndef M_PI_F
+#  define M_PI_F ((float)M_PI)
+#endif
+
+#define AUDIO_FAKE_SIN_DATA_FREQ 1000
+
 struct audio_fake_s
 {
   struct audio_lowerhalf_s dev; /* Audio lower half (this device) */
@@ -64,6 +71,8 @@ struct audio_fake_s
   char          mqname[16];     /* Our message queue name */
   struct file   mq;             /* Message queue for receiving messages */
   struct file   file;           /* Audio file for playback or capture */
+  const void    *sindata;       /* Sin data buffer, surpport 8bit/16bit/32bit  */
+  uint32_t      sinsize;        /* Sin data size */
   FAR const audio_fake_params_t *params;
 };
 
@@ -249,6 +258,113 @@ static uint8_t audio_fake_subfmt_convert(uint8_t format)
 }
 
 /****************************************************************************
+ * Name: audio_fake_sin_data_init
+ *
+ * Description: Initialize a buffer for sine wave data for capture
+ *
+ ****************************************************************************/
+
+static int audio_fake_sin_data_init(FAR struct audio_lowerhalf_s *dev)
+{
+  FAR struct audio_fake_s *priv = (FAR struct audio_fake_s *)dev;
+  int freq = AUDIO_FAKE_SIN_DATA_FREQ;
+  uint8_t format;
+  uint32_t nsamples;
+  uint32_t i;
+
+  nsamples = (priv->sample_rate *
+               priv->channels *
+               priv->params->period_time) / 1000;
+  format = audio_fake_subfmt_convert(priv->format);
+  if (format == AUDIO_SUBFMT_PCM_S8)
+    {
+      priv->sinsize = nsamples * sizeof(int8_t);
+      int8_t *data = (int8_t *)kmm_zalloc(priv->sinsize);
+      if (!data)
+        {
+          auderr("ERROR: Failed to allocate memory for sine data\n");
+          return -ENOMEM;
+        }
+
+      for (i = 0; i < nsamples; i++)
+        {
+          float t = (float)i / priv->sample_rate;
+          float sample = sinf(2 * M_PI_F * freq * t);
+          data[i] = (int8_t)(sample * INT8_MAX);
+        }
+
+      priv->sindata = data;
+    }
+  else if (format == AUDIO_SUBFMT_PCM_S16_LE)
+    {
+      priv->sinsize = nsamples * sizeof(int16_t);
+      int16_t *data = (int16_t *)kmm_zalloc(priv->sinsize);
+      if (!data)
+        {
+          auderr("ERROR: Failed to allocate memory for sine data\n");
+          return -ENOMEM;
+        }
+
+      for (i = 0; i < nsamples; i++)
+        {
+          float t = (float)i / priv->sample_rate;
+          float sample = sinf(2 * M_PI_F * freq * t);
+          data[i] = (int16_t)(sample * INT16_MAX);
+        }
+
+      priv->sindata = data;
+    }
+  else if (format == AUDIO_SUBFMT_PCM_S32_LE)
+    {
+      priv->sinsize = nsamples * sizeof(int32_t);
+      int32_t *data = (int32_t *)kmm_zalloc(priv->sinsize);
+      if (!data)
+        {
+          auderr("ERROR: Failed to allocate memory for sine data\n");
+          return -ENOMEM;
+        }
+
+      for (i = 0; i < nsamples; i++)
+        {
+          float t = (float)i / priv->sample_rate;
+          float sample = sinf(2 * M_PI_F * freq * t);
+          data[i] = (int32_t)(sample * INT32_MAX);
+        }
+
+        priv->sindata = data;
+    }
+  else
+    {
+      auderr("ERROR: sin_data unsupported format %d\n", format);
+      return -EINVAL;
+    }
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: audio_fake_sin_data_read
+ *
+ * Description: Read capture data from inited sindata.
+ *
+ ****************************************************************************/
+
+static int audio_fake_sin_data_read(FAR struct audio_lowerhalf_s *dev,
+                                    FAR struct ap_buffer_s *apb)
+{
+  FAR struct audio_fake_s *priv = (FAR struct audio_fake_s *)dev;
+
+  DEBUGASSERT(apb->nmaxbytes == priv->sinsize);
+
+  memcpy(apb->samp, priv->sindata, priv->sinsize);
+  apb->nbytes  = priv->sinsize;
+  apb->curbyte = 0;
+  apb->flags   = 0;
+
+  return 0;
+}
+
+/****************************************************************************
  * Name: audio_fake_file_init
  *
  * Description: Initialize the audio file for playback or capture virtual
@@ -412,7 +528,15 @@ static int audio_fake_process_buffer(FAR struct audio_lowerhalf_s *dev,
     }
   else
     {
-      ret = audio_fake_file_read(dev, apb);
+      if (priv->sindata)
+        {
+          ret = audio_fake_sin_data_read(dev, apb);
+        }
+      else
+        {
+          ret = audio_fake_file_read(dev, apb);
+        }
+
       if (ret < 0)
         {
           auderr("Error read data , ret %d\n", ret);
@@ -779,7 +903,18 @@ static int audio_fake_start(FAR struct audio_lowerhalf_s *dev)
   ret = audio_fake_file_init(dev);
   if (ret < 0)
     {
-      return ret;
+      if (!priv->params->playback)
+        {
+          ret = audio_fake_sin_data_init(dev);
+          if (ret < 0)
+            {
+              return ret;
+            }
+        }
+      else
+        {
+          return ret;
+        }
     }
 
   priv->start_tick = clock_systime_ticks();
