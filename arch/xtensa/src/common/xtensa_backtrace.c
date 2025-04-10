@@ -71,8 +71,8 @@ struct xtensa_windowregs_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static void inline get_window_regs(struct xtensa_windowregs_s *frame)
-always_inline_function;
+static always_inline_function void
+get_window_regs(struct xtensa_windowregs_s *frame);
 
 /****************************************************************************
  * Private Functions
@@ -87,7 +87,8 @@ always_inline_function;
  ****************************************************************************/
 
 #ifndef __XTENSA_CALL0_ABI__
-static void get_window_regs(struct xtensa_windowregs_s *frame)
+static always_inline_function void
+get_window_regs(struct xtensa_windowregs_s *frame)
 {
   __asm__ __volatile__("\trsr %0, WINDOWSTART\n": "=r"(frame->windowstart));
   __asm__ __volatile__("\trsr %0, WINDOWBASE\n": "=r"(frame->windowbase));
