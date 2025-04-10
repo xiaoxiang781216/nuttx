@@ -37,6 +37,7 @@
 #include <nuttx/list.h>
 #include <nuttx/mutex.h>
 #include <nuttx/nuttx.h>
+#include <nuttx/spinlock.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -177,6 +178,12 @@ enum
   BINDER_LOOPER_STATE_POLL       = 0x20,
 };
 
+struct wait_queue_head
+{
+  spinlock_t lock;
+  struct list_node entry;
+};
+
 typedef int (*wait_queue_func_t)(FAR void *arg, unsigned mode);
 
 struct wait_queue_entry
@@ -301,7 +308,7 @@ struct binder_thread
   FAR struct binder_proc *proc;
   struct list_node thread_node;
   struct list_node waiting_thread_node;
-  struct list_node wait;
+  struct wait_queue_head wait;
   struct list_node todo;
   int looper;
   FAR struct binder_transaction *transaction_stack;
@@ -329,7 +336,7 @@ struct binder_proc
 
   struct list_node threads;
   struct list_node nodes;
-  struct list_node freeze_wait;
+  struct wait_queue_head freeze_wait;
   struct list_node todo_list;
   struct list_node delivered_death;
   struct list_node waiting_threads;
@@ -642,12 +649,13 @@ void binder_set_priority(FAR struct binder_thread *thread,
                          FAR const struct binder_priority *desired);
 void init_waitqueue_entry(FAR struct wait_queue_entry *wq_entry,
                           FAR void * arg, wait_queue_func_t func);
-void prepare_to_wait(FAR struct list_node *wq_head,
+void prepare_to_wait(FAR struct wait_queue_head *wq_head,
                      FAR struct wait_queue_entry *wq_entry);
-void finish_wait(FAR struct wait_queue_entry *wq_entry);
-int  wait_event_interruptible(FAR struct list_node *wq_head,
+void finish_wait(FAR struct wait_queue_head *wq_head,
+                 FAR struct wait_queue_entry *wq_entry);
+int  wait_event_interruptible(FAR struct wait_queue_head *wq_head,
                               unsigned int timeout);
-void wait_wake_up(FAR struct list_node *wq_head, int sync);
+void wait_wake_up(FAR struct wait_queue_head *wq_head, int sync);
 void wake_up_pollfree(FAR struct binder_thread *thread);
 
 /* function prototype define for binder_node.c */

@@ -50,12 +50,6 @@
 #include "binder_internal.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-mutex_t binder_wq_entry_lock = NXMUTEX_INITIALIZER;
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -102,26 +96,31 @@ void init_waitqueue_entry(FAR struct wait_queue_entry *wq_entry,
                "wq_entry=%p\n", wq_entry);
 }
 
-void prepare_to_wait(FAR struct list_node *wq_head,
+void prepare_to_wait(FAR struct wait_queue_head *wq_head,
                      FAR struct wait_queue_entry *wq_entry)
 {
-  nxmutex_lock(&binder_wq_entry_lock);
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave_nopreempt(&wq_head->lock);
   if (list_is_empty(&wq_entry->entry))
     {
-      list_add_tail(wq_head, &wq_entry->entry);
+      list_add_tail(&wq_head->entry, &wq_entry->entry);
     }
 
-  nxmutex_unlock(&binder_wq_entry_lock);
+  spin_unlock_irqrestore_nopreempt(&wq_head->lock, flags);
 
   binder_debug(BINDER_DEBUG_SCHED, "prepare to wait:"
                "wq_head=%p, wq_entry=%p\n", wq_head, wq_entry);
 }
 
-void finish_wait(FAR struct wait_queue_entry *wq_entry)
+void finish_wait(FAR struct wait_queue_head *wq_head,
+                 FAR struct wait_queue_entry *wq_entry)
 {
+  irqstate_t flags;
+
   binder_debug(BINDER_DEBUG_SCHED, "finish wait:wq_entry=%p\n", wq_entry);
 
-  nxmutex_lock(&binder_wq_entry_lock);
+  flags = spin_lock_irqsave_nopreempt(&wq_head->lock);
   if (!list_is_empty(&wq_entry->entry))
     {
       list_delete_init(&wq_entry->entry);
@@ -129,17 +128,18 @@ void finish_wait(FAR struct wait_queue_entry *wq_entry)
       wq_entry->func = 0;
     }
 
-  nxmutex_unlock(&binder_wq_entry_lock);
+  spin_unlock_irqrestore_nopreempt(&wq_head->lock, flags);
 }
 
-void wait_wake_up(FAR struct list_node *wq_head, int sync)
+void wait_wake_up(FAR struct wait_queue_head *wq_head, int sync)
 {
   FAR struct wait_queue_entry *curr;
   FAR struct wait_queue_entry *next;
+  irqstate_t flags;
   int ret;
 
-  nxmutex_lock(&binder_wq_entry_lock);
-  list_for_every_entry_safe(wq_head, curr, next,
+  flags = spin_lock_irqsave_nopreempt(&wq_head->lock);
+  list_for_every_entry_safe(&wq_head->entry, curr, next,
                             struct wait_queue_entry, entry)
     {
       ret = curr->func(curr, sync);
@@ -149,14 +149,16 @@ void wait_wake_up(FAR struct list_node *wq_head, int sync)
         }
     }
 
-  nxmutex_unlock(&binder_wq_entry_lock);
+  spin_unlock_irqrestore_nopreempt(&wq_head->lock, flags);
 }
 
 void wake_up_pollfree(FAR struct binder_thread *thread)
 {
   FAR struct wait_queue_entry *wq_entry;
+  irqstate_t flags;
   int i;
 
+  flags = spin_lock_irqsave_nopreempt(&thread->wait.lock);
   for (i = 0; i < CONFIG_DRIVERS_BINDER_NPOLLWAITERS; ++i)
     {
       wq_entry = &thread->wq_entry[i];
@@ -165,6 +167,8 @@ void wake_up_pollfree(FAR struct binder_thread *thread)
           wq_entry->func(wq_entry, 0);
         }
     }
+
+  spin_unlock_irqrestore_nopreempt(&thread->wait.lock, flags);
 
   binder_debug(BINDER_DEBUG_SCHED, "%d:%d wake up\n",
                thread->tid, thread->proc->pid);

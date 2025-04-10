@@ -164,7 +164,7 @@ static int binder_wait_for_work(FAR struct binder_thread *thread,
         }
     }
 
-  finish_wait(&wait);
+  finish_wait(&thread->wait, &wait);
   binder_inner_proc_unlock(proc);
 
   return ret;
@@ -672,7 +672,8 @@ FAR static struct binder_thread *binder_get_thread_ilocked(
   thread->tid = thread_pid;
   thread->tmp_ref = 0;
   list_initialize(&thread->thread_node);
-  list_initialize(&thread->wait);
+  list_initialize(&thread->wait.entry);
+  spin_lock_init(&thread->wait.lock);
   list_initialize(&thread->todo);
   list_initialize(&thread->waiting_thread_node);
 

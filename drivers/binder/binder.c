@@ -138,7 +138,6 @@ const char *g_binder_return_str[] =
 #endif /* CONFIG_BINDER_DRIVER_DEBUG */
 
 unsigned int binder_last_debug_id = 1;
-extern mutex_t binder_wq_entry_lock;
 
 /****************************************************************************
  * Private Functions
@@ -499,6 +498,7 @@ static int binder_poll(FAR struct file *filp,
   FAR struct binder_proc *proc = filp->f_priv;
   FAR struct binder_thread *thread = NULL;
   bool wait_for_proc_work;
+  irqstate_t flags;
 
   thread = binder_get_thread(proc);
   if (!thread)
@@ -510,7 +510,7 @@ static int binder_poll(FAR struct file *filp,
     {
       int i;
 
-      nxmutex_lock(&binder_wq_entry_lock);
+      flags = spin_lock_irqsave_nopreempt(&thread->wait.lock);
       for (i = 0; i < CONFIG_DRIVERS_BINDER_NPOLLWAITERS; ++i)
         {
           if (!thread->wq_entry[i].private)
@@ -519,7 +519,8 @@ static int binder_poll(FAR struct file *filp,
                                    poll_wake_function);
               if (list_is_empty(&thread->wq_entry[i].entry))
                 {
-                  list_add_tail(&thread->wait, &(thread->wq_entry[i].entry));
+                  list_add_tail(&thread->wait.entry,
+                                &(thread->wq_entry[i].entry));
                 }
 
               fds->priv = &thread->wq_entry[i];
@@ -527,7 +528,8 @@ static int binder_poll(FAR struct file *filp,
             }
         }
 
-      nxmutex_unlock(&binder_wq_entry_lock);
+      spin_unlock_irqrestore_nopreempt(&thread->wait.lock, flags);
+
       if (i >= CONFIG_DRIVERS_BINDER_NPOLLWAITERS)
         {
           binder_debug(BINDER_DEBUG_ERROR,
@@ -555,7 +557,7 @@ static int binder_poll(FAR struct file *filp,
                        (struct wait_queue_entry *)fds->priv;
       binder_debug(BINDER_DEBUG_SCHED, "%d:%d poll finish\n",
                    proc->pid, thread->tid);
-      finish_wait(wq_entry);
+      finish_wait(&thread->wait, wq_entry);
       fds->priv = NULL;
     }
 
@@ -583,7 +585,8 @@ static int binder_open(FAR struct file *filep)
   proc->pid = getpid();
   list_initialize(&proc->threads);
   list_initialize(&proc->nodes);
-  list_initialize(&proc->freeze_wait);
+  list_initialize(&proc->freeze_wait.entry);
+  spin_lock_init(&proc->freeze_wait.lock);
   list_initialize(&proc->todo_list);
   list_initialize(&proc->delivered_death);
   list_initialize(&proc->waiting_threads);
