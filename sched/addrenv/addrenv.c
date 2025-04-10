@@ -172,13 +172,6 @@ int addrenv_switch(FAR struct tcb_s *tcb)
             }
         }
 
-      /* This is a safe spot to drop the current address environment */
-
-      if (curr)
-        {
-          addrenv_drop(curr, true);
-        }
-
       /* Save the new, current address environment group */
 
       g_addrenv[cpu] = next;
@@ -199,6 +192,16 @@ int addrenv_switch(FAR struct tcb_s *tcb)
 #endif
 
   spin_unlock_irqrestore(&g_addrenv_lock, flags);
+
+  /* addrenv->refs already atomic, once we reach 0, always need drop
+   * so not necessary to drop inside g_addrenv_lock.
+   */
+
+  if (curr != next && curr != NULL)
+    {
+      addrenv_drop(curr, true);
+    }
+
   return OK;
 }
 
