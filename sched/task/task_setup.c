@@ -521,6 +521,7 @@ int nxtask_setup_stackargs(FAR struct task_tcb_s *tcb,
                            FAR char * const argv[])
 {
   FAR char **stackargv;
+  FAR char *firststr;
   FAR char *str;
   size_t strtablen;
   size_t argvlen;
@@ -601,7 +602,7 @@ int nxtask_setup_stackargs(FAR struct task_tcb_s *tcb,
    * NUL terminator in the string buffer.
    */
 
-  stackargv[0] = str;
+  firststr = str;
   nbytes       = strlen(name) + 1;
   strlcpy(str, name, strtablen);
   str         += nbytes;
@@ -629,6 +630,12 @@ int nxtask_setup_stackargs(FAR struct task_tcb_s *tcb,
    */
 
   stackargv[argc + 1] = NULL;
+
+  /* We will place the assignment of the first string at the end to ensure
+   * that initialization of parameters is completed before they are used
+   */
+
+  stackargv[0] = firststr;
 
   return OK;
 }
