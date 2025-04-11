@@ -73,10 +73,6 @@ void nx_pthread_exit(FAR void *exit_value)
 
   DEBUGASSERT(tcb != NULL);
 
-  flags = enter_critical_section();
-  tcb->flags |= TCB_FLAG_EXIT_PROCESSING;
-  leave_critical_section(flags);
-
   /* Block any signal actions that would awaken us while were
    * are performing the JOIN handshake.
    */
