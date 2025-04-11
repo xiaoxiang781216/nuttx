@@ -91,12 +91,12 @@ struct hp_wqueue_s g_hpwork =
 };
 
 #ifdef SCHED_HPWORKSTACKSECTION
-static uint8_t g_hp_work_stack[CONFIG_SCHED_HPNTHREADS]
-                              [CONFIG_SCHED_HPWORKSTACKSIZE]
+static aligned_data(STACK_ALIGNMENT) uint8_t
+g_hp_work_stack[CONFIG_SCHED_HPNTHREADS][CONFIG_SCHED_HPWORKSTACKSIZE]
 locate_data(CONFIG_SCHED_HPWORKSTACKSECTION);
 #else
-static uint8_t g_hp_work_stack[CONFIG_SCHED_HPNTHREADS]
-                              [CONFIG_SCHED_HPWORKSTACKSIZE];
+static aligned_data(STACK_ALIGNMENT) uint8_t
+g_hp_work_stack[CONFIG_SCHED_HPNTHREADS][CONFIG_SCHED_HPWORKSTACKSIZE];
 #endif
 
 #endif /* CONFIG_SCHED_HPWORK */
@@ -114,12 +114,12 @@ struct lp_wqueue_s g_lpwork =
 };
 
 #ifdef SCHED_LPWORKSTACKSECTION
-static uint8_t g_lp_work_stack[CONFIG_SCHED_LPNTHREADS]
-                              [CONFIG_SCHED_LPWORKSTACKSIZE]
+static aligned_data(STACK_ALIGNMENT) uint8_t
+g_lp_work_stack[CONFIG_SCHED_LPNTHREADS][CONFIG_SCHED_LPWORKSTACKSIZE]
 locate_data(CONFIG_SCHED_LPWORKSTACKSECTION);
 #else
-static uint8_t g_lp_work_stack[CONFIG_SCHED_LPNTHREADS]
-                              [CONFIG_SCHED_LPWORKSTACKSIZE];
+static aligned_data(STACK_ALIGNMENT) uint8_t
+g_lp_work_stack[CONFIG_SCHED_LPNTHREADS][CONFIG_SCHED_LPWORKSTACKSIZE];
 #endif
 
 #endif /* CONFIG_SCHED_LPWORK */
