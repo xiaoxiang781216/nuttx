@@ -62,9 +62,13 @@ class CrashStackOverflow(gdb.Command):
             gdb.write("No stack overflow found\n")
             return
 
-        print(f"Found stack overflow threads\n{'PID':<4} {'name':<10} {'FILLED'}")
+        print(
+            f"Found stack overflow threads\n{'PID':<4} {'NAME':<10} {'STACKSIZE':<10} {'FILLED'}"
+        )
         for tcb, filled in collected:
-            print(f"{tcb['pid']:<4} {utils.get_task_name(tcb):<10} {filled:.2%}")
+            print(
+                f"{tcb['pid']:<4} {utils.get_task_name(tcb):<10} {tcb.adj_stack_size:<10} {filled:.2%}"
+            )
 
     def diagnose(self, *args, **kwargs):
         collected = self.collect(utils.get_tcbs())
@@ -78,6 +82,7 @@ class CrashStackOverflow(gdb.Command):
                 {
                     "pid": tcb["pid"],
                     "name": utils.get_task_name(tcb),
+                    "stacksize": tcb.adj_stack_size,
                     "filled": filled,
                     "backtrace": utils.Backtrace(utils.get_backtrace(int(tcb["pid"]))),
                 }
