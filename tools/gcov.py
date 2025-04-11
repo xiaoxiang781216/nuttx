@@ -50,33 +50,38 @@ def parse_gcda_data(path):
         if not started:
             continue
 
-        if line.startswith("gcov end"):
-            started = False
-            if size != len(output) // 2:
-                print(
-                    f"Size mismatch for {filename}: expected {size} bytes, got {len(output) // 2} bytes"
-                )
-
-            match = re.search(r"checksum:\s*(0x[0-9a-fA-F]+)", line)
-            if match:
-                checksum = int(match.group(1), 16)
-                output = bytearray.fromhex(output)
-                expected = sum(output) % 65536
-                if checksum != expected:
-                    print(
-                        f"Checksum mismatch for {filename}: expected {checksum}, got {expected}"
+        try:
+            if line.startswith("gcov end"):
+                started = False
+                if size != len(output) // 2:
+                    raise ValueError(
+                        f"Size mismatch for {filename}: expected {size} bytes, got {len(output) // 2} bytes"
                     )
-                    continue
 
-                outfile = os.path.join(gcda_path, "./" + filename)
-                os.makedirs(os.path.dirname(outfile), exist_ok=True)
+                match = re.search(r"checksum:\s*(0x[0-9a-fA-F]+)", line)
+                if match:
+                    checksum = int(match.group(1), 16)
+                    output = bytearray.fromhex(output)
+                    expected = sum(output) % 65536
+                    if checksum != expected:
+                        raise ValueError(
+                            f"Checksum mismatch for {filename}: expected {checksum}, got {expected}"
+                        )
 
-                with open(outfile, "wb") as fp:
-                    fp.write(output)
-                    print(f"write {outfile} success")
-            output = ""
-        else:
-            output += line.strip()
+                    outfile = os.path.join(gcda_path, "./" + filename)
+                    os.makedirs(os.path.dirname(outfile), exist_ok=True)
+
+                    with open(outfile, "wb") as fp:
+                        fp.write(output)
+                        print(f"write {outfile} success")
+                output = ""
+            else:
+                output += line.strip()
+        except Exception as e:
+            print(f"Error processing {path}: {e}")
+            print(f"gcov start filename:{filename} size:{size}")
+            print(output)
+            print(f"gcov end filename:{filename} checksum:{checksum}")
 
     return gcda_path
 
