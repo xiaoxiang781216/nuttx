@@ -166,6 +166,9 @@ static ssize_t cpufreq_read(FAR struct file *filep,
     }
 
   offset = filep->f_pos;
+
+  nxmutex_lock(&policy->lock);
+
   linesize = snprintf(line, CPUFREQ_LINELEN,
                       "cpu_cur_freq:%d\n"
                       "cpu_min_freq:%d\n"
@@ -198,6 +201,8 @@ static ssize_t cpufreq_read(FAR struct file *filep,
     }
 
 #endif /* CONFIG_CPUFREQ_PROCFS_QOS */
+
+  nxmutex_unlock(&policy->lock);
 
   copysize = procfs_memcpy(line, linesize, buffer, buflen, &offset);
   filep->f_pos += copysize;
