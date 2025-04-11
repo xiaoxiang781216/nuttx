@@ -48,6 +48,12 @@
  * Pre-processor Prototypes
  ****************************************************************************/
 
+/* For use with EABI and floating point, the stack must be aligned to 8-byte
+ * addresses.
+ */
+
+#define STACK_ALIGNMENT     8
+
 #ifndef __ASSEMBLY__
 
 #ifdef __cplusplus

@@ -41,6 +41,12 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* Align the stack to word (4 byte) boundaries.  This is probablya greater
+ * alignment than is required.
+ */
+
+#define STACK_ALIGNMENT     4
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
