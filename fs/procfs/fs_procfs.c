@@ -151,7 +151,11 @@ static const struct procfs_entry_s g_procfs_entries[] =
 #endif
 
 #ifdef CONFIG_SCHED_IRQMONITOR
+#  ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
+  { "irqs",         &g_irq_operations,      PROCFS_FILE_TYPE,   0666 },
+#  else
   { "irqs",         &g_irq_operations,      PROCFS_FILE_TYPE,   0444 },
+#  endif
 #endif
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_MEMINFO

@@ -105,6 +105,11 @@ static ssize_t irq_read(FAR struct file *filep, FAR char *buffer,
 static int     irq_dup(FAR const struct file *oldp,
                  FAR struct file *newp);
 
+#ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
+static ssize_t irq_write(FAR struct file *filep, FAR const char *buffer,
+                 size_t buflen);
+#endif
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -119,7 +124,11 @@ const struct procfs_operations g_irq_operations =
   irq_open,       /* open */
   irq_close,      /* close */
   irq_read,       /* read */
+#ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
+  irq_write,      /* write */
+#else
   NULL,           /* write */
+#endif
   NULL,           /* poll */
 
   irq_dup,        /* dup */
@@ -267,6 +276,7 @@ static int irq_open(FAR struct file *filep, FAR const char *relpath,
 
   finfo("Open '%s'\n", relpath);
 
+#ifndef CONFIG_ARCH_HAVE_IRQTRIGGER
   /* This PROCFS file is read-only.  Any attempt to open with write access
    * is not permitted.
    */
@@ -276,6 +286,7 @@ static int irq_open(FAR struct file *filep, FAR const char *relpath,
       ferr("ERROR: Only O_RDONLY supported\n");
       return -EACCES;
     }
+#endif
 
   /* Allocate a container to hold the file attributes */
 
@@ -358,6 +369,27 @@ static ssize_t irq_read(FAR struct file *filep, FAR char *buffer,
   filep->f_pos += irqfile->ncopied;
   return irqfile->ncopied;
 }
+
+#ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
+static ssize_t irq_write(FAR struct file *filep, FAR const char *buffer,
+                 size_t buflen)
+{
+  int ret;
+  int irq;
+
+  finfo("buffer=%p buflen=%d\n", buffer, (int)buflen);
+
+  /* Scan the IRQ number from buffer */
+
+  ret = sscanf(buffer, "%d", &irq);
+  if (ret == 1 && irq < NR_IRQS && irq > 0)
+    {
+      up_trigger_irq(irq, 0);
+    }
+
+  return buflen;
+}
+#endif
 
 /****************************************************************************
  * Name: irq_dup
