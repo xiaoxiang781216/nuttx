@@ -52,17 +52,36 @@
  */
 
 #ifdef CONFIG_SCHED_IRQMONITOR
+
+#  ifdef CONFIG_ARCH_IRQPRIO
+#    define INC_NESTLEVEL()    atomic_fetch_add(&g_irq_level[this_cpu()], 1)
+#    define DEC_NESTLEVEL(ndx) \
+       do \
+         { \
+           if (atomic_fetch_sub(&g_irq_level[this_cpu()], 1) > 1 && \
+               ndx < NUSER_IRQS) \
+             { \
+               atomic_fetch_add(&g_irqvector[ndx].nests, 1); \
+             } \
+          } \
+       while (0)
+#  else
+#    define INC_NESTLEVEL()
+#    define DEC_NESTLEVEL(ndx)
+#  endif
+
 #  define CALL_VECTOR(ndx, vector, irq, context, arg) \
      do \
        { \
          clock_t start; \
          clock_t elapsed; \
+         INC_NESTLEVEL(); \
          start = perf_gettime(); \
          vector(irq, context, arg); \
          elapsed = perf_gettime() - start; \
          if (ndx < NUSER_IRQS) \
            { \
-             g_irqvector[ndx].count++; \
+             atomic_fetch_add(&g_irqvector[ndx].count, 1); \
              if (elapsed > g_irqvector[ndx].time) \
                { \
                  g_irqvector[ndx].time = elapsed; \
@@ -74,12 +93,21 @@
              CRITMONITOR_PANIC("IRQ %d(%p), execute time too long %ju\n", \
                                irq, vector, (uintmax_t)elapsed); \
            } \
+         DEC_NESTLEVEL(ndx); \
        } \
      while (0)
 #else
 #  define CALL_VECTOR(ndx, vector, irq, context, arg) \
      vector(irq, context, arg)
 #endif /* CONFIG_SCHED_IRQMONITOR */
+
+/****************************************************************************
+ * Privtae Data
+ ****************************************************************************/
+
+#if defined(CONFIG_SCHED_IRQMONITOR) && defined(CONFIG_ARCH_IRQPRIO)
+static atomic_t g_irq_level[CONFIG_SMP_NCPUS];
+#endif
 
 /****************************************************************************
  * Public Functions

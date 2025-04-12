@@ -54,7 +54,10 @@ struct irq_info_s
 #ifdef CONFIG_SCHED_IRQMONITOR
   clock_t start;     /* Time interrupt attached */
   clock_t time;      /* Maximum execution time on this IRQ */
-  uint32_t count;    /* Number of interrupts on this IRQ */
+  atomic_t count;    /* Number of interrupts on this IRQ */
+#  ifdef CONFIG_ARCH_IRQPRIO
+  atomic_t nests;    /* Number of preemptions by this IRQ */
+#  endif
 #endif
 };
 
