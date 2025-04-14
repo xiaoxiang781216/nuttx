@@ -24,7 +24,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/audio/audio.h>
-#include <nuttx/kthread.h>
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/spi/spi_flash.h>
@@ -208,18 +207,6 @@ static void sim_init_smartfs(void)
 }
 #endif
 
-static int sim_loop_task(int argc, char **argv)
-{
-  while (1)
-    {
-      /* Sleep minimal time, let the idle run */
-
-      usleep(CONFIG_SIM_LOOPTASK_INTERVAL);
-    }
-
-  return 0;
-}
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -323,8 +310,4 @@ void up_initialize(void)
   wd_start_period(&g_x11update_wdog, SIM_X11UPDATE_PERIOD,
                   SIM_X11UPDATE_PERIOD, sim_x11update_interrupt, 0);
 #endif
-
-  kthread_create("loop_task", CONFIG_SIM_LOOPTASK_PRIORITY,
-                 CONFIG_DEFAULT_TASK_STACKSIZE,
-                 sim_loop_task, NULL);
 }
