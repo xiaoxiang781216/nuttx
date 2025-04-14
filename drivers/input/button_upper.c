@@ -46,7 +46,7 @@
 #include <nuttx/random.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/input/buttons.h>
-
+#include <nuttx/spinlock.h>
 #include <nuttx/irq.h>
 
 /****************************************************************************
@@ -63,6 +63,7 @@ struct btn_upperhalf_s
 
   btn_buttonset_t bu_sample;  /* Last sampled button states */
   bool bu_enabled;
+  spinlock_t lock;            /* Lock for this button driver */
 
   /* The following is a singly linked list of open references to the
    * button device.
@@ -168,7 +169,7 @@ static void btn_enable(FAR struct btn_upperhalf_s *priv)
    * interrupts must be disabled.
    */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   /* Visit each opened reference to the device */
 
@@ -217,7 +218,7 @@ static void btn_enable(FAR struct btn_upperhalf_s *priv)
       lower->bl_enable(lower, 0, 0, NULL, NULL);
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -342,7 +343,7 @@ static int btn_open(FAR struct file *filep)
   lower = priv->bu_lower;
   DEBUGASSERT(lower && lower->bl_supported);
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   supported = lower->bl_supported(lower);
   opriv->bo_pollevents.bp_press   = supported;
@@ -362,7 +363,7 @@ static int btn_open(FAR struct file *filep)
 
   btn_enable(priv);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
   return OK;
 }
 
@@ -387,7 +388,7 @@ static int btn_close(FAR struct file *filep)
 
   /* Get exclusive access to the driver structure */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&priv->lock);
 
 #if CONFIG_INPUT_BUTTONS_DEBOUNCE_DELAY
   wd_cancel(&priv->bu_wdog);
@@ -403,7 +404,7 @@ static int btn_close(FAR struct file *filep)
   if (!curr)
     {
       ierr("ERROR: Failed to find open entry\n");
-      leave_critical_section(flags);
+      spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
       return -ENOENT;
     }
 
@@ -422,7 +423,7 @@ static int btn_close(FAR struct file *filep)
 
   btn_enable(priv);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
 
   /* Cancel any pending notification */
 
@@ -466,7 +467,7 @@ static ssize_t btn_read(FAR struct file *filep, FAR char *buffer,
 
   /* Get exclusive access to the driver structure */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   /* Read and return the current state of the buttons */
 
@@ -475,7 +476,7 @@ static ssize_t btn_read(FAR struct file *filep, FAR char *buffer,
   *(FAR btn_buttonset_t *)buffer = lower->bl_buttons(lower);
   opriv->bo_pending = false;
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
   return (ssize_t)sizeof(btn_buttonset_t);
 }
 
@@ -510,7 +511,7 @@ static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Get exclusive access to the driver structure */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   /* Write the current state of the buttons */
 
@@ -525,7 +526,7 @@ static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
       ret = -ENOSYS;
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
   return (ssize_t)ret;
 }
 
@@ -550,7 +551,7 @@ static int btn_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Get exclusive access to the driver structure */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&priv->lock);
 
   /* Handle the ioctl command */
 
@@ -651,7 +652,7 @@ static int btn_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       break;
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
   return ret;
 }
 
@@ -677,7 +678,7 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   /* Get exclusive access to the driver structure */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   /* Are we setting up the poll?  Or tearing it down? */
 
@@ -741,7 +742,7 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
   btn_enable(priv);
 
 errout:
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
   return ret;
 }
 
@@ -805,5 +806,6 @@ int btn_register(FAR const char *devname,
       kmm_free(priv);
     }
 
+  spin_lock_init(&priv->lock);
   return ret;
 }

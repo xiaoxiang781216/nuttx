@@ -33,7 +33,7 @@
 
 #include <nuttx/board.h>
 #include <nuttx/input/buttons.h>
-
+#include <nuttx/spinlock.h>
 #include <nuttx/irq.h>
 
 #if CONFIG_INPUT_BUTTONS_LOWER
@@ -57,6 +57,7 @@ static int btn_interrupt(int irq, FAR void *context, FAR void *arg);
  ****************************************************************************/
 
 static uint32_t g_btnnum;
+static spinlock_t g_bl_enable_lock = SP_UNLOCKED;
 
 /* This is the button button lower half driver interface */
 
@@ -124,7 +125,7 @@ static void btn_enable(FAR const struct btn_lowerhalf_s *lower,
 
   /* Start with all interrupts disabled */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&g_bl_enable_lock);
   btn_disable();
 
   iinfo("press: %02" PRIx32 " release: %02" PRIx32 " handler: %p arg: %p\n",
@@ -153,7 +154,7 @@ static void btn_enable(FAR const struct btn_lowerhalf_s *lower,
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&g_bl_enable_lock, flags);
 }
 
 /****************************************************************************
@@ -166,12 +167,10 @@ static void btn_enable(FAR const struct btn_lowerhalf_s *lower,
 
 static void btn_disable(void)
 {
-  irqstate_t flags;
   uint32_t id;
 
   /* Disable each button interrupt */
 
-  flags = enter_critical_section();
   for (id = 0; id < g_btnnum; id++)
     {
       board_button_irq(id, NULL, NULL);
@@ -181,7 +180,6 @@ static void btn_disable(void)
 
   g_btnhandler = NULL;
   g_btnarg     = NULL;
-  leave_critical_section(flags);
 }
 
 /****************************************************************************
