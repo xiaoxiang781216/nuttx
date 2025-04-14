@@ -262,7 +262,10 @@ static void vlan_reclaim(FAR struct netdev_lowerhalf_s *dev)
   FAR struct vlan_device_s      *vlan = (FAR struct vlan_device_s *)dev;
   FAR struct netdev_lowerhalf_s *real = vlan->real;
 
-  real->ops->reclaim(real);
+  if (real->ops->reclaim)
+    {
+      real->ops->reclaim(real);
+    }
 }
 
 /****************************************************************************
