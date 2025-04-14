@@ -41,6 +41,7 @@
  ****************************************************************************/
 
 #define SIM_X11EVENT_PERIOD    MSEC2TICK(CONFIG_SIM_X11EVENT_INTERVAL)
+#define SIM_X11UPDATE_PERIOD   MSEC2TICK(CONFIG_SIM_X11UPDATE_INTERVAL)
 
 /****************************************************************************
  * Private Data
@@ -49,6 +50,10 @@
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
     defined(CONFIG_SIM_BUTTONS)
 static struct wdog_period_s g_x11event_wdog;   /* Watchdog for event loop */
+#endif
+
+#ifdef CONFIG_SIM_X11FB
+static struct wdog_period_s g_x11update_wdog;  /* Watchdog for update loop */
 #endif
 
 /****************************************************************************
@@ -84,6 +89,21 @@ static void sim_init_cmdline(void)
 static void sim_x11event_interrupt(wdparm_t arg)
 {
   sim_x11events();
+}
+#endif
+
+/****************************************************************************
+ * Name: sim_x11update_interrupt
+ *
+ * Description:
+ *   interrupts event process function
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SIM_X11FB
+static void sim_x11update_interrupt(wdparm_t arg)
+{
+  sim_x11loop();
 }
 #endif
 
@@ -196,10 +216,6 @@ static int sim_loop_task(int argc, char **argv)
       irqstate_t flags = up_irq_save();
 
       sched_lock();
-
-#if defined(CONFIG_SIM_LCDDRIVER) || defined(CONFIG_SIM_FRAMEBUFFER)
-      sim_x11loop();
-#endif
 
 #ifdef CONFIG_SIM_NETDEV
       /* Run the network if enabled */
@@ -341,6 +357,11 @@ void up_initialize(void)
     defined(CONFIG_SIM_BUTTONS)
   wd_start_period(&g_x11event_wdog, SIM_X11EVENT_PERIOD, SIM_X11EVENT_PERIOD,
                   sim_x11event_interrupt, 0);
+#endif
+
+#ifdef CONFIG_SIM_X11FB
+  wd_start_period(&g_x11update_wdog, SIM_X11UPDATE_PERIOD,
+                  SIM_X11UPDATE_PERIOD, sim_x11update_interrupt, 0);
 #endif
 
   kthread_create("loop_task", CONFIG_SIM_LOOPTASK_PRIORITY,
