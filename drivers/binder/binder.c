@@ -461,12 +461,6 @@ static int binder_munmap(FAR struct task_group_s *group,
                          FAR struct mm_map_entry_s *entry,
                          FAR void *start, size_t length)
 {
-  FAR struct binder_proc *proc = entry->priv.p;
-  struct binder_mmap_area vma;
-
-  vma.area_start = start;
-  vma.area_size  = length;
-  binder_alloc_unmmap(&proc->alloc, &vma);
   return mm_map_remove(get_group_mm(group), entry);
 }
 
@@ -474,17 +468,11 @@ static int binder_mmap(FAR struct file *filep,
                        FAR struct mm_map_entry_s *map)
 {
   FAR struct binder_proc *proc = filep->f_priv;
-  struct binder_mmap_area vma;
-
-  vma.area_start = map->vaddr;
-  vma.area_size = MIN(map->length, CONFIG_DRIVERS_BINDER_MAX_VMSIZE);
-
-  binder_alloc_mmap(&proc->alloc, &vma);
 
   map->munmap = binder_munmap;
   map->priv.p = (void *)proc;
-  map->vaddr = vma.area_start;
-  map->length = vma.area_size;
+  map->vaddr = g_binder_alloc.buffer_data;
+  map->length = CONFIG_DRIVERS_BINDER_MAX_MEMORY;
 
   mm_map_add(get_current_mm(), map);
 
@@ -599,7 +587,6 @@ static int binder_open(FAR struct file *filep)
     }
 
   proc->context = &binder_dev->context;
-  binder_alloc_init(&proc->alloc, proc->pid);
 
   nxmutex_lock(&binder_dev->binder_procs_lock);
   binder_dev->ref_count++;
@@ -778,6 +765,9 @@ int binder_initialize(void)
       nxmutex_destroy(&device->binder_procs_lock);
       kmm_free(device);
     }
+
+  binder_alloc_init(&g_binder_alloc);
+  binder_alloc_mem(&g_binder_alloc);
 
   return ret;
 }
