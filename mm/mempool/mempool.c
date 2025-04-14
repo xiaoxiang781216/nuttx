@@ -104,13 +104,10 @@ static inline void mempool_add_queue(FAR struct mempool_s *pool,
 static inline void mempool_record(FAR struct mempool_s *pool,
                                   FAR struct mempool_record_s *record)
 {
-#  if defined(CONFIG_MM_RECORD_STACK) || defined(CONFIG_MM_RECORD_PID)
-  pid_t pid = _SCHED_GETTID();
-#  endif
   DEBUGASSERT(record->magic == MEMPOOL_MAGIC_FREE);
   record->magic = MEMPOOL_MAGIC_ALLOC;
 #  ifdef CONFIG_MM_RECORD_PID
-  record->pid = pid;
+  record->pid = _SCHED_GETTID();
 #  endif
 
   MM_INCSEQNO(record);
