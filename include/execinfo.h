@@ -78,7 +78,7 @@ void backtrace_dump(void);
 #else
 #  define backtrace_record(skip) (NULL)
 #  define backtrace_remove(entry)
-#  define backtrace_get(entry, size) (*(size)=0)
+#  define backtrace_get(entry, size) (*(size) = 0, NULL)
 #  define backtrace_dump()
 #endif
 
