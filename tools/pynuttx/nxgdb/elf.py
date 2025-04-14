@@ -55,7 +55,11 @@ class ElfImport(gdb.Command):
             return
         modules = []
         for tcb in tcbs:
-            if tcb.group != 0 and tcb.group.tg_bininfo != 0:
+            if (
+                tcb.group != 0
+                and tcb.group.tg_bininfo != 0
+                and tcb.group.tg_bininfo.mod.modname.string() != ""
+            ):
                 modules.append(tcb.group.tg_bininfo.mod)
 
         if not modules:
