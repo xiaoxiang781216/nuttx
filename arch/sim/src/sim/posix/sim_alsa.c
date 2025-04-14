@@ -26,8 +26,8 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/audio/audio.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/queue.h>
 #include <nuttx/nuttx.h>
+#include <nuttx/wdog.h>
 
 #include <debug.h>
 #include <sys/param.h>
@@ -36,6 +36,12 @@
 
 #include "sim_internal.h"
 #include "sim_offload.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define SIM_AUDIO_PERIOD  MSEC2TICK(CONFIG_SIM_LOOP_INTERVAL)
 
 /****************************************************************************
  * Private Types
@@ -47,7 +53,7 @@ struct sim_audio_s
   struct dq_queue_s pendq;
   mutex_t pendlock;
 
-  sq_entry_t link;
+  struct wdog_period_s wdog;           /* Watchdog for event loop */
 
   bool playback;
   bool offload;
@@ -132,8 +138,6 @@ static const struct audio_ops_s g_sim_audio_ops =
   .reserve       = sim_audio_reserve,
   .release       = sim_audio_release,
 };
-
-static sq_queue_t g_sim_audio;
 
 /****************************************************************************
  * Private Functions
@@ -1145,22 +1149,16 @@ fail:
   return ret;
 }
 
+static void sim_alsa_interrupt(wdparm_t arg)
+{
+  struct sim_audio_s *priv = (struct sim_audio_s *)arg;
+
+  sim_audio_process(priv);
+}
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-void sim_audio_loop(void)
-{
-  sq_entry_t *entry;
-
-  for (entry = sq_peek(&g_sim_audio); entry; entry = sq_next(entry))
-    {
-      struct sim_audio_s *priv =
-        container_of(entry, struct sim_audio_s, link);
-
-      sim_audio_process(priv);
-    }
-}
 
 struct audio_lowerhalf_s *sim_audio_initialize(bool playback, bool offload)
 {
@@ -1184,7 +1182,8 @@ struct audio_lowerhalf_s *sim_audio_initialize(bool playback, bool offload)
       return NULL;
     }
 
-  sq_addlast(&priv->link, &g_sim_audio);
+  wd_start_period(&priv->wdog, SIM_AUDIO_PERIOD, SIM_AUDIO_PERIOD,
+                  sim_alsa_interrupt, (wdparm_t)priv);
 
   /* Setting default config */
 
