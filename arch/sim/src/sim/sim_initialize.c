@@ -25,7 +25,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/audio/audio.h>
 #include <nuttx/kthread.h>
-#include <nuttx/motor/foc/foc_dummy.h>
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/spi/spi_flash.h>
@@ -216,12 +215,6 @@ static int sim_loop_task(int argc, char **argv)
       irqstate_t flags = up_irq_save();
 
       sched_lock();
-
-#ifdef CONFIG_MOTOR_FOC_DUMMY
-      /* Update simulated FOC device */
-
-      foc_dummy_update();
-#endif
 
       sched_unlock();
       up_irq_restore(flags);
