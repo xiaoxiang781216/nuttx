@@ -481,7 +481,6 @@ void sim_usbdev_initialize(void);
 
 #ifdef CONFIG_SIM_USB_HOST
 int sim_usbhost_initialize(void);
-int sim_usbhost_loop(void);
 #endif
 
 /* Debug ********************************************************************/
