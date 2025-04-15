@@ -1235,6 +1235,17 @@ config ARM_FPU_ABI_SOFT
 	---help---
 		Pass float value via integer register (-mfloat-abi=softfp)
 
+config ARM_BUSY_WAIT
+	bool "Busy wait when boot"
+	default n
+	depends on ARCH_HAVE_MULTICPU
+	---help---
+		Enables busy wait when SMP boot
+
+config ARM_BUSY_WAIT_FLAG_ADDR
+	hex "Busy wait flag address"
+	depends on ARM_BUSY_WAIT
+
 config ARM_DPFPU32
 	bool "FPU with 32 double-precision register"
 	default y
