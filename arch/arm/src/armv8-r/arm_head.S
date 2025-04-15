@@ -134,39 +134,28 @@ __start:
 	mrc		CP15_MPIDR(r0)
 	and		r0, r0, #0x3
 	cmp		r0, #0
-#if defined(CONFIG_SMP) && CONFIG_SMP_NCPUS > 1
+#if CONFIG_NCPUS > 1
 	beq		__cpu0_start
 	wfe
 	cpsid		if			/* Disable IRQs and FIQs */
 	mov		fp, #0			/* Clear frame pointer */
 	cmp		r0, #1
 	beq		__cpu1_start
-#  if CONFIG_SMP_NCPUS > 2
+#  if CONFIG_NCPUS > 2
 	cmp		r0, #2
 	beq		__cpu2_start
 #  endif
-#  if CONFIG_SMP_NCPUS > 3
+#  if CONFIG_NCPUS > 3
 	cmp		r0, #3
 	beq		__cpu3_start
 #  endif
-#  if CONFIG_SMP_NCPUS > 4
-#  Warn Need work for CONFIG_SMP_NCPUS > 4
-	b		  __cpux_wfi
+#  if CONFIG_NCPUS > 4
+#    error This logic needs to extended for CONFIG_SMP_NCPUS > 4
 #  endif
 
-#else
-	beq		__cpu0_start
-#endif
-
-__cpux_wfi:
-
-  /* Clear all pending data access */
-
-	dsb		sy
-	wfi
-	b		__cpux_wfi
-
 __cpu0_start:
+
+#endif
 
 	/* Make sure that IRQs and FIQs are disabled */
 
