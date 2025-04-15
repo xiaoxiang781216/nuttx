@@ -32,7 +32,7 @@
 
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/netdev.h>
-#include <nuttx/mm/iob.h>
+#include <nuttx/net/can.h>
 
 #include "devif/devif.h"
 #include "can/can.h"
@@ -204,13 +204,18 @@ uint16_t can_datahandler(FAR struct net_driver_s *dev,
   int ret = 0;
 
 #if CONFIG_NET_RECV_BUFSIZE > 0
+#  if CONFIG_NET_CAN_NBUFFERS > 0
+  int bufnum = div_const_roundup(conn->rcvbufs, NET_CAN_PKTSIZE);
+#  else
+  int bufnum = div_const_roundup(conn->rcvbufs, CONFIG_IOB_BUFSIZE);
+#  endif
   /* Check the frame count pending on conn->readahead */
 
-  if (iob_get_queue_entry_count(&conn->readahead) >= conn->recv_buffnum)
+  if (iob_get_queue_entry_count(&conn->readahead) >= bufnum)
     {
       nwarn("WARNNING: There are no free recive buffer to retain the data. "
-            "Recive buffer number:%"PRId32", recived frames:%"PRIuPTR" \n",
-            conn->recv_buffnum, iob_get_queue_entry_count(&conn->readahead));
+            "Recive buffer number:%d, recived frames:%u \n",
+            bufnum, iob_get_queue_entry_count(&conn->readahead));
       goto errout;
     }
 #endif
