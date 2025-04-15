@@ -44,7 +44,6 @@
 #define RPMSG_VIRTIO_LITE_CMD_DONE   0x0
 #define RPMSG_VIRTIO_LITE_CMD_READY  0x1
 #define RPMSG_VIRTIO_LITE_CMD_PANIC  0x2
-#define RPMSG_VIRTIO_LITE_CMD_ACK    0xffff
 #define RPMSG_VIRTIO_LITE_CMD_MASK   0xffff
 #define RPMSG_VIRTIO_LITE_CMD_SHIFT  16
 
@@ -164,6 +163,46 @@
   ((d)->ops->notify ? (d)->ops->notify(d,v) : -ENOSYS)
 
 /****************************************************************************
+ * Name: RPMSG_VIRTIO_LITE_SEND_COMMAND
+ *
+ * Description:
+ *   Send command to the peer side. The function can not be implemented if
+ *   the resource table space will not be powered off by each side. and it
+ *   can resuse the RPMSG_VIRTIO_LITE_RSC2CMD to tranfer command.
+ *
+ * Input Parameters:
+ *   dev      - Device-specific state data
+ *   cmd      - CMD to be sent
+ *   wait      - True if need wait for the command has been received
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#define RPMSG_VIRTIO_LITE_SEND_COMMAND(d,c,a) \
+  ((d)->ops->send_command ? (d)->ops->send_command(d,c,w) : UNUSED(d))
+
+/****************************************************************************
+ * Name: RPMSG_VIRTIO_LITE_RECV_COMMAND
+ *
+ * Description:
+ *   Receive command from the peer side. The function can not be implemented
+ *   if the resource table space will not be powered off by each side. and it
+ *   can resuse the RPMSG_VIRTIO_LITE_RSC2CMD to tranfer command.
+ *
+ * Input Parameters:
+ *   dev      - Device-specific state data
+ *
+ * Returned Value:
+ *   CMD value received
+ *
+ ****************************************************************************/
+
+#define RPMSG_VIRTIO_LITE_RECV_COMMAND(d) \
+  ((d)->ops->recv_command ? (d)->ops->recv_command(d) : UINT32_MAX)
+
+/****************************************************************************
  * Public Types
  ****************************************************************************/
 
@@ -199,6 +238,9 @@ struct rpmsg_virtio_lite_ops_s
   CODE int (*register_callback)(FAR struct rpmsg_virtio_lite_s *dev,
                                 rpmsg_virtio_callback_t callback,
                                 FAR void *arg);
+  CODE void (*send_command)(FAR struct rpmsg_virtio_lite_s *dev,
+                            uint32_t cmd, bool wait);
+  CODE uint32_t (*recv_command)(FAR struct rpmsg_virtio_lite_s *dev);
 };
 
 struct rpmsg_virtio_lite_s

@@ -109,9 +109,6 @@ static void rpmsg_virtio_lite_notify(FAR struct virtqueue *vq);
 static void
 rpmsg_virtio_lite_send_command(FAR struct rpmsg_virtio_lite_priv_s *priv,
                                uint32_t cmd, bool wait);
-static uint32_t
-rpmsg_virtio_lite_recv_command(FAR struct rpmsg_virtio_lite_priv_s *priv,
-                               bool ack);
 
 /****************************************************************************
  * Private Data
@@ -575,11 +572,18 @@ rpmsg_virtio_lite_wakeup_rx(FAR struct rpmsg_virtio_lite_priv_s *priv)
 }
 
 static void
-rpmsg_virtio_lite_send_command(struct rpmsg_virtio_lite_priv_s *priv,
+rpmsg_virtio_lite_send_command(FAR struct rpmsg_virtio_lite_priv_s *priv,
                                uint32_t cmd, bool wait)
 {
   FAR struct rpmsg_virtio_lite_cmd_s *rpmsg_virtio_cmd =
     RPMSG_VIRTIO_LITE_RSC2CMD(priv->rsc);
+  uint32_t timeout = CONFIG_RPMSG_VIRTIO_LITE_CMD_TIMEOUT_MS;
+
+  if (priv->dev->ops->send_command)
+    {
+      priv->dev->ops->send_command(priv->dev, cmd, wait);
+      return;
+    }
 
   if (RPMSG_VIRTIO_LITE_IS_MASTER(priv->dev))
     {
@@ -592,57 +596,50 @@ rpmsg_virtio_lite_send_command(struct rpmsg_virtio_lite_priv_s *priv,
 
   rpmsg_virtio_lite_notify(priv->vdev.vrings_info->vq);
 
-  if (wait)
+  /* Wait until the peer side has received the commnand */
+
+  while (wait && timeout-- > 0)
     {
-      uint32_t timeout = CONFIG_RPMSG_VIRTIO_LITE_CMD_TIMEOUT_MS;
-
-      while (timeout-- > 0)
+      if (RPMSG_VIRTIO_LITE_IS_MASTER(priv->dev))
         {
-          uint32_t ack = rpmsg_virtio_lite_recv_command(priv, false);
-
-          if (RPMSG_VIRTIO_LITE_GET_CMD(ack) == RPMSG_VIRTIO_LITE_CMD_ACK)
-            {
-              break;
-            }
-
-          up_mdelay(1);
+          cmd = rpmsg_virtio_cmd->cmd_master;
         }
+      else
+        {
+          cmd = rpmsg_virtio_cmd->cmd_slave;
+        }
+
+      if (RPMSG_VIRTIO_LITE_GET_CMD(cmd) == RPMSG_VIRTIO_LITE_CMD_DONE)
+        {
+          break;
+        }
+
+      up_mdelay(1);
     }
 }
 
 static uint32_t
-rpmsg_virtio_lite_recv_command(FAR struct rpmsg_virtio_lite_priv_s *priv,
-                               bool ack)
+rpmsg_virtio_lite_recv_command(FAR struct rpmsg_virtio_lite_priv_s *priv)
 {
   FAR struct rpmsg_virtio_lite_cmd_s *rpmsg_virtio_cmd =
     RPMSG_VIRTIO_LITE_RSC2CMD(priv->rsc);
   uint32_t cmd;
 
+  if (priv->dev->ops->recv_command)
+    {
+      cmd = priv->dev->ops->recv_command(priv->dev);
+      return cmd;
+    }
+
   if (RPMSG_VIRTIO_LITE_IS_MASTER(priv->dev))
     {
-      if (rpmsg_virtio_cmd->cmd_slave == RPMSG_VIRTIO_LITE_CMD_DONE)
-        {
-          return RPMSG_VIRTIO_LITE_CMD_DONE;
-        }
-
       cmd = rpmsg_virtio_cmd->cmd_slave;
       rpmsg_virtio_cmd->cmd_slave = RPMSG_VIRTIO_LITE_CMD_DONE;
     }
   else
     {
-      if (rpmsg_virtio_cmd->cmd_master == RPMSG_VIRTIO_LITE_CMD_DONE)
-        {
-          return RPMSG_VIRTIO_LITE_CMD_DONE;
-        }
-
       cmd = rpmsg_virtio_cmd->cmd_master;
       rpmsg_virtio_cmd->cmd_master = RPMSG_VIRTIO_LITE_CMD_DONE;
-    }
-
-  if (ack)
-    {
-      rpmsg_virtio_lite_send_command(priv,
-        RPMSG_VIRTIO_LITE_CMD(RPMSG_VIRTIO_LITE_CMD_ACK, 0), false);
     }
 
   return cmd;
@@ -651,7 +648,7 @@ rpmsg_virtio_lite_recv_command(FAR struct rpmsg_virtio_lite_priv_s *priv,
 static void
 rpmsg_virtio_lite_check_command(FAR struct rpmsg_virtio_lite_priv_s *priv)
 {
-  uint32_t cmd = rpmsg_virtio_lite_recv_command(priv, true);
+  uint32_t cmd = rpmsg_virtio_lite_recv_command(priv);
 
   switch (RPMSG_VIRTIO_LITE_GET_CMD(cmd))
     {
