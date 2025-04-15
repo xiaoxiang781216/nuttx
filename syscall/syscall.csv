@@ -100,6 +100,8 @@
 "nxsem_unlink","nuttx/semaphore.h","defined(CONFIG_FS_NAMED_SEMAPHORES)","int","FAR const char *"
 "nxsem_wait","nuttx/semaphore.h","","int","FAR sem_t *"
 "open","fcntl.h","","int","FAR const char *","int","...","mode_t"
+"perf_gettime","nuttx/clock.h","","clock_t"
+"perf_convert","nuttx/clock.h","","void","clock_t","FAR struct timespec *"
 "pgalloc", "nuttx/arch.h", "defined(CONFIG_BUILD_KERNEL)", "uintptr_t", "uintptr_t", "unsigned int"
 "pipe2","unistd.h","defined(CONFIG_PIPES) && CONFIG_DEV_PIPE_SIZE > 0","int","int [2]|FAR int *","int"
 "poll","poll.h","","int","FAR struct pollfd *","nfds_t","int"

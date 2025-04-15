@@ -178,6 +178,11 @@ SYSCALL_LOOKUP(clock_settime,              2)
   SYSCALL_LOOKUP(adjtime,                  2)
 #endif
 
+/* Perf monitoring cycle counters */
+
+SYSCALL_LOOKUP(perf_gettime,               0)
+SYSCALL_LOOKUP(perf_convert,               2)
+
 /* The following are defined only if POSIX timers are supported */
 
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
