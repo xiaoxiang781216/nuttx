@@ -941,6 +941,17 @@ FAR struct tcb_s *nxsched_get_tcb_by_index(int index);
 void nxsched_put_tcb(FAR struct tcb_s *tcb);
 
 /****************************************************************************
+ * Name: nxsched_verify_pid
+ *
+ * Description:
+ *   Given a task ID, this function will check whether the
+ *   TCB corresponding to the PID exists.
+ *
+ ****************************************************************************/
+
+bool nxsched_verify_pid(pid_t pid);
+
+/****************************************************************************
  * Name:  nxsched_release_tcb
  *
  * Description:

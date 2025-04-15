@@ -432,17 +432,6 @@ void nxsched_critmon_csection(FAR struct tcb_s *tcb, bool state,
                               FAR void *caller);
 #endif
 
-/****************************************************************************
- * Name: nxsched_verify_pid
- *
- * Description:
- *   Given a task ID, this function will check whether the
- *   TCB corresponding to the PID exists.
- *
- ****************************************************************************/
-
-bool nxsched_verify_pid(pid_t pid);
-
 /* Obtain TLS from kernel */
 
 struct tls_info_s; /* Forward declare */
