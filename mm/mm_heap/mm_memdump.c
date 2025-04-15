@@ -31,6 +31,7 @@
 #include <debug.h>
 #include <execinfo.h>
 #include <sys/prctl.h>
+#include <nuttx/sched.h>
 #include <nuttx/mm/mm.h>
 
 #include "mm_heap/mm.h"

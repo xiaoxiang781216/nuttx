@@ -29,6 +29,7 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/sched.h>
 #include <nuttx/mm/mm.h>
 
 #include "mm_heap/mm.h"
