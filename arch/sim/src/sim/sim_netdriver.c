@@ -70,6 +70,7 @@
 #include <nuttx/net/pkt.h>
 
 #include "sim_internal.h"
+#include "sim_wifihost.h"
 
 #define SIM_NETDEV_BUFSIZE (CONFIG_SIM_NETDEV_MTU + ETH_HDRLEN + \
                             CONFIG_NET_GUARDSIZE)
@@ -87,19 +88,21 @@
 #define DEVIDX(p) ((struct sim_netdev_s *)(p) - g_sim_dev)
 #define DEVBUF(p) (((struct sim_netdev_s *)(p))->buf)
 
-#if CONFIG_SIM_WIFIDEV_NUMBER != 0
-#  include "sim_wifidriver.c"
-#else
+#define IDXDEV(i) ((struct netdev_lowerhalf_s *)(&g_sim_dev[i].dev))
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
 
 struct sim_netdev_s
 {
+#if CONFIG_SIM_WIFIDEV_NUMBER != 0
+  struct sim_wifihost_lowerhalf_s dev;
+#else
   struct netdev_lowerhalf_s dev;
+#endif
   uint8_t buf[SIM_NETDEV_BUFSIZE]; /* Used when packet buffer is fragmented */
 };
-#endif
 
 /****************************************************************************
  * Private Function Prototypes
@@ -197,7 +200,7 @@ static int netdriver_ifup(struct netdev_lowerhalf_s *dev)
 #if CONFIG_SIM_WIFIDEV_NUMBER != 0
   if (DEVIDX(dev) < CONFIG_SIM_WIFIDEV_NUMBER)
     {
-      if (wifidriver_connected(dev))
+      if (sim_wifihost_connected((struct sim_wifihost_lowerhalf_s *)dev))
         {
           netdev_lower_carrier_on(dev);
         }
@@ -241,7 +244,7 @@ int sim_netdriver_init(void)
 
   for (devidx = 0; devidx < CONFIG_SIM_NETDEV_NUMBER; devidx++)
     {
-      dev = &g_sim_dev[devidx].dev;
+      dev = IDXDEV(devidx);
 
       /* Internal initialization */
 
@@ -258,7 +261,8 @@ int sim_netdriver_init(void)
 #if CONFIG_SIM_WIFIDEV_NUMBER != 0
       if (devidx < CONFIG_SIM_WIFIDEV_NUMBER)
         {
-          wifidriver_init(dev, devidx);
+          sim_wifihost_init((struct sim_wifihost_lowerhalf_s *)dev,
+                            devidx);
         }
 #endif
 
@@ -275,13 +279,13 @@ int sim_netdriver_init(void)
 
 void sim_netdriver_setmacaddr(int devidx, unsigned char *macaddr)
 {
-  memcpy(g_sim_dev[devidx].dev.netdev.d_mac.ether.ether_addr_octet, macaddr,
+  memcpy(IDXDEV(devidx)->netdev.d_mac.ether.ether_addr_octet, macaddr,
          IFHWADDRLEN);
 }
 
 void sim_netdriver_setmtu(int devidx, int mtu)
 {
-  g_sim_dev[devidx].dev.netdev.d_pktsize = MIN(SIM_NETDEV_BUFSIZE,
+  IDXDEV(devidx)->netdev.d_pktsize = MIN(SIM_NETDEV_BUFSIZE,
                                                mtu + ETH_HDRLEN);
 }
 
@@ -292,7 +296,7 @@ void sim_netdriver_loop(void)
     {
       if (sim_netdev_avail(devidx))
         {
-          netdev_lower_rxready(&g_sim_dev[devidx].dev);
+          netdev_lower_rxready(IDXDEV(devidx));
         }
     }
 }

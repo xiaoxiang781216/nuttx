@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/sim/src/sim/sim_wifidriver.c
+ * arch/sim/src/sim/sim_wifihost.c
  * Manage the host wireless
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -34,6 +34,7 @@
 #include <sys/time.h>
 
 #include "sim_internal.h"
+#include "sim_wifihost.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -104,6 +105,9 @@
     ret__;                                                       \
   })
 
+#define NETDEV2WIFI(dev) \
+  ((struct sim_wifi_s *)((struct sim_wifihost_lowerhalf_s *)dev)->wifi)
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -154,10 +158,9 @@ struct sim_bss_info_s
   int16_t snr;                  /* average SNR of during frame reception */
 };
 
-struct sim_netdev_s
+struct sim_wifi_s
 {
-  struct netdev_lowerhalf_s dev;
-  uint8_t buf[SIM_NETDEV_BUFSIZE]; /* Used when packet buffer is fragmented */
+  struct netdev_lowerhalf_s *dev;
   char ssid[SSID_MAX_LEN];
   char bssid[ETH_ALEN];
   uint16_t channel;
@@ -255,7 +258,7 @@ static const struct wireless_ops_s g_iw_ops =
  * Private Functions
  ****************************************************************************/
 
-static int get_cmd_result_num(struct sim_netdev_s *wifidev, char *cmd)
+static int get_cmd_result_num(struct sim_wifi_s *wifidev, char *cmd)
 {
   int num = 0;
   char rbuf[BUF_LEN];
@@ -275,21 +278,21 @@ static int get_cmd_result_num(struct sim_netdev_s *wifidev, char *cmd)
 
 /* For sta, add an available network. */
 
-static int wpa_add_network(struct sim_netdev_s *wifidev)
+static int wpa_add_network(struct sim_wifi_s *wifidev)
 {
   return get_cmd_result_num(wifidev, "add_network");
 }
 
 /* For sta, get the number of available networks. */
 
-static int wpa_get_network_num(struct sim_netdev_s *wifidev)
+static int wpa_get_network_num(struct sim_wifi_s *wifidev)
 {
   return get_cmd_result_num(wifidev, "list_network | grep \"\\[\" | wc -l");
 }
 
 /* For sta, get the available network_id. */
 
-static int wpa_get_last_network_id(struct sim_netdev_s *wifidev,
+static int wpa_get_last_network_id(struct sim_wifi_s *wifidev,
                                    int network_num)
 {
   int num;
@@ -821,7 +824,7 @@ static int get_bss_info(struct sim_bss_info_s *bss_info, char *buf, int len)
   return OK;
 }
 
-static int get_scan_results(struct sim_netdev_s *wifidev,
+static int get_scan_results(struct sim_wifi_s *wifidev,
                             struct sim_scan_result_s *scan_reqs)
 {
   int ret;
@@ -896,7 +899,7 @@ get_scan:
   return ret;
 }
 
-static bool get_wpa_state(struct sim_netdev_s *wifidev)
+static bool get_wpa_state(struct sim_wifi_s *wifidev)
 {
   int ret;
   char rbuf[BUF_LEN];
@@ -912,7 +915,7 @@ static bool get_wpa_state(struct sim_netdev_s *wifidev)
   return false;
 }
 
-static bool get_wpa_bssid(struct sim_netdev_s *wifidev,
+static bool get_wpa_bssid(struct sim_wifi_s *wifidev,
                           unsigned char *bssid)
 {
   int ret;
@@ -929,7 +932,7 @@ static bool get_wpa_bssid(struct sim_netdev_s *wifidev,
   return false;
 }
 
-static bool get_wpa_rssi(struct sim_netdev_s *wifidev, int32_t *rssi)
+static bool get_wpa_rssi(struct sim_wifi_s *wifidev, int32_t *rssi)
 {
   int ret;
   char rbuf[BUF_LEN];
@@ -946,14 +949,14 @@ static bool get_wpa_rssi(struct sim_netdev_s *wifidev, int32_t *rssi)
   return false;
 }
 
-static void get_wpa_ssid(struct sim_netdev_s *wifidev,
+static void get_wpa_ssid(struct sim_wifi_s *wifidev,
                          struct iw_point *essid)
 {
   essid->length = strlen(wifidev->ssid);
   strlcpy(essid->pointer, wifidev->ssid, essid->length + 1);
 }
 
-static int get_wpa_freq(struct sim_netdev_s *wifidev)
+static int get_wpa_freq(struct sim_wifi_s *wifidev)
 {
   return get_cmd_result_num(wifidev,
                             "status | grep freq | awk -F'=' '{print $2}'");
@@ -1073,7 +1076,7 @@ static int wifi_send_event(struct net_driver_s *dev, unsigned int cmd,
   return OK;
 }
 
-static int wifidriver_start_scan(struct sim_netdev_s *wifidev,
+static int wifidriver_start_scan(struct sim_wifi_s *wifidev,
                                  struct iwreq *pwrq)
 {
   int ret;
@@ -1108,7 +1111,7 @@ static int wifidriver_start_scan(struct sim_netdev_s *wifidev,
   return ret;
 }
 
-static int wifidriver_scan_result(struct sim_netdev_s *wifidev,
+static int wifidriver_scan_result(struct sim_wifi_s *wifidev,
                                struct iwreq *pwrq)
 {
   struct sim_scan_result_s scan_req;
@@ -1137,7 +1140,7 @@ static int wifidriver_scan_result(struct sim_netdev_s *wifidev,
   return ret;
 }
 
-static int wifidriver_set_auth(struct sim_netdev_s *wifidev,
+static int wifidriver_set_auth(struct sim_wifi_s *wifidev,
                                struct iwreq *pwrq)
 {
   int ret = 0;
@@ -1208,7 +1211,7 @@ static int wifidriver_set_auth(struct sim_netdev_s *wifidev,
   return ret;
 }
 
-static int wifidriver_get_auth(struct sim_netdev_s *wifidev,
+static int wifidriver_get_auth(struct sim_wifi_s *wifidev,
                                struct iwreq *pwrq)
 {
   int ret = 0;
@@ -1231,7 +1234,7 @@ static int wifidriver_get_auth(struct sim_netdev_s *wifidev,
   return ret;
 }
 
-static int wifidriver_set_psk(struct sim_netdev_s *wifidev,
+static int wifidriver_set_psk(struct sim_wifi_s *wifidev,
                               struct iwreq *pwrq)
 {
   struct iw_encode_ext *ext;
@@ -1285,7 +1288,7 @@ static int wifidriver_set_psk(struct sim_netdev_s *wifidev,
   return ret ;
 }
 
-static int wifidriver_get_psk(struct sim_netdev_s *wifidev,
+static int wifidriver_get_psk(struct sim_wifi_s *wifidev,
                               struct iwreq *pwrq)
 {
   struct iw_encode_ext *ext;
@@ -1321,7 +1324,7 @@ static int wifidriver_get_psk(struct sim_netdev_s *wifidev,
   return ret ;
 }
 
-static int wifidriver_set_essid(struct sim_netdev_s *wifidev,
+static int wifidriver_set_essid(struct sim_wifi_s *wifidev,
                              struct iwreq *pwrq)
 {
   char ssid_buf[SSID_MAX_LEN];
@@ -1377,7 +1380,7 @@ static int wifidriver_set_essid(struct sim_netdev_s *wifidev,
   return ret;
 }
 
-static int wifidriver_get_essid(struct sim_netdev_s *wifidev,
+static int wifidriver_get_essid(struct sim_wifi_s *wifidev,
                              struct iwreq *pwrq)
 {
   int ret = 0;
@@ -1412,7 +1415,7 @@ static int wifidriver_get_essid(struct sim_netdev_s *wifidev,
   return ret;
 }
 
-static int wifidriver_set_bssid(struct sim_netdev_s *wifidev,
+static int wifidriver_set_bssid(struct sim_wifi_s *wifidev,
                              struct iwreq *pwrq)
 {
   int ret = 0;
@@ -1451,7 +1454,7 @@ static int wifidriver_set_bssid(struct sim_netdev_s *wifidev,
   return ret;
 }
 
-static int wifidriver_get_bssid(struct sim_netdev_s *wifidev,
+static int wifidriver_get_bssid(struct sim_wifi_s *wifidev,
                                 struct iwreq *pwrq)
 {
   struct sockaddr *sockaddr = &pwrq->u.ap_addr;
@@ -1483,7 +1486,7 @@ static int wifidriver_get_bssid(struct sim_netdev_s *wifidev,
   return ret;
 }
 
-static int wifidriver_start_connect(struct sim_netdev_s *wifidev)
+static int wifidriver_start_connect(struct sim_wifi_s *wifidev)
 {
   int timeout = 10;
 
@@ -1517,7 +1520,7 @@ static int wifidriver_start_connect(struct sim_netdev_s *wifidev)
 
                memset(&wrqu, 0, sizeof(wrqu));
                memcpy(wrqu.ap_addr.sa_data, bssid, ETH_ALEN);
-               wifi_send_event(&wifidev->dev.netdev, SIOCGIWAP, &wrqu);
+               wifi_send_event(&wifidev->dev->netdev, SIOCGIWAP, &wrqu);
                return OK;
              }
 
@@ -1542,7 +1545,7 @@ static int wifidriver_start_connect(struct sim_netdev_s *wifidev)
   return OK;
 }
 
-static int wifidriver_start_disconnect(struct sim_netdev_s *wifidev)
+static int wifidriver_start_disconnect(struct sim_wifi_s *wifidev)
 {
   int ret;
 
@@ -1562,14 +1565,14 @@ static int wifidriver_start_disconnect(struct sim_netdev_s *wifidev)
   return ret;
 }
 
-static int wifidriver_get_mode(struct sim_netdev_s *wifidev,
+static int wifidriver_get_mode(struct sim_wifi_s *wifidev,
                                struct iwreq *pwrq)
 {
   pwrq->u.mode = wifidev->mode;
   return OK;
 }
 
-static int wifidriver_set_mode(struct sim_netdev_s *wifidev,
+static int wifidriver_set_mode(struct sim_wifi_s *wifidev,
                                struct iwreq *pwrq)
 {
   int ret;
@@ -1636,7 +1639,7 @@ static int wifidriver_set_mode(struct sim_netdev_s *wifidev,
   return ret;
 }
 
-static int wifidriver_set_country(struct sim_netdev_s *wifidev,
+static int wifidriver_set_country(struct sim_wifi_s *wifidev,
                                struct iwreq *pwrq)
 {
   char country[4] =
@@ -1656,7 +1659,7 @@ static int wifidriver_set_country(struct sim_netdev_s *wifidev,
   return set_cmd(wifidev, "set country %s", country);
 }
 
-static int wifidriver_get_country(struct sim_netdev_s *wifidev,
+static int wifidriver_get_country(struct sim_wifi_s *wifidev,
                                struct iwreq *pwrq)
 {
   char country[128];
@@ -1694,7 +1697,7 @@ static int wifidriver_get_country(struct sim_netdev_s *wifidev,
   return ret;
 }
 
-static int wifidriver_get_sensitivity(struct sim_netdev_s *wifidev,
+static int wifidriver_get_sensitivity(struct sim_wifi_s *wifidev,
                                       struct iwreq *pwrq)
 {
   int32_t rssi;
@@ -1720,7 +1723,7 @@ static int wifidriver_get_sensitivity(struct sim_netdev_s *wifidev,
   return ret;
 }
 
-int wifidriver_set_freq(struct sim_netdev_s *wifidev, struct iwreq *pwrq)
+int wifidriver_set_freq(struct sim_wifi_s *wifidev, struct iwreq *pwrq)
 {
   int channel;
   int ret = 0;
@@ -1745,7 +1748,7 @@ int wifidriver_set_freq(struct sim_netdev_s *wifidev, struct iwreq *pwrq)
   return ret;
 }
 
-static int wifidriver_get_freq(struct sim_netdev_s *wifidev,
+static int wifidriver_get_freq(struct sim_wifi_s *wifidev,
                                struct iwreq *pwrq)
 {
   switch (wifidev->mode)
@@ -1773,7 +1776,7 @@ static int wifidriver_get_freq(struct sim_netdev_s *wifidev,
   return OK;
 }
 
-static int wifidriver_get_range(struct sim_netdev_s *wifidev,
+static int wifidriver_get_range(struct sim_wifi_s *wifidev,
                              struct iwreq *pwrq)
 {
   int k;
@@ -1796,7 +1799,7 @@ static int wifidriver_connect(struct netdev_lowerhalf_s *dev)
 {
   int ret;
 
-  ret = wifidriver_start_connect((struct sim_netdev_s *)dev);
+  ret = wifidriver_start_connect(NETDEV2WIFI(dev));
   if (ret >= 0)
     {
       netdev_lower_carrier_on(dev);
@@ -1810,7 +1813,7 @@ static int wifidriver_disconnect(struct netdev_lowerhalf_s *dev)
   int ret;
   union iwreq_data wrqu;
 
-  ret = wifidriver_start_disconnect((struct sim_netdev_s *)dev);
+  ret = wifidriver_start_disconnect(NETDEV2WIFI(dev));
   if (ret >= 0)
     {
       netdev_lower_carrier_off(dev);
@@ -1825,7 +1828,7 @@ static int wifidriver_disconnect(struct netdev_lowerhalf_s *dev)
 static int wifidriver_essid(struct netdev_lowerhalf_s *dev,
                             struct iwreq *iwr, bool set)
 {
-  struct sim_netdev_s *wifidev = (struct sim_netdev_s *)dev;
+  struct sim_wifi_s *wifidev = NETDEV2WIFI(dev);
 
   if (set)
     {
@@ -1841,7 +1844,7 @@ static int wifidriver_bssid(struct netdev_lowerhalf_s *dev,
                             struct iwreq *iwr, bool set)
 {
   int ret;
-  struct sim_netdev_s *wifidev = (struct sim_netdev_s *)dev;
+  struct sim_wifi_s *wifidev = NETDEV2WIFI(dev);
 
   if (set)
     {
@@ -1864,18 +1867,18 @@ static int wifidriver_passwd(struct netdev_lowerhalf_s *dev,
 {
   if (set)
     {
-      return wifidriver_set_psk((struct sim_netdev_s *)dev, iwr);
+      return wifidriver_set_psk(NETDEV2WIFI(dev), iwr);
     }
   else
     {
-      return wifidriver_get_psk((struct sim_netdev_s *)dev, iwr);
+      return wifidriver_get_psk(NETDEV2WIFI(dev), iwr);
     }
 }
 
 static int wifidriver_mode(struct netdev_lowerhalf_s *dev,
                            struct iwreq *iwr, bool set)
 {
-  struct sim_netdev_s *wifidev = (struct sim_netdev_s *)dev;
+  struct sim_wifi_s *wifidev = NETDEV2WIFI(dev);
 
   if (set)
     {
@@ -1890,7 +1893,7 @@ static int wifidriver_mode(struct netdev_lowerhalf_s *dev,
 static int wifidriver_auth(struct netdev_lowerhalf_s *dev,
                            struct iwreq *iwr, bool set)
 {
-  struct sim_netdev_s *wifidev = (struct sim_netdev_s *)dev;
+  struct sim_wifi_s *wifidev = NETDEV2WIFI(dev);
 
   if (set)
     {
@@ -1905,7 +1908,7 @@ static int wifidriver_auth(struct netdev_lowerhalf_s *dev,
 static int wifidriver_freq(struct netdev_lowerhalf_s *dev,
                            struct iwreq *iwr, bool set)
 {
-  struct sim_netdev_s *wifidev = (struct sim_netdev_s *)dev;
+  struct sim_wifi_s *wifidev = NETDEV2WIFI(dev);
 
   if (set)
     {
@@ -1932,7 +1935,7 @@ static int wifidriver_txpower(struct netdev_lowerhalf_s *dev,
 static int wifidriver_country(struct netdev_lowerhalf_s *dev,
                               struct iwreq *iwr, bool set)
 {
-  struct sim_netdev_s *wifidev = (struct sim_netdev_s *)dev;
+  struct sim_wifi_s *wifidev = NETDEV2WIFI(dev);
 
   if (set)
     {
@@ -1947,7 +1950,7 @@ static int wifidriver_country(struct netdev_lowerhalf_s *dev,
 static int wifidriver_sensitivity(struct netdev_lowerhalf_s *dev,
                                   struct iwreq *iwr, bool set)
 {
-  struct sim_netdev_s *wifidev = (struct sim_netdev_s *)dev;
+  struct sim_wifi_s *wifidev = NETDEV2WIFI(dev);
 
   if (set)
     {
@@ -1962,7 +1965,7 @@ static int wifidriver_sensitivity(struct netdev_lowerhalf_s *dev,
 static int wifidriver_scan(struct netdev_lowerhalf_s *dev,
                            struct iwreq *iwr, bool set)
 {
-  struct sim_netdev_s *wifidev = (struct sim_netdev_s *)dev;
+  struct sim_wifi_s *wifidev = NETDEV2WIFI(dev);
 
   if (set)
     {
@@ -1977,12 +1980,20 @@ static int wifidriver_scan(struct netdev_lowerhalf_s *dev,
 static int wifidriver_range(struct netdev_lowerhalf_s *dev,
                             struct iwreq *iwr)
 {
-  return wifidriver_get_range((struct sim_netdev_s *)dev, iwr);
+  return wifidriver_get_range(NETDEV2WIFI(dev), iwr);
 }
 
-static bool wifidriver_connected(struct netdev_lowerhalf_s *dev)
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: sim_wifihost_connected
+ ****************************************************************************/
+
+bool sim_wifihost_connected(struct sim_wifihost_lowerhalf_s *dev)
 {
-  struct sim_netdev_s *wifidev = (struct sim_netdev_s *)dev;
+  struct sim_wifi_s *wifidev = (struct sim_wifi_s *)dev->wifi;
 
   if (wifidev->mode == IW_MODE_MASTER)
     {
@@ -1996,21 +2007,36 @@ static bool wifidriver_connected(struct netdev_lowerhalf_s *dev)
   return false;
 }
 
-static void wifidriver_init(struct netdev_lowerhalf_s *dev, int devidx)
-{
-  struct sim_netdev_s *wifidev = (struct sim_netdev_s *)dev;
+/****************************************************************************
+ * Name: sim_wifihost_init
+ ****************************************************************************/
 
-  wifidev->mode = IW_MODE_AUTO;
-  wifidev->devidx = devidx;
+int sim_wifihost_init(struct sim_wifihost_lowerhalf_s *dev, int devidx)
+{
+  struct sim_wifi_s *priv;
+
+  priv = kmm_zalloc(sizeof(*priv));
+  if (priv == NULL)
+    {
+      nerr("wifi driver priv alloc failed\n");
+      return -ENOMEM;
+    }
+
+  dev->wifi    = priv;
+  priv->dev    = &dev->lower;
+  priv->mode   = IW_MODE_AUTO;
+  priv->devidx = devidx;
+
+  /* Bind the wireless ops interfaces. */
+
+  dev->lower.iw_ops  = &g_iw_ops;
 
   /* The default host wlan interface name is corresponding to the nuttx
    * wlan interface name. If not, should modify the host wlan interface
    * name.
    */
 
-  snprintf(wifidev->host_ifname, IFNAMSIZ, "wlan%d", devidx);
+  snprintf(priv->host_ifname, IFNAMSIZ, "wlan%d", devidx);
 
-  /* Bind the wireless ops interfaces. */
-
-  dev->iw_ops = &g_iw_ops;
+  return OK;
 }
