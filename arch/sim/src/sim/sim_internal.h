@@ -98,7 +98,7 @@
 
 /* Size of the simulated heap */
 
-#define SIM_HEAP_SIZE (64*1024*1024)
+#define SIM_HEAP_SIZE (512*1024*1024U)
 
 /* Macros to handle saving and restoring interrupt state ********************/
 

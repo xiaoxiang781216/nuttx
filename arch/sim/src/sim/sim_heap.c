@@ -576,6 +576,8 @@ struct mallinfo mm_mallinfo(struct mm_heap_s *heap)
   info.aordblks = atomic_load(&heap->aordblks);
   info.uordblks = atomic_load(&heap->uordblks);
   info.usmblks  = atomic_load(&heap->usmblks);
+  info.arena    = SIM_HEAP_SIZE;
+  info.fordblks = SIM_HEAP_SIZE - info.uordblks;
   return info;
 }
 
@@ -662,7 +664,9 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
 size_t mm_heapfree(struct mm_heap_s *heap)
 {
-  return SIZE_MAX;
+  struct mallinfo info;
+  info = mm_mallinfo(heap);
+  return info.fordblks;
 }
 
 /****************************************************************************
@@ -675,7 +679,7 @@ size_t mm_heapfree(struct mm_heap_s *heap)
 
 size_t mm_heapfree_largest(FAR struct mm_heap_s *heap)
 {
-  return SIZE_MAX;
+  return mm_heapfree(heap);
 }
 
 #else /* CONFIG_MM_CUSTOMIZE_MANAGER */
