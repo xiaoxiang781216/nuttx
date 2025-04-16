@@ -271,12 +271,14 @@ class ParseBinaryLogTool:
         binary_log_path,
         elf_nuttx_path,
         out_path=None,
+        perf_freq=100e6,
         size_long=4,
         config_endian_big=False,
     ):
         self.binary_log_path = binary_log_path
         self.elf_nuttx_path = elf_nuttx_path
         self.out_path = out_path
+        self.perf_freq = perf_freq
         self.symbol_tables = SymbolTables(self.elf_nuttx_path)
         self.symbol_tables.parse_symbol()
         with open(self.binary_log_path, "rb") as f:
@@ -284,8 +286,16 @@ class ParseBinaryLogTool:
         self.parsed = list()
         self.task_name_dict = dict()
         self.size_long = size_long
-        self.size_note_common = 3 + size_long * 3
         self.config_endian_big = config_endian_big
+        self.symbol_tables.typeinfo["time_t"] = "int%d" % (
+            self.symbol_tables.get_typesize("time_t") * 8
+        )
+        self.symbol_tables.typeinfo["clock_t"] = "int%d" % (
+            self.symbol_tables.get_typesize("clock_t") * 8
+        )
+        self.symbol_tables.typeinfo["uintptr_t"] = "int%d" % (
+            self.symbol_tables.get_typesize("uintptr_t") * 8
+        )
 
     def parse_by_endian(self, lis):
         res = [hex(e)[2:] for e in lis]  # strip prefix "0x"
@@ -303,38 +313,53 @@ class ParseBinaryLogTool:
         one.add("uint8", "nc_type")
         one.add("uint8", "nc_priority")
         one.add("uint8", "nc_cpu")
-        one.add("uint8", "nc_pid", self.size_long)
-        one.add("uint8", "nc_systime_sec", self.size_long)
-        one.add("uint8", "nc_systime_nsec", self.size_long)
+        one.add(self.symbol_tables.typeinfo["pid_t"], "nc_pid")
+        one.add(self.symbol_tables.typeinfo["clock_t"], "nc_systime")
         res = one.deserialize(self.in_bytes, st)
+
+        # check length
+        if res["nc_length"] == 0:
+            return res
 
         # case type
         if res["nc_type"] == 0:
-            one.add("uint8", "nsa_name", res["nc_length"] - self.size_note_common)
-        elif res["nc_type"] == 22:
-            one.add("uint8", "nst_ip", self.size_long)  # pointer of func
-            one.add("uint8", "nst_data")  # B|E
+            one.add("uint8", "nst_name", res["nc_length"] - one.size())
         elif res["nc_type"] == 20:  # case: NOTE_IRQ_ENTER
+            one.add(self.symbol_tables.typeinfo["uintptr_t"], "nih_handler")
             one.add("uint8", "nih_irq")
         elif res["nc_type"] == 21:  # case: NOTE_IRQ_LEAVE
+            one.add(self.symbol_tables.typeinfo["uintptr_t"], "nih_handler")
             one.add("uint8", "nih_irq")
+        elif res["nc_type"] == 30:  # case: NOTE_DUMP_PRINTF
+            one.add(self.symbol_tables.typeinfo["uintptr_t"], "npt_ip")
+            one.add(self.symbol_tables.typeinfo["uintptr_t"], "npt_fmt")
+            one.add("uint32", "npt_tag")
+            one.add("uint32", "npt_type")
+            if res["nc_length"] - one.size() > 0:
+                one.add("uint8", "npt_data", (res["nc_length"] - one.size()))
+        elif 31 <= res["nc_type"] <= 36:  # case: NOTE_DUMP_BEGIN ~ NOTE_DUMP_THREADTIME
+            one.add(self.symbol_tables.typeinfo["uintptr_t"], "nev_ip")
+            one.add("uint32", "nev_tag")
+            if res["nc_length"] - one.size() > 0:
+                one.add("uint8", "nev_data", (res["nc_length"] - one.size()))
         else:
             print(f'skipped note, nc_type={res["nc_type"]}')
 
         res = one.deserialize(self.in_bytes, st)
         # parse pid, systime ...
-        res["nc_pid"] = self.parse_by_endian(res["nc_pid"])[0]
-        res["nc_systime_sec"] = self.parse_by_endian(res["nc_systime_sec"])[0]
-        res["nc_systime_nsec"] = self.parse_by_endian(res["nc_systime_nsec"])[0]
-        if "nst_ip" in res:
-            res["nst_ip"] = self.parse_by_endian(res["nst_ip"])[1]
+        if "npt_fmt" in res:
+            res["npt_fmt"] = hex(res["npt_fmt"])
+        if "npt_ip" in res:
+            res["npt_ip"] = hex(res["npt_ip"])
+        if "nev_ip" in res:
+            res["nev_ip"] = hex(res["nev_ip"])
 
         # parse cpu, name ...
         if "nc_cpu" not in res:
             res["nc_cpu"] = 0
-        if "nsa_name" in res:
-            nsa_name = "".join(chr(i) for i in res["nsa_name"][:-1])
-            self.task_name_dict[res["nc_pid"]] = nsa_name
+        if "nst_name" in res:
+            nst_name = "".join(chr(i) for i in res["nst_name"][:-1])
+            self.task_name_dict[res["nc_pid"]] = nst_name
         if "nst_data" in res:
             res["nst_data"] = chr(res["nst_data"])
         return res
@@ -343,39 +368,97 @@ class ParseBinaryLogTool:
         nc_type = one["nc_type"]
         nc_pid = one["nc_pid"]
         nc_cpu = one["nc_cpu"]
-        nsa_name = self.task_name_dict.get(nc_pid, "noname")
-        float_time = float(
-            str(one["nc_systime_sec"]) + "." + str(one["nc_systime_nsec"])
-        )
+        nst_name = self.task_name_dict.get(nc_pid, "noname")
+        float_time = one["nc_systime"] / self.perf_freq
 
         # case nc_type
         a_model, other_model = None, None
         if nc_type == 0:  # case: NOTE_START
             payload = (
-                f"sched_wakeup_new: comm={nsa_name} pid={nc_pid} target_cpu={nc_cpu}"
+                f"sched_wakeup_new: comm={nst_name} pid={nc_pid} target_cpu={nc_cpu}"
             )
             other_model = OtherModel(payload="").parse(payload)
         if nc_type == 3:  # case: NOTE_RESUME
-            payload = f"sched_waking: comm={nsa_name} pid={nc_pid} target_cpu={nc_cpu}"
+            payload = f"sched_waking: comm={nst_name} pid={nc_pid} target_cpu={nc_cpu}"
             other_model = OtherModel(payload="").parse(payload)
-        if nc_type == 22:  # case: NOTE_DUMP_STRING
-            func_name = self.symbol_tables.symbol_dict.get(
-                int(one["nst_ip"], 16), "no_func_name"
-            )
-            payload = f'tracing_mark_write: {one["nst_data"]}|{nc_pid}|{func_name}'
-            a_model = ATraceModel(sign="", pid=-1, func="").parse(payload)
         if nc_type == 20:  # case: NOTE_IRQ_ENTER
             payload = f'irq_handler_entry: irq={one["nih_irq"]} name={one["nih_irq"]}'
             other_model = OtherModel(payload="").parse(payload)
         if nc_type == 21:  # case: NOTE_IRQ_LEAVE
             payload = f'irq_handler_exit: irq={one["nih_irq"]} name={one["nih_irq"]}'
             other_model = OtherModel(payload="").parse(payload)
+        if nc_type == 30:  # case: NOTE_DUMP_PRINTF
+            payload = f"tracing_mark_write: I|{nc_pid}|"
+            str_format = self.symbol_tables.readstring(int(one["npt_fmt"], 16))
+            if "npt_data" in one:
+                binary_data = bytes(one["npt_data"])
+            else:
+                binary_data = bytes()
+            str_result = self.printf(str_format, binary_data).rstrip("\n")
+            payload += str_result
+            a_model = ATraceModel(sign="", pid=-1, func="").parse(payload)
+        if nc_type == 31:  # case: NOTE_DUMP_BEGIN
+            payload = f"tracing_mark_write: B|{nc_pid}|"
+            if "nev_data" in one:
+                str_result = "".join(chr(i) for i in one["nev_data"])
+                payload += str_result
+            else:
+                payload += f'{one["nev_ip"]}S'
+            a_model = ATraceModel(sign="", pid=-1, func="").parse(payload)
+        if nc_type == 32:  # case: NOTE_DUMP_END
+            payload = f"tracing_mark_write: E|{nc_pid}|"
+            if "nev_data" in one:
+                str_result = "".join(chr(i) for i in one["nev_data"])
+                payload += str_result
+            else:
+                payload += f'{one["nev_ip"]}S'
+            a_model = ATraceModel(sign="", pid=-1, func="").parse(payload)
+        if nc_type == 33:  # case: NOTE_DUMP_MARK
+            payload = f"tracing_mark_write: I|{nc_pid}|"
+            if "nev_data" in one:
+                str_result = "".join(chr(i) for i in one["nev_data"])
+                payload += str_result
+            a_model = ATraceModel(sign="", pid=-1, func="").parse(payload)
+        if nc_type == 34:  # case: NOTE_DUMP_BINARY
+            payload = f"tracing_mark_write: I|{nc_pid}|"
+            if "nev_data" in one:
+                str_result = " ".join(f"0x{byte:02x}" for byte in one["nev_data"])
+                payload += str_result
+            a_model = ATraceModel(sign="", pid=-1, func="").parse(payload)
+        if nc_type == 35:  # case: NOTE_DUMP_COUNTER
+            payload = f"tracing_mark_write: C|{nc_pid}|"
+            if "nev_data" in one:
+                binary_data = bytes(one["nev_data"])
+                tmp_struct = pycstruct.StructDef()
+                tmp_struct.add(self.symbol_tables.typeinfo["clock_t"], "value")
+                tmp_struct.add(
+                    "uint8", "name", (len(one["nev_data"]) - tmp_struct.size())
+                )
+                counter = tmp_struct.deserialize(binary_data, 0)
+                truncated_name = []
+                for i in counter["name"]:
+                    if i == 0:
+                        break
+                    truncated_name.append(i)
+                str_result = "".join(chr(i) for i in truncated_name)
+                payload += str_result
+                payload += f'|{counter["value"]}'
+            a_model = ATraceModel(sign="", pid=-1, func="").parse(payload)
+        if nc_type == 36:  # case: NOTE_DUMP_THREADTIME
+            payload = f"tracing_mark_write: I|{nc_pid}|"
+            if "nev_data" in one:
+                binary_data = bytes(one["nev_data"])
+                tmp_struct = pycstruct.StructDef()
+                tmp_struct.add(self.symbol_tables.typeinfo["clock_t"], "elapsed")
+                threadtime = tmp_struct.deserialize(binary_data, 0)
+                payload += f'elapsed:{threadtime["elapsed"]}'
+            a_model = ATraceModel(sign="", pid=-1, func="").parse(payload)
 
         for mod in [a_model, other_model]:
             if mod is not None:
                 self.parsed.append(
                     TraceModel(
-                        name=nsa_name,
+                        name=nst_name,
                         tid=nc_pid,
                         cpu=nc_cpu,
                         time=float_time,
@@ -387,6 +470,9 @@ class ParseBinaryLogTool:
         st = 0
         while st < len(self.in_bytes):
             one = self.parse_one(st)
+            if one["nc_length"] == 0:
+                print("warn, nc_length is zero")
+                break
             self.track_one(one)
             st += one["nc_length"]
         if self.out_path is not None:
@@ -397,12 +483,160 @@ class ParseBinaryLogTool:
             for mod in self.parsed:
                 print(f"debug, dump one={mod.dump_one_trace()}")
 
+    def extract_int(self, fmt, data):
+        pattern = re.match(
+            r"%([-+ #0]*)?(\d+|\*)?(\.)?(\d+|\*)?([hljzt]|ll|hh)?([diuxXop])", fmt
+        ).groups()
+        format = "%" if pattern[0] is None else "%" + pattern[0]
+
+        if pattern[4] == "l" or pattern[4] == "z" or pattern[4] == "t":
+            length = 4 if self.symbol_tables.typeinfo["size_t"] == "int32" else 8
+        elif pattern[4] == "ll":
+            length = 8
+        elif pattern[4] == "h":
+            length = 2
+        elif pattern[4] == "hh":
+            length = 1
+        else:
+            length = 4
+
+        width = 0
+        if pattern[1] == "*":
+            width = int.from_bytes(
+                data[:4], byteorder=self.symbol_tables.elfinfo["byteorder"], signed=True
+            )
+            data = data[4:]
+            format += str(width)
+        elif pattern[1] is not None:
+            width = int(pattern[1])
+            format += pattern[1]
+
+        format += pattern[5]
+        if pattern[5] == "d" or pattern[5] == "i":
+            value = int.from_bytes(
+                data[:length],
+                byteorder=self.symbol_tables.elfinfo["byteorder"],
+                signed=True,
+            )
+        elif (
+            pattern[5] == "u"
+            or pattern[5] == "x"
+            or pattern[5] == "X"
+            or pattern[5] == "o"
+            or pattern[5] == "O"
+        ):
+            value = int.from_bytes(
+                data[:length],
+                byteorder=self.symbol_tables.elfinfo["byteorder"],
+                signed=False,
+            )
+
+        value = format % value
+        return "%s", length, value
+
+    def extract_float(self, fmt, data):
+        pattern = re.match(
+            r"%([-+ #0]*)?(\d+|\*)?(\.)?(\d+|\*)?(L)?([fFeEgGaA])", fmt
+        ).groups()
+        if pattern[4] == "L":
+            length = 16
+        else:
+            length = 8
+        value = struct.unpack("<d", data[:length])[0]
+        return "%s", length, fmt % value
+
+    def extract_string(self, fmt, data):
+        lenght = 0
+        if fmt == "%.*s":
+            lenght = int.from_bytes(
+                data[:4], byteorder=self.symbol_tables.elfinfo["byteorder"], signed=True
+            )
+            data = data[4:]
+        else:
+            lenght = 0
+
+        try:
+            string = data.split(b"\x00")[0].decode("utf-8")
+            if len(data.split(b"\x00")[0]) != len(string) and len(string):
+                size = 4 if self.symbol_tables.typeinfo["size_t"] == "uint32" else 8
+                address = int.from_bytes(
+                    data[:size],
+                    byteorder=self.symbol_tables.elfinfo["byteorder"],
+                    signed=False,
+                )
+                string = f"<<0x{address}>>"
+                lenght += size
+            else:
+                lenght += len(string) + 1
+        except Exception:
+            size = 4 if self.symbol_tables.typeinfo["size_t"] == "uint32" else 8
+            address = int.from_bytes(
+                data[:size],
+                byteorder=self.symbol_tables.elfinfo["byteorder"],
+                signed=False,
+            )
+            string = f"<<0x{address}>>"
+            lenght += size
+        return "%s", lenght, string
+
+    def extract_point(self, fmt, data):
+        length = 4 if self.symbol_tables.typeinfo["size_t"] == "int32" else 8
+        value = int.from_bytes(
+            data[:length],
+            byteorder=self.symbol_tables.elfinfo["byteorder"],
+            signed=False,
+        )
+        return "%s", length, f"{value:x}"
+
+    conversions = {
+        r"%p": extract_point,
+        r"%c": lambda _0, _1, data: ("%c", 1, chr(data[0])),
+        r"%([-+ #0]*)?(\d+|\*)?(\.)?(\d+|\*)?(L)?([fFeEgGaA])": extract_float,
+        r"%([-+ #0]*)?(\d+|\*)?(\.)?(\d+|\*)?([hljzt]|ll|hh)?([diuxXop])": extract_int,
+        r"%([ ]*)?([\d+|\*])?(\.)?([\d+|\*])?s": extract_string,
+    }
+
+    patterns = {re.compile(pattern): func for pattern, func in conversions.items()}
+
+    def printf(self, format, data):
+        try:
+            fmt = []
+            values = []
+
+            parts = [
+                part
+                for part in re.split(
+                    r"(%[-+#0\s]*[\d|\*]*(?:\.[\d|\*])?[lhjztL]?[diufFeEgGxXoscpn%])",
+                    format,
+                )
+            ]
+            for part in parts:
+                if "%" not in part:
+                    fmt.append(part)
+                    continue
+
+                for pattern, handler in self.patterns.items():
+                    if pattern.match(part):
+                        part, length, value = handler(self, part, data)
+                        values.append(value)
+                        fmt.append(part)
+                        data = data[length:]
+                        break
+                else:
+                    fmt.append(part)
+
+            return "".join(fmt) % tuple(values)
+        except Exception as e:
+            logger.error(f"format failed: {e}")
+
 
 class TraceDecoder(SymbolTables):
-    def __init__(self, elffile):
+    def __init__(self, elffile, perf_freq=100e6):
         super().__init__(elffile)
         self.data = b""
+        self.perf_freq = perf_freq
         self.typeinfo["time_t"] = "int%d" % (self.get_typesize("time_t") * 8)
+        self.typeinfo["clock_t"] = "int%d" % (self.get_typesize("clock_t") * 8)
 
     def note_common_define(self):
         note_common = pycstruct.StructDef(alignment=4)
@@ -411,8 +645,7 @@ class TraceDecoder(SymbolTables):
         note_common.add("uint8", "nc_priority")
         note_common.add("uint8", "nc_cpu")
         note_common.add(self.typeinfo["pid_t"], "nc_pid")
-        note_common.add(self.typeinfo["time_t"], "nc_systime_sec")
-        note_common.add(self.typeinfo["long"], "nc_systime_nsec")
+        note_common.add(self.typeinfo["clock_t"], "nc_systime")
         return note_common
 
     def note_printf_define(self, length):
@@ -420,6 +653,7 @@ class TraceDecoder(SymbolTables):
         struct_def.add(self.note_common_define(), "npt_cmn")
         struct_def.add(self.typeinfo["size_t"], "npt_ip")
         struct_def.add(self.typeinfo["size_t"], "npt_fmt")
+        struct_def.add("uint32", "npt_tag")
         struct_def.add("uint32", "npt_type")
         if length > 0:
             struct_def.add("uint8", "npt_data", length=length)
@@ -563,10 +797,7 @@ class TraceDecoder(SymbolTables):
 
     def print_format(self, note):
         payload = dict()
-        payload["time"] = (
-            note["npt_cmn"]["nc_systime_sec"]
-            + note["npt_cmn"]["nc_systime_nsec"] / 1000000000
-        )
+        payload["time"] = note["npt_cmn"]["nc_systime"] / self.perf_freq
         payload["pid"] = note["npt_cmn"]["nc_pid"]
         payload["cpu"] = (
             0 if "nc_cpu" not in note["npt_cmn"] else note["npt_cmn"]["nc_cpu"]
@@ -588,7 +819,7 @@ class TraceDecoder(SymbolTables):
                 if nc_length < common_struct.size():
                     raise ValueError("Invalid note length")
 
-                if common_note["nc_type"] == 24:
+                if common_note["nc_type"] == 30:
                     note_struct = self.note_printf_define(0)
                     length = nc_length - note_struct.size()
                     note = note_struct.deserialize(data)
@@ -622,6 +853,12 @@ def parse_arguments():
     parser.add_argument("-d", "--device", help="Physical serial device name")
     parser.add_argument(
         "-b", "--baudrate", help="Physical serial device baud rate", default=115200
+    )
+    parser.add_argument(
+        "-p",
+        "--perffreq",
+        help="Frequency of the performance counter",
+        default=100e6,
     )
     parser.add_argument("-v", "--verbose", help="verbose output", action="store_true")
     parser.add_argument(
@@ -672,10 +909,11 @@ if __name__ == "__main__":
             print("trace log type is binary")
             if args.elf:
                 print(
-                    "parse_binary_log, default config, size_long=4, config_endian_big=False, config_smp=0"
+                    f"parse_binary_log, default config, size_long=4, "
+                    f"perf_freq={args.perffreq}, config_endian_big=False, config_smp=0"
                 )
                 parse_binary_log_tool = ParseBinaryLogTool(
-                    args.trace, args.elf, out_path
+                    args.trace, args.elf, out_path, args.perffreq
                 )
                 parse_binary_log_tool.symbol_tables.parse_symbol()
                 parse_binary_log_tool.parse_binary_log()
@@ -687,7 +925,7 @@ if __name__ == "__main__":
             print("error, please add elf file path")
             exit(1)
 
-        decode = TraceDecoder(args.elf)
+        decode = TraceDecoder(args.elf, args.perffreq)
         with serial.Serial(args.device, baudrate=args.baudrate) as ser:
             ser.timeout = 0
             decode.tty_received()
