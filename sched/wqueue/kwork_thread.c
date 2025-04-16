@@ -35,7 +35,7 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/queue.h>
+#include <nuttx/list.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/kthread.h>
 #include <nuttx/semaphore.h>
@@ -83,7 +83,7 @@
 
 struct hp_wqueue_s g_hpwork =
 {
-  {NULL, NULL},
+  LIST_INITIAL_VALUE(g_hpwork.q),
   SEM_INITIALIZER(0),
   SEM_INITIALIZER(0),
   SP_UNLOCKED,
@@ -106,7 +106,7 @@ g_hp_work_stack[CONFIG_SCHED_HPNTHREADS][CONFIG_SCHED_HPWORKSTACKSIZE];
 
 struct lp_wqueue_s g_lpwork =
 {
-  {NULL, NULL},
+  LIST_INITIAL_VALUE(g_lpwork.q),
   SEM_INITIALIZER(0),
   SEM_INITIALIZER(0),
   SP_UNLOCKED,
@@ -179,8 +179,12 @@ static int work_thread(int argc, FAR char *argv[])
 
       /* Remove the ready-to-execute work from the list */
 
-      while ((work = (FAR struct work_s *)dq_remfirst(&wqueue->q)) != NULL)
+      while (!list_is_empty(&wqueue->q))
         {
+          work = list_first_entry(&wqueue->q, struct work_s, node);
+
+          list_delete(&work->node);
+
           if (work->worker == NULL)
             {
               continue;
@@ -365,7 +369,7 @@ FAR struct kwork_wqueue_s *work_queue_create(FAR const char *name,
 
   /* Initialize the work queue structure */
 
-  dq_init(&wqueue->q);
+  list_initialize(&wqueue->q);
   nxsem_init(&wqueue->sem, 0, 0);
   nxsem_init(&wqueue->exsem, 0, 0);
   wqueue->nthreads = nthreads;
