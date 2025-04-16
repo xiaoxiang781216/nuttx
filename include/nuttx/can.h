@@ -397,7 +397,7 @@ static inline uint8_t can_bytes2dlc(uint8_t nbytes)
     {
       return nbytes;
     }
-#ifdef CONFIG_CAN_FD
+#if defined(CONFIG_CAN_FD) || defined(CONFIG_NET_CAN_CANFD)
   else if (nbytes <= 12)
     {
       return 9;
@@ -456,7 +456,7 @@ static inline uint8_t can_dlc2bytes(uint8_t dlc)
 {
   if (dlc > 8)
     {
-#ifdef CONFIG_CAN_FD
+#if defined(CONFIG_CAN_FD) || defined(CONFIG_NET_CAN_CANFD)
       switch (dlc)
         {
           case 9:
