@@ -272,6 +272,7 @@ static int work_thread_create(FAR const char *name, int priority,
   char arg1[32];
   int wndx;
   int pid;
+  FAR void *stack = NULL;
 
   /* Don't permit any of the threads to run until we have fully initialized
    * all of them.
@@ -289,8 +290,14 @@ static int work_thread_create(FAR const char *name, int priority,
       argv[1] = arg1;
       argv[2] = NULL;
 
-      pid = kthread_create_with_stack(name, priority,
-                                      stack_addr + wndx * stack_size,
+      /* In case of the stack_addr is NULL */
+
+      if (stack_addr)
+        {
+          stack = (FAR void *)((uintptr_t)stack_addr + wndx * stack_size);
+        }
+
+      pid = kthread_create_with_stack(name, priority, stack,
                                       stack_size, work_thread, argv);
 
       DEBUGASSERT(pid > 0);
