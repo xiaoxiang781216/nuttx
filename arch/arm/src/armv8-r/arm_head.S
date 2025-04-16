@@ -136,7 +136,17 @@ __start:
 	cmp		r0, #0
 #if CONFIG_NCPUS > 1
 	beq		__cpu0_start
+
+#ifdef CONFIG_ARM_BUSY_WAIT
+	ldr		r2, =CONFIG_ARM_BUSY_WAIT_FLAG_ADDR
+1:
+	ldr		r1, [r2, #0]
+	cmp		r1, #0
+	beq		1b
+#else
 	wfe
+#endif
+
 	cpsid		if			/* Disable IRQs and FIQs */
 	mov		fp, #0			/* Clear frame pointer */
 	cmp		r0, #1
@@ -226,6 +236,13 @@ __cpu0_start:
 	/* Branch to arm_boot and never return like armv7-r */
 
 	b		arm_boot
+
+#if defined(CONFIG_ARM_BUSY_WAIT) && defined(CONFIG_SMP)
+	ldr		r0, =CONFIG_ARM_BUSY_WAIT_FLAG_ADDR
+	mov		r1, #1
+	str		r1, [r0]
+	dsb		sy
+#endif
 
 	/* .text Data */
 
