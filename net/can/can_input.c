@@ -76,7 +76,20 @@ static int can_input_conn(FAR struct net_driver_s *dev,
 
   /* Perform the application callback */
 
-  flags = can_callback(dev, conn, CAN_NEWDATA);
+  if (conn->rxcb != NULL)
+    {
+      FAR uint8_t *frame = dev->d_buf;
+      flags = CAN_NEWDATA;
+      ret = conn->rxcb(conn->rxarg, frame);
+      if (ret == OK)
+        {
+          flags = 0;
+        }
+    }
+  else
+    {
+      flags = can_callback(dev, conn, CAN_NEWDATA);
+    }
 
   /* If the operation was successful, the CAN_NEWDATA flag is removed
    * and thus the packet can be deleted (OK will be returned).

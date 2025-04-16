@@ -34,6 +34,7 @@
 
 #include <nuttx/semaphore.h>
 #include <nuttx/can.h>
+#include <nuttx/net/can.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
 
@@ -125,6 +126,14 @@ struct can_conn_s
    */
 
   struct can_poll_s pollinfo[4]; /* FIXME make dynamic */
+
+  /* Rx sync callback.
+   *
+   *    rx_sync_callback_args - the user data passed to the callback
+   */
+
+  can_rx_cb_t rxcb;
+  FAR void *rxarg;
 
 #ifdef CONFIG_NET_CANPROTO_OPTIONS
   struct can_filter filters[CONFIG_NET_CAN_RAW_FILTER_MAX];
