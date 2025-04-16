@@ -1016,10 +1016,6 @@ static int audio_fake_release(FAR struct audio_lowerhalf_s *dev)
  * Description:
  *   Initialize and register fake audio device.
  *
- * Returned Value:
- *   0 is returned on success;
- *   others is returned on failure.
- *
  ****************************************************************************/
 
 int audio_fake_initialize(void)
@@ -1038,8 +1034,9 @@ int audio_fake_initialize(void)
  *   nparams - number of fake audio parameters
  *
  * Returned Value:
- *   0 is returned on success;
- *   others is returned on failure.
+ *   >0 values represents the number of node register succeed;
+ *   <0 values indicate that all nodes have failed to register, and
+ *   the value is the error code of the last node register returned.
  *
  ****************************************************************************/
 
@@ -1048,13 +1045,14 @@ int audio_fake_register(FAR const audio_fake_params_t *params,
 {
   FAR struct audio_fake_s *priv;
   FAR audio_fake_params_t *param;
+  size_t good = 0;
   size_t i;
-  int ret;
+  int ret = 0;
 
   if (!params || !nparams)
     {
       auderr("ERROR: Invalid fake audio parameters\n");
-      return EINVAL;
+      return -EINVAL;
     }
 
   for (i = 0; i < nparams; i++)
@@ -1064,7 +1062,8 @@ int audio_fake_register(FAR const audio_fake_params_t *params,
       if (!priv || !param)
         {
           auderr("ERROR: Failed to allocate fake audio device\n");
-          return -ENOMEM;
+          ret = -ENOMEM;
+          continue;
         }
 
       *param = params[i];
@@ -1074,13 +1073,15 @@ int audio_fake_register(FAR const audio_fake_params_t *params,
       ret = audio_register(param->devname, &priv->dev);
       if (ret < 0)
         {
-          auderr("ERROR: Failed to register (%s) fake audio device.\n",
-                 params->devname);
+          audwarn("WARNING: Failed to register (%s) fake audio device(%d)\n",
+                  params->devname, ret);
           kmm_free(priv);
           kmm_free(param);
-          return ret;
+          continue;
         }
+
+      good++;
     }
 
-  return 0;
+  return good ? good : ret;
 }
