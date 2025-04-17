@@ -90,6 +90,8 @@
 #define CANFD_ESI 0x02 /* Error state indicator of the transmitting node */
 #define CANFD_FDF 0x04 /* Mark CAN FD for dual use of struct canfd_frame */
 
+#define CAN_TCF   0x08 /* Tranmit confirmation frame used of struct can_frame & canfd_frame*/
+
 #define CAN_INV_FILTER 0x20000000u /* To be set in can_filter.can_id */
 
 /* PF_CAN protocols */
@@ -276,7 +278,7 @@ struct can_frame
 {
   canid_t can_id;  /* 32 bit CAN_ID + EFF/RTR/ERR flags */
   uint8_t can_dlc; /* frame payload length in byte (0 .. CAN_MAX_DLEN) */
-  uint8_t __pad;   /* padding */
+  uint8_t flags;   /* additional flags */
   uint8_t __res0;  /* reserved / padding */
   uint8_t __res1;  /* reserved / padding */
   uint8_t data[CAN_MAX_DLEN];
@@ -295,7 +297,7 @@ struct canfd_frame
 {
   canid_t can_id;  /* 32 bit CAN_ID + EFF/RTR/ERR flags */
   uint8_t len;     /* frame payload length in byte */
-  uint8_t flags;   /* additional flags for CAN FD */
+  uint8_t flags;   /* additional flags */
   uint8_t __res0;  /* reserved / padding */
   uint8_t __res1;  /* reserved / padding */
   uint8_t data[CANFD_MAX_DLEN];
