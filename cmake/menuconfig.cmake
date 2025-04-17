@@ -84,8 +84,6 @@ add_custom_target(
           ${CMAKE_BINARY_DIR}/defconfig.tmp
   COMMAND ${CMAKE_COMMAND} -P ${NUTTX_DIR}/cmake/savedefconfig.cmake
           ${CMAKE_BINARY_DIR}/.config ${CMAKE_BINARY_DIR}/defconfig.tmp
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_BINARY_DIR}/defconfig
-          ${NUTTX_DEFCONFIG}
   WORKING_DIRECTORY ${NUTTX_DIR})
 
 # utility target to replace defconfig to board's defconfig
