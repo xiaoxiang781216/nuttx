@@ -102,6 +102,8 @@ void up_initialize(void)
   up_enable_dcache();
 #endif
 
+  tricore_trapinit();
+
   /* Colorize the interrupt stack */
 
   up_color_intstack();
