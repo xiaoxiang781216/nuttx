@@ -100,9 +100,9 @@ void umm_initialize(FAR void *heap_start, size_t heap_size)
 #endif
 
 #ifdef CONFIG_BUILD_KERNEL
-  *heap = mm_initialize_pool(NULL, heap_start, heap_size, NULL);
+  *heap = mm_initialize_pool(NULL, NULL, heap_start, heap_size, NULL);
 #else
-  *heap = mm_initialize_pool("Umem", heap_start, heap_size, NULL);
+  *heap = mm_initialize_pool(NULL, "Umem", heap_start, heap_size, NULL);
 #endif
 }
 
