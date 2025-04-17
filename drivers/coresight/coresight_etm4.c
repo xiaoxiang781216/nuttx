@@ -608,6 +608,7 @@ static const struct coresight_ops_s g_etm4_ops =
  *
  ****************************************************************************/
 
+#ifdef CONFIG_CORESIGHT_ETM_USE_COPROCESSOR
 static uint64_t etm4_sysreg_read(uint32_t offset)
 {
   uint64_t res = 0;
@@ -645,6 +646,7 @@ static void etm4_sysreg_write(uint64_t val, uint32_t offset, bool bit_64)
               offset);
     }
 }
+#endif
 
 /****************************************************************************
  * Name: etm4_devarch_to_arch
