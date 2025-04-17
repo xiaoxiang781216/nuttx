@@ -298,7 +298,9 @@ class Nxthread(gdb.Command):
                     except gdb.error and UnicodeDecodeError:
                         gdb.write(f"Thread {i}\n")
 
-                    gdb.execute(f"setregs g_pidhash[{i}]->xcp.regs")
+                    if not utils.task_is_running(tcb):
+                        gdb.execute(f"setregs g_pidhash[{i}]->xcp.regs")
+
                     cmd_arg = ""
                     for cmd in arg[2:]:
                         cmd_arg += cmd + " "
@@ -330,7 +332,9 @@ class Nxthread(gdb.Command):
                         except gdb.error and UnicodeDecodeError:
                             gdb.write(f"Thread {i}\n")
 
-                        gdb.execute(f"setregs g_pidhash[{i}]->xcp.regs")
+                        if not utils.task_is_running(utils.get_tcb(i)):
+                            gdb.execute(f"setregs g_pidhash[{i}]->xcp.regs")
+
                         gdb.execute(f"{cmd}\n")
                         g_registers.restore()
 
