@@ -160,7 +160,12 @@ def resolve_type(dwarfinfo, die):
         return get_name(die, size=type_size)
 
     if die.tag == "DW_TAG_pointer_type":
-        return get_name(die, suffix="*", size=type_size)
+        base_type_die = resolve_referenced_die(dwarfinfo, die)
+        if base_type_die:
+            name, size = resolve_type(dwarfinfo, base_type_die)
+            return (f"{name}*", type_size)
+        else:
+            return ("void*", type_size)
 
     if die.tag == "DW_TAG_typedef":
         base_type_die = resolve_referenced_die(dwarfinfo, die)
