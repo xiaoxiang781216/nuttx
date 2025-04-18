@@ -1496,6 +1496,7 @@ void binder_transaction(FAR struct binder_proc *proc,
 
   /* Done processing objects, copy the rest of the buffer */
 
+  binder_inner_proc_lock(target_proc);
   if (binder_alloc_copy_to_buffer(&g_binder_alloc,
               t->buffer, user_offset, (void *)(user_buffer + user_offset),
               tr->data_size - user_offset))
@@ -1505,8 +1506,11 @@ void binder_transaction(FAR struct binder_proc *proc,
                    "got transaction with invalid data ptr\n",
                    LOG_TAG, getpid(), gettid());
       return_error = BR_FAILED_REPLY;
+      binder_inner_proc_unlock(target_proc);
       goto err_copy_data_failed;
     }
+
+  binder_inner_proc_unlock(target_proc);
 
   tcomplete->type = BINDER_WORK_TRANSACTION_COMPLETE;
   t->work.type = BINDER_WORK_TRANSACTION;
