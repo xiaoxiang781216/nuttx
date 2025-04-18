@@ -225,7 +225,7 @@ class Nxinfothreads(gdb.Command):
 
             if tcb["task_state"] == gdb.parse_and_eval("TSTATE_WAIT_SEM"):
                 mutex = tcb["waitobj"].cast(utils.lookup_type("sem_t").pointer())
-                if utils.sem_is_mutex(mutex["flags"]):
+                if utils.sem_is_mutex(mutex):
                     mutex = tcb["waitobj"].cast(utils.lookup_type("mutex_t").pointer())
                     statename = f"Waiting,Mutex:{mutex['holder']}"
 
