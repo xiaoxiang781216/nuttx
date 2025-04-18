@@ -73,12 +73,5 @@ int tls_init_info(FAR struct tcb_s *tcb)
   /* Attach per-task info in group to TLS */
 
   info->tl_task = tcb->group->tg_info;
-
-  /* Initialize the starting address of argv to NULL to prevent
-   * it from being misused.
-   */
-
-  ((FAR char **)tcb->stack_base_ptr)[0] = NULL;
-
   return OK;
 }

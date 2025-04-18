@@ -70,12 +70,5 @@ int tls_dup_info(FAR struct tcb_s *dst, FAR struct tcb_s *src)
   /* Attach per-task info in group to TLS */
 
   info->tl_task = dst->group->tg_info;
-
-  /* Initialize the starting address of argv to NULL to prevent
-   * it from being misused.
-   */
-
-  ((FAR char **)dst->stack_base_ptr)[0] = NULL;
-
   return OK;
 }
