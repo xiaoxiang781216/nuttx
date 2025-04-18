@@ -55,9 +55,7 @@ ifeq ($(CONFIG_NRF52_GPIOTE),y)
 CHIP_CSRCS += nrf52_gpiote.c
 endif
 
-ifeq ($(CONFIG_NRF52_UART),y)
 CHIP_CSRCS += nrf52_serial.c
-endif
 
 ifeq ($(CONFIG_NRF52_WDT),y)
 CHIP_CSRCS += nrf52_wdt.c
