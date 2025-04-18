@@ -236,6 +236,7 @@ endif
 
 ifeq ($(CONFIG_SIM_SPI_LINUX),y)
   HOSTSRCS += sim_linuxspi.c
+  CSRCS += sim_spi.c
 endif
 
 ifeq ($(CONFIG_SIM_GPIOCHIP_LINUX),y)

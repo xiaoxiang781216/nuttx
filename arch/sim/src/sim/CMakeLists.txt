@@ -246,6 +246,7 @@ endif()
 
 if(CONFIG_SIM_SPI_LINUX)
   list(APPEND HOSTSRCS sim_linuxspi.c)
+  list(APPEND SRCS sim_spi.c)
 endif()
 
 if(CONFIG_SIM_GPIOCHIP_LINUX)
