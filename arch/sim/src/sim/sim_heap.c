@@ -578,6 +578,7 @@ struct mallinfo mm_mallinfo(struct mm_heap_s *heap)
   info.usmblks  = atomic_load(&heap->usmblks);
   info.arena    = SIM_HEAP_SIZE;
   info.fordblks = SIM_HEAP_SIZE - info.uordblks;
+  info.mxordblk = info.fordblks;
   return info;
 }
 
