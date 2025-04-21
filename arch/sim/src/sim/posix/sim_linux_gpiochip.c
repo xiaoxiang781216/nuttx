@@ -108,19 +108,19 @@ int host_gpiochip_direction(struct host_gpiochip_dev *priv, uint8_t pin,
     }
 
   snprintf(req.consumer, sizeof(req.consumer) - 1, "gpio%d", pin);
-  ret = host_uninterruptible(ioctl, priv->file, GPIO_V2_GET_LINE_IOCTL,
-                             &req);
+  ret = host_uninterruptible_errno(ioctl, priv->file,
+                                   GPIO_V2_GET_LINE_IOCTL, &req);
   if (ret < 0)
     {
       gpioerr("ERROR: pin %d set direction failed\n", pin);
-      return -errno;
+      return ret;
     }
 
-  ret = host_uninterruptible(ioctl, req.fd, FIONBIO, &nonblock);
+  ret = host_uninterruptible_errno(ioctl, req.fd, FIONBIO, &nonblock);
   if (ret < 0)
     {
-      gpioerr("ERROR: Failed to set non-blocking: %s\n", strerror(errno));
-      return -errno;
+      gpioerr("ERROR: Failed to set non-blocking: %s\n", strerror(ret));
+      return ret;
     }
 
   priv->line_fd[pin] = req.fd;
@@ -181,19 +181,19 @@ int host_gpiochip_irq_request(struct host_gpiochip_dev *priv, uint8_t pin,
 
   /* Warn only pin 10 can register in ch341A */
 
-  ret = host_uninterruptible(ioctl, priv->file, GPIO_V2_GET_LINE_IOCTL,
-                             &req);
+  ret = host_uninterruptible_errno(ioctl, priv->file,
+                                   GPIO_V2_GET_LINE_IOCTL, &req);
   if (ret < 0)
     {
-      gpioerr("ERROR: ioctl failed: %s \n", strerror(errno));
-      return -errno;
+      gpioerr("ERROR: ioctl failed: %s \n", strerror(ret));
+      return ret;
     }
 
-  ret = host_uninterruptible(ioctl, req.fd, FIONBIO, &nonblock);
+  ret = host_uninterruptible_errno(ioctl, req.fd, FIONBIO, &nonblock);
   if (ret < 0)
     {
-      gpioerr("ERROR: Failed to set non-blocking: %s\n", strerror(errno));
-      return -errno;
+      gpioerr("ERROR: Failed to set non-blocking: %s\n", strerror(ret));
+      return ret;
     }
 
   priv->line_fd[pin] = req.fd;
@@ -232,12 +232,12 @@ int host_gpiochip_writepin(struct host_gpiochip_dev *priv, uint8_t pin,
   vals.mask = 1;
   vals.bits = !!value;
 
-  ret = host_uninterruptible(ioctl, priv->line_fd[pin],
-                             GPIO_V2_LINE_SET_VALUES_IOCTL, &vals);
+  ret = host_uninterruptible_errno(ioctl, priv->line_fd[pin],
+                                   GPIO_V2_LINE_SET_VALUES_IOCTL, &vals);
   if (ret < 0)
     {
       gpioerr("ERROR: Failed to set pin %d value %d\n", pin, value);
-      return -errno;
+      return ret;
     }
 
   return 0;
@@ -272,12 +272,12 @@ int host_gpiochip_readpin(struct host_gpiochip_dev *priv, uint8_t pin,
 
   memset(&vals, 0, sizeof(vals));
   vals.mask = 1;
-  ret = host_uninterruptible(ioctl, priv->line_fd[pin],
-                             GPIO_V2_LINE_GET_VALUES_IOCTL, &vals);
+  ret = host_uninterruptible_errno(ioctl, priv->line_fd[pin],
+                                   GPIO_V2_LINE_GET_VALUES_IOCTL, &vals);
   if (ret < 0)
     {
-      gpioerr("ERROR: Failed to get pin%d value, errno[%d]\n", pin, errno);
-      return -errno;
+      gpioerr("ERROR: Failed to get pin%d value, errno[%d]\n", pin, ret);
+      return ret;
     }
 
   *value = !!(vals.bits & 0x01);
@@ -307,7 +307,8 @@ bool host_gpiochip_irq_active(struct host_gpiochip_dev *priv, uint8_t pin)
       struct gpio_v2_line_event ev;
       int fd = priv->line_fd[pin];
       memset(&ev, 0, sizeof(ev));
-      if (host_uninterruptible(read, fd, &ev, sizeof(ev)) == sizeof(ev))
+      if (host_uninterruptible_errno(read, fd, &ev,
+                                     sizeof(ev)) == sizeof(ev))
         {
           return true;
         }
@@ -340,12 +341,12 @@ int host_gpiochip_get_line(struct host_gpiochip_dev *priv, uint8_t pin,
 
   memset(&info, 0, sizeof(info));
   info.offset = pin;
-  ret = host_uninterruptible(ioctl, priv->file, GPIO_V2_GET_LINEINFO_IOCTL,
-                             &info);
+  ret = host_uninterruptible_errno(ioctl, priv->file,
+                                   GPIO_V2_GET_LINEINFO_IOCTL, &info);
   if (ret < 0)
     {
       gpioerr("Failed to get line info: %d", ret);
-      return -errno;
+      return ret;
     }
 
   if (info.flags & GPIO_V2_LINE_FLAG_USED)
