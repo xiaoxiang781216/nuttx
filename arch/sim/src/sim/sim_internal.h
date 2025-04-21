@@ -132,8 +132,6 @@
 
 #define host_uninterruptible(func, ...)                         \
     ({                                                          \
-        extern uint64_t up_irq_save(void);                      \
-        extern void up_irq_restore(uint64_t flags);             \
         uint64_t flags_ = up_irq_save();                        \
         typeof(func(__VA_ARGS__)) ret_ = func(__VA_ARGS__);     \
         up_irq_restore(flags_);                                 \
@@ -143,13 +141,23 @@
 #define host_uninterruptible_no_return(func, ...)               \
     do                                                          \
       {                                                         \
-        extern uint64_t up_irq_save(void);                      \
-        extern void up_irq_restore(uint64_t flags);             \
         uint64_t flags_ = up_irq_save();                        \
         func(__VA_ARGS__);                                      \
         up_irq_restore(flags_);                                 \
       }                                                         \
     while (0)
+
+#define host_uninterruptible_errno(func, ...)                   \
+    ({                                                          \
+        uint64_t flags_ = up_irq_save();                        \
+        typeof(func(__VA_ARGS__)) ret_ = func(__VA_ARGS__);     \
+        if (ret_ < 0)                                           \
+          {                                                     \
+            ret_ = -errno;                                      \
+          }                                                     \
+        up_irq_restore(flags_);                                 \
+        ret_;                                                   \
+    })
 
 /* File System Definitions **************************************************/
 
@@ -201,6 +209,9 @@ extern char **g_argv;
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
+
+uint64_t up_irq_save(void);
+void up_irq_restore(uint64_t flags);
 
 /* Context switching */
 
