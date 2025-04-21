@@ -426,6 +426,14 @@ endif
 CMODULEFLAGS = $(CFLAGS) -fvisibility=hidden
 LDMODULEFLAGS = -r -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/modlib/gnu-elf.ld)
 
+ifeq ($(CONFIG_ARCH_RV32),y)
+  LDMODULEFLAGS += --oformat elf32-littleriscv
+else ifeq ($(CONFIG_ARCH_RV64ILP32),y)
+  LDMODULEFLAGS += --oformat elf32-littleriscv
+else
+  LDMODULEFLAGS += --oformat elf64-littleriscv
+endif
+
 # ELF module definitions
 
 CELFFLAGS = $(CFLAGS) -fvisibility=hidden
