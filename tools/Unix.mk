@@ -533,21 +533,6 @@ pass2: $(NUTTXLIBS)
 # in that case, execute 'make pass1 pass2' from the command line.
 
 $(BIN): pass1 pass2
-ifeq ($(CONFIG_BUILD_2PASS),y)
-	$(Q) if [ -z "$(CONFIG_PASS1_BUILDIR)" ]; then \
-		echo "ERROR: CONFIG_PASS1_BUILDIR not defined"; \
-		exit 1; \
-	fi
-	$(Q) if [ ! -d "$(CONFIG_PASS1_BUILDIR)" ]; then \
-		echo "ERROR: CONFIG_PASS1_BUILDIR does not exist"; \
-		exit 1; \
-	fi
-	$(Q) if [ ! -f "$(CONFIG_PASS1_BUILDIR)/Makefile" ]; then \
-		echo "ERROR: No Makefile in CONFIG_PASS1_BUILDIR"; \
-		exit 1; \
-	fi
-	$(Q) $(MAKE) -C $(CONFIG_PASS1_BUILDIR) LINKLIBS="$(LINKLIBS)" USERLIBS="$(USERLIBS)" "$(CONFIG_PASS1_TARGET)"
-endif
 	$(Q) $(MAKE) -C $(ARCH_SRC) EXTRA_OBJS="$(EXTRA_OBJS)" LINKLIBS="$(LINKLIBS)" APPDIR="$(APPDIR)" EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)" $(BIN)
 	$(Q) if [ -w /tftpboot ] ; then \
 		cp -f $(BIN) /tftpboot/$(BIN).${CONFIG_ARCH}; \
@@ -582,6 +567,21 @@ ifeq ($(CONFIG_RAW_DISASSEMBLY),y)
 	@echo "CP: nuttx.asm"
 	$(Q) $(OBJDUMP) -d $(BIN) > nuttx.asm
 	$(Q) echo nuttx.bin >> nuttx.asm
+endif
+ifeq ($(CONFIG_BUILD_2PASS),y)
+	$(Q) if [ -z "$(CONFIG_PASS1_BUILDIR)" ]; then \
+		echo "ERROR: CONFIG_PASS1_BUILDIR not defined"; \
+		exit 1; \
+	fi
+	$(Q) if [ ! -d "$(CONFIG_PASS1_BUILDIR)" ]; then \
+		echo "ERROR: CONFIG_PASS1_BUILDIR does not exist"; \
+		exit 1; \
+	fi
+	$(Q) if [ ! -f "$(CONFIG_PASS1_BUILDIR)/Makefile" ]; then \
+		echo "ERROR: No Makefile in CONFIG_PASS1_BUILDIR"; \
+		exit 1; \
+	fi
+	$(Q) $(MAKE) -C $(CONFIG_PASS1_BUILDIR) LINKLIBS="$(LINKLIBS)" USERLIBS="$(USERLIBS)" "$(CONFIG_PASS1_TARGET)"
 endif
 	$(call POSTBUILD, $(TOPDIR))
 
