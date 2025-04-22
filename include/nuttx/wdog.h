@@ -29,6 +29,7 @@
 
 #include <nuttx/config.h>
 
+#include <nuttx/list_type.h>
 #include <nuttx/compiler.h>
 #include <nuttx/clock.h>
 #include <errno.h>
@@ -64,32 +65,24 @@ typedef uint32_t  wdparm_t;
 
 typedef CODE void (*wdentry_t)(wdparm_t arg);
 
-/* Avoid the inclusion of nuttx/list.h */
-
-struct wdlist_node
-{
-  FAR struct wdlist_node *next;
-  FAR struct wdlist_node *prev;
-};
-
 /* Support a doubly linked list of watchdog timers */
 
 struct wdog_s
 {
-  struct wdlist_node node;       /* Supports a doubly linked list */
-  wdparm_t           arg;        /* Callback argument */
-  wdentry_t          func;       /* Function to execute when delay expires */
+  struct list_node node;    /* Supports a doubly linked list */
+  wdparm_t         arg;     /* Callback argument */
+  wdentry_t        func;    /* Function to execute when delay expires */
 #ifdef CONFIG_PIC
-  FAR void          *picbase;    /* PIC base address */
+  FAR void        *picbase; /* PIC base address */
 #endif
-  clock_t            expired;    /* Timer associated with the absolute time */
+  clock_t          expired; /* Timer associated with the absolute time */
 };
 
 struct wdog_period_s
 {
-  struct wdog_s      wdog;       /* Watchdog */
-  clock_t            period;     /* Period time in ticks */
-  wdentry_t          func;       /* Wrapped function to execute when delay expires */
+  struct wdog_s    wdog;    /* Watchdog */
+  clock_t          period;  /* Period time in ticks */
+  wdentry_t        func;    /* Wrapped function to execute when delay expires */
 };
 
 /****************************************************************************
