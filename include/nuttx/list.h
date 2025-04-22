@@ -301,8 +301,8 @@
 
 struct list_node
 {
-  FAR struct list_node *prev;
   FAR struct list_node *next;
+  FAR struct list_node *prev;
 };
 
 /****************************************************************************

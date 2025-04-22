@@ -68,8 +68,8 @@ typedef CODE void (*wdentry_t)(wdparm_t arg);
 
 struct wdlist_node
 {
-  FAR struct wdlist_node *prev;
   FAR struct wdlist_node *next;
+  FAR struct wdlist_node *prev;
 };
 
 /* This is the internal representation of the watchdog timer structure.
