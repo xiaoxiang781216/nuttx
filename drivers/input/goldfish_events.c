@@ -496,43 +496,46 @@ int goldfish_events_register(FAR void *base, int irq)
   uint32_t max_slot;
   int ret;
 
-  putreg32(GOLDFISH_EVENTS_PAGE_EVBITS | EV_ABS,
-           base + GOLDFISH_EVENTS_SET_PAGE);
-
-  /* Since each 32-bit (4-byte) block can represent 32 event codes, dividing
-   * ABS_MT_SLOT by 32 gives the block index,
-   * then multiplying by 4 converts it to a byte offset.
+  /* [ABSEntry Structure]
+   * Each EV_ABS event code corresponds to an ABSEntry containing four
+   * 32-bit parameters:
+   *   typedef struct ABSEntry {
+   *       uint32_t min;    // Minimum value (offset +0)
+   *       uint32_t max;    // Maximum value (offset +4)
+   *       uint32_t fuzz;   // Input noise filter (offset +8)
+   *       uint32_t flat;   // Contact size threshold (offset +12)
+   *   } ABSEntry;          // Total size 16 bytes
    *
-   * For example, if ABS_MT_SLOT is 47:
-   *   47/32 = 1 (block index)
-   *   1*4 = 4 bytes offset
+   * [Offset Calculation]
+   * 1. abs_slot_offset = ABS_MT_SLOT << 4
+   *    (Equivalent to ABS_MT_SLOT * sizeof(ABSEntry))
+   * 2. max_slot_offset = abs_slot_offset + 4
+   *    (Points to max field in ABSEntry)
    *
-   * This means the data needs to cover at least 5 bytes (from 0 to 4 bytes
-   * offset) to include the bit position for this event code.
+   * [Multi-touch Detection]
+   * Verify through GOLDFISH_EVENTS_PAGE_ABSDATA page length:
+   * - Multi-touch: abs_info_count = ABS_MAX * 4 (4 params per slot)
+   * - Single-touch: abs_info_count = 3 * 4 (X/Y/Z axes)
    *
-   * Each EV_ABS event code corresponds to an ABSEntry structure
-   * The structure is defined as follows:
+   * The code is as follows：
+   * abs_info_count = isScreenMultiTouch(config) ? ABS_MAX * 4 : 3 * 4;
    *
-   * typedef struct ABSEntry
+   * get_page_len(events_state *s)
    * {
-   *   uint32_t min;
-   *   uint32_t max;
-   *   uint32_t fuzz;
-   *   uint32_t flat;
-   * };
-   * so abs_slot_offset = ABS_MT_SLOT << 4;
-   *
-   * The offset of the max value is 4 bytes after the min value.
-   * so max_slot_offset = abs_slot_offset + 4;
+   * ...
+   *    if (page == PAGE_ABSDATA)
+   *      return abs_info_count * sizeof(int32_t);
+   * ...
+   * }
    * */
 
-  if (getreg32(base + GOLDFISH_EVENTS_LEN) > ABS_MT_SLOT / 32 * 4)
+  putreg32(GOLDFISH_EVENTS_PAGE_ABSDATA, base + GOLDFISH_EVENTS_SET_PAGE);
+
+  if (getreg32(base + GOLDFISH_EVENTS_LEN) == 4 * ABS_MAX * sizeof(int32_t))
     {
       const int abs_slot_offset = ABS_MT_SLOT << 4;
-
       putreg32(GOLDFISH_EVENTS_PAGE_ABSDATA,
                base + GOLDFISH_EVENTS_SET_PAGE);
-
       max_slot = getreg32(base + GOLDFISH_EVENTS_DATA + abs_slot_offset + 4);
       iinfo("Multi-touch enabled, maxpoint:%" PRIu32 ".\n", max_slot);
     }
