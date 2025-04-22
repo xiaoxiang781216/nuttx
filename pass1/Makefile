@@ -64,5 +64,6 @@ distclean: clean
 	$(call DELFILE, .depend)
 	$(call DELFILE, *.c)
 	$(call DELFILE, *.S)
+	$(call DELDIR, ko)
 
 -include Make.dep
