@@ -28,6 +28,7 @@
 #include <nuttx/power/pm.h>
 #include <nuttx/spi/spi_flash.h>
 #include <nuttx/spi/qspi_flash.h>
+#include <nuttx/wqueue.h>
 
 #include <stdlib.h>
 
@@ -47,11 +48,11 @@
 
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
     defined(CONFIG_SIM_BUTTONS)
-static struct wdog_period_s g_x11event_wdog;   /* Watchdog for event loop */
+static struct work_s g_x11event_work;          /* Work structure for event loop */
 #endif
 
 #ifdef CONFIG_SIM_X11FB
-static struct wdog_period_s g_x11update_wdog;  /* Watchdog for update loop */
+static struct work_s g_x11update_work;          /* Work structure for event loop */
 #endif
 
 /****************************************************************************
@@ -87,6 +88,8 @@ static void sim_init_cmdline(void)
 static void sim_x11event_interrupt(wdparm_t arg)
 {
   sim_x11events();
+  work_queue(HPWORK, &g_x11event_work, (void *)sim_x11event_interrupt,
+             NULL, SIM_X11EVENT_PERIOD);
 }
 #endif
 
@@ -102,6 +105,8 @@ static void sim_x11event_interrupt(wdparm_t arg)
 static void sim_x11update_interrupt(wdparm_t arg)
 {
   sim_x11loop();
+  work_queue(HPWORK, &g_x11update_work, (void *)sim_x11update_interrupt,
+             NULL, SIM_X11UPDATE_PERIOD);
 }
 #endif
 
@@ -302,12 +307,12 @@ void up_initialize(void)
 
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
     defined(CONFIG_SIM_BUTTONS)
-  wd_start_period(&g_x11event_wdog, SIM_X11EVENT_PERIOD, SIM_X11EVENT_PERIOD,
-                  sim_x11event_interrupt, 0);
+  work_queue(HPWORK, &g_x11event_work, (void *)sim_x11event_interrupt,
+             NULL, SIM_X11EVENT_PERIOD);
 #endif
 
 #ifdef CONFIG_SIM_X11FB
-  wd_start_period(&g_x11update_wdog, SIM_X11UPDATE_PERIOD,
-                  SIM_X11UPDATE_PERIOD, sim_x11update_interrupt, 0);
+  work_queue(HPWORK, &g_x11update_work, (void *)sim_x11update_interrupt,
+             NULL, SIM_X11UPDATE_PERIOD);
 #endif
 }
