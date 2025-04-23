@@ -1019,6 +1019,7 @@ int audio_register(FAR const char *name, FAR struct audio_lowerhalf_s *dev)
   FAR const char *ptr;
   FAR char *pathptr;
 #endif
+  int ret;
 
   if (!name || !dev)
     {
@@ -1144,7 +1145,14 @@ int audio_register(FAR const char *name, FAR struct audio_lowerhalf_s *dev)
   dev->priv = upper;
 
   audinfo("Registering %s\n", path);
-  return register_driver(path, &g_audioops, 0666, upper);
+  ret = register_driver(path, &g_audioops, 0666, upper);
+  if (ret != OK)
+    {
+      auderr("Failed to register %s\n", path);
+      kmm_free(upper);
+    }
+
+  return ret;
 }
 
 #endif /* CONFIG_AUDIO */
