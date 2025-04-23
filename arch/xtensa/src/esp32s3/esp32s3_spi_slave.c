@@ -37,6 +37,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/spi/spi.h>
@@ -223,12 +224,14 @@ struct spislave_priv_s
 
   /* SPI Slave TX queue buffer */
 
-  uint8_t tx_buffer[SPI_SLAVE_BUFSIZE];
+  uint8_t *tx_buffer;
   uint32_t rx_length;         /* Location of next RX value */
 
   /* SPI Slave RX queue buffer */
 
-  uint8_t rx_buffer[SPI_SLAVE_BUFSIZE];
+  uint8_t *rx_buffer;
+
+  bool need_copy;
 
   /* Flag that indicates whether SPI Slave is currently processing */
 
@@ -367,15 +370,10 @@ static struct spislave_priv_s esp32s3_spi2slave_priv =
   .mode          = SPISLAVE_MODE0,
   .nbits         = 0,
   .tx_length     = 0,
-  .tx_buffer     =
-                  {
-                    0
-                  },
+  .tx_buffer     = NULL,
   .rx_length     = 0,
-  .rx_buffer     =
-                  {
-                    0
-                  },
+  .rx_buffer     = NULL,
+  .need_copy     = false,
   .is_processing = false,
   .is_tx_enabled = false
 };
@@ -458,15 +456,10 @@ static struct spislave_priv_s esp32s3_spi3slave_priv =
   .mode          = SPISLAVE_MODE0,
   .nbits         = 0,
   .tx_length     = 0,
-  .tx_buffer     =
-                  {
-                    0
-                  },
+  .tx_buffer     = NULL,
   .rx_length     = 0,
-  .rx_buffer     =
-                  {
-                    0
-                  },
+  .rx_buffer     = NULL,
+  .need_copy     = false,
   .is_processing = false,
   .is_tx_enabled = false
 };
@@ -692,7 +685,7 @@ static int spislave_cs_interrupt(int irq, void *context, void *arg)
 {
   struct spislave_priv_s *priv = (struct spislave_priv_s *)arg;
 
-  if (priv->is_processing)
+  if (priv->need_copy && priv->is_processing)
     {
       priv->is_processing = false;
       SPIS_DEV_SELECT(priv->dev, false);
@@ -1053,8 +1046,18 @@ static int spislave_periph_interrupt(int irq, void *context, void *arg)
 #endif
       if (transfer_size > 0)
         {
-          spislave_store_result(priv, transfer_size);
+          if (priv->need_copy)
+            {
+              spislave_store_result(priv, transfer_size);
+            }
+
           SPIS_DEV_NOTIFY(priv->dev, SPISLAVE_RX_COMPLETE);
+        }
+
+      if (!priv->need_copy)
+        {
+          SPIS_DEV_GETRECVBUF(priv->dev, (void **)&(priv->rx_buffer));
+          priv->rx_length = 0;
         }
 
 #ifdef CONFIG_ESP32S3_SPI_DMA
@@ -1072,20 +1075,24 @@ static int spislave_periph_interrupt(int irq, void *context, void *arg)
   if (int_status & SPI_SLV_INT_TX)
     {
 #endif
-      if (priv->is_tx_enabled && transfer_size > 0)
+      if (priv->need_copy)
         {
-          spislave_evict_sent_data(priv, transfer_size);
-          SPIS_DEV_NOTIFY(priv->dev, SPISLAVE_TX_COMPLETE);
-        }
+          if (priv->is_tx_enabled && transfer_size > 0)
+            {
+              spislave_evict_sent_data(priv, transfer_size);
+              SPIS_DEV_NOTIFY(priv->dev, SPISLAVE_TX_COMPLETE);
+            }
 
-      spislave_prepare_next_tx(priv);
+          spislave_prepare_next_tx(priv);
+        }
 
 #ifdef CONFIG_ESP32S3_SPI_IO_QIO
       int_clear |= SPI_SLV_INT_CLR_TX;
     }
 #endif
 
-  if (priv->is_processing && esp32s3_gpioread(priv->config->cs_pin))
+  if (priv->need_copy && priv->is_processing &&
+      esp32s3_gpioread(priv->config->cs_pin))
     {
       priv->is_processing = false;
       SPIS_DEV_SELECT(priv->dev, false);
@@ -1505,12 +1512,31 @@ static void spislave_bind(struct spi_slave_ctrlr_s *ctrlr,
   spislave_setmode(ctrlr, mode);
   spislave_setbits(ctrlr, nbits);
 
+  SPIS_DEV_GETRECVBUF(priv->dev, (void **)&(priv->rx_buffer));
+  if (priv->rx_buffer == NULL)
+    {
+      priv->tx_buffer = kmm_memalign(32, 2 * SPI_SLAVE_BUFSIZE);
+      if (priv->tx_buffer == NULL)
+        {
+          spierr("Failed to allocate tx buffer\n");
+          spin_unlock_irqrestore(&priv->lock, flags);
+          return;
+        }
+
+      priv->rx_buffer = priv->tx_buffer + SPI_SLAVE_BUFSIZE;
+      priv->need_copy = true;
+    }
+
   num_words = SPIS_DEV_GETDATA(dev, &data);
 
   if (data != NULL && num_words > 0)
     {
       size_t num_bytes = WORDS2BYTES(priv, num_words);
-      memcpy(priv->tx_buffer, data, num_bytes);
+      if (priv->need_copy)
+        {
+          memcpy(priv->tx_buffer, data, num_bytes);
+        }
+
       priv->tx_length += num_bytes;
     }
 
@@ -1613,6 +1639,15 @@ static int spislave_enqueue(struct spi_slave_ctrlr_s *ctrlr,
   DEBUGASSERT(priv->dev != NULL);
 
   flags = spin_lock_irqsave(&priv->lock);
+  if (!priv->need_copy)
+    {
+      priv->tx_buffer = (uint8_t *)data;
+      priv->tx_length = WORDS2BYTES(priv, len);
+      priv->rx_length = 0;
+      spislave_prepare_next_tx(priv);
+      spin_unlock_irqrestore(&priv->lock, flags);
+      return priv->tx_length;
+    }
 
   bufsize = SPI_SLAVE_BUFSIZE - priv->tx_length;
   if (bufsize == 0)
@@ -1727,6 +1762,11 @@ static size_t spislave_qpoll(struct spi_slave_ctrlr_s *ctrlr)
 
   DEBUGASSERT(priv != NULL);
   DEBUGASSERT(priv->dev != NULL);
+
+  if (!priv->need_copy)
+    {
+      return 0;
+    }
 
   spiinfo("ctrlr=%p\n", ctrlr);
 
