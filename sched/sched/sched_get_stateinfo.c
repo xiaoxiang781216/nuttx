@@ -31,6 +31,7 @@
 #include <semaphore.h>
 #include <nuttx/mutex.h>
 #include <nuttx/irq.h>
+#include <nuttx/addrenv.h>
 #include "nuttx/sched.h"
 
 /****************************************************************************

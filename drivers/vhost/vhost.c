@@ -27,6 +27,7 @@
 #include <debug.h>
 
 #include <nuttx/kmalloc.h>
+#include <nuttx/list.h>
 #include <nuttx/mutex.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/vhost/vhost.h>

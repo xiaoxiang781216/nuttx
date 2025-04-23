@@ -37,7 +37,6 @@
 #include <pthread.h>
 #include <time.h>
 
-#include <nuttx/addrenv.h>
 #include <nuttx/clock.h>
 #include <nuttx/irq.h>
 #include <nuttx/mutex.h>
@@ -239,6 +238,10 @@
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
+
+#ifdef CONFIG_ARCH_ADDRENV
+struct addrenv_s; /* Forward definition to avoid including addrenv.h */
+#endif
 
 /* General Task Management Types ********************************************/
 

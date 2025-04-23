@@ -34,6 +34,7 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/addrenv.h>
 #include <nuttx/queue.h>
 
 #include "sched/sched.h"
