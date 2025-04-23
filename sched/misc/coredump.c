@@ -30,6 +30,7 @@
 #include <string.h>
 #include <syslog.h>
 #include <debug.h>
+#include <fcntl.h>
 
 #include <nuttx/coredump.h>
 #include <nuttx/elf.h>
