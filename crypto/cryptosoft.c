@@ -188,7 +188,14 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
         }
     }
 
-  bcopy(ivp, crp->crp_iv, ivlen);
+  switch (sw->sw_alg)
+    {
+      case CRYPTO_AES_CBC:
+        bcopy(ivp, crp->crp_iv, ivlen);
+        break;
+      default:
+        break;
+    }
 
   return 0; /* Done with encryption/decryption */
 }

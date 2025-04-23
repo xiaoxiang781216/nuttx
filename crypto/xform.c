@@ -212,7 +212,7 @@ const struct enc_xform enc_xform_aes =
 const struct enc_xform enc_xform_aes_ctr =
 {
   CRYPTO_AES_CTR, "AES-CTR",
-  16, 8, 16 + 4, 32 + 4,
+  16, 16, 16, 32,
   sizeof(struct aes_ctr_ctx),
   aes_ctr_crypt,
   aes_ctr_crypt,
@@ -254,7 +254,7 @@ const struct enc_xform enc_xform_aes_cmac =
 const struct enc_xform enc_xform_aes_xts =
 {
   CRYPTO_AES_XTS, "AES-XTS",
-  16, 8, 32, 64,
+  16, 16, 32, 64,
   sizeof(struct aes_xts_ctx),
   aes_xts_encrypt,
   aes_xts_decrypt,
@@ -585,7 +585,7 @@ void aes_ctr_reinit(caddr_t key, FAR uint8_t *iv)
   FAR struct aes_ctr_ctx *ctx;
 
   ctx = (FAR struct aes_ctr_ctx *)key;
-  bcopy(iv, ctx->ac_block + AESCTR_NONCESIZE, AESCTR_IVSIZE);
+  bcopy(iv, ctx->ac_block, AESCTR_NONCESIZE + AESCTR_IVSIZE);
 
   /* reset counter */
 
@@ -645,35 +645,19 @@ int aes_ctr_setkey(FAR void *sched, FAR uint8_t *key, int len)
     }
 
   ctx = (FAR struct aes_ctr_ctx *)sched;
-  if (aes_setkey(&ctx->ac_key, key, len - AESCTR_NONCESIZE) != 0)
+  if (aes_setkey(&ctx->ac_key, key, len) != 0)
     {
       return -1;
     }
 
-  bcopy(key + len - AESCTR_NONCESIZE, ctx->ac_block, AESCTR_NONCESIZE);
   return 0;
 }
 
 void aes_xts_reinit(caddr_t key, FAR uint8_t *iv)
 {
   FAR struct aes_xts_ctx *ctx = (FAR struct aes_xts_ctx *)key;
-  uint64_t blocknum;
-  u_int i;
 
-  /* Prepare tweak as E_k2(IV). IV is specified as LE representation
-   * of a 64-bit block number which we allow to be passed in directly.
-   */
-
-  memcpy(&blocknum, iv, AES_XTS_IVSIZE);
-  for (i = 0; i < AES_XTS_IVSIZE; i++)
-    {
-      ctx->tweak[i] = blocknum & 0xff;
-      blocknum >>= 8;
-    }
-
-  /* Last 64 bits of IV are always zero */
-
-  bzero(ctx->tweak + AES_XTS_IVSIZE, AES_XTS_IVSIZE);
+  bcopy(iv, ctx->tweak, 16);
 
   rijndael_encrypt(&ctx->key2, ctx->tweak, ctx->tweak);
 }
