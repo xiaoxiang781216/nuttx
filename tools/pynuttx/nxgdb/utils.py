@@ -1292,6 +1292,9 @@ class BacktraceEntry:
         return [int(addr) for addr in stack]
 
     def format(self, formatter: str = "{:<5} {:<36} {}\n"):
+        if not self.entry:
+            return ""
+
         stack = ArrayIterator(self.entry.stack, self.entry.depth)
         return str(Backtrace(stack))
 

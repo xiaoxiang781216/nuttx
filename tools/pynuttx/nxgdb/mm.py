@@ -498,8 +498,15 @@ class MMNode(gdb.Value, p.MMFreeNode):
         if MM_RECORD_STACK_DEPTH <= 0:
             return ()
 
-        if not self._backtrace and (stack := utils.BacktraceEntry(self["stack"]).get()):
-            self._backtrace = tuple(stack)
+        # The free mm heap node does not record backtrace, the value may be illegal
+        try:
+            if not self._backtrace and (
+                stack := utils.BacktraceEntry(self["stack"]).get()
+            ):
+                self._backtrace = tuple(stack)
+        except gdb.MemoryError:
+            self._backtrace = tuple(utils.BacktraceEntry(0).get())
+
         return self._backtrace
 
     @property
