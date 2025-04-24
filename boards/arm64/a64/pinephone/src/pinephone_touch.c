@@ -118,7 +118,7 @@ static int pinephone_gt9xx_irq_attach(const struct gt9xx_board_s *state,
   /* Set Interrupt Priority in Generic Interrupt Controller v2 */
 
   up_prioritize_irq(A64_IRQ_PH_EINT, 0);
-  up_set_type_irq(A64_IRQ_PH_EINT, IRQ_RISING_EDGE);
+  up_set_irq_type(A64_IRQ_PH_EINT, IRQ_RISING_EDGE);
 
   /* Enable Interrupts for Port PH */
 

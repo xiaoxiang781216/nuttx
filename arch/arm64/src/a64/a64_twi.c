@@ -1844,7 +1844,7 @@ static void twi_hw_initialize(struct a64_twi_priv_s *priv)
   /* Set Interrupt Priority in Generic Interrupt Controller v2 */
 
   up_prioritize_irq(priv->config->irq, 0);
-  up_set_type_irq(priv->config->irq, IRQ_HIGH_LEVEL);
+  up_set_irq_type(priv->config->irq, IRQ_HIGH_LEVEL);
 
   /* Enable TWI Interrupt */
 

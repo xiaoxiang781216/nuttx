@@ -773,7 +773,7 @@ static int zynq_uart_attach(struct uart_dev_s *dev)
   /* Set Interrupt Priority in Generic Interrupt Controller v2 */
 
   up_prioritize_irq(port->irq_num, 0);
-  up_set_type_irq(port->irq_num, IRQ_HIGH_LEVEL);
+  up_set_irq_type(port->irq_num, IRQ_HIGH_LEVEL);
 
   /* Enable UART Interrupt */
 
