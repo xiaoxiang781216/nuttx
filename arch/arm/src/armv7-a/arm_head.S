@@ -195,10 +195,12 @@ __start:
 	wfe
 #endif
 
+#  if CONFIG_NCPUS > 1
 	ldr		r1, =cpu1_start
 	ldr		r1, [r1]
 	cmp		r0, #1
 	bxeq		r1
+#  endif
 #  if CONFIG_NCPUS > 2
 	ldr		r1, =cpu2_start
 	ldr		r1, [r1]
