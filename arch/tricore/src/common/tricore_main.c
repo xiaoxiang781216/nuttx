@@ -72,6 +72,10 @@ void weak_function tricore_apu_init(void)
 {
 }
 
+void weak_function tricore_csrm_apu_init(void)
+{
+}
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -127,6 +131,6 @@ void core5_main(void)
 
 void core6_main(void)
 {
-  tricore_apu_init();
+  tricore_csrm_apu_init();
   core_main();
 }
