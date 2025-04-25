@@ -154,7 +154,7 @@ int host_system(char *buf, size_t len, const char *fmt, ...)
 
       up_irq_restore(flags);
 
-      ret = host_uninterruptible_errno(fread, buf, 1, len, fp);
+      ret = host_uninterruptible(fread, buf, 1, len, fp);
       host_uninterruptible(pclose, fp);
     }
 
