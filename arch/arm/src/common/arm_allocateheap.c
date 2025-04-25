@@ -37,6 +37,9 @@
 
 #include "arm_internal.h"
 #include "chip.h"
+#ifdef CONFIG_BUILD_KERNEL
+#include "mmu.h"
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions
