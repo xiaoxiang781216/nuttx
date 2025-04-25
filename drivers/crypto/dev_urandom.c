@@ -317,6 +317,8 @@ void devurandom_register(void)
   unsigned int seed = 0;
   struct timespec ts;
 
+  UNUSED(seed);
+
   nxclock_gettime(CLOCK_REALTIME, &ts);
   seed = clock_time2ticks(&ts);
 
