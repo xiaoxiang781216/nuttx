@@ -77,7 +77,9 @@ static int group_signal_handler(pid_t pid, FAR void *arg)
 {
   FAR struct group_signal_s *info = (FAR struct group_signal_s *)arg;
   FAR struct tcb_s *tcb;
+#ifndef CONFIG_DISABLE_SIGNALS
   FAR sigactq_t *sigact;
+#endif
   bool terminate = false;
   int ret = 0;
 
@@ -148,6 +150,7 @@ static int group_signal_handler(pid_t pid, FAR void *arg)
 
           /* Is there also a action associated with the task group? */
 
+#ifndef CONFIG_DISABLE_SIGNALS
           sigact = nxsig_find_action(tcb->group, info->siginfo->si_signo);
           if (sigact)
             {
@@ -169,6 +172,7 @@ static int group_signal_handler(pid_t pid, FAR void *arg)
                     }
                 }
             }
+#endif
         }
     }
 

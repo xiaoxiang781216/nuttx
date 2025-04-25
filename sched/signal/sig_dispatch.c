@@ -50,6 +50,7 @@
  * Private Types
  ****************************************************************************/
 
+#ifndef CONFIG_DISABLE_SIGNALS
 struct sig_arg_s
 {
   pid_t pid;
@@ -399,6 +400,8 @@ static FAR sigpendq_t *nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
   return sigpend;
 }
 
+#endif /* !CONFIG_DISABLE_SIGNALS */
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -428,11 +431,13 @@ static FAR sigpendq_t *nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
 int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 {
   FAR struct tcb_s *rtcb = this_task();
-  FAR sigactq_t *sigact;
   irqstate_t flags;
   int masked;
   int ret = OK;
+#ifndef CONFIG_DISABLE_SIGNALS
   FAR sigpendq_t *sigpend = NULL;
+  FAR sigactq_t *sigact;
+#endif
 
   sinfo("TCB=%p pid=%d signo=%d code=%d value=%d masked=%s\n",
         stcb, stcb->pid, info->si_signo, info->si_code,
@@ -456,10 +461,6 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
     }
 
   /************************** MASKED SIGNAL ACTIONS *************************/
-
-  /* Find if there is a group sigaction associated with this signal */
-
-  sigact = nxsig_find_action(stcb->group, info->si_signo);
 
   flags = enter_critical_section();
 
@@ -533,14 +534,15 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
               nxsched_switch(this_task(), rtcb);
             }
 
-#ifdef CONFIG_LIB_SYSCALL
+#ifndef CONFIG_DISABLE_SIGNALS
+#  ifdef CONFIG_LIB_SYSCALL
           /* Must also add signal action if in system call */
 
           if (masked == 0)
             {
               sigpend = nxsig_add_pendingsignal(stcb, info);
             }
-#endif
+#  endif
         }
 
       /* Its not one we are waiting for... Add it to the list of pending
@@ -550,6 +552,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
       else
         {
           sigpend = nxsig_add_pendingsignal(stcb, info);
+#endif
         }
 
       leave_critical_section(flags);
@@ -561,9 +564,15 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
     {
       leave_critical_section(flags);
 
+#ifndef CONFIG_DISABLE_SIGNALS
+      /* Find if there is a group sigaction associated with this signal */
+
+      sigact = nxsig_find_action(stcb->group, info->si_signo);
+
       /* Queue any sigaction's requested by this task. */
 
       ret = nxsig_queue_action(stcb, sigact, info);
+#endif
 
       /* Deliver of the signal must be performed in a critical section */
 
@@ -671,12 +680,14 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
       leave_critical_section(flags);
     }
 
+#ifndef CONFIG_DISABLE_SIGNALS
   /* Dispatch kernel action, if needed, in case a pending signal was added */
 
   if (sigpend != NULL)
     {
       nxsig_dispatch_kernel_action(stcb, &sigpend->info);
     }
+#endif
 
   /* In case nxsig_ismember failed due to an invalid signal number */
 
