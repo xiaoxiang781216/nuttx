@@ -104,7 +104,7 @@ class CrashThread(gdb.Command):
         print(f"Found {len(collected)} crashed threads\n{'PID':<4} {'Name':<10}")
         for thread in collected:
             print("{:<4} {:<10}".format(thread.pid, thread.name))
-            for _, func, _ in thread.backtrace:
+            for _, func, _, _ in thread.backtrace:
                 print("{:<4} {:<10}".format("", func))
 
     def diagnose(self, *args, **kwargs):
@@ -119,14 +119,7 @@ class CrashThread(gdb.Command):
                     "pid": thread.pid,
                     "name": thread.name,
                     "entry": utils.get_task_entry(utils.get_tcb(thread.pid)),
-                    "backtrace": [
-                        {
-                            "address": addr,
-                            "function": func,
-                            "source": src,
-                        }
-                        for addr, func, src in thread.backtrace
-                    ],
+                    "backtrace": thread.backtrace,
                 }
                 for thread in threads
             ],
