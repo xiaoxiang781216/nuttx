@@ -184,6 +184,7 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
                     {
                       arg.saved_affinity = stcb->affinity;
                       arg.need_restore   = true;
+                      CPU_ZERO(&stcb->affinity);
                       CPU_SET(stcb->cpu, &stcb->affinity);
                     }
 

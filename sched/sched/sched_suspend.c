@@ -161,6 +161,7 @@ void nxsched_suspend(FAR struct tcb_s *tcb)
             {
               arg.saved_affinity = tcb->affinity;
               arg.need_restore = true;
+              CPU_ZERO(&tcb->affinity);
               CPU_SET(tcb->cpu, &tcb->affinity);
             }
 

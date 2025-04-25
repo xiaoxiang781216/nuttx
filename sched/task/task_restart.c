@@ -243,6 +243,7 @@ static int nxtask_restart(pid_t pid)
         {
           arg.saved_affinity = tcb->affinity;
           arg.need_restore = true;
+          CPU_ZERO(&tcb->affinity);
           CPU_SET(tcb->cpu, &tcb->affinity);
         }
 

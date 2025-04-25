@@ -131,6 +131,7 @@ int sched_backtrace(pid_t tid, FAR void **buffer, int size, int skip)
                 {
                   arg.saved_affinity = tcb->affinity;
                   arg.need_restore = true;
+                  CPU_ZERO(&tcb->affinity);
                   CPU_SET(tcb->cpu, &tcb->affinity);
                 }
 
