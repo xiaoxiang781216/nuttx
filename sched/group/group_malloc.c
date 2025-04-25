@@ -78,7 +78,24 @@ FAR void *group_malloc(FAR struct task_group_s *group, size_t nbytes)
        */
 
 #ifdef CONFIG_MM_TASK_HEAP
-      return mm_malloc(group->tg_heap, nbytes);
+      for (; ; )
+        {
+          FAR void *mem = mm_malloc(group->tg_heap, nbytes);
+#  ifdef CONFIG_BUILD_KERNEL
+          if (!mem)
+            {
+              if (mm_sbrk(group->tg_heap,
+                          nbytes < 1 ? 1 : nbytes, NULL) != OK)
+                {
+                  return NULL;
+                }
+            }
+          else
+#  endif
+            {
+              return mem;
+            }
+        }
 #else
       return kumm_malloc(nbytes);
 #endif

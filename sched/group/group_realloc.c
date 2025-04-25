@@ -79,7 +79,24 @@ FAR void *group_realloc(FAR struct task_group_s *group, FAR void *oldmem,
        */
 
 #ifdef CONFIG_MM_TASK_HEAP
-      return mm_realloc(group->tg_heap, oldmem, newsize);
+      for (; ; )
+        {
+          FAR void *mem = mm_realloc(group->tg_heap, oldmem, newsize);
+#  ifdef CONFIG_BUILD_KERNEL
+          if (!mem)
+            {
+              if (mm_sbrk(group->tg_heap,
+                          newsize < 1 ? 1 : newsize, NULL) != OK)
+                {
+                  return NULL;
+                }
+            }
+          else
+#  endif
+            {
+              return mem;
+            }
+        }
 #else
       return kumm_realloc(oldmem, newsize);
 #endif

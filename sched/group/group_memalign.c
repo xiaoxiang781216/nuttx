@@ -79,7 +79,24 @@ FAR void *group_memalign(FAR struct task_group_s *group, size_t alignment,
        */
 
 #ifdef CONFIG_MM_TASK_HEAP
-      return mm_memalign(group->tg_heap, alignment, nbytes);
+      for (; ; )
+        {
+          FAR void *mem = mm_memalign(group->tg_heap, alignment, nbytes);
+#  ifdef CONFIG_BUILD_KERNEL
+          if (!mem)
+            {
+              if (mm_sbrk(group->tg_heap,
+                          nbytes < 1 ? 1 : nbytes, NULL) != OK)
+                {
+                  return NULL;
+                }
+            }
+          else
+#  endif
+            {
+              return mem;
+            }
+        }
 #else
       return kumm_memalign(alignment, nbytes);
 #endif
