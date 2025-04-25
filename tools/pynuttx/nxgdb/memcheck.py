@@ -173,3 +173,16 @@ class MMCheck(gdb.Command):
             traceback.print_exc()
 
         print("Check done.")
+
+    def diagnose(self, *args, **kwargs):
+        output = gdb.execute("mm check", to_string=True)
+        fail = "issues in heap" in output
+        return {
+            "title": "Memory Corruption Check",
+            "summary": (
+                "Memory corruption found" if fail else "No obvious memory corruption"
+            ),
+            "command": "memcheck",
+            "result": "fail" if fail else "pass",
+            "data": output,
+        }

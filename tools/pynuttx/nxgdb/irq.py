@@ -78,3 +78,12 @@ class IRQInfoDump(gdb.Command):
             print(
                 self.formatter.format(i, irq.count, irq.time, "N/A", handler, irq_arg)
             )
+
+    def diagnose(self, *args, **kwargs):
+        return {
+            "title": "IRQ Information",
+            "summary": "IRQ information including count, rate etc.",
+            "command": "irqinfo",
+            "result": "info",
+            "message": gdb.execute("irqinfo", to_string=True),
+        }

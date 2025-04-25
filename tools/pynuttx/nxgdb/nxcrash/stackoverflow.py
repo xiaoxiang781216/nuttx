@@ -68,7 +68,7 @@ class CrashStackOverflow(gdb.Command):
     def diagnose(self, *args, **kwargs):
         collected = self.collect(utils.get_tcbs())
         return {
-            "title": "Stack OverFlow Report",
+            "title": "Stack Overflow Report",
             "summary": f"{'No' if not collected else len(collected)} threads{'s' if len(collected) != 1 else ''} found",
             "result": "fail" if collected else "pass",
             "command": "crash stackoverflow",

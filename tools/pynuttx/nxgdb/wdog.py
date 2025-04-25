@@ -65,3 +65,12 @@ class WDogDump(gdb.Command):
     def invoke(self, arg, from_tty):
         for wdog in get_wdog_list():
             print(wdog)
+
+    def diagnose(self, *args, **kwargs):
+        return {
+            "title": "Wdog Timer Information",
+            "summary": "Wdog timer information",
+            "command": "wdog",
+            "result": "info",
+            "message": gdb.execute("wdog", to_string=True),
+        }

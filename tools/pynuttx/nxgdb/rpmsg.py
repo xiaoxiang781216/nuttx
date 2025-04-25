@@ -186,3 +186,12 @@ class RPMsgDump(gdb.Command):
         if not args.transport_only:
             self.dump_rpmsg_cb()
         self.dump_rpmsg(args.transport_only)
+
+    def diagnose(self, *args, **kwargs):
+        return {
+            "title": "RPMSG Report",
+            "summary": "RPMSG report",
+            "command": "rpmsgdump",
+            "result": "info",
+            "message": gdb.execute("rpmsgdump", to_string=True),
+        }

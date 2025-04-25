@@ -122,7 +122,7 @@ class UnameCommand(gdb.Command):
     def diagnose(self, *args, **kwargs):
         return {
             "title": "Uname Report",
-            "summary": "dump the kernel version number",
+            "summary": "Version numbers of both tool and kernel",
             "command": "uname",
             "result": "info",
             "message": gdb.execute("uname -a", to_string=True),

@@ -153,8 +153,8 @@ class Critmon(gdb.Command):
 
     def diagnose(self, *args, **kwargs):
         return {
-            "title": "critmon report",
-            "summary": "critical resource busy-wait time dump",
+            "title": "Critmon Report",
+            "summary": "Critical resource busy-wait time dump",
             "result": "info",
             "command": "critmon",
             "data": gdb.execute("critmon", to_string=True),

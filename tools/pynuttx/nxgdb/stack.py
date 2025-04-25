@@ -219,3 +219,12 @@ class StackUsage(gdb.Command):
                 continue
 
             self.format_print(pid, stack)
+
+    def diagnose(self, *args, **kwargs):
+        return {
+            "title": "Stack Usage Report",
+            "summary": "Stack usage report",
+            "command": "stack-usage",
+            "result": "info",
+            "message": gdb.execute("stack-usage", to_string=True),
+        }

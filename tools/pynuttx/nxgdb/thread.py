@@ -588,3 +588,12 @@ class Ps(gdb.Command):
                 gdb.write(f"[Error] GDB error while processing TCB: {e}\n")
             except Exception as e:
                 gdb.write(f"[Error] Unexpected error: {e}\n")
+
+    def diagnose(self, *args, **kwargs):
+        return {
+            "title": "Thread Information",
+            "summary": "Thread information",
+            "command": "ps",
+            "result": "info",
+            "message": gdb.execute("ps", to_string=True),
+        }

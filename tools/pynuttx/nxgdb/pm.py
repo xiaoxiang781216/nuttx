@@ -101,3 +101,12 @@ class Pmconfig(gdb.Command):
         for i, domain_name in enumerate(domains):
             domain = pmdomains[i]
             self.print_state_info(domain_name, domain)
+
+    def diagnose(self, *args, **kwargs):
+        return {
+            "title": "Power Manager Information",
+            "summary": "Power manager information",
+            "command": "pmconfig",
+            "result": "info",
+            "message": gdb.execute("pmconfig", to_string=True),
+        }

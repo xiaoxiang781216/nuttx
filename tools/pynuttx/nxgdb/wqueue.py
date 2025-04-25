@@ -171,3 +171,12 @@ class WorkQueueDump(gdb.Command):
 
             print("    Queued:")
             print("\n".join(f"    {work}" for work in queue.workers))
+
+    def diagnose(self, *args, **kwargs):
+        return {
+            "title": "Worker Queue Information",
+            "summary": "All worker queue information",
+            "command": "worker",
+            "result": "info",
+            "message": gdb.execute("worker", to_string=True),
+        }

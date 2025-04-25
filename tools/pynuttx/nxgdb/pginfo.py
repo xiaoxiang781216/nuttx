@@ -117,3 +117,12 @@ class DumpPageTableCommand(gdb.Command):
 
         pagetable = clz()
         pagetable.dump()
+
+    def diagnose(self, *args, **kwargs):
+        return {
+            "title": "Page Table Information",
+            "summary": "Page table information",
+            "command": "dump_pagetable",
+            "result": "info",
+            "message": gdb.execute("dump_pagetable", to_string=True),
+        }

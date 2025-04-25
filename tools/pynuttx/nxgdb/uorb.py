@@ -156,3 +156,12 @@ class uORBDump(gdb.Command):
                     hex(topic.buffer.address),
                 )
             )
+
+    def diagnose(self, *args, **kwargs):
+        return {
+            "title": "UORB Topics",
+            "summary": "All active uORB topics",
+            "command": "uorb",
+            "result": "info",
+            "message": gdb.execute("uorb", to_string=True),
+        }

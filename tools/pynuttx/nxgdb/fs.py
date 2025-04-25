@@ -300,7 +300,7 @@ class Fdinfo(gdb.Command):
         output = gdb.execute("fdinfo", to_string=True)
 
         return {
-            "title": "fdinfo report",
+            "title": "File Descriptors Information",
             "summary": f"Total files opened:{self.total_fd_count}",
             "result": "info",
             "command": "fdinfo",
@@ -336,7 +336,7 @@ class Mount(gdb.Command):
         output = gdb.execute("mount", to_string=True)
 
         return {
-            "title": "File system mount information",
+            "title": "File System Mount Information",
             "summary": f"Total {self.mount_count} mount points",
             "command": "mount",
             "result": "info",
@@ -440,7 +440,7 @@ class ForeachInode(gdb.Command):
         output = gdb.execute("foreach inode", to_string=True)
 
         return {
-            "title": "File node information",
+            "title": "File Node Information",
             "summary": "inode formation dump",
             "command": "foreach inode",
             "result": "info",
@@ -494,7 +494,7 @@ class InfoShmfs(gdb.Command):
         output = gdb.execute("info shm", to_string=True)
 
         return {
-            "title": "Share memory usage",
+            "title": "Share Memory Usage",
             "summary": f"Total used:{self.total_size}kB, {self.block_count}blocks",
             "result": "info",
             "command": "info shm",
@@ -586,7 +586,7 @@ class InfoRomfs(gdb.Command):
         output = gdb.execute("info romfs", to_string=True)
 
         return {
-            "title": "Romfs cache information",
+            "title": "Romfs Cache Information",
             "summary": "Romfs nodeinfo dump",
             "command": "info romfs",
             "result": "info",
@@ -699,7 +699,7 @@ class InfoYaffs(gdb.Command):
     def diagnose(self, *args, **kwargs):
         output = gdb.execute("info yaffs", to_string=True)
         return {
-            "title": "Yaffs cache information",
+            "title": "Yaffs Cache Information",
             "summary": "Yaffs information dump",
             "command": "info Yaffs",
             "result": "info",

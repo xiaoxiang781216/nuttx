@@ -110,7 +110,7 @@ class CrashThread(gdb.Command):
     def diagnose(self, *args, **kwargs):
         threads = self.collect(utils.get_tcbs())
         return {
-            "title": "Threads that seem crashed",
+            "title": "Threads Seem Crashed",
             "summary": f"{'No' if not threads else len(threads)} threads seem crashed",
             "result": "fail" if threads else "pass",
             "command": "crash thread",

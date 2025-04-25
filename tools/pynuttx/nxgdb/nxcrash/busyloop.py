@@ -62,7 +62,7 @@ class CrashBusyloop(gdb.Command):
         collected = self.collect(utils.get_tcbs())
 
         return {
-            "title": "Busyloop Report",
+            "title": "System Busyloop Detection",
             "summary": f"{'No' if not collected else len(collected)} threads occur busyloop",
             "result": "fail" if collected else "pass",
             "command": "crash busyloop",
