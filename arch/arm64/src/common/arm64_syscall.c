@@ -97,6 +97,11 @@ uintptr_t dispatch_syscall(unsigned int nbr, uintptr_t parm1,
                            uintptr_t parm6)
 {
   struct tcb_s *rtcb         = this_task();
+
+  /* Indicate that we are in a syscall handler */
+
+  atomic_fetch_or(&rtcb->flags, TCB_FLAG_SYSCALL);
+
   register long x0 asm("x0") = (long)(nbr);
   register long x1 asm("x1") = (long)(parm1);
   register long x2 asm("x2") = (long)(parm2);
@@ -115,10 +120,6 @@ uintptr_t dispatch_syscall(unsigned int nbr, uintptr_t parm1,
 
       return -ENOSYS;
     }
-
-  /* Indicate that we are in a syscall handler */
-
-  atomic_fetch_or(&rtcb->flags, TCB_FLAG_SYSCALL);
 
   /* Offset a0 to account for the reserved syscalls */
 

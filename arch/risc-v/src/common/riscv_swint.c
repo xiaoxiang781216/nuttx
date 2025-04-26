@@ -85,6 +85,11 @@ uintptr_t dispatch_syscall(unsigned int nbr, uintptr_t parm1,
                            uintptr_t parm6, void *context)
 {
   struct tcb_s *rtcb         = this_task();
+
+  /* Indicate that we are in a syscall handler */
+
+  atomic_fetch_or(&rtcb->flags, TCB_FLAG_SYSCALL);
+
   register long a0 asm("a0") = (long)(nbr);
   register long a1 asm("a1") = (long)(parm1);
   register long a2 asm("a2") = (long)(parm2);
@@ -107,10 +112,6 @@ uintptr_t dispatch_syscall(unsigned int nbr, uintptr_t parm1,
   /* Set the user register context to TCB */
 
   rtcb->xcp.sregs = context;
-
-  /* Indicate that we are in a syscall handler */
-
-  atomic_fetch_or(&rtcb->flags, TCB_FLAG_SYSCALL);
 
   /* Offset a0 to account for the reserved syscalls */
 
