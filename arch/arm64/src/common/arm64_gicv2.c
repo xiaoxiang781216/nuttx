@@ -1348,6 +1348,8 @@ void arm64_gic_secondary_init(void)
   arm_gic_initialize();
 }
 
+#endif /* CONFIG_SMP */
+
 /****************************************************************************
  * Name: up_trigger_irq
  *
@@ -1402,8 +1404,6 @@ void up_trigger_irq(int irq, cpu_set_t cpuset)
       putreg32(regval, GIC_ICDSGIR);
     }
 }
-
-#endif /* CONFIG_SMP */
 
 /****************************************************************************
  * Name: up_get_legacy_irq
