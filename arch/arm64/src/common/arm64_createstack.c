@@ -125,7 +125,7 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
 
       tcb->stack_alloc_ptr =
 #ifdef CONFIG_TLS_ALIGNED
-        group_memalign(tcb->group, alignment, stack_size);
+        group_memalign(tcb->group, TLS_STACK_ALIGN, stack_size);
 #else /* CONFIG_TLS_ALIGNED */
         group_memalign(tcb->group, STACK_ALIGNMENT, stack_size);
 #endif /* CONFIG_TLS_ALIGNED */

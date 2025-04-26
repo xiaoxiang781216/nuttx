@@ -32,6 +32,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
+#include <nuttx/addrenv.h>
 
 #include "sched/sched.h"
 #include "arm64_internal.h"
