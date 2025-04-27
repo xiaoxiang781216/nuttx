@@ -43,6 +43,7 @@
 #include <nuttx/mm/kasan.h>
 #include <nuttx/mm/mempool.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/pgalloc.h>
 
 #include "tlsf/tlsf.h"
 
@@ -778,6 +779,85 @@ FAR void *mm_brkaddr(FAR struct mm_heap_s *heap, int region)
 
   return heap->mm_heapend[region];
 }
+
+/****************************************************************************
+ * Name: mm_sbrk
+ *
+ * Description:
+ *    The sbrk() function is used to change the amount of space allocated
+ *    for the calling process. The change is made by resetting the process's
+ *    break value and allocating the appropriate amount of space.  The amount
+ *    of allocated space increases as the break value increases.
+ *
+ *    The sbrk() function adds 'incr' bytes to the break value and changes
+ *    the allocated space accordingly. If incr is negative, the amount of
+ *    allocated space is decreased by incr bytes. The current value of the
+ *    program break is returned by sbrk(0).
+ *
+ * Input Parameters:
+ *    heap - The heap to be used.
+ *    incr - Specifies the number of bytes to add or to remove from the
+ *      space allocated for the process.
+ *    mem  - The address of the new program break.
+ *
+ * Returned Value:
+ *    ENOMEM - The requested change would allocate more space than
+ *      allowed under system limits.
+ *    EAGAIN - The total amount of system memory available for allocation
+ *      to this process is temporarily insufficient. This may occur even
+ *      though the space requested was less than the maximum data segment
+ *      size.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_BUILD_KERNEL
+int mm_sbrk(FAR struct mm_heap_s *heap, intptr_t incr, FAR void **mem)
+{
+  uintptr_t brkaddr;
+  uintptr_t allocbase;
+  unsigned int pgincr;
+  size_t bytesize;
+
+  DEBUGASSERT(incr >= 0);
+  if (incr < 0)
+    {
+      return -ENOSYS;
+    }
+
+  /* Get the current break address (NOTE: assumes region 0). */
+
+  brkaddr = (uintptr_t)mm_brkaddr(heap, 0);
+  if (incr > 0)
+    {
+      /* Convert the increment to multiples of the page size */
+
+      pgincr = MM_NPAGES(incr);
+
+      /* Allocate the requested number of pages and map them to the
+       * break address.
+       */
+
+      allocbase = pgalloc(brkaddr, pgincr);
+      if (allocbase == 0)
+        {
+          return -EAGAIN;
+        }
+
+      /* Extend the heap (region 0) */
+
+      bytesize = pgincr << MM_PGSHIFT;
+      mm_extend(heap, (FAR void *)allocbase, bytesize, 0);
+    }
+
+  if (mem)
+    {
+      *mem = (FAR void *)brkaddr;
+    }
+
+  return 0;
+}
+
+#endif
 
 /****************************************************************************
  * Name: mm_calloc

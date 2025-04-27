@@ -392,6 +392,12 @@ bool kmm_heapmember(FAR void *mem);
 
 FAR void *mm_brkaddr(FAR struct mm_heap_s *heap, int region);
 
+/* Functions contained in mm_sbrk.c *****************************************/
+
+#ifdef CONFIG_BUILD_KERNEL
+int mm_sbrk(FAR struct mm_heap_s *heap, intptr_t incr, FAR void **mem);
+#endif
+
 /* Functions contained in umm_brkaddr.c *************************************/
 
 FAR void *umm_brkaddr(int region);

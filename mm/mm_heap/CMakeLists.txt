@@ -46,6 +46,10 @@ if(CONFIG_MM_DEFAULT_MANAGER)
     list(APPEND SRCS mm_checkcorruption.c)
   endif()
 
+  if(CONFIG_BUILD_KERNEL)
+    list(APPEND SRCS mm_sbrk.c)
+  endif()
+
   target_sources(mm PRIVATE ${SRCS})
 
 endif()
