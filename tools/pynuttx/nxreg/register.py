@@ -322,18 +322,30 @@ def get_reginfo(elf: LiefELF) -> List[RegInfo]:
     # Now get register offset in TCB
     _, data = elf.read_symbol("g_reginfo")
 
-    reginfo_s = Struct(
-        "name" / PaddedString(8, "utf-8"),
-        "size" / Int8ul,
-        "regnum" / Int8ul,
-        "toffset" / Int16sl,
-        "goffset" / Int16sl,
-        "reserved" / Int16ul,
-    )
+    try:
+        reginfo_s = Struct(
+            "name" / PaddedString(8, "utf-8"),
+            "size" / Int8ul,
+            "regnum" / Int8ul,
+            "toffset" / Int16sl,
+            "goffset" / Int16sl,
+            "reserved" / Int16ul,
+        )
+        regsnum = len(data) // reginfo_s.sizeof()
+        reginfo_t = Array(regsnum, reginfo_s)
+        reginfo = reginfo_t.parse(data)
+    except Exception:
 
-    regsnum = len(data) // reginfo_s.sizeof()
-    reginfo_t = Array(regsnum, reginfo_s)
-    reginfo = reginfo_t.parse(data)
+        reginfo_s = Struct(
+            "name" / PaddedString(8, "utf-8"),
+            "size" / Int8ul,
+            "regnum" / Int8ul,
+            "toffset" / Int16sl,
+            "goffset" / Int16sl,
+        )
+        regsnum = len(data) // reginfo_s.sizeof()
+        reginfo_t = Array(regsnum, reginfo_s)
+        reginfo = reginfo_t.parse(data)
 
     return [RegInfo(reg.name, elf.bits // 8, reg.toffset) for reg in reginfo]
 
