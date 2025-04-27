@@ -582,6 +582,14 @@ config I2S_DMADESC_NUM
 
 endif #ESP32S3_I2S
 
+config ESP32S3_IOEXPANDER
+	bool "I/O Expander Support"
+	default n
+	select IOEXPANDER
+	select IOEXPANDER_INT_ENABLE
+	select ESP32S3_GPIO_IRQ
+	---help---
+		Enable ESP32-S3 I/O Expander driver.
 
 config ESP32S3_SPI
 	bool

@@ -120,6 +120,8 @@
   ((gpio_num >= 0) && \
     (((1ULL << (gpio_num)) & SOC_GPIO_VALID_DIGITAL_IO_PAD_MASK) != 0))
 
+#define ESP32S3_NPINS     49
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -147,6 +149,27 @@ extern "C"
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: esp32s3_is_valid_gpio
+ *
+ * Description:
+ *   Check if the requested pin is a valid GPIO pin.
+ *
+ * Input Parameters:
+ *   pin  - Pin to be checked for validity.
+ *
+ * Returned Value:
+ *   True if the requested pin is a valid GPIO pin, false otherwise.
+ *
+ ****************************************************************************/
+
+static inline bool esp32s3_is_valid_gpio(uint32_t pin)
+{
+  /* ESP32-S3 has 45 GPIO pins numbered from 0 to 21 and 26 to 48 */
+
+  return pin <= 21 || (pin >= 26 && pin < ESP32S3_NPINS);
+}
 
 /****************************************************************************
  * Name: esp32s3_gpioirqinitialize

@@ -44,12 +44,6 @@
 #include "hardware/esp32s3_usb_serial_jtag.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define ESP32S3_NPINS   49
-
-/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -60,27 +54,6 @@ static int g_gpio_cpuint;
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: is_valid_gpio
- *
- * Description:
- *   Check if the requested pin is a valid GPIO pin.
- *
- * Input Parameters:
- *   pin  - Pin to be checked for validity.
- *
- * Returned Value:
- *   True if the requested pin is a valid GPIO pin, false otherwise.
- *
- ****************************************************************************/
-
-static inline bool is_valid_gpio(uint32_t pin)
-{
-  /* ESP32-S3 has 45 GPIO pins numbered from 0 to 21 and 26 to 48 */
-
-  return pin <= 21 || (pin >= 26 && pin < ESP32S3_NPINS);
-}
 
 /****************************************************************************
  * Name: gpio_dispatch
@@ -203,7 +176,7 @@ int esp32s3_configgpio(uint32_t pin, gpio_pinattr_t attr)
   uint32_t cntrl;
   uint32_t pin2func;
 
-  DEBUGASSERT(is_valid_gpio(pin));
+  DEBUGASSERT(esp32s3_is_valid_gpio(pin));
 
   func  = 0;
   cntrl = 0;
@@ -322,7 +295,7 @@ int esp32s3_configgpio(uint32_t pin, gpio_pinattr_t attr)
 
 void esp32s3_gpiowrite(int pin, bool value)
 {
-  DEBUGASSERT(is_valid_gpio(pin));
+  DEBUGASSERT(esp32s3_is_valid_gpio(pin));
 
   if (value)
     {
@@ -367,7 +340,7 @@ bool esp32s3_gpioread(int pin)
 {
   uint32_t regval;
 
-  DEBUGASSERT(is_valid_gpio(pin));
+  DEBUGASSERT(esp32s3_is_valid_gpio(pin));
 
   if (pin < 32)
     {
@@ -600,7 +573,7 @@ void esp32s3_gpio_matrix_out(uint32_t pin, uint32_t signal_idx, bool out_inv,
   uint32_t regaddr = GPIO_FUNC0_OUT_SEL_CFG_REG + (pin * 4);
   uint32_t regval = signal_idx << GPIO_FUNC0_OUT_SEL_S;
 
-  DEBUGASSERT(is_valid_gpio(pin));
+  DEBUGASSERT(esp32s3_is_valid_gpio(pin));
 
   if (pin < 32)
     {
