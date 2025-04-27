@@ -281,13 +281,6 @@ static void rpmsg_virtio_wakeup_tx(FAR struct rpmsg_virtio_priv_s *priv)
     {
       nxsem_post(&priv->semtx);
     }
-
-  /* rpmsg_virtio_wakeup_tx() called normally means the tx buffer has been
-   * returned by peer, so call rpmsg_virtio_pm_action(false) to enter
-   * lowe power mode when there is no pending tx buffer.
-   */
-
-  rpmsg_virtio_pm_action(priv, false);
 }
 
 /****************************************************************************
@@ -475,13 +468,11 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg)
 }
 
 /****************************************************************************
- * Name: rpmsg_virtio_rx_callback
+ * Name: rpmsg_virtio_update_rx
  ****************************************************************************/
 
-static void rpmsg_virtio_rx_callback(FAR struct virtqueue *vq)
+static void rpmsg_virtio_update_rx(FAR struct rpmsg_virtio_priv_s *priv)
 {
-  FAR struct rpmsg_virtio_priv_s *priv =
-    metal_container_of(vq->vq_dev->priv, struct rpmsg_virtio_priv_s, rvdev);
   FAR struct rpmsg_virtio_device *rvdev = &priv->rvdev;
   FAR struct virtqueue *rvq = rvdev->rvq;
 
@@ -495,7 +486,18 @@ static void rpmsg_virtio_rx_callback(FAR struct virtqueue *vq)
       RPMSG_VIRTIO_INVALIDATE(rvq->vq_ring.avail->idx);
       priv->headrx = rvq->vq_ring.avail->idx;
     }
+}
 
+/****************************************************************************
+ * Name: rpmsg_virtio_rx_callback
+ ****************************************************************************/
+
+static void rpmsg_virtio_rx_callback(FAR struct virtqueue *vq)
+{
+  FAR struct rpmsg_virtio_priv_s *priv =
+    metal_container_of(vq->vq_dev->priv, struct rpmsg_virtio_priv_s, rvdev);
+
+  rpmsg_virtio_update_rx(priv);
   rpmsg_virtio_wakeup_rx(priv);
 }
 
@@ -509,6 +511,12 @@ static void rpmsg_virtio_tx_callback(FAR struct virtqueue *vq)
     metal_container_of(vq->vq_dev->priv, struct rpmsg_virtio_priv_s, rvdev);
 
   rpmsg_virtio_wakeup_tx(priv);
+
+  /* rpmsg_virtio_tx_callback() called normally means the tx buffer has been
+   * returned by peer, so call rpmsg_virtio_pm_action(false) to enter to
+   * low power mode when all the tx buffers have been returned.
+   */
+
   rpmsg_virtio_pm_action(priv, false);
 }
 
@@ -547,9 +555,7 @@ static int rpmsg_virtio_notify_wait(FAR struct rpmsg_device *rdev,
 
   /* Wait to wakeup */
 
-  virtqueue_enable_cb(priv->rvdev.svq);
   nxsem_tickwait(&priv->semtx, MSEC2TICK(RPMSG_VIRTIO_TIMEOUT_MS));
-  virtqueue_disable_cb(priv->rvdev.svq);
   rpmsg_virtio_rx_worker(priv);
 
   return 0;
@@ -622,11 +628,16 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
 
   /* Wake up the rx thread to process message */
 
+  rpmsg_virtio_update_rx(priv);
   rpmsg_virtio_wakeup_rx(priv);
 
   /* Broadcast device_created to all registers */
 
   rpmsg_device_created(&priv->rpmsg);
+
+  /* Open tx buffer return callback */
+
+  virtqueue_enable_cb(priv->rvdev.svq);
 
   return ret;
 }
