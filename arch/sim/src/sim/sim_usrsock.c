@@ -48,7 +48,7 @@ struct usrsock_s
 {
   uint8_t in[SIM_USRSOCK_BUFSIZE];
   uint8_t out[SIM_USRSOCK_BUFSIZE];
-  struct wdog_period_s wdog;
+  struct work_s work;
 };
 
 /****************************************************************************
@@ -391,9 +391,11 @@ static const usrsock_handler_t g_usrsock_handler[] =
   [USRSOCK_REQUEST_SHUTDOWN]    = usrsock_shutdown_handler,
 };
 
-static void sim_usrsock_interrupt(wdparm_t arg)
+static void sim_usrsock_work(void *arg)
 {
   host_usrsock_loop();
+  work_queue(HPWORK, &g_usrsock.work, (void *)sim_usrsock_work,
+             NULL, SIM_USRSOCK_PERIOD);
 }
 
 /****************************************************************************
@@ -407,8 +409,8 @@ int usrsock_event_callback(int16_t usockid, uint16_t events)
 
 void usrsock_register(void)
 {
-  wd_start_period(&g_usrsock.wdog, SIM_USRSOCK_PERIOD, SIM_USRSOCK_PERIOD,
-                  sim_usrsock_interrupt, 0);
+  work_queue(HPWORK, &g_usrsock.work, (void *)sim_usrsock_work,
+             NULL, SIM_USRSOCK_PERIOD);
 }
 
 /****************************************************************************
