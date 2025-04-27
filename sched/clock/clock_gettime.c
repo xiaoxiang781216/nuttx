@@ -180,6 +180,8 @@ int nxclock_gettime(clockid_t clock_id, FAR struct timespec *tp)
         {
           nxsched_put_tcb(tcb);
         }
+#else
+      ret = -EINVAL;
 #endif
     }
 
