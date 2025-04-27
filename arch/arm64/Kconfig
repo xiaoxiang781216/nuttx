@@ -34,6 +34,7 @@ config ARCH_CHIP_A64
 	select ARCH_HAVE_IRQTRIGGER
 	select ARCH_NEED_ADDRENV_MAPPING
 	select ARM64_HAVE_PSCI
+	select ARCH_HAVE_IRQPRIO
 	---help---
 		Allwinner A64 SoC
 
@@ -118,6 +119,7 @@ config ARCH_CHIP_ZYNQ_MPSOC
 	select ARCH_HAVE_IRQTRIGGER
 	select ARCH_NEED_ADDRENV_MAPPING
 	select ARM64_HAVE_PSCI
+	select ARCH_HAVE_IRQPRIO
 	---help---
 		XilinX ZYNQ MPSOC
 
