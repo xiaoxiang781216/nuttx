@@ -1093,6 +1093,7 @@ static int sim_mixer_open(struct sim_audio_s *priv)
       host_uninterruptible_no_return(snd_mixer_selem_id_free, sid);
       if (!priv->volume)
         {
+          ret = -EINVAL;
           goto fail;
         }
 
@@ -1114,6 +1115,7 @@ static int sim_mixer_open(struct sim_audio_s *priv)
       host_uninterruptible_no_return(snd_mixer_selem_id_free, sid);
       if (!priv->volume)
         {
+          ret = -EINVAL;
           goto fail;
         }
 
@@ -1129,7 +1131,7 @@ static int sim_mixer_open(struct sim_audio_s *priv)
 fail:
   host_uninterruptible(snd_mixer_close, priv->mixer);
   priv->mixer = NULL;
-  return 0;
+  return ret;
 }
 
 /****************************************************************************
