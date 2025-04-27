@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <nuttx/irq.h>
 #include <arch/arch.h>
 #include <arch/irq.h>
 #include <arch/mode.h>
