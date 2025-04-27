@@ -28,6 +28,7 @@
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 
 #include <assert.h>
 #include <debug.h>
@@ -377,6 +378,13 @@ static int audio_fake_file_init(FAR struct audio_lowerhalf_s *dev)
   FAR struct audio_fake_s *priv = (FAR struct audio_fake_s *)dev;
   char filename[64];
   int ret;
+
+  ret = mkdir(CONFIG_AUDIO_FAKE_DATA_PATH, 0755);
+  if (ret < 0 && get_errno() != EEXIST)
+    {
+      auderr("Failed to create directory\n");
+      return -get_errno();
+    }
 
   snprintf(filename, sizeof(filename), "%s/%s_%"PRIu32"_%"PRIu32"_%d.pcm",
            CONFIG_AUDIO_FAKE_DATA_PATH, priv->params->devname,
