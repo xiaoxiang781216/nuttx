@@ -45,6 +45,9 @@ struct sim_gpiochip_callback_s
 {
   ioe_callback_t cbfunc;
   void *cbarg;
+#if CONFIG_IOEXPANDER_NPINS <= 64
+  ioe_pinset_t pinset;
+#endif
 };
 
 struct sim_gpiochip_dev_s
@@ -92,8 +95,6 @@ static struct ioexpander_ops_s g_sim_gpiochip_ops =
   .ioe_detach    = sim_gpiochip_detach,
 #endif
 };
-
-struct ioexpander_dev_s *g_gpiochip = NULL;
 
 /****************************************************************************
  * Private Functions
@@ -183,9 +184,14 @@ static int sim_gpiochip_option(struct ioexpander_dev_s *dev, uint8_t pin,
           gpioerr("ERROR: Failed to request event: %s\n", strerror(errno));
         }
     }
+  else if (option == IOEXPANDER_OPTION_INVERT)
+    {
+      gpiowarn("invert option is not implemented yet\n");
+      return 0;
+    }
   else
     {
-      gpioinfo("gpiochip io option not support\n");
+      gpioerr("gpiochip io option %d not support\n", option);
       return -ENOTSUP;
     }
 
@@ -254,6 +260,7 @@ static void *sim_gpiochip_attach(struct ioexpander_dev_s *dev,
 {
   struct sim_gpiochip_dev_s *priv = (struct sim_gpiochip_dev_s *)dev;
   void *handle = NULL;
+#if CONFIG_IOEXPANDER_NPINS <= 64
   int i;
 
   for (i = 0; i < CONFIG_IOEXPANDER_NPINS; i++)
@@ -261,10 +268,16 @@ static void *sim_gpiochip_attach(struct ioexpander_dev_s *dev,
       if (pinset & (1 << i))
         {
           priv->cb[i].cbarg = arg;
-          handle = &priv->cb[i];
           priv->cb[i].cbfunc = callback;
+          priv->cb[i].pinset = pinset;
+          handle = &priv->cb[i];
         }
     }
+#else
+  priv->cb[pinset].cbarg = arg;
+  handle = &priv->cb[pinset];
+  priv->cb[pinset].cbfunc = callback;
+#endif
 
   return handle;
 }
@@ -280,6 +293,10 @@ static int sim_gpiochip_detach(struct ioexpander_dev_s *dev, void *handle)
 {
   struct sim_gpiochip_dev_s *priv = (struct sim_gpiochip_dev_s *)dev;
   struct sim_gpiochip_callback_s *cb = handle;
+#if CONFIG_IOEXPANDER_NPINS <= 64
+  ioe_pinset_t pinset;
+  int i;
+#endif
 
   if (priv == NULL || cb == NULL)
     {
@@ -287,60 +304,24 @@ static int sim_gpiochip_detach(struct ioexpander_dev_s *dev, void *handle)
       return -EINVAL;
     }
 
+#if CONFIG_IOEXPANDER_NPINS <= 64
+  pinset = cb->pinset;
+  for (i = 0; i < CONFIG_IOEXPANDER_NPINS; i++)
+    {
+      if (pinset & (1 << i))
+        {
+          priv->cb[i].cbarg = NULL;
+          priv->cb[i].cbfunc = NULL;
+          priv->cb[i].pinset = 0;
+        }
+    }
+#else
   cb->cbfunc = NULL;
   cb->cbarg = NULL;
+#endif
   return 0;
 }
 #endif
-
-/****************************************************************************
- * Name: sim_gpiochip_register_gpio
- *
- * Description:
- *   register gpio for gpiochip device
- *
- * Input Parameters:
- *   priv - A pointer to instance of sim gpiochip device.
- *
- * Returned Value:
- *   0 for OK.
- *
- ****************************************************************************/
-
-static int sim_gpiochip_register_gpio(struct sim_gpiochip_dev_s *priv)
-{
-  struct ioexpander_dev_s *ioe = (struct ioexpander_dev_s *)priv;
-  bool input;
-  int line;
-  int ret;
-
-  for (line = 0; line < CONFIG_IOEXPANDER_NPINS; line++)
-    {
-      ret = host_gpiochip_get_line(priv->dev, line, &input);
-      if (ret != 0)
-        {
-          continue;
-        }
-
-      if (input)
-        {
-          ret = gpio_lower_half(ioe, line, GPIO_INPUT_PIN,
-                                GPIOCHIP_LINE_BASE + line);
-        }
-      else
-        {
-          ret = gpio_lower_half(ioe, line, GPIO_OUTPUT_PIN,
-                                GPIOCHIP_LINE_BASE + line);
-        }
-
-      if (ret < 0)
-        {
-          return ret;
-        }
-    }
-
-  return 0;
-}
 
 /****************************************************************************
  * Name: sim_gpiochip_irq_process
@@ -362,13 +343,10 @@ static void sim_gpiochip_irq_process(struct sim_gpiochip_dev_s *priv)
 
   for (line = 0; line < CONFIG_IOEXPANDER_NPINS; line++)
     {
-      if (host_gpiochip_irq_active(priv->dev, line))
+      if (priv->cb[line].cbfunc && host_gpiochip_irq_active(priv->dev, line))
         {
-          if (priv->cb[line].cbfunc)
-            {
-              priv->cb[line].cbfunc((struct ioexpander_dev_s *)priv,
-                                    line, priv->cb[line].cbarg);
-            }
+          priv->cb[line].cbfunc((struct ioexpander_dev_s *)priv,
+                                 line, priv->cb[line].cbarg);
         }
     }
 }
@@ -418,16 +396,15 @@ static void sim_gpiochip_interrupt(wdparm_t arg)
  *
  ****************************************************************************/
 
-int sim_gpiochip_initialize(const char *path)
+struct ioexpander_dev_s *sim_gpiochip_initialize(const char *path)
 {
   struct sim_gpiochip_dev_s *priv;
-  int ret;
 
   priv = kmm_zalloc(sizeof(struct sim_gpiochip_dev_s));
   if (priv == NULL)
     {
-      gpioerr("Failed to allocate memory for gpiochip device");
-      return -ENOMEM;
+      gpioerr("Failed to allocate memory for gpiochip device\n");
+      return NULL;
     }
 
   priv->ops = &g_sim_gpiochip_ops;
@@ -435,43 +412,13 @@ int sim_gpiochip_initialize(const char *path)
   priv->dev = host_gpiochip_alloc(path);
   if (priv->dev == NULL)
     {
-      gpioerr("Failed to init gpiochip: %d", ret);
+      gpioerr("Failed to init gpiochip\n");
       kmm_free(priv);
-      return -ENODEV;
-    }
-
-  ret = sim_gpiochip_register_gpio(priv);
-  if (ret < 0)
-    {
-      gpioerr("Failed to register gpio: %d", ret);
-      host_gpiochip_free(priv->dev);
-      kmm_free(priv);
-      return ret;
+      return NULL;
     }
 
   wd_start(&priv->wdog, SIM_GPIOCHIP_WDOG_DELAY,
            sim_gpiochip_interrupt, (wdparm_t)priv);
 
-  g_gpiochip = (struct ioexpander_dev_s *)priv;
-
-  return 0;
-}
-
-/****************************************************************************
- * Name: sim_gpiochip_get_ioe
- *
- * Description:
- *   Get the ioexpander pointer of gpiochip device
- *
- * Input Parameters:
- *   None.
- *
- * Returned Value:
- *   The pointer to the instance of sim gpiochip device.
- *
- ****************************************************************************/
-
-struct ioexpander_dev_s *sim_gpiochip_get_ioe(void)
-{
-  return g_gpiochip;
+  return (struct ioexpander_dev_s *)priv;
 }
