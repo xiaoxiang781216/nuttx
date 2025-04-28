@@ -226,6 +226,12 @@ int virtio_unregister_device(FAR struct virtio_device *device);
 
 void virtio_register_drivers(void);
 
+FAR void *virtio_get_next_buffer(FAR struct virtqueue *vq, uint16_t idx,
+                                 FAR uint16_t *next_idx,
+                                 FAR uint32_t *next_len);
+ssize_t virtio_get_buffers(FAR struct virtqueue *vq,
+                           FAR struct virtqueue_buf *vb, size_t vbcnt);
+
 #undef EXTERN
 #ifdef __cplusplus
 }
