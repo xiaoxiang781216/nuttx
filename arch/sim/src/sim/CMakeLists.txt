@@ -49,17 +49,19 @@ list(
   sim_releasestack.c
   sim_stackframe.c
   sim_exit.c
-  sim_schedulesigaction.c
   sim_switchcontext.c
   sim_ummheap.c
   sim_uart.c
   sim_copyfullstate.c
-  sim_sigdeliver.c
   sim_registerdump.c
   sim_saveusercontext.c
   sim_tcbinfo.c
   sim_sectionheap.c
   sim_checkhostfstypes.c)
+
+if(NOT CONFIG_DISABLE_SIGNALS)
+  list(APPEND SRCS sim_schedulesigaction.c sim_sigdeliver.c)
+endif()
 
 if(CONFIG_HOST_X86_64)
   if(CONFIG_SIM_M32)
