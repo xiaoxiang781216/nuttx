@@ -246,6 +246,7 @@ struct xcptcontext
 
   chipreg_t regs[XCPTCONTEXT_REGS];
 
+#ifndef CONFIG_DISABLE_SIGNALS
   /* The following retains that state during signal execution
    *
    * REVISIT:  Because there is only one copy of these save areas,
@@ -256,6 +257,7 @@ struct xcptcontext
 
   chipreg_t saved_pc;    /* Saved return address */
   chipreg_t saved_i;     /* Saved interrupt state */
+#endif
 };
 #endif
 
