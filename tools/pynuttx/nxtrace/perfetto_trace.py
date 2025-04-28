@@ -73,6 +73,10 @@ class TraceHead:
         self.tid = tid if tid is not None else pid
 
 
+class PerfettoTraceBadArgsError(ValueError):
+    pass
+
+
 class TraceClassFactory:
     def __new__(cls, message_name):
         message_descriptor = cls._get_message_descriptor(message_name)
