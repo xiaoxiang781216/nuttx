@@ -32,6 +32,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <nuttx/addrenv.h>
+
 #include "addrenv.h"
 
 /****************************************************************************
