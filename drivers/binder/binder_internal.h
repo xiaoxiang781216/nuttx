@@ -206,7 +206,7 @@ struct binder_buffer
   int data_size;
   int offsets_size;
   FAR void *user_data;
-  int pid;
+  pid_t pid;
 };
 
 /* struct binder_page - page data object used for binder */
@@ -625,7 +625,8 @@ FAR struct binder_buffer *binder_alloc_new_buf(
 
 void binder_alloc_free_buf(FAR struct binder_alloc *alloc,
                            FAR struct binder_buffer *buffer);
-void binder_alloc_deferred_release(FAR struct binder_alloc *alloc);
+void binder_alloc_deferred_release(FAR struct binder_alloc *alloc,
+                                   pid_t pid);
 
 /* function prototype define for binder_sched.c */
 
