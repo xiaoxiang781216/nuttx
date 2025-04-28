@@ -47,6 +47,7 @@ CONFIG_MM_RECORD = (
 )
 
 mempool_record_s = utils.lookup_type("struct mempool_record_s")
+mm_record_size = 0
 
 PID_MM_INVALID = -100
 PID_MM_MEMPOOL = -1
@@ -59,7 +60,8 @@ def mm_alignup(size: int) -> int:
     return size
 
 
-mm_record_size = mm_alignup(mempool_record_s.sizeof) if CONFIG_MM_RECORD else 0
+if mempool_record_s and CONFIG_MM_RECORD:
+    mm_record_size = mm_alignup(mempool_record_s.sizeof)
 
 
 class MemPoolBlock:
