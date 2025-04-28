@@ -286,6 +286,7 @@ static void binder_free_proc(FAR struct binder_proc *proc)
       nxmutex_unlock(&device->binder_procs_lock);
     }
 
+  binder_alloc_deferred_release(&g_binder_alloc, proc->pid);
   kmm_free(proc);
 }
 
