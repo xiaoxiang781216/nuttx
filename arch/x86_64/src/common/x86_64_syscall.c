@@ -183,6 +183,7 @@ uint64_t *x86_64_syscall(uint64_t *regs)
           break;
         }
 
+#ifndef CONFIG_DISABLE_SIGNALS
       /* cmd=SYS_signal_handler:  This a user signal handler callback
        *
        * void signal_handler(_sa_sigaction_t sighand, int signo,
@@ -285,6 +286,7 @@ uint64_t *x86_64_syscall(uint64_t *regs)
 
           break;
         }
+#endif  /* !CONFIG_DISABLE_SIGNALS*/
 #endif  /* CONFIG_BUILD_KERNEL */
 
       case SYS_assert_handler:

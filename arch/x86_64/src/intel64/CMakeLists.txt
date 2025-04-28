@@ -32,8 +32,6 @@ set(SRCS
     intel64_rtc.c
     intel64_restore_auxstate.c
     intel64_stackframe.c
-    intel64_schedulesigaction.c
-    intel64_sigdeliver.c
     intel64_usestack.c
     intel64_systemreset.c
     intel64_freq.c
@@ -46,6 +44,10 @@ set(SRCS
     intel64_rng.c
     intel64_check_capability.c
     intel64_cpu.c)
+
+if(NOT CONFIG_DISABLE_SIGNALS)
+  list(APPEND SRCS intel64_schedulesigaction.c intel64_sigdeliver.c)
+endif()
 
 if(CONFIG_ARCH_HAVE_HWP)
   list(APPEND SRCS intel64_hwp.c)
