@@ -962,9 +962,11 @@ static ssize_t uart_read(FAR struct file *filep,
                   recvd--;
                   if (dev->tc_lflag & ECHO)
                     {
+                      nxmutex_lock(&dev->xmit.lock);
                       uart_putxmitchar(dev, '\b', true);
                       uart_putxmitchar(dev, ' ', true);
                       uart_putxmitchar(dev, '\b', true);
+                      nxmutex_unlock(&dev->xmit.lock);
 
 #ifdef CONFIG_SERIAL_TXDMA
                       uart_dmatxavail(dev);
@@ -1019,12 +1021,14 @@ static ssize_t uart_read(FAR struct file *filep,
 
               if (!iscntrl(ch & 0xff) || ch == '\n')
                 {
+                  nxmutex_lock(&dev->xmit.lock);
                   if (ch == '\n')
                     {
                       uart_putxmitchar(dev, '\r', true);
                     }
 
                   uart_putxmitchar(dev, ch, true);
+                  nxmutex_unlock(&dev->xmit.lock);
 
                   /* Mark the tx buffer have echoed content here,
                    * to avoid the tx buffer is empty such as special escape
