@@ -37,8 +37,6 @@ set(SRCS
     tricore_registerdump.c
     tricore_releasestack.c
     tricore_saveusercontext.c
-    tricore_schedulesigaction.c
-    tricore_sigdeliver.c
     tricore_stackframe.c
     tricore_svcall.c
     tricore_systimer.c
@@ -47,10 +45,16 @@ set(SRCS
     tricore_usestack.c
     tricore_fork.c)
 
-if(CONFIG_BUILD_PROTECTED OR CONFIG_BUILD_KERNEL)
-  list(APPEND SRCS tricore_task_start.c tricore_pthread_start.c
-       tricore_signal_dispatch.c)
+if(NOT CONFIG_DISABLE_SIGNALS)
+  list(APPEND SRCS tricore_schedulesigaction.c tricore_sigdeliver.c)
+endif()
 
+if(CONFIG_BUILD_PROTECTED OR CONFIG_BUILD_KERNEL)
+  list(APPEND SRCS tricore_task_start.c tricore_pthread_start.c)
+
+  if(NOT CONFIG_DISABLE_SIGNALS)
+    list(APPEND SRCS tricore_signal_dispatch.c)
+  endif()
   if(CONFIG_BUILD_PROTECTED)
     target_sources(arch_interface PRIVATE tricore_signal_handler.c)
   endif()

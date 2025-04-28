@@ -266,7 +266,7 @@ void tricore_svcall(volatile void *trap)
        *   D12 = ucontext
        */
 
-#ifdef CONFIG_BUILD_PROTECTED
+#if defined(CONFIG_BUILD_PROTECTED) && !defined(CONFIG_DISABLE_SIGNALS)
       case SYS_signal_handler:
         {
           struct tcb_s *rtcb = this_task();
