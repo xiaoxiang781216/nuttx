@@ -595,7 +595,7 @@ FAR void *circbuf_get_writeptr(FAR struct circbuf_s *circ, FAR size_t *size)
  *
  ****************************************************************************/
 
-FAR void *circbuf_get_readptr(FAR struct circbuf_s *circ, size_t *size)
+FAR const void *circbuf_get_readptr(FAR struct circbuf_s *circ, size_t *size)
 {
   size_t off;
 
