@@ -208,7 +208,8 @@ uint64_t *arm64_syscall(uint64_t *regs)
         break_critical_section();
         break;
 
-#if defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)
+#if (defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)) && \
+    !defined(CONFIG_DISABLE_SIGNALS)
       /* R0=SYS_signal_handler:  This a user signal handler callback
        *
        * void signal_handler(_sa_sigaction_t sighand, int signo,
@@ -280,9 +281,10 @@ uint64_t *arm64_syscall(uint64_t *regs)
 #endif
         }
         break;
-#endif
+#endif /* (CONFIG_BUILD_KERNEL || CONFIG_BUILD_PROTECTED) && !CONFIG_DISABLE_SIGNALS */
 
-#if defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)
+#if (defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)) && \
+    !defined(CONFIG_DISABLE_SIGNALS)
       /* R0=SYS_signal_handler_return:  This a user signal handler callback
        *
        *   void signal_handler_return(void);
@@ -312,7 +314,7 @@ uint64_t *arm64_syscall(uint64_t *regs)
 #endif
         }
         break;
-#endif
+#endif /* (CONFIG_BUILD_KERNEL || CONFIG_BUILD_PROTECTED) && !CONFIG_DISABLE_SIGNALS */
       case SYS_assert_handler:
         {
           _assert((const char *)regs[REG_X1], (int)regs[REG_X2],

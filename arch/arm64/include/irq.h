@@ -257,6 +257,11 @@ extern "C"
 
 struct xcptcontext
 {
+#ifndef CONFIG_DISABLE_SIGNALS
+  /* task context, for signal process */
+
+  uint64_t *saved_regs;
+
 #if defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)
   /* This is the saved address to use when returning from a user-space
    * signal handler.
@@ -265,16 +270,14 @@ struct xcptcontext
   uintptr_t sigreturn;
 
 #endif
+#endif /* !CONFIG_DISABLE_SIGNALS */
+
   /* task stack reg context */
 
   uint64_t *regs;
 #ifndef CONFIG_BUILD_FLAT
   uint64_t *initregs;
 #endif
-
-  /* task context, for signal process */
-
-  uint64_t *saved_regs;
 
 #ifdef CONFIG_ARCH_FPU
   uint64_t *fpu_regs;
