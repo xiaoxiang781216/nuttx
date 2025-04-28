@@ -62,6 +62,12 @@
 int binfmt_copyattr(FAR const posix_spawnattr_t **copy,
                     FAR const posix_spawnattr_t *attr)
 {
+  if (attr == NULL)
+    {
+      *copy = NULL;
+      return OK;
+    }
+
   *copy = kmm_malloc(sizeof(posix_spawnattr_t));
   if (*copy == NULL)
     {
