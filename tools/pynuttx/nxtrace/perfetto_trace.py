@@ -28,7 +28,6 @@ except ImportError:
     print("pip install protobuf==4.25.3")
     exit(1)
 
-from . import PerfettoTraceBadArgsError
 from . import perfetto_trace_pb2 as pb2
 
 logger = logging.getLogger(__name__)
