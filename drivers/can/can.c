@@ -527,8 +527,7 @@ static ssize_t can_read(FAR struct file *filep, FAR char *buffer,
           /* Will the next message in the FIFO fit into the user buffer? */
 
           FAR struct can_msg_s *msg = &fifo->rx_buffer[fifo->rx_head];
-          int nbytes = can_dlc2bytes(msg->cm_hdr.ch_dlc);
-          int msglen = CAN_MSGLEN(nbytes);
+          int msglen = sizeof(struct can_msg_s);
 
           if (ret + msglen > buflen)
             {
