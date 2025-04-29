@@ -593,17 +593,25 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
       uint64_t shmbuf_pa0;
       uint64_t shmbuf_pa1;
 
-      virtio_read_config_member(vdev, struct fw_rsc_config, h2r_buf_addr,
+      /* In OpenAMP, priv->pool[0] is the RX share memory pool, should use
+       * r2h_buf_addr and r2h_buf_size
+       */
+
+      virtio_read_config_member(vdev, struct fw_rsc_config, r2h_buf_addr,
                                 &shmbuf_pa0);
       shmbuf_va0 = up_addrenv_pa_to_va((uintptr_t)shmbuf_pa0);
       rpmsg_virtio_init_shm_pool(&priv->pool[0], shmbuf_va0,
-              config.h2r_buf_size * vdev->vrings_info[0].info.num_descs);
+              config.r2h_buf_size * vdev->vrings_info[0].info.num_descs);
 
-      virtio_read_config_member(vdev, struct fw_rsc_config, r2h_buf_addr,
+      /* In OpenAMP, priv->pool[1] is the TX share memory pool, should use
+       * h2r_buf_addr and h2r_buf_size
+       */
+
+      virtio_read_config_member(vdev, struct fw_rsc_config, h2r_buf_addr,
                                 &shmbuf_pa1);
       shmbuf_va1 = up_addrenv_pa_to_va((uintptr_t)shmbuf_pa1);
       rpmsg_virtio_init_shm_pool(&priv->pool[1], shmbuf_va1,
-              config.r2h_buf_size * vdev->vrings_info[1].info.num_descs);
+              config.h2r_buf_size * vdev->vrings_info[1].info.num_descs);
 
       config.split_shpool = true;
     }
