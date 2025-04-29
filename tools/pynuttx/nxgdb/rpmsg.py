@@ -27,6 +27,9 @@ import gdb
 from . import utils
 from .lists import NxList
 
+RPMSG_HOST = 0
+RPMSG_DEVICE = 1
+
 
 class RPMsgDump(gdb.Command):
     """Dump rpmsg service"""
@@ -69,10 +72,10 @@ class RPMsgDump(gdb.Command):
     def parse_args(self, arg):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
-            "-t",
-            "--transport-only",
+            "-f",
+            "--full",
             action="store_true",
-            help="Only dump the rpmsg transport layer",
+            help="Dump the rpmsg information fullly",
         )
 
         try:
@@ -116,14 +119,53 @@ class RPMsgDump(gdb.Command):
             + "\n"
         )
 
+    def rpmsg_virtio_buffer_nused(self, rvdev, rx):
+        vq = rvdev["rvq"] if rx else rvdev["svq"]
+        is_host = rvdev["vdev"]["role"] == RPMSG_HOST
+
+        nused = vq["vq_ring"]["avail"]["idx"] - vq["vq_ring"]["used"]["idx"]
+        if is_host ^ rx:
+            return nused
+        else:
+            return vq["vq_nentries"] - nused
+
+    def dump_rpmsg_virtio_buffer(self, rvdev, rx):
+        vq = rvdev["rvq"] if rx else rvdev["svq"]
+        nused = self.rpmsg_virtio_buffer_nused(rvdev, rx)
+
+        gdb.write(
+            f"    {'RX' if rx else 'Tx'} buffer, total {vq['vq_nentries']}, pending {nused}\n"
+        )
+
+        for i in range(nused):
+            if (rvdev["vdev"]["role"] == RPMSG_HOST) ^ rx:
+                desc_idx = (vq["vq_ring"]["used"]["idx"] + i) & (vq["vq_nentries"] - 1)
+                desc_idx = vq["vq_ring"]["avail"]["ring"][desc_idx]
+            else:
+                desc_idx = (vq["vq_ring"]["avail"]["idx"] + i) & (vq["vq_nentries"] - 1)
+                desc_idx = vq["vq_ring"]["used"]["ring"][desc_idx]["id"]
+
+            addr = vq["vq_ring"]["desc"][desc_idx]["addr"]
+            if addr:
+                hdr = addr.cast(utils.lookup_type("struct rpmsg_hdr").pointer())
+                ept = self.rpmsg_get_ept_from_addr(
+                    rvdev["rdev"], hdr["dst"] if rx else hdr["src"]
+                )
+
+                if ept:
+                    gdb.write(
+                        f"      {'RX' if rx else 'TX'} buffer:{addr} held by {ept['name']}\n"
+                    )
+
     def dump_rpmsg_virtio(self, rdev):
         if not self.is_rpmsg_transport(rdev, "virtio"):
             return
 
         rvdev = rdev.cast(utils.lookup_type("struct rpmsg_virtio_device").pointer())
 
+        gdb.write("Rpmsg VirtIO Transport:\n")
         gdb.write(
-            f"Rpmsg Virtio Trasport: rvdev:{rvdev} h2r_buf_size:{rvdev['config']['h2r_buf_size']}"
+            f"rvdev:{rvdev} h2r_buf_size:{rvdev['config']['h2r_buf_size']}  "
             f"r2h_buf_size:{rvdev['config']['r2h_buf_size']}\n"
         )
         for vbuff in NxList(rvdev["reclaimer"], "struct vbuff_reclaimer_t", "node"):
@@ -134,6 +176,10 @@ class RPMsgDump(gdb.Command):
         try:
             self.dump_virtqueue(rvdev["svq"])
             self.dump_virtqueue(rvdev["rvq"])
+            gdb.write("  rpmsg buffer list:\n")
+            self.dump_rpmsg_virtio_buffer(rvdev, True)
+            self.dump_rpmsg_virtio_buffer(rvdev, False)
+
         except gdb.error as e:
             gdb.write(f"Error when dump virtqueues: {e}\n")
 
@@ -237,20 +283,25 @@ class RPMsgDump(gdb.Command):
             )
         gdb.write("\n".join(output) + "\n")
 
-    def dump_rpmsg(self, transport_only):
+    def dump_rpmsg(self, args):
         for rpmsg in NxList(gdb.parse_and_eval("g_rpmsg"), "struct rpmsg_s", "node"):
-            gdb.write(f"Rpmsg Device: rpmsg:{rpmsg} rdev:{rpmsg['rdev']}\n")
-            if not transport_only:
-                self.dump_rdev(rpmsg["rdev"])
-            self.dump_rpmsg_virtio(rpmsg["rdev"])
-            self.dump_rpmsg_port(rpmsg["rdev"])
+            rdev = utils.Value(int(rpmsg) + utils.sizeof("struct rpmsg_s"))
+            rdev = rdev.cast(utils.lookup_type("struct rpmsg_device").pointer())
+            gdb.write(
+                f"Rpmsg:\n"
+                f"rpmsg:{rpmsg} localcpu:{rpmsg['local_cpuname']} remotecpu:{rpmsg['cpuname']}\n"
+            )
+            if args.full:
+                self.dump_rdev(rdev)
+            self.dump_rpmsg_virtio(rdev)
+            self.dump_rpmsg_port(rdev)
 
     @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
         if not (args := self.parse_args(args)):
             return
 
-        if not args.transport_only:
+        if args.full:
             self.dump_rpmsg_cb()
         self.dump_rpmsg(args.transport_only)
 
