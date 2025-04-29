@@ -87,7 +87,7 @@
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_TICKLESS
-static unsigned int g_wdtimernested;
+static unsigned int g_wdtimernested[CONFIG_SMP_NCPUS];
 #endif
 
 /****************************************************************************
@@ -151,7 +151,7 @@ static inline_function void wd_expiration(clock_t ticks)
    * is called in the watchdog callback functions.
    */
 
-  g_wdtimernested++;
+  g_wdtimernested[this_cpu()]++;
 #endif
 
   /* Process the watchdog at the head of the list as well as any
@@ -195,7 +195,7 @@ static inline_function void wd_expiration(clock_t ticks)
 #ifdef CONFIG_SCHED_TICKLESS
   /* Decrement the nested watchdog timer count */
 
-  g_wdtimernested--;
+  g_wdtimernested[this_cpu()]--;
 #endif
 
   spin_unlock_irqrestore(&g_wdspinlock, flags);
@@ -326,7 +326,7 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
 
   wd_insert(wdog, ticks, wdentry, arg);
 
-  if (!g_wdtimernested &&
+  if (!g_wdtimernested[this_cpu()] &&
       (reassess || list_is_head(&g_wdactivelist, &wdog->node)))
     {
       /* Resume the interval timer that will generate the next
