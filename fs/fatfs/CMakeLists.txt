@@ -31,4 +31,8 @@ if(CONFIG_FS_FATFS)
                                 PROPERTIES COMPILE_FLAGS -finstrument-functions)
   endif()
 
+  if(CONFIG_FATFS_ERROR_LOG)
+    set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/fatfs/source/ff.c DIRECTORY ..
+                                PROPERTIES COMPILE_FLAGS -DFS_ERROR_LOG)
+  endif()
 endif()

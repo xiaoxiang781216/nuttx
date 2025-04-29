@@ -14,3 +14,9 @@ config FS_FATFS_SECTOR_RATIO
 	int "The ratio between fatfs filesystem sector and block device sector"
 	depends on FS_FATFS
 	default 1
+
+config FS_FATFS_ERROR_LOG
+	bool "FATFS file system output detail error log"
+	depends on DEBUG_FS_ERROR
+	---help---
+		Enable FATFS file system detail error log.

@@ -31,6 +31,10 @@ endif
 DEPPATH += --dep-path fatfs
 VPATH += :fatfs
 
+ifeq ($(CONFIG_FS_FATFS_ERROR_LOG),y)
+fatfs/fatfs/source/ff.c_CFLAGS += -DFS_ERROR_LOG
+endif
+
 CSRCS += ff.c ffunicode.c
 
 DEPPATH += --dep-path fatfs/fatfs/sorce
