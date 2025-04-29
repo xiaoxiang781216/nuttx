@@ -294,7 +294,7 @@ class RPMsgDump(gdb.Command):
                 f"Rpmsg:\n"
                 f"rpmsg:{rpmsg} localcpu:{rpmsg['local_cpuname']} remotecpu:{rpmsg['cpuname']}\n"
             )
-            if not transport_only:
+            if args.full:
                 self.dump_rdev(rdev)
             self.dump_rpmsg_virtio(rdev)
             self.dump_rpmsg_port(rdev)
@@ -306,7 +306,7 @@ class RPMsgDump(gdb.Command):
 
         if args.full:
             self.dump_rpmsg_cb()
-        self.dump_rpmsg(args.transport_only)
+        self.dump_rpmsg(args)
 
     def diagnose(self, *args, **kwargs):
         return {
