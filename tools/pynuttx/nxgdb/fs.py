@@ -36,7 +36,7 @@ FSNODEFLAG_TYPE_MASK = 0x0000000F
 CONFIG_PSEUDOFS_FILE = utils.get_symbol_value("CONFIG_PSEUDOFS_FILE")
 CONFIG_PSEUDOFS_ATTRIBUTES = utils.get_symbol_value("CONFIG_PSEUDOFS_ATTRIBUTES")
 
-CONFIG_FS_BACKTRACE = utils.get_field_nitems("struct fd", "f_backtrace")
+CONFIG_FS_BACKTRACE = utils.has_field("struct fd", "f_backtrace")
 CONFIG_FS_SHMFS = utils.get_symbol_value("CONFIG_FS_SHMFS")
 
 CONFIG_NFILE_DESCRIPTORS_PER_BLOCK = utils.get_field_nitems(
@@ -273,9 +273,8 @@ class Fdinfo(gdb.Command):
 
         output = []
         if CONFIG_FS_BACKTRACE:
-            backtrace = utils.Backtrace(
-                utils.ArrayIterator(fdp.f_backtrace), formatter=backtrace_formatter
-            )
+            backtrace = tuple(utils.BacktraceEntry(fdp.f_backtrace).get())
+            backtrace = utils.Backtrace(backtrace, backtrace_formatter)
 
             output.append(
                 formatter.format(

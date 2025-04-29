@@ -87,14 +87,15 @@ config FS_NOTIFY_FD_POLLWAITERS
 endif # FS_NOTIFY
 
 config FS_BACKTRACE
-	int "VFS backtrace"
-	default 0
+	bool "VFS backtrace"
+	default n
+	depends on LIBC_BACKTRACE_DEPTH > 0
 	---help---
 		Add backtrace to vfs file open.
 
 config FS_BACKTRACE_SKIP
 	int "Backtrace to skip"
-	default 2
-	depends on FS_BACKTRACE > 0
+	default 4
+	depends on FS_BACKTRACE
 	---help---
 		Skip depth of backtrace.

@@ -1345,7 +1345,7 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
   linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
                                "\n%-3s %-7s %-4s %-9s %-14s %s\n",
                                "FD", "OFLAGS", "TYPE", "POS", "PATH",
-#if CONFIG_FS_BACKTRACE > 0
+#ifdef CONFIG_FS_BACKTRACE
                                "BACKTRACE"
 #else
                                ""
@@ -1395,11 +1395,18 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
                                    (long)filep->f_pos, path);
       if (linesize < STATUS_LINELEN)
         {
-#if CONFIG_FS_BACKTRACE > 0
-          linesize += backtrace_format(procfile->line + linesize,
-                                       STATUS_LINELEN - linesize,
-                                       fdp->f_backtrace,
-                                       CONFIG_FS_BACKTRACE);
+#ifdef CONFIG_FS_BACKTRACE
+          FAR void **backtrace;
+          int size;
+
+          backtrace = backtrace_get(fdp->f_backtrace, &size);
+          if (backtrace != NULL)
+            {
+              linesize += backtrace_format(procfile->line + linesize,
+                                           STATUS_LINELEN - linesize,
+                                           backtrace, size);
+            }
+
 #endif
           procfile->line[linesize - 2] = '\n';
         }

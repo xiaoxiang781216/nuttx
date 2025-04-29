@@ -478,8 +478,8 @@ struct fd
   #ifdef CONFIG_FDSAN
   uint64_t          f_tag_fdsan; /* File owner fdsan tag, init to 0 */
 #endif
-#if CONFIG_FS_BACKTRACE > 0
-  FAR void         *f_backtrace[CONFIG_FS_BACKTRACE]; /* Backtrace to while file opens */
+#ifdef CONFIG_FS_BACKTRACE
+  FAR void         *f_backtrace; /* Backtrace to while file opens */
 #endif
 };
 

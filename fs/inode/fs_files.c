@@ -376,7 +376,7 @@ void fdlist_dump(FAR struct fdlist *list)
   int i;
 
   syslog(LOG_INFO, "%-4s%-4s%-8s%-5s%-10s%-14s"
-#if CONFIG_FS_BACKTRACE > 0
+#ifdef CONFIG_FS_BACKTRACE
         " BACKTRACE"
 #endif
         "\n",
@@ -394,8 +394,10 @@ void fdlist_dump(FAR struct fdlist *list)
       FAR struct fd *fdp;
       FAR struct file *filep;
 
-#if CONFIG_FS_BACKTRACE > 0
-      char buf[BACKTRACE_BUFFER_SIZE(CONFIG_FS_BACKTRACE)];
+#ifdef CONFIG_FS_BACKTRACE
+      char buf[BACKTRACE_BUFFER_SIZE(CONFIG_LIBC_BACKTRACE_DEPTH)] = "";
+      FAR void **backtrace;
+      int size;
 #endif
 
       /* Is there an inode associated with the file descriptor? */
@@ -410,19 +412,22 @@ void fdlist_dump(FAR struct fdlist *list)
           path[0] = '\0';
         }
 
-#if CONFIG_FS_BACKTRACE > 0
-      backtrace_format(buf, sizeof(buf), fdp->f_backtrace,
-                       CONFIG_FS_BACKTRACE);
+#ifdef CONFIG_FS_BACKTRACE
+      backtrace = backtrace_get(fdp->f_backtrace, &size);
+      if (backtrace != NULL)
+        {
+          backtrace_format(buf, sizeof(buf), backtrace, size);
+        }
 #endif
 
       syslog(LOG_INFO, "%-4d%-4d%-8d%-5x%-10ld%-14s"
-#if CONFIG_FS_BACKTRACE > 0
+#ifdef CONFIG_FS_BACKTRACE
             " %s"
 #endif
             "\n", getpid(), i, filep->f_oflags,
             INODE_GET_TYPE(filep->f_inode),
             (long)filep->f_pos, path
-#if CONFIG_FS_BACKTRACE > 0
+#ifdef CONFIG_FS_BACKTRACE
             , buf
 #endif
             );
@@ -995,6 +1000,7 @@ int fdlist_close(FAR struct fdlist *list, int fd)
   /* Perform the protected close operation */
 
   fdlist_uninstall(list, fdp);
+  FS_REMOVE_BACKTRACE(fdp);
 
   /* fdlist_get2 will increase the reference count, there call
    * file_put reduce reference count.

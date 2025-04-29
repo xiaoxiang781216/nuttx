@@ -31,6 +31,7 @@
 #include <nuttx/compiler.h>
 
 #include <sys/types.h>
+#include <execinfo.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <dirent.h>
@@ -71,22 +72,19 @@
     } \
   while (0)
 
-#if CONFIG_FS_BACKTRACE > 0
-#  define FS_ADD_BACKTRACE(fd) \
-     do \
-       { \
-          int n = sched_backtrace(_SCHED_GETTID(), \
-                                  (fd)->f_backtrace, \
-                                  CONFIG_FS_BACKTRACE, \
-                                  CONFIG_FS_BACKTRACE_SKIP); \
-          if (n < CONFIG_FS_BACKTRACE) \
-            { \
-              (fd)->f_backtrace[n] = NULL; \
-            } \
-       } \
-     while (0)
+#ifdef CONFIG_FS_BACKTRACE
+#  define FS_ADD_BACKTRACE(fdp) \
+      (fdp)->f_backtrace = backtrace_record(CONFIG_FS_BACKTRACE_SKIP);
+#  define FS_REMOVE_BACKTRACE(fdp) \
+      do \
+        { \
+          backtrace_remove((fdp)->f_backtrace); \
+          (fdp)->f_backtrace = NULL; \
+        } \
+      while (0)
 #else
 #  define FS_ADD_BACKTRACE(fd)
+#  define FS_REMOVE_BACKTRACE(fd)
 #endif
 
 /****************************************************************************
