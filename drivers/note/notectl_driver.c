@@ -68,6 +68,11 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
   int ret = -ENOSYS;
 
+  if (arg == 0)
+    {
+      return -EINVAL;
+    }
+
   /* Handle the ioctl commands */
 
   switch (cmd)
@@ -81,18 +86,9 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR struct note_filter_named_mode_s *mode =
                          (FAR struct note_filter_named_mode_s *)arg;
-
-          if (mode == NULL)
-            {
-              ret = -EINVAL;
-            }
-          else
-            {
-              sched_note_filter_mode(mode, NULL);
-              ret = OK;
-            }
+          sched_note_filter_mode(mode, NULL);
+          return OK;
         }
-        break;
 
       /* NOTE_SETFILTERMODE
        *      - Set note filter mode
@@ -103,18 +99,9 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR struct note_filter_named_mode_s *mode =
                         (FAR struct note_filter_named_mode_s *)arg;
-
-          if (mode == NULL)
-            {
-              ret = -EINVAL;
-            }
-          else
-            {
-              sched_note_filter_mode(NULL, mode);
-              ret = OK;
-            }
+          sched_note_filter_mode(NULL, mode);
+          return OK;
         }
-        break;
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
       /* NOTE_GETSYSCALLFILTER
@@ -126,18 +113,9 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR struct note_filter_named_syscall_s *filter;
           filter = (FAR struct note_filter_named_syscall_s *)arg;
-
-          if (filter == NULL)
-            {
-              ret = -EINVAL;
-            }
-          else
-            {
-              sched_note_filter_syscall(filter, NULL);
-              ret = OK;
-            }
+          sched_note_filter_syscall(filter, NULL);
+          return OK;
         }
-        break;
 
       /* NOTE_SETSYSCALLFILTER
        *      - Set syscall filter setting
@@ -148,18 +126,9 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR struct note_filter_named_syscall_s *filter;
           filter = (FAR struct note_filter_named_syscall_s *)arg;
-
-          if (filter == NULL)
-            {
-              ret = -EINVAL;
-            }
-          else
-            {
-              sched_note_filter_syscall(NULL, filter);
-              ret = OK;
-            }
+          sched_note_filter_syscall(NULL, filter);
+          return OK;
         }
-        break;
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
@@ -172,18 +141,9 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR struct note_filter_named_irq_s *filter;
           filter = (FAR struct note_filter_named_irq_s *)arg;
-
-          if (filter == NULL)
-            {
-              ret = -EINVAL;
-            }
-          else
-            {
-              sched_note_filter_irq(filter, NULL);
-              ret = OK;
-            }
+          sched_note_filter_irq(filter, NULL);
+          return OK;
         }
-        break;
 
       /* NOTE_SETIRQFILTER
        *      - Set IRQ filter setting
@@ -195,18 +155,37 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR struct note_filter_named_irq_s *filter;
           filter = (FAR struct note_filter_named_irq_s *)arg;
-
-          if (filter == NULL)
-            {
-              ret = -EINVAL;
-            }
-          else
-            {
-              sched_note_filter_irq(NULL, filter);
-              ret = OK;
-            }
+          sched_note_filter_irq(NULL, filter);
+          return OK;
         }
-        break;
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+      /* NOTE_GETTAGFILTER
+       *      - Get tag filter setting
+       *        Argument: A writable pointer to struct note_filter_tag_s
+       */
+
+      case NOTE_GETTAGFILTER:
+        {
+          FAR struct note_filter_named_tag_s *filter;
+          filter = (FAR struct note_filter_named_tag_s *)arg;
+          sched_note_filter_tag(filter, NULL);
+          return OK;
+        }
+
+      /* NOTE_SETTAGFILTER
+       *      - Set tag filter setting
+       *        Argument: A read-only pointer to struct note_filter_tag_s
+       */
+
+      case NOTE_SETTAGFILTER:
+        {
+          FAR struct note_filter_named_tag_s *filter;
+          filter = (FAR struct note_filter_named_tag_s *)arg;
+          sched_note_filter_tag(NULL, filter);
+          return OK;
+        }
 #endif
 
       default:

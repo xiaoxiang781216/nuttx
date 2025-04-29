@@ -183,7 +183,9 @@
 #define NOTE_SETSYSCALLFILTER            _NOTEIOC(0x09)
 #define NOTE_GETIRQFILTER                _NOTEIOC(0x0A)
 #define NOTE_SETIRQFILTER                _NOTEIOC(0x0B)
-#define NOTE_GETFREQ                     _NOTEIOC(0x0C)
+#define NOTE_GETTAGFILTER                _NOTEIOC(0x0C)
+#define NOTE_SETTAGFILTER                _NOTEIOC(0x0D)
+#define NOTE_GETFREQ                     _NOTEIOC(0x0E)
 
 /* Overwrite mode definitions */
 
