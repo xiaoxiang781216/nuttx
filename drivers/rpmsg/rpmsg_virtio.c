@@ -383,7 +383,7 @@ static void rpmsg_virtio_dump_buffer(FAR struct rpmsg_virtio_device *rvdev,
       metal_log(METAL_LOG_EMERGENCY, "      sent %d:\n", num);
     }
 
-  for (i = 0; i < num; i++)
+  for (i = 0; i < num && i < vq->vq_nentries; i++)
     {
       if ((role == RPMSG_HOST) ^ rx)
         {
