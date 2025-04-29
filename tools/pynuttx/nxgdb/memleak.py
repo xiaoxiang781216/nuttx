@@ -278,15 +278,7 @@ class MMLeak(gdb.Command):
             }
 
             if mm.MM_RECORD_STACK_DEPTH > 0 and node.backtrace and node.backtrace[0]:
-                bt = utils.Backtrace(node.backtrace)
-                info["backtrace"] = [
-                    {
-                        "address": addr,
-                        "function": func,
-                        "source": source,
-                    }
-                    for addr, func, source in bt.backtrace
-                ]
+                info["backtrace"] = utils.Backtrace(node.backtrace)
             data.append(info)
 
         return {
