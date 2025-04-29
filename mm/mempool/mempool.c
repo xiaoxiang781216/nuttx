@@ -94,6 +94,9 @@ static inline void mempool_add_queue(FAR struct mempool_s *pool,
       /* Usr mem layout after record payload,  keep record when overlap. */
 
       node = (FAR void *)mempool_get_block_from_record(record);
+#  ifdef CONFIG_MM_RECORD_STACK
+      record->stack = NULL;
+#  endif
       record->magic = MEMPOOL_MAGIC_FREE;
 #endif
       sq_addlast(node, queue);
@@ -102,14 +105,15 @@ static inline void mempool_add_queue(FAR struct mempool_s *pool,
 
 #ifdef CONFIG_MM_RECORD
 static inline void mempool_record(FAR struct mempool_s *pool,
-                                  FAR struct mempool_record_s *record)
+                                  FAR struct mempool_record_s *record,
+                                  unsigned int magic)
 {
-  DEBUGASSERT(record->magic == MEMPOOL_MAGIC_FREE);
-  record->magic = MEMPOOL_MAGIC_ALLOC;
+  record->magic = magic;
 #  ifdef CONFIG_MM_RECORD_PID
   record->pid = _SCHED_GETTID();
 #  endif
 
+  backtrace_remove(record->stack);
   MM_INCSEQNO(record);
 
 #  ifdef CONFIG_MM_RECORD_STACK
@@ -132,7 +136,7 @@ static void mempool_foreach(FAR struct mempool_s *pool,
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
   FAR struct mempool_record_s *record;
   FAR sq_entry_t *entry;
-  FAR char *base ;
+  FAR char *base;
   size_t nblks;
 
   if (pool->ibase != NULL)
@@ -425,7 +429,8 @@ retry:
 
 #ifdef CONFIG_MM_RECORD
   record = mempool_get_record_from_block(blk);
-  mempool_record(pool, record);
+  DEBUGASSERT(record->magic == MEMPOOL_MAGIC_FREE);
+  mempool_record(pool, record, MEMPOOL_MAGIC_ALLOC);
 #endif
 
   blk = kasan_unpoison(blk, pool->blocksize);
@@ -460,9 +465,9 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
   /* Check double free or out of out of bounds */
 
   DEBUGASSERT(record->magic == MEMPOOL_MAGIC_ALLOC);
-  record->magic = MEMPOOL_MAGIC_FREE;
+
 #  ifdef CONFIG_MM_RECORD_STACK
-  backtrace_remove(record->stack);
+  mempool_record(pool, record, MEMPOOL_MAGIC_FREE);
 #  endif
 #endif
 
