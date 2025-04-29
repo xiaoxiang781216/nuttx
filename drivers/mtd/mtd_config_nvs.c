@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/mtd/mtd_config_fs.c
+ * drivers/mtd/mtd_config_nvs.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
