@@ -86,8 +86,10 @@ int rpmsg_note_initialize(void)
       return -ENOMEM;
     }
 
-  NOTE_FILTER_TAGMASK_ZERO(&g_rpmsg_note_drv->filter.tag_mask);
-  NOTE_FILTER_TAGMASK_SET(NOTE_TAG_RPMSG,
+  /* Only enable rpmsg related traces */
+
+  NOTE_FILTER_TAGMASK_FILL(&g_rpmsg_note_drv->filter.tag_mask);
+  NOTE_FILTER_TAGMASK_CLR(NOTE_TAG_RPMSG,
                           &g_rpmsg_note_drv->filter.tag_mask);
 
   g_rpmsg_note_drv->filter.mode.flag = NOTE_FILTER_MODE_FLAG_ENABLE |

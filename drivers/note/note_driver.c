@@ -740,7 +740,7 @@ static inline int note_isenabled_dump(FAR struct note_driver_s *driver,
   /* If the dump trace is disabled, do nothing. */
 
   if (!(driver->filter.mode.flag & NOTE_FILTER_MODE_FLAG_DUMP) ||
-      !NOTE_FILTER_TAGMASK_ISSET(tag, &driver->filter.tag_mask))
+      NOTE_FILTER_TAGMASK_ISSET(tag, &driver->filter.tag_mask))
     {
       return false;
     }
@@ -1562,7 +1562,7 @@ void sched_note_syscall_enter(int nr, int argc, ...)
 
           argc = 0;
         }
-        else
+      else
         {
           if (formatted && argc == 0)
             {

@@ -79,11 +79,14 @@
           ((s)->syscall_mask[(nr) / 8] & (1 << ((nr) % 8)))
 #  define NOTE_FILTER_SYSCALLMASK_ZERO(s) \
           memset((s), 0, sizeof(struct note_filter_syscall_s))
+#  define NOTE_FILTER_SYSCALLMASK_FILL(s) \
+          memset((s), 0xff, sizeof(struct note_filter_syscall_s))
 #else
 #  define NOTE_FILTER_SYSCALLMASK_SET(nr, s)
 #  define NOTE_FILTER_SYSCALLMASK_CLR(nr, s)
 #  define NOTE_FILTER_SYSCALLMASK_ISSET(nr, s) (0)
 #  define NOTE_FILTER_SYSCALLMASK_ZERO(s)
+#  define NOTE_FILTER_SYSCALLMASK_FILL(s)
 #endif
 
 /* Helper macros for IRQ instrumentation filter */
@@ -97,11 +100,14 @@
           ((s)->irq_mask[(nr) / 8] & (1 << ((nr) % 8)))
 #  define NOTE_FILTER_IRQMASK_ZERO(s) \
           memset((s), 0, sizeof(struct note_filter_irq_s))
+#  define NOTE_FILTER_IRQMASK_FILL(s) \
+          memset((s), 0xff, sizeof(struct note_filter_irq_s))
 #else
 #  define NOTE_FILTER_IRQMASK_SET(nr, s)
 #  define NOTE_FILTER_IRQMASK_CLR(nr, s)
 #  define NOTE_FILTER_IRQMASK_ISSET(nr, s) (0)
 #  define NOTE_FILTER_IRQMASK_ZERO(s)
+#  define NOTE_FILTER_IRQMASK_FILL(s)
 #endif
 
 /* Helper macros for dump instrumentation filter */
@@ -115,11 +121,14 @@
           ((s)->tag_mask[(tag) / 8] & (1 << ((tag) % 8)))
 #  define NOTE_FILTER_TAGMASK_ZERO(s) \
           memset((s), 0, sizeof(struct note_filter_tag_s));
+#  define NOTE_FILTER_TAGMASK_FILL(s) \
+          memset((s), 0xff, sizeof(struct note_filter_tag_s))
 #else
 #  define NOTE_FILTER_TAGMASK_SET(tag, s)
 #  define NOTE_FILTER_TAGMASK_CLR(tag, s)
 #  define NOTE_FILTER_TAGMASK_ISSET(tag, s) (0)
 #  define NOTE_FILTER_TAGMASK_ZERO(s)
+#  define NOTE_FILTER_TAGMASK_FILL(s)
 #endif
 
 /* IOCTL Commands ***********************************************************/
