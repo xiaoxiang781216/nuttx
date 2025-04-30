@@ -69,7 +69,7 @@ int up_shmat(uintptr_t *pages, unsigned int npages, uintptr_t vaddr)
   struct tcb_s *tcb = this_task();
   struct arch_addrenv_s *addrenv;
   uintptr_t *l1entry;
-  uint32_t *l2table;
+  uintptr_t *l2table;
   irqstate_t flags;
   uintptr_t paddr;
   unsigned int nmapped;
@@ -119,11 +119,11 @@ int up_shmat(uintptr_t *pages, unsigned int npages, uintptr_t vaddr)
            * address.
            */
 
-          l2table = (uint32_t *)arm_pgvaddr(paddr);
+          l2table = (uintptr_t *)arm_pgvaddr(paddr);
 
           /* Initialize the page table */
 
-          memset(l2table, 0, ENTRIES_PER_L2TABLE * sizeof(uint32_t));
+          memset(l2table, 0, ENTRIES_PER_L2TABLE * sizeof(uintptr_t));
 
           /* In case first time set shm l1 entry */
 
@@ -142,7 +142,7 @@ int up_shmat(uintptr_t *pages, unsigned int npages, uintptr_t vaddr)
            * address.
            */
 
-          l2table = (uint32_t *)arm_pgvaddr(paddr);
+          l2table = (uintptr_t *)arm_pgvaddr(paddr);
         }
 
       /* Map the virtual address to this physical address */
@@ -163,7 +163,7 @@ int up_shmat(uintptr_t *pages, unsigned int npages, uintptr_t vaddr)
 
       up_flush_dcache((uintptr_t)l2table,
                       (uintptr_t)l2table +
-                      ENTRIES_PER_L2TABLE * sizeof(uint32_t));
+                      ENTRIES_PER_L2TABLE * sizeof(uintptr_t));
 
       leave_critical_section(flags);
     }
@@ -193,7 +193,7 @@ int up_shmdt(uintptr_t vaddr, unsigned int npages)
   struct tcb_s *tcb = this_task();
   struct arch_addrenv_s *addrenv;
   uintptr_t *l1entry;
-  uint32_t *l2table;
+  uintptr_t *l2table;
   irqstate_t flags;
   uintptr_t paddr;
   unsigned int nunmapped;
@@ -233,7 +233,7 @@ int up_shmdt(uintptr_t vaddr, unsigned int npages)
        * address.
        */
 
-      l2table = (uint32_t *)arm_pgvaddr(paddr);
+      l2table = (uintptr_t *)arm_pgvaddr(paddr);
 
       /* Unmap this virtual page address.
        *

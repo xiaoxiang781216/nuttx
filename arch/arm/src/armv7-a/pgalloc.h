@@ -107,7 +107,7 @@ static inline bool arm_uservaddr(uintptr_t vaddr)
  *
  ****************************************************************************/
 
-static inline void set_l2_entry(uint32_t *l2table, uintptr_t paddr,
+static inline void set_l2_entry(uintptr_t *l2table, uintptr_t paddr,
                                 uintptr_t vaddr, uint32_t mmuflags)
 {
   uint32_t index;
@@ -132,7 +132,7 @@ static inline void set_l2_entry(uint32_t *l2table, uintptr_t paddr,
  *
  ****************************************************************************/
 
-static inline void clr_l2_entry(uint32_t *l2table, uintptr_t vaddr)
+static inline void clr_l2_entry(uintptr_t *l2table, uintptr_t vaddr)
 {
   uint32_t index;
 
@@ -157,7 +157,7 @@ static inline void clr_l2_entry(uint32_t *l2table, uintptr_t vaddr)
  *
  ****************************************************************************/
 
-static inline uintptr_t get_l2_entry(uint32_t *l2table, uintptr_t vaddr)
+static inline uintptr_t get_l2_entry(uintptr_t *l2table, uintptr_t vaddr)
 {
   uint32_t index;
 
