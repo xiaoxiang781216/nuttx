@@ -325,9 +325,17 @@ static int shmfs_map_object(FAR struct shmfs_object_s *object,
 static int shmfs_add_map(FAR struct mm_map_entry_s *entry,
                          FAR struct inode *inode)
 {
+  FAR struct mm_map_s *mm = get_current_mm();
+
+  if (mm_map_find(mm, entry->vaddr, entry->length))
+    {
+      return OK;
+    }
+
   entry->munmap = shmfs_munmap;
   entry->priv.p = (FAR void *)inode;
-  return mm_map_add(get_current_mm(), entry);
+
+  return mm_map_add(mm, entry);
 }
 
 /****************************************************************************
