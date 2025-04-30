@@ -94,9 +94,9 @@ class NoteFactory:
         cls.parser = elf_parser
         cls.ptrace = PerfettoTrace(output)
         cls.NCPUS = elf_parser.macro("CONFIG_SMP_NCPUS")
-        cls.types = elf_parser.enum("note_type_e")
+        cls.types = elf_parser.get_type("note_type_e")
         global Tstate
-        Tstate = elf_parser.enum("tstate_e")
+        Tstate = elf_parser.get_type("tstate_e")
 
         cls.mapping = {
             "note_common_s": cls.parser.get_type("note_common_s"),

@@ -155,12 +155,12 @@ class ELFParser:
         self.types = dict()
         self.info = dict()
         self.symbol = dict()
+        self.result = dict()
         self.dwarf = self.elf.get_dwarf_info()
 
         t = time.time()
         print("Parsing ELF file...")
         self.parse_header()
-        self.parse_types()
         self.macro = Macro(elf_path)
         print(f"ELF file parsed in {time.time() - t:.1f} seconds")
 
@@ -201,16 +201,26 @@ class ELFParser:
 
         return self.symbol[name]
 
-    def parse_types(self):
-        for CU in self.elf.get_dwarf_info().iter_CUs():
-            # Iterate all DIEs in CU and save them by tag
-            for DIE in CU.iter_DIEs():
-                # If the type is already in the dictionary, add the die to the set
-                if DIE.tag in self.types.keys():
-                    self.types[DIE.tag].set_type(DIE)
-                else:
-                    self.types[DIE.tag] = Types(DIE.tag)
-                    self.types[DIE.tag].set_type(DIE)
+    def parse_base_type(self, die):
+        name = die.attributes["DW_AT_name"].value.decode("utf-8")
+        size = die.attributes["DW_AT_byte_size"].value
+
+        basetypes = {
+            "unsigned": {1: Int8ul, 2: Int16ul, 4: Int32ul, 8: Int64ul},
+            "float": {2: Float16l, 4: Float32l, 8: Float64l},
+            "signed": {1: Int8sl, 2: Int16sl, 4: Int32sl, 8: Int64sl},
+        }
+
+        if "unsigned" in name:
+            return basetypes["unsigned"].get(size)
+        elif "double" in name or "float" in name:
+            return basetypes["float"].get(size)
+        elif "_Bool" in name:
+            return Int8ul
+        elif "char" in name or "short" in name or "int" in name:
+            return basetypes["signed"].get(size)
+
+        raise ValueError(f"Unsupported base type: {name}")
 
     def parse_array(self, die):
         nums = 0
@@ -225,192 +235,97 @@ class ELFParser:
         array = Array(nums, item_type)
         return array
 
-    def parse_die(self, die):
-        if die.tag == "DW_TAG_structure_type":
-            if "DW_AT_name" not in die.attributes:
-                return None
-            ret = self.struct(die.attributes["DW_AT_name"].value.decode("utf-8"))
-            return ret
-        elif die.tag == "DW_TAG_enumeration_type":
-            if "DW_AT_name" not in die.attributes:
-                return None
-            return self.enum(die.attributes["DW_AT_name"].value.decode("utf-8"))
-        elif die.tag == "DW_TAG_base_type":
-            if "DW_AT_name" not in die.attributes:
-                return None
-            return self.base_type(die.attributes["DW_AT_name"].value.decode("utf-8"))
-        elif die.tag == "DW_TAG_typedef":
-            if "DW_AT_name" not in die.attributes:
-                return None
-            return self.typedef(die.attributes["DW_AT_name"].value.decode("utf-8"))
-        elif die.tag == "DW_TAG_pointer_type":
-            if self.info["bitwides"] == 32:
-                return Int32ul
-            elif self.info["bitwides"] == 64:
-                return Int64ul
-            else:
-                raise ValueError("Unsupported ELF class")
-        elif die.tag == "DW_TAG_array_type":
-            return self.parse_array(die)
-        else:
-            raise ValueError(f"Unsupported type: {die.tag}")
+    def parse_typedef(self, die):
+        type_attr = die.attributes["DW_AT_type"]
+        die = self.dwarf.get_DIE_from_refaddr(type_attr.value + die.cu.cu_offset)
+        return self.parse_die(die)
 
-    def get_type(self, type_name):
-        if len(self.types.keys()) == 0:
-            self.parse_types()
+    def parse_struct(self, die):
+        members = dict()
+        for child in die.iter_children():
+            member_name = child.attributes["DW_AT_name"].value.decode("utf-8")
+            member_type = child.attributes["DW_AT_type"].value
+            type_die = self.dwarf.get_DIE_from_refaddr(member_type + die.cu.cu_offset)
+            member_type = self.parse_die(type_die)
+            members[member_name] = member_type
 
-        for key, value in self.types.items():
-            if type_name in value.types.keys():
-                if key == "DW_TAG_structure_type":
-                    return self.struct(type_name)
-                elif key == "DW_TAG_enumeration_type":
-                    return self.enum(type_name)
-                elif key == "DW_TAG_base_type":
-                    return self.base_type(type_name)
-                elif key == "DW_TAG_typedef":
-                    return self.typedef(type_name)
-                elif key == "DW_TAG_enumerator":
-                    return self.enum_value(type_name)
-                else:
-                    raise ValueError(f"Unsupported type: {key} {type_name}")
+        struct = Struct(**members)
+        return struct
+
+    def parse_enum(self, die) -> IntEnum:
+        if die.tag != "DW_TAG_enumeration_type":
+            raise ValueError(f"type is not enum: {die.tag}")
+
+        enum = dict()
+        name = die.attributes["DW_AT_name"].value.decode("utf-8")
+        for child in die.iter_children():
+            name = child.attributes["DW_AT_name"].value.decode("utf-8")
+            value = child.attributes["DW_AT_const_value"].value
+            enum[name] = value
+
+        return IntEnum(name, enum)
+
+    def parse_enum_value(self, die):
+        if die.tag != "DW_TAG_enumerator":
+            raise ValueError(f"type is not enum: {die.tag}")
+
+        name = die.attributes["DW_AT_name"].value.decode("utf-8")
+        value = die.attributes["DW_AT_const_value"].value
+        return name, value
+
+    def find_die_by_name(self, name):
+        if name in self.types:
+            return self.types[name]
+
+        for CU in self.dwarf.iter_CUs():
+            result = None
+            for DIE in CU.iter_DIEs():
+                if "DW_AT_name" not in DIE.attributes:
+                    continue
+
+                AT_name = DIE.attributes["DW_AT_name"].value.decode("utf-8")
+                self.types[AT_name] = DIE
+                if name == AT_name:
+                    result = DIE
+
+            if result:
+                return result
 
         return None
 
-    def base_type(self, name):
-        base_types = self.types["DW_TAG_base_type"]
-        types = base_types.get_types(name)
-        if types is None:
+    def parse_die(self, die):
+        if (
+            "DW_AT_name" not in die.attributes
+            and die.tag != "DW_TAG_pointer_type"
+            and die.tag != "DW_TAG_array_type"
+        ):
             return None
 
-        for die in types:
-            name = die.attributes["DW_AT_name"].value.decode("utf-8")
-            size = die.attributes["DW_AT_byte_size"].value
+        tag_handlers = {
+            "DW_TAG_structure_type": self.parse_struct,
+            "DW_TAG_enumeration_type": self.parse_enum,
+            "DW_TAG_base_type": self.parse_base_type,
+            "DW_TAG_typedef": self.parse_typedef,
+            "DW_TAG_pointer_type": lambda _: (
+                Int32ul if self.info["bitwides"] == 32 else Int64ul
+            ),
+            "DW_TAG_array_type": self.parse_array,
+        }
 
-            unsigned_map = {
-                1: Int8ul,
-                2: Int16ul,
-                4: Int32ul,
-                8: Int64ul,
-            }
-            signed_map = {
-                1: Int8sl,
-                2: Int16sl,
-                4: Int32sl,
-                8: Int64sl,
-            }
-            double_map = {
-                2: Float16l,
-                4: Float32l,
-                8: Float64l,
-            }
-            if "unsigned" in name:
-                return unsigned_map.get(size, None)
-            elif "double" in name or "float" in name:
-                return double_map.get(size, None)
-            elif "_Bool" in name:
-                return Int8ul
-            elif "char" in name or "short" in name or "int" in name:
-                return signed_map.get(size, None)
+        if die.tag not in tag_handlers:
+            raise ValueError(f"Unsupported type: {die.tag}")
 
-        raise ValueError(f"Unsupported base type: {name}")
+        return tag_handlers[die.tag](die)
 
-    def typedef(self, name):
-        typedefs = self.types["DW_TAG_typedef"]
-        types = typedefs.get_types(name)
-        if types is None:
+    def get_type(self, type_name):
+        if type_name in self.result:
+            return self.result[type_name]
+
+        die = self.find_die_by_name(type_name)
+        if die is None:
             return None
 
-        for die in types:
-            name = die.attributes["DW_AT_name"].value.decode("utf-8")
-            type_attr = die.attributes["DW_AT_type"]
-            die = self.dwarf.get_DIE_from_refaddr(type_attr.value + die.cu.cu_offset)
-            return self.parse_die(die)
-
-    def struct(self, type_name):
-        structs = self.types["DW_TAG_structure_type"]
-        types = structs.get_types(type_name)
-
-        if types is None:
-            return None
-
-        # If the type is a list, it means we have already obtained the enum value
-        ret = structs.get_result(type_name)
-        if ret is not None:
-            return ret
-
-        rets = set()
-        for dies in types:
-            members = dict()
-            for die in dies.iter_children():
-                member_name = die.attributes["DW_AT_name"].value.decode("utf-8")
-                member_type = die.attributes["DW_AT_type"].value
-                type_die = self.dwarf.get_DIE_from_refaddr(
-                    member_type + die.cu.cu_offset
-                )
-                member_type = self.parse_die(type_die)
-                members[member_name] = member_type
-
-            struct = Struct(**members)
-            if not rets or all(ret.sizeof() != struct.sizeof() for ret in rets):
-                rets.add(struct)
-
-        return structs.set_result(type_name, rets)
-
-    def enum(self, type_name):
-        if len(self.types.keys()) == 0:
-            self.parse_types()
-
-        enums = self.types["DW_TAG_enumeration_type"]
-        types = enums.get_types(type_name)
-
-        if types is None:
-            return None
-
-        # If the type is a list, it means we have already obtained the enum value
-        ret = enums.get_result(type_name)
-        if ret is not None:
-            return ret
-
-        rets = set()
-        for dies in types:
-            enum = dict()
-            for die in dies.iter_children():
-                name = die.attributes["DW_AT_name"].value.decode("utf-8")
-                value = die.attributes["DW_AT_const_value"].value
-                enum[name] = value
-
-            ret = IntEnum(type_name, enum)
-
-            # Remove duplicates
-            if not any(
-                all(item[key] == value for key, value in enum.items()) for item in rets
-            ):
-                rets.add(ret)
-
-        return enums.set_result(type_name, rets)
-
-    def enum_value(self, enum_name):
-        if len(self.types.keys()) == 0:
-            self.parse_types()
-
-        enums = self.types["DW_TAG_enumerator"]
-        types = enums.get_types(enum_name)
-
-        if types is None:
-            return None
-
-        ret = enums.get_result(enum_name)
-        if ret is not None:
-            return ret
-
-        rets = set()
-        for dies in types:
-            name = dies.attributes["DW_AT_name"].value.decode("utf-8")
-            if name == enum_name:
-                value = dies.attributes["DW_AT_const_value"].value
-                rets.add(value)
-
-        return enums.set_result(enum_name, rets)
+        return self.parse_die(die)
 
 
 class LiefELF:
