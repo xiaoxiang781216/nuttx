@@ -104,6 +104,11 @@ static struct lib_blkoutstream_s g_devstream;
 static struct lib_mtdoutstream_s g_devstream;
 #endif
 
+#ifdef CONFIG_BOARD_COREDUMP_MEMDEV
+static struct lib_fileinstream_s g_meminstream;
+static struct lib_fileoutstream_s g_memstream;
+#endif
+
 #ifdef CONFIG_BOARD_MEMORY_RANGE
 static struct memory_region_s g_memory_region[] =
   {
@@ -228,6 +233,30 @@ static int elf_emit_hdr(FAR struct elf_dumpinfo_s *cinfo,
 
   return elf_emit(cinfo, &ehdr, sizeof(ehdr));
 }
+
+/****************************************************************************
+ * Name: elf_exist_hdr
+ *
+ * Description:
+ *   Determine whether there is an elf header in device.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_BOARD_COREDUMP_MEMDEV
+static bool elf_exist_hdr(FAR struct lib_instream_s *instream)
+{
+  Elf_Ehdr ehdr;
+  int ret;
+
+  ret = lib_stream_gets(instream, &ehdr, sizeof(ehdr));
+  if (ret != sizeof(ehdr))
+    {
+      return false;
+    }
+
+  return memcmp(ehdr.e_ident, ELFMAG, EI_MAGIC_SIZE) == 0;
+}
+#endif
 
 /****************************************************************************
  * Name: elf_get_ntcb
@@ -811,6 +840,44 @@ static void coredump_dump_dev(pid_t pid)
 #endif
 
 /****************************************************************************
+ * Name: coredump_dump_mem
+ *
+ * Description:
+ *   Save coredump to memory device.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_BOARD_COREDUMP_MEMDEV
+static void coredump_dump_mem(pid_t pid)
+{
+  FAR void *stream = &g_memstream;
+  int ret;
+
+  if (elf_exist_hdr(&g_meminstream))
+    {
+      _alert("Coredump memory device already exist:%s\n",
+             CONFIG_BOARD_COREDUMP_DEVPATH);
+      return;
+    }
+
+#ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
+  lib_lzfoutstream(&g_lzfstream, stream);
+  stream = &g_lzfstream;
+#endif
+
+  ret = coredump(g_regions, stream, pid);
+  if (ret < 0)
+    {
+      _alert("Coredump fail %d\n", ret);
+      return;
+    }
+
+  _alert("Finish coredump, write %"PRIuOFF" bytes to %s\n",
+         g_memstream.common.nput, CONFIG_BOARD_COREDUMP_DEVPATH);
+}
+#endif
+
+/****************************************************************************
  * Name: coredump_initialize_memory_region
  *
  * Description:
@@ -955,9 +1022,27 @@ int coredump_initialize(void)
                               CONFIG_BOARD_COREDUMP_DEVPATH);
 #endif
 
+#ifdef CONFIG_BOARD_COREDUMP_MEMDEV
+  ret = lib_fileinstream_open(&g_meminstream,
+                              CONFIG_BOARD_COREDUMP_DEVPATH,
+                              O_RDONLY, 0666);
+  if (ret < 0)
+    {
+      _alert("%s Coredump instream could not be opened:%d\n", ret);
+      return ret;
+    }
+
+  ret = lib_fileoutstream_open(&g_memstream,
+                               CONFIG_BOARD_COREDUMP_DEVPATH,
+                               O_WRONLY, 0666);
+#endif
+
 #ifdef CONFIG_BOARD_COREDUMP_DEV
   if (ret < 0)
     {
+#  ifdef CONFIG_BOARD_COREDUMP_MEMDEV
+      lib_fileoutstream_close(&g_meminstream);
+#  endif
       _alert("%s Coredump device not found %d\n",
              CONFIG_BOARD_COREDUMP_DEVPATH, ret);
     }
