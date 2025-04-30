@@ -162,6 +162,10 @@ uint64_t *arm64_syscall(uint64_t *regs)
   uint64_t             spsr;
 #endif
 
+  /* Set irq flag */
+
+  write_sysreg((uintptr_t)tcb | 1, tpidr_el1);
+
   if (*running_task != NULL)
     {
       (*running_task)->xcp.regs = regs;
@@ -316,6 +320,10 @@ uint64_t *arm64_syscall(uint64_t *regs)
       default:
         {
           svcerr("ERROR: Bad SYS call: 0x%" PRIx64 "\n", cmd);
+
+          /* Clear irq flag */
+
+          write_sysreg((uintptr_t)tcb & ~1ul, tpidr_el1);
           return 0;
         }
         break;
@@ -351,5 +359,8 @@ uint64_t *arm64_syscall(uint64_t *regs)
       restore_critical_section(tcb, cpu);
     }
 
+  /* Clear irq flag */
+
+  write_sysreg((uintptr_t)tcb & ~1ul, tpidr_el1);
   return tcb->xcp.regs;
 }
