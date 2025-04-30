@@ -69,7 +69,6 @@ struct fatfs_dir_s
 struct fatfs_file_s
 {
   int        refs;
-  char       path[PATH_MAX + 3];
   FIL        f;
 };
 
@@ -366,12 +365,12 @@ static int fatfs_open(FAR struct file *filep, FAR const char *relpath,
       return ret;
     }
 
-  fp->path[0] = '0' + fs->pdrv;
-  fp->path[1] = ':';
-  fp->path[2] = '\0';
+  fp->f.obj.path[0] = '0' + fs->pdrv;
+  fp->f.obj.path[1] = ':';
+  fp->f.obj.path[2] = '\0';
   oflags = fatfs_convert_oflags(oflags);
-  strlcat(fp->path, relpath, sizeof(fp->path));
-  ret = fatfs_convert_result(f_open(&fp->f, fp->path, oflags));
+  strlcat(fp->f.obj.path, relpath, sizeof(fp->f.obj.path));
+  ret = fatfs_convert_result(f_open(&fp->f, fp->f.obj.path, oflags));
   if (ret < 0)
     {
       fs_heap_free(fp);
@@ -611,7 +610,7 @@ static int fatfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
     {
       FAR char *ptr = (FAR char *)((uintptr_t)arg);
       inode_getpath(filep->f_inode, ptr, PATH_MAX);
-      strcat(ptr, &fp->path[2]);
+      strcat(ptr, &fp->f.obj.path[2]);
     }
   else
     {
@@ -773,7 +772,7 @@ static int fatfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
       goto errsem;
     }
 
-  ret = fatfs_stat_i(fs, fp->path, buf);
+  ret = fatfs_stat_i(fs, fp->f.obj.path, buf);
 
 errsem:
   nxmutex_unlock(&fs->lock);
@@ -838,7 +837,7 @@ static int fatfs_fchstat(FAR const struct file *filep,
       return ret;
     }
 
-  ret = fatfs_chstat_i(fp->path, buf, flags);
+  ret = fatfs_chstat_i(fp->f.obj.path, buf, flags);
   nxmutex_unlock(&fs->lock);
   return ret;
 }
@@ -938,7 +937,6 @@ static int fatfs_opendir(FAR struct inode *mountpt,
                          FAR struct fs_dirent_s **dir)
 {
   FAR struct fatfs_mountpt_s *fs;
-  char path[strlen(relpath) + 3];
   FAR struct fatfs_dir_s *fdir;
   int ret;
 
@@ -961,10 +959,11 @@ static int fatfs_opendir(FAR struct inode *mountpt,
       return ret;
     }
 
-  path[0] = '0' + fs->pdrv;
-  path[1] = ':';
-  path[2] = '\0';
-  ret = fatfs_convert_result(f_opendir(&fdir->dir, strcat(path, relpath)));
+  fdir->dir.obj.path[0] = '0' + fs->pdrv;
+  fdir->dir.obj.path[1] = ':';
+  fdir->dir.obj.path[2] = '\0';
+  strlcat(fdir->dir.obj.path, relpath, sizeof(fdir->dir.obj.path));
+  ret = fatfs_convert_result(f_opendir(&fdir->dir, fdir->dir.obj.path));
   if (ret >= 0)
     {
       *dir = &fdir->base;
