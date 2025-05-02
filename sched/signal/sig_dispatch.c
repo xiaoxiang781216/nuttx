@@ -223,6 +223,9 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
  * Description:
  *   Allocate a pending signal list entry
  *
+ * Assumptions:
+ *   Called with g_sigpendingsignal locked
+ *
  ****************************************************************************/
 
 static FAR sigpendq_t *nxsig_alloc_pendingsignal(void)
@@ -289,6 +292,9 @@ static FAR sigpendq_t *nxsig_alloc_pendingsignal(void)
  * Description:
  *   Find a specified element in the pending signal list
  *
+ * Assumptions:
+ *   Called with group->tg_sigpendingq locked
+ *
  ****************************************************************************/
 
 static FAR sigpendq_t *
@@ -347,10 +353,13 @@ static void nxsig_dispatch_kernel_action(FAR struct tcb_s *stcb,
  *   was done intentionally so that a run-away sender cannot consume
  *   all of memory.
  *
+ * Assumptions:
+ *   Called with tg_sigpendingq locked
+ *
  ****************************************************************************/
 
-static void nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
-                                    FAR siginfo_t *info)
+static FAR sigpendq_t *nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
+                                               FAR siginfo_t *info)
 {
   FAR struct task_group_s *group;
   FAR sigpendq_t *sigpend;
@@ -387,11 +396,12 @@ static void nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
           flags = spin_lock_irqsave(&group->tg_lock);
           sq_addlast((FAR sq_entry_t *)sigpend, &group->tg_sigpendingq);
           spin_unlock_irqrestore(&group->tg_lock, flags);
-          nxsig_dispatch_kernel_action(stcb, &sigpend->info);
         }
     }
 
   DEBUGASSERT(sigpend);
+
+  return sigpend;
 }
 
 /****************************************************************************
@@ -426,6 +436,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
   irqstate_t flags;
   int masked;
   int ret = OK;
+  FAR sigpendq_t *sigpend = NULL;
 
   sinfo("TCB=%p pid=%d signo=%d code=%d value=%d masked=%s\n",
         stcb, stcb->pid, info->si_signo, info->si_code,
@@ -449,6 +460,8 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
     }
 
   /************************** MASKED SIGNAL ACTIONS *************************/
+
+  flags = enter_critical_section();
 
   masked = nxsig_ismember(&stcb->sigprocmask, info->si_signo);
 
@@ -491,7 +504,6 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
        * signals can be queued from the interrupt level.
        */
 
-      flags = enter_critical_section();
       if (stcb->task_state == TSTATE_WAIT_SIG &&
           (masked == 0 ||
            nxsig_ismember(&stcb->sigwaitmask, info->si_signo)))
@@ -521,14 +533,12 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
               up_switch_context(stcb, rtcb);
             }
 
-          leave_critical_section(flags);
-
 #ifdef CONFIG_LIB_SYSCALL
           /* Must also add signal action if in system call */
 
           if (masked == 0)
             {
-              nxsig_add_pendingsignal(stcb, info);
+              sigpend = nxsig_add_pendingsignal(stcb, info);
             }
 #endif
         }
@@ -539,15 +549,18 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
       else
         {
-          leave_critical_section(flags);
-          nxsig_add_pendingsignal(stcb, info);
+          sigpend = nxsig_add_pendingsignal(stcb, info);
         }
+
+      leave_critical_section(flags);
     }
 
   /************************* UNMASKED SIGNAL ACTIONS ************************/
 
   else
     {
+      leave_critical_section(flags);
+
       /* Queue any sigaction's requested by this task. */
 
       ret = nxsig_queue_action(stcb, info);
@@ -656,6 +669,13 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 #endif
 
       leave_critical_section(flags);
+    }
+
+  /* Dispatch kernel action, if needed, in case a pending signal was added */
+
+  if (sigpend != NULL)
+    {
+      nxsig_dispatch_kernel_action(stcb, &sigpend->info);
     }
 
   /* In case nxsig_ismember failed due to an invalid signal number */
