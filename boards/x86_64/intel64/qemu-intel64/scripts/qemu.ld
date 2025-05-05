@@ -93,6 +93,7 @@ SECTIONS
     {
         _srodata = ABSOLUTE(.);
         *(.rodata .rodata.*)
+        *(.lrodata .lrodata.*)
         *(.fixup)
         *(.gnu.warning)
         *(.glue_7)
@@ -123,6 +124,7 @@ SECTIONS
     {
         _sdata = ABSOLUTE(.);
         *(.data .data.*)
+        *(.ldata .ldata.*)
         *(.gnu.linkonce.d.*)
         CONSTRUCTORS
         . = ALIGN(4);
@@ -133,6 +135,7 @@ SECTIONS
     {
         _sbss = ABSOLUTE(.);
         *(.bss .bss.*)
+        *(.lbss .lbss.*)
         *(.gnu.linkonce.b.*)
         *(COMMON)
         . = ALIGN(16);
