@@ -20,6 +20,8 @@
 ############################################################################
 
 
+import bisect
+import functools
 import hashlib
 import importlib
 import logging
@@ -152,6 +154,7 @@ class ELFParser:
 
     def __init__(self, elf_path):
         self.elf = ELFFile(open(elf_path, "rb"))
+        self.addr = list()
         self.types = dict()
         self.info = dict()
         self.symbol = dict()
@@ -161,6 +164,7 @@ class ELFParser:
         t = time.time()
         print("Parsing ELF file...")
         self.parse_header()
+        self.parse_symbol()
         self.macro = Macro(elf_path)
         print(f"ELF file parsed in {time.time() - t:.1f} seconds")
 
@@ -174,6 +178,15 @@ class ELFParser:
         )
         self.info["arch"] = header["e_machine"]
         self.info["size_t"] = "uint%d" % self.info["bitwides"]
+
+    def symbol_filter(self, symbol):
+        if symbol["st_info"]["type"] != "STT_FUNC":
+            return None
+        if symbol["st_info"]["bind"] == "STB_WEAK":
+            return None
+        if symbol["st_shndx"] == "SHN_UNDEF":
+            return None
+        return symbol
 
     def parse_symbol(self):
         tables = [
@@ -191,7 +204,14 @@ class ELFParser:
                 except Exception:
                     name = symbol.name
                 self.symbol[name] = symbol["st_value"]
+                if symbol_filter := self.symbol_filter(symbol):
+                    self.addr.append(
+                        (symbol_filter["st_value"], symbol_filter["st_size"], name)
+                    )
 
+        self.addr.sort(key=lambda x: x[0])
+
+    @functools.lru_cache(maxsize=None)
     def symbol_addr(self, name):
         if len(self.symbol.keys()) == 0:
             self.parse_symbol()
@@ -201,6 +221,20 @@ class ELFParser:
 
         return self.symbol[name]
 
+    @functools.lru_cache(maxsize=None)
+    def addr2symbol(self, address):
+        """Get function name from address"""
+        if len(self.addr) == 0:
+            self.parse_symbol()
+
+        if i := bisect.bisect_left(self.addr, address, key=lambda x: x[0]):
+            addr, size, name = self.addr[i - 1]
+            if addr <= address < addr + size:
+                return name
+
+        return None
+
+    @functools.lru_cache(maxsize=None)
     def parse_base_type(self, die):
         name = die.attributes["DW_AT_name"].value.decode("utf-8")
         size = die.attributes["DW_AT_byte_size"].value
@@ -222,6 +256,7 @@ class ELFParser:
 
         raise ValueError(f"Unsupported base type: {name}")
 
+    @functools.lru_cache(maxsize=None)
     def parse_array(self, die):
         nums = 0
         for child in die.iter_children():
@@ -235,11 +270,13 @@ class ELFParser:
         array = Array(nums, item_type)
         return array
 
+    @functools.lru_cache(maxsize=None)
     def parse_typedef(self, die):
         type_attr = die.attributes["DW_AT_type"]
         die = self.dwarf.get_DIE_from_refaddr(type_attr.value + die.cu.cu_offset)
         return self.parse_die(die)
 
+    @functools.lru_cache(maxsize=None)
     def parse_struct(self, die):
         members = dict()
         for child in die.iter_children():
@@ -252,6 +289,7 @@ class ELFParser:
         struct = Struct(**members)
         return struct
 
+    @functools.lru_cache(maxsize=None)
     def parse_enum(self, die) -> IntEnum:
         if die.tag != "DW_TAG_enumeration_type":
             raise ValueError(f"type is not enum: {die.tag}")
@@ -265,6 +303,7 @@ class ELFParser:
 
         return IntEnum(name, enum)
 
+    @functools.lru_cache(maxsize=None)
     def parse_enum_value(self, die):
         if die.tag != "DW_TAG_enumerator":
             raise ValueError(f"type is not enum: {die.tag}")
@@ -273,6 +312,7 @@ class ELFParser:
         value = die.attributes["DW_AT_const_value"].value
         return name, value
 
+    @functools.lru_cache(maxsize=None)
     def find_die_by_name(self, name):
         if name in self.types:
             return self.types[name]
@@ -293,6 +333,7 @@ class ELFParser:
 
         return None
 
+    @functools.lru_cache(maxsize=None)
     def parse_die(self, die):
         if (
             "DW_AT_name" not in die.attributes
@@ -317,6 +358,7 @@ class ELFParser:
 
         return tag_handlers[die.tag](die)
 
+    @functools.lru_cache(maxsize=None)
     def get_type(self, type_name):
         if type_name in self.result:
             return self.result[type_name]
