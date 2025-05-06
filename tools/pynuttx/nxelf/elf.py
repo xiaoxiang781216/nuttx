@@ -225,7 +225,7 @@ class ELFParser:
     def parse_array(self, die):
         nums = 0
         for child in die.iter_children():
-            nums = child.attributes["DW_AT_upper_bound"].value
+            nums = child.attributes["DW_AT_upper_bound"].value + 1
 
         type_die = self.dwarf.get_DIE_from_refaddr(
             die.attributes["DW_AT_type"].value + die.cu.cu_offset
