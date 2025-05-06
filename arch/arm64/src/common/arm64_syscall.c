@@ -35,7 +35,6 @@
 #include <nuttx/sched.h>
 #include <nuttx/addrenv.h>
 
-#include "addrenv.h"
 #include "arch/irq.h"
 #include "arm64_internal.h"
 #include "arm64_fatal.h"

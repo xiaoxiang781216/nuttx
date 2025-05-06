@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm64/src/common/arm64_addrenv.c
+ * arch/arm64/src/common/arm64_addrenv_mmu.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -80,6 +80,10 @@
 
 #ifndef CONFIG_BUILD_KERNEL
 #  error "This module is intended to be used with CONFIG_BUILD_KERNEL"
+#endif
+
+#if CONFIG_MM_PGSIZE != 4096
+#  error Only pages sizes of 4096 are currently supported (CONFIG_ARCH_ADDRENV)
 #endif
 
 /* Entries per PGT */
