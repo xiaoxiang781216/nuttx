@@ -105,6 +105,7 @@ uint8_t *hc_doirq(int irq, uint8_t *regs)
        */
 
       addrenv_switch(tcb);
+      tcb = this_task();
 #endif
 
       /* Update scheduler parameters. */

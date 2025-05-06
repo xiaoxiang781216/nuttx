@@ -93,14 +93,14 @@ int arm_svcall(int irq, void *context, void *arg)
       case SYS_restore_context:
       case SYS_switch_context:
         {
+#ifdef CONFIG_ARCH_ADDRENV
+          addrenv_switch(tcb);
+#endif
           tcb = this_task();
           restore_critical_section(tcb, this_cpu());
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
           regs = tcb->xcp.regs;
-#endif
-#ifdef CONFIG_ARCH_ADDRENV
-          addrenv_switch(tcb);
 #endif
         }
         break;

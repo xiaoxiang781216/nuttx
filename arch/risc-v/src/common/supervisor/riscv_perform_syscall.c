@@ -66,6 +66,7 @@ void *riscv_perform_syscall(uintreg_t *regs)
        */
 
       addrenv_switch(tcb);
+      tcb = this_task();
 #endif
       /* Update scheduler parameters */
 

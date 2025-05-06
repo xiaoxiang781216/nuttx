@@ -108,6 +108,7 @@ uint32_t *renesas_doirq(int irq, uint32_t * regs)
            */
 
           addrenv_switch(tcb);
+          tcb = this_task();
 #endif
 
           /* Update scheduler parameters. */

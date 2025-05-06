@@ -91,6 +91,7 @@ uint32_t *xtensa_irq_dispatch(int irq, uint32_t *regs)
        */
 
       addrenv_switch(tcb);
+      tcb = this_task();
 #endif
 
       /* Update scheduler parameters */

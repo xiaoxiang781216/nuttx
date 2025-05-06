@@ -97,6 +97,7 @@ IFX_INT_WRAPPER(CONFIG_CPU_COREID)
        */
 
       addrenv_switch(tcb);
+      tcb = this_task();
 #endif
 
       /* Update scheduler parameters */
