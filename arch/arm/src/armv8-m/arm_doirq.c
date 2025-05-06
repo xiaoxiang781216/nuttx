@@ -28,6 +28,7 @@
 #include <assert.h>
 
 #include <nuttx/irq.h>
+#include <nuttx/addrenv.h>
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
 #include <arch/board/board.h>
