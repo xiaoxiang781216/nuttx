@@ -148,26 +148,26 @@ int group_initialize(FAR struct tcb_s *tcb, uint8_t ttype, size_t heapsize)
                        (FAR void **)&group->tg_heap);
 #elif defined(CONFIG_MM_TASK_HEAP)
 #  ifdef CONFIG_ARCH_ADDRENV
-  if (group->tg_addrenv_own->addrenv.heap)
-    {
-      group->tg_heap =
-        (FAR struct mm_heap_s *)group->tg_addrenv_own->addrenv.heap;
-    }
-  else
-#  endif
-    {
-      ret = group_heap_initialize(&group->tg_heap,
-                                  CONFIG_MM_TASK_HEAP_DEFAULT_ALIGN,
-                                  heapsize);
-      if (ret < 0)
+      if (group->tg_addrenv_own->addrenv.heap)
         {
-          return ret;
+          group->tg_heap =
+            (FAR struct mm_heap_s *)group->tg_addrenv_own->addrenv.heap;
         }
+      else
+#  endif
+        {
+          ret = group_heap_initialize(&group->tg_heap,
+                                      CONFIG_MM_TASK_HEAP_DEFAULT_ALIGN,
+                                      heapsize);
+          if (ret < 0)
+            {
+              return ret;
+            }
 
 #  ifdef CONFIG_ARCH_ADDRENV
-      group->tg_addrenv_own->addrenv.heap = (uintptr_t)group->tg_heap;
+          group->tg_addrenv_own->addrenv.heap = (uintptr_t)group->tg_heap;
 #  endif
-    }
+        }
 #endif
     }
   else
