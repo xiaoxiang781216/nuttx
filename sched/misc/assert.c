@@ -46,6 +46,7 @@
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/usb/usbdev_trace.h>
 #include <nuttx/mm/kasan.h>
+#include <nuttx/trace.h>
 
 #include <assert.h>
 #include <debug.h>
@@ -915,6 +916,7 @@ void _assert(FAR const char *filename, int linenum,
       /* Fatal error, enter panic state. */
 
       g_nx_initstate = OSINIT_PANIC;
+      sched_trace_mark("PANIC");
 
 #ifdef CONFIG_SMP
       if (os_ready)

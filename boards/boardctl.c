@@ -40,6 +40,7 @@
 #include <nuttx/binfmt/symtab.h>
 #include <nuttx/drivers/ramdisk.h>
 #include <nuttx/reboot_notifier.h>
+#include <nuttx/trace.h>
 
 #ifdef CONFIG_NX
 #  include <nuttx/nx/nxmu.h>
@@ -415,6 +416,7 @@ int boardctl(unsigned int cmd, uintptr_t arg)
       case BOARDIOC_RESET:
         {
           g_nx_initstate = OSINIT_RESET;
+          sched_trace_mark("RESET");
           reboot_notifier_call_chain(SYS_RESTART, (FAR void *)arg);
           up_flush_dcache_all();
           ret = board_reset((int)arg);
