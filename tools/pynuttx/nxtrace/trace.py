@@ -18,6 +18,7 @@
 #
 ############################################################################
 
+import functools
 import logging
 import sys
 
@@ -30,12 +31,10 @@ except ModuleNotFoundError:
     print("pip install construct")
     exit(1)
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARN)
-
 # Corresponds to the tstate_e enumeration type in nuttx
 
 Tstate = None
+logger = logging.getLogger(__name__)
 
 
 class TaskNameCache:
@@ -73,12 +72,6 @@ def GenTraceHead(note):
 
 
 class NoteFactory:
-    instance = None
-    parser = None
-    types = None
-    mapping = dict()
-    type2name = dict()
-
     def __new__(cls, elf_parser):
         if cls.instance is None:
             cls.instance = super().__new__(cls)
@@ -97,78 +90,73 @@ class NoteFactory:
         cls.types = elf_parser.get_type("note_type_e")
         global Tstate
         Tstate = elf_parser.get_type("tstate_e")
-
-        cls.mapping = {
-            "note_common_s": cls.parser.get_type("note_common_s"),
-            "note_event_s": Struct(
-                "nev_cmn" / cls.parser.get_type("note_common_s"),
-                "nev_data"
-                / Bytes(this.length - cls.parser.get_type("note_common_s").sizeof()),
-            ),
-        }
-
-        try:
-            cls.type2name = {
-                cls.types.NOTE_STOP: "note_stop_s",
-                cls.types.NOTE_SUSPEND: "note_suspend_s",
-                cls.types.NOTE_RESUME: "note_resume_s",
-                cls.types.NOTE_SYSCALL_ENTER: "note_syscall_enter_s",
-                cls.types.NOTE_SYSCALL_LEAVE: "note_syscall_leave_s",
-                cls.types.NOTE_IRQ_ENTER: "note_irqhandler_s",
-                cls.types.NOTE_IRQ_LEAVE: "note_irqhandler_s",
-                cls.types.NOTE_DUMP_PRINTF: "note_printf_s",
-                cls.types.NOTE_DUMP_BEGIN: "note_event_s",
-                cls.types.NOTE_DUMP_END: "note_event_s",
-                cls.types.NOTE_DUMP_MARK: "note_event_s",
-            }
-        except Exception as e:
-            logger.error(f"Error initializing NoteFactory: {e}")
-            exit(1)
+        cls.note_common_s = cls.parser.get_type("note_common_s")
 
     @classmethod
+    @functools.lru_cache(maxsize=None)
     def struct(cls, note_type):
-        if note_type in cls.mapping:
-            return cls.mapping[note_type]
+        note_event_s = Struct(
+            *[
+                field
+                for field in cls.parser.get_type("note_event_s").subcons
+                if field.name != "nev_data"
+            ]
+        )
+        cls.note_event_s = Struct(
+            *[field for field in note_event_s.subcons if field.name != "nev_data"],
+            "nev_data" / Bytes(this.nev_cmn.nc_length - note_event_s.sizeof()),
+        )
 
-        if note_type in cls.type2name:
-            struct = cls.parser.get_type(cls.type2name[note_type])
-        elif note_type == cls.types.NOTE_START:
-            struct = Struct(
-                "nst_cmn" / cls.mapping["note_common_s"],
+        if note_type == cls.types.NOTE_START:
+            return Struct(
+                "nst_cmn" / cls.note_common_s,
                 "name" / CString("utf8"),
             )
+        elif note_type == cls.types.NOTE_STOP:
+            return cls.parser.get_type("note_stop_s")
+        elif note_type == cls.types.NOTE_SUSPEND:
+            return cls.parser.get_type("note_suspend_s")
+        elif note_type == cls.types.NOTE_RESUME:
+            return cls.parser.get_type("note_resume_s")
+        elif note_type in [cls.types.NOTE_IRQ_ENTER, cls.types.NOTE_IRQ_LEAVE]:
+            return cls.parser.get_type("note_irqhandler_s")
+        elif note_type in [cls.types.NOTE_SYSCALL_ENTER, cls.types.NOTE_SYSCALL_LEAVE]:
+            return cls.parser.get_type("note_syscall_s")
+        elif note_type in [
+            cls.types.NOTE_DUMP_BEGIN,
+            cls.types.NOTE_DUMP_END,
+            cls.types.NOTE_DUMP_MARK,
+        ]:
+            return cls.note_event_s
+        elif note_type == cls.types.NOTE_DUMP_PRINTF:
+            note_printf_s = cls.parser.get_type("note_printf_s")
+            return Struct(
+                *[field for field in note_printf_s.subcons if field.name != "npt_data"],
+                "npt_data" / Bytes(this.npt_cmn.nc_length - note_printf_s.sizeof()),
+            )
         elif note_type == cls.types.NOTE_DUMP_COUNTER:
-            struct = cls.mapping["note_event_s"] + cls.parser.get_type("note_counter_s")
+            note_counter_s = cls.parser.get_type("note_counter_s")
+
+            return Struct(
+                *note_event_s.subcons,
+                *[field for field in note_counter_s.subcons if field.name != "name"],
+                "name" / CString("utf8"),
+            )
         elif note_type == cls.types.NOTE_DUMP_THREADTIME:
-            struct = cls.mapping["note_event_s"] + cls.parser.get_type(
-                "note_threadtime_s"
+            note_threadtime_s = cls.parser.get_type("note_threadtime_s")
+            return Struct(
+                *note_event_s.subcons,
+                *note_threadtime_s.subcons,
             )
         else:
-            raise ValueError(f"Unknown note type: {note_type}")
-
-        cls.mapping[note_type] = struct
-        return struct
+            logger.error(f"Unknown note type: {note_type}")
+            return None
 
     @classmethod
     def parse(cls, data):
-        if len(data) < 4 or len(data) < data[0]:
-            return None
-
-        note_length = data[0]
-        note_type = data[1]
-        cpu = data[3]
-
-        if note_type >= len(cls.types):
-            raise ValueError(f"Unknown note type: {note_type}")
-
-        if note_length > 256:
-            raise ValueError(f"Note length not valid: {note_length}")
-
-        if cpu >= cls.NCPUS:
-            raise ValueError(f"CPU number too large: {cpu}")
-
-        struct = cls.struct(note_type)
-        note = struct.parse(data[:note_length])
+        common = cls.note_common_s.parse(data)
+        struct = cls.struct(common.nc_type)
+        note = struct.parse(data[: common.nc_length])
         logger.debug(note)
 
         class Note(Container):
@@ -258,6 +246,24 @@ class NoteFactory:
                     sched_switch["pendingswitch"] = False
                     sched_switch["current_pid"] = sched_switch["next_pid"]
                     sched_switch["current_priority"] = sched_switch["next_priority"]
+            elif note.nc_type == cls.types.NOTE_DUMP_BEGIN:
+                if len(note.nev_data) > 0:
+                    cls.ptrace.atrace_begin(head, str(note.nev_data))
+                else:
+                    sym = cls.parser.addr2symbol(note.nev_ip)
+                    cls.ptrace.atrace_begin(head, sym if sym else f"0x{note.nev_ip:x}")
+            elif note.nc_type == cls.types.NOTE_DUMP_END:
+                if len(note.nev_data) > 0:
+                    cls.ptrace.atrace_end(head, str(note.nev_data))
+                else:
+                    sym = cls.parser.addr2symbol(note.nev_ip)
+                    cls.ptrace.atrace_end(head, sym if sym else f"0x{note.nev_ip:x}")
+            elif note.nc_type == cls.types.NOTE_DUMP_MARK:
+                cls.ptrace.atrace_instant(head, str(note.nev_data))
+            elif note.nc_type == cls.types.NOTE_DUMP_COUNTER:
+                cls.ptrace.atrace_int(head, str(note.name), note.value)
+            elif note.nc_type == cls.types.NOTE_DUMP_THREADTIME:
+                cls.ptrace.atrace_int(head, "threadtime", note.elapsed)
 
             logger.debug(sched_switch)
 

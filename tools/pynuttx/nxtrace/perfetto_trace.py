@@ -315,8 +315,8 @@ class PerfettoTrace:
     def atrace_begin(self, head: TraceHead, msg):
         return self.print(head, f"B|{head.pid}|{msg}")
 
-    def atrace_end(self, head: TraceHead):
-        return self.print(head, "E")
+    def atrace_end(self, head: TraceHead, msg=""):
+        return self.print(head, "E" + f"|{head.pid}|{msg}" if msg else "")
 
     def atrace_async_begin(self, head: TraceHead, msg, cookie):
         return self.print(head, f"S|{head.pid}|{msg}|{cookie}")

@@ -20,6 +20,7 @@
 ############################################################################
 
 import argparse
+import logging
 import signal
 import sys
 
@@ -31,6 +32,7 @@ from nxtrace.trace import NoteParser
 def note_binary_parser(elf_parser, note_parser, binary_file):
     note_parser.parse_file(binary_file)
     note_parser.dump()
+    note_parser.flush()
 
 
 def rtt_parser(elf_parser, note_parser, device, interface, speed, channel):
@@ -85,7 +87,13 @@ def arg_parse():
     parser.add_argument("-i", "--interface", help="RTT interface")
     parser.add_argument("-s", "--speed", type=int, help="RTT speed")
     parser.add_argument("-c", "--channel", type=int, help="RTT channel")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
 
     # Validate the arguments
     if args.binary:
