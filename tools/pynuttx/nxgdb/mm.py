@@ -382,11 +382,17 @@ class MMNode(gdb.Value, p.MMFreeNode):
     MM_ALLOC_BIT = 0x1
     MM_PREVFREE_BIT = 0x2
     MM_MASK_BIT = MM_ALLOC_BIT | MM_PREVFREE_BIT
-    MM_SIZEOF_ALLOCNODE = utils.sizeof("struct mm_allocnode_s")
-    # Although preceding can locates in the previous node, we still count it as overhead
-    MM_ALLOCNODE_OVERHEAD = MM_SIZEOF_ALLOCNODE
-    MM_MIN_SHIFT = utils.log2ceil(utils.sizeof("struct mm_freenode_s"))
-    MM_MIN_CHUNK = 1 << MM_MIN_SHIFT
+    try:
+        MM_SIZEOF_ALLOCNODE = utils.sizeof("struct mm_allocnode_s")
+        # Although preceding can locates in the previous node, we still count it as overhead
+        MM_ALLOCNODE_OVERHEAD = MM_SIZEOF_ALLOCNODE
+        MM_MIN_SHIFT = utils.log2ceil(utils.sizeof("struct mm_freenode_s"))
+        MM_MIN_CHUNK = 1 << MM_MIN_SHIFT
+    except Exception:
+        MM_SIZEOF_ALLOCNODE = 0
+        MM_ALLOCNODE_OVERHEAD = 0
+        MM_MIN_SHIFT = 0
+        MM_MIN_CHUNK = 0
 
     def __init__(self, node: gdb.Value):
         if node.type.code == gdb.TYPE_CODE_PTR:
