@@ -336,7 +336,7 @@ config XTENSA_TOOLCHAIN_XCLANG
 
 config XTENSA_TOOLCHAIN_ESP
 	bool "ESP toolchain for xtensa"
-	select ARCH_TOOLCHAIN_GNU
+	select ARCH_TOOLCHAIN_GCC
 
 endchoice
 
