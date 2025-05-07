@@ -131,6 +131,9 @@ void up_initial_state(struct tcb_s *tcb)
   tcb->xcp.regs[JB_PC] = (xcpt_reg_t)pre_start;
 
 #ifdef CONFIG_SIM_ASAN
-  __asan_unpoison_memory_region(tcb->stack_alloc_ptr, tcb->adj_stack_size);
+  __asan_unpoison_memory_region(tcb->stack_alloc_ptr,
+                                tcb->pid == IDLE_PROCESS_ID ?
+                                tcb->adj_stack_size :
+                                kmm_malloc_size(tcb->stack_alloc_ptr));
 #endif
 }
