@@ -107,7 +107,7 @@ static struct syslog_rpmsg_s g_syslog_rpmsg;
 #if CONFIG_SYSLOG_RPMSG_BUFSIZE != 0
 #  ifdef SYSLOG_RPMSG_BUFFER_SECTION
 static char g_sysbuffer[CONFIG_SYSLOG_RPMSG_BUFSIZE]
-                       locate_data(SYSLOG_RPMSG_BUFFER_SECTION);
+                       locate_data(CONFIG_SYSLOG_RPMSG_BUFFER_SECTION);
 #  else
 static char g_sysbuffer[CONFIG_SYSLOG_RPMSG_BUFSIZE];
 #  endif

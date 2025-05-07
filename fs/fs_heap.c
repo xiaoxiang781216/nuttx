@@ -43,7 +43,8 @@ static FAR struct mm_heap_s *g_fs_heap;
 void fs_heap_initialize(void)
 {
 #ifdef FS_HEAPBUF_SECTION
-  static uint8_t buf[CONFIG_FS_HEAPSIZE] locate_data(FS_HEAPBUF_SECTION);
+  static uint8_t buf[CONFIG_FS_HEAPSIZE]
+    locate_data(CONFIG_FS_HEAPBUF_SECTION);
 #else
   FAR void *buf = kmm_malloc(CONFIG_FS_HEAPSIZE);
 #endif

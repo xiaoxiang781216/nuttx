@@ -174,7 +174,7 @@ static const struct file_operations g_noteram_fops =
 
 static
 #ifdef DRIVERS_NOTERAM_SECTION
-locate_data(DRIVERS_NOTERAM_SECTION)
+locate_data(CONFIG_DRIVERS_NOTERAM_SECTION)
 #endif
 struct noteram_buffer_s
 {
