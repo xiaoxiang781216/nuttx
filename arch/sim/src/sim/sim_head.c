@@ -220,3 +220,13 @@ int board_power_off(int status)
   return 0;
 }
 #endif
+
+#ifdef CONFIG_BOARDCTL_RESET
+int board_reset(int status)
+{
+  /* Reset simulator */
+
+  host_reset(status);
+  return 0;
+}
+#endif

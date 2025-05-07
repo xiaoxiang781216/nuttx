@@ -223,6 +223,7 @@ void  sim_unlock(void);
 /* sim_hostmisc.c ***********************************************************/
 
 void host_abort(int status);
+void host_reset(int status);
 int  host_backtrace(void** array, int size);
 int  host_system(char *buf, size_t len, const char *fmt, ...);
 

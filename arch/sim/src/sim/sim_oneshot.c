@@ -489,16 +489,16 @@ struct oneshot_lowerhalf_s *oneshot_initialize(int chan,
 
 void up_timer_initialize(void)
 {
+  up_alarm_set_lowerhalf(oneshot_initialize(0, 0));
+
 #ifdef CONFIG_SIM_WALLTIME_SIGNAL
   int timer_irq = host_timerirq();
 
-  /* Enable the alarm handler and attach the interrupt to the NuttX logic */
+  /* Attach the interrupt to the NuttX logic and enable the alarm handler. */
 
-  up_enable_irq(timer_irq);
   irq_attach(timer_irq, sim_timer_handler, NULL);
+  up_enable_irq(timer_irq);
 #endif
-
-  up_alarm_set_lowerhalf(oneshot_initialize(0, 0));
 }
 
 /****************************************************************************

@@ -85,6 +85,29 @@ void host_abort(int status)
 }
 
 /****************************************************************************
+ * Name: host_reset
+ *
+ * Description:
+ *   Restart the simulation
+ *
+ * Input Parameters:
+ *   status - Exit status to set
+ ****************************************************************************/
+
+void host_reset(int status)
+{
+#ifndef CONFIG_COVERAGE_NONE
+  /* Dump gcov data. */
+
+  host_uninterruptible_no_return(__gcov_dump);
+#endif
+
+  /* exit the simulation */
+
+  host_uninterruptible_no_return(execvp, g_argv[0], g_argv);
+}
+
+/****************************************************************************
  * Name: host_backtrace
  *
  * Description:
