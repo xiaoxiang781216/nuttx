@@ -186,6 +186,8 @@
 #define NOTE_GETTAGFILTER                _NOTEIOC(0x0C)
 #define NOTE_SETTAGFILTER                _NOTEIOC(0x0D)
 #define NOTE_GETFREQ                     _NOTEIOC(0x0E)
+#define NOTE_GETRATELIMIT                _NOTEIOC(0x0F)
+#define NOTE_SETRATELIMIT                _NOTEIOC(0x10)
 
 /* Overwrite mode definitions */
 
@@ -265,6 +267,16 @@ struct note_driver_ops_s
   CODE void (*vprintf)(FAR struct note_driver_s *drv, uintptr_t ip,
                        FAR const char *fmt, va_list va) printf_like(3, 0);
 #endif
+};
+
+/* This is the type of the argument passed to the NOTE_GETRATELIMIT and
+ * NOTE_SETRATELIMIT ioctls
+ */
+
+struct note_ratelimit_s
+{
+  unsigned int interval; /* The interval in seconds */
+  unsigned int burst;    /* The max allowed note number during interval */
 };
 
 /* This is the type of the argument passed to the NOTECTL_GETMODE and

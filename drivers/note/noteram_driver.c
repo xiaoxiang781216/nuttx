@@ -88,6 +88,14 @@
  * Private Types
  ****************************************************************************/
 
+struct noteram_ratelimit_s
+{
+  unsigned int interval; /* The interval in seconds */
+  unsigned int burst;    /* The max allowed note number during interval */
+  unsigned int printed;  /* The number of printed note during interval */
+  unsigned long begin;   /* The timestamp in seconds */
+};
+
 struct noteram_header_s
 {
   volatile unsigned int head;
@@ -107,6 +115,7 @@ struct noteram_driver_s
   spinlock_t lock;
   FAR struct pollfd *pfd;
   struct notifier_block nb;
+  struct noteram_ratelimit_s ratelimit;
 };
 
 /* The structure to hold the context data of trace dump */
@@ -211,6 +220,65 @@ struct noteram_driver_s g_noteram_driver =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: noteram_ratelimit
+ *
+ * Description:
+ *   Check whether the instrumentation is limited.
+ *
+ * Input Parameters:
+ *   driver - The channel of note driver
+ *
+ * Returned Value:
+ *   True is returned if the instrumentation is limited.
+ *
+ ****************************************************************************/
+
+static bool noteram_ratelimit(FAR struct noteram_driver_s *drv)
+{
+  bool ret;
+  clock_t ticks;
+  uint32_t seconds;
+  FAR struct noteram_ratelimit_s *limit;
+
+  limit = &drv->ratelimit;
+
+  if (limit->interval == 0)
+    {
+      return false;
+    }
+
+  ticks = clock_systime_ticks();
+  seconds = ticks * CONFIG_USEC_PER_TICK / 1000000;
+
+  if (limit->begin == 0)
+    {
+      limit->begin = seconds;
+    }
+
+  /* Reset statistical information */
+
+  if ((seconds - limit->begin) >= limit->interval)
+    {
+      limit->begin = seconds;
+      limit->printed = 0;
+    }
+
+  /* Check if the note is limited */
+
+  if (limit->burst && limit->burst > limit->printed)
+    {
+      limit->printed++;
+      ret = false;
+    }
+  else
+    {
+      ret = true;
+    }
+
+  return ret;
+}
 
 /****************************************************************************
  * Name: noteram_buffer_clear
@@ -633,6 +701,36 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         break;
 
+      case NOTE_GETRATELIMIT:
+        if (arg == 0)
+          {
+            ret = -EINVAL;
+          }
+        else
+          {
+            FAR struct note_ratelimit_s *limit =
+              (FAR struct note_ratelimit_s *)arg;
+
+            limit->interval = drv->ratelimit.interval;
+            limit->burst = drv->ratelimit.burst;
+          }
+        break;
+
+      case NOTE_SETRATELIMIT:
+        if (arg == 0)
+          {
+            ret = -EINVAL;
+          }
+        else
+          {
+            FAR struct note_ratelimit_s *limit =
+              (FAR struct note_ratelimit_s *)arg;
+
+            drv->ratelimit.interval = limit->interval;
+            drv->ratelimit.burst = limit->burst;
+          }
+        break;
+
       case NOTE_GETFREQ:
         *(FAR unsigned long *)arg = perf_getfreq();
         ret = OK;
@@ -746,6 +844,12 @@ static void noteram_add(FAR struct note_driver_s *driver,
   irqstate_t flags;
 
   flags = spin_lock_irqsave_notrace(&drv->lock);
+
+  if (noteram_ratelimit(drv))
+    {
+      spin_unlock_irqrestore_notrace(&drv->lock, flags);
+      return;
+    }
 
   if (drv->header->magic != NOTERAM_MAGIC)
     {
