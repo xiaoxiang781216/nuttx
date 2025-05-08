@@ -294,6 +294,8 @@ class MMClassify(gdb.Command):
             "-p", "--pid", type=int, default=None, help="Thread PID, -1 for mempool"
         )
 
+        parser.add_argument("--pids", nargs="+", type=int, help="List of pids")
+
         parser.add_argument(
             "-c",
             "--classifier-file",
@@ -344,25 +346,27 @@ class MMClassify(gdb.Command):
                 print("memoryclassify: no backtrace")
                 return
 
-            filters = {
-                "pid": args.pid,
-                "nodesize": None,
-                "used": None,
-                "free": None,
-                "seqmin": None,
-                "seqmax": None,
-                "orphan": None,
-                "no_heap": None,
-                "no_pool": None,
-                "no_pid": None,
-            }
+            args.pids.append(args.pid)
+            for pid in args.pids:
+                filters = {
+                    "pid": args.pid,
+                    "nodesize": None,
+                    "used": None,
+                    "free": None,
+                    "seqmin": None,
+                    "seqmax": None,
+                    "orphan": None,
+                    "no_heap": None,
+                    "no_pool": None,
+                    "no_pid": None,
+                }
 
-            memblocks.extend(
-                MemBlockCoredump(node, len(nodes))
-                for node, nodes in memdump.group_nodes(
-                    memdump.dump_nodes(mm.get_heaps(), filters)
-                ).items()
-            )
+                memblocks.extend(
+                    MemBlockCoredump(node, len(nodes))
+                    for node, nodes in memdump.group_nodes(
+                        memdump.dump_nodes(mm.get_heaps(), filters)
+                    ).items()
+                )
 
         stat = MemoryCategory(
             "total", Classifier(getattr(classify_config, "categories"))
