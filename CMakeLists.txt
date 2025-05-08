@@ -468,6 +468,14 @@ endif()
 
 include(platform)
 
+# Generate device tree heade files
+add_custom_target(
+  dts_generator
+  COMMAND ${CMAKE_COMMAND} -P ${NUTTX_DIR}/cmake/nuttx_generate_dts.cmake
+          ${NUTTX_DEFCONFIG} ${NUTTX_DIR} ${CMAKE_BINARY_DIR}
+  WORKING_DIRECTORY ${NUTTX_DIR})
+add_dependencies(nuttx_context dts_generator)
+
 # Setup main nuttx target ####################################################
 
 add_executable(nuttx)
