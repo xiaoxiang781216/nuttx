@@ -804,6 +804,10 @@ static int rpmsg_virtio_lite_start(FAR struct rpmsg_virtio_lite_priv_s *priv)
   rpmsg_virtio_lite_update_rx(priv);
   rpmsg_virtio_lite_wakeup_rx(priv);
 
+  /* Set peer's state to running */
+
+  rpmsg_modify_signals(&priv->rpmsg, RPMSG_SIGNAL_RUNNING, 0);
+
   /* Broadcast device_created to all registers */
 
   rpmsg_device_created(&priv->rpmsg);
