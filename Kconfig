@@ -2889,6 +2889,10 @@ menu "File Systems"
 source "fs/Kconfig"
 endmenu
 
+menu "Devicetree header generation support"
+source "devicetree/Kconfig"
+endmenu
+
 menu "Graphics Support"
 source "graphics/Kconfig"
 source "libs/libnx/Kconfig"

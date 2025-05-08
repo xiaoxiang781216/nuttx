@@ -1,0 +1,46 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+config DEVICETREE_HEADER_GENERATION
+	bool "Device Tree header file generation support"
+	default n
+	---help---
+		This option enables support for generate device tree
+		header file in NuttX.
+
+		NOTE: The config directories following can be either relative
+		to the project or an absolute path, which was separated by comma.
+
+if DEVICETREE_HEADER_GENERATION
+
+config DTS_SOURCE_DTR
+	string "Device Tree source file directories"
+	default ""
+	---help---
+		This option specifies the source file directories to be
+		compiled into the device tree binary.
+
+config DTS_OVERLAY_DIR
+	string "Device Tree overlay file directories"
+	default ""
+	---help---
+		This option specifies the overlay file directories to be
+		compiled into the device tree binary.
+
+config DTS_CUSTOM_BINDINGS_DIR
+	string "Device Tree custom bindings directory"
+	default ""
+	---help---
+		This option specifies the directory containing the
+		custom device tree bindings.
+
+config DTS_CUSTOM_DT_BINDINGS_INCLUDE_DIR
+	string "Device Tree custom dt-bindings directory"
+	default ""
+	---help---
+		This option specifies the directory containing the
+		custom device tree header files.
+
+endif # if DEVICETREE_HEADER_GENERATION
