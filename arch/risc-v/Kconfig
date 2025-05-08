@@ -732,6 +732,9 @@ endif
 if ARCH_CHIP_BL602
 source "arch/risc-v/src/bl602/Kconfig"
 endif
+if ARCH_CHIP_ESP32C3
+source "arch/risc-v/src/esp32c3-legacy/Kconfig"
+endif
 if ARCH_CHIP_ESP32C3_GENERIC
 source "arch/risc-v/src/esp32c3/Kconfig"
 endif
