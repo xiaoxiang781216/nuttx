@@ -584,7 +584,7 @@ int clock_isleapyear(int year);
  *
  ****************************************************************************/
 
-int clock_daysbeforemonth(int month, bool leapyear);
+int clock_daysbeforemonth(int month, bool leap_year);
 
 /****************************************************************************
  * Name:  clock_dayoftheweek
