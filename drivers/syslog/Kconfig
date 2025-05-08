@@ -413,6 +413,12 @@ config SYSLOG_FILE_SIZE_LIMIT
 
 endif # SYSLOG_FILE
 
+config SYSLOG_ITM
+	bool "Log to ITM"
+	default n
+	---help---
+		Use ITM as a SYSLOG output device.
+
 config CONSOLE_SYSLOG
 	bool "Use SYSLOG for /dev/console"
 	default n

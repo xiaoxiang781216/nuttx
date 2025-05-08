@@ -81,4 +81,8 @@ if(CONFIG_SYSLOG_STREAM)
   list(APPEND SRCS syslog_stream.c)
 endif()
 
+if(CONFIG_SYSLOG_ITM)
+  list(APPEND SRCS syslog_itmchannel.c)
+endif()
+
 target_sources(drivers PRIVATE ${SRCS})
