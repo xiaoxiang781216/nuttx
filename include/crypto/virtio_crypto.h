@@ -27,7 +27,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <errno.h>
+#include <crypto/asn1.h>
 #include <crypto/cryptodev.h>
 #include <nuttx/virtio/virtio-crypto.h>
 
@@ -35,28 +35,189 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define VIRTIO_CRYPTO_MD5_HASH_LEN        16
-#define VIRTIO_CRYPTO_SHA1_HASH_LEN       20
-#define VIRTIO_CRYPTO_SHA224_HASH_LEN     28
-#define VIRTIO_CRYPTO_SHA256_HASH_LEN     32
-#define VIRTIO_CRYPTO_SHA384_HASH_LEN     48
-#define VIRTIO_CRYPTO_SHA512_HASH_LEN     64
-#define VIRTIO_CRYPTO_AESCMAC_KEY_LEN     16
-#define VIRTIO_CRYPTO_AES_IV_LEN          16
-#define VIRTIO_CRYPTO_CCM_IV_LEN          12
-#define VIRTIO_CRYPTO_CHACHAPOLY_IV_LEN   12
-#define VIRTIO_CRYPTO_DES_IV_LEN          8
-#define VIRTIO_CRYPTO_GCM_IV_LEN          12
-#define VIRTIO_CRYPTO_CCM_TAG_LEN         16
-#define VIRTIO_CRYPTO_GCM_TAG_LEN         16
-#define VIRTIO_CRYPTO_CHACHAPOLY_TAG_LEN  16
-#define VIRTIO_CRYPTO_NOUNCE_LEN          4
+#define VIRTIO_CRYPTO_MD5_HASH_LEN           16
+#define VIRTIO_CRYPTO_SHA1_HASH_LEN          20
+#define VIRTIO_CRYPTO_SHA224_HASH_LEN        28
+#define VIRTIO_CRYPTO_SHA256_HASH_LEN        32
+#define VIRTIO_CRYPTO_SHA384_HASH_LEN        48
+#define VIRTIO_CRYPTO_SHA512_HASH_LEN        64
+#define VIRTIO_CRYPTO_AESCMAC_KEY_LEN        16
+#define VIRTIO_CRYPTO_CCM_TAG_LEN            16
+#define VIRTIO_CRYPTO_GCM_TAG_LEN            16
+#define VIRTIO_CRYPTO_CHACHAPOLY_TAG_LEN     16
 
-#define VIRTIO_CRYPTO_KEYID               0x01
+#define VIRTIO_CRYPTO_KEYID                  0x01
+
+/* RSA public keys:
+ *  SubjectPublicKeyInfo  ::=  SEQUENCE  {          1 + 3
+ *       algorithm            AlgorithmIdentifier,  1 + 1 (sequence)
+ *                                                + 1 + 1 + 9 (rsa oid)
+ *                                                + 1 + 1 (params null)
+ *       subjectPublicKey     BIT STRING }          1 + 3 + (1 + below)
+ *  RSAPublicKey ::= SEQUENCE {                     1 + 3
+ *      modulus           INTEGER,  -- n            1 + 3 + MPI_MAX + 1
+ *      publicExponent    INTEGER   -- e            1 + 3 + MPI_MAX + 1
+ *  }
+ */
+
+#define VIRTIO_CRYPTO_RSA_PUB_DER_MAX_BYTES(bits)  (38 + 2 * (bits) / 8)
+
+/* RSA private keys:
+ *  RSAPrivateKey ::= SEQUENCE {                    1 + 3
+ *      version           Version,                  1 + 1 + 1
+ *      modulus           INTEGER,                  1 + 3 + MPI_MAX + 1
+ *      publicExponent    INTEGER,                  1 + 3 + MPI_MAX + 1
+ *      privateExponent   INTEGER,                  1 + 3 + MPI_MAX + 1
+ *      prime1            INTEGER,                  1 + 3 + MPI_MAX / 2 + 1
+ *      prime2            INTEGER,                  1 + 3 + MPI_MAX / 2 + 1
+ *      exponent1         INTEGER,                  1 + 3 + MPI_MAX / 2 + 1
+ *      exponent2         INTEGER,                  1 + 3 + MPI_MAX / 2 + 1
+ *      coefficient       INTEGER,                  1 + 3 + MPI_MAX / 2 + 1
+ *      otherPrimeInfos   OtherPrimeInfos OPTIONAL  0 (not supported)
+ *  }
+ */
+
+#define VIRTIO_CRYPTO_RSA_MAX_SIZE_2(bits)  (((bits) / 8) / 2 +  \
+                                             ((bits) / 8) % 2)
+#define VIRTIO_CRYPTO_RSA_PRV_DER_MAX_BYTES(bits)              \
+                                  (47 + 3 * ((bits) / 8)         \
+                                  + 5 * VIRTIO_CRYPTO_RSA_MAX_SIZE_2(bits))
+#define VIRTIO_CRYPTO_RSA_DER_MAX_BYTES(bits, is_priv)         \
+        (is_priv ? VIRTIO_CRYPTO_RSA_PRV_DER_MAX_BYTES(bits) : \
+                   VIRTIO_CRYPTO_RSA_PUB_DER_MAX_BYTES(bits))
 
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
+
+/* RSAPublicKey ::= SEQUENCE {
+ *     modulus           INTEGER,  -- n
+ *     publicExponent    INTEGER   -- e
+ * }
+ */
+
+static inline_function int
+virtio_crypto_write_rsa_pubkey_der(FAR const unsigned char *n, size_t nlen,
+                                   FAR const unsigned char *e, size_t elen,
+                                   FAR unsigned char *buf, size_t size)
+{
+  unsigned char *p;
+  int len = 0;
+
+  p = buf + size;
+
+  /* Export E */
+
+  len += asn1_write_mpi(&p, buf, e, elen);
+
+  /* Export N */
+
+  len += asn1_write_mpi(&p, buf, n, nlen);
+
+  len += asn1_write_len(&p, buf, len);
+  len += asn1_write_tag(&p, buf, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  return len;
+}
+
+/* RsaPrivKey ::= SEQUENCE {
+ *     version     INTEGER
+ *     n           INTEGER
+ *     e           INTEGER
+ *     d           INTEGER
+ *     p           INTEGER
+ *     q           INTEGER
+ *     dp          INTEGER
+ *     dq          INTEGER
+ *     u           INTEGER
+ *     otherPrimeInfos   OtherPrimeInfos OPTIONAL
+ * }
+ */
+
+static inline_function int
+virtio_crypto_write_rsa_key_der(FAR const unsigned char *n, size_t nlen,
+                                FAR const unsigned char *e, size_t elen,
+                                FAR const unsigned char *d, size_t dlen,
+                                FAR const unsigned char *p, size_t plen,
+                                FAR const unsigned char *q, size_t qlen,
+                                FAR const unsigned char *dp, size_t dplen,
+                                FAR const unsigned char *dq, size_t dqlen,
+                                FAR const unsigned char *qp, size_t qplen,
+                                FAR unsigned char *buf, size_t size)
+{
+  unsigned char *pos;
+  int len = 0;
+
+  pos = buf + size;
+
+  /* Export QP */
+
+  len += asn1_write_mpi(&pos, buf, qp, qplen);
+
+  /* Export DQ */
+
+  len += asn1_write_mpi(&pos, buf, dq, dqlen);
+
+  /* Export DP */
+
+  len += asn1_write_mpi(&pos, buf, dp, dplen);
+
+  /* Export Q */
+
+  len += asn1_write_mpi(&pos, buf, q, qlen);
+
+  /* Export P */
+
+  len += asn1_write_mpi(&pos, buf, p, plen);
+
+  /* Export D */
+
+  len += asn1_write_mpi(&pos, buf, d, dlen);
+
+  /* Export E */
+
+  len += asn1_write_mpi(&pos, buf, e, elen);
+
+  /* Export N */
+
+  len += asn1_write_mpi(&pos, buf, n, nlen);
+
+  len += asn1_write_int(&pos, buf, 0);
+  len += asn1_write_len(&pos, buf, len);
+  len += asn1_write_tag(&pos, buf, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  return len;
+}
+
+/* RsaPrivKey ::= SEQUENCE {
+ *     version     INTEGER
+ *     n           INTEGER
+ *     d           INTEGER
+ *     otherPrimeInfos   OtherPrimeInfos OPTIONAL
+ * }
+ */
+
+static inline_function int
+virtio_crypto_write_rsa_key_der_no_crt(FAR unsigned char *buf, size_t size,
+                                       FAR unsigned char *n, size_t nlen,
+                                       FAR unsigned char *d, size_t dlen)
+{
+  unsigned char *pos;
+  int len = 0;
+
+  pos = buf + size;
+
+  /* Export D */
+
+  len += asn1_write_mpi(&pos, buf, d, dlen);
+
+  /* Export N */
+
+  len += asn1_write_mpi(&pos, buf, n, nlen);
+
+  len += asn1_write_int(&pos, buf, 0);
+  len += asn1_write_len(&pos, buf, len);
+  len += asn1_write_tag(&pos, buf, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  return len;
+}
 
 static inline_function
 int virtio_crypto_get_errcode(int verr)
@@ -185,6 +346,27 @@ int virtio_crypto_get_service(int alg)
       case CRYPTO_CHACHA20_POLY1305:
       case CRYPTO_CHACHA20_POLY1305_MAC:
         return VIRTIO_CRYPTO_SERVICE_AEAD;
+    }
+
+  return -EINVAL;
+}
+
+static inline_function
+int virtio_crypto_asym_get_alg(int kalg)
+{
+  switch (kalg)
+    {
+      case CRK_MOD_EXP:
+      case CRK_MOD_EXP_CRT:
+      case CRK_RSA_PKCS15_SIGN:
+      case CRK_RSA_PKCS15_VERIFY:
+      case CRK_RSA_PSS_SIGN:
+      case CRK_RSA_PSS_VERIFY:
+        return VIRTIO_CRYPTO_AKCIPHER_RSA;
+      case CRK_ECDSA_SECP256R1_SIGN:
+      case CRK_ECDSA_SECP256R1_VERIFY:
+      case CRK_ECDSA_SECP256R1_GENKEY:
+        return VIRTIO_CRYPTO_AKCIPHER_ECDSA;
     }
 
   return -EINVAL;
