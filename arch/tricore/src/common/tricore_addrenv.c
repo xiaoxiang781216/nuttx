@@ -375,11 +375,11 @@ int up_addrenv_mprot(arch_addrenv_t *addrenv, uintptr_t addr, size_t len,
 
 int up_addrenv_ustackswitch(struct tcb_s *tcb)
 {
-  struct tls_info_s *tls = nxsched_get_tls(tcb);
   struct mpu_region_s conf;
 
   conf.base = (uintptr_t)tcb->stack_alloc_ptr;
-  conf.size = tcb->adj_stack_size + tls->tl_size;
+  conf.size = (uintptr_t)tcb->stack_base_ptr + tcb->adj_stack_size -
+              (uintptr_t)tcb->stack_alloc_ptr;
   conf.kflags = REGION_TYPE_DATA | REGION_ATTR_RW;
   conf.uflags = REGION_TYPE_DATA | REGION_ATTR_RW;
 
@@ -388,13 +388,14 @@ int up_addrenv_ustackswitch(struct tcb_s *tcb)
       g_addrenv_stack_region = mpu_allocdataregion();
     }
 
-    mpu_modify_region(g_mpu_kset, g_addrenv_stack_region,
-                      conf.base, conf.size, conf.kflags);
+  mpu_control(false);
+  mpu_modify_region(g_mpu_kset, g_addrenv_stack_region,
+                    conf.base, conf.size, conf.kflags);
 #ifdef CONFIG_BUILD_PROTECTED
-    mpu_modify_region(g_mpu_uset, g_addrenv_stack_region,
-                      conf.base, conf.size, conf.uflags);
+  mpu_modify_region(g_mpu_uset, g_addrenv_stack_region,
+                    conf.base, conf.size, conf.uflags);
 #endif
-
+  mpu_control(true);
   return OK;
 }
 
@@ -420,11 +421,11 @@ int up_addrenv_ustackswitch(struct tcb_s *tcb)
 
 int up_addrenv_kstackswitch(struct tcb_s *tcb)
 {
-  struct tls_info_s *tls = nxsched_get_tls(tcb);
   struct mpu_region_s conf;
 
   conf.base = (uintptr_t)tcb->stack_alloc_ptr;
-  conf.size = tcb->adj_stack_size + tls->tl_size;
+  conf.size = (uintptr_t)tcb->stack_base_ptr + tcb->adj_stack_size -
+              (uintptr_t)tcb->stack_alloc_ptr;
   conf.kflags = REGION_TYPE_DATA | REGION_ATTR_RW;
   conf.uflags = REGION_TYPE_DATA | REGION_ATTR_RO;
 
@@ -433,13 +434,14 @@ int up_addrenv_kstackswitch(struct tcb_s *tcb)
       g_addrenv_stack_region = mpu_allocdataregion();
     }
 
-    mpu_modify_region(g_mpu_kset, g_addrenv_stack_region,
-                      conf.base, conf.size, conf.kflags);
+  mpu_control(false);
+  mpu_modify_region(g_mpu_kset, g_addrenv_stack_region,
+                    conf.base, conf.size, conf.kflags);
 #ifdef CONFIG_BUILD_PROTECTED
-    mpu_modify_region(g_mpu_uset, g_addrenv_stack_region,
-                      conf.base, conf.size, conf.uflags);
+  mpu_modify_region(g_mpu_uset, g_addrenv_stack_region,
+                    conf.base, conf.size, conf.uflags);
 #endif
-
+  mpu_control(true);
   return OK;
 }
 #endif
