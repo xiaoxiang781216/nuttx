@@ -56,7 +56,6 @@
 
 struct mofile_s
 {
-  FAR struct mofile_s *next;
   char path[PATH_MAX];
   FAR const char *plural_rule;
   unsigned long nplurals;
@@ -482,6 +481,73 @@ static unsigned long eval(FAR const char *s, unsigned long n)
   return *s == ';' ? ev.r : -1;
 }
 
+static FAR struct mofile_s *mofile_malloc(FAR const char *path)
+{
+  FAR struct mofile_s *mofile;
+  FAR const char *r;
+
+  mofile = lib_malloc(sizeof(*mofile));
+  if (mofile == NULL)
+    {
+      return NULL;
+    }
+
+  strlcpy(mofile->path, path, PATH_MAX);
+  mofile->map = momap(path, &mofile->size);
+  if (mofile->map == MAP_FAILED)
+    {
+      lib_free(mofile);
+      return NULL;
+    }
+
+  /* Initialize the default plural rule */
+
+  mofile->plural_rule = "n!=1;";
+  mofile->nplurals = 2;
+
+  /* Parse the plural rule from the header entry(empty string) */
+
+  r = molookup(mofile->map, mofile->size, "");
+  while (r != NULL && strncmp(r, "Plural-Forms:", 13))
+    {
+      r = strchr(r, '\n');
+      if (r != NULL)
+        {
+          r += 1;
+        }
+    }
+
+  if (r != NULL)
+    {
+      r = skipspace(r + 13);
+      if (strncmp(r, "nplurals=", 9) == 0)
+        {
+          mofile->nplurals = strtoul(r + 9, (FAR char **)&r, 10);
+        }
+
+      r = strchr(r, ';');
+      if (r != NULL)
+        {
+          r = skipspace(r + 1);
+          if (strncmp(r, "plural=", 7) == 0)
+            {
+              mofile->plural_rule = r + 7;
+            }
+        }
+    }
+
+  return mofile;
+}
+
+static void mofile_free(FAR struct mofile_s *mofile)
+{
+  if (mofile)
+    {
+      munmap(mofile->map, mofile->size);
+      lib_free(mofile);
+    }
+}
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -588,78 +654,21 @@ FAR char *dcngettext(FAR const char *domainname,
 
   while (nxmutex_lock(&g_lock) < 0);
 
-  for (mofile = g_mofile; mofile; mofile = mofile->next)
+  mofile = g_mofile;
+  if (!mofile || strcmp(mofile->path, path) != 0)
     {
-      if (strcmp(mofile->path, path) == 0)
-        {
-          break;
-        }
-    }
-
-  if (mofile == NULL)
-    {
-      FAR const char *r;
-
-      mofile = lib_malloc(sizeof(*mofile));
-      if (mofile == NULL)
-        {
-          nxmutex_unlock(&g_lock);
-          lib_put_tempbuffer(path);
-          return notrans;
-        }
-
-      strlcpy(mofile->path, path, PATH_MAX);
-      mofile->map = momap(path, &mofile->size);
-      if (mofile->map == MAP_FAILED)
-        {
-          nxmutex_unlock(&g_lock);
-          lib_put_tempbuffer(path);
-          lib_free(mofile);
-          return notrans;
-        }
-
-      /* Initialize the default plural rule */
-
-      mofile->plural_rule = "n!=1;";
-      mofile->nplurals = 2;
-
-      /* Parse the plural rule from the header entry(empty string) */
-
-      r = molookup(mofile->map, mofile->size, "");
-      while (r != NULL && strncmp(r, "Plural-Forms:", 13))
-        {
-          r = strchr(r, '\n');
-          if (r != NULL)
-            {
-              r += 1;
-            }
-        }
-
-      if (r != NULL)
-        {
-          r = skipspace(r + 13);
-          if (strncmp(r, "nplurals=", 9) == 0)
-            {
-              mofile->nplurals = strtoul(r + 9, (FAR char **)&r, 10);
-            }
-
-          r = strchr(r, ';');
-          if (r != NULL)
-            {
-              r = skipspace(r + 1);
-              if (strncmp(r, "plural=", 7) == 0)
-                {
-                  mofile->plural_rule = r + 7;
-                }
-            }
-        }
-
-      mofile->next = g_mofile;
+      mofile_free(mofile);
+      mofile = mofile_malloc(path);
       g_mofile = mofile;
     }
 
   nxmutex_unlock(&g_lock); /* Leave look before search */
   lib_put_tempbuffer(path);
+
+  if (mofile == NULL)
+    {
+      return notrans;
+    }
 
   trans = molookup(mofile->map, mofile->size, msgid1);
   if (trans == NULL)
