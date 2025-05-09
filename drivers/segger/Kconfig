@@ -100,7 +100,7 @@ config SEGGER_RTT2_BUFFER_SIZE_DOWN
 
 choice
 	prompt "SEGGER_RTT_MODE"
-	default SEGGER_RTT_MODE_NO_BLOCK_SKIP
+	default SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL_CONNECTED
 
 config SEGGER_RTT_MODE_NO_BLOCK_SKIP
 	bool "Skip. Do not block, output nothing. (Default)"
@@ -110,6 +110,9 @@ config SEGGER_RTT_MODE_NO_BLOCK_TRIM
 
 config SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL
 	bool "Block: Wait until there is space in the buffer."
+
+config SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL_CONNECTED
+	bool "Block: Wait until there is space in the buffer and connected."
 
 endchoice # SEGGER_RTT_MODE
 
