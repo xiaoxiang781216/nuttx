@@ -940,6 +940,8 @@ struct sensor_gnss_satellite
 
 struct sensor_gnss_measurement
 {
+  uint64_t timestamp;       /* Time since system start, Units is microseconds */
+
   /* Indicating what fields are valid.
    * See SENSOR_GNSS_MEASUREMENT_HAS_*.
    */
@@ -1010,6 +1012,8 @@ struct sensor_gnss_measurement
 
 struct sensor_gnss_clock
 {
+  uint64_t timestamp;       /* Time since system start, Units is microseconds */
+
   /* Indicating what fields are valid.
    * See SENSOR_GNSS_CLOCK_HAS_*.
    */
