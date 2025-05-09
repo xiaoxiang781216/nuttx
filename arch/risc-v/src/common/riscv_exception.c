@@ -31,6 +31,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #ifdef CONFIG_PAGING
+#  include <nuttx/addrenv.h>
 #  include <nuttx/pgalloc.h>
 #endif
 
