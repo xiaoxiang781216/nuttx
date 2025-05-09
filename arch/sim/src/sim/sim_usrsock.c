@@ -30,6 +30,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/net/usrsock.h>
+#include <nuttx/wqueue.h>
 
 #include "sim_hostusrsock.h"
 
