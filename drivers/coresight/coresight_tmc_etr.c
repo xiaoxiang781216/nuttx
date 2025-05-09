@@ -469,10 +469,19 @@ int tmc_etr_register(FAR struct coresight_tmc_dev_s *tmcdev,
     }
 
   tmcdev->mode = TMC_ETR_MODE_FLAT;
-  tmcdev->buf = kmm_zalloc(tmcdev->size);
-  if (tmcdev->buf == NULL)
+  if (desc->buffer)
     {
-      return -ENOMEM;
+      tmcdev->buf = desc->buffer;
+    }
+  else
+    {
+      tmcdev->buf = kmm_zalloc(tmcdev->size);
+      if (tmcdev->buf == NULL)
+        {
+          return -ENOMEM;
+        }
+
+      tmcdev->is_allocated = true;
     }
 
   tmcdev->csdev.ops = &g_tmc_sink_ops;
@@ -496,7 +505,11 @@ int tmc_etr_register(FAR struct coresight_tmc_dev_s *tmcdev,
 drv_err:
   coresight_unregister(&tmcdev->csdev);
 cs_err:
-  kmm_free(tmcdev->buf);
+  if (!desc->buffer)
+    {
+      kmm_free(tmcdev->buf);
+    }
+
   return ret;
 }
 
@@ -511,5 +524,8 @@ void tmc_etr_unregister(FAR struct coresight_tmc_dev_s * tmcdev)
   snprintf(pathname, sizeof(pathname), "/dev/%s", tmcdev->csdev.name);
   unregister_driver(pathname);
   coresight_unregister(&tmcdev->csdev);
-  kmm_free(tmcdev->buf);
+  if (tmcdev->is_allocated)
+    {
+      kmm_free(tmcdev->buf);
+    }
 }

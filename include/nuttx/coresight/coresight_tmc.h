@@ -98,6 +98,7 @@ struct coresight_tmc_dev_s
   enum tmc_etr_mode_e mode;             /* ETR buffer mode. */
   uint32_t offset;                      /* Data offset in ETR buffer. */
   uint8_t opencnt;                      /* TMC device's open count. */
+  bool    is_allocated;                 /* True if the buffer is allocated by the driver. */
 };
 
 /****************************************************************************

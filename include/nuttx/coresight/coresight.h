@@ -149,6 +149,7 @@ struct coresight_desc_s
 
   /* Used in TMC-ETR device. */
 
+  FAR void *buffer;
   uint32_t buffer_size;
   uint32_t burst_size;
   uint32_t caps;
