@@ -34,6 +34,7 @@
 #include <nuttx/config.h>
 
 #include <assert.h>
+#include <debug.h>
 
 #include <nuttx/circbuf.h>
 #include <nuttx/lib/lib.h>
@@ -272,6 +273,39 @@ bool circbuf_is_empty(FAR struct circbuf_s *circ)
 bool circbuf_is_full(FAR struct circbuf_s *circ)
 {
   return !circbuf_space(circ);
+}
+
+/****************************************************************************
+ * Name: cirbuf_dump
+ *
+ * Description:
+ *   Dump data from the circular buffer.
+ *
+ * Input Parameters:
+ *   msg  - Describe message.
+ *   circ - Address of the circular buffer to be used.
+ ****************************************************************************/
+
+void cirbuf_dump(FAR struct circbuf_s *circ, FAR const char *msg)
+{
+  size_t head;
+  size_t tail;
+
+  DEBUGASSERT(circ);
+  head = circ->head % circ->size;
+  tail = circ->tail % circ->size;
+
+  if (head < tail)
+    {
+      lib_dumpbuffer(msg, (FAR const uint8_t *)circ->base + tail,
+                     circ->size - tail);
+      lib_dumpbuffer(msg, (FAR const uint8_t *)circ->base, head);
+    }
+  else if (head > tail)
+    {
+      lib_dumpbuffer(msg, (FAR const uint8_t *)circ->base + tail,
+                     head - tail);
+    }
 }
 
 /****************************************************************************

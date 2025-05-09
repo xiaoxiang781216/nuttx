@@ -171,6 +171,19 @@ bool circbuf_is_full(FAR struct circbuf_s *circ);
 bool circbuf_is_empty(FAR struct circbuf_s *circ);
 
 /****************************************************************************
+ * Name: cirbuf_dump
+ *
+ * Description:
+ *   Dump data from the circular buffer.
+ *
+ * Input Parameters:
+ *   circ - Address of the circular buffer to be used.
+ *   msg  - Describe message.
+ ****************************************************************************/
+
+void cirbuf_dump(FAR struct circbuf_s *circ, FAR const char *msg);
+
+/****************************************************************************
  * Name: circbuf_size
  *
  * Description:
