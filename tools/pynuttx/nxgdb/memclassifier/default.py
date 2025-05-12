@@ -88,13 +88,60 @@ categories = {
     "graphic": {
         "judger": is_graphic,
         "subcategories": {
+            "lv_malloc": backtrace_function_name_equal(
+                ["lv_malloc_core", "lv_realloc_core"]
+            ),
+            "ft_realloc ": backtrace_function_name_equal(["ft_realloc "]),
             "freetype_cache": {"judger": is_freetype_cache},
+            "freetype": backtrace_function_name_equal(["ft_alloc"]),
+            "font": backtrace_function_name_equal(["ferry::Font::"]),
+            "textBase": backtrace_function_name_startswith(["ferry::TextBase::"]),
             "image_cache": {"judger": is_image_cache},
+            "widget": backtrace_function_name_startswith(["ferry::Widget"]),
+            "string_with_Kid": backtrace_function_name_startswith(
+                ["ferry::stringToKidInitialize", "ferry::kidToStringInitialize"]
+            ),
+            "ImageCacheManager": backtrace_function_name_startswith(
+                ["ferry::ImageCacheManager::", "gui_init_image_cachemanager"]
+            ),
+            "ImageProvider": backtrace_function_name_startswith(
+                ["ferry::ImageProvider::"]
+            ),
+            "Yoga": backtrace_function_name_startswith(["YGNode", "facebook::yoga::"]),
+            "onPreset": backtrace_function_name_startswith(
+                ["ferry::WidgetIMP::onPreSet"]
+            ),
         },
     },
-    "style": is_style,
-    "libuv": backtrace_function_name_equal(["uv__realloc", "uv_pipe"]),
-    "dom": backtrace_function_name_startswith(["js_dom_create", "ferry::PbDom"]),
+    "style": {
+        "judger": backtrace_function_name_startswith(
+            ["ferry::style::", "ferry::DomElement::computeStyle"]
+        ),
+        "subcategories": {
+            "StrRefHeader": backtrace_function_name_startswith(
+                ["ferry::style::StrRefHeader::From"]
+            ),
+            "computeStyle": backtrace_function_name_contain(["computeStyle"]),
+            "StringPool": backtrace_function_name_startswith(
+                ["ferry::style::StringPool::StringPool"]
+            ),
+            "selector": backtrace_function_name_startswith(
+                ["ferry::style::StyleManagerBuilder::addSelector"]
+            ),
+            "StyleManager": backtrace_function_name_startswith(
+                ["ferry::style::StyleManager::StyleManager"]
+            ),
+        },
+    },
+    "libuv": backtrace_function_name_equal(["uv__realloc", "uv_pipe", "uv_loop_init"]),
+    "dom": {
+        "judger": backtrace_function_name_startswith(["js_dom_create", "ferry::PbDom"]),
+        "subcategories": {
+            "create_element_from_js": backtrace_function_name_startswith(
+                ["create_element_from_js", "js_dom_create_element"]
+            ),
+        },
+    },
     "curl": backtrace_function_name_startswith(["Curl_"]),
     "native_proxy": backtrace_function_name_startswith(
         [
@@ -112,10 +159,18 @@ categories = {
     "binder": backtrace_function_name_equal(
         ["binder_mmap", "android::RefBase::RefBase()"]
     ),
+    "stack": {
+        "judger": backtrace_function_name_startswith(["up_create_stack"]),
+        "ignore": True,
+    },
     "framework": backtrace_function_name_startswith(
         [
-            "ferry::Application::initManifestConfig",
+            "ferry::Framework::",
+            "ferry::Application::",
+            "ferry::__runApplication",
             "ferry::PageLoader::createPage(ferry::PageInfo const&)",
+            "ferry::PageNavigator::",
+            "ferry::Page::init",
             "os::app::ApplicationThread::ApplicationThread(os::app::Application*)",
             "ferry::AppLoader::initAppEnv(ferry::Application*",
         ]

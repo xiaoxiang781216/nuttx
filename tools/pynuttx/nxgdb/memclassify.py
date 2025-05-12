@@ -33,10 +33,13 @@ class Classifier:
         self.class_name = category_name
 
         for key, sub_info in info.items():
+            ignore = False
             if callable(sub_info):
                 self.judgers.append(sub_info)
                 sub_classifier = None
             else:  # sub_info is a dict
+                if "ignore" in sub_info:
+                    ignore = sub_info["ignore"]
                 self.judgers.append(sub_info["judger"])
                 sub_classifier = (
                     Classifier(
@@ -46,7 +49,7 @@ class Classifier:
                     else None
                 )
 
-            self.stats.append(MemoryCategory(key, sub_classifier))
+            self.stats.append(MemoryCategory(key, ignore, sub_classifier))
 
     def __call__(self, mem_blocks):
         for mb in mem_blocks:
@@ -106,11 +109,12 @@ class MemBlock:
 class MemoryCategory:
     WIDTH = 88
 
-    def __init__(self, category="total", classifier=None):
+    def __init__(self, category="total", ignore=False, classifier=None):
         self.category = category
         self.mem_blocks = []
         self.classifier = classifier
         self.children = []
+        self.ignore = ignore
 
     def append(self, mem_block):
         self.mem_blocks.append(mem_block)
@@ -136,8 +140,7 @@ class MemoryCategory:
 
     def print_statistics(self, categorys=[]):
 
-        if not self.children:
-            # no children means no categories, just print nothing
+        if not self.children:  # No children means no categories, just print nothing
             return
 
         categorys.append(self.category)
@@ -187,8 +190,12 @@ class MemoryCategory:
             res.append(
                 (
                     ".".join(title_path),
-                    [child.category for child in self.children],
-                    [child.no_overhead_size for child in self.children],
+                    [child.category for child in self.children if not child.ignore],
+                    [
+                        child.no_overhead_size
+                        for child in self.children
+                        if not child.ignore
+                    ],
                 )
             )
             for child in self.children:
@@ -243,8 +250,7 @@ class MemBlockCoredump(MemBlock):
     def __init__(self, node, cnt):
         super().__init__()
         self.mem_node = node
-        self.cnt = cnt
-        # deal with call_stack
+        self.cnt = cnt  # deal with call_stack
         self.call_stack = []
         for addr, func, file, line in utils.Backtrace(node.backtrace).backtrace:
             func = func.strip("<>")
@@ -294,7 +300,9 @@ class MMClassify(gdb.Command):
             "-p", "--pid", type=int, default=None, help="Thread PID, -1 for mempool"
         )
 
-        parser.add_argument("--pids", nargs="+", type=int, help="List of pids")
+        parser.add_argument(
+            "--pids", nargs="+", type=int, default=[], help="List of pids"
+        )
 
         parser.add_argument(
             "-c",
@@ -345,11 +353,11 @@ class MMClassify(gdb.Command):
             if not mm.MM_RECORD_STACK_DEPTH < 8:
                 print("memoryclassify: no backtrace")
                 return
-
-            args.pids.append(args.pid)
+            if args.pid is not None:
+                args.pids.append(args.pid)
             for pid in args.pids:
                 filters = {
-                    "pid": args.pid,
+                    "pid": pid,
                     "nodesize": None,
                     "used": None,
                     "free": None,
@@ -369,7 +377,7 @@ class MMClassify(gdb.Command):
                 )
 
         stat = MemoryCategory(
-            "total", Classifier(getattr(classify_config, "categories"))
+            "total", False, Classifier(getattr(classify_config, "categories"))
         )
         stat.extend(memblocks)
         stat.classify()
