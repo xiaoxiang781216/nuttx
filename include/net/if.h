@@ -206,6 +206,7 @@ struct can_ioctl_filter_s
 
 enum can_ioctl_state_e
 {
+  CAN_STATE_STOPPED = 0,     /* The can/lin controller is in the stop state */
   CAN_STATE_OPERATIONAL = 1, /* The can/lin controller is in the awake state */
   CAN_STATE_SLEEP,           /* The can/lin controller is in the sleep state */
   CAN_STATE_SPENDING,        /* The can/lin controller is preparing to enter sleep state */
