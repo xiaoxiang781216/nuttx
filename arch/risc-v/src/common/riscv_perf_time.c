@@ -55,7 +55,7 @@ void up_perf_init(void *arg)
  * Name: up_perf_gettime
  ****************************************************************************/
 
-unsigned long up_perf_gettime(void)
+clock_t up_perf_gettime(void)
 {
   return READ_CSR(CSR_TIME);
 }
@@ -73,7 +73,7 @@ unsigned long up_perf_getfreq(void)
  * Name: up_perf_convert
  ****************************************************************************/
 
-void up_perf_convert(unsigned long elapsed, struct timespec *ts)
+void up_perf_convert(clock_t elapsed, struct timespec *ts)
 {
   DEBUGASSERT(g_clock_frequency && (g_clock_frequency != ULONG_MAX));
 
