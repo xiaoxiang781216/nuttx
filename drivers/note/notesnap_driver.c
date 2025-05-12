@@ -226,7 +226,7 @@ static inline void notesnap_common(FAR struct note_driver_s *drv,
 #ifdef CONFIG_SMP
   note->cpu = tcb->cpu;
 #endif
-  note->count = perf_gettime();
+  note->count = UP_REALSYM(perf_gettime)();
   note->pid = tcb->pid;
   note->args = args;
 }
@@ -396,7 +396,7 @@ void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream)
           [(index + i) % CONFIG_DRIVERS_NOTESNAP_NBUFFERS];
       struct timespec time;
 
-      perf_convert(note->count, &time);
+      UP_REALSYM(perf_convert)(note->count, &time);
       lib_sprintf(stream,
                   "snapshoot: [%" PRIu64 ".%09u] "
 #ifdef CONFIG_SMP

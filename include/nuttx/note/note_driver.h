@@ -37,14 +37,12 @@
 
 /* For system call numbers definition */
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
-#  ifdef CONFIG_LIB_SYSCALL
-#    include <syscall.h>
-#  else
-#    define CONFIG_LIB_SYSCALL
-#    include <syscall.h>
-#    undef CONFIG_LIB_SYSCALL
-#  endif
+#ifdef CONFIG_LIB_SYSCALL
+#  include <syscall.h>
+#else
+#  define CONFIG_LIB_SYSCALL
+#  include <syscall.h>
+#  undef CONFIG_LIB_SYSCALL
 #endif
 
 /****************************************************************************

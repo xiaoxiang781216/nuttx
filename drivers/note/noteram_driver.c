@@ -939,7 +939,7 @@ static int noteram_dump_header(FAR struct lib_outstream_s *s,
   pid_t pid;
   int ret;
 
-  perf_convert(note->nc_systime, &ts);
+  UP_REALSYM(perf_convert)(note->nc_systime, &ts);
   pid = note->nc_pid;
 #ifdef CONFIG_SMP
   int cpu = note->nc_cpu;

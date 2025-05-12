@@ -221,7 +221,7 @@ static void note_common(FAR struct tcb_s *tcb,
       note->nc_pid = tcb->pid;
     }
 
-  note->nc_systime = perf_gettime();
+  note->nc_systime = UP_REALSYM(perf_gettime)();
 }
 
 /****************************************************************************

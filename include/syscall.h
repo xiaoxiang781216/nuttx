@@ -35,7 +35,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_LIB_SYSCALL
+#if defined(CONFIG_LIB_SYSCALL) && \
+    defined(CONFIG_SCHED_INSTRUMENTATION_SYSCALL)
 #  ifndef UP_WRAPSYM
 #    define UP_WRAPSYM(s) __wrap_##s
 #  endif
