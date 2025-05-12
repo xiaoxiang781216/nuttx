@@ -72,7 +72,7 @@ struct audio_fake_s
   char          mqname[16];     /* Our message queue name */
   struct file   mq;             /* Message queue for receiving messages */
   struct file   file;           /* Audio file for playback or capture */
-  const void    *sindata;       /* Sin data buffer, surpport 8bit/16bit/32bit  */
+  void          *sindata;       /* Sin data buffer, surpport 8bit/16bit/32bit  */
   uint32_t      sinsize;        /* Sin data size */
   FAR const audio_fake_params_t *params;
 };
@@ -341,6 +341,24 @@ static int audio_fake_sin_data_init(FAR struct audio_lowerhalf_s *dev)
     }
 
   return 0;
+}
+
+/****************************************************************************
+ * Name: audio_fake_sin_data_deinit
+ *
+ * Description: Deinitialize the sine wave data.
+ *
+ ****************************************************************************/
+
+static void audio_fake_sin_data_deinit(FAR struct audio_lowerhalf_s *dev)
+{
+  FAR struct audio_fake_s *priv = (FAR struct audio_fake_s *)dev;
+
+  if (priv->sindata)
+    {
+      kmm_free(priv->sindata);
+      priv->sindata = NULL;
+    }
 }
 
 /****************************************************************************
@@ -876,6 +894,7 @@ static int audio_fake_workerthread(int argc, FAR char **argv)
   file_mq_unlink(priv->mqname);
   priv->mqname[0] = '\0';
 
+  audio_fake_sin_data_deinit(&priv->dev);
   audio_fake_file_deinit(&priv->dev);
 
 #ifdef CONFIG_AUDIO_MULTI_SESSION
