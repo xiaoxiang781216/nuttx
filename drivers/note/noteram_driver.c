@@ -1515,6 +1515,7 @@ int noteram_register(void)
  *  devpath: The path of the Noteram device
  *  bufsize: The size of the circular buffer
  *  overwrite: The overwrite mode
+ *  crashdump: If used by the crash dump
  *
  * Returned Value:
  *   Zero on succress. A negated errno value is returned on a failure.
@@ -1525,6 +1526,43 @@ FAR struct note_driver_s *
 noteram_initialize(FAR const char *devpath, size_t bufsize,
                    bool overwrite, bool crashdump)
 {
+  FAR void *buffer;
+
+  bufsize += sizeof(struct noteram_header_s);
+  buffer = kmm_zalloc(bufsize);
+  if (buffer == NULL)
+    {
+      return NULL;
+    }
+
+  return noteram_initialize_with_buffer(devpath, buffer, bufsize,
+                                        overwrite, crashdump);
+}
+
+/****************************************************************************
+ * Name: noteram_initialize_with_buffer
+ *
+ * Description:
+ *   Register a serial driver at /dev/note/ram that can be used by an
+ *   application to read data from the circular note buffer.
+ *
+ * Input Parameters:
+ *  devpath: The path of the Noteram device
+ *  buffer: The buffer to use by the noteram driver
+ *  bufsize: The size of the circular buffer
+ *  overwrite: The overwrite mode
+ *  crashdump: If used by the crash dump
+ *
+ * Returned Value:
+ *   Zero on succress. A negated errno value is returned on a failure.
+ *
+ ****************************************************************************/
+
+FAR struct note_driver_s *
+noteram_initialize_with_buffer(FAR const char *devpath,
+                               FAR void *buffer, size_t bufsize,
+                               bool overwrite, bool crashdump)
+{
   FAR struct noteram_driver_s *drv;
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   size_t len = strlen(devpath) + 1;
@@ -1533,8 +1571,12 @@ noteram_initialize(FAR const char *devpath, size_t bufsize,
 #endif
   int ret;
 
-  drv = kmm_malloc(sizeof(*drv) + len +
-                   sizeof(struct noteram_header_s) + bufsize);
+  if (!buffer || bufsize <= sizeof(struct noteram_header_s))
+    {
+      return NULL;
+    }
+
+  drv = kmm_zalloc(sizeof(*drv) + len);
   if (drv == NULL)
     {
       return NULL;
@@ -1560,15 +1602,18 @@ noteram_initialize(FAR const char *devpath, size_t bufsize,
 #endif
 
   drv->driver.ops = &g_noteram_ops;
-  drv->header = (FAR struct noteram_header_s *)((uintptr_t)(drv + 1) + len);
-  drv->header->magic = NOTERAM_MAGIC;
-  drv->header->head = 0;
-  drv->header->tail = 0;
-  drv->header->read = 0;
+  drv->header = (FAR struct noteram_header_s *)buffer;
+  bufsize -= sizeof(struct noteram_header_s);
+
+  if (drv->header->magic != NOTERAM_MAGIC)
+    {
+      memset(drv->header, 0, sizeof(struct noteram_header_s));
+      drv->header->magic = NOTERAM_MAGIC;
+    }
+
   drv->buffer = (FAR uint8_t *)(drv->header + 1);
   drv->bufsize = bufsize;
   drv->overwrite = overwrite;
-  drv->pfd = NULL;
 
   ret = note_driver_register(&drv->driver);
   if (ret < 0)
