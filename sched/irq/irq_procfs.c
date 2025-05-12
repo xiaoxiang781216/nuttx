@@ -156,7 +156,6 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
   FAR struct irq_file_s *irqfile = (FAR struct irq_file_s *)arg;
   struct irq_info_s copy;
   struct timespec delta;
-  irqstate_t flags;
   clock_t elapsed;
   clock_t now;
   size_t linesize;
@@ -169,7 +168,6 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
 
   /* Take a snapshot and reset the counts */
 
-  flags = enter_critical_section();
   memcpy(&copy, info, sizeof(struct irq_info_s));
   now         = clock_systime_ticks();
   info->start = now;
@@ -178,7 +176,6 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
 #ifdef CONFIG_ARCH_IRQPRIO
   info->nests = 0;
 #endif
-  leave_critical_section(flags);
 
   /* Don't bother if count == 0.
    *

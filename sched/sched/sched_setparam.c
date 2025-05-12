@@ -124,7 +124,6 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
       TCB_FLAG_SCHED_SPORADIC)
     {
       FAR struct sporadic_s *sporadic;
-      irqstate_t flags;
       sclock_t repl_ticks;
       sclock_t budget_ticks;
 
@@ -172,7 +171,6 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
 
       /* Stop/reset current sporadic scheduling */
 
-      flags = enter_critical_section();
       ret = nxsched_reset_sporadic(tcb);
       if (ret >= 0)
         {
@@ -198,7 +196,6 @@ int nxsched_set_param(pid_t pid, FAR const struct sched_param *param)
 
       /* Restore interrupts and handler errors */
 
-      leave_critical_section(flags);
       if (ret < 0)
         {
           goto errout_with_lock;

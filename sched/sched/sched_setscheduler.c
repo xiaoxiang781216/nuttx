@@ -81,7 +81,6 @@ int nxsched_set_scheduler(pid_t pid, int policy,
                           FAR const struct sched_param *param)
 {
   FAR struct tcb_s *tcb;
-  irqstate_t flags;
   int ret;
 
   /* Check for supported scheduling policy */
@@ -130,7 +129,6 @@ int nxsched_set_scheduler(pid_t pid, int policy,
 
   /* Further, disable timer interrupts while we set up scheduling policy. */
 
-  flags = enter_critical_section();
   atomic_fetch_and(&tcb->flags, ~TCB_FLAG_POLICY_MASK);
   switch (policy)
     {
@@ -271,8 +269,6 @@ int nxsched_set_scheduler(pid_t pid, int policy,
 #endif
     }
 
-  leave_critical_section(flags);
-
   /* Set the new priority */
 
   ret = nxsched_reprioritize(tcb, param->sched_priority);
@@ -283,7 +279,6 @@ int nxsched_set_scheduler(pid_t pid, int policy,
 #ifdef CONFIG_SCHED_SPORADIC
 errout_with_irq:
   nxsched_put_tcb(tcb);
-  leave_critical_section(flags);
   sched_unlock();
   return ret;
 #endif

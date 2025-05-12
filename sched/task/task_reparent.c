@@ -70,15 +70,8 @@ int task_reparent(pid_t ppid, pid_t chpid)
   FAR struct tcb_s *chtcb;
   FAR struct tcb_s *otcb;
   FAR struct tcb_s *ptcb;
-  irqstate_t flags;
   pid_t opid;
   int ret;
-
-  /* Disable interrupts so that nothing can change in the relationship of
-   * the three task:  Child, current parent, and new parent.
-   */
-
-  flags = enter_critical_section();
 
   /* Get the child tasks task group */
 
@@ -211,7 +204,6 @@ errout_with_otcb:
   nxsched_put_tcb(chtcb);
 
 errout_with_chtcb:
-  leave_critical_section(flags);
   return ret;
 }
 #else
@@ -224,14 +216,7 @@ int task_reparent(pid_t ppid, pid_t chpid)
   FAR struct tcb_s *chtcb = NULL;
   FAR struct tcb_s *otcb = NULL;
   pid_t opid;
-  irqstate_t flags;
   int ret;
-
-  /* Disable interrupts so that nothing can change in the relationship of
-   * the three task:  Child, current parent, and new parent.
-   */
-
-  flags = enter_critical_section();
 
   /* Get the child tasks TCB (chtcb) */
 
@@ -333,7 +318,6 @@ int task_reparent(pid_t ppid, pid_t chpid)
 #endif /* CONFIG_SCHED_CHILD_STATUS */
 
 errout_with_ints:
-  leave_critical_section(flags);
   nxsched_put_tcb(ptcb);
   nxsched_put_tcb(otcb);
   nxsched_put_tcb(chtcb);

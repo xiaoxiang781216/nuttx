@@ -2089,7 +2089,6 @@ static int perf_close(FAR struct file *filep)
 {
   FAR struct perf_event_s *event = filep->f_priv;
   FAR struct perf_event_context_s *ctx;
-  irqstate_t flags = enter_critical_section();
 
   ASSERT(event != NULL);
 
@@ -2100,7 +2099,6 @@ static int perf_close(FAR struct file *filep)
     }
 
   perf_free_event(event);
-  leave_critical_section(flags);
   return OK;
 }
 

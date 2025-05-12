@@ -326,12 +326,6 @@ int nxsig_action(int signo, FAR const struct sigaction *act,
 
   if (signo == SIGCHLD && (act->sa_flags & SA_NOCLDWAIT) != 0)
     {
-      /* We do require a critical section to muck with the TCB values that
-       * can be modified by the child thread.
-       */
-
-      flags = enter_critical_section();
-
       /* Mark that status should be not be retained */
 
       atomic_fetch_or(&rtcb->group->tg_flags, GROUP_FLAG_NOCLDWAIT);
@@ -339,7 +333,6 @@ int nxsig_action(int signo, FAR const struct sigaction *act,
       /* Free all pending exit status */
 
       group_remove_children(rtcb->group);
-      leave_critical_section(flags);
     }
 #endif
 

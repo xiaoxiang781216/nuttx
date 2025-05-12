@@ -220,7 +220,6 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
   bool retains;
 #endif
   FAR struct siginfo info;
-  irqstate_t flags;
   sigset_t set;
   int ret;
 
@@ -228,7 +227,6 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
 
   sigemptyset(&set);
   nxsig_addset(&set, SIGCHLD);
-  flags = enter_critical_section();
 
   /* Verify that this task actually has children and that the requested PID
    * is actually a child of this task.
@@ -481,7 +479,6 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
   ret = pid;
 
 errout:
-  leave_critical_section(flags);
   return ret;
 }
 #endif /* CONFIG_SCHED_HAVE_PARENT */

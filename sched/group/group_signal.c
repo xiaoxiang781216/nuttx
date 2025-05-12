@@ -216,17 +216,6 @@ int group_signal(FAR struct task_group_s *group, FAR siginfo_t *siginfo)
   info.atcb    = NULL;     /* This TCB was awakened */
   info.ptcb    = NULL;     /* This TCB received the signal */
 
-  /* Make sure that pre-emption is disabled to that we signal all of the
-   * members of the group before any of them actually run. (This does
-   * nothing if were were called from an interrupt handler).
-   */
-
-#ifdef CONFIG_SMP
-  irqstate_t flags = enter_critical_section();
-#else
-  sched_lock();
-#endif
-
   /* Now visit each member of the group and perform signal handling checks. */
 
   ret = group_foreachchild(group, group_signal_handler, &info);
@@ -268,11 +257,6 @@ int group_signal(FAR struct task_group_s *group, FAR siginfo_t *siginfo)
     }
 
 errout:
-#ifdef CONFIG_SMP
-  leave_critical_section(flags);
-#else
-  sched_unlock();
-#endif
   return ret;
 
 #else
