@@ -1370,7 +1370,9 @@ void sched_note_preemption(FAR struct tcb_s *tcb, bool locked)
   struct note_preempt_s note;
   FAR struct note_driver_s **driver;
   bool formatted = false;
+  irqstate_t flags;
 
+  flags = spin_lock_irqsave_notrace(&g_note_lock);
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_preemption(*driver))
@@ -1402,6 +1404,8 @@ void sched_note_preemption(FAR struct tcb_s *tcb, bool locked)
 
       note_add(*driver, &note, note.npr_cmn.nc_length);
     }
+
+  spin_unlock_irqrestore_notrace(&g_note_lock, flags);
 }
 #endif
 
