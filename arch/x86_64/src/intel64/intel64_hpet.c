@@ -34,6 +34,7 @@
 #include <stdint.h>
 
 #include "intel64_hpet.h"
+#include "x86_64_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions

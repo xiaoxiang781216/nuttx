@@ -583,34 +583,6 @@ static inline void setidt(void *idt, int size)
   __asm__ volatile ("lidt %0"::"m"(idt_ptr):"memory");
 }
 
-static inline uint64_t rdtscp(void)
-{
-  uint32_t lo;
-  uint32_t hi;
-
-  __asm__ volatile("rdtscp" : "=a" (lo), "=d" (hi)::"ecx", "memory");
-  return (uint64_t)lo | (((uint64_t)hi) << 32);
-}
-
-static inline uint64_t rdtsc(void)
-{
-  uint32_t lo;
-  uint32_t hi;
-
-  __asm__ volatile("rdtsc" : "=a" (lo), "=d" (hi)::"memory");
-  return (uint64_t)lo | (((uint64_t)hi) << 32);
-}
-
-static inline void set_pcid(uint64_t pcid)
-{
-  if (pcid < 4095)
-    {
-      __asm__ volatile("mov %%cr3, %%rbx; andq $-4096, %%rbx; or %0, "
-                       "%%rbx; mov %%rbx, %%cr3;"
-                       ::"g"(pcid):"memory", "rbx", "rax");
-    }
-}
-
 static inline void set_cr3(uint64_t cr3)
 {
   __asm__ volatile("mov %0, %%cr3" :: "r"(cr3));
@@ -628,23 +600,6 @@ static inline uint64_t get_pml4(void)
   /* Aligned to a 4-KByte boundary */
 
   return get_cr3() & 0xfffffffffffff000;
-}
-
-static inline unsigned long read_msr(unsigned int msr)
-{
-  uint32_t low;
-  uint32_t high;
-
-  __asm__ volatile("rdmsr" : "=a" (low), "=d" (high) : "c" (msr));
-  return low | ((unsigned long)high << 32);
-}
-
-static inline void write_msr(unsigned int msr, unsigned long val)
-{
-  __asm__ volatile("wrmsr"
-                   : /* no output */
-                   : "c" (msr), "a" (val), "d" (val >> 32)
-                   : "memory");
 }
 
 static inline uint64_t read_fsbase(void)
@@ -844,11 +799,6 @@ static inline void up_irq_restore(irqstate_t flags)
     {
       up_irq_enable();
     }
-}
-
-static inline unsigned int up_apic_cpu_id(void)
-{
-  return read_msr(MSR_X2APIC_ID);
 }
 
 /****************************************************************************

@@ -25,6 +25,8 @@
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
 
+#include "x86_64_internal.h"
+
 extern unsigned long g_x86_64_timer_freq;
 
 /* REP NOP (PAUSE) is a good thing to insert into busy-wait loops. */
