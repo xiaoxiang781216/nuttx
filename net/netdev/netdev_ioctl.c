@@ -775,6 +775,7 @@ static ssize_t net_ioctl_ifreq_arglen(uint8_t domain, int cmd)
       case SIOCCANRECOVERY:
       case SIOCGCANSTATE:
       case SIOCSCANSTATE:
+      case SIOCCANOFLUSH:
       case SIOCSIFNAME:
       case SIOCGIFNAME:
       case SIOCGIFINDEX:
@@ -1245,6 +1246,7 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
       case SIOCACANSTDFILTER:  /* Add a standard-ID filter */
       case SIOCDCANSTDFILTER:  /* Delete a standard-ID filter */
       case SIOCCANRECOVERY:    /* Recovery can controller when bus-off */
+      case SIOCCANOFLUSH:      /* Flush data written but not transmitted */
         if (dev->d_ioctl)
           {
             FAR struct can_ioctl_filter_s *can_filter =

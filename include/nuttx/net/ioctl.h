@@ -127,6 +127,7 @@
 #define SIOCCANRECOVERY    _SIOC(0x0032)  /* Recovery can, work only when bus-off state */
 #define SIOCGCANSTATE      _SIOC(0x0041)  /* Get state from a CAN/LIN controller */
 #define SIOCSCANSTATE      _SIOC(0x0042)  /* Set the LIN/CAN controller state */
+#define SIOCCANOFLUSH      _SIOC(0x0045)  /* Flush data written but not transmitted */
 
 /* Network socket control ***************************************************/
 
