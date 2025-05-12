@@ -219,6 +219,19 @@ struct can_ioctl_state_s
   enum can_ioctl_state_e state;
 };
 
+enum can_ioctl_transv_state_e
+{
+  CAN_TRANSV_SLEEP   = 0, /* The can/lin transceiver sleep state */
+  CAN_TRANSV_STANDBY = 1, /* The can/lin transceiver standby state */
+  CAN_TRANSV_NORMAL  = 2, /* The can/lin transceiver normal state */
+};
+
+struct can_ioctl_transv_state_s
+{
+  uintptr_t priv;             /* This is private data. */
+  enum can_ioctl_transv_state_e state;
+};
+
 /* There are two forms of the I/F request structure.
  * One for IPv6 and one for IPv4.
  * Notice that they are (and must be) cast compatible and really different
@@ -229,23 +242,24 @@ struct can_ioctl_state_s
 
 struct lifreq
 {
-  char                         lifr_name[IFNAMSIZ];  /* Network device name (e.g. "eth0") */
-  int16_t                      lifr_ifindex;         /* Interface index */
+  char                                lifr_name[IFNAMSIZ];  /* Network device name (e.g. "eth0") */
+  int16_t                             lifr_ifindex;         /* Interface index */
   union
   {
-    struct sockaddr_storage    lifru_addr;           /* IP Address */
-    struct sockaddr_storage    lifru_dstaddr;        /* P-to-P Address */
-    struct sockaddr_storage    lifru_broadaddr;      /* Broadcast address */
-    struct sockaddr_storage    lifru_netmask;        /* Netmask */
-    struct sockaddr            lifru_hwaddr;         /* MAC address */
-    int                        lifru_count;          /* Number of devices */
-    int                        lifru_mtu;            /* MTU size */
-    uint32_t                   lifru_flags;          /* Interface flags */
-    struct mii_ioctl_notify_s  llfru_mii_notify;     /* PHY event notification */
-    struct mii_ioctl_data_s    lifru_mii_data;       /* MII request data */
-    struct can_ioctl_data_s    lifru_can_data;       /* CAN bitrate request data */
-    struct can_ioctl_filter_s  lifru_can_filter;     /* CAN filter request data */
-    struct can_ioctl_state_s   lifru_can_state;      /* CAN/LIN controller state */
+    struct sockaddr_storage           lifru_addr;              /* IP Address */
+    struct sockaddr_storage           lifru_dstaddr;           /* P-to-P Address */
+    struct sockaddr_storage           lifru_broadaddr;         /* Broadcast address */
+    struct sockaddr_storage           lifru_netmask;           /* Netmask */
+    struct sockaddr                   lifru_hwaddr;            /* MAC address */
+    int                               lifru_count;             /* Number of devices */
+    int                               lifru_mtu;               /* MTU size */
+    uint32_t                          lifru_flags;             /* Interface flags */
+    struct mii_ioctl_notify_s         llfru_mii_notify;        /* PHY event notification */
+    struct mii_ioctl_data_s           lifru_mii_data;          /* MII request data */
+    struct can_ioctl_data_s           lifru_can_data;          /* CAN bitrate request data */
+    struct can_ioctl_filter_s         lifru_can_filter;        /* CAN filter request data */
+    struct can_ioctl_state_s          lifru_can_state;         /* CAN/LIN controller state */
+    struct can_ioctl_transv_state_s   lifru_can_transv_state;  /* CAN/LIN transceiver state */
   } lifr_ifru;
 };
 
@@ -283,24 +297,25 @@ struct lifconf
 
 struct ifreq
 {
-  char                         ifr_name[IFNAMSIZ];  /* Network device name (e.g. "eth0") */
-  int16_t                      ifr_ifindex;         /* Interface index */
+  char                                ifr_name[IFNAMSIZ];       /* Network device name (e.g. "eth0") */
+  int16_t                             ifr_ifindex;              /* Interface index */
   union
   {
-    struct sockaddr            ifru_addr;           /* IP Address */
-    struct sockaddr            ifru_dstaddr;        /* P-to-P Address */
-    struct sockaddr            ifru_broadaddr;      /* Broadcast address */
-    struct sockaddr            ifru_netmask;        /* Netmask */
-    struct sockaddr            ifru_hwaddr;         /* MAC address */
-    int                        ifru_count;          /* Number of devices */
-    int                        ifru_mtu;            /* MTU size */
-    uint32_t                   ifru_flags;          /* Interface flags */
-    struct mii_ioctl_notify_s  ifru_mii_notify;     /* PHY event notification */
-    struct mii_ioctl_data_s    ifru_mii_data;       /* MII request data */
-    struct can_ioctl_data_s    ifru_can_data;       /* CAN bitrate request data */
-    struct can_ioctl_filter_s  ifru_can_filter;     /* CAN filter request data */
-    struct can_ioctl_state_s   ifru_can_state;      /* CAN/LIN controller state */
-    FAR void                  *ifru_data;           /* For use by interface */
+    struct sockaddr                   ifru_addr;                /* IP Address */
+    struct sockaddr                   ifru_dstaddr;             /* P-to-P Address */
+    struct sockaddr                   ifru_broadaddr;           /* Broadcast address */
+    struct sockaddr                   ifru_netmask;             /* Netmask */
+    struct sockaddr                   ifru_hwaddr;              /* MAC address */
+    int                               ifru_count;               /* Number of devices */
+    int                               ifru_mtu;                 /* MTU size */
+    uint32_t                          ifru_flags;               /* Interface flags */
+    struct mii_ioctl_notify_s         ifru_mii_notify;          /* PHY event notification */
+    struct mii_ioctl_data_s           ifru_mii_data;            /* MII request data */
+    struct can_ioctl_data_s           ifru_can_data;            /* CAN bitrate request data */
+    struct can_ioctl_filter_s         ifru_can_filter;          /* CAN filter request data */
+    struct can_ioctl_state_s          ifru_can_state;           /* CAN/LIN controller state */
+    struct can_ioctl_transv_state_s   lifru_can_transv_state;   /* CAN/LIN transceiver state */
+    FAR void                         *ifru_data;                /* For use by interface */
   } ifr_ifru;
 };
 

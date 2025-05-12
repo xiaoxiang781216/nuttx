@@ -776,6 +776,8 @@ static ssize_t net_ioctl_ifreq_arglen(uint8_t domain, int cmd)
       case SIOCGCANSTATE:
       case SIOCSCANSTATE:
       case SIOCCANOFLUSH:
+      case SIOCGCANTRSVSTATE:
+      case SIOCSCANTRSVSTATE:
       case SIOCSIFNAME:
       case SIOCGIFNAME:
       case SIOCGIFINDEX:
@@ -1270,6 +1272,21 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
               &req->ifr_ifru.ifru_can_state;
             ret = dev->d_ioctl(dev, cmd,
                           (unsigned long)(uintptr_t)can_state);
+          }
+        else
+          {
+            ret = -ENOSYS;
+          }
+        break;
+
+      case SIOCGCANTRSVSTATE:  /* Get state from CAN transceiver */
+      case SIOCSCANTRSVSTATE:  /* Set the CAN transceiver state */
+        if (dev->d_ioctl)
+          {
+            FAR struct can_ioctl_transv_state_s *can_transv_state =
+              &req->ifr_ifru.lifru_can_transv_state;
+            ret = dev->d_ioctl(dev, cmd,
+                          (unsigned long)(uintptr_t)can_transv_state);
           }
         else
           {
