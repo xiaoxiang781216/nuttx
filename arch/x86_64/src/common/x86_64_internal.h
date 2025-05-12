@@ -225,7 +225,7 @@ static inline_function void x86_64_set_ktopstk(uint64_t *ktopstk)
 }
 #endif
 
-static inline uint64_t rdtscp(void)
+static inline_function uint64_t rdtscp(void)
 {
   uint32_t lo;
   uint32_t hi;
@@ -234,7 +234,7 @@ static inline uint64_t rdtscp(void)
   return (uint64_t)lo | (((uint64_t)hi) << 32);
 }
 
-static inline uint64_t rdtsc(void)
+static inline_function uint64_t rdtsc(void)
 {
   uint32_t lo;
   uint32_t hi;
@@ -243,7 +243,7 @@ static inline uint64_t rdtsc(void)
   return (uint64_t)lo | (((uint64_t)hi) << 32);
 }
 
-static inline void set_pcid(uint64_t pcid)
+static inline_function void set_pcid(uint64_t pcid)
 {
   if (pcid < 4095)
     {
@@ -253,7 +253,7 @@ static inline void set_pcid(uint64_t pcid)
     }
 }
 
-static inline unsigned long read_msr(unsigned int msr)
+static inline_function unsigned long read_msr(unsigned int msr)
 {
   uint32_t low;
   uint32_t high;
@@ -262,7 +262,7 @@ static inline unsigned long read_msr(unsigned int msr)
   return low | ((unsigned long)high << 32);
 }
 
-static inline void write_msr(unsigned int msr, unsigned long val)
+static inline_function void write_msr(unsigned int msr, unsigned long val)
 {
   __asm__ volatile("wrmsr"
                    : /* no output */
@@ -270,7 +270,7 @@ static inline void write_msr(unsigned int msr, unsigned long val)
                    : "memory");
 }
 
-static inline unsigned int up_apic_cpu_id(void)
+static inline_function unsigned int up_apic_cpu_id(void)
 {
   return read_msr(MSR_X2APIC_ID);
 }
