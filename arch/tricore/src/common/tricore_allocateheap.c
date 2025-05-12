@@ -84,8 +84,8 @@ void weak_function up_allocate_heap(void **heap_start, size_t *heap_size)
 
   /* Return the heap settings */
 
-  *heap_start = _edata;
-  *heap_size = (uintptr_t)_eheap - (uintptr_t)_edata;
+  *heap_start = _sheap;
+  *heap_size = (uintptr_t)_eheap - (uintptr_t)_sheap;
 #endif
 }
 
@@ -106,12 +106,12 @@ void weak_function up_allocate_kheap(void **heap_start, size_t *heap_size)
    * This heap begins after the kernel-space idle stack.
    */
 
-  DEBUGASSERT((uintptr_t)_edata + CONFIG_MM_KERNEL_HEAPSIZE
+  DEBUGASSERT((uintptr_t)_sheap + CONFIG_MM_KERNEL_HEAPSIZE
               <= (uintptr_t)_eheap);
 
   /* Return the kernel heap settings */
 
-  *heap_start = _edata;
-  *heap_size = (uintptr_t)_eheap - (uintptr_t)_edata;
+  *heap_start = _sheap;
+  *heap_size = (uintptr_t)_eheap - (uintptr_t)_sheap;
 }
 #endif

@@ -155,19 +155,8 @@ extern uintptr_t        __ISTACK[];
 
 /* These symbols are setup by the linker script. */
 
-#ifdef CONFIG_TRICORE_TOOLCHAIN_TASKING
-extern uintptr_t        _lc_gb_data[]; /* Start of .data */
-extern uintptr_t        _lc_ge_data[]; /* End+1 of .data */
-#define _sdata          _lc_gb_data
-#define _edata          _lc_ge_data
-#define _eheap          __USTACK_END
-#else
-extern uintptr_t        __HEAP[];      /* End+1 of .data */
-extern uintptr_t        __A0_MEM[];    /* End+1 of .data */
-#define _sdata          LCF_DSPR_START
-#define _edata          __HEAP
-#define _eheap          __USTACK_END
-#endif
+extern uintptr_t        _sheap[]; /* Start of .heap */
+extern uintptr_t        _eheap[]; /* End+1 of .heap */
 
 #endif
 
