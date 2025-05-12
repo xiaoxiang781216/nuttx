@@ -57,42 +57,6 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: exec_ctors
- *
- * Description:
- *   Execute C++ static constructors.  This function is registered as a
- *   start hook and runs on the thread of the newly created task before
- *   the new task's main function is called.
- *
- * Input Parameters:
- *   arg - Argument is instance of load state info structure cast to void *.
- *
- * Returned Value:
- *   0 (OK) is returned on success and a negated errno is returned on
- *   failure.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_BINFMT_CONSTRUCTORS
-static void exec_ctors(FAR void *arg)
-{
-  FAR const struct binary_s *binp = (FAR const struct binary_s *)arg;
-  binfmt_ctor_t *ctor = (CODE binfmt_ctor_t *)binp->mod.initarr;
-  int i;
-
-  /* Execute each constructor */
-
-  for (i = 0; i < binp->mod.ninit; i++)
-    {
-      binfo("Calling ctor %d at %p\n", i, ctor);
-
-      (*ctor)();
-      ctor++;
-    }
-}
-#endif
-
-/****************************************************************************
  * Name: exec_swap
  *
  * Description:
