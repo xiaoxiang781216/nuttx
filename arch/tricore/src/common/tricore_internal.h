@@ -122,13 +122,6 @@
 typedef void (*up_vector_t)(void);
 #endif
 
-#ifdef CONFIG_LIB_SYSCALL
-typedef uintptr_t (*syscall_stub_t)(int nbr,
-                                    uintptr_t parm1, uintptr_t parm2,
-                                    uintptr_t parm3, uintptr_t parm4,
-                                    uintptr_t parm5, uintptr_t parm6);
-#endif
-
 typedef struct
 {
   uint32_t used;

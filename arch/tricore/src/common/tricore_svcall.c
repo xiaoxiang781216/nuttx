@@ -42,6 +42,40 @@
  * Private Functions
  ****************************************************************************/
 
+#ifdef CONFIG_LIB_SYSCALL
+static void dispatch_syscall(void)
+{
+  __asm__ __volatile__ (
+#ifdef CONFIG_TRICORE_TOOLCHAIN_TASKING
+    "mov.aa    a14, %0\n\t"
+    "sh        d15, d4, #2\n\t"
+    "addsc.a   a14, a14, d15, #0\n\t"
+    "sub.a     sp, #12\n\t"
+    "st.w      [sp]8, d10\n\t"
+    "st.w      [sp]4, d9\n\t"
+    "st.w      [sp]0, d8\n\t"
+    "ld.a      a15, [a14]0\n\t"
+    "calli     a15\n\t"
+    "addih.a   sp, sp, #12\n\t"
+#else
+    "mov.aa    %%a14, %0\n\t"
+    "sh        %%d15, %%d4, 2\n\t"
+    "addsc.a   %%a14, %%a14, %%d15, 0\n\t"
+    "sub.a     %%sp, 12\n\t"
+    "st.w      [%%sp]8, %%d10\n\t"
+    "st.w      [%%sp]4, %%d9\n\t"
+    "st.w      [%%sp]0, %%d8\n\t"
+    "ld.a      %%a15, [%%a14]0\n\t"
+    "calli     %%a15\n\t"
+    "addih.a   %%sp, %%sp, 12\n\t"
+#endif
+    ::"a"(g_stublookup)
+    : "memory"
+  );
+  sys_call0(SYS_syscall_return);
+}
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -60,15 +94,6 @@ void tricore_svcall(volatile void *trap)
   struct tcb_s **running_task = &g_running_tasks[this_cpu()];
   uintptr_t *regs;
   uint32_t cmd;
-
-#ifdef CONFIG_LIB_SYSCALL
-  uint32_t  arg1;
-  uint32_t  arg2;
-  uint32_t  arg3;
-  uint32_t  arg4;
-  uint32_t  arg5;
-  uint32_t  arg6;
-#endif
 
   regs = (uintptr_t *)__mfcr(CPU_PCXI);
 
@@ -119,6 +144,28 @@ void tricore_svcall(volatile void *trap)
         }
         break;
 
+#ifdef CONFIG_LIB_SYSCALL
+      case SYS_syscall_return:
+        {
+          uintptr_t *plregs = tricore_csa2addr(regs[REG_UPCXI]);
+          uintptr_t *puregs = tricore_csa2addr(plregs[REG_LPCXI]);
+          struct tcb_s *rtcb = this_task();
+          int index = rtcb->xcp.nsyscalls - 1;
+          int ret = plregs[REG_D2];
+
+          puregs[REG_UPCXI] = 0;
+          tricore_reclaim_csa(regs[REG_UPCXI]);
+
+          regs[REG_UPCXI] = tricore_addr2csa(rtcb->xcp.syscall_regs[index]);
+          plregs = tricore_csa2addr(regs[REG_UPCXI]);
+          puregs = tricore_csa2addr(plregs[REG_LPCXI]);
+
+          puregs[REG_D8] = ret;
+          rtcb->xcp.nsyscalls = index;
+        }
+        break;
+#endif
+
       /* REG_D8 = SYS_task_start:  This a user task start
        *
        * void up_task_start(main_t taskentry, int argc, char *argv[])
@@ -135,7 +182,7 @@ void tricore_svcall(volatile void *trap)
 #ifdef CONFIG_BUILD_PROTECTED
       case SYS_task_start:
         {
-           /* Set up to return to the user-space _start function in
+          /* Set up to return to the user-space _start function in
            * unprivileged mode.  We need:
            *
            *   PC  = task_startup
@@ -295,44 +342,45 @@ void tricore_svcall(volatile void *trap)
       default:
         {
 #ifdef CONFIG_LIB_SYSCALL
-          int ret;
-          int nbr = cmd - CONFIG_SYS_RESERVED;
-          uintptr_t * low_csa = tricore_csa2addr(regs[REG_UPCXI]);
-          uintptr_t * up_csa  = tricore_csa2addr(low_csa[REG_UPCXI]);
-          struct tcb_s *rtcb  = nxsched_self();
-          syscall_stub_t stub;
+          uintptr_t *plregs = tricore_csa2addr(regs[REG_UPCXI]);
+          uintptr_t *puregs = tricore_csa2addr(plregs[REG_LPCXI]);
+          struct tcb_s *rtcb = nxsched_self();
+          int index = rtcb->xcp.nsyscalls;
 
-          DEBUGASSERT(nbr < SYS_nsyscalls);
-          DEBUGASSERT(rtcb->xcp.nsyscalls < CONFIG_SYS_NNEST);
+          /* Verify that the SYS call number is within range */
 
-          stub = (syscall_stub_t)g_stublookup[nbr];
+          DEBUGASSERT(cmd >= CONFIG_SYS_RESERVED && cmd < SYS_maxsyscall);
 
-          arg1 = regs[REG_D9];
-          arg2 = regs[REG_D10];
-          arg3 = regs[REG_D11];
-          arg4 = regs[REG_D12];
-          arg5 = regs[REG_D13];
-          arg6 = regs[REG_D14];
+          DEBUGASSERT(index < CONFIG_SYS_NNEST);
 
-          /* Setup nested syscall */
+          /* Setup to return to dispatch_syscall in privileged mode. */
 
-          rtcb->xcp.nsyscalls += 1;
+          rtcb->xcp.syscall_regs[index] = plregs;
+          rtcb->xcp.nsyscalls = index + 1;
 
-          up_set_interrupt_context(false);
+          /* New plregs and puregs to dispatch_syscall */
 
-          /* Call syscall function */
+          plregs = tricore_alloc_csa(
+            (uintptr_t)dispatch_syscall,
+            STACK_ALIGN_DOWN(puregs[REG_SP]),
+            (puregs[REG_PSW] & (~PSW_MODE_MASK) & (~PSW_PRS_MASK)) |
+            (PSW_IO_SUPERVISOR),
+            !(plregs[REG_LPCXI] & PCXI_PIE));
+          puregs = tricore_csa2addr(plregs[REG_LPCXI]);
 
-          ret = stub(nbr, arg1, arg2, arg3, arg4, arg5, arg6);
+          /* Args passed to dispatch_syscall */
 
-          /* Setup return from nested syscall */
+          plregs[REG_D4] = regs[REG_D8] - CONFIG_SYS_RESERVED;
+          plregs[REG_D5] = regs[REG_D9];
+          plregs[REG_D6] = regs[REG_D10];
+          plregs[REG_D7] = regs[REG_D11];
+          puregs[REG_D8] = regs[REG_D12];
+          puregs[REG_D9] = regs[REG_D13];
+          puregs[REG_D10] = regs[REG_D14];
 
-          rtcb->xcp.nsyscalls -= 1;
+          puregs[REG_UPCXI] = regs[REG_UPCXI];
 
-          /* Find the first UP CSA block, then assign the return value to the
-           * D8 register.
-           */
-
-          up_csa[REG_D8] = ret;
+          regs[REG_UPCXI] = tricore_addr2csa(plregs);
 #else
         svcerr("ERROR: Bad SYS call: %d\n", (int)regs[REG_D0]);
 #endif
