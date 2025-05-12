@@ -466,9 +466,7 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
 
   DEBUGASSERT(record->magic == MEMPOOL_MAGIC_ALLOC);
 
-#  ifdef CONFIG_MM_RECORD
   mempool_record(pool, record, MEMPOOL_MAGIC_FREE);
-#  endif
 #endif
 
   pool->nalloc--;
