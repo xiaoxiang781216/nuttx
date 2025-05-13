@@ -65,11 +65,12 @@ SECTIONS
     _eronly = ABSOLUTE(.);
 
     .data : {
+        . = ALIGN(64);
         _sdata = ABSOLUTE(.);
         *(.data .data.*)
         *(.gnu.linkonce.d.*)
         CONSTRUCTORS
-        . = ALIGN(4);
+        . = ALIGN(64);
         _edata = ABSOLUTE(.);
     } > usram AT > uflash
 
@@ -78,7 +79,7 @@ SECTIONS
         *(.bss .bss.*)
         *(.gnu.linkonce.b.*)
         *(COMMON)
-        . = ALIGN(4);
+        . = ALIGN(64);
         _ebss = ABSOLUTE(.);
     } > usram
 

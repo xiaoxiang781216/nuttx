@@ -104,6 +104,6 @@ void qemu_userspace(void)
 
   mpu_showtype();
   mpu_user_flash(UFLASH_START, UFLASH_SIZE);
-  mpu_user_intsram(USRAM_START, USRAM_SIZE);
+  mpu_user_intsram(USRAM_START, dataend - datastart);
   mpu_control(true);
 }

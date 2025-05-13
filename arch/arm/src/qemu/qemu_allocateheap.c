@@ -36,6 +36,7 @@
 #endif
 
 #include "arm_internal.h"
+#include "mpu.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -92,6 +93,10 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
   *heap_start = (void *)ubase;
   *heap_size  = usize;
+
+#ifndef CONFIG_MM_TASK_HEAP
+  mpu_user_intsram(ubase, usize);
+#endif
 
   /* user space access to user heap is done in qemu_userspace() */
 #endif
