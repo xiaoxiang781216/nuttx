@@ -95,7 +95,8 @@ int arm_svcall(int irq, void *context, void *arg)
       case SYS_switch_context:
         {
 #ifdef CONFIG_ARCH_ADDRENV
-          addrenv_switch(tcb);
+          tcb = this_task();
+          addrenv_switch(tcb); /* this_task maybe changed */
 #endif
           tcb = this_task();
           restore_critical_section(tcb, this_cpu());
