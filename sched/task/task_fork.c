@@ -169,12 +169,6 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
   heap_size = 0;
 #endif
 
-  ret = group_initialize(child, ttype, heap_size);
-  if (ret < 0)
-    {
-      goto errout_with_tcb;
-    }
-
 #if defined(CONFIG_ARCH_ADDRENV)
   /* Join the parent address environment */
 
@@ -187,6 +181,12 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
         }
     }
 #endif
+
+  ret = group_initialize(child, ttype, heap_size);
+  if (ret < 0)
+    {
+      goto errout_with_tcb;
+    }
 
   /* Duplicate the parent tasks environment */
 

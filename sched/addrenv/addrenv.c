@@ -288,6 +288,7 @@ int addrenv_attach(FAR struct tcb_s *tcb, FAR struct addrenv_s *addrenv)
 
 int addrenv_join(FAR struct tcb_s *ptcb, FAR struct tcb_s *tcb)
 {
+  FAR struct task_group_s *group = tcb->group;
   int ret;
 
   ret = up_addrenv_attach(ptcb, tcb);
@@ -297,14 +298,19 @@ int addrenv_join(FAR struct tcb_s *ptcb, FAR struct tcb_s *tcb)
       return ret;
     }
 
+  if (group == NULL)
+    {
+      group = (FAR struct task_group_s *)(tcb + 1);
+    }
+
   /* Take a reference to the address environment */
 
   addrenv_take(ptcb->group->tg_addrenv_own);
 
   /* Share the parent's address environment */
 
-  tcb->group->tg_addrenv_own = ptcb->group->tg_addrenv_own;
-  tcb->addrenv_curr = tcb->group->tg_addrenv_own;
+  group->tg_addrenv_own = ptcb->group->tg_addrenv_own;
+  tcb->addrenv_curr = group->tg_addrenv_own;
 
   return OK;
 }
