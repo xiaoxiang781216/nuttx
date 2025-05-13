@@ -949,9 +949,9 @@ static int noteram_dump_header(FAR struct lib_outstream_s *s,
 
   note_get_taskname(pid, buf, TASK_NAME_SIZE);
 
-  ret = lib_sprintf(s, "%8s-%-3u [%d] %3" PRIu64 ".%09lu: ",
+  ret = lib_sprintf(s, "%8s-%-3u [%d] %3" PRIuTM ".%09lu: ",
                     buf, get_pid(pid), cpu,
-                    (uint64_t)ts.tv_sec, ts.tv_nsec);
+                    ts.tv_sec, ts.tv_nsec);
 
   return ret;
 }
