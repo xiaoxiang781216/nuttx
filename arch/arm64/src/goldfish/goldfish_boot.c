@@ -79,7 +79,7 @@ const struct arm_mmu_config g_mmu_config =
  * Public Functions
  ****************************************************************************/
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_HAVE_MULTICPU
 
 /****************************************************************************
  * Public Functions

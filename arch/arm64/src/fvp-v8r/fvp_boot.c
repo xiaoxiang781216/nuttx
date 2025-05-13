@@ -115,7 +115,7 @@ void arm64_el_init(void)
   UP_ISB();
 }
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_HAVE_MULTICPU
 
 /****************************************************************************
  * Public Functions

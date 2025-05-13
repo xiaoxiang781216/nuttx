@@ -91,7 +91,7 @@ static char g_syslog_rpmsg_buf[4096];
  * Public Functions
  ****************************************************************************/
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_HAVE_MULTICPU
 
 /****************************************************************************
  * Public Functions
