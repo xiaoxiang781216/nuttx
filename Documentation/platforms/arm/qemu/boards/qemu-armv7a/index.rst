@@ -109,10 +109,12 @@ The command that starts QEMU and enables the QEMU EDU device looks like this::
 
 
 Gdbstub support
-===========
-  The Qemu version must be above 9.2 to support two serial ports.
+===============
 
-  One window:
+The Qemu version must be above 9.2 to support two serial ports.
+
+One window::
+
   ./tools/configure.sh qemu-armv7a:gdbstub; make -j25
   qemu-system-arm -cpu cortex-a7 -nographic -machine virt,virtualization=off,gic-version=2 -net none -kernel ./nuttx  -serial mon:stdio -serial pty
   char device redirected to /dev/pts/26 (label serial1)
@@ -120,7 +122,8 @@ Gdbstub support
   uart_register: Registering /dev/console
   uart_register: Registering /dev/ttyS0
 
-  Another window:
+Another window::
+
   gdb-multiarch nuttx -ex "target remot /dev/pts/26"
   GNU gdb (Ubuntu 15.0.50.20240403-0ubuntu1) 15.0.50.20240403-git
   Copyright (C) 2024 Free Software Foundation, Inc.
@@ -133,7 +136,7 @@ Gdbstub support
   For bug reporting instructions, please see:
   <https://www.gnu.org/software/gdb/bugs/>.
   Find the GDB manual and other documentation resources online at:
-      <http://www.gnu.org/software/gdb/documentation/>.
+  <http://www.gnu.org/software/gdb/documentation/>.
 
   For help, type "help".
   Type "apropos word" to search for commands related to "word"...

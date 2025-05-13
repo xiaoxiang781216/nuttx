@@ -6,10 +6,12 @@ qemu-armv8a
    :literal:
 
 
-5. Gdbstub demo::
-   The Qemu version must be above 9.2 to support two serial ports.
+5. Gdbstub demo
 
-   One window:
+The Qemu version must be above 9.2 to support two serial ports.
+
+One window::
+
    ./tools/configure.sh qemu-armv8a:gdbstub; make -j25
    qemu-system-aarch64 -cpu cortex-a53 -nographic -machine virt,virtualization=on,gic-version=3 -net none -kernel ./nuttx -serial mon:stdio -serial pty
    char device redirected to /dev/pts/27 (label serial1)
@@ -18,7 +20,8 @@ qemu-armv8a
    - Boot from EL1
    - Boot to C runtime for OS Initialize
 
-   Another window:
+Another window::
+  
    gdb-multiarch nuttx -ex "target remot /dev/pts/27"
    GNU gdb (Ubuntu 15.0.50.20240403-0ubuntu1) 15.0.50.20240403-git
    Copyright (C) 2024 Free Software Foundation, Inc.
@@ -31,7 +34,7 @@ qemu-armv8a
    For bug reporting instructions, please see:
    <https://www.gnu.org/software/gdb/bugs/>.
    Find the GDB manual and other documentation resources online at:
-      <http://www.gnu.org/software/gdb/documentation/>.
+   <http://www.gnu.org/software/gdb/documentation/>.
 
    For help, type "help".
    Type "apropos word" to search for commands related to "word"...
