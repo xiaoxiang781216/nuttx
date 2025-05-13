@@ -250,8 +250,15 @@ EXTERN uint8_t g_idle_topstack[];   /* End+1 of heap */
  ****************************************************************************/
 
 void arm64_new_task(struct tcb_s *tak_new);
+
+#ifdef CONFIG_BUILD_KERNEL
 void arm64_jump_to_user(uint64_t entry, uint64_t x0, uint64_t x1,
                         uint64_t sp_el0, uint64_t *regs) noreturn_function;
+#elif defined(CONFIG_BUILD_PROTECTED)
+void arm64_jump_to_user(uint64_t startup, uint64_t entry, uint64_t x0,
+                        uint64_t x1, uint64_t sp_el0,
+                        uint64_t *regs) noreturn_function;
+#endif
 
 /* Low level initialization provided by chip logic */
 

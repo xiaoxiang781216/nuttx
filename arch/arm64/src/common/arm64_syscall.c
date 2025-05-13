@@ -158,7 +158,7 @@ uint64_t *arm64_syscall(uint64_t *regs)
   struct tcb_s **running_task = &g_running_tasks[cpu];
   struct tcb_s *tcb = this_task();
   uint64_t cmd;
-#ifdef CONFIG_BUILD_KERNEL
+#if defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)
   uint64_t             spsr;
 #endif
 
@@ -216,7 +216,7 @@ uint64_t *arm64_syscall(uint64_t *regs)
         restore_critical_section(tcb, cpu);
         break;
 
-#ifdef CONFIG_BUILD_KERNEL
+#if defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)
       /* R0=SYS_signal_handler:  This a user signal handler callback
        *
        * void signal_handler(_sa_sigaction_t sighand, int signo,
@@ -244,7 +244,12 @@ uint64_t *arm64_syscall(uint64_t *regs)
            * unprivileged mode.
            */
 
+#if defined(CONFIG_BUILD_KERNEL)
           regs[REG_ELR]  = (uint64_t)ARCH_DATA_RESERVE->ar_sigtramp;
+#elif defined(CONFIG_BUILD_PROTECTED)
+          regs[REG_ELR]  = (uint64_t)(USERSPACE->signal_handler);
+#endif
+
           spsr           = regs[REG_SPSR] & ~SPSR_MODE_MASK;
           regs[REG_SPSR] = spsr | SPSR_MODE_EL0T;
 
@@ -285,7 +290,7 @@ uint64_t *arm64_syscall(uint64_t *regs)
         break;
 #endif
 
-#ifdef CONFIG_BUILD_KERNEL
+#if defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)
       /* R0=SYS_signal_handler_return:  This a user signal handler callback
        *
        *   void signal_handler_return(void);

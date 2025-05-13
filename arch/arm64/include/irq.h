@@ -257,7 +257,7 @@ extern "C"
 
 struct xcptcontext
 {
-#ifdef CONFIG_BUILD_KERNEL
+#if defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)
   /* This is the saved address to use when returning from a user-space
    * signal handler.
    */

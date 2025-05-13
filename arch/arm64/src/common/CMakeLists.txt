@@ -78,7 +78,7 @@ if(CONFIG_SMP)
   list(APPEND SRCS arm64_smpcall.c)
 endif()
 
-if(CONFIG_BUILD_KERNEL)
+if(CONFIG_BUILD_KERNEL OR CONFIG_BUILD_PROTECTED)
   list(APPEND SRCS arm64_task_start.c arm64_pthread_start.c
        arm64_signal_dispatch.c)
 endif()

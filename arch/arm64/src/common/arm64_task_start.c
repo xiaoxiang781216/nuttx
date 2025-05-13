@@ -76,8 +76,14 @@ void up_task_start(main_t taskentry, int argc, char *argv[])
    *   SPSR = user mode
    */
 
+#ifdef CONFIG_BUILD_KERNEL
   arm64_jump_to_user((uint64_t)taskentry, (uint64_t)argc, (uint64_t)argv,
                      (uint64_t)rtcb->xcp.ustkptr, rtcb->xcp.initregs);
+#elif defined(CONFIG_BUILD_PROTECTED)
+  arm64_jump_to_user((uint64_t)USERSPACE->task_startup,
+                     (uint64_t)taskentry, (uint64_t)argc, (uint64_t)argv,
+                     (uint64_t)rtcb->xcp.ustkptr, rtcb->xcp.initregs);
+#endif
 }
 
 #endif /* !CONFIG_BUILD_FLAT */
