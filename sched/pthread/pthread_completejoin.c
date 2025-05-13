@@ -65,7 +65,7 @@
 int pthread_completejoin(pid_t pid, FAR void *exit_value)
 {
   FAR struct tcb_s *tcb = nxsched_get_tcb(pid);
-  FAR struct task_group_s *group = tcb->group;
+  FAR struct task_group_s *group;
   FAR struct task_join_s *join;
   FAR struct tcb_s *wtcb;
   FAR sq_entry_t *curr;
@@ -79,6 +79,7 @@ int pthread_completejoin(pid_t pid, FAR void *exit_value)
 
   sinfo("pid=%d exit_value=%p\n", pid, exit_value);
 
+  group = tcb->group;
   nxrmutex_lock(&group->tg_mutex);
 
   if (!sq_empty(&tcb->join_queue))
