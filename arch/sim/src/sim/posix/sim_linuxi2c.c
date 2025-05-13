@@ -37,6 +37,7 @@
 #include <linux/i2c.h>
 
 #include "sim_i2c.h"
+#include "sim_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -200,7 +201,8 @@ static int linux_i2cbus_transfer(struct i2c_master_s *dev,
            * different buffers.
            */
 
-          pack_buf = malloc(msgs[0].length + msgs[1].length);
+          pack_buf = host_uninterruptible(malloc,
+                                          msgs[0].length + msgs[1].length);
           if (pack_buf == NULL)
             {
               return -1;
@@ -226,7 +228,7 @@ static int linux_i2cbus_transfer(struct i2c_master_s *dev,
       return -1;
     }
 
-  if (ioctl(file, I2C_RDWR, &ioctl_data) < 1)
+  if (host_uninterruptible(ioctl, file, I2C_RDWR, &ioctl_data) < 1)
     {
       ret = -1;
     }
@@ -246,7 +248,7 @@ static int linux_i2cbus_transfer(struct i2c_master_s *dev,
             }
         }
 
-      free(pack_buf);
+      host_uninterruptible_no_return(free, pack_buf);
     }
 
   return ret;
@@ -269,7 +271,7 @@ struct i2c_master_s *sim_i2cbus_initialize(int bus)
   struct linux_i2cbus_master_s *priv;
   char filename[20];
 
-  priv = malloc(sizeof(*priv));
+  priv = host_uninterruptible(malloc, sizeof(*priv));
   if (priv == NULL)
     {
       ERROR("Failed to allocate private i2c master driver");
@@ -277,11 +279,11 @@ struct i2c_master_s *sim_i2cbus_initialize(int bus)
     }
 
   snprintf(filename, sizeof(filename), "/dev/i2c-%d", bus);
-  priv->file = open(filename, O_RDWR);
+  priv->file = host_uninterruptible(open, filename, O_RDWR);
   if (priv->file < 0)
     {
       ERROR("Failed to open %s: %d", filename, priv->file);
-      free(priv);
+      host_uninterruptible_no_return(free, priv);
       return NULL;
     }
 
@@ -302,9 +304,9 @@ int sim_i2cbus_uninitialize(struct i2c_master_s *dev)
   struct linux_i2cbus_master_s *priv = (struct linux_i2cbus_master_s *)dev;
   if (priv->file >= 0)
     {
-      close(priv->file);
+      host_uninterruptible(close, priv->file);
     }
 
-  free(priv);
+  host_uninterruptible_no_return(free, priv);
   return 0;
 }

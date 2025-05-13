@@ -28,6 +28,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "sim_internal.h"
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -94,9 +96,10 @@ static void save_and_replace_init_funcs(int argc, const char *argv[],
   g_saved_envp = envp;
   g_saved_apple = apple;
 
-  g_saved_init_funcs = malloc(g_num_saved_init_funcs *
+  g_saved_init_funcs = host_uninterruptible(malloc, g_num_saved_init_funcs *
                               sizeof(*g_saved_init_funcs));
-  allow_write(&mod_init_func_start, &mod_init_func_end);
+  host_uninterruptible(allow_write, &mod_init_func_start,
+                       &mod_init_func_end);
   int i = 0;
   for (fp = &mod_init_func_start; fp < &mod_init_func_end; fp++)
     {
