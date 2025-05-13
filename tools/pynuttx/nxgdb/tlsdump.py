@@ -25,10 +25,7 @@ import gdb
 from . import utils
 from .lists import NxDQueue
 
-CONFIG_TLS_TASK_NELEM = utils.get_field_nitems("struct task_info_s", "ta_telem")
 CONFIG_TLS_NELEM = utils.get_field_nitems("struct tls_info_s", "tl_elem")
-
-tls_info_s = utils.lookup_type("struct tls_info_s").pointer()
 
 
 class TlsDump(gdb.Command):
@@ -63,36 +60,12 @@ class TlsDump(gdb.Command):
 
         return args
 
-    def dump_tls(self, tcb):
-        """dump tls info"""
-
-        try:
-            if not tcb or not utils.get_tcb_type(tcb):
-                return
-
-            pid = int(tcb.pid)
-            type = utils.get_tcb_type(tcb)
-            task_info = tcb.stack_alloc_ptr.cast(tls_info_s).tl_task
-            print(f"PID:{pid}, {type}, task_info addr:{hex(task_info)}")
-
-            if type == "TASK":
-                print("task tls elements:")
-                for i in range(CONFIG_TLS_TASK_NELEM):
-                    tls = utils.get_task_tls(pid, i)
-                    print(f"{hex(tls)}")
-
-            print("thread tls elements:")
-            for i in range(CONFIG_TLS_NELEM):
-                tls = utils.get_thread_tls(pid, i)
-                print(f"{hex(tls)}")
-        except gdb.error:
-            return
-
     def check_corruption(self, tcb):
         """integrity check"""
 
         try:
-            if not tcb or not utils.get_tcb_type(tcb):
+            tcb_s = utils.lookup_type("struct tcb_s").pointer()
+            if not tcb or tcb.type != tcb_s:
                 print("No tcb found, or the tcb type is invalid")
                 return True
 
@@ -104,10 +77,11 @@ class TlsDump(gdb.Command):
                 if utils.get_tcb_type(tcb) == "TASK"
                 else utils.get_tcb(tcb.group.tg_pid)
             )
-            if not task:
+            if not task or not utils.get_tcb_type(task):
                 print("Can not find the task within the group")
                 return True
 
+            tls_info_s = utils.lookup_type("struct tls_info_s").pointer()
             task_info = task.stack_alloc_ptr.cast(tls_info_s).tl_task
             corrupted = False
             # Traverse all threads under this task through the group linked list
@@ -140,13 +114,27 @@ class TlsDump(gdb.Command):
             return
 
         # tlsdump / tlsdump -p pid
+        tls_info_s = utils.lookup_type("struct tls_info_s").pointer()
+        CONFIG_TLS_TASK_NELEM = utils.get_field_nitems("struct task_info_s", "ta_telem")
         pid = args.pid
         tcbs = [utils.get_tcb(pid)] if pid is not None else utils.get_tcbs()
         for tcb in tcbs:
-            if not tcb:
-                print(f"Pid={pid}, no task or thread found")
+            if not tcb or not (task_type := utils.get_tcb_type(tcb)):
                 continue
-            self.dump_tls(tcb)
+            tls_info = tcb.stack_alloc_ptr.cast(tls_info_s)
+            task_info = tls_info.tl_task
+            print(f"PID:{tcb.pid}, {task_type}, task_info addr:{hex(task_info)}")
+
+            if task_type == "TASK":
+                print("task tls elements:")
+                for i in range(CONFIG_TLS_TASK_NELEM):
+                    tls = task_info.ta_telem[i]
+                    print(f"{i}: {hex(tls)}")
+
+            print("thread tls elements:")
+            for i in range(CONFIG_TLS_NELEM):
+                tls = tls_info.tl_elem[i]
+                print(f"{i}: {hex(tls)}")
 
     def diagnose(self, *args, **kwargs):
         corrupted = any(self.check_corruption(tcb) for tcb in utils.get_tcbs())

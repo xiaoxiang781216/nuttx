@@ -953,14 +953,17 @@ def get_tcb_type(tcb):
     """get tcb type"""
     if not tcb:
         return None
-
-    mask = get_symbol_value("TCB_FLAG_TTYPE_MASK")
-    if tcb["flags"] & mask == get_symbol_value("TCB_FLAG_TTYPE_PTHREAD"):
-        return "PTHREAD"
-    elif tcb["flags"] & mask == get_symbol_value("TCB_FLAG_TTYPE_KERNEL"):
-        return "KTHREAD"
-    else:
-        return "TASK"
+    try:
+        mask = get_symbol_value("TCB_FLAG_TTYPE_MASK")
+        if tcb["flags"] & mask == get_symbol_value("TCB_FLAG_TTYPE_PTHREAD"):
+            return "PTHREAD"
+        elif tcb["flags"] & mask == get_symbol_value("TCB_FLAG_TTYPE_KERNEL"):
+            return "KTHREAD"
+        elif tcb["flags"] & mask == get_symbol_value("TCB_FLAG_TTYPE_TASK"):
+            return "TASK"
+        return None
+    except gdb.error as e:
+        raise gdb.error(f"Failed to determine TCB type: {str(e)}") from e
 
 
 def get_tid(tcb):
