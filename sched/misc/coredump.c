@@ -245,16 +245,25 @@ static int elf_emit_hdr(FAR struct elf_dumpinfo_s *cinfo,
 #ifdef CONFIG_BOARD_COREDUMP_MEMDEV
 static bool elf_exist_hdr(FAR struct lib_instream_s *instream)
 {
-  Elf_Ehdr ehdr;
   int ret;
 
-  ret = lib_stream_gets(instream, &ehdr, sizeof(ehdr));
-  if (ret != sizeof(ehdr))
+#  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
+  struct lzf_header_s hdr;
+# else
+  Elf_Ehdr hdr;
+#  endif
+
+  ret = lib_stream_gets(instream, &hdr, sizeof(hdr));
+  if (ret != sizeof(hdr))
     {
       return false;
     }
 
-  return memcmp(ehdr.e_ident, ELFMAG, EI_MAGIC_SIZE) == 0;
+#  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
+  return memcmp(hdr.lzf_magic, "ZV", 2) == 0;
+#  else
+  return memcmp(hdr.e_ident, ELFMAG, EI_MAGIC_SIZE) == 0;
+#endif
 }
 #endif
 
@@ -860,10 +869,10 @@ static void coredump_dump_mem(pid_t pid)
       return;
     }
 
-#ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
+#  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
   lib_lzfoutstream(&g_lzfstream, stream);
   stream = &g_lzfstream;
-#endif
+#  endif
 
   ret = coredump(g_regions, stream, pid);
   if (ret < 0)
