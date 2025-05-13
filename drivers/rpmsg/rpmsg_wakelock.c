@@ -150,6 +150,7 @@ static int rpmsg_wakelock_control(FAR struct rpmsg_wakelock_s *priv,
             {
               rpmsginfo("wakelock destroyed: %s\n", name);
               list_delete(&wl->node);
+              pm_wakelock_uninit(&wl->wakelock);
               kmm_free(wl);
             }
         }
