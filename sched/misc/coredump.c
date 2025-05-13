@@ -1039,7 +1039,8 @@ int coredump_initialize(void)
                               O_RDONLY, 0666);
   if (ret < 0)
     {
-      _alert("%s Coredump instream could not be opened:%d\n", ret);
+      _alert("%s Coredump instream could not be opened:%d\n",
+             CONFIG_BOARD_COREDUMP_DEVPATH, ret);
       return ret;
     }
 
