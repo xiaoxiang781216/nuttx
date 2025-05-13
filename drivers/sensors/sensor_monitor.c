@@ -212,6 +212,7 @@ static ssize_t sensor_monitor_read(FAR struct file *filep, FAR char *buffer,
   size_t copysize;
 
   sminfo.offset = filep->f_pos;
+  sminfo.totalsize = 0;
 
   copysize = procfs_memcpy(g_sensor_monitor_header,
                            strlen(g_sensor_monitor_header),
