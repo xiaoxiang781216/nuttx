@@ -29,6 +29,7 @@
 #include <nuttx/arch.h>
 #include <assert.h>
 
+#include <nuttx/addrenv.h>
 #include <nuttx/board.h>
 #include <arch/board/board.h>
 #include <sched/sched.h>
@@ -42,6 +43,7 @@
 
 uint32_t *arm_doirq(int irq, uint32_t *regs)
 {
+  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
   struct tcb_s *tcb = this_task();
 
   board_autoled_on(LED_INIRQ);
@@ -76,8 +78,16 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   if (regs != tcb->xcp.regs)
     {
-      struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+#ifdef CONFIG_ARCH_ADDRENV
+      /* Make sure that the address environment for the previously
+       * running task is closed down gracefully (data caches dump,
+       * MMU flushed) and set up the address environment for the new
+       * thread at the head of the ready-to-run list.
+       */
 
+      addrenv_switch(tcb);
+      tcb = this_task();
+#endif
       /* Update scheduler parameters */
 
       nxsched_switch_context(*running_task, tcb);

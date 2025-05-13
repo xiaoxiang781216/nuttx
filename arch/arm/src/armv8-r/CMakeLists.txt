@@ -70,6 +70,10 @@ if(CONFIG_SMP)
   list(APPEND SRCS arm_smpcall.c arm_cpuidlestack.c arm_scu.c)
 endif()
 
+if(CONFIG_ARCH_ADDRENV)
+  list(APPEND SRCS arm_addrenv.c)
+endif()
+
 if(CONFIG_LIB_SYSCALL)
   list(APPEND SRCS arm_dispatch_syscall.S)
 endif()
