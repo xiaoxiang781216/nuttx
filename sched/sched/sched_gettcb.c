@@ -76,7 +76,7 @@ FAR struct tcb_s *nxsched_get_tcb(pid_t pid)
         }
     }
 
-  if (ret)
+  if (ret && ret != running_task())
     {
       if (!up_interrupt_context())
         {
@@ -101,7 +101,18 @@ FAR struct tcb_s *nxsched_get_tcb(pid_t pid)
 
 void nxsched_put_tcb(FAR struct tcb_s *tcb)
 {
-  if (!tcb)
+  FAR struct tcb_s *rtcb;
+#ifdef CONFIG_SMP
+  irqstate_t flags;
+
+  flags = up_irq_save();
+  rtcb = running_task();
+  up_irq_restore(flags);
+#else
+  rtcb = running_task();
+#endif
+
+  if (!tcb || tcb == rtcb)
     {
       return;
     }
@@ -154,7 +165,7 @@ FAR struct tcb_s *nxsched_get_tcb_by_index(int index)
   flags = spin_lock_irqsave(&g_pidhashlock);
   ret = g_pidhash[index];
 
-  if (ret)
+  if (ret && ret != running_task())
     {
       if (!up_interrupt_context())
         {
