@@ -457,11 +457,11 @@
 
 #define SNIOC_GET_EVENTS              _SNIOC(0x009D)
 
-/* Command:      SNIOC_SET_NONWAKEUP
- * Description:  Set non-wakeup flag for user.
- * Argument:     True is non-wakeup, false is wakeup.
+/* Command:      SNIOC_SET_WAKEUP
+ * Description:  Set wakeup flag for user.
+ * Argument:     True is wakeup, false is non-wakeup.
  */
 
-#define SNIOC_SET_NONWAKEUP           _SNIOC(0x009E)
+#define SNIOC_SET_WAKEUP              _SNIOC(0x009E)
 
 #endif /* __INCLUDE_NUTTX_SENSORS_IOCTL_H */
