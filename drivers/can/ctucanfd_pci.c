@@ -1074,18 +1074,14 @@ static bool ctucanfd_chrdev_cancel(FAR struct can_dev_s *dev,
 
 static void ctucanfd_chardev_receive(FAR struct ctucanfd_can_s *priv)
 {
-  FAR struct can_dev_s    *dev    = (FAR struct can_dev_s *)priv;
-  FAR uint32_t            *ptr    = NULL;
-  struct can_hdr_s         hdr    =
-  {
-    0
-  };
-
-  struct ctucanfd_frame_s  frame;
-  int                      i      = 0;
-  int                      ret    = 0;
-  uint16_t                 frc    = 0;
-  uint32_t                 regval = 0;
+  FAR struct can_dev_s        *dev    = (FAR struct can_dev_s *)priv;
+  FAR struct ctucanfd_frame_s *frame;
+  struct can_hdr_s             hdr;
+  uint32_t                     buff[sizeof(struct ctucanfd_frame_s) / 4];
+  int                          i      = 0;
+  int                          ret    = 0;
+  uint16_t                     frc    = 0;
+  uint32_t                     regval = 0;
 
   /* Get frame count */
 
@@ -1096,38 +1092,42 @@ static void ctucanfd_chardev_receive(FAR struct ctucanfd_can_s *priv)
 
   while (frc-- > 0)
     {
-      ptr = (FAR uint32_t *)&frame;
+      /* We use a pointer to buffer to avoid an unaligned pointer
+       * compiler errors
+       */
+
+      frame = (struct ctucanfd_frame_s *)&buff;
 
       for (i = 0; i < sizeof(struct ctucanfd_frame_s) / 4; i++)
         {
           /* RX buffer in automatic mode */
 
-          ptr[i] = ctucanfd_getreg(priv, CTUCANFD_RXDATA);
+          buff[i] = ctucanfd_getreg(priv, CTUCANFD_RXDATA);
         }
 
       /* Get the DLC */
 
-      hdr.ch_dlc = frame.fmt.dlc;
+      hdr.ch_dlc = frame->fmt.dlc;
 
       /* Get RTR bit */
 
-      hdr.ch_rtr = frame.fmt.rtr;
+      hdr.ch_rtr = frame->fmt.rtr;
 
 #ifdef CONFIG_CAN_EXTID
       /* Get the CAN identifier. */
 
-      hdr.ch_extid = frame.fmt.ide;
+      hdr.ch_extid = frame->fmt.ide;
 
       if (hdr.ch_extid)
         {
-          hdr.ch_id = frame.id.id_ext;
+          hdr.ch_id = frame->id.id_ext;
         }
       else
         {
-          hdr.ch_id = frame.id.id;
+          hdr.ch_id = frame->id.id;
         }
 #else
-      if (frame.fmt.ide)
+      if (frame->fmt.ide)
         {
           canerr("ERROR: Received message with extended"
                  " identifier.  Dropped\n");
@@ -1135,7 +1135,7 @@ static void ctucanfd_chardev_receive(FAR struct ctucanfd_can_s *priv)
           continue;
         }
 
-      hdr.ch_id = frame.id.id;
+      hdr.ch_id = frame->id.id;
 #endif
 
       /* Clear the error indication and unused bits */
@@ -1146,11 +1146,11 @@ static void ctucanfd_chardev_receive(FAR struct ctucanfd_can_s *priv)
       hdr.ch_tcf   = 0;
 
 #ifdef CONFIG_CAN_FD
-      hdr.ch_esi = frame.fmt.esi_rsv;
-      hdr.ch_edl = frame.fmt.fdf;
-      hdr.ch_brs = frame.fmt.brs;
+      hdr.ch_esi = frame->fmt.esi_rsv;
+      hdr.ch_edl = frame->fmt.fdf;
+      hdr.ch_brs = frame->fmt.brs;
 #else
-      if (frame.fmt.fdf)
+      if (frame->fmt.fdf)
         {
           /* Drop any FD CAN messages if not supported */
 
@@ -1162,7 +1162,7 @@ static void ctucanfd_chardev_receive(FAR struct ctucanfd_can_s *priv)
 
       /* Provide the data to the upper half driver */
 
-      ret = can_receive(dev, &hdr, (FAR uint8_t *)&frame.data);
+      ret = can_receive(dev, &hdr, (FAR uint8_t *)&frame->data);
       if (ret < 0)
         {
           canerr("ERROR: can_receive failed %d\n", ret);
@@ -1684,12 +1684,12 @@ static int ctucanfd_sock_send(FAR struct ctucanfd_can_s *priv)
 
 static void ctucanfd_sock_receive(FAR struct ctucanfd_can_s *priv)
 {
-  struct ctucanfd_frame_s  rxframe;
-  FAR uint32_t            *ptr    = NULL;
-  int                      i      = 0;
-  uint16_t                 frc    = 0;
-  uint32_t                 regval = 0;
-  uint8_t                  bytes;
+  FAR struct ctucanfd_frame_s *rxframe;
+  uint32_t                     buff[sizeof(struct ctucanfd_frame_s) / 4];
+  int                          i      = 0;
+  uint16_t                     frc    = 0;
+  uint32_t                     regval = 0;
+  uint8_t                      bytes;
 
   /* Get frame count */
 
@@ -1700,52 +1700,56 @@ static void ctucanfd_sock_receive(FAR struct ctucanfd_can_s *priv)
 
   while (frc-- > 0)
     {
-      ptr = (FAR uint32_t *)&rxframe;
+      /* We use a pointer to buffer to avoid an unaligned pointer
+       * compiler errors
+       */
+
+      rxframe = (struct ctucanfd_frame_s *)&buff;
 
       for (i = 0; i < sizeof(struct ctucanfd_frame_s) / 4; i++)
         {
           /* RX buffer in automatic mode */
 
-          ptr[i] = ctucanfd_getreg(priv, CTUCANFD_RXDATA);
+          buff[i] = ctucanfd_getreg(priv, CTUCANFD_RXDATA);
         }
 
       /* CAN 2.0 or CAN FD */
 
 #ifdef CONFIG_NET_CAN_CANFD
-      if (rxframe.fmt.fdf)
+      if (rxframe->fmt.fdf)
         {
           struct canfd_frame *frame = (struct canfd_frame *)priv->rx_pool;
 
           /* Get the DLC */
 
-          frame->len = can_dlc2bytes(rxframe.fmt.dlc);
+          frame->len = can_dlc2bytes(rxframe->fmt.dlc);
 
 #ifdef CONFIG_NET_CAN_EXTID
           /* Get the CAN identifier. */
 
-          if (rxframe.fmt.ide)
+          if (rxframe->fmt.ide)
             {
-              frame->can_id = rxframe.id.id_ext;
+              frame->can_id = rxframe->id.id_ext;
               frame->can_id |= CAN_EFF_FLAG;
             }
           else
             {
-              frame->can_id = rxframe.id.id;
+              frame->can_id = rxframe->id.id;
             }
 #else
-          if (rxframe.fmt.ide)
+          if (rxframe->fmt.ide)
             {
               canerr("ERROR: Received message with extended"
                      " identifier.  Dropped\n");
               continue;
             }
 
-          frame->can_id = rxframe.id.id;
+          frame->can_id = rxframe->id.id;
 #endif
 
           /* Extract the RTR bit */
 
-          if (rxframe.fmt.rtr)
+          if (rxframe->fmt.rtr)
             {
               frame->can_id |= CAN_RTR_FLAG;
             }
@@ -1754,22 +1758,22 @@ static void ctucanfd_sock_receive(FAR struct ctucanfd_can_s *priv)
 
           frame->flags = 0;
 
-          if (rxframe.fmt.esi_rsv)
+          if (rxframe->fmt.esi_rsv)
             {
               frame->flags |= CANFD_ESI;
             }
 
-          if (rxframe.fmt.brs)
+          if (rxframe->fmt.brs)
             {
               frame->flags |= CANFD_BRS;
             }
 
           /* Get data */
 
-          bytes = can_dlc2bytes(rxframe.fmt.dlc);
+          bytes = can_dlc2bytes(rxframe->fmt.dlc);
           for (i = 0; i < bytes; i++)
             {
-              frame->data[i] = rxframe.data[i];
+              frame->data[i] = rxframe->data[i];
             }
 
           /* Copy the buffer pointer to priv->dev..  Set amount of data
@@ -1802,43 +1806,43 @@ static void ctucanfd_sock_receive(FAR struct ctucanfd_can_s *priv)
 
           /* Get the DLC */
 
-          frame->can_dlc = rxframe.fmt.dlc;
+          frame->can_dlc = rxframe->fmt.dlc;
 
 #ifdef CONFIG_NET_CAN_EXTID
           /* Get the CAN identifier. */
 
-          if (rxframe.fmt.ide)
+          if (rxframe->fmt.ide)
             {
-              frame->can_id = rxframe.id.id_ext;
+              frame->can_id = rxframe->id.id_ext;
               frame->can_id |= CAN_EFF_FLAG;
             }
           else
             {
-              frame->can_id = rxframe.id.id;
+              frame->can_id = rxframe->id.id;
             }
 #else
-          if (rxframe.fmt.ide)
+          if (rxframe->fmt.ide)
             {
               canerr("ERROR: Received message with extended"
                      " identifier.  Dropped\n");
               continue;
             }
 
-          frame->can_id = rxframe.id.id;
+          frame->can_id = rxframe->id.id;
 #endif
 
           /* Extract the RTR bit */
 
-          if (rxframe.fmt.rtr)
+          if (rxframe->fmt.rtr)
             {
               frame->can_id |= CAN_RTR_FLAG;
             }
 
           /* Get data */
 
-          for (i = 0; i < rxframe.fmt.dlc; i++)
+          for (i = 0; i < rxframe->fmt.dlc; i++)
             {
-              frame->data[i] = rxframe.data[i];
+              frame->data[i] = rxframe->data[i];
             }
 
           /* Copy the buffer pointer to priv->dev..  Set amount of data
@@ -2165,6 +2169,7 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
   if (!priv->bar0_base)
     {
       pcierr("Not found BAR0\n");
+      ret = -ENODEV;
       goto errout;
     }
 
@@ -2180,6 +2185,7 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
   if (!priv->canfd_base)
     {
       pcierr("Not found CANFD bar\n");
+      ret = -ENODEV;
       goto errout;
     }
 
