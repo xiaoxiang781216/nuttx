@@ -862,12 +862,14 @@ static void coredump_dump_mem(pid_t pid)
   FAR void *stream = &g_memstream;
   int ret;
 
-  if (elf_exist_hdr(&g_meminstream))
+#  ifndef CONFIG_BOARD_COREDUMP_OVERWRITE
+  if (elf_exist_hdr((FAR struct lib_instream_s *)&g_meminstream))
     {
       _alert("Coredump memory device already exist:%s\n",
              CONFIG_BOARD_COREDUMP_DEVPATH);
       return;
     }
+#  endif
 
 #  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
   lib_lzfoutstream(&g_lzfstream, stream);

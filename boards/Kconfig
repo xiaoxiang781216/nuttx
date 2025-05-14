@@ -4780,6 +4780,13 @@ config BOARD_COREDUMP_COMPRESSION
 	---help---
 		Enable LZF compression algorithm for core dump content
 
+config BOARD_COREDUMP_OVERWRITE
+	bool "Overwrite exsiting core dump data in memory device"
+	default n
+	depends on BOARD_COREDUMP_MEMDEV
+	---help---
+		Enable this option to overwrite the existing coredump.
+
 config BOARD_COREDUMP_BASE64STREAM
 	bool "Enable base64 encoding for output stream"
 	default n
