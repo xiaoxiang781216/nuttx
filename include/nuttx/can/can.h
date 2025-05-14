@@ -41,6 +41,8 @@
 #include <nuttx/mutex.h>
 #include <nuttx/can.h>
 
+#include <nuttx/can/can_common.h>
+
 #if defined CONFIG_CAN_TXREADY \
   || defined CONFIG_CAN_ERROR_POLLING
 #  include <nuttx/wqueue.h>
