@@ -286,6 +286,7 @@ class NetCheck(gdb.Command):
             "title": "Netcheck Report",
             "summary": "Net status check",
             "result": "pass" if result else "fail",
+            "category": utils.DiagnoseCategory.connectivity,
             "command": "netcheck",
             "data": message,
         }

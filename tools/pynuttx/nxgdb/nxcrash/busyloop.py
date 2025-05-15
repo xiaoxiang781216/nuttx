@@ -66,6 +66,7 @@ class CrashBusyloop(gdb.Command):
             "title": "System Busyloop Detection",
             "summary": f"{'No' if not collected else len(collected)} threads occur busyloop",
             "result": "fail" if collected else "pass",
+            "category": utils.DiagnoseCategory.sched,
             "command": "crash busyloop",
             "thread": [
                 {

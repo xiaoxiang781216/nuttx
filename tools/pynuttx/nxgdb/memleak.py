@@ -236,6 +236,7 @@ class MMLeak(gdb.Command):
             "title": "Memory Leak Report",
             "summary": f"Total {total_blk} blks, {total_size} bytes leaked",
             "result": "fail" if total_blk else "pass",
+            "category": utils.DiagnoseCategory.memory,
             "command": "mm leak",
             "data": data,
         }

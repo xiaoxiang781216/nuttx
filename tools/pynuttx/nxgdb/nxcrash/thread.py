@@ -92,6 +92,7 @@ class CrashThread(gdb.Command):
             "title": "Threads Seem Crashed",
             "summary": f"{'No' if not threads else len(threads)} threads seem crashed",
             "result": "fail" if threads else "pass",
+            "category": utils.DiagnoseCategory.sched,
             "command": "crash thread",
             "thread": [
                 {

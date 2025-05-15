@@ -84,6 +84,7 @@ class NoteSnap(gdb.Command):
             "summary": "notesnap dump",
             "command": "notesnap",
             "result": "pass",
+            "category": utils.DiagnoseCategory.system,
             "message": self.parse_notesnap(),
         }
 

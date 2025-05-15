@@ -109,5 +109,6 @@ class Pmconfig(gdb.Command):
             "summary": "Power manager information",
             "command": "pmconfig",
             "result": "info",
+            "category": utils.DiagnoseCategory.power,
             "message": gdb.execute("pmconfig", to_string=True),
         }

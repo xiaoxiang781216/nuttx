@@ -185,5 +185,6 @@ class MMCheck(gdb.Command):
             ),
             "command": "memcheck",
             "result": "fail" if fail else "pass",
+            "category": utils.DiagnoseCategory.memory,
             "data": output,
         }

@@ -155,6 +155,7 @@ class TlsDump(gdb.Command):
             "title": "tlsdump report",
             "summary": "integrity check",
             "result": "failed" if corrupted else "pass",
+            "category": utils.DiagnoseCategory.system,
             "command": "tlsdump",
             "data": gdb.execute("tlsdump", to_string=True),
         }

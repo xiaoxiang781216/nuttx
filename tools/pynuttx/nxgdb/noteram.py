@@ -156,5 +156,6 @@ class NoteRamCommand(gdb.Command):
             "summary": "noteram dump",
             "command": "noteram",
             "result": "info",
+            "category": utils.DiagnoseCategory.system,
             "message": notes,
         }

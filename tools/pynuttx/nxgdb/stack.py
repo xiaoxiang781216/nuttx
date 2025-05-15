@@ -227,5 +227,6 @@ class StackUsage(gdb.Command):
             "summary": "Stack usage report",
             "command": "stack-usage",
             "result": "info",
+            "category": utils.DiagnoseCategory.memory,
             "message": gdb.execute("stack-usage", to_string=True),
         }

@@ -72,6 +72,7 @@ class CrashStackOverflow(gdb.Command):
             "title": "Stack Overflow Report",
             "summary": f"{'No' if not collected else len(collected)} threads{'s' if len(collected) != 1 else ''} found",
             "result": "fail" if collected else "pass",
+            "category": utils.DiagnoseCategory.memory,
             "command": "crash stackoverflow",
             "thread": [
                 {

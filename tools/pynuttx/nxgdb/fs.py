@@ -316,6 +316,7 @@ class Fdinfo(gdb.Command):
             "title": "File Descriptors Information",
             "summary": f"Total files opened:{self.total_fd_count}",
             "result": "info",
+            "category": utils.DiagnoseCategory.fs,
             "command": "fdinfo",
             "message": output,
         }
@@ -354,6 +355,7 @@ class Mount(gdb.Command):
             "summary": f"Total {self.mount_count} mount points",
             "command": "mount",
             "result": "info",
+            "category": utils.DiagnoseCategory.fs,
             "message": output or "No mount",
         }
 
@@ -457,6 +459,7 @@ class ForeachInode(gdb.Command):
             "summary": "inode formation dump",
             "command": "foreach inode",
             "result": "info",
+            "category": utils.DiagnoseCategory.fs,
             "message": output,
         }
 
@@ -511,6 +514,7 @@ class InfoShmfs(gdb.Command):
             "title": "Share Memory Usage",
             "summary": f"Total used:{self.total_size}kB, {self.block_count}blocks",
             "result": "info",
+            "category": utils.DiagnoseCategory.fs,
             "command": "info shm",
             "message": output or "No InfoShmfs",
         }
@@ -605,6 +609,7 @@ class InfoRomfs(gdb.Command):
             "summary": "Romfs nodeinfo dump",
             "command": "info romfs",
             "result": "info",
+            "category": utils.DiagnoseCategory.fs,
             "message": output or "No romfs information",
         }
 
@@ -687,7 +692,7 @@ class InfoYaffs(gdb.Command):
             f"n_data_chunks:{n_data_chunks},serial:{serial}{moreinfo}"
         }
 
-        print(f"{initial_indent}{file_type.rsplit('_',2)[1]} {baseinfo}")
+        print(f"{initial_indent}{file_type.rsplit('_', 2)[1]} {baseinfo}")
         if file_type == "yaffs_dir_var":
             head = node.variant.cast(utils.lookup_type("struct yaffs_dir_var"))
             for siblings in NxList(head.children, "struct yaffs_obj", "siblings"):
@@ -719,6 +724,7 @@ class InfoYaffs(gdb.Command):
             "summary": "Yaffs information dump",
             "command": "info Yaffs",
             "result": "info",
+            "category": utils.DiagnoseCategory.fs,
             "message": output or "No yaffs information",
         }
 

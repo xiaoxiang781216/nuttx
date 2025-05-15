@@ -157,5 +157,6 @@ class Critmon(gdb.Command):
             "summary": "Critical resource busy-wait time dump",
             "result": "info",
             "command": "critmon",
+            "category": utils.DiagnoseCategory.sched,
             "data": gdb.execute("critmon", to_string=True),
         }

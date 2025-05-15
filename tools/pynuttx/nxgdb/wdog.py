@@ -73,5 +73,6 @@ class WDogDump(gdb.Command):
             "summary": "Wdog timer information",
             "command": "wdog",
             "result": "info",
+            "category": utils.DiagnoseCategory.system,
             "message": gdb.execute("wdog", to_string=True),
         }

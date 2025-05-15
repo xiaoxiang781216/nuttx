@@ -601,5 +601,6 @@ class Ps(gdb.Command):
             "summary": "Thread information",
             "command": "ps",
             "result": "info",
+            "category": utils.DiagnoseCategory.sched,
             "message": gdb.execute("ps", to_string=True),
         }

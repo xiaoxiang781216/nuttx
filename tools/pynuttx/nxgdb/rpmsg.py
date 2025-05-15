@@ -194,5 +194,6 @@ class RPMsgDump(gdb.Command):
             "summary": "RPMSG report",
             "command": "rpmsgdump",
             "result": "info",
+            "category": utils.DiagnoseCategory.rpc,
             "message": gdb.execute("rpmsgdump", to_string=True),
         }

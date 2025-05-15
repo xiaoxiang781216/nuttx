@@ -22,7 +22,7 @@
 
 import gdb
 
-from .utils import dont_repeat_decorator, read_u64
+from .utils import DiagnoseCategory, dont_repeat_decorator, read_u64
 
 
 class PageTable:
@@ -125,5 +125,6 @@ class DumpPageTableCommand(gdb.Command):
             "summary": "Page table information",
             "command": "dump_pagetable",
             "result": "info",
+            "category": DiagnoseCategory.memory,
             "message": gdb.execute("dump_pagetable", to_string=True),
         }

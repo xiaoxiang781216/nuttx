@@ -179,5 +179,6 @@ class WorkQueueDump(gdb.Command):
             "summary": "All worker queue information",
             "command": "worker",
             "result": "info",
+            "category": utils.DiagnoseCategory.system,
             "message": gdb.execute("worker", to_string=True),
         }

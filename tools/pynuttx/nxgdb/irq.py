@@ -86,5 +86,6 @@ class IRQInfoDump(gdb.Command):
             "summary": "IRQ information including count, rate etc.",
             "command": "irqinfo",
             "result": "info",
+            "category": utils.DiagnoseCategory.system,
             "message": gdb.execute("irqinfo", to_string=True),
         }

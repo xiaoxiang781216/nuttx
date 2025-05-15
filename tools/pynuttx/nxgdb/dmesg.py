@@ -73,6 +73,7 @@ class Dmesg(gdb.Command):
                 f"RAM log length: {len(ramlog)} bytes. RPMSG log length:{len(rpmsg_syslog)} bytes."
             ),
             "result": "info",
+            "category": utils.DiagnoseCategory.system,
             "command": "dmesg",
             "message": f"RAM log:\n{ramlog}\n RPMSG syslog:{rpmsg_syslog}",
         }

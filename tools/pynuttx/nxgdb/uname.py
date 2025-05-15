@@ -139,5 +139,6 @@ class UnameCommand(gdb.Command):
             "summary": "Version numbers of both tool and kernel",
             "command": "uname",
             "result": "info",
+            "category": utils.DiagnoseCategory.system,
             "message": gdb.execute("uname -a", to_string=True),
         }

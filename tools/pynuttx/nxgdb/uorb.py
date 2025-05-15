@@ -164,5 +164,6 @@ class uORBDump(gdb.Command):
             "summary": "All active uORB topics",
             "command": "uorb",
             "result": "info",
+            "category": utils.DiagnoseCategory.sensor,
             "message": gdb.execute("uorb", to_string=True),
         }

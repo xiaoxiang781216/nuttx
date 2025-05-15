@@ -290,6 +290,21 @@ class Backtrace:
         ]
 
 
+class DiagnoseCategory(str, Enum):
+    sched = "sched"
+    memory = "memory"
+    system = "system"
+    power = "power"
+    libuv = "libuv"
+    rpc = "rpc"
+    fs = "fs"
+    sensor = "sensor"
+    connectivity = "connectivity"
+    graphics = "graphics"
+    audio = "audio"
+    video = "video"
+
+
 def lookup_type(name, block=None) -> gdb.Type:
     """Return the type object of a type name"""
     key = (name, block)
