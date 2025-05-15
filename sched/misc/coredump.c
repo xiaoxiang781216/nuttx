@@ -116,6 +116,7 @@ static struct memory_region_s g_memory_region[] =
   };
 #endif
 static const struct memory_region_s *g_regions;
+static bool g_stream_initialized;
 
 /****************************************************************************
  * Private Functions
@@ -1022,11 +1023,13 @@ int coredump_initialize(void)
   if (ret < 0)
     {
 # ifdef CONFIG_BOARD_COREDUMP_MEMDEV
-      lib_fileinstream_close(&g_devstream);
+      lib_fileinstream_close(&g_devinstream);
 # endif
       _alert("%s Coredump device init failed:%d\n",
              CONFIG_BOARD_COREDUMP_DEVPATH, ret);
     }
+
+  g_stream_initialized = true;
 #endif
 
   return ret;
@@ -1045,6 +1048,12 @@ int coredump_initialize(void)
 
 void coredump_dump(pid_t pid)
 {
+  if (!g_stream_initialized)
+    {
+      _alert("Coredump device is not initialized.\n");
+      return;
+    }
+
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
   coredump_dump_syslog(pid);
 #elif defined(CONFIG_BOARD_COREDUMP_DEV)
