@@ -50,7 +50,8 @@
 #endif
 
 #if defined(CONFIG_BOARD_COREDUMP_BLKDEV) || \
-    defined(CONFIG_BOARD_COREDUMP_MTDDEV)
+    defined(CONFIG_BOARD_COREDUMP_MTDDEV) || \
+    defined(CONFIG_BOARD_COREDUMP_MEMDEV)
 #  define CONFIG_BOARD_COREDUMP_DEV
 #endif
 
@@ -103,11 +104,9 @@ static struct lib_hexdumpstream_s g_hexstream;
 static struct lib_blkoutstream_s g_devstream;
 #elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
 static struct lib_mtdoutstream_s g_devstream;
-#endif
-
-#ifdef CONFIG_BOARD_COREDUMP_MEMDEV
-static struct lib_fileinstream_s g_meminstream;
-static struct lib_fileoutstream_s g_memstream;
+#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
+static struct lib_fileinstream_s g_devinstream;
+static struct lib_fileoutstream_s g_devstream;
 #endif
 
 #ifdef CONFIG_BOARD_MEMORY_RANGE
@@ -826,16 +825,27 @@ static void coredump_dump_dev(pid_t pid)
   FAR void *stream = &g_devstream;
   int ret;
 
+# if defined(CONFIG_BOARD_COREDUMP_BLKDEV) || defined(CONFIG_BOARD_COREDUMP_MTDDEV)
   if (g_devstream.inode == NULL)
     {
       _alert("Coredump device not found\n");
       return;
     }
+# endif
 
-#ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
+# ifndef CONFIG_BOARD_COREDUMP_OVERWRITE
+  if (elf_exist_hdr((FAR struct lib_instream_s *)&g_devinstream))
+    {
+      _alert("Coredump memory device already exist:%s\n",
+             CONFIG_BOARD_COREDUMP_DEVPATH);
+      return;
+    }
+# endif
+
+# ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
   lib_lzfoutstream(&g_lzfstream, stream);
   stream = &g_lzfstream;
-#endif
+# endif
 
   ret = coredump(g_regions, stream, pid);
   if (ret < 0)
@@ -992,10 +1002,8 @@ int coredump_initialize(void)
 #elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
   ret = lib_mtdoutstream_open(&g_devstream,
                               CONFIG_BOARD_COREDUMP_DEVPATH);
-#endif
-
-#ifdef CONFIG_BOARD_COREDUMP_MEMDEV
-  ret = lib_fileinstream_open(&g_meminstream,
+#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
+  ret = lib_fileinstream_open(&g_devinstream,
                               CONFIG_BOARD_COREDUMP_DEVPATH,
                               O_RDONLY, 0666);
   if (ret < 0)
@@ -1005,7 +1013,7 @@ int coredump_initialize(void)
       return ret;
     }
 
-  ret = lib_fileoutstream_open(&g_memstream,
+  ret = lib_fileoutstream_open(&g_devstream,
                                CONFIG_BOARD_COREDUMP_DEVPATH,
                                O_WRONLY, 0666);
 #endif
@@ -1013,10 +1021,10 @@ int coredump_initialize(void)
 #ifdef CONFIG_BOARD_COREDUMP_DEV
   if (ret < 0)
     {
-#  ifdef CONFIG_BOARD_COREDUMP_MEMDEV
-      lib_fileoutstream_close(&g_meminstream);
-#  endif
-      _alert("%s Coredump device not found %d\n",
+# ifdef CONFIG_BOARD_COREDUMP_MEMDEV
+      lib_fileinstream_close(&g_devstream);
+# endif
+      _alert("%s Coredump device init failed:%d\n",
              CONFIG_BOARD_COREDUMP_DEVPATH, ret);
     }
 #endif
@@ -1039,9 +1047,7 @@ void coredump_dump(pid_t pid)
 {
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
   coredump_dump_syslog(pid);
-#endif
-
-#ifdef CONFIG_BOARD_COREDUMP_DEV
+#elif defined(CONFIG_BOARD_COREDUMP_DEV)
   coredump_dump_dev(pid);
 #endif
 }
