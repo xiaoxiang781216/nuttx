@@ -20,4 +20,8 @@
 
 set(SRCS mps_allocateheap.c mps_irq.c mps_serial.c mps_start.c mps_timer.c)
 
+if(CONFIG_BUILD_PROTECTED)
+  list(APPEND SRCS mps_userspace.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})

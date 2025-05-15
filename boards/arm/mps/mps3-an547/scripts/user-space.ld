@@ -20,11 +20,23 @@
  *
  ****************************************************************************/
 
-/* NOTE:  This depends on the memory.ld script having been included prior to
- * this script.
+OUTPUT_ARCH(arm)
+
+/* Specify the memory areas
+ * see arch/arm/src/mps/hardware/mps_memorymap.h for more details
  */
 
-OUTPUT_ARCH(arm)
+MEMORY
+{
+
+  kflash (rx)  : ORIGIN = 0x00000000, LENGTH = 4M
+  uflash (rx)  : ORIGIN = 0x20000000, LENGTH = 4M
+
+  kocram (rwx) : ORIGIN = 0x60000000, LENGTH = 8M
+  uocram (rwx) : ORIGIN = 0x60800000, LENGTH = 8M
+}
+
+_ram_size = LENGTH(kocram) + LENGTH(uocram);
 SECTIONS
 {
   .userspace :
