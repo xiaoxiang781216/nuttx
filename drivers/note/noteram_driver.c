@@ -713,6 +713,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
             limit->interval = drv->ratelimit.interval;
             limit->burst = drv->ratelimit.burst;
+            ret = OK;
           }
         break;
 
@@ -728,6 +729,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
             drv->ratelimit.interval = limit->interval;
             drv->ratelimit.burst = limit->burst;
+            ret = OK;
           }
         break;
 
