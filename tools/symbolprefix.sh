@@ -203,9 +203,11 @@ for input in "${inputs[@]}"; do
         if [ -z "$(ls -A "$temp_dir")" ]; then
             cp "$lib" "$final_output"
         else
-            for objfile in "$temp_dir"/*.o; do
-                process_one "$objfile" "$objfile" "$prefix"
-                remove_symbol_prefix "$objfile" "$objfile" "$prefix"
+            for objfile in "$temp_dir"/*; do
+                if file "$objfile" | grep -q "relocatable"; then
+                    process_one "$objfile" "$objfile" "$prefix"
+                    remove_symbol_prefix "$objfile" "$objfile" "$prefix"
+                fi
             done
 
             # keep the order of the file in the archive
@@ -227,7 +229,7 @@ done
 # Remove prefix from the skip section symbols
 if [[ ${#remove_prefix_args[@]} -ne 0 ]]; then
   for rename in "$output"/*; do
-    if [[ "$rename" == *.a || "$rename" == *.o ]]; then
+    if file "$rename" | grep -qE "ar archive|relocatable"; then
       $OBJCOPY "${remove_prefix_args[@]}" "$rename" "$rename"
     fi
   done
@@ -247,7 +249,7 @@ if [[ ${#skip_symbols[@]} -ne 0 ]]; then
     done
 
     for rename in "$output"/*; do
-      if [[ "$rename" == *.a || "$rename" == *.o ]]; then
+      if file "$rename" | grep -qE "ar archive|relocatable"; then
         echo $OBJCOPY "${remove_prefix_args[@]}" "$rename" "$rename"
         $OBJCOPY "${remove_prefix_args[@]}" "$rename" "$rename"
       fi
