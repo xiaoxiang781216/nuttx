@@ -46,6 +46,7 @@
 #include <nuttx/can.h>
 #include <stdint.h>
 
+#ifdef CONFIG_NET_CAN
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -108,4 +109,5 @@ int can_input(FAR struct net_driver_s *dev);
 }
 #endif
 
+#endif  /* CONFIG_NET_CAN */
 #endif /* __INCLUDE_NUTTX_NET_CAN_H */
