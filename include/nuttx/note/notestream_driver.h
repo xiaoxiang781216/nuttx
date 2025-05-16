@@ -55,10 +55,6 @@ extern "C"
  * Public Data
  ****************************************************************************/
 
-#ifdef CONFIG_DRIVERS_NOTELOWEROUT
-extern struct notestream_driver_s g_notestream_lowerout;
-#endif
-
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/

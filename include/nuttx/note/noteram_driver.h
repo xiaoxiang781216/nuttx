@@ -44,34 +44,10 @@
 struct noteram_driver_s;
 
 /****************************************************************************
- * Public Data
- ****************************************************************************/
-
-extern struct noteram_driver_s g_noteram_driver;
-
-/****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
-#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
-
-/****************************************************************************
- * Name: noteram_register
- *
- * Description:
- *   Register RAM note driver at /dev/note/ram that can be used by an
- *   application to read note data from the circular note buffer.
- *
- * Input Parameters:
- *   None.
- *
- * Returned Value:
- *   Zero on succress. A negated errno value is returned on a failure.
- *
- ****************************************************************************/
-
 #ifdef CONFIG_DRIVERS_NOTERAM
-int noteram_register(void);
 
 FAR struct note_driver_s *
 noteram_initialize(FAR const char *devpath, size_t bufsize,
@@ -82,7 +58,5 @@ noteram_initialize_with_buffer(FAR const char *devpath,
                                FAR void *buffer, size_t bufsize,
                                bool overwrite, bool crashdump, bool regnote);
 #endif
-
-#endif /* defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT) */
 
 #endif /* __INCLUDE_NUTTX_NOTE_NOTERAM_DRIVER_H */

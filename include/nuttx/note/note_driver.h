@@ -383,8 +383,6 @@ struct note_driver_s
  * Public Function Prototypes
  ****************************************************************************/
 
-#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
-
 #ifdef CONFIG_DRIVERS_NOTE
 
 /****************************************************************************
@@ -422,8 +420,6 @@ int note_early_initialize(void);
 int note_initialize(void);
 #endif
 
-#endif /* defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT) */
-
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
 void note_driver_printf_ip(FAR struct note_driver_s *driver, uint32_t tag,
                            uintptr_t ip, uint32_t type,
@@ -444,30 +440,10 @@ void note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
 #endif
 
 /****************************************************************************
- * Name: note_get_taskname
- *
- * Description:
- *   Get the task name string of the specified PID
- *
- * Input Parameters:
- *   PID - Task ID
- *   buf - A writable buffer to hold the task name
- *   len - The length of the buffer
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void note_get_taskname(pid_t pid, FAR char *buf, size_t len);
-
-/****************************************************************************
  * Name: note_driver_register
  ****************************************************************************/
 
 int note_driver_register(FAR struct note_driver_s *driver);
-
-#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
 
 /****************************************************************************
  * Name: sched_note_filter_mode
@@ -551,7 +527,5 @@ void sched_note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
 void sched_note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
                            FAR struct note_filter_named_tag_s *newf);
 #endif
-
-#endif /* defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT) */
 
 #endif /* __INCLUDE_NUTTX_NOTE_NOTE_DRIVER_H */

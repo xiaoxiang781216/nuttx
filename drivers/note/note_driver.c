@@ -38,14 +38,11 @@
 #include <nuttx/sched.h>
 #include <nuttx/clock.h>
 #include <nuttx/note/note_driver.h>
-#include <nuttx/note/noteram_driver.h>
-#include <nuttx/note/notelog_driver.h>
-#include <nuttx/note/notestream_driver.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/spinlock.h>
 
+#include "note_driver.h"
 #include "sched/sched.h"
-#include "noterpmsg.h"
 
 /****************************************************************************
  * Pre-processor Definitions

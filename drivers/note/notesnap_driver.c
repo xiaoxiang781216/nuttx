@@ -26,7 +26,6 @@
 
 #include <nuttx/atomic.h>
 #include <nuttx/note/note_driver.h>
-#include <nuttx/note/notesnap_driver.h>
 #include <nuttx/panic_notifier.h>
 #include <nuttx/sched_note.h>
 #include <sched/sched.h>
@@ -200,6 +199,8 @@ static FAR const char *g_notesnap_type[] =
  * Private Functions
  ****************************************************************************/
 
+static void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream);
+
 /****************************************************************************
  * Name: notesnap_common
  ****************************************************************************/
@@ -234,6 +235,14 @@ static inline void notesnap_common(FAR struct note_driver_s *drv,
 /****************************************************************************
  * Name: notesnap_*
  ****************************************************************************/
+
+static void notesnap_dump(void)
+{
+  struct lib_syslograwstream_s stream;
+  lib_syslograwstream_open(&stream);
+  notesnap_dump_with_stream(&stream.common);
+  lib_syslograwstream_close(&stream);
+}
 
 static void notesnap_start(FAR struct note_driver_s *drv,
                            FAR struct tcb_s *tcb)
@@ -412,16 +421,4 @@ void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream)
     }
 
   atomic_set(&g_notesnap.dumping, false);
-}
-
-/****************************************************************************
- * Name: notesnap_dump
- ****************************************************************************/
-
-void notesnap_dump(void)
-{
-  struct lib_syslograwstream_s stream;
-  lib_syslograwstream_open(&stream);
-  notesnap_dump_with_stream(&stream.common);
-  lib_syslograwstream_close(&stream);
 }

@@ -47,6 +47,8 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/streams.h>
 
+#include "note_driver.h"
+
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
 #  ifdef CONFIG_LIB_SYSCALL
 #    include <syscall.h>
