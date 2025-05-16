@@ -25,8 +25,29 @@ set(CMAKE_SYSTEM_VERSION 1)
 
 set(ARCH_SUBDIR intel64)
 
-set(CMAKE_C_COMPILER gcc)
-set(CMAKE_CXX_COMPILER g++)
+if(CONFIG_WINDOWS_CYGWIN)
+  set(TOOLCHAIN_PREFIX i486-nuttx-elf)
+endif()
+
+if(CONFIG_HOST_MACOS)
+  set(TOOLCHAIN_PREFIX x86_64-elf)
+endif()
+
+set(TOOLCHAIN_PREFIX x86_64-none-linux-gnu)
+
+set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)
+set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++)
+set(CMAKE_ASM_COMPILER ${CMAKE_C_COMPILER})
+set(CMAKE_PREPROCESSOR ${TOOLCHAIN_PREFIX}-gcc -E -P -x c)
+set(CMAKE_STRIP ${TOOLCHAIN_PREFIX}-strip --strip-unneeded)
+set(CMAKE_OBJCOPY ${TOOLCHAIN_PREFIX}-objcopy)
+set(CMAKE_OBJDUMP ${TOOLCHAIN_PREFIX}-objdump)
+set(CMAKE_LINKER ${TOOLCHAIN_PREFIX}-ld)
+set(CMAKE_LD ${TOOLCHAIN_PREFIX}-ld)
+set(CMAKE_AR ${TOOLCHAIN_PREFIX}-ar)
+set(CMAKE_NM ${TOOLCHAIN_PREFIX}-nm)
+set(CMAKE_RANLIB ${TOOLCHAIN_PREFIX}-ranlib)
+
 # override the ARCHIVE command
 set(CMAKE_ARCHIVE_COMMAND "<CMAKE_AR> rcs <TARGET> <LINK_FLAGS> <OBJECTS>")
 set(CMAKE_RANLIB_COMMAND "<CMAKE_RANLIB> <TARGET>")
@@ -44,27 +65,28 @@ set(CMAKE_ASM_ARCHIVE_FINISH ${CMAKE_RANLIB_COMMAND})
 
 set(NO_LTO "-fno-lto")
 
-if(CONFIG_DEBUG_CUSTOMOPT)
+if(CONFIG_DEBUG_SYMBOLS)
+  add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
+endif()
+
+if(CONFIG_DEBUG_NOOPT)
+  add_compile_options(-O0)
+elseif(CONFIG_DEBUG_CUSTOMOPT)
   add_compile_options(${CONFIG_DEBUG_OPTLEVEL})
 elseif(CONFIG_DEBUG_FULLOPT)
   add_compile_options(-Os)
 endif()
 
-if(NOT CONFIG_DEBUG_NOOPT)
-  add_compile_options(-fno-strict-aliasing)
-endif()
-
-# NOTE: don't set -fomit-frame-pointer - it breaks debugging with gdb. The
-# addresses of local variables are shifted in gdb if this option is enabled
-
 if(CONFIG_FRAME_POINTER)
   add_compile_options(-fno-omit-frame-pointer -fno-optimize-sibling-calls)
 endif()
 
-if(CONFIG_STACK_CANARIES)
-  add_compile_options(-fstack-protector-all)
-else()
-  add_compile_options(-fno-stack-protector)
+if(CONFIG_ARCH_INTEL64_DISABLE_CET)
+  add_compile_options(-fcf-protection=none)
+endif()
+
+if(CONFIG_ARCH_INTEL64_DISABLE_CET)
+  add_compile_options(-fno-tree-vectorize)
 endif()
 
 if(CONFIG_STACK_USAGE)
@@ -81,26 +103,25 @@ if(CONFIG_ARCH_INSTRUMENT_ALL)
   add_compile_options(-finstrument-functions)
 endif()
 
+if(CONFIG_PROFILE_ALL)
+  add_compile_options(-pg)
+endif()
+
+add_compile_options(-fno-pic -mcmodel=large -mno-red-zone -mrdrnd)
+
 if(CONFIG_COVERAGE_ALL)
   add_compile_options(-fprofile-arcs -ftest-coverage -fno-inline)
 endif()
 
-if(CONFIG_DEBUG_SYMBOLS)
-  add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
-endif()
-
 if(CONFIG_HOST_LINUX)
-  add_link_options(-Wl,-z,noexecstack)
+  add_link_options(-Wl,-z noexecstack)
 endif()
 
 # Architecture flags
 
-add_link_options(-Wl,--entry=__pmode_entry)
 add_link_options(-z max-page-size=0x1000)
 add_link_options(-no-pie -nostdlib)
 add_link_options(-Wl,--no-relax)
-add_compile_options(-fno-pic -mcmodel=large)
-add_compile_options(-mno-red-zone)
 
 add_compile_options(
   -U_AIX
@@ -135,12 +156,10 @@ if(CONFIG_CXX_STANDARD)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-std=${CONFIG_CXX_STANDARD}>)
 endif()
 
-if(CONFIG_LIBCXX)
-  add_compile_options(-D_LIBCPP_DISABLE_AVAILABILITY)
-endif()
-
-if(NOT CONFIG_LIBCXXTOOLCHAIN)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
+if(CONFIG_STACK_CANARIES)
+  add_compile_options(-fstack-protector-all)
+else()
+  add_compile_options(-fno-stack-protector)
 endif()
 
 if(NOT CONFIG_CXX_EXCEPTION)
@@ -152,6 +171,10 @@ if(NOT CONFIG_CXX_RTTI)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
 endif()
 
+if(CONFIG_LIBCXX)
+  add_compile_options(-D__GLIBCXX__ -D_LIBCPP_DISABLE_AVAILABILITY)
+endif()
+
 if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
   add_link_options(-Wl,--gc-sections)
   add_compile_options(-ffunction-sections -fdata-sections)
@@ -161,8 +184,24 @@ if(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE)
   add_link_options(-Wl,--whole-archive)
 endif()
 
-if(CONFIG_ARCH_INTEL64_HAVE_RDRAND)
-  add_compile_options(-mrdrnd)
+if(NOT CONFIG_LIBCXXTOOLCHAIN)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
+endif()
+
+if(CONFIG_MM_KASAN_ALL)
+  add_compile_options(-fsanitize=kernel-address)
+endif()
+
+if(CONFIG_MM_KASAN_GLOBAL)
+  add_compile_options(--param asan-globals=1)
+endif()
+
+if(CONFIG_MM_KASAN_DISABLE_READS_CHECK)
+  add_compile_options(--param asan-instrument-reads=0)
+endif()
+
+if(CONFIG_MM_KASAN_DISABLE_WRITES_CHECK)
+  add_compile_options(--param asan-instrument-writes=0)
 endif()
 
 if(CONFIG_ARCH_X86_64_SSE3)
@@ -183,6 +222,10 @@ endif()
 
 if(CONFIG_ARCH_X86_64_SSE4A)
   add_compile_options(-msse4a)
+endif()
+
+if(CONFIG_ARCH_X86_64_FMA)
+  add_compile_options(-mfma)
 endif()
 
 if(CONFIG_ARCH_X86_64_AVX)
