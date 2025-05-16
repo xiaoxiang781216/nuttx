@@ -52,9 +52,9 @@ void rpmsg_note_receive(FAR const struct rpmsg_hdr *hdr,
                         FAR const struct rpmsg_endpoint *ept)
 {
   DEBUGASSERT(hdr != NULL && ept != NULL);
-  sched_note_printf(NOTE_TAG_RPMSG,
-                    "Recv:src:%u dst:%u len:%d ept_cb:%p\n",
-                    hdr->src, hdr->dst, hdr->len, ept->cb);
+  note_driver_printf(g_rpmsg_note_drv, NOTE_TAG_RPMSG,
+                     "Recv:src:%u dst:%u len:%d ept_cb:%p\n",
+                     hdr->src, hdr->dst, hdr->len, ept->cb);
 }
 
 /****************************************************************************
@@ -66,9 +66,9 @@ void rpmsg_note_send(FAR struct rpmsg_device *rdev,
                      const void *data, int len)
 {
   DEBUGASSERT(rdev != NULL);
-  sched_note_printf(NOTE_TAG_RPMSG,
-                    "Send:rdev:%p src:%" PRIu32 " dst:%" PRIu32 " len:%d\n",
-                    rdev, src, dst, len);
+  note_driver_printf(g_rpmsg_note_drv, NOTE_TAG_RPMSG,
+                     "Send:rdev:%p src:%" PRIu32 " dst:%" PRIu32 " len:%d\n",
+                     rdev, src, dst, len);
 }
 
 /****************************************************************************
@@ -79,21 +79,12 @@ int rpmsg_note_initialize(void)
 {
   g_rpmsg_note_drv = noteram_initialize("/dev/note/rpmsg",
                                         CONFIG_RPMSG_NOTE_BUFSIZE,
-                                        true, true);
+                                        true, true, false);
   if (g_rpmsg_note_drv == NULL)
     {
       rpmsgerr("failed to initialize note driver.\n");
       return -ENOMEM;
     }
-
-  /* Only enable rpmsg related traces */
-
-  NOTE_FILTER_TAGMASK_FILL(&g_rpmsg_note_drv->filter.tag_mask);
-  NOTE_FILTER_TAGMASK_CLR(NOTE_TAG_RPMSG,
-                          &g_rpmsg_note_drv->filter.tag_mask);
-
-  g_rpmsg_note_drv->filter.mode.flag = NOTE_FILTER_MODE_FLAG_ENABLE |
-                                       NOTE_FILTER_MODE_FLAG_DUMP;
 
   return 0;
 }

@@ -1530,6 +1530,7 @@ int noteram_register(void)
  *  bufsize: The size of the circular buffer
  *  overwrite: The overwrite mode
  *  crashdump: If used by the crash dump
+ *  regnote: If register the note driver
  *
  * Returned Value:
  *   Zero on succress. A negated errno value is returned on a failure.
@@ -1538,7 +1539,7 @@ int noteram_register(void)
 
 FAR struct note_driver_s *
 noteram_initialize(FAR const char *devpath, size_t bufsize,
-                   bool overwrite, bool crashdump)
+                   bool overwrite, bool crashdump, bool regnote)
 {
   FAR void *buffer;
 
@@ -1550,7 +1551,7 @@ noteram_initialize(FAR const char *devpath, size_t bufsize,
     }
 
   return noteram_initialize_with_buffer(devpath, buffer, bufsize,
-                                        overwrite, crashdump);
+                                        overwrite, crashdump, regnote);
 }
 
 /****************************************************************************
@@ -1566,6 +1567,7 @@ noteram_initialize(FAR const char *devpath, size_t bufsize,
  *  bufsize: The size of the circular buffer
  *  overwrite: The overwrite mode
  *  crashdump: If used by the crash dump
+ *  regnote: If register the note driver
  *
  * Returned Value:
  *   Zero on succress. A negated errno value is returned on a failure.
@@ -1575,7 +1577,7 @@ noteram_initialize(FAR const char *devpath, size_t bufsize,
 FAR struct note_driver_s *
 noteram_initialize_with_buffer(FAR const char *devpath,
                                FAR void *buffer, size_t bufsize,
-                               bool overwrite, bool crashdump)
+                               bool overwrite, bool crashdump, bool regnote)
 {
   FAR struct noteram_driver_s *drv;
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
@@ -1629,11 +1631,14 @@ noteram_initialize_with_buffer(FAR const char *devpath,
   drv->bufsize = bufsize;
   drv->overwrite = overwrite;
 
-  ret = note_driver_register(&drv->driver);
-  if (ret < 0)
+  if (regnote)
     {
-      kmm_free(drv);
-      return NULL;
+      ret = note_driver_register(&drv->driver);
+      if (ret < 0)
+        {
+          kmm_free(drv);
+          return NULL;
+        }
     }
 
   if (devpath == NULL)

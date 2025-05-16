@@ -129,6 +129,22 @@
 #  define NOTE_FILTER_TAGMASK_FILL(s)
 #endif
 
+# define note_driver_event(driver, tag, event, buf, len) \
+         note_driver_event_ip(driver, tag, SCHED_NOTE_IP, event, buf, len)
+#define note_driver_vprintf(driver, tag, fmt, va) \
+        note_driver_vprintf_ip(driver, tag, SCHED_NOTE_IP, fmt, va)
+#define note_driver_printf(driver, tag, fmt, ...) \
+        note_driver_printf_ip(driver, tag, SCHED_NOTE_IP, 0, fmt, ##__VA_ARGS__)
+
+#define note_driver_begin(driver, tag) \
+        note_driver_event(driver, tag, NOTE_DUMP_BEGIN, NULL, 0)
+#define note_driver_end(driver, tag) \
+        note_driver_event(driver, tag, NOTE_DUMP_END, NULL, 0)
+#define note_driver_mark(driver, tag, buf) \
+        note_driver_event(driver, tag, NOTE_DUMP_MARK, buf, strlen(buf))
+#define note_driver_binary(driver, tag, buf, len) \
+        note_driver_event(driver, tag, NOTE_DUMP_BINARY, buf, len)
+
 /* IOCTL Commands ***********************************************************/
 
 /* NOTE_CLEAR
@@ -407,6 +423,25 @@ int note_initialize(void);
 #endif
 
 #endif /* defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT) */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+void note_driver_printf_ip(FAR struct note_driver_s *driver, uint32_t tag,
+                           uintptr_t ip, uint32_t type,
+                           FAR const char *fmt, ...) printf_like(5, 6);
+
+void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint32_t tag,
+                            uintptr_t ip, uint32_t type,
+                            FAR const char *fmt,
+                            va_list *va) printf_like(5, 0);
+
+void note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
+                          uintptr_t ip, uint8_t event, FAR const void *buf,
+                          size_t len);
+#else
+#  define note_driver_printf_ip(d,t,i,p,f,a)
+#  define note_driver_vprintf_ip(d,t,i,p,f,a)
+#  define note_driver_event_ip(d,t,i,e,b,l)
+#endif
 
 /****************************************************************************
  * Name: note_get_taskname
