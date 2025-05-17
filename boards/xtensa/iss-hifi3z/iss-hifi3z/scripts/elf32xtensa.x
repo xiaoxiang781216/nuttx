@@ -551,26 +551,26 @@ SECTIONS
 
   __llvm_prf_data : ALIGN(4)
   {
-    __llvm_prf_data_start = ABSOLUTE(.);
+    __start__llvm_prf_data = ABSOLUTE(.);
     *(__llvm_prf_data)
     . = ALIGN (4);
-    __llvm_prf_data_end = ABSOLUTE(.);
+    __end__llvm_prf_data = ABSOLUTE(.);
   } >sram18_seg :sram18_phdr
 
   __llvm_prf_cnts : ALIGN(4)
   {
-    __llvm_prf_cnts_start = ABSOLUTE(.);
+    __start__llvm_prf_cnts = ABSOLUTE(.);
     *(__llvm_prf_cnts)
     . = ALIGN (4);
-    __llvm_prf_cnts_end = ABSOLUTE(.);
+    __end__llvm_prf_cnts = ABSOLUTE(.);
   } >sram18_seg :sram18_phdr
 
   __llvm_prf_names : ALIGN(4)
   {
-    __llvm_prf_names_start = ABSOLUTE(.);
+    __start__llvm_prf_names = ABSOLUTE(.);
     *(__llvm_prf_names)
     . = ALIGN (4);
-    __llvm_prf_names_end = ABSOLUTE(.);
+    __end__llvm_prf_names = ABSOLUTE(.);
   } >sram18_seg :sram18_phdr
 
   __llvm_prf_vnds : ALIGN(4)
