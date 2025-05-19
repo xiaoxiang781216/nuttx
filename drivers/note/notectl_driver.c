@@ -24,13 +24,10 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
-#include <sys/types.h>
 #include <errno.h>
-
 #include <nuttx/fs/fs.h>
-#include <nuttx/note/note_driver.h>
+
+#include "note_driver.h"
 
 /****************************************************************************
  * Private Types
@@ -86,7 +83,7 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR struct note_filter_named_mode_s *mode =
                          (FAR struct note_filter_named_mode_s *)arg;
-          sched_note_filter_mode(mode, NULL);
+          note_filter_mode(mode, NULL);
           return OK;
         }
 
@@ -99,7 +96,7 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR struct note_filter_named_mode_s *mode =
                         (FAR struct note_filter_named_mode_s *)arg;
-          sched_note_filter_mode(NULL, mode);
+          note_filter_mode(NULL, mode);
           return OK;
         }
 
@@ -113,7 +110,7 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR struct note_filter_named_syscall_s *filter;
           filter = (FAR struct note_filter_named_syscall_s *)arg;
-          sched_note_filter_syscall(filter, NULL);
+          note_filter_syscall(filter, NULL);
           return OK;
         }
 
@@ -126,7 +123,7 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR struct note_filter_named_syscall_s *filter;
           filter = (FAR struct note_filter_named_syscall_s *)arg;
-          sched_note_filter_syscall(NULL, filter);
+          note_filter_syscall(NULL, filter);
           return OK;
         }
 #endif
@@ -141,7 +138,7 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR struct note_filter_named_irq_s *filter;
           filter = (FAR struct note_filter_named_irq_s *)arg;
-          sched_note_filter_irq(filter, NULL);
+          note_filter_irq(filter, NULL);
           return OK;
         }
 
@@ -155,7 +152,7 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR struct note_filter_named_irq_s *filter;
           filter = (FAR struct note_filter_named_irq_s *)arg;
-          sched_note_filter_irq(NULL, filter);
+          note_filter_irq(NULL, filter);
           return OK;
         }
 #endif
@@ -170,7 +167,7 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR struct note_filter_named_tag_s *filter;
           filter = (FAR struct note_filter_named_tag_s *)arg;
-          sched_note_filter_tag(filter, NULL);
+          note_filter_tag(filter, NULL);
           return OK;
         }
 
@@ -183,7 +180,7 @@ static int notectl_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           FAR struct note_filter_named_tag_s *filter;
           filter = (FAR struct note_filter_named_tag_s *)arg;
-          sched_note_filter_tag(NULL, filter);
+          note_filter_tag(NULL, filter);
           return OK;
         }
 #endif

@@ -2141,7 +2141,7 @@ void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
 
 /****************************************************************************
- * Name: sched_note_filter_mode
+ * Name: note_filter_mode
  *
  * Description:
  *   Set and get note filter mode.
@@ -2160,8 +2160,8 @@ void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
  *
  ****************************************************************************/
 
-void sched_note_filter_mode(FAR struct note_filter_named_mode_s *oldm,
-                            FAR struct note_filter_named_mode_s *newm)
+void note_filter_mode(FAR struct note_filter_named_mode_s *oldm,
+                      FAR struct note_filter_named_mode_s *newm)
 {
   irqstate_t irq_mask;
   FAR struct note_driver_s **driver;
@@ -2206,7 +2206,7 @@ void sched_note_filter_mode(FAR struct note_filter_named_mode_s *oldm,
 }
 
 /****************************************************************************
- * Name: sched_note_filter_syscall
+ * Name: note_filter_syscall
  *
  * Description:
  *   Set and get syscall filter setting
@@ -2226,8 +2226,8 @@ void sched_note_filter_mode(FAR struct note_filter_named_mode_s *oldm,
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
-void sched_note_filter_syscall(FAR struct note_filter_named_syscall_s *oldf,
-                               FAR struct note_filter_named_syscall_s *newf)
+void note_filter_syscall(FAR struct note_filter_named_syscall_s *oldf,
+                         FAR struct note_filter_named_syscall_s *newf)
 {
   irqstate_t irq_mask;
   FAR struct note_driver_s **driver;
@@ -2273,7 +2273,7 @@ void sched_note_filter_syscall(FAR struct note_filter_named_syscall_s *oldf,
 #endif
 
 /****************************************************************************
- * Name: sched_note_filter_irq
+ * Name: note_filter_irq
  *
  * Description:
  *   Set and get IRQ filter setting
@@ -2293,8 +2293,8 @@ void sched_note_filter_syscall(FAR struct note_filter_named_syscall_s *oldf,
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
-void sched_note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
-                           FAR struct note_filter_named_irq_s *newf)
+void note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
+                     FAR struct note_filter_named_irq_s *newf)
 {
   irqstate_t irq_mask;
   FAR struct note_driver_s **driver;
@@ -2340,7 +2340,7 @@ void sched_note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
 #endif
 
 /****************************************************************************
- * Name: sched_note_filter_tag
+ * Name: note_filter_tag
  *
  * Description:
  *   Set and get tag filter setting
@@ -2360,8 +2360,8 @@ void sched_note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-void sched_note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
-                           FAR struct note_filter_named_tag_s *newf)
+void note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
+                     FAR struct note_filter_named_tag_s *newf)
 {
   FAR struct note_driver_s **driver;
   irqstate_t irq_mask;
