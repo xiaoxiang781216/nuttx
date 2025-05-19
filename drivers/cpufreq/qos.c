@@ -40,7 +40,7 @@ static spinlock_t g_pm_qos_lock;
  * Private Functions
  ****************************************************************************/
 
-static int32_t pm_qos_get_value(FAR struct pm_qos_constraints *c)
+static uint32_t pm_qos_get_value(FAR struct pm_qos_constraints *c)
 {
   if (plist_head_empty(&c->list))
     {
@@ -65,7 +65,7 @@ static int32_t pm_qos_get_value(FAR struct pm_qos_constraints *c)
 }
 
 static void pm_qos_set_value(FAR struct pm_qos_constraints *c,
-                             int32_t value)
+                             uint32_t value)
 {
   c->target_value = value;
 }
@@ -78,7 +78,7 @@ static void pm_qos_set_value(FAR struct pm_qos_constraints *c,
 static void pm_qos_flags_remove_req(FAR struct pm_qos_flags *pqf,
                                     FAR struct pm_qos_flags_request *req)
 {
-  int32_t val = 0;
+  uint32_t val = 0;
 
   list_delete(&req->node);
   list_for_every_entry(&pqf->list, req, typeof(*req), node)
@@ -97,7 +97,7 @@ static void pm_qos_flags_remove_req(FAR struct pm_qos_flags *pqf,
  * c: List of PM QoS constraint requests.
  */
 
-int32_t pm_qos_read_value(FAR struct pm_qos_constraints *c)
+uint32_t pm_qos_read_value(FAR struct pm_qos_constraints *c)
 {
   return c->target_value;
 }
@@ -121,12 +121,12 @@ int32_t pm_qos_read_value(FAR struct pm_qos_constraints *c)
 
 int pm_qos_update_target(FAR struct pm_qos_constraints *c,
                          FAR struct plist_node *node,
-                         enum pm_qos_req_action action, int32_t value)
+                         enum pm_qos_req_action action, uint32_t value)
 {
   irqstate_t flags;
-  int32_t prev_value;
-  int32_t curr_value;
-  int32_t new_value;
+  uint32_t prev_value;
+  uint32_t curr_value;
+  uint32_t new_value;
 
   flags = spin_lock_irqsave(&g_pm_qos_lock);
   prev_value = pm_qos_get_value(c);
@@ -192,7 +192,7 @@ int pm_qos_update_target(FAR struct pm_qos_constraints *c,
 
 int pm_qos_update_flags(FAR struct pm_qos_flags *pqf,
                         FAR struct pm_qos_flags_request *req,
-                        enum pm_qos_req_action action, int32_t val)
+                        enum pm_qos_req_action action, uint32_t val)
 {
   irqstate_t irqflags;
   int32_t prev_value;
@@ -261,10 +261,10 @@ void freq_constraints_init(FAR struct freq_constraints *qos)
  * type: QoS request type.
  */
 
-int32_t freq_qos_read_value(FAR struct freq_constraints *qos,
+uint32_t freq_qos_read_value(FAR struct freq_constraints *qos,
                             enum freq_qos_req_type type)
 {
-  int32_t ret;
+  uint32_t ret;
 
   switch (type)
     {
@@ -294,7 +294,7 @@ int32_t freq_qos_read_value(FAR struct freq_constraints *qos,
  */
 
 int freq_qos_apply(FAR struct freq_qos_request *req,
-                   enum pm_qos_req_action action, int32_t value)
+                   enum pm_qos_req_action action, uint32_t value)
 {
   int ret;
 
@@ -338,7 +338,7 @@ int freq_qos_apply(FAR struct freq_qos_request *req,
 
 int freq_qos_add_request(FAR struct freq_constraints *qos,
                          FAR struct freq_qos_request *req,
-                         enum freq_qos_req_type type, int32_t value)
+                         enum freq_qos_req_type type, uint32_t value)
 {
   int ret;
 
@@ -372,7 +372,7 @@ int freq_qos_add_request(FAR struct freq_constraints *qos,
  */
 
 int freq_qos_update_request(FAR struct freq_qos_request *req,
-                            int32_t new_value)
+                            uint32_t new_value)
 {
   if (!req || new_value < 0)
     {

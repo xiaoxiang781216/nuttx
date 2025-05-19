@@ -41,7 +41,7 @@ struct plist_head
 
 struct plist_node
 {
-  int prio;
+  uint32_t prio;
   struct list_node prio_list;
   struct list_node node_list;
 };

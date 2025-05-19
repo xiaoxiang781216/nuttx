@@ -54,9 +54,9 @@ enum pm_qos_type
 struct pm_qos_constraints
 {
   struct plist_head list;
-  int32_t target_value;
-  int32_t default_value;
-  int32_t no_constraint_value;
+  uint32_t target_value;
+  uint32_t default_value;
+  uint32_t no_constraint_value;
   enum pm_qos_type type;
   FAR struct blocking_notifier_head *notifiers;
 };
@@ -123,28 +123,28 @@ extern "C"
 #define EXTERN extern
 #endif
 
-int32_t pm_qos_read_value(FAR struct pm_qos_constraints *c);
+uint32_t pm_qos_read_value(FAR struct pm_qos_constraints *c);
 
 int pm_qos_update_target(FAR struct pm_qos_constraints *c,
                          FAR struct plist_node *node,
-                         enum pm_qos_req_action action, int32_t value);
+                         enum pm_qos_req_action action, uint32_t value);
 int pm_qos_update_flags(FAR struct pm_qos_flags *pqf,
                         FAR struct pm_qos_flags_request *req,
-                        enum pm_qos_req_action action, int32_t val);
+                        enum pm_qos_req_action action, uint32_t val);
 
 void freq_constraints_init(FAR struct freq_constraints *qos);
-int32_t freq_qos_read_value(FAR struct freq_constraints *qos,
-                            enum freq_qos_req_type type);
+uint32_t freq_qos_read_value(FAR struct freq_constraints *qos,
+                             enum freq_qos_req_type type);
 
 int freq_qos_add_request(FAR struct freq_constraints *qos,
                          FAR struct freq_qos_request *req,
-                         enum freq_qos_req_type type, int32_t value);
+                         enum freq_qos_req_type type, uint32_t value);
 int freq_qos_update_request(FAR struct freq_qos_request *req,
-                            int32_t new_value);
+                            uint32_t new_value);
 int freq_qos_remove_request(FAR struct freq_qos_request *req);
 
 int freq_qos_apply(FAR struct freq_qos_request *req,
-                   enum pm_qos_req_action action, int32_t value);
+                   enum pm_qos_req_action action, uint32_t value);
 
 int freq_qos_add_notifier(FAR struct freq_constraints *qos,
                           enum freq_qos_req_type type,

@@ -194,7 +194,7 @@ static ssize_t cpufreq_read(FAR struct file *filep,
     {
       linesize += snprintf(line + linesize,
                            CPUFREQ_LINELEN - linesize,
-                           "%p: %d %d\n",
+                           "%p: %"PRIu32" %"PRIu32"\n",
                            qos->caller,
                            qos->min.pnode.prio,
                            qos->max.pnode.prio);
