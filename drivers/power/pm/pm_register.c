@@ -35,8 +35,6 @@
 
 #include "pm.h"
 
-#ifdef CONFIG_PM
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -129,5 +127,3 @@ int pm_domain_register(int domain, FAR struct pm_callback_s *cb)
   spin_unlock_irqrestore(&pdom->lock, flags);
   return ret;
 }
-
-#endif /* CONFIG_PM */

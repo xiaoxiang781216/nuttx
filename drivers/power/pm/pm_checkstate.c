@@ -34,8 +34,6 @@
 
 #include "pm.h"
 
-#ifdef CONFIG_PM
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -94,5 +92,3 @@ enum pm_state_e pm_checkstate(int domain)
 
   return newstate;
 }
-
-#endif /* CONFIG_PM */
