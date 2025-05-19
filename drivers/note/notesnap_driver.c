@@ -227,7 +227,7 @@ static inline void notesnap_common(FAR struct note_driver_s *drv,
 #ifdef CONFIG_SMP
   note->cpu = tcb->cpu;
 #endif
-  note->count = UP_REALSYM(perf_gettime)();
+  note->count = NOTE_PERF_GETTIME();
   note->pid = tcb->pid;
   note->args = args;
 }

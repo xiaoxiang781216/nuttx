@@ -24,8 +24,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
@@ -218,7 +216,7 @@ static void note_common(FAR struct tcb_s *tcb,
       note->nc_pid = tcb->pid;
     }
 
-  note->nc_systime = UP_REALSYM(perf_gettime)();
+  note->nc_systime = NOTE_PERF_GETTIME();
 }
 
 /****************************************************************************

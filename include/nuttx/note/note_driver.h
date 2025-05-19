@@ -129,8 +129,16 @@
 #  define NOTE_FILTER_TAGMASK_FILL(s)
 #endif
 
-# define note_driver_event(driver, tag, event, buf, len) \
-         note_driver_event_ip(driver, tag, SCHED_NOTE_IP, event, buf, len)
+/* Sometimes perf_getime is not a syscall */
+
+#ifdef CONFIG_ARCH_HAVE_PERF_EVENTS_USER_ACCESS
+#  define NOTE_PERF_GETTIME perf_gettime
+#else
+#  define NOTE_PERF_GETTIME UP_REALSYM(perf_gettime)
+#endif
+
+#define note_driver_event(driver, tag, event, buf, len) \
+        note_driver_event_ip(driver, tag, SCHED_NOTE_IP, event, buf, len)
 #define note_driver_vprintf(driver, tag, fmt, va) \
         note_driver_vprintf_ip(driver, tag, SCHED_NOTE_IP, fmt, va)
 #define note_driver_printf(driver, tag, fmt, ...) \
