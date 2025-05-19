@@ -245,7 +245,7 @@ def gdb_start(args):
     return multiprocessing.Process(target=gdb_run, args=(gdb_cmd,)).start()
 
 
-def parse_args(args=None):
+def get_argparser():
     parser = argparse.ArgumentParser(
         prog="nxstub",
         description=f"nxstub v{__version__} - NuttX GDB server based on crash log, core dump or memory dump.",
@@ -254,14 +254,15 @@ def parse_args(args=None):
         "-a",
         "--arch",
         type=str,
-        required=True,
         choices=g_reg_table.keys(),
+        required=True,
         help="The architecture of the target.",
     )
     parser.add_argument(
         "-e",
         "--elffile",
         type=str,
+        metavar="file",
         required=True,
         help="The elf file.",
     )
@@ -282,6 +283,7 @@ def parse_args(args=None):
         "-r",
         "--rawfile",
         type=str,
+        metavar="file",
         nargs="*",
         help="The memory dump file, in format of 'memdump1.bin:address1 memdump2.bin:address2'.",
     )
@@ -289,6 +291,7 @@ def parse_args(args=None):
         "-c",
         "--core",
         type=str,
+        metavar="file",
         help="The core dump file.",
     )
     parser.add_argument(
@@ -301,6 +304,7 @@ def parse_args(args=None):
         "-l",
         "--log",
         type=str,
+        metavar="file",
         help="The crash dump log file.",
     )
     parser.add_argument(
@@ -314,6 +318,7 @@ def parse_args(args=None):
         "--gdb",
         help="Optional path to GDB executable, once specified, will automatically start GDB session.",
         type=str,
+        metavar="file",
     )
     parser.add_argument(
         "-i",
@@ -324,12 +329,16 @@ def parse_args(args=None):
     parser.add_argument(
         "dump",
         type=str,
+        metavar="file",
         nargs="?",
         default=None,
         help="Optional dump file that could be crash log, memory dump or core dump, automatically parsed.",
     )
+    return parser
 
-    return parser.parse_args(args)
+
+def parse_args(args=None):
+    return get_argparser().parse_args(args)
 
 
 def main(args=None):

@@ -1,4 +1,4 @@
-############################################################################
+###########################################################################
 # tools/pynuttx/nxgdb/target.py
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -26,11 +26,14 @@ import gdb
 import nxstub
 from nxreg.register import get_arch_name
 
-from . import utils
+from . import autocompeletion, utils
 
 
+@autocompeletion.complete
 class Target(gdb.Command):
     """Use nxstub to parse crash log dump, core dump or memory dump, as target."""
+
+    parser = nxstub.get_argparser()
 
     def __init__(self):
         super().__init__("target stub", gdb.COMMAND_USER)
