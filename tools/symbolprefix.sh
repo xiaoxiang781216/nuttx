@@ -94,6 +94,13 @@ else
     READELF=readelf
 fi
 
+if [ -n "$AR" ]; then
+    echo "AR is defined: $AR"
+else
+    echo "AR is not defined, using default ar"
+    AR=ar
+fi
+
 # Check input files exist
 for input in "${inputs[@]}"; do
     if [ ! -f "$input" ]; then
@@ -198,7 +205,7 @@ for input in "${inputs[@]}"; do
         temp_dir=$(mktemp -d)
         lib=$(realpath "$input")
         cd "$temp_dir"
-        ar x "$lib"
+        $AR x "$lib"
         cd "$OLDPWD"
         if [ -z "$(ls -A "$temp_dir")" ]; then
             cp "$lib" "$final_output"
@@ -212,9 +219,9 @@ for input in "${inputs[@]}"; do
 
             # keep the order of the file in the archive
             final_output=$(realpath "$final_output")
-            ar t "$lib" > "$temp_dir/file_list.txt"
+            $AR t "$lib" > "$temp_dir/file_list.txt"
             cd "$temp_dir"
-            ar rcs "$final_output" $(cat "$temp_dir/file_list.txt")
+            $AR rcs "$final_output" $(cat "$temp_dir/file_list.txt")
             cd "$OLDPWD"
         fi
 
