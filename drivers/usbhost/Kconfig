@@ -396,7 +396,8 @@ config USBHOST_HIDMOUSE
 	default n
 	depends on !INT_DISABLE
 	select INPUT
-	select INPUT_MOUSE
+	select INPUT_TOUCHSCREEN if HIDMOUSE_TSCIF
+	select INPUT_MOUSE if !HIDMOUSE_TSCIF
 	---help---
 		Enable support for the mouse class driver.
 
@@ -510,7 +511,7 @@ config HIDMOUSE_XTHRESH
 
 		Default: 12
 
-config HIDMOUSE_THRESHY
+config HIDMOUSE_YTHRESH
 	int "Y threshold"
 	default 12
 	---help---
@@ -520,7 +521,7 @@ config HIDMOUSE_THRESHY
 
 		Default: 12
 
-if INPUT_MOUSE_WHEEL
+if !HIDMOUSE_TSCIF
 
 config HIDMOUSE_WMAX
 	int "Maximum wheel position"
@@ -555,7 +556,7 @@ config HIDMOUSE_WTHRESH
 
 		Default: 1
 
-endif # INPUT_MOUSE_WHEEL
+endif # !HIDMOUSE_TSCIF
 endif # USBHOST_HIDMOUSE
 
 config USBHOST_XBOXCONTROLLER

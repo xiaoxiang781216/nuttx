@@ -110,11 +110,7 @@
 
 #define HIDMOUSE_YTHRESH_B16 (CONFIG_HIDMOUSE_YTHRESH << 16)
 
-#ifdef CONFIG_HIDMOUSE_TSCIF
-#  undef CONFIG_INPUT_MOUSE_WHEEL
-#endif
-
-#ifdef CONFIG_INPUT_MOUSE_WHEEL
+#ifndef CONFIG_HIDMOUSE_TSCIF
 
 #  ifndef CONFIG_HIDMOUSE_WMAX
 #    define CONFIG_HIDMOUSE_WMAX 100
@@ -132,7 +128,7 @@
 
 #  define HIDMOUSE_WTHRESH_B16 (CONFIG_HIDMOUSE_WTHRESH << 16)
 
-#endif /* CONFIG_INPUT_MOUSE_WHEEL */
+#endif /* NOT CONFIG_HIDMOUSE_TSCIF */
 
 #ifndef CONFIG_HIDMOUSE_DEFPRIO
 #  define CONFIG_HIDMOUSE_DEFPRIO 50
@@ -145,6 +141,10 @@
 #ifndef CONFIG_HIDMOUSE_NPOLLWAITERS
 #  define CONFIG_HIDMOUSE_NPOLLWAITERS 2
 #endif
+
+/* circular buffer size */
+
+#define HIDMOUSE_NBUFFER 8
 
 /* This is a value for the threshold that guarantees a big difference on the
  * first left button (but can't overflow).
@@ -192,44 +192,6 @@
  * Private Types
  ****************************************************************************/
 
-#ifdef CONFIG_HIDMOUSE_TSCIF
-/* This describes the state of one event */
-
-enum mouse_button_e
-{
-  BUTTON_NONE = 0,                      /* No button pressed */
-  BUTTON_PRESSED,                       /* Left buffer pressed */
-  BUTTON_MOVE,                          /* Same button press, possibly different position */
-  BUTTON_RELEASED                       /* Left button released */
-};
-
-/* This structure describes the results of one mouse sample.  Since this
- * emulates a touchscreen, only the mouse left button is used.
- */
-
-struct mouse_sample_s
-{
-  uint8_t  id;                          /* Sampled touch point ID */
-  uint8_t  event;                       /* Button state (see enum mouse_button_e) */
-  bool     valid;                       /* True: x,y contain valid, sampled data */
-  uint16_t x;                           /* Measured X position */
-  uint16_t y;                           /* Measured Y position */
-};
-
-#else
-/* This structure summarizes the mouse report */
-
-struct mouse_sample_s
-{
-  uint8_t  buttons;                     /* Button state (see MOUSE_BUTTON_* definitions) */
-  uint16_t x;                           /* Accumulated X position */
-  uint16_t y;                           /* Accumulated Y position */
-#ifdef CONFIG_INPUT_MOUSE_WHEEL
-  uint16_t wheel;                       /* Reported wheel position */
-#endif
-};
-#endif
-
 /* This structure contains the internal, private state of the USB host
  * mouse storage class.
  */
@@ -250,31 +212,29 @@ struct usbhost_state_s
 
   volatile bool           disconnected; /* TRUE: Device has been disconnected */
   volatile bool           polling;      /* TRUE: Poll thread is running */
-  volatile bool           open;         /* TRUE: The mouse device is open */
   volatile bool           valid;        /* TRUE: New sample data is available */
   uint8_t                 devno;        /* Minor number in the /dev/mouse[n] device */
-  uint8_t                 nwaiters;     /* Number of threads waiting for mouse data */
 #ifdef CONFIG_HIDMOUSE_TSCIF
-  uint8_t                 id;           /* Current "touch" point ID */
+  struct touch_lowerhalf_s touchlower;   /* Touchpad device lowerhalf instance */
+  struct touch_sample_s    touchsample;  /* Last sampled touch data */
 #else
-  uint8_t                 buttons;      /* Current state of the mouse buttons */
+  struct mouse_lowerhalf_s mouselower;   /* Mouse device lowerhalf instance */
+  struct mouse_report_s    mousesample;  /* Last sampled mouse data */
 #endif
   int16_t                 crefs;        /* Reference count on the driver instance */
   mutex_t                 lock;         /* Used to maintain mutual exclusive access */
-  sem_t                   waitsem;      /* Used to wait for mouse data */
   FAR uint8_t            *tbuffer;      /* The allocated transfer buffer */
   b16_t                   xaccum;       /* Current integrated X position */
   b16_t                   yaccum;       /* Current integrated Y position */
   b16_t                   xlast;        /* Last reported X position */
   b16_t                   ylast;        /* Last reported Y position */
-#ifdef CONFIG_INPUT_MOUSE_WHEEL
+#ifndef CONFIG_HIDMOUSE_TSCIF
   b16_t                   waccum;       /* Current integrated while position */
   b16_t                   wlast;        /* Last reported wheel position */
 #endif
   size_t                  tbuflen;      /* Size of the allocated transfer buffer */
   pid_t                   pollpid;      /* PID of the poll task */
   struct work_s           work;         /* For cornercase error handling by the worker thread */
-  struct mouse_sample_s   sample;       /* Last sampled mouse data */
   usbhost_ep_t            epin;         /* Interrupt IN endpoint */
 
   /* The following is a list if poll structures of threads waiting for
@@ -310,13 +270,10 @@ static void usbhost_position(FAR struct usbhost_state_s *priv,
 #ifdef CONFIG_HIDMOUSE_TSCIF
 static bool usbhost_touchscreen(FAR struct usbhost_state_s *priv,
                                 FAR struct usbhid_mousereport_s *rpt);
-#endif
+#else
 static bool usbhost_threshold(FAR struct usbhost_state_s *priv);
+#endif
 static int usbhost_mouse_poll(int argc, FAR char *argv[]);
-static int usbhost_sample(FAR struct usbhost_state_s *priv,
-                          FAR struct mouse_sample_s *sample);
-static int usbhost_waitsample(FAR struct usbhost_state_s *priv,
-                              FAR struct mouse_sample_s *sample);
 
 /* Helpers for usbhost_connect() */
 
@@ -346,17 +303,6 @@ static int usbhost_connect(FAR struct usbhost_class_s *usbclass,
                            FAR const uint8_t *configdesc, int desclen);
 static int usbhost_disconnected(FAR struct usbhost_class_s *usbclass);
 
-/* Driver methods.  We export the mouse as a standard character driver */
-
-static int usbhost_open(FAR struct file *filep);
-static int usbhost_close(FAR struct file *filep);
-static ssize_t usbhost_read(FAR struct file *filep,
-                            FAR char *buffer, size_t len);
-static ssize_t usbhost_write(FAR struct file *filep,
-                             FAR const char *buffer, size_t len);
-static int usbhost_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                        bool setup);
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -383,19 +329,6 @@ static struct usbhost_registry_s g_hidmouse =
   usbhost_create,          /* create */
   1,                       /* nids */
   &g_hidmouse_id           /* id[] */
-};
-
-static const struct file_operations g_hidmouse_fops =
-{
-  usbhost_open,            /* open */
-  usbhost_close,           /* close */
-  usbhost_read,            /* read */
-  usbhost_write,           /* write */
-  NULL,                    /* seek */
-  NULL,                    /* ioctl */
-  NULL,                    /* mmap */
-  NULL,                    /* truncate */
-  usbhost_poll             /* poll */
 };
 
 /* This is a bitmap that is used to allocate device names /dev/mouse0-31. */
@@ -547,7 +480,12 @@ static void usbhost_destroy(FAR void *arg)
 
   uinfo("Unregister driver\n");
   usbhost_mkdevname(priv, devname);
-  unregister_driver(devname);
+
+#ifdef CONFIG_HIDMOUSE_TSCIF
+  touch_unregister(&(priv->touchlower), devname);
+#else
+  mouse_unregister(&(priv->mouselower), devname);
+#endif
 
   /* Release the device name used by this connection */
 
@@ -564,10 +502,9 @@ static void usbhost_destroy(FAR void *arg)
 
   usbhost_tdfree(priv);
 
-  /* Destroy the mutex & semaphores */
+  /* Destroy the mutex */
 
   nxmutex_destroy(&priv->lock);
-  nxsem_destroy(&priv->waitsem);
 
   /* Disconnect the USB host device */
 
@@ -599,22 +536,11 @@ static void usbhost_destroy(FAR void *arg)
 
 static void usbhost_notify(FAR struct usbhost_state_s *priv)
 {
-  /* If there are threads waiting for read data, then signal one of them
-   * that the read data is available.
-   */
-
-  if (priv->nwaiters > 0)
-    {
-      nxsem_post(&priv->waitsem);
-    }
-
-  /* If there are threads waiting on poll() for mouse data to become
-   * available, then wake them up now.  NOTE: we wake up all waiting
-   * threads because we do not know that they are going to do.  If they
-   * all try to read the data, then some make end up blocking after all.
-   */
-
-  poll_notify(priv->fds, CONFIG_HIDMOUSE_NPOLLWAITERS, POLLIN);
+#ifdef CONFIG_HIDMOUSE_TSCIF
+  touch_event(priv->touchlower.priv, &priv->touchsample);
+#else
+  mouse_event(priv->mouselower.priv, &priv->mousesample);
+#endif
 }
 
 /****************************************************************************
@@ -664,6 +590,7 @@ static void usbhost_position(FAR struct usbhost_state_s *priv,
 
   /* Scale the X displacement and determine the new X position */
 
+#ifdef CONFIG_HIDMOUSE_TSCIF
   pos = priv->xaccum + CONFIG_HIDMOUSE_XSCALE * disp;
 
   /* Make sure that the scaled X position does not become negative or exceed
@@ -678,6 +605,9 @@ static void usbhost_position(FAR struct usbhost_state_s *priv,
     {
       pos = 0;
     }
+#else
+  pos = CONFIG_HIDMOUSE_XSCALE * disp;
+#endif
 
   /* Save the updated X position */
 
@@ -699,6 +629,7 @@ static void usbhost_position(FAR struct usbhost_state_s *priv,
     }
 #endif
 
+#ifdef CONFIG_HIDMOUSE_TSCIF
   pos = priv->yaccum + CONFIG_HIDMOUSE_YSCALE * disp;
 
   if (pos > HIDMOUSE_YMAX_B16)
@@ -709,10 +640,14 @@ static void usbhost_position(FAR struct usbhost_state_s *priv,
     {
       pos = 0;
     }
+#else
+  pos = CONFIG_HIDMOUSE_YSCALE * disp;
+#endif
 
   priv->yaccum = pos;
 
-#ifdef CONFIG_INPUT_MOUSE_WHEEL
+#ifndef CONFIG_HIDMOUSE_TSCIF
+
   /* Do the same for the wheel position */
 
   disp = rpt->wdisp;
@@ -721,16 +656,7 @@ static void usbhost_position(FAR struct usbhost_state_s *priv,
       disp |= 0xffffff00;
     }
 
-  pos = priv->waccum + CONFIG_HIDMOUSE_WSCALE * disp;
-
-  if (pos > HIDMOUSE_WMAX_B16)
-    {
-      pos = HIDMOUSE_WMAX_B16;
-    }
-  else if (pos < 0)
-    {
-      pos = 0;
-    }
+  pos = CONFIG_HIDMOUSE_WSCALE * disp;
 
   priv->waccum = pos;
 #endif
@@ -763,80 +689,40 @@ static bool usbhost_touchscreen(FAR struct usbhost_state_s *priv,
 
       priv->xlast = INVALID_POSITION_B16;
       priv->ylast = INVALID_POSITION_B16;
+      priv->touchsample.point[0].flags &= ~TOUCH_POS_VALID;
 
-      /* Ignore the report if the button was not pressed last time
-       * (BUTTON_NONE == button released and already reported;
-       * BUTTON_RELEASED == button released, but not yet reported)
-       */
+      /* Filter consecutive release events */
 
-      if (priv->sample.event == BUTTON_NONE ||
-          priv->sample.event == BUTTON_RELEASED)
+      if (priv->touchsample.point[0].flags & TOUCH_UP)
         {
           return false;
         }
 
-      /* The left button has just been released.  NOTE: We know from a
-       * previous test, that this is a button release condition. This will
-       * be changed to BUTTON_NONE after the button release has been
-       * reported.
-       */
+      /* Update release state flag */
 
-      priv->sample.event = BUTTON_RELEASED;
-    }
-
-  /* It is a left button press event.  If the last button release event has
-   * not been processed yet, then we have to ignore the button press event
-   * (or else it will look like a drag event)
-   */
-
-  else if (priv->sample.event == BUTTON_RELEASED)
-    {
-      /* If we have not yet processed the button release event, then we
-       * cannot handle this button press event. We will have to discard the
-       * data and wait for the next sample.
-       */
-
-      return false;
+      priv->touchsample.point[0].flags = TOUCH_UP;
     }
 
   /* Handle left-button down events */
 
   else
     {
-      /* If this is the first left button press report, then report that
-       * event.  If event == BUTTON_PRESSED, it will be  set to set to
-       * BUTTON_MOVE after the button press is first sampled.
-       */
-
-      if (priv->sample.event != BUTTON_MOVE)
+      if (priv->touchsample.point[0].flags & TOUCH_MOVE)
         {
-          /* First button press */
-
-          priv->sample.event = BUTTON_PRESSED;
+          return true;
         }
 
-      /* Otherwise, perform a thresholding operation so that the results
-       * will be more stable.  If the difference from the last sample is
-       * small, then ignore the event.
-       */
+      uint8_t new_flags = TOUCH_POS_VALID;
+      new_flags |= priv->touchsample.point[0].flags & TOUCH_DOWN ?
+                   TOUCH_MOVE : TOUCH_DOWN;
 
-      else if (!usbhost_xythreshold(priv))
-        {
-          return false;
-        }
+      priv->touchsample.point[0].flags = new_flags;
     }
-
-  /* We get here:
-   *
-   * (1) When the left button is just release,
-   * (2) When the left button is first pressed, or
-   * (3) When the left button is held and some significant 'dragging'
-   *     has occurred.
-   */
 
   return true;
 }
-#endif
+
+#else
 
 /****************************************************************************
  * Name: usbhost_threshold
@@ -857,61 +743,29 @@ static bool usbhost_touchscreen(FAR struct usbhost_state_s *priv,
 static bool usbhost_threshold(FAR struct usbhost_state_s *priv)
 {
 #if CONFIG_HIDMOUSE_XTHRESH > 0 && CONFIG_HIDMOUSE_YTHRESH > 0
-  b16_t pos;
-  b16_t diff;
 
-  /* Get the difference in the X position from the last report */
+  /* Check if the X exceeds the report threshold */
 
-  pos = priv->xaccum;
-  if (pos > priv->xlast)
-    {
-      diff = pos - priv->xlast;
-    }
-  else
-    {
-      diff = priv->xlast - pos;
-    }
-
-  /* Check if the X difference exceeds the report threshold */
-
-  if (diff >= HIDMOUSE_XTHRESH_B16)
+  if (priv->xaccum >= HIDMOUSE_XTHRESH_B16 ||
+      priv->xaccum <= -HIDMOUSE_XTHRESH_B16)
     {
       return true;
     }
 
-  /* Little or no change in the X direction, check the Y direction.  */
+  /* Check if the Y exceeds the report threshold  */
 
-  pos = priv->yaccum;
-  if (pos > priv->ylast)
-    {
-      diff = pos - priv->ylast;
-    }
-  else
-    {
-      diff = priv->ylast - pos;
-    }
-
-  if (diff >= HIDMOUSE_YTHRESH_B16)
+  if (priv->yaccum >= HIDMOUSE_YTHRESH_B16 ||
+      priv->yaccum <= -HIDMOUSE_YTHRESH_B16)
     {
       return true;
     }
 
-#ifdef CONFIG_INPUT_MOUSE_WHEEL
-  /* Get the difference in the wheel position from the last report */
+#ifndef CONFIG_HIDMOUSE_TSCIF
 
-  pos = priv->waccum;
-  if (pos > priv->wlast)
-    {
-      diff = pos - priv->wlast;
-    }
-  else
-    {
-      diff = priv->wlast - pos;
-    }
+  /* Check if the wheel exceeds the report threshold */
 
-  /* Check if the X difference exceeds the report threshold */
-
-  if (diff >= HIDMOUSE_WTHRESH_B16)
+  if (priv->waccum >= HIDMOUSE_WTHRESH_B16 ||
+      priv->waccum <= -HIDMOUSE_WTHRESH_B16)
     {
       return true;
     }
@@ -926,6 +780,7 @@ static bool usbhost_threshold(FAR struct usbhost_state_s *priv)
   return true;
 #endif
 }
+#endif
 
 /****************************************************************************
  * Name: usbhost_mouse_poll
@@ -1024,93 +879,81 @@ static int usbhost_mouse_poll(int argc, FAR char *argv[])
 
           nerrors = 0;
 
-          /* Ignore the mouse data if no task has opened the driver. */
+          /* Get exclusive access to the mouse state data */
 
-          if (priv->open)
+          ret = nxmutex_lock(&priv->lock);
+          if (ret < 0)
             {
-              /* Get exclusive access to the mouse state data */
+              /* Break out and disconnect if the thread is canceled. */
 
-              ret = nxmutex_lock(&priv->lock);
-              if (ret < 0)
-                {
-                  /* Break out and disconnect if the thread is canceled. */
+              break;
+            }
 
-                  break;
-                }
+          /* Get the HID mouse report */
 
-              /* Get the HID mouse report */
+          rpt = (FAR struct usbhid_mousereport_s *)priv->tbuffer;
 
-              rpt = (FAR struct usbhid_mousereport_s *)priv->tbuffer;
+          /* Get the updated mouse position */
 
-              /* Get the updated mouse position */
-
-              usbhost_position(priv, rpt);
+          usbhost_position(priv, rpt);
 
 #ifdef CONFIG_HIDMOUSE_TSCIF
-              /* Execute the touchscreen state machine */
+          /* Execute the touchscreen state machine */
 
-              if (usbhost_touchscreen(priv, rpt))
+          if (usbhost_touchscreen(priv, rpt))
 #else
-              /* Check if any buttons have changed.  If so, then report the
-               * new mouse data.
+          /* Check if any buttons have changed.  If so, then report the
+           * new mouse data.
+           *
+           * If not, then perform a thresholding operation so that the
+           * results will be more stable.  If the difference from the
+           * last sample is small, then ignore the event.
+           */
+
+          buttons = rpt->buttons & USBHID_MOUSEIN_BUTTON_MASK;
+          if (buttons != priv->mousesample.buttons ||
+              usbhost_threshold(priv))
+#endif
+            {
+              /* We get here when either there is a meaningful button
+               * change and/or a significant movement of the mouse.  We
+               * are going to report the mouse event.
                *
-               * If not, then perform a thresholding operation so that the
-               * results will be more stable.  If the difference from the
-               * last sample is small, then ignore the event.
+               * Snap to the new x/y position for subsequent
+               * thresholding
                */
 
-              buttons = rpt->buttons & USBHID_MOUSEIN_BUTTON_MASK;
-              if (buttons != priv->buttons || usbhost_threshold(priv))
-#endif
-                {
-                  /* We get here when either there is a meaningful button
-                   * change and/or a significant movement of the mouse.  We
-                   * are going to report the mouse event.
-                   *
-                   * Snap to the new x/y position for subsequent
-                   * thresholding
-                   */
-
-                  priv->xlast = priv->xaccum;
-                  priv->ylast = priv->yaccum;
-#ifdef CONFIG_INPUT_MOUSE_WHEEL
-                  priv->wlast = priv->waccum;
-#endif
-                  /* Update the sample X/Y positions */
-
-                  priv->sample.x = b16toi(priv->xaccum);
-                  priv->sample.y = b16toi(priv->yaccum);
-#ifdef CONFIG_INPUT_MOUSE_WHEEL
-                  priv->sample.wheel = b16toi(priv->waccum);
-#endif
+              priv->xlast = priv->xaccum;
+              priv->ylast = priv->yaccum;
 
 #ifdef CONFIG_HIDMOUSE_TSCIF
-                  /* The X/Y positional data is now valid */
+              /* Update the touchsample X/Y positions */
 
-                  priv->sample.valid = true;
-
-                  /* Indicate the availability of new sample data
-                   * for this ID
-                   */
-
-                  priv->sample.id = priv->id;
+              priv->touchsample.point[0].x = b16toi(priv->xaccum);
+              priv->touchsample.point[0].y = b16toi(priv->yaccum);
 #else
-                  /* Report and remember the new button state */
+              priv->wlast = priv->waccum;
+              priv->mousesample.wheel = b16toi(priv->waccum);
 
-                  priv->sample.buttons = buttons;
-                  priv->buttons = buttons;
+              /* Update the mousesample X/Y positions */
+
+              priv->mousesample.x = b16toi(priv->xaccum);
+              priv->mousesample.y = b16toi(priv->yaccum);
+
+              /* Report and remember the new button state */
+
+              priv->mousesample.buttons = buttons;
 #endif
-                  priv->valid = true;
+              priv->valid = true;
 
-                  /* Notify any waiters that new HIDMOUSE data is available */
+              /* Notify any waiters that new HIDMOUSE data is available */
 
-                  usbhost_notify(priv);
-                }
-
-              /* Release our lock on the state structure */
-
-              nxmutex_unlock(&priv->lock);
+              usbhost_notify(priv);
             }
+
+          /* Release our lock on the state structure */
+
+          nxmutex_unlock(&priv->lock);
         }
 
       /* If USB debug is on, then provide some periodic indication that
@@ -1178,146 +1021,6 @@ static int usbhost_mouse_poll(int argc, FAR char *argv[])
 
       nxmutex_unlock(&priv->lock);
     }
-
-  leave_critical_section(flags);
-  return ret;
-}
-
-/****************************************************************************
- * Name: usbhost_sample
- *
- * Description:
- *   Check if mouse data is available
- *
- ****************************************************************************/
-
-static int usbhost_sample(FAR struct usbhost_state_s *priv,
-                          FAR struct mouse_sample_s *sample)
-{
-  irqstate_t flags;
-  int ret = -EAGAIN;
-
-  /* Interrupts must be disabled when this is called to (1) prevent posting
-   * of semaphores from interrupt handlers, and (2) to prevent sampled data
-   * from changing until it has been reported.
-   */
-
-  flags = enter_critical_section();
-
-  /* Is there new mouse data available? */
-
-  if (priv->valid)
-    {
-      /* Return a copy of the sampled data. */
-
-      memcpy(sample, &priv->sample, sizeof(struct mouse_sample_s));
-
-#ifdef CONFIG_HIDMOUSE_TSCIF
-      /* Now manage state transitions */
-
-      if (sample->event == BUTTON_RELEASED)
-        {
-          /* Next.. No button press.  Increment the ID so that next event ID
-           * will be unique.  X/Y positions are no longer valid.
-           */
-
-          priv->sample.event = BUTTON_NONE;
-          priv->id++;
-          priv->sample.valid = false;
-        }
-      else if (sample->event == BUTTON_PRESSED)
-        {
-          /* First report -- next report will be a movement */
-
-          priv->sample.event = BUTTON_MOVE;
-        }
-
-#endif
-
-      /* The sample has been reported and is no longer valid */
-
-      priv->valid = false;
-      ret = OK;
-    }
-
-  leave_critical_section(flags);
-  return ret;
-}
-
-/****************************************************************************
- * Name: usbhost_waitsample
- *
- * Description:
- *   Wait for the next valid mouse sample
- *
- * Input Parameters:
- *    priv   - HID mouse state instance
- *    sample - The location to regurn the sample data
- *
- ****************************************************************************/
-
-static int usbhost_waitsample(FAR struct usbhost_state_s *priv,
-                              FAR struct mouse_sample_s *sample)
-{
-  irqstate_t flags;
-  int ret;
-
-  /* Interrupts must be disabled when this is called to (1) prevent posting
-   * of semaphores from interrupt handlers, and (2) to prevent sampled data
-   * from changing until it has been reported.
-   */
-
-  flags = enter_critical_section();
-
-  /* Now release the semaphore that manages mutually exclusive access to
-   * the device structure.  This may cause other tasks to become ready to
-   * run, but they cannot run yet because pre-emption is disabled.
-   */
-
-  nxmutex_unlock(&priv->lock);
-
-  /* Try to get the a sample... if we cannot, then wait on the semaphore
-   * that is posted when new sample data is available.
-   */
-
-  while (usbhost_sample(priv, sample) < 0)
-    {
-      /* Wait for a change in the HIDMOUSE state */
-
-      iinfo("Waiting..\n");
-      priv->nwaiters++;
-      ret = nxsem_wait(&priv->waitsem);
-      priv->nwaiters--;
-
-      if (ret < 0)
-        {
-          ierr("ERROR: nxsem_wait: %d\n", ret);
-          goto errout;
-        }
-
-      /* Did the mouse become disconnected while we were waiting */
-
-      if (priv->disconnected)
-        {
-          ret = -ENODEV;
-          goto errout;
-        }
-    }
-
-  iinfo("Sampled\n");
-
-  /* Re-acquire the semaphore that manages mutually exclusive access to
-   * the device structure.  We may have to wait here.  But we have our
-   * sample. Interrupts and pre-emption will be re-enabled while we wait.
-   */
-
-  ret = nxmutex_lock(&priv->lock);
-
-errout:
-  /* Then re-enable interrupts.  We might get interrupt here and there
-   * could be a new sample.  But no new threads will run because we still
-   * have pre-emption disabled.
-   */
 
   leave_critical_section(flags);
   return ret;
@@ -1630,7 +1333,15 @@ static inline int usbhost_devinit(FAR struct usbhost_state_s *priv)
 
   uinfo("Register driver\n");
   usbhost_mkdevname(priv, devname);
-  ret = register_driver(devname, &g_hidmouse_fops, 0666, priv);
+
+#ifdef CONFIG_HIDMOUSE_TSCIF
+  priv->touchlower.maxpoint = 1;
+  priv->touchsample.npoints = 1;
+
+  touch_register(&(priv->touchlower), devname, HIDMOUSE_NBUFFER);
+#else
+  mouse_register(&(priv->mouselower), devname, HIDMOUSE_NBUFFER);
+#endif
 
   /* We now have to be concerned about asynchronous modification of crefs
    * because the driver has been registered.
@@ -1783,10 +1494,9 @@ usbhost_create(FAR struct usbhost_hubport_s *hport,
 
           priv->crefs = 1;
 
-          /* Initialize mutex & semaphores */
+          /* Initialize mutex */
 
           nxmutex_init(&priv->lock);
-          nxsem_init(&priv->waitsem, 0, 0);
 
           /* Return the instance of the USB mouse class driver */
 
@@ -1905,7 +1615,6 @@ static int usbhost_connect(FAR struct usbhost_class_s *usbclass,
 static int usbhost_disconnected(FAR struct usbhost_class_s *usbclass)
 {
   FAR struct usbhost_state_s *priv = (FAR struct usbhost_state_s *)usbclass;
-  int i;
 
   DEBUGASSERT(priv != NULL);
 
@@ -1915,15 +1624,6 @@ static int usbhost_disconnected(FAR struct usbhost_class_s *usbclass)
 
   priv->disconnected = true;
   uinfo("Disconnected\n");
-
-  /* Are there a thread(s) waiting for mouse data that will never come? */
-
-  for (i = 0; i < priv->nwaiters; i++)
-    {
-      /* Yes.. wake them up */
-
-      nxsem_post(&priv->waitsem);
-    }
 
   /* Possibilities:
    *
@@ -1957,447 +1657,6 @@ static int usbhost_disconnected(FAR struct usbhost_class_s *usbclass)
     }
 
   return OK;
-}
-
-/****************************************************************************
- * Character driver methods
- ****************************************************************************/
-
-/****************************************************************************
- * Name: usbhost_open
- *
- * Description:
- *   Standard character driver open method.
- *
- ****************************************************************************/
-
-static int usbhost_open(FAR struct file *filep)
-{
-  FAR struct inode           *inode;
-  FAR struct usbhost_state_s *priv;
-  irqstate_t flags;
-  int ret;
-
-  uinfo("Entry\n");
-  inode = filep->f_inode;
-  priv  = inode->i_private;
-
-  /* Make sure that we have exclusive access to the private data structure */
-
-  DEBUGASSERT(priv && priv->crefs > 0 && priv->crefs < USBHOST_MAX_CREFS);
-  ret = nxmutex_lock(&priv->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  /* Check if the mouse device is still connected.  We need to disable
-   * interrupts momentarily to assure that there are no asynchronous
-   * disconnect events.
-   */
-
-  flags = enter_critical_section();
-  if (priv->disconnected)
-    {
-      /* No... the driver is no longer bound to the class.  That means that
-       * the USB storage device is no longer connected.  Refuse any further
-       * attempts to open the driver.
-       */
-
-      ret = -ENODEV;
-    }
-  else
-    {
-      /* Was the driver previously open?  We need to perform special
-       * initialization on the first time that the driver is opened.
-       */
-
-      if (!priv->open)
-        {
-          /* Set the thresholding values so that the first button press
-           * will be reported.
-           */
-
-          priv->xlast = INVALID_POSITION_B16;
-          priv->ylast = INVALID_POSITION_B16;
-#ifdef CONFIG_INPUT_MOUSE_WHEEL
-          priv->wlast = INVALID_POSITION_B16;
-#endif
-          /* Set the reported position to the center of the range */
-
-          priv->xaccum = (HIDMOUSE_XMAX_B16 >> 1);
-          priv->yaccum = (HIDMOUSE_YMAX_B16 >> 1);
-        }
-
-      /* Otherwise, just increment the reference count on the driver */
-
-      priv->crefs++;
-      priv->open = true;
-      ret        = OK;
-    }
-
-  leave_critical_section(flags);
-
-  nxmutex_unlock(&priv->lock);
-  return ret;
-}
-
-/****************************************************************************
- * Name: usbhost_close
- *
- * Description:
- *   Standard character driver close method.
- *
- ****************************************************************************/
-
-static int usbhost_close(FAR struct file *filep)
-{
-  FAR struct inode *inode;
-  FAR struct usbhost_state_s *priv;
-  irqstate_t flags;
-  int ret;
-
-  uinfo("Entry\n");
-  inode = filep->f_inode;
-  priv  = inode->i_private;
-
-  /* Decrement the reference count on the driver */
-
-  DEBUGASSERT(priv->crefs >= 1);
-  ret = nxmutex_lock(&priv->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  /* We need to disable interrupts momentarily to assure that there are no
-   * asynchronous poll or disconnect events.
-   */
-
-  flags = enter_critical_section();
-  priv->crefs--;
-
-  /* Check if the USB mouse device is still connected.  If the device is
-   * no longer connected, then unregister the driver and free the driver
-   * class instance.
-   */
-
-  if (priv->disconnected)
-    {
-      /* If the reference count is one or less then there are two
-       * possibilities:
-       *
-       * 1) It might be zero meaning that the polling thread has already
-       *    exited and decremented its count.
-       * 2) If might be one meaning either that (a) the polling thread is
-       *    still running and still holds a count, or (b) the polling thread
-       *    has exited, but there is still an outstanding open reference.
-       */
-
-      if (priv->crefs == 0 || (priv->crefs == 1 && priv->polling))
-        {
-          /* Yes.. In either case, then the driver is no longer open */
-
-          priv->open = false;
-
-          /* Check if the USB keyboard device is still connected. */
-
-          if (priv->crefs == 0)
-            {
-              /* The polling thread is no longer running */
-
-              DEBUGASSERT(!priv->polling);
-
-              /* If the device is no longer connected, unregister the driver
-               * and free the driver class instance.
-               */
-
-              usbhost_destroy(priv);
-
-              /* Skip giving the semaphore... it is no longer valid */
-
-              leave_critical_section(flags);
-              return OK;
-            }
-          else /* if (priv->crefs == 1) */
-            {
-              /* The polling thread is still running.  Signal it so that it
-               * will wake up and call usbhost_destroy().  The particular
-               * signal that we use does not matter in this case.
-               */
-
-              nxsig_kill(priv->pollpid, SIGALRM);
-            }
-        }
-    }
-
-  nxmutex_unlock(&priv->lock);
-  leave_critical_section(flags);
-  return OK;
-}
-
-/****************************************************************************
- * Name: usbhost_read
- *
- * Description:
- *   Standard character driver read method.
- *
- ****************************************************************************/
-
-static ssize_t usbhost_read(FAR struct file *filep, FAR char *buffer,
-                            size_t len)
-{
-  FAR struct inode           *inode;
-  FAR struct usbhost_state_s *priv;
-#ifdef CONFIG_HIDMOUSE_TSCIF
-  FAR struct touch_sample_s  *report;
-#else
-  FAR struct mouse_report_s  *report;
-#endif
-  struct mouse_sample_s       sample;
-  int                         ret;
-
-  uinfo("Entry\n");
-  DEBUGASSERT(buffer);
-  inode = filep->f_inode;
-  priv  = inode->i_private;
-
-  /* Make sure that we have exclusive access to the private data structure */
-
-  DEBUGASSERT(priv && priv->crefs > 0 && priv->crefs < USBHOST_MAX_CREFS);
-  ret = nxmutex_lock(&priv->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  /* Check if the mouse is still connected.  We need to disable interrupts
-   * momentarily to assure that there are no asynchronous disconnect events.
-   */
-
-  if (priv->disconnected)
-    {
-      /* No... the driver is no longer bound to the class.  That means that
-       * the USB mouse is no longer connected.  Refuse any further attempts
-       * to access the driver.
-       */
-
-      ret = -ENODEV;
-      goto errout;
-    }
-
-  /* Try to read sample data. */
-
-  ret = usbhost_sample(priv, &sample);
-  if (ret < 0)
-    {
-      /* Sample data is not available now.  We would ave to wait to get
-       * receive sample data.  If the user has specified the O_NONBLOCK
-       * option, then just return an error.
-       */
-
-      if (filep->f_oflags & O_NONBLOCK)
-        {
-          /* Yes.. then return a failure */
-
-          ret = -EAGAIN;
-          goto errout;
-        }
-
-      /* Wait for sample data */
-
-      ret = usbhost_waitsample(priv, &sample);
-      if (ret < 0)
-        {
-          /* We might have been awakened by a signal */
-
-          ierr("ERROR: usbhost_waitsample: %d\n", ret);
-          goto errout;
-        }
-    }
-
-  /* We now have sampled HIDMOUSE data that we can report to the caller.  */
-
-#ifdef CONFIG_HIDMOUSE_TSCIF
-  report = (FAR struct touch_sample_s *)buffer;
-  memset(report, 0, SIZEOF_TOUCH_SAMPLE_S(1));
-
-  report->npoints            = 1;
-  report->point[0].id        = sample.id;
-  report->point[0].x         = sample.x;
-  report->point[0].y         = sample.y;
-
-  /* Report the appropriate flags */
-
-  if (sample.event == BUTTON_RELEASED)
-    {
-      /* But was released.  Is the positional data valid?  This is
-       * important to know because the release will be sent to the
-       * window based on its last positional data.
-       */
-
-      if (sample.valid)
-        {
-          report->point[0].flags  = TOUCH_UP | TOUCH_ID_VALID |
-                                    TOUCH_POS_VALID;
-        }
-      else
-        {
-          report->point[0].flags  = TOUCH_UP | TOUCH_ID_VALID;
-        }
-    }
-  else if (sample.event == BUTTON_PRESSED)
-    {
-      /* First event */
-
-      report->point[0].flags  = TOUCH_DOWN | TOUCH_ID_VALID |
-                                TOUCH_POS_VALID;
-    }
-  else /* if (sample->event == BUTTON_MOVE) */
-    {
-      /* Movement of the same event */
-
-      report->point[0].flags  = TOUCH_MOVE | TOUCH_ID_VALID |
-                                TOUCH_POS_VALID;
-    }
-
-  iinfo("  id:      %d\n", report->point[0].id);
-  iinfo("  flags:   %02x\n", report->point[0].flags);
-  iinfo("  x:       %d\n", report->point[0].x);
-  iinfo("  y:       %d\n", report->point[0].y);
-
-  ret = SIZEOF_TOUCH_SAMPLE_S(1);
-#else
-  report = (FAR struct mouse_report_s *)buffer;
-  memset(report, 0, sizeof(struct mouse_report_s));
-
-  report->buttons = sample.buttons;
-  report->x       = sample.x;
-  report->y       = sample.y;
-#ifdef CONFIG_INPUT_MOUSE_WHEEL
-  report->wheel   = sample.wheel;
-#endif
-
-  ret = sizeof(struct mouse_report_s);
-#endif
-
-errout:
-  nxmutex_unlock(&priv->lock);
-  iinfo("Returning: %d\n", ret);
-  return (ssize_t)ret;
-}
-
-/****************************************************************************
- * Name: usbhost_write
- *
- * Description:
- *   Standard character driver write method.
- *
- ****************************************************************************/
-
-static ssize_t usbhost_write(FAR struct file *filep, FAR const char *buffer,
-                             size_t len)
-{
-  /* We won't try to write to the mouse */
-
-  return -ENOSYS;
-}
-
-/****************************************************************************
- * Name: usbhost_poll
- *
- * Description:
- *   Standard character driver poll method.
- *
- ****************************************************************************/
-
-static int usbhost_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                        bool setup)
-{
-  FAR struct inode           *inode;
-  FAR struct usbhost_state_s *priv;
-  int                         ret;
-  int                         i;
-
-  uinfo("Entry\n");
-  DEBUGASSERT(fds);
-  inode = filep->f_inode;
-  priv  = inode->i_private;
-
-  /* Make sure that we have exclusive access to the private data structure */
-
-  DEBUGASSERT(priv);
-  ret = nxmutex_lock(&priv->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  /* Check if the mouse is still connected.  We need to disable interrupts
-   * momentarily to assure that there are no asynchronous disconnect events.
-   */
-
-  if (priv->disconnected)
-    {
-      /* No... the driver is no longer bound to the class.  That means that
-       * the USB mouse is no longer connected.  Refuse any further attempts
-       * to access the driver.
-       */
-
-      ret = -ENODEV;
-    }
-  else if (setup)
-    {
-      /* This is a request to set up the poll.  Find an available slot for
-       * the poll structure reference
-       */
-
-      for (i = 0; i < CONFIG_HIDMOUSE_NPOLLWAITERS; i++)
-        {
-          /* Find an available slot */
-
-          if (!priv->fds[i])
-            {
-              /* Bind the poll structure and this slot */
-
-              priv->fds[i] = fds;
-              fds->priv    = &priv->fds[i];
-              break;
-            }
-        }
-
-      if (i >= CONFIG_HIDMOUSE_NPOLLWAITERS)
-        {
-          fds->priv = NULL;
-          ret       = -EBUSY;
-          goto errout;
-        }
-
-      /* Should we immediately notify on any of the requested events? Notify
-       * the POLLIN event if there is buffered mouse data.
-       */
-
-      if (priv->valid)
-        {
-          poll_notify(&fds, 1, POLLIN);
-        }
-    }
-  else
-    {
-      /* This is a request to tear down the poll. */
-
-      FAR struct pollfd **slot = (FAR struct pollfd **)fds->priv;
-      DEBUGASSERT(slot);
-
-      /* Remove all memory of the poll setup */
-
-      *slot     = NULL;
-      fds->priv = NULL;
-    }
-
-errout:
-  nxmutex_unlock(&priv->lock);
-  return ret;
 }
 
 /****************************************************************************
