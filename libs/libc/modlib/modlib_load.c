@@ -246,7 +246,6 @@ static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo, bool alloc)
   loadinfo->datasize = datasize;
 }
 
-#ifdef CONFIG_MODLIB_LOADTO_LMA
 /****************************************************************************
  * Name: modlib_vma2lma
  *
@@ -281,7 +280,6 @@ static int modlib_vma2lma(FAR struct mod_loadinfo_s *loadinfo,
 
   return -ENOENT;
 }
-#endif
 
 /****************************************************************************
  * Name: modlib_set_emptysect_vma
@@ -329,7 +327,8 @@ static void modlib_set_emptysect_vma(FAR struct mod_loadinfo_s *loadinfo,
  *
  ****************************************************************************/
 
-static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
+static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo,
+                                  bool is_vma)
 {
   FAR uint8_t *text = (FAR uint8_t *)loadinfo->textalloc;
   FAR uint8_t *data = (FAR uint8_t *)loadinfo->datastart;
@@ -439,14 +438,15 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
 
           if (shdr->sh_type != SHT_NOBITS)
             {
-#ifdef CONFIG_MODLIB_LOADTO_LMA
-              ret = modlib_vma2lma(loadinfo, shdr, (FAR Elf_Addr *)pptr);
-              if (ret < 0)
+              if (is_vma)
                 {
-                  berr("ERROR: Failed to convert addr %d: %d\n", i, ret);
-                  return ret;
+                  ret = modlib_vma2lma(loadinfo, shdr, (FAR Elf_Addr *)pptr);
+                  if (ret < 0)
+                    {
+                      berr("ERROR: Failed to convert addr %d: %d\n", i, ret);
+                      return ret;
+                    }
                 }
-#endif
 
               /* Read the section data from sh_offset to the memory region */
 
@@ -463,12 +463,13 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
            * section must be cleared.
            */
 
-#ifndef CONFIG_MODLIB_LOADTO_LMA
           else if (*pptr != NULL)
             {
-              memset(*pptr, 0, shdr->sh_size);
+              if (!is_vma)
+                {
+                  memset(*pptr, 0, shdr->sh_size);
+                }
             }
-#endif
 
 skipload:
 
@@ -543,7 +544,7 @@ skipload:
  *
  ****************************************************************************/
 
-int modlib_load(FAR struct mod_loadinfo_s *loadinfo)
+int modlib_load_vma(FAR struct mod_loadinfo_s *loadinfo, bool is_vma)
 {
   int ret;
 
@@ -583,79 +584,83 @@ int modlib_load(FAR struct mod_loadinfo_s *loadinfo)
    * GOT. Therefore we cannot do two different allocations.
    */
 
-#ifndef CONFIG_MODLIB_LOADTO_LMA
-
-  if (loadinfo->ehdr.e_type == ET_REL || loadinfo->ehdr.e_type == ET_EXEC)
+  if (!is_vma)
     {
+      if (loadinfo->ehdr.e_type == ET_REL ||
+          loadinfo->ehdr.e_type == ET_EXEC)
+        {
 #  ifndef CONFIG_ARCH_USE_SEPARATED_SECTION
-      if (loadinfo->xipbase != 0)
-        {
-          loadinfo->textalloc = loadinfo->xipbase +
-                                loadinfo->shdr[1].sh_offset;
-        }
-      else if (loadinfo->textsize > 0)
-        {
+          if (loadinfo->xipbase != 0)
+            {
+              loadinfo->textalloc = loadinfo->xipbase +
+                                    loadinfo->shdr[1].sh_offset;
+            }
+          else if (loadinfo->textsize > 0)
+            {
 #    ifdef CONFIG_ARCH_USE_TEXT_HEAP
-          loadinfo->textalloc = (uintptr_t)
-                                up_textheap_memalign(loadinfo->textalign,
-                                                     loadinfo->textsize +
-                                                     loadinfo->segpad);
+              loadinfo->textalloc = (uintptr_t)
+                                    up_textheap_memalign(loadinfo->textalign,
+                                                         loadinfo->textsize +
+                                                         loadinfo->segpad);
 #    else
+              loadinfo->textalloc = (uintptr_t)
+                                    lib_memalign(loadinfo->textalign,
+                                                 loadinfo->textsize +
+                                                 loadinfo->segpad);
+#    endif
+              if (!loadinfo->textalloc)
+                {
+                  berr("ERROR: Failed to allocate memory"
+                       "for the module text\n");
+                  ret = -ENOMEM;
+                  goto errout_with_buffers;
+                }
+            }
+
+          if (loadinfo->datasize > 0)
+            {
+#    ifdef CONFIG_ARCH_USE_DATA_HEAP
+              loadinfo->datastart = (uintptr_t)
+                up_dataheap_memalign(loadinfo->dataalign,
+                                     loadinfo->datasize);
+#    else
+              loadinfo->datastart = (uintptr_t)
+                lib_memalign(loadinfo->dataalign,
+                             loadinfo->datasize);
+#    endif
+              if (!loadinfo->datastart)
+                {
+                  berr("ERROR: Failed to allocate memory"
+                       "for the module data\n");
+                  ret = -ENOMEM;
+                  goto errout_with_buffers;
+                }
+            }
+#  endif
+        }
+      else if (loadinfo->ehdr.e_type == ET_DYN)
+        {
           loadinfo->textalloc = (uintptr_t)lib_memalign(loadinfo->textalign,
                                                         loadinfo->textsize +
+                                                        loadinfo->datasize +
                                                         loadinfo->segpad);
-#    endif
+
           if (!loadinfo->textalloc)
             {
-              berr("ERROR: Failed to allocate memory for the module text\n");
+              berr("ERROR: Failed to allocate memory for the module\n");
               ret = -ENOMEM;
               goto errout_with_buffers;
             }
-        }
 
-      if (loadinfo->datasize > 0)
-        {
-#    ifdef CONFIG_ARCH_USE_DATA_HEAP
-          loadinfo->datastart = (uintptr_t)
-                                 up_dataheap_memalign(loadinfo->dataalign,
-                                                      loadinfo->datasize);
-#    else
-          loadinfo->datastart = (uintptr_t)lib_memalign(loadinfo->dataalign,
-                                                        loadinfo->datasize);
-#    endif
-          if (!loadinfo->datastart)
-            {
-              berr("ERROR: Failed to allocate memory for the module data\n");
-              ret = -ENOMEM;
-              goto errout_with_buffers;
-            }
+          loadinfo->datastart = loadinfo->textalloc +
+                                loadinfo->textsize +
+                                loadinfo->segpad;
         }
-#  endif
     }
-  else if (loadinfo->ehdr.e_type == ET_DYN)
-    {
-      loadinfo->textalloc = (uintptr_t)lib_memalign(loadinfo->textalign,
-                                                    loadinfo->textsize +
-                                                    loadinfo->datasize +
-                                                    loadinfo->segpad);
-
-      if (!loadinfo->textalloc)
-        {
-          berr("ERROR: Failed to allocate memory for the module\n");
-          ret = -ENOMEM;
-          goto errout_with_buffers;
-        }
-
-      loadinfo->datastart = loadinfo->textalloc +
-                            loadinfo->textsize +
-                            loadinfo->segpad;
-    }
-
-#endif /* CONFIG_MODLIB_LOADTO_LMA */
 
   /* Load ELF section data into memory */
 
-  ret = modlib_loadfile(loadinfo);
+  ret = modlib_loadfile(loadinfo, is_vma);
   if (ret < 0)
     {
       berr("ERROR: modlib_loadfile failed: %d\n", ret);
@@ -699,7 +704,8 @@ errout_with_buffers:
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_ADDRENV
-int modlib_load_with_addrenv(FAR struct mod_loadinfo_s *loadinfo)
+int modlib_load_with_addrenv(FAR struct mod_loadinfo_s *loadinfo,
+                             bool is_vma)
 {
   int ret;
 
@@ -750,7 +756,7 @@ int modlib_load_with_addrenv(FAR struct mod_loadinfo_s *loadinfo)
       goto errout_with_buffers;
     }
 
-  ret = modlib_loadfile(loadinfo);
+  ret = modlib_loadfile(loadinfo, is_vma);
   if (ret < 0)
     {
       berr("ERROR: modlib_loadfile failed: %d\n", ret);

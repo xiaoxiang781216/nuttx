@@ -112,7 +112,7 @@ static int elf_loadbinary(FAR struct binary_s *binp,
 
   /* Load the program binary */
 
-  ret = modlib_load_with_addrenv(&loadinfo);
+  ret = modlib_load_with_addrenv(&loadinfo, false);
   modlib_dumploadinfo(&loadinfo);
   if (ret != 0)
     {

@@ -29,6 +29,7 @@
 
 #include <nuttx/config.h>
 
+#include <stdbool.h>
 #include <sys/types.h>
 #include <elf.h>
 
@@ -330,6 +331,21 @@ void modlib_getsymtab(FAR const struct symtab_s **symtab, FAR int *nsymbols);
 void modlib_setsymtab(FAR const struct symtab_s *symtab, int nsymbols);
 
 /****************************************************************************
+ * Name: modlib_load_vma
+ *
+ * Description:
+ *   Loads the binary into memory, allocating memory, performing relocations
+ *   and initializing the data and bss segments.
+ *
+ * Returned Value:
+ *   0 (OK) is returned on success and a negated errno is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+int modlib_load_vma(FAR struct mod_loadinfo_s *loadinfo, bool is_vma);
+
+/****************************************************************************
  * Name: modlib_load
  *
  * Description:
@@ -342,7 +358,7 @@ void modlib_setsymtab(FAR const struct symtab_s *symtab, int nsymbols);
  *
  ****************************************************************************/
 
-int modlib_load(FAR struct mod_loadinfo_s *loadinfo);
+#define modlib_load(l) modlib_load_vma(l, false)
 
 /****************************************************************************
  * Name: modlib_load_with_addrenv
@@ -358,9 +374,10 @@ int modlib_load(FAR struct mod_loadinfo_s *loadinfo);
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_ADDRENV
-int modlib_load_with_addrenv(FAR struct mod_loadinfo_s *loadinfo);
+int modlib_load_with_addrenv(FAR struct mod_loadinfo_s
+                             *loadinfo, bool is_vma);
 #else
-#  define modlib_load_with_addrenv(l) modlib_load(l)
+#  define modlib_load_with_addrenv(l, v) modlib_load(l)
 #endif
 
 /****************************************************************************
