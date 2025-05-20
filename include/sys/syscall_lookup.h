@@ -394,8 +394,6 @@ SYSCALL_LOOKUP(munmap,                     2)
   SYSCALL_LOOKUP(socketpair,               4)
 #endif
 
-SYSCALL_LOOKUP(nanosleep,                  2)
-
 /* I/O event notification facility */
 
 SYSCALL_LOOKUP(epoll_close,                1)
@@ -404,16 +402,6 @@ SYSCALL_LOOKUP(epoll_create1,              1)
 SYSCALL_LOOKUP(epoll_ctl,                  4)
 SYSCALL_LOOKUP(epoll_pwait,                5)
 SYSCALL_LOOKUP(epoll_wait,                 4)
-
-/* POSIX timers */
-
-SYSCALL_LOOKUP(time,                       1)
-SYSCALL_LOOKUP(gettimeofday,               2)
-SYSCALL_LOOKUP(settimeofday,               2)
-
-/* ANSI C signal handling */
-
-SYSCALL_LOOKUP(signal,                     2)
 
 #ifdef CONFIG_SCHED_PERF_EVENTS
   SYSCALL_LOOKUP(perf_event_open,          5)
