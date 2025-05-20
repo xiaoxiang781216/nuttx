@@ -18,15 +18,21 @@
 #
 ############################################################################
 
-ARCHCPUFLAGS += -march=armv8-r
+ifeq ($(CONFIG_ARCH_HAVE_DPFPU),y)
+  ARCHCPUFLAGS += -march=armv8-r
+else
+  ARCHCPUFLAGS += -march=armv8-r+fp.sp
+endif
 
 ifeq ($(CONFIG_ARCH_FPU),y)
   LLVM_ABITYPE := eabihf
 
   ifeq ($(CONFIG_ARM_NEON),y)
     ARCHCPUFLAGS += -mfpu=neon-fp-armv8
-  else
+  else ifeq ($(CONFIG_ARCH_HAVE_DPFPU),y)
     ARCHCPUFLAGS += -mfpu=fp-armv8
+  else
+    ARCHCPUFLAGS += -mfpu=fpv5-sp-d16
   endif
   ifeq ($(CONFIG_ARM_FPU_ABI_SOFT),y)
     ARCHCPUFLAGS += -mfloat-abi=softfp

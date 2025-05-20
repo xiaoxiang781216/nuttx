@@ -20,16 +20,20 @@
 
 set(PLATFORM_FLAGS)
 
-if(CONFIG_ARCH_CORTEXR52)
-  list(APPEND PLATFORM_FLAGS -mcpu=cortex-r52)
+if(CONFIG_ARCH_HAVE_DPFPU)
+  list(APPEND PLATFORM_FLAGS -march=armv8-r)
+else()
+  list(APPEND PLATFORM_FLAGS -march=armv8-r+fp.sp)
 endif()
 
 if(CONFIG_ARCH_FPU)
 
   if(CONFIG_ARM_NEON)
     list(APPEND PLATFORM_FLAGS -mfpu=neon-fp-armv8)
-  else()
+  elseif(CONFIG_ARCH_HAVE_DPFPU)
     list(APPEND PLATFORM_FLAGS -mfpu=fp-armv8)
+  else()
+    list(APPEND PLATFORM_FLAGS -mfpu=fpv5-sp-d16)
   endif()
   if(CONFIG_ARM_FPU_ABI_SOFT)
     list(APPEND PLATFORM_FLAGS -mfloat-abi=softfp)
