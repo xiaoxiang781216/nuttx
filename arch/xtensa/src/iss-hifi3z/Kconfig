@@ -1,8 +1,0 @@
-#
-# For a description of the syntax of this configuration file,
-# see the file kconfig-language.txt in the NuttX tools repository.
-#
-
-if ARCH_CHIP_ISS_HIFI3Z
-
-endif # ARCH_CHIP_ISS_HIFI3Z

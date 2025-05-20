@@ -534,18 +534,6 @@ config ARCH_BOARD_ESP32H2_DEVKIT
 	---help---
 		The ESP32-H2 DevKit features the ESP32-H2 CPU with a RISC-V core.
 
-config ARCH_BOARD_ISS_HIFI4
-	bool "hifi4 simulation"
-	depends on ARCH_CHIP_ISS_HIFI4
-	---help---
-		hifi4 simulation on Xtensa Instruction Set Simulator (ISS)
-
-config ARCH_BOARD_ISS_HIFI3Z
-	bool "hifi3z simulation"
-	depends on ARCH_CHIP_ISS_HIFI3Z
-	---help---
-		hifi3z simulation on Xtensa Instruction Set Simulator (ISS)
-
 config ARCH_BOARD_ET_STM32_STAMP
 	bool "Futurlec: ET-STM32 Stamp"
 	depends on ARCH_CHIP_STM32F103RE
@@ -3339,8 +3327,6 @@ config ARCH_BOARD
 	default "esp32c6-devkitc"           if ARCH_BOARD_ESP32C6_DEVKITC
 	default "esp32c6-devkitm"           if ARCH_BOARD_ESP32C6_DEVKITM
 	default "esp32h2-devkit"            if ARCH_BOARD_ESP32H2_DEVKIT
-	default "iss-hifi4"                 if ARCH_BOARD_ISS_HIFI4
-	default "iss-hifi3z"                if ARCH_BOARD_ISS_HIFI3Z
 	default "et-stm32-stamp"            if ARCH_BOARD_ET_STM32_STAMP
 	default "tlsr8278adk80d"            if ARCH_BOARD_TLSR8278ADK80D
 	default "ez80f910200kitg"           if ARCH_BOARD_EZ80F910200KITG
@@ -4536,12 +4522,6 @@ endif
 #endif
 if ARCH_BOARD_ESP32H2_DEVKIT
 source "boards/risc-v/esp32h2/esp32h2-devkit/Kconfig"
-endif
-if ARCH_BOARD_ISS_HIFI4
-source "boards/xtensa/iss-hifi4/iss-hifi4/Kconfig"
-endif
-if ARCH_BOARD_ISS_HIFI3Z
-source "boards/xtensa/iss-hifi3z/iss-hifi3z/Kconfig"
 endif
 if ARCH_BOARD_SIM
 source "boards/sim/sim/sim/Kconfig"
