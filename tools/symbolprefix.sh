@@ -191,6 +191,28 @@ remove_symbol_prefix() {
     done < <($READELF -W -S "$input" | awk '/^\s*\[[0-9]+/{print $2, $1}')
 }
 
+extract_lib_files() {
+    local lib="$1"
+    local path="$2"
+
+    cd "$path" || return
+    for file in $($AR t "$lib" | sort | uniq -c | awk '{print $2}'); do
+        count=1
+        if [[ $($AR t "$lib" | grep -c "^$file$") -gt 1 ]]; then
+            for duplicate in $($AR t "$lib" | grep "^$file$"); do
+                $AR xN $count "$lib" "$file"
+                mv "$file" "${file}.${count}"
+                count=$((count + 1))
+            done
+        else
+            $AR xN 1 "$lib" "$file"
+            mv "$file" "${file}.1"
+        fi
+    done
+
+    cd - || return
+}
+
 # Handle all file
 for input in "${inputs[@]}"; do
     if [ "$is_output_dir" -eq 1 ]; then
@@ -204,9 +226,7 @@ for input in "${inputs[@]}"; do
         echo "[$(basename "$input")] lib Processing $input -> $final_output"
         temp_dir=$(mktemp -d)
         lib=$(realpath "$input")
-        cd "$temp_dir"
-        $AR x "$lib"
-        cd "$OLDPWD"
+        extract_lib_files "$lib" "$temp_dir"
         if [ -z "$(ls -A "$temp_dir")" ]; then
             cp "$lib" "$final_output"
         else
@@ -219,7 +239,7 @@ for input in "${inputs[@]}"; do
 
             # keep the order of the file in the archive
             final_output=$(realpath "$final_output")
-            $AR t "$lib" > "$temp_dir/file_list.txt"
+            $AR t "$lib" | awk '{count[$0]++} {print $0 "." count[$0]}' > "$temp_dir/file_list.txt"
             cd "$temp_dir"
             $AR rcs "$final_output" $(cat "$temp_dir/file_list.txt")
             cd "$OLDPWD"
