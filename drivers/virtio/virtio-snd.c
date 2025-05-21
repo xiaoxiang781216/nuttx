@@ -336,12 +336,14 @@ virtio_snd_get_support_formats(FAR const struct virtio_snd_pcm_info *info,
 static void virtio_snd_pcm_notify_cb(FAR struct virtqueue *vq)
 {
   FAR struct virtio_snd_s *priv = vq->vq_dev->priv;
+  irqstate_t flags;
 
+  flags = spin_lock_irqsave(&priv->lock);
   for (; ; )
     {
       FAR struct virtio_snd_buffer_s *buf;
       FAR struct virtio_snd_dev_s *sdev;
-      buf = virtqueue_get_buffer_lock(vq, NULL, NULL, &priv->lock);
+      buf = virtqueue_get_buffer(vq, NULL, NULL);
       if (buf == NULL)
         {
           break;
@@ -357,6 +359,8 @@ static void virtio_snd_pcm_notify_cb(FAR struct virtqueue *vq)
       sdev = (FAR struct virtio_snd_dev_s *)buf->dev;
       sdev->cache_buffers--;
     }
+
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -414,8 +418,8 @@ static int virtio_snd_send_pcm(FAR struct virtio_snd_dev_s *sdev,
     }
 
   virtqueue_kick(vq);
-  spin_unlock_irqrestore(&priv->lock, flags);
   sdev->cache_buffers++;
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   return OK;
 }
@@ -998,8 +1002,10 @@ static int virtio_snd_ioctl(FAR struct audio_lowerhalf_s *dev,
                             unsigned long arg)
 {
   FAR struct virtio_snd_dev_s *sdev = (FAR struct virtio_snd_dev_s *)dev;
+  FAR struct virtio_snd_s *priv = sdev->priv;
   FAR struct ap_buffer_info_s *bufinfo;
   FAR long *latency = (FAR long *)arg;
+  irqstate_t flags;
 
   switch (cmd)
     {
@@ -1010,8 +1016,10 @@ static int virtio_snd_ioctl(FAR struct audio_lowerhalf_s *dev,
         break;
 
       case AUDIOIOC_GETLATENCY:
+        flags = spin_lock_irqsave(&priv->lock);
         *latency = sdev->cache_buffers * sdev->period_bytes /
                    sdev->frame_size;
+        spin_unlock_irqrestore(&priv->lock, flags);
         break;
 
       default:
