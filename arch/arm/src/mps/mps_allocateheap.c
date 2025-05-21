@@ -313,11 +313,23 @@ void *up_textheap_memalign(const char *sectname,
 void *up_textheap_memalign(size_t align, size_t size)
 #  endif
 {
-  uintptr_t base = (uintptr_t)MPS_SRAM2_START + g_alloc_count;
-  uintptr_t ret = ALIGN_UP(base, align);
+  if (CONFIG_RAM_START > MPS_SRAM2_START)
+    {
+      /* Use the SRAM2 for boot elf text sections */
 
-  g_alloc_count += ret - base + size;
-  return (void *)ret;
+      uintptr_t base = (uintptr_t)MPS_SRAM2_START + g_alloc_count;
+      uintptr_t ret = ALIGN_UP(base, align);
+
+      g_alloc_count += ret - base + size;
+
+      return (void *)ret;
+    }
+  else
+    {
+      /* Use the normal heap for application or so */
+
+      return memalign(align, size);
+    }
 }
 #endif
 
@@ -332,6 +344,10 @@ void *up_textheap_memalign(size_t align, size_t size)
 #if defined(CONFIG_ARCH_USE_TEXT_HEAP)
 void up_textheap_free(void *p)
 {
+  if (CONFIG_RAM_START <= MPS_SRAM2_START)
+    {
+      return free(p);
+    }
 }
 #endif
 
