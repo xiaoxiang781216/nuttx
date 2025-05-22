@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/sim/src/sim/sim_gpiochip.h
+ * arch/sim/src/sim/sim_hostgpiochip.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_SIM_SRC_SIM_GPIOCHIP_H
-#define __ARCH_SIM_SRC_SIM_GPIOCHIP_H
+#ifndef __ARCH_SIM_SRC_SIM_HOSTGPIOCHIP_H
+#define __ARCH_SIM_SRC_SIM_HOSTGPIOCHIP_H
 
 /****************************************************************************
  * Included Files

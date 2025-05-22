@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/sim/src/sim/sim_usbdev.h
+ * arch/sim/src/sim/sim_hostusbdev.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_SIM_SRC_SIM_USB_DEV_H
-#define __ARCH_SIM_SRC_SIM_USB_DEV_H
+#ifndef __ARCH_SIM_SRC_SIM_HOSTUSBDEV_H
+#define __ARCH_SIM_SRC_SIM_HOSTUSBDEV_H
 
 /****************************************************************************
  * Included Files

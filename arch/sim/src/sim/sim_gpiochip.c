@@ -27,7 +27,7 @@
 #include <nuttx/ioexpander/gpio.h>
 #include <nuttx/ioexpander/ioexpander.h>
 
-#include "sim_gpiochip.h"
+#include "sim_hostgpiochip.h"
 #include "sim_internal.h"
 
 /****************************************************************************

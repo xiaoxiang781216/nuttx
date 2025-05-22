@@ -44,7 +44,7 @@
 #include <nuttx/usb/usbdev_trace.h>
 
 #include "sim_internal.h"
-#include "sim_usbdev.h"
+#include "sim_hostusbdev.h"
 
 /****************************************************************************
  * Pre-processor Definitions

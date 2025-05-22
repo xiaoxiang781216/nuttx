@@ -40,7 +40,7 @@
 #include <libusb-1.0/libusb.h>
 
 #include "sim_internal.h"
-#include "sim_usbhost.h"
+#include "sim_hostusbhost.h"
 
 /****************************************************************************
  * Pre-processor Definitions

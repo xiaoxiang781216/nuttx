@@ -48,9 +48,9 @@
 
 struct sim_canchar_s
 {
-  struct can_dev_s dev;    /* CAN character device */
-  struct sim_can_s host;   /* Host CAN handler */
-  struct work_s    worker; /* Work queue for RX */
+  struct can_dev_s  dev;    /* CAN character device */
+  struct host_can_s host;   /* Host CAN handler */
+  struct work_s     worker; /* Work queue for RX */
 };
 
 /****************************************************************************

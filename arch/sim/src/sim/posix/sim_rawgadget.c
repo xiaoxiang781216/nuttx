@@ -40,7 +40,7 @@
 #include <linux/usb/ch9.h>
 
 #include "sim_internal.h"
-#include "sim_usbdev.h"
+#include "sim_hostusbdev.h"
 
 /****************************************************************************
  * Pre-processor Definitions

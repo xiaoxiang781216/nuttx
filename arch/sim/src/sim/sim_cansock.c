@@ -46,7 +46,7 @@
 struct sim_cansock_s
 {
   struct net_driver_s dev;    /* Interface understood by the network */
-  struct sim_can_s    host;   /* Host CAN handler */
+  struct host_can_s   host;   /* Host CAN handler */
   struct work_s       worker; /* Work queue for RX */
 };
 

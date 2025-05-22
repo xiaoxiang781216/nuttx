@@ -42,7 +42,7 @@
 #include <nuttx/usb/usbhost.h>
 #include <nuttx/usb/usbhost_trace.h>
 
-#include "sim_usbhost.h"
+#include "sim_hostusbhost.h"
 #include "sim_internal.h"
 
 /****************************************************************************

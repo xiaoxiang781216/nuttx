@@ -153,7 +153,7 @@ if(CONFIG_HOST_MACOS)
 endif()
 
 if(CONFIG_SIM_CAMERA_V4L2)
-  list(APPEND HOSTSRCS sim_host_v4l2.c)
+  list(APPEND HOSTSRCS sim_hostv4l2.c)
   list(APPEND SRCS sim_camera.c)
   list(APPEND STDLIBS v4l2)
 endif()

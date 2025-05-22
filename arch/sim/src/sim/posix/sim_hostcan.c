@@ -45,7 +45,7 @@
  * Name: host_can_init
  ****************************************************************************/
 
-int host_can_init(struct sim_can_s *can, int devidx)
+int host_can_init(struct host_can_s *can, int devidx)
 {
   struct sockaddr_can addr;
   struct ifreq        ifr;
@@ -104,7 +104,7 @@ int host_can_init(struct sim_can_s *can, int devidx)
  *
  ****************************************************************************/
 
-int host_can_read(struct sim_can_s *can, void *frame)
+int host_can_read(struct host_can_s *can, void *frame)
 {
   if (!can->ifup || can->fd < 0)
     {
@@ -125,7 +125,7 @@ int host_can_read(struct sim_can_s *can, void *frame)
  *
  ****************************************************************************/
 
-int host_can_send(struct sim_can_s *can, void *frame, size_t len)
+int host_can_send(struct host_can_s *can, void *frame, size_t len)
 {
   if (!can->ifup || can->fd < 0)
     {
@@ -144,7 +144,7 @@ int host_can_send(struct sim_can_s *can, void *frame, size_t len)
  * Name: host_can_ifup
  ****************************************************************************/
 
-int host_can_ifup(struct sim_can_s *can)
+int host_can_ifup(struct host_can_s *can)
 {
   can->ifup = true;
   return 0;
@@ -154,7 +154,7 @@ int host_can_ifup(struct sim_can_s *can)
  * Name: host_can_ifdown
  ****************************************************************************/
 
-int host_can_ifdown(struct sim_can_s *can)
+int host_can_ifdown(struct host_can_s *can)
 {
   can->ifup = false;
   return 0;
@@ -164,7 +164,7 @@ int host_can_ifdown(struct sim_can_s *can)
  * Name: host_can_avail
  ****************************************************************************/
 
-bool host_can_avail(struct sim_can_s *can)
+bool host_can_avail(struct host_can_s *can)
 {
   struct timeval tv;
   fd_set fdset;

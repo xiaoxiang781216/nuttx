@@ -285,7 +285,7 @@ ifeq ($(CONFIG_SIM_SOUND_ALSA),y)
 endif
 
 ifeq ($(CONFIG_SIM_CAMERA_V4L2),y)
-  HOSTSRCS += sim_host_v4l2.c
+  HOSTSRCS += sim_hostv4l2.c
   CSRCS += sim_camera.c
   STDLIBS += -lv4l2
 endif
