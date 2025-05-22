@@ -203,7 +203,7 @@ int host_close(int fd)
 {
   /* Just call the close routine */
 
-  return host_uninterruptible(close, fd);
+  return host_uninterruptible_errno(close, fd);
 }
 
 /****************************************************************************
@@ -214,7 +214,7 @@ nuttx_ssize_t host_read(int fd, void *buf, nuttx_size_t count)
 {
   /* Just call the read routine */
 
-  return host_uninterruptible(read, fd, buf, count);
+  return host_uninterruptible_errno(read, fd, buf, count);
 }
 
 /****************************************************************************
@@ -225,7 +225,7 @@ nuttx_ssize_t host_write(int fd, const void *buf, nuttx_size_t count)
 {
   /* Just call the write routine */
 
-  return host_uninterruptible(write, fd, buf, count);
+  return host_uninterruptible_errno(write, fd, buf, count);
 }
 
 /****************************************************************************
@@ -237,7 +237,7 @@ nuttx_off_t host_lseek(int fd, nuttx_off_t pos, nuttx_off_t offset,
 {
   /* Just call the lseek routine */
 
-  return host_uninterruptible(lseek, fd, offset, whence);
+  return host_uninterruptible_errno(lseek, fd, offset, whence);
 }
 
 /****************************************************************************
@@ -248,7 +248,7 @@ int host_ioctl(int fd, int request, unsigned long arg)
 {
   /* Just call the ioctl routine */
 
-  return host_uninterruptible(ioctl, fd, request, arg);
+  return ioctl(fd, request, arg);
 }
 
 /****************************************************************************
@@ -259,7 +259,7 @@ void host_sync(int fd)
 {
   /* Just call the sync routine */
 
-  host_uninterruptible(fsync, fd);
+  fsync(fd);
 }
 
 /****************************************************************************
@@ -268,7 +268,7 @@ void host_sync(int fd)
 
 int host_dup(int fd)
 {
-  return host_uninterruptible(dup, fd);
+  return dup(fd);
 }
 
 /****************************************************************************
@@ -368,7 +368,7 @@ void *host_opendir(const char *name)
 {
   /* Return the host DIR pointer */
 
-  return (void *)host_uninterruptible(opendir, name);
+  return (void *)opendir(name);
 }
 
 /****************************************************************************
@@ -381,7 +381,7 @@ int host_readdir(void *dirp, struct nuttx_dirent_s *entry)
 
   /* Call the host's readdir routine */
 
-  ent = host_uninterruptible(readdir, dirp);
+  ent = readdir(dirp);
   if (ent != NULL)
     {
       /* Copy the entry name */
@@ -438,7 +438,7 @@ void host_rewinddir(void *dirp)
 {
   /* Just call the rewinddir routine */
 
-  host_uninterruptible_no_return(rewinddir, dirp);
+  rewinddir(dirp);
 }
 
 /****************************************************************************

@@ -30,7 +30,6 @@
 #endif
 
 #ifndef __ASSEMBLY__
-#  include <errno.h>
 #  include <sys/types.h>
 #  include <stdbool.h>
 #  include <stdint.h>

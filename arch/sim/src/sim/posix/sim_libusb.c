@@ -197,7 +197,7 @@ static void host_libusb_ep0transfer_cb(struct libusb_transfer *transfer)
       datareq->success = false;
     }
 
-  host_uninterruptible_no_return(free, buffer - LIBUSB_CONTROL_SETUP_SIZE);
+  free(buffer - LIBUSB_CONTROL_SETUP_SIZE);
 
   host_libusb_fifopush(&dev->completed, datareq);
   host_uninterruptible_no_return(libusb_free_transfer, transfer);
@@ -297,8 +297,7 @@ static int host_libusb_ep0inhandle(struct host_libusb_hostdev_s *dev,
       return LIBUSB_ERROR_NO_DEVICE;
     }
 
-  buffer = host_uninterruptible(malloc, LIBUSB_CONTROL_SETUP_SIZE +
-                                ctrlreq->wLength);
+  buffer = malloc(LIBUSB_CONTROL_SETUP_SIZE + ctrlreq->wLength);
   if (!buffer)
     {
       ERROR("control data buffer malloc() fail: %s\n",
@@ -336,7 +335,7 @@ err_with_transfer:
   host_uninterruptible_no_return(libusb_free_transfer, transfer);
 
 err_with_buffer:
-  host_uninterruptible_no_return(free, buffer);
+  free(buffer);
 
   return ret;
 }
@@ -615,9 +614,8 @@ int host_usbhost_open(void)
     }
 
   dev->config_desc = (struct libusb_config_descriptor **)
-                      host_uninterruptible(malloc,
-                              dev->dev_desc.bNumConfigurations
-                              *(sizeof(struct libusb_config_descriptor *)));
+                      malloc(dev->dev_desc.bNumConfigurations
+                      *(sizeof(struct libusb_config_descriptor *)));
   if (!dev->config_desc)
     {
       ERROR("host_libusb_devinit() malloc failed: %s\n",
@@ -656,7 +654,7 @@ void host_usbhost_close(void)
 
   if (dev->config_desc)
     {
-      host_uninterruptible_no_return(free, dev->config_desc);
+      free(dev->config_desc);
       dev->config_desc = NULL;
     }
 

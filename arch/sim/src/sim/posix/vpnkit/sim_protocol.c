@@ -50,7 +50,6 @@
 #include <syslog.h>
 
 #include "sim_protocol.h"
-#include "sim_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -88,7 +87,7 @@ int really_read(int fd, uint8_t *buffer, size_t total)
 
   while (remaining > 0)
     {
-      n = host_uninterruptible_errno(read, fd, buffer, remaining);
+      n = read(fd, buffer, remaining);
       if (n == 0)
         {
           ERROR("EOF reading from socket: closing\n");
@@ -98,7 +97,7 @@ int really_read(int fd, uint8_t *buffer, size_t total)
       if (n < 0)
         {
           ERROR("Failure reading from socket: closing: %s",
-                strerror(-n));
+                strerror(errno));
           goto err;
         }
 
@@ -112,7 +111,7 @@ err:
    * shutdown
    */
 
-  host_uninterruptible(shutdown, fd, SHUT_RD);
+  shutdown(fd, SHUT_RD);
   return -1;
 }
 
@@ -123,7 +122,7 @@ int really_write(int fd, uint8_t *buffer, size_t total)
 
   while (remaining > 0)
     {
-      n = host_uninterruptible_errno(write, fd, buffer, remaining);
+      n = write(fd, buffer, remaining);
       if (n == 0)
         {
           ERROR("EOF writing to socket: closing");
@@ -133,7 +132,7 @@ int really_write(int fd, uint8_t *buffer, size_t total)
       if (n < 0)
         {
           ERROR("Failure writing to socket: closing: %s",
-                strerror(-n));
+                strerror(errno));
           goto err;
         }
 
@@ -147,7 +146,7 @@ err:
 
   /* On error: stop listening to the socket */
 
-  host_uninterruptible(shutdown, fd, SHUT_WR);
+  shutdown(fd, SHUT_WR);
   return -1;
 }
 
@@ -155,7 +154,7 @@ struct init_message *create_init_message(void)
 {
   struct init_message *m;
 
-  m = host_uninterruptible(malloc, sizeof(struct init_message));
+  m = malloc(sizeof(struct init_message));
   if (!m)
     {
       return NULL;
@@ -178,7 +177,7 @@ char *print_init_message(struct init_message *m)
   char *buffer;
   int n;
 
-  buffer = host_uninterruptible(malloc, 80);
+  buffer = malloc(80);
   if (!buffer)
     {
       return NULL;
@@ -187,8 +186,8 @@ char *print_init_message(struct init_message *m)
   n = snprintf(buffer, 80, "version %d, commit %s", m->version, tmp);
   if (n < 0)
     {
-      shutdown(perror, "Failed to format init_message");
-      shutdown(exit, 1);
+      perror("Failed to format init_message");
+      exit(1);
     }
 
   return buffer;

@@ -37,7 +37,6 @@
 #include <linux/spi/spidev.h>
 
 #include "sim_spi.h"
-#include "sim_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -210,8 +209,7 @@ static void linux_spi_select(struct spi_dev_s *dev, uint32_t devid,
           .cs_change = false,
         };
 
-      host_uninterruptible(ioctl, priv->file, SPI_IOC_MESSAGE(1),
-                           &transfer_data);
+      ioctl(priv->file, SPI_IOC_MESSAGE(1), &transfer_data);
     }
 }
 
@@ -242,8 +240,8 @@ static uint32_t linux_spi_setfrequency(struct spi_dev_s *dev,
   int file = priv->file;
   uint32_t actualfreq;
 
-  host_uninterruptible(ioctl, file, SPI_IOC_WR_MAX_SPEED_HZ, &frequency);
-  host_uninterruptible(ioctl, file, SPI_IOC_RD_MAX_SPEED_HZ, &actualfreq);
+  ioctl(file, SPI_IOC_WR_MAX_SPEED_HZ, &frequency);
+  ioctl(file, SPI_IOC_RD_MAX_SPEED_HZ, &actualfreq);
 
   return actualfreq;
 }
@@ -342,7 +340,7 @@ static void linux_spi_setmode(struct spi_dev_s *dev, enum spi_mode_e mode)
         break;
     }
 
-    host_uninterruptible(ioctl, file, SPI_IOC_WR_MODE, &spilinuxmode);
+    ioctl(file, SPI_IOC_WR_MODE, &spilinuxmode);
 }
 
 /****************************************************************************
@@ -366,8 +364,7 @@ static void linux_spi_setbits(struct spi_dev_s *dev, int nbits)
   int file = priv->file;
   uint8_t bits_per_word = (uint8_t)nbits;
 
-  host_uninterruptible(ioctl, file, SPI_IOC_WR_BITS_PER_WORD,
-                       &bits_per_word);
+  ioctl(file, SPI_IOC_WR_BITS_PER_WORD, &bits_per_word);
 }
 
 /****************************************************************************
@@ -429,7 +426,7 @@ static int linux_spi_hwfeatures(struct spi_dev_s *dev,
       lsb = 1;
     }
 
-  return host_uninterruptible(ioctl, file, SPI_IOC_WR_LSB_FIRST, &lsb);
+  return ioctl(file, SPI_IOC_WR_LSB_FIRST, &lsb);
 }
 #endif
 
@@ -680,8 +677,7 @@ static int linux_spi_transfer(struct spi_dev_s *dev, const void *txbuffer,
     }
 #endif
 
-  return host_uninterruptible(ioctl, file, SPI_IOC_MESSAGE(1),
-                              &transfer_data);
+  return ioctl(file, SPI_IOC_MESSAGE(1), &transfer_data);
 }
 
 /****************************************************************************
@@ -706,18 +702,18 @@ struct spi_dev_s *sim_spi_initialize(const char *filename)
 {
   struct linux_spi_dev_s *priv;
 
-  priv = host_uninterruptible(malloc, sizeof(*priv));
+  priv = malloc(sizeof(*priv));
   if (priv == NULL)
     {
       ERROR("Failed to allocate private spi master driver");
       return NULL;
     }
 
-  priv->file = host_uninterruptible(open, filename, O_RDWR);
+  priv->file = open(filename, O_RDWR);
   if (priv->file < 0)
     {
       ERROR("Failed to open %s: %d", filename, priv->file);
-      host_uninterruptible_no_return(free, priv);
+      free(priv);
       return NULL;
     }
 
@@ -748,9 +744,9 @@ int sim_spi_uninitialize(struct spi_dev_s *dev)
   struct linux_spi_dev_s *priv = (struct linux_spi_dev_s *)dev;
   if (priv->file >= 0)
     {
-      host_uninterruptible(close, priv->file);
+      close(priv->file);
     }
 
-  host_uninterruptible_no_return(free, priv);
+  free(priv);
   return 0;
 }

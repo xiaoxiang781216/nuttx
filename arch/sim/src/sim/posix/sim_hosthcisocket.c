@@ -96,7 +96,7 @@ int host_bthcisock_avail(int fd)
   FD_ZERO(&fdset);
   FD_SET(fd, &fdset);
 
-  return host_uninterruptible(select, fd + 1, &fdset, NULL, NULL, &tv) > 0;
+  return select(fd + 1, &fdset, NULL, NULL, &tv) > 0;
 }
 
 /****************************************************************************
@@ -118,11 +118,9 @@ int host_bthcisock_avail(int fd)
 
 int host_bthcisock_send(int fd, const void *data, size_t len)
 {
-  int err;
-
-  while (err = host_uninterruptible_errno(write, fd, data, len), err < 0)
+  while (write(fd, data, len) < 0)
     {
-      if (err == -EAGAIN || err == -EINTR)
+      if (errno == EAGAIN || errno == EINTR)
         {
           continue;
         }
@@ -154,8 +152,7 @@ int host_bthcisock_receive(int fd, void *data, size_t len)
 {
   int err;
 
-  while ((err = host_uninterruptible_errno(read, fd, data, len)) < 0
-          && (err == -EINTR));
+  while ((err = read(fd, data, len)) < 0 && (errno == EINTR));
 
   if (err <= 0)
     {
@@ -190,10 +187,8 @@ int host_bthcisock_open(int dev_idx)
 {
   int err;
   struct sockaddr_hci addr;
-  int fd = host_uninterruptible_errno(socket, PF_BLUETOOTH,
-                                      SOCK_RAW | SOCK_CLOEXEC
-                                      | SOCK_NONBLOCK,
-                                      BTPROTO_HCI);
+  int fd = socket(PF_BLUETOOTH, SOCK_RAW | SOCK_CLOEXEC | SOCK_NONBLOCK,
+                  BTPROTO_HCI);
   if (fd < 0)
     {
       return fd;
@@ -201,7 +196,7 @@ int host_bthcisock_open(int dev_idx)
 
   /* We must bring the device down before binding to user channel */
 
-  err = host_uninterruptible_errno(ioctl, fd, HCIDEVDOWN, dev_idx);
+  err = ioctl(fd, HCIDEVDOWN, dev_idx);
   if (err < 0)
     {
       return err;
@@ -212,8 +207,7 @@ int host_bthcisock_open(int dev_idx)
   addr.hci_dev = dev_idx;
   addr.hci_channel = HCI_CHANNEL_USER;
 
-  err = host_uninterruptible_errno(bind, fd, (struct sockaddr *) &addr,
-                                   sizeof(addr));
+  err = bind(fd, (struct sockaddr *) &addr, sizeof(addr));
   if (err < 0)
     {
       close(fd);
@@ -240,5 +234,5 @@ int host_bthcisock_open(int dev_idx)
 
 int host_bthcisock_close(int fd)
 {
-  return host_uninterruptible_errno(close, fd);
+  return close(fd);
 }

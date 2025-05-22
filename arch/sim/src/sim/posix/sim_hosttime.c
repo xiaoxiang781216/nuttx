@@ -46,8 +46,7 @@ uint64_t host_gettime(bool rtc)
   struct timespec tp;
   uint64_t current;
 
-  host_uninterruptible(clock_gettime, rtc ? CLOCK_REALTIME : CLOCK_MONOTONIC,
-                       &tp);
+  clock_gettime(rtc ? CLOCK_REALTIME : CLOCK_MONOTONIC, &tp);
   current = 1000000000ull * tp.tv_sec + tp.tv_nsec;
 
   if (rtc)
@@ -110,7 +109,7 @@ int host_settimer(uint64_t nsec)
   it.it_value.tv_sec     = nsec / 1000000000;
   it.it_value.tv_usec    = (nsec + 1000) / 1000;
 
-  return host_uninterruptible(setitimer, ITIMER_REAL, &it, NULL);
+  return setitimer(ITIMER_REAL, &it, NULL);
 }
 
 /****************************************************************************
