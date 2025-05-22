@@ -30,6 +30,7 @@
 #include <poll.h>
 
 #include <nuttx/sched.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/video/v4l2_m2m.h>
 #include <nuttx/video/video.h>
 

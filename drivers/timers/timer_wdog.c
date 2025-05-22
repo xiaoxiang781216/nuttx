@@ -31,6 +31,7 @@
 
 #include <nuttx/atomic.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/wdog.h>
 #include <nuttx/timers/timer.h>
 

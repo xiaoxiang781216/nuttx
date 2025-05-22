@@ -32,6 +32,7 @@
 #include <poll.h>
 
 #include <nuttx/mutex.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/video/v4l2_cap.h>
 #include <nuttx/video/video.h>
 

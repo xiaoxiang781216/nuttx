@@ -34,6 +34,7 @@
 #include <errno.h>
 
 #include <nuttx/lib/lib.h>
+#include <nuttx/kmalloc.h>
 
 /****************************************************************************
  * Public Functions

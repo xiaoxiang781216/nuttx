@@ -25,6 +25,7 @@
 #include <debug.h>
 #include <time.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <nuttx/sysevent/sysdiag.h>
 

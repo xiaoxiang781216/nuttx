@@ -32,7 +32,6 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <signal.h>
-#include <pthread.h>
 
 #ifdef CONFIG_BUILD_PROTECTED
 

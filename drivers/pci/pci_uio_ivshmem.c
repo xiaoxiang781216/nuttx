@@ -36,6 +36,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/mm/map.h>
 #include <nuttx/pci/pci_ivshmem.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/sched.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>

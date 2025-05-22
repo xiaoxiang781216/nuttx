@@ -44,6 +44,7 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/kmalloc.h>
 #include <nuttx/net/bluetooth.h>
 
 #include <nuttx/wireless/bluetooth/bt_core.h>

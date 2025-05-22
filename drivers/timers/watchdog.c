@@ -38,6 +38,7 @@
 #include <assert.h>
 
 #include <nuttx/fs/fs.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/irq.h>
 #include <nuttx/lib/lib.h>
 #include <nuttx/panic_notifier.h>

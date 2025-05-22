@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include <nuttx/kmalloc.h>
 #include <nuttx/drivers/ramdisk.h>
 #include <nuttx/pci/pci_ivshmem.h>
 
