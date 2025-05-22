@@ -16,19 +16,20 @@ cc_defaults {
         "-DCONFIG_HAVE_LONG_DOUBLE",
         "-DCONFIG_HAVE_LONG_LONG",
         "-DCONFIG_LIBC_FLOATINGPOINT",
-        "-DCONFIG_LIBC_SCANSET",
+        "-DCONFIG_LIBC_NETDB",
         "-DCONFIG_LIBC_NUMBERED_ARGS",
         "-DCONFIG_LIBC_PRINT_EXTENSION",
+        "-DCONFIG_LIBC_SCANSET",
         "-DCONFIG_STDIO_DISABLE_BUFFERING",
         "-DCONFIG_STREAM_BASE64_BUFFER_SIZE=128",
         "-DCONFIG_STREAM_HEXDUMP_BUFFER_SIZE=128",
         "-DCONFIG_STREAM_OUT_BUFFER_SIZE=64",
         "-DDEBUGASSERT=assert",
+        "-DFAR=",
+        "-DOK=0",
+        "-D_NX_GETERRVAL(r)=(-errno)",
         "-Dget_errno()=errno",
         "-Dset_errno(e)=do{errno = (int)(e);}while(0)",
-        "-D_NX_GETERRVAL(r)=(-errno)",
-        "-DOK=0",
-        "-DFAR=",
     ],
     proprietary: true,
 }
@@ -36,17 +37,35 @@ cc_defaults {
 genrule {
     name: "nuttx_headers_gen",
     srcs: [
-        "include/nuttx/streams.h",
+        "include/debug.h",
+        "include/netdb.h",
         "include/nuttx/compiler.h",
         "include/nuttx/crc32.h",
+        "include/nuttx/kmalloc.h",
+        "include/nuttx/lib/lib.h",
+        "include/nuttx/net/dns.h",
+        "include/nuttx/net/ethernet.h",
+        "include/nuttx/net/netconfig.h",
+        "include/nuttx/streams.h",
     ],
-    cmd: "mkdir $(genDir)/nuttx; touch $(out); cp $(in) $(genDir)/nuttx",
+    cmd: "mkdir -p $(genDir)/nuttx/lib; " +
+         "mkdir -p $(genDir)/nuttx/net; " +
+         "touch $(out); " +
+         "for f in $(in); do " +
+         "cp $$f $(genDir)/$${f#*include/};" +
+         "done;",
     out: [
-        "nuttx/streams.h",
+        "debug.h",
+        "netdb.h",
         "nuttx/compiler.h",
         "nuttx/config.h",
-        "nuttx/lib/lib.h",
         "nuttx/crc32.h",
+        "nuttx/kmalloc.h",
+        "nuttx/lib/lib.h",
+        "nuttx/net/dns.h",
+        "nuttx/net/ethernet.h",
+        "nuttx/net/netconfig.h",
+        "nuttx/streams.h",
     ],
 }
 
@@ -54,6 +73,11 @@ cc_library_static {
     name: "libnuttx_libc",
     header_libs: ["nuttx_libc_headers"],
     srcs: [
+        "libs/libc/misc/lib_crc32.c",
+        "libs/libc/netdb/lib_freeaddrinfo.c",
+        "libs/libc/netdb/lib_getaddrinfo.c",
+        "libs/libc/netdb/lib_gethostentbynamer.c",
+        "libs/libc/netdb/lib_rexec.c",
         "libs/libc/stdio/lib_dtoa_data.c",
         "libs/libc/stdio/lib_dtoa_engine.c",
         "libs/libc/stdio/lib_libbsprintf.c",
@@ -64,7 +88,10 @@ cc_library_static {
         "libs/libc/stream/lib_libnoflush.c",
         "libs/libc/stream/lib_meminstream.c",
         "libs/libc/stream/lib_stdoutstream.c",
-        "libs/libc/misc/lib_crc32.c",
+    ],
+    cflags: [
+        "-DCONFIG_NET_RPMSG",
+        "-DERROR=-1",
     ],
     defaults : [ "nuttx_libc_defaults" ],
     local_include_dirs:["libs/libc/"],
