@@ -242,6 +242,7 @@ endif()
 
 if(CONFIG_SIM_I2CBUS_LINUX)
   list(APPEND HOSTSRCS sim_linuxi2c.c)
+  list(APPEND SRCS sim_i2c.c)
 endif()
 
 if(CONFIG_SIM_SPI_LINUX)

@@ -232,6 +232,7 @@ endif
 
 ifeq ($(CONFIG_SIM_I2CBUS_LINUX),y)
   HOSTSRCS += sim_linuxi2c.c
+  CSRCS += sim_i2c.c
 endif
 
 ifeq ($(CONFIG_SIM_SPI_LINUX),y)

@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/sim/src/sim/posix/sim_i2c.h
+ * arch/sim/src/sim/sim_hosti2c.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_SIM_SRC_POSIX_SIM_I2C_H
-#define __ARCH_SIM_SRC_POSIX_SIM_I2C_H
+#ifndef __ARCH_SIM_SRC_SIM_HOSTI2C_H
+#define __ARCH_SIM_SRC_SIM_HOSTI2C_H
 
 /****************************************************************************
  * Included Files
@@ -37,10 +37,10 @@
 
 /* NuttX msg flags (see i2c_master.h) */
 
-#define NUTTX_I2C_M_READ       0x0001 /* Read data, from slave to master */
-#define NUTTX_I2C_M_TEN        0x0002 /* Ten bit address */
-#define NUTTX_I2C_M_NOSTOP     0x0040 /* Message should not end with a STOP */
-#define NUTTX_I2C_M_NOSTART    0x0080 /* Message should not begin with a START */
+#define HOST_I2C_M_READ       0x0001 /* Read data, from slave to master */
+#define HOST_I2C_M_TEN        0x0002 /* Ten bit address */
+#define HOST_I2C_M_NOSTOP     0x0040 /* Message should not end with a STOP */
+#define HOST_I2C_M_NOSTART    0x0080 /* Message should not begin with a START */
 
 /****************************************************************************
  * Public Types
@@ -48,7 +48,7 @@
 
 /* NuttX i2c msg struct (see i2c_master.h) */
 
-struct i2c_msg_s
+struct host_i2c_msg
 {
   uint32_t frequency;         /* I2C frequency */
   uint16_t addr;              /* Slave address (7- or 10-bit) */
@@ -57,26 +57,12 @@ struct i2c_msg_s
   ssize_t length;             /* Length of the buffer in bytes */
 };
 
-/* Structs needed for interacting with the NuttX i2c_master */
-
-struct i2c_master_s
-{
-  const struct i2c_ops_s *ops;
-};
-
-struct i2c_ops_s
-{
-  int (*transfer)(struct i2c_master_s *dev,
-                  struct i2c_msg_s *msgs, int count);
-#ifdef CONFIG_I2C_RESET
-  int (*reset)(struct i2c_master_s *dev);
-#endif
-  int (*setup)(struct i2c_master_s *dev);
-  int (*shutdown)(struct i2c_master_s *dev);
-};
-
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
+
+int host_i2cbus_transfer(int fd, struct host_i2c_msg *msgs, int count);
+int host_i2c_open(const char *path);
+void host_i2c_close(int fd);
 
 #endif /* __ARCH_SIM_SRC_POSIX_SIM_I2C_H */

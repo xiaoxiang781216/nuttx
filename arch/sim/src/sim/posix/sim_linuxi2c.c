@@ -22,96 +22,35 @@
  * Included Files
  ****************************************************************************/
 
-#include <sys/types.h>
-#include <sys/ioctl.h>
-
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <syslog.h>
-#include <unistd.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
-
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
+#include <linux/ioctl.h>
 
-#include "sim_i2c.h"
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define ERROR(fmt, ...) \
-        syslog(LOG_ERR, "sim_i2cbuslinux: " fmt "\n", ##__VA_ARGS__)
-#define INFO(fmt, ...) \
-        syslog(LOG_ERR, "sim_i2cbuslinux: " fmt "\n", ##__VA_ARGS__)
-#define DEBUG(fmt, ...)
+#include "sim_internal.h"
+#include "sim_hosti2c.h"
 
 /****************************************************************************
- * Private Types
- ****************************************************************************/
-
-struct linux_i2cbus_master_s
-{
-  const struct i2c_ops_s *ops; /* I2C vtable */
-  int file;
-};
-
-/****************************************************************************
- * Private Function Prototypes
- ****************************************************************************/
-
-static int linux_i2cbus_transfer(struct i2c_master_s *dev,
-                                 struct i2c_msg_s *msgs, int count);
-#ifdef CONFIG_I2C_RESET
-static int linux_i2cbus_reset(struct i2c_master_s *dev);
-#endif
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static struct i2c_ops_s i2c_linux_ops =
-{
-  .transfer = linux_i2cbus_transfer,
-#ifdef CONFIG_I2C_RESET
-  .reset = linux_i2cbus_reset,
-#endif
-};
-
-/****************************************************************************
- * Private Functions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: linux_i2cbus_reset
- *
- * Description:
- *   Provide i2c reset
- *
- ****************************************************************************/
-
-#ifdef CONFIG_I2C_RESET
-static int linux_i2cbus_reset(struct i2c_master_s *dev)
-{
-  return -1; /* Not implemented */
-}
-#endif
-
-/****************************************************************************
- * Name: linux_i2cbus_transfer
+ * Name: host_i2cbus_transfer
  *
  * Description:
  *   Provide i2c transfer
  *
  ****************************************************************************/
 
-static int linux_i2cbus_transfer(struct i2c_master_s *dev,
-                                 struct i2c_msg_s *msgs, int count)
+int host_i2cbus_transfer(int fd, struct host_i2c_msg *msgs, int count)
 {
-  struct linux_i2cbus_master_s *priv = (struct linux_i2cbus_master_s *)dev;
   struct i2c_rdwr_ioctl_data ioctl_data;
   struct i2c_msg host_msgs[count];
   int idx;
@@ -135,78 +74,31 @@ static int linux_i2cbus_transfer(struct i2c_master_s *dev,
       ioctl_data.msgs[idx].buf = msgs[idx].buffer;
       ioctl_data.msgs[idx].len = msgs[idx].length;
       ioctl_data.msgs[idx].flags = 0;
-      if (msgs[idx].flags & NUTTX_I2C_M_READ)
+      if (msgs[idx].flags & HOST_I2C_M_READ)
         {
            ioctl_data.msgs[idx].flags |= I2C_M_RD;
         }
 
-      if (msgs[idx].flags & NUTTX_I2C_M_TEN)
+      if (msgs[idx].flags & HOST_I2C_M_TEN)
         {
           ioctl_data.msgs[idx].flags |= I2C_M_TEN;
         }
 
-      if (msgs[idx].flags & NUTTX_I2C_M_NOSTART)
+      if (msgs[idx].flags & HOST_I2C_M_NOSTART)
         {
           ioctl_data.msgs[idx].flags |= I2C_M_NOSTART;
         }
     }
 
-  return ioctl(priv->file, I2C_RDWR, &ioctl_data);
+  return host_uninterruptible(ioctl, fd, I2C_RDWR, &ioctl_data);
 }
 
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: sim_i2cbus_initialize
- *
- * Description:
- *   Initialize one I2C bus
- *
- ****************************************************************************/
-
-struct i2c_master_s *sim_i2cbus_initialize(int bus)
+int host_i2c_open(const char *path)
 {
-  struct linux_i2cbus_master_s *priv;
-  char filename[20];
-
-  priv = malloc(sizeof(*priv));
-  if (priv == NULL)
-    {
-      ERROR("Failed to allocate private i2c master driver");
-      return NULL;
-    }
-
-  snprintf(filename, sizeof(filename), "/dev/i2c-%d", bus);
-  priv->file = open(filename, O_RDWR);
-  if (priv->file < 0)
-    {
-      ERROR("Failed to open %s: %d", filename, priv->file);
-      free(priv);
-      return NULL;
-    }
-
-  priv->ops = &i2c_linux_ops;
-  return (struct i2c_master_s *)priv;
+  return host_uninterruptible(open, path, O_RDWR);
 }
 
-/****************************************************************************
- * Name: sim_i2cbus_uninitialize
- *
- * Description:
- *   Uninitialize an I2C bus
- *
- ****************************************************************************/
-
-int sim_i2cbus_uninitialize(struct i2c_master_s *dev)
+void host_i2c_close(int fd)
 {
-  struct linux_i2cbus_master_s *priv = (struct linux_i2cbus_master_s *)dev;
-  if (priv->file >= 0)
-    {
-      close(priv->file);
-    }
-
-  free(priv);
-  return 0;
+  host_uninterruptible(close, fd);
 }
