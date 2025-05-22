@@ -255,6 +255,9 @@ mm_initialize_heap(FAR struct mm_heap_s *heap, FAR const char *name,
       heapstart = (FAR char *)heap_adj + sizeof(struct mm_heap_s);
 
       DEBUGASSERT(MM_MIN_CHUNK >= MM_SIZEOF_ALLOCNODE);
+
+      memset(heap, 0, sizeof(struct mm_heap_s));
+      heap->mm_curused = sizeof(struct mm_heap_s);
     }
   else
     {
@@ -263,11 +266,9 @@ mm_initialize_heap(FAR struct mm_heap_s *heap, FAR const char *name,
         {
           return NULL;
         }
+
+      memset(heap, 0, sizeof(struct mm_heap_s));
     }
-
-  /* Set up global variables */
-
-  memset(heap, 0, sizeof(struct mm_heap_s));
 
   /* Initialize the node array */
 
@@ -295,7 +296,6 @@ mm_initialize_heap(FAR struct mm_heap_s *heap, FAR const char *name,
 
   /* Add the initial region of memory to the heap */
 
-  heap->mm_curused = sizeof(struct mm_heap_s);
   mm_addregion(heap, heapstart, heapsize);
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
