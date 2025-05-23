@@ -32,6 +32,7 @@
 #include <syslog.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
@@ -110,146 +111,47 @@ static int linux_i2cbus_reset(struct i2c_master_s *dev)
 static int linux_i2cbus_transfer(struct i2c_master_s *dev,
                                  struct i2c_msg_s *msgs, int count)
 {
-  int ret = 0;
   struct linux_i2cbus_master_s *priv = (struct linux_i2cbus_master_s *)dev;
-  int file = priv->file;
-  uint8_t *pack_buf = NULL;
   struct i2c_rdwr_ioctl_data ioctl_data;
-  struct i2c_msg l_msgs[2];  /* We only support up to 2 messages */
-  ioctl_data.msgs = l_msgs;
+  struct i2c_msg host_msgs[count];
+  int idx;
 
-  /* Many i2c bus do not play well with combined messages via the Linux
-   * interface, this makes stitching things together a little harder
-   * because NuttX provides the ability to hold the bus without ending
-   * with a STOP which is not ideal in general, and not possible with
-   * Linux.
-   */
-
-  if ((msgs[0].flags & NUTTX_I2C_M_TEN) || (msgs[1].flags & NUTTX_I2C_M_TEN))
+  if (count > I2C_RDRW_IOCTL_MAX_MSGS)
     {
-      /* Linux also has somewhat poor support for 10bit addresses and they
-       * are quite rare so we just don't support them for now here
-       */
-
-      return -1;
+      return -EINVAL;
     }
 
-  ioctl_data.msgs = l_msgs;
-
-  if (count == 1)
+  memset(&ioctl_data, 0, sizeof(ioctl_data));
+  ioctl_data.nmsgs = count;
+  ioctl_data.msgs = host_msgs;
+  for (idx = 0; idx < count; idx++)
     {
-      if (msgs[0].flags & NUTTX_I2C_M_NOSTOP || \
-          msgs[0].flags & NUTTX_I2C_M_NOSTART)
+      if (msgs[idx].addr != msgs[0].addr)
         {
-          /* Do not support leaving the bus hanging or try to send
-           * without first starting.
-           */
-
-          return -1;
+          return -ENOTSUP;
         }
 
-      l_msgs[0].addr = msgs[0].addr;
-      l_msgs[0].buf = msgs[0].buffer;
-      l_msgs[0].len = msgs[0].length;
-      l_msgs[0].flags = 0;
-      if (msgs[0].flags & NUTTX_I2C_M_READ)
+      ioctl_data.msgs[idx].addr = msgs[idx].addr;
+      ioctl_data.msgs[idx].buf = msgs[idx].buffer;
+      ioctl_data.msgs[idx].len = msgs[idx].length;
+      ioctl_data.msgs[idx].flags = 0;
+      if (msgs[idx].flags & NUTTX_I2C_M_READ)
         {
-           l_msgs[0].flags |= I2C_M_RD;
+           ioctl_data.msgs[idx].flags |= I2C_M_RD;
         }
 
-      ioctl_data.nmsgs = 1;
-    }
-  else if(count == 2)
-    {
-      /* Addresses should be the same */
-
-      if (msgs[0].addr != msgs[1].addr)
+      if (msgs[idx].flags & NUTTX_I2C_M_TEN)
         {
-          return -1;
+          ioctl_data.msgs[idx].flags |= I2C_M_TEN;
         }
 
-      /* Check if we are about to do a read of a register
-       * NuttX interface represents this as WRITE(NOSTOP) + READ
-       * Linux interface represents this as WRITE + READ
-       */
-
-      if (msgs[0].flags & NUTTX_I2C_M_NOSTOP && \
-          msgs[1].flags & NUTTX_I2C_M_READ)
+      if (msgs[idx].flags & NUTTX_I2C_M_NOSTART)
         {
-          l_msgs[0].addr = msgs[0].addr;
-          l_msgs[0].flags = 0;
-          l_msgs[0].buf = msgs[0].buffer;
-          l_msgs[0].len = msgs[0].length;
-
-          l_msgs[1].addr = msgs[1].addr;
-          l_msgs[1].flags = I2C_M_RD;
-          l_msgs[1].buf = msgs[1].buffer;
-          l_msgs[1].len = msgs[1].length;
-          ioctl_data.nmsgs = 2;
-        }
-      else if (!(msgs[0].flags & NUTTX_I2C_M_READ) && \
-               !(msgs[1].flags & NUTTX_I2C_M_READ) && \
-               (msgs[0].flags & NUTTX_I2C_M_NOSTOP) && \
-               (msgs[1].flags & NUTTX_I2C_M_NOSTART))
-        {
-          /* These writes are actually just a single write in Linux
-           * so we pack the data in a single buffer and the unpack
-           * it at the end.  This could support for for more than just 2
-           * messages, but in most cases it is just two because it is
-           * connivent to write the register address and the data into two
-           * different buffers.
-           */
-
-          pack_buf = malloc(msgs[0].length + msgs[1].length);
-          if (pack_buf == NULL)
-            {
-              return -1;
-            }
-
-          memcpy(pack_buf, msgs[0].buffer, msgs[0].length);
-          memcpy(pack_buf + msgs[0].length, msgs[1].buffer, msgs[1].length);
-          l_msgs[0].len = msgs[0].length + msgs[1].length;
-          l_msgs[0].flags = 0;
-          l_msgs[0].addr = msgs[0].addr;
-          ioctl_data.msgs[0].buf = pack_buf;
-          ioctl_data.nmsgs = 1;
-        }
-      else
-        {
-          /* Many busses cannot handle more than 2 messages */
-
-          return -1;
+          ioctl_data.msgs[idx].flags |= I2C_M_NOSTART;
         }
     }
-  else
-    {
-      return -1;
-    }
 
-  if (ioctl(file, I2C_RDWR, &ioctl_data) < 1)
-    {
-      ret = -1;
-    }
-
-  /* Unpack from buffer back to msg buffers if needed */
-
-  if (pack_buf != NULL)
-    {
-      if (ret == 0)
-        {
-          int idx;
-          uint8_t *msg_p = pack_buf;
-          for (idx = 0; idx < count; idx++)
-            {
-              memcpy(msgs[idx].buffer, msg_p, msgs[idx].length);
-              msg_p += msgs[idx].length;
-            }
-        }
-
-      free(pack_buf);
-    }
-
-  return ret;
+  return ioctl(priv->file, I2C_RDWR, &ioctl_data);
 }
 
 /****************************************************************************
