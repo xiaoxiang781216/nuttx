@@ -65,10 +65,13 @@ extern void macho_call_saved_init_funcs(void);
 void lib_cxx_initialize(void)
 {
 #ifdef CONFIG_HAVE_CXXINITIALIZE
+  static mutex_t lock = NXMUTEX_INITIALIZER;
   static int inited = 0;
 
+  nxmutex_lock(&lock);
   if (inited == 0)
     {
+      inited = 1;
 #if defined(CONFIG_ARCH_SIM) && defined(CONFIG_HOST_MACOS)
       macho_call_saved_init_funcs();
 #else
@@ -94,8 +97,8 @@ void lib_cxx_initialize(void)
             }
         }
 #endif
-
-      inited = 1;
     }
+
+  nxmutex_unlock(&lock);
 #endif
 }
