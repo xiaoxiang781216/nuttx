@@ -69,6 +69,10 @@ if(CONFIG_USBDEV)
     list(APPEND SRCS usbdev_fs.c)
   endif()
 
+  if(CONFIG_USBMTP)
+    list(APPEND SRCS mtp.c)
+  endif()
+
   list(APPEND SRCS composite.c usbdev_desc.c usbdev_req.c)
   list(APPEND SRCS usbdev_trace.c usbdev_trprintf.c)
 
