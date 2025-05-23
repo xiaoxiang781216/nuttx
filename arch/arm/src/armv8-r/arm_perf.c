@@ -68,7 +68,7 @@ void up_perf_init(void *arg)
 
   if (g_cpu_freq == ULONG_MAX || g_cpu_freq == 0)
     {
-      g_cpu_freq = arm_arch_timer_get_cntfrq();
+      g_cpu_freq = arm_timer_get_freq();
     }
 
   cp15_pmu_uer(PMUER_UME);

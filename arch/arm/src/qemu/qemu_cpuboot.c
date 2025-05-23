@@ -81,6 +81,8 @@ void arm_cpu_boot(int cpu)
 
   up_irqinitialize();
 
+  arm_timer_secondary_init(0);
+
   /* Then transfer control to the IDLE task */
 
   nx_idle_trampoline();
