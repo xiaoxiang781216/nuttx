@@ -39,7 +39,9 @@
 
 #ifdef CONFIG_RPMSG_PROCFS
 void rpmsg_procfs_initialize(void);
+bool rpmsg_procfs_note_allow(FAR const char *ept_name);
 #else
 #  define rpmsg_procfs_initialize()
+#  define rpmsg_procfs_note_allow(ept_name) 0
 #endif /* CONFIG_RPMSG_PROCFS */
 #endif /* __DRIVERS_RPMSG_RPMSG_PROCFS_H */

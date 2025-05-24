@@ -32,6 +32,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
+#include <fnmatch.h>
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
@@ -84,6 +85,8 @@ static int     rpmsg_procfs_open(FAR struct file *filep,
 static int     rpmsg_procfs_close(FAR struct file *filep);
 static ssize_t rpmsg_procfs_read(FAR struct file *filep, FAR char *buffer,
                                  size_t buflen);
+static ssize_t rpmsg_procfs_write(FAR struct file *filep,
+                                  FAR const char *buffer, size_t buflen);
 static int     rpmsg_procfs_dup(FAR const struct file *oldp,
                                 FAR struct file *newp);
 
@@ -96,7 +99,7 @@ static const struct procfs_operations g_rpmsg_procfs_ops =
   rpmsg_procfs_open,   /* open */
   rpmsg_procfs_close,  /* close */
   rpmsg_procfs_read,   /* read */
-  NULL,                /* write */
+  rpmsg_procfs_write,  /* write */
   NULL,                /* poll */
   rpmsg_procfs_dup,    /* dup */
 };
@@ -105,6 +108,8 @@ static const struct procfs_entry_s g_rpmsg_procfs_root =
 {
   "rpmsg", &g_rpmsg_procfs_ops, PROCFS_FILE_TYPE
 };
+
+static char g_rpmsg_procfs_filter[RPMSG_PROCFS_LINELEN];
 
 /****************************************************************************
  * Private Functions
@@ -213,6 +218,23 @@ static ssize_t rpmsg_procfs_read(FAR struct file *filep, FAR char *buffer,
 }
 
 /****************************************************************************
+ * Name: rpmsg_procfs_write
+ ****************************************************************************/
+
+static ssize_t rpmsg_procfs_write(FAR struct file *filep,
+                                  FAR const char *buffer, size_t buflen)
+{
+  if (buffer == NULL || buflen <= 1 || buflen > RPMSG_PROCFS_LINELEN)
+    {
+      return -EINVAL;
+    }
+
+  strlcpy(g_rpmsg_procfs_filter, buffer, RPMSG_PROCFS_LINELEN);
+
+  return buflen;
+}
+
+/****************************************************************************
  * Name: rpmsg_procfs_dup
  *
  * Description:
@@ -255,6 +277,15 @@ rpmsg_procfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: rpmsg_procfs_note_allow
+ ****************************************************************************/
+
+bool rpmsg_procfs_note_allow(FAR const char *ept_name)
+{
+  return fnmatch(g_rpmsg_procfs_filter, ept_name, 0) == 0;
+}
 
 /****************************************************************************
  * Name: rpmsg_procfs_initialize

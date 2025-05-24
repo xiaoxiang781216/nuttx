@@ -34,6 +34,8 @@
 #include <nuttx/note/noteram_driver.h>
 #include <nuttx/rpmsg/rpmsg_note.h>
 
+#include "rpmsg_procfs.h"
+
 /****************************************************************************
  * Private data
  ****************************************************************************/
@@ -78,7 +80,12 @@ void rpmsg_note_send(FAR struct rpmsg_device *rdev,
 void rpmsg_note_binary(FAR const char *name,
                        FAR const void *buf, size_t len)
 {
-  note_driver_event(g_rpmsg_note_drv, NOTE_TAG_RPMSG, buf, len);
+  /* filter ept  */
+
+  if (rpmsg_procfs_note_allow(name))
+    {
+      note_driver_event(g_rpmsg_note_drv, NOTE_TAG_RPMSG, buf, len);
+    }
 }
 
 /****************************************************************************
@@ -101,7 +108,12 @@ void rpmsg_note_printf(FAR const char *name, FAR const char *format, ...)
 void rpmsg_note_vprintf(FAR const char *name,
                         FAR const char *format, va_list ap)
 {
-  note_driver_vprintf(g_rpmsg_note_drv, NOTE_TAG_RPMSG, format, &ap);
+  /* filter ept  */
+
+  if (rpmsg_procfs_note_allow(name))
+    {
+      note_driver_vprintf(g_rpmsg_note_drv, NOTE_TAG_RPMSG, format, &ap);
+    }
 }
 
 /****************************************************************************
