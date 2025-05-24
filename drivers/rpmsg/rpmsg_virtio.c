@@ -31,6 +31,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
 #include <nuttx/power/pm.h>
+#include <nuttx/rpmsg/rpmsg_note.h>
 #include <nuttx/rpmsg/rpmsg_virtio.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
@@ -292,8 +293,19 @@ static void rpmsg_virtio_rx_worker(FAR struct rpmsg_virtio_priv_s *priv)
               ept->dest_addr = rp_hdr->src;
             }
 
+          rpmsg_note_printf(ept->name, false,
+                            "[Virtio] rx ept->cb start ept:%p, name:%s, "
+                            "cb:%p, hdr:%p, rdev:%p",
+                            ept, ept->name, ept->cb, rp_hdr, rdev);
+          rpmsg_note_binary(ept->name, rp_hdr, len);
+
           status = ept->cb(ept, RPMSG_LOCATE_DATA(rp_hdr),
                            rp_hdr->len, rp_hdr->src, ept->priv);
+
+          rpmsg_note_printf(ept->name, false,
+                            "[Virtio] rx ept->cb end ept:%p, name:%s, "
+                            "cb:%p, hdr:%p, rdev:%p",
+                            ept, ept->name, ept->cb, rp_hdr, rdev);
 
           RPMSG_ASSERT(status >= 0 ||
                        status == RPMSG_SUCCESS_BUFFER_RELEASED,

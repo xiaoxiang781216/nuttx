@@ -29,6 +29,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/rpmsg/rpmsg_note.h>
 
 #include <metal/mutex.h>
 #include <metal/sys.h>
@@ -458,7 +459,17 @@ static void rpmsg_port_rx_callback(FAR struct rpmsg_port_s *port,
           metal_mutex_release(&rdev->lock);
         }
 
+      rpmsg_note_printf(ept->name, false, "[Port] rx ept->cb start, "
+                        "ept:%p, name:%s, cb:%p, hdr:%p, rdev:%p",
+                        ept, ept->name, ept->cb, rphdr, rdev);
+      rpmsg_note_binary(ept->name, rphdr, rphdr->len);
+
       status = ept->cb(ept, data, rphdr->len, rphdr->src, ept->priv);
+
+      rpmsg_note_printf(ept->name, false, "[Port] rx ept->cb end, "
+                        "ept:%p, name:%s, cb:%p, hdr:%p, rdev:%p",
+                        ept, ept->name, ept->cb, rphdr, rdev);
+
       if (status < 0 && status != RPMSG_SUCCESS_BUFFER_RELEASED)
         {
           RPMSG_ASSERT(0, "unexpected callback status\n");
