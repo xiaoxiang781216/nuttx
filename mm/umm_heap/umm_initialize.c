@@ -98,11 +98,16 @@ void umm_initialize(FAR void *heap_start, size_t heap_size)
 
   FAR struct mm_heap_s **heap = &g_mmheap;
 #endif
+  struct mm_heap_config_s config;
 
+  memset(&config, 0, sizeof(config));
+  config.start = heap_start;
+  config.size  = heap_size;
 #ifdef CONFIG_BUILD_KERNEL
-  *heap = mm_initialize_pool(NULL, NULL, heap_start, heap_size, NULL);
+  *heap = mm_initialize_pool(&config, NULL);
 #else
-  *heap = mm_initialize_pool(NULL, "Umem", heap_start, heap_size, NULL);
+  config.name = "Umem";
+  *heap = mm_initialize_pool(&config, NULL);
 #endif
 }
 
