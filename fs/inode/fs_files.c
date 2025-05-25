@@ -486,11 +486,11 @@ void files_putlist(FAR struct filelist *list)
         {
           file_close(&list->fl_files[i][j]);
         }
-    }
 
-  for (i = list->fl_rows - 1; i > 0; i--)
-    {
-      fs_heap_free(list->fl_files[i]);
+      if (i != 0)
+        {
+          fs_heap_free(list->fl_files[i]);
+        }
     }
 
   if (list->fl_files != &list->fl_prefile)
