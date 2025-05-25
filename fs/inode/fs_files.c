@@ -472,7 +472,6 @@ void files_dumplist(FAR struct filelist *list)
 
 void files_putlist(FAR struct filelist *list)
 {
-  bool loop;
   int i;
   int j;
 
@@ -481,26 +480,12 @@ void files_putlist(FAR struct filelist *list)
    * because there should not be any references in this context.
    */
 
-again:
-  loop = false;
   for (i = list->fl_rows - 1; i >= 0; i--)
     {
       for (j = CONFIG_NFILE_DESCRIPTORS_PER_BLOCK - 1; j >= 0; j--)
         {
-#ifdef CONFIG_FS_REFCOUNT
-          if (fs_putfilep(&list->fl_files[i][j]) > 0)
-            {
-              loop = true;
-            }
-#else
           file_close(&list->fl_files[i][j]);
-#endif
         }
-    }
-
-  if (loop)
-    {
-      goto again;
     }
 
   for (i = list->fl_rows - 1; i > 0; i--)
@@ -859,14 +844,13 @@ void fs_reffilep(FAR struct file *filep)
 
 int fs_putfilep(FAR struct file *filep)
 {
-  int ret;
+  int ret = 0;
 
   DEBUGASSERT(filep);
 
   /* If refs is zero, the close() had called, closing it now. */
 
-  ret = atomic_fetch_sub(&filep->f_refs, 1) - 1;
-  if (ret == 0)
+  if (atomic_fetch_sub(&filep->f_refs, 1) == 1)
     {
       ret = file_close(filep);
       if (ret < 0)
