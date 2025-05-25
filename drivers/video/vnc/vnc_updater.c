@@ -127,8 +127,8 @@ static void vnc_sem_debug(FAR struct vnc_session_s *session,
   nqueued      = sq_count(&session->updqueue);
   nfree        = sq_count(&session->updfree);
 
-  freesem      = session->freesem.semcount;
-  queuesem     = session->queuesem.semcount;
+  freesem      = atomic_read(NXSEM_COUNT(&session->freesem));
+  queuesem     = atomic_read(NXSEM_COUNT(&session->queuesem));
 
   freecount    = freesem  > 0 ? freesem   : 0;
   queuecount   = queuesem > 0 ? queuesem  : 0;
@@ -244,7 +244,8 @@ static void vnc_free_update(FAR struct vnc_session_s *session,
 
   spin_unlock_irqrestore_nopreempt(&session->lock, flags);
   vnc_sem_debug(session, "After free", 0);
-  DEBUGASSERT(session->freesem.semcount <= CONFIG_VNCSERVER_NUPDATES);
+  DEBUGASSERT(atomic_read(NXSEM_COUNT(&session->freesem)) <=
+              CONFIG_VNCSERVER_NUPDATES);
 }
 
 /****************************************************************************
@@ -344,7 +345,8 @@ static void vnc_add_queue(FAR struct vnc_session_s *session,
 
   spin_unlock_irqrestore_nopreempt(&session->lock, flags);
   vnc_sem_debug(session, "After add", 0);
-  DEBUGASSERT(session->queuesem.semcount <= CONFIG_VNCSERVER_NUPDATES);
+  DEBUGASSERT(atomic_read(NXSEM_COUNT(&session->queuesem)) <=
+              CONFIG_VNCSERVER_NUPDATES);
 }
 
 /****************************************************************************
