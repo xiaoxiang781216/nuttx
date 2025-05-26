@@ -99,8 +99,6 @@ FAR void *net_bufpool_timedalloc(FAR struct net_bufpool_s *pool,
 {
   FAR struct net_bufnode_s *node;
   FAR void *buf;
-  unsigned int count;
-  int blresult;
   int ret;
   int i;
 
@@ -110,12 +108,13 @@ FAR void *net_bufpool_timedalloc(FAR struct net_bufpool_s *pool,
       DEBUGASSERT(pool->nodesize > 0);
     }
 
-  blresult = nxrmutex_breaklock(&pool->lock, &count);
-  ret = net_sem_timedwait_uninterruptible(&pool->sem, timeout);
-
-  if (blresult >= 0)
+  if (timeout == 0)
     {
-      nxrmutex_restorelock(&pool->lock, count);
+      ret = nxsem_trywait(&pool->sem);
+    }
+  else
+    {
+      ret = net_sem_timedwait_uninterruptible(&pool->sem, timeout);
     }
 
   if (ret != OK)
