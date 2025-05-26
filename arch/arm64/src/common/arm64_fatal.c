@@ -179,7 +179,7 @@ static const char *g_esr_desc_str[] =
   [ESR_ELX_EC_BREAKPT_CUR] = "Breakpoint exception taken without a change "
                              "in Exception level",
   [ESR_ELX_EC_SOFTSTP_LOW] = "Software Step exception from a lower "
-                             "Exception level,"
+                             "Exception level, "
                              "that might be using AArch32 or AArch64",
   [ESR_ELX_EC_SOFTSTP_CUR] = "Software Step exception taken without a "
                              "change in Exception level",
@@ -578,7 +578,7 @@ void arm64_fatal_handler(uint64_t *regs)
 
 void arm64_register_debug_hook(int nr, fatal_handle_func_t fn)
 {
-  DEBUGVERIFY(nr > 0 && nr <= nitems(g_debug_handler));
+  DEBUGASSERT(nr > 0 && nr <= nitems(g_debug_handler));
 
   /* Override the default handler */
 
