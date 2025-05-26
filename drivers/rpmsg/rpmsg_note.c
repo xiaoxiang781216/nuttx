@@ -28,6 +28,7 @@
 
 #include <assert.h>
 #include <debug.h>
+#include <execinfo.h>
 
 #include <nuttx/sched_note.h>
 #include <nuttx/note/note_driver.h>
@@ -92,12 +93,13 @@ void rpmsg_note_binary(FAR const char *name,
  * Name: rpmsg_note_printf
  ****************************************************************************/
 
-void rpmsg_note_printf(FAR const char *name, FAR const char *format, ...)
+void rpmsg_note_printf(FAR const char *name, bool bt,
+                       FAR const char *format, ...)
 {
   va_list ap;
 
   va_start(ap, format);
-  rpmsg_note_vprintf(name, format, ap);
+  rpmsg_note_vprintf(name, bt, format, ap);
   va_end(ap);
 }
 
@@ -105,14 +107,33 @@ void rpmsg_note_printf(FAR const char *name, FAR const char *format, ...)
  * Name: rpmsg_note_vprintf
  ****************************************************************************/
 
-void rpmsg_note_vprintf(FAR const char *name,
+void rpmsg_note_vprintf(FAR const char *name, bool bt,
                         FAR const char *format, va_list ap)
 {
   /* filter ept  */
 
   if (rpmsg_procfs_note_allow(name))
     {
-      note_driver_vprintf(g_rpmsg_note_drv, NOTE_TAG_RPMSG, format, &ap);
+#if defined(CONFIG_RPMSG_NOTE_BACKTRACE) && CONFIG_RPMSG_NOTE_BACKTRACE > 0
+      if (bt)
+        {
+          FAR void *buffer[CONFIG_RPMSG_NOTE_BACKTRACE];
+          char buf[BACKTRACE_BUFFER_SIZE(CONFIG_RPMSG_NOTE_BACKTRACE)];
+          struct va_format vaf;
+          vaf.fmt = format;
+          vaf.va = &ap;
+
+          backtrace(buffer, CONFIG_RPMSG_NOTE_BACKTRACE);
+          backtrace_format(buf, sizeof(buf), buffer,
+                          CONFIG_RPMSG_NOTE_BACKTRACE);
+          note_driver_printf(g_rpmsg_note_drv, NOTE_TAG_RPMSG,
+                            "%pV, %s", &vaf, buf);
+        }
+      else
+#endif
+        {
+          note_driver_vprintf(g_rpmsg_note_drv, NOTE_TAG_RPMSG, format, &ap);
+        }
     }
 }
 

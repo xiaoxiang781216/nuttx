@@ -26,6 +26,12 @@ config RPMSG_NOTE_BUFSIZE
 		This macro sets the note buffer size corresponding to rpmsg.
 		It can be customized and the dafault value is 16384.
 
+config RPMSG_NOTE_BACKTRACE
+	int "Rpmsg note backtrace"
+	depends on RPMSG_NOTE
+	default 0
+	range 0 16
+
 config RPMSG_LOCAL_CPUNAME
 	string "Rpmsg Local Cpuname"
 	default LIBC_HOSTNAME

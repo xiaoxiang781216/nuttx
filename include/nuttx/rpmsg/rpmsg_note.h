@@ -46,8 +46,9 @@ void rpmsg_note_send(FAR struct rpmsg_device *rdev,
                      const void *data, int len);
 void rpmsg_note_binary(FAR const char *name,
                        FAR const void *buf, size_t len);
-void rpmsg_note_printf(FAR const char *name, FAR const char *format, ...);
-void rpmsg_note_vprintf(FAR const char *name,
+void rpmsg_note_printf(FAR const char *name, bool bt,
+                       FAR const char *format, ...);
+void rpmsg_note_vprintf(FAR const char *name, bool bt,
                         FAR const char *format, va_list ap);
 #else
 #  define rpmsg_note_initialize()
@@ -61,14 +62,14 @@ void rpmsg_note_vprintf(FAR const char *name,
          UNUSED(len); \
        } \
      while (0)
-#  define rpmsg_note_printf(name, format, ...) \
+#  define rpmsg_note_printf(name, bt, format, ...) \
      do \
        { \
          UNUSED(name); \
          UNUSED(format); \
        } \
      while (0)
-#  define rpmsg_note_vprintf(name, format, ap) \
+#  define rpmsg_note_vprintf(name, bt, format, ap) \
      do \
        { \
          UNUSED(name); \
