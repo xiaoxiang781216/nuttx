@@ -396,8 +396,8 @@ static void rpmsg_virtio_dump_buffer(FAR struct rpmsg_virtio_device *rvdev,
         {
           RPMSG_VIRTIO_INVALIDATE(vq->vq_ring.avail->idx);
           desc_idx = (vq->vq_ring.avail->idx + i) & (vq->vq_nentries - 1);
-          RPMSG_VIRTIO_INVALIDATE(vq->vq_ring.used->ring[desc_idx].id);
-          desc_idx = vq->vq_ring.used->ring[desc_idx].id;
+          RPMSG_VIRTIO_INVALIDATE(vq->vq_ring.used->ring[desc_idx].u.id);
+          desc_idx = vq->vq_ring.used->ring[desc_idx].u.id;
         }
 
       addr = metal_io_phys_to_virt(vq->shm_io,

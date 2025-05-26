@@ -133,7 +133,7 @@ ssize_t virtio_get_buffers(FAR struct virtqueue *vq,
   vb[0].buf = buf;
   vb[0].len = len;
 
-  head = vq->vq_ring.used->ring[idx].id;
+  head = vq->vq_ring.used->ring[idx].u.id;
   for (i = 1, idx = head; ; i++)
     {
       buf = virtio_get_next_buffer(vq, idx, &idx, &len);
