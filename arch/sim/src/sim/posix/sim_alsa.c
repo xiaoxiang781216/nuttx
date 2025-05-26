@@ -1019,6 +1019,17 @@ static void sim_audio_process(struct sim_audio_s *priv)
       priv->dev.upper(priv->dev.priv, AUDIO_CALLBACK_DEQUEUE, apb, OK);
 #endif
 
+      if (dq_empty(&priv->pendq))
+        {
+          /* If no more buffers, send underrun message to upper layer */
+#ifdef CONFIG_AUDIO_MULTI_SESSION
+          priv->dev.upper(priv->dev.priv, AUDIO_CALLBACK_UNDERRUN,
+                          NULL, OK, NULL);
+#else
+          priv->dev.upper(priv->dev.priv, AUDIO_CALLBACK_UNDERRUN, NULL, OK);
+#endif
+        }
+
       if (final)
         {
           host_uninterruptible(snd_pcm_drain, priv->pcm);
