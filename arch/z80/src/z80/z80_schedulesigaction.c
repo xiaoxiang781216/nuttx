@@ -34,7 +34,6 @@
 
 #include "chip/switch.h"
 #include "sched/sched.h"
-#include "signal/signal.h"
 #include "z80_internal.h"
 
 /****************************************************************************

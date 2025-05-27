@@ -419,7 +419,7 @@ uint32_t *arm_syscall(uint32_t *regs)
 
               /* Copy "info" into user stack */
 
-              if ((atomic_read(&rtcb->flags) & TCB_FLAG_SIGDELIVER) != 0)
+              if (rtcb->sigdeliver)
                 {
                   usp = rtcb->xcp.saved_regs[REG_SP];
                 }

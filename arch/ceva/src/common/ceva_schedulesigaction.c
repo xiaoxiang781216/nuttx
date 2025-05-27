@@ -31,7 +31,6 @@
 #include <nuttx/arch.h>
 
 #include "sched/sched.h"
-#include "signal/signal.h"
 #include "ceva_internal.h"
 
 #ifndef CONFIG_DISABLE_SIGNALS

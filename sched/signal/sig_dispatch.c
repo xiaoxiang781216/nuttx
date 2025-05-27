@@ -87,7 +87,7 @@ static int sig_handler(FAR void *cookie)
       atomic_fetch_and(&tcb->flags, ~TCB_FLAG_CPU_LOCKED);
     }
 
-  if ((atomic_read(&tcb->flags) & TCB_FLAG_SIGDELIVER) != 0)
+  if (tcb->sigdeliver)
     {
       up_schedule_sigaction(tcb);
     }
@@ -160,13 +160,13 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb,
            * up_schedule_sigaction()
            */
 
-          if ((atomic_read(&stcb->flags) & TCB_FLAG_SIGDELIVER) == 0)
+          if (!stcb->sigdeliver)
             {
 #ifdef CONFIG_SMP
               int cpu = stcb->cpu;
               int me  = this_cpu();
 
-              atomic_fetch_or(&stcb->flags, TCB_FLAG_SIGDELIVER);
+              stcb->sigdeliver = nxsig_deliver;
               if (cpu != me && stcb->task_state == TSTATE_TASK_RUNNING)
                 {
                   struct sig_arg_s arg;
@@ -190,7 +190,7 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb,
               else
 #endif
                 {
-                  atomic_fetch_or(&stcb->flags, TCB_FLAG_SIGDELIVER);
+                  stcb->sigdeliver = nxsig_deliver;
                   if (stcb == this_task() && !up_interrupt_context())
                     {
                       /* In this case just deliver the signal now. */
@@ -198,7 +198,7 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb,
                       leave_critical_section(flags);
                       nxsig_deliver(stcb);
                       flags = enter_critical_section();
-                      atomic_fetch_and(&stcb->flags, ~TCB_FLAG_SIGDELIVER);
+                      stcb->sigdeliver = NULL;
                     }
                   else
                     {

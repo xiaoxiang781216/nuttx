@@ -33,7 +33,6 @@
 #include <arch/lm32/irq.h>
 
 #include "sched/sched.h"
-#include "signal/signal.h"
 #include "lm32.h"
 
 /****************************************************************************

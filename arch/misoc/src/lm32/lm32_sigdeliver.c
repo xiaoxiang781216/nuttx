@@ -36,7 +36,6 @@
 #include <arch/board/board.h>
 
 #include "sched/sched.h"
-#include "signal/signal.h"
 #include "lm32.h"
 
 /****************************************************************************
@@ -60,9 +59,9 @@ void lm32_sigdeliver(void)
 
   board_autoled_on(LED_SIGNAL);
 
-  sinfo("rtcb=%p sigpendactionq.head=%p\n",
-        rtcb, rtcb->sigpendactionq.head);
-  DEBUGASSERT((atomic_read(&rtcb->flags) & TCB_FLAG_SIGDELIVER) != 0);
+  sinfo("rtcb=%p sigdeliver=%p sigpendactionq.head=%p\n",
+        rtcb, rtcb->sigdeliver, rtcb->sigpendactionq.head);
+  DEBUGASSERT(rtcb->sigdeliver != NULL);
 
   /* Save the return state on the stack. */
 
@@ -78,7 +77,7 @@ void lm32_sigdeliver(void)
 
   /* Deliver the signal */
 
-  nxsig_deliver(rtcb);
+  (rtcb->sigdeliver)(rtcb);
 
   /* Output any debug messages BEFORE restoring errno (because they may
    * alter errno), then disable interrupts again and restore the original
@@ -102,10 +101,7 @@ void lm32_sigdeliver(void)
 
   regs[REG_EPC]     = rtcb->xcp.saved_epc;
   regs[REG_INT_CTX] = rtcb->xcp.saved_int_ctx;
-
-  /* Allows next handler to be scheduled */
-
-  atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SIGDELIVER);
+  rtcb->sigdeliver  = NULL;  /* Allows next handler to be scheduled */
 
   /* Then restore the correct state for this thread of
    * execution.

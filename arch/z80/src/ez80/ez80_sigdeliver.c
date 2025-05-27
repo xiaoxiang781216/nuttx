@@ -37,7 +37,6 @@
 
 #include "chip/switch.h"
 #include "sched/sched.h"
-#include "signal/signal.h"
 #include "z80_internal.h"
 
 /****************************************************************************
@@ -61,9 +60,9 @@ void z80_sigdeliver(void)
 
   board_autoled_on(LED_SIGNAL);
 
-  sinfo("rtcb=%p sigpendactionq.head=%p\n",
-         rtcb, rtcb->sigpendactionq.head);
-  DEBUGASSERT((atomic_read(&rtcb->flags) & TCB_FLAG_SIGDELIVER) != 0);
+  sinfo("rtcb=%p sigdeliver=%p sigpendactionq.head=%p\n",
+         rtcb, rtcb->sigdeliver, rtcb->sigpendactionq.head);
+  DEBUGASSERT(rtcb->sigdeliver != NULL);
 
   /* Save the return state on the stack. */
 
@@ -79,7 +78,7 @@ void z80_sigdeliver(void)
 
   /* Deliver the signals */
 
-  nxsig_deliver(rtcb);
+  (rtcb->sigdeliver)(rtcb);
 
   /* Output any debug messages BEFORE restoring errno (because they may
    * alter errno), then disable interrupts again and restore the original
@@ -99,12 +98,9 @@ void z80_sigdeliver(void)
    * could be modified by a hostile program.
    */
 
-  regs[XCPT_PC] = rtcb->xcp.saved_pc;
-  regs[XCPT_I]  = rtcb->xcp.saved_i;
-
-  /* Allows next handler to be scheduled */
-
-  atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SIGDELIVER);
+  regs[XCPT_PC]    = rtcb->xcp.saved_pc;
+  regs[XCPT_I]     = rtcb->xcp.saved_i;
+  rtcb->sigdeliver = NULL;  /* Allows next handler to be scheduled */
 
   /* Modify the saved return state with the actual saved values in the
    * TCB.  This depends on the fact that nested signal handling is

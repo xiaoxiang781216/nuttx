@@ -32,7 +32,6 @@
 #include <nuttx/arch.h>
 
 #include "sched/sched.h"
-#include "signal/signal.h"
 #include "x86_64_internal.h"
 
 /****************************************************************************

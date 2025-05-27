@@ -33,7 +33,6 @@
 #include <arch/avr32/avr32.h>
 
 #include "sched/sched.h"
-#include "signal/signal.h"
 #include "avr_internal.h"
 
 /****************************************************************************

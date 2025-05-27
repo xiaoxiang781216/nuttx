@@ -33,7 +33,6 @@
 #include <nuttx/arch.h>
 
 #include "sched/sched.h"
-#include "signal/signal.h"
 #include "arm64_internal.h"
 #include "arm64_arch.h"
 #include "irq/irq.h"

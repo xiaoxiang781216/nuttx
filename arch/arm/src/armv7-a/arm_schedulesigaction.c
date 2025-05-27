@@ -34,7 +34,6 @@
 
 #include "arm.h"
 #include "sched/sched.h"
-#include "signal/signal.h"
 #include "arm_internal.h"
 #include "irq/irq.h"
 

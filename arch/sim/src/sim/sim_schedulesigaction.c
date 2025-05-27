@@ -30,7 +30,6 @@
 #include <nuttx/arch.h>
 
 #include "sched/sched.h"
-#include "signal/signal.h"
 
 /****************************************************************************
  * Public Functions
@@ -80,7 +79,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
 
   if (tcb == this_task())
     {
-      nxsig_deliver(tcb);
-      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_SIGDELIVER);
+      (tcb->sigdeliver)(tcb);
+      tcb->sigdeliver = NULL;
     }
 }

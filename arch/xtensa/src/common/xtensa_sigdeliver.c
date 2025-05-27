@@ -35,7 +35,6 @@
 #include <arch/board/board.h>
 
 #include "sched/sched.h"
-#include "signal/signal.h"
 #include "xtensa.h"
 
 /****************************************************************************
@@ -68,9 +67,9 @@ void xtensa_sig_deliver(void)
 
   board_autoled_on(LED_SIGNAL);
 
-  sinfo("rtcb=%p sigpendactionq.head=%p\n",
-        rtcb, rtcb->sigpendactionq.head);
-  DEBUGASSERT((atomic_read(&rtcb->flags) & TCB_FLAG_SIGDELIVER) != 0);
+  sinfo("rtcb=%p sigdeliver=%p sigpendactionq.head=%p\n",
+        rtcb, rtcb->sigdeliver, rtcb->sigpendactionq.head);
+  DEBUGASSERT(rtcb->sigdeliver != NULL);
 
 retry:
 #ifdef CONFIG_SMP
@@ -103,7 +102,7 @@ retry:
 
   /* Deliver the signals */
 
-  nxsig_deliver(rtcb);
+  (rtcb->sigdeliver)(rtcb);
 
   /* Output any debug messages BEFORE restoring errno (because they may
    * alter errno), then disable interrupts again and restore the original
@@ -147,9 +146,7 @@ retry:
    * could be modified by a hostile program.
    */
 
-  /* Allows next handler to be scheduled */
-
-  atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SIGDELIVER);
+  rtcb->sigdeliver = NULL;  /* Allows next handler to be scheduled */
 
   /* Then restore the correct state for this thread of execution.
    */

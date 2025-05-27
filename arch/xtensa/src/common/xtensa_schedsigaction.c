@@ -34,7 +34,6 @@
 
 #include "irq/irq.h"
 #include "sched/sched.h"
-#include "signal/signal.h"
 
 #include "chip.h"
 #include "xtensa.h"

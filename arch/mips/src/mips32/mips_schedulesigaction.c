@@ -34,7 +34,6 @@
 #include <arch/mips32/cp0.h>
 
 #include "sched/sched.h"
-#include "signal/signal.h"
 #include "mips_internal.h"
 
 /****************************************************************************
