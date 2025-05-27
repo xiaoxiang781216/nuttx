@@ -178,7 +178,9 @@ ifeq ($(CONFIG_ARCH_MULTIBOOT1),y)
 	$(Q) $(OBJCOPY) -R.realmode -R.note.* -O binary $(NUTTX) $(NUTTX).bin \
 	&& $(OBJCOPY) -j.realmode -O binary $(NUTTX) $(NUTTX)_realmode.bin \
 	&& $(CC) -m32 -no-pie -nostdlib common/multiboot1.S \
-			-T common/multiboot1.ld -o $(NUTTX).mb1
+		-DNUTTX_BIN='"$(NUTTX).bin"'            \
+		-DNUTTX_REALMODE_BIN='"$(NUTTX)_realmode.bin"'\
+		-T common/multiboot1.ld -o $(NUTTX).mb1
 endif
 
 # This is part of the top-level export target

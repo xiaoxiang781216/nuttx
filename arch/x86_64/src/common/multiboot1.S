@@ -29,7 +29,7 @@
 
 .section                ".bin" , "ax"
 bin_start:
-    .incbin             "../../../nuttx.bin"
+    .incbin             NUTTX_BIN
 
 multiboot_info_struct:
     .long               0
@@ -75,7 +75,7 @@ copy_loop:
 
 .section                ".realmode", "ax"
 realmode_start:
-    .incbin             "../../../nuttx_realmode.bin"
+    .incbin             NUTTX_REALMODE_BIN
 
 .align 8
 realmode_size:
