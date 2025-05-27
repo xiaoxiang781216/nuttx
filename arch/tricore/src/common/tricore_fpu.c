@@ -24,6 +24,8 @@
 
 #include <nuttx/config.h>
 
+#include <string.h>
+
 #include "tricore_internal.h"
 
 /****************************************************************************
@@ -52,4 +54,31 @@ void tricore_fpuinit(void)
 
   __mtcr(FPU_SYNC_TRAP_REG,
          __mfcr(FPU_SYNC_TRAP_REG) | (1U << FPU_TRAP_FZE_SHIFT));
+}
+
+/****************************************************************************
+ * Name: up_fpucmp
+ *
+ * Description:
+ *   Compare FPU areas from thread context.
+ *
+ * Input Parameters:
+ *   saveregs1 - Pointer to the saved FPU registers.
+ *   saveregs2 - Pointer to the saved FPU registers.
+ *
+ * Returned Value:
+ *   True if FPU areas compare equal, False otherwise.
+ *
+ ****************************************************************************/
+
+bool up_fpucmp(const void *saveregs1, const void *saveregs2)
+{
+  const uintptr_t *regs1 = saveregs1;
+  const uintptr_t *regs2 = saveregs2;
+
+  /* The FPU uses the general-purpose data registers, so
+   * only the upper half needs to be compared.
+   */
+
+  return memcmp(regs1, regs2, TC_CONTEXT_REGS * sizeof(uintptr_t)) == 0;
 }
