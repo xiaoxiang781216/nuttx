@@ -182,8 +182,11 @@ remove_symbol_prefix() {
                 if [ "$sym_ndx" = "$ndx" ]; then
                     # Remove prefix from symbol
                     newname="${symbol#$prefix}"
-                    remove_prefix_args+=(--redefine-sym "$symbol=$newname")
-                    remove_prefix_symbols+="$newname\n"
+                    if ! echo -e "$remove_prefix_symbols" | grep -Fxq "$newname"; then
+                        remove_prefix_symbols+="$newname\n"
+                        remove_prefix_args+=(--redefine-sym "$symbol=$newname")
+                    fi
+
                     echo "[$(basename "$input")] Removing prefix from symbol $symbol -> $newname"
                 fi
             done < <($READELF -Ws "$input" | awk '/^\s*[0-9]+:/{print $8, $7}')
