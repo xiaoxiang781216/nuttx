@@ -46,9 +46,11 @@
 #include <nuttx/config.h>
 #include <nuttx/cache.h>
 #include <arch/barriers.h>
+#include <sys/param.h>
 
 #include "arm_internal.h"
 #include "nvic.h"
+#include "l2cc.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -219,7 +221,7 @@ size_t up_get_icache_linesize(void)
 
   if (clsize == 0)
     {
-      clsize = up_get_cache_linesize(true);
+      clsize = MAX(up_get_cache_linesize(true), l2cc_linesize());
     }
 
   return clsize;
@@ -245,7 +247,7 @@ size_t up_get_icache_size(void)
 
   if (csize == 0)
     {
-      csize = up_get_cache_size(true);
+      csize = MAX(up_get_cache_size(true), l2cc_size());
     }
 
   return csize;
@@ -431,7 +433,7 @@ size_t up_get_dcache_linesize(void)
 
   if (clsize == 0)
     {
-      clsize = up_get_cache_linesize(false);
+      clsize = MAX(up_get_cache_linesize(false), l2cc_linesize());
     }
 
   return clsize;
@@ -457,7 +459,7 @@ size_t up_get_dcache_size(void)
 
   if (csize == 0)
     {
-      csize = up_get_cache_size(false);
+      csize = MAX(up_get_cache_size(false), l2cc_size());
     }
 
   return csize;
@@ -548,6 +550,8 @@ void up_enable_dcache(void)
   putreg32(ccr, NVIC_CFGCON);
 
   UP_MB();
+
+  l2cc_enable();
 }
 #endif /* CONFIG_ARMV7M_DCACHE */
 
@@ -631,6 +635,8 @@ void up_disable_dcache(void)
   while (locals.sets--);
 
   UP_MB();
+
+  l2cc_disable();
 }
 #endif /* CONFIG_ARMV7M_DCACHE */
 
@@ -661,6 +667,7 @@ void up_disable_dcache(void)
 #ifdef CONFIG_ARMV7M_DCACHE
 void up_invalidate_dcache(uintptr_t start, uintptr_t end)
 {
+  uintptr_t start_ = start;
   uint32_t ssize = up_get_dcache_linesize();
 
   /* Invalidate the D-Cache containing this range of addresses
@@ -701,6 +708,8 @@ void up_invalidate_dcache(uintptr_t start, uintptr_t end)
     }
 
   UP_MB();
+
+  l2cc_invalidate(start_, end);
 }
 #endif /* CONFIG_ARMV7M_DCACHE */
 
@@ -766,6 +775,8 @@ void up_invalidate_dcache_all(void)
   while (sets--);
 
   UP_MB();
+
+  l2cc_invalidate_all();
 }
 #endif /* CONFIG_ARMV7M_DCACHE */
 
@@ -796,6 +807,7 @@ void up_invalidate_dcache_all(void)
 #ifdef CONFIG_ARMV7M_DCACHE
 void up_clean_dcache(uintptr_t start, uintptr_t end)
 {
+  uintptr_t start_ = start;
 #ifndef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
   uint32_t ccsidr;
   uint32_t sshift;
@@ -843,6 +855,8 @@ void up_clean_dcache(uintptr_t start, uintptr_t end)
 #endif /* !CONFIG_ARMV7M_DCACHE_WRITETHROUGH */
 
   UP_MB();
+
+  l2cc_clean(start_, end);
 }
 #endif /* CONFIG_ARMV7M_DCACHE */
 
@@ -919,6 +933,8 @@ void up_clean_dcache_all(void)
 #endif /* !CONFIG_ARMV7M_DCACHE_WRITETHROUGH */
 
   UP_MB();
+
+  l2cc_clean_all();
 }
 #endif /* CONFIG_ARMV7M_DCACHE */
 
@@ -949,6 +965,7 @@ void up_clean_dcache_all(void)
 #ifdef CONFIG_ARMV7M_DCACHE
 void up_flush_dcache(uintptr_t start, uintptr_t end)
 {
+  uintptr_t start_ = start;
 #ifndef CONFIG_ARMV7M_DCACHE_WRITETHROUGH
   uint32_t ccsidr;
   uint32_t sshift;
@@ -998,6 +1015,8 @@ void up_flush_dcache(uintptr_t start, uintptr_t end)
 #else
   up_invalidate_dcache(start, end);
 #endif /* !CONFIG_ARMV7M_DCACHE_WRITETHROUGH */
+
+  l2cc_flush(start_, end);
 }
 #endif /* CONFIG_ARMV7M_DCACHE */
 
@@ -1075,6 +1094,8 @@ void up_flush_dcache_all(void)
 #else
   up_invalidate_dcache_all();
 #endif /* !CONFIG_ARMV7M_DCACHE_WRITETHROUGH */
+
+  l2cc_flush_all();
 }
 #endif /* CONFIG_ARMV7M_DCACHE */
 
