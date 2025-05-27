@@ -112,7 +112,7 @@ static inline Display *sim_x11createframe(void)
   XTextProperty iconprop;
   XSizeHints hints;
 
-  display = XOpenDisplay(NULL);
+  display = host_uninterruptible(XOpenDisplay, NULL);
   if (display == NULL)
     {
       syslog(LOG_ERR, "Unable to open display.\n");
@@ -120,10 +120,11 @@ static inline Display *sim_x11createframe(void)
     }
 
   g_screen = DefaultScreen(display);
-  g_window = XCreateSimpleWindow(display, DefaultRootWindow(display),
-                                 0, 0, g_fbpixelwidth, g_fbpixelheight, 2,
-                                 BlackPixel(display, g_screen),
-                                 BlackPixel(display, g_screen));
+  g_window = host_uninterruptible(XCreateSimpleWindow, display,
+                                  DefaultRootWindow(display),
+                                  0, 0, g_fbpixelwidth, g_fbpixelheight, 2,
+                                  BlackPixel(display, g_screen),
+                                  BlackPixel(display, g_screen));
 
   XStringListToTextProperty(&winname, 1, &winprop);
   XStringListToTextProperty(&iconname, 1, &iconprop);
@@ -132,37 +133,42 @@ static inline Display *sim_x11createframe(void)
   hints.width  = hints.min_width  = hints.max_width  = g_fbpixelwidth;
   hints.height = hints.min_height = hints.max_height = g_fbpixelheight;
 
-  XSetWMProperties(display, g_window, &winprop, &iconprop, argv, 1,
-                   &hints, NULL, NULL);
-  XFree(winprop.value);
-  XFree(iconprop.value);
+  host_uninterruptible_no_return(XSetWMProperties, display, g_window,
+                                 &winprop, &iconprop, argv, 1,
+                                 &hints, NULL, NULL);
+  host_uninterruptible_no_return(XFree, winprop.value);
+  host_uninterruptible_no_return(XFree, iconprop.value);
 
   /* Select window input events */
 
 #if defined(CONFIG_SIM_AJOYSTICK)
-  XSelectInput(display, g_window,
-               ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
+  host_uninterruptible(XSelectInput, display, g_window,
+                       ButtonPressMask | ButtonReleaseMask |
+                       PointerMotionMask);
 #else
-  XSelectInput(display, g_window,
-               ButtonPressMask | ButtonReleaseMask | PointerMotionMask |
-               KeyPressMask | KeyReleaseMask);
+  host_uninterruptible(XSelectInput, display, g_window,
+                       ButtonPressMask | ButtonReleaseMask |
+                       PointerMotionMask | KeyPressMask | KeyReleaseMask);
 #endif
 
   /* Release queued events on the display */
 
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
     defined(CONFIG_SIM_BUTTONS)
-  XAllowEvents(display, AsyncBoth, CurrentTime);
+  host_uninterruptible(XAllowEvents, display, AsyncBoth, CurrentTime);
 
   /* Grab mouse button 1, enabling mouse-related events */
 
-  XGrabButton(display, Button1, AnyModifier, g_window, 1,
-              ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
-              GrabModeAsync, GrabModeAsync, None, None);
+  host_uninterruptible(XGrabButton, display, Button1, AnyModifier,
+                       g_window, 1,
+                       ButtonPressMask | ButtonReleaseMask |
+                       ButtonMotionMask,
+                       GrabModeAsync, GrabModeAsync, None, None);
 #endif
 
   gcval.graphics_exposures = 0;
-  g_gc = XCreateGC(display, g_window, GCGraphicsExposures, &gcval);
+  g_gc = host_uninterruptible(XCreateGC, display, g_window,
+                              GCGraphicsExposures, &gcval);
 
   return display;
 }
@@ -187,7 +193,7 @@ static int sim_x11errorhandler(Display *display, XErrorEvent *event)
 static void sim_x11traperrors(void)
 {
   g_xerror = 0;
-  XSetErrorHandler(sim_x11errorhandler);
+  host_uninterruptible(XSetErrorHandler, sim_x11errorhandler);
 }
 #endif
 
@@ -198,8 +204,8 @@ static void sim_x11traperrors(void)
 #ifndef CONFIG_SIM_X11NOSHM
 static int sim_x11untraperrors(Display *display)
 {
-  XSync(display, 0);
-  XSetErrorHandler(NULL);
+  host_uninterruptible(XSync, display, 0);
+  host_uninterruptible(XSetErrorHandler, NULL);
   return g_xerror;
 }
 #endif
@@ -218,17 +224,17 @@ static void sim_x11uninit(void)
 #ifndef CONFIG_SIM_X11NOSHM
   if (g_shmcheckpoint > 4)
     {
-      XShmDetach(g_display, &g_xshminfo);
+      host_uninterruptible(XShmDetach, g_display, &g_xshminfo);
     }
 
   if (g_shmcheckpoint > 3)
     {
-      shmdt(g_xshminfo.shmaddr);
+      host_uninterruptible(shmdt, g_xshminfo.shmaddr);
     }
 
   if (g_shmcheckpoint > 2)
     {
-      shmctl(g_xshminfo.shmid, IPC_RMID, 0);
+      host_uninterruptible(shmctl, g_xshminfo.shmid, IPC_RMID, 0);
     }
 #endif
 
@@ -244,10 +250,11 @@ static void sim_x11uninit(void)
 
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
     defined(CONFIG_SIM_BUTTONS)
-  XUngrabButton(g_display, Button1, AnyModifier, g_window);
+  host_uninterruptible(XUngrabButton, g_display, Button1, AnyModifier,
+                       g_window);
 #endif
 
-  XCloseDisplay(g_display);
+  host_uninterruptible(XCloseDisplay, g_display);
 }
 
 /****************************************************************************
@@ -261,7 +268,7 @@ static void sim_x11uninitialize(void)
     {
       if (!b_useshm && g_framebuffer)
         {
-          free(g_framebuffer);
+          host_uninterruptible_no_return(free, g_framebuffer);
           g_framebuffer = 0;
         }
     }
@@ -286,20 +293,20 @@ static inline int sim_x11mapsharedmem(Display *display,
 #endif
   int fbinterval = 0;
 
-  atexit(sim_x11uninit);
+  host_uninterruptible(atexit, sim_x11uninit);
   g_shmcheckpoint = 1;
   b_useshm = 0;
 
 #ifndef CONFIG_SIM_X11NOSHM
-  if (XShmQueryExtension(display))
+  if (host_uninterruptible(XShmQueryExtension, display))
     {
       b_useshm = 1;
 
       sim_x11traperrors();
-      g_image = XShmCreateImage(display,
-                                DefaultVisual(display, g_screen),
-                                depth, ZPixmap, NULL, &g_xshminfo,
-                                g_fbpixelwidth, g_fbpixelheight);
+      g_image = host_uninterruptible(XShmCreateImage, display,
+                                     DefaultVisual(display, g_screen),
+                                     depth, ZPixmap, NULL, &g_xshminfo,
+                                     g_fbpixelwidth, g_fbpixelheight);
       if (sim_x11untraperrors(display))
         {
           sim_x11uninitialize();
@@ -314,11 +321,11 @@ static inline int sim_x11mapsharedmem(Display *display,
 
       g_shmcheckpoint++;
 
-      g_xshminfo.shmid = shmget(IPC_PRIVATE,
-                                g_image->bytes_per_line *
-                                (g_image->height * fbcount +
-                                interval * (fbcount - 1)),
-                                IPC_CREAT | 0777);
+      g_xshminfo.shmid = host_uninterruptible(shmget, IPC_PRIVATE,
+                                              g_image->bytes_per_line *
+                                              (g_image->height * fbcount +
+                                              interval * (fbcount - 1)),
+                                              IPC_CREAT | 0777);
       if (g_xshminfo.shmid < 0)
         {
           sim_x11uninitialize();
@@ -327,7 +334,8 @@ static inline int sim_x11mapsharedmem(Display *display,
 
       g_shmcheckpoint++;
 
-      g_image->data = (char *) shmat(g_xshminfo.shmid, 0, 0);
+      g_image->data = (char *) host_uninterruptible(shmat, g_xshminfo.shmid,
+                                                    0, 0);
       if (g_image->data == ((char *) -1))
         {
           sim_x11uninitialize();
@@ -340,7 +348,7 @@ static inline int sim_x11mapsharedmem(Display *display,
       g_xshminfo.readOnly = 0;
 
       sim_x11traperrors();
-      result = XShmAttach(display, &g_xshminfo);
+      result = host_uninterruptible(XShmAttach, display, &g_xshminfo);
       if (sim_x11untraperrors(display) || !result)
         {
           sim_x11uninitialize();
@@ -360,12 +368,14 @@ shmerror:
       b_useshm = 0;
 
       fbinterval = (depth * g_fbpixelwidth / 8) * interval;
-      g_framebuffer = malloc(fblen * fbcount + fbinterval * (fbcount - 1));
+      g_framebuffer = host_uninterruptible(malloc,
+                              fblen * fbcount + fbinterval * (fbcount - 1));
 
-      g_image = XCreateImage(display, DefaultVisual(display, g_screen),
-                             depth, ZPixmap, 0, g_framebuffer,
-                             g_fbpixelwidth, g_fbpixelheight,
-                             8, 0);
+      g_image = host_uninterruptible(XCreateImage, display,
+                                     DefaultVisual(display, g_screen),
+                                     depth, ZPixmap, 0, g_framebuffer,
+                                     g_fbpixelwidth, g_fbpixelheight,
+                                     8, 0);
 
       if (g_image == NULL)
         {
@@ -441,8 +451,8 @@ int sim_x11initialize(unsigned short width, unsigned short height,
 
   /* Determine the supported pixel bpp of the current window */
 
-  XGetWindowAttributes(display, DefaultRootWindow(display),
-                       &windowattributes);
+  host_uninterruptible(XGetWindowAttributes, display,
+                       DefaultRootWindow(display), &windowattributes);
 
   /* Get the pixel depth.  If the depth is 24-bits, use 32 because X expects
    * 32-bit alignment anyway.
@@ -480,7 +490,7 @@ int sim_x11initialize(unsigned short width, unsigned short height,
       *fblen = (*stride * height);
       fbinterval = *stride * interval;
 
-      g_trans_framebuffer = malloc(*fblen * fbcount +
+      g_trans_framebuffer = host_uninterruptible(malloc, *fblen * fbcount +
                                    fbinterval * (fbcount - 1));
       if (g_trans_framebuffer == NULL)
         {
@@ -515,8 +525,8 @@ int sim_x11openwindow(void)
       return -ENODEV;
     }
 
-  XMapWindow(g_display, g_window);
-  XSync(g_display, 0);
+  host_uninterruptible(XMapWindow, g_display, g_window);
+  host_uninterruptible(XSync, g_display, 0);
 
   return 0;
 }
@@ -532,8 +542,8 @@ int sim_x11closewindow(void)
       return -ENODEV;
     }
 
-  XUnmapWindow(g_display, g_window);
-  XSync(g_display, 0);
+  host_uninterruptible(XUnmapWindow, g_display, g_window);
+  host_uninterruptible(XSync, g_display, 0);
 
   return 0;
 }
@@ -596,7 +606,7 @@ int sim_x11cmap(unsigned short first, unsigned short len,
 
       /* Then allocate a color for this selection */
 
-      if (!XAllocColor(g_display, cmap, &color))
+      if (!host_uninterruptible(XAllocColor, g_display, cmap, &color))
         {
           syslog(LOG_ERR, "Failed to allocate color%d\n", ndx);
           return -1;
@@ -620,14 +630,16 @@ int sim_x11update(void)
 #ifndef CONFIG_SIM_X11NOSHM
   if (b_useshm)
     {
-      XShmPutImage(g_display, g_window, g_gc, g_image, 0, 0, 0, 0,
-                   g_fbpixelwidth, g_fbpixelheight, 0);
+      host_uninterruptible(XShmPutImage, g_display, g_window, g_gc, g_image,
+                           0, 0, 0, 0,
+                           g_fbpixelwidth, g_fbpixelheight, 0);
     }
   else
 #endif
     {
-      XPutImage(g_display, g_window, g_gc, g_image, 0, 0, 0, 0,
-                g_fbpixelwidth, g_fbpixelheight);
+      host_uninterruptible(XPutImage, g_display, g_window, g_gc, g_image,
+                           0, 0, 0, 0,
+                           g_fbpixelwidth, g_fbpixelheight);
     }
 
   if (g_fbbpp == 32 && CONFIG_SIM_FBBPP == 16)
@@ -637,7 +649,7 @@ int sim_x11update(void)
                          g_trans_framebuffer + g_offset);
     }
 
-  XSync(g_display, 0);
+  host_uninterruptible(XSync, g_display, 0);
 
   return 0;
 }
