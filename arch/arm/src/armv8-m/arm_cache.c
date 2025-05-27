@@ -1096,7 +1096,7 @@ void up_flush_dcache_all(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV8M_ICACHE
+#ifdef CONFIG_ARMV8M_DCACHE
 void up_coherent_dcache(uintptr_t addr, size_t len)
 {
   uintptr_t end;
