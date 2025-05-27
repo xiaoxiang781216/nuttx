@@ -19,6 +19,8 @@ config BLUETOOTH_UART
 	---help---
 		Enable Bluetooth UART driver.
 
+if BLUETOOTH_UART
+
 config BLUETOOTH_UART_GENERIC
 	bool
 	default n
@@ -26,8 +28,6 @@ config BLUETOOTH_UART_GENERIC
 config BLUETOOTH_UART_SHIM
 	bool  "Bluetooth UART SHIM driver"
 	default n
-
-if BLUETOOTH_UART
 
 choice
 	prompt "Bluetooth UART HCI device"
