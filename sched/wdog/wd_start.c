@@ -407,7 +407,10 @@ int wd_start(FAR struct wdog_s *wdog, clock_t delay,
 {
   /* Ensure delay is within the range the wdog can handle. */
 
-  delay = delay < WDOG_MAX_DELAY ? delay : WDOG_MAX_DELAY;
+  if (delay > WDOG_MAX_DELAY)
+    {
+      return -EINVAL;
+    }
 
   return wd_start_abstick(wdog, clock_delay2abstick(delay), wdentry, arg);
 }

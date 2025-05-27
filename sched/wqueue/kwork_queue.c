@@ -83,14 +83,11 @@ int work_queue_period_wq(FAR struct kwork_wqueue_s *wqueue,
   clock_t expected;
   bool retimer;
 
-  if (wqueue == NULL || work == NULL || worker == NULL)
+  if (wqueue == NULL || work == NULL || worker == NULL ||
+      delay > WDOG_MAX_DELAY)
     {
       return -EINVAL;
     }
-
-  /* Ensure delay is within the range the wdog can handle. */
-
-  delay = delay < WDOG_MAX_DELAY ? delay : WDOG_MAX_DELAY;
 
   expected = clock_delay2abstick(delay);
 
