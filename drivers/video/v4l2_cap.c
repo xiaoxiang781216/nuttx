@@ -782,9 +782,21 @@ static int start_capture(FAR struct capture_mng_s *cmng,
                          FAR struct v4l2_fract *interval,
                          uintptr_t bufaddr, uint32_t bufsize)
 {
-  video_format_t c_fmt[MAX_CAPTURE_FMT];
-  imgdata_format_t df[MAX_CAPTURE_FMT];
-  imgsensor_format_t sf[MAX_CAPTURE_FMT];
+  video_format_t c_fmt[MAX_CAPTURE_FMT] =
+    {
+      0
+    };
+
+  imgdata_format_t df[MAX_CAPTURE_FMT] =
+    {
+      0
+    };
+
+  imgsensor_format_t sf[MAX_CAPTURE_FMT] =
+    {
+      0
+    };
+
   imgdata_interval_t di;
   imgsensor_interval_t si;
 
@@ -1263,9 +1275,21 @@ static int validate_frame_setting(FAR capture_mng_t *cmng,
                                   FAR struct v4l2_rect *clip,
                                   FAR struct v4l2_fract *interval)
 {
-  video_format_t c_fmt[MAX_CAPTURE_FMT];
-  imgdata_format_t df[MAX_CAPTURE_FMT];
-  imgsensor_format_t sf[MAX_CAPTURE_FMT];
+  video_format_t c_fmt[MAX_CAPTURE_FMT] =
+    {
+      0
+    };
+
+  imgdata_format_t df[MAX_CAPTURE_FMT] =
+    {
+      0
+    };
+
+  imgsensor_format_t sf[MAX_CAPTURE_FMT] =
+    {
+      0
+    };
+
   imgdata_interval_t di;
   imgsensor_interval_t si;
   int ret;
@@ -1947,8 +1971,15 @@ static int complete_capture(uint8_t err_code,
   FAR vbuf_container_t *container = NULL;
   enum v4l2_buf_type buf_type;
   irqstate_t           flags;
-  imgdata_format_t df[MAX_CAPTURE_FMT];
-  video_format_t c_fmt[MAX_CAPTURE_FMT];
+  imgdata_format_t df[MAX_CAPTURE_FMT] =
+    {
+      0
+    };
+
+  video_format_t c_fmt[MAX_CAPTURE_FMT] =
+    {
+      0
+    };
 
   flags = enter_critical_section();
 
@@ -2523,7 +2554,11 @@ static int capture_try_fmt(FAR struct file *filep,
   FAR struct inode *inode = filep->f_inode;
   FAR capture_mng_t *cmng = inode->i_private;
   FAR capture_type_inf_t *type_inf;
-  video_format_t vf[MAX_CAPTURE_FMT];
+  video_format_t vf[MAX_CAPTURE_FMT] =
+    {
+      0
+    };
+
   uint8_t nr_fmt;
 
   if (cmng == NULL || fmt == NULL)
@@ -2910,7 +2945,11 @@ static int capture_s_selection(FAR struct file *filep,
   FAR struct inode *inode = filep->f_inode;
   FAR capture_mng_t *cmng = inode->i_private;
   FAR capture_type_inf_t *type_inf;
-  uint32_t p_u32[IMGSENSOR_CLIP_NELEM];
+  uint32_t p_u32[IMGSENSOR_CLIP_NELEM] =
+    {
+      0
+    };
+
   imgsensor_value_t val;
   uint32_t id;
   int ret;
