@@ -219,13 +219,16 @@ static int ftl_open(FAR struct inode *inode)
 
   if (dev->refs == 0)
     {
-      /* Allocate one, in-memory erase block buffer */
-
-      dev->eblock = kmm_malloc(dev->geo.erasesize);
-      if (!dev->eblock)
+      if (dev->mtd->erase != NULL || dev->lptable != NULL)
         {
-          ferr("ERROR: Failed to allocate an erase block buffer\n");
-          return -ENOMEM;
+          /* Allocate one, in-memory erase block buffer */
+
+          dev->eblock = kmm_malloc(dev->geo.erasesize);
+          if (!dev->eblock)
+            {
+              ferr("ERROR: Failed to allocate an erase block buffer\n");
+              return -ENOMEM;
+            }
         }
     }
 
@@ -491,6 +494,18 @@ static ssize_t ftl_flush(FAR void *priv, FAR const uint8_t *buffer,
   size_t nxfrd;
   int    nbytes;
   int    ret;
+
+  if (dev->mtd->erase == NULL && dev->lptable == NULL)
+    {
+      ret = MTD_BWRITE(dev->mtd, startblock, nblocks, buffer);
+      if (ret != nblocks)
+        {
+          ferr("ERROR: Direct write block %" PRIdOFF " failed: %d\n",
+               startblock, ret);
+        }
+
+      return ret;
+    }
 
   /* Get the aligned block.  Here is is assumed: (1) The number of R/W blocks
    * per erase block is a power of 2, and (2) the erase begins with that same
