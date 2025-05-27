@@ -78,7 +78,7 @@
 	.global    __enable_sse_avx
 	.global    __enable_pcid
 	.global    __revoke_low_memory
-#ifdef CONFIG_LIB_SYSCALL
+#ifdef CONFIG_ARCH_HAVE_SYSCALL
 	.global    x86_64_syscall_entry
 	.global    x86_64_syscall
 #endif
@@ -346,7 +346,7 @@ start64_init:
 
 	movl    $MSR_EFER,  %ecx
 	rdmsr
-#ifdef CONFIG_LIB_SYSCALL
+#ifdef CONFIG_ARCH_HAVE_SYSCALL
 	or      $(EFER_LME | EFER_SCE),  %eax
 #else
 	or      $EFER_LME,  %eax
@@ -533,7 +533,7 @@ __enable_pcid:
 
 	.size   __enable_pcid, . - __enable_pcid
 
-#ifdef CONFIG_LIB_SYSCALL
+#ifdef CONFIG_ARCH_HAVE_SYSCALL
   /****************************************************************************
   * Name: x86_64_syscall_entry
   *
