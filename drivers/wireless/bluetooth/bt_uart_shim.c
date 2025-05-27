@@ -38,6 +38,7 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/kmalloc.h>
