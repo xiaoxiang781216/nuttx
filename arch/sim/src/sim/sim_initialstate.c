@@ -119,6 +119,11 @@ void up_initial_state(struct tcb_s *tcb)
 #endif
                                    + tcb->adj_stack_size;
 
+  /* Mark the stack top to zero, to avoid unwind backtrace failed */
+
+  memset((char *)tcb->xcp.regs[JB_SP] - XCPTCONTEXT_SIZE,
+         0, XCPTCONTEXT_SIZE);
+
   /* Mask the interrupt until switching to the new task */
 
   memset(&tcb->xcp.regs[JB_FLAG], 0xff, sizeof(uint32_t) * 2);
