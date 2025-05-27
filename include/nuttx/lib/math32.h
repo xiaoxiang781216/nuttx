@@ -433,34 +433,34 @@ uint64_t invdiv_u32(uint32_t n, FAR const invdiv_param32_t *param)
 
 /* Helper function to do n bits integer division. */
 
-#define invdiv_udiv_soft(arr, n, q, divisor) \
+#define invdiv_udiv_soft(arr, n, q, d) \
 do \
 { \
-    unsigned long idx; \
-    unsigned long bits_per_idx = sizeof(uint64_t) * 8; \
-    unsigned long bits_max = bits_per_idx * n; \
+    uint32_t idx; \
+    uint32_t bits_per_idx = sizeof(uint64_t) * 8; \
+    uint32_t bits_max = bits_per_idx * n; \
     uint64_t reminder = 0ull; \
-    uint64_t high_r = 0ull; \
+    uint64_t high_rem = 0ull; \
     for (idx = 0; idx < bits_max; idx++) \
       { \
-        unsigned long bits = bits_max - idx - 1; \
-        unsigned long bits_idx = bits / bits_per_idx; \
-        unsigned long bits_idx_off = bits % bits_per_idx; \
+        uint32_t bits = bits_max - idx - 1; \
+        uint32_t bits_idx = bits / bits_per_idx; \
+        uint32_t bits_idx_off = bits % bits_per_idx; \
         reminder <<= 1u; \
         reminder |= ((arr)[bits_idx] >> bits_idx_off) & 1u; \
-        if (reminder >= (divisor)) \
+        if (reminder >= (d)) \
           { \
-            reminder -= (divisor); \
-            q[bits_idx] |= (1ul << bits_idx_off); \
+            reminder    -= (d); \
+            q[bits_idx] |= (1ull << bits_idx_off); \
           } \
-        else if (high_r != 0) \
+        else if (high_rem != 0) \
           { \
-            uint64_t c = (uint64_t)0 - (divisor); \
-            high_r   -= 1; \
-            reminder += c; \
-            q[bits_idx] |= (1ul << bits_idx_off); \
+            uint64_t c   = 0ull - (d); \
+            high_rem    -= 1; \
+            reminder    += c; \
+            q[bits_idx] |= (1ull << bits_idx_off); \
           } \
-        high_r += (reminder >> (bits_per_idx - 1)) & 1u; \
+        high_rem += (reminder >> (bits_per_idx - 1)) & 1u; \
       } \
 } \
 while(0)
