@@ -51,14 +51,6 @@ if(CONFIG_SYSLOG_CONSOLE
   list(APPEND SRCS syslog_device.c)
 endif()
 
-if(CONFIG_SYSLOG_CHAR)
-  list(APPEND SRCS syslog_devchannel.c)
-endif()
-
-if(CONFIG_SYSLOG_CONSOLE)
-  list(APPEND SRCS syslog_consolechannel.c)
-endif()
-
 if(CONFIG_SYSLOG_FILE)
   list(APPEND SRCS syslog_filechannel.c)
 endif()

@@ -27,6 +27,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <sys/stat.h>
 
 #include <stdint.h>
 #include <stdio.h>
@@ -40,10 +41,9 @@
 #include <nuttx/arch.h>
 #include <nuttx/lib/lib.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/syslog/syslog.h>
-#include <nuttx/compiler.h>
-#include <nuttx/kmalloc.h>
 
 #include "syslog.h"
 
@@ -56,7 +56,8 @@
  * end of the file.
  */
 
-#define SYSLOG_OFLAGS (O_WRONLY | O_CREAT | O_APPEND)
+#define SYSLOG_OFLAGS (O_WRONLY)
+#define SYSLOG_OMODE  (S_IROTH | S_IRGRP | S_IRUSR | S_IWUSR)
 
 /****************************************************************************
  * Private Types
@@ -128,19 +129,6 @@ static const uint8_t g_syscrlf[2] =
 
 static inline int syslog_dev_lock(FAR struct syslog_dev_s *syslog_dev)
 {
-  /* Does this thread already hold the lock?  That could happen if
-   * we were called recursively, i.e., if the logic kicked off by
-   * file_write() where to generate more debug output.  Return an
-   * error in that case.
-   */
-
-  if (nxrmutex_is_hold(&syslog_dev->sl_lock))
-    {
-      /* Return an error (instead of deadlocking) */
-
-      return -EWOULDBLOCK;
-    }
-
   /* Either the lock is available or is currently held by another
    * thread.  Wait for it to become available.
    */
@@ -212,8 +200,8 @@ static int syslog_dev_open(FAR struct syslog_dev_s *syslog_dev,
    * have to re-open the file.
    */
 
-  syslog_dev->sl_oflags  = oflags;
-  syslog_dev->sl_mode    = mode;
+  syslog_dev->sl_oflags = oflags;
+  syslog_dev->sl_mode = mode;
   if (syslog_dev->sl_devpath != devpath)
     {
       if (syslog_dev->sl_devpath != NULL)
@@ -691,7 +679,7 @@ static int syslog_dev_flush(FAR syslog_channel_t *channel)
  ****************************************************************************/
 
 FAR syslog_channel_t *syslog_dev_initialize(FAR const char *devpath,
-                                                   int oflags, int mode)
+                                            int oflags, int mode)
 {
   FAR struct syslog_dev_s *syslog_dev;
 
@@ -780,4 +768,51 @@ void syslog_dev_uninitialize(FAR syslog_channel_t *channel)
   /* Free the channel structure */
 
   kmm_free(syslog_dev);
+}
+
+/****************************************************************************
+ * Name: syslog_dev_channel
+ *
+ * Description:
+ *   Configure to use the character device at CONFIG_SYSLOG_DEVPATH as the
+ *   SYSLOG channel.
+ *
+ *   This tiny function is simply a wrapper around syslog_dev_initialize()
+ *   and syslog_channel_register().  It calls syslog_dev_initialize() to
+ *   configure the character device at CONFIG_SYSLOG_DEVPATH then calls
+ *   syslog_channel_register() to use that device as the SYSLOG output
+ *   channel.
+ *
+ *   NOTE interrupt level SYSLOG output will be lost in this case unless
+ *   the interrupt buffer is used.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   A pointer to the new SYSLOG channel; NULL is returned on any failure.
+ *
+ ****************************************************************************/
+
+FAR syslog_channel_t *syslog_dev_channel(FAR const char *devpath)
+{
+  FAR syslog_channel_t *dev_channel;
+
+  /* Initialize the character driver interface */
+
+  dev_channel = syslog_dev_initialize(devpath, SYSLOG_OFLAGS, SYSLOG_OMODE);
+  if (dev_channel == NULL)
+    {
+      return NULL;
+    }
+
+  /* Use the character driver as the SYSLOG channel */
+
+  if (syslog_channel_register(dev_channel) != OK)
+    {
+      syslog_dev_uninitialize(dev_channel);
+      dev_channel = NULL;
+    }
+
+  return dev_channel;
 }

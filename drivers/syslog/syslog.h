@@ -150,7 +150,7 @@ void syslog_dev_uninitialize(FAR syslog_channel_t *channel);
  ****************************************************************************/
 
 #ifdef CONFIG_SYSLOG_CHAR
-FAR syslog_channel_t *syslog_dev_channel(void);
+FAR syslog_channel_t *syslog_dev_channel(FAR const char *devpath);
 #endif
 
 /****************************************************************************

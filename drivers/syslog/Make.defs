@@ -50,17 +50,7 @@ endif
 # System logging to a character device (or file)
 
 ifneq ($(CONFIG_SYSLOG_CONSOLE)$(CONFIG_SYSLOG_CHAR)$(CONFIG_SYSLOG_FILE),)
-  ifeq ($(CONFIG_SYSLOG),y)
-    CSRCS += syslog_device.c
-  endif
-endif
-
-ifeq ($(CONFIG_SYSLOG_CHAR),y)
-CSRCS += syslog_devchannel.c
-endif
-
-ifeq ($(CONFIG_SYSLOG_CONSOLE),y)
-CSRCS += syslog_consolechannel.c
+  CSRCS += syslog_device.c
 endif
 
 ifeq ($(CONFIG_SYSLOG_FILE),y)
