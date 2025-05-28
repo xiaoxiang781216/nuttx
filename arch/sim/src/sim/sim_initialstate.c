@@ -101,6 +101,11 @@ void up_initial_state(struct tcb_s *tcb)
   memset(&tcb->xcp, 0, sizeof(struct xcptcontext));
   tcb->xcp.regs = tcb->xcp.buf;
 
+  /* Mark the stack top to zero, to avoid unwind backtrace failed */
+
+  memset((char *)tcb->stack_base_ptr + tcb->adj_stack_size -
+         XCPTCONTEXT_SIZE, 0, XCPTCONTEXT_SIZE);
+
   /* Note: The amd64 ABI requires 16-bytes alignment _before_ a function
    * call.
    * On the other hand, our way to set up and switch to a new context
@@ -118,11 +123,6 @@ void up_initial_state(struct tcb_s *tcb)
                                    - sizeof(xcpt_reg_t)
 #endif
                                    + tcb->adj_stack_size;
-
-  /* Mark the stack top to zero, to avoid unwind backtrace failed */
-
-  memset((char *)tcb->xcp.regs[JB_SP] - XCPTCONTEXT_SIZE,
-         0, XCPTCONTEXT_SIZE);
 
   /* Mask the interrupt until switching to the new task */
 
