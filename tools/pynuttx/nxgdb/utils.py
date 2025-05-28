@@ -540,6 +540,8 @@ def get_symbol_value(name, locspec="nx_start", cacheable=True):
 
     state = suppress_cli_notifications(True)
 
+    original_thread = gdb.selected_thread()
+    original_frame = gdb.selected_frame()
     # Switch to inferior 2 and set the scope firstly
     gdb.execute("inferior 2", to_string=True)
     gdb.execute(f"list {locspec}", to_string=True)
@@ -561,6 +563,8 @@ def get_symbol_value(name, locspec="nx_start", cacheable=True):
 
     # Switch back to inferior 1
     gdb.execute("inferior 1", to_string=True)
+    original_thread.switch()
+    original_frame.select()
     suppress_cli_notifications(state)
     return value
 
@@ -1006,6 +1010,8 @@ def switch_inferior(inferior):
 def check_version():
     """Check the elf and memory version"""
     state = suppress_cli_notifications()
+    original_thread = gdb.selected_thread()
+    original_frame = gdb.selected_frame()
     switch_inferior(1)
     try:
         mem_version = gdb.execute("p g_version", to_string=True).split("=")[1]
@@ -1024,6 +1030,8 @@ def check_version():
         gdb.write(f"Build version: {mem_version}\n")
 
     switch_inferior(1)  # Switch back
+    original_thread.switch()
+    original_frame.select()
     # Verify the ELF file version against the GDB tool version
     check_compatibility()
     suppress_cli_notifications(state)
