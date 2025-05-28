@@ -53,7 +53,7 @@ config RPMSG_DEFER_WORK_PRIORITY
 
 config RPMSG_DEFER_WORK_STACKSIZE
 	int "rpmsg stack size"
-	default DEFAULT_TASK_STACKSIZE
+	default 4096
 
 endif # RPMSG_DEFER_WORK_COUNT > 0
 
