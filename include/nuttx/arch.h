@@ -2567,6 +2567,11 @@ void nxsched_alarm_tick_expiration(clock_t ticks);
  * Returned Value:
  *   The time remaining until the next timer expiration.
  *
+ * Note:
+ *   There is two special returned value
+ *   Zero     : The time already expired or in processing.
+ *   CLOCK_MAX: There is no waiting timer
+ *
  ****************************************************************************/
 
 clock_t nxsched_get_next_expired(void);

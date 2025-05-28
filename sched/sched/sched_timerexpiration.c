@@ -616,16 +616,38 @@ void nxsched_reassess_timer(void)
  * Returned Value:
  *   The time remaining until the next timer expiration.
  *
+ * Note:
+ *   There is two special returned value
+ *   Zero     : The time already expired or in processing.
+ *   CLOCK_MAX: There is no waiting timer
+ *
  ****************************************************************************/
 
 clock_t nxsched_get_next_expired(void)
 {
-  sclock_t ret;
+  sclock_t delta;
+  clock_t ret = 0;
 
-  ret = get_time_tick() + atomic_read(&g_timer_interval) -
-        clock_systime_ticks();
+  delta = get_time_tick() + atomic_read(&g_timer_interval) -
+          clock_systime_ticks();
 
-  return ret < 0 ? 0 : ret;
+  if (delta < 0)
+    {
+      irqstate_t flags;
+      flags = spin_lock_irqsave(&g_wdspinlock);
+      if (list_is_empty(&g_wdactivelist))
+        {
+          ret = CLOCK_MAX;
+        }
+
+      spin_unlock_irqrestore(&g_wdspinlock, flags);
+    }
+  else
+    {
+      ret = delta;
+    }
+
+  return ret;
 }
 
 #endif /* CONFIG_SCHED_TICKLESS */
