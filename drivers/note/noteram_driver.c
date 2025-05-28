@@ -738,6 +738,18 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         ret = OK;
         break;
 
+      case FIONREAD:
+        if (arg == 0)
+          {
+            ret = -EINVAL;
+          }
+        else
+          {
+            *(FAR unsigned int *)arg = noteram_unread_length(drv);
+            ret = OK;
+          }
+        break;
+
       case PIPEIOC_POLLINTHRD:
         drv->threshold = (uint32_t)arg;
         ret = OK;
