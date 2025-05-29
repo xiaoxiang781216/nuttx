@@ -28,6 +28,7 @@
 
 #include <sys/types.h>
 #include <syslog.h>
+#include <debug.h>
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/fdt.h>
@@ -40,18 +41,38 @@
 #include "chip.h"
 #include "qemu-armv7r.h"
 
+#ifdef CONFIG_IOEXPANDER_PL061
+#  include <nuttx/ioexpander/ioexpander.h>
+#  include <nuttx/ioexpander/pl061.h>
+#endif
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
 #ifndef QEMU_SPI_IRQ_BASE
-#define QEMU_SPI_IRQ_BASE     32
+#  define QEMU_SPI_IRQ_BASE     32
+#endif
+
+#ifdef CONFIG_IOEXPANDER_PL061
+#  define QEMU_PWR_PL061_BASE   0x90b0000
+#  define QEMU_RESET_PIN        1
 #endif
 
 #define QEMU_VIRTIO_MMIO_BASE    0x0a000000
 #define QEMU_VIRTIO_MMIO_REGSIZE 0x200
 #define QEMU_VIRTIO_MMIO_IRQ     (QEMU_SPI_IRQ_BASE + 16)
 #define QEMU_VIRTIO_MMIO_NUM     32
+
+/****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+struct restart_gpio_s            /* Data needed to init pl061 IOE */
+{
+  uintptr_t base;
+  uint32_t pin;
+};
 
 /****************************************************************************
  * Private Functions
@@ -108,6 +129,66 @@ static void register_devices_from_fdt(void)
   UNUSED(ret);
 }
 
+/****************************************************************************
+ * Name: fdt_restart_gpio
+ *
+ * Description:
+ *   This function finds the gpio power device from device tree, for
+ *   use with arm virt board.
+ *
+ * Input Parameters:
+ *   fdt   - Device tree handle
+ *
+ * Output Parameters:
+ *   restart   - GPIO power device info
+ *
+ * Returned Value:
+ *   Return 0 if success, nageative if failed
+ *
+ ****************************************************************************/
+
+static int fdt_restart_gpio(FAR const void *fdt,
+                            struct restart_gpio_s *restart)
+{
+  uintptr_t addr;
+  uint32_t  pin;
+  const uint32_t *prop;
+  int offset = -1;
+
+  if (restart)
+    {
+      offset = fdt_node_offset_by_compatible(fdt, offset, "gpio-restart");
+      if (offset == -FDT_ERR_NOTFOUND)
+        {
+          return -ENODEV;
+        }
+
+      prop = fdt_getprop(fdt, offset, "gpios", NULL);
+      if (!prop)
+        {
+          return -ENODEV;
+        }
+
+      addr = fdt32_to_cpu(prop[0]);
+      pin = fdt32_to_cpu(prop[1]);
+      sinfo("phandle=%" PRIxPTR " pin=%" PRIu32 "\n", addr, pin);
+
+      offset = fdt_node_offset_by_phandle(fdt, addr);
+      if (offset == -FDT_ERR_NOTFOUND)
+        {
+          return -ENODEV;
+        }
+
+      addr = fdt_get_reg_base(fdt, offset, 0);
+      sinfo("base=%" PRIxPTR "\n", addr);
+
+      restart->base = addr;
+      restart->pin = pin;
+    }
+
+  return OK;
+}
+
 #endif
 
 /****************************************************************************
@@ -156,3 +237,48 @@ int qemu_bringup(void)
   UNUSED(ret);
   return OK;
 }
+
+#ifdef CONFIG_BOARDCTL_RESET
+/****************************************************************************
+ * Name: board_reset
+ *
+ * Description:
+ *   Reboot board
+ *
+ ****************************************************************************/
+
+int board_reset(int status)
+{
+#ifdef CONFIG_IOEXPANDER_PL061
+  struct ioexpander_dev_s *ioe;
+  struct restart_gpio_s restart =
+  {
+    QEMU_PWR_PL061_BASE,
+    QEMU_RESET_PIN
+  };
+
+#if defined(CONFIG_LIBC_FDT) && defined(CONFIG_DEVICE_TREE)
+  const void *fdt = fdt_get();
+
+  if (fdt && fdt_restart_gpio(fdt, &restart) != OK)
+    {
+      swarn("ERROR: no pl061, use hardcoded settings\n");
+    }
+#endif
+
+  ioe = pl061_ioe_initialize(restart.base, 0);
+  if (ioe)
+    {
+      IOEXP_SETDIRECTION(ioe, restart.pin, IOEXPANDER_DIRECTION_OUT);
+      IOEXP_WRITEPIN(ioe, restart.pin, 1);
+    }
+  else
+    {
+      syslog(LOG_ERR, "ERROR: Failed pl061 init: %x\n", restart.base);
+    }
+#endif
+
+  UNUSED(status);
+  return 0;
+}
+#endif
