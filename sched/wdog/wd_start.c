@@ -328,24 +328,26 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
     {
       reassess |= list_is_head(&g_wdactivelist, &wdog->node);
       list_delete(&wdog->node);
-      wdog->func = NULL;
     }
 
   reassess |= wd_insert(wdog, ticks, wdentry, arg);
 
-  if (!g_wdtimernested[this_cpu()] && reassess)
+  /* If wd_start is called in the expiration callbacks,
+   * the reassess proccess is disabled.
+   */
+
+  reassess &= !g_wdtimernested[this_cpu()];
+
+  spin_unlock_irqrestore(&g_wdspinlock, flags);
+
+  if (reassess)
     {
       /* Resume the interval timer that will generate the next
        * interval event. If the timer at the head of the list changed,
        * then this will pick that new delay.
        */
 
-      spin_unlock_irqrestore(&g_wdspinlock, flags);
       nxsched_reassess_timer();
-    }
-  else
-    {
-      spin_unlock_irqrestore(&g_wdspinlock, flags);
     }
 #else
   UNUSED(reassess);
@@ -355,7 +357,6 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
   if (WDOG_ISACTIVE(wdog))
     {
       list_delete(&wdog->node);
-      wdog->func = NULL;
     }
 
   wd_insert(wdog, ticks, wdentry, arg);
