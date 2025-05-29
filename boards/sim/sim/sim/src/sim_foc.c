@@ -46,7 +46,7 @@
  * Private Data
  ****************************************************************************/
 
-static struct wdog_period_s g_foc_wdog;   /* Watchdog for event loop */
+static struct wdog_s g_foc_wdog;   /* Watchdog for event loop */
 
 /****************************************************************************
  * Private Functions
@@ -55,6 +55,7 @@ static struct wdog_period_s g_foc_wdog;   /* Watchdog for event loop */
 static void sim_foc_interrupt(wdparm_t arg)
 {
   foc_dummy_update();
+  wd_start_next(&g_foc_wdog, SIM_FOC_PERIOD, sim_foc_interrupt, 0);
 }
 
 /****************************************************************************
@@ -119,8 +120,7 @@ int sim_foc_setup(void)
             }
         }
 
-      wd_start_period(&g_foc_wdog, SIM_FOC_PERIOD, SIM_FOC_PERIOD,
-                      sim_foc_interrupt, 0);
+      wd_start(&g_foc_wdog, SIM_FOC_PERIOD, sim_foc_interrupt, 0);
       initialized = true;
     }
 

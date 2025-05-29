@@ -64,16 +64,16 @@ union bt_hdr_u
 };
 struct bthcisock_s
 {
-  struct bt_driver_s   drv;
-  int                  id;
-  int                  fd;
+  struct bt_driver_s drv;
+  int                id;
+  int                fd;
 
-  uint16_t             rxlen;
-  uint8_t              rxbuf[SIM_BTHCI_RX_FRAMELEN];
+  uint16_t           rxlen;
+  uint8_t            rxbuf[SIM_BTHCI_RX_FRAMELEN];
 
   /* Wd timer for transmit */
 
-  struct wdog_period_s wdog;
+  struct wdog_s      wdog;
 };
 
 /****************************************************************************
@@ -270,6 +270,9 @@ static void sim_bthcisock_interrupt(wdparm_t arg)
     {
       bthcisock_receive(&dev->drv);
     }
+
+  wd_start_next(&dev->wdog, SIM_BTHCI_WDOG_DELAY,
+                sim_bthcisock_interrupt, arg);
 }
 
 /****************************************************************************
@@ -310,8 +313,8 @@ int sim_bthcisock_register(int dev_id)
       return ret;
     }
 
-  wd_start_period(&dev->wdog, 0, SIM_BTHCI_WDOG_DELAY,
-                  sim_bthcisock_interrupt, (wdparm_t)dev);
+  wd_start(&dev->wdog, 0,
+           sim_bthcisock_interrupt, (wdparm_t)dev);
 
   return 0;
 }

@@ -95,34 +95,6 @@ static unsigned int g_wdtimernested[CONFIG_SMP_NCPUS];
  ****************************************************************************/
 
 /****************************************************************************
- * Name: wdentry_period
- *
- * Description:
- *   Periodic watchdog timer callback function.
- *
- * Input Parameters:
- *   arg - The argument of the wdog callback.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void wdentry_period(wdparm_t arg)
-{
-  FAR struct wdog_period_s *wdperiod = (FAR struct wdog_period_s *)arg;
-
-  wdperiod->func(wdperiod->wdog.arg);
-
-  if (wdperiod->period != 0)
-    {
-      wd_start_abstick(&wdperiod->wdog,
-                       wdperiod->wdog.expired + wdperiod->period,
-                       wdentry_period, wdperiod->wdog.arg);
-    }
-}
-
-/****************************************************************************
  * Name: wd_expiration
  *
  * Description:
@@ -180,9 +152,6 @@ static inline_function clock_t wd_expiration(clock_t ticks)
       func = wdog->func;
       arg = wdog->arg;
       wdog->func = NULL;
-
-      arg = func != wdentry_period ? wdog->arg :
-            (wdparm_t)list_container_of(wdog, struct wdog_period_s, wdog);
 
       /* Execute the watchdog function */
 
@@ -418,45 +387,6 @@ int wd_start(FAR struct wdog_s *wdog, clock_t delay,
     }
 
   return wd_start_abstick(wdog, clock_delay2abstick(delay), wdentry, arg);
-}
-
-/****************************************************************************
- * Name: wd_start_period
- *
- * Description:
- *   This function periodically adds a watchdog timer to the active timer.
- *
- * Input Parameters:
- *   wdog     - Pointer of the periodic watchdog.
- *   delay    - Delayed time in system ticks.
- *   period   - Period in system ticks.
- *   wdentry  - Function to call on timeout.
- *   arg      - Parameter to pass to wdentry.
- *
- *   NOTE:  The parameter must be of type wdparm_t.
- *
- * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is return to
- *   indicate the nature of any failure.
- *
- * Assumptions:
- *   The watchdog routine runs in the context of the timer interrupt handler
- *   and is subject to all ISR restrictions.
- *
- ****************************************************************************/
-
-int wd_start_period(FAR struct wdog_period_s *wdog, clock_t delay,
-                    clock_t period, wdentry_t wdentry, wdparm_t arg)
-{
-  if (!wdog || !period || !wdentry)
-    {
-      return -EINVAL;
-    }
-
-  wdog->func   = wdentry;
-  wdog->period = period;
-
-  return wd_start(&wdog->wdog, delay, wdentry_period, arg);
 }
 
 /****************************************************************************

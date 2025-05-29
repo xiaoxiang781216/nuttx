@@ -149,16 +149,16 @@ struct sim_ep_s
 
 struct sim_usbdev_s
 {
-  struct usbdev_s               usbdev;
-  struct usbdevclass_driver_s  *driver;               /* The bound device class driver */
-  struct usb_ctrlreq_s          ctrl;                 /* Last EP0 request */
-  uint8_t                       devstate;             /* State of the device (see enum sim_devstate_e) */
-  uint8_t                       prevstate;            /* Previous state of the device before SUSPEND */
-  uint8_t                       selfpowered:1;        /* 1: Device is self powered */
-  uint16_t                      epavail;              /* Bitset of available endpoints */
-  struct sim_ep_s               eps[SIM_USB_EPNUM];
-  spinlock_t                    lock;                 /* Spinlock */
-  struct wdog_period_s          wdog;                 /* Watchdog for event loop */
+  struct usbdev_s              usbdev;
+  struct usbdevclass_driver_s *driver;               /* The bound device class driver */
+  struct usb_ctrlreq_s         ctrl;                 /* Last EP0 request */
+  uint8_t                      devstate;             /* State of the device (see enum sim_devstate_e) */
+  uint8_t                      prevstate;            /* Previous state of the device before SUSPEND */
+  uint8_t                      selfpowered:1;        /* 1: Device is self powered */
+  uint16_t                     epavail;              /* Bitset of available endpoints */
+  struct sim_ep_s              eps[SIM_USB_EPNUM];
+  spinlock_t                   lock;                 /* Spinlock */
+  struct wdog_s                wdog;                 /* Watchdog for event loop */
 };
 
 struct sim_req_s
@@ -1087,6 +1087,8 @@ static void sim_usbdev_interrupt(wdparm_t arg)
         }
     }
   while (do_loop);
+
+  wd_start_next(&priv->wdog, SIM_USB_PERIOD, sim_usbdev_interrupt, arg);
 }
 
 /****************************************************************************
@@ -1146,8 +1148,8 @@ int usbdev_register(struct usbdevclass_driver_s *driver)
 
   if (ret == 0)
     {
-      wd_start_period(&priv->wdog, SIM_USB_PERIOD, SIM_USB_PERIOD,
-                      sim_usbdev_interrupt, (wdparm_t)priv);
+      wd_start(&priv->wdog, SIM_USB_PERIOD,
+               sim_usbdev_interrupt, (wdparm_t)priv);
     }
 
   return ret;

@@ -53,7 +53,7 @@ struct sim_audio_s
   struct dq_queue_s pendq;
   mutex_t pendlock;
 
-  struct wdog_period_s wdog;           /* Watchdog for event loop */
+  struct wdog_s wdog;           /* Watchdog for event loop */
 
   bool playback;
   bool offload;
@@ -1154,6 +1154,9 @@ static void sim_alsa_interrupt(wdparm_t arg)
   struct sim_audio_s *priv = (struct sim_audio_s *)arg;
 
   sim_audio_process(priv);
+
+  wd_start_next(&priv->wdog, SIM_AUDIO_PERIOD,
+                sim_alsa_interrupt, arg);
 }
 
 /****************************************************************************
@@ -1182,8 +1185,8 @@ struct audio_lowerhalf_s *sim_audio_initialize(bool playback, bool offload)
       return NULL;
     }
 
-  wd_start_period(&priv->wdog, SIM_AUDIO_PERIOD, SIM_AUDIO_PERIOD,
-                  sim_alsa_interrupt, (wdparm_t)priv);
+  wd_start(&priv->wdog, SIM_AUDIO_PERIOD,
+           sim_alsa_interrupt, (wdparm_t)priv);
 
   /* Setting default config */
 

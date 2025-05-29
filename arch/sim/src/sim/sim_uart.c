@@ -54,23 +54,23 @@ struct tty_priv_s
 {
   /* tty-port path name */
 
-  const char           *path;
+  const char   *path;
 
   /* The file descriptor. It is returned by open */
 
-  int                  fd;
+  int           fd;
 
   /* TX interrupt enable or not */
 
-  bool                 txint;
+  bool          txint;
 
   /* RX interrupt enable or not */
 
-  bool                 rxint;
+  bool          rxint;
 
   /* Wd timer for transmit */
 
-  struct wdog_period_s wdog;
+  struct wdog_s wdog;
 };
 
 /****************************************************************************
@@ -463,6 +463,8 @@ static void sim_tty_interrupt(wdparm_t arg)
       uart_recvchars(dev);
 #endif
     }
+
+  wd_start_next(&priv->wdog, SIM_UART_WDOG_DELAY, sim_tty_interrupt, arg);
 }
 
 /****************************************************************************
@@ -480,8 +482,8 @@ static void tty_rxint(struct uart_dev_s *dev, bool enable)
   priv->rxint = enable;
   if (enable)
     {
-      wd_start_period(&priv->wdog, 0, SIM_UART_WDOG_DELAY,
-                      sim_tty_interrupt, (wdparm_t)dev);
+      wd_start(&priv->wdog, 0,
+               sim_tty_interrupt, (wdparm_t)dev);
     }
 }
 
@@ -656,8 +658,8 @@ static void tty_txint(struct uart_dev_s *dev, bool enable)
   priv->txint = enable;
   if (enable)
     {
-      wd_start_period(&priv->wdog, 0, SIM_UART_WDOG_DELAY,
-                      sim_tty_interrupt, (wdparm_t)dev);
+      wd_start(&priv->wdog, 0,
+               sim_tty_interrupt, (wdparm_t)dev);
     }
 }
 

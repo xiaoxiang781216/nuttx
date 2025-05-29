@@ -98,7 +98,7 @@ struct sim_rptun_dev_s
 
   /* Wd timer for transmit */
 
-  struct wdog_period_s      wdog;
+  struct wdog_s             wdog;
 };
 
 /****************************************************************************
@@ -446,6 +446,9 @@ static void sim_rptun_interrupt(wdparm_t arg)
           dev->callback(dev->arg, RPTUN_NOTIFY_ALL);
         }
     }
+
+  wd_start_next(&dev->wdog, SIM_RPTUN_WDOG_DELAY,
+                sim_rptun_interrupt, (wdparm_t)dev);
 }
 
 /****************************************************************************
@@ -492,8 +495,8 @@ int sim_rptun_init(const char *shmemname, const char *cpuname, int master)
       return ret;
     }
 
-  wd_start_period(&dev->wdog, 0, SIM_RPTUN_WDOG_DELAY,
-                  sim_rptun_interrupt, (wdparm_t)dev);
+  wd_start(&dev->wdog, 0,
+           sim_rptun_interrupt, (wdparm_t)dev);
 
   return 0;
 }

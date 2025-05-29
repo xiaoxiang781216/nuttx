@@ -52,7 +52,7 @@ typedef struct
   uint8_t  *next_buf;
   struct timeval *next_ts;
   struct host_video_dev_s *vdev;
-  struct wdog_period_s wdog;
+  struct wdog_s wdog;
 } sim_camera_priv_t;
 
 /****************************************************************************
@@ -364,6 +364,8 @@ static void sim_camera_interrupt(wdparm_t arg)
           priv->capture_cb(0, ret, &tv, priv->capture_arg);
         }
     }
+
+  wd_start_next(&priv->wdog, SIM_CAMERA_PERIOD, sim_camera_interrupt, arg);
 }
 
 /****************************************************************************
@@ -377,7 +379,7 @@ int sim_camera_initialize(void)
   imgsensor_register(&priv->sensor);
   imgdata_register(&priv->data);
 
-  wd_start_period(&priv->wdog, SIM_CAMERA_PERIOD, SIM_CAMERA_PERIOD,
-                  sim_camera_interrupt, (wdparm_t)priv);
+  wd_start(&priv->wdog, SIM_CAMERA_PERIOD,
+           sim_camera_interrupt, (wdparm_t)priv);
   return 0;
 }

@@ -90,26 +90,26 @@ struct sim_usbhost_s
    * to struct sim_usbhost_s.
    */
 
-  struct usbhost_driver_s       drvr;
+  struct usbhost_driver_s      drvr;
 
   /* This is the hub port description understood by class drivers */
 
-  struct usbhost_roothubport_s  hport;
+  struct usbhost_roothubport_s hport;
 
   /* Root hub port status */
 
-  volatile bool                 connected;          /* Connected to device */
-  struct                        sim_epinfo_s ep0;   /* EP0 endpoint info */
+  volatile bool                connected;          /* Connected to device */
+  struct                       sim_epinfo_s ep0;   /* EP0 endpoint info */
 
-  uint8_t                       state;
+  uint8_t                      state;
 
-  volatile bool                 pscwait;            /* TRUE: Thread is waiting for port status change event */
+  volatile bool                pscwait;            /* TRUE: Thread is waiting for port status change event */
 
-  mutex_t                       lock;               /* Support mutually exclusive access */
-  sem_t                         pscsem;             /* Semaphore to wait for port status change events */
+  mutex_t                      lock;               /* Support mutually exclusive access */
+  sem_t                        pscsem;             /* Semaphore to wait for port status change events */
 
-  struct usbhost_devaddr_s      devgen;              /* Address generation data */
-  struct wdog_period_s          wdog;
+  struct usbhost_devaddr_s     devgen;              /* Address generation data */
+  struct wdog_s                wdog;
 };
 
 /****************************************************************************
@@ -769,6 +769,9 @@ static void sim_usbhost_interrupt(wdparm_t arg)
           priv->pscwait = false;
         }
     }
+
+  wd_start_next(&priv->wdog, SIM_USBHOST_PERIOD,
+                sim_usbhost_interrupt, arg);
 }
 
 /****************************************************************************
@@ -851,8 +854,8 @@ int sim_usbhost_initialize(void)
       return -ENODEV;
     }
 
-  wd_start_period(&priv->wdog, SIM_USBHOST_PERIOD, SIM_USBHOST_PERIOD,
-                  sim_usbhost_interrupt, (wdparm_t)priv);
+  wd_start(&priv->wdog, SIM_USBHOST_PERIOD,
+           sim_usbhost_interrupt, (wdparm_t)priv);
 
   return OK;
 }
