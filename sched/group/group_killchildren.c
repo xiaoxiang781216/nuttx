@@ -179,7 +179,9 @@ int group_kill_children(FAR struct tcb_s *tcb)
 
       /* Wait a bit for child exit */
 
+#  if CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS > 0
       ret = CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS;
+#  endif
       while (1)
         {
           irqstate_t flags = spin_lock_irqsave(&tcb->group->tg_lock);
