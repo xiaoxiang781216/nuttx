@@ -516,7 +516,6 @@ err_with_pools:
       mempool_deinit(pools + i);
     }
 
-  mempool_multiple_free_chunk(mpool, pools);
   return NULL;
 }
 
