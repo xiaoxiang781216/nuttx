@@ -100,14 +100,16 @@ void _exit(int status)
           usleep(1000);
         }
     }
-  else
-    {
-      nxsched_release_pid(tcb->pid);
-    }
 
   enter_critical_section();
 
   nxtask_exithook(tcb, status);
 
+  /* In nxtask_exithook, nxmutex_lock is used, and nxmutex_lock depends
+   * on nxsched_get_tcb. Therefore, we move nxsched_release_pid
+   * to this position.
+   */
+
+  nxsched_release_pid(tcb->pid);
   up_exit(status);
 }
