@@ -71,6 +71,9 @@ struct sim_oneshot_lowerhalf_s
 
 static void sim_process_tick(sq_entry_t *entry);
 
+static int sim_tick_max_delay(struct oneshot_lowerhalf_s *lower,
+                              clock_t *ticks);
+
 static int sim_max_delay(struct oneshot_lowerhalf_s *lower,
                          struct timespec *ts);
 static int sim_start(struct oneshot_lowerhalf_s *lower,
@@ -91,10 +94,11 @@ static sq_queue_t g_oneshot_list;
 
 static const struct oneshot_operations_s g_oneshot_ops =
 {
-  .max_delay = sim_max_delay,
-  .start     = sim_start,
-  .cancel    = sim_cancel,
-  .current   = sim_current,
+  .tick_max_delay = sim_tick_max_delay,
+  .max_delay      = sim_max_delay,
+  .start          = sim_start,
+  .cancel         = sim_cancel,
+  .current        = sim_current,
 };
 
 static struct timespec g_timer_lastset;
@@ -104,6 +108,25 @@ static uint64_t g_timer_lastdelay;
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/* Do not use max_delay, since converting it to ticks can be overflowed. */
+
+static int sim_tick_max_delay(struct oneshot_lowerhalf_s *lower,
+                              clock_t *ticks)
+{
+  int ret = OK;
+
+  if (ticks)
+    {
+      *ticks = UINT32_MAX;
+    }
+  else
+    {
+      ret = -EINVAL;
+    }
+
+  return ret;
+}
 
 /****************************************************************************
  * Name: sim_timer_current
