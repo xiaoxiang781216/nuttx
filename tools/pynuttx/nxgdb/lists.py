@@ -350,6 +350,7 @@ class ForeachListEntry(gdb.Command):
 
     def __init__(self):
         super().__init__("foreach list", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        utils.alias("list-foreach", "foreach list")
 
     @utils.dont_repeat_decorator
     def invoke(self, arg, from_tty):
@@ -408,6 +409,7 @@ class ForeachArray(gdb.Command):
 
     def __init__(self):
         super().__init__("foreach array", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        utils.alias("array-foreach", "foreach array")
 
     @utils.dont_repeat_decorator
     def invoke(self, arg, from_tty):

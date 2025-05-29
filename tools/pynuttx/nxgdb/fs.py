@@ -377,6 +377,7 @@ class ForeachInode(gdb.Command):
 
     def __init__(self):
         super().__init__("foreach inode", gdb.COMMAND_USER)
+        utils.alias("inode-foreach", "foreach inode")
 
     def get_root_inode(self, addr_or_expr):
         try:
