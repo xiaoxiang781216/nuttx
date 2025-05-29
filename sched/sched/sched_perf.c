@@ -2356,7 +2356,7 @@ static void perf_swevent_timer_handle(wdparm_t arg)
     perf_swevent_timer_handle_cpu(event);
 #endif
 
-  wd_start(&event->hw.waitdog, period, perf_swevent_timer_handle, arg);
+  wd_start_next(&event->hw.waitdog, period, perf_swevent_timer_handle, arg);
 }
 
 /****************************************************************************

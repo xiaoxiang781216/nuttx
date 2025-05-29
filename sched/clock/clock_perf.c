@@ -65,7 +65,7 @@ static void perf_update(wdparm_t arg)
   FAR struct perf_s *perf = &g_perf;
 
   perf_gettime();
-  wd_start((FAR struct wdog_s *)arg, perf->timeout, perf_update, arg);
+  wd_start_next((FAR struct wdog_s *)arg, perf->timeout, perf_update, arg);
 }
 
 /****************************************************************************
