@@ -305,7 +305,11 @@ int host_usrsock_socket(int domain, int type, int protocol)
    * nuttx exits unexpectedly.
    */
 
-  setsockopt(ret, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+  if (setsockopt(ret, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+    {
+      close(ret);
+      return -errno;
+    }
 
   sock_nonblock(ret, true);
   host_usrsock_set_fd(ret, &g_active_read_fds);
@@ -509,7 +513,7 @@ int host_usrsock_accept(int sockfd, struct nuttx_sockaddr *addr,
   int ret;
 
   ret = accept(sockfd, &naddr, &naddrlen);
-  if (ret <= 0)
+  if (ret < 0)
     {
       return -errno;
     }
