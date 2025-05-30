@@ -143,6 +143,23 @@ static inline_function void putsreg(irqstate_t sreg)
   asm volatile ("out __SREG__, %s" : : "r" (sreg) :);
 }
 
+/* Return program counter */
+
+static inline_function uint16_t up_getpc(void)
+{
+  uint16_t pc;
+
+  __asm__ __volatile__
+    (
+      "rcall .+0\n\t"
+      "pop %A0\n\t"
+      "pop %B0"
+      : "=r" (pc)
+    );
+
+  return pc;
+}
+
 /* Return the current value of the stack pointer */
 
 static inline_function uint16_t up_getsp(void)

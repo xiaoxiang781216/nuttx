@@ -2968,7 +2968,7 @@ void perf_event_task_sched_out(FAR struct tcb_s *tcb)
 {
   FAR struct perf_event_context_s *ctx = tcb->perf_event_ctx;
 
-  perf_swevent(PERF_COUNT_SW_CONTEXT_SWITCHES, SCHED_NOTE_IP);
+  perf_swevent(PERF_COUNT_SW_CONTEXT_SWITCHES, up_getpc());
 
   if (ctx != NULL)
     {
