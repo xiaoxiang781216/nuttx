@@ -137,12 +137,13 @@ static void wdentry_period(wdparm_t arg)
  *
  ****************************************************************************/
 
-static inline_function void wd_expiration(clock_t ticks)
+static inline_function clock_t wd_expiration(clock_t ticks)
 {
   FAR struct wdog_s *wdog;
   irqstate_t         flags;
   wdentry_t          func;
   wdparm_t           arg;
+  clock_t            ret = 0;
 
   flags = spin_lock_irqsave(&g_wdspinlock);
 
@@ -166,6 +167,7 @@ static inline_function void wd_expiration(clock_t ticks)
 
       if (!clock_compare(wdog->expired, ticks))
         {
+          ret = wdog->expired - ticks;
           break;
         }
 
@@ -199,6 +201,8 @@ static inline_function void wd_expiration(clock_t ticks)
 #endif
 
   spin_unlock_irqrestore(&g_wdspinlock, flags);
+
+  return ret;
 }
 
 /****************************************************************************
@@ -486,37 +490,35 @@ clock_t wd_timer(clock_t ticks, bool noswitches)
 {
   FAR struct wdog_s *wdog;
   irqstate_t flags;
-  sclock_t ret;
+  clock_t    ret = 0;
 
   /* Check if the watchdog at the head of the list is ready to run */
 
   if (!noswitches)
     {
-      wd_expiration(ticks);
+      ret = wd_expiration(ticks);
     }
-
-  flags = spin_lock_irqsave(&g_wdspinlock);
-
-  /* Return the delay for the next watchdog to expire */
-
-  if (list_is_empty(&g_wdactivelist))
+  else
     {
+      flags = spin_lock_irqsave(&g_wdspinlock);
+
+      /* Return the delay for the next watchdog to expire */
+
+      if (!list_is_empty(&g_wdactivelist))
+        {
+          /* Notice that if noswitches, expired - g_wdtickbase
+           * may get negative value.
+           */
+
+          wdog = list_first_entry(&g_wdactivelist, struct wdog_s, node);
+          ret  = !clock_compare(wdog->expired, ticks) ?
+                 wdog->expired - ticks : 1;
+        }
+
       spin_unlock_irqrestore(&g_wdspinlock, flags);
-      return 0;
     }
 
-  /* Notice that if noswitches, expired - g_wdtickbase
-   * may get negative value.
-   */
-
-  wdog = list_first_entry(&g_wdactivelist, struct wdog_s, node);
-  ret = wdog->expired - ticks;
-
-  spin_unlock_irqrestore(&g_wdspinlock, flags);
-
-  /* Return the delay for the next watchdog to expire */
-
-  return MAX(ret, 1);
+  return ret;
 }
 
 #else
