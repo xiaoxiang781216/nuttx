@@ -83,12 +83,6 @@ void clock_timer(void);
 #  define clock_timer()
 #endif
 
-/****************************************************************************
- * perf_init
- ****************************************************************************/
-
-void perf_init(void);
-
 #ifdef CONFIG_SCHED_CPULOAD_SYSCLK
 void cpuload_init(void);
 #endif
