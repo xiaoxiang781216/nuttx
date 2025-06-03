@@ -39,11 +39,6 @@
 #  undef  __alloca
 #  define alloca(size)   _alloca(size)
 #  define __alloca(size) _alloca(size)
-#elif defined(__TASKING__)
-#  undef  alloca
-#  undef  __alloca
-#  define alloca(size)   __alloc(size)
-#  define __alloca(size) __alloc(size)
 #endif
 
 #endif /* __INCLUDE_ALLOCA_H */
