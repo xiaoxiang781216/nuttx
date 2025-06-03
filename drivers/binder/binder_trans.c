@@ -173,8 +173,8 @@ static size_t binder_get_object(FAR struct binder_proc *proc,
     }
   else
     {
-      if (binder_alloc_copy_from_buffer(&g_binder_alloc, object,
-                                        buffer, offset, read_size))
+      if (binder_alloc_copy_from_buffer(&proc->alloc, object, buffer, offset,
+                                        read_size))
         {
           return 0;
         }
@@ -705,7 +705,7 @@ void binder_transaction_buffer_release(FAR struct binder_proc *proc,
       binder_size_t object_offset;
 
       if (!binder_alloc_copy_from_buffer(
-               &g_binder_alloc, &object_offset, buffer,
+               &proc->alloc, &object_offset, buffer,
                buffer_offset, sizeof(object_offset)))
         {
           object_size = binder_get_object(proc, NULL, buffer,
@@ -1304,7 +1304,7 @@ void binder_transaction(FAR struct binder_proc *proc,
     }
 
   t->buffer =
-    binder_alloc_new_buf(&g_binder_alloc, tr->data_size,
+    binder_alloc_new_buf(&target_proc->alloc, tr->data_size,
                          tr->offsets_size, secctx_sz,
                          !reply && (t->flags & TF_ONE_WAY),
                          &ret);
@@ -1325,7 +1325,7 @@ void binder_transaction(FAR struct binder_proc *proc,
                           ALIGN(tr->offsets_size, sizeof(void *));
 
       t->security_ctx = (uintptr_t)t->buffer->user_data + buf_offset;
-      err = binder_alloc_copy_to_buffer(&g_binder_alloc,
+      err = binder_alloc_copy_to_buffer(&target_proc->alloc,
                                         t->buffer, buf_offset,
                                         secctx, secctx_sz);
       if (err)
@@ -1340,7 +1340,7 @@ void binder_transaction(FAR struct binder_proc *proc,
   t->buffer->target_node = target_node;
   t->buffer->clear_on_free = !!(t->flags & TF_CLEAR_BUF);
 
-  if (binder_alloc_copy_to_buffer(&g_binder_alloc, t->buffer,
+  if (binder_alloc_copy_to_buffer(&target_proc->alloc, t->buffer,
                       ALIGN(tr->data_size, sizeof(void *)),
                       (FAR void *)(uintptr_t)tr->data.ptr.offsets,
                       tr->offsets_size))
@@ -1374,7 +1374,7 @@ void binder_transaction(FAR struct binder_proc *proc,
       binder_size_t object_offset;
       binder_size_t copy_size;
 
-      if (binder_alloc_copy_from_buffer(&g_binder_alloc, &object_offset,
+      if (binder_alloc_copy_from_buffer(&target_proc->alloc, &object_offset,
                                         t->buffer, buffer_offset,
                                         sizeof(object_offset)))
         {
@@ -1389,7 +1389,7 @@ void binder_transaction(FAR struct binder_proc *proc,
       copy_size = object_offset - user_offset;
       if (copy_size &&
           (user_offset > object_offset ||
-           binder_alloc_copy_to_buffer(&g_binder_alloc, t->buffer,
+           binder_alloc_copy_to_buffer(&target_proc->alloc, t->buffer,
                                        user_offset,
                                        (void *)(user_buffer + user_offset),
                                        copy_size)))
@@ -1428,7 +1428,7 @@ void binder_transaction(FAR struct binder_proc *proc,
           fp = to_flat_binder_object(hdr);
           ret = binder_translate_binder(fp, t, thread);
           if (ret < 0 ||
-              binder_alloc_copy_to_buffer(&g_binder_alloc, t->buffer,
+              binder_alloc_copy_to_buffer(&target_proc->alloc, t->buffer,
                                           object_offset, fp, sizeof(*fp)))
             {
               return_error = BR_FAILED_REPLY;
@@ -1444,7 +1444,7 @@ void binder_transaction(FAR struct binder_proc *proc,
           fp = to_flat_binder_object(hdr);
           ret = binder_translate_handle(fp, t, thread);
           if (ret < 0 ||
-              binder_alloc_copy_to_buffer(&g_binder_alloc, t->buffer,
+              binder_alloc_copy_to_buffer(&target_proc->alloc, t->buffer,
                                           object_offset, fp, sizeof(*fp)))
             {
               return_error = BR_FAILED_REPLY;
@@ -1463,7 +1463,7 @@ void binder_transaction(FAR struct binder_proc *proc,
                                               thread, in_reply_to);
           fp->pad_binder = 0;
           if (ret_local < 0 ||
-              binder_alloc_copy_to_buffer(&g_binder_alloc, t->buffer,
+              binder_alloc_copy_to_buffer(&target_proc->alloc, t->buffer,
                                           object_offset, fp, sizeof(*fp)))
             {
               return_error = BR_FAILED_REPLY;
@@ -1497,7 +1497,7 @@ void binder_transaction(FAR struct binder_proc *proc,
   /* Done processing objects, copy the rest of the buffer */
 
   binder_inner_proc_lock(target_proc);
-  if (binder_alloc_copy_to_buffer(&g_binder_alloc,
+  if (binder_alloc_copy_to_buffer(&target_proc->alloc,
               t->buffer, user_offset, (void *)(user_buffer + user_offset),
               tr->data_size - user_offset))
     {
@@ -1600,7 +1600,7 @@ err_copy_data_failed:
 
   target_node = NULL;
   t->buffer->transaction = NULL;
-  binder_alloc_free_buf(&g_binder_alloc, t->buffer);
+  binder_alloc_free_buf(&target_proc->alloc, t->buffer);
 err_binder_alloc_buf_failed:
   kmm_free(tcomplete);
 err_alloc_tcomplete_failed:

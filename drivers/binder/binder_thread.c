@@ -222,7 +222,7 @@ static void binder_free_buf(FAR struct binder_proc *proc,
     }
 
   binder_release_entire_buffer(proc, thread, buffer, is_failure);
-  binder_alloc_free_buf(&g_binder_alloc, buffer);
+  binder_alloc_free_buf(&proc->alloc, buffer);
 }
 
 /****************************************************************************
@@ -286,6 +286,7 @@ static void binder_free_proc(FAR struct binder_proc *proc)
       nxmutex_unlock(&device->binder_procs_lock);
     }
 
+  binder_alloc_deferred_release(&proc->alloc);
   kmm_free(proc);
 }
 
@@ -373,8 +374,8 @@ static int binder_apply_fd_fixups(FAR struct binder_proc *proc,
     binder_debug(BINDER_DEBUG_TRANSACTION, "fd fixup txn %d fd %d\n",
                  t->debug_id, fd);
 
-    if (binder_alloc_copy_to_buffer(&g_binder_alloc, t->buffer,
-                                    fixup->offset, &fd, sizeof(uint32_t)))
+    if (binder_alloc_copy_to_buffer(&proc->alloc, t->buffer, fixup->offset,
+                                    &fd, sizeof(uint32_t)))
       {
         ret = -EINVAL;
         break;
@@ -386,9 +387,8 @@ static int binder_apply_fd_fixups(FAR struct binder_proc *proc,
     {
       if (ret)
         {
-          err = binder_alloc_copy_from_buffer(&g_binder_alloc, &fd,
-                                              t->buffer, fixup->offset,
-                                              sizeof(fd));
+          err = binder_alloc_copy_from_buffer(&proc->alloc, &fd, t->buffer,
+                                              fixup->offset, sizeof(fd));
           WARN_ON(err);
           if (!err)
             {
@@ -927,7 +927,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
 
           get_value(data_ptr, (binder_unaligned_uintptr_t *)ptr);
           ptr += sizeof(binder_uintptr_t);
-          b_buffer = binder_alloc_prepare_to_free(&g_binder_alloc, data_ptr);
+          b_buffer = binder_alloc_prepare_to_free(&proc->alloc, data_ptr);
           if (b_buffer == NULL)
             {
               binder_debug(BINDER_DEBUG_ERROR,

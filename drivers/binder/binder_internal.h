@@ -236,8 +236,6 @@ struct binder_alloc
   FAR struct binder_page *pages_array;     /* array of binder_lru_page */
 };
 
-extern struct binder_alloc g_binder_alloc;
-
 /**
  * struct binder_priority - scheduler policy and priority
  */
@@ -340,6 +338,10 @@ struct binder_proc
   /* Fields used to support binder priority set and get */
 
   struct binder_priority default_priority;
+
+  /* Fields used to support binder allocator bookkeeping */
+
+  struct binder_alloc alloc;
 
   /* binder_context for this proc */
 
@@ -605,8 +607,11 @@ static inline bool binder_available_for_proc_work_ilocked(
 
 /* function prototype define for binder_alloc.c */
 
-void binder_alloc_init(FAR struct binder_alloc *alloc);
-int binder_alloc_mem(FAR struct binder_alloc *alloc);
+void binder_alloc_init(FAR struct binder_alloc *alloc, pid_t pid);
+int binder_alloc_mmap(FAR struct binder_alloc *alloc,
+                      FAR struct binder_mmap_area *vma);
+int binder_alloc_unmmap(FAR struct binder_alloc *alloc,
+                        FAR struct binder_mmap_area *vma);
 FAR struct binder_buffer *binder_alloc_prepare_to_free(
   FAR struct binder_alloc *alloc, uintptr_t user_ptr);
 int binder_alloc_copy_from_buffer(FAR struct binder_alloc *alloc,

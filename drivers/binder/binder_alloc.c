@@ -60,12 +60,6 @@
         ((void *)(((uintptr_t)(buffer)->user_data - 1) & PAGE_MASK))
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-struct binder_alloc g_binder_alloc;
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -776,22 +770,47 @@ void binder_alloc_deferred_release(FAR struct binder_alloc *alloc)
 }
 
 /****************************************************************************
- * Name: binder_alloc_mem
+ * Name: binder_alloc_unmmap
  *
  * Description:
- *   Allocate memory for the binder
+ *   Description of the operation of the function.
  *
  * Input Parameters:
- *   alloc - alloc structure for g_binder_alloc
+ *   alloc - alloc structure for this proc
+ *   vma   - vma passed to mmap().
  *
  * Returned Value:
- *   0       : success
- *   -EBUSY  : alread malloc
- *   -ENOMEM : failed to malloc memory
+ *   0 = success
  *
  ****************************************************************************/
 
-int binder_alloc_mem(FAR struct binder_alloc *alloc)
+int binder_alloc_unmmap(FAR struct binder_alloc *alloc,
+                        FAR struct binder_mmap_area *vma)
+{
+  kmm_free(vma->area_start);
+  return 0;
+}
+
+/****************************************************************************
+ * Name: binder_alloc_mmap
+ *
+ * Description:
+ *   Map address space for proc. Called by binder_mmap() to initialize the
+ *   space specified in vma for allocating binder buffers
+ *
+ * Input Parameters:
+ *   alloc - alloc structure for this proc
+ *   vma   - vma passed to mmap()
+ *
+ * Returned Value:
+ *   0       : success
+ *   -EBUSY  : address space already mapped
+ *   -ENOMEM : failed to map memory to given address space
+ *
+ ****************************************************************************/
+
+int binder_alloc_mmap(FAR struct binder_alloc *alloc,
+                      FAR struct binder_mmap_area *vma)
 {
   FAR const char *failure_string;
   FAR struct binder_buffer *buffer;
@@ -802,21 +821,22 @@ int binder_alloc_mem(FAR struct binder_alloc *alloc)
   if (alloc->buffer_data_size)
     {
       ret = -EBUSY;
-      failure_string = "already malloc";
-      goto err_already_malloc;
+      failure_string = "already mapped";
+      goto err_already_mapped;
     }
 
-  alloc->buffer_data = kmm_memalign(PAGE_SIZE,
-                                    CONFIG_DRIVERS_BINDER_MAX_MEMORY);
-  if (alloc->buffer_data == NULL)
+  vma->area_start = kmm_memalign(PAGE_SIZE, vma->area_size);
+  if (vma->area_start == NULL)
     {
       ret = -ENOMEM;
-      failure_string = "malloc failed";
-      goto err_alloc_area_failed;
+      failure_string = "alloc map area failed";
+      goto err_alloc_maparea_failed;
     }
 
-  alloc->buffer_data_size = CONFIG_DRIVERS_BINDER_MAX_MEMORY;
+  alloc->buffer_data_size = MIN(vma->area_size, SZ_4M);
   nxmutex_unlock(&alloc->alloc_lock);
+
+  alloc->buffer_data = vma->area_start;
 
   alloc->pages_array =
     kmm_calloc(alloc->buffer_data_size / PAGE_SIZE,
@@ -846,7 +866,8 @@ int binder_alloc_mem(FAR struct binder_alloc *alloc)
   insert_free_buffer(alloc, buffer);
 
   binder_debug(BINDER_DEBUG_ALLOC_BUFFER,
-               "alloc memory success\n");
+               "alloc->pid=%d map area %p-%p success\n", alloc->pid,
+               vma->area_start, (void *)(vma->area_start + vma->area_size));
 
   return 0;
 
@@ -857,11 +878,13 @@ err_alloc_pages_failed:
   alloc->buffer_data = NULL;
   nxmutex_lock(&alloc->alloc_lock);
   alloc->buffer_data_size = 0;
-err_already_malloc:
-err_alloc_area_failed:
+err_already_mapped:
+err_alloc_maparea_failed:
   nxmutex_unlock(&alloc->alloc_lock);
-  _err("ERROR: %s: %s failed %d\n",
-       __func__, alloc->pid, failure_string, ret);
+  _err("ERROR: %s: %d %lx-%lx %s failed %d\n",
+       __func__, alloc->pid, (unsigned long)vma->area_start,
+       (unsigned long)(vma->area_start + vma->area_size),
+       failure_string, ret);
   return ret;
 }
 
@@ -877,9 +900,9 @@ err_alloc_area_failed:
  *
  ****************************************************************************/
 
-void binder_alloc_init(FAR struct binder_alloc *alloc)
+void binder_alloc_init(FAR struct binder_alloc *alloc, pid_t pid)
 {
-  alloc->pid = getpid();
+  alloc->pid = pid;
   alloc->buffer_data = NULL;
   alloc->buffer_data_size = 0;
 

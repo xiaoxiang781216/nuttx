@@ -36,8 +36,3 @@ config DRIVERS_BINDER_NPOLLWAITERS
 	int "Driver binder number of poll waiters"
 	default 4
 	depends on DRIVERS_BINDER
-
-config DRIVERS_BINDER_MAX_MEMORY
-	int "Drivers binder max alloc memory"
-	default 2097152
-	depends on DRIVERS_BINDER
