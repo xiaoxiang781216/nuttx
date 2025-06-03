@@ -61,7 +61,6 @@ set(SRCS
     lib_mempcpy.c
     lib_rawmemchr.c
     lib_memmove.c
-    lib_memset.c
     lib_strlcat.c
     lib_strlcpy.c
     lib_strnlen.c)
@@ -85,6 +84,7 @@ if(CONFIG_LIBC_STRING_OPTIMIZE)
     lib_bsdmemccpy.c
     lib_bsdmemcmp.c
     lib_bsdmemrchr.c
+    lib_bsdmemset.c
     lib_bsdstpncpy.c
     lib_bsdstrchr.c
     lib_bsdstrcmp.c
@@ -104,6 +104,7 @@ else()
     lib_memccpy.c
     lib_memcmp.c
     lib_memrchr.c
+    lib_memset.c
     lib_stpncpy.c
     lib_strchr.c
     lib_strcmp.c
