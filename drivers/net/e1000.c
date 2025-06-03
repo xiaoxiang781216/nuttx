@@ -488,6 +488,9 @@ static void e1000_dump_mem(FAR struct e1000_driver_s *priv,
  * Returned Value:
  *   None
  *
+ * Assumption:
+ *   This function can be called only after card reset and when TX is disabled
+ *
  *****************************************************************************/
 
 static void e1000_txclean(FAR struct e1000_driver_s *priv)
@@ -528,6 +531,9 @@ static void e1000_txclean(FAR struct e1000_driver_s *priv)
  * Returned Value:
  *   None
  *
+ * Assumption:
+ *   This function can be called only after card reset and when RX is disabled
+ *
  *****************************************************************************/
 
 static void e1000_rxclean(FAR struct e1000_driver_s *priv)
@@ -535,7 +541,7 @@ static void e1000_rxclean(FAR struct e1000_driver_s *priv)
   priv->rx_now = 0;
 
   e1000_putreg_mem(priv, E1000_RDH, 0);
-  e1000_putreg_mem(priv, E1000_RDT, 0);
+  e1000_putreg_mem(priv, E1000_RDT, E1000_RX_DESC - 1);
 }
 
 /*****************************************************************************
@@ -1183,6 +1189,12 @@ static void e1000_disable(FAR struct e1000_driver_s *priv)
 
   e1000_putreg_mem(priv, E1000_RCTL, 0);
 
+  /* We have to reset device, otherwise writing to RDH and THD corrupts
+   * the device state.
+   */
+
+  e1000_putreg_mem(priv, E1000_CTRL, E1000_CTRL_RST);
+
   /* Reset Tx tail */
 
   e1000_txclean(priv);
@@ -1290,10 +1302,6 @@ static void e1000_enable(FAR struct e1000_driver_s *priv)
   /* Reset RX tail */
 
   e1000_rxclean(priv);
-
-  /* All RX descriptors availalbe */
-
-  e1000_putreg_mem(priv, E1000_RDT, E1000_RX_DESC);
 
   /* Enable interrupts */
 
