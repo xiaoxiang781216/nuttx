@@ -850,46 +850,6 @@ static void coredump_dump_dev(pid_t pid)
 #endif
 
 /****************************************************************************
- * Name: coredump_dump_mem
- *
- * Description:
- *   Save coredump to memory device.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_BOARD_COREDUMP_MEMDEV
-static void coredump_dump_mem(pid_t pid)
-{
-  FAR void *stream = &g_memstream;
-  int ret;
-
-#  ifndef CONFIG_BOARD_COREDUMP_OVERWRITE
-  if (elf_exist_hdr((FAR struct lib_instream_s *)&g_meminstream))
-    {
-      _alert("Coredump memory device already exist:%s\n",
-             CONFIG_BOARD_COREDUMP_DEVPATH);
-      return;
-    }
-#  endif
-
-#  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
-  lib_lzfoutstream(&g_lzfstream, stream);
-  stream = &g_lzfstream;
-#  endif
-
-  ret = coredump(g_regions, stream, pid);
-  if (ret < 0)
-    {
-      _alert("Coredump fail %d\n", ret);
-      return;
-    }
-
-  _alert("Finish coredump, write %"PRIuOFF" bytes to %s\n",
-         g_memstream.common.nput, CONFIG_BOARD_COREDUMP_DEVPATH);
-}
-#endif
-
-/****************************************************************************
  * Name: coredump_initialize_memory_region
  *
  * Description:
