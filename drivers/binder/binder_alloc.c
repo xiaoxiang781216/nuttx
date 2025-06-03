@@ -226,7 +226,6 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
     if (size <= buffer_size)
       {
         buffer = tmp;
-        buffer->pid = getpid();
         break;
       }
   }
@@ -250,7 +249,6 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
       list_add_head(&buffer->entry, &new_buffer->entry);
       list_initialize(&new_buffer->rb_node);
       new_buffer->free = 1;
-      new_buffer->pid = getpid();
       insert_free_buffer(alloc, new_buffer);
       new_buffer = NULL;
     }
@@ -703,9 +701,10 @@ void binder_alloc_free_buf(FAR struct binder_alloc *alloc,
   nxmutex_unlock(&alloc->alloc_lock);
 }
 
-void binder_alloc_deferred_release(FAR struct binder_alloc *alloc,
-                                   pid_t pid)
+void binder_alloc_deferred_release(FAR struct binder_alloc *alloc)
 {
+  int buffers;
+  int page_count;
   FAR struct binder_buffer *buffer;
   FAR struct binder_buffer *buffer_itr;
 
@@ -716,38 +715,64 @@ void binder_alloc_deferred_release(FAR struct binder_alloc *alloc,
       return;
     }
 
+  buffers = 0;
   nxmutex_lock(&alloc->alloc_lock);
 
-  list_for_every_entry_safe(&alloc->buffers_list, buffer,
+  list_for_every_entry_safe(&alloc->allocated_buffers_list, buffer,
                             buffer_itr, struct binder_buffer, rb_node)
     {
-      if (buffer->pid == pid)
+      /* Transaction should already have been freed */
+
+      BUG_ON(buffer->transaction != NULL);
+
+      if (buffer->clear_on_free)
         {
-          if (list_is_last(&buffer->entry, &alloc->buffers_list))
-            {
-              break;
-            }
-
-          /* Transaction should already have been freed */
-
-          BUG_ON(buffer->transaction != NULL);
-
-          if (buffer->clear_on_free)
-            {
-              binder_alloc_clear_buf(alloc, buffer);
-              buffer->clear_on_free = false;
-            }
-
-          list_delete_init(&buffer->entry);
-          list_delete_init(&buffer->rb_node);
-          kmm_free(buffer);
+          binder_alloc_clear_buf(alloc, buffer);
+          buffer->clear_on_free = false;
         }
+
+      binder_free_buf_locked(alloc, buffer);
+      buffers++;
+    }
+
+  while (!list_is_empty(&alloc->buffers_list))
+    {
+      buffer = list_first_entry(&alloc->buffers_list, struct binder_buffer,
+                                entry);
+      WARN_ON(!buffer->free);
+
+      list_delete_init(&buffer->entry);
+      WARN_ON(!list_is_empty(&alloc->buffers_list));
+      kmm_free(buffer);
+    }
+
+  page_count = 0;
+  if (alloc->pages_array)
+    {
+      int i;
+
+      for (i = 0; i < alloc->buffer_data_size / PAGE_SIZE; i++)
+        {
+          if (!alloc->pages_array[i].page_ptr)
+            {
+              continue;
+            }
+
+          binder_debug(BINDER_DEBUG_ALLOC_BUFFER,
+                       "alloc->pid=%d: page %d at %pK %s\n", alloc->pid, i,
+                       (alloc->buffer_data + i * PAGE_SIZE), "active");
+          alloc->pages_array[i].page_ptr = NULL;
+          page_count++;
+        }
+
+      kmm_free(alloc->pages_array);
     }
 
   nxmutex_unlock(&alloc->alloc_lock);
 
   binder_debug(BINDER_DEBUG_OPEN_CLOSE,
-               "pid=%d free all buffer\n", pid);
+               "alloc->pid=%d buffers %d, pages %d\n", alloc->pid, buffers,
+               page_count);
 }
 
 /****************************************************************************
@@ -836,7 +861,7 @@ err_already_malloc:
 err_alloc_area_failed:
   nxmutex_unlock(&alloc->alloc_lock);
   _err("ERROR: %s: %s failed %d\n",
-       __func__, failure_string, ret);
+       __func__, alloc->pid, failure_string, ret);
   return ret;
 }
 
