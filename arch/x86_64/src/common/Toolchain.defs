@@ -141,12 +141,6 @@ ifeq ($(CONFIG_HOST_LINUX),y)
 endif
 
 ifeq ($(CONFIG_LIBCXX),y)
-  # Linux C++ ABI seems vary.
-  # Probably __GLIBCXX__ is the best bet.
-  # XXX what to do for windows?
-
-  CXXFLAGS += -D__GLIBCXX__
-
   # Disable availability macros.
   # The availability on Host OS is not likely appropriate for NuttX.
   #
