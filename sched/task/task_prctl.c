@@ -79,13 +79,25 @@ int prctl(int option, ...)
 
           FAR char *name = va_arg(ap, FAR char *);
           FAR struct tcb_s *tcb;
+          irqstate_t flags;
           int pid = 0;
+
+          /* A pointer to the task name storage must also be provided */
+
+          if (name == NULL)
+            {
+              serr("ERROR: No name provide\n");
+              errcode = EFAULT;
+              goto errout;
+            }
 
           if (option == PR_SET_NAME_EXT ||
               option == PR_GET_NAME_EXT)
             {
               pid = va_arg(ap, int);
             }
+
+          flags = enter_critical_section();
 
           /* Get the TCB associated with the PID (handling the special case
            * of pid==0 meaning "this thread")
@@ -106,17 +118,9 @@ int prctl(int option, ...)
 
           if (tcb == NULL)
             {
+              leave_critical_section(flags);
               serr("ERROR: Pid does not correspond to a task: %d\n", pid);
               errcode = ESRCH;
-              goto errout;
-            }
-
-          /* A pointer to the task name storage must also be provided */
-
-          if (name == NULL)
-            {
-              serr("ERROR: No name provide\n");
-              errcode = EFAULT;
               goto errout;
             }
 
@@ -140,6 +144,8 @@ int prctl(int option, ...)
               strlcpy(name, tcb->name, sizeof(tcb->name));
               name[CONFIG_TASK_NAME_SIZE - 1] = '\0';
             }
+
+           leave_critical_section(flags);
         }
         break;
 #else
