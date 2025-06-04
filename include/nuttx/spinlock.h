@@ -607,11 +607,11 @@ irqstate_t spin_lock_irqsave_nopreempt(FAR volatile spinlock_t *lock)
  *   Similar feature with enter_critical_section, but isolate by instance.
  *
  *   If SPINLOCK is enabled:
- *     Will take spinlock each cpu fisrt call.
+ *     Will take spinlock each cpu first call.
  *
  *   If SPINLOCK is not enabled:
  *     Equivalent to up_irq_save() + sched_lock().
- *     Will only sched_lock once when frist called.
+ *     Will only sched_lock once when first called.
  *
  * Input Parameters:
  *   lock - Caller specific rspinlock_s. not NULL.
@@ -878,7 +878,7 @@ void rspin_unlock_irqrestore_noprempt(FAR struct rspinlock_s *lock,
  *
  *   This implementation is non-reentrant and set a bit of lock.
  *
- *  The priority of reader is higher than writter if a reader hold the
+ *  The priority of reader is higher than writer if a reader hold the
  *  lock, a new reader can get its lock but writer can't get this lock.
  *
  * Input Parameters:
@@ -925,7 +925,7 @@ static inline_function void read_lock(FAR volatile rwlock_t *lock)
  *
  *   This implementation is non-reentrant and set a bit of lock.
  *
- *  The priority of reader is higher than writter if a reader hold the
+ *  The priority of reader is higher than writer if a reader hold the
  *  lock, a new reader can get its lock but writer can't get this lock.
  *
  * Input Parameters:
@@ -997,7 +997,7 @@ static inline_function void read_unlock(FAR volatile rwlock_t *lock)
  *   This implementation is non-reentrant and set all bit on lock to avoid
  *   readers and writers.
  *
- *  The priority of reader is higher than writter if a reader hold the
+ *  The priority of reader is higher than writer if a reader hold the
  *  lock, a new reader can get its lock but writer can't get this lock.
  *
  * Input Parameters:
@@ -1043,7 +1043,7 @@ static inline_function void write_lock(FAR volatile rwlock_t *lock)
  *   This implementation is non-reentrant and set all bit on lock to avoid
  *   readers and writers.
  *
- *  The priority of reader is higher than writter if a reader hold the
+ *  The priority of reader is higher than writer if a reader hold the
  *  lock, a new reader can get its lock but writer can't get this lock.
  *
  * Input Parameters:
