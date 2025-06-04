@@ -633,6 +633,7 @@ static const char *g_white_content_list[] =
   "__setA11",
   "__moveToDataParamRet",
   "__jumpToFunctionWithLink",
+  "__jumpBackToLink",
 
   /* Ref:
    * drivers/trace32/t32fdx/t32fdx.c

@@ -92,30 +92,30 @@ void tricore_svcall(volatile void *trap)
 {
   struct tcb_s *tcb = this_task();
   struct tcb_s **running_task = &g_running_tasks[this_cpu()];
-  uintptr_t *regs;
+  uintptr_t *plregs;
+  uintptr_t *puregs;
   uint32_t cmd;
 
-  regs = (uintptr_t *)__mfcr(CPU_PCXI);
-
-  /* DSYNC instruction should be executed immediately prior to the MTCR */
+  /* DSYNC instruction should be executed immediately prior to the MFCR */
 
   UP_DSB();
 
-  regs = tricore_csa2addr((uintptr_t)regs);
+  plregs = tricore_csa2addr(__mfcr(CPU_PCXI));
+  puregs = tricore_csa2addr(plregs[REG_LPCXI]);
 
   /* Set irq flag */
 
   up_set_interrupt_context(true);
 
-  cmd = regs[REG_D8];
+  cmd = puregs[REG_D8];
 
   if (cmd != SYS_restore_context)
     {
-      (*running_task)->xcp.regs = tricore_csa2addr(regs[REG_UPCXI]);
+      (*running_task)->xcp.regs = plregs;
     }
   else
     {
-      tricore_reclaim_csa(regs[REG_UPCXI]);
+      tricore_reclaim_csa(tricore_addr2csa(plregs));
     }
 
   /* Handle the SVCall according to the command in R0 */
@@ -127,7 +127,7 @@ void tricore_svcall(volatile void *trap)
 
       case SYS_restore_context:
         *running_task = tcb;
-        regs[REG_UPCXI] = tricore_addr2csa(tcb->xcp.regs);
+        __mtcr(CPU_PCXI, tricore_addr2csa(tcb->xcp.regs));
         UP_ISB();
 
 #ifdef CONFIG_ARCH_ADDRENV
@@ -138,8 +138,8 @@ void tricore_svcall(volatile void *trap)
 
       case SYS_assert_handler:
         {
-          _assert((const char *)regs[REG_D9], (int)regs[REG_D10],
-                  (const char *)regs[REG_D11], (void *)running_regs(),
+          _assert((const char *)puregs[REG_D9], (int)puregs[REG_D10],
+                  (const char *)puregs[REG_D11], (void *)running_regs(),
                   false);
         }
         break;
@@ -147,21 +147,21 @@ void tricore_svcall(volatile void *trap)
 #ifdef CONFIG_LIB_SYSCALL
       case SYS_syscall_return:
         {
-          uintptr_t *plregs = tricore_csa2addr(regs[REG_UPCXI]);
-          uintptr_t *puregs = tricore_csa2addr(plregs[REG_LPCXI]);
           struct tcb_s *rtcb = this_task();
           int index = rtcb->xcp.nsyscalls - 1;
           int ret = plregs[REG_D2];
 
           puregs[REG_UPCXI] = 0;
-          tricore_reclaim_csa(regs[REG_UPCXI]);
+          tricore_reclaim_csa(tricore_addr2csa(plregs));
 
-          regs[REG_UPCXI] = tricore_addr2csa(rtcb->xcp.syscall_regs[index]);
-          plregs = tricore_csa2addr(regs[REG_UPCXI]);
+          plregs = rtcb->xcp.syscall_regs[index];
           puregs = tricore_csa2addr(plregs[REG_LPCXI]);
 
           puregs[REG_D8] = ret;
           rtcb->xcp.nsyscalls = index;
+
+          __mtcr(CPU_PCXI, tricore_addr2csa(plregs));
+          UP_ISB();
         }
         break;
 #endif
@@ -192,18 +192,15 @@ void tricore_svcall(volatile void *trap)
            *   A4  = argv
            */
 
-          uintptr_t *plregs = tricore_csa2addr(regs[REG_UPCXI]);
-          uintptr_t *puregs = tricore_csa2addr(plregs[REG_LPCXI]);
-
           /* Updata PC */
 
           plregs[REG_LPC] = (uintptr_t)USERSPACE->task_startup;
 
           /* Updata function args */
 
-          plregs[REG_A4] = regs[REG_D9];
-          plregs[REG_D4] = regs[REG_D10];
-          plregs[REG_A5] = regs[REG_D11];
+          plregs[REG_A4] = puregs[REG_D9];
+          plregs[REG_D4] = puregs[REG_D10];
+          plregs[REG_A5] = puregs[REG_D11];
 
           /* Return unprivileged mode */
 
@@ -239,17 +236,14 @@ void tricore_svcall(volatile void *trap)
            * A5  = arg
            */
 
-          uintptr_t *plregs = tricore_csa2addr(regs[REG_UPCXI]);
-          uintptr_t *puregs = tricore_csa2addr(plregs[REG_LPCXI]);
-
           /* Updata PC */
 
-          plregs[REG_LPC] = regs[REG_D9];
+          plregs[REG_LPC] = puregs[REG_D9];
 
           /* Updata function args */
 
-          plregs[REG_A4] = regs[REG_D10];
-          plregs[REG_A5] = regs[REG_D11];
+          plregs[REG_A4] = puregs[REG_D10];
+          plregs[REG_A5] = puregs[REG_D11];
 
           /* Return unprivileged mode */
 
@@ -277,9 +271,6 @@ void tricore_svcall(volatile void *trap)
 #ifdef CONFIG_BUILD_PROTECTED
       case SYS_signal_handler:
         {
-          uintptr_t *plregs = tricore_csa2addr(regs[REG_UPCXI]);
-          uintptr_t *puregs = tricore_csa2addr(plregs[REG_LPCXI]);
-
           struct tcb_s *rtcb = this_task();
 
           /* Remember the caller's return address */
@@ -297,10 +288,10 @@ void tricore_svcall(volatile void *trap)
            * userpace_s signal_handler.
            */
 
-          plregs[REG_A4] = regs[REG_D9];  /* sighand */
-          plregs[REG_D4] = regs[REG_D10]; /* signal */
-          plregs[REG_A5] = regs[REG_D11]; /* info */
-          plregs[REG_A6] = regs[REG_D12]; /* ucontext */
+          plregs[REG_A4] = puregs[REG_D9];  /* sighand */
+          plregs[REG_D4] = puregs[REG_D10]; /* signal */
+          plregs[REG_A5] = puregs[REG_D11]; /* info */
+          plregs[REG_A6] = puregs[REG_D12]; /* ucontext */
 
           /* Return unprivileged mode */
 
@@ -318,8 +309,6 @@ void tricore_svcall(volatile void *trap)
 #ifdef CONFIG_BUILD_PROTECTED
       case SYS_signal_handler_return:
         {
-          uintptr_t *plregs = tricore_csa2addr(regs[REG_UPCXI]);
-          uintptr_t *puregs = tricore_csa2addr(plregs[REG_LPCXI]);
           struct tcb_s *rtcb = this_task();
 
           /* Set up to return to the kernel-mode signal dispatching logic. */
@@ -342,15 +331,11 @@ void tricore_svcall(volatile void *trap)
       default:
         {
 #ifdef CONFIG_LIB_SYSCALL
-          uintptr_t *plregs = tricore_csa2addr(regs[REG_UPCXI]);
-          uintptr_t *puregs = tricore_csa2addr(plregs[REG_LPCXI]);
           struct tcb_s *rtcb = nxsched_self();
+          uintptr_t *regs = plregs;
           int index = rtcb->xcp.nsyscalls;
 
-          /* Verify that the SYS call number is within range */
-
           DEBUGASSERT(cmd >= CONFIG_SYS_RESERVED && cmd < SYS_maxsyscall);
-
           DEBUGASSERT(index < CONFIG_SYS_NNEST);
 
           /* Setup to return to dispatch_syscall in privileged mode. */
@@ -370,19 +355,21 @@ void tricore_svcall(volatile void *trap)
 
           /* Args passed to dispatch_syscall */
 
+          puregs[REG_UPCXI] = tricore_addr2csa(regs);
+          puregs[REG_UA11] = (uintptr_t)__getA11();
+          regs = tricore_csa2addr(regs[REG_LPCXI]);
+          puregs[REG_D8] = regs[REG_D12];
+          puregs[REG_D9] = regs[REG_D13];
+          puregs[REG_D10] = regs[REG_D14];
           plregs[REG_D4] = regs[REG_D8] - CONFIG_SYS_RESERVED;
           plregs[REG_D5] = regs[REG_D9];
           plregs[REG_D6] = regs[REG_D10];
           plregs[REG_D7] = regs[REG_D11];
-          puregs[REG_D8] = regs[REG_D12];
-          puregs[REG_D9] = regs[REG_D13];
-          puregs[REG_D10] = regs[REG_D14];
 
-          puregs[REG_UPCXI] = regs[REG_UPCXI];
-
-          regs[REG_UPCXI] = tricore_addr2csa(plregs);
+          __mtcr(CPU_PCXI, tricore_addr2csa(plregs));
+          UP_ISB();
 #else
-        svcerr("ERROR: Bad SYS call: %d\n", (int)regs[REG_D0]);
+        svcerr("ERROR: Bad SYS call: %d\n", (int)puregs[REG_D8]);
 #endif
         }
         break;
@@ -391,4 +378,6 @@ void tricore_svcall(volatile void *trap)
   /* Set irq flag */
 
   up_set_interrupt_context(false);
+
+  __jumpBackToLink();
 }
