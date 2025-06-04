@@ -1165,7 +1165,8 @@ static int e1000_rmmac(FAR struct netdev_lowerhalf_s *dev,
 
 static void e1000_disable(FAR struct e1000_driver_s *priv)
 {
-  int i = 0;
+  uint32_t regval;
+  int      i = 0;
 
   /* Disable interrupts */
 
@@ -1174,7 +1175,9 @@ static void e1000_disable(FAR struct e1000_driver_s *priv)
 
   /* Disable Transmiter */
 
-  e1000_putreg_mem(priv, E1000_TCTL, 0);
+  regval = e1000_getreg_mem(priv, E1000_TCTL);
+  regval &= ~E1000_TCTL_EN;
+  e1000_putreg_mem(priv, E1000_TCTL, regval);
 
   /* Disable Receiver */
 
