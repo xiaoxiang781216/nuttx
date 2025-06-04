@@ -625,12 +625,17 @@ irqstate_t spin_lock_irqsave_nopreempt(FAR volatile spinlock_t *lock)
 static inline_function
 irqstate_t rspin_lock_irqsave_noprempt(FAR struct rspinlock_s *lock)
 {
+  /* For race condition, we may get cpuid in stack and then thread
+   * moved to other cpu.  So we have to get cpuid with irq disabled.
+   */
+
+  irqstate_t flags = up_irq_save();
   int cpu = this_cpu();
-  irqstate_t flags = 0;
 
   if (lock->holder != cpu)
     {
-      flags = spin_lock_irqsave_nopreempt(&lock->lock);
+      spin_lock(&lock->lock);
+      sched_lock();
       DEBUGASSERT(lock->count == 0);
       lock->holder = cpu;
     }
