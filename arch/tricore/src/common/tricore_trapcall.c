@@ -31,6 +31,7 @@
 #include <syscall.h>
 
 #include <arch/irq.h>
+#include <arch/barriers.h>
 #include <sched/sched.h>
 #include <nuttx/coredump.h>
 #include <nuttx/sched.h>
@@ -310,28 +311,29 @@ int tricore_assertiontrap(uint32_t tid, void *context, void *arg)
 void tricore_trapcall(volatile void *trap)
 {
   uintptr_t *regs;
-  uintptr_t pcxi;
 
   IfxCpu_Trap *ctrap = (IfxCpu_Trap *)trap;
   IfxCpu_Trap_Class tclass = (IfxCpu_Trap_Class)ctrap->tClass;
   unsigned int tid = ctrap->tId;
 
-  tricore_trapinfo(trap);
-
   /* enter this funtion means that the regs is upcsa */
 
   regs = tricore_csa2addr(__mfcr(CPU_PCXI));
-  pcxi = regs[REG_UPCXI];
-  regs = tricore_csa2addr(pcxi);
 
   if (!up_interrupt_context())
     {
+      up_set_interrupt_context(true);
+
       /* Update the current task's regs */
 
       g_running_tasks[this_cpu()]->xcp.regs = regs;
+
+      __mtcr(CPU_FCX, tricore_addr2csa(g_intstackalloc));
+      __mtcr(CPU_LCX, tricore_addr2csa(g_intstacktop - 2 * TC_CONTEXT_SIZE));
+      UP_ISB();
     }
 
-  up_set_interrupt_context(true);
+  tricore_trapinfo(trap);
 
   if (tclass == IfxCpu_Trap_Class_nonMaskableInterrupt)
     {

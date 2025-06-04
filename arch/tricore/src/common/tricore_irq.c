@@ -112,6 +112,8 @@ void up_irqinitialize(void)
   tricore_gpsrinitialize();
 #endif
 
+  tricore_region_csainit(g_intstackalloc, CONFIG_ARCH_INTERRUPTSTACK);
+
   up_irq_enable();
 }
 

@@ -94,6 +94,7 @@ void tricore_svcall(volatile void *trap)
   struct tcb_s **running_task = &g_running_tasks[this_cpu()];
   uintptr_t *plregs;
   uintptr_t *puregs;
+  uintptr_t *cpu_lcx;
   uint32_t cmd;
 
   /* DSYNC instruction should be executed immediately prior to the MFCR */
@@ -102,6 +103,12 @@ void tricore_svcall(volatile void *trap)
 
   plregs = tricore_csa2addr(__mfcr(CPU_PCXI));
   puregs = tricore_csa2addr(plregs[REG_LPCXI]);
+
+  /* set registers related to csa */
+
+  __mtcr(CPU_FCX, tricore_addr2csa(g_intstackalloc));
+  __mtcr(CPU_LCX, tricore_addr2csa(g_intstacktop - 2 * TC_CONTEXT_SIZE));
+  UP_ISB();
 
   /* Set irq flag */
 
@@ -127,8 +134,6 @@ void tricore_svcall(volatile void *trap)
 
       case SYS_restore_context:
         *running_task = tcb;
-        __mtcr(CPU_PCXI, tricore_addr2csa(tcb->xcp.regs));
-        UP_ISB();
 
 #ifdef CONFIG_ARCH_ADDRENV
         addrenv_switch(tcb);
@@ -156,12 +161,10 @@ void tricore_svcall(volatile void *trap)
 
           plregs = rtcb->xcp.syscall_regs[index];
           puregs = tricore_csa2addr(plregs[REG_LPCXI]);
-
           puregs[REG_D8] = ret;
-          rtcb->xcp.nsyscalls = index;
 
-          __mtcr(CPU_PCXI, tricore_addr2csa(plregs));
-          UP_ISB();
+          rtcb->xcp.nsyscalls = index;
+          rtcb->xcp.regs = plregs;
         }
         break;
 #endif
@@ -346,12 +349,15 @@ void tricore_svcall(volatile void *trap)
           /* New plregs and puregs to dispatch_syscall */
 
           plregs = tricore_alloc_csa(
+            rtcb,
             (uintptr_t)dispatch_syscall,
             STACK_ALIGN_DOWN(puregs[REG_SP]),
             (puregs[REG_PSW] & (~PSW_MODE_MASK) & (~PSW_PRS_MASK)) |
             (PSW_IO_SUPERVISOR),
             !(plregs[REG_LPCXI] & PCXI_PIE));
           puregs = tricore_csa2addr(plregs[REG_LPCXI]);
+
+          rtcb->xcp.regs = plregs;
 
           /* Args passed to dispatch_syscall */
 
@@ -365,9 +371,6 @@ void tricore_svcall(volatile void *trap)
           plregs[REG_D5] = regs[REG_D9];
           plregs[REG_D6] = regs[REG_D10];
           plregs[REG_D7] = regs[REG_D11];
-
-          __mtcr(CPU_PCXI, tricore_addr2csa(plregs));
-          UP_ISB();
 #else
         svcerr("ERROR: Bad SYS call: %d\n", (int)puregs[REG_D8]);
 #endif
@@ -378,6 +381,16 @@ void tricore_svcall(volatile void *trap)
   /* Set irq flag */
 
   up_set_interrupt_context(false);
+
+  /* Reserve at least two csa for CPU_LCX */
+
+  cpu_lcx =
+    (uintptr_t *)((uint8_t *)tcb->stack_base_ptr + tcb->adj_stack_size) -
+    2 * TC_CONTEXT_REGS;
+  __mtcr(CPU_PCXI, tricore_addr2csa(tcb->xcp.regs));
+  __mtcr(CPU_FCX, tricore_addr2csa(tcb->xcp.regs + TC_CONTEXT_REGS));
+  __mtcr(CPU_LCX, tricore_addr2csa(cpu_lcx));
+  UP_ISB();
 
   __jumpBackToLink();
 }

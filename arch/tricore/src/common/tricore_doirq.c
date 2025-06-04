@@ -58,6 +58,7 @@ IFX_INT_WRAPPER(CONFIG_CPU_COREID)
 #else
   Ifx_CPU_ICR icr;
   uintptr_t *regs;
+  uintptr_t *cpu_lcx;
 
   icr.U = __mfcr(CPU_ICR);
   regs = tricore_csa2addr(__mfcr(CPU_PCXI));
@@ -66,6 +67,12 @@ IFX_INT_WRAPPER(CONFIG_CPU_COREID)
     {
       (*running_task)->xcp.regs = regs;
     }
+
+  /* set registers related to csa */
+
+  __mtcr(CPU_FCX, tricore_addr2csa(g_intstackalloc));
+  __mtcr(CPU_LCX, tricore_addr2csa(g_intstacktop - 2 * TC_CONTEXT_SIZE));
+  UP_ISB();
 
   board_autoled_on(LED_INIRQ);
 
@@ -110,10 +117,17 @@ IFX_INT_WRAPPER(CONFIG_CPU_COREID)
        */
 
       *running_task = tcb;
-
-      __mtcr(CPU_PCXI, tricore_addr2csa(tcb->xcp.regs));
-      UP_ISB();
     }
+
+  /* Reserve at least two csa for CPU_LCX */
+
+  cpu_lcx =
+    (uintptr_t *)((uint8_t *)tcb->stack_base_ptr + tcb->adj_stack_size) -
+    2 * TC_CONTEXT_REGS;
+  __mtcr(CPU_PCXI, tricore_addr2csa(tcb->xcp.regs));
+  __mtcr(CPU_FCX, tricore_addr2csa(tcb->xcp.regs + TC_CONTEXT_REGS));
+  __mtcr(CPU_LCX, tricore_addr2csa(cpu_lcx));
+  UP_ISB();
 
   /* Set irq flag */
 

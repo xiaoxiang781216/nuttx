@@ -34,7 +34,9 @@
 #include <nuttx/arch.h>
 #include <nuttx/tls.h>
 #include <nuttx/board.h>
+
 #include <arch/board/board.h>
+#include <arch/barriers.h>
 
 #include <tricore_internal.h>
 
@@ -158,6 +160,8 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
       tcb->stack_base_ptr = tcb->stack_alloc_ptr;
       tcb->adj_stack_size = size_of_stack;
 
+      tricore_region_csainit(tcb->stack_base_ptr, tcb->adj_stack_size);
+
 #ifdef CONFIG_STACK_COLORATION
       /* If stack debug is enabled, then fill the stack with a
        * recognizable value that we can use later to test for high
@@ -191,12 +195,14 @@ void tricore_stack_color(void *stackbase, size_t nbytes)
   size_t    nwords;
   uintptr_t sp;
 
-  /* Take extra care that we do not write outside the stack boundaries */
-
-  stkptr = (uint32_t *)STACKFRAME_ALIGN_UP((uintptr_t)stackbase);
-
   if (nbytes == 0) /* 0: colorize the running stack */
     {
+      /* DSYNC instruction should be executed immediately prior to the MFCR */
+
+      UP_DSB();
+
+      stackbase = tricore_csa2addr(__mfcr(CPU_FCX));
+
       stkend = up_getsp();
       if (stkend > (uintptr_t)&sp)
         {
@@ -208,6 +214,7 @@ void tricore_stack_color(void *stackbase, size_t nbytes)
       stkend = (uintptr_t)stackbase + nbytes;
     }
 
+  stkptr = (uint32_t *)STACKFRAME_ALIGN_UP((uintptr_t)stackbase);
   stkend = STACKFRAME_ALIGN_DOWN(stkend);
   nwords = (stkend - (uintptr_t)stkptr) >> 2;
 
@@ -215,7 +222,12 @@ void tricore_stack_color(void *stackbase, size_t nbytes)
 
   while (nwords-- > 0)
     {
-      *stkptr++ = STACK_COLOR;
+      if (!TC_CONTEXT_ALIGNED(stkptr))
+        {
+          *stkptr = STACK_COLOR;
+        }
+
+      stkptr++;
     }
 }
 #endif

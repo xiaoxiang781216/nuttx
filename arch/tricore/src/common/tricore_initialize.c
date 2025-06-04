@@ -58,9 +58,12 @@ static inline void up_color_intstack(void)
 
   for (size = (CONFIG_ARCH_INTERRUPTSTACK & ~15);
        size > 0;
-       size -= sizeof(uint32_t))
+       size -= sizeof(uint32_t), ptr++)
     {
-      *ptr++ = STACK_COLOR;
+      if (!TC_CONTEXT_ALIGNED(ptr))
+        {
+          *ptr = STACK_COLOR;
+        }
     }
 }
 #else
