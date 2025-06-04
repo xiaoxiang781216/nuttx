@@ -12,7 +12,7 @@ config MM_KASAN
 		add -fsanitize=kernel-address to CFLAGS/CXXFLAGS too.
 
 config MM_KASAN_INSTRUMENT
-    bool
+	bool
 
 if MM_KASAN
 
@@ -43,6 +43,12 @@ config MM_KASAN_HW_TAGS
 	select ARM64_MTE if ARCH_ARM64
 	---help---
 		KAsan based on hardware tags
+
+config MM_KASAN_SIM
+	bool "KAsan on simulator"
+	depends on ARCH_SIM && FRAME_POINTER
+	---help---
+		KASan on simulator that use asan api to protect memory
 
 endchoice
 

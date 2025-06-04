@@ -83,7 +83,7 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SIM_ASAN
+#if defined(CONFIG_SIM_ASAN) || defined(CONFIG_MM_KASAN_SIM)
 nosanitize_address
 #endif
 pid_t sim_fork(const xcpt_reg_t *context)
