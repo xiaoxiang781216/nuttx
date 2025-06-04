@@ -31,9 +31,24 @@ add_custom_command(
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS mksyscall)
 
-# TODO: SYSCALLWRAPS = syscall_wraps.ldcmd $(Q) $(CPP) $(CPPFLAGS)
-# $(SYSCALLWRAPS:.ldcmd=.h) | \ sed -e '1,/WRAPOPTSTARTS/d' -e '/^#/d' >
-# $(SYSCALLWRAPS)
+set(WRAP_LD_CMD "${CMAKE_BINARY_DIR}/syscall_wraps.ldcmd")
+
+add_custom_command(
+  OUTPUT ${WRAP_LD_CMD}
+  COMMAND
+    ${PREPROCESS} -I${CMAKE_BINARY_DIR}/include -I${NUTTX_DIR}/include
+    -I${NUTTX_CHIP_ABS_DIR} ${CMAKE_CURRENT_LIST_DIR}/../syscall_wraps.h >
+    ${WRAP_LD_CMD}tmp
+  COMMAND
+    bash -c
+    "sed -e '1,/WRAPOPTSTARTS/d' -e '/^#/d' -e 's/--wrap /-Wl,--wrap=/g' ${WRAP_LD_CMD}tmp > ${WRAP_LD_CMD}"
+  DEPENDS ${CMAKE_CURRENT_LIST_DIR}/../syscall_wraps.h
+  VERBATIM)
+
+add_custom_target(wrap_ld_cmd DEPENDS ${WRAP_LD_CMD})
+add_dependencies(nuttx wrap_ld_cmd)
+
+target_link_options(nuttx PRIVATE "@${WRAP_LD_CMD}")
 
 # add sources to target
 target_sources(wraps PRIVATE ${SYSCALLS})
