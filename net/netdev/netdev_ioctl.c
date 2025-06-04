@@ -393,11 +393,11 @@ static int netdev_bluetooth_ioctl(FAR struct socket *psock, int cmd,
 {
   FAR struct net_driver_s *dev;
   FAR char *ifname;
-  int ret = -EINVAL;
+  int ret = -ENOTTY;
 
-  if (arg != 0ul)
+  if (_BLUETOOTHIOCVALID(cmd))
     {
-      if (_BLUETOOTHIOCVALID(cmd))
+      if (arg != 0ul)
         {
           /* Get the name of the Bluetooth device to receive the IOCTL
            * command
@@ -410,9 +410,9 @@ static int netdev_bluetooth_ioctl(FAR struct socket *psock, int cmd,
         }
       else
         {
-          /* Not a Bluetooth IOCTL command */
+          /* Argument is invalid */
 
-          return -ENOTTY;
+          return -EINVAL;
         }
 
       /* Find the device with this name */
@@ -458,9 +458,9 @@ static int netdev_iee802154_ioctl(FAR struct socket *psock, int cmd,
   FAR char *ifname;
   int ret = -ENOTTY;
 
-  if (arg != 0ul)
+  if (_MAC802154IOCVALID(cmd))
     {
-      if (_MAC802154IOCVALID(cmd))
+      if (arg != 0ul)
         {
           /* Get the IEEE802.15.4 MAC device to receive the radio IOCTL
            * command
@@ -473,9 +473,9 @@ static int netdev_iee802154_ioctl(FAR struct socket *psock, int cmd,
         }
       else
         {
-          /* Not an EEE802.15.4 MAC IOCTL command */
+          /* Argument is invalid */
 
-          return -ENOTTY;
+          return -EINVAL;
         }
 
       /* Find the device with this name */
@@ -519,9 +519,9 @@ static int netdev_pktradio_ioctl(FAR struct socket *psock, int cmd,
   FAR char *ifname;
   int ret = -ENOTTY;
 
-  if (arg != 0ul)
+  if (_PKRADIOIOCVALID(cmd))
     {
-      if (_PKRADIOIOCVALID(cmd))
+      if (arg != 0ul)
         {
           /* Get the packet radio device to receive the radio IOCTL
            * command
@@ -534,10 +534,9 @@ static int netdev_pktradio_ioctl(FAR struct socket *psock, int cmd,
         }
       else
         {
-          /* Not a packet radio IOCTL command */
+          /* Argument is invalid */
 
-          nwarn("WARNING: Not a packet radio IOCTL command: %d\n", cmd);
-          return -ENOTTY;
+          return -EINVAL;
         }
 
       /* Find the device with this name */
