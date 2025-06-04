@@ -46,6 +46,7 @@
 #include <nuttx/wdog.h>
 #include <nuttx/circbuf.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/sched_note.h>
 
 /****************************************************************************
  * Pre-processor definitions
@@ -1525,6 +1526,8 @@ void fb_notify_vsync(FAR struct fb_vtable_s *vtable)
   FAR struct fb_priv_s * priv;
   irqstate_t flags;
 
+  sched_note_mark(NOTE_TAG_GRAPHICS, __func__);
+
   fb = vtable->priv;
   if (fb != NULL)
     {
@@ -1612,6 +1615,8 @@ int fb_remove_paninfo(FAR struct fb_vtable_s *vtable, int overlay)
   irqstate_t flags;
   ssize_t ret;
   bool full;
+
+  sched_note_mark(NOTE_TAG_GRAPHICS, __func__);
 
   fb = vtable->priv;
   if (fb == NULL)
