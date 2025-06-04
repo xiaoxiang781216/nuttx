@@ -249,6 +249,8 @@ static inline_function void spin_lock_notrace(FAR volatile spinlock_t *lock)
 
   UP_DMB();
 }
+#else
+#  define spin_lock_notrace(lock)
 #endif /* CONFIG_SPINLOCK */
 
 /****************************************************************************
@@ -297,6 +299,8 @@ static inline_function void spin_lock(FAR volatile spinlock_t *lock)
 
   sched_note_spinlock_locked(lock);
 }
+#else
+#  define spin_lock(lock)
 #endif /* CONFIG_SPINLOCK */
 
 /****************************************************************************
@@ -422,6 +426,8 @@ spin_unlock_notrace(FAR volatile spinlock_t *lock)
   UP_DSB();
   UP_SEV();
 }
+#else
+#  define spin_unlock_notrace(lock)
 #endif /* CONFIG_SPINLOCK */
 
 /****************************************************************************
