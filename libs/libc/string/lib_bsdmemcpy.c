@@ -30,22 +30,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Nonzero if either x or y is not aligned on a "long" boundary. */
-
-#define UNALIGNED(x, y) \
-  (((long)(uintptr_t)(x) & (sizeof(long) - 1)) | ((long)(uintptr_t)(y) & (sizeof(long) - 1)))
-
-/* How many bytes are copied each iteration of the 4X unrolled loop. */
-
-#define BIGBLOCKSIZE (sizeof(long) << 2)
-
-/* How many bytes are copied each iteration of the word copy loop. */
-
-#define LITTLEBLOCKSIZE (sizeof(long))
-
-/* Threshhold for punting to the byte copier. */
-
-#define TOO_SMALL(len) ((len) < BIGBLOCKSIZE)
+#define BIGBLOCKSIZE (sizeof(libc_data_t) << 2)
 
 /****************************************************************************
  * Public Functions
@@ -62,8 +47,8 @@ FAR void *memcpy(FAR void *dest, FAR const void *src, size_t n)
 {
   FAR char *pout = dest;
   FAR const char *pin = src;
-  FAR long *paligned_out;
-  FAR const long *paligned_in;
+  FAR libc_data_t *paligned_out;
+  FAR const libc_data_t *paligned_in;
 
   /* If the size is small, or either pin or pout is unaligned,
    * then punt into the byte copy loop.  This should be rare.
@@ -71,10 +56,10 @@ FAR void *memcpy(FAR void *dest, FAR const void *src, size_t n)
 
   if (!TOO_SMALL(n) && !UNALIGNED(pin, pout))
     {
-      paligned_out = (FAR long *)pout;
-      paligned_in = (FAR long *)pin;
+      paligned_out = (FAR libc_data_t *)pout;
+      paligned_in = (FAR libc_data_t *)pin;
 
-      /* Copy 4X long words at a time if possible. */
+      /* Copy 4X libc_data_t words at a time if possible. */
 
       while (n >= BIGBLOCKSIZE)
         {
@@ -85,7 +70,7 @@ FAR void *memcpy(FAR void *dest, FAR const void *src, size_t n)
           n -= BIGBLOCKSIZE;
         }
 
-      /* Copy one long word at a time if possible. */
+      /* Copy one libc_data_t word at a time if possible. */
 
       while (n >= LITTLEBLOCKSIZE)
         {
