@@ -426,10 +426,22 @@ void mpu_modify_region(unsigned int region, uintptr_t base, size_t size,
   uint32_t regval;
   uint8_t l2size;
   uint8_t subregions;
+  uintptr_t alignedbase;
 
   /* Check that the region is valid */
 
   DEBUGASSERT(g_mpu_region & (1 << region));
+
+  alignedbase  = base & MPU_RBAR_ADDR_MASK;
+  l2size       = mpu_log2regionceil(size + base - alignedbase);
+  alignedbase &= ~((1 << l2size) - 1);
+  l2size       = mpu_log2regionceil(size + base - alignedbase);
+
+  DEBUGASSERT(alignedbase + (1 << l2size) >= base + size);
+  DEBUGASSERT(l2size == 5 ||
+              alignedbase + (1 << (l2size - 1)) < base + size);
+  DEBUGASSERT((alignedbase & MPU_RBAR_ADDR_MASK) == alignedbase);
+  DEBUGASSERT((alignedbase & ((1 << l2size) - 1)) == 0);
 
   /* Select the region */
 
@@ -437,7 +449,7 @@ void mpu_modify_region(unsigned int region, uintptr_t base, size_t size,
 
   /* Select the region base address */
 
-  mpu_set_drbar(base & MPU_RBAR_ADDR_MASK);
+  mpu_set_drbar(alignedbase & MPU_RBAR_ADDR_MASK);
 
   /* Select the region size and the sub-region map */
 
