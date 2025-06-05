@@ -257,6 +257,11 @@ int icmpv6_neighbor(FAR struct net_driver_s *dev,
 
       net_ipv6addr_copy(lookup, dev->d_ipv6draddr);
 #endif
+
+      if (net_is_addr_unspecified(lookup))
+        {
+          return -EHOSTUNREACH;
+        }
     }
 
   /* Allocate resources to receive a callback.  This and the following
