@@ -979,9 +979,11 @@ static int zms_recover_last_ate(FAR struct zms_fs *fs,
   ZMS_ATE(end_ate, ate_size);
   uint64_t data_end_addr;
   uint64_t ate_end_addr;
+  bool found = false;
   int rc;
 
-  ate_end_addr = *addr - ate_size;
+  *addr -= ate_size;
+  ate_end_addr = *addr;
   data_end_addr = *addr & ZMS_ADDR_BLOCK_MASK;
   while (ate_end_addr >= data_end_addr)
     {
@@ -999,6 +1001,7 @@ static int zms_recover_last_ate(FAR struct zms_fs *fs,
           data_end_addr += end_ate->offset +
                            zms_align_up(fs, end_ate->key_len + end_ate->len);
           *addr = ate_end_addr;
+          found = true;
         }
 
       if (ate_end_addr < ate_size)
@@ -1014,7 +1017,7 @@ static int zms_recover_last_ate(FAR struct zms_fs *fs,
       *data_wra = data_end_addr;
     }
 
-  return 0;
+  return found;
 }
 
 /****************************************************************************
@@ -1034,8 +1037,11 @@ static int zms_recover_free_ate(FAR struct zms_fs *fs, FAR uint64_t *ate_wra,
     {
       return rc;
     }
+  else if (rc)
+    {
+      *ate_wra -= zms_ate_size(fs);
+    }
 
-  *ate_wra -= zms_ate_size(fs);
   if (fs->mtd->erase == NULL)
     {
       return 0;
@@ -1496,7 +1502,7 @@ static int zms_find_ate(FAR struct zms_fs *fs,
           prev_block = prev_addr >> ZMS_ADDR_BLOCK_SHIFT;
         }
     }
-  while (start_addr != end_addr);
+  while (start_addr != end_addr && start_addr != fs->ate_wra);
 
   *ate_addr = prev_addr;
   return prev_found;
@@ -1553,7 +1559,7 @@ static int zms_find_ate_with_key(FAR struct zms_fs *fs,
           prev_block = prev_addr >> ZMS_ADDR_BLOCK_SHIFT;
         }
     }
-  while (start_addr != end_addr);
+  while (start_addr != end_addr && start_addr != fs->ate_wra);
 
   *ate_addr = prev_addr;
   return prev_found;
@@ -1636,7 +1642,6 @@ static int zms_gc(FAR struct zms_fs *fs)
   fs->cycle_cnt = empty_ate->cycle_cnt;
 
   stop_addr = gc_addr - ate_size;
-
   gc_addr &= ZMS_ADDR_BLOCK_MASK;
   gc_addr += close_ate->offset;
 
