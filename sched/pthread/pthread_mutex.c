@@ -372,7 +372,7 @@ void pthread_mutex_inconsistent(FAR struct tcb_s *tcb)
 
   DEBUGASSERT(tcb != NULL);
 
-  flags = spin_lock_irqsave(&tcb->mutex_lock);
+  flags = spin_lock_irqsave_nopreempt(&tcb->mutex_lock);
 
   /* Remove and process each mutex held by this task */
 
@@ -390,5 +390,5 @@ void pthread_mutex_inconsistent(FAR struct tcb_s *tcb)
       mutex_unlock(&mutex->mutex);
     }
 
-  spin_unlock_irqrestore(&tcb->mutex_lock, flags);
+  spin_unlock_irqrestore_nopreempt(&tcb->mutex_lock, flags);
 }
