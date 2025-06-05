@@ -152,6 +152,7 @@ struct task_info_s
 #ifdef CONFIG_MM_TASK_HEAP
   FAR struct mm_heap_s *ta_heap;
 #endif
+  pid_t ta_pid; /* Process ID */
 };
 
 /* struct tls_cleanup_s *****************************************************/
