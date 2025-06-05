@@ -308,8 +308,12 @@ irqstate_t enter_critical_section(void)
       FAR struct tcb_s *rtcb = this_task();
       if (rtcb->irqcount == 1)
         {
-          nxsched_critmon_csection(rtcb, true, return_address(0));
+#  ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
           sched_note_csection(rtcb, true);
+#  endif
+#  if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
+          nxsched_critmon_csection(rtcb, true, return_address(0));
+#  endif
         }
     }
 #endif
@@ -462,8 +466,12 @@ void leave_critical_section(irqstate_t flags)
       FAR struct tcb_s *rtcb = this_task();
       if (rtcb->irqcount == 1)
         {
-          nxsched_critmon_csection(rtcb, false, return_address(0));
+#  ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
           sched_note_csection(rtcb, false);
+#  endif
+#  if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
+          nxsched_critmon_csection(rtcb, false, return_address(0));
+#  endif
         }
     }
 #endif
