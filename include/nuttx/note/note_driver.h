@@ -54,17 +54,21 @@
  */
 
 #ifndef CONFIG_SCHED_INSTRUMENTATION_CPUSET
-#  define CONFIG_SCHED_INSTRUMENTATION_CPUSET 0xffff
+#  define CONFIG_SCHED_INSTRUMENTATION_CPUSET ~0
 #endif
 
 /* Note filter mode flag definitions */
 
 #define NOTE_FILTER_MODE_FLAG_ENABLE       (1 << 0) /* Enable instrumentation */
-#define NOTE_FILTER_MODE_FLAG_SWITCH       (1 << 1) /* Enable syscall instrumentation */
+#define NOTE_FILTER_MODE_FLAG_SWITCH       (1 << 1) /* Enable switch instrumentation */
 #define NOTE_FILTER_MODE_FLAG_SYSCALL      (1 << 2) /* Enable syscall instrumentation */
 #define NOTE_FILTER_MODE_FLAG_IRQ          (1 << 3) /* Enable IRQ instrumentaiton */
 #define NOTE_FILTER_MODE_FLAG_DUMP         (1 << 4) /* Enable dump instrumentaiton */
 #define NOTE_FILTER_MODE_FLAG_SYSCALL_ARGS (1 << 5) /* Enable collecting syscall arguments */
+#define NOTE_FILTER_MODE_FLAG_PREEMPTION   (1 << 6) /* Enable preemption instrumentation */
+#define NOTE_FILTER_MODE_FLAG_CSECTION     (1 << 7) /* Enable csection instrumentaiton */
+#define NOTE_FILTER_MODE_FLAG_SPINLOCKS    (1 << 8) /* Enable spinlock instrumentaiton */
+#define NOTE_FILTER_MODE_FLAG_HEAP         (1 << 9) /* Enable heap instrumentaiton */
 
 /* Helper macros for syscall instrumentation filter */
 
