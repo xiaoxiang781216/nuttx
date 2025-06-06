@@ -599,7 +599,7 @@ irqstate_t spin_lock_irqsave_nopreempt(FAR volatile spinlock_t *lock)
 }
 
 /****************************************************************************
- * Name: rspin_lock_irqsave_noprempt
+ * Name: rspin_lock_irqsave_nopreempt
  *
  * Description:
  *   Nest supported spinlock, can support UINT8_MAX max depth.
@@ -623,7 +623,7 @@ irqstate_t spin_lock_irqsave_nopreempt(FAR volatile spinlock_t *lock)
  ****************************************************************************/
 
 static inline_function
-irqstate_t rspin_lock_irqsave_noprempt(FAR struct rspinlock_s *lock)
+irqstate_t rspin_lock_irqsave_nopreempt(FAR struct rspinlock_s *lock)
 {
   /* For race condition, we may get cpuid in stack and then thread
    * moved to other cpu.  So we have to get cpuid with irq disabled.
@@ -811,11 +811,11 @@ void spin_unlock_irqrestore_nopreempt(FAR volatile spinlock_t *lock,
 }
 
 /****************************************************************************
- * Name: rspin_unlock_irqrestore_noprempt
+ * Name: rspin_unlock_irqrestore_nopreempt
  *
  * Description:
  *   Nest supported spinunlock, can support UINT8_MAX max depth.
- *   Should work with rspin_lock_irqsave_noprempt().
+ *   Should work with rspin_lock_irqsave_nopreempt().
  *   Similar feature with leave_critical_section, but isolate by instance.
  *
  *   If SPINLOCK is enabled:
@@ -838,7 +838,7 @@ void spin_unlock_irqrestore_nopreempt(FAR volatile spinlock_t *lock,
  ****************************************************************************/
 
 static inline_function
-void rspin_unlock_irqrestore_noprempt(FAR struct rspinlock_s *lock,
+void rspin_unlock_irqrestore_nopreempt(FAR struct rspinlock_s *lock,
                                       irqstate_t flags)
 {
   DEBUGASSERT(lock->holder == this_cpu());
@@ -847,6 +847,8 @@ void rspin_unlock_irqrestore_noprempt(FAR struct rspinlock_s *lock,
       lock->holder = RSPINLOCK_CPU_INVALID;
       spin_unlock_irqrestore_nopreempt(&lock->lock, flags);
     }
+
+  /* If not last rspinlock restore,  up_irq_restore should not required */
 }
 
 #if defined(CONFIG_RW_SPINLOCK)
@@ -878,8 +880,9 @@ void rspin_unlock_irqrestore_noprempt(FAR struct rspinlock_s *lock,
  *
  *   This implementation is non-reentrant and set a bit of lock.
  *
- *  The priority of reader is higher than writer if a reader hold the
- *  lock, a new reader can get its lock but writer can't get this lock.
+ *  The reader's priority is higher than the writer's priority.  If a reader
+ *  holds the lock, a new reader can get its lock but a writer can't get this
+ *  lock.
  *
  * Input Parameters:
  *   lock - A reference to the spinlock object to lock.
@@ -925,8 +928,9 @@ static inline_function void read_lock(FAR volatile rwlock_t *lock)
  *
  *   This implementation is non-reentrant and set a bit of lock.
  *
- *  The priority of reader is higher than writer if a reader hold the
- *  lock, a new reader can get its lock but writer can't get this lock.
+ *  The reader's priority is higher than the writer's priority.  If a reader
+ *  holds the lock, a new reader can get its lock but a writer can't get this
+ *  lock.
  *
  * Input Parameters:
  *   lock - A reference to the spinlock object to lock.
@@ -997,8 +1001,9 @@ static inline_function void read_unlock(FAR volatile rwlock_t *lock)
  *   This implementation is non-reentrant and set all bit on lock to avoid
  *   readers and writers.
  *
- *  The priority of reader is higher than writer if a reader hold the
- *  lock, a new reader can get its lock but writer can't get this lock.
+ *  The reader's priority is higher than the writer's priority.  If a reader
+ *  holds the lock, a new reader can get its lock but a writer can't get this
+ *  lock.
  *
  * Input Parameters:
  *   lock - A reference to the spinlock object to lock.
@@ -1043,8 +1048,9 @@ static inline_function void write_lock(FAR volatile rwlock_t *lock)
  *   This implementation is non-reentrant and set all bit on lock to avoid
  *   readers and writers.
  *
- *  The priority of reader is higher than writer if a reader hold the
- *  lock, a new reader can get its lock but writer can't get this lock.
+ *  The reader's priority is higher than the writer's priority.  If a reader
+ *  holds the lock, a new reader can get its lock but a writer can't get this
+ *  lock.
  *
  * Input Parameters:
  *   lock - A reference to the spinlock object to lock.
