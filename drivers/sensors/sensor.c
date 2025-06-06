@@ -504,7 +504,7 @@ static void sensor_generate_timing(FAR struct sensor_upperhalf_s *upper,
 static bool sensor_is_updated(FAR struct sensor_upperhalf_s *upper,
                               FAR struct sensor_user_s *user)
 {
-  long delta = upper->state.generation - user->state.generation;
+  int32_t delta = upper->state.generation - user->state.generation;
 
   if (delta <= 0)
     {
@@ -533,7 +533,7 @@ static void sensor_catch_up(FAR struct sensor_upperhalf_s *upper,
                             FAR struct sensor_user_s *user)
 {
   uint32_t generation;
-  long delta;
+  int32_t delta;
 
   circbuf_peek(&upper->timing, &generation, TIMING_BUF_ESIZE);
   delta = generation - user->state.generation;
