@@ -175,17 +175,24 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
   /* Return the heap settings */
 
   *heap_start = (void *)g_idle_topstack;
-  if (g_idle_topstack > MPS_SRAM1_START + MPS_SRAM1_SIZE)
-    {
-      /* If the range of SRAM1 is exceeded, we think that the extern REGION
-       * is enabled
-       */
 
-      *heap_size  = PRIMARY_RAM_END - g_idle_topstack;
+  if (g_idle_topstack < MPS_SRAM1_START + MPS_SRAM1_SIZE)
+    {
+      /* Using SRAM1 */
+
+      *heap_size  = MPS_SRAM1_START + MPS_SRAM1_SIZE - g_idle_topstack;
+    }
+  else if (g_idle_topstack < MPS_SRAM2_START + MPS_SRAM2_SIZE)
+    {
+      /* Using SRAM2 */
+
+      *heap_size  = MPS_SRAM2_START + MPS_SRAM2_SIZE - g_idle_topstack;
     }
   else
     {
-      *heap_size  = MPS_SRAM1_START + MPS_SRAM1_SIZE - g_idle_topstack;
+      /* Using PSRAM */
+
+      *heap_size  = PRIMARY_RAM_END - g_idle_topstack;
     }
 
 #  if defined(CONFIG_MM_KERNEL_HEAP)
