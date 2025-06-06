@@ -45,6 +45,7 @@ list(
   lib_base64outstream.c
   lib_filesistream.c
   lib_fileoutstream.c
+  lib_libbsprintf.c
   lib_libosprintf.c
   lib_libvscanf.c
   lib_libvsprintf.c

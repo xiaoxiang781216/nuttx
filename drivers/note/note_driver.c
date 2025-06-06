@@ -38,6 +38,7 @@
 #include <nuttx/note/note_driver.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/streams.h>
 
 #include "note_driver.h"
 #include "sched/sched.h"
@@ -1678,154 +1679,8 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint32_t tag,
     }
   else
     {
-      FAR const char *p = fmt;
-      bool infmt = false;
-      char c;
-
-      while ((c = *p++) != '\0')
-        {
-          if (c != '%' && !infmt)
-            {
-              continue;
-            }
-
-          infmt = true;
-          var = (FAR void *)&note->npt_data[next];
-
-          if (c == 'c' || c == 'd' || c == 'i' || c == 'u' ||
-              c == 'o' || c == 'x' || c == 'X')
-            {
-              if (*(p - 2) == 'j')
-                {
-                  if (next + sizeof(var->im) > length)
-                    {
-                      break;
-                    }
-
-                  var->im = va_arg(*va, intmax_t);
-                  next += sizeof(var->im);
-                }
-#ifdef CONFIG_HAVE_LONG_LONG
-              else if (*(p - 2) == 'l' && *(p - 3) == 'l')
-                {
-                  if (next + sizeof(var->ll) > length)
-                    {
-                      break;
-                    }
-
-                  var->ll = va_arg(*va, long long);
-                  next += sizeof(var->ll);
-                }
-#endif
-              else if (*(p - 2) == 'l')
-                {
-                  if (next + sizeof(var->l) > length)
-                    {
-                      break;
-                    }
-
-                  var->l = va_arg(*va, long);
-                  next += sizeof(var->l);
-                }
-              else if (*(p - 2) == 'z')
-                {
-                  if (next + sizeof(var->sz) > length)
-                    {
-                      break;
-                    }
-
-                  var->sz = va_arg(*va, size_t);
-                  next += sizeof(var->sz);
-                }
-              else if (*(p - 2) == 't')
-                {
-                  if (next + sizeof(var->ptr) > length)
-                    {
-                      break;
-                    }
-
-                  var->ptr = va_arg(*va, ptrdiff_t);
-                  next += sizeof(var->ptr);
-                }
-              else
-                {
-                  if (next + sizeof(var->i) > length)
-                    {
-                      break;
-                    }
-
-                  var->i = va_arg(*va, int);
-                  next += sizeof(var->i);
-                }
-
-              infmt = false;
-            }
-          else if (c == 'e' || c == 'f' || c == 'g' || c == 'a' ||
-                    c == 'A' || c == 'E' || c == 'F' || c == 'G')
-            {
-#ifdef CONFIG_HAVE_DOUBLE
-#  ifdef CONFIG_HAVE_LONG_DOUBLE
-              if (*(p - 2) == 'L')
-                {
-                  if (next + sizeof(var->ld) > length)
-                    {
-                      break;
-                    }
-
-                  var->ld = va_arg(*va, long double);
-                  next += sizeof(var->ld);
-                }
-              else
-#  endif
-                {
-                  if (next + sizeof(var->d) > length)
-                    {
-                      break;
-                    }
-
-                  var->d = va_arg(*va, double);
-                  next += sizeof(var->d);
-                }
-#endif
-
-              infmt = false;
-            }
-          else if (c == '*')
-            {
-              var->i = va_arg(*va, int);
-              next += sizeof(var->i);
-            }
-          else if (c == 's')
-            {
-              size_t len;
-              var->s = va_arg(*va, FAR char *);
-              if (var->s == NULL)
-                {
-                  var->s = "(null)";
-                }
-
-              len = strlen(var->s) + 1;
-              if (next + len > length)
-                {
-                  len = length - next;
-                }
-
-              strlcpy(note->npt_data + next, var->s, len);
-              next += len;
-              infmt = false;
-            }
-          else if (c == 'p')
-            {
-              if (next + sizeof(var->p) > length)
-                {
-                  break;
-                }
-
-              var->p = va_arg(*va, FAR void *);
-              next += sizeof(var->p);
-              infmt = false;
-            }
-        }
+      next = lib_bsprintf(note->npt_data, length, fmt, *va);
+      DEBUGASSERT(next < sizeof(data) - sizeof(*note));
     }
 
   length = SIZEOF_NOTE_PRINTF(next);

@@ -825,6 +825,18 @@ int lib_osprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
                  FAR const void *buf);
 
 /****************************************************************************
+ * Name: lib_bsprintf
+ *
+ * Description:
+ *  Implements saving sprintf parameters to buffer, which can use
+ *  lib_osprintf to restore the data in buffer to a string.
+ *
+ ****************************************************************************/
+
+ssize_t lib_bsprintf(FAR void *buffer, size_t size,
+                     FAR const IPTR char *fmt, va_list va);
+
+/****************************************************************************
  * Name: lib_sprintf_internal
  *
  * Description:
