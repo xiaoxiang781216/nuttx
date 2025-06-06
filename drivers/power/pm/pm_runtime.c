@@ -56,12 +56,12 @@ static irqstate_t pm_runtime_lock(FAR struct pm_runtime_s *rpm)
       nxrmutex_lock(&rpm->mutex);
     }
 
-  return rspin_lock_irqsave_noprempt(&rpm->lock);
+  return rspin_lock_irqsave_nopreempt(&rpm->lock);
 }
 
 static void pm_runtime_unlock(FAR struct pm_runtime_s *rpm, irqstate_t flags)
 {
-  rspin_unlock_irqrestore_noprempt(&rpm->lock, flags);
+  rspin_unlock_irqrestore_nopreempt(&rpm->lock, flags);
 
   if (!up_interrupt_context() && !sched_idletask())
     {

@@ -125,7 +125,7 @@ static void btn_enable(FAR const struct btn_lowerhalf_s *lower,
 
   /* Start with all interrupts disabled */
 
-  flags = rspin_lock_irqsave_noprempt(&g_btnlower_enable_lock);
+  flags = rspin_lock_irqsave_nopreempt(&g_btnlower_enable_lock);
   btn_disable();
 
   iinfo("press: %02" PRIx32 " release: %02" PRIx32 " handler: %p arg: %p\n",
@@ -154,7 +154,7 @@ static void btn_enable(FAR const struct btn_lowerhalf_s *lower,
         }
     }
 
-  rspin_unlock_irqrestore_noprempt(&g_btnlower_enable_lock, flags);
+  rspin_unlock_irqrestore_nopreempt(&g_btnlower_enable_lock, flags);
 }
 
 /****************************************************************************
@@ -172,7 +172,7 @@ static void btn_disable(void)
 
   /* Disable each button interrupt */
 
-  flags = rspin_lock_irqsave_noprempt(&g_btnlower_enable_lock);
+  flags = rspin_lock_irqsave_nopreempt(&g_btnlower_enable_lock);
   for (id = 0; id < g_btnnum; id++)
     {
       board_button_irq(id, NULL, NULL);
@@ -182,7 +182,7 @@ static void btn_disable(void)
 
   g_btnhandler = NULL;
   g_btnarg     = NULL;
-  rspin_unlock_irqrestore_noprempt(&g_btnlower_enable_lock, flags);
+  rspin_unlock_irqrestore_nopreempt(&g_btnlower_enable_lock, flags);
 }
 
 /****************************************************************************

@@ -45,7 +45,7 @@
 #define CLK_PROCFS_LINELEN                  80
 
 /****************************************************************************
- * Private Datas
+ * Private Data
  ****************************************************************************/
 
 static struct rspinlock_s g_clk_lock = RSPINLOCK_INITIALIZER;
@@ -308,12 +308,12 @@ static irqstate_t clk_list_lock(void)
       nxrmutex_lock(&g_clk_list_lock);
     }
 
-  return rspin_lock_irqsave_noprempt(&g_clk_lock);
+  return rspin_lock_irqsave_nopreempt(&g_clk_lock);
 }
 
 static void clk_list_unlock(irqstate_t flags)
 {
-  rspin_unlock_irqrestore_noprempt(&g_clk_lock, flags);
+  rspin_unlock_irqrestore_nopreempt(&g_clk_lock, flags);
 
   if (!up_interrupt_context() && !sched_idletask())
     {
