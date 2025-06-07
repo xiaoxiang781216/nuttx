@@ -2743,8 +2743,8 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
 
   event->pmuctx = pmu_ctx;
 
-  event_fd = file_allocate(&g_perf_inode, O_RDONLY | flags,
-                           0, event, 0, true);
+  event_fd = file_allocate_from_inode(&g_perf_inode, O_RDONLY | flags,
+                                      0, event, 0);
   if (event_fd < 0)
     {
       ret = -EINVAL;

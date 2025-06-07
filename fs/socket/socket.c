@@ -201,7 +201,7 @@ static ssize_t sock_file_writev(FAR struct file *filep,
 
 int sockfd_allocate(FAR struct socket *psock, int oflags)
 {
-  return file_allocate(&g_sock_inode, oflags, 0, psock, 0, true);
+  return file_allocate_from_inode(&g_sock_inode, oflags, 0, psock, 0);
 }
 
 /****************************************************************************

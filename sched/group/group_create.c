@@ -203,7 +203,7 @@ int group_initialize(FAR struct tcb_s *tcb, uint8_t ttype, size_t heapsize)
 
   /* Initialize file descriptors for the TCB */
 
-  files_initlist(&group->tg_filelist);
+  fdlist_init(&group->tg_fdlist);
 
   /* Alloc task info for group  */
 

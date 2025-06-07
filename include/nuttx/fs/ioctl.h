@@ -244,6 +244,9 @@
 #define FIOC_SETFLAGS       _FIOC(0x0017) /* IN:  The flags that need to set to file
                                            * OUT: None
                                            */
+#define FIOGCLEX            _FIOC(0x0018) /* IN:  FAR int *
+                                           * OUT: None
+                                           */
 
 /* NuttX file system ioctl definitions **************************************/
 

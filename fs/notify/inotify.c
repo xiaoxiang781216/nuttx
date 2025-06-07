@@ -1255,8 +1255,8 @@ int inotify_init1(int flags)
       goto exit_set_errno;
     }
 
-  ret = file_allocate(&g_inotify_inode, O_RDOK | flags,
-                      0, dev, 0, true);
+  ret = file_allocate_from_inode(&g_inotify_inode, O_RDOK | flags,
+                                 0, dev, 0);
   if (ret < 0)
     {
       ferr("Failed to allocate inotify fd\n");
