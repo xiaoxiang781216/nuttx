@@ -735,7 +735,7 @@ retry:
 
   /* Update filep lock state */
 
-  filep->locked = true;
+  filep->f_locked = true;
 
   /* When there is a lock change, we need to wake up the blocking lock */
 
@@ -773,7 +773,7 @@ void file_closelk(FAR struct file *filep)
   bool deleted = false;
   int ret;
 
-  if (!filep->locked)
+  if (!filep->f_locked)
     {
       return;
     }
@@ -810,7 +810,7 @@ void file_closelk(FAR struct file *filep)
         {
           deleted = true;
           file_lock_delete(file_lock);
-          filep->locked = false;
+          filep->f_locked = false;
         }
     }
 
