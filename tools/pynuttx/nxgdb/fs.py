@@ -36,11 +36,11 @@ FSNODEFLAG_TYPE_MASK = 0x0000000F
 CONFIG_PSEUDOFS_FILE = utils.get_symbol_value("CONFIG_PSEUDOFS_FILE")
 CONFIG_PSEUDOFS_ATTRIBUTES = utils.get_symbol_value("CONFIG_PSEUDOFS_ATTRIBUTES")
 
-CONFIG_FS_BACKTRACE = utils.get_field_nitems("struct file", "f_backtrace")
+CONFIG_FS_BACKTRACE = utils.get_field_nitems("struct fd", "f_backtrace")
 CONFIG_FS_SHMFS = utils.get_symbol_value("CONFIG_FS_SHMFS")
 
 CONFIG_NFILE_DESCRIPTORS_PER_BLOCK = utils.get_field_nitems(
-    "struct filelist", "fl_prefiles"
+    "struct fdlist", "fl_prefds"
 )
 
 if CONFIG_NFILE_DESCRIPTORS_PER_BLOCK is None:
@@ -193,9 +193,9 @@ def inode_gettype(inode: p.Inode) -> InodeType:
 
 def get_file(tcb: Tcb, fd):
     group = tcb.group
-    filelist = group.tg_filelist
-    fl_files = filelist.fl_files
-    fl_rows = filelist.fl_rows
+    fdlist = group.tg_fdlist
+    fl_fds = fdlist.fl_fds
+    fl_rows = fdlist.fl_rows
 
     row = fd // CONFIG_NFILE_DESCRIPTORS_PER_BLOCK
     col = fd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK
@@ -203,7 +203,7 @@ def get_file(tcb: Tcb, fd):
     if row >= fl_rows:
         return None
 
-    return fl_files[row][col]
+    return fl_fds[row][col]
 
 
 def foreach_inode(root=None, path="") -> Generator[Tuple[p.Inode, str], None, None]:
@@ -219,20 +219,21 @@ def foreach_inode(root=None, path="") -> Generator[Tuple[p.Inode, str], None, No
 def foreach_file(tcb: Tcb):
     """Iterate over all file descriptors in a tcb"""
     group = tcb.group
-    filelist = group.tg_filelist
-    fl_files = filelist.fl_files
-    fl_rows = filelist.fl_rows
+    fdlist = group.tg_fdlist
+    fl_fds = fdlist.fl_fds
+    fl_rows = fdlist.fl_rows
 
     for row in range(fl_rows):
         for col in range(CONFIG_NFILE_DESCRIPTORS_PER_BLOCK):
-            file = fl_files[row][col]
+            fdp = fl_fds[row][col]
 
-            if not file or not file.f_inode:
+            if not fdp or not fdp.f_file:
                 continue
 
             fd = row * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK + col
+            file = fdp.f_file
 
-            yield fd, file
+            yield fd, fdp, file
 
 
 def fstype_filter(fstype):
@@ -254,7 +255,7 @@ class Fdinfo(gdb.Command):
         super().__init__("fdinfo", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
         self.total_fd_count = 0
 
-    def print_file_info(self, fd, file: p.File, formatter: str):
+    def print_file_info(self, fd, fdp: p.Fd, file: p.File, formatter: str):
         backtrace_formatter = "{0:<5} {1:<36} {2}"
 
         oflags = int(file.f_oflags)
@@ -264,7 +265,7 @@ class Fdinfo(gdb.Command):
         output = []
         if CONFIG_FS_BACKTRACE:
             backtrace = utils.Backtrace(
-                utils.ArrayIterator(file.f_backtrace), formatter=backtrace_formatter
+                utils.ArrayIterator(fdp.f_backtrace), formatter=backtrace_formatter
             )
 
             output.append(
@@ -303,8 +304,8 @@ class Fdinfo(gdb.Command):
         gdb.write(formatter.format(*headers) + "\n")
 
         fd_count = 0
-        for fd, file in foreach_file(tcb):
-            self.print_file_info(fd, file, formatter)
+        for fd, fdp, file in foreach_file(tcb):
+            self.print_file_info(fd, fdp, file, formatter)
             fd_count += 1
         self.total_fd_count += fd_count
 
