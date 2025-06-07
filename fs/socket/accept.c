@@ -184,7 +184,7 @@ int accept4(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen,
       goto errout_with_psock;
     }
 
-  fs_putfilep(filep);
+  file_put(filep);
   leave_cancellation_point();
   return newfd;
 
@@ -195,7 +195,7 @@ errout_with_alloc:
   fs_heap_free(newsock);
 
 errout_with_filep:
-  fs_putfilep(filep);
+  file_put(filep);
 
 errout:
   leave_cancellation_point();

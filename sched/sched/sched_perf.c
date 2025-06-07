@@ -2182,7 +2182,7 @@ static int perf_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct perf_event_s *out_event;
           int fd = (int) arg;
 
-          ret = fs_getfilep(fd, &out_filep);
+          ret = file_get(fd, &out_filep);
           if (ret < 0)
             {
               return -EINVAL;
@@ -2673,7 +2673,7 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
 
   if (group_fd >= 0)
     {
-      ret = fs_getfilep(group_fd, &group_file);
+      ret = file_get(group_fd, &group_file);
       if (ret < 0)
         {
           serr("perf event group_fd fail:%d\n", group_fd);
@@ -2684,7 +2684,7 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
 
       if (group_leader->cpu != cpu)
         {
-          fs_putfilep(group_file);
+          file_put(group_file);
           serr("Event cpu must be same as group leader\n");
           return -EINVAL;
         }
@@ -2758,7 +2758,7 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
 
   if (group_file != NULL)
     {
-      fs_putfilep(group_file);
+      file_put(group_file);
     }
 
   perf_add_event_to_count(event, ctx);
@@ -2772,7 +2772,7 @@ err_with_event:
 
   if (group_file != NULL)
     {
-      fs_putfilep(group_file);
+      file_put(group_file);
     }
 
   perf_free_event(event);

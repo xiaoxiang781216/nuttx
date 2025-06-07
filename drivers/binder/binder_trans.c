@@ -105,7 +105,7 @@ static uid_t geteuid_bypid(pid_t pid)
  * Description:
  *   Given a file descriptor, return the corresponding instance of struct
  *   file and increment the inode reference conut of this file.
- *   Note: The function based on fs_getfilep, it is can be used to
+ *   Note: The function based on file_get, it is can be used to
  *       translate file descriptor between NuttX process
  *
  * Input Parameters:
@@ -123,14 +123,14 @@ static int file_tx_get(unsigned int fd, FAR struct file *filep)
   FAR struct file *file;
   int ret;
 
-  ret = fs_getfilep(fd, &file);
+  ret = file_get(fd, &file);
   if (ret < 0)
     {
       return ret;
     }
 
   ret = file_dup2(file, filep);
-  fs_putfilep(file);
+  file_put(file);
   return ret;
 }
 

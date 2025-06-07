@@ -372,7 +372,7 @@ int ptp_clockid_to_filep(clockid_t clock_id, FAR struct file **filep)
   ret = clock_id >> CLOCK_SHIFT;
   if (ret >= 0)
     {
-      ret = fs_getfilep(ret, filep);
+      ret = file_get(ret, filep);
     }
 
   if (ret < 0)
@@ -383,7 +383,7 @@ int ptp_clockid_to_filep(clockid_t clock_id, FAR struct file **filep)
   ops = (*filep)->f_inode->u.i_ops;
   if (ops != &g_ptp_clock_file_ops)
     {
-      fs_putfilep(*filep);
+      file_put(*filep);
       return -EINVAL;
     }
 

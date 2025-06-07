@@ -282,7 +282,7 @@ int ioctl(int fd, int req, ...)
 
   /* Get the file structure corresponding to the file descriptor. */
 
-  ret = fs_getfilep(fd, &filep);
+  ret = file_get(fd, &filep);
   if (ret < 0)
     {
       goto err;
@@ -294,7 +294,7 @@ int ioctl(int fd, int req, ...)
   ret = file_vioctl(filep, req, ap);
   va_end(ap);
 
-  fs_putfilep(filep);
+  file_put(filep);
   if (ret < 0)
     {
       goto err;
