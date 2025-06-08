@@ -33,6 +33,7 @@
 #include <debug.h>
 
 #include <nuttx/cancelpt.h>
+#include <nuttx/pthread.h>
 
 #include "pthread/pthread.h"
 

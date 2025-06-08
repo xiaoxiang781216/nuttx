@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/pthread/pthread_mutexdestroy.c
+ * libs/libc/pthread/pthread_mutex_destroy.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -34,9 +34,7 @@
 #include <debug.h>
 
 #include <nuttx/semaphore.h>
-
-#include "pthread/pthread.h"
-#include "sched/sched.h"
+#include <nuttx/pthread.h>
 
 /****************************************************************************
  * Public Functions
@@ -90,7 +88,7 @@ int pthread_mutex_destroy(FAR pthread_mutex_t *mutex)
            * nxsched_get_tcb() does.
            */
 
-          if (!nxsched_verify_pid(pid))
+          if (pthread_kill(pid, 0) != 0)
             {
               /* The thread associated with the PID no longer exists */
 

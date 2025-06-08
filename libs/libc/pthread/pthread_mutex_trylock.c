@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/pthread/pthread_mutextrylock.c
+ * libs/libc/pthread/pthread_mutex_trylock.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -33,8 +33,7 @@
 #include <errno.h>
 #include <debug.h>
 
-#include "pthread/pthread.h"
-#include "sched/sched.h"
+#include <nuttx/pthread.h>
 
 /****************************************************************************
  * Public Functions
@@ -111,20 +110,20 @@ int pthread_mutex_trylock(FAR pthread_mutex_t *mutex)
           if (pid > 0 &&
               ((mutex->flags & _PTHREAD_MFLAGS_ROBUST) != 0 ||
                mutex->type != PTHREAD_MUTEX_NORMAL) &&
-              !nxsched_verify_pid(pid))
+              pthread_kill(pid, 0) != 0)
 
 #else /* CONFIG_PTHREAD_MUTEX_TYPES */
           /* Check if this NORMAL mutex is robust */
 
           if (pid > 0 &&
               (mutex->flags & _PTHREAD_MFLAGS_ROBUST) != 0 &&
-              !nxsched_verify_pid(pid))
+              pthread_kill(pid, 0) != 0)
 
 #endif /* CONFIG_PTHREAD_MUTEX_TYPES */
 #else /* CONFIG_PTHREAD_MUTEX_ROBUST */
           /* This mutex is always robust, whatever type it is. */
 
-          if (pid > 0 && !nxsched_verify_pid(pid))
+          if (pid > 0 && pthread_kill(pid, 0) != 0)
 #endif
             {
               /* < 0: available, >0 owned, ==0 error */

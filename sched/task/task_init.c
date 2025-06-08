@@ -152,10 +152,6 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
 
   nxsem_init(&tcb->exit_sem, 0, 0);
 
-#ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
-  spin_lock_init(&tcb->mutex_lock);
-#endif
-
   /* Duplicate the parent tasks environment */
 
   ret = env_dup(tcb->group, envp);

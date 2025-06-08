@@ -157,10 +157,6 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
 
   nxsem_init(&child->exit_sem, 0, 0);
 
-#ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
-  spin_lock_init(&child->mutex_lock);
-#endif
-
   /* Allocate a new task group with the same privileges as the parent */
 
 #if defined(CONFIG_MM_TASK_HEAP) && !defined(CONFIG_BUILD_KERNEL)

@@ -61,23 +61,21 @@
 void pthread_mutex_inconsistent(FAR struct tcb_s *tcb)
 {
   FAR struct pthread_mutex_s *mutex;
-  irqstate_t flags;
+  FAR struct tls_info_s *tls = nxsched_get_tls(tcb);
 
   DEBUGASSERT(tcb != NULL);
 
-  sched_lock();
+  nxmutex_lock(&tls->tl_lock);
 
   /* Remove and process each mutex held by this task */
 
-  while (tcb->mhead != NULL)
+  while (tls->tl_mhead != NULL)
     {
       /* Remove the mutex from the TCB list */
 
-      flags        = enter_critical_section();
-      mutex        = tcb->mhead;
-      tcb->mhead   = mutex->flink;
-      mutex->flink = NULL;
-      leave_critical_section(flags);
+      mutex         = tls->tl_mhead;
+      tls->tl_mhead = mutex->flink;
+      mutex->flink  = NULL;
 
       /* Mark the mutex as INCONSISTENT and wake up any waiting thread */
 
@@ -85,5 +83,5 @@ void pthread_mutex_inconsistent(FAR struct tcb_s *tcb)
       mutex_reset(&mutex->mutex);
     }
 
-  sched_unlock();
+  nxmutex_unlock(&tls->tl_lock);
 }

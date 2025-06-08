@@ -682,12 +682,6 @@ struct tcb_s
   sq_queue_t sigpostedq;                 /* List of posted signals          */
   siginfo_t  *sigunbinfo;                /* Signal info when task unblocked */
 
-  /* Robust mutex support ***************************************************/
-
-#if !defined(CONFIG_DISABLE_PTHREAD) && !defined(CONFIG_PTHREAD_MUTEX_UNSAFE)
-  FAR struct pthread_mutex_s *mhead;     /* List of mutexes held by thread  */
-#endif
-
   /* CPU load monitoring support ********************************************/
 
 #ifndef CONFIG_SCHED_CPULOAD_NONE
@@ -755,10 +749,6 @@ struct tcb_s
   size_t caller_deepest;
   size_t level_deepest;
   size_t level;
-#endif
-
-#ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
-  spinlock_t mutex_lock;
 #endif
 
   /* The total number that we are referenced by other tasks and
