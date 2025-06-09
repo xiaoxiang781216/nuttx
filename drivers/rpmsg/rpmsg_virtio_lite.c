@@ -107,6 +107,9 @@ static uint64_t
 rpmsg_virtio_lite_get_features_(FAR struct virtio_device *dev);
 static void rpmsg_virtio_lite_set_features(FAR struct virtio_device *dev,
                                            uint64_t feature);
+static void rpmsg_virtio_lite_read_config(struct virtio_device *vdev,
+                                          uint32_t offset, void *dst,
+                                          int length);
 static void rpmsg_virtio_lite_notify(FAR struct virtqueue *vq);
 static void
 rpmsg_virtio_lite_send_command(FAR struct rpmsg_virtio_lite_priv_s *priv,
@@ -131,6 +134,7 @@ static const struct virtio_dispatch g_rpmsg_virtio_lite_dispatch =
   .set_status        = rpmsg_virtio_lite_set_status_,
   .get_features      = rpmsg_virtio_lite_get_features_,
   .set_features      = rpmsg_virtio_lite_set_features,
+  .read_config       = rpmsg_virtio_lite_read_config,
   .notify            = rpmsg_virtio_lite_notify,
 };
 
@@ -362,6 +366,16 @@ static void rpmsg_virtio_lite_set_features(FAR struct virtio_device *vdev,
     rpmsg_virtio_lite_get_priv(vdev);
 
   priv->rsc->rpmsg_vdev.gfeatures = features;
+}
+
+static void rpmsg_virtio_lite_read_config(struct virtio_device *vdev,
+                                          uint32_t offset, void *dst,
+                                          int length)
+{
+  FAR struct rpmsg_virtio_lite_priv_s *priv =
+    rpmsg_virtio_lite_get_priv(vdev);
+
+  memcpy(dst, (FAR uint8_t *)&priv->rsc->config + offset, length);
 }
 
 static void rpmsg_virtio_lite_notify(FAR struct virtqueue *vq)
