@@ -77,6 +77,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
   size_t prevsize = 0;
   size_t nextsize = 0;
   FAR void *newmem;
+  bool bypass;
 
   /* If oldmem is NULL, then realloc is equivalent to malloc */
 
@@ -138,7 +139,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
   /* We need to hold the MM mutex while we muck with the nodelist. */
 
   DEBUGVERIFY(mm_lock(heap));
-  kasan_bypass(true);
+  bypass = kasan_bypass(true);
 
   DEBUGASSERT(MM_NODE_IS_ALLOC(oldnode));
 
@@ -166,7 +167,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
       /* Then return the original address */
 
-      kasan_bypass(false);
+      kasan_bypass(bypass);
       mm_unlock(heap);
       MM_RECORD(heap, oldnode);
 
@@ -399,7 +400,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
       size = MM_SIZEOF_NODE(oldnode);
 
-      kasan_bypass(false);
+      kasan_bypass(bypass);
       mm_unlock(heap);
       MM_RECORD(heap, (FAR char *)newmem - MM_SIZEOF_ALLOCNODE);
 
@@ -428,7 +429,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
        * leave the original memory in place.
        */
 
-      kasan_bypass(false);
+      kasan_bypass(bypass);
       mm_unlock(heap);
       newmem = mm_malloc(heap, size);
       if (newmem)

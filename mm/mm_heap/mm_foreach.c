@@ -52,6 +52,7 @@ void mm_foreach(FAR struct mm_heap_s *heap, mm_node_handler_t handler,
   FAR struct mm_allocnode_s *node;
   FAR struct mm_allocnode_s *prev;
   size_t nodesize;
+  bool bypass;
 #if CONFIG_MM_REGIONS > 1
   int region;
 #else
@@ -77,7 +78,7 @@ void mm_foreach(FAR struct mm_heap_s *heap, mm_node_handler_t handler,
           return;
         }
 
-      kasan_bypass(true);
+      bypass = kasan_bypass(true);
 
       for (node = heap->mm_heapstart[region];
            node < heap->mm_heapend[region];
@@ -102,7 +103,7 @@ void mm_foreach(FAR struct mm_heap_s *heap, mm_node_handler_t handler,
       DEBUGASSERT(node == heap->mm_heapend[region]);
       handler(node, arg);
 
-      kasan_bypass(false);
+      kasan_bypass(bypass);
       mm_unlock(heap);
     }
 #undef region

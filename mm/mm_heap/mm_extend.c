@@ -59,6 +59,7 @@ void mm_extend(FAR struct mm_heap_s *heap, FAR void *mem, size_t size,
   FAR struct mm_allocnode_s *newnode;
   uintptr_t blockstart;
   uintptr_t blockend;
+  bool bypass;
 
   /* Make sure that we were passed valid parameters */
 
@@ -81,7 +82,7 @@ void mm_extend(FAR struct mm_heap_s *heap, FAR void *mem, size_t size,
   /* Take the memory manager mutex */
 
   DEBUGVERIFY(mm_lock(heap));
-  kasan_bypass(true);
+  bypass = kasan_bypass(true);
 
   /* Get the terminal node in the old heap.  The block to extend must
    * immediately follow this node.
@@ -114,7 +115,7 @@ void mm_extend(FAR struct mm_heap_s *heap, FAR void *mem, size_t size,
 
   heap->mm_heapsize += size;
 
-  kasan_bypass(false);
+  kasan_bypass(bypass);
   mm_unlock(heap);
 
   /* Finally "free" the new block of memory where the old terminal node was

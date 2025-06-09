@@ -106,11 +106,12 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
   FAR struct mm_freenode_s *node;
   uintptr_t heapbase;
   uintptr_t heapend;
+  bool bypass;
 #if CONFIG_MM_REGIONS > 1
   int idx;
 
   DEBUGVERIFY(mm_lock(heap));
-  kasan_bypass(true);
+  bypass = kasan_bypass(true);
 
   idx = heap->mm_nregions;
 
@@ -119,7 +120,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
   DEBUGASSERT(idx < CONFIG_MM_REGIONS);
   if (idx >= CONFIG_MM_REGIONS)
     {
-      kasan_bypass(false);
+      kasan_bypass(bypass);
       mm_unlock(heap);
       return;
     }
@@ -127,7 +128,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
 #else
 #  define idx 0
   DEBUGVERIFY(mm_lock(heap));
-  kasan_bypass(true);
+  bypass = kasan_bypass(true);
 #endif
 
 #if defined(CONFIG_MM_SMALL) && !defined(CONFIG_SMALL_MEMORY)
@@ -216,7 +217,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
   sched_note_heap(NOTE_HEAP_ADD, heap, heapstart, heapsize,
                   heap->mm_curused);
 
-  kasan_bypass(false);
+  kasan_bypass(bypass);
   mm_unlock(heap);
 }
 

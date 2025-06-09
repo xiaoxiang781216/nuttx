@@ -47,11 +47,12 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   FAR struct mm_delaynode_s *tmp = mem;
   irqstate_t flags;
+  bool bypass;
 
   /* Delay the deallocation until a more appropriate time. */
 
   flags = mm_lock_irq(heap);
-  kasan_bypass(true);
+  bypass = kasan_bypass(true);
 
 #  ifdef CONFIG_DEBUG_ASSERTIONS
   FAR struct mm_freenode_s *node;
@@ -67,7 +68,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
   heap->mm_delaycount[this_cpu()]++;
 #endif
 
-  kasan_bypass(false);
+  kasan_bypass(bypass);
   mm_unlock_irq(heap, flags);
 #endif
 }
@@ -91,6 +92,7 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
   FAR struct mm_freenode_s *next;
   size_t nodesize;
   size_t prevsize;
+  bool bypass;
 
   if (mm_lock(heap) < 0)
     {
@@ -103,7 +105,7 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
       return;
     }
 
-  kasan_bypass(true);
+  bypass = kasan_bypass(true);
   nodesize = mm_malloc_size(heap, mem);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
@@ -124,7 +126,7 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
 
   if (delay)
     {
-      kasan_bypass(false);
+      kasan_bypass(bypass);
       mm_unlock(heap);
       add_delaylist(heap, mem);
       return;
@@ -227,7 +229,7 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
 
   mm_addfreechunk(heap, node);
 
-  kasan_bypass(false);
+  kasan_bypass(bypass);
   mm_unlock(heap);
 }
 
