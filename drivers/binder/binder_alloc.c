@@ -514,10 +514,13 @@ static int binder_alloc_do_buffer_copy(
   FAR struct binder_buffer *buffer, binder_size_t buffer_offset,
   FAR void *ptr, size_t bytes)
 {
+  nxmutex_lock(&alloc->alloc_lock);
+
   /* All copies must be 32-bit aligned and 32-bit size */
 
   if (!check_buffer(alloc, buffer, buffer_offset, bytes))
     {
+      nxmutex_unlock(&alloc->alloc_lock);
       return -EINVAL;
     }
 
@@ -550,6 +553,8 @@ static int binder_alloc_do_buffer_copy(
       ptr = ptr + size;
       buffer_offset += size;
     }
+
+  nxmutex_unlock(&alloc->alloc_lock);
 
   return 0;
 }
