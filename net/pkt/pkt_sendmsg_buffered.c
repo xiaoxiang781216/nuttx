@@ -36,6 +36,7 @@
 #include <debug.h>
 
 #include <arch/irq.h>
+#include <netpacket/packet.h>
 
 #include <nuttx/semaphore.h>
 #include <nuttx/net/netdev.h>
@@ -207,10 +208,12 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
 {
   FAR const void *buf = msg->msg_iov->iov_base;
   size_t len = msg->msg_iov->iov_len;
+  FAR struct sockaddr_ll *addr = msg->msg_name;
   FAR struct net_driver_s *dev;
   FAR struct pkt_conn_s *conn;
   FAR struct iob_s *iob;
   bool nonblock;
+  int offset;
   int ret = OK;
 
   /* Validity check, only single iov supported */
@@ -220,12 +223,10 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
       return -ENOTSUP;
     }
 
-  if (msg->msg_name != NULL)
+  if (psock->s_type != SOCK_DGRAM && psock->s_type != SOCK_RAW)
     {
-      /* pkt_sendto */
-
-      nerr("ERROR: sendto() not supported for raw packet sockets\n");
-      return -EAFNOSUPPORT;
+      nerr("ERROR: Unsupported socket type: %d\n", psock->s_type);
+      return -ENOTSUP;
     }
 
   /* Verify that the sockfd corresponds to valid, allocated socket */
@@ -235,25 +236,35 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
       return -EBADF;
     }
 
-  /* Only SOCK_RAW is supported */
-
-  if (psock->s_type != SOCK_RAW)
-    {
-      /* EDESTADDRREQ.  Signifies that the socket is not connection-mode and
-       * no peer address is set.
-       */
-
-      return -EDESTADDRREQ;
-    }
-
   if (len <= 0)
     {
       return 0;
     }
 
+  if ((psock->s_type == SOCK_DGRAM && (msg->msg_name == NULL ||
+       msg->msg_namelen < sizeof(struct sockaddr_ll) ||
+       addr->sll_halen < ETHER_ADDR_LEN)) ||
+      (psock->s_type == SOCK_RAW && msg->msg_name != NULL))
+    {
+      nerr("ERROR: invalid parameters\n");
+      return -EINVAL;
+    }
+
   net_lock();
 
+  conn = psock->s_conn;
+
   /* Get the device driver that will service this transfer */
+
+  if (psock->s_type == SOCK_DGRAM)
+    {
+      conn->ifindex = addr->sll_ifindex;
+      offset = 0;
+    }
+  else
+    {
+      offset = -NET_LL_HDRLEN(dev);
+    }
 
   dev = pkt_find_device(psock->s_conn);
   if (dev == NULL)
@@ -262,7 +273,6 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
       goto errout_with_lock;
     }
 
-  conn = psock->s_conn;
   nonblock = _SS_ISNONBLOCK(conn->sconn.s_flags) ||
              (flags & MSG_DONTWAIT) != 0;
 
@@ -323,7 +333,7 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
 
   if (nonblock)
     {
-      ret = iob_trycopyin(iob, buf, len, -NET_LL_HDRLEN(dev), false);
+      ret = iob_trycopyin(iob, buf, len, offset, false);
     }
   else
     {
@@ -336,7 +346,7 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
        */
 
       blresult = net_breaklock(&count);
-      ret = iob_copyin(iob, buf, len, -NET_LL_HDRLEN(dev), false);
+      ret = iob_copyin(iob, buf, len, offset, false);
       if (blresult >= 0)
         {
           net_restorelock(count);
@@ -347,6 +357,15 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
     {
       nerr("ERROR: Failed to copy data into write buffer\n");
       goto errout_with_iob;
+    }
+
+  if (psock->s_type == SOCK_DGRAM)
+    {
+      FAR struct eth_hdr_s *ethhdr =
+          (FAR struct eth_hdr_s *)(IOB_DATA(iob) - NET_LL_HDRLEN(dev));
+      memcpy(ethhdr->dest, addr->sll_addr, ETHER_ADDR_LEN);
+      memcpy(ethhdr->src, &dev->d_mac.ether, ETHER_ADDR_LEN);
+      ethhdr->type = addr->sll_protocol;
     }
 
   if (nonblock)
