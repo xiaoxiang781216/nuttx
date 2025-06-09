@@ -45,7 +45,7 @@
  * alignment than is required.
  */
 
-#define STACK_ALIGNMENT     4
+#define STACKFRAME_ALIGN 4
 
 /****************************************************************************
  * Public Types

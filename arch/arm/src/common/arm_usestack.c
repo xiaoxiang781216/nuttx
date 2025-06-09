@@ -103,7 +103,7 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
   tcb->stack_alloc_ptr = stack;
   tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
   tcb->adj_stack_size  =
-      STACK_ALIGN_DOWN((uintptr_t)stack + stack_size) - (uintptr_t)stack;
+    STACKFRAME_ALIGN_DOWN((uintptr_t)stack + stack_size) - (uintptr_t)stack;
 
 #ifdef CONFIG_STACK_COLORATION
   /* If stack debug is enabled, then fill the stack with a

@@ -96,7 +96,7 @@
  * addresses.
  */
 
-#define STACK_ALIGNMENT     8
+#define STACKFRAME_ALIGN 8
 
 #ifdef __cplusplus
 #define EXTERN extern "C"

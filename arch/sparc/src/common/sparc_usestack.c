@@ -97,7 +97,7 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
    * next boundary
    */
 
-  top_of_stack = STACK_ALIGN_DOWN(top_of_stack);
+  top_of_stack = STACKFRAME_ALIGN_DOWN(top_of_stack);
   size_of_stack = top_of_stack - (uint32_t)tcb->stack_alloc_ptr;
 
   /* Save the adjusted stack values in the struct tcb_s */
