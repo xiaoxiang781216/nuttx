@@ -373,7 +373,7 @@ config MM_KASAN_REGIONS
 
 config MM_KASAN_WATCHPOINT
 	int "Kasan watchpoint maximum number"
-	default 0
+	default 4
 	---help---
 		The maximum number of watchpoints that can be set by KASan.
 
