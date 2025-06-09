@@ -42,7 +42,6 @@
 #include <nuttx/lib/lib.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/syslog/syslog.h>
 
 #include "syslog.h"
@@ -83,7 +82,6 @@ struct syslog_dev_s
   uint8_t      sl_state;    /* See enum syslog_dev_state */
   uint8_t      sl_oflags;   /* Saved open mode (for re-open) */
   uint16_t     sl_mode;     /* Saved open flags (for re-open) */
-  rmutex_t     sl_lock;     /* Enforces mutually exclusive access */
   struct file  sl_file;     /* The syslog file structure */
   FAR char    *sl_devpath;  /* Full path to the character device */
 };
@@ -95,7 +93,6 @@ struct syslog_dev_s
 static ssize_t syslog_dev_write(FAR syslog_channel_t *channel,
                                 FAR const char *buffer, size_t buflen);
 static int syslog_dev_putc(FAR syslog_channel_t *channel, int ch);
-static int syslog_dev_force(FAR syslog_channel_t *channel, int ch);
 static int syslog_dev_flush(FAR syslog_channel_t *channel);
 
 /****************************************************************************
@@ -107,38 +104,16 @@ static int syslog_dev_flush(FAR syslog_channel_t *channel);
 static const struct syslog_channel_ops_s g_syslog_dev_ops =
 {
   syslog_dev_putc,
-  syslog_dev_force,
+  syslog_dev_putc,
   syslog_dev_flush,
   syslog_dev_write,
-  NULL,
+  syslog_dev_write,
   syslog_dev_uninitialize
 };
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: syslog_dev_lock
- ****************************************************************************/
-
-static inline int syslog_dev_lock(FAR struct syslog_dev_s *syslog_dev)
-{
-  /* Either the lock is available or is currently held by another
-   * thread.  Wait for it to become available.
-   */
-
-  return nxrmutex_lock(&syslog_dev->sl_lock);
-}
-
-/****************************************************************************
- * Name: syslog_dev_unlock
- ****************************************************************************/
-
-static inline void syslog_dev_unlock(FAR struct syslog_dev_s *syslog_dev)
-{
-  nxrmutex_unlock(&syslog_dev->sl_lock);
-}
 
 /****************************************************************************
  * Name: syslog_dev_open
@@ -232,7 +207,6 @@ static int syslog_dev_open(FAR struct syslog_dev_s *syslog_dev,
 
   /* The SYSLOG device is open and ready for writing. */
 
-  nxrmutex_init(&syslog_dev->sl_lock);
   syslog_dev->sl_state = SYSLOG_OPENED;
   return OK;
 }
@@ -278,19 +252,17 @@ static int syslog_dev_outputready(FAR struct syslog_dev_s *syslog_dev)
 {
   int ret;
 
-  /* Cases (4) and (5) */
-
-  if (up_interrupt_context() || sched_idletask())
-    {
-      return -ENOSYS;
-    }
-
   /* We can save checks in the usual case:  That after the SYSLOG device
    * has been successfully opened.
    */
 
   if (syslog_dev->sl_state != SYSLOG_OPENED)
     {
+      if (up_interrupt_context() || sched_idletask())
+        {
+          return -ENOSYS;
+        }
+
       /* Case (1) and (2) */
 
       if (syslog_dev->sl_state == SYSLOG_UNINITIALIZED ||
@@ -304,7 +276,6 @@ static int syslog_dev_outputready(FAR struct syslog_dev_s *syslog_dev)
       if (syslog_dev->sl_state == SYSLOG_FAILURE)
         {
           file_close(&syslog_dev->sl_file);
-          nxrmutex_destroy(&syslog_dev->sl_lock);
 
           syslog_dev->sl_state = SYSLOG_REOPEN;
         }
@@ -373,27 +344,12 @@ static ssize_t syslog_dev_write(FAR syslog_channel_t *channel,
       return ret;
     }
 
-  /* The syslog device is ready for writing */
-
-  ret = syslog_dev_lock(syslog_dev);
-  if (ret < 0)
-    {
-      /* We probably already hold the mutex and were probably
-       * re-entered by the logic kicked off by file_write().
-       * We might also have been interrupted by a signal.  Either
-       * way, we are outta here.
-       */
-
-      return ret;
-    }
-
   ret = file_write(&syslog_dev->sl_file, buffer, buflen);
   if (ret < 0)
     {
       syslog_dev->sl_state = SYSLOG_FAILURE;
     }
 
-  syslog_dev_unlock(syslog_dev);
   return ret;
 }
 
@@ -429,56 +385,13 @@ static int syslog_dev_putc(FAR syslog_channel_t *channel, int ch)
       return ret;
     }
 
-  /* The syslog device is ready for writing and we have something of
-   * value to write.
-   */
-
-  ret = syslog_dev_lock(syslog_dev);
-  if (ret < 0)
-    {
-      /* We probably already hold the lock and were probably
-       * re-entered by the logic kicked off by file_write().
-       * We might also have been interrupted by a signal.  Either
-       * way, we are outta here.
-       */
-
-      return ret;
-    }
-
   nbytes = file_write(&syslog_dev->sl_file, &uch, 1);
-  syslog_dev_unlock(syslog_dev);
-
-  /* Check if the write was successful.  If not, nbytes will be
-   * a negated errno value.
-   */
-
   if (nbytes < 0)
     {
       syslog_dev->sl_state = SYSLOG_FAILURE;
     }
 
   return nbytes;
-}
-
-/****************************************************************************
- * Name: syslog_dev_force
- *
- * Description:
- *   Dummy, do nothing force write operation.
- *
- * Input Parameters:
- *   channel    - Handle to syslog channel to be used.
- *
- * Returned Value:
- *   On success, the character is echoed back to the caller.  A negated
- *   errno value is returned on any failure.
- *
- ****************************************************************************/
-
-static int syslog_dev_force(FAR syslog_channel_t *channel, int ch)
-{
-  UNUSED(channel);
-  return ch;
 }
 
 /****************************************************************************
@@ -607,16 +520,12 @@ void syslog_dev_uninitialize(FAR syslog_channel_t *channel)
 
   syslog_dev_flush(channel);
 
-  /* Close the detached file instance, and destroy the mutex. These are
-   * both only created when the device is in SYSLOG_OPENED or SYSLOG_FAILURE
-   * state.
-   */
+  /* Close the detached file instance. */
 
   if (syslog_dev->sl_state == SYSLOG_OPENED ||
       syslog_dev->sl_state == SYSLOG_FAILURE)
     {
       file_close(&syslog_dev->sl_file);
-      nxrmutex_destroy(&syslog_dev->sl_lock);
     }
 
   /* Set the device in UNINITIALIZED state. */
