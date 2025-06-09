@@ -57,7 +57,7 @@ static int btn_interrupt(int irq, FAR void *context, FAR void *arg);
  ****************************************************************************/
 
 static uint32_t g_btnnum;
-static struct rspinlock_s g_btnlower_enable_lock = RSPINLOCK_INITIALIZER;
+static rspinlock_t g_btnlower_enable_lock = RSPINLOCK_INITIALIZER;
 
 /* This is the button button lower half driver interface */
 

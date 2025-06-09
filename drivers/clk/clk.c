@@ -48,12 +48,12 @@
  * Private Data
  ****************************************************************************/
 
-static struct rspinlock_s g_clk_lock = RSPINLOCK_INITIALIZER;
-static rmutex_t g_clk_list_lock      = NXRMUTEX_INITIALIZER;
+static rspinlock_t g_clk_lock      = RSPINLOCK_INITIALIZER;
+static rmutex_t g_clk_list_lock    = NXRMUTEX_INITIALIZER;
 static
-struct list_node g_clk_root_list     = LIST_INITIAL_VALUE(g_clk_root_list);
+struct list_node g_clk_root_list   = LIST_INITIAL_VALUE(g_clk_root_list);
 static
-struct list_node g_clk_orphan_list   = LIST_INITIAL_VALUE(g_clk_orphan_list);
+struct list_node g_clk_orphan_list = LIST_INITIAL_VALUE(g_clk_orphan_list);
 
 /****************************************************************************
  * Private Function Prototypes

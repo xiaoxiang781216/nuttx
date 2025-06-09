@@ -61,9 +61,9 @@ struct btn_upperhalf_s
 
   FAR const struct btn_lowerhalf_s *bu_lower;
 
-  btn_buttonset_t bu_sample;  /* Last sampled button states */
+  btn_buttonset_t bu_sample; /* Last sampled button states */
   bool bu_enabled;
-  struct rspinlock_s lock;    /* Lock for this button driver */
+  rspinlock_t lock;          /* Lock for this button driver */
 
   /* The following is a singly linked list of open references to the
    * button device.
