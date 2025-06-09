@@ -154,6 +154,7 @@ static int vlan_transmit(FAR struct netdev_lowerhalf_s *dev,
 
       if (newpkt == NULL)
         {
+          nerr("ERROR: Failed to reallocate packet\n");
           return -ENOMEM;
         }
 
@@ -297,6 +298,7 @@ int vlan_register(FAR struct netdev_lowerhalf_s *real, uint16_t vid,
 
   if (real == NULL || real->netdev.d_lltype != NET_LL_ETHERNET)
     {
+      nerr("ERROR: Invalid real device\n");
       return -EINVAL;
     }
 
@@ -311,6 +313,7 @@ int vlan_register(FAR struct netdev_lowerhalf_s *real, uint16_t vid,
   vlan = kmm_zalloc(sizeof(struct vlan_device_s));
   if (vlan == NULL)
     {
+      nerr("ERROR: Failed to allocate memory for VLAN device\n");
       return -ENOMEM;
     }
 
@@ -338,6 +341,7 @@ int vlan_register(FAR struct netdev_lowerhalf_s *real, uint16_t vid,
   ret = netdev_lower_vlan_add(real, vid, &vlan->dev);
   if (ret < 0)
     {
+      nerr("ERROR: Failed to add VLAN device: %d\n", ret);
       goto errout;
     }
 
@@ -375,6 +379,7 @@ void vlan_unregister(FAR struct netdev_lowerhalf_s *dev)
 
   if (vlan == NULL)
     {
+      nerr("ERROR: Vlan is NULL\n");
       return;
     }
 
