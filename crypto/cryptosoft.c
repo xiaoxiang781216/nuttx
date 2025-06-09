@@ -63,6 +63,7 @@ int swcr_id = -1;
 int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
                 FAR struct swcr_data *sw, caddr_t buf)
 {
+  FAR char *output;
   unsigned char blk[EALG_MAX_BLOCK_LEN];
   FAR unsigned char *iv;
   FAR unsigned char *ivp;
@@ -119,6 +120,7 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
   i = crd->crd_len;
 
   buf = buf + crd->crd_skip;
+  output = crp->crp_dst;
   while (i > 0)
     {
       bcopy(buf, blk, exf->blocksize);
@@ -175,8 +177,8 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
           ivp = nivp;
         }
 
-      bcopy(blk, crp->crp_dst, exf->blocksize);
-      crp->crp_dst += exf->blocksize;
+      bcopy(blk, output, exf->blocksize);
+      output += exf->blocksize;
 
       i -= blks;
 
