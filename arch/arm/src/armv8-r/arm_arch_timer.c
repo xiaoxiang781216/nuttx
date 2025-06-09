@@ -113,11 +113,6 @@ static inline uint64_t arm_arch_timer_count(void)
   return CP15_GET64(CNTVCT);
 }
 
-static inline uint64_t arm_arch_timer_get_cntfrq(void)
-{
-  return CP15_GET(CNTFRQ);
-}
-
 /****************************************************************************
  * Name: arm_arch_timer_compare_isr
  *

@@ -1085,7 +1085,7 @@ config ARCH_ARMV8R
 	bool
 	default n
 	select ARCH_HAVE_CPUINFO
-	select ARCH_HAVE_PERF_EVENTS
+	select ARCH_HAVE_PERF_EVENTS_USER_ACCESS
 	select ONESHOT
 	select ALARM_ARCH
 

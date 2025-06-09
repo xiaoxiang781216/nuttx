@@ -27,9 +27,11 @@
 
 #include "arm_internal.h"
 #include "sctlr.h"
+#include "arm_arch_timer.h"
 
 #ifdef CONFIG_ARCH_PERF_EVENTS
 
+#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -64,6 +66,11 @@ void up_perf_init(void *arg)
 {
   g_cpu_freq = (unsigned long)(uintptr_t)arg;
 
+  if (g_cpu_freq == ULONG_MAX || g_cpu_freq == 0)
+    {
+      g_cpu_freq = arm_arch_timer_get_cntfrq();
+    }
+
   cp15_pmu_uer(PMUER_UME);
   cp15_pmu_pmcr(PMCR_E);
   cp15_pmu_cesr(PMCESR_CCES);
@@ -74,11 +81,6 @@ unsigned long up_perf_getfreq(void)
   return g_cpu_freq;
 }
 
-clock_t up_perf_gettime(void)
-{
-  return cp15_pmu_rdccr();
-}
-
 void up_perf_convert(clock_t elapsed, struct timespec *ts)
 {
   clock_t left;
@@ -87,4 +89,11 @@ void up_perf_convert(clock_t elapsed, struct timespec *ts)
   left        = elapsed - ts->tv_sec * g_cpu_freq;
   ts->tv_nsec = NSEC_PER_SEC * (uint64_t)left / g_cpu_freq;
 }
+#endif /* CONFIG_BUILD_FLAT || __KERNEL__ */
+
+clock_t up_perf_gettime(void)
+{
+  return cp15_pmu_rdccr();
+}
+
 #endif /* CONFIG_ARCH_PERF_EVENTS */
