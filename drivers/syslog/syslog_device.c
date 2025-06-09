@@ -114,11 +114,6 @@ static const struct syslog_channel_ops_s g_syslog_dev_ops =
   syslog_dev_uninitialize
 };
 
-static const uint8_t g_syscrlf[2] =
-{
-  '\r', '\n'
-};
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -368,10 +363,6 @@ static ssize_t syslog_dev_write(FAR syslog_channel_t *channel,
                                 FAR const char *buffer, size_t buflen)
 {
   FAR struct syslog_dev_s *syslog_dev = (FAR struct syslog_dev_s *)channel;
-  FAR const char *endptr;
-  ssize_t nwritten;
-  size_t writelen;
-  size_t remaining;
   int ret;
 
   /* Check if the system is ready to do output operations */
@@ -396,106 +387,12 @@ static ssize_t syslog_dev_write(FAR syslog_channel_t *channel,
       return ret;
     }
 
-  /* Loop until we have output all characters */
-
-  for (endptr = buffer, remaining = buflen;
-       remaining > 0;
-       endptr++, remaining--)
+  ret = file_write(&syslog_dev->sl_file, buffer, buflen);
+  if (ret < 0)
     {
-      /* Check for carriage return or line feed */
-
-      if (*endptr == '\r' || *endptr == '\n')
-        {
-          /* Write everything up to the position of the special
-           * character.
-           *
-           * - buffer points to next byte to output.
-           * - endptr points to the special character.
-           */
-
-          writelen = (size_t)((uintptr_t)endptr - (uintptr_t)buffer);
-          if (writelen > 0)
-            {
-              nwritten = file_write(&syslog_dev->sl_file,
-                                    buffer, writelen);
-              if (nwritten < 0)
-                {
-                  ret = (int)nwritten;
-                  goto errout_with_lock;
-                }
-            }
-
-          /* Check for pre-formatted CR-LF sequence */
-
-          if (remaining > 1 &&
-              ((endptr[0] == '\r' && endptr[1] == '\n') ||
-               (endptr[0] == '\n' && endptr[1] == '\r')))
-            {
-              writelen = sizeof(g_syscrlf);
-
-              /* Skip over pre-formatted CR-LF or LF-CR sequence */
-
-              endptr++;
-              remaining--;
-            }
-          else
-            {
-              /* Ignore the carriage return, but for the linefeed, output
-               * both a carriage return and a linefeed.
-               */
-
-              writelen = *endptr == '\n' ? sizeof(g_syscrlf) : 0;
-            }
-
-          if (writelen > 0)
-            {
-              nwritten = file_write(&syslog_dev->sl_file,
-                                    g_syscrlf, writelen);
-
-              /* Synchronize the file when each CR-LF is encountered
-               * (i.e., implements line buffering always).
-               */
-
-              if (nwritten > 0)
-                {
-                  syslog_dev_flush(channel);
-                }
-
-              if (nwritten < 0)
-                {
-                  ret = (int)nwritten;
-                  goto errout_with_lock;
-                }
-            }
-
-          /* Adjust pointers */
-
-          buffer = endptr + 1;
-        }
+      syslog_dev->sl_state = SYSLOG_FAILURE;
     }
 
-  /* Write any unterminated data at the end of the buffer.
-   *
-   * - buffer points to next byte to output.
-   * - endptr points to the end of the buffer plus 1.
-   */
-
-  writelen = (size_t)((uintptr_t)endptr - (uintptr_t)buffer);
-  if (writelen > 0)
-    {
-      nwritten = file_write(&syslog_dev->sl_file, buffer, writelen);
-      if (nwritten < 0)
-        {
-          ret = (int)nwritten;
-          goto errout_with_lock;
-        }
-    }
-
-  syslog_dev_unlock(syslog_dev);
-  return buflen;
-
-errout_with_lock:
-  syslog_dev->sl_state = SYSLOG_FAILURE;
   syslog_dev_unlock(syslog_dev);
   return ret;
 }
@@ -532,13 +429,6 @@ static int syslog_dev_putc(FAR syslog_channel_t *channel, int ch)
       return ret;
     }
 
-  /* Ignore carriage returns */
-
-  if (ch == '\r')
-    {
-      return ch;
-    }
-
   /* The syslog device is ready for writing and we have something of
    * value to write.
    */
@@ -555,31 +445,7 @@ static int syslog_dev_putc(FAR syslog_channel_t *channel, int ch)
       return ret;
     }
 
-  /* Pre-pend a newline with a carriage return. */
-
-  if (ch == '\n')
-    {
-      /* Write the CR-LF sequence */
-
-      nbytes = file_write(&syslog_dev->sl_file, g_syscrlf, 2);
-
-      /* Synchronize the file when each CR-LF is encountered (i.e.,
-       * implements line buffering always).
-       */
-
-      if (nbytes > 0)
-        {
-          syslog_dev_flush(channel);
-        }
-    }
-  else
-    {
-      /* Write the non-newline character (and don't flush) */
-
-      uch = (uint8_t)ch;
-      nbytes = file_write(&syslog_dev->sl_file, &uch, 1);
-    }
-
+  nbytes = file_write(&syslog_dev->sl_file, &uch, 1);
   syslog_dev_unlock(syslog_dev);
 
   /* Check if the write was successful.  If not, nbytes will be
@@ -589,10 +455,9 @@ static int syslog_dev_putc(FAR syslog_channel_t *channel, int ch)
   if (nbytes < 0)
     {
       syslog_dev->sl_state = SYSLOG_FAILURE;
-      return (int)nbytes;
     }
 
-  return ch;
+  return nbytes;
 }
 
 /****************************************************************************
