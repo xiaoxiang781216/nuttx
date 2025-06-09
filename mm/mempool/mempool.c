@@ -372,9 +372,12 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool)
 #endif
   FAR sq_entry_t *blk;
   irqstate_t flags;
+  bool bypass;
 
 retry:
   flags = spin_lock_irqsave(&pool->lock);
+  bypass = kasan_bypass(true);
+
   blk = mempool_remove_queue(pool, &pool->queue);
   if (blk == NULL)
     {
@@ -383,6 +386,7 @@ retry:
           blk = mempool_remove_queue(pool, &pool->iqueue);
           if (blk == NULL)
             {
+              kasan_bypass(bypass);
               spin_unlock_irqrestore(&pool->lock, flags);
               return blk;
             }
@@ -391,6 +395,7 @@ retry:
         {
           size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
 
+          kasan_bypass(bypass);
           spin_unlock_irqrestore(&pool->lock, flags);
           if (pool->expandsize >= blocksize + sizeof(sq_entry_t))
             {
@@ -405,7 +410,10 @@ retry:
                 }
 
               kasan_poison(base, size);
+
               flags = spin_lock_irqsave(&pool->lock);
+              bypass = kasan_bypass(true);
+
               mempool_add_queue(pool, &pool->queue,
                                 base, nexpand, blocksize);
               sq_addlast((FAR sq_entry_t *)(base + nexpand * blocksize),
@@ -425,6 +433,7 @@ retry:
     }
 
   pool->nalloc++;
+  kasan_bypass(bypass);
   spin_unlock_irqrestore(&pool->lock, flags);
 
 #ifdef CONFIG_MM_RECORD
@@ -455,6 +464,8 @@ retry:
 void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
 {
   irqstate_t flags = spin_lock_irqsave(&pool->lock);
+  bool bypass = kasan_bypass(true);
+
 #ifdef CONFIG_MM_RECORD
   FAR struct mempool_record_s *record;
 
@@ -493,6 +504,7 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
     }
 
   kasan_poison(blk, pool->blocksize);
+  kasan_bypass(bypass);
   spin_unlock_irqrestore(&pool->lock, flags);
   if (pool->wait && pool->expandsize == 0)
     {
@@ -524,15 +536,19 @@ int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
 {
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
   irqstate_t flags;
+  bool bypass;
 
   DEBUGASSERT(pool != NULL && info != NULL);
 
   flags = spin_lock_irqsave(&pool->lock);
+  bypass = kasan_bypass(true);
+
   info->ordblks = sq_count(&pool->queue);
   info->iordblks = sq_count(&pool->iqueue);
   info->aordblks = pool->nalloc;
   info->arena = sq_count(&pool->equeue) * sizeof(sq_entry_t) +
     (info->aordblks + info->ordblks + info->iordblks) * blocksize;
+  kasan_bypass(bypass);
   spin_unlock_irqrestore(&pool->lock, flags);
   info->sizeblks = blocksize;
   if (pool->wait && pool->expandsize == 0)
@@ -559,6 +575,7 @@ mempool_info_task(FAR struct mempool_s *pool,
                   FAR const struct malltask *task)
 {
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
+  bool bypass;
   struct mallinfo_task info =
     {
       0, 0
@@ -567,9 +584,11 @@ mempool_info_task(FAR struct mempool_s *pool,
   if (task->pid == PID_MM_FREE)
     {
       irqstate_t flags = spin_lock_irqsave(&pool->lock);
+      bypass = kasan_bypass(true);
       size_t count = sq_count(&pool->queue) +
                      sq_count(&pool->iqueue);
 
+      kasan_bypass(bypass);
       spin_unlock_irqrestore(&pool->lock, flags);
       info.aordblks += count;
       info.uordblks += count * blocksize;
@@ -577,8 +596,10 @@ mempool_info_task(FAR struct mempool_s *pool,
   else if (task->pid == PID_MM_ALLOC)
     {
       irqstate_t flags = spin_lock_irqsave(&pool->lock);
+      bypass = kasan_bypass(true);
       size_t nalloc = pool->nalloc;
 
+      kasan_bypass(bypass);
       spin_unlock_irqrestore(&pool->lock, flags);
 
       info.aordblks += nalloc;

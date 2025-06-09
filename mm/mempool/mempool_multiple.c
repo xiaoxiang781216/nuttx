@@ -303,6 +303,7 @@ mempool_multiple_get_dict(FAR struct mempool_multiple_s *mpool,
                           FAR void *blk)
 {
   FAR void *addr;
+  bool   bypass;
   size_t index;
   size_t row;
   size_t col;
@@ -312,8 +313,9 @@ mempool_multiple_get_dict(FAR struct mempool_multiple_s *mpool,
       return NULL;
     }
 
+  bypass = kasan_bypass(true);
   addr = (FAR void *)ALIGN_DOWN((uintptr_t)blk, mpool->expandsize);
-  if (kasan_clear_tag(blk) == kasan_clear_tag(addr))
+  if (blk == addr)
     {
       /* It is not a memory block allocated by mempool
        * Because the blk is need not aligned with the expandsize
@@ -326,6 +328,7 @@ mempool_multiple_get_dict(FAR struct mempool_multiple_s *mpool,
   index = *(FAR size_t *)addr;
   if (index >= mpool->dict_used)
     {
+      kasan_bypass(bypass);
       return NULL;
     }
 
@@ -338,9 +341,11 @@ mempool_multiple_get_dict(FAR struct mempool_multiple_s *mpool,
       ((FAR char *)kasan_clear_tag(blk) -
        (FAR char *)addr >= mpool->dict[row][col].size))
     {
+      kasan_bypass(bypass);
       return NULL;
     }
 
+  kasan_bypass(bypass);
   return &mpool->dict[row][col];
 }
 

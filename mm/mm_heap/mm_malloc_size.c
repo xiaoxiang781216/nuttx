@@ -42,16 +42,16 @@ size_t mm_malloc_size(FAR struct mm_heap_s *heap, FAR void *mem)
 {
   FAR struct mm_freenode_s *node;
   ssize_t size;
-  bool flag;
+  bool bypass;
 
-  flag = kasan_bypass(true);
+  bypass = kasan_bypass(true);
 #ifdef CONFIG_MM_HEAP_MEMPOOL
   if (heap->mm_mpool)
     {
       size = mempool_multiple_alloc_size(heap->mm_mpool, mem);
       if (size >= 0)
         {
-          kasan_bypass(flag);
+          kasan_bypass(bypass);
           return size;
         }
     }
@@ -74,7 +74,7 @@ size_t mm_malloc_size(FAR struct mm_heap_s *heap, FAR void *mem)
 
   size = MM_SIZEOF_NODE(node) - MM_ALLOCNODE_OVERHEAD;
 
-  kasan_bypass(flag);
-  UNUSED(flag);
+  kasan_bypass(bypass);
+  UNUSED(bypass);
   return size;
 }
