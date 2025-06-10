@@ -51,6 +51,17 @@ config DEV_RPMSG_SERVER_WORK_STACKSIZE
 
 endif # DEV_RPMSG_SERVER
 
+config OPTEE_OPENVELA_COMPAT
+	bool "Enable driver compatibility with openvela OP-TEE OS"
+	default n
+	---help---
+		The Openvela version of OP-TEE OS makes a special interpretation of
+		registered memory (OPTEE_MSG_ATTR_TYPE_RMEM_*) for use directly with
+		pointers, instead of cookies. Enable this setting to have the OP-TEE
+		driver pass temporary memory as registered memory in the way that
+		Openvela expects. Enabled by default with the socket transports of the
+		OP-TEE driver.
+
 choice
 	prompt "Select OP-TEE dev implementation"
 	default DEV_OPTEE_NONE
@@ -64,12 +75,14 @@ choice
 
 config DEV_OPTEE_LOCAL
 	bool "OPTEE Local Socket Support"
+	select OPTEE_OPENVELA_COMPAT
 	depends on NET_LOCAL
 	depends on LIBC_MEMFD_SHMFS || LIBC_MEMFD_TMPFS
 	depends on ALLOW_BSD_COMPONENTS
 
 config DEV_OPTEE_RPMSG
 	bool "OP-TEE RPMSG Socket Support"
+	select OPTEE_OPENVELA_COMPAT
 	depends on NET_RPMSG
 	depends on LIBC_MEMFD_SHMFS || LIBC_MEMFD_TMPFS
 	depends on ALLOW_BSD_COMPONENTS

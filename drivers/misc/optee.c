@@ -558,6 +558,56 @@ static int optee_close(FAR struct file *filep)
   return 0;
 }
 
+#ifdef CONFIG_OPTEE_OPENVELA_COMPAT
+static int optee_memref_to_msg_param(FAR struct optee_priv_data *priv,
+                                     FAR struct optee_msg_param *mp,
+                                     FAR const struct tee_ioctl_param *p)
+{
+  FAR struct optee_shm *shm;
+
+  /* Τhe case for non-registered memrefs below is a hack to work with
+   * openvela. Normally, non-registered memory should be specified as
+   * OPTEE_MSG_ATTR_TYPE_TMEM_* (note the 'T') and `buf_ptr` should be set
+   * to the physical address of its page list representation (see
+   * alternative optee_memref_to_msg_param() implementation below).
+   *
+   * Related openvela patches:
+   *  - external_optee_optee_os@1a29df42 core/tee/entry_std.c#L160
+   *  - frameworks_security_optee_vela@54b377d5c compat/mobj_dyn_shm.c#L25
+   */
+
+  mp->attr = OPTEE_MSG_ATTR_TYPE_RMEM_INPUT + p->attr -
+             TEE_IOCTL_PARAM_ATTR_TYPE_MEMREF_INPUT;
+  if (p->c != TEE_MEMREF_NULL)
+    {
+      shm = idr_find(priv->shms, p->c);
+      if (shm == NULL)
+        {
+          return -EINVAL;
+        }
+
+      if (shm->flags & TEE_SHM_REGISTER)
+        {
+          mp->u.rmem.shm_ref = (uintptr_t)shm;
+        }
+      else
+        {
+          /* hack to comply with openvela */
+
+          mp->u.rmem.shm_ref = shm->addr;
+        }
+    }
+  else
+    {
+      mp->u.rmem.shm_ref = 0;
+    }
+
+  mp->u.rmem.size = p->b;
+  mp->u.rmem.offs = p->a;
+  return 0;
+}
+
+#else /* !CONFIG_OPTEE_OPENVELA_COMPAT */
 static int optee_memref_to_msg_param(FAR struct optee_priv_data *priv,
                                      FAR struct optee_msg_param *mp,
                                      FAR const struct tee_ioctl_param *p)
@@ -612,6 +662,7 @@ static int optee_memref_to_msg_param(FAR struct optee_priv_data *priv,
 
   return 0;
 }
+#endif /* !CONFIG_OPTEE_OPENVELA_COMPAT */
 
 static int optee_to_msg_param(FAR struct optee_priv_data *priv,
                               FAR struct optee_msg_param *mparams,
@@ -928,8 +979,12 @@ static int optee_ioctl_version(FAR struct tee_ioctl_version_data *vers)
   vers->impl_id = TEE_IMPL_ID_OPTEE;
   vers->impl_caps = TEE_OPTEE_CAP_TZ;
   vers->gen_caps = TEE_GEN_CAP_GP |
-                   TEE_GEN_CAP_MEMREF_NULL |
-                   TEE_GEN_CAP_REG_MEM;
+                   TEE_GEN_CAP_MEMREF_NULL;
+
+#ifndef CONFIG_OPTEE_OPENVELA_COMPAT
+  vers->gen_caps |= TEE_GEN_CAP_REG_MEM;
+#endif
+
   return 0;
 }
 
