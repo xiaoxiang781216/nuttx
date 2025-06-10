@@ -834,7 +834,8 @@ static void coredump_dump_dev(pid_t pid)
     }
 # endif
 
-# ifndef CONFIG_BOARD_COREDUMP_OVERWRITE
+# if defined(CONFIG_BOARD_COREDUMP_MEMDEV) && \
+     !defined(CONFIG_BOARD_COREDUMP_OVERWRITE)
   if (elf_exist_hdr((FAR struct lib_instream_s *)&g_devinstream))
     {
       _alert("Coredump memory device already exist:%s\n",
