@@ -28,6 +28,7 @@
 
 #include <assert.h>
 #include <debug.h>
+#include <execinfo.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
@@ -117,18 +118,22 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
 #endif
 
   kasan_poison(mem, nodesize);
+  node = (FAR struct mm_freenode_s *)
+    ((FAR char *)kasan_reset_tag(mem) - MM_SIZEOF_ALLOCNODE);
 
   if (delay)
     {
       mm_unlock(heap);
+#if CONFIG_MM_BACKTRACE > 0
+      sched_backtrace(_SCHED_GETTID(), node->backtrace_free,
+                      CONFIG_MM_BACKTRACE, CONFIG_MM_BACKTRACE_SKIP);
+#endif
       add_delaylist(heap, mem);
       return;
     }
 
   /* Map the memory chunk into a free node */
 
-  node = (FAR struct mm_freenode_s *)
-         ((FAR char *)kasan_reset_tag(mem) - MM_SIZEOF_ALLOCNODE);
   nodesize = MM_SIZEOF_NODE(node);
 
   /* Sanity check against double-frees */

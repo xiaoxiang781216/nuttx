@@ -441,6 +441,10 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
   DEBUGASSERT(buf->magic == MEMPOOL_MAGIC_ALLOC);
   buf->magic = MEMPOOL_MAGIC_FREE;
 
+#if CONFIG_MM_BACKTRACE > 0
+  sched_backtrace(_SCHED_GETTID(), buf->backtrace_free, CONFIG_MM_BACKTRACE,
+                  CONFIG_MM_HEAP_MEMPOOL_BACKTRACE_SKIP);
+#endif
 #endif
 
   pool->nalloc--;

@@ -133,6 +133,7 @@ struct mempool_backtrace_s
 #  endif
 #  if CONFIG_MM_BACKTRACE > 0
   FAR void *backtrace[CONFIG_MM_BACKTRACE];
+  FAR void *backtrace_free[CONFIG_MM_BACKTRACE];
 #  endif
 };
 #endif
