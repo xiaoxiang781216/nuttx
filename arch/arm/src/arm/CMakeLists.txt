@@ -18,7 +18,7 @@
 #
 # ##############################################################################
 
-set(SRCS arm_head.S)
+target_sources(nuttx PRIVATE arm_head.S)
 
 list(
   APPEND

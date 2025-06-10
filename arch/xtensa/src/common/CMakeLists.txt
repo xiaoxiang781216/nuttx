@@ -20,14 +20,13 @@
 
 # Common Xtensa files (arch/xtensa/src/common)
 
+target_sources(
+  nuttx PRIVATE xtensa_vectors.S xtensa_window_vector.S xtensa_windowspill.S
+                xtensa_int_handlers.S xtensa_user_handler.S)
+
 list(
   APPEND
   SRCS
-  xtensa_vectors.S
-  xtensa_window_vector.S
-  xtensa_windowspill.S
-  xtensa_int_handlers.S
-  xtensa_user_handler.S
   xtensa_context.S
   xtensa_cpuint.S
   xtensa_panic.S
