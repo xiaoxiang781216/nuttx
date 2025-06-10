@@ -108,8 +108,8 @@ if(MERGE_LD)
       $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--entry=kernel___start -nostdlib
       $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--gc-sections
       $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--cref
-      $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>-Map=nuttx_merger.map -T
-      ${LD_SCRIPT_TMP} ${MERGE_LINK_OPTIONS}
+      $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>-Map=nuttx_merger.map
+      ${NUTTX_EXTRA_FLAGS} -T ${LD_SCRIPT_TMP} ${MERGE_LINK_OPTIONS}
       $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--start-group
       ${nuttx_merged_libs_paths} $<$<NOT:$<BOOL:${USE_LINKER}>>:-Wl,>--end-group
       -o nuttx_merger.elf
