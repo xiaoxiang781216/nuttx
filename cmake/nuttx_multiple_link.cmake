@@ -101,7 +101,7 @@ macro(define_multiple_link_target inter_target dep_target linktimes)
       OUTPUT ${LINK_KASAN_GLOBAL_SOURCE} POST_BUILD
       COMMAND
         ${NUTTX_DIR}/tools/kasan_global.py -e ${CMAKE_BINARY_DIR}/${dep_target}
-        -o ${LINK_KASAN_GLOBAL_SOURCE} -a ${CONFIG_MM_KASAN_GLOBAL_ALIGN}
+        -o ${LINK_KASAN_GLOBAL_SOURCE} -a ${CONFIG_MM_KASAN_GLOBAL_ALIGN} --debug > kasan_global_${linktimes}.log
       DEPENDS ${dep_target}
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       COMMAND_EXPAND_LISTS)
