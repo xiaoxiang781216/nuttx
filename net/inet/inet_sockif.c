@@ -40,6 +40,7 @@
 
 #include "tcp/tcp.h"
 #include "udp/udp.h"
+#include "pkt/pkt.h"
 #include "icmp/icmp.h"
 #include "icmpv6/icmpv6.h"
 #include "sixlowpan/sixlowpan.h"
@@ -2429,6 +2430,16 @@ inet_sockif(sa_family_t family, int type, int protocol)
       && protocol == IPPROTO_ICMPV6)
     {
       return &g_icmpv6_sockif;
+    }
+  else
+#endif
+#ifdef CONFIG_NET_PKT
+  /* Support for SOCK_RAW or SOCK_DGRAM sockets with IPPROTO_RAW */
+
+  if (((type == SOCK_RAW) || (type == SOCK_DGRAM)) &&
+      (protocol == IPPROTO_RAW))
+    {
+      return &g_pkt_sockif;
     }
   else
 #endif
