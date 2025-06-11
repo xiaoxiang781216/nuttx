@@ -39,7 +39,7 @@ static const struct section_mapping_s g_section_mapping[] =
 {
   {
     VIRT_FLASH_PSECTION, VIRT_FLASH_VSECTION,
-    MMU_MEMFLAGS, _NSECTIONS(VIRT_FLASH_SECSIZE)
+    MMU_ROMFLAGS, _NSECTIONS(VIRT_FLASH_SECSIZE)
   },
   {
     VIRT_IO_PSECTION, VIRT_IO_VSECTION,
