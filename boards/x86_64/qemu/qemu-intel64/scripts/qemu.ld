@@ -89,6 +89,19 @@ SECTIONS
         _einit = ABSOLUTE(.);
     }
 
+#ifdef CONFIG_MM_KASAN_GLOBAL
+    .kasan.unused : {
+        *(.data..LASANLOC*)
+    }
+    .kasan.global : {
+        KEEP (*(.data..LASAN0))
+        KEEP (*(.data.rel.local..LASAN0))
+    }
+    .kasan.shadows : {
+        *(.kasan.shadows)
+    }
+#endif
+
     .rodata ALIGN(0x1000) :
     {
         _srodata = ABSOLUTE(.);
