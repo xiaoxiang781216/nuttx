@@ -100,41 +100,6 @@ static uid_t geteuid_bypid(pid_t pid)
 }
 
 /****************************************************************************
- * Name: file_tx_get
- *
- * Description:
- *   Given a file descriptor, return the corresponding instance of struct
- *   file and increment the inode reference conut of this file.
- *   Note: The function based on file_get, it is can be used to
- *       translate file descriptor between NuttX process
- *
- * Input Parameters:
- *   fd    - The file descriptor
- *   filep - The location to return the struct file instance
- *
- * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returned on
- *   any failure.
- *
- ****************************************************************************/
-
-static int file_tx_get(unsigned int fd, FAR struct file *filep)
-{
-  FAR struct file *file;
-  int ret;
-
-  ret = file_get(fd, &file);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  ret = file_dup2(file, filep);
-  file_put(file);
-  return ret;
-}
-
-/****************************************************************************
  * Name: binder_get_object
  *
  * Description:
@@ -604,7 +569,7 @@ static int binder_translate_fd(uint32_t fd, binder_size_t fd_offset,
     }
 
   list_initialize(&fixup->fixup_entry);
-  ret = file_tx_get(fd, &fixup->file);
+  ret = file_get(fd, &fixup->file);
   if (ret < 0)
     {
       binder_debug(BINDER_DEBUG_ERROR,

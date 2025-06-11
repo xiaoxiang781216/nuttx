@@ -360,8 +360,8 @@ static int binder_apply_fd_fixups(FAR struct binder_proc *proc,
   list_for_every_entry(&t->fd_fixups, fixup, struct binder_txn_fd_fixup,
                        fixup_entry)
   {
-    fd = file_dup(&fixup->file, 0, 0);
-    file_close(&fixup->file);
+    fd = file_dup(fixup->file, 0, 0);
+    file_put(fixup->file);
 
     if (fd < 0)
       {

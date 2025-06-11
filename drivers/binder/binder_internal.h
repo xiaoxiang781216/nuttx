@@ -526,7 +526,7 @@ struct binder_object
 struct binder_txn_fd_fixup
 {
   struct list_node fixup_entry; /* list entry */
-  struct file file;             /* struct file to be associated with new fd */
+  FAR struct file *file;        /* struct file to be associated with new fd */
   size_t offset;                /* offset in buffer data to this fixup */
 };
 
