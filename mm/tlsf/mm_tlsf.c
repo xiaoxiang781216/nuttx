@@ -131,10 +131,6 @@ struct memdump_record_s
 #ifdef CONFIG_MM_RECORD_STACK
   FAR void *stack;                          /* The backtrace buffer for caller */
 #endif
-
-  /* Kasan is disable or enable for this heap */
-
-  bool mm_nokasan;
 };
 #endif
 
