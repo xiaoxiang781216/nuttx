@@ -523,7 +523,7 @@ static FAR struct vsock_conn_s *vsock_alloc(void)
   if (ret < 0)
     {
       kmm_free(conn);
-      vrterr("circbuf_init failed\n");
+      vrterr("circbuf_init failed %d\n", ret);
       return NULL;
     }
 
@@ -997,7 +997,7 @@ static int vsock_send_pkt(FAR struct vsock_conn_s *conn,
   vsock_restorelock(conn, rxcount, txcount);
   if (ret < 0)
     {
-      vrterr("Alloc pkt and buffer failed%d\n");
+      vrterr("Alloc pkt and buffer failed %d\n", ret);
       return ret;
     }
 
@@ -1971,7 +1971,7 @@ static ssize_t vsock_sendmsg(FAR struct socket *psock,
 
       if (ret < 0)
         {
-          vrterr("vsock_sendmsg: tx_credit timeout\n");
+          vrterr("vsock_sendmsg: tx_credit timeout %d\n", ret);
           break;
         }
     }
