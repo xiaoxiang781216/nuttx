@@ -33,6 +33,7 @@
 #include <arch/chip/chip.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/timers/arch_alarm.h>
+#include <nuttx/kmalloc.h>
 
 #include "gic.h"
 #include "arm_arch_timer.h"
