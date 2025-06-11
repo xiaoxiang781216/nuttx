@@ -87,7 +87,7 @@ extern "C"
 #endif
 
 #define RSPINLOCK_CPU_INVALID (-1)
-#define RSPINLOCK_INITIALIZER {RSPINLOCK_CPU_INVALID, SP_UNLOCKED, 0}
+#define RSPINLOCK_INITIALIZER {SP_UNLOCKED, RSPINLOCK_CPU_INVALID, 0}
 
 /****************************************************************************
  * Public Types
@@ -97,8 +97,8 @@ struct rspinlock_s
 {
   /* Which cpu is holding spinlock,  and taking recursive count */
 
-  volatile int holder;
   volatile spinlock_t lock;
+  volatile int holder;
   volatile unsigned int count;
 };
 
