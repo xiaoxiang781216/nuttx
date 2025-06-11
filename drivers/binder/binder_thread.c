@@ -222,7 +222,7 @@ static void binder_free_buf(FAR struct binder_proc *proc,
     }
 
   binder_release_entire_buffer(proc, thread, buffer, is_failure);
-  binder_alloc_free_buf(&proc->alloc, buffer);
+  mm_free(proc->alloc.heap, buffer);
 }
 
 /****************************************************************************

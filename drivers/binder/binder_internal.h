@@ -36,6 +36,7 @@
 #include <nuttx/android/binder.h>
 #include <nuttx/list.h>
 #include <nuttx/mutex.h>
+#include <nuttx/mm/mm.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/spinlock.h>
 
@@ -197,15 +198,9 @@ struct wait_queue_entry
 
 struct binder_buffer
 {
-  struct list_node entry;           /* free and allocated entries by address */
-  struct list_node rb_node;         /* free entry by size or allocated entry */
-  unsigned free : 1;                /* true if buffer is free */
-  unsigned clear_on_free : 1;       /* true if buffer must be zeroed after use */
   unsigned allow_user_free : 1;     /* true if user is allowed to free buffer */
   unsigned async_transaction : 1;   /* true if buffer is in use for an async txn */
-  unsigned oneway_spam_suspect : 1; /* true if total async allocate size just
-                                     * exceed spamming detect threshold */
-  unsigned debug_id : 27;           /* unique ID for debugging */
+  unsigned debug_id : 30;           /* unique ID for debugging */
 
   FAR struct binder_transaction *transaction;
 
@@ -214,13 +209,6 @@ struct binder_buffer
   int offsets_size;
   FAR void *user_data;
   int pid;
-};
-
-/* struct binder_page - page data object used for binder */
-
-struct binder_page
-{
-  FAR void * page_ptr; /* pointer to page address in mmap'd area */
 };
 
 /**
@@ -234,14 +222,11 @@ struct binder_page
 struct binder_alloc
 {
   pid_t pid;                               /* pid for associated binder_proc */
-  mutex_t alloc_lock;                      /* Protected lock for associated binder_proc */
-  FAR void *buffer_data;                   /* base of per-proc address space mapped via mmap */
-  size_t buffer_data_size;                 /* size of address space specified via mmap */
   off_t kbuf_ubuf_offset;                  /* offset between kbuf and ubuf */
-  struct list_node buffers_list;           /* list of all buffers for this proc */
-  struct list_node free_buffers_list;      /* list of buffers available for allocation */
-  struct list_node allocated_buffers_list; /* allocated buffers sorted by address */
-  FAR struct binder_page *pages_array;     /* array of binder_lru_page */
+  FAR struct mm_heap_s *heap;
+  FAR void *base;
+  size_t size;
+  char name[32];
 };
 
 /**
@@ -615,7 +600,7 @@ static inline bool binder_available_for_proc_work_ilocked(
 
 /* function prototype define for binder_alloc.c */
 
-void binder_alloc_init(FAR struct binder_alloc *alloc, pid_t pid);
+int binder_alloc_init(FAR struct binder_alloc *alloc, pid_t pid);
 int binder_alloc_mmap(FAR struct mm_map_s *mm,
                       FAR struct binder_alloc *alloc,
                       FAR struct binder_mmap_area *vma);
@@ -637,8 +622,6 @@ FAR struct binder_buffer *binder_alloc_new_buf(
   FAR struct binder_alloc *alloc, size_t data_size, size_t secctx_sz,
   size_t offsets_size, int is_async, FAR int *ret);
 
-void binder_alloc_free_buf(FAR struct binder_alloc *alloc,
-                           FAR struct binder_buffer *buffer);
 void binder_alloc_deferred_release(FAR struct binder_alloc *alloc);
 
 /* function prototype define for binder_sched.c */

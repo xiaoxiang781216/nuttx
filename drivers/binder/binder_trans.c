@@ -1311,7 +1311,6 @@ void binder_transaction(FAR struct binder_proc *proc,
   t->buffer->debug_id = t->debug_id;
   t->buffer->transaction = t;
   t->buffer->target_node = target_node;
-  t->buffer->clear_on_free = !!(t->flags & TF_CLEAR_BUF);
 
   if (binder_alloc_copy_to_buffer(&target_proc->alloc, t->buffer,
                       ALIGN(tr->data_size, sizeof(void *)),
@@ -1569,7 +1568,7 @@ err_copy_data_failed:
 
   target_node = NULL;
   t->buffer->transaction = NULL;
-  binder_alloc_free_buf(&target_proc->alloc, t->buffer);
+  mm_free(target_proc->alloc.heap, t->buffer);
 err_binder_alloc_buf_failed:
   kmm_free(tcomplete);
 err_alloc_tcomplete_failed:

@@ -31,3 +31,8 @@ config DRIVERS_BINDER_NPOLLWAITERS
 	int "Driver binder number of poll waiters"
 	default 4
 	depends on DRIVERS_BINDER
+
+config BINDER_HEAP_SIZE
+	int "Driver binder heap size"
+	default 65536
+	depends on DRIVERS_BINDER

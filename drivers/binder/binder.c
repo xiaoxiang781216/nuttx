@@ -602,7 +602,13 @@ static int binder_open(FAR struct file *filep)
     }
 
   proc->context = &binder_dev->context;
-  binder_alloc_init(&proc->alloc, proc->pid);
+  if (binder_alloc_init(&proc->alloc, proc->pid) < 0)
+    {
+      binder_debug(BINDER_DEBUG_ERROR,
+                   "ERROR: Failed to init binder alloc\n");
+      kmm_free(proc);
+      return -ENOMEM;
+    }
 
   nxmutex_lock(&binder_dev->binder_procs_lock);
   binder_dev->ref_count++;
