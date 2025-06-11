@@ -30,7 +30,7 @@
 #include <nuttx/config.h>
 
 #include <nuttx/list.h>
-#include <nuttx/spinlock.h>
+#include <nuttx/spinlock_type.h>
 
 /****************************************************************************
  * Pre-processor Definitions
