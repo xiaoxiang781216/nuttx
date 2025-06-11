@@ -139,6 +139,9 @@ exception_common:
   csrr       s0, CSR_STATUS       /* s0=status */
   csrr       s1, CSR_EPC          /* s1=exception PC */
   csrr       s2, CSR_CAUSE        /* s2=cause */
+#ifdef CONFIG_ARCH_RV_HAVE_CLIC
+  csrr       s4, CSR_INTTHRESH    /* s4=interrupt threshold */
+#endif
 
 #ifdef CONFIG_ARCH_KERNEL_STACK
   csrr       s3, CSR_SCRATCH
@@ -150,6 +153,9 @@ exception_common:
   REGSTORE   s0, REG_INT_CTX(sp)
   REGSTORE   s1, REG_EPC(sp)
   REGSTORE   s3, REG_SP(sp)
+#ifdef CONFIG_ARCH_RV_HAVE_CLIC
+  REGSTORE   s4, REG_INT_THRESH(sp)
+#endif
 
 #ifdef CONFIG_LIB_SYSCALL
   /* Check whether it is an exception or interrupt */
@@ -264,6 +270,10 @@ return_from_exception:
 
   REGLOAD    s0, REG_INT_CTX(sp)  /* restore status */
   csrw       CSR_STATUS, s0
+#ifdef CONFIG_ARCH_RV_HAVE_CLIC
+  REGLOAD    s0, REG_INT_THRESH(sp) /* restore interrupt threshold */
+  csrw       CSR_INTTHRESH, s0
+#endif
 
 #ifdef CONFIG_LIB_SYSCALL
   /* Store tcb to scratch register */
