@@ -138,9 +138,6 @@ void up_schedule_sigaction(struct tcb_s *tcb)
 #ifdef CONFIG_SMP
 void up_schedule_sigaction(struct tcb_s *tcb)
 {
-  int cpu;
-  int me;
-
   sinfo("tcb=%p, rtcb=%p current_regs=%p\n", tcb,
         this_task(), up_current_regs());
 
@@ -150,9 +147,6 @@ void up_schedule_sigaction(struct tcb_s *tcb)
 
   if (tcb->task_state == TSTATE_TASK_RUNNING)
     {
-      me  = this_cpu();
-      cpu = tcb->cpu;
-
       /* tcb is running on the same CPU */
 
       /* Save registers that must be protected while the signal
