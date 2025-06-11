@@ -670,6 +670,8 @@ void up_invalidate_dcache(uintptr_t start, uintptr_t end)
   uintptr_t start_ = start;
   uint32_t ssize = up_get_dcache_linesize();
 
+  UNUSED(start_);
+
   /* Invalidate the D-Cache containing this range of addresses
    * Round down the start address to the nearest cache line boundary.
    *
@@ -854,6 +856,8 @@ void up_clean_dcache(uintptr_t start, uintptr_t end)
   while (start < end);
 #endif /* !CONFIG_ARMV7M_DCACHE_WRITETHROUGH */
 
+  UNUSED(start_);
+
   UP_MB();
 
   l2cc_clean(start_, end);
@@ -1015,6 +1019,8 @@ void up_flush_dcache(uintptr_t start, uintptr_t end)
 #else
   up_invalidate_dcache(start, end);
 #endif /* !CONFIG_ARMV7M_DCACHE_WRITETHROUGH */
+
+  UNUSED(start_);
 
   l2cc_flush(start_, end);
 }
