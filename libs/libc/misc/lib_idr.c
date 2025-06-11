@@ -26,6 +26,7 @@
 
 #include <nuttx/lib/lib.h>
 #include <nuttx/idr.h>
+#include <nuttx/mutex.h>
 #include <sys/tree.h>
 
 /****************************************************************************

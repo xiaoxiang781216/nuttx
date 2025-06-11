@@ -31,6 +31,7 @@
 
 #include <limits.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <wchar.h>
 
 /****************************************************************************
