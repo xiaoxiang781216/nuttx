@@ -214,8 +214,10 @@ function setup_toolchain()
   if [ "$XTENSAD_LICENSE_FILE" == "" ]; then
     export XTENSAD_LICENSE_FILE=28000@10.38.168.2
   fi
+  # WASI SDK is clang based toolchain to build WebAssembly targets
   export WASI_SDK_PATH=${ROOTDIR}/prebuilts/clang/${SYSTEM}/wasm
-  export PATH=${WASI_SDK_PATH}:$PATH
+  # Wasm toolchain is used to optimize wasm binaries
+  export WASM_TOOLCHAIN_PATH=${ROOTDIR}/prebuilts/clang/${SYSTEM}/wasm
   export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/pyelftools
   export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/cxxfilt
   export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/Mako
