@@ -34,6 +34,7 @@
 #include <nuttx/clock.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/timers/oneshot.h>
 #include <nuttx/timers/arch_alarm.h>
 
@@ -88,6 +89,7 @@ static int sim_current(struct oneshot_lowerhalf_s *lower,
  * Private Data
  ****************************************************************************/
 
+static rspinlock_t g_oneshot_list_lock = RSPINLOCK_INITIALIZER;
 static sq_queue_t g_oneshot_list;
 
 /* Lower half operations */
@@ -162,7 +164,7 @@ static inline void sim_reset_alarm(struct timespec *alarm)
  * Name: sim_update_hosttimer
  *
  * Description:
- *   Ths function is called periodically to deliver the tick events to the
+ *   This function is called periodically to deliver the tick events to the
  *   NuttX simulation.
  *
  ****************************************************************************/
@@ -218,7 +220,7 @@ static void sim_update_hosttimer(void)
  * Name: sim_timer_update_internal
  *
  * Description:
- *   Ths function is called periodically to deliver the tick events to the
+ *   This function is called periodically to deliver the tick events to the
  *   NuttX simulation.
  *
  ****************************************************************************/
@@ -228,7 +230,7 @@ static void sim_timer_update_internal(void)
   sq_entry_t *entry;
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = rspin_lock_irqsave(&g_oneshot_list_lock);
 
   sim_timer_current(&g_timer_lastirq);
 
@@ -237,7 +239,9 @@ static void sim_timer_update_internal(void)
       sim_process_tick(entry);
     }
 
-  leave_critical_section(flags);
+  sim_update_hosttimer();
+
+  rspin_unlock_irqrestore(&g_oneshot_list_lock, flags);
 }
 
 /****************************************************************************
@@ -341,7 +345,7 @@ static int sim_start(struct oneshot_lowerhalf_s *lower,
 
   DEBUGASSERT(priv != NULL && callback != NULL && ts != NULL);
 
-  flags = enter_critical_section();
+  flags = rspin_lock_irqsave(&g_oneshot_list_lock);
 
   sim_timer_current(&current);
   clock_timespec_add(&current, ts, &priv->alarm);
@@ -351,7 +355,7 @@ static int sim_start(struct oneshot_lowerhalf_s *lower,
 
   sim_update_hosttimer();
 
-  leave_critical_section(flags);
+  rspin_unlock_irqrestore(&g_oneshot_list_lock, flags);
 
   return OK;
 }
@@ -390,8 +394,7 @@ static int sim_cancel(struct oneshot_lowerhalf_s *lower,
 
   DEBUGASSERT(priv != NULL);
 
-  flags = enter_critical_section();
-
+  flags = rspin_lock_irqsave(&g_oneshot_list_lock);
   if (ts != NULL)
     {
       sim_timer_current(&current);
@@ -404,7 +407,7 @@ static int sim_cancel(struct oneshot_lowerhalf_s *lower,
   priv->callback = NULL;
   priv->arg      = NULL;
 
-  leave_critical_section(flags);
+  rspin_unlock_irqrestore(&g_oneshot_list_lock, flags);
 
   return OK;
 }

@@ -26,12 +26,19 @@
 #include <debug.h>
 #include <nuttx/arch.h>
 #include <nuttx/power/pm.h>
+#include <nuttx/spinlock.h>
 
 #include "sim_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static spinlock_t g_sim_idle_lock = SP_UNLOCKED;
 
 /****************************************************************************
  * Public Functions
@@ -60,8 +67,7 @@ void up_idle(void)
 #endif
   irqstate_t flags;
 
-  flags = enter_critical_section();
-  sched_lock();
+  flags = spin_lock_irqsave_nopreempt(&g_sim_idle_lock);
 
 #ifdef CONFIG_PM
   /* Fake some power management stuff for testing purposes */
@@ -87,6 +93,5 @@ void up_idle(void)
   pm_changestate(PM_IDLE_DOMAIN, PM_RESTORE);
 #endif
 
-  sched_unlock();
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&g_sim_idle_lock, flags);
 }
