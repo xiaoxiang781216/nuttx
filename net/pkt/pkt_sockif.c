@@ -349,6 +349,7 @@ static int pkt_close(FAR struct socket *psock)
 
   switch (psock->s_type)
     {
+      case SOCK_DGRAM:
       case SOCK_RAW:
       case SOCK_CTRL:
         {
