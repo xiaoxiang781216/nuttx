@@ -165,28 +165,27 @@ process_one() {
     $OBJCOPY "@$rename_args" --prefix-symbols=$prefix "$input" "$output_file"
 }
 
-remove_prefix_args=()
-remove_prefix_symbols=""
+remove_prefix_args_file=$(mktemp)
+remove_prefix_symbols_file=$(mktemp)
+remove_prefix_symbols_lock="${remove_prefix_args_file}.lock"
 remove_symbol_prefix() {
     local input="$1"
     local output_file="$2"
     local prefix="$3"
 
-    # Find skipped sections and their indices
     while read -r section ndx; do
         ndx="${ndx//[^0-9]/}"
         if should_skip_section "$section"; then
             echo "[$(basename "$input")] Removing prefix from symbols in section $section"
-            # Find symbols with the same index as the skipped section
             while read -r symbol sym_ndx; do
                 if [ "$sym_ndx" = "$ndx" ]; then
-                    # Remove prefix from symbol
                     newname="${symbol#$prefix}"
-                    if ! echo -e "$remove_prefix_symbols" | grep -Fxq "$newname"; then
-                        remove_prefix_symbols+="$newname\n"
-                        remove_prefix_args+=(--redefine-sym "$symbol=$newname")
-                    fi
-
+                    flock "$remove_prefix_symbols_lock" bash -c "
+                        if ! grep -Fxq \"$newname\" \"$remove_prefix_symbols_file\"; then
+                            echo \"$newname\" >> \"$remove_prefix_symbols_file\"
+                            echo \"--redefine-sym $symbol=$newname\" >> \"$remove_prefix_args_file\"
+                        fi
+                    "
                     echo "[$(basename "$input")] Removing prefix from symbol $symbol -> $newname"
                 fi
             done < <($READELF -Ws "$input" | awk '/^\s*[0-9]+:/{print $8, $7}')
@@ -217,7 +216,9 @@ extract_lib_files() {
 }
 
 # Handle all file
-for input in "${inputs[@]}"; do
+for input in "${inputs[@]}";
+do
+{
     if [ "$is_output_dir" -eq 1 ]; then
         filename=$(basename "$input")
         final_output="${output%/}/$filename"
@@ -254,7 +255,16 @@ for input in "${inputs[@]}"; do
         process_one "$input" "$final_output" "$prefix"
         remove_symbol_prefix "$final_output" "$final_output" "$prefix"
     fi
+} &
 done
+wait
+
+remove_prefix_args=()
+while IFS= read -r line; do
+    remove_prefix_args+=($line)
+done < "$remove_prefix_args_file"
+
+remove_prefix_symbols=$(cat "$remove_prefix_symbols_file")
 
 # Remove prefix from the skip section symbols
 if [[ ${#remove_prefix_args[@]} -ne 0 ]]; then
