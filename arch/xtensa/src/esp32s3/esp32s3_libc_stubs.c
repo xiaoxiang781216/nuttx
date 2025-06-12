@@ -35,6 +35,7 @@
 #include <nuttx/signal.h>
 #include <nuttx/mutex.h>
 #include <nuttx/lib/lib.h>
+#include <nuttx/kmalloc.h>
 
 #include "rom/esp32s3_libc_stubs.h"
 
