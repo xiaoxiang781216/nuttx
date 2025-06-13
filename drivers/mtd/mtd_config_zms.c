@@ -971,8 +971,7 @@ static int zms_flash_wrt_entry(FAR struct zms_fs *fs, uint32_t id,
  *
  ****************************************************************************/
 
-static int zms_recover_last_ate(FAR struct zms_fs *fs,
-                                FAR uint64_t *addr,
+static int zms_recover_last_ate(FAR struct zms_fs *fs, FAR uint64_t *addr,
                                 FAR uint64_t *data_wra)
 {
   size_t ate_size = zms_ate_size(fs);
@@ -1039,7 +1038,7 @@ static int zms_recover_free_ate(FAR struct zms_fs *fs, FAR uint64_t *ate_wra,
     }
   else if (rc)
     {
-      *ate_wra -= zms_ate_size(fs);
+      *ate_wra -= ate_size;
     }
 
   if (fs->mtd->erase == NULL)
@@ -1060,7 +1059,7 @@ static int zms_recover_free_ate(FAR struct zms_fs *fs, FAR uint64_t *ate_wra,
           break;
         }
 
-      *ate_wra -= zms_ate_size(fs);
+      *ate_wra -= ate_size;
     }
 
   /* Possible data write after last ate write, update data_wra */
@@ -1068,8 +1067,7 @@ static int zms_recover_free_ate(FAR struct zms_fs *fs, FAR uint64_t *ate_wra,
   while (*ate_wra >= *data_wra)
     {
       empty_len = *ate_wra - *data_wra;
-      rc = zms_flash_cmp_const(fs, *data_wra, fs->erasestate,
-                                empty_len);
+      rc = zms_flash_cmp_const(fs, *data_wra, fs->erasestate, empty_len);
       if (rc <= 0)
         {
           return rc;
@@ -1682,6 +1680,7 @@ static int zms_gc(FAR struct zms_fs *fs)
         {
           data_addr = gc_prev_addr & ZMS_ADDR_BLOCK_MASK;
           data_addr += gc_ate->offset;
+          gc_ate->offset = fs->data_wra & ZMS_ADDR_OFFSET_MASK;
           rc = zms_flash_block_move(fs, data_addr,
                                     zms_align_up(fs, gc_ate->key_len +
                                                  gc_ate->len));
@@ -1690,7 +1689,6 @@ static int zms_gc(FAR struct zms_fs *fs)
               return rc;
             }
 
-          gc_ate->offset = fs->data_wra & ZMS_ADDR_OFFSET_MASK;
           gc_ate->cycle_cnt = prev_cycle;
           zms_ate_crc8_update(gc_ate);
           rc = zms_flash_ate_wrt(fs, gc_ate);
@@ -2052,8 +2050,7 @@ static int zms_init(FAR struct zms_fs *fs)
  *
  ****************************************************************************/
 
-static int zms_read(FAR struct zms_fs *fs,
-                    FAR struct config_data_s *pdata)
+static int zms_read(FAR struct zms_fs *fs, FAR struct config_data_s *pdata)
 {
   size_t ate_size = zms_ate_size(fs);
   uint64_t wlk_addr = fs->ate_wra;
@@ -2124,8 +2121,7 @@ static int zms_read(FAR struct zms_fs *fs,
  *
  ****************************************************************************/
 
-static int zms_write(FAR struct zms_fs *fs,
-                     FAR struct config_data_s *pdata)
+static int zms_write(FAR struct zms_fs *fs, FAR struct config_data_s *pdata)
 {
   size_t ate_size = zms_ate_size(fs);
   uint64_t wlk_addr = fs->ate_wra;
