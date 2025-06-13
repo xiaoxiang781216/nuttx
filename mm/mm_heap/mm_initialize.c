@@ -30,6 +30,7 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/lib/lib.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/mm/kasan.h>
@@ -241,14 +242,14 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
 FAR struct mm_heap_s *
 mm_initialize_heap(FAR const struct mm_heap_config_s *config)
 {
-  FAR struct mm_heap_s *heap = config->heap;
+  FAR struct mm_heap_s *heap;
   FAR const char *name = config->name;
   FAR void *heapstart = config->start;
   size_t heapsize = config->size;
   int i;
 
   minfo("Heap: name=%s, start=%p size=%zu\n", name, heapstart, heapsize);
-  if (heap == NULL)
+  if (!config->allocheap)
     {
       /* First ensure the memory to be used is aligned */
 
@@ -269,7 +270,7 @@ mm_initialize_heap(FAR const struct mm_heap_config_s *config)
     }
   else
     {
-      heap = mm_memalign(heap, MM_ALIGN, sizeof(struct mm_heap_s));
+      heap = lib_memalign(MM_ALIGN, sizeof(struct mm_heap_s));
       if (heap == NULL)
         {
           return NULL;
