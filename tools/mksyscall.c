@@ -991,96 +991,107 @@ int main(int argc, char **argv, char **envp)
        show_usage(argv[0]);
     }
 
-  csvpath = argv[optind];
-  if (++optind < argc)
+  /* all the follow arguments are treated to be csv files */
+
+  while (optind < argc)
     {
-       fprintf(stderr, "Unexpected garbage at the end of the line\n");
-       show_usage(argv[0]);
-    }
-
-  /* Open the CSV file */
-
-  stream = fopen(csvpath, "r");
-  if (!stream)
-    {
-      fprintf(stderr, "open %s failed: %s\n", csvpath, strerror(errno));
-      exit(3);
-    }
-
-  /* Process each line in the CVS file */
-
-  while ((ptr = read_line(stream)) != NULL)
-    {
-      int nfixed;
-
-      /* Parse the line from the CVS file */
-
-      int nargs = parse_csvline(ptr);
-      if (nargs < PARM1_INDEX)
+      if (g_debug)
         {
-          fprintf(stderr, "Only %d arguments found: %s\n", nargs, g_line);
-          exit(8);
+          printf("Processing the csv file: %s\n", argv[optind]);
         }
 
-      /* Assume no variable arguments by default */
+      csvpath = argv[optind];
 
-      nfixed = nargs - PARM1_INDEX;
+      /* Open the CSV file */
 
-      /* Search for an occurrence of "...".  This is followed by the list
-       * types in the variable arguments.  The number of types is the
-       * maximum number of variable arguments.
-       */
-
-      for (i = PARM1_INDEX; i < nargs; i++)
+      stream = fopen(csvpath, "r");
+      if (!stream)
         {
-          if (is_vararg(g_parm[i]))
+          fprintf(stderr, "open %s failed: %s\n", csvpath, strerror(errno));
+          exit(3);
+        }
+
+      /* Process each line in the CVS file */
+
+      while ((ptr = read_line(stream)) != NULL)
+        {
+          int nfixed;
+
+          /* Parse the line from the CVS file */
+
+          int nargs = parse_csvline(ptr);
+          if (nargs < PARM1_INDEX)
             {
-              /* "..." is the last argument? */
+              fprintf(stderr,
+                "Only %d arguments found: %s\n", nargs, g_line);
+              exit(8);
+            }
 
-              if (i == --nargs)
+          /* Assume no variable arguments by default */
+
+          nfixed = nargs - PARM1_INDEX;
+
+          /* Search for an occurrence of "...".  This is followed by the list
+          * types in the variable arguments.  The number of types is the
+          * maximum number of variable arguments.
+          */
+
+          for (i = PARM1_INDEX; i < nargs; i++)
+            {
+              if (is_vararg(g_parm[i]))
                 {
-                  /* Yes, generate the default variable arguments */
+                  /* "..." is the last argument? */
 
-                  while (nargs < PARM1_INDEX + 6)
+                  if (i == --nargs)
                     {
-                      strcpy(g_parm[nargs++], "uintptr_t");
+                      /* Yes, generate the default variable arguments */
+
+                      while (nargs < PARM1_INDEX + 6)
+                        {
+                          strcpy(g_parm[nargs++], "uintptr_t");
+                        }
                     }
-                }
-              else
-                {
-                  /* Move up one slot to overwrite "..." */
+                  else
+                    {
+                      /* Move up one slot to overwrite "..." */
 
-                  memmove(g_parm[i], g_parm[i + 1],
-                          sizeof(g_parm[i]) * (nargs - i));
-                }
+                      memmove(g_parm[i], g_parm[i + 1],
+                              sizeof(g_parm[i]) * (nargs - i));
+                    }
 
-              nfixed = i - PARM1_INDEX;
-              break;
+                  nfixed = i - PARM1_INDEX;
+                  break;
+                }
             }
-        }
 
-      if (proxies)
-        {
-          generate_proxy(nfixed, nargs - PARM1_INDEX);
-        }
-      else if (wrappers)
-        {
-          generate_wrapper(nfixed, nargs - PARM1_INDEX);
-        }
-      else
-        {
-          g_stubstream = NULL;
-          generate_stub(nfixed, nargs - PARM1_INDEX);
-          if (g_stubstream != NULL)
+          if (proxies)
             {
-              fprintf(g_stubstream, "\n#endif /* __STUB_H */\n");
-              fclose(g_stubstream);
+              generate_proxy(nfixed, nargs - PARM1_INDEX);
+            }
+          else if (wrappers)
+            {
+              generate_wrapper(nfixed, nargs - PARM1_INDEX);
+            }
+          else
+            {
+              g_stubstream = NULL;
+              generate_stub(nfixed, nargs - PARM1_INDEX);
+              if (g_stubstream != NULL)
+                {
+                  fprintf(g_stubstream, "\n#endif /* __STUB_H */\n");
+                  fclose(g_stubstream);
+                }
             }
         }
+
+      /* Close the CSV file */
+
+      fclose(stream);
+
+      /* Move to the next CSV file */
+
+      optind++;
     }
 
-  /* Close the CSV file */
-
-  fclose(stream);
   return 0;
 }
