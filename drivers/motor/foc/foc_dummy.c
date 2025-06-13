@@ -33,6 +33,7 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/spinlock.h>
 #include <nuttx/motor/foc/foc_dummy.h>
 #include <nuttx/motor/foc/foc_lower.h>
 
@@ -172,6 +173,8 @@ static struct foc_lower_s g_foc_dummy_lower[CONFIG_MOTOR_FOC_INST];
 
 static struct foc_dev_s g_foc_dev[CONFIG_MOTOR_FOC_INST];
 
+static spinlock_t g_foc_lock = SP_UNLOCKED;
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -238,9 +241,9 @@ static int foc_dummy_start(FAR struct foc_dev_s *dev, bool state)
 
   /* Store FOC worker state */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_foc_lock);
   sim->state = state;
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_foc_lock, flags);
 
 errout:
   return ret;
@@ -686,7 +689,7 @@ void foc_dummy_update(void)
   int                          i    = 0;
   irqstate_t                   flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&g_foc_lock);
 
   /* Update all FOC instances */
 
@@ -711,5 +714,5 @@ void foc_dummy_update(void)
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&g_foc_lock, flags);
 }
