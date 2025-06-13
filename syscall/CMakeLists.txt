@@ -19,10 +19,10 @@
 # the License.
 #
 # ##############################################################################
+include(nuttx_syscall_utils)
+
 # Parse CSV file to get expected output source files for each target
-file(STRINGS syscall.csv SYSCALLS)
-list(TRANSFORM SYSCALLS REPLACE "^\"([^,]+)\",.+" "\\1")
-list(TRANSFORM SYSCALLS APPEND ".c")
+parse_syscall_csv(SYSCALLS syscall.csv)
 
 # generate the host tool
 nuttx_build_host_target(mksyscall ${CMAKE_SOURCE_DIR}/tools/mksyscall.c)

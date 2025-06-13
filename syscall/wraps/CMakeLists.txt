@@ -21,15 +21,17 @@
 # ##############################################################################
 nuttx_add_kernel_library(wraps)
 
-list(TRANSFORM SYSCALLS PREPEND "${CMAKE_CURRENT_BINARY_DIR}/WRAP_")
-
-# generate files
-add_custom_command(
-  OUTPUT ${SYSCALLS}
-  COMMAND ${CMAKE_BINARY_DIR}/bin_host/mksyscall -w
-          ${CMAKE_CURRENT_LIST_DIR}/../syscall.csv
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS mksyscall)
+generate_syscall_files(
+  OUTPUT_VAR
+  GENERATED_WRAPS
+  MODE
+  WRAP
+  OUTPATH
+  ${CMAKE_CURRENT_BINARY_DIR}
+  ALL_SYSCALLS
+  ${SYSCALLS}
+  CSV_FILES
+  ${CMAKE_CURRENT_LIST_DIR}/../syscall.csv)
 
 set(WRAP_LD_CMD "${CMAKE_BINARY_DIR}/syscall_wraps.ldcmd")
 
@@ -51,4 +53,4 @@ add_dependencies(nuttx wrap_ld_cmd)
 target_link_options(nuttx PRIVATE "@${WRAP_LD_CMD}")
 
 # add sources to target
-target_sources(wraps PRIVATE ${SYSCALLS})
+target_sources(wraps PRIVATE ${GENERATED_WRAPS})

@@ -21,21 +21,25 @@
 # ##############################################################################
 nuttx_add_kernel_library(stubs)
 
-list(TRANSFORM SYSCALLS PREPEND "${CMAKE_CURRENT_BINARY_DIR}/STUB_")
-
 if(NOT (CONFIG_ARCH_64BIT) AND CONFIG_FS_LARGEFILE)
   # off_t is 64bit, so off_t need be passed as pointer on 32bit arch
 
   set(OPTIONS -r off_t)
 endif()
 
-# generate files
-add_custom_command(
-  OUTPUT ${SYSCALLS}
-  COMMAND ${CMAKE_BINARY_DIR}/bin_host/mksyscall -s
-          ${CMAKE_CURRENT_LIST_DIR}/../syscall.csv ${OPTIONS}
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS mksyscall)
+generate_syscall_files(
+  OUTPUT_VAR
+  GENERATED_STUBS
+  MODE
+  STUB
+  OUTPATH
+  ${CMAKE_CURRENT_BINARY_DIR}
+  ALL_SYSCALLS
+  ${SYSCALLS}
+  CSV_FILES
+  ${CMAKE_CURRENT_LIST_DIR}/../syscall.csv
+  TYPE_REFERENCES
+  ${OPTIONS})
 
 # add sources to target
-target_sources(stubs PRIVATE ${SYSCALLS})
+target_sources(stubs PRIVATE ${GENERATED_STUBS})
