@@ -101,7 +101,8 @@ macro(define_multiple_link_target inter_target dep_target linktimes)
       OUTPUT ${LINK_KASAN_GLOBAL_SOURCE} POST_BUILD
       COMMAND
         ${NUTTX_DIR}/tools/kasan_global.py -e ${CMAKE_BINARY_DIR}/${dep_target}
-        -o ${LINK_KASAN_GLOBAL_SOURCE} -a ${CONFIG_MM_KASAN_GLOBAL_ALIGN} --debug > kasan_global_${linktimes}.log
+        -o ${LINK_KASAN_GLOBAL_SOURCE} -a ${CONFIG_MM_KASAN_GLOBAL_ALIGN}
+        --debug > kasan_global_${linktimes}.log
       DEPENDS ${dep_target}
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       COMMAND_EXPAND_LISTS)
@@ -113,6 +114,10 @@ macro(define_multiple_link_target inter_target dep_target linktimes)
     ${inter_target}
     ${MULTIPLE_LINK_SOURCES_${linktimes}}
     $<FILTER:$<TARGET_OBJECTS:nuttx>,EXCLUDE,allsyms_empty|kasan_global>)
+
+  set_source_files_properties(
+    ${MULTIPLE_LINK_SOURCES_${linktimes}}
+    PROPERTIES COMPILE_OPTIONS -fno-sanitize=kernel-address)
 
   # relink target and nuttx have exactly the same configuration
   target_include_directories(
