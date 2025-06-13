@@ -43,6 +43,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/compiler.h>
+#include <nuttx/kmalloc.h>
 
 #include "syslog.h"
 
