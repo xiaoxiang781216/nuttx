@@ -612,8 +612,6 @@ static inline bool binder_available_for_proc_work_ilocked(
 void binder_alloc_init(FAR struct binder_alloc *alloc, pid_t pid);
 int binder_alloc_mmap(FAR struct binder_alloc *alloc,
                       FAR struct binder_mmap_area *vma);
-int binder_alloc_unmmap(FAR struct binder_alloc *alloc,
-                        FAR struct binder_mmap_area *vma);
 FAR struct binder_buffer *binder_alloc_prepare_to_free(
   FAR struct binder_alloc *alloc, uintptr_t user_ptr);
 int binder_alloc_copy_from_buffer(FAR struct binder_alloc *alloc,

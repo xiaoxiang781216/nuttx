@@ -767,33 +767,13 @@ void binder_alloc_deferred_release(FAR struct binder_alloc *alloc)
       kmm_free(alloc->pages_array);
     }
 
+  kmm_free(alloc->buffer_data);
+
   nxmutex_unlock(&alloc->alloc_lock);
 
   binder_debug(BINDER_DEBUG_OPEN_CLOSE,
                "alloc->pid=%d buffers %d, pages %d\n", alloc->pid, buffers,
                page_count);
-}
-
-/****************************************************************************
- * Name: binder_alloc_unmmap
- *
- * Description:
- *   Description of the operation of the function.
- *
- * Input Parameters:
- *   alloc - alloc structure for this proc
- *   vma   - vma passed to mmap().
- *
- * Returned Value:
- *   0 = success
- *
- ****************************************************************************/
-
-int binder_alloc_unmmap(FAR struct binder_alloc *alloc,
-                        FAR struct binder_mmap_area *vma)
-{
-  kmm_free(vma->area_start);
-  return 0;
 }
 
 /****************************************************************************
