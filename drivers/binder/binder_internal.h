@@ -620,7 +620,6 @@ int binder_alloc_mmap(FAR struct mm_map_s *mm,
                       FAR struct binder_alloc *alloc,
                       FAR struct binder_mmap_area *vma);
 int binder_alloc_unmmap(FAR struct mm_map_s *mm,
-                        FAR struct binder_alloc *alloc,
                         FAR struct binder_mmap_area *vma);
 FAR struct binder_buffer *binder_alloc_prepare_to_free(
   FAR struct binder_alloc *alloc, uintptr_t user_ptr);

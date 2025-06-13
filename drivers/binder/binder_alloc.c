@@ -706,6 +706,7 @@ void binder_alloc_deferred_release(FAR struct binder_alloc *alloc)
   int page_count;
   FAR struct binder_buffer *buffer;
   FAR struct binder_buffer *buffer_itr;
+  FAR void *kbuf = alloc->buffer_data + alloc->kbuf_ubuf_offset;
 
   if (alloc->buffer_data_size == 0)
     {
@@ -767,7 +768,7 @@ void binder_alloc_deferred_release(FAR struct binder_alloc *alloc)
       kmm_free(alloc->pages_array);
     }
 
-  kmm_free(alloc->buffer_data);
+  kmm_free(kbuf);
 
   nxmutex_unlock(&alloc->alloc_lock);
 
@@ -793,14 +794,11 @@ void binder_alloc_deferred_release(FAR struct binder_alloc *alloc)
  ****************************************************************************/
 
 int binder_alloc_unmmap(FAR struct mm_map_s *mm,
-                        FAR struct binder_alloc *alloc,
                         FAR struct binder_mmap_area *vma)
 {
-  FAR void * kbuf = vma->area_start + alloc->kbuf_ubuf_offset;
 #ifdef CONFIG_BUILD_KERNEL
   vm_unmap_region(mm, vma->area_start, vma->area_size);
 #endif
-  kmm_free(kbuf);
   return 0;
 }
 
