@@ -37,6 +37,7 @@
 #include <nuttx/signal.h>
 #include <nuttx/mutex.h>
 #include <nuttx/lib/lib.h>
+#include <nuttx/kmalloc.h>
 
 #include "esp_rom_caps.h"
 #include "rom/libc_stubs.h"
