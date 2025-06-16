@@ -754,14 +754,14 @@ static int cdcacm_serialstate(FAR struct cdcacm_dev_s *priv)
   if (wrcontainer == NULL)
     {
       ret = -ENOMEM;
-      spin_unlock_irqrestrore(&priv->lock, flags);
+      spin_unlock_irqrestore(&priv->lock, flags);
       goto errout_with_flags;
     }
 
   /* Decrement the count of write requests */
 
   priv->nwrq--;
-  spin_unlock_irqrestrore(&priv->lock, flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   /* Format the SerialState notification */
 
