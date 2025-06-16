@@ -101,6 +101,7 @@
 #include <nuttx/pgalloc.h>
 #include <nuttx/irq.h>
 #include <nuttx/cache.h>
+#include <nuttx/kmalloc.h>
 
 #include "pgalloc.h"
 #include "mmu.h"
