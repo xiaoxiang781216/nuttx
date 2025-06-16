@@ -118,4 +118,8 @@ if(MERGE_LD)
     DEPENDS nuttx_post merge_ldscript_tmp
     COMMENT "Merging kernel and user ELFs"
     VERBATIM)
+
+  if(TARGET merger_post_build)
+    add_dependencies(post_build merger_post_build)
+  endif()
 endif()
