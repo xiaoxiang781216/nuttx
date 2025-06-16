@@ -506,6 +506,12 @@ def suppress_cli_notifications(suppress=True):
         return True
 
 
+def check_inferior_valid():
+    """Check if the current inferior is valid"""
+    inferior = gdb.selected_inferior()
+    return inferior and inferior.connection and inferior.connection.is_valid()
+
+
 def get_symbol_value(name, locspec="nx_start", cacheable=True):
     """Return the value of a symbol value etc: Variable, Marco"""
     global g_symbol_cache
@@ -540,8 +546,10 @@ def get_symbol_value(name, locspec="nx_start", cacheable=True):
 
     state = suppress_cli_notifications(True)
 
-    original_thread = gdb.selected_thread()
-    original_frame = gdb.selected_frame()
+    if check_inferior_valid():
+        original_thread = gdb.selected_thread()
+        if original_thread and original_thread.is_valid():
+            original_frame = gdb.selected_frame()
     # Switch to inferior 2 and set the scope firstly
     gdb.execute("inferior 2", to_string=True)
     gdb.execute(f"list {locspec}", to_string=True)
@@ -563,8 +571,10 @@ def get_symbol_value(name, locspec="nx_start", cacheable=True):
 
     # Switch back to inferior 1
     gdb.execute("inferior 1", to_string=True)
-    original_thread.switch()
-    original_frame.select()
+    if check_inferior_valid() and original_thread and original_thread.is_valid():
+        original_thread.switch()
+        if original_frame and original_frame.is_valid():
+            original_frame.select()
     suppress_cli_notifications(state)
     return value
 
@@ -1010,8 +1020,10 @@ def switch_inferior(inferior):
 def check_version():
     """Check the elf and memory version"""
     state = suppress_cli_notifications()
-    original_thread = gdb.selected_thread()
-    original_frame = gdb.selected_frame()
+    if check_inferior_valid():
+        original_thread = gdb.selected_thread()
+        if original_thread and original_thread.is_valid():
+            original_frame = gdb.selected_frame()
     switch_inferior(1)
     try:
         mem_version = gdb.execute("p g_version", to_string=True).split("=")[1]
@@ -1030,8 +1042,10 @@ def check_version():
         gdb.write(f"Build version: {mem_version}\n")
 
     switch_inferior(1)  # Switch back
-    original_thread.switch()
-    original_frame.select()
+    if check_inferior_valid() and original_thread and original_thread.is_valid():
+        original_thread.switch()
+        if original_frame and original_frame.is_valid():
+            original_frame.select()
     # Verify the ELF file version against the GDB tool version
     check_compatibility()
     suppress_cli_notifications(state)

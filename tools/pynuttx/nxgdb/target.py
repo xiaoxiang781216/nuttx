@@ -61,8 +61,7 @@ class Target(gdb.Command):
             print(f"Warning: current arch {arch} does not match nxstub {parsed.arch}")
 
         # If currently has connection to target, disconnect it
-        inferior = gdb.selected_inferior()
-        if inferior and inferior.connection and inferior.connection.is_valid():
+        if utils.check_inferior_valid():
             gdb.execute("disconnect")
 
         def kill(event=None):
