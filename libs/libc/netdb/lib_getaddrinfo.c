@@ -37,7 +37,7 @@
 #  include <netpacket/rpmsg.h>
 #endif
 #ifdef CONFIG_NET_VSOCK
-#  include <netpacket/vm_sockets.h>
+#  include <sys/vm_sockets.h>
 #endif
 #include <netdb.h>
 #include <sys/un.h>
