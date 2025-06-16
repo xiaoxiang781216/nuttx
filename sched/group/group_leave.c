@@ -92,6 +92,10 @@ group_release(FAR struct task_group_s *group, uint8_t ttype)
   pthread_release(group);
 #endif
 
+  /* Destroy the mm_map list */
+
+  mm_map_destroy(&group->tg_mm_map);
+
   /* Free all file-related resources now.  We really need to close files as
    * soon as possible while we still have a functioning task.
    */
@@ -103,10 +107,6 @@ group_release(FAR struct task_group_s *group, uint8_t ttype)
   /* Release all shared environment variables */
 
   env_release(group);
-
-  /* Destroy the mm_map list */
-
-  mm_map_destroy(&group->tg_mm_map);
 
 #ifdef CONFIG_BINFMT_LOADABLE
   /* If the exiting task was loaded into RAM from a file, then we need to
