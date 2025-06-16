@@ -1723,16 +1723,46 @@ gc_done:
 }
 
 /****************************************************************************
- * Name: zms_init
+ * Name: zms_clear
  ****************************************************************************/
 
-static int zms_init(FAR struct zms_fs *fs)
+static int zms_clear(FAR struct zms_fs *fs)
 {
-  uint32_t closed_blocks = 0;
-  struct mtd_geometry_s geo;
-  uint64_t data_wra = 0;
-  uint64_t addr = 0;
+  uint64_t addr;
   uint32_t i;
+  int rc;
+
+  if (fs->mtd->erase != NULL)
+    {
+      rc = MTD_IOCTL(fs->mtd, MTDIOC_BULKERASE, 0);
+      if (rc < 0)
+        {
+          return rc;
+        }
+    }
+  else
+    {
+      for (i = 0; i < fs->nblocks; i++)
+        {
+          addr = zms_empty_ate_addr(fs, (uint64_t)i << ZMS_ADDR_BLOCK_SHIFT);
+          rc = zms_add_empty_ate(fs, addr);
+          if (rc)
+            {
+              return rc;
+            }
+        }
+    }
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: zms_mount
+ ****************************************************************************/
+
+static int zms_mount(FAR struct zms_fs *fs)
+{
+  struct mtd_geometry_s geo;
   int rc;
 
   /* Get the device geometry. (Casting to uintptr_t first eliminates
@@ -1750,11 +1780,6 @@ static int zms_init(FAR struct zms_fs *fs)
   fs->blocksize = CONFIG_MTD_CONFIG_BLOCKSIZE_MULTIPLE * geo.erasesize;
   fs->nblocks   = geo.neraseblocks / CONFIG_MTD_CONFIG_BLOCKSIZE_MULTIPLE;
   fs->progsize  = geo.blocksize;
-
-  size_t ate_size = zms_ate_size(fs);
-  ZMS_ATE(close_ate, ate_size);
-  ZMS_ATE(empty_ate, ate_size);
-  ZMS_ATE(first_ate, ate_size);
 
   rc = MTD_IOCTL(fs->mtd, MTDIOC_ERASESTATE,
                  (unsigned long)((uintptr_t)&fs->erasestate));
@@ -1776,10 +1801,30 @@ static int zms_init(FAR struct zms_fs *fs)
    * 1 close ATE, 1 empty ATE, 1 GC done ATE, 1 Delete ATE, 1 ID/Value ATE
    */
 
-  if (fs->blocksize < 5 * ate_size)
+  if (fs->blocksize < 5 * zms_ate_size(fs))
     {
       return -EINVAL;
     }
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: zms_init
+ ****************************************************************************/
+
+static int zms_init(FAR struct zms_fs *fs)
+{
+  size_t ate_size = zms_ate_size(fs);
+  uint32_t closed_blocks = 0;
+  uint64_t data_wra = 0;
+  uint64_t addr = 0;
+  uint32_t i;
+  int rc;
+
+  ZMS_ATE(close_ate, ate_size);
+  ZMS_ATE(empty_ate, ate_size);
+  ZMS_ATE(first_ate, ate_size);
 
   /* Step through the blocks to find a open block following
    * a closed block, this is where ZMS can write.
@@ -2506,8 +2551,8 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
 
         /* Call the MTD's ioctl for this. */
 
-        rc = MTD_IOCTL(fs->mtd, cmd, arg);
-        if (rc >= 0)
+        rc = zms_clear(fs);
+        if (rc == 0)
           {
             rc = zms_init(fs);
           }
@@ -2571,11 +2616,30 @@ int mtdconfig_register_by_path(FAR struct mtd_dev_s *mtd,
       goto errout;
     }
 
+  rc = zms_mount(fs);
+  if (rc)
+    {
+      ferr("ERROR: zms mount failed: %d\n", rc);
+      goto mutex_err;
+    }
+
   rc = zms_init(fs);
   if (rc < 0)
     {
-      ferr("ERROR: zms_init failed: %d\n", rc);
-      goto mutex_err;
+#ifdef CONFIG_MTD_CONFIG_AUTOFORMAT
+      fwarn("WARNING: zms init failed: %d, autoformat\n", rc);
+      rc = zms_clear(fs);
+      if (rc == 0)
+        {
+          rc = zms_init(fs);
+        }
+
+      if (rc < 0)
+#endif
+        {
+          ferr("ERROR: zms_init failed: %d\n", rc);
+          goto mutex_err;
+        }
     }
 
   rc = register_driver(path, &g_mtdconfig_fops, 0666, fs);

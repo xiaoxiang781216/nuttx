@@ -224,6 +224,15 @@ config MTD_CONFIG_CACHE_SIZE
 	  Number of entries in Non-volatile Storage lookup cache.
 	  It is recommended that it be a power of 2.
 
+config MTD_CONFIG_AUTOFORMAT
+	bool "ZMS Autoformat"
+	default n
+	depends on MTD_CONFIG_ZMS
+	---help---
+	  Attempt to register zms first. If the register is successful,
+	  it will be completed. If the register fails, all data will be
+	  cleared first, and then register zms again.
+
 endif
 
 comment "MTD Device Drivers"
