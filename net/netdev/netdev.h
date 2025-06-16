@@ -591,6 +591,27 @@ uint16_t ipv6_upperlayer_payload_chksum(FAR struct net_driver_s *dev,
 
 #endif /* CONFIG_NET_IPv6 */
 
+/****************************************************************************
+ * Name: netdev_list_lock
+ *
+ * Description:
+ *   Lock the network device list.  This is used to protect the network
+ *   device list from concurrent access.
+ *
+ ****************************************************************************/
+
+void netdev_list_lock(void);
+
+/****************************************************************************
+ * Name: netdev_list_unlock
+ *
+ * Description:
+ *   Unlock the network device list.
+ *
+ ****************************************************************************/
+
+void netdev_list_unlock(void);
+
 #undef EXTERN
 #ifdef __cplusplus
 }
