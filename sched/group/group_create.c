@@ -166,6 +166,7 @@ int group_initialize(FAR struct tcb_s *tcb, uint8_t ttype, size_t heapsize)
 
 #  ifdef CONFIG_ARCH_ADDRENV
           group->tg_addrenv_own->addrenv.heap = (uintptr_t)group->tg_heap;
+          group->tg_addrenv_own->addrenv.heapsize = heapsize;
 #  endif
         }
 #endif
