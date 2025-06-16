@@ -29,6 +29,13 @@ include wraps/Make.defs
 MKSYSCALL = "$(TOPDIR)$(DELIM)tools$(DELIM)mksyscall$(HOSTEXEEXT)"
 CSVFILE = "$(TOPDIR)$(DELIM)syscall$(DELIM)syscall.csv"
 
+ifeq ($(CONFIG_FS_LARGEFILE),y)
+  ifeq ($(CONFIG_ARCH_64BIT),)
+    # off_t is 64bit, so off_t need be passed as pointer on 32bit arch
+    OPTIONS := -r off_t
+  endif
+endif
+
 STUB_SRCS += syscall_names.c
 
 ifeq ($(CONFIG_SCHED_INSTRUMENTATION_SYSCALL),y)
@@ -95,8 +102,8 @@ depend: .depend
 .context: syscall.csv
 	$(Q) $(MAKE) -C $(TOPDIR)$(DELIM)tools -f Makefile.host mksyscall
 ifeq ($(CONFIG_LIB_SYSCALL),y)
-	$(Q) (cd proxies; $(MKSYSCALL) -p $(CSVFILE);)
-	$(Q) (cd stubs; $(MKSYSCALL) -s $(CSVFILE);)
+	$(Q) (cd proxies; $(MKSYSCALL) -p $(CSVFILE) $(OPTIONS);)
+	$(Q) (cd stubs; $(MKSYSCALL) -s $(CSVFILE) $(OPTIONS);)
 endif
 ifeq ($(CONFIG_SCHED_INSTRUMENTATION_SYSCALL),y)
 	$(Q) (cd wraps; $(MKSYSCALL) -w $(CSVFILE);)

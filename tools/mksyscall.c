@@ -37,6 +37,7 @@
 
 static bool g_inline;
 static FILE *g_stubstream;
+static char *g_byref[MAX_BYREFSIZE];
 
 /****************************************************************************
  * Private Functions
@@ -72,6 +73,19 @@ static const char *check_array(const char *type)
     }
 
   return NULL;
+}
+
+static bool check_byref(const char *type)
+{
+  for (int i = 0; i < MAX_BYREFSIZE && g_byref[i] != NULL; i++)
+    {
+      if (strcmp(type, g_byref[i]) == 0)
+        {
+          return true;
+        }
+    }
+
+  return false;
 }
 
 static void print_formalparm(FILE *stream, const char *argtype, int parmno)
@@ -315,6 +329,13 @@ static void generate_proxy(int nfixed, int nparms)
     {
       fprintf(stream, "  sys_call%d(", nparms);
     }
+  else if (check_byref(g_parm[RETTYPE_INDEX]))
+    {
+      /* If the return type need be passed by reference. */
+
+      fprintf(stream, "  %s ret;\n", g_parm[RETTYPE_INDEX]);
+      fprintf(stream, "  sys_call%d(", nparms + 1);
+    }
   else
     {
       fprintf(stream, "  return (%s)sys_call%d(", g_parm[RETTYPE_INDEX],
@@ -341,10 +362,23 @@ static void generate_proxy(int nfixed, int nparms)
           get_fieldname(g_parm[PARM1_INDEX + i], fieldname);
           fprintf(stream, ", (uintptr_t)parm%d.%s", i + 1, fieldname);
         }
+      else if (check_byref(g_parm[PARM1_INDEX + i]))
+        {
+          /* If the parameter need be passed by reference. */
+
+          fprintf(stream, ", (uintptr_t)&parm%d", i + 1);
+        }
       else
         {
           fprintf(stream, ", (uintptr_t)parm%d", i + 1);
         }
+    }
+
+  if (check_byref(g_parm[RETTYPE_INDEX]))
+    {
+      /* If the return type need be passed by reference. */
+
+      fprintf(stream, ", (uintptr_t)&ret");
     }
 
   /* Handle the tail end of the function. */
@@ -353,6 +387,10 @@ static void generate_proxy(int nfixed, int nparms)
   if (strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
     {
         fprintf(stream, "  while(1);\n");
+    }
+  else if (check_byref(g_parm[RETTYPE_INDEX]))
+    {
+      fprintf(stream, "  return ret;\n");
     }
 
   fprintf(stream, "}\n");
@@ -459,6 +497,13 @@ static void generate_stub(int nfixed, int nparms)
       fprintf(stream, ", uintptr_t parm%d", i + 1);
     }
 
+  if (check_byref(g_parm[RETTYPE_INDEX]))
+    {
+      /* If the return type need be passed by pointer. */
+
+      fprintf(stream, ", uintptr_t ret");
+    }
+
   fprintf(stream, ")\n{\n");
 
   /* Then call the proxied function.  Functions that have no return value are
@@ -469,6 +514,11 @@ static void generate_stub(int nfixed, int nparms)
       strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
     {
       fprintf(stream, "  %s(", g_parm[NAME_INDEX]);
+    }
+  else if (check_byref(g_parm[RETTYPE_INDEX]))
+    {
+      fprintf(stream, "  *(FAR %s *)ret = %s(", g_parm[RETTYPE_INDEX],
+              g_parm[NAME_INDEX]);
     }
   else
     {
@@ -505,6 +555,14 @@ static void generate_stub(int nfixed, int nparms)
         {
           fprintf(stream, "(%s)((%s)parm%d)", formal, actual, i + 1);
         }
+      else if (check_byref(g_parm[PARM1_INDEX + i]))
+        {
+          /* If the parameter need be passed by reference, then we will
+           * have to dereference the pointer to get the actual value.
+           */
+
+          fprintf(stream, "*(FAR %s *)parm%d", formal, i + 1);
+        }
       else
         {
           fprintf(stream, "(%s)parm%d", actual, i + 1);
@@ -512,10 +570,13 @@ static void generate_stub(int nfixed, int nparms)
     }
 
   /* Tail end of the function.  If the stubs function has no return
-   * value, just return zero (OK).
+   * value, just return zero (OK). If the return type is a pointer
+   * then we will return a zero.
    */
 
-  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0)
+  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0 ||
+      strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0 ||
+      check_byref(g_parm[RETTYPE_INDEX]))
     {
       fprintf(stream, ");\n  return 0;\n}\n");
     }
@@ -846,12 +907,15 @@ static void generate_wrapper(int nfixed, int nparms)
 
 static void show_usage(const char *progname)
 {
-  fprintf(stderr, "USAGE: %s [-p|s|i] <CSV file>\n\n", progname);
+  fprintf(stderr, "USAGE: %s [-p|s|i] <CSV file>"
+                  "[-r type1 [type2 [...]] \n\n", progname);
   fprintf(stderr, "Where:\n\n");
   fprintf(stderr, "\t-p : Generate proxies\n");
   fprintf(stderr, "\t-s : Generate stubs\n");
   fprintf(stderr, "\t-i : Generate proxies as static inline functions\n");
   fprintf(stderr, "\t-w : Generate wrappers\n");
+  fprintf(stderr, "\t-r : Mark these types of data as reference"
+                         "to avoid parameter truncation issues\n");
   fprintf(stderr, "\t-d : Enable debug output\n");
   exit(1);
 }
@@ -867,15 +931,15 @@ int main(int argc, char **argv, char **envp)
   bool wrappers = false;
   FILE *stream;
   char *ptr;
+  int i = 0;
   int ch;
-  int i;
 
   /* Parse command line options */
 
   g_debug = false;
   g_inline = false;
 
-  while ((ch = getopt(argc, argv, ":dpsw")) > 0)
+  while ((ch = getopt(argc, argv, ":dpswr")) > 0)
     {
       switch (ch)
         {
@@ -897,6 +961,14 @@ int main(int argc, char **argv, char **envp)
 
           case 'w' :
             wrappers = true;
+            break;
+
+          case 'r' :
+            while (optind < argc && argv[optind][0] != '-')
+              {
+                g_byref[i++] = argv[optind++];
+              }
+
             break;
 
           case '?' :
