@@ -39,6 +39,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/circbuf.h>
 #include <nuttx/rc/lirc_dev.h>
+#include <nuttx/spinlock.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -58,6 +59,7 @@ struct lirc_upperhalf_s
   struct list_node             fh;           /* list of struct lirc_fh_s object */
   FAR struct lirc_lowerhalf_s *lower;        /* the handle of lower half driver */
   mutex_t                      lock;         /* Manages exclusive access to lowerhalf */
+  spinlock_t                   spinlock;     /* The protection spinlock for critical section */
   bool                         gap;          /* true if we're in a gap */
   uint64_t                     gap_start;    /* time when gap starts */
   uint64_t                     gap_duration; /* duration of initial gap */
@@ -169,9 +171,9 @@ static int lirc_open(FAR struct file *filep)
         }
     }
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&upper->spinlock);
   list_add_tail(&upper->fh, &fh->node);
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&upper->spinlock, flags);
 
   filep->f_priv = fh;
   return 0;
@@ -192,9 +194,9 @@ static int lirc_close(FAR struct file *filep)
   FAR struct lirc_lowerhalf_s *lower = fh->lower;
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&upper->spinlock);
   list_delete(&fh->node);
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&upper->spinlock, flags);
 
   nxsem_destroy(&fh->waitsem);
   circbuf_uninit(&fh->buffer);
@@ -212,13 +214,15 @@ static int lirc_poll(FAR struct file *filep,
                      FAR struct pollfd *fds, bool setup)
 {
   FAR struct lirc_fh_s *fh = filep->f_priv;
+  FAR struct inode *inode  = filep->f_inode;
+  FAR struct lirc_upperhalf_s *upper = inode->i_private;
   pollevent_t eventset = 0;
-  irqstate_t flags;
   int ret = 0;
 
-  flags = enter_critical_section();
   if (setup)
     {
+      irqstate_t flags;
+
       if (fh->fds)
         {
           ret = -EBUSY;
@@ -228,10 +232,13 @@ static int lirc_poll(FAR struct file *filep,
       fh->fds = fds;
       fds->priv = &fh->fds;
 
+      flags = spin_lock_irqsave(&upper->spinlock);
       if (!circbuf_is_empty(&fh->buffer))
         {
           eventset |= POLLIN | POLLRDNORM;
         }
+
+      spin_unlock_irqrestore(&upper->spinlock, flags);
 
       poll_notify(&fds, 1, eventset);
     }
@@ -250,7 +257,6 @@ static int lirc_poll(FAR struct file *filep,
     }
 
 errout:
-  leave_critical_section(flags);
   return ret;
 }
 
@@ -656,6 +662,8 @@ static ssize_t lirc_read_scancode(FAR struct file *filep, FAR char *buffer,
                                   size_t length)
 {
   FAR struct lirc_fh_s *fh = filep->f_priv;
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct lirc_upperhalf_s *upper = inode->i_private;
   irqstate_t flags;
   ssize_t ret;
 
@@ -665,7 +673,7 @@ static ssize_t lirc_read_scancode(FAR struct file *filep, FAR char *buffer,
       return -EINVAL;
     }
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&upper->spinlock);
   do
     {
       if (circbuf_is_empty(&fh->buffer))
@@ -676,7 +684,9 @@ static ssize_t lirc_read_scancode(FAR struct file *filep, FAR char *buffer,
               goto err;
             }
 
+          spin_unlock_irqrestore(&upper->spinlock, flags);
           ret = nxsem_wait_uninterruptible(&fh->waitsem);
+          flags = spin_lock_irqsave(&upper->spinlock);
           if (ret < 0)
             {
               goto err;
@@ -688,7 +698,7 @@ static ssize_t lirc_read_scancode(FAR struct file *filep, FAR char *buffer,
   while (ret <= 0);
 
 err:
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&upper->spinlock, flags);
   return ret;
 }
 
@@ -696,6 +706,8 @@ static ssize_t lirc_read_mode2(FAR struct file *filep, FAR char *buffer,
                                size_t length)
 {
   FAR struct lirc_fh_s *fh = filep->f_priv;
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct lirc_upperhalf_s *upper = inode->i_private;
   irqstate_t flags;
   ssize_t ret = 0;
 
@@ -704,7 +716,7 @@ static ssize_t lirc_read_mode2(FAR struct file *filep, FAR char *buffer,
       return -EINVAL;
     }
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&upper->spinlock);
   do
     {
       if (circbuf_is_empty(&fh->buffer))
@@ -715,7 +727,9 @@ static ssize_t lirc_read_mode2(FAR struct file *filep, FAR char *buffer,
               goto err;
             }
 
+          spin_unlock_irqrestore(&upper->spinlock, flags);
           ret = nxsem_wait_uninterruptible(&fh->waitsem);
+          flags = spin_lock_irqsave(&upper->spinlock);
           if (ret < 0)
             {
               goto err;
@@ -727,7 +741,7 @@ static ssize_t lirc_read_mode2(FAR struct file *filep, FAR char *buffer,
   while (ret <= 0);
 
 err:
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&upper->spinlock, flags);
   return ret;
 }
 
@@ -791,6 +805,7 @@ int lirc_register(FAR struct lirc_lowerhalf_s *lower, int devno)
   upper->lower = lower;
   list_initialize(&upper->fh);
   nxmutex_init(&upper->lock);
+  spin_lock_init(&upper->spinlock);
   lower->priv = upper;
 
   /* Register remote control character device */
@@ -911,7 +926,7 @@ void lirc_raw_event(FAR struct lirc_lowerhalf_s *lower,
           upper->gap_duration = MIN(upper->gap_duration, LIRC_VALUE_MASK);
           gap = LIRC_SPACE(upper->gap_duration);
 
-          flags = enter_critical_section();
+          flags = spin_lock_irqsave_nopreempt(&upper->spinlock);
           list_for_every_safe(&upper->fh, node, tmp)
             {
               fh = (FAR struct lirc_fh_s *)node;
@@ -928,7 +943,7 @@ void lirc_raw_event(FAR struct lirc_lowerhalf_s *lower,
               upper->gap = false;
             }
 
-          leave_critical_section(flags);
+          spin_unlock_irqrestore_nopreempt(&upper->spinlock, flags);
         }
 
       sample = ev.pulse ? LIRC_PULSE(ev.duration) : LIRC_SPACE(ev.duration);
@@ -936,7 +951,7 @@ void lirc_raw_event(FAR struct lirc_lowerhalf_s *lower,
              ev.duration, ev.pulse ? 1 : 0);
     }
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&upper->spinlock);
   list_for_every_safe(&upper->fh, node, tmp)
     {
       fh = (FAR struct lirc_fh_s *)node;
@@ -956,7 +971,7 @@ void lirc_raw_event(FAR struct lirc_lowerhalf_s *lower,
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&upper->spinlock, flags);
 }
 
 /****************************************************************************
@@ -985,7 +1000,7 @@ void lirc_scancode_event(FAR struct lirc_lowerhalf_s *lower,
 
   lsc->timestamp = lirc_get_timestamp();
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&upper->spinlock);
   list_for_every_safe(&upper->fh, node, tmp)
     {
       fh = (FAR struct lirc_fh_s *)node;
@@ -1000,7 +1015,7 @@ void lirc_scancode_event(FAR struct lirc_lowerhalf_s *lower,
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&upper->spinlock, flags);
 }
 
 /****************************************************************************
@@ -1031,7 +1046,7 @@ void lirc_sample_event(FAR struct lirc_lowerhalf_s *lower,
   irqstate_t flags;
   int semcount;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&upper->spinlock);
   list_for_every_safe(&upper->fh, node, tmp)
     {
       fh = (FAR struct lirc_fh_s *)node;
@@ -1046,5 +1061,5 @@ void lirc_sample_event(FAR struct lirc_lowerhalf_s *lower,
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&upper->spinlock, flags);
 }
