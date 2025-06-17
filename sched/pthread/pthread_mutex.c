@@ -387,7 +387,7 @@ void pthread_mutex_inconsistent(FAR struct tcb_s *tcb)
       /* Mark the mutex as INCONSISTENT and wake up any waiting thread */
 
       mutex->flags |= _PTHREAD_MFLAGS_INCONSISTENT;
-      mutex_unlock(&mutex->mutex);
+      mutex_reset(&mutex->mutex);
     }
 
   spin_unlock_irqrestore_nopreempt(&tcb->mutex_lock, flags);
