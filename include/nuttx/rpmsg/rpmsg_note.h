@@ -44,9 +44,38 @@ void rpmsg_note_receive(FAR const struct rpmsg_hdr *hdr,
 void rpmsg_note_send(FAR struct rpmsg_device *rdev,
                      uint32_t src, uint32_t dst,
                      const void *data, int len);
+void rpmsg_note_binary(FAR const char *name,
+                       FAR const void *buf, size_t len);
+void rpmsg_note_printf(FAR const char *name, FAR const char *format, ...);
+void rpmsg_note_vprintf(FAR const char *name,
+                        FAR const char *format, va_list ap);
 #else
-# define rpmsg_note_initialize()
-# define rpmsg_note_receive(hdr, ept)
-# define rpmsg_note_send(rdev, src, dst, data, len)
+#  define rpmsg_note_initialize()
+#  define rpmsg_note_receive(hdr, ept)
+#  define rpmsg_note_send(rdev, src, dst, data, len)
+#  define rpmsg_note_binary(name, buf, len) \
+     do \
+       { \
+         UNUSED(name); \
+         UNUSED(buf); \
+         UNUSED(len); \
+       } \
+     while (0)
+#  define rpmsg_note_printf(name, format, ...) \
+     do \
+       { \
+         UNUSED(name); \
+         UNUSED(format); \
+       } \
+     while (0)
+#  define rpmsg_note_vprintf(name, format, ap) \
+     do \
+       { \
+         UNUSED(name); \
+         UNUSED(format); \
+         UNUSED(ap); \
+       } \
+     while (0)
 #endif /* CONFIG_RPMSG_NOTE */
+
 #endif /* __DRIVERS_RPMSG_RPMSG_NOTE_H */
