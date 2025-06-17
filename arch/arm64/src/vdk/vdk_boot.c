@@ -53,21 +53,21 @@ static const struct arm64_mpu_region g_mpu_regions[] =
   MPU_REGION_ENTRY("nx_code",
      (uint64_t)_stext,
      (uint64_t)_etext,
-     REGION_RAM_TEXT_ATTR),
+     REGION_KTEXT_ATTR),
 
   /* Region 1 NuttX rodata */
 
   MPU_REGION_ENTRY("nx_rodata",
      (uint64_t)_srodata,
      (uint64_t)_erodata,
-     REGION_RAM_RO_ATTR),
+     REGION_RO_RO_ATTR),
 
   /* Region 2 NuttX data */
 
   MPU_REGION_ENTRY("nx_data",
      (uint64_t)_sdata,
      (uint64_t)CONFIG_RAMBANK_END,
-     REGION_RAM_ATTR),
+     REGION_RW_NA_ATTR),
 
   /* Region 3 device region */
 
@@ -81,7 +81,7 @@ static const struct arm64_mpu_region g_mpu_regions[] =
   MPU_REGION_ENTRY("SRAM",
      (uint64_t)CONFIG_SRAM_BASEADDR,
      (uint64_t)CONFIG_SRAM_END,
-     REGION_RAM_ATTR)
+     REGION_RW_NA_ATTR)
 };
 
 const struct arm64_mpu_config g_mpu_config =
