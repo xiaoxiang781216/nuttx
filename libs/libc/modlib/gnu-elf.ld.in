@@ -33,7 +33,7 @@
 #  define DATA
 #endif
 
-#if defined(CONFIG_LIBC_ARCH_ELF_64BIT)
+#if defined(CONFIG_ARCH_64BIT)
 #  define SECTIONS_ALIGN 8
 #else
 #  define SECTIONS_ALIGN 4
