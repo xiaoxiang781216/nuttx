@@ -37,6 +37,9 @@
 #include <nuttx/init.h>
 #include <nuttx/mutex.h>
 #include <nuttx/mtd/mtd.h>
+#ifdef CONFIG_ESP32S3_SPI_FLASH_SUPPORT_PSRAM_STACK
+#include <nuttx/wqueue.h>
+#endif
 
 #include "hardware/esp32s3_soc.h"
 #include "hardware/esp32s3_cache_memory.h"
