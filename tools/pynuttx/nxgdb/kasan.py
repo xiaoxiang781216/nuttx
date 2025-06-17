@@ -92,6 +92,43 @@ class KASan(gdb.Command):
 
         super().__init__("kasan", gdb.COMMAND_USER)
 
+    @utils.dont_repeat_decorator
+    def invoke(self, args, from_tty):
+        parser = argparse.ArgumentParser(
+            description="Memory Tagging Commands", add_help=False
+        )
+        subparsers = parser.add_subparsers(dest="command")
+        subparsers.add_parser(
+            "check",
+            help="Validate a pointer's logical tag against the allocation tag.",
+        )
+        subparsers.add_parser(
+            "print-allocation-tag", help="Print the allocation tag for ADDRESS."
+        )
+        subparsers.add_parser(
+            "print-logical-tag", help="Print the logical tag from POINTER."
+        )
+
+        try:
+            parsed_args, addrparser = parser.parse_known_args(gdb.string_to_argv(args))
+        except SystemExit:
+            return
+
+        if not parsed_args.command:
+            print(parser.format_help())
+            return
+
+        regions = {}
+        address = []
+
+        for args in addrparser:
+            split = args.split(":")
+            addr = utils.parse_arg(split[0])
+            if len(split) == 2:
+                address.extend([addr + i for i in range(0, int(split[1]))])
+            else:
+                address.append(addr)
+
         """ Common bit width and kasan alignment length in multiple modes """
         bitwidth = utils.sizeof("long") * 8
         scale = utils.get_symbol_value("KASAN_SHADOW_SCALE")
@@ -150,41 +187,12 @@ class KASan(gdb.Command):
                     )
                 )
 
-    @utils.dont_repeat_decorator
-    def invoke(self, args, from_tty):
-        parser = argparse.ArgumentParser(
-            description="Memory Tagging Commands", add_help=False
-        )
-        subparsers = parser.add_subparsers(dest="command")
-        subparsers.add_parser(
-            "check",
-            help="Validate a pointer's logical tag against the allocation tag.",
-        )
-        subparsers.add_parser(
-            "print-allocation-tag", help="Print the allocation tag for ADDRESS."
-        )
-        subparsers.add_parser(
-            "print-logical-tag", help="Print the logical tag from POINTER."
-        )
-
-        try:
-            parsed_args, addresses = parser.parse_known_args(args.split())
-        except SystemExit:
-            print(parser.format_help())
-            return
-
-        if not parsed_args.command:
-            print(parser.format_help())
-            return
-
-        regions = {}
-        for addr in addresses:
-            addr = utils.parse_arg(addr)
+        for addr in address:
             for region in self.regions:
                 if region.contains(addr):
                     regions[addr] = region
                     break
-            else:
+            if addr not in regions:
                 print(f"Addr 0x{addr:X} Not in any region")
 
         if parsed_args.command in command_actions:
