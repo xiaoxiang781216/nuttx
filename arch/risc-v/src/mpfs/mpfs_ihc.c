@@ -145,7 +145,8 @@ struct mpfs_ihc_work_arg_s
  ****************************************************************************/
 
 static const char *mpfs_rptun_get_cpuname(struct rptun_dev_s *dev);
-static struct rptun_rsc_s *mpfs_rptun_get_resource(struct rptun_dev_s *dev);
+static struct resource_table *mpfs_rptun_get_resource(struct rptun_dev_s
+                                                      *dev);
 static bool mpfs_rptun_is_autostart(struct rptun_dev_s *dev);
 static bool mpfs_rptun_is_master(struct rptun_dev_s *dev);
 static int mpfs_rptun_start(struct rptun_dev_s *dev);
@@ -843,7 +844,7 @@ static const char *mpfs_rptun_get_cpuname(struct rptun_dev_s *dev)
  *
  ****************************************************************************/
 
-static struct rptun_rsc_s *
+static struct resource_table *
 mpfs_rptun_get_resource(struct rptun_dev_s *dev)
 {
   struct mpfs_rptun_dev_s *priv = container_of(dev,
@@ -855,7 +856,7 @@ mpfs_rptun_get_resource(struct rptun_dev_s *dev)
 
   if (priv->shmem != NULL)
     {
-      return &priv->shmem->rsc;
+      return &priv->shmem->rsc.rsc_tbl_hdr;
     }
   else
     {
@@ -867,7 +868,7 @@ mpfs_rptun_get_resource(struct rptun_dev_s *dev)
       g_shmem.base = VRING_SHMEM;
 
       rsc->rsc_tbl_hdr.ver          = 1;
-      rsc->rsc_tbl_hdr.num          = 1;
+      rsc->rsc_tbl_hdr.num          = 2;
       rsc->offset[0]                = offsetof(struct rptun_rsc_s,
                                                rpmsg_vdev);
       rsc->rpmsg_vdev.type          = RSC_VDEV;
@@ -898,6 +899,18 @@ mpfs_rptun_get_resource(struct rptun_dev_s *dev)
       rsc->rpmsg_vring1.notifyid    = VRING1_NOTIFYID;
       rsc->config.r2h_buf_size      = VRING_SIZE;
       rsc->config.h2r_buf_size      = VRING_SIZE;
+
+      /* Carveout, reserved 0x1000 for vrings and memory management header */
+
+      rsc->offset[1]                = offsetof(struct rptun_rsc_s,
+                                               carveout);
+      rsc->carveout.type            = RSC_CARVEOUT;
+      rsc->carveout.da              = (uintptr_t)rsc + ALIGN_UP(sizeof
+                                      (struct rptun_rsc_s), VRING_ALIGN);
+      rsc->carveout.pa              = FW_RSC_U32_ADDR_ANY;
+      rsc->carveout.len             = VRING_SIZE * VRING_NR * VRINGS +
+                                      0x1000;
+      memcpy(rsc->carveout.name, "vdev0buffer", 10);
     }
 
   /* It might be tempting to set this at mpfs_rptun_start(), but it's only
@@ -912,7 +925,7 @@ mpfs_rptun_get_resource(struct rptun_dev_s *dev)
 
   up_enable_irq(g_plic_irq);
 
-  return &priv->shmem->rsc;
+  return &priv->shmem->rsc.rsc_tbl_hdr;
 }
 
 /****************************************************************************
