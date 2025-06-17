@@ -564,13 +564,12 @@ static int rpmsgblk_ept_cb(FAR struct rpmsg_endpoint *ept,
   FAR struct rpmsgblk_header_s *header = data;
   uint32_t command = header->command;
 
-  if (command >= nitems(g_rpmsgblk_handler))
+  if (command < nitems(g_rpmsgblk_handler))
     {
-      return -EINVAL;
+      return g_rpmsgblk_handler[command](ept, data, len, src, priv);
     }
 
-  return rpmsg_defer_work(ept, data, len, src, priv,
-                          g_rpmsgblk_handler[command]);
+  return -EINVAL;
 }
 
 /****************************************************************************
