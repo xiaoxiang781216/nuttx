@@ -96,15 +96,30 @@ class Stack(object):
         return usage
 
     def check_max_usage(self):
-        spare = 0
+        np = utils.import_check("numpy", errmsg="Please pip install numpy")
+        if not np:
+            raise gdb.GdbError(
+                "stack max usage check requires numpy, please install it via pip"
+            )
         memory = gdb.selected_inferior().read_memory(self._stack_base, self._stack_size)
         size = utils.sizeof("int")
         pattern = int(self._pattern).to_bytes(size, byteorder="little")
-        for i in range(0, self._stack_size // size):
-            if bytes(memory[i * size : (i + 1) * size]) != pattern:
-                spare = i * size
-                break
-        return self._stack_size - spare
+
+        arr = np.frombuffer(memory, dtype=np.uint8)
+        arr = arr.reshape(-1, size)
+        pattern_arr = np.frombuffer(pattern * (len(arr)), dtype=np.uint8).reshape(
+            -1, size
+        )
+
+        mismatch = np.any(arr != pattern_arr, axis=1)
+        first_diff = np.argmax(mismatch)
+
+        if not mismatch.any():
+            used = 0
+        else:
+            used = self._stack_size - (first_diff * size)
+
+        return used
 
     def max_usage(self):
         if not utils.get_symbol_value("CONFIG_STACK_COLORATION"):

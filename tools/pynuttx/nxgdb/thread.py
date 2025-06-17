@@ -428,44 +428,73 @@ class Ps(gdb.Command):
         self._fmt_wxl = "{0: <{width}}"
         # By default we align to the right, whcih respects the nuttx foramt
         self._fmt_wx = "{0: >{width}}"
+        self._char_ptr_ptr_type = None
+        self._mutex_t_ptr_type = None
+        self._sem_t_ptr_type = None
+        self._pthread_tcb_s_ptr_type = None
+        self.macros = {
+            "TCB_FLAG_POLICY_MASK": utils.get_symbol_value("TCB_FLAG_POLICY_MASK"),
+            "TCB_FLAG_POLICY_SHIFT": utils.get_symbol_value("TCB_FLAG_POLICY_SHIFT"),
+            "TCB_FLAG_TTYPE_MASK": utils.get_symbol_value("TCB_FLAG_TTYPE_MASK"),
+            "TCB_FLAG_TTYPE_SHIFT": utils.get_symbol_value("TCB_FLAG_TTYPE_SHIFT"),
+            "TCB_FLAG_EXIT_PROCESSING": utils.get_symbol_value(
+                "TCB_FLAG_EXIT_PROCESSING"
+            ),
+            "TCB_FLAG_TTYPE_PTHREAD": utils.get_symbol_value("TCB_FLAG_TTYPE_PTHREAD"),
+            "_SIGSET_NELEM": utils.get_symbol_value("_SIGSET_NELEM"),
+            "CONFIG_SCHED_CPULOAD_NONE": utils.get_symbol_value(
+                "CONFIG_SCHED_CPULOAD_NONE"
+            ),
+            "CONFIG_SMP": utils.get_symbol_value("CONFIG_SMP"),
+        }
+
+    def get_cached_type(self, type_name):
+        if type_name == "char_ptr_ptr" and not self._char_ptr_ptr_type:
+            self._char_ptr_ptr_type = gdb.lookup_type("char").pointer().pointer()
+        elif type_name == "mutex_t_ptr" and not self._mutex_t_ptr_type:
+            self._mutex_t_ptr_type = utils.lookup_type("mutex_t").pointer()
+        elif type_name == "sem_t_ptr" and not self._sem_t_ptr_type:
+            self._sem_t_ptr_type = utils.lookup_type("sem_t").pointer()
+        elif type_name == "pthread_tcb_s_ptr" and not self._pthread_tcb_s_ptr_type:
+            self._pthread_tcb_s_ptr_type = utils.lookup_type(
+                "struct pthread_tcb_s"
+            ).pointer()
+
+        return getattr(self, f"_{type_name}_type")
 
     def parse_and_show_info(self, tcb):
-        def get_macro(x):
-            return utils.get_symbol_value(x)
-
         def eval2str(cls, x):
             return cls(int(x)).name
-
-        def cast2ptr(x, t):
-            return x.cast(utils.lookup_type(t).pointer())
 
         pid = int(tcb["pid"])
         group = int(tcb["group"]["tg_pid"])
         priority = int(tcb["sched_priority"])
+        flags = int(tcb["flags"])
 
         policy = eval2str(
             TaskSchedPolicy,
-            (tcb["flags"] & get_macro("TCB_FLAG_POLICY_MASK"))
-            >> get_macro("TCB_FLAG_POLICY_SHIFT"),
+            (flags & self.macros.get("TCB_FLAG_POLICY_MASK"))
+            >> self.macros.get("TCB_FLAG_POLICY_SHIFT"),
         )
 
         task_type = eval2str(
             TaskType,
-            (tcb["flags"] & get_macro("TCB_FLAG_TTYPE_MASK"))
-            >> get_macro("TCB_FLAG_TTYPE_SHIFT"),
+            (flags & self.macros.get("TCB_FLAG_TTYPE_MASK"))
+            >> self.macros.get("TCB_FLAG_TTYPE_SHIFT"),
         )
 
-        npx = "P" if (tcb["flags"] & get_macro("TCB_FLAG_EXIT_PROCESSING")) else "-"
+        npx = "P" if (flags & self.macros.get("TCB_FLAG_EXIT_PROCESSING")) else "-"
 
-        waiter = (
-            str(int(cast2ptr(tcb["waitobj"], "mutex_t")["holder"]))
-            if tcb["waitobj"]
-            and utils.sem_is_mutex(cast2ptr(tcb["waitobj"], "sem_t")["flags"])
-            else ""
-        )
-        state_and_event = eval2str(TaskState, (tcb["task_state"])) + (
-            "@MutexHolder: " + waiter if waiter else ""
-        )
+        waiter = ""
+        if tcb["waitobj"]:
+            waitobj = tcb["waitobj"].cast(self.get_cached_type("sem_t_ptr"))
+            if utils.sem_is_mutex(waitobj):
+                mutex = waitobj.cast(self.get_cached_type("mutex_t_ptr"))
+                waiter = str(int(mutex["holder"]))
+
+        state_and_event = eval2str(TaskState, (tcb["task_state"]))
+        if waiter:
+            state_and_event += "@MutexHolder: " + waiter
         state_and_event = state_and_event.split("_")
 
         # Append a null str here so we don't need to worry
@@ -477,9 +506,9 @@ class Ps(gdb.Command):
         sigmask = "{0:#0{1}x}".format(
             sum(
                 int(tcb["sigprocmask"]["_elem"][i] << i)
-                for i in range(get_macro("_SIGSET_NELEM"))
+                for i in range(self.macros.get("_SIGSET_NELEM"))
             ),
-            get_macro("_SIGSET_NELEM") * 8 + 2,
+            self.macros.get("_SIGSET_NELEM") * 8 + 2,
         )[
             2:
         ]  # exclude "0x"
@@ -496,43 +525,41 @@ class Ps(gdb.Command):
 
         stacksz = st._stack_size
         used = st.max_usage()
-        filled = "{0:.2%}".format(st.max_usage() / st._stack_size)
+        filled = "{0:.2%}".format(used / stacksz)
 
-        cpu = int(tcb["cpu"]) if get_macro("CONFIG_SMP") else 0
+        cpu = int(tcb["cpu"]) if self.macros.get("CONFIG_SMP") else 0
 
         # For a task we need to display its cmdline arguments, while for a thread we display
         # pointers to its entry and argument
         cmd = ""
         name = utils.get_task_name(tcb)
 
-        if int(tcb["flags"] & get_macro("TCB_FLAG_TTYPE_MASK")) == int(
-            get_macro("TCB_FLAG_TTYPE_PTHREAD")
+        if (flags & self.macros.get("TCB_FLAG_TTYPE_MASK")) == self.macros.get(
+            "TCB_FLAG_TTYPE_PTHREAD"
         ):
             entry = tcb["entry"]["main"]
-            ptcb = cast2ptr(tcb, "struct pthread_tcb_s")
+            ptcb = tcb.cast(self.get_cached_type("pthread_tcb_s_ptr"))
             arg = ptcb["arg"]
-            cmd = " ".join((name, hex(entry), hex(arg)))
-        elif tcb["pid"] < utils.get_ncpus():
-            # This must be the Idle Tasks, hence we just get its name
+            cmd = f"{name} {hex(entry)} {hex(arg)}"
+        elif pid < utils.get_ncpus():
             cmd = name
         else:
             # For tasks other than pthreads, hence need to get its command line
             # arguments from
-            argv = (
-                tcb["stack_alloc_ptr"]
-                + cast2ptr(tcb["stack_alloc_ptr"], "struct tls_info_s")["tl_size"]
-            )
+            tls_info_type = utils.lookup_type("struct tls_info_s").pointer()
+            stack_ptr = tcb["stack_alloc_ptr"].cast(tls_info_type)
+            argv = tcb["stack_alloc_ptr"] + stack_ptr["tl_size"]
             args = []
-            parg = argv.cast(gdb.lookup_type("char").pointer().pointer()) + 1
+            parg = argv.cast(self.get_cached_type("char_ptr_ptr")) + 1
             while parg.dereference():
                 args.append(parg.dereference().string())
                 parg += 1
-
             cmd = " ".join([name] + args)
 
-        if not utils.get_symbol_value("CONFIG_SCHED_CPULOAD_NONE"):
+        if not self.macros.get("CONFIG_SCHED_CPULOAD_NONE"):
+            g_cpuload_total = int(gdb.parse_and_eval("g_cpuload_total"))
             load = "{0:.1%}".format(
-                int(tcb["ticks"]) / int(gdb.parse_and_eval("g_cpuload_total"))
+                int(tcb["ticks"]) / g_cpuload_total if g_cpuload_total else 0
             )
         else:
             load = "Dis."
