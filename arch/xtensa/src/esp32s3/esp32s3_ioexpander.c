@@ -24,6 +24,7 @@
 
 #include <debug.h>
 
+#include <nuttx/kmalloc.h>
 #include <nuttx/ioexpander/ioexpander.h>
 #include <nuttx/nuttx.h>
 
@@ -51,7 +52,7 @@ struct esp32s3_ioexpander_pincfg_s
   uint8_t opt;
 #ifdef CONFIG_IOEXPANDER_INT_ENABLE
   ioe_callback_t cb;
-  FAR void *arg;
+  void *arg;
   ioe_pinset_t pinset;
 #endif
 };
@@ -66,20 +67,20 @@ struct esp32s3_ioexpander_dev_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static int esp32s3_ioe_direction(FAR struct ioexpander_dev_s *dev,
+static int esp32s3_ioe_direction(struct ioexpander_dev_s *dev,
                                  uint8_t pin, int direction);
-static int esp32s3_ioe_option(FAR struct ioexpander_dev_s *dev,
-                              uint8_t pin, int opt, FAR void *val);
-static int esp32s3_ioe_writepin(FAR struct ioexpander_dev_s *dev,
+static int esp32s3_ioe_option(struct ioexpander_dev_s *dev,
+                              uint8_t pin, int opt, void *val);
+static int esp32s3_ioe_writepin(struct ioexpander_dev_s *dev,
                                 uint8_t pin, bool value);
-static int esp32s3_ioe_readpin(FAR struct ioexpander_dev_s *dev,
-                               uint8_t pin, FAR bool *value);
+static int esp32s3_ioe_readpin(struct ioexpander_dev_s *dev,
+                               uint8_t pin, bool *value);
 #ifdef CONFIG_IOEXPANDER_INT_ENABLE
-FAR void *esp32s3_ioe_attach(FAR struct ioexpander_dev_s *dev,
-                             ioe_pinset_t pinset, ioe_callback_t callback,
-                             FAR void *arg);
-static int esp32s3_ioe_detach(FAR struct ioexpander_dev_s *dev,
-                              FAR void *handle);
+void *esp32s3_ioe_attach(struct ioexpander_dev_s *dev,
+                         ioe_pinset_t pinset, ioe_callback_t callback,
+                         void *arg);
+static int esp32s3_ioe_detach(struct ioexpander_dev_s *dev,
+                              void *handle);
 #endif
 
 /****************************************************************************
@@ -121,11 +122,11 @@ static const struct ioexpander_ops_s g_esp32s3_ioe_ops =
  *
  ****************************************************************************/
 
-static int esp32s3_ioe_direction(FAR struct ioexpander_dev_s *dev,
+static int esp32s3_ioe_direction(struct ioexpander_dev_s *dev,
                                  uint8_t pin, int direction)
 {
-  FAR struct esp32s3_ioexpander_dev_s *priv =
-    (FAR struct esp32s3_ioexpander_dev_s *)dev;
+  struct esp32s3_ioexpander_dev_s *priv =
+    (struct esp32s3_ioexpander_dev_s *)dev;
   gpio_pinattr_t attr = 0;
 
   DEBUGASSERT(priv != NULL && pin < ESP32S3_MAX_NPINS &&
@@ -183,11 +184,11 @@ static int esp32s3_ioe_direction(FAR struct ioexpander_dev_s *dev,
  *
  ****************************************************************************/
 
-static int esp32s3_ioe_option(FAR struct ioexpander_dev_s *dev,
-                              uint8_t pin, int opt, FAR void *val)
+static int esp32s3_ioe_option(struct ioexpander_dev_s *dev,
+                              uint8_t pin, int opt, void *val)
 {
-  FAR struct esp32s3_ioexpander_dev_s *priv =
-    (FAR struct esp32s3_ioexpander_dev_s *)dev;
+  struct esp32s3_ioexpander_dev_s *priv =
+    (struct esp32s3_ioexpander_dev_s *)dev;
   gpio_intrtype_t intrtype;
 
   DEBUGASSERT(priv != NULL && pin < ESP32S3_MAX_NPINS &&
@@ -255,11 +256,11 @@ static int esp32s3_ioe_option(FAR struct ioexpander_dev_s *dev,
  *
  ****************************************************************************/
 
-static int esp32s3_ioe_writepin(FAR struct ioexpander_dev_s *dev,
+static int esp32s3_ioe_writepin(struct ioexpander_dev_s *dev,
                                 uint8_t pin, bool value)
 {
-  FAR struct esp32s3_ioexpander_dev_s *priv =
-    (FAR struct esp32s3_ioexpander_dev_s *)dev;
+  struct esp32s3_ioexpander_dev_s *priv =
+    (struct esp32s3_ioexpander_dev_s *)dev;
 
   DEBUGASSERT(priv != NULL && pin < ESP32S3_MAX_NPINS &&
               esp32s3_is_valid_gpio(pin));
@@ -298,11 +299,11 @@ static int esp32s3_ioe_writepin(FAR struct ioexpander_dev_s *dev,
  *
  ****************************************************************************/
 
-static int esp32s3_ioe_readpin(FAR struct ioexpander_dev_s *dev,
-                               uint8_t pin, FAR bool *value)
+static int esp32s3_ioe_readpin(struct ioexpander_dev_s *dev,
+                               uint8_t pin, bool *value)
 {
-  FAR struct esp32s3_ioexpander_dev_s *priv =
-    (FAR struct esp32s3_ioexpander_dev_s *)dev;
+  struct esp32s3_ioexpander_dev_s *priv =
+    (struct esp32s3_ioexpander_dev_s *)dev;
   bool val;
 
   DEBUGASSERT(priv != NULL && pin < ESP32S3_MAX_NPINS &&
@@ -344,9 +345,9 @@ static int esp32s3_ioe_readpin(FAR struct ioexpander_dev_s *dev,
 
 static int esp32s3_ioe_irq_handler(int irq, void *context, void *arg)
 {
-  FAR struct esp32s3_ioexpander_pincfg_s *cfg = arg;
+  struct esp32s3_ioexpander_pincfg_s *cfg = arg;
   uint8_t pin = ESP32S3_IRQ2PIN(irq);
-  FAR struct esp32s3_ioexpander_dev_s *priv =
+  struct esp32s3_ioexpander_dev_s *priv =
     container_of(cfg - pin, struct esp32s3_ioexpander_dev_s, cfg);
 
   DEBUGASSERT(cfg != NULL && cfg->cb != NULL);
@@ -375,13 +376,13 @@ static int esp32s3_ioe_irq_handler(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-FAR void *esp32s3_ioe_attach(FAR struct ioexpander_dev_s *dev,
-                             ioe_pinset_t pinset, ioe_callback_t callback,
-                             FAR void *arg)
+void *esp32s3_ioe_attach(struct ioexpander_dev_s *dev,
+                         ioe_pinset_t pinset, ioe_callback_t callback,
+                         void *arg)
 {
-  FAR struct esp32s3_ioexpander_dev_s *priv =
-    (FAR struct esp32s3_ioexpander_dev_s *)dev;
-  FAR void *handle = NULL;
+  struct esp32s3_ioexpander_dev_s *priv =
+    (struct esp32s3_ioexpander_dev_s *)dev;
+  void *handle = NULL;
   int irq;
   int ret;
   int i;
@@ -431,12 +432,12 @@ FAR void *esp32s3_ioe_attach(FAR struct ioexpander_dev_s *dev,
  *
  ****************************************************************************/
 
-static int esp32s3_ioe_detach(FAR struct ioexpander_dev_s *dev,
-                              FAR void *handle)
+static int esp32s3_ioe_detach(struct ioexpander_dev_s *dev,
+                              void *handle)
 {
-  FAR struct esp32s3_ioexpander_dev_s *priv =
-    (FAR struct esp32s3_ioexpander_dev_s *)dev;
-  FAR struct esp32s3_ioexpander_pincfg_s *cfg = handle;
+  struct esp32s3_ioexpander_dev_s *priv =
+    (struct esp32s3_ioexpander_dev_s *)dev;
+  struct esp32s3_ioexpander_pincfg_s *cfg = handle;
   ioe_pinset_t pinset = cfg->pinset;
   int i;
 
@@ -477,7 +478,7 @@ static int esp32s3_ioe_detach(FAR struct ioexpander_dev_s *dev,
  *
  ****************************************************************************/
 
-FAR struct ioexpander_dev_s *esp32s3_ioexpander_initialize(void)
+struct ioexpander_dev_s *esp32s3_ioexpander_initialize(void)
 {
   if (g_esp32s3_ioe == NULL)
     {
