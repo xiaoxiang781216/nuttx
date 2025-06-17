@@ -170,10 +170,10 @@ struct mii_ioctl_notify_s
 
 struct mii_ioctl_data_s
 {
-  uint32_t reg_num;     /* PHY register address */
-  uint32_t val_in;      /* PHY input data */
-  uint32_t val_out;     /* PHY output data */
   uint16_t phy_id;      /* PHY device address */
+  uint16_t reg_num;     /* PHY register address */
+  uint16_t val_in;      /* PHY input data */
+  uint16_t val_out;     /* PHY output data */
 };
 
 /* Structure passed to get or set the CAN bitrate
