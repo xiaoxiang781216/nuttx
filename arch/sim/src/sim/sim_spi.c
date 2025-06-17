@@ -24,6 +24,7 @@
 
 #include <debug.h>
 
+#include <nuttx/kmalloc.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/wqueue.h>
 
