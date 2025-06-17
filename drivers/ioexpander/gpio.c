@@ -392,11 +392,11 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       case GPIOC_REGISTER:
         if (dev->gp_pintype >= GPIO_INTERRUPT_PIN)
           {
-            flags = enter_critical_section();
 #if CONFIG_DEV_GPIO_NSIGNALS > 0
             if (arg)
               {
                 pid = nxsched_getpid();
+                flags = spin_lock_irqsave(&dev->lock);
                 for (i = 0; i < CONFIG_DEV_GPIO_NSIGNALS; i++)
                   {
                     FAR struct gpio_signal_s *signal = &dev->gp_signals[i];
@@ -410,22 +410,19 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                       }
                   }
 
+                spin_unlock_irqrestore(&dev->lock, flags);
                 if (i == CONFIG_DEV_GPIO_NSIGNALS)
                   {
-                    leave_critical_section(flags);
                     ret = -EBUSY;
                     break;
                   }
               }
 #endif
 
-            if (dev->register_count++ > 0)
+            if (atomic_fetch_add(&dev->register_count, 1) > 0)
               {
-                leave_critical_section(flags);
                 break;
               }
-
-            leave_critical_section(flags);
 
             /* Register our handler */
 
@@ -454,13 +451,15 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       case GPIOC_UNREGISTER:
         if (dev->gp_pintype >= GPIO_INTERRUPT_PIN)
           {
-            flags = enter_critical_section();
 #if CONFIG_DEV_GPIO_NSIGNALS > 0
             pid = nxsched_getpid();
+            flags = spin_lock_irqsave(&dev->lock);
             for (i = 0; i < CONFIG_DEV_GPIO_NSIGNALS; i++)
               {
                 if (pid == dev->gp_signals[i].gp_pid)
                   {
+                    FAR struct sigwork_s *work;
+
                     for (j = i + 1; j < CONFIG_DEV_GPIO_NSIGNALS; j++)
                       {
                         if (dev->gp_signals[j].gp_pid == 0)
@@ -476,19 +475,21 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                       }
 
                     dev->gp_signals[j].gp_pid = 0;
-                    nxsig_cancel_notification(&dev->gp_signals[j].gp_work);
+                    work = &dev->gp_signals[j].gp_work;
+                    spin_unlock_irqrestore(&dev->lock, flags);
+                    nxsig_cancel_notification(work);
+                    flags = spin_lock_irqsave(&dev->lock);
                     break;
                   }
               }
+
+            spin_unlock_irqrestore(&dev->lock, flags);
 #endif
 
-            if (--dev->register_count > 0)
+            if (atomic_fetch_sub(&dev->register_count, 1) > 1)
               {
-                leave_critical_section(flags);
                 break;
               }
-
-            leave_critical_section(flags);
 
             /* Make sure that the pin interrupt is disabled */
 
@@ -633,7 +634,7 @@ static int gpio_poll(FAR struct file *filep,
 
   /* Are we setting up the poll?  Or tearing it down? */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&dev->lock);
   if (setup)
     {
 #if CONFIG_DEV_GPIO_NPOLLWAITERS > 0
@@ -656,7 +657,9 @@ static int gpio_poll(FAR struct file *filep,
 
               if (dev->int_count != (uintptr_t)(filep->f_priv))
                 {
+                  spin_unlock_irqrestore(&dev->lock, flags);
                   poll_notify(&fds, 1, POLLIN);
+                  return ret;
                 }
 
               break;
@@ -682,7 +685,7 @@ static int gpio_poll(FAR struct file *filep,
       fds->priv = NULL;
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&dev->lock, flags);
   return ret;
 }
 
@@ -749,6 +752,7 @@ int gpio_pin_register_byname(FAR struct gpio_dev_s *dev,
 
   DEBUGASSERT(dev != NULL && dev->gp_ops != NULL && pinname != NULL);
 
+  spin_lock_init(&dev->lock);
   switch (dev->gp_pintype)
     {
       case GPIO_INPUT_PIN:
