@@ -145,6 +145,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
 #ifdef CONFIG_MM_RECORD_STACK
   backtrace_remove(oldnode->stack);
+  oldnode->stack = NULL;
 #endif
 
   /* Check if this is a request to reduce the size of the allocation. */
