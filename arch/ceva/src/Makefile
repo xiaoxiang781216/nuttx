@@ -69,10 +69,10 @@ OBJS = $(AOBJS) $(COBJS)
 # User-mode objects
 
 UASRCS = $(CHIP_UASRCS) $(CMN_UASRCS)
-UAOBJS = $(UASRCS:.S=$(OBJEXT))
+UAOBJS = $(UASRCS:.S=$(UOBJEXT))
 
 UCSRCS = $(CHIP_UCSRCS) $(CMN_UCSRCS)
-UCOBJS = $(UCSRCS:.c=$(OBJEXT))
+UCOBJS = $(UCSRCS:.c=$(UOBJEXT))
 
 USRCS = $(UASRCS) $(UCSRCS)
 UOBJS = $(UAOBJS) $(UCOBJS)
@@ -116,10 +116,16 @@ all: $(HEAD_OBJ) $(BIN)
 
 .PHONY: board$(DELIM)libboard$(LIBEXT)
 
-$(sort $(AOBJS) $(UAOBJS) $(HEAD_OBJ)): %$(OBJEXT): %.S
+$(AOBJS) $(HEAD_OBJ): %$(OBJEXT): %.S
 	$(call ASSEMBLE, $<, $@)
 
-$(sort $(COBJS) $(UCOBJS)): %$(OBJEXT): %.c
+$(COBJS): %$(OBJEXT): %.c
+	$(call COMPILE, $<, $@)
+
+$(UAOBJS): %$(UOBJEXT): %.S
+	$(call ASSEMBLE, $<, $@)
+
+$(UCOBJS): %$(UOBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(BIN) $(KBIN): $(OBJS)

@@ -108,6 +108,7 @@ endif
 ASMEXT ?= .S
 OBJEXT ?= .o
 LIBEXT ?= .a
+UOBJEXT = .u$(OBJEXT)
 
 ifeq ($(CONFIG_WINDOWS_CYGWIN),y)
   EXEEXT ?= .exe

@@ -64,10 +64,10 @@ OBJS = $(AOBJS) $(COBJS)
 # User-mode objects
 
 UASRCS = $(CHIP_UASRCS) $(CMN_UASRCS)
-UAOBJS = $(UASRCS:.S=$(OBJEXT))
+UAOBJS = $(UASRCS:.S=$(UOBJEXT))
 
 UCSRCS = $(CHIP_UCSRCS) $(CMN_UCSRCS)
-UCOBJS = $(UCSRCS:.c=$(OBJEXT))
+UCOBJS = $(UCSRCS:.c=$(UOBJEXT))
 
 USRCS = $(UASRCS) $(UCSRCS)
 UOBJS = $(UAOBJS) $(UCOBJS)
@@ -134,10 +134,16 @@ all: $(HEAD_COBJ) $(BIN)
 
 .PHONY: board$(DELIM)libboard$(LIBEXT)
 
-$(AOBJS) $(UAOBJS): %$(OBJEXT): %.S
+$(AOBJS): %$(OBJEXT): %.S
 	$(call ASSEMBLE, $<, $@)
 
-$(COBJS) $(UCOBJS) $(HEAD_COBJ): %$(OBJEXT): %.c
+$(COBJS) $(HEAD_COBJ): %$(OBJEXT): %.c
+	$(call COMPILE, $<, $@)
+
+$(UAOBJS): %$(UOBJEXT): %.S
+	$(call ASSEMBLE, $<, $@)
+
+$(UCOBJS): %$(UOBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 ifeq ($(CONFIG_BUILD_FLAT),y)
