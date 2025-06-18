@@ -578,7 +578,7 @@ void arm64_fatal_handler(uint64_t *regs)
 
 void arm64_register_debug_hook(int nr, fatal_handle_func_t fn)
 {
-  DEBUGASSERT(nr > 0 && nr <= nitems(g_debug_handler));
+  DEBUGASSERT(nr >= 0 && nr < nitems(g_debug_handler));
 
   /* Override the default handler */
 
