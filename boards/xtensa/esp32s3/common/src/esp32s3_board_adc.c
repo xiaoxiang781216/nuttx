@@ -29,6 +29,7 @@
 #include <syslog.h>
 #include <debug.h>
 #include <sys/types.h>
+#include <nuttx/kmalloc.h>
 
 #include "esp32s3_adc.h"
 
