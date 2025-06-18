@@ -56,6 +56,10 @@
 #  define ARCH_ELFDATA_PARM NULL
 #endif
 
+#if defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)
+#  define up_coherent_dcache(start,size)
+#endif
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
