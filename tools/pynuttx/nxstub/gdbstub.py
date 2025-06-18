@@ -160,7 +160,7 @@ class GDBStub:
     def handle_q(self, packet: bytes):
         packet = packet.decode("ascii")
         if packet.startswith("qSupported"):
-            self.send_packet("PacketSize=FFFF")
+            self.send_packet("PacketSize=FFFFFF;binary-upload+")
         elif packet.startswith("qC"):
             pid = self.target.current_thread()
             self.logger.debug(f"Current thread: {pid}")
@@ -227,6 +227,22 @@ class GDBStub:
         value = unhexlify(value)
         self.registers.set(regnum=regnum, value=value)
         self.send_packet("OK")
+
+    def handle_x(self, packet: bytes):
+        packet = packet.decode("ascii")
+        addr, length = packet[1:].split(",")
+        data = self.target.memory_read(int(addr, 16), int(length, 16))
+        self.send_packet(b"b" + bytes(data))
+
+    def handle_X(self, packet: bytes):
+        addr_and_length, data = packet[1:].split(b":")
+        addr_and_length = addr_and_length.decode("ascii")
+        addr, length = addr_and_length.split(",")
+        if int(length, 16) != len(data):
+            self.send_packet("E01")
+            return
+        ok = self.target.memory_write(int(addr, 16), data)
+        self.send_packet("OK" if ok else "")
 
     def handle_m(self, packet: bytes):
         packet = packet.decode("ascii")
