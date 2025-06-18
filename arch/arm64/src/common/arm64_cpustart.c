@@ -199,7 +199,7 @@ int up_cpu_start(int cpu)
 #endif
 
 #ifdef CONFIG_SMP
-  uint32_t *address = &smp_busy_wait_flag;
+  uint32_t *address = &g_smp_busy_wait_flag;
   *address = 1;
   up_flush_dcache((uintptr_t)address, (uintptr_t)address + sizeof(address));
 #endif
