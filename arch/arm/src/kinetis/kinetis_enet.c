@@ -310,9 +310,9 @@ static int  kinetis_ioctl(struct net_driver_s *dev, int cmd,
 
 static inline void kinetis_initmii(struct kinetis_driver_s *priv);
 static int kinetis_writemii(struct kinetis_driver_s *priv, uint8_t phyaddr,
-             uint8_t regaddr, uint32_t data);
+             uint8_t regaddr, uint16_t data);
 static int kinetis_readmii(struct kinetis_driver_s *priv, uint8_t phyaddr,
-             uint8_t regaddr, uint32_t *data);
+             uint8_t regaddr, uint16_t *data);
 static inline int kinetis_initphy(struct kinetis_driver_s *priv);
 
 /* Initialization */
@@ -1419,7 +1419,7 @@ static void kinetis_initmii(struct kinetis_driver_s *priv)
  ****************************************************************************/
 
 static int kinetis_writemii(struct kinetis_driver_s *priv, uint8_t phyaddr,
-                            uint8_t regaddr, uint32_t data)
+                            uint8_t regaddr, uint16_t data)
 {
   int timeout;
 
@@ -1478,7 +1478,7 @@ static int kinetis_writemii(struct kinetis_driver_s *priv, uint8_t phyaddr,
  ****************************************************************************/
 
 static int kinetis_readmii(struct kinetis_driver_s *priv, uint8_t phyaddr,
-                           uint8_t regaddr, uint32_t *data)
+                           uint8_t regaddr, uint16_t *data)
 {
   int timeout;
 
@@ -1519,7 +1519,7 @@ static int kinetis_readmii(struct kinetis_driver_s *priv, uint8_t phyaddr,
 
   /* And return the MII data */
 
-  *data = getreg32(KINETIS_ENET_MMFR) & ENET_MMFR_DATA_MASK;
+  *data = (uint16_t)(getreg32(KINETIS_ENET_MMFR) & ENET_MMFR_DATA_MASK);
   return OK;
 }
 
@@ -1544,7 +1544,7 @@ static inline int kinetis_initphy(struct kinetis_driver_s *priv)
 {
   uint32_t rcr;
   uint32_t tcr;
-  uint32_t phydata;
+  uint16_t phydata;
   uint8_t phyaddr;
   int retries;
   int ret;
@@ -1565,10 +1565,10 @@ static inline int kinetis_initphy(struct kinetis_driver_s *priv)
           nxsig_usleep(LINK_WAITUS);
           ninfo("%s: Read PHYID1, retries=%d\n",
                 BOARD_PHY_NAME, retries + 1);
-          phydata = 0xffffffff;
+          phydata = 0xffff;
           ret = kinetis_readmii(priv, phyaddr, MII_PHYID1, &phydata);
         }
-      while ((ret < 0 || phydata == 0xffffffff) && ++retries < 3);
+      while ((ret < 0 || phydata == 0xffff) && ++retries < 3);
 
       /* If we successfully read anything then break out, using this PHY
        * address
@@ -1591,10 +1591,10 @@ static inline int kinetis_initphy(struct kinetis_driver_s *priv)
 
   /* Verify PHYID1.  Compare OUI bits 3-18 */
 
-  ninfo("%s: PHYID1: %04"PRIx32"\n", BOARD_PHY_NAME, phydata);
+  ninfo("%s: PHYID1: %04x\n", BOARD_PHY_NAME, phydata);
   if (phydata != BOARD_PHYID1)
     {
-      nerr("ERROR: PHYID1=%04"PRIx32" incorrect for %s.  Expected %04x\n",
+      nerr("ERROR: PHYID1=%04x incorrect for %s.  Expected %04x\n",
            phydata, BOARD_PHY_NAME, BOARD_PHYID1);
       return -ENXIO;
     }
@@ -1608,7 +1608,7 @@ static inline int kinetis_initphy(struct kinetis_driver_s *priv)
       return ret;
     }
 
-  ninfo("%s: PHYID2: %04"PRIx32"\n", BOARD_PHY_NAME, phydata);
+  ninfo("%s: PHYID2: %04x\n", BOARD_PHY_NAME, phydata);
 
   /* Verify PHYID2:  Compare OUI bits 19-24 and the 6-bit model number
    * (ignoring the 4-bit revision number).
@@ -1616,7 +1616,7 @@ static inline int kinetis_initphy(struct kinetis_driver_s *priv)
 
   if ((phydata & 0xfff0) != (BOARD_PHYID2 & 0xfff0))
     {
-      nerr("ERROR: PHYID2=%04"PRIx32" incorrect for %s.  Expected %04x\n",
+      nerr("ERROR: PHYID2=%04x incorrect for %s.  Expected %04x\n",
            (phydata & 0xfff0), BOARD_PHY_NAME, (BOARD_PHYID2 & 0xfff0));
       return -ENXIO;
     }
@@ -1650,7 +1650,7 @@ static inline int kinetis_initphy(struct kinetis_driver_s *priv)
   if (phydata & MII_MSR_ANEGCOMPLETE)
     {
       ninfo("%s: Autonegotiation complete\n",  BOARD_PHY_NAME);
-      ninfo("%s: MII_MSR: %04"PRIx32"\n", BOARD_PHY_NAME, phydata);
+      ninfo("%s: MII_MSR: %04x\n", BOARD_PHY_NAME, phydata);
     }
   else
     {
@@ -1679,7 +1679,7 @@ static inline int kinetis_initphy(struct kinetis_driver_s *priv)
       return ret;
     }
 
-  ninfo("%s: BOARD_PHY_STATUS: %04"PRIx32"\n", BOARD_PHY_NAME, phydata);
+  ninfo("%s: BOARD_PHY_STATUS: %04x\n", BOARD_PHY_NAME, phydata);
 
   /* Set up the transmit and receive control registers based on the
    * configuration and the auto negotiation results.
@@ -1733,8 +1733,8 @@ static inline int kinetis_initphy(struct kinetis_driver_s *priv)
     {
       /* This might happen if Autonegotiation did not complete(?) */
 
-      nerr("ERROR: Neither 10- nor 100-BaseT reported: PHY STATUS=%04"
-           PRIx32"\n", phydata);
+      nerr("ERROR: Neither 10- nor 100-BaseT reported: PHY STATUS=%04x\n",
+           phydata);
       return -EIO;
     }
 
