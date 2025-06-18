@@ -320,12 +320,13 @@ static int work_thread_create(FAR const char *name, int priority,
                               FAR void *stack_addr, int stack_size,
                               FAR struct kwork_wqueue_s *wqueue)
 {
+  FAR struct kworker_s *worker = wq_get_worker(wqueue);
+  FAR void *stack = NULL;
   FAR char *argv[3];
   char arg0[32];
   char arg1[32];
   int wndx;
   int pid;
-  FAR void *stack = NULL;
 
   /* Don't permit any of the threads to run until we have fully initialized
    * all of them.
@@ -335,10 +336,10 @@ static int work_thread_create(FAR const char *name, int priority,
 
   for (wndx = 0; wndx < wqueue->nthreads; wndx++)
     {
-      nxsem_init(&wqueue->worker[wndx].wait, 0, 0);
+      nxsem_init(&worker[wndx].wait, 0, 0);
 
       snprintf(arg0, sizeof(arg0), "%p", wqueue);
-      snprintf(arg1, sizeof(arg1), "%p", &wqueue->worker[wndx]);
+      snprintf(arg1, sizeof(arg1), "%p", &worker[wndx]);
       argv[0] = arg0;
       argv[1] = arg1;
       argv[2] = NULL;
@@ -361,7 +362,7 @@ static int work_thread_create(FAR const char *name, int priority,
           return pid;
         }
 
-      wqueue->worker[wndx].pid = pid;
+      worker[wndx].pid = pid;
     }
 
   sched_unlock();
@@ -526,6 +527,7 @@ int work_queue_free(FAR struct kwork_wqueue_s *wqueue)
 
 int work_queue_priority_wq(FAR struct kwork_wqueue_s *wqueue)
 {
+  FAR struct kworker_s *worker;
   FAR struct tcb_s *tcb;
   int pri;
 
@@ -536,7 +538,10 @@ int work_queue_priority_wq(FAR struct kwork_wqueue_s *wqueue)
 
   /* Find for the TCB associated with matching PID */
 
-  tcb = nxsched_get_tcb(wqueue->worker[0].pid);
+  worker = wq_get_worker(wqueue);
+
+  tcb = nxsched_get_tcb(worker[0].pid);
+
   if (!tcb)
     {
       return -ESRCH;
