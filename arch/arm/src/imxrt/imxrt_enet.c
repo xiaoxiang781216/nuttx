@@ -512,9 +512,9 @@ static int imxrt_phyintenable(struct imxrt_driver_s *priv);
 #endif
 static inline void imxrt_initmii(struct imxrt_driver_s *priv);
 static int imxrt_writemii(struct imxrt_driver_s *priv, uint8_t phyaddr,
-             uint8_t regaddr, uint32_t data);
+             uint8_t regaddr, uint16_t data);
 static int imxrt_readmii(struct imxrt_driver_s *priv, uint8_t phyaddr,
-             uint8_t regaddr, uint32_t *data);
+             uint8_t regaddr, uint16_t *data);
 static int imxrt_initphy(struct imxrt_driver_s *priv, bool renogphy);
 #if defined(CLAUSE45)
 static int imxrt_readmmd(struct imxrt_driver_s *priv, uint8_t phyaddr,
@@ -1985,7 +1985,7 @@ static int imxrt_phyintenable(struct imxrt_driver_s *priv)
 
   /* Compile time Kzxxxx defaults */
 
-  uint32_t mask = MII_KSZ80X1_INT_LDEN | MII_KSZ80X1_INT_LUEN;
+  uint16_t mask = MII_KSZ80X1_INT_LDEN | MII_KSZ80X1_INT_LUEN;
   uint8_t  rreg = MII_KSZ8081_INT;
   uint8_t  wreg = rreg;
 
@@ -2078,7 +2078,7 @@ static void imxrt_initmii(struct imxrt_driver_s *priv)
  ****************************************************************************/
 
 static int imxrt_writemii(struct imxrt_driver_s *priv, uint8_t phyaddr,
-                            uint8_t regaddr, uint32_t data)
+                            uint8_t regaddr, uint16_t data)
 {
   int timeout;
 
@@ -2138,7 +2138,7 @@ static int imxrt_writemii(struct imxrt_driver_s *priv, uint8_t phyaddr,
  ****************************************************************************/
 
 static int imxrt_readmii(struct imxrt_driver_s *priv, uint8_t phyaddr,
-                           uint8_t regaddr, uint32_t *data)
+                           uint8_t regaddr, uint16_t *data)
 {
   int timeout;
 
@@ -2180,8 +2180,8 @@ static int imxrt_readmii(struct imxrt_driver_s *priv, uint8_t phyaddr,
 
   /* And return the MII data */
 
-  *data = imxrt_enet_getreg32(priv, IMXRT_ENET_MMFR_OFFSET) &
-          ENET_MMFR_DATA_MASK;
+  *data = (uint16_t)(imxrt_enet_getreg32(priv, IMXRT_ENET_MMFR_OFFSET) &
+                                    ENET_MMFR_DATA_MASK);
   return OK;
 }
 
@@ -2203,7 +2203,7 @@ static int imxrt_readmii(struct imxrt_driver_s *priv, uint8_t phyaddr,
 
 static int imxrt_determine_phy(struct imxrt_driver_s *priv)
 {
-  uint32_t phydata     = 0xffffffff;
+  uint16_t phydata     = 0xffff;
   uint8_t phyaddr      = 0;
   uint8_t last_phyaddr = 0;
   int retries;
@@ -2225,10 +2225,10 @@ static int imxrt_determine_phy(struct imxrt_driver_s *priv)
           do
             {
               nxsig_usleep(100);
-              phydata = 0xffffffff;
+              phydata = 0xffff;
               ret = imxrt_readmii(priv, phyaddr, MII_PHYID1, &phydata);
             }
-          while ((ret < 0 || phydata == 0xffffffff) && ++retries < 3);
+          while ((ret < 0 || phydata == 0xffff) && ++retries < 3);
 
           if (retries <= 3 && ret == 0 &&
               phydata == g_board_phys[priv->current_phy].id1)
@@ -2236,10 +2236,10 @@ static int imxrt_determine_phy(struct imxrt_driver_s *priv)
               do
                 {
                   nxsig_usleep(100);
-                  phydata = 0xffffffff;
+                  phydata = 0xffff;
                   ret = imxrt_readmii(priv, phyaddr, MII_PHYID2, &phydata);
                 }
-              while ((ret < 0 || phydata == 0xffffffff) && ++retries < 3);
+              while ((ret < 0 || phydata == 0xffff) && ++retries < 3);
               if (retries <= 3 && ret == 0 &&
                   (phydata & 0xfff0) ==
                   (g_board_phys[priv->current_phy].id2 & 0xfff0))
@@ -2528,7 +2528,7 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv, bool renogphy)
   uint32_t rcr;
   uint32_t tcr;
   uint32_t racc;
-  uint32_t phydata;
+  uint16_t phydata;
   uint8_t phyaddr    = BOARD_PHY_ADDR;
   int retries;
   int ret;
@@ -2553,10 +2553,10 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv, bool renogphy)
           ninfo("%s: Read PHYID1, retries=%d\n",
                 BOARD_PHY_NAME, retries + 1);
 
-          phydata = 0xffffffff;
+          phydata = 0xffff;
           ret     = imxrt_readmii(priv, phyaddr, MII_PHYID1, &phydata);
         }
-      while ((ret < 0 || phydata == 0xffffffff) && ++retries < 3);
+      while ((ret < 0 || phydata == 0xffff) && ++retries < 3);
 
       if (retries >= 3)
         {
@@ -2570,11 +2570,11 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv, bool renogphy)
 
       /* Verify PHYID1.  Compare OUI bits 3-18 */
 
-      ninfo("%s: PHYID1: %04"PRIx32"\n", BOARD_PHY_NAME, phydata);
-      if ((phydata & 0xffff) != BOARD_PHYID1)
+      ninfo("%s: PHYID1: %04x\n", BOARD_PHY_NAME, phydata);
+      if (phydata != BOARD_PHYID1)
         {
-          nerr("ERROR: PHYID1=%04"PRIx32" incorrect for %s.  Expected %04x"
-               "\n", phydata, BOARD_PHY_NAME, BOARD_PHYID1);
+          nerr("ERROR: PHYID1=%04x incorrect for %s.  Expected %04x\n",
+               phydata, BOARD_PHY_NAME, BOARD_PHYID1);
           return -ENXIO;
         }
 
@@ -2587,7 +2587,7 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv, bool renogphy)
           return ret;
         }
 
-      ninfo("%s: PHYID2: %04"PRIx32"\n", BOARD_PHY_NAME, phydata);
+      ninfo("%s: PHYID2: %04x\n", BOARD_PHY_NAME, phydata);
 
       /* Verify PHYID2:  Compare OUI bits 19-24 and the 6-bit model number
        * (ignoring the 4-bit revision number).
@@ -2595,7 +2595,7 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv, bool renogphy)
 
       if ((phydata & 0xfff0) != (BOARD_PHYID2 & 0xfff0))
         {
-          nerr("ERROR: PHYID2=%04"PRIx32" incorrect for %s. Expected %04x\n",
+          nerr("ERROR: PHYID2=%04x incorrect for %s.  Expected %04x\n",
                (phydata & 0xfff0), BOARD_PHY_NAME, (BOARD_PHYID2 & 0xfff0));
           return -ENXIO;
         }
@@ -2790,7 +2790,7 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv, bool renogphy)
           if (phydata & MII_MSR_ANEGCOMPLETE)
             {
               ninfo("%s: Autonegotiation complete\n",  BOARD_PHY_NAME);
-              ninfo("%s: MII_MSR: %04"PRIx32"\n", BOARD_PHY_NAME, phydata);
+              ninfo("%s: MII_MSR: %04x\n", BOARD_PHY_NAME, phydata);
             }
           else
             {
@@ -2828,10 +2828,10 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv, bool renogphy)
       retries = 0;
       do
         {
-          phydata = 0xffffffff;
+          phydata = 0xffff;
           ret = imxrt_readmii(priv, phyaddr, BOARD_PHY_STATUS, &phydata);
         }
-      while ((ret < 0 || phydata == 0xffffffff) && ++retries < 3);
+      while ((ret < 0 || phydata == 0xffff) && ++retries < 3);
 
       /* If we didn't successfully read anything and we haven't tried
        * a physical renegotiation then lets do that
@@ -2855,7 +2855,7 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv, bool renogphy)
             }
         }
 
-      ninfo("%s: BOARD_PHY_STATUS: %04"PRIx32"\n", BOARD_PHY_NAME, phydata);
+      ninfo("%s: BOARD_PHY_STATUS: %04x\n", BOARD_PHY_NAME, phydata);
 #  if defined(CONFIG_ETH0_PHY_MULTI)
     }
 #  endif
@@ -2923,8 +2923,8 @@ static inline int imxrt_initphy(struct imxrt_driver_s *priv, bool renogphy)
     {
       /* This might happen if Autonegotiation did not complete(?) */
 
-      nerr("ERROR: Neither 10- nor 100-BaseT reported: PHY STATUS=%04"PRIx32
-           "\n", phydata);
+      nerr("ERROR: Neither 10- nor 100-BaseT reported: PHY STATUS=%04x\n",
+           phydata);
       return -EIO;
     }
 
