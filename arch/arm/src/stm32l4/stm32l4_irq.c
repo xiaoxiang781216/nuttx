@@ -339,7 +339,6 @@ void up_irqinitialize(void)
   irq_attach(STM32L4_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(STM32L4_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(STM32L4_IRQ_PENDSV, stm32l4_pendsv, NULL);
-  arm_enable_dbgmonitor();
   irq_attach(STM32L4_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
   irq_attach(STM32L4_IRQ_RESERVED, stm32l4_reserved, NULL);
 #endif

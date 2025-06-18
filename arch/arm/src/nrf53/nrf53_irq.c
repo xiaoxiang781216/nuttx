@@ -342,7 +342,6 @@ void up_irqinitialize(void)
   irq_attach(NRF53_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(NRF53_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(NRF53_IRQ_PENDSV, nrf53_pendsv, NULL);
-  arm_enable_dbgmonitor();
   irq_attach(NRF53_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
   irq_attach(NRF53_IRQ_RESERVED, nrf53_reserved, NULL);
 #endif

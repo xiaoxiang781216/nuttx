@@ -378,7 +378,6 @@ void up_irqinitialize(void)
   irq_attach(KINETIS_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(KINETIS_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(KINETIS_IRQ_PENDSV, kinetis_pendsv, NULL);
-  arm_enable_dbgmonitor();
   irq_attach(KINETIS_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
   irq_attach(KINETIS_IRQ_RESERVED, kinetis_reserved, NULL);
 #endif

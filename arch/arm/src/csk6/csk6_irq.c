@@ -197,7 +197,6 @@ void up_irqinitialize(void)
   irq_attach(CSK6_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(CSK6_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(CSK6_IRQ_PENDSV, csk6_pendsv, NULL);
-  arm_enable_dbgmonitor();
   irq_attach(CSK6_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
   irq_attach(CSK6_IRQ_RESERVED, csk6_reserved, NULL);
 #endif

@@ -380,7 +380,6 @@ void up_irqinitialize(void)
   irq_attach(S32K3XX_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(S32K3XX_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(S32K3XX_IRQ_PENDSV, s32k3xx_pendsv, NULL);
-  arm_enable_dbgmonitor();
   irq_attach(S32K3XX_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
   irq_attach(S32K3XX_IRQ_RESERVED, s32k3xx_reserved, NULL);
 #endif

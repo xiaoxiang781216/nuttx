@@ -347,7 +347,6 @@ void up_irqinitialize(void)
   irq_attach(EFM32_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(EFM32_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(EFM32_IRQ_PENDSV, efm32_pendsv, NULL);
-  arm_enable_dbgmonitor();
   irq_attach(EFM32_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
   irq_attach(EFM32_IRQ_RESERVED, efm32_reserved, NULL);
 #endif

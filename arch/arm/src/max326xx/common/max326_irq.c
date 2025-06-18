@@ -338,7 +338,6 @@ void up_irqinitialize(void)
   irq_attach(MAX326_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(MAX326_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(MAX326_IRQ_PENDSV, max326_pendsv, NULL);
-  arm_enable_dbgmonitor();
   irq_attach(MAX326_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
   irq_attach(MAX326_IRQ_RESERVED, max326_reserved, NULL);
 #endif

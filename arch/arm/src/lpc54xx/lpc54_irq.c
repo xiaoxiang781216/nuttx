@@ -338,7 +338,6 @@ void up_irqinitialize(void)
   irq_attach(LPC54_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(LPC54_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(LPC54_IRQ_PENDSV, lpc54_pendsv, NULL);
-  arm_enable_dbgmonitor();
   irq_attach(LPC54_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
   irq_attach(LPC54_IRQ_RESERVED, lpc54_reserved, NULL);
 #endif

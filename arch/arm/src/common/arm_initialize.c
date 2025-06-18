@@ -150,5 +150,10 @@ void up_initialize(void)
   /* Initialize the L2 cache if present and selected */
 
   arm_l2ccinitialize();
+
+#ifdef CONFIG_ARCH_HAVE_DEBUG
+  arm_enable_dbgmonitor();
+#endif
+
   board_autoled_on(LED_IRQSENABLED);
 }

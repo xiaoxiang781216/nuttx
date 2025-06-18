@@ -505,7 +505,6 @@ void up_irqinitialize(void)
   irq_attach(LC823450_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(LC823450_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(LC823450_IRQ_PENDSV, lc823450_pendsv, NULL);
-  arm_enable_dbgmonitor();
   irq_attach(LC823450_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
   irq_attach(LC823450_IRQ_RESERVED, lc823450_reserved, NULL);
 #endif

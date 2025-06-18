@@ -328,7 +328,6 @@ void up_irqinitialize(void)
   irq_attach(EOSS3_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(EOSS3_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(EOSS3_IRQ_PENDSV, eoss3_pendsv, NULL);
-  arm_enable_dbgmonitor();
   irq_attach(EOSS3_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
   irq_attach(EOSS3_IRQ_RESERVED, eoss3_reserved, NULL);
 #endif

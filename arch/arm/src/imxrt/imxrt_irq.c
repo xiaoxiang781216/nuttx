@@ -490,7 +490,6 @@ void up_irqinitialize(void)
   irq_attach(IMXRT_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(IMXRT_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(IMXRT_IRQ_PENDSV, imxrt_pendsv, NULL);
-  arm_enable_dbgmonitor();
   irq_attach(IMXRT_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
   irq_attach(IMXRT_IRQ_RESERVED, imxrt_reserved, NULL);
 #endif

@@ -305,7 +305,6 @@ void up_irqinitialize(void)
   irq_attach(CXD32_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(CXD32_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(CXD32_IRQ_PENDSV, cxd32_pendsv, NULL);
-  arm_enable_dbgmonitor();
   irq_attach(CXD32_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
   irq_attach(CXD32_IRQ_RESERVED, cxd32_reserved, NULL);
 #endif
