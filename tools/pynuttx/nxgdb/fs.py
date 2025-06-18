@@ -641,6 +641,69 @@ class InfoRomfs(gdb.Command):
             self.dump_romfs_cache(node, path)
 
 
+class InfoLittlefs(gdb.Command):
+    """Show littlefs cache information"""
+
+    def __init__(self):
+        if utils.get_symbol_value("CONFIG_FS_LITTLEFS"):
+            super().__init__("info littlefs", gdb.COMMAND_USER)
+
+    def parse_arguments(self, argv):
+        parser = argparse.ArgumentParser(description=self.__doc__)
+        parser.add_argument(
+            "-P",
+            "--path",
+            type=str,
+            default=None,
+            help="set the littlefs path to be dumped",
+        )
+
+        try:
+            args = parser.parse_args(argv)
+        except SystemExit:
+            return None
+
+        return args
+
+    def diagnose(self, *args, **kwargs):
+        output = gdb.execute("info littlefs", to_string=True)
+
+        return {
+            "title": "Littlefs cache information",
+            "summary": "Littlefs nodeinfo dump",
+            "command": "info littlefs",
+            "result": "info",
+            "message": output or "No littlefs information",
+        }
+
+    def dump_little_cache(self, node: Inode, path):
+        mpt = node.i_private.cast(
+            utils.lookup_type("struct littlefs_mountpt_s").pointer()
+        )
+        drv = mpt.drv.dereference()
+        geo = mpt.geo
+        cfg = mpt.cfg
+        lfs = mpt.lfs
+        print("littlefs {path} mount point information: {hex(mpt)}")
+        print("drv:")
+        print(drv.format_string(pretty_structs=True, styling=True))
+        print("cfg:")
+        print(cfg.format_string(pretty_structs=True, styling=True))
+        print("geo:")
+        print(geo.format_string(pretty_structs=True, styling=True))
+        print("lfs:")
+        print(lfs.format_string(pretty_structs=True, styling=True))
+
+    @utils.dont_repeat_decorator
+    def invoke(self, args, from_tty):
+        args = self.parse_arguments(gdb.string_to_argv(args))
+        nodes = filter(fstype_filter("littlefs"), foreach_inode())
+        for node, path in nodes:
+            if args and args.path and path != args.path:
+                continue
+            self.dump_little_cache(node, path)
+
+
 @autocompeletion.complete
 class InfoYaffs(gdb.Command):
     """Show yaffs cache information"""
