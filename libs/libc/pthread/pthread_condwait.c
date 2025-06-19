@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/pthread/pthread_condclockwait.c
+ * libs/libc/pthread/pthread_condwait.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -25,69 +25,52 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/compiler.h>
 
-#include <stdint.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <signal.h>
-#include <time.h>
+#include <sched.h>
 #include <errno.h>
-#include <assert.h>
 #include <debug.h>
 
-#include <nuttx/irq.h>
-#include <nuttx/wdog.h>
-#include <nuttx/signal.h>
 #include <nuttx/cancelpt.h>
 #include <nuttx/pthread.h>
 
-#include "sched/sched.h"
-#include "pthread/pthread.h"
-#include "clock/clock.h"
-#include "signal/signal.h"
+#include "pthread.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: pthread_cond_clockwait
+ * Name: int pthread_cond_wait
  *
  * Description:
- *   A thread can perform a timed wait on a condition variable.
+ *   A thread can wait for a condition variable to be signalled or broadcast.
  *
  * Input Parameters:
- *   cond    - the condition variable to wait on
- *   mutex   - the mutex that protects the condition variable
- *   clockid - The timing source to use in the conversion
- *   abstime - wait until this absolute time
+ *   None
  *
  * Returned Value:
- *   OK (0) on success; A non-zero errno value is returned on failure.
+ *   None
  *
  * Assumptions:
- *   Timing is of resolution 1 msec, with +/-1 millisecond accuracy.
  *
  ****************************************************************************/
 
-int pthread_cond_clockwait(FAR pthread_cond_t *cond,
-                           FAR pthread_mutex_t *mutex,
-                           clockid_t clockid,
-                           FAR const struct timespec *abstime)
+int pthread_cond_wait(FAR pthread_cond_t *cond, FAR pthread_mutex_t *mutex)
 {
-  int ret = OK;
   int status;
+  int ret;
 
-  sinfo("cond=%p mutex=%p abstime=%p\n", cond, mutex, abstime);
+  sinfo("cond=%p mutex=%p\n", cond, mutex);
 
-  /* pthread_cond_clockwait() is a cancellation point */
+  /* pthread_cond_wait() is a cancellation point */
 
   enter_cancellation_point();
 
   /* Make sure that non-NULL references were provided. */
 
-  if (!cond || !mutex)
+  if (cond == NULL || mutex == NULL)
     {
       ret = EINVAL;
     }
@@ -98,44 +81,39 @@ int pthread_cond_clockwait(FAR pthread_cond_t *cond,
     {
       ret = EPERM;
     }
-
-  /* If no wait time is provided, this function degenerates to
-   * the same behavior as pthread_cond_wait().
-   */
-
-  else if (!abstime)
-    {
-      ret = pthread_cond_wait(cond, mutex);
-    }
-
   else
     {
       unsigned int nlocks;
 
-      sinfo("Give up mutex...\n");
-
-      cond->wait_count++;
-
       /* Give up the mutex */
 
+      sinfo("Give up mutex / take cond\n");
+
+      cond->wait_count++;
       ret = pthread_mutex_breaklock(mutex, &nlocks);
-      if (ret == 0)
+
+      status = -nxsem_wait_uninterruptible(&cond->sem);
+      if (ret == OK)
         {
-          status = nxsem_clockwait_uninterruptible(&cond->sem,
-                                                   clockid, abstime);
-          if (status < 0)
-            {
-              ret = -status;
-            }
+          /* Report the first failure that occurs */
+
+          ret = status;
         }
 
-      /* Reacquire the mutex (retaining the ret). */
+      /* Reacquire the mutex.
+       *
+       * When cancellation points are enabled, we need to hold the mutex
+       * when the pthread is canceled and cleanup handlers, if any, are
+       * entered.
+       */
 
-      sinfo("Re-locking...\n");
+      sinfo("Reacquire mutex...\n");
 
       status = pthread_mutex_restorelock(mutex, nlocks);
-      if (ret == 0)
+      if (ret == OK)
         {
+          /* Report the first failure that occurs */
+
           ret = status;
         }
     }

@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/pthread/pthread_condbroadcast.c
+ * libs/libc/pthread/pthread_condsignal.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -27,25 +27,23 @@
 #include <nuttx/config.h>
 
 #include <pthread.h>
-#include <sched.h>
 #include <errno.h>
 #include <debug.h>
-
-#include "pthread/pthread.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: pthread_cond_broadcast
+ * Name: pthread_cond_signal
  *
  * Description:
- *    A thread broadcast on a condition variable.
- *    pthread_cond_broadcast shall unblock all threads currently blocked on a
+ *    A thread can signal on a condition variable.
+ *    pthread_cond_signal shall unblock a thread currently blocked on a
  *    specified condition variable cond. We need own the mutex that threads
  *    calling pthread_cond_wait or pthread_cond_timedwait have associated
  *    with the condition variable during their wait.
+ *
  * Input Parameters:
  *   None
  *
@@ -56,7 +54,7 @@
  *
  ****************************************************************************/
 
-int pthread_cond_broadcast(FAR pthread_cond_t *cond)
+int pthread_cond_signal(FAR pthread_cond_t *cond)
 {
   int ret = OK;
 
@@ -68,22 +66,11 @@ int pthread_cond_broadcast(FAR pthread_cond_t *cond)
     }
   else
     {
-      /* Loop until all of the waiting threads have been restarted. */
-
-      while (cond->wait_count > 0)
+      if (cond->wait_count > 0)
         {
-          /* If the value is less than zero (meaning that one or more
-           * thread is waiting), then post the condition semaphore.
-           * Only the highest priority waiting thread will get to execute
-           */
-
-          ret = -nxsem_post(&cond->sem);
-
-          /* Increment the semaphore count (as was done by the
-           * above post).
-           */
-
+          sinfo("Signalling...\n");
           cond->wait_count--;
+          ret = -nxsem_post(&cond->sem);
         }
     }
 

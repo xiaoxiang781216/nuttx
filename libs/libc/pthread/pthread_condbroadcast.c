@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/pthread/pthread_mutexinconsistent.c
+ * libs/libc/pthread/pthread_condbroadcast.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -28,60 +28,63 @@
 
 #include <pthread.h>
 #include <sched.h>
-#include <assert.h>
 #include <errno.h>
-
-#include <nuttx/sched.h>
-#include <nuttx/semaphore.h>
-
-#include "pthread/pthread.h"
+#include <debug.h>
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: pthread_mutex_inconsistent
+ * Name: pthread_cond_broadcast
  *
  * Description:
- *   This function is called when a pthread is terminated via either
- *   pthread_exit() or pthread_cancel().  It will check for any mutexes
- *   held by exitting thread.  It will mark them as inconsistent and
- *   then wake up the highest priority waiter for the mutex.  That
- *   instance of pthread_mutex_lock() will then return EOWNERDEAD.
- *
+ *    A thread broadcast on a condition variable.
+ *    pthread_cond_broadcast shall unblock all threads currently blocked on a
+ *    specified condition variable cond. We need own the mutex that threads
+ *    calling pthread_cond_wait or pthread_cond_timedwait have associated
+ *    with the condition variable during their wait.
  * Input Parameters:
- *   tcb -- a reference to the TCB of the exitting pthread.
+ *   None
  *
  * Returned Value:
- *   None.
+ *   None
+ *
+ * Assumptions:
  *
  ****************************************************************************/
 
-void pthread_mutex_inconsistent(FAR struct tcb_s *tcb)
+int pthread_cond_broadcast(FAR pthread_cond_t *cond)
 {
-  FAR struct pthread_mutex_s *mutex;
-  FAR struct tls_info_s *tls = nxsched_get_tls(tcb);
+  int ret = OK;
 
-  DEBUGASSERT(tcb != NULL);
+  sinfo("cond=%p\n", cond);
 
-  nxmutex_lock(&tls->tl_lock);
-
-  /* Remove and process each mutex held by this task */
-
-  while (tls->tl_mhead != NULL)
+  if (!cond)
     {
-      /* Remove the mutex from the TCB list */
+      ret = EINVAL;
+    }
+  else
+    {
+      /* Loop until all of the waiting threads have been restarted. */
 
-      mutex         = tls->tl_mhead;
-      tls->tl_mhead = mutex->flink;
-      mutex->flink  = NULL;
+      while (cond->wait_count > 0)
+        {
+          /* If the value is less than zero (meaning that one or more
+           * thread is waiting), then post the condition semaphore.
+           * Only the highest priority waiting thread will get to execute
+           */
 
-      /* Mark the mutex as INCONSISTENT and wake up any waiting thread */
+          ret = -nxsem_post(&cond->sem);
 
-      mutex->flags |= _PTHREAD_MFLAGS_INCONSISTENT;
-      mutex_reset(&mutex->mutex);
+          /* Increment the semaphore count (as was done by the
+           * above post).
+           */
+
+          cond->wait_count--;
+        }
     }
 
-  nxmutex_unlock(&tls->tl_lock);
+  sinfo("Returning %d\n", ret);
+  return ret;
 }
