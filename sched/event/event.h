@@ -29,7 +29,7 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/irq.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/list.h>
 #include <nuttx/semaphore.h>
 
