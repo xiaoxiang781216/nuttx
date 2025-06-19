@@ -54,7 +54,7 @@ struct rpmsgfs_s
 struct rpmsgfs_cookie_s
 {
   sem_t    sem;
-  int      result;
+  int64_t  result;
   FAR void *data;
 };
 
@@ -87,10 +87,10 @@ static void rpmsgfs_device_destroy(struct rpmsg_device *rdev,
 static int  rpmsgfs_ept_cb(FAR struct rpmsg_endpoint *ept,
                            FAR void *data, size_t len, uint32_t src,
                            FAR void *priv);
-static int rpmsgfs_send_recv(FAR struct rpmsgfs_s *priv,
-                             uint32_t command, bool copy,
-                             FAR struct rpmsgfs_header_s *msg,
-                             int len, FAR void *data);
+static int64_t rpmsgfs_send_recv(FAR struct rpmsgfs_s *priv,
+                                 uint32_t command, bool copy,
+                                 FAR struct rpmsgfs_header_s *msg,
+                                 int len, FAR void *data);
 
 /****************************************************************************
  * Private Data
@@ -340,13 +340,13 @@ static int rpmsgfs_ept_cb(FAR struct rpmsg_endpoint *ept,
   return -EINVAL;
 }
 
-static int rpmsgfs_send_recv(FAR struct rpmsgfs_s *priv,
-                             uint32_t command, bool copy,
-                             FAR struct rpmsgfs_header_s *msg,
-                             int len, FAR void *data)
+static int64_t rpmsgfs_send_recv(FAR struct rpmsgfs_s *priv,
+                                 uint32_t command, bool copy,
+                                 FAR struct rpmsgfs_header_s *msg,
+                                 int len, FAR void *data)
 {
   FAR struct rpmsgfs_cookie_s cookie;
-  int ret;
+  int64_t ret;
 
   memset(&cookie, 0, sizeof(cookie));
   nxsem_init(&cookie.sem, 0, 0);
