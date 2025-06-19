@@ -21,7 +21,15 @@
 #
 ############################################################################
 
-set -e
+set -eo pipefail
+
+# Check if gawk is installed, this is required for adding prefix to
+# symbols memory sections.
+
+if ! command -v gawk &> /dev/null; then
+    echo "Error: gawk is not installed. Please install it and try again."
+    exit 1
+fi
 
 skip_sections=()
 skip_symbols=()
