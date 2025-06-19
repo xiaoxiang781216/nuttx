@@ -177,7 +177,7 @@ int weak_function up_rtc_getdatetime(FAR struct tm *tp)
       ret = g_rtc_lower->ops->rdtime(g_rtc_lower, &rtctime);
       if (ret == 0)
         {
-          *tp = *((FAR struct tm *)&rtctime);
+          memcpy(tp, &rtctime, sizeof(struct tm));
         }
     }
 
