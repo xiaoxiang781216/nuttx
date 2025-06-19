@@ -109,6 +109,10 @@ macro(define_multiple_link_target inter_target dep_target linktimes)
     ${MULTIPLE_LINK_SOURCES_${linktimes}}
     $<FILTER:$<TARGET_OBJECTS:nuttx>,EXCLUDE,allsyms_empty|kasan_global>)
 
+  set_source_files_properties(
+    ${MULTIPLE_LINK_SOURCES_${linktimes}}
+    PROPERTIES COMPILE_OPTIONS -fno-sanitize=kernel-address)
+
   # relink target and nuttx have exactly the same configuration
   target_include_directories(
     ${inter_target} SYSTEM PUBLIC ${CMAKE_SOURCE_DIR}/include
