@@ -1527,17 +1527,15 @@ static int fatfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
                       FAR struct stat *buf)
 {
   FAR struct fatfs_mountpt_s *fs;
-  FAR char *path;
+  char path[strlen(relpath) + 3];
   int ret;
 
   /* Get the mountpoint private data from the inode structure */
 
   fs = mountpt->i_private;
-  path = fs_heap_malloc(strlen(relpath) + 3);
   ret = nxmutex_lock(&fs->lock);
   if (ret < 0)
     {
-      fs_heap_free(path);
       return ret;
     }
 
@@ -1546,7 +1544,7 @@ static int fatfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
   path[2] = '\0';
   ret = fatfs_stat_i(fs, strcat(path, relpath), buf);
   nxmutex_unlock(&fs->lock);
-  fs_heap_free(path);
+
   return ret;
 }
 
