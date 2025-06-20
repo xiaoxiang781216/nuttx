@@ -1664,6 +1664,7 @@ static int vsock_connect(FAR struct socket *psock,
       goto err_with_bind;
     }
 
+  conn->sconn.s_flags |= _SF_CONNECTING;
   if (_SS_ISNONBLOCK(conn->sconn.s_flags))
     {
       ret = -EINPROGRESS;
@@ -2105,7 +2106,8 @@ static int vsock_close(FAR struct socket *psock)
                conn, conn->sconn.s_flags);
       vsock_remove_conn(conn);
     }
-  else if (_SS_ISCONNECTED(conn->sconn.s_flags))
+  else if (_SS_ISCONNECTED(conn->sconn.s_flags) ||
+           _SS_ISCONNECTING(conn->sconn.s_flags))
     {
       vsock_add_ref(conn);
       conn->shutdown = SHUT_RDWR;
