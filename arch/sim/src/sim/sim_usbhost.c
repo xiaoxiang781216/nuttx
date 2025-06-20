@@ -36,6 +36,7 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
 #include <nuttx/usb/usb.h>
@@ -110,6 +111,8 @@ struct sim_usbhost_s
 
   struct usbhost_devaddr_s     devgen;              /* Address generation data */
   struct wdog_s                wdog;
+
+  spinlock_t                   slock;
 };
 
 /****************************************************************************
@@ -166,6 +169,7 @@ static struct sim_usbhost_s g_sim_usbhost =
   .lock = NXMUTEX_INITIALIZER,
   .pscsem = SEM_INITIALIZER(0),
   .ep0.iocsem = SEM_INITIALIZER(1),
+  .slock = SP_UNLOCKED,
 };
 
 static struct usbhost_connection_s g_sim_usbconn =
@@ -258,13 +262,12 @@ static int sim_usbhost_wait(struct usbhost_connection_s *conn,
 {
   struct sim_usbhost_s *priv = &g_sim_usbhost;
   irqstate_t flags;
-  int ret;
+  int ret = OK;
 
   /* Loop until the connection state changes on one of the root hub ports or
    * until an error occurs.
    */
 
-  flags = enter_critical_section();
   for (; ; )
     {
       /* Check for a change in the connection state on any root hub port */
@@ -273,6 +276,7 @@ static int sim_usbhost_wait(struct usbhost_connection_s *conn,
 
       /* Has the connection state changed on the RH port? */
 
+      flags = spin_lock_irqsave(&priv->slock);
       connport = &priv->hport.hport;
       if (priv->connected != connport->connected)
         {
@@ -282,8 +286,8 @@ static int sim_usbhost_wait(struct usbhost_connection_s *conn,
 
           connport->connected = priv->connected;
           *hport = connport;
-          leave_critical_section(flags);
-          return OK;
+          spin_unlock_irqrestore(&priv->slock, flags);
+          break;
         }
 
       /* No changes on any port. Wait for a connection/disconnection event
@@ -291,12 +295,16 @@ static int sim_usbhost_wait(struct usbhost_connection_s *conn,
        */
 
       priv->pscwait = true;
+      spin_unlock_irqrestore(&priv->slock, flags);
+
       ret = nxsem_wait_uninterruptible(&priv->pscsem);
       if (ret < 0)
         {
-          return ret;
+          break;
         }
     }
+
+  return ret;
 }
 
 /****************************************************************************
