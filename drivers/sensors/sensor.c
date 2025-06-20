@@ -1527,23 +1527,28 @@ rpmsg_err:
  *           as the driver persists.
  *   devno - The user specifies which device of this type, from 0.
  *
+ * Returned Value:
+ *   OK if the driver was successfully unregister; A negated errno value is
+ *   returned on any failure.
  ****************************************************************************/
 
-void sensor_unregister(FAR struct sensor_lowerhalf_s *lower, int devno)
+int sensor_unregister(FAR struct sensor_lowerhalf_s *lower, int devno)
 {
   FAR char *path;
+  int ret;
 
   path = lib_get_tempbuffer(PATH_MAX);
   if (path == NULL)
     {
-      return;
+      return -ENOMEM;
     }
 
   snprintf(path, PATH_MAX, DEVNAME_FMT,
            g_sensor_meta[lower->type].name,
            devno);
-  sensor_custom_unregister(lower, path);
+  ret = sensor_custom_unregister(lower, path);
   lib_put_tempbuffer(path);
+  return ret;
 }
 
 /****************************************************************************
@@ -1559,10 +1564,13 @@ void sensor_unregister(FAR struct sensor_lowerhalf_s *lower, int devno)
  *           as the driver persists.
  *   path  - The user specifies path of device, ex: /dev/uorb/xxx
  *
+ * Returned Value:
+ *   OK if the driver was successfully unregister; A negated errno value is
+ *   returned on any failure.
  ****************************************************************************/
 
-void sensor_custom_unregister(FAR struct sensor_lowerhalf_s *lower,
-                              FAR const char *path)
+int sensor_custom_unregister(FAR struct sensor_lowerhalf_s *lower,
+                             FAR const char *path)
 {
   FAR struct sensor_upperhalf_s *upper;
 
@@ -1571,13 +1579,22 @@ void sensor_custom_unregister(FAR struct sensor_lowerhalf_s *lower,
 
 #ifdef CONFIG_SENSORS_RPMSG
   lower = sensor_rpmsg_unregister(lower);
+  if (lower == NULL)
+    {
+      return -EBUSY;
+    }
+
 #endif
 
   upper = lower->priv;
-
   sminfo(upper->name, "UnRegistering");
-  unregister_driver(path);
 
+  if (upper->state.nadvertisers != 0 || upper->state.nsubscribers != 0)
+    {
+      return -EBUSY;
+    }
+
+  unregister_driver(path);
   nxrmutex_destroy(&upper->lock);
   if (circbuf_is_init(&upper->buffer))
     {
@@ -1586,4 +1603,5 @@ void sensor_custom_unregister(FAR struct sensor_lowerhalf_s *lower,
     }
 
   kmm_free(upper);
+  return OK;
 }

@@ -1751,6 +1751,11 @@ sensor_rpmsg_unregister(FAR struct sensor_lowerhalf_s *lower)
 {
   FAR struct sensor_rpmsg_dev_s *dev = lower->priv;
 
+  if (dev->nadvertisers != 0 || dev->nsubscribers != 0)
+    {
+      return NULL;
+    }
+
   down_write(&g_dev_lock);
   list_delete(&dev->node);
   up_write(&g_dev_lock);
