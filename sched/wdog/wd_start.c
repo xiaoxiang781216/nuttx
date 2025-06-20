@@ -83,12 +83,12 @@
 #endif
 
 /****************************************************************************
- * Private Data
+ * Public Data
  ****************************************************************************/
 
-#ifdef CONFIG_SCHED_TICKLESS
-static unsigned int g_wdtimernested[CONFIG_SMP_NCPUS];
-#endif
+/* The hazard-pointers used for check if cores hold references to wdog. */
+
+volatile struct wdog_s *g_wdrunning[CONFIG_SMP_NCPUS];
 
 /****************************************************************************
  * Private Functions
@@ -144,6 +144,10 @@ static inline_function clock_t wd_expiration(clock_t ticks)
           break;
         }
 
+      /* Acquire the hazard pointer to indicate the wdog is ocupied */
+
+      g_wdrunning[cpu] = wdog;
+
       /* Remove the watchdog from the head of the list */
 
       list_delete(&wdog->node);
@@ -151,7 +155,7 @@ static inline_function clock_t wd_expiration(clock_t ticks)
       /* Indicate that the watchdog is no longer active. */
 
       func = wdog->func;
-      arg = wdog->arg;
+      arg  = wdog->arg;
       wdog->func = NULL;
 
       /* Execute the watchdog function */
@@ -161,11 +165,12 @@ static inline_function clock_t wd_expiration(clock_t ticks)
       CALL_FUNC(func, arg);
     }
 
-#ifdef CONFIG_SCHED_TICKLESS
-  /* Decrement the nested watchdog timer count */
+  /* Release the hazard-pointer to show no reference held.
+   * Since this function is called only in the interrupt context,
+   * the cpu should not change after the unlock/lock operation.
+   */
 
-  g_wdtimernested[this_cpu()]--;
-#endif
+  g_wdrunning[cpu] = NULL;
 
   leave_critical_section(flags);
 

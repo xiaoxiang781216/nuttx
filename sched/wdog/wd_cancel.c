@@ -68,7 +68,7 @@ int wd_cancel(FAR struct wdog_s *wdog)
 
   /* Make sure that the watchdog is valid and still active. */
 
-  if (wdog == NULL || !WDOG_ISACTIVE(wdog))
+  if (!WDOG_ISACTIVE(wdog))
     {
       leave_critical_section(flags);
     }
