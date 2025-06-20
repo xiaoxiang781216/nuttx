@@ -121,6 +121,7 @@ void aes_cfb128_decrypt(caddr_t, FAR uint8_t *);
 
 void aes_ctr_crypt(caddr_t, FAR uint8_t *);
 
+void aes_reinit_xform(caddr_t, FAR uint8_t *);
 void aes_ctr_reinit(caddr_t, FAR uint8_t *);
 void aes_xts_reinit(caddr_t, FAR uint8_t *);
 void aes_gcm_reinit(caddr_t, FAR uint8_t *);
@@ -206,7 +207,7 @@ const struct enc_xform enc_xform_aes =
   aes_encrypt_xform,
   aes_decrypt_xform,
   aes_setkey_xform,
-  NULL
+  aes_reinit_xform,
 };
 
 const struct enc_xform enc_xform_aes_ctr =
@@ -567,12 +568,35 @@ int cast5_setkey(FAR void *sched, FAR uint8_t *key, int len)
 
 void aes_encrypt_xform(caddr_t key, FAR uint8_t *blk)
 {
-  aes_encrypt((FAR AES_CTX *)key, blk, blk);
+  FAR AES_CTX *ctx;
+  int i;
+
+  ctx = (FAR AES_CTX *)key;
+  for (i = 0; i < RIJNDAEL128_BLOCK_LEN; i++)
+    {
+      blk[i] ^= ctx->iv[i];
+    }
+
+  aes_encrypt(ctx, blk, blk);
+  bcopy(blk, ctx->iv, RIJNDAEL128_BLOCK_LEN);
 }
 
 void aes_decrypt_xform(caddr_t key, FAR uint8_t *blk)
 {
-  aes_decrypt((FAR AES_CTX *)key, blk, blk);
+  FAR AES_CTX *ctx;
+  uint8_t tmp[RIJNDAEL128_BLOCK_LEN];
+  int i;
+
+  ctx = (FAR AES_CTX *)key;
+  bcopy(blk, tmp, RIJNDAEL128_BLOCK_LEN);
+
+  aes_decrypt(ctx, blk, blk);
+  for (i = 0; i < RIJNDAEL128_BLOCK_LEN; i++)
+    {
+      blk[i] ^= ctx->iv[i];
+    }
+
+  bcopy(tmp, ctx->iv, RIJNDAEL128_BLOCK_LEN);
 }
 
 int aes_setkey_xform(FAR void *sched, FAR uint8_t *key, int len)
@@ -580,16 +604,20 @@ int aes_setkey_xform(FAR void *sched, FAR uint8_t *key, int len)
   return aes_setkey((FAR AES_CTX *)sched, key, len);
 }
 
+void aes_reinit_xform(caddr_t key, FAR uint8_t *iv)
+{
+  FAR AES_CTX *ctx;
+
+  ctx = (FAR AES_CTX *)key;
+  bcopy(iv, ctx->iv, RIJNDAEL128_BLOCK_LEN);
+}
+
 void aes_ctr_reinit(caddr_t key, FAR uint8_t *iv)
 {
   FAR struct aes_ctr_ctx *ctx;
 
   ctx = (FAR struct aes_ctr_ctx *)key;
-  bcopy(iv, ctx->ac_block, AESCTR_NONCESIZE + AESCTR_IVSIZE);
-
-  /* reset counter */
-
-  bzero(ctx->ac_block + AESCTR_NONCESIZE + AESCTR_IVSIZE, 4);
+  bcopy(iv, ctx->ac_block, AESCTR_BLOCKSIZE);
 }
 
 void aes_gcm_reinit(caddr_t key, FAR uint8_t *iv)
@@ -613,6 +641,14 @@ void aes_ctr_crypt(caddr_t key, FAR uint8_t *data)
 
   ctx = (FAR struct aes_ctr_ctx *)key;
 
+  aes_encrypt(&ctx->ac_key, ctx->ac_block, keystream);
+  for (i = 0; i < AESCTR_BLOCKSIZE; i++)
+    {
+      data[i] ^= keystream[i];
+    }
+
+  explicit_bzero(keystream, sizeof(keystream));
+
   /* increment counter */
 
   for (i = AESCTR_BLOCKSIZE - 1;
@@ -625,14 +661,6 @@ void aes_ctr_crypt(caddr_t key, FAR uint8_t *data)
           break;
         }
     }
-
-  aes_encrypt(&ctx->ac_key, ctx->ac_block, keystream);
-  for (i = 0; i < AESCTR_BLOCKSIZE; i++)
-    {
-      data[i] ^= keystream[i];
-    }
-
-  explicit_bzero(keystream, sizeof(keystream));
 }
 
 int aes_ctr_setkey(FAR void *sched, FAR uint8_t *key, int len)
@@ -645,11 +673,12 @@ int aes_ctr_setkey(FAR void *sched, FAR uint8_t *key, int len)
     }
 
   ctx = (FAR struct aes_ctr_ctx *)sched;
-  if (aes_setkey(&ctx->ac_key, key, len) != 0)
+  if (aes_setkey(&ctx->ac_key, key, len - AESCTR_NONCESIZE) != 0)
     {
       return -1;
     }
 
+  bcopy(key + len - AESCTR_NONCESIZE, ctx->ac_block, AESCTR_NONCESIZE);
   return 0;
 }
 

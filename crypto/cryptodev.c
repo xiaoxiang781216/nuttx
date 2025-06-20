@@ -441,6 +441,11 @@ static int cryptodev_op(FAR struct csession *cse,
           crde.crd_flags &= ~CRD_F_ENCRYPT;
         }
 
+      if (cop->flags & COP_FLAG_UPDATE)
+        {
+          crde.crd_flags |= CRD_F_UPDATE;
+        }
+
       crde.crd_len = cop->len;
       crde.crd_inject = 0;
       crde.crd_alg = cse->cipher;

@@ -112,7 +112,7 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
    * handling themselves.
    */
 
-  if (exf->reinit)
+  if (exf->reinit && !(crd->crd_flags & CRD_F_UPDATE))
     {
       exf->reinit((caddr_t)sw->sw_kschedule, iv);
     }
@@ -190,15 +190,6 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
         }
     }
 
-  switch (sw->sw_alg)
-    {
-      case CRYPTO_AES_CBC:
-        bcopy(ivp, crp->crp_iv, ivlen);
-        break;
-      default:
-        break;
-    }
-
   return 0; /* Done with encryption/decryption */
 }
 
@@ -218,12 +209,19 @@ int swcr_authcompute(FAR struct cryptop *crp,
       return -EINVAL;
     }
 
-  err = axf->update(&sw->sw_ctx, (FAR uint8_t *)buf + crd->crd_skip,
-                    crd->crd_len);
-
-  if (err)
+  if (crd->crd_flags & CRD_F_UPDATE)
     {
-      return err;
+      err = axf->update(&sw->sw_ctx, (FAR uint8_t *)buf + crd->crd_skip,
+                        crd->crd_len);
+      if (err)
+        {
+          return err;
+        }
+    }
+  else
+    {
+      axf->final((FAR uint8_t *)crp->crp_mac, &sw->sw_ctx);
+      return 0;
     }
 
   if (crd->crd_flags & CRD_F_ESN)
@@ -231,33 +229,9 @@ int swcr_authcompute(FAR struct cryptop *crp,
       axf->update(&sw->sw_ctx, crd->crd_esn, 4);
     }
 
-  switch (sw->sw_alg)
-    {
-      case CRYPTO_MD5_HMAC:
-      case CRYPTO_SHA1_HMAC:
-      case CRYPTO_RIPEMD160_HMAC:
-      case CRYPTO_SHA2_256_HMAC:
-      case CRYPTO_SHA2_384_HMAC:
-      case CRYPTO_SHA2_512_HMAC:
-        if (sw->sw_octx == NULL)
-          {
-            return -EINVAL;
-          }
-
-        if (crd->crd_flags & CRD_F_UPDATE)
-          {
-            break;
-          }
-
-        axf->final(aalg, &sw->sw_ctx);
-        bcopy(sw->sw_octx, &sw->sw_ctx, axf->ctxsize);
-        axf->update(&sw->sw_ctx, aalg, axf->hashsize);
-        axf->final((FAR uint8_t *)crp->crp_mac, &sw->sw_ctx);
-        bcopy(sw->sw_ictx, &sw->sw_ctx, axf->ctxsize);
-        break;
-    }
-
-  return 0;
+  axf->final(aalg, &sw->sw_ctx);
+  bcopy(sw->sw_octx, &sw->sw_ctx, axf->ctxsize);
+  return axf->update(&sw->sw_ctx, aalg, axf->hashsize);
 }
 
 int swcr_hash(FAR struct cryptop *crp,
@@ -1031,7 +1005,7 @@ int swcr_process(struct cryptop *crp)
       return -EINVAL;
     }
 
-  if (crp->crp_desc == NULL || crp->crp_buf == NULL)
+  if (crp->crp_desc == NULL)
     {
       crp->crp_etype = -EINVAL;
       goto done;
