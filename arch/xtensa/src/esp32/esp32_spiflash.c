@@ -40,6 +40,7 @@
 #include <nuttx/kthread.h>
 #include <nuttx/mutex.h>
 #include <nuttx/mtd/mtd.h>
+#include <nuttx/wqueue.h>
 
 #include "sched/sched.h"
 
