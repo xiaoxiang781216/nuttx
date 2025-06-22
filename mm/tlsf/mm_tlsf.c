@@ -159,6 +159,16 @@ struct mm_memdump_priv_s
 #endif
 };
 
+/****************************************************************************
+ * Private Function Prototypes
+ ****************************************************************************/
+
+static void mm_delayfree(struct mm_heap_s *heap, void *mem, bool delay);
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
 #ifdef CONFIG_MM_HEAP_MEMPOOL
 static inline_function
 void memdump_info_pool(FAR struct mm_memdump_priv_s *priv,
@@ -180,16 +190,6 @@ void memdump_dump_pool(FAR struct mm_memdump_priv_s *priv,
 #  define memdump_info_pool(priv,heap)
 #  define memdump_dump_pool(priv,heap)
 #endif
-
-/****************************************************************************
- * Private Function Prototypes
- ****************************************************************************/
-
-static void mm_delayfree(struct mm_heap_s *heap, void *mem, bool delay);
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
 
 /****************************************************************************
  * Name: mm_lock_irq
@@ -306,11 +306,9 @@ static void memdump_dump_biggestnodes(FAR struct mm_memdump_priv_s *priv)
 
   priv->info.aordblks = priv->filled;
 }
-
 #endif
 
 #ifdef CONFIG_MM_RECORD
-
 /****************************************************************************
  * Name: memdump_backtrace
  ****************************************************************************/
@@ -322,11 +320,11 @@ static void memdump_backtrace(FAR struct mm_heap_s *heap,
   FAR struct tcb_s *tcb;
 #  endif
 
-#ifdef CONFIG_MM_RECORD_PID
+#  ifdef CONFIG_MM_RECORD_PID
   buf->pid = _SCHED_GETTID();
-#endif
+#  endif
   MM_INCSEQNO(buf);
-#ifdef CONFIG_MM_RECORD_STACK
+#  ifdef CONFIG_MM_RECORD_STACK
   tcb = nxsched_get_tcb(buf->pid);
   if (heap->mm_procfs.backtrace ||
       (tcb && atomic_read(&tcb->flags) & TCB_FLAG_HEAP_DUMP))
@@ -356,9 +354,9 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
   tmp->flink = heap->mm_delaylist[this_cpu()];
   heap->mm_delaylist[this_cpu()] = tmp;
 
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
+#  if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
   heap->mm_delaycount[this_cpu()]++;
-#endif
+#  endif
 
   mm_unlock_irq(heap, flags);
 #endif
@@ -381,17 +379,16 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
 
   tmp = heap->mm_delaylist[this_cpu()];
 
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  if (tmp == NULL ||
-      (!force &&
-        heap->mm_delaycount[this_cpu()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
+#  if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
+  if (tmp == NULL || (!force &&
+      heap->mm_delaycount[this_cpu()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
     {
       mm_unlock_irq(heap, flags);
       return false;
     }
 
   heap->mm_delaycount[this_cpu()] = 0;
-#endif
+#  endif
 
   heap->mm_delaylist[this_cpu()] = NULL;
 
@@ -399,7 +396,7 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
 
   /* Test if the delayed is empty */
 
-  ret = tmp != NULL;
+  ret = !!tmp;
 
   while (tmp)
     {
@@ -532,17 +529,17 @@ static int mm_lock(FAR struct mm_heap_s *heap)
 
   if (up_interrupt_context())
     {
-#if !defined(CONFIG_SMP)
+#  ifndef CONFIG_SMP
       /* Check the mutex value, if held by someone, then return false.
        * Or, touch the heap internal data directly.
        */
 
       return nxmutex_is_locked(&heap->mm_lock) ? -EAGAIN : 0;
-#else
+#  else
       /* Can't take mutex in SMP interrupt handler */
 
       return -EAGAIN;
-#endif
+#  endif
     }
   else
 #endif
@@ -645,18 +642,18 @@ static void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem,
       size_t size = mm_malloc_size(heap, mem);
       UNUSED(size);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  /* If delay free is enabled, a memory node will be freed twice.
-   * The first time is to add the node to the delay list, and the second
-   * time is to actually free the node. Therefore, we only colorize the
-   * memory node the first time, when `delay` is set to true.
-   */
+#  if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
+      /* If delay free is enabled, a memory node will be freed twice.
+       * The first time is to add the node to the delay list, and the second
+       * time is to actually free the node. Therefore, we only colorize the
+       * memory node the first time, when `delay` is set to true.
+       */
 
-  if (delay)
-#endif
-    {
-      memset(mem, MM_FREE_MAGIC, size);
-    }
+      if (delay)
+#  endif
+        {
+          memset(mem, MM_FREE_MAGIC, size);
+        }
 #endif
 
       kasan_poison(mem, size);
@@ -1284,7 +1281,7 @@ struct mallinfo_task mm_mallinfo_task(FAR struct mm_heap_s *heap,
 #if CONFIG_MM_REGIONS > 1
   int region;
 #else
-#define region 0
+#  define region 0
 #endif
 
   free_delaylist(heap, true);
@@ -1820,10 +1817,9 @@ void mm_uninitialize(FAR struct mm_heap_s *heap)
                       (uintptr_t)heap->mm_heapstart[i], heap->mm_curused);
     }
 
-#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
-#  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+#if defined(CONFIG_FS_PROCFS) && (defined(CONFIG_BUILD_FLAT) || \
+    defined(__KERNEL__)) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   procfs_unregister_meminfo(&heap->mm_procfs);
-#  endif
 #endif
   nxmutex_destroy(&heap->mm_lock);
   tlsf_destroy(&heap->mm_tlsf);
