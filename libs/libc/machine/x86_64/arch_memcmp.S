@@ -1,5 +1,5 @@
 /*********************************************************************************
- * libs/libc/machine/x86_64/gnu/arch_memcmp.S
+ * libs/libc/machine/x86_64/arch_memcmp.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2014, Intel Corporation
@@ -1581,7 +1581,7 @@ L(32bytes):
 	ret
 
 /*
- * Aligned 8 bytes to avoid 2 branch "taken" in one 16 alinged code block.
+ * Aligned 8 bytes to avoid 2 branch "taken" in one 16 aligned code block.
  */
 	ALIGN (3)
 L(less16bytes):

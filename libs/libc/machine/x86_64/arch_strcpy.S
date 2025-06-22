@@ -1,5 +1,5 @@
 /*********************************************************************************
- * libs/libc/machine/x86_64/gnu/arch_strcpy.S
+ * libs/libc/machine/x86_64/arch_strcpy.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2014, Intel Corporation
@@ -138,7 +138,7 @@ ENTRY (STRCPY)
 	movdqu	(%rsi, %rcx), %xmm1   /* copy 16 bytes */
 	movdqu	%xmm1, (%rdi)
 
-/* If source adress alignment != destination adress alignment */
+/* If source address alignment != destination address alignment */
 	.p2align 4
 L(Unalign16Both):
 	sub	%rcx, %rdi
@@ -334,7 +334,7 @@ L(Unaligned64Leave):
 	BRANCH_TO_JMPTBL_ENTRY (L(ExitTable), %rdx, 4)
 #endif
 
-/* If source adress alignment == destination adress alignment */
+/* If source address alignment == destination address alignment */
 
 L(SourceStringAlignmentLess32):
 	pxor	%xmm0, %xmm0
