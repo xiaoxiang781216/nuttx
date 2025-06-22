@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/common/ghs/lib_dummy.c
+ * libs/libc/machine/arm/arch_dummy.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
