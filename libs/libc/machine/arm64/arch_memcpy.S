@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/arm64/gnu/arch_memcpy.S
+ * libs/libc/machine/arm64/arch_memcpy.S
  *
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: 2012-2013, Linaro Limited, 2015 ARM Ltd
