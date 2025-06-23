@@ -379,6 +379,10 @@ void icmp_input(FAR struct net_driver_s *dev)
 
           goto icmp_send_nothing;
         }
+      else
+        {
+          goto typeerr;
+        }
     }
 #endif
 
