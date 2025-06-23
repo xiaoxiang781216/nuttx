@@ -581,19 +581,20 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
   uint32_t out_len;
   int ret = OK;
 
-  /* Disable the hardware interrupt */
-
-  flags = enter_critical_section();
+  if ((ret = nxmutex_lock(&priv->ioctl_mutex)) < 0)
+    {
+      return ret;
+    }
 
   if (priv->bc_bifup)
     {
-      goto errout_in_critical_section;
+      goto errout_in_ioctl_mutex;
     }
 
   ret = bcmf_wl_active(priv, true);
   if (ret != OK)
     {
-      goto errout_in_critical_section;
+      goto errout_in_ioctl_mutex;
     }
 
   /* Enable chip */
@@ -645,13 +646,13 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
 
   bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_COEX_HIGH);
 
-  goto errout_in_critical_section;
+  goto errout_in_ioctl_mutex;
 
 errout_in_wl_active:
   bcmf_wl_active(priv, false);
 
-errout_in_critical_section:
-  leave_critical_section(flags);
+errout_in_ioctl_mutex:
+  nxmutex_unlock(&priv->ioctl_mutex);
 
   wlinfo("bcmf_ifup done: %d\n", ret);
 
@@ -677,11 +678,12 @@ errout_in_critical_section:
 static int bcmf_ifdown(FAR struct net_driver_s *dev)
 {
   FAR struct bcmf_dev_s *priv = (FAR struct bcmf_dev_s *)dev->d_private;
-  irqstate_t flags;
+  int ret;
 
-  /* Disable the hardware interrupt */
-
-  flags = enter_critical_section();
+  if ((ret = nxmutex_lock(&priv->ioctl_mutex)) < 0)
+    {
+      return ret;
+    }
 
   if (priv->bc_bifup)
     {
@@ -707,7 +709,7 @@ static int bcmf_ifdown(FAR struct net_driver_s *dev)
       bcmf_wl_active(priv, false);
     }
 
-  leave_critical_section(flags);
+  nxmutex_unlock(&priv->ioctl_mutex);
 
   return OK;
 }

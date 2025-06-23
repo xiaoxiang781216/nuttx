@@ -1168,9 +1168,7 @@ FAR struct bcmf_dev_s *bcmf_allocate_device(void)
 
   /* Init ioctl mutex */
 
-#ifdef CONFIG_NETDEV_IOCTL
   nxmutex_init(&priv->ioctl_mutex);
-#endif
 
   /* Init scan timeout timer */
 
