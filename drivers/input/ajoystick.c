@@ -49,6 +49,8 @@
 #include <nuttx/signal.h>
 #include <nuttx/random.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/mutex.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/input/ajoystick.h>
 
 #include <nuttx/irq.h>
@@ -66,6 +68,9 @@ struct ajoy_upperhalf_s
   FAR const struct ajoy_lowerhalf_s *au_lower;
 
   ajoy_buttonset_t au_sample;  /* Last sampled button states */
+
+  spinlock_t  lock;            /* Spinlock for this driver */
+  mutex_t     mutex;           /* Mutex for this driver */
 
   /* The following is a singly linked list of open references to the
    * joystick device.
@@ -156,6 +161,7 @@ static void ajoy_enable(FAR struct ajoy_upperhalf_s *priv)
   FAR struct ajoy_open_s *opriv;
   ajoy_buttonset_t press;
   ajoy_buttonset_t release;
+  irqstate_t flags;
 
   DEBUGASSERT(priv);
   lower = priv->au_lower;
@@ -165,6 +171,8 @@ static void ajoy_enable(FAR struct ajoy_upperhalf_s *priv)
 
   press   = 0;
   release = 0;
+
+  flags = spin_lock_irqsave(&priv->lock);
 
   for (opriv = priv->au_open; opriv; opriv = opriv->ao_flink)
     {
@@ -176,6 +184,10 @@ static void ajoy_enable(FAR struct ajoy_upperhalf_s *priv)
       press   |= opriv->ao_notify.an_press;
       release |= opriv->ao_notify.an_release;
     }
+
+  spin_unlock_irqrestore(&priv->lock, flags);
+
+  nxmutex_lock(&priv->mutex);
 
   /* Enable/disable button interrupts */
 
@@ -193,6 +205,8 @@ static void ajoy_enable(FAR struct ajoy_upperhalf_s *priv)
 
       lower->al_enable(lower, 0, 0, NULL, NULL);
     }
+
+  nxmutex_unlock(&priv->mutex);
 }
 
 /****************************************************************************
@@ -233,8 +247,6 @@ static void ajoy_sample(FAR struct ajoy_upperhalf_s *priv)
    * interrupts must be disabled.
    */
 
-  flags = enter_critical_section();
-
   /* Sample the new button state */
 
   DEBUGASSERT(lower->al_buttons);
@@ -245,6 +257,8 @@ static void ajoy_sample(FAR struct ajoy_upperhalf_s *priv)
   /* Determine which buttons have been newly pressed and which have been
    * newly released.
    */
+
+  flags = spin_lock_irqsave_nopreempt(&priv->lock);
 
   change = sample ^ priv->au_sample;
   press  = change & sample;
@@ -283,7 +297,7 @@ static void ajoy_sample(FAR struct ajoy_upperhalf_s *priv)
     }
 
   priv->au_sample = sample;
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -316,17 +330,18 @@ static int ajoy_open(FAR struct file *filep)
 
   lower = priv->au_lower;
   DEBUGASSERT(lower && lower->al_supported);
-
-  flags = enter_critical_section();
-
   supported = lower->al_supported(lower);
   opriv->ao_pollevents.ap_press   = supported;
   opriv->ao_pollevents.ap_release = supported;
 
   /* Attach the open structure to the device */
 
+  flags = spin_lock_irqsave(&priv->lock);
+
   opriv->ao_flink = priv->au_open;
   priv->au_open = opriv;
+
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   /* Enable/disable interrupt handling */
 
@@ -336,7 +351,6 @@ static int ajoy_open(FAR struct file *filep)
 
   filep->f_priv = (FAR void *)opriv;
 
-  leave_critical_section(flags);
   return OK;
 }
 
@@ -359,7 +373,7 @@ static int ajoy_close(FAR struct file *filep)
   DEBUGASSERT(inode->i_private);
   priv  = inode->i_private;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   /* Find the open structure in the list of open structures for the device */
 
@@ -370,8 +384,8 @@ static int ajoy_close(FAR struct file *filep)
   DEBUGASSERT(curr);
   if (!curr)
     {
+      spin_unlock_irqrestore(&priv->lock, flags);
       ierr("ERROR: Failed to find open entry\n");
-      leave_critical_section(flags);
       return -ENOENT;
     }
 
@@ -386,11 +400,11 @@ static int ajoy_close(FAR struct file *filep)
       priv->au_open = opriv->ao_flink;
     }
 
+  spin_unlock_irqrestore(&priv->lock, flags);
+
   /* Enable/disable interrupt handling */
 
   ajoy_enable(priv);
-
-  leave_critical_section(flags);
 
   /* Cancel any pending notification */
 
@@ -435,7 +449,7 @@ static ssize_t ajoy_read(FAR struct file *filep, FAR char *buffer,
 
   /* Get exclusive access to the driver structure */
 
-  flags = enter_critical_section();
+  nxmutex_lock(&priv->mutex);
 
   /* Read and return the current state of the joystick buttons */
 
@@ -444,11 +458,14 @@ static ssize_t ajoy_read(FAR struct file *filep, FAR char *buffer,
   ret = lower->al_sample(lower, (FAR struct ajoy_sample_s *)buffer);
   if (ret >= 0)
     {
+      flags = spin_lock_irqsave(&priv->lock);
       opriv->ao_pollpending = false;
+      spin_unlock_irqrestore(&priv->lock, flags);
+
       ret = sizeof(struct ajoy_sample_s);
     }
 
-  leave_critical_section(flags);
+  nxmutex_unlock(&priv->mutex);
   return (ssize_t)ret;
 }
 
@@ -470,10 +487,6 @@ static int ajoy_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
   priv  = inode->i_private;
-
-  /* Get exclusive access to the driver structure */
-
-  flags = enter_critical_section();
 
   /* Handle the ioctl command */
 
@@ -523,8 +536,12 @@ static int ajoy_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           {
             /* Save the poll events */
 
+            flags = spin_lock_irqsave(&priv->lock);
+
             opriv->ao_pollevents.ap_press   = pollevents->ap_press;
             opriv->ao_pollevents.ap_release = pollevents->ap_release;
+
+            spin_unlock_irqrestore(&priv->lock, flags);
 
             /* Enable/disable interrupt handling */
 
@@ -554,10 +571,14 @@ static int ajoy_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           {
             /* Save the notification events */
 
+            flags = spin_lock_irqsave(&priv->lock);
+
             opriv->ao_notify.an_press   = notify->an_press;
             opriv->ao_notify.an_release = notify->an_release;
             opriv->ao_notify.an_event   = notify->an_event;
             opriv->ao_pid               = nxsched_getpid();
+
+            spin_unlock_irqrestore(&priv->lock, flags);
 
             /* Enable/disable interrupt handling */
 
@@ -573,7 +594,6 @@ static int ajoy_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       break;
     }
 
-  leave_critical_section(flags);
   return ret;
 }
 
@@ -585,6 +605,7 @@ static int ajoy_poll(FAR struct file *filep, FAR struct pollfd *fds,
                      bool setup)
 {
   FAR struct inode *inode;
+  FAR struct ajoy_upperhalf_s *priv;
   FAR struct ajoy_open_s *opriv;
   irqstate_t flags;
   int ret = OK;
@@ -594,10 +615,11 @@ static int ajoy_poll(FAR struct file *filep, FAR struct pollfd *fds,
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
+  priv  = inode->i_private;
 
   /* Get exclusive access to the driver structure */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&priv->lock);
 
   /* Are we setting up the poll?  Or tearing it down? */
 
@@ -659,7 +681,7 @@ static int ajoy_poll(FAR struct file *filep, FAR struct pollfd *fds,
     }
 
 errout:
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
   return ret;
 }
 
@@ -706,6 +728,9 @@ int ajoy_register(FAR const char *devname,
       return -ENOMEM;
     }
 
+  spin_lock_init(&priv->lock);
+  nxmutex_init(&priv->mutex);
+
   /* Make sure that all ajoystick interrupts are disabled */
 
   DEBUGASSERT(lower->al_enable);
@@ -724,6 +749,7 @@ int ajoy_register(FAR const char *devname,
   if (ret < 0)
     {
       ierr("ERROR: register_driver failed: %d\n", ret);
+      nxmutex_destroy(&priv->mutex);
       kmm_free(priv);
     }
 

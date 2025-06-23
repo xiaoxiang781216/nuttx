@@ -49,6 +49,8 @@
 #include <nuttx/signal.h>
 #include <nuttx/random.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/mutex.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/input/djoystick.h>
 
 #include <nuttx/irq.h>
@@ -66,6 +68,9 @@ struct djoy_upperhalf_s
   FAR const struct djoy_lowerhalf_s *du_lower;
 
   djoy_buttonset_t du_sample;  /* Last sampled button states */
+
+  spinlock_t  lock;            /* Spinlock for this driver */
+  mutex_t     mutex;           /* Mutex for this driver */
 
   /* The following is a singly linked list of open references to the
    * joystick device.
@@ -156,6 +161,7 @@ static void djoy_enable(FAR struct djoy_upperhalf_s *priv)
   FAR struct djoy_open_s *opriv;
   djoy_buttonset_t press;
   djoy_buttonset_t release;
+  irqstate_t flags;
 
   DEBUGASSERT(priv);
   lower = priv->du_lower;
@@ -165,6 +171,8 @@ static void djoy_enable(FAR struct djoy_upperhalf_s *priv)
 
   press   = 0;
   release = 0;
+
+  flags = spin_lock_irqsave(&priv->lock);
 
   for (opriv = priv->du_open; opriv; opriv = opriv->do_flink)
     {
@@ -176,6 +184,10 @@ static void djoy_enable(FAR struct djoy_upperhalf_s *priv)
       press   |= opriv->do_notify.dn_press;
       release |= opriv->do_notify.dn_release;
     }
+
+  spin_unlock_irqrestore(&priv->lock, flags);
+
+  nxmutex_lock(&priv->mutex);
 
   /* Enable/disable button interrupts */
 
@@ -193,6 +205,8 @@ static void djoy_enable(FAR struct djoy_upperhalf_s *priv)
 
       lower->dl_enable(lower, 0, 0, NULL, NULL);
     }
+
+  nxmutex_unlock(&priv->mutex);
 }
 
 /****************************************************************************
@@ -233,8 +247,6 @@ static void djoy_sample(FAR struct djoy_upperhalf_s *priv)
    * interrupts must be disabled.
    */
 
-  flags = enter_critical_section();
-
   /* Sample the new button state */
 
   DEBUGASSERT(lower->dl_sample);
@@ -245,6 +257,8 @@ static void djoy_sample(FAR struct djoy_upperhalf_s *priv)
   /* Determine which buttons have been newly pressed and which have been
    * newly released.
    */
+
+  flags = spin_lock_irqsave_nopreempt(&priv->lock);
 
   change = sample ^ priv->du_sample;
   press  = change & sample;
@@ -283,7 +297,7 @@ static void djoy_sample(FAR struct djoy_upperhalf_s *priv)
     }
 
   priv->du_sample = sample;
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -317,16 +331,18 @@ static int djoy_open(FAR struct file *filep)
   lower = priv->du_lower;
   DEBUGASSERT(lower && lower->dl_supported);
 
-  flags = enter_critical_section();
-
   supported = lower->dl_supported(lower);
   opriv->do_pollevents.dp_press   = supported;
   opriv->do_pollevents.dp_release = supported;
 
   /* Attach the open structure to the device */
 
+  flags = spin_lock_irqsave(&priv->lock);
+
   opriv->do_flink = priv->du_open;
   priv->du_open = opriv;
+
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   /* Enable/disable interrupt handling */
 
@@ -336,7 +352,6 @@ static int djoy_open(FAR struct file *filep)
 
   filep->f_priv = (FAR void *)opriv;
 
-  leave_critical_section(flags);
   return OK;
 }
 
@@ -359,7 +374,7 @@ static int djoy_close(FAR struct file *filep)
   DEBUGASSERT(inode->i_private);
   priv  = inode->i_private;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   /* Find the open structure in the list of open structures for the device */
 
@@ -370,8 +385,8 @@ static int djoy_close(FAR struct file *filep)
   DEBUGASSERT(curr);
   if (!curr)
     {
+      spin_unlock_irqrestore(&priv->lock, flags);
       ierr("ERROR: Failed to find open entry\n");
-      leave_critical_section(flags);
       return -ENOENT;
     }
 
@@ -386,11 +401,11 @@ static int djoy_close(FAR struct file *filep)
       priv->du_open = opriv->do_flink;
     }
 
+  spin_unlock_irqrestore(&priv->lock, flags);
+
   /* Enable/disable interrupt handling */
 
   djoy_enable(priv);
-
-  leave_critical_section(flags);
 
   /* Cancel any pending notification */
 
@@ -433,18 +448,24 @@ static ssize_t djoy_read(FAR struct file *filep, FAR char *buffer,
 
   /* Get exclusive access to the driver structure */
 
-  flags = enter_critical_section();
+  nxmutex_lock(&priv->mutex);
 
   /* Read and return the current state of the joystick buttons */
 
   lower = priv->du_lower;
   DEBUGASSERT(lower && lower->dl_sample);
   priv->du_sample = lower->dl_sample(lower);
+
+  flags = spin_lock_irqsave(&priv->lock);
+
   *(FAR djoy_buttonset_t *)buffer = priv->du_sample;
   opriv->do_pollpending = false;
+
+  spin_unlock_irqrestore(&priv->lock, flags);
+
   ret = sizeof(djoy_buttonset_t);
 
-  leave_critical_section(flags);
+  nxmutex_unlock(&priv->mutex);
   return (ssize_t)ret;
 }
 
@@ -466,10 +487,6 @@ static int djoy_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
   priv  = inode->i_private;
-
-  /* Get exclusive access to the driver structure */
-
-  flags = enter_critical_section();
 
   /* Handle the ioctl command */
 
@@ -519,8 +536,12 @@ static int djoy_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           {
             /* Save the poll events */
 
+            flags = spin_lock_irqsave(&priv->lock);
+
             opriv->do_pollevents.dp_press   = pollevents->dp_press;
             opriv->do_pollevents.dp_release = pollevents->dp_release;
+
+            spin_unlock_irqrestore(&priv->lock, flags);
 
             /* Enable/disable interrupt handling */
 
@@ -550,10 +571,14 @@ static int djoy_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           {
             /* Save the notification events */
 
+            flags = spin_lock_irqsave(&priv->lock);
+
             opriv->do_notify.dn_press   = notify->dn_press;
             opriv->do_notify.dn_release = notify->dn_release;
             opriv->do_notify.dn_event   = notify->dn_event;
             opriv->do_pid               = nxsched_getpid();
+
+            spin_unlock_irqrestore(&priv->lock, flags);
 
             /* Enable/disable interrupt handling */
 
@@ -569,7 +594,6 @@ static int djoy_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       break;
     }
 
-  leave_critical_section(flags);
   return ret;
 }
 
@@ -581,6 +605,7 @@ static int djoy_poll(FAR struct file *filep, FAR struct pollfd *fds,
                      bool setup)
 {
   FAR struct inode *inode;
+  FAR struct djoy_upperhalf_s *priv;
   FAR struct djoy_open_s *opriv;
   irqstate_t flags;
   int ret = OK;
@@ -590,10 +615,11 @@ static int djoy_poll(FAR struct file *filep, FAR struct pollfd *fds,
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
+  priv  = inode->i_private;
 
   /* Get exclusive access to the driver structure */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&priv->lock);
 
   /* Are we setting up the poll?  Or tearing it down? */
 
@@ -653,7 +679,7 @@ static int djoy_poll(FAR struct file *filep, FAR struct pollfd *fds,
     }
 
 errout:
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
   return ret;
 }
 
@@ -700,6 +726,9 @@ int djoy_register(FAR const char *devname,
       return -ENOMEM;
     }
 
+  spin_lock_init(&priv->lock);
+  nxmutex_init(&priv->mutex);
+
   /* Make sure that all djoystick interrupts are disabled */
 
   DEBUGASSERT(lower->dl_enable);
@@ -718,6 +747,7 @@ int djoy_register(FAR const char *devname,
   if (ret < 0)
     {
       ierr("ERROR: register_driver failed: %d\n", ret);
+      nxmutex_destroy(&priv->mutex);
       kmm_free(priv);
     }
 
