@@ -343,13 +343,10 @@ static int rpmsgfs_open(FAR struct file *filep, FAR const char *relpath,
 
   if ((oflags & (O_APPEND | O_WRONLY)) == (O_APPEND | O_WRONLY))
     {
-      ret = rpmsgfs_client_lseek(fs->handle, hf->fd, 0, SEEK_END);
-      if (ret >= 0)
+      filep->f_pos = rpmsgfs_client_lseek(fs->handle, hf->fd, 0, SEEK_END);
+      if (filep->f_pos < 0)
         {
-          filep->f_pos = ret;
-        }
-      else
-        {
+          ret = filep->f_pos;
           goto errout_with_buffer;
         }
     }

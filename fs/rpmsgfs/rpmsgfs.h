@@ -92,7 +92,7 @@ begin_packed_struct struct rpmsgfs_read_s
   struct rpmsgfs_header_s header;
   int32_t                 fd;
   uint32_t                count;
-  int32_t                 offset;
+  int64_t                 offset;
   char                    buf[0];
 } end_packed_struct;
 
@@ -103,7 +103,7 @@ begin_packed_struct struct rpmsgfs_lseek_s
   struct rpmsgfs_header_s header;
   int32_t                 fd;
   int32_t                 whence;
-  int32_t                 offset;
+  int64_t                 offset;
 } end_packed_struct;
 
 begin_packed_struct struct rpmsgfs_ioctl_s

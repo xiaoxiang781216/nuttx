@@ -589,8 +589,15 @@ off_t rpmsgfs_client_lseek(FAR void *handle, int fd,
     .whence = whence,
   };
 
-  return rpmsgfs_send_recv(handle, RPMSGFS_LSEEK, true,
+  offset = rpmsgfs_send_recv(handle, RPMSGFS_LSEEK, true,
            (struct rpmsgfs_header_s *)&msg, sizeof(msg), NULL);
+
+  if (offset >= 0)
+    {
+      offset = msg.offset;
+    }
+
+  return offset;
 }
 
 int rpmsgfs_client_ioctl(FAR void *handle, int fd,
