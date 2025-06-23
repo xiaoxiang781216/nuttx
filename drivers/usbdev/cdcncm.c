@@ -1157,7 +1157,6 @@ static void cdcncm_txdone(FAR struct cdcncm_driver_s *priv)
 static void cdcncm_interrupt_work(FAR void *arg)
 {
   FAR struct cdcncm_driver_s *self = (FAR struct cdcncm_driver_s *)arg;
-  irqstate_t flags;
 
   /* Check if we received an incoming packet, if so, call cdcncm_receive() */
 
@@ -1166,10 +1165,8 @@ static void cdcncm_interrupt_work(FAR void *arg)
       cdcncm_receive(self);
       netdev_lower_rxready(&self->dev);
 
-      flags = enter_critical_section();
       self->rxpending = false;
       EP_SUBMIT(self->epbulkout, self->rdreq);
-      leave_critical_section(flags);
     }
 
   /* Check if a packet transmission just completed.  If so, call
@@ -1177,17 +1174,11 @@ static void cdcncm_interrupt_work(FAR void *arg)
    * are no pending transmissions.
    */
 
-  flags = enter_critical_section();
   if (self->txdone)
     {
       self->txdone = false;
-      leave_critical_section(flags);
 
       cdcncm_txdone(self);
-    }
-  else
-    {
-      leave_critical_section(flags);
     }
 }
 
@@ -1254,11 +1245,6 @@ static int cdcncm_ifdown(FAR struct netdev_lowerhalf_s *dev)
 {
   FAR struct cdcncm_driver_s *priv =
     container_of(dev, struct cdcncm_driver_s, dev);
-  irqstate_t flags;
-
-  /* Disable the Ethernet interrupt */
-
-  flags = enter_critical_section();
 
   /* Put the EMAC in its reset, non-operational state.  This should be
    * a known configuration that will guarantee the cdcncm_ifup() always
@@ -1268,7 +1254,6 @@ static int cdcncm_ifdown(FAR struct netdev_lowerhalf_s *dev)
   /* Mark the device "down" */
 
   priv->bifup = false;
-  leave_critical_section(flags);
 
   return OK;
 }

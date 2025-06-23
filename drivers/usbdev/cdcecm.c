@@ -522,7 +522,6 @@ static void cdcecm_txdone(FAR struct cdcecm_driver_s *priv)
 static void cdcecm_interrupt_work(FAR void *arg)
 {
   FAR struct cdcecm_driver_s *self = (FAR struct cdcecm_driver_s *)arg;
-  irqstate_t flags;
 
   /* Lock the network and serialize driver operations if necessary.
    * NOTE: Serialization is only required in the case where the driver work
@@ -538,10 +537,8 @@ static void cdcecm_interrupt_work(FAR void *arg)
     {
       cdcecm_receive(self);
 
-      flags = enter_critical_section();
       self->rxpending = false;
       EP_SUBMIT(self->epbulkout, self->rdreq);
-      leave_critical_section(flags);
     }
 
   /* Check if a packet transmission just completed.  If so, call
@@ -551,9 +548,7 @@ static void cdcecm_interrupt_work(FAR void *arg)
 
   if (self->txdone)
     {
-      flags = enter_critical_section();
       self->txdone = false;
-      leave_critical_section(flags);
 
       cdcecm_txdone(self);
     }
@@ -621,11 +616,6 @@ static int cdcecm_ifdown(FAR struct net_driver_s *dev)
 {
   FAR struct cdcecm_driver_s *priv =
     (FAR struct cdcecm_driver_s *)dev->d_private;
-  irqstate_t flags;
-
-  /* Disable the Ethernet interrupt */
-
-  flags = enter_critical_section();
 
   /* Put the EMAC in its reset, non-operational state.  This should be
    * a known configuration that will guarantee the cdcecm_ifup() always
@@ -635,7 +625,7 @@ static int cdcecm_ifdown(FAR struct net_driver_s *dev)
   /* Mark the device "down" */
 
   priv->bifup = false;
-  leave_critical_section(flags);
+
   return OK;
 }
 

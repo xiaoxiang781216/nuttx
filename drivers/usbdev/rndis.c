@@ -176,6 +176,7 @@ struct rndis_dev_s
   uint32_t rndis_host_tx_count;          /* TX packet counter */
   uint32_t rndis_host_rx_count;          /* RX packet counter */
   uint8_t host_mac_address[6];           /* Host side MAC address */
+  mutex_t lock;                          /* Mutex to protect the driver state */
 
   size_t response_queue_words;           /* Count of words waiting in response_queue. */
   uint32_t response_queue[RNDIS_RESP_QUEUE_WORDS];
@@ -586,7 +587,6 @@ static const struct rndis_oid_value_s g_rndis_oid_values[] =
 
 static int rndis_submit_rdreq(FAR struct rndis_dev_s *priv)
 {
-  irqstate_t flags = enter_critical_section();
   int ret = OK;
 
   if (!priv->rdreq_submitted && !priv->rx_blocked)
@@ -604,7 +604,6 @@ static int rndis_submit_rdreq(FAR struct rndis_dev_s *priv)
         }
     }
 
-  leave_critical_section(flags);
   return ret;
 }
 
@@ -621,14 +620,11 @@ static int rndis_submit_rdreq(FAR struct rndis_dev_s *priv)
 
 static void rndis_cancel_rdreq(FAR struct rndis_dev_s *priv)
 {
-  irqstate_t flags = enter_critical_section();
   if (priv->rdreq_submitted)
     {
       EP_CANCEL(priv->epbulkout, priv->rdreq);
       priv->rdreq_submitted = false;
     }
-
-  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -644,11 +640,8 @@ static void rndis_cancel_rdreq(FAR struct rndis_dev_s *priv)
 
 static void rndis_block_rx(FAR struct rndis_dev_s *priv)
 {
-  irqstate_t flags = enter_critical_section();
-
   priv->rx_blocked = true;
   rndis_cancel_rdreq(priv);
-  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -765,18 +758,19 @@ static void rndis_freewrreq(FAR struct rndis_dev_s *priv,
 
 static bool rndis_allocnetreq(FAR struct rndis_dev_s *priv)
 {
-  irqstate_t flags = enter_critical_section();
+  while (nxmutex_lock(&priv->lock) < 0);
+
   DEBUGASSERT(priv->net_req == NULL);
 
   if (!rndis_hasfreereqs(priv))
     {
-      leave_critical_section(flags);
+      nxmutex_unlock(&priv->lock);
       return false;
     }
 
   priv->net_req = rndis_allocwrreq(priv);
 
-  leave_critical_section(flags);
+  nxmutex_unlock(&priv->lock);
   return priv->net_req != NULL;
 }
 
@@ -796,7 +790,7 @@ static bool rndis_allocnetreq(FAR struct rndis_dev_s *priv)
 
 static void rndis_sendnetreq(FAR struct rndis_dev_s *priv)
 {
-  irqstate_t flags = enter_critical_section();
+  while (nxmutex_lock(&priv->lock) < 0);
 
   DEBUGASSERT(priv->net_req != NULL);
 
@@ -804,7 +798,7 @@ static void rndis_sendnetreq(FAR struct rndis_dev_s *priv)
   EP_SUBMIT(priv->epbulkin, priv->net_req->req);
 
   priv->net_req            = NULL;
-  leave_critical_section(flags);
+  nxmutex_unlock(&priv->lock);
 }
 
 /****************************************************************************
@@ -823,12 +817,12 @@ static void rndis_sendnetreq(FAR struct rndis_dev_s *priv)
 
 static void rndis_freenetreq(FAR struct rndis_dev_s *priv)
 {
-  irqstate_t flags = enter_critical_section();
+  while (nxmutex_lock(&priv->lock) < 0);
 
   rndis_freewrreq(priv, priv->net_req);
   priv->net_req = NULL;
 
-  leave_critical_section(flags);
+  nxmutex_unlock(&priv->lock);
 }
 
 /****************************************************************************
@@ -1020,13 +1014,12 @@ static void rndis_rxdispatch(FAR void *arg)
 {
   FAR struct rndis_dev_s *priv = (FAR struct rndis_dev_s *)arg;
   FAR struct eth_hdr_s *hdr;
-  irqstate_t flags;
 
   net_lock();
-  flags = enter_critical_section();
+  while (nxmutex_lock(&priv->lock) < 0);
   rndis_giverxreq(priv);
   priv->netdev.d_len = priv->current_rx_datagram_size;
-  leave_critical_section(flags);
+  nxmutex_unlock(&priv->lock);
 
   hdr = (FAR struct eth_hdr_s *)
     &priv->netdev.d_iob->io_data[CONFIG_NET_LL_GUARDSIZE -
@@ -1693,7 +1686,6 @@ static void rndis_rdcomplete(FAR struct usbdev_ep_s *ep,
                              FAR struct usbdev_req_s *req)
 {
   FAR struct rndis_dev_s *priv;
-  irqstate_t flags;
   int ret;
 
   /* Sanity check */
@@ -1714,7 +1706,6 @@ static void rndis_rdcomplete(FAR struct usbdev_ep_s *ep,
 
   ret = OK;
 
-  flags = enter_critical_section();
   priv->rdreq_submitted = false;
 
   switch (req->result)
@@ -1726,7 +1717,6 @@ static void rndis_rdcomplete(FAR struct usbdev_ep_s *ep,
 
     case -ESHUTDOWN: /* Disconnection */
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDSHUTDOWN), 0);
-      leave_critical_section(flags);
       return;
 
     default: /* Some other error occurred */
@@ -1739,8 +1729,6 @@ static void rndis_rdcomplete(FAR struct usbdev_ep_s *ep,
     {
       rndis_submit_rdreq(priv);
     }
-
-  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -1757,7 +1745,6 @@ static void rndis_wrcomplete(FAR struct usbdev_ep_s *ep,
 {
   FAR struct rndis_dev_s *priv;
   FAR struct rndis_req_s *reqcontainer;
-  irqstate_t flags;
 
   /* Sanity check */
 
@@ -1776,7 +1763,6 @@ static void rndis_wrcomplete(FAR struct usbdev_ep_s *ep,
 
   /* Return the write request to the free list */
 
-  flags = enter_critical_section();
   rndis_freewrreq(priv, reqcontainer);
   if (rndis_hasfreereqs(priv))
     {
@@ -1797,8 +1783,6 @@ static void rndis_wrcomplete(FAR struct usbdev_ep_s *ep,
                (uint16_t)-req->result);
       break;
     }
-
-  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -2082,7 +2066,6 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
 {
   FAR struct rndis_dev_s *priv = ((FAR struct rndis_driver_s *)driver)->dev;
   FAR struct rndis_req_s *reqcontainer;
-  irqstate_t flags;
   size_t reqlen;
   int ret;
   int i;
@@ -2283,9 +2266,9 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
       reqcontainer->req->priv     = reqcontainer;
       reqcontainer->req->callback = rndis_wrcomplete;
 
-      flags = enter_critical_section();
+      while (nxmutex_lock(&priv->lock) < 0);
       sq_addlast((FAR sq_entry_t *)reqcontainer, &priv->reqlist);
-      leave_critical_section(flags);
+      nxmutex_unlock(&priv->lock);
     }
 
   /* Initialize response queue to empty */
@@ -2324,7 +2307,6 @@ static void usbclass_unbind(FAR struct usbdevclass_driver_s *driver,
 {
   FAR struct rndis_dev_s *priv;
   FAR struct rndis_req_s *reqcontainer;
-  irqstate_t flags;
 
   usbtrace(TRACE_CLASSUNBIND, 0);
 
@@ -2389,7 +2371,7 @@ static void usbclass_unbind(FAR struct usbdevclass_driver_s *driver,
        * of them
        */
 
-      flags = enter_critical_section();
+      while (nxmutex_lock(&priv->lock) < 0);
       while (!sq_empty(&priv->reqlist))
         {
           reqcontainer = (struct rndis_req_s *)sq_remfirst(&priv->reqlist);
@@ -2400,7 +2382,7 @@ static void usbclass_unbind(FAR struct usbdevclass_driver_s *driver,
             }
         }
 
-      leave_critical_section(flags);
+      nxmutex_unlock(&priv->lock);
 
       /* Free the interrupt IN endpoint */
 
@@ -2670,7 +2652,6 @@ static void usbclass_disconnect(FAR struct usbdevclass_driver_s *driver,
                                 FAR struct usbdev_s *dev)
 {
   FAR struct rndis_dev_s *priv;
-  irqstate_t flags;
 
   usbtrace(TRACE_CLASSDISCONNECT, 0);
 
@@ -2700,13 +2681,13 @@ static void usbclass_disconnect(FAR struct usbdevclass_driver_s *driver,
 
   priv->netdev.d_ifdown(&priv->netdev);
 
-  flags = enter_critical_section();
+  while (nxmutex_lock(&priv->lock) < 0);
 
   /* Reset the configuration */
 
   usbclass_resetconfig(priv);
 
-  leave_critical_section(flags);
+  nxmutex_unlock(&priv->lock);
 
   /* Perform the soft connect function so that we will we can be
    * re-enumerated (unless we are part of a composite device)
@@ -2844,8 +2825,10 @@ static int usbclass_setconfig(FAR struct rndis_dev_s *priv, uint8_t config)
 
   /* Queue read requests in the bulk OUT endpoint */
 
+  while (nxmutex_lock(&priv->lock) < 0);
   priv->rdreq->callback = rndis_rdcomplete;
   ret = rndis_submit_rdreq(priv);
+  nxmutex_unlock(&priv->lock);
   if (ret != OK)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDSUBMIT), (uint16_t)-ret);
@@ -2904,6 +2887,8 @@ static int usbclass_classobject(int minor,
   drvr = &alloc->drvr;
   *classdev = &drvr->drvr;
 
+  nxmutex_init(&priv->lock);
+
   /* Get device info */
 
   memcpy(&priv->devinfo, devinfo, sizeof(struct usbdev_devinfo_s));
@@ -2951,6 +2936,7 @@ static void usbclass_uninitialize(FAR struct usbdevclass_driver_s *classdev)
   FAR struct rndis_alloc_s *alloc = (FAR struct rndis_alloc_s *)drvr->dev;
 
   netdev_unregister(&drvr->dev->netdev);
+  nxmutex_destroy(&drvr->dev->lock);
   kmm_free(alloc);
 }
 
