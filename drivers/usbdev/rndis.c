@@ -2860,6 +2860,8 @@ static int usbclass_setconfig(FAR struct rndis_dev_s *priv, uint8_t config)
       priv->netdev.d_flags |= IFF_UP;
     }
 
+  netdev_carrier_on(&priv->netdev);
+
   return OK;
 
 errout:
