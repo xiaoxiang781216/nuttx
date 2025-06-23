@@ -914,6 +914,8 @@ void mm_checkcorruption(FAR struct mm_heap_s *heap)
 #  define region 0
 #endif
 
+  free_delaylist(heap, true);
+
   /* Visit each region */
 
 #if CONFIG_MM_REGIONS > 1
@@ -1235,6 +1237,8 @@ struct mallinfo mm_mallinfo(FAR struct mm_heap_s *heap)
 
   memset(&info, 0, sizeof(struct mallinfo));
 
+  free_delaylist(heap, true);
+
   /* Visit each region */
 
 #if CONFIG_MM_REGIONS > 1
@@ -1278,6 +1282,8 @@ struct mallinfo_task mm_mallinfo_task(FAR struct mm_heap_s *heap,
 #else
 #define region 0
 #endif
+
+  free_delaylist(heap, true);
 
 #ifdef CONFIG_MM_HEAP_MEMPOOL
   info = mempool_multiple_info_task(heap->mm_mpool, task);
@@ -1337,6 +1343,8 @@ void mm_memdump(FAR struct mm_heap_s *heap,
       priv.dump.seqmax = dump->seqmax;
     }
 #endif
+
+  free_delaylist(heap, true);
 
   if (pid == PID_MM_MEMPOOL)
     {
@@ -1794,6 +1802,8 @@ void mm_uninitialize(FAR struct mm_heap_s *heap)
   mempool_multiple_deinit(heap->mm_mpool);
 #endif
 
+  free_delaylist(heap, true);
+
   for (i = 0; i < CONFIG_MM_REGIONS; i++)
     {
       if (!heap->mm_nokasan)
@@ -1836,22 +1846,6 @@ FAR void *mm_zalloc(FAR struct mm_heap_s *heap, size_t size)
 }
 
 /****************************************************************************
- * Name: mm_free_delaylist
- *
- * Description:
- *   force freeing the delaylist of this heap.
- *
- ****************************************************************************/
-
-void mm_free_delaylist(FAR struct mm_heap_s *heap)
-{
-  if (heap)
-    {
-       free_delaylist(heap, true);
-    }
-}
-
-/****************************************************************************
  * Name: mm_heapfree
  *
  * Description:
@@ -1861,6 +1855,7 @@ void mm_free_delaylist(FAR struct mm_heap_s *heap)
 
 size_t mm_heapfree(FAR struct mm_heap_s *heap)
 {
+  free_delaylist(heap, true);
   return heap->mm_heapsize - heap->mm_curused;
 }
 

@@ -60,6 +60,7 @@ void mm_foreach(FAR struct mm_heap_s *heap, mm_node_handler_t handler,
 #endif
 
   DEBUGASSERT(handler);
+  mm_free_delaylist(heap);
 
   /* Visit each region */
 
