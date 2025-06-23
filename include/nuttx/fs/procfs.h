@@ -131,12 +131,18 @@ struct procfs_dir_priv_s
 
 /* An entry for procfs_register_meminfo */
 
+struct mallinfo;
 struct mm_heap_s;
+struct mm_memdump_s;
+
 struct procfs_meminfo_entry_s
 {
   FAR const char *name;
   FAR struct mm_heap_s *heap;
   FAR struct procfs_meminfo_entry_s *next;
+  struct mallinfo (*mallinfo)(FAR struct mm_heap_s *);
+  void (*memdump)(FAR struct mm_heap_s *,
+                  FAR const struct mm_memdump_s *);
 #ifdef CONFIG_MM_RECORD_STACK
 
   /* This is dynamic control flag whether to turn on backtrace in the heap,
