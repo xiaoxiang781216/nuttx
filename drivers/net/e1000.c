@@ -171,6 +171,10 @@ struct e1000_driver_s
 
   FAR uint32_t *mta;
 #endif
+
+  /* A spinlock for protecting the driving state */
+
+  spinlock_t lock;
 };
 
 /*****************************************************************************
@@ -999,12 +1003,12 @@ static int e1000_ifup(FAR struct netdev_lowerhalf_s *dev)
         dev->netdev.d_ipv6addr[6], dev->netdev.d_ipv6addr[7]);
 #endif
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   /* Enable the Ethernet */
 
   e1000_enable(priv);
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   /* Update link status in case link status interrupt is missing */
 
@@ -1035,7 +1039,7 @@ static int e1000_ifdown(FAR struct netdev_lowerhalf_s *dev)
   FAR struct e1000_driver_s *priv = (FAR struct e1000_driver_s *)dev;
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   /* Put the EMAC in its reset, non-operational state.  This should be
    * a known configuration that will guarantee the e1000_ifup() always
@@ -1046,7 +1050,7 @@ static int e1000_ifdown(FAR struct netdev_lowerhalf_s *dev)
 
   /* Mark the device "down" */
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
   return OK;
 }
 
@@ -1537,6 +1541,8 @@ static int e1000_probe(FAR struct pci_device_s *dev)
       nerr("e1000_initialize failed %d\n", ret);
       goto errout;
     }
+
+  spin_lock_init(&priv->lock);
 
   /* Register the network device */
 
