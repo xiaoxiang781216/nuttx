@@ -463,7 +463,7 @@ static int rpmsgfs_lseek_handler(FAR struct rpmsg_endpoint *ept,
 {
   FAR struct rpmsgfs_lseek_s *msg = data;
   FAR struct file *filep;
-  int64_t ret = -ENOENT;
+  int ret = -ENOENT;
 
   filep = rpmsgfs_get_file(priv, msg->fd);
   if (filep != NULL)

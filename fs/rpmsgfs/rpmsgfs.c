@@ -283,7 +283,7 @@ static int rpmsgfs_open(FAR struct file *filep, FAR const char *relpath,
   FAR struct rpmsgfs_mountpt_s *fs;
   FAR struct rpmsgfs_ofile_s  *hf;
   FAR char *path;
-  int64_t ret;
+  int ret;
 
   /* Sanity checks */
 
