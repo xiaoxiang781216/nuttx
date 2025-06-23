@@ -91,7 +91,7 @@ static uint64_t g_tsc_start;
 
 static uint32_t g_timer_active;
 
-static irqstate_t g_tmr_flags;
+static spinlock_t g_tmr_sync_spin = SP_UNLOCKED;
 
 /****************************************************************************
  * Public Functions
@@ -185,16 +185,6 @@ static inline void up_tick2ts(uint64_t tick, struct timespec *ts)
                            NSEC_PER_SEC, g_x86_64_timer_freq));
 }
 
-static inline void up_tmr_sync_up(void)
-{
-    g_tmr_flags = enter_critical_section();
-}
-
-static inline void up_tmr_sync_down(void)
-{
-    leave_critical_section(g_tmr_flags);
-}
-
 /****************************************************************************
  * Name: up_timer_gettime
  *
@@ -270,7 +260,9 @@ int up_timer_gettime(struct timespec *ts)
 
 int up_alarm_cancel(struct timespec *ts)
 {
-  up_tmr_sync_up();
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(&g_tmr_sync_spin);
 
   up_mask_tmr();
 
@@ -281,7 +273,7 @@ int up_alarm_cancel(struct timespec *ts)
 
   g_timer_active = 0;
 
-  up_tmr_sync_down();
+  spin_unlock_irqrestore(&g_tmr_sync_spin, flags);
 
   return OK;
 }
@@ -314,8 +306,9 @@ int up_alarm_cancel(struct timespec *ts)
 int up_alarm_start(const struct timespec *ts)
 {
   uint64_t ticks;
+  irqstate_t flags;
 
-  up_tmr_sync_up();
+  flags = spin_lock_irqsave(&g_tmr_sync_spin);
 
   up_unmask_tmr();
 
@@ -328,7 +321,7 @@ int up_alarm_start(const struct timespec *ts)
   g_goal_time_ts.tv_sec = ts->tv_sec;
   g_goal_time_ts.tv_nsec = ts->tv_nsec;
 
-  up_tmr_sync_down();
+  spin_unlock_irqrestore(&g_tmr_sync_spin, flags);
 
   tmrinfo("%" PRIdMAX ".%09ld\n", (uintmax_t)ts->tv_sec, ts->tv_nsec);
   tmrinfo("start\n");
@@ -399,7 +392,9 @@ void up_alarm_expire(void)
 
 int up_timer_cancel(struct timespec *ts)
 {
-  up_tmr_sync_up();
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(&g_tmr_sync_spin);
 
   up_mask_tmr();
 
@@ -418,7 +413,7 @@ int up_timer_cancel(struct timespec *ts)
 
   g_timer_active = 0;
 
-  up_tmr_sync_down();
+  spin_unlock_irqrestore(&g_tmr_sync_spin, flags);
 
   return OK;
 }
@@ -451,8 +446,9 @@ int up_timer_cancel(struct timespec *ts)
 int up_timer_start(const struct timespec *ts)
 {
   uint64_t ticks;
+  irqstate_t flags;
 
-  up_tmr_sync_up();
+  flags = spin_lock_irqsave(&g_tmr_sync_spin);
 
   up_unmask_tmr();
 
@@ -464,7 +460,7 @@ int up_timer_start(const struct timespec *ts)
 
   g_goal_time = ticks;
 
-  up_tmr_sync_down();
+  spin_unlock_irqrestore(&g_tmr_sync_spin, flags);
   return OK;
 }
 
