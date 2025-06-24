@@ -1869,5 +1869,13 @@ size_t mm_heapfree(FAR struct mm_heap_s *heap)
 
 size_t mm_heapfree_largest(FAR struct mm_heap_s *heap)
 {
-  return SIZE_MAX;
+  size_t max_free;
+
+  free_delaylist(heap, true);
+
+  DEBUGVERIFY(mm_lock(heap));
+  max_free = tlsf_largest_free_block(heap->mm_tlsf);
+  mm_unlock(heap);
+
+  return max_free;
 }
