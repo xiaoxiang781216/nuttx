@@ -25,9 +25,11 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
+#include <nuttx/fs/fs.h>
 #include <nuttx/ipcc.h>
 #include <nuttx/mutex.h>
-#include <stdio.h>
+#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Public Types
@@ -56,8 +58,7 @@ int ipcc_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
 ssize_t ipcc_read(FAR struct file *filep, FAR char *buffer, size_t buflen);
 ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
                    size_t buflen);
-int ipcc_poll(FAR struct file *filep, FAR struct pollfd *fds,
-              bool setup);
+int ipcc_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup);
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
 int ipcc_unlink(FAR struct inode *inode);
 #endif

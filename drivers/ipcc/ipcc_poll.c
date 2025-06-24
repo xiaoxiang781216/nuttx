@@ -25,18 +25,9 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/ipcc.h>
-#include <nuttx/kmalloc.h>
-#include <nuttx/semaphore.h>
 
 #include <assert.h>
-#include <debug.h>
-#include <errno.h>
-#include <fcntl.h>
 #include <poll.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <sys/types.h>
 
 #include "ipcc_priv.h"
 
@@ -63,8 +54,7 @@
  *
  ****************************************************************************/
 
-int ipcc_poll(FAR struct file *filep, FAR struct pollfd *fds,
-              bool setup)
+int ipcc_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
 {
   FAR struct ipcc_driver_s *priv;
   FAR struct pollfd **slot;

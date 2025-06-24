@@ -25,17 +25,12 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/ipcc.h>
-#include <nuttx/kmalloc.h>
-#include <nuttx/semaphore.h>
 
 #include <assert.h>
-#include <debug.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <sys/types.h>
+
+#include <nuttx/irq.h>
 
 #include "ipcc_priv.h"
 
@@ -121,13 +116,12 @@ void ipcc_rxfree_notify(FAR struct ipcc_driver_s *priv)
  *
  ****************************************************************************/
 
-ssize_t ipcc_read(FAR struct file *filep, FAR char *buffer,
-                         size_t buflen)
+ssize_t ipcc_read(FAR struct file *filep, FAR char *buffer, size_t buflen)
 {
   FAR struct ipcc_driver_s *priv;
+  irqstate_t flags;
   ssize_t nread;
   int ret;
-  int flags;
 
   /* Get our private data structure */
 

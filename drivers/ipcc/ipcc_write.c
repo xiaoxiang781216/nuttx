@@ -25,16 +25,12 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/ipcc.h>
-#include <nuttx/kmalloc.h>
-#include <nuttx/semaphore.h>
 
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <sys/types.h>
+
+#include <nuttx/irq.h>
 
 #include "ipcc_priv.h"
 
@@ -123,12 +119,12 @@ void ipcc_txfree_notify(FAR struct ipcc_driver_s *priv)
  ****************************************************************************/
 
 ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
-                         size_t buflen)
+                   size_t buflen)
 {
   FAR struct ipcc_driver_s *priv;
+  irqstate_t flags;
   ssize_t nwritten;
   int ret;
-  int flags;
 
   /* Get our private data structure */
 
@@ -162,7 +158,7 @@ ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
            */
 
           nwritten += priv->ipcc->ops.write(priv->ipcc, buffer + nwritten,
-                                           buflen - nwritten);
+                                            buflen - nwritten);
           if (nwritten == (ssize_t)buflen || nwritten < 0)
             {
               /* We've managed to write whole buffer to IPCC memory,

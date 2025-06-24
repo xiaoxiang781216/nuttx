@@ -25,15 +25,8 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/ipcc.h>
-#include <nuttx/kmalloc.h>
-#include <nuttx/semaphore.h>
 
 #include <assert.h>
-#include <errno.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <sys/types.h>
 
 #include "ipcc_priv.h"
 

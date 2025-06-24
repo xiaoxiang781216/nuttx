@@ -24,11 +24,7 @@ ifeq ($(CONFIG_IPCC),y)
 
 # Include ipcc driver
 
-CSRCS += ipcc_poll.c
-CSRCS += ipcc_read.c
-CSRCS += ipcc_write.c
-CSRCS += ipcc_register.c
-CSRCS += ipcc_open.c
+CSRCS += ipcc_poll.c ipcc_read.c ipcc_write.c ipcc_register.c ipcc_open.c
 CSRCS += ipcc_close.c
 
 ifneq ($(CONFIG_DISABLE_PSEUDOFS_OPERATIONS),y)
