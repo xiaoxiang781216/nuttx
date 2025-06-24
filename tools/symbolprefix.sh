@@ -31,13 +31,18 @@ args=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --skip-section)
-            if [ -n "$2" ]; then
-                skip_sections+=("$2")
-                shift 2
-            else
-                echo "Error: --skip-section requires an argument"
+            shift
+            while [[ $# -gt 0 && "$1" != "--skip-section-end" ]]; do
+                skip_sections+=("$1")
+                shift
+            done
+
+            if [[ "$1" != "--skip-section-end" ]]; then
+                echo "Error: Missing --skip-section-end after --skip-section"
                 exit 1
             fi
+
+            shift
             ;;
         --skip-symbol)
             if [ -n "$2" ] && [ -f "$2" ]; then
@@ -291,7 +296,7 @@ fi
 if [[ ${#skip_symbols[@]} -ne 0 ]]; then
     echo "[$(basename "$input")] Skipping symbols from $input"
     for symbol in "${skip_symbols[@]}"; do
-        remove_prefix_args+=(--redefine-sym "$prefix$symbol=$symbol")
+        remove_prefix_args+=(--redefine-sym "$prefix$symbol=$symbol" --weaken-symbol=$symbol)
     done
 
     for rename in "$output"/*; do

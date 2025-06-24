@@ -49,6 +49,7 @@ if(MERGE_LD)
   get_property(SKIP_SECTION GLOBAL PROPERTY PROTECTED_MERGE_SKIP_SECTION)
   if(SKIP_SECTION)
     set(K_SKIP_SECTION "--skip-section ")
+    set(K_SKIP_SECTION_END "--skip-section-end")
     set(U_SKIP_SYMBOL "--skip-symbol ${K_DIR}/remove_prefix_symbols.txt")
     string(JOIN " " SKIP_SECTION_STR ${SKIP_SECTION})
   endif()
@@ -95,8 +96,8 @@ if(MERGE_LD)
     COMMAND
       env OBJCOPY=${CMAKE_OBJCOPY}; env READELF=${CMAKE_READELF}; env
       AR=${CMAKE_AR}; env K_LIBS=${kernel_libs_str}; env
-      K_SKIP=${K_SKIP_SECTION};bash -c
-      "${CMAKE_SOURCE_DIR}/tools/symbolprefix.sh \$K_SKIP ${SKIP_SECTION_STR} \$K_LIBS ${K_DIR} kernel_ ;"
+      K_SKIP=${K_SKIP_SECTION}; env K_SKIP_END=${K_SKIP_SECTION_END}; bash -c
+      "${CMAKE_SOURCE_DIR}/tools/symbolprefix.sh \$K_SKIP ${SKIP_SECTION_STR} \$K_SKIP_END \$K_LIBS ${K_DIR} kernel_ ;"
     COMMAND
       env OBJCOPY=${CMAKE_OBJCOPY}; env READELF=${CMAKE_READELF}; env
       AR=${CMAKE_AR}; env U_LIBS=${user_libs_str}; env U_SKIP=${U_SKIP_SYMBOL}
