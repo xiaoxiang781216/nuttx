@@ -174,8 +174,8 @@ ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
                * be number of bytes written or negated errno.
                */
 
-              nxmutex_unlock(&priv->lock);
               leave_critical_section(flags);
+              nxmutex_unlock(&priv->lock);
               return nwritten;
             }
         }
@@ -197,8 +197,8 @@ ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
         {
           /* All outstanding data has been copied to txbuffer, we're done */
 
-          nxmutex_unlock(&priv->lock);
           leave_critical_section(flags);
+          nxmutex_unlock(&priv->lock);
           return nwritten;
         }
 
@@ -218,8 +218,8 @@ ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
            * be number of bytes written or negated errno.
            */
 
-          nxmutex_unlock(&priv->lock);
           leave_critical_section(flags);
+          nxmutex_unlock(&priv->lock);
           return nwritten;
         }
 
@@ -233,8 +233,8 @@ ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
            * -EAGAIN when we did not write anything
            */
 
-          nxmutex_unlock(&priv->lock);
           leave_critical_section(flags);
+          nxmutex_unlock(&priv->lock);
           return nwritten ? nwritten : -EAGAIN;
         }
 
@@ -242,12 +242,11 @@ ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
        * to write data
        */
 
+      leave_critical_section(flags);
       nxmutex_unlock(&priv->lock);
 
       if ((ret = nxsem_wait(&priv->txsem)))
         {
-          leave_critical_section(flags);
-
           /* We were interrupted by signal, return error or number
            * of bytes written
            */
@@ -265,7 +264,6 @@ ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
        */
 
       nxmutex_lock(&priv->lock);
+      flags = enter_critical_section();
     }
-
-  leave_critical_section(flags);
 }

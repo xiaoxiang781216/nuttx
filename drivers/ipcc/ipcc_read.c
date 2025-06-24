@@ -30,6 +30,7 @@
 #include <nuttx/semaphore.h>
 
 #include <assert.h>
+#include <debug.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -171,11 +172,11 @@ ssize_t ipcc_read(FAR struct file *filep, FAR char *buffer,
            */
 
           leave_critical_section(flags);
-        }
 
-      if ((nread = circbuf_read(&priv->ipcc->rxbuf, buffer, buflen)) > 0)
-        {
-          /* got some data */
+          nread = circbuf_read(&priv->ipcc->rxbuf, buffer, buflen);
+          DEBUGASSERT(nread > 0);
+
+          /* Must got some data */
 
           if (priv->ipcc->overflow)
             {
@@ -236,11 +237,10 @@ ssize_t ipcc_read(FAR struct file *filep, FAR char *buffer,
       /* We are in blocking mode, so we have to wait for data to arrive.
        */
 
+      leave_critical_section(flags);
       nxmutex_unlock(&priv->lock);
       if ((ret = nxsem_wait(&priv->rxsem)))
         {
-          leave_critical_section(flags);
-
           /* We were interrupted by signal, but we have not written
            * any data to caller's buffer, so we return with error
            */
@@ -258,7 +258,6 @@ ssize_t ipcc_read(FAR struct file *filep, FAR char *buffer,
        */
 
       nxmutex_lock(&priv->lock);
+      flags = enter_critical_section();
     }
-
-  leave_critical_section(flags);
 }

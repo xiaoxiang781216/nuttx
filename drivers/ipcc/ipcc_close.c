@@ -87,7 +87,6 @@ int ipcc_close(FAR struct file *filep)
        */
 
       ipcc_cleanup(priv);
-      return OK;
     }
 
   nxmutex_unlock(&priv->lock);
