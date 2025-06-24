@@ -272,7 +272,7 @@ ifeq ($(CONFIG_SIM_CANDEV_SOCK),y)
   CSRCS += sim_cansock.c
 endif
 
-ifeq ($(CONFIG_RPMSG_VIRTIO_LITE),y)
+ifeq ($(CONFIG_SIM_RPMSG_VIRTIO_LITE),y)
   CSRCS += sim_rpmsg_virtio.c
 endif
 
