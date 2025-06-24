@@ -547,7 +547,7 @@ static int arm64_exception_handler(uint64_t *regs)
  * Public Functions
  ****************************************************************************/
 
-void arm64_fatal_handler(uint64_t *regs)
+uint64_t *arm64_fatal_handler(uint64_t *regs)
 {
   struct tcb_s *tcb = this_task();
   int ret;
@@ -574,6 +574,8 @@ void arm64_fatal_handler(uint64_t *regs)
   /* Clear irq flag */
 
   write_sysreg((uintptr_t)tcb & ~1ul, tpidr_el1);
+
+  return regs;
 }
 
 void arm64_register_debug_hook(int nr, fatal_handle_func_t fn)
