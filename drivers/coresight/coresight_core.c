@@ -54,6 +54,7 @@ struct coresight_node_s
  ****************************************************************************/
 
 static struct list_node g_csdev_list = LIST_INITIAL_VALUE(g_csdev_list);
+static spinlock_t g_csdev_list_lock = SP_UNLOCKED;
 
 /****************************************************************************
  * Private Functions
@@ -673,17 +674,17 @@ static FAR struct coresight_dev_s *coresight_find_dev(FAR const char *name)
   FAR struct coresight_dev_s *tempdev;
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_csdev_list_lock);
   list_for_every_entry(&g_csdev_list, tempdev, struct coresight_dev_s, node)
     {
       if (strcmp(tempdev->name, name) == 0)
         {
-          leave_critical_section(flags);
+          spin_unlock_irqrestore(&g_csdev_list_lock, flags);
           return tempdev;
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_csdev_list_lock, flags);
   return NULL;
 }
 
@@ -725,6 +726,7 @@ int coresight_register(FAR struct coresight_dev_s *csdev,
   csdev->subtype = desc->subtype;
   csdev->outport_num = desc->outport_num;
   list_initialize(&csdev->path);
+  spin_lock_init(&csdev->lock);
 
 #ifdef CONFIG_CLK
   if (desc->clkname != NULL)
@@ -760,7 +762,7 @@ int coresight_register(FAR struct coresight_dev_s *csdev,
         }
     }
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_csdev_list_lock);
   list_for_every_entry(&g_csdev_list, tempdev, struct coresight_dev_s, node)
     {
       for (i = 0; i < tempdev->outport_num; i++)
@@ -783,7 +785,7 @@ int coresight_register(FAR struct coresight_dev_s *csdev,
     }
 
   list_add_tail(&g_csdev_list, &csdev->node);
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_csdev_list_lock, flags);
 
   return 0;
 }
@@ -805,7 +807,7 @@ void coresight_unregister(FAR struct coresight_dev_s *csdev)
   irqstate_t flags;
   int i;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_csdev_list_lock);
   list_for_every_entry(&g_csdev_list, tempdev, struct coresight_dev_s, node)
     {
       if (csdev == tempdev)
@@ -854,7 +856,7 @@ void coresight_unregister(FAR struct coresight_dev_s *csdev)
     }
 
   list_delete(&csdev->node);
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_csdev_list_lock, flags);
 
   if (csdev->outport_num > 0)
     {
@@ -891,7 +893,7 @@ int coresight_enable(FAR struct coresight_dev_s *srcdev,
       return ret;
     }
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_csdev_list_lock);
 
   if (list_is_empty(&srcdev->path))
     {
@@ -924,7 +926,7 @@ int coresight_enable(FAR struct coresight_dev_s *srcdev,
     }
 
 out:
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_csdev_list_lock, flags);
   return ret;
 
 err_source:
@@ -950,11 +952,11 @@ void coresight_disable(FAR struct coresight_dev_s *srcdev)
 {
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_csdev_list_lock);
 
   coresight_disable_source(srcdev);
   coresight_disable_path(&srcdev->path);
   coresight_release_path(&srcdev->path);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_csdev_list_lock, flags);
 }

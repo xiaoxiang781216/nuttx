@@ -255,7 +255,7 @@ void funnel_unregister(FAR struct coresight_funnel_dev_s *fundev)
 {
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&fundev->csdev.lock);
   if (fundev->csdev.refcnt > 0)
     {
       int i;
@@ -269,7 +269,7 @@ void funnel_unregister(FAR struct coresight_funnel_dev_s *fundev)
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&fundev->csdev.lock, flags);
   coresight_unregister(&fundev->csdev);
 
   kmm_free(fundev);

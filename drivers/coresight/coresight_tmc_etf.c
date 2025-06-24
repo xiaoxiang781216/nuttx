@@ -393,7 +393,7 @@ static int tmc_etf_open(FAR struct file *filep)
         {
           irqstate_t flags;
 
-          flags = enter_critical_section();
+          flags = spin_lock_irqsave(&tmcdev->csdev.lock);
           if (tmcdev->csdev.refcnt > 0)
             {
               tmc_etf_hw_disable_and_read(tmcdev);
@@ -412,7 +412,7 @@ static int tmc_etf_open(FAR struct file *filep)
               ret = -EACCES;
             }
 
-          leave_critical_section(flags);
+          spin_unlock_irqrestore(&tmcdev->csdev.lock, flags);
         }
     }
 
@@ -565,10 +565,10 @@ void tmc_etf_unregister(FAR struct coresight_tmc_dev_s * tmcdev)
        * hw in coresight_core.c
        */
 
-      flags = enter_critical_section();
+      flags = spin_lock_irqsave(&tmcdev->csdev.lock);
       tmc_etf_hw_disable(tmcdev);
       coresight_disclaim_device(tmcdev->csdev.addr);
-      leave_critical_section(flags);
+      spin_unlock_irqrestore(&tmcdev->csdev.lock, flags);
     }
 
   coresight_unregister(&tmcdev->csdev);

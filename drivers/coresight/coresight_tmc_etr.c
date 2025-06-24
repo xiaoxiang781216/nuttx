@@ -332,7 +332,7 @@ static int tmc_etr_open(FAR struct file *filep)
     {
       irqstate_t flags;
 
-      flags = enter_critical_section();
+      flags = spin_lock_irqsave(&tmcdev->csdev.lock);
       if (tmcdev->csdev.refcnt > 0)
         {
           tmc_etr_hw_disable_and_read(tmcdev);
@@ -349,7 +349,7 @@ static int tmc_etr_open(FAR struct file *filep)
           ret = -EACCES;
         }
 
-      leave_critical_section(flags);
+      spin_unlock_irqrestore(&tmcdev->csdev.lock, flags);
     }
 
   nxmutex_unlock(&tmcdev->lock);
@@ -379,7 +379,7 @@ static int tmc_etr_close(FAR struct file *filep)
     {
       irqstate_t flags;
 
-      flags = enter_critical_section();
+      flags = spin_lock_irqsave(&tmcdev->csdev.lock);
       if (tmcdev->csdev.refcnt > 0)
         {
           if (tmc_etr_hw_enable(tmcdev) < 0)
@@ -388,7 +388,7 @@ static int tmc_etr_close(FAR struct file *filep)
             }
         }
 
-      leave_critical_section(flags);
+      spin_unlock_irqrestore(&tmcdev->csdev.lock, flags);
     }
 
   nxmutex_unlock(&tmcdev->lock);

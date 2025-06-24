@@ -338,7 +338,7 @@ static int etb_open(FAR struct file *filep)
         {
           irqstate_t flags;
 
-          flags = enter_critical_section();
+          flags = spin_lock_irqsave(&etbdev->csdev.lock);
           if (etbdev->csdev.refcnt > 0)
             {
               etb_hw_disable(etbdev);
@@ -350,7 +350,7 @@ static int etb_open(FAR struct file *filep)
               etb_hw_enable(etbdev);
             }
 
-          leave_critical_section(flags);
+          spin_unlock_irqrestore(&etbdev->csdev.lock, flags);
         }
     }
 

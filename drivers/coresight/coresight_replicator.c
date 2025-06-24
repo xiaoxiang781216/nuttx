@@ -279,7 +279,7 @@ void replicator_unregister(FAR struct coresight_replicator_dev_s *repdev)
 {
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&repdev->csdev.lock);
   if (repdev->csdev.refcnt > 0)
     {
       int i;
@@ -293,7 +293,7 @@ void replicator_unregister(FAR struct coresight_replicator_dev_s *repdev)
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&repdev->csdev.lock, flags);
   coresight_unregister(&repdev->csdev);
 
   kmm_free(repdev);

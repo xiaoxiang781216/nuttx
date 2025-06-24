@@ -31,6 +31,7 @@
 #include <nuttx/clk/clk.h>
 #include <nuttx/list.h>
 #include <nuttx/power/pm.h>
+#include <nuttx/spinlock.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -194,6 +195,8 @@ struct coresight_dev_s
   enum coresight_dev_type_e type;
   union coresight_dev_subtype_u subtype;
   FAR const struct coresight_ops_s *ops;
+
+  spinlock_t lock;
 
   /* Used to connect all the coresight device register to coresight bus. */
 
