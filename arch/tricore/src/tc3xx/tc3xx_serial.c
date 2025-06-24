@@ -538,12 +538,9 @@ static int up_receive(struct uart_dev_s *dev, unsigned int *status)
 static void up_rxint(struct uart_dev_s *dev, bool enable)
 {
   struct up_dev_s *priv = dev->priv;
-  irqstate_t flags = enter_critical_section();
 
   IfxAsclin_enableRxFifoFillLevelFlag(priv->uartbase, enable);
   IfxAsclin_enableRxFifoInlet(priv->uartbase, enable);
-
-  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -597,18 +594,12 @@ static void up_send(struct uart_dev_s *dev, int ch)
 
 static void up_txint(struct uart_dev_s *dev, bool enable)
 {
-  irqstate_t flags;
-
-  flags = enter_critical_section();
-
   if (enable)
     {
       /* Enable the TX interrupt */
 
       uart_xmitchars(dev);
     }
-
-  leave_critical_section(flags);
 }
 
 /****************************************************************************

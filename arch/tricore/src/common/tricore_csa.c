@@ -30,6 +30,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/tls.h>
+#include <nuttx/spinlock.h>
 #include <arch/barriers.h>
 #include <arch/irq.h>
 #include <sched/sched.h>
@@ -155,15 +156,14 @@ void tricore_get_csainfo(csa_info_t *info)
 {
   FAR struct tcb_s *rtcb = nxsched_self();
   uintptr_t fcx, ucx;
-  irqstate_t state;
+  irqstate_t flags;
   int hash_ndx;
   int ndx;
 
-  state = enter_critical_section();
-  sched_lock();
-
   info->used = 0;
   hash_ndx = PIDHASH(rtcb->pid);
+
+  flags = spin_lock_irqsave(&g_pidhashlock);
 
   for (ndx = 0; ndx < g_npidhash; ndx++)
     {
@@ -195,6 +195,8 @@ void tricore_get_csainfo(csa_info_t *info)
         }
     }
 
+  spin_unlock_irqrestore(&g_pidhashlock, flags);
+
   fcx = __mfcr(CPU_FCX) & FCX_FREE;
   UP_DSB();
 
@@ -204,8 +206,5 @@ void tricore_get_csainfo(csa_info_t *info)
       info->free++;
       fcx = tricore_csa2addr(fcx)[REG_UPCXI] & FCX_FREE;
     }
-
-  sched_unlock();
-  leave_critical_section(state);
 }
 

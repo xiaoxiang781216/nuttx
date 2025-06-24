@@ -24,7 +24,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
-
 #include <nuttx/timers/oneshot.h>
 #include <nuttx/timers/arch_alarm.h>
 
@@ -44,11 +43,11 @@
 struct tricore_systimer_lowerhalf_s
 {
   struct oneshot_lowerhalf_s lower;
-  volatile void              *tbase;
+  volatile void             *tbase;
   uint64_t                   freq;
   uint64_t                   alarm;
   oneshot_callback_t         callback;
-  void                       *arg;
+  void                      *arg;
 };
 
 /****************************************************************************
@@ -89,29 +88,14 @@ static struct tricore_systimer_lowerhalf_s g_systimer_lower =
 static uint64_t
 tricore_systimer_get_time(struct tricore_systimer_lowerhalf_s *priv)
 {
-  irqstate_t flags;
-  uint64_t ticks;
-
-  flags = enter_critical_section();
-
-  ticks = IfxStm_get(priv->tbase);
-
-  leave_critical_section(flags);
-
-  return ticks;
+  return IfxStm_get(priv->tbase);
 }
 
 static void
 tricore_systimer_set_timecmp(struct tricore_systimer_lowerhalf_s *priv,
                              uint64_t value)
 {
-  irqstate_t flags;
-
-  flags = enter_critical_section();
-
   IfxStm_updateCompare(priv->tbase, IfxStm_Comparator_0, value);
-
-  leave_critical_section(flags);
 }
 
 /****************************************************************************
