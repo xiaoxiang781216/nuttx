@@ -22,6 +22,10 @@
 
 set(SRCS)
 
+if(CONFIG_ARMV7R_MEMCHR)
+  list(APPEND SRCS arch_memchr.S)
+endif()
+
 if(CONFIG_ARMV7R_MEMCPY)
   list(APPEND SRCS arch_memcpy.S)
 endif()
