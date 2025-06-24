@@ -781,6 +781,8 @@ static int rpmsg_virtio_lite_start(FAR struct rpmsg_virtio_lite_priv_s *priv)
   config.h2r_buf_size = rsc->config.h2r_buf_size;
   config.r2h_buf_size = rsc->config.r2h_buf_size;
   config.split_shpool = true;
+  config.rx_callback  = NULL;
+  config.tx_callback  = NULL;
 
   ret = rpmsg_init_vdev_with_config(&priv->rvdev, vdev, rpmsg_ns_bind,
                                     metal_io_get_region(),
