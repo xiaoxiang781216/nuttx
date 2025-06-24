@@ -25,13 +25,16 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/arch.h>
-#include <nuttx/irq.h>
-#include <nuttx/audio/audio_dma.h>
-#include <nuttx/kmalloc.h>
-#include <nuttx/queue.h>
 
 #include <debug.h>
+
+#include <nuttx/arch.h>
+#include <nuttx/irq.h>
+#include <nuttx/kmalloc.h>
+#include <nuttx/queue.h>
+#include <nuttx/spinlock.h>
+
+#include <nuttx/audio/audio_dma.h>
 
 /****************************************************************************
  * Private Types
@@ -51,6 +54,7 @@ struct audio_dma_s
   struct dq_queue_s pendq;
   apb_samp_t buffer_size;
   apb_samp_t buffer_num;
+  spinlock_t lock;
 };
 
 /****************************************************************************
@@ -443,9 +447,9 @@ static int audio_dma_enqueuebuffer(struct audio_lowerhalf_s *dev,
 
   apb->flags |= AUDIO_APB_OUTPUT_ENQUEUED;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&audio_dma->lock);
   dq_addlast(&apb->dq_entry, &audio_dma->pendq);
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&audio_dma->lock, flags);
 
   if (audio_dma->xrun)
     {
@@ -513,8 +517,11 @@ static void audio_dma_callback(struct dma_chan_s *chan,
   struct audio_dma_s *audio_dma = (struct audio_dma_s *)arg;
   struct ap_buffer_s *apb;
   bool final = false;
+  irqstate_t flags;
 
+  flags = spin_lock_irqsave(&audio_dma->lock);
   apb = (struct ap_buffer_s *)dq_remfirst(&audio_dma->pendq);
+  spin_unlock_irqrestore(&audio_dma->lock, flags);
   if (!apb)
     {
       /* xrun */
@@ -596,6 +603,7 @@ struct audio_lowerhalf_s *audio_dma_initialize(struct dma_dev_s *dma_dev,
   audio_dma->buffer_size = CONFIG_AUDIO_BUFFER_NUMBYTES;
   audio_dma->buffer_num  = CONFIG_AUDIO_NUM_BUFFERS;
   dq_init(&audio_dma->pendq);
+  spin_lock_init(&audio_dma->lock);
 
   audio_dma->dev.ops = &g_audio_dma_ops;
   return &audio_dma->dev;
