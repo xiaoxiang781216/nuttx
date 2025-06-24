@@ -37,6 +37,7 @@
 #include <nuttx/panic_notifier.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/rpmsg/rpmsg_virtio_lite.h>
 
 #include "rpmsg.h"
@@ -77,6 +78,7 @@ struct rpmsg_virtio_lite_priv_s
   struct notifier_block              nb;
   bool                               rpanic;
 #ifdef CONFIG_RPMSG_VIRTIO_LITE_PM
+  spinlock_t                         lock;
   struct pm_wakelock_s               wakelock;
   struct wdog_s                      wdog;
 #endif
@@ -185,6 +187,9 @@ static void rpmsg_virtio_lite_pm_callback(wdparm_t arg)
 {
   FAR struct rpmsg_virtio_lite_priv_s *priv =
     (FAR struct rpmsg_virtio_lite_priv_s *)arg;
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave_nopreempt(&priv->lock);
 
   if (rpmsg_virtio_lite_buffer_nused(&priv->rvdev, false))
     {
@@ -197,6 +202,8 @@ static void rpmsg_virtio_lite_pm_callback(wdparm_t arg)
     {
       pm_wakelock_relax(&priv->wakelock);
     }
+
+  spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
 }
 #endif
 
@@ -207,7 +214,7 @@ rpmsg_virtio_lite_pm_action(FAR struct rpmsg_virtio_lite_priv_s *priv,
   irqstate_t flags;
   int count;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&priv->lock);
 
   count = pm_wakelock_staycount(&priv->wakelock);
   if (stay && count == 0)
@@ -227,7 +234,7 @@ rpmsg_virtio_lite_pm_action(FAR struct rpmsg_virtio_lite_priv_s *priv,
     }
 #endif
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
 }
 
 static inline bool
@@ -899,6 +906,7 @@ int rpmsg_virtio_lite_initialize(FAR struct rpmsg_virtio_lite_s *dev)
     }
 
 #ifdef CONFIG_RPMSG_VIRTIO_LITE_PM
+  spin_lock_init(&priv->lock);
   snprintf(name, sizeof(name), "rpmsg-%s", priv->rpmsg.cpuname);
   pm_wakelock_init(&priv->wakelock, name, PM_IDLE_DOMAIN, PM_IDLE);
 #endif
