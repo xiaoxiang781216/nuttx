@@ -33,6 +33,12 @@
 #include "sim_internal.h"
 
 /****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static uint64_t g_host_start;
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -57,6 +63,8 @@ uint64_t host_gettime(bool rtc)
   if (start == 0)
     {
       start = current;
+      clock_gettime(CLOCK_REALTIME, &tp);
+      g_host_start = 1000000000ull * tp.tv_sec + tp.tv_nsec;
     }
 
   return current - start;

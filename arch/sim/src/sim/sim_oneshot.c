@@ -97,6 +97,10 @@ static const struct oneshot_operations_s g_oneshot_ops =
   .current   = sim_current,
 };
 
+static struct timespec g_timer_lastset;
+static struct timespec g_timer_lastirq;
+static uint64_t g_timer_lastdelay;
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -145,8 +149,8 @@ static void sim_update_hosttimer(void)
 {
   struct timespec *next = NULL;
   struct timespec current;
-  sq_entry_t *entry;
   uint64_t nsec;
+  sq_entry_t *entry;
 
   for (entry = sq_peek(&g_oneshot_list); entry; entry = sq_next(entry))
     {
@@ -171,6 +175,12 @@ static void sim_update_hosttimer(void)
   nsec  = current.tv_sec * NSEC_PER_SEC;
   nsec += current.tv_nsec;
 
+  /* Save to static variables for debugging */
+
+  g_timer_lastset.tv_sec  = current.tv_sec;
+  g_timer_lastset.tv_nsec = current.tv_nsec;
+  g_timer_lastdelay       = nsec;
+
   host_settimer(nsec);
 }
 #else
@@ -192,6 +202,8 @@ static void sim_timer_update_internal(void)
   irqstate_t flags;
 
   flags = enter_critical_section();
+
+  sim_timer_current(&g_timer_lastirq);
 
   for (entry = sq_peek(&g_oneshot_list); entry; entry = sq_next(entry))
     {
