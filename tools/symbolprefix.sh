@@ -266,6 +266,12 @@ if [[ ${#remove_prefix_args[@]} -ne 0 ]]; then
 fi
 
 # Save the removed prefix symbols to a file
+
+if [[ -n "${skip_sections[*]}" ]]; then
+  echo "Skip sections: ${skip_sections[*]}"
+  touch "$output/remove_prefix_symbols.txt"
+fi
+
 if [[ -n "$remove_prefix_symbols" ]]; then
   echo -e "$remove_prefix_symbols" > "$output/remove_prefix_symbols.txt"
   echo "[$(basename "$input")] Removed prefix symbols saved to $output/remove_prefix_symbols.txt"
