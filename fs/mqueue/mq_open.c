@@ -319,7 +319,7 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
 
       /* Set the initial reference count on this inode to one */
 
-      atomic_fetch_add(&inode->i_crefs, 1);
+      inode_addref(inode);
 
       if (created)
         {

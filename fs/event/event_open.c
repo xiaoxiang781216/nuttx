@@ -191,7 +191,7 @@ int nxevent_open(FAR nxevent_t **event, FAR const char *name,
       /* Initialize the inode */
 
       INODE_SET_NAMEDEVENT(inode);
-      atomic_fetch_add(&inode->i_crefs, 1);
+      inode_addref(inode);
 
       /* Initialize the event groups */
 
