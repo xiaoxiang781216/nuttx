@@ -153,6 +153,9 @@ static void rpmsg_virtio_pm_callback(wdparm_t arg)
 {
   FAR struct rpmsg_virtio_priv_s *priv =
     (FAR struct rpmsg_virtio_priv_s *)arg;
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave_nopreempt(&priv->lock);
 
   if (rpmsg_virtio_buffer_nused(&priv->rvdev, false))
     {
@@ -163,6 +166,8 @@ static void rpmsg_virtio_pm_callback(wdparm_t arg)
     {
       pm_wakelock_relax(&priv->wakelock);
     }
+
+  spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
 }
 #endif
 
@@ -178,7 +183,7 @@ rpmsg_virtio_pm_action(FAR struct rpmsg_virtio_priv_s *priv, bool stay)
   irqstate_t flags;
   int count;
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = spin_lock_irqsave_nopreempt(&priv->lock);
 
   count = pm_wakelock_staycount(&priv->wakelock);
   if (stay && count == 0)
@@ -203,7 +208,7 @@ rpmsg_virtio_pm_action(FAR struct rpmsg_virtio_priv_s *priv, bool stay)
     }
 #endif
 
-  spin_unlock_irqrestore(&priv->lock, flags);
+  spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
 }
 
 /****************************************************************************
