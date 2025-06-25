@@ -44,19 +44,7 @@
 
 #include <search.h>
 
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/****************************************************************************
- * Private Types
- ****************************************************************************/
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static struct hsearch_data g_htab;
+#include <nuttx/tls.h>
 
 /****************************************************************************
  * Public Functions
@@ -81,7 +69,9 @@ static struct hsearch_data g_htab;
 
 int hcreate(size_t nel)
 {
-  return hcreate_r(nel, &g_htab);
+  FAR struct task_info_s *info = task_get_info();
+
+  return hcreate_r(nel, &info->ta_htab);
 }
 
 /****************************************************************************
@@ -102,7 +92,9 @@ int hcreate(size_t nel)
 
 void hdestroy(void)
 {
-  hdestroy_r(&g_htab);
+  FAR struct task_info_s *info = task_get_info();
+
+  hdestroy_r(&info->ta_htab);
 }
 
 /****************************************************************************
@@ -127,9 +119,10 @@ void hdestroy(void)
 
 FAR ENTRY *hsearch(ENTRY item, ACTION action)
 {
+  FAR struct task_info_s *info = task_get_info();
   FAR ENTRY *retval = NULL;
 
-  hsearch_r(item, action, &retval, &g_htab);
+  hsearch_r(item, action, &retval, &info->ta_htab);
 
   return retval;
 }
@@ -152,5 +145,7 @@ FAR ENTRY *hsearch(ENTRY item, ACTION action)
 
 void hforeach(hforeach_t handle, FAR void *data)
 {
-  hforeach_r(handle, data, &g_htab);
+  FAR struct task_info_s *info = task_get_info();
+
+  hforeach_r(handle, data, &info->ta_htab);
 }

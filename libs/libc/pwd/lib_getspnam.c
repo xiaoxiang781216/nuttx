@@ -28,6 +28,8 @@
 #include <shadow.h>
 #include <string.h>
 
+#include <nuttx/tls.h>
+
 #include "pwd/lib_pwd.h"
 
 /****************************************************************************
@@ -44,12 +46,15 @@ FAR struct spwd *getspnam(FAR const char *name)
 #else
   if (strcmp(name, ROOT_NAME) == 0)
     {
+      FAR struct task_info_s *info = task_get_info();
       size_t nsize = sizeof(ROOT_NAME);
       size_t psize = sizeof(ROOT_PWDP);
-      result = &g_spwd;
+      result = &info->ta_spwd;
 
-      result->sp_namp = g_passwd_buffer;
-      result->sp_pwdp = &g_passwd_buffer[nsize];
+      task_info_init_buffer(info->ta_passwd_buffer,
+                            CONFIG_LIBC_PASSWD_LINESIZE);
+      result->sp_namp = info->ta_passwd_buffer;
+      result->sp_pwdp = &info->ta_passwd_buffer[nsize];
 
       strlcpy(result->sp_namp, ROOT_NAME, nsize);
       strlcpy(result->sp_pwdp, ROOT_PWDP, psize);

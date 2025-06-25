@@ -32,6 +32,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <nuttx/tls.h>
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -130,6 +132,7 @@ FAR struct ether_addr *ether_aton_r(FAR const char *asc,
 
 FAR struct ether_addr *ether_aton(FAR const char *asc)
 {
-  static struct ether_addr addr;
-  return ether_aton_r(asc, &addr);
+  FAR struct task_info_s *info = task_get_info();
+
+  return ether_aton_r(asc, &info->ta_ether_aton_addr);
 }

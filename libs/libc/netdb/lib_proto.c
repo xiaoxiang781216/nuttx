@@ -29,11 +29,7 @@
 #include <netdb.h>
 #include <string.h>
 
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static struct protoent result_buf;
+#include <nuttx/tls.h>
 
 /****************************************************************************
  * Public Functions
@@ -41,31 +37,42 @@ static struct protoent result_buf;
 
 void endprotoent(void)
 {
-  endprotoent_r(&result_buf);
+  FAR struct task_info_s *info = task_get_info();
+
+  endprotoent_r(&info->ta_protoent);
 }
 
 void setprotoent(int stayopen)
 {
-  setprotoent_r(stayopen, &result_buf);
+  FAR struct task_info_s *info = task_get_info();
+
+  setprotoent_r(stayopen, &info->ta_protoent);
 }
 
 FAR struct protoent *getprotoent(void)
 {
+  FAR struct task_info_s *info = task_get_info();
   FAR struct protoent *result;
-  int ret = getprotoent_r(&result_buf, NULL, 0, &result);
-  return ret == OK ? &result_buf : NULL;
+
+  int ret = getprotoent_r(&info->ta_protoent, NULL, 0, &result);
+  return ret == OK ? &info->ta_protoent : NULL;
 }
 
 FAR struct protoent *getprotobyname(FAR const char *name)
 {
+  FAR struct task_info_s *info = task_get_info();
   FAR struct protoent *result;
-  int ret = getprotobyname_r(name, &result_buf, NULL, 0, &result);
-  return ret == OK ? &result_buf : NULL;
+
+  int ret = getprotobyname_r(name, &info->ta_protoent, NULL, 0, &result);
+  return ret == OK ? &info->ta_protoent : NULL;
 }
 
 FAR struct protoent *getprotobynumber(int proto)
 {
+  FAR struct task_info_s *info = task_get_info();
   FAR struct protoent *result;
-  int ret = getprotobynumber_r(proto, &result_buf, NULL, 0, &result);
-  return ret == OK ? &result_buf : NULL;
+
+  int ret = getprotobynumber_r(proto, &info->ta_protoent, NULL, 0,
+                               &result);
+  return ret == OK ? &info->ta_protoent : NULL;
 }

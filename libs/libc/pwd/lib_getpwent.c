@@ -30,6 +30,8 @@
 #include <pwd.h>
 #include <errno.h>
 
+#include <nuttx/tls.h>
+
 #include "pwd/lib_pwd.h"
 
 /****************************************************************************
@@ -53,7 +55,9 @@
 
 void setpwent(void)
 {
-  g_passwd_index = 0;
+  FAR struct task_info_s *info = task_get_info();
+
+  info->ta_passwd_index = 0;
 }
 
 /****************************************************************************
@@ -73,7 +77,9 @@ void setpwent(void)
 
 void endpwent(void)
 {
-  g_passwd_index = 0;
+  FAR struct task_info_s *info = task_get_info();
+
+  info->ta_passwd_index = 0;
 }
 
 /****************************************************************************
@@ -98,8 +104,11 @@ void endpwent(void)
 
 FAR struct passwd *getpwent(void)
 {
+  FAR struct task_info_s *info = task_get_info();
   FAR struct passwd *pwd;
-  getpwent_r(&g_passwd, g_passwd_buffer,
+
+  task_info_init_buffer(info->ta_passwd_buffer, CONFIG_LIBC_PASSWD_LINESIZE);
+  getpwent_r(&info->ta_passwd, info->ta_passwd_buffer,
              CONFIG_LIBC_PASSWD_LINESIZE, &pwd);
   return pwd;
 }
@@ -132,9 +141,10 @@ int getpwent_r(FAR struct passwd *pwd,
                FAR char *buf, size_t buflen,
                FAR struct passwd **result)
 {
+  FAR struct task_info_s *info = task_get_info();
   int ret;
 #ifdef CONFIG_LIBC_PASSWD_FILE
-  ret = pwd_findby_index(g_passwd_index, pwd, buf, buflen);
+  ret = pwd_findby_index(info->ta_passwd_index, pwd, buf, buflen);
   if (ret != 1)
     {
       *result = NULL;
@@ -142,10 +152,10 @@ int getpwent_r(FAR struct passwd *pwd,
     }
 
   *result = pwd;
-  g_passwd_index++;
+  info->ta_passwd_index++;
   return OK;
 #else
-  if (g_passwd_index != 0)
+  if (info->ta_passwd_index != 0)
     {
       /* The only known user is 'root', if index in not 0. Thus, report
        * back that no match was found.
@@ -159,7 +169,7 @@ int getpwent_r(FAR struct passwd *pwd,
                    ROOT_SHELL, ROOT_PASSWD, pwd, buf, buflen, result);
   if (ret == 0)
     {
-      g_passwd_index++;
+      info->ta_passwd_index++;
     }
 
   return ret;

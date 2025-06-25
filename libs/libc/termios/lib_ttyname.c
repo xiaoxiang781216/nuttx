@@ -28,6 +28,8 @@
 #include <limits.h>
 #include <unistd.h>
 
+#include <nuttx/tls.h>
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -57,15 +59,15 @@
 
 FAR char *ttyname(int fd)
 {
-  static char name[TTY_NAME_MAX];
+  FAR struct task_info_s *info = task_get_info();
   int ret;
 
-  ret = ttyname_r(fd, name, TTY_NAME_MAX);
+  ret = ttyname_r(fd, info->ta_ttyname, sizeof(info->ta_ttyname));
   if (ret != 0)
     {
       set_errno(ret);
       return NULL;
     }
 
-  return name;
+  return info->ta_ttyname;
 }

@@ -31,6 +31,8 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+#include <nuttx/tls.h>
+
 #if defined(CONFIG_NET_IPv4) || defined(CONFIG_LIBC_IPv4_ADDRCONV)
 
 /****************************************************************************
@@ -67,8 +69,9 @@ FAR char *inet_ntoa_r(struct in_addr in, FAR char *buf, size_t bufflen)
 
 FAR char *inet_ntoa(struct in_addr in)
 {
-  static char buffer[INET_ADDRSTRLEN];
-  return inet_ntoa_r(in, buffer, sizeof(buffer));
+  FAR struct task_info_s *info = task_get_info();
+
+  return inet_ntoa_r(in, info->ta_ntoa_buf, sizeof(info->ta_ntoa_buf));
 }
 
 #endif /* CONFIG_NET_IPv4 || CONFIG_LIBC_IPv4_ADDRCONV */

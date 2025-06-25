@@ -28,6 +28,8 @@
 
 #include <netdb.h>
 
+#include <nuttx/tls.h>
+
 #include "netdb/lib_netdb.h"
 
 /****************************************************************************
@@ -63,11 +65,14 @@
 FAR struct hostent *gethostbyaddr(FAR const void *addr,
                                   socklen_t len, int type)
 {
+  FAR struct task_info_s *info = task_get_info();
   FAR struct hostent *res;
   int ret;
 
-  ret = gethostbyaddr_r(addr, len, type, &g_hostent, g_hostbuffer,
-                        CONFIG_NETDB_BUFSIZE, &res, &h_errno);
+  task_info_init_buffer(info->ta_hostbuffer, CONFIG_NETDB_BUFSIZE);
+  ret = gethostbyaddr_r(addr, len, type, &info->ta_hostent,
+                        info->ta_hostbuffer, CONFIG_NETDB_BUFSIZE,
+                        &res, &info->ta_h_errno);
   return ret == 0 ? res : NULL;
 }
 

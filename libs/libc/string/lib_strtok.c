@@ -26,11 +26,11 @@
 
 #include <string.h>
 
+#include <nuttx/tls.h>
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
-static FAR char *g_saveptr = NULL;
 
 /****************************************************************************
  * Public Functions
@@ -71,5 +71,7 @@ static FAR char *g_saveptr = NULL;
 #undef strtok /* See mm/README.txt */
 FAR char *strtok(FAR char *str, FAR const char *delim)
 {
-  return strtok_r(str, delim, &g_saveptr);
+  FAR struct task_info_s *info = task_get_info();
+
+  return strtok_r(str, delim, &info->ta_strtokptr);
 }

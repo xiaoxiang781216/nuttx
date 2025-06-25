@@ -28,6 +28,7 @@ if(CONFIG_LIBC_NETDB)
   list(
     APPEND
     SRCS
+    lib_h_errno.c
     lib_netdb.c
     lib_gethostbyname.c
     lib_gethostbynamer.c

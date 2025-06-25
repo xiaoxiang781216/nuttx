@@ -28,6 +28,8 @@
 
 #include <netdb.h>
 
+#include <nuttx/tls.h>
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -39,11 +41,11 @@
 FAR struct servent *getservbyname(FAR const char *name,
                                   FAR const char *proto)
 {
-  static struct servent ent;
+  FAR struct task_info_s *info = task_get_info();
   FAR struct servent *res;
   int ret;
 
-  ret = getservbyname_r(name, proto, &ent, NULL, 0, &res);
+  ret = getservbyname_r(name, proto, &info->ta_servent, NULL, 0, &res);
   return (ret != OK) ? NULL : res;
 }
 

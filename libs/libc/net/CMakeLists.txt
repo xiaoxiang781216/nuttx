@@ -31,12 +31,10 @@ set(SRCS
     lib_inetntoa.c
     lib_inetntop.c
     lib_inetpton.c
-    lib_inetnetwork.c
-    lib_etherntoa.c
-    lib_etheraton.c)
+    lib_inetnetwork.c)
 
 if(CONFIG_NET)
-  list(APPEND SRCS lib_accept.c)
+  list(APPEND SRCS lib_accept.c lib_etherntoa.c lib_etheraton.c)
 endif()
 
 if(CONFIG_NET_LOOPBACK)

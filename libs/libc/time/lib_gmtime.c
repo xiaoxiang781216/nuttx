@@ -31,12 +31,7 @@
 #include <debug.h>
 
 #include <nuttx/clock.h>
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static struct tm g_gmtime;
+#include <nuttx/tls.h>
 
 /****************************************************************************
  * Public Functions
@@ -52,7 +47,9 @@ static struct tm g_gmtime;
 
 FAR struct tm *gmtime(FAR const time_t *timep)
 {
-  return gmtime_r(timep, &g_gmtime);
+  FAR struct task_info_s *info = task_get_info();
+
+  return gmtime_r(timep, &info->ta_gmtime);
 }
 
 FAR struct tm *localtime(FAR const time_t *timep)

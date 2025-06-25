@@ -24,11 +24,7 @@
 
 #include <unistd.h>
 
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static char g_passwd[128];
+#include <nuttx/tls.h>
 
 /****************************************************************************
  * Public Functions
@@ -36,5 +32,8 @@ static char g_passwd[128];
 
 char *crypt(const char *key, const char *salt)
 {
-  return crypt_r(key, salt, g_passwd);
+  FAR struct task_info_s *info = task_get_info();
+
+  task_info_init_buffer(info->ta_passwd_buf, 128);
+  return crypt_r(key, salt, info->ta_passwd_buf);
 }

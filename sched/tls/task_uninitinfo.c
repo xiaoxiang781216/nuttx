@@ -145,6 +145,14 @@ void task_uninit_info(FAR struct task_group_s *group)
   task_uninit_stream(group);
 #endif /* CONFIG_FILE_STREAM */
 
+  task_info_uninit_buffer(info->ta_passwd_buffer);
+#ifdef CONFIG_LIBC_NETDB
+  task_info_uninit_buffer(info->ta_hostbuffer);
+#endif
+#ifdef CONFIG_CRYPTO
+  task_info_uninit_buffer(info->ta_passwd_buf);
+#endif
+
   nxmutex_destroy(&info->ta_lock);
 #ifdef CONFIG_MM_KERNEL_HEAP
   group_free(group, info);

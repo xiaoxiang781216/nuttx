@@ -61,13 +61,6 @@ extern "C"
 #define EXTERN extern
 #endif
 
-/* Data for non-reentrant group functions */
-
-EXTERN int g_passwd_index;
-EXTERN struct passwd g_passwd;
-EXTERN struct spwd g_spwd;
-EXTERN char g_passwd_buffer[CONFIG_LIBC_PASSWD_LINESIZE];
-
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/

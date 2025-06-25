@@ -28,6 +28,8 @@
 
 #include <time.h>
 
+#include <nuttx/tls.h>
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -51,6 +53,7 @@
 
 FAR char *asctime(FAR const struct tm *tp)
 {
-  static char buf[26];
-  return asctime_r(tp, buf);
+  FAR struct task_info_s *info = task_get_info();
+
+  return asctime_r(tp, info->ta_asctime);
 }

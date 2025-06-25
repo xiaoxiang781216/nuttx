@@ -275,9 +275,7 @@ extern "C"
  * Issue 7, 2018 edition.
  */
 
-/* REVISIT:  This should at least be per-task? */
-
-EXTERN int h_errno;
+#define h_errno (*get_h_errno())
 
 /****************************************************************************
  * Public Function Prototypes
@@ -289,8 +287,8 @@ int rexec_af(FAR char **ahost, int inport, FAR const char *user,
              FAR const char *passwd, FAR const char *cmd, FAR int *fd2p,
              sa_family_t af);
 
+FAR int             *get_h_errno(void);
 #if 0 /* None of these are yet supported */
-
 void                 endhostent(void);
 void                 endnetent(void);
 void                 endprotoent(void);

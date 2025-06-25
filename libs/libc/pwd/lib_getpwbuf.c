@@ -28,6 +28,8 @@
 
 #include <pwd.h>
 
+#include <nuttx/tls.h>
+
 #include "pwd/lib_pwd.h"
 
 /****************************************************************************
@@ -59,8 +61,12 @@ FAR struct passwd *getpwbuf(uid_t uid, gid_t gid, FAR const char *name,
                             FAR const char *gecos, FAR const char *dir,
                             FAR const char *shell, FAR const char *passwd)
 {
+  FAR struct task_info_s *info = task_get_info();
   FAR struct passwd *pwd = NULL;
-  int ret = getpwbuf_r(uid, gid, name, gecos, dir, shell, passwd, &g_passwd,
-                       g_passwd_buffer, sizeof(g_passwd_buffer), &pwd);
+
+  task_info_init_buffer(info->ta_passwd_buffer, CONFIG_LIBC_PASSWD_LINESIZE);
+  int ret = getpwbuf_r(uid, gid, name, gecos, dir, shell, passwd,
+                       &info->ta_passwd, info->ta_passwd_buffer,
+                       CONFIG_LIBC_PASSWD_LINESIZE, &pwd);
   return ret == 0 ? pwd : NULL;
 }

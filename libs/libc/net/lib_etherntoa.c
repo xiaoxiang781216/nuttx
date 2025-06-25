@@ -30,6 +30,8 @@
 #include <net/ethernet.h>
 #include <netinet/ether.h>
 
+#include <nuttx/tls.h>
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -66,6 +68,7 @@ FAR char *ether_ntoa_r(FAR const struct ether_addr *addr, FAR char *buf)
 
 FAR char *ether_ntoa(FAR const struct ether_addr *addr)
 {
-  static char buffer[20];
-  return ether_ntoa_r(addr, buffer);
+  FAR struct task_info_s *info = task_get_info();
+
+  return ether_ntoa_r(addr, info->ta_ether_ntoa_buf);
 }

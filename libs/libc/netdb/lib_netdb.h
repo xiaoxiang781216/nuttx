@@ -107,8 +107,6 @@ extern "C"
 #define EXTERN extern
 #endif
 
-EXTERN struct hostent g_hostent;
-EXTERN char g_hostbuffer[CONFIG_NETDB_BUFSIZE];
 EXTERN const struct services_db_s g_services_db[];
 
 /****************************************************************************

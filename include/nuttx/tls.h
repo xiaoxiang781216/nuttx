@@ -29,8 +29,14 @@
 
 #include <nuttx/config.h>
 
-#include <stdint.h>
+#include <net/ethernet.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <pwd.h>
+#include <search.h>
+#include <shadow.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include <arch/arch.h>
 #include <arch/types.h>
@@ -39,12 +45,11 @@
 #include <nuttx/cache.h>
 #include <nuttx/atexit.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/lib/lib.h>
 
 #ifdef CONFIG_PTHREAD_ATFORK
 #  include <nuttx/list.h>
 #endif
-
-#include <sys/types.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -70,6 +75,27 @@
 #  define TLS_MAXSTACK     (TLS_STACK_ALIGN)
 #  define TLS_INFO(sp)     ((FAR struct tls_info_s *)((sp) & ~TLS_STACK_MASK))
 #endif
+
+#define task_info_init_buffer(buffer, size) \
+  do                                        \
+    {                                       \
+      if (buffer == NULL)                   \
+        {                                   \
+          buffer = lib_zalloc(size);        \
+        }                                   \
+    }                                       \
+  while (0)
+
+#define task_info_uninit_buffer(buffer) \
+  do                                    \
+    {                                   \
+      if (buffer != NULL)               \
+        {                               \
+          lib_free(buffer);             \
+          buffer = NULL;                \
+        }                               \
+    }                                   \
+  while (0)
 
 /****************************************************************************
  * Public Types
@@ -125,34 +151,60 @@ struct pthread_atfork_s
 
 struct task_info_s
 {
-  mutex_t         ta_lock;
+  mutex_t               ta_lock;
+  pid_t                 ta_pid; /* Process ID */
+  FAR char             *ta_strtokptr;
+  char                  ta_asctime[26];
+  struct hsearch_data   ta_htab;
+  char                  ta_ttyname[TTY_NAME_MAX];
+  struct tm             ta_gmtime;
+  int                   ta_passwd_index;
+  struct passwd         ta_passwd;
+  struct spwd           ta_spwd;
+  FAR char             *ta_passwd_buffer;
 #if CONFIG_TLS_TASK_NELEM > 0
-  uintptr_t       ta_telem[CONFIG_TLS_TASK_NELEM]; /* Task local storage elements */
+  uintptr_t             ta_telem[CONFIG_TLS_TASK_NELEM]; /* Task local storage elements */
 #endif
 #if defined(CONFIG_TLS_NELEM) && CONFIG_TLS_NELEM > 0
-  tls_dtor_t      ta_tlsdtor[CONFIG_TLS_NELEM]; /* List of TLS destructors      */
+  tls_dtor_t            ta_tlsdtor[CONFIG_TLS_NELEM]; /* List of TLS destructors      */
 #endif
 #ifndef CONFIG_BUILD_KERNEL
-  struct getopt_s ta_getopt; /* Globals used by getopt() */
-  mode_t          ta_umask;  /* File mode creation mask */
+  struct getopt_s       ta_getopt; /* Globals used by getopt() */
+  mode_t                ta_umask;  /* File mode creation mask */
 #  ifdef CONFIG_LIBC_LOCALE
-  char            ta_domain[NAME_MAX]; /* Current domain for gettext */
+  char                  ta_domain[NAME_MAX]; /* Current domain for gettext */
 #  endif
 #endif
 #if CONFIG_LIBC_MAX_EXITFUNS > 0
-  struct atexit_list_s ta_exit; /* Exit functions */
+  struct atexit_list_s  ta_exit; /* Exit functions */
 #endif
 #ifdef CONFIG_FILE_STREAM
-  struct streamlist ta_streamlist; /* Holds C buffered I/O info */
+  struct streamlist     ta_streamlist; /* Holds C buffered I/O info */
 #endif
 
 #ifdef CONFIG_PTHREAD_ATFORK
-  struct list_node ta_atfork; /* Holds the pthread_atfork_s list */
+  struct list_node      ta_atfork; /* Holds the pthread_atfork_s list */
 #endif
 #ifdef CONFIG_MM_TASK_HEAP
   FAR struct mm_heap_s *ta_heap;
 #endif
-  pid_t ta_pid; /* Process ID */
+#if defined(CONFIG_NET_IPv4) || defined(CONFIG_LIBC_IPv4_ADDRCONV)
+  char                  ta_ntoa_buf[INET_ADDRSTRLEN];
+#endif
+#ifdef CONFIG_LIBC_NETDB
+  struct hostent        ta_hostent;
+  FAR char             *ta_hostbuffer;
+  int                   ta_h_errno;
+  struct servent        ta_servent;
+  struct protoent       ta_protoent;
+#endif
+#ifdef CONFIG_NET
+  char                  ta_ether_ntoa_buf[20];
+  struct ether_addr     ta_ether_aton_addr;
+#endif
+#ifdef CONFIG_CRYPTO
+  FAR char             *ta_passwd_buf;
+#endif
 };
 
 /* struct tls_cleanup_s *****************************************************/
@@ -203,10 +255,10 @@ struct tls_cleanup_s
 
 struct tls_info_s
 {
-  FAR struct task_info_s *tl_task;
+  FAR struct task_info_s     *tl_task;
 
 #if defined(CONFIG_TLS_NELEM) && CONFIG_TLS_NELEM > 0
-  uintptr_t tl_elem[CONFIG_TLS_NELEM]; /* TLS elements */
+  uintptr_t                   tl_elem[CONFIG_TLS_NELEM]; /* TLS elements */
 #endif
 
   /* tl_tos   - The index to the next available entry at the top of the
@@ -215,20 +267,20 @@ struct tls_info_s
    */
 
 #if CONFIG_TLS_NCLEANUP > 0
-  uint8_t tl_tos;
-  struct tls_cleanup_s tl_stack[CONFIG_TLS_NCLEANUP];
+  uint8_t                     tl_tos;
+  struct tls_cleanup_s        tl_stack[CONFIG_TLS_NCLEANUP];
 #endif
 
-  uint8_t tl_cpstate;                  /* Cancellation state */
+  uint8_t                     tl_cpstate; /* Cancellation state */
 
 #ifdef CONFIG_CANCELLATION_POINTS
-  int16_t tl_cpcount;                  /* Nested cancellation point count */
+  int16_t                     tl_cpcount; /* Nested cancellation point count */
 #endif
 
-  uint16_t tl_size;                    /* Actual size with alignments */
-  int tl_errno;                        /* Per-thread error number */
-  FAR char **tl_argv;                  /* Arguments first string */
-  pid_t tl_tid;                        /* Thread ID */
+  uint16_t                    tl_size;    /* Actual size with alignments */
+  int                         tl_errno;   /* Per-thread error number */
+  FAR char                  **tl_argv;    /* Arguments first string */
+  pid_t                       tl_tid;     /* Thread ID */
 
   /* Robust mutex support ***************************************************/
 

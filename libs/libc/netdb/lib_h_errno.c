@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/pwd/lib_pwd_globals.c
+ * libs/libc/netdb/lib_h_errno.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -26,19 +26,31 @@
 
 #include <nuttx/config.h>
 
-#include "pwd/lib_pwd.h"
+#include <netdb.h>
 
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
-/* Data for non-reentrant group functions */
-
-int g_passwd_index;
-struct passwd g_passwd;
-struct spwd g_spwd;
-char g_passwd_buffer[CONFIG_LIBC_PASSWD_LINESIZE];
+#include <nuttx/tls.h>
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: get_h_errno
+ *
+ * Description:
+ *   Return the value of the h_errno variable.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   The value of the h_errno variable.
+ *
+ ****************************************************************************/
+
+FAR int *get_h_errno(void)
+{
+  FAR struct task_info_s *info = task_get_info();
+
+  return &info->ta_h_errno;
+}
