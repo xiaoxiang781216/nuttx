@@ -542,6 +542,7 @@ int noteram_close(FAR struct file *filep)
 {
   FAR struct noteram_dump_context_s *ctx = filep->f_priv;
 
+  filep->f_priv = NULL;
   kmm_free(ctx);
   return OK;
 }
@@ -613,7 +614,7 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
 
 static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
-  int ret = -ENOSYS;
+  int ret = -ENOTTY;
   FAR struct noteram_driver_s *drv = filep->f_inode->i_private;
   irqstate_t flags = spin_lock_irqsave_notrace(&drv->lock);
 
@@ -758,7 +759,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
 
       default:
-          break;
+        break;
     }
 
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
