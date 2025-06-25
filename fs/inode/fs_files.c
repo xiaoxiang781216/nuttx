@@ -802,6 +802,10 @@ int fdlist_copy(FAR struct fdlist *plist, FAR struct fdlist *clist,
                   file_put(filep);
                   continue;
                 }
+
+#ifdef CONFIG_FDCHECK
+              fd = fdcheck_restore(fd);
+#endif
             }
           else if (fcloexec)
             {
