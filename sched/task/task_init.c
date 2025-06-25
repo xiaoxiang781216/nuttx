@@ -261,6 +261,10 @@ errout_with_group:
 
   group_leave(tcb);
 
+#ifdef CONFIG_ARCH_ADDRENV
+  addrenv_drop(tcb->group->tg_addrenv_own, false);
+#endif
+
 errout:
   sched_trace_end();
   return ret;
