@@ -31,6 +31,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/atomic.h>
 #include <nuttx/net/snoop.h>
+#include <nuttx/spinlock.h>
 
 #include <nuttx/wireless/bluetooth/bt_bridge.h>
 #include <nuttx/wireless/bluetooth/bt_driver.h>
@@ -77,6 +78,7 @@ struct bt_bridge_s
 #endif /* CONFIG_BLUETOOTH_BRIDGE_BTSNOOP */
   atomic_t                  refs;
   bool                      dispatched[BT_FILTER_CMD_COUNT];
+  spinlock_t                lock;
 };
 
 /****************************************************************************
@@ -483,17 +485,17 @@ static int bt_bridge_send(FAR struct bt_driver_s *drv,
   FAR struct bt_driver_s *driver = bridge->driver;
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&bridge->lock);
 
   if (bt_bridge_filter_command(bridge, drv, data))
     {
-      leave_critical_section(flags);
+      spin_unlock_irqrestore(&bridge->lock, flags);
       return len;
     }
 
   if (bt_filter_can_send(&device->filter, type, data, len))
     {
-      leave_critical_section(flags);
+      spin_unlock_irqrestore(&bridge->lock, flags);
 #ifdef CONFIG_BLUETOOTH_BRIDGE_BTSNOOP
       snoop_dump(bridge->snoop, data - drv->head_reserve,
                  len + drv->head_reserve, 0,
@@ -503,7 +505,7 @@ static int bt_bridge_send(FAR struct bt_driver_s *drv,
       return driver->send(driver, type, data, len);
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&bridge->lock, flags);
   return 0;
 }
 
@@ -530,7 +532,7 @@ static int bt_bridge_receive(FAR struct bt_driver_s *drv,
   irqstate_t flags;
   int i;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&bridge->lock);
   for (i = 0; i < BT_FILTER_TYPE_COUNT; i++)
     {
       device = &bridge->device[i];
@@ -539,7 +541,7 @@ static int bt_bridge_receive(FAR struct bt_driver_s *drv,
         {
           int ret;
 
-          leave_critical_section(flags);
+          spin_unlock_irqrestore(&bridge->lock, flags);
           ret = bt_netdev_receive(driver, type, data, len);
 
 #ifdef CONFIG_BLUETOOTH_BRIDGE_BTSNOOP
@@ -551,7 +553,7 @@ static int bt_bridge_receive(FAR struct bt_driver_s *drv,
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&bridge->lock, flags);
   return 0;
 }
 
@@ -670,6 +672,7 @@ int bt_bridge_register(FAR struct bt_driver_s *hcidrv,
   hcidrv->receive = bt_bridge_receive;
   hcidrv->priv = bridge;
 
+  spin_lock_init(&bridge->lock);
   bt_device_init(bridge, btdrv, BT_FILTER_TYPE_BT);
   bt_device_init(bridge, bledrv, BT_FILTER_TYPE_BLE);
 
