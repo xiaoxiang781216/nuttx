@@ -34,8 +34,6 @@
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/rpmsg/rpmsg_ping.h>
-#include <nuttx/spinlock.h>
-#include <nuttx/wqueue.h>
 #include <openamp/rpmsg.h>
 #include <openamp/rpmsg_internal.h>
 
@@ -57,19 +55,6 @@
  * Public Types
  ****************************************************************************/
 
-#if CONFIG_RPMSG_DEFER_WORK_COUNT > 0
-struct rpmsg_defer_node_s
-{
-  FAR struct rpmsg_endpoint *ept;
-  FAR void                  *data;
-  FAR void                  *priv;
-  size_t                     len;
-  uint32_t                   src;
-  rpmsg_ept_cb               handler;
-  struct metal_list          node;
-};
-#endif
-
 struct rpmsg_s
 {
   bool                         init;
@@ -89,14 +74,6 @@ struct rpmsg_s
   struct rpmsg_endpoint        wakelock;
 #endif
   atomic_t                     signals;
-#if CONFIG_RPMSG_DEFER_WORK_COUNT > 0
-  struct work_s                defer_work;
-  FAR struct kwork_wqueue_s    *defer_wqueue;
-  struct metal_list            defer_free;
-  struct metal_list            defer_used;
-  struct rpmsg_defer_node_s    defer_nodes[CONFIG_RPMSG_DEFER_WORK_COUNT];
-  spinlock_t                   defer_lock;
-#endif
 };
 
 struct rpmsg_timestamp_s
@@ -153,9 +130,6 @@ int rpmsg_post(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem);
 
 FAR const char *rpmsg_get_local_cpuname(FAR struct rpmsg_device *rdev);
 FAR const char *rpmsg_get_cpuname(FAR struct rpmsg_device *rdev);
-int rpmsg_defer_work(FAR struct rpmsg_endpoint *ept, FAR void *data,
-                     size_t len, uint32_t src, FAR void *priv,
-                     rpmsg_ept_cb handler);
 int rpmsg_get_signals(FAR struct rpmsg_device *rdev);
 int rpmsg_get_timestamp(FAR struct rpmsg_device *rdev, FAR const void *data,
                         FAR struct rpmsg_timestamp_s *ts);
