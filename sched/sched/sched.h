@@ -71,9 +71,12 @@
 #  define current_task(cpu)      ((FAR struct tcb_s *)list_readytorun()->head)
 #endif
 
-/* This macro returns the running task. */
+/* This macro returns the running task which may different from this_task()
+ * during interrupt level context switches.
+ */
 
-#define running_task()           (g_running_tasks[this_cpu()])
+#define running_task() \
+  (up_interrupt_context() ? g_running_tasks[this_cpu()] : this_task())
 
 /* List attribute flags */
 
