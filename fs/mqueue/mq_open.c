@@ -38,6 +38,7 @@
 
 #include <nuttx/mqueue.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/spinlock.h>
 
 #include "inode/inode.h"
 #include "mqueue/mqueue.h"
@@ -97,10 +98,9 @@ static int nxmq_file_poll(FAR struct file *filep,
   FAR struct mqueue_inode_s *msgq = inode->i_private;
   pollevent_t eventset = 0;
   irqstate_t flags;
-  int ret = 0;
   int i;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&msgq->lock);
 
   if (setup)
     {
@@ -121,8 +121,8 @@ static int nxmq_file_poll(FAR struct file *filep,
       if (i >= CONFIG_FS_MQUEUE_NPOLLWAITERS)
         {
           fds->priv = NULL;
-          ret       = -EBUSY;
-          goto errout;
+          spin_unlock_irqrestore(&msgq->lock, flags);
+          return -EBUSY;
         }
 
       /* Immediately notify on any of the requested events */
@@ -137,9 +137,10 @@ static int nxmq_file_poll(FAR struct file *filep,
           eventset |= POLLIN;
         }
 
+      spin_unlock_irqrestore(&msgq->lock, flags);
       poll_notify(&fds, 1, eventset);
     }
-  else if (fds->priv != NULL)
+  else
     {
       for (i = 0; i < CONFIG_FS_MQUEUE_NPOLLWAITERS; i++)
         {
@@ -150,11 +151,11 @@ static int nxmq_file_poll(FAR struct file *filep,
               break;
             }
         }
+
+      spin_unlock_irqrestore(&msgq->lock, flags);
     }
 
-errout:
-  leave_critical_section(flags);
-  return ret;
+  return 0;
 }
 
 static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
@@ -166,7 +167,6 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
   FAR struct mq_attr *attr = NULL;
   struct inode_search_s desc;
   char fullpath[MAX_MQUEUE_PATH];
-  irqstate_t flags;
   mode_t mode = 0;
   int ret;
 
@@ -228,8 +228,6 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
    * SMP case.
    */
 
-  flags = enter_critical_section();
-
   /* Get the inode for this mqueue.  This should succeed if the message
    * queue has already been created.  In this case, inode_find() will
    * have incremented the reference count on the inode.
@@ -237,6 +235,7 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
 
   SETUP_SEARCH(&desc, fullpath, false);
 
+retry:
   ret = inode_find(&desc);
   if (ret >= 0)
     {
@@ -292,7 +291,14 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
 
       if (ret < 0)
         {
-          goto errout_with_lock;
+          if (ret == -EEXIST)
+            {
+              goto retry;
+            }
+          else
+            {
+              goto errout_with_lock;
+            }
         }
 
       /* Allocate memory for the new message queue.  The new inode will
@@ -326,7 +332,6 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
     }
 
   RELEASE_SEARCH(&desc);
-  leave_critical_section(flags);
 #ifdef CONFIG_FS_NOTIFY
   notify_open(fullpath, oflags);
 #endif
@@ -337,7 +342,6 @@ errout_with_inode:
 
 errout_with_lock:
   RELEASE_SEARCH(&desc);
-  leave_critical_section(flags);
 
 errout:
   return ret;

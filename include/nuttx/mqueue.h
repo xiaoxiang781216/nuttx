@@ -32,6 +32,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/signal.h>
 #include <nuttx/list.h>
+#include <nuttx/spinlock_type.h>
 
 #include <sys/types.h>
 #include <stdint.h>
@@ -128,6 +129,7 @@ struct mqueue_inode_s
   struct sigwork_s ntwork;    /* Notification work */
 #endif
   FAR struct pollfd *fds[CONFIG_FS_MQUEUE_NPOLLWAITERS];
+  spinlock_t lock;            /* Spinlock to protect this structure */
 };
 
 /****************************************************************************

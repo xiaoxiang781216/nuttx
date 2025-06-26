@@ -106,6 +106,7 @@ int nxmq_alloc_msgq(FAR struct mq_attr *attr,
 
       dq_init(&msgq->cmn.waitfornotempty);
       dq_init(&msgq->cmn.waitfornotfull);
+      spin_lock_init(&msgq->lock);
     }
   else
     {
