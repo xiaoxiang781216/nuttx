@@ -20,6 +20,7 @@
 #
 ############################################################################
 
+import argparse
 import bisect
 import json
 import time
@@ -39,6 +40,7 @@ class GlobalNode(memdump.MMNodeDump):
         self.seqno = None
         self.overhead = 0
         self.backtrace = ()
+        self.usersize = nodesize
 
     def __repr__(self):
         return f"GlobalVar@{self.address:x}:{self.nodesize}Bytes"
@@ -102,6 +104,30 @@ class MMLeak(gdb.Command):
 
         return nodes
 
+    def pointers(
+        self, node: memdump.MMNodeDump, regions, checked_ptr
+    ) -> Generator[int, None, None]:
+        # Return all possible pointers stored in this node
+        longsize = utils.get_long_type().sizeof
+        memory = node.read_memory()
+        size = len(memory)
+        prev_mem = None
+        while size > 0:
+            size -= longsize
+            mem = memory[size : size + longsize]
+            if mem == prev_mem:
+                continue
+
+            prev_mem = mem
+            ptr = int.from_bytes(mem, "little")
+            if ptr in checked_ptr:
+                continue
+
+            checked_ptr[ptr] = True
+
+            if any(region["start"] <= ptr < region["end"] for region in regions):
+                yield ptr
+
     def collect_leaks(
         self, heaps: List[mm.MMHeap]
     ) -> Dict[memdump.MMNodeDump, List[memdump.MMNodeDump]]:
@@ -140,37 +166,14 @@ class MMLeak(gdb.Command):
             for start, end in heap.regions
         ]
 
-        longsize = utils.get_long_type().sizeof
-
         checked_ptr = {}
-
-        def pointers(node: memdump.MMNodeDump) -> Generator[int, None, None]:
-            # Return all possible pointers stored in this node
-            memory = node.read_memory()
-            size = len(memory)
-            prev_mem = None
-            while size > 0:
-                size -= longsize
-                mem = memory[size : size + longsize]
-                if mem == prev_mem:
-                    continue
-
-                prev_mem = mem
-                ptr = int.from_bytes(mem, "little")
-                if ptr in checked_ptr:
-                    continue
-
-                checked_ptr[ptr] = True
-
-                if any(region["start"] <= ptr < region["end"] for region in regions):
-                    yield ptr
 
         print("Leak analyzing...", flush=True, end="")
         t = time.time()
         for good in good_nodes:
             if not sorted_addr:  # All nodes are checked
                 break
-            for ptr in pointers(good):
+            for ptr in self.pointers(good, regions, checked_ptr):
                 if not (idx := bisect.bisect_right(sorted_addr, ptr)):
                     continue
 
@@ -195,8 +198,55 @@ class MMLeak(gdb.Command):
             count = len(nodes[node])
             yield node, is_pid_alive(node.pid), count
 
+    def dump_good_nodes(self, address):
+        global_nodes = self.global_nodes()
+        node = next(
+            (
+                node
+                for node in global_nodes
+                if node.address <= address < node.address + node.nodesize
+            ),
+            None,
+        ) or memdump.find_address(address)
+        if not node:
+            print(f"{address:#x} Not found in global variables or heap nodes.")
+            return
+
+        regions = [
+            {"start": start.address, "end": end.address}
+            for heap in memdump.get_heaps()
+            for start, end in heap.regions
+        ]
+
+        print(
+            f"Address found in {node}, size: {node.nodesize} bytes\nMark below as all good."
+        )
+        for ptr in self.pointers(node, regions, {}):
+            print(f"{ptr:#x}")
+
     @utils.dont_repeat_decorator
     def invoke(self, arg: str, from_tty: bool) -> None:
+        parser = argparse.ArgumentParser(
+            description="Check if any memory is leaked in the system.",
+        )
+        parser.add_argument(
+            "-a",
+            "--address",
+            type=str,
+            default=None,
+            help="Dump all good nodes reference by this block. The address must be a member of this block",
+        )
+
+        pargs = None
+        try:
+            pargs = parser.parse_args(gdb.string_to_argv(arg))
+        except SystemExit:
+            pass
+
+        if pargs and pargs.address is not None:
+            self.dump_good_nodes(utils.parse_arg(pargs.address))
+            return
+
         heaps = memdump.get_heaps("g_mmheap")
 
         leak_nodes = self.collect_leaks(heaps)
