@@ -43,6 +43,7 @@ class MMNodeDump(Protocol):
     is_free: bool
     from_pool: bool
     overhead: int
+    useraddress: int  # Address of user memory
     usersize: int = 0  # Size of the user data, excluding overhead
 
     def contains(self, addr: int) -> bool: ...

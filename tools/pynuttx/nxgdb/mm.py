@@ -72,6 +72,8 @@ class MemPoolBlock:
         self.address = addr
         self.blocksize = int(blocksize)
         self.nodesize = int(blocksize) + self.overhead
+        self.usersize = self.blocksize
+        self.useraddress = self.address
         # Lazy evaluation
         self._backtrace = self._pid = self._seqno = self._magic = self._blk = None
 
@@ -435,6 +437,11 @@ class MMNode(gdb.Value, p.MMFreeNode):
         if not self._address:
             self._address = int(super().address)
         return self._address
+
+    @property
+    def useraddress(self) -> int:
+        """Address of user memory, excluding overhead"""
+        return self.address + self.overhead
 
     @property
     def prevsize(self) -> int:

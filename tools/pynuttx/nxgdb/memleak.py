@@ -128,8 +128,8 @@ class MMLeak(gdb.Command):
             if node in heap_guards:
                 continue
 
-            nodes_dict[node.address] = node
-            sorted_addr.add(node.address)
+            nodes_dict[node.useraddress] = node
+            sorted_addr.add(node.useraddress)
 
         sorted_addr = sorted(sorted_addr)
         print(f" {time.time() - t:.2f}s", flush=True, end="\n")
