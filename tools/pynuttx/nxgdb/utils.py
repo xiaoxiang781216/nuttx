@@ -363,11 +363,8 @@ long_type = lookup_type("long")
 
 def dont_repeat_decorator(func):
     def wrapper(self, args, from_tty):
-        try:
-            self.dont_repeat()
-            func(self, args, from_tty)
-        except Exception as e:
-            print(f"Error: {e}")
+        self.dont_repeat()
+        func(self, args, from_tty)
 
     return wrapper
 
