@@ -221,6 +221,8 @@ rpmsg_port_create_queues(FAR struct rpmsg_port_s *port,
       return ret;
     }
 
+  port->txq.port = port;
+  port->rxq.port = port;
   return 0;
 }
 
@@ -666,8 +668,10 @@ FAR struct rpmsg_port_header_s *
 rpmsg_port_queue_get_available_buffer(FAR struct rpmsg_port_queue_s *queue,
                                       bool wait)
 {
-  FAR struct list_node *node;
+  FAR struct rpmsg_port_s *port = queue->port;
   FAR struct rpmsg_port_header_s *hdr;
+  FAR struct list_node *node;
+  int ret;
 
   for (; ; )
     {
@@ -683,7 +687,12 @@ rpmsg_port_queue_get_available_buffer(FAR struct rpmsg_port_queue_s *queue,
           return NULL;
         }
 
-      nxsem_wait_uninterruptible(&queue->free.sem);
+      ret = port->ops->notify_queue_noavail ?
+            port->ops->notify_queue_noavail(port, queue) : -ENOTSUP;
+      if (ret == -ENOTSUP)
+        {
+          nxsem_wait_uninterruptible(&queue->free.sem);
+        }
     }
 }
 
