@@ -839,7 +839,10 @@ if(CONFIG_BUILD_PROTECTED)
 
   add_custom_command(
     OUTPUT User.map
-    COMMAND ${CMAKE_NM} nuttx_user > User.map
+    COMMAND
+      ${CMAKE_NM} nuttx_user | grep -v
+      '\(compiled\)\|\(\${CMAKE_C_OUTPUT_EXTENSION}$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)'
+      | sort > User.map
     DEPENDS nuttx_user)
   add_custom_target(usermap ALL DEPENDS User.map)
   add_dependencies(nuttx_post usermap)
