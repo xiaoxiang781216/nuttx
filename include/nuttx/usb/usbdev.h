@@ -139,7 +139,7 @@
 
 /* Invoked when the driver is unbound from a USB device driver */
 
-#define CLASS_UNBIND(drvr,dev)    (drvr)->ops->unbind(drvr,dev)
+#define CLASS_UNBIND(drvr,dev)    (drvr)->ops->unbind ? (drvr)->ops->unbind(drvr,dev) : (void)0
 
 /* Invoked after all transfers have been stopped, when the host is
  * disconnected.
