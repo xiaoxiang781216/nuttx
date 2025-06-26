@@ -429,6 +429,15 @@ config ARCH_RV_ISA_ZICSR_ZIFENCEI
 		clang < 17 or GCC < 11.3.0, for which this is not possible or need
 		special treatment.
 
+config ARCH_RV_ISA_ZICFILP
+	bool
+	default n
+	---help---
+		Enable support for the RISC-V Zicfilp (Control Flow Integrity for Indirect Branches)
+		extension. This extension provides hardware support for control flow integrity
+		by implementing branch protection mechanisms. When enabled, the compiler will
+		generate code with control flow protection for indirect branches.
+
 config ARCH_RV_EXPERIMENTAL_EXTENSIONS
 	string "LLVM RISC-V Experimental Extensions"
 	default ""

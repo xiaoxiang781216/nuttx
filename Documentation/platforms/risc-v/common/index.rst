@@ -149,3 +149,178 @@ References
 * NuttX RISC-V Architecture Documentation
 * ``arch/risc-v/include/irq.h`` - Core interrupt handling definitions
 * ``arch/risc-v/src/common/riscv_exception_common.S`` - Assembly interrupt handling
+
+RISC-V Zicfilp Control Flow Integrity Extension
+===============================================
+
+Overview
+--------
+
+The RISC-V Zicfilp (Control Flow Integrity for Indirect Branches) extension provides
+hardware support for control flow integrity by implementing branch protection mechanisms.
+This extension helps protect against Return-Oriented Programming (ROP) and Jump-Oriented
+Programming (JOP) attacks by adding hardware checks for indirect branch targets.
+
+Zicfilp Extension Basics
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The Zicfilp extension provides:
+
+1. **Hardware CFI Support**: Hardware-based control flow integrity checks for indirect branches
+2. **Branch Protection**: Protection against code-reuse attacks (ROP/JOP)
+3. **Compiler Integration**: Works with compiler-generated CFI instrumentation
+4. **Performance**: Hardware implementation provides better performance than software-only solutions
+
+Configuration
+^^^^^^^^^^^^^
+
+Chip Configuration Requirement
+""""""""""""""""""""""""""""""
+
+**IMPORTANT**: The ``ARCH_RV_ISA_ZICFILP`` option must be selected by the chip
+configuration and should not be manually enabled by users. This ensures that
+the extension is only activated on hardware that actually supports it.
+
+To enable Zicfilp extension support in your custom RISC-V chip:
+
+.. code-block:: kconfig
+
+   config ARCH_CHIP_MYCUSTOM_CHIP
+       bool "My Custom RISC-V Chip with Zicfilp"
+       select ARCH_RV32  # or ARCH_RV64
+       select ARCH_RV_ISA_M
+       select ARCH_RV_ISA_A
+       select ARCH_RV_ISA_C
+       select ARCH_RV_ISA_ZICFILP  # Select this only if hardware supports it
+       ---help---
+         My custom RISC-V chip with Zicfilp CFI support
+
+Kconfig Configuration
+"""""""""""""""""""""
+
+The actual Kconfig definition is:
+
+.. code-block:: kconfig
+
+   config ARCH_RV_ISA_ZICFILP
+       bool
+       default n
+       ---help---
+         Enable support for the RISC-V Zicfilp (Control Flow Integrity for Indirect Branches)
+         extension. This extension provides hardware support for control flow integrity
+         by implementing branch protection mechanisms. When enabled, the compiler will
+         generate code with control flow protection for indirect branches.
+
+         NOTE: This option should not be manually enabled. It must be selected by
+         the chip configuration to ensure proper hardware support.
+
+.. warning::
+   **Do not manually enable this option** through menuconfig or defconfig unless you are
+   creating a custom chip configuration. The chip configuration should select this option
+   based on actual hardware capabilities.
+
+Valid Configuration Methods
+"""""""""""""""""""""""""""
+
+1. **Chip Configuration** (Recommended): Add ``select ARCH_RV_ISA_ZICFILP`` to your chip's Kconfig
+2. **Custom Board** (Advanced): Only if creating a custom chip configuration that supports Zicfilp
+
+Invalid Configuration Methods
+"""""""""""""""""""""""""""""
+
+These methods should be avoided:
+
+1. **menuconfig**: Manual selection through the menu system
+2. **defconfig**: Direct addition of ``CONFIG_ARCH_RV_ISA_ZICFILP=y``
+
+The above methods bypass hardware capability checks and may result in CFI instructions
+being generated for hardware that doesn't support them.
+
+Compiler Support
+^^^^^^^^^^^^^^^^
+
+When ``ARCH_RV_ISA_ZICFILP`` is enabled, the build system automatically:
+
+1. **ISA String**: Adds ``_zicfilp`` to the ``-march`` compiler flag
+
+   .. code-block:: bash
+
+      # Example: rv64imac becomes rv64imac_zicfilp
+      -march=rv64imac_zicfilp
+
+2. **CFI Protection**: Adds ``-fcf-protection=branch`` compiler flag for branch protection
+
+   .. code-block:: bash
+
+      # Compiler flags
+      -fcf-protection=branch
+
+Implementation Details
+^^^^^^^^^^^^^^^^^^^^^^
+
+Hardware Requirements
+"""""""""""""""""""""
+
+To use this feature, your RISC-V implementation must:
+
+- Support the Zicfilp extension in hardware
+- Implement the required CFI instructions and checks
+- Support the necessary CSRs for CFI configuration
+
+Toolchain Requirements
+""""""""""""""""""""""
+
+- **GCC**: Version that supports Zicfilp extension and ``-fcf-protection=branch``
+- **Clang**: Version that supports Zicfilp extension
+- **Binutils**: Version that can assemble Zicfilp instructions
+
+Runtime Behavior
+"""""""""""""""""
+
+When CFI is not enabled or supported at runtime, CFI-related instructions will be
+treated as NOPs (no operation):
+
+.. note::
+   **CFI Instruction Behavior**: If the Zicfilp extension is not enabled in hardware
+   or runtime configuration, CFI-related instructions inserted by the compiler will
+   execute as NOP instructions. This provides backward compatibility but offers no
+   protection.
+
+Integration Example
+^^^^^^^^^^^^^^^^^^^
+
+For a custom RISC-V chip with Zicfilp support:
+
+.. code-block:: kconfig
+
+   config ARCH_CHIP_MYCUSTOM_CHIP
+       bool "My Custom RISC-V Chip with CFI"
+       select ARCH_RV64
+       select ARCH_RV_ISA_M
+       select ARCH_RV_ISA_A
+       select ARCH_RV_ISA_C
+       select ARCH_RV_ISA_ZICFILP  # Select only if hardware supports Zicfilp
+       ---help---
+         My custom RISC-V chip with Zicfilp CFI support
+
+.. note::
+   **Hardware Verification Required**: Only select ``ARCH_RV_ISA_ZICFILP`` if your
+   chip actually implements the Zicfilp extension in hardware. Selecting this option
+   for chips without hardware support will generate CFI instructions that execute
+   as NOPs, providing no security benefit.
+
+Debugging and Verification
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To verify Zicfilp is properly enabled:
+
+1. **Check compiler flags**: Verify ``-march`` includes ``_zicfilp`` and ``-fcf-protection=branch`` is present
+2. **Disassemble code**: Look for CFI-related instructions in generated code
+3. **Runtime testing**: Test with CFI violations to ensure protection is active
+
+References
+^^^^^^^^^^
+
+* RISC-V Zicfilp Extension Specification
+* GCC Control Flow Protection Documentation
+* RISC-V ISA Manual - Chapter on Code Integrity Extensions

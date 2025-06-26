@@ -22,6 +22,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
   .section .text
   .balign  64
   .global  __trap_vec
@@ -38,5 +40,8 @@
  ****************************************************************************/
 
 __trap_vec:
+#ifdef CONFIG_ARCH_RV_ISA_ZICFILP
+  lpad 0x1
+#endif
   j    exception_common
   nop
