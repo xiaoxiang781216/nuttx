@@ -146,8 +146,8 @@ class MMLeak(gdb.Command):
 
         def pointers(node: memdump.MMNodeDump) -> Generator[int, None, None]:
             # Return all possible pointers stored in this node
-            size = node.nodesize - node.overhead
             memory = node.read_memory()
+            size = len(memory)
             prev_mem = None
             while size > 0:
                 size -= longsize

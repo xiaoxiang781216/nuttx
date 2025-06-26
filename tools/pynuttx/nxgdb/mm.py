@@ -424,12 +424,10 @@ class MMNode(gdb.Value, p.MMFreeNode):
 
     def contains(self, address):
         """Check if the address is in node's range, excluding overhead"""
-        return self.address + self.overhead <= address < self.address + self.nodesize
+        return self.useraddress <= address < self.useraddress + self.usersize
 
     def read_memory(self):
-        addr = int(self.address) + MMNode.MM_ALLOCNODE_OVERHEAD
-        size = self.nodesize - MMNode.MM_ALLOCNODE_OVERHEAD
-        return gdb.selected_inferior().read_memory(addr, size)
+        return gdb.selected_inferior().read_memory(self.useraddress, self.usersize)
 
     @property
     def address(self) -> int:
@@ -453,7 +451,11 @@ class MMNode(gdb.Value, p.MMFreeNode):
     @property
     def usersize(self) -> int:
         """Size of this chunk, excluding overhead"""
-        return self.nodesize - MMNode.MM_ALLOCNODE_OVERHEAD
+        usersize = self.nodesize - MMNode.MM_ALLOCNODE_OVERHEAD
+
+        # This node is allocted, thus the next node's preceding is user memory.
+        usersize += 4
+        return usersize
 
     @property
     def flink(self):
