@@ -11,3 +11,4 @@ pillow
 plotly
 pyelftools
 pylink-square
+viztracer

@@ -54,6 +54,31 @@ class Profile(gdb.Command):
         )
 
 
+class ViztracerCommand(gdb.Command):
+    """Profile a gdb command
+
+    Usage: viztracer <gdb command>
+    """
+
+    def __init__(self):
+        self.viztracer = import_check("viztracer")
+        if not self.viztracer:
+            return
+
+        super().__init__("viztracer", gdb.COMMAND_USER)
+
+    @dont_repeat_decorator
+    def invoke(self, args, from_tty):
+        if not args:
+            gdb.write("Usage: viztracer <gdb command>\n")
+            return
+
+        with self.viztracer.VizTracer():
+            gdb.execute(f"{args}")
+
+        print("Or open URL https://ui.perfetto.dev and load the json file")
+
+
 class Time(gdb.Command):
     """Time a gdb command
 
