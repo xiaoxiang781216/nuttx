@@ -112,10 +112,18 @@ int host_settimer(uint64_t nsec)
 {
   struct itimerval it;
 
+  /* Convert to microseconds and set minimum timer to 1 microsecond. */
+
+  nsec /= 1000;
+  if (nsec == 0)
+    {
+      nsec = 1;
+    }
+
   it.it_interval.tv_sec  = 0;
   it.it_interval.tv_usec = 0;
-  it.it_value.tv_sec     = nsec / 1000000000;
-  it.it_value.tv_usec    = (nsec + 1000) / 1000;
+  it.it_value.tv_sec     = nsec / 1000000;
+  it.it_value.tv_usec    = nsec % 1000000;
 
   return setitimer(ITIMER_REAL, &it, NULL);
 }
