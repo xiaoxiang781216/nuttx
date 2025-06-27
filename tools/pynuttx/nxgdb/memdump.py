@@ -150,10 +150,17 @@ def print_header(formatter=None):
     gdb.write(formatter.format(*head))
 
 
-def get_heaps(args_heap=None) -> List[mm.MMHeap]:
-    if args_heap:
-        return [mm.MMHeap(gdb.parse_and_eval(args_heap))]
-    return mm.get_heaps()
+def get_heaps(args_heap: str = None) -> List[mm.MMHeap]:
+    """Get the list of heaps, or a specific heap if args_heap is provided."""
+    heaps = mm.get_heaps()
+    if args_heap is not None:
+        heap = next((heap for heap in heaps if heap.name == args_heap), None)
+        if heap is not None:
+            return [heap]
+        else:
+            return [mm.MMHeap(utils.parse_arg(args_heap))]
+    else:
+        return heaps
 
 
 def parse_memdump_log(logfile, filters=None) -> Generator[MMNodeDump, None, None]:
@@ -309,15 +316,13 @@ class MMDump(gdb.Command):
         except SystemExit:
             return
 
-    def find_address(self, addr, heap=None, log=None):
+    def find_address(self, addr, heaps: List[mm.MMHeap] = None, log=None):
         """Find the node that contains the address from memdump log or live dump."""
         addr = int(gdb.parse_and_eval(addr))
         if log:
             nodes = parse_memdump_log(log)
             node = next((node for node in nodes if node.contains(addr)), None)
         else:
-            heaps = [mm.MMHeap(gdb.parse_and_eval(heap))] if heap else mm.get_heaps()
-
             # Find pool firstly
             node = next(
                 (blk for pool in mm.get_pools(heaps) if (blk := pool.find(addr))), None
@@ -330,11 +335,10 @@ class MMDump(gdb.Command):
 
         return addr, node
 
-    def collect_nodes(self, heap, log=None, filters=None):
+    def collect_nodes(self, heaps: List[mm.MMHeap], log=None, filters=None):
         if log:
             nodes = parse_memdump_log(log, filters=filters)
         else:
-            heaps = [mm.MMHeap(gdb.parse_and_eval(heap))] if heap else mm.get_heaps()
             nodes = dump_nodes(heaps, filters)
 
         return nodes
@@ -351,9 +355,11 @@ class MMDump(gdb.Command):
         def printnode(node, count):
             print_node(node, node.pid in pids, count, no_backtrace=args.no_backtrace)
 
+        heaps = get_heaps(args.heap)
+
         # Find the node by address, find directly and then quit
         if args.address:
-            addr, node = self.find_address(args.address, args.heap, args.log)
+            addr, node = self.find_address(args.address, heaps, args.log)
             if not node:
                 print(f"Address {addr:#x} not found in any heap")
             else:
@@ -382,7 +388,7 @@ class MMDump(gdb.Command):
             "no_pid": args.no_pid,
         }
 
-        nodes = self.collect_nodes(args.heap, log=args.log, filters=filters)
+        nodes = self.collect_nodes(heaps, log=args.log, filters=filters)
 
         sort_method = {
             "count": lambda node: 1,
