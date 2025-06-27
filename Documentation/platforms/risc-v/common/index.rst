@@ -323,4 +323,186 @@ References
 
 * RISC-V Zicfilp Extension Specification
 * GCC Control Flow Protection Documentation
+
+RISC-V Zicfiss (Shadow Stack)
+-----------------------------
+
+The RISC-V Zicfiss extension provides hardware support for shadow stack functionality,
+which is used to protect against Return-Oriented Programming (ROP) attacks and other
+control flow hijacking techniques. This extension maintains a separate stack for
+return addresses, providing enhanced security for function calls and returns.
+
+.. note::
+   **Shadow Stack Protection**: The Zicfiss extension implements a shadow stack
+   mechanism that maintains return addresses separately from the main stack. This
+   provides protection against stack-based attacks that attempt to modify return
+   addresses.
+
+Configuration
+^^^^^^^^^^^^^
+
+To enable Zicfiss support in NuttX, you need to configure both the ISA extension
+and the shadow stack functionality:
+
+.. code-block:: kconfig
+
+   config ARCH_RV_ISA_ZICFISS
+       bool
+       default n
+       ---help---
+         Enable support for the RISC-V Zicfiss (Control Flow Integrity Shadow Stack)
+         extension. This extension provides hardware support for control flow integrity
+         by implementing shadow stack mechanisms to protect against return-oriented
+         programming (ROP) attacks.
+
+   config ARCH_RV_SHADOW_STACK
+       bool "Enable RISC-V Shadow Stack support"
+       default n
+       depends on ARCH_RV_ISA_ZICFISS
+       ---help---
+         Enable shadow stack support for RISC-V systems that have the Zicfiss
+         extension. This provides additional security by maintaining a separate
+         stack for return addresses.
+
+Compiler Support
+^^^^^^^^^^^^^^^^
+
+When Zicfiss is enabled, the toolchain will:
+
+1. **Include Zicfiss in march**: The ``_zicfiss`` extension is added to the ``-march`` flag
+2. **Generate shadow stack instructions**: The compiler generates appropriate shadow stack management code
+3. **CFI Protection**: Adds ``-fcf-protection=return`` compiler flag for return address protection
+4. **Runtime support**: The system provides shadow stack allocation and management
+
+   .. code-block:: bash
+
+      # Compiler flags when shadow stack is enabled
+      -march=rv64imac_zicfiss
+      -fcf-protection=return
+
+Shadow Stack Implementation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+NuttX implements shadow stack support with the following features:
+
+**Memory Management**:
+
+- **Allocation**: Shadow stacks are allocated for each thread (typically half the size of the main stack)
+- **Alignment**: Shadow stacks are aligned to 16-byte boundaries as required by RISC-V
+- **Deallocation**: Shadow stacks are automatically freed when threads terminate
+
+**Thread Context**:
+
+- **SSP Register**: The Shadow Stack Pointer (SSP) is saved and restored during context switches
+- **TCB Integration**: Shadow stack pointers are stored in the thread control block (TCB)
+- **Initialization**: Shadow stacks are initialized when threads are created
+
+**Interrupt Handling**:
+
+- **Context Save/Restore**: The SSP register is saved and restored during interrupt processing
+- **Exception Handling**: Shadow stack state is maintained across exceptions
+
+Hardware Requirements
+^^^^^^^^^^^^^^^^^^^^^
+
+The Zicfiss extension requires:
+
+1. **Hardware Support**: The RISC-V core must implement the Zicfiss extension
+2. **CSR Support**: Access to the Shadow Stack Pointer (SSP) control and status register
+3. **Memory Protection**: Proper memory management for shadow stack regions
+
+.. warning::
+   **Hardware Dependency**: Only select ``ARCH_RV_ISA_ZICFISS`` if your RISC-V
+   implementation actually supports the Zicfiss extension in hardware. Enabling
+   this option on hardware without Zicfiss support may result in undefined behavior.
+
+Privilege Levels
+^^^^^^^^^^^^^^^^
+
+Similar to Zicfilp, Zicfiss behavior depends on the privilege level:
+
+- **Machine Mode (M-mode)**: Shadow stack support depends on the specific implementation
+- **Supervisor Mode (S-mode)**: Standard Zicfiss functionality should work as specified
+- **User Mode (U-mode)**: Full shadow stack protection is available
+
+For NuttX deployments:
+
+- **Flat/Protected Mode**: Running in M-mode, shadow stack support may be implementation-specific
+- **Kernel Mode**: Running in S-mode, standard Zicfiss should work as specified
+
+Runtime Behavior
+^^^^^^^^^^^^^^^^^
+
+When shadow stack is enabled:
+
+1. **Function Calls**: Return addresses are pushed to both the main stack and shadow stack
+2. **Function Returns**: Return addresses are verified against the shadow stack
+3. **Mismatch Detection**: Hardware detects mismatches between main and shadow stack return addresses
+4. **Exception Generation**: Control flow violations trigger exceptions
+
+.. note::
+   **Backward Compatibility**: If the Zicfiss extension is not enabled in hardware,
+   shadow stack instructions will be treated as NOPs, providing backward compatibility
+   but no security protection.
+
+Memory Overhead
+^^^^^^^^^^^^^^^
+
+Shadow stack implementation adds memory overhead:
+
+- **Per-thread overhead**: Each thread requires an additional shadow stack (typically 50% of main stack size)
+- **Kernel overhead**: Additional memory for shadow stack management structures
+- **Runtime overhead**: Minimal performance impact from shadow stack operations
+
+Integration Example
+^^^^^^^^^^^^^^^^^^^
+
+For a custom RISC-V chip with Zicfiss support:
+
+.. code-block:: kconfig
+
+   config ARCH_CHIP_MYCUSTOM_SECURE_CHIP
+       bool "My Custom RISC-V Chip with Shadow Stack"
+       select ARCH_RV64
+       select ARCH_RV_ISA_M
+       select ARCH_RV_ISA_A
+       select ARCH_RV_ISA_C
+       select ARCH_RV_ISA_ZICFISS     # Select only if hardware supports Zicfiss
+       select ARCH_RV_SHADOW_STACK    # Enable shadow stack functionality
+       ---help---
+         My custom RISC-V chip with Zicfiss shadow stack support
+
+Debugging and Verification
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To verify Zicfiss is properly enabled:
+
+1. **Check compiler flags**: Verify ``-march`` includes ``_zicfiss`` and ``-fcf-protection=return`` is present
+2. **Inspect shadow stack allocation**: Monitor shadow stack memory usage
+3. **Test protection**: Use test cases that attempt ROP attacks
+4. **Verify CSR access**: Ensure SSP register is accessible and functional
+
+Troubleshooting
+^^^^^^^^^^^^^^^
+
+Common issues and solutions:
+
+**Shadow Stack Allocation Failures**:
+- Ensure sufficient memory is available for shadow stack allocation
+- Check that shadow stack size is appropriate for your application
+
+**Performance Impact**:
+- Shadow stack operations have minimal overhead
+- Memory usage increases due to additional shadow stacks
+
+**Compatibility Issues**:
+- Ensure all code is compiled with Zicfiss-aware toolchain
+- Verify hardware actually supports the Zicfiss extension
+
+References
+^^^^^^^^^^
+
+* RISC-V Zicfiss Extension Specification
+* RISC-V Control Flow Integrity Technical Specification
+* GCC Shadow Stack Documentation
 * RISC-V ISA Manual - Chapter on Code Integrity Extensions

@@ -415,6 +415,10 @@
 #define CSR_SIEH            0x114
 #define CSR_SIPH            0x154
 
+/* Shadow Stack CSRs */
+
+#define CSR_SSP             0x011
+
 /* In mstatus register */
 
 #define MSTATUS_UIE         (0x1 << 0)  /* User Interrupt Enable */

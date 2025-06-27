@@ -41,6 +41,47 @@
  ****************************************************************************/
 
 /****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: release_shadow_stack
+ *
+ * Description:
+ *   Release the shadow stack allocated for a task and clear shadow
+ *   stack-related information in the TCB.
+ *
+ *   The following TCB fields are cleared by this function:
+ *
+ *   - sstack_alloc_ptr: Pointer to allocated shadow stack
+ *   - sstack_top_ptr: Adjusted shadow stack top pointer
+ *
+ * Input Parameters:
+ *   - dtcb: The TCB containing information about the shadow stack to be
+ *       released
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+static void release_shadow_stack(struct tcb_s *dtcb)
+{
+  /* Is there a shadow stack allocated? */
+
+  if (dtcb->xcp.sstack_alloc_ptr)
+    {
+      /* Free the shadow stack */
+
+      kmm_free(dtcb->xcp.sstack_alloc_ptr);
+
+      /* Clear the shadow stack pointers */
+
+      dtcb->xcp.sstack_alloc_ptr = NULL;
+      dtcb->xcp.sstack_top_ptr = NULL;
+    }
+}
+#endif /* CONFIG_ARCH_RV_SHADOW_STACK */
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -100,4 +141,10 @@ void up_release_stack(struct tcb_s *dtcb, uint8_t ttype)
       kmm_free(dtcb->xcp.vregs);
     }
 #endif
+
+  /* Release shadow stack */
+
+#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+  release_shadow_stack(dtcb);
+#endif /* CONFIG_ARCH_RV_SHADOW_STACK */
 }

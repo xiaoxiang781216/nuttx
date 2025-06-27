@@ -203,6 +203,12 @@
 #define REG_X30_NDX         30
 #define REG_X31_NDX         31
 
+/* Shadow Stack register
+ * SS = Shadow Stack - used for Control Flow Integrity (CFI)
+ * This register stores the shadow stack pointer when shadow stack
+ * support is enabled via CONFIG_ARCH_RV_SHADOW_STACK.
+ */
+
 /* Interrupt Context register
  * This register stores interrupt-related state that needs to be preserved
  * across context switches and interrupt handling.
@@ -235,9 +241,19 @@
 
 #ifdef CONFIG_ARCH_RV_HAVE_CLIC
 #  define REG_INT_THRESH_NDX  32
-#  define REG_INT_CTX_NDX     33
+#  ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#    define REG_SSP_NDX       33
+#    define REG_INT_CTX_NDX   34
+#  else
+#    define REG_INT_CTX_NDX   33
+#  endif
 #else
-#  define REG_INT_CTX_NDX     32
+#  ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#    define REG_SSP_NDX       32
+#    define REG_INT_CTX_NDX   33
+#  else
+#    define REG_INT_CTX_NDX   32
+#  endif
 #endif
 
 #ifdef CONFIG_ARCH_RISCV_INTXCPT_EXTREGS
@@ -388,6 +404,9 @@
 #  ifdef CONFIG_ARCH_RV_HAVE_CLIC
 #    define REG_INT_THRESH  (INT_REG_SIZE*REG_INT_THRESH_NDX)
 #  endif
+#  ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#    define REG_SSP         (INT_REG_SIZE*REG_SSP_NDX)
+#  endif
 #  define REG_INT_CTX       (INT_REG_SIZE*REG_INT_CTX_NDX)
 
 #ifdef CONFIG_ARCH_FPU
@@ -469,6 +488,9 @@
 #  define REG_X31           REG_X31_NDX
 #  ifdef CONFIG_ARCH_RV_HAVE_CLIC
 #    define REG_INT_THRESH  REG_INT_THRESH_NDX
+#  endif
+#  ifdef CONFIG_ARCH_RV_SHADOW_STACK
+#    define REG_SSP         REG_SSP_NDX
 #  endif
 #  define REG_INT_CTX       REG_INT_CTX_NDX
 
@@ -681,6 +703,15 @@ struct xcptcontext
 #  else
   uintreg_t *vregs;
 #  endif
+#endif
+
+#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+  /* Shadow stack for control flow integrity */
+
+  uintreg_t *sstack_alloc_ptr;           /* Pointer to allocated shadow stack */
+                                         /* Needed to deallocate shadow stack */
+  uintreg_t *sstack_top_ptr;             /* Adjusted initial shadow stack ptr */
+                                         /* after initialization             */
 #endif
 };
 

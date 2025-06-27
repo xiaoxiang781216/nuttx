@@ -438,6 +438,32 @@ config ARCH_RV_ISA_ZICFILP
 		by implementing branch protection mechanisms. When enabled, the compiler will
 		generate code with control flow protection for indirect branches.
 
+config ARCH_RV_ISA_ZICFISS
+	bool
+	default n
+	---help---
+		Enable support for the RISC-V Zicfiss (Control Flow Integrity Shadow Stack)
+		extension. This extension provides hardware support for control flow integrity
+		by implementing shadow stack mechanisms to protect against return-oriented
+		programming (ROP) attacks. When enabled, the compiler will generate code
+		with shadow stack protection for function calls and returns.
+
+config ARCH_RV_SHADOW_STACK
+	bool "Enable RISC-V Shadow Stack support"
+	default n
+	depends on ARCH_RV_ISA_ZICFISS
+	---help---
+		Enable shadow stack support for RISC-V systems that have the Zicfiss
+		extension. This provides additional security by maintaining a separate
+		stack for return addresses, helping to prevent return-oriented
+		programming (ROP) attacks and other control flow hijacking attempts.
+
+config ARCH_RV_SHADOW_STACK_ALL
+	bool "Enable RISC-V Shadow Stack for entire image"
+	default y
+	depends on ARCH_RV_SHADOW_STACK
+
+
 config ARCH_RV_EXPERIMENTAL_EXTENSIONS
 	string "LLVM RISC-V Experimental Extensions"
 	default ""

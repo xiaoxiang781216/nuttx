@@ -233,6 +233,10 @@ ifeq ($(CONFIG_RISCV_TOOLCHAIN),GNU_RVG)
     ARCHCPUEXTFLAGS := $(ARCHCPUEXTFLAGS)_zicfilp
   endif
 
+  ifeq ($(CONFIG_ARCH_RV_ISA_ZICFISS),y)
+    ARCHCPUEXTFLAGS := $(ARCHCPUEXTFLAGS)_zicfiss
+  endif
+
   # Detect abi type
 
   ifeq ($(CONFIG_ARCH_RV32),y)
@@ -332,6 +336,12 @@ endif
 
 ifeq ($(CONFIG_ARCH_INSTRUMENT_ALL),y)
   ARCHOPTIMIZATION += -finstrument-functions
+endif
+
+# Shadow Stack Protection
+
+ifeq ($(CONFIG_ARCH_RV_SHADOW_STACK_ALL),y)
+  ARCHOPTIMIZATION += -fcf-protection=return
 endif
 
 # Link Time Optimization

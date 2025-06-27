@@ -142,6 +142,9 @@ exception_common:
 #ifdef CONFIG_ARCH_RV_HAVE_CLIC
   csrr       s4, CSR_INTTHRESH    /* s4=interrupt threshold */
 #endif
+#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+  csrr       s5, CSR_SSP          /* s5=shadow stack pointer */
+#endif
 
 #ifdef CONFIG_ARCH_KERNEL_STACK
   csrr       s3, CSR_SCRATCH
@@ -155,6 +158,9 @@ exception_common:
   REGSTORE   s3, REG_SP(sp)
 #ifdef CONFIG_ARCH_RV_HAVE_CLIC
   REGSTORE   s4, REG_INT_THRESH(sp)
+#endif
+#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+  REGSTORE   s5, REG_SSP(sp)       /* Save shadow stack pointer */
 #endif
 
 #ifdef CONFIG_LIB_SYSCALL
@@ -273,6 +279,10 @@ return_from_exception:
 #ifdef CONFIG_ARCH_RV_HAVE_CLIC
   REGLOAD    s0, REG_INT_THRESH(sp) /* restore interrupt threshold */
   csrw       CSR_INTTHRESH, s0
+#endif
+#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+  REGLOAD    s0, REG_SSP(sp)       /* restore shadow stack pointer */
+  csrw       CSR_SSP, s0
 #endif
 
 #ifdef CONFIG_LIB_SYSCALL

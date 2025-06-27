@@ -291,6 +291,10 @@ if(CONFIG_RISCV_TOOLCHAIN STREQUAL GNU_RVG)
     set(ARCHCPUEXTFLAGS ${ARCHCPUEXTFLAGS}_zicfilp)
   endif()
 
+  if(CONFIG_ARCH_RV_ISA_ZICFISS)
+    set(ARCHCPUEXTFLAGS ${ARCHCPUEXTFLAGS}_zicfiss)
+  endif()
+
   # Detect abi type
 
   if(CONFIG_ARCH_RV32)
@@ -394,4 +398,10 @@ endif()
 
 if(CONFIG_MM_UBSAN_TRAP_ON_ERROR)
   add_compile_options(-fsanitize-undefined-trap-on-error)
+endif()
+
+# Shadow Stack Protection
+
+if(CONFIG_ARCH_RV_SHADOW_STACK_ALL)
+  add_compile_options(-fcf-protection=return)
 endif()

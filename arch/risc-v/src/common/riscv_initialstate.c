@@ -99,7 +99,16 @@ void up_initial_state(struct tcb_s *tcb)
     {
       tcb->stack_alloc_ptr = (void *)g_cpux_idlestack(this_cpu());
       tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
-      tcb->adj_stack_size  = SMP_STACK_SIZE;
+      tcb->adj_stack_size  = SMP_IDLE_STACK_SIZE;
+
+#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+      /* Setup shadow stack for idle task */
+
+      xcp->sstack_alloc_ptr =
+        (uintreg_t *)g_cpux_idleshadowstack(this_cpu());
+      xcp->sstack_top_ptr = (uintreg_t *)((uintptr_t)xcp->sstack_alloc_ptr +
+                                          SMP_SHADOW_STACK_SIZE);
+#endif /* CONFIG_ARCH_RV_SHADOW_STACK */
 
 #ifdef CONFIG_STACK_COLORATION
       /* If stack debug is enabled, then fill the stack with a
@@ -163,6 +172,10 @@ void up_initial_state(struct tcb_s *tcb)
 
   regval = riscv_get_newintctx();
   xcp->regs[REG_INT_CTX] = regval;
+
+#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+  xcp->regs[REG_SSP] = (uintreg_t)xcp->sstack_top_ptr;
+#endif
 
   /* Initialize the state of the extended context */
 
