@@ -24,6 +24,7 @@
 
 #include <debug.h>
 #include <nuttx/i2c/i2c_master.h>
+#include <nuttx/kmalloc.h>
 
 #include "sim_internal.h"
 #include "sim_hosti2c.h"
