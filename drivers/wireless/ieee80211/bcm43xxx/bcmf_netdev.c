@@ -577,7 +577,6 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
 {
   FAR struct bcmf_dev_s *priv = (FAR struct bcmf_dev_s *)dev->d_private;
   struct ether_addr zmac;
-  irqstate_t flags;
   uint32_t out_len;
   int ret = OK;
 
