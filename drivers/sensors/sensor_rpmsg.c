@@ -737,6 +737,11 @@ static int sensor_rpmsg_open(FAR struct sensor_lowerhalf_s *lower,
   sensor_rpmsg_lock(dev);
   if (filep->f_oflags & O_WROK)
     {
+      if (filep->f_oflags & SENSOR_PERSIST)
+        {
+          dev->lower.persist = true;
+        }
+
       if (dev->nadvertisers++ == 0)
         {
           adv = true;
