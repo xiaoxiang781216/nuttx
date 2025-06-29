@@ -138,6 +138,7 @@
 #ifdef CONFIG_ARCH_HAVE_PERF_EVENTS_USER_ACCESS
 #  define NOTE_PERF_GETTIME perf_gettime
 #else
+clock_t UP_REALSYM(perf_gettime)(void);
 #  define NOTE_PERF_GETTIME UP_REALSYM(perf_gettime)
 #endif
 
