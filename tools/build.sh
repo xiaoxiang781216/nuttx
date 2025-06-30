@@ -256,6 +256,11 @@ function setup_toolchain()
     export ARMLMD_LICENSE_FILE=${HOME}/.arm/ds/licenses/DS000-EV-31030.lic
   fi
 
+  # Host build-tools
+  if [ -d ${ROOTDIR}/prebuilts/build-tools/${SYSTEM}-${SYS_ARCH}/bin ]; then
+    export PATH=${ROOTDIR}/prebuilts/build-tools/${SYSTEM}-${SYS_ARCH}/bin:$PATH
+  fi
+
   # Generate compile database file compile_commands.json
   if type bear >/dev/null 2>&1; then
     # get version of bear
