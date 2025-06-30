@@ -9,6 +9,7 @@ numpy
 pandas
 pillow
 plotly
+prettytable
 pyelftools
 pylink-square
 viztracer

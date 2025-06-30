@@ -564,55 +564,100 @@ class Ps(gdb.Command):
         else:
             load = "Dis."
 
-        gdb.write(
-            " ".join(
-                (
-                    self._fmt_wx.format(pid, width=5),
-                    self._fmt_wx.format(group, width=5),
-                    self._fmt_wx.format(cpu, width=3),
-                    self._fmt_wx.format(priority, width=3),
-                    self._fmt_wxl.format(policy, width=8),
-                    self._fmt_wxl.format(task_type, width=7),
-                    self._fmt_wx.format(npx, width=3),
-                    self._fmt_wxl.format(state, width=8),
-                    self._fmt_wxl.format(event, width=9),
-                    self._fmt_wxl.format(sigmask, width=8),
-                    self._fmt_wx.format(stacksz, width=7),
-                    self._fmt_wx.format(used, width=7),
-                    self._fmt_wx.format(filled, width=6),
-                    self._fmt_wx.format(load, width=6),
+        if hasattr(self, "table"):
+            self.table.add_row(
+                [
+                    pid,
+                    group,
+                    cpu,
+                    priority,
+                    policy,
+                    task_type,
+                    npx,
+                    state,
+                    event,
+                    sigmask,
+                    stacksz,
+                    used,
+                    filled,
+                    load,
                     cmd,
+                ]
+            )
+        else:
+            gdb.write(
+                " ".join(
+                    (
+                        self._fmt_wx.format(pid, width=5),
+                        self._fmt_wx.format(group, width=5),
+                        self._fmt_wx.format(cpu, width=3),
+                        self._fmt_wx.format(priority, width=3),
+                        self._fmt_wxl.format(policy, width=8),
+                        self._fmt_wxl.format(task_type, width=7),
+                        self._fmt_wx.format(npx, width=3),
+                        self._fmt_wxl.format(state, width=8),
+                        self._fmt_wxl.format(event, width=9),
+                        self._fmt_wxl.format(sigmask, width=8),
+                        self._fmt_wx.format(stacksz, width=7),
+                        self._fmt_wx.format(used, width=7),
+                        self._fmt_wx.format(filled, width=6),
+                        self._fmt_wx.format(load, width=6),
+                        cmd,
+                    )
                 )
             )
-        )
-        gdb.write("\n")
+            gdb.write("\n")
 
     @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
-        gdb.write(
-            " ".join(
-                (
-                    self._fmt_wx.format("PID", width=5),
-                    self._fmt_wx.format("GROUP", width=5),
-                    self._fmt_wx.format("CPU", width=3),
-                    self._fmt_wx.format("PRI", width=3),
-                    self._fmt_wxl.format("POLICY", width=8),
-                    self._fmt_wxl.format("TYPE", width=7),
-                    self._fmt_wx.format("NPX", width=3),
-                    self._fmt_wxl.format("STATE", width=8),
-                    self._fmt_wxl.format("EVENT", width=9),
-                    self._fmt_wxl.format(
-                        "SIGMASK", width=utils.get_symbol_value("_SIGSET_NELEM") * 8
-                    ),
-                    self._fmt_wx.format("STACK", width=7),
-                    self._fmt_wx.format("USED", width=7),
-                    self._fmt_wx.format("FILLED", width=3),
-                    self._fmt_wx.format("LOAD", width=6),
-                    "COMMAND",
+        prettytable = utils.import_check(
+            "prettytable",
+            errmsg="Execute `pip install prettytable` for better printing result.\n",
+        )
+        if prettytable:
+            self.table = prettytable.PrettyTable()
+            self.table.field_names = [
+                "PID",
+                "GROUP",
+                "CPU",
+                "PRI",
+                "POLICY",
+                "TYPE",
+                "NPX",
+                "STATE",
+                "EVENT",
+                "SIGMASK",
+                "STACK",
+                "USED",
+                "FILLED",
+                "LOAD",
+                "COMMAND",
+            ]
+        else:
+            gdb.write(
+                " ".join(
+                    (
+                        self._fmt_wx.format("PID", width=5),
+                        self._fmt_wx.format("GROUP", width=5),
+                        self._fmt_wx.format("CPU", width=3),
+                        self._fmt_wx.format("PRI", width=3),
+                        self._fmt_wxl.format("POLICY", width=8),
+                        self._fmt_wxl.format("TYPE", width=7),
+                        self._fmt_wx.format("NPX", width=3),
+                        self._fmt_wxl.format("STATE", width=8),
+                        self._fmt_wxl.format("EVENT", width=9),
+                        self._fmt_wxl.format(
+                            "SIGMASK", width=utils.get_symbol_value("_SIGSET_NELEM") * 8
+                        ),
+                        self._fmt_wx.format("STACK", width=7),
+                        self._fmt_wx.format("USED", width=7),
+                        self._fmt_wx.format("FILLED", width=3),
+                        self._fmt_wx.format("LOAD", width=6),
+                        "COMMAND",
+                    )
                 )
             )
-        )
-        gdb.write("\n")
+            gdb.write("\n")
 
         for tcb in utils.get_tcbs():
             try:
@@ -621,6 +666,8 @@ class Ps(gdb.Command):
                 gdb.write(f"[Error] GDB error while processing TCB: {e}\n")
             except Exception as e:
                 gdb.write(f"[Error] Unexpected error: {e}\n")
+        if hasattr(self, "table"):
+            gdb.write(f"{self.table.get_string()}\n")
 
     def diagnose(self, *args, **kwargs):
         return {
