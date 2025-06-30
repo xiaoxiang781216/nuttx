@@ -210,8 +210,6 @@ static void sim_timer_update_internal(void)
       sim_process_tick(entry);
     }
 
-  sim_update_hosttimer();
-
   leave_critical_section(flags);
 }
 
@@ -237,14 +235,6 @@ static void sim_process_tick(sq_entry_t *entry)
   void *cbarg;
 
   DEBUGASSERT(priv != NULL);
-
-  struct timespec current;
-
-  sim_timer_current(&current);
-  if (clock_timespec_compare(&priv->alarm, &current) > 0)
-    {
-      return; /* Alarm doesn't expire yet */
-    }
 
   sim_reset_alarm(&priv->alarm);
 
