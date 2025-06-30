@@ -170,6 +170,12 @@ static void sim_update_hosttimer(void)
     }
 
   sim_timer_current(&current);
+
+  /* Save to static variables for debugging */
+
+  g_timer_lastset.tv_sec  = current.tv_sec;
+  g_timer_lastset.tv_nsec = current.tv_nsec;
+
   clock_timespec_subtract(next, &current, &current);
 
   nsec  = current.tv_sec * NSEC_PER_SEC;
@@ -177,9 +183,7 @@ static void sim_update_hosttimer(void)
 
   /* Save to static variables for debugging */
 
-  g_timer_lastset.tv_sec  = current.tv_sec;
-  g_timer_lastset.tv_nsec = current.tv_nsec;
-  g_timer_lastdelay       = nsec;
+  g_timer_lastdelay = nsec;
 
   host_settimer(nsec);
 }
