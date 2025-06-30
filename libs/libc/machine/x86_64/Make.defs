@@ -76,7 +76,7 @@ ASRCS += arch_strncmp.S
 endif
 
 ifeq ($(CONFIG_PROFILE_MINI),y)
-ASRCS += mcount.S
+ASRCS += arch_mcount.S
 endif
 
 ifeq ($(CONFIG_ARCH_TOOLCHAIN_GNU),y)

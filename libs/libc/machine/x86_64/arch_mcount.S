@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/x86_64/gnu/mcount.S
+ * libs/libc/machine/x86_64/arch_mcount.S
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
