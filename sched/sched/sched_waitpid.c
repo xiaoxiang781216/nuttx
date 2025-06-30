@@ -107,6 +107,11 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
     {
       return -ECHILD;
     }
+  else if ((atomic_read(&ctcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
+    {
+      nxsched_put_tcb(ctcb);
+      return -ECHILD;
+    }
 
   /* Then the task group corresponding to this PID */
 
@@ -295,7 +300,8 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
        */
 
       ctcb = nxsched_get_tcb(pid);
-      if (!ctcb || !ctcb->group || ctcb->group->tg_ppid != rtcb->pid)
+      if (!ctcb || !ctcb->group || ctcb->group->tg_ppid != rtcb->pid ||
+          (atomic_read(&ctcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
         {
           nxsched_put_tcb(ctcb);
           ret = -ECHILD;
