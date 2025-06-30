@@ -241,8 +241,6 @@ static void sim_timer_update_internal(void)
       sim_process_tick(entry);
     }
 
-  sim_update_hosttimer();
-
   rspin_unlock_irqrestore(&g_oneshot_list_lock, flags);
 }
 
