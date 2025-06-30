@@ -50,9 +50,9 @@
  */
 
 #ifndef CONFIG_BUILD_FLAT
-#  define CONFIG_SYS_RESERVED 4
+#  define CONFIG_SYS_RESERVED 5
 #else
-#  define CONFIG_SYS_RESERVED 3
+#  define CONFIG_SYS_RESERVED 4
 #endif
 
 /* sys_call macros **********************************************************/
@@ -171,6 +171,14 @@
 #define up_syscall_return() sys_call0(SYS_syscall_return)
 
 #endif
+
+/* SYS call 4:
+ *
+ * void _assert(const char *filename, int linenum, const char *msg);
+ */
+
+#define SYS_assert_handler (4)
+
 #endif /* __ASSEMBLY__ */
 
 /****************************************************************************

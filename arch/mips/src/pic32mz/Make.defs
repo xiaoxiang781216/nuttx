@@ -32,7 +32,7 @@ CMN_CSRCS += mips_modifyreg8.c mips_modifyreg16.c mips_modifyreg32.c
 CMN_CSRCS += mips_nputs.c mips_releasestack.c mips_registerdump.c
 CMN_CSRCS += mips_schedulesigaction.c mips_sigdeliver.c mips_swint0.c
 CMN_CSRCS += mips_stackframe.c mips_switchcontext.c mips_saveusercontext.c
-CMN_CSRCS += mips_udelay.c mips_usestack.c mips_fork.c
+CMN_CSRCS += mips_udelay.c mips_usestack.c mips_fork.c mips_assert.c
 
 # Configuration dependent common files
 
