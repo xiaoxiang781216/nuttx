@@ -34,19 +34,19 @@
 
 static const struct reginfo_s g_reginfo[] =
 {
-  REGINFO_AUTO("eax",    4, 0,  TCB_REG_OFF(G_EAX)),
-  REGINFO_AUTO("ecx",    4, 1,  TCB_REG_OFF(G_ECX)),
-  REGINFO_AUTO("edx",    4, 2,  TCB_REG_OFF(G_EDX)),
+  REGINFO_AUTO("eax",    4, 0,  TCB_REG_OFF(REG_EAX)),
+  REGINFO_AUTO("ecx",    4, 1,  TCB_REG_OFF(REG_ECX)),
+  REGINFO_AUTO("edx",    4, 2,  TCB_REG_OFF(REG_EDX)),
   REGINFO_AUTO("ebx",    4, 3,  REGINFO_OFFSET_INVALID),
-  REGINFO_AUTO("esp",    4, 4,  TCB_REG_OFF(G_ESP)),
-  REGINFO_AUTO("ebp",    4, 5,  TCB_REG_OFF(G_EBP)),
-  REGINFO_AUTO("esi",    4, 6,  TCB_REG_OFF(G_ESI)),
-  REGINFO_AUTO("edi",    4, 7,  TCB_REG_OFF(G_EDI)),
-  REGINFO_AUTO("eip",    4, 8,  TCB_REG_OFF(G_EIP)),
-  REGINFO_AUTO("eflags", 4, 9,  TCB_REG_OFF(G_EFLAG),
-  REGINFO_AUTO("cs",     4, 10, TCB_REG_OFF(G_CS)),
-  REGINFO_AUTO("ss",     4, 11, TCB_REG_OFF(G_SS)),
-  REGINFO_AUTO("ds",     4, 12, TCB_REG_OFF(G_DS)),
+  REGINFO_AUTO("esp",    4, 4,  TCB_REG_OFF(REG_ESP)),
+  REGINFO_AUTO("ebp",    4, 5,  TCB_REG_OFF(REG_EBP)),
+  REGINFO_AUTO("esi",    4, 6,  TCB_REG_OFF(REG_ESI)),
+  REGINFO_AUTO("edi",    4, 7,  TCB_REG_OFF(REG_EDI)),
+  REGINFO_AUTO("eip",    4, 8,  TCB_REG_OFF(REG_EIP)),
+  REGINFO_AUTO("eflags", 4, 9,  TCB_REG_OFF(REG_EFLAGS)),
+  REGINFO_AUTO("cs",     4, 10, TCB_REG_OFF(REG_CS)),
+  REGINFO_AUTO("ss",     4, 11, TCB_REG_OFF(REG_SS)),
+  REGINFO_AUTO("ds",     4, 12, TCB_REG_OFF(REG_DS)),
 };
 
 /****************************************************************************

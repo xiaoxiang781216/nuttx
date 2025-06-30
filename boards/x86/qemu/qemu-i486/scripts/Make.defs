@@ -22,6 +22,6 @@
 
 include $(TOPDIR)/.config
 include $(TOPDIR)/tools/Config.mk
-include $(TOPDIR)/arch/x86/src/i486/Toolchain.defs
+include $(TOPDIR)/arch/x86/src/common/Toolchain.defs
 
 ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)qemu.ld
