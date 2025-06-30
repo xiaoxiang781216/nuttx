@@ -103,9 +103,11 @@ static const struct oneshot_operations_s g_oneshot_ops =
   .current        = sim_current,
 };
 
+#ifdef CONFIG_SIM_WALLTIME_SIGNAL
 static struct timespec g_timer_lastset;
-static struct timespec g_timer_lastirq;
 static uint64_t g_timer_lastdelay;
+#endif
+static struct timespec g_timer_lastirq;
 
 /****************************************************************************
  * Private Functions
@@ -208,9 +210,7 @@ static void sim_update_hosttimer(void)
 
   /* Save to static variables for debugging */
 
-  g_timer_lastset.tv_sec  = current.tv_sec;
-  g_timer_lastset.tv_nsec = current.tv_nsec;
-  g_timer_lastdelay       = nsec;
+  g_timer_lastdelay = nsec;
 
   host_settimer(nsec);
 }
