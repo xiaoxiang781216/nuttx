@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/machine/xtensa/mcount.c
+ * libs/libc/machine/xtensa/arch_mcount.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

@@ -57,7 +57,7 @@ ASRCS += arch_strcmp.S
 endif
 
 ifeq ($(CONFIG_PROFILE_NONE),)
-CSRCS += mcount.c
+CSRCS += arch_mcount.c
 endif
 
 DEPPATH += --dep-path machine/xtensa
