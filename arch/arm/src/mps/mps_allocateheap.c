@@ -182,12 +182,14 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
       *heap_size  = MPS_SRAM1_START + MPS_SRAM1_SIZE - g_idle_topstack;
     }
+#ifdef MPS_SRAM2_START
   else if (g_idle_topstack < MPS_SRAM2_START + MPS_SRAM2_SIZE)
     {
       /* Using SRAM2 */
 
       *heap_size  = MPS_SRAM2_START + MPS_SRAM2_SIZE - g_idle_topstack;
     }
+#endif
   else
     {
       /* Using PSRAM */
