@@ -2338,6 +2338,13 @@ static void imx9_txint(struct uart_dev_s *dev, bool enable)
   irqstate_t flags;
   uint32_t regval;
 
+#ifndef CONFIG_SUPPRESS_SERIAL_INTS
+  if (enable)
+    {
+      uart_xmitchars(dev);
+    }
+#endif
+
   /* Enable interrupt for TX complete */
 
   flags = spin_lock_irqsave(&priv->lock);
@@ -2357,13 +2364,6 @@ static void imx9_txint(struct uart_dev_s *dev, bool enable)
   regval |= priv->ie;
   imx9_serialout(priv, IMX9_LPUART_CTRL_OFFSET, regval);
   spin_unlock_irqrestore(&priv->lock, flags);
-
-#ifndef CONFIG_SUPPRESS_SERIAL_INTS
-  if (enable)
-    {
-      uart_xmitchars(dev);
-    }
-#endif
 }
 #endif
 
