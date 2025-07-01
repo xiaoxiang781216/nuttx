@@ -235,6 +235,8 @@ static int arm_tick_start(struct oneshot_lowerhalf_s *lower,
                             oneshot_callback_t callback, void *arg,
                             clock_t ticks)
 {
+  uint64_t tick_time;
+  uint64_t tick_cycle;
   struct arm_oneshot_lowerhalf_s *priv =
     (struct arm_oneshot_lowerhalf_s *)lower;
 
@@ -247,8 +249,11 @@ static int arm_tick_start(struct oneshot_lowerhalf_s *lower,
 
   /* Set the timeout */
 
-  arm_arch_timer_set_compare(arm_arch_timer_count() +
-                               priv->cycle_per_tick * ticks);
+  tick_cycle = priv->cycle_per_tick * ticks;
+  tick_time = arm_arch_timer_count() + tick_cycle;
+  tick_time -= (tick_time % tick_cycle);
+
+  arm_arch_timer_set_compare(tick_time);
 
   /* Try to unmask the timer irq in timer controller
    * in case of arm_tick_cancel is called.
