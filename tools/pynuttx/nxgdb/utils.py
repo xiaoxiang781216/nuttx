@@ -969,7 +969,15 @@ def get_tid(tcb):
         return None
 
 
-def get_task_name(tcb):
+def get_task_name(tcb_or_pid):
+    if isinstance(tcb_or_pid, int):
+        tcb = get_tcb(tcb_or_pid)
+    else:
+        tcb = tcb_or_pid
+
+    if tcb is None:
+        return ""
+
     try:
         name = tcb["name"].cast(gdb.lookup_type("char").pointer())
         return name.string()
