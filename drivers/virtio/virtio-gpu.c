@@ -30,6 +30,7 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/video/fb.h>
 #include <nuttx/virtio/virtio.h>
+#include <nuttx/kmalloc.h>
 
 #include "virtio-gpu.h"
 
@@ -572,7 +573,11 @@ static int virtio_gpu_init_fbmem(FAR struct virtio_device *vdev,
   priv->stride = priv->xres * VIRTIO_GPU_BPP >> 3;
   fblen = priv->stride * priv->yres;
 
+#ifdef CONFIG_BUILD_PROTECTED
+  priv->fbmem = (FAR uint8_t *)kumm_calloc(fblen * fb_count, 16);
+#else
   priv->fbmem = (FAR uint8_t *)virtio_zalloc_buf(vdev, fblen * fb_count, 16);
+#endif
   if (priv->fbmem == NULL)
     {
       vrterr("ERROR: Failed to allocate frame buffer memory");
@@ -611,7 +616,11 @@ static int virtio_gpu_init_fbmem(FAR struct virtio_device *vdev,
   return ret;
 
 error:
+#ifdef CONFIG_BUILD_PROTECTED
+  kumm_free(priv->fbmem);
+#else
   virtio_free_buf(vdev, priv->fbmem);
+#endif
   return ret;
 }
 
