@@ -589,8 +589,9 @@ class MMHeap(Value, p.MMHeap):
         return int(utils.get_field(self, "mm_nregions", default=1))
 
     @property
-    def mm_mpool(self) -> Value:
-        return utils.get_field(self, "mm_mpool", default=None)
+    def mm_mpool(self) -> MemPoolMultiple:
+        mpool = utils.get_field(self, "mm_mpool", default=None)
+        return MemPoolMultiple(mpool) if mpool else None
 
     @property
     def regions(self) -> List[Tuple[MMNode, MMNode]]:
@@ -648,8 +649,7 @@ def get_pools(heaps: List[Value] = []) -> Generator[MemPool, None, None]:
         if not (mm_pool := heap.mm_mpool):
             continue
 
-        mpool = MemPoolMultiple(mm_pool)
-        for pool in mpool.pools:
+        for pool in mm_pool.pools:
             yield pool
 
 
