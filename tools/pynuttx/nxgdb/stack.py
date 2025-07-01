@@ -196,18 +196,31 @@ class StackUsage(gdb.Command):
                 res += "!"
             return res
 
-        gdb.write(
-            self._fmt.format(
-                pid,
-                stack._thread_name[:10],
-                stack._thread_entry,
-                hex(stack._stack_base),
-                stack._stack_size,
-                gen_info_str(stack.cur_usage()),
-                gen_info_str(stack.max_usage()),
+        if hasattr(self, "table"):
+            self.table.add_row(
+                [
+                    pid,
+                    stack._thread_name[:10],
+                    stack._thread_entry,
+                    hex(stack._stack_base),
+                    stack._stack_size,
+                    gen_info_str(stack.cur_usage()),
+                    gen_info_str(stack.max_usage()),
+                ]
             )
-        )
-        gdb.write("\n")
+        else:
+            gdb.write(
+                self._fmt.format(
+                    pid,
+                    stack._thread_name[:10],
+                    stack._thread_entry,
+                    hex(stack._stack_base),
+                    stack._stack_size,
+                    gen_info_str(stack.cur_usage()),
+                    gen_info_str(stack.max_usage()),
+                )
+            )
+            gdb.write("\n")
 
     @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
@@ -217,12 +230,28 @@ class StackUsage(gdb.Command):
 
         pids = stacks.keys() if len(args) == 0 else args
 
-        gdb.write(
-            self._fmt.format(
-                "Pid", "Name", "Entry", "Base", "Size", "CurUsage", "MaxUsage"
-            )
+        prettytable = utils.import_check(
+            "prettytable",
+            errmsg="Execute `pip install prettytable` for better printing result.\n",
         )
-        gdb.write("\n")
+        if prettytable:
+            self.table = prettytable.PrettyTable()
+            self.table.field_names = [
+                "PID",
+                "NAME",
+                "Entry",
+                "Base",
+                "Size",
+                "CurUsage",
+                "MaxUsage",
+            ]
+        else:
+            gdb.write(
+                self._fmt.format(
+                    "Pid", "Name", "Entry", "Base", "Size", "CurUsage", "MaxUsage"
+                )
+            )
+            gdb.write("\n")
 
         for pid in pids:
             stack = stacks.get(pid)
@@ -231,6 +260,8 @@ class StackUsage(gdb.Command):
                 continue
 
             self.format_print(pid, stack)
+        if hasattr(self, "table"):
+            gdb.write(f"{self.table.get_string()}\n")
 
     def diagnose(self, *args, **kwargs):
         return {
