@@ -13,6 +13,7 @@
 "clock","time.h","","clock_t"
 "clock_adjtime","sys/timex.h","defined(CONFIG_CLOCK_ADJTIME)","int","clockid_t","struct timex *"
 "clock_gettime","time.h","","int","clockid_t","FAR struct timespec *"
+"clock_getres","time.h","","int","clockid_t","FAR struct timespec *"
 "clock_nanosleep","time.h","","int","clockid_t","int","FAR const struct timespec *", "FAR struct timespec *"
 "clock_settime","time.h","","int","clockid_t","const struct timespec*"
 "close","unistd.h","","int","int"
