@@ -372,7 +372,8 @@ err_with_buffer:
 }
 
 static int host_libusb_ep0outhandle(struct host_libusb_hostdev_s *dev,
-                                    struct usb_ctrlrequest *ctrlreq)
+                                    struct usb_ctrlrequest *ctrlreq,
+                                    struct host_usb_datareq_s *datareq)
 {
   int ret = LIBUSB_SUCCESS;
 
@@ -383,37 +384,71 @@ static int host_libusb_ep0outhandle(struct host_libusb_hostdev_s *dev,
       return LIBUSB_ERROR_NO_DEVICE;
     }
 
-  if ((ctrlreq->bRequestType & USB_TYPE_MASK) !=
-      USB_TYPE_STANDARD)
+  switch (ctrlreq->bRequestType & USB_TYPE_MASK)
     {
-      return ret;
-    }
-
-  switch (ctrlreq->bRequest)
-    {
-      case USB_REQ_SET_CONFIGURATION:
-        ret = host_uninterruptible(libusb_detach_kernel_driver,
-                                   dev->handle, 0);
-        if (ret == LIBUSB_SUCCESS)
+      case USB_TYPE_STANDARD:
+        switch (ctrlreq->bRequest)
           {
-            ret = host_uninterruptible(libusb_set_configuration,
-                                       dev->handle,
-                                       ctrlreq->wValue);
-            ret |= host_uninterruptible(libusb_claim_interface,
-                                        dev->handle, 0);
-          }
-        else if (ret == LIBUSB_ERROR_NOT_FOUND)
-          {
-            return LIBUSB_SUCCESS;
+            case USB_REQ_SET_CONFIGURATION:
+              ret = host_uninterruptible(libusb_detach_kernel_driver,
+                                         dev->handle, 0);
+              if (ret == LIBUSB_SUCCESS)
+                {
+                  ret = host_uninterruptible(libusb_set_configuration,
+                                             dev->handle, ctrlreq->wValue);
+                  ret |= host_uninterruptible(libusb_claim_interface,
+                                              dev->handle, 0);
+                }
+              else if (ret == LIBUSB_ERROR_NOT_FOUND)
+                {
+                  return LIBUSB_SUCCESS;
+                }
+              break;
+            case USB_REQ_SET_DESCRIPTOR:
+              ret = host_uninterruptible(libusb_control_transfer,
+                                         dev->handle,
+                                         ctrlreq->bRequestType,
+                                         ctrlreq->bRequest,
+                                         ctrlreq->wValue,
+                                         ctrlreq->wIndex,
+                                         datareq->data,
+                                         datareq->len,
+                                         1000);
+              break;
+            default:
+              ERROR("Unsupported standard request: 0x%02X\n",
+                    ctrlreq->bRequest);
+              break;
           }
         break;
-      case USB_REQ_SET_INTERFACE: /* TODO */
+      case USB_TYPE_CLASS:
+      case USB_TYPE_VENDOR:
+        ret = host_uninterruptible(libusb_control_transfer, dev->handle,
+                                   ctrlreq->bRequestType,
+                                   ctrlreq->bRequest,
+                                   ctrlreq->wValue,
+                                   ctrlreq->wIndex,
+                                   datareq->data,
+                                   datareq->len,
+                                   1000);
         break;
       default:
+        ERROR("Unsupported request type: 0x%02X\n", ctrlreq->bRequestType);
         break;
     }
 
-  return ret;
+  if (ret >= 0)
+    {
+      datareq->success = true;
+      datareq->xfer = ret; /* Actual bytes transferred */
+    }
+  else
+    {
+      datareq->success = false;
+      datareq->xfer = 0;
+    }
+
+  return datareq->success ? LIBUSB_SUCCESS : ret;
 }
 
 static int
@@ -611,7 +646,7 @@ int host_usbhost_ep0trans(struct host_usb_ctrlreq_s *ctrlreq,
 
   if (!(libusb_ctrlreq.bRequestType & USB_DIR_IN))
     {
-      ret = host_libusb_ep0outhandle(dev, &libusb_ctrlreq);
+      ret = host_libusb_ep0outhandle(dev, &libusb_ctrlreq, datareq);
       datareq->success = (ret != LIBUSB_SUCCESS) ? false : true;
       host_libusb_fifopush(&dev->completed, datareq);
     }
