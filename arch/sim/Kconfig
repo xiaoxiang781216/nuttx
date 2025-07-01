@@ -922,6 +922,37 @@ config SIM_LIBUSB
 	---help---
 		Use libusb to set up virtual USB Host controller.
 
+config SIM_USB_MATCHBYCLASS
+	bool "Match USB device by class/subclass/protocol"
+	default n
+	help
+		Enable this to match USB devices using configurable class,
+		subclass, and protocol codes.
+
+if SIM_USB_MATCHBYCLASS
+
+config SIM_USB_CLASS
+	hex "USB device class code"
+	default 0xe0
+	help
+		USB device class code (default: 0xe0, USB_CLASS_WIRELESS).
+
+config SIM_USB_SUBCLASS
+	hex "USB device subclass code"
+	default 0x01
+	help
+		USB device subclass code (default: 0x01, USB_SUBCLASS_BLUETOOTH).
+
+config SIM_USB_PROTOCOL
+	hex "USB device protocol code"
+	default 0x01
+	help
+		USB device protocol code (default: 0x01, USB_PROTOCOL_BLUETOOTH).
+
+endif
+
+if !SIM_USB_MATCHBYCLASS
+
 config SIM_USB_VID
 	hex "Simulated USB Dev VID"
 	default 0x18d1
@@ -929,6 +960,8 @@ config SIM_USB_VID
 config SIM_USB_PID
 	hex "Simulated USB Dev PID"
 	default 0x4e11
+
+endif
 
 config SIM_USB_STACKSIZE
 	int "Simulated USB waiter stack size"

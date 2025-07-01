@@ -591,6 +591,8 @@ static const char *g_white_content_list[] =
 
   "bNumConfigurations",
   "bDeviceClass",
+  "bDeviceSubClass",
+  "bDeviceProtocol",
   "idVendor",
   "idProduct",
 

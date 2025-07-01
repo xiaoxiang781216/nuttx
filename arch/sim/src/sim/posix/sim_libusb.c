@@ -55,18 +55,6 @@
 #define HOST_LIBUSB_EP_NUM(addr)   ((addr) & USB_ENDPOINT_NUMBER_MASK)
 #define HOST_LIBUSB_EP_DIR(addr)   ((addr) & USB_ENDPOINT_DIR_MASK)
 
-#ifdef CONFIG_SIM_USB_VID
-#  define USB_VID               CONFIG_SIM_USB_VID
-#else
-#  define USB_VID               0x18d1
-#endif
-
-#ifdef CONFIG_SIM_USB_PID
-#  define USB_PID               CONFIG_SIM_USB_PID
-#else
-#  define USB_PID               0x4e11
-#endif
-
 #define HOST_LIBUSB_FIFO_NUM    8
 
 #define HOST_LIBUSB_FIFO_USED(fifo) \
@@ -594,8 +582,23 @@ static bool host_libusb_connectdevice(void)
           continue;
         }
 
-      if (dev_desc.idVendor == USB_VID ||
-          dev_desc.idProduct == USB_PID)
+#ifdef CONFIG_SIM_USB_MATCHBYCLASS
+  /* Match USB devices with configurable class, subclass, and protocol.
+   * (CONFIG_SIM_USB_MATCHBYCLASS) instead of fixed VID/PID.
+   *
+   * Example matching values:
+   * - bDeviceClass:    CLASS_WIRELESS     (0xe0) for wireless devices
+   * - bDeviceSubClass: SUBCLASS_BLUETOOTH (0x01) for Bluetooth devices
+   * - bDeviceProtocol: PROTOCOL_BLUETOOTH (0x01) for Bluetooth protocol
+   */
+
+      if (dev_desc.bDeviceClass == CONFIG_SIM_USB_CLASS &&
+          dev_desc.bDeviceSubClass == CONFIG_SIM_USB_SUBCLASS &&
+          dev_desc.bDeviceProtocol == CONFIG_SIM_USB_PROTOCOL)
+#else
+      if (dev_desc.idVendor == CONFIG_SIM_USB_VID ||
+          dev_desc.idProduct == CONFIG_SIM_USB_PID)
+#endif
         {
           g_libusb_dev.priv = dev;
           memcpy(&g_libusb_dev.dev_desc, &dev_desc,
@@ -811,13 +814,38 @@ int host_usbhost_init(void)
       return ret;
     }
 
+#ifdef CONFIG_SIM_USB_MATCHBYCLASS
+  /* Match USB devices with configurable class, subclass, and protocol.
+   * (CONFIG_SIM_USB_MATCHBYCLASS) instead of fixed VID/PID.
+   *
+   * Example matching values:
+   * - bDeviceClass:    CLASS_WIRELESS     (0xe0) for wireless devices
+   * - bDeviceSubClass: SUBCLASS_BLUETOOTH (0x01) for Bluetooth devices
+   * - bDeviceProtocol: PROTOCOL_BLUETOOTH (0x01) for Bluetooth protocol
+   */
+
   ret = host_uninterruptible(libusb_hotplug_register_callback,
-          g_libusb_context,
-          (libusb_hotplug_event) (LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT |
-          LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED),
-          (libusb_hotplug_flag) 0, USB_VID, USB_PID,
-          LIBUSB_HOTPLUG_MATCH_ANY, host_libusb_hotplug_callback,
-          NULL, NULL);
+                             g_libusb_context,
+                             LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT |
+                             LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED,
+                             0,
+                             LIBUSB_HOTPLUG_MATCH_ANY,
+                             LIBUSB_HOTPLUG_MATCH_ANY,
+                             CONFIG_SIM_USB_CLASS,
+                             host_libusb_hotplug_callback,
+                             NULL, NULL);
+#else
+  ret = host_uninterruptible(libusb_hotplug_register_callback,
+                             g_libusb_context,
+                             LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT |
+                             LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED,
+                             0,
+                             CONFIG_SIM_USB_VID,
+                             CONFIG_SIM_USB_PID,
+                             LIBUSB_HOTPLUG_MATCH_ANY,
+                             host_libusb_hotplug_callback,
+                             NULL, NULL);
+#endif
   if (ret != LIBUSB_SUCCESS)
     {
       ERROR("libusb_hotplug_register_callback() failed: %s\n",
