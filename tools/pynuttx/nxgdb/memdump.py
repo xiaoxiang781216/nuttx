@@ -548,7 +548,28 @@ class MMFree(gdb.Command):
 
     @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
-        heaps = mm.get_heaps()
+        parser = argparse.ArgumentParser(description=self.__doc__)
+
+        parser.add_argument(
+            "--heap",
+            type=str,
+            default=None,
+            help="Which heap to inspect",
+        )
+
+        parser.add_argument(
+            "-t",
+            "--thread-usage",
+            action="store_true",
+            help="Show memory usage of each thread",
+        )
+
+        try:
+            args = parser.parse_args(gdb.string_to_argv(args))
+        except SystemExit:
+            return
+
+        heaps = get_heaps(args.heap)
 
         formatter = "{:<20} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10} {:<10}"
         header = (
@@ -564,9 +585,16 @@ class MMFree(gdb.Command):
 
         print(formatter.format(*header))
         mm_heap_s = utils.lookup_type("struct mm_heap_s")
+
+        # Print summary of memory usage
+        summary = defaultdict(lambda: {"size": 0, "count": 0})
+        mempool_free = 0
+
         for heap in heaps:
             heap_free = heap_used = 0
             total_size = max_free = nused = nfree = 0
+
+            # Heap nodes
             for node in heap.nodes:
                 nodesize = node.nodesize
                 total_size += nodesize
@@ -578,6 +606,8 @@ class MMFree(gdb.Command):
                 else:
                     heap_used += nodesize
                     nused += 1
+                    summary[node.pid]["size"] += node.nodesize
+                    summary[node.pid]["count"] += 1
 
             mempool_total = 0
             mempool_maxused = 0
@@ -601,6 +631,8 @@ class MMFree(gdb.Command):
                         else:
                             mempool_used += blk.nodesize
                             mempool_nused += 1
+                            summary[blk.pid]["size"] += node.nodesize
+                            summary[blk.pid]["count"] += 1
 
             total = heap.heapsize + mm_heap_s.sizeof
             heap_used += mm_heap_s.sizeof  # struct overhead
@@ -631,6 +663,33 @@ class MMFree(gdb.Command):
                         mempool_nfree,
                     )
                 )
+
+        if args.thread_usage:
+            print("\nSummary of thread memory usage:")
+            formatter = "{:<10} {:<30} {:<16} {:<10} {:<10}"
+            print(formatter.format("PID", "TaskName", "Size", "Size(kB)", "Count"))
+            for pid, data in sorted(
+                summary.items(), key=lambda x: x[1]["size"], reverse=True
+            ):
+                print(
+                    formatter.format(
+                        pid,
+                        utils.get_task_name(pid) or "<noname>",
+                        data["size"],
+                        f"{data['size'] / 1024:.1f}kB",
+                        data["count"],
+                    )
+                )
+
+    def diagnose(self, *args, **kwargs):
+        return {
+            "title": "Memory Free Information",
+            "summary": "Memory free information",
+            "command": "free",
+            "result": "info",
+            "category": utils.DiagnoseCategory.memory,
+            "message": gdb.execute("mm free --thread-usage", to_string=True),
+        }
 
 
 class NxMemoryRange(gdb.Command):
