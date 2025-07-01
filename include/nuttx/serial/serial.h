@@ -38,6 +38,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/power/pm.h>
+#include <nuttx/spinlock.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -340,6 +341,7 @@ struct uart_dev_s
   sem_t                xmitsem;      /* Wakeup user waiting for space in xmit.buffer */
   sem_t                recvsem;      /* Wakeup user waiting for data in recv.buffer */
   mutex_t              closelock;    /* Locks out new open while close is in progress */
+  rspinlock_t          lock;         /* The protection rspinlock for critical section */
 
   /* I/O buffers */
 
@@ -396,6 +398,26 @@ extern "C"
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: uart_spinlock
+ *
+ * Description:
+ *   Enter critical section for this uart.
+ *
+ ****************************************************************************/
+
+irqstate_t uart_spinlock(FAR uart_dev_t *dev, bool nopreempt);
+
+/****************************************************************************
+ * Name: uart_spinunlock
+ *
+ * Description:
+ *   Leave critical section for this uart.
+ *
+ ****************************************************************************/
+
+void uart_spinunlock(FAR uart_dev_t *dev, bool nopreempt, irqstate_t flags);
 
 /****************************************************************************
  * Name: uart_register
