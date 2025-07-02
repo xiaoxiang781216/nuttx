@@ -2522,7 +2522,8 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
 
   if (cmd >= CFGDIOC_GETCONFIG && cmd <= CFGDIOC_NEXTCONFIG &&
       (pdata == NULL || pdata->len > UINT16_MAX ||
-      (pdata->len > 0 && pdata->configdata == NULL)))
+      (pdata->len > 0 && pdata->configdata == NULL
+      && cmd != CFGDIOC_DELCONFIG)))
     {
       return -EINVAL;
     }
