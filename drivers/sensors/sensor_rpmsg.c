@@ -1268,7 +1268,8 @@ static int sensor_rpmsg_sub_handler(FAR struct rpmsg_endpoint *ept,
    *   3.When the number of advertisers is 0, it is not persistent attribute.
    */
 
-  if (!dev || dev->nadvertisers < 0 || !dev->lower.persist)
+  if (!dev || dev->nadvertisers < 0 || (dev->nadvertisers == 0 &&
+      !dev->lower.persist))
     {
       return 0;
     }
