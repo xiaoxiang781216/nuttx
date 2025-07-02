@@ -712,6 +712,7 @@ static inline void audio_dequeuebuffer(FAR struct audio_upperhalf_s *upper,
 #endif
 {
   struct audio_msg_s    msg;
+  int ret = 0;
 
   audinfo("Entry\n");
 
@@ -725,8 +726,10 @@ static inline void audio_dequeuebuffer(FAR struct audio_upperhalf_s *upper,
       msg.session = session;
 #endif
       apb->flags |= AUDIO_APB_DEQUEUED;
-      file_mq_send(upper->usermq, (FAR const char *)&msg, sizeof(msg),
-                   CONFIG_AUDIO_BUFFER_DEQUEUE_PRIO);
+      ret = file_mq_send(upper->usermq, (FAR const char *)&msg, sizeof(msg),
+                         CONFIG_AUDIO_BUFFER_DEQUEUE_PRIO);
+      if (ret < 0)
+        auderr("ret:%d apb:%p\n", ret, apb);
     }
 }
 
