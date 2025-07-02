@@ -124,6 +124,7 @@ void up_disable_irq(int irq)
   volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
 
   IfxSrc_disable(src);
+  IfxSrc_deinit(src);
 }
 
 /****************************************************************************
