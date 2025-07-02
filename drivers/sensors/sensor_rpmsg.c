@@ -360,6 +360,7 @@ static void sensor_rpmsg_advsub(FAR struct sensor_rpmsg_dev_s *dev,
     {
       FAR struct sensor_rpmsg_proxy_s *proxy = NULL;
       bool find = false;
+      bool adv = false;
 
       if (command == SENSOR_RPMSG_SUBSCRIBE ||
           command == SENSOR_RPMSG_UNSUBSCRIBE)
@@ -376,6 +377,18 @@ static void sensor_rpmsg_advsub(FAR struct sensor_rpmsg_dev_s *dev,
                 }
             }
         }
+      else
+        {
+          /* Advertise and unadvertise need to be broadcast. otherwise, data
+           * will be lost if the following two conditions occur at the same
+           * time.
+           *  1.The adv core crashed, the advertiser has a long life cycle.
+           *  2.The remote subscriber has a long life cycle, and the remote
+           *    core side has not been restarted
+           */
+
+          adv = true;
+        }
 
       /* There are several scenarios that require broadcasting:
        * 1. If the proxy corresponding to the EPT (Endpoint) did not
@@ -390,7 +403,7 @@ static void sensor_rpmsg_advsub(FAR struct sensor_rpmsg_dev_s *dev,
        * target core is in a sleep state to prevent unnecessary wakeups.
        */
 
-      if (rpmsg_is_running(sre->ept.rdev) || (find && proxy->wakeup))
+      if (adv || rpmsg_is_running(sre->ept.rdev) || (find && proxy->wakeup))
         {
           sensor_rpmsg_advsub_one(dev, &sre->ept, command);
         }
