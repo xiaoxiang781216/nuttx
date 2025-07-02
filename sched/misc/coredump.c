@@ -1030,8 +1030,9 @@ int coredump_initialize(void)
              CONFIG_BOARD_COREDUMP_DEVPATH, ret);
     }
 
-  g_stream_initialized = true;
 #endif
+
+  g_stream_initialized = true;
 
   return ret;
 }
