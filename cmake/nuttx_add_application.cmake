@@ -29,14 +29,17 @@ define_property(
   FULL_DOCS "List of all NuttX application libraries")
 
 # Create a directories for the application binaries `bin` for stripped binaries
-# `bin_debug` for debug binaries
-if(NOT EXISTS ${CMAKE_BINARY_DIR}/bin)
-  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-endif()
+# `bin_debug` for debug binaries if(NOT EXISTS ${CMAKE_BINARY_DIR}/bin) Make
+# sure the binary directory always rebuild
+add_custom_target(
+  gen_apps_bin_dir ALL
+  COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/bin
+  COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/bin_debug
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/bin
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/bin_debug
+  COMMENT "Generating bin output directories")
 
-if(NOT EXISTS ${CMAKE_BINARY_DIR}/bin_debug)
-  file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin_debug)
-endif()
+add_dependencies(apps_context gen_apps_bin_dir)
 
 # ~~~
 # nuttx_add_application
