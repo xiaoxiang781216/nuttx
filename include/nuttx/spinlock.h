@@ -266,6 +266,8 @@ spin_trylock_notrace(FAR volatile spinlock_t *lock)
   return atomic_xchg_acquire(lock, SP_LOCKED) != SP_LOCKED;
 #endif /* CONFIG_TICKET_SPINLOCK */
 }
+#else
+#  define spin_trylock_notrace(lock) true
 #endif /* CONFIG_SPINLOCK */
 
 /****************************************************************************
@@ -314,6 +316,8 @@ static inline_function bool spin_trylock(FAR volatile spinlock_t *lock)
 
   return locked;
 }
+#else
+#  define spin_trylock(lock) true
 #endif /* CONFIG_SPINLOCK */
 
 /****************************************************************************
