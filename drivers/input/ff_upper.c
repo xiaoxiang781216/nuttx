@@ -212,9 +212,7 @@ static int ff_erase_effect(FAR struct ff_upperhalf_s *upper, int effect_id,
       return ret;
     }
 
-  nxmutex_lock(&upper->lock);
   lower->playback(lower, effect_id, 0);
-  nxmutex_unlock(&upper->lock);
 
   upper->effects[effect_id].owner = NULL;
   if (lower->erase != NULL)
