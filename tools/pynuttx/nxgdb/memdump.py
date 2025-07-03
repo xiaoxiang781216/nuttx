@@ -439,14 +439,14 @@ class MMDump(gdb.Command):
 
 
 class MMfrag(gdb.Command):
-    """Show memory fragmentation rate"""
+    """Show memory fragmentation rate and analyze fragmentation causes"""
 
     def __init__(self):
         super().__init__("mm frag", gdb.COMMAND_USER)
         utils.alias("memfrag", "mm frag")
 
-    @utils.dont_repeat_decorator
-    def invoke(self, args, from_tty):
+    def parse_arguments(self, argv):
+        """Parse command line arguments"""
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
             "--heap",
@@ -454,36 +454,152 @@ class MMfrag(gdb.Command):
             default=None,
             help="Which heap to inspect",
         )
+        parser.add_argument(
+            "-v",
+            "--verbose",
+            action="store_true",
+            help="Show detailed fragmentation causes (orphan nodes between free nodes)",
+        )
+        parser.add_argument(
+            "--threshold",
+            type=int,
+            default=512,
+            help="Minimum total size of adjacent free nodes to consider (bytes, default: 512)",
+        )
+        parser.add_argument(
+            "--top", type=int, default=None, help="Number of top fragments to show"
+        )
+        parser.add_argument(
+            "--no-backtrace",
+            action="store_true",
+            help="Do not print backtrace",
+        )
 
         try:
-            args = parser.parse_args(gdb.string_to_argv(args))
+            args = parser.parse_args(argv)
         except SystemExit:
             return None
 
-        for heap in get_heaps(args.heap):
-            nodes = list(
-                sorted(heap.nodes_free(), key=lambda node: node.nodesize, reverse=True)
+        return args
+
+    def show_fragmentation_rate(self, heap: mm.MMHeap):
+        """Calculate and display fragmentation rate for a heap"""
+        free_nodes = list(
+            sorted(heap.nodes_free(), key=lambda node: node.nodesize, reverse=True)
+        )
+        if not free_nodes:
+            gdb.write(f"{heap}: no free nodes\n")
+            return
+
+        total_free_size = sum(node.nodesize for node in free_nodes)
+        remaining = total_free_size
+        frag_rate = 0.0
+
+        for node in free_nodes:
+            frag_rate += (1 - (node.nodesize / remaining)) * (
+                node.nodesize / total_free_size
             )
-            if not nodes:
-                gdb.write(f"{heap}: no free nodes\n")
-                continue
+            remaining -= node.nodesize
 
-            freesize = sum(node.nodesize for node in nodes)
-            remaining = freesize
-            fragrate = 0
+        frag_rate *= 1000
+        gdb.write(
+            f"{heap.name}@{heap.address:#x}, fragmentation rate:{frag_rate:.2f},"
+            f" heapsize: {heap.heapsize}, free size: {total_free_size},"
+            f" free count: {len(free_nodes)}, largest: {free_nodes[0].nodesize}\n"
+        )
 
-            for node in nodes:
-                fragrate += (1 - (node.nodesize / remaining)) * (
-                    node.nodesize / freesize
-                )
-                remaining -= node.nodesize
+    def show_memory_fragments(self, heap: mm.MMHeap, args):
+        """Analyze and display fragmentation causes (orphan nodes between free nodes)"""
+        formatter = "{:>4} {:>8} {:>12} {:>12} {:>12} {:>14} {:>9} {:>18} {:}\n"
 
-            fragrate = fragrate * 1000
+        def print_fragment_header():
+            head = (
+                "Pool",
+                "PID",
+                "PrevSize",
+                "NodeSize",
+                "NextSize",
+                "TotalFreeSize",
+                "Seqno",
+                "Address",
+                "Backtrace",
+            )
+            gdb.write(formatter.format(*head))
+
+        def print_fragment_node(node: MMNodeDump, total_free, no_backtrace=False):
             gdb.write(
-                f"{heap.name}@{heap.address:#x}, fragmentation rate:{fragrate:.2f},"
-                f" heapsize: {heap.heapsize}, free size: {freesize},"
-                f" free count: {len(nodes)}, largest: {nodes[0].nodesize}\n"
+                formatter.format(
+                    "P" if node.from_pool else "H",
+                    node.pid,
+                    node.prevnode.nodesize,
+                    node.nodesize,
+                    node.nextnode.nodesize,
+                    total_free,
+                    node.seqno,
+                    hex(node.address),
+                    "",
+                )
             )
+            if (
+                mm.MM_RECORD_STACK_DEPTH > 0
+                and not no_backtrace
+                and node.backtrace
+                and node.backtrace[0]
+            ):
+                leading = formatter.format("", "", "", "", "", "", "", "", "")[:-1]
+                bt_format = leading + "{1:<48}{2}\n"
+                gdb.write(f"{utils.Backtrace(node.backtrace, formatter=bt_format)}\n")
+
+        def collect_significant_fragments():
+            heap_guards = [item for start, end in heap.regions for item in (start, end)]
+
+            for node in heap.nodes_used():
+                if node in heap_guards:
+                    continue
+                if not (node.is_prev_free and node.nextnode and node.nextnode.is_free):
+                    continue
+                total_free = sum(n.nodesize for n in [node.prevnode, node.nextnode])
+                if total_free < args.threshold:
+                    continue
+
+                yield node, total_free
+
+        fragments = list(collect_significant_fragments())
+        if not fragments:
+            gdb.write(
+                f"No significant memory fragments found in {heap.name} "
+                f"(threshold: {args.threshold} bytes)\n"
+            )
+            return
+
+        gdb.write("-" * 106 + "\n")
+        print_fragment_header()
+
+        fragments.sort(key=lambda x: x[1], reverse=True)
+        for node, total_free in fragments[: args.top]:
+            print_fragment_node(node, total_free, args.no_backtrace)
+
+    @utils.dont_repeat_decorator
+    def invoke(self, args, from_tty):
+        parsed_args = self.parse_arguments(gdb.string_to_argv(args))
+        if not parsed_args:
+            return
+
+        heaps = get_heaps(parsed_args.heap)
+        for heap in heaps:
+            self.show_fragmentation_rate(heap)
+            if parsed_args.verbose:
+                self.show_memory_fragments(heap, parsed_args)
+
+    def diagnose(self, *args, **kwargs):
+        return {
+            "title": "Memory Fragments Report",
+            "summary": "Display fragmentation causes (orphan nodes between free nodes)",
+            "command": "mm frag",
+            "result": "info",
+            "category": utils.DiagnoseCategory.memory,
+            "message": gdb.execute("mm frag --verbose", to_string=True),
+        }
 
 
 class MMMap(gdb.Command):
