@@ -392,7 +392,8 @@ int notesnap_register(void)
 
 void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream)
 {
-  size_t index = g_notesnap.index % CONFIG_DRIVERS_NOTESNAP_NBUFFERS;
+  size_t index = atomic_load(&g_notesnap.index) %
+                 CONFIG_DRIVERS_NOTESNAP_NBUFFERS;
   size_t i;
 
   /* Stop recording while dumping */
