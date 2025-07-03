@@ -39,8 +39,8 @@ COMPILER_RT_OBJDIR = compiler-rt \
                      compiler-rt/compiler-rt/lib/builtins/$(ARCH) \
                      compiler-rt/compiler-rt/lib/profile
 
-BIN_OBJDIR = $(addprefix $(BINDIR)$(DELIM),$(COMPILER_RT_OBJDIR))
-KBIN_OBJDIR = $(addprefix $(KBINDIR)$(DELIM),$(COMPILER_RT_OBJDIR))
+BIN_OBJDIR ?= $(addprefix bin$(DELIM),$(COMPILER_RT_OBJDIR))
+KBIN_OBJDIR = $(addprefix kbin$(DELIM),$(COMPILER_RT_OBJDIR))
 
 $(BIN_OBJDIR) $(KBIN_OBJDIR):
 	$(Q) mkdir -p $@
