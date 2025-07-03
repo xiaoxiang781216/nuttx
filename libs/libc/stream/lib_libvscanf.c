@@ -1298,7 +1298,7 @@ int lib_scanf(FAR struct lib_instream_s *stream, FAR int *lastc,
 }
 
 /****************************************************************************
- * Name: lib_bscanf
+ * Name: lib_oscanf
  *
  * Description:
  *  Convert data into a structure according to standard formatting protocols.
@@ -1307,7 +1307,7 @@ int lib_scanf(FAR struct lib_instream_s *stream, FAR int *lastc,
  *
  ****************************************************************************/
 
-int lib_bscanf(FAR struct lib_instream_s *stream, FAR int *lastc,
+int lib_oscanf(FAR struct lib_instream_s *stream, FAR int *lastc,
                FAR const IPTR char *fmt, FAR void *data)
 {
   union vabuf_u vabuf =

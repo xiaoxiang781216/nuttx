@@ -1127,7 +1127,7 @@ str_lpad:
                     {
                       FAR struct va_format *vaf = (FAR void *)(uintptr_t)x;
 
-                      lib_bsprintf(stream, vaf->fmt, vaf->va);
+                      lib_osprintf(stream, vaf->fmt, vaf->va);
                       continue;
                     }
 

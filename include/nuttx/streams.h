@@ -813,7 +813,7 @@ int lib_sprintf(FAR struct lib_outstream_s *stream,
                 FAR const IPTR char *fmt, ...) printf_like(2, 3);
 
 /****************************************************************************
- * Name: lib_bsprintf
+ * Name: lib_osprintf
  *
  * Description:
  *  Implementation of sprintf formatted output buffer data. Structure data
@@ -821,7 +821,7 @@ int lib_sprintf(FAR struct lib_outstream_s *stream,
  *
  ****************************************************************************/
 
-int lib_bsprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
+int lib_osprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
                  FAR const void *buf);
 
 /****************************************************************************
@@ -881,7 +881,7 @@ int lib_vscanf(FAR struct lib_instream_s *stream, FAR int *lastc,
                FAR const IPTR char *fmt, va_list ap) scanf_like(3, 0);
 
 /****************************************************************************
- * Name: lib_bscanf
+ * Name: lib_oscanf
  *
  * Description:
  *  Convert data into a structure according to standard formatting protocols.
@@ -890,7 +890,7 @@ int lib_vscanf(FAR struct lib_instream_s *stream, FAR int *lastc,
  *
  ****************************************************************************/
 
-int lib_bscanf(FAR struct lib_instream_s *stream, FAR int *lastc,
+int lib_oscanf(FAR struct lib_instream_s *stream, FAR int *lastc,
                FAR const IPTR char *fmt, FAR void *data);
 
 #undef EXTERN

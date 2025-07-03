@@ -1,4 +1,4 @@
-lib_bsprintf
+lib_osprintf
 ============
 
 This function is mainly used to output the contents of the input
@@ -93,8 +93,8 @@ https://en.cppreference.com/w/c/io/fscanf
        lib_stdoutstream(&stdoutstream, stdout);
 
        flockfile(stdout);
-       lib_bsprintf(&stdoutstream.common, sv, &test_v);
-       lib_bsprintf(&stdoutstream.common, sg, &test_g);
+       lib_osprintf(&stdoutstream.common, sv, &test_v);
+       lib_osprintf(&stdoutstream.common, sg, &test_g);
        funlockfile(stdout);
       #else
        struct lib_rawoutstream_s rawoutstream;
@@ -103,17 +103,17 @@ https://en.cppreference.com/w/c/io/fscanf
        lib_rawoutstream(&rawoutstream, STDOUT_FILENO);
        lib_bufferedoutstream(&outstream, &rawoutstream.common);
 
-       lib_bsprintf(&outstream.common, sv, &test_v);
-       lib_bsprintf(&outstream.common, sg, &test_g);
+       lib_osprintf(&outstream.common, sv, &test_v);
+       lib_osprintf(&outstream.common, sg, &test_g);
 
        lib_stream_flush(&outstream.common);
       #endif
 
-lib_bscanf
+lib_oscanf
 ==========
 
 This function adds a formatted standard scanf string to the
-structure(lib_bscanf). 1. https://zh.cppreference.com/w/c/io/fscanf
+structure(lib_oscanf). 1. https://zh.cppreference.com/w/c/io/fscanf
 
 -  **special**:
 
@@ -178,4 +178,4 @@ structure(lib_bscanf). 1. https://zh.cppreference.com/w/c/io/fscanf
    ::
 
       struct test vg;
-      ret = lib_bscanf(binput, bflag, &vg);
+      ret = lib_oscanf(binput, bflag, &vg);

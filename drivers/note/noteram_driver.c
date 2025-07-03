@@ -1032,7 +1032,7 @@ static int noteram_dump_printf(FAR struct lib_outstream_s *s,
 
   if (note->npt_type == 0)
     {
-      ret = lib_bsprintf(s, note->npt_fmt, note->npt_data);
+      ret = lib_osprintf(s, note->npt_fmt, note->npt_data);
     }
   else
     {
@@ -1070,7 +1070,7 @@ static int noteram_dump_printf(FAR struct lib_outstream_s *s,
             }
         }
 
-        ret += lib_bsprintf(s, fmt, note->npt_data);
+        ret += lib_osprintf(s, fmt, note->npt_data);
     }
 
   return ret;

@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/stream/lib_libbsprintf.c
+ * libs/libc/stream/lib_libosprintf.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -34,7 +34,7 @@
  * Public Functions
  ****************************************************************************/
 
-int lib_bsprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
+int lib_osprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
                  FAR const void *buf)
 {
   begin_packed_struct union
