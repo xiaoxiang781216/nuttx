@@ -31,6 +31,8 @@
 
 #ifdef CONFIG_RPMSG_PING
 
+#include <openamp/rpmsg.h>
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -43,6 +45,12 @@ struct rpmsg_ping_s
   int  len;
   int  cmd;
   int  sleep; /* unit: ms */
+};
+
+struct rpmsg_ping_dev_s
+{
+  struct rpmsg_endpoint ept;
+  struct rpmsg_endpoint ept_rt;
 };
 
 #endif /* CONFIG_RPMSG_PING */
