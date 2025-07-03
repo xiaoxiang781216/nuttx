@@ -114,7 +114,7 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size,
             {
               if (next + sizeof(var->l) > length)
                 {
-                  break;
+                  return -ENOMEM;
                 }
 
               var->l = va_arg(va, long);
@@ -124,7 +124,7 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size,
             {
               if (next + sizeof(var->sz) > length)
                 {
-                  break;
+                  return -ENOMEM;
                 }
 
               var->sz = va_arg(va, size_t);
@@ -144,7 +144,7 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size,
             {
               if (next + sizeof(var->i) > length)
                 {
-                  break;
+                  return -ENOMEM;
                 }
 
               var->i = va_arg(va, int);
@@ -195,7 +195,7 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size,
           len = strlen(var->s) + 1;
           if (next + len > length)
             {
-              len = length - next;
+              return -ENOMEM;
             }
 
           strlcpy(buffer + next, var->s, len);
@@ -204,14 +204,54 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size,
         }
       else if (c == 'p')
         {
-          if (next + sizeof(var->p) > length)
-            {
-              return -ENOMEM;
-            }
-
-          var->p = va_arg(va, FAR void *);
-          next += sizeof(var->p);
           infmt = false;
+          if (*p == 'V')
+            {
+              FAR struct va_format *vaf = va_arg(va, FAR struct va_format *);
+              size_t len;
+              int ret;
+              p++;
+
+              /* Copy the format string to the buffer */
+
+              len = strlen(vaf->fmt) + 1;
+              if (next + len > length)
+                {
+                  return -ENOMEM;
+                }
+
+              memcpy(buffer + next, vaf->fmt, len);
+              next += len;
+
+              /* copy the va_list member to the buffer */
+
+#  ifdef va_copy
+              va_list copy;
+              va_copy(copy, *vaf->va);
+              ret = lib_bsprintf(buffer + next, length - next,
+                                 vaf->fmt, copy);
+              va_end(copy);
+#  else
+              ret = lib_bsprintf(buffer + next, length - next,
+                                 vaf->fmt, vaf->va);
+#  endif
+              if (ret < 0)
+                {
+                  return ret;
+                }
+
+              next += ret;
+            }
+          else
+            {
+              if (next + sizeof(var->p) > length)
+                {
+                  return -ENOMEM;
+                }
+
+              var->p = va_arg(va, FAR void *);
+              next += sizeof(var->p);
+            }
         }
     }
 

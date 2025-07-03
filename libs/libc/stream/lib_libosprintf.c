@@ -31,11 +31,13 @@
 #include <stdlib.h>
 
 /****************************************************************************
- * Public Functions
+ * Private Functions
  ****************************************************************************/
 
-int lib_osprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
-                 FAR const void *buf)
+static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
+                                 FAR const IPTR char *fmt,
+                                 FAR const void *buf,
+                                 FAR size_t *offset)
 {
   begin_packed_struct union
     {
@@ -65,7 +67,6 @@ int lib_osprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
   FAR const char *data = buf;
   char fmtstr[64];
   bool infmt = false;
-  size_t offset = 0;
   size_t ret = 0;
   size_t len = 0;
   char c;
@@ -86,7 +87,7 @@ int lib_osprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
           memset(fmtstr, 0, sizeof(fmtstr));
         }
 
-      var = (FAR void *)(data + offset);
+      var = (FAR void *)(data + *offset);
       fmtstr[len++] = c;
 
       if (c == 'c' || c == 'd' || c == 'i' || c == 'u' ||
@@ -94,44 +95,44 @@ int lib_osprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
         {
           if (*(fmt - 2) == 'j')
             {
-              offset += sizeof(var->im);
+              *offset += sizeof(var->im);
               ret += lib_sprintf(s, fmtstr, var->im);
             }
 #ifdef CONFIG_HAVE_LONG_LONG
           else if (*(fmt - 2) == 'l' && *(fmt - 3) == 'l')
             {
-              offset += sizeof(var->ll);
+              *offset += sizeof(var->ll);
               ret += lib_sprintf(s, fmtstr, var->ll);
             }
 #endif
           else if (*(fmt - 2) == 'l')
             {
-              offset += sizeof(var->l);
+              *offset += sizeof(var->l);
               ret += lib_sprintf(s, fmtstr, var->l);
             }
           else if (*(fmt - 2) == 'z')
             {
-              offset += sizeof(var->sz);
+              *offset += sizeof(var->sz);
               ret += lib_sprintf(s, fmtstr, var->sz);
             }
           else if (*(fmt - 2) == 't')
             {
-              offset += sizeof(var->pd);
+              *offset += sizeof(var->pd);
               ret += lib_sprintf(s, fmtstr, var->pd);
             }
           else if (*(fmt - 2) == 'h' && *(fmt - 3) == 'h')
             {
-              offset += sizeof(var->c);
+              *offset += sizeof(var->c);
               ret += lib_sprintf(s, fmtstr, var->c);
             }
           else if (*(fmt - 2) == 'h')
             {
-              offset += sizeof(var->si);
+              *offset += sizeof(var->si);
               ret += lib_sprintf(s, fmtstr, var->si);
             }
           else
             {
-              offset += sizeof(var->i);
+              *offset += sizeof(var->i);
               ret += lib_sprintf(s, fmtstr, var->i);
             }
 
@@ -143,19 +144,19 @@ int lib_osprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
 #ifdef CONFIG_HAVE_DOUBLE
           if (*(fmt - 2) == 'h')
             {
-              offset += sizeof(var->f);
+              *offset += sizeof(var->f);
               ret += lib_sprintf(s, fmtstr, var->f);
             }
 #  ifdef CONFIG_HAVE_LONG_DOUBLE
           else if (*(fmt - 2) == 'L')
             {
-              offset += sizeof(var->ld);
+              *offset += sizeof(var->ld);
               ret += lib_sprintf(s, fmtstr, var->ld);
             }
 #  endif
           else
             {
-              offset += sizeof(var->d);
+              *offset += sizeof(var->d);
               ret += lib_sprintf(s, fmtstr, var->d);
             }
 
@@ -166,18 +167,18 @@ int lib_osprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
         {
           sprintf(fmtstr + len - 1, "%d", var->i);
           len = strlen(fmtstr);
-          offset += sizeof(var->i);
+          *offset += sizeof(var->i);
         }
       else if (c == 's')
         {
           if (prec != NULL)
             {
-              offset += strtol(prec, NULL, 10);
+              *offset += strtol(prec, NULL, 10);
               prec = NULL;
             }
           else
             {
-              offset += strlen(var->s) + 1;
+              *offset += strlen(var->s) + 1;
             }
 
           ret += lib_sprintf(s, fmtstr, var->s);
@@ -185,9 +186,20 @@ int lib_osprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
         }
       else if (c == 'p')
         {
-          offset += sizeof(var->p);
-          ret += lib_sprintf(s, fmtstr, var->p);
           infmt = false;
+          if (*fmt == 'V')
+            {
+              size_t off = 0;
+              len = strlen(var->s) + 1;
+              ret += lib_osprintf_internal(s, var->s, var->s + len, &off);
+              *offset += len + off;
+              fmt++;
+            }
+          else
+            {
+              *offset += sizeof(var->p);
+              ret += lib_sprintf(s, fmtstr, var->p);
+            }
         }
       else if (c == '.')
         {
@@ -196,4 +208,16 @@ int lib_osprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
     }
 
   return ret;
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+int lib_osprintf(FAR struct lib_outstream_s *s,
+                 FAR const char *fmt,
+                 FAR const void *buf)
+{
+  size_t offset = 0;
+  return lib_osprintf_internal(s, fmt, buf, &offset);
 }
