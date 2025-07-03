@@ -1066,6 +1066,11 @@ def sem_is_mutex(sem):
     return sem["flags"] & SEM_TYPE_MUTEX
 
 
+def mutex_get_holder(mutex):
+    NXSEM_MBLOCKING_BIT = 1 << 31
+    return mutex["val"]["mholder"] & ~NXSEM_MBLOCKING_BIT
+
+
 def switch_inferior(inferior):
     state = suppress_cli_notifications(True)
 

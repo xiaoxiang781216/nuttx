@@ -232,8 +232,7 @@ class Nxinfothreads(gdb.Command):
             if tcb["task_state"] == utils.parse_and_eval("TSTATE_WAIT_SEM"):
                 mutex = tcb["waitobj"].cast(utils.lookup_type("sem_t").pointer())
                 if utils.sem_is_mutex(mutex):
-                    mutex = tcb["waitobj"].cast(utils.lookup_type("mutex_t").pointer())
-                    statename = f"Waiting,Mutex:{mutex['holder']}"
+                    statename = f"Waiting,Mutex:{utils.mutex_get_holder(mutex)}"
 
             try:
                 """Maybe tcb not have name member, or name is not utf-8"""
@@ -495,8 +494,8 @@ class Ps(gdb.Command):
         if tcb["waitobj"]:
             waitobj = tcb["waitobj"].cast(self.get_cached_type("sem_t_ptr"))
             if utils.sem_is_mutex(waitobj):
-                mutex = waitobj.cast(self.get_cached_type("mutex_t_ptr"))
-                waiter = str(int(mutex["holder"]))
+                mutex = tcb["waitobj"].cast(utils.lookup_type("sem_t").pointer())
+                waiter = str(utils.mutex_get_holder(mutex))
 
         state_and_event = eval2str(TaskState, (tcb["task_state"]))
         if waiter:

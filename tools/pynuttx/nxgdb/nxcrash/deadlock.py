@@ -44,8 +44,7 @@ class DeadLock(gdb.Command):
             return False
 
         # It's waiting on a mutex
-        mutex = tcb["waitobj"].cast(utils.lookup_type("mutex_t").pointer())
-        holder = mutex["holder"]
+        holder = utils.mutex_get_holder(sem)
         if holder in self.holders:
             return True
 
