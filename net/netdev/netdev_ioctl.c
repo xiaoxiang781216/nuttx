@@ -580,18 +580,18 @@ static int netdev_cell_ioctl(FAR struct socket *psock, int cmd,
   int ret = -ENOTTY;
 
   ninfo("cmd: %d\n", cmd);
-  net_lock();
 
   if (_CELLIOCVALID(cmd))
     {
       dev = netdev_findbyname(req->ifr_name);
       if (dev && dev->d_ioctl)
         {
+          netdev_lock(dev);
           ret = dev->d_ioctl(dev, cmd, (unsigned long)(uintptr_t)req);
+          netdev_unlock(dev);
         }
     }
 
-  net_unlock();
   return ret;
 }
 #endif
@@ -832,8 +832,6 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
 
   ninfo("cmd: %d\n", cmd);
 
-  net_lock();
-
   /* Execute commands that do not need ifr_name or lifr_name */
 
   switch (cmd)
@@ -888,7 +886,6 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
       default:
         if (req == NULL)
           {
-            net_unlock();
             return -ENOTTY;
           }
 
@@ -915,9 +912,10 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
 
   if (dev == NULL)
     {
-      net_unlock();
       return ret;
     }
+
+  netdev_lock(dev);
 
   /* Execute commands that need ifr_name or lifr_name */
 
@@ -1330,7 +1328,7 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
         break;
     }
 
-  net_unlock();
+  netdev_unlock(dev);
   return ret;
 }
 
@@ -1391,8 +1389,6 @@ static int netdev_imsf_ioctl(FAR struct socket *psock, int cmd,
 
   ninfo("cmd: %d\n", cmd);
 
-  net_lock();
-
   /* Execute the command */
 
   switch (cmd)
@@ -1402,6 +1398,7 @@ static int netdev_imsf_ioctl(FAR struct socket *psock, int cmd,
           dev = netdev_imsfdev(imsf);
           if (dev)
             {
+              netdev_lock(dev);
               if (imsf->imsf_fmode == MCAST_INCLUDE)
                 {
                   ret = igmp_joingroup(dev, &imsf->imsf_multiaddr);
@@ -1411,6 +1408,8 @@ static int netdev_imsf_ioctl(FAR struct socket *psock, int cmd,
                   DEBUGASSERT(imsf->imsf_fmode == MCAST_EXCLUDE);
                   ret = igmp_leavegroup(dev, &imsf->imsf_multiaddr);
                 }
+
+              netdev_unlock(dev);
             }
         }
         break;
@@ -1421,7 +1420,6 @@ static int netdev_imsf_ioctl(FAR struct socket *psock, int cmd,
         break;
     }
 
-  net_unlock();
   return ret;
 }
 #endif

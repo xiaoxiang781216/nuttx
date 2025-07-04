@@ -382,7 +382,7 @@ static void netdev_upper_txavail_work(FAR struct netdev_upperhalf_s *upper)
 
   /* Ignore the notification if the interface is not yet up */
 
-  net_lock();
+  netdev_lock(dev);
   if (IFF_IS_UP(dev->d_flags) && !upper->txing)
     {
       DEBUGASSERT(dev->d_buf == NULL); /* Make sure: IOB only. */
@@ -392,7 +392,7 @@ static void netdev_upper_txavail_work(FAR struct netdev_upperhalf_s *upper)
       upper->txing = false;
     }
 
-  net_unlock();
+  netdev_unlock(dev);
 }
 
 /****************************************************************************
@@ -708,7 +708,7 @@ static void netdev_upper_rxpoll_work(FAR struct netdev_upperhalf_s *upper)
 
   /* Loop while receive() successfully retrieves valid Ethernet frames. */
 
-  net_lock();
+  netdev_lock(dev);
   while ((pkt = lower->ops->receive(lower)) != NULL)
     {
       if (!IFF_IS_UP(dev->d_flags))
@@ -763,7 +763,7 @@ static void netdev_upper_rxpoll_work(FAR struct netdev_upperhalf_s *upper)
         }
     }
 
-  net_unlock();
+  netdev_unlock(dev);
 }
 
 /****************************************************************************
