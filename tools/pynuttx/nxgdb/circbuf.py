@@ -25,7 +25,7 @@ from typing import Generator, Union
 
 import gdb
 
-from . import utils
+from . import autocompeletion, utils
 from .protocols import circbuf as p
 
 
@@ -142,14 +142,11 @@ class CircBuf(utils.Value, p.CircBuf):
             offset += sizeof
 
 
+@autocompeletion.complete
 class CircBufInfo(gdb.Command):
     """Print circbuf_s information"""
 
-    def __init__(self):
-        super().__init__("circbuf", gdb.COMMAND_USER)
-
-    @utils.dont_repeat_decorator
-    def invoke(self, arg: str, from_tty: bool) -> None:
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description="Dump circle buffer information")
         parser.add_argument(
             "--type",
@@ -172,9 +169,16 @@ class CircBufInfo(gdb.Command):
             type=str,
             help="The address of the circubuf_s",
         )
+        return parser
 
+    def __init__(self):
+        super().__init__("circbuf", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
+
+    @utils.dont_repeat_decorator
+    def invoke(self, arg: str, from_tty: bool) -> None:
         try:
-            args = parser.parse_args(gdb.string_to_argv(arg))
+            args = self.parser.parse_args(gdb.string_to_argv(arg))
         except SystemExit:
             gdb.write("Invalid arguments\n")
             return

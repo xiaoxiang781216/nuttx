@@ -26,7 +26,7 @@ import shutil
 
 import gdb
 
-from . import mm, utils
+from . import autocompeletion, mm, utils
 
 
 def create_file_with_size(filename, size):
@@ -34,40 +34,41 @@ def create_file_with_size(filename, size):
         f.write(b"\0" * size)
 
 
-def parse_args(args):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-o", "--output", help="Gcore output file")
-    parser.add_argument(
-        "-p",
-        "--prefix",
-        help="Prefix for objcopy tool",
-        default="",
-        type=str,
-    )
-
-    parser.add_argument(
-        "--trust-readonly",
-        help="Trust readonly section from elf, bypass read from device.",
-        action="store_true",
-        default=True,
-    )
-
-    parser.add_argument(
-        "--no-trust-readonly",
-        help="Do not trust readonly section from elf, read from device.",
-        action="store_false",
-        dest="trust_readonly",
-    )
-
-    parser.add_argument(
-        "-r",
-        "--memrange",
-        type=str,
-    )
-    return parser.parse_args(args)
-
-
+@autocompeletion.complete
 class NXGcore(gdb.Command):
+
+    def get_argparser(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-o", "--output", metavar="file", help="Gcore output file")
+        parser.add_argument(
+            "-p",
+            "--prefix",
+            help="Prefix for objcopy tool",
+            default="",
+            type=str,
+        )
+
+        parser.add_argument(
+            "--trust-readonly",
+            help="Trust readonly section from elf, bypass read from device.",
+            action="store_true",
+            default=True,
+        )
+
+        parser.add_argument(
+            "--no-trust-readonly",
+            help="Do not trust readonly section from elf, read from device.",
+            action="store_false",
+            dest="trust_readonly",
+        )
+
+        parser.add_argument(
+            "-r",
+            "--memrange",
+            type=str,
+        )
+        return parser
+
     def __init__(self):
         self.tempfile = utils.import_check(
             "tempfile",
@@ -78,11 +79,12 @@ class NXGcore(gdb.Command):
             return
 
         super().__init__("nxgcore", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
 
     @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
         try:
-            args = parse_args(gdb.string_to_argv(args))
+            args = self.parser.parse_args(gdb.string_to_argv(args))
         except SystemExit:
             return
 

@@ -28,7 +28,7 @@ from typing import List
 
 import gdb
 
-from . import fs, utils
+from . import autocompeletion, fs, utils
 from .circbuf import CircBuf
 from .protocols import uorb as p
 
@@ -108,6 +108,7 @@ def get_topics(topic: str = None) -> List[Sensor]:
     return (Sensor(node, path=path) for node, path in nodes)
 
 
+@autocompeletion.complete
 class uORBDump(gdb.Command):
     """Dump uORB topics"""
 
@@ -124,11 +125,7 @@ class uORBDump(gdb.Command):
         "Circbuf",
     )
 
-    def __init__(self):
-        super().__init__("uorb", gdb.COMMAND_USER)
-
-    @utils.dont_repeat_decorator
-    def invoke(self, arg: str, from_tty: bool) -> None:
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
             "--topic",
@@ -136,9 +133,16 @@ class uORBDump(gdb.Command):
             help="The topic name to dump, e.g. 'sensor_accel'",
             default=None,
         )
+        return parser
 
+    def __init__(self):
+        super().__init__("uorb", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
+
+    @utils.dont_repeat_decorator
+    def invoke(self, arg: str, from_tty: bool) -> None:
         try:
-            args = parser.parse_args(gdb.string_to_argv(arg))
+            args = self.parser.parse_args(gdb.string_to_argv(arg))
         except SystemExit:
             return
 

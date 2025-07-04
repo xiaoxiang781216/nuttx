@@ -27,7 +27,7 @@ from typing import Generator, List, Tuple
 
 import gdb
 
-from . import lists, utils
+from . import autocompeletion, lists, utils
 from .protocols import mm as p
 from .utils import Value
 
@@ -794,22 +794,26 @@ class MMHeapInfo(gdb.Command):
             gdb.write("\n")
 
 
+@autocompeletion.complete
 class MMPoolInfo(gdb.Command):
     """Show basic heap information"""
 
-    def __init__(self):
-        super().__init__("mm pool", gdb.COMMAND_USER)
-        utils.alias("mempool", "mm pool")
-
-    @utils.dont_repeat_decorator
-    def invoke(self, arg: str, from_tty: bool) -> None:
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description="Dump memory pool information.")
         parser.add_argument(
             "--heap", type=str, help="Which heap's pool to show", default=None
         )
+        return parser
 
+    def __init__(self):
+        super().__init__("mm pool", gdb.COMMAND_USER)
+        utils.alias("mempool", "mm pool")
+        self.parser = self.get_argparser()
+
+    @utils.dont_repeat_decorator
+    def invoke(self, arg: str, from_tty: bool) -> None:
         try:
-            args = parser.parse_args(gdb.string_to_argv(arg))
+            args = self.parser.parse_args(gdb.string_to_argv(arg))
         except SystemExit:
             return
 

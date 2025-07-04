@@ -26,7 +26,7 @@ from typing import Generator, Tuple, Union
 
 import gdb
 
-from . import utils
+from . import autocompeletion, utils
 from .lists import NxList
 from .protocols import fs as p
 from .protocols.thread import Tcb
@@ -248,12 +248,21 @@ def fstype_filter(fstype):
     return filter
 
 
+@autocompeletion.complete
 class Fdinfo(gdb.Command):
     """Dump fd info information of process"""
 
+    def get_argparser(self):
+        parser = argparse.ArgumentParser(
+            description="Get fdinfo for a process or all processes."
+        )
+        parser.add_argument("-p", "--pid", type=int, help="Optional process ID")
+        return parser
+
     def __init__(self):
-        super().__init__("fdinfo", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
+        super().__init__("fdinfo", gdb.COMMAND_DATA)
         self.total_fd_count = 0
+        self.parser = self.get_argparser()
 
     def print_file_info(self, fd, fdp: p.Fd, file: p.File, formatter: str):
         backtrace_formatter = "{0:<5} {1:<36} {2}"
@@ -325,13 +334,8 @@ class Fdinfo(gdb.Command):
 
     @utils.dont_repeat_decorator
     def invoke(self, arg, from_tty):
-        parser = argparse.ArgumentParser(
-            description="Get fdinfo for a process or all processes."
-        )
-        parser.add_argument("-p", "--pid", type=int, help="Optional process ID")
-
         try:
-            args = parser.parse_args(gdb.string_to_argv(arg))
+            args = self.parser.parse_args(gdb.string_to_argv(arg))
         except SystemExit:
             gdb.write("Invalid arguments.\n")
             return
@@ -373,22 +377,11 @@ class Mount(gdb.Command):
             self.mount_count += 1
 
 
+@autocompeletion.complete
 class ForeachInode(gdb.Command):
     """Dump each inode info"""
 
-    def __init__(self):
-        super().__init__("foreach inode", gdb.COMMAND_USER)
-        utils.alias("inode-foreach", "foreach inode")
-
-    def get_root_inode(self, addr_or_expr):
-        try:
-            return utils.Value(int(addr_or_expr, 0)).cast(
-                gdb.lookup_type("struct inode").pointer()
-            )
-        except ValueError:
-            return utils.gdb_eval_or_none(addr_or_expr)
-
-    def parse_arguments(self, argv):
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description="foreach inode command")
         parser.add_argument(
             "-L",
@@ -413,13 +406,29 @@ class ForeachInode(gdb.Command):
         parser.add_argument(
             "addr_or_expr",
             type=str,
+            metavar="symbol",
             nargs="?",
             default=None,
             help="set the start inode to be tranversed",
         )
+        return parser
 
+    def __init__(self):
+        super().__init__("foreach inode", gdb.COMMAND_USER)
+        utils.alias("inode-foreach", "foreach inode")
+        self.parser = self.get_argparser()
+
+    def get_root_inode(self, addr_or_expr):
         try:
-            args = parser.parse_args(argv)
+            return utils.Value(int(addr_or_expr, 0)).cast(
+                gdb.lookup_type("struct inode").pointer()
+            )
+        except ValueError:
+            return utils.gdb_eval_or_none(addr_or_expr)
+
+    def parse_arguments(self, argv):
+        try:
+            args = self.parser.parse_args(argv)
         except SystemExit:
             return None
 
@@ -539,25 +548,30 @@ class InfoShmfs(gdb.Command):
             self.block_count += 1
 
 
+@autocompeletion.complete
 class InfoRomfs(gdb.Command):
     """Show romfs cache information"""
 
-    def __init__(self):
-        if utils.get_symbol_value("CONFIG_FS_ROMFS_CACHE_NODE"):
-            super().__init__("info romfs", gdb.COMMAND_USER)
-
-    def parse_arguments(self, argv):
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
             "-P",
             "--path",
             type=str,
+            metavar="file",
             default=None,
             help="set the romfs path to be dumped",
         )
+        return parser
 
+    def __init__(self):
+        if utils.get_symbol_value("CONFIG_FS_ROMFS_CACHE_NODE"):
+            super().__init__("info romfs", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
+
+    def parse_arguments(self, argv):
         try:
-            args = parser.parse_args(argv)
+            args = self.parser.parse_args(argv)
         except SystemExit:
             return None
 
@@ -626,6 +640,7 @@ class InfoRomfs(gdb.Command):
             self.dump_romfs_cache(node, path)
 
 
+@autocompeletion.complete
 class InfoYaffs(gdb.Command):
     """Show yaffs cache information"""
 
@@ -638,22 +653,26 @@ class InfoYaffs(gdb.Command):
         5: "yaffs_SPECIAL_var",
     }
 
-    def __init__(self):
-        if utils.get_symbol_value("CONFIG_FS_YAFFS"):
-            super().__init__("info yaffs", gdb.COMMAND_USER)
-
-    def parse_arguments(self, argv):
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=gdb.__doc__)
         parser.add_argument(
             "-P",
             "--path",
             type=str,
+            metavar="file",
             default=None,
             help="set the yaffs path to be dumped",
         )
+        return parser
 
+    def __init__(self):
+        if utils.get_symbol_value("CONFIG_FS_YAFFS"):
+            super().__init__("info yaffs", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
+
+    def parse_arguments(self, argv):
         try:
-            args = parser.parse_args(argv)
+            args = self.parser.parse_args(argv)
         except SystemExit:
             return None
 

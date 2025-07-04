@@ -24,7 +24,7 @@ import sys
 
 import gdb
 
-from . import memdump, mm, utils
+from . import autocompeletion, memdump, mm, utils
 
 
 class Classifier:
@@ -296,18 +296,16 @@ class MemBlockCoredump(MemBlock):
         return self.call_stack
 
 
+@autocompeletion.complete
 class MMClassify(gdb.Command):
     """classify memory by callstack"""
 
-    def __init__(self):
-        super().__init__("mm classify", gdb.COMMAND_USER)
-        utils.alias("memclassify", "mm classify")
-
-    def parse_args(self, argv):
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description="Memory Classify")
         parser.add_argument(
             "-o",
             "--output-dir",
+            metavar="file",
             default="memclass.output",
             help="Specify the directory to save the the call stack files after categorization",
         )
@@ -331,11 +329,19 @@ class MMClassify(gdb.Command):
             "-l",
             "--log",
             default=None,
+            metavar="file",
             help="Specify the memdump log file.",
         )
+        return parser
 
+    def __init__(self):
+        super().__init__("mm classify", gdb.COMMAND_USER)
+        utils.alias("memclassify", "mm classify")
+        self.parser = self.get_argparser()
+
+    def parse_args(self, argv):
         try:
-            args = parser.parse_args(argv)
+            args = self.parser.parse_args(argv)
         except SystemExit:
             return False
 

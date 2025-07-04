@@ -22,22 +22,17 @@ import argparse
 
 import gdb
 
-from . import utils
+from . import autocompeletion, utils
 from .lists import NxDQueue
 
 CONFIG_TLS_NELEM = utils.get_field_nitems("struct tls_info_s", "tl_elem")
 
 
+@autocompeletion.complete
 class TlsDump(gdb.Command):
     """Dump and check the integrity of tls_info and task_info"""
 
-    def __init__(self):
-        if not CONFIG_TLS_NELEM:
-            print("TLS is not enabled in the current configuration")
-            return
-        super().__init__("tlsdump", gdb.COMMAND_USER)
-
-    def parse_arguments(self, argv):
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
             "-p",
@@ -52,9 +47,18 @@ class TlsDump(gdb.Command):
             action="store_true",
             help="Integrity check.All threads in a task must share the same task_info",
         )
+        return parser
 
+    def __init__(self):
+        if not CONFIG_TLS_NELEM:
+            print("TLS is not enabled in the current configuration")
+            return
+        super().__init__("tlsdump", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
+
+    def parse_arguments(self, argv):
         try:
-            args = parser.parse_args(argv)
+            args = self.parser.parse_args(argv)
         except SystemExit:
             return None
 

@@ -29,7 +29,7 @@ try:
 except SystemExit:
     pass
 
-from . import utils
+from . import autocompeletion, utils
 
 
 class NoteRam:
@@ -83,13 +83,27 @@ class NoteRam:
             ) % bufsize
 
 
+@autocompeletion.complete
 class NoteRamCommand(gdb.Command):
     """GDB command to parse and dump noteram datas"""
+
+    def get_argparser(self):
+        parser = argparse.ArgumentParser(description=self.__doc__)
+        parser.add_argument(
+            "-o",
+            "--output-path",
+            type=str,
+            metavar="file",
+            default="noteram.perfetto",
+            help="Specify the output path for the Perfetto file",
+        )
+        return parser
 
     def __init__(self):
         if not utils.get_field_nitems("struct noteram_driver_s", "buffer"):
             return
         super().__init__("noteram", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
 
     def init_note_factory(self, out_path):
         """Initialize NoteFactory"""
@@ -118,16 +132,8 @@ class NoteRamCommand(gdb.Command):
         return notes
 
     def parse_arguments(self, argv):
-        parser = argparse.ArgumentParser(description=self.__doc__)
-        parser.add_argument(
-            "-o",
-            "--output-path",
-            type=str,
-            default="noteram.perfetto",
-            help="Specify the output path for the Perfetto file",
-        )
         try:
-            args = parser.parse_args(argv)
+            args = self.parser.parse_args(argv)
         except SystemExit:
             return None
         return args

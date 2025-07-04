@@ -24,7 +24,7 @@ from os import path
 
 import gdb
 
-from . import utils
+from . import autocompeletion, utils
 
 
 def get_commit_id():
@@ -50,13 +50,11 @@ machine = str(utils.get_symbol_value("CONFIG_ARCH")).replace('"', "")
 tool_version = get_commit_id()
 
 
+@autocompeletion.complete
 class UnameCommand(gdb.Command):
     """Output specific system information"""
 
-    def __init__(self):
-        super().__init__("uname", gdb.COMMAND_USER)
-
-    def parse_arguments(self, argv):
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
             "-a",
@@ -96,9 +94,15 @@ class UnameCommand(gdb.Command):
             action="store_true",
             help="Display version information and exit",
         )
+        return parser
 
+    def __init__(self):
+        super().__init__("uname", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
+
+    def parse_arguments(self, argv):
         try:
-            args = parser.parse_args(argv)
+            args = self.parser.parse_args(argv)
         except SystemExit:
             return None
 

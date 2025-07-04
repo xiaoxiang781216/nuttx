@@ -25,7 +25,7 @@ from gc import get_referrers
 
 import gdb
 
-from . import utils
+from . import autocompeletion, utils
 
 
 class DiagnosePrefix(gdb.Command):
@@ -35,19 +35,17 @@ class DiagnosePrefix(gdb.Command):
         super().__init__("diagnose", gdb.COMMAND_USER, prefix=True)
 
 
+@autocompeletion.complete
 class DiagnoseReport(gdb.Command):
     """Run diagnostics to generate reports."""
 
-    def __init__(self):
-        super().__init__("diagnose report", gdb.COMMAND_USER)
-
-    @utils.dont_repeat_decorator
-    def invoke(self, args, from_tty):
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
             "-o",
             "--output",
             type=str,
+            metavar="file",
             help="report output file name",
         )
         parser.add_argument(
@@ -59,9 +57,16 @@ class DiagnoseReport(gdb.Command):
         parser.add_argument(
             "-l", "--list", action="store_true", help="list available commands"
         )
+        return parser
 
+    def __init__(self):
+        super().__init__("diagnose report", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
+
+    @utils.dont_repeat_decorator
+    def invoke(self, args, from_tty):
         try:
-            args = parser.parse_args(gdb.string_to_argv(args))
+            args = self.parser.parse_args(gdb.string_to_argv(args))
         except SystemExit:
             return
 

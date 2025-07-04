@@ -24,13 +24,14 @@ import argparse
 
 import gdb
 
-from . import utils
+from . import autocompeletion, utils
 from .lists import NxList
 
 RPMSG_HOST = 0
 RPMSG_DEVICE = 1
 
 
+@autocompeletion.complete
 class RPMsgDump(gdb.Command):
     """Dump rpmsg service"""
 
@@ -65,11 +66,7 @@ class RPMsgDump(gdb.Command):
         "{:<12} {:<8} {:<5} {:<5} {:<7} {:<14} {:<14} {:<10} {:<12} {:<14} {:<9} {:<11}"
     )
 
-    def __init__(self):
-        if utils.get_symbol_value("CONFIG_RPMSG"):
-            super(RPMsgDump, self).__init__("rpmsgdump", gdb.COMMAND_USER)
-
-    def parse_args(self, arg):
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
             "-f",
@@ -77,9 +74,16 @@ class RPMsgDump(gdb.Command):
             action="store_true",
             help="Dump the rpmsg information fullly",
         )
+        return parser
 
+    def __init__(self):
+        if utils.get_symbol_value("CONFIG_RPMSG"):
+            super(RPMsgDump, self).__init__("rpmsgdump", gdb.COMMAND_USER)
+            self.parser = self.get_argparser()
+
+    def parse_args(self, arg):
         try:
-            return parser.parse_args(gdb.string_to_argv(arg))
+            return self.parser.parse_args(gdb.string_to_argv(arg))
         except SystemExit:
             return
 

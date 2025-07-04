@@ -38,6 +38,7 @@ from typing import List, Optional, Union
 import gdb
 from nxelf.macros import fetch_macro_info, try_expand
 
+from . import autocompeletion
 from .protocols.thread import Tcb
 
 g_symbol_cache = {}
@@ -1333,6 +1334,7 @@ class Hexdump(gdb.Command):
         hexdump(address, size)
 
 
+@autocompeletion.complete
 class Addr2Line(gdb.Command):
     """Convert addresses or expressions
 
@@ -1346,6 +1348,21 @@ class Addr2Line(gdb.Command):
     """
 
     formatter = "{:<20} {:<32} {}\n"
+
+    def get_argparser(self):
+        parser = argparse.ArgumentParser(
+            description="Convert addresses or expressions to source code location"
+        )
+        parser.add_argument(
+            "-f", "--file", type=str, metavar="file", help="Crash log to analyze."
+        )
+        parser.add_argument(
+            "-p",
+            "--pid",
+            type=int,
+            help="Only dump specified task backtrace from crash file.",
+        )
+        return parser
 
     def __init__(self):
         super().__init__("addr2line", gdb.COMMAND_USER)
@@ -1361,21 +1378,9 @@ class Addr2Line(gdb.Command):
         if not args:
             gdb.write(Addr2Line.__doc__ + "\n")
             return
-
-        parser = argparse.ArgumentParser(
-            description="Convert addresses or expressions to source code location"
-        )
-        parser.add_argument("-f", "--file", type=str, help="Crash log to analyze.")
-        parser.add_argument(
-            "-p",
-            "--pid",
-            type=int,
-            help="Only dump specified task backtrace from crash file.",
-        )
-
         pargs = None
         try:
-            pargs, _ = parser.parse_known_args(gdb.string_to_argv(args))
+            pargs, _ = self.parser.parse_known_args(gdb.string_to_argv(args))
         except SystemExit:
             pass
 
@@ -1419,18 +1424,22 @@ class Addr2Line(gdb.Command):
             self.print_backtrace(addresses)
 
 
+@autocompeletion.complete
 class BacktracePool(gdb.Command):
     """Display the global backtrace information"""
+
+    def get_argparser(self):
+        parser = argparse.ArgumentParser(description=self.__doc__)
+        parser.add_argument("-d", "--detail", action="store_true")
+        parser.add_argument("-t", "--top", type=int, help="Display the top N backtrace")
+        return parser
 
     def __init__(self):
         super().__init__("backtracepool", gdb.COMMAND_USER)
 
     def invoke(self, args, from_tty):
         g_backtrace_pool = parse_and_eval("g_backtrace_pool")
-        parser = argparse.ArgumentParser(description=self.__doc__)
-        parser.add_argument("-d", "--detail", action="store_true")
-        parser.add_argument("-t", "--top", type=int, help="Display the top N backtrace")
-        args = parser.parse_args(gdb.string_to_argv(args))
+        args = self.parser.parse_args(gdb.string_to_argv(args))
 
         formatter = "{:>8} {:>8} {:>10} {:}\n"
         btformat = formatter.format("", "", "", "")[:-1] + "{1:<48}{2}\n"

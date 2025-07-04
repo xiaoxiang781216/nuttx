@@ -24,7 +24,7 @@ import argparse
 
 import gdb
 
-from . import utils
+from . import autocompeletion, utils
 
 list_node_type = utils.lookup_type("struct list_node")
 sq_queue_type = utils.lookup_type("sq_queue_t")
@@ -345,19 +345,13 @@ class ListCheck(gdb.Command):
             raise gdb.GdbError("Invalid argument type: {}".format(obj.type))
 
 
+@autocompeletion.complete
 class ForeachListEntry(gdb.Command):
     """Dump list members for a given list"""
 
-    def __init__(self):
-        super().__init__("foreach list", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
-        utils.alias("list-foreach", "foreach list")
-
-    @utils.dont_repeat_decorator
-    def invoke(self, arg, from_tty):
-        argv = gdb.string_to_argv(arg)
-
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description="Iterate the items in list")
-        parser.add_argument("head", type=str, help="List head")
+        parser.add_argument("head", type=str, help="List head", metavar="symbol")
         parser.add_argument(
             "-n",
             "--next",
@@ -378,8 +372,18 @@ class ForeachListEntry(gdb.Command):
             help="Only dump this element in array member struct.",
             default=None,
         )
+        return parser
+
+    def __init__(self):
+        super().__init__("foreach list", gdb.COMMAND_DATA)
+        utils.alias("list-foreach", "foreach list")
+        self.parser = self.get_argparser()
+
+    @utils.dont_repeat_decorator
+    def invoke(self, arg, from_tty):
+        argv = gdb.string_to_argv(arg)
         try:
-            args = parser.parse_args(argv)
+            args = self.parser.parse_args(argv)
         except SystemExit:
             gdb.write("Invalid arguments\n")
             return
@@ -404,17 +408,11 @@ class ForeachListEntry(gdb.Command):
                 break
 
 
+@autocompeletion.complete
 class ForeachArray(gdb.Command):
     """Dump array members."""
 
-    def __init__(self):
-        super().__init__("foreach array", gdb.COMMAND_DATA, gdb.COMPLETE_EXPRESSION)
-        utils.alias("array-foreach", "foreach array")
-
-    @utils.dont_repeat_decorator
-    def invoke(self, arg, from_tty):
-        argv = gdb.string_to_argv(arg)
-
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description="Iterate the items in array")
         parser.add_argument("head", type=str, help="List head")
         parser.add_argument(
@@ -431,8 +429,17 @@ class ForeachArray(gdb.Command):
             help="Only dump this element in array member struct.",
             default=None,
         )
+        return parser
+
+    def __init__(self):
+        super().__init__("foreach array", gdb.COMMAND_DATA)
+        utils.alias("array-foreach", "foreach array")
+
+    @utils.dont_repeat_decorator
+    def invoke(self, arg, from_tty):
+        argv = gdb.string_to_argv(arg)
         try:
-            args = parser.parse_args(argv)
+            args = self.parser.parse_args(argv)
         except SystemExit:
             gdb.write("Invalid arguments\n")
             return

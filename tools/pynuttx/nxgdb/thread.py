@@ -28,7 +28,7 @@ import gdb
 from nxelf.elf import LiefELF
 from nxreg.register import Registers, get_arch_name
 
-from . import utils
+from . import autocompeletion, utils
 from .stack import Stack
 
 
@@ -133,6 +133,7 @@ class RegInfoCommand(gdb.Command):
             )
 
 
+@autocompeletion.complete
 class SetRegs(gdb.Command):
     """Load registers from TCB context memory address.
     Usage: setregs [regs]
@@ -145,11 +146,7 @@ class SetRegs(gdb.Command):
     If the memory address is NULL, it will not set registers.
     """
 
-    def __init__(self):
-        super().__init__("setregs", gdb.COMMAND_USER)
-
-    @utils.dont_repeat_decorator
-    def invoke(self, arg, from_tty):
+    def get_argparser(self):
         parser = argparse.ArgumentParser(
             description="Set registers to the specified values"
         )
@@ -158,11 +155,19 @@ class SetRegs(gdb.Command):
             "regs",
             nargs="?",
             default="",
+            metavar="symbol",
             help="The memory address to load register values, use g_running_tasks.xcp.regs if not specified",
         )
+        return parser
 
+    def __init__(self):
+        super().__init__("setregs", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
+
+    @utils.dont_repeat_decorator
+    def invoke(self, arg, from_tty):
         try:
-            args = parser.parse_args(gdb.string_to_argv(arg))
+            args = self.parser.parse_args(gdb.string_to_argv(arg))
         except SystemExit:
             return
 

@@ -29,7 +29,7 @@ from typing import Dict, Generator, List, Protocol, Tuple
 
 import gdb
 
-from . import mm, utils
+from . import autocompeletion, mm, utils
 
 
 class MMNodeDump(Protocol):
@@ -221,15 +221,11 @@ def parse_memdump_log(logfile, filters=None) -> Generator[MMNodeDump, None, None
     return filter(filter_node(**filters), nodes) if filters else nodes
 
 
+@autocompeletion.complete
 class MMDump(gdb.Command):
     """Dump memory manager heap"""
 
-    def __init__(self):
-        super().__init__("mm dump", gdb.COMMAND_USER)
-        # define memdump as mm dump
-        utils.alias("memdump", "mm dump")
-
-    def parse_args(self, arg):
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
             "-a",
@@ -310,9 +306,17 @@ class MMDump(gdb.Command):
             default="count",
             help="sort the node by size(nodesize * count), nodesize,  count or sequence number",
         )
+        return parser
 
+    def __init__(self):
+        super().__init__("mm dump", gdb.COMMAND_USER)
+        # define memdump as mm dump
+        utils.alias("memdump", "mm dump")
+        self.parser = self.get_argparser()
+
+    def parse_args(self, arg):
         try:
-            return parser.parse_args(gdb.string_to_argv(arg))
+            return self.parser.parse_args(gdb.string_to_argv(arg))
         except SystemExit:
             return
 
@@ -438,15 +442,11 @@ class MMDump(gdb.Command):
             print(f"Total {total_blk} blks, {total_size} bytes")
 
 
+@autocompeletion.complete
 class MMfrag(gdb.Command):
     """Show memory fragmentation rate and analyze fragmentation causes"""
 
-    def __init__(self):
-        super().__init__("mm frag", gdb.COMMAND_USER)
-        utils.alias("memfrag", "mm frag")
-
-    def parse_arguments(self, argv):
-        """Parse command line arguments"""
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
             "--heap",
@@ -474,13 +474,12 @@ class MMfrag(gdb.Command):
             action="store_true",
             help="Do not print backtrace",
         )
+        return parser
 
-        try:
-            args = parser.parse_args(argv)
-        except SystemExit:
-            return None
-
-        return args
+    def __init__(self):
+        super().__init__("mm frag", gdb.COMMAND_USER)
+        utils.alias("memfrag", "mm frag")
+        self.parser = self.get_argparser()
 
     def show_fragmentation_rate(self, heap: mm.MMHeap):
         """Calculate and display fragmentation rate for a heap"""
@@ -581,7 +580,7 @@ class MMfrag(gdb.Command):
 
     @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
-        parsed_args = self.parse_arguments(gdb.string_to_argv(args))
+        parsed_args = self.parser.parse_args(gdb.string_to_argv(args))
         if not parsed_args:
             return
 
@@ -602,8 +601,24 @@ class MMfrag(gdb.Command):
         }
 
 
+@autocompeletion.complete
 class MMMap(gdb.Command):
     """Generate memory map image to visualize memory layout"""
+
+    def get_argparser(self):
+        parser = argparse.ArgumentParser(description=self.__doc__)
+        parser.add_argument(
+            "-o",
+            "--output",
+            type=str,
+            metavar="file",
+            default=None,
+            help="img output file",
+        )
+        parser.add_argument(
+            "--heap", type=str, help="Which heap's pool to show", default=None
+        )
+        return parser
 
     def __init__(self):
         self.np = utils.import_check("numpy", errmsg="Please pip install numpy\n")
@@ -616,6 +631,7 @@ class MMMap(gdb.Command):
 
         super().__init__("mm map", gdb.COMMAND_USER)
         utils.alias("memmap", "mm map")
+        self.parser = self.get_argparser()
 
     def save_memory_map(self, nodes: List[MMNodeDump], output_file):
         mallinfo = sorted(nodes, key=lambda node: node.address)
@@ -634,16 +650,8 @@ class MMMap(gdb.Command):
         self.plt.imsave(output_file, img, cmap=self.plt.get_cmap("Greens"))
 
     def parse_arguments(self, argv):
-        parser = argparse.ArgumentParser(description=self.__doc__)
-        parser.add_argument(
-            "-o", "--output", type=str, default=None, help="img output file"
-        )
-        parser.add_argument(
-            "--heap", type=str, help="Which heap's pool to show", default=None
-        )
-
         try:
-            args = parser.parse_args(argv)
+            args = self.parser.parse_args(argv)
         except SystemExit:
             return None
 
@@ -661,8 +669,24 @@ class MMMap(gdb.Command):
             gdb.write(f"Memory map saved to {output}\n")
 
 
+@autocompeletion.complete
 class MMVisualize(gdb.Command):
     """Generates a memory treemap, showing all backtrace statistics"""
+
+    def get_argparser(self):
+        parser = argparse.ArgumentParser(description=self.__doc__)
+        parser.add_argument(
+            "-o",
+            "--output",
+            type=str,
+            metavar="file",
+            default="mm_visualize",
+            help="html output file",
+        )
+        parser.add_argument(
+            "--heap", type=str, help="Which heap's pool to show", default=None
+        )
+        return parser
 
     def __init__(self):
         self.backtrace_depth = mm.MM_RECORD_STACK_DEPTH
@@ -678,23 +702,12 @@ class MMVisualize(gdb.Command):
             "plotly.express", errmsg="Please pip install plotly\n"
         )
         self.pd = utils.import_check("pandas", errmsg="Please pip install pandas\n")
+        self.parser = self.get_argparser()
 
     @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
-        parser = argparse.ArgumentParser(description=self.__doc__)
-        parser.add_argument(
-            "-o",
-            "--output",
-            type=str,
-            default="mm_visualize",
-            help="html output file",
-        )
-        parser.add_argument(
-            "--heap", type=str, help="Which heap's pool to show", default=None
-        )
-
         try:
-            args = parser.parse_args(gdb.string_to_argv(args))
+            args = self.parser.parse_args(gdb.string_to_argv(args))
         except SystemExit:
             return
 
@@ -918,23 +931,27 @@ class MMFree(gdb.Command):
         }
 
 
+@autocompeletion.complete
 class NxMemoryRange(gdb.Command):
     """Show RAM range of heap and sections"""
 
-    def __init__(self):
-        super().__init__("mm range", gdb.COMMAND_USER)
-        utils.alias("memrange", "mm range")
-
-    @utils.dont_repeat_decorator
-    def invoke(self, arg, from_tty):
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument("--heap-only", action="store_true", help="Heap only")
         parser.add_argument(
             "--globals-only", action="store_true", help="Global variables only"
         )
+        return parser
 
+    def __init__(self):
+        super().__init__("mm range", gdb.COMMAND_USER)
+        utils.alias("memrange", "mm range")
+        self.parser = self.get_argparser()
+
+    @utils.dont_repeat_decorator
+    def invoke(self, arg, from_tty):
         try:
-            args = parser.parse_args(gdb.string_to_argv(arg))
+            args = self.parser.parse_args(gdb.string_to_argv(arg))
         except SystemExit:
             return
 
@@ -948,29 +965,39 @@ class NxMemoryRange(gdb.Command):
         print(formatter.format(*header))
         for start, end in memrange:
             length = end - start
-            print(formatter.format(hex(start), hex(end), length, f"{length/1024: .1f}"))
+            print(
+                formatter.format(hex(start), hex(end), length, f"{length / 1024: .1f}")
+            )
 
 
+@autocompeletion.complete
 class NxDumpRAM(gdb.Command):
     """Dump memory to file, similar to GDB dump memory"""
 
-    def __init__(self):
-        super().__init__("dump ram", gdb.COMMAND_USER)
-
-    @utils.dont_repeat_decorator
-    def invoke(self, arg: str, from_tty: bool) -> None:
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
-            "-o", "--output", help="Memory dump output directory", default="memdump"
+            "-o",
+            "--output",
+            help="Memory dump output directory",
+            metavar="file",
+            default="memdump",
         )
         parser.add_argument("-r", "--memrange", type=str, default=None)
         parser.add_argument("--heap-only", action="store_true", help="Heap only")
         parser.add_argument(
             "--globals-only", action="store_true", help="Global variables only"
         )
+        return parser
 
+    def __init__(self):
+        super().__init__("dump ram", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
+
+    @utils.dont_repeat_decorator
+    def invoke(self, arg: str, from_tty: bool) -> None:
         try:
-            args = parser.parse_args(gdb.string_to_argv(arg))
+            args = self.parser.parse_args(gdb.string_to_argv(arg))
         except SystemExit:
             return
 
@@ -998,15 +1025,11 @@ class NxDumpRAM(gdb.Command):
                 f.write(data)
 
 
+@autocompeletion.complete
 class NxMemoryFind(gdb.Command):
     """Find memory address by pattern"""
 
-    def __init__(self):
-        super().__init__("mm find", gdb.COMMAND_USER)
-        utils.alias("memfind", "mm find")
-
-    @utils.dont_repeat_decorator
-    def invoke(self, arg: str, from_tty: bool) -> None:
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument("pattern", type=str, help="Pattern to search")
         parser.add_argument("-r", "--memrange", type=str, default=None)
@@ -1014,9 +1037,17 @@ class NxMemoryFind(gdb.Command):
         parser.add_argument(
             "--globals-only", action="store_true", help="Global variables only"
         )
+        return parser
 
+    def __init__(self):
+        super().__init__("mm find", gdb.COMMAND_USER)
+        utils.alias("memfind", "mm find")
+        self.parser = self.get_argparser()
+
+    @utils.dont_repeat_decorator
+    def invoke(self, arg: str, from_tty: bool) -> None:
         try:
-            args = parser.parse_args(gdb.string_to_argv(arg))
+            args = self.parser.parse_args(gdb.string_to_argv(arg))
         except SystemExit:
             return
 

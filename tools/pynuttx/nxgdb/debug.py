@@ -30,21 +30,7 @@ from . import utils
 class DebugPy(gdb.Command):
     """Start debugpy server, so we can debug python code from IDE like VSCode"""
 
-    def __init__(self):
-        debugpy = utils.import_check("debugpy", errmsg="Please pip install debugpy")
-        if not debugpy:
-            return
-
-        self.debugpy = debugpy
-        super().__init__("debugpy", gdb.COMMAND_USER)
-
-    @utils.dont_repeat_decorator
-    def invoke(self, args, from_tty):
-        debugpy = self.debugpy
-        if debugpy.is_client_connected():
-            gdb.write("debugpy is already running.\n")
-            return
-
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=DebugPy.__doc__)
         parser.add_argument(
             "-p",
@@ -53,9 +39,25 @@ class DebugPy(gdb.Command):
             type=int,
             help="Server listening port",
         )
+        return parser
 
+    def __init__(self):
+        debugpy = utils.import_check("debugpy", errmsg="Please pip install debugpy")
+        if not debugpy:
+            return
+
+        self.debugpy = debugpy
+        super().__init__("debugpy", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
+
+    @utils.dont_repeat_decorator
+    def invoke(self, args, from_tty):
+        debugpy = self.debugpy
+        if debugpy.is_client_connected():
+            gdb.write("debugpy is already running.\n")
+            return
         try:
-            args = parser.parse_args(gdb.string_to_argv(args))
+            args = self.parser.parse_args(gdb.string_to_argv(args))
         except SystemExit:
             return
 

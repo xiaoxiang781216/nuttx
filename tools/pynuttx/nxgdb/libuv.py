@@ -22,7 +22,7 @@ import argparse
 
 import gdb
 
-from . import lists, utils
+from . import autocompeletion, lists, utils
 
 
 class UVQueue(lists.NxList):
@@ -41,11 +41,33 @@ class UVQueue(lists.NxList):
         return node["prev"] if node["prev"] != self.list else None
 
 
+@autocompeletion.complete
 class UVDump(gdb.Command):
     """Dump the information of uv_loop & handle_queue & uv_worker in libuv"""
 
+    def get_argparser(self):
+        parser = argparse.ArgumentParser(description="libuv dump command")
+        parser.add_argument(
+            "mode",
+            nargs="?",
+            choices=["loop", "handle_queue", "uv_worker"],
+            default="loop",
+        )
+        parser.add_argument("-p", "--pid", type=int, help="Thread PID of Quickapp")
+        parser.add_argument("-l", "--loop", type=str, help="address of uv_loop_t")
+        parser.add_argument(
+            "-d",
+            "--detail",
+            action="store_const",
+            const=True,
+            default=False,
+            help="print more detail information",
+        )
+        return parser
+
     def __init__(self):
         super(UVDump, self).__init__("uv dump", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
 
     def dump_loop(self, loop):
         if not loop:
@@ -127,26 +149,8 @@ class UVDump(gdb.Command):
 
     @utils.dont_repeat_decorator
     def invoke(self, argument: str, from_tty: bool):
-        parser = argparse.ArgumentParser(description="libuv dump command")
-        parser.add_argument(
-            "mode",
-            nargs="?",
-            choices=["loop", "handle_queue", "uv_worker"],
-            default="loop",
-        )
-        parser.add_argument("-p", "--pid", type=int, help="Thread PID of Quickapp")
-        parser.add_argument("-l", "--loop", type=str, help="address of uv_loop_t")
-        parser.add_argument(
-            "-d",
-            "--detail",
-            action="store_const",
-            const=True,
-            default=False,
-            help="print more detail information",
-        )
-
         try:
-            args = parser.parse_args(gdb.string_to_argv(argument))
+            args = self.parser.parse_args(gdb.string_to_argv(argument))
         except SystemExit:
             gdb.write("invalid arguments.\n")
             return
