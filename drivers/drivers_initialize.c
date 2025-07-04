@@ -52,7 +52,6 @@
 #include <nuttx/serial/pty.h>
 #include <nuttx/serial/uart_hostfs.h>
 #include <nuttx/serial/uart_ram.h>
-#include <nuttx/sysevent/sysevent_dev.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/syslog/syslog_console.h>
 #include <nuttx/syslog/syslog_rpmsg.h>
@@ -138,10 +137,6 @@ void drivers_initialize(void)
 #endif
 
   syslog_initialize();
-
-#ifdef CONFIG_SYSEVENT
-  sysevent_dev_init();
-#endif
 
 #ifdef CONFIG_SERIAL_RTT
   serial_rtt_initialize();

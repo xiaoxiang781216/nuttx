@@ -85,7 +85,6 @@ include rc/Make.defs
 include segger/Make.defs
 include usrsock/Make.defs
 include binder/Make.defs
-include sysevent/Make.defs
 include reset/Make.defs
 include pci/Make.defs
 include hwtracing/Make.defs
