@@ -103,7 +103,15 @@ static void tcp_close_connection(FAR struct tcp_conn_s *conn, uint16_t flags)
        * (eventually) be reported as an ENOTCONN error.
        */
 
-      conn->sconn.s_flags &= ~(_SF_CONNECTED | _SF_CLOSED);
+      conn->sconn.s_flags &= ~_SF_CONNECTED;
+      if (conn->tcpstateflags == TCP_SYN_SENT && (flags & TCP_ABORT) != 0)
+        {
+          conn->sconn.s_flags |= _SF_CLOSED;
+        }
+      else
+        {
+          conn->sconn.s_flags &= ~_SF_CLOSED;
+        }
     }
 }
 
