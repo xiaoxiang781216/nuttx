@@ -79,12 +79,19 @@ static int can_input_conn(FAR struct net_driver_s *dev,
   if (conn->rxcb != NULL)
     {
       FAR uint8_t *frame = dev->d_buf;
+      FAR struct iob_s *iob = dev->d_iob;
+
+      dev->d_buf = NULL;
+      dev->d_iob = NULL;
       flags = CAN_NEWDATA;
       ret = conn->rxcb(conn->rxarg, frame);
       if (ret == OK)
         {
           flags = 0;
         }
+
+      netdev_iob_replace(dev, iob);
+      dev->d_buf = frame;
     }
   else
     {
