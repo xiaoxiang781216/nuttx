@@ -38,114 +38,8 @@
 #include "sched/sched.h"
 
 /****************************************************************************
- * Private Type Declarations
- ****************************************************************************/
-
-#ifdef CONFIG_SMP
-struct reprioritize_arg_s
-{
-  pid_t pid;
-  cpu_set_t saved_affinity;
-  int  sched_priority;
-  bool need_restore;
-};
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-static int reprioritize_handler(FAR void *cookie)
-{
-  FAR struct reprioritize_arg_s *arg = cookie;
-  FAR struct tcb_s *rtcb = this_task();
-  FAR struct tcb_s *tcb;
-  irqstate_t flags;
-
-  flags = enter_critical_section();
-
-  tcb = nxsched_get_tcb(arg->pid);
-
-  if (!tcb || tcb->task_state == TSTATE_TASK_INVALID ||
-      (atomic_read(&tcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
-    {
-      leave_critical_section(flags);
-      nxsched_put_tcb(tcb);
-      return OK;
-    }
-
-  if (arg->need_restore)
-    {
-      tcb->affinity = arg->saved_affinity;
-      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_CPU_LOCKED);
-    }
-
-  if (nxsched_reprioritize_rtr(tcb, arg->sched_priority))
-    {
-      nxscehd_switch(this_task(), rtcb);
-    }
-
-  leave_critical_section(flags);
-  nxsched_put_tcb(tcb);
-  return OK;
-}
-#endif
-
-/****************************************************************************
- * Name: nxsched_nexttcb
- *
- * Description:
- *   Get the next highest priority ready-to-run task.
- *
- * Input Parameters:
- *   tcb - the TCB of task to reprioritize.
- *
- * Returned Value:
- *   TCB of the next highest priority ready-to-run task.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SMP
-static FAR struct tcb_s *nxsched_nexttcb(FAR struct tcb_s *tcb)
-{
-  FAR struct tcb_s *nxttcb = tcb->flink;
-  FAR struct tcb_s *rtrtcb;
-
-  /* Which task should run next?  It will be either the next tcb in the
-   * assigned task list (nxttcb) or a TCB in the g_readytorun list.  We can
-   * only select a task from that list if the affinity mask includes the
-   * tcb->cpu.
-   *
-   * If pre-emption is locked or another CPU is in a critical section,
-   * then use the 'nxttcb' which will probably be the IDLE thread.
-   */
-
-  if (!nxsched_islocked_tcb(this_task()))
-    {
-      /* Search for the highest priority task that can run on tcb->cpu. */
-
-      for (rtrtcb = (FAR struct tcb_s *)list_readytorun()->head;
-           rtrtcb != NULL && !CPU_ISSET(tcb->cpu, &rtrtcb->affinity);
-           rtrtcb = rtrtcb->flink);
-
-      /* Return the TCB from the readyt-to-run list if it is the next
-       * highest priority task.
-       */
-
-      if (rtrtcb != NULL &&
-          rtrtcb->sched_priority >= nxttcb->sched_priority)
-        {
-          return rtrtcb;
-        }
-    }
-
-  /* Otherwise, return the next TCB in the g_assignedtasks[] list...
-   * probably the TCB of the IDLE thread.
-   * REVISIT:  What if it is not the IDLE thread?
-   */
-
-  return nxttcb;
-}
-#endif
 
 /****************************************************************************
  * Name:  nxsched_running_setpriority
@@ -177,12 +71,17 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
   /* Get the TCB of the next highest priority, ready to run task */
 
 #ifdef CONFIG_SMP
-  nxttcb = nxsched_nexttcb(tcb);
+  nxttcb = (FAR struct tcb_s *)dq_peek(list_readytorun());
 #else
   nxttcb = tcb->flink;
 #endif
 
-  DEBUGASSERT(nxttcb != NULL);
+  /* A context switch will occur if the new priority of the running
+   * task becomes less than OR EQUAL TO the next highest priority
+   * ready to run task.
+   */
+
+#ifdef CONFIG_SMP
 
   /* A context switch will occur:
    * CASE 1. The new priority of the running task becomes less than or
@@ -191,13 +90,19 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
    * the current cpu.
    */
 
-#ifdef CONFIG_SMP
-  if (sched_priority <= nxttcb->sched_priority ||
+  if ((nxttcb && sched_priority <= nxttcb->sched_priority) ||
       (tcb->affinity & (1 << tcb->cpu)) == 0)
 #else
-  if (sched_priority <= nxttcb->sched_priority)
+  if (nxttcb && sched_priority <= nxttcb->sched_priority)
 #endif
     {
+#ifdef CONFIG_SMP
+      tcb->sched_priority = (uint8_t)sched_priority;
+      if (nxsched_deliver_task(this_cpu(), tcb->cpu, SWITCH_EQUAL))
+        {
+          nxscehd_switch(this_task(), tcb);
+        }
+#else
       FAR struct tcb_s *rtcb = this_task();
 
       if (rtcb->lockcount > 0)
@@ -215,11 +120,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
               nxsched_add_prioritized(nxttcb, list_pendingtasks());
               nxttcb->task_state = TSTATE_TASK_PENDING;
 
-#ifdef CONFIG_SMP
-              nxttcb = nxsched_nexttcb(tcb);
-#else
               nxttcb = tcb->flink;
-#endif
             }
           while (sched_priority < nxttcb->sched_priority);
 
@@ -231,36 +132,12 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
         {
           /* A context switch will occur. */
 
-#ifdef CONFIG_SMP
-          if (tcb->cpu != this_cpu() &&
-              tcb->task_state == TSTATE_TASK_RUNNING)
-            {
-              struct reprioritize_arg_s arg;
-
-              arg.pid = tcb->pid;
-              if (atomic_fetch_or(&tcb->flags, TCB_FLAG_CPU_LOCKED) &
-                  TCB_FLAG_CPU_LOCKED)
-                {
-                  arg.need_restore = false;
-                }
-              else
-                {
-                  arg.saved_affinity = tcb->affinity;
-                  arg.need_restore = true;
-                  CPU_ZERO(&tcb->affinity);
-                  CPU_SET(tcb->cpu, &tcb->affinity);
-                }
-
-              arg.sched_priority = sched_priority;
-              nxsched_smp_call_single(tcb->cpu, reprioritize_handler, &arg);
-            }
-          else
-#endif
           if (nxsched_reprioritize_rtr(tcb, sched_priority))
             {
               nxscehd_switch(this_task(), rtcb);
             }
         }
+#endif
     }
 
   /* Otherwise, we can just change priority since it has no effect */
@@ -297,9 +174,13 @@ static void nxsched_readytorun_setpriority(FAR struct tcb_s *tcb,
 
   rtcb = this_task();
 
-  /* A context switch will occur. */
-
+#ifdef CONFIG_SMP
+  dq_rem((FAR struct dq_entry_s *)tcb, list_readytorun());
+  tcb->sched_priority = sched_priority;
+  if (nxsched_add_readytorun(tcb))
+#else
   if (nxsched_reprioritize_rtr(tcb, sched_priority))
+#endif
     {
       nxscehd_switch(this_task(), rtcb);
     }
@@ -387,59 +268,52 @@ static inline void nxsched_blocked_setpriority(FAR struct tcb_s *tcb,
 int nxsched_set_priority(FAR struct tcb_s *tcb, int sched_priority)
 {
   irqstate_t flags;
-  int ret = OK;
 
   /* Verify that the requested priority is in the valid range */
 
   if (sched_priority < SCHED_PRIORITY_MIN ||
       sched_priority > SCHED_PRIORITY_MAX)
     {
-      ret = -EINVAL;
+      return -EINVAL;
     }
-  else
+
+  /* We need to assure that there there is no interrupt activity while
+   * performing the following.
+   */
+
+  flags = enter_critical_section();
+
+  /* There are three major cases (and two sub-cases) that must be
+   * considered:
+   */
+
+  switch (tcb->task_state)
     {
-      /* We need to assure that there there is no interrupt activity while
-       * performing the following.
+      /* CASE 1. The task is running and a context switch may be caused by
+       * the re-prioritization
        */
 
-      flags = enter_critical_section();
+      case TSTATE_TASK_RUNNING:
+        nxsched_running_setpriority(tcb, sched_priority);
+        break;
 
-      /* There are three major cases (and two sub-cases) that must be
-       * considered:
+      /* CASE 2. The task is ready-to-run (but not running) and a context
+       * switch may be caused by the re-prioritization
        */
 
-      switch (tcb->task_state)
-        {
-          /* CASE 1. The task is running and a context switch may be caused
-           * by the re-prioritization
-           */
+      case TSTATE_TASK_READYTORUN:
+        nxsched_readytorun_setpriority(tcb, sched_priority);
+        break;
 
-          case TSTATE_TASK_RUNNING:
-            nxsched_running_setpriority(tcb, sched_priority);
-            break;
+      /* CASE 3. The task is not in the ready to run list.  Changing its
+       * Priority cannot effect the currently executing task.
+       */
 
-          /* CASE 2. The task is ready-to-run (but not running) and a context
-           * switch may be caused by the re-prioritization
-           */
+      default:
+        nxsched_blocked_setpriority(tcb, sched_priority);
+        break;
+    }
 
-          case TSTATE_TASK_READYTORUN:
-#ifdef CONFIG_SMP
-          case TSTATE_TASK_ASSIGNED:
-#endif
-            nxsched_readytorun_setpriority(tcb, sched_priority);
-            break;
-
-          /* CASE 3. The task is not in the ready to run list.  Changing its
-           * Priority cannot effect the currently executing task.
-           */
-
-          default:
-            nxsched_blocked_setpriority(tcb, sched_priority);
-            break;
-        }
-
-      leave_critical_section(flags);
-   }
-
-  return ret;
+  leave_critical_section(flags);
+  return OK;
 }

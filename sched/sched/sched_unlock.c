@@ -35,6 +35,7 @@
 
 #include "irq/irq.h"
 #include "sched/sched.h"
+#include "sched/queue.h"
 
 /****************************************************************************
  * Public Functions
@@ -57,6 +58,7 @@
 void nxsched_unlock(FAR struct tcb_s *rtcb)
 {
   irqstate_t flags = enter_critical_section_notrace();
+  FAR struct tcb_s *ptcb;
 
   /* Note that we no longer have pre-emption disabled. */
 
@@ -73,12 +75,16 @@ void nxsched_unlock(FAR struct tcb_s *rtcb)
    * this task to be switched out!
    */
 
-  if (list_pendingtasks()->head != NULL)
+#ifdef CONFIG_SMP
+  ptcb = (FAR struct tcb_s *)dq_peek(list_readytorun());
+  if (ptcb && ptcb->sched_priority > rtcb->sched_priority &&
+      nxsched_deliver_task(rtcb->cpu, rtcb->cpu, SWITCH_HIGHER))
+#else
+  ptcb = (FAR struct tcb_s *)dq_peek(list_pendingtasks());
+  if (ptcb && nxsched_merge_pending())
+#endif
     {
-      if (nxsched_merge_pending())
-        {
-          nxscehd_switch(this_task(), rtcb);
-        }
+      nxscehd_switch(this_task(), rtcb);
     }
 
 #if CONFIG_RR_INTERVAL > 0
