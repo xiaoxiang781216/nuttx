@@ -125,3 +125,27 @@ int bt_driver_register_with_id(FAR struct bt_driver_s *driver, int id)
 
   return ret;
 }
+
+/****************************************************************************
+ * Name: bt_driver_unregister_with_id
+ *
+ * Description:
+ *   Unregister bluetooth driver.
+ *
+ * Input Parameters:
+ *   driver - an instance of the bt_driver_s interface
+ *   id     - bluetooth device id
+ *
+ * Returned Value:
+ *   Zero is returned on success; a negated errno value is returned on any
+ *   failure.
+ *
+ ****************************************************************************/
+
+int bt_driver_unregister_with_id(FAR struct bt_driver_s *driver, int id)
+{
+  UNUSED(driver);
+  UNUSED(id);
+
+  return -ENOSYS;
+}

@@ -1100,7 +1100,7 @@ static inline int usbhost_devinit(FAR struct usbhost_state_s *priv)
     {
       /* Register the driver with the network stack. */
 
-      ret = bt_netdev_register(&priv->btdev);
+      ret = bt_driver_register(&priv->btdev);
       if (ret < 0)
         {
           uerr("ERROR: bt_netdev_register failed: %d\n", ret);
@@ -1454,7 +1454,7 @@ static int usbhost_disconnected(FAR struct usbhost_class_s *usbclass)
 
   if (priv->devchar == 'a')
     {
-      bt_netdev_unregister(&priv->btdev);
+      bt_driver_unregister(&priv->btdev);
     }
 
   /* Cancel any ongoing transfers */

@@ -52,8 +52,13 @@
 #ifdef CONFIG_DRIVERS_BLUETOOTH
 #  define bt_driver_register(btdev) \
         bt_driver_register_with_id(btdev, CONFIG_BLUETOOTH_DEVICE_ID)
+
+#  define bt_driver_unregister(btdev) \
+        bt_driver_unregister_with_id(btdev, CONFIG_BLUETOOTH_DEVICE_ID)
 #else
 #  define bt_driver_register(btdev) bt_netdev_register(btdev)
+
+#  define bt_driver_unregister(btdev) bt_netdev_unregister(btdev)
 #endif
 
 /****************************************************************************
@@ -161,6 +166,7 @@ int bt_netdev_unregister(FAR struct bt_driver_s *btdev);
 
 #ifdef CONFIG_DRIVERS_BLUETOOTH
 int bt_driver_register_with_id(FAR struct bt_driver_s *driver, int id);
+int bt_driver_unregister_with_id(FAR struct bt_driver_s *driver, int id);
 #endif
 
 #endif /* __INCLUDE_NUTTX_WIRELESS_BLUETOOTH_BT_DRIVER_H */
