@@ -719,10 +719,12 @@ static bool zms_ate_cmp_const(FAR const struct zms_ate *entry,
  ****************************************************************************/
 
 static inline bool
-zms_ate_valid_different_block(FAR const struct zms_ate *entry,
+zms_ate_valid_different_block(FAR struct zms_fs *fs,
+                              FAR const struct zms_ate *entry,
                               uint8_t cycle_cnt)
 {
-  return cycle_cnt == entry->cycle_cnt && zms_ate_crc8_check(entry);
+  return cycle_cnt == entry->cycle_cnt && zms_ate_crc8_check(entry) &&
+         (entry->key_len > 0 || entry->id == zms_special_ate_id(fs));
 }
 
 /****************************************************************************
@@ -736,7 +738,7 @@ zms_ate_valid_different_block(FAR const struct zms_ate *entry,
 static inline bool zms_ate_valid(FAR struct zms_fs *fs,
                                  FAR const struct zms_ate *entry)
 {
-  return zms_ate_valid_different_block(entry, fs->cycle_cnt);
+  return zms_ate_valid_different_block(fs, entry, fs->cycle_cnt);
 }
 
 /****************************************************************************
@@ -755,7 +757,7 @@ static inline bool zms_ate_valid(FAR struct zms_fs *fs,
 static inline bool zms_close_ate_valid(FAR struct zms_fs *fs,
                                        FAR const struct zms_ate *entry)
 {
-  return zms_ate_valid_different_block(entry, entry->cycle_cnt) &&
+  return zms_ate_valid_different_block(fs, entry, entry->cycle_cnt) &&
          entry->len == 0 && entry->id == zms_special_ate_id(fs) &&
          (fs->blocksize - entry->offset) % zms_ate_size(fs) == 0;
 }
@@ -767,7 +769,7 @@ static inline bool zms_close_ate_valid(FAR struct zms_fs *fs,
 static inline bool zms_empty_ate_valid(FAR struct zms_fs *fs,
                                        FAR const struct zms_ate *entry)
 {
-  return zms_ate_valid_different_block(entry, entry->cycle_cnt) &&
+  return zms_ate_valid_different_block(fs, entry, entry->cycle_cnt) &&
          entry->len == 0xffff && entry->id == zms_special_ate_id(fs);
 }
 
@@ -778,7 +780,7 @@ static inline bool zms_empty_ate_valid(FAR struct zms_fs *fs,
 static inline bool zms_gc_done_ate_valid(FAR struct zms_fs *fs,
                                          FAR const struct zms_ate *entry)
 {
-  return zms_ate_valid_different_block(entry, entry->cycle_cnt) &&
+  return zms_ate_valid_different_block(fs, entry, entry->cycle_cnt) &&
          entry->len == 0 && entry->id == zms_special_ate_id(fs);
 }
 
@@ -992,7 +994,8 @@ static int zms_recover_last_ate(FAR struct zms_fs *fs, FAR uint64_t *addr,
           return rc;
         }
 
-      if (zms_ate_valid(fs, end_ate))
+      if (zms_ate_valid(fs, end_ate) &&
+          end_ate->offset >= (data_end_addr & ZMS_ADDR_OFFSET_MASK))
         {
           /* Found a valid ate, update data_end_addr and *addr */
 
@@ -1432,7 +1435,7 @@ static int zms_rebuild_cache(FAR struct zms_fs *fs)
               return rc;
             }
 
-          if (zms_ate_valid_different_block(ate, cycle_cnt))
+          if (zms_ate_valid_different_block(fs, ate, cycle_cnt))
             {
               *cache_entry = ate_addr;
               if (++count == CONFIG_MTD_CONFIG_CACHE_SIZE)
@@ -1488,7 +1491,7 @@ static int zms_find_ate(FAR struct zms_fs *fs,
               return rc;
             }
 
-          if (zms_ate_valid_different_block(ate, cycle_cnt) &&
+          if (zms_ate_valid_different_block(fs, ate, cycle_cnt) &&
               !zms_flash_cmp_direct(fs, (prev_addr & ZMS_ADDR_BLOCK_MASK) +
                           ate->offset, (entry_addr & ZMS_ADDR_BLOCK_MASK) +
                                             entry->offset, entry->key_len))
@@ -1546,7 +1549,7 @@ static int zms_find_ate_with_key(FAR struct zms_fs *fs,
               return rc;
             }
 
-          if (zms_ate_valid_different_block(ate, cycle_cnt) &&
+          if (zms_ate_valid_different_block(fs, ate, cycle_cnt) &&
               !zms_flash_block_cmp(fs, (prev_addr & ZMS_ADDR_BLOCK_MASK) +
                                    ate->offset, key, key_len))
             {
@@ -2383,7 +2386,7 @@ static int zms_next(FAR struct zms_fs *fs, FAR struct file *filep,
 
       prev_block = rd_addr >> ZMS_ADDR_BLOCK_SHIFT;
       if (step_ate->id != zms_special_ate_id(fs) && step_ate->len != 0 &&
-          zms_ate_valid_different_block(step_ate, cycle_cnt))
+          zms_ate_valid_different_block(fs, step_ate, cycle_cnt))
         {
 #if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
           wlk_addr = fs->cache[zms_cache_index(step_ate->id)];
