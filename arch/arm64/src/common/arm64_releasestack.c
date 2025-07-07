@@ -90,7 +90,11 @@ void up_release_stack(struct tcb_s *dtcb, uint8_t ttype)
   if (dtcb->stack_alloc_ptr &&
       (atomic_read(&dtcb->flags) & TCB_FLAG_FREE_STACK))
     {
+#if defined(CONFIG_ARCH_STACK_PROTECT) || defined(CONFIG_ARCH_KSTACK_PROTECT)
+      mm_free(*USERSPACE->us_heap, dtcb->stack_alloc_ptr);
+#else
       group_free(dtcb->group, dtcb->stack_alloc_ptr);
+#endif
     }
 
   /* Mark the stack freed */
