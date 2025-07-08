@@ -47,6 +47,35 @@
  ****************************************************************************/
 
 /****************************************************************************
+ * Name:  nxsched_lock
+ *
+ * Description:
+ *   The internal operations of sched_lock().
+ *
+ * Input Parameters:
+ *   rtcb - the TCB of task to lock sched.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#if (defined(CONFIG_SCHED_CRITMONITOR) && \
+     CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0) || \
+    defined(CONFIG_SCHED_INSTRUMENTATION_PREEMPTION)
+void nxsched_lock(FAR struct tcb_s *rtcb)
+{
+  if (!up_interrupt_context())
+    {
+      /* Note that we have pre-emption locked */
+
+      nxsched_critmon_preemption(rtcb, true, return_address(0));
+      sched_note_preemption(rtcb, true);
+    }
+}
+#endif
+
+/****************************************************************************
  * Name:  sched_lock
  *
  * Description:
@@ -64,6 +93,7 @@
  *
  ****************************************************************************/
 
+#undef sched_lock
 void sched_lock(void)
 {
   FAR struct tcb_s *rtcb = this_task();
@@ -80,15 +110,6 @@ void sched_lock(void)
 
   if (rtcb->lockcount++ == 0)
     {
-#if (CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0) || \
-    defined(CONFIG_SCHED_INSTRUMENTATION_PREEMPTION)
-      if (!up_interrupt_context())
-        {
-          /* Note that we have pre-emption locked */
-
-          nxsched_critmon_preemption(rtcb, true, return_address(0));
-          sched_note_preemption(rtcb, true);
-        }
-#endif
+      nxsched_lock(rtcb);
     }
 }

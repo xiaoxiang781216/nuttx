@@ -572,14 +572,13 @@ irqstate_t spin_lock_irqsave(FAR volatile spinlock_t *lock)
  *
  ****************************************************************************/
 
-static inline_function
-irqstate_t spin_lock_irqsave_nopreempt(FAR volatile spinlock_t *lock)
-{
-  irqstate_t flags;
-  flags = spin_lock_irqsave(lock);
-  sched_lock();
-  return flags;
-}
+#define spin_lock_irqsave_nopreempt(lock) \
+  ({ \
+    irqstate_t flags; \
+    flags = spin_lock_irqsave(lock); \
+    sched_lock(); \
+    flags; \
+  })
 
 /****************************************************************************
  * Name: rspin_lock_is_recursive
@@ -665,14 +664,13 @@ irqstate_t rspin_lock_irqsave(FAR rspinlock_t *lock)
   return flags;
 }
 
-static inline_function
-irqstate_t rspin_lock_irqsave_nopreempt(FAR rspinlock_t *lock)
-{
-  irqstate_t flags = rspin_lock_irqsave(lock);
-  sched_lock();
-
-  return flags;
-}
+#define rspin_lock_irqsave_nopreempt(lock) \
+  ({ \
+    irqstate_t flags; \
+    flags = rspin_lock_irqsave(lock); \
+    sched_lock(); \
+    flags; \
+  })
 
 /****************************************************************************
  * Name: spin_trylock_irqsave_notrace
@@ -832,13 +830,13 @@ void spin_unlock_irqrestore(FAR volatile spinlock_t *lock, irqstate_t flags)
  *
  ****************************************************************************/
 
-static inline_function
-void spin_unlock_irqrestore_nopreempt(FAR volatile spinlock_t *lock,
-                                      irqstate_t flags)
-{
-  spin_unlock_irqrestore(lock, flags);
-  sched_unlock();
-}
+#define spin_unlock_irqrestore_nopreempt(lock, flags) \
+  do \
+    { \
+      spin_unlock_irqrestore(lock, flags); \
+      sched_unlock(); \
+    } \
+  while (0)
 
 /****************************************************************************
  * Name: rspin_unlock_irqrestore/rspin_unlock_irqrestore_nopreempt
@@ -893,13 +891,13 @@ void rspin_unlock_irqrestore(FAR rspinlock_t *lock, irqstate_t flags)
   /* If not last rspinlock restore,  up_irq_restore should not required */
 }
 
-static inline_function
-void rspin_unlock_irqrestore_nopreempt(FAR rspinlock_t *lock,
-                                       irqstate_t flags)
-{
-  rspin_unlock_irqrestore(lock, flags);
-  sched_unlock();
-}
+#define rspin_unlock_irqrestore_nopreempt(lock, flags) \
+  do \
+    { \
+      rspin_unlock_irqrestore(lock, flags); \
+      sched_unlock(); \
+    } \
+  while (0)
 
 static inline_function
 uint16_t rspin_breaklock(FAR rspinlock_t *lock)

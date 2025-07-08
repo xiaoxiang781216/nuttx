@@ -41,6 +41,119 @@
  ****************************************************************************/
 
 /****************************************************************************
+ * Name:  nxsched_unlock
+ *
+ * Description:
+ *   The internal operations of sched_unlock().
+ *
+ * Input Parameters:
+ *   rtcb - the TCB of task to unlock sched.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void nxsched_unlock(FAR struct tcb_s *rtcb)
+{
+  irqstate_t flags = enter_critical_section_notrace();
+
+  /* Note that we no longer have pre-emption disabled. */
+
+  if (!up_interrupt_context())
+    {
+      nxsched_critmon_preemption(rtcb, false, return_address(0));
+      sched_note_preemption(rtcb, false);
+    }
+
+  /* Release any ready-to-run tasks that have collected in
+   * g_pendingtasks.
+   *
+   * NOTE: This operation has a very high likelihood of causing
+   * this task to be switched out!
+   */
+
+  if (list_pendingtasks()->head != NULL)
+    {
+      if (nxsched_merge_pending())
+        {
+          up_switch_context(this_task(), rtcb);
+        }
+    }
+
+#if CONFIG_RR_INTERVAL > 0
+  /* If (1) the task that was running supported round-robin
+   * scheduling and (2) if its time slice has already expired, but
+   * (3) it could not slice out because pre-emption was disabled,
+   * then we need to swap the task out now and reassess the interval
+   * timer for the next time slice.
+   */
+
+  if ((atomic_read(&rtcb->flags) & TCB_FLAG_POLICY_MASK) ==
+      TCB_FLAG_SCHED_RR && rtcb->timeslice == 0)
+    {
+      /* Yes.. that is the situation.  But one more thing.  The call
+       * to nxsched_merge_pending() above may have actually replaced
+       * the task at the head of the ready-to-run list.  In that
+       * case, we need only to reset the timeslice value back to the
+       * maximum.
+       */
+
+      if (rtcb != this_task())
+        {
+          rtcb->timeslice = MSEC2TICK(CONFIG_RR_INTERVAL);
+        }
+#  ifdef CONFIG_SCHED_TICKLESS
+      else if ((atomic_fetch_or(&rtcb->flags, TCB_FLAG_PREEMPT_SCHED) &
+                TCB_FLAG_PREEMPT_SCHED) == 0)
+        {
+          nxsched_reassess_timer();
+          atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_PREEMPT_SCHED);
+        }
+#  endif
+    }
+#endif
+
+#ifdef CONFIG_SCHED_SPORADIC
+#  if CONFIG_RR_INTERVAL > 0
+  else
+#  endif
+  /* If (1) the task that was running supported sporadic scheduling
+   * and (2) if its budget slice has already expired, but (3) it
+   * could not slice out because pre-emption was disabled, then we
+   * need to swap the task out now and reassess the interval timer
+   * for the next time slice.
+   */
+
+  if ((atomic_read(&rtcb->flags) & TCB_FLAG_POLICY_MASK) ==
+      TCB_FLAG_SCHED_SPORADIC && rtcb->timeslice < 0)
+    {
+      /* Yes.. that is the situation.  Force the low-priority state
+       * now
+       */
+
+      nxsched_sporadic_lowpriority(rtcb);
+
+#  ifdef CONFIG_SCHED_TICKLESS
+      /* Make sure that the call to nxsched_merge_pending() did not
+       * change the currently active task.
+       */
+
+      if (rtcb == this_task() &&
+          (atomic_fetch_or(&rtcb->flags, TCB_FLAG_PREEMPT_SCHED) &
+           TCB_FLAG_PREEMPT_SCHED) == 0)
+        {
+          nxsched_reassess_timer();
+          atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_PREEMPT_SCHED);
+        }
+#  endif
+    }
+#endif
+
+  leave_critical_section_notrace(flags);
+}
+
+/****************************************************************************
  * Name:  sched_unlock
  *
  * Description:
@@ -53,6 +166,7 @@
  *
  ****************************************************************************/
 
+#undef sched_unlock
 void sched_unlock(void)
 {
   /* sched_unlock should have no effect if called from the interrupt level. */
@@ -69,100 +183,6 @@ void sched_unlock(void)
 
   if (--rtcb->lockcount == 0)
     {
-      irqstate_t flags = enter_critical_section_notrace();
-
-      /* Note that we no longer have pre-emption disabled. */
-
-      if (!up_interrupt_context())
-        {
-          nxsched_critmon_preemption(rtcb, false, return_address(0));
-          sched_note_preemption(rtcb, false);
-        }
-
-      /* Release any ready-to-run tasks that have collected in
-       * g_pendingtasks.
-       *
-       * NOTE: This operation has a very high likelihood of causing
-       * this task to be switched out!
-       */
-
-      if (list_pendingtasks()->head != NULL)
-        {
-          if (nxsched_merge_pending())
-            {
-              up_switch_context(this_task(), rtcb);
-            }
-        }
-
-#if CONFIG_RR_INTERVAL > 0
-      /* If (1) the task that was running supported round-robin
-       * scheduling and (2) if its time slice has already expired, but
-       * (3) it could not slice out because pre-emption was disabled,
-       * then we need to swap the task out now and reassess the interval
-       * timer for the next time slice.
-       */
-
-      if ((atomic_read(&rtcb->flags) & TCB_FLAG_POLICY_MASK) ==
-          TCB_FLAG_SCHED_RR && rtcb->timeslice == 0)
-        {
-          /* Yes.. that is the situation.  But one more thing.  The call
-           * to nxsched_merge_pending() above may have actually replaced
-           * the task at the head of the ready-to-run list.  In that
-           * case, we need only to reset the timeslice value back to the
-           * maximum.
-           */
-
-          if (rtcb != this_task())
-            {
-              rtcb->timeslice = MSEC2TICK(CONFIG_RR_INTERVAL);
-            }
-#  ifdef CONFIG_SCHED_TICKLESS
-          else if ((atomic_fetch_or(&rtcb->flags, TCB_FLAG_PREEMPT_SCHED) &
-                    TCB_FLAG_PREEMPT_SCHED) == 0)
-            {
-              nxsched_reassess_timer();
-              atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_PREEMPT_SCHED);
-            }
-#  endif
-        }
-#endif
-
-#ifdef CONFIG_SCHED_SPORADIC
-#  if CONFIG_RR_INTERVAL > 0
-      else
-#  endif
-      /* If (1) the task that was running supported sporadic scheduling
-       * and (2) if its budget slice has already expired, but (3) it
-       * could not slice out because pre-emption was disabled, then we
-       * need to swap the task out now and reassess the interval timer
-       * for the next time slice.
-       */
-
-      if ((atomic_read(&rtcb->flags) & TCB_FLAG_POLICY_MASK) ==
-          TCB_FLAG_SCHED_SPORADIC && rtcb->timeslice < 0)
-        {
-          /* Yes.. that is the situation.  Force the low-priority state
-           * now
-           */
-
-          nxsched_sporadic_lowpriority(rtcb);
-
-#  ifdef CONFIG_SCHED_TICKLESS
-          /* Make sure that the call to nxsched_merge_pending() did not
-           * change the currently active task.
-           */
-
-          if (rtcb == this_task() &&
-              (atomic_fetch_or(&rtcb->flags, TCB_FLAG_PREEMPT_SCHED) &
-               TCB_FLAG_PREEMPT_SCHED) == 0)
-            {
-              nxsched_reassess_timer();
-              atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_PREEMPT_SCHED);
-            }
-#  endif
-        }
-#endif
-
-      leave_critical_section_notrace(flags);
+      nxsched_unlock(rtcb);
     }
 }
