@@ -944,6 +944,7 @@ void nxsched_foreach(nxsched_foreach_t handler, FAR void *arg);
 
 FAR struct tcb_s *nxsched_get_tcb(pid_t pid);
 FAR struct tcb_s *nxsched_get_tcb_by_index(int index);
+FAR struct tcb_s *nxsched_get_childtcb(FAR struct tcb_s *parent);
 void nxsched_put_tcb(FAR struct tcb_s *tcb);
 
 /****************************************************************************

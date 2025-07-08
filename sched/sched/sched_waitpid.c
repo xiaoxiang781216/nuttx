@@ -437,7 +437,26 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
 
       /* Wait for any death-of-child signal */
 
-      ret = nxsig_waitinfo(&set, &info);
+      if (pid != INVALID_PROCESS_ID)
+        {
+          ctcb = nxsched_get_tcb(pid);
+        }
+      else
+        {
+          ctcb = nxsched_get_childtcb(rtcb);
+        }
+
+      if (ctcb && ctcb->group &&
+          !(atomic_read(&ctcb->group->tg_flags) & GROUP_FLAG_EXITING))
+        {
+          ret = nxsig_waitinfo(&set, &info);
+        }
+      else
+        {
+          ret = -ECHILD;
+        }
+
+      nxsched_put_tcb(ctcb);
       if (ret < 0)
         {
           goto errout;

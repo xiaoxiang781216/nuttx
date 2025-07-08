@@ -187,3 +187,54 @@ FAR struct tcb_s *nxsched_get_tcb_by_index(int index)
 
   return ret;
 }
+
+FAR struct tcb_s *nxsched_get_childtcb(FAR struct tcb_s *parent)
+{
+  FAR struct tcb_s *ret = NULL;
+  irqstate_t flags;
+  int hash_ndx;
+
+  /* The test and the return setup should be atomic.  This still does
+   * not provide proper protection if the recipient of the TCB does not
+   * also protect against the task associated with the TCB from
+   * terminating asynchronously.
+   */
+
+  flags = spin_lock_irqsave(&g_pidhashlock);
+
+  for (hash_ndx = 0; hash_ndx < g_npidhash; hash_ndx++)
+    {
+      /* Verify that the correct TCB was found. */
+
+      if (g_pidhash[hash_ndx] &&
+          parent->group->tg_pid == g_pidhash[hash_ndx]->group->tg_ppid)
+        {
+          /* Return the TCB associated with this pid (if any) */
+
+          ret = g_pidhash[hash_ndx];
+          break;
+        }
+    }
+
+  if (ret && ret != running_task())
+    {
+      if (!up_interrupt_context())
+        {
+          /* If we are in the thread context, after obtaining a reference to
+           * another task, we may not be able to release this reference
+           * immediately. The purpose of refs is also to prevent the
+           * situation where this_task is killed and thus unable to release
+           * the references to other tasks. We need to record the total
+           * number of references that this_task makes to other tasks.
+           */
+
+          atomic_fetch_add(&this_task()->refs, 1);
+        }
+
+      atomic_fetch_add(&ret->refs, 1);
+    }
+
+  spin_unlock_irqrestore(&g_pidhashlock, flags);
+
+  return ret;
+}
