@@ -1226,7 +1226,7 @@
 #  endif
 
 #  define offsetof(a, b) __builtin_offsetof(a, b)
-#  define return_address(x) 0
+#  define return_address(x) (uintptr_t)__get_return_address()
 
 #  define no_builtin(n)
 
