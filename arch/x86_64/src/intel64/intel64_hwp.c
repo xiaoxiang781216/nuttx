@@ -109,6 +109,10 @@ void intel64_hwp_setfreq(uint8_t energy_pref, uint8_t min_lvl,
 
   if (x86_64_hwp_is_available())
     {
+      /* Make sure that reserved part is zeroed */
+
+      reg.reg_val = 0;
+
       /* Energy Performance Preferences:
        * 0x0: Performance <--> 0xFF: Energy Efficient
        * 0x80: Balanced
