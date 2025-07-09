@@ -109,6 +109,7 @@ static int file_mmap_(FAR struct file *filep, FAR void *start,
 
   if ((flags & MAP_ANONYMOUS) != 0)
     {
+#ifdef CONFIG_FS_ANONMAP
       ret = map_anonymous(&entry, type);
 
       /* According to the mmap(2) specification, anonymous pages should be
@@ -120,6 +121,7 @@ static int file_mmap_(FAR struct file *filep, FAR void *start,
           DEBUGASSERT(entry.vaddr != NULL);
           memset(entry.vaddr, 0, entry.length);
         }
+#endif
 
       goto out;
     }
