@@ -19,7 +19,7 @@
 # ##############################################################################
 
 if(CONFIG_FS_YAFFS)
-
+  file(GLOB CSRCS ${CMAKE_CURRENT_LIST_DIR}/*.c)
   file(GLOB YAFFS_CSRCS ${CMAKE_CURRENT_LIST_DIR}/yaffs/*.c)
   file(GLOB DIRECT_CSRCS ${CMAKE_CURRENT_LIST_DIR}/yaffs/direct/*.c)
 
@@ -36,11 +36,11 @@ if(CONFIG_FS_YAFFS)
     fs PRIVATE -DCONFIG_YAFFS_DIRECT -DCONFIG_YAFFS_PROVIDE_DEFS
                -DCONFIG_YAFFS_DEFINES_TYPES -Dloff_t=off_t)
 
-  target_sources(fs PRIVATE ${YAFFS_CSRCS} ${DIRECT_CSRCS})
+  target_sources(fs PRIVATE ${CSRCS} ${YAFFS_CSRCS} ${DIRECT_CSRCS})
 
   target_include_directories(fs PRIVATE ${CMAKE_CURRENT_LIST_DIR}/yaffs)
 
-  if(CONFIG_TRACE_LITTLEFS_FS)
+  if(CONFIG_TRACE_YAFFS_FS)
     set_source_files_properties(yaffs_vfs.c DIRECTORY ..
                                 PROPERTIES COMPILE_FLAGS -finstrument-functions)
   endif()

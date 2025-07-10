@@ -2671,6 +2671,10 @@ config TRACE_LROFS_FS
 	bool "Enable tracepoints in lrofs"
 	default n
 
+config TRACE_YAFFS_FS
+	bool "Enable tracepoints in yaffs"
+	default n
+
 endmenu # Trace Fs Support
 endif
 
