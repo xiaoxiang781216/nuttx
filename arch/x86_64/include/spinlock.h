@@ -102,7 +102,7 @@ static inline_function spinlock_t up_testset(volatile spinlock_t *lock)
   uint32_t new_val = SP_LOCKED;
   uint32_t old_val = SP_UNLOCKED;
 
-  asm volatile (
+  __asm__ volatile (
                 "lock cmpxchgl %[val], %[ptr]\n\
                  sete %0\n"
                 : "=q" (ret), [ptr] "+m" (*lock), "+a" (old_val)
