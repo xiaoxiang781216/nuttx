@@ -724,6 +724,7 @@ zms_ate_valid_different_block(FAR struct zms_fs *fs,
                               uint8_t cycle_cnt)
 {
   return cycle_cnt == entry->cycle_cnt && zms_ate_crc8_check(entry) &&
+         entry->offset < (fs->blocksize - 2 * zms_ate_size(fs)) &&
          (entry->key_len > 0 || entry->id == zms_special_ate_id(fs));
 }
 
