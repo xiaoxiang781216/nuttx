@@ -677,7 +677,9 @@ if(NOT CONFIG_ARCH_SIM)
                         ${LINK_OPTION_FLAG}${ldscript})
     target_link_libraries(
       nuttx
-      PRIVATE $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--start-group>
+      PRIVATE ${NUTTX_EXTRA_FLAGS}
+              ${LINK_OPTION_FLAG}${ldscript}
+              $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--start-group>
               ${nuttx_libs}
               $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--end-group>)
   endif()
@@ -882,8 +884,7 @@ if(CONFIG_BUILD_PROTECTED)
   else()
     target_link_libraries(
       nuttx_user
-      PRIVATE -T
-              ${user_ldscript}
+      PRIVATE ${LINK_OPTION_FLAG}${user_ldscript}
               $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--start-group>
               ${nuttx_system_libs}
               ${nuttx_apps_libs}
