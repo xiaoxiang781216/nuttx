@@ -148,7 +148,7 @@ static inline_function bool up_interrupt_context(void)
 {
   bool flag;
   __asm__ volatile("movb %%gs:(%c1), %0"
-                   : "=qr" (flag)
+                   : "=r" (flag)
                    : "i" (offsetof(struct intel64_cpu_s,
                                    interrupt_context)));
   return flag;

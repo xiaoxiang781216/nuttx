@@ -105,7 +105,7 @@ static inline_function spinlock_t up_testset(volatile spinlock_t *lock)
   __asm__ volatile (
                 "lock cmpxchgl %[val], %[ptr]\n\
                  sete %0\n"
-                : "=q" (ret), [ptr] "+m" (*lock), "+a" (old_val)
+                : "=r" (ret), [ptr] "+m" (*lock), "+a" (old_val)
                 : [val]"r" (new_val)
                 : "memory");
 
