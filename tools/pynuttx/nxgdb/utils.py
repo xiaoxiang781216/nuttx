@@ -543,6 +543,8 @@ def get_symbol_value(name, locspec="nx_start", cacheable=True):
 
     state = suppress_cli_notifications(True)
 
+    original_thread = None
+    original_frame = None
     if check_inferior_valid():
         original_thread = gdb.selected_thread()
         if original_thread and original_thread.is_valid():
@@ -568,7 +570,7 @@ def get_symbol_value(name, locspec="nx_start", cacheable=True):
 
     # Switch back to inferior 1
     gdb.execute("inferior 1", to_string=True)
-    if check_inferior_valid() and original_thread and original_thread.is_valid():
+    if original_thread and original_thread.is_valid():
         original_thread.switch()
         if original_frame and original_frame.is_valid():
             original_frame.select()
@@ -1024,6 +1026,8 @@ def switch_inferior(inferior):
 
 def check_version():
     """Check the elf and memory version"""
+    original_thread = None
+    original_frame = None
     state = suppress_cli_notifications()
     if check_inferior_valid():
         original_thread = gdb.selected_thread()
@@ -1047,7 +1051,7 @@ def check_version():
         gdb.write(f"Build version: {mem_version}\n")
 
     switch_inferior(1)  # Switch back
-    if check_inferior_valid() and original_thread and original_thread.is_valid():
+    if original_thread and original_thread.is_valid():
         original_thread.switch()
         if original_frame and original_frame.is_valid():
             original_frame.select()
