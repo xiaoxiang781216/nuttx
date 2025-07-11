@@ -25,24 +25,12 @@
  * Included Files
  ****************************************************************************/
 
-#ifndef __ASSEMBLY__
-#  include <stdint.h>
-#endif /* __ASSEMBLY__ */
-
+#include <arch/types.h>
 #include <arch/barriers.h>
 
 /* Include RISC-V architecture-specific IRQ definitions (including register
  * save structure and up_irq_save()/up_irq_restore() functions)
  */
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* Spinlock states */
-
-#define SP_UNLOCKED 0  /* The Un-locked state */
-#define SP_LOCKED   1  /* The Locked state */
 
 /* Memory barriers for use with NuttX spinlock logic
  *
@@ -66,18 +54,6 @@
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-
-/* The Type of a spinlock.
- *
- * RISC-V architecture (in the standard atomic-instruction extension "A")
- * supports exclusive accesses to memory locations in the form of the
- * Load-Reserved (LR) and Store-Conditional (SC) instructions. RV64 supports
- * doubleword aligned data only but others supports word aligned data.
- *
- * RISC-V architecture supports fence instruction to ensure memory ordering
- */
-
-typedef uintptr_t spinlock_t;
 
 /****************************************************************************
  * Public Function Prototypes

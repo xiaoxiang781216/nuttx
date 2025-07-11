@@ -73,7 +73,7 @@ typedef struct spinlock_s
  * SP_LOCKED and SP_UNLOCKED must be constants of type spinlock_t.
  */
 
-#include <arch/spinlock.h>
+#include <arch/types.h>
 
 #endif /* CONFIG_SPINLOCK */
 
