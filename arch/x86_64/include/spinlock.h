@@ -63,20 +63,17 @@
 #if defined(CONFIG_ARCH_HAVE_TESTSET)
 static inline_function spinlock_t up_testset(volatile spinlock_t *lock)
 {
-  /* Perform the 32-bit CAS operation */
+  /* Perform the 32-bit SWAP operation */
 
-  unsigned char ret;
   uint32_t new_val = SP_LOCKED;
-  uint32_t old_val = SP_UNLOCKED;
+  uint32_t old_val;
 
-  __asm__ volatile (
-                "lock cmpxchgl %[val], %[ptr]\n\
-                 sete %0\n"
-                : "=r" (ret), [ptr] "+m" (*lock), "+a" (old_val)
-                : [val]"r" (new_val)
-                : "memory");
+  __asm__ volatile ("lock xchgl %[ptr], %[val]"
+                    : [ptr] "+m" (lock), "=a" (old_val)
+                    : [val] "r" (new_val)
+                    : "cc");
 
-  return !ret;
+  return old_val;
 }
 #endif
 
