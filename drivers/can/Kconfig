@@ -160,11 +160,11 @@ config CAN_TXPRIORITY
 config CAN_TXCANCEL
 	bool "Implement tx cancel ability"
 	default n
-        depends on CAN_TXPRIORITY
+	depends on CAN_TXPRIORITY
 	---help---
 		Enabling this feature adds support for the can cancel ability.
-                this ability can cancel the msg with the largest msgID in the
-                mailbox and return true if success.
+		this ability can cancel the msg with the largest msgID in the
+		mailbox and return true if success.
 
 choice
 	prompt "TX Ready Work Queue"
