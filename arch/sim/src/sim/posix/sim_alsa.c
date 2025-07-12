@@ -27,8 +27,7 @@
 #include <nuttx/audio/audio.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/nuttx.h>
-#include <nuttx/wdog.h>
-
+#include <nuttx/wqueue.h>
 #include <debug.h>
 #include <sys/param.h>
 
@@ -51,9 +50,8 @@ struct sim_audio_s
 {
   struct audio_lowerhalf_s dev;
   struct dq_queue_s pendq;
+  struct work_s work;
   mutex_t pendlock;
-
-  struct wdog_s wdog;           /* Watchdog for event loop */
 
   bool playback;
   bool offload;
@@ -1149,14 +1147,14 @@ fail:
   return ret;
 }
 
-static void sim_alsa_interrupt(wdparm_t arg)
+static void sim_audio_work_handler(FAR void *arg)
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)arg;
 
   sim_audio_process(priv);
 
-  wd_start_next(&priv->wdog, SIM_AUDIO_PERIOD,
-                sim_alsa_interrupt, arg);
+  work_queue_next(HPWORK, &priv->work, sim_audio_work_handler, priv,
+                  SIM_AUDIO_PERIOD);
 }
 
 /****************************************************************************
@@ -1185,8 +1183,9 @@ struct audio_lowerhalf_s *sim_audio_initialize(bool playback, bool offload)
       return NULL;
     }
 
-  wd_start(&priv->wdog, SIM_AUDIO_PERIOD,
-           sim_alsa_interrupt, (wdparm_t)priv);
+  memset(&priv->work, 0, sizeof(struct work_s));
+  work_queue(HPWORK, &priv->work, sim_audio_work_handler, priv,
+             SIM_AUDIO_PERIOD);
 
   /* Setting default config */
 
@@ -1198,6 +1197,5 @@ struct audio_lowerhalf_s *sim_audio_initialize(bool playback, bool offload)
   priv->channels    = 2;
   priv->bps         = 16;
   priv->frame_size  = 4;
-
   return &priv->dev;
 }
