@@ -603,6 +603,12 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
                   if ((flags & TCP_NEWDATA) != 0)
                     {
+                      FAR uint8_t *buf = dev->d_buf;
+                      FAR struct iob_s *iob = dev->d_iob;
+
+                      dev->d_buf = NULL;
+                      dev->d_iob = NULL;
+
                       /* The current receive data needs to be handled by
                        * following tcp_recvhandler or tcp_data_event. Notify
                        * driver to send the message and marked as rexmit
@@ -610,7 +616,10 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
                       TCP_WBNACK(wrb) = 0;
                       conn->timeout = true;
+
                       netdev_txnotify_dev(conn->dev);
+                      netdev_iob_replace(dev, iob);
+                      dev->d_buf = buf;
                       return flags;
                     }
 
