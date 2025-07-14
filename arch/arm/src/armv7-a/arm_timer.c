@@ -117,24 +117,6 @@ static inline void arm_timer_set_ctrl(uint32_t ctrl)
   UP_ISB();
 }
 
-static inline uint32_t arm_timer_get_tval(void)
-{
-  UP_ISB();
-  return CP15_GET(CNTP_TVAL);
-}
-
-static inline void arm_timer_set_tval(uint32_t tval)
-{
-  CP15_SET(CNTP_TVAL, tval);
-  UP_ISB();
-}
-
-static inline uint64_t arm_timer_get_cval(void)
-{
-  UP_ISB();
-  return CP15_GET64(CNTP_CVAL);
-}
-
 static inline void arm_timer_set_cval(uint64_t cval)
 {
   CP15_SET64(CNTP_CVAL, cval);
