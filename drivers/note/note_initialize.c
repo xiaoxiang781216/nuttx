@@ -32,6 +32,7 @@
 #include <nuttx/note/notestream_driver.h>
 #include <nuttx/segger/note_rtt.h>
 #include <nuttx/segger/sysview.h>
+#include <nuttx/trace32/note_fdx.h>
 
 #include "note_driver.h"
 
@@ -197,6 +198,15 @@ int note_initialize(void)
   if (ret < 0)
     {
       serr("noterpmsg_init failed %d\n", ret);
+      return ret;
+    }
+#endif
+
+#ifdef CONFIG_TRACE32_FDX_NOTE
+  ret = notefdx_register();
+  if (ret < 0)
+    {
+      serr("notefdx_register failed %d\n", ret);
       return ret;
     }
 #endif
