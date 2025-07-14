@@ -326,12 +326,12 @@ static int elf_get_info_note_size(void)
  ****************************************************************************/
 
 static void elf_emit_tcb_note(FAR struct elf_dumpinfo_s *cinfo,
-                              FAR struct tcb_s *tcb)
+                              FAR struct tcb_s *tcb, FAR void *regs)
 {
   char name[COREDUMP_INFONAME_SIZE];
   elf_prstatus_t status;
   elf_prpsinfo_t info;
-  FAR uintptr_t *regs;
+  ssize_t offset;
   Elf_Nhdr nhdr;
   int i;
 
@@ -372,9 +372,14 @@ static void elf_emit_tcb_note(FAR struct elf_dumpinfo_s *cinfo,
 
   status.pr_pid = tcb->pid == 0 ? PID0_REPLACE : tcb->pid;
 
-  regs = (FAR uintptr_t *)g_running_regs;
-  if (running_task() == tcb)
+  if (running_task() != tcb)
     {
+      regs = (FAR void *)g_running_regs;
+      up_copyusercontext(regs, tcb->xcp.regs, XCPTCONTEXT_SIZE);
+    }
+  else if (regs == NULL)
+    {
+      regs = (FAR void *)g_running_regs;
       if (up_interrupt_context())
         {
           up_copyusercontext(regs, running_regs(), XCPTCONTEXT_SIZE);
@@ -384,33 +389,24 @@ static void elf_emit_tcb_note(FAR struct elf_dumpinfo_s *cinfo,
           up_saveusercontext(regs);
         }
     }
-  else
-    {
-      up_copyusercontext(regs, tcb->xcp.regs, XCPTCONTEXT_SIZE);
-    }
 
-  if (regs != NULL)
+  memset(status.pr_regs, 0, sizeof(status.pr_regs));
+  for (i = 0, offset = 0; i < g_tcbinfo.regs_num; i++)
     {
-      ssize_t offset = 0;
+      FAR const struct reginfo_s *reg = &g_tcbinfo.u.reginfo[i];
 
-      memset(status.pr_regs, 0, sizeof(status.pr_regs));
-      for (i = 0; i < g_tcbinfo.regs_num; i++)
+      if (reg->coffset != REGINFO_OFFSET_AUTO)
         {
-          FAR const struct reginfo_s *reg = &g_tcbinfo.u.reginfo[i];
-
-          if (reg->coffset != REGINFO_OFFSET_AUTO)
-            {
-              offset = reg->coffset;
-            }
-
-          if (reg->toffset != REGINFO_OFFSET_INVALID)
-            {
-              memcpy((FAR char *)status.pr_regs + offset,
-                     (uint8_t *)regs + reg->toffset, reg->size);
-            }
-
-          offset += reg->size;
+          offset = reg->coffset;
         }
+
+      if (reg->toffset != REGINFO_OFFSET_INVALID)
+        {
+          memcpy((FAR char *)status.pr_regs + offset,
+                  (uint8_t *)regs + reg->toffset, reg->size);
+        }
+
+      offset += reg->size;
     }
 
   elf_emit(cinfo, &status, sizeof(status));
@@ -424,7 +420,7 @@ static void elf_emit_tcb_note(FAR struct elf_dumpinfo_s *cinfo,
  *
  ****************************************************************************/
 
-static void elf_emit_note(FAR struct elf_dumpinfo_s *cinfo)
+static void elf_emit_note(FAR struct elf_dumpinfo_s *cinfo, FAR void *regs)
 {
   FAR struct tcb_s *tcb;
   int i;
@@ -436,7 +432,7 @@ static void elf_emit_note(FAR struct elf_dumpinfo_s *cinfo)
           tcb = nxsched_get_tcb(i);
           if (tcb)
             {
-              elf_emit_tcb_note(cinfo, tcb);
+              elf_emit_tcb_note(cinfo, tcb, regs);
               nxsched_put_tcb(tcb);
             }
         }
@@ -446,7 +442,7 @@ static void elf_emit_note(FAR struct elf_dumpinfo_s *cinfo)
       tcb = nxsched_get_tcb(cinfo->pid);
       if (tcb)
         {
-          elf_emit_tcb_note(cinfo, tcb);
+          elf_emit_tcb_note(cinfo, tcb, regs);
           nxsched_put_tcb(tcb);
         }
     }
@@ -786,7 +782,7 @@ coredump_print_memory_regions(FAR const struct memory_region_s *regions)
  ****************************************************************************/
 
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
-static void coredump_dump_syslog(pid_t pid)
+static void coredump_dump_syslog(pid_t pid, FAR void *regs)
 {
   FAR void *stream;
   FAR const char *streamname;
@@ -820,7 +816,7 @@ static void coredump_dump_syslog(pid_t pid)
 
   /* Do core dump */
 
-  coredump(g_regions, stream, pid);
+  coredump(g_regions, stream, pid, regs);
 
 #  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
   _alert("Finish coredump (Compression Enabled). %s formatted\n",
@@ -842,7 +838,7 @@ static void coredump_dump_syslog(pid_t pid)
  ****************************************************************************/
 
 #ifdef CONFIG_BOARD_COREDUMP_DEV
-static void coredump_dump_dev(pid_t pid)
+static void coredump_dump_dev(pid_t pid, FAR void *regs)
 {
   FAR void *stream = &g_devstream;
   int ret;
@@ -870,7 +866,7 @@ static void coredump_dump_dev(pid_t pid)
   stream = &g_lzfstream;
 # endif
 
-  ret = coredump(g_regions, stream, pid);
+  ret = coredump(g_regions, stream, pid, regs);
   if (ret < 0)
     {
       _alert("Coredump fail %d\n", ret);
@@ -1066,10 +1062,11 @@ int coredump_initialize(void)
  *
  * Input Parameters:
  *   pid - The task/thread ID of the thread to dump
+ *   regs - Pointer to the task's saved context
  *
  ****************************************************************************/
 
-void coredump_dump(pid_t pid)
+void coredump_dump(pid_t pid, FAR void *regs)
 {
   if (!g_stream_initialized)
     {
@@ -1079,9 +1076,9 @@ void coredump_dump(pid_t pid)
 
   coredump_print_memory_regions(g_regions);
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
-  coredump_dump_syslog(pid);
+  coredump_dump_syslog(pid, regs);
 #elif defined(CONFIG_BOARD_COREDUMP_DEV)
-  coredump_dump_dev(pid);
+  coredump_dump_dev(pid, regs);
 #endif
 }
 
@@ -1095,7 +1092,7 @@ void coredump_dump(pid_t pid)
 
 int coredump(FAR const struct memory_region_s *regions,
              FAR struct lib_outstream_s *stream,
-             pid_t pid)
+             pid_t pid, FAR void *regs)
 {
   struct elf_dumpinfo_s cinfo;
   int memsegs = 0;
@@ -1141,7 +1138,7 @@ int coredump(FAR const struct memory_region_s *regions,
 
   /* Fill note information */
 
-  elf_emit_note(&cinfo);
+  elf_emit_note(&cinfo, regs);
 
   /* Align to page */
 
