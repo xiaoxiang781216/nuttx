@@ -68,34 +68,25 @@ void nxsched_process_delivered(int cpu)
   struct tcb_s *btcb = NULL;
   struct tcb_s *tcb;
 
-  DEBUGASSERT(g_cpu_nestcount[cpu] == 0);
   DEBUGASSERT(up_interrupt_context());
 
-  if ((g_cpu_irqset & (1 << cpu)) == 0)
-    {
-      /* If CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0,
-       * start counting time of busy-waiting.
-       */
+  /* If CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0,
+   * start counting time of busy-waiting.
+   */
 
-      nxsched_critmon_busywait(true, return_address(0));
+  nxsched_critmon_busywait(true, return_address(0));
 
-      spin_lock_notrace(&g_cpu_irqlock);
+  spin_lock_notrace(&g_cpu_irqlock);
 
-      /* Get the lock, end counting busy-waiting */
+  /* Get the lock, end counting busy-waiting */
 
-      nxsched_critmon_busywait(false, return_address(0));
-
-      g_cpu_irqset |= (1 << cpu);
-    }
+  nxsched_critmon_busywait(false, return_address(0));
 
   tcb = current_task(cpu);
 
   if (g_delivertasks[cpu] == NULL)
     {
-      if (tcb->irqcount <= 0)
-        {
-          cpu_irqlock_clear();
-        }
+      spin_unlock_notrace(&g_cpu_irqlock);
 
       return;
     }
@@ -106,10 +97,7 @@ void nxsched_process_delivered(int cpu)
       g_delivertasks[cpu] = NULL;
       nxsched_add_prioritized(btcb, &g_pendingtasks);
       btcb->task_state = TSTATE_TASK_PENDING;
-      if (tcb->irqcount <= 0)
-        {
-          cpu_irqlock_clear();
-        }
+      spin_unlock_notrace(&g_cpu_irqlock);
 
       return;
     }
@@ -148,8 +136,5 @@ void nxsched_process_delivered(int cpu)
   g_delivertasks[cpu] = NULL;
   tcb = current_task(cpu);
 
-  if (tcb->irqcount <= 0)
-    {
-      cpu_irqlock_clear();
-    }
+  spin_unlock_notrace(&g_cpu_irqlock);
 }
