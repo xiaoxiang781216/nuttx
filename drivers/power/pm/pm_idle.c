@@ -49,18 +49,14 @@ struct pm_idle_s
   spinlock_t lock;
   cpu_set_t running;
   cpu_set_t firstdone;
-#if CONFIG_PM_SMP_LAST_CPU_INDEX >= 0
   struct smp_call_data_s smp_call_data;
-#endif
 };
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
-#if CONFIG_PM_SMP_LAST_CPU_INDEX >= 0
 static int pm_idle_smp_call_cb(FAR void *arg);
-#endif
 
 /****************************************************************************
  * Private Data
@@ -71,21 +67,64 @@ static struct pm_idle_s g_pm_idle =
   SP_UNLOCKED,
   PM_SMP_ALL_CPUS,
   0,
-#if CONFIG_PM_SMP_LAST_CPU_INDEX >= 0
   SMP_CALL_INITIALIZER(pm_idle_smp_call_cb, NULL),
-#endif
 };
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-#if CONFIG_PM_SMP_LAST_CPU_INDEX >= 0
 static int pm_idle_smp_call_cb(FAR void *arg)
 {
   return 0;
 }
-#endif
+
+/****************************************************************************
+ * Name: pm_idle_checkstate
+ *
+ * Description:
+ *   Before last CPU enters WFI, verify other CPUs in expected PM state.
+ *
+ * Input Parameters:
+ *   cpu   - the current CPU.
+ *
+ * Returned Value:
+ *   true  - current CPU is still the last CPU.
+ *   false - current CPU is not the last one.
+ *
+ ****************************************************************************/
+
+static bool pm_idle_checkstate(int cpu)
+{
+  enum pm_state_e oldstate;
+  enum pm_state_e newstate;
+  cpu_set_t cpus;
+  int i;
+
+  CPU_ZERO(&cpus);
+  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+    {
+      if (i == cpu)
+        {
+          continue;
+        }
+
+      oldstate = pm_querystate(PM_SMP_CPU_DOMAIN(i));
+      newstate = pm_checkstate(PM_SMP_CPU_DOMAIN(i));
+      if (oldstate != newstate)
+        {
+          CPU_SET(i, &cpus);
+        }
+    }
+
+  if (CPU_COUNT(&cpus) > 0)
+    {
+      nxsched_smp_call_async(cpus, &g_pm_idle.smp_call_data);
+      return false;
+    }
+
+  return true;
+}
 
 /****************************************************************************
  * Public Functions
@@ -214,6 +253,11 @@ void pm_idle(pm_idle_handler_t handler)
       last = false;
     }
 #endif
+
+  if (last)
+    {
+      last = pm_idle_checkstate(cpu);
+    }
 
   if (last)
     {
