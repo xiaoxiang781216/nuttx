@@ -564,6 +564,21 @@ FAR struct iob_s *net_ioballoc(bool throttled);
 #endif
 
 /****************************************************************************
+ * Name: net_getrandom
+ *
+ * Description:
+ *   Fill a buffer of arbitrary length with randomness. This function is
+ *   guaranteed to be success.
+ *
+ * Input Parameters:
+ *   bytes  - Buffer for returned random bytes
+ *   nbytes - Number of bytes requested.
+ *
+ ****************************************************************************/
+
+void net_getrandom(FAR void *bytes, size_t nbytes);
+
+/****************************************************************************
  * Name: sockfd_allocate
  *
  * Description:
@@ -1499,6 +1514,41 @@ int netdev_register(FAR struct net_driver_s *dev, enum net_lltype_e lltype);
  ****************************************************************************/
 
 int netdev_unregister(FAR struct net_driver_s *dev);
+
+/****************************************************************************
+ * Name: netdev_findbyname
+ *
+ * Description:
+ *   Find a previously registered network device using its assigned
+ *   network interface name
+ *
+ * Input Parameters:
+ *   ifname The interface name of the device of interest
+ *
+ * Returned Value:
+ *  Pointer to driver on success; null on failure
+ *
+ ****************************************************************************/
+
+FAR struct net_driver_s *netdev_findbyname(FAR const char *ifname);
+
+/****************************************************************************
+ * Name: netdev_findbyindex
+ *
+ * Description:
+ *   Find a previously registered network device by assigned interface index.
+ *
+ * Input Parameters:
+ *   ifindex - The interface index.  This is a one-based index and must be
+ *             greater than zero.
+ *
+ * Returned Value:
+ *  Pointer to driver on success; NULL on failure.  This function will return
+ *  NULL only if there is no device corresponding to the provided index.
+ *
+ ****************************************************************************/
+
+FAR struct net_driver_s *netdev_findbyindex(int ifindex);
 
 #undef EXTERN
 #ifdef __cplusplus
