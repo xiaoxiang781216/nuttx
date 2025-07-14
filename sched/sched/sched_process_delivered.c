@@ -67,26 +67,17 @@ void nxsched_process_delivered(int cpu)
   FAR struct tcb_s *prev;
   struct tcb_s *btcb = NULL;
   struct tcb_s *tcb;
+  irqstate_t flags;
 
   DEBUGASSERT(up_interrupt_context());
 
-  /* If CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0,
-   * start counting time of busy-waiting.
-   */
-
-  nxsched_critmon_busywait(true, return_address(0));
-
-  spin_lock_notrace(&g_cpu_irqlock);
-
-  /* Get the lock, end counting busy-waiting */
-
-  nxsched_critmon_busywait(false, return_address(0));
+  flags = enter_critical_section();
 
   tcb = current_task(cpu);
 
   if (g_delivertasks[cpu] == NULL)
     {
-      spin_unlock_notrace(&g_cpu_irqlock);
+      leave_critical_section(flags);
 
       return;
     }
@@ -97,7 +88,7 @@ void nxsched_process_delivered(int cpu)
       g_delivertasks[cpu] = NULL;
       nxsched_add_prioritized(btcb, &g_pendingtasks);
       btcb->task_state = TSTATE_TASK_PENDING;
-      spin_unlock_notrace(&g_cpu_irqlock);
+      leave_critical_section(flags);
 
       return;
     }
@@ -136,5 +127,5 @@ void nxsched_process_delivered(int cpu)
   g_delivertasks[cpu] = NULL;
   tcb = current_task(cpu);
 
-  spin_unlock_notrace(&g_cpu_irqlock);
+  leave_critical_section(flags);
 }
