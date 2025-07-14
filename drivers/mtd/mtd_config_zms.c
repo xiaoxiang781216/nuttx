@@ -101,7 +101,8 @@ begin_packed_struct struct zms_ate
   uint32_t offset;       /* Data offset within block */
   uint16_t len;          /* Data len within block */
   uint16_t key_len;      /* Key string len */
-  uint16_t data_crc;     /* Reserve for data_crc */
+  uint8_t  data_crc8;    /* Crc8 check of the data */
+  uint8_t  part;         /* Future extension */
   uint8_t  cycle_cnt;    /* cycle counter for non erasable devices */
   uint8_t  crc8;         /* Crc8 check of the ate entry */
 } end_packed_struct;
@@ -673,10 +674,13 @@ static inline void zms_ate_crc8_update(FAR struct zms_ate *entry)
  *
  ****************************************************************************/
 
-static inline bool zms_ate_crc8_check(FAR const struct zms_ate *entry)
+static inline bool zms_ate_crc8_check(FAR struct zms_fs *fs,
+                                      FAR const struct zms_ate *entry)
 {
   return entry->crc8 == crc8part((FAR const uint8_t *)entry,
-                                 offsetof(struct zms_ate, crc8), 0xff);
+                                 offsetof(struct zms_ate, crc8), 0xff) &&
+         (entry->len > 0 || entry->data_crc8 == 0 ||
+          entry->data_crc8 == fs->erasestate);
 }
 
 /****************************************************************************
@@ -723,7 +727,7 @@ zms_ate_valid_different_block(FAR struct zms_fs *fs,
                               FAR const struct zms_ate *entry,
                               uint8_t cycle_cnt)
 {
-  return cycle_cnt == entry->cycle_cnt && zms_ate_crc8_check(entry) &&
+  return cycle_cnt == entry->cycle_cnt && zms_ate_crc8_check(fs, entry) &&
          entry->offset < (fs->blocksize - 2 * zms_ate_size(fs)) &&
          (entry->key_len > 0 || entry->id == zms_special_ate_id(fs));
 }
@@ -896,6 +900,7 @@ static int zms_flash_wrt_entry(FAR struct zms_fs *fs, uint32_t id,
   entry->len = len;
   entry->key_len = key_len;
   entry->cycle_cnt = fs->cycle_cnt;
+  entry->data_crc8 = crc8(data, len);
 
   zms_ate_crc8_update(entry);
 
@@ -2104,6 +2109,7 @@ static int zms_read(FAR struct zms_fs *fs, FAR struct config_data_s *pdata)
   size_t ate_size = zms_ate_size(fs);
   uint64_t wlk_addr = fs->ate_wra;
   ZMS_ATE(wlk_ate, ate_size);
+  uint8_t data_crc8;
   int rc;
 
 #ifdef CONFIG_MTD_CONFIG_NAMED
@@ -2147,6 +2153,19 @@ static int zms_read(FAR struct zms_fs *fs, FAR struct config_data_s *pdata)
         {
           ferr("Data read failed, rc=%d\n", rc);
           return rc;
+        }
+
+      if (pdata->len >= wlk_ate->len && wlk_ate->data_crc8 != fs->erasestate)
+        {
+          /* Do not compute CRC for partial reads as CRC won't match */
+
+          data_crc8 = crc8(pdata->configdata, wlk_ate->len);
+          if (wlk_ate->data_crc8 != data_crc8)
+            {
+              ferr("Invalid data crc: %" PRIx8 ", wlk_ate->data_crc8: "
+                    "%" PRIx8 "\n", data_crc8, wlk_ate->data_crc8);
+              return -EIO;
+            }
         }
     }
 
