@@ -186,7 +186,7 @@ void nxsched_suspend(FAR struct tcb_s *tcb)
 
           if (switch_needed)
             {
-              up_switch_context(this_task(), rtcb);
+              nxscehd_switch(this_task(), rtcb);
             }
         }
     }

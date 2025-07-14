@@ -142,6 +142,6 @@ void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode)
 
   if (nxsched_add_readytorun(wtcb))
     {
-      up_switch_context(wtcb, rtcb);
+      nxscehd_switch(wtcb, rtcb);
     }
 }

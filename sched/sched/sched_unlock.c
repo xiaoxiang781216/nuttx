@@ -77,7 +77,7 @@ void nxsched_unlock(FAR struct tcb_s *rtcb)
     {
       if (nxsched_merge_pending())
         {
-          up_switch_context(this_task(), rtcb);
+          nxscehd_switch(this_task(), rtcb);
         }
     }
 

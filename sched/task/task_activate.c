@@ -103,7 +103,7 @@ void nxtask_activate(FAR struct tcb_s *tcb)
 
   if (nxsched_add_readytorun(tcb))
     {
-      up_switch_context(tcb, rtcb);
+      nxscehd_switch(tcb, rtcb);
     }
 
   leave_critical_section(flags);

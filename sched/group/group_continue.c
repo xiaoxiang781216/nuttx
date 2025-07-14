@@ -77,7 +77,7 @@ static int group_continue_handler(pid_t pid, FAR void *arg)
 
       if (nxsched_add_readytorun(rtcb))
         {
-          up_switch_context(rtcb, tcb);
+          nxscehd_switch(rtcb, tcb);
         }
 
       nxsched_put_tcb(rtcb);

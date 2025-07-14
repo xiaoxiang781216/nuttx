@@ -532,7 +532,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           if (nxsched_add_readytorun(stcb))
             {
-              up_switch_context(stcb, rtcb);
+              nxscehd_switch(stcb, rtcb);
             }
 
 #ifdef CONFIG_LIB_SYSCALL
@@ -600,7 +600,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           if (nxsched_add_readytorun(stcb))
             {
-              up_switch_context(stcb, rtcb);
+              nxscehd_switch(stcb, rtcb);
             }
         }
 
@@ -664,7 +664,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           if (nxsched_add_readytorun(stcb))
             {
-              up_switch_context(stcb, rtcb);
+              nxscehd_switch(stcb, rtcb);
             }
 #endif
         }

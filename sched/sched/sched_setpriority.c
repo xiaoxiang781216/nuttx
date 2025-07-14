@@ -81,7 +81,7 @@ static int reprioritize_handler(FAR void *cookie)
 
   if (nxsched_reprioritize_rtr(tcb, arg->sched_priority))
     {
-      up_switch_context(this_task(), rtcb);
+      nxscehd_switch(this_task(), rtcb);
     }
 
   leave_critical_section(flags);
@@ -258,7 +258,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 #endif
           if (nxsched_reprioritize_rtr(tcb, sched_priority))
             {
-              up_switch_context(this_task(), rtcb);
+              nxscehd_switch(this_task(), rtcb);
             }
         }
     }
@@ -301,7 +301,7 @@ static void nxsched_readytorun_setpriority(FAR struct tcb_s *tcb,
 
   if (nxsched_reprioritize_rtr(tcb, sched_priority))
     {
-      up_switch_context(this_task(), rtcb);
+      nxscehd_switch(this_task(), rtcb);
     }
 }
 
