@@ -100,7 +100,6 @@ class Tcb(Value):
     affinity: Value
     flags: Value
     lockcount: Value
-    irqcount: Value
     errcode: Value
     timeslice: Value
     sporadic: Value

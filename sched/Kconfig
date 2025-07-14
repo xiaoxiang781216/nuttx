@@ -370,10 +370,6 @@ config IRQ_WORK_STACKSIZE
 	---help---
 		The default stack size for isr wqueue.
 
-config IRQCOUNT
-	bool
-	default n
-
 config SMP
 	bool "Symmetric Multi-Processing (SMP)"
 	default n
@@ -381,7 +377,6 @@ config SMP
 	depends on ARCH_HAVE_TESTSET
 	depends on ARCH_INTERRUPTSTACK != 0
 	select SPINLOCK
-	select IRQCOUNT
 	---help---
 		Enables support for Symmetric Multi-Processing (SMP) on a multi-CPU
 		platform.
@@ -932,7 +927,6 @@ config SCHED_CRITMONITOR
 	bool "Enable Critical Section monitoring"
 	default n
 	depends on FS_PROCFS
-	select IRQCOUNT if SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
 	---help---
 		Enables logic that monitors the duration of time that a thread keeps
 		interrupts or pre-emption disabled.  These global locks can have
@@ -1274,7 +1268,6 @@ config SCHED_INSTRUMENTATION_CSECTION
 	bool "Critical section monitor hooks"
 	default n
 	select SCHED_INSTRUMENTATION
-	select IRQCOUNT
 	---help---
 		Enables additional hooks for entry and exit from critical sections.
 		Interrupts are disabled while within a critical section.  Board-
