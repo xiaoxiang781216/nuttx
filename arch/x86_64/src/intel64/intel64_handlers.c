@@ -113,10 +113,6 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
        */
 
       *running_task = tcb;
-
-      /* Restore the cpu lock */
-
-      restore_critical_section(tcb, this_cpu());
     }
 
   /* Clear irq flag */
