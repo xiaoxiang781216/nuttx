@@ -941,6 +941,49 @@ net_rpmsg_drv_alloc(FAR const char *devname, enum net_lltype_e lltype)
   return priv;
 }
 
+#ifdef CONFIG_NET_RPMSG_DRV_SERVER
+/****************************************************************************
+ * Name: net_rpmsg_drv_ns_match
+ ****************************************************************************/
+
+static bool net_rpmsg_drv_ns_match(FAR struct rpmsg_device *rdev,
+                                   FAR void *priv, FAR const char *name,
+                                   uint32_t dest)
+{
+  return !strncmp(name, NET_RPMSG_EPT_PREFIX, strlen(NET_RPMSG_EPT_PREFIX));
+}
+
+/****************************************************************************
+ * Name: net_rpmsg_drv_ns_bind
+ ****************************************************************************/
+
+static void net_rpmsg_drv_ns_bind(FAR struct rpmsg_device *rdev,
+                                  FAR void *priv_, FAR const char *name,
+                                  uint32_t dest)
+{
+  FAR struct net_rpmsg_drv_s *priv;
+  FAR struct net_driver_s *dev;
+  const char *devname = name + strlen(NET_RPMSG_EPT_PREFIX);
+
+  dev = netdev_findbyname(devname);
+  if (dev)
+    {
+      priv = container_of(dev, struct net_rpmsg_drv_s, dev);
+    }
+  else
+    {
+      priv = net_rpmsg_drv_alloc(devname, NET_LL_ETHERNET);
+      if (!priv)
+        {
+          return;
+        }
+    }
+
+  rpmsg_create_ept(&priv->ept, rdev, name, RPMSG_ADDR_ANY, dest,
+                   net_rpmsg_drv_ept_cb, rpmsg_destroy_ept);
+}
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -1028,3 +1071,18 @@ void net_rpmsg_drv_set_callback(FAR struct netdev_lowerhalf_s *dev,
   priv->cb = cb;
   priv->priv = priv;
 }
+
+#ifdef CONFIG_NET_RPMSG_DRV_SERVER
+/****************************************************************************
+ * Name: net_rpmsg_drv_server_init
+ ****************************************************************************/
+
+int net_rpmsg_drv_server_init(void)
+{
+  return rpmsg_register_callback(NULL,
+                                 NULL,
+                                 NULL,
+                                 net_rpmsg_drv_ns_match,
+                                 net_rpmsg_drv_ns_bind);
+}
+#endif
