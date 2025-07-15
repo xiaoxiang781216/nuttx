@@ -36,7 +36,9 @@ from .utils import Value
 # wrong value on some platforms.
 
 CONFIG_MM_RECORD_STACK = utils.get_symbol_value("CONFIG_MM_RECORD_STACK") or 0
-CONFIG_LIBC_BACKTRACE_DEPTH = utils.get_symbol_value("CONFIG_LIBC_BACKTRACE_DEPTH") or 0
+CONFIG_LIBC_BACKTRACE_DEPTH = (
+    utils.get_field_nitems("struct backtrace_entry_s", "stack") or 0
+)
 MM_RECORD_STACK_DEPTH = (
     int(CONFIG_LIBC_BACKTRACE_DEPTH) if int(CONFIG_MM_RECORD_STACK) else 0
 )
