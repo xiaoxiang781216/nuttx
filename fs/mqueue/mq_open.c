@@ -280,25 +280,7 @@ retry:
           /* The mqueue does not exist and O_CREAT is not set */
 
           ret = -ENOENT;
-          goto errout_with_lock;
-        }
-
-      /* Create an inode in the pseudo-filesystem at this path */
-
-      inode_lock();
-      ret = inode_reserve(fullpath, mode, &inode);
-      inode_unlock();
-
-      if (ret < 0)
-        {
-          if (ret == -EEXIST)
-            {
-              goto retry;
-            }
-          else
-            {
-              goto errout_with_lock;
-            }
+          goto errout_with_search;
         }
 
       /* Allocate memory for the new message queue.  The new inode will
@@ -308,22 +290,51 @@ retry:
       ret = nxmq_alloc_msgq(attr, &msgq);
       if (ret < 0)
         {
-          goto errout_with_inode;
+          goto errout_with_search;
+        }
+
+      /* Create an inode in the pseudo-filesystem at this path */
+
+      inode_lock();
+      ret = inode_reserve(fullpath, mode, &inode);
+
+      /* When two thread try create at same time, should ensure inode
+       * relative information modified before inode_unlock.
+       */
+
+      if (ret >= 0)
+        {
+          INODE_SET_MQUEUE(inode);
+
+          inode->u.i_ops   = &g_nxmq_fileops;
+          inode->i_private = msgq;
+          msgq->inode      = inode;
+
+          /* Set the initial reference count on this inode to one */
+
+          inode_addref(inode);
+        }
+
+      inode_unlock();
+
+      if (ret < 0)
+        {
+          nxmq_free_msgq(msgq);
+
+          if (ret == -EEXIST)
+            {
+              goto retry;
+            }
+          else
+            {
+              goto errout_with_search;
+            }
         }
 
       /* Associate the inode with a file structure */
 
       mq->f_oflags = oflags;
       mq->f_inode  = inode;
-
-      INODE_SET_MQUEUE(inode);
-      inode->u.i_ops    = &g_nxmq_fileops;
-      inode->i_private  = msgq;
-      msgq->inode       = inode;
-
-      /* Set the initial reference count on this inode to one */
-
-      inode_addref(inode);
 
       if (created)
         {
@@ -340,7 +351,7 @@ retry:
 errout_with_inode:
   inode_release(inode);
 
-errout_with_lock:
+errout_with_search:
   RELEASE_SEARCH(&desc);
 
 errout:
