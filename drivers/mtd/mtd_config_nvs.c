@@ -60,9 +60,17 @@
 
 #define NVS_CACHE_NO_ADDR               0xffffffff
 
-#define NVS_ATE(name, size) \
-  char name##_buf[size]; \
-  FAR struct nvs_ate *name = (FAR struct nvs_ate *)name##_buf
+#if CONFIG_MTD_CONFIG_BUFFER_SIZE > 0
+#  define NVS_BUFFER_SIZE(fs)           CONFIG_MTD_CONFIG_BUFFER_SIZE
+#  define NVS_ATE(name, size) \
+    char name##_buf[CONFIG_MTD_CONFIG_BUFFER_SIZE]; \
+    FAR struct nvs_ate *name = (FAR struct nvs_ate *)name##_buf
+#else
+#  define NVS_BUFFER_SIZE(fs)           nvs_align_up(fs, 32)
+#  define NVS_ATE(name, size) \
+    char name##_buf[size]; \
+    FAR struct nvs_ate *name = (FAR struct nvs_ate *)name##_buf
+#endif
 
 /****************************************************************************
  * Private Types
@@ -206,6 +214,15 @@ static inline size_t nvs_align_up(FAR struct nvs_fs *fs, size_t len)
 }
 
 /****************************************************************************
+ * Name: nvs_align_down
+ ****************************************************************************/
+
+static inline size_t nvs_align_down(FAR struct nvs_fs *fs, size_t len)
+{
+  return len & ~(fs->progsize - 1);
+}
+
+/****************************************************************************
  * Name: nvs_ate_size
  ****************************************************************************/
 
@@ -219,15 +236,6 @@ static inline size_t nvs_ate_size(FAR struct nvs_fs *fs)
     }
 
   return nvs_align_up(fs, sizeof(struct nvs_ate)) + fs->progsize;
-}
-
-/****************************************************************************
- * Name: nvs_buffer_size
- ****************************************************************************/
-
-static inline size_t nvs_buffer_size(FAR struct nvs_fs *fs)
-{
-  return nvs_align_up(fs, 32);
 }
 
 /****************************************************************************
@@ -341,7 +349,7 @@ static int nvs_flash_rd(FAR struct nvs_fs *fs, uint32_t addr,
 
   return nvs_flash_brd(fs, offset, data, len);
 #else
-  uint8_t buf[fs->progsize];
+  uint8_t buf[NVS_BUFFER_SIZE(fs)];
   size_t bytes_to_rd;
   off_t begin_padding;
   off_t offset;
@@ -467,13 +475,14 @@ static int nvs_flash_block_cmp(FAR struct nvs_fs *fs, uint32_t addr,
                                FAR const void *data, size_t len)
 {
   FAR const uint8_t *data8 = (FAR const uint8_t *)data;
-  uint8_t buf[nvs_buffer_size(fs)];
+  uint8_t buf[NVS_BUFFER_SIZE(fs)];
+  size_t buf_size = nvs_align_down(fs, sizeof(buf));
   size_t bytes_to_cmp;
   int rc;
 
   while (len > 0)
     {
-      bytes_to_cmp = MIN(sizeof(buf), len);
+      bytes_to_cmp = MIN(buf_size, len);
       rc = nvs_flash_rd(fs, addr, buf, bytes_to_cmp);
       if (rc)
         {
@@ -507,14 +516,15 @@ static int nvs_flash_block_cmp(FAR struct nvs_fs *fs, uint32_t addr,
 static int nvs_flash_direct_cmp(FAR struct nvs_fs *fs, uint32_t addr1,
                                 uint32_t addr2, size_t len)
 {
-  uint8_t buf1[nvs_buffer_size(fs)];
-  uint8_t buf2[nvs_buffer_size(fs)];
+  uint8_t buf1[NVS_BUFFER_SIZE(fs)];
+  uint8_t buf2[NVS_BUFFER_SIZE(fs)];
+  size_t buf_size = nvs_align_down(fs, sizeof(buf1));
   size_t bytes_to_cmp;
   int rc;
 
   while (len > 0)
     {
-      bytes_to_cmp = MIN(sizeof(buf1), len);
+      bytes_to_cmp = MIN(buf_size, len);
       rc = nvs_flash_rd(fs, addr1, buf1, bytes_to_cmp);
       if (rc)
         {
@@ -554,14 +564,15 @@ static int nvs_flash_direct_cmp(FAR struct nvs_fs *fs, uint32_t addr1,
 static int nvs_flash_cmp_const(FAR struct nvs_fs *fs, uint32_t addr,
                                uint8_t value, size_t len)
 {
-  uint8_t cmp[nvs_buffer_size(fs)];
+  uint8_t cmp[NVS_BUFFER_SIZE(fs)];
+  size_t buf_size = nvs_align_down(fs, sizeof(cmp));
   size_t bytes_to_cmp;
   int rc;
 
   memset(cmp, value, sizeof(cmp));
   while (len > 0)
     {
-      bytes_to_cmp = MIN(sizeof(cmp), len);
+      bytes_to_cmp = MIN(buf_size, len);
       rc = nvs_flash_block_cmp(fs, addr, cmp, bytes_to_cmp);
       if (rc)
         {
@@ -587,13 +598,14 @@ static int nvs_flash_cmp_const(FAR struct nvs_fs *fs, uint32_t addr,
 static int nvs_flash_block_move(FAR struct nvs_fs *fs, uint32_t addr,
                                 size_t len)
 {
-  uint8_t buf[nvs_buffer_size(fs)];
+  uint8_t buf[NVS_BUFFER_SIZE(fs)];
+  size_t buf_size = nvs_align_down(fs, sizeof(buf));
   size_t bytes_to_copy;
   int rc;
 
   while (len)
     {
-      bytes_to_copy = MIN(sizeof(buf), len);
+      bytes_to_copy = MIN(buf_size, len);
       rc = nvs_flash_rd(fs, addr, buf, bytes_to_copy);
       if (rc)
         {
@@ -800,7 +812,7 @@ static int nvs_flash_wrt_entry(FAR struct nvs_fs *fs, uint32_t id,
 {
   size_t ate_size = nvs_ate_size(fs);
   NVS_ATE(entry, ate_size);
-  uint8_t buf[fs->progsize];
+  uint8_t buf[NVS_BUFFER_SIZE(fs)];
   uint16_t copy_len = 0;
   uint16_t left;
   int rc;
@@ -827,14 +839,14 @@ static int nvs_flash_wrt_entry(FAR struct nvs_fs *fs, uint32_t id,
       /* Write align block which inlcude part key + part data */
 
       left = rc;
-      memset(buf, fs->erasestate, sizeof(buf));
+      memset(buf, fs->erasestate, fs->progsize);
 
-      copy_len = (left + len) <= sizeof(buf) ?
-                  len : (sizeof(buf) - left);
+      copy_len = (left + len) <= fs->progsize ?
+                  len : (fs->progsize - left);
 
       memcpy(buf, key + key_size - left, left);
       memcpy(buf + left, data, copy_len);
-      rc = nvs_flash_data_wrt(fs, buf, sizeof(buf));
+      rc = nvs_flash_data_wrt(fs, buf, fs->progsize);
       if (rc)
         {
           ferr("Write value failed, rc=%d\n", rc);
@@ -853,10 +865,10 @@ static int nvs_flash_wrt_entry(FAR struct nvs_fs *fs, uint32_t id,
       /* Add padding at the end of data */
 
       left = rc;
-      memset(buf, fs->erasestate, sizeof(buf));
+      memset(buf, fs->erasestate, fs->progsize);
       memcpy(buf, data + len - left, left);
 
-      rc = nvs_flash_data_wrt(fs, buf, sizeof(buf));
+      rc = nvs_flash_data_wrt(fs, buf, fs->progsize);
       if (rc)
         {
           ferr("Write value failed, rc=%d\n", rc);
@@ -1089,11 +1101,11 @@ static int nvs_add_gc_done_ate(FAR struct nvs_fs *fs)
 
 static int nvs_expire_ate(FAR struct nvs_fs *fs, uint32_t addr)
 {
-  uint8_t expired[fs->progsize];
-  memset(expired, ~fs->erasestate, sizeof(expired));
+  uint8_t expired[NVS_BUFFER_SIZE(fs)];
+  memset(expired, ~fs->erasestate, fs->progsize);
 
   return nvs_flash_wrt(fs, addr + nvs_align_up(fs, sizeof(struct nvs_ate)),
-                       expired, sizeof(expired));
+                       expired, fs->progsize);
 }
 
 /****************************************************************************
@@ -1272,6 +1284,10 @@ static int nvs_startup(FAR struct nvs_fs *fs)
   size_t ate_size = nvs_ate_size(fs);
   NVS_ATE(second_ate, ate_size);
   NVS_ATE(last_ate, ate_size);
+
+#if CONFIG_MTD_CONFIG_BUFFER_SIZE > 0
+  DEBUGASSERT(ate_size <= CONFIG_MTD_CONFIG_BUFFER_SIZE);
+#endif
 
   rc = MTD_IOCTL(fs->mtd, MTDIOC_ERASESTATE,
                  (unsigned long)((uintptr_t)&fs->erasestate));

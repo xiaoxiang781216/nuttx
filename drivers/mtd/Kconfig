@@ -220,18 +220,25 @@ config MTD_CONFIG_CACHE_SIZE
 	int "Non-volatile Storage lookup cache size"
 	default 0
 	depends on MTD_CONFIG_NVS || MTD_CONFIG_ZMS
-	help
-	  Number of entries in Non-volatile Storage lookup cache.
-	  It is recommended that it be a power of 2.
+	---help---
+		Number of entries in Non-volatile Storage lookup cache.
+		It is recommended that it be a power of 2.
 
 config MTD_CONFIG_AUTOFORMAT
 	bool "ZMS Autoformat"
 	default n
 	depends on MTD_CONFIG_ZMS
 	---help---
-	  Attempt to register zms first. If the register is successful,
-	  it will be completed. If the register fails, all data will be
-	  cleared first, and then register zms again.
+		Attempt to register zms first. If the register is successful,
+		it will be completed. If the register fails, all data will be
+		cleared first, and then register zms again.
+
+config MTD_CONFIG_BUFFER_SIZE
+	int "Buffer size on the stack"
+	default 0
+	---help---
+		Define a fixed size buffer on the stack instead of using a
+		variable length array.
 
 endif
 
