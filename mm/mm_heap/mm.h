@@ -231,7 +231,7 @@ struct mm_heap_s
 {
   /* Mutex for controling access to this heap */
 
-  mutex_t mm_lock;
+  rmutex_t mm_lock;
 
   /* This is the size of the heap provided to mm */
 

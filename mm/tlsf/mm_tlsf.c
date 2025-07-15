@@ -71,7 +71,7 @@ struct mm_heap_s
    * the following un-named mutex.
    */
 
-  mutex_t mm_lock;
+  rmutex_t mm_lock;
 
   /* This is the size of the heap provided to mm */
 
@@ -1033,7 +1033,7 @@ mm_initialize_heap(FAR const struct mm_heap_config_s *config)
    * a-time access to private data sets).
    */
 
-  nxmutex_init(&heap->mm_lock);
+  nxrmutex_init(&heap->mm_lock);
 
   /* Add the initial region of memory to the heap */
 
@@ -1739,7 +1739,7 @@ void mm_uninitialize(FAR struct mm_heap_s *heap)
     defined(__KERNEL__)) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   procfs_unregister_meminfo(&heap->mm_procfs);
 #endif
-  nxmutex_destroy(&heap->mm_lock);
+  nxrmutex_destroy(&heap->mm_lock);
   tlsf_destroy(&heap->mm_tlsf);
 }
 

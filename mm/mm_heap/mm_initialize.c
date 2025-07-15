@@ -296,7 +296,7 @@ mm_initialize_heap(FAR const struct mm_heap_config_s *config)
    * a-time access to private data sets).
    */
 
-  nxmutex_init(&heap->mm_lock);
+  nxrmutex_init(&heap->mm_lock);
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
 #  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
@@ -442,5 +442,5 @@ void mm_uninitialize(FAR struct mm_heap_s *heap)
     defined(__KERNEL__)) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   procfs_unregister_meminfo(&heap->mm_procfs);
 #endif
-  nxmutex_destroy(&heap->mm_lock);
+  nxrmutex_destroy(&heap->mm_lock);
 }
