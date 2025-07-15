@@ -89,9 +89,13 @@ class WorkQueue(Value, p.KWorkQueue):
     @property
     def workers(self) -> List[Work]:
         work_s = utils.lookup_type("struct work_s")
-        return [
-            Work(worker.cast(work_s.pointer())) for worker in lists.NxDQueue(self.q)
+        expired_work = [
+            Work(worker.cast(work_s.pointer())) for worker in lists.NxList(self.expired)
         ]
+        pending_work = [
+            Work(worker.cast(work_s.pointer())) for worker in lists.NxList(self.pending)
+        ]
+        return expired_work + pending_work
 
     @property
     def threads(self) -> List[KWorker]:
@@ -103,6 +107,12 @@ class WorkQueue(Value, p.KWorkQueue):
     @property
     def nthreads(self):
         return int(self["nthreads"])
+
+    @property
+    def worker(self):
+        return (utils.sizeof("struct kwork_wqueue_s") + self.address).cast(
+            utils.lookup_type("struct kworker_s").pointer()
+        )
 
     @property
     def is_running(self):
