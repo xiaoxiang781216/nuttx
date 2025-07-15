@@ -99,13 +99,8 @@ static ssize_t syslog_stream_write(FAR syslog_channel_t *channel,
 {
   FAR struct syslog_stream_s *chan =
     (FAR struct syslog_stream_s *)channel;
-  ssize_t nwritten;
-  irqstate_t flags;
 
-  flags = enter_critical_section();
-  nwritten = lib_stream_puts(chan->stream, buffer, buflen);
-  leave_critical_section(flags);
-  return nwritten;
+  return lib_stream_puts(chan->stream, buffer, buflen);
 }
 
 /****************************************************************************
@@ -129,12 +124,8 @@ static int syslog_stream_putc(FAR syslog_channel_t *channel, int ch)
 {
   FAR struct syslog_stream_s *chan =
     (FAR struct syslog_stream_s *)channel;
-  irqstate_t flags;
 
-  flags = enter_critical_section();
   lib_stream_putc(chan->stream, ch);
-  leave_critical_section(flags);
-
   return OK;
 }
 
@@ -156,11 +147,8 @@ static int syslog_stream_flush(FAR syslog_channel_t *channel)
 {
   FAR struct syslog_stream_s *chan =
     (FAR struct syslog_stream_s *)channel;
-  irqstate_t flags;
 
-  flags = enter_critical_section();
   lib_stream_flush(chan->stream);
-  leave_critical_section(flags);
   return OK;
 }
 

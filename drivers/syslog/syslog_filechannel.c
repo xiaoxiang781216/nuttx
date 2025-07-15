@@ -170,17 +170,6 @@ end:
 FAR syslog_channel_t *syslog_file_channel(FAR const char *devpath)
 {
   FAR syslog_channel_t *file_channel;
-  irqstate_t flags;
-
-  /* Reset the default SYSLOG channel so that we can safely modify the
-   * SYSLOG device.  This is an atomic operation and we should be safe
-   * after the default channel has been selected.
-   *
-   * We disable pre-emption only so that we are not suspended and a lot of
-   * important debug output is lost while we futz with the channels.
-   */
-
-  flags = enter_critical_section();
 
   /* Rotate the log file, if needed. */
 
@@ -199,7 +188,7 @@ FAR syslog_channel_t *syslog_file_channel(FAR const char *devpath)
   file_channel = syslog_dev_initialize(devpath, OPEN_FLAGS, OPEN_MODE);
   if (file_channel == NULL)
     {
-      goto errout_with_lock;
+      return NULL;
     }
 
   /* Use the file as the SYSLOG channel. If this fails we are pretty much
@@ -212,8 +201,6 @@ FAR syslog_channel_t *syslog_file_channel(FAR const char *devpath)
       file_channel = NULL;
     }
 
-errout_with_lock:
-  leave_critical_section(flags);
   return file_channel;
 }
 

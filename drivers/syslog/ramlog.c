@@ -109,6 +109,7 @@ struct ramlog_dev_s
   uint32_t                   rl_bufsize;   /* Size of the circular buffer */
   struct list_node           rl_list;      /* The list of ramlog_user_s */
   struct ramlog_ratelimit_s  rl_ratelimit; /* The ratelimit for ramlog */
+  spinlock_t                 rl_lock;      /* The lock for ramlog */
 };
 
 /****************************************************************************
@@ -367,11 +368,11 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
 
   /* Disable interrupts (in case we are NOT called from interrupt handler) */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave_nopreempt(&priv->rl_lock);
 
   if (ramlog_ratelimit(priv))
     {
-      leave_critical_section(flags);
+      spin_unlock_irqrestore_nopreempt(&priv->rl_lock, flags);
       return len;
     }
 
@@ -395,13 +396,6 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
 
   if (len > 0)
     {
-      /* Lock the scheduler do NOT switch out */
-
-      if (!up_interrupt_context())
-        {
-          sched_lock();
-        }
-
 #ifndef CONFIG_RAMLOG_NONBLOCKING
       /* Are there threads waiting for read data? */
 
@@ -410,13 +404,6 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
       /* Notify all poll/select waiters that they can read from the FIFO */
 
       ramlog_pollnotify(priv);
-
-      /* Unlock the scheduler */
-
-      if (!up_interrupt_context())
-        {
-          sched_unlock();
-        }
     }
 
   /* We always have to return the number of bytes requested and NOT the
@@ -424,7 +411,7 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
    * probably retry, causing same error condition again.
    */
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore_nopreempt(&priv->rl_lock, flags);
   return len;
 }
 
@@ -453,7 +440,7 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
 
   /* Get exclusive access to the rl_tail index */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->rl_lock);
 
   /* Loop until something is read */
 
@@ -496,6 +483,7 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
            * but will be re-enabled while we are waiting.
            */
 
+          spin_unlock_irqrestore(&priv->rl_lock, flags);
           ret = nxsem_wait(&upriv->rl_waitsem);
 
           /* Did we successfully get the rl_waitsem? */
@@ -509,6 +497,10 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
                */
 
               return ret;
+            }
+          else
+            {
+              flags = spin_lock_irqsave(&priv->rl_lock);
             }
 #endif /* CONFIG_RAMLOG_NONBLOCKING */
         }
@@ -549,7 +541,7 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->rl_lock, flags);
 
   /* Return the number of characters actually read */
 
@@ -582,7 +574,7 @@ static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
   irqstate_t flags;
   int ret = 0;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->rl_lock);
 
   switch (cmd)
     {
@@ -633,7 +625,7 @@ static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
         break;
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->rl_lock, flags);
   return ret;
 }
 
@@ -652,7 +644,7 @@ static int ramlog_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   /* Get exclusive access to the poll structures */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->rl_lock);
 
   /* Are we setting up the poll?  Or tearing it down? */
 
@@ -677,6 +669,7 @@ static int ramlog_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
           eventset |= POLLIN;
         }
 
+      spin_unlock_irqrestore(&priv->rl_lock, flags);
       poll_notify(&fds, 1, eventset);
     }
   else if (fds->priv)
@@ -689,9 +682,9 @@ static int ramlog_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       *slot     = NULL;
       fds->priv = NULL;
+      spin_unlock_irqrestore(&priv->rl_lock, flags);
     }
 
-  leave_critical_section(flags);
   return 0;
 }
 
@@ -720,11 +713,11 @@ static int ramlog_file_open(FAR struct file *filep)
   nxsem_init(&upriv->rl_waitsem, 0, 0);
 #endif
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->rl_lock);
   list_add_tail(&priv->rl_list, &upriv->rl_node);
   upriv->rl_tail = header->rl_head > priv->rl_bufsize ?
                    header->rl_head - priv->rl_bufsize : 0;
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->rl_lock, flags);
 
   filep->f_priv = upriv;
   return 0;
@@ -736,14 +729,16 @@ static int ramlog_file_open(FAR struct file *filep)
 
 static int ramlog_file_close(FAR struct file *filep)
 {
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct ramlog_dev_s *priv = inode->i_private;
   FAR struct ramlog_user_s *upriv = filep->f_priv;
   irqstate_t flags;
 
   /* Get exclusive access to the rl_tail index */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->rl_lock);
   list_delete(&upriv->rl_node);
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->rl_lock, flags);
 
 #ifndef CONFIG_RAMLOG_NONBLOCKING
   nxsem_destroy(&upriv->rl_waitsem);
