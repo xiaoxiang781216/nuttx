@@ -20,3 +20,5 @@ config HWTRACING_TIMEOUT
 	default 100
 
 endif # HWTRACING
+
+source "drivers/hwtracing/coresight/Kconfig"

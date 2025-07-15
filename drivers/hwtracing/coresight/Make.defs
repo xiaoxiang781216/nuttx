@@ -24,7 +24,7 @@
 
 ifeq ($(CONFIG_CORESIGHT),y)
 
-CSRCS += coresight_core.c coresight_common.c
+CSRCS += coresight_common.c
 
 ifeq ($(CONFIG_CORESIGHT_ETB),y)
 CSRCS += coresight_etb.c
@@ -62,8 +62,8 @@ ifeq ($(CONFIG_CORESIGHT_TPIU),y)
 CSRCS += coresight_tpiu.c
 endif
 
-DEPPATH += --dep-path coresight
-VPATH += :coresight
-CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)coresight
+DEPPATH += --dep-path hwtracing/coresight
+VPATH += :hwtracing/coresight
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)hwtracing$(DELIM)coresight
 
 endif # CONFIG_CORESIGHT

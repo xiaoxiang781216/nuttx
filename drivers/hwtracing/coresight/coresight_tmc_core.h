@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/coresight/coresight_tmc_core.h
+ * drivers/hwtracing/coresight/coresight_tmc_core.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,15 +20,15 @@
  *
  ****************************************************************************/
 
-#ifndef __DRIVERS_CORESIGHT_CORESIGHT_TMC_CORE_H
-#define __DRIVERS_CORESIGHT_CORESIGHT_TMC_CORE_H
+#ifndef __DRIVERS_HWTRACING_CORESIGHT_CORESIGHT_TMC_CORE_H
+#define __DRIVERS_HWTRACING_CORESIGHT_CORESIGHT_TMC_CORE_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/bits.h>
-#include <nuttx/coresight/coresight_tmc.h>
+#include <nuttx/hwtracing/coresight/coresight_tmc.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -144,14 +144,14 @@ enum tmc_mode_e
  ****************************************************************************/
 
 int tmc_etf_register(FAR struct coresight_tmc_dev_s *tmcdev,
-                     FAR const struct coresight_desc_s *desc);
+                     FAR const struct hwtracing_desc_s *desc);
 
 /****************************************************************************
  * Name: tmc_etr_register
  ****************************************************************************/
 
 int tmc_etr_register(FAR struct coresight_tmc_dev_s *tmcdev,
-                     FAR const struct coresight_desc_s *desc);
+                     FAR const struct hwtracing_desc_s *desc);
 
 /****************************************************************************
  * Name: tmc_etf_unregister
@@ -165,4 +165,4 @@ void tmc_etf_unregister(FAR struct coresight_tmc_dev_s * tmcdev);
 
 void tmc_etr_unregister(FAR struct coresight_tmc_dev_s * tmcdev);
 
-#endif  //__DRIVERS_CORESIGHT_CORESIGHT_TMC_CORE_H
+#endif  //__DRIVERS_HWTRACING_CORESIGHT_CORESIGHT_TMC_CORE_H

@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/coresight/coresight_replicator.c
+ * drivers/hwtracing/coresight/coresight_replicator.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -29,7 +29,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/irq.h>
 
-#include <nuttx/coresight/coresight_replicator.h>
+#include <nuttx/hwtracing/coresight/coresight_replicator.h>
 
 #include "coresight_common.h"
 
@@ -46,22 +46,22 @@
  * Private Functions Prototypes
  ****************************************************************************/
 
-static int replicator_enable(FAR struct coresight_dev_s *csdev,
+static int replicator_enable(FAR struct hwtracing_dev_s *htdev,
                              int iport, int oport);
-static void replicator_disable(FAR struct coresight_dev_s *csdev,
+static void replicator_disable(FAR struct hwtracing_dev_s *htdev,
                                int iport, int oport);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static const struct coresight_link_ops_s g_replicator_link_ops =
+static const struct hwtracing_link_ops_s g_replicator_link_ops =
 {
   .enable  = replicator_enable,
   .disable = replicator_disable,
 };
 
-static const struct coresight_ops_s g_replicator_ops =
+static const struct hwtracing_ops_s g_replicator_ops =
 {
   .link_ops = &g_replicator_link_ops,
 };
@@ -87,19 +87,19 @@ replicator_hw_enable(FAR struct coresight_replicator_dev_s *repdev,
       return -EINVAL;
     }
 
-  coresight_unlock(repdev->csdev.addr);
-  id0val = coresight_get32(repdev->csdev.addr + REPLICATOR_IDFILTER0);
-  id1val = coresight_get32(repdev->csdev.addr + REPLICATOR_IDFILTER1);
+  coresight_unlock(repdev->htdev.addr);
+  id0val = hwtracing_get32(repdev->htdev.addr + REPLICATOR_IDFILTER0);
+  id1val = hwtracing_get32(repdev->htdev.addr + REPLICATOR_IDFILTER1);
 
   /* Only claim the device when the first slave port is enabled */
 
   if (id0val == 0xff && id1val == 0xff)
     {
-      ret = coresight_claim_device(repdev->csdev.addr);
+      ret = coresight_claim_device(repdev->htdev.addr);
       if (ret < 0)
         {
-          cserr("%s claim failed\n", repdev->csdev.name);
-          coresight_lock(repdev->csdev.addr);
+          hterr("%s claim failed\n", repdev->htdev.name);
+          coresight_lock(repdev->htdev.addr);
           return ret;
         }
     }
@@ -107,18 +107,18 @@ replicator_hw_enable(FAR struct coresight_replicator_dev_s *repdev,
   switch (port)
     {
       case 0:
-        coresight_put32(0x00, repdev->csdev.addr + REPLICATOR_IDFILTER0);
+        hwtracing_put32(0x00, repdev->htdev.addr + REPLICATOR_IDFILTER0);
         break;
 
       case 1:
-        coresight_put32(0x00, repdev->csdev.addr + REPLICATOR_IDFILTER1);
+        hwtracing_put32(0x00, repdev->htdev.addr + REPLICATOR_IDFILTER1);
         break;
 
       default:
         break;
     }
 
-  coresight_lock(repdev->csdev.addr);
+  coresight_lock(repdev->htdev.addr);
   return ret;
 }
 
@@ -148,15 +148,15 @@ replicator_hw_disable(FAR struct coresight_replicator_dev_s *repdev,
         return;
     }
 
-  coresight_unlock(repdev->csdev.addr);
-  coresight_put32(0xff, repdev->csdev.addr + off);
-  id0val = coresight_get32(repdev->csdev.addr + REPLICATOR_IDFILTER0);
-  id1val = coresight_get32(repdev->csdev.addr + REPLICATOR_IDFILTER1);
-  coresight_lock(repdev->csdev.addr);
+  coresight_unlock(repdev->htdev.addr);
+  hwtracing_put32(0xff, repdev->htdev.addr + off);
+  id0val = hwtracing_get32(repdev->htdev.addr + REPLICATOR_IDFILTER0);
+  id1val = hwtracing_get32(repdev->htdev.addr + REPLICATOR_IDFILTER1);
+  coresight_lock(repdev->htdev.addr);
 
   if (id0val == 0xff && id1val == 0xff)
     {
-      coresight_disclaim_device(repdev->csdev.addr);
+      coresight_disclaim_device(repdev->htdev.addr);
     }
 }
 
@@ -164,11 +164,11 @@ replicator_hw_disable(FAR struct coresight_replicator_dev_s *repdev,
  * Name: replicator_enable
  ****************************************************************************/
 
-static int replicator_enable(FAR struct coresight_dev_s *csdev,
+static int replicator_enable(FAR struct hwtracing_dev_s *htdev,
                              int iport, int oport)
 {
   FAR struct coresight_replicator_dev_s *repdev =
-    (FAR struct coresight_replicator_dev_s *)csdev;
+    (FAR struct coresight_replicator_dev_s *)htdev;
   int ret = 0;
 
   if (repdev->port_refcnt[oport]++ == 0)
@@ -177,7 +177,7 @@ static int replicator_enable(FAR struct coresight_dev_s *csdev,
       if (ret < 0)
         {
           repdev->port_refcnt[oport]--;
-          cserr("%s inport %d enabled failed\n", csdev->name, oport);
+          hterr("%s inport %d enabled failed\n", htdev->name, oport);
         }
     }
 
@@ -188,16 +188,16 @@ static int replicator_enable(FAR struct coresight_dev_s *csdev,
  * Name: replicator_disable
  ****************************************************************************/
 
-static void replicator_disable(FAR struct coresight_dev_s *csdev,
+static void replicator_disable(FAR struct hwtracing_dev_s *htdev,
                                int iport, int oport)
 {
   FAR struct coresight_replicator_dev_s *repdev =
-    (FAR struct coresight_replicator_dev_s *)csdev;
+    (FAR struct coresight_replicator_dev_s *)htdev;
 
   if (--repdev->port_refcnt[oport] == 0)
     {
       replicator_hw_disable(repdev, oport);
-      csinfo("%s inport %d disabled\n", csdev->name, oport);
+      htinfo("%s inport %d disabled\n", htdev->name, oport);
     }
 }
 
@@ -207,13 +207,13 @@ static void replicator_disable(FAR struct coresight_dev_s *csdev,
 
 static void replicator_reset(FAR struct coresight_replicator_dev_s *repdev)
 {
-  if (coresight_claim_device(repdev->csdev.addr) == 0)
+  if (coresight_claim_device(repdev->htdev.addr) == 0)
     {
-      coresight_unlock(repdev->csdev.addr);
-      coresight_put32(0xff, repdev->csdev.addr + REPLICATOR_IDFILTER0);
-      coresight_put32(0xff, repdev->csdev.addr + REPLICATOR_IDFILTER1);
-      coresight_lock(repdev->csdev.addr);
-      coresight_disclaim_device(repdev->csdev.addr);
+      coresight_unlock(repdev->htdev.addr);
+      hwtracing_put32(0xff, repdev->htdev.addr + REPLICATOR_IDFILTER0);
+      hwtracing_put32(0xff, repdev->htdev.addr + REPLICATOR_IDFILTER1);
+      coresight_lock(repdev->htdev.addr);
+      coresight_disclaim_device(repdev->htdev.addr);
     }
 }
 
@@ -236,27 +236,27 @@ static void replicator_reset(FAR struct coresight_replicator_dev_s *repdev)
  ****************************************************************************/
 
 FAR struct coresight_replicator_dev_s *
-replicator_register(FAR const struct coresight_desc_s *desc)
+replicator_register(FAR const struct hwtracing_desc_s *desc)
 {
   FAR struct coresight_replicator_dev_s *repdev;
-  FAR struct coresight_dev_s *csdev;
+  FAR struct hwtracing_dev_s *htdev;
   int ret;
 
   repdev = kmm_zalloc(sizeof(struct coresight_replicator_dev_s) +
                       sizeof(uint8_t) * desc->outport_num);
   if (repdev == NULL)
     {
-      cserr("%s:malloc failed!\n", desc->name);
+      hterr("%s:malloc failed!\n", desc->name);
       return NULL;
     }
 
-  csdev = &repdev->csdev;
-  csdev->ops = &g_replicator_ops;
-  ret = coresight_register(csdev, desc);
+  htdev = &repdev->htdev;
+  htdev->ops = &g_replicator_ops;
+  ret = hwtracing_register(htdev, desc);
   if (ret < 0)
     {
       kmm_free(repdev);
-      cserr("%s: register failed\n", desc->name);
+      hterr("%s: register failed\n", desc->name);
       return NULL;
     }
 
@@ -279,12 +279,12 @@ void replicator_unregister(FAR struct coresight_replicator_dev_s *repdev)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(&repdev->csdev.lock);
-  if (repdev->csdev.refcnt > 0)
+  flags = spin_lock_irqsave(&repdev->htdev.lock);
+  if (repdev->htdev.refcnt > 0)
     {
       int i;
 
-      for (i = 0; i < repdev->csdev.outport_num; i++)
+      for (i = 0; i < repdev->htdev.outport_num; i++)
         {
           if (repdev->port_refcnt[i] > 0)
             {
@@ -293,8 +293,8 @@ void replicator_unregister(FAR struct coresight_replicator_dev_s *repdev)
         }
     }
 
-  spin_unlock_irqrestore(&repdev->csdev.lock, flags);
-  coresight_unregister(&repdev->csdev);
+  spin_unlock_irqrestore(&repdev->htdev.lock, flags);
+  hwtracing_unregister(&repdev->htdev);
 
   kmm_free(repdev);
 }

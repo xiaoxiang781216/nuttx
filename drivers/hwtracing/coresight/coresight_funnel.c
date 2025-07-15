@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/coresight/coresight_funnel.c
+ * drivers/hwtracing/coresight/coresight_funnel.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -29,7 +29,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/irq.h>
 
-#include <nuttx/coresight/coresight_funnel.h>
+#include <nuttx/hwtracing/coresight/coresight_funnel.h>
 
 #include "coresight_common.h"
 
@@ -51,22 +51,22 @@
  * Private Functions Prototypes
  ****************************************************************************/
 
-static int funnel_enable(FAR struct coresight_dev_s *csdev,
+static int funnel_enable(FAR struct hwtracing_dev_s *htdev,
                          int iport, int oport);
-static void funnel_disable(FAR struct coresight_dev_s *csdev,
+static void funnel_disable(FAR struct hwtracing_dev_s *htdev,
                            int iport, int oport);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static const struct coresight_link_ops_s g_funnel_link_ops =
+static const struct hwtracing_link_ops_s g_funnel_link_ops =
 {
   .enable  = funnel_enable,
   .disable = funnel_disable,
 };
 
-static const struct coresight_ops_s g_funnel_ops =
+static const struct hwtracing_ops_s g_funnel_ops =
 {
   .link_ops = &g_funnel_link_ops,
 };
@@ -85,29 +85,29 @@ static int funnel_hw_enable(FAR struct coresight_funnel_dev_s *fundev,
   uint32_t functl;
   int ret = 0;
 
-  coresight_unlock(fundev->csdev.addr);
-  functl = coresight_get32(fundev->csdev.addr + FUNNEL_FUNCTL);
-  coresight_lock(fundev->csdev.addr);
+  coresight_unlock(fundev->htdev.addr);
+  functl = hwtracing_get32(fundev->htdev.addr + FUNNEL_FUNCTL);
+  coresight_lock(fundev->htdev.addr);
 
   /* Only claim the device when the first slave port is enabled */
 
   if (!(functl & FUNNEL_ENS_MASK))
     {
-      ret = coresight_claim_device(fundev->csdev.addr);
+      ret = coresight_claim_device(fundev->htdev.addr);
       if (ret < 0)
         {
-          cserr("%s claim failed\n", fundev->csdev.name);
+          hterr("%s claim failed\n", fundev->htdev.name);
           return ret;
         }
     }
 
-  coresight_unlock(fundev->csdev.addr);
+  coresight_unlock(fundev->htdev.addr);
   functl &= ~FUNNEL_HOLDTIME_MASK;
   functl |= FUNNEL_HOLDTIME;
   functl |= 1 << port;
-  coresight_put32(functl, fundev->csdev.addr + FUNNEL_FUNCTL);
-  coresight_put32(fundev->priority, fundev->csdev.addr + FUNNEL_PRICTL);
-  coresight_lock(fundev->csdev.addr);
+  hwtracing_put32(functl, fundev->htdev.addr + FUNNEL_FUNCTL);
+  hwtracing_put32(fundev->priority, fundev->htdev.addr + FUNNEL_PRICTL);
+  coresight_lock(fundev->htdev.addr);
 
   return ret;
 }
@@ -121,15 +121,15 @@ static void funnel_hw_disable(FAR struct coresight_funnel_dev_s *fundev,
 {
   uint32_t functl;
 
-  coresight_unlock(fundev->csdev.addr);
-  functl = coresight_get32(fundev->csdev.addr + FUNNEL_FUNCTL);
+  coresight_unlock(fundev->htdev.addr);
+  functl = hwtracing_get32(fundev->htdev.addr + FUNNEL_FUNCTL);
   functl &= ~(1 << port);
-  coresight_put32(functl, fundev->csdev.addr + FUNNEL_FUNCTL);
-  coresight_lock(fundev->csdev.addr);
+  hwtracing_put32(functl, fundev->htdev.addr + FUNNEL_FUNCTL);
+  coresight_lock(fundev->htdev.addr);
 
   if (!(functl & FUNNEL_ENS_MASK))
     {
-      coresight_disclaim_device(fundev->csdev.addr);
+      coresight_disclaim_device(fundev->htdev.addr);
     }
 }
 
@@ -137,11 +137,11 @@ static void funnel_hw_disable(FAR struct coresight_funnel_dev_s *fundev,
  * Name: funnel_enable
  ****************************************************************************/
 
-static int funnel_enable(FAR struct coresight_dev_s *csdev,
+static int funnel_enable(FAR struct hwtracing_dev_s *htdev,
                          int iport, int oport)
 {
   FAR struct coresight_funnel_dev_s *fundev =
-    (FAR struct coresight_funnel_dev_s *)csdev;
+    (FAR struct coresight_funnel_dev_s *)htdev;
   int ret = 0;
 
   if (fundev->port_refcnt[iport]++ == 0)
@@ -150,7 +150,7 @@ static int funnel_enable(FAR struct coresight_dev_s *csdev,
       if (ret < 0)
         {
           fundev->port_refcnt[iport]--;
-          cserr("%s inport %d enabled failed\n", csdev->name, iport);
+          hterr("%s inport %d enabled failed\n", htdev->name, iport);
         }
     }
 
@@ -161,16 +161,16 @@ static int funnel_enable(FAR struct coresight_dev_s *csdev,
  * Name: funnel_disable
  ****************************************************************************/
 
-static void funnel_disable(FAR struct coresight_dev_s *csdev,
+static void funnel_disable(FAR struct hwtracing_dev_s *htdev,
                            int iport, int oport)
 {
   FAR struct coresight_funnel_dev_s *fundev =
-    (FAR struct coresight_funnel_dev_s *)csdev;
+    (FAR struct coresight_funnel_dev_s *)htdev;
 
   if (--fundev->port_refcnt[iport] == 0)
     {
       funnel_hw_disable(fundev, iport);
-      csinfo("%s inport %d disabled\n", csdev->name, iport);
+      htinfo("%s inport %d disabled\n", htdev->name, iport);
     }
 }
 
@@ -212,28 +212,28 @@ void set_funnel_priority(FAR struct coresight_funnel_dev_s *fundev,
  ****************************************************************************/
 
 FAR struct coresight_funnel_dev_s *
-funnel_register(FAR const struct coresight_desc_s *desc)
+funnel_register(FAR const struct hwtracing_desc_s *desc)
 {
   FAR struct coresight_funnel_dev_s *fundev;
-  FAR struct coresight_dev_s *csdev;
+  FAR struct hwtracing_dev_s *htdev;
   int ret;
 
   fundev = kmm_zalloc(sizeof(struct coresight_funnel_dev_s) +
                       sizeof(uint8_t) * desc->inport_num);
   if (fundev == NULL)
     {
-      cserr("%s:malloc failed!\n", desc->name);
+      hterr("%s:malloc failed!\n", desc->name);
       return NULL;
     }
 
   fundev->port_num = desc->inport_num;
-  csdev = &fundev->csdev;
-  csdev->ops = &g_funnel_ops;
-  ret = coresight_register(csdev, desc);
+  htdev = &fundev->htdev;
+  htdev->ops = &g_funnel_ops;
+  ret = hwtracing_register(htdev, desc);
   if (ret < 0)
     {
       kmm_free(fundev);
-      cserr("%s: register failed\n", desc->name);
+      hterr("%s: register failed\n", desc->name);
       return NULL;
     }
 
@@ -255,8 +255,8 @@ void funnel_unregister(FAR struct coresight_funnel_dev_s *fundev)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(&fundev->csdev.lock);
-  if (fundev->csdev.refcnt > 0)
+  flags = spin_lock_irqsave(&fundev->htdev.lock);
+  if (fundev->htdev.refcnt > 0)
     {
       int i;
 
@@ -269,8 +269,8 @@ void funnel_unregister(FAR struct coresight_funnel_dev_s *fundev)
         }
     }
 
-  spin_unlock_irqrestore(&fundev->csdev.lock, flags);
-  coresight_unregister(&fundev->csdev);
+  spin_unlock_irqrestore(&fundev->htdev.lock, flags);
+  hwtracing_unregister(&fundev->htdev);
 
   kmm_free(fundev);
 }

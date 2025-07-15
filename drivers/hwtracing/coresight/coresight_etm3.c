@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/coresight/coresight_etm3.c
+ * drivers/hwtracing/coresight/coresight_etm3.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -29,7 +29,7 @@
 #include <nuttx/bits.h>
 #include <nuttx/kmalloc.h>
 
-#include <nuttx/coresight/coresight_etm.h>
+#include <nuttx/hwtracing/coresight/coresight_etm.h>
 
 #include "coresight_common.h"
 
@@ -193,20 +193,20 @@
  * Private Functions Prototypes
  ****************************************************************************/
 
-static int etm_enable(FAR struct coresight_dev_s *csdev);
-static void etm_disable(FAR struct coresight_dev_s *csdev);
+static int etm_enable(FAR struct hwtracing_dev_s *htdev);
+static void etm_disable(FAR struct hwtracing_dev_s *htdev);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static const struct coresight_source_ops_s g_etm_source_ops =
+static const struct hwtracing_source_ops_s g_etm_source_ops =
 {
   .enable  = etm_enable,
   .disable = etm_disable,
 };
 
-static const struct coresight_ops_s g_etm_ops =
+static const struct hwtracing_ops_s g_etm_ops =
 {
   .source_ops = &g_etm_source_ops,
 };
@@ -219,13 +219,13 @@ static const struct coresight_ops_s g_etm_ops =
 static inline void etm_write_reg(FAR struct coresight_etm_dev_s *etmdev,
                                  uint32_t val, uint32_t off)
 {
-  coresight_put32(val, etmdev->csdev.addr + off);
+  hwtracing_put32(val, etmdev->htdev.addr + off);
 }
 
 static inline uint32_t etm_read_reg(FAR struct coresight_etm_dev_s *etmdev,
                                     uint32_t off)
 {
-  return coresight_get32(etmdev->csdev.addr + off);
+  return hwtracing_get32(etmdev->htdev.addr + off);
 }
 #endif
 
@@ -300,8 +300,8 @@ static void etm_set_pwrdwn(FAR struct coresight_etm_dev_s *etmdev)
 
 static void etm_set_pwrup(FAR struct coresight_etm_dev_s *etmdev)
 {
-  coresight_modify32(ETM_PDCR_PWD_UP, ETM_PDCR_PWD_UP,
-                     etmdev->csdev.addr + ETM_PDCR);
+  hwtracing_modify32(ETM_PDCR_PWD_UP, ETM_PDCR_PWD_UP,
+                     etmdev->htdev.addr + ETM_PDCR);
 }
 
 /****************************************************************************
@@ -310,7 +310,7 @@ static void etm_set_pwrup(FAR struct coresight_etm_dev_s *etmdev)
 
 static void etm_clr_pwrup(FAR struct coresight_etm_dev_s *etmdev)
 {
-  coresight_modify32(0, ETM_PDCR_PWD_UP, etmdev->csdev.addr + ETM_PDCR);
+  hwtracing_modify32(0, ETM_PDCR_PWD_UP, etmdev->htdev.addr + ETM_PDCR);
 }
 
 /****************************************************************************
@@ -326,7 +326,7 @@ static int etm_timeout(FAR struct coresight_etm_dev_s *etmdev,
 {
   int i;
 
-  for (i = CONFIG_CORESIGHT_TIMEOUT; i > 0; i--)
+  for (i = CONFIG_HWTRACING_TIMEOUT; i > 0; i--)
     {
       uint32_t value = etm_read_reg(etmdev, off);
       if ((value & mask) == val)
@@ -356,7 +356,7 @@ static void etm_set_program(FAR struct coresight_etm_dev_s *etmdev)
 
   if (etm_timeout(etmdev, ETM_SR_PROGRAM, ETM_SR_PROGRAM, ETM_SR) < 0)
     {
-      cserr("timeout observed at setting ETM_SR_PROGRAM\n");
+      hterr("timeout observed at setting ETM_SR_PROGRAM\n");
     }
 }
 
@@ -370,7 +370,7 @@ static void etm_clr_program(FAR struct coresight_etm_dev_s *etmdev)
 
   if (etm_timeout(etmdev, 0, ETM_SR_PROGRAM, ETM_SR) < 0)
     {
-      cserr("timeout observed at clearing ETM_SR_PROGRAM\n");
+      hterr("timeout observed at clearing ETM_SR_PROGRAM\n");
     }
 }
 
@@ -386,7 +386,7 @@ static void etm_init_arch_data(FAR struct coresight_etm_dev_s *etmdev)
 {
   uint32_t etmccr;
 
-  coresight_unlock(etmdev->csdev.addr);
+  coresight_unlock(etmdev->htdev.addr);
   etm_os_unlock(etmdev);
   etm_clr_pwrdwn(etmdev);
   etm_set_pwrup(etmdev);
@@ -405,7 +405,7 @@ static void etm_init_arch_data(FAR struct coresight_etm_dev_s *etmdev)
   etm_clr_program(etmdev);
   etm_clr_pwrup(etmdev);
   etm_set_pwrdwn(etmdev);
-  coresight_lock(etmdev->csdev.addr);
+  coresight_lock(etmdev->htdev.addr);
 }
 
 /****************************************************************************
@@ -478,7 +478,7 @@ static void etm_hw_enable(FAR struct coresight_etm_dev_s *etmdev)
   uint32_t etmcr;
   int i;
 
-  coresight_unlock(etmdev->csdev.addr);
+  coresight_unlock(etmdev->htdev.addr);
   etm_os_unlock(etmdev);
   etm_set_pwrup(etmdev);
   etm_clr_pwrdwn(etmdev);
@@ -543,7 +543,7 @@ static void etm_hw_enable(FAR struct coresight_etm_dev_s *etmdev)
   etm_write_reg(etmdev, 0x0, ETM_VMIDCVR);
 
   etm_clr_program(etmdev);
-  coresight_lock(etmdev->csdev.addr);
+  coresight_lock(etmdev->htdev.addr);
 }
 
 /****************************************************************************
@@ -555,7 +555,7 @@ static void etm_hw_disable(FAR struct coresight_etm_dev_s *etmdev)
   FAR struct etm_config_s *config = &etmdev->cfg;
   int i;
 
-  coresight_unlock(etmdev->csdev.addr);
+  coresight_unlock(etmdev->htdev.addr);
   etm_set_program(etmdev);
 
   /* Read back sequencer and counters for post trace analysis */
@@ -567,20 +567,20 @@ static void etm_hw_disable(FAR struct coresight_etm_dev_s *etmdev)
     }
 
   etm_set_pwrdwn(etmdev);
-  coresight_lock(etmdev->csdev.addr);
+  coresight_lock(etmdev->htdev.addr);
 }
 
 /****************************************************************************
  * Name: etm_enable
  ****************************************************************************/
 
-static int etm_enable(FAR struct coresight_dev_s *csdev)
+static int etm_enable(FAR struct hwtracing_dev_s *htdev)
 {
   FAR struct coresight_etm_dev_s *etmdev =
-    (FAR struct coresight_etm_dev_s *)csdev;
+    (FAR struct coresight_etm_dev_s *)htdev;
   int ret;
 
-  ret = coresight_claim_device(etmdev->csdev.addr);
+  ret = coresight_claim_device(etmdev->htdev.addr);
   if (ret < 0)
     {
       return ret;
@@ -594,13 +594,13 @@ static int etm_enable(FAR struct coresight_dev_s *csdev)
  * Name: etm_enable
  ****************************************************************************/
 
-static void etm_disable(FAR struct coresight_dev_s *csdev)
+static void etm_disable(FAR struct hwtracing_dev_s *htdev)
 {
   FAR struct coresight_etm_dev_s *etmdev =
-    (FAR struct coresight_etm_dev_s *)csdev;
+    (FAR struct coresight_etm_dev_s *)htdev;
 
   etm_hw_disable(etmdev);
-  coresight_disclaim_device(etmdev->csdev.addr);
+  coresight_disclaim_device(etmdev->htdev.addr);
 }
 
 /****************************************************************************
@@ -625,7 +625,7 @@ static void etm_disable(FAR struct coresight_dev_s *csdev)
 int etm_config(FAR struct coresight_etm_dev_s *etmdev,
                FAR const struct etm_config_s *config)
 {
-  coresight_unlock(etmdev->csdev.addr);
+  coresight_unlock(etmdev->htdev.addr);
   etm_os_unlock(etmdev);
   etm_clr_pwrdwn(etmdev);
   etm_set_pwrup(etmdev);
@@ -642,7 +642,7 @@ int etm_config(FAR struct coresight_etm_dev_s *etmdev,
   etm_clr_program(etmdev);
   etm_clr_pwrup(etmdev);
   etm_set_pwrdwn(etmdev);
-  coresight_lock(etmdev->csdev.addr);
+  coresight_lock(etmdev->htdev.addr);
 
   return 0;
 }
@@ -662,40 +662,40 @@ int etm_config(FAR struct coresight_etm_dev_s *etmdev,
  ****************************************************************************/
 
 FAR struct coresight_etm_dev_s *
-etm_register(FAR const struct coresight_desc_s *desc)
+etm_register(FAR const struct hwtracing_desc_s *desc)
 {
   FAR struct coresight_etm_dev_s *etmdev;
-  FAR struct coresight_dev_s *csdev;
+  FAR struct hwtracing_dev_s *htdev;
   int ret;
 
   etmdev = kmm_zalloc(sizeof(struct coresight_etm_dev_s));
   if (etmdev == NULL)
     {
-      cserr("%s:malloc failed!\n", desc->name);
+      hterr("%s:malloc failed!\n", desc->name);
       return NULL;
     }
 
   etmdev->cpu = desc->cpu;
-  etmdev->csdev.addr = desc->addr;
+  etmdev->htdev.addr = desc->addr;
   etm_init_arch_data(etmdev);
 
   if (!etm_arch_supported(etmdev->arch))
     {
       kmm_free(etmdev);
-      cserr("%s:current implement version is not supported\n", desc->name);
+      hterr("%s:current implement version is not supported\n", desc->name);
       return NULL;
     }
 
   etmdev->traceid = coresight_get_cpu_trace_id(etmdev->cpu);
   etm_set_default(&etmdev->cfg);
 
-  csdev = &etmdev->csdev;
-  csdev->ops = &g_etm_ops;
-  ret = coresight_register(csdev, desc);
+  htdev = &etmdev->htdev;
+  htdev->ops = &g_etm_ops;
+  ret = hwtracing_register(htdev, desc);
   if (ret < 0)
     {
       kmm_free(etmdev);
-      cserr("%s:register failed\n", desc->name);
+      hterr("%s:register failed\n", desc->name);
       return NULL;
     }
 
@@ -712,6 +712,6 @@ etm_register(FAR const struct coresight_desc_s *desc)
 
 void etm_unregister(FAR struct coresight_etm_dev_s *etmdev)
 {
-  coresight_unregister(&etmdev->csdev);
+  hwtracing_unregister(&etmdev->htdev);
   kmm_free(etmdev);
 }

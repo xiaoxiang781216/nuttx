@@ -1072,42 +1072,6 @@
 #  define htinfo     _none
 #endif
 
-#ifdef CONFIG_DEBUG_CORESIGHT_ERROR
-#  define cserr       _err
-#else
-#  define cserr      _none
-#endif
-
-#ifdef CONFIG_DEBUG_CORESIGHT_WARN
-#  define cswarn     _warn
-#else
-#  define cswarn     _none
-#endif
-
-#ifdef CONFIG_DEBUG_CORESIGHT_INFO
-#  define csinfo     _info
-#else
-#  define csinfo     _none
-#endif
-
-#ifdef CONFIG_DEBUG_RPTUN_ERROR
-#  define rptunerr     _err
-#else
-#  define rptunerr     _none
-#endif
-
-#ifdef CONFIG_DEBUG_RPTUN_WARN
-#  define rptunwarn    _warn
-#else
-#  define rptunwarn    _none
-#endif
-
-#ifdef CONFIG_DEBUG_RPTUN_INFO
-#  define rptuninfo    _info
-#else
-#  define rptuninfo    _none
-#endif
-
 #ifdef CONFIG_DEBUG_PTP_ERROR
 #  define ptperr     _err
 #else

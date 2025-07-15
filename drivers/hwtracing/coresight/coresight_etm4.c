@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/coresight/coresight_etm4.c
+ * drivers/hwtracing/coresight/coresight_etm4.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -29,7 +29,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/bits.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/coresight/coresight_etm4.h>
+#include <nuttx/hwtracing/coresight/coresight_etm4.h>
 
 #include "coresight_common.h"
 
@@ -578,20 +578,20 @@
  * Private Functions Prototypes
  ****************************************************************************/
 
-static int etm4_enable(FAR struct coresight_dev_s *csdev);
-static void etm4_disable(FAR struct coresight_dev_s *csdev);
+static int etm4_enable(FAR struct hwtracing_dev_s *htdev);
+static void etm4_disable(FAR struct hwtracing_dev_s *htdev);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static const struct coresight_source_ops_s g_etm4_source_ops =
+static const struct hwtracing_source_ops_s g_etm4_source_ops =
 {
   .enable  = etm4_enable,
   .disable = etm4_disable,
 };
 
-static const struct coresight_ops_s g_etm4_ops =
+static const struct hwtracing_ops_s g_etm4_ops =
 {
   .source_ops = &g_etm4_source_ops,
 };
@@ -617,7 +617,7 @@ static uint64_t etm4_sysreg_read(uint32_t offset)
     {
       ETM4_READ_SYSREG_CASES(res)
       default :
-        cserr("etm4x: trying to read unsupported register @%x\n", offset);
+        hterr("etm4x: trying to read unsupported register @%x\n", offset);
     }
 
   return res;
@@ -642,7 +642,7 @@ static void etm4_sysreg_write(uint64_t val, uint32_t offset, bool bit_64)
     {
       ETM4_WRITE_SYSREG_CASES(val)
       default :
-        cserr("etm4x: trying to write to unsupported register @%x\n",
+        hterr("etm4x: trying to write to unsupported register @%x\n",
               offset);
     }
 }
@@ -693,7 +693,7 @@ static inline void etm4_write_reg32(FAR struct coresight_etm4_dev_s *etmdev,
 #ifdef CONFIG_CORESIGHT_ETM_USE_COPROCESSOR
   etm4_sysreg_write(val, off, false);
 #else
-  coresight_put32(val, etmdev->csdev.addr + off);
+  hwtracing_put32(val, etmdev->htdev.addr + off);
 #endif
 }
 
@@ -711,7 +711,7 @@ static inline void etm4_write_reg64(FAR struct coresight_etm4_dev_s *etmdev,
 #ifdef CONFIG_CORESIGHT_ETM_USE_COPROCESSOR
   etm4_sysreg_write(val, off, true);
 #else
-  coresight_put64(val, etmdev->csdev.addr + off);
+  hwtracing_put64(val, etmdev->htdev.addr + off);
 #endif
 }
 
@@ -729,7 +729,7 @@ static inline uint32_t etm4_read_reg32(FAR struct coresight_etm4_dev_s
 #ifdef CONFIG_CORESIGHT_ETM_USE_COPROCESSOR
   return etm4_sysreg_read(off);
 #else
-  return coresight_get32(etmdev->csdev.addr + off);
+  return hwtracing_get32(etmdev->htdev.addr + off);
 #endif
 }
 
@@ -746,7 +746,7 @@ int etm4_claim_device(FAR struct coresight_etm4_dev_s *etmdev)
   int ret = -EBUSY;
 
 #ifndef CONFIG_CORESIGHT_ETM_USE_COPROCESSOR
-  return coresight_claim_device(etmdev->csdev.addr);
+  return coresight_claim_device(etmdev->htdev.addr);
 #endif
 
   if (etm4_read_reg32(etmdev, CORESIGHT_CLAIMCLR) != 0)
@@ -783,7 +783,7 @@ int etm4_claim_device(FAR struct coresight_etm4_dev_s *etmdev)
 void etm4_disclaim_device(FAR struct coresight_etm4_dev_s *etmdev)
 {
 #ifndef CONFIG_CORESIGHT_ETM_USE_COPROCESSOR
-  return coresight_disclaim_device(etmdev->csdev.addr);
+  return coresight_disclaim_device(etmdev->htdev.addr);
 #endif
 
   if (etm4_read_reg32(etmdev, CORESIGHT_CLAIMCLR) ==
@@ -794,7 +794,7 @@ void etm4_disclaim_device(FAR struct coresight_etm4_dev_s *etmdev)
     }
   else
     {
-      cserr("current device is not claimed or something wrong happend\n");
+      hterr("current device is not claimed or something wrong happend\n");
     }
 }
 
@@ -825,7 +825,7 @@ etm4_sspcicrn_present(FAR struct coresight_etm4_dev_s *etmdev, int n)
 static inline void etm4_lock(FAR struct coresight_etm4_dev_s *etmdev)
 {
 #ifndef CONFIG_CORESIGHT_ETM_USE_COPROCESSOR
-  coresight_lock(etmdev->csdev.addr);
+  coresight_lock(etmdev->htdev.addr);
 #endif
 }
 
@@ -840,7 +840,7 @@ static inline void etm4_lock(FAR struct coresight_etm4_dev_s *etmdev)
 static inline void etm4_unlock(FAR struct coresight_etm4_dev_s *etmdev)
 {
 #ifndef CONFIG_CORESIGHT_ETM_USE_COPROCESSOR
-  coresight_unlock(etmdev->csdev.addr);
+  coresight_unlock(etmdev->htdev.addr);
 #endif
 }
 
@@ -870,7 +870,7 @@ static int etm4_timeout(FAR struct coresight_etm4_dev_s *etmdev,
 {
   int i;
 
-  for (i = CONFIG_CORESIGHT_TIMEOUT; i > 0; i--)
+  for (i = CONFIG_HWTRACING_TIMEOUT; i > 0; i--)
     {
       uint32_t value = etm4_read_reg32(etmdev, off);
       if ((value & mask) == val)
@@ -911,7 +911,7 @@ static void etm4_enable_hw(FAR struct coresight_etm4_dev_s *etmdev)
 
   if (etm4_timeout(etmdev, 1, TRCSTATR_IDLE_BIT, TRCSTATR))
     {
-      cserr("timeout while waiting for Idle Trace Status\n");
+      hterr("timeout while waiting for Idle Trace Status\n");
     }
 
   if (etmdev->nr_pe)
@@ -1036,7 +1036,7 @@ static void etm4_enable_hw(FAR struct coresight_etm4_dev_s *etmdev)
 
   if (etm4_timeout(etmdev, 0, TRCSTATR_IDLE_BIT, TRCSTATR))
     {
-      cserr("timeout while waiting for Idle Trace Status\n");
+      hterr("timeout while waiting for Idle Trace Status\n");
     }
 
   etm4_lock(etmdev);
@@ -1049,17 +1049,17 @@ static void etm4_enable_hw(FAR struct coresight_etm4_dev_s *etmdev)
  *   Enable the ETMv4 device.
  *
  * Input Parameters:
- *   csdev - Pointer to the coresight device structure.
+ *   htdev - Pointer to the coresight device structure.
  *
  * Returned Value:
  *   Zero on success; negative error code on failure.
  *
  ****************************************************************************/
 
-static int etm4_enable(FAR struct coresight_dev_s *csdev)
+static int etm4_enable(FAR struct hwtracing_dev_s *htdev)
 {
   FAR struct coresight_etm4_dev_s *etmdev =
-      (FAR struct coresight_etm4_dev_s *)csdev;
+      (FAR struct coresight_etm4_dev_s *)htdev;
   int ret;
 
   ret = etm4_claim_device(etmdev);
@@ -1117,7 +1117,7 @@ static void etm4_disable_hw(FAR struct coresight_etm4_dev_s *etmdev)
 
   if (etm4_timeout(etmdev, 1, TRCSTATR_PMSTABLE_BIT, TRCSTATR))
     {
-      cserr("timeout while waiting for PM stable Trace Status\n");
+      hterr("timeout while waiting for PM stable Trace Status\n");
     }
 
   /* read the status of the single shot comparators */
@@ -1146,14 +1146,14 @@ static void etm4_disable_hw(FAR struct coresight_etm4_dev_s *etmdev)
  *   Disable the ETMv4 device.
  *
  * Input Parameters:
- *   csdev - Pointer to the coresight device structure.
+ *   htdev - Pointer to the coresight device structure.
  *
  ****************************************************************************/
 
-static void etm4_disable(FAR struct coresight_dev_s *csdev)
+static void etm4_disable(FAR struct hwtracing_dev_s *htdev)
 {
   FAR struct coresight_etm4_dev_s *etmdev =
-    (FAR struct coresight_etm4_dev_s *)csdev;
+    (FAR struct coresight_etm4_dev_s *)htdev;
 
   etm4_disable_hw(etmdev);
   etm4_disclaim_device(etmdev);
@@ -1177,7 +1177,7 @@ static void etm4_enable_trace_filtering(struct coresight_etm4_dev_s *etmdev)
 
   if (!ID_AA64DFR0_EL1_TRACEFILT(dfr0))
     {
-      cserr("Trace Filter feature is not support");
+      hterr("Trace Filter feature is not support");
       return;
     }
 
@@ -1361,33 +1361,33 @@ int etm4_config(FAR struct coresight_etm4_dev_s *etmdev,
  ****************************************************************************/
 
 FAR struct coresight_etm4_dev_s *
-etm4_register(FAR const struct coresight_desc_s *desc)
+etm4_register(FAR const struct hwtracing_desc_s *desc)
 {
   FAR struct coresight_etm4_dev_s *etmdev;
-  FAR struct coresight_dev_s *csdev;
+  FAR struct hwtracing_dev_s *htdev;
   int ret;
 
   etmdev = kmm_zalloc(sizeof(struct coresight_etm4_dev_s));
   if (etmdev == NULL)
     {
-      cserr("%s:malloc failed!\n", desc->name);
+      hterr("%s:malloc failed!\n", desc->name);
       return NULL;
     }
 
   etmdev->cpu = desc->cpu;
-  etmdev->csdev.addr = desc->addr;
+  etmdev->htdev.addr = desc->addr;
   etm4_init_arch_data(etmdev);
 
   etmdev->trcid = coresight_get_cpu_trace_id(etmdev->cpu);
   etm4_set_default(&etmdev->cfg);
 
-  csdev = &etmdev->csdev;
-  csdev->ops = &g_etm4_ops;
-  ret = coresight_register(csdev, desc);
+  htdev = &etmdev->htdev;
+  htdev->ops = &g_etm4_ops;
+  ret = hwtracing_register(htdev, desc);
   if (ret < 0)
     {
       kmm_free(etmdev);
-      cserr("%s:register failed\n", desc->name);
+      hterr("%s:register failed\n", desc->name);
       return NULL;
     }
 
@@ -1407,6 +1407,6 @@ etm4_register(FAR const struct coresight_desc_s *desc)
 
 void etm4_unregister(FAR struct coresight_etm4_dev_s *etmdev)
 {
-  coresight_unregister(&etmdev->csdev);
+  hwtracing_unregister(&etmdev->htdev);
   kmm_free(etmdev);
 }

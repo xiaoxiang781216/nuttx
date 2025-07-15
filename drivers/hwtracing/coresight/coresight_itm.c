@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/coresight/coresight_itm.c
+ * drivers/hwtracing/coresight/coresight_itm.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -27,7 +27,7 @@
 #include <errno.h>
 #include <debug.h>
 #include <nuttx/bits.h>
-#include <nuttx/coresight/coresight_itm.h>
+#include <nuttx/hwtracing/coresight/coresight_itm.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/spinlock.h>
 #include <sys/param.h>
@@ -56,20 +56,20 @@
  * Private Functions Prototypes
  ****************************************************************************/
 
-static int itm_enable(FAR struct coresight_dev_s *csdev);
-static void itm_disable(FAR struct coresight_dev_s *csdev);
+static int itm_enable(FAR struct hwtracing_dev_s *htdev);
+static void itm_disable(FAR struct hwtracing_dev_s *htdev);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static const struct coresight_source_ops_s g_itm_source_ops =
+static const struct hwtracing_source_ops_s g_itm_source_ops =
 {
   .enable  = itm_enable,
   .disable = itm_disable,
 };
 
-static const struct coresight_ops_s g_itm_ops =
+static const struct hwtracing_ops_s g_itm_ops =
 {
   .source_ops = &g_itm_source_ops,
 };
@@ -86,10 +86,10 @@ static FAR struct coresight_itm_dev_s *g_itmdev;
 
 static void itm_hw_disable(FAR struct coresight_itm_dev_s *itmdev)
 {
-  coresight_unlock(itmdev->csdev.addr);
-  coresight_modify32(0x0, ITM_CTRL_EN, itmdev->csdev.addr + ITM_TCR);
-  coresight_put32(0x0, itmdev->csdev.addr + ITM_TER);
-  coresight_lock(itmdev->csdev.addr);
+  coresight_unlock(itmdev->htdev.addr);
+  hwtracing_modify32(0x0, ITM_CTRL_EN, itmdev->htdev.addr + ITM_TCR);
+  hwtracing_put32(0x0, itmdev->htdev.addr + ITM_TER);
+  coresight_lock(itmdev->htdev.addr);
 }
 
 /****************************************************************************
@@ -98,37 +98,37 @@ static void itm_hw_disable(FAR struct coresight_itm_dev_s *itmdev)
 
 static void itm_hw_enable(FAR struct coresight_itm_dev_s *itmdev)
 {
-  coresight_unlock(itmdev->csdev.addr);
-  coresight_put32(0xffffffff, itmdev->csdev.addr + ITM_TER);
-  coresight_modify32(ITM_CTRL_EN, ITM_CTRL_EN,
-                     itmdev->csdev.addr + ITM_TCR);
-  coresight_lock(itmdev->csdev.addr);
+  coresight_unlock(itmdev->htdev.addr);
+  hwtracing_put32(0xffffffff, itmdev->htdev.addr + ITM_TER);
+  hwtracing_modify32(ITM_CTRL_EN, ITM_CTRL_EN,
+                     itmdev->htdev.addr + ITM_TCR);
+  coresight_lock(itmdev->htdev.addr);
 }
 
 /****************************************************************************
  * Name: itm_hw_disable
  ****************************************************************************/
 
-static void itm_disable(FAR struct coresight_dev_s *csdev)
+static void itm_disable(FAR struct hwtracing_dev_s *htdev)
 {
   FAR struct coresight_itm_dev_s *itmdev =
-    (FAR struct coresight_itm_dev_s *)csdev;
+    (FAR struct coresight_itm_dev_s *)htdev;
 
   itm_hw_disable(itmdev);
-  coresight_disclaim_device(itmdev->csdev.addr);
+  coresight_disclaim_device(itmdev->htdev.addr);
 }
 
 /****************************************************************************
  * Name: itm_enable
  ****************************************************************************/
 
-static int itm_enable(FAR struct coresight_dev_s *csdev)
+static int itm_enable(FAR struct hwtracing_dev_s *htdev)
 {
   FAR struct coresight_itm_dev_s *itmdev =
-    (FAR struct coresight_itm_dev_s *)csdev;
+    (FAR struct coresight_itm_dev_s *)htdev;
   int ret;
 
-  ret = coresight_claim_device(itmdev->csdev.addr);
+  ret = coresight_claim_device(itmdev->htdev.addr);
   if (ret < 0)
     {
       return ret;
@@ -147,9 +147,9 @@ static uint32_t itm_get_stimulus_port_num(uintptr_t addr)
   uint32_t numsp;
 
   coresight_unlock(addr);
-  coresight_put32(0xffffffff, addr + ITM_TPR);
-  numsp = coresight_get32(addr + ITM_TPR);
-  coresight_put32(0x0, addr + ITM_TPR);
+  hwtracing_put32(0xffffffff, addr + ITM_TPR);
+  numsp = hwtracing_get32(addr + ITM_TPR);
+  hwtracing_put32(0x0, addr + ITM_TPR);
   coresight_lock(addr);
 
   return LOG2_CEIL(numsp) * 8;
@@ -179,27 +179,27 @@ static ssize_t itm_stimulus_send(uintptr_t stimulus, FAR const void *data,
 {
   int i;
 
-  for (i = 0; i < CONFIG_CORESIGHT_TIMEOUT; i++)
+  for (i = 0; i < CONFIG_HWTRACING_TIMEOUT; i++)
     {
-      if (coresight_get32(stimulus))
+      if (hwtracing_get32(stimulus))
         {
           switch (size)
             {
               case 4:
-                coresight_put32(*(uint32_t *)data, stimulus);
+                hwtracing_put32(*(uint32_t *)data, stimulus);
                 return OK;
 
               case 2:
-                coresight_put16(*(uint16_t *)data, stimulus);
+                hwtracing_put16(*(uint16_t *)data, stimulus);
                 return OK;
 
               case 3:
-                coresight_put16(*(uint16_t *)data, stimulus);
-                coresight_put8(*(uint8_t *)(data + 2), stimulus);
+                hwtracing_put16(*(uint16_t *)data, stimulus);
+                hwtracing_put8(*(uint8_t *)(data + 2), stimulus);
                 return OK;
 
               case 1:
-                coresight_put8(*(uint8_t *)data, stimulus);
+                hwtracing_put8(*(uint8_t *)data, stimulus);
                 return OK;
             }
         }
@@ -265,7 +265,7 @@ FAR struct itm_port_s *itm_alloc_port(void)
   set_bit(port->num, &g_itmdev->map);
   spin_unlock_irqrestore(&g_itmdev->lock, flags);
 
-  port->stimulus = g_itmdev->csdev.addr + ITM_STIMPORT(port->num);
+  port->stimulus = g_itmdev->htdev.addr + ITM_STIMPORT(port->num);
   spin_lock_init(&port->lock);
   return port;
 }
@@ -390,17 +390,17 @@ void itm_stream_open(FAR struct itm_port_s *port,
  ****************************************************************************/
 
 FAR struct coresight_itm_dev_s *
-itm_register(FAR const struct coresight_desc_s *desc)
+itm_register(FAR const struct hwtracing_desc_s *desc)
 {
   FAR struct coresight_itm_dev_s *itmdev;
-  FAR struct coresight_dev_s *csdev;
+  FAR struct hwtracing_dev_s *htdev;
   uint32_t numsp;
   int ret;
 
   itmdev = kmm_zalloc(sizeof(struct coresight_itm_dev_s));
   if (itmdev == NULL)
     {
-      cserr("%s:malloc failed!\n", desc->name);
+      hterr("%s:malloc failed!\n", desc->name);
       return NULL;
     }
 
@@ -410,18 +410,18 @@ itm_register(FAR const struct coresight_desc_s *desc)
   if (itmdev->traceid < 0)
     {
       kmm_free(itmdev);
-      cserr("%s:get unique traceid failed!\n", desc->name);
+      hterr("%s:get unique traceid failed!\n", desc->name);
       return NULL;
     }
 
-  csdev = &itmdev->csdev;
-  csdev->ops = &g_itm_ops;
-  ret = coresight_register(csdev, desc);
+  htdev = &itmdev->htdev;
+  htdev->ops = &g_itm_ops;
+  ret = hwtracing_register(htdev, desc);
   if (ret < 0)
     {
       coresight_put_system_trace_id(itmdev->traceid);
       kmm_free(itmdev);
-      cserr("%s:register failed\n", desc->name);
+      hterr("%s:register failed\n", desc->name);
       return NULL;
     }
 
@@ -447,7 +447,7 @@ void itm_unregister(FAR struct coresight_itm_dev_s *itmdev)
       return;
     }
 
-  coresight_unregister(&itmdev->csdev);
+  hwtracing_unregister(&itmdev->htdev);
   coresight_put_system_trace_id(itmdev->traceid);
   kmm_free(itmdev);
   g_itmdev = NULL;

@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/coresight/coresight_common.c
+ * drivers/hwtracing/coresight/coresight_common.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -80,7 +80,7 @@ static const uint32_t g_coresight_barrier_pkt[4] =
 
 void coresight_lock(uintptr_t addr)
 {
-  coresight_put32(CORESIGHT_LOCK, addr + CORESIGHT_LAR);
+  hwtracing_put32(CORESIGHT_LOCK, addr + CORESIGHT_LAR);
 }
 
 /****************************************************************************
@@ -89,7 +89,7 @@ void coresight_lock(uintptr_t addr)
 
 void coresight_unlock(uintptr_t addr)
 {
-  coresight_put32(CORESIGHT_UNLOCK, addr + CORESIGHT_LAR);
+  hwtracing_put32(CORESIGHT_UNLOCK, addr + CORESIGHT_LAR);
 }
 
 /****************************************************************************
@@ -112,13 +112,13 @@ int coresight_claim_device(uintptr_t addr)
   int ret = -EBUSY;
 
   coresight_unlock(addr);
-  if (coresight_get32(addr + CORESIGHT_CLAIMCLR) != 0)
+  if (hwtracing_get32(addr + CORESIGHT_CLAIMCLR) != 0)
     {
       goto out;
     }
 
-  coresight_put32(CORESIGHT_CLAIM_SELF_HOSTED, addr + CORESIGHT_CLAIMSET);
-  if (coresight_get32(addr + CORESIGHT_CLAIMCLR) ==
+  hwtracing_put32(CORESIGHT_CLAIM_SELF_HOSTED, addr + CORESIGHT_CLAIMSET);
+  if (hwtracing_get32(addr + CORESIGHT_CLAIMCLR) ==
         CORESIGHT_CLAIM_SELF_HOSTED)
     {
       ret = 0;
@@ -127,7 +127,7 @@ int coresight_claim_device(uintptr_t addr)
     {
       /* There was a race setting the tags, clean up and fail */
 
-      coresight_put32(CORESIGHT_CLAIM_SELF_HOSTED,
+      hwtracing_put32(CORESIGHT_CLAIM_SELF_HOSTED,
                       addr + CORESIGHT_CLAIMCLR);
     }
 
@@ -150,15 +150,15 @@ out:
 void coresight_disclaim_device(uintptr_t addr)
 {
   coresight_unlock(addr);
-  if (coresight_get32(addr + CORESIGHT_CLAIMCLR) ==
+  if (hwtracing_get32(addr + CORESIGHT_CLAIMCLR) ==
         CORESIGHT_CLAIM_SELF_HOSTED)
     {
-      coresight_put32(CORESIGHT_CLAIM_SELF_HOSTED,
+      hwtracing_put32(CORESIGHT_CLAIM_SELF_HOSTED,
                       addr + CORESIGHT_CLAIMCLR);
     }
   else
     {
-      cserr("current device is not claimed or something wrong happend\n");
+      hterr("current device is not claimed or something wrong happend\n");
     }
 
   coresight_lock(addr);
@@ -185,7 +185,7 @@ int coresight_get_cpu_trace_id(int cpu)
 
   if (traceid >= CORESIGHT_SOURCE_BITMAP_SIZE)
     {
-      cserr("trace id is out of bounds\n");
+      hterr("trace id is out of bounds\n");
       return -EINVAL;
     }
 
@@ -224,7 +224,7 @@ int coresight_get_system_trace_id(void)
 
   if (traceid == 0)
     {
-      cserr("get system trace id failed\n");
+      hterr("get system trace id failed\n");
       spin_unlock_irqrestore(&g_coresight_trace_id_lock, flags);
       return -EINVAL;
     }
@@ -253,41 +253,6 @@ void coresight_put_system_trace_id(int traceid)
   flags = spin_lock_irqsave(&g_coresight_trace_id_lock);
   clear_bit(traceid, g_coresight_trace_id_bitmap);
   spin_unlock_irqrestore(&g_coresight_trace_id_lock, flags);
-}
-
-/****************************************************************************
- * Name: coresight_timeout
- *
- * Description:
- *   Loop until a bitmask of register has changed to a specific value.
- *
- * Input Parameters:
- *   addr    - Base addr of the coresight device.
- *   off     - Register offset of the coresight device.
- *   bitmask - Bitmask to be checked.
- *   val     - Value to be matched.
- *
- * Returned Value:
- *   Zero on success; a negative value on failure.
- *
- ****************************************************************************/
-
-int coresight_timeout(uint32_t val, uint32_t mask, uintptr_t addr)
-{
-  int i;
-
-  for (i = CONFIG_CORESIGHT_TIMEOUT; i > 0; i--)
-    {
-      uint32_t value = coresight_get32(addr);
-      if ((value & mask) == val)
-        {
-          return 0;
-        }
-
-      up_udelay(1);
-    }
-
-  return -EAGAIN;
 }
 
 /****************************************************************************

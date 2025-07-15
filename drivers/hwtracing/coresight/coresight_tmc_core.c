@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/coresight/coresight_tmc_core.c
+ * drivers/hwtracing/coresight/coresight_tmc_core.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -29,7 +29,7 @@
 #include <nuttx/bits.h>
 #include <nuttx/kmalloc.h>
 
-#include <nuttx/coresight/coresight_tmc.h>
+#include <nuttx/hwtracing/coresight/coresight_tmc.h>
 
 #include "coresight_common.h"
 #include "coresight_tmc_core.h"
@@ -91,12 +91,12 @@ static enum tmc_mem_intf_width_e tmc_etr_get_memwidth(uint32_t devid)
  ****************************************************************************/
 
 static void tmc_init_arch_data(FAR struct coresight_tmc_dev_s *tmcdev,
-                               FAR const struct coresight_desc_s *desc)
+                               FAR const struct hwtracing_desc_s *desc)
 {
   uint32_t devid;
 
   coresight_unlock(desc->addr);
-  devid = coresight_get32(desc->addr + CORESIGHT_DEVID);
+  devid = hwtracing_get32(desc->addr + CORESIGHT_DEVID);
   tmcdev->config_type = BMVAL(devid, 6, 7);
   if (tmcdev->config_type == TMC_CONFIG_TYPE_ETR)
     {
@@ -106,7 +106,7 @@ static void tmc_init_arch_data(FAR struct coresight_tmc_dev_s *tmcdev,
     }
   else
     {
-      tmcdev->size = coresight_get32(desc->addr + TMC_RSZ) * 4;
+      tmcdev->size = hwtracing_get32(desc->addr + TMC_RSZ) * 4;
       tmcdev->mmwidth = tmc_etf_get_memwidth(devid);
     }
 
@@ -132,7 +132,7 @@ static void tmc_init_arch_data(FAR struct coresight_tmc_dev_s *tmcdev,
  ****************************************************************************/
 
 FAR struct coresight_tmc_dev_s *
-tmc_register(FAR const struct coresight_desc_s *desc)
+tmc_register(FAR const struct hwtracing_desc_s *desc)
 {
   FAR struct coresight_tmc_dev_s *tmcdev;
   int ret = -EINVAL;
@@ -140,7 +140,7 @@ tmc_register(FAR const struct coresight_desc_s *desc)
   tmcdev = kmm_zalloc(sizeof(struct coresight_tmc_dev_s));
   if (tmcdev == NULL)
     {
-      cserr("%s:malloc failed!\n", desc->name);
+      hterr("%s:malloc failed!\n", desc->name);
       return NULL;
     }
 
@@ -159,7 +159,7 @@ tmc_register(FAR const struct coresight_desc_s *desc)
         break;
 
       default:
-        cserr("config type error\n");
+        hterr("config type error\n");
         break;
     }
 
@@ -198,7 +198,7 @@ void tmc_unregister(FAR struct coresight_tmc_dev_s *tmcdev)
         break;
 
       default:
-        cserr("wrong config type\n");
+        hterr("wrong config type\n");
         break;
     }
 

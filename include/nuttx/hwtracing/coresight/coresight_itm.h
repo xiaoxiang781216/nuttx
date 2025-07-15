@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/coresight/coresight_itm.h
+ * include/nuttx/hwtracing/coresight/coresight_itm.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,14 +20,14 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_ITM_H
-#define __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_ITM_H
+#ifndef __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_ITM_H
+#define __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_ITM_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/coresight/coresight.h>
+#include <nuttx/hwtracing/hwtracing.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/streams.h>
 
@@ -41,7 +41,7 @@
 
 struct coresight_itm_dev_s
 {
-  struct coresight_dev_s csdev;
+  struct hwtracing_dev_s htdev;
   int traceid;                       /* Trace id. */
 
   /* The total number of stimulus port support by this ITM. */
@@ -142,7 +142,7 @@ ssize_t itm_send(FAR struct itm_port_s *port, FAR const void *buffer,
  ****************************************************************************/
 
 FAR struct coresight_itm_dev_s *
-itm_register(FAR const struct coresight_desc_s *desc);
+itm_register(FAR const struct hwtracing_desc_s *desc);
 
 /****************************************************************************
  * Name: itm_unregister
@@ -157,4 +157,4 @@ itm_register(FAR const struct coresight_desc_s *desc);
 
 void itm_unregister(FAR struct coresight_itm_dev_s *itmdev);
 
-#endif /* __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_ITM_H */
+#endif /* __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_ITM_H */

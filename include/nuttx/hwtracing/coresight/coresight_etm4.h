@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/coresight/coresight_etm4.h
+ * include/nuttx/hwtracing/coresight/coresight_etm4.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,14 +18,14 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_ETM4_H
-#define __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_ETM4_H
+#ifndef __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_ETM4_H
+#define __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_ETM4_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/coresight/coresight.h>
+#include <nuttx/hwtracing/hwtracing.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -86,7 +86,7 @@ struct etm4_config_s
 
 struct coresight_etm4_dev_s
 {
-  struct coresight_dev_s csdev;
+  struct hwtracing_dev_s htdev;
   struct etm4_config_s cfg;
   int cpu;                     /* The cpu this component is affined to */
   uint8_t arch;                /* ETM architecture version */
@@ -147,7 +147,7 @@ struct coresight_etm4_dev_s
  ****************************************************************************/
 
 FAR struct coresight_etm4_dev_s *
-etm4_register(FAR const struct coresight_desc_s *desc);
+etm4_register(FAR const struct hwtracing_desc_s *desc);
 
 /****************************************************************************
  * Name: etm4_unregister
@@ -177,4 +177,4 @@ void etm4_unregister(FAR struct coresight_etm4_dev_s *etmdev);
 int etm4_config(FAR struct coresight_etm4_dev_s *etmdev,
                 FAR const struct etm4_config_s *config);
 
-#endif /* __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_ETM4_H */
+#endif /* __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_ETM4_H */

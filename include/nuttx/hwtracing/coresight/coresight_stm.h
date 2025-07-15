@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/coresight/coresight_stm.h
+ * include/nuttx/hwtracing/coresight/coresight_stm.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,14 +20,14 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_STM_H
-#define __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_STM_H
+#ifndef __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_STM_H
+#define __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_STM_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/coresight/coresight.h>
+#include <nuttx/hwtracing/hwtracing.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -64,7 +64,7 @@ enum stp_packet_flags_e
 
 struct coresight_stm_dev_s
 {
-  struct coresight_dev_s csdev;
+  struct hwtracing_dev_s htdev;
   int traceid;                       /* Trace id. */
 
   /* Used in STM device: start address of extend stimulus port, this memory
@@ -163,7 +163,7 @@ ssize_t stm_sendpacket(FAR struct coresight_stm_dev_s *stmdev,
  ****************************************************************************/
 
 FAR struct coresight_stm_dev_s *
-stm_register(FAR const struct coresight_desc_s *desc);
+stm_register(FAR const struct hwtracing_desc_s *desc);
 
 /****************************************************************************
  * Name: stm_unregister
@@ -178,4 +178,4 @@ stm_register(FAR const struct coresight_desc_s *desc);
 
 void stm_unregister(FAR struct coresight_stm_dev_s *stmdev);
 
-#endif  //__INCLUDE_NUTTX_CORESIGHT_CORESIGHT_STM_H
+#endif  //__INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_STM_H

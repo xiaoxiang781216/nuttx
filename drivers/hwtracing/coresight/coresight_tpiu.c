@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/coresight/coresight_tpiu.c
+ * drivers/hwtracing/coresight/coresight_tpiu.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -29,7 +29,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/bits.h>
 
-#include <nuttx/coresight/coresight_tpiu.h>
+#include <nuttx/hwtracing/coresight/coresight_tpiu.h>
 
 #include "coresight_common.h"
 
@@ -72,20 +72,20 @@
  * Private Functions Prototypes
  ****************************************************************************/
 
-static int tpiu_enable(FAR struct coresight_dev_s *csdev);
-static void tpiu_disable(FAR struct coresight_dev_s *csdev);
+static int tpiu_enable(FAR struct hwtracing_dev_s *htdev);
+static void tpiu_disable(FAR struct hwtracing_dev_s *htdev);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static const struct coresight_sink_ops_s g_tpiu_sink_ops =
+static const struct hwtracing_sink_ops_s g_tpiu_sink_ops =
 {
   .enable  = tpiu_enable,
   .disable = tpiu_disable,
 };
 
-static const struct coresight_ops_s g_tpiu_ops =
+static const struct hwtracing_ops_s g_tpiu_ops =
 {
   .sink_ops = &g_tpiu_sink_ops,
 };
@@ -100,49 +100,49 @@ static const struct coresight_ops_s g_tpiu_ops =
 
 static void tpiu_hw_disable(FAR struct coresight_tpiu_dev_s *tpiudev)
 {
-  coresight_unlock(tpiudev->csdev.addr);
+  coresight_unlock(tpiudev->htdev.addr);
 
   /* Trigger a formatter stop event. */
 
-  coresight_modify32(TPIU_FFCR_STOP_FI, TPIU_FFCR_STOP_FI,
-                     tpiudev->csdev.addr + TPIU_FFCR);
-  coresight_modify32(TPIU_FFCR_FON_MAN, TPIU_FFCR_FON_MAN,
-                     tpiudev->csdev.addr + TPIU_FFCR);
-  if (coresight_timeout(0, TPIU_FFCR_FON_MAN,
-                        tpiudev->csdev.addr + TPIU_FFCR) < 0)
+  hwtracing_modify32(TPIU_FFCR_STOP_FI, TPIU_FFCR_STOP_FI,
+                     tpiudev->htdev.addr + TPIU_FFCR);
+  hwtracing_modify32(TPIU_FFCR_FON_MAN, TPIU_FFCR_FON_MAN,
+                     tpiudev->htdev.addr + TPIU_FFCR);
+  if (hwtracing_timeout(0, TPIU_FFCR_FON_MAN,
+                        tpiudev->htdev.addr + TPIU_FFCR) < 0)
     {
-      cserr("timeout while waiting for completion of Manual Flush\n");
+      hterr("timeout while waiting for completion of Manual Flush\n");
     }
 
-  if (coresight_timeout(TPIU_FFSR_FT_STOPPED, TPIU_FFSR_FT_STOPPED,
-                        tpiudev->csdev.addr + TPIU_FFSR) < 0)
+  if (hwtracing_timeout(TPIU_FFSR_FT_STOPPED, TPIU_FFSR_FT_STOPPED,
+                        tpiudev->htdev.addr + TPIU_FFSR) < 0)
     {
-      cserr("timeout while waiting for Formatter to Stop\n");
+      hterr("timeout while waiting for Formatter to Stop\n");
     }
 
-  coresight_lock(tpiudev->csdev.addr);
+  coresight_lock(tpiudev->htdev.addr);
 }
 
 /****************************************************************************
  * Name: tpiu_enable
  ****************************************************************************/
 
-static int tpiu_enable(FAR struct coresight_dev_s *csdev)
+static int tpiu_enable(FAR struct hwtracing_dev_s *htdev)
 {
-  return coresight_claim_device(csdev->addr);
+  return coresight_claim_device(htdev->addr);
 }
 
 /****************************************************************************
  * Name: tpiu_disable
  ****************************************************************************/
 
-static void tpiu_disable(FAR struct coresight_dev_s *csdev)
+static void tpiu_disable(FAR struct hwtracing_dev_s *htdev)
 {
   FAR struct coresight_tpiu_dev_s *tpiudev =
-    (FAR struct coresight_tpiu_dev_s *)csdev;
+    (FAR struct coresight_tpiu_dev_s *)htdev;
 
   tpiu_hw_disable(tpiudev);
-  coresight_disclaim_device(tpiudev->csdev.addr);
+  coresight_disclaim_device(tpiudev->htdev.addr);
 }
 
 /****************************************************************************
@@ -164,26 +164,26 @@ static void tpiu_disable(FAR struct coresight_dev_s *csdev)
  ****************************************************************************/
 
 FAR struct coresight_tpiu_dev_s *
-tpiu_register(FAR const struct coresight_desc_s *desc)
+tpiu_register(FAR const struct hwtracing_desc_s *desc)
 {
   FAR struct coresight_tpiu_dev_s *tpiudev;
-  FAR struct coresight_dev_s *csdev;
+  FAR struct hwtracing_dev_s *htdev;
   int ret;
 
   tpiudev = kmm_zalloc(sizeof(struct coresight_tpiu_dev_s));
   if (tpiudev == NULL)
     {
-      cserr("%s:malloc failed!\n", desc->name);
+      hterr("%s:malloc failed!\n", desc->name);
       return NULL;
     }
 
-  csdev = &tpiudev->csdev;
-  csdev->ops = &g_tpiu_ops;
-  ret = coresight_register(csdev, desc);
+  htdev = &tpiudev->htdev;
+  htdev->ops = &g_tpiu_ops;
+  ret = hwtracing_register(htdev, desc);
   if (ret < 0)
     {
       kmm_free(tpiudev);
-      cserr("%s:register failed\n", desc->name);
+      hterr("%s:register failed\n", desc->name);
       return NULL;
     }
 
@@ -203,6 +203,6 @@ tpiu_register(FAR const struct coresight_desc_s *desc)
 
 void tpiu_unregister(FAR struct coresight_tpiu_dev_s *tpiudev)
 {
-  coresight_unregister(&tpiudev->csdev);
+  hwtracing_unregister(&tpiudev->htdev);
   kmm_free(tpiudev);
 }

@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/coresight/coresight_tpiu.h
+ * include/nuttx/hwtracing/coresight/coresight_funnel.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,22 +20,25 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_TPIU_H
-#define __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_TPIU_H
+#ifndef __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_FUNNEL_H
+#define __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_FUNNEL_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/coresight/coresight.h>
+#include <nuttx/hwtracing/hwtracing.h>
 
 /****************************************************************************
  * Public Types
  ****************************************************************************/
 
-struct coresight_tpiu_dev_s
+struct coresight_funnel_dev_s
 {
-  struct coresight_dev_s csdev;
+  struct hwtracing_dev_s htdev;
+  uint32_t priority;                 /* Port selection order. */
+  uint8_t port_num;                  /* Port numbre. */
+  uint8_t port_refcnt[0];            /* Port refcnt. */
 };
 
 /****************************************************************************
@@ -43,33 +46,49 @@ struct coresight_tpiu_dev_s
  ****************************************************************************/
 
 /****************************************************************************
- * Name: tpiu_register
+ * Name: set_funnel_priority
  *
  * Description:
- *   Register a tpiu devices.
+ *   Set funnel ports priority. It should to be called when port has not been
+ *   enabled.
+ *
+ * Input Parameters:
+ *   fundev  - Pointer to the funnel coresight device.
+ *   priority- Priority to set.
+ *
+ ****************************************************************************/
+
+void set_funnel_priority(FAR struct coresight_funnel_dev_s *fundev,
+                         uint32_t priority);
+
+/****************************************************************************
+ * Name: funnel_register
+ *
+ * Description:
+ *   Register an funnel devices.
  *
  * Input Parameters:
  *   desc  - A description of this coresight device.
  *
  * Returned Value:
- *   Pointer to a tpiu device on success; NULL on failure.
+ *   Pointer to a funnel device on success; NULL on failure.
  *
  ****************************************************************************/
 
-FAR struct coresight_tpiu_dev_s *
-tpiu_register(FAR const struct coresight_desc_s *desc);
+FAR struct coresight_funnel_dev_s *
+funnel_register(FAR const struct hwtracing_desc_s *desc);
 
 /****************************************************************************
- * Name: tpiu_unregister
+ * Name: funnel_unregister
  *
  * Description:
- *   Unregister a tpiu devices.
+ *   Unregister a funnel devices.
  *
  * Input Parameters:
- *   tpiudev  - Pointer to the tpiu device.
+ *   fundev  - Pointer to the funnel device.
  *
  ****************************************************************************/
 
-void tpiu_unregister(FAR struct coresight_tpiu_dev_s *tpiudev);
+void funnel_unregister(FAR struct coresight_funnel_dev_s *fundev);
 
-#endif  //__INCLUDE_NUTTX_CORESIGHT_CORESIGHT_TPIU_H
+#endif  //__INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_FUNNEL_H

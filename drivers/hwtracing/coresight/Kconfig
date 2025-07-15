@@ -15,10 +15,6 @@ config CORESIGHT_MAX_OUTPORT_NUM
 	int "Max outport number of coresight device"
 	default 2
 
-config CORESIGHT_TIMEOUT
-	int "Timeout us for waiting register state change"
-	default 100
-
 config CORESIGHT_ETB
 	bool "ETB coresight device support"
 	default n

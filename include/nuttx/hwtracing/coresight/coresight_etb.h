@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/coresight/coresight_etb.h
+ * include/nuttx/hwtracing/coresight/coresight_etb.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,15 +20,15 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_ETB_H
-#define __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_ETB_H
+#ifndef __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_ETB_H
+#define __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_ETB_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/mutex.h>
-#include <nuttx/coresight/coresight.h>
+#include <nuttx/hwtracing/hwtracing.h>
 
 /****************************************************************************
  * Public Types
@@ -36,7 +36,7 @@
 
 struct coresight_etb_dev_s
 {
-  struct coresight_dev_s csdev;
+  struct hwtracing_dev_s htdev;
   uint32_t trigger_cntr;             /* Amount of words to store after a trigger */
   uint32_t buffer_depth;             /* ETB buffer depth. */
   uint32_t available;                /* Available buffer size. */
@@ -64,7 +64,7 @@ struct coresight_etb_dev_s
  ****************************************************************************/
 
 FAR struct coresight_etb_dev_s *
-etb_register(FAR const struct coresight_desc_s *desc);
+etb_register(FAR const struct hwtracing_desc_s *desc);
 
 /****************************************************************************
  * Name: etb_unregister
@@ -79,4 +79,4 @@ etb_register(FAR const struct coresight_desc_s *desc);
 
 void etb_unregister(FAR struct coresight_etb_dev_s *etbdev);
 
-#endif  //__INCLUDE_NUTTX_CORESIGHT_CORESIGHT_ETB_H
+#endif  //__INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_ETB_H

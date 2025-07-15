@@ -31,3 +31,9 @@ VPATH += :hwtracing
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)hwtracing
 
 endif # CONFIG_HWTRACING
+
+ifeq ($(CONFIG_CORESIGHT),y)
+
+include hwtracing/coresight/Make.defs
+
+endif # CONFIG_CORESIGHT

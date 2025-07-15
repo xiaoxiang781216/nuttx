@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/coresight/coresight_etm.h
+ * include/nuttx/hwtracing/coresight/coresight_etm.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,14 +20,14 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_ETM_H
-#define __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_ETM_H
+#ifndef __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_ETM_H
+#define __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_ETM_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/coresight/coresight.h>
+#include <nuttx/hwtracing/hwtracing.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -75,7 +75,7 @@ struct etm_config_s
 
 struct coresight_etm_dev_s
 {
-  struct coresight_dev_s csdev;
+  struct hwtracing_dev_s htdev;
   struct etm_config_s cfg;
   int cpu;                       /* The cpu this component is affined to */
   int port_size;                 /* Out port size */
@@ -107,7 +107,7 @@ struct coresight_etm_dev_s
  ****************************************************************************/
 
 FAR struct coresight_etm_dev_s *
-etm_register(FAR const struct coresight_desc_s *desc);
+etm_register(FAR const struct hwtracing_desc_s *desc);
 
 /****************************************************************************
  * Name: etm_unregister
@@ -137,4 +137,4 @@ void etm_unregister(FAR struct coresight_etm_dev_s *etmdev);
 int etm_config(FAR struct coresight_etm_dev_s *etmdev,
                FAR const struct etm_config_s *config);
 
-#endif  //__INCLUDE_NUTTX_CORESIGHT_CORESIGHT_ETM_H
+#endif  //__INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_ETM_H

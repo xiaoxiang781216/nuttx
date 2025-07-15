@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/coresight/coresight_funnel.h
+ * include/nuttx/hwtracing/coresight/coresight_replicator.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,24 +20,22 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_FUNNEL_H
-#define __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_FUNNEL_H
+#ifndef __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_REPLICATOR_H
+#define __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_REPLICATOR_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/coresight/coresight.h>
+#include <nuttx/hwtracing/hwtracing.h>
 
 /****************************************************************************
  * Public Types
  ****************************************************************************/
 
-struct coresight_funnel_dev_s
+struct coresight_replicator_dev_s
 {
-  struct coresight_dev_s csdev;
-  uint32_t priority;                 /* Port selection order. */
-  uint8_t port_num;                  /* Port numbre. */
+  struct hwtracing_dev_s htdev;
   uint8_t port_refcnt[0];            /* Port refcnt. */
 };
 
@@ -46,49 +44,33 @@ struct coresight_funnel_dev_s
  ****************************************************************************/
 
 /****************************************************************************
- * Name: set_funnel_priority
+ * Name: replicator_register
  *
  * Description:
- *   Set funnel ports priority. It should to be called when port has not been
- *   enabled.
- *
- * Input Parameters:
- *   fundev  - Pointer to the funnel coresight device.
- *   priority- Priority to set.
- *
- ****************************************************************************/
-
-void set_funnel_priority(FAR struct coresight_funnel_dev_s *fundev,
-                         uint32_t priority);
-
-/****************************************************************************
- * Name: funnel_register
- *
- * Description:
- *   Register an funnel devices.
+ *   Register an replicator devices.
  *
  * Input Parameters:
  *   desc  - A description of this coresight device.
  *
  * Returned Value:
- *   Pointer to a funnel device on success; NULL on failure.
+ *   Pointer to a replicator device on success; NULL on failure.
  *
  ****************************************************************************/
 
-FAR struct coresight_funnel_dev_s *
-funnel_register(FAR const struct coresight_desc_s *desc);
+FAR struct coresight_replicator_dev_s *
+replicator_register(FAR const struct hwtracing_desc_s *desc);
 
 /****************************************************************************
- * Name: funnel_unregister
+ * Name: replicator_unregister
  *
  * Description:
- *   Unregister a funnel devices.
+ *   Unregister a replicator devices.
  *
  * Input Parameters:
- *   fundev  - Pointer to the funnel device.
+ *   fundev  - Pointer to the replicator device.
  *
  ****************************************************************************/
 
-void funnel_unregister(FAR struct coresight_funnel_dev_s *fundev);
+void replicator_unregister(FAR struct coresight_replicator_dev_s *repdev);
 
-#endif  //__INCLUDE_NUTTX_CORESIGHT_CORESIGHT_FUNNEL_H
+#endif  //__INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_REPLICATOR_H

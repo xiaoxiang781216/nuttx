@@ -1,5 +1,5 @@
 # ##############################################################################
-# drivers/coresight/CMakeLists.txt
+# drivers/hwtracing/coresight/CMakeLists.txt
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -21,7 +21,7 @@
 # ##############################################################################
 
 if(CONFIG_CORESIGHT)
-  set(SRCS coresight_core.c coresight_common.c)
+  set(SRCS coresight_common.c)
 
   if(CONFIG_CORESIGHT_ETB)
     list(APPEND SRCS coresight_etb.c)

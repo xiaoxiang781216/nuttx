@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/coresight/coresight_replicator.h
+ * include/nuttx/hwtracing/coresight/coresight_tpiu.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,23 +20,22 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_REPLICATOR_H
-#define __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_REPLICATOR_H
+#ifndef __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_TPIU_H
+#define __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_TPIU_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/coresight/coresight.h>
+#include <nuttx/hwtracing/hwtracing.h>
 
 /****************************************************************************
  * Public Types
  ****************************************************************************/
 
-struct coresight_replicator_dev_s
+struct coresight_tpiu_dev_s
 {
-  struct coresight_dev_s csdev;
-  uint8_t port_refcnt[0];            /* Port refcnt. */
+  struct hwtracing_dev_s htdev;
 };
 
 /****************************************************************************
@@ -44,33 +43,33 @@ struct coresight_replicator_dev_s
  ****************************************************************************/
 
 /****************************************************************************
- * Name: replicator_register
+ * Name: tpiu_register
  *
  * Description:
- *   Register an replicator devices.
+ *   Register a tpiu devices.
  *
  * Input Parameters:
  *   desc  - A description of this coresight device.
  *
  * Returned Value:
- *   Pointer to a replicator device on success; NULL on failure.
+ *   Pointer to a tpiu device on success; NULL on failure.
  *
  ****************************************************************************/
 
-FAR struct coresight_replicator_dev_s *
-replicator_register(FAR const struct coresight_desc_s *desc);
+FAR struct coresight_tpiu_dev_s *
+tpiu_register(FAR const struct hwtracing_desc_s *desc);
 
 /****************************************************************************
- * Name: replicator_unregister
+ * Name: tpiu_unregister
  *
  * Description:
- *   Unregister a replicator devices.
+ *   Unregister a tpiu devices.
  *
  * Input Parameters:
- *   fundev  - Pointer to the replicator device.
+ *   tpiudev  - Pointer to the tpiu device.
  *
  ****************************************************************************/
 
-void replicator_unregister(FAR struct coresight_replicator_dev_s *repdev);
+void tpiu_unregister(FAR struct coresight_tpiu_dev_s *tpiudev);
 
-#endif  //__INCLUDE_NUTTX_CORESIGHT_CORESIGHT_REPLICATOR_H
+#endif  //__INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_TPIU_H

@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/coresight/coresight_tmc.h
+ * include/nuttx/hwtracing/coresight/coresight_tmc.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,15 +20,15 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_TMC_H
-#define __INCLUDE_NUTTX_CORESIGHT_CORESIGHT_TMC_H
+#ifndef __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_TMC_H
+#define __INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_TMC_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/mutex.h>
-#include <nuttx/coresight/coresight.h>
+#include <nuttx/hwtracing/hwtracing.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -85,7 +85,7 @@ enum tmc_etr_mode_e
 
 struct coresight_tmc_dev_s
 {
-  struct coresight_dev_s csdev;
+  struct hwtracing_dev_s htdev;
   enum tmc_config_type_e config_type;   /* Device type: ETB/ETR/ETF. */
   enum tmc_mem_intf_width_e mmwidth;    /* Width of the memory interface databus, in bytes. */
   uint32_t trigger_cntr;                /* Amount of words to store after a trigger. */
@@ -120,7 +120,7 @@ struct coresight_tmc_dev_s
  ****************************************************************************/
 
 FAR struct coresight_tmc_dev_s *
-tmc_register(FAR const struct coresight_desc_s *desc);
+tmc_register(FAR const struct hwtracing_desc_s *desc);
 
 /****************************************************************************
  * Name: tmc_unregister
@@ -135,4 +135,4 @@ tmc_register(FAR const struct coresight_desc_s *desc);
 
 void tmc_unregister(FAR struct coresight_tmc_dev_s *tmcdev);
 
-#endif  //__INCLUDE_NUTTX_CORESIGHT_CORESIGHT_TMC_H
+#endif  //__INCLUDE_NUTTX_HWTRACING_CORESIGHT_CORESIGHT_TMC_H

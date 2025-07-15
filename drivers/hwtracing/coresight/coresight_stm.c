@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/coresight/coresight_stm.c
+ * drivers/hwtracing/coresight/coresight_stm.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -31,7 +31,7 @@
 #include <nuttx/lib/math32.h>
 #include <nuttx/bits.h>
 
-#include <nuttx/coresight/coresight_stm.h>
+#include <nuttx/hwtracing/coresight/coresight_stm.h>
 
 #include "coresight_common.h"
 
@@ -112,20 +112,20 @@ enum stm_pkt_type_e
  * Private Functions Prototypes
  ****************************************************************************/
 
-static int stm_enable(FAR struct coresight_dev_s *csdev);
-static void stm_disable(FAR struct coresight_dev_s *csdev);
+static int stm_enable(FAR struct hwtracing_dev_s *htdev);
+static void stm_disable(FAR struct hwtracing_dev_s *htdev);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static const struct coresight_source_ops_s g_stm_source_ops =
+static const struct hwtracing_source_ops_s g_stm_source_ops =
 {
   .enable  = stm_enable,
   .disable = stm_disable,
 };
 
-static const struct coresight_ops_s g_stm_ops =
+static const struct hwtracing_ops_s g_stm_ops =
 {
   .source_ops = &g_stm_source_ops,
 };
@@ -140,22 +140,22 @@ static const struct coresight_ops_s g_stm_ops =
 
 static void stm_hw_disable(FAR struct coresight_stm_dev_s *stmdev)
 {
-  coresight_unlock(stmdev->csdev.addr);
-  coresight_modify32(0x0, STM_EN, stmdev->csdev.addr + STM_TCSR);
-  coresight_put32(0x0, stmdev->csdev.addr + STM_SPER);
-  coresight_put32(0x0, stmdev->csdev.addr + STM_SPTRIGCSR);
+  coresight_unlock(stmdev->htdev.addr);
+  hwtracing_modify32(0x0, STM_EN, stmdev->htdev.addr + STM_TCSR);
+  hwtracing_put32(0x0, stmdev->htdev.addr + STM_SPER);
+  hwtracing_put32(0x0, stmdev->htdev.addr + STM_SPTRIGCSR);
 
-  coresight_put32(0x0, stmdev->csdev.addr + STM_HEMCR);
-  coresight_put32(0x0, stmdev->csdev.addr + STM_HEER);
-  coresight_put32(0x0, stmdev->csdev.addr + STM_HETER);
+  hwtracing_put32(0x0, stmdev->htdev.addr + STM_HEMCR);
+  hwtracing_put32(0x0, stmdev->htdev.addr + STM_HEER);
+  hwtracing_put32(0x0, stmdev->htdev.addr + STM_HETER);
 
-  if (coresight_timeout(0x0, STM_TCSR_BUSY,
-                        stmdev->csdev.addr + STM_TCSR) < 0)
+  if (hwtracing_timeout(0x0, STM_TCSR_BUSY,
+                        stmdev->htdev.addr + STM_TCSR) < 0)
     {
-      cserr("timeout waiting for STM stopped\n");
+      hterr("timeout waiting for STM stopped\n");
     }
 
-  coresight_lock(stmdev->csdev.addr);
+  coresight_lock(stmdev->htdev.addr);
 }
 
 /****************************************************************************
@@ -164,53 +164,53 @@ static void stm_hw_disable(FAR struct coresight_stm_dev_s *stmdev)
 
 static void stm_hw_enable(FAR struct coresight_stm_dev_s *stmdev)
 {
-  coresight_unlock(stmdev->csdev.addr);
+  coresight_unlock(stmdev->htdev.addr);
   if (stmdev->stmheer != 0)
     {
-      coresight_put32(stmdev->stmhebsr, stmdev->csdev.addr + STM_HEBSR);
-      coresight_put32(stmdev->stmheter, stmdev->csdev.addr + STM_HETER);
-      coresight_put32(stmdev->stmheer, stmdev->csdev.addr + STM_HEER);
-      coresight_put32(STM_HE_EN | STM_HE_ERRDETECT_EN,
-                      stmdev->csdev.addr + STM_HEMCR);
+      hwtracing_put32(stmdev->stmhebsr, stmdev->htdev.addr + STM_HEBSR);
+      hwtracing_put32(stmdev->stmheter, stmdev->htdev.addr + STM_HETER);
+      hwtracing_put32(stmdev->stmheer, stmdev->htdev.addr + STM_HEER);
+      hwtracing_put32(STM_HE_EN | STM_HE_ERRDETECT_EN,
+                      stmdev->htdev.addr + STM_HEMCR);
     }
 
-  coresight_put32(STM_ATBTRIGEN_DIR, stmdev->csdev.addr + STM_SPTRIGCSR);
-  coresight_put32(stmdev->stmspscr, stmdev->csdev.addr + STM_SPSCR);
-  coresight_put32(stmdev->stmsper, stmdev->csdev.addr + STM_SPER);
+  hwtracing_put32(STM_ATBTRIGEN_DIR, stmdev->htdev.addr + STM_SPTRIGCSR);
+  hwtracing_put32(stmdev->stmspscr, stmdev->htdev.addr + STM_SPSCR);
+  hwtracing_put32(stmdev->stmsper, stmdev->htdev.addr + STM_SPER);
 
   /* 4096 byte between synchronisation packets */
 
-  coresight_put32(0xfff, stmdev->csdev.addr + STM_SYNCR);
-  coresight_put32((stmdev->traceid << 16) | STM_TIMESTAMPED_EN | STM_EN,
-                  stmdev->csdev.addr + STM_TCSR);
+  hwtracing_put32(0xfff, stmdev->htdev.addr + STM_SYNCR);
+  hwtracing_put32((stmdev->traceid << 16) | STM_TIMESTAMPED_EN | STM_EN,
+                  stmdev->htdev.addr + STM_TCSR);
 
-  coresight_lock(stmdev->csdev.addr);
+  coresight_lock(stmdev->htdev.addr);
 }
 
 /****************************************************************************
  * Name: stm_hw_disable
  ****************************************************************************/
 
-static void stm_disable(FAR struct coresight_dev_s *csdev)
+static void stm_disable(FAR struct hwtracing_dev_s *htdev)
 {
   FAR struct coresight_stm_dev_s *stmdev =
-    (FAR struct coresight_stm_dev_s *)csdev;
+    (FAR struct coresight_stm_dev_s *)htdev;
 
   stm_hw_disable(stmdev);
-  coresight_disclaim_device(stmdev->csdev.addr);
+  coresight_disclaim_device(stmdev->htdev.addr);
 }
 
 /****************************************************************************
  * Name: stm_enable
  ****************************************************************************/
 
-static int stm_enable(FAR struct coresight_dev_s *csdev)
+static int stm_enable(FAR struct hwtracing_dev_s *htdev)
 {
   FAR struct coresight_stm_dev_s *stmdev =
-    (FAR struct coresight_stm_dev_s *)csdev;
+    (FAR struct coresight_stm_dev_s *)htdev;
   int ret;
 
-  ret = coresight_claim_device(stmdev->csdev.addr);
+  ret = coresight_claim_device(stmdev->htdev.addr);
   if (ret < 0)
     {
       return ret;
@@ -229,7 +229,7 @@ static uint32_t stm_get_stimulus_port_num(uintptr_t addr)
   uint32_t numsp;
 
   coresight_unlock(addr);
-  numsp = coresight_get32(addr + CORESIGHT_DEVID);
+  numsp = hwtracing_get32(addr + CORESIGHT_DEVID);
   if ((numsp & 0x1ffff) == 0)
     {
       numsp = STM_DEFAULT_CHANNELS;
@@ -253,7 +253,7 @@ static uint8_t stm_get_fundamental_data_size(uintptr_t addr)
     }
 
   coresight_unlock(addr);
-  stmspfeat2r = coresight_get32(addr + STM_SPFEAT2R);
+  stmspfeat2r = hwtracing_get32(addr + STM_SPFEAT2R);
   coresight_lock(addr);
 
   return BMVAL(stmspfeat2r, 12, 15) ? 8 : 4;
@@ -302,19 +302,19 @@ static void stm_send(uintptr_t addr, const void *data,
       case 8:
         DEBUGASSERT(sizeof(uintptr_t) == 8);
 
-        coresight_put64(*(uint64_t *)data, addr);
+        hwtracing_put64(*(uint64_t *)data, addr);
         break;
 
       case 4:
-        coresight_put32(*(uint32_t *)data, addr);
+        hwtracing_put32(*(uint32_t *)data, addr);
         break;
 
       case 2:
-        coresight_put16(*(uint16_t *)data, addr);
+        hwtracing_put16(*(uint16_t *)data, addr);
         break;
 
       case 1:
-        coresight_put8(*(uint8_t *)data, addr);
+        hwtracing_put8(*(uint8_t *)data, addr);
         break;
 
       default:
@@ -453,10 +453,10 @@ ssize_t stm_sendpacket(FAR struct coresight_stm_dev_s *stmdev,
  ****************************************************************************/
 
 FAR struct coresight_stm_dev_s *
-stm_register(FAR const struct coresight_desc_s *desc)
+stm_register(FAR const struct hwtracing_desc_s *desc)
 {
   FAR struct coresight_stm_dev_s *stmdev;
-  FAR struct coresight_dev_s *csdev;
+  FAR struct hwtracing_dev_s *htdev;
   uint32_t numsp = stm_get_stimulus_port_num(desc->addr);
   int ret;
 
@@ -464,7 +464,7 @@ stm_register(FAR const struct coresight_desc_s *desc)
                       sizeof(unsigned long) * BITS_TO_LONGS(numsp));
   if (stmdev == NULL)
     {
-      cserr("%s:malloc failed!\n", desc->name);
+      hterr("%s:malloc failed!\n", desc->name);
       return NULL;
     }
 
@@ -476,20 +476,20 @@ stm_register(FAR const struct coresight_desc_s *desc)
   if (stmdev->traceid < 0)
     {
       kmm_free(stmdev);
-      cserr("%s:get unique traceid failed!\n", desc->name);
+      hterr("%s:get unique traceid failed!\n", desc->name);
       return NULL;
     }
 
   stm_init_default_data(stmdev);
 
-  csdev = &stmdev->csdev;
-  csdev->ops = &g_stm_ops;
-  ret = coresight_register(csdev, desc);
+  htdev = &stmdev->htdev;
+  htdev->ops = &g_stm_ops;
+  ret = hwtracing_register(htdev, desc);
   if (ret < 0)
     {
       coresight_put_system_trace_id(stmdev->traceid);
       kmm_free(stmdev);
-      cserr("%s:register failed\n", desc->name);
+      hterr("%s:register failed\n", desc->name);
       return NULL;
     }
 
@@ -509,7 +509,7 @@ stm_register(FAR const struct coresight_desc_s *desc)
 
 void stm_unregister(FAR struct coresight_stm_dev_s *stmdev)
 {
-  coresight_unregister(&stmdev->csdev);
+  hwtracing_unregister(&stmdev->htdev);
   coresight_put_system_trace_id(stmdev->traceid);
   kmm_free(stmdev);
 }

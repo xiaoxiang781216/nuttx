@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/coresight/coresight_common.h
+ * drivers/hwtracing/coresight/coresight_common.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,14 +20,15 @@
  *
  ****************************************************************************/
 
-#ifndef __DRIVERS_CORESIGHT_CORESIGHT_COMMON_H
-#define __DRIVERS_CORESIGHT_CORESIGHT_COMMON_H
+#ifndef __DRIVERS_HWTRACING_CORESIGHT_CORESIGHT_COMMON_H
+#define __DRIVERS_HWTRACING_CORESIGHT_CORESIGHT_COMMON_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <stdint.h>
+#include <nuttx/hwtracing/hwtracing.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -51,23 +52,6 @@
 #define CORESIGHT_DEVTYPE              0xfcc
 
 #define CORESIGHT_CLAIM_SELF_HOSTED    BIT(1)
-
-/* Register operations */
-
-#define coresight_put8(val, addr) \
-        (*(FAR volatile uint8_t *)(addr) = (val))
-#define coresight_put16(val, addr) \
-        (*(FAR volatile uint16_t *)(addr) = (val))
-#define coresight_put32(val, addr) \
-        (*(FAR volatile uint32_t *)(addr) = (val))
-#define coresight_put64(val, addr) \
-        (*(FAR volatile uint64_t *)(addr) = (val))
-
-#define coresight_get32(addr) \
-        (*(FAR volatile uint32_t *)(addr))
-#define coresight_modify32(val, mask, addr) \
-        coresight_put32((coresight_get32(addr) & ~(mask)) | \
-        ((val) & (mask)), (addr))
 
 /****************************************************************************
  * Public Function Prototypes
@@ -171,25 +155,6 @@ int coresight_get_system_trace_id(void);
 void coresight_put_system_trace_id(int traceid);
 
 /****************************************************************************
- * Name: coresight_timeout
- *
- * Description:
- *   Loop until a bitmask of register has changed to a specific value.
- *
- * Input Parameters:
- *   addr    - Base addr of the coresight device.
- *   off     - Register offset of the coresight device.
- *   bitmask - Bitmask to be checked.
- *   val     - Value to be matched.
- *
- * Returned Value:
- *   Zero on success; a negative value on failure.
- *
- ****************************************************************************/
-
-int coresight_timeout(uint32_t val, uint32_t mask, uintptr_t addr);
-
-/****************************************************************************
  * Name: coresight_insert_barrier_packet
  *
  * Description:
@@ -204,4 +169,4 @@ int coresight_timeout(uint32_t val, uint32_t mask, uintptr_t addr);
 
 void coresight_insert_barrier_packet(FAR void *buf);
 
-#endif  /* __DRIVERS_CORESIGHT_CORESIGHT_COMMON_H */
+#endif  /* __DRIVERS_HWTRACING_CORESIGHT_CORESIGHT_COMMON_H */
