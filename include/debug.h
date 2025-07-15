@@ -116,7 +116,12 @@
  */
 
 #ifndef __arch_syslog
-#  define __arch_syslog syslog
+#  ifdef CONFIG_CPP_HAVE_VARARGS
+#    define __arch_syslog(priority, fmt, ...) \
+            syslog(priority, fmt, ##__VA_ARGS__)
+#  else
+#    define __arch_syslog syslog
+#  endif
 #endif
 
 #if !defined(CONFIG_DEBUG_ALERT)
