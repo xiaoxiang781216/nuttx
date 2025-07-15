@@ -1054,6 +1054,24 @@
 #  define rptuninfo    _none
 #endif
 
+#ifdef CONFIG_DEBUG_HWTRACING_ERROR
+#  define hterr       _err
+#else
+#  define hterr      _none
+#endif
+
+#ifdef CONFIG_DEBUG_HWTRACING_WARN
+#  define htwarn     _warn
+#else
+#  define htwarn     _none
+#endif
+
+#ifdef CONFIG_DEBUG_HWTRACING_INFO
+#  define htinfo     _info
+#else
+#  define htinfo     _none
+#endif
+
 #ifdef CONFIG_DEBUG_CORESIGHT_ERROR
 #  define cserr       _err
 #else

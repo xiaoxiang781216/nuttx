@@ -2507,6 +2507,38 @@ config DEBUG_CORESIGHT_INFO
 
 endif # DEBUG_CORESIGHT
 
+config DEBUG_HWTRACING
+	bool "hwtracing Debug Features"
+	default n
+	depends on HWTRACING
+	---help---
+		Enable hwtracing debug features.
+
+if DEBUG_HWTRACING
+
+config DEBUG_HWTRACING_ERROR
+	bool "hwtracing Error Output"
+	default n
+	depends on DEBUG_ERROR
+	---help---
+		Enable hwtracing driver error output to SYSLOG.
+
+config DEBUG_HWTRACING_WARN
+	bool "hwtracing Warnings Output"
+	default n
+	depends on DEBUG_WARN
+	---help---
+		Enable hwtracing warning output to SYSLOG.
+
+config DEBUG_HWTRACING_INFO
+	bool "hwtracing Informational Output"
+	default n
+	depends on DEBUG_INFO
+	---help---
+		Enable hwtracing driver informational output to SYSLOG.
+
+endif # DEBUG_HWTRACING
+
 endif # DEBUG_FEATURES
 
 config ARCH_PROTECT_ZERO_ADDRESS

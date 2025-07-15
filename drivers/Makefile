@@ -89,6 +89,7 @@ include sysevent/Make.defs
 include reset/Make.defs
 include pci/Make.defs
 include coresight/Make.defs
+include hwtracing/Make.defs
 include aie/Make.defs
 include safety/Make.defs
 include trace32/Make.defs

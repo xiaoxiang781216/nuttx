@@ -1,0 +1,22 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+menuconfig HWTRACING
+	bool "Hwtracing Driver Support"
+	default n
+	---help---
+		Hwtracing drivers support.
+
+if HWTRACING
+
+config HWTRACING_MAX_OUTPORT_NUM
+	int "Max outport number of hwtracing device"
+	default 2
+
+config HWTRACING_TIMEOUT
+	int "Timeout us for waiting register state change"
+	default 100
+
+endif # HWTRACING
