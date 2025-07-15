@@ -66,4 +66,6 @@ if(CONFIG_COVERAGE_TOOLCHAIN)
   list(APPEND EXTRA_LIB ${extra_library})
 endif()
 
+nuttx_add_extra_library(${EXTRA_LIB})
+
 set(PREPROCESS ${CMAKE_PREPROCESSOR})
