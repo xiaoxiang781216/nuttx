@@ -167,8 +167,9 @@ config LIBC_BACKTRACE_LOAD_FACTOR
 		The load factor of the backtrace record.
 
 config LIBC_MUTEX_BACKTRACE
-	int "The depth of mutex backtrace"
-	default 0
+	bool "Enable mutex backtrace"
+	depends on LIBC_BACKTRACE_DEPTH > 0
+	default n
 	---help---
-		Config the depth of backtrace, dumping the backtrace of thread which
-		last acquired the mutex. Disable mutex backtrace by 0.
+		Enable the mutex backtrace, dumping the backtrace of thread which
+		last acquired the mutex.

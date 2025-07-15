@@ -48,8 +48,8 @@
 struct mutex_s
 {
   sem_t sem;
-#if CONFIG_LIBC_MUTEX_BACKTRACE > 0
-  FAR void *backtrace[CONFIG_LIBC_MUTEX_BACKTRACE];
+#ifdef CONFIG_LIBC_MUTEX_BACKTRACE
+  FAR void *stack;
 #endif
 };
 
@@ -90,10 +90,12 @@ extern "C"
  *
  ****************************************************************************/
 
-#if CONFIG_LIBC_MUTEX_BACKTRACE > 0
+#ifdef CONFIG_LIBC_MUTEX_BACKTRACE
 void nxmutex_add_backtrace(FAR mutex_t *mutex);
+void nxmutex_remove_backtrace(FAR mutex_t *mutex);
 #else
 #  define nxmutex_add_backtrace(mutex)
+#  define nxmutex_remove_backtrace(mutex)
 #endif
 
 /****************************************************************************
@@ -580,7 +582,13 @@ static inline_function int nxmutex_trylock(FAR mutex_t *mutex)
 
 static inline_function int nxmutex_unlock(FAR mutex_t *mutex)
 {
-  return nxsem_post(&mutex->sem);
+  int ret = nxsem_post(&mutex->sem);
+  if (ret >= 0)
+    {
+      nxmutex_remove_backtrace(mutex);
+    }
+
+  return ret;
 }
 
 /****************************************************************************
@@ -597,6 +605,7 @@ static inline_function int nxmutex_unlock(FAR mutex_t *mutex)
 static inline_function void nxmutex_reset(FAR mutex_t *mutex)
 {
   nxsem_reset(&mutex->sem, 1);
+  nxmutex_remove_backtrace(mutex);
 }
 
 /****************************************************************************

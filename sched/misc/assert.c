@@ -561,20 +561,22 @@ static void dump_tasks(void)
  * Name: dump_lockholder
  ****************************************************************************/
 
-#if CONFIG_LIBC_MUTEX_BACKTRACE > 0
+#ifdef CONFIG_LIBC_MUTEX_BACKTRACE
 static void dump_lockholder(pid_t tid)
 {
-  char buf[BACKTRACE_BUFFER_SIZE(CONFIG_LIBC_MUTEX_BACKTRACE)];
+  char buf[BACKTRACE_BUFFER_SIZE(CONFIG_LIBC_BACKTRACE_DEPTH)];
   FAR struct tcb_s *tcb;
   FAR mutex_t *mutex;
+  FAR void **stack;
+  int depth;
 
   tcb = nxsched_get_tcb(tid);
   DEBUGASSERT(tcb != NULL);
   mutex = (FAR mutex_t *)tcb->waitobj;
   nxsched_put_tcb(tcb);
 
-  backtrace_format(buf, sizeof(buf), mutex->backtrace,
-                   CONFIG_LIBC_MUTEX_BACKTRACE);
+  stack = backtrace_get(mutex->stack, &depth);
+  backtrace_format(buf, sizeof(buf), stack, depth);
 
   _alert("Mutex holder(%d) backtrace:%s\n", nxmutex_get_holder(mutex), buf);
 }

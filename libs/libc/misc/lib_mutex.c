@@ -49,17 +49,16 @@
  *
  ****************************************************************************/
 
-#if CONFIG_LIBC_MUTEX_BACKTRACE > 0
+#ifdef CONFIG_LIBC_MUTEX_BACKTRACE
 void nxmutex_add_backtrace(FAR mutex_t *mutex)
 {
-  int n;
+  mutex->stack = backtrace_record(0);
+}
 
-  n = sched_backtrace(nxmutex_get_holder(mutex), mutex->backtrace,
-                      CONFIG_LIBC_MUTEX_BACKTRACE, 0);
-  if (n < CONFIG_LIBC_MUTEX_BACKTRACE)
-    {
-      mutex->backtrace[n] = NULL;
-    }
+void nxmutex_remove_backtrace(FAR mutex_t *mutex)
+{
+  backtrace_remove(mutex->stack);
+  mutex->stack = NULL;
 }
 #endif
 
