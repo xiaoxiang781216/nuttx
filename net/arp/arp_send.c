@@ -205,6 +205,7 @@ int arp_send(in_addr_t ipaddr)
   FAR struct arp_send_info_s *info;
   FAR struct arp_send_s *state;
   FAR struct arp_notify_s *notify;
+  bool sending = false;
   int ret;
 
   /* First check if destination is a local broadcast. */
@@ -344,17 +345,26 @@ int arp_send(in_addr_t ipaddr)
        * issue.
        */
 
-      if (arp_find(ipaddr, NULL, dev, true) >= 0)
+      ret = arp_find(ipaddr, NULL, dev, true);
+      if (ret >= 0 || ret == -ENETUNREACH)
         {
-          /* We have it!  Break out with success */
+          /* We have it! Break out with ret value */
 
-          ret = OK;
           break;
         }
 
       /* Set up the ARP response wait BEFORE we send the ARP request */
 
       arp_wait_setup(ipaddr, notify);
+
+      if (ret == -EINPROGRESS && !sending)
+        {
+          /* ARP request for the same destination is in progress, directly
+           * wait arp response notify.
+           */
+
+          goto wait;
+        }
 
       /* Allocate resources to receive a callback.  This and the following
        * initialization is performed with the network lock because we don't
@@ -389,6 +399,16 @@ int arp_send(in_addr_t ipaddr)
 
       netdev_txnotify_dev(dev);
 
+      /* MAC address marked with all zeros to limit concurrent task
+       * send ARP request for same destination.
+       */
+
+      if (state->snd_retries == 0)
+        {
+          arp_update(dev, ipaddr, NULL);
+          sending = true;
+        }
+
       /* Wait for the send to complete or an error to occur.
        * net_sem_wait will also terminate if a signal is received.
        */
@@ -419,6 +439,7 @@ int arp_send(in_addr_t ipaddr)
 
       /* Now wait for response to the ARP response to be received. */
 
+wait:
       ret = arp_wait(notify, CONFIG_ARP_SEND_DELAYMSEC);
 
       /* arp_wait will return OK if and only if the matching ARP response
