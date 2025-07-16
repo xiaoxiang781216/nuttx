@@ -37,6 +37,7 @@
 #include <linux/ioctl.h>
 #include <linux/types.h>
 #include <linux/gpio.h>
+#include <linux/version.h>
 
 #include "sim_hostgpiochip.h"
 #include "sim_internal.h"
@@ -65,6 +66,8 @@
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
 
 /****************************************************************************
  * Name: host_gpiochip_direction
@@ -417,3 +420,51 @@ void host_gpiochip_free(struct host_gpiochip_dev *priv)
   host_uninterruptible(close, priv->file);
   free(priv);
 }
+
+#else
+
+struct host_gpiochip_dev *host_gpiochip_alloc(const char *filename)
+{
+  return NULL;
+}
+
+void host_gpiochip_free(struct host_gpiochip_dev *dev)
+{
+}
+
+int host_gpiochip_get_line(struct host_gpiochip_dev *priv, uint8_t pin,
+                           bool *input)
+{
+  return 0;
+}
+
+int host_gpiochip_readpin(struct host_gpiochip_dev *dev,
+                          uint8_t line, bool *value)
+{
+  return 0;
+}
+
+int host_gpiochip_writepin(struct host_gpiochip_dev *dev,
+                           uint8_t pin, bool value)
+{
+  return 0;
+}
+
+int host_gpiochip_direction(struct host_gpiochip_dev *dev,
+                            uint8_t pin, bool input)
+{
+  return 0;
+}
+
+int host_gpiochip_irq_request(struct host_gpiochip_dev *dev, uint8_t pin,
+                              uint16_t cfgset)
+{
+  return 0;
+}
+
+bool host_gpiochip_irq_active(struct host_gpiochip_dev *dev, uint8_t pin)
+{
+  return false;
+}
+
+#endif
