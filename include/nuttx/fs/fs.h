@@ -1950,6 +1950,31 @@ int pseudofile_create_from(FAR const char *path,
                            FAR const void *buf, size_t size, mode_t mode);
 #endif
 
+/****************************************************************************
+ * Name: map_anonymous
+ *
+ * Description:
+ *   Support simulation of private anonymous mapping by allocating memory
+ *   from heap
+ *
+ * Input Parameters:
+ *   map     Input struct containing user request
+ *   kernel  fs_heap_zalloc or kumm_zalloc
+ *
+ * Returned Value:
+ *   On success returns 0. Otherwise negated errno is returned appropriately.
+ *
+ *     ENOMEM
+ *       Insufficient memory is available to simulate mapping
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_FS_ANONMAP
+int map_anonymous(FAR struct mm_map_entry_s *entry, bool kernel);
+#else
+#  define map_anonymous(entry, kernel) (-ENOSYS)
+#endif /* CONFIG_FS_ANONMAP */
+
 #undef EXTERN
 #if defined(__cplusplus)
 }
