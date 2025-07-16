@@ -21,6 +21,8 @@
 import logging
 from enum import IntEnum
 
+from . import perfetto_trace_pb2 as pb2
+
 try:
     from google.protobuf.message_factory import GetMessageClass
 except ImportError:
@@ -28,7 +30,6 @@ except ImportError:
     print("pip install protobuf==4.25.3")
     exit(1)
 
-from . import perfetto_trace_pb2 as pb2
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARN)
@@ -131,7 +132,8 @@ class PerfettoTrace:
         self.trace = pb2.Trace()
         self.file = open(filename, "wb")
 
-        self.current_uuid = 0
+        self.current_uuid = 1
+        self.counter_track_cache = {}
 
     def fill_debug_annotation_value(self, debug_annotation, value):
         if isinstance(value, dict):
@@ -316,7 +318,7 @@ class PerfettoTrace:
         return self.print(head, f"B|{head.pid}|{msg}")
 
     def atrace_end(self, head: TraceHead, msg=""):
-        return self.print(head, "E" + f"|{head.pid}|{msg}" if msg else "")
+        return self.print(head, f"E|{head.pid}|{msg}" if msg else "")
 
     def atrace_async_begin(self, head: TraceHead, msg, cookie):
         return self.print(head, f"S|{head.pid}|{msg}|{cookie}")
@@ -361,11 +363,39 @@ class PerfettoTrace:
             )
         )
 
-    def trace_event(self, uuid, ts, type, name=None, flow_ids=[], args={}):
+    def add_counter_track(
+        self, uuid, parent_uuid, name, unit="UNIT_COUNT", categories=None
+    ):
+        counter_descriptor = pb2.CounterDescriptor(
+            unit=getattr(
+                pb2.CounterDescriptor.Unit, unit, pb2.CounterDescriptor.Unit.UNIT_COUNT
+            )
+        )
+
+        if categories:
+            counter_descriptor.categories.extend(categories)
+
+        track_descriptor = pb2.TrackDescriptor(
+            uuid=uuid, parent_uuid=parent_uuid, name=name, counter=counter_descriptor
+        )
+
+        self.trace.packet.append(
+            pb2.TracePacket(
+                track_descriptor=track_descriptor,
+                trusted_packet_sequence_id=self.DEFAULT_TRUSTED_PACKET_SEQUENCE_ID,
+            )
+        )
+
+    def trace_event(
+        self, uuid, ts, type, name=None, value: int = None, flow_ids=[], args={}
+    ):
         pkt = self.trace.packet.add()
         pkt.timestamp = ts
         pkt.track_event.type = type
         pkt.track_event.track_uuid = uuid
+        if value is not None:
+            pkt.track_event.counter_value = value
+
         pkt.trusted_packet_sequence_id = self.DEFAULT_TRUSTED_PACKET_SEQUENCE_ID
 
         if args:
@@ -385,8 +415,42 @@ class PerfettoTrace:
         if name:
             pkt.track_event.name = name
         if flow_ids:
-            pkt.track_event.flow_ids = flow_ids
+            for flow_id in flow_ids:
+                pkt.track_event.flow_ids.append(flow_id)
 
     def trace_slice(self, uuid, start, end, name, flow_ids=[], args={}):
-        self.trace_event(uuid, start, self.SLICE_BEGIN, name, flow_ids, args)
+        self.trace_event(
+            uuid, start, self.SLICE_BEGIN, name, flow_ids=flow_ids, args=args
+        )
         self.trace_event(uuid, end, self.SLICE_END)
+
+    def trace_begin(self, uuid, start, name, flow_ids=[], args={}):
+        self.trace_event(
+            uuid, start, self.SLICE_BEGIN, name, flow_ids=flow_ids, args=args
+        )
+
+    def trace_end(self, uuid, end, name="", flow_ids=[], args={}):
+        self.trace_event(uuid, end, self.SLICE_END, name, flow_ids=flow_ids, args=args)
+
+    def trace_counter(self, parent_uuid, ts, name, value: int, flow_ids=[], args={}):
+        cache_key = (parent_uuid, name)
+
+        # Check if the counter track already exists
+        if cache_key not in self.counter_track_cache:
+            counter_uuid = self.next_uuid()
+            self.add_counter_track(
+                uuid=counter_uuid, parent_uuid=parent_uuid, name=name, unit="UNIT_COUNT"
+            )
+
+            self.counter_track_cache[cache_key] = counter_uuid
+            logger.debug(
+                f"Created counter track: {name} for parent PID {parent_uuid}, UUID: {counter_uuid}"
+            )
+
+        # Get the cached counter track UUID
+        counter_uuid = self.counter_track_cache[cache_key]
+
+        # Use the counter track UUID to record the event
+        return self.trace_event(
+            counter_uuid, ts, self.COUNTER, name, value, flow_ids, args
+        )
