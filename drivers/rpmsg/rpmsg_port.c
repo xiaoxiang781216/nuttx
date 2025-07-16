@@ -440,6 +440,7 @@ static void rpmsg_port_rx_callback(FAR struct rpmsg_port_s *port,
   FAR struct rpmsg_hdr *rphdr = (FAR struct rpmsg_hdr *)hdr->buf;
   FAR void *data = RPMSG_LOCATE_DATA(rphdr);
   FAR struct rpmsg_endpoint *ept;
+  size_t len = rphdr->len + sizeof(*rphdr);
   int status = 0;
 
   metal_mutex_acquire(&rdev->lock);
@@ -465,16 +466,15 @@ static void rpmsg_port_rx_callback(FAR struct rpmsg_port_s *port,
           metal_mutex_release(&rdev->lock);
         }
 
-      rpmsg_note_printf(ept->name, false, "[Port] rx ept->cb start, "
-                        "ept:%p, name:%s, cb:%p, hdr:%p, rdev:%p",
-                        ept, ept->name, ept->cb, rphdr, rdev);
-      rpmsg_note_binary(ept->name, rphdr, rphdr->len);
+      rpmsg_note_trace(ept->name, false, rphdr, len,
+                       "[Port] rx ept->cb start cb:%p rdev:%p hdr:%p len:%d",
+                       ept, ept->name, ept->cb, rdev, rphdr, len);
 
       status = ept->cb(ept, data, rphdr->len, rphdr->src, ept->priv);
 
-      rpmsg_note_printf(ept->name, false, "[Port] rx ept->cb end, "
-                        "ept:%p, name:%s, cb:%p, hdr:%p, rdev:%p",
-                        ept, ept->name, ept->cb, rphdr, rdev);
+      rpmsg_note_trace(ept->name, false, NULL, 0,
+                       "[Port] rx ept->cb start cb:%p rdev:%p hdr:%p len:%d",
+                       ept, ept->name, ept->cb, rdev, rphdr, len);
 
       if (status < 0 && status != RPMSG_SUCCESS_BUFFER_RELEASED)
         {
