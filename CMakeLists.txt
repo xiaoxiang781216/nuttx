@@ -34,6 +34,13 @@
 # Request a version available on latest Ubuntu LTS (20.04)
 
 cmake_minimum_required(VERSION 3.16)
+set(CMAKE_SYSTEM_NAME Generic)
+set(CMAKE_SYSTEM_VERSION 1)
+
+# Force the C or CXX compiler to avoid CMake automatic detection
+
+set(CMAKE_C_COMPILER_FORCED TRUE)
+set(CMAKE_CXX_COMPILER_FORCED TRUE)
 
 # Handle newer CMake versions correctly by setting policies
 

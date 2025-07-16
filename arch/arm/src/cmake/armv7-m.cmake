@@ -18,9 +18,6 @@
 #
 # ##############################################################################
 
-set(CMAKE_SYSTEM_NAME Generic)
-set(CMAKE_SYSTEM_VERSION 1)
-
 set(TOOLCHAIN_ARCH_FILE)
 
 if(CONFIG_ARCH_TOOLCHAIN_CLANG) # clang

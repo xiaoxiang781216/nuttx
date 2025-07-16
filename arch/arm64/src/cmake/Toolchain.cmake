@@ -18,9 +18,6 @@
 #
 # ##############################################################################
 
-set(CMAKE_SYSTEM_NAME Generic)
-set(CMAKE_SYSTEM_VERSION 1)
-
 if(CONFIG_ARCH_ARMV8A)
   add_compile_options(-march=armv8-a)
   # Default to cortex-a53 if no specific CPU is selected

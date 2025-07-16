@@ -18,9 +18,6 @@
 #
 # ##############################################################################
 
-set(CMAKE_SYSTEM_NAME Generic)
-set(CMAKE_SYSTEM_VERSION 1)
-
 if(CONFIG_RISCV_TOOLCHAIN_GNU_RV32
    OR CONFIG_RISCV_TOOLCHAIN_GNU_RV64
    OR CONFIG_RISCV_TOOLCHAIN_GNU_RV64ILP32
