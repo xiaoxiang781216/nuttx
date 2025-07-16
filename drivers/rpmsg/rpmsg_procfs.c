@@ -224,12 +224,13 @@ static ssize_t rpmsg_procfs_read(FAR struct file *filep, FAR char *buffer,
 static ssize_t rpmsg_procfs_write(FAR struct file *filep,
                                   FAR const char *buffer, size_t buflen)
 {
-  if (buffer == NULL || buflen <= 1 || buflen > RPMSG_PROCFS_LINELEN)
+  if (buffer == NULL || buflen <= 1 || buflen >= RPMSG_PROCFS_LINELEN)
     {
       return -EINVAL;
     }
 
-  strlcpy(g_rpmsg_procfs_filter, buffer, RPMSG_PROCFS_LINELEN);
+  memcpy(g_rpmsg_procfs_filter, buffer, buflen);
+  g_rpmsg_procfs_filter[buflen] = '\0';
 
   return buflen;
 }
