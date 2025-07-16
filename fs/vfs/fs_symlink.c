@@ -56,7 +56,7 @@
  *
  * Description:
  *   The symlink() function will create a new link (directory entry) for the
- *   existing file, path2.  This implementation is simplied for use with
+ *   existing file, path2.  This implementation is simplified for use with
  *   NuttX in these ways:
  *
  *   - Links may be created only within the NuttX top-level, pseudo file
@@ -146,6 +146,15 @@ int symlink(FAR const char *path1, FAR const char *path2)
 
       inode_lock();
       ret = inode_reserve(path2, 0777, &inode);
+
+      if (ret >= 0)
+        {
+          /* Initialize the inode */
+
+          INODE_SET_SOFTLINK(inode);
+          inode->u.i_link = newpath2;
+        }
+
       inode_unlock();
       if (ret < 0)
         {
@@ -153,11 +162,6 @@ int symlink(FAR const char *path1, FAR const char *path2)
           errcode = -ret;
           goto errout_with_search;
         }
-
-      /* Initialize the inode */
-
-      INODE_SET_SOFTLINK(inode);
-      inode->u.i_link = newpath2;
     }
 
   /* Symbolic link successfully created */
