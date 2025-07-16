@@ -1177,7 +1177,10 @@ def jsonify(obj, indent=None):
         try:
             return str(obj) if isinstance(obj, gdb.Value) else obj.toJSON()
         except Exception:
-            return obj.__dict__
+            try:
+                return obj.__dict__
+            except Exception as e:
+                return f"<jsonify failed: {type(obj), {e}}>"
 
     return json.dumps(obj, default=dumper, indent=indent)
 
