@@ -55,6 +55,7 @@
 #include <nuttx/net/tcp.h>
 
 #include "devif/devif.h"
+#include "utils/utils.h"
 #include "tcp/tcp.h"
 
 /****************************************************************************
@@ -97,10 +98,12 @@ void tcp_poll(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
 
   /* Discard any currently buffered data */
 
+  conn_lock(&conn->sconn);
   if (conn->timeout)
     {
       conn->timeout = false;
       tcp_timer(dev, conn);
+      conn_unlock(&conn->sconn);
       return;
     }
 
@@ -127,6 +130,8 @@ void tcp_poll(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
 
       tcp_appsend(dev, conn, result);
     }
+
+  conn_unlock(&conn->sconn);
 }
 
 #endif /* CONFIG_NET && CONFIG_NET_TCP */

@@ -34,6 +34,7 @@
 
 #include "devif/devif.h"
 #include "socket/socket.h"
+#include "utils/utils.h"
 #include "tcp/tcp.h"
 
 #ifdef NET_TCP_HAVE_STACK
@@ -212,8 +213,6 @@ static void tcp_shutdown_monitor(FAR struct tcp_conn_s *conn, uint16_t flags)
    * are informed of the loss of connection event.
    */
 
-  net_lock();
-
   /* Free all allocated connection event callback structures */
 
   while (conn->connevents != NULL)
@@ -222,8 +221,6 @@ static void tcp_shutdown_monitor(FAR struct tcp_conn_s *conn, uint16_t flags)
                                &conn->connevents,
                                &conn->connevents_tail);
     }
-
-  net_unlock();
 }
 
 /****************************************************************************
@@ -259,8 +256,6 @@ int tcp_start_monitor(FAR struct socket *psock)
 
   conn = psock->s_conn;
 
-  net_lock();
-
   /* Non-blocking connection ? */
 
   nonblock_conn = (conn->tcpstateflags == TCP_SYN_SENT &&
@@ -286,7 +281,6 @@ int tcp_start_monitor(FAR struct socket *psock)
       if (conn->tcpstateflags == TCP_CLOSED ||
           conn->tcpstateflags == TCP_LAST_ACK)
         {
-          net_unlock();
           return OK;
         }
 
@@ -294,7 +288,6 @@ int tcp_start_monitor(FAR struct socket *psock)
        * because the socket was already disconnected.
        */
 
-      net_unlock();
       return -ENOTCONN;
     }
 
@@ -302,6 +295,7 @@ int tcp_start_monitor(FAR struct socket *psock)
    * the network goes down.
    */
 
+  conn_dev_lock(&conn->sconn, conn->dev);
   cb = devif_callback_alloc(conn->dev,
                             &conn->connevents,
                             &conn->connevents_tail);
@@ -319,7 +313,7 @@ int tcp_start_monitor(FAR struct socket *psock)
         }
     }
 
-  net_unlock();
+  conn_dev_unlock(&conn->sconn, conn->dev);
   return OK;
 }
 
@@ -349,7 +343,9 @@ void tcp_stop_monitor(FAR struct tcp_conn_s *conn, uint16_t flags)
 
   /* Stop the network monitor */
 
+  conn_dev_lock(&conn->sconn, conn->dev);
   tcp_shutdown_monitor(conn, flags);
+  conn_dev_unlock(&conn->sconn, conn->dev);
 }
 
 /****************************************************************************

@@ -40,6 +40,7 @@
 #include "devif/devif.h"
 #include "tcp/tcp.h"
 #include "socket/socket.h"
+#include "utils/utils.h"
 
 /****************************************************************************
  * Private Functions
@@ -53,8 +54,6 @@ static void tcp_close_work(FAR void *param)
 {
   FAR struct tcp_conn_s *conn = (FAR struct tcp_conn_s *)param;
 
-  net_lock();
-
   conn->flags &= ~TCP_CLOSE_ARRANGED;
   if (conn->crefs == 0)
     {
@@ -63,8 +62,6 @@ static void tcp_close_work(FAR void *param)
       tcp_stop_monitor(conn, TCP_CLOSE);
       tcp_free(conn);
     }
-
-  net_unlock();
 }
 
 /****************************************************************************
@@ -220,9 +217,9 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
 
   /* Interrupts are disabled here to avoid race conditions */
 
-  net_lock();
-
   conn = psock->s_conn;
+
+  conn_dev_lock(&conn->sconn, conn->dev);
 
   /* Discard our reference to the connection */
 
@@ -278,12 +275,14 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
 
       /* Notify the device driver of the availability of TX data */
 
+      conn_dev_unlock(&conn->sconn, conn->dev);
       tcp_send_txnotify(psock, conn);
     }
   else
     {
       /* Stop the network monitor for all sockets */
 
+      conn_dev_unlock(&conn->sconn, conn->dev);
       tcp_stop_monitor(conn, TCP_CLOSE);
 
       /* Free network resources */
@@ -293,7 +292,6 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
 
   psock->s_conn = NULL;
 
-  net_unlock();
   return ret;
 }
 

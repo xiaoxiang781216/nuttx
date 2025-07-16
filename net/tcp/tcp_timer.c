@@ -62,6 +62,7 @@
 #include "netdev/netdev.h"
 #include "devif/devif.h"
 #include "socket/socket.h"
+#include "utils/utils.h"
 #include "tcp/tcp.h"
 
 /****************************************************************************
@@ -145,19 +146,20 @@ static void tcp_timer_expiry(FAR void *arg)
 {
   FAR struct tcp_conn_s *conn = NULL;
 
-  net_lock();
+  tcp_conn_list_lock();
 
   while ((conn = tcp_nextconn(conn)) != NULL)
     {
       if (conn == arg)
         {
+          tcp_conn_list_unlock();
           conn->timeout = true;
           netdev_txnotify_dev(conn->dev);
-          break;
+          return;
         }
     }
 
-  net_unlock();
+  tcp_conn_list_unlock();
 }
 
 /****************************************************************************
