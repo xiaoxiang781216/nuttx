@@ -58,7 +58,7 @@ void rpmsg_note_binary(FAR const char *name,
 
   if (rpmsg_procfs_note_allow(name))
     {
-      note_driver_event(g_rpmsg_note_drv, NOTE_TAG_RPMSG, buf, len);
+      note_driver_binary(g_rpmsg_note_drv, NOTE_TAG_RPMSG, buf, len);
     }
 }
 
