@@ -55,7 +55,7 @@
 void arm_arch_timer_secondary_init(void);
 #endif
 
-inline uint64_t arm_arch_timer_get_cntfrq(void)
+static inline uint64_t arm_arch_timer_get_cntfrq(void)
 {
   return CP15_GET(CNTFRQ);
 }
