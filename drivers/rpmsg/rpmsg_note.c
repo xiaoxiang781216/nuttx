@@ -31,6 +31,7 @@
 #include <execinfo.h>
 
 #include <nuttx/sched_note.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/note/noteram_driver.h>
 #include <nuttx/rpmsg/rpmsg_note.h>
@@ -42,48 +43,34 @@
  ****************************************************************************/
 
 static FAR struct note_driver_s *g_rpmsg_note_drv;
+static spinlock_t g_rpmsg_note_lock = SP_UNLOCKED;
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: rpmsg_note_binary
+ * Name: rpmsg_note_trace
  ****************************************************************************/
 
-void rpmsg_note_binary(FAR const char *name,
-                       FAR const void *buf, size_t len)
-{
-  /* filter ept  */
-
-  if (rpmsg_procfs_note_allow(name))
-    {
-      note_driver_binary(g_rpmsg_note_drv, NOTE_TAG_RPMSG, buf, len);
-    }
-}
-
-/****************************************************************************
- * Name: rpmsg_note_printf
- ****************************************************************************/
-
-void rpmsg_note_printf(FAR const char *name, bool bt,
-                       FAR const char *format, ...)
+void rpmsg_note_trace(FAR const char *name, bool bt, FAR const void *buf,
+                      size_t len, FAR const char *format, ...)
 {
   va_list ap;
 
   va_start(ap, format);
-  rpmsg_note_vprintf(name, bt, format, ap);
+  rpmsg_note_vtrace(name, bt, buf, len, format, ap);
   va_end(ap);
 }
 
 /****************************************************************************
- * Name: rpmsg_note_vprintf
+ * Name: rpmsg_note_vtrace
  ****************************************************************************/
 
-void rpmsg_note_vprintf(FAR const char *name, bool bt,
-                        FAR const char *format, va_list ap)
+void rpmsg_note_vtrace(FAR const char *name, bool bt, FAR const void *buf,
+                       size_t len, FAR const char *format, va_list ap)
 {
-  /* filter ept  */
+  irqstate_t flags;
 
   if (rpmsg_procfs_note_allow(name))
     {
@@ -99,14 +86,23 @@ void rpmsg_note_vprintf(FAR const char *name, bool bt,
           backtrace(buffer, CONFIG_RPMSG_NOTE_BACKTRACE);
           backtrace_format(buf, sizeof(buf), buffer,
                           CONFIG_RPMSG_NOTE_BACKTRACE);
+          flags = spin_lock_irqsave(&g_rpmsg_note_lock);
           note_driver_printf(g_rpmsg_note_drv, NOTE_TAG_RPMSG,
                             "%pV, %s", &vaf, buf);
         }
       else
 #endif
         {
+          flags = spin_lock_irqsave(&g_rpmsg_note_lock);
           note_driver_vprintf(g_rpmsg_note_drv, NOTE_TAG_RPMSG, format, &ap);
         }
+
+      if (len > 0 && buf != NULL)
+        {
+          note_driver_binary(g_rpmsg_note_drv, NOTE_TAG_RPMSG, buf, len);
+        }
+
+      spin_unlock_irqrestore(&g_rpmsg_note_lock, flags);
     }
 }
 
@@ -118,7 +114,7 @@ int rpmsg_note_initialize(void)
 {
   g_rpmsg_note_drv = noteram_initialize("/dev/note/rpmsg",
                                         CONFIG_RPMSG_NOTE_BUFSIZE,
-                                        true, true, false);
+                                        true, true, true);
   if (g_rpmsg_note_drv == NULL)
     {
       rpmsgerr("failed to initialize note driver.\n");

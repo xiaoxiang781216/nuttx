@@ -39,35 +39,29 @@
  ****************************************************************************/
 
 int rpmsg_note_initialize(void);
-void rpmsg_note_binary(FAR const char *name,
-                       FAR const void *buf, size_t len);
-void rpmsg_note_printf(FAR const char *name, bool bt,
-                       FAR const char *format, ...);
-void rpmsg_note_vprintf(FAR const char *name, bool bt,
-                        FAR const char *format, va_list ap);
+void rpmsg_note_trace(FAR const char *name, bool bt, FAR const void *buf,
+                      size_t len, FAR const char *format, ...);
+void rpmsg_note_vtrace(FAR const char *name, bool bt, FAR const void *buf,
+                       size_t len, FAR const char *format, va_list ap);
 #else
 #  define rpmsg_note_initialize()
-#  define rpmsg_note_binary(name, buf, len) \
+#  define rpmsg_note_trace(name, bt, buf, len, format, ...) \
      do \
        { \
-         UNUSED(name); \
-         UNUSED(buf); \
-         UNUSED(len); \
+         (void)(name); \
+         (void)(buf); \
+         (void)(len); \
+         (void)(format); \
        } \
      while (0)
-#  define rpmsg_note_printf(name, bt, format, ...) \
+#  define rpmsg_note_vtrace(name, bt, buf, len, format, ap) \
      do \
        { \
-         UNUSED(name); \
-         UNUSED(format); \
-       } \
-     while (0)
-#  define rpmsg_note_vprintf(name, bt, format, ap) \
-     do \
-       { \
-         UNUSED(name); \
-         UNUSED(format); \
-         UNUSED(ap); \
+         (void)(name); \
+         (void)(buf); \
+         (void)(len); \
+         (void)(format); \
+         (void)(ap); \
        } \
      while (0)
 #endif /* CONFIG_RPMSG_NOTE */
