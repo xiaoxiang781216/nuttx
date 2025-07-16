@@ -33,6 +33,7 @@
 #ifndef __ASSEMBLY__
 #  include <stdbool.h>
 #  include <arch/syscall.h>
+#  include <nuttx/init.h>
 #endif
 
 /****************************************************************************
@@ -84,7 +85,7 @@
 #ifndef up_switch_context
 #define up_switch_context(tcb, rtcb)                              \
   do {                                                            \
-    if (!up_interrupt_context())                                  \
+    if (!up_interrupt_context() && !OSINIT_IS_PANIC())            \
       {                                                           \
         sys_call2(SYS_switch_context, (uintptr_t)&rtcb->xcp.regs, \
                   (uintptr_t)tcb->xcp.regs);                      \
