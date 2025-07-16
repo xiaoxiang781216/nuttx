@@ -33,6 +33,7 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/mtd/mtd.h>
+#include <nuttx/kmalloc.h>
 
 #include "cfi.h"
 
