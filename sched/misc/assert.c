@@ -562,52 +562,61 @@ static void dump_tasks(void)
  * Name: dump_lockholder
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_MUTEX_BACKTRACE
+#ifdef CONFIG_ARCH_DEADLOCKDUMP
 static void dump_lockholder(pid_t tid)
 {
   char buf[BACKTRACE_BUFFER_SIZE(CONFIG_LIBC_BACKTRACE_DEPTH)];
   FAR struct tcb_s *tcb;
-  FAR mutex_t *mutex;
-  FAR void **stack;
-  int depth;
+  FAR void **stack = NULL;
+  int depth = 0;
+  pid_t holder = INVALID_PROCESS_ID;
 
   tcb = nxsched_get_tcb(tid);
   DEBUGASSERT(tcb != NULL);
-  mutex = (FAR mutex_t *)tcb->waitobj;
-  nxsched_put_tcb(tcb);
 
-  stack = backtrace_get(mutex->stack, &depth);
+  if (tcb->task_state == TSTATE_WAIT_SEM)
+    {
+      FAR mutex_t *mutex = tcb->waitobj;
+
+      holder = nxmutex_get_holder(mutex);
+#  ifdef CONFIG_LIBC_MUTEX_BACKTRACE
+      stack = backtrace_get(mutex->stack, &depth);
+#  endif
+    }
+#  ifdef CONFIG_SPINLOCK_DEBUG
+  else
+    {
+      FAR spinlock_debug_t *info = tcb->wait_spinlock;
+
+      holder = spinlock_get_holder(info);
+#    ifdef CONFIG_SPINLOCK_BACKTRACE
+      stack = backtrace_get(info->stack, &depth);
+#    endif
+    }
+#  endif
+
+  nxsched_put_tcb(tcb);
   backtrace_format(buf, sizeof(buf), stack, depth);
 
-  _alert("Mutex holder(%d) backtrace:%s\n", nxmutex_get_holder(mutex), buf);
+  _alert("Deadlock(%d) holder(%d) backtrace: %s\n", tid, holder, buf);
 }
-#else
-#  define dump_lockholder(tid)
-#endif
 
 /****************************************************************************
  * Name: dump_deadlock
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_DEADLOCKDUMP
 static void dump_deadlock(void)
 {
   pid_t deadlock[CONFIG_ARCH_DEADLOCKDUMP_MAX];
   size_t i = nxsched_collect_deadlock(deadlock,
                                       CONFIG_ARCH_DEADLOCKDUMP_MAX);
 
-  if (i > 0)
+  while (i-- > 0)
     {
-      _alert("Deadlock detected\n");
-      while (i-- > 0)
-        {
+      dump_lockholder(deadlock[i]);
 #  ifdef CONFIG_SCHED_BACKTRACE
-          sched_dumpstack(deadlock[i]);
-          dump_lockholder(deadlock[i]);
-#  else
-          _alert("deadlock pid: %d\n", deadlock[i]);
+      sched_dumpstack(deadlock[i]);
 #  endif
-        }
     }
 }
 #endif

@@ -67,13 +67,17 @@ void nxsched_critmon_busywait(bool state, FAR void *caller);
 #endif
 
 #ifdef CONFIG_SPINLOCK_DEBUG
+void spinlock_mark_locking(FAR spinlock_debug_t *info);
 void spinlock_mark_locked(FAR spinlock_debug_t *info);
 void spinlock_mark_unlocked(FAR spinlock_debug_t *info);
 void spinlock_switch_context(FAR struct tcb_s *from);
+pid_t spinlock_get_holder(FAR spinlock_debug_t *info);
 #else
+#  define spinlock_mark_locking(info)
 #  define spinlock_mark_locked(info)
 #  define spinlock_mark_unlocked(info)
 #  define spinlock_switch_context(from)
+#  define spinlock_get_holder(info) INVALID_PROCESS_ID
 #endif
 
 /****************************************************************************
@@ -191,6 +195,10 @@ static inline_function void spin_lock_notrace(FAR volatile spinlock_t *lock)
 #ifdef CONFIG_SPINLOCK
 static inline_function void spin_lock(FAR volatile spinlock_t *lock)
 {
+  /* Mark that we want to hold lock */
+
+  spinlock_mark_locking(&lock->info);
+
   /* Notify that we are waiting for a spinlock */
 
   sched_note_spinlock(lock, NOTE_SPINLOCK_LOCK);
@@ -455,6 +463,10 @@ irqstate_t spin_lock_irqsave(FAR volatile spinlock_t *lock)
 {
   irqstate_t flags;
 
+  /* Mark that we want to hold lock */
+
+  spinlock_mark_locking(&lock->info);
+
   /* Notify that we are waiting for a spinlock */
 
   sched_note_spinlock(lock, NOTE_SPINLOCK_LOCK);
@@ -653,6 +665,10 @@ void rspin_lock(FAR rspinlock_t *lock)
     }
   else
     {
+      /* Mark that we want to hold lock */
+
+      spinlock_mark_locking(&lock->info);
+
       /* Try seize the ownership of the lock using CAS. */
 
       new_val.count = 1;
@@ -1265,6 +1281,9 @@ static inline_function void read_unlock(FAR volatile rwlock_t *lock)
 
 static inline_function void write_lock(FAR volatile rwlock_t *lock)
 {
+  /* Mark that we want to hold lock */
+
+  spinlock_mark_locking(&lock->info);
   nxsched_critmon_busywait(true, return_address(0));
 
   while (true)
