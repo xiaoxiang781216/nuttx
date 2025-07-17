@@ -87,7 +87,7 @@
  * bringing up the rest of the system.
  */
 
-static struct tcb_s g_idletcb[CONFIG_SMP_NCPUS] =
+struct tcb_s g_idletcb[CONFIG_SMP_NCPUS] =
 {
   {
     .pid        = 0,
@@ -266,69 +266,41 @@ dq_queue_t g_readytorun =
  *    and
  *  - Tasks/threads that have not been assigned to a CPU.
  *
- * Otherwise, the TCB will be retained in an assigned task list,
- * g_assignedtasks.  As its name suggests, on 'g_assignedtasks queue for CPU
- * 'n' would contain only tasks/threads that are assigned to CPU 'n'.  Tasks/
+ * Otherwise, the running TCB will be retained in g_assignedtasks vector.
+ * As its name suggests, on 'g_assignedtasks vector for CPU
+ * 'n' would contain the task/thread which is assigned to CPU 'n'.  Tasks/
  * threads would be assigned a particular CPU by one of two mechanisms:
  *
  *  - (Semi-)permanently through an RTOS interfaces such as
  *    pthread_attr_setaffinity(), or
  *  - Temporarily through scheduling logic when a previously unassigned task
  *    is made to run.
- *
- * Tasks/threads that are assigned to a CPU via an interface like
- * pthread_attr_setaffinity() would never go into the g_readytorun list, but
- * would only go into the g_assignedtasks[n] list for the CPU 'n' to which
- * the thread has been assigned.  Hence, the g_readytorun list would hold
- * only unassigned tasks/threads.
- *
- * Like the g_readytorun list in in non-SMP case, each g_assignedtask[] list
- * is prioritized:  The head of the list is the currently active task on this
- * CPU.  Tasks after the active task are ready-to-run and assigned to this
- * CPU. The tail of this assigned task list, the lowest priority task, is
- * always the CPU's IDLE task.
  */
 
 #ifdef CONFIG_SMP
-dq_queue_t g_assignedtasks[CONFIG_SMP_NCPUS] =
+FAR struct tcb_s *g_assignedtasks[CONFIG_SMP_NCPUS] =
 {
-    {
-      (FAR dq_entry_t *)&g_idletcb[0], (FAR dq_entry_t *)&g_idletcb[0]
-    },
+    &g_idletcb[0],
 #if CONFIG_SMP_NCPUS > 1
-    {
-      (FAR dq_entry_t *)&g_idletcb[1], (FAR dq_entry_t *)&g_idletcb[1]
-    },
+    &g_idletcb[1],
 #endif
 #if CONFIG_SMP_NCPUS > 2
-    {
-      (FAR dq_entry_t *)&g_idletcb[2], (FAR dq_entry_t *)&g_idletcb[2]
-    },
+    &g_idletcb[2],
 #endif
 #if CONFIG_SMP_NCPUS > 3
-    {
-      (FAR dq_entry_t *)&g_idletcb[3], (FAR dq_entry_t *)&g_idletcb[3]
-    },
+    &g_idletcb[3],
 #endif
 #if CONFIG_SMP_NCPUS > 4
-    {
-      (FAR dq_entry_t *)&g_idletcb[4], (FAR dq_entry_t *)&g_idletcb[4]
-    },
+    &g_idletcb[4],
 #endif
 #if CONFIG_SMP_NCPUS > 5
-    {
-      (FAR dq_entry_t *)&g_idletcb[5], (FAR dq_entry_t *)&g_idletcb[5]
-    },
+    &g_idletcb[5],
 #endif
 #if CONFIG_SMP_NCPUS > 6
-    {
-      (FAR dq_entry_t *)&g_idletcb[6], (FAR dq_entry_t *)&g_idletcb[6]
-    },
+    &g_idletcb[6],
 #endif
 #if CONFIG_SMP_NCPUS > 7
-    {
-      (FAR dq_entry_t *)&g_idletcb[7], (FAR dq_entry_t *)&g_idletcb[7]
-    },
+    &g_idletcb[7],
 #endif
 #if CONFIG_SMP_NCPUS > 8
 #  error This logic needs to extended for CONFIG_SMP_NCPUS > 8,
@@ -472,19 +444,6 @@ static void tasklist_initialize(void)
   tlist[TSTATE_TASK_READYTORUN].list = list_readytorun();
   tlist[TSTATE_TASK_READYTORUN].attr = TLIST_ATTR_PRIORITIZED;
 
-  /* TSTATE_TASK_ASSIGNED */
-
-  tlist[TSTATE_TASK_ASSIGNED].list = list_assignedtasks(0);
-  tlist[TSTATE_TASK_ASSIGNED].attr = TLIST_ATTR_PRIORITIZED |
-                                     TLIST_ATTR_INDEXED |
-                                     TLIST_ATTR_RUNNABLE;
-
-  /* TSTATE_TASK_RUNNING */
-
-  tlist[TSTATE_TASK_RUNNING].list = list_assignedtasks(0);
-  tlist[TSTATE_TASK_RUNNING].attr = TLIST_ATTR_PRIORITIZED |
-                                    TLIST_ATTR_INDEXED |
-                                    TLIST_ATTR_RUNNABLE;
 #else
 
   /* TSTATE_TASK_PENDING */
