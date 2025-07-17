@@ -205,3 +205,5 @@ if(GCCVER GREATER_EQUAL 12)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-alloc-size-larger-than>
                       $<$<COMPILE_LANGUAGE:CXX>:-Wno-stringop-overflow>)
 endif()
+
+set(PREPROCESS ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)

@@ -17,6 +17,7 @@
 # the License.
 #
 # ##############################################################################
+
 get_directory_property(TOOLCHAIN_DIR_FLAGS DIRECTORY ${CMAKE_SOURCE_DIR}
                                                      COMPILE_OPTIONS)
 
@@ -33,37 +34,16 @@ foreach(FLAG ${TOOLCHAIN_DIR_FLAGS})
 endforeach()
 set_property(GLOBAL PROPERTY NUTTX_EXTRA_FLAGS ${NUTTX_EXTRA_FLAGS})
 
-execute_process(
-  COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-          --print-libgcc-file-name
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  OUTPUT_VARIABLE extra_library)
-list(APPEND EXTRA_LIB ${extra_library})
+nuttx_find_toolchain_lib()
+
 if(CONFIG_LIBM_TOOLCHAIN)
-  execute_process(
-    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-            --print-file-name=libm.a
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    OUTPUT_VARIABLE extra_library)
-  list(APPEND EXTRA_LIB ${extra_library})
+  nuttx_find_toolchain_lib(libm.a)
 endif()
+
 if(CONFIG_LIBSUPCXX_TOOLCHAIN)
-  execute_process(
-    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-            --print-file-name=libsupc++.a
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    OUTPUT_VARIABLE extra_library)
-  list(APPEND EXTRA_LIB ${extra_library})
+  nuttx_find_toolchain_lib(libsupc++.a)
 endif()
+
 if(CONFIG_COVERAGE_TOOLCHAIN)
-  execute_process(
-    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-            --print-file-name=libgcov.a
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    OUTPUT_VARIABLE extra_library)
-  list(APPEND EXTRA_LIB ${extra_library})
+  nuttx_find_toolchain_lib(libgcov.a)
 endif()
-
-nuttx_add_extra_library(${EXTRA_LIB})
-
-set(PREPROCESS ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)
