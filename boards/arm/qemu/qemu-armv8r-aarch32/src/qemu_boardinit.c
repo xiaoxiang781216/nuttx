@@ -24,10 +24,8 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
 #include <nuttx/arch.h>
-
-#include <nuttx/bits.h>
+#include <nuttx/config.h>
 #include <stdint.h>
 #include <nuttx/board.h>
 #include "qemu-armv8r.h"
@@ -35,12 +33,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#define PL61_PWR_BASE   0x90b0000
-#define PL61_PWR_DIR    (PL61_PWR_BASE + 0x400)
-#define PL61_PWR_PIN1   (PL61_PWR_BASE + (BIT(1) << 2))
-
-#define PL61_REG(x)     *(volatile char *)(x)
 
 /****************************************************************************
  * Private Functions
@@ -131,20 +123,6 @@ int board_power_off(int status)
 #ifdef CONFIG_ARM_SEMIHOSTING_POWEROFF
   up_systempoweroff();
 #endif
-
-  return 0;
-}
-#endif
-
-#ifdef CONFIG_BOARDCTL_RESET
-int board_reset(int status)
-{
-  UNUSED(status);
-
-  /* Set PL61 pin1 as output then enable it */
-
-  PL61_REG(PL61_PWR_DIR)  = BIT(1);
-  PL61_REG(PL61_PWR_PIN1) = BIT(1);
 
   return 0;
 }
