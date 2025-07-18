@@ -28,7 +28,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/userspace.h>
-
+#include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
 
 #ifdef CONFIG_MM_KERNEL_HEAP
@@ -91,12 +91,14 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
   /* Return the user-space heap settings */
 
-  *heap_start = (void *)ubase;
-  *heap_size  = usize;
-
 #ifndef CONFIG_MM_TASK_HEAP
+  ubase = ALIGN_UP(ubase, MPU_ALIGNMENT);
+  usize = ALIGN_DOWN(usize, MPU_ALIGNMENT);
   mpu_user_intsram(ubase, usize);
 #endif
+
+  *heap_start = (void *)ubase;
+  *heap_size  = usize;
 
   /* user space access to user heap is done in qemu_userspace() */
 #endif
