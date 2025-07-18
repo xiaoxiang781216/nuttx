@@ -90,6 +90,7 @@
 
 #define CP15_HSCTLR(r)     _CP15(4, r, c1, c0, 0)   /* Hyp System Control Register */
 #define CP15_HACTLR(r)     _CP15(4, r, c1, c0, 1)   /* Hyp Auxiliary Control Register */
+#define CP15_HCPTR(r)      _CP15(4, r, c1, c1, 2)   /* Hyp Architectural Feature Trap Register */
 #define CP15_SCTLR(r)      _CP15(0, r, c1, c0, 0)   /* System Control Register */
 #define CP15_ACTLR(r)      _CP15(0, r, c1, c0, 1)   /* Auxiliary Control Register */
 #define CP15_CPACR(r)      _CP15(0, r, c1, c0, 2)   /* Coprocessor Access Control Register */
