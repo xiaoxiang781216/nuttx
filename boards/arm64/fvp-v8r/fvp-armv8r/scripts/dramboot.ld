@@ -30,6 +30,7 @@ SECTIONS
 {
   /* where the global variable out-of-bounds detection information located */
   .text : {
+      . = ALIGN(64);
       _stext = .;            /* Text section */
       *(.start .start.*)
       *(.vectors*)
@@ -37,14 +38,15 @@ SECTIONS
       *(.text*)
       *(.fixup)
       *(.gnu.warning)
+      . = ALIGN(64);
       _etext = .; /* End_1 of .text */
       _sztext = _etext - _stext;
-  } > ktext
+  } > ksram
 
   .ARM.extab :
   {
       *(.ARM.extab*)
-  } > ktext
+  } > ksram
 
   /* .ARM.exidx is sorted, so has to go in its own output section.  */
 
@@ -52,16 +54,12 @@ SECTIONS
   .ARM.exidx :
   {
       *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-  } > ktext
+  } > ksram
   PROVIDE_HIDDEN (__exidx_end = .);
 
-  . = ALIGN(4096);
-
   .bss : {                     /* BSS */
+       . = ALIGN(64);
        _sbss = . ;
-#if defined(CONFIG_SMP) && defined(CONFIG_ARM64_SMP_BUSY_WAIT)
-       . = . + 0x4;          /* Busy Wait Flag */
-#endif
        *(.bss*)
        . = ALIGN(4096);
        _ebss = .;
@@ -159,4 +157,3 @@ SECTIONS
     .debug_loc 0        : { *(.debug_loc) }
     .debug_macinfo 0    : { *(.debug_macinfo) }
 }
-
