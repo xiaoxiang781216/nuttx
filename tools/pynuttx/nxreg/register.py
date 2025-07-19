@@ -588,9 +588,10 @@ class TricoreRegisters(GeneralRegisters):
             xcpregs = self.readmem(csa2addr(lpcx), upper_count * 4)
             for name in xcp_table[lower_count:]:
                 reg = self.get(name=name)
-                if reg.toffset + reg.size > len(xcpregs):
+                reg_off = reg.tcb_reg_off - lower_count * 4
+                if reg_off < 0 or (reg_off + reg.size) > len(xcpregs):
                     raise ValueError("No valid source to load register values.\n")
-                reg.value = xcpregs[reg.toffset : reg.toffset + reg.size]
+                reg.value = xcpregs[reg_off : reg_off + reg.size]
 
         return self
 
