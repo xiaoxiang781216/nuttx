@@ -809,40 +809,36 @@ int boardctl(unsigned int cmd, uintptr_t arg)
 
           if (spinlock->action == BOARDIOC_SPINLOCK_LOCK)
             {
-              if (flags != NULL)
+              if (flags != NULL && lock != NULL)
                 {
-                  *flags = up_irq_save();
+                  *flags = spin_lock_irqsave(lock);
                 }
-
-              if (lock != NULL)
+              else if (lock != NULL)
                 {
                   spin_lock(lock);
                 }
             }
           else if (spinlock->action == BOARDIOC_SPINLOCK_TRYLOCK)
             {
-              if (flags != NULL)
+              if (flags != NULL && lock != NULL)
                 {
-                  *flags = up_irq_save();
+                  if (!spin_trylock_irqsave(lock, *flags))
+                    {
+                      ret = -EBUSY;
+                    }
                 }
-
-              if (!spin_trylock(lock))
+              else if (!spin_trylock(lock))
                 {
                   ret = -EBUSY;
-                  if (flags != NULL)
-                    {
-                      up_irq_restore(*flags);
-                    }
                 }
             }
           else if (spinlock->action == BOARDIOC_SPINLOCK_UNLOCK)
             {
-              if (flags != NULL)
+              if (flags != NULL && lock != NULL)
                 {
-                  up_irq_restore(*flags);
+                  spin_unlock_irqrestore(lock, *flags);
                 }
-
-              if (lock != NULL)
+              else if (lock != NULL)
                 {
                   spin_unlock(lock);
                 }
