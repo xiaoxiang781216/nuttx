@@ -141,24 +141,21 @@
     while (0)
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 || \
-    defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION) || defined(CONFIG_SMP)
+    defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
 void restore_critical_section(uint16_t count);
-uint16_t critical_section_count(void);
 #else
-#  define restore_critical_section(count)
-#  define critical_section_count() 0
+#  define restore_critical_section(count) rspin_restorelock(&g_schedlock, count)
 #endif
 
 #define nxscehd_switch(tcb, rtcb) \
   do \
     { \
-      uint16_t count = critical_section_count(); \
+      uint16_t count = rspin_lock_count(&g_schedlock); \
       up_switch_context(tcb, rtcb); \
       if (!up_interrupt_context()) \
         { \
           restore_critical_section(count); \
         } \
-      UNUSED(count); \
     } \
   while (0)
 

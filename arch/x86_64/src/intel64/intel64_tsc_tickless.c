@@ -55,6 +55,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/clock.h>
+#include <nuttx/spinlock.h>
 
 #include "x86_64_internal.h"
 

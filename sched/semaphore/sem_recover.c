@@ -31,6 +31,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
+#include <nuttx/spinlock.h>
 
 #include "semaphore/semaphore.h"
 

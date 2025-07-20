@@ -32,6 +32,8 @@
 #include <nuttx/mutex.h>
 #include <nuttx/irq.h>
 #include <nuttx/addrenv.h>
+#include <nuttx/spinlock.h>
+
 #include "nuttx/sched.h"
 
 /****************************************************************************

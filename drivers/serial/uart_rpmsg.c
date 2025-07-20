@@ -34,6 +34,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/mutex.h>
 #include <nuttx/rpmsg/rpmsg.h>
 #include <nuttx/serial/serial.h>
