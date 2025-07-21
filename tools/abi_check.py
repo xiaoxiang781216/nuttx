@@ -474,7 +474,11 @@ def diff(result1, result2):
         i = 0
         for param1, param2 in zip(prototype1["parameters"], prototype2["parameters"]):
             i += 1
-            if param1 != param2:
+            if (
+                param1["type"] != param2["type"]
+                or param1["size"] != param2["size"]
+                or param1["field"] != param2["field"]
+            ):
                 print(f"Function {function_name} parameter {i} is different")
                 prototype_diff(param1, param2)
                 print("")
