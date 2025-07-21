@@ -143,9 +143,7 @@ static void rpmsg_router_hub_unbind(FAR struct rpmsg_endpoint *ept)
   if (peer_ept->cb)
     {
       rpmsg_send_ns_message(peer_ept, RPMSG_NS_DESTROY);
-      metal_mutex_acquire(&rdev->lock);
-      rpmsg_ept_decref(peer_ept);
-      metal_mutex_release(&rdev->lock);
+      rpmsg_ept_decref(ept);
     }
   else
     {
@@ -179,13 +177,8 @@ static void rpmsg_router_hub_bound(FAR struct rpmsg_endpoint *ept)
                          rpmsg_router_hub_cb, rpmsg_router_hub_unbind);
   DEBUGASSERT(ret == RPMSG_SUCCESS);
 
-  metal_mutex_acquire(&rdev->lock);
   rpmsg_ept_incref(ept);
-  metal_mutex_release(&rdev->lock);
-
-  metal_mutex_acquire(&src_rdev->lock);
   rpmsg_ept_incref(src_ept);
-  metal_mutex_release(&src_rdev->lock);
 }
 
 /****************************************************************************

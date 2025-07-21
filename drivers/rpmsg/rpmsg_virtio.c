@@ -327,8 +327,8 @@ static void rpmsg_virtio_rx_worker(FAR struct rpmsg_virtio_priv_s *priv)
           status = RPMSG_SUCCESS;
         }
 
-      metal_mutex_acquire(&rdev->lock);
       rpmsg_ept_decref(ept);
+      metal_mutex_acquire(&rdev->lock);
       if (status != RPMSG_SUCCESS_BUFFER_RELEASED &&
           rpmsg_virtio_buf_held_dec_test(rp_hdr))
         {

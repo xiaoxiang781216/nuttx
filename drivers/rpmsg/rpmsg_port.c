@@ -487,9 +487,7 @@ static void rpmsg_port_rx_callback(FAR struct rpmsg_port_s *port,
       rpmsg_port_release_rx_buffer(rdev, data);
     }
 
-  metal_mutex_acquire(&rdev->lock);
   rpmsg_ept_decref(ept);
-  metal_mutex_release(&rdev->lock);
 }
 
 /****************************************************************************
@@ -539,9 +537,7 @@ static int rpmsg_port_ns_callback(FAR struct rpmsg_endpoint *ept,
 
       if (decref)
         {
-          metal_mutex_acquire(&rdev->lock);
           rpmsg_ept_decref(ept);
-          metal_mutex_release(&rdev->lock);
         }
     }
   else if (msg->flags == RPMSG_NS_CREATE)
