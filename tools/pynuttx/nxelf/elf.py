@@ -227,7 +227,7 @@ class ELFParser:
         if len(self.addr) == 0:
             self.parse_symbol()
 
-        if i := bisect.bisect_left(self.addr, address, key=lambda x: x[0]):
+        if i := bisect.bisect_right(self.addr, address, key=lambda x: x[0]):
             addr, size, name = self.addr[i - 1]
             if addr <= address < addr + size:
                 return name
