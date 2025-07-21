@@ -47,6 +47,7 @@
  ****************************************************************************/
 
 #define RPMSG_VIRTIO_TIMEOUT_MS      20
+#define RPMSG_VIRTIO_RECURSIVE_LIMIT 8
 #define RPMSG_VIRTIO_FEATURES        (1 << VIRTIO_RPMSG_F_NS | \
                                       1 << VIRTIO_RPMSG_F_ACK | \
                                       1 << VIRTIO_RPMSG_F_BUFSZ | \
@@ -72,6 +73,7 @@ struct rpmsg_virtio_priv_s
   sem_t                        semrx;
   sem_t                        semtx;
   pid_t                        tid;
+  int                          recursive;
   vq_notify                    notifytx;
   uint16_t                     headrx;
 #ifdef CONFIG_RPMSG_VIRTIO_PM
@@ -641,10 +643,20 @@ static int rpmsg_virtio_notify_wait(FAR struct rpmsg_device *rdev,
       return RPMSG_EOPNOTSUPP;
     }
 
+  /* Limit the recursive level */
+
+  if (priv->recursive >= RPMSG_VIRTIO_RECURSIVE_LIMIT)
+    {
+      return RPMSG_EOPNOTSUPP;
+    }
+
+  priv->recursive++;
+
   /* Wait to wakeup */
 
   nxsem_tickwait(&priv->semtx, MSEC2TICK(RPMSG_VIRTIO_TIMEOUT_MS));
   rpmsg_virtio_rx_worker(priv);
+  priv->recursive--;
 
   return 0;
 }
