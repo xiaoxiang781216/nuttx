@@ -181,6 +181,13 @@ config RPMSG_VIRTIO_STACKSIZE
 	int "rpmsg virtio stack size"
 	default 4096
 
+config RPMSG_VIRTIO_DUMP_VERBOSE
+	bool "rpmsg virtio dump verbose"
+	default !DEFAULT_SMALL
+	---help---
+		Dump verbose info when rpmsg virtio dump, default is y unless
+		DEFAULT_SMALL is y.
+
 config RPMSG_VIRTIO_PM
 	bool "rpmsg virtio power management"
 	depends on PM
