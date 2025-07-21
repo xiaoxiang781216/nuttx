@@ -30,7 +30,7 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/spinlock.h>
 
-#include "noterpmsg.h"
+#include "note_driver.h"
 
 /****************************************************************************
  * Pre-processor definitions

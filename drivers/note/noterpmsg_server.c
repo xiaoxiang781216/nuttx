@@ -28,7 +28,7 @@
 #include <nuttx/rpmsg/rpmsg.h>
 #include <nuttx/sched_note.h>
 
-#include "noterpmsg.h"
+#include "note_driver.h"
 
 /****************************************************************************
  * Pre-processor Definitions
