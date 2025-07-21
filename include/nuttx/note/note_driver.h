@@ -59,16 +59,50 @@
 
 /* Note filter mode flag definitions */
 
-#define NOTE_FILTER_MODE_FLAG_ENABLE       (1 << 0) /* Enable instrumentation */
-#define NOTE_FILTER_MODE_FLAG_SWITCH       (1 << 1) /* Enable switch instrumentation */
-#define NOTE_FILTER_MODE_FLAG_SYSCALL      (1 << 2) /* Enable syscall instrumentation */
-#define NOTE_FILTER_MODE_FLAG_IRQ          (1 << 3) /* Enable IRQ instrumentaiton */
-#define NOTE_FILTER_MODE_FLAG_DUMP         (1 << 4) /* Enable dump instrumentaiton */
-#define NOTE_FILTER_MODE_FLAG_SYSCALL_ARGS (1 << 5) /* Enable collecting syscall arguments */
-#define NOTE_FILTER_MODE_FLAG_PREEMPTION   (1 << 6) /* Enable preemption instrumentation */
-#define NOTE_FILTER_MODE_FLAG_CSECTION     (1 << 7) /* Enable csection instrumentaiton */
-#define NOTE_FILTER_MODE_FLAG_SPINLOCKS    (1 << 8) /* Enable spinlock instrumentaiton */
-#define NOTE_FILTER_MODE_FLAG_HEAP         (1 << 9) /* Enable heap instrumentaiton */
+#define NOTE_FILTER_MODE_FLAG_SWITCH                          \
+  ((1ULL << NOTE_START)      | (1ULL << NOTE_STOP)        |   \
+   (1ULL << NOTE_SUSPEND)    | (1ULL << NOTE_RESUME)      |   \
+   (1ULL << NOTE_CPU_START)  | (1ULL << NOTE_CPU_STARTED) |   \
+   (1ULL << NOTE_CPU_PAUSE)  | (1ULL << NOTE_CPU_PAUSED)  |   \
+   (1ULL << NOTE_CPU_RESUME) | (1ULL << NOTE_CPU_RESUMED))
+
+#define NOTE_FILTER_MODE_FLAG_SYSCALL                         \
+  ((1ULL << NOTE_SYSCALL_ENTER) | (1ULL << NOTE_SYSCALL_LEAVE))
+
+#define NOTE_FILTER_MODE_FLAG_IRQ                             \
+  ((1ULL << NOTE_IRQ_ENTER) | (1ULL << NOTE_IRQ_LEAVE))
+
+#define NOTE_FILTER_MODE_FLAG_DUMP                            \
+  ((1ULL << NOTE_DUMP_PRINTF)  | (1ULL << NOTE_DUMP_BEGIN)  | \
+   (1ULL << NOTE_DUMP_END)     |  (1ULL << NOTE_DUMP_MARK)  | \
+   (1ULL << NOTE_DUMP_BINARY)  | (1ULL << NOTE_DUMP_COUNTER)| \
+   (1ULL << NOTE_DUMP_THREADTIME))
+
+#define NOTE_FILTER_MODE_FLAG_PREEMPTION                      \
+  ((1ULL << NOTE_PREEMPT_LOCK) | (1ULL << NOTE_PREEMPT_UNLOCK))
+
+#define NOTE_FILTER_MODE_FLAG_CSECTION                        \
+  ((1ULL << NOTE_CSECTION_ENTER) | (1ULL << NOTE_CSECTION_EXIT))
+
+#define NOTE_FILTER_MODE_FLAG_SPINLOCKS                       \
+  ((1ULL << NOTE_SPINLOCK_ENTER) | (1ULL << NOTE_SPINLOCK_EXIT))
+
+#define NOTE_FILTER_MODE_FLAG_HEAP                            \
+  ((1ULL << NOTE_HEAP_ADD) | (1ULL << NOTE_HEAP_REMOVE) |     \
+   (1ULL << NOTE_HEAP_ALLOC) | (1ULL << NOTE_HEAP_FREE))
+
+/* Helper macros for type instrumentation filter */
+
+#define NOTE_FILTER_TYPEMASK_SET(type, s) \
+          (((uint8_t *)&(s)->type_mask)[(type) / 8] |= (1 << ((type) % 8)))
+#define NOTE_FILTER_TYPEMASK_CLR(type, s) \
+          (((uint8_t *)&(s)->type_mask)[(type) / 8] &= ~(1 << ((type) % 8)))
+#define NOTE_FILTER_TYPEMASK_ISSET(type, s) \
+          (((uint8_t *)&(s)->type_mask)[(type) / 8] & (1 << ((type) % 8)))
+#define NOTE_FILTER_TYPEMASK_ZERO(s) \
+          memset((s), 0, sizeof(struct note_filter_mode_s))
+#define NOTE_FILTER_TYPEMASK_FILL(s) \
+          memset((s), 0xff, sizeof(struct note_filter_mode_s))
 
 /* Helper macros for syscall instrumentation filter */
 
@@ -312,7 +346,7 @@ struct note_ratelimit_s
 
 struct note_filter_mode_s
 {
-  unsigned int flag;          /* Filter mode flag */
+  uint64_t type_mask;         /* The type mask of the note */
 #ifdef CONFIG_SMP
   cpu_set_t cpuset;           /* The set of monitored CPUs */
 #endif

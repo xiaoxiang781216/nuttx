@@ -125,6 +125,7 @@
 
 enum note_type_e
 {
+  NOTE_ALL,
   NOTE_START,
   NOTE_STOP,
   NOTE_SUSPEND,
@@ -323,8 +324,10 @@ struct note_syscall_enter_s
 {
   struct note_common_s nsc_cmn;         /* Common note parameters */
   uint8_t nsc_nr;                       /* System call number */
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER_SYSCALL_ARGS
   uint8_t nsc_argc;                     /* Number of system call arguments */
   uintptr_t nsc_args[MAX_SYSCALL_ARGS]; /* System call arguments */
+#endif
 };
 
 struct note_syscall_leave_s

@@ -1209,19 +1209,13 @@ config SCHED_INSTRUMENTATION_FILTER
 config SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
 	hex "Default instrumentation filter mode"
 	depends on SCHED_INSTRUMENTATION_FILTER
-	default 0x3ff
+	default 0x0
 	---help---
 		Default mode of the instrumentation filter logic.
-			Bit 0 = Enable instrumentation
-			Bit 1 = Enable switch instrumentation
-			Bit 2 = Enable syscall instrumentation
-			Bit 3 = Enable IRQ instrumentation
-			Bit 4 = Enable dump instrumentation
-			Bit 5 = Enable collecting syscall arguments
-			Bit 6 = Enable preemption instrumentation
-			Bit 7 = Enable csection instrumentation
-			Bit 8 = Enable spinlock instrumentation
-			Bit 9 = Enable heap instrumentation
+		Each bit corresponds to an enumeration value in enum note_type_e.
+		For example, if bit 0 is 1, NOTE_START is disabled.
+		Bit 0 represents the global enable bit, 0x0 means all events are
+		enabled by default, 0x01 means all events are disabled by default.
 
 config SCHED_INSTRUMENTATION_CPUSET
 	hex "CPU bit set"
@@ -1295,6 +1289,14 @@ config SCHED_INSTRUMENTATION_SYSCALL
 
 			void sched_note_syscall_enter(int nr, int argc, ...);
 			void sched_note_syscall_leave(int nr, uintptr_t result);
+
+config SCHED_INSTRUMENTATION_FILTER_SYSCALL_ARGS
+	bool "Record syscall arguments"
+	depends on SCHED_INSTRUMENTATION_SYSCALL
+	default n
+	---help---
+		Record syscall arguments.
+		When this option is enabled, the syscall arguments will be recorded.
 
 config SCHED_INSTRUMENTATION_IRQHANDLER
 	bool "Interrupt handler monitor hooks"

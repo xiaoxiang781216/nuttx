@@ -1182,8 +1182,8 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
       {
         FAR struct note_syscall_enter_s *nsc;
         int i;
-        uintptr_t arg;
 
+        UNUSED(i);
         nsc = (FAR struct note_syscall_enter_s *)p;
         if (nsc->nsc_nr < CONFIG_SYS_RESERVED ||
             nsc->nsc_nr >= SYS_maxsyscall)
@@ -1195,8 +1195,10 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
         ret += lib_sprintf(s, "sys_%s(",
                            g_funcnames[nsc->nsc_nr - CONFIG_SYS_RESERVED]);
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER_SYSCALL_ARGS
         for (i = 0; i < nsc->nsc_argc; i++)
           {
+            uintptr_t arg;
             arg = nsc->nsc_args[i];
             if (i == 0)
               {
@@ -1207,6 +1209,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
                 ret += lib_sprintf(s, ", arg%d: 0x%" PRIxPTR, i, arg);
               }
           }
+#endif
 
         ret += lib_sprintf(s, ")\n");
       }
@@ -1604,12 +1607,12 @@ noteram_initialize_with_buffer(FAR const char *devpath,
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   memcpy(drv + 1, devpath, len);
   drv->driver.name = (FAR const char *)(drv + 1);
-  drv->driver.filter.mode.flag =
-                      CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE;
+  drv->driver.filter.mode.type_mask =
+    CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE;
 
 #  ifdef CONFIG_SMP
   drv->driver.filter.mode.cpuset =
-                      CONFIG_SCHED_INSTRUMENTATION_CPUSET;
+    CONFIG_SCHED_INSTRUMENTATION_CPUSET;
 #  endif
 #endif
 
