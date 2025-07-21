@@ -217,7 +217,7 @@ endif # RPMSG_VIRTIO
 config RPMSG_VIRTIO_LITE
 	bool
 	default n
-	select RPMSG
+	select RPMSG_VIRTIO
 
 if RPMSG_VIRTIO_LITE
 
@@ -228,23 +228,6 @@ config RPMSG_VIRTIO_LITE_PRIORITY
 config RPMSG_VIRTIO_LITE_STACKSIZE
 	int "rpmsg virtio lite rx thread stack size"
 	default DEFAULT_TASK_STACKSIZE
-
-config RPMSG_VIRTIO_LITE_PM
-	bool "rpmsg virtio lite power management"
-	depends on PM
-	default n
-	---help---
-		If TX/RX buffer is supplied and powered by each CPU.
-		And when one CPU in DEEP sleep, then it's buffer will
-		goto RAM-retention mode, can't access from another CPU.
-		So, we provide this method to resolve this.
-
-config RPMSG_VIRTIO_LITE_PM_AUTORELAX
-	bool "rpmsg virtio lite pm autorelax"
-	depends on RPMSG_VIRTIO_LITE_PM
-	default y
-	---help---
-		use wd_timer to auto relax pm
 
 endif # RPMSG_VIRTIO_LITE
 

@@ -203,10 +203,34 @@
   ((d)->ops->recv_command ? (d)->ops->recv_command(d) : UINT32_MAX)
 
 /****************************************************************************
+ * Name: RPMSG_VIRTIO_LITE_GET_ADDRENV
+ *
+ * Description:
+ *   Get address env list
+ *
+ * Input Parameters:
+ *   dev  - Device-specific state data
+ *
+ * Returned Value:
+ *   Addrenv pointer on success, NULL on failure.
+ *
+ ****************************************************************************/
+
+#define RPMSG_VIRTIO_LITE_GET_ADDRENV(d) \
+  ((d)->ops->get_addrenv ? (d)->ops->get_addrenv(d) : NULL)
+
+/****************************************************************************
  * Public Types
  ****************************************************************************/
 
 typedef CODE int (*rpmsg_virtio_callback_t)(FAR void *arg, uint32_t vqid);
+
+struct rpmsg_virtio_lite_addrenv_s
+{
+  uintptr_t pa;
+  uintptr_t da;
+  size_t    size;
+};
 
 begin_packed_struct struct rpmsg_virtio_lite_cmd_s
 {
@@ -217,12 +241,13 @@ begin_packed_struct struct rpmsg_virtio_lite_cmd_s
 struct aligned_data(8) rpmsg_virtio_lite_rsc_s
 {
   struct resource_table    rsc_tbl_hdr;
-  uint32_t                 offset[2];
+  uint32_t                 offset[3];
   struct fw_rsc_trace      log_trace;
   struct fw_rsc_vdev       rpmsg_vdev;
   struct fw_rsc_vdev_vring rpmsg_vring0;
   struct fw_rsc_vdev_vring rpmsg_vring1;
   struct fw_rsc_config     config;
+  struct fw_rsc_carveout   carveout;
 };
 
 struct rpmsg_virtio_lite_s;
@@ -240,6 +265,8 @@ struct rpmsg_virtio_lite_ops_s
                                 FAR void *arg);
   CODE void (*send_command)(FAR struct rpmsg_virtio_lite_s *dev,
                             uint32_t cmd, bool wait);
+  CODE FAR const struct rpmsg_virtio_lite_addrenv_s *
+  (*get_addrenv)(FAR struct rpmsg_virtio_lite_s *dev);
   CODE uint32_t (*recv_command)(FAR struct rpmsg_virtio_lite_s *dev);
 };
 
