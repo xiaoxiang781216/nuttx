@@ -24,144 +24,137 @@ import gdb
 
 from . import autocompeletion, lists, utils
 
-
-class UVQueue(lists.NxList):
-    def __init__(
-        self, list: gdb.Value, container_type=None, member=None, reverse=False
-    ):
-        super().__init__(list, container_type, member, reverse)
-
-    def _get_first(self):
-        return self.list
-
-    def _get_next(self, node):
-        return node["next"] if node["next"] != self.list else None
-
-    def _get_prev(self, node):
-        return node["prev"] if node["prev"] != self.list else None
+UV_HANDLE_FLAG = utils.enum("enum uv_handle_flag")
 
 
 @autocompeletion.complete
 class UVDump(gdb.Command):
-    """Dump the information of uv_loop & handle_queue & uv_worker in libuv"""
+    """Dump libuv loop and handle informations"""
 
     def get_argparser(self):
-        parser = argparse.ArgumentParser(description="libuv dump command")
+        parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
-            "mode",
-            nargs="?",
-            choices=["loop", "handle_queue", "uv_worker"],
-            default="loop",
+            "-l",
+            "--loop",
+            type=str,
+            required=True,
+            help="Memory address of uv_loop structure",
         )
-        parser.add_argument("-p", "--pid", type=int, help="Thread PID of Quickapp")
-        parser.add_argument("-l", "--loop", type=str, help="address of uv_loop_t")
         parser.add_argument(
-            "-d",
-            "--detail",
-            action="store_const",
-            const=True,
-            default=False,
-            help="print more detail information",
+            "--handles",
+            action="store_true",
+            help="Dump handles information instead of loop data",
+        )
+        parser.add_argument(
+            "--active",
+            action="store_true",
+            help="Filter only active handles (requires --handles)",
+        )
+        parser.add_argument(
+            "--no-backtrace",
+            action="store_true",
+            help="Do not print backtrace (requires --handles)",
         )
         return parser
 
     def __init__(self):
-        super(UVDump, self).__init__("uv dump", gdb.COMMAND_USER)
+        super(UVDump, self).__init__("uvdump", gdb.COMMAND_USER)
         self.parser = self.get_argparser()
 
-    def dump_loop(self, loop):
-        if not loop:
-            return
-        gdb.write("### dump uv_loop ###\n")
-        gdb.write(f"uv_loop address: 0x{loop}, main content of loop: {{\n")
-        gdb.write(f"  data: {loop['data']}\n")
-        gdb.write(f"  active_handles: {loop['active_handles']}\n")
-        gdb.write(f"  active_reqs: {loop['active_reqs']}\n")
-        gdb.write(f"  stop_flag: {loop['stop_flag']}\n")
-        gdb.write(f"  close_flag: {loop['close_flag']}\n")
-        gdb.write(f"  flags: {loop['flags']}\n")
-        gdb.write(f"  backend_fd: {loop['backend_fd']}\n")
-        gdb.write(f"  nwatchers: {loop['nwatchers']}\n")
-        gdb.write(f"  nfds: {loop['nfds']}\n")
-        gdb.write(f"  emfile_fd: {loop['emfile_fd']}\n")
-        gdb.write(f"  poll_fds: {loop['poll_fds']}\n")
-        gdb.write(f"  poll_fds_used: {loop['poll_fds_used']}\n")
-        gdb.write(f"  poll_fds_size: {loop['poll_fds_size']}\n")
-        gdb.write(f"  poll_fds_iterating: {loop['poll_fds_iterating']}\n")
-        gdb.write("}\n")
-
-        return
-
-    def dump_handle_queue(self, loop):
-        gdb.write("### dump uv_handle queue & backtrace ###\n")
-        if not loop:
-            return
-        head = loop["handle_queue"].address
-        if not head:
-            gdb.write("handle queue is None\n")
+    def dump_loop_info(self, loop_ptr):
+        """Dump uv_loop_t structure fields"""
+        if not loop_ptr:
             return
 
-        UV_HANDLE = utils.enum("enum uv_handle_flag")
-        UV_HANDLE_BACKTRACE = utils.get_symbol_value("UV_HANDLE_BACKTRACE")
-        flags = [
-            (UV_HANDLE.HANDLE_REF, "R"),
-            (UV_HANDLE.HANDLE_ACTIVE, "A"),
-            (UV_HANDLE.HANDLE_INTERNAL, "I"),
-        ]
-        handle_queue = UVQueue(head, gdb.lookup_type("uv_handle_t"), "handle_queue")
-        for i, uv_handle in enumerate(handle_queue):
-            output = ""
-            for handle, flag in flags:
-                output += flag if handle.value & uv_handle["flags"] else "-"
-            gdb.write(f"[{i}] [{output}] {uv_handle['type']} {uv_handle}\n")
-            if UV_HANDLE_BACKTRACE > 0:
-                gdb.write(f"backtrace: {uv_handle['backtrace']}\n")
-            if self.detail:
-                uv_handle_content = uv_handle.dereference().format_string(
-                    styling=True, pretty_arrays=True, pretty_structs=True
+        print(loop_ptr.dereference())
+
+    def dump_uv_handles(self, loop_ptr, active_only=False, no_backtrace=False):
+        """Dump handle information from uv_loop_t structure"""
+        if not loop_ptr:
+            return
+
+        formatter = "{:>8} {:>12} {:>18} {:}\n"
+        headers = ("Flags", "Type", "Address", "Backtrace")
+        gdb.write(formatter.format(*headers))
+        gdb.write("-" * 50 + "\n")
+
+        try:
+            handle_queue_head = loop_ptr["handle_queue"].address
+            handle_queue = lists.NxList(
+                handle_queue_head, utils.lookup_type("uv_handle_t"), "handle_queue"
+            )
+            type_name_map = {
+                member.value: member.name.lower()
+                for member in utils.enum("uv_handle_type")
+            }
+
+            for uv_handle in handle_queue:
+                handle_flags = int(uv_handle["flags"])
+                is_active = handle_flags & UV_HANDLE_FLAG.HANDLE_ACTIVE.value
+
+                if active_only and not is_active:
+                    continue
+
+                handle_type = int(uv_handle["type"])
+                type_name = type_name_map.get(handle_type, f"<unknown:{handle_type}>")
+                flag_str = (
+                    "["
+                    + ("R" if handle_flags & UV_HANDLE_FLAG.HANDLE_REF.value else "-")
+                    + (
+                        "A"
+                        if handle_flags & UV_HANDLE_FLAG.HANDLE_ACTIVE.value
+                        else "-"
+                    )
+                    + (
+                        "I"
+                        if handle_flags & UV_HANDLE_FLAG.HANDLE_INTERNAL.value
+                        else "-"
+                    )
+                    + "]"
                 )
-                gdb.write(f"uv_handle detail content: {uv_handle_content}\n")
 
-    def get_loop_in_thread(self, thread):
-        # TODO: find loop variable in current thread
-        # depends on the bugfix in block.superblock
-        if not thread:
-            return None
-        gdb.write(f"### [TODO] get uv_loop in thread {thread.ptid} ###\n")
+                gdb.write(
+                    formatter.format(
+                        flag_str,
+                        type_name,
+                        f"0x{int(uv_handle):x}",
+                        "",
+                    )
+                )
 
-    def get_loop(self, args):
-        if args.loop:
-            loop = utils.gdb_eval_or_none(args.loop)
-            if loop is None:
-                gdb.write("invalid loop ptr\n")
-                return None
-            return loop.cast(gdb.lookup_type("uv_loop_t").pointer())
-
-        if args.pid:
-            for thread in gdb.selected_inferior().threads():
-                if args.pid == thread.ptid[1]:
-                    return self.get_loop_in_thread(thread)
-            gdb.write(f"invalid pid {args.pid}\n")
-        else:
-            return self.get_loop_in_thread(gdb.selected_thread())
-
-        return None
+                if not no_backtrace:
+                    backtrace = tuple(utils.BacktraceEntry(uv_handle["stack"]).get())
+                    if backtrace and backtrace[0]:
+                        leading = formatter.format("", "", "", "")[:-1]
+                        bt_format = leading + "{1:<48}{2}\n"
+                        gdb.write(f"{utils.Backtrace(backtrace, formatter=bt_format)}")
+        except gdb.error:
+            print("Error: Unable to access handle queue.")
+            return
 
     @utils.dont_repeat_decorator
-    def invoke(self, argument: str, from_tty: bool):
+    def invoke(self, args, from_tty):
         try:
-            args = self.parser.parse_args(gdb.string_to_argv(argument))
+            parsed_args = self.parser.parse_args(gdb.string_to_argv(args))
         except SystemExit:
-            gdb.write("invalid arguments.\n")
             return
 
-        gdb.write(f"### dump libuv in {args.mode} mode ###\n")
+        if not parsed_args.handles and (parsed_args.active or parsed_args.no_backtrace):
+            required = []
+            if parsed_args.active:
+                required.append("--active")
+            if parsed_args.no_backtrace:
+                required.append("--no-backtrace")
 
-        loop = self.get_loop(args)
-        self.detail = args.detail
+            print(f"Error: Options {', '.join(required)} require --handles")
+            return
 
-        if args.mode == "loop":
-            self.dump_loop(loop)
-        elif args.mode == "handle_queue":
-            self.dump_handle_queue(loop)
-        return
+        loop = utils.gdb_eval_or_none(parsed_args.loop)
+        if not loop:
+            return
+
+        loop_ptr = loop.cast(utils.lookup_type("uv_loop_t").pointer())
+        if parsed_args.handles:
+            self.dump_uv_handles(loop_ptr, parsed_args.active, parsed_args.no_backtrace)
+        else:
+            self.dump_loop_info(loop_ptr)
