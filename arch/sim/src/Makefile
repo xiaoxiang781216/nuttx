@@ -473,6 +473,9 @@ else
 	$(Q) $(call LINK_ALLSYMS_KASAN)
 	$(Q) $(call LINK_ALLSYMS_KASAN)
 endif
+ifeq ($(CONFIG_DRIVERS_NOTE_STRIP_FORMAT),y)
+	$(Q) $(TOPDIR)/tools/mknotetype.py -e $(NUTTX) -c $(OBJCOPY)
+endif
 	$(Q) $(NM) $(TOPDIR)/$@ | \
 		grep -v '\(compiled\)\|\(\.o$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | \
 		sort > $(TOPDIR)/System.map

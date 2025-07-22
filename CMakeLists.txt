@@ -775,6 +775,23 @@ else()
     $<$<BOOL:${CONFIG_SIM_M32}>:-m32>)
 endif()
 
+# Generate a note tag with format information, replacing the default pointer
+# content
+
+if(CONFIG_DRIVERS_NOTE_STRIP_FORMAT)
+  add_custom_target(
+    nuttx_note ALL
+    COMMAND ${NUTTX_DIR}/tools/mknotetype.py -e nuttx -c ${CMAKE_OBJCOPY}
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Processing note tag section for nuttx"
+    DEPENDS nuttx)
+  add_dependencies(nuttx_post nuttx_note)
+
+  if(TARGET final_nuttx)
+    add_dependencies(nuttx_note final_nuttx)
+  endif()
+endif()
+
 # TODO: if we use an install target a manifest may not be needed
 if(CONFIG_ARCH_SIM)
   file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest "nuttx\n")

@@ -228,6 +228,9 @@ else
 	$(Q) $(call LINK_ALLSYMS_KASAN)
 	$(Q) $(call LINK_ALLSYMS_KASAN)
 endif
+ifeq ($(CONFIG_DRIVERS_NOTE_STRIP_FORMAT),y)
+	$(Q) $(TOPDIR)/tools/mknotetype.py -e $(NUTTX) -c $(OBJCOPY)
+endif
 ifeq ($(CONFIG_MM_KASAN_GLOBAL),y)
 	$(Q) $(OBJCOPY) -R .kasan.global $(NUTTX)
 	$(Q) $(OBJCOPY) -R .kasan.unused $(NUTTX)
