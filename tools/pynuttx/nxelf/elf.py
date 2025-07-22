@@ -260,15 +260,44 @@ class ELFParser:
     def parse_array(self, die):
         nums = 0
         for child in die.iter_children():
-            nums = child.attributes["DW_AT_upper_bound"].value + 1
+            if "DW_AT_upper_bound" in child.attributes:
+                nums = child.attributes["DW_AT_upper_bound"].value + 1
+            elif "DW_AT_count" in child.attributes:
+                nums = child.attributes["DW_AT_count"].value
 
         type_die = self.dwarf.get_DIE_from_refaddr(
             die.attributes["DW_AT_type"].value + die.cu.cu_offset
         )
 
         item_type = self.parse_die(type_die)
-        array = Array(nums, item_type)
-        return array
+
+        def dynamic_array(ctx):
+            # If array_field is specified during parse, array parsing uses the specified field as the length
+            if hasattr(ctx, "_params") and "array_field" in ctx._params:
+                field_name = ctx._params["array_field"]
+                if hasattr(ctx, field_name):
+                    return getattr(ctx, field_name)
+            elif hasattr(ctx, "_params") and "array_length" in ctx._params:
+                # If array_length is specified during parse, the array is parsed using the specified length.
+                return ctx._params["array_length"]
+
+            return nums
+
+        """
+            Usage example:
+            struct example_s {
+                int length;
+                int buffer[0];
+            };
+            struct = elf.get_type("example")
+            struct.parse(
+                b"\x00\x00\x00\x04"  # length = 4
+                b"\x01\x02\x03\x04",  # buffer = [1, 2, 3, 4]
+                array_field="length"  # Use the length field to determine the size of the array
+            )
+        """
+
+        return Array(dynamic_array, item_type)
 
     @functools.lru_cache(maxsize=None)
     def parse_typedef(self, die):
