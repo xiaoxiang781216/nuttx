@@ -65,15 +65,14 @@ static inline_function spinlock_t up_testset(volatile spinlock_t *lock)
 {
   /* Perform the 32-bit SWAP operation */
 
-  uint32_t new_val = SP_LOCKED;
-  uint32_t old_val;
+  uint32_t val = SP_LOCKED;
 
   __asm__ volatile ("lock xchgl %[ptr], %[val]"
-                    : [ptr] "+m" (lock), "=a" (old_val)
-                    : [val] "r" (new_val)
+                    : [ptr] "+m" (*lock), [val] "+a" (val)
+                    :
                     : "cc");
 
-  return old_val;
+  return val;
 }
 #endif
 
