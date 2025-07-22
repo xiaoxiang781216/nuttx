@@ -104,7 +104,8 @@ static void tcp_close_connection(FAR struct tcp_conn_s *conn, uint16_t flags)
        */
 
       conn->sconn.s_flags &= ~_SF_CONNECTED;
-      if (conn->tcpstateflags == TCP_SYN_SENT && (flags & TCP_ABORT) != 0)
+      if ((flags & TCP_ABORT) != 0 && (conn->tcpstateflags == TCP_SYN_SENT ||
+                                       conn->tcpstateflags == TCP_CLOSED))
         {
           conn->sconn.s_flags |= _SF_CLOSED;
         }
