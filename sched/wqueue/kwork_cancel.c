@@ -72,6 +72,10 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
           work_timer_reset(wqueue);
         }
     }
+  else
+    {
+      ret = -ENOENT;
+    }
 
   /* Note that cancel_sync can not be called in the interrupt
    * context and the idletask context.
