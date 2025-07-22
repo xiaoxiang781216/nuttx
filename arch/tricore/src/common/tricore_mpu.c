@@ -73,12 +73,14 @@ static Ifx_CPU_DPRE get_dpre_value(unsigned int set)
       case 5:
         dpre_value.U = __mfcr(CPU_DPRE_5);
         break;
+#ifndef CONFIG_ARCH_CHIP_AURIX_TC3XX
       case 6:
         dpre_value.U = __mfcr(CPU_DPRE_6);
         break;
       case 7:
         dpre_value.U = __mfcr(CPU_DPRE_7);
         break;
+#endif
       default:
         dpre_value.U = 0;
         break;
@@ -109,12 +111,14 @@ static void set_dpre_value(unsigned int set, Ifx_CPU_DPRE dpre_value)
       case 5:
         __mtcr(CPU_DPRE_5, dpre_value.U);
         break;
+#ifndef CONFIG_ARCH_CHIP_AURIX_TC3XX
       case 6:
         __mtcr(CPU_DPRE_6, dpre_value.U);
         break;
       case 7:
         __mtcr(CPU_DPRE_7, dpre_value.U);
         break;
+#endif
       default:
         break;
     }
@@ -146,12 +150,14 @@ static Ifx_CPU_DPWE get_dpwe_value(unsigned int set)
       case 5:
         dpwe_value.U = __mfcr(CPU_DPWE_5);
         break;
+#ifndef CONFIG_ARCH_CHIP_AURIX_TC3XX
       case 6:
         dpwe_value.U = __mfcr(CPU_DPWE_6);
         break;
       case 7:
         dpwe_value.U = __mfcr(CPU_DPWE_7);
         break;
+#endif
       default:
         dpwe_value.U = 0;
         break;
@@ -183,11 +189,13 @@ static void set_dpwe_value(unsigned int set, Ifx_CPU_DPWE dpwe_value)
         __mtcr(CPU_DPWE_5, dpwe_value.U);
         break;
       case 6:
+#ifndef CONFIG_ARCH_CHIP_AURIX_TC3XX
         __mtcr(CPU_DPWE_6, dpwe_value.U);
         break;
       case 7:
         __mtcr(CPU_DPWE_7, dpwe_value.U);
         break;
+#endif
       default:
         break;
     }
@@ -219,12 +227,14 @@ static Ifx_CPU_CPXE get_cpxe_value(unsigned int set)
       case 5:
         cpxe_value.U = __mfcr(CPU_CPXE_5);
         break;
+#ifndef CONFIG_ARCH_CHIP_AURIX_TC3XX
       case 6:
         cpxe_value.U = __mfcr(CPU_CPXE_6);
         break;
       case 7:
         cpxe_value.U = __mfcr(CPU_CPXE_7);
         break;
+#endif
       default:
         cpxe_value.U = 0;
         break;
@@ -255,12 +265,14 @@ static void set_cpxe_value(unsigned int set, Ifx_CPU_CPXE cpxe_value)
       case 5:
         __mtcr(CPU_CPXE_5, cpxe_value.U);
         break;
+#ifndef CONFIG_ARCH_CHIP_AURIX_TC3XX
       case 6:
         __mtcr(CPU_CPXE_6, cpxe_value.U);
         break;
       case 7:
         __mtcr(CPU_CPXE_7, cpxe_value.U);
         break;
+#endif
       default:
         break;
     }
@@ -346,6 +358,7 @@ static int get_dpr_addrass_value(unsigned int region,
         dpr_l->U = __mfcr(CPU_DPR17_L);
         dpr_u->U = __mfcr(CPU_DPR17_U);
         break;
+#ifndef CONFIG_ARCH_CHIP_AURIX_TC3XX
       case 18:
         dpr_l->U = __mfcr(CPU_DPR18_L);
         dpr_u->U = __mfcr(CPU_DPR18_U);
@@ -370,6 +383,7 @@ static int get_dpr_addrass_value(unsigned int region,
         dpr_l->U = __mfcr(CPU_DPR23_L);
         dpr_u->U = __mfcr(CPU_DPR23_U);
         break;
+#endif
       default:
         return -EINVAL;
     }
@@ -455,6 +469,7 @@ static void set_dpr_address_value(unsigned int region,
         __mtcr(CPU_DPR17_L, dpr_l.U);
         __mtcr(CPU_DPR17_U, dpr_u.U);
         break;
+#ifndef CONFIG_ARCH_CHIP_AURIX_TC3XX
       case 18:
         __mtcr(CPU_DPR18_L, dpr_l.U);
         __mtcr(CPU_DPR18_U, dpr_u.U);
@@ -479,6 +494,7 @@ static void set_dpr_address_value(unsigned int region,
         __mtcr(CPU_DPR23_L, dpr_l.U);
         __mtcr(CPU_DPR23_U, dpr_u.U);
         break;
+#endif
       default:
         break;
     }
@@ -532,6 +548,7 @@ static int get_cpr_address_region(unsigned int region,
         cpr_l->U = __mfcr(CPU_CPR9_L);
         cpr_u->U = __mfcr(CPU_CPR9_U);
         break;
+#ifndef CONFIG_ARCH_CHIP_AURIX_TC3XX
       case 10:
         cpr_l->U = __mfcr(CPU_CPR10_L);
         cpr_u->U = __mfcr(CPU_CPR10_U);
@@ -556,6 +573,7 @@ static int get_cpr_address_region(unsigned int region,
         cpr_l->U = __mfcr(CPU_CPR15_L);
         cpr_u->U = __mfcr(CPU_CPR15_U);
         break;
+#endif
       default:
         return -EINVAL;
     }
@@ -609,6 +627,7 @@ static void set_cpr_address_value(unsigned int region,
         __mtcr(CPU_CPR9_L, cpr_l.U);
         __mtcr(CPU_CPR9_U, cpr_u.U);
         break;
+#ifndef CONFIG_ARCH_CHIP_AURIX_TC3XX
       case 10:
         __mtcr(CPU_CPR10_L, cpr_l.U);
         __mtcr(CPU_CPR10_U, cpr_u.U);
@@ -633,6 +652,7 @@ static void set_cpr_address_value(unsigned int region,
         __mtcr(CPU_CPR15_L, cpr_l.U);
         __mtcr(CPU_CPR15_U, cpr_u.U);
         break;
+#endif
     }
 
   UP_ISB();
@@ -938,11 +958,11 @@ void mpu_free_set(unsigned int set)
 
 void mpu_control(bool enable)
 {
-  Ifx_CPU_CORECON corecon_value;
+  Ifx_CPU_SYSCON corecon_value;
 
-  corecon_value.U = __mfcr(CPU_CORECON);
+  corecon_value.U = __mfcr(CPU_SYSCON);
   corecon_value.B.PROTEN = enable;
-  __mtcr(CPU_CORECON, corecon_value.U);
+  __mtcr(CPU_SYSCON, corecon_value.U);
 
   UP_ISB();
 }
