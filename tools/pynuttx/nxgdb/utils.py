@@ -889,15 +889,54 @@ def in_interrupt_context(cpuid=0):
 # task
 def get_register_byname(regname, tcb=None):
     frame = gdb.selected_frame()
-
-    # If no tcb is given then we can directly use the register from
-    # the cached frame by GDB
-    if not tcb or task_is_running(tcb):
+    if not tcb:
         return int(frame.read_register(regname))
+
+    if task_is_running(tcb):
+        threads = gdb.selected_inferior().threads()
+        if not threads:
+            print("No threads found")
+            return 0
+
+        origin = gdb.selected_thread()
+
+        # SMP online debugging is not currently supported by the debug tools.
+        # However, in the case of QEMU, each simulated CPU runs in its own thread.
+        # We can leverage this by inspecting QEMU threads in GDB to switch between CPUs,
+        # and use GDB frames to access CPU registers.
+        # This special case is handled below.
+        if (
+            gdb.RemoteTargetConnection == gdb.selected_inferior().connection.type
+            and threads[0].details
+            and "cpu" not in threads[0].details.lower()
+        ):
+            # We should use the TCB's pid to find the thread,
+            # because gdbserver can parser the coredump
+            thread = get_gdb_thread(tcb["pid"])
+        else:
+            # For SMP, we need to switch to the thread's CPU
+            if len(threads) > 1:
+                threads = sorted(threads, key=lambda t: t.num)
+                thread = threads[tcb.cpu]
+            else:
+                # For single CPU, just use the first thread
+                thread = threads[0]
+        if thread and thread.is_valid():
+            thread.switch()
+            reg = int(gdb.selected_frame().read_register(regname))
+            if origin and origin.is_valid():
+                origin.switch()
+                if frame and frame.is_valid():
+                    frame.select()
+            else:
+                print("Warning: the original thread is not valid")
+            return reg
+        else:
+            print(f"Thread is not valid, tcb: {tcb}")
+            return 0
 
     # Ok, let's take it from the context in the given tcb
     tcbinfo = parse_and_eval("g_tcbinfo")
-
     for reg in ArrayIterator(tcbinfo.u.reginfo, tcbinfo.regs_num):
         if reg.name.string().lower() == regname.lower():
             xcpregs = tcb["xcp"]["regs"]
