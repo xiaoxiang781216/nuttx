@@ -71,15 +71,6 @@ if(CONFIG_COVERAGE_TOOLCHAIN)
   list(APPEND EXTRA_LIB ${extra_library})
 endif()
 
-if(CONFIG_CXX_EXCEPTION)
-  execute_process(
-    COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-            --print-file-name=libgcc_eh.a
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    OUTPUT_VARIABLE extra_library)
-  list(APPEND EXTRA_LIB ${extra_library})
-endif()
-
 nuttx_add_extra_library(${EXTRA_LIB})
 
 set(PREPROCESS ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)
@@ -95,6 +86,8 @@ if(CONFIG_ARCH_MULTIBOOT1)
   set(NUTTX_BIN "${NUTTX_ELF}.bin")
   set(NUTTX_REALMODE_BIN "${NUTTX_ELF}_realmode.bin")
   set(NUTTX_MB1 "${NUTTX_ELF}.mb1")
+  configure_file(${CMAKE_SOURCE_DIR}/arch/x86_64/src/common/multiboot1.S.in
+                 ${CMAKE_BINARY_DIR}/arch/x86_64/src/common/multiboot1.S)
   add_custom_command(
     OUTPUT ${NUTTX_BIN} ${NUTTX_REALMODE_BIN}
     COMMAND ${CMAKE_OBJCOPY} -R .realmode -R .note.* -O binary
@@ -106,10 +99,12 @@ if(CONFIG_ARCH_MULTIBOOT1)
   add_custom_command(
     OUTPUT ${NUTTX_MB1}
     COMMAND
-      ${CMAKE_C_COMPILER} -m32 -no-pie -nostdlib -DNUTTX_BIN='"${NUTTX_BIN}"'
-      -DNUTTX_REALMODE_BIN='"${NUTTX_REALMODE_BIN}"'
-      ${CMAKE_SOURCE_DIR}/arch/x86_64/src/common/multiboot1.S -T
-      ${CMAKE_SOURCE_DIR}/arch/x86_64/src/common/multiboot1.ld -o ${NUTTX_MB1}
+      ${CMAKE_AS} --32 ${CMAKE_BINARY_DIR}/arch/x86_64/src/common/multiboot1.S
+      -o multiboot1.elf
+    COMMAND
+      ${CMAKE_LD} -m elf_i386 -T
+      ${CMAKE_SOURCE_DIR}/arch/x86_64/src/common/multiboot1.ld multiboot1.elf -o
+      ${NUTTX_MB1}
     DEPENDS ${NUTTX_BIN} ${NUTTX_REALMODE_BIN}
     COMMENT "Building nuttx.mb1 multiboot1 image")
   add_custom_target(multiboot1 ALL DEPENDS ${NUTTX_MB1})

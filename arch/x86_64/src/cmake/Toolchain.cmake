@@ -28,7 +28,7 @@ set(ARCH_SUBDIR intel64)
 # cross-development toolchain selection
 
 if(CONFIG_X86_64_TOOLCHAIN_GNU_NONE)
-  set(TOOLCHAIN_PREFIX x86_64-none-linux-gnu)
+  set(TOOLCHAIN_PREFIX x86_64-none-elf)
 elseif(CONFIG_WINDOWS_CYGWIN)
   set(TOOLCHAIN_PREFIX i486-nuttx-elf)
 elseif(CONFIG_HOST_MACOS)
@@ -48,6 +48,7 @@ set(CMAKE_LINKER ${TOOLCHAIN_PREFIX}-ld)
 set(CMAKE_LD ${TOOLCHAIN_PREFIX}-ld)
 set(CMAKE_AR ${TOOLCHAIN_PREFIX}-ar)
 set(CMAKE_NM ${TOOLCHAIN_PREFIX}-nm)
+set(CMAKE_AS ${TOOLCHAIN_PREFIX}-as)
 set(CMAKE_RANLIB ${TOOLCHAIN_PREFIX}-ranlib)
 
 # override the ARCHIVE command
@@ -147,7 +148,8 @@ add_compile_options(
   -Wundef
   -Wno-attributes
   -Wno-unknown-pragmas
-  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>)
+  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
+  $<$<COMPILE_LANGUAGE:ASM>:-Wa,--divide>)
 
 # LLVM target definitions
 set(LLVM_ARCH "x86_64")

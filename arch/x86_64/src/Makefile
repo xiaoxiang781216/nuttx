@@ -97,10 +97,6 @@ ifeq ($(CONFIG_LIBSUPCXX_TOOLCHAIN),y)
   EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a}}
 endif
 
-ifeq ($(CONFIG_CXX_EXCEPTION),y)
-  EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libgcc_eh.a}}
-endif
-
 VPATH = chip:common:$(ARCH_SUBDIR)
 
 all: libarch$(LIBEXT)
@@ -183,6 +179,8 @@ ifeq ($(CONFIG_ARCH_MULTIBOOT1),y)
 	@echo "Generating: nuttx.mb1 in ELF32/multiboot1"
 	$(Q) $(OBJCOPY) -R.realmode -R.note.* -O binary $(NUTTX) $(NUTTX).bin \
 	&& $(OBJCOPY) -j.realmode -O binary $(NUTTX) $(NUTTX)_realmode.bin \
+	&& sed "s^@NUTTX_BIN@^$(NUTTX).bin^g;s^@NUTTX_REALMODE_BIN@^$(NUTTX)_realmode.bin^g" \
+	common/multiboot1.S.in > common/multiboot1.S \
 	&& $(AS) --32 common/multiboot1.S -o multiboot1.elf \
 	&& $(LD) -m elf_i386 -T common/multiboot1.ld multiboot1.elf -o $(NUTTX).mb1
 endif
