@@ -71,6 +71,9 @@ static int rpmsg_crypto_process_handler(FAR struct rpmsg_endpoint *ept,
 static int rpmsg_crypto_freesession_handler(FAR struct rpmsg_endpoint *ept,
                                             FAR void *data, size_t len,
                                             uint32_t src, FAR void *priv);
+static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
+                                           FAR void *data, size_t len,
+                                           uint32_t src, FAR void *priv);
 
 /****************************************************************************
  * Private Data
@@ -81,6 +84,7 @@ static const rpmsg_ept_cb g_rpmsg_crypto_handler[] =
   [RPMSG_CRYPTO_NEWSESSION]  = rpmsg_crypto_newsession_handler,
   [RPMSG_CRYPTO_PROCESS]     = rpmsg_crypto_process_handler,
   [RPMSG_CRYPTO_FREESESSION] = rpmsg_crypto_freesession_handler,
+  [RPMSG_CRYPTO_KEYPROCESS]  = rpmsg_crypto_keyprocess_handler,
 };
 
 /****************************************************************************
@@ -430,6 +434,75 @@ static int rpmsg_crypto_freesession_handler(FAR struct rpmsg_endpoint *ept,
   msg->header.result = crypto_freesession(rcsdata->tid);
   kmm_free(rcsdata);
   return rpmsg_send(ept, msg, sizeof(*msg));
+}
+
+/****************************************************************************
+ * Name: rpmsg_crypto_keyprocess_handler
+ ****************************************************************************/
+
+static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
+                                           FAR void *data, size_t len,
+                                           uint32_t src, FAR void *priv)
+{
+  FAR struct rpmsg_crypto_keyprocess_s *msg = data;
+  FAR struct rpmsg_crypto_keyprocess_s *rsp;
+  struct cryptkop krp;
+  uint32_t space;
+
+  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  if (rsp == NULL)
+    {
+      rpmsgerr("get tx payload failed or no enough space\n");
+      return -ENOMEM;
+    }
+
+  rsp->header = msg->header;
+  rsp->data = msg->data;
+  memset(&krp, 0, sizeof(krp));
+  krp.krp_op = msg->data.cmd;
+  switch (msg->data.cmd)
+    {
+      case CRK_ALLOCATE_KEY:
+        krp.krp_iparams = 0;
+        krp.krp_oparams = 1;
+        krp.krp_param[0].crp_nbits = msg->data.dst_data_len * 8;
+        krp.krp_param[0].crp_p = rsp->buf;
+        break;
+      case CRK_VALIDATE_KEYID:
+      case CRK_DELETE_KEY:
+      case CRK_SAVE_KEY:
+      case CRK_LOAD_KEY:
+      case CRK_UNLOAD_KEY:
+        krp.krp_iparams = 1;
+        krp.krp_oparams = 0;
+        krp.krp_param[0].crp_nbits = msg->data.name_len * 8;
+        krp.krp_param[0].crp_p = msg->buf;
+        break;
+      case CRK_IMPORT_KEY:
+        krp.krp_iparams = 2;
+        krp.krp_oparams = 0;
+        krp.krp_param[0].crp_nbits = msg->data.name_len * 8;
+        krp.krp_param[0].crp_p = msg->buf;
+        krp.krp_param[1].crp_nbits = msg->data.src_data_len * 8;
+        krp.krp_param[1].crp_p = msg->buf + msg->data.name_len;
+        break;
+      case CRK_EXPORT_KEY:
+        krp.krp_iparams = 1;
+        krp.krp_oparams = 1;
+        krp.krp_param[0].crp_nbits = msg->data.name_len * 8;
+        krp.krp_param[0].crp_p = msg->buf;
+        krp.krp_param[1].crp_nbits = msg->data.dst_data_len * 8;
+        krp.krp_param[1].crp_p = rsp->buf;
+        break;
+    }
+
+  rsp->header.result = crypto_kinvoke(&krp);
+  if (rsp->header.result == 0)
+    {
+      rsp->header.result = krp.krp_status;
+    }
+
+  return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + rsp->data.dst_data_len);
 }
 
 /****************************************************************************

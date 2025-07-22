@@ -64,6 +64,7 @@ struct rpmsg_crypto_s
                                        * between two cpu established.
                                        */
   uint8_t               devid;        /* The device id registered */
+  uint8_t               keydevid;     /* The key management id registered */
   uint32_t              sesnum;       /* The number of sessions */
   FAR struct rpmsg_crypto_session_s
                        *sessions;     /* The session data slots */
@@ -82,6 +83,9 @@ static int rpmsg_crypto_process_handler(FAR struct rpmsg_endpoint *ept,
 static int rpmsg_crypto_freesession_handler(FAR struct rpmsg_endpoint *ept,
                                             FAR void *data, size_t len,
                                             uint32_t src, FAR void *priv);
+static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
+                                           FAR void *data, size_t len,
+                                           uint32_t src, FAR void *priv);
 
 /****************************************************************************
  * Private Data
@@ -94,6 +98,7 @@ static const rpmsg_ept_cb g_rpmsg_crypto_handler[] =
   [RPMSG_CRYPTO_NEWSESSION]  = rpmsg_crypto_newsession_handler,
   [RPMSG_CRYPTO_PROCESS]     = rpmsg_crypto_process_handler,
   [RPMSG_CRYPTO_FREESESSION] = rpmsg_crypto_freesession_handler,
+  [RPMSG_CRYPTO_KEYPROCESS]  = rpmsg_crypto_keyprocess_handler,
 };
 
 /****************************************************************************
@@ -179,22 +184,30 @@ static int rpmsg_crypto_send_recv(FAR struct rpmsg_crypto_s *priv,
   return ret;
 }
 
-static int rpmsg_crypto_free_session(FAR struct rpmsg_crypto_s *rdev,
-                                     uint32_t sid)
-{
-  if (sid > rdev->sesnum)
-    {
-      return -EINVAL;
-    }
-
-  nxsem_destroy(&rdev->sessions[sid].sem);
-  rdev->sessions[sid].used = false;
-  return OK;
-}
-
 static int rpmsg_crypto_alloc_session(FAR struct rpmsg_crypto_s *rdev)
 {
   FAR struct rpmsg_crypto_session_s *session;
+
+  if (rdev->sesnum == 0)
+    {
+      rdev->sesnum = RPMSG_CRYPTO_SESSIONS_NUM;
+    }
+
+  session = kmm_realloc(rdev->sessions, rdev->sesnum * 2 *
+                        sizeof(struct rpmsg_crypto_session_s));
+  if (session == NULL)
+    {
+      rdev->sesnum = 0;
+      return -ENOMEM;
+    }
+
+  rdev->sessions = session;
+  rdev->sesnum *= 2;
+  return OK;
+}
+
+static int rpmsg_crypto_get_session(FAR struct rpmsg_crypto_s *rdev)
+{
   uint32_t i;
 
   for (i = 0; i < rdev->sesnum; i++)
@@ -205,28 +218,27 @@ static int rpmsg_crypto_alloc_session(FAR struct rpmsg_crypto_s *rdev)
         }
     }
 
-  if (i == rdev->sesnum)
+  if (i == rdev->sesnum && rpmsg_crypto_alloc_session(rdev) < 0)
     {
-      if (rdev->sesnum == 0)
-        {
-          rdev->sesnum = RPMSG_CRYPTO_SESSIONS_NUM;
-        }
-
-      session = kmm_realloc(rdev->sessions, rdev->sesnum * 2 *
-                            sizeof(struct rpmsg_crypto_session_s));
-      if (session == NULL)
-        {
-          rdev->sesnum = 0;
-          return -ENOMEM;
-        }
-
-      rdev->sessions = session;
-      rdev->sesnum *= 2;
+      return -ENOMEM;
     }
 
   rdev->sessions[i].used = true;
   nxsem_init(&rdev->sessions[i].sem, 0, 0);
   return i;
+}
+
+static int rpmsg_crypto_put_session(FAR struct rpmsg_crypto_s *rdev,
+                                    uint32_t sid)
+{
+  if (sid > rdev->sesnum)
+    {
+      return -EINVAL;
+    }
+
+  nxsem_destroy(&rdev->sessions[sid].sem);
+  rdev->sessions[sid].used = false;
+  return OK;
 }
 
 static int
@@ -313,13 +325,12 @@ static int rpmsg_crypto_newsession(FAR uint32_t *sid,
       return -EINVAL;
     }
 
-  *sid = rpmsg_crypto_alloc_session(rdev);
+  *sid = rpmsg_crypto_get_session(rdev);
   msg = rpmsg_crypto_get_tx_payload_buffer(rdev, &space);
   if (msg == NULL)
     {
       rpmsgerr("No space for payload\n");
-      ret = -ENOMEM;
-      goto fail;
+      return -ENOMEM;
     }
 
   /* create newsession msg */
@@ -350,7 +361,7 @@ static int rpmsg_crypto_newsession(FAR uint32_t *sid,
   return rdev->sessions[*sid].result;
 
 fail:
-  rpmsg_crypto_free_session(rdev, *sid);
+  rpmsg_crypto_put_session(rdev, *sid);
   return ret;
 }
 
@@ -630,8 +641,85 @@ static int rpmsg_crypto_freesession(uint64_t tid)
       return ret;
     }
 
-  rpmsg_crypto_free_session(rdev, sid);
+  rpmsg_crypto_put_session(rdev, sid);
   return ret;
+}
+
+static int rpmsg_crypto_keyprocess(FAR struct cryptkop *krp)
+{
+  FAR struct rpmsg_crypto_session_s *session;
+  FAR struct rpmsg_crypto_keyprocess_s *msg;
+  FAR struct rpmsg_crypto_s *rdev;
+  uint32_t data_len = 0;
+  uint32_t space;
+  uint32_t sid;
+  int ret;
+
+  rdev = (FAR struct rpmsg_crypto_s *)crypto_driver_get_priv(krp->krp_hid);
+  if (rdev == NULL)
+    {
+      rpmsgerr("Invalid context\n");
+      return -EINVAL;
+    }
+
+  msg = rpmsg_crypto_get_tx_payload_buffer(rdev, &space);
+  if (msg == NULL)
+    {
+      rpmsgerr("No space for payload\n");
+      return -ENOMEM;
+    }
+
+  sid = rpmsg_crypto_get_session(rdev);
+  session = &rdev->sessions[sid];
+  memset(msg, 0, sizeof(*msg));
+  msg->data.cmd = krp->krp_op;
+  switch (msg->data.cmd)
+    {
+      case CRK_ALLOCATE_KEY:
+        msg->data.dst_data_len = krp->krp_param[0].crp_nbits / 8;
+        break;
+      case CRK_VALIDATE_KEYID:
+      case CRK_DELETE_KEY:
+      case CRK_SAVE_KEY:
+      case CRK_LOAD_KEY:
+      case CRK_UNLOAD_KEY:
+        msg->data.name_len = krp->krp_param[0].crp_nbits / 8;
+        break;
+      case CRK_IMPORT_KEY:
+        msg->data.name_len = krp->krp_param[0].crp_nbits / 8;
+        msg->data.src_data_len = krp->krp_param[1].crp_nbits / 8;
+        break;
+      case CRK_EXPORT_KEY:
+        msg->data.name_len = krp->krp_param[0].crp_nbits / 8;
+        msg->data.dst_data_len = krp->krp_param[1].crp_nbits / 8;
+        break;
+    }
+
+  if (msg->data.name_len)
+    {
+      memcpy(msg->buf, krp->krp_param[0].crp_p, msg->data.name_len);
+      data_len += msg->data.name_len;
+    }
+
+  if (msg->data.src_data_len)
+    {
+      memcpy(msg->buf + data_len, krp->krp_param[1].crp_p,
+                                  msg->data.src_data_len);
+      data_len += msg->data.src_data_len;
+    }
+
+  session->data = krp;
+  ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
+                               RPMSG_CRYPTO_KEYPROCESS,
+                               sizeof(*msg) + data_len, true);
+  if (ret < 0)
+    {
+      rpmsgerr("Send msg failed\n");
+      return ret;
+    }
+
+  rpmsg_crypto_put_session(rdev, sid);
+  return OK;
 }
 
 static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
@@ -690,6 +778,27 @@ static int rpmsg_crypto_freesession_handler(FAR struct rpmsg_endpoint *ept,
     (FAR struct rpmsg_crypto_session_s *)(uintptr_t)header->cookie;
 
   session->result = header->result;
+  return rpmsg_post(ept, &session->sem);
+}
+
+static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
+                                           FAR void *data, size_t len,
+                                           uint32_t src, FAR void *priv)
+{
+  FAR struct rpmsg_crypto_header_s *header = data;
+  FAR struct rpmsg_crypto_session_s *session =
+    (FAR struct rpmsg_crypto_session_s *)(uintptr_t)header->cookie;
+  FAR struct rpmsg_crypto_keyprocess_s *msg = data;
+  FAR struct cryptkop *krp = session->data;
+
+  len -= sizeof(*msg);
+  session->result = header->result;
+  krp->krp_status = header->result;
+  if (session->result == 0 && msg->data.dst_data_len > 0)
+    {
+      memcpy(krp->krp_param[krp->krp_iparams].crp_p, msg->buf, len);
+    }
+
   return rpmsg_post(ept, &session->sem);
 }
 
@@ -833,6 +942,7 @@ int rpmsg_crypto_register(FAR const char *remotecpu)
 {
   FAR struct rpmsg_crypto_s *rdev;
   int algs[CRYPTO_ALGORITHM_MAX + 1];
+  int keyalgs[CRYPTO_ALGORITHM_MAX + 1];
   int ret;
   int i;
 
@@ -868,7 +978,7 @@ int rpmsg_crypto_register(FAR const char *remotecpu)
       goto fail;
     }
 
-  /* Register NuttX driver */
+  /* Register NuttX driver for cipher */
 
   rdev->devid = crypto_get_driverid(CRYPTOCAP_F_REMOTE);
 
@@ -884,18 +994,42 @@ int rpmsg_crypto_register(FAR const char *remotecpu)
 
   if (ret < 0)
     {
-      rpmsgerr("rpmsg crypto register failed, ret=%d\n", ret);
-      rpmsg_unregister_callback(rdev,
-                                rpmsg_crypto_created,
-                                rpmsg_crypto_destroy,
-                                NULL,
-                                NULL);
-      goto fail;
+      rpmsgerr("rpmsg crypto cipher register failed, ret=%d\n", ret);
+      goto fail2;
+    }
+
+  /* Register NuttX driver for key management */
+
+  rdev->keydevid = crypto_get_driverid(CRYPTOCAP_F_KEY_MGMT);
+
+  crypto_driver_set_priv(rdev->keydevid, rdev);
+
+  keyalgs[CRK_ALLOCATE_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
+  keyalgs[CRK_VALIDATE_KEYID] = CRYPTO_ALG_FLAG_SUPPORTED;
+  keyalgs[CRK_IMPORT_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
+  keyalgs[CRK_DELETE_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
+  keyalgs[CRK_EXPORT_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
+  keyalgs[CRK_SAVE_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
+  keyalgs[CRK_LOAD_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
+  keyalgs[CRK_UNLOAD_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
+
+  ret = crypto_kregister(rdev->keydevid, keyalgs, rpmsg_crypto_keyprocess);
+
+  if (ret < 0)
+    {
+      rpmsgerr("rpmsg crypto key register failed, ret=%d\n", ret);
+      goto fail2;
     }
 
   return ret;
 
 fail:
   kmm_free(rdev);
+fail2:
+  rpmsg_unregister_callback(rdev,
+                            rpmsg_crypto_created,
+                            rpmsg_crypto_destroy,
+                            NULL,
+                            NULL);
   return ret;
 }
