@@ -708,10 +708,19 @@ static int rpmsg_crypto_keyprocess(FAR struct cryptkop *krp)
       data_len += msg->data.src_data_len;
     }
 
-  session->data = krp;
+  if (krp->krp_flags & CRYPTO_F_CBIMM)
+    {
+      session->data = krp->krp_opaque;
+    }
+  else
+    {
+      session->data = krp;
+    }
+
   ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
                                RPMSG_CRYPTO_KEYPROCESS,
-                               sizeof(*msg) + data_len, true);
+                               sizeof(*msg) + data_len,
+                               !(krp->krp_flags & CRYPTO_F_CBIMM));
   if (ret < 0)
     {
       rpmsgerr("Send msg failed\n");
@@ -797,6 +806,11 @@ static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
   if (session->result == 0 && msg->data.dst_data_len > 0)
     {
       memcpy(krp->krp_param[krp->krp_iparams].crp_p, msg->buf, len);
+    }
+
+  if ((krp->krp_flags & CRYPTO_F_CBIMM) && krp->krp_callback)
+    {
+      return krp->krp_callback(krp);
     }
 
   return rpmsg_post(ept, &session->sem);
