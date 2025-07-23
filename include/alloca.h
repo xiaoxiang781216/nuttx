@@ -41,12 +41,12 @@
 #  define __alloca(size) _alloca(size)
 #elif defined(__TASKING__)
 #  undef  alloca
-#  define alloca(size)                                  \
-    ({                                                  \
-      FAR char *__sp = __get_sp();                      \
-      __sp = ((((uintptr_t)(__sp - (size))) / 8) * 8);  \
-      __set_sp(__sp);                                   \
-      __sp;                                             \
+#  define alloca(size)                                          \
+    ({                                                          \
+      FAR char *__sp = __get_sp();                              \
+      __sp = (FAR char *)(((uintptr_t)(__sp - (size))) & ~0x7); \
+      __set_sp(__sp);                                           \
+      __sp;                                                     \
     })
 
 #endif
