@@ -1387,6 +1387,7 @@ class Addr2Line(gdb.Command):
 
 
 PID0_REPLACE = get_symbol_value("PID0_REPLACE")
+MAX_FRAMES = 99
 
 
 def get_gdb_thread_pid(thread: gdb.InferiorThread) -> int:
@@ -1401,17 +1402,16 @@ def get_gdb_thread(pid: int) -> Optional[gdb.InferiorThread]:
 
 
 def get_thread_frames(arg: Union[gdb.InferiorThread, int]) -> Union[List[gdb.Frame]]:
-    thread = arg
-    if isinstance(arg, int):
-        thread = get_gdb_thread(arg)
-
+    thread = arg if not isinstance(arg, int) else get_gdb_thread(arg)
     if not thread:
         return []
+
     thread.switch()
 
     frames = []
     frame = gdb.newest_frame()
-    while frame and frame.is_valid():
+
+    while len(frames) < MAX_FRAMES and frame and frame.is_valid():
         frames.append(frame)
         frame = frame.older()
 
