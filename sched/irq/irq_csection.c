@@ -284,7 +284,8 @@ irqstate_t enter_critical_section_notrace(void)
 }
 #endif
 
-#undef enter_critical_section
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 || \
+    defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
 irqstate_t enter_critical_section(void)
 {
   irqstate_t flags;
@@ -301,8 +302,6 @@ irqstate_t enter_critical_section(void)
 
   nxsched_critmon_busywait(false, return_address(0));
 
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 || \
-    defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
   if (!up_interrupt_context())
     {
       FAR struct tcb_s *rtcb = this_task();
@@ -316,10 +315,10 @@ irqstate_t enter_critical_section(void)
 #  endif
         }
     }
-#endif
 
   return flags;
 }
+#endif
 
 /****************************************************************************
  * Name: leave_critical_section_notrace
@@ -456,11 +455,10 @@ void leave_critical_section_notrace(irqstate_t flags)
 }
 #endif
 
-#undef leave_critical_section
-void leave_critical_section(irqstate_t flags)
-{
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 || \
     defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
+void leave_critical_section(irqstate_t flags)
+{
   if (!up_interrupt_context())
     {
       FAR struct tcb_s *rtcb = this_task();
@@ -474,7 +472,7 @@ void leave_critical_section(irqstate_t flags)
 #  endif
         }
     }
-#endif
 
   leave_critical_section_notrace(flags);
 }
+#endif
