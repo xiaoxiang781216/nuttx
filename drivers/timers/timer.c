@@ -444,10 +444,7 @@ static int timer_poll(FAR struct file *filep,
   irqstate_t flags;
   int ret = OK;
 
-  if (upper == NULL || fds == NULL)
-    {
-      return -EINVAL;
-    }
+  DEBUGASSERT(upper != NULL && fds != NULL);
 
   flags = spin_lock_irqsave(&upper->spinlock);
 
