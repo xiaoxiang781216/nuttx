@@ -63,9 +63,17 @@
 
 #define ZMS_INVALID_BLOCK               GENMASK_ULL(31, 0)
 
-#define ZMS_ATE(name, size) \
-  char name##_buf[size]; \
-  FAR struct zms_ate *name = (FAR struct zms_ate *)name##_buf
+#if CONFIG_MTD_CONFIG_BUFFER_SIZE > 0
+#  define ZMS_BUFFER_SIZE(fs)           CONFIG_MTD_CONFIG_BUFFER_SIZE
+#  define ZMS_ATE(name, size) \
+    char name##_buf[CONFIG_MTD_CONFIG_BUFFER_SIZE]; \
+    FAR struct zms_ate *name = (FAR struct zms_ate *)name##_buf
+#else
+#  define ZMS_BUFFER_SIZE(fs)           zms_align_up(fs, 32)
+#  define ZMS_ATE(name, size) \
+    char name##_buf[size]; \
+    FAR struct zms_ate *name = (FAR struct zms_ate *)name##_buf
+#endif
 
 /****************************************************************************
  * Private Types
@@ -212,6 +220,15 @@ static inline size_t zms_align_up(FAR struct zms_fs *fs, size_t len)
 }
 
 /****************************************************************************
+ * Name: zms_align_down
+ ****************************************************************************/
+
+static inline size_t zms_align_down(FAR struct zms_fs *fs, size_t len)
+{
+  return len & ~(fs->progsize - 1);
+}
+
+/****************************************************************************
  * Name: zms_ate_size
  ****************************************************************************/
 
@@ -238,15 +255,6 @@ static inline uint64_t zms_empty_ate_addr(FAR struct zms_fs *fs,
                                           uint64_t addr)
 {
   return (addr & ZMS_ADDR_BLOCK_MASK) + fs->blocksize - zms_ate_size(fs);
-}
-
-/****************************************************************************
- * Name: zms_buffer_size
- ****************************************************************************/
-
-static inline size_t zms_buffer_size(FAR struct zms_fs *fs)
-{
-  return zms_align_up(fs, 128);
 }
 
 /****************************************************************************
@@ -350,7 +358,7 @@ static int zms_flash_rd(FAR struct zms_fs *fs, uint64_t addr,
 #ifdef CONFIG_MTD_BYTE_WRITE
   return zms_flash_brd(fs, offset, data8, len);
 #else
-  uint8_t buf[fs->progsize];
+  uint8_t buf[ZMS_BUFFER_SIZE(fs)];
   size_t bytes_to_rd;
   off_t begin_padding;
   int rc;
@@ -468,13 +476,14 @@ static int zms_flash_block_cmp(FAR struct zms_fs *fs, uint64_t addr,
                                FAR const void *data, size_t len)
 {
   FAR const uint8_t *data8 = (FAR const uint8_t *)data;
-  uint8_t buf[zms_buffer_size(fs)];
+  uint8_t buf[ZMS_BUFFER_SIZE(fs)];
+  size_t buf_size = zms_align_down(fs, sizeof(buf));
   size_t bytes_to_cmp;
   int rc;
 
   while (len > 0)
     {
-      bytes_to_cmp = MIN(sizeof(buf), len);
+      bytes_to_cmp = MIN(buf_size, len);
       rc = zms_flash_rd(fs, addr, buf, bytes_to_cmp);
       if (rc)
         {
@@ -508,14 +517,15 @@ static int zms_flash_block_cmp(FAR struct zms_fs *fs, uint64_t addr,
 static int zms_flash_cmp_direct(FAR struct zms_fs *fs, uint64_t addr1,
                                 uint64_t addr2, size_t len)
 {
-  uint8_t buf1[zms_buffer_size(fs)];
-  uint8_t buf2[zms_buffer_size(fs)];
+  uint8_t buf1[ZMS_BUFFER_SIZE(fs)];
+  uint8_t buf2[ZMS_BUFFER_SIZE(fs)];
+  size_t buf_size = zms_align_down(fs, sizeof(buf1));
   size_t bytes_to_cmp;
   int rc;
 
   while (len > 0)
     {
-      bytes_to_cmp = MIN(sizeof(buf1), len);
+      bytes_to_cmp = MIN(buf_size, len);
       rc = zms_flash_rd(fs, addr1, buf1, bytes_to_cmp);
       if (rc)
         {
@@ -555,14 +565,15 @@ static int zms_flash_cmp_direct(FAR struct zms_fs *fs, uint64_t addr1,
 static int zms_flash_cmp_const(FAR struct zms_fs *fs, uint64_t addr,
                                uint8_t value, size_t len)
 {
-  uint8_t cmp[zms_buffer_size(fs)];
+  uint8_t cmp[ZMS_BUFFER_SIZE(fs)];
+  size_t buf_size = zms_align_down(fs, sizeof(cmp));
   size_t bytes_to_cmp;
   int rc;
 
   memset(cmp, value, sizeof(cmp));
   while (len > 0)
     {
-      bytes_to_cmp = MIN(sizeof(cmp), len);
+      bytes_to_cmp = MIN(buf_size, len);
       rc = zms_flash_block_cmp(fs, addr, cmp, bytes_to_cmp);
       if (rc)
         {
@@ -588,13 +599,14 @@ static int zms_flash_cmp_const(FAR struct zms_fs *fs, uint64_t addr,
 static int zms_flash_block_move(FAR struct zms_fs *fs, uint64_t addr,
                                 size_t len)
 {
-  uint8_t buf[zms_buffer_size(fs)];
+  uint8_t buf[ZMS_BUFFER_SIZE(fs)];
+  size_t buf_size = zms_align_down(fs, sizeof(buf));
   size_t bytes_to_copy;
   int rc;
 
   while (len)
     {
-      bytes_to_copy = MIN(sizeof(buf), len);
+      bytes_to_copy = MIN(buf_size, len);
       rc = zms_flash_rd(fs, addr, buf, bytes_to_copy);
       if (rc)
         {
@@ -796,8 +808,7 @@ static inline bool zms_gc_done_ate_valid(FAR struct zms_fs *fs,
 static int zms_get_block_cycle(FAR struct zms_fs *fs, uint64_t addr,
                                FAR uint8_t *cycle_cnt)
 {
-  size_t ate_size = zms_ate_size(fs);
-  ZMS_ATE(empty_ate, ate_size);
+  ZMS_ATE(empty_ate, zms_ate_size(fs));
   uint64_t empty_addr;
   int rc;
 
@@ -888,7 +899,7 @@ static int zms_flash_wrt_entry(FAR struct zms_fs *fs, uint32_t id,
   FAR const uint8_t *key8 = (FAR const uint8_t *)key;
   FAR const uint8_t *data8 = (FAR const uint8_t *)data;
   size_t ate_size = zms_ate_size(fs);
-  uint8_t buf[fs->progsize];
+  uint8_t buf[ZMS_BUFFER_SIZE(fs)];
   ZMS_ATE(entry, ate_size);
   size_t copy_len = 0;
   size_t left;
@@ -917,14 +928,14 @@ static int zms_flash_wrt_entry(FAR struct zms_fs *fs, uint32_t id,
       /* Write align block which inlcude part key + part data */
 
       left = rc;
-      memset(buf, fs->erasestate, sizeof(buf));
+      memset(buf, fs->erasestate, fs->progsize);
 
-      copy_len = left + len <= sizeof(buf) ?
-                 len : sizeof(buf) - left;
+      copy_len = left + len <= fs->progsize ?
+                 len : fs->progsize - left;
 
       memcpy(buf, key8 + key_len - left, left);
       memcpy(buf + left, data8, copy_len);
-      rc = zms_flash_data_wrt(fs, buf, sizeof(buf));
+      rc = zms_flash_data_wrt(fs, buf, fs->progsize);
       if (rc)
         {
           ferr("Write value failed, rc=%d\n", rc);
@@ -943,10 +954,10 @@ static int zms_flash_wrt_entry(FAR struct zms_fs *fs, uint32_t id,
       /* Add padding at the end of data */
 
       left = rc;
-      memset(buf, fs->erasestate, sizeof(buf));
+      memset(buf, fs->erasestate, fs->progsize);
       memcpy(buf, data8 + len - left, left);
 
-      rc = zms_flash_data_wrt(fs, buf, sizeof(buf));
+      rc = zms_flash_data_wrt(fs, buf, fs->progsize);
       if (rc)
         {
           ferr("Write value failed, rc=%d\n", rc);
@@ -1323,8 +1334,7 @@ static int zms_verify_and_increment_cycle_cnt(FAR struct zms_fs *fs,
                                               FAR uint8_t *cycle_cnt)
 {
   uint64_t close_addr = zms_close_ate_addr(fs, addr);
-  size_t ate_size = zms_ate_size(fs);
-  ZMS_ATE(close_ate, ate_size);
+  ZMS_ATE(close_ate, zms_ate_size(fs));
   int rc;
 
   rc = zms_flash_ate_rd(fs, close_addr, close_ate);
@@ -1409,11 +1419,10 @@ static int zms_add_empty_ate(FAR struct zms_fs *fs, uint64_t addr)
 static int zms_rebuild_cache(FAR struct zms_fs *fs)
 {
   uint32_t prev_block = ZMS_INVALID_BLOCK;
-  size_t ate_size = zms_ate_size(fs);
+  ZMS_ATE(ate, zms_ate_size(fs));
   uint64_t addr = fs->ate_wra;
   uint8_t cycle_cnt = 0;
   FAR uint64_t *cache_entry;
-  ZMS_ATE(ate, ate_size);
   uint32_t count = 0;
   uint64_t ate_addr;
   int rc;
@@ -1772,6 +1781,7 @@ static int zms_clear(FAR struct zms_fs *fs)
 static int zms_mount(FAR struct zms_fs *fs)
 {
   struct mtd_geometry_s geo;
+  size_t ate_size;
   int rc;
 
   /* Get the device geometry. (Casting to uintptr_t first eliminates
@@ -1789,6 +1799,11 @@ static int zms_mount(FAR struct zms_fs *fs)
   fs->blocksize = CONFIG_MTD_CONFIG_BLOCKSIZE_MULTIPLE * geo.erasesize;
   fs->nblocks   = geo.neraseblocks / CONFIG_MTD_CONFIG_BLOCKSIZE_MULTIPLE;
   fs->progsize  = geo.blocksize;
+
+  ate_size = zms_ate_size(fs);
+#if CONFIG_MTD_CONFIG_BUFFER_SIZE > 0
+  DEBUGASSERT(ate_size <= CONFIG_MTD_CONFIG_BUFFER_SIZE);
+#endif
 
   rc = MTD_IOCTL(fs->mtd, MTDIOC_ERASESTATE,
                  (unsigned long)((uintptr_t)&fs->erasestate));
@@ -1810,7 +1825,7 @@ static int zms_mount(FAR struct zms_fs *fs)
    * 1 close ATE, 1 empty ATE, 1 GC done ATE, 1 Delete ATE, 1 ID/Value ATE
    */
 
-  if (fs->blocksize < 5 * zms_ate_size(fs))
+  if (fs->blocksize < 5 * ate_size)
     {
       return -EINVAL;
     }
@@ -2106,9 +2121,8 @@ static int zms_init(FAR struct zms_fs *fs)
 
 static int zms_read(FAR struct zms_fs *fs, FAR struct config_data_s *pdata)
 {
-  size_t ate_size = zms_ate_size(fs);
+  ZMS_ATE(wlk_ate, zms_ate_size(fs));
   uint64_t wlk_addr = fs->ate_wra;
-  ZMS_ATE(wlk_ate, ate_size);
   uint8_t data_crc8;
   int rc;
 
@@ -2364,9 +2378,8 @@ static int zms_next(FAR struct zms_fs *fs, FAR struct file *filep,
 {
   FAR uint64_t *step_addr = (FAR uint64_t *)filep->f_priv;
   uint32_t prev_block = ZMS_INVALID_BLOCK;
-  size_t ate_size = zms_ate_size(fs);
-  ZMS_ATE(step_ate, ate_size);
-  ZMS_ATE(wlk_ate, ate_size);
+  ZMS_ATE(step_ate, zms_ate_size(fs));
+  ZMS_ATE(wlk_ate, zms_ate_size(fs));
   uint8_t cycle_cnt = 0;
   uint64_t wlk_addr;
   uint64_t rd_addr;
