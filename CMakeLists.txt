@@ -661,12 +661,14 @@ endif()
 set(nuttx_libs ${nuttx_kernel_libs} ${nuttx_system_libs} ${nuttx_apps_libs}
                ${nuttx_extra_libs})
 
+# Remove executable suffix
+set(CMAKE_EXECUTABLE_SUFFIX "")
+
 if(NOT CONFIG_ARCH_SIM)
   # TODO: nostart/nodefault not applicable to nuttx toolchain
   if(CONFIG_ARCH_TOOLCHAIN_TASKING)
     target_link_libraries(nuttx PRIVATE --lsl-file=${ldscript} ${nuttx_libs})
-    # Remove executable suffix
-    set(CMAKE_EXECUTABLE_SUFFIX "")
+
   else()
     get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
     target_link_libraries(
