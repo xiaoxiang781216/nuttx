@@ -144,7 +144,6 @@ out:
  *   returned on success.  A negated errno value is returned on failure:
  *
  *     -ETIMEDOUT is returned on the timeout condition.
- *     -ECANCELED may be returned if the thread is canceled while waiting.
  *
  ****************************************************************************/
 
@@ -158,7 +157,7 @@ int nxsem_tickwait_uninterruptible(FAR sem_t *sem, uint32_t delay)
       /* Take the semaphore (perhaps waiting) */
 
       ret = nxsem_tickwait(sem, delay);
-      if (ret != -EINTR)
+      if (ret != -EINTR && ret != -ECANCELED)
         {
           break;
         }

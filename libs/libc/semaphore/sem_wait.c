@@ -213,7 +213,6 @@ int nxsem_wait(FAR sem_t *sem)
  * Return Value:
  *   Zero(OK)  - On success
  *   EINVAL    - Invalid attempt to get the semaphore
- *   ECANCELED - May be returned if the thread is canceled while waiting.
  *
  ****************************************************************************/
 
@@ -227,47 +226,7 @@ int nxsem_wait_uninterruptible(FAR sem_t *sem)
 
       ret = nxsem_wait(sem);
     }
-  while (ret == -EINTR);
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: nxsem_clockwait_uninterruptible
- *
- * Description:
- *   This function is wrapped version of nxsem_clockwait(), which is
- *   uninterruptible and convenient for use.
- *
- * Input Parameters:
- *   sem     - Semaphore object
- *   clockid - The timing source to use in the conversion
- *   abstime - The absolute time to wait until a timeout is declared.
- *
- * Returned Value:
- *   EINVAL    The sem argument does not refer to a valid semaphore.  Or the
- *             thread would have blocked, and the abstime parameter specified
- *             a nanoseconds field value less than zero or greater than or
- *             equal to 1000 million.
- *   ETIMEDOUT The semaphore could not be locked before the specified timeout
- *             expired.
- *   EDEADLK   A deadlock condition was detected.
- *   ECANCELED May be returned if the thread is canceled while waiting.
- *
- ****************************************************************************/
-
-int nxsem_clockwait_uninterruptible(FAR sem_t *sem, clockid_t clockid,
-                                    FAR const struct timespec *abstime)
-{
-  int ret;
-
-  do
-    {
-      /* Take the semaphore (perhaps waiting) */
-
-      ret = nxsem_clockwait(sem, clockid, abstime);
-    }
-  while (ret == -EINTR);
+  while (ret == -EINTR || ret == -ECANCELED);
 
   return ret;
 }
