@@ -133,7 +133,7 @@ void nxsched_critmon_busywait(bool state, FAR void *caller);
 
 #if defined(CONFIG_ARCH_HAVE_TESTSET)
 _spinlock_t up_testset(FAR volatile _spinlock_t *lock);
-#else
+#elif defined(CONFIG_SPINLOCK)
 static inline _spinlock_t up_testset(FAR volatile _spinlock_t *lock)
 {
   irqstate_t flags;
