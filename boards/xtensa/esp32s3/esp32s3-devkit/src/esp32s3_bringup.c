@@ -38,6 +38,8 @@
 #include <stdio.h>
 
 #include <errno.h>
+#include <nuttx/drivers/rpmsgblk.h>
+#include <nuttx/drivers/rpmsgdev.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/himem/himem.h>
 #include <arch/board/board.h>
@@ -293,6 +295,19 @@ int esp32s3_bringup(void)
 
 #if defined(CONFIG_ESP32S3_SPI) && defined(CONFIG_RPMSG_PORT_SPI_SLAVE)
   rpmsg_port_spi_slave_init();
+#endif
+
+#ifdef CONFIG_DEV_RPMSG
+  rpmsgdev_register("remote", "/dev/console", "/dev/remote-console");
+  rpmsgdev_register("remote", "/dev/null", "/dev/remote-null");
+#endif
+
+#ifdef CONFIG_BLK_RPMSG
+  rpmsgblk_register("remote", "/dev/ram2", NULL);
+#endif
+
+#ifdef CONFIG_RPMSGMTD
+  rpmsgmtd_register("remote", "/dev/rammtd", NULL);
 #endif
 
 #if defined(CONFIG_ESP32S3_EFUSE)
