@@ -614,6 +614,53 @@ bool rspin_lock_is_recursive(FAR volatile rspinlock_t *lock)
 }
 
 /****************************************************************************
+ * Name: rspin_lock_is_hold
+ *
+ * Description:
+ *   This function checks whether the recursive spinlock is currently held
+ *   by the current holder. That is, whether it's locked at least once.
+ *   Note that this is inherently racy unless the current cpu is holding
+ *   the rspinlock.
+ *
+ * Parameters:
+ *   lock - Recursive spinlock descriptor.
+ *
+ * Return Value:
+ *   True if the rspinlock is held (count > 0) and owned by the current
+ *   cpu, otherwise returns false.
+ *
+ ****************************************************************************/
+
+static inline_function
+bool rspin_lock_is_hold(FAR volatile rspinlock_t *lock)
+{
+  return lock->owner == this_cpu() + 1;
+}
+
+/****************************************************************************
+ * Name: rspin_lock_is_locked
+ *
+ * Description:
+ *   This function checks whether the recursive spinlock is currently held
+ *   by any holder. That is, whether it's locked at least once.
+ *   Note that this is inherently racy unless the calling thread is
+ *   holding the rspinlock.
+ *
+ * Parameters:
+ *   lock - Recursive spinlock descriptor.
+ *
+ * Return Value:
+ *   True if the rspinlock is held (count > 0), otherwise returns false.
+ *
+ ****************************************************************************/
+
+static inline_function
+bool rspin_lock_is_locked(FAR volatile rspinlock_t *lock)
+{
+  return lock->count > 0;
+}
+
+/****************************************************************************
  * Name: rspin_lock_count
  *
  * Description:
@@ -851,6 +898,30 @@ static inline_function bool rspin_trylock(FAR rspinlock_t *lock)
   true; \
 })
 #endif /* CONFIG_SPINLOCK */
+
+/****************************************************************************
+ * Name: spin_trylock_irqsave_nopreempt
+ *
+ * Description:
+ *   Try once to lock the spinlock and disable preemption if successful. Do
+ *   not wait if the spinlock is already locked.
+ *
+ * Input Parameters:
+ *   lock   - A reference to the spinlock object to lock.
+ *   flags  - flag of interrupts status
+ *
+ * Returned Value:
+ *   true  - Failure, the spinlock was already locked
+ *   false - Success, the spinlock was successfully locked and
+ *                 preemption is disabled
+ *
+ ****************************************************************************/
+
+#define spin_trylock_irqsave_nopreempt(lock, flags) \
+  ({ \
+    spin_trylock_irqsave(lock, flags) ? \
+    ({ sched_lock(); true; }) : false; \
+  })
 
 /****************************************************************************
  * Name: spin_unlock_irqrestore_notrace
