@@ -24,6 +24,10 @@ if(CONFIG_CORESIGHT)
   add_subdirectory(coresight)
 endif()
 
+if(CONFIG_TRICOREHT)
+  add_subdirectory(tricoreht)
+endif()
+
 if(CONFIG_HWTRACING)
   set(SRCS hwtracing.c)
 

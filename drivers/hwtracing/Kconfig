@@ -22,3 +22,5 @@ config HWTRACING_TIMEOUT
 endif # HWTRACING
 
 source "drivers/hwtracing/coresight/Kconfig"
+source "drivers/hwtracing/tricoreht/Kconfig"
+

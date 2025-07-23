@@ -35,5 +35,6 @@ endif # CONFIG_HWTRACING
 ifeq ($(CONFIG_CORESIGHT),y)
 
 include hwtracing/coresight/Make.defs
+include hwtracing/tricoreht/Make.defs
 
 endif # CONFIG_CORESIGHT
