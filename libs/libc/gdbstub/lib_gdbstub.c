@@ -1150,7 +1150,7 @@ static int gdb_read_registers(FAR struct gdb_state_s *state)
         {
           memcpy(&value, xcpregs + reg->toffset, reg->size);
           ret = gdb_bin2hex(&state->pkt_buf[offset * 2],
-                            BUFSIZE - offset,
+                            BUFSIZE - offset * 2,
                             &value, reg->size);
           if (ret < 0)
             {
