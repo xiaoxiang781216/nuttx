@@ -321,6 +321,7 @@ class MMClassify(gdb.Command):
         parser.add_argument(
             "-c",
             "--classifier-file",
+            metavar="file",
             default="default",
             help="Specify the config file. Default is 'script_path/default.py'",
         )

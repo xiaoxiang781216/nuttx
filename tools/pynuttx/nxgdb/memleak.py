@@ -234,6 +234,7 @@ class MMLeak(gdb.Command):
             "--address",
             type=str,
             default=None,
+            metavar="symbol",
             help="Dump all good nodes reference by this block. The address must be a member of this block",
         )
 

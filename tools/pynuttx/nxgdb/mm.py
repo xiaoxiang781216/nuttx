@@ -801,7 +801,11 @@ class MMPoolInfo(gdb.Command):
     def get_argparser(self):
         parser = argparse.ArgumentParser(description="Dump memory pool information.")
         parser.add_argument(
-            "--heap", type=str, help="Which heap's pool to show", default=None
+            "--heap",
+            type=str,
+            metavar="file",
+            help="Which heap's pool to show",
+            default=None,
         )
         return parser
 
