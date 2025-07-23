@@ -505,7 +505,7 @@ static inline_function int nxmutex_lock(FAR mutex_t *mutex)
 {
   int ret;
 
-  ret = nxsem_wait(&mutex->sem);
+  ret = nxsem_wait_uninterruptible(&mutex->sem);
   if (ret >= 0)
     {
       nxmutex_add_backtrace(mutex);

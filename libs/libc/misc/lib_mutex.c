@@ -151,7 +151,7 @@ int nxmutex_ticklock(FAR mutex_t *mutex, uint32_t delay)
 
   if (delay)
     {
-      ret = nxsem_tickwait(&mutex->sem, delay);
+      ret = nxsem_tickwait_uninterruptible(&mutex->sem, delay);
     }
   else
     {
@@ -200,11 +200,11 @@ int nxmutex_clocklock(FAR mutex_t *mutex, clockid_t clockid,
 
   if (abstime)
     {
-      ret = nxsem_clockwait(&mutex->sem, clockid, abstime);
+      ret = nxsem_clockwait_uninterruptible(&mutex->sem, clockid, abstime);
     }
   else
     {
-      ret = nxsem_wait(&mutex->sem);
+      ret = nxsem_wait_uninterruptible(&mutex->sem);
     }
 
   if (ret >= 0)
