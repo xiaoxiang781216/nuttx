@@ -140,6 +140,8 @@
 #  include <nuttx/rpmsg/rpmsg_port.h>
 #endif
 
+#include <nuttx/serial/uart_rpmsg.h>
+
 #include "esp32s3-devkit.h"
 
 /****************************************************************************
@@ -198,6 +200,13 @@ static void rpmsg_port_spi_slave_init(void)
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+#ifdef CONFIG_RPMSG_UART
+void rpmsg_serialinit(void)
+{
+  uart_rpmsg_init("remote", "remote", 4096, true);
+}
+#endif
 
 /****************************************************************************
  * Name: esp32s3_bringup

@@ -1225,6 +1225,20 @@ void up_putc(int ch)
 #endif
 }
 
+#else
+
+void xtensa_earlyserialinit(void)
+{
+}
+
+void xtensa_serialinit(void)
+{
+}
+
+void up_putc(int ch)
+{
+}
+
 #endif /* HAVE_UART_DEVICE */
 
 #else /* USE_SERIALDRIVER */
