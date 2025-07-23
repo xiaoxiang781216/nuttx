@@ -196,16 +196,7 @@ static int timer_close(FAR struct file *filep)
   /* Get exclusive access to the device structures */
 
   nxmutex_lock(&upper->lock);
-
-  /* Decrement the references to the driver.  If the reference count will
-   * decrement to 0, then uninitialize the driver.
-   */
-
-  if (upper->crefs > 0)
-    {
-      upper->crefs--;
-    }
-
+  upper->crefs--;
   nxmutex_unlock(&upper->lock);
   return OK;
 }
