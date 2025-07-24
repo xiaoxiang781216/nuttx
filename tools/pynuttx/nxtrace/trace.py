@@ -20,6 +20,8 @@
 
 import functools
 import logging
+import re
+import struct
 import sys
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional
@@ -360,10 +362,162 @@ class DumpCounterProcessor(NoteProcessor):
         ptrace.atrace_int(head, str(note.name), note.value)
 
 
+class NotePrintf:
+    format_pattern = re.compile(
+        r"%(?P<flags>[-+ #0]*)?(?P<width>\d+|\*)?(?:\.(?P<precision>\d+|\*))?"
+        r"(?P<length>[hljztL]|ll|hh)?(?P<specifier>[diufFeEgGxXoscpn%])"
+    )
+
+    def _parse_format_params(self, parser, groups, data):
+        offset = 0
+        byteorder = parser.info["byteorder"]
+
+        def get_value(key):
+            nonlocal offset
+            if groups[key] == "*":
+                value = int.from_bytes(
+                    data[offset : offset + 4],
+                    byteorder=byteorder,
+                    signed=True,
+                )
+                offset += 4
+                return value
+            elif groups[key]:
+                return int(groups[key])
+            return None
+
+        return get_value("width"), get_value("precision"), offset
+
+    def _build_format_spec(self, flags, width, precision, specifier, value):
+        """
+        Python format string syntax:
+            format_spec ::= [options][width][grouping]["." precision][type]
+            options     ::= [[fill]align][sign]["z"]["#"]["0"]
+            align       ::= "<" | ">" | "=" | "^"
+            sign        ::= "+" | "-" | " "
+            width       ::= digit+
+            precision   ::= digit+
+            type        ::= "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g"
+                            | "G" | "n" | "o" | "s" | "x" | "X" | "%"
+        """
+
+        fmt = ""
+        specifier_map = {"i": "d", "u": "d", "p": "#x", "A": "E", "a": "e"}
+        specifier = specifier_map.get(specifier, specifier)
+
+        # Process printf flags according to Python format priority
+        if "-" in flags:
+            fmt += "<"
+        elif not isinstance(value, int):
+            fmt += ">"
+
+        if "+" in flags:
+            fmt += "+"
+        elif " " in flags:
+            fmt += " "
+
+        if "#" in flags and specifier in "o":
+            value = f"0{value:o}"
+            specifier = "s"
+        elif "#" in flags:
+            fmt += "#"
+
+        if "0" in flags and width is not None:
+            fmt += "0"
+
+        # Python format string no support precision for int,
+        # so we need to handle it manually
+        if precision is not None and isinstance(value, int):
+            if "<" not in fmt:
+                fmt = ">" + fmt
+            value = f"{value:0{precision}}"
+            precision = None
+            specifier = "s"
+
+        if width is not None:
+            fmt += str(width)
+
+        if precision is not None:
+            fmt += f".{precision}"
+
+        # Build format string
+        return f"{{:{fmt}{specifier}}}".format(value)
+
+    def _extract_value(self, parser, groups, data, offset):
+        # Get format parameters %[flags][width][.precision][length]specifier
+        size_t = 4 if parser.info["size_t"] == "uint32" else 8
+        flags = groups["flags"]
+        width = groups["width"]
+        precision = groups["precision"]
+        length = groups["length"]
+        specifier = groups["specifier"]
+        value = None
+
+        # Parse format parameters (width and precision)
+        width, precision, param_offset = self._parse_format_params(
+            parser, groups, data[offset:]
+        )
+        offset += param_offset
+
+        # Extract value based on specifier
+        if specifier == "c":
+            value = data[offset]
+            offset += 4
+        elif specifier in "diuxXop":
+            length_map = {"ll": 8, "l": size_t, "z": size_t, "t": size_t}
+            length = length_map.get(length, size_t if specifier == "p" else 4)
+            signed = specifier in ("d", "i")
+
+            value = int.from_bytes(
+                data[offset : offset + length],
+                byteorder=parser.info["byteorder"],
+                signed=signed,
+            )
+            offset += length
+        elif specifier in "fFeEgGaA":
+            length = 16 if length == "L" else 8
+            value = struct.unpack("<d", data[offset : offset + length])[0]
+            offset += length
+        elif specifier == "s":
+            string = data[offset:].split(b"\x00")[0]
+            offset += len(string) + 1
+            value = string.decode("utf-8", errors="ignore")
+
+        formatted = self._build_format_spec(flags, width, precision, specifier, value)
+        return formatted, offset
+
+    def printf(self, parser, format, data):
+        result = ""
+        offset = 0
+        end = 0
+
+        # Find all format specifiers
+        for match in self.format_pattern.finditer(format):
+            if match.start() > end:
+                result += format[end : match.start()]
+
+            part = match.group(0)
+            if part == "%%":
+                result += "%"
+            else:
+                groups = match.groupdict()
+                value, offset = self._extract_value(parser, groups, data, offset)
+                result += value
+
+            end = match.end()
+
+        # Add remaining plain text
+        if end < len(format):
+            result += format[end:]
+
+        return result
+
+
 class DumpPrintfProcessor(NoteProcessor):
     def process(self, note, head, sched_state, ptrace, parser):
-        str_format = parser.readstring(note.npt_fmt)
-        print(f"DumpPrintfProcessor:{note} fmt: {str_format} data: {note.npt_data}")
+        result = parser.readstring(note.npt_fmt)
+        result = NotePrintf().printf(parser, result, note.npt_data)
+        ptrace.atrace_instant(head, result)
 
 
 class DumpBinaryProcessor(NoteProcessor):
@@ -508,9 +662,14 @@ class NoteFactory:
             return cls.note_event_s
         elif note_type == cls.types.NOTE_DUMP_PRINTF:
             note_printf_s = cls.parser.get_type("note_printf_s")
+            fixed_size = sum(
+                field.sizeof()
+                for field in note_printf_s.subcons
+                if field.name != "npt_data"
+            )
             return Struct(
                 *[field for field in note_printf_s.subcons if field.name != "npt_data"],
-                "npt_data" / Bytes(this.npt_cmn.nc_length - note_printf_s.sizeof()),
+                "npt_data" / Bytes(this.npt_cmn.nc_length - fixed_size),
             )
         elif note_type == cls.types.NOTE_DUMP_COUNTER:
             note_counter_s = cls.parser.get_type("note_counter_s")

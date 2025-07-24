@@ -235,6 +235,27 @@ class ELFParser:
         return None
 
     @functools.lru_cache(maxsize=None)
+    def readstring(self, addr):
+        for segment in self.elf.iter_segments():
+            seg_addr = segment["p_paddr"]
+            seg_size = min(segment["p_memsz"], segment["p_filesz"])
+            if addr >= seg_addr and addr <= seg_addr + seg_size:
+                data = segment.data()[addr - seg_addr :]
+                data = data.split(b"\x00")[0]
+                return data.decode("utf-8")
+        return None
+
+    @functools.lru_cache(maxsize=None)
+    def read(self, addr, size):
+        for segment in self.elf.iter_segments():
+            seg_addr = segment["p_paddr"]
+            seg_size = min(segment["p_memsz"], segment["p_filesz"])
+            if addr >= seg_addr and addr + size <= seg_addr + seg_size:
+                data = segment.data()
+                start = addr - seg_addr
+                return data[start : start + size]
+
+    @functools.lru_cache(maxsize=None)
     def parse_base_type(self, die):
         name = die.attributes["DW_AT_name"].value.decode("utf-8")
         size = die.attributes["DW_AT_byte_size"].value
