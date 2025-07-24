@@ -22,7 +22,7 @@
 
 import gdb
 
-from .. import utils
+from .. import backtrace, utils
 
 BUSYLOOP_THRESHOLD = 0.9 / utils.get_ncpus()
 
@@ -64,7 +64,9 @@ class CrashBusyloop(gdb.Command):
 
         return {
             "title": "System Busyloop Detection",
-            "summary": f"{'No' if not collected else len(collected)} threads occur busyloop",
+            "summary": (
+                f"{'No' if not collected else len(collected)} threads occur busyloop"
+            ),
             "result": "fail" if collected else "pass",
             "category": utils.DiagnoseCategory.sched,
             "command": "crash busyloop",
@@ -73,7 +75,7 @@ class CrashBusyloop(gdb.Command):
                     "pid": tcb["pid"],
                     "name": utils.get_task_name(tcb),
                     "cpuload": cpuload,
-                    "backtrace": utils.Backtrace(
+                    "backtrace": backtrace.Backtrace(
                         utils.get_backtrace(int(tcb["pid"])), break_null=False
                     ),
                 }

@@ -27,7 +27,7 @@ from typing import Generator, List, Tuple
 
 import gdb
 
-from . import autocompeletion, lists, utils
+from . import autocompeletion, backtrace, lists, utils
 from .protocols import mm as p
 from .utils import Value
 
@@ -162,7 +162,9 @@ class MemPoolBlock:
             return ()
 
         if not self._backtrace:
-            self._backtrace = tuple(utils.BacktraceEntry(self.record["stack"]).get())
+            self._backtrace = tuple(
+                backtrace.BacktraceEntry(self.record["stack"]).get()
+            )
         return self._backtrace
 
     @property
@@ -516,11 +518,11 @@ class MMNode(gdb.Value, p.MMFreeNode):
         # The free mm heap node does not record backtrace, the value may be illegal
         try:
             if not self._backtrace and (
-                stack := utils.BacktraceEntry(self["stack"]).get()
+                stack := backtrace.BacktraceEntry(self["stack"]).get()
             ):
                 self._backtrace = tuple(stack)
         except gdb.MemoryError:
-            self._backtrace = tuple(utils.BacktraceEntry(0).get())
+            self._backtrace = tuple(backtrace.BacktraceEntry(0).get())
 
         return self._backtrace
 

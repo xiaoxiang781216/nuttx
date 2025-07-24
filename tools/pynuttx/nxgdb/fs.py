@@ -26,7 +26,9 @@ from typing import Generator, Tuple, Union
 
 import gdb
 
-from . import autocompeletion, utils
+from . import autocompeletion
+from . import backtrace as bt
+from . import utils
 from .lists import NxList
 from .protocols import fs as p
 from .protocols.thread import Tcb
@@ -273,8 +275,8 @@ class Fdinfo(gdb.Command):
 
         output = []
         if CONFIG_FS_BACKTRACE:
-            backtrace = tuple(utils.BacktraceEntry(fdp.f_backtrace).get())
-            backtrace = utils.Backtrace(backtrace, backtrace_formatter)
+            backtrace = tuple(bt.BacktraceEntry(fdp.f_backtrace).get())
+            backtrace = backtrace.Backtrace(backtrace, backtrace_formatter)
 
             output.append(
                 formatter.format(

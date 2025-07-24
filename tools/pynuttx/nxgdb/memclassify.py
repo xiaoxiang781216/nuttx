@@ -24,7 +24,7 @@ import sys
 
 import gdb
 
-from . import autocompeletion, memdump, mm, utils
+from . import autocompeletion, backtrace, memdump, mm, utils
 
 
 class Classifier:
@@ -268,7 +268,7 @@ class MemBlockCoredump(MemBlock):
         self.mem_node = node
         self.cnt = cnt  # deal with call_stack
         self.call_stack = []
-        for addr, func, file, line in utils.Backtrace(node.backtrace).backtrace:
+        for addr, func, file, line in backtrace.Backtrace(node.backtrace).backtrace:
             func = func.strip("<>")
             if func.find("+"):  # remove the offset affter '+'
                 func = func[: func.find("+")]

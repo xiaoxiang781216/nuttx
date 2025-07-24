@@ -22,7 +22,7 @@ import argparse
 
 import gdb
 
-from . import autocompeletion, utils
+from . import autocompeletion, backtrace, utils
 
 
 @autocompeletion.complete
@@ -95,5 +95,5 @@ class QjsDump(gdb.Command):
             for bt in utils.ArrayIterator(backtrace_ptr, maxlen=cnt):
                 gdb.write("BackTrace Entry:\n")
                 gdb.write(
-                    f"{utils.Backtrace(list(utils.ArrayIterator(bt['buffers'], bt['nptrs'])), formatter=btformat)}\n"
+                    f"{backtrace.Backtrace(list(utils.ArrayIterator(bt['buffers'], bt['nptrs'])), formatter=btformat)}\n"
                 )

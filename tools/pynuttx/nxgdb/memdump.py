@@ -29,7 +29,7 @@ from typing import Dict, Generator, List, Protocol, Tuple
 
 import gdb
 
-from . import autocompeletion, mm, utils
+from . import autocompeletion, backtrace, mm, utils
 
 
 class MMNodeDump(Protocol):
@@ -129,7 +129,7 @@ def print_node(node: MMNodeDump, alive, count=1, formatter=None, no_backtrace=Fa
         leading = formatter.format("", "", "", "", "", "", "", "", "")[:-1]
         btformat = leading + "{1:<48}{2}\n"
         if node.backtrace and node.backtrace[0]:
-            gdb.write(f"{utils.Backtrace(node.backtrace, formatter=btformat)}\n")
+            gdb.write(f"{backtrace.Backtrace(node.backtrace, formatter=btformat)}\n")
 
 
 def print_header(formatter=None):
@@ -550,7 +550,9 @@ class MMfrag(gdb.Command):
             ):
                 leading = formatter.format("", "", "", "", "", "", "", "", "")[:-1]
                 bt_format = leading + "{1:<48}{2}\n"
-                gdb.write(f"{utils.Backtrace(node.backtrace, formatter=bt_format)}\n")
+                gdb.write(
+                    f"{backtrace.Backtrace(node.backtrace, formatter=bt_format)}\n"
+                )
 
         def collect_significant_fragments():
             heap_guards = [item for start, end in heap.regions for item in (start, end)]

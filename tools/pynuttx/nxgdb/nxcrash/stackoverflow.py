@@ -22,7 +22,7 @@
 
 import gdb
 
-from .. import utils
+from .. import backtrace, utils
 from ..stack import Stack
 
 STACK_FILL_THRESHOLD = 0.9
@@ -70,7 +70,9 @@ class CrashStackOverflow(gdb.Command):
         collected = self.collect(utils.get_tcbs())
         return {
             "title": "Stack Overflow Report",
-            "summary": f"{'No' if not collected else len(collected)} threads{'s' if len(collected) != 1 else ''} found",
+            "summary": (
+                f"{'No' if not collected else len(collected)} threads{'s' if len(collected) != 1 else ''} found"
+            ),
             "result": "fail" if collected else "pass",
             "category": utils.DiagnoseCategory.memory,
             "command": "crash stackoverflow",
@@ -80,7 +82,7 @@ class CrashStackOverflow(gdb.Command):
                     "name": utils.get_task_name(tcb),
                     "stacksize": tcb.adj_stack_size,
                     "filled": filled,
-                    "backtrace": utils.Backtrace(
+                    "backtrace": backtrace.Backtrace(
                         utils.get_backtrace(int(tcb["pid"])), break_null=False
                     ),
                 }

@@ -25,7 +25,7 @@ from typing import List
 
 import gdb
 
-from .. import utils
+from .. import backtrace, utils
 
 
 @dataclass
@@ -34,7 +34,7 @@ class ThreadInfo:
 
     pid: int
     name: str
-    backtrace: utils.Backtrace
+    backtrace: backtrace.Backtrace
     crashed: bool = False
 
 
@@ -59,7 +59,7 @@ class CrashThread(gdb.Command):
             return ThreadInfo(
                 pid=pid,
                 name=utils.get_task_name(tcb),
-                backtrace=utils.Backtrace(utils.get_backtrace(pid), break_null=False),
+                backtrace=backtrace.Backtrace(utils.get_backtrace(pid), break_null=False),
                 crashed=True,
             )
 

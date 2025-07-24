@@ -29,7 +29,7 @@ from typing import Dict, Generator, List, Tuple
 
 import gdb
 
-from . import autocompeletion, memdump, mm, utils
+from . import autocompeletion, backtrace, memdump, mm, utils
 
 
 class GlobalNode(memdump.MMNodeDump):
@@ -283,7 +283,7 @@ class MMLeak(gdb.Command):
             }
 
             if mm.MM_RECORD_STACK_DEPTH > 0 and node.backtrace and node.backtrace[0]:
-                info["backtrace"] = utils.Backtrace(node.backtrace)
+                info["backtrace"] = backtrace.Backtrace(node.backtrace)
             data.append(info)
 
         return {
