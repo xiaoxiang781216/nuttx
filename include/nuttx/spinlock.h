@@ -625,10 +625,10 @@ uint16_t rspin_lock_count(FAR volatile rspinlock_t *lock)
 }
 
 /****************************************************************************
- * Name: rspin_lock_irqsave/rspin_lock_irqsave_nopreempt
+ * Name: rspin_lock/rspin_lock_irqsave/rspin_lock_irqsave_nopreempt
  *
  * Description:
- *   Nest supported spinlock, can support UINT8_MAX max depth.
+ *   Nest supported spinlock, can support UINT16_MAX max depth.
  *   As we should not disable irq for long time, sched also locked.
  *   Similar feature with enter_critical_section, but isolate by instance.
  *
@@ -659,10 +659,10 @@ void rspin_lock(FAR rspinlock_t *lock)
   /* Already owned this lock. */
 
   if (lock->owner == cpu)
-  {
-    lock->count += 1;
-    return;
-  }
+    {
+      lock->count += 1;
+      return;
+    }
 
   new_val.count = 1;
   new_val.owner = cpu;
@@ -711,11 +711,8 @@ irqstate_t rspin_lock_irqsave(FAR rspinlock_t *lock)
  *   flags - flag of interrupts status
  *
  * Returned Value:
- *   SP_LOCKED   - Failure, the spinlock was already locked
- *   SP_UNLOCKED - Success, the spinlock was successfully locked
- *
- * Assumptions:
- *   Not running at the interrupt level.
+ *   true  - Success, the spinlock was successfully locked
+ *   false - Failure, the spinlock was already locked
  *
  ****************************************************************************/
 
@@ -747,11 +744,8 @@ irqstate_t rspin_lock_irqsave(FAR rspinlock_t *lock)
  *   flags - flag of interrupts status
  *
  * Returned Value:
- *   SP_LOCKED   - Failure, the spinlock was already locked
- *   SP_UNLOCKED - Success, the spinlock was successfully locked
- *
- * Assumptions:
- *   Not running at the interrupt level.
+ *   true  - Success, the spinlock was successfully locked
+ *   false - Failure, the spinlock was already locked
  *
  ****************************************************************************/
 
@@ -866,7 +860,7 @@ void spin_unlock_irqrestore(FAR volatile spinlock_t *lock, irqstate_t flags)
  * Name: rspin_unlock_irqrestore/rspin_unlock_irqrestore_nopreempt
  *
  * Description:
- *   Nest supported spinunlock, can support UINT8_MAX max depth.
+ *   Nest supported spinunlock, can support UINT16_MAX max depth.
  *   Should work with rspin_lock_irqsave_nopreempt().
  *   Similar feature with leave_critical_section, but isolate by instance.
  *
