@@ -1174,6 +1174,7 @@ void binder_transaction(FAR struct binder_proc *proc,
                            tmp->to_thread ? tmp->to_thread->tid : 0);
               nxmutex_unlock(&tmp->lock);
               binder_inner_proc_unlock(proc);
+              BUG_ON(1);
               return_error          = BR_FAILED_REPLY;
               goto err_bad_call_stack;
             }
