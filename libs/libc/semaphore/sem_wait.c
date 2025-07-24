@@ -213,6 +213,7 @@ int nxsem_wait(FAR sem_t *sem)
  * Return Value:
  *   Zero(OK)  - On success
  *   EINVAL    - Invalid attempt to get the semaphore
+ *   ECANCELED - May be returned if the thread is canceled while waiting.
  *
  ****************************************************************************/
 
@@ -226,7 +227,7 @@ int nxsem_wait_uninterruptible(FAR sem_t *sem)
 
       ret = nxsem_wait(sem);
     }
-  while (ret == -EINTR || ret == -ECANCELED);
+  while (ret == -EINTR);
 
   return ret;
 }
