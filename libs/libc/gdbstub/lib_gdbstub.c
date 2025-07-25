@@ -1068,8 +1068,6 @@ static int gdb_send_error_packet(FAR struct gdb_state_s *state,
 
 static void gdb_update_regcache(FAR struct gdb_state_s *state)
 {
-  FAR struct tcb_s *tcb = nxsched_get_tcb(state->pid);
-
   if (state->pid == _SCHED_GETTID())
     {
       if (up_interrupt_context() && running_regs())
@@ -1084,8 +1082,12 @@ static void gdb_update_regcache(FAR struct gdb_state_s *state)
     }
   else
     {
-      up_copyusercontext(state->running_regs, tcb->xcp.regs,
-                         XCPTCONTEXT_SIZE);
+      FAR struct tcb_s *tcb = nxsched_get_tcb(state->pid);
+      if (tcb != NULL)
+        {
+          up_copyusercontext(state->running_regs, tcb->xcp.regs,
+                             XCPTCONTEXT_SIZE);
+        }
     }
 
   state->xcpregs = state->running_regs;
