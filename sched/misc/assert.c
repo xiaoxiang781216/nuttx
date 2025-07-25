@@ -880,6 +880,13 @@ void _assert(FAR const char *filename, int linenum,
       memcpy(g_last_regs[this_cpu()], regs, sizeof(g_last_regs[0]));
     }
 
+  /* in case of meet up_current_regs() NULL which directly from assert(0) */
+
+  if (up_current_regs() == NULL)
+    {
+      up_set_current_regs(regs);
+    }
+
   notifier_data.rtcb = rtcb;
   notifier_data.regs = regs;
   notifier_data.filename = filename;
