@@ -40,17 +40,6 @@
 #include <nuttx/spinlock_type.h>
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define WDOG_ISCANCELING(w, cpu)  \
-    ((uintptr_t)g_wdrunning[cpu] == ((uintptr_t)(w) | 0x1))
-#define WDOG_SETCANCELING(w, cpu) \
-    (g_wdrunning[cpu] = (FAR struct wdog_s *)((uintptr_t)(w) | 0x1))
-#define WDOG_GETRUNNING(cpu)      \
-    ((FAR struct wdog_s *)((uintptr_t)g_wdrunning[cpu] & ~(uintptr_t)0x1))
-
-/****************************************************************************
  * Public Data
  ****************************************************************************/
 
@@ -68,10 +57,6 @@ extern "C"
  */
 
 extern struct list_node g_wdactivelist;
-
-/* Hazard-pointers used for check if cores holds the reference to wdog. */
-
-extern volatile struct wdog_s *g_wdrunning[CONFIG_SMP_NCPUS];
 
 /****************************************************************************
  * Public Function Prototypes
