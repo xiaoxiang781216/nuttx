@@ -800,12 +800,12 @@ int btn_register(FAR const char *devname,
   /* And register the button driver */
 
   ret = register_driver(devname, &g_btn_fops, 0666, priv);
+  rspin_lock_init(&priv->lock);
   if (ret < 0)
     {
       ierr("ERROR: register_driver failed: %d\n", ret);
       kmm_free(priv);
     }
 
-  rspin_lock_init(&priv->lock);
   return ret;
 }
