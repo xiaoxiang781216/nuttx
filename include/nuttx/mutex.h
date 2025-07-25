@@ -505,10 +505,20 @@ static inline_function int nxmutex_lock(FAR mutex_t *mutex)
 {
   int ret;
 
-  ret = nxsem_wait_uninterruptible(&mutex->sem);
-  if (ret >= 0)
+  for (; ; )
     {
-      nxmutex_add_backtrace(mutex);
+      /* Take the semaphore (perhaps waiting) */
+
+      ret = nxsem_wait(&mutex->sem);
+      if (ret >= 0)
+        {
+          nxmutex_add_backtrace(mutex);
+          break;
+        }
+      else if (ret != -EINTR && ret != -ECANCELED)
+        {
+          break;
+        }
     }
 
   return ret;
