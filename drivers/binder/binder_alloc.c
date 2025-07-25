@@ -904,15 +904,12 @@ err_alloc_pages_failed:
 #endif
   kmm_free(kbuf);
   alloc->buffer_data = NULL;
-  nxmutex_lock(&alloc->alloc_lock);
   alloc->buffer_data_size = 0;
 err_already_mapped:
 err_alloc_kbuf_failed:
   nxmutex_unlock(&alloc->alloc_lock);
-  _err("ERROR: %s: %d %lx-%lx %s failed %d\n",
-       __func__, alloc->pid, (unsigned long)vma->area_start,
-       (unsigned long)(vma->area_start + vma->area_size),
-       failure_string, ret);
+  _err("ERROR: %s: %d %s failed %d\n",
+       __func__, alloc->pid, failure_string, ret);
   return ret;
 }
 
