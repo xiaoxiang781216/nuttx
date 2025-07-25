@@ -22,12 +22,24 @@
 
 import sys
 from os import path
+from pathlib import Path
 
 here = path.dirname(path.abspath(__file__))
+
+nuttx_path = Path(__file__).resolve().parents[2]
+libcxx_path = path.join(
+    nuttx_path, "libs", "libxx", "libcxx", "libcxx", "utils", "gdb", "libcxx"
+)
 
 if __name__ == "__main__":
     if here not in sys.path:
         sys.path.insert(0, here)
+
+    if path.exists(libcxx_path):
+        sys.path.insert(0, libcxx_path)
+        from printers import register_libcxx_printer_loader
+
+        register_libcxx_printer_loader()
 
     modules = ("nxelf", "nxgdb", "nxreg", "nxstub", "nxtrace")
     for key in list(sys.modules):
