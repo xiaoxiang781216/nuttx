@@ -117,7 +117,7 @@ static inline_function clock_t wd_expiration(clock_t ticks)
   wdparm_t           arg;
   clock_t            ret = 0;
 
-  flags = spin_lock_irqsave(&g_wdspinlock);
+  flags = enter_critical_section();
 
 #ifdef CONFIG_SCHED_TICKLESS
   /* Increment the nested watchdog timer count to handle cases where wd_start
@@ -156,11 +156,8 @@ static inline_function clock_t wd_expiration(clock_t ticks)
       /* Execute the watchdog function */
 
       up_setpicbase(wdog->picbase);
-      spin_unlock_irqrestore(&g_wdspinlock, flags);
 
       CALL_FUNC(func, arg);
-
-      flags = spin_lock_irqsave(&g_wdspinlock);
     }
 
 #ifdef CONFIG_SCHED_TICKLESS
@@ -169,7 +166,7 @@ static inline_function clock_t wd_expiration(clock_t ticks)
   g_wdtimernested[this_cpu()]--;
 #endif
 
-  spin_unlock_irqrestore(&g_wdspinlock, flags);
+  leave_critical_section(flags);
 
   return ret;
 }
@@ -293,7 +290,7 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
    * the critical section is established.
    */
 
-  flags = spin_lock_irqsave(&g_wdspinlock);
+  flags = enter_critical_section();
 #ifdef CONFIG_SCHED_TICKLESS
   /* We need to reassess timer if the watchdog list head has changed. */
 
@@ -311,7 +308,7 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
 
   reassess &= !g_wdtimernested[this_cpu()];
 
-  spin_unlock_irqrestore(&g_wdspinlock, flags);
+  leave_critical_section(flags);
 
   if (reassess)
     {
@@ -333,7 +330,7 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
     }
 
   wd_insert(wdog, ticks, wdentry, arg);
-  spin_unlock_irqrestore(&g_wdspinlock, flags);
+  leave_critical_section(flags);
 #endif
 
   sched_note_wdog(NOTE_WDOG_START, wdentry, (FAR void *)(uintptr_t)ticks);
@@ -430,7 +427,7 @@ clock_t wd_timer(clock_t ticks, bool noswitches)
     }
   else
     {
-      flags = spin_lock_irqsave(&g_wdspinlock);
+      flags = enter_critical_section();
 
       /* Return the delay for the next watchdog to expire */
 
@@ -445,7 +442,7 @@ clock_t wd_timer(clock_t ticks, bool noswitches)
                  wdog->expired - ticks : 1;
         }
 
-      spin_unlock_irqrestore(&g_wdspinlock, flags);
+      leave_critical_section(flags);
     }
 
   return ret;

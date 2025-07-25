@@ -63,13 +63,13 @@ int wd_cancel(FAR struct wdog_s *wdog)
   irqstate_t flags;
   bool head;
 
-  flags = spin_lock_irqsave(&g_wdspinlock);
+  flags = enter_critical_section();
 
   /* Make sure that the watchdog is valid and still active. */
 
   if (wdog == NULL || !WDOG_ISACTIVE(wdog))
     {
-      spin_unlock_irqrestore(&g_wdspinlock, flags);
+      leave_critical_section(flags);
       return -EINVAL;
     }
 
@@ -89,7 +89,7 @@ int wd_cancel(FAR struct wdog_s *wdog)
   /* Mark the watchdog inactive */
 
   wdog->func = NULL;
-  spin_unlock_irqrestore(&g_wdspinlock, flags);
+  leave_critical_section(flags);
 
   if (head)
     {

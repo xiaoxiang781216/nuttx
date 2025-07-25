@@ -57,7 +57,6 @@ extern "C"
  */
 
 extern struct list_node g_wdactivelist;
-extern spinlock_t g_wdspinlock;
 
 /****************************************************************************
  * Public Function Prototypes
