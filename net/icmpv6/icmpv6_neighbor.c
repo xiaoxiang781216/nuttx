@@ -277,7 +277,7 @@ int icmpv6_neighbor(FAR struct net_driver_s *dev,
    * want anything to happen until we are ready.
    */
 
-  net_lock();
+  netdev_lock(dev);
   state.snd_cb = devif_callback_alloc((dev),
                                       &(dev)->d_conncb,
                                       &(dev)->d_conncb_tail);
@@ -372,7 +372,7 @@ int icmpv6_neighbor(FAR struct net_driver_s *dev,
   devif_dev_callback_free(dev, state.snd_cb);
 
 errout_with_lock:
-  net_unlock();
+  netdev_unlock(dev);
 
 errout:
   return ret;
