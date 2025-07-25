@@ -30,12 +30,12 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+
 #include <debug.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/wdog.h>
-#include <nuttx/atomic.h>
-#include <nuttx/spinlock.h>
+#include <nuttx/mutex.h>
 
 #include <sys/ioctl.h>
 #include <sys/timerfd.h>
@@ -62,14 +62,14 @@ typedef struct timerfd_waiter_sem_s
 
 struct timerfd_priv_s
 {
-  spinlock_t                lock;    /* Lock to protect the driver state */
+  mutex_t                   lock;    /* Enforces device exclusive access */
   FAR timerfd_waiter_sem_t *rdsems;  /* List of blocking readers */
   int                       clock;   /* Clock to use as the timing base */
   int                       delay;   /* If non-zero, used to reset repetitive
                                       * timers */
   struct wdog_s             wdog;    /* The watchdog that provides the timing */
   timerfd_t                 counter; /* timerfd counter */
-  atomic_t                  crefs;   /* References counts on timerfd (max: 255) */
+  uint8_t                   crefs;   /* References counts on timerfd (max: 255) */
 
   /* The following is a list if poll structures of threads waiting for
    * driver events.
@@ -96,8 +96,7 @@ static int timerfd_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
 static int timerfd_blocking_io(FAR struct timerfd_priv_s *dev,
                                FAR timerfd_waiter_sem_t  *sem,
-                               FAR timerfd_waiter_sem_t **slist,
-                               FAR irqstate_t *intflags);
+                               FAR timerfd_waiter_sem_t **slist);
 
 static FAR struct timerfd_priv_s *timerfd_allocdev(void);
 static void timerfd_destroy(FAR struct timerfd_priv_s *dev);
@@ -149,8 +148,9 @@ static FAR struct timerfd_priv_s *timerfd_allocdev(void)
     {
       /* Initialize the private structure */
 
-      spin_lock_init(&dev->lock);
-      atomic_set(&dev->crefs, 1);
+      nxmutex_init(&dev->lock);
+      nxmutex_lock(&dev->lock);
+      dev->crefs++;
     }
 
   return dev;
@@ -159,31 +159,65 @@ static FAR struct timerfd_priv_s *timerfd_allocdev(void)
 static void timerfd_destroy(FAR struct timerfd_priv_s *dev)
 {
   wd_cancel(&dev->wdog);
+  nxmutex_unlock(&dev->lock);
+  nxmutex_destroy(&dev->lock);
   fs_heap_free(dev);
 }
 
 static int timerfd_open(FAR struct file *filep)
 {
   FAR struct timerfd_priv_s *priv = filep->f_priv;
+  int ret;
 
   /* Get exclusive access to the device structures */
 
-  atomic_fetch_add(&priv->crefs, 1);
-  return OK;
+  ret = nxmutex_lock(&priv->lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  if (priv->crefs >= 255)
+    {
+      /* More than 255 opens; uint8_t would overflow to zero */
+
+      ret = -EMFILE;
+    }
+  else
+    {
+      /* Save the new open count on success */
+
+      priv->crefs += 1;
+      ret = OK;
+    }
+
+  nxmutex_unlock(&priv->lock);
+  return ret;
 }
 
 static int timerfd_close(FAR struct file *filep)
 {
   FAR struct timerfd_priv_s *priv = filep->f_priv;
+  int ret;
+
+  /* Get exclusive access to the device structures */
+
+  ret = nxmutex_lock(&priv->lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
 
   /* Decrement the references to the driver.  If the reference count will
    * decrement to 0, then uninitialize the driver.
    */
 
-  if (atomic_fetch_sub(&priv->crefs, 1) > 1)
+  if (priv->crefs > 1)
     {
       /* Just decrement the reference count and release the semaphore */
 
+      priv->crefs--;
+      nxmutex_unlock(&priv->lock);
       return OK;
     }
 
@@ -197,8 +231,7 @@ static int timerfd_close(FAR struct file *filep)
 
 static int timerfd_blocking_io(FAR struct timerfd_priv_s *dev,
                                FAR  timerfd_waiter_sem_t *sem,
-                               FAR timerfd_waiter_sem_t **slist,
-                               FAR irqstate_t *intflags)
+                               FAR timerfd_waiter_sem_t **slist)
 {
   int ret;
 
@@ -207,9 +240,7 @@ static int timerfd_blocking_io(FAR struct timerfd_priv_s *dev,
 
   /* Wait for timerfd to notify */
 
-  spin_unlock_irqrestore(&dev->lock, *intflags);
   ret = nxsem_wait(&sem->sem);
-  *intflags = spin_lock_irqsave(&dev->lock);
   if (ret < 0)
     {
       FAR timerfd_waiter_sem_t *cur_sem;
@@ -239,7 +270,6 @@ static ssize_t timerfd_read(FAR struct file *filep, FAR char *buffer,
                             size_t len)
 {
   FAR struct timerfd_priv_s *dev = filep->f_priv;
-  timerfd_waiter_sem_t sem;
   irqstate_t intflags;
   ssize_t ret;
 
@@ -248,43 +278,45 @@ static ssize_t timerfd_read(FAR struct file *filep, FAR char *buffer,
       return -EINVAL;
     }
 
-  nxsem_init(&sem.sem, 0, 0);
-
   /* Ensure that interrupts are disabled and we do not lose counts
    * if expiration occurs after read, but before setting counter
    * to zero
    */
 
-  intflags = spin_lock_irqsave(&dev->lock);
+  intflags = enter_critical_section();
 
   /* Wait for an incoming event */
 
   if (dev->counter == 0)
     {
+      timerfd_waiter_sem_t sem;
+
       if (filep->f_oflags & O_NONBLOCK)
         {
-          spin_unlock_irqrestore(&dev->lock, intflags);
-          nxsem_destroy(&sem.sem);
+          leave_critical_section(intflags);
           return -EAGAIN;
         }
 
+      nxsem_init(&sem.sem, 0, 0);
       do
         {
-          ret = timerfd_blocking_io(dev, &sem, &dev->rdsems, &intflags);
+          ret = timerfd_blocking_io(dev, &sem, &dev->rdsems);
           if (ret < 0)
             {
-              spin_unlock_irqrestore(&dev->lock, intflags);
+              leave_critical_section(intflags);
               nxsem_destroy(&sem.sem);
               return ret;
             }
         }
       while (dev->counter == 0);
+
+      nxsem_destroy(&sem.sem);
     }
 
   *(FAR timerfd_t *)buffer = dev->counter;
   dev->counter = 0;
-  spin_unlock_irqrestore(&dev->lock, intflags);
-  nxsem_destroy(&sem.sem);
+
+  leave_critical_section(intflags);
 
   return sizeof(timerfd_t);
 }
@@ -298,7 +330,7 @@ static int timerfd_poll(FAR struct file *filep, FAR struct pollfd *fds,
   int ret = OK;
   int i;
 
-  intflags = spin_lock_irqsave(&dev->lock);
+  intflags = enter_critical_section();
   if (!setup)
     {
       /* This is a request to tear down the poll. */
@@ -341,15 +373,13 @@ static int timerfd_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   if (dev->counter > 0)
     {
-      spin_unlock_irqrestore(&dev->lock, intflags);
 #ifdef CONFIG_TIMER_FD_POLL
       poll_notify(&fds, 1, POLLIN);
 #endif
-      return OK;
     }
 
 out:
-  spin_unlock_irqrestore(&dev->lock, intflags);
+  leave_critical_section(intflags);
   return ret;
 }
 #endif
@@ -364,7 +394,7 @@ static void timerfd_timeout(wdparm_t arg)
    * atomically
    */
 
-  intflags = spin_lock_irqsave_nopreempt(&dev->lock);
+  intflags = enter_critical_section();
 
   /* Increment timer expiration counter */
 
@@ -393,7 +423,8 @@ static void timerfd_timeout(wdparm_t arg)
     }
 
   dev->rdsems = NULL;
-  spin_unlock_irqrestore_nopreempt(&dev->lock, intflags);
+
+  leave_critical_section(intflags);
 }
 
 /****************************************************************************
@@ -440,6 +471,8 @@ int timerfd_create(int clockid, int flags)
     }
 
   /* Device is ready for use */
+
+  nxmutex_unlock(&new_dev->lock);
 
   return new_fd;
 
@@ -493,7 +526,8 @@ int timerfd_settime(int fd, int flags,
    * atomicaly.
    */
 
-  intflags = spin_lock_irqsave(&dev->lock);
+  intflags = enter_critical_section();
+
   if (old_value)
     {
       /* Get the number of ticks before the underlying watchdog expires */
@@ -522,7 +556,7 @@ int timerfd_settime(int fd, int flags,
 
   if (new_value->it_value.tv_sec <= 0 && new_value->it_value.tv_nsec <= 0)
     {
-      spin_unlock_irqrestore(&dev->lock, intflags);
+      leave_critical_section(intflags);
       file_put(filep);
       return OK;
     }
@@ -566,12 +600,13 @@ int timerfd_settime(int fd, int flags,
   /* Then start the watchdog */
 
   ret = wd_start(&dev->wdog, delay, timerfd_timeout, (wdparm_t)dev);
-  spin_unlock_irqrestore(&dev->lock, intflags);
   if (ret < 0)
     {
+      leave_critical_section(intflags);
       goto errout_with_filep;
     }
 
+  leave_critical_section(intflags);
   file_put(filep);
   return OK;
 
