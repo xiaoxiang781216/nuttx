@@ -685,7 +685,14 @@ irqstate_t rspin_lock_irqsave(FAR rspinlock_t *lock)
   return flags;
 }
 #else
-#  define rspin_lock_irqsave(l) ((void)(l), up_irq_save())
+static inline_function
+irqstate_t rspin_lock_irqsave(FAR rspinlock_t *lock)
+{
+  irqstate_t flags = up_irq_save();
+  lock->count++;
+  lock->owner = this_cpu() + 1;
+  return flags;
+}
 #endif
 
 #define rspin_lock_irqsave_nopreempt(lock) \
@@ -754,8 +761,9 @@ static inline_function bool rspin_trylock(FAR rspinlock_t *lock)
 #else
 #  define rspin_trylock_irqsave(l, f) \
     ({ \
-      (void)(l); \
       (f) = up_irq_save(); \
+      (l)->count++; \
+      (l)->owner = this_cpu() + 1; \
       true; \
     })
 #endif
@@ -980,7 +988,17 @@ void rspin_unlock_irqrestore(FAR rspinlock_t *lock, irqstate_t flags)
   /* If not last rspinlock restore,  up_irq_restore should not required */
 }
 #else
-#  define rspin_unlock_irqrestore(l, f) ((void)(l), up_irq_restore(f))
+static inline_function
+void rspin_unlock_irqrestore(FAR rspinlock_t *lock, irqstate_t flags)
+{
+  if (--lock->count == 0)
+    {
+      lock->owner = 0;
+      up_irq_restore(flags);
+    }
+
+  /* If not last rspinlock restore,  up_irq_restore should not required */
+}
 #endif
 
 #define rspin_unlock_irqrestore_nopreempt(lock, flags) \
@@ -1010,8 +1028,21 @@ void rspin_restorelock(FAR rspinlock_t *lock, uint16_t count)
   lock->count = count;
 }
 #else
-#  define rspin_breaklock(lock) (0)
-#  define rspin_restorelock(lock, count)
+static inline_function
+uint16_t rspin_breaklock(FAR rspinlock_t *lock)
+{
+  int oldcount = lock->count;
+
+  lock->val = 0;
+  return oldcount;
+}
+
+static inline_function
+void rspin_restorelock(FAR rspinlock_t *lock, uint16_t count)
+{
+  lock->owner = this_cpu() + 1;
+  lock->count = count;
+}
 #endif
 
 #if defined(CONFIG_RW_SPINLOCK)
