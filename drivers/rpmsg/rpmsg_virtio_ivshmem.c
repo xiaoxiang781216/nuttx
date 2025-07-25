@@ -70,6 +70,7 @@ struct rpmsg_virtio_ivshmem_dev_s
   FAR struct rpmsg_virtio_ivshmem_mem_s *shmem;
   size_t                                 shmem_size;
   struct simple_addrenv_s                addrenv[2];
+  struct rpmsg_virtio_lite_addrenv_s     raddrenv[2];
   int                                    master;
   char                                   cpuname[RPMSG_NAME_SIZE + 1];
   FAR struct pci_device_s               *ivshmem;
@@ -109,6 +110,7 @@ static const struct rpmsg_virtio_lite_ops_s g_rpmsg_virtio_ivshmem_ops =
   .is_master         = rpmsg_virtio_ivshmem_is_master,
   .notify            = rpmsg_virtio_ivshmem_notify,
   .register_callback = rpmsg_virtio_ivshmem_register_callback,
+  .get_addrenv       = rpmsg_virtio_ivshmem_get_addrenv,
 };
 
 /****************************************************************************
@@ -137,20 +139,38 @@ rpmsg_virtio_ivshmem_get_resource(FAR struct rpmsg_virtio_lite_s *dev)
   if (priv->master)
     {
       memset(priv->shmem, 0, priv->shmem_size);
+      rsc->rpmsg_vdev.type          = RSC_VDEV;
       rsc->rpmsg_vdev.id            = VIRTIO_ID_RPMSG;
+      rsc->rpmsg_vdev.notifyid      = RSC_NOTIFY_ID_ANY;
       rsc->rpmsg_vdev.dfeatures     = 1 << VIRTIO_RPMSG_F_NS |
-                                      1 << VIRTIO_RPMSG_F_ACK;
+                                      1 << VIRTIO_RPMSG_F_ACK |
+                                      1 << VIRTIO_RPMSG_F_CPUNAME |
+                                      1 << VIRTIO_RPMSG_F_BUFSZ;
       rsc->rpmsg_vdev.config_len    = sizeof(struct fw_rsc_config);
       rsc->rpmsg_vdev.num_of_vrings = 2;
+      rsc->rpmsg_vdev.reserved[0]   = VIRTIO_DEV_DRIVER;
+      rsc->rpmsg_vdev.reserved[1]   = 0;
       rsc->rpmsg_vring0.da          = 0;
       rsc->rpmsg_vring0.align       = RPMSG_VIRTIO_VRING_ALIGNMENT;
       rsc->rpmsg_vring0.num         = CONFIG_RPMSG_VIRTIO_IVSHMEM_BUFFNUM;
+      rsc->rpmsg_vring0.notifyid    = RSC_NOTIFY_ID_ANY;
       rsc->rpmsg_vring1.da          = 0;
       rsc->rpmsg_vring1.align       = RPMSG_VIRTIO_VRING_ALIGNMENT;
       rsc->rpmsg_vring1.num         = CONFIG_RPMSG_VIRTIO_IVSHMEM_BUFFNUM;
+      rsc->rpmsg_vring1.notifyid    = RSC_NOTIFY_ID_ANY;
       rsc->config.r2h_buf_size      = CONFIG_RPMSG_VIRTIO_IVSHMEM_BUFFSIZE;
       rsc->config.h2r_buf_size      = CONFIG_RPMSG_VIRTIO_IVSHMEM_BUFFSIZE;
       cmd->cmd_slave                = 0;
+
+      rsc->carveout.da              =
+        offsetof(struct rpmsg_virtio_ivshmem_mem_s, rsc);
+      rsc->carveout.pa              = FW_RSC_U32_ADDR_ANY;
+      rsc->carveout.len             = sizeof(priv->shmem->rsc);
+
+      strlcpy((FAR char *)rsc->config.host_cpuname,
+              CONFIG_RPMSG_LOCAL_CPUNAME, VIRTIO_RPMSG_CPUNAME_SIZE);
+      strlcpy((FAR char *)rsc->config.remote_cpuname,
+              priv->cpuname, VIRTIO_RPMSG_CPUNAME_SIZE);
 
       priv->shmem->basem = (uint64_t)(uintptr_t)priv->shmem;
     }
@@ -173,6 +193,11 @@ rpmsg_virtio_ivshmem_get_resource(FAR struct rpmsg_virtio_lite_s *dev)
 
       priv->shmem->basem = 0;
     }
+
+  priv->raddrenv[0].pa   = priv->master ? (uintptr_t)priv->shmem :
+                                          (uintptr_t)priv->shmem->basem;
+  priv->raddrenv[0].da   = 0;
+  priv->raddrenv[0].size = sizeof(*priv->shmem);
 
   return rsc;
 }
@@ -330,6 +355,15 @@ static void rpmsg_virtio_ivshmem_remove(FAR struct ivshmem_device_s *ivdev)
 
   ivshmem_control_irq(ivdev, false);
   ivshmem_detach_irq(ivdev);
+}
+
+static const struct rpmsg_virtio_lite_addrenv_s *
+rpmsg_virtio_ivshmem_get_addrenv(struct rpmsg_virtio_lite_s *dev)
+{
+  struct rpmsg_virtio_ivshmem_dev_s *priv =
+    container_of(dev, struct rpmsg_virtio_ivshmem_dev_s, dev);
+
+  return &priv->raddrenv[0];
 }
 
 /****************************************************************************

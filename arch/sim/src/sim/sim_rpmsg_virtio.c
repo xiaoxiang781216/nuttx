@@ -55,17 +55,17 @@ struct sim_rpmsg_virtio_shmem_s
 
 struct sim_rpmsg_virtio_dev_s
 {
-  struct rpmsg_virtio_lite_s      dev;
-  rpmsg_virtio_callback_t         callback;
-  void                            *arg;
-  int                             master;
-  uint32_t                        seq;
-  struct sim_rpmsg_virtio_shmem_s *shmem;
-  struct simple_addrenv_s         addrenv[2];
-  char                            cpuname[RPMSG_NAME_SIZE + 1];
-  char                            shmemname[RPMSG_NAME_SIZE + 1];
-
-  struct work_s                   work;
+  struct rpmsg_virtio_lite_s         dev;
+  rpmsg_virtio_callback_t            callback;
+  void                               *arg;
+  int                                master;
+  uint32_t                           seq;
+  struct sim_rpmsg_virtio_shmem_s    *shmem;
+  struct simple_addrenv_s            addrenv[2];
+  struct rpmsg_virtio_lite_addrenv_s raddrenv[2];
+  char                               cpuname[RPMSG_NAME_SIZE + 1];
+  char                               shmemname[RPMSG_NAME_SIZE + 1];
+  struct work_s                      work;
 };
 
 /****************************************************************************
@@ -99,19 +99,36 @@ sim_rpmsg_virtio_get_resource(struct rpmsg_virtio_lite_s *dev)
   if (priv->master)
     {
       memset(priv->shmem, 0, sizeof(*priv->shmem));
+      rsc->rpmsg_vdev.type          = RSC_VDEV;
       rsc->rpmsg_vdev.id            = VIRTIO_ID_RPMSG;
+      rsc->rpmsg_vdev.notifyid      = RSC_NOTIFY_ID_ANY;
       rsc->rpmsg_vdev.dfeatures     = 1 << VIRTIO_RPMSG_F_NS |
-                                      1 << VIRTIO_RPMSG_F_ACK;
+                                      1 << VIRTIO_RPMSG_F_ACK |
+                                      1 << VIRTIO_RPMSG_F_CPUNAME |
+                                      1 << VIRTIO_RPMSG_F_BUFSZ;
       rsc->rpmsg_vdev.config_len    = sizeof(struct fw_rsc_config);
       rsc->rpmsg_vdev.num_of_vrings = 2;
+      rsc->rpmsg_vdev.reserved[0]   = VIRTIO_DEV_DRIVER;
+      rsc->rpmsg_vdev.reserved[1]   = 0;
       rsc->rpmsg_vring0.da          = 0;
       rsc->rpmsg_vring0.align       = 8;
       rsc->rpmsg_vring0.num         = 8;
+      rsc->rpmsg_vring0.notifyid    = RSC_NOTIFY_ID_ANY;
       rsc->rpmsg_vring1.da          = 0;
       rsc->rpmsg_vring1.align       = 8;
       rsc->rpmsg_vring1.num         = 8;
+      rsc->rpmsg_vring1.notifyid    = RSC_NOTIFY_ID_ANY;
       rsc->config.r2h_buf_size      = 2048;
       rsc->config.h2r_buf_size      = 2048;
+      rsc->carveout.da              =
+        offsetof(struct sim_rpmsg_virtio_shmem_s, buf);
+      rsc->carveout.pa              = FW_RSC_U32_ADDR_ANY;
+      rsc->carveout.len             = sizeof(priv->shmem->buf);
+
+      strlcpy((FAR char *)rsc->config.host_cpuname,
+              CONFIG_RPMSG_LOCAL_CPUNAME, VIRTIO_RPMSG_CPUNAME_SIZE);
+      strlcpy((FAR char *)rsc->config.remote_cpuname,
+              priv->cpuname, VIRTIO_RPMSG_CPUNAME_SIZE);
 
       priv->shmem->base = (uintptr_t)priv->shmem;
     }
@@ -130,6 +147,11 @@ sim_rpmsg_virtio_get_resource(struct rpmsg_virtio_lite_s *dev)
 
       simple_addrenv_initialize(&priv->addrenv[0]);
     }
+
+  priv->raddrenv[0].pa   = priv->master ? (uintptr_t)priv->shmem :
+                                          (uintptr_t)priv->shmem->base;
+  priv->raddrenv[0].da   = 0;
+  priv->raddrenv[0].size = sizeof(*priv->shmem);
 
   return rsc;
 }
@@ -203,6 +225,15 @@ static int sim_rpmsg_virtio_notify(struct rpmsg_virtio_lite_s *dev,
   return 0;
 }
 
+static const struct rpmsg_virtio_lite_addrenv_s *
+sim_rpmsg_virtio_get_addrenv(struct rpmsg_virtio_lite_s *dev)
+{
+  struct sim_rpmsg_virtio_dev_s *priv =
+    container_of(dev, struct sim_rpmsg_virtio_dev_s, dev);
+
+  return &priv->raddrenv[0];
+}
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -214,6 +245,7 @@ static const struct rpmsg_virtio_lite_ops_s g_sim_rpmsg_virtio_ops =
   .is_master         = sim_rpmsg_virtio_is_master,
   .notify            = sim_rpmsg_virtio_notify,
   .register_callback = sim_rpmsg_virtio_register_callback,
+  .get_addrenv       = sim_rpmsg_virtio_get_addrenv,
 };
 
 /****************************************************************************
