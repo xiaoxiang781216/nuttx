@@ -117,6 +117,8 @@ if(MERGE_LD)
             "Merge elf generated at ${CMAKE_BINARY_DIR}/nuttx_merger.elf"
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     DEPENDS nuttx_post merge_ldscript_tmp
+    COMMAND rm -rf ${K_DIR} ${U_DIR}
+    COMMAND rm -f libnuttx_merge_kernel.a libnuttx_merge_user.a
     COMMENT "Merging kernel and user ELFs"
     VERBATIM)
 
