@@ -42,6 +42,7 @@ config ARCH_ARM64
 	select ARCH_HAVE_THREAD_LOCAL
 	select ARCH_HAVE_PERF_EVENTS
 	select ONESHOT
+	select ONESHOT_COUNT
 	---help---
 		The ARM64 architectures
 
