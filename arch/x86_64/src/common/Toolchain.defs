@@ -163,8 +163,8 @@ ifeq ($(CONFIG_MM_KASAN_INSTRUMENT_ALL),y)
     KASAN_PARAM += asan-instrument-writes=0
   endif
 
-  ifeq ($(CONFIG_ARM_TOOLCHAIN_CLANG),y)
-    ARCHOPTIMIZATION += $(addprefix -mllvm ,$(KASAN_PARAM))
+  ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+    ARCHOPTIMIZATION += $(addprefix -mllvm ,$(addprefix -,$(KASAN_PARAM)))
   else
     ARCHOPTIMIZATION += $(addprefix --param ,$(KASAN_PARAM))
   endif

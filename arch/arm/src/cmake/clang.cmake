@@ -132,22 +132,31 @@ endif()
 
 if(CONFIG_MM_KASAN_INSTRUMENT_ALL)
   add_compile_options(-fsanitize=kernel-address)
-  add_compile_options(-mllvm=asan-stack=0)
-  add_compile_options(-mllvm=-asan-instrumentation-with-call-threshold=0)
+  set(KASAN_PARAM "")
+  list(APPEND KASAN_PARAM "asan-stack=0")
+  list(APPEND KASAN_PARAM "asan-instrumentation-with-call-threshold=0")
 
   if(CONFIG_MM_KASAN_GLOBAL)
-    add_compile_options(-mllvm=asan-globals=1)
+    list(APPEND KASAN_PARAM "asan-globals=1")
   else()
-    add_compile_options(-mllvm=asan-globals=0)
+    list(APPEND KASAN_PARAM "asan-globals=0")
   endif()
 
   if(CONFIG_MM_KASAN_DISABLE_READS_CHECK)
-    add_compile_options(-mllvm=asan-instrument-reads=0)
+    list(APPEND KASAN_PARAM "asan-instrument-reads=0")
   endif()
 
   if(CONFIG_MM_KASAN_DISABLE_WRITES_CHECK)
-    add_compile_options(-mllvm=asan-instrument-writes=0)
+    list(APPEND KASAN_PARAM "asan-instrument-writes=0")
   endif()
+
+  set(KASAN_PARAM_STR "")
+  foreach(param IN LISTS KASAN_PARAM)
+    string(APPEND KASAN_PARAM_STR "-mllvm -${param} ")
+  endforeach()
+
+  file(WRITE ${CMAKE_BINARY_DIR}/kasan_params.cmd "${KASAN_PARAM_STR}")
+  add_compile_options("@${CMAKE_BINARY_DIR}/kasan_params.cmd")
 endif()
 
 # Instrumentation options

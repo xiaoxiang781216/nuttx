@@ -96,10 +96,13 @@ if(CONFIG_MM_KASAN_INSTRUMENT_ALL)
     list(APPEND KASAN_PARAM "asan-instrument-writes=0")
   endif()
 
+  set(KASAN_PARAM_STR "")
   foreach(param IN LISTS KASAN_PARAM)
-    add_compile_options("-mllvm=${param}")
+    string(APPEND KASAN_PARAM_STR "-mllvm -${param} ")
   endforeach()
 
+  file(WRITE ${CMAKE_BINARY_DIR}/kasan_params.cmd "${KASAN_PARAM_STR}")
+  add_compile_options("@${CMAKE_BINARY_DIR}/kasan_params.cmd")
 endif()
 
 if(CONFIG_ARCH_INSTRUMENT_ALL)
