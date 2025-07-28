@@ -29,6 +29,7 @@
 
 #if defined(CONFIG_ARCH_CHIP_IMX93)
 #  include "hardware/imx93/imx93_edma.h"
+#elif defined(CONFIG_ARCH_CHIP_IMX95)
 #else
 #  error Unrecognized i.MX9 architecture
 #endif
