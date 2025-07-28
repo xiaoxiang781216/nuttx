@@ -244,8 +244,7 @@ int arp_send(in_addr_t ipaddr)
   if (!dev)
     {
       nerr("ERROR: Unreachable: %08lx\n", (unsigned long)ipaddr);
-      ret = -EHOSTUNREACH;
-      goto errout;
+      return -EHOSTUNREACH;
     }
 
   /* ARP support is only built if the Ethernet link layer is supported.
@@ -317,26 +316,17 @@ int arp_send(in_addr_t ipaddr)
   if (info == NULL)
     {
       nerr("ERROR: Failed to allocate ARP send info\n");
-      ret = -ENOMEM;
-      goto errout;
+      return -ENOMEM;
     }
 
   state = &info->state;
   notify = &info->notify;
 
-  net_lock();
-  state->snd_cb = arp_callback_alloc(dev);
-  if (!state->snd_cb)
-    {
-      nerr("ERROR: Failed to allocate a callback\n");
-      ret = -ENOMEM;
-      goto errout_with_lock;
-    }
-
   nxsem_init(&state->snd_sem, 0, 0); /* Doesn't really fail */
 
   state->snd_retries = 0;            /* No retries yet */
   state->snd_ipaddr  = ipaddr;       /* IP address to query */
+  state->snd_cb      = NULL;         /* No callback allocated yet */
 
   /* Remember the routing device name */
 
@@ -377,6 +367,24 @@ int arp_send(in_addr_t ipaddr)
 
       arp_wait_setup(ipaddr, notify);
 
+      /* Allocate resources to receive a callback.  This and the following
+       * initialization is performed with the network lock because we don't
+       * want anything to happen until we are ready.
+       */
+
+      netdev_lock(dev);
+      if (state->snd_cb == NULL)
+        {
+          state->snd_cb = arp_callback_alloc(dev);
+          if (!state->snd_cb)
+            {
+              nerr("ERROR: Failed to allocate a callback\n");
+              netdev_unlock(dev);
+              ret = -ENOMEM;
+              goto out;
+            }
+        }
+
       /* Arm/re-arm the callback */
 
       state->snd_sent      = false;
@@ -385,6 +393,8 @@ int arp_send(in_addr_t ipaddr)
       state->snd_cb->priv  = (FAR void *)state;
       state->snd_cb->event = arp_send_eventhandler;
       state->finish_cb     = NULL;
+
+      netdev_unlock(dev);
 
       /* Notify the device driver that new TX data is available. */
 
@@ -453,10 +463,7 @@ timeout:
 out:
   nxsem_destroy(&state->snd_sem);
   arp_callback_free(dev, state->snd_cb);
-errout_with_lock:
   NET_BUFPOOL_FREE(g_arp_send_infos, info);
-  net_unlock();
-errout:
   return ret;
 }
 
@@ -506,7 +513,7 @@ int arp_send_async(in_addr_t ipaddr, arp_send_finish_cb_t cb)
       goto errout;
     }
 
-  net_lock();
+  netdev_lock(dev);
   state->snd_cb = arp_callback_alloc(dev);
   if (!state->snd_cb)
     {
@@ -535,7 +542,7 @@ int arp_send_async(in_addr_t ipaddr, arp_send_finish_cb_t cb)
   netdev_txnotify_dev(dev);
 
 errout_with_lock:
-  net_unlock();
+  netdev_unlock(dev);
 errout:
   return ret;
 }
