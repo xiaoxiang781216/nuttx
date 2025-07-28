@@ -474,11 +474,21 @@ static int rpmsg_virtio_lite_callback(FAR void *arg, uint32_t vqid)
 {
   FAR struct rpmsg_virtio_lite_priv_s *priv = arg;
   FAR struct virtio_device *vdev = &priv->vdev;
-  FAR struct rpmsg_virtio_device *rvdev = vdev->priv;
-  FAR struct virtqueue *rvq = rvdev->rvq;
-  FAR struct virtqueue *svq = rvdev->svq;
+  FAR struct virtqueue *rvq;
+  FAR struct virtqueue *svq;
 
   rpmsg_virtio_lite_check_command(priv);
+
+  if (VIRTIO_ROLE_IS_DRIVER(vdev))
+    {
+      rvq  = vdev->vrings_info[0].vq;
+      svq  = vdev->vrings_info[1].vq;
+    }
+  else
+    {
+      rvq  = vdev->vrings_info[1].vq;
+      svq  = vdev->vrings_info[0].vq;
+    }
 
   if (vqid == RPMSG_VIRTIO_LITE_NOTIFY_ALL ||
       vqid == vdev->vrings_info[rvq->vq_queue_index].notifyid)
@@ -600,21 +610,23 @@ static int rpmsg_virtio_lite_thread(int argc, FAR char *argv[])
   priv->shmbuf = shmbase + tbsz + v0sz + v1sz;
   priv->shmlen = rsc->carveout.len - tbsz - v0sz - v1sz;
 
-  ret = rpmsg_virtio_probe(vdev);
-  if (ret < 0)
-    {
-      goto err_vq1;
-    }
-
   RPMSG_VIRTIO_LITE_REGISTER_CALLBACK(priv->dev, rpmsg_virtio_lite_callback,
                                       priv);
 
   priv->nb.notifier_call = rpmsg_virtio_lite_panic_notifier;
   panic_notifier_chain_register(&priv->nb);
 
+  ret = rpmsg_virtio_probe(vdev);
+  if (ret < 0)
+    {
+      goto err_vq1;
+    }
+
   return ret;
 
 err_vq1:
+  panic_notifier_chain_unregister(&priv->nb);
+  RPMSG_VIRTIO_LITE_REGISTER_CALLBACK(priv->dev, NULL, NULL);
   virtqueue_free(rvrings[1].vq);
 err_vq0:
   virtqueue_free(rvrings[0].vq);
@@ -647,7 +659,8 @@ int rpmsg_virtio_lite_initialize(FAR struct rpmsg_virtio_lite_s *dev)
   argv[1] = arg1;
   argv[2] = NULL;
 
-  ret = kthread_create("rpmsg_virtio", CONFIG_RPMSG_VIRTIO_LITE_PRIORITY,
+  ret = kthread_create("rpmsg_virtio_lite",
+                       CONFIG_RPMSG_VIRTIO_LITE_PRIORITY,
                        CONFIG_RPMSG_VIRTIO_LITE_STACKSIZE,
                        rpmsg_virtio_lite_thread, argv);
   if (ret < 0)
