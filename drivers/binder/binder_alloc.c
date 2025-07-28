@@ -904,6 +904,7 @@ err_alloc_pages_failed:
 #endif
   kmm_free(kbuf);
   alloc->buffer_data = NULL;
+  nxmutex_lock(&alloc->alloc_lock);
   alloc->buffer_data_size = 0;
 err_already_mapped:
 err_alloc_kbuf_failed:
