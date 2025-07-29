@@ -614,6 +614,8 @@ uint16_t rspin_lock_count(FAR volatile rspinlock_t *lock)
  *     Equivalent to up_irq_save() + sched_lock().
  *     Will only sched_lock once when first called.
  *
+ *   NOTE: This function is only allowed to execute with irq disabled.
+ *
  * Input Parameters:
  *   lock - Caller specific rspinlock_s. not NULL.
  *
@@ -628,27 +630,30 @@ static inline_function
 void rspin_lock(FAR rspinlock_t *lock)
 {
   rspinlock_t new_val;
-  rspinlock_t old_val = RSPINLOCK_INITIALIZER;
+  rspinlock_t old_val;
   int         cpu     = this_cpu() + 1;
 
   /* Already owned this lock. */
 
-  if (lock->owner == cpu)
+  old_val.val = atomic_load((FAR atomic_t *)&lock->val);
+
+  if (old_val.owner == cpu)
     {
       lock->count += 1;
       return;
     }
 
+  /* Try seize the ownership of the lock using CAS. */
+
   new_val.count = 1;
   new_val.owner = cpu;
 
-  /* Try seize the ownership of the lock. */
-
-  while (!atomic_cmpxchg_acquire(&lock->val, &old_val.val,
-                                 new_val.val))
+  do
     {
       old_val.val = 0;
     }
+  while (!atomic_cmpxchg_acquire((FAR atomic_t *)&lock->val,
+                                 (FAR atomic_t *)&old_val.val, new_val.val));
 }
 
 static inline_function
@@ -707,16 +712,25 @@ irqstate_t rspin_lock_irqsave(FAR rspinlock_t *lock)
 static inline_function bool rspin_trylock(FAR rspinlock_t *lock)
 {
   rspinlock_t new_val;
-  rspinlock_t old_val = RSPINLOCK_INITIALIZER;
+  rspinlock_t old_val;
   int         cpu     = this_cpu() + 1;
 
   /* Already owned this lock. */
 
-  if (lock->owner == cpu)
+  old_val.val = atomic_load((FAR atomic_t *)&lock->val);
+
+  if (old_val.owner == cpu)
     {
       lock->count += 1;
       return true;
     }
+
+  if (old_val.val != 0)
+    {
+      return false;
+    }
+
+  /* Try seize the ownership of the lock using CAS. */
 
   new_val.count = 1;
   new_val.owner = cpu;
