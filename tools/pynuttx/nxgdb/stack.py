@@ -96,7 +96,7 @@ class Stack(object):
         return usage
 
     def check_max_usage(self):
-        np = utils.import_check("numpy", errmsg="Please pip install numpy")
+        np = utils.import_check("numpy", errmsg="Please pip install numpy\n")
         if not np:
             raise gdb.GdbError(
                 "stack max usage check requires numpy, please install it via pip"

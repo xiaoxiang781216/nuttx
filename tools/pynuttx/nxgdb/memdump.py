@@ -703,7 +703,7 @@ class MMVisualize(gdb.Command):
         self.backtrace_depth = mm.MM_RECORD_STACK_DEPTH
         if self.backtrace_depth <= 0:
             gdb.write(
-                "Without mm record backtrace enabled, visualization is not possible"
+                "Without mm record backtrace enabled, visualization is not possible\n"
             )
             return
 

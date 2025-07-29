@@ -42,7 +42,7 @@ class DebugPy(gdb.Command):
         return parser
 
     def __init__(self):
-        debugpy = utils.import_check("debugpy", errmsg="Please pip install debugpy")
+        debugpy = utils.import_check("debugpy", errmsg="Please pip install debugpy\n")
         if not debugpy:
             return
 

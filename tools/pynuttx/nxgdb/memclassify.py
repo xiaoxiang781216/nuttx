@@ -225,7 +225,7 @@ class MemoryCategory:
 def draw_pie(stat):
     datasets = stat.collect_piedata()
     plt = utils.import_check(
-        "matplotlib.pyplot", errmsg="Please pip install matplotlib"
+        "matplotlib.pyplot", errmsg="Please pip install matplotlib\n"
     )
     if plt is None:
         print("matplotlib is not installed")
