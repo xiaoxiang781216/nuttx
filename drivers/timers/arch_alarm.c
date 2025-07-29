@@ -58,20 +58,14 @@ static void ndelay_accurate(unsigned long nanoseconds)
   struct timespec end;
   struct timespec delta;
 
-  if (ONESHOT_CURRENT(g_oneshot_lower, &now) < 0)
-    {
-      return;
-    }
+  ONESHOT_CURRENT(g_oneshot_lower, &now);
 
   clock_nsec2time(&delta, nanoseconds);
   clock_timespec_add(&now, &delta, &end);
 
   while (clock_timespec_compare(&now, &end) < 0)
     {
-      if (ONESHOT_CURRENT(g_oneshot_lower, &now) < 0)
-        {
-          break;
-        }
+      ONESHOT_CURRENT(g_oneshot_lower, &now);
     }
 }
 
