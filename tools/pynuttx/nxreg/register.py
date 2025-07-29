@@ -219,7 +219,7 @@ g_reg_table = {
         "registers": [
             ("pc", 0, 0),
             ("ps", 73, 292, 0x40000),  # g_reg_offs placed it in the second position
-            ("a0", 1, REGINFO_OFFSET_AUTO),
+            ("a0", 1, 4),
             ("a1", 2, REGINFO_OFFSET_AUTO),
             ("a2", 3, REGINFO_OFFSET_AUTO),
             ("a3", 4, REGINFO_OFFSET_AUTO),
@@ -235,7 +235,7 @@ g_reg_table = {
             ("a13", 14, REGINFO_OFFSET_AUTO),
             ("a14", 15, REGINFO_OFFSET_AUTO),
             ("a15", 16, REGINFO_OFFSET_AUTO),
-            ("windowbase", 69, 276, REGINFO_OFFSET_AUTO),
+            ("windowbase", 69, 276, 0),
             ("windowstart", 70, 280, 1),
         ],
     },
@@ -243,7 +243,7 @@ g_reg_table = {
         "architecture": ["xtensa"],  # Use xt-gdb
         "feature": "",
         "registers": [
-            ("pc", 32, REGINFO_OFFSET_AUTO),
+            ("pc", 32, 0),
             ("ps", 742, 472, 0x40000),
             ("a0", 256, 4),
             ("a1", 257, REGINFO_OFFSET_AUTO),
@@ -261,7 +261,7 @@ g_reg_table = {
             ("a13", 269, REGINFO_OFFSET_AUTO),
             ("a14", 270, REGINFO_OFFSET_AUTO),
             ("a15", 271, REGINFO_OFFSET_AUTO),
-            ("windowbase", 584, 308, REGINFO_OFFSET_AUTO),
+            ("windowbase", 584, 308, 0),
             ("windowstart", 585, 312, 1),
         ],
     },
@@ -438,7 +438,9 @@ class GeneralRegisters:
             goffset = offset + regsize  # move to next register offset
 
             info = next((r for r in reginfo if r.name == name), None)
-            if not info or info.toffset == REGINFO_OFFSET_INVALID:
+            has_toffset = info and info.toffset != REGINFO_OFFSET_INVALID
+            if not (fixed or has_toffset):
+                # Not a fixed fake register, nor a register in TCB
                 self.logger.debug(f"Register {name}({regnum}) not found in TCB")
                 continue
 
@@ -447,8 +449,8 @@ class GeneralRegisters:
                 regnum=regnum,
                 size=regsize,
                 goffset=offset,
-                toffset=info.toffset,
-                value=None if info.toffset == REGINFO_OFFSET_INVALID else 0,
+                toffset=info.toffset if has_toffset else 0,
+                value=None if not has_toffset else 0,
                 fixedvalue=fixed[0] if fixed else None,
             )
 
@@ -513,6 +515,12 @@ class GeneralRegisters:
         reply = b""
         goffset = 0
         for reg in self._registers:
+            self.logger.debug(
+                f"Register {reg.name}({reg.regnum}) at {reg.goffset}, "
+                f"size: {reg.size}, value: {hex(reg.value)}, "
+                f"fixed: {reg.fixedvalue}, has_value: {reg.has_value}"
+            )
+
             if reg.goffset != goffset:
                 reply += b"xx" * (reg.goffset - goffset)
 
