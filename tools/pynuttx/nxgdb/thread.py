@@ -52,6 +52,7 @@ class NxRegisters:
         if not mapped_arch_name:
             raise ValueError("Architecture is not found in g_reg_table.\n")
 
+        print(f"Register set for: {mapped_arch_name}")
         self.registers = Registers(elf, arch=mapped_arch_name, readmem=read_memory)
 
     def load(self, regs: Union[int, gdb.Value] = None):

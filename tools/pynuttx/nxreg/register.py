@@ -614,5 +614,10 @@ def get_arch_name():
 
     for arch_key, arch_info in g_reg_table.items():
         if gdb_arch in arch_info["architecture"]:
-            return arch_key
+            if arch_key == "xtensa" and "esp-gdb" in gdb.execute(
+                "show version", to_string=True
+            ):
+                return "esp32s3"
+            else:
+                return arch_key
     return None
