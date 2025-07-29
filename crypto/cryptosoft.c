@@ -54,7 +54,7 @@
 #define SWKEY_FILL_NAME(name, keyid, type)       \
   do                                             \
     {                                            \
-      snprintf(name, sizeof(name), "%s.%d.%s",   \
+      snprintf(name, sizeof(name), "%s.%lu.%s",  \
                SWKEY_MAGIC_STRING, keyid, type); \
     }                                            \
   while (0)
