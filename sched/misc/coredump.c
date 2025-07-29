@@ -1041,7 +1041,7 @@ int coredump_initialize(void)
   if (ret < 0)
     {
 # ifdef CONFIG_BOARD_COREDUMP_MEMDEV
-      lib_fileinstream_close(&g_devstream);
+      lib_fileinstream_close(&g_devinstream);
 # endif
       _alert("%s Coredump device init failed:%d\n",
              CONFIG_BOARD_COREDUMP_DEVPATH, ret);
