@@ -557,7 +557,7 @@ FAR void *mempool_multiple_alloc(FAR struct mempool_multiple_s *mpool,
   end = mpool->pools + mpool->npools;
   do
     {
-      FAR void *blk = mempool_allocate(pool);
+      FAR void *blk = mempool_allocate(pool, UINT_MAX);
 
       if (blk)
         {
@@ -728,7 +728,7 @@ FAR void *mempool_multiple_memalign(FAR struct mempool_multiple_s *mpool,
   end = mpool->pools + mpool->npools;
   do
     {
-      FAR char *blk = mempool_allocate(pool);
+      FAR char *blk = mempool_allocate(pool, UINT_MAX);
       if (blk != NULL)
         {
           return (FAR void *)ALIGN_UP((uintptr_t)blk, alignment);
