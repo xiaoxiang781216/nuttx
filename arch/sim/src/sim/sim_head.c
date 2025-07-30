@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <alloca.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <setjmp.h>
@@ -45,6 +46,7 @@
 
 int g_argc;
 char **g_argv;
+void *g_idle_topstack;
 
 /****************************************************************************
  * Private Data
@@ -153,6 +155,30 @@ noprofile_function const char *__ubsan_default_options(void)
 #endif
 
 /****************************************************************************
+ * Name: alloca_idle_stack
+ *
+ * Description:
+ *   Initialize the idle stack and
+ *   set g_idle_topstack to the top of the stack
+ *
+ ****************************************************************************/
+
+static noinline_function void alloca_idle_stack(void)
+{
+  /* Allocate the stack for the idle task, avoid using unallocated
+   * addresses directly, otherwise it may cause asan to report an error:
+   *
+   * AddressSanitizer:DEADLYSIGNAL
+   * ==9060==ERROR: AddressSanitizer: SEGV on unknown address 0xff77d000
+   */
+
+  g_idle_topstack = alloca(CONFIG_IDLETHREAD_STACKSIZE +
+                           CONFIG_SIM_STACKSIZE_ADJUSTMENT);
+  g_idle_topstack += CONFIG_IDLETHREAD_STACKSIZE +
+                     CONFIG_SIM_STACKSIZE_ADJUSTMENT;
+}
+
+/****************************************************************************
  * Name: main
  *
  * Description:
@@ -180,6 +206,14 @@ int main(int argc, char **argv, char **envp)
 
   host_cpu0_start();
 #endif
+
+  /* Equal to g_idle_topstack = (void *)up_getsp();
+   * Instead of using this expression directly,
+   * we need alloca to avoid ASAN reports error.
+   */
+
+  alloca_idle_stack();
+
   /* Start the NuttX emulation.  This should not return. */
 
   nx_start();

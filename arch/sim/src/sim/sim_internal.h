@@ -184,6 +184,7 @@ struct i2c_master_s;
 
 extern int g_argc;
 extern char **g_argv;
+extern void *g_idle_topstack;
 
 /****************************************************************************
  * Public Function Prototypes
