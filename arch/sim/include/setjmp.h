@@ -38,7 +38,7 @@
 #if defined(CONFIG_HOST_X86_64) && !defined(CONFIG_SIM_M32)
   /* Storage order: %rbx, %rsp, %rbp, %r12, %r13, %r14, %r15, %rip */
 
-#  define XCPTCONTEXT_REGS    10
+#  define XCPTCONTEXT_REGS    11
 #  define XCPTCONTEXT_SIZE    (8 * XCPTCONTEXT_REGS)
 
 #  ifdef __ASSEMBLY__
@@ -53,6 +53,7 @@
 #    define JB_RIP            (7*8)
 #    define JB_FLAG           (8*8)
 #    define JB_ERRNO          (9*8)
+#    define JB_ALIGN0         (10*8)
 
 #  else
 
@@ -66,6 +67,7 @@
 #    define JB_RIP            (7)
 #    define JB_FLAG           (8)
 #    define JB_ERRNO          (9)
+#    define JB_ALIGN0         (10)
 
 #  endif /* __ASSEMBLY__ */
 
