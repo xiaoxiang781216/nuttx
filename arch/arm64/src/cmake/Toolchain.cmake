@@ -18,30 +18,34 @@
 #
 # ##############################################################################
 
+set(OPTION_MARCH_FEATURE)
+
+if(CONFIG_ARCH_HAVE_AE)
+  set(OPTION_MARCH_FEATURE ae)
+endif()
+
 if(CONFIG_ARCH_ARMV8A)
   add_compile_options(-march=armv8-a)
-  # Default to cortex-a53 if no specific CPU is selected
-  set(LLVM_CPUTYPE cortex-a53)
 elseif(CONFIG_ARCH_ARMV8R)
-  # Default to cortex-r82 if no specific CPU is selected
-  set(LLVM_CPUTYPE cortex-r82)
   if(CONFIG_ARCH_FPU)
     add_compile_options(-march=armv8-r)
   else()
     add_compile_options(-march=armv8-r+nofp)
   endif()
-elseif(CONFIG_ARCH_CORTEX_A53)
-  set(LLVM_CPUTYPE cortex-a53)
-  add_compile_options(-mcpu=cortex-a53)
+endif()
+
+if(CONFIG_ARCH_CORTEX_A53)
+  set(LLVM_CPUTYPE cortex-a53${OPTION_MARCH_FEATURE})
+  add_compile_options(-mcpu=cortex-a53${OPTION_MARCH_FEATURE})
 elseif(CONFIG_ARCH_CORTEX_A57)
-  set(LLVM_CPUTYPE cortex-a57)
-  add_compile_options(-mcpu=cortex-a57)
+  set(LLVM_CPUTYPE cortex-a57${OPTION_MARCH_FEATURE})
+  add_compile_options(-mcpu=cortex-a57${OPTION_MARCH_FEATURE})
 elseif(CONFIG_ARCH_CORTEX_A72)
-  set(LLVM_CPUTYPE cortex-a72)
-  add_compile_options(-mcpu=cortex-a72)
+  set(LLVM_CPUTYPE cortex-a72${OPTION_MARCH_FEATURE})
+  add_compile_options(-mcpu=cortex-a72${OPTION_MARCH_FEATURE})
 elseif(CONFIG_ARCH_CORTEX_R82)
-  set(LLVM_CPUTYPE cortex-r82)
-  add_compile_options(-mcpu=cortex-r82)
+  set(LLVM_CPUTYPE cortex-r82${OPTION_MARCH_FEATURE})
+  add_compile_options(-mcpu=cortex-r82${OPTION_MARCH_FEATURE})
 endif()
 
 # include the toolchain specific cmake file
