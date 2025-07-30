@@ -30,6 +30,8 @@
 #include <nuttx/config.h>
 #include <nuttx/atomic.h>
 
+#include <alloca.h>
+
 #ifdef CONFIG_RPMSG
 
 #include <nuttx/fs/ioctl.h>
@@ -50,6 +52,11 @@
 #define RPMSGIOC_RELEASE_WAKELOCK   _RPMSGIOC(7)
 
 #define RPMSG_SIGNAL_RUNNING        TIOCM_CD
+
+#if CONFIG_RPMSG_POOL_COUNT <= 0
+#  define rpmsg_pool_alloc(size)    alloca(size)
+#  define rpmsg_pool_free(addr)
+#endif
 
 /****************************************************************************
  * Public Types
@@ -138,6 +145,11 @@ static inline_function bool rpmsg_is_running(FAR struct rpmsg_device *rdev)
 {
   return rpmsg_get_signals(rdev) & RPMSG_SIGNAL_RUNNING;
 }
+
+#if CONFIG_RPMSG_POOL_COUNT > 0
+FAR void *rpmsg_pool_alloc(size_t size);
+void rpmsg_pool_free(FAR void *addr);
+#endif
 
 int rpmsg_register_callback(FAR void *priv,
                             rpmsg_dev_cb_t device_created,
