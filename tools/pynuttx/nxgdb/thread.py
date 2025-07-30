@@ -543,7 +543,7 @@ class Ps(gdb.Command):
             "TCB_FLAG_TTYPE_PTHREAD"
         ):
             entry = tcb["entry"]["main"]
-            ptcb = tcb.cast(self.get_cached_type("pthread_tcb_s_ptr"))
+            ptcb = tcb.cast(utils.lookup_type("struct pthread_entry_s").pointer())
             arg = ptcb["arg"]
             cmd = f"{name} {hex(entry)} {hex(arg)}"
         elif pid < utils.get_ncpus():
