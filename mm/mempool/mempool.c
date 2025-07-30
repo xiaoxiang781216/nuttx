@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <assert.h>
+#include <debug.h>
 #include <execinfo.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -415,6 +416,13 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout)
 
 retry:
   flags = spin_lock_irqsave(&pool->lock);
+  if (pool->maxalloc > 0 && pool->nalloc >= pool->maxalloc)
+    {
+      spin_unlock_irqrestore(&pool->lock, flags);
+      merr("ERROR: mempool_allocate: maxalloc=%zu\n", pool->maxalloc);
+      return NULL;
+    }
+
   bypass = kasan_bypass(true);
 
   blk = mempool_remove_queue(pool, &pool->queue);
@@ -605,6 +613,7 @@ int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
   info->aordblks = pool->nalloc;
   info->arena = sq_count(&pool->equeue) * MEMPOOL_HEADER_SIZE +
     (info->aordblks + info->ordblks + info->iordblks) * blocksize;
+  info->maxalloc = pool->maxalloc;
   kasan_bypass(bypass);
   spin_unlock_irqrestore(&pool->lock, flags);
   info->sizeblks = blocksize;
