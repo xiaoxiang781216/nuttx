@@ -32,13 +32,16 @@ if(MERGE_LD)
         "Please check Toolchain file , Make sure CMAKE_LD is set correctly")
   endif()
 
-  get_filename_component(LD_SCRIPT_NAME ${MERGE_LD} NAME)
-  set(LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/${LD_SCRIPT_NAME}.tmp")
+  if(NOT CONFIG_ARCH_TOOLCHAIN_TASKING)
+    get_filename_component(LD_SCRIPT_NAME ${MERGE_LD} NAME)
+    set(LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/${LD_SCRIPT_NAME}.tmp")
 
-  nuttx_generate_preprocess_target(SOURCE_FILE ${MERGE_LD} TARGET_FILE
-                                   ${LD_SCRIPT_TMP})
-
-  add_custom_target(merge_ldscript_tmp DEPENDS ${LD_SCRIPT_TMP})
+    nuttx_generate_preprocess_target(SOURCE_FILE ${MERGE_LD} TARGET_FILE
+                                     ${LD_SCRIPT_TMP})
+    add_custom_target(merge_ldscript_tmp DEPENDS ${LD_SCRIPT_TMP})
+  else()
+    add_custom_target(merge_ldscript_tmp DEPENDS ${MERGE_LD})
+  endif()
 
   get_property(MERGE_LINK_OPTIONS GLOBAL PROPERTY PROTECTED_MERGE_LINK_OPTIONS)
   # are we using linker or compiler?
