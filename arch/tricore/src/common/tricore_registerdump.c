@@ -100,11 +100,11 @@ void tricore_dump_csachain(uintptr_t pcxi)
     {
       if (pcxi & PCXI_UL)
         {
-          tricore_dump_upcsa(tricore_csa2addr(pcxi));
+          tricore_dump_upcsa((uint32_t *)tricore_csa2addr(pcxi));
         }
       else
         {
-          tricore_dump_lowcsa(tricore_csa2addr(pcxi));
+          tricore_dump_lowcsa((uint32_t *)tricore_csa2addr(pcxi));
         }
 
         pcxi = tricore_csa2addr(pcxi)[0];
