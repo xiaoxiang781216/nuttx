@@ -468,11 +468,12 @@ mempool_multiple_init(FAR const char *name,
       pools[i].blocksize = poolsize[i];
       pools[i].expandsize = expandsize - mpool->minpoolsize;
       pools[i].priv = mpool;
+      pools[i].name = name;
       pools[i].alloc = mempool_multiple_alloc_callback;
       pools[i].free = mempool_multiple_free_callback;
       pools[i].check = mempool_multiple_check;
 
-      ret = mempool_init(pools + i, name);
+      ret = mempool_init(pools + i);
       if (ret < 0)
         {
           goto err_with_pools;

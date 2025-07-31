@@ -308,14 +308,13 @@ mempool_memdump_free_callback(FAR struct mempool_s *pool,
  *
  * Input Parameters:
  *   pool - Address of the memory pool to be used.
- *   name - The name of memory pool.
  *
  * Returned Value:
  *   Zero on success; A negated errno value is returned on any failure.
  *
  ****************************************************************************/
 
-int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
+int mempool_init(FAR struct mempool_s *pool)
 {
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
 
@@ -375,7 +374,7 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
     }
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
-  mempool_procfs_register(&pool->procfs, name);
+  mempool_procfs_register(&pool->procfs, pool->name);
 #  ifdef CONFIG_MM_RECORD_STACK_DEFAULT
   pool->procfs.backtrace = true;
 #  elif defined(CONFIG_MM_RECORD_STACK)
