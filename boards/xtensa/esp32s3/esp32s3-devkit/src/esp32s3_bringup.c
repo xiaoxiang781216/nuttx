@@ -38,8 +38,6 @@
 #include <stdio.h>
 
 #include <errno.h>
-#include <nuttx/drivers/rpmsgblk.h>
-#include <nuttx/drivers/rpmsgdev.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/himem/himem.h>
 #include <arch/board/board.h>
@@ -132,81 +130,15 @@
 #  include "espressif/esp_temperature_sensor.h"
 #endif
 
-#ifdef CONFIG_ESP32S3_IOEXPANDER
-#  include "esp32s3_ioexpander.h"
-#endif
-
-#ifdef CONFIG_RPMSG_PORT
-#  include <nuttx/rpmsg/rpmsg_port.h>
-#endif
-
-#include <nuttx/serial/uart_rpmsg.h>
-
 #include "esp32s3-devkit.h"
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-#ifdef CONFIG_RPMSG_PORT_SPI_SLAVE
-
-static void rpmsg_port_spi_slave_init(void)
-{
-  const struct rpmsg_port_config_s rpmsg_port_cfg =
-    {
-      .txnum = 8,
-      .rxnum = 8,
-      .txlen = 1024,
-      .rxlen = 1024,
-      .txbuf = NULL,
-      .rxbuf = NULL,
-      .remotecpu = "remote",
-    };
-
-  const struct rpmsg_port_spi_config_s spicfg =
-    {
-      .mreq_pin = 2,
-      .mreq_invert = IOEXPANDER_VAL_NORMAL,
-      .sreq_pin = 1,
-      .sreq_invert = IOEXPANDER_VAL_NORMAL,
-      .nbits = 8,
-      .mode = SPISLAVE_MODE0,
-    };
-
-  FAR struct spi_slave_ctrlr_s *ctrlr =
-    esp32s3_spislave_ctrlr_initialize(ESP32S3_SPI2);
-  FAR struct ioexpander_dev_s *ioe = esp32s3_ioexpander_initialize();
-  int ret;
-
-  if (ioe == NULL || ctrlr == NULL)
-    {
-      syslog(LOG_ERR, "invaild ioe: %p ctrlr :%p\n", ioe, ctrlr);
-      return;
-    }
-
-  ret = rpmsg_port_spi_slave_initialize(&rpmsg_port_cfg, &spicfg,
-                                        ctrlr, ioe);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "Failed to init rpmsg port spi slave\n");
-    }
-  else
-    {
-      syslog(LOG_ERR, "init rpmsg port spi slave success\n");
-    }
-}
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-#ifdef CONFIG_RPMSG_UART
-void rpmsg_serialinit(void)
-{
-  uart_rpmsg_init("remote", "remote", 4096, true);
-}
-#endif
 
 /****************************************************************************
  * Name: esp32s3_bringup
@@ -303,20 +235,7 @@ int esp32s3_bringup(void)
 #endif
 
 #if defined(CONFIG_ESP32S3_SPI) && defined(CONFIG_RPMSG_PORT_SPI_SLAVE)
-  rpmsg_port_spi_slave_init();
-#endif
-
-#ifdef CONFIG_DEV_RPMSG
-  rpmsgdev_register("remote", "/dev/console", "/dev/remote-console");
-  rpmsgdev_register("remote", "/dev/null", "/dev/remote-null");
-#endif
-
-#ifdef CONFIG_BLK_RPMSG
-  rpmsgblk_register("remote", "/dev/ram2", NULL);
-#endif
-
-#ifdef CONFIG_RPMSGMTD
-  rpmsgmtd_register("remote", "/dev/rammtd", NULL);
+  esp32s3_rpmsg_initialize();
 #endif
 
 #if defined(CONFIG_ESP32S3_EFUSE)

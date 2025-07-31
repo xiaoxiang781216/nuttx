@@ -275,5 +275,24 @@ int esp32s3_lan9250_uninitialize(int port);
 int esp_openeth_initialize(void);
 #endif
 
+/****************************************************************************
+ * Name: esp32s3_rpmsg_initialize
+ *
+ * Description:
+ *   This function is called by platform-specific setup logic to initialize
+ *   the rpmsg relative function.
+ *
+ * Input Parameters:
+ *   NULL.
+ *
+ * Returned Value:
+ *   NULL.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_RPMSG
+void esp32s3_rpmsg_initialize(void);
+#endif
+
 #endif /* __ASSEMBLY__ */
 #endif /* __BOARDS_XTENSA_ESP32S3_ESP32S3_DEVKIT_SRC_ESP32S3_DEVKIT_H */
