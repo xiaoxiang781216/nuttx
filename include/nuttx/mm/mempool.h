@@ -42,14 +42,14 @@
  ****************************************************************************/
 
 #ifdef CONFIG_MM_RECORD
-#  define MEMPOOL_REALBLOCKSIZE(pool) (ALIGN_UP((pool)->blocksize + \
-                                       sizeof(struct mempool_record_s), \
-                                       MM_ALIGN))
-#  define MEMPOOL_RECORD_SIZE         (ALIGN_UP( \
-                                       sizeof(struct mempool_record_s), \
-                                       MM_ALIGN))
+#  define MEMPOOL_REALBLOCKSIZE(s) (ALIGN_UP((s) + \
+                                    sizeof(struct mempool_record_s), \
+                                    MM_ALIGN))
+#  define MEMPOOL_RECORD_SIZE      (ALIGN_UP( \
+                                    sizeof(struct mempool_record_s), \
+                                    MM_ALIGN))
 #else
-#  define MEMPOOL_REALBLOCKSIZE(pool) ((pool)->blocksize)
+#  define MEMPOOL_REALBLOCKSIZE(s) (s)
 #endif
 
 /****************************************************************************
