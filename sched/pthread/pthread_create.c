@@ -255,7 +255,8 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
     {
       /* Allocate the stack for the TCB */
 
-      ret = up_create_stack(ptcb, attr->stacksize, TCB_FLAG_TTYPE_PTHREAD);
+      ret = up_create_stack(ptcb, attr->stacksize + attr->guardsize,
+                            TCB_FLAG_TTYPE_PTHREAD);
     }
 
   if (ret != OK)
