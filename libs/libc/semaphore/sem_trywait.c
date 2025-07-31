@@ -107,7 +107,6 @@ int sem_trywait(FAR sem_t *sem)
 
 int nxsem_trywait(FAR sem_t *sem)
 {
-  bool fastpath = true;
   bool mutex;
 
   /* This API should not be called from the idleloop or interrupt */
@@ -125,7 +124,7 @@ int nxsem_trywait(FAR sem_t *sem)
 #ifdef CONFIG_PRIORITY_PROTECT
   if ((sem->flags & SEM_PRIO_MASK) == SEM_PRIO_PROTECT)
     {
-      fastpath = false;
+      return nxsem_trywait_slow(sem);
     }
 #endif
 
@@ -134,11 +133,11 @@ int nxsem_trywait(FAR sem_t *sem)
 #ifdef CONFIG_PRIORITY_INHERITANCE
   if (!mutex && (sem->flags & SEM_PRIO_MASK) != SEM_PRIO_NONE)
     {
-      fastpath = false;
+      return nxsem_trywait_slow(sem);
     }
 #endif
 
-  while (fastpath)
+  for (; ; )
     {
       FAR atomic_t *val = mutex ? NXSEM_MHOLDER(sem) : NXSEM_COUNT(sem);
       int32_t old = atomic_read(val);
@@ -168,6 +167,4 @@ int nxsem_trywait(FAR sem_t *sem)
           return OK;
         }
     }
-
-  return nxsem_trywait_slow(sem);
 }
