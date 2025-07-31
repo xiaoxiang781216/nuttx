@@ -1593,7 +1593,14 @@ static void spislave_unbind(struct spi_slave_ctrlr_s *ctrlr)
 
   resetbits(priv->config->clk_bit, SYSTEM_PERIP_CLK_EN0_REG);
 
+  spislave_deinitialize(ctrlr);
   priv->dev = NULL;
+  if (priv->need_copy)
+    {
+      kmm_free(priv->tx_buffer);
+      priv->rx_buffer = NULL;
+      priv->need_copy = false;
+    }
 
   spin_unlock_irqrestore(&priv->lock, flags);
 }
