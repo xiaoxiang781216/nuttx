@@ -57,6 +57,7 @@
 #endif
 
 #if defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)
+#  undef up_coherent_dcache
 #  define up_coherent_dcache(start,size)
 #endif
 
