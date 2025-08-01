@@ -977,16 +977,19 @@ static int lrofs_readdir(FAR struct inode *mountpt,
       goto errout_with_lock;
     }
 
+  /* ln_child in dir may have been updated */
+
+  if (ln->ln_child != ldir->firstnode || ldir->count != ln->ln_count)
+    {
+      ldir->firstnode = ln->ln_child;
+      ldir->currnode = ldir->firstnode;
+      ldir->count = ln->ln_count;
+    }
+
   /* Loop, skipping over unsupported items in the file system */
 
   for (; ; )
     {
-      if (ldir->count != ln->ln_count)
-        {
-          ldir->currnode = ldir->firstnode;
-          ldir->count = ln->ln_count;
-        }
-
       /* Have we reached the end of the directory */
 
       if (!ln->ln_count || !ldir->currnode || !(*ldir->currnode))
@@ -1601,7 +1604,6 @@ static int lrofs_rename(FAR struct inode *mountpt,
   FAR struct lrofs_nodeinfo_s *ln_new;
   FAR struct lrofs_nodeinfo_s *ln_newpath;
   FAR struct lrofs_mountpt_s *lm;
-  FAR char *newpath;
   FAR char *newname;
   int ret;
 
@@ -1643,9 +1645,10 @@ static int lrofs_rename(FAR struct inode *mountpt,
 
   if (ln_new == NULL)
     {
+      FAR char *newpath = fs_heap_strdup(newrelpath);
       FAR struct lrofs_nodeinfo_s *ln_oldpath = ln_old->ln_parent;
-      newname = basename((FAR char *)newrelpath);
-      newpath = dirname((FAR char *)newrelpath);
+      newname = basename(newpath);
+      newpath = dirname(newpath);
       if (strcmp(newpath, ".") == 0)
         {
           ln_newpath = lm->lm_root;
@@ -1657,6 +1660,7 @@ static int lrofs_rename(FAR struct inode *mountpt,
             {
               finfo("Failed to find new path: %d\n", ret);
               ret = -ENOENT;
+              fs_heap_free(newpath);
               goto errout_with_lock;
             }
 
@@ -1671,6 +1675,8 @@ static int lrofs_rename(FAR struct inode *mountpt,
               ln_newpath = ln_new;
             }
         }
+
+        fs_heap_free(newpath);
     }
   else
     {
