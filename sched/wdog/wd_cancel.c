@@ -39,85 +39,76 @@
 #include "wdog/wdog.h"
 
 /****************************************************************************
- * Public Functions
+ * Inline Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: wd_cancel
+ * Name: wd_cancel_running
  *
  * Description:
- *   This function cancels a currently running watchdog timer. Watchdog
- *   timers may be canceled from the interrupt level.
+ *   This function cancels a currently inactive watchdog timer.
+ *   Note that the inactive watchdog timer callback may be running.
  *
  * Input Parameters:
  *   wdog - ID of the watchdog to cancel.
  *
  * Returned Value:
- *   Zero (OK) is returned on success;  A negated errno value is returned to
- *   indicate the nature of any failure.
+ *   true  - the watchdog callback is running.
+ *   false - the watchdog is already inactive.
  *
  ****************************************************************************/
 
-int wd_cancel(FAR struct wdog_s *wdog)
+static inline_function
+bool wd_cancel_running(FAR struct wdog_s *wdog)
 {
-  irqstate_t flags;
-  bool head;
+  int  cpu;
+  bool running = false;
 
-  if (wdog == NULL)
+  DEBUGASSERT(wdog != NULL);
+
+  /* Check if any core has marked the wdog via hazard-pointer. */
+
+  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
     {
-      return -EINVAL;
-    }
-
-  flags = spin_lock_irqsave(&g_wdspinlock);
-
-  /* Make sure that the watchdog is valid and still active. */
-
-  if (!WDOG_ISACTIVE(wdog))
-    {
-      int cpu;
-
-      /* Check if any core has marked the wdog via hazard-pointer. */
-
-      for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+      if (WDOG_GETRUNNING(cpu) == wdog)
         {
-          if (WDOG_GETRUNNING(cpu) == wdog)
-            {
-              /* Calling wd_cancel(wdog) in the wdog expiration callback
-               * to cancel the wdog itself can lead to circular-wait,
-               * which is not allowed.
-               */
-
-              DEBUGASSERT(cpu != this_cpu());
-
-              /* Mark canceling state to block the remote thread
-               * restarting the wdog.
-               */
-
-              WDOG_SETCANCELING(wdog, cpu);
-              break;
-            }
-        }
-
-      spin_unlock_irqrestore(&g_wdspinlock, flags);
-
-      /* Wait until the wdog callback is finished and the hazard-pointer
-       * is released. So the thread is safe to use the wdog data-structure.
-       */
-
-      if (cpu != CONFIG_SMP_NCPUS)
-        {
-          /* Since the callback is only called in the interrupt context,
-           * spin-waiting should be enough.
+          /* Calling wd_cancel(wdog) in the wdog expiration callback
+           * to cancel the wdog itself can lead to circular-wait,
+           * which is not allowed.
            */
 
-          while (WDOG_GETRUNNING(cpu) == wdog)
-            {
-              /* CPU Relaxing. */
-            }
-        }
+          DEBUGASSERT(cpu != this_cpu());
 
-      return -EINVAL;
+          /* Mark canceling state to block the remote thread
+           * restarting the wdog.
+           */
+
+          WDOG_SETCANCELING(wdog, cpu);
+
+          running = true;
+        }
     }
+
+  return running;
+}
+
+/****************************************************************************
+ * Name: wd_cancel_active
+ *
+ * Description:
+ *   This function cancels a currently active watchdog timer.
+ *
+ * Input Parameters:
+ *   wdog - ID of the watchdog to cancel.
+ *
+ * Returned Value:
+ *   If the head of the watchdog list has changed.
+ *
+ ****************************************************************************/
+
+static inline_function bool wd_cancel_active(FAR struct wdog_s *wdog)
+{
+  bool head;
 
   sched_note_wdog(NOTE_WDOG_CANCEL, (FAR void *)wdog->func,
                   (FAR void *)(uintptr_t)wdog->expired);
@@ -135,6 +126,58 @@ int wd_cancel(FAR struct wdog_s *wdog)
   /* Mark the watchdog inactive */
 
   wdog->func = NULL;
+
+  return head;
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: wd_try_cancel
+ *
+ * Description:
+ *   This function set wdog to canceling state. This will prevent the wdog
+ *   from restarting. However, this function can not ensure wdog ownership
+ *   acquired after calling. Remote thread can still hold the reference
+ *   to the wdog. It means this function CAN NOT PROVIDE MEMORY-SAFETY.
+ *
+ * Input Parameters:
+ *   wdog - ID of the watchdog to cancel.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returned to
+ *   indicate the nature of any failure.
+ *   -EINVAL is returned if wdog is NULL or inactive.
+ *   -EBUSY is returned if the wdog callback is running.
+ *
+ ****************************************************************************/
+
+int wd_try_cancel(FAR struct wdog_s *wdog)
+{
+  irqstate_t flags;
+  int        ret     = -EINVAL;
+  bool       head    = false;
+  bool       running = false;
+
+  if (wdog == NULL)
+    {
+      return ret;
+    }
+
+  flags = spin_lock_irqsave(&g_wdspinlock);
+
+  /* Make sure that the watchdog is valid and still active. */
+
+  if (WDOG_ISACTIVE(wdog))
+    {
+      head = wd_cancel_active(wdog);
+      ret  = OK;
+    }
+
+  running = wd_cancel_running(wdog);
+
   spin_unlock_irqrestore(&g_wdspinlock, flags);
 
   if (head)
@@ -147,5 +190,60 @@ int wd_cancel(FAR struct wdog_s *wdog)
       nxsched_reassess_timer();
     }
 
-  return 0;
+  /* If the wdog callback is running. */
+
+  return running ? -EBUSY : ret;
+}
+
+/****************************************************************************
+ * Name: wd_cancel
+ *
+ * Description:
+ *   This function cancels a currently running watchdog timer. Watchdog
+ *   timers may be canceled from the interrupt level. This function ensure
+ *   the watchdog timer ownership acquired. So users can free or reuse the
+ *   wdog data-structure.
+ *
+ * Input Parameters:
+ *   wdog - ID of the watchdog to cancel.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success;  A negated errno value is returned to
+ *   indicate the nature of any failure.
+ *   -EINVAL is returned if wdog is NULL or inactive.
+ *
+ ****************************************************************************/
+
+int wd_cancel(FAR struct wdog_s *wdog)
+{
+  int cpu;
+  int ret = wd_try_cancel(wdog);
+
+  if (ret != -EBUSY)
+    {
+      return ret;
+    }
+
+  /* Wait for ALL references to the wdog being released. */
+
+  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+    {
+      /* Since the callback is only called in the interrupt context,
+       * spin-waiting should be enough.
+       */
+
+      while (WDOG_GETRUNNING(cpu) == wdog)
+        {
+          /* CPU Relaxing. */
+
+          /* If other threads call wd_start in non-interrupt context to
+           * restart this wdog, it will lead to canceling failure.
+           * This is an ownership violation issue that should be prohibited.
+           */
+
+          DEBUGASSERT(!WDOG_ISACTIVE(wdog));
+        }
+    }
+
+  return OK;
 }

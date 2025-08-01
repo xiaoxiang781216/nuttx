@@ -348,7 +348,9 @@ int wd_start_next(FAR struct wdog_s *wdog, clock_t delay,
  *
  * Description:
  *   This function cancels a currently running watchdog timer. Watchdog
- *   timers may be cancelled from the interrupt level.
+ *   timers may be canceled from the interrupt level. This function ensure
+ *   the watchdog timer ownership acquired. So users can free or reuse the
+ *   wdog data-structure.
  *
  * Input Parameters:
  *   wdog - ID of the watchdog to cancel.
@@ -356,10 +358,33 @@ int wd_start_next(FAR struct wdog_s *wdog, clock_t delay,
  * Returned Value:
  *   Zero (OK) is returned on success;  A negated errno value is returned to
  *   indicate the nature of any failure.
+ *   -EINVAL is returned if wdog is NULL or inactive.
  *
  ****************************************************************************/
 
 int wd_cancel(FAR struct wdog_s *wdog);
+
+/****************************************************************************
+ * Name: wd_try_cancel
+ *
+ * Description:
+ *   This function set wdog to canceling state. This will prevent the wdog
+ *   from restarting. However, this function can not ensure wdog ownership
+ *   acquired after calling. Remote thread can still hold the reference
+ *   to the wdog. It means this function CAN NOT PROVIDE MEMORY-SAFETY.
+ *
+ * Input Parameters:
+ *   wdog - ID of the watchdog to cancel.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returned to
+ *   indicate the nature of any failure.
+ *   -EINVAL is returned if wdog is NULL or inactive.
+ *   -EBUSY is returned if the wdog callback is running.
+ *
+ ****************************************************************************/
+
+int wd_try_cancel(FAR struct wdog_s *wdog);
 
 /****************************************************************************
  * Name: wd_gettime
