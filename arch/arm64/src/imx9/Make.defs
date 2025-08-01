@@ -26,13 +26,12 @@ endif
 
 # i.MX9-specific C source files
 
-CHIP_CSRCS  = imx9_boot.c
+CHIP_CSRCS  = imx9_boot.c 
+CHIP_CSRCS += imx9_clockconfig.c imx9_iomuxc.c imx9_lpuart.c imx9_lowputc.c
 
 ifeq ($(CONFIG_ARCH_CHIP_IMX93),y)
-CHIP_CSRCS  += imx9_ccm.c imx9_gpio.c imx9_iomuxc.c
+CHIP_CSRCS  += imx9_ccm.c imx9_gpio.c
 endif
-
-CHIP_CSRCS += imx9_lpuart.c imx9_lowputc.c imx9_clockconfig.c
 
 ifeq ($(CONFIG_IMX9_GPIO_IRQ),y)
   CHIP_CSRCS += imx9_gpioirq.c

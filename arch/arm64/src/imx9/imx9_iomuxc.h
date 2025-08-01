@@ -82,6 +82,7 @@ struct iomux_cfg_s
   uint32_t pad;
   uint32_t mux;
 };
+
 typedef struct iomux_cfg_s iomux_cfg_t;
 
 /****************************************************************************
