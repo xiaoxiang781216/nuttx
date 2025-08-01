@@ -355,7 +355,7 @@ void binder_dec_node(FAR struct binder_node *node, int strong, int internal)
 
 static void binder_inc_node_tmpref(FAR struct binder_node *node)
 {
-  FAR struct binder_proc *proc = node->proc;
+  FAR struct binder_proc *proc;
 
   if (node == NULL)
     {
@@ -364,6 +364,7 @@ static void binder_inc_node_tmpref(FAR struct binder_node *node)
       return;
     }
 
+  proc = node->proc;
   binder_node_lock(node);
   if (proc != NULL)
     {
