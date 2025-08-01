@@ -63,13 +63,59 @@ int wd_cancel(FAR struct wdog_s *wdog)
   irqstate_t flags;
   bool head;
 
+  if (wdog == NULL)
+    {
+      return -EINVAL;
+    }
+
   flags = spin_lock_irqsave(&g_wdspinlock);
 
   /* Make sure that the watchdog is valid and still active. */
 
-  if (wdog == NULL || !WDOG_ISACTIVE(wdog))
+  if (!WDOG_ISACTIVE(wdog))
     {
+      int cpu;
+
+      /* Check if any core has marked the wdog via hazard-pointer. */
+
+      for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+        {
+          if (WDOG_GETRUNNING(cpu) == wdog)
+            {
+              /* Calling wd_cancel(wdog) in the wdog expiration callback
+               * to cancel the wdog itself can lead to circular-wait,
+               * which is not allowed.
+               */
+
+              DEBUGASSERT(cpu != this_cpu());
+
+              /* Mark canceling state to block the remote thread
+               * restarting the wdog.
+               */
+
+              WDOG_SETCANCELING(wdog, cpu);
+              break;
+            }
+        }
+
       spin_unlock_irqrestore(&g_wdspinlock, flags);
+
+      /* Wait until the wdog callback is finished and the hazard-pointer
+       * is released. So the thread is safe to use the wdog data-structure.
+       */
+
+      if (cpu != CONFIG_SMP_NCPUS)
+        {
+          /* Since the callback is only called in the interrupt context,
+           * spin-waiting should be enough.
+           */
+
+          while (WDOG_GETRUNNING(cpu) == wdog)
+            {
+              /* CPU Relaxing. */
+            }
+        }
+
       return -EINVAL;
     }
 
