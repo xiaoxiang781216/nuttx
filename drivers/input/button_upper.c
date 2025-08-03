@@ -47,6 +47,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/input/buttons.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/mutex.h>
 #include <nuttx/irq.h>
 
 /****************************************************************************
@@ -63,7 +64,8 @@ struct btn_upperhalf_s
 
   btn_buttonset_t bu_sample; /* Last sampled button states */
   bool bu_enabled;
-  rspinlock_t lock;          /* Lock for this button driver */
+  spinlock_t lock;           /* Spinlock for this button driver */
+  mutex_t mutex;             /* Mutex for this button driver */
 
   /* The following is a singly linked list of open references to the
    * button device.
@@ -164,12 +166,13 @@ static void btn_enable(FAR struct btn_upperhalf_s *priv)
 
   DEBUGASSERT(priv && priv->bu_lower);
   lower = priv->bu_lower;
+  DEBUGASSERT(lower->bl_enable);
 
   /* This routine is called both task level and interrupt level, so
    * interrupts must be disabled.
    */
 
-  flags = rspin_lock_irqsave_nopreempt(&priv->lock);
+  flags = spin_lock_irqsave(&priv->lock);
 
   /* Visit each opened reference to the device */
 
@@ -189,9 +192,12 @@ static void btn_enable(FAR struct btn_upperhalf_s *priv)
       release |= opriv->bo_notify.bn_release;
     }
 
+  spin_unlock_irqrestore(&priv->lock, flags);
+
+  nxmutex_lock(&priv->mutex);
+
   /* Enable/disable button interrupts */
 
-  DEBUGASSERT(lower->bl_enable);
   if (press != 0 || release != 0)
     {
       /* Update last sampled button states when enabling interrupts for
@@ -218,7 +224,7 @@ static void btn_enable(FAR struct btn_upperhalf_s *priv)
       lower->bl_enable(lower, 0, 0, NULL, NULL);
     }
 
-  rspin_unlock_irqrestore_nopreempt(&priv->lock, flags);
+    nxmutex_unlock(&priv->mutex);
 }
 
 /****************************************************************************
@@ -255,6 +261,7 @@ static void btn_sample(wdparm_t arg)
   btn_buttonset_t change;
   btn_buttonset_t press;
   btn_buttonset_t release;
+  irqstate_t flags;
 
   priv = (FAR struct btn_upperhalf_s *)arg;
   DEBUGASSERT(priv && priv->bu_lower);
@@ -270,6 +277,8 @@ static void btn_sample(wdparm_t arg)
   /* Determine which buttons have been newly pressed and which have been
    * newly released.
    */
+
+  flags = spin_lock_irqsave_nopreempt(&priv->lock);
 
   change = sample ^ priv->bu_sample;
   press  = change & sample;
@@ -310,6 +319,7 @@ static void btn_sample(wdparm_t arg)
     }
 
   priv->bu_sample = sample;
+  spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -343,8 +353,6 @@ static int btn_open(FAR struct file *filep)
   lower = priv->bu_lower;
   DEBUGASSERT(lower && lower->bl_supported);
 
-  flags = rspin_lock_irqsave_nopreempt(&priv->lock);
-
   supported = lower->bl_supported(lower);
   opriv->bo_pollevents.bp_press   = supported;
   opriv->bo_pollevents.bp_release = supported;
@@ -352,8 +360,12 @@ static int btn_open(FAR struct file *filep)
 
   /* Attach the open structure to the device */
 
+  flags = spin_lock_irqsave(&priv->lock);
+
   opriv->bo_flink = priv->bu_open;
   priv->bu_open = opriv;
+
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   /* Attach the open structure to the file structure */
 
@@ -363,7 +375,6 @@ static int btn_open(FAR struct file *filep)
 
   btn_enable(priv);
 
-  rspin_unlock_irqrestore_nopreempt(&priv->lock, flags);
   return OK;
 }
 
@@ -388,13 +399,13 @@ static int btn_close(FAR struct file *filep)
 
   /* Get exclusive access to the driver structure */
 
-  flags = rspin_lock_irqsave_nopreempt(&priv->lock);
-
 #if CONFIG_INPUT_BUTTONS_DEBOUNCE_DELAY
   wd_cancel(&priv->bu_wdog);
 #endif
 
   /* Find the open structure in the list of open structures for the device */
+
+  flags = spin_lock_irqsave(&priv->lock);
 
   for (prev = NULL, curr = priv->bu_open;
        curr && curr != opriv;
@@ -403,8 +414,8 @@ static int btn_close(FAR struct file *filep)
   DEBUGASSERT(curr);
   if (!curr)
     {
+      spin_unlock_irqrestore(&priv->lock, flags);
       ierr("ERROR: Failed to find open entry\n");
-      rspin_unlock_irqrestore_nopreempt(&priv->lock, flags);
       return -ENOENT;
     }
 
@@ -419,11 +430,11 @@ static int btn_close(FAR struct file *filep)
       priv->bu_open = opriv->bo_flink;
     }
 
+  spin_unlock_irqrestore(&priv->lock, flags);
+
   /* Enable/disable interrupt handling */
 
   btn_enable(priv);
-
-  rspin_unlock_irqrestore_nopreempt(&priv->lock, flags);
 
   /* Cancel any pending notification */
 
@@ -467,16 +478,19 @@ static ssize_t btn_read(FAR struct file *filep, FAR char *buffer,
 
   /* Get exclusive access to the driver structure */
 
-  flags = rspin_lock_irqsave_nopreempt(&priv->lock);
+  nxmutex_lock(&priv->mutex);
 
   /* Read and return the current state of the buttons */
 
   lower = priv->bu_lower;
   DEBUGASSERT(lower && lower->bl_buttons);
   *(FAR btn_buttonset_t *)buffer = lower->bl_buttons(lower);
-  opriv->bo_pending = false;
 
-  rspin_unlock_irqrestore_nopreempt(&priv->lock, flags);
+  flags = spin_lock_irqsave(&priv->lock);
+  opriv->bo_pending = false;
+  spin_unlock_irqrestore(&priv->lock, flags);
+
+  nxmutex_unlock(&priv->mutex);
   return (ssize_t)sizeof(btn_buttonset_t);
 }
 
@@ -490,7 +504,6 @@ static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
   FAR struct inode *inode;
   FAR struct btn_upperhalf_s *priv;
   FAR const struct btn_lowerhalf_s *lower;
-  irqstate_t flags;
   int ret;
 
   inode = filep->f_inode;
@@ -511,7 +524,7 @@ static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Get exclusive access to the driver structure */
 
-  flags = rspin_lock_irqsave_nopreempt(&priv->lock);
+  nxmutex_lock(&priv->mutex);
 
   /* Write the current state of the buttons */
 
@@ -526,7 +539,7 @@ static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
       ret = -ENOSYS;
     }
 
-  rspin_unlock_irqrestore_nopreempt(&priv->lock, flags);
+  nxmutex_unlock(&priv->mutex);
   return (ssize_t)ret;
 }
 
@@ -548,10 +561,6 @@ static int btn_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
   priv  = inode->i_private;
-
-  /* Get exclusive access to the driver structure */
-
-  flags = rspin_lock_irqsave_nopreempt(&priv->lock);
 
   /* Handle the ioctl command */
 
@@ -602,8 +611,12 @@ static int btn_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           {
             /* Save the poll events */
 
+            flags = spin_lock_irqsave(&priv->lock);
+
             opriv->bo_pollevents.bp_press   = pollevents->bp_press;
             opriv->bo_pollevents.bp_release = pollevents->bp_release;
+
+            spin_unlock_irqrestore(&priv->lock, flags);
 
             /* Enable/disable interrupt handling */
 
@@ -633,10 +646,14 @@ static int btn_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           {
             /* Save the notification events */
 
+            flags = spin_lock_irqsave(&priv->lock);
+
             opriv->bo_notify.bn_press   = notify->bn_press;
             opriv->bo_notify.bn_release = notify->bn_release;
             opriv->bo_notify.bn_event   = notify->bn_event;
             opriv->bo_pid               = nxsched_getpid();
+
+            spin_unlock_irqrestore(&priv->lock, flags);
 
             /* Enable/disable interrupt handling */
 
@@ -652,7 +669,6 @@ static int btn_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       break;
     }
 
-  rspin_unlock_irqrestore_nopreempt(&priv->lock, flags);
   return ret;
 }
 
@@ -678,7 +694,7 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   /* Get exclusive access to the driver structure */
 
-  flags = rspin_lock_irqsave_nopreempt(&priv->lock);
+  flags = spin_lock_irqsave_nopreempt(&priv->lock);
 
   /* Are we setting up the poll?  Or tearing it down? */
 
@@ -712,6 +728,7 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       if (i >= CONFIG_INPUT_BUTTONS_NPOLLWAITERS)
         {
+          spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
           ierr("ERROR: Too many poll waiters\n");
           fds->priv = NULL;
           ret       = -EBUSY;
@@ -727,6 +744,7 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
 #ifdef CONFIG_DEBUG_FEATURES
       if (!slot)
         {
+          spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
           ierr("ERROR: Poll slot not found\n");
           ret = -EIO;
           goto errout;
@@ -739,10 +757,11 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
       fds->priv = NULL;
     }
 
+  spin_unlock_irqrestore_nopreempt(&priv->lock, flags);
+
   btn_enable(priv);
 
 errout:
-  rspin_unlock_irqrestore_nopreempt(&priv->lock, flags);
   return ret;
 }
 
@@ -788,6 +807,9 @@ int btn_register(FAR const char *devname,
       return -ENOMEM;
     }
 
+  spin_lock_init(&priv->lock);
+  nxmutex_init(&priv->mutex);
+
   /* Make sure that all button interrupts are disabled */
 
   DEBUGASSERT(lower->bl_enable);
@@ -800,10 +822,10 @@ int btn_register(FAR const char *devname,
   /* And register the button driver */
 
   ret = register_driver(devname, &g_btn_fops, 0666, priv);
-  rspin_lock_init(&priv->lock);
   if (ret < 0)
     {
       ierr("ERROR: register_driver failed: %d\n", ret);
+      nxmutex_destroy(&priv->mutex);
       kmm_free(priv);
     }
 
