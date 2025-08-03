@@ -65,6 +65,7 @@
 #include <nuttx/drivers/optee.h>
 #include <nuttx/audio/audio_fake.h>
 #include <nuttx/usb/usbhost.h>
+#include <nuttx/audio/audio_rpmsg.h>
 
 #ifdef CONFIG_DRIVERS_BINDER
 #  include <nuttx/android/binder.h>
@@ -356,6 +357,10 @@ void drivers_initialize(void)
 
 #ifdef CONFIG_PTP_CLOCK_DUMMY
   ptp_clock_dummy_initialize(0);
+#endif
+
+#ifdef CONFIG_AUDIO_RPMSG
+  audio_rpmsg_initialize();
 #endif
 
   drivers_trace_end();
