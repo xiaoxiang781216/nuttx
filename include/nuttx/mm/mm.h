@@ -131,8 +131,10 @@
 #endif
 
 #ifdef CONFIG_MM_KERNEL_HEAP
-#  define MM_INTERNAL_HEAP(heap) ((heap) == USR_HEAP || (heap) == g_kmmheap)
+#  define KNR_HEAP               g_kmmheap
+#  define MM_INTERNAL_HEAP(heap) ((heap) == USR_HEAP || (heap) == KNR_HEAP)
 #else
+#  define KNR_HEAP               USR_HEAP
 #  define MM_INTERNAL_HEAP(heap) ((heap) == USR_HEAP)
 #endif
 
