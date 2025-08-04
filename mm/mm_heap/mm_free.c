@@ -42,7 +42,8 @@
  * Private Functions
  ****************************************************************************/
 
-static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
+static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
+                          bool asan_check)
 {
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   FAR struct mm_delaynode_s *tmp = mem;
@@ -54,19 +55,34 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
   flags = mm_lock_irq(heap);
   bypass = kasan_bypass(true);
 
-#  ifdef CONFIG_DEBUG_ASSERTIONS
-  FAR struct mm_freenode_s *node;
-
-  node = (FAR struct mm_freenode_s *)((FAR char *)mem - MM_SIZEOF_ALLOCNODE);
-  DEBUGASSERT(MM_NODE_IS_ALLOC(node));
+#ifdef CONFIG_DEBUG_ASSERTIONS
+#  ifdef CONFIG_MM_HEAP_MEMPOOL
+  if (!heap->mm_mpool || !mempool_multiple_member(heap->mm_mpool, mem))
 #  endif
+    {
+      FAR struct mm_freenode_s *node;
+      node = (FAR struct mm_freenode_s *)((FAR char *)mem -
+             MM_SIZEOF_ALLOCNODE);
+      DEBUGASSERT(MM_NODE_IS_ALLOC(node));
+    }
+#endif
 
   tmp->flink = heap->mm_delaylist[this_cpu()];
   heap->mm_delaylist[this_cpu()] = tmp;
 
-#  if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
+#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
   heap->mm_delaycount[this_cpu()]++;
-#  endif
+#endif
+
+  if (asan_check)
+    {
+      size_t size = mm_malloc_size(heap, mem);
+#ifdef CONFIG_MM_FILL_ALLOCATIONS
+      memset(mem, MM_FREE_MAGIC, size);
+#endif
+      UNUSED(size);
+      kasan_poison(mem, size);
+    }
 
   kasan_bypass(bypass);
   mm_unlock_irq(heap, flags);
@@ -78,14 +94,14 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: mm_delayfree
+ * Name: mm_forcefree
  *
  * Description:
- *   Delay free memory if `delay` is true, otherwise free it immediately.
+ *   Heap mem relase, add to chunk.
  *
  ****************************************************************************/
 
-void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
+void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 {
   FAR struct mm_freenode_s *node;
   FAR struct mm_freenode_s *prev;
@@ -94,50 +110,28 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
   size_t prevsize;
   bool bypass;
 
-  if (mm_lock(heap) < 0)
-    {
-      /* Meet -ESRCH return, which means we are in situations
-       * during context switching(See mm_lock() & gettid()).
-       * Then add to the delay list.
-       */
+  /* Free mempool blk first */
 
-      add_delaylist(heap, mem);
+#ifdef CONFIG_MM_HEAP_MEMPOOL
+  if (heap->mm_mpool && mempool_multiple_free(heap->mm_mpool, mem) >= 0)
+    {
       return;
-    }
-
-  bypass = kasan_bypass(true);
-  nodesize = mm_malloc_size(heap, mem);
-#ifdef CONFIG_MM_FILL_ALLOCATIONS
-#  if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  /* If delay free is enabled, a memory node will be freed twice.
-   * The first time is to add the node to the delay list, and the second
-   * time is to actually free the node. Therefore, we only colorize the
-   * memory node the first time, when `delay` is set to true.
-   */
-
-  if (delay)
-#  endif
-    {
-      memset(mem, MM_FREE_MAGIC, nodesize);
     }
 #endif
 
+  mm_lock(heap);
+  bypass = kasan_bypass(true);
+  nodesize = mm_malloc_size(heap, mem);
+#ifdef CONFIG_MM_FILL_ALLOCATIONS
+  memset(mem, MM_FREE_MAGIC, nodesize);
+#endif
   kasan_poison(mem, nodesize);
-
-  if (delay)
-    {
-      kasan_bypass(bypass);
-      mm_unlock(heap);
-      add_delaylist(heap, mem);
-      return;
-    }
 
   /* Map the memory chunk into a free node */
 
   node = (FAR struct mm_freenode_s *)
          ((FAR char *)kasan_clear_tag(mem) - MM_SIZEOF_ALLOCNODE);
   nodesize = MM_SIZEOF_NODE(node);
-
 #ifdef CONFIG_MM_RECORD_STACK
   backtrace_remove(node->stack);
 #endif
@@ -145,7 +139,6 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
   /* Sanity check against double-frees */
 
   DEBUGASSERT(MM_NODE_IS_ALLOC(node));
-
   node->size &= ~MM_ALLOC_BIT;
 
   /* Update heap statistics */
@@ -228,9 +221,31 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
   /* Add the merged node to the nodelist */
 
   mm_addfreechunk(heap, node);
-
   kasan_bypass(bypass);
   mm_unlock(heap);
+}
+
+/****************************************************************************
+ * Name: mm_delayfree
+ *
+ * Description:
+ *   Add mem to delaylist, mem will be freed after a while.
+ *
+ ****************************************************************************/
+
+void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem)
+{
+  minfo("Adding delaylist %p\n", mem);
+
+  /* Protect against attempts to free a NULL reference */
+
+  if (mem == NULL)
+    {
+      return;
+    }
+
+  DEBUGASSERT(mm_heapmember(heap, mem));
+  add_delaylist(heap, mem, false);
 }
 
 /****************************************************************************
@@ -255,15 +270,10 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
 
   DEBUGASSERT(mm_heapmember(heap, mem));
 
-#ifdef CONFIG_MM_HEAP_MEMPOOL
-  if (heap->mm_mpool)
-    {
-      if (mempool_multiple_free(heap->mm_mpool, mem) >= 0)
-        {
-          return;
-        }
-    }
-#endif
+#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
+  add_delaylist(heap, mem, true);
+#else
 
-  mm_delayfree(heap, mem, CONFIG_MM_FREE_DELAYCOUNT_MAX > 0);
+  mm_forcefree(heap, mem);
+#endif
 }

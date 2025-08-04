@@ -82,6 +82,7 @@ extern "C"
 #define kumm_realloc(p,s)        realloc(p,s)
 #define kumm_memalign(a,s)       memalign(a,s)
 #define kumm_free(p)             free(p)
+#define kumm_delayfree(p)        umm_delayfree(p)
 #define kumm_mallinfo()          mallinfo()
 
 /* This family of allocators is used to manage kernel protected memory */
@@ -102,6 +103,7 @@ extern "C"
 #  define kmm_realloc(p,s)       kumm_realloc(p,s)
 #  define kmm_memalign(a,s)      kumm_memalign(a,s)
 #  define kmm_free(p)            kumm_free(p)
+#  define kmm_delayfree(p)       kumm_delayfree(p)
 #  define kmm_mallinfo()         kumm_mallinfo()
 #  define kmm_heapmember(p)      kumm_umm_heapmember(p)
 #  define kmm_memdump(p)         kumm_umm_memdump(p)
@@ -141,6 +143,7 @@ FAR void *group_zalloc(FAR struct task_group_s *group, size_t nbytes);
 /* Functions defined in group/group_free.c **********************************/
 
 void group_free(FAR struct task_group_s *group, FAR void *mem);
+void group_delayfree(FAR struct task_group_s *group, FAR void *mem);
 
 /* Functions defined in group/group_memalign.c ******************************/
 
@@ -155,6 +158,7 @@ FAR void *group_memalign(FAR struct task_group_s *group, size_t alignment,
 #  define group_realloc(g,p,s)   kumm_realloc((p),(s))
 #  define group_zalloc(g,n)      kumm_zalloc(n)
 #  define group_free(g,m)        kumm_free(m)
+#  define group_delayfree(g,m)   kumm_delayfree(m)
 #  define group_memalign(g,a,n)  kumm_memalign(a,n)
 #endif
 
