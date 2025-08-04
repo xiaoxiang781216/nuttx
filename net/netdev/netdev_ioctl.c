@@ -766,6 +766,7 @@ static ssize_t net_ioctl_ifreq_arglen(uint8_t domain, int cmd)
       case SIOCGMIIPHY:
       case SIOCGMIIREG:
       case SIOCSMIIREG:
+      case SIOCDEVPRIVATE ... SIOCDEVPRIVATE + 15:
       case SIOCGCANBITRATE:
       case SIOCSCANBITRATE:
       case SIOCACANEXTFILTER:
@@ -1256,6 +1257,20 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
               &req->ifr_ifru.ifru_can_data;
             ret = dev->d_ioctl(dev, cmd,
                           (unsigned long)(uintptr_t)can_bitrate_data);
+          }
+        else
+          {
+            ret = -ENOSYS;
+          }
+        break;
+#endif
+
+#if defined(CONFIG_NETDEV_IOCTL) && defined(CONFIG_NETDEV_DEVPRIVATE_IOCTL)
+      case SIOCDEVPRIVATE ... SIOCDEVPRIVATE + 15:  /* Private ioctl */
+        if (dev->d_ioctl)
+          {
+            FAR void *data = req->ifr_ifru.ifru_data;
+            ret = dev->d_ioctl(dev, cmd, (unsigned long)(uintptr_t)data);
           }
         else
           {

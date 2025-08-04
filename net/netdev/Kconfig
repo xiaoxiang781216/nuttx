@@ -58,6 +58,14 @@ config NETDEV_MODEM_LTE_IOCTL
 	---help---
 		Enable support for modem device ioctl() commands
 
+config NETDEV_DEVPRIVATE_IOCTL
+	bool "Enable DEVPRIVATE ioctl()"
+	default n
+	select NETDEV_IOCTL
+	---help---
+		Enable support for DEVPRIVATE ioctl() commands for private
+		driver extensions.
+
 config NETDEV_IFINDEX
 	bool "Enable IF index support"
 	default n

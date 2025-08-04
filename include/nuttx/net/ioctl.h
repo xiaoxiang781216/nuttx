@@ -162,6 +162,20 @@
 #define SIOCGIFVLAN        _SIOC(0x0043)  /* Get VLAN interface */
 #define SIOCSIFVLAN        _SIOC(0x0044)  /* Set VLAN interface */
 
+/* Device private ioctl calls ***********************************************/
+
+/* These 16 ioctls are available to devices via the do_ioctl() device
+ * vector. Each device should include this file and redefine these names
+ * as their own. Because these are device dependent it is a good idea
+ * _NOT_ to issue them to random objects and hope.
+ */
+
+#define SIOCDEVPRIVATE      _SIOC(0x00F0)  /* Start of device-private ioctl */
+
+/* End of device-private ioctl */
+
+#define SIOCDEVPRIVATE_END  (SIOCDEVPRIVATE + 15)
+
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
