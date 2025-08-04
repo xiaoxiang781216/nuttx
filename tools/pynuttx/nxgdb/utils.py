@@ -353,6 +353,14 @@ def get_type_field(obj: Union[TypeOrStr, gdb.Value], field: str) -> gdb.Field:
         if f.name == field:
             return f
 
+        # Check anonymous(f.name is None) fields of struct and union recursively
+        if f.name is None and f.type.code in (
+            gdb.TYPE_CODE_STRUCT,
+            gdb.TYPE_CODE_UNION,
+        ):
+            if f := get_type_field(f.type, field):
+                return f
+
 
 def get_field_nitems(t: TypeOrStr, field: str) -> Union[int, None]:
     """Return the array length of a field in type, or None if no such field"""
