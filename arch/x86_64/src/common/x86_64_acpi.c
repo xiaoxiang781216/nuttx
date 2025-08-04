@@ -548,11 +548,11 @@ ssize_t acpi_table_get(const char *name, void **data)
   else if (strncmp(name, ACPI_SIG_DSDT, 4) == 0)
     {
       dsdt = (struct acpi_sdt_s *)(uintptr_t)acpi->facp->dsdt;
-      acpi_map_region((uintptr_t)dsdt, sizeof(struct acpi_sdt_s));
-      acpi_map_region((uintptr_t)dsdt + sizeof(struct acpi_sdt_s),
-                      dsdt->length - sizeof(struct acpi_sdt_s));
       if (data != NULL && dsdt)
         {
+          acpi_map_region((uintptr_t)dsdt, sizeof(struct acpi_sdt_s));
+          acpi_map_region((uintptr_t)dsdt + sizeof(struct acpi_sdt_s),
+                          dsdt->length - sizeof(struct acpi_sdt_s));
           *data = kmm_zalloc(dsdt->length);
           if (!*data)
             {
