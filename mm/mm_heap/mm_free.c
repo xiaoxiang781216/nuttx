@@ -249,6 +249,29 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem)
 }
 
 /****************************************************************************
+ * Name: mm_delayfree
+ *
+ * Description:
+ *   Add mem to delaylist, mem will be freed after a while.
+ *
+ ****************************************************************************/
+
+void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem)
+{
+  minfo("Adding delaylist %p\n", mem);
+
+  /* Protect against attempts to free a NULL reference */
+
+  if (mem == NULL)
+    {
+      return;
+    }
+
+  DEBUGASSERT(mm_heapmember(heap, mem));
+  add_delaylist(heap, mem, false);
+}
+
+/****************************************************************************
  * Name: mm_free
  *
  * Description:
