@@ -120,9 +120,11 @@ struct rpmsg_socket_conn_s
 
   /* server listen-scoket listening: backlog > 0;
    * others: backlog = 0;
+   * pending is current number of pending connections;
    */
 
   int                            backlog;
+  int                            pending;
 
   /* The remote connection's credentials */
 
@@ -352,23 +354,9 @@ static int rpmsg_socket_ept_cb(FAR struct rpmsg_endpoint *ept,
       if (conn->server)
         {
           FAR struct rpmsg_socket_conn_s *tmp;
-          int cnt = 0;
 
           nxmutex_lock(&conn->server->recvlock);
-          for (tmp = conn->server; tmp->next; tmp = tmp->next)
-            {
-              if (++cnt >= conn->server->backlog)
-                {
-                  /* Reject the connection */
-
-                  nerr("Reject the connection, listening backlog is full\n");
-                  nxmutex_unlock(&conn->server->recvlock);
-                  rpmsg_destroy_ept(&conn->ept);
-                  rpmsg_socket_free(conn);
-                  return 0;
-                }
-            }
-
+          for (tmp = conn->server; tmp->next; tmp = tmp->next);
           tmp->next = conn;
           rpmsg_socket_post(&conn->server->recvsem);
           rpmsg_socket_poll_notify(conn->server, POLLIN);
@@ -627,6 +615,21 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
       return;
     }
 
+  nxmutex_lock(&server->recvlock);
+  if (server->pending >= server->backlog)
+    {
+      /* Reject the connection */
+
+      nerr("Reject the connection, Max listen %d\n", server->backlog);
+      nxmutex_unlock(&server->recvlock);
+      rpmsg_destroy_ept(&new->ept);
+      rpmsg_socket_free(new);
+      return;
+    }
+
+  server->pending++;
+  nxmutex_unlock(&server->recvlock);
+
   ret = rpmsg_set_priority(&new->ept, server->priority);
   if (ret < 0)
     {
@@ -865,6 +868,7 @@ static int rpmsg_socket_accept(FAR struct socket *psock,
           conn = server->next;
           server->next = conn->next;
           conn->next = NULL;
+          server->pending--;
         }
 
       nxmutex_unlock(&server->recvlock);
