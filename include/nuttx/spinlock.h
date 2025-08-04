@@ -583,10 +583,10 @@ irqstate_t spin_lock_irqsave(FAR volatile spinlock_t *lock)
 
 #define spin_lock_irqsave_nopreempt(lock) \
   ({ \
-    irqstate_t flags; \
-    flags = spin_lock_irqsave(lock); \
+    irqstate_t _flags; \
+    _flags = spin_lock_irqsave(lock); \
     sched_lock(); \
-    flags; \
+    _flags; \
   })
 
 /****************************************************************************
@@ -706,10 +706,10 @@ irqstate_t rspin_lock_irqsave(FAR rspinlock_t *lock)
 
 #define rspin_lock_irqsave_nopreempt(lock) \
   ({ \
-    irqstate_t flags; \
-    flags = rspin_lock_irqsave(lock); \
+    irqstate_t _flags; \
+    _flags = rspin_lock_irqsave(lock); \
     sched_lock(); \
-    flags; \
+    _flags; \
   })
 
 /****************************************************************************
