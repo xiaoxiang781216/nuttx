@@ -245,7 +245,9 @@ int nxsem_post_slow(FAR sem_t *sem)
         }
       else if (proto == SEM_PRIO_PROTECT)
         {
+#ifdef CONFIG_PRIORITY_PROTECT
           nxsem_protect_post(sem);
+#endif
         }
 
       sched_unlock();
