@@ -627,7 +627,7 @@ static off_t lrofs_seek(FAR struct file *filep, off_t offset, int whence)
 
 errout_with_lock:
   nxrmutex_unlock(&lm->lm_lock);
-  return ret;
+  return ret < 0 ? ret : position;
 }
 
 /****************************************************************************
