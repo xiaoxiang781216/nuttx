@@ -34,14 +34,13 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/mm/kasan.h>
 #include <nuttx/mm/mempool.h>
+#include <nuttx/mutex.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/sched.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#define MEMPOOL_HEADER_SIZE (sizeof(sq_entry_t) + CONFIG_MM_NODE_GUARDSIZE)
 
 #ifdef CONFIG_MM_RECORD
 #define MEMPOOL_MAGIC_FREE  0x55555555
@@ -55,6 +54,12 @@ typedef void (*mempool_callback_t)(FAR struct mempool_s *pool,
                                    FAR struct mempool_record_s *record,
                                    FAR const void *input, FAR void *output);
 #endif
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static mutex_t g_mempool_init_lock = NXMUTEX_INITIALIZER;
 
 /****************************************************************************
  * Private Functions
@@ -297,6 +302,47 @@ mempool_memdump_free_callback(FAR struct mempool_s *pool,
 #endif
 
 /****************************************************************************
+ * Name: mempool_alloc_callback
+ *
+ * Description:
+ *   The static mempool alloc callback function.
+ *
+ ****************************************************************************/
+
+static FAR void *mempool_alloc_callback(FAR struct mempool_s *pool,
+                                        size_t size)
+{
+  return mm_malloc(pool->priv, size);
+}
+
+/****************************************************************************
+ * Name: mempool_free_callback
+ *
+ * Description:
+ *   The static mempool free callback function.
+ *
+ ****************************************************************************/
+
+static void mempool_free_callback(FAR struct mempool_s *pool, FAR void *addr)
+{
+  mm_free(pool->priv, addr);
+}
+
+/****************************************************************************
+ * Name: mempool_check_callback
+ *
+ * Description:
+ *   The static mempool check callback function.
+ *
+ ****************************************************************************/
+
+static void mempool_check_callback(FAR struct mempool_s *pool,
+                                   FAR void *addr)
+{
+  DEBUGASSERT(mm_heapmember(pool->priv, addr));
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -307,6 +353,12 @@ mempool_memdump_free_callback(FAR struct mempool_s *pool,
  *   Initialize a memory pool.
  *   The user needs to specify the initialization information of mempool
  *   including blocksize, initialsize, expandsize, interruptsize.
+ *   This function is also used to auto init the mempool if user do not
+ *   call the mempool_init() explictly.
+ *   And if user do not specified the `priv`, `alloc`, `free` and `check`
+ *   elements, mempool_init() will use a default dynamic expand method
+ *   (expand memory from USER_HEAP/KNR_HEAP) and MEMPOOL_DEFINE defined
+ *   mempool will use this method too.
  *
  * Input Parameters:
  *   pool - Address of the memory pool to be used.
@@ -320,6 +372,33 @@ int mempool_init(FAR struct mempool_s *pool)
 {
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
 
+  if (pool->init)
+    {
+      return OK;
+    }
+
+  nxmutex_lock(&g_mempool_init_lock);
+  if (pool->init)
+    {
+      nxmutex_unlock(&g_mempool_init_lock);
+      return OK;
+    }
+
+  if (pool->priv == NULL && pool->alloc == NULL &&
+      pool->free == NULL && pool->check == NULL)
+    {
+      /* Default dynamic expand feature */
+
+#ifdef __KERNEL__
+      pool->priv = KNR_HEAP;
+#else
+      pool->priv = USR_HEAP;
+#endif
+      pool->alloc = mempool_alloc_callback;
+      pool->free  = mempool_free_callback;
+      pool->check = mempool_check_callback;
+    }
+
   sq_init(&pool->queue);
   sq_init(&pool->iqueue);
   sq_init(&pool->equeue);
@@ -332,6 +411,7 @@ int mempool_init(FAR struct mempool_s *pool)
       pool->ibase = pool->alloc(pool, size);
       if (pool->ibase == NULL)
         {
+          nxmutex_unlock(&g_mempool_init_lock);
           return -ENOMEM;
         }
 
@@ -361,6 +441,7 @@ int mempool_init(FAR struct mempool_s *pool)
                   pool->free(pool, pool->ibase);
                 }
 
+              nxmutex_unlock(&g_mempool_init_lock);
               return -ENOMEM;
             }
 
@@ -392,6 +473,8 @@ int mempool_init(FAR struct mempool_s *pool)
 #  endif
 #endif
 
+  pool->init = true;
+  nxmutex_unlock(&g_mempool_init_lock);
   return 0;
 }
 
@@ -422,6 +505,8 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout)
   FAR sq_entry_t *blk;
   irqstate_t flags;
   bool bypass;
+
+  mempool_init(pool);
 
 retry:
   flags = spin_lock_irqsave(&pool->lock);
@@ -612,6 +697,7 @@ size_t mempool_navail(FAR struct mempool_s *pool)
   size_t ret;
 
   DEBUGASSERT(pool != NULL);
+  mempool_init(pool);
 
   flags = spin_lock_irqsave(&pool->lock);
   if (pool->maxalloc == 0)
@@ -647,6 +733,7 @@ int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
   bool bypass;
 
   DEBUGASSERT(pool != NULL && info != NULL);
+  mempool_init(pool);
 
   flags = spin_lock_irqsave(&pool->lock);
   bypass = kasan_bypass(true);
@@ -689,6 +776,8 @@ mempool_info_task(FAR struct mempool_s *pool,
     {
       0, 0
     };
+
+  mempool_init(pool);
 
   if (task->pid == PID_MM_FREE)
     {
@@ -746,6 +835,8 @@ mempool_info_task(FAR struct mempool_s *pool,
 void mempool_memdump(FAR struct mempool_s *pool,
                      FAR const struct mm_memdump_s *dump)
 {
+  mempool_init(pool);
+
 #ifdef CONFIG_MM_RECORD
   if (dump->pid == PID_MM_FREE)
     {
