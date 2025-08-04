@@ -1220,11 +1220,19 @@ int audio_fake_register(FAR const audio_fake_params_t *params,
   for (i = 0; i < nparams; i++)
     {
       priv = (FAR struct audio_fake_s *)kmm_zalloc(sizeof(*priv));
-      param = (audio_fake_params_t *)kmm_zalloc(sizeof(*param));
-      if (!priv || !param)
+      if (!priv)
         {
-          auderr("ERROR: Failed to allocate fake audio device\n");
+          auderr("ERROR: Failed to allocate fake audio priv\n");
           ret = -ENOMEM;
+          continue;
+        }
+
+      param = (FAR audio_fake_params_t *)kmm_zalloc(sizeof(*param));
+      if (!param)
+        {
+          auderr("ERROR: Failed to allocate fake audio params\n");
+          ret = -ENOMEM;
+          kmm_free(priv);
           continue;
         }
 
