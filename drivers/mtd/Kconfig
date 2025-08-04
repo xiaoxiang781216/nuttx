@@ -224,6 +224,26 @@ config MTD_CONFIG_CACHE_SIZE
 		Number of entries in Non-volatile Storage lookup cache.
 		It is recommended that it be a power of 2.
 
+choice
+	prompt "Non-volatile Storage lookup cache mode"
+	depends on MTD_CONFIG_CACHE_SIZE > 0
+	default MTD_CONFIG_FULL_CACHE
+
+config MTD_CONFIG_HASH_TABLE
+	bool "hash table"
+	---help---
+		If the cache size is large enough, it is recommended
+		to choose hash table mode.
+
+config MTD_CONFIG_FULL_CACHE
+	bool "full cache"
+	---help---
+		If the cache size is small or the all KV quantities is
+		smaller than the cache size, it is recommended to
+		choose full cache mode.
+
+endchoice # Non-volatile Storage lookup cache size
+
 config MTD_CONFIG_AUTOFORMAT
 	bool "ZMS Autoformat"
 	default n

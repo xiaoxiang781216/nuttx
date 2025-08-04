@@ -81,6 +81,14 @@
 
 /* Non-volatile Storage File system structure */
 
+struct zms_cache
+{
+#ifdef CONFIG_MTD_CONFIG_FULL_CACHE
+  uint32_t id;
+#endif
+  uint64_t addr;
+};
+
 struct zms_fs
 {
   FAR struct mtd_dev_s *mtd;           /* MTD device */
@@ -97,7 +105,10 @@ struct zms_fs
   uint64_t              data_wra;      /* Next data write address */
   mutex_t               zms_lock;
 #if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
-  uint64_t              cache[CONFIG_MTD_CONFIG_CACHE_SIZE];
+  struct zms_cache      cache[CONFIG_MTD_CONFIG_CACHE_SIZE];
+#endif
+#ifdef CONFIG_MTD_CONFIG_FULL_CACHE
+  bool                  cache_partial;
 #endif
 };
 
@@ -156,34 +167,116 @@ static const struct file_operations g_mtdconfig_fops =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: zms_cache_index
+ * Name: zms_compare_cache
  ****************************************************************************/
 
-#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
-static inline size_t zms_cache_index(uint32_t id)
+#ifdef CONFIG_MTD_CONFIG_FULL_CACHE
+static int zms_compare_cache(FAR const void *a, FAR const void *b)
 {
-  return id % CONFIG_MTD_CONFIG_CACHE_SIZE;
+  FAR const struct zms_cache *cache_a = (FAR const struct zms_cache *)a;
+  FAR const struct zms_cache *cache_b = (FAR const struct zms_cache *)b;
+
+  return (cache_a->id > cache_b->id) ? 1 :
+         (cache_a->id < cache_b->id) ? -1 : 0;
 }
+#endif
 
 /****************************************************************************
  * Name: zms_invalid_cache
  ****************************************************************************/
 
-static void zms_invalid_cache(struct zms_fs *fs, uint32_t block)
+#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+static void zms_invalid_cache(FAR struct zms_fs *fs, uint32_t block)
 {
-  FAR uint64_t *cache_entry = fs->cache;
-  FAR const uint64_t *cache_end =
-                     &fs->cache[CONFIG_MTD_CONFIG_CACHE_SIZE];
+  FAR struct zms_cache *cache_entry = fs->cache;
+  FAR const struct zms_cache *cache_end =
+                              &fs->cache[CONFIG_MTD_CONFIG_CACHE_SIZE];
 
   for (; cache_entry < cache_end; ++cache_entry)
     {
-      if ((*cache_entry >> ZMS_ADDR_BLOCK_SHIFT) == block)
+      if (cache_entry->addr >> ZMS_ADDR_BLOCK_SHIFT == block)
         {
-          *cache_entry = ZMS_CACHE_NO_ADDR;
+          memset(cache_entry, 0xff, sizeof(struct zms_cache));
         }
     }
+
+#  ifdef CONFIG_MTD_CONFIG_FULL_CACHE
+  qsort(fs->cache, CONFIG_MTD_CONFIG_CACHE_SIZE, sizeof(struct zms_cache),
+        zms_compare_cache);
+#  endif
 }
-#endif /* CONFIG_MTD_CONFIG_CACHE_SIZE */
+
+/****************************************************************************
+ * Name: zms_lookup_cache
+ ****************************************************************************/
+
+static FAR struct zms_cache *zms_lookup_cache(FAR struct zms_fs *fs,
+                                              uint32_t id)
+{
+#  if defined(CONFIG_MTD_CONFIG_HASH_TABLE)
+  return &fs->cache[id % CONFIG_MTD_CONFIG_CACHE_SIZE];
+#  elif defined(CONFIG_MTD_CONFIG_FULL_CACHE)
+  struct zms_cache cache_tmp;
+
+  cache_tmp.id = id;
+  return (FAR struct zms_cache *)bsearch(&cache_tmp, fs->cache,
+                                         CONFIG_MTD_CONFIG_CACHE_SIZE,
+                                         sizeof(struct zms_cache),
+                                         zms_compare_cache);
+#  endif
+}
+
+/****************************************************************************
+ * Name: zms_lookup_addr
+ ****************************************************************************/
+
+static uint64_t zms_lookup_addr(FAR struct zms_fs *fs, uint32_t id)
+{
+  FAR struct zms_cache *cache_entry = zms_lookup_cache(fs, id);
+#  if defined(CONFIG_MTD_CONFIG_HASH_TABLE)
+  return cache_entry->addr;
+#  elif defined(CONFIG_MTD_CONFIG_FULL_CACHE)
+  if (cache_entry != NULL)
+    {
+      return cache_entry->addr;
+    }
+  else if (fs->cache_partial)
+    {
+      return fs->ate_wra;
+    }
+  else
+    {
+      return ZMS_CACHE_NO_ADDR;
+    }
+#  endif
+}
+
+/****************************************************************************
+ * Name: zms_search_cache
+ ****************************************************************************/
+
+static FAR struct zms_cache *zms_search_cache(FAR struct zms_fs *fs,
+                                              uint32_t id)
+{
+#  if defined(CONFIG_MTD_CONFIG_HASH_TABLE)
+  return &fs->cache[id % CONFIG_MTD_CONFIG_CACHE_SIZE];
+#  elif defined(CONFIG_MTD_CONFIG_FULL_CACHE)
+  FAR struct zms_cache *cache_entry = fs->cache;
+  FAR const struct zms_cache *cache_end =
+                             &fs->cache[CONFIG_MTD_CONFIG_CACHE_SIZE];
+
+  for (; cache_entry < cache_end; ++cache_entry)
+    {
+      if (cache_entry->id == id)
+        {
+          return cache_entry;
+        }
+    }
+
+  return NULL;
+#  endif
+}
+#endif
 
 /****************************************************************************
  * Name: zms_fnv_hash
@@ -423,11 +516,34 @@ static inline int zms_flash_ate_wrt(FAR struct zms_fs *fs,
   size_t ate_size = zms_ate_size(fs);
   int rc;
 #if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+  FAR struct zms_cache *cache_entry;
+
   /* 0xFFFFFFFF is a special-purpose identifier. Exclude it from the cache */
 
   if (entry->id != zms_special_ate_id(fs))
     {
-      fs->cache[zms_cache_index(entry->id)] = fs->ate_wra;
+      cache_entry = zms_lookup_cache(fs, entry->id);
+      if (cache_entry != NULL)
+        {
+          cache_entry->addr = fs->ate_wra;
+        }
+#  ifdef CONFIG_MTD_CONFIG_FULL_CACHE
+      else
+        {
+          cache_entry = &fs->cache[CONFIG_MTD_CONFIG_CACHE_SIZE - 1];
+          if (cache_entry->id == ZMS_INVALID_BLOCK)
+            {
+              cache_entry->addr = fs->ate_wra;
+              cache_entry->id = entry->id;
+              qsort(fs->cache, CONFIG_MTD_CONFIG_CACHE_SIZE,
+                    sizeof(struct zms_cache), zms_compare_cache);
+            }
+          else
+            {
+              fs->cache_partial = true;
+            }
+        }
+#  endif
     }
 #endif
 
@@ -1419,10 +1535,10 @@ static int zms_add_empty_ate(FAR struct zms_fs *fs, uint64_t addr)
 static int zms_rebuild_cache(FAR struct zms_fs *fs)
 {
   uint32_t prev_block = ZMS_INVALID_BLOCK;
+  FAR struct zms_cache *cache_entry;
   ZMS_ATE(ate, zms_ate_size(fs));
   uint64_t addr = fs->ate_wra;
   uint8_t cycle_cnt = 0;
-  FAR uint64_t *cache_entry;
   uint32_t count = 0;
   uint64_t ate_addr;
   int rc;
@@ -1438,10 +1554,9 @@ static int zms_rebuild_cache(FAR struct zms_fs *fs)
           return rc;
         }
 
-      cache_entry = &fs->cache[zms_cache_index(ate->id)];
-
       if (ate->id != zms_special_ate_id(fs) &&
-          *cache_entry == ZMS_CACHE_NO_ADDR)
+          (!(cache_entry = zms_search_cache(fs, ate->id)) ||
+           cache_entry->addr == ZMS_CACHE_NO_ADDR))
         {
           rc = zms_get_cycle_on_block_change(fs, ate_addr, prev_block,
                                              &cycle_cnt);
@@ -1452,11 +1567,23 @@ static int zms_rebuild_cache(FAR struct zms_fs *fs)
 
           if (zms_ate_valid_different_block(fs, ate, cycle_cnt))
             {
-              *cache_entry = ate_addr;
+#  ifdef CONFIG_MTD_CONFIG_FULL_CACHE
+              cache_entry = &fs->cache[count];
+              if (count++ == CONFIG_MTD_CONFIG_CACHE_SIZE)
+                {
+                  fs->cache_partial = true;
+                  break;
+                }
+
+              cache_entry->id = ate->id;
+#  endif
+              cache_entry->addr = ate_addr;
+#  ifdef CONFIG_MTD_CONFIG_HASH_TABLE
               if (++count == CONFIG_MTD_CONFIG_CACHE_SIZE)
                 {
                   break;
                 }
+#  endif
             }
 
           prev_block = ate_addr >> ZMS_ADDR_BLOCK_SHIFT;
@@ -1464,6 +1591,10 @@ static int zms_rebuild_cache(FAR struct zms_fs *fs)
     }
   while (addr != fs->ate_wra);
 
+#  ifdef CONFIG_MTD_CONFIG_FULL_CACHE
+  qsort(fs->cache, CONFIG_MTD_CONFIG_CACHE_SIZE, sizeof(struct zms_cache),
+        zms_compare_cache);
+#  endif
   return 0;
 }
 #endif /* CONFIG_MTD_CONFIG_CACHE_SIZE */
@@ -1677,7 +1808,7 @@ static int zms_gc(FAR struct zms_fs *fs)
         }
 
 #if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
-      wlk_addr = fs->cache[zms_cache_index(gc_ate->id)];
+      wlk_addr = zms_lookup_addr(fs, gc_ate->id);
       if (wlk_addr == ZMS_CACHE_NO_ADDR)
 #endif
         {
@@ -1770,6 +1901,10 @@ static int zms_clear(FAR struct zms_fs *fs)
             }
         }
     }
+
+#if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
+  memset(fs->cache, 0xff, sizeof(fs->cache));
+#endif
 
   return 0;
 }
@@ -2055,16 +2190,7 @@ static int zms_init(FAR struct zms_fs *fs)
           fs->ate_wra += (fs->blocksize - 3 * ate_size);
           fs->data_wra = (fs->ate_wra & ZMS_ADDR_BLOCK_MASK);
 #if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
-
-          /* At this point, the lookup cache wasn't built but the gc function
-           * need to use it. So, temporarily, we set the lookup cache to the
-           * end of the fs. The cache will be rebuilt afterwards
-           */
-
-          for (i = 0; i < CONFIG_MTD_CONFIG_CACHE_SIZE; i++)
-            {
-              fs->cache[i] = fs->ate_wra;
-            }
+          memset(fs->cache, 0xff, sizeof(fs->cache));
 #endif
 
           rc = zms_gc(fs);
@@ -2138,7 +2264,7 @@ static int zms_read(FAR struct zms_fs *fs, FAR struct config_data_s *pdata)
 
 #if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
   uint32_t hash_id = zms_fnv_hash(key, key_len);
-  wlk_addr = fs->cache[zms_cache_index(hash_id)];
+  wlk_addr = zms_lookup_addr(fs, hash_id);
   if (wlk_addr == ZMS_CACHE_NO_ADDR)
     {
       return -ENOENT;
@@ -2244,7 +2370,7 @@ static int zms_write(FAR struct zms_fs *fs, FAR struct config_data_s *pdata)
   /* Find latest entry with same id. */
 
 #if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
-  wlk_addr = fs->cache[zms_cache_index(hash_id)];
+  wlk_addr = zms_lookup_addr(fs, hash_id);
   if (wlk_addr != ZMS_CACHE_NO_ADDR)
 #endif
     {
@@ -2422,7 +2548,7 @@ static int zms_next(FAR struct zms_fs *fs, FAR struct file *filep,
           zms_ate_valid_different_block(fs, step_ate, cycle_cnt))
         {
 #if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
-          wlk_addr = fs->cache[zms_cache_index(step_ate->id)];
+          wlk_addr = zms_lookup_addr(fs, step_ate->id);
           if (wlk_addr == ZMS_CACHE_NO_ADDR)
 #endif
             {
