@@ -107,6 +107,12 @@ config NET_TCP_RTO
 	---help---
 		RTO of TCP/IP connections (all tasks)
 
+config NET_TCP_FIXED_RTO
+	bool "Use fixed RTO"
+	default n
+	---help---
+		Use fixed RTO for TCP/IP connections (all tasks)
+
 config NET_TCP_MAXRTX
 	int "Maximum retransmitted number of TCP/IP data packet"
 	default 8
