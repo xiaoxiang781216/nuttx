@@ -73,7 +73,7 @@ void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode)
 {
   FAR struct tcb_s *rtcb = this_task();
   FAR sem_t *sem = wtcb->waitobj;
-  bool mutex = NXSEM_IS_MUTEX(sem);
+  bool mutex;
 
 #ifdef CONFIG_ARCH_ADDRENV
   FAR struct addrenv_s *oldenv;
@@ -83,6 +83,8 @@ void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode)
       addrenv_select(wtcb->group->tg_addrenv_own, &oldenv);
     }
 #endif
+
+  mutex = NXSEM_IS_MUTEX(sem);
 
   /* It is possible that an interrupt/context switch beat us to the punch
    * and already changed the task's state.
@@ -96,6 +98,13 @@ void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode)
 
   if (mutex && (errcode == EINTR || errcode == ECANCELED))
     {
+#ifdef CONFIG_ARCH_ADDRENV
+      if (wtcb->group->tg_addrenv_own)
+        {
+          addrenv_restore(oldenv);
+        }
+#endif
+
       return;
     }
 
