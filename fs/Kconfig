@@ -114,6 +114,13 @@ config FS_HEAPSIZE
 		Support for shm/tmpfs/fs_pseudofile.c ram based fs memory.
 		default 0 to use kmm directly. independent heap disabled
 
+config FS_HEAP_MEMPOOL_INIT_CHUNK_SIZE
+	int "FS heap mempool init chunk size"
+	default 0
+	depends on FS_HEAPSIZE > 0
+	---help---
+		Size of the mempool allocated when fs heap init.
+
 config FS_HEAPBUF_SECTION
 	string "FS heap use Userheap section"
 	depends on FS_HEAPSIZE > 0
