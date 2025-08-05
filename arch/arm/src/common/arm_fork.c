@@ -92,6 +92,7 @@ pid_t arm_fork(const struct fork_s *context)
   struct tcb_s *parent = this_task();
   struct tcb_s *child;
   uint32_t newsp;
+  uint32_t oldfp;
   uint32_t newfp;
   uint32_t newtop;
   uint32_t stacktop;
@@ -158,15 +159,34 @@ pid_t arm_fork(const struct fork_s *context)
 
   /* Was there a frame pointer in place before? */
 
-  if (context->fp >= oldsp && context->fp < stacktop)
+  oldfp = context->fp;
+#ifdef CONFIG_FRAME_POINTER
+  if (oldfp < context->sp || oldfp > stacktop)
     {
       uint32_t frameutil = stacktop - context->fp;
-      newfp = newtop - frameutil;
+      oldfp = newtop - frameutil;
     }
-  else
+
+  newfp = newtop - (stacktop - oldfp);
+
+  /* Re generate framepointer chain in child thread */
+
+  for (; ; )
     {
-      newfp = context->fp;
+      uint32_t nextfp = *(uint32_t *)oldfp;
+      uint32_t *nextmnew;
+      if (nextfp < context->sp || nextfp > stacktop || nextfp <= oldfp)
+        {
+          break;
+        }
+
+      nextmnew = (uint32_t *)(newtop - (stacktop - oldfp));
+      *nextmnew = newtop - (stacktop - nextfp);
+      oldfp = nextfp;
     }
+#else
+  newfp = oldfp;
+#endif
 
   sinfo("Old stack top:%08" PRIx32 " SP:%08" PRIx32 " FP:%08" PRIx32 "\n",
         stacktop, oldsp, context->fp);
