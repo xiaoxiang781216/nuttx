@@ -101,13 +101,15 @@ static inline void riscv_write_stime(uint64_t value)
 }
 #  endif /* CONFIG_ARCH_RV_EXT_SSTC */
 
-static inline uint64_t riscv_mtimer_get()
+static inline uint64_t riscv_mtimer_get(uint64_t mtime_addr)
 {
+  UNUSED(mtime_addr);
   return riscv_sbi_get_time();
 }
 
-static inline void riscv_mtimer_set(uint64_t value)
+static inline void riscv_mtimer_set(uint64_t mtimecmp_addr, uint64_t value)
 {
+  UNUSED(mtimecmp_addr);
 #  ifndef CONFIG_ARCH_RV_EXT_SSTC
   riscv_sbi_set_timer(value);
 #  else

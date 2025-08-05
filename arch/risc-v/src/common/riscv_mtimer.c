@@ -94,7 +94,7 @@ static void riscv_mtimer_set_mtimecmp(struct riscv_mtimer_lowerhalf_s *priv,
   else
 #endif
     {
-      riscv_mtimer_set32(priv->mtimecmp, value);
+      riscv_mtimer_set(priv->mtimecmp, value);
     }
 }
 
