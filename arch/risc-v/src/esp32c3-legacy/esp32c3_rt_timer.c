@@ -34,10 +34,10 @@
 #include <debug.h>
 
 #include <nuttx/nuttx.h>
-#include <nuttx/irq.h>
 #include <nuttx/kthread.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/spinlock.h>
 
 #include "hardware/esp32c3_soc.h"
 #include "esp32c3_tim.h"

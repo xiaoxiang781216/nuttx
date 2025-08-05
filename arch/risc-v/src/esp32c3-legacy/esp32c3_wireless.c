@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/spinlock.h>
 
 #include <semaphore.h>
 #include <debug.h>

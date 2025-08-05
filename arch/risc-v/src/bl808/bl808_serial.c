@@ -33,10 +33,10 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/serial/serial.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/serial/tioctl.h>
+#include <nuttx/spinlock.h>
 
 #include "hardware/bl808_uart.h"
 #include "hardware/bl808_glb.h"

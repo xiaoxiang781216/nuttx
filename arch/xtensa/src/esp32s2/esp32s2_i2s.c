@@ -38,7 +38,6 @@
 #include <assert.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
 #include <nuttx/clock.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/mqueue.h>
@@ -46,6 +45,7 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/audio/audio.h>
 #include <nuttx/audio/i2s.h>
+#include <nuttx/spinlock.h>
 
 #include <arch/board/board.h>
 

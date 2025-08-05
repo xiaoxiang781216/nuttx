@@ -38,6 +38,7 @@
 #include <nuttx/sdio.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/mmcsd.h>
 #if defined(CONFIG_ESP32S3_SDMMC_DMA) && defined(CONFIG_ESP32S3_SPIRAM)
 #include <nuttx/kmalloc.h>

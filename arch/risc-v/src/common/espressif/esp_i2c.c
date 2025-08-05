@@ -38,10 +38,10 @@
 #include <sys/time.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
 #include <nuttx/clock.h>
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/i2c/i2c_master.h>
 
 #include <arch/board/board.h>

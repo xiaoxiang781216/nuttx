@@ -30,8 +30,8 @@
 #include <assert.h>
 #include <errno.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/clock.h>
+#include <nuttx/spinlock.h>
 
 #include "bm3803_freerun.h"
 

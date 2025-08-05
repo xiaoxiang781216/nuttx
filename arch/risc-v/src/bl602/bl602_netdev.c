@@ -39,13 +39,13 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
 #include <nuttx/signal.h>
+#include <nuttx/spinlock.h>
 
 #include <sys/types.h>
 
 #include <arpa/inet.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>

@@ -29,8 +29,8 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/timers/oneshot.h>
 
 #include "bm3803_oneshot.h"

@@ -33,6 +33,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/clock.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/timers/watchdog.h>
 
 #include "xtensa.h"

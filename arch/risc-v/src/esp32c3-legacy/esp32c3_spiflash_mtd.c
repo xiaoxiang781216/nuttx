@@ -37,6 +37,7 @@
 #include <nuttx/init.h>
 #include <nuttx/mutex.h>
 #include <nuttx/mtd/mtd.h>
+#include <nuttx/spinlock.h>
 
 #include "esp32c3_attr.h"
 #include "esp32c3_spiflash.h"

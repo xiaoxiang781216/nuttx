@@ -22,6 +22,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/spinlock.h>
 #include "nuttx/arch.h"
 #include "hardware/bl602_hbn.h"
 #include "bl602_hbn.h"

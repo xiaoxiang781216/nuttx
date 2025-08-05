@@ -34,6 +34,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/init.h>
+#include <nuttx/spinlock.h>
 
 #include "esp32c3.h"
 #include "esp32c3_spiflash.h"

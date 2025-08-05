@@ -36,8 +36,8 @@
 #include <stdlib.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/spi/slave.h>
 

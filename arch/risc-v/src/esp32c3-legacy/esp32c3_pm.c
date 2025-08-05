@@ -24,8 +24,8 @@
 
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
 #include <nuttx/power/pm.h>
+#include <nuttx/spinlock.h>
 
 #ifdef CONFIG_PM
 

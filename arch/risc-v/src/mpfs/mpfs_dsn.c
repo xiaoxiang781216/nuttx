@@ -26,6 +26,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <nuttx/signal.h>
+#include <nuttx/spinlock.h>
 #include "mpfs_dsn.h"
 #include "riscv_internal.h"
 

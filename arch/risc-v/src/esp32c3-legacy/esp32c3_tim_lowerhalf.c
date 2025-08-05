@@ -33,6 +33,7 @@
 #include <stdio.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/timers/timer.h>
 
 #include "hardware/esp32c3_soc.h"

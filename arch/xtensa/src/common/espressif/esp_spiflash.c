@@ -34,6 +34,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/init.h>
+#include <nuttx/spinlock.h>
 #include "esp_spiflash.h"
 #include "esp_attr.h"
 #include "memspi_host_driver.h"
