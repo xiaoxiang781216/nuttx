@@ -86,7 +86,7 @@ struct netdev_upperhalf_s
   struct netdev_vlan_entry_s vlan[CONFIG_NET_VLAN_COUNT];
 #endif
 
-  bool txing;
+  int txing;
 
   /* Deferring process to work queue or thread */
 
