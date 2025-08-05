@@ -276,7 +276,7 @@ class Fdinfo(gdb.Command):
         output = []
         if CONFIG_FS_BACKTRACE:
             backtrace = tuple(bt.BacktraceEntry(fdp.f_backtrace).get())
-            backtrace = backtrace.Backtrace(backtrace, backtrace_formatter)
+            backtrace = bt.Backtrace(backtrace, backtrace_formatter)
 
             output.append(
                 formatter.format(
