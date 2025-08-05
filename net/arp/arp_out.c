@@ -259,7 +259,7 @@ void arp_out(FAR struct net_driver_s *dev)
     {
       /* No send ARP if the interface forbiden */
 
-      if (IFF_IS_NOARP(dev->d_flags))
+      if (IFF_IS_NOARP(dev->d_flags) || ret == -ENETUNREACH)
         {
           ninfo("ARP not supported on %s, no send!\n", dev->d_ifname);
           dev->d_len = 0;
