@@ -75,9 +75,9 @@ void up_release_stack(struct tcb_s *dtcb, uint8_t ttype)
       (atomic_read(&dtcb->flags) & TCB_FLAG_FREE_STACK))
     {
 #ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
-      xtensa_imm_free(dtcb->stack_alloc_ptr);
+      xtensa_imm_delayfree(dtcb->stack_alloc_ptr);
 #else
-      group_free(dtcb->group, dtcb->stack_alloc_ptr);
+      group_delayfree(dtcb->group, dtcb->stack_alloc_ptr);
 #endif
     }
 

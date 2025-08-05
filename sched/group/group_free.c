@@ -82,4 +82,46 @@ void group_free(FAR struct task_group_s *group, FAR void *mem)
     }
 }
 
+/****************************************************************************
+ * Name: group_delayfree
+ *
+ * Description:
+ *   Free memory appropriate previously allocated via group_malloc() using
+ *   the appropriate memory manager with delay.
+ *
+ ****************************************************************************/
+
+void group_delayfree(FAR struct task_group_s *group, FAR void *mem)
+{
+  /* A NULL group pointer means the current group */
+
+  if (!group)
+    {
+      FAR struct tcb_s *tcb = this_task();
+      DEBUGASSERT(tcb && tcb->group);
+      group = tcb->group;
+    }
+
+  /* Check the group is privileged */
+
+  if ((atomic_read(&group->tg_flags) & GROUP_FLAG_PRIVILEGED) != 0)
+    {
+      /* It is a privileged group... use the kernel mode memory allocator */
+
+      kmm_delayfree(mem);
+    }
+  else
+    {
+      /* This is an unprivileged group... use the user mode memory
+       * allocator.
+       */
+
+#ifdef CONFIG_MM_TASK_HEAP
+      mm_delayfree(group->tg_heap, mem);
+#else
+      kumm_delayfree(mem);
+#endif
+    }
+}
+
 #endif /* defined(CONFIG_MM_KERNEL_HEAP) || defined(CONFIG_MM_TASK_HEAP) */

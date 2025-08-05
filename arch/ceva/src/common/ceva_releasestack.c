@@ -91,14 +91,14 @@ void up_release_stack(struct tcb_s *dtcb, uint8_t ttype)
 
       if (ttype == TCB_FLAG_TTYPE_KERNEL)
         {
-          kmm_free(dtcb->stack_alloc_ptr);
+          kmm_delayfree(dtcb->stack_alloc_ptr);
         }
       else
 #endif
         {
           /* Use the user-space allocator if this is a task or pthread */
 
-          kumm_free(dtcb->stack_alloc_ptr);
+          kumm_delayfree(dtcb->stack_alloc_ptr);
         }
     }
 

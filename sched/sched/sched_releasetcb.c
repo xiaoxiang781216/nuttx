@@ -210,7 +210,7 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, uint8_t ttype)
 #endif
             }
 
-          kmm_free(tcb);
+          kmm_delayfree(tcb);
         }
     }
 

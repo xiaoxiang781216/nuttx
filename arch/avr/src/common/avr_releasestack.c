@@ -82,7 +82,7 @@ void up_release_stack(FAR struct tcb_s *dtcb, uint8_t ttype)
   if (dtcb->stack_alloc_ptr &&
       (atomic_read(&dtcb->flags) & TCB_FLAG_FREE_STACK))
     {
-      group_free(dtcb->group, dtcb->stack_alloc_ptr);
+      group_delayfree(dtcb->group, dtcb->stack_alloc_ptr);
     }
 
   /* Mark the stack freed */
