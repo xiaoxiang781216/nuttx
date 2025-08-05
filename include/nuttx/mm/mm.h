@@ -195,7 +195,7 @@ struct mm_heap_config_s
   bool            allocheap;
 };
 
-struct mempool_init_s
+struct mm_pool_config_s
 {
   FAR const size_t *poolsize;
   size_t            npools;
@@ -283,10 +283,10 @@ mm_initialize(FAR const char *name, FAR void *heapstart, size_t heapsize)
 #ifdef CONFIG_MM_HEAP_MEMPOOL
 FAR struct mm_heap_s *
 mm_initialize_pool(FAR const struct mm_heap_config_s *config,
-                   FAR const struct mempool_init_s *init);
+                   FAR const struct mm_pool_config_s *poolconfig);
 
 #else
-#  define mm_initialize_pool(config, init) mm_initialize_heap(config)
+#  define mm_initialize_pool(config, poolconfig) mm_initialize_heap(config)
 #endif
 
 void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,

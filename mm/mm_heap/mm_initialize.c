@@ -76,8 +76,11 @@ static FAR void *mempool_memalign(FAR void *arg, size_t alignment,
   return ret;
 }
 #else
-#  define mempool_memalign mm_memalign
+#  define mempool_memalign ((mempool_multiple_alloc_t)mm_memalign)
 #endif
+
+#  define mempool_malloc_size ((mempool_multiple_alloc_size_t)mm_malloc_size)
+#  define mempool_free ((mempool_multiple_free_t)mm_free)
 
 /****************************************************************************
  * Public Functions
@@ -321,55 +324,79 @@ mm_initialize_heap(FAR const struct mm_heap_config_s *config)
 #ifdef CONFIG_MM_HEAP_MEMPOOL
 FAR struct mm_heap_s *
 mm_initialize_pool(FAR const struct mm_heap_config_s *config,
-                   FAR const struct mempool_init_s *init)
+                   FAR const struct mm_pool_config_s *poolconfig)
 {
   FAR struct mm_heap_s *heap;
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD > 0
   size_t poolsize[MEMPOOL_NPOOLS];
-  struct mempool_init_s def;
+  struct mm_pool_config_s def;
 
-  if (init == NULL)
+  if (poolconfig)
     {
-      /* Initialize the multiple mempool default parameter */
+      memcpy(&def, poolconfig, sizeof(struct mm_pool_config_s));
+    }
+  else
+    {
+      memset(&def, 0, sizeof(struct mm_pool_config_s));
+    }
 
+  if (def.poolsize == 0 || def.npools == 0)
+    {
       int i;
 
       for (i = 0; i < MEMPOOL_NPOOLS; i++)
         {
-#  if CONFIG_MM_MIN_BLKSIZE != 0
+#if CONFIG_MM_MIN_BLKSIZE != 0
           poolsize[i] = (i + 1) * CONFIG_MM_MIN_BLKSIZE;
-#  else
+#else
           poolsize[i] = (i + 1) * MM_MIN_CHUNK;
-#  endif
+#endif
         }
 
-      def.poolsize        = poolsize;
-      def.npools          = MEMPOOL_NPOOLS;
-      def.threshold       = CONFIG_MM_HEAP_MEMPOOL_THRESHOLD;
-      def.chunksize       = CONFIG_MM_HEAP_MEMPOOL_CHUNK_SIZE;
-      def.init_chunksize  = CONFIG_MM_HEAP_MEMPOOL_INIT_CHUNK_SIZE;
-      def.expandsize      = CONFIG_MM_HEAP_MEMPOOL_EXPAND_SIZE;
-      def.dict_expendsize = CONFIG_MM_HEAP_MEMPOOL_DICTIONARY_EXPAND_SIZE;
-
-      init = &def;
+      def.poolsize = poolsize;
+      def.npools = MEMPOOL_NPOOLS;
     }
-#endif
+
+  if (def.threshold == 0)
+    {
+      def.threshold = CONFIG_MM_HEAP_MEMPOOL_THRESHOLD;
+    }
+
+  if (def.chunksize == 0)
+    {
+      def.chunksize = CONFIG_MM_HEAP_MEMPOOL_CHUNK_SIZE;
+    }
+
+  if (def.init_chunksize == 0)
+    {
+      def.init_chunksize = CONFIG_MM_HEAP_MEMPOOL_INIT_CHUNK_SIZE;
+    }
+
+  if (def.expandsize == 0)
+    {
+      def.expandsize = CONFIG_MM_HEAP_MEMPOOL_EXPAND_SIZE;
+    }
+
+  if (def.dict_expendsize == 0)
+    {
+      def.dict_expendsize = CONFIG_MM_HEAP_MEMPOOL_DICTIONARY_EXPAND_SIZE;
+    }
 
   heap = mm_initialize_heap(config);
 
   /* Initialize the multiple mempool in heap */
 
-  if (init != NULL && init->poolsize != NULL && init->npools != 0)
-    {
-      heap->mm_threshold = init->threshold;
-      heap->mm_mpool     = mempool_multiple_init(config->name,
-                               init->poolsize, init->npools,
-                               (mempool_multiple_alloc_t)mempool_memalign,
-                               (mempool_multiple_alloc_size_t)mm_malloc_size,
-                               (mempool_multiple_free_t)mm_free, heap,
-                               init->chunksize, init->init_chunksize,
-                               init->expandsize, init->dict_expendsize);
-    }
+  heap->mm_threshold = def.threshold;
+  heap->mm_mpool = mempool_multiple_init(config->name,
+                                         def.poolsize,
+                                         def.npools,
+                                         mempool_memalign,
+                                         mempool_malloc_size,
+                                         mempool_free,
+                                         heap,
+                                         def.chunksize,
+                                         def.init_chunksize,
+                                         def.expandsize,
+                                         def.dict_expendsize);
 
   return heap;
 }
