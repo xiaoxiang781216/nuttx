@@ -178,6 +178,7 @@ struct lrofs_file_s
   FAR struct lrofs_nodeinfo_s *lf_ln;           /* The node struct addr of the file */
   FAR uint8_t                 *lf_buffer;       /* File sector buffer, allocated if rm_xipbase==0 */
   uint8_t                      lf_type;         /* File type (for fstat()) */
+  bool                         lf_dirty;        /* true: Data has been written to the buffer */
   char                         lf_path[1];      /* Path of open file */
 };
 
@@ -218,6 +219,8 @@ lrofs_finddirentry(FAR struct lrofs_mountpt_s *lm,
 int lrofs_filecacheread(FAR struct lrofs_mountpt_s *lm,
                         FAR struct lrofs_file_s *lf,
                         uint32_t sector);
+int lrofs_filecachewrite(FAR struct lrofs_mountpt_s *lm,
+                         FAR struct lrofs_file_s *lf);
 int lrofs_hwconfigure(FAR struct lrofs_mountpt_s *lm);
 int lrofs_fsconfigure(FAR struct lrofs_mountpt_s *lm,
                       FAR const void *data);
@@ -240,6 +243,9 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
                       FAR struct lrofs_nodeinfo_s *ln_newpath,
                       FAR const char *newname);
 void lrofs_free_sparelist(FAR struct list_node *list);
+int lrofs_update_filesize(FAR struct lrofs_mountpt_s *lm,
+                          FAR struct lrofs_nodeinfo_s *ln,
+                          uint32_t size);
 #undef EXTERN
 #if defined(__cplusplus)
 }

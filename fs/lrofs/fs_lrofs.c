@@ -276,9 +276,10 @@ static int lrofs_open(FAR struct file *filep, FAR const char *relpath,
    * non-zero elements)
    */
 
-  lf->lf_ln   = ln;
-  lf->lf_size = ln->ln_size;
-  lf->lf_type = (uint8_t)(ln->ln_next & RFNEXT_ALLMODEMASK);
+  lf->lf_ln    = ln;
+  lf->lf_dirty = false;
+  lf->lf_size  = ln->ln_size;
+  lf->lf_type  = (uint8_t)(ln->ln_next & RFNEXT_ALLMODEMASK);
   memcpy(lf->lf_path, relpath, len + 1);
 
   /* Get the start of the file data */
@@ -342,8 +343,10 @@ errout_with_sem:
 
 static int lrofs_close(FAR struct file *filep)
 {
-  FAR struct lrofs_mountpt_s *lm;
-  FAR struct lrofs_file_s    *lf;
+  FAR struct lrofs_mountpt_s  *lm;
+  FAR struct lrofs_file_s     *lf;
+  FAR struct lrofs_nodeinfo_s *ln;
+  int ret;
 
   DEBUGASSERT(filep->f_priv != NULL);
 
@@ -351,8 +354,26 @@ static int lrofs_close(FAR struct file *filep)
 
   lf = filep->f_priv;
   lm = filep->f_inode->i_private;
+  ln = lf->lf_ln;
 
   nxrmutex_lock(&lm->lm_lock);
+  ret = lrofs_filecachewrite(lm, lf);
+  if (ret < 0)
+    {
+      ferr("ERROR: lrofs_filecachewrite failed: %d\n", ret);
+      nxrmutex_unlock(&lm->lm_lock);
+      return ret;
+    }
+
+  /* Update file size into file header */
+
+  ret = lrofs_update_filesize(lm, ln, lf->lf_size);
+  if (ret < 0)
+    {
+      ferr("ERROR: lrofs_update_filesize failed: %d\n", ret);
+      nxrmutex_unlock(&lm->lm_lock);
+      return ret;
+    }
 
   lm->lm_refs--;
 
@@ -706,8 +727,9 @@ static int lrofs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 
 static int lrofs_truncate(FAR struct file *filep, off_t length)
 {
-  FAR struct lrofs_mountpt_s *lm;
-  FAR struct lrofs_file_s *lf;
+  FAR struct lrofs_mountpt_s  *lm;
+  FAR struct lrofs_file_s     *lf;
+  FAR struct lrofs_nodeinfo_s *ln;
   int ret;
 
   DEBUGASSERT(filep->f_priv != NULL);
@@ -716,6 +738,7 @@ static int lrofs_truncate(FAR struct file *filep, off_t length)
 
   lf = filep->f_priv;
   lm = filep->f_inode->i_private;
+  ln = lf->lf_ln;
 
   /* Make sure that the mount is still healthy */
 
@@ -732,6 +755,15 @@ static int lrofs_truncate(FAR struct file *filep, off_t length)
     {
       ferr("ERROR: Failed to truncate file '%s': %d\n",
            lf->lf_path, ret);
+      goto errout_with_lock;
+    }
+
+  /* Update file size into file header */
+
+  ret = lrofs_update_filesize(lm, ln, lf->lf_size);
+  if (ret < 0)
+    {
+      ferr("ERROR: lrofs_update_filesize failed: %d\n", ret);
     }
 
 errout_with_lock:
@@ -745,9 +777,47 @@ errout_with_lock:
 
 static int lrofs_sync(FAR struct file *filep)
 {
-  /* There is nothing to do here. Data will be write to flash directly */
+  FAR struct lrofs_mountpt_s  *lm;
+  FAR struct lrofs_file_s     *lf;
+  FAR struct lrofs_nodeinfo_s *ln;
+  int ret;
 
-  return OK;
+  DEBUGASSERT(filep->f_priv != NULL);
+
+  /* Recover our private data from the struct file instance */
+
+  lf = filep->f_priv;
+  lm = filep->f_inode->i_private;
+  ln = lf->lf_ln;
+
+  /* Check if the mount is still healthy */
+
+  nxrmutex_lock(&lm->lm_lock);
+  ret = lrofs_checkmount(lm);
+  if (ret < 0)
+    {
+      ferr("ERROR: lrofs_checkmount failed: %d\n", ret);
+      goto errout_with_lock;
+    }
+
+  ret = lrofs_filecachewrite(lm, lf);
+  if (ret < 0)
+    {
+      ferr("ERROR: lrofs_filecachewrite failed: %d\n", ret);
+      goto errout_with_lock;
+    }
+
+  /* Update file size into file header */
+
+  ret = lrofs_update_filesize(lm, ln, lf->lf_size);
+  if (ret < 0)
+    {
+      ferr("ERROR: lrofs_update_filesize failed: %d\n", ret);
+    }
+
+errout_with_lock:
+  nxrmutex_unlock(&lm->lm_lock);
+  return ret;
 }
 
 /****************************************************************************

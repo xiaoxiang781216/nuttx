@@ -231,29 +231,6 @@ static int lrofs_devcachewrite(FAR struct lrofs_mountpt_s *lm,
 }
 
 /****************************************************************************
- * Name: lrofs_filecachewrite
- *
- * Description:
- *   Write the specified sector for specified offset into the sector cache.
- *
- ****************************************************************************/
-
-static int lrofs_filecachewrite(FAR struct lrofs_mountpt_s *lm,
-                                FAR struct lrofs_file_s *lf)
-{
-  int ret;
-
-  ret = lrofs_hwwrite(lm, lf->lf_buffer, lf->lf_cachesector,
-                      lf->lf_ncachesector);
-  if (ret < 0)
-    {
-      ferr("ERROR: lrofs_hwwrite failed: %d\n", ret);
-    }
-
-  return ret;
-}
-
-/****************************************************************************
  * Name: lrofs_devcacheload
  *
  * Description:
@@ -988,36 +965,6 @@ static int lrofs_cachenode(FAR struct lrofs_mountpt_s *lm,
 }
 
 /****************************************************************************
- * Name: lrofs_update_filesize
- *
- * Description:
- *   Update the file size to lrofs
- *
- ****************************************************************************/
-
-static int lrofs_update_filesize(FAR struct lrofs_mountpt_s *lm,
-                                 FAR struct lrofs_nodeinfo_s *ln,
-                                 uint32_t size)
-{
-  int16_t ndx;
-
-  /* Get the node sector index */
-
-  ndx = lrofs_devcacheload(lm, ln->ln_offset);
-  if (ndx < 0)
-    {
-      return ndx;
-    }
-
-  /* Update the node size */
-
-  lrofs_devwrite32(lm, ndx + LROFS_FHDR_SIZE, size);
-  return lrofs_devcachewrite(lm,
-                             SEC_NSECTORS((FAR struct lrofs_mountpt_s *)lm,
-                             ln->ln_origoffset));
-}
-
-/****************************************************************************
  * Name: lrofs_do_create
  *
  * Description:
@@ -1340,6 +1287,13 @@ int lrofs_filecacheread(FAR struct lrofs_mountpt_s *lm,
   if (lf->lf_cachesector > sector ||
       lf->lf_cachesector + lf->lf_ncachesector <= sector)
     {
+      ret = lrofs_filecachewrite(lm, lf);
+      if (ret < 0)
+        {
+          ferr("ERROR: lrofs_filecachewrite failed: %d\n", ret);
+          return ret;
+        }
+
       /* Check the access mode */
 
       if (lm->lm_xipbase)
@@ -1369,6 +1323,35 @@ int lrofs_filecacheread(FAR struct lrofs_mountpt_s *lm,
     }
 
   return 0;
+}
+
+/****************************************************************************
+ * Name: lrofs_filecachewrite
+ *
+ * Description:
+ *   Write the specified sector for specified offset into the sector cache.
+ *
+ ****************************************************************************/
+
+int lrofs_filecachewrite(FAR struct lrofs_mountpt_s *lm,
+                         FAR struct lrofs_file_s *lf)
+{
+  int ret = OK;
+
+  if (lf->lf_dirty)
+    {
+      ret = lrofs_hwwrite(lm, lf->lf_buffer, lf->lf_cachesector,
+                          lf->lf_ncachesector);
+      if (ret < 0)
+        {
+          ferr("ERROR: lrofs_hwwrite failed: %d\n", ret);
+          return ret;
+        }
+
+      lf->lf_dirty = false;
+    }
+
+  return ret;
 }
 
 /****************************************************************************
@@ -2020,6 +2003,13 @@ int lrofs_write_file(FAR struct file *filep, FAR const char *buffer,
       nsectors  = SEC_NSECTORS(lm, buflen);
       if (nsectors >= lf->lf_ncachesector && sectorndx == 0)
         {
+          ret = lrofs_filecachewrite(lm, lf);
+          if (ret < 0)
+            {
+              ferr("ERROR: lrofs_filecachewrite failed: %d\n", ret);
+              goto error_out;
+            }
+
           ret = lrofs_hwwrite(lm, userbuffer, sector, nsectors);
           if (ret < 0)
             {
@@ -2057,15 +2047,7 @@ int lrofs_write_file(FAR struct file *filep, FAR const char *buffer,
             }
 
           memcpy(&lf->lf_buffer[sectorndx], userbuffer, byteswritten);
-
-          /* Write the whole sector into the file data buffer. */
-
-          ret = lrofs_filecachewrite(lm, lf);
-          if (ret < 0)
-            {
-              ferr("ERROR: lrofs_filecachewrite failed: %d\n", ret);
-              goto error_out;
-            }
+          lf->lf_dirty = true;
         }
 
       userbuffer   += byteswritten;
@@ -2082,13 +2064,6 @@ int lrofs_write_file(FAR struct file *filep, FAR const char *buffer,
       lf->lf_size = filep->f_pos;
       lf->lf_endsector = SEC_NSECTORS(lm, lf->lf_startoffset + lf->lf_size);
       lm->lm_volsize += writesize;
-
-      ret = lrofs_update_filesize(lm, ln, lf->lf_size);
-      if (ret < 0)
-        {
-          ferr("ERROR: lrofs_update_filesize failed: %d\n", ret);
-          goto error_out;
-        }
     }
 
   return writesize;
@@ -2155,15 +2130,6 @@ int lrofs_truncate_file(FAR struct file *filep, off_t length)
   ln->ln_size = length;
   lf->lf_size = length;
   lf->lf_endsector = SEC_NSECTORS(lm, lf->lf_startoffset + lf->lf_size);
-
-  /* Update the file size to disk */
-
-  ret = lrofs_update_filesize(lm, ln, lf->lf_size);
-  if (ret < 0)
-    {
-      ferr("ERROR: lrofs_update_filesize failed: %d\n", ret);
-      return ret;
-    }
 
   if (remain > 0)
     {
@@ -2502,4 +2468,32 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
 
   ln_old->ln_parent = ln_newpath;
   return OK;
+}
+
+/****************************************************************************
+ * Name: lrofs_update_filesize
+ *
+ * Description:
+ *   Update the file size to lrofs
+ *
+ ****************************************************************************/
+
+int lrofs_update_filesize(FAR struct lrofs_mountpt_s *lm,
+                          FAR struct lrofs_nodeinfo_s *ln,
+                          uint32_t size)
+{
+  int16_t ndx;
+
+  /* Get the node sector index */
+
+  ndx = lrofs_devcacheload(lm, ln->ln_offset);
+  if (ndx < 0)
+    {
+      return ndx;
+    }
+
+  /* Update the node size */
+
+  lrofs_devwrite32(lm, ndx + LROFS_FHDR_SIZE, size);
+  return lrofs_devcachewrite(lm, SEC_NSECTORS(lm, ln->ln_origoffset));
 }
