@@ -60,10 +60,10 @@
 #include <arpa/inet.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
 #include <nuttx/wdog.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/net/gmii.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>

@@ -38,8 +38,8 @@
 #include <nuttx/usb/usb.h>
 #include <nuttx/usb/usbdev.h>
 #include <nuttx/usb/usbdev_trace.h>
+#include <nuttx/spinlock.h>
 
-#include <nuttx/irq.h>
 #include <arch/board/board.h>
 
 #include "arm_internal.h"

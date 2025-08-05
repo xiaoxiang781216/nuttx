@@ -62,6 +62,7 @@
 #include <nuttx/queue.h>
 #include <nuttx/wdog.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/audio/audio.h>
 #include <nuttx/audio/i2s.h>

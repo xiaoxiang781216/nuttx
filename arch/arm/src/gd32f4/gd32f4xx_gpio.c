@@ -30,7 +30,7 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/irq.h>
+#include <nuttx/spinlock.h>
 
 #include "chip.h"
 #include "gd32f4xx_syscfg.h"

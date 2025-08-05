@@ -30,7 +30,7 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
+#include <nuttx/spinlock.h>
 
 #include "arm64_internal.h"
 #include "imx9_gpio.h"

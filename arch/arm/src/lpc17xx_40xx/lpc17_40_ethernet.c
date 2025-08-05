@@ -38,7 +38,6 @@
 #include <arpa/inet.h>
 
 #include <nuttx/wdog.h>
-#include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/signal.h>
@@ -46,6 +45,8 @@
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>
+
+#include <nuttx/spinlock.h>
 
 #ifdef CONFIG_NET_PKT
 #  include <nuttx/net/pkt.h>

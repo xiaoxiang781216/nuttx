@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/init.h>
+#include <nuttx/spinlock.h>
 
 #include "arm.h"
 #include "arm_internal.h"

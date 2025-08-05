@@ -39,12 +39,11 @@
 #include <nuttx/signal.h>
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/usb/usb.h>
 #include <nuttx/usb/ohci.h>
 #include <nuttx/usb/usbhost.h>
 #include <nuttx/usb/usbhost_devaddr.h>
-
-#include <nuttx/irq.h>
 
 #include <arch/board/board.h> /* May redefine GPIO settings */
 

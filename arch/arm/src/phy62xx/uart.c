@@ -42,11 +42,11 @@
 #include "error.h"
 #include "jump_function.h"
 
-#include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/serial/serial.h>
 #include <nuttx/circbuf.h>
+#include <nuttx/spinlock.h>
 
 #define UART_TX_BUFFER_SIZE   64
 #define UART_RX_BUFFER_SIZE   64

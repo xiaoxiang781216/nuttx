@@ -33,7 +33,7 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/irq.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/timers/timer.h>
 #include <arch/board/board.h>
 

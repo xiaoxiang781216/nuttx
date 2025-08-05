@@ -43,8 +43,8 @@
 #include <nuttx/mmcsd.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/signal.h>
+#include <nuttx/spinlock.h>
 
-#include <nuttx/irq.h>
 #include <arch/board/board.h>
 
 #include "chip.h"

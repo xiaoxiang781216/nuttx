@@ -24,10 +24,10 @@
 
 #include <nuttx/config.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/irq.h>
 #include <nuttx/signal.h>
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/spinlock.h>
 
 #include <inttypes.h>
 #include <stdio.h>

@@ -41,8 +41,8 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/signal.h>
 #include <nuttx/mmcsd.h>
-#include <nuttx/irq.h>
 #include <nuttx/cache.h>
+#include <nuttx/spinlock.h>
 
 #include <arch/board/board.h>
 

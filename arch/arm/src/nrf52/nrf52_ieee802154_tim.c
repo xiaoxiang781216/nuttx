@@ -28,8 +28,8 @@
 #include <errno.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/spinlock.h>
 
 #include "nrf52_ieee802154_tim.h"
 #include "nrf52_ieee802154_trace.h"

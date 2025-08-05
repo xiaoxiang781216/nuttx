@@ -30,6 +30,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/signal.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/wireless/ieee80211/bcmf_gspi.h>
 #include <arch/barriers.h>
 

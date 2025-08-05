@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <sys/param.h>
 
+#include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/mm/iob.h>
 

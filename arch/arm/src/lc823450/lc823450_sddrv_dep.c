@@ -49,10 +49,10 @@
 #include <errno.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
 #include <nuttx/clock.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/signal.h>
+#include <nuttx/spinlock.h>
 
 #include "arm_internal.h"
 #include "lc823450_sddrv_type.h"

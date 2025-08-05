@@ -31,6 +31,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/signal.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/leds/ws2812.h>
 
 #include <rp2040_pio.h>

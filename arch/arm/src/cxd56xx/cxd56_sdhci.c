@@ -42,8 +42,8 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/mmcsd.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/irq.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/spinlock.h>
 
 #include <arch/board/board.h>
 

@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/spinlock.h>
 #include "chip.h"
 
 /* This file is only a thin shell that includes the proper PWR implementation

@@ -69,7 +69,7 @@
 #include <assert.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
+#include <nuttx/spinlock.h>
 #include <debug.h>
 
 #include "arm_internal.h"

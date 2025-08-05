@@ -46,8 +46,8 @@
 #include <nuttx/usb/usbdev_trace.h>
 #include <nuttx/fs/procfs.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/signal.h>
+#include <nuttx/spinlock.h>
 #include <arch/chip/usbdev.h>
 #include <arch/chip/pm.h>
 

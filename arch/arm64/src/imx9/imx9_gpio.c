@@ -23,14 +23,13 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/spinlock.h>
 
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
 #include <errno.h>
-
-#include <nuttx/irq.h>
 
 #include <imx9_gpiobase.c>
 

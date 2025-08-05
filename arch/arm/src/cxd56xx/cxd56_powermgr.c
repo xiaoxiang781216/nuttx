@@ -30,6 +30,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/mqueue.h>
 #include <nuttx/queue.h>
+#include <nuttx/spinlock.h>
 
 #include <assert.h>
 #include <debug.h>

@@ -39,9 +39,9 @@
 #include <nuttx/sdio.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/mmcsd.h>
 
-#include <nuttx/irq.h>
 #include <arch/board/board.h>
 
 #include "chip.h"
