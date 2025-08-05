@@ -420,7 +420,7 @@ void arm64_mpu_init(bool is_primary_core)
 
   mpu_init();
 
-  arm64_mpu_init_regiions();
+  arm64_mpu_init_regions();
 
   arm64_mpu_enable();
 }
