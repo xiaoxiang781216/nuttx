@@ -1008,7 +1008,7 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           if (lower->ops->selftest == NULL)
             {
-              ret = -ENOTSUP;
+              ret = -ENOTTY;
               break;
             }
 
@@ -1020,7 +1020,7 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           if (lower->ops->set_calibvalue == NULL)
             {
-              ret = -ENOTSUP;
+              ret = -ENOTTY;
               break;
             }
 
@@ -1032,7 +1032,7 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           if (lower->ops->calibrate == NULL)
             {
-              ret = -ENOTSUP;
+              ret = -ENOTTY;
               break;
             }
 
@@ -1090,7 +1090,7 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           if (lower->ops->get_info == NULL)
             {
-              ret = -ENOTSUP;
+              ret = -ENOTTY;
               break;
             }
 
@@ -1119,7 +1119,7 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               return -EINVAL;
             }
 
-          ret = -ENOTSUP;
+          ret = -ENOTTY;
           if (lower->ops->flush != NULL)
             {
               /* Lower half driver will do flush in asynchronous mode,
@@ -1135,7 +1135,7 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                 }
             }
 
-          if (ret == -ENOTSUP)
+          if (ret == -ENOTTY)
             {
               /* If flush is not supported, complete immediately */
 
@@ -1143,7 +1143,7 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               user->event |= SENSOR_EVENT_FLUSH_COMPLETE;
               sensor_pollnotify_one(user, POLLPRI, user->role);
 
-              /* If caller isn't from remote core, convert ENOTSUP
+              /* If caller isn't from remote core, convert ENOTTY
                * to zero return, indicating the flush is completed.
                * If it's from remote core, need to inform the remote
                * core the flush is not supported for driver.
