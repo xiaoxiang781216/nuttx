@@ -34,8 +34,8 @@
 #include <debug.h>
 
 #include <arch/board/board.h>
-#include <nuttx/irq.h>
 #include <nuttx/clock.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/fs/automount.h>
 
 /****************************************************************************

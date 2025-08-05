@@ -115,12 +115,12 @@
 #include <nuttx/board.h>
 #include <nuttx/wdog.h>
 #include <nuttx/clock.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/lcd/lcd.h>
 #include <nuttx/lcd/ili9488.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/video/rgbcolors.h>
 
-#include <nuttx/irq.h>
 #include <arch/board/board.h>
 
 #include "arm_internal.h"

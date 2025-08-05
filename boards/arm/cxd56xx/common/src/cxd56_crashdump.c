@@ -35,9 +35,11 @@
 #include <time.h>
 
 #include <nuttx/kmalloc.h>
+#include <nuttx/spinlock.h>
 
 #include <arch/chip/backuplog.h>
 #include <arch/chip/crashdump.h>
+
 #include "cxd56_wdt.h"
 #include "arm_internal.h"
 

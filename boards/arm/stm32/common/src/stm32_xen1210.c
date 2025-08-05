@@ -38,8 +38,8 @@
 #include <nuttx/timers/pwm.h>
 #include <arch/board/board.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/arch.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/fs/ioctl.h>
 
 #include "stm32_gpio.h"
