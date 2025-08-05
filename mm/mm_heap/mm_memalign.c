@@ -149,7 +149,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
    * nodelist.
    */
 
-  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
   bypass = kasan_bypass(true);
 
   /* Get the node associated with the allocation and the next node after
@@ -284,7 +284,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
                   heap->mm_curused);
 
   kasan_bypass(bypass);
-  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
 
   MM_RECORD(heap, node);
 

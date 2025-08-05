@@ -360,7 +360,7 @@ static void forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
     }
 #endif
 
-  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
   size = mm_malloc_size(heap, mem);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
   memset(mem, MM_FREE_MAGIC, size);
@@ -372,7 +372,7 @@ static void forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
   heap->mm_curused -= size;
   sched_note_heap(NOTE_HEAP_FREE, heap, mem, size, heap->mm_curused);
   tlsf_free(heap->mm_tlsf, mem);
-  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
 }
 
 /****************************************************************************
@@ -618,7 +618,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
       kasan_register(heapstart, &heapsize);
     }
 
-  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
 
   minfo("Region %d: base=%p size=%zu\n", idx + 1, heapstart, heapsize);
 
@@ -642,7 +642,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
   tlsf_add_pool(heap->mm_tlsf, heapstart, heapsize);
   sched_note_heap(NOTE_HEAP_ADD, heap, heapstart, heapsize,
                   heap->mm_curused);
-  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
 }
 
 /****************************************************************************
@@ -801,7 +801,7 @@ void mm_checkcorruption(FAR struct mm_heap_s *heap)
     {
       /* Retake the mutex for each region to reduce latencies */
 
-      DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+      DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
 
       /* Check tlsf control block in the first pass */
 
@@ -816,7 +816,7 @@ void mm_checkcorruption(FAR struct mm_heap_s *heap)
 
       /* Release the mutex */
 
-      DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+      DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
     }
 #undef region
 }
@@ -847,7 +847,7 @@ void mm_extend(FAR struct mm_heap_s *heap, FAR void *mem, size_t size,
 
   /* Take the memory manager mutex */
 
-  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
 
   /* Extend the tlsf pool */
 
@@ -859,7 +859,7 @@ void mm_extend(FAR struct mm_heap_s *heap, FAR void *mem, size_t size,
   heap->mm_heapsize += size;
   heap->mm_heapend[region] += size;
 
-  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
 }
 
 /****************************************************************************
@@ -1166,10 +1166,10 @@ struct mallinfo mm_mallinfo(FAR struct mm_heap_s *heap)
     {
       /* Retake the mutex for each region to reduce latencies */
 
-      DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+      DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
       tlsf_walk_pool(heap->mm_heapstart[region],
                      mallinfo_handler, &info);
-      DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+      DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
     }
 #undef region
 
@@ -1216,10 +1216,10 @@ struct mallinfo_task mm_mallinfo_task(FAR struct mm_heap_s *heap,
     {
       /* Retake the mutex for each region to reduce latencies */
 
-      DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+      DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
       tlsf_walk_pool(heap->mm_heapstart[region],
                      mallinfo_task_handler, &handle);
-      DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+      DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
     }
 #undef region
 
@@ -1349,10 +1349,10 @@ void mm_memdump(FAR struct mm_heap_s *heap,
   for (region = 0; region < heap->mm_nregions; region++)
 #endif
     {
-      DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+      DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
       tlsf_walk_pool(heap->mm_heapstart[region],
                      memdump_handler, &priv);
-      DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+      DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
     }
 #undef region
 
@@ -1431,7 +1431,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
   /* Allocate from the tlsf pool */
 
-  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
 #ifdef CONFIG_MM_RECORD
   ret = tlsf_malloc(heap->mm_tlsf, size +
                     sizeof(struct memdump_record_s));
@@ -1452,7 +1452,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
                       heap->mm_curused);
     }
 
-  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
 
   if (ret)
     {
@@ -1517,7 +1517,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
 
   /* Allocate from the tlsf pool */
 
-  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
 #ifdef CONFIG_MM_RECORD
   ret = tlsf_memalign(heap->mm_tlsf, alignment, size +
                       sizeof(struct memdump_record_s));
@@ -1538,7 +1538,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
                       heap->mm_curused);
     }
 
-  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
 
   if (ret)
     {
@@ -1651,7 +1651,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
   /* Allocate from the tlsf pool */
 
-  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
   oldsize = mm_malloc_size(heap, oldmem);
   heap->mm_curused -= oldsize;
 #ifdef CONFIG_MM_RECORD
@@ -1676,7 +1676,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
                       heap->mm_curused);
     }
 
-  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
 
   if (newmem)
     {
@@ -1791,9 +1791,9 @@ size_t mm_heapfree_largest(FAR struct mm_heap_s *heap)
 
   free_delaylist(heap, true);
 
-  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
   max_free = tlsf_largest_free_block(heap->mm_tlsf);
-  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
 
   return max_free;
 }

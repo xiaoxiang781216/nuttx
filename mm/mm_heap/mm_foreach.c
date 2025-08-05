@@ -74,7 +74,7 @@ void mm_foreach(FAR struct mm_heap_s *heap, mm_node_handler_t handler,
        * Retake the mutex for each region to reduce latencies
        */
 
-      DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+      DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
       bypass = kasan_bypass(true);
 
       for (node = heap->mm_heapstart[region];
@@ -101,7 +101,7 @@ void mm_foreach(FAR struct mm_heap_s *heap, mm_node_handler_t handler,
       handler(node, arg);
 
       kasan_bypass(bypass);
-      DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+      DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
     }
 #undef region
 }

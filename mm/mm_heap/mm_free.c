@@ -119,7 +119,7 @@ void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
     }
 #endif
 
-  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
   bypass = kasan_bypass(true);
   nodesize = mm_malloc_size(heap, mem);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
@@ -222,30 +222,7 @@ void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 
   mm_addfreechunk(heap, node);
   kasan_bypass(bypass);
-  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
-}
-
-/****************************************************************************
- * Name: mm_delayfree
- *
- * Description:
- *   Add mem to delaylist, mem will be freed after a while.
- *
- ****************************************************************************/
-
-void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem)
-{
-  minfo("Adding delaylist %p\n", mem);
-
-  /* Protect against attempts to free a NULL reference */
-
-  if (mem == NULL)
-    {
-      return;
-    }
-
-  DEBUGASSERT(mm_heapmember(heap, mem));
-  add_delaylist(heap, mem, false);
+  DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
 }
 
 /****************************************************************************

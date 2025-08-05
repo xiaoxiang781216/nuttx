@@ -217,7 +217,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
   /* We need to hold the MM mutex while we muck with the nodelist. */
 
-  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
   bypass = kasan_bypass(true);
 
   /* Convert the request size into a nodelist index */
@@ -335,7 +335,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
     }
 
   kasan_bypass(bypass);
-  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
 
   if (ret)
     {

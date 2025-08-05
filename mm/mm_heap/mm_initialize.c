@@ -114,7 +114,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
 #if CONFIG_MM_REGIONS > 1
   int idx;
 
-  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
   bypass = kasan_bypass(true);
 
   idx = heap->mm_nregions;
@@ -125,13 +125,13 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
   if (idx >= CONFIG_MM_REGIONS)
     {
       kasan_bypass(bypass);
-      DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+      DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
       return;
     }
 
 #else
 #  define idx 0
-  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
   bypass = kasan_bypass(true);
 #endif
 
@@ -222,7 +222,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
                   heap->mm_curused);
 
   kasan_bypass(bypass);
-  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
 }
 
 /****************************************************************************

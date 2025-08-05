@@ -138,7 +138,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
   /* We need to hold the MM mutex while we muck with the nodelist. */
 
-  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
+  DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
   bypass = kasan_bypass(true);
 
   DEBUGASSERT(MM_NODE_IS_ALLOC(oldnode));
@@ -169,7 +169,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
       /* Then return the original address */
 
       kasan_bypass(bypass);
-      DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+      DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
       MM_RECORD(heap, oldnode);
 
       return oldmem;
@@ -402,7 +402,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
       size = MM_SIZEOF_NODE(oldnode);
 
       kasan_bypass(bypass);
-      DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+      DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
       MM_RECORD(heap, (FAR char *)newmem - MM_SIZEOF_ALLOCNODE);
 
       newmem = kasan_unpoison(newmem, size - MM_ALLOCNODE_OVERHEAD);
@@ -431,7 +431,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
        */
 
       kasan_bypass(bypass);
-      DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
+      DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
       newmem = mm_malloc(heap, size);
       if (newmem)
         {
