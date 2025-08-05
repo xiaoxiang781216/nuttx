@@ -49,7 +49,6 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
 #include <nuttx/kmalloc.h>
@@ -57,6 +56,7 @@
 #include <nuttx/spi/spi.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/random.h>
+#include <nuttx/spinlock.h>
 
 #include <nuttx/input/touchscreen.h>
 #include <nuttx/input/ads7843e.h>

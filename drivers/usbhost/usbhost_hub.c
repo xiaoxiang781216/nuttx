@@ -33,12 +33,12 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/arch.h>
 #include <nuttx/signal.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/clock.h>
+#include <nuttx/spinlock.h>
 
 #include <nuttx/usb/usb.h>
 #include <nuttx/usb/usbhost.h>

@@ -44,6 +44,7 @@
 #include <nuttx/queue.h>
 #include <nuttx/clock.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/audio/i2s.h>

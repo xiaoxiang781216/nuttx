@@ -37,12 +37,12 @@
 #include <debug.h>
 #include <strings.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/signal.h>
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/can/can.h>
 #include <nuttx/can/mcp2515.h>

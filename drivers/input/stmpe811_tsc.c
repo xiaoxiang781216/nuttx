@@ -50,6 +50,7 @@
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/random.h>
+#include <nuttx/spinlock.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/input/touchscreen.h>

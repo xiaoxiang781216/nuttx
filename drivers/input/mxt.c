@@ -44,7 +44,6 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/arch.h>
@@ -54,6 +53,7 @@
 #include <nuttx/random.h>
 
 #include <nuttx/signal.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/input/touchscreen.h>
 #include <nuttx/input/mxt.h>

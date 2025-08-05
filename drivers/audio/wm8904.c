@@ -44,13 +44,13 @@
 #include <fixedmath.h>
 #include <debug.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
 #include <nuttx/clock.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/signal.h>
 #include <nuttx/mqueue.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
