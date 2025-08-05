@@ -294,13 +294,6 @@ typedef CODE void (*mm_node_handler_t)(FAR struct mm_allocnode_s *node,
  * Public Function Prototypes
  ****************************************************************************/
 
-/* Functions contained in mm_lock.c *****************************************/
-
-int mm_lock(FAR struct mm_heap_s *heap);
-void mm_unlock(FAR struct mm_heap_s *heap);
-irqstate_t mm_lock_irq(FAR struct mm_heap_s *heap);
-void mm_unlock_irq(FAR struct mm_heap_s *heap, irqstate_t state);
-
 /* Functions contained in mm_shrinkchunk.c **********************************/
 
 void mm_shrinkchunk(FAR struct mm_heap_s *heap,

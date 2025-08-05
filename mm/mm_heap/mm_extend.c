@@ -81,7 +81,7 @@ void mm_extend(FAR struct mm_heap_s *heap, FAR void *mem, size_t size,
 
   /* Take the memory manager mutex */
 
-  DEBUGVERIFY(mm_lock(heap));
+  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
   bypass = kasan_bypass(true);
 
   /* Get the terminal node in the old heap.  The block to extend must
@@ -116,7 +116,7 @@ void mm_extend(FAR struct mm_heap_s *heap, FAR void *mem, size_t size,
   heap->mm_heapsize += size;
 
   kasan_bypass(bypass);
-  mm_unlock(heap);
+  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
 
   /* Finally "free" the new block of memory where the old terminal node was
    * located.

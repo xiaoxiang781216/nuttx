@@ -66,7 +66,7 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
 
   /* Move the delay list to local */
 
-  flags = mm_lock_irq(heap);
+  flags = up_irq_save();
   bypass = kasan_bypass(true);
 
   tmp = heap->mm_delaylist[this_cpu()];
@@ -75,7 +75,7 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
   if (tmp == NULL || (!force &&
       heap->mm_delaycount[this_cpu()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
     {
-      mm_unlock_irq(heap, flags);
+      up_irq_restore(flags);
       return false;
     }
 
@@ -85,7 +85,7 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
   heap->mm_delaylist[this_cpu()] = NULL;
 
   kasan_bypass(bypass);
-  mm_unlock_irq(heap, flags);
+  up_irq_restore(flags);
 
   /* Test if the delayed is empty */
 
@@ -217,7 +217,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
   /* We need to hold the MM mutex while we muck with the nodelist. */
 
-  DEBUGVERIFY(mm_lock(heap));
+  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
   bypass = kasan_bypass(true);
 
   /* Convert the request size into a nodelist index */
@@ -335,7 +335,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
     }
 
   kasan_bypass(bypass);
-  mm_unlock(heap);
+  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
 
   if (ret)
     {

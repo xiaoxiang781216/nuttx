@@ -52,7 +52,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
 
   /* Delay the deallocation until a more appropriate time. */
 
-  flags = mm_lock_irq(heap);
+  flags = up_irq_save();
   bypass = kasan_bypass(true);
 
 #ifdef CONFIG_DEBUG_ASSERTIONS
@@ -85,7 +85,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
     }
 
   kasan_bypass(bypass);
-  mm_unlock_irq(heap, flags);
+  up_irq_restore(flags);
 #endif
 }
 
@@ -119,7 +119,7 @@ void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
     }
 #endif
 
-  mm_lock(heap);
+  DEBUGVERIFY(nxmutex_lock(&heap->mm_lock));
   bypass = kasan_bypass(true);
   nodesize = mm_malloc_size(heap, mem);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
@@ -222,7 +222,7 @@ void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 
   mm_addfreechunk(heap, node);
   kasan_bypass(bypass);
-  mm_unlock(heap);
+  DEBUGVERIFY(nxmutex_unlock(&heap->mm_lock));
 }
 
 /****************************************************************************
