@@ -365,6 +365,11 @@ class DumpPrintfProcessor(NoteProcessor):
         print(f"DumpPrintfProcessor:{note} fmt: {str_format} data: {note.npt_data}")
 
 
+class DumpBinaryProcessor(NoteProcessor):
+    def process(self, note, head, sched_state, ptrace, parser):
+        ptrace.atrace_instant(head, note.nev_data)
+
+
 class DumpThreadTimeProcessor(NoteProcessor):
     def process(self, note, head, sched_state, ptrace, parser):
         ptrace.atrace_int(head, "threadtime", note.elapsed)
@@ -393,6 +398,7 @@ class NoteProcessorRegistry:
         self.register_processor(types.NOTE_DUMP_MARK, DumpMarkProcessor())
         self.register_processor(types.NOTE_DUMP_COUNTER, DumpCounterProcessor())
         self.register_processor(types.NOTE_DUMP_PRINTF, DumpPrintfProcessor())
+        self.register_processor(types.NOTE_DUMP_BINARY, DumpBinaryProcessor())
         self.register_processor(types.NOTE_DUMP_THREADTIME, DumpThreadTimeProcessor())
 
     def get_processor(self, note_type):
@@ -496,6 +502,7 @@ class NoteFactory:
             cls.types.NOTE_DUMP_BEGIN,
             cls.types.NOTE_DUMP_END,
             cls.types.NOTE_DUMP_MARK,
+            cls.types.NOTE_DUMP_BINARY,
         ]:
             return cls.note_event_s
         elif note_type == cls.types.NOTE_DUMP_PRINTF:
