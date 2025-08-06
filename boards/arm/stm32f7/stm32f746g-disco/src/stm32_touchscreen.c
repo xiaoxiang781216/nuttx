@@ -30,6 +30,7 @@
 #include <debug.h>
 #include <errno.h>
 
+#include <nuttx/spinlock.h>
 #include <nuttx/input/ft5x06.h>
 
 #include "stm32_gpio.h"

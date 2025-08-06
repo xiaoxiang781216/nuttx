@@ -52,9 +52,9 @@
 #include <time.h>
 #include <assert.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/clock.h>
+#include <nuttx/spinlock.h>
 #include <arch/board/board.h>
 #include <arch/irq.h>
 

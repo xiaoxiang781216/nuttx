@@ -35,7 +35,6 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/board.h>
 #include <nuttx/clock.h>
 #include <nuttx/wqueue.h>
@@ -43,6 +42,7 @@
 #include <nuttx/input/touchscreen.h>
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/spinlock.h>
 
 #include <arch/board/board.h>
 #include "arm_internal.h"

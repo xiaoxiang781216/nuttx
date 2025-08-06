@@ -53,6 +53,7 @@
 #include <nuttx/mqueue.h>
 #include <nuttx/queue.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/spinlock.h>
 
 #include "es8311.h"
 

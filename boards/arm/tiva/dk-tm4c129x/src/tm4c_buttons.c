@@ -31,8 +31,8 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
+#include <nuttx/spinlock.h>
 
-#include <nuttx/irq.h>
 #include <arch/board/board.h>
 
 #include "dk-tm4c129x.h"

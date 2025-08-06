@@ -32,8 +32,8 @@
 #include <debug.h>
 #include <string.h>
 
-#include <arch/irq.h>
 #include <nuttx/arch.h>
+#include <nuttx/spinlock.h>
 
 #include "arm_internal.h"
 #include "nrf53_gpio.h"

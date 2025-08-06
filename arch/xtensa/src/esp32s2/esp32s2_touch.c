@@ -30,8 +30,8 @@
 #include <sys/types.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/spinlock.h>
 #include <arch/irq.h>
 
 #include "xtensa.h"

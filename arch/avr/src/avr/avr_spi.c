@@ -33,9 +33,9 @@
 #include <debug.h>
 
 #include <arch/board/board.h>
-#include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/mutex.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/spi/spi.h>
 
 #include <avr/io.h>

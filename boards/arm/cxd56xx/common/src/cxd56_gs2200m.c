@@ -31,7 +31,7 @@
 #include <nuttx/config.h>
 #include <nuttx/board.h>
 #include <nuttx/spi/spi.h>
-#include <nuttx/irq.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/wireless/gs2200m.h>
 
 #include <arch/chip/pin.h>

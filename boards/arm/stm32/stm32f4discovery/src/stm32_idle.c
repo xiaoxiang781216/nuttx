@@ -33,8 +33,7 @@
 #include <nuttx/board.h>
 #include <nuttx/clock.h>
 #include <nuttx/power/pm.h>
-
-#include <nuttx/irq.h>
+#include <nuttx/spinlock.h>
 
 #include "arm_internal.h"
 #include "stm32_pm.h"

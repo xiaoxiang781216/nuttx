@@ -31,6 +31,8 @@
 #include <debug.h>
 #include <errno.h>
 
+#include <nuttx/spinlock.h>
+
 #include "esp32s2_clockconfig.h"
 #include "esp32s2_gpio.h"
 #include "esp32s2_ledc.h"

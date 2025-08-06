@@ -47,7 +47,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include <nuttx/irq.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/timers/timer.h>
 
 #include <arch/board/board.h>

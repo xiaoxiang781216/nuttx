@@ -32,8 +32,8 @@
 #include <assert.h>
 #include <errno.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/board.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/lcd/ft80x.h>
 

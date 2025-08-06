@@ -26,8 +26,8 @@
 #include <debug.h>
 #include <assert.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/efuse/efuse.h>
 
 #include "hardware/esp32s3_soc.h"

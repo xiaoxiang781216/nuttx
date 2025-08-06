@@ -34,10 +34,9 @@
 #include <debug.h>
 
 #include <arch/board/board.h>
-#include <nuttx/irq.h>
 #include <nuttx/arch.h>
-
 #include <nuttx/wqueue.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/can.h>
 

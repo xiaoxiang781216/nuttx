@@ -31,6 +31,7 @@
 #include <sys/param.h>
 
 #include <nuttx/kmalloc.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/wireless/wireless.h>
 
 #ifdef CONFIG_ESPRESSIF_WIFI
