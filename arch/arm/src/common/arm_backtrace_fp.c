@@ -39,6 +39,17 @@
  * Description:
  *  backtrace() parsing the return address through frame pointer
  *
+ *  stack frame:
+ *  +---------------------+ <- caller's SP
+ *  |     args r0, r1     | <- passed by register
+ *  +---------------------+
+ *  | saved lr (return)   | <- push {r7, lr}
+ *  | saved r7 (fp)       |
+ *  +---------------------+ <- r7 (frame pointer)
+ *  | local var (r1)      | <- sp-0
+ *  | local var (r0)      | <- sp-4
+ *  +---------------------+ <- sp (sp-8)
+ *
  ****************************************************************************/
 
 nosanitize_address
@@ -56,7 +67,11 @@ static int backtrace(uintptr_t *base, uintptr_t *limit,
         }
     }
 
-  for (; i < size; fp = (uintptr_t *)*(fp - 1))
+  /* [fp + 0] = last frame's fp
+   * [fp + 1] = return address (caller's PC)
+   */
+
+  for (; i < size; fp = (uintptr_t *)fp[0])
     {
       if (fp == NULL || fp > limit || fp < base || *fp == 0)
         {
@@ -65,7 +80,7 @@ static int backtrace(uintptr_t *base, uintptr_t *limit,
 
       if ((*skip)-- <= 0)
         {
-          buffer[i++] = (void *)*fp;
+          buffer[i++] = (void *)fp[1];
         }
     }
 
