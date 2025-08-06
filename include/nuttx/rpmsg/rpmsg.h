@@ -35,6 +35,7 @@
 #ifdef CONFIG_RPMSG
 
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/reboot_notifier.h>
 #include <nuttx/rpmsg/rpmsg_ping.h>
 #include <openamp/rpmsg.h>
 #include <openamp/rpmsg_internal.h>
@@ -81,6 +82,7 @@ struct rpmsg_s
   struct rpmsg_endpoint        wakelock;
 #endif
   atomic_t                     signals;
+  struct notifier_block        nbreboot;
 };
 
 struct rpmsg_timestamp_s

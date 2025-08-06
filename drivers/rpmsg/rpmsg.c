@@ -191,6 +191,20 @@ static int rpmsg_ioctl_foreach_cb(FAR struct rpmsg_s *rpmsg, FAR void *arg)
   return 0;
 }
 
+static int rpmsg_reboot_notifier(FAR struct notifier_block *nb,
+                                 unsigned long action, FAR void *data)
+{
+  FAR struct rpmsg_s *rpmsg = metal_container_of(nb, struct rpmsg_s,
+                                                 nbreboot);
+
+  if (action == SYS_HALT)
+    {
+      return rpmsg_dev_ioctl_(rpmsg, RPMSGIOC_DUMP, 0);
+    }
+
+  return 0;
+}
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -600,11 +614,15 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
   metal_list_add_tail(&g_rpmsg, &rpmsg->node);
   up_write(&g_rpmsg_lock);
 
+  rpmsg->nbreboot.notifier_call = rpmsg_reboot_notifier;
+  register_reboot_notifier(&rpmsg->nbreboot);
   return ret;
 }
 
 void rpmsg_unregister(FAR const char *path, FAR struct rpmsg_s *rpmsg)
 {
+  unregister_reboot_notifier(&rpmsg->nbreboot);
+
   down_write(&g_rpmsg_lock);
   metal_list_del(&rpmsg->node);
   up_write(&g_rpmsg_lock);
