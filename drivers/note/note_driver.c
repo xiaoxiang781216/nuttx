@@ -601,6 +601,7 @@ void sched_note_add(FAR const void *data, size_t len)
               continue;
             }
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
           if (note->nc_type > NOTE_DUMP_PRINTF &&
               note->nc_type <= NOTE_DUMP_THREADTIME)
             {
@@ -620,6 +621,7 @@ void sched_note_add(FAR const void *data, size_t len)
                   continue;
                 }
             }
+#endif
 
           if ((*driver)->ops->add == NULL)
             {
