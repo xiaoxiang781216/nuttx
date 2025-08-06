@@ -293,9 +293,8 @@ function(nuttx_add_application)
     endif()
 
     if(INCLUDE_DIRECTORIES)
-      foreach(inc ${INCLUDE_DIRECTORIES})
-        target_include_directories(${TARGET} BEFORE PRIVATE ${inc})
-      endforeach()
+      target_include_directories(${TARGET} BEFORE
+                                 PRIVATE ${INCLUDE_DIRECTORIES})
     endif()
 
     # Set apps global compile options & definitions hold by nuttx_apps_interface
