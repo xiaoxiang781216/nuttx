@@ -211,7 +211,7 @@ int nxmq_wait_send(FAR struct mqueue_inode_s *msgq,
 
   if (abstime || ticks >= 0)
     {
-      wd_cancel(&rtcb->waitdog);
+      wd_try_cancel(&rtcb->waitdog);
     }
 
   return -rtcb->errcode;
@@ -288,7 +288,7 @@ void nxmq_notify_send(FAR struct mqueue_inode_s *msgq)
 
       if (WDOG_ISACTIVE(&btcb->waitdog))
         {
-          wd_cancel(&btcb->waitdog);
+          wd_try_cancel(&btcb->waitdog);
         }
 
       msgq->cmn.nwaitnotempty--;
