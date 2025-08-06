@@ -149,7 +149,8 @@ static inline uintptr_t sys_call0(unsigned int nbr)
     );
   __asm volatile
   (
-    "syscall %1"
+    "syscall %1  \n\t"
+    "mov  %0, d8 \n\t"
     : "=d"(reg0)
     : "i"(SYS_syscall), "d"(nbr)
     : "memory", "a11"
@@ -186,9 +187,10 @@ static inline uintptr_t sys_call1(unsigned int nbr, uintptr_t parm1)
     );
   __asm volatile
   (
-    "syscall %1"
+    "syscall %1  \n\t"
+    "mov  %0, d8 \n\t"
     : "=d"(reg0)
-    : "i"(SYS_syscall)
+    : "i"(SYS_syscall), "d"(nbr)
     : "memory", "a11"
   );
 #else
@@ -226,9 +228,10 @@ static inline uintptr_t sys_call2(unsigned int nbr, uintptr_t parm1,
     );
   __asm volatile
   (
-    "syscall %1"
+    "syscall %1  \n\t"
+    "mov  %0, d8 \n\t"
     : "=d"(reg0)
-    : "i"(SYS_syscall)
+    : "i"(SYS_syscall), "d"(nbr)
     : "memory", "a11"
   );
 #else
@@ -268,9 +271,10 @@ static inline uintptr_t sys_call3(unsigned int nbr, uintptr_t parm1,
     );
   __asm volatile
   (
-    "syscall %1"
+    "syscall %1  \n\t"
+    "mov  %0, d8 \n\t"
     : "=d"(reg0)
-    : "i"(SYS_syscall)
+    : "i"(SYS_syscall), "d"(nbr)
     : "memory", "a11"
   );
 #else
@@ -313,9 +317,10 @@ static inline uintptr_t sys_call4(unsigned int nbr, uintptr_t parm1,
     );
   __asm volatile
   (
-    "syscall %1"
+    "syscall %1  \n\t"
+    "mov  %0, d8 \n\t"
     : "=d"(reg0)
-    : "i"(SYS_syscall)
+    : "i"(SYS_syscall), "d"(nbr)
     : "memory", "a11"
   );
 #else
@@ -361,9 +366,10 @@ static inline uintptr_t sys_call5(unsigned int nbr, uintptr_t parm1,
     );
   __asm volatile
   (
-    "syscall %1"
+    "syscall %1  \n\t"
+    "mov  %0, d8 \n\t"
     : "=d"(reg0)
-    : "i"(SYS_syscall)
+    : "i"(SYS_syscall), "d"(nbr)
     : "memory", "a11"
   );
 #else
@@ -413,9 +419,10 @@ static inline uintptr_t sys_call6(unsigned int nbr, uintptr_t parm1,
     );
   __asm volatile
   (
-    "syscall %1"
+    "syscall %1  \n\t"
+    "mov  %0, d8 \n\t"
     : "=d"(reg0)
-    : "i"(SYS_syscall)
+    : "i"(SYS_syscall), "d"(nbr)
     : "memory", "a11"
   );
 #else
