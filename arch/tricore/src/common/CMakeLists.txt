@@ -76,3 +76,10 @@ target_compile_options(nuttx PRIVATE ${IFXFLAGS})
 target_include_directories(
   nuttx SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include
                        ${CMAKE_BINARY_DIR}/include_arch)
+
+if(CONFIG_ARCH_TOOLCHAIN_TASKING)
+  target_link_options(nuttx PRIVATE -OtxYcL)
+  if(CONFIG_BUILD_PROTECTED)
+    target_link_options(nuttx_user PRIVATE --optimize=0)
+  endif()
+endif()
