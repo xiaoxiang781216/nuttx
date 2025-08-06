@@ -522,7 +522,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           if (WDOG_ISACTIVE(&stcb->waitdog))
             {
-              wd_cancel(&stcb->waitdog);
+              wd_try_cancel(&stcb->waitdog);
             }
 
           /* Remove the task from waiting list */
@@ -590,7 +590,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           if (WDOG_ISACTIVE(&stcb->waitdog))
             {
-              wd_cancel(&stcb->waitdog);
+              wd_try_cancel(&stcb->waitdog);
             }
 
           /* Remove the task from waiting list */

@@ -150,7 +150,7 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
 
   /* Stop the watchdog timer */
 
-  wd_cancel(&rtcb->waitdog);
+  wd_try_cancel(&rtcb->waitdog);
 
   /* We can now restore interrupts and delete the watchdog */
 
