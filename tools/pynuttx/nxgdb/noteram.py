@@ -25,7 +25,7 @@ import gdb
 
 try:
     from nxelf.elf import ELFParser
-    from nxtrace.trace import NoteFactory
+    from nxtrace.trace import NoteParser
 except SystemExit:
     pass
 
@@ -35,100 +35,82 @@ from . import autocompeletion, utils
 class NoteRam:
     def __init__(self, driver_name: str):
         """Initialize NoteRam object with driver structure"""
-        self.driver = None
-        self.buffer = None
-        self.bufsize = 0
-        self.head = 0
-        self.read = 0
 
         self.driver = utils.gdb_eval_or_none(driver_name)
         if not self.driver:
             return
-        self.head = int(self.driver["header"]["head"])
-        self.read = int(self.driver["header"]["read"])
-        self.bufsize = int(self.driver["bufsize"])
-        self.buffer = (
-            gdb.selected_inferior()
-            .read_memory(self.driver["buffer"].cast("uintptr_t"), self.bufsize)
-            .tobytes()
-        )
 
-    def events(self):
-        """Generate events from circular buffer"""
-        if not self.buffer or not self.bufsize:
+        noteram_driver_s = utils.lookup_type("struct noteram_driver_s")
+        if self.driver.type.code == gdb.TYPE_CODE_PTR:
+            self.driver = self.driver.cast(noteram_driver_s.pointer())
+
+        head = int(self.driver["header"]["head"])
+        tail = int(self.driver["header"]["tail"])
+        bufsize = int(self.driver["bufsize"])
+        address = int(self.driver["buffer"])
+
+        if head == tail:
+            self.buffer = b""
             return
 
+        gdbif = gdb.selected_inferior()
+        if head > tail:
+            available = head - tail
+            rawdata = gdbif.read_memory(address + tail, available).tobytes()
+        else:
+            available = bufsize - tail + head
+            remaining = bufsize - tail
+            rawdata = gdbif.read_memory(address + tail, remaining).tobytes()
+            rawdata += gdbif.read_memory(address, available - remaining).tobytes()
+
+        self.buffer = self._process_events(rawdata)
+
+    def _process_events(self, rawdata):
+        """Process all trace data with alignment"""
+
         uintptr_size = utils.sizeof("uintptr_t")
-        buffer, bufsize, head, read = (
-            self.buffer,
-            self.bufsize,
-            self.head,
-            self.read,
-        )
-        while (unread := (head - read) % bufsize) > 0:
-            event_len = int(buffer[read])
-            if event_len <= 0 or event_len > unread:
-                raise BufferError(
-                    f"Invalid event length: {event_len}, available space {unread}"
-                )
-            end = read + event_len
-            event = bytes(
-                buffer[read:end]
-                if end <= bufsize
-                else buffer[read:bufsize] + buffer[: end % bufsize]
-            )
-            yield event
-            read = (
-                read + ((event_len + uintptr_size - 1) & ~(uintptr_size - 1))
-            ) % bufsize
+        tracedata = bytes()
+        offset = 0
+
+        while offset < len(rawdata):
+            notelen = int(rawdata[offset])
+            if notelen <= 0 or offset + notelen > len(rawdata):
+                raise BufferError(f"Invalid event length: {notelen}")
+
+            event = rawdata[offset : offset + notelen]
+            offset += (notelen + uintptr_size - 1) & ~(uintptr_size - 1)
+            tracedata += event
+
+        return tracedata
 
 
 @autocompeletion.complete
 class NoteRamCommand(gdb.Command):
     """GDB command to parse and dump noteram datas"""
 
-    def get_argparser(self):
-        parser = argparse.ArgumentParser(description=self.__doc__)
-        parser.add_argument(
-            "-o",
-            "--output-path",
-            type=str,
-            metavar="file",
-            default="noteram.perfetto",
-            help="Specify the output path for the Perfetto file",
-        )
-        return parser
-
     def __init__(self):
         if not utils.get_field_nitems("struct noteram_driver_s", "buffer"):
             return
         super().__init__("noteram", gdb.COMMAND_USER)
-        self.parser = self.get_argparser()
 
-    def init_note_factory(self, out_path):
-        """Initialize NoteFactory"""
-        if path := gdb.objfiles()[0].filename:
-            NoteFactory.init_instance(ELFParser(path), out_path)
-            return True
-        return False
-
-    def collect_notes(self, out_path):
+    def collect_notes(self, driver_name, out_path, save_path=None):
         """Collect notes only if initialization succeeds"""
-        if not self.init_note_factory(out_path):
-            raise RuntimeError("NoteFactory initialization failed")
 
-        notes = []
-        noteram = NoteRam("g_noteram_driver")
+        noteram = NoteRam(driver_name)
         if not noteram.buffer:
             print("No valid noteram buffer")
-            return notes
+            return None
 
-        for idx, event in enumerate(noteram.events()):
-            try:
-                if note := NoteFactory.parse(event):
-                    notes.append(note)
-            except Exception as e:
-                print(f"Error parsing event {idx} ({event}): {e}")
+        if save_path:
+            with open(save_path, "wb") as f:
+                f.write(noteram.buffer)
+            print(f"Raw trace data saved to: {path.abspath(save_path)}")
+
+        elf_parser = ELFParser(gdb.objfiles()[0].filename)
+        note_parser = NoteParser(elf_parser, output=out_path)
+        notes = note_parser.parse(noteram.buffer)
+        note_parser.dump()
+        note_parser.flush()
         return notes
 
     def parse_arguments(self, args):
@@ -139,22 +121,20 @@ class NoteRamCommand(gdb.Command):
 
     @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
-        if not (args := self.parse_arguments(gdb.string_to_argv(args))):
-            return
-        out_path = path.abspath(args.output_path)
-        notes = self.collect_notes(out_path)
-        if notes:
-            NoteFactory.dump(notes)
-            NoteFactory.flush()
-            print(f"Perfetto file saved to: {out_path}")
-        else:
-            print("No notes collected, skipping dump")
+        args = self.parse_arguments(args)
+
+        try:
+            self.collect_notes(
+                args.driver, path.abspath(args.output_path), args.save_data
+            )
+        except Exception as e:
+            print(f"Error parsing notes: {e}")
 
     def diagnose(self, *args, **kwargs):
-        notes = self.collect_notes("diagnose_noteram.perfetto")
-        if notes:
-            NoteFactory.dump(notes)
-            NoteFactory.flush()
+        try:
+            notes = self.collect_notes("diagnose_noteram.perfetto")
+        except Exception as e:
+            notes = f"No notes collected {e}"
 
         return {
             "title": "Noteram Report",
