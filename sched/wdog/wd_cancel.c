@@ -42,6 +42,30 @@
  * Inline Functions
  ****************************************************************************/
 
+static inline_function
+bool wd_isrunning_on(FAR struct wdog_s *wdog, unsigned int cpu)
+{
+  bool ret;
+  irqstate_t flags;
+
+  DEBUGASSERT(cpu < CONFIG_SMP_NCPUS);
+
+  flags = spin_lock_irqsave(&g_wdspinlock);
+
+  ret = WDOG_GETRUNNING(cpu) == wdog;
+
+  /* If other threads call wd_start in non-interrupt context to
+   * restart this wdog, it will lead to canceling failure.
+   * This is an ownership violation issue that should be prohibited.
+   */
+
+  DEBUGASSERT(!WDOG_ISACTIVE(wdog));
+
+  spin_unlock_irqrestore(&g_wdspinlock, flags);
+
+  return ret;
+}
+
 /****************************************************************************
  * Name: wd_cancel_running
  *
@@ -232,16 +256,9 @@ int wd_cancel(FAR struct wdog_s *wdog)
        * spin-waiting should be enough.
        */
 
-      while (WDOG_GETRUNNING(cpu) == wdog)
+      while (wd_isrunning_on(wdog, cpu))
         {
           /* CPU Relaxing. */
-
-          /* If other threads call wd_start in non-interrupt context to
-           * restart this wdog, it will lead to canceling failure.
-           * This is an ownership violation issue that should be prohibited.
-           */
-
-          DEBUGASSERT(!WDOG_ISACTIVE(wdog));
         }
     }
 
