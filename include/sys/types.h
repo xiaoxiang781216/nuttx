@@ -329,6 +329,8 @@ typedef CODE int (*main_t)(int argc, FAR char *argv[]);
 
 /* POSIX-like OS return values: */
 
+#undef OK
+
 enum
 {
   ERROR = -1,
