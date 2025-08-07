@@ -325,7 +325,7 @@ class MMDump(gdb.Command):
 
     def find_address(self, addr, heaps: List[mm.MMHeap] = None, log=None):
         """Find the node that contains the address from memdump log or live dump."""
-        addr = int(gdb.parse_and_eval(addr))
+        addr = int(utils.parse_and_eval(addr))
         if log:
             nodes = parse_memdump_log(log)
             node = next((node for node in nodes if node.contains(addr)), None)

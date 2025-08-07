@@ -76,7 +76,7 @@ def socket_for_each_entry(proto):
         readahead = conn["readahead"]
     """
 
-    active_connections = gdb.parse_and_eval("g_active_%s_connections" % proto)
+    active_connections = utils.parse_and_eval("g_active_%s_connections" % proto)
     for node in NxDQueue(active_connections, "struct socket_conn_s", "node"):
         # udp_conn_s::socket_conn_s sconn
         yield utils.container_of(
@@ -128,11 +128,11 @@ class NetStats(gdb.Command):
             size = utils.get_symbol_value("CONFIG_IOB_BUFSIZE")
             ntotal = utils.get_symbol_value("CONFIG_IOB_NBUFFERS")
 
-            nfree = gdb.parse_and_eval("g_iob_sem")["val"]["semcount"]
+            nfree = utils.parse_and_eval("g_iob_sem")["val"]["semcount"]
             nwait, nfree = (0, nfree) if nfree >= 0 else (-nfree, 0)
 
             nthrottle = (
-                gdb.parse_and_eval("g_throttle_sem")["val"]["semcount"]
+                utils.parse_and_eval("g_throttle_sem")["val"]["semcount"]
                 if utils.get_symbol_value("CONFIG_IOB_THROTTLE") > 0
                 else 0
             )
@@ -149,7 +149,7 @@ class NetStats(gdb.Command):
 
     def pkt_stats(self):
         try:
-            netstats = gdb.parse_and_eval("g_netstats")
+            netstats = utils.parse_and_eval("g_netstats")
             gdb.write(
                 "Packets:%7s%7s%7s%7s%7s%7s\n"
                 % ("IPv4", "IPv6", "TCP", "UDP", "ICMP", "ICMPv6")
@@ -295,9 +295,9 @@ class NetCheck(gdb.Command):
         result = NetCheckResult.PASS
         message = []
         try:
-            nfree = gdb.parse_and_eval("g_iob_sem")["val"]["semcount"]
+            nfree = utils.parse_and_eval("g_iob_sem")["val"]["semcount"]
             nthrottle = (
-                gdb.parse_and_eval("g_throttle_sem")["val"]["semcount"]
+                utils.parse_and_eval("g_throttle_sem")["val"]["semcount"]
                 if utils.get_symbol_value("CONFIG_IOB_THROTTLE") > 0
                 else 0
             )

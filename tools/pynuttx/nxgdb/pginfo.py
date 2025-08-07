@@ -22,7 +22,7 @@
 
 import gdb
 
-from .utils import DiagnoseCategory, dont_repeat_decorator, read_u64
+from .utils import DiagnoseCategory, dont_repeat_decorator, parse_and_eval, read_u64
 
 
 class PageTable:
@@ -90,7 +90,7 @@ class PageTableX86(PageTable):
                 break
 
     def dump(self):
-        pml4_addr = int(gdb.parse_and_eval("&pml4")) & ~0xFFF
+        pml4_addr = int(parse_and_eval("&pml4")) & ~0xFFF
         print(f"pml4_addr: {pml4_addr:#x}")
 
         for line in self.walk_table(pml4_addr, 0):

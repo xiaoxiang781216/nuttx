@@ -173,12 +173,12 @@ class SetRegs(gdb.Command):
             return
 
         if args and args.regs:
-            regs = gdb.parse_and_eval(f"{args.regs}").cast(
+            regs = utils.parse_and_eval(f"{args.regs}").cast(
                 utils.lookup_type("char").pointer()
             )
         else:
             try:
-                current_regs = gdb.parse_and_eval("g_running_tasks[0].xcp.regs")
+                current_regs = utils.parse_and_eval("g_running_tasks[0].xcp.regs")
             except gdb.error as e:
                 gdb.write(f"Failed to parse running tasks: {e}\n")
                 return
@@ -201,9 +201,9 @@ class Nxinfothreads(gdb.Command):
 
     @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
-        npidhash = gdb.parse_and_eval("g_npidhash")
-        pidhash = gdb.parse_and_eval("g_pidhash")
-        statenames = gdb.parse_and_eval("g_statenames")
+        npidhash = utils.parse_and_eval("g_npidhash")
+        pidhash = utils.parse_and_eval("g_pidhash")
+        statenames = utils.parse_and_eval("g_statenames")
 
         if utils.is_target_smp():
             gdb.write(
@@ -229,7 +229,7 @@ class Nxinfothreads(gdb.Command):
             statename = statenames[tcb["task_state"]].string()
             statename = f'\x1b{"[32;1m" if statename == "Running" else "[33;1m"}{statename}\x1b[m'
 
-            if tcb["task_state"] == gdb.parse_and_eval("TSTATE_WAIT_SEM"):
+            if tcb["task_state"] == utils.parse_and_eval("TSTATE_WAIT_SEM"):
                 mutex = tcb["waitobj"].cast(utils.lookup_type("sem_t").pointer())
                 if utils.sem_is_mutex(mutex):
                     mutex = tcb["waitobj"].cast(utils.lookup_type("mutex_t").pointer())
@@ -286,8 +286,8 @@ class Nxthread(gdb.Command):
 
     @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
-        npidhash = gdb.parse_and_eval("g_npidhash")
-        pidhash = gdb.parse_and_eval("g_pidhash")
+        npidhash = utils.parse_and_eval("g_npidhash")
+        pidhash = utils.parse_and_eval("g_pidhash")
         arg = args.split(" ")
         arglen = len(arg)
 
@@ -563,7 +563,7 @@ class Ps(gdb.Command):
             cmd = " ".join([name] + args)
 
         if not self.macros.get("CONFIG_SCHED_CPULOAD_NONE"):
-            g_cpuload_total = int(gdb.parse_and_eval("g_cpuload_total"))
+            g_cpuload_total = int(utils.parse_and_eval("g_cpuload_total"))
             load = "{0:.1%}".format(
                 int(tcb["ticks"]) / g_cpuload_total if g_cpuload_total else 0
             )

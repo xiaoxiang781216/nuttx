@@ -334,7 +334,7 @@ class ListCheck(gdb.Command):
         if len(argv) != 1:
             raise gdb.GdbError("nx-list-check takes one argument")
 
-        obj = gdb.parse_and_eval(argv[0])
+        obj = utils.parse_and_eval(argv[0])
         if obj.type == list_node_type.pointer():
             list_check(obj)
         elif obj.type == sq_queue_type.pointer():
@@ -388,7 +388,7 @@ class ForeachListEntry(gdb.Command):
             gdb.write("Invalid arguments\n")
             return
 
-        pointer = gdb.parse_and_eval(args.head)
+        pointer = utils.parse_and_eval(args.head)
         node = pointer
         i = 0
         while node:
@@ -444,7 +444,7 @@ class ForeachArray(gdb.Command):
             gdb.write("Invalid arguments\n")
             return
 
-        pointer = gdb.parse_and_eval(args.head)
+        pointer = utils.parse_and_eval(args.head)
         node = pointer
         len = args.length if args.length else utils.nitems(pointer)
         for i in range(len):

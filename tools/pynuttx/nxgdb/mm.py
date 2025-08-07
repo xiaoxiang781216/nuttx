@@ -646,7 +646,7 @@ def get_heaps() -> List[MMHeap]:
     # parse g_procfs_meminfo to get all heaps
     heaps = []
     meminfo: p.ProcfsMeminfoEntry = utils.gdb_eval_or_none("g_procfs_meminfo")
-    if not meminfo and (heap := gdb.parse_and_eval("g_mmheap")):
+    if not meminfo and (heap := utils.parse_and_eval("g_mmheap")):
         heaps.append(MMHeap(heap))
 
     while meminfo:
@@ -682,8 +682,8 @@ def memory_range(heap=True, globals=True) -> List[Tuple[int, int]]:
 
                 memranges.append((start, end))
 
-        idle_topstack = int(gdb.parse_and_eval("g_idle_topstack"))
-        idle_stacksize = int(gdb.parse_and_eval("CONFIG_IDLETHREAD_STACKSIZE"))
+        idle_topstack = int(utils.parse_and_eval("g_idle_topstack"))
+        idle_stacksize = int(utils.parse_and_eval("CONFIG_IDLETHREAD_STACKSIZE"))
         memranges.append((idle_topstack - idle_stacksize, idle_topstack))
 
     # Get heaps from memdump
@@ -821,7 +821,7 @@ class MMPoolInfo(gdb.Command):
         except SystemExit:
             return
 
-        heaps = [gdb.parse_and_eval(args.heap)] if args.heap else get_heaps()
+        heaps = [utils.parse_and_eval(args.heap)] if args.heap else get_heaps()
         if not (pools := list(get_pools(heaps))):
             gdb.write("No pools found.\n")
             return

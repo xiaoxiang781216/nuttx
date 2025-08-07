@@ -76,7 +76,7 @@ class Pmconfig(gdb.Command):
         gdb.write(self.state_formatter.format(domain_name, *self.state_header) + "\n")
 
         state_info_list, sum_time = get_pm_state_info_list(domain)
-        pm_state = gdb.parse_and_eval("g_pm_state")
+        pm_state = utils.parse_and_eval("g_pm_state")
 
         for state in range(PM_COUNT):
             state_info = state_info_list[state]
@@ -95,7 +95,7 @@ class Pmconfig(gdb.Command):
         if not has_inferior():
             return
 
-        pmdomains = gdb.parse_and_eval("g_pmdomains")
+        pmdomains = utils.parse_and_eval("g_pmdomains")
         ndomains = utils.nitems(pmdomains)
 
         domains = [f"DOMAIN{i}" for i in range(ndomains)]

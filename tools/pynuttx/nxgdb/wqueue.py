@@ -124,7 +124,7 @@ class WorkQueue(Value, p.KWorkQueue):
 
 
 def get_work_queues() -> List[WorkQueue]:
-    entry = gdb.parse_and_eval("work_thread")
+    entry = utils.parse_and_eval("work_thread")
     kwork_wqueue_s = utils.lookup_type("struct kwork_wqueue_s")
 
     tcbs = utils.get_tcbs()

@@ -282,7 +282,9 @@ class RPMsgDump(gdb.Command):
         self.print_headers(self.CALLBACK_HEADER, self.CALLBACK_FORAMTTER)
 
         output = []
-        for cb in NxList(gdb.parse_and_eval("g_rpmsg_cb"), "struct rpmsg_cb_s", "node"):
+        for cb in NxList(
+            utils.parse_and_eval("g_rpmsg_cb"), "struct rpmsg_cb_s", "node"
+        ):
             output.append(
                 self.CALLBACK_FORAMTTER.format(
                     str(cb), str(cb["ns_match"]), str(cb["ns_bind"])
@@ -291,7 +293,7 @@ class RPMsgDump(gdb.Command):
         gdb.write("\n".join(output) + "\n")
 
     def dump_rpmsg(self, args):
-        for rpmsg in NxList(gdb.parse_and_eval("g_rpmsg"), "struct rpmsg_s", "node"):
+        for rpmsg in NxList(utils.parse_and_eval("g_rpmsg"), "struct rpmsg_s", "node"):
             rdev = utils.Value(int(rpmsg) + utils.sizeof("struct rpmsg_s"))
             rdev = rdev.cast(utils.lookup_type("struct rpmsg_device").pointer())
             gdb.write(
