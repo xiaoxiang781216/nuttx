@@ -30,7 +30,7 @@ list(APPEND SRCS arm64_releasestack.c arm64_stackframe.c arm64_usestack.c)
 list(APPEND SRCS arm64_exit.c arm64_fork.c)
 list(APPEND SRCS arm64_schedulesigaction.c arm64_sigdeliver.c)
 list(APPEND SRCS arm64_getintstack.c arm64_registerdump.c)
-list(APPEND SRCS arm64_perf.c arm64_tcbinfo.c arm64_assert.c)
+list(APPEND SRCS arm64_perf.c arm64_tcbinfo.c)
 
 # Common C source files ( hardware BSP )
 list(APPEND SRCS arm64_arch_timer.c arm64_cache.c)

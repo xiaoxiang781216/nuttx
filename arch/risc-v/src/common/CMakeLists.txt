@@ -31,7 +31,7 @@ list(APPEND SRCS riscv_mtimer.c riscv_nputs.c riscv_registerdump.c)
 list(APPEND SRCS riscv_releasestack.c riscv_schedulesigaction.c
      riscv_sigdeliver.c)
 list(APPEND SRCS riscv_stackframe.c riscv_tcbinfo.c riscv_swint.c)
-list(APPEND SRCS riscv_switchcontext.c riscv_usestack.c riscv_assert.c)
+list(APPEND SRCS riscv_switchcontext.c riscv_usestack.c)
 
 if(NOT CONFIG_ARCH_IDLE_CUSTOM)
   list(APPEND SRCS riscv_idle.c)

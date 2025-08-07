@@ -38,7 +38,6 @@ set(SRCS
     arm_stackframe.c
     arm_usestack.c
     arm_fork.c
-    arm_assert.c
     arm_poweroff.c
     ${ARCH_TOOLCHAIN_PATH}/fork.S)
 

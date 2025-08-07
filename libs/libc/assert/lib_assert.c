@@ -28,6 +28,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <syscall.h>
 
 /****************************************************************************
  * Public Functions
@@ -35,7 +36,7 @@
 
 void __assert(FAR const char *filename, int linenum, FAR const char *msg)
 {
-#ifdef CONFIG_BUILD_FLAT
+#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   if (up_interrupt_context())
     {
       _assert(filename, linenum, msg, NULL, true);

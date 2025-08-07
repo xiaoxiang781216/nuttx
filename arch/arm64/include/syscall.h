@@ -399,6 +399,14 @@ void arm64_smccc_smc(unsigned long a0, unsigned long a1,
                      unsigned long a6, unsigned long a7,
                      struct arm64_smccc_res *res);
 
+/****************************************************************************
+ * Name: up_assert
+ ****************************************************************************/
+
+#define up_assert(filename, linenum, msg) \
+    sys_call3(SYS_assert_handler, (uintptr_t)filename, \
+              (uintptr_t)linenum, (uintptr_t)msg);
+
 #ifdef __cplusplus
 #define EXTERN extern "C"
 extern "C"

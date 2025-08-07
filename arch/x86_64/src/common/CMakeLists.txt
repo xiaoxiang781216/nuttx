@@ -30,8 +30,7 @@ set(SRCS
     x86_64_nputs.c
     x86_64_switchcontext.c
     x86_64_tcbinfo.c
-    x86_64_tlb.c
-    x86_64_assert.c)
+    x86_64_tlb.c)
 
 if(CONFIG_ARCH_HAVE_FORK)
   list(APPEND SRCS x86_64_fork.c fork.S)

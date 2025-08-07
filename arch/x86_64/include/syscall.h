@@ -199,6 +199,14 @@ static inline uintptr_t sys_call6(unsigned int nbr, uintptr_t parm1,
   return ret;
 }
 
+/****************************************************************************
+ * Name: up_assert
+ ****************************************************************************/
+
+#define up_assert(filename, linenum, msg) \
+    sys_call3(SYS_assert_handler, (uintptr_t)filename, \
+              (uintptr_t)linenum, (uintptr_t)msg);
+
 #undef EXTERN
 #ifdef __cplusplus
 }

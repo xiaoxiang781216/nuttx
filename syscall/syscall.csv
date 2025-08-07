@@ -197,7 +197,6 @@
 "umount2","sys/mount.h","!defined(CONFIG_DISABLE_MOUNTPOINT)","int","FAR const char *","unsigned int"
 "unlink","unistd.h","!defined(CONFIG_DISABLE_MOUNTPOINT)","int","FAR const char *"
 "unsetenv","stdlib.h","!defined(CONFIG_DISABLE_ENVIRON)","int","FAR const char *"
-"up_assert","nuttx/arch.h","defined(CONFIG_ARCH_HAVE_SYSCALL)","void","FAR const char *", "int", "FAR const char *"
 "up_fork","nuttx/arch.h","defined(CONFIG_ARCH_HAVE_FORK)","pid_t"
 "utimens","sys/stat.h","","int","FAR const char *","const struct timespec [2]|FAR const struct timespec *"
 "wait","sys/wait.h","defined(CONFIG_SCHED_WAITPID) && defined(CONFIG_SCHED_HAVE_PARENT)","pid_t","FAR int *"
