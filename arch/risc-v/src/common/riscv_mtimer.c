@@ -86,16 +86,7 @@ static uint64_t riscv_mtimer_get_mtime(struct riscv_mtimer_lowerhalf_s *priv)
 static void riscv_mtimer_set_mtimecmp(struct riscv_mtimer_lowerhalf_s *priv,
                                       uint64_t value)
 {
-#if CONFIG_ARCH_RV_MMIO_BITS == 64
-  if (-1 != priv->mtime)
-    {
-      riscv_mtimer_set64(priv->mtimecmp, value);
-    }
-  else
-#endif
-    {
-      riscv_mtimer_set(priv->mtimecmp, value);
-    }
+  riscv_mtimer_set(priv->mtime, priv->mtimecmp, value);
 }
 
 /****************************************************************************

@@ -64,28 +64,24 @@ static inline uint64_t riscv_mtimer_get(uint64_t mtime_addr)
 }
 
 static inline
-void riscv_mtimer_set32(uint64_t mtimecmp_addr, uint64_t value)
+void riscv_mtimer_set(uint64_t mtime_addr,
+                      uint64_t mtimecmp_addr, uint64_t value)
 {
-  putreg32(UINT32_MAX, mtimecmp_addr + 4);
-  putreg32(value, mtimecmp_addr);
-  putreg32(value >> 32, mtimecmp_addr + 4);
-
-  UP_DSB();
-}
-
-static inline
-void riscv_mtimer_set64(uint64_t mtimecmp_addr, uint64_t value)
-{
-  putreg64(value, mtimecmp_addr);
-
-  UP_DSB();
-}
-
 #  if CONFIG_ARCH_RV_MMIO_BITS == 64
-#    define riscv_mtimer_set(mtimecmp, v) riscv_mtimer_set64(mtimecmp, v)
-#  else
-#    define riscv_mtimer_set(mtimecmp, v) riscv_mtimer_set32(mtimecmp, v)
+  if (-1 != mtime_addr)
+    {
+      putreg64(value, mtimecmp_addr);
+    }
+  else
 #  endif
+    {
+      putreg32(UINT32_MAX, mtimecmp_addr + 4);
+      putreg32(value, mtimecmp_addr);
+      putreg32(value >> 32, mtimecmp_addr + 4);
+    }
+
+  UP_DSB();
+}
 
 #else
 
@@ -107,9 +103,12 @@ static inline uint64_t riscv_mtimer_get(uint64_t mtime_addr)
   return riscv_sbi_get_time();
 }
 
-static inline void riscv_mtimer_set(uint64_t mtimecmp_addr, uint64_t value)
+static inline
+void riscv_mtimer_set(uint64_t mtime_addr,
+                      uint64_t mtimecmp_addr, uint64_t value)
 {
   UNUSED(mtimecmp_addr);
+  UNUSED(mtime_addr);
 #  ifndef CONFIG_ARCH_RV_EXT_SSTC
   riscv_sbi_set_timer(value);
 #  else
