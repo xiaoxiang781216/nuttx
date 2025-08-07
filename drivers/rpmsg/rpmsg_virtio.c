@@ -35,6 +35,7 @@
 #include <nuttx/rpmsg/rpmsg_virtio.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/virtio/virtio.h>
 #include <nuttx/virtio/virtio-config.h>
 #include <nuttx/wdog.h>
 #include <metal/utilities.h>
@@ -103,6 +104,10 @@ static void rpmsg_virtio_tx_wakeup(FAR struct rpmsg_virtio_priv_s *priv);
 static int rpmsg_virtio_wait(FAR struct rpmsg_s *rpmsg, FAR sem_t *sem);
 static int rpmsg_virtio_post(FAR struct rpmsg_s *rpmsg, FAR sem_t *sem);
 static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg);
+static FAR void *rpmsg_virtio_alloc_buf(FAR struct rpmsg_s *rpmsg,
+                                        size_t size, size_t align);
+static void rpmsg_virtio_free_buf(FAR struct rpmsg_s *rpmsg,
+                                  FAR void *addr);
 
 static void rpmsg_virtio_rx_callback(FAR struct virtqueue *vq);
 static void rpmsg_virtio_tx_callback(FAR struct virtqueue *vq);
@@ -119,6 +124,9 @@ static const struct rpmsg_ops_s g_rpmsg_virtio_ops =
   NULL,
   NULL,
   rpmsg_virtio_dump,
+  NULL,
+  rpmsg_virtio_alloc_buf,
+  rpmsg_virtio_free_buf,
 };
 
 /****************************************************************************
@@ -557,6 +565,32 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg)
     {
       metal_mutex_release(&rdev->lock);
     }
+}
+
+/****************************************************************************
+ * Name: rpmsg_virtio_alloc_buf
+ ****************************************************************************/
+
+static FAR void *rpmsg_virtio_alloc_buf(FAR struct rpmsg_s *rpmsg,
+                                        size_t size, size_t align)
+{
+  FAR struct rpmsg_virtio_priv_s *priv =
+    (FAR struct rpmsg_virtio_priv_s *)rpmsg;
+
+  return virtio_malloc_buf(priv->vdev, size, align);
+}
+
+/****************************************************************************
+ * Name: rpmsg_virtio_free_buf
+ ****************************************************************************/
+
+static void rpmsg_virtio_free_buf(FAR struct rpmsg_s *rpmsg,
+                                  FAR void *addr)
+{
+  FAR struct rpmsg_virtio_priv_s *priv =
+    (FAR struct rpmsg_virtio_priv_s *)rpmsg;
+
+  virtio_free_buf(priv->vdev, addr);
 }
 
 /****************************************************************************
