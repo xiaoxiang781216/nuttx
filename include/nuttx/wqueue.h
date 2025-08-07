@@ -357,6 +357,20 @@ FAR struct kwork_wqueue_s *work_queue_create(FAR const char *name,
                                              uint8_t nthreads);
 
 /****************************************************************************
+ * Name: work_qeueue_dispatch
+ *
+ * Description:
+ *   Execute all pending work items on a given work queue by iterating
+ *   through each worker thread and invoking its execution routine.
+ *
+ * Input Parameters:
+ *   wqueue - Work queue instance.
+ *
+ ****************************************************************************/
+
+void work_qeueue_dispatch(FAR struct kwork_wqueue_s *wqueue);
+
+/****************************************************************************
  * Name: work_queue_free
  *
  * Description:
