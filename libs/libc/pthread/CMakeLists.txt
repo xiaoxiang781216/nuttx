@@ -74,6 +74,7 @@ if(NOT CONFIG_DISABLE_PTHREAD)
     pthread_condsignal.c
     pthread_condwait.c
     pthread_create.c
+    pthread_equal.c
     pthread_exit.c
     pthread_kill.c
     pthread_setname_np.c
