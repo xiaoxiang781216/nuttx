@@ -770,6 +770,12 @@ coredump_print_memory_regions(FAR const struct memory_region_s *regions)
 {
   int i;
 
+  if (regions == NULL)
+    {
+      _alert("No memory regions defined.\n");
+      return;
+    }
+
   _alert("Memory regions will be printed:\n");
   for (i = 0; regions[i].start < regions[i].end; i++)
     {
