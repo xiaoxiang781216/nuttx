@@ -201,7 +201,7 @@ class Addr2Line(gdb.Command):
                     addresses.append(int(arg, 16))
                 else:
                     try:
-                        var = gdb.parse_and_eval(f"{arg}")
+                        var = utils.parse_and_eval(f"{arg}")
                         addresses.append(var)
                     except gdb.error as e:
                         gdb.write(f"Ignore {arg}: {e}\n")
