@@ -512,7 +512,7 @@ int timerfd_settime(int fd, int flags,
    * timerfd_settime() is called).
    */
 
-  wd_cancel(&dev->wdog);
+  wd_try_cancel(&dev->wdog);
 
   /* Clear expiration counter */
 
