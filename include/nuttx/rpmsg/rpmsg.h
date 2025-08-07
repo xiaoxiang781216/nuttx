@@ -107,6 +107,9 @@ struct rpmsg_ops_s
   CODE void (*dump)(FAR struct rpmsg_s *rpmsg);
   CODE int (*get_timestamp)(FAR struct rpmsg_s *rpmsg, FAR const void *data,
                             FAR struct rpmsg_timestamp_s *ts);
+  CODE FAR void *(*alloc_buf)(FAR struct rpmsg_s *rpmsg, size_t size,
+                              size_t align);
+  CODE void (*free_buf)(FAR struct rpmsg_s *rpmsg, FAR void *addr);
 };
 
 CODE typedef void (*rpmsg_dev_cb_t)(FAR struct rpmsg_device *rdev,
@@ -142,6 +145,10 @@ FAR const char *rpmsg_get_cpuname(FAR struct rpmsg_device *rdev);
 int rpmsg_get_signals(FAR struct rpmsg_device *rdev);
 int rpmsg_get_timestamp(FAR struct rpmsg_device *rdev, FAR const void *data,
                         FAR struct rpmsg_timestamp_s *ts);
+bool rpmsg_support_alloc_buf(FAR struct rpmsg_device *rdev);
+FAR void *rpmsg_alloc_buf(FAR struct rpmsg_device *rdev, size_t size,
+                          size_t align);
+void rpmsg_free_buf(FAR struct rpmsg_device *rdev, FAR void *addr);
 
 static inline_function bool rpmsg_is_running(FAR struct rpmsg_device *rdev)
 {
