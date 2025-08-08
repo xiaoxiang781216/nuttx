@@ -38,7 +38,7 @@
  ****************************************************************************/
 
 #ifndef CONFIG_ARCH_USE_S_MODE
-static inline uint64_t riscv_mtimer_get(uint64_t mtime_addr)
+static inline uint64_t riscv_mtimer_get(uintreg_t mtime_addr)
 {
 #  if CONFIG_ARCH_RV_MMIO_BITS == 64
   /* mtime_addr is -1, means this SoC:
@@ -64,8 +64,8 @@ static inline uint64_t riscv_mtimer_get(uint64_t mtime_addr)
 }
 
 static inline
-void riscv_mtimer_set(uint64_t mtime_addr,
-                      uint64_t mtimecmp_addr, uint64_t value)
+void riscv_mtimer_set(uintreg_t mtime_addr,
+                      uintreg_t mtimecmp_addr, uint64_t value)
 {
 #  if CONFIG_ARCH_RV_MMIO_BITS == 64
   if (-1 != mtime_addr)
@@ -97,15 +97,15 @@ static inline void riscv_write_stime(uint64_t value)
 }
 #  endif /* CONFIG_ARCH_RV_EXT_SSTC */
 
-static inline uint64_t riscv_mtimer_get(uint64_t mtime_addr)
+static inline uint64_t riscv_mtimer_get(uintreg_t mtime_addr)
 {
   UNUSED(mtime_addr);
   return riscv_sbi_get_time();
 }
 
 static inline
-void riscv_mtimer_set(uint64_t mtime_addr,
-                      uint64_t mtimecmp_addr, uint64_t value)
+void riscv_mtimer_set(uintreg_t mtime_addr,
+                      uintreg_t mtimecmp_addr, uint64_t value)
 {
   UNUSED(mtimecmp_addr);
   UNUSED(mtime_addr);
