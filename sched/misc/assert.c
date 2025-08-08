@@ -248,8 +248,8 @@ static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
   int cpu = rtcb->cpu;
 #else
   int cpu = this_cpu();
-  UNUSED(cpu);
 #endif
+  UNUSED(cpu);
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
   uintptr_t intstack_base = up_get_intstackbase(cpu);
   size_t intstack_size = CONFIG_ARCH_INTERRUPTSTACK;
