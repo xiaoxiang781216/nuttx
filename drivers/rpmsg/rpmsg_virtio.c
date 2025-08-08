@@ -29,7 +29,6 @@
 #include <stdbool.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/kthread.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/rpmsg/rpmsg_virtio.h>
 #include <nuttx/semaphore.h>
@@ -47,7 +46,7 @@
  ****************************************************************************/
 
 #define RPMSG_VIRTIO_TIMEOUT_MS      20
-#define RPMSG_VIRTIO_RECURSIVE_LIMIT 8
+
 #define RPMSG_VIRTIO_FEATURES        (1 << VIRTIO_RPMSG_F_NS | \
                                       1 << VIRTIO_RPMSG_F_ACK | \
                                       1 << VIRTIO_RPMSG_F_BUFSZ | \
@@ -64,12 +63,6 @@
  * Private Types
  ****************************************************************************/
 
-struct rpmsg_virtio_node_s
-{
-  FAR struct rpmsg_hdr           *hdr;
-  struct metal_list               node;
-};
-
 struct rpmsg_virtio_priv_s
 {
   struct rpmsg_s                  rpmsg;
@@ -78,14 +71,10 @@ struct rpmsg_virtio_priv_s
   FAR struct virtio_device       *vdev;
   sem_t                           semrx;
   sem_t                           semtx;
-  pid_t                           tid;
-  int                             recursive;
   vq_notify                       notifytx;
   uint16_t                        headrx;
   uint16_t                        headtx;
-  FAR struct rpmsg_virtio_node_s *noderx;
-  struct metal_list               freerx;
-  struct metal_list               readyrx;
+  struct work_s                   startwork;
 #ifdef CONFIG_RPMSG_VIRTIO_PM
   spinlock_t                      lock;
   struct pm_wakelock_s            wakelock;
@@ -97,11 +86,8 @@ struct rpmsg_virtio_priv_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static void rpmsg_virtio_rx_wakeup(FAR struct rpmsg_virtio_priv_s *priv);
-static void rpmsg_virtio_tx_wakeup(FAR struct rpmsg_virtio_priv_s *priv);
-
-static int rpmsg_virtio_wait(FAR struct rpmsg_s *rpmsg, FAR sem_t *sem);
-static int rpmsg_virtio_post(FAR struct rpmsg_s *rpmsg, FAR sem_t *sem);
+static int rpmsg_virtio_wait(FAR struct rpmsg_s *rpmsg);
+static int rpmsg_virtio_post(FAR struct rpmsg_s *rpmsg);
 static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg);
 static FAR void *rpmsg_virtio_alloc_buf(FAR struct rpmsg_s *rpmsg,
                                         size_t size, size_t align);
@@ -238,15 +224,6 @@ rpmsg_virtio_pm_action(FAR struct rpmsg_virtio_priv_s *priv, bool stay)
 #endif
 
 /****************************************************************************
- * Name: rpmsg_virtio_is_recursive
- ****************************************************************************/
-
-static bool rpmsg_virtio_is_recursive(FAR struct rpmsg_virtio_priv_s *priv)
-{
-  return nxsched_gettid() == priv->tid;
-}
-
-/****************************************************************************
  * Name: rpmsg_virtio_process_rx_buffer
  *
  * Note: this function must be called with the rdev->lock held
@@ -296,48 +273,28 @@ static int rpmsg_virtio_process_rx_buffer(FAR struct rpmsg_device *rdev,
  * Name: rpmsg_virtio_rx_worker
  ****************************************************************************/
 
-static void rpmsg_virtio_rx_worker(FAR struct rpmsg_virtio_priv_s *priv)
+static void rpmsg_virtio_rx_worker(FAR struct rpmsg_s *rpmsg, FAR void *arg)
 {
+  FAR struct rpmsg_virtio_priv_s *priv =
+    (FAR struct rpmsg_virtio_priv_s *)rpmsg;
   FAR struct virtio_device *vdev = priv->vdev;
   FAR struct rpmsg_virtio_device *rvdev = vdev->priv;
   FAR struct rpmsg_device *rdev = &rvdev->rdev;
-  FAR struct rpmsg_virtio_node_s *node;
+  FAR struct rpmsg_hdr *hdr = arg;
   FAR struct rpmsg_endpoint *ept;
-  FAR struct metal_list *tmp;
-  FAR struct rpmsg_hdr *hdr;
-  bool release = false;
-  int status;
+  int status = RPMSG_SUCCESS;
 
   metal_mutex_acquire(&rdev->lock);
-  while ((tmp = metal_list_first(&priv->readyrx)) != NULL)
+  ept = rpmsg_get_ept_from_addr(rdev, hdr->dst);
+  if (ept)
     {
-      metal_list_del(tmp);
-      node = metal_container_of(tmp, struct rpmsg_virtio_node_s, node);
-      hdr = node->hdr;
-      metal_list_add_tail(&priv->freerx, &node->node);
-
-      ept = rpmsg_get_ept_from_addr(rdev, hdr->dst);
-      if (ept)
-        {
-          status = rpmsg_virtio_process_rx_buffer(rdev, ept, hdr);
-        }
-      else
-        {
-          status = RPMSG_SUCCESS;
-        }
-
-      if (status != RPMSG_SUCCESS_BUFFER_RELEASED &&
-          rpmsg_virtio_buf_held_dec_test(hdr))
-        {
-          rpmsg_virtio_release_rx_buffer_nolock(rvdev, hdr);
-          release = true;
-        }
+      status = rpmsg_virtio_process_rx_buffer(rdev, ept, hdr);
     }
 
-  if (release)
+  if (status != RPMSG_SUCCESS_BUFFER_RELEASED &&
+      rpmsg_virtio_buf_held_dec_test(hdr))
     {
-      /* tell peer we return some rx buffer */
-
+      rpmsg_virtio_release_rx_buffer_nolock(rvdev, hdr);
       virtqueue_kick(rvdev->rvq);
     }
 
@@ -345,26 +302,25 @@ static void rpmsg_virtio_rx_worker(FAR struct rpmsg_virtio_priv_s *priv)
 }
 
 /****************************************************************************
- * Name: rpmsg_virtio_rx_wakeup
+ * Name: rpmsg_virtio_wait
  ****************************************************************************/
 
-static void rpmsg_virtio_rx_wakeup(FAR struct rpmsg_virtio_priv_s *priv)
+static int rpmsg_virtio_wait(FAR struct rpmsg_s *rpmsg)
 {
-  int semcount;
+  FAR struct rpmsg_virtio_priv_s *priv =
+    (FAR struct rpmsg_virtio_priv_s *)rpmsg;
 
-  nxsem_get_value(&priv->semrx, &semcount);
-  while (semcount++ < 1)
-    {
-      nxsem_post(&priv->semrx);
-    }
+  return nxsem_tickwait(&priv->semtx, MSEC2TICK(RPMSG_VIRTIO_TIMEOUT_MS));
 }
 
 /****************************************************************************
- * Name: rpmsg_virtio_tx_wakeup
+ * Name: rpmsg_virtio_post
  ****************************************************************************/
 
-static void rpmsg_virtio_tx_wakeup(FAR struct rpmsg_virtio_priv_s *priv)
+static int rpmsg_virtio_post(FAR struct rpmsg_s *rpmsg)
 {
+  FAR struct rpmsg_virtio_priv_s *priv =
+    (FAR struct rpmsg_virtio_priv_s *)rpmsg;
   int semcount;
 
   nxsem_get_value(&priv->semtx, &semcount);
@@ -372,58 +328,8 @@ static void rpmsg_virtio_tx_wakeup(FAR struct rpmsg_virtio_priv_s *priv)
     {
       nxsem_post(&priv->semtx);
     }
-}
 
-/****************************************************************************
- * Name: rpmsg_virtio_wait
- ****************************************************************************/
-
-static int rpmsg_virtio_wait(FAR struct rpmsg_s *rpmsg, FAR sem_t *sem)
-{
-  FAR struct rpmsg_virtio_priv_s *priv =
-    (FAR struct rpmsg_virtio_priv_s *)rpmsg;
-  int ret;
-
-  if (!rpmsg_virtio_is_recursive(priv))
-    {
-      return nxsem_wait_uninterruptible(sem);
-    }
-
-  while (1)
-    {
-      ret = nxsem_trywait(sem);
-      if (ret >= 0)
-        {
-          break;
-        }
-
-      nxsem_wait(&priv->semtx);
-      rpmsg_virtio_rx_worker(priv);
-    }
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: rpmsg_virtio_post
- ****************************************************************************/
-
-static int rpmsg_virtio_post(FAR struct rpmsg_s *rpmsg, FAR sem_t *sem)
-{
-  FAR struct rpmsg_virtio_priv_s *priv =
-    (FAR struct rpmsg_virtio_priv_s *)rpmsg;
-  int semcount;
-  int ret;
-
-  nxsem_get_value(sem, &semcount);
-  ret = nxsem_post(sem);
-
-  if (priv && semcount >= 0)
-    {
-      rpmsg_virtio_tx_wakeup(priv);
-    }
-
-  return ret;
+  return OK;
 }
 
 /****************************************************************************
@@ -631,24 +537,6 @@ static void rpmsg_virtio_update_tx(FAR struct rpmsg_virtio_priv_s *priv)
 }
 
 /****************************************************************************
- * Name: rpmsg_virtio_rx_enqueue
- ****************************************************************************/
-
-static void rpmsg_virtio_rx_enqueue(FAR struct rpmsg_virtio_priv_s *priv,
-                                    FAR struct rpmsg_hdr *hdr)
-{
-  FAR struct rpmsg_virtio_node_s *node;
-  FAR struct metal_list *tmp;
-
-  tmp = metal_list_first(&priv->freerx);
-  DEBUGASSERT(tmp != NULL);
-  metal_list_del(tmp);
-  node = metal_container_of(tmp, struct rpmsg_virtio_node_s, node);
-  node->hdr = hdr;
-  metal_list_add_tail(&priv->readyrx, &node->node);
-}
-
-/****************************************************************************
  * Name: rpmsg_virtio_rx_dispatch
  ****************************************************************************/
 
@@ -681,13 +569,30 @@ static void rpmsg_virtio_rx_dispatch(FAR struct rpmsg_virtio_priv_s *priv)
 
       if (ept)
         {
-          if (ept->priority == RPMSG_PRIO_RT)
+          uint8_t priority = ept->priority;
+
+          if (ept == &rdev->ns_ept)
+            {
+              FAR struct rpmsg_endpoint *ept_;
+              FAR struct rpmsg_ns_msg *ns_msg;
+
+              ns_msg = (FAR struct rpmsg_ns_msg *)RPMSG_LOCATE_DATA(hdr);
+              ept_ = rpmsg_get_endpoint(rdev, ns_msg->name, RPMSG_ADDR_ANY,
+                                        hdr->dst);
+              if (ept_)
+                {
+                  priority = ept_->priority;
+                }
+            }
+
+          if (priority == RPMSG_PRIO_RT && ept != &rdev->ns_ept)
             {
               status = rpmsg_virtio_process_rx_buffer(rdev, ept, hdr);
             }
           else
             {
-              rpmsg_virtio_rx_enqueue(priv, hdr);
+              rpmsg_queue_rx_work(&priv->rpmsg, priority,
+                                  rpmsg_virtio_rx_worker, hdr);
               status = RPMSG_SUCCESS_BUFFER_RELEASED;
             }
         }
@@ -711,15 +616,7 @@ static void rpmsg_virtio_rx_dispatch(FAR struct rpmsg_virtio_priv_s *priv)
       virtqueue_kick(rvdev->rvq);
     }
 
-  if (!metal_list_is_empty(&priv->readyrx))
-    {
-      metal_mutex_release(&rdev->lock);
-      rpmsg_virtio_rx_wakeup(priv);
-    }
-  else
-    {
-      metal_mutex_release(&rdev->lock);
-    }
+  metal_mutex_release(&rdev->lock);
 }
 
 /****************************************************************************
@@ -744,7 +641,7 @@ static void rpmsg_virtio_tx_callback(FAR struct virtqueue *vq)
   FAR struct rpmsg_virtio_priv_s *priv =
     metal_container_of(vq->vq_dev->priv, struct rpmsg_virtio_priv_s, rvdev);
 
-  rpmsg_virtio_tx_wakeup(priv);
+  rpmsg_virtio_post(&priv->rpmsg);
 
   /* rpmsg_virtio_tx_callback() called normally means the tx buffer has been
    * returned by peer, so call rpmsg_virtio_pm_action(false) to enter to
@@ -783,35 +680,18 @@ static int rpmsg_virtio_notify_wait(FAR struct rpmsg_device *rdev,
   FAR struct rpmsg_virtio_priv_s *priv =
     metal_container_of(rdev, struct rpmsg_virtio_priv_s, rvdev);
 
-  if (!rpmsg_virtio_is_recursive(priv))
-    {
-      return RPMSG_EOPNOTSUPP;
-    }
-
-  /* Limit the recursive level */
-
-  if (priv->recursive >= RPMSG_VIRTIO_RECURSIVE_LIMIT)
-    {
-      return RPMSG_EOPNOTSUPP;
-    }
-
-  priv->recursive++;
-
-  /* Wait to wakeup */
-
-  nxsem_tickwait(&priv->semtx, MSEC2TICK(RPMSG_VIRTIO_TIMEOUT_MS));
-  rpmsg_virtio_rx_worker(priv);
-  priv->recursive--;
-
-  return 0;
+  return rpmsg_wait(&priv->rvdev.rdev.ns_ept, &priv->semtx);
 }
 
 /****************************************************************************
- * Name: rpmsg_virtio_start
+ * Name: rpmsg_virtio_start_worker
  ****************************************************************************/
 
-static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
+static void rpmsg_virtio_start_worker(FAR void *arg)
 {
+  FAR struct rpmsg_s *rpmsg = (FAR struct rpmsg_s *)arg;
+  FAR struct rpmsg_virtio_priv_s *priv =
+    (FAR struct rpmsg_virtio_priv_s *)rpmsg;
   FAR struct virtio_device *vdev = priv->vdev;
   struct rpmsg_virtio_config config =
   {
@@ -822,8 +702,8 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
     rpmsg_virtio_tx_callback,
   };
 
+  char name[64];
   uint16_t nrx;
-  uint16_t i;
   int ret;
 
   if (virtio_has_feature(vdev, VIRTIO_RPMSG_F_BUFSZ))
@@ -873,17 +753,14 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
       nrx = vdev->vrings_info[1].info.num_descs;
     }
 
-  priv->noderx = kmm_malloc(nrx * sizeof(*priv->noderx));
-  if (priv->noderx == NULL)
-    {
-      return -ENOMEM;
-    }
+  /* Register the rpmsg to rpmsg framework */
 
-  metal_list_init(&priv->readyrx);
-  metal_list_init(&priv->freerx);
-  for (i = 0; i < nrx; i++)
+  snprintf(name, sizeof(name), "/dev/rpmsg/%s", priv->rpmsg.cpuname);
+  ret = rpmsg_register(name, &priv->rpmsg, &g_rpmsg_virtio_ops, nrx);
+  if (ret < 0)
     {
-      metal_list_add_tail(&priv->freerx, &priv->noderx[i].node);
+      rpmsgerr("rpmsg register failed, ret=%d\n", ret);
+      return;
     }
 
   ret = rpmsg_init_vdev_with_config(&priv->rvdev, vdev, rpmsg_ns_bind,
@@ -892,8 +769,8 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
   if (ret < 0)
     {
       rpmsgerr("rpmsg_init_vdev failed, ret=%d\n", ret);
-      kmm_free(priv->noderx);
-      return ret;
+      rpmsg_unregister(name, &priv->rpmsg);
+      return;
     }
 
   priv->rvdev.rdev.lock.is_spinlock = true;
@@ -918,35 +795,6 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
   /* Open tx buffer return callback */
 
   virtqueue_enable_cb(priv->rvdev.svq);
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: rpmsg_virtio_thread
- ****************************************************************************/
-
-static int rpmsg_virtio_thread(int argc, FAR char *argv[])
-{
-  FAR struct rpmsg_virtio_priv_s *priv = (FAR struct rpmsg_virtio_priv_s *)
-    ((uintptr_t)strtoul(argv[2], NULL, 16));
-  int ret;
-
-  priv->tid = nxsched_gettid();
-  ret = rpmsg_virtio_start(priv);
-  if (ret < 0)
-    {
-      rpmsgerr("virtio rpmsg start failed, ret=%d\n", ret);
-      return ret;
-    }
-
-  while (1)
-    {
-      nxsem_wait_uninterruptible(&priv->semrx);
-      rpmsg_virtio_rx_worker(priv);
-    }
-
-  return 0;
 }
 
 /****************************************************************************
@@ -960,10 +808,10 @@ static int rpmsg_virtio_thread(int argc, FAR char *argv[])
 int rpmsg_virtio_probe(FAR struct virtio_device *vdev)
 {
   FAR struct rpmsg_virtio_priv_s *priv;
-  FAR char *argv[3];
   uint64_t features;
+#ifdef CONFIG_RPMSG_VIRTIO_PM
   char name[64];
-  char arg1[32];
+#endif
   int ret;
 
   priv = kmm_zalloc(sizeof(*priv));
@@ -1010,30 +858,15 @@ int rpmsg_virtio_probe(FAR struct virtio_device *vdev)
                          VIRTIO_RPMSG_CPUNAME_SIZE);
     }
 
-  /* Register the rpmsg to rpmsg framework */
-
-  snprintf(name, sizeof(name), "/dev/rpmsg/%s", priv->rpmsg.cpuname);
-  ret = rpmsg_register(name, &priv->rpmsg, &g_rpmsg_virtio_ops);
+  ret = rpmsg_init_wqueues(&priv->rpmsg);
   if (ret < 0)
     {
-      rpmsgerr("rpmsg register failed, ret=%d\n", ret);
+      rpmsgerr("rpmsg_init_wqueues failed, ret=%d\n", ret);
       goto err;
     }
 
-  snprintf(arg1, sizeof(arg1), "%p", priv);
-  argv[0] = priv->rpmsg.cpuname;
-  argv[1] = arg1;
-  argv[2] = NULL;
-  ret = kthread_create("rpmsg-virtio", CONFIG_RPMSG_VIRTIO_PRIORITY,
-                       CONFIG_RPMSG_VIRTIO_STACKSIZE,
-                       rpmsg_virtio_thread, argv);
-  if (ret < 0)
-    {
-      rpmsgerr("kthread_create failed, ret=%d\n", ret);
-      goto err_kthread;
-    }
-
-  priv->tid = ret;
+  rpmsg_queue_work(&priv->rpmsg, RPMSG_PRIO_DEFAULT, &priv->startwork,
+                   rpmsg_virtio_start_worker, &priv->rpmsg);
 
 #ifdef CONFIG_RPMSG_VIRTIO_PM
   spin_lock_init(&priv->lock);
@@ -1043,8 +876,6 @@ int rpmsg_virtio_probe(FAR struct virtio_device *vdev)
 
   return ret;
 
-err_kthread:
-  rpmsg_unregister(name, &priv->rpmsg);
 err:
   nxsem_destroy(&priv->semtx);
   nxsem_destroy(&priv->semrx);
@@ -1071,6 +902,10 @@ void rpmsg_virtio_remove(FAR struct virtio_device *vdev)
 
   virtqueue_disable_cb(priv->rvdev.svq);
 
+  /* Deinit the rpmsg wqueues */
+
+  rpmsg_deinit_wqueues(&priv->rpmsg);
+
   /* Destory all the rpmsg services */
 
   rpmsg_device_destory(&priv->rpmsg);
@@ -1086,13 +921,10 @@ void rpmsg_virtio_remove(FAR struct virtio_device *vdev)
 
   rpmsg_deinit_vdev(&priv->rvdev);
 
-  /* Free noderx */
+  /* Destory the rpmsg virtio semaphores */
 
-  kmm_free(priv->noderx);
-
-  /* Delete the kthread */
-
-  kthread_delete(priv->tid);
+  nxsem_destroy(&priv->semtx);
+  nxsem_destroy(&priv->semrx);
 
   /* Free the private data */
 

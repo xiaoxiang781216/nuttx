@@ -26,8 +26,12 @@
 
 #include <nuttx/config.h>
 
+#include <debug.h>
+#include <stdio.h>
+
 #include <metal/sys.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/wqueue.h>
 #include <nuttx/mm/mempool.h>
 #include <nuttx/mutex.h>
 #include <nuttx/rwsem.h>
@@ -39,6 +43,13 @@
 #include "rpmsg_router.h"
 #include "rpmsg_procfs.h"
 #include "rpmsg_wakelock.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define RPMSG_RECURSIVE_LIMIT    8
+#define RPMSG_DEFAULT_WQUEUE_IDX (CONFIG_RPMSG_WQUEUE_NUMBER / 2)
 
 /****************************************************************************
  * Private Types
@@ -66,6 +77,14 @@ struct rpmsg_ioctl_s
   FAR const char *cpuname;
   int             cmd;
   unsigned long   arg;
+};
+
+struct rpmsg_work_s
+{
+  struct work_s       work;
+  rpmsg_worker_t      worker;
+  FAR struct rpmsg_s *rpmsg;
+  FAR void           *arg;
 };
 
 /****************************************************************************
@@ -204,6 +223,71 @@ static int rpmsg_reboot_notifier(FAR struct notifier_block *nb,
   return 0;
 }
 
+static int rpmsg_init_workrx(FAR struct rpmsg_s *rpmsg, uint16_t nrx)
+{
+  FAR struct rpmsg_work_s *workrx;
+  uint16_t i;
+
+  if (nrx == 0)
+    {
+      return 0;
+    }
+
+  workrx = kmm_zalloc(nrx * sizeof(struct rpmsg_work_s));
+  if (workrx == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  list_initialize(&rpmsg->freerx);
+  for (i = 0; i < nrx; i++)
+    {
+      list_add_tail(&rpmsg->freerx, &workrx[i].work.node);
+    }
+
+  rpmsg->workrx = workrx;
+  return 0;
+}
+
+static void rpmsg_deinit_workrx(FAR struct rpmsg_s *rpmsg)
+{
+  if (rpmsg->workrx)
+    {
+      kmm_free(rpmsg->workrx);
+      rpmsg->workrx = NULL;
+    }
+}
+
+static FAR struct rpmsg_wqueue_s *
+rpmsg_get_current_wqueue(FAR struct rpmsg_s *rpmsg)
+{
+  int i;
+
+  for (i = 0; i < CONFIG_RPMSG_WQUEUE_NUMBER; i++)
+    {
+      if (work_queue_in_queue(rpmsg->wqueues[i].kwqueue))
+        {
+          return &rpmsg->wqueues[i];
+        }
+    }
+
+  return NULL;
+}
+
+static void rpmsg_rx_worker(FAR void *arg)
+{
+  FAR struct rpmsg_work_s *work = arg;
+  FAR struct rpmsg_s *rpmsg = work->rpmsg;
+  FAR struct rpmsg_device *rdev;
+
+  arg = work->arg;
+  rdev = rpmsg_get_rdev_by_rpmsg(rpmsg);
+  metal_mutex_acquire(&rdev->lock);
+  list_add_tail(&work->rpmsg->freerx, &work->work.node);
+  metal_mutex_release(&rdev->lock);
+  work->worker(rpmsg, arg);
+}
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -216,7 +300,9 @@ void rpmsg_initialize(void)
 
 int rpmsg_wait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
 {
+  FAR struct rpmsg_wqueue_s *wqueue;
   FAR struct rpmsg_s *rpmsg;
+  int ret;
 
   if (!ept || !sem)
     {
@@ -229,12 +315,40 @@ int rpmsg_wait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
       return nxsem_wait_uninterruptible(sem);
     }
 
-  return rpmsg->ops->wait(rpmsg, sem);
+  wqueue = rpmsg_get_current_wqueue(rpmsg);
+  if (wqueue == NULL)
+    {
+      return nxsem_wait_uninterruptible(sem);
+    }
+
+  for (; ; )
+    {
+      ret = nxsem_trywait(sem);
+      if (ret >= 0)
+        {
+          return ret;
+        }
+
+      rpmsg->ops->wait(rpmsg);
+
+      if (wqueue->recursive >= RPMSG_RECURSIVE_LIMIT)
+        {
+          return RPMSG_EOPNOTSUPP;
+        }
+
+      wqueue->recursive++;
+      work_qeueue_dispatch(wqueue->kwqueue);
+      wqueue->recursive--;
+    }
+
+  return OK;
 }
 
 int rpmsg_post(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
 {
   FAR struct rpmsg_s *rpmsg;
+  int semcount = 0;
+  int ret;
 
   if (!ept || !sem)
     {
@@ -247,7 +361,14 @@ int rpmsg_post(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
       return nxsem_post(sem);
     }
 
-  return rpmsg->ops->post(rpmsg, sem);
+  nxsem_get_value(sem, &semcount);
+  ret = nxsem_post(sem);
+  if (semcount >= 0)
+    {
+      ret = rpmsg->ops->post(rpmsg);
+    }
+
+  return ret;
 }
 
 FAR const char *rpmsg_get_local_cpuname(FAR struct rpmsg_device *rdev)
@@ -614,7 +735,7 @@ void rpmsg_device_destory(FAR struct rpmsg_s *rpmsg)
 }
 
 int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
-                   FAR const struct rpmsg_ops_s *ops)
+                   FAR const struct rpmsg_ops_s *ops, uint16_t nrx)
 {
   struct metal_init_params params = METAL_INIT_DEFAULTS;
   int ret;
@@ -628,6 +749,14 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
   ret = register_driver(path, &g_rpmsg_dev_ops, 0222, rpmsg);
   if (ret < 0)
     {
+      metal_finish();
+      return ret;
+    }
+
+  ret = rpmsg_init_workrx(rpmsg, nrx);
+  if (ret < 0)
+    {
+      unregister_driver(path);
       metal_finish();
       return ret;
     }
@@ -656,6 +785,7 @@ void rpmsg_unregister(FAR const char *path, FAR struct rpmsg_s *rpmsg)
   metal_list_del(&rpmsg->node);
   up_write(&g_rpmsg_lock);
 
+  rpmsg_deinit_workrx(rpmsg);
   nxrmutex_destroy(&rpmsg->lock);
   unregister_driver(path);
 
@@ -766,4 +896,86 @@ void rpmsg_modify_signals(FAR struct rpmsg_s *rpmsg,
     {
       metal_mutex_release(&rdev->lock);
     }
+}
+
+int rpmsg_init_wqueues(FAR struct rpmsg_s *rpmsg)
+{
+  FAR struct rpmsg_wqueue_s *wqueue;
+  char name[64];
+  int i;
+
+  for (i = 0; i < CONFIG_RPMSG_WQUEUE_NUMBER; i++)
+    {
+      wqueue = &rpmsg->wqueues[i];
+      snprintf(name, sizeof(name), "rpmsg-%s-%d", rpmsg->cpuname, i);
+      wqueue->kwqueue = work_queue_create(name,
+                                          CONFIG_RPMSG_WQUEUE_PRIORITY + i,
+                                          NULL,
+                                          CONFIG_RPMSG_WQUEUE_STACKSIZE,
+                                          1);
+      if (wqueue->kwqueue == NULL)
+        {
+          rpmsgerr("rpmsg wqueue [%d] create failed\n", i);
+          goto err;
+        }
+    }
+
+  return 0;
+
+err:
+  while (--i >= 0)
+    {
+      work_queue_free(rpmsg->wqueues[i].kwqueue);
+    }
+
+  return -ENOMEM;
+}
+
+void rpmsg_deinit_wqueues(FAR struct rpmsg_s *rpmsg)
+{
+  int i;
+
+  for (i = 0; i < CONFIG_RPMSG_WQUEUE_NUMBER; i++)
+    {
+      if (rpmsg->wqueues[i].kwqueue != NULL)
+        {
+          work_queue_free(rpmsg->wqueues[i].kwqueue);
+        }
+    }
+}
+
+int rpmsg_queue_work(FAR struct rpmsg_s *rpmsg, uint8_t priority,
+                     FAR struct work_s *work, worker_t worker, FAR void *arg)
+{
+  int idx;
+
+  idx = (int)priority - RPMSG_PRIO_DEFAULT + RPMSG_DEFAULT_WQUEUE_IDX;
+  if (idx < 0)
+    {
+      idx = 0;
+    }
+  else if (idx >= CONFIG_RPMSG_WQUEUE_NUMBER)
+    {
+      idx = CONFIG_RPMSG_WQUEUE_NUMBER - 1;
+    }
+
+  return work_queue_wq(rpmsg->wqueues[idx].kwqueue, work, worker, arg, 0);
+}
+
+void rpmsg_queue_rx_work(FAR struct rpmsg_s *rpmsg, uint8_t priority,
+                         rpmsg_worker_t worker, FAR void *arg)
+{
+  FAR struct rpmsg_device *rdev = rpmsg_get_rdev_by_rpmsg(rpmsg);
+  FAR struct rpmsg_work_s *work;
+
+  metal_mutex_acquire(&rdev->lock);
+  work = list_remove_head_type(&rpmsg->freerx, struct rpmsg_work_s,
+                               work.node);
+  metal_mutex_release(&rdev->lock);
+  DEBUGASSERT(work != NULL);
+  work->arg = arg;
+  work->rpmsg = rpmsg;
+  work->worker = worker;
+
+  rpmsg_queue_work(rpmsg, priority, &work->work, rpmsg_rx_worker, work);
 }
