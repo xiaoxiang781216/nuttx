@@ -915,6 +915,10 @@ static void cmux_uart_read(FAR void *arg)
           cmux_dump_data("<---", buffer, ret);
           cmux_frame_received(cmux, buffer, ret);
         }
+      else if (ret < 0)
+        {
+          cmux_err("Failed to read data: %d\n", ret);
+        }
     }
   while (ret > 0);
 
@@ -950,8 +954,9 @@ static int cmux_uart_open(FAR struct cmux_s *cmux)
 
   /* Register data receiving notification */
 
+  cmux->fds.revents = 0;
   cmux->fds.arg     = cmux;
-  cmux->fds.events  = POLL_IN;
+  cmux->fds.events  = POLLIN;
   cmux->fds.cb      = cmux_poll_cb;
   file_poll(&cmux->filep, &cmux->fds, true);
 
