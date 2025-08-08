@@ -921,6 +921,8 @@ if(CONFIG_BUILD_PROTECTED)
     add_custom_target(nuttx-combined ALL DEPENDS nuttx_combined.hex)
   endif()
 
+  # share symbols with nuttx_user
+  include(nuttx_protected_symbol_share)
 endif()
 
 if(CONFIG_BUILD_KERNEL)
