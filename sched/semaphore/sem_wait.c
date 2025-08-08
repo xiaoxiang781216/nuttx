@@ -261,12 +261,21 @@ int nxsem_wait_slow(FAR sem_t *sem)
 
   /* If this now holds the mutex, set the holder TID and the lock bit */
 
-  if (mutex && ret == OK)
+  if (mutex)
     {
-      uint32_t blocking_bit =
-        dq_empty(SEM_WAITLIST(sem)) ? 0 : NXSEM_MBLOCKING_BIT;
+      if (ret == OK)
+        {
+          atomic_set(NXSEM_MHOLDER(sem), ((uint32_t)rtcb->pid));
+        }
 
-      atomic_set(NXSEM_MHOLDER(sem), ((uint32_t)rtcb->pid) | blocking_bit);
+      if (dq_empty(SEM_WAITLIST(sem)))
+        {
+          atomic_fetch_and(NXSEM_MHOLDER(sem), ~NXSEM_MBLOCKING_BIT);
+        }
+      else
+        {
+          atomic_fetch_or(NXSEM_MHOLDER(sem), NXSEM_MBLOCKING_BIT);
+        }
     }
 
   leave_critical_section(flags);
