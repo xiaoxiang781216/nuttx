@@ -101,58 +101,43 @@ FAR struct tcb_s *nxsched_get_tcb(pid_t pid)
 
 void nxsched_put_tcb(FAR struct tcb_s *tcb)
 {
-  FAR struct tcb_s *rtcb;
-#ifdef CONFIG_SMP
-  irqstate_t flags;
-
-  flags = up_irq_save();
-  rtcb = running_task();
-  up_irq_restore(flags);
-#else
-  rtcb = running_task();
-#endif
-
-  if (!tcb || tcb == rtcb)
+  if (tcb && tcb != running_task())
     {
-      return;
-    }
+      DEBUGASSERT(atomic_read(&tcb->refs) > 0);
 
-  DEBUGASSERT(atomic_read(&tcb->refs) > 0);
+      /* tcb may in EXIT_PROCESSING */
 
-  /* tcb may in EXIT_PROCESSING */
-
-  if (atomic_fetch_sub(&tcb->refs, 1) == 1)
-    {
-      nxsem_post(&tcb->exit_sem);
-    }
-
-  if (up_interrupt_context())
-    {
-      return;
-    }
-
-  tcb = this_task();
-
-  DEBUGASSERT(atomic_read(&tcb->refs) > 0);
-
-  /* this_task may be killed and in KILL_PROCESSING */
-
-  if (atomic_fetch_sub(&tcb->refs, 1) == 1 &&
-      (atomic_read(&tcb->flags) & TCB_FLAG_KILL_PROCESSING))
-    {
-      nxsem_post(&tcb->exit_sem);
-
-      /* If the TCB is already in the exiting state, we
-       * should allow the exiting task to execute normally first.
-       * We stop the execution here.
-       *
-       * If it continues to run, it may happen that we obtain
-       * the TCB again and it gets killed.
-       */
-
-      for (; ; )
+      if (atomic_fetch_sub(&tcb->refs, 1) == 1)
         {
-          usleep(1000);
+          nxsem_post(&tcb->exit_sem);
+        }
+
+      if (!up_interrupt_context())
+        {
+          tcb = this_task();
+
+          DEBUGASSERT(atomic_read(&tcb->refs) > 0);
+
+          /* this_task may be killed and in KILL_PROCESSING */
+
+          if (atomic_fetch_sub(&tcb->refs, 1) == 1 &&
+              (atomic_read(&tcb->flags) & TCB_FLAG_KILL_PROCESSING))
+            {
+              nxsem_post(&tcb->exit_sem);
+
+              /* If the TCB is already in the exiting state, we
+               * should allow the exiting task to execute normally first.
+               * We stop the execution here.
+               *
+               * If it continues to run, it may happen that we obtain
+               * the TCB again and it gets killed.
+               */
+
+              for (; ; )
+                {
+                  usleep(1000);
+                }
+            }
         }
     }
 }
