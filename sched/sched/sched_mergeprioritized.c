@@ -83,80 +83,83 @@ void nxsched_merge_prioritized(FAR dq_queue_t *list1, FAR dq_queue_t *list2,
   /* Get the TCB at the head of list1 */
 
   tcb1 = (FAR struct tcb_s *)dq_peek(&clone);
-  if (tcb1 == NULL)
+  if (tcb1 != NULL)
     {
-      /* Special case.. list1 is empty.  There is nothing to be done. */
-
-      return;
-    }
-
-  /* Now the TCBs are no longer accessible and we can change the state on
-   * each TCB.  We go through extra precaution to assure that a TCB is never
-   * in a list with the wrong state.
-   */
-
-  for (tmp  = tcb1;
-       tmp != NULL;
-       tmp  = (FAR struct tcb_s *)dq_next((FAR dq_entry_t *)tmp))
-    {
-      tmp->task_state = task_state;
-    }
-
-  /* Get the head of list2 */
-
-  tcb2 = (FAR struct tcb_s *)dq_peek(list2);
-  if (tcb2 == NULL)
-    {
-      /* Special case.. list2 is empty.  Move list1 to list2. */
-
-      dq_move(&clone, list2);
-      return;
-    }
-
-  /* Now loop until all entries from list1 have been merged into list2. tcb1
-   * points at the TCB at the head of list1; tcb2 points to the TCB at the
-   * current working position in list2
-   */
-
-  do
-    {
-      /* Are we at the end of list2 with TCBs remaining to be merged in
-       * list1?
+      /* Now the TCBs are no longer accessible and we can
+       * change the state on each TCB.  We go through extra
+       * precaution to assure that a TCB is never
+       * in a list with the wrong state.
        */
 
-      if (tcb2 == NULL)
+      for (tmp  = tcb1;
+          tmp != NULL;
+          tmp  = (FAR struct tcb_s *)dq_next((FAR dq_entry_t *)tmp))
         {
-          /* Yes..  Just append the remainder of list1 to the end of list2. */
-
-          dq_cat(&clone, list2);
-          break;
+          tmp->task_state = task_state;
         }
 
-      /* Which TCB has higher priority? */
+      /* Get the head of list2 */
 
-      else if (tcb1->sched_priority > tcb2->sched_priority)
+      tcb2 = (FAR struct tcb_s *)dq_peek(list2);
+      if (tcb2 != NULL)
         {
-          /* The TCB from list1 has higher priority than the TCB from list2.
-           * Remove the TCB from list1 and insert it before the TCB from
-           * list2.
+          /* Now loop until all entries from list1
+           * have been merged into list2. tcb1
+           * points at the TCB at the head of list1;
+           * tcb2 points to the TCB at the
+           * current working position in list2
            */
 
-          tmp = (FAR struct tcb_s *)dq_remfirst(&clone);
-          DEBUGASSERT(tmp == tcb1);
+          do
+            {
+              /* Are we at the end of list2 with TCBs
+               * remaining to be merged in list1?
+               */
 
-          dq_addbefore((FAR dq_entry_t *)tcb2, (FAR dq_entry_t *)tmp,
-                       list2);
+              if (tcb2 == NULL)
+                {
+                  /* Yes..  Just append the remainder
+                   * of list1 to the end of list2.
+                   */
 
-          tcb1 = (FAR struct tcb_s *)dq_peek(&clone);
+                  dq_cat(&clone, list2);
+                  break;
+                }
+
+              /* Which TCB has higher priority? */
+
+              else if (tcb1->sched_priority > tcb2->sched_priority)
+                {
+                  /* The TCB from list1 has higher priority than the
+                   * TCB from list2. Remove the TCB from list1 and insert
+                   * it before the TCB from list2.
+                   */
+
+                  tmp = (FAR struct tcb_s *)dq_remfirst(&clone);
+                  DEBUGASSERT(tmp == tcb1);
+
+                  dq_addbefore((FAR dq_entry_t *)tcb2, (FAR dq_entry_t *)tmp,
+                              list2);
+
+                  tcb1 = (FAR struct tcb_s *)dq_peek(&clone);
+                }
+              else
+                {
+                  /* The TCB from list2 has higher (or same) priority as
+                   * the TCB from list2.  Skip to the next, lower priority
+                   * TCB in list2.
+                   */
+
+                  tcb2 = (FAR struct tcb_s *)dq_next((FAR dq_entry_t *)tcb2);
+                }
+            }
+          while (tcb1 != NULL);
         }
       else
         {
-          /* The TCB from list2 has higher (or same) priority as the TCB
-           * from list2.  Skip to the next, lower priority TCB in list2.
-           */
+          /* Special case.. list2 is empty.  Move list1 to list2. */
 
-          tcb2 = (FAR struct tcb_s *)dq_next((FAR dq_entry_t *)tcb2);
+          dq_move(&clone, list2);
         }
     }
-  while (tcb1 != NULL);
 }
