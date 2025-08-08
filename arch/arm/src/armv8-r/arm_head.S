@@ -182,10 +182,6 @@ __cpu0_start:
 	ldr		sp, .Lstackpointer
 	mov		fp, #0
 
-	/* Set Hyp/PL2 Vector table base register */
-	ldr		r0, .Lhypvectorstart
-	mcr		CP15_HVBAR(r0)
-
 	/* Invalidate caches and TLBs.
 	 *
 	 *   NOTE: "The ARMv7 Virtual Memory System Architecture (VMSA) does not
@@ -207,18 +203,28 @@ __cpu0_start:
 	bl		cp15_dcache_op_level
 	isb
 
-	bl		hsctlr_initialize  /* Init Hyp system control register */
-
-	ldr		r0, =HACTLR_INIT
-	mcr		CP15_HACTLR(r0)  /* Enable EL1 access all IMP DEFINED registers */
-
 	/* Initialize .bss and .data assumt that RAM that is ready to use. */
 	bl		arm_data_initialize
 
 	/* Platform hook for highest EL */
 	bl		arm_el_init
 
-    /* Move to PL1 SYS with all exceptions masked */
+	/* Skip hypervisor register initializition */
+	mrs		r0, CPSR
+	and		r0, r0, #PSR_MODE_MASK
+	cmp		r0, #PSR_MODE_HYP	/* Check the current processor mode */
+	bne		1f
+
+	/* Set Hyp/PL2 Vector table base register */
+	ldr		r0, .Lhypvectorstart
+	mcr		CP15_HVBAR(r0)
+
+	/* Initialize Hyp system control register */
+	bl		hsctlr_initialize	/* Init Hyp system control register */
+	ldr		r0, =HACTLR_INIT
+	mcr		CP15_HACTLR(r0)	/* Enable EL1 access all IMP DEFINED registers */
+
+	/* Move to PL1 SYS with all exceptions masked */
 	mov		r0, #(PSR_MODE_SYS | PSR_I_BIT | PSR_F_BIT | PSR_A_BIT)
 	msr		spsr_hyp, r0
 
