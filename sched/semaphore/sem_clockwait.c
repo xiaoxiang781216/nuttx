@@ -112,49 +112,47 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
   /* Try to take the semaphore without waiting. */
 
   ret = nxsem_trywait(sem);
-  if (ret == OK)
+  if (ret != OK)
     {
-      /* We got it! */
-
-      goto out;
-    }
-
-  /* We will have to wait for the semaphore.  Make sure that we were provided
-   * with a valid timeout.
-   */
+      /* We will have to wait for the semaphore.  Make sure that
+       * we were provided with a valid timeout.
+       */
 
 #ifdef CONFIG_DEBUG_FEATURES
-  if (abstime->tv_nsec < 0 || abstime->tv_nsec >= 1000000000)
-    {
-      ret = -EINVAL;
-      goto out;
-    }
+      if (!(abstime->tv_nsec < 0 || abstime->tv_nsec >= 1000000000))
+        {
 #endif
+          if (clockid == CLOCK_REALTIME)
+            {
+              wd_start_realtime(&rtcb->waitdog, abstime,
+                                nxsem_timeout, (uintptr_t)rtcb);
+            }
+          else
+            {
+              wd_start_abstime(&rtcb->waitdog, abstime,
+                               nxsem_timeout, (uintptr_t)rtcb);
+            }
 
-  if (clockid == CLOCK_REALTIME)
-    {
-      wd_start_realtime(&rtcb->waitdog, abstime,
-                        nxsem_timeout, (uintptr_t)rtcb);
+          /* Now perform the blocking wait.  If nxsem_wait() fails, the
+           * negated errno value will be returned below.
+           */
+
+          ret = nxsem_wait(sem);
+
+          /* Stop the watchdog timer */
+
+          wd_cancel(&rtcb->waitdog);
+#ifdef CONFIG_DEBUG_FEATURES
+        }
+      else
+        {
+          ret = -EINVAL;
+        }
+#endif
     }
-  else
-    {
-      wd_start_abstime(&rtcb->waitdog, abstime,
-                       nxsem_timeout, (uintptr_t)rtcb);
-    }
-
-  /* Now perform the blocking wait.  If nxsem_wait() fails, the
-   * negated errno value will be returned below.
-   */
-
-  ret = nxsem_wait(sem);
-
-  /* Stop the watchdog timer */
-
-  wd_cancel(&rtcb->waitdog);
 
   /* We can now restore interrupts and delete the watchdog */
 
-out:
   leave_critical_section(flags);
   return ret;
 }
