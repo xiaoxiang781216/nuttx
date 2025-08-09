@@ -607,6 +607,7 @@ static void gnss_parse(FAR struct gnss_upperhalf_s *upper,
     {
       if (*buffer == '$')
         {
+          upper->parsenext = 0;
           newline = true;
         }
 
