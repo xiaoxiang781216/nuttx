@@ -921,8 +921,6 @@ if(CONFIG_BUILD_PROTECTED)
     add_custom_target(nuttx-combined ALL DEPENDS nuttx_combined.hex)
   endif()
 
-  # merge kernel & userspace ELFs
-  include(nuttx_merge_protected_elf)
 endif()
 
 if(CONFIG_BUILD_KERNEL)
