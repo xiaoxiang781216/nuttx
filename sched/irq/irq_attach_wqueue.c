@@ -58,35 +58,23 @@ struct irq_work_info_s
 };
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE
-static struct irq_work_info_s
-g_irq_work_vector[CONFIG_ARCH_NUSER_INTERRUPTS];
-#else
-static struct irq_work_info_s g_irq_work_vector[NR_IRQS];
-#endif
-
-static mutex_t g_irq_wqueue_lock = NXMUTEX_INITIALIZER;
-static FAR struct kwork_wqueue_s *g_irq_wqueue[CONFIG_IRQ_NWORKS];
-
-#ifdef IRQ_WORK_SECTION
-static aligned_data(STACK_ALIGNMENT) uint8_t
-g_irq_work_stack[CONFIG_IRQ_NWORKS][CONFIG_IRQ_WORK_STACKSIZE]
-locate_data(CONFIG_IRQ_WORK_SECTION);
-#else
-static aligned_data(STACK_ALIGNMENT) uint8_t
-g_irq_work_stack[CONFIG_IRQ_NWORKS][CONFIG_IRQ_WORK_STACKSIZE];
-#endif
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
 static
 inline_function FAR struct kwork_wqueue_s *irq_get_wqueue(int priority)
 {
+#ifdef IRQ_WORK_SECTION
+  static aligned_data(STACK_ALIGNMENT) uint8_t
+  g_irq_work_stack[CONFIG_IRQ_NWORKS][CONFIG_IRQ_WORK_STACKSIZE]
+  locate_data(CONFIG_IRQ_WORK_SECTION);
+#else
+  static aligned_data(STACK_ALIGNMENT) uint8_t
+  g_irq_work_stack[CONFIG_IRQ_NWORKS][CONFIG_IRQ_WORK_STACKSIZE];
+#endif
+  static mutex_t g_irq_wqueue_lock = NXMUTEX_INITIALIZER;
+  static FAR struct kwork_wqueue_s *g_irq_wqueue[CONFIG_IRQ_NWORKS];
+
   FAR struct kwork_wqueue_s *queue;
   int wqueue_priority;
   int i;
@@ -174,6 +162,13 @@ static int irq_default_handler(int irq, FAR void *regs, FAR void *arg)
 int irq_attach_wqueue(int irq, xcpt_t isr, xcpt_t isrwork,
                       FAR void *arg, int priority)
 {
+#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE
+  static struct irq_work_info_s
+  g_irq_work_vector[CONFIG_ARCH_NUSER_INTERRUPTS];
+#else
+  static struct irq_work_info_s g_irq_work_vector[NR_IRQS];
+#endif
+
   FAR struct irq_work_info_s *info;
 
 #if NR_IRQS > 0

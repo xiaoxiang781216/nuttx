@@ -54,12 +54,6 @@ struct irq_thread_info_s
 };
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static pid_t g_irq_thread_pid[NR_IRQS];
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -149,6 +143,8 @@ int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
                       int priority, int stack_size)
 {
 #if NR_IRQS > 0
+  static pid_t g_irq_thread_pid[NR_IRQS];
+
   FAR char *argv[5];
   char arg1[32];  /* irq */
   char arg2[32];  /* isr */
