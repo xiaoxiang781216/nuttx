@@ -93,7 +93,7 @@ static noreturn_function int isr_thread_main(int argc, FAR char *argv[])
   info.arg = arg;
   info.handler = isr;
 
-  nxsem_init(&sem, 0, 0);
+  nxsem_init(&sem, 0, 0u);
 
   irq_attach(irq, irq_thread_default_handler, &info);
 
@@ -153,7 +153,7 @@ int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
   pid_t pid;
   int ndx;
 
-  if ((unsigned)irq >= NR_IRQS)
+  if (irq < 0 || irq >= NR_IRQS)
     {
       return -EINVAL;
     }
