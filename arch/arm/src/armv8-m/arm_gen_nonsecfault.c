@@ -149,6 +149,13 @@ int arm_gen_nonsecurefault(int irq, uint32_t *regs)
 
   syslog_flush();
 
+  /* Don't back to REE when its PC is 0 */
+
+  if (getreg32(sp_ns + OFFSET_R15) == 0)
+    {
+      return 0;
+    }
+
   /* Force set return ReturnAddress to 0, then non-secure cpu will crash.
    * Also, the ReturnAddress is very important, so move it to R12.
    */
