@@ -249,6 +249,7 @@ static int rpmsg_virtio_process_rx_buffer(FAR struct rpmsg_device *rdev,
                                           FAR struct rpmsg_endpoint *ept,
                                           FAR struct rpmsg_hdr *hdr)
 {
+  size_t len = hdr->len;
   int status;
 
   if (ept->dest_addr == RPMSG_ADDR_ANY)
@@ -267,10 +268,9 @@ static int rpmsg_virtio_process_rx_buffer(FAR struct rpmsg_device *rdev,
                     "[Virtio] rx ept->cb start ept:%p, name:%s, "
                     "cb:%p, hdr:%p, rdev:%p",
                     ept, ept->name, ept->cb, hdr, rdev);
-  rpmsg_note_binary(ept->name, hdr, hdr->len);
+  rpmsg_note_binary(ept->name, hdr, len);
 
-  status = ept->cb(ept, RPMSG_LOCATE_DATA(hdr), hdr->len, hdr->src,
-                   ept->priv);
+  status = ept->cb(ept, RPMSG_LOCATE_DATA(hdr), len, hdr->src, ept->priv);
 
   rpmsg_note_printf(ept->name, false,
                     "[Virtio] rx ept->cb end ept:%p, name:%s, "
