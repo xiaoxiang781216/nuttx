@@ -27,8 +27,9 @@ import re
 from typing import List
 
 import gdb
+import nxgdb.fs as fs
 
-from . import autocompeletion, fs, utils
+from . import autocompeletion, utils
 from .circbuf import CircBuf
 from .protocols import uorb as p
 
