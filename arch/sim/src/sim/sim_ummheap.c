@@ -251,6 +251,14 @@ static void forcefree(struct mm_heap_s *heap, void *mem)
   node = (struct mm_allocnode_s *)((uintptr_t)mem - MM_ALLOCNODE_SIZE);
   update_stats(heap, mem, node->size, false);
   sched_note_heap(NOTE_HEAP_FREE, heap, mem, node->size, 0);
+#ifdef CONFIG_MM_RECORD_STACK
+  if (node->stack)
+    {
+      backtrace_remove(node->stack);
+      node->stack = NULL;
+    }
+#endif
+
   host_free(node->allocmem);
 }
 
