@@ -69,9 +69,12 @@ static struct perf_s g_perf;
 static void perf_update(wdparm_t arg)
 {
   FAR struct perf_s *perf = (FAR struct perf_s *)arg;
+  irqstate_t flags = spin_lock_irqsave(&perf->lock);
+  clock_t timeout = perf->timeout;
+  spin_unlock_irqrestore(&perf->lock, flags);
 
   perf_gettime();
-  wd_start_next(&perf->wdog, perf->timeout, perf_update, arg);
+  wd_start_next(&perf->wdog, timeout, perf_update, arg);
 }
 
 /****************************************************************************
