@@ -40,16 +40,6 @@
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-/* These are the preallocated times */
-
-#if CONFIG_PREALLOC_TIMERS > 0
-static struct posix_timer_s g_prealloctimers[CONFIG_PREALLOC_TIMERS];
-#endif
-
-/****************************************************************************
  * Public Data
  ****************************************************************************/
 
@@ -88,6 +78,12 @@ spinlock_t g_locktimers = SP_UNLOCKED;
 
 void timer_initialize(void)
 {
+  /* These are the preallocated times */
+
+#if CONFIG_PREALLOC_TIMERS > 0
+  static struct posix_timer_s g_prealloctimers[CONFIG_PREALLOC_TIMERS];
+#endif
+
   sched_trace_begin();
 
 #if CONFIG_PREALLOC_TIMERS > 0
