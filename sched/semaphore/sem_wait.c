@@ -263,19 +263,22 @@ int nxsem_wait_slow(FAR sem_t *sem)
 
   if (mutex)
     {
-      if (ret == OK)
+      int32_t old = atomic_read(NXSEM_MHOLDER(sem));
+      int32_t new;
+      do
         {
-          atomic_set(NXSEM_MHOLDER(sem), ((uint32_t)rtcb->pid));
-        }
+          new = ret == OK ? rtcb->pid : old;
 
-      if (dq_empty(SEM_WAITLIST(sem)))
-        {
-          atomic_fetch_and(NXSEM_MHOLDER(sem), ~NXSEM_MBLOCKING_BIT);
+          if (dq_empty(SEM_WAITLIST(sem)))
+            {
+              new &= ~NXSEM_MBLOCKING_BIT;
+            }
+          else
+            {
+              new |= NXSEM_MBLOCKING_BIT;
+            }
         }
-      else
-        {
-          atomic_fetch_or(NXSEM_MHOLDER(sem), NXSEM_MBLOCKING_BIT);
-        }
+      while (!atomic_try_cmpxchg_release(NXSEM_MHOLDER(sem), &old, new));
     }
 
   leave_critical_section(flags);
