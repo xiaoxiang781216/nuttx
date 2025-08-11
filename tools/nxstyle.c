@@ -420,6 +420,7 @@ static const char *g_white_content_list[] =
   "Window",
   "XShmSegmentInfo",
   "XImage",
+  "XInitThreads",
   "XGCValues",
   "XTextProperty",
   "XSizeHints",
