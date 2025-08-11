@@ -411,7 +411,7 @@ class Register:
         self.logger.debug(f"Set {self.name} = {self._value:#x}")
 
 
-class GeneralRegisters:
+class Registers:
     def __init__(self, elf: LiefELF, arch=None, readmem=None):
         """
         Registers class to store register information
@@ -550,57 +550,6 @@ class GeneralRegisters:
 
     def __getitem__(self, key):
         return self._registers[key]
-
-
-class TricoreRegisters(GeneralRegisters):
-    def __init__(self, elf, arch=None, readmem=None):
-        super().__init__(elf, arch, readmem)
-
-    # tricore read csa
-    def load(self, addr: int):
-        lower_count = 16
-        upper_count = 16
-        lpcx = None
-        xcpregs = self.readmem(addr, lower_count * 4)  # read lower csa
-        xcp_table = [reg[0] for reg in g_reg_table["tricore"]["registers"]]
-
-        if not xcpregs:
-            raise ValueError("No valid source to load register values.\n")
-
-        for name in xcp_table[:lower_count]:
-            reg = self.get(name=name)
-            reg.value = xcpregs[reg.toffset : reg.toffset + reg.size]
-            if name == "pcx":
-                lpcx = reg.value
-
-        if not lpcx:
-            raise ValueError("Invalid lpcx register loaded.\n")
-
-        PCXI_UL = 1 << 20  # determine wheteher it is the upper csa flag
-        is_upper = (lpcx & PCXI_UL) != 0
-
-        def csa2addr(csa):
-            # #define tricore_csa2addr(csa) ((uintptr_t *)((((csa) & 0x000F0000) << 12) \
-            #                                  | (((csa) & 0x0000FFFF) << 6)))
-            return (csa & 0x000F0000) << 12 | (csa & 0x0000FFFF) << 6
-
-        if is_upper:
-            xcpregs = self.readmem(csa2addr(lpcx), upper_count * 4)
-            for name in xcp_table[lower_count:]:
-                reg = self.get(name=name)
-                reg_off = reg.tcb_reg_off - lower_count * 4
-                if reg_off < 0 or (reg_off + reg.size) > len(xcpregs):
-                    raise ValueError("No valid source to load register values.\n")
-                reg.value = xcpregs[reg_off : reg_off + reg.size]
-
-        return self
-
-
-def Registers(elf, arch=None, readmem=None) -> GeneralRegisters:
-    if arch == "tricore":
-        return TricoreRegisters(elf, arch, readmem)
-    else:
-        return GeneralRegisters(elf, arch, readmem)
 
 
 def get_arch_name():
