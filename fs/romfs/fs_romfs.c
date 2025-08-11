@@ -626,6 +626,22 @@ static int romfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   return -ENOTTY;
 }
 
+#ifdef CONFIG_BUILD_KERNEL
+static int romfs_munmap(FAR struct task_group_s *group,
+                        FAR struct mm_map_entry_s *entry,
+                        FAR void *start, size_t length)
+{
+  if (group && entry)
+    {
+      finfo("%p, len=%zu\n", entry->vaddr, entry->length);
+      vm_unmap_region(get_group_mm(group), entry->vaddr, entry->length);
+      mm_map_remove(get_current_mm(), entry);
+    }
+
+  return OK;
+}
+#endif
+
 static int romfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 {
   FAR struct romfs_mountpt_s *rm;
@@ -647,8 +663,15 @@ static int romfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
   if (rm->rm_xipbase && map->offset >= 0 && map->offset < rf->rf_size &&
       map->length != 0 && map->offset + map->length <= rf->rf_size)
     {
-      map->vaddr = rm->rm_xipbase + rf->rf_startoffset + map->offset;
-      return 0;
+      map->vaddr  = rm->rm_xipbase + rf->rf_startoffset + map->offset;
+#ifdef CONFIG_BUILD_KERNEL
+      map->vaddr  = vm_map_region(get_current_mm(), (uintptr_t)map->vaddr,
+                                  rf->rf_size);
+      map->length = rf->rf_size;
+      map->munmap = romfs_munmap;
+      mm_map_add(get_current_mm(), map);
+#endif
+      return OK;
     }
 
   return -ENOTTY;
@@ -1129,7 +1152,7 @@ static int romfs_bind(FAR struct inode *blkdriver, FAR const void *data,
       goto errout_with_mount;
     }
 
-  /* Then complete the mount by getting the ROMFS configuratrion from
+  /* Then complete the mount by getting the ROMFS configuration from
    * the ROMF header
    */
 
