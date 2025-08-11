@@ -44,7 +44,8 @@ set(SRCS
     tricore_systimer.c
     tricore_tcbinfo.c
     tricore_trapcall.c
-    tricore_usestack.c)
+    tricore_usestack.c
+    tricore_fork.c)
 
 if(CONFIG_BUILD_PROTECTED OR CONFIG_BUILD_KERNEL)
   list(APPEND SRCS tricore_task_start.c tricore_pthread_start.c
