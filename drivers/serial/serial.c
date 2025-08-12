@@ -2068,6 +2068,32 @@ void uart_spinunlock(FAR uart_dev_t *dev, bool nopreempt, irqstate_t flags)
 }
 
 /****************************************************************************
+ * Name: uart_spinlock_breaklock
+ *
+ * Description:
+ *   Break the lock and return the recursive count.
+ *
+ ****************************************************************************/
+
+uint16_t uart_spinlock_breaklock(FAR uart_dev_t *dev)
+{
+  return rspin_breaklock(&dev->lock);
+}
+
+/****************************************************************************
+ * Name: uart_spinlock_restorelock
+ *
+ * Description:
+ *   Restore the lock to the recursive count.
+ *
+ ****************************************************************************/
+
+void uart_spinlock_restorelock(FAR uart_dev_t *dev, uint16_t count)
+{
+  rspin_restorelock(&dev->lock, count);
+}
+
+/****************************************************************************
  * Name: uart_register
  *
  * Description:
