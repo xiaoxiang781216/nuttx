@@ -1122,7 +1122,7 @@ static int lrofs_bind(FAR struct inode *blkdriver, FAR const void *data,
         }
     }
 
-  /* Then complete the mount by getting the ROMFS configuratrion from
+  /* Then complete the mount by getting the LROFS configuratrion from
    * the ROMF header
    */
 

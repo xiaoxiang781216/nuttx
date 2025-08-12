@@ -547,7 +547,7 @@ static uint32_t lrofs_add_sparenode(FAR struct lrofs_mountpt_s *lm,
           if (node->end - node->start >= size)
             {
               uint32_t aligned = SEC_ALIGNUP(lm, node->start);
-              offset = ROMFS_ALIGNUP(node->start);
+              offset = LROFS_ALIGNUP(node->start);
               if (aligned - offset < size)
                 {
                   offset = aligned;
@@ -742,11 +742,11 @@ static int lrofs_add_disk(FAR struct lrofs_mountpt_s *lm,
                    ln_parent->ln_origoffset & RFNEXT_OFFSETMASK;
     }
 
-  lrofs_devwrite32(lm, ndx + ROMFS_FHDR_INFO, node_info);
-  lrofs_devwrite32(lm, ndx + ROMFS_FHDR_NEXT, type);
-  lrofs_devwrite32(lm, ndx + ROMFS_FHDR_SIZE, 0);
-  lrofs_devwrite32(lm, ndx + ROMFS_FHDR_CHKSUM, 0);
-  memcpy(lm->lm_devbuffer + ndx + ROMFS_FHDR_NAME, ln->ln_name,
+  lrofs_devwrite32(lm, ndx + LROFS_FHDR_INFO, node_info);
+  lrofs_devwrite32(lm, ndx + LROFS_FHDR_NEXT, type);
+  lrofs_devwrite32(lm, ndx + LROFS_FHDR_SIZE, 0);
+  lrofs_devwrite32(lm, ndx + LROFS_FHDR_CHKSUM, 0);
+  memcpy(lm->lm_devbuffer + ndx + LROFS_FHDR_NAME, ln->ln_name,
          ln->ln_namesize + 1);
   ret = lrofs_devcachewrite(lm, SEC_NSECTORS(lm, ln->ln_origoffset));
   if (ret < 0)
@@ -766,14 +766,14 @@ static int lrofs_add_disk(FAR struct lrofs_mountpt_s *lm,
 
   if (firstchild)
     {
-      lrofs_devwrite32(lm, ndx + ROMFS_FHDR_INFO,
+      lrofs_devwrite32(lm, ndx + LROFS_FHDR_INFO,
                       (ln->ln_origoffset & RFNEXT_OFFSETMASK));
       return lrofs_devcachewrite(lm,
                                  SEC_NSECTORS(lm, ln_prev->ln_origoffset));
     }
 
-  pre_next = lrofs_devload32(lm, ndx + ROMFS_FHDR_NEXT);
-  lrofs_devwrite32(lm, ndx + ROMFS_FHDR_NEXT,
+  pre_next = lrofs_devload32(lm, ndx + LROFS_FHDR_NEXT);
+  lrofs_devwrite32(lm, ndx + LROFS_FHDR_NEXT,
                    (ln->ln_origoffset & RFNEXT_OFFSETMASK) |
                    (pre_next & RFNEXT_ALLMODEMASK));
 
@@ -834,7 +834,7 @@ static int lrofs_remove_disk(FAR struct lrofs_mountpt_s *lm,
       return ndx;
     }
 
-  node_next = lrofs_devload32(lm, ndx + ROMFS_FHDR_NEXT);
+  node_next = lrofs_devload32(lm, ndx + LROFS_FHDR_NEXT);
 
   /* Get the prevnode sector index */
 
@@ -844,10 +844,10 @@ static int lrofs_remove_disk(FAR struct lrofs_mountpt_s *lm,
       return ndx;
     }
 
-  pre_next = lrofs_devload32(lm, ndx + ROMFS_FHDR_NEXT);
+  pre_next = lrofs_devload32(lm, ndx + LROFS_FHDR_NEXT);
   if (firstchild)
     {
-      lrofs_devwrite32(lm, ndx + ROMFS_FHDR_INFO,
+      lrofs_devwrite32(lm, ndx + LROFS_FHDR_INFO,
                        (node_next & RFNEXT_OFFSETMASK));
       return lrofs_devcachewrite(lm,
                                  SEC_NSECTORS(lm, ln_prev->ln_origoffset));
@@ -855,7 +855,7 @@ static int lrofs_remove_disk(FAR struct lrofs_mountpt_s *lm,
 
   /* Update the prevnode next */
 
-  lrofs_devwrite32(lm, ndx + ROMFS_FHDR_NEXT,
+  lrofs_devwrite32(lm, ndx + LROFS_FHDR_NEXT,
                    (node_next & RFNEXT_OFFSETMASK) |
                    (pre_next & RFNEXT_ALLMODEMASK));
 
@@ -901,10 +901,10 @@ static int lrofs_cachenode(FAR struct lrofs_mountpt_s *lm,
   ln->ln_namesize   = nsize;
   memcpy(ln->ln_name, name, nsize + 1);
 
-  totalsize = ROMFS_ALIGNUP(ROMFS_FHDR_NAME + nsize + 1);
+  totalsize = LROFS_ALIGNUP(LROFS_FHDR_NAME + nsize + 1);
   if (offset == origoffset)
     {
-      totalsize += ROMFS_ALIGNUP(size);
+      totalsize += LROFS_ALIGNUP(size);
     }
 
   lm->lm_volsize += totalsize;
@@ -1011,7 +1011,7 @@ static int lrofs_update_filesize(FAR struct lrofs_mountpt_s *lm,
 
   /* Update the node size */
 
-  lrofs_devwrite32(lm, ndx + ROMFS_FHDR_SIZE, size);
+  lrofs_devwrite32(lm, ndx + LROFS_FHDR_SIZE, size);
   return lrofs_devcachewrite(lm,
                              SEC_NSECTORS((FAR struct lrofs_mountpt_s *)lm,
                              ln->ln_origoffset));
@@ -1185,7 +1185,7 @@ static int lrofs_followhardlinks(FAR struct lrofs_mountpt_s *lm,
 
       /* Check if this is a hard link */
 
-      next = lrofs_devread32(lm, ndx + ROMFS_FHDR_NEXT);
+      next = lrofs_devread32(lm, ndx + LROFS_FHDR_NEXT);
       if (!IS_HARDLINK(next))
         {
           *poffset = offset;
@@ -1196,7 +1196,7 @@ static int lrofs_followhardlinks(FAR struct lrofs_mountpt_s *lm,
        * link and that poffset was set to the link offset is valid.
        */
 
-      offset = lrofs_devread32(lm, ndx + ROMFS_FHDR_INFO);
+      offset = lrofs_devread32(lm, ndx + LROFS_FHDR_INFO);
       ret    = LINK_FOLLOWED;
     }
 
@@ -1524,7 +1524,7 @@ int lrofs_parsedirentry(FAR struct lrofs_mountpt_s *lm, uint32_t offset,
    * after we follow the hard links.
    */
 
-  save = lrofs_devread32(lm, ndx + ROMFS_FHDR_NEXT);
+  save = lrofs_devread32(lm, ndx + LROFS_FHDR_NEXT);
 
   /* Traverse hardlinks as necessary to get to the real file header */
 
@@ -1548,15 +1548,15 @@ int lrofs_parsedirentry(FAR struct lrofs_mountpt_s *lm, uint32_t offset,
    * we know that most the basic node info fits into the sector.  The
    * associated name may not, however.
    *
-   * NOTE:  Since ROMFS directory entries are aligned to 16-byte boundaries,
-   * we are assured that ndx + ROMFS_FHDR_INFO/SIZE will lie wholly within
+   * NOTE:  Since LROFS directory entries are aligned to 16-byte boundaries,
+   * we are assured that ndx + LROFS_FHDR_INFO/SIZE will lie wholly within
    * the sector buffer.
    */
 
-  next   = lrofs_devread32(lm, ndx + ROMFS_FHDR_NEXT);
+  next   = lrofs_devread32(lm, ndx + LROFS_FHDR_NEXT);
   *pnext = (save & RFNEXT_OFFSETMASK) | (next & RFNEXT_ALLMODEMASK);
-  *pinfo = lrofs_devread32(lm, ndx + ROMFS_FHDR_INFO);
-  *psize = lrofs_devread32(lm, ndx + ROMFS_FHDR_SIZE);
+  *pinfo = lrofs_devread32(lm, ndx + LROFS_FHDR_INFO);
+  *psize = lrofs_devread32(lm, ndx + LROFS_FHDR_SIZE);
 
   return 0;
 }
@@ -1581,7 +1581,7 @@ int lrofs_parsefilename(FAR struct lrofs_mountpt_s *lm, uint32_t offset,
    * of the name have been parsed.
    */
 
-  offset += ROMFS_FHDR_NAME;
+  offset += LROFS_FHDR_NAME;
   while (namelen < NAME_MAX && !done)
     {
       /* Read the sector into memory */
@@ -1641,8 +1641,8 @@ int lrofs_datastart(FAR struct lrofs_mountpt_s *lm,
                     FAR struct lrofs_nodeinfo_s *ln,
                     FAR uint32_t *start)
 {
-  *start = ROMFS_ALIGNUP(ln->ln_offset +
-                         ROMFS_FHDR_NAME + ln->ln_namesize + 1);
+  *start = LROFS_ALIGNUP(ln->ln_offset +
+                         LROFS_FHDR_NAME + ln->ln_namesize + 1);
   return 0;
 }
 
@@ -1650,8 +1650,8 @@ int lrofs_datastart(FAR struct lrofs_mountpt_s *lm,
  * Name: lrofs_hwconfigure
  *
  * Description:
- *   This function is called as part of the ROMFS mount operation.
- *   It configures the ROMFS filestem for use on this block driver.  This
+ *   This function is called as part of the LROFS mount operation.
+ *   It configures the LROFS filestem for use on this block driver.  This
  *   include the accounting for the geometry of the device, setting up any
  *   XIP modes of operation, and/or allocating any cache buffers.
  *
@@ -1718,10 +1718,10 @@ int lrofs_hwconfigure(FAR struct lrofs_mountpt_s *lm)
  * Name: lrofs_fsconfigure
  *
  * Description:
- *   This function is called as part of the ROMFS mount operation   It
+ *   This function is called as part of the LROFS mount operation   It
  *   sets up the mount structure to include configuration information
- *   contained in the ROMFS header.  This is the place where we actually
- *   determine if the media contains a ROMFS filesystem.
+ *   contained in the LROFS header.  This is the place where we actually
+ *   determine if the media contains a LROFS filesystem.
  *
  ****************************************************************************/
 
@@ -1731,7 +1731,7 @@ int lrofs_fsconfigure(FAR struct lrofs_mountpt_s *lm, FAR const void *data)
   int             ret;
   uint32_t        rootoffset;
 
-  /* Then get information about the ROMFS filesystem on the devices managed
+  /* Then get information about the LROFS filesystem on the devices managed
    * by this block driver. Read sector zero which contains the volume header.
    */
 
@@ -1741,21 +1741,21 @@ int lrofs_fsconfigure(FAR struct lrofs_mountpt_s *lm, FAR const void *data)
       return ret;
     }
 
-  /* Verify the magic number at that identifies this as a ROMFS filesystem */
+  /* Verify the magic number at that identifies this as a LROFS filesystem */
 
-  if (memcmp(lm->lm_buffer, ROMFS_VHDR_MAGIC, ROMFS_VHDR_SIZE) != 0)
+  if (memcmp(lm->lm_buffer, LROFS_VHDR_MAGIC, LROFS_VHDR_SIZE) != 0)
     {
       return -EINVAL;
     }
 
   /* Then extract the values we need from the header and return success */
 
-  lm->lm_volsize = lrofs_devread32(lm, ROMFS_VHDR_SIZE);
+  lm->lm_volsize = lrofs_devread32(lm, LROFS_VHDR_SIZE);
 
   /* The root directory entry begins right after the header */
 
-  name = (FAR const char *)&lm->lm_buffer[ROMFS_VHDR_VOLNAME];
-  rootoffset = ROMFS_ALIGNUP(ROMFS_VHDR_VOLNAME + strlen(name) + 1);
+  name = (FAR const char *)&lm->lm_buffer[LROFS_VHDR_VOLNAME];
+  rootoffset = LROFS_ALIGNUP(LROFS_VHDR_VOLNAME + strlen(name) + 1);
   ret = lrofs_init_sparelist(lm);
   if (ret < 0)
     {
@@ -1779,7 +1779,7 @@ int lrofs_fsconfigure(FAR struct lrofs_mountpt_s *lm, FAR const void *data)
  * Name: lrofs_fileconfigure
  *
  * Description:
- *   This function is called as part of the ROMFS file open operation   It
+ *   This function is called as part of the LROFS file open operation   It
  *   sets up the file structure to handle buffer appropriately, depending
  *   upon XIP mode or not.
  *
@@ -1815,9 +1815,9 @@ int lrofs_fileconfigure(FAR struct lrofs_mountpt_s *lm,
       lf->lf_endsector = SEC_NSECTORS(lm, endoffset);
       startsector = SEC_NSECTORS(lm, lf->lf_startoffset);
       nsectors = lf->lf_endsector - startsector + 1;
-      if (nsectors > CONFIG_FS_ROMFS_CACHE_FILE_NSECTORS)
+      if (nsectors > CONFIG_FS_LROFS_CACHE_FILE_NSECTORS)
         {
-          nsectors = CONFIG_FS_ROMFS_CACHE_FILE_NSECTORS;
+          nsectors = CONFIG_FS_LROFS_CACHE_FILE_NSECTORS;
         }
 
       /* Nothing in the cache buffer */
@@ -1879,7 +1879,7 @@ int lrofs_create(FAR struct lrofs_mountpt_s *lm,
 
   /* Alloc the node space from lrofs sparelist */
 
-  size = ROMFS_ALIGNUP(ROMFS_VHDR_VOLNAME + strlen(name) + 1);
+  size = LROFS_ALIGNUP(LROFS_VHDR_VOLNAME + strlen(name) + 1);
   if (isdir)
     {
       /* Add node size of ./.. (64) */
@@ -2214,33 +2214,33 @@ int lrofs_truncate_file(FAR struct file *filep, off_t length)
 
 int lrofs_mkfs(FAR struct lrofs_mountpt_s *lm)
 {
-  /* Write the magic number at that identifies this as a ROMFS filesystem */
+  /* Write the magic number at that identifies this as a LROFS filesystem */
 
-  lrofs_devmemcpy(lm, ROMFS_VHDR_ROM1FS, ROMFS_VHDR_MAGIC, ROMFS_VHDR_SIZE);
+  lrofs_devmemcpy(lm, LROFS_VHDR_ROM1FS, LROFS_VHDR_MAGIC, LROFS_VHDR_SIZE);
 
-  /* Init the ROMFS volume size */
+  /* Init the LROFS volume size */
 
-  lrofs_devwrite32(lm, ROMFS_VHDR_SIZE, 0x60);
+  lrofs_devwrite32(lm, LROFS_VHDR_SIZE, 0x60);
 
   /* Write the volume name */
 
-  lrofs_devstrcpy(lm, ROMFS_VHDR_VOLNAME, "lrofs");
+  lrofs_devstrcpy(lm, LROFS_VHDR_VOLNAME, "lrofs");
 
   /* Write the root node . */
 
-  lrofs_devwrite32(lm, 0x20 + ROMFS_FHDR_NEXT, 0x40 | RFNEXT_DIRECTORY);
-  lrofs_devwrite32(lm, 0x20 + ROMFS_FHDR_INFO, 0x20);
-  lrofs_devwrite32(lm, 0x20 + ROMFS_FHDR_SIZE, 0);
-  lrofs_devwrite32(lm, 0x20 + ROMFS_FHDR_CHKSUM, 0);
-  lrofs_devstrcpy(lm, 0x20 + ROMFS_FHDR_NAME, ".");
+  lrofs_devwrite32(lm, 0x20 + LROFS_FHDR_NEXT, 0x40 | RFNEXT_DIRECTORY);
+  lrofs_devwrite32(lm, 0x20 + LROFS_FHDR_INFO, 0x20);
+  lrofs_devwrite32(lm, 0x20 + LROFS_FHDR_SIZE, 0);
+  lrofs_devwrite32(lm, 0x20 + LROFS_FHDR_CHKSUM, 0);
+  lrofs_devstrcpy(lm, 0x20 + LROFS_FHDR_NAME, ".");
 
   /* Write the root node .. */
 
-  lrofs_devwrite32(lm, 0x40 + ROMFS_FHDR_NEXT, RFNEXT_HARDLINK);
-  lrofs_devwrite32(lm, 0x40 + ROMFS_FHDR_INFO, 0x20);
-  lrofs_devwrite32(lm, 0x40 + ROMFS_FHDR_SIZE, 0);
-  lrofs_devwrite32(lm, 0x40 + ROMFS_FHDR_CHKSUM, 0);
-  lrofs_devstrcpy(lm, 0x40 + ROMFS_FHDR_NAME, "..");
+  lrofs_devwrite32(lm, 0x40 + LROFS_FHDR_NEXT, RFNEXT_HARDLINK);
+  lrofs_devwrite32(lm, 0x40 + LROFS_FHDR_INFO, 0x20);
+  lrofs_devwrite32(lm, 0x40 + LROFS_FHDR_SIZE, 0);
+  lrofs_devwrite32(lm, 0x40 + LROFS_FHDR_CHKSUM, 0);
+  lrofs_devstrcpy(lm, 0x40 + LROFS_FHDR_NAME, "..");
 
   /* Write the buffer to sector zero */
 
@@ -2310,7 +2310,7 @@ int lrofs_remove(FAR struct lrofs_mountpt_s *lm,
 
   /* Return the node space to lrofs sparelist  */
 
-  totalsize = ROMFS_ALIGNUP(ROMFS_VHDR_VOLNAME + ln->ln_namesize + 1) +
+  totalsize = LROFS_ALIGNUP(LROFS_VHDR_VOLNAME + ln->ln_namesize + 1) +
                             ln->ln_size;
   lm->lm_volsize -= totalsize;
   lrofs_free_spareregion(&lm->lm_sparelist, ln->ln_origoffset,
@@ -2344,7 +2344,7 @@ int lrofs_remove(FAR struct lrofs_mountpt_s *lm,
       for (int i = 0; i < ln->ln_count; i++)
         {
           ln_temp = ln->ln_child[i];
-          totalsize = ROMFS_ALIGNUP(ROMFS_VHDR_VOLNAME +
+          totalsize = LROFS_ALIGNUP(LROFS_VHDR_VOLNAME +
                                     ln_temp->ln_namesize + 1) +
                                     ln_temp->ln_size;
           lm->lm_volsize -= totalsize;

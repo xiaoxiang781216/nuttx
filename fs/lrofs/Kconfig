@@ -9,3 +9,13 @@ config FS_LROFS
 	depends on !DISABLE_MOUNTPOINT
 	---help---
 		Enable LROFS filesystem support
+if FS_LROFS
+
+config FS_LROFS_CACHE_FILE_NSECTORS
+	int "The number of file cache sector"
+	range 1 256
+	default 1
+	---help---
+		The number of file cache sector
+
+endif

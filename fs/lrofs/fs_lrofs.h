@@ -40,25 +40,25 @@
 
 /* Volume header (multi-byte values are big-endian) */
 
-#define ROMFS_VHDR_ROM1FS   0  /*  0-7:  "-rom1fs-" */
-#define ROMFS_VHDR_SIZE     8  /*  8-11: Number of accessible bytes in this fs. */
-#define ROMFS_VHDR_CHKSUM  12  /* 12-15: Checksum of the first 512 bytes. */
-#define ROMFS_VHDR_VOLNAME 16  /* 16-..: Zero terminated volume name, padded to
+#define LROFS_VHDR_ROM1FS   0  /*  0-7:  "-rom1fs-" */
+#define LROFS_VHDR_SIZE     8  /*  8-11: Number of accessible bytes in this fs. */
+#define LROFS_VHDR_CHKSUM  12  /* 12-15: Checksum of the first 512 bytes. */
+#define LROFS_VHDR_VOLNAME 16  /* 16-..: Zero terminated volume name, padded to
                                 *        16 byte boundary. */
 
-#define ROMFS_VHDR_MAGIC   "-rom1fs-"
+#define LROFS_VHDR_MAGIC   "-rom1fs-"
 
 /* File header offset (multi-byte values are big-endian) */
 
-#define ROMFS_FHDR_NEXT     0  /*  0-3:  Offset of the next file header
+#define LROFS_FHDR_NEXT     0  /*  0-3:  Offset of the next file header
                                 *        (zero if no more files) */
-#define ROMFS_FHDR_INFO     4  /*  4-7:  Info for directories/hard links/
+#define LROFS_FHDR_INFO     4  /*  4-7:  Info for directories/hard links/
                                 *        devices */
-#define ROMFS_FHDR_SIZE     8  /*  8-11: Size of this file in bytes */
-#define ROMFS_FHDR_CHKSUM  12  /* 12-15: Checksum covering the meta data,
+#define LROFS_FHDR_SIZE     8  /*  8-11: Size of this file in bytes */
+#define LROFS_FHDR_CHKSUM  12  /* 12-15: Checksum covering the meta data,
                                 *        including the file name, and
                                 *        padding. */
-#define ROMFS_FHDR_NAME    16  /* 16-..: Zero terminated volume name, padded
+#define LROFS_FHDR_NAME    16  /* 16-..: Zero terminated volume name, padded
                                 *        to 16 byte boundary. */
 
 /* Bits 0-3 of the rf_next offset provide mode information.  These are the
@@ -96,11 +96,11 @@
 
 /* Alignment macros */
 
-#define ROMFS_ALIGNMENT       16
-#define ROMFS_MAXPADDING      (ROMFS_ALIGNMENT-1)
-#define ROMFS_ALIGNMASK       (~ROMFS_MAXPADDING)
-#define ROMFS_ALIGNUP(addr)   ((((uint32_t)(addr))+ROMFS_MAXPADDING)&ROMFS_ALIGNMASK)
-#define ROMFS_ALIGNDOWN(addr) (((uint32_t)(addr))&ROMFS_ALIGNMASK)
+#define LROFS_ALIGNMENT       16
+#define LROFS_MAXPADDING      (LROFS_ALIGNMENT-1)
+#define LROFS_ALIGNMASK       (~LROFS_MAXPADDING)
+#define LROFS_ALIGNUP(addr)   ((((uint32_t)(addr))+LROFS_MAXPADDING)&LROFS_ALIGNMASK)
+#define LROFS_ALIGNDOWN(addr) (((uint32_t)(addr))&LROFS_ALIGNMASK)
 
 /* Offset and sector conversions */
 
@@ -140,7 +140,7 @@ struct lrofs_mountpt_s
   rmutex_t                     lm_lock;         /* Used to assume thread-safe access */
   uint32_t                     lm_refs;         /* The references for all files opened on this mountpoint */
   uint32_t                     lm_hwnsectors;   /* HW: The number of sectors reported by the hardware */
-  uint32_t                     lm_volsize;      /* Size of the ROMFS volume */
+  uint32_t                     lm_volsize;      /* Size of the LROFS volume */
   uint32_t                     lm_cachesector;  /* Current sector in the rm_buffer */
   FAR uint8_t                 *lm_xipbase;      /* Base address of directly accessible media */
   FAR uint8_t                 *lm_buffer;       /* Device sector buffer, allocated if rm_xipbase==0 */

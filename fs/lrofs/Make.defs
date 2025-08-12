@@ -27,7 +27,7 @@ ifeq ($(CONFIG_TRACE_LROFS_FS),y)
 lrofs/fs_lrofs.c_CFLAGS += -finstrument-functions
 endif
 
-# Include ROMFS build support
+# Include LROFS build support
 
 DEPPATH += --dep-path lrofs
 VPATH += :lrofs
