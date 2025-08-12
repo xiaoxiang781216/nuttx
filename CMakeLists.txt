@@ -373,11 +373,13 @@ if(NOT EXISTS ${CMAKE_BINARY_DIR}/.config OR NOT "${NUTTX_DEFCONFIG}" STREQUAL
       OUTPUT_STRIP_TRAILING_WHITESPACE)
     message(STATUS "  Ninja:  ${ninja_version}")
 
-    # Ninja generator does not yet know how to build archives in pieces, so
-    # response files must be used to deal with very long linker command lines.
-    set(CMAKE_NINJA_FORCE_RESPONSE_FILE
-        1
-        CACHE INTERNAL "")
+    if(CMAKE_HOST_WIN32)
+      # Ninja generator does not yet know how to build archives in pieces, so
+      # response files must be used to deal with very long linker command lines.
+      set(CMAKE_NINJA_FORCE_RESPONSE_FILE
+          1
+          CACHE INTERNAL "")
+    endif()
   endif()
   message(STATUS "  Board:  ${NUTTX_BOARD}")
   message(STATUS "  Config: ${NUTTX_CONFIG}")
