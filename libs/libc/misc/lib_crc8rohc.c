@@ -86,5 +86,5 @@ uint8_t crc8rohcpart(FAR const uint8_t *src, size_t len, uint8_t crc8val)
 
 uint8_t crc8rohc(FAR const uint8_t *src, size_t len)
 {
-  return crc8rohcpart(src, len, 0xff);
+  return crc8rohcpart(src, len, 0xffu);
 }

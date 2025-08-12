@@ -156,7 +156,7 @@ uint16_t crc16h8005_part(FAR const uint8_t *src,
   size_t i;
   uint16_t v = crc16val;
 
-  for (i = 0; i < len; i++)
+  for (i = 0u; i < len; i++)
     {
       v = (v >> 8) ^ g_crc16_tab[(v ^ src[i]) & 0xff];
     }
@@ -175,5 +175,5 @@ uint16_t crc16h8005_part(FAR const uint8_t *src,
 
 uint16_t crc16h8005(FAR const uint8_t *src, size_t len)
 {
-  return crc16h8005_part(src, len, 0x0000);
+  return crc16h8005_part(src, len, 0x0000u);
 }

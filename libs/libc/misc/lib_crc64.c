@@ -243,7 +243,7 @@ uint64_t crc64part(FAR const uint8_t *src, size_t len, uint64_t crc64val)
 {
   size_t i;
 
-  for (i = 0; i < len; i++)
+  for (i = 0u; i < len; i++)
     {
       crc64val = crc64_tab[((crc64val >> 56) & 0xff) ^ src[i]] ^
                  (crc64val << 8);
@@ -257,12 +257,12 @@ uint64_t crc64part(FAR const uint8_t *src, size_t len, uint64_t crc64val)
   size_t i;
   size_t j;
 
-  for (i = 0; i < len; i++)
+  for (i = 0u; i < len; i++)
     {
       crc64val ^= (uint64_t)src[i] << 56;
-      for (j = 0; j < 8; j++)
+      for (j = 0u; j < 8u; j++)
         {
-          if ((crc64val & ((uint64_t)1 << 63)) != 0)
+          if ((crc64val & ((uint64_t)1 << 63)) != 0u)
             {
               crc64val = (crc64val << 1) ^ CRC64_POLY;
             }

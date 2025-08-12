@@ -86,7 +86,7 @@ uint16_t crc16ibmpart(FAR const uint8_t *src, size_t len, uint16_t crc16val)
 {
   size_t i;
 
-  for (i = 0; i < len; i++)
+  for (i = 0u; i < len; i++)
     {
       crc16val = (crc16val >> 8) ^
                  g_crc16ibm_tab[(crc16val ^ src[i]) & 0xff];
@@ -106,5 +106,5 @@ uint16_t crc16ibmpart(FAR const uint8_t *src, size_t len, uint16_t crc16val)
 
 uint16_t crc16ibm(FAR const uint8_t *src, size_t len)
 {
-  return crc16ibmpart(src, len, 0);
+  return crc16ibmpart(src, len, 0u);
 }

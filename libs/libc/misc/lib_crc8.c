@@ -121,5 +121,5 @@ uint8_t crc8part(FAR const uint8_t *src, size_t len, uint8_t crc8val)
 
 uint8_t crc8(FAR const uint8_t *src, size_t len)
 {
-  return crc8part(src, len, 0);
+  return crc8part(src, len, 0u);
 }

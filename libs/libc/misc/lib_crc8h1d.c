@@ -166,5 +166,5 @@ uint8_t crc8h1d_part(FAR const uint8_t *src, size_t len, uint8_t crc8val)
 
 uint8_t crc8h1d(FAR const uint8_t *src, size_t len)
 {
-  return crc8h1d_part(src, len, 0x00);
+  return crc8h1d_part(src, len, 0x00u);
 }

@@ -73,7 +73,7 @@
  ****************************************************************************/
 #ifndef CONFIG_LIBC_ARCH_CRC32
 #ifdef CONFIG_LIBC_CRC32_SLOW
-#  define LIBC_CRC32_POLY  0xedb88320
+#  define LIBC_CRC32_POLY 0xedb88320u
 #else
 static const uint32_t crc32_tab[] =
 {
@@ -161,11 +161,11 @@ uint32_t crc32part(FAR const uint8_t *src, size_t len, uint32_t crc32val)
   size_t i;
 
 #ifdef CONFIG_LIBC_CRC32_SLOW
-  for (i = 0; i < len; i++)
+  for (i = 0u; i < len; i++)
     {
       size_t j;
       crc32val ^= src[i];
-      for (j = 0; j < 8; j++)
+      for (j = 0u; j < 8; j++)
         {
           if (crc32val & 1)
             {
@@ -178,7 +178,7 @@ uint32_t crc32part(FAR const uint8_t *src, size_t len, uint32_t crc32val)
         }
     }
 #else
-  for (i = 0; i < len; i++)
+  for (i = 0u; i < len; i++)
     {
       crc32val = crc32_tab[(crc32val & 0xff) ^ src[i]] ^ (crc32val >> 8);
     }
@@ -199,5 +199,5 @@ uint32_t crc32part(FAR const uint8_t *src, size_t len, uint32_t crc32val)
 
 uint32_t crc32(FAR const uint8_t *src, size_t len)
 {
-  return crc32part(src, len, 0);
+  return crc32part(src, len, 0u);
 }

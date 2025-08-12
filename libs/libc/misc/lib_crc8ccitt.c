@@ -99,5 +99,5 @@ uint8_t crc8ccittpart(FAR const uint8_t *src, size_t len, uint8_t crc8val)
 
 uint8_t crc8ccitt(FAR const uint8_t *src, size_t len)
 {
-  return crc8ccittpart(src, len, 0);
+  return crc8ccittpart(src, len, 0u);
 }

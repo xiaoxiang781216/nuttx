@@ -266,14 +266,14 @@ uint64_t crc64emac_part(FAR const uint8_t *src,
 {
   size_t i;
 
-  crc64val ^= 0xffffffffffffffff;
-  for (i = 0; i < len; i++)
+  crc64val ^= 0xffffffffffffffffu;
+  for (i = 0u; i < len; i++)
     {
       crc64val = g_crc64_tab[(crc64val & 0xff) ^ src[i]] ^
                  (crc64val >> 8);
     }
 
-  return crc64val ^ 0xffffffffffffffff;
+  return crc64val ^ 0xffffffffffffffffu;
 }
 
 /****************************************************************************
@@ -287,7 +287,7 @@ uint64_t crc64emac_part(FAR const uint8_t *src,
 
 uint64_t crc64emac(FAR const uint8_t *src, size_t len)
 {
-  return crc64emac_part(src, len, 0x0000000000000000);
+  return crc64emac_part(src, len, 0x0000000000000000u);
 }
 
 #endif /* CONFIG_HAVE_LONG_LONG */
