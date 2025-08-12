@@ -139,7 +139,7 @@ static void pseudofile_remove(FAR struct fs_pseudofile_s *pf)
 {
   nxmutex_unlock(&pf->lock);
   nxmutex_destroy(&pf->lock);
-  fs_heap_free(pf->content);
+  fs_large_free(pf->content);
   fs_heap_free(pf);
 }
 
@@ -176,13 +176,13 @@ static int pseudofile_expand(FAR struct inode *node,
   FAR struct fs_pseudofile_s *pf = node->i_private;
   FAR void *tmp;
 
-  if (pf->content && fs_heap_malloc_size(pf->content) >= size)
+  if (pf->content && fs_large_malloc_size(pf->content) >= size)
     {
       node->i_size = size;
       return 0;
     }
 
-  tmp = fs_heap_realloc(pf->content, 1 << LOG2_CEIL(size));
+  tmp = fs_large_realloc(pf->content, 1 << LOG2_CEIL(size));
   if (tmp == NULL)
     {
       return -ENOMEM;
@@ -397,7 +397,7 @@ static int pseudofile_truncate(FAR struct file *filep, off_t length)
     {
       FAR void *tmp;
 
-      tmp = fs_heap_realloc(pf->content, length);
+      tmp = fs_large_realloc(pf->content, length);
       if (tmp == NULL)
         {
           ret = -ENOMEM;

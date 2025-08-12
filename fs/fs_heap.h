@@ -39,31 +39,49 @@
  * Public Function Prototypes
  ****************************************************************************/
 
-#if defined(CONFIG_FS_HEAPSIZE) && CONFIG_FS_HEAPSIZE > 0
+#if CONFIG_FS_HEAPSIZE > 0
 void      fs_heap_initialize(void);
-FAR void *fs_heap_zalloc(size_t size) malloc_like1(1);
-FAR void *fs_heap_malloc(size_t size) malloc_like1(1);
-size_t    fs_heap_malloc_size(FAR void *mem);
-FAR void *fs_heap_realloc(FAR void *oldmem, size_t size) realloc_like(2);
-FAR void *fs_heap_memalign(size_t alignment, size_t size) malloc_like1(3);
-void      fs_heap_free(FAR void *mem);
+struct mallinfo_task fs_heap_mallinfo_task(FAR const struct malltask *task);
 FAR char *fs_heap_strdup(FAR const char *s) malloc_like;
 FAR char *fs_heap_strndup(FAR const char *s, size_t size) malloc_like;
 int       fs_heap_asprintf(FAR char **strp, FAR const char *fmt, ...)
           printf_like(2, 3);
-struct mallinfo_task fs_heap_mallinfo_task(FAR const struct malltask *task);
+FAR void *fs_large_zalloc(size_t size) malloc_like1(1);
+FAR void *fs_large_malloc(size_t size) malloc_like1(1);
+size_t    fs_large_malloc_size(FAR void *mem);
+FAR void *fs_large_realloc(FAR void *oldmem, size_t size)
+          realloc_like(2);
+FAR void *fs_large_memalign(size_t alignment, size_t size)
+          malloc_like1(3);
+void      fs_large_free(FAR void *mem);
 #else
 #  define fs_heap_initialize()
-#  define fs_heap_zalloc        kmm_zalloc
-#  define fs_heap_malloc        kmm_malloc
-#  define fs_heap_malloc_size   kmm_malloc_size
-#  define fs_heap_realloc       kmm_realloc
-#  define fs_heap_memalign      kmm_memalign
-#  define fs_heap_free          kmm_free
-#  define fs_heap_mallinfo_task kmm_mallinfo_task
-#  define fs_heap_strdup        strdup
-#  define fs_heap_strndup       strndup
-#  define fs_heap_asprintf      asprintf
-#endif
+#  define fs_heap_mallinfo_task     kmm_mallinfo_task
+#  define fs_heap_strdup            strdup
+#  define fs_heap_strndup           strndup
+#  define fs_heap_asprintf          asprintf
+#  define fs_large_zalloc           kmm_zalloc
+#  define fs_large_malloc           kmm_malloc
+#  define fs_large_malloc_size      kmm_malloc_size
+#  define fs_large_realloc          kmm_realloc
+#  define fs_large_memalign         kmm_memalign
+#  define fs_large_free             kmm_free
+#endif /* CONFIG_FS_HEAPSIZE */
 
-#endif
+# if defined(CONFIG_FS_HEAPLARGE_ONLY) || CONFIG_FS_HEAPSIZE <= 0
+#  define fs_heap_zalloc            kmm_zalloc
+#  define fs_heap_malloc            kmm_malloc
+#  define fs_heap_malloc_size       kmm_malloc_size
+#  define fs_heap_realloc           kmm_realloc
+#  define fs_heap_memalign          kmm_memalign
+#  define fs_heap_free              kmm_free
+# else
+#  define fs_heap_zalloc            fs_large_zalloc
+#  define fs_heap_malloc            fs_large_malloc
+#  define fs_heap_malloc_size       fs_large_malloc_size
+#  define fs_heap_realloc           fs_large_realloc
+#  define fs_heap_memalign          fs_large_memalign
+#  define fs_heap_free              fs_large_free
+# endif /* CONFIG_FS_HEAPLARGE_ONLY */
+
+#endif /* __FS_FS_HEAP_H */

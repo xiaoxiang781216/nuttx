@@ -251,7 +251,7 @@ static int tmpfs_realloc_directory(FAR struct tmpfs_directory_s *tdo,
 
   /* Realloc the directory object */
 
-  newentry = fs_heap_realloc(tdo->tdo_entry, objsize);
+  newentry = fs_large_realloc(tdo->tdo_entry, objsize);
   if (newentry == NULL)
     {
       return -ENOMEM;
@@ -291,7 +291,7 @@ static int tmpfs_realloc_file(FAR struct tmpfs_file_s *tfo,
         {
           /* Free the file object */
 
-          fs_heap_free(tfo->tfo_data);
+          fs_large_free(tfo->tfo_data);
           tfo->tfo_data = NULL;
           tfo->tfo_alloc = 0;
           tfo->tfo_size = 0;
@@ -332,7 +332,7 @@ static int tmpfs_realloc_file(FAR struct tmpfs_file_s *tfo,
 
   /* Realloc the file object */
 
-  newdata = fs_heap_realloc(tfo->tfo_data, allocsize);
+  newdata = fs_large_realloc(tfo->tfo_data, allocsize);
   if (newdata == NULL)
     {
       return -ENOMEM;
@@ -383,7 +383,7 @@ static void tmpfs_release_lockedfile(FAR struct tmpfs_file_s *tfo)
     {
       tmpfs_unlock_file(tfo);
       nxrmutex_destroy(&tfo->tfo_lock);
-      fs_heap_free(tfo->tfo_data);
+      fs_large_free(tfo->tfo_data);
       fs_heap_free(tfo);
     }
 
@@ -1265,13 +1265,13 @@ static int tmpfs_free_callout(FAR struct tmpfs_directory_s *tdo,
           return TMPFS_UNLINKED;
         }
 
-      fs_heap_free(tfo->tfo_data);
+      fs_large_free(tfo->tfo_data);
     }
   else /* if (to->to_type == TMPFS_DIRECTORY) */
     {
       tdo = (FAR struct tmpfs_directory_s *)to;
 
-      fs_heap_free(tdo->tdo_entry);
+      fs_large_free(tdo->tdo_entry);
     }
 
   /* Free the object now */
@@ -2268,7 +2268,7 @@ static int tmpfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
   /* Now we can destroy the root file system and the file system itself. */
 
   nxrmutex_destroy(&tdo->tdo_lock);
-  fs_heap_free(tdo->tdo_entry);
+  fs_large_free(tdo->tdo_entry);
   fs_heap_free(tdo);
 
   nxrmutex_destroy(&fs->tfs_lock);
@@ -2435,7 +2435,7 @@ static int tmpfs_unlink(FAR struct inode *mountpt, FAR const char *relpath)
   else
     {
       nxrmutex_destroy(&tfo->tfo_lock);
-      fs_heap_free(tfo->tfo_data);
+      fs_large_free(tfo->tfo_data);
       fs_heap_free(tfo);
     }
 
@@ -2577,7 +2577,7 @@ static int tmpfs_rmdir(FAR struct inode *mountpt, FAR const char *relpath)
   /* Free the directory object */
 
   nxrmutex_destroy(&tdo->tdo_lock);
-  fs_heap_free(tdo->tdo_entry);
+  fs_large_free(tdo->tdo_entry);
   fs_heap_free(tdo);
 
   /* Release the reference and lock on the parent directory */
