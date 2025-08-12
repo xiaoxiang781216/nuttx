@@ -2479,6 +2479,13 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
             }
 
           tmp->ln_offset = ln_old->ln_offset;
+          if (ln_old->ln_count != 0)
+            {
+              tmp->ln_child = ln_old->ln_child;
+              tmp->ln_count = ln_old->ln_count;
+              tmp->ln_max = ln_old->ln_max;
+            }
+
           fs_heap_free(ln_old);
           ln_old = tmp;
         }
