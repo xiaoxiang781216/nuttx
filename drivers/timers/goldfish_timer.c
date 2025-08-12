@@ -105,7 +105,7 @@ static int goldfish_timer_maxdelay(FAR struct oneshot_lowerhalf_s *lower_,
                                    FAR struct timespec *ts)
 {
   ts->tv_sec  = UINT32_MAX;
-  ts->tv_nsec = UINT32_MAX;
+  ts->tv_nsec = NSEC_PER_SEC;
 
   return 0;
 }
