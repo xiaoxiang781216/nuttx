@@ -152,15 +152,19 @@ def print_header(formatter=None):
 
 def get_heaps(args_heap: str = None) -> List[mm.MMHeap]:
     """Get the list of heaps, or a specific heap if args_heap is provided."""
-    heaps = mm.get_heaps()
     if args_heap is not None:
-        heap = next((heap for heap in heaps if heap.name == args_heap), None)
-        if heap is not None:
-            return [heap]
-        else:
+        try:
+            # Check if the arg is heap name, instead of heap symbol or address.
+            heaps = mm.get_heaps()
+            heap = next((heap for heap in heaps if heap.name == args_heap), None)
+            if heap is not None:
+                return [heap]
+        except gdb.MemoryError:
+            pass
+        finally:
             return [mm.MMHeap(utils.parse_arg(args_heap))]
     else:
-        return heaps
+        return mm.get_heaps()
 
 
 def parse_memdump_log(logfile, filters=None) -> Generator[MMNodeDump, None, None]:

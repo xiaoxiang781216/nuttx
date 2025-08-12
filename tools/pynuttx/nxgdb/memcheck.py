@@ -20,13 +20,14 @@
 #
 ############################################################################
 
+import argparse
 import traceback
 from collections import defaultdict
 from typing import Dict, List
 
 import gdb
 
-from . import memdump, mm, utils
+from . import autocompeletion, memdump, mm, utils
 
 
 def is_heap_node_corrupted(heap: mm.MMHeap, node: mm.MMNode) -> str:
@@ -194,18 +195,39 @@ def dump_issues(issues: Dict[int, List[str]]) -> None:
         gdb.write(f"{len(reasons)} issues @{hex(address)}: " f"{strings}\n")
 
 
+@autocompeletion.complete
 class MMCheck(gdb.Command):
     """Check memory manager and pool integrity"""
+
+    def get_argparser(self):
+        parser = argparse.ArgumentParser(description=self.__doc__)
+        parser.add_argument(
+            "--heap",
+            type=str,
+            metavar="symbol",
+            default=None,
+            help="Only check this heap if specified, default to check all heaps",
+        )
+        return parser
+
+    def parse_args(self, arg):
+        try:
+            return self.parser.parse_args(gdb.string_to_argv(arg))
+        except SystemExit:
+            return
 
     def __init__(self):
         super().__init__("mm check", gdb.COMMAND_USER)
         utils.alias("memcheck", "mm check")
+        self.parser = self.get_argparser()
 
     @utils.dont_repeat_decorator
     def invoke(self, arg: str, from_tty: bool) -> None:
         try:
+            if not (args := self.parse_args(arg)):
+                return
             issues = defaultdict(list)
-            heaps = memdump.get_heaps()
+            heaps = memdump.get_heaps(args.heap)
             for heap in heaps:
                 issues = check_heap(heap)
                 if issues:
