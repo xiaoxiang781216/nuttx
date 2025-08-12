@@ -71,6 +71,7 @@ struct rpmsg_virtio_lite_priv_s
   FAR struct rpmsg_virtio_lite_rsc_s *rsc;
   struct virtio_device               vdev;
   struct virtio_vring_info           rvrings[2];
+  FAR struct virtqueue               *vq[2];
   FAR void                           *shmbuf;
   size_t                             shmlen;
   struct notifier_block              nb;
@@ -88,6 +89,8 @@ rpmsg_virtio_lite_create_virtqueues_(FAR struct virtio_device *vdev,
                                      FAR const char *names[],
                                      vq_callback callbacks[],
                                      FAR void *callback_args[]);
+static void
+rpmsg_virtio_lite_delete_virtqueues(FAR struct virtio_device *vdev);
 static uint8_t rpmsg_virtio_lite_get_status_(FAR struct virtio_device *dev);
 static void rpmsg_virtio_lite_set_status_(FAR struct virtio_device *dev,
                                           uint8_t status);
@@ -117,6 +120,7 @@ static void rpmsg_virtio_lite_free_buf(FAR struct virtio_device *vdev,
 static const struct virtio_dispatch g_rpmsg_virtio_lite_dispatch =
 {
   .create_virtqueues  = rpmsg_virtio_lite_create_virtqueues_,
+  .delete_virtqueues  = rpmsg_virtio_lite_delete_virtqueues,
   .get_status         = rpmsg_virtio_lite_get_status_,
   .set_status         = rpmsg_virtio_lite_set_status_,
   .get_features       = rpmsg_virtio_lite_get_features_,
@@ -158,6 +162,8 @@ rpmsg_virtio_lite_create_virtqueues_(FAR struct virtio_device *vdev,
                                      vq_callback callbacks[],
                                      FAR void *callback_args[])
 {
+  FAR struct rpmsg_virtio_lite_priv_s *priv =
+    rpmsg_virtio_lite_get_priv(vdev);
   int ret;
   int i;
 
@@ -183,16 +189,38 @@ rpmsg_virtio_lite_create_virtqueues_(FAR struct virtio_device *vdev,
         }
 #endif
 
-      ret = virtqueue_create(vdev, i, names[i], valloc,
-                             callbacks[i], vdev->func->notify,
-                             vinfo->vq);
+      ret = virtqueue_create(vdev, i, names[i], valloc, callbacks[i],
+                             vdev->func->notify, priv->vq[i]);
       if (ret < 0)
         {
           return ret;
         }
+
+      vinfo->vq = priv->vq[i];
     }
 
   return 0;
+}
+
+/****************************************************************************
+ * Name: rpmsg_virtio_lite_delete_virtqueues
+ ****************************************************************************/
+
+static void
+rpmsg_virtio_lite_delete_virtqueues(FAR struct virtio_device *vdev)
+{
+  FAR struct virtio_vring_info *vinfo;
+  unsigned int i;
+
+  for (i = 0; i < vdev->vrings_num; i++)
+    {
+      vinfo = &vdev->vrings_info[i];
+      if (vinfo->vq)
+        {
+          memset(vinfo->vq, 0, sizeof(struct virtqueue));
+          vinfo->vq = NULL;
+        }
+    }
 }
 
 /****************************************************************************
@@ -490,14 +518,14 @@ static int rpmsg_virtio_lite_callback(FAR void *arg, uint32_t vqid)
       svq  = vdev->vrings_info[0].vq;
     }
 
-  if (vqid == RPMSG_VIRTIO_LITE_NOTIFY_ALL ||
-      vqid == vdev->vrings_info[rvq->vq_queue_index].notifyid)
+  if (rvq != NULL && (vqid == RPMSG_VIRTIO_LITE_NOTIFY_ALL ||
+      vqid == vdev->vrings_info[rvq->vq_queue_index].notifyid))
     {
       virtqueue_notification(rvq);
     }
 
-  if (vqid == RPMSG_VIRTIO_LITE_NOTIFY_ALL ||
-      vqid == vdev->vrings_info[svq->vq_queue_index].notifyid)
+  if (svq != NULL && (vqid == RPMSG_VIRTIO_LITE_NOTIFY_ALL ||
+      vqid == vdev->vrings_info[svq->vq_queue_index].notifyid))
     {
       virtqueue_notification(svq);
     }
@@ -586,8 +614,8 @@ static int rpmsg_virtio_lite_thread(int argc, FAR char *argv[])
   rvrings[0].info.num_descs = rsc->rpmsg_vring0.num;
   rvrings[0].info.align = rsc->rpmsg_vring0.align;
   rvrings[0].notifyid = RPMSG_VIRTIO_LITE_VRING0_NOTIFYID;
-  rvrings[0].vq = virtqueue_allocate(rsc->rpmsg_vring0.num);
-  if (rvrings[0].vq == NULL)
+  priv->vq[0] = virtqueue_allocate(rsc->rpmsg_vring0.num);
+  if (priv->vq[0] == NULL)
     {
       ret = -ENOMEM;
       goto err;
@@ -598,8 +626,8 @@ static int rpmsg_virtio_lite_thread(int argc, FAR char *argv[])
   rvrings[1].info.num_descs = rsc->rpmsg_vring1.num;
   rvrings[1].info.align = rsc->rpmsg_vring1.align;
   rvrings[1].notifyid = RPMSG_VIRTIO_LITE_VRING1_NOTIFYID;
-  rvrings[1].vq = virtqueue_allocate(rsc->rpmsg_vring1.num);
-  if (rvrings[1].vq == NULL)
+  priv->vq[1] = virtqueue_allocate(rsc->rpmsg_vring1.num);
+  if (priv->vq[1] == NULL)
     {
       ret = -ENOMEM;
       goto err_vq0;
@@ -627,9 +655,9 @@ static int rpmsg_virtio_lite_thread(int argc, FAR char *argv[])
 err_vq1:
   panic_notifier_chain_unregister(&priv->nb);
   RPMSG_VIRTIO_LITE_REGISTER_CALLBACK(priv->dev, NULL, NULL);
-  virtqueue_free(rvrings[1].vq);
+  virtqueue_free(priv->vq[1]);
 err_vq0:
-  virtqueue_free(rvrings[0].vq);
+  virtqueue_free(priv->vq[0]);
 err:
   kmm_free(priv);
   return ret;
