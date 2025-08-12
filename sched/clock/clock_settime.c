@@ -138,8 +138,8 @@ int clock_settime(clockid_t clock_id, FAR const struct timespec *tp)
   if (ret < 0)
     {
       set_errno(-ret);
-      return ERROR;
+      ret = ERROR;
     }
 
-  return OK;
+  return ret;
 }

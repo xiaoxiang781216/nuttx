@@ -94,11 +94,14 @@ int nxclock_gettime(clockid_t clock_id, FAR struct timespec *tp)
 
   if (tp == NULL)
     {
-      return -EINVAL;
+      ret = -EINVAL;
     }
-
-  if (clock_id == CLOCK_MONOTONIC || clock_id == CLOCK_BOOTTIME)
+  else if (clock_id == CLOCK_MONOTONIC || clock_id == CLOCK_BOOTTIME)
     {
+#ifndef CONFIG_CLOCK_TIMEKEEPING
+      irqstate_t flags;
+#endif
+
       /* The the time elapsed since the timer was initialized at power on
        * reset.
        */
@@ -106,13 +109,10 @@ int nxclock_gettime(clockid_t clock_id, FAR struct timespec *tp)
       clock_systime_timespec(tp);
 
 #ifndef CONFIG_CLOCK_TIMEKEEPING
-      {
-        irqstate_t flags;
 
-        flags = spin_lock_irqsave(&g_basetime_lock);
-        clock_timespec_add(&g_monotonic_basetime, tp, tp);
-        spin_unlock_irqrestore(&g_basetime_lock, flags);
-      }
+      flags = spin_lock_irqsave(&g_basetime_lock);
+      clock_timespec_add(&g_monotonic_basetime, tp, tp);
+      spin_unlock_irqrestore(&g_basetime_lock, flags);
 #endif
     }
   else if (clock_id == CLOCK_REALTIME)
@@ -140,13 +140,11 @@ int nxclock_gettime(clockid_t clock_id, FAR struct timespec *tp)
       FAR struct file *filep;
 
       ret = ptp_clockid_to_filep(clock_id, &filep);
-      if (ret < 0)
+      if (ret >= 0)
         {
-          return ret;
+          ret = file_ioctl(filep, PTP_CLOCK_GETTIME, tp);
+          file_put(filep);
         }
-
-      ret = file_ioctl(filep, PTP_CLOCK_GETTIME, tp);
-      file_put(filep);
     }
 #endif
   else
@@ -179,18 +177,18 @@ int nxclock_gettime(clockid_t clock_id, FAR struct timespec *tp)
             {
               ret = -EINVAL;
             }
+
+          if (pid != 0)
+            {
+              nxsched_put_tcb(tcb);
+            }
         }
       else
         {
-          return -EINVAL;
-        }
-
-      if (pid != 0)
-        {
-          nxsched_put_tcb(tcb);
+          ret = -EINVAL;
         }
 #else
-      ret = -EINVAL;
+    ret = -EINVAL;
 #endif
     }
 
@@ -229,8 +227,8 @@ int clock_gettime(clockid_t clock_id, FAR struct timespec *tp)
   if (ret < 0)
     {
       set_errno(-ret);
-      return ERROR;
+      ret = ERROR;
     }
 
-  return OK;
+  return ret;
 }
