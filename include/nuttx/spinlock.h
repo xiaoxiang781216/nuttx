@@ -1519,7 +1519,7 @@ void leave_critical_section(irqstate_t flags) noinstrument_function;
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 || \
     defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
-void break_critical_section(void);
+uint16_t break_critical_section(void);
 #else
 #  define break_critical_section() rspin_breaklock(&g_schedlock)
 #endif

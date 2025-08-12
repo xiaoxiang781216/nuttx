@@ -76,7 +76,7 @@ void restore_critical_section(uint16_t count)
     }
 }
 
-void break_critical_section(void)
+uint16_t break_critical_section(void)
 {
   if (!up_interrupt_context())
     {
@@ -90,7 +90,7 @@ void break_critical_section(void)
 #  endif
     }
 
-  rspin_breaklock(&g_schedlock);
+  return rspin_breaklock(&g_schedlock);
 }
 
 irqstate_t enter_critical_section(void)

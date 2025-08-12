@@ -241,6 +241,7 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
 {
   struct smp_call_data_s data;
   struct smp_call_cookie_s cookie;
+  int semcount;
   int cpucnt;
   int ret = OK;
   int i;
@@ -262,12 +263,25 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
     }
 
   cpucnt = CPU_COUNT(&cpuset);
-  for (i = 0; i < cpucnt; i++)
+  if (up_interrupt_context())
     {
-      int rc = nxsem_wait_uninterruptible(&cookie.sem);
-      if (rc < 0)
+      /* Wait until completion. */
+
+      do
         {
-          ret = rc;
+          nxsem_get_value(&cookie.sem, &semcount);
+        }
+      while (semcount != cpucnt);
+    }
+  else
+    {
+      for (i = 0; i < cpucnt; i++)
+        {
+          int rc = nxsem_wait_uninterruptible(&cookie.sem);
+          if (rc < 0)
+            {
+              ret = rc;
+            }
         }
     }
 

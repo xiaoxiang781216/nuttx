@@ -170,6 +170,7 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb,
               if (cpu != me && stcb->task_state == TSTATE_TASK_RUNNING)
                 {
                   struct sig_arg_s arg;
+                  uint16_t count;
 
                   arg.pid = stcb->pid;
                   if (atomic_fetch_or(&stcb->flags, TCB_FLAG_CPU_LOCKED) &
@@ -185,7 +186,9 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb,
                       CPU_SET(stcb->cpu, &stcb->affinity);
                     }
 
-                  nxsched_smp_call_single(stcb->cpu, sig_handler, &arg);
+                  count = break_critical_section();
+                  nxsched_smp_call_single(cpu, sig_handler, &arg);
+                  restore_critical_section(count);
                 }
               else
 #endif
