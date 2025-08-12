@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <errno.h>
+#include <execinfo.h>
 #include <time.h>
 
 #include <nuttx/sched.h>
