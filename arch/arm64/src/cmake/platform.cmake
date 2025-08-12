@@ -18,6 +18,8 @@
 #
 # ##############################################################################
 
+set(CMAKE_SYSTEM_PROCESSOR "aarch64")
+
 get_directory_property(TOOLCHAIN_DIR_FLAGS DIRECTORY ${CMAKE_SOURCE_DIR}
                                                      COMPILE_OPTIONS)
 
