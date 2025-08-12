@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <errno.h>
+#include <time.h>
 
 #include <nuttx/sched.h>
 #include <nuttx/clock.h>
@@ -163,7 +164,7 @@ int nxmutex_ticklock(FAR mutex_t *mutex, uint32_t delay)
 
   /* Wait until we get the lock or until the timeout expires */
 
-  end = clock_delay2abstick(delay);
+  end = clock() + delay + 1; /* Similar to clock_delay2abstick(delay) */
 
   for (; ; )
     {
@@ -178,7 +179,7 @@ int nxmutex_ticklock(FAR mutex_t *mutex, uint32_t delay)
           break;
         }
 
-      delay = end - clock_systime_ticks();
+      delay = end - clock();
       if ((int32_t)delay < 0)
         {
           delay = 0;
