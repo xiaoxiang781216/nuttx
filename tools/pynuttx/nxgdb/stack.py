@@ -35,27 +35,21 @@ except gdb.error:
 
 
 class Stack(object):
-    def __init__(self, name, entry, base, alloc, size, cursp, align):
+    def __init__(self, base, size, cursp):
         # We don't care about the stack growth here, base always point to the lower address!
-        self._thread_name = name
-        self._thread_entry = entry
         self._stack_base = base
-        self._stack_alloc = alloc
         self._stack_top = base + size
         self._cur_sp = cursp
         self._stack_size = size
-        self._align = align
-        self._pattern = STACK_COLORATION_PATTERN
 
         self._sanity_check()
 
     def _sanity_check(self):
         # do some basic sanity checking to make sure we have a sane stack object
         if (
-            self._stack_base < self._stack_alloc
+            self._stack_base > self._stack_top
             or not self._stack_size
-            or self._cur_sp <= self._stack_base
-            or self._cur_sp > self._stack_base + self._stack_size
+            or self.is_stackof()
         ):
 
             gdb.write(
@@ -64,14 +58,7 @@ class Stack(object):
             )
 
             gdb.write("Inconsistant stack size...Maybe memory corruption?\n")
-
-        # TODO: check if stack ptr is located at a sane address range!
-
-    def cur_usage(self):
-        usage = self._stack_top - self._cur_sp
-
-        if self.is_stackof():
-            gdb.write("An overflow detected, dumping the stack:\n")
+            gdb.write("dumping the stack:\n")
 
             ptr_4bytes = gdb.Value(self._stack_base).cast(
                 utils.lookup_type("unsigned int").pointer()
@@ -87,28 +74,30 @@ class Stack(object):
                     gdb.write("\n")
 
             gdb.write("\n")
-            raise gdb.GdbError(
-                "pls check your stack size! @ {0} sp:{1:x} base:{2:x}".format(
-                    self._thread_name, self._cur_sp, self._stack_base
+            gdb.GdbError(
+                "pls check your stack size! sp:{0:x} base:{1:x}".format(
+                    self._cur_sp, self._stack_base
                 )
             )
 
-        return usage
+    def cur_usage(self):
+        return self._stack_top - self._cur_sp
 
-    def check_max_usage(self):
+    def check_stack_usage(self) -> int:
         np = utils.import_check("numpy", errmsg="Please pip install numpy\n")
         if not np:
             raise gdb.GdbError(
                 "stack max usage check requires numpy, please install it via pip"
             )
         memory = gdb.selected_inferior().read_memory(self._stack_base, self._stack_size)
-        size = utils.sizeof("int")
-        pattern = int(self._pattern).to_bytes(size, byteorder="little")
+
+        color_size = utils.sizeof("int")
+        pattern = int(STACK_COLORATION_PATTERN).to_bytes(color_size, byteorder="little")
 
         arr = np.frombuffer(memory, dtype=np.uint8)
-        arr = arr.reshape(-1, size)
+        arr = arr.reshape(-1, color_size)
         pattern_arr = np.frombuffer(pattern * (len(arr)), dtype=np.uint8).reshape(
-            -1, size
+            -1, color_size
         )
 
         mismatch = np.any(arr != pattern_arr, axis=1)
@@ -117,34 +106,26 @@ class Stack(object):
         if not mismatch.any():
             used = 0
         else:
-            used = self._stack_size - (first_diff * size)
+            used = self._stack_size - (first_diff * color_size)
 
         return used
 
     def max_usage(self):
         if not utils.get_symbol_value("CONFIG_STACK_COLORATION"):
             return 0
-
-        return self.check_max_usage()
+        return self.check_stack_usage()
 
     def avalaible(self):
-        cur_usage = self.cur_usage()
-        return self._stack_size - cur_usage
+        return self._stack_size - self.cur_usage()
 
     def maxdepth_backtrace(self):
         raise gdb.GdbError("Not implemented yet", traceback.print_stack())
 
-    def cur_sp(self):
-        return self._cur_sp
-
-    def is_stackof(self):
+    def is_stackof(self) -> bool:
         # we should notify the user if the stack overflow is about to happen as well!
-        return self._cur_sp <= self._stack_base
-
-    def has_stackof(self):
-        max_usage = self.max_usage()
-
-        return max_usage >= self._stack_size
+        if utils.check_inferior_valid():
+            return (self.check_stack_usage() / self._stack_size) >= 95
+        return False
 
 
 # Always refetch the stack infos, never cached as we may have threads created/destroyed
@@ -159,13 +140,9 @@ def fetch_stacks():
 
         try:
             stacks[int(tcb["pid"])] = Stack(
-                utils.get_task_name(tcb),
-                hex(tcb["entry"]["pthread"]),  # should use main?
                 int(tcb["stack_base_ptr"]),
-                int(tcb["stack_alloc_ptr"]),
                 int(tcb["adj_stack_size"]),
                 sp,
-                4,
             )
 
         except gdb.GdbError as e:
@@ -188,7 +165,7 @@ class StackUsage(gdb.Command):
             "{0: <4} | {1: <10} | {2: <10} | {3: <20} | {4: <10} | {5: <15} | {6: <15}"
         )
 
-    def format_print(self, pid, stack):
+    def format_print(self, pid, stack, tcb):
         def gen_info_str(x):
             usage = x / stack._stack_size
             res = f"{str(x)} -> {usage:.2%}"
@@ -200,8 +177,8 @@ class StackUsage(gdb.Command):
             self.table.add_row(
                 [
                     pid,
-                    stack._thread_name[:10],
-                    stack._thread_entry,
+                    utils.get_task_name(tcb),
+                    hex(tcb["entry"]["pthread"]),
                     hex(stack._stack_base),
                     stack._stack_size,
                     gen_info_str(stack.cur_usage()),
@@ -212,8 +189,8 @@ class StackUsage(gdb.Command):
             gdb.write(
                 self._fmt.format(
                     pid,
-                    stack._thread_name[:10],
-                    stack._thread_entry,
+                    utils.get_task_name(tcb),
+                    hex(tcb["entry"]["pthread"]),
                     hex(stack._stack_base),
                     stack._stack_size,
                     gen_info_str(stack.cur_usage()),
@@ -259,7 +236,7 @@ class StackUsage(gdb.Command):
             if not stack:
                 continue
 
-            self.format_print(pid, stack)
+            self.format_print(pid, stack, utils.get_tcb(pid))
         if hasattr(self, "table"):
             gdb.write(f"{self.table.get_string()}\n")
 

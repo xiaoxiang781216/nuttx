@@ -40,13 +40,9 @@ class CrashStackOverflow(gdb.Command):
         collected = []
         for tcb in tcbs:
             st = Stack(
-                utils.get_task_name(tcb),
-                hex(tcb["entry"]["pthread"]),  # should use main?
                 int(tcb["stack_base_ptr"]),
-                int(tcb["stack_alloc_ptr"]),
                 int(tcb["adj_stack_size"]),
                 utils.get_sp(tcb),
-                4,
             )
 
             filled = st.max_usage() / st._stack_size
