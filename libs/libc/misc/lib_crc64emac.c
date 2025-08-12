@@ -269,7 +269,7 @@ uint64_t crc64emac_part(FAR const uint8_t *src,
   crc64val ^= 0xffffffffffffffffu;
   for (i = 0u; i < len; i++)
     {
-      crc64val = g_crc64_tab[(crc64val & 0xff) ^ src[i]] ^
+      crc64val = g_crc64_tab[(uint8_t)(crc64val & 0xffu) ^ src[i]] ^
                  (crc64val >> 8);
     }
 

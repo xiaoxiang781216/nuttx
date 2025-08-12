@@ -190,7 +190,8 @@ uint32_t crc32h04c11db7_part(FAR const uint8_t *src,
   crc32val ^= 0xffffffffu;
   for (i = 0u; i < len; i++)
     {
-      crc32val = g_crc32_tab[(crc32val & 0xff) ^ src[i]] ^ (crc32val >> 8);
+      crc32val = g_crc32_tab[(uint8_t)(crc32val & 0xffu) ^ src[i]] ^
+                 (crc32val >> 8);
     }
 
   return crc32val ^ 0xffffffffu;
