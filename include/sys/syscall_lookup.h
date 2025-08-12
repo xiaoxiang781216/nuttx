@@ -181,7 +181,7 @@ SYSCALL_LOOKUP(clock_settime,              2)
 
 /* Perf monitoring cycle counters */
 
-#ifndef CONFIG_ARCH_HAVE_PERF_EVENTS_USER_ACCESS
+#ifndef CONFIG_ARCH_PERF_EVENTS_USER_ACCESS
   SYSCALL_LOOKUP(perf_gettime,             0)
 #endif
 SYSCALL_LOOKUP(perf_convert,               2)

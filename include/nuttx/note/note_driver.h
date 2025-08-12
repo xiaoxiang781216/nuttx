@@ -135,7 +135,7 @@
 
 /* Sometimes perf_getime is not a syscall */
 
-#ifdef CONFIG_ARCH_HAVE_PERF_EVENTS_USER_ACCESS
+#ifdef CONFIG_ARCH_PERF_EVENTS_USER_ACCESS
 #  define NOTE_PERF_GETTIME perf_gettime
 #else
 clock_t UP_REALSYM(perf_gettime)(void);

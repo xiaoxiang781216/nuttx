@@ -76,6 +76,6 @@ ifeq ($(CONFIG_LIB_SYSCALL),y)
   CMN_ASRCS += arm_dispatch_syscall.S
 endif
 
-ifeq ($(CONFIG_ARCH_HAVE_PERF_EVENTS_USER_ACCESS),y)
+ifeq ($(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS),y)
   CMN_UCSRCS += arm_perf.c
 endif
