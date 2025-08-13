@@ -1022,10 +1022,14 @@ void rspin_unlock_irqrestore(FAR rspinlock_t *lock, irqstate_t flags)
 static inline_function
 uint16_t rspin_breaklock(FAR rspinlock_t *lock)
 {
-  int oldcount = lock->count;
+  int oldcount = 0;
 
-  lock->count = 1;
-  rspin_unlock(lock);
+  if (lock->owner == this_cpu() + 1)
+    {
+      oldcount = lock->count;
+      lock->count = 1;
+      rspin_unlock(lock);
+    }
 
   return oldcount;
 }
@@ -1033,24 +1037,35 @@ uint16_t rspin_breaklock(FAR rspinlock_t *lock)
 static inline_function
 void rspin_restorelock(FAR rspinlock_t *lock, uint16_t count)
 {
-  rspin_lock(lock);
-  lock->count = count;
+  if (count != 0)
+    {
+      rspin_lock(lock);
+      lock->count = count;
+    }
 }
 #else
 static inline_function
 uint16_t rspin_breaklock(FAR rspinlock_t *lock)
 {
-  int oldcount = lock->count;
+  int oldcount = 0;
 
-  lock->val = 0;
+  if (lock->owner == this_cpu() + 1)
+    {
+      oldcount = lock->count;
+      lock->val = 0;
+    }
+
   return oldcount;
 }
 
 static inline_function
 void rspin_restorelock(FAR rspinlock_t *lock, uint16_t count)
 {
-  lock->owner = this_cpu() + 1;
-  lock->count = count;
+  if (count != 0)
+    {
+      lock->owner = this_cpu() + 1;
+      lock->count = count;
+    }
 }
 #endif
 
