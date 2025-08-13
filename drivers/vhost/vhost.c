@@ -177,7 +177,7 @@ FAR void *vhost_get_next_buffer(FAR struct virtqueue *vq, uint16_t idx,
   FAR void *buffer;
   uint16_t next;
 
-  VRING_INVALIDATE(vq->vq_ring.desc[idx], sizeof(vq->vq_ring.desc[idx]));
+  VRING_INVALIDATE(&vq->vq_ring.desc[idx], sizeof(vq->vq_ring.desc[idx]));
   if (((vq->vq_ring.desc[idx].flags) & VRING_DESC_F_NEXT) == 0)
     {
       return NULL;
@@ -189,7 +189,7 @@ FAR void *vhost_get_next_buffer(FAR struct virtqueue *vq, uint16_t idx,
       *next_idx = next;
     }
 
-  VRING_INVALIDATE(vq->vq_ring.desc[next], sizeof(vq->vq_ring.desc[next]));
+  VRING_INVALIDATE(&vq->vq_ring.desc[next], sizeof(vq->vq_ring.desc[next]));
   buffer = virtqueue_phys_to_virt(vq, vq->vq_ring.desc[next].addr);
   if (next_len != NULL)
     {
