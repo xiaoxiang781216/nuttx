@@ -60,6 +60,7 @@ int nxsched_get_stackinfo(pid_t pid, FAR struct stackinfo_s *stackinfo)
 {
   FAR struct tcb_s *rtcb = this_task();  /* TCB of running task */
   FAR struct tcb_s *qtcb;                /* TCB of queried task */
+  int ret = OK;
 
   DEBUGASSERT(rtcb != NULL && stackinfo != NULL);
 
@@ -76,40 +77,45 @@ int nxsched_get_stackinfo(pid_t pid, FAR struct stackinfo_s *stackinfo)
       /* Get the task to be queried */
 
       qtcb = nxsched_get_tcb(pid);
-      if (qtcb == NULL)
+      if (qtcb != NULL)
         {
-          return -ENOENT;
-        }
-
-      /* A kernel thread can query any other thread.  Application threads
-       * can only query application threads in the same task group.
-       */
-
-      if ((atomic_read(&rtcb->flags) & TCB_FLAG_TTYPE_MASK) !=
-          TCB_FLAG_TTYPE_KERNEL)
-        {
-          /* It is an application thread.  It is permitted to query
-           * only threads within the same task group.  It is not permitted
-           * to peek into the stacks of either kernel threads or other
-           * applications tasks.
+          /* A kernel thread can query any other thread.  Application threads
+           * can only query application threads in the same task group.
            */
 
-          if (rtcb->group != qtcb->group)
+          if ((atomic_read(&rtcb->flags) & TCB_FLAG_TTYPE_MASK) !=
+              TCB_FLAG_TTYPE_KERNEL)
             {
-              nxsched_put_tcb(qtcb);
-              return -EACCES;
+              /* It is an application thread.  It is permitted to query
+               * only threads within the same task group. It is not permitted
+               * to peek into the stacks of either kernel threads or other
+               * applications tasks.
+               */
+
+              if (rtcb->group != qtcb->group)
+                {
+                  nxsched_put_tcb(qtcb);
+                  ret = -EACCES;
+                }
             }
+        }
+      else
+        {
+          ret = -ENOENT;
         }
     }
 
-  stackinfo->adj_stack_size  = qtcb->adj_stack_size;
-  stackinfo->stack_alloc_ptr = qtcb->stack_alloc_ptr;
-  stackinfo->stack_base_ptr  = qtcb->stack_base_ptr;
-
-  if (pid != 0)
+  if (ret >= 0)
     {
-      nxsched_put_tcb(qtcb);
+      stackinfo->adj_stack_size  = qtcb->adj_stack_size;
+      stackinfo->stack_alloc_ptr = qtcb->stack_alloc_ptr;
+      stackinfo->stack_base_ptr  = qtcb->stack_base_ptr;
+
+      if (pid != 0)
+        {
+          nxsched_put_tcb(qtcb);
+        }
     }
 
-  return OK;
+  return ret;
 }
