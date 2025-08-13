@@ -87,10 +87,4 @@ if(CONFIG_RAM_UART)
   list(APPEND SRCS uart_ram.c)
 endif()
 
-# Serial cmux driver
-
-if(CONFIG_UART_CMUX)
-  list(APPEND SRCS uart_cmux.c)
-endif()
-
 target_sources(drivers PRIVATE ${SRCS})
