@@ -27,7 +27,7 @@ from typing import Any, List, Optional
 from .perfetto_trace import PerfettoTrace, TaskInfo, TaskState, TraceHead
 
 try:
-    from construct import Adapter, Bytes, Container, CString, Struct, this
+    from construct import Adapter, Bytes, Container, CString, FixedSized, Struct, this
 except ModuleNotFoundError:
     print("Please execute the following command to install dependencies:")
     print("pip install construct")
@@ -479,13 +479,13 @@ class NoteFactory:
             "nev_data" / Bytes(this.nev_cmn.nc_length - note_event_s.sizeof()),
         )
 
-        if note_type == cls.types.NOTE_START:
+        if note_type in [cls.types.NOTE_START, cls.types.NOTE_TASKNAME]:
             return Struct(
                 "nst_cmn" / cls.note_common_s,
                 "name"
-                / CString("utf8").validate(
-                    lambda s: len(s)
-                    == this.nst_cmn.nc_length - cls.note_common_s.sizeof()
+                / FixedSized(
+                    this.nst_cmn.nc_length - cls.note_common_s.sizeof(),
+                    CString(encoding="utf-8"),
                 ),
             )
         elif note_type == cls.types.NOTE_STOP:
@@ -652,6 +652,9 @@ class NoteParser:
 
             if note is None:
                 break
+
+            if note.nc_type == NoteFactory.types.NOTE_TASKNAME:
+                TaskNameCache(note.nc_pid, note.name)
 
             notes.append(note)
             self.notes.append(note)

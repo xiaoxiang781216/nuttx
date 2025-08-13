@@ -59,12 +59,13 @@
 
 /* Note filter mode flag definitions */
 
-#define NOTE_FILTER_MODE_FLAG_SWITCH                          \
-  ((1ULL << NOTE_START)      | (1ULL << NOTE_STOP)        |   \
-   (1ULL << NOTE_SUSPEND)    | (1ULL << NOTE_RESUME)      |   \
-   (1ULL << NOTE_CPU_START)  | (1ULL << NOTE_CPU_STARTED) |   \
-   (1ULL << NOTE_CPU_PAUSE)  | (1ULL << NOTE_CPU_PAUSED)  |   \
-   (1ULL << NOTE_CPU_RESUME) | (1ULL << NOTE_CPU_RESUMED))
+#define NOTE_FILTER_MODE_FLAG_SWITCH                         \
+  ((1ULL << NOTE_START)       | (1ULL << NOTE_STOP)        | \
+   (1ULL << NOTE_SUSPEND)     | (1ULL << NOTE_RESUME)      | \
+   (1ULL << NOTE_TASKNAME)    | (1ULL << NOTE_CPU_START)   | \
+   (1ULL << NOTE_CPU_STARTED) | (1ULL << NOTE_CPU_PAUSE)   | \
+   (1ULL << NOTE_CPU_PAUSED)  | (1ULL << NOTE_CPU_RESUME)  | \
+   (1ULL << NOTE_CPU_RESUMED))
 
 #define NOTE_FILTER_MODE_FLAG_SYSCALL                         \
   ((1ULL << NOTE_SYSCALL_ENTER) | (1ULL << NOTE_SYSCALL_LEAVE))

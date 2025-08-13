@@ -38,6 +38,7 @@ struct notefdx_s
   struct note_driver_s driver;
   FAR void *channel;
   spinlock_t lock;
+  int loss;
 };
 
 /****************************************************************************
@@ -105,8 +106,23 @@ static void notefdx_add(FAR struct note_driver_s *drv,
   if (note->channel != NULL)
     {
       irqstate_t flags = spin_lock_irqsave(&note->lock);
-      T32_Fdx_SendPoll(note->channel, (FAR void *)buf, notelen);
+      int ret = T32_Fdx_SendPoll(note->channel, (FAR void *)buf, notelen);
       spin_unlock_irqrestore(&note->lock, flags);
+
+      if (ret > 0)
+        {
+          bool resync = (note->loss >= CONFIG_TRACE32_FDX_NOTE_BUFSIZE);
+          note->loss = 0;
+
+          if (resync)
+            {
+              sched_note_taskname();
+            }
+        }
+      else
+        {
+          note->loss += notelen;
+        }
     }
 }
 

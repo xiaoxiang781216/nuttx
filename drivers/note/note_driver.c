@@ -555,6 +555,43 @@ static void note_record_taskname(pid_t pid, FAR const char *name)
   strlcpy(ti->name, name, namelen + 1);
   g_note_taskname.head += ti->size;
 }
+
+/****************************************************************************
+ * Name: sched_note_one_taskname
+ ****************************************************************************/
+
+static void sched_note_one_taskname(const char *name, pid_t pid)
+{
+  FAR struct note_driver_s **driver;
+  struct note_startalloc_s note;
+  bool formatted = false;
+  unsigned int length;
+
+  for (driver = g_note_drivers; *driver; driver++)
+    {
+      if (!note_isenabled_type(*driver, NOTE_TASKNAME))
+        {
+          continue;
+        }
+
+      if ((*driver)->ops->add == NULL)
+        {
+          continue;
+        }
+
+      if (!formatted)
+        {
+          int namelen = strlen(name);
+          strlcpy(note.nsa_name, name, sizeof(note.nsa_name));
+          length = SIZEOF_NOTE_START(namelen + 1);
+          formatted = true;
+          note_common(NULL, &note.nsa_cmn, length, NOTE_TASKNAME);
+          note.nsa_cmn.nc_pid = pid;
+        }
+
+      note_add(*driver, &note, length);
+    }
+}
 #endif
 
 /****************************************************************************
@@ -674,6 +711,10 @@ void sched_note_start(FAR struct tcb_s *tcb)
   int namelen = 0;
 #endif
 
+#if CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
+  note_record_taskname(tcb->pid, tcb->name);
+#endif
+
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_START))
@@ -730,10 +771,6 @@ void sched_note_stop(FAR struct tcb_s *tcb)
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
-#if CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
-  note_record_taskname(tcb->pid, tcb->name);
-#endif
-
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_STOP))
@@ -764,6 +801,27 @@ void sched_note_stop(FAR struct tcb_s *tcb)
 
       note_add(*driver, &note, note.nsp_cmn.nc_length);
     }
+}
+
+void sched_note_taskname(void)
+{
+#if CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
+  FAR struct note_taskname_info_s *ti;
+  int n = g_note_taskname.tail;
+
+  while (n != g_note_taskname.head)
+    {
+      ti = (FAR struct note_taskname_info_s *)
+            &g_note_taskname.buffer[n];
+
+      sched_note_one_taskname(ti->name, ti->pid);
+      n += ti->size;
+      if (n >= CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE)
+        {
+          n -= CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE;
+        }
+    }
+#endif
 }
 
 void sched_note_suspend(FAR struct tcb_s *tcb)

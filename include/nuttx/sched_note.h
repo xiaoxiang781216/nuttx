@@ -130,6 +130,7 @@ enum note_type_e
   NOTE_STOP,
   NOTE_SUSPEND,
   NOTE_RESUME,
+  NOTE_TASKNAME,
   NOTE_CPU_START,
   NOTE_CPU_STARTED,
   NOTE_CPU_PAUSE,
@@ -157,7 +158,6 @@ enum note_type_e
   NOTE_HEAP_ALLOC,
   NOTE_HEAP_FREE,
   NOTE_DUMP_PRINTF,
-
   NOTE_DUMP_BEGIN,
   NOTE_DUMP_END,
   NOTE_DUMP_MARK,
@@ -446,11 +446,13 @@ void sched_note_start(FAR struct tcb_s *tcb);
 void sched_note_stop(FAR struct tcb_s *tcb);
 void sched_note_suspend(FAR struct tcb_s *tcb);
 void sched_note_resume(FAR struct tcb_s *tcb);
+void sched_note_taskname(void);
 #else
 #  define sched_note_stop(t)
 #  define sched_note_start(t)
 #  define sched_note_suspend(t)
 #  define sched_note_resume(t)
+#  define sched_note_taskname()
 #endif
 
 #if defined(CONFIG_SMP) && defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH)
