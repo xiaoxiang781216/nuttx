@@ -87,4 +87,10 @@ if(CONFIG_RAM_UART)
   list(APPEND SRCS uart_ram.c)
 endif()
 
+# Uart gsmmux driver
+
+if(CONFIG_UART_GSMMUX)
+  list(APPEND SRCS uart_gsmmux.c)
+endif()
+
 target_sources(drivers PRIVATE ${SRCS})

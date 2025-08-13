@@ -87,6 +87,12 @@ ifeq ($(CONFIG_16550_PCI_UART),y)
   CSRCS += uart_pci_16550.c
 endif
 
+# Uart gsmmux driver
+
+ifeq ($(CONFIG_UART_GSMMUX),y)
+  CSRCS += uart_gsmmux.c
+endif
+
 # Include serial build support
 
 DEPPATH += --dep-path serial

@@ -959,4 +959,80 @@ config UART_BTH5_NPOLLWAITERS
 
 endif # UART_BTH5
 
+menuconfig UART_GSMMUX
+	bool "Serial Channel Multiplexer"
+	default n
+	select SERIAL_TXDMA
+	select SERIAL_RXDMA
+	---help---
+		Enable serial port multiplexing support. It uses the gsm0710 protocol
+		to multiplex a physical serial port into multiple serial devices.
+
+if UART_GSMMUX
+
+config UART_GSMMUX_DEBUG
+	hex "cmux debug level"
+	default 0x0
+	---help---
+		Enable this option to print cmux debug information
+
+config UART_GSMMUX_DEVNAME
+	string "UART GSM MUX Device Name"
+	---help---
+		The device name of the UART GSM MUX
+
+config UART_GSMMUX_RXBUF_SIZE
+	int "UART GSM MUX Rx UART Buffer Size"
+	default 1024
+	---help---
+		The Rx UART buffer size of the UART GSM MUX
+
+config UART_GSMMUX_TXBUF_SIZE
+	int "UART GSM MUX Tx UART Buffer Size"
+	default 1024
+	---help---
+		The Tx UART buffer size of the UART GSM MUX
+
+config UART_GSMMUX_TTYGSM
+	bool
+	---help---
+		Enable this option to use UART GSM MUX as TTYGSM
+
+config UART_GSMMUX_CONSOLE
+	bool "UART GSM MUX Console"
+	select UART_GSMMUX_TTYGSM
+	default n
+	---help---
+		Enable this option to use UART GSM MUX as console
+
+config UART_GSMMUX_TTYGSM1
+	bool "UART GSM MUX TTYGSM1"
+	select UART_GSMMUX_TTYGSM
+	default n
+	---help---
+		Enable this option to use UART GSM MUX as TTYGSM1
+
+config UART_GSMMUX_TTYGSM2
+	bool "UART GSM MUX TTYGSM2"
+	select UART_GSMMUX_TTYGSM
+	default n
+	---help---
+		Enable this option to use UART GSM MUX as TTYGSM2
+
+config UART_GSMMUX_TTYGSM3
+	bool "UART GSM MUX TTYGSM3"
+	select UART_GSMMUX_TTYGSM
+	default n
+	---help---
+		Enable this option to use UART GSM MUX as TTYGSM3
+
+config UART_GSMMUX_BUFFER_SIZE
+	int "UART GSM MUX MTU/MRU Default Buffer Size"
+	depends on UART_GSMMUX_TTYGSM
+	default 127
+	---help---
+		The default buffer size of the UART GSM MUX
+
+endif # UART_GSMMUX
+
 endif # SERIAL
