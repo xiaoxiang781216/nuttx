@@ -30,11 +30,19 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
+#include <nuttx/spinlock.h>
 
 #include "tricore_internal.h"
 
 #include "IfxSrc.h"
 #include "IfxCpu.h"
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static spinlock_t g_irqlock = SP_UNLOCKED;
+static int g_irqmap_count = 1;
 
 /****************************************************************************
  * Private Functions
@@ -128,9 +136,16 @@ void up_irqinitialize(void)
 void up_disable_irq(int irq)
 {
   volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
+  Ifx_SRC_SRCR srctmp;
 
   IfxSrc_disable(src);
-  IfxSrc_deinit(src);
+
+  /* Clear, keep SRPN */
+
+  srctmp.U      = 0U;
+  srctmp.B.TOS  = ~0;
+  srctmp.B.SRPN = src->B.SRPN;
+  src->U = srctmp.U;
 }
 
 /****************************************************************************
@@ -183,3 +198,40 @@ void up_trigger_irq(int irq, cpu_set_t cpuset)
   srb->U = cpuset;
 }
 #endif
+
+/****************************************************************************
+ * Name: up_irq_to_ndx
+ *
+ * Description:
+ *   Irq to ndx
+ *
+ ****************************************************************************/
+
+int up_irq_to_ndx(int irq)
+{
+  volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
+  Ifx_SRC_SRCR srctmp;
+  irqstate_t flags;
+  int ndx;
+
+  ndx = src->B.SRPN;
+  if (ndx != 0)
+    {
+      return ndx;
+    }
+
+  flags = spin_lock_irqsave(&g_irqlock);
+  ndx = src->B.SRPN;
+  if (ndx == 0)
+    {
+      ndx = g_irqmap_count++;
+      g_irqrevmap[ndx] = irq;
+      srctmp.U = src->U;
+      srctmp.B.SRPN = ndx;
+      src->U = srctmp.U;
+    }
+
+  spin_unlock_irqrestore(&g_irqlock, flags);
+
+  return ndx;
+}

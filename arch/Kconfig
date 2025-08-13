@@ -1346,6 +1346,13 @@ config ARCH_MINIMAL_VECTORTABLE_DYNAMIC
 	---help---
 		Use a minimum amount of RAM for the vector table.
 
+config ARCH_IRQ_TO_NDX
+	bool "Irq to ndx"
+	default n
+	depends on ARCH_MINIMAL_VECTORTABLE_DYNAMIC
+	---help---
+		Use up_irq_to_ndx interface.
+
 config ARCH_NUSER_INTERRUPTS
 	int "Number of interrupts"
 	default 0
