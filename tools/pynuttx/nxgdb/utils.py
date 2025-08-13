@@ -906,12 +906,13 @@ def get_register_byname(regname, tcb=None):
         # and use GDB frames to access CPU registers.
         # This special case is handled below.
         if (
-            gdb.RemoteTargetConnection == gdb.selected_inferior().connection.type
+            check_inferior_valid()
+            and "remote" in gdb.selected_inferior().connection.type.lower()
             and threads[0].details
             and "cpu" not in threads[0].details.lower()
         ):
             # We should use the TCB's pid to find the thread,
-            # because gdbserver can parser the coredump
+            # because gdbserver.py can parser the coredump
             thread = get_gdb_thread(tcb["pid"])
         else:
             # For SMP, we need to switch to the thread's CPU
