@@ -52,8 +52,7 @@ bool nxsched_verify_pid(pid_t pid)
   if (ret)
     {
       nxsched_put_tcb(ret);
-      return true;
     }
 
-  return false;
+  return ret != NULL;
 }
