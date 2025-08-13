@@ -59,11 +59,11 @@ FAR struct shmfs_object_s *shmfs_alloc_object(size_t length)
     {
       hdr_size = ALIGN_UP(hdr_size, cachesize);
       alloc_size = ALIGN_UP(alloc_size, cachesize);
-      object = fs_large_memalign(cachesize, hdr_size + alloc_size);
+      object = fs_heap_memalign(cachesize, hdr_size + alloc_size);
     }
   else
     {
-      object = fs_large_malloc(hdr_size + alloc_size);
+      object = fs_heap_malloc(hdr_size + alloc_size);
     }
 
   if (object)
@@ -112,7 +112,7 @@ FAR struct shmfs_object_s *shmfs_alloc_object(size_t length)
   size_t n_pages = MM_NPAGES(length);
 
   object = fs_heap_zalloc(sizeof(struct shmfs_object_s) +
-                          (n_pages - 1) * sizeof(object->paddr));
+                      (n_pages - 1) * sizeof(object->paddr));
 
   if (object)
     {
@@ -158,11 +158,8 @@ void shmfs_free_object(FAR struct shmfs_object_s *object)
 {
   if (object)
     {
-#if defined(CONFIG_BUILD_FLAT)
-      fs_large_free(object);
-#elif defined(CONFIG_BUILD_PROTECTED)
+#if defined(CONFIG_BUILD_PROTECTED)
       kumm_free(object->paddr);
-      fs_heap_free(object);
 #elif defined(CONFIG_BUILD_KERNEL)
       size_t i;
       size_t n_pages = MM_NPAGES(object->length);
@@ -174,8 +171,12 @@ void shmfs_free_object(FAR struct shmfs_object_s *object)
               mm_pgfree((uintptr_t)pages[i], 1);
             }
         }
+#endif
+
+      /* Delete the object metadata
+       * (and the shared memory in case of FLAT build)
+       */
 
       fs_heap_free(object);
-#endif
     }
 }

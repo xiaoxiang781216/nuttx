@@ -109,35 +109,25 @@ config SENDFILE_BUFSIZE
 config FS_HEAPSIZE
 	int "Independent heap bytes"
 	default 0
+	depends on FS_SHMFS || FS_TMPFS || PSEUDOFS_FILE
 	---help---
 		Support for shm/tmpfs/fs_pseudofile.c ram based fs memory.
 		default 0 to use kmm directly. independent heap disabled
 
-if FS_HEAPSIZE > 0
-
 config FS_HEAP_MEMPOOL_INIT_CHUNK_SIZE
 	int "FS heap mempool init chunk size"
 	default 0
+	depends on FS_HEAPSIZE > 0
 	---help---
 		Size of the mempool allocated when fs heap init.
 
 config FS_HEAPBUF_SECTION
 	string "FS heap use Userheap section"
+	depends on FS_HEAPSIZE > 0
 	default ""
 	---help---
 		Allocated fs heap from the specified section. If not
 		specified, it will alloc from kernel heap.
-
-config FS_HEAPLARGE_ONLY
-	bool "FS heap only use by large blocks"
-	default y
-	depends on FS_SHMFS || FS_TMPFS || PSEUDOFS_FILE
-	---help---
-		FS heap only use by large blocks.
-		When this option is enabled, the FS heap will only be used
-		for large blocks, which are typically larger than the
-		default block size, like shmfs, tmpfs, and pseudo file system.
-endif
 
 source "fs/vfs/Kconfig"
 source "fs/aio/Kconfig"

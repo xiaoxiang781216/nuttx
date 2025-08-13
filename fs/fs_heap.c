@@ -28,7 +28,7 @@
 
 #include "fs_heap.h"
 
-#if CONFIG_FS_HEAPSIZE > 0
+#if defined(CONFIG_FS_HEAPSIZE) && CONFIG_FS_HEAPSIZE > 0
 
 /****************************************************************************
  * Private Data
@@ -62,15 +62,40 @@ void fs_heap_initialize(void)
   g_fs_heap = mm_initialize_pool(&config, &poolconfig);
 }
 
-struct mallinfo_task fs_heap_mallinfo_task(FAR const struct malltask *task)
+FAR void *fs_heap_zalloc(size_t size)
 {
-  return mm_mallinfo_task(g_fs_heap, task);
+  return mm_zalloc(g_fs_heap, size);
+}
+
+FAR void *fs_heap_malloc(size_t size)
+{
+  return mm_malloc(g_fs_heap, size);
+}
+
+size_t fs_heap_malloc_size(FAR void *mem)
+{
+  return mm_malloc_size(g_fs_heap, mem);
+}
+
+FAR void *fs_heap_realloc(FAR void *oldmem, size_t size)
+{
+  return mm_realloc(g_fs_heap, oldmem, size);
+}
+
+FAR void *fs_heap_memalign(size_t alignment, size_t size)
+{
+  return mm_memalign(g_fs_heap, alignment, size);
+}
+
+void fs_heap_free(FAR void *mem)
+{
+  mm_free(g_fs_heap, mem);
 }
 
 FAR char *fs_heap_strdup(FAR const char *s)
 {
   size_t len = strlen(s) + 1;
-  FAR char *copy = mm_malloc(g_fs_heap, len);
+  FAR char *copy = fs_heap_malloc(len);
   if (copy != NULL)
     {
       memcpy(copy, s, len);
@@ -82,7 +107,7 @@ FAR char *fs_heap_strdup(FAR const char *s)
 FAR char *fs_heap_strndup(FAR const char *s, size_t size)
 {
   size_t len = strnlen(s, size) + 1;
-  FAR char *copy = mm_malloc(g_fs_heap, len);
+  FAR char *copy = fs_heap_malloc(len);
   if (copy != NULL)
     {
       memcpy(copy, s, len);
@@ -109,7 +134,7 @@ int fs_heap_asprintf(FAR char **strp, FAR const char *fmt, ...)
       return len;
     }
 
-  *strp = mm_malloc(g_fs_heap, len + 1);
+  *strp = fs_heap_malloc(len + 1);
   if (*strp == NULL)
     {
       return -ENOMEM;
@@ -122,34 +147,9 @@ int fs_heap_asprintf(FAR char **strp, FAR const char *fmt, ...)
   return len;
 }
 
-FAR void *fs_large_zalloc(size_t size)
+struct mallinfo_task fs_heap_mallinfo_task(FAR const struct malltask *task)
 {
-  return mm_zalloc(g_fs_heap, size);
-}
-
-FAR void *fs_large_malloc(size_t size)
-{
-  return mm_malloc(g_fs_heap, size);
-}
-
-size_t fs_large_malloc_size(FAR void *mem)
-{
-  return mm_malloc_size(g_fs_heap, mem);
-}
-
-FAR void *fs_large_realloc(FAR void *oldmem, size_t size)
-{
-  return mm_realloc(g_fs_heap, oldmem, size);
-}
-
-FAR void *fs_large_memalign(size_t alignment, size_t size)
-{
-  return mm_memalign(g_fs_heap, alignment, size);
-}
-
-void fs_large_free(FAR void *mem)
-{
-  mm_free(g_fs_heap, mem);
+  return mm_mallinfo_task(g_fs_heap, task);
 }
 
 #endif
