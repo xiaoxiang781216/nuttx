@@ -387,55 +387,59 @@ static inline void nxsched_blocked_setpriority(FAR struct tcb_s *tcb,
 int nxsched_set_priority(FAR struct tcb_s *tcb, int sched_priority)
 {
   irqstate_t flags;
+  int ret = OK;
 
   /* Verify that the requested priority is in the valid range */
 
   if (sched_priority < SCHED_PRIORITY_MIN ||
       sched_priority > SCHED_PRIORITY_MAX)
     {
-      return -EINVAL;
+      ret = -EINVAL;
     }
-
-  /* We need to assure that there there is no interrupt activity while
-   * performing the following.
-   */
-
-  flags = enter_critical_section();
-
-  /* There are three major cases (and two sub-cases) that must be
-   * considered:
-   */
-
-  switch (tcb->task_state)
+  else
     {
-      /* CASE 1. The task is running and a context switch may be caused by
-       * the re-prioritization
+      /* We need to assure that there there is no interrupt activity while
+       * performing the following.
        */
 
-      case TSTATE_TASK_RUNNING:
-        nxsched_running_setpriority(tcb, sched_priority);
-        break;
+      flags = enter_critical_section();
 
-      /* CASE 2. The task is ready-to-run (but not running) and a context
-       * switch may be caused by the re-prioritization
+      /* There are three major cases (and two sub-cases) that must be
+       * considered:
        */
 
-      case TSTATE_TASK_READYTORUN:
+      switch (tcb->task_state)
+        {
+          /* CASE 1. The task is running and a context switch may be caused
+           * by the re-prioritization
+           */
+
+          case TSTATE_TASK_RUNNING:
+            nxsched_running_setpriority(tcb, sched_priority);
+            break;
+
+          /* CASE 2. The task is ready-to-run (but not running) and a context
+           * switch may be caused by the re-prioritization
+           */
+
+          case TSTATE_TASK_READYTORUN:
 #ifdef CONFIG_SMP
-      case TSTATE_TASK_ASSIGNED:
+          case TSTATE_TASK_ASSIGNED:
 #endif
-        nxsched_readytorun_setpriority(tcb, sched_priority);
-        break;
+            nxsched_readytorun_setpriority(tcb, sched_priority);
+            break;
 
-      /* CASE 3. The task is not in the ready to run list.  Changing its
-       * Priority cannot effect the currently executing task.
-       */
+          /* CASE 3. The task is not in the ready to run list.  Changing its
+           * Priority cannot effect the currently executing task.
+           */
 
-      default:
-        nxsched_blocked_setpriority(tcb, sched_priority);
-        break;
-    }
+          default:
+            nxsched_blocked_setpriority(tcb, sched_priority);
+            break;
+        }
 
-  leave_critical_section(flags);
-  return OK;
+      leave_critical_section(flags);
+   }
+
+  return ret;
 }
