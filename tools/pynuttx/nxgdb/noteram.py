@@ -20,6 +20,7 @@
 
 import argparse
 from os import path
+from typing import Optional
 
 import gdb
 
@@ -37,6 +38,8 @@ class NoteRam:
         """Initialize NoteRam object with driver structure"""
 
         self.driver = utils.gdb_eval_or_none(driver_name)
+        self.elf_parser = None
+        self.note_parser = None
         if not self.driver:
             return
 
@@ -83,6 +86,30 @@ class NoteRam:
 
         return tracedata
 
+    def collect_notes(
+        self, out_path: str, save_path: Optional[str] = None
+    ) -> Optional[bytes]:
+        """
+        Collect notes and return notes data
+        Returns None if initialization fails
+        """
+        if not self.buffer:
+            print("No valid noteram buffer")
+            return None
+
+        if save_path:
+            with open(save_path, "wb") as f:
+                f.write(self.buffer)
+            print(f"Raw trace data saved to: {path.abspath(save_path)}")
+
+        self.elf_parser = ELFParser(gdb.objfiles()[0].filename)
+        self.note_parser = NoteParser(self.elf_parser, output=out_path)
+        notes = self.note_parser.parse(self.buffer)
+        self.note_parser.dump()
+        self.note_parser.flush()
+
+        return notes
+
 
 @autocompeletion.complete
 class NoteRamCommand(gdb.Command):
@@ -120,26 +147,6 @@ class NoteRamCommand(gdb.Command):
         super().__init__("noteram", gdb.COMMAND_USER)
         self.parser = self.get_argparser()
 
-    def collect_notes(self, driver_name, out_path, save_path=None):
-        """Collect notes only if initialization succeeds"""
-
-        noteram = NoteRam(driver_name)
-        if not noteram.buffer:
-            print("No valid noteram buffer")
-            return None
-
-        if save_path:
-            with open(save_path, "wb") as f:
-                f.write(noteram.buffer)
-            print(f"Raw trace data saved to: {path.abspath(save_path)}")
-
-        elf_parser = ELFParser(gdb.objfiles()[0].filename)
-        note_parser = NoteParser(elf_parser, output=out_path)
-        notes = note_parser.parse(noteram.buffer)
-        note_parser.dump()
-        note_parser.flush()
-        return notes
-
     def parse_arguments(self, args):
         try:
             return self.parser.parse_args(gdb.string_to_argv(args))
@@ -151,15 +158,15 @@ class NoteRamCommand(gdb.Command):
         args = self.parse_arguments(args)
 
         try:
-            self.collect_notes(
-                args.driver, path.abspath(args.output_path), args.save_data
-            )
+            noteram = NoteRam(args.driver)
+            noteram.collect_notes(path.abspath(args.output_path), args.save_data)
         except Exception as e:
             print(f"Error parsing notes: {e}")
 
     def diagnose(self, *args, **kwargs):
         try:
-            notes = self.collect_notes("diagnose_noteram.perfetto")
+            noteram = NoteRam("diagnose_noteram.perfetto")
+            notes = noteram.collect_notes()
         except Exception as e:
             notes = f"No notes collected {e}"
 
