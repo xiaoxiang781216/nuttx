@@ -789,15 +789,11 @@ class MMVisualize(gdb.Command):
         gdb.write(f"Memory map saved to Memory visualizations saved to {path}\n")
 
 
+@autocompeletion.complete
 class MMFree(gdb.Command):
     """Show heap statistics, same as device command free"""
 
-    def __init__(self):
-        super().__init__("mm free", gdb.COMMAND_USER)
-        utils.alias("free", "mm free")
-
-    @utils.dont_repeat_decorator
-    def invoke(self, args, from_tty):
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
 
         parser.add_argument(
@@ -814,9 +810,17 @@ class MMFree(gdb.Command):
             action="store_true",
             help="Show memory usage of each thread",
         )
+        return parser
 
+    def __init__(self):
+        super().__init__("mm free", gdb.COMMAND_USER)
+        utils.alias("free", "mm free")
+        self.parser = self.get_argparser()
+
+    @utils.dont_repeat_decorator
+    def invoke(self, args, from_tty):
         try:
-            args = parser.parse_args(gdb.string_to_argv(args))
+            args = self.parser.parse_args(gdb.string_to_argv(args))
         except SystemExit:
             return
 

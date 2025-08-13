@@ -434,6 +434,7 @@ class ForeachArray(gdb.Command):
     def __init__(self):
         super().__init__("foreach array", gdb.COMMAND_DATA)
         utils.alias("array-foreach", "foreach array")
+        self.parser = self.get_argparser()
 
     @utils.dont_repeat_decorator
     def invoke(self, arg, from_tty):

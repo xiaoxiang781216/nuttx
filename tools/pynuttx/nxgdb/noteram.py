@@ -131,12 +131,11 @@ class NoteRamCommand(gdb.Command):
                 print(f"Error parsing event {idx} ({event}): {e}")
         return notes
 
-    def parse_arguments(self, argv):
+    def parse_arguments(self, args):
         try:
-            args = self.parser.parse_args(argv)
+            return self.parser.parse_args(gdb.string_to_argv(args))
         except SystemExit:
             return None
-        return args
 
     @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):

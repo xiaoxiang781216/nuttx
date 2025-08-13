@@ -29,7 +29,7 @@ from typing import Dict, Generator, List, Tuple
 
 import gdb
 
-from . import memdump, mm, utils
+from . import autocompeletion, memdump, mm, utils
 
 
 class GlobalNode(memdump.MMNodeDump):
@@ -52,8 +52,23 @@ class GlobalNode(memdump.MMNodeDump):
         return gdb.selected_inferior().read_memory(self.address, self.nodesize)
 
 
+@autocompeletion.complete
 class MMLeak(gdb.Command):
     """Dump memory manager heap"""
+
+    def get_argparser(self):
+        parser = argparse.ArgumentParser(
+            description="Check if any memory is leaked in the system.",
+        )
+        parser.add_argument(
+            "-a",
+            "--address",
+            type=str,
+            default=None,
+            metavar="symbol",
+            help="Dump all good nodes reference by this block. The address must be a member of this block",
+        )
+        return parser
 
     def __init__(self):
         self.elf = utils.import_check(
@@ -64,6 +79,7 @@ class MMLeak(gdb.Command):
 
         super().__init__("mm leak", gdb.COMMAND_USER)
         utils.alias("memleak", "mm leak")
+        self.parser = self.get_argparser()
 
     def global_nodes(self) -> List[GlobalNode]:
         cache = path.join(
@@ -226,21 +242,9 @@ class MMLeak(gdb.Command):
 
     @utils.dont_repeat_decorator
     def invoke(self, arg: str, from_tty: bool) -> None:
-        parser = argparse.ArgumentParser(
-            description="Check if any memory is leaked in the system.",
-        )
-        parser.add_argument(
-            "-a",
-            "--address",
-            type=str,
-            default=None,
-            metavar="symbol",
-            help="Dump all good nodes reference by this block. The address must be a member of this block",
-        )
-
         pargs = None
         try:
-            pargs = parser.parse_args(gdb.string_to_argv(arg))
+            pargs = self.parser.parse_args(gdb.string_to_argv(arg))
         except SystemExit:
             pass
 

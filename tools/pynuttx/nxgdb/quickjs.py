@@ -22,27 +22,33 @@ import argparse
 
 import gdb
 
-from . import utils
+from . import autocompeletion, utils
 
 
+@autocompeletion.complete
 class QjsDump(gdb.Command):
     """Dump the information of backtrace of JSObject in QuickJS"""
 
-    def __init__(self):
-        if utils.has_field("JSObject", "backtrace"):
-            super().__init__("qjsdump", gdb.COMMAND_USER)
-
-    def parse_args(self, arg):
+    def parse_arguments(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
             "-a",
             "--address",
             type=str,
+            metavar="symbol",
             default=None,
             help="Variable or address of a JSObject.",
         )
+        return parser
+
+    def __init__(self):
+        if utils.has_field("JSObject", "backtrace"):
+            super().__init__("qjsdump", gdb.COMMAND_USER)
+            self.parser = self.parse_arguments()
+
+    def parse_args(self, arg):
         try:
-            return parser.parse_args(gdb.string_to_argv(arg))
+            return self.parser.parse_args(gdb.string_to_argv(arg))
         except SystemExit:
             return
 
