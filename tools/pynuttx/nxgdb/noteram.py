@@ -88,10 +88,37 @@ class NoteRam:
 class NoteRamCommand(gdb.Command):
     """GDB command to parse and dump noteram datas"""
 
+    def get_argparser(self):
+        parser = argparse.ArgumentParser(description=self.__doc__)
+        parser.add_argument(
+            "-d",
+            "--driver",
+            type=str,
+            metavar="driver",
+            default="g_noteram_driver",
+            help="Specify the noteram driver name",
+        )
+        parser.add_argument(
+            "-o",
+            "--output-path",
+            type=str,
+            metavar="file",
+            default="noteram.perfetto",
+            help="Specify the output path for the Perfetto file",
+        )
+        parser.add_argument(
+            "-s",
+            "--save_data",
+            type=str,
+            help="Specify the save path for the raw trace data",
+        )
+        return parser
+
     def __init__(self):
         if not utils.get_field_nitems("struct noteram_driver_s", "buffer"):
             return
         super().__init__("noteram", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
 
     def collect_notes(self, driver_name, out_path, save_path=None):
         """Collect notes only if initialization succeeds"""

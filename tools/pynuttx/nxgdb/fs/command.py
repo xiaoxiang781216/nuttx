@@ -293,25 +293,30 @@ class InfoRomfs(gdb.Command):
             romfs.dump_romfs_cache(node, path)
 
 
+@autocompeletion.complete
 class InfoLittlefs(gdb.Command):
     """Show littlefs cache information"""
 
-    def __init__(self):
-        if utils.get_symbol_value("CONFIG_FS_LITTLEFS"):
-            super().__init__("info littlefs", gdb.COMMAND_USER)
-
-    def parse_arguments(self, argv):
+    def get_argparser(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
             "-P",
             "--path",
             type=str,
+            metavar="file",
             default=None,
             help="set the littlefs path to be dumped",
         )
+        return parser
 
+    def __init__(self):
+        if utils.get_symbol_value("CONFIG_FS_LITTLEFS"):
+            super().__init__("info littlefs", gdb.COMMAND_USER)
+            self.parser = self.get_argparser()
+
+    def parse_arguments(self, argv):
         try:
-            args = parser.parse_args(argv)
+            args = self.parser.parse_args(argv)
         except SystemExit:
             return None
 

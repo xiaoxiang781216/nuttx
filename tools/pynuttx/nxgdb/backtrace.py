@@ -150,6 +150,7 @@ class Addr2Line(gdb.Command):
 
     def __init__(self):
         super().__init__("addr2line", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
 
     def print_backtrace(self, addresses, pid=None):
         if pid:
@@ -220,6 +221,7 @@ class BacktracePool(gdb.Command):
 
     def __init__(self):
         super().__init__("backtracepool", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
 
     def invoke(self, args, from_tty):
         g_backtrace_pool = utils.parse_and_eval("g_backtrace_pool")
