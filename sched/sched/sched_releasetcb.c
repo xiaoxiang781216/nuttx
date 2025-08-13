@@ -111,6 +111,7 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, uint8_t ttype)
 #ifndef CONFIG_DISABLE_PTHREAD
   FAR struct task_group_s *group;
 #endif
+  bool skipfree = false;
   int ret = OK;
 
   if (tcb)
@@ -183,30 +184,33 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, uint8_t ttype)
               /* Mark the group as deleted now */
 
               atomic_fetch_or(&group->tg_flags, GROUP_FLAG_DELETED);
-
-              return ret;
+              skipfree = true;
             }
         }
 #endif
 
-      nxsem_destroy(&tcb->exit_sem);
-
-      /* And, finally, release the TCB itself */
-
-      if (atomic_read(&tcb->flags) & TCB_FLAG_FREE_TCB)
+      if (!skipfree)
         {
-          if ((tcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_TASK)
+          nxsem_destroy(&tcb->exit_sem);
+
+          /* And, finally, release the TCB itself */
+
+          if (atomic_read(&tcb->flags) & TCB_FLAG_FREE_TCB)
             {
+              if ((tcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_TASK)
+                {
 #if !defined(CONFIG_BUILD_KERNEL) && !defined(CONFIG_ARCH_ADDRENV)
-              /* Kernel build not use group_heap_initialize.
-               * If use addrenv, it will uninitialized in up_addrenv_destroy.
-               */
+                  /* Kernel build not use group_heap_initialize.
+                   * If use addrenv, it will uninitialized
+                   * in up_addrenv_destroy.
+                   */
 
-              group_heap_uninitialize(tcb->group->tg_heap);
+                  group_heap_uninitialize(tcb->group->tg_heap);
 #endif
-            }
+                }
 
-          kmm_delayfree(tcb);
+              kmm_delayfree(tcb);
+            }
         }
     }
 
