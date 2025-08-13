@@ -40,6 +40,10 @@ if(NOT CONFIG_DISABLE_MOUNTPOINT)
       list(APPEND SRCS fs_procfspressure.c)
     endif()
 
+    if(CONFIG_FS_PROCFS_REGISTER)
+      list(APPEND SRCS fs_procfssimple.c)
+    endif()
+
     target_sources(fs PRIVATE ${SRCS})
 
   endif()

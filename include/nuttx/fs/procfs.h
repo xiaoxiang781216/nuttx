@@ -293,6 +293,226 @@ void procfs_register_meminfo(FAR struct procfs_meminfo_entry_s *entry);
 
 void procfs_unregister_meminfo(FAR struct procfs_meminfo_entry_s *entry);
 
+/****************************************************************************
+ * Name: procfs_create_u8
+ *
+ * Description:
+ *   Create a procfs entry for an 8-bit unsigned integer variable.
+ *
+ * Input Parameters:
+ *   path  - The path of the procfs entry
+ *   mode  - The mode (permissions) for the procfs entry
+ *   value - Pointer to the 8-bit unsigned integer variable
+ *
+ * Returned Value:
+ *   Pointer to the procfs entry on success; NULL on failure
+ *
+ ****************************************************************************/
+
+FAR struct procfs_entry_s *
+procfs_create_u8(FAR const char *path, mode_t mode,
+                 FAR uint8_t *value);
+
+/****************************************************************************
+ * Name: procfs_create_u16
+ *
+ * Description:
+ *   Create a procfs entry for a 16-bit unsigned integer variable.
+ *
+ * Input Parameters:
+ *   path  - The path of the procfs entry
+ *   mode  - The mode (permissions) for the procfs entry
+ *   value - Pointer to the 16-bit unsigned integer variable
+ *
+ * Returned Value:
+ *   Pointer to the procfs entry on success; NULL on failure
+ *
+ ****************************************************************************/
+
+FAR struct procfs_entry_s *
+procfs_create_u16(FAR const char *path, mode_t mode,
+                  FAR uint16_t *value);
+
+/****************************************************************************
+ * Name: procfs_create_u32
+ *
+ * Description:
+ *   Create a procfs entry for a 32-bit unsigned integer variable.
+ *
+ * Input Parameters:
+ *   path  - The path of the procfs entry
+ *   mode  - The mode (permissions) for the procfs entry
+ *   value - Pointer to the 32-bit unsigned integer variable
+ *
+ * Returned Value:
+ *   Pointer to the procfs entry on success; NULL on failure
+ *
+ ****************************************************************************/
+
+FAR struct procfs_entry_s *
+procfs_create_u32(FAR const char *path, mode_t mode,
+                  FAR uint32_t *value);
+
+/****************************************************************************
+ * Name: procfs_create_u64
+ *
+ * Description:
+ *   Create a procfs entry for a 64-bit unsigned integer variable.
+ *
+ * Input Parameters:
+ *   path  - The path of the procfs entry
+ *   mode  - The mode (permissions) for the procfs entry
+ *   value - Pointer to the 64-bit unsigned integer variable
+ *
+ * Returned Value:
+ *   Pointer to the procfs entry on success; NULL on failure
+ *
+ ****************************************************************************/
+
+FAR struct procfs_entry_s *
+procfs_create_u64(FAR const char *path, mode_t mode,
+                  FAR uint64_t *value);
+
+/****************************************************************************
+ * Name: procfs_create_ulong
+ *
+ * Description:
+ *   Create a procfs entry for an unsigned long variable.
+ *
+ * Input Parameters:
+ *   path  - The path of the procfs entry
+ *   mode  - The mode (permissions) for the procfs entry
+ *   value - Pointer to the unsigned long variable
+ *
+ * Returned Value:
+ *   Pointer to the procfs entry on success; NULL on failure
+ *
+ ****************************************************************************/
+
+FAR struct procfs_entry_s *
+procfs_create_ulong(FAR const char *path, mode_t mode,
+                    FAR unsigned long *value);
+
+/****************************************************************************
+ * Name: procfs_create_x8
+ *
+ * Description:
+ *   Create a procfs entry for an 8-bit hexadecimal variable.
+ *
+ * Input Parameters:
+ *   path  - The path of the procfs entry
+ *   mode  - The mode (permissions) for the procfs entry
+ *   value - Pointer to the 8-bit variable to be displayed in hex
+ *
+ * Returned Value:
+ *   Pointer to the procfs entry on success; NULL on failure
+ *
+ ****************************************************************************/
+
+FAR struct procfs_entry_s *
+procfs_create_x8(FAR const char *path, mode_t mode,
+                 FAR uint8_t *value);
+
+/****************************************************************************
+ * Name: procfs_create_x16
+ *
+ * Description:
+ *   Create a procfs entry for a 16-bit hexadecimal variable.
+ *
+ * Input Parameters:
+ *   path  - The path of the procfs entry
+ *   mode  - The mode (permissions) for the procfs entry
+ *   value - Pointer to the 16-bit variable to be displayed in hex
+ *
+ * Returned Value:
+ *   Pointer to the procfs entry on success; NULL on failure
+ *
+ ****************************************************************************/
+
+FAR struct procfs_entry_s *
+procfs_create_x16(FAR const char *path, mode_t mode,
+                  FAR uint16_t *value);
+
+/****************************************************************************
+ * Name: procfs_create_x32
+ *
+ * Description:
+ *   Create a procfs entry for a 32-bit hexadecimal variable.
+ *
+ * Input Parameters:
+ *   path  - The path of the procfs entry
+ *   mode  - The mode (permissions) for the procfs entry
+ *   value - Pointer to the 32-bit variable to be displayed in hex
+ *
+ * Returned Value:
+ *   Pointer to the procfs entry on success; NULL on failure
+ *
+ ****************************************************************************/
+
+FAR struct procfs_entry_s *
+procfs_create_x32(FAR const char *path, mode_t mode,
+                  FAR uint32_t *value);
+
+/****************************************************************************
+ * Name: procfs_create_x64
+ *
+ * Description:
+ *   Create a procfs entry for a 64-bit hexadecimal variable.
+ *
+ * Input Parameters:
+ *   path  - The path of the procfs entry
+ *   mode  - The mode (permissions) for the procfs entry
+ *   value - Pointer to the 64-bit variable to be displayed in hex
+ *
+ * Returned Value:
+ *   Pointer to the procfs entry on success; NULL on failure
+ *
+ ****************************************************************************/
+
+FAR struct procfs_entry_s *
+procfs_create_x64(FAR const char *path, mode_t mode,
+                  FAR uint64_t *value);
+
+/****************************************************************************
+ * Name: procfs_create_size_t
+ *
+ * Description:
+ *   Create a procfs entry for a size_t variable.
+ *
+ * Input Parameters:
+ *   path  - The path of the procfs entry
+ *   mode  - The mode (permissions) for the procfs entry
+ *   value - Pointer to the size_t variable
+ *
+ * Returned Value:
+ *   Pointer to the procfs entry on success; NULL on failure
+ *
+ ****************************************************************************/
+
+FAR struct procfs_entry_s *
+procfs_create_size_t(FAR const char *path, mode_t mode,
+                     FAR size_t *value);
+
+/****************************************************************************
+ * Name: procfs_create_bool
+ *
+ * Description:
+ *   Create a procfs entry for a boolean variable.
+ *
+ * Input Parameters:
+ *   path  - The path of the procfs entry
+ *   mode  - The mode (permissions) for the procfs entry
+ *   value - Pointer to the boolean variable
+ *
+ * Returned Value:
+ *   Pointer to the procfs entry on success; NULL on failure
+ *
+ ****************************************************************************/
+
+FAR struct procfs_entry_s *
+procfs_create_bool(FAR const char *path, mode_t mode,
+                   FAR bool *value);
+
 #undef EXTERN
 #ifdef __cplusplus
 }
