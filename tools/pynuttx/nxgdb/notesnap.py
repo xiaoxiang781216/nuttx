@@ -78,6 +78,36 @@ class NoteSnap(gdb.Command):
             output.append(NoteSnapChunk(**chunk))
         return output
 
+    @utils.dont_repeat_decorator
+    def invoke(self, args, from_tty):
+        try:
+            chunks = self.parse_notesnap()
+
+            prettytable = utils.import_check(
+                "prettytable",
+                errmsg="Execute `pip install prettytable` for better printing result.\n",
+            )
+
+            if prettytable:
+                table = prettytable.PrettyTable()
+                headers = ["Task Name", "PID", "Note Type", "Args"]
+                if CONFIG_SMP:
+                    headers.insert(1, "CPU")
+                table.field_names = headers
+                table.align = "l"
+                for chunk in chunks:
+                    row = [chunk.taskname]
+                    if CONFIG_SMP:
+                        row.append(str(chunk.cpu))
+                    row.extend([str(chunk.pid), chunk.notetype, hex(chunk.args)])
+                    table.add_row(row)
+                print(table)
+            else:
+                print(*chunks, sep="\n")
+
+        except Exception as e:
+            print(f"Error happened during notesnap: {e}")
+
     def diagnose(self, *args, **kwargs):
         return {
             "title": "Notesnap Report",
@@ -87,10 +117,3 @@ class NoteSnap(gdb.Command):
             "category": utils.DiagnoseCategory.system,
             "message": self.parse_notesnap(),
         }
-
-    @utils.dont_repeat_decorator
-    def invoke(self, args, from_tty):
-        try:
-            print(*(self.parse_notesnap()), sep="\n")
-        except Exception as e:
-            print(f"Error happened during notesnap: {e}")
