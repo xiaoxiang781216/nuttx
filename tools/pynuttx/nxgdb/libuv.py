@@ -24,8 +24,6 @@ import gdb
 
 from . import autocompeletion, lists, utils
 
-UV_HANDLE_FLAG = utils.enum("enum uv_handle_flag")
-
 
 @autocompeletion.complete
 class UVDump(gdb.Command):
@@ -58,6 +56,8 @@ class UVDump(gdb.Command):
         return parser
 
     def __init__(self):
+        if not utils.get_symbol_value("CONFIG_LIBUV"):
+            return
         super(UVDump, self).__init__("uvdump", gdb.COMMAND_USER)
         self.parser = self.get_argparser()
 
@@ -72,6 +72,8 @@ class UVDump(gdb.Command):
         """Dump handle information from uv_loop_t structure"""
         if not loop_ptr:
             return
+
+        UV_HANDLE_FLAG = utils.enum("enum uv_handle_flag")
 
         formatter = "{:>8} {:>12} {:>18} {:}\n"
         headers = ("Flags", "Type", "Address", "Backtrace")
