@@ -161,53 +161,55 @@ static inline void nxtask_sigchild(pid_t ppid, FAR struct tcb_s *ctcb,
        */
 
       chgrp->tg_ppid = INVALID_PROCESS_ID;
-      return;
     }
-
-  pgrp = ptcb->group;
-  DEBUGASSERT(pgrp);
-
-  /* Save the exit status now if this is the main thread of the task group
-   * that is exiting. Only the exiting main task of a task group carries
-   * interpretable exit  Check if this is the main task that is exiting.
-   */
-
-#ifndef CONFIG_DISABLE_PTHREAD
-  if ((atomic_read(&ctcb->flags) & TCB_FLAG_TTYPE_MASK) !=
-      TCB_FLAG_TTYPE_PTHREAD)
-#endif
+  else
     {
-      nxtask_exitstatus(pgrp, status);
-    }
+      pgrp = ptcb->group;
+      DEBUGASSERT(pgrp);
 
-  /* But only the final exiting thread in a task group, whatever it is,
-   * should generate SIGCHLD.
-   */
-
-  if (sq_is_singular(&chgrp->tg_members))
-    {
-      /* Mark that all of the threads in the task group have exited */
-
-      nxtask_groupexit(pgrp);
-
-      /* Create the siginfo structure.  We don't actually know the cause.
-       * That is a bug. Let's just say that the child task just exited
-       * for now.
+      /* Save the exit status now if this is the main thread of the task
+       * group that is exiting. Only the exiting main task of a task group
+       * carries interpretable exit Check if this is the main task that
+       * is exiting.
        */
 
-      info.si_signo           = SIGCHLD;
-      info.si_code            = CLD_EXITED;
-      info.si_errno           = OK;
-      info.si_value.sival_ptr = NULL;
-      info.si_pid             = chgrp->tg_pid;
-      info.si_status          = pgrp->tg_exitcode;
+#ifndef CONFIG_DISABLE_PTHREAD
+      if ((atomic_read(&ctcb->flags) & TCB_FLAG_TTYPE_MASK) !=
+          TCB_FLAG_TTYPE_PTHREAD)
+#endif
+        {
+          nxtask_exitstatus(pgrp, status);
+        }
 
-      /* Send the signal to one thread in the group */
+      /* But only the final exiting thread in a task group, whatever it is,
+       * should generate SIGCHLD.
+       */
 
-      group_signal(pgrp, &info);
+      if (sq_is_singular(&chgrp->tg_members))
+        {
+          /* Mark that all of the threads in the task group have exited */
+
+          nxtask_groupexit(pgrp);
+
+          /* Create the siginfo structure.  We don't actually know the cause.
+           * That is a bug. Let's just say that the child task just exited
+           * for now.
+           */
+
+          info.si_signo           = SIGCHLD;
+          info.si_code            = CLD_EXITED;
+          info.si_errno           = OK;
+          info.si_value.sival_ptr = NULL;
+          info.si_pid             = chgrp->tg_pid;
+          info.si_status          = pgrp->tg_exitcode;
+
+          /* Send the signal to one thread in the group */
+
+          group_signal(pgrp, &info);
+        }
+
+      nxsched_put_tcb(ptcb);
     }
-
-  nxsched_put_tcb(ptcb);
 }
 
 #else /* HAVE_GROUP_MEMBERS */
