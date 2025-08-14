@@ -155,8 +155,12 @@ int waitid(idtype_t idtype, id_t id, FAR siginfo_t *info, int options)
   bool retains;
 #endif
   sigset_t set;
-  int errcode;
+  int errcode = ENOSYS;
   int ret;
+
+  /* waitid() is a cancellation point */
+
+  enter_cancellation_point();
 
   /* MISSING LOGIC:   If WNOHANG is provided in the options, then this
    * function should returned immediately.  However, there is no mechanism
@@ -168,124 +172,96 @@ int waitid(idtype_t idtype, id_t id, FAR siginfo_t *info, int options)
 #ifdef CONFIG_DEBUG_FEATURES
   /* Only ID types P_PID and P_ALL are supported */
 
-  if (idtype != P_PID && idtype != P_ALL)
-    {
-      set_errno(ENOSYS);
-      return ERROR;
-    }
-
-  /* None of the options are supported except for WEXITED (which must be
-   * provided.  Currently SIGCHLD always reports CLD_EXITED so we cannot
-   * distinguish any other events.
-   */
-
-  if ((options & WEXITED) == 0)
-    {
-      set_errno(ENOSYS);
-      return ERROR;
-    }
-
-  if ((options & ~(WEXITED | WNOHANG)) != 0)
-    {
-      set_errno(ENOSYS);
-      return ERROR;
-    }
+  if ((idtype == P_PID || idtype == P_ALL) &&
+      (options & WEXITED) != 0 &&
+      (options & ~(WEXITED | WNOHANG)) == 0)
 #endif
+    {
+      /* Create a signal set that contains only SIGCHLD */
 
-  /* waitid() is a cancellation point */
+      sigemptyset(&set);
+      nxsig_addset(&set, SIGCHLD);
+      errcode = OK;
 
-  enter_cancellation_point();
-
-  /* Create a signal set that contains only SIGCHLD */
-
-  sigemptyset(&set);
-  nxsig_addset(&set, SIGCHLD);
-
-  /* Verify that this task actually has children and that the requested
-   * TCB is actually a child of this task.
-   */
+      /* Verify that this task actually has children and that the requested
+       * TCB is actually a child of this task.
+       */
 
 #ifdef CONFIG_SCHED_CHILD_STATUS
-  /* Does this task retain child status? */
-
-  retains = ((atomic_read(&rtcb->group->tg_flags) &
-             GROUP_FLAG_NOCLDWAIT) == 0);
-
-  if (rtcb->group->tg_children == NULL && retains)
-    {
-      /* There are no children */
-
-      errcode = ECHILD;
-      goto errout;
-    }
-  else if (idtype == P_PID)
-    {
-      /* Get the TCB corresponding to this PID and make sure that the
-       * thread it is our child.
-       */
-
-      ctcb = nxsched_get_tcb((pid_t)id);
-      if (ctcb && ctcb->group)
-        {
-          /* Make sure that the thread it is our child. */
-
-          if (ctcb->group->tg_ppid != rtcb->pid)
-            {
-              nxsched_put_tcb(ctcb);
-              errcode = ECHILD;
-              goto errout;
-            }
-        }
-
-      nxsched_put_tcb(ctcb);
-
       /* Does this task retain child status? */
 
-      if (retains)
+      retains = ((atomic_read(&rtcb->group->tg_flags) &
+                GROUP_FLAG_NOCLDWAIT) == 0);
+
+      if (rtcb->group->tg_children == NULL && retains)
         {
-          /* Check if this specific pid has allocated child status? */
+          /* There are no children */
 
-          if (group_find_child(rtcb->group, (pid_t)id) == NULL)
+          errcode = ECHILD;
+        }
+      else if (idtype == P_PID)
+        {
+          /* Get the TCB corresponding to this PID and make sure that the
+           * thread it is our child.
+           */
+
+          ctcb = nxsched_get_tcb((pid_t)id);
+          if (ctcb && ctcb->group)
             {
-              /* This specific pid is not a child */
+              /* Make sure that the thread it is our child. */
 
-              errcode = ECHILD;
-              goto errout;
+              if (ctcb->group->tg_ppid != rtcb->pid)
+                {
+                  errcode = ECHILD;
+                }
+            }
+
+          nxsched_put_tcb(ctcb);
+
+          /* Does this task retain child status? */
+
+          if (retains && errcode == OK)
+            {
+              /* Check if this specific pid has allocated child status? */
+
+              if (group_find_child(rtcb->group, (pid_t)id) == NULL)
+                {
+                  /* This specific pid is not a child */
+
+                  errcode = ECHILD;
+                }
             }
         }
-    }
 #else
-  /* Child status is not retained. */
+      /* Child status is not retained. */
 
-  if (atomic_read(&rtcb->group->tg_nchildren) == 0)
-    {
-      /* There are no children */
-
-      errcode = ECHILD;
-      goto errout;
-    }
-  else if (idtype == P_PID)
-    {
-      /* Get the TCB corresponding to this PID and make sure that the
-       * thread is our child.
-       */
-
-      ctcb = nxsched_get_tcb((pid_t)id);
-
-      if (!ctcb || !ctcb->group || ctcb->group->tg_ppid != rtcb->pid)
+      if (atomic_read(&rtcb->group->tg_nchildren) == 0)
         {
-          errcode = ECHILD;
-          nxsched_put_tcb(ctcb);
-          goto errout;
-        }
+          /* There are no children */
 
-      nxsched_put_tcb(ctcb);
-    }
+          errcode = ECHILD;
+        }
+      else if (idtype == P_PID)
+        {
+          /* Get the TCB corresponding to this PID and make sure that the
+           * thread is our child.
+           */
+
+          ctcb = nxsched_get_tcb((pid_t)id);
+
+          if (!ctcb || !ctcb->group || ctcb->group->tg_ppid != rtcb->pid)
+            {
+              errcode = ECHILD;
+            }
+
+          nxsched_put_tcb(ctcb);
+        }
 #endif
+    }
 
   /* Loop until the child that we are waiting for dies */
 
-  for (; ; )
+  while (errcode == OK)
     {
 #ifdef CONFIG_SCHED_CHILD_STATUS
       /* Check if the task has already died. Signals are not queued in
@@ -350,7 +326,7 @@ int waitid(idtype_t idtype, id_t id, FAR siginfo_t *info, int options)
                */
 
               errcode = ECHILD;
-              goto errout;
+              break;
             }
         }
 #else
@@ -369,7 +345,7 @@ int waitid(idtype_t idtype, id_t id, FAR siginfo_t *info, int options)
            */
 
           errcode = ECHILD;
-          goto errout;
+          break;
         }
 #endif
 
@@ -395,7 +371,7 @@ int waitid(idtype_t idtype, id_t id, FAR siginfo_t *info, int options)
       if (ret < 0)
         {
           errcode = -ret;
-          goto errout;
+          break;
         }
 
       /* Make there this was SIGCHLD */
@@ -436,16 +412,16 @@ int waitid(idtype_t idtype, id_t id, FAR siginfo_t *info, int options)
               /* Return success */
 
 #ifdef CONFIG_SCHED_CHILD_STATUS
-                  if (retains)
-                    {
-                      child = group_find_child(rtcb->group, info->si_pid);
+              if (retains)
+                {
+                  child = group_find_child(rtcb->group, info->si_pid);
 
-                      if (child &&
-                          (child->ch_flags & CHILD_FLAG_EXITED) != 0)
-                        {
-                          exited_child(rtcb, child, NULL);
-                        }
+                  if (child &&
+                      (child->ch_flags & CHILD_FLAG_EXITED) != 0)
+                    {
+                      exited_child(rtcb, child, NULL);
                     }
+                }
 #endif
 
               break;
@@ -456,18 +432,23 @@ int waitid(idtype_t idtype, id_t id, FAR siginfo_t *info, int options)
           else /* if (idtype == P_PGID) */
             {
               errcode = ENOSYS;
-              goto errout;
+              break;
             }
         }
     }
 
   leave_cancellation_point();
-  return OK;
+  if (errcode != OK)
+    {
+      ret = ERROR;
+      set_errno(errcode);
+    }
+  else
+    {
+      ret = OK;
+    }
 
-errout:
-  leave_cancellation_point();
-  set_errno(errcode);
-  return ERROR;
+  return ret;
 }
 
 #endif /* CONFIG_SCHED_WAITPID && CONFIG_SCHED_HAVE_PARENT */
