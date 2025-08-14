@@ -46,14 +46,12 @@
  * Preprocessor definitions
  ****************************************************************************/
 
-/* judges if a sigaction instance is a preallocated one */
+/****************************************************************************
+ * Private Types
+ ****************************************************************************/
 
 #if CONFIG_SIG_PREALLOC_ACTIONS > 0
-#  define IS_PREALLOC_ACTION(x) ( \
-          (uintptr_t)(x) >= (uintptr_t)g_sigactions && \
-          (uintptr_t)(x) < ((uintptr_t)g_sigactions) + sizeof(g_sigactions))
-#else
-#  define IS_PREALLOC_ACTION(x) false
+typedef sigactq_t sigaction_prealloc_t[CONFIG_SIG_PREALLOC_ACTIONS];
 #endif
 
 /****************************************************************************
@@ -61,13 +59,28 @@
  ****************************************************************************/
 
 #if CONFIG_SIG_PREALLOC_ACTIONS > 0
-static sigactq_t  g_sigactions[CONFIG_SIG_PREALLOC_ACTIONS];
-static bool       g_sigactions_used = false;
+static DEFINE_PER_CPU_BMP(sigaction_prealloc_t, g_sigactions);
+static DEFINE_PER_CPU_BMP(bool, g_sigactions_used);
 #endif
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/* judges if a sigaction instance is a preallocated one */
+
+#if CONFIG_SIG_PREALLOC_ACTIONS > 0
+static inline_function bool is_prealloc_action(FAR sigactq_t *sigact)
+{
+  uintptr_t prealloc_base = (uintptr_t)&g_sigactions;
+  uintptr_t ptr           = (uintptr_t)(sigact);
+
+  return ptr >= prealloc_base &&
+         ptr < prealloc_base + sizeof(sigaction_prealloc_t);
+}
+#else
+#  define is_prealloc_action(sigact) false
+#endif
 
 /****************************************************************************
  * Name: nxsig_alloc_actionblock
@@ -383,7 +396,7 @@ int nxsig_action(int signo, FAR const struct sigaction *act,
   else
     {
       /* Do we still have a sigaction container from the previous setting?
-       * If so, then re-use for the new signal action.
+       * If so, then reuse for the new signal action.
        */
 
       if (sigact == NULL)
@@ -450,7 +463,7 @@ void nxsig_release_action(FAR sigactq_t *sigact)
 {
   irqstate_t flags;
 
-  if (CONFIG_SIG_ALLOC_ACTIONS > 1 || IS_PREALLOC_ACTION(sigact))
+  if (CONFIG_SIG_ALLOC_ACTIONS > 1 || is_prealloc_action(sigact))
     {
       /* Non-preallocated instances will never return to heap! */
 

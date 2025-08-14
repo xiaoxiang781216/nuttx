@@ -41,7 +41,9 @@
  * Public Data
  ****************************************************************************/
 
-rspinlock_t g_schedlock = RSPINLOCK_INITIALIZER;
+#undef g_schedlock
+DEFINE_PER_CPU_BMP(rspinlock_t, g_schedlock) = RSPINLOCK_INITIALIZER;
+#define g_schedlock this_cpu_var_bmp(g_schedlock)
 
 /****************************************************************************
  * Public Functions

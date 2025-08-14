@@ -35,8 +35,10 @@
  * Private Data
  ****************************************************************************/
 
-static struct blocking_notifier_head g_reboot_notifier_list =
-                                       BLOCKING_NOTIFIER_INITVALUE;
+static
+DEFINE_PER_CPU_BMP(struct blocking_notifier_head, g_reboot_notifier_list) =
+BLOCKING_NOTIFIER_INITVALUE;
+#define g_reboot_notifier_list this_cpu_var_bmp(g_reboot_notifier_list)
 
 /****************************************************************************
  * Public Functions

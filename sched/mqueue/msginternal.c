@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <nuttx/kmalloc.h>
+#include <nuttx/sched.h>
 #include "mqueue/msg.h"
 
 /****************************************************************************
@@ -37,14 +38,23 @@
  * Private Data
  ****************************************************************************/
 
-static uint8_t             g_nmsgq; /* The number of groups of msgs array */
-static FAR struct msgq_s **g_msgqs; /* The pointer of two layer file descriptors array */
+/* The number of groups of msgs array */
+
+static DEFINE_PER_CPU_BSS_BMP(uint8_t, g_nmsgq);
+#define g_nmsgq this_cpu_var_bmp(g_nmsgq)
+
+/* The pointer of two layer file descriptors array */
+
+static DEFINE_PER_CPU_BSS_BMP(FAR struct msgq_s **, g_msgqs);
+#define g_msgqs this_cpu_var_bmp(g_msgqs)
 
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
-struct list_node g_msgfreelist;
+#undef g_msgfreelist
+DEFINE_PER_CPU_BSS_BMP(struct list_node, g_msgfreelist);
+#define g_msgfreelist this_cpu_var_bmp(g_msgfreelist)
 
 /****************************************************************************
  * Private Functions

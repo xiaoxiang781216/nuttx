@@ -79,7 +79,8 @@ extern "C"
 #define EXTERN extern
 #endif
 
-EXTERN struct list_node g_msgfreelist;
+DECLARE_PER_CPU_BMP(struct list_node, g_msgfreelist);
+#define g_msgfreelist this_cpu_var_bmp(g_msgfreelist)
 
 /****************************************************************************
  * Public Function Prototypes

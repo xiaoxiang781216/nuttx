@@ -94,15 +94,18 @@ extern "C"
  * The number of messages in this list is a system configuration item.
  */
 
-EXTERN struct list_node g_msgfree;
+DECLARE_PER_CPU_BMP(struct list_node, g_msgfree);
+#define g_msgfree this_cpu_var_bmp(g_msgfree)
 
 /* The g_msgfreeirq is a list of messages that are reserved for use by
  * interrupt handlers.
  */
 
-EXTERN struct list_node g_msgfreeirq;
+DECLARE_PER_CPU_BMP(struct list_node, g_msgfreeirq);
+#define g_msgfreeirq this_cpu_var_bmp(g_msgfreeirq)
 
-EXTERN spinlock_t g_msgfreelock;
+DECLARE_PER_CPU_BMP(spinlock_t, g_msgfreelock);
+#define g_msgfreelock this_cpu_var_bmp(g_msgfreelock)
 
 /****************************************************************************
  * Public Function Prototypes

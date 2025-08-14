@@ -88,7 +88,8 @@ pid_t spinlock_get_holder(FAR spinlock_debug_t *info);
  * disabled.
  */
 
-extern rspinlock_t g_schedlock;
+DECLARE_PER_CPU_BMP(rspinlock_t, g_schedlock);
+#define g_schedlock this_cpu_var_bmp(g_schedlock)
 
 /****************************************************************************
  * Name: spin_lock_init

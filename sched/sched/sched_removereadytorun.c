@@ -160,7 +160,7 @@ static void nxsched_remove_running(FAR struct tcb_s *tcb)
   /* Activate the idle task */
 
   nxttcb->task_state = TSTATE_TASK_RUNNING;
-  g_assignedtasks[cpu] = nxttcb;
+  per_cpu_var_smp(g_assignedtasks, cpu) = nxttcb;
   up_update_task(nxttcb);
 
   nxsched_switch_running(tcb->cpu, false);

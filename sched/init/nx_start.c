@@ -107,13 +107,15 @@ DEFINE_PER_CPU_BSS(struct tcb_s, g_idletcb);
  * task, is always the IDLE task.
  */
 
-dq_queue_t g_readytorun =
+#undef g_readytorun
+DEFINE_PER_CPU_BMP(dq_queue_t, g_readytorun) =
 {
 #if !defined(CONFIG_SMP)
   (FAR dq_entry_t *)&per_cpu_var_smp(g_idletcb, 0),
   (FAR dq_entry_t *)&per_cpu_var_smp(g_idletcb, 0),
 #endif
 };
+#define g_readytorun this_cpu_var_bmp(g_readytorun)
 
 /* In order to support SMP, the function of the g_readytorun list changes,
  * The g_readytorun is still used but in the SMP case it will contain only:
@@ -179,36 +181,47 @@ DEFINE_PER_CPU_BSS(FAR struct tcb_s *, g_running_tasks);
  */
 
 #ifndef CONFIG_SMP
-dq_queue_t g_pendingtasks;
-#endif
+#  undef g_pendingtasks
+DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_pendingtasks);
+#  define g_pendingtasks this_cpu_var_bmp(g_pendingtasks)
+#endif 
 
 /* This is the list of all tasks that are blocked waiting for a signal */
 
-dq_queue_t g_waitingforsignal;
+#undef g_waitingforsignal
+DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_waitingforsignal);
+#define g_waitingforsignal this_cpu_var_bmp(g_waitingforsignal)
 
 #ifdef CONFIG_LEGACY_PAGING
 /* This is the list of all tasks that are blocking waiting for a page fill */
 
-dq_queue_t g_waitingforfill;
+#undef g_waitingforfill
+DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_waitingforfill);
+#define g_waitingforfill this_cpu_var_bmp(g_waitingforfill)
 #endif
 
 #ifdef CONFIG_SIG_SIGSTOP_ACTION
 /* This is the list of all tasks that have been stopped
  * via SIGSTOP or SIGTSTP
  */
-
-dq_queue_t g_stoppedtasks;
+#undef g_stoppedtasks
+DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_stoppedtasks);
+#define g_stoppedtasks this_cpu_var_bmp(g_stoppedtasks)
 #endif
 
 /* This list of all tasks that have been initialized, but not yet
  * activated. NOTE:  This is the only list that is not prioritized.
  */
 
-dq_queue_t g_inactivetasks;
+#undef g_inactivetasks
+DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_inactivetasks);
+#define g_inactivetasks this_cpu_var_bmp(g_inactivetasks)
 
 /* This is the value of the last process ID assigned to a task */
 
-volatile pid_t g_lastpid = CONFIG_SMP_NCPUS - 1;
+#undef g_lastpid
+DEFINE_PER_CPU_BMP(volatile pid_t, g_lastpid) = CONFIG_SMP_NCPUS - 1;
+#define g_lastpid this_cpu_var_bmp(g_lastpid)
 
 /* The following hash table is used for two things:
  *
@@ -217,9 +230,17 @@ volatile pid_t g_lastpid = CONFIG_SMP_NCPUS - 1;
  * 2. Is used to quickly map a process ID into a TCB.
  */
 
-FAR struct tcb_s **g_pidhash;
-volatile int g_npidhash;
-spinlock_t g_pidhashlock = SP_UNLOCKED;
+#undef g_pidhash
+DEFINE_PER_CPU_BSS_BMP(FAR struct tcb_s **, g_pidhash);
+#define g_pidhash this_cpu_var_bmp(g_pidhash)
+
+#undef g_npidhash
+DEFINE_PER_CPU_BSS_BMP(volatile int, g_npidhash);
+#define g_npidhash this_cpu_var_bmp(g_npidhash)
+
+#undef g_pidhashlock
+DEFINE_PER_CPU_BMP(spinlock_t, g_pidhashlock) = SP_UNLOCKED;
+#define g_pidhashlock this_cpu_var_bmp(g_pidhashlock)
 
 /* This is a table of task lists.  This table is indexed by the task state
  * enumeration type (tstate_t) and provides a pointer to the associated
@@ -228,18 +249,18 @@ spinlock_t g_pidhashlock = SP_UNLOCKED;
  * ordered list or not.
  */
 
-struct tasklist_s g_tasklisttable[NUM_TASK_STATES];
+#undef g_tasklisttable
+DEFINE_PER_CPU_BSS_BMP(tasklist_table_t, g_tasklisttable);
+#define g_tasklisttable this_cpu_var_bmp(g_tasklisttable)
 
 /* This is the current initialization state.  The level of initialization
  * is only important early in the start-up sequence when certain OS or
  * hardware resources may not yet be available to the kernel logic.
  */
 
-volatile enum nx_initstate_e g_nx_initstate;  /* See enum nx_initstate_e */
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
+#undef g_nx_initstate
+DEFINE_PER_CPU_BSS_BMP(volatile enum nx_initstate_e, g_nx_initstate);
+#define g_nx_initstate this_cpu_var_bmp(g_nx_initstate)
 
 /****************************************************************************
  * Private Functions
@@ -408,13 +429,18 @@ static void idle_task_initialize(void)
   tcb->refs             = 1;
 
 #if CONFIG_TASK_NAME_SIZE > 0
-  strlcpy(tcb->name, "Idle_Task", CONFIG_TASK_NAME_SIZE);
+  snprintf(tcb->name, CONFIG_TASK_NAME_SIZE, "CPU%d IDLE", up_cpu_index());
 #endif
   sem_init(&tcb->exit_sem, 0, 0);
 
   /* Then add the idle task's TCB to the head of the current ready to
    * run list.
    */
+
+#ifdef CONFIG_BMP
+  dq_init(&g_readytorun);
+  dq_addfirst((FAR dq_entry_t *)tcb, &g_readytorun);
+#endif
 
   g_running_task        = tcb;
 

@@ -66,7 +66,8 @@
  * then limit all requested delays to this value (in ticks).
  */
 
-uint32_t g_oneshot_maxticks = UINT32_MAX;
+DEFINE_PER_CPU_BMP(uint32_t, g_oneshot_maxticks) = UINT32_MAX;
+#define g_oneshot_maxticks this_cpu_var_bmp(g_oneshot_maxticks)
 #endif
 
 /****************************************************************************
@@ -94,15 +95,20 @@ static clock_t nxsched_timer_start(clock_t ticks, clock_t interval);
  * the timer is not running.
  */
 
-static clock_t g_timer_tick;
-static seqcount_t g_timer_tick_lock = SEQLOCK_INITIALIZER;
+static DEFINE_PER_CPU_BSS_BMP(clock_t, g_timer_tick);
+#define g_timer_tick this_cpu_var_bmp(g_timer_tick)
+
+static
+DEFINE_PER_CPU_BMP(seqcount_t, g_timer_tick_lock) = SEQLOCK_INITIALIZER;
+#define g_timer_tick_lock this_cpu_var_bmp(g_timer_tick_lock)
 
 /* This is the duration of the currently active timer or, when
  * nxsched_timer_expiration() is called, the duration of interval timer
  * that just expired.  The value zero means that no timer was active.
  */
 
-static atomic_t g_timer_interval;
+static DEFINE_PER_CPU_BSS_BMP(atomic_t, g_timer_interval);
+#define g_timer_interval this_cpu_var_bmp(g_timer_interval)
 
 /****************************************************************************
  * Private Functions

@@ -968,7 +968,8 @@ EXTERN const struct tcbinfo_s g_tcbinfo;
  * task, is always the IDLE task.
  */
 
-extern dq_queue_t g_readytorun;
+DECLARE_PER_CPU_BMP(dq_queue_t, g_readytorun);
+#define g_readytorun this_cpu_var_bmp(g_readytorun)
 
 /****************************************************************************
  * Public Function Prototypes
@@ -1043,7 +1044,7 @@ bool nxsched_verify_pid(pid_t pid);
  *
  * Description:
  *   When a task is destroyed, this function must be called to make its
- *   process ID available for re-use.
+ *   process ID available for reuse.
  *
  ****************************************************************************/
 
