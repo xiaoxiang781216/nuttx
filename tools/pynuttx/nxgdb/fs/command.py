@@ -26,6 +26,7 @@ import gdb
 import nxgdb.autocompeletion as autocompeletion
 import nxgdb.fs.fatfs as fatfs
 import nxgdb.fs.littlefs as littlefs
+import nxgdb.fs.lrofs as lrofs
 import nxgdb.fs.romfs as romfs
 import nxgdb.fs.yaffs as yaffs
 import nxgdb.utils as utils
@@ -252,7 +253,6 @@ class InfoRomfs(gdb.Command):
             "-P",
             "--path",
             type=str,
-            metavar="file",
             default=None,
             help="set the romfs path to be dumped",
         )
@@ -303,7 +303,6 @@ class InfoLittlefs(gdb.Command):
             "-P",
             "--path",
             type=str,
-            metavar="file",
             default=None,
             help="set the littlefs path to be dumped",
         )
@@ -353,7 +352,6 @@ class InfoYaffs(gdb.Command):
             "-P",
             "--path",
             type=str,
-            metavar="file",
             default=None,
             help="set the yaffs path to be dumped",
         )
@@ -442,3 +440,52 @@ class InfoFatfs(gdb.Command):
             if args and args.path and path != args.path:
                 continue
             fatfs.dump_fatfs_cache(node, path)
+
+
+class InfoLrofs(gdb.Command):
+    """Show lrofs cache information"""
+
+    def get_argparser(self):
+        parser = argparse.ArgumentParser(description=self.__doc__)
+        parser.add_argument(
+            "-P",
+            "--path",
+            type=str,
+            default=None,
+            help="set the lrofs path to be dumped",
+        )
+        return parser
+
+    def __init__(self):
+        if utils.get_symbol_value("CONFIG_FS_LROFS"):
+            super().__init__("info lrofs", gdb.COMMAND_USER)
+        self.parser = self.get_argparser()
+
+    def parse_arguments(self, argv):
+        try:
+            args = self.parser.parse_args(argv)
+        except SystemExit:
+            return None
+
+        return args
+
+    def diagnose(self, *args, **kwargs):
+        output = gdb.execute("info lrofs", to_string=True)
+
+        return {
+            "title": "Lrofs Cache Information",
+            "summary": "Lrofs nodeinfo dump",
+            "command": "info lrofs",
+            "result": "info",
+            "category": utils.DiagnoseCategory.fs,
+            "message": output or "No lrofs information",
+        }
+
+    @utils.dont_repeat_decorator
+    def invoke(self, args, from_tty):
+        args = self.parse_arguments(gdb.string_to_argv(args))
+        nodes = filter(fstype_filter("lrofs"), foreach_inode())
+        for node, path in nodes:
+            if args and args.path and path != args.path:
+                continue
+            lrofs.dump_lrofs_cache(node, path)
