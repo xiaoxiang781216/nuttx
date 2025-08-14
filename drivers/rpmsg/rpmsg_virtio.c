@@ -631,6 +631,13 @@ static void rpmsg_virtio_rx_dispatch(FAR struct rpmsg_virtio_priv_s *priv)
   uint16_t idx;
   int status;
 
+  if (priv->noderx == NULL)
+    {
+      /* Do not response interrupt if noderx is not initialized */
+
+      return;
+    }
+
   metal_mutex_acquire(&rdev->lock);
   while (!last)
     {
@@ -780,6 +787,7 @@ static int rpmsg_virtio_notify_wait(FAR struct rpmsg_device *rdev,
 static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
 {
   FAR struct virtio_device *vdev = priv->vdev;
+  FAR struct rpmsg_virtio_node_s *noderx;
   struct rpmsg_virtio_config config =
   {
     RPMSG_BUFFER_SIZE,
@@ -845,9 +853,8 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
   priv->rvdev.notify_wait_cb = rpmsg_virtio_notify_wait;
   priv->rvdev.rdev.ns_unbind_cb = rpmsg_ns_unbind;
 
-  priv->noderx = kmm_malloc(priv->rvdev.rvq->vq_nentries *
-                            sizeof(*priv->noderx));
-  if (priv->noderx == NULL)
+  noderx = kmm_malloc(priv->rvdev.rvq->vq_nentries * sizeof(*priv->noderx));
+  if (noderx == NULL)
     {
       rpmsg_deinit_vdev(&priv->rvdev);
       return -ENOMEM;
@@ -857,8 +864,10 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
   metal_list_init(&priv->freerx);
   for (i = 0; i < priv->rvdev.rvq->vq_nentries; i++)
     {
-      metal_list_add_tail(&priv->freerx, &priv->noderx[i].node);
+      metal_list_add_tail(&priv->freerx, &noderx[i].node);
     }
+
+  priv->noderx = noderx;
 
   /* Wake up the rx thread to process message */
 
