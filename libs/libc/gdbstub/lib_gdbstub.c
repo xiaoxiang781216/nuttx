@@ -1087,6 +1087,11 @@ static void gdb_update_regcache(FAR struct gdb_state_s *state)
         {
           up_copyusercontext(state->running_regs, tcb->xcp.regs,
                              XCPTCONTEXT_SIZE);
+          nxsched_put_tcb(tcb);
+        }
+      else
+        {
+          memset(state->running_regs, 0, XCPTCONTEXT_SIZE);
         }
     }
 
