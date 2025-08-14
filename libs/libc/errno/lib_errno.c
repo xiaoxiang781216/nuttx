@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/percpu.h>
 
 #include <nuttx/tls.h>
 
@@ -33,7 +34,8 @@
  * Private Data
  ****************************************************************************/
 
-static int g_errno;
+static DEFINE_PER_CPU_BSS_BMP(int, g_errno);
+#define g_errno this_cpu_var_bmp(g_errno)
 
 /****************************************************************************
  * Public Functions

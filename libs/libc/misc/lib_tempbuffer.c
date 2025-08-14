@@ -56,11 +56,13 @@ struct tempbuffer_s
  * Private Data
  ****************************************************************************/
 
-static struct tempbuffer_s g_tempbuffer =
+static DEFINE_PER_CPU_BMP(struct tempbuffer_s, g_tempbuffer) =
 {
   SP_UNLOCKED,
   (1u << CONFIG_LIBC_MAX_TEMPBUFFER) - 1,
 };
+
+#define g_tempbuffer this_cpu_var_bmp(g_tempbuffer)
 
 /****************************************************************************
  * Private Functions

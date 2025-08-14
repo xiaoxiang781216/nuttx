@@ -66,8 +66,11 @@ extern void macho_call_saved_init_funcs(void);
 void lib_cxx_initialize(void)
 {
 #ifdef CONFIG_HAVE_CXXINITIALIZE
-  static mutex_t lock = NXMUTEX_INITIALIZER;
-  static int inited = 0;
+  static DEFINE_PER_CPU_BMP(mutex_t, lock) = NXMUTEX_INITIALIZER;
+  static DEFINE_PER_CPU_BSS_BMP(int, inited);
+
+#  define lock this_cpu_var_bmp(lock)
+#  define inited this_cpu_var_bmp(inited)
 
   nxmutex_lock(&lock);
   if (inited == 0)
