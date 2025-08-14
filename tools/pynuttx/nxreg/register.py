@@ -267,14 +267,14 @@ g_reg_table = {
     },
     "tricore": {
         "architecture": [
-            "TriCore:V1.2",
-            "TriCore:V1.1",
-            "TriCore:V1.3",
-            "TriCore:V1.3.1",
-            "Tricore:V1_6",
-            "TriCore:V1_6_1",
-            "TriCore:V1_6_2",
-            "TriCore:V1_8",
+            "tricore:v1.2",
+            "tricore:v1.1",
+            "tricore:v1.3",
+            "tricore:v1.3.1",
+            "tricore:v1_6",
+            "tricore:v1_6_1",
+            "tricore:v1_6_2",
+            "tricore:v1_8",
         ],  # Use tricore-gdb
         "feature": "",
         "registers": [
