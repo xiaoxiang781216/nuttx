@@ -63,10 +63,11 @@ static int sync_reboot_handler(FAR struct notifier_block *nb,
  * Name: fs_sync_reboot_nb
  ****************************************************************************/
 
-static struct notifier_block g_sync_nb =
+static DEFINE_PER_CPU_BMP(struct notifier_block, g_sync_nb) =
 {
   sync_reboot_handler
 };
+#define g_sync_nb this_cpu_var_bmp(g_sync_nb)
 
 /****************************************************************************
  * Public Functions

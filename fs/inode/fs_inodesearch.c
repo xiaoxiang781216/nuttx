@@ -54,7 +54,9 @@ static FAR const char *_inode_getcwd(void);
  * Public Data
  ****************************************************************************/
 
-FAR struct inode *g_root_inode = NULL;
+#undef g_root_inode
+DEFINE_PER_CPU_BSS_BMP(FAR struct inode *, g_root_inode);
+#define g_root_inode this_cpu_var_bmp(g_root_inode)
 
 /****************************************************************************
  * Private Functions

@@ -104,7 +104,7 @@
  *  relpath  - INPUT:  (not used)
  *             OUTPUT: If the returned inode is a mountpoint, this is the
  *                     relative path from the mountpoint.
- *             OUTPUT: If a symobolic link into a mounted file system is
+ *             OUTPUT: If a symbolic link into a mounted file system is
  *                     detected while traversing the path, then the link
  *                     will be converted to a mountpoint inode if the
  *                     mountpoint link is in an intermediate node of the
@@ -152,7 +152,8 @@ extern "C"
 #define EXTERN extern
 #endif
 
-EXTERN FAR struct inode *g_root_inode;
+DECLARE_PER_CPU_BMP(FAR struct inode *, g_root_inode);
+#define g_root_inode this_cpu_var_bmp(g_root_inode)
 
 /****************************************************************************
  * Public Function Prototypes

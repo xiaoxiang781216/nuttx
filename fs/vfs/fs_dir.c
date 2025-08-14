@@ -79,7 +79,7 @@ static const struct file_operations g_dir_fileops =
   dir_ioctl,  /* ioctl */
 };
 
-static struct inode g_dir_inode =
+static DEFINE_PER_CPU_BMP(struct inode, g_dir_inode) =
 {
   NULL,
   NULL,
@@ -88,6 +88,7 @@ static struct inode g_dir_inode =
   0,
   { &g_dir_fileops },
 };
+#define g_dir_inode this_cpu_var_bmp(g_dir_inode)
 
 /****************************************************************************
  * Private Functions
@@ -209,7 +210,7 @@ static off_t seek_pseudodir(FAR struct file *filep, off_t offset)
 
   for (; curr != NULL && pos != offset; pos++, curr = curr->i_peer);
 
-  /* Now get the inode to vist next time that readdir() is called */
+  /* Now get the inode to visit next time that readdir() is called */
 
   prev = pdir->next;
 

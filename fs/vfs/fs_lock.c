@@ -86,8 +86,11 @@ struct file_lock_bucket_s
  * Private Data
  ****************************************************************************/
 
-static struct hsearch_data g_file_lock_table;
-static mutex_t g_protect_lock = NXMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BSS_BMP(struct hsearch_data, g_file_lock_table);
+static DEFINE_PER_CPU_BMP(mutex_t, g_protect_lock) = NXMUTEX_INITIALIZER;
+
+#define g_file_lock_table this_cpu_var_bmp(g_file_lock_table)
+#define g_protect_lock    this_cpu_var_bmp(g_protect_lock)
 
 /****************************************************************************
  * Private Functions

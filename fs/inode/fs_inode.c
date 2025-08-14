@@ -41,7 +41,9 @@
  * Private Data
  ****************************************************************************/
 
-static rw_semaphore_t g_inode_lock = RWSEM_INITIALIZER;
+#undef g_inode_lock
+static DEFINE_PER_CPU_BMP(rw_semaphore_t, g_inode_lock) = RWSEM_INITIALIZER;
+#define g_inode_lock this_cpu_var_bmp(g_inode_lock)
 
 /****************************************************************************
  * Public Functions

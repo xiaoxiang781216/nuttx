@@ -39,7 +39,8 @@
  * Private Data
  ****************************************************************************/
 
-static ino_t g_ino;
+static DEFINE_PER_CPU_BSS_BMP(ino_t, g_ino);
+#define g_ino this_cpu_var_bmp(g_ino)
 
 /****************************************************************************
  * Private Functions

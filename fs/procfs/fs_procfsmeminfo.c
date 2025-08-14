@@ -135,8 +135,12 @@ const struct procfs_operations g_memdump_operations =
 };
 #endif
 
-static FAR struct procfs_meminfo_entry_s *g_procfs_meminfo = NULL;
-static mutex_t g_procfs_meminfo_lock = NXMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BSS_BMP(FAR struct procfs_meminfo_entry_s *,
+                              g_procfs_meminfo);
+#define g_procfs_meminfo this_cpu_var_bmp(g_procfs_meminfo)
+static
+DEFINE_PER_CPU_BMP(mutex_t, g_procfs_meminfo_lock) = NXMUTEX_INITIALIZER;
+#define g_procfs_meminfo_lock this_cpu_var_bmp(g_procfs_meminfo_lock)
 
 /****************************************************************************
  * Private Functions
