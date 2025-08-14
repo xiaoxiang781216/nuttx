@@ -51,18 +51,22 @@
 
 static void tricore_gpsrinitialize(void)
 {
-  volatile Ifx_SRC_SRCR *src = &SRC_GPSR0_SR0 + up_cpu_index();
+  volatile Ifx_SRC_SRCR *src;
+  int cpu_idx;
   int i;
+
+  cpu_idx = up_cpu_index();
+  src = &SRC_GPSR0_SR0 + cpu_idx;
 
   /* Cpux gpsr init */
 
   for (i = 0; i < CONFIG_NCPUS; i++)
     {
 #ifdef CONFIG_ARCH_CHIP_AURIX_TC3XX
-      IfxSrc_init(src, IfxSrc_Tos_cpu0 + up_cpu_index(),
+      IfxSrc_init(src, (cpu_idx == 0 ? IfxSrc_Tos_cpu0 : cpu_idx + 1),
                   IRQ_TO_NDX(TRICORE_SRC2IRQ(src)));
 #else
-      IfxSrc_init(src, IfxSrc_Tos_cpu0 + up_cpu_index(),
+      IfxSrc_init(src, IfxSrc_Tos_cpu0 + cpu_idx,
                   IRQ_TO_NDX(TRICORE_SRC2IRQ(src)),
                   IfxSrc_VmId_none);
 #endif
@@ -73,8 +77,8 @@ static void tricore_gpsrinitialize(void)
   /* Cpucs gpsr init */
 
 #ifndef CONFIG_ARCH_CHIP_AURIX_TC3XX
-  src = &SRC_GPSR6_SR0 + up_cpu_index();
-  IfxSrc_init(src, IfxSrc_Tos_cpu0 + up_cpu_index(),
+  src = &SRC_GPSR6_SR0 + cpu_idx;
+  IfxSrc_init(src, IfxSrc_Tos_cpu0 + cpu_idx,
               IRQ_TO_NDX(TRICORE_SRC2IRQ(src)),
               IfxSrc_VmId_none);
 #endif
