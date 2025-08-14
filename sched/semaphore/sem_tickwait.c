@@ -87,40 +87,32 @@ int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
   /* Try to take the semaphore without waiting. */
 
   ret = nxsem_trywait(sem);
-  if (ret == OK)
+  if (ret != OK)
     {
-      /* We got it! */
+      if (delay == 0)
+        {
+          /* Timed out already before waiting */
 
-      goto out;
+          ret = -ETIMEDOUT;
+        }
+      else
+        {
+          /* Start the watchdog with interrupts still disabled */
+
+          wd_start(&rtcb->waitdog, delay, nxsem_timeout, (uintptr_t)rtcb);
+
+          /* Now perform the blocking wait */
+
+          ret = nxsem_wait(sem);
+
+          /* Stop the watchdog timer */
+
+          wd_try_cancel(&rtcb->waitdog);
+        }
     }
-
-  /* We will have to wait for the semaphore.  Make sure that we were provided
-   * with a valid timeout.
-   */
-
-  if (delay == 0)
-    {
-      /* Timed out already before waiting */
-
-      ret = -ETIMEDOUT;
-      goto out;
-    }
-
-  /* Start the watchdog with interrupts still disabled */
-
-  wd_start(&rtcb->waitdog, delay, nxsem_timeout, (uintptr_t)rtcb);
-
-  /* Now perform the blocking wait */
-
-  ret = nxsem_wait(sem);
-
-  /* Stop the watchdog timer */
-
-  wd_try_cancel(&rtcb->waitdog);
 
   /* We can now restore interrupts */
 
-out:
   leave_critical_section(flags);
   return ret;
 }
