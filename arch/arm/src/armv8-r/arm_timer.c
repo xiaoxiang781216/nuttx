@@ -135,6 +135,10 @@ static int arm_arch_timer_compare_isr(int irq, void *regs, void *arg)
   struct arm_oneshot_lowerhalf_s *priv =
     (struct arm_oneshot_lowerhalf_s *)arg;
 
+  /* Suspend the timer irq, restart again when call tick_start */
+
+  arm_arch_timer_set_irq_mask(true);
+
   if (priv->callback)
     {
       /* Then perform the callback */
@@ -348,6 +352,10 @@ static struct oneshot_lowerhalf_s *arm_oneshot_initialize(void)
 
   irq_attach(ARM_ARCH_TIMER_IRQ,
              arm_arch_timer_compare_isr, priv);
+
+  /* Avoid early timer irq cause abort. */
+
+  arm_arch_timer_set_irq_mask(true);
 
   tmrinfo("oneshot_initialize ok %p \n", &priv->lh);
 
