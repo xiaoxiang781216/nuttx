@@ -64,7 +64,7 @@
 int prctl(int option, ...)
 {
   va_list ap;
-  int errcode;
+  int errcode = OK;
 
   va_start(ap, option);
   switch (option)
@@ -88,7 +88,7 @@ int prctl(int option, ...)
             {
               serr("ERROR: No name provide\n");
               errcode = EFAULT;
-              goto errout;
+              break;
             }
 
           if (option == PR_SET_NAME_EXT ||
@@ -121,7 +121,7 @@ int prctl(int option, ...)
               leave_critical_section(flags);
               serr("ERROR: Pid does not correspond to a task: %d\n", pid);
               errcode = ESRCH;
-              goto errout;
+              break;
             }
 
           /* Now get or set the task name */
@@ -155,26 +155,25 @@ int prctl(int option, ...)
 #else
         serr("ERROR: Option not enabled: %d\n", option);
         errcode = ENOSYS;
-        goto errout;
+        break;
 #endif
 
       default:
         serr("ERROR: Unrecognized option: %d\n", option);
         errcode = EINVAL;
-        goto errout;
+        break;
     }
 
   /* Not reachable unless CONFIG_TASK_NAME_SIZE is > 0.  NOTE: This might
    * change if additional commands are supported.
    */
 
-#if CONFIG_TASK_NAME_SIZE > 0
   va_end(ap);
-  return OK;
-#endif
+  if (errcode != OK)
+    {
+      set_errno(errcode);
+      errcode = ERROR;
+    }
 
-errout:
-  va_end(ap);
-  set_errno(errcode);
-  return ERROR;
+  return errcode;
 }
