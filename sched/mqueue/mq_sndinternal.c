@@ -303,7 +303,7 @@ void nxmq_notify_send(FAR struct mqueue_inode_s *msgq)
 
       if (nxsched_add_readytorun(btcb))
         {
-          nxscehd_switch(btcb, rtcb);
+          nxscehd_switch(this_task(), rtcb);
         }
     }
 }

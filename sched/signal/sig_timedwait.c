@@ -123,7 +123,7 @@ static void nxsig_timeout(wdparm_t arg)
 
       if (nxsched_add_readytorun(wtcb))
         {
-          nxscehd_switch(wtcb, rtcb);
+          nxscehd_switch(this_task(), rtcb);
         }
     }
 
@@ -191,7 +191,7 @@ void nxsig_wait_irq(FAR struct tcb_s *wtcb, int errcode)
 
       if (nxsched_add_readytorun(wtcb))
         {
-          nxscehd_switch(wtcb, rtcb);
+          nxscehd_switch(this_task(), rtcb);
         }
     }
 

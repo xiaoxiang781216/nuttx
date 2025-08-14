@@ -301,7 +301,7 @@ static inline bool pg_dequeue(void)
 
           if (nxsched_add_readytorun(g_pftcb))
             {
-              nxscehd_switch(g_pftcb, wtcb);
+              nxscehd_switch(this_task(), wtcb);
             }
         }
     }
@@ -498,7 +498,7 @@ static inline void pg_fillcomplete(void)
 
   if (nxsched_add_readytorun(g_pftcb))
     {
-      nxscehd_switch(g_pftcb, wtcb);
+      nxscehd_switch(this_task(), wtcb);
     }
 }
 
@@ -601,7 +601,7 @@ int pg_worker(int argc, FAR char *argv[])
 
               if (nxsched_add_readytorun(g_pftcb))
                 {
-                  nxscehd_switch(g_pftcb, wtcb);
+                  nxscehd_switch(this_task(), wtcb);
                 }
 
               /* Yes .. Start the next asynchronous fill.  Check the return
@@ -686,7 +686,7 @@ int pg_worker(int argc, FAR char *argv[])
 
           if (nxsched_add_readytorun(g_pftcb))
             {
-              nxscehd_switch(g_pftcb, wtcb);
+              nxscehd_switch(this_task(), wtcb);
             }
         }
 
