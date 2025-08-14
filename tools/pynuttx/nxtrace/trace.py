@@ -28,9 +28,10 @@ from .perfetto_trace import PerfettoTrace, TaskInfo, TaskState, TraceHead
 
 try:
     from construct import Adapter, Bytes, Container, CString, FixedSized, Struct, this
+    from tqdm import tqdm
 except ModuleNotFoundError:
     print("Please execute the following command to install dependencies:")
-    print("pip install construct")
+    print("pip install construct tqdm")
     exit(1)
 
 Tstate = None
@@ -530,34 +531,71 @@ class NoteFactory:
             return None
 
     @classmethod
+    def _extract_common_fields(cls, note: Container) -> Container:
+        for key in list(note.keys()):
+            if key.endswith("_cmn") and isinstance(note[key], Container):
+                cmn = note[key]
+                for sub_key in cmn.keys():
+                    if sub_key not in note:
+                        note[sub_key] = cmn[sub_key]
+                break
+        return note
+
+    @classmethod
     def parse(cls, data):
-        def validate_note(data):
-            common = cls.note_common_s.parse(data)
-            if (
-                common.nc_pid < 0
-                or common.nc_cpu > cls.NCPUS
-                or common.nc_cpu < 0
-                or common.nc_priority > 255
-                or common.nc_priority < 0
-            ):
-                raise ValueError("Invalid note")
-            return common
+        notes = []
+        view = memoryview(data)
+        pos = 0
+        header_size = cls.note_common_s.sizeof()
 
-        common = validate_note(data)
-        validate_note(data[common.nc_length :])
-        struct = cls.struct(common.nc_type)
-        note = struct.parse(data[: common.nc_length])
-        logger.debug(note)
+        total_size = len(view)
+        last_pos = 0
+        with tqdm(
+            desc="Parse notes", unit="byte", total=total_size, leave=True
+        ) as pbar:
+            while len(view) - pos >= header_size:
+                try:
+                    common = cls.note_common_s.parse(view[pos : pos + header_size])
 
-        class Note(Container):
-            def __getattr__(self, name):
-                if name not in self.keys():
-                    for key in self.keys():
-                        if isinstance(self[key], Container):
-                            return getattr(self[key], name)
-                return self[name]
+                    if (
+                        common.nc_pid < 0
+                        or common.nc_cpu > cls.NCPUS
+                        or common.nc_cpu < 0
+                        or common.nc_priority > 255
+                        or common.nc_priority < 0
+                        or common.nc_length <= 0
+                    ):
+                        logger.error(
+                            f"Invalid note header at pos {pos}, skipping byte: {view[pos]}"
+                        )
+                        pos += 1
+                        continue
 
-        return Note(note)
+                    total_len = common.nc_length
+                    if len(view) - pos < total_len:
+                        break
+
+                    struct = cls.struct(common.nc_type)
+                    note = struct.parse(view[pos : pos + total_len])
+                    note = cls._extract_common_fields(note)
+                    notes.append(note)
+                    logger.debug(f"Parsed note type {common.nc_type} {note}")
+
+                    pos += total_len
+                    # update progress bar every 10KB
+                    if pos - last_pos > 10240:
+                        pbar.update(pos - last_pos)
+                        last_pos = pos
+
+                except Exception as e:
+                    logger.error(
+                        f"Parse error at pos {pos}: {e}, skipping byte: {view[pos]}"
+                    )
+                    pbar.update(1)
+                    pos += 1
+                    continue
+
+        return notes, pos
 
     @classmethod
     def dump(
@@ -570,10 +608,14 @@ class NoteFactory:
             raise ValueError("Plugin manager is required")
 
         plugin_manager.set_context_data(cls.ptrace, cls.parser, cls)
-        for note in notes:
-            logger.debug(note)
-            head = GenTraceHead(note)
-            plugin_manager.process_note(note, head)
+        with tqdm(
+            desc="Dump notes", unit="notes", total=len(notes), leave=True
+        ) as pbar:
+            for note in notes:
+                logger.debug(note)
+                head = GenTraceHead(note)
+                plugin_manager.process_note(note, head)
+                pbar.update(1)
 
     @classmethod
     def flush(cls):
@@ -641,25 +683,17 @@ class NoteParser:
 
     def parse(self, data):
         self.buffer.extend(data)
-        notes = list()
-        while len(self.buffer):
-            try:
-                note = NoteFactory.parse(self.buffer)
-            except Exception as e:
-                logger.error(f"skip bytes: {self.buffer[0]} {e}")
-                self.buffer = self.buffer[1:]
-                continue
+        parsed_notes, _ = NoteFactory.parse(self.buffer)
 
-            if note is None:
-                break
-
+        notes = []
+        for note in parsed_notes:
             if note.nc_type == NoteFactory.types.NOTE_TASKNAME:
                 TaskNameCache(note.nc_pid, note.name)
 
             notes.append(note)
             self.notes.append(note)
-            self.buffer = self.buffer[note.nc_length :]
-            if self.cache_size > 0 and len(notes) >= self.cache_size:
+
+            if self.cache_size > 0 and len(self.notes) > self.cache_size:
                 self.notes.pop(0)
 
         return notes

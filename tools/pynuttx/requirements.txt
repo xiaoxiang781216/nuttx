@@ -12,4 +12,5 @@ plotly
 prettytable
 pyelftools
 pylink-square
+tqdm
 viztracer
