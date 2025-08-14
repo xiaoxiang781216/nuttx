@@ -54,7 +54,8 @@ extern "C"
  * list.
  */
 
-EXTERN FAR struct binfmt_s *g_binfmts;
+DECLARE_PER_CPU_BMP(FAR struct binfmt_s *, g_binfmts);
+#define g_binfmts this_cpu_var_bmp(g_binfmts)
 
 /****************************************************************************
  * Public Function Prototypes

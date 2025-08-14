@@ -49,12 +49,13 @@ static int builtin_loadbinary(FAR struct binary_s *binp,
  * Private Data
  ****************************************************************************/
 
-static struct binfmt_s g_builtin_binfmt =
+static DEFINE_PER_CPU_BMP(struct binfmt_s, g_builtin_binfmt) =
 {
   NULL,               /* next */
   builtin_loadbinary, /* load */
   NULL,               /* unload */
 };
+#define g_builtin_binfmt this_cpu_var_bmp(g_builtin_binfmt)
 
 /****************************************************************************
  * Private Functions

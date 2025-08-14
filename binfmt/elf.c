@@ -70,12 +70,13 @@ static int elf_unloadbinary(FAR struct binary_s *binp);
  * Private Data
  ****************************************************************************/
 
-static struct binfmt_s g_elfbinfmt =
+static DEFINE_PER_CPU_BMP(struct binfmt_s, g_elfbinfmt) =
 {
   NULL,             /* next */
   elf_loadbinary,   /* load */
   elf_unloadbinary, /* unload */
 };
+#define g_elfbinfmt this_cpu_var_bmp(g_elfbinfmt)
 
 /****************************************************************************
  * Private Functions

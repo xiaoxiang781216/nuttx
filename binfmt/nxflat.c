@@ -78,12 +78,13 @@ static void nxflat_dumploadinfo(FAR struct nxflat_loadinfo_s *loadinfo);
  * Private Data
  ****************************************************************************/
 
-static struct binfmt_s g_nxflatbinfmt =
+static DEFINE_PER_CPU_BMP(struct binfmt_s, g_nxflatbinfmt) =
 {
   NULL,                /* next */
   nxflat_loadbinary,   /* load */
   nxflat_unloadbinary, /* unload */
 };
+#define g_nxflatbinfmt this_cpu_var_bmp(g_nxflatbinfmt)
 
 /****************************************************************************
  * Private Functions

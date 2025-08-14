@@ -44,7 +44,8 @@
  * list.
  */
 
-FAR struct binfmt_s *g_binfmts;
+#undef g_binfmts
+DEFINE_PER_CPU_BSS_BMP(FAR struct binfmt_s *, g_binfmts);
 
 /****************************************************************************
  * Private Functions
