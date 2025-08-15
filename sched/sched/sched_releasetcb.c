@@ -129,10 +129,6 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, uint8_t ttype)
       timer_deleteall(tcb->pid);
 #endif
 
-#ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
-      nxmutex_destroy(&nxsched_get_tls(tcb)->tl_lock);
-#endif
-
       /* Delete the thread's stack if one has been allocated */
 
       if (tcb->stack_alloc_ptr)
