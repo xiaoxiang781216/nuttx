@@ -626,7 +626,7 @@ static int romfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   return -ENOTTY;
 }
 
-#ifdef CONFIG_BUILD_KERNEL
+#if defined(CONFIG_BUILD_KERNEL) && defined(CONFIG_ARCH_VMA_MAPPING)
 static int romfs_munmap(FAR struct task_group_s *group,
                         FAR struct mm_map_entry_s *entry,
                         FAR void *start, size_t length)
@@ -664,7 +664,7 @@ static int romfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
       map->length != 0 && map->offset + map->length <= rf->rf_size)
     {
       map->vaddr  = rm->rm_xipbase + rf->rf_startoffset + map->offset;
-#ifdef CONFIG_BUILD_KERNEL
+#if defined(CONFIG_BUILD_KERNEL) && defined(CONFIG_ARCH_VMA_MAPPING)
       map->vaddr  = vm_map_region(get_current_mm(), (uintptr_t)map->vaddr,
                                   rf->rf_size);
       map->length = rf->rf_size;
