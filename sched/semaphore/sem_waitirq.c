@@ -136,6 +136,10 @@ void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode)
     {
       atomic_fetch_add(NXSEM_COUNT(sem), 1);
     }
+  else if (dq_empty(SEM_WAITLIST(sem)))
+    {
+      atomic_fetch_and(NXSEM_MHOLDER(sem), ~NXSEM_MBLOCKING_BIT);
+    }
 
   /* Indicate that the wait is over. */
 

@@ -74,6 +74,7 @@ int nxsem_wait_slow(FAR sem_t *sem)
   irqstate_t flags;
   int ret;
   bool unlocked;
+  uint32_t mholder;
   FAR struct tcb_s *htcb = NULL;
   bool mutex = NXSEM_IS_MUTEX(sem);
 
@@ -90,8 +91,6 @@ int nxsem_wait_slow(FAR sem_t *sem)
 
   if (mutex)
     {
-      uint32_t mholder;
-
       /* We lock the mutex for us by setting the blocks bit,
        * this is all that is needed if we block
        */
@@ -145,7 +144,18 @@ int nxsem_wait_slow(FAR sem_t *sem)
        * time when a task blocks on the mutex, for priority restoration
        */
 
-      if (!mutex)
+      if (mutex)
+        {
+          mholder = rtcb->pid;
+
+          if (!dq_empty(SEM_WAITLIST(sem)))
+            {
+              mholder |= NXSEM_MBLOCKING_BIT;
+            }
+
+          atomic_set(NXSEM_MHOLDER(sem), mholder);
+        }
+      else
         {
           nxsem_add_holder(sem);
         }
@@ -257,28 +267,6 @@ int nxsem_wait_slow(FAR sem_t *sem)
           sched_unlock();
         }
 #endif
-    }
-
-  /* If this now holds the mutex, set the holder TID and the lock bit */
-
-  if (mutex)
-    {
-      int32_t old = atomic_read(NXSEM_MHOLDER(sem));
-      int32_t new;
-      do
-        {
-          new = ret == OK ? rtcb->pid : old;
-
-          if (dq_empty(SEM_WAITLIST(sem)))
-            {
-              new &= ~NXSEM_MBLOCKING_BIT;
-            }
-          else
-            {
-              new |= NXSEM_MBLOCKING_BIT;
-            }
-        }
-      while (!atomic_try_cmpxchg_release(NXSEM_MHOLDER(sem), &old, new));
     }
 
   leave_critical_section(flags);
