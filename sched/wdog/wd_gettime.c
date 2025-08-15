@@ -58,7 +58,7 @@ sclock_t wd_gettime(FAR struct wdog_s *wdog)
 
   if (wdog && WDOG_ISACTIVE(wdog))
     {
-      delay = wdog->expired - clock_systime_ticks();
+      delay = (sclock_t)(wdog->expired - clock_systime_ticks());
       delay = delay < 0 ? 0 : delay;
     }
 
