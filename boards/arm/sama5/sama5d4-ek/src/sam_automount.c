@@ -33,8 +33,8 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/clock.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/fs/automount.h>
 
 #include "sama5d4-ek.h"

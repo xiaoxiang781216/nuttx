@@ -32,7 +32,7 @@
 #include <assert.h>
 #include <errno.h>
 
-#include <nuttx/irq.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/audio/i2s.h>
 #include <nuttx/audio/pcm.h>
