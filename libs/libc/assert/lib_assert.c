@@ -34,6 +34,7 @@
  * Public Functions
  ****************************************************************************/
 
+#ifndef CONFIG_LIBC_ASSERT_CUSTOM
 void __assert(FAR const char *filename, int linenum, FAR const char *msg)
 {
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
@@ -53,3 +54,4 @@ void __assert(FAR const char *filename, int linenum, FAR const char *msg)
 
   abort();
 }
+#endif
