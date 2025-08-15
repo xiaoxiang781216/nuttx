@@ -86,16 +86,15 @@ int nxmutex_init(FAR mutex_t *mutex)
 {
   int ret = nxsem_init(&mutex->sem, 0, NXSEM_NO_MHOLDER);
 
-  if (ret < 0)
+  if (ret >= 0)
     {
-      return ret;
+#ifdef CONFIG_PRIORITY_INHERITANCE
+      nxsem_set_protocol(&mutex->sem, SEM_TYPE_MUTEX | SEM_PRIO_INHERIT);
+#else
+      nxsem_set_protocol(&mutex->sem, SEM_TYPE_MUTEX);
+#endif
     }
 
-#ifdef CONFIG_PRIORITY_INHERITANCE
-  nxsem_set_protocol(&mutex->sem, SEM_TYPE_MUTEX | SEM_PRIO_INHERIT);
-#else
-  nxsem_set_protocol(&mutex->sem, SEM_TYPE_MUTEX);
-#endif
   return ret;
 }
 
@@ -149,40 +148,42 @@ int nxmutex_ticklock(FAR mutex_t *mutex, uint32_t delay)
   clock_t end;
   int ret;
 
-  /* If delay is zero, then this function is equivalent to sem_trywait() */
-
-  if (delay == 0)
+  if (delay == 0u)
     {
+      /* If delay is zero, then this function is equivalent to
+       * sem_trywait()
+       */
+
       ret = nxsem_trywait(&mutex->sem);
       if (ret >= 0)
         {
           nxmutex_add_backtrace(mutex);
         }
-
-      return ret;
     }
-
-  /* Wait until we get the lock or until the timeout expires */
-
-  end = clock() + delay + 1; /* Similar to clock_delay2abstick(delay) */
-
-  for (; ; )
+  else
     {
-      ret = nxsem_tickwait(&mutex->sem, delay);
-      if (ret >= 0)
-        {
-          nxmutex_add_backtrace(mutex);
-          break;
-        }
-      else if (ret != -EINTR && ret != -ECANCELED)
-        {
-          break;
-        }
+      /* Wait until we get the lock or until the timeout expires */
 
-      delay = end - clock();
-      if ((int32_t)delay < 0)
+      end = clock() + delay + 1u; /* Similar to clock_delay2abstick(delay) */
+
+      for (; ; )
         {
-          delay = 0;
+          ret = nxsem_tickwait(&mutex->sem, delay);
+          if (ret >= 0)
+            {
+              nxmutex_add_backtrace(mutex);
+              break;
+            }
+          else if (ret != -EINTR && ret != -ECANCELED)
+            {
+              break;
+            }
+
+          delay = end - clock();
+          if ((int32_t)delay < 0)
+            {
+              delay = 0u;
+            }
         }
     }
 
@@ -475,9 +476,9 @@ int nxrmutex_unlock(FAR rmutex_t *rmutex)
 {
   int ret = OK;
 
-  DEBUGASSERT(rmutex->count > 0);
+  DEBUGASSERT(rmutex->count > 0u);
 
-  if (--rmutex->count == 0)
+  if (--rmutex->count == 0u)
     {
       ret = nxmutex_unlock(&rmutex->mutex);
       if (ret < 0)
@@ -510,11 +511,11 @@ int nxrmutex_breaklock(FAR rmutex_t *rmutex, FAR unsigned int *count)
 {
   int ret = OK;
 
-  *count = 0;
+  *count = 0u;
   if (nxrmutex_is_hold(rmutex))
     {
       *count = rmutex->count;
-      rmutex->count = 0;
+      rmutex->count = 0u;
       ret = nxmutex_unlock(&rmutex->mutex);
       if (ret < 0)
         {
@@ -546,7 +547,7 @@ int nxrmutex_restorelock(FAR rmutex_t *rmutex, unsigned int count)
 {
   int ret = OK;
 
-  if (count != 0)
+  if (count != 0u)
     {
       ret = nxmutex_lock(&rmutex->mutex);
       if (ret >= 0)
