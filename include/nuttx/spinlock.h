@@ -248,12 +248,24 @@ static inline_function void spin_lock(FAR volatile spinlock_t *lock)
 static inline_function bool
 spin_trylock_notrace(FAR volatile spinlock_t *lock)
 {
+  bool ret = false;
+
 #ifdef CONFIG_TICKET_SPINLOCK
   return atomic_cmpxchg_acquire(&lock->next, &lock->owner,
                                 atomic_read_relax(&lock->next) + 1);
 #else /* CONFIG_TICKET_SPINLOCK */
   return atomic_xchg_acquire(lock, SP_LOCKED) != SP_LOCKED;
 #endif /* CONFIG_TICKET_SPINLOCK */
+    {
+      UP_DSB();
+    }
+  else
+    {
+      ret = true;
+      UP_DMB();
+    }
+
+  return ret;
 }
 #else
 #  define spin_trylock_notrace(lock) true
@@ -631,7 +643,7 @@ void rspin_lock(FAR rspinlock_t *lock)
 {
   rspinlock_t new_val;
   rspinlock_t old_val;
-  int         cpu     = this_cpu() + 1;
+  int         cpu = this_cpu() + 1;
 
   /* Already owned this lock. */
 
@@ -640,20 +652,21 @@ void rspin_lock(FAR rspinlock_t *lock)
   if (old_val.owner == cpu)
     {
       lock->count += 1;
-      return;
     }
-
-  /* Try seize the ownership of the lock using CAS. */
-
-  new_val.count = 1;
-  new_val.owner = cpu;
-
-  do
+  else
     {
-      old_val.val = 0;
+      /* Try seize the ownership of the lock using CAS. */
+
+      new_val.count = 1;
+      new_val.owner = cpu;
+
+      do
+        {
+          old_val.val = 0;
+        }
+      while (!atomic_cmpxchg_acquire((FAR atomic_t *)&lock->val,
+             (FAR atomic_t *)&old_val.val, new_val.val));
     }
-  while (!atomic_cmpxchg_acquire((FAR atomic_t *)&lock->val,
-                                 (FAR atomic_t *)&old_val.val, new_val.val));
 }
 
 static inline_function
@@ -713,7 +726,8 @@ static inline_function bool rspin_trylock(FAR rspinlock_t *lock)
 {
   rspinlock_t new_val;
   rspinlock_t old_val;
-  int         cpu     = this_cpu() + 1;
+  int         cpu = this_cpu() + 1;
+  bool        ret = false;
 
   /* Already owned this lock. */
 
@@ -722,23 +736,21 @@ static inline_function bool rspin_trylock(FAR rspinlock_t *lock)
   if (old_val.owner == cpu)
     {
       lock->count += 1;
-      return true;
+      ret = true;
     }
-
-  if (old_val.val != 0)
+  else if (old_val.val == 0)
     {
-      return false;
+      /* Try seize the ownership of the lock using CAS. */
+
+      new_val.count = 1;
+      new_val.owner = cpu;
+
+      ret = atomic_cmpxchg_acquire((FAR atomic_t *)&lock->val,
+                                   (FAR atomic_t *)&old_val.val,
+                                   new_val.val);
     }
 
-  /* Try seize the ownership of the lock using CAS. */
-
-  new_val.count = 1;
-  new_val.owner = cpu;
-
-  /* Try seize the ownership of the lock. */
-
-  return atomic_cmpxchg_acquire(&lock->val, &old_val.val,
-                                new_val.val);
+  return ret;
 }
 
 #  define rspin_trylock_irqsave(l, f) \
@@ -978,16 +990,18 @@ void spin_unlock_irqrestore(FAR volatile spinlock_t *lock, irqstate_t flags)
 static inline_function
 bool rspin_unlock(FAR rspinlock_t *lock)
 {
+  bool ret = false;
+
   DEBUGASSERT(lock->owner == this_cpu() + 1);
   DEBUGASSERT(lock->count >= 1);
 
   if (--lock->count == 0)
     {
-      atomic_set_release(&lock->val, 0);
-      return true;
+      atomic_set_release((FAR atomic_t *)&lock->val, 0);
+      ret = true;
     }
 
-  return false;
+  return ret;
 }
 
 static inline_function
@@ -1162,6 +1176,8 @@ static inline_function void read_lock(FAR volatile rwlock_t *lock)
 
 static inline_function bool read_trylock(FAR volatile rwlock_t *lock)
 {
+  bool ret = false;
+
   while (true)
     {
       int old = atomic_read(lock);
@@ -1169,16 +1185,17 @@ static inline_function bool read_trylock(FAR volatile rwlock_t *lock)
       if (old <= RW_SP_WRITE_LOCKED)
         {
           DEBUGASSERT(old == RW_SP_WRITE_LOCKED);
-          return false;
+          break;
         }
       else if (atomic_cmpxchg_acquire(lock, &old, old + 1))
         {
+          ret = true;
+          UP_DMB();
           break;
         }
     }
 
-  UP_DMB();
-  return true;
+  return ret;
 }
 
 /****************************************************************************
@@ -1276,6 +1293,7 @@ static inline_function void write_lock(FAR volatile rwlock_t *lock)
 static inline_function bool write_trylock(FAR volatile rwlock_t *lock)
 {
   int zero = RW_SP_UNLOCKED;
+  bool ret;
 
   return atomic_cmpxchg_acquire(lock, &zero, RW_SP_WRITE_LOCKED);
 }
