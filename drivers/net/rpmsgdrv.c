@@ -992,6 +992,9 @@ static void net_rpmsg_drv_ns_bind(FAR struct rpmsg_device *rdev,
   if (dev)
     {
       drv = container_of(dev, struct net_rpmsg_drv_s, dev.netdev);
+      drv->ept.priv = drv;
+      drv->ept.release_cb = net_rpmsg_drv_ept_release;
+      drv->ept.ns_bound_cb = net_rpmsg_drv_ns_bound;
     }
   else
     {
@@ -1008,12 +1011,11 @@ static void net_rpmsg_drv_ns_bind(FAR struct rpmsg_device *rdev,
         {
           return;
         }
-
-      rpmsg_post(&drv->ept, &drv->wait);
     }
 
   rpmsg_create_ept(&drv->ept, rdev, name, RPMSG_ADDR_ANY, dest,
                    net_rpmsg_drv_ept_cb, rpmsg_destroy_ept);
+  rpmsg_post(&drv->ept, &drv->wait);
 }
 #endif
 
