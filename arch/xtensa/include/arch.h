@@ -162,6 +162,22 @@ void *xtensa_imm_zalloc(size_t size);
 void xtensa_imm_free(void *mem);
 
 /****************************************************************************
+ * Name: xtensa_imm_delayfree
+ *
+ * Description:
+ *   Free memory from the internal heap with delay.
+ *
+ * Input Parameters:
+ *   mem - Address to be freed.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void xtensa_imm_delayfree(void *mem);
+
+/****************************************************************************
  * Name: xtensa_imm_memalign
  *
  * Description:
