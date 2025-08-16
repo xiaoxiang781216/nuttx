@@ -98,107 +98,105 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
   FAR struct task_group_s *group;
   bool mystat = false;
   irqstate_t flags;
-  int ret;
+  int ret = -ECHILD;
 
   /* Get the TCB corresponding to this PID */
 
   ctcb = nxsched_get_tcb(pid);
-  if (ctcb == NULL)
+  if (ctcb != NULL)
     {
-      return -ECHILD;
-    }
-  else if ((atomic_read(&ctcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
-    {
-      nxsched_put_tcb(ctcb);
-      return -ECHILD;
-    }
-
-  /* Then the task group corresponding to this PID */
-
-  group = ctcb->group;
-  nxsched_put_tcb(ctcb);
-  if (group == NULL)
-    {
-      return -ECHILD;
-    }
-
-  /* Lock this group so that it cannot be deleted until the wait completes */
-
-  flags = spin_lock_irqsave(&group->tg_lock);
-  group->tg_nwaiters++;
-  DEBUGASSERT(group->tg_nwaiters > 0);
-
-  /* "If more than one thread is suspended in waitpid() awaiting termination
-   * of the same process, exactly one thread will return the process status
-   * at the time of the target process termination."  Hmmm.. what do we
-   * return to the others?
-   */
-
-  if (group->tg_waitflags == 0)
-    {
-      /* Save the waitpid() options, setting the non-standard WCLAIMED bit to
-       * assure that tg_waitflags is non-zero.
-       */
-
-      group->tg_waitflags = (uint8_t)options | WCLAIMED;
-
-      /* Save the return status location (which may be NULL) */
-
-      group->tg_statloc = stat_loc;
-
-      /* We are the waipid() instance that gets the return status */
-
-      mystat = true;
-    }
-
-  /* Then wait for the task to exit */
-
-  if ((options & WNOHANG) != 0)
-    {
-      /* Don't wait if status is not available */
-
-      ret = nxsem_trywait(&group->tg_exitsem);
-    }
-  else
-    {
-      /* Wait if necessary for status to become available */
-
-      spin_unlock_irqrestore(&group->tg_lock, flags);
-      ret = nxsem_wait(&group->tg_exitsem);
-      flags = spin_lock_irqsave(&group->tg_lock);
-    }
-
-  group->tg_nwaiters--;
-
-  if (ret < 0)
-    {
-      /* Handle the awkward case of whether or not we
-       * need to nullify the stat_loc value.
-       */
-
-      if (mystat)
+      if ((group = ctcb->group) != NULL &&
+          (atomic_read(&ctcb->flags) & TCB_FLAG_EXIT_PROCESSING) == 0)
         {
-          group->tg_statloc   = NULL;
-          group->tg_waitflags = 0;
-        }
+          nxsched_put_tcb(ctcb);
 
-      if ((options & WNOHANG) != 0)
-        {
-          pid = 0;
+          /* Lock this group so that it cannot be
+           * deleted until the wait completes
+           */
+
+          flags = spin_lock_irqsave(&group->tg_lock);
+          group->tg_nwaiters++;
+          DEBUGASSERT(group->tg_nwaiters > 0);
+
+          /* "If more than one thread is suspended in waitpid() awaiting
+           * termination of the same process, exactly one thread will
+           * return the process status at the time of the target process
+           * termination."  Hmmm.. what do we return to the others?
+           */
+
+          if (group->tg_waitflags == 0)
+            {
+              /* Save the waitpid() options, setting the non-standard
+               * WCLAIMED bit to assure that tg_waitflags is non-zero.
+               */
+
+              group->tg_waitflags = (uint8_t)options | WCLAIMED;
+
+              /* Save the return status location (which may be NULL) */
+
+              group->tg_statloc = stat_loc;
+
+              /* We are the waipid() instance
+               * that gets the return status
+               */
+
+              mystat = true;
+            }
+
+          /* Then wait for the task to exit */
+
+          if ((options & WNOHANG) != 0)
+            {
+              /* Don't wait if status is not available */
+
+              ret = nxsem_trywait(&group->tg_exitsem);
+            }
+          else
+            {
+              /* Wait if necessary for status to become available */
+
+              spin_unlock_irqrestore(&group->tg_lock, flags);
+              ret = nxsem_wait(&group->tg_exitsem);
+              flags = spin_lock_irqsave(&group->tg_lock);
+            }
+
+          group->tg_nwaiters--;
+
+          if (ret < 0)
+            {
+              /* Handle the awkward case of whether or not we
+               * need to nullify the stat_loc value.
+               */
+
+              if (mystat)
+                {
+                  group->tg_statloc   = NULL;
+                  group->tg_waitflags = 0;
+                }
+
+              if ((options & WNOHANG) != 0)
+                {
+                  pid = 0;
+                }
+              else
+                {
+                  pid = ret;
+                }
+            }
+
+          /* On success, return the PID */
+
+          ret = pid;
+
+          spin_unlock_irqrestore(&group->tg_lock, flags);
+          group_drop(group);
         }
       else
         {
-          goto errout;
+          nxsched_put_tcb(ctcb);
         }
     }
 
-  /* On success, return the PID */
-
-  ret = pid;
-
-errout:
-  spin_unlock_irqrestore(&group->tg_lock, flags);
-  group_drop(group);
   return ret;
 }
 
@@ -227,7 +225,7 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
   FAR struct siginfo info;
   irqstate_t flags;
   sigset_t set;
-  int ret;
+  int ret = OK;
 
   /* Create a signal set that contains only SIGCHLD */
 
@@ -247,7 +245,6 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
   if (rtcb->group->tg_children == NULL && retains)
     {
       ret = -ECHILD;
-      goto errout;
     }
   else if (pid != INVALID_PROCESS_ID)
     {
@@ -262,9 +259,7 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
 
           if (ctcb->group->tg_ppid != rtcb->group->tg_pid)
             {
-              nxsched_put_tcb(ctcb);
               ret = -ECHILD;
-              goto errout;
             }
         }
 
@@ -273,14 +268,13 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
        * task retain child status?
        */
 
-      if (retains)
+      if (retains && ret == OK)
         {
           /* Yes.. Check if this specific pid has allocated child status? */
 
           if (group_find_child(rtcb->group, pid) == NULL)
             {
               ret = -ECHILD;
-              goto errout;
             }
         }
     }
@@ -292,7 +286,6 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
       /* There are no children */
 
       ret = -ECHILD;
-      goto errout;
     }
   else if (pid != INVALID_PROCESS_ID)
     {
@@ -304,9 +297,7 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
       if (!ctcb || !ctcb->group || ctcb->group->tg_ppid != rtcb->pid ||
           (atomic_read(&ctcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
         {
-          nxsched_put_tcb(ctcb);
           ret = -ECHILD;
-          goto errout;
         }
 
       nxsched_put_tcb(ctcb);
@@ -316,7 +307,7 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
 
   /* Loop until the child that we are waiting for dies */
 
-  for (; ; )
+  while (ret >= 0)
     {
 #ifdef CONFIG_SCHED_CHILD_STATUS
       /* Check if the task has already died. Signals are not queued in
@@ -345,7 +336,7 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
                   *stat_loc = child->ch_status << 8;
                 }
 
-              pid = child->ch_pid;
+              ret = child->ch_pid;
 
               /* Discard the child entry and break out of the loop */
 
@@ -384,6 +375,8 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
                   group_remove_child(rtcb->group, pid);
                   group_free_child(child);
                 }
+
+              ret = pid;
               break;
             }
         }
@@ -404,7 +397,7 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
                */
 
               ret = -ECHILD;
-              goto errout;
+              break;
             }
         }
 
@@ -425,14 +418,14 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
            */
 
           ret = -ECHILD;
-          goto errout;
+          break;
         }
 
 #endif /* CONFIG_SCHED_CHILD_STATUS */
 
       if ((options & WNOHANG) != 0)
         {
-          pid = 0;
+          ret = 0;
           break;
         }
 
@@ -464,7 +457,7 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
 
       if (ret < 0)
         {
-          goto errout;
+          break;
         }
 
       /* Was this the death of the thread we were waiting for? In the of
@@ -500,15 +493,11 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
             }
 #endif /* CONFIG_SCHED_CHILD_STATUS */
 
+          ret = pid;
           break;
         }
     }
 
-  /* On success, return the PID */
-
-  ret = pid;
-
-errout:
   return ret;
 }
 #endif /* CONFIG_SCHED_HAVE_PARENT */
