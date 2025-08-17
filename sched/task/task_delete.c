@@ -68,6 +68,7 @@ int nxtask_delete(pid_t pid)
 {
   FAR struct tcb_s *dtcb;
   FAR struct tcb_s *rtcb;
+  int ret = OK;
 
   /* Check if the task to delete is the calling task:  PID=0 means to delete
    * the calling task.  In this case, task_delete() is much like exit()
@@ -89,15 +90,18 @@ int nxtask_delete(pid_t pid)
        * has probably already exited.
        */
 
-      return -ESRCH;
+      ret = -ESRCH;
     }
 
   /* Only tasks and kernel threads can be deleted with this interface
    * (The semantics of the call should be sufficient to prohibit this).
    */
 
-  DEBUGASSERT((atomic_read(&dtcb->flags) & TCB_FLAG_TTYPE_MASK) !=
-              TCB_FLAG_TTYPE_PTHREAD);
+  else if ((atomic_read(&dtcb->flags) & TCB_FLAG_TTYPE_MASK) ==
+           TCB_FLAG_TTYPE_PTHREAD)
+    {
+      DEBUGPANIC();
+    }
 
   /* Non-privileged tasks and pthreads may not delete privileged kernel
    * threads.
@@ -106,21 +110,22 @@ int nxtask_delete(pid_t pid)
    * permissions are supported and a user task might also be privileged.
    */
 
-  if (((atomic_read(&rtcb->flags) & TCB_FLAG_TTYPE_MASK) !=
-      TCB_FLAG_TTYPE_KERNEL) &&
-      ((atomic_read(&dtcb->flags) & TCB_FLAG_TTYPE_MASK) ==
-      TCB_FLAG_TTYPE_KERNEL))
+  else if (((atomic_read(&rtcb->flags) & TCB_FLAG_TTYPE_MASK) !=
+           TCB_FLAG_TTYPE_KERNEL) &&
+           ((atomic_read(&dtcb->flags) & TCB_FLAG_TTYPE_MASK) ==
+           TCB_FLAG_TTYPE_KERNEL))
     {
       nxsched_put_tcb(dtcb);
-      return -EACCES;
+      ret = -EACCES;
     }
 
   /* Check if the task to delete is the calling task */
 
-  if (pid == rtcb->pid)
+  else if (pid == rtcb->pid)
     {
-      /* If it is, then what we really wanted to do was exit. Note that we
-       * don't bother to unlock the TCB since it will be going away.
+      /* If it is, then what we really wanted to do was exit.
+       * Note that we don't bother to unlock the TCB since
+       * it will be going away.
        */
 
       nxsched_put_tcb(dtcb);
@@ -129,19 +134,23 @@ int nxtask_delete(pid_t pid)
 
   /* Notify the target if the non-cancelable or deferred cancellation set */
 
-  if (nxnotify_cancellation(dtcb))
+  else if (nxnotify_cancellation(dtcb))
     {
       nxsched_put_tcb(dtcb);
-      return OK;
+      ret = OK;
+    }
+  else
+    {
+      nxsched_put_tcb(dtcb);
+
+      /* Otherwise, perform the asynchronous cancellation, letting
+       * nxtask_terminate() do all of the heavy lifting.
+       */
+
+      ret = nxtask_terminate(pid);
     }
 
-  nxsched_put_tcb(dtcb);
-
-  /* Otherwise, perform the asynchronous cancellation, letting
-   * nxtask_terminate() do all of the heavy lifting.
-   */
-
-  return nxtask_terminate(pid);
+  return ret;
 }
 
 /****************************************************************************
