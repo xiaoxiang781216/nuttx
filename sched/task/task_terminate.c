@@ -107,92 +107,100 @@ int nxtask_terminate(pid_t pid)
   FAR struct tcb_s *dtcb;
   uint8_t task_state;
   irqstate_t flags;
+  int ret = OK;
 
   /* Find for the TCB associated with matching PID */
 
   dtcb = nxsched_get_tcb(pid);
   if (!dtcb)
     {
-      return -ESRCH;
+      ret = -ESRCH;
     }
-
-  if (atomic_fetch_or(&dtcb->flags, TCB_FLAG_EXIT_PROCESSING) &
-                      TCB_FLAG_EXIT_PROCESSING)
+  else if (atomic_fetch_or(&dtcb->flags, TCB_FLAG_EXIT_PROCESSING) &
+                           TCB_FLAG_EXIT_PROCESSING)
     {
       nxsched_put_tcb(dtcb);
-      return -ESRCH;
-    }
-
-  atomic_fetch_or(&dtcb->flags, TCB_FLAG_KILL_PROCESSING);
-
-  /* Even if we decrease the reference count here,
-   * dtcb won't be released elsewhere, because TCB already
-   * has TCB_FLAG_EXIT_PROCESSING flag.
-   */
-
-  nxsched_put_tcb(dtcb);
-  nxsched_release_pid(pid);
-
-  flags = enter_critical_section();
-
-  /* Remove dtcb from tasklist, let remove_readtorun() do the job */
-
-  task_state = dtcb->task_state;
-#ifdef CONFIG_SMP
-  if (task_state == TSTATE_TASK_RUNNING &&
-      dtcb->cpu != this_cpu())
-    {
-      cpu_set_t affinity;
-      atomic_t tcb_flags;
-      int ret;
-
-      tcb_flags = atomic_fetch_or(&dtcb->flags, TCB_FLAG_CPU_LOCKED);
-
-      affinity = dtcb->affinity;
-      CPU_ZERO(&dtcb->affinity);
-      CPU_SET(dtcb->cpu, &dtcb->affinity);
-
-      ret = nxsched_smp_call_single(dtcb->cpu, terminate_handler,
-                                    (FAR void *)(uintptr_t)dtcb);
-
-      if (ret < 0)
-        {
-          /* Already terminate */
-
-          leave_critical_section(flags);
-          return ret;
-        }
-
-      atomic_set(&dtcb->flags, tcb_flags);
-      dtcb->affinity = affinity;
+      ret = -ESRCH;
     }
   else
-#endif
     {
-      nxsched_remove_readytorun(dtcb);
+      atomic_fetch_or(&dtcb->flags, TCB_FLAG_KILL_PROCESSING);
+
+      /* Even if we decrease the reference count here,
+       * dtcb won't be released elsewhere, because TCB already
+       * has TCB_FLAG_EXIT_PROCESSING flag.
+       */
+
+      nxsched_put_tcb(dtcb);
+      nxsched_release_pid(pid);
+
+      flags = enter_critical_section();
+
+      /* Remove dtcb from tasklist, let remove_readtorun() do the job */
+
+      task_state = dtcb->task_state;
+#ifdef CONFIG_SMP
+      if (task_state == TSTATE_TASK_RUNNING &&
+          dtcb->cpu != this_cpu())
+        {
+          cpu_set_t affinity;
+          atomic_t tcb_flags;
+
+          tcb_flags = atomic_fetch_or(&dtcb->flags, TCB_FLAG_CPU_LOCKED);
+
+          affinity = dtcb->affinity;
+          CPU_ZERO(&dtcb->affinity);
+          CPU_SET(dtcb->cpu, &dtcb->affinity);
+
+          ret = nxsched_smp_call_single(dtcb->cpu, terminate_handler,
+                                        (FAR void *)(uintptr_t)dtcb);
+
+          if (ret < 0)
+            {
+              /* Already terminate */
+
+              leave_critical_section(flags);
+            }
+          else
+            {
+              atomic_set(&dtcb->flags, tcb_flags);
+              dtcb->affinity = affinity;
+            }
+        }
+      else
+#endif
+        {
+          nxsched_remove_readytorun(dtcb);
+        }
+
+      if (ret >= 0)
+        {
+          dtcb->task_state = task_state;
+
+          /* Perform common task termination logic.  We need to do
+           * this as early as possible so that higher level clean-up logic
+           * can run in a healthy tasking environment.
+           *
+           * I suppose EXIT_SUCCESS is an appropriate return value???
+           */
+
+          nxtask_exithook(dtcb, EXIT_SUCCESS);
+
+          leave_critical_section(flags);
+
+          /* Since all tasks pass through this function as the final step
+           * in their exit sequence, this is an appropriate place to inform
+           * any instrumentation layer that the task no longer exists.
+           */
+
+          sched_note_stop(dtcb);
+
+          /* Deallocate its TCB */
+
+          ret = nxsched_release_tcb(dtcb, atomic_read(&dtcb->flags) &
+                                    TCB_FLAG_TTYPE_MASK);
+        }
     }
 
-  dtcb->task_state = task_state;
-
-  /* Perform common task termination logic.  We need to do
-   * this as early as possible so that higher level clean-up logic
-   * can run in a healthy tasking environment.
-   *
-   * I suppose EXIT_SUCCESS is an appropriate return value???
-   */
-
-  nxtask_exithook(dtcb, EXIT_SUCCESS);
-
-  leave_critical_section(flags);
-  /* Since all tasks pass through this function as the final step in their
-   * exit sequence, this is an appropriate place to inform any
-   * instrumentation layer that the task no longer exists.
-   */
-
-  sched_note_stop(dtcb);
-
-  /* Deallocate its TCB */
-
-  return nxsched_release_tcb(dtcb, atomic_read(&dtcb->flags) &
-                             TCB_FLAG_TTYPE_MASK);
+  return ret;
 }
