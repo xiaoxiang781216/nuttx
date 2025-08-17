@@ -86,21 +86,23 @@ set(PREPROCESS ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)
 
 if(CONFIG_ARCH_MULTIBOOT1)
   message(STATUS "Generating: nuttx.mb1 in ELF32/multiboot1")
-
+  if(CONFIG_ALLSYMS)
+    set(FINAL_NUTTX_ELF "${CMAKE_BINARY_DIR}/final_nuttx")
+  else()
+    set(FINAL_NUTTX_ELF "${CMAKE_BINARY_DIR}/nuttx")
+  endif()
   set(NUTTX_ELF "${CMAKE_BINARY_DIR}/nuttx")
   set(NUTTX_BIN "${NUTTX_ELF}.bin")
   set(NUTTX_REALMODE_BIN "${NUTTX_ELF}_realmode.bin")
   set(NUTTX_MB1 "${NUTTX_ELF}.mb1")
-
   add_custom_command(
     OUTPUT ${NUTTX_BIN} ${NUTTX_REALMODE_BIN}
-    COMMAND ${CMAKE_OBJCOPY} -R .realmode -R .note.* -O binary ${NUTTX_ELF}
-            ${NUTTX_BIN}
-    COMMAND ${CMAKE_OBJCOPY} -j .realmode -O binary ${NUTTX_ELF}
+    COMMAND ${CMAKE_OBJCOPY} -R .realmode -R .note.* -O binary
+            ${FINAL_NUTTX_ELF} ${NUTTX_BIN}
+    COMMAND ${CMAKE_OBJCOPY} -j .realmode -O binary ${FINAL_NUTTX_ELF}
             ${NUTTX_REALMODE_BIN}
-    DEPENDS ${NUTTX_ELF}
+    DEPENDS ${FINAL_NUTTX_ELF}
     COMMENT "Generating binary and realmode segments from nuttx ELF")
-
   add_custom_command(
     OUTPUT ${NUTTX_MB1}
     COMMAND
@@ -110,6 +112,5 @@ if(CONFIG_ARCH_MULTIBOOT1)
       ${CMAKE_SOURCE_DIR}/arch/x86_64/src/common/multiboot1.ld -o ${NUTTX_MB1}
     DEPENDS ${NUTTX_BIN} ${NUTTX_REALMODE_BIN}
     COMMENT "Building nuttx.mb1 multiboot1 image")
-
   add_custom_target(multiboot1 ALL DEPENDS ${NUTTX_MB1})
 endif()
