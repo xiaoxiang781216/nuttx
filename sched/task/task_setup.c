@@ -90,6 +90,7 @@ static int nxtask_assign_pid(FAR struct tcb_s *tcb)
   int   hash_ndx;
   void *temp;
   int   i;
+  int   ret = -ENOMEM;
 
   /* NOTE:
    * ERROR means that the g_pidhash[] table is completely full.
@@ -98,109 +99,117 @@ static int nxtask_assign_pid(FAR struct tcb_s *tcb)
 
   /* We'll try every allowable pid */
 
-retry:
-
-  /* Protect the following operation with a critical section
-   * because g_pidhash is accessed from an interrupt context
-   */
-
-  flags = spin_lock_irqsave(&g_pidhashlock);
-
-  /* Get the next process ID candidate */
-
-  next_pid = g_lastpid + 1;
-  for (i = 0; i < g_npidhash; i++)
+  for (; ; )
     {
-      /* Verify that the next_pid is in the valid range */
+      /* Protect the following operation with a critical section
+       * because g_pidhash is accessed from an interrupt context
+       */
 
-      if (next_pid <= 0)
+      flags = spin_lock_irqsave(&g_pidhashlock);
+
+      /* Get the next process ID candidate */
+
+      next_pid = g_lastpid + 1;
+      for (i = 0; i < g_npidhash; i++)
         {
-          next_pid  = 1;
+          /* Verify that the next_pid is in the valid range */
+
+          if (next_pid <= 0)
+            {
+              next_pid = 1;
+            }
+
+          /* Get the hash_ndx associated with the next_pid */
+
+          hash_ndx = PIDHASH(next_pid);
+
+          /* Check if there is a (potential) duplicate of this pid */
+
+          if (!g_pidhash[hash_ndx])
+            {
+              /* Assign this PID to the task */
+
+              g_pidhash[hash_ndx] = tcb;
+              tcb->pid = next_pid;
+              atomic_set(&tcb->refs, 1);
+              g_lastpid = next_pid;
+
+              spin_unlock_irqrestore(&g_pidhashlock, flags);
+              ret = OK;
+              break;
+            }
+
+            next_pid++;
         }
 
-      /* Get the hash_ndx associated with the next_pid */
-
-      hash_ndx = PIDHASH(next_pid);
-
-      /* Check if there is a (potential) duplicate of this pid */
-
-      if (!g_pidhash[hash_ndx])
+      if (ret == OK)
         {
-          /* Assign this PID to the task */
-
-          g_pidhash[hash_ndx] = tcb;
-          tcb->pid = next_pid;
-          atomic_set(&tcb->refs, 1);
-          g_lastpid = next_pid;
-
-          spin_unlock_irqrestore(&g_pidhashlock, flags);
-          return OK;
+          break;
         }
 
-      next_pid++;
-    }
+      /* If we get here, then the g_pidhash[] table is completely full.
+       * We will alloc new space and copy original g_pidhash to it to
+       * expand space.
+       */
 
-  /* If we get here, then the g_pidhash[] table is completely full.
-   * We will alloc new space and copy original g_pidhash to it to
-   * expand space.
-   */
+      temp = g_pidhash;
 
-  temp = g_pidhash;
+      /* Calling malloc in a critical section may cause thread switching.
+       * Here we check whether other threads have applied successfully,
+       * and if successful, return directly
+       */
 
-  /* Calling malloc in a critical section may cause thread switching.
-   * Here we check whether other threads have applied successfully,
-   * and if successful, return directly
-   */
-
-  spin_unlock_irqrestore(&g_pidhashlock, flags);
-  pidhash = kmm_zalloc(g_npidhash * 2 * sizeof(*pidhash));
-  if (pidhash == NULL)
-    {
-      return -ENOMEM;
-    }
-
-  /* Handle conner case: context siwtch happened when kmm_malloc */
-
-  spin_lock_irqsave(&g_pidhashlock);
-  if (temp != g_pidhash)
-    {
       spin_unlock_irqrestore(&g_pidhashlock, flags);
-      kmm_free(pidhash);
-      goto retry;
-    }
-
-  g_npidhash *= 2;
-
-  /* All original pid and hash_ndx are mismatch,
-   * so we need to rebuild their relationship
-   */
-
-  for (i = 0; i < g_npidhash / 2; i++)
-    {
-      if (g_pidhash[i] == NULL)
+      pidhash = kmm_zalloc(g_npidhash * 2 * sizeof(*pidhash));
+      if (pidhash == NULL)
         {
-          /* If the pid is not used, skip it.
-           * This may be triggered when a context switch occurs
-           * during zalloc and a thread is destroyed.
-           */
+          ret = -ENOMEM;
+          break;
+        }
 
+      /* Handle conner case: context siwtch happened when kmm_malloc */
+
+      spin_lock_irqsave(&g_pidhashlock);
+      if (temp != g_pidhash)
+        {
+          spin_unlock_irqrestore(&g_pidhashlock, flags);
+          kmm_free(pidhash);
           continue;
         }
 
-      hash_ndx = PIDHASH(g_pidhash[i]->pid);
-      DEBUGASSERT(pidhash[hash_ndx] == NULL);
-      pidhash[hash_ndx] = g_pidhash[i];
+      g_npidhash *= 2;
+
+      /* All original pid and hash_ndx are mismatch,
+       * so we need to rebuild their relationship
+       */
+
+      for (i = 0; i < g_npidhash / 2; i++)
+        {
+          if (g_pidhash[i] == NULL)
+            {
+              /* If the pid is not used, skip it.
+               * This may be triggered when a context switch occurs
+               * during zalloc and a thread is destroyed.
+               */
+
+              continue;
+            }
+
+          hash_ndx = PIDHASH(g_pidhash[i]->pid);
+          DEBUGASSERT(pidhash[hash_ndx] == NULL);
+          pidhash[hash_ndx] = g_pidhash[i];
+        }
+
+      /* Release resource for original g_pidhash, using new g_pidhash */
+
+      g_pidhash = pidhash;
+      spin_unlock_irqrestore(&g_pidhashlock, flags);
+      kmm_free(temp);
+
+      /* Let's try every allowable pid again */
     }
 
-  /* Release resource for original g_pidhash, using new g_pidhash */
-
-  g_pidhash = pidhash;
-  spin_unlock_irqrestore(&g_pidhashlock, flags);
-  kmm_free(temp);
-
-  /* Let's try every allowable pid again */
-
-  goto retry;
+  return ret;
 }
 
 /****************************************************************************
