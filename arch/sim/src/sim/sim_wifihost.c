@@ -183,7 +183,6 @@ struct sim_wifi_s
   char host_ifname[IFNAMSIZ];   /* The wlan interface name on the host */
   uint8_t network_id;           /* for sta, default is 0 */
   hrtime_t scantime;
-  struct wdog_s wdog;
 };
 
 /* for wireless event */

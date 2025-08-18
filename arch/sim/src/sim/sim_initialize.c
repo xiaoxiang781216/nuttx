@@ -76,7 +76,7 @@ static void sim_init_cmdline(void)
 #endif
 
 /****************************************************************************
- * Name: sim_x11event_interrupt
+ * Name: sim_x11event_work
  *
  * Description:
  *   interrupts event process function
@@ -85,16 +85,16 @@ static void sim_init_cmdline(void)
 
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
     defined(CONFIG_SIM_BUTTONS)
-static void sim_x11event_interrupt(wdparm_t arg)
+static void sim_x11event_work(void *arg)
 {
   sim_x11events();
-  work_queue(HPWORK, &g_x11event_work, (void *)sim_x11event_interrupt,
-             NULL, SIM_X11EVENT_PERIOD);
+  work_queue_next(HPWORK, &g_x11event_work, sim_x11event_work,
+                  NULL, SIM_X11EVENT_PERIOD);
 }
 #endif
 
 /****************************************************************************
- * Name: sim_x11update_interrupt
+ * Name: sim_x11update_work
  *
  * Description:
  *   interrupts event process function
@@ -102,11 +102,11 @@ static void sim_x11event_interrupt(wdparm_t arg)
  ****************************************************************************/
 
 #ifdef CONFIG_SIM_X11FB
-static void sim_x11update_interrupt(wdparm_t arg)
+static void sim_x11update_work(void *arg)
 {
   sim_x11loop();
-  work_queue(HPWORK, &g_x11update_work, (void *)sim_x11update_interrupt,
-             NULL, SIM_X11UPDATE_PERIOD);
+  work_queue_next(HPWORK, &g_x11update_work, sim_x11update_work,
+                  NULL, SIM_X11UPDATE_PERIOD);
 }
 #endif
 
@@ -307,12 +307,12 @@ void up_initialize(void)
 
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
     defined(CONFIG_SIM_BUTTONS)
-  work_queue(HPWORK, &g_x11event_work, (void *)sim_x11event_interrupt,
+  work_queue(HPWORK, &g_x11event_work, sim_x11event_work,
              NULL, SIM_X11EVENT_PERIOD);
 #endif
 
 #ifdef CONFIG_SIM_X11FB
-  work_queue(HPWORK, &g_x11update_work, (void *)sim_x11update_interrupt,
+  work_queue(HPWORK, &g_x11update_work, sim_x11update_work,
              NULL, SIM_X11UPDATE_PERIOD);
 #endif
 }

@@ -40,7 +40,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define SIM_CAN_WDOG_DELAY  USEC2TICK(1000)
+#define SIM_CAN_WORK_DELAY  USEC2TICK(1000)
 
 /****************************************************************************
  * Private Types
@@ -50,7 +50,7 @@ struct sim_canchar_s
 {
   struct can_dev_s  dev;  /* CAN character device */
   struct host_can_s host; /* Host CAN handler */
-  struct wdog_s     wdog; /* Work queue for RX */
+  struct work_s     work; /* Work queue for RX */
 };
 
 /****************************************************************************
@@ -69,7 +69,7 @@ static int  sim_can_remoterequest(struct can_dev_s *dev, uint16_t id);
 static int  sim_can_send(struct can_dev_s *dev, struct can_msg_s *msg);
 static bool sim_can_txready(struct can_dev_s *dev);
 static bool sim_can_txempty(struct can_dev_s *dev);
-static void sim_can_interrupt(wdparm_t arg);
+static void sim_can_work(void *arg);
 
 /****************************************************************************
  * Private Data
@@ -119,7 +119,7 @@ static int sim_can_setup(struct can_dev_s *dev)
 
   /* Start RX work */
 
-  return wd_start(&priv->wdog, 0, sim_can_interrupt, (wdparm_t)priv);
+  return work_queue(HPWORK, &priv->work, sim_can_work, priv, 0);
 }
 
 /****************************************************************************
@@ -132,7 +132,7 @@ static void sim_can_shutdown(struct can_dev_s *dev)
 
   /* Cancel work */
 
-  wd_cancel(&priv->wdog);
+  work_cancel(HPWORK, &priv->work);
 
   host_can_ifdown(&priv->host);
 }
@@ -267,7 +267,7 @@ static bool sim_can_txempty(struct can_dev_s *dev)
 }
 
 /****************************************************************************
- * Name: sim_can_interrupt
+ * Name: sim_can_work
  *
  * Description:
  *   Feed pending packets on the host sockets into the CAN stack.
@@ -277,7 +277,7 @@ static bool sim_can_txempty(struct can_dev_s *dev)
  *
  ****************************************************************************/
 
-static void sim_can_interrupt(wdparm_t arg)
+static void sim_can_work(void *arg)
 {
   struct sim_canchar_s *priv = (struct sim_canchar_s *)arg;
   struct canfd_frame    frame;
@@ -322,7 +322,8 @@ static void sim_can_interrupt(wdparm_t arg)
     }
 
 nodata:
-  wd_start_next(&priv->wdog, SIM_CAN_WDOG_DELAY, sim_can_interrupt, arg);
+  work_queue_next(HPWORK, &priv->work, sim_can_work, arg,
+                  SIM_CAN_WORK_DELAY);
 }
 
 /****************************************************************************
