@@ -244,7 +244,6 @@ static void tcp_sendcommon(FAR struct net_driver_s *dev,
   g_netstats.tcp.sent++;
 #endif
 
-#if !defined(CONFIG_NET_TCP_WRITE_BUFFERS)
   if ((tcp->flags & (TCP_SYN | TCP_FIN)) != 0)
     {
       /* Remember sndseq that will be used in case of a possible
@@ -259,9 +258,6 @@ static void tcp_sendcommon(FAR struct net_driver_s *dev,
 
       net_incr32(conn->sndseq, 1);
     }
-#else
-  /* REVISIT for the buffered mode */
-#endif
 }
 
 /****************************************************************************
