@@ -582,13 +582,8 @@ static inline_function int nxmutex_trylock(FAR mutex_t *mutex)
 
 static inline_function int nxmutex_unlock(FAR mutex_t *mutex)
 {
-  int ret = nxsem_post(&mutex->sem);
-  if (ret >= 0)
-    {
-      nxmutex_remove_backtrace(mutex);
-    }
-
-  return ret;
+  nxmutex_remove_backtrace(mutex);
+  return nxsem_post(&mutex->sem);
 }
 
 /****************************************************************************
@@ -604,8 +599,8 @@ static inline_function int nxmutex_unlock(FAR mutex_t *mutex)
 
 static inline_function void nxmutex_reset(FAR mutex_t *mutex)
 {
-  nxsem_reset(&mutex->sem, 1);
   nxmutex_remove_backtrace(mutex);
+  nxsem_reset(&mutex->sem, 1);
 }
 
 /****************************************************************************
