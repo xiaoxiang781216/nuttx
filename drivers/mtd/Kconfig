@@ -159,10 +159,9 @@ config MTD_CONFIG_NVS
 		on-chip NorFlash, it implements basic KV write, read, and delete
 		functions, and supports power down protection.
 
-config MTD_CONFIG_ZMS
-	bool "ZMS"
+config MTD_CONFIG_NVS2
+	bool "NVS2"
 	---help---
-		https://docs.zephyrproject.org/latest/services/storage/zms/zms.html
 		It supports classical on-chip NOR flash as well as new technologies
 		like RRAM and MRAM that do not require a separate erase operation
 		at all.
@@ -212,14 +211,14 @@ config MTD_CONFIG_NAME_LEN
 config MTD_CONFIG_BLOCKSIZE_MULTIPLE
 	int "Set NVS blocksize multiple"
 	default 1
-	depends on MTD_CONFIG_NVS || MTD_CONFIG_ZMS
+	depends on MTD_CONFIG_NVS || MTD_CONFIG_NVS2
 	---help---
 		The size of a multiple of blocksize compared to erasize
 
 config MTD_CONFIG_CACHE_SIZE
 	int "Non-volatile Storage lookup cache size"
 	default 0
-	depends on MTD_CONFIG_NVS || MTD_CONFIG_ZMS
+	depends on MTD_CONFIG_NVS || MTD_CONFIG_NVS2
 	---help---
 		Number of entries in Non-volatile Storage lookup cache.
 		It is recommended that it be a power of 2.
@@ -245,13 +244,13 @@ config MTD_CONFIG_FULL_CACHE
 endchoice # Non-volatile Storage lookup cache size
 
 config MTD_CONFIG_AUTOFORMAT
-	bool "ZMS Autoformat"
+	bool "NVS Autoformat"
 	default n
-	depends on MTD_CONFIG_ZMS
+	depends on MTD_CONFIG_NVS2
 	---help---
-		Attempt to register zms first. If the register is successful,
+		Attempt to register nvs first. If the register is successful,
 		it will be completed. If the register fails, all data will be
-		cleared first, and then register zms again.
+		cleared first, and then register nvs again.
 
 config MTD_CONFIG_BUFFER_SIZE
 	int "Buffer size on the stack"

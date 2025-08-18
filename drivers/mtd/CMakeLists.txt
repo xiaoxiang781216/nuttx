@@ -23,8 +23,8 @@
 if(CONFIG_MTD)
   set(SRCS ftl.c)
 
-  if(CONFIG_MTD_CONFIG_ZMS)
-    list(APPEND SRCS mtd_config_zms.c)
+  if(CONFIG_MTD_CONFIG_NVS2)
+    list(APPEND SRCS mtd_config_nvs2.c)
   elseif(CONFIG_MTD_CONFIG_NVS)
     list(APPEND SRCS mtd_config_nvs.c)
   elseif(CONFIG_MTD_CONFIG)
