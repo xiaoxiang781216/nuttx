@@ -333,7 +333,7 @@ int addrenv_join(FAR struct tcb_s *ptcb, FAR struct tcb_s *tcb)
 
 int addrenv_leave(FAR struct tcb_s *tcb)
 {
-  uint8_t ttype = atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK;
+  int ttype = atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK;
   int ret;
 
   /* Detach from the address environment */

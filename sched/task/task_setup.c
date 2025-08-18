@@ -266,7 +266,7 @@ static inline void nxtask_inherit_affinity(FAR struct tcb_s *tcb)
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_HAVE_PARENT
-static inline void nxtask_save_parent(FAR struct tcb_s *tcb, uint8_t ttype)
+static inline void nxtask_save_parent(FAR struct tcb_s *tcb, int ttype)
 {
   DEBUGASSERT(tcb != NULL && tcb->group != NULL);
 
@@ -414,7 +414,7 @@ static inline void nxtask_dup_dspace(FAR struct tcb_s *tcb)
 
 static int nxthread_setup_scheduler(FAR struct tcb_s *tcb, int priority,
                                     start_t start, CODE void *entry,
-                                    uint8_t ttype)
+                                    int ttype)
 {
   FAR struct tcb_s *rtcb = this_task();
   irqstate_t flags;
@@ -693,7 +693,7 @@ int nxtask_setup_stackargs(FAR struct tcb_s *tcb,
  ****************************************************************************/
 
 int nxtask_setup_scheduler(FAR struct tcb_s *tcb, int priority,
-                           start_t start, main_t main, uint8_t ttype)
+                           start_t start, main_t main, int ttype)
 {
   /* Perform common thread setup */
 

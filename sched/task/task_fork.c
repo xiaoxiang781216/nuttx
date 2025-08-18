@@ -102,7 +102,7 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
   FAR char **argv;
   size_t stack_size;
   size_t heap_size;
-  uint8_t ttype;
+  int ttype;
   int priority;
   int ret;
 

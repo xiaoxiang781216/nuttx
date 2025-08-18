@@ -90,7 +90,7 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
                 FAR const posix_spawnattr_t *attr,
                 FAR char * const argv[], FAR char * const envp[])
 {
-  uint8_t ttype = atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK;
+  int ttype = atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK;
   size_t stacksize = attr->stacksize;
 #ifndef CONFIG_BUILD_KERNEL
   FAR void *stack = attr->stackaddr;

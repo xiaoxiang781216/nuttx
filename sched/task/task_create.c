@@ -74,7 +74,7 @@
  *
  ****************************************************************************/
 
-int nxthread_create(FAR const char *name, uint8_t ttype, int priority,
+int nxthread_create(FAR const char *name, int ttype, int priority,
                     FAR void *stack_addr, int stack_size, main_t entry,
                     FAR char * const argv[], FAR char * const envp[])
 {

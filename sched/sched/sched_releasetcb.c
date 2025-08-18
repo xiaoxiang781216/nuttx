@@ -106,7 +106,7 @@ void nxsched_release_pid(pid_t pid)
  *
  ****************************************************************************/
 
-int nxsched_release_tcb(FAR struct tcb_s *tcb, uint8_t ttype)
+int nxsched_release_tcb(FAR struct tcb_s *tcb, int ttype)
 {
 #ifndef CONFIG_DISABLE_PTHREAD
   FAR struct task_group_s *group;

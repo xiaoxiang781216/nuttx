@@ -119,7 +119,7 @@ static inline void group_inherit_identity(FAR struct task_group_s *group)
  *
  ****************************************************************************/
 
-int group_initialize(FAR struct tcb_s *tcb, uint8_t ttype, size_t heapsize)
+int group_initialize(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
 {
   FAR struct task_group_s *group;
   int ret;

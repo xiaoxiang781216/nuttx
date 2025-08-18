@@ -73,7 +73,7 @@
  ****************************************************************************/
 
 static inline void
-group_release(FAR struct task_group_s *group, uint8_t ttype)
+group_release(FAR struct task_group_s *group, int ttype)
 {
   /* Destroy the mutex */
 

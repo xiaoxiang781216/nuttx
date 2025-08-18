@@ -69,7 +69,7 @@ void group_heap_uninitialize(FAR struct mm_heap_s *heap);
 #  define group_heap_uninitialize(heap)
 #endif
 
-int group_initialize(FAR struct tcb_s *tcb, uint8_t ttype, size_t heapsize);
+int group_initialize(FAR struct tcb_s *tcb, int ttype, size_t heapsize);
 
 void group_postinitialize(FAR struct tcb_s *tcb);
 #ifndef CONFIG_DISABLE_PTHREAD
