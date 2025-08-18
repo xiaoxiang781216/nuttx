@@ -1108,7 +1108,6 @@ static int audio_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 {
   FAR struct inode *inode = filep->f_inode;
   FAR struct audio_upperhalf_s *upper = inode->i_private;
-  int buffer_size;
   int ret;
 
   ret = nxmutex_lock(&upper->lock);
@@ -1117,13 +1116,11 @@ static int audio_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
       return ret;
     }
 
-  buffer_size = upper->apbs[0]->nmaxbytes;
-
   /* Return the address corresponding to the start of frame buffer. */
 
-  if (map->length == buffer_size)
+  if (upper->apbs && map->length == upper->apbs[0]->nmaxbytes)
     {
-      ret = map->offset / buffer_size;
+      ret = map->offset / upper->apbs[0]->nmaxbytes;
 
       DEBUGASSERT(ret < upper->periods);
 
