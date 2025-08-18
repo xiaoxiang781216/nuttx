@@ -659,8 +659,8 @@ static int audio_freebuffer(FAR struct audio_upperhalf_s *upper,
   if (ret > 0 && share)
     {
       bufdesc->u.buffer = NULL;
-      upper->apbs[upper->periods] = NULL;
       upper->periods--;
+      upper->apbs[upper->periods] = NULL;
       if (upper->periods == 0)
         {
           kmm_free(upper->apbs);
