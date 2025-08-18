@@ -454,6 +454,12 @@ static int procfs_open(FAR struct file *filep, FAR const char *relpath,
           DEBUGASSERT(g_procfs_entries[x].ops &&
                       g_procfs_entries[x].ops->open);
 
+          /* Bind debug entry to file.  Debug entries directly reference
+           * target variables, so we reuse the same entry for all opens.
+           */
+
+          filep->f_priv = g_procfs_entries[x].priv;
+
           ret = g_procfs_entries[x].ops->open(filep, relpath, oflags, mode);
           if (ret == OK)
             {

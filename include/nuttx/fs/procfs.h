@@ -98,6 +98,7 @@ struct procfs_entry_s
   FAR const struct procfs_operations *ops;
   uint8_t type;
   mode_t mode;
+  FAR void *priv;
 };
 
 /* Specifies the common elements for an open file in the procfs
