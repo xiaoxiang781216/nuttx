@@ -166,11 +166,15 @@ class StackUsage(gdb.Command):
         )
 
     def format_print(self, pid, stack, tcb):
-        def gen_info_str(x):
+        def gen_usage_str(x):
             usage = x / stack._stack_size
-            res = f"{str(x)} -> {usage:.2%}"
+            res = f"{usage:.2%}"
             if usage > 0.8:
                 res += "!"
+            return res
+
+        def gen_info_str(x):
+            res = f"{str(x)} -> {gen_usage_str(x)}"
             return res
 
         if hasattr(self, "table"):
@@ -181,8 +185,10 @@ class StackUsage(gdb.Command):
                     hex(tcb["entry"]["pthread"]),
                     hex(stack._stack_base),
                     stack._stack_size,
-                    gen_info_str(stack.cur_usage()),
-                    gen_info_str(stack.max_usage()),
+                    str(stack.cur_usage()),
+                    gen_usage_str(stack.cur_usage()),
+                    str(stack.max_usage()),
+                    gen_usage_str(stack.max_usage()),
                 ]
             )
         else:
@@ -220,7 +226,9 @@ class StackUsage(gdb.Command):
                 "Base",
                 "Size",
                 "CurUsage",
+                "CurUsage%",
                 "MaxUsage",
+                "MaxUsage%",
             ]
         else:
             gdb.write(
