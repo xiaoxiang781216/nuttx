@@ -219,6 +219,7 @@ class StackUsage(gdb.Command):
         )
         if prettytable:
             self.table = prettytable.PrettyTable()
+            self.table.align = "l"
             self.table.field_names = [
                 "PID",
                 "NAME",
