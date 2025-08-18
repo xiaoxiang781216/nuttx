@@ -459,7 +459,7 @@ typedef struct cookie_io_functions_t
 struct file
 {
   int               f_oflags;   /* Open mode flags */
-  atomic_t          f_refs;     /* Reference count */
+  int               f_refs;     /* Reference count */
   off_t             f_pos;      /* File position */
   FAR struct inode *f_inode;    /* Driver or file system interface */
   FAR void         *f_priv;     /* Per file driver private data */

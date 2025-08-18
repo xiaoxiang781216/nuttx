@@ -75,7 +75,7 @@ static void fdlist_get_by_index(FAR struct fdlist *list,
   *filep = fdp1->f_file;
   if (*filep != NULL)
     {
-      atomic_fetch_add(&(*filep)->f_refs, 1);
+      (*filep)->f_refs++;
     }
 
   spin_unlock_irqrestore_notrace(&list->fl_lock, flags);
@@ -221,7 +221,7 @@ static void fdlist_install(FAR struct fdlist *list, int fd,
   fdp1 = &list->fl_fds[l1][l2];
   filep1 = fdp1->f_file;
   fdp1->f_file = filep;
-  file_ref(filep);
+  filep->f_refs++;
   fdp1->f_cloexec = !!(oflags & O_CLOEXEC);
   FS_ADD_BACKTRACE(fdp1);
   if (copy)
@@ -613,7 +613,7 @@ int fdlist_dupfile(FAR struct fdlist *list, int oflags, int minfd,
           fdp = &list->fl_fds[i][j];
           if (fdp->f_file == NULL)
             {
-              atomic_fetch_add(&filep->f_refs, 1);
+              filep->f_refs++;
               fdp->f_file        = filep;
               fdp->f_cloexec     = !!(oflags & O_CLOEXEC);
  #ifdef CONFIG_FDSAN
@@ -675,7 +675,7 @@ int fdlist_allocate(FAR struct fdlist *list, int oflags,
       return -ENOMEM;
     }
 
-  file_ref(*filep);
+  (*filep)->f_refs++;
   fd = fdlist_dupfile(list, oflags, minfd, *filep);
   if (fd < 0)
     {
@@ -886,10 +886,17 @@ int file_get2(int fd, FAR struct file **filep, FAR struct fd **fdp)
 
 void file_ref(FAR struct file *filep)
 {
-  /* This interface is used to increase the reference count of filep */
+  FAR struct tcb_s *tcb = this_task();
+  FAR struct fdlist *list = &tcb->group->tg_fdlist;
+  irqstate_t flags;
 
   DEBUGASSERT(filep);
-  atomic_fetch_add(&filep->f_refs, 1);
+
+  /* This interface is used to increase the reference count of filep */
+
+  flags = spin_lock_irqsave_notrace(&list->fl_lock);
+  filep->f_refs++;
+  spin_unlock_irqrestore_notrace(&list->fl_lock, flags);
 }
 
 /****************************************************************************
@@ -906,6 +913,9 @@ void file_ref(FAR struct file *filep)
 
 int file_put(FAR struct file *filep)
 {
+  FAR struct fdlist *list;
+  FAR struct tcb_s *tcb;
+  irqstate_t flags;
   int ret = 0;
 
   if (filep == NULL)
@@ -913,10 +923,15 @@ int file_put(FAR struct file *filep)
       return ret;
     }
 
+  tcb = this_task();
+  list = &tcb->group->tg_fdlist;
+
   /* If refs is zero, the close() had called, closing it now. */
 
-  if (atomic_fetch_sub(&filep->f_refs, 1) == 1)
+  flags = spin_lock_irqsave_notrace(&list->fl_lock);
+  if (filep->f_refs-- == 1)
     {
+      spin_unlock_irqrestore_notrace(&list->fl_lock, flags);
       ret = file_close(filep);
       if (ret < 0)
         {
@@ -924,8 +939,10 @@ int file_put(FAR struct file *filep)
         }
 
       fs_heap_free(filep);
+      return ret;
     }
 
+  spin_unlock_irqrestore_notrace(&list->fl_lock, flags);
   return ret;
 }
 
