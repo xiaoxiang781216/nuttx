@@ -233,9 +233,8 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
    * have incremented the reference count on the inode.
    */
 
-  SETUP_SEARCH(&desc, fullpath, false);
-
 retry:
+  SETUP_SEARCH(&desc, fullpath, false);
   ret = inode_find(&desc);
   if (ret >= 0)
     {
@@ -323,6 +322,7 @@ retry:
 
           if (ret == -EEXIST)
             {
+              RELEASE_SEARCH(&desc);
               goto retry;
             }
           else
