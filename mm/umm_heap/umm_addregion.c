@@ -53,5 +53,9 @@
 
 void umm_addregion(FAR void *heap_start, size_t heap_size)
 {
+#if !defined(CONFIG_BUILD_PROTECTED) || !defined(__KERNEL__)
+  mm_addregion(g_mmheap, heap_start, heap_size);
+#else
   mm_addregion(USR_HEAP, heap_start, heap_size);
+#endif
 }
