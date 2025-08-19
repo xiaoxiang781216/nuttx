@@ -86,51 +86,53 @@ static int nxtask_spawn_create(FAR const char *name, main_t entry,
   pid_t pid;
   int ret;
 
+  DEBUGASSERT(attr);
+
   /* Allocate a TCB for the new task. */
 
   tcb = kmm_zalloc(sizeof(struct tcb_s) + sizeof(struct task_group_s));
   if (tcb == NULL)
     {
       serr("ERROR: Failed to allocate TCB\n");
-      return -ENOMEM;
+      ret = -ENOMEM;
     }
-
-  /* Setup the task type */
-
-  atomic_set(&tcb->flags, TCB_FLAG_TTYPE_TASK | TCB_FLAG_FREE_TCB);
-
-  /* Initialize the task */
-
-  ret = nxtask_init(tcb, name, entry, actions, attr, argv, envp);
-  if (ret < OK)
+  else
     {
-      kmm_free(tcb);
-      return ret;
-    }
+      /* Setup the task type */
 
-  /* Get the assigned pid before we start the task */
+      atomic_set(&tcb->flags, TCB_FLAG_TTYPE_TASK | TCB_FLAG_FREE_TCB);
 
-  pid = tcb->pid;
+      /* Initialize the task */
 
-  /* Set the attributes */
-
-  if (attr)
-    {
-      ret = spawn_execattrs(pid, attr);
-      if (ret < 0)
+      ret = nxtask_init(tcb, name, entry, actions, attr, argv, envp);
+      if (ret < OK)
         {
-          goto errout_with_taskinit;
+          kmm_free(tcb);
+        }
+      else
+        {
+          /* Get the assigned pid before we start the task */
+
+          pid = tcb->pid;
+
+          /* Set the attributes */
+
+          ret = spawn_execattrs(pid, attr);
+          if (ret < 0)
+            {
+              nxtask_uninit(tcb);
+            }
+          else
+            {
+              /* Activate the task */
+
+              nxtask_activate(tcb);
+
+              ret = pid;
+            }
         }
     }
 
-  /* Activate the task */
-
-  nxtask_activate(tcb);
-
-  return pid;
-
-errout_with_taskinit:
-  nxtask_uninit(tcb);
   return ret;
 }
 
@@ -197,39 +199,40 @@ static int nxtask_spawn_exec(FAR pid_t *pidp, FAR const char *name,
       /* Set the default priority to the same priority as this task */
 
       ret = nxsched_get_param(0, &param);
-      if (ret < 0)
+      if (ret == OK)
         {
-          return ret;
+          posix_spawnattr_init(&tmp);
+          posix_spawnattr_setschedparam(&tmp, &param);
+          posix_spawnattr_setstacksize(&tmp,
+                                       CONFIG_POSIX_SPAWN_DEFAULT_STACKSIZE);
+          attr = &tmp;
+        }
+    }
+
+  if (ret == OK)
+    {
+      /* Start the task */
+
+      pid = nxtask_spawn_create(name, entry, actions, attr, argv,
+                                envp ? envp : environ);
+
+      if (attr == &tmp)
+        {
+          posix_spawnattr_destroy(&tmp);
         }
 
-      posix_spawnattr_init(&tmp);
-      posix_spawnattr_setschedparam(&tmp, &param);
-      posix_spawnattr_setstacksize(&tmp,
-                                   CONFIG_POSIX_SPAWN_DEFAULT_STACKSIZE);
-      attr = &tmp;
-    }
+      if (pid < 0)
+        {
+          ret = pid;
+          serr("ERROR: nxtask_spawn_create failed: %d\n", ret);
+        }
 
-  /* Start the task */
+      /* Return the task ID to the caller */
 
-  pid = nxtask_spawn_create(name, entry, actions, attr, argv,
-                            envp ? envp : environ);
-  if (attr == &tmp)
-    {
-      posix_spawnattr_destroy(&tmp);
-    }
-
-  if (pid < 0)
-    {
-      ret = pid;
-      serr("ERROR: nxtask_spawn_create failed: %d\n", ret);
-      return ret;
-    }
-
-  /* Return the task ID to the caller */
-
-  if (pid)
-    {
-      *pidp = pid;
+      else if (pid)
+        {
+          *pidp = pid;
+        }
     }
 
   return ret;
