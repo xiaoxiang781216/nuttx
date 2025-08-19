@@ -206,16 +206,17 @@ size_t mm_heapfree(FAR struct mm_heap_s *heap)
 size_t mm_heapfree_largest(FAR struct mm_heap_s *heap)
 {
   FAR struct mm_freenode_s *node;
+  int i;
 
   mm_free_delaylist(heap);
 
-  for (node = heap->mm_nodelist[MM_NNODES - 1].blink; node;
-       node = node->blink)
+  for (i = MM_NNODES - 1; i >= 0; i--)
     {
-      size_t nodesize = MM_SIZEOF_NODE(node);
-      if (nodesize != 0)
+      node = heap->mm_nodelist[i].flink ? heap->mm_nodelist[i].flink :
+             heap->mm_nodelist[i].blink;
+      if (node != NULL)
         {
-          return nodesize;
+          return MM_SIZEOF_NODE(node);
         }
     }
 
