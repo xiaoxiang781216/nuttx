@@ -435,13 +435,13 @@ extern "C"
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION
+#if defined(CONFIG_SCHED_INSTRUMENTATION) && defined(CONFIG_DRIVERS_NOTE)
 void sched_note_add(FAR const void *note, size_t notelen);
 #else
 #  define sched_note_add(n,l)
 #endif
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
+#if defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH) && defined(CONFIG_DRIVERS_NOTE)
 void sched_note_start(FAR struct tcb_s *tcb);
 void sched_note_stop(FAR struct tcb_s *tcb);
 void sched_note_suspend(FAR struct tcb_s *tcb);
@@ -455,7 +455,7 @@ void sched_note_taskname(void);
 #  define sched_note_taskname()
 #endif
 
-#if defined(CONFIG_SMP) && defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH)
+#if defined(CONFIG_SMP) && defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH) && defined(CONFIG_DRIVERS_NOTE)
 void sched_note_cpu_start(FAR struct tcb_s *tcb, int cpu);
 void sched_note_cpu_started(FAR struct tcb_s *tcb);
 void sched_note_cpu_pause(FAR struct tcb_s *tcb, int cpu);
@@ -471,25 +471,25 @@ void sched_note_cpu_resumed(FAR struct tcb_s *tcb);
 #  define sched_note_cpu_resumed(t)
 #endif
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
+#if defined(CONFIG_SCHEDTRUMENTATION_PREEMPTION) && defined(CONFIG_DRIVERS_NOTE)
 void sched_note_preemption(FAR struct tcb_s *tcb, bool locked);
 #else
 #  define sched_note_preemption(t,l)
 #endif
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
+#if defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION) && defined(CONFIG_DRIVERS_NOTE)
 void sched_note_csection(FAR struct tcb_s *tcb, bool enter);
 #else
 #  define sched_note_csection(t,e)
 #endif
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
+#if defined(CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS) && defined(CONFIG_DRIVERS_NOTE)
 void sched_note_spinlock(FAR volatile spinlock_t *spinlock, int type);
 #else
 #  define sched_note_spinlock(spinlock, type)
 #endif
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
+#if defined(CONFIG_SCHED_INSTRUMENTATION_SYSCALL) && defined(CONFIG_DRIVERS_NOTE)
 void sched_note_syscall_enter(int nr, int argc, ...);
 void sched_note_syscall_leave(int nr, uintptr_t result);
 #else
@@ -497,26 +497,26 @@ void sched_note_syscall_leave(int nr, uintptr_t result);
 #  define sched_note_syscall_leave(n,r)
 #endif
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
+#if defined(CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER) && defined(CONFIG_DRIVERS_NOTE)
 void sched_note_irqhandler(int irq, FAR void *handler, bool enter);
 #else
 #  define sched_note_irqhandler(i,h,e)
 #endif
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_WDOG
+#if defined(CONFIG_SCHED_INSTRUMENTATION_WDOG) && defined(CONFIG_DRIVERS_NOTE)
 void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg);
 #else
 #  define sched_note_wdog(e,h,a)
 #endif
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
+#if defined(CONFIG_SCHED_INSTRUMENTATION_HEAP) && defined(CONFIG_DRIVERS_NOTE)
 void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
                      size_t size, size_t used);
 #else
 #  define sched_note_heap(e,h,m,s,c)
 #endif
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+#if defined(CONFIG_SCHED_INSTRUMENTATION_DUMP) && defined(CONFIG_DRIVERS_NOTE)
 void sched_note_event_ip(uint32_t tag, uintptr_t ip, uint8_t event,
                          FAR const void *buf, size_t len);
 void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
