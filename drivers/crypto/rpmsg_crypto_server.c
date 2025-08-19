@@ -479,6 +479,7 @@ static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
         krp.krp_param[0].crp_p = msg->buf;
         break;
       case CRK_IMPORT_KEY:
+      case CRK_GENERATE_AES_KEY:
         krp.krp_iparams = 2;
         krp.krp_oparams = 0;
         krp.krp_param[0].crp_nbits = msg->data.name_len * 8;
