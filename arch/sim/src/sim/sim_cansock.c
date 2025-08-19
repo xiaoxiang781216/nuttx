@@ -203,8 +203,8 @@ static void sim_can_work(void *arg)
     }
 
 nodata:
-  work_queue_next(HPWORK, &priv->work, sim_can_work, priv,
-                  SIM_CAN_WORK_DELAY);
+  work_queue(HPWORK, &priv->work, sim_can_work, priv,
+             SIM_CAN_WORK_DELAY);
 }
 
 /****************************************************************************

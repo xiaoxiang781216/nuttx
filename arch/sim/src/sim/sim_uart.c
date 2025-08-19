@@ -462,8 +462,8 @@ static void sim_tty_work(void *arg)
 #endif
     }
 
-  work_queue_next(HPWORK, &priv->work, sim_tty_work, arg,
-                  SIM_UART_WORK_DELAY);
+  work_queue(HPWORK, &priv->work, sim_tty_work, arg,
+             SIM_UART_WORK_DELAY);
 }
 
 /****************************************************************************

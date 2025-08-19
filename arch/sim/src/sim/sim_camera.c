@@ -365,8 +365,8 @@ static void sim_camera_work(void *arg)
         }
     }
 
-  work_queue_next(HPWORK, &priv->work, sim_camera_work, arg,
-                  SIM_CAMERA_PERIOD);
+  work_queue(HPWORK, &priv->work, sim_camera_work, arg,
+             SIM_CAMERA_PERIOD);
 }
 
 /****************************************************************************

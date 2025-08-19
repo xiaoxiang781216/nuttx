@@ -1152,8 +1152,8 @@ static void sim_audio_work(FAR void *arg)
   struct sim_audio_s *priv = (struct sim_audio_s *)arg;
 
   sim_audio_process(priv);
-  work_queue_next(HPWORK, &priv->work, sim_audio_work, priv,
-                  SIM_AUDIO_PERIOD);
+  work_queue(HPWORK, &priv->work, sim_audio_work, priv,
+             SIM_AUDIO_PERIOD);
 }
 
 /****************************************************************************

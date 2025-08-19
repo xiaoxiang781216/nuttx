@@ -181,8 +181,8 @@ static void sim_rpmsg_virtio_work(void *arg)
         }
     }
 
-  work_queue_next(HPWORK, &dev->work, sim_rpmsg_virtio_work, dev,
-                  SIM_RPMSG_VIRTIO_WORK_DELAY);
+  work_queue(HPWORK, &dev->work, sim_rpmsg_virtio_work, dev,
+             SIM_RPMSG_VIRTIO_WORK_DELAY);
 }
 
 static int sim_rpmsg_virtio_notify(struct rpmsg_virtio_lite_s *dev,

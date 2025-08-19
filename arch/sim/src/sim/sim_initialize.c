@@ -88,8 +88,8 @@ static void sim_init_cmdline(void)
 static void sim_x11event_work(void *arg)
 {
   sim_x11events();
-  work_queue_next(HPWORK, &g_x11event_work, sim_x11event_work,
-                  NULL, SIM_X11EVENT_PERIOD);
+  work_queue(HPWORK, &g_x11event_work, sim_x11event_work,
+             NULL, SIM_X11EVENT_PERIOD);
 }
 #endif
 
@@ -105,8 +105,8 @@ static void sim_x11event_work(void *arg)
 static void sim_x11update_work(void *arg)
 {
   sim_x11loop();
-  work_queue_next(HPWORK, &g_x11update_work, sim_x11update_work,
-                  NULL, SIM_X11UPDATE_PERIOD);
+  work_queue(HPWORK, &g_x11update_work, sim_x11update_work,
+             NULL, SIM_X11UPDATE_PERIOD);
 }
 #endif
 

@@ -774,8 +774,8 @@ static void sim_usbhost_work(void *arg)
         }
     }
 
-  work_queue_next(HPWORK, &priv->work, sim_usbhost_work, priv,
-                  SIM_USBHOST_PERIOD);
+  work_queue(HPWORK, &priv->work, sim_usbhost_work, priv,
+             SIM_USBHOST_PERIOD);
 }
 
 /****************************************************************************

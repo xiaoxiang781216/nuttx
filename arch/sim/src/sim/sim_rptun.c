@@ -446,8 +446,8 @@ static void sim_rptun_work(void *arg)
         }
     }
 
-  work_queue_next(HPWORK, &dev->work, sim_rptun_work, dev,
-                  SIM_RPTUN_WORK_DELAY);
+  work_queue(HPWORK, &dev->work, sim_rptun_work, dev,
+             SIM_RPTUN_WORK_DELAY);
 }
 
 /****************************************************************************
