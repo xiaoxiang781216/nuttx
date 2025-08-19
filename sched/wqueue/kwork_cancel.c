@@ -46,66 +46,64 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
                         FAR struct work_s *work)
 {
   irqstate_t flags;
-  int ret = OK;
   FAR sem_t *sync_wait = NULL;
+  int ret = -EINVAL;
 
-  if (wqueue == NULL || work == NULL)
+  if (wqueue && work)
     {
-      return -EINVAL;
-    }
-
-  /* Cancelling the work is simply a matter of removing the work structure
-   * from the work queue.  This must be done with interrupts disabled because
-   * new work is typically added to the work queue from interrupt handlers.
-   */
-
-  flags = spin_lock_irqsave(&wqueue->lock);
-
-  if (!work_available(work))
-    {
-      /* If the head of the pending queue has changed, we should reset
-       * the wqueue timer.
+      ret = OK;
+      /* Cancelling the work is simply a matter of removing the work
+       * structure from the work queue. This must be done with interrupts
+       * disabled because new work is typically added to the work queue from
+       * interrupt handlers.
        */
 
-      if (work_remove(wqueue, work))
+      flags = spin_lock_irqsave(&wqueue->lock);
+
+      if (!work_available(work))
         {
-          work_timer_reset(wqueue);
-        }
-    }
-  else
-    {
-      ret = -ENOENT;
-    }
+          /* If the head of the pending queue has changed, we should reset
+           * the wqueue timer.
+           */
 
-  /* Note that cancel_sync can not be called in the interrupt
-   * context and the idletask context.
-   */
-
-  if (sync)
-    {
-      int wndx;
-      int pid = nxsched_gettid();
-      FAR struct kworker_s *worker = wq_get_worker(wqueue);
-
-      /* Wait until the worker thread finished the work. */
-
-      for (wndx = 0; wndx < wqueue->nthreads; wndx++)
-        {
-          if (worker[wndx].work == work && worker[wndx].pid != pid)
+          if (work_remove(wqueue, work))
             {
-              worker[wndx].wait_count++;
-              sync_wait = &worker[wndx].wait;
-              ret = -EBUSY;
-              break;
+              work_timer_reset(wqueue);
             }
         }
-    }
+      else
+        {
+          ret = -ENOENT;
+        }
 
-  spin_unlock_irqrestore(&wqueue->lock, flags);
+      /* Note that cancel_sync can not be called in the interrupt
+       * context and the idletask context.
+       */
 
-  if (sync_wait)
-    {
-      nxsem_wait_uninterruptible(sync_wait);
+      if (sync)
+        {
+          int wndx;
+          int pid = nxsched_gettid();
+          FAR struct kworker_s *worker = wq_get_worker(wqueue);
+
+          /* Wait until the worker thread finished the work. */
+
+          for (wndx = 0; wndx < wqueue->nthreads; wndx++)
+            {
+              if (worker[wndx].work == work && worker[wndx].pid != pid)
+                {
+                  worker[wndx].wait_count++;
+                  sync_wait = &worker[wndx].wait;
+                }
+            }
+        }
+
+      spin_unlock_irqrestore(&wqueue->lock, flags);
+
+      if (sync_wait)
+        {
+          nxsem_wait_uninterruptible(sync_wait);
+        }
     }
 
   return ret;

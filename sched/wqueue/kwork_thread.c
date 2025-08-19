@@ -308,7 +308,7 @@ static int work_thread_create(FAR const char *name, int priority,
   char arg0[32];
   char arg1[32];
   int wndx;
-  int pid;
+  int ret = OK;
 
   /* Don't permit any of the threads to run until we have fully initialized
    * all of them.
@@ -333,22 +333,23 @@ static int work_thread_create(FAR const char *name, int priority,
           stack = ((FAR char *)stack_addr + wndx * stack_size);
         }
 
-      pid = kthread_create_with_stack(name, priority, stack,
+      ret = kthread_create_with_stack(name, priority, stack,
                                       stack_size, work_thread, argv);
 
-      DEBUGASSERT(pid > 0);
-      if (pid < 0)
+      DEBUGASSERT(ret > 0);
+      if (ret < 0)
         {
-          serr("ERROR: work_thread_create %d failed: %d\n", wndx, pid);
-          sched_unlock();
-          return pid;
+          serr("ERROR: work_thread_create %d failed: %d\n", wndx, ret);
+          break;
         }
-
-      worker[wndx].pid = pid;
+      else
+        {
+          worker[wndx].pid = ret;
+        }
     }
 
   sched_unlock();
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -404,39 +405,36 @@ FAR struct kwork_wqueue_s *work_queue_create(FAR const char *name,
                                              int stack_size,
                                              uint8_t nthreads)
 {
-  FAR struct kwork_wqueue_s *wqueue;
+  FAR struct kwork_wqueue_s *wqueue = NULL;
   int ret;
 
-  if (nthreads < 1)
+  if (nthreads >= 1)
     {
-      return NULL;
-    }
+      /* Allocate a new work queue */
 
-  /* Allocate a new work queue */
+      wqueue = kmm_zalloc(sizeof(struct kwork_wqueue_s) +
+                          nthreads * sizeof(struct kworker_s));
+      if (wqueue)
+        {
+          /* Initialize the work queue structure */
 
-  wqueue = kmm_zalloc(sizeof(struct kwork_wqueue_s) +
-                      nthreads * sizeof(struct kworker_s));
-  if (wqueue == NULL)
-    {
-      return NULL;
-    }
+          list_initialize(&wqueue->expired);
+          list_initialize(&wqueue->pending);
+          nxsem_init(&wqueue->sem, 0, 0u);
+          nxsem_init(&wqueue->exsem, 0, 0u);
+          wqueue->nthreads = nthreads;
+          spin_lock_init(&wqueue->lock);
 
-  /* Initialize the work queue structure */
+          /* Create the work queue thread pool */
 
-  list_initialize(&wqueue->expired);
-  list_initialize(&wqueue->pending);
-  nxsem_init(&wqueue->sem, 0, 0u);
-  nxsem_init(&wqueue->exsem, 0, 0u);
-  wqueue->nthreads = nthreads;
-  spin_lock_init(&wqueue->lock);
-
-  /* Create the work queue thread pool */
-
-  ret = work_thread_create(name, priority, stack_addr, stack_size, wqueue);
-  if (ret < 0)
-    {
-      kmm_free(wqueue);
-      return NULL;
+          ret = work_thread_create(name, priority, stack_addr, stack_size,
+                                   wqueue);
+          if (ret < 0)
+            {
+              kmm_free(wqueue);
+              wqueue = NULL;
+            }
+        }
     }
 
   return wqueue;
@@ -461,35 +459,35 @@ FAR struct kwork_wqueue_s *work_queue_create(FAR const char *name,
 int work_queue_free(FAR struct kwork_wqueue_s *wqueue)
 {
   int wndx;
+  int ret = -EINVAL;
 
-  if (wqueue == NULL)
+  if (wqueue != NULL)
     {
-      return -EINVAL;
+      ret = OK;
+      wd_cancel(&wqueue->timer);
+
+      /* Mark the work queue as exiting */
+
+      wqueue->exit = true;
+
+      /* Queue a exit work for all threads */
+
+      for (wndx = 0; wndx < wqueue->nthreads; wndx++)
+        {
+          nxsem_post(&wqueue->sem);
+        }
+
+      for (wndx = 0; wndx < wqueue->nthreads; wndx++)
+        {
+          nxsem_wait_uninterruptible(&wqueue->exsem);
+        }
+
+      nxsem_destroy(&wqueue->sem);
+      nxsem_destroy(&wqueue->exsem);
+      kmm_free(wqueue);
     }
 
-  wd_cancel(&wqueue->timer);
-
-  /* Mark the work queue as exiting */
-
-  wqueue->exit = true;
-
-  /* Queue a exit work for all threads */
-
-  for (wndx = 0; wndx < wqueue->nthreads; wndx++)
-    {
-      nxsem_post(&wqueue->sem);
-    }
-
-  for (wndx = 0; wndx < wqueue->nthreads; wndx++)
-    {
-      nxsem_wait_uninterruptible(&wqueue->exsem);
-    }
-
-  nxsem_destroy(&wqueue->sem);
-  nxsem_destroy(&wqueue->exsem);
-  kmm_free(wqueue);
-
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -510,17 +508,18 @@ bool work_queue_in_queue(FAR struct kwork_wqueue_s *wqueue)
 {
   FAR struct kworker_s *worker = wq_get_worker(wqueue);
   pid_t pid = nxsched_gettid();
+  bool ret = false;
   int i;
 
   for (i = 0; i < wqueue->nthreads; i++)
     {
       if (pid == worker[i].pid)
         {
-          return true;
+          ret = true;
         }
     }
 
-  return false;
+  return ret;
 }
 
 /****************************************************************************
@@ -542,28 +541,28 @@ int work_queue_priority_wq(FAR struct kwork_wqueue_s *wqueue)
 {
   FAR struct kworker_s *worker;
   FAR struct tcb_s *tcb;
-  int pri;
+  int ret = -EINVAL;
 
-  if (wqueue == NULL)
+  if (wqueue != NULL)
     {
-      return -EINVAL;
+      /* Find for the TCB associated with matching PID */
+
+      worker = wq_get_worker(wqueue);
+
+      tcb = nxsched_get_tcb(worker[0].pid);
+
+      if (!tcb)
+        {
+          ret = -ESRCH;
+        }
+      else
+        {
+          ret = tcb->sched_priority;
+          nxsched_put_tcb(tcb);
+        }
     }
 
-  /* Find for the TCB associated with matching PID */
-
-  worker = wq_get_worker(wqueue);
-
-  tcb = nxsched_get_tcb(worker[0].pid);
-
-  if (!tcb)
-    {
-      return -ESRCH;
-    }
-
-  pri = tcb->sched_priority;
-  nxsched_put_tcb(tcb);
-
-  return pri;
+  return ret;
 }
 
 int work_queue_priority(int qid)

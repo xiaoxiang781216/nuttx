@@ -135,23 +135,21 @@ extern struct lp_wqueue_s g_lpwork;
 
 static inline_function FAR struct kwork_wqueue_s *work_qid2wq(int qid)
 {
+  FAR struct kwork_wqueue_s *wq = NULL;
 #ifdef CONFIG_SCHED_HPWORK
   if (qid == HPWORK)
     {
-      return &g_hpwork.wq;
+      wq = &g_hpwork.wq;
     }
-  else
 #endif
 #ifdef CONFIG_SCHED_LPWORK
   if (qid == LPWORK)
     {
-      return &g_lpwork.wq;
+      wq = &g_lpwork.wq;
     }
-  else
 #endif
-    {
-      return NULL;
-    }
+
+  return wq;
 }
 
 /****************************************************************************
