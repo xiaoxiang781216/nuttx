@@ -91,115 +91,7 @@
  *
  ****************************************************************************/
 
-#ifndef CONFIG_SCHED_HAVE_PARENT
-pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
-{
-  FAR struct tcb_s *ctcb;
-  FAR struct task_group_s *group;
-  bool mystat = false;
-  irqstate_t flags;
-  int ret = -ECHILD;
-
-  /* Get the TCB corresponding to this PID */
-
-  ctcb = nxsched_get_tcb(pid);
-  if (ctcb != NULL)
-    {
-      if ((group = ctcb->group) != NULL &&
-          (atomic_read(&ctcb->flags) & TCB_FLAG_EXIT_PROCESSING) == 0)
-        {
-          nxsched_put_tcb(ctcb);
-
-          /* Lock this group so that it cannot be
-           * deleted until the wait completes
-           */
-
-          flags = spin_lock_irqsave(&group->tg_lock);
-          group->tg_nwaiters++;
-          DEBUGASSERT(group->tg_nwaiters > 0);
-
-          /* "If more than one thread is suspended in waitpid() awaiting
-           * termination of the same process, exactly one thread will
-           * return the process status at the time of the target process
-           * termination."  Hmmm.. what do we return to the others?
-           */
-
-          if (group->tg_waitflags == 0)
-            {
-              /* Save the waitpid() options, setting the non-standard
-               * WCLAIMED bit to assure that tg_waitflags is non-zero.
-               */
-
-              group->tg_waitflags = (uint8_t)options | WCLAIMED;
-
-              /* Save the return status location (which may be NULL) */
-
-              group->tg_statloc = stat_loc;
-
-              /* We are the waipid() instance
-               * that gets the return status
-               */
-
-              mystat = true;
-            }
-
-          /* Then wait for the task to exit */
-
-          if ((options & WNOHANG) != 0)
-            {
-              /* Don't wait if status is not available */
-
-              ret = nxsem_trywait(&group->tg_exitsem);
-            }
-          else
-            {
-              /* Wait if necessary for status to become available */
-
-              spin_unlock_irqrestore(&group->tg_lock, flags);
-              ret = nxsem_wait(&group->tg_exitsem);
-              flags = spin_lock_irqsave(&group->tg_lock);
-            }
-
-          group->tg_nwaiters--;
-
-          if (ret < 0)
-            {
-              /* Handle the awkward case of whether or not we
-               * need to nullify the stat_loc value.
-               */
-
-              if (mystat)
-                {
-                  group->tg_statloc   = NULL;
-                  group->tg_waitflags = 0;
-                }
-
-              if ((options & WNOHANG) != 0)
-                {
-                  pid = 0;
-                }
-              else
-                {
-                  pid = ret;
-                }
-            }
-
-          /* On success, return the PID */
-
-          ret = pid;
-
-          spin_unlock_irqrestore(&group->tg_lock, flags);
-          group_drop(group);
-        }
-      else
-        {
-          nxsched_put_tcb(ctcb);
-        }
-    }
-
-  return ret;
-}
-
+#ifdef CONFIG_SCHED_HAVE_PARENT
 /****************************************************************************
  *
  * If CONFIG_SCHED_HAVE_PARENT is defined, then waitpid will use the SIGCHLD
@@ -213,7 +105,6 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
  *
  ****************************************************************************/
 
-#else
 pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
 {
   FAR struct tcb_s *rtcb = this_task();
@@ -495,6 +386,114 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
 
           ret = pid;
           break;
+        }
+    }
+
+  return ret;
+}
+#else
+pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
+{
+  FAR struct tcb_s *ctcb;
+  FAR struct task_group_s *group;
+  bool mystat = false;
+  irqstate_t flags;
+  int ret = -ECHILD;
+
+  /* Get the TCB corresponding to this PID */
+
+  ctcb = nxsched_get_tcb(pid);
+  if (ctcb != NULL)
+    {
+      if ((group = ctcb->group) != NULL &&
+          (atomic_read(&ctcb->flags) & TCB_FLAG_EXIT_PROCESSING) == 0)
+        {
+          nxsched_put_tcb(ctcb);
+
+          /* Lock this group so that it cannot be
+           * deleted until the wait completes
+           */
+
+          flags = spin_lock_irqsave(&group->tg_lock);
+          group->tg_nwaiters++;
+          DEBUGASSERT(group->tg_nwaiters > 0);
+
+          /* "If more than one thread is suspended in waitpid() awaiting
+           * termination of the same process, exactly one thread will
+           * return the process status at the time of the target process
+           * termination."  Hmmm.. what do we return to the others?
+           */
+
+          if (group->tg_waitflags == 0)
+            {
+              /* Save the waitpid() options, setting the non-standard
+               * WCLAIMED bit to assure that tg_waitflags is non-zero.
+               */
+
+              group->tg_waitflags = (uint8_t)options | WCLAIMED;
+
+              /* Save the return status location (which may be NULL) */
+
+              group->tg_statloc = stat_loc;
+
+              /* We are the waipid() instance
+               * that gets the return status
+               */
+
+              mystat = true;
+            }
+
+          /* Then wait for the task to exit */
+
+          if ((options & WNOHANG) != 0)
+            {
+              /* Don't wait if status is not available */
+
+              ret = nxsem_trywait(&group->tg_exitsem);
+            }
+          else
+            {
+              /* Wait if necessary for status to become available */
+
+              spin_unlock_irqrestore(&group->tg_lock, flags);
+              ret = nxsem_wait(&group->tg_exitsem);
+              flags = spin_lock_irqsave(&group->tg_lock);
+            }
+
+          group->tg_nwaiters--;
+
+          if (ret < 0)
+            {
+              /* Handle the awkward case of whether or not we
+               * need to nullify the stat_loc value.
+               */
+
+              if (mystat)
+                {
+                  group->tg_statloc   = NULL;
+                  group->tg_waitflags = 0;
+                }
+
+              if ((options & WNOHANG) != 0)
+                {
+                  pid = 0;
+                }
+              else
+                {
+                  pid = ret;
+                }
+            }
+
+          /* On success, return the PID */
+
+          ret = pid;
+
+          spin_unlock_irqrestore(&group->tg_lock, flags);
+          group_drop(group);
+        }
+      else
+        {
+          nxsched_put_tcb(ctcb);
         }
     }
 
