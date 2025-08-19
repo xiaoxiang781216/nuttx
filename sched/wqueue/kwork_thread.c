@@ -93,15 +93,6 @@ struct hp_wqueue_s g_hpwork =
   }
 };
 
-#ifdef SCHED_HPWORKSTACKSECTION
-static aligned_data(STACK_ALIGNMENT) uint8_t
-g_hp_work_stack[CONFIG_SCHED_HPNTHREADS][CONFIG_SCHED_HPWORKSTACKSIZE]
-locate_data(CONFIG_SCHED_HPWORKSTACKSECTION);
-#else
-static aligned_data(STACK_ALIGNMENT) uint8_t
-g_hp_work_stack[CONFIG_SCHED_HPNTHREADS][CONFIG_SCHED_HPWORKSTACKSIZE];
-#endif
-
 #endif /* CONFIG_SCHED_HPWORK */
 
 #if defined(CONFIG_SCHED_LPWORK)
@@ -118,15 +109,6 @@ struct lp_wqueue_s g_lpwork =
     CONFIG_SCHED_LPNTHREADS,
   }
 };
-
-#ifdef SCHED_LPWORKSTACKSECTION
-static aligned_data(STACK_ALIGNMENT) uint8_t
-g_lp_work_stack[CONFIG_SCHED_LPNTHREADS][CONFIG_SCHED_LPWORKSTACKSIZE]
-locate_data(CONFIG_SCHED_LPWORKSTACKSECTION);
-#else
-static aligned_data(STACK_ALIGNMENT) uint8_t
-g_lp_work_stack[CONFIG_SCHED_LPNTHREADS][CONFIG_SCHED_LPWORKSTACKSIZE];
-#endif
 
 #endif /* CONFIG_SCHED_LPWORK */
 
@@ -609,6 +591,15 @@ int work_start_highpri(void)
 {
   /* Start the high-priority, kernel mode worker thread(s) */
 
+#ifdef SCHED_HPWORKSTACKSECTION
+  static aligned_data(STACK_ALIGNMENT) uint8_t
+  g_hp_work_stack[CONFIG_SCHED_HPNTHREADS][CONFIG_SCHED_HPWORKSTACKSIZE]
+  locate_data(CONFIG_SCHED_HPWORKSTACKSECTION);
+#else
+  static aligned_data(STACK_ALIGNMENT) uint8_t
+  g_hp_work_stack[CONFIG_SCHED_HPNTHREADS][CONFIG_SCHED_HPWORKSTACKSIZE];
+#endif
+
   sinfo("Starting high-priority kernel worker thread(s)\n");
 
   return work_thread_create(HPWORKNAME,
@@ -638,6 +629,15 @@ int work_start_highpri(void)
 int work_start_lowpri(void)
 {
   /* Start the low-priority, kernel mode worker thread(s) */
+
+#ifdef SCHED_LPWORKSTACKSECTION
+  static aligned_data(STACK_ALIGNMENT) uint8_t
+  g_lp_work_stack[CONFIG_SCHED_LPNTHREADS][CONFIG_SCHED_LPWORKSTACKSIZE]
+  locate_data(CONFIG_SCHED_LPWORKSTACKSECTION);
+#else
+  static aligned_data(STACK_ALIGNMENT) uint8_t
+  g_lp_work_stack[CONFIG_SCHED_LPNTHREADS][CONFIG_SCHED_LPWORKSTACKSIZE];
+#endif
 
   sinfo("Starting low-priority kernel worker thread(s)\n");
 
