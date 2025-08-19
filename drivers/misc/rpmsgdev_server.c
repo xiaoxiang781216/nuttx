@@ -627,7 +627,7 @@ static int rpmsgdev_init_wqueue(void)
     {
       g_rpmsgdev_wqueue = work_queue_create("rpmsgdev_server",
         CONFIG_DEV_RPMSG_SERVER_WORK_PRIORITY, NULL,
-        CONFIG_DEV_RPMSG_SERVER_WORK_STACKSIZE, 1);
+        CONFIG_DEV_RPMSG_SERVER_WORK_STACKSIZE, 1u);
     }
 
   return g_rpmsgdev_wqueue ? 0 : -ENOMEM;

@@ -121,7 +121,7 @@ void work_dispatch(FAR struct kwork_wqueue_s *wq)
 {
   FAR struct work_s *work;
   FAR struct work_s *next;
-  unsigned int count = 0;
+  unsigned int count = 0u;
   clock_t      ticks = clock_systime_ticks();
 
   /* Wake up the worker thread once there is expired work.
@@ -154,7 +154,7 @@ void work_dispatch(FAR struct kwork_wqueue_s *wq)
        * So only `count - 1` semaphore will be posted.
        */
 
-      if (count++ > 0)
+      if (count++ > 0u)
         {
           nxsem_post(&wq->sem);
         }
@@ -318,7 +318,7 @@ static int work_thread_create(FAR const char *name, int priority,
 
   for (wndx = 0; wndx < wqueue->nthreads; wndx++)
     {
-      nxsem_init(&worker[wndx].wait, 0, 0);
+      nxsem_init(&worker[wndx].wait, 0, 0u);
 
       snprintf(arg0, sizeof(arg0), "%p", wqueue);
       snprintf(arg1, sizeof(arg1), "%p", &worker[wndx]);
@@ -330,7 +330,7 @@ static int work_thread_create(FAR const char *name, int priority,
 
       if (stack_addr)
         {
-          stack = (FAR void *)((uintptr_t)stack_addr + wndx * stack_size);
+          stack = ((FAR char *)stack_addr + wndx * stack_size);
         }
 
       pid = kthread_create_with_stack(name, priority, stack,
@@ -401,7 +401,8 @@ void work_timer_expired(wdparm_t arg)
 FAR struct kwork_wqueue_s *work_queue_create(FAR const char *name,
                                              int priority,
                                              FAR void *stack_addr,
-                                             int stack_size, int nthreads)
+                                             int stack_size,
+                                             uint8_t nthreads)
 {
   FAR struct kwork_wqueue_s *wqueue;
   int ret;
@@ -424,9 +425,8 @@ FAR struct kwork_wqueue_s *work_queue_create(FAR const char *name,
 
   list_initialize(&wqueue->expired);
   list_initialize(&wqueue->pending);
-  wqueue->timer.func = NULL;
-  nxsem_init(&wqueue->sem, 0, 0);
-  nxsem_init(&wqueue->exsem, 0, 0);
+  nxsem_init(&wqueue->sem, 0, 0u);
+  nxsem_init(&wqueue->exsem, 0, 0u);
   wqueue->nthreads = nthreads;
   spin_lock_init(&wqueue->lock);
 
@@ -593,11 +593,11 @@ int work_start_highpri(void)
 
 #ifdef SCHED_HPWORKSTACKSECTION
   static aligned_data(STACK_ALIGNMENT) uint8_t
-  g_hp_work_stack[CONFIG_SCHED_HPNTHREADS][CONFIG_SCHED_HPWORKSTACKSIZE]
+  g_hp_work_stack[CONFIG_SCHED_HPNTHREADS * CONFIG_SCHED_HPWORKSTACKSIZE]
   locate_data(CONFIG_SCHED_HPWORKSTACKSECTION);
 #else
   static aligned_data(STACK_ALIGNMENT) uint8_t
-  g_hp_work_stack[CONFIG_SCHED_HPNTHREADS][CONFIG_SCHED_HPWORKSTACKSIZE];
+  g_hp_work_stack[CONFIG_SCHED_HPNTHREADS * CONFIG_SCHED_HPWORKSTACKSIZE];
 #endif
 
   sinfo("Starting high-priority kernel worker thread(s)\n");
@@ -606,7 +606,7 @@ int work_start_highpri(void)
                             CONFIG_SCHED_HPWORKPRIORITY,
                             g_hp_work_stack,
                             CONFIG_SCHED_HPWORKSTACKSIZE,
-                            (FAR struct kwork_wqueue_s *)&g_hpwork);
+                            &g_hpwork.wq);
 }
 #endif /* CONFIG_SCHED_HPWORK */
 
@@ -632,11 +632,11 @@ int work_start_lowpri(void)
 
 #ifdef SCHED_LPWORKSTACKSECTION
   static aligned_data(STACK_ALIGNMENT) uint8_t
-  g_lp_work_stack[CONFIG_SCHED_LPNTHREADS][CONFIG_SCHED_LPWORKSTACKSIZE]
+  g_lp_work_stack[CONFIG_SCHED_LPNTHREADS * CONFIG_SCHED_LPWORKSTACKSIZE]
   locate_data(CONFIG_SCHED_LPWORKSTACKSECTION);
 #else
   static aligned_data(STACK_ALIGNMENT) uint8_t
-  g_lp_work_stack[CONFIG_SCHED_LPNTHREADS][CONFIG_SCHED_LPWORKSTACKSIZE];
+  g_lp_work_stack[CONFIG_SCHED_LPNTHREADS * CONFIG_SCHED_LPWORKSTACKSIZE];
 #endif
 
   sinfo("Starting low-priority kernel worker thread(s)\n");
@@ -645,7 +645,7 @@ int work_start_lowpri(void)
                             CONFIG_SCHED_LPWORKPRIORITY,
                             g_lp_work_stack,
                             CONFIG_SCHED_LPWORKSTACKSIZE,
-                            (FAR struct kwork_wqueue_s *)&g_lpwork);
+                            &g_lpwork.wq);
 }
 #endif /* CONFIG_SCHED_LPWORK */
 

@@ -37,7 +37,7 @@
 #include "sched/sched.h"
 
 /****************************************************************************
- * Privte Types
+ * Private Types
  ****************************************************************************/
 
 /* This is the type of the list of interrupt handlers, one for each IRQ.
@@ -97,7 +97,7 @@ inline_function FAR struct kwork_wqueue_s *irq_get_wqueue(int priority)
   if (i < CONFIG_IRQ_NWORKS && queue == NULL)
     {
       queue = work_queue_create("isrwork", priority, g_irq_work_stack[i],
-                                CONFIG_IRQ_WORK_STACKSIZE, 1);
+                                CONFIG_IRQ_WORK_STACKSIZE, 1u);
 
       g_irq_wqueue[i] = queue;
       nxmutex_unlock(&g_irq_wqueue_lock);

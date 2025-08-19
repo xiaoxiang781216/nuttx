@@ -52,8 +52,8 @@
  * This function requires the workers are located next to the wqueue.
  */
 
-#define wq_get_worker(wq) \
-  (FAR struct kworker_s *)((FAR char *)(wq) + sizeof(struct kwork_wqueue_s))
+#define wq_get_worker(wq) (FAR struct kworker_s *)(FAR void *) \
+          ((FAR char *)(FAR void *)(wq) + sizeof(struct kwork_wqueue_s))
 
 /****************************************************************************
  * Public Type Definitions
@@ -138,14 +138,14 @@ static inline_function FAR struct kwork_wqueue_s *work_qid2wq(int qid)
 #ifdef CONFIG_SCHED_HPWORK
   if (qid == HPWORK)
     {
-      return (FAR struct kwork_wqueue_s *)&g_hpwork;
+      return &g_hpwork.wq;
     }
   else
 #endif
 #ifdef CONFIG_SCHED_LPWORK
   if (qid == LPWORK)
     {
-      return (FAR struct kwork_wqueue_s *)&g_lpwork;
+      return &g_lpwork.wq;
     }
   else
 #endif
