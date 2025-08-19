@@ -19,6 +19,10 @@
 # ##############################################################################
 set(SRCS fvp_boot.c fvp_serial.c fvp_timer.c)
 
+if(CONFIG_BUILD_PROTECTED)
+  list(APPEND SRCS fvp_userspace.c)
+endif()
+
 if(CONFIG_ARCH_EARLY_PRINT)
   list(APPEND SRCS fvp_lowputc.S)
 endif()
