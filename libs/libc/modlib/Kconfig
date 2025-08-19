@@ -80,6 +80,16 @@ config MODLIB_SYMBOL_CACHECOUNT
 		This is an cache that is used to store elf symbol table to
 		reduce access fs. Default: 256
 
+config MODLIB_SECTION_ALIGNMENT
+	int "MODLIB SECTIONS alignment"
+	default 8 if ARCH_64BIT
+	default 4
+	---help---
+		This setting determines the alignment of sections in memory.
+		For 64-bit architectures, the default alignment is 8 bytes.
+		For other architectures, the default alignment is 4 bytes.
+
+
 if MODLIB_HAVE_SYMTAB
 
 config MODLIB_SYMTAB_ARRAY

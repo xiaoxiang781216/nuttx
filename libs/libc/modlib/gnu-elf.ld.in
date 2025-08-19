@@ -33,11 +33,7 @@
 #  define DATA
 #endif
 
-#if defined(CONFIG_ARCH_64BIT)
-#  define SECTIONS_ALIGN 8
-#else
-#  define SECTIONS_ALIGN 4
-#endif
+#define SECTIONS_ALIGN CONFIG_MODLIB_SECTION_ALIGNMENT
 
 SECTIONS
 {
