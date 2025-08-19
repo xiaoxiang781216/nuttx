@@ -42,77 +42,18 @@
 #ifdef CONFIG_SCHED_WAITPID
 
 /****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: nxsched_waitpid
- *
- * Description:
- *   This functions will obtain status information pertaining to one
- *   of the caller's child processes. This function will suspend
- *   execution of the calling thread until status information for one of the
- *   terminated child processes of the calling process is available, or until
- *   delivery of a signal whose action is either to execute a signal-catching
- *   function or to terminate the process. If more than one thread is
- *   suspended in nxsched_waitpid() awaiting termination of the same process,
- *   exactly one thread will return the process status at the time of the
- *   target process termination. If status information is available prior to
- *   the call to nxsched_waitpid(), return will be immediate.
- *
- * Input Parameters:
- *   pid - The task ID of the thread to waid for
- *   stat_loc - The location to return the exit status
- *   options - Modifiable behavior, see sys/wait.h.
- *
- * Returned Value:
- *   If nxsched_waitpid() returns because the status of a child process is
- *   available, it will return a value equal to the process ID of the child
- *   process for which status is reported.
- *
- *   If nxsched_waitpid() returns due to the delivery of a signal to the
- *   calling process, -1 will be returned and errno set to EINTR.
- *
- *   If nxsched_waitpid() was invoked with WNOHANG set in options, it has
- *   at least one child process specified by pid for which status is not
- *   available, and status is not available for any process specified by
- *   pid, 0 is returned.
- *
- *   Otherwise, (pid_t)-1 will be returned, and errno set to indicate the
- *   error:
- *
- *   ECHILD - The process specified by pid does not exist or is not a child
- *            of the calling process, or the process group specified by pid
- *            does not exist does not have any member process that is a child
- *            of the calling process.
- *   EINTR - The function was interrupted by a signal. The value of the
- *           location pointed to by stat_loc is undefined.
- *   EINVAL - The options argument is not valid.
- *
+ * Private Functions
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_HAVE_PARENT
-/****************************************************************************
- *
- * If CONFIG_SCHED_HAVE_PARENT is defined, then waitpid will use the SIGCHLD
- * signal.  It can also handle the pid == INVALID_PROCESS_ID argument.  This
- * is slightly more spec-compliant.
- *
- * But then I have to be concerned about the fact that NuttX does not queue
- * signals.  This means that a flurry of signals can cause signals to be
- * lost (or to have the data in the struct siginfo to be overwritten by
- * the next signal).
- *
- ****************************************************************************/
-
-pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
+static inline_function
+int waittcb(FAR struct tcb_s *rtcb, pid_t pid, int options,
+            FAR int *stat_loc, bool retains)
 {
-  FAR struct tcb_s *rtcb = this_task();
-  FAR struct tcb_s *ctcb;
 #ifdef CONFIG_SCHED_CHILD_STATUS
   FAR struct child_status_s *child = NULL;
-  bool retains;
 #endif
+  FAR struct tcb_s *ctcb;
   FAR struct siginfo info;
   irqstate_t flags;
   sigset_t set;
@@ -122,81 +63,6 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
 
   sigemptyset(&set);
   nxsig_addset(&set, SIGCHLD);
-
-  /* Verify that this task actually has children and that the requested PID
-   * is actually a child of this task.
-   */
-
-#ifdef CONFIG_SCHED_CHILD_STATUS
-  /* Does this task retain child status? */
-
-  retains = ((atomic_read(&rtcb->group->tg_flags) &
-             GROUP_FLAG_NOCLDWAIT) == 0);
-
-  if (rtcb->group->tg_children == NULL && retains)
-    {
-      ret = -ECHILD;
-    }
-  else if (pid != INVALID_PROCESS_ID)
-    {
-      /* Get the TCB corresponding to this PID.  NOTE: If the child has
-       * already exited, then the PID will not map to a valid TCB.
-       */
-
-      ctcb = nxsched_get_tcb(pid);
-      if (ctcb && ctcb->group)
-        {
-          /* Make sure that the thread it is our child. */
-
-          if (ctcb->group->tg_ppid != rtcb->group->tg_pid)
-            {
-              ret = -ECHILD;
-            }
-        }
-
-      nxsched_put_tcb(ctcb);
-      /* The child task is ours or it is no longer active.  Does the parent
-       * task retain child status?
-       */
-
-      if (retains && ret == OK)
-        {
-          /* Yes.. Check if this specific pid has allocated child status? */
-
-          if (group_find_child(rtcb->group, pid) == NULL)
-            {
-              ret = -ECHILD;
-            }
-        }
-    }
-
-#else /* CONFIG_SCHED_CHILD_STATUS */
-
-  if (atomic_read(&rtcb->group->tg_nchildren) == 0)
-    {
-      /* There are no children */
-
-      ret = -ECHILD;
-    }
-  else if (pid != INVALID_PROCESS_ID)
-    {
-      /* Get the TCB corresponding to this PID and make sure that the
-       * thread it is our child.
-       */
-
-      ctcb = nxsched_get_tcb(pid);
-      if (!ctcb || !ctcb->group || ctcb->group->tg_ppid != rtcb->pid ||
-          (atomic_read(&ctcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
-        {
-          ret = -ECHILD;
-        }
-
-      nxsched_put_tcb(ctcb);
-    }
-
-#endif /* CONFIG_SCHED_CHILD_STATUS */
-
-  /* Loop until the child that we are waiting for dies */
 
   while (ret >= 0)
     {
@@ -391,8 +257,161 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
 
   return ret;
 }
+#endif
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: nxsched_waitpid
+ *
+ * Description:
+ *   This functions will obtain status information pertaining to one
+ *   of the caller's child processes. This function will suspend
+ *   execution of the calling thread until status information for one of the
+ *   terminated child processes of the calling process is available, or until
+ *   delivery of a signal whose action is either to execute a signal-catching
+ *   function or to terminate the process. If more than one thread is
+ *   suspended in nxsched_waitpid() awaiting termination of the same process,
+ *   exactly one thread will return the process status at the time of the
+ *   target process termination. If status information is available prior to
+ *   the call to nxsched_waitpid(), return will be immediate.
+ *
+ * Input Parameters:
+ *   pid - The task ID of the thread to waid for
+ *   stat_loc - The location to return the exit status
+ *   options - Modifiable behavior, see sys/wait.h.
+ *
+ * Returned Value:
+ *   If nxsched_waitpid() returns because the status of a child process is
+ *   available, it will return a value equal to the process ID of the child
+ *   process for which status is reported.
+ *
+ *   If nxsched_waitpid() returns due to the delivery of a signal to the
+ *   calling process, -1 will be returned and errno set to EINTR.
+ *
+ *   If nxsched_waitpid() was invoked with WNOHANG set in options, it has
+ *   at least one child process specified by pid for which status is not
+ *   available, and status is not available for any process specified by
+ *   pid, 0 is returned.
+ *
+ *   Otherwise, (pid_t)-1 will be returned, and errno set to indicate the
+ *   error:
+ *
+ *   ECHILD - The process specified by pid does not exist or is not a child
+ *            of the calling process, or the process group specified by pid
+ *            does not exist does not have any member process that is a child
+ *            of the calling process.
+ *   EINTR - The function was interrupted by a signal. The value of the
+ *           location pointed to by stat_loc is undefined.
+ *   EINVAL - The options argument is not valid.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_HAVE_PARENT
+/****************************************************************************
+ *
+ * If CONFIG_SCHED_HAVE_PARENT is defined, then waitpid will use the SIGCHLD
+ * signal.  It can also handle the pid == INVALID_PROCESS_ID argument.  This
+ * is slightly more spec-compliant.
+ *
+ * But then I have to be concerned about the fact that NuttX does not queue
+ * signals.  This means that a flurry of signals can cause signals to be
+ * lost (or to have the data in the struct siginfo to be overwritten by
+ * the next signal).
+ *
+ ****************************************************************************/
+
+pid_t nxsched_waitpid(pid_t pid, FAR int *stat_loc, int options)
+{
+  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *ctcb;
+  bool retains = false;
+  int ret = OK;
+
+  /* Verify that this task actually has children and that the requested PID
+   * is actually a child of this task.
+   */
+
+#ifdef CONFIG_SCHED_CHILD_STATUS
+  /* Does this task retain child status? */
+
+  retains = ((atomic_read(&rtcb->group->tg_flags) &
+             GROUP_FLAG_NOCLDWAIT) == 0);
+
+  if (rtcb->group->tg_children == NULL && retains)
+    {
+      ret = -ECHILD;
+    }
+  else if (pid != INVALID_PROCESS_ID)
+    {
+      /* Get the TCB corresponding to this PID.  NOTE: If the child has
+       * already exited, then the PID will not map to a valid TCB.
+       */
+
+      ctcb = nxsched_get_tcb(pid);
+      if (ctcb && ctcb->group)
+        {
+          /* Make sure that the thread it is our child. */
+
+          if (ctcb->group->tg_ppid != rtcb->group->tg_pid)
+            {
+              ret = -ECHILD;
+            }
+        }
+
+      nxsched_put_tcb(ctcb);
+      /* The child task is ours or it is no longer active.  Does the parent
+       * task retain child status?
+       */
+
+      if (retains && ret == OK)
+        {
+          /* Yes.. Check if this specific pid has allocated child status? */
+
+          if (group_find_child(rtcb->group, pid) == NULL)
+            {
+              ret = -ECHILD;
+            }
+        }
+    }
+
+#else /* CONFIG_SCHED_CHILD_STATUS */
+
+  if (atomic_read(&rtcb->group->tg_nchildren) == 0)
+    {
+      /* There are no children */
+
+      ret = -ECHILD;
+    }
+  else if (pid != INVALID_PROCESS_ID)
+    {
+      /* Get the TCB corresponding to this PID and make sure that the
+       * thread it is our child.
+       */
+
+      ctcb = nxsched_get_tcb(pid);
+      if (!ctcb || !ctcb->group || ctcb->group->tg_ppid != rtcb->pid ||
+          (atomic_read(&ctcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
+        {
+          ret = -ECHILD;
+        }
+
+      nxsched_put_tcb(ctcb);
+    }
+
+#endif /* CONFIG_SCHED_CHILD_STATUS */
+
+  if (ret == OK)
+    {
+      ret = waittcb(rtcb, pid, options, stat_loc, retains);
+    }
+
+  return ret;
+}
 #else
-pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
+pid_t nxsched_waitpid(pid_t pid, FAR int *stat_loc, int options)
 {
   FAR struct tcb_s *ctcb;
   FAR struct task_group_s *group;
@@ -625,7 +644,7 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
  *
  ****************************************************************************/
 
-pid_t waitpid(pid_t pid, int *stat_loc, int options)
+pid_t waitpid(pid_t pid, FAR int *stat_loc, int options)
 {
   pid_t ret;
 
