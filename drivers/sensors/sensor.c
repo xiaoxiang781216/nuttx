@@ -944,7 +944,6 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   uint32_t arg1 = (uint32_t)arg;
   int ret = 0;
 
-  smdebug(upper->name, "sensor ioctl start, cmd:%d", cmd);
   switch (cmd)
     {
       case SNIOC_GET_STATE:
@@ -1150,7 +1149,6 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
     }
 
-  smdebug(upper->name, "sensor ioctl end, ret:%d", ret);
   return ret;
 }
 
