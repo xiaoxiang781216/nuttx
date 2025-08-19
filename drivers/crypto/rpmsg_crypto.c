@@ -687,6 +687,7 @@ static int rpmsg_crypto_keyprocess(FAR struct cryptkop *krp)
         break;
       case CRK_IMPORT_KEY:
       case CRK_GENERATE_AES_KEY:
+      case CRK_GENERATE_SECP256R1_KEY:
         msg->data.name_len = krp->krp_param[0].crp_nbits / 8;
         msg->data.src_data_len = krp->krp_param[1].crp_nbits / 8;
         break;
@@ -1025,6 +1026,7 @@ int rpmsg_crypto_register(FAR const char *remotecpu)
   keyalgs[CRK_DELETE_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
   keyalgs[CRK_EXPORT_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
   keyalgs[CRK_GENERATE_AES_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
+  keyalgs[CRK_GENERATE_SECP256R1_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
   keyalgs[CRK_SAVE_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
   keyalgs[CRK_LOAD_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
   keyalgs[CRK_UNLOAD_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
