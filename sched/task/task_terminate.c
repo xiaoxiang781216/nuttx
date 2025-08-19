@@ -143,14 +143,9 @@ int nxtask_terminate(pid_t pid)
       if (task_state == TSTATE_TASK_RUNNING &&
           dtcb->cpu != this_cpu())
         {
-          cpu_set_t affinity;
           atomic_t tcb_flags;
 
           tcb_flags = atomic_fetch_or(&dtcb->flags, TCB_FLAG_CPU_LOCKED);
-
-          affinity = dtcb->affinity;
-          CPU_ZERO(&dtcb->affinity);
-          CPU_SET(dtcb->cpu, &dtcb->affinity);
 
           ret = nxsched_smp_call_single(dtcb->cpu, terminate_handler,
                                         (FAR void *)(uintptr_t)dtcb);
@@ -164,7 +159,6 @@ int nxtask_terminate(pid_t pid)
           else
             {
               atomic_set(&dtcb->flags, tcb_flags);
-              dtcb->affinity = affinity;
             }
         }
       else
