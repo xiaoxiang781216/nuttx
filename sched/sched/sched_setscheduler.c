@@ -168,7 +168,7 @@ int nxsched_set_scheduler(pid_t pid, int policy,
                           FAR const struct sched_param *param)
 {
   FAR struct tcb_s *tcb;
-  int ret = OK;
+  int ret = -EINVAL;
 
   /* Check if the task to modify the calling task */
 
@@ -201,6 +201,8 @@ int nxsched_set_scheduler(pid_t pid, int policy,
           param->sched_priority >= SCHED_PRIORITY_MIN &&
           param->sched_priority <= SCHED_PRIORITY_MAX)
         {
+          ret = OK;
+
           /* Further, disable timer interrupts
            * while we set up scheduling policy.
            */
@@ -254,14 +256,6 @@ int nxsched_set_scheduler(pid_t pid, int policy,
 #endif
             }
         }
-      else
-        {
-          ret = -EINVAL;
-        }
-    }
-  else
-    {
-      ret = -ESRCH;
     }
 
   /* Set the new priority */
