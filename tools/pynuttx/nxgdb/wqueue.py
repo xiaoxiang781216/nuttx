@@ -110,9 +110,9 @@ class WorkQueue(Value, p.KWorkQueue):
 
     @property
     def worker(self):
-        return (utils.sizeof("struct kwork_wqueue_s") + self.address).cast(
-            utils.lookup_type("struct kworker_s").pointer()
-        )
+        return utils.Value(
+            (utils.sizeof("struct kwork_wqueue_s") + int(self.address))
+        ).cast(utils.lookup_type("struct kworker_s").pointer())
 
     @property
     def is_running(self):

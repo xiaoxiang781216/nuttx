@@ -30,15 +30,6 @@ from .value import Value
 class Work(Value):
     """struct work_s"""
 
-    class U(Value):
-        class S(Value):
-            dq: Value
-            qtime: Value
-
-        s: S
-        timer: Value  # wdog_s
-
-    u: U
     worker: Value  # void (*worker_t)(FAR void *arg);
     arg: Value
     wq: KWorkQueue
@@ -55,7 +46,8 @@ class KWorker(Value):
 class KWorkQueue(Value):
     """struct kwork_wqueue_s"""
 
-    q: Value
+    expired: Value
+    pending: Value
     sem: Value
     exsem: Value
     nthreads: int
