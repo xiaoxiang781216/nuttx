@@ -1,0 +1,39 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+menuconfig ETHOSU
+	bool "Arm Ethos-U NPU support"
+	default n
+	depends on ARCH_ARM && CMSIS
+	---help---
+		Enable support for Arm Ethos-U NPU (Neural Processing Unit).
+		This driver provides AI Engine lower half implementation for neural network inference.
+
+if ETHOSU
+
+choice ETHOSU_ARCH
+	prompt "Ethos-U Architecture"
+	default ETHOSU_U55
+	---help---
+		Select the target Ethos-U NPU architecture variant.
+
+config ETHOSU_U55
+	bool "Ethos-U55"
+	---help---
+		Select Ethos-U55 NPU architecture.
+
+config ETHOSU_U65
+	bool "Ethos-U65"
+	---help---
+		Select Ethos-U65 NPU architecture.
+
+config ETHOSU_U85
+	bool "Ethos-U85"
+	---help---
+		Select Ethos-U85 NPU architecture.
+
+endchoice
+
+endif # ETHOSU

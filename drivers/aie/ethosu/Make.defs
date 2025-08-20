@@ -1,0 +1,95 @@
+############################################################################
+# drivers/aie/ethosu/Make.defs
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.  The
+# ASF licenses this file to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance with the
+# License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+############################################################################
+
+ifeq ($(CONFIG_ETHOSU),y)
+
+ETHOSU_VERSION ?= 25.05
+
+# Path to local ethos-u-core-driver (relative to drivers/)
+ETHOSU_CORE_DRIVER_PATH = aie/ethosu/ethos-u-core-driver-$(ETHOSU_VERSION)
+
+# Include CMSIS path
+CFLAGS += -I$(TOPDIR)/../apps/mlearning/cmsis/CMSIS_5/CMSIS/Core/Include
+
+# Include external library header files (lower priority)
+CFLAGS += -I$(TOPDIR)/drivers/$(ETHOSU_CORE_DRIVER_PATH)/include
+
+# Undefine __KERNEL__ if it exists
+CFLAGS += -U__KERNEL__
+
+# External library specific definitions
+CFLAGS += -D__CORTEX_M
+
+# Suppress warnings for external library source files
+$(ETHOSU_CORE_DRIVER_PATH)/src/%.o: CFLAGS += -w
+
+# NuttX adapter layer sources (local ethosu directory)
+CSRCS += aie/ethosu/ethosu_platform.c
+CSRCS += aie/ethosu/ethosu_lowerhalf.c
+
+# ethos-u-core-driver sources (from local ethos-u-core-driver directory)
+CSRCS += $(ETHOSU_CORE_DRIVER_PATH)/src/ethosu_driver.c
+CSRCS += $(ETHOSU_CORE_DRIVER_PATH)/src/ethosu_pmu.c
+
+# Include device-specific sources based on configuration
+ifeq ($(CONFIG_ETHOSU_U55),y)
+CFLAGS += -DETHOSU55=1 -DETHOSU_ARCH=u55
+CXXFLAGS += -DETHOSU55=1 -DETHOSU_ARCH=u55
+CSRCS += $(ETHOSU_CORE_DRIVER_PATH)/src/ethosu_device_u55_u65.c
+else ifeq ($(CONFIG_ETHOSU_U65),y)
+CFLAGS += -DETHOSU65=1 -DETHOSU_ARCH=u65
+CXXFLAGS += -DETHOSU65=1 -DETHOSU_ARCH=u65
+CSRCS += $(ETHOSU_CORE_DRIVER_PATH)/src/ethosu_device_u55_u65.c
+else ifeq ($(CONFIG_ETHOSU_U85),y)
+CFLAGS += -DETHOSU85=1 -DETHOSU_ARCH=u85
+CXXFLAGS += -DETHOSU85=1 -DETHOSU_ARCH=u85
+CSRCS += $(ETHOSU_CORE_DRIVER_PATH)/src/ethosu_device_u85.c
+endif
+
+# ---------------------------------------------------------------------------
+# Download and unpack: Arm Ethos-U Core Driver
+
+# Only auto-download if no local git checkout exists
+ifeq ($(wildcard $(ETHOSU_CORE_DRIVER_PATH)/.git),)
+
+ETHOSU_ZIP = ethos-u-core-driver-$(ETHOSU_VERSION).zip
+
+# Download archive
+$(ETHOSU_ZIP):
+	$(call DOWNLOAD,https://gitlab.arm.com/artificial-intelligence/ethos-u/ethos-u-core-driver/-/archive/$(ETHOSU_VERSION),$(ETHOSU_ZIP),$(ETHOSU_ZIP))
+	$(Q) unzip -o $(ETHOSU_ZIP) -d $(dir $(ETHOSU_CORE_DRIVER_PATH))
+
+# Ensure external sources exist before dependency generation
+$(ETHOSU_CORE_DRIVER_PATH)/src/%.c: | $(ETHOSU_ZIP)
+	@:
+
+endif
+
+# Hook into 'make context' to auto-fetch/unpack
+context:: $(ETHOSU_ZIP)
+
+# Clean downloads and extracted sources when not a git repository
+distclean::
+ifeq ($(wildcard $(ETHOSU_CORE_DRIVER_PATH)/.git),)
+	$(call DELDIR, $(ETHOSU_CORE_DRIVER_PATH))
+	$(call DELFILE, $(ETHOSU_ZIP))
+endif
+
+endif

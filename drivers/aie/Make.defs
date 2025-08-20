@@ -24,6 +24,11 @@ ifeq ($(CONFIG_AI_ENGINE),y)
 
 CSRCS += ai_engine.c
 
+# Include Ethos-U NPU driver when enabled
+ifeq ($(CONFIG_ETHOSU),y)
+include aie$(DELIM)ethosu$(DELIM)Make.defs
+endif
+
 # Include AI engine device driver build support
 
 DEPPATH += --dep-path aie

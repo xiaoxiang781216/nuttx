@@ -3,8 +3,14 @@
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
 
-config AI_ENGINE
+menuconfig AI_ENGINE
 	bool "AI Engine Acceleration Support"
 	default n
 	---help---
 		Drivers for various AI engine devices.
+
+if AI_ENGINE
+
+source "drivers/aie/ethosu/Kconfig"
+
+endif # AI_ENGINE
