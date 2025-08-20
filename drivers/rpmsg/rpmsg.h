@@ -29,6 +29,7 @@
 
 #include <nuttx/rpmsg/rpmsg.h>
 
+#include "rpmsg_char.h"
 #include "rpmsg_ping.h"
 
 /****************************************************************************
@@ -61,6 +62,9 @@ struct rpmsg_s
 #endif
 #ifdef CONFIG_RPMSG_WAKELOCK
   struct rpmsg_endpoint        wakelock;
+#endif
+#ifdef CONFIG_RPMSG_CHAR
+  struct rpmsg_char_s          chr;
 #endif
   atomic_t                     signals;
   struct notifier_block        nbreboot;

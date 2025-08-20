@@ -179,6 +179,18 @@ static int rpmsg_dev_ioctl_(FAR struct rpmsg_s *rpmsg, int cmd,
         ret = rpmsg_wakelock(&rpmsg->wakelock, cmd, arg);
         break;
 #endif
+#ifdef CONFIG_RPMSG_CHAR
+      case RPMSG_CREATE_EPT_IOCTL:
+      case RPMSG_CREATE_DEV_IOCTL:
+        ret = rpmsg_char_create_eptdev(
+          &rpmsg->chr, (FAR const struct rpmsg_endpoint_info *)arg);
+        break;
+      case RPMSG_RELEASE_DEV_IOCTL:
+        rpmsg_char_destroy_eptdev(
+          &rpmsg->chr, (FAR const struct rpmsg_endpoint_info *)arg);
+        ret = OK;
+        break;
+#endif
       default:
         if (rpmsg->ops->ioctl)
           {
@@ -817,6 +829,8 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
   ret = metal_init(&params);
   if (ret >= 0)
     {
+      rpmsg_char_init(&rpmsg->chr);
+
       ret = register_driver(path, &g_rpmsg_dev_ops, 0222, rpmsg);
       if (ret >= 0)
         {
@@ -840,11 +854,13 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
           else
             {
               unregister_driver(path);
+              rpmsg_char_deinit(&rpmsg->chr);
               metal_finish();
             }
         }
       else
         {
+          rpmsg_char_deinit(&rpmsg->chr);
           metal_finish();
         }
     }
@@ -863,7 +879,7 @@ void rpmsg_unregister(FAR const char *path, FAR struct rpmsg_s *rpmsg)
   rpmsg_deinit_workrx(rpmsg);
   nxrmutex_destroy(&rpmsg->lock);
   unregister_driver(path);
-
+  rpmsg_char_deinit(&rpmsg->chr);
   metal_finish();
 }
 
