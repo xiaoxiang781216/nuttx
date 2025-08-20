@@ -51,7 +51,7 @@ uint16_t crc16ccittpart(FAR const uint8_t *src, size_t len,
 {
   size_t i;
   uint16_t v = crc16val;
-  static uint16_t crc16ccitt_tab[256] =
+  static const uint16_t g_crc16_tab[256] =
   {
     0x0000u, 0x1189u, 0x2312u, 0x329bu, 0x4624u, 0x57adu, 0x6536u, 0x74bfu,
     0x8c48u, 0x9dc1u, 0xaf5au, 0xbed3u, 0xca6cu, 0xdbe5u, 0xe97eu, 0xf8f7u,
@@ -89,7 +89,7 @@ uint16_t crc16ccittpart(FAR const uint8_t *src, size_t len,
 
   for (i = 0u; i < len; i++)
     {
-      v = (v >> 8) ^ crc16ccitt_tab[(v ^ src[i]) & 0xff];
+      v = (v >> 8) ^ g_crc16_tab[(v ^ src[i]) & 0xff];
     }
 
   return v;

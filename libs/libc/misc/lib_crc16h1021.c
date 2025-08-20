@@ -118,7 +118,7 @@ uint16_t crc16h1021_part(FAR const uint8_t *src,
                          size_t len, uint16_t crc16val)
 {
   size_t i;
-  static uint16_t g_crc16_tab[256] =
+  static const uint16_t g_crc16_tab[256] =
   {
     0x0000u, 0x1021u, 0x2042u, 0x3063u, 0x4084u, 0x50a5u, 0x60c6u, 0x70e7u,
     0x8108u, 0x9129u, 0xa14au, 0xb16bu, 0xc18cu, 0xd1adu, 0xe1ceu, 0xf1efu,

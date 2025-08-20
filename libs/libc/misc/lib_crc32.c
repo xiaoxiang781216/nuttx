@@ -111,7 +111,7 @@ uint32_t crc32part(FAR const uint8_t *src, size_t len, uint32_t crc32val)
         }
     }
 #else
-  static const uint32_t crc32_tab[] =
+  static const uint32_t g_crc32_tab[] =
   {
     0x00000000u, 0x77073096u, 0xee0e612cu, 0x990951bau,
     0x076dc419u, 0x706af48fu, 0xe963a535u, 0x9e6495a3u,
@@ -181,7 +181,7 @@ uint32_t crc32part(FAR const uint8_t *src, size_t len, uint32_t crc32val)
 
   for (i = 0u; i < len; i++)
     {
-      crc32val = crc32_tab[(uint8_t)(crc32val & 0xffu) ^ src[i]] ^
+      crc32val = g_crc32_tab[(uint8_t)(crc32val & 0xffu) ^ src[i]] ^
                  (crc32val >> 8);
     }
 #endif

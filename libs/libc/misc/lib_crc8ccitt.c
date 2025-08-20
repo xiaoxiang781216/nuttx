@@ -49,7 +49,7 @@
 
 uint8_t crc8ccittpart(FAR const uint8_t *src, size_t len, uint8_t crc8val)
 {
-  static const uint8_t crc8_tab[256] =
+  static const uint8_t g_crc8_tab[256] =
   {
     0x00u, 0x07u, 0x0eu, 0x09u, 0x1cu, 0x1bu, 0x12u, 0x15u,
     0x38u, 0x3fu, 0x36u, 0x31u, 0x24u, 0x23u, 0x2au, 0x2du,
@@ -85,7 +85,7 @@ uint8_t crc8ccittpart(FAR const uint8_t *src, size_t len, uint8_t crc8val)
     0xe6u, 0xe1u, 0xe8u, 0xefu, 0xfau, 0xfdu, 0xf4u, 0xf3u
   };
 
-  return crc8table(crc8_tab, src, len, crc8val);
+  return crc8table(g_crc8_tab, src, len, crc8val);
 }
 
 /***************************************************************************

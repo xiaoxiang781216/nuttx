@@ -53,7 +53,7 @@
  *     size_t i;
  *     size_t j;
  *
- *     printf("static const uint64_t crc64_tab[%zu] =\n", CRC64_TABLEN);
+ *     printf("static const uint64_t g_crc64_tab[%zu] =\n", CRC64_TABLEN);
  *     printf("{\n  ");
  *
  *     for (i = 0; i < CRC64_TABLEN; i++)
@@ -108,7 +108,7 @@
 uint64_t crc64part(FAR const uint8_t *src, size_t len, uint64_t crc64val)
 {
   size_t i;
-  static const uint64_t crc64_tab[256] =
+  static const uint64_t g_crc64_tab[256] =
   {
     0x0000000000000000u, 0x42f0e1eba9ea3693u,
     0x85e1c3d753d46d26u, 0xc711223cfa3e5bb5u,
@@ -242,7 +242,7 @@ uint64_t crc64part(FAR const uint8_t *src, size_t len, uint64_t crc64val)
 
   for (i = 0u; i < len; i++)
     {
-      crc64val = crc64_tab[((crc64val >> 56) & 0xff) ^ src[i]] ^
+      crc64val = g_crc64_tab[((crc64val >> 56) & 0xff) ^ src[i]] ^
                  (crc64val << 8);
     }
 

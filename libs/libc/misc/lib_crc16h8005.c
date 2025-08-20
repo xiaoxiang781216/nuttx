@@ -119,7 +119,7 @@ uint16_t crc16h8005_part(FAR const uint8_t *src,
 {
   size_t i;
   uint16_t v = crc16val;
-  static uint16_t g_crc16_tab[256] =
+  static const uint16_t g_crc16_tab[256] =
   {
     0x0000u, 0xc0c1u, 0xc181u, 0x0140u, 0xc301u, 0x03c0u, 0x0280u, 0xc241u,
     0xc601u, 0x06c0u, 0x0780u, 0xc741u, 0x0500u, 0xc5c1u, 0xc481u, 0x0440u,
