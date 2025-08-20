@@ -38,6 +38,48 @@
 #include "semaphore/semaphore.h"
 
 /****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+static inline_function
+void restore_context(FAR struct tcb_s *rtcb, FAR struct tcb_s *wtcb,
+                     FAR sem_t *sem, int errcode, bool mutex)
+{
+  /* This restores the value to what it was before the previous sem_wait.
+   * This caused the thread to be blocked in the first place.
+   *
+   * For mutexes, the holder is updated by the thread itself
+   * when it exits nxsem_wait
+   */
+
+  if (!mutex)
+    {
+      atomic_fetch_add(NXSEM_COUNT(sem), 1);
+    }
+  else if (dq_empty(SEM_WAITLIST(sem)))
+    {
+      atomic_fetch_and(NXSEM_MHOLDER(sem), ~NXSEM_MBLOCKING_BIT);
+    }
+
+  /* Indicate that the wait is over. */
+
+  wtcb->waitobj = NULL;
+
+  /* Mark the errno value for the thread. */
+
+  wtcb->errcode = errcode;
+
+  /* Add the task to ready-to-run task list and
+   * perform the context switch if one is needed
+   */
+
+  if (nxsched_add_readytorun(wtcb))
+    {
+      nxscehd_switch(wtcb, rtcb);
+    }
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -124,37 +166,6 @@ void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode)
         }
 #endif
 
-      /* This restores the value to what it was before the previous sem_wait.
-       * This caused the thread to be blocked in the first place.
-       *
-       * For mutexes, the holder is updated by the thread itself
-       * when it exits nxsem_wait
-       */
-
-      if (!mutex)
-        {
-          atomic_fetch_add(NXSEM_COUNT(sem), 1);
-        }
-      else if (dq_empty(SEM_WAITLIST(sem)))
-        {
-          atomic_fetch_and(NXSEM_MHOLDER(sem), ~NXSEM_MBLOCKING_BIT);
-        }
-
-      /* Indicate that the wait is over. */
-
-      wtcb->waitobj = NULL;
-
-      /* Mark the errno value for the thread. */
-
-      wtcb->errcode = errcode;
-
-      /* Add the task to ready-to-run task list and
-       * perform the context switch if one is needed
-       */
-
-      if (nxsched_add_readytorun(wtcb))
-        {
-          nxscehd_switch(wtcb, rtcb);
-        }
+      restore_context(rtcb, wtcb, sem, errcode, mutex);
     }
 }
