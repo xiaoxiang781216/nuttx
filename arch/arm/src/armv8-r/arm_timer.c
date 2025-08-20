@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/arm_arch_timer.c
+ * arch/arm/src/armv8-r/arm_timer.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -36,7 +36,7 @@
 #include <nuttx/kmalloc.h>
 
 #include "gic.h"
-#include "arm_arch_timer.h"
+#include "arm_timer.h"
 
 /****************************************************************************
  * Private Types

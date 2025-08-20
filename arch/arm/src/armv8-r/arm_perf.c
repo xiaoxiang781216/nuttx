@@ -27,7 +27,7 @@
 
 #include "arm_internal.h"
 #include "sctlr.h"
-#include "arm_arch_timer.h"
+#include "arm_timer.h"
 
 #ifdef CONFIG_ARCH_PERF_EVENTS
 

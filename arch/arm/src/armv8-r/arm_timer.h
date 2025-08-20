@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/arm_arch_timer.h
+ * arch/arm/src/armv8-r/arm_timer.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_ARMV8_R_ARM_ARCH_TIMER_H
-#define __ARCH_ARM_SRC_ARMV8_R_ARM_ARCH_TIMER_H
+#ifndef __ARCH_ARM_SRC_ARMV8_R_ARM_TIMER_H
+#define __ARCH_ARM_SRC_ARMV8_R_ARM_TIMER_H
 
 /****************************************************************************
  * Included Files
@@ -60,4 +60,4 @@ static inline uint64_t arm_arch_timer_get_cntfrq(void)
   return CP15_GET(CNTFRQ);
 }
 
-#endif /* __ARCH_ARM_SRC_ARMV8_R_ARM_ARCH_TIMER_H */
+#endif /* __ARCH_ARM_SRC_ARMV8_R_ARM_TIMER_H */
