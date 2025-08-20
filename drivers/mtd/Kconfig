@@ -1483,4 +1483,18 @@ config MTD_CFI
 	---help---
 		Support CFI(common flash interface) NOR FLASH.
 
+config MTD_CFI_PAGE_SIZE
+	int "page size of MTD CFI NOR FLASH (bytes)"
+	default 16
+	depends on MTD_CFI
+	---help---
+		Configure write page size of CFI Flash.
+		According to the CFI protocol, the flash supports write
+		operation size from one byte up to a maximum number of bytes
+		defined in flash hardware acccording the CFI document JEP137B.
+		The MTD device driver requires defining a page size, which serves
+		as the minimum write unit of the flash. Hence, this configuration
+		is introduced. The Configured page size within the range of
+		the maximum number of bytes is considered valid.
+
 endif # MTD
