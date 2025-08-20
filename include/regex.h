@@ -89,13 +89,13 @@ extern "C"
 {
 #endif
 
-int regcomp(FAR regex_t *__restrict, FAR const char *__restrict, int);
+int regcomp(FAR regex_t *, FAR const char *, int);
 
-int regexec(FAR const regex_t * __restrict, FAR const char *__restrict,
-            size_t, FAR regmatch_t *__restrict, int);
+int regexec(FAR const regex_t * , FAR const char *,
+            size_t, FAR regmatch_t *, int);
 void regfree(FAR regex_t *);
 
-size_t regerror(int, FAR const regex_t *__restrict, FAR char *__restrict,
+size_t regerror(int, FAR const regex_t *, FAR char *,
                 size_t);
 
 #ifdef __cplusplus

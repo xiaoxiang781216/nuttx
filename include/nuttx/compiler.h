@@ -1177,7 +1177,6 @@
 #  define weak_data                     __attribute__((weak))
 #  define weak_function                 __attribute__((weak))
 #  define weak_const_function           __attribute__((weak, __const__))
-#  define restrict
 #  define noreturn_function
 #  define farcall_function              __attribute__((long_call))
 #  define pure_function
