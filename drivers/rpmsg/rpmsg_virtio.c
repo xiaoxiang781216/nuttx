@@ -882,6 +882,7 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
       return ret;
     }
 
+  priv->rvdev.rdev.lock.is_spinlock = true;
   priv->notifytx = priv->rvdev.svq->notify;
   priv->rvdev.svq->notify = rpmsg_virtio_tx_notify;
   priv->rvdev.notify_wait_cb = rpmsg_virtio_notify_wait;
