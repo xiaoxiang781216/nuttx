@@ -169,7 +169,7 @@ static int nxtask_assign_pid(FAR struct tcb_s *tcb)
 
       /* Handle conner case: context siwtch happened when kmm_malloc */
 
-      spin_lock_irqsave(&g_pidhashlock);
+      flags = spin_lock_irqsave(&g_pidhashlock);
       if (temp != g_pidhash)
         {
           spin_unlock_irqrestore(&g_pidhashlock, flags);
