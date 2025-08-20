@@ -80,7 +80,9 @@ class TestThread(unittest.TestCase):
         # fail to continue running a task wich is waiting for a mutex if the current running
         # task was actually the idle task.
 
-        cur_thread_id = gdb.parse_and_eval("g_running_tasks")["pid"]
+        cur_thread_id = gdb.parse_and_eval(
+            f"g_running_tasks[{gdb.selected_thread().num - 1}]"
+        )["pid"]
 
         gdb.execute("nxthread 0")
         gdb.execute("frame 0")
