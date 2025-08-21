@@ -58,55 +58,61 @@
 
 size_t nxtask_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size)
 {
-  size_t n = 0;
+  size_t n = 0u;
 #ifdef CONFIG_ARCH_ADDRENV
   FAR struct addrenv_s *oldenv;
 #endif
 
   /* Sanity checks and idle tasks */
 
-  if (!tcb || size < 1 || is_idle_task(tcb))
+  if (!tcb || size < 1u || is_idle_task(tcb))
     {
       *args = '\0';
-      return 0;
     }
-
-#ifdef CONFIG_ARCH_ADDRENV
-  if (tcb->group->tg_addrenv_own != NULL)
+  else
     {
-      addrenv_select(tcb->group->tg_addrenv_own, &oldenv);
-    }
+#ifdef CONFIG_ARCH_ADDRENV
+      if (tcb->group->tg_addrenv_own != NULL)
+        {
+          addrenv_select(tcb->group->tg_addrenv_own, &oldenv);
+        }
 #endif
 
 #ifndef CONFIG_DISABLE_PTHREAD
-  if ((atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK) ==
-      TCB_FLAG_TTYPE_PTHREAD)
-    {
-      FAR struct pthread_entry_s *entry =
-        (FAR struct pthread_entry_s *)(tcb + 1);
-
-      n += snprintf(args, size, " %p %p", tcb->entry.main, entry->arg);
-    }
-  else
-#endif
-    {
-      FAR char **argv = nxsched_get_stackargs(tcb);
-
-      if (argv++)
+      if ((atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK) ==
+          TCB_FLAG_TTYPE_PTHREAD)
         {
-          while (*argv != NULL && n < size)
+          FAR struct pthread_entry_s *entry =
+            (FAR struct pthread_entry_s *)(tcb + 1);
+
+          n += snprintf(args, size, " %p %p", tcb->entry.main, entry->arg);
+        }
+      else
+#endif
+        {
+          FAR char **argv = nxsched_get_stackargs(tcb);
+
+          if (argv++)
             {
-              n += snprintf(args + n, size - n, " %s", *argv++);
+              while (*argv != NULL && n < size)
+                {
+                  n += snprintf(args + n, size - n, " %s", *argv++);
+                }
             }
+        }
+
+#ifdef CONFIG_ARCH_ADDRENV
+      if (tcb->group->tg_addrenv_own != NULL)
+        {
+          addrenv_restore(oldenv);
+        }
+#endif
+
+      if (n >= size - 1u)
+        {
+          n = size - 1u;
         }
     }
 
-#ifdef CONFIG_ARCH_ADDRENV
-  if (tcb->group->tg_addrenv_own != NULL)
-    {
-      addrenv_restore(oldenv);
-    }
-#endif
-
-  return n < size - 1 ? n : size - 1;
+  return n;
 }

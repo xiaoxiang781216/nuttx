@@ -53,6 +53,7 @@
 pid_t nxsched_gettid(void)
 {
   FAR struct tcb_s *rtcb = this_task();
+  pid_t tid = (pid_t)-ESRCH;
 
   /* Get the TCB at the head of the ready-to-run task list.  That
    * will usually be the currently executing task.  There are one
@@ -71,10 +72,8 @@ pid_t nxsched_gettid(void)
        * ready-to-run task list
        */
 
-      return rtcb->pid;
+      tid = rtcb->pid;
     }
 
-  /* No.. return -ESRCH to indicate this condition */
-
-  return (pid_t)-ESRCH;
+  return tid;
 }

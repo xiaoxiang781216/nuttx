@@ -81,7 +81,7 @@ int nxthread_create(FAR const char *name, uint8_t ttype, int priority,
   posix_spawnattr_t attr;
   FAR struct tcb_s *tcb;
   pid_t pid;
-  int ret;
+  int ret = -ENOMEM;
 
   posix_spawnattr_init(&attr);
   posix_spawnattr_setstacksize(&attr, stack_size);
@@ -96,32 +96,36 @@ int nxthread_create(FAR const char *name, uint8_t ttype, int priority,
   if (!tcb)
     {
       serr("ERROR: Failed to allocate TCB\n");
-      return -ENOMEM;
     }
-
-  /* Setup the task type */
-
-  atomic_set(&tcb->flags, ttype | TCB_FLAG_FREE_TCB);
-
-  /* Initialize the task */
-
-  ret = nxtask_init(tcb, name, entry, NULL, &attr, argv, envp);
-  posix_spawnattr_destroy(&attr);
-  if (ret < OK)
+  else
     {
-      kmm_free(tcb);
-      return ret;
+      /* Setup the task type */
+
+      atomic_set(&tcb->flags, ttype | TCB_FLAG_FREE_TCB);
+
+      /* Initialize the task */
+
+      ret = nxtask_init(tcb, name, entry, NULL, &attr, argv, envp);
+      posix_spawnattr_destroy(&attr);
+      if (ret < OK)
+        {
+          kmm_free(tcb);
+        }
+      else
+        {
+          /* Get the assigned pid before we start the task */
+
+          pid = tcb->pid;
+
+          /* Activate the task */
+
+          nxtask_activate(tcb);
+
+          ret = pid;
+        }
     }
 
-  /* Get the assigned pid before we start the task */
-
-  pid = tcb->pid;
-
-  /* Activate the task */
-
-  nxtask_activate(tcb);
-
-  return pid;
+  return ret;
 }
 
 /****************************************************************************
