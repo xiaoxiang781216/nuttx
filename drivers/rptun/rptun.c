@@ -400,22 +400,22 @@ static void rptun_update_vring_da(FAR struct remoteproc *rproc,
 
   for (i = 0; i < vdev_rsc->num_of_vrings; i++)
     {
-      FAR struct fw_rsc_vdev_vring *vring = &vdev_rsc->vring[i];
+      FAR struct fw_rsc_vdev_vring *rvring = &vdev_rsc->vring[i];
       metal_phys_addr_t vring_da = METAL_BAD_PHYS;
       metal_phys_addr_t vring_pa;
       uint32_t vring_sz;
 
-      vring_sz = ALIGN_UP(vring_size(vring->num, vring->align),
-                          vring->align);
+      vring_sz = ALIGN_UP(vring_size(rvring->num, rvring->align),
+                          rvring->align);
       vring_pa = metal_io_virt_to_phys(metal_io_get_region(), *shmbase);
       remoteproc_mmap(rproc, &vring_pa, &vring_da, vring_sz, 0, NULL);
 
       rptuninfo("vr[%u] shm=%p len=%zu da=0x%lx pa=0x%lx sz=%" PRIu32 "\n",
                 i, *shmbase, *shmlen, vring_da, vring_pa, vring_sz);
 
-      if (vring->da == 0u || vring->da == FW_RSC_U32_ADDR_ANY)
+      if (rvring->da == 0u || rvring->da == FW_RSC_U32_ADDR_ANY)
         {
-          vring->da = vring_da;
+          rvring->da = vring_da;
           *shmbase += vring_sz;
           *shmlen  -= vring_sz;
         }
