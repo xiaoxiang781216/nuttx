@@ -332,6 +332,7 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
       memset(mem, MM_FREE_MAGIC, size);
 #  endif
       kasan_poison(mem, size);
+      UNUSED(size);
     }
 
   up_irq_restore(flags);
