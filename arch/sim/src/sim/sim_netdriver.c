@@ -276,8 +276,8 @@ static void sim_netdev_interrupt(void *arg)
       netdev_lower_rxready(dev);
     }
 
-  work_queue(HPWORK, &priv->work, sim_netdev_interrupt, arg,
-             SIM_NETDEV_PERIOD);
+  work_queue_next(HPWORK, &priv->work, sim_netdev_interrupt, arg,
+                  SIM_NETDEV_PERIOD);
 }
 
 /****************************************************************************

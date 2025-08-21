@@ -374,8 +374,8 @@ static void sim_gpiochip_work(void *arg)
     {
       sim_gpiochip_irq_process(priv);
 
-      work_queue(HPWORK, &priv->work, sim_gpiochip_work, priv,
-                 SIM_GPIOCHIP_WORK_DELAY);
+      work_queue_next(HPWORK, &priv->work, sim_gpiochip_work, priv,
+                      SIM_GPIOCHIP_WORK_DELAY);
     }
 }
 

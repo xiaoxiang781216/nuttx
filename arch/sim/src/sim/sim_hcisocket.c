@@ -267,8 +267,8 @@ static void sim_bthcisock_work(void *arg)
       bthcisock_receive(&dev->drv);
     }
 
-  work_queue(HPWORK, &dev->work, sim_bthcisock_work, arg,
-             SIM_BTHCI_WORK_DELAY);
+  work_queue_next(HPWORK, &dev->work, sim_bthcisock_work, arg,
+                  SIM_BTHCI_WORK_DELAY);
 }
 
 /****************************************************************************

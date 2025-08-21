@@ -1088,8 +1088,8 @@ static void sim_usbdev_work(void *arg)
     }
   while (do_loop);
 
-  work_queue(HPWORK, &priv->work, sim_usbdev_work, priv,
-             SIM_USB_PERIOD);
+  work_queue_next(HPWORK, &priv->work, sim_usbdev_work, priv,
+                  SIM_USB_PERIOD);
 }
 
 /****************************************************************************

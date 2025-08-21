@@ -462,8 +462,8 @@ static void sim_tty_work(void *arg)
 #endif
     }
 
-  work_queue(HPWORK, &priv->work, sim_tty_work, arg,
-             SIM_UART_WORK_DELAY);
+  work_queue_next(HPWORK, &priv->work, sim_tty_work, arg,
+                  SIM_UART_WORK_DELAY);
 }
 
 /****************************************************************************
@@ -479,7 +479,7 @@ static void tty_rxint(struct uart_dev_s *dev, bool enable)
   struct tty_priv_s *priv = dev->priv;
 
   priv->rxint = enable;
-  if (enable)
+  if (enable && !priv->txint)
     {
       work_queue(HPWORK, &priv->work, sim_tty_work, dev,
                  SIM_UART_WORK_DELAY);
@@ -655,7 +655,7 @@ static void tty_txint(struct uart_dev_s *dev, bool enable)
   struct tty_priv_s *priv = dev->priv;
 
   priv->txint = enable;
-  if (enable)
+  if (enable && !priv->rxint)
     {
       work_queue(HPWORK, &priv->work, sim_tty_work, dev,
                  SIM_UART_WORK_DELAY);
