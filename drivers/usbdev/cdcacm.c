@@ -1493,6 +1493,10 @@ static void cdcacm_unbind(FAR struct usbdevclass_driver_s *driver,
        * of them)
        */
 
+#ifdef CONFIG_CDCACM_DISABLE_TXBUF
+      nxmutex_lock(&priv->serdev.xmit.lock);
+#endif
+
       flags = spin_lock_irqsave(&priv->lock);
 
 #ifdef CONFIG_CDCACM_DISABLE_TXBUF
@@ -1519,6 +1523,10 @@ static void cdcacm_unbind(FAR struct usbdevclass_driver_s *driver,
 
       DEBUGASSERT(priv->nwrq == 0);
       spin_unlock_irqrestore(&priv->lock, flags);
+
+#ifdef CONFIG_CDCACM_DISABLE_TXBUF
+      nxmutex_unlock(&priv->serdev.xmit.lock);
+#endif
 
 #ifdef CONFIG_CDCACM_HAVE_EPINTIN
       /* Free the interrupt IN endpoint */
