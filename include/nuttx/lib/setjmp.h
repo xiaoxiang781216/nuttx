@@ -59,7 +59,6 @@ typedef struct sigsetjmp_buf_s sigjmp_buf[1];
 
 /****************************************************************************
  * Name: siglongjmp
- *       void siglongjmp(sigjmp_buf env, int val);
  *
  * Description:
  *   Restores the program's execution context previously saved by
@@ -76,14 +75,15 @@ typedef struct sigsetjmp_buf_s sigjmp_buf[1];
  *
  ****************************************************************************/
 
-#define siglongjmp(env, val)                            \
-  ({                                                    \
-    if (env->savemask)                                  \
-      {                                                 \
-        sigprocmask(SIG_SETMASK, &env->sigmask, NULL);  \
-      }                                                 \
-    longjmp(env->jmpbuf, val);                          \
-  })
+static inline_function void siglongjmp(sigjmp_buf env, int val)
+{
+  if (env->savemask)
+    {
+      sigprocmask(SIG_SETMASK, &env->sigmask, NULL);
+    }
+
+  longjmp(env->jmpbuf, val);
+}
 
 /****************************************************************************
  * Name: sigsetjmp
