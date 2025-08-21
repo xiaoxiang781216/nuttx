@@ -84,7 +84,6 @@ add_compile_options(--tradeoff=2)
 
 # mergering of sections
 
-add_compile_options(-R)
 add_compile_options(--concatenate-sections)
 
 # Debug link map
