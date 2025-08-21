@@ -494,37 +494,43 @@
 
 #define SENSOR_TYPE_ULTRAVIOLET                     53
 
+/* Ambient Light Uncalibrate
+ * The ambient light sensor uncalibrate value is returned in SI units lux.
+ */
+
+#define SENSOR_TYPE_LIGHT_UNCALIBRATED              54
+
 /* GNSS
  * A sensor of this type returns GNSS data. Include latitude, longitude,
  * altitude, horizontal position accuracy, vertical position accuracy,
  * horizontal dilution of precision, vertical dilution of precision...
  */
 
-#define SENSOR_TYPE_GNSS                            54
+#define SENSOR_TYPE_GNSS                            55
 
 /* Sensor of GNSS satellite
  * A sensor of this type returns the GNSS satellite information.
  */
 
-#define SENSOR_TYPE_GNSS_SATELLITE                  55
+#define SENSOR_TYPE_GNSS_SATELLITE                  56
 
 /* GNSS Measurement */
 
-#define SENSOR_TYPE_GNSS_MEASUREMENT                56
+#define SENSOR_TYPE_GNSS_MEASUREMENT                57
 
 /* GNSS Clock */
 
-#define SENSOR_TYPE_GNSS_CLOCK                      57
+#define SENSOR_TYPE_GNSS_CLOCK                      58
 
 /* GNSS Geofence */
 
-#define SENSOR_TYPE_GNSS_GEOFENCE                   58
+#define SENSOR_TYPE_GNSS_GEOFENCE                   59
 
 /* The total number of sensor
  * please increase it if you added a new sensor type!
  */
 
-#define SENSOR_TYPE_COUNT                           59
+#define SENSOR_TYPE_COUNT                           60
 
 /* The additional sensor open flags */
 

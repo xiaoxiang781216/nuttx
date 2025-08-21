@@ -216,6 +216,7 @@ static const struct sensor_meta_s g_sensor_meta[] =
   {sizeof(struct sensor_pm25),                "pm25"},
   {sizeof(struct sensor_pm10),                "pm10"},
   {sizeof(struct sensor_uv),                  "uv"},
+  {sizeof(struct sensor_light),               "light_uncal"},
   {sizeof(struct sensor_gnss),                "gnss"},
   {sizeof(struct sensor_gnss_satellite),      "gnss_satellite"},
   {sizeof(struct sensor_gnss_measurement),    "gnss_measurement"},
