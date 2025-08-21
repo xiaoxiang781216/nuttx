@@ -26,19 +26,6 @@
 #define __ARCH_RISCV_INCLUDE_TYPES_H
 
 /****************************************************************************
- * Included Files
- ****************************************************************************/
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* Raw spinlock states */
-
-#define UP_SP_UNLOCKED 0  /* The Un-locked state */
-#define UP_SP_LOCKED   1  /* The Locked state */
-
-/****************************************************************************
  * Type Declarations
  ****************************************************************************/
 
@@ -141,20 +128,6 @@ typedef unsigned int       _size_t;
 /* This is the size of the interrupt state save returned by irqsave().  */
 
 typedef unsigned int       irqstate_t;
-#endif
-
-/* The Type of a spinlock.
- *
- * RISC-V architecture (in the standard atomic-instruction extension "A")
- * supports exclusive accesses to memory locations in the form of the
- * Load-Reserved (LR) and Store-Conditional (SC) instructions. RV64 supports
- * doubleword aligned data only but others supports word aligned data.
- *
- * RISC-V architecture supports fence instruction to ensure memory ordering
- */
-
-#ifdef CONFIG_ARCH_HAVE_TESTSET
-typedef _size_t            _spinlock_t;
 #endif
 
 #endif /* __ASSEMBLY__ */

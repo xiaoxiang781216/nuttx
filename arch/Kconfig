@@ -115,7 +115,6 @@ config ARCH_SIM
 	select ARCH_HAVE_TICKLESS
 	select ARCH_HAVE_POWEROFF
 	select ARCH_HAVE_RESET
-	select ARCH_HAVE_TESTSET
 	select ARCH_HAVE_FORK if !HOST_WINDOWS
 	select ARCH_HAVE_SETJMP
 	select ARCH_HAVE_CUSTOMOPT
@@ -144,7 +143,6 @@ config ARCH_X86_64
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_DPFPU
 	select ARCH_HAVE_MULTICPU
-	select ARCH_HAVE_TESTSET
 	select ARCH_HAVE_INTERRUPTSTACK
 	select ARCH_HAVE_CUSTOMOPT
 	select ARCH_HAVE_THREAD_LOCAL
@@ -538,20 +536,11 @@ config ARCH_LDST_16BIT_NOT_ATOMIC
 	(The same applies for non-interrupt context write and interrupt
 	context read.)
 
-config ARCH_HAVE_TESTSET
-	bool
-	default n
-
 config ARCH_HAVE_CUSTOM_TESTSET
 	bool
 	default n
-	select ARCH_HAVE_TESTSET
 
 config ARCH_HAVE_THREAD_LOCAL
-	bool
-	default n
-
-config ARCH_HAVE_FETCHADD
 	bool
 	default n
 

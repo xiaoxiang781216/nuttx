@@ -32,15 +32,6 @@
 #include <nuttx/config.h>
 
 /****************************************************************************
- * Pre-processor Prototypes
- ****************************************************************************/
-
-/* Raw spinlock states */
-
-#define UP_SP_UNLOCKED 0  /* The Un-locked state */
-#define UP_SP_LOCKED   1  /* The Locked state */
-
-/****************************************************************************
  * Type Declarations
  ****************************************************************************/
 
@@ -101,27 +92,6 @@ typedef unsigned long      _size_t;
 typedef signed int         _ssize_t;
 typedef unsigned int       _size_t;
 
-#endif
-
-/* The Type of a spinlock.
- * ARM official document
- * ARM® Cortex®-A Series, Version: 1.0, Programmer’s Guide for ARMv8-A
- * ARM DEN0024A (ID050815)
- *
- * chapter 14.1.4 Synchronization
- *
- * The A64 instruction set has instructions for implementing
- * synchronization functions:
- * -- Load Exclusive (LDXR): LDXR W|Xt, [Xn]
- * -- Store Exclusive (STXR): STXR Ws, W|Xt, [Xn] where Ws
- *     indicates whether the store completed successfully.
- *     0 = success.
- * -- Clear Exclusive access monitor (CLREX) This is used to
- *     clear the state of the Local Exclusive Monitor.
- */
-
-#ifdef CONFIG_ARCH_HAVE_TESTSET
-typedef _uint64_t          _spinlock_t;
 #endif
 
 /* This is the size of the interrupt state save returned by

@@ -38,7 +38,6 @@ config ARCH_CHIP_QEMU_CORTEXR52
 	bool "Qemu virtual Processor (cortex-r52)"
 	select ARCH_CORTEXR52
 	select ARCH_HAVE_ADDRENV
-	select ARCH_HAVE_FETCHADD
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_DPFPU
 	select ARCH_HAVE_IRQTRIGGER

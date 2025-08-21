@@ -55,30 +55,10 @@ typedef struct spinlock_s
 #  define SP_UNLOCKED (spinlock_t){0, 0}
 #  define SP_LOCKED   (spinlock_t){0, 1}
 #elif defined(CONFIG_SPINLOCK) || !defined(CONFIG_HAVE_ZERO_SIZE_ARRAY)
-#  if defined(CONFIG_ARCH_HAVE_TESTSET)
+typedef uint32_t spinlock_t;
 
-/* The architecture specific spinlock.h header file must also provide the
- * following:
- *
- *   UP_SP_LOCKED   - A definition of the locked state value (usually 1)
- *   UP_SP_UNLOCKED - A definition of the unlocked state value (usually 0)
- *   _spinlock_t     - The type of a spinlock memory object.
- *
- * UP_SP_LOCKED and UP_SP_UNLOCKED must be constants of type spinlock_t.
- */
-
-#  include <arch/types.h>
-#  else
-typedef uint8_t _spinlock_t;
-
-#    define UP_SP_UNLOCKED 0  /* The Un-locked state */
-#    define UP_SP_LOCKED   1  /* The Locked state */
-#  endif
-
-typedef _spinlock_t spinlock_t;
-
-#  define SP_UNLOCKED UP_SP_UNLOCKED
-#  define SP_LOCKED   UP_SP_LOCKED
+#  define SP_UNLOCKED 0
+#  define SP_LOCKED   1
 #else
 #  define SP_LOCKED      SP_UNLOCKED
 #  define SP_UNLOCKED    \
