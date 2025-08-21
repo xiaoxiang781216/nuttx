@@ -156,7 +156,7 @@ uint16_t crc16h1021_part(FAR const uint8_t *src,
 
   for (i = 0u; i < len; i++)
     {
-      crc16val = g_crc16_tab[((crc16val >> 8) & 0xff) ^
+      crc16val = g_crc16_tab[((crc16val >> 8) & 0xffu) ^
                  src[i]] ^ (uint16_t)(crc16val << 8);
     }
 
