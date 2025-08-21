@@ -261,7 +261,7 @@ static FAR struct cdcacm_dev_s *g_syslog_cdcacm;
 static const struct usbdevclass_driverops_s g_driverops =
 {
   cdcacm_bind,           /* bind */
-  NULL,                  /* unbind */
+  cdcacm_unbind,         /* unbind */
   cdcacm_setup,          /* setup */
   cdcacm_disconnect,     /* disconnect */
 #ifdef CONFIG_SERIAL_REMOVABLE
@@ -2957,8 +2957,6 @@ static int cdcuart_release(FAR struct uart_dev_s *dev)
   /* And free the memory resources. */
 
   wd_cancel(&priv->rxfailsafe);
-  cdcacm_unbind(&((FAR struct cdcacm_alloc_s *)priv)->drvr.drvr,
-                priv->usbdev);
   kmm_free(priv);
   return OK;
 }
