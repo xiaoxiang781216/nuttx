@@ -248,24 +248,12 @@ static inline_function void spin_lock(FAR volatile spinlock_t *lock)
 static inline_function bool
 spin_trylock_notrace(FAR volatile spinlock_t *lock)
 {
-  bool ret = false;
-
 #ifdef CONFIG_TICKET_SPINLOCK
   return atomic_cmpxchg_acquire(&lock->next, &lock->owner,
                                 atomic_read_relax(&lock->next) + 1);
 #else /* CONFIG_TICKET_SPINLOCK */
   return atomic_xchg_acquire(lock, SP_LOCKED) != SP_LOCKED;
 #endif /* CONFIG_TICKET_SPINLOCK */
-    {
-      UP_DSB();
-    }
-  else
-    {
-      ret = true;
-      UP_DMB();
-    }
-
-  return ret;
 }
 #else
 #  define spin_trylock_notrace(lock) true
@@ -1190,7 +1178,6 @@ static inline_function bool read_trylock(FAR volatile rwlock_t *lock)
       else if (atomic_cmpxchg_acquire(lock, &old, old + 1))
         {
           ret = true;
-          UP_DMB();
           break;
         }
     }
@@ -1293,7 +1280,6 @@ static inline_function void write_lock(FAR volatile rwlock_t *lock)
 static inline_function bool write_trylock(FAR volatile rwlock_t *lock)
 {
   int zero = RW_SP_UNLOCKED;
-  bool ret;
 
   return atomic_cmpxchg_acquire(lock, &zero, RW_SP_WRITE_LOCKED);
 }
