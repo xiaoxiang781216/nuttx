@@ -95,6 +95,7 @@ int arm_svcall(int irq, void *context, void *arg)
       case SYS_switch_context:
         {
 #ifdef CONFIG_ARCH_ADDRENV
+          tcb = this_task();
           addrenv_switch(tcb);
 #endif
           tcb = this_task();
