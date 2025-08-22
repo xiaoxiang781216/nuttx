@@ -35,7 +35,6 @@
 
 #include "rpmsg.h"
 #include "rpmsg_note.h"
-#include "rpmsg_ping.h"
 #include "rpmsg_test.h"
 #include "rpmsg_router.h"
 #include "rpmsg_procfs.h"
