@@ -33,6 +33,49 @@
  * Public Types
  ****************************************************************************/
 
+struct rpmsg_s
+{
+  bool                         init;
+  struct metal_list            bind;
+  rmutex_t                     lock;
+  struct metal_list            node;
+  char                         local_cpuname[RPMSG_NAME_SIZE];
+  char                         cpuname[RPMSG_NAME_SIZE];
+  FAR const struct rpmsg_ops_s *ops;
+#ifdef CONFIG_RPMSG_PING
+  struct rpmsg_ping_dev_s      ping;
+#endif
+#ifdef CONFIG_RPMSG_TEST
+  struct rpmsg_endpoint        test;
+#endif
+#ifdef CONFIG_RPMSG_WAKELOCK
+  struct rpmsg_endpoint        wakelock;
+#endif
+  atomic_t                     signals;
+  struct notifier_block        nbreboot;
+};
+
+/**
+ * struct rpmsg_ops_s - Rpmsg device operations
+ * wait: wait sem.
+ * post: post sem.
+ * get_cpuname: get cpu name.
+ */
+
+struct rpmsg_ops_s
+{
+  CODE int (*wait)(FAR struct rpmsg_s *rpmsg, FAR sem_t *sem);
+  CODE int (*post)(FAR struct rpmsg_s *rpmsg, FAR sem_t *sem);
+  CODE int (*ioctl)(FAR struct rpmsg_s *rpmsg, int cmd, unsigned long arg);
+  CODE void (*panic)(FAR struct rpmsg_s *rpmsg);
+  CODE void (*dump)(FAR struct rpmsg_s *rpmsg);
+  CODE int (*get_timestamp)(FAR struct rpmsg_s *rpmsg, FAR const void *data,
+                            FAR struct rpmsg_timestamp_s *ts);
+  CODE FAR void *(*alloc_buf)(FAR struct rpmsg_s *rpmsg, size_t size,
+                              size_t align);
+  CODE void (*free_buf)(FAR struct rpmsg_s *rpmsg, FAR void *addr);
+};
+
 CODE typedef int (*rpmsg_foreach_t)(FAR struct rpmsg_s *rpmsg,
                                     FAR void *args);
 
