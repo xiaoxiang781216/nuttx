@@ -406,8 +406,6 @@ static inline_function void xtensa_disable_all(void)
 
 static inline_function void xtensa_intclear(uint32_t intnum)
 {
-  DEBUGASSERT(intnum < XCHAL_NUM_INTERRUPTS);
-
   if (intnum < 32)
     {
       __asm__ __volatile__
