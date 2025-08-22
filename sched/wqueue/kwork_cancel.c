@@ -82,13 +82,13 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
 
       if (sync)
         {
-          int wndx;
+          uint8_t wndx;
           int pid = nxsched_gettid();
           FAR struct kworker_s *worker = wq_get_worker(wqueue);
 
           /* Wait until the worker thread finished the work. */
 
-          for (wndx = 0; wndx < wqueue->nthreads; wndx++)
+          for (wndx = 0u; wndx < wqueue->nthreads; wndx++)
             {
               if (worker[wndx].work == work && worker[wndx].pid != pid)
                 {

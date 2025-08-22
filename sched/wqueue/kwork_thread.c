@@ -319,7 +319,7 @@ static int work_thread_create(FAR const char *name, int priority,
   FAR char *argv[3];
   char arg0[32];
   char arg1[32];
-  int wndx;
+  uint8_t wndx;
   int ret = OK;
 
   /* Don't permit any of the threads to run until we have fully initialized
@@ -328,7 +328,7 @@ static int work_thread_create(FAR const char *name, int priority,
 
   sched_lock();
 
-  for (wndx = 0; wndx < wqueue->nthreads; wndx++)
+  for (wndx = 0u; wndx < wqueue->nthreads; wndx++)
     {
       nxsem_init(&worker[wndx].wait, 0, 0u);
 
@@ -342,7 +342,8 @@ static int work_thread_create(FAR const char *name, int priority,
 
       if (stack_addr)
         {
-          stack = ((FAR char *)stack_addr + wndx * stack_size);
+          stack = ((FAR char *)stack_addr +
+                             (size_t)wndx * (size_t)stack_size);
         }
 
       ret = kthread_create_with_stack(name, priority, stack,
@@ -448,7 +449,7 @@ FAR struct kwork_wqueue_s *work_queue_create(FAR const char *name,
   FAR struct kwork_wqueue_s *wqueue = NULL;
   int ret;
 
-  if (nthreads >= 1)
+  if (nthreads >= 1u)
     {
       /* Allocate a new work queue */
 
@@ -498,7 +499,7 @@ FAR struct kwork_wqueue_s *work_queue_create(FAR const char *name,
 
 int work_queue_free(FAR struct kwork_wqueue_s *wqueue)
 {
-  int wndx;
+  uint8_t wndx;
   int ret = -EINVAL;
 
   if (wqueue != NULL)
@@ -512,12 +513,12 @@ int work_queue_free(FAR struct kwork_wqueue_s *wqueue)
 
       /* Queue a exit work for all threads */
 
-      for (wndx = 0; wndx < wqueue->nthreads; wndx++)
+      for (wndx = 0u; wndx < wqueue->nthreads; wndx++)
         {
           nxsem_post(&wqueue->sem);
         }
 
-      for (wndx = 0; wndx < wqueue->nthreads; wndx++)
+      for (wndx = 0u; wndx < wqueue->nthreads; wndx++)
         {
           nxsem_wait_uninterruptible(&wqueue->exsem);
         }
@@ -549,9 +550,9 @@ bool work_queue_in_queue(FAR struct kwork_wqueue_s *wqueue)
   FAR struct kworker_s *worker = wq_get_worker(wqueue);
   pid_t pid = nxsched_gettid();
   bool ret = false;
-  int i;
+  uint8_t i;
 
-  for (i = 0; i < wqueue->nthreads; i++)
+  for (i = 0u; i < wqueue->nthreads; i++)
     {
       if (pid == worker[i].pid)
         {
