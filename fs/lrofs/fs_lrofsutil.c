@@ -1206,6 +1206,194 @@ static int lrofs_update_filenext(FAR struct lrofs_mountpt_s *lm,
 }
 
 /****************************************************************************
+ * Name: lrofs_copy_filecontent
+ *
+ * Description:
+ *   Copy content of a file in the disk
+ *
+ ****************************************************************************/
+
+static int lrofs_copy_filecontent(FAR struct lrofs_mountpt_s *lm,
+                                  FAR struct lrofs_nodeinfo_s *ln_old,
+                                  uint32_t old_offset, uint32_t new_offset)
+{
+  int16_t ndx;
+  int ret = OK;
+  int bytes = 0;
+
+  while (ln_old->ln_size - bytes >= lm->lm_hwsectorsize)
+    {
+      ndx = lrofs_devcacheload(lm, old_offset + bytes);
+      if (ndx < 0)
+        {
+          ferr("ERROR: lrofs_devcacheload failed: %d\n", ndx);
+          return ndx;
+        }
+
+      ret = lrofs_devcachewrite(lm, SEC_NSECTORS(lm, new_offset + bytes));
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      bytes += lm->lm_hwsectorsize;
+    }
+
+  if (bytes < ln_old->ln_size)
+    {
+      FAR char *buffer = fs_heap_zalloc(ln_old->ln_size - bytes);
+      if (buffer == NULL)
+        {
+          return -ENOMEM;
+        }
+
+      ndx = lrofs_devcacheload(lm, old_offset + bytes);
+      if (ndx < 0)
+        {
+          ferr("ERROR: lrofs_devcacheload failed: %d\n", ndx);
+          fs_heap_free(buffer);
+          return ndx;
+        }
+
+      memcpy(buffer, lm->lm_devbuffer + ndx, ln_old->ln_size - bytes);
+      ndx = lrofs_devcacheload(lm, new_offset + bytes);
+      if (ndx < 0)
+        {
+          ferr("ERROR: lrofs_devcacheload failed: %d\n", ndx);
+          fs_heap_free(buffer);
+          return ndx;
+        }
+
+      lrofs_devmemcpy(lm, ndx, buffer, ln_old->ln_size - bytes);
+      ret = lrofs_devcachewrite(lm, SEC_NSECTORS(lm, new_offset + bytes));
+      fs_heap_free(buffer);
+    }
+
+  return ret;
+}
+
+/****************************************************************************
+ * Name: lrofs_move_renamedfile
+ *
+ * Description:
+ *   Move a renamed file in the disk
+ *
+ ****************************************************************************/
+
+static int lrofs_move_renamedfile(FAR struct lrofs_mountpt_s *lm,
+                                  FAR struct lrofs_nodeinfo_s *ln_old,
+                                  FAR struct lrofs_nodeinfo_s *ln_prev,
+                                  FAR const char *newname, bool firstchild)
+{
+  int ret;
+  int16_t ndx;
+  int fhdr_len;
+  uint32_t info;
+  uint32_t offset;
+  uint32_t checksum;
+  FAR struct lrofs_nodeinfo_s *ln_parent;
+
+  ndx = lrofs_devcacheload(lm, ln_old->ln_origoffset);
+  if (ndx < 0)
+    {
+      ferr("ERROR: lrofs_devcacheload failed: %d\n", ndx);
+      return ndx;
+    }
+
+  info = lrofs_devload32(lm, ndx + LROFS_FHDR_INFO);
+  checksum = lrofs_devload32(lm, ndx + LROFS_FHDR_CHKSUM);
+  ln_parent = ln_old->ln_parent;
+  fhdr_len = LROFS_ALIGNUP(LROFS_FHDR_NAME + strlen(newname) + 1);
+  offset = lrofs_add_sparenode(lm, fhdr_len,
+                               IS_DIRECTORY(ln_old->ln_next));
+  if (offset == 0)
+    {
+      return -ENOSPC;
+    }
+
+  /* Alloc space for file content */
+
+  if (IS_FILE(ln_old->ln_next))
+    {
+      uint32_t old_offset;
+      uint32_t new_offset;
+
+      ret = lrofs_alloc_spareregion(&lm->lm_sparelist,
+                                    offset + fhdr_len,
+                                    offset + fhdr_len + ln_old->ln_size);
+      if (ret < 0)
+        {
+          ferr("ERROR: lrofs_alloc_spareregion failed\n");
+          return ret;
+        }
+
+      /* Write file content */
+
+      old_offset = ln_old->ln_origoffset +
+                   LROFS_ALIGNUP(LROFS_FHDR_NAME + ln_old->ln_namesize + 1);
+      new_offset = offset +
+                   LROFS_ALIGNUP(LROFS_FHDR_NAME + strlen(newname) + 1);
+      ret = lrofs_copy_filecontent(lm, ln_old, old_offset, new_offset);
+      if (ret < 0)
+        {
+          ferr("ERROR: lrofs_copy_filecontent failed: %d\n", ret);
+          return ret;
+        }
+    }
+
+  /* Update file header to disk */
+
+  ndx = lrofs_devcacheload(lm, offset);
+  if (ndx < 0)
+    {
+      ferr("ERROR: lrofs_devcacheload failed: %d\n", ndx);
+      return ndx;
+    }
+
+  lrofs_devwrite32(lm, ndx + LROFS_FHDR_NEXT, ln_old->ln_next);
+  lrofs_devwrite32(lm, ndx + LROFS_FHDR_INFO, info);
+  lrofs_devwrite32(lm, ndx + LROFS_FHDR_SIZE, ln_old->ln_size);
+  lrofs_devwrite32(lm, ndx + LROFS_FHDR_CHKSUM, checksum);
+  memcpy(lm->lm_devbuffer + ndx + LROFS_FHDR_NAME,
+         ln_old->ln_name, strlen(newname) + 1);
+  ret = lrofs_devcachewrite(lm, SEC_NSECTORS(lm, offset));
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  lrofs_free_spareregion(&lm->lm_sparelist, ln_old->ln_origoffset,
+                         ln_old->ln_origoffset +
+                         LROFS_ALIGNUP(LROFS_FHDR_NAME +
+                         ln_old->ln_namesize + 1) + ln_old->ln_size);
+  ln_old->ln_origoffset = offset;
+  ln_old->ln_offset = offset;
+  ln_prev->ln_next = (offset & RFNEXT_OFFSETMASK) |
+                     (ln_prev->ln_next & RFNEXT_ALLMODEMASK);
+
+  /* Update next file header of prev node to disk */
+
+  ret = lrofs_update_filenext(lm, ln_prev);
+  if (ret < 0)
+    {
+      ferr("ERROR: lrofs_update_filenext failed: %d\n", ret);
+      return ret;
+    }
+
+  /* Update info of parent node */
+
+  if (firstchild && ln_parent)
+    {
+      ndx = lrofs_devcacheload(lm, ln_parent->ln_origoffset);
+      lrofs_devwrite32(lm, ndx + LROFS_FHDR_INFO, offset);
+      return lrofs_devcachewrite(lm,
+                                 SEC_NSECTORS(lm, ln_parent->ln_origoffset));
+    }
+
+  return ret;
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -2399,6 +2587,7 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
   FAR struct lrofs_nodeinfo_s *ln_parent;
   bool firstchild;
   int ret;
+  int index = -1;
 
   DEBUGASSERT(ln_old != NULL && ln_newpath != NULL);
 
@@ -2408,6 +2597,83 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
   if (ln_prev == NULL)
     {
       return -ENOENT;
+    }
+
+  /* Get the original index in ln_child */
+
+  ln_parent = ln_old->ln_parent;
+  for (int i = 0; i < ln_parent->ln_count; i++)
+    {
+      if (ln_parent->ln_child[i] == ln_old)
+        {
+          index = i;
+          break;
+        }
+    }
+
+  if (index == -1)
+    {
+      return -ENOENT;
+    }
+
+  if (newname != NULL)
+    {
+      /* If file name needs more disk space, alloc a new space region. */
+
+      if (strlen(newname) > LROFS_ALIGNUP(ln_old->ln_namesize + 1))
+        {
+          ret = lrofs_move_renamedfile(lm, ln_old, ln_prev, newname,
+                                       firstchild);
+          if (ret < 0)
+            {
+              ferr("ERROR: lrofs_move_renamedfile failed: %d\n", ret);
+              return ret;
+            }
+        }
+
+      /* If file name needs more nodeinfo space, alloc a new nodeinfo */
+
+      if (strlen(newname) > ln_old->ln_namesize)
+        {
+          FAR void *tmp;
+
+          tmp = fs_heap_realloc(ln_old, sizeof(struct lrofs_nodeinfo_s) +
+                                strlen(newname));
+          if (tmp == NULL)
+            {
+              return -ENOMEM;
+            }
+
+          ln_old = tmp;
+          ln_old->ln_namesize = strlen(newname);
+          memcpy(ln_old->ln_name, newname, strlen(newname) + 1);
+          ret = lrofs_update_filename(lm, ln_old);
+          if (ret < 0)
+            {
+              ferr("ERROR: lrofs_update_filename failed: %d\n", ret);
+              return ret;
+            }
+
+          ln_parent->ln_child[index] = ln_old;
+          qsort(ln_parent->ln_child, ln_parent->ln_count,
+                sizeof(*ln_parent->ln_child), lrofs_nodeinfo_compare);
+        }
+      else
+        {
+          ln_old->ln_namesize = strlen(newname);
+          memcpy(ln_old->ln_name, newname, strlen(newname) + 1);
+          ret = lrofs_update_filename(lm, ln_old);
+          if (ret < 0)
+            {
+              ferr("ERROR: lrofs_update_filename failed: %d\n", ret);
+              return ret;
+            }
+        }
+    }
+
+  if (ln_newpath == ln_parent)
+    {
+      return OK;
     }
 
   /* Remove the node from disk */
@@ -2428,7 +2694,6 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
 
   /* Update parent cache node */
 
-  ln_parent = ln_old->ln_parent;
   if (ln_parent->ln_count > 1)
     {
       for (int i = 0; i < ln_parent->ln_count; i++)
@@ -2486,44 +2751,6 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
       return ret;
     }
 
-  if (newname != NULL)
-    {
-      if (strlen(newname) <= ln_old->ln_namesize)
-        {
-          ln_old->ln_namesize = strlen(newname);
-          memcpy(ln_old->ln_name, newname, strlen(newname) + 1);
-          ret = lrofs_update_filename(lm, ln_old);
-          if (ret < 0)
-            {
-              ferr("ERROR: lrofs_update_filename failed: %d\n", ret);
-              return ret;
-            }
-        }
-      else
-        {
-          FAR struct lrofs_nodeinfo_s *tmp = lrofs_alloc_nodeinfo(
-                                             ln_old->ln_origoffset,
-                                             ln_old->ln_size,
-                                             ln_old->ln_next,
-                                             newname);
-          if (tmp == NULL)
-            {
-              return -ENOMEM;
-            }
-
-          tmp->ln_offset = ln_old->ln_offset;
-          if (ln_old->ln_count != 0)
-            {
-              tmp->ln_child = ln_old->ln_child;
-              tmp->ln_count = ln_old->ln_count;
-              tmp->ln_max = ln_old->ln_max;
-            }
-
-          fs_heap_free(ln_old);
-          ln_old = tmp;
-        }
-    }
-
   /* Update the parent nodeinfo */
 
   ret = lrofs_update_parentnode(ln_newpath, ln_old);
@@ -2533,7 +2760,6 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
       return ret;
     }
 
-  ln_old->ln_parent = ln_newpath;
   return OK;
 }
 
