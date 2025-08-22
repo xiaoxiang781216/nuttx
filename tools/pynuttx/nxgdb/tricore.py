@@ -24,7 +24,7 @@ import argparse
 import gdb
 
 from . import utils
-from .utils import Backtrace
+from .backtrace import Backtrace
 
 FCX_FREE_MASK = (0xFFFF << 0) | (0xF << 16)
 PCXI_UL = 1 << 20
