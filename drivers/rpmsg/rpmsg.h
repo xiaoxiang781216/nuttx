@@ -30,6 +30,13 @@
 #include <nuttx/rpmsg/rpmsg.h>
 
 /****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
+CODE typedef int (*rpmsg_foreach_t)(FAR struct rpmsg_s *rpmsg,
+                                    FAR void *args);
+
+/****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
@@ -60,6 +67,7 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
 void rpmsg_unregister(FAR const char *path, FAR struct rpmsg_s *rpmsg);
 
 void rpmsg_dump_epts(FAR struct rpmsg_device *rdev);
+int rpmsg_foreach(rpmsg_foreach_t handler, FAR void *args);
 
 #endif /* CONFIG_RPMSG */
 #endif /* __DRIVERS_RPMSG_RPMSG_H */

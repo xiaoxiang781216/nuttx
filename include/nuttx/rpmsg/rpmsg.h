@@ -120,8 +120,6 @@ CODE typedef bool (*rpmsg_match_cb_t)(FAR struct rpmsg_device *rdev,
 CODE typedef void (*rpmsg_bind_cb_t)(FAR struct rpmsg_device *rdev,
                                      FAR void *priv, FAR const char *name,
                                      uint32_t dest);
-CODE typedef int (*rpmsg_foreach_t)(FAR struct rpmsg_s *rpmsg,
-                                    FAR void *args);
 
 /****************************************************************************
  * Public Function Prototypes
@@ -174,7 +172,6 @@ void rpmsg_unregister_callback(FAR void *priv,
 int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg);
 int rpmsg_panic(FAR const char *cpuname);
 void rpmsg_dump_all(void);
-int rpmsg_foreach(rpmsg_foreach_t handler, FAR void *args);
 
 #ifdef CONFIG_RPMSG_NOTE
 void rpmsg_note_trace(FAR const char *name, bool bt, FAR const void *buf,
