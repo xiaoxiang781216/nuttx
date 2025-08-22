@@ -1151,6 +1151,61 @@ static int lrofs_followhardlinks(FAR struct lrofs_mountpt_s *lm,
 }
 
 /****************************************************************************
+ * Name: lrofs_update_filename
+ *
+ * Description:
+ *   Update the file name to lrofs
+ *
+ ****************************************************************************/
+
+static int lrofs_update_filename(FAR struct lrofs_mountpt_s *lm,
+                                 FAR struct lrofs_nodeinfo_s *ln)
+{
+  int16_t ndx;
+
+  /* Get the node sector index */
+
+  ndx = lrofs_devcacheload(lm, ln->ln_origoffset);
+  if (ndx < 0)
+    {
+      return ndx;
+    }
+
+  /* Update the file name */
+
+  memcpy(lm->lm_devbuffer + ndx + LROFS_FHDR_NAME, ln->ln_name,
+         ln->ln_namesize + 1);
+  return lrofs_devcachewrite(lm, SEC_NSECTORS(lm, ln->ln_origoffset));
+}
+
+/****************************************************************************
+ * Name: lrofs_update_filenext
+ *
+ * Description:
+ *   Update the next file offset to lrofs
+ *
+ ****************************************************************************/
+
+static int lrofs_update_filenext(FAR struct lrofs_mountpt_s *lm,
+                                 FAR struct lrofs_nodeinfo_s *ln)
+{
+  int16_t ndx;
+
+  /* Get the node sector index */
+
+  ndx = lrofs_devcacheload(lm, ln->ln_origoffset);
+  if (ndx < 0)
+    {
+      return ndx;
+    }
+
+  /* Update the next file offset */
+
+  lrofs_devwrite32(lm, ndx + LROFS_FHDR_NEXT, ln->ln_next);
+  return lrofs_devcachewrite(lm, SEC_NSECTORS(lm, ln->ln_origoffset));
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -2412,18 +2467,24 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
         }
     }
 
-  ret = lrofs_add_disk(lm, ln_prev, ln_old,
-                       ln_old->ln_next & RFNEXT_ALLMODEMASK, false);
-  if (ret < 0)
-    {
-      ferr("ERROR: lrofs_add_disk failed: %d\n", ret);
-      return ret;
-    }
-
   /* Update the new prevnode nodeinfo */
 
   ln_prev->ln_next = (ln_old->ln_origoffset & RFNEXT_OFFSETMASK) |
                      (ln_prev->ln_next & RFNEXT_ALLMODEMASK);
+  ret = lrofs_update_filenext(lm, ln_prev);
+  if (ret < 0)
+    {
+      ferr("ERROR: lrofs_update_filenext of ln_prev failed: %d\n", ret);
+      return ret;
+    }
+
+  ln_old->ln_next = ln_old->ln_next & RFNEXT_ALLMODEMASK;
+  ret = lrofs_update_filenext(lm, ln_old);
+  if (ret < 0)
+    {
+      ferr("ERROR: lrofs_update_filenext of ln_old failed: %d\n", ret);
+      return ret;
+    }
 
   if (newname != NULL)
     {
@@ -2431,6 +2492,12 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
         {
           ln_old->ln_namesize = strlen(newname);
           memcpy(ln_old->ln_name, newname, strlen(newname) + 1);
+          ret = lrofs_update_filename(lm, ln_old);
+          if (ret < 0)
+            {
+              ferr("ERROR: lrofs_update_filename failed: %d\n", ret);
+              return ret;
+            }
         }
       else
         {
