@@ -34,7 +34,7 @@
 #include <nuttx/spinlock.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/note/noteram_driver.h>
-#include <nuttx/rpmsg/rpmsg_note.h>
+#include <nuttx/rpmsg/rpmsg.h>
 
 #include "rpmsg_procfs.h"
 

@@ -31,7 +31,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/rpmsg/rpmsg_note.h>
 
 #include <metal/mutex.h>
 #include <metal/sys.h>

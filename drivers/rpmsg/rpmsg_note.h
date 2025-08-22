@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/rpmsg/rpmsg_note.h
+ * drivers/rpmsg/rpmsg_note.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -29,41 +29,14 @@
 
 #include <nuttx/config.h>
 
-#include <openamp/rpmsg.h>
-#include <openamp/rpmsg_internal.h>
-
-#ifdef CONFIG_RPMSG_NOTE
-
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
+#ifdef CONFIG_RPMSG_NOTE
 int rpmsg_note_initialize(void);
-void rpmsg_note_trace(FAR const char *name, bool bt, FAR const void *buf,
-                      size_t len, FAR const char *format, ...);
-void rpmsg_note_vtrace(FAR const char *name, bool bt, FAR const void *buf,
-                       size_t len, FAR const char *format, va_list ap);
 #else
 #  define rpmsg_note_initialize()
-#  define rpmsg_note_trace(name, bt, buf, len, format, ...) \
-     do \
-       { \
-         (void)(name); \
-         (void)(buf); \
-         (void)(len); \
-         (void)(format); \
-       } \
-     while (0)
-#  define rpmsg_note_vtrace(name, bt, buf, len, format, ap) \
-     do \
-       { \
-         (void)(name); \
-         (void)(buf); \
-         (void)(len); \
-         (void)(format); \
-         (void)(ap); \
-       } \
-     while (0)
-#endif /* CONFIG_RPMSG_NOTE */
+#endif
 
 #endif /* __DRIVERS_RPMSG_RPMSG_NOTE_H */

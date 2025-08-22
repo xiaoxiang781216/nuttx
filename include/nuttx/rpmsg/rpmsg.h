@@ -176,6 +176,33 @@ int rpmsg_panic(FAR const char *cpuname);
 void rpmsg_dump_all(void);
 int rpmsg_foreach(rpmsg_foreach_t handler, FAR void *args);
 
+#ifdef CONFIG_RPMSG_NOTE
+void rpmsg_note_trace(FAR const char *name, bool bt, FAR const void *buf,
+                      size_t len, FAR const char *format, ...);
+void rpmsg_note_vtrace(FAR const char *name, bool bt, FAR const void *buf,
+                       size_t len, FAR const char *format, va_list ap);
+#else
+#  define rpmsg_note_trace(name, bt, buf, len, format, ...) \
+     do \
+       { \
+         (void)(name); \
+         (void)(buf); \
+         (void)(len); \
+         (void)(format); \
+       } \
+     while (0)
+#  define rpmsg_note_vtrace(name, bt, buf, len, format, ap) \
+     do \
+       { \
+         (void)(name); \
+         (void)(buf); \
+         (void)(len); \
+         (void)(format); \
+         (void)(ap); \
+       } \
+     while (0)
+#endif /* CONFIG_RPMSG_NOTE */
+
 #ifdef __cplusplus
 }
 #endif

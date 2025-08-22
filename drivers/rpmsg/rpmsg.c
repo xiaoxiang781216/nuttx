@@ -32,9 +32,9 @@
 #include <nuttx/mutex.h>
 #include <nuttx/rwsem.h>
 #include <nuttx/semaphore.h>
-#include <nuttx/rpmsg/rpmsg_note.h>
 
 #include "rpmsg.h"
+#include "rpmsg_note.h"
 #include "rpmsg_ping.h"
 #include "rpmsg_test.h"
 #include "rpmsg_router.h"
