@@ -636,6 +636,12 @@ static const char *g_white_content_list[] =
   "__jumpBackToLink",
 
   /* Ref:
+   * libs/libc/machine/tricore/arch_atomic.c
+   */
+
+  "__cmpAndSwap",
+
+  /* Ref:
    * drivers/trace32/t32fdx/t32fdx.c
    */
 
