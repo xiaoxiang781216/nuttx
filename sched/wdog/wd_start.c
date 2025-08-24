@@ -74,9 +74,9 @@
 #  define CALL_FUNC(func, arg) \
       do \
         { \
-          sched_note_wdog(NOTE_WDOG_ENTER, func, (FAR void *)(uintptr_t)arg); \
+          sched_note_wdog(NOTE_WDOG_ENTER, func, (FAR void *)arg); \
           func(arg); \
-          sched_note_wdog(NOTE_WDOG_LEAVE, func, (FAR void *)(uintptr_t)arg); \
+          sched_note_wdog(NOTE_WDOG_LEAVE, func, (FAR void *)arg); \
         } \
       while (0)
 
