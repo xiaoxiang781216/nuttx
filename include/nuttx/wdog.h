@@ -39,7 +39,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define WDOG_ISACTIVE(w)   ((w)->func != 0)
+#define WDOG_ISACTIVE(w)   ((w)->func != NULL)
 
 /* The maximum delay tick should be CLOCK_MAX >> 1.
  * However, if there are expired wdog timer in the wdog queue, clock_compare

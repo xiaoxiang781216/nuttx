@@ -283,7 +283,7 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
 
   /* Verify the wdog and setup parameters */
 
-  if (wdog != NULL && wdentry != 0)
+  if (wdog != NULL && wdentry != NULL)
     {
       /* NOTE:  There is a race condition here... the caller may receive
        * the watchdog between the time that wd_start_abstick is called and
