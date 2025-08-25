@@ -30,7 +30,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
-#if !defined(CONFIG_LIBC_ARCH_ATOMIC)
+#if defined(CONFIG_LIBC_ATOMIC_TOOLCHAIN)
 #  if __has_include(<atomic>) && defined(__cplusplus)
 extern "C++"
 {

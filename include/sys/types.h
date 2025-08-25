@@ -313,7 +313,7 @@ struct fsid_s
 
 /* Atomic types */
 
-#if !defined(CONFIG_LIBC_ARCH_ATOMIC) && !defined(__STDC_NO_ATOMICS__) && \
+#if defined(CONFIG_LIBC_ATOMIC_TOOLCHAIN) && !defined(__STDC_NO_ATOMICS__) && \
     ((defined(__cplusplus) && __cplusplus >= 201103L) || \
      (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L))
 typedef volatile _Atomic int32_t atomic_t;
