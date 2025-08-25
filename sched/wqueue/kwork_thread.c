@@ -131,10 +131,8 @@ struct lp_wqueue_s g_lpwork =
 static void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
                           FAR struct kworker_s *kworker)
 {
-  clock_t ticks = clock_systime_ticks();
   FAR struct work_s *work;
   FAR struct work_s *next;
-  unsigned int count = 0u;
   irqstate_t flags;
   worker_t worker;
   FAR void *arg;
@@ -146,12 +144,15 @@ static void work_dispatch(FAR struct kwork_wqueue_s *wqueue,
 
   flags = spin_lock_irqsave_nopreempt(&wqueue->lock);
 
-  /* If the wqueue timer is expired and non-active, it indicates that
-   * there might be expired work in the pending queue.
+  /* If the worker thread is the first woken thread, the thread
+   * should check the pending queue and dispatch the expired work.
    */
 
-  if (!WDOG_ISACTIVE(&wqueue->timer))
+  if (!WDOG_ISACTIVE(&wqueue->timer) && !list_is_empty(&wqueue->pending))
     {
+      unsigned int count = 0u;
+      clock_t      ticks = clock_systime_ticks();
+
       /* Wake up the worker thread once there is expired work.
        * If some worker threads are busy, here the callback will
        * wake up another waiting work thread.

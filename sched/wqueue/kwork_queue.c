@@ -82,7 +82,11 @@ int work_queue_next_wq(FAR struct kwork_wqueue_s *wqueue,
 
       work->worker = worker; /* Work callback. non-NULL means queued */
       work->arg    = arg;    /* Callback argument */
-      work->qtime += delay;  /* Expected time based on last expiration time */
+
+      /* Expected time based on last expiration time */
+
+      work->qtime  = work->qtime ? work->qtime + delay :
+                                   clock_systime_ticks() + delay;
 
       flags = spin_lock_irqsave(&wqueue->lock);
 
@@ -159,14 +163,14 @@ int work_queue_wq(FAR struct kwork_wqueue_s *wqueue,
                   FAR void *arg, clock_t delay)
 {
   irqstate_t flags;
-  clock_t expected;
   bool retimer;
   int ret = -EINVAL;
 
   if (wqueue && work && worker && delay <= WDOG_MAX_DELAY)
     {
+      clock_t expected = delay ? clock_delay2abstick(delay) : delay;
+
       ret = OK;
-      expected = clock_delay2abstick(delay);
 
       /* Interrupts are disabled so that this logic can be called from with
        * task logic or from interrupt handling logic.
