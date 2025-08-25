@@ -343,9 +343,7 @@ void tcp_stop_monitor(FAR struct tcp_conn_s *conn, uint16_t flags)
 
   /* Stop the network monitor */
 
-  conn_dev_lock(&conn->sconn, conn->dev);
   tcp_shutdown_monitor(conn, flags);
-  conn_dev_unlock(&conn->sconn, conn->dev);
 }
 
 /****************************************************************************

@@ -59,7 +59,9 @@ static void tcp_close_work(FAR void *param)
     {
       /* Stop the network monitor for all sockets */
 
+      conn_dev_lock(&conn->sconn, conn->dev);
       tcp_stop_monitor(conn, TCP_CLOSE);
+      conn_dev_unlock(&conn->sconn, conn->dev);
       tcp_free(conn);
     }
 }
@@ -282,8 +284,8 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
     {
       /* Stop the network monitor for all sockets */
 
-      conn_dev_unlock(&conn->sconn, conn->dev);
       tcp_stop_monitor(conn, TCP_CLOSE);
+      conn_dev_unlock(&conn->sconn, conn->dev);
 
       /* Free network resources */
 
