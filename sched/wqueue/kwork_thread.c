@@ -81,15 +81,19 @@
 #if defined(CONFIG_SCHED_HPWORK)
 /* The state of the kernel mode, high priority work queue(s). */
 
-struct hp_wqueue_s g_hpwork =
+struct hp_wqueue_s aligned_data(64) g_hpwork =
 {
   {
+    SP_UNLOCKED,
     LIST_INITIAL_VALUE(g_hpwork.wq.expired),
     LIST_INITIAL_VALUE(g_hpwork.wq.pending),
     SEM_INITIALIZER(0),
-    SEM_INITIALIZER(0),
-    SP_UNLOCKED,
+    {
+      { 0 }
+    },
     CONFIG_SCHED_HPNTHREADS,
+    false,
+    SEM_INITIALIZER(0),
   }
 };
 
@@ -98,15 +102,19 @@ struct hp_wqueue_s g_hpwork =
 #if defined(CONFIG_SCHED_LPWORK)
 /* The state of the kernel mode, low priority work queue(s). */
 
-struct lp_wqueue_s g_lpwork =
+struct lp_wqueue_s aligned_data(64) g_lpwork =
 {
   {
+    SP_UNLOCKED,
     LIST_INITIAL_VALUE(g_lpwork.wq.expired),
     LIST_INITIAL_VALUE(g_lpwork.wq.pending),
     SEM_INITIALIZER(0),
+    {
+      { 0 }
+    },
+    CONFIG_SCHED_HPNTHREADS,
+    false,
     SEM_INITIALIZER(0),
-    SP_UNLOCKED,
-    CONFIG_SCHED_LPNTHREADS,
   }
 };
 
