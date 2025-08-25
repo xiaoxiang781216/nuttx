@@ -1,5 +1,10 @@
 /arm64
 
+-vdk-armv8r:nsh
+-vdk-armv8r:nsh_smp
+
+-imx93-evk:bootloader
+
 # arm64 Boards build by CMake
 CMake,qemu-armv8a:citest
 CMake,qemu-armv8a:citest_smp

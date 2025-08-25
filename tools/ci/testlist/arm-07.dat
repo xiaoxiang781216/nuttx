@@ -9,3 +9,6 @@
 /arm/samd5e5,CONFIG_ARM_TOOLCHAIN_CLANG
 
 /arm/samv7,CONFIG_ARM_TOOLCHAIN_GNU_EABI
+
+-sam3u-ek:knsh
+-same70-qmtech:mcuboot-loader

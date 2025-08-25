@@ -2,3 +2,4 @@
 /risc-v/[f-p]*
 /risc-v/q[0-d]*
 -,arty_a7:.+
+-hpm6360evk:nsh

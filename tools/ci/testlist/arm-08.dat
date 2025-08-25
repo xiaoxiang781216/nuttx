@@ -6,6 +6,10 @@
 
 /arm/stm32/nucleo-f30*,CONFIG_ARM_TOOLCHAIN_GNU_EABI
 
+-nucleo-f302r8:ihm07m1_b16
+-nucleo-f302r8:ihm07m1_f32
+-nucleo-f302r8:qenco
+
 # Boards build by CMake
 
 CMake,nucleo-f103rb:adc
