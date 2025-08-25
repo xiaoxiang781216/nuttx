@@ -136,27 +136,6 @@ static uint32_t rptun_recv_command(FAR struct rptun_priv_s *priv, bool ack);
  * Private Data
  ****************************************************************************/
 
-static const struct remoteproc_ops g_rptun_ops =
-{
-  .init        = rptun_init,
-  .remove      = rptun_remove,
-  .config      = rptun_config,
-  .start       = rptun_start,
-  .stop        = rptun_stop,
-  .notify      = rptun_notify,
-  .get_mem     = rptun_get_mem,
-};
-
-static const struct file_operations g_rptun_fops =
-{
-  0,                /* open */
-  0,                /* close */
-  0,                /* read */
-  0,                /* write */
-  0,                /* seek */
-  rptun_dev_ioctl,  /* ioctl */
-};
-
 #ifdef CONFIG_RPTUN_LOADER
 static const struct image_store_ops g_rptun_store_ops =
 {
@@ -166,12 +145,6 @@ static const struct image_store_ops g_rptun_store_ops =
   .features = SUPPORT_SEEK,
 };
 #endif
-
-static const struct virtio_memory_ops g_rptun_mmops =
-{
-  .alloc = rptun_alloc_buf,
-  .free  = rptun_free_buf,
-};
 
 static struct metal_list g_rptun_priv = METAL_INIT_LIST(g_rptun_priv);
 static metal_mutex_t g_rptun_lock = METAL_MUTEX_INIT(g_rptun_lock);
@@ -316,6 +289,12 @@ static int rptun_init_carveout(FAR struct rptun_priv_s *priv,
                                FAR const char *shmname,
                                FAR void *shmbase, size_t shmlen)
 {
+  static const struct virtio_memory_ops g_rptun_mmops =
+    {
+      .alloc = rptun_alloc_buf,
+      .free  = rptun_free_buf,
+    };
+
   FAR struct rptun_carveout_s *carveout;
   struct mm_heap_config_s config;
   int ret = -ENOMEM;
@@ -1172,6 +1151,27 @@ static int rptun_panic_notifier(FAR struct notifier_block *block,
 
 int rptun_initialize(FAR struct rptun_dev_s *dev)
 {
+  static const struct remoteproc_ops g_rptun_ops =
+    {
+      .init        = rptun_init,
+      .remove      = rptun_remove,
+      .config      = rptun_config,
+      .start       = rptun_start,
+      .stop        = rptun_stop,
+      .notify      = rptun_notify,
+      .get_mem     = rptun_get_mem,
+    };
+
+  static const struct file_operations g_rptun_fops =
+    {
+      0,                /* open */
+      0,                /* close */
+      0,                /* read */
+      0,                /* write */
+      0,                /* seek */
+      rptun_dev_ioctl,  /* ioctl */
+    };
+
   FAR struct rptun_priv_s *priv;
   char name[32];
   int ret = -ENOMEM;
