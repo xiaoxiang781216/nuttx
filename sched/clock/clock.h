@@ -34,6 +34,7 @@
 #include <nuttx/clock.h>
 #include <nuttx/compiler.h>
 #include <nuttx/spinlock_type.h>
+#include <nuttx/seqlock.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -57,12 +58,13 @@
  * Public Data
  ****************************************************************************/
 
-#if !defined(CONFIG_SCHED_TICKLESS) && !defined(__HAVE_KERNEL_GLOBALS)
+#if !defined(CONFIG_SCHED_TICKLESS)
   /* The system clock exists (CONFIG_SCHED_TICKLESS), but it not prototyped
    * globally in include/nuttx/clock.h.
    */
 
 extern volatile clock_t g_system_ticks;
+extern seqcount_t g_system_tick_lock;
 #endif
 
 #ifndef CONFIG_CLOCK_TIMEKEEPING

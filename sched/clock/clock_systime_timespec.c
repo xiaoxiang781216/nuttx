@@ -85,7 +85,7 @@ int clock_systime_timespec(FAR struct timespec *ts)
 #elif defined(CONFIG_SCHED_TICKLESS)
   up_timer_gettime(ts);
 #else
-  clock_ticks2time(ts, g_system_ticks);
+  clock_ticks2time(ts, clock_systime_ticks());
 #endif
   return 0;
 }

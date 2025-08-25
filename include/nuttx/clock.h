@@ -42,41 +42,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Configuration ************************************************************/
-
-/* Efficient, direct access to OS global timer variables will be supported
- * if the execution environment has direct access to kernel global data.
- * The code in this execution context can access the kernel global data
- * directly if:
- *
- * 1. We are not running tick-less (in which case there is no global timer
- *    data),
- * 2. This is an un-protected, non-kernel build,
- * 3. This is a protected build, but this code is being built for execution
- *    within the kernel space.
- * 4. It we are building with SYSCALLs enabled, but not in a kernel build,
- *    then we can't know a priori whether the code has access to the
- *    global variables or not.  In that case we have to assume not.
- */
-
-#undef __HAVE_KERNEL_GLOBALS
-#if defined(CONFIG_SCHED_TICKLESS)
-  /* Case 1: There is no global timer data */
-
-#elif defined(__KERNEL__)
-  /* Case 3: Kernel mode of protected/kernel build */
-
-#  define __HAVE_KERNEL_GLOBALS 1
-
-#elif defined(CONFIG_LIB_SYSCALL)
-  /* Case 4: Building with SYSCALLs enabled, but not part of a kernel build */
-
-#else
-  /* Case 2: Un-protected, non-kernel build */
-
-#  define __HAVE_KERNEL_GLOBALS 1
-#endif
-
 /* If CONFIG_SYSTEM_TIME64 is selected and the CPU supports long long types,
  * then a 64-bit system time will be used.
  */
@@ -331,22 +296,6 @@ extern "C"
 {
 #else
 #define EXTERN extern
-#endif
-
-/* Access to raw system clock ***********************************************/
-
-/* Direct access to the system timer/counter is supported only if (1) the
- * system timer counter is available (i.e., we are not configured to use
- * a hardware periodic timer), and (2) the execution environment has direct
- * access to kernel global data
- */
-
-#ifdef __HAVE_KERNEL_GLOBALS
-EXTERN volatile clock_t g_system_ticks;
-
-#  ifndef CONFIG_SYSTEM_TIME64
-#    define clock_systime_ticks() g_system_ticks
-#  endif
 #endif
 
 /****************************************************************************
@@ -751,9 +700,7 @@ void clock_resynchronize(FAR struct timespec *rtc_diff);
  *
  ****************************************************************************/
 
-#if !defined(__HAVE_KERNEL_GLOBALS) || defined(CONFIG_SYSTEM_TIME64)
 clock_t clock_systime_ticks(void);
-#endif
 
 /****************************************************************************
  * Name: clock_systime_timespec

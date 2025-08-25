@@ -40,6 +40,7 @@
 #include "sched/sched.h"
 #include "wdog/wdog.h"
 #include "clock/clock.h"
+#include "nuttx/seqlock.h"
 
 #ifdef CONFIG_CLOCK_TIMEKEEPING
 #  include "clock/clock_timekeeping.h"
@@ -94,6 +95,7 @@ static clock_t nxsched_timer_start(clock_t ticks, clock_t interval);
  */
 
 static clock_t g_timer_tick;
+static seqcount_t g_timer_tick_lock = SEQLOCK_INITIALIZER;
 
 /* This is the duration of the currently active timer or, when
  * nxsched_timer_expiration() is called, the duration of interval timer
@@ -106,22 +108,32 @@ static atomic_t g_timer_interval;
  * Private Functions
  ****************************************************************************/
 
-static inline_function clock_t  get_time_tick(void)
+static inline_function clock_t get_time_tick(void)
 {
-#ifdef CONFIG_SYSTEM_TIME64
-  return atomic64_read((FAR atomic64_t *)&g_timer_tick);
-#else
-  return atomic_read((FAR atomic_t *)&g_timer_tick);
-#endif
+  clock_t ret;
+  unsigned int seq;
+
+  do
+    {
+      seq = read_seqbegin(&g_timer_tick_lock);
+      ret = g_timer_tick;
+    }
+  while (read_seqretry(&g_timer_tick_lock, seq));
+
+  return ret;
 }
 
 static inline_function clock_t update_time_tick(clock_t tick)
 {
-#ifdef CONFIG_SYSTEM_TIME64
-  return atomic64_xchg((FAR atomic64_t *)&g_timer_tick, tick);
-#else
-  return atomic_xchg((FAR atomic_t *)&g_timer_tick, tick);
-#endif
+  irqstate_t flags;
+  clock_t oldtick;
+
+  flags = write_seqlock_irqsave(&g_timer_tick_lock);
+  oldtick = g_timer_tick;
+  g_timer_tick = tick;
+  write_sequnlock_irqrestore(&g_timer_tick_lock, flags);
+
+  return oldtick;
 }
 
 #if !defined(CONFIG_SCHED_TICKLESS_TICK_ARGUMENT) && !defined(CONFIG_CLOCK_TIMEKEEPING)

@@ -41,6 +41,7 @@
 #include <nuttx/trace.h>
 
 #include <nuttx/spinlock.h>
+#include <nuttx/seqlock.h>
 
 #include "clock/clock.h"
 #ifdef CONFIG_CLOCK_TIMEKEEPING
@@ -57,6 +58,7 @@ volatile uint64_t g_system_ticks = INITIAL_SYSTEM_TIMER_TICKS;
 #else
 volatile uint32_t g_system_ticks = INITIAL_SYSTEM_TIMER_TICKS;
 #endif
+seqcount_t g_system_tick_lock = SEQLOCK_INITIALIZER;
 #endif
 
 #ifndef CONFIG_CLOCK_TIMEKEEPING
@@ -418,11 +420,9 @@ void clock_resynchronize(FAR struct timespec *rtc_diff)
       clock_t diff_ticks = SEC2TICK(rtc_diff->tv_sec) +
                            NSEC2TICK(rtc_diff->tv_nsec);
 
-#ifdef CONFIG_SYSTEM_TIME64
-      atomic64_fetch_add((FAR atomic64_t *)&g_system_ticks, diff_ticks);
-#else
-      atomic_fetch_add((FAR atomic_t *)&g_system_ticks, diff_ticks);
-#endif
+      flags = write_seqlock_irqsave(&g_system_tick_lock);
+      g_system_ticks += diff_ticks;
+      write_sequnlock_irqrestore(&g_system_tick_lock, flags);
     }
 }
 #endif
@@ -440,12 +440,12 @@ void clock_resynchronize(FAR struct timespec *rtc_diff)
 #ifndef CONFIG_SCHED_TICKLESS
 void clock_timer(void)
 {
+  irqstate_t flags;
+
   /* Increment the per-tick system counter */
 
-#ifdef CONFIG_SYSTEM_TIME64
-  atomic64_fetch_add((FAR atomic64_t *)&g_system_ticks, 1);
-#else
-  atomic_fetch_add((FAR atomic_t *)&g_system_ticks, 1);
-#endif
+  flags = write_seqlock_irqsave(&g_system_tick_lock);
+  g_system_ticks++;
+  write_sequnlock_irqrestore(&g_system_tick_lock, flags);
 }
 #endif
