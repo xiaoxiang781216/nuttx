@@ -52,12 +52,9 @@
  * Public Data
  ****************************************************************************/
 
-#ifndef CONFIG_SCHED_TICKLESS
-#ifdef CONFIG_SYSTEM_TIME64
-volatile uint64_t g_system_ticks = INITIAL_SYSTEM_TIMER_TICKS;
-#else
-volatile uint32_t g_system_ticks = INITIAL_SYSTEM_TIMER_TICKS;
-#endif
+#if !defined(CONFIG_SCHED_TICKLESS) && \
+    !defined(CONFIG_ALARM_ARCH) && !defined(CONFIG_TIMER_ARCH)
+volatile clock_t g_system_ticks = INITIAL_SYSTEM_TIMER_TICKS;
 seqcount_t g_system_tick_lock = SEQLOCK_INITIALIZER;
 #endif
 

@@ -93,14 +93,6 @@ clock_t clock_systime_ticks(void)
 
   up_timer_gettick(&ticks);
   return ticks;
-#elif defined(CONFIG_SCHED_TICKLESS)
-  struct timespec ts =
-    {
-      0
-    };
-
-  up_timer_gettime(&ts);
-  return clock_time2ticks_floor(&ts);
 #else
   clock_t ret;
   unsigned int seq;

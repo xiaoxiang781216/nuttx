@@ -58,7 +58,8 @@
  * Public Data
  ****************************************************************************/
 
-#if !defined(CONFIG_SCHED_TICKLESS)
+#if !defined(CONFIG_SCHED_TICKLESS) && \
+    !defined(CONFIG_ALARM_ARCH) && !defined(CONFIG_TIMER_ARCH)
   /* The system clock exists (CONFIG_SCHED_TICKLESS), but it not prototyped
    * globally in include/nuttx/clock.h.
    */
