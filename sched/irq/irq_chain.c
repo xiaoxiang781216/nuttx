@@ -153,7 +153,7 @@ int irqchain_attach(int ndx, xcpt_t isr, FAR void *arg)
     {
       if (g_irqvector[ndx].handler != irqchain_dispatch)
         {
-          if (sq_count(&g_irqchainfreelist) < 2)
+          if (sq_count(&g_irqchainfreelist) < 2u)
             {
               ret = -ENOMEM;
             }
