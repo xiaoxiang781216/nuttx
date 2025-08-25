@@ -340,7 +340,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *rtrtcb);
 bool nxsched_remove_readytorun(FAR struct tcb_s *rtrtcb);
 void nxsched_remove_self(FAR struct tcb_s *rtrtcb);
 void nxsched_merge_prioritized(FAR dq_queue_t *list1, FAR dq_queue_t *list2,
-                               uint8_t task_state);
+                               tstate_t task_state);
 bool nxsched_merge_pending(void);
 void nxsched_add_blocked(FAR struct tcb_s *btcb, tstate_t task_state);
 void nxsched_remove_blocked(FAR struct tcb_s *btcb);

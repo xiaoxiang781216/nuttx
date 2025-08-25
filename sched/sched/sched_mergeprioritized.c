@@ -64,7 +64,7 @@
  ****************************************************************************/
 
 void nxsched_merge_prioritized(FAR dq_queue_t *list1, FAR dq_queue_t *list2,
-                               uint8_t task_state)
+                               tstate_t task_state)
 {
   dq_queue_t clone;
   FAR struct tcb_s *tcb1;

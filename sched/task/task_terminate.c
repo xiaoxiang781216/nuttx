@@ -105,7 +105,7 @@ static int terminate_handler(FAR void *cookie)
 int nxtask_terminate(pid_t pid)
 {
   FAR struct tcb_s *dtcb;
-  uint8_t task_state;
+  tstate_t task_state;
   irqstate_t flags;
   int ret = OK;
 

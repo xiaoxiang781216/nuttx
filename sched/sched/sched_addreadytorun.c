@@ -157,7 +157,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
   FAR struct tcb_s *headtcb;
   FAR dq_queue_t *tasklist;
   bool doswitch;
-  int task_state;
+  tstate_t task_state;
   int cpu;
   int me;
 
