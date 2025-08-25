@@ -664,13 +664,6 @@ static void rpmsg_virtio_rx_dispatch(FAR struct rpmsg_virtio_priv_s *priv)
   uint16_t idx;
   int status;
 
-  if (priv->noderx == NULL)
-    {
-      /* Do not response interrupt if noderx is not initialized */
-
-      return;
-    }
-
   metal_mutex_acquire(&rdev->lock);
   while (!last)
     {
@@ -820,7 +813,6 @@ static int rpmsg_virtio_notify_wait(FAR struct rpmsg_device *rdev,
 static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
 {
   FAR struct virtio_device *vdev = priv->vdev;
-  FAR struct rpmsg_virtio_node_s *noderx;
   struct rpmsg_virtio_config config =
   {
     RPMSG_BUFFER_SIZE,
@@ -830,8 +822,9 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
     rpmsg_virtio_tx_callback,
   };
 
+  uint16_t nrx;
+  uint16_t i;
   int ret;
-  int i;
 
   if (virtio_has_feature(vdev, VIRTIO_RPMSG_F_BUFSZ))
     {
@@ -841,35 +834,56 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
                                 &config.r2h_buf_size);
     }
 
-  if (vdev->role == VIRTIO_DEV_DRIVER &&
-      virtio_has_feature(vdev, VIRTIO_RPMSG_F_BUFADDR))
+  if (vdev->role == VIRTIO_DEV_DRIVER)
     {
-      FAR void *shmbuf_va0;
-      FAR void *shmbuf_va1;
-      uint64_t shmbuf_pa0;
-      uint64_t shmbuf_pa1;
+      if (virtio_has_feature(vdev, VIRTIO_RPMSG_F_BUFADDR))
+        {
+          FAR void *shmbuf_va0;
+          FAR void *shmbuf_va1;
+          uint64_t shmbuf_pa0;
+          uint64_t shmbuf_pa1;
 
-      /* In OpenAMP, priv->pool[0] is the RX share memory pool, should use
-       * r2h_buf_addr and r2h_buf_size
-       */
+          /* In OpenAMP, priv->pool[0] is the RX share memory pool,
+           * should use r2h_buf_addr and r2h_buf_size
+           */
 
-      virtio_read_config_member(vdev, struct fw_rsc_config, r2h_buf_addr,
-                                &shmbuf_pa0);
-      shmbuf_va0 = up_addrenv_pa_to_va((uintptr_t)shmbuf_pa0);
-      rpmsg_virtio_init_shm_pool(&priv->pool[0], shmbuf_va0,
-              config.r2h_buf_size * vdev->vrings_info[0].info.num_descs);
+          virtio_read_config_member(vdev, struct fw_rsc_config, r2h_buf_addr,
+                                    &shmbuf_pa0);
+          shmbuf_va0 = up_addrenv_pa_to_va((uintptr_t)shmbuf_pa0);
+          rpmsg_virtio_init_shm_pool(&priv->pool[0], shmbuf_va0,
+                  config.r2h_buf_size * vdev->vrings_info[0].info.num_descs);
 
-      /* In OpenAMP, priv->pool[1] is the TX share memory pool, should use
-       * h2r_buf_addr and h2r_buf_size
-       */
+          /* In OpenAMP, priv->pool[1] is the TX share memory pool,
+           * should use h2r_buf_addr and h2r_buf_size
+           */
 
-      virtio_read_config_member(vdev, struct fw_rsc_config, h2r_buf_addr,
-                                &shmbuf_pa1);
-      shmbuf_va1 = up_addrenv_pa_to_va((uintptr_t)shmbuf_pa1);
-      rpmsg_virtio_init_shm_pool(&priv->pool[1], shmbuf_va1,
-              config.h2r_buf_size * vdev->vrings_info[1].info.num_descs);
+          virtio_read_config_member(vdev, struct fw_rsc_config, h2r_buf_addr,
+                                    &shmbuf_pa1);
+          shmbuf_va1 = up_addrenv_pa_to_va((uintptr_t)shmbuf_pa1);
+          rpmsg_virtio_init_shm_pool(&priv->pool[1], shmbuf_va1,
+                  config.h2r_buf_size * vdev->vrings_info[1].info.num_descs);
 
-      config.split_shpool = true;
+          config.split_shpool = true;
+        }
+
+      nrx = vdev->vrings_info[0].info.num_descs;
+    }
+  else
+    {
+      nrx = vdev->vrings_info[1].info.num_descs;
+    }
+
+  priv->noderx = kmm_malloc(nrx * sizeof(*priv->noderx));
+  if (priv->noderx == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  metal_list_init(&priv->readyrx);
+  metal_list_init(&priv->freerx);
+  for (i = 0; i < nrx; i++)
+    {
+      metal_list_add_tail(&priv->freerx, &priv->noderx[i].node);
     }
 
   ret = rpmsg_init_vdev_with_config(&priv->rvdev, vdev, rpmsg_ns_bind,
@@ -878,6 +892,7 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
   if (ret < 0)
     {
       rpmsgerr("rpmsg_init_vdev failed, ret=%d\n", ret);
+      kmm_free(priv->noderx);
       return ret;
     }
 
@@ -886,22 +901,6 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
   priv->rvdev.svq->notify = rpmsg_virtio_tx_notify;
   priv->rvdev.notify_wait_cb = rpmsg_virtio_notify_wait;
   priv->rvdev.rdev.ns_unbind_cb = rpmsg_ns_unbind;
-
-  noderx = kmm_malloc(priv->rvdev.rvq->vq_nentries * sizeof(*priv->noderx));
-  if (noderx == NULL)
-    {
-      rpmsg_deinit_vdev(&priv->rvdev);
-      return -ENOMEM;
-    }
-
-  metal_list_init(&priv->readyrx);
-  metal_list_init(&priv->freerx);
-  for (i = 0; i < priv->rvdev.rvq->vq_nentries; i++)
-    {
-      metal_list_add_tail(&priv->freerx, &noderx[i].node);
-    }
-
-  priv->noderx = noderx;
 
   /* Wake up the rx thread to process message */
 
@@ -1083,13 +1082,13 @@ void rpmsg_virtio_remove(FAR struct virtio_device *vdev)
       virtio_reset_device(vdev);
     }
 
-  /* Free noderx */
-
-  kmm_free(priv->noderx);
-
   /* Deinit the rpmsg virtio device */
 
   rpmsg_deinit_vdev(&priv->rvdev);
+
+  /* Free noderx */
+
+  kmm_free(priv->noderx);
 
   /* Delete the kthread */
 
