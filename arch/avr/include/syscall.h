@@ -36,6 +36,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifndef CONFIG_SYS_RESERVED
+#  define CONFIG_SYS_RESERVED 0
+#endif
+
 #define SYS_syscall 0x80
 
 /****************************************************************************
