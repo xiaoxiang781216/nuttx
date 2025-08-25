@@ -141,7 +141,63 @@ __cpu3_start:
 #endif
 
 #if CONFIG_SMP_NCPUS > 4
-#  warn Need work for CONFIG_SMP_NCPUS > 4
+  .global __cpu4_start
+  .type   __cpu4_start, #function
+__cpu4_start:
+  ldr   sp, .Lcpu4_stackpointer
+  b     __el2_boot
+
+	.globl	cpu4_start
+	.type	cpu4_start, object
+
+	cpu4_start:
+	.long	__cpu4_start
+#endif
+
+#if CONFIG_SMP_NCPUS > 5
+  .global __cpu5_start
+  .type   __cpu5_start, #function
+__cpu5_start:
+  ldr   sp, .Lcpu5_stackpointer
+  b     __el2_boot
+
+	.globl	cpu5_start
+	.type	cpu5_start, object
+
+	cpu5_start:
+	.long	__cpu5_start
+#endif
+
+#if CONFIG_SMP_NCPUS > 6
+  .global __cpu6_start
+  .type   __cpu6_start, #function
+__cpu6_start:
+  ldr   sp, .Lcpu6_stackpointer
+  b     __el2_boot
+
+	.globl	cpu6_start
+	.type	cpu6_start, object
+
+	cpu6_start:
+	.long	__cpu6_start
+#endif
+
+#if CONFIG_SMP_NCPUS > 7
+  .global __cpu7_start
+  .type   __cpu7_start, #function
+__cpu7_start:
+  ldr   sp, .Lcpu7_stackpointer
+  b     __el2_boot
+
+	.globl	cpu7_start
+	.type	cpu7_start, object
+
+	cpu7_start:
+	.long	__cpu7_start
+#endif
+
+#if CONFIG_SMP_NCPUS > 8
+#  warn Need work for CONFIG_SMP_NCPUS > 8
   b     _cpux_wfi
 #endif
 
@@ -179,7 +235,7 @@ __el2_boot:
 
 __el1_boot:
   mrc   CP15_MPIDR(r0)      /* Get cpuindex */
-  and   r0, r0, #0x3
+  and   r0, r0, #0x7
   cmp   r0, #1
   beq   __cpu1_boot
 
@@ -191,6 +247,26 @@ __el1_boot:
 #if CONFIG_SMP_NCPUS > 3
   cmp   r0, #3
   beq   __cpu3_boot
+#endif
+
+#if CONFIG_SMP_NCPUS > 4
+  cmp   r0, #4
+  beq   __cpu4_boot
+#endif
+
+#if CONFIG_SMP_NCPUS > 5
+  cmp   r0, #5
+  beq   __cpu5_boot
+#endif
+
+#if CONFIG_SMP_NCPUS > 6
+  cmp   r0, #6
+  beq   __cpu6_boot
+#endif
+
+#if CONFIG_SMP_NCPUS > 7
+  cmp   r0, #7
+  beq   __cpu7_boot
 #endif
 
 /****************************************************************************
@@ -269,8 +345,96 @@ __cpu3_boot:
   .size __cpu3_start, .-__cpu3_start
 
 #if CONFIG_SMP_NCPUS > 4
-#  error This logic needs to extended for CONFIG_SMP_NCPUS > 4
 
+__cpu4_boot:
+  /* Make sure that we are in SYS mode with IRQs and FIQs disabled */
+
+  cpsid   if, #PSR_MODE_SYS
+
+  /* Set up the stack pointer and the CPU index */
+
+  ldr   sp, .Lcpu4_stackpointer
+  sub   sp, sp, #XCPTCONTEXT_SIZE
+  mov   r5, #4
+
+  /* Then branch to the common startup logic (PC-relative) */
+
+  b   .Lcpu_start
+
+.Lcpu4_stackpointer:
+  .long .Lcpu4_stacktop
+  .size __cpu4_start, .-__cpu4_start
+
+#if CONFIG_SMP_NCPUS > 5
+
+__cpu5_boot:
+  /* Make sure that we are in SYS mode with IRQs and FIQs disabled */
+
+  cpsid   if, #PSR_MODE_SYS
+
+  /* Set up the stack pointer and the CPU index */
+
+  ldr   sp, .Lcpu5_stackpointer
+  sub   sp, sp, #XCPTCONTEXT_SIZE
+  mov   r5, #5
+
+  /* Then branch to the common startup logic (PC-relative) */
+
+  b   .Lcpu_start
+
+.Lcpu5_stackpointer:
+  .long .Lcpu5_stacktop
+  .size __cpu5_start, .-__cpu5_start
+
+#if CONFIG_SMP_NCPUS > 6
+
+__cpu6_boot:
+  /* Make sure that we are in SYS mode with IRQs and FIQs disabled */
+
+  cpsid   if, #PSR_MODE_SYS
+
+  /* Set up the stack pointer and the CPU index */
+
+  ldr   sp, .Lcpu6_stackpointer
+  sub   sp, sp, #XCPTCONTEXT_SIZE
+  mov   r5, #6
+
+  /* Then branch to the common startup logic (PC-relative) */
+
+  b   .Lcpu_start
+
+.Lcpu6_stackpointer:
+  .long .Lcpu6_stacktop
+  .size __cpu6_start, .-__cpu6_start
+
+#if CONFIG_SMP_NCPUS > 7
+
+__cpu7_boot:
+  /* Make sure that we are in SYS mode with IRQs and FIQs disabled */
+
+  cpsid   if, #PSR_MODE_SYS
+
+  /* Set up the stack pointer and the CPU index */
+
+  ldr   sp, .Lcpu7_stackpointer
+  sub   sp, sp, #XCPTCONTEXT_SIZE
+  mov   r5, #7
+
+  /* Then branch to the common startup logic (PC-relative) */
+
+  b   .Lcpu_start
+
+.Lcpu7_stackpointer:
+  .long .Lcpu7_stacktop
+  .size __cpu7_start, .-__cpu7_start
+
+#if CONFIG_SMP_NCPUS > 8
+#  error This logic needs to extended for CONFIG_SMP_NCPUS > 8
+
+#endif /* CONFIG_SMP_NCPUS > 8 */
+#endif /* CONFIG_SMP_NCPUS > 7 */
+#endif /* CONFIG_SMP_NCPUS > 6 */
+#endif /* CONFIG_SMP_NCPUS > 5 */
 #endif /* CONFIG_SMP_NCPUS > 4 */
 #endif /* CONFIG_SMP_NCPUS > 3 */
 #endif /* CONFIG_SMP_NCPUS > 2 */
@@ -580,8 +744,52 @@ g_cpu3_idlestack:
   .size g_cpu3_idlestack, .Lcpu3_stacktop-g_cpu3_idlestack
 
 #if CONFIG_SMP_NCPUS > 4
-#  error This logic needs to extended for CONFIG_SMP_NCPUS > 4
+  .align  8
+  .globl  g_cpu4_idlestack
+  .type g_cpu4_idlestack, object
 
+g_cpu4_idlestack:
+  .space  SMP_STACK_SIZE
+.Lcpu4_stacktop:
+  .size g_cpu4_idlestack, .Lcpu4_stacktop-g_cpu4_idlestack
+
+#if CONFIG_SMP_NCPUS > 5
+  .align  8
+  .globl  g_cpu5_idlestack
+  .type g_cpu5_idlestack, object
+
+g_cpu5_idlestack:
+  .space  SMP_STACK_SIZE
+.Lcpu5_stacktop:
+  .size g_cpu5_idlestack, .Lcpu5_stacktop-g_cpu5_idlestack
+
+#if CONFIG_SMP_NCPUS > 6
+  .align  8
+  .globl  g_cpu6_idlestack
+  .type g_cpu6_idlestack, object
+
+g_cpu6_idlestack:
+  .space  SMP_STACK_SIZE
+.Lcpu6_stacktop:
+  .size g_cpu6_idlestack, .Lcpu6_stacktop-g_cpu6_idlestack
+
+#if CONFIG_SMP_NCPUS > 7
+  .align  8
+  .globl  g_cpu7_idlestack
+  .type g_cpu7_idlestack, object
+
+g_cpu7_idlestack:
+  .space  SMP_STACK_SIZE
+.Lcpu7_stacktop:
+  .size g_cpu7_idlestack, .Lcpu7_stacktop-g_cpu7_idlestack
+
+#if CONFIG_SMP_NCPUS > 8
+#  error This logic needs to extended for CONFIG_SMP_NCPUS > 8
+
+#endif /* CONFIG_SMP_NCPUS > 8 */
+#endif /* CONFIG_SMP_NCPUS > 7 */
+#endif /* CONFIG_SMP_NCPUS > 6 */
+#endif /* CONFIG_SMP_NCPUS > 5 */
 #endif /* CONFIG_SMP_NCPUS > 4 */
 #endif /* CONFIG_SMP_NCPUS > 3 */
 #endif /* CONFIG_SMP_NCPUS > 2 */

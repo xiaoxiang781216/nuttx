@@ -56,7 +56,19 @@ extern uint32_t g_cpu2_idlestack[SMP_STACK_WORDS];
 #if CONFIG_SMP_NCPUS > 3
 extern uint32_t g_cpu3_idlestack[SMP_STACK_WORDS];
 #if CONFIG_SMP_NCPUS > 4
-#  error This logic needs to extended for CONFIG_SMP_NCPUS > 4
+extern uint32_t g_cpu4_idlestack[SMP_STACK_WORDS];
+#if CONFIG_SMP_NCPUS > 5
+extern uint32_t g_cpu5_idlestack[SMP_STACK_WORDS];
+#if CONFIG_SMP_NCPUS > 6
+extern uint32_t g_cpu6_idlestack[SMP_STACK_WORDS];
+#if CONFIG_SMP_NCPUS > 7
+extern uint32_t g_cpu7_idlestack[SMP_STACK_WORDS];
+#if CONFIG_SMP_NCPUS > 8
+#  error This logic needs to extended for CONFIG_SMP_NCPUS > 8
+#endif /* CONFIG_SMP_NCPUS > 8 */
+#endif /* CONFIG_SMP_NCPUS > 7 */
+#endif /* CONFIG_SMP_NCPUS > 6 */
+#endif /* CONFIG_SMP_NCPUS > 5 */
 #endif /* CONFIG_SMP_NCPUS > 4 */
 #endif /* CONFIG_SMP_NCPUS > 3 */
 #endif /* CONFIG_SMP_NCPUS > 2 */
@@ -99,7 +111,23 @@ void __cpu3_start(void);
 #endif
 
 #if CONFIG_SMP_NCPUS > 4
-#  error This logic needs to extended for CONFIG_SMP_NCPUS > 4
+void __cpu4_start(void);
+#endif
+
+#if CONFIG_SMP_NCPUS > 5
+void __cpu5_start(void);
+#endif
+
+#if CONFIG_SMP_NCPUS > 6
+void __cpu6_start(void);
+#endif
+
+#if CONFIG_SMP_NCPUS > 7
+void __cpu7_start(void);
+#endif
+
+#if CONFIG_SMP_NCPUS > 8
+#  error This logic needs to extended for CONFIG_SMP_NCPUS > 8
 #endif
 
 /****************************************************************************

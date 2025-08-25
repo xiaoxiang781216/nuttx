@@ -56,6 +56,18 @@ static const uint32_t *g_cpu_stackalloc[CONFIG_SMP_NCPUS] =
   , g_cpu2_idlestack
 #if CONFIG_SMP_NCPUS > 3
   , g_cpu3_idlestack
+#if CONFIG_SMP_NCPUS > 4
+  , g_cpu4_idlestack
+#if CONFIG_SMP_NCPUS > 5
+  , g_cpu5_idlestack
+#if CONFIG_SMP_NCPUS > 6
+  , g_cpu6_idlestack
+#if CONFIG_SMP_NCPUS > 7
+  , g_cpu7_idlestack
+#endif /* CONFIG_SMP_NCPUS > 7 */
+#endif /* CONFIG_SMP_NCPUS > 6 */
+#endif /* CONFIG_SMP_NCPUS > 5 */
+#endif /* CONFIG_SMP_NCPUS > 4 */
 #endif /* CONFIG_SMP_NCPUS > 3 */
 #endif /* CONFIG_SMP_NCPUS > 2 */
 };

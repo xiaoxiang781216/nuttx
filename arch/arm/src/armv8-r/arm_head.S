@@ -132,7 +132,7 @@ __start:
 	/* Get cpuindex, cpu0 continue boot, others wait event from cpu0 */
 
 	mrc		CP15_MPIDR(r0)
-	and		r0, r0, #0x3
+	and		r0, r0, #0x7
 	cmp		r0, #0
 #if CONFIG_NCPUS > 1
 	beq		__cpu0_start
@@ -166,7 +166,31 @@ __start:
 	bxeq		r1
 #  endif
 #  if CONFIG_NCPUS > 4
-#    error This logic needs to extended for CONFIG_SMP_NCPUS > 4
+	ldr		r1, =cpu4_start
+	ldr		r1, [r1]
+	cmp		r0, #4
+	bxeq		r1
+#  endif
+#  if CONFIG_NCPUS > 5
+	ldr		r1, =cpu5_start
+	ldr		r1, [r1]
+	cmp		r0, #5
+	bxeq		r1
+#  endif
+#  if CONFIG_NCPUS > 6
+	ldr		r1, =cpu6_start
+	ldr		r1, [r1]
+	cmp		r0, #6
+	bxeq		r1
+#  endif
+#  if CONFIG_NCPUS > 7
+	ldr		r1, =cpu7_start
+	ldr		r1, [r1]
+	cmp		r0, #7
+	bxeq		r1
+#  endif
+#  if CONFIG_NCPUS > 8
+#    error This logic needs to extended for CONFIG_SMP_NCPUS > 8
 #  endif
 
 __cpu0_start:
