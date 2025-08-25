@@ -210,13 +210,14 @@ static int rpmsg_dev_ioctl(FAR struct file *filep, int cmd,
 static int rpmsg_ioctl_foreach_cb(FAR struct rpmsg_s *rpmsg, FAR void *arg)
 {
   FAR struct rpmsg_ioctl_s *info = (FAR struct rpmsg_ioctl_s *)arg;
+  int ret = OK;
 
   if (!info->cpuname || !strcmp(rpmsg->cpuname, info->cpuname))
     {
-      return rpmsg_dev_ioctl_(rpmsg, info->cmd, info->arg);
+      ret = rpmsg_dev_ioctl_(rpmsg, info->cmd, info->arg);
     }
 
-  return 0;
+  return ret;
 }
 
 static int rpmsg_reboot_notifier(FAR struct notifier_block *nb,
@@ -224,39 +225,42 @@ static int rpmsg_reboot_notifier(FAR struct notifier_block *nb,
 {
   FAR struct rpmsg_s *rpmsg = metal_container_of(nb, struct rpmsg_s,
                                                  nbreboot);
+  int ret = OK;
 
   if (action == SYS_HALT)
     {
-      return rpmsg_dev_ioctl_(rpmsg, RPMSGIOC_DUMP, 0);
+      ret = rpmsg_dev_ioctl_(rpmsg, RPMSGIOC_DUMP, 0);
     }
 
-  return 0;
+  return ret;
 }
 
 static int rpmsg_init_workrx(FAR struct rpmsg_s *rpmsg, uint16_t nrx)
 {
   FAR struct rpmsg_work_s *workrx;
   uint16_t i;
+  int ret = OK;
 
-  if (nrx == 0)
+  if (nrx != 0)
     {
-      return 0;
+      workrx = kmm_zalloc(nrx * sizeof(struct rpmsg_work_s));
+      if (workrx != NULL)
+        {
+          list_initialize(&rpmsg->freerx);
+          for (i = 0; i < nrx; i++)
+            {
+              list_add_tail(&rpmsg->freerx, &workrx[i].work.node);
+            }
+
+          rpmsg->workrx = workrx;
+        }
+      else
+        {
+          ret = -ENOMEM;
+        }
     }
 
-  workrx = kmm_zalloc(nrx * sizeof(struct rpmsg_work_s));
-  if (workrx == NULL)
-    {
-      return -ENOMEM;
-    }
-
-  list_initialize(&rpmsg->freerx);
-  for (i = 0; i < nrx; i++)
-    {
-      list_add_tail(&rpmsg->freerx, &workrx[i].work.node);
-    }
-
-  rpmsg->workrx = workrx;
-  return 0;
+  return ret;
 }
 
 static void rpmsg_deinit_workrx(FAR struct rpmsg_s *rpmsg)
@@ -304,6 +308,7 @@ static int rpmsg_create_wqueues(FAR struct rpmsg_wqueue_s *wqueues,
 {
   FAR struct rpmsg_wqueue_s *wqueue;
   char wqname[64];
+  int ret = OK;
   int i;
 
   for (i = 0; i < CONFIG_RPMSG_WQUEUE_NUMBER; i++)
@@ -319,19 +324,17 @@ static int rpmsg_create_wqueues(FAR struct rpmsg_wqueue_s *wqueues,
       if (wqueue->kwqueue == NULL)
         {
           rpmsgerr("rpmsg wqueue [%d] create failed\n", i);
-          goto err;
+          while (--i >= 0)
+            {
+              work_queue_free(wqueues[i].kwqueue);
+            }
+
+          ret = -ENOMEM;
+          break;
         }
     }
 
-  return OK;
-
-err:
-  while (--i >= 0)
-    {
-      work_queue_free(wqueues[i].kwqueue);
-    }
-
-  return -ENOMEM;
+  return ret;
 }
 
 /****************************************************************************
@@ -351,70 +354,73 @@ int rpmsg_wait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
 {
   FAR struct rpmsg_wqueue_s *wqueue;
   FAR struct rpmsg_s *rpmsg;
-  int ret;
+  int ret = -EINVAL;
 
-  if (!ept || !sem)
+  if (ept && sem)
     {
-      return -EINVAL;
-    }
-
-  rpmsg = rpmsg_get_by_rdev(ept->rdev);
-  if (!rpmsg || !rpmsg->ops->wait)
-    {
-      return nxsem_wait_uninterruptible(sem);
-    }
-
-  wqueue = rpmsg_get_current_wqueue(rpmsg);
-  if (wqueue == NULL)
-    {
-      return nxsem_wait_uninterruptible(sem);
-    }
-
-  for (; ; )
-    {
-      ret = nxsem_trywait(sem);
-      if (ret >= 0)
+      rpmsg = rpmsg_get_by_rdev(ept->rdev);
+      if (!rpmsg || !rpmsg->ops->wait)
         {
-          return ret;
+          ret = nxsem_wait_uninterruptible(sem);
         }
-
-      rpmsg->ops->wait(rpmsg);
-
-      if (wqueue->recursive >= RPMSG_RECURSIVE_LIMIT)
+      else
         {
-          return RPMSG_EOPNOTSUPP;
-        }
+          wqueue = rpmsg_get_current_wqueue(rpmsg);
+          if (wqueue == NULL)
+            {
+              ret = nxsem_wait_uninterruptible(sem);
+            }
+          else
+            {
+              for (; ; )
+                {
+                  ret = nxsem_trywait(sem);
+                  if (ret >= 0)
+                    {
+                      break;
+                    }
 
-      wqueue->recursive++;
-      work_qeueue_dispatch(wqueue->kwqueue);
-      wqueue->recursive--;
+                  rpmsg->ops->wait(rpmsg);
+
+                  if (wqueue->recursive >= RPMSG_RECURSIVE_LIMIT)
+                    {
+                      ret = RPMSG_EOPNOTSUPP;
+                      break;
+                    }
+
+                  wqueue->recursive++;
+                  work_qeueue_dispatch(wqueue->kwqueue);
+                  wqueue->recursive--;
+                }
+            }
+        }
     }
 
-  return OK;
+  return ret;
 }
 
 int rpmsg_post(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
 {
   FAR struct rpmsg_s *rpmsg;
   int semcount = 0;
-  int ret;
+  int ret = -EINVAL;
 
-  if (!ept || !sem)
+  if (ept && sem)
     {
-      return -EINVAL;
-    }
-
-  rpmsg = rpmsg_get_by_rdev(ept->rdev);
-  if (!rpmsg || !rpmsg->ops->post)
-    {
-      return nxsem_post(sem);
-    }
-
-  nxsem_get_value(sem, &semcount);
-  ret = nxsem_post(sem);
-  if (semcount >= 0)
-    {
-      ret = rpmsg->ops->post(rpmsg);
+      rpmsg = rpmsg_get_by_rdev(ept->rdev);
+      if (!rpmsg || !rpmsg->ops->post)
+        {
+          ret = nxsem_post(sem);
+        }
+      else
+        {
+          nxsem_get_value(sem, &semcount);
+          ret = nxsem_post(sem);
+          if (semcount >= 0)
+            {
+              ret = rpmsg->ops->post(rpmsg);
+            }
+        }
     }
 
   return ret;
@@ -423,14 +429,15 @@ int rpmsg_post(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
 FAR const char *rpmsg_get_local_cpuname(FAR struct rpmsg_device *rdev)
 {
   FAR struct rpmsg_s *rpmsg = rpmsg_get_by_rdev(rdev);
+  FAR const char *cpuname = NULL;
 
-  if (rpmsg == NULL)
+  if (rpmsg != NULL)
     {
-      return NULL;
+      cpuname = rpmsg->local_cpuname[0] ? rpmsg->local_cpuname :
+                CONFIG_RPMSG_LOCAL_CPUNAME;
     }
 
-  return rpmsg->local_cpuname[0] ? rpmsg->local_cpuname :
-         CONFIG_RPMSG_LOCAL_CPUNAME;
+  return cpuname;
 }
 
 FAR const char *rpmsg_get_cpuname(FAR struct rpmsg_device *rdev)
@@ -450,13 +457,14 @@ int rpmsg_get_timestamp(FAR struct rpmsg_device *rdev, FAR const void *data,
                         FAR struct rpmsg_timestamp_s *ts)
 {
   FAR struct rpmsg_s *rpmsg = rpmsg_get_by_rdev(rdev);
+  int ret = -EINVAL;
 
-  if (!rpmsg || !data || !ts || !rpmsg->ops->get_timestamp)
+  if (rpmsg && data && ts && rpmsg->ops->get_timestamp)
     {
-      return -EINVAL;
+      ret = rpmsg->ops->get_timestamp(rpmsg, data, ts);
     }
 
-  return rpmsg->ops->get_timestamp(rpmsg, data, ts);
+  return ret;
 }
 
 bool rpmsg_support_alloc_buf(FAR struct rpmsg_device *rdev)
@@ -470,13 +478,14 @@ FAR void *rpmsg_alloc_buf(FAR struct rpmsg_device *rdev, size_t size,
                           size_t align)
 {
   FAR struct rpmsg_s *rpmsg = rpmsg_get_by_rdev(rdev);
+  FAR void *buf = NULL;
 
   if (!rpmsg || !rpmsg->ops->alloc_buf)
     {
-      return NULL;
+      buf = rpmsg->ops->alloc_buf(rpmsg, size, align);
     }
 
-  return rpmsg->ops->alloc_buf(rpmsg, size, align);
+  return buf;
 }
 
 void rpmsg_free_buf(FAR struct rpmsg_device *rdev, FAR void *addr)
@@ -511,69 +520,75 @@ int rpmsg_register_callback(FAR void *priv,
   FAR struct metal_list *node;
   FAR struct metal_list *bnode;
   FAR struct rpmsg_cb_s *cb;
+  bool again = true;
+  int ret = -ENOMEM;
 
   cb = kmm_zalloc(sizeof(struct rpmsg_cb_s));
-  if (cb == NULL)
+  if (cb != NULL)
     {
-      return -ENOMEM;
-    }
+      cb->priv           = priv;
+      cb->device_created = device_created;
+      cb->device_destroy = device_destroy;
+      cb->ns_match       = ns_match;
+      cb->ns_bind        = ns_bind;
 
-  cb->priv           = priv;
-  cb->device_created = device_created;
-  cb->device_destroy = device_destroy;
-  cb->ns_match       = ns_match;
-  cb->ns_bind        = ns_bind;
-
-  down_write(&g_rpmsg_lock);
-  metal_list_add_tail(&g_rpmsg_cb, &cb->node);
-  downgrade_write(&g_rpmsg_lock);
-  metal_list_for_each(&g_rpmsg, node)
-    {
-      FAR struct rpmsg_s *rpmsg =
-        metal_container_of(node, struct rpmsg_s, node);
-      FAR struct rpmsg_device *rdev = rpmsg_get_rdev_by_rpmsg(rpmsg);
-
-      if (!rpmsg->init)
+      down_write(&g_rpmsg_lock);
+      metal_list_add_tail(&g_rpmsg_cb, &cb->node);
+      downgrade_write(&g_rpmsg_lock);
+      metal_list_for_each(&g_rpmsg, node)
         {
-          continue;
-        }
+          FAR struct rpmsg_s *rpmsg =
+            metal_container_of(node, struct rpmsg_s, node);
+          FAR struct rpmsg_device *rdev = rpmsg_get_rdev_by_rpmsg(rpmsg);
 
-      if (device_created)
-        {
-          device_created(rdev, priv);
-        }
-
-      if (ns_bind == NULL)
-        {
-          continue;
-        }
-
-      DEBUGASSERT(ns_match != NULL);
-
-again:
-      nxrmutex_lock(&rpmsg->lock);
-      metal_list_for_each(&rpmsg->bind, bnode)
-        {
-          FAR struct rpmsg_bind_s *bind =
-            metal_container_of(bnode, struct rpmsg_bind_s, node);
-
-          if (ns_match(rdev, priv, bind->name, bind->dest))
+          if (!rpmsg->init)
             {
-              metal_list_del(bnode);
-              nxrmutex_unlock(&rpmsg->lock);
-              ns_bind(rdev, priv, bind->name, bind->dest);
-
-              kmm_free(bind);
-              goto again;
+              continue;
             }
+
+          if (device_created)
+            {
+              device_created(rdev, priv);
+            }
+
+          if (ns_bind == NULL)
+            {
+              continue;
+            }
+
+          DEBUGASSERT(ns_match != NULL);
+
+          nxrmutex_lock(&rpmsg->lock);
+          while (again)
+            {
+              again = false;
+              metal_list_for_each(&rpmsg->bind, bnode)
+                {
+                  FAR struct rpmsg_bind_s *bind =
+                    metal_container_of(bnode, struct rpmsg_bind_s, node);
+
+                  if (ns_match(rdev, priv, bind->name, bind->dest))
+                    {
+                      metal_list_del(bnode);
+                      nxrmutex_unlock(&rpmsg->lock);
+
+                      ns_bind(rdev, priv, bind->name, bind->dest);
+                      kmm_free(bind);
+                      again = true;
+
+                      nxrmutex_lock(&rpmsg->lock);
+                    }
+                }
+            }
+
+          nxrmutex_unlock(&rpmsg->lock);
         }
 
-       nxrmutex_unlock(&rpmsg->lock);
+      up_read(&g_rpmsg_lock);
+      ret = 0;
     }
 
-  up_read(&g_rpmsg_lock);
-
-  return 0;
+  return ret;
 }
 
 void rpmsg_unregister_callback(FAR void *priv,
@@ -628,6 +643,7 @@ void rpmsg_ns_bind(FAR struct rpmsg_device *rdev,
   FAR struct rpmsg_s *rpmsg = rpmsg_get_by_rdev(rdev);
   FAR struct rpmsg_bind_s *bind;
   FAR struct metal_list *node;
+  bool matched = false;
 
   down_read(&g_rpmsg_lock);
   metal_list_for_each(&g_rpmsg_cb, node)
@@ -643,24 +659,25 @@ void rpmsg_ns_bind(FAR struct rpmsg_device *rdev,
           up_read(&g_rpmsg_lock);
 
           ns_bind(rdev, cb_priv, name, dest);
-          return;
+          matched = true;
         }
     }
 
-  bind = kmm_malloc(sizeof(struct rpmsg_bind_s));
-  if (bind == NULL)
+  if (!matched)
     {
-      return;
+      bind = kmm_malloc(sizeof(struct rpmsg_bind_s));
+      if (bind != NULL)
+        {
+          bind->dest = dest;
+          strlcpy(bind->name, name, RPMSG_NAME_SIZE);
+
+          nxrmutex_lock(&rpmsg->lock);
+          metal_list_add_tail(&rpmsg->bind, &bind->node);
+          nxrmutex_unlock(&rpmsg->lock);
+
+          up_read(&g_rpmsg_lock);
+        }
     }
-
-  bind->dest = dest;
-  strlcpy(bind->name, name, RPMSG_NAME_SIZE);
-
-  nxrmutex_lock(&rpmsg->lock);
-  metal_list_add_tail(&rpmsg->bind, &bind->node);
-  nxrmutex_unlock(&rpmsg->lock);
-
-  up_read(&g_rpmsg_lock);
 }
 
 void rpmsg_ns_unbind(FAR struct rpmsg_device *rdev,
@@ -790,39 +807,40 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
   int ret;
 
   ret = metal_init(&params);
-  if (ret < 0)
+  if (ret >= 0)
     {
-      return ret;
+      ret = register_driver(path, &g_rpmsg_dev_ops, 0222, rpmsg);
+      if (ret >= 0)
+        {
+          ret = rpmsg_init_workrx(rpmsg, nrx);
+          if (ret >= 0)
+            {
+              metal_list_init(&rpmsg->bind);
+              nxrmutex_init(&rpmsg->lock);
+              rpmsg->ops = ops;
+              atomic_set(&rpmsg->signals, RPMSG_SIGNAL_RUNNING);
+
+              /* Add priv to list */
+
+              down_write(&g_rpmsg_lock);
+              metal_list_add_tail(&g_rpmsg, &rpmsg->node);
+              up_write(&g_rpmsg_lock);
+
+              rpmsg->nbreboot.notifier_call = rpmsg_reboot_notifier;
+              register_reboot_notifier(&rpmsg->nbreboot);
+            }
+          else
+            {
+              unregister_driver(path);
+              metal_finish();
+            }
+        }
+      else
+        {
+          metal_finish();
+        }
     }
 
-  ret = register_driver(path, &g_rpmsg_dev_ops, 0222, rpmsg);
-  if (ret < 0)
-    {
-      metal_finish();
-      return ret;
-    }
-
-  ret = rpmsg_init_workrx(rpmsg, nrx);
-  if (ret < 0)
-    {
-      unregister_driver(path);
-      metal_finish();
-      return ret;
-    }
-
-  metal_list_init(&rpmsg->bind);
-  nxrmutex_init(&rpmsg->lock);
-  rpmsg->ops = ops;
-  atomic_set(&rpmsg->signals, RPMSG_SIGNAL_RUNNING);
-
-  /* Add priv to list */
-
-  down_write(&g_rpmsg_lock);
-  metal_list_add_tail(&g_rpmsg, &rpmsg->node);
-  up_write(&g_rpmsg_lock);
-
-  rpmsg->nbreboot.notifier_call = rpmsg_reboot_notifier;
-  register_reboot_notifier(&rpmsg->nbreboot);
   return ret;
 }
 
