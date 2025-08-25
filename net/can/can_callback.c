@@ -65,7 +65,7 @@ can_data_event(FAR struct net_driver_s *dev, FAR struct can_conn_s *conn,
                uint16_t flags)
 {
   int buflen = dev->d_len;
-  uint16_t recvlen;
+  int recvlen;
   uint16_t ret;
 
   ret = (flags & ~CAN_NEWDATA);
@@ -194,7 +194,7 @@ uint16_t can_callback(FAR struct net_driver_s *dev,
  *
  ****************************************************************************/
 
-uint16_t can_datahandler(FAR struct net_driver_s *dev,
+int can_datahandler(FAR struct net_driver_s *dev,
                          FAR struct can_conn_s *conn)
 {
   FAR struct iob_s *iob = dev->d_iob;
