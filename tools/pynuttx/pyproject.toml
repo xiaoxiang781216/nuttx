@@ -16,6 +16,7 @@ classifiers = [
 dependencies = [
     "angr>=0.0.0",
     "capstone>=0.0.0",
+    "cloudpickle>=0.0.0",
     "construct>=0.0.0",
     "debugpy>=0.0.0",
     "lauterbach-trace32-rcl>=0.0.0",
@@ -33,4 +34,4 @@ dependencies = [
 
 
 [tool.setuptools]
-package-dir = {"nxgdb" = "nxgdb", "nxelf" = "nxelf", "nxreg" = "nxreg", "nxstub" = "nxstub", "nxtrace" = "nxtrace"}
+package-dir = {"gdbrpc" = "gdbrpc", "nxgdb" = "nxgdb", "nxelf" = "nxelf", "nxreg" = "nxreg", "nxstub" = "nxstub", "nxtrace" = "nxtrace"}

@@ -49,3 +49,10 @@ class CrashPrefix(gdb.Command):
 
     def __init__(self):
         super().__init__("crash", gdb.COMMAND_USER, prefix=True)
+
+
+class GDBRpcPrefix(gdb.Command):
+    """GDB Remote Protocol related commands prefix"""
+
+    def __init__(self):
+        super().__init__("gdbrpc", gdb.COMMAND_USER, prefix=True)

@@ -1,5 +1,6 @@
 angr
 capstone
+cloudpickle
 construct
 debugpy
 lauterbach-trace32-rcl

@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
         register_libcxx_printer_loader()
 
-    modules = ("nxelf", "nxgdb", "nxreg", "nxstub", "nxtrace")
+    modules = ("gdbrpc", "nxelf", "nxgdb", "nxreg", "nxstub", "nxtrace")
     for key in list(sys.modules):
         if key.startswith(modules):
             del sys.modules[key]
