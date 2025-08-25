@@ -182,13 +182,13 @@ FAR struct posix_timer_s *timer_gethandle(timer_t timerid)
   FAR sq_entry_t *entry;
   irqstate_t flags;
 
-  if (timerid != NULL)
+  if (timerid != 0u)
     {
       flags = spin_lock_irqsave(&g_locktimers);
 
       sq_for_every(&g_alloctimers, entry)
         {
-          if (entry == timerid)
+          if ((uintptr_t)entry == timerid)
             {
               timer = (FAR struct posix_timer_s *)timerid;
               break;

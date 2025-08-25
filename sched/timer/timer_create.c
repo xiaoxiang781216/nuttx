@@ -219,7 +219,7 @@ int timer_create(clockid_t clockid, FAR struct sigevent *evp,
 
           /* Return the timer */
 
-          *timerid = ret;
+          *timerid = (timer_t)ret;
         }
     }
 
