@@ -306,6 +306,7 @@ long sysconf(int name)
 
       case _SC_SYNCHRONIZED_IO:
         return _POSIX_SYNCHRONIZED_IO;
+
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
       case _SC_TIMERS:
         return _POSIX_TIMERS;
@@ -316,6 +317,43 @@ long sysconf(int name)
       case _SC_TIMER_MAX:
         return TIMER_MAX;
 #endif
+
+      case _SC_THREAD_SAFE_FUNCTIONS:
+        return _POSIX_THREAD_SAFE_FUNCTIONS;
+
+      case _SC_THREAD_PRIORITY_SCHEDULING:
+        return _POSIX_THREAD_PRIORITY_SCHEDULING;
+
+      case _SC_THREAD_PROCESS_SHARED:
+        return _POSIX_THREAD_PROCESS_SHARED;
+
+      case _SC_MAPPED_FILES:
+        return _POSIX_MAPPED_FILES;
+
+      case _SC_THREAD_DESTRUCTOR_ITERATIONS:
+        return _POSIX_THREAD_DESTRUCTOR_ITERATIONS;
+
+      case _SC_THREAD_KEYS_MAX:
+        return _POSIX_THREAD_KEYS_MAX;
+
+      case _SC_THREAD_PRIO_PROTECT:
+        return _POSIX_THREAD_PRIO_PROTECT;
+
+      case _SC_THREAD_PRIO_INHERIT:
+        return _POSIX_THREAD_PRIO_INHERIT;
+
+      case _SC_PRIORITY_SCHEDULING:
+        return _POSIX_PRIORITY_SCHEDULING;
+
+      case _SC_THREAD_ATTR_STACKADDR:
+        return _POSIX_THREAD_ATTR_STACKADDR;
+
+      case _SC_THREAD_ATTR_STACKSIZE:
+        return _POSIX_THREAD_ATTR_STACKSIZE;
+
+      case _SC_THREADS:
+        return _POSIX_THREADS;
+
       default:
 #if 0 /* Assume valid but not implemented for the time being */
         errcode = EINVAL;
