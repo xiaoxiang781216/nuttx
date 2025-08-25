@@ -293,7 +293,8 @@ static inline_function uint32_t up_getpc(void)
 
   __asm__ __volatile__
   (
-    "rsr %0, PC\n"
+    "movi %0, 1f\n"
+    "1:\n"
     : "=r" (pc)
   );
 
