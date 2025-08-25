@@ -911,6 +911,25 @@ flt_oper:
           size = 1;
           goto str_lpad;
 
+        case 'n':
+          if ((flags & FL_LONG) != 0)
+            {
+              FAR long *cur_len = va_arg(ap, FAR long *);
+              *cur_len = (long)total_len;
+            }
+          else if ((flags & FL_SHORT) != 0)
+            {
+              FAR short *cur_len = va_arg(ap, FAR short *);
+              *cur_len = (short)total_len;
+            }
+          else
+            {
+              FAR int *cur_len = va_arg(ap, FAR int *);
+              *cur_len = total_len;
+            }
+
+          goto tail;
+
         case 's':
         case 'S':
 #ifdef CONFIG_LIBC_NUMBERED_ARGS
