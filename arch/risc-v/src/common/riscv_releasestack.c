@@ -116,7 +116,7 @@ static void release_shadow_stack(struct tcb_s *dtcb)
  *
  ****************************************************************************/
 
-void up_release_stack(struct tcb_s *dtcb, uint8_t ttype)
+void up_release_stack(struct tcb_s *dtcb, int ttype)
 {
   /* Is there a stack allocated? */
 

@@ -89,7 +89,7 @@
  *
  ****************************************************************************/
 
-int up_create_stack(struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
+int up_create_stack(struct tcb_s *tcb, size_t stack_size, int ttype)
 {
 #ifdef CONFIG_TLS
   /* The allocated stack size must not exceed the maximum possible for the

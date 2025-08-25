@@ -338,7 +338,7 @@ void up_initial_state(FAR struct tcb_s *tcb);
  *
  ****************************************************************************/
 
-int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype);
+int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, int ttype);
 
 /****************************************************************************
  * Name: up_use_stack
@@ -451,7 +451,7 @@ FAR void *up_stack_frame(FAR struct tcb_s *tcb, size_t frame_size);
  *
  ****************************************************************************/
 
-void up_release_stack(FAR struct tcb_s *dtcb, uint8_t ttype);
+void up_release_stack(FAR struct tcb_s *dtcb, int ttype);
 
 /****************************************************************************
  * Name: up_switch_context
