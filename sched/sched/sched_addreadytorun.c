@@ -157,7 +157,7 @@ bool nxsched_switch_running(int cpu, bool switch_equal)
       return false;
     }
 
-  if (switch_equal)
+  if (switch_equal && sched_priority > 0)
     {
       sched_priority--;
     }
@@ -249,6 +249,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
   bool doswitch = false;
   int target_cpu = btcb->flags & TCB_FLAG_CPU_LOCKED ? btcb->cpu :
     nxsched_select_cpu(btcb->affinity);
+  FAR struct tcb_s *tcb = current_task(target_cpu);
 
   /* Add the btcb to the ready to run list, and try to run it on the target
    * CPU
@@ -257,18 +258,13 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
   btcb->task_state = TSTATE_TASK_READYTORUN;
   nxsched_add_prioritized(btcb, list_readytorun());
 
-  if (target_cpu < CONFIG_SMP_NCPUS)
+  /* In some cases, such as setaffinity, cpu need to be used. */
+
+  btcb->cpu = target_cpu;
+  if (tcb->sched_priority < btcb->sched_priority)
     {
-      FAR struct tcb_s *tcb = current_task(target_cpu);
-
-      /* In some cases, such as setaffinity, cpu need to be used. */
-
-      btcb->cpu = target_cpu;
-      if (tcb->sched_priority < btcb->sched_priority)
-        {
-          doswitch = nxsched_deliver_task(this_cpu(), target_cpu,
-                                          SWITCH_HIGHER);
-        }
+      doswitch = nxsched_deliver_task(this_cpu(), target_cpu,
+                                      SWITCH_HIGHER);
     }
 
   return doswitch;
