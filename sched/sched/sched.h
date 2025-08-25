@@ -499,7 +499,7 @@ static inline_function bool nxsched_add_prioritized(FAR struct tcb_s *tcb,
 {
   FAR struct tcb_s *next;
   FAR struct tcb_s *prev;
-  uint8_t sched_priority = tcb->sched_priority;
+  int sched_priority = tcb->sched_priority;
   bool ret = false;
 
   /* Lets do a sanity check before we get started. */

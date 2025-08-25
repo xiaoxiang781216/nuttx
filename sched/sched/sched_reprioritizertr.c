@@ -68,7 +68,7 @@ bool nxsched_reprioritize_rtr(FAR struct tcb_s *tcb, int priority)
 
   /* Setup up the new task priority */
 
-  tcb->sched_priority = (uint8_t)priority;
+  tcb->sched_priority = priority;
 
   /* Return the task to the specified blocked task list.
    * nxsched_add_readytorun will return true if the task was

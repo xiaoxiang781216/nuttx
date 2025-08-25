@@ -97,7 +97,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 #endif
     {
 #ifdef CONFIG_SMP
-      tcb->sched_priority = (uint8_t)sched_priority;
+      tcb->sched_priority = sched_priority;
       if (nxsched_deliver_task(this_cpu(), tcb->cpu, SWITCH_EQUAL))
         {
           nxscehd_switch(this_task(), tcb);
@@ -126,7 +126,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 
           /* Change the task priority */
 
-          tcb->sched_priority = (uint8_t)sched_priority;
+          tcb->sched_priority = sched_priority;
         }
       else
         {
@@ -146,7 +146,7 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
     {
       /* Change the task priority */
 
-      tcb->sched_priority = (uint8_t)sched_priority;
+      tcb->sched_priority = sched_priority;
     }
 }
 
@@ -219,7 +219,7 @@ static inline void nxsched_blocked_setpriority(FAR struct tcb_s *tcb,
 
       /* Change the task priority */
 
-      tcb->sched_priority = (uint8_t)sched_priority;
+      tcb->sched_priority = sched_priority;
 
       /* Put it back into the prioritized list at the correct position. */
 
@@ -232,7 +232,7 @@ static inline void nxsched_blocked_setpriority(FAR struct tcb_s *tcb,
     {
       /* Just change the task's priority */
 
-      tcb->sched_priority = (uint8_t)sched_priority;
+      tcb->sched_priority = sched_priority;
     }
 }
 

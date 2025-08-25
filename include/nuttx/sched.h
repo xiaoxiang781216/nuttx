@@ -616,8 +616,8 @@ struct tcb_s
   /* Task Management Fields *************************************************/
 
   pid_t    pid;                          /* This is the ID of the thread    */
-  uint8_t  sched_priority;               /* Current priority of the thread  */
-  uint8_t  init_priority;                /* Initial priority of the thread  */
+  int      sched_priority;               /* Current priority of the thread  */
+  int      init_priority;                /* Initial priority of the thread  */
 
   start_t  start;                        /* Thread start function           */
   entry_t  entry;                        /* Entry Point into the thread     */

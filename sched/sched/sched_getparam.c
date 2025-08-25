@@ -87,7 +87,7 @@ int nxsched_get_param(pid_t pid, FAR struct sched_param *param)
         {
           /* Return the priority if the calling task. */
 
-          param->sched_priority = (int)rtcb->sched_priority;
+          param->sched_priority = rtcb->sched_priority;
         }
 
       /* This PID is not for the calling task, we will have to look it up */
@@ -107,7 +107,7 @@ int nxsched_get_param(pid_t pid, FAR struct sched_param *param)
             {
               /* Return the priority of the task */
 
-              param->sched_priority = (int)tcb->sched_priority;
+              param->sched_priority = tcb->sched_priority;
 
 #ifdef CONFIG_SCHED_SPORADIC
               if ((atomic_read(&tcb->flags) & TCB_FLAG_POLICY_MASK) ==
@@ -118,8 +118,8 @@ int nxsched_get_param(pid_t pid, FAR struct sched_param *param)
 
                   /* Return parameters associated with SCHED_SPORADIC */
 
-                  param->sched_ss_low_priority = (int)sporadic->low_priority;
-                  param->sched_ss_max_repl     = (int)sporadic->max_repl;
+                  param->sched_ss_low_priority = sporadic->low_priority;
+                  param->sched_ss_max_repl     = sporadic->max_repl;
 
                   clock_ticks2time(&param->sched_ss_repl_period,
                                   sporadic->repl_period);
