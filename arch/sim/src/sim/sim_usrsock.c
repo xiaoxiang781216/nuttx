@@ -29,9 +29,11 @@
 #include <string.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/net/usrsock.h>
 #include <nuttx/wqueue.h>
 
+#include "sim_internal.h"
 #include "sim_hostusrsock.h"
 
 /****************************************************************************
@@ -394,7 +396,10 @@ static const usrsock_handler_t g_usrsock_handler[] =
 
 static void sim_usrsock_work(void *arg)
 {
+  irqstate_t flags = irq_save_nopreempt();
   host_usrsock_loop();
+  irq_restore_nopreempt(flags);
+
   work_queue_next(HPWORK, &g_usrsock.work, sim_usrsock_work,
                   NULL, SIM_USRSOCK_PERIOD);
 }

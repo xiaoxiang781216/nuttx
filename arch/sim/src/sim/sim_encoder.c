@@ -27,6 +27,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/video/v4l2_m2m.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/spinlock.h>
 
 #include "sim_x264encoder.h"
 #include "sim_internal.h"
@@ -515,6 +516,7 @@ static void sim_encoder_work(void *encoder)
   sim_encoder_t *sim_encoder = encoder;
   struct v4l2_buffer *src_buf;
   struct v4l2_buffer *dst_buf;
+  irqstate_t flags;
   int ret;
 
   src_buf = codec_output_get_buf(sim_encoder->cookie);
@@ -529,7 +531,10 @@ static void sim_encoder_work(void *encoder)
       return;
     }
 
+  flags = irq_save_nopreempt();
   ret = sim_encoder_process(encoder, dst_buf, src_buf);
+  irq_restore_nopreempt(flags);
+
   if (ret > 0)
     {
       work_queue(HPWORK, &sim_encoder->work,

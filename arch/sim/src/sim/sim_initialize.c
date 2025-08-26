@@ -28,6 +28,7 @@
 #include <nuttx/power/pm.h>
 #include <nuttx/spi/spi_flash.h>
 #include <nuttx/spi/qspi_flash.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 
 #include <stdlib.h>
@@ -87,7 +88,10 @@ static void sim_init_cmdline(void)
     defined(CONFIG_SIM_BUTTONS)
 static void sim_x11event_work(void *arg)
 {
+  irqstate_t flags = irq_save_nopreempt();
   sim_x11events();
+  irq_restore_nopreempt(flags);
+
   work_queue_next(HPWORK, &g_x11event_work, sim_x11event_work,
                   NULL, SIM_X11EVENT_PERIOD);
 }
@@ -104,7 +108,10 @@ static void sim_x11event_work(void *arg)
 #ifdef CONFIG_SIM_X11FB
 static void sim_x11update_work(void *arg)
 {
+  irqstate_t flags = irq_save_nopreempt();
   sim_x11loop();
+  irq_restore_nopreempt(flags);
+
   work_queue_next(HPWORK, &g_x11update_work, sim_x11update_work,
                   NULL, SIM_X11UPDATE_PERIOD);
 }

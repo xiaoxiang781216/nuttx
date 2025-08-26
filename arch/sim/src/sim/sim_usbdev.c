@@ -1052,11 +1052,13 @@ static void sim_usbdev_work(void *arg)
   struct host_usb_ctrlreq_s *ctrlreq;
   uint8_t *recv_data;
   uint16_t data_len;
+  irqstate_t flags;
   uint8_t epcnt;
   bool do_loop;
 
   /* Loop ep0 */
 
+  flags = irq_save_nopreempt();
   do
     {
       do_loop = false;
@@ -1088,6 +1090,7 @@ static void sim_usbdev_work(void *arg)
     }
   while (do_loop);
 
+  irq_restore_nopreempt(flags);
   work_queue_next(HPWORK, &priv->work, sim_usbdev_work, priv,
                   SIM_USB_PERIOD);
 }

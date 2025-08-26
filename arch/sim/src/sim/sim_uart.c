@@ -26,6 +26,7 @@
 #include <nuttx/serial/serial.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/serial/uart_ram.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 #include <string.h>
 #include <sys/types.h>
@@ -438,12 +439,14 @@ static void sim_tty_work(void *arg)
 {
   struct uart_dev_s *dev = (struct uart_dev_s *)arg;
   struct tty_priv_s *priv = dev->priv;
+  irqstate_t flags;
 
   if (priv->fd < 0)
     {
       return;
     }
 
+  flags = irq_save_nopreempt();
   if (priv->txint)
     {
 #ifdef CONFIG_SIM_UART_DMA
@@ -462,6 +465,7 @@ static void sim_tty_work(void *arg)
 #endif
     }
 
+  irq_restore_nopreempt(flags);
   work_queue_next(HPWORK, &priv->work, sim_tty_work, arg,
                   SIM_UART_WORK_DELAY);
 }

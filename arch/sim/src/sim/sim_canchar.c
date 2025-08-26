@@ -32,6 +32,7 @@
 
 #include <nuttx/can/can.h>
 #include <nuttx/can.h>
+#include <nuttx/spinlock.h>
 
 #include "sim_hostcan.h"
 #include "sim_internal.h"
@@ -280,6 +281,7 @@ static bool sim_can_txempty(struct can_dev_s *dev)
 static void sim_can_work(void *arg)
 {
   struct sim_canchar_s *priv = (struct sim_canchar_s *)arg;
+  irqstate_t            flags = irq_save_nopreempt();
   struct canfd_frame    frame;
   struct can_hdr_s      hdr;
   int                   ret;
@@ -320,6 +322,8 @@ static void sim_can_work(void *arg)
 
       can_receive(&priv->dev, &hdr, frame.data);
     }
+
+  irq_restore_nopreempt(flags);
 
 nodata:
   work_queue_next(HPWORK, &priv->work, sim_can_work, arg,

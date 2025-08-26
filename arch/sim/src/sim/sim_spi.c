@@ -26,6 +26,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/spi/spi.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 
 #include "sim_internal.h"
@@ -271,8 +272,10 @@ static int sim_spi_cmddata(struct spi_dev_s *dev, uint32_t devid, bool cmd)
 static void sim_spi_transfer_worker(FAR void *arg)
 {
   struct sim_spi_dev_s *priv = arg;
+  irqstate_t flags = irq_save_nopreempt();
 
   host_spi_transfer(priv->fd, priv->txbuffer, priv->rxbuffer, priv->nwords);
+  irq_restore_nopreempt(flags);
   priv->cb(priv->cb_args);
 }
 #endif

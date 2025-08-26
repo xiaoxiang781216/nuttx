@@ -29,6 +29,7 @@
 #include <nuttx/rptun/rptun.h>
 #include <nuttx/list.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/spinlock.h>
 
 #include "sim_internal.h"
 
@@ -418,6 +419,7 @@ static void sim_rptun_check_reset(struct sim_rptun_dev_s *priv)
 static void sim_rptun_work(void *arg)
 {
   struct sim_rptun_dev_s *dev = (struct sim_rptun_dev_s *)arg;
+  irqstate_t flags = irq_save_nopreempt();
 
   if (dev->shmem != NULL)
     {
@@ -446,6 +448,7 @@ static void sim_rptun_work(void *arg)
         }
     }
 
+  irq_restore_nopreempt(flags);
   work_queue_next(HPWORK, &dev->work, sim_rptun_work, dev,
                   SIM_RPTUN_WORK_DELAY);
 }

@@ -24,6 +24,7 @@
 
 #include <debug.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/ioexpander/gpio.h>
 #include <nuttx/ioexpander/ioexpander.h>
@@ -372,7 +373,9 @@ static void sim_gpiochip_work(void *arg)
 
   if (priv)
     {
+      irqstate_t flags = irq_save_nopreempt();
       sim_gpiochip_irq_process(priv);
+      irq_restore_nopreempt(flags);
 
       work_queue_next(HPWORK, &priv->work, sim_gpiochip_work, priv,
                       SIM_GPIOCHIP_WORK_DELAY);

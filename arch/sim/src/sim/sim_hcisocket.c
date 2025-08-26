@@ -36,6 +36,7 @@
 
 #include <nuttx/nuttx.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/bluetooth.h>
 #include <nuttx/wireless/bluetooth/bt_driver.h>
@@ -261,11 +262,14 @@ static void bthcisock_free(struct bthcisock_s *dev)
 static void sim_bthcisock_work(void *arg)
 {
   struct bthcisock_s *dev = (struct bthcisock_s *)arg;
+  irqstate_t flags = irq_save_nopreempt();
 
   if (host_bthcisock_avail(dev->fd))
     {
       bthcisock_receive(&dev->drv);
     }
+
+  irq_restore_nopreempt(flags);
 
   work_queue_next(HPWORK, &dev->work, sim_bthcisock_work, arg,
                   SIM_BTHCI_WORK_DELAY);

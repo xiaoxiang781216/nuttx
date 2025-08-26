@@ -64,6 +64,7 @@
 
 #include <nuttx/compiler.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev_lowerhalf.h>
@@ -270,12 +271,14 @@ static void sim_netdev_interrupt(void *arg)
 {
   struct sim_netdev_s *priv = (struct sim_netdev_s *)arg;
   struct netdev_lowerhalf_s *dev = (struct netdev_lowerhalf_s *)&priv->dev;
+  irqstate_t flags = irq_save_nopreempt();
 
   if (sim_netdev_avail(DEVIDX(dev)))
     {
       netdev_lower_rxready(dev);
     }
 
+  irq_restore_nopreempt(flags);
   work_queue_next(HPWORK, &priv->work, sim_netdev_interrupt, arg,
                   SIM_NETDEV_PERIOD);
 }

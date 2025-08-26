@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <string.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/video/imgsensor.h>
 #include <nuttx/video/imgdata.h>
 #include <nuttx/video/video.h>
@@ -356,6 +357,7 @@ static void sim_camera_work(void *arg)
 
   if (priv->next_buf)
     {
+      irqstate_t flags = irq_save_nopreempt();
       ret = host_video_dqbuf(priv->vdev, priv->next_buf, priv->buf_size);
       if (ret > 0)
         {
@@ -363,6 +365,8 @@ static void sim_camera_work(void *arg)
           TIMESPEC_TO_TIMEVAL(&tv, &ts);
           priv->capture_cb(0, ret, &tv, priv->capture_arg);
         }
+
+      irq_restore_nopreempt(flags);
     }
 
   work_queue_next(HPWORK, &priv->work, sim_camera_work, arg,

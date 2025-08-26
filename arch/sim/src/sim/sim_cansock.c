@@ -29,6 +29,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/can.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 
 #include "sim_hostcan.h"
@@ -172,6 +173,7 @@ static int sim_can_netdev_ioctl(struct net_driver_s *dev, int cmd,
 static void sim_can_work(void *arg)
 {
   struct sim_cansock_s *priv = (struct sim_cansock_s *)arg;
+  irqstate_t            flags = irq_save_nopreempt();
   struct canfd_frame    hframe;
   int                   ret;
 
@@ -202,6 +204,7 @@ static void sim_can_work(void *arg)
       net_unlock();
     }
 
+  irq_restore_nopreempt(flags);
 nodata:
   work_queue_next(HPWORK, &priv->work, sim_can_work, priv,
                   SIM_CAN_WORK_DELAY);

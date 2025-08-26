@@ -39,6 +39,7 @@
 #include <nuttx/spinlock.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/usb/usb.h>
 #include <nuttx/usb/usbhost.h>
@@ -712,7 +713,10 @@ static void sim_usbhost_work(void *arg)
 {
   struct sim_usbhost_s *priv = (struct sim_usbhost_s *)arg;
   struct usbhost_hubport_s *hport;
+  irqstate_t flags;
   bool connect;
+
+  flags = irq_save_nopreempt();
 
   /* Handle root hub status change on each root port */
 
@@ -774,6 +778,7 @@ static void sim_usbhost_work(void *arg)
         }
     }
 
+  irq_restore_nopreempt(flags);
   work_queue_next(HPWORK, &priv->work, sim_usbhost_work, priv,
                   SIM_USBHOST_PERIOD);
 }

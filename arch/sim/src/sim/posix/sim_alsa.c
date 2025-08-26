@@ -27,6 +27,7 @@
 #include <nuttx/audio/audio.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/nuttx.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 #include <debug.h>
 #include <sys/param.h>
@@ -1151,7 +1152,10 @@ static void sim_audio_work(FAR void *arg)
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)arg;
 
+  irqstate_t flags = irq_save_nopreempt();
   sim_audio_process(priv);
+  irq_restore_nopreempt(flags);
+
   work_queue_next(HPWORK, &priv->work, sim_audio_work, priv,
                   SIM_AUDIO_PERIOD);
 }
