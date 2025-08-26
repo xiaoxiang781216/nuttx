@@ -401,7 +401,7 @@ static void rptun_update_vring_da(FAR struct remoteproc *rproc,
   for (i = 0; i < vdev_rsc->num_of_vrings; i++)
     {
       FAR struct fw_rsc_vdev_vring *rvring = &vdev_rsc->vring[i];
-      metal_phys_addr_t vring_da = METAL_BAD_PHYS;
+      metal_phys_addr_t vring_da;
       metal_phys_addr_t vring_pa;
       uint32_t vring_sz;
 
