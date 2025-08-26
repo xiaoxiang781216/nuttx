@@ -478,9 +478,9 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint32_t tag,
                             FAR const char *fmt,
                             va_list *va) printf_like(5, 0);
 
-void note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
-                          uintptr_t ip, uint8_t event, FAR const void *buf,
-                          size_t len);
+size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
+                            uintptr_t ip, uint8_t event, FAR const void *buf,
+                            size_t len);
 #else
 #  define note_driver_printf_ip(d,t,i,p,f,a)
 #  define note_driver_vprintf_ip(d,t,i,p,f,a)

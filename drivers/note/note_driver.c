@@ -1521,9 +1521,9 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-void note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
-                          uintptr_t ip, uint8_t event, FAR const void *buf,
-                          size_t len)
+size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
+                            uintptr_t ip, uint8_t event, FAR const void *buf,
+                            size_t len)
 {
   FAR struct tcb_s *tcb = running_task();
   FAR struct note_event_s *note;
@@ -1532,12 +1532,12 @@ void note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
 
   if (note_event(driver, ip, event, buf, len))
     {
-      return;
+      return length;
     }
 
   if (driver->ops->add == NULL)
     {
-      return;
+      return length;
     }
 
   /* Format the note */
@@ -1560,6 +1560,7 @@ void note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
   /* Add the note to circular buffer */
 
   note_add(driver, note, length);
+  return length - SIZEOF_NOTE_EVENT(0);
 }
 
 void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint32_t tag,
