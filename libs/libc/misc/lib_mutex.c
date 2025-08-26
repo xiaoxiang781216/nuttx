@@ -143,7 +143,7 @@ bool nxmutex_is_hold(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
-int nxmutex_ticklock(FAR mutex_t *mutex, uint32_t delay)
+int nxmutex_ticklock(FAR mutex_t *mutex, clock_t delay)
 {
   clock_t end;
   int ret;

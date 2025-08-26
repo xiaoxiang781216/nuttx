@@ -66,7 +66,7 @@
  *
  ****************************************************************************/
 
-int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
+int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
 {
   FAR struct tcb_s *rtcb = this_task();
   irqstate_t flags;
@@ -140,7 +140,7 @@ int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
  *
  ****************************************************************************/
 
-int nxsem_tickwait_uninterruptible(FAR sem_t *sem, uint32_t delay)
+int nxsem_tickwait_uninterruptible(FAR sem_t *sem, clock_t delay)
 {
   clock_t end = clock_delay2abstick(delay);
   int ret;

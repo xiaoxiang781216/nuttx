@@ -350,7 +350,7 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
  *
  ****************************************************************************/
 
-int nxsem_tickwait(FAR sem_t *sem, uint32_t delay);
+int nxsem_tickwait(FAR sem_t *sem, clock_t delay);
 
 /****************************************************************************
  * Name: nxsem_post / nxsem_post_slow
@@ -706,7 +706,7 @@ int nxsem_clockwait_uninterruptible(FAR sem_t *sem, clockid_t clockid,
  *
  ****************************************************************************/
 
-int nxsem_tickwait_uninterruptible(FAR sem_t *sem, uint32_t delay);
+int nxsem_tickwait_uninterruptible(FAR sem_t *sem, clock_t delay);
 
 /****************************************************************************
  * Name: nxsem_getprioceiling
