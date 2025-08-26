@@ -97,9 +97,12 @@ void rpmsg_note_vtrace(FAR const char *name, bool bt, FAR const void *buf,
           note_driver_vprintf(g_rpmsg_note_drv, NOTE_TAG_RPMSG, format, &ap);
         }
 
-      if (len > 0 && buf != NULL)
+      while (len > 0)
         {
-          note_driver_binary(g_rpmsg_note_drv, NOTE_TAG_RPMSG, buf, len);
+          size_t written = note_driver_binary(g_rpmsg_note_drv,
+                                              NOTE_TAG_RPMSG, buf, len);
+          buf += written;
+          len -= written;
         }
 
       spin_unlock_irqrestore(&g_rpmsg_note_lock, flags);
