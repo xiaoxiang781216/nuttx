@@ -71,13 +71,14 @@
 
 #  ifndef __cplusplus
 #    ifdef CONFIG_C99_BOOL
-#      define bool _Bool
+#      define bool  _Bool
+#      define true  1
+#      define false 0
 #    else
-#      define bool uint8_t
+#      define bool  uint8_t
+#      define true  ((bool)1)
+#      define false ((bool)0)
 #    endif
-
-#    define true  (bool)1
-#    define false (bool)0
 
 #    define __bool_true_false_are_defined 1
 #  else
