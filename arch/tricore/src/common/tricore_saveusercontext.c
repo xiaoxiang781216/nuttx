@@ -46,11 +46,11 @@
  *
  ****************************************************************************/
 
-int up_saveusercontext(void *saveregs)
+int up_saveusercontext(void *saveregs_)
 {
+  uintptr_t *saveregs = (uintptr_t *)saveregs_;
   uintptr_t *regs;
   uintptr_t pcxi;
-  int csa_size = TC_CONTEXT_REGS * sizeof(uintptr_t);
 
   /* Save and copy the current lowe csa */
 
@@ -58,12 +58,14 @@ int up_saveusercontext(void *saveregs)
 
   pcxi = __mfcr(CPU_PCXI);
   regs = tricore_csa2addr(pcxi);
-  memcpy(saveregs, regs, csa_size);
+  memcpy(saveregs, regs, TC_CONTEXT_SIZE);
+  saveregs[REG_LPCXI] = tricore_addr2csa(saveregs + TC_CONTEXT_REGS)
+                        | (pcxi & ~FCX_FREE);
 
   /* Copy the current upper csa */
 
-  regs = tricore_csa2addr(regs[0]);
-  memcpy((char *)saveregs + csa_size, regs, csa_size);
+  regs = tricore_csa2addr(regs[REG_LPCXI]);
+  memcpy(saveregs + TC_CONTEXT_REGS, regs, TC_CONTEXT_SIZE);
 
   __asm("rslcx");
 
