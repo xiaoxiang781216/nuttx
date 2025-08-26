@@ -155,7 +155,7 @@ static void stability_governor_statechanged(int domain,
         {
           /* The left tick from wdog, if >0 should be other irq source */
 
-          sclock_t left = wd_gettime(wdog);
+          sclock_t left = (sclock_t)wd_gettime(wdog);
           if (left <= 0)
             {
               gdom->wdog_wakeup = true;

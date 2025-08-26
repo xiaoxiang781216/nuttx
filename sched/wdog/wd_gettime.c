@@ -52,7 +52,7 @@
  *
  ****************************************************************************/
 
-sclock_t wd_gettime(FAR struct wdog_s *wdog)
+clock_t wd_gettime(FAR struct wdog_s *wdog)
 {
   sclock_t delay = 0;
 
@@ -62,5 +62,5 @@ sclock_t wd_gettime(FAR struct wdog_s *wdog)
       delay = delay < 0 ? 0 : delay;
     }
 
-  return delay;
+  return (clock_t)delay;
 }

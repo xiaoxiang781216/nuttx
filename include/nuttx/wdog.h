@@ -378,7 +378,7 @@ int wd_cancel(FAR struct wdog_s *wdog);
  *
  ****************************************************************************/
 
-sclock_t wd_gettime(FAR struct wdog_s *wdog);
+clock_t wd_gettime(FAR struct wdog_s *wdog);
 
 #undef EXTERN
 #ifdef __cplusplus
