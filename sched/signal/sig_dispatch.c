@@ -729,19 +729,26 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 int nxsig_dispatch(pid_t pid, FAR siginfo_t *info, bool thread)
 {
 #ifdef HAVE_GROUP_MEMBERS
-  FAR struct tcb_s *stcb;
+  FAR struct tcb_s *stcb = NULL;
   FAR struct task_group_s *group = NULL;
 
   /* Get the TCB associated with the pid */
 
-  stcb = nxsched_get_tcb(pid);
-  if (stcb != NULL)
+  if (pid == 0)
     {
-      /* The task/thread associated with this PID is still active. Get its
-       * task group.
-       */
+      group = this_task()->group;
+    }
+  else
+    {
+      stcb = nxsched_get_tcb(pid);
+      if (stcb != NULL)
+        {
+          /* The task/thread associated with this PID is still active.
+           * Get its task group.
+           */
 
-      group = stcb->group;
+          group = stcb->group;
+        }
     }
 
   /* Did we locate the group? */
