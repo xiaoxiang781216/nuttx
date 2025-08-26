@@ -29,6 +29,7 @@
 #include <stdarg.h>
 #include <syslog.h>
 
+#include <nuttx/tls.h>
 #include <nuttx/syslog/syslog.h>
 
 #include "syslog/syslog.h"
@@ -52,9 +53,11 @@
 
 void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
 {
+  FAR struct task_info_s *info = task_get_info();
+
   /* Check if this priority is enabled */
 
-  if ((g_syslog_mask & LOG_MASK(priority)) != 0)
+  if ((info->ta_syslog_mask & LOG_MASK(priority)) != 0)
     {
       /* Yes.. Perform the nx_vsyslog system call.
        *

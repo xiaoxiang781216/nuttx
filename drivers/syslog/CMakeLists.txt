@@ -25,7 +25,14 @@
 set(SRCS syslog_initialize.c)
 
 if(CONFIG_SYSLOG)
-  list(APPEND SRCS vsyslog.c syslog_channel.c syslog_write.c syslog_flush.c)
+  list(
+    APPEND
+    SRCS
+    setlogmask.c
+    vsyslog.c
+    syslog_channel.c
+    syslog_write.c
+    syslog_flush.c)
 endif()
 
 if(CONFIG_SYSLOG_INTBUFFER)

@@ -162,6 +162,9 @@ struct task_info_s
   struct passwd         ta_passwd;
   struct spwd           ta_spwd;
   FAR char             *ta_passwd_buffer;
+#ifdef CONFIG_SYSLOG
+  uint8_t               ta_syslog_mask;
+#endif
 #if CONFIG_TLS_TASK_NELEM > 0
   uintptr_t             ta_telem[CONFIG_TLS_TASK_NELEM]; /* Task local storage elements */
 #endif

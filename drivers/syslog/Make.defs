@@ -26,7 +26,7 @@
 CSRCS += syslog_initialize.c
 
 ifeq ($(CONFIG_SYSLOG),y)
-CSRCS += vsyslog.c syslog_channel.c
+CSRCS += setlogmask.c vsyslog.c syslog_channel.c
 CSRCS += syslog_write.c syslog_flush.c
 endif
 

@@ -31,6 +31,7 @@
 #include <nuttx/compiler.h>
 #include <nuttx/streams.h>
 
+#include <stdint.h>
 #include <sys/types.h>
 #include <stdarg.h>
 
@@ -182,6 +183,8 @@ extern "C"
 #else
 #define EXTERN extern
 #endif
+
+EXTERN uint8_t g_syslog_mask;
 
 /****************************************************************************
  * Public Function Prototypes
@@ -383,6 +386,20 @@ int syslog_flush(void);
 
 #ifdef CONFIG_SYSLOG
 int nx_vsyslog(int priority, FAR const IPTR char *src, FAR va_list *ap);
+#endif
+
+/****************************************************************************
+ * Name: nx_setlogmask
+ *
+ * Description:
+ *   Like the standard setlogmask() function, nx_setlogmask() sets the all
+ *   system log mask to the specified value.  It also sets the per-task
+ *   log mask for all tasks.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SYSLOG
+int nx_setlogmask(int mask);
 #endif
 
 #undef EXTERN

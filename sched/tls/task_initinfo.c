@@ -29,6 +29,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
+#include <nuttx/syslog/syslog.h>
 
 #include "sched/sched.h"
 #include "tls.h"
@@ -144,6 +145,10 @@ int task_init_info(FAR struct task_group_s *group)
 
 #ifdef CONFIG_MM_TASK_HEAP
   info->ta_heap = group->tg_heap;
+#endif
+
+#ifdef CONFIG_SYSLOG
+  info->ta_syslog_mask = g_syslog_mask;
 #endif
 
   return OK;

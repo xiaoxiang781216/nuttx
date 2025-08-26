@@ -29,15 +29,13 @@
 #include <stdint.h>
 #include <syslog.h>
 
+#include <nuttx/tls.h>
+
 #include "syslog/syslog.h"
 
 /****************************************************************************
  * Public Data
  ****************************************************************************/
-
-/* The currently enabled set of syslog priorities */
-
-uint8_t g_syslog_mask = CONFIG_SYSLOG_DEFAULT_MASK;
 
 /****************************************************************************
  * Public Functions
@@ -78,10 +76,11 @@ uint8_t g_syslog_mask = CONFIG_SYSLOG_DEFAULT_MASK;
 
 int setlogmask(int mask)
 {
+  FAR struct task_info_s *info = task_get_info();
   uint8_t oldmask;
 
-  oldmask       = g_syslog_mask;
-  g_syslog_mask = (uint8_t)mask;
+  oldmask       = info->ta_syslog_mask;
+  info->ta_syslog_mask = (uint8_t)mask;
 
   return oldmask;
 }
