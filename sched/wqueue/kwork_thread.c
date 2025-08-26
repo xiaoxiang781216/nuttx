@@ -598,7 +598,7 @@ int work_queue_priority_wq(FAR struct kwork_wqueue_s *wqueue)
         }
       else
         {
-          ret = tcb->sched_priority;
+          ret = (int)tcb->sched_priority;
           nxsched_put_tcb(tcb);
         }
     }
