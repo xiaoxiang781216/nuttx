@@ -176,11 +176,7 @@
 #define _POSIX_DELAYTIMER_MAX CONFIG_POSIX_TIMERS_MAX
 #define _POSIX_TIMER_MAX      CONFIG_POSIX_TIMERS_MAX
 
-#ifdef CONFIG_USEC_PER_TICK
-#  define _POSIX_CLOCKRES_MIN ((CONFIG_USEC_PER_TICK)*1000)
-#else
-#  define _POSIX_CLOCKRES_MIN (10*1000000)
-#endif
+#define _POSIX_CLOCKRES_MIN   20000000
 
 /* Required for asynchronous I/O */
 
@@ -190,12 +186,12 @@
 /* Required for POSIX message passing */
 
 #define _POSIX_MQ_OPEN_MAX    -1
-#define _POSIX_MQ_PRIO_MAX    UCHAR_MAX
+#define _POSIX_MQ_PRIO_MAX    32
 
 /* Required for POSIX semaphores */
 
-#define _POSIX_SEM_NSEMS_MAX  INT_MAX
-#define _POSIX_SEM_VALUE_MAX  INT_MAX
+#define _POSIX_SEM_NSEMS_MAX  256
+#define _POSIX_SEM_VALUE_MAX  32767
 
 /* Numerical limits.  These values may be increased from the POSIX minimum
  * values above or made indeterminate
@@ -234,7 +230,7 @@
 
 #define DELAYTIMER_MAX _POSIX_DELAYTIMER_MAX
 #define TIMER_MAX      _POSIX_TIMER_MAX
-#define CLOCKRES_MIN   _POSIX_CLOCKRES_MIN
+#define CLOCKRES_MIN   (CONFIG_USEC_PER_TICK * 1000)
 
 #ifdef CONFIG_SYSTEM_TIME64
 #  define CLOCK_MAX    UINT64_MAX
@@ -308,12 +304,12 @@
 /* Required for POSIX message passing */
 
 #define MQ_OPEN_MAX    _POSIX_MQ_OPEN_MAX
-#define MQ_PRIO_MAX    _POSIX_MQ_PRIO_MAX
+#define MQ_PRIO_MAX    UCHAR_MAX
 
 /* Required for POSIX semaphores */
 
-#define SEM_NSEMS_MAX  _POSIX_SEM_NSEMS_MAX
-#define SEM_VALUE_MAX  _POSIX_SEM_VALUE_MAX
+#define SEM_NSEMS_MAX  INT_MAX
+#define SEM_VALUE_MAX  INT_MAX
 
 /* Required for POSIX pthread management */
 

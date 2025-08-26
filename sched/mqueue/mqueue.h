@@ -48,7 +48,6 @@
 
 #define MQ_MAX_BYTES   CONFIG_MQ_MAXMSGSIZE
 #define MQ_MAX_MSGS    16
-#define MQ_PRIO_MAX    _POSIX_MQ_PRIO_MAX
 
 #define MQ_MSG_SIZE(n) (sizeof(struct mqueue_msg_s) + (n) - 1)
 
