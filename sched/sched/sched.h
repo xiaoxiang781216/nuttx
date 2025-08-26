@@ -144,7 +144,11 @@
     defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
 void restore_critical_section(uint16_t count);
 #else
-#  define restore_critical_section(count) rspin_restorelock(&g_schedlock, count)
+#  ifdef CONFIG_SMP
+#    define restore_critical_section(count) rspin_restorelock(&g_schedlock, count)
+#  else
+#    define restore_critical_section(count)
+#  endif
 #endif
 
 #define nxscehd_switch(tcb, rtcb) \
@@ -156,6 +160,7 @@ void restore_critical_section(uint16_t count);
         { \
           restore_critical_section(count); \
         } \
+      UNUSED(count); \
     } \
   while (0)
 
