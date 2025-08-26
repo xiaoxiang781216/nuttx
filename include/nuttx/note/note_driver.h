@@ -178,11 +178,11 @@ clock_t UP_REALSYM(perf_gettime)(void);
 #endif
 
 #define note_driver_event(driver, tag, event, buf, len) \
-        note_driver_event_ip(driver, tag, SCHED_NOTE_IP, event, buf, len)
+        note_driver_event_ip(driver, tag, up_getpc(), event, buf, len)
 #define note_driver_vprintf(driver, tag, fmt, va) \
-        note_driver_vprintf_ip(driver, tag, SCHED_NOTE_IP, 0, fmt, va)
+        note_driver_vprintf_ip(driver, tag, up_getpc(), 0, fmt, va)
 #define note_driver_printf(driver, tag, fmt, ...) \
-        note_driver_printf_ip(driver, tag, SCHED_NOTE_IP, 0, fmt, ##__VA_ARGS__)
+        note_driver_printf_ip(driver, tag, up_getpc(), 0, fmt, ##__VA_ARGS__)
 
 #define note_driver_begin(driver, tag) \
         note_driver_event(driver, tag, NOTE_DUMP_BEGIN, NULL, 0)
