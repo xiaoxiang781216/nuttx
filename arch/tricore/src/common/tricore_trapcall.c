@@ -339,43 +339,43 @@ void tricore_trapcall(volatile void *trap)
     {
       tricore_nmitrap(tid, regs, NULL);
       up_set_interrupt_context(false);
-      return;
+      __jumpBackToLink();
     }
 
   if (tclass == IfxCpu_Trap_Class_memoryManagement)
     {
       tricore_mmutrap(tid, regs, NULL);
-      return;
+      __jumpBackToLink();
     }
 
   if (tclass == IfxCpu_Trap_Class_internalProtection)
     {
       tricore_internalprotrape(tid, regs, NULL);
-      return;
+      __jumpBackToLink();
     }
 
   if (tclass == IfxCpu_Trap_Class_instructionErrors)
     {
       tricore_insterrorstrap(tid, regs, NULL);
-      return;
+      __jumpBackToLink();
     }
 
   if (tclass == IfxCpu_Trap_Class_contextManagement)
     {
       tricore_contexmnttrap(tid, regs, NULL);
-      return;
+      __jumpBackToLink();
     }
 
   if (tclass == IfxCpu_Trap_Class_bus)
     {
       tricore_bustrap(tid, regs, NULL);
-      return;
+      __jumpBackToLink();
     }
 
   if (tclass == IfxCpu_Trap_Class_assertion)
     {
       tricore_assertiontrap(tid, regs, NULL);
-      return;
+      __jumpBackToLink();
     }
 
   up_irq_save();
