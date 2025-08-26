@@ -76,7 +76,7 @@
  *
  ****************************************************************************/
 
-int nxsig_queue(int pid, int signo, union sigval value)
+int nxsig_queue(int pid, int signo, const union sigval value)
 {
 #ifdef CONFIG_SCHED_HAVE_PARENT
   FAR struct tcb_s *rtcb = this_task();
@@ -142,7 +142,7 @@ int nxsig_queue(int pid, int signo, union sigval value)
  *
  ****************************************************************************/
 
-int sigqueue(int pid, int signo, union sigval value)
+int sigqueue(int pid, int signo, const union sigval value)
 {
   int ret;
 
