@@ -57,18 +57,19 @@
  * Input Parameters:
  *   alloc - Allocation base address of the stack
  *   size - The size of the stack in bytes
+ *   checksize - The size of check region
  *
  * Returned Value:
  *   The estimated amount of stack space used.
  *
  ****************************************************************************/
 
-size_t tricore_stack_check(uintptr_t alloc, size_t size)
+static size_t tricore_stack_check(uintptr_t alloc, size_t size,
+                                  size_t checksize)
 {
   uintptr_t start;
   uintptr_t end;
   uint32_t *ptr;
-  size_t mark;
 
   if (size == 0)
     {
@@ -84,18 +85,40 @@ size_t tricore_stack_check(uintptr_t alloc, size_t size)
 
   size  = (end - start) >> 2;
 
-  /* In tricore, a csa linked list built on task's stack, so it is
-   * necessary to traverse the entire stack space instead of counting
-   * to the first non-STACK_COLOR address.
-   */
+  /* Get the adjusted size of the checksize */
 
-  for (ptr = (uint32_t *)start, mark = (size >> 2);
-       mark > 0 && *ptr == STACK_COLOR;
-       ptr++, mark--);
+  checksize = (checksize & ~3) >> 2;
 
-  /* Return our guess about how much stack space was used */
+  /* Find the first STACK_COLOR, jumping with size of csa */
 
-  return mark << 2;
+  for (ptr = (uint32_t *)start; size > 0;
+       size -= TC_CONTEXT_REGS, ptr += TC_CONTEXT_REGS)
+    {
+      if (*(ptr + 1) == STACK_COLOR)
+        {
+          break;
+        }
+    }
+
+  /* Count remaining STACK_COLOR */
+
+  for (; checksize > 0 && size > 0; size--, ptr++)
+    {
+      /* In tricore, a csa linked list built on task's stack, and pcxi
+       * words are considered as unused.
+       */
+
+      if (*ptr == STACK_COLOR || TC_CONTEXT_ALIGNED(ptr))
+        {
+          checksize--;
+        }
+      else
+        {
+          break;
+        }
+    }
+
+  return checksize << 2;
 }
 
 /****************************************************************************
@@ -127,7 +150,8 @@ size_t up_check_tcbstack(struct tcb_s *tcb, size_t check_size)
     }
 #endif
 
-  size = tricore_stack_check((uintptr_t)tcb->stack_base_ptr, check_size);
+  size = tricore_stack_check((uintptr_t)tcb->stack_base_ptr,
+                             tcb->adj_stack_size, check_size);
 
 #ifdef CONFIG_ARCH_ADDRENV
   if (tcb->group->tg_addrenv_own != NULL)
@@ -143,7 +167,8 @@ size_t up_check_tcbstack(struct tcb_s *tcb, size_t check_size)
 size_t up_check_intstack(int cpu)
 {
   return tricore_stack_check((uintptr_t)g_intstackalloc,
-                           (CONFIG_ARCH_INTERRUPTSTACK & ~15));
+                             (CONFIG_ARCH_INTERRUPTSTACK & ~15),
+                             (CONFIG_ARCH_INTERRUPTSTACK & ~15));
 }
 #endif
 

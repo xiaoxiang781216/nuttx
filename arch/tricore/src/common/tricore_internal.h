@@ -222,7 +222,6 @@ tricore_systimer_initialize(volatile void *tbase, int irq, uint64_t freq);
 /* Debug ********************************************************************/
 
 #ifdef CONFIG_STACK_COLORATION
-size_t tricore_stack_check(uintptr_t alloc, size_t size);
 void tricore_stack_color(void *stackbase, size_t nbytes);
 #endif
 
