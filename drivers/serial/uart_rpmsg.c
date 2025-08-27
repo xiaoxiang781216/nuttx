@@ -47,6 +47,7 @@
 #define UART_RPMSG_DEV_CONSOLE          "/dev/console"
 #define UART_RPMSG_DEV_PREFIX           "/dev/tty"
 #define UART_RPMSG_EPT_PREFIX           "rpmsg-tty"
+#define UART_RPMSG_NAME_SIZE            (RPMSG_NAME_SIZE - 10)
 
 #define UART_RPMSG_TTY_WRITE            0
 #define UART_RPMSG_TTY_WAKEUP           1
@@ -80,8 +81,8 @@ struct uart_rpmsg_priv_s
 {
   struct rpmsg_endpoint ept;
   mutex_t               lock;
-  FAR const char        *devname;
-  FAR const char        *cpuname;
+  char                  devname[UART_RPMSG_NAME_SIZE];
+  char                  cpuname[UART_RPMSG_NAME_SIZE];
   FAR void              *recv_data;
   atomic_t              last_upper;
 };
@@ -460,8 +461,8 @@ int uart_rpmsg_init(FAR const char *cpuname, FAR const char *devname,
     }
 
   nxmutex_init(&priv->lock);
-  priv->cpuname = cpuname;
-  priv->devname = devname;
+  strlcpy(priv->cpuname, cpuname, sizeof(priv->cpuname));
+  strlcpy(priv->devname, devname, sizeof(priv->devname));
 
   dev->priv = priv;
 
