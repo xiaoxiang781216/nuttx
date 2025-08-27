@@ -368,7 +368,7 @@ struct rptun_ops_s
   CODE int (*register_callback)(FAR struct rptun_dev_s *dev,
                                 rptun_callback_t callback, FAR void *arg);
 
-  CODE void (*reset)(FAR struct rptun_dev_s *dev, int value);
+  CODE void (*reset)(FAR struct rptun_dev_s *dev, unsigned long value);
   CODE void (*panic)(FAR struct rptun_dev_s *dev);
 };
 
@@ -394,7 +394,7 @@ extern "C"
 int rptun_initialize(FAR struct rptun_dev_s *dev);
 int rptun_boot(FAR const char *cpuname);
 int rptun_poweroff(FAR const char *cpuname);
-int rptun_reset(FAR const char *cpuname, int value);
+int rptun_reset(FAR const char *cpuname, unsigned long value);
 int rptun_panic(FAR const char *cpuname);
 
 #ifdef __cplusplus
