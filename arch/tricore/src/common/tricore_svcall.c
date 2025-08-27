@@ -392,5 +392,11 @@ void tricore_svcall(volatile void *trap)
   __mtcr(CPU_LCX, tricore_addr2csa(cpu_lcx));
   UP_ISB();
 
+  /* (*running_task)->xcp.regs is about to become invalid
+   * and will be marked as NULL to avoid misusage.
+   */
+
+  (*running_task)->xcp.regs = NULL;
+
   __jumpBackToLink();
 }
