@@ -27,7 +27,8 @@ set(SRCS
     nrf53_lowputc.c
     nrf53_gpio.c
     nrf53_uid.c
-    nrf53_spu.c)
+    nrf53_spu.c
+    nrf53_serial.c)
 
 if(CONFIG_NRF53_SYSTIMER_SYSTICK)
   list(APPEND SRCS nrf53_systick.c)
@@ -51,10 +52,6 @@ endif()
 
 if(CONFIG_NRF53_GPIOTE)
   list(APPEND SRCS nrf53_gpiote.c)
-endif()
-
-if(CONFIG_NRF53_UART)
-  list(APPEND SRCS nrf53_serial.c)
 endif()
 
 if(CONFIG_NRF53_IPC)
