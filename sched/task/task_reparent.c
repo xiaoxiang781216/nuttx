@@ -71,139 +71,132 @@ int task_reparent(pid_t ppid, pid_t chpid)
   FAR struct tcb_s *otcb;
   FAR struct tcb_s *ptcb;
   pid_t opid;
-  int ret;
+  int ret = -ECHILD;
 
   /* Get the child tasks task group */
 
   chtcb = nxsched_get_tcb(chpid);
-  if (!chtcb)
+  if (chtcb)
     {
-      ret = -ECHILD;
-      goto errout_with_chtcb;
-    }
+      chgrp = chtcb->group;
+      DEBUGASSERT(chgrp);
 
-  chgrp = chtcb->group;
-  DEBUGASSERT(chgrp);
+      /* Get the PID of the old parent task's task group (opid) */
 
-  /* Get the PID of the old parent task's task group (opid) */
+      opid = chgrp->tg_ppid;
 
-  opid = chgrp->tg_ppid;
+      /* Get the old parent task's task group (ogrp) */
 
-  /* Get the old parent task's task group (ogrp) */
-
-  otcb = nxsched_get_tcb(opid);
-  if (!otcb)
-    {
-      ret = -ECHILD;
-      goto errout_with_otcb;
-    }
-
-  ogrp = otcb->group;
-  DEBUGASSERT(ogrp);
-
-  /* If new parent task's PID (ppid) is zero, then new parent is the
-   * grandparent will be the new parent, i.e., the parent of the current
-   * parent task.
-   */
-
-  if (ppid == 0)
-    {
-      /* Get the grandparent task's task group (pgrp) */
-
-      ppid = ogrp->tg_ppid;
-      ptcb = nxsched_get_tcb(ppid);
-      if (!ptcb)
+      otcb = nxsched_get_tcb(opid);
+      if (otcb)
         {
-          ret = -ECHILD;
-          goto errout_with_ptcb;
-        }
+          ogrp = otcb->group;
+          DEBUGASSERT(ogrp);
 
-      pgrp = ptcb->group;
-    }
-  else
-    {
-      /* Get the new parent task's task group (pgrp) */
+          /* If new parent task's PID (ppid) is zero, then new parent
+           * is the grandparent will be the new parent, i.e.,
+           * the parent of the current parent task.
+           */
 
-      ptcb = nxsched_get_tcb(ppid);
-      if (!ptcb)
-        {
-          ret = -ESRCH;
-          goto errout_with_ptcb;
-        }
+          if (ppid == 0)
+            {
+              /* Get the grandparent task's task group (pgrp) */
 
-      pgrp = chtcb->group;
-      ppid = pgrp->tg_pid;
-    }
+              ppid = ogrp->tg_ppid;
+              ptcb = nxsched_get_tcb(ppid);
+              if (ptcb)
+                {
+                  ret = OK;
+                  pgrp = ptcb->group;
+                }
+            }
+          else
+            {
+              /* Get the new parent task's task group (pgrp) */
 
-  DEBUGASSERT(pgrp);
+              ptcb = nxsched_get_tcb(ppid);
+              if (ptcb)
+                {
+                  ret = OK;
+                  pgrp = chtcb->group;
+                  ppid = pgrp->tg_pid;
+                }
+              else
+                {
+                  ret = -ESRCH;
+                }
+            }
 
-  /* Then reparent the child.  Notice that we don't actually change the
-   * parent of the task. Rather, we change the parent task group for
-   * all members of the child's task group.
-   */
+          if (ret == OK)
+            {
+              /* Then reparent the child. Notice that we don't actually
+               * change the parent of the task. Rather, we change the parent
+               * task group for all members of the child's task group.
+               */
 
-  chgrp->tg_ppid = ppid;
+              chgrp->tg_ppid = ppid;
 
 #ifdef CONFIG_SCHED_CHILD_STATUS
-  /* Remove the child status entry from old parent task group */
+              /* Remove the child status entry from old parent task group */
 
-  child = group_remove_child(ogrp, chpid);
-  if (child)
-    {
-      /* Has the new parent's task group suppressed child exit status? */
+              child = group_remove_child(ogrp, chpid);
+              if (child)
+                {
+                  /* Has the new parent's task group suppressed child exit
+                   * status?
+                   */
 
-      if ((atomic_read(&pgrp->tg_flags) & GROUP_FLAG_NOCLDWAIT) == 0)
-        {
-          /* No.. Add the child status entry to the new parent's task group */
+                  if (!(atomic_read(&pgrp->tg_flags) & GROUP_FLAG_NOCLDWAIT))
+                    {
+                      /* No.. Add the child status entry to the new parent's
+                       * task group
+                       */
 
-          group_add_child(pgrp, child);
-        }
-      else
-        {
-          /* Yes.. Discard the child status entry */
+                      group_add_child(pgrp, child);
+                    }
+                  else
+                    {
+                      /* Yes.. Discard the child status entry */
 
-          group_free_child(child);
-        }
+                      group_free_child(child);
+                    }
 
-      /* Either case is a success */
+                  /* Either case is a success */
+                }
+              else
+                {
+                  /* This would not be an error if the original parent's task
+                   * group has suppressed child exit status.
+                   */
 
-      ret = OK;
-    }
-  else
-    {
-      /* This would not be an error if the original parent's task group has
-       * suppressed child exit status.
-       */
-
-      ret = ((atomic_read(&ogrp->tg_flags) &
-              GROUP_FLAG_NOCLDWAIT) == 0) ? -ENOENT : OK;
-    }
+                  ret = ((atomic_read(&ogrp->tg_flags) &
+                          GROUP_FLAG_NOCLDWAIT) == 0) ? -ENOENT : OK;
+                }
 
 #else /* CONFIG_SCHED_CHILD_STATUS */
-  /* Child task exit status is not retained */
+              /* Child task exit status is not retained */
 
-  DEBUGASSERT(atomic_read(&ogrp->tg_nchildren) > 0);
+              DEBUGASSERT(atomic_read(&ogrp->tg_nchildren) > 0);
 
-  /* The original parent now has one few children */
+              /* The original parent now has one few children */
 
-  atomic_fetch_sub(&ogrp->tg_nchildren, 1);
+              atomic_fetch_sub(&ogrp->tg_nchildren, 1);
 
-  /* The new parent has one additional child */
+              /* The new parent has one additional child */
 
-  atomic_fetch_add(&pgrp->tg_nchildren, 1);
-  ret = OK;
+              atomic_fetch_add(&pgrp->tg_nchildren, 1);
 
 #endif /* CONFIG_SCHED_CHILD_STATUS */
 
-  nxsched_put_tcb(ptcb);
+              nxsched_put_tcb(ptcb);
+            }
 
-errout_with_ptcb:
-  nxsched_put_tcb(otcb);
+          nxsched_put_tcb(otcb);
+        }
 
-errout_with_otcb:
-  nxsched_put_tcb(chtcb);
+      nxsched_put_tcb(chtcb);
+    }
 
-errout_with_chtcb:
   return ret;
 }
 #else
@@ -216,111 +209,116 @@ int task_reparent(pid_t ppid, pid_t chpid)
   FAR struct tcb_s *chtcb = NULL;
   FAR struct tcb_s *otcb = NULL;
   pid_t opid;
-  int ret;
+  int ret = -ECHILD;
 
   /* Get the child tasks TCB (chtcb) */
 
   chtcb = nxsched_get_tcb(chpid);
-  if (!chtcb)
+  if (chtcb)
     {
-      ret = -ECHILD;
-      goto errout_with_ints;
-    }
+      /* Get the PID of the child task's parent (opid) */
 
-  /* Get the PID of the child task's parent (opid) */
+      opid = chtcb->group->tg_ppid;
 
-  opid = chtcb->group->tg_ppid;
+      /* Get the TCB of the child task's parent (otcb) */
 
-  /* Get the TCB of the child task's parent (otcb) */
-
-  otcb = nxsched_get_tcb(opid);
-  if (!otcb)
-    {
-      ret = -ESRCH;
-      goto errout_with_ints;
-    }
-
-  /* If new parent task's PID (tg_ppid) is zero, then new parent is the
-   * grandparent will be the new parent, i.e., the parent of the current
-   * parent task.
-   */
-
-  if (ppid == 0)
-    {
-      ppid = otcb->group->tg_ppid;
-    }
-
-  /* Get the new parent task's TCB (ptcb) */
-
-  ptcb = nxsched_get_tcb(ppid);
-  if (!ptcb)
-    {
-      ret = -ESRCH;
-      goto errout_with_ints;
-    }
-
-  /* Then reparent the child.  The task specified by ppid is the new
-   * parent.
-   */
-
-  chtcb->group->tg_ppid = ppid;
-
-#ifdef CONFIG_SCHED_CHILD_STATUS
-  /* Remove the child status entry from old parent TCB */
-
-  child = group_remove_child(otcb->group, chpid);
-  if (child)
-    {
-      /* Has the new parent's task group suppressed child exit status? */
-
-      if ((atomic_read(&ptcb->group->tg_flags) & GROUP_FLAG_NOCLDWAIT) == 0)
+      otcb = nxsched_get_tcb(opid);
+      if (!otcb)
         {
-          /* No.. Add the child status entry to the new parent's task group */
-
-          group_add_child(ptcb->group, child);
+          ret = -ESRCH;
         }
       else
         {
-          /* Yes.. Discard the child status entry */
+          /* If new parent task's PID (tg_ppid) is zero, then new parent
+           * is the grandparent will be the new parent, i.e., the parent
+           * of the current parent task.
+           */
 
-          group_free_child(child);
-        }
+          if (ppid == 0)
+            {
+              ppid = otcb->group->tg_ppid;
+            }
 
-      /* Either case is a success */
+          /* Get the new parent task's TCB (ptcb) */
 
-      ret = OK;
-    }
-  else
-    {
-      /* This would not be an error if the original parent's task group has
-       * suppressed child exit status.
-       */
+          ptcb = nxsched_get_tcb(ppid);
+          if (!ptcb)
+            {
+              ret = -ESRCH;
+            }
+          else
+            {
+              /* Then reparent the child.  The task specified by ppid is
+               * the new parent.
+               */
 
-      ret = ((atomic_read(&otcb->group->tg_flags) &
-              GROUP_FLAG_NOCLDWAIT) == 0) ? -ENOENT : OK;
-    }
+              chtcb->group->tg_ppid = ppid;
+
+#ifdef CONFIG_SCHED_CHILD_STATUS
+              /* Remove the child status entry from old parent TCB */
+
+              child = group_remove_child(otcb->group, chpid);
+              if (child)
+                {
+                  /* Has the new parent's task group suppressed child
+                   * exit status?
+                   * */
+
+                  if (!(atomic_read(&ptcb->group->tg_flags) &
+                        GROUP_FLAG_NOCLDWAIT))
+                    {
+                      /* No.. Add the child status entry to the new parent's
+                       * task group
+                       */
+
+                      group_add_child(ptcb->group, child);
+                    }
+                  else
+                    {
+                      /* Yes.. Discard the child status entry */
+
+                      group_free_child(child);
+                    }
+
+                  /* Either case is a success */
+
+                  ret = OK;
+                }
+              else
+                {
+                  /* This would not be an error if the original parent's task
+                   * group has suppressed child exit status.
+                   */
+
+                  ret = ((atomic_read(&otcb->group->tg_flags) &
+                          GROUP_FLAG_NOCLDWAIT) == 0) ? -ENOENT : OK;
+                }
 
 #else /* CONFIG_SCHED_CHILD_STATUS */
-  /* Child task exit status is not retained */
+              /* Child task exit status is not retained */
 
-  DEBUGASSERT(otcb->group != NULL &&
-              atomic_read(&otcb->group->tg_nchildren) > 0);
+              DEBUGASSERT(otcb->group != NULL &&
+                          atomic_read(&otcb->group->tg_nchildren) > 0);
 
-  /* The original parent now has one few children */
+              /* The original parent now has one few children */
 
-  atomic_fetch_sub(&otcb->group->tg_nchildren, 1);
+              atomic_fetch_sub(&otcb->group->tg_nchildren, 1);
 
-  /* The new parent has one additional child */
+              /* The new parent has one additional child */
 
-  atomic_fetch_add(&ptcb->group->tg_nchildren, 1);
-  ret = OK;
+              atomic_fetch_add(&ptcb->group->tg_nchildren, 1);
+              ret = OK;
 
 #endif /* CONFIG_SCHED_CHILD_STATUS */
 
-errout_with_ints:
-  nxsched_put_tcb(ptcb);
-  nxsched_put_tcb(otcb);
-  nxsched_put_tcb(chtcb);
+              nxsched_put_tcb(ptcb);
+            }
+
+          nxsched_put_tcb(otcb);
+        }
+
+      nxsched_put_tcb(chtcb);
+    }
 
   return ret;
 }
