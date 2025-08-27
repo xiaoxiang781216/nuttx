@@ -187,7 +187,7 @@ static int nxtask_restart(pid_t pid)
   FAR struct tcb_s *rtcb;
   FAR struct tcb_s *tcb = NULL;
   irqstate_t flags;
-  int ret;
+  int ret = OK;
 
   /* We are restarting some other task than ourselves.  Make sure that the
    * task does not change its state while we are executing.  In the single
@@ -205,29 +205,34 @@ static int nxtask_restart(pid_t pid)
     {
       /* Not implemented */
 
+      leave_critical_section(flags);
       ret = -ENOSYS;
-      goto errout_with_lock;
     }
 
   /* Find for the TCB associated with matching pid  */
 
-  tcb = nxsched_get_tcb(pid);
-#ifndef CONFIG_DISABLE_PTHREAD
-  if (!tcb || (atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK) ==
-      TCB_FLAG_TTYPE_PTHREAD)
-#else
-  if (!tcb)
-#endif
+  else if (!(tcb = nxsched_get_tcb(pid)))
     {
-      /* There is no TCB with this pid or, if there is, it is not a task. */
+      /* There is no TCB with this pid */
 
+      leave_critical_section(flags);
       ret = -ESRCH;
-      goto errout_with_lock;
     }
+#ifndef CONFIG_DISABLE_PTHREAD
+  else if ((atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK) ==
+           TCB_FLAG_TTYPE_PTHREAD)
+    {
+      /* Oh if there is, it is not a task. */
+
+      leave_critical_section(flags);
+      nxsched_put_tcb(tcb);
+      ret = -ESRCH;
+    }
+#endif
 
 #ifdef CONFIG_SMP
-  if (tcb->task_state == TSTATE_TASK_RUNNING &&
-      tcb->cpu != this_cpu())
+  else if (tcb->task_state == TSTATE_TASK_RUNNING &&
+           tcb->cpu != this_cpu())
     {
       struct restart_arg_s arg;
       int cpu = tcb->cpu;
@@ -250,64 +255,65 @@ static int nxtask_restart(pid_t pid)
       if (!tcb || tcb->task_state != TSTATE_TASK_INVALID ||
           (atomic_read(&tcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
         {
+          leave_critical_section(flags);
+          nxsched_put_tcb(tcb);
           ret = -ESRCH;
-          goto errout_with_lock;
         }
+      else
+        {
+          DEBUGASSERT(tcb->task_state != TSTATE_TASK_RUNNING);
+          nxtask_reset_task(tcb, false);
+          leave_critical_section(flags);
 
-      DEBUGASSERT(tcb->task_state != TSTATE_TASK_RUNNING);
-      nxtask_reset_task(tcb, false);
+          /* Activate the task. */
+
+          nxtask_activate(tcb);
+          nxsched_put_tcb(tcb);
+        }
+    }
+#endif /* CONFIG_SMP */
+
+  else
+    {
+      /* Reset critmon info */
+
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD >= 0
+      tcb->run_start           = 0;
+      tcb->run_max             = 0;
+      tcb->run_time            = 0;
+#endif
+
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
+      tcb->premp_start         = 0;
+      tcb->premp_max           = 0;
+      tcb->premp_caller        = NULL;
+      tcb->premp_max_caller    = NULL;
+#endif
+
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
+      tcb->crit_start          = 0;
+      tcb->crit_max            = 0;
+      tcb->crit_caller         = NULL;
+      tcb->crit_max_caller     = NULL;
+#endif
+
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0
+      tcb->busywait_start      = 0;
+      tcb->busywait_max        = 0;
+      tcb->busywait_total      = 0;
+      tcb->busywait_caller     = NULL;
+      tcb->busywait_max_caller = NULL;
+#endif
+
+      nxtask_reset_task(tcb, true);
       leave_critical_section(flags);
 
       /* Activate the task. */
 
       nxtask_activate(tcb);
       nxsched_put_tcb(tcb);
-      return OK;
     }
-#endif /* CONFIG_SMP */
 
-  /* Reset critmon info */
-
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD >= 0
-  tcb->run_start           = 0;
-  tcb->run_max             = 0;
-  tcb->run_time            = 0;
-#endif
-
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
-  tcb->premp_start         = 0;
-  tcb->premp_max           = 0;
-  tcb->premp_caller        = NULL;
-  tcb->premp_max_caller    = NULL;
-#endif
-
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-  tcb->crit_start          = 0;
-  tcb->crit_max            = 0;
-  tcb->crit_caller         = NULL;
-  tcb->crit_max_caller     = NULL;
-#endif
-
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0
-  tcb->busywait_start      = 0;
-  tcb->busywait_max        = 0;
-  tcb->busywait_total      = 0;
-  tcb->busywait_caller     = NULL;
-  tcb->busywait_max_caller = NULL;
-#endif
-
-  nxtask_reset_task(tcb, true);
-  leave_critical_section(flags);
-
-  /* Activate the task. */
-
-  nxtask_activate(tcb);
-  nxsched_put_tcb(tcb);
-  return OK;
-
-errout_with_lock:
-  nxsched_put_tcb(tcb);
-  leave_critical_section(flags);
   return ret;
 }
 
