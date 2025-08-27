@@ -284,7 +284,7 @@ void work_timer_reset(FAR struct kwork_wqueue_s *wqueue)
     }
   else
     {
-      wd_cancel(&wqueue->timer);
+      wd_try_cancel(&wqueue->timer);
     }
 }
 
