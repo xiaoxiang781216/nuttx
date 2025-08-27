@@ -26,7 +26,8 @@ set(SRCS
     nrf52_allocateheap.c
     nrf52_lowputc.c
     nrf52_gpio.c
-    nrf52_uid.c)
+    nrf52_uid.c
+    nrf52_serial.c)
 
 if(CONFIG_NRF52_SYSTIMER_SYSTICK)
   list(APPEND SRCS nrf52_systick.c)
@@ -58,10 +59,6 @@ endif()
 
 if(CONFIG_NRF52_GPIOTE)
   list(APPEND SRCS nrf52_gpiote.c)
-endif()
-
-if(CONFIG_NRF52_UART)
-  list(APPEND SRCS nrf52_serial.c)
 endif()
 
 if(CONFIG_NRF52_WDT)
