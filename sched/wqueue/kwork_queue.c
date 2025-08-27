@@ -76,6 +76,9 @@ int work_queue_next_wq(FAR struct kwork_wqueue_s *wqueue,
 
   if (wqueue && work && worker && delay <= WDOG_MAX_DELAY)
     {
+      clock_t expected = work->qtime ? work->qtime + delay :
+                                       clock_systime_ticks() + delay;
+
       ret = OK;
 
       /* Initialize the work structure. */
@@ -85,8 +88,7 @@ int work_queue_next_wq(FAR struct kwork_wqueue_s *wqueue,
 
       /* Expected time based on last expiration time */
 
-      work->qtime  = work->qtime ? work->qtime + delay :
-                                   clock_systime_ticks() + delay;
+      work->qtime  = expected;
 
       flags = spin_lock_irqsave(&wqueue->lock);
 
@@ -98,7 +100,7 @@ int work_queue_next_wq(FAR struct kwork_wqueue_s *wqueue,
             {
               /* Start the timer if the work is the earliest expired work. */
 
-              wd_start_abstick(&wqueue->timer, work->qtime,
+              wd_start_abstick(&wqueue->timer, expected,
                                work_timer_expired, (wdparm_t)wqueue);
             }
         }
