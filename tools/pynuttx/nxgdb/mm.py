@@ -69,7 +69,7 @@ class MemPoolBlock:
     Memory pool block instance.
     """
 
-    MAGIC_ALLOC = 0x5555_5555
+    MAGIC_ALLOC = 0xAAAA_AAAA
 
     def __init__(self, addr: int, blocksize: int, overhead: int) -> None:
         """
