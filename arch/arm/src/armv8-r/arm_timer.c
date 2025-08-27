@@ -120,33 +120,6 @@ static inline void arm_timer_phy_set_irq_mask(bool mask)
               BIT(CNT_CTL_IMASK_BIT), CNTP_CTL);
 }
 
-static inline uint64_t arm_timer_virt_count(void)
-{
-  return CP15_GET64(CNTVCT);
-}
-
-static inline void arm_timer_virt_set_relative(uint32_t tval)
-{
-  CP15_SET(CNTV_TVAL, tval);
-}
-
-static inline void arm_timer_virt_set_absolute(uint64_t cval)
-{
-  CP15_SET64(CNTV_CVAL, cval);
-}
-
-static inline void arm_timer_virt_enable(bool enable)
-{
-  CP15_MODIFY((uint32_t)enable << CNT_CTL_ENABLE_BIT,
-              BIT(CNT_CTL_ENABLE_BIT), CNTV_CTL);
-}
-
-static inline void arm_timer_virt_set_irq_mask(bool mask)
-{
-  CP15_MODIFY((uint32_t)mask << CNT_CTL_IMASK_BIT,
-              BIT(CNT_CTL_IMASK_BIT), CNTV_CTL);
-}
-
 /****************************************************************************
  * Name: arm_arch_timer_compare_isr
  *
@@ -170,7 +143,7 @@ static int arm_arch_timer_compare_isr(int irq, void *regs, void *arg)
 
   /* Suspend the timer irq, restart again when call tick_start */
 
-  arm_timer_virt_set_irq_mask(true);
+  arm_timer_phy_set_irq_mask(true);
 
   if (priv->callback)
     {
@@ -243,7 +216,7 @@ static int arm_tick_cancel(struct oneshot_lowerhalf_s *lower,
 
   /* Disable int */
 
-  arm_timer_virt_set_irq_mask(true);
+  arm_timer_phy_set_irq_mask(true);
 
   return OK;
 }
@@ -287,16 +260,16 @@ static int arm_tick_start(struct oneshot_lowerhalf_s *lower,
   /* Set the timeout */
 
   tick_cycle = priv->cycle_per_tick * ticks;
-  tick_time = arm_timer_virt_count() + tick_cycle;
+  tick_time = arm_timer_phy_count() + tick_cycle;
   tick_time -= (tick_time % tick_cycle);
 
-  arm_timer_virt_set_absolute(tick_time);
+  arm_timer_phy_set_absolute(tick_time);
 
   /* Try to unmask the timer irq in timer controller
    * in case of arm_tick_cancel is called.
    */
 
-  arm_timer_virt_set_irq_mask(false);
+  arm_timer_phy_set_irq_mask(false);
 
   return OK;
 }
@@ -327,7 +300,7 @@ static int arm_tick_current(struct oneshot_lowerhalf_s *lower,
 
   DEBUGASSERT(ticks != NULL);
 
-  *ticks = arm_timer_virt_count() / priv->cycle_per_tick;
+  *ticks = arm_timer_phy_count() / priv->cycle_per_tick;
 
   return OK;
 }
@@ -388,7 +361,7 @@ static struct oneshot_lowerhalf_s *arm_oneshot_initialize(void)
 
   /* Avoid early timer irq cause abort. */
 
-  arm_timer_virt_set_irq_mask(true);
+  arm_timer_phy_set_irq_mask(true);
 
   tmrinfo("oneshot_initialize ok %p \n", &priv->lh);
 
@@ -418,7 +391,7 @@ void up_timer_initialize(void)
 
   up_alarm_set_lowerhalf(arm_oneshot_initialize());
   up_enable_irq(ARM_ARCH_TIMER_IRQ);
-  arm_timer_virt_enable(true);
+  arm_timer_phy_enable(true);
 }
 
 #ifdef CONFIG_SMP
@@ -453,7 +426,7 @@ void arm_timer_secondary_init(void)
 
   /* Start timer */
 
-  arm_timer_virt_enable(true);
+  arm_timer_phy_enable(true);
 #endif
 }
 #endif
