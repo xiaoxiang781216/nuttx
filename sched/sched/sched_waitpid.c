@@ -225,6 +225,7 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
   bool retains;
 #endif
   FAR struct siginfo info;
+  irqstate_t flags;
   sigset_t set;
   int ret;
 
@@ -437,6 +438,8 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
 
       /* Wait for any death-of-child signal */
 
+      flags = enter_critical_section();
+
       if (pid != INVALID_PROCESS_ID)
         {
           ctcb = nxsched_get_tcb(pid);
@@ -457,6 +460,8 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
         }
 
       nxsched_put_tcb(ctcb);
+      leave_critical_section(flags);
+
       if (ret < 0)
         {
           goto errout;
