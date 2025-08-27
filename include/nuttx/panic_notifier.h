@@ -34,15 +34,16 @@
 #include <sys/types.h>
 
 /****************************************************************************
- * Public Types
+ * Pre-processor Definitions
  ****************************************************************************/
 
-enum panic_type_e
-{
-  PANIC_KERNEL         =  0,
-  PANIC_TASK           =  1,
-  PANIC_KERNEL_FINAL   =  2,
-};
+#define PANIC_KERNEL         0u
+#define PANIC_TASK           1u
+#define PANIC_KERNEL_FINAL   2u
+
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
 
 /* Notifier data for panic */
 
