@@ -395,8 +395,8 @@ static int pkt_close(FAR struct socket *psock)
               /* Then free the connection structure */
 
               conn->crefs = 0;          /* No more references on the connection */
-              pkt_free(psock->s_conn);  /* Free network resources */
               conn_dev_unlock(&conn->sconn, dev);
+              pkt_free(psock->s_conn);  /* Free network resources */
             }
           else
             {
