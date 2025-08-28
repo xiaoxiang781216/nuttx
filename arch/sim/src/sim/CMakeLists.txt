@@ -128,7 +128,7 @@ endif()
 
 if(CONFIG_SIM_SOUND_ALSA)
   list(APPEND HOSTSRCS sim_hostalsa.c)
-  list(APPEND SRCS posix/sim_alsa.c)
+  list(APPEND SRCS sim_alsa.c)
   list(APPEND SRCS sim_offload.c)
   list(APPEND STDLIBS asound)
 endif()

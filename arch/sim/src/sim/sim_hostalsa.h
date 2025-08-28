@@ -22,6 +22,113 @@
 #define __ARCH_SIM_SRC_SIM_HOSTALSA_H
 
 /****************************************************************************
+ * Included Files
+ ****************************************************************************/
+
+#include <endian.h>
+
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
+#ifndef __ASOUNDLIB_H
+
+typedef unsigned long snd_pcm_uframes_t;
+typedef long snd_pcm_sframes_t;
+typedef struct _snd_pcm snd_pcm_t;
+typedef struct _snd_pcm_hw_params snd_pcm_hw_params_t;
+typedef struct _snd_mixer snd_mixer_t;
+typedef struct _snd_mixer_class snd_mixer_class_t;
+typedef struct _snd_mixer_elem snd_mixer_elem_t;
+typedef struct _snd_mixer_selem_id snd_mixer_selem_id_t;
+
+typedef enum _snd_pcm_format
+{
+  SND_PCM_FORMAT_UNKNOWN = -1,
+  SND_PCM_FORMAT_S8 = 0,
+  SND_PCM_FORMAT_U8,
+  SND_PCM_FORMAT_S16_LE,
+  SND_PCM_FORMAT_S16_BE,
+  SND_PCM_FORMAT_U16_LE,
+  SND_PCM_FORMAT_U16_BE,
+  SND_PCM_FORMAT_S24_LE,
+  SND_PCM_FORMAT_S24_BE,
+  SND_PCM_FORMAT_U24_LE,
+  SND_PCM_FORMAT_U24_BE,
+  SND_PCM_FORMAT_S32_LE,
+  SND_PCM_FORMAT_S32_BE,
+  SND_PCM_FORMAT_U32_LE,
+  SND_PCM_FORMAT_U32_BE,
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+  SND_PCM_FORMAT_S16 = SND_PCM_FORMAT_S16_LE,
+  SND_PCM_FORMAT_U16 = SND_PCM_FORMAT_U16_LE,
+  SND_PCM_FORMAT_S24 = SND_PCM_FORMAT_S24_LE,
+  SND_PCM_FORMAT_U24 = SND_PCM_FORMAT_U24_LE,
+  SND_PCM_FORMAT_S32 = SND_PCM_FORMAT_S32_LE,
+  SND_PCM_FORMAT_U32 = SND_PCM_FORMAT_U32_LE,
+#elif __BYTE_ORDER == __BIG_ENDIAN
+  SND_PCM_FORMAT_S16 = SND_PCM_FORMAT_S16_BE,
+  SND_PCM_FORMAT_U16 = SND_PCM_FORMAT_U16_BE,
+  SND_PCM_FORMAT_S24 = SND_PCM_FORMAT_S24_BE,
+  SND_PCM_FORMAT_U24 = SND_PCM_FORMAT_U24_BE,
+  SND_PCM_FORMAT_S32 = SND_PCM_FORMAT_S32_BE,
+  SND_PCM_FORMAT_U32 = SND_PCM_FORMAT_U32_BE,
+#else
+#error "Unknown endian"
+#endif
+} snd_pcm_format_t;
+
+typedef enum _vela_snd_pcm_stream
+{
+  SND_PCM_STREAM_PLAYBACK = 0,
+  SND_PCM_STREAM_CAPTURE,
+  SND_PCM_STREAM_LAST = SND_PCM_STREAM_CAPTURE
+} snd_pcm_stream_t;
+
+typedef enum _snd_pcm_access
+{
+  SND_PCM_ACCESS_MMAP_INTERLEAVED = 0,
+  SND_PCM_ACCESS_MMAP_NONINTERLEAVED,
+  SND_PCM_ACCESS_MMAP_COMPLEX,
+  SND_PCM_ACCESS_RW_INTERLEAVED,
+  SND_PCM_ACCESS_RW_NONINTERLEAVED,
+  SND_PCM_ACCESS_LAST = SND_PCM_ACCESS_RW_NONINTERLEAVED
+} snd_pcm_access_t;
+
+typedef enum
+{
+  SND_MIXER_SCHN_UNKNOWN = -1,
+  SND_MIXER_SCHN_FRONT_LEFT,
+  SND_MIXER_SCHN_FRONT_RIGHT,
+  SND_MIXER_SCHN_REAR_LEFT,
+  SND_MIXER_SCHN_REAR_RIGHT,
+  SND_MIXER_SCHN_FRONT_CENTER,
+  SND_MIXER_SCHN_WOOFER,
+  SND_MIXER_SCHN_SIDE_LEFT,
+  SND_MIXER_SCHN_SIDE_RIGHT,
+  SND_MIXER_SCHN_REAR_CENTER,
+  SND_MIXER_SCHN_LAST = 31,
+  SND_MIXER_SCHN_MONO = SND_MIXER_SCHN_FRONT_LEFT
+} snd_mixer_selem_channel_id_t;
+
+enum snd_mixer_selem_regopt_abstract
+{
+  SND_MIXER_SABSTRACT_NONE,
+  SND_MIXER_SABSTRACT_BASIC,
+};
+
+struct snd_mixer_selem_regopt
+{
+  int ver;
+  enum snd_mixer_selem_regopt_abstract abstract;
+  const char *device;
+  snd_pcm_t *playback_pcm;
+  snd_pcm_t *capture_pcm;
+};
+
+#endif //__ASOUNDLIB_H
+
+/****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 

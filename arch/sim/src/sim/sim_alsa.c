@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/sim/src/sim/posix/sim_alsa.c
+ * arch/sim/src/sim/sim_alsa.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,17 +22,15 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-#include <nuttx/nuttx.h>
+#include <debug.h>
 #include <nuttx/audio/audio.h>
+#include <nuttx/config.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/nuttx.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
-#include <debug.h>
+#include <nuttx/queue.h>
+#include <nuttx/spinlock.h>
 #include <sys/param.h>
-
-#include <alsa/asoundlib.h>
 
 #include "sim_hostalsa.h"
 #include "sim_internal.h"
