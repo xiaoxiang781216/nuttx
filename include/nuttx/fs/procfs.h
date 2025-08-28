@@ -29,6 +29,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/mm/mm.h>
 
 /****************************************************************************
  * Pre-processor Definitions

@@ -40,6 +40,7 @@
 #include <nuttx/kthread.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/sched.h>
+#include <nuttx/tls.h>
 
 #include "sched/sched.h"
 #include "wqueue/wqueue.h"

@@ -27,6 +27,7 @@
 #include <nuttx/config.h>
 
 #include <nuttx/mm/mm.h>
+#include <nuttx/tls.h>
 
 #include "umm_heap/umm_heap.h"
 
@@ -48,3 +49,10 @@ FAR struct mm_heap_s *g_mmheap;
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+#ifdef CONFIG_MM_TASK_HEAP
+FAR struct mm_heap_s **umm_getheap(void)
+{
+  return &task_get_info()->ta_heap;
+}
+#endif

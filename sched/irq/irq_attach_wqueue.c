@@ -31,6 +31,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/tls.h>
 #include <debug.h>
 
 #include "irq/irq.h"

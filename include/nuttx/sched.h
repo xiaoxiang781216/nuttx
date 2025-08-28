@@ -45,8 +45,6 @@
 #include <nuttx/wdog.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/mm/map.h>
-#include <nuttx/mm/mm.h>
-#include <nuttx/tls.h>
 #include <nuttx/spinlock_type.h>
 
 #include <arch/arch.h>
@@ -462,6 +460,9 @@ struct binary_s;                    /* Forward reference                        
                                     /* Defined in include/nuttx/binfmt/binfmt.h */
 #endif
 
+struct task_info_s;
+struct mm_heap_s;
+
 struct task_group_s
 {
   pid_t tg_pid;                     /* The ID of the task within the group      */
@@ -521,9 +522,6 @@ struct task_group_s
 
   /* Thread local storage ***************************************************/
 
-#ifndef CONFIG_MM_KERNEL_HEAP
-  struct task_info_s tg_info_;
-#endif
   FAR struct task_info_s *tg_info;
 
   /* POSIX Signal Control Fields ********************************************/

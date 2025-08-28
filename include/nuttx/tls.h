@@ -374,7 +374,12 @@ void tls_destruct(void);
  *
  ****************************************************************************/
 
-FAR struct task_info_s *task_get_info(void);
+static inline_function FAR struct task_info_s *task_get_info(void)
+{
+  FAR struct tls_info_s *info = tls_get_info();
+
+  return info ? info->tl_task : NULL;
+}
 
 #if CONFIG_TLS_NCLEANUP > 0
 /****************************************************************************

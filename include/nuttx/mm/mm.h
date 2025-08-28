@@ -29,10 +29,10 @@
 
 #include <nuttx/config.h>
 #include <nuttx/userspace.h>
-#include <nuttx/tls.h>
 
 #include <sys/types.h>
 #include <stdbool.h>
+#include <string.h>
 #include <malloc.h>
 
 /****************************************************************************
@@ -115,7 +115,7 @@
 #define mm_memdump_s malltask
 
 #ifdef CONFIG_MM_TASK_HEAP
-#  define USR_HEAP (task_get_info()->ta_heap)
+#  define USR_HEAP (*umm_getheap())
 #elif defined(CONFIG_BUILD_PROTECTED) && defined(__KERNEL__)
 /* In the protected mode, there are two heaps:  A kernel heap and a single
  * user heap.  Kernel code must obtain the address of the user heap data
@@ -475,6 +475,10 @@ void mm_memdump(FAR struct mm_heap_s *heap,
 /* Functions contained in umm_memdump.c *************************************/
 
 void umm_memdump(FAR const struct mm_memdump_s *dump);
+
+#ifdef CONFIG_MM_TASK_HEAP
+FAR struct mm_heap_s **umm_getheap(void);
+#endif
 
 #ifdef CONFIG_DEBUG_MM
 /* Functions contained in mm_checkcorruption.c ******************************/

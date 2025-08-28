@@ -33,6 +33,7 @@
 
 #include <nuttx/sched.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/tls.h>
 
 #include "pthread.h"
 

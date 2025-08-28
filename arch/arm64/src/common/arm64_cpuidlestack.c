@@ -27,6 +27,7 @@
 #include <assert.h>
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
+#include <nuttx/tls.h>
 
 #include "arm64_smp.h"
 #include "arm64_internal.h"

@@ -59,6 +59,7 @@ extern "C"
  ****************************************************************************/
 
 struct task_group_s;  /* Forward reference */
+struct tls_info_s;    /* Forward reference */
 
 int pthread_setup_scheduler(FAR struct tcb_s *tcb, int priority,
                             start_t start, pthread_startroutine_t entry);

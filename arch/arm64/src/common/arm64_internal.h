@@ -30,6 +30,7 @@
 #ifndef __ASSEMBLY__
 #  include <nuttx/compiler.h>
 #  include <nuttx/arch.h>
+#  include <nuttx/tls.h>
 #  include <sys/types.h>
 #  include <stdint.h>
 #  include <syscall.h>
