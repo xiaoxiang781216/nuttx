@@ -119,20 +119,20 @@ struct sem_s
    * tasks hold references to the semaphore.
    */
 
-  uint8_t flags;                 /* See SEM_PRIO_* definitions */
+  int flags;                         /* See SEM_PRIO_* definitions */
 
   dq_queue_t waitlist;
 
 #ifdef CONFIG_PRIORITY_INHERITANCE
 #  if CONFIG_SEM_PREALLOCHOLDERS > 0
-  FAR struct semholder_s *hhead; /* List of holders of semaphore counts */
+  FAR struct semholder_s *hhead;     /* List of holders of semaphore counts */
 #  else
-  struct semholder_s holder;     /* Slot for old and new holder */
+  struct semholder_s holder;         /* Slot for old and new holder */
 #  endif
 #endif
 #ifdef CONFIG_PRIORITY_PROTECT
-  uint8_t ceiling;               /* The priority ceiling owned by mutex  */
-  uint8_t saved;                 /* The saved priority of thread before boost */
+  uint8_t ceiling;                   /* The priority ceiling owned by mutex  */
+  uint8_t saved;                     /* The saved priority of thread before boost */
 #endif
 };
 

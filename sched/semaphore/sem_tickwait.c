@@ -89,7 +89,7 @@ int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
   ret = nxsem_trywait(sem);
   if (ret != OK)
     {
-      if (delay == 0)
+      if (delay == 0u)
         {
           /* Timed out already before waiting */
 

@@ -43,7 +43,7 @@
 static inline_function
 int get_blocking(FAR sem_t *sem, bool mutex, bool *blocking)
 {
-  uint32_t mholder = NXSEM_NO_MHOLDER;
+  int32_t mholder = NXSEM_NO_MHOLDER;
   int ret = OK;
 
   if (mutex)
@@ -214,10 +214,9 @@ int nxsem_post_slow(FAR sem_t *sem)
 
               if (mutex)
                 {
-                  uint32_t blocking_bit = dq_empty(SEM_WAITLIST(sem)) ?
+                  int32_t blocking_bit = dq_empty(SEM_WAITLIST(sem)) ?
                     0 : NXSEM_MBLOCKING_BIT;
-                  atomic_set(NXSEM_MHOLDER(sem),
-                            ((uint32_t)stcb->pid) | blocking_bit);
+                  atomic_set(NXSEM_MHOLDER(sem), stcb->pid | blocking_bit);
                 }
               else
                 {

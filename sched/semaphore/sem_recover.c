@@ -111,7 +111,7 @@ void nxsem_recover(FAR struct tcb_s *tcb)
 
           if (dq_empty(SEM_WAITLIST(sem)))
             {
-              uint32_t mholder =
+              int32_t mholder =
                 atomic_fetch_and(NXSEM_MHOLDER(sem), ~NXSEM_MBLOCKING_BIT);
               DEBUGASSERT(NXSEM_MBLOCKING(mholder));
             }

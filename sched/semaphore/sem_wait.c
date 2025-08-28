@@ -74,7 +74,7 @@ int nxsem_wait_slow(FAR sem_t *sem)
   irqstate_t flags;
   int ret = OK;
   bool unlocked;
-  uint32_t mholder;
+  int32_t mholder;
   FAR struct tcb_s *htcb = NULL;
   bool mutex = NXSEM_IS_MUTEX(sem);
 

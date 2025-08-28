@@ -67,7 +67,7 @@ void restore_context(FAR struct tcb_s *rtcb, FAR struct tcb_s *wtcb,
 
   /* Mark the errno value for the thread. */
 
-  wtcb->errcode = errcode;
+  wtcb->errcode = (int16_t)errcode;
 
   /* Add the task to ready-to-run task list and
    * perform the context switch if one is needed
