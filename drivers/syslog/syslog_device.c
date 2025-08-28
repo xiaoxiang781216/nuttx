@@ -78,7 +78,7 @@ enum syslog_dev_state
 
 struct syslog_dev_s
 {
-  syslog_channel_t channel;
+  syslog_channel_t sl_channel;
 
   uint8_t      sl_state;    /* See enum syslog_dev_state */
   uint8_t      sl_oflags;   /* Saved open mode (for re-open) */
@@ -692,7 +692,7 @@ FAR syslog_channel_t *syslog_dev_initialize(FAR const char *devpath,
 
   syslog_dev_open(syslog_dev, devpath, oflags, mode);
 
-  syslog_dev->channel.sc_ops = &g_syslog_dev_ops;
+  syslog_dev->sl_channel.sc_ops = &g_syslog_dev_ops;
 
   return (FAR syslog_channel_t *)syslog_dev;
 }
