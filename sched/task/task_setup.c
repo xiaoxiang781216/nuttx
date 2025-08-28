@@ -160,7 +160,7 @@ static int nxtask_assign_pid(FAR struct tcb_s *tcb)
        */
 
       spin_unlock_irqrestore(&g_pidhashlock, flags);
-      pidhash = kmm_zalloc(g_npidhash * 2 * sizeof(*pidhash));
+      pidhash = kmm_zalloc(g_npidhash * 2u * sizeof(*pidhash));
       if (pidhash == NULL)
         {
           ret = -ENOMEM;
@@ -433,8 +433,8 @@ static int nxthread_setup_scheduler(FAR struct tcb_s *tcb, int priority,
 
       /* Save task priority and entry point in the TCB */
 
-      tcb->sched_priority = (uint8_t)priority;
-      tcb->init_priority  = (uint8_t)priority;
+      tcb->sched_priority = priority;
+      tcb->init_priority  = priority;
 #ifdef CONFIG_PRIORITY_INHERITANCE
       tcb->base_priority  = (uint8_t)priority;
 #endif
@@ -543,7 +543,7 @@ int nxtask_setup_stackargs(FAR struct tcb_s *tcb,
   FAR char *str;
   size_t strtablen;
   size_t argvlen;
-  int nbytes;
+  size_t nbytes;
   int argc;
   int i;
   int ret = OK;
@@ -557,7 +557,7 @@ int nxtask_setup_stackargs(FAR struct tcb_s *tcb,
 
   /* Get the size of the task name (including the NUL terminator) */
 
-  strtablen = (strlen(name) + 1);
+  strtablen = (strlen(name) + 1u);
 
   /* Count the number of arguments and get the accumulated size of the
    * argument strings (including the null terminators).  The argument count
@@ -576,7 +576,7 @@ int nxtask_setup_stackargs(FAR struct tcb_s *tcb,
            * size of the allocated stack.
            */
 
-          strtablen += (strlen(argv[argc]) + 1);
+          strtablen += (strlen(argv[argc]) + 1u);
           DEBUGASSERT(strtablen < tcb->adj_stack_size);
           if (strtablen >= tcb->adj_stack_size)
             {
@@ -606,7 +606,7 @@ int nxtask_setup_stackargs(FAR struct tcb_s *tcb,
        * task name plus a NULL argv[] entry to terminate the list.
        */
 
-      argvlen   = (argc + 2) * sizeof(FAR char *);
+      argvlen   = (size_t)(argc + 2) * sizeof(FAR char *);
       stackargv = (FAR char **)up_stack_frame(tcb, argvlen + strtablen);
 
       DEBUGASSERT(stackargv != NULL);
@@ -627,7 +627,7 @@ int nxtask_setup_stackargs(FAR struct tcb_s *tcb,
            */
 
           stackargv[0] = str;
-          nbytes       = strlen(name) + 1;
+          nbytes       = strlen(name) + 1u;
           strlcpy(str, name, strtablen);
           str         += nbytes;
           strtablen   -= nbytes;
@@ -643,7 +643,7 @@ int nxtask_setup_stackargs(FAR struct tcb_s *tcb,
                */
 
               stackargv[i + 1] = str;
-              nbytes           = strlen(argv[i]) + 1;
+              nbytes           = strlen(argv[i]) + 1u;
               strlcpy(str, argv[i], strtablen);
               str             += nbytes;
               strtablen       -= nbytes;
