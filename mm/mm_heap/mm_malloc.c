@@ -123,7 +123,7 @@ void mm_dump_handler(FAR struct tcb_s *tcb, FAR void *arg)
   task.seqmax = ULONG_MAX;
 #  endif
   info = mm_mallinfo_task(arg, &task);
-  mwarn("pid:%5d, used:%10d, nused:%10d\n",
+  mwarn("pid:%5d, used:%10zu, nused:%10zu\n",
         task.pid, info.uordblks, info.aordblks);
 }
 #endif

@@ -95,7 +95,7 @@ static inline void mempool_add_queue(FAR struct mempool_s *pool,
                                      FAR char *base, size_t nblks,
                                      size_t blocksize)
 {
-  while (nblks-- > 0)
+  while (nblks-- > 0u)
     {
       FAR sq_entry_t *node = (FAR sq_entry_t *)(base + blocksize * nblks);
 #ifdef CONFIG_MM_RECORD
@@ -459,7 +459,7 @@ int mempool_init(FAR struct mempool_s *pool)
     }
 
   spin_lock_init(&pool->lock);
-  if (pool->wait && pool->expandsize == 0)
+  if (pool->wait && pool->expandsize == 0u)
     {
       nxsem_init(&pool->waitsem, 0, 0);
     }
@@ -510,7 +510,7 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout)
 
 retry:
   flags = spin_lock_irqsave(&pool->lock);
-  if (pool->maxalloc > 0 && pool->nalloc >= pool->maxalloc)
+  if (pool->maxalloc > 0u && pool->nalloc >= pool->maxalloc)
     {
       spin_unlock_irqrestore(&pool->lock, flags);
       merr("ERROR: mempool_allocate: maxalloc=%zu\n", pool->maxalloc);
@@ -561,7 +561,7 @@ retry:
                          &pool->equeue);
               blk = mempool_remove_queue(pool, &pool->queue);
             }
-          else if (!pool->wait || timeout == 0)
+          else if (!pool->wait || timeout == 0u)
             {
               return NULL;
             }
@@ -665,7 +665,7 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
   kasan_poison(blk, pool->blocksize);
   kasan_bypass(bypass);
   spin_unlock_irqrestore(&pool->lock, flags);
-  if (pool->wait && pool->expandsize == 0)
+  if (pool->wait && pool->expandsize == 0u)
     {
       int semcount;
 
@@ -700,10 +700,10 @@ size_t mempool_navail(FAR struct mempool_s *pool)
   mempool_init(pool);
 
   flags = spin_lock_irqsave(&pool->lock);
-  if (pool->maxalloc != 0)
+  if (pool->maxalloc != 0u)
     {
       ret = pool->maxalloc > pool->nalloc ?
-            pool->maxalloc - pool->nalloc : 0;
+            pool->maxalloc - pool->nalloc : 0u;
     }
 
   spin_unlock_irqrestore(&pool->lock, flags);
@@ -745,12 +745,12 @@ int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
   kasan_bypass(bypass);
   spin_unlock_irqrestore(&pool->lock, flags);
   info->sizeblks = blocksize;
-  if (pool->wait && pool->expandsize == 0)
+  if (pool->wait && pool->expandsize == 0u)
     {
       int semcount;
 
       nxsem_get_value(&pool->waitsem, &semcount);
-      info->nwaiter = -semcount;
+      info->nwaiter = (unsigned long)-semcount;
     }
   else
     {
@@ -877,14 +877,14 @@ int mempool_deinit(FAR struct mempool_s *pool)
   size_t count = 0;
   int ret = -EBUSY;
 
-  if (pool->nalloc == 0)
+  if (pool->nalloc == 0u)
     {
       if (pool->initialsize >= blocksize + MEMPOOL_HEADER_SIZE)
         {
           count = (pool->initialsize - MEMPOOL_HEADER_SIZE) / blocksize;
         }
 
-      if (count == 0)
+      if (count == 0u)
         {
           if (pool->expandsize >= blocksize + MEMPOOL_HEADER_SIZE)
             {
@@ -915,7 +915,7 @@ int mempool_deinit(FAR struct mempool_s *pool)
           pool->free(pool, pool->ibase);
         }
 
-      if (pool->wait && pool->expandsize == 0)
+      if (pool->wait && pool->expandsize == 0u)
         {
           nxsem_destroy(&pool->waitsem);
         }

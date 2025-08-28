@@ -43,7 +43,7 @@
  ****************************************************************************/
 
 #define MEMPOOL_HEADER_SIZE        (sizeof(sq_entry_t) + \
-                                    CONFIG_MM_NODE_GUARDSIZE)
+                                    (size_t)CONFIG_MM_NODE_GUARDSIZE)
 
 #ifdef CONFIG_MM_RECORD
 #  define MEMPOOL_REALBLOCKSIZE(s) (ALIGN_UP((s) + \

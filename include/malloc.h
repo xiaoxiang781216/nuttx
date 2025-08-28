@@ -88,8 +88,8 @@ struct malltask
 
 struct mallinfo_task
 {
-  int aordblks; /* This is the number of allocated (in use) chunks for task */
-  int uordblks; /* This is the total size of memory occupied for task */
+  size_t aordblks; /* This is the number of allocated (in use) chunks for task */
+  size_t uordblks; /* This is the total size of memory occupied for task */
 };
 
 /****************************************************************************

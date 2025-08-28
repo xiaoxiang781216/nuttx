@@ -350,5 +350,5 @@ void mm_memdump(FAR struct mm_heap_s *heap,
 #endif
 
   syslog(LOG_INFO, "%12s%12s\n", "Total Blks", "Total Size");
-  syslog(LOG_INFO, "%12d%12d\n", priv.info.aordblks, priv.info.uordblks);
+  syslog(LOG_INFO, "%12zu%12zu\n", priv.info.aordblks, priv.info.uordblks);
 }

@@ -980,7 +980,7 @@ static ssize_t proc_heap(FAR struct proc_file_s *procfile,
   /* Show the heap alloc size */
 
   linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                               "%-12s%d\n", "AllocSize:", info.uordblks);
+                               "%-12s%zu\n", "AllocSize:", info.uordblks);
   copysize   = procfs_memcpy(procfile->line, linesize, buffer, remaining,
                              &offset);
 
@@ -996,7 +996,7 @@ static ssize_t proc_heap(FAR struct proc_file_s *procfile,
   /* Show the heap alloc block */
 
   linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                               "%-12s%d\n", "AllocBlks:", info.aordblks);
+                               "%-12s%zu\n", "AllocBlks:", info.aordblks);
   totalsize += procfs_memcpy(procfile->line, linesize, buffer, remaining,
                              &offset);
   return totalsize;
