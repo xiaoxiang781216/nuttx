@@ -63,7 +63,7 @@ struct irq_work_info_s
  ****************************************************************************/
 
 static
-inline_function FAR struct kwork_wqueue_s *irq_get_wqueue(int priority)
+inline_function FAR struct kwork_wqueue_s *irq_get_wqueue(uint8_t priority)
 {
 #ifdef IRQ_WORK_SECTION
   static aligned_data(STACK_ALIGNMENT) uint8_t
@@ -77,7 +77,7 @@ inline_function FAR struct kwork_wqueue_s *irq_get_wqueue(int priority)
   static FAR struct kwork_wqueue_s *g_irq_wqueue[CONFIG_IRQ_NWORKS];
 
   FAR struct kwork_wqueue_s *queue = NULL;
-  int wqueue_priority;
+  uint8_t wqueue_priority;
   int i;
 
   nxmutex_lock(&g_irq_wqueue_lock);
@@ -164,7 +164,7 @@ static int irq_default_handler(int irq, FAR void *context, FAR void *arg)
  ****************************************************************************/
 
 int irq_attach_wqueue(int irq, xcpt_t isr, xcpt_t isrwork,
-                      FAR void *arg, int priority)
+                      FAR void *arg, uint8_t priority)
 {
 #ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE
   static struct irq_work_info_s
