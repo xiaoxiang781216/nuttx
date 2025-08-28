@@ -70,6 +70,8 @@
     NULL,                     /* stackaddr */ \
     PTHREAD_STACK_DEFAULT,    /* stacksize */ \
     PTHREAD_GUARD_DEFAULT,    /* guardsize */   \
+    0,                        /* low_priority */ \
+    0,                        /* max_repl */ \
     {0, 0},                   /* repl_period */ \
     {0, 0},                   /* budget */ \
   }
