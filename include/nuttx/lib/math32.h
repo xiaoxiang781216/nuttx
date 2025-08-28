@@ -345,15 +345,15 @@ static inline_function uint64_t div64_const(uint64_t n, uint32_t base)
 #  define div_const(n, base) \
     ((sizeof(n) == sizeof(uint64_t)) ? div64_const(n, base) : ((n) / (base)))
 #  define div_const_roundup(n, base) \
-    ((sizeof(n) == sizeof(uint64_t)) ? div64_const((n) + (base) - 1, base) : \
-     (((n) + (base) - 1) / (base)))
+    ((sizeof(n) == sizeof(uint64_t)) ? div64_const((n) + (base) - 1ul, base) : \
+     (((n) + (base) - 1ul) / (base)))
 #  define div_const_roundnearest(n, base) \
-    ((sizeof(n) == sizeof(uint64_t)) ? div64_const((n) + ((base) / 2), base) : \
-     (((n) + ((base) / 2)) / (base)))
+    ((sizeof(n) == sizeof(uint64_t)) ? div64_const((n) + ((base) / 2ul), base) : \
+     (((n) + ((base) / 2ul)) / (base)))
 #else
 #  define div_const(n, base) ((n) / (base))
-#  define div_const_roundup(n, base) (((n) + (base) - 1) / (base))
-#  define div_const_roundnearest(n, base) (((n) + ((base) / 2)) / (base))
+#  define div_const_roundup(n, base) (((n) + (base) - 1ul) / (base))
+#  define div_const_roundnearest(n, base) (((n) + ((base) / 2ul)) / (base))
 #endif
 
 /* Division optimizing method proposed by T. Granlund and L. Montgomery.
