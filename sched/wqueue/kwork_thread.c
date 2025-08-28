@@ -321,7 +321,7 @@ static int work_thread(int argc, FAR char *argv[])
  ****************************************************************************/
 
 static int work_thread_create(FAR const char *name, int priority,
-                              FAR void *stack_addr, int stack_size,
+                              FAR void *stack_addr, size_t stack_size,
                               FAR struct kwork_wqueue_s *wqueue)
 {
   FAR struct kworker_s *worker = wq_get_worker(wqueue);
@@ -353,7 +353,7 @@ static int work_thread_create(FAR const char *name, int priority,
       if (stack_addr)
         {
           stack = ((FAR char *)stack_addr +
-                             (size_t)wndx * (size_t)stack_size);
+                             (size_t)wndx * stack_size);
         }
 
       ret = kthread_create_with_stack(name, priority, stack,
@@ -453,7 +453,7 @@ void work_timer_expired(wdparm_t arg)
 FAR struct kwork_wqueue_s *work_queue_create(FAR const char *name,
                                              int priority,
                                              FAR void *stack_addr,
-                                             int stack_size,
+                                             size_t stack_size,
                                              uint8_t nthreads)
 {
   FAR struct kwork_wqueue_s *wqueue = NULL;
