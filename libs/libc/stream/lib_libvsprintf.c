@@ -551,16 +551,17 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
 #endif
 
 #ifdef CONFIG_LIBC_FLOATINGPOINT
-      if (c >= 'E' && c <= 'G')
+      if ((c >= 'E' && c <= 'G') || c == 'A')
         {
           flags |= FL_FLTUPP;
           c += 'e' - 'E';
           goto flt_oper;
         }
-      else if (c >= 'e' && c <= 'g')
+      else if ((c >= 'e' && c <= 'g') || c == 'a')
         {
           double value;
           int exp;              /* Exponent of master decimal digit */
+          int radix;            /* Decimal or hexadecimal representation */
           int n;
           uint8_t sign;         /* Sign character (or 0) */
           uint8_t ndigs;        /* Number of digits to convert */
@@ -574,25 +575,39 @@ flt_oper:
           if ((flags & FL_PREC) == 0)
             {
               prec = 6;
+              if (c == 'a' || c == 'A')
+                {
+                  prec = 13;
+                }
             }
 
           flags &= ~(FL_FLTEXP | FL_FLTFIX);
 
           if (c == 'e')
             {
+              radix = 10;
               ndigs = prec + 1;
               ndecimal = 0;
               flags |= FL_FLTEXP;
             }
           else if (c == 'f')
             {
+              radix = 10;
               ndigs = DTOA_MAX_DIG;
               ndecimal = prec;
               flags |= FL_FLTFIX;
             }
+          else if (c == 'g')
+            {
+              radix = 10;
+              ndigs = prec;
+              ndecimal = 0;
+            }
           else
             {
-              ndigs = prec;
+              flags |= FL_FLTEXP;
+              radix = 16;
+              ndigs = prec + 1;
               ndecimal = 0;
             }
 
@@ -613,9 +628,8 @@ flt_oper:
 #else
           value = va_arg(ap, double);
 #endif
-
           ndigs = __dtoa_engine(value, &_dtoa, ndigs,
-                                ndecimal);
+                                ndecimal, radix);
           exp = _dtoa.exp;
 
           sign = 0;
@@ -724,7 +738,9 @@ flt_oper:
             }
           else
             {
-              n = 5;              /* 1e+00 */
+              /* Floating point format is 1e+00 or 0x1p+0 */
+
+              n = radix == 10 ? 5 : 6;
             }
 
           if (sign != 0)
@@ -759,7 +775,7 @@ flt_oper:
               stream_putc(sign, stream);
             }
 
-          if ((flags & FL_LPAD) == 0)
+          if ((flags & FL_LPAD) == 0 && (radix != 16))
             {
               while (width)
                 {
@@ -825,17 +841,41 @@ flt_oper:
             }
           else
             {
-              /* 'e(E)' format
+              /* 'e(E)' format and 'a(A)' format
                *
                * Mantissa
                */
+
+              uint8_t diff = 'a' - 'A';
+
+              if (radix == 16)
+                {
+                  stream_putc('0', stream);
+                  stream_putc((flags & FL_FLTUPP) ? 'X' : 'x', stream);
+                  if ((flags & FL_LPAD) == 0)
+                    {
+                      while (width)
+                        {
+                          stream_putc('0', stream);
+                          width--;
+                        }
+                    }
+                }
+
+              if ((flags & FL_FLTUPP) && (_dtoa.digits[0] >= 'a'))
+                {
+                  stream_putc(_dtoa.digits[0] - diff, stream);
+                }
+              else
+                {
+                  stream_putc(_dtoa.digits[0], stream);
+                }
 
               if (_dtoa.digits[0] != '1')
                 {
                   _dtoa.flags &= ~DTOA_CARRY;
                 }
 
-              stream_putc(_dtoa.digits[0], stream);
               if (prec > 0)
                 {
                   uint8_t pos;
@@ -843,8 +883,18 @@ flt_oper:
                   stream_putc('.', stream);
                   for (pos = 1; pos < 1 + prec; pos++)
                     {
-                      stream_putc(pos < ndigs ? _dtoa.digits[pos] : '0',
-                                  stream);
+                      if ((flags & FL_FLTUPP) &&
+                          (_dtoa.digits[pos] >= 'a'))
+                        {
+                          stream_putc(pos < ndigs ?
+                                      _dtoa.digits[pos] - diff : '0',
+                                      stream);
+                        }
+                      else
+                        {
+                          stream_putc(pos < ndigs ?
+                                      _dtoa.digits[pos] : '0', stream);
+                        }
                     }
                 }
               else if ((flags & FL_ALT) != 0)
@@ -854,9 +904,18 @@ flt_oper:
 
               /* Exponent */
 
-              stream_putc(flags & FL_FLTUPP ? 'E' : 'e', stream);
+              if (radix == 10)
+                {
+                  stream_putc(flags & FL_FLTUPP ? 'E' : 'e', stream);
+                }
+              else
+                {
+                  stream_putc(flags & FL_FLTUPP ? 'P' : 'p', stream);
+                }
+
               ndigs = '+';
-              if (exp < 0 || (exp == 0 && (_dtoa.flags & DTOA_CARRY) != 0))
+              if (exp < 0 ||
+                  (exp == 0 && (_dtoa.flags & DTOA_CARRY) != 0))
                 {
                   exp = -exp;
                   ndigs = '-';
@@ -865,7 +924,7 @@ flt_oper:
               stream_putc(ndigs, stream);
               c = __ultoa_invert(exp, buf, 10) - buf;
 
-              if (exp >= 0 && exp <= 9)
+              if (radix == 10 && exp >= 0 && exp <= 9)
                 {
                   stream_putc('0', stream);
                 }

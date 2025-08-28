@@ -162,6 +162,109 @@
 
 #define DTOA_ROUND_NUM        (DBL_DIG + 1)
 
+#if DBL_MAX_EXP > 1 && DBL_MAX_EXP <= 2
+#  define DTOA_HEX_SCALE_UP_NUM 1
+#endif
+#if DBL_MAX_EXP > 2 && DBL_MAX_EXP <= 4
+#  define DTOA_HEX_SCALE_UP_NUM 2
+#endif
+#if DBL_MAX_EXP > 4 && DBL_MAX_EXP <= 8
+#  define DTOA_HEX_SCALE_UP_NUM 3
+#endif
+#if DBL_MAX_EXP > 8 && DBL_MAX_EXP <= 16
+#  define DTOA_HEX_SCALE_UP_NUM 4
+#endif
+#if DBL_MAX_EXP > 16 && DBL_MAX_EXP <= 32
+#  define DTOA_HEX_SCALE_UP_NUM 5
+#endif
+#if DBL_MAX_EXP > 32 && DBL_MAX_EXP <= 64
+#  define DTOA_HEX_SCALE_UP_NUM 6
+#endif
+#if DBL_MAX_EXP > 64 && DBL_MAX_EXP <= 128
+#  define DTOA_HEX_SCALE_UP_NUM 7
+#endif
+#if DBL_MAX_EXP > 128 && DBL_MAX_EXP <= 256
+#  define DTOA_HEX_SCALE_UP_NUM 8
+#endif
+#if DBL_MAX_EXP > 256 && DBL_MAX_EXP <= 512
+#  define DTOA_HEX_SCALE_UP_NUM 9
+#endif
+#if DBL_MAX_EXP > 512 && DBL_MAX_EXP <= 1024
+#  define DTOA_HEX_SCALE_UP_NUM 10
+#endif
+#if DBL_MAX_EXP > 1024 && DBL_MAX_EXP <= 2048
+#  define DTOA_HEX_SCALE_UP_NUM 11
+#endif
+#if DBL_MAX_EXP > 2048 && DBL_MAX_EXP <= 4096
+#  define DTOA_HEX_SCALE_UP_NUM 12
+#endif
+#if DBL_MAX_EXP > 4096 && DBL_MAX_EXP <= 8192
+#  define DTOA_HEX_SCALE_UP_NUM 13
+#endif
+#if DBL_MAX_EXP > 8192 && DBL_MAX_EXP <= 16384
+#  define DTOA_HEX_SCALE_UP_NUM 14
+#endif
+#if DBL_MAX_EXP > 16384 && DBL_MAX_EXP <= 32768
+#  define DTOA_HEX_SCALE_UP_NUM 15
+#endif
+#if DBL_MAX_EXP > 32768 && DBL_MAX_EXP <= 65536
+#  define DTOA_HEX_SCALE_UP_NUM 16
+#endif
+#if DBL_MAX_EXP > 65536 && DBL_MAX_EXP <= 131072
+#  define DTOA_HEX_SCALE_UP_NUM 17
+#endif
+#if DBL_MIN_EXP <= -1 && DBL_MIN_EXP > -2
+#  define DTOA_HEX_SCALE_DOWN_NUM 1
+#endif
+#if DBL_MIN_EXP <= -2 && DBL_MIN_EXP > -4
+#  define DTOA_HEX_SCALE_DOWN_NUM 2
+#endif
+#if DBL_MIN_EXP <= -4 && DBL_MIN_EXP > -8
+#  define DTOA_HEX_SCALE_DOWN_NUM 3
+#endif
+#if DBL_MIN_EXP <= -8 && DBL_MIN_EXP > -16
+#  define DTOA_HEX_SCALE_DOWN_NUM 4
+#endif
+#if DBL_MIN_EXP <= -16 && DBL_MIN_EXP > -32
+#  define DTOA_HEX_SCALE_DOWN_NUM 5
+#endif
+#if DBL_MIN_EXP <= -32 && DBL_MIN_EXP > -64
+#  define DTOA_HEX_SCALE_DOWN_NUM 6
+#endif
+#if DBL_MIN_EXP <= -64 && DBL_MIN_EXP > -128
+#  define DTOA_HEX_SCALE_DOWN_NUM 7
+#endif
+#if DBL_MIN_EXP <= -128 && DBL_MIN_EXP > -256
+#  define DTOA_HEX_SCALE_DOWN_NUM 8
+#endif
+#if DBL_MIN_EXP <= -256 && DBL_MIN_EXP > -512
+#  define DTOA_HEX_SCALE_DOWN_NUM 9
+#endif
+#if DBL_MIN_EXP <= -512 && DBL_MIN_EXP > -1024
+#  define DTOA_HEX_SCALE_DOWN_NUM 10
+#endif
+#if DBL_MIN_EXP <= -1024 && DBL_MIN_EXP > -2048
+#  define DTOA_HEX_SCALE_DOWN_NUM 11
+#endif
+#if DBL_MIN_EXP <= -2048 && DBL_MIN_EXP > -4096
+#  define DTOA_HEX_SCALE_DOWN_NUM 12
+#endif
+#if DBL_MIN_EXP <= -4096 && DBL_MIN_EXP > -8192
+#  define DTOA_HEX_SCALE_DOWN_NUM 13
+#endif
+#if DBL_MIN_EXP <= -8192 && DBL_MIN_EXP > -16384
+#  define DTOA_HEX_SCALE_DOWN_NUM 14
+#endif
+#if DBL_MIN_EXP <= -16384 && DBL_MIN_EXP > -32768
+#  define DTOA_HEX_SCALE_DOWN_NUM 15
+#endif
+#if DBL_MIN_EXP <= -32768 && DBL_MIN_EXP > -65536
+#  define DTOA_HEX_SCALE_DOWN_NUM 16
+#endif
+#if DBL_MIN_EXP <= -65536 && DBL_MIN_EXP > -131072
+#  define DTOA_HEX_SCALE_DOWN_NUM 17
+#endif
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -181,11 +284,16 @@ extern const double g_dtoa_scale_up[];
 extern const double g_dtoa_scale_down[];
 extern const double g_dtoa_round[];
 
+extern const double g_dtoa_hex_scale_up[];
+extern const double g_dtoa_hex_scale_down[];
+extern const double g_dtoa_hex_round[];
+
+extern const char g_dtoa_hex_table[];
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
 int __dtoa_engine(double x, FAR struct dtoa_s *dtoa, int max_digits,
-                  int max_decimals);
+                  int max_decimals, int radix);
 
 #endif /* __LIBS_LIBC_STREAM_LIB_DTOA_ENGINE_H */

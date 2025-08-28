@@ -275,6 +275,220 @@ const double g_dtoa_round[] =
 #endif
 };
 
+const double g_dtoa_hex_scale_up[] =
+{
+#if DBL_MAX_EXP - 1 >= 1
+  0x1p+1,
+#endif
+#if DBL_MAX_EXP - 1 >= 2
+  0x1p+2,
+#endif
+#if DBL_MAX_EXP - 1 >= 4
+  0x1p+4,
+#endif
+#if DBL_MAX_EXP - 1 >= 8
+  0x1p+8,
+#endif
+#if DBL_MAX_EXP - 1 >= 16
+  0x1p+16,
+#endif
+#if DBL_MAX_EXP - 1 >= 32
+  0x1p+32,
+#endif
+#if DBL_MAX_EXP - 1 >= 64
+  0x1p+64,
+#endif
+#if DBL_MAX_EXP - 1 >= 128
+  0x1p+128,
+#endif
+#if DBL_MAX_EXP - 1 >= 256
+  0x1p+256,
+#endif
+#if DBL_MAX_EXP - 1 >= 512
+  0x1p+512,
+#endif
+#if DBL_MAX_EXP - 1 >= 1024
+  0x1p+1024,
+#endif
+#if DBL_MAX_EXP - 1 >= 2048
+  0x1p+2048,
+#endif
+#if DBL_MAX_EXP - 1 >= 4096
+  0x1p+4096,
+#endif
+#if DBL_MAX_EXP - 1 >= 8192
+  0x1p+8192,
+#endif
+#if DBL_MAX_EXP - 1 >= 16384
+  0x1p+16384,
+#endif
+#if DBL_MAX_EXP - 1 >= 32768
+  0x1p+32768,
+#endif
+#if DBL_MAX_EXP - 1 >= 65536
+  0x1p+65536,
+#endif
+};
+
+const double g_dtoa_hex_scale_down[] =
+{
+#if DBL_MIN_EXP <= -1
+  0x1p-1,
+#endif
+#if DBL_MIN_EXP <= -2
+  0x1p-2,
+#endif
+#if DBL_MIN_EXP <= -4
+  0x1p-4,
+#endif
+#if DBL_MIN_EXP <= -8
+  0x1p-8,
+#endif
+#if DBL_MIN_EXP <= -16
+  0x1p-16,
+#endif
+#if DBL_MIN_EXP <= -32
+  0x1p-32,
+#endif
+#if DBL_MIN_EXP <= -64
+  0x1p-64,
+#endif
+#if DBL_MIN_EXP <= -128
+  0x1p-128,
+#endif
+#if DBL_MIN_EXP <= -256
+  0x1p-256,
+#endif
+#if DBL_MIN_EXP <= -512
+  0x1p-512,
+#endif
+#if DBL_MIN_EXP <= -1024
+  0x1p-1024,
+#endif
+#if DBL_MIN_EXP <= -2048
+  0x1p-2048,
+#endif
+#if DBL_MIN_EXP <= -4096
+  0x1p-4096,
+#endif
+#if DBL_MIN_EXP <= -8192
+  0x1p-8192,
+#endif
+#if DBL_MIN_EXP <= -16384
+  0x1p-16384
+#endif
+#if DBL_MIN_EXP <= -32768
+  0x1p-32768
+#endif
+#if DBL_MIN_EXP <= -65536
+  0x1p-65536,
+#endif
+};
+const double g_dtoa_hex_round[] =
+{
+#if DBL_MANT_DIG >= 129
+  0x1p+127,
+#endif
+#if DBL_MANT_DIG >= 125
+  0x1p+123,
+#endif
+#if DBL_MANT_DIG >= 121
+  0x1p+119,
+#endif
+#if DBL_MANT_DIG >= 117
+  0x1p+115,
+#endif
+#if DBL_MANT_DIG >= 113
+  0x1p+111,
+#endif
+#if DBL_MANT_DIG >= 109
+  0x1p+107,
+#endif
+#if DBL_MANT_DIG >= 105
+  0x1p+103,
+#endif
+#if DBL_MANT_DIG >= 101
+  0x1p+99,
+#endif
+#if DBL_MANT_DIG >= 97
+  0x1p+95,
+#endif
+#if DBL_MANT_DIG >= 93
+  0x1p+91,
+#endif
+#if DBL_MANT_DIG >= 89
+  0x1p+87,
+#endif
+#if DBL_MANT_DIG >= 85
+  0x1p+83,
+#endif
+#if DBL_MANT_DIG >= 81
+  0x1p+79,
+#endif
+#if DBL_MANT_DIG >= 77
+  0x1p+75,
+#endif
+#if DBL_MANT_DIG >= 73
+  0x1p+71,
+#endif
+#if DBL_MANT_DIG >= 69
+  0x1p+67,
+#endif
+#if DBL_MANT_DIG >= 65
+  0x1p+63,
+#endif
+#if DBL_MANT_DIG >= 61
+  0x1p+59,
+#endif
+#if DBL_MANT_DIG >= 57
+  0x1p+55,
+#endif
+#if DBL_MANT_DIG >= 53
+  0x1p+51,
+#endif
+#if DBL_MANT_DIG >= 49
+  0x1p+47,
+#endif
+#if DBL_MANT_DIG >= 45
+  0x1p+43,
+#endif
+#if DBL_MANT_DIG >= 41
+  0x1p+39,
+#endif
+#if DBL_MANT_DIG >= 37
+  0x1p+35,
+#endif
+#if DBL_MANT_DIG >= 33
+  0x1p+31,
+#endif
+#if DBL_MANT_DIG >= 29
+  0x1p+27,
+#endif
+#if DBL_MANT_DIG >= 25
+  0x1p+23,
+#endif
+#if DBL_MANT_DIG >= 21
+  0x1p+19,
+#endif
+#if DBL_MANT_DIG >= 17
+  0x1p+15,
+#endif
+#if DBL_MANT_DIG >= 13
+  0x1p+11,
+#endif
+#if DBL_MANT_DIG >= 9
+  0x1p+7,
+#endif
+#if DBL_MANT_DIG >= 5
+  0x1p+3,
+#endif
+};
+
+const char g_dtoa_hex_table[16] =
+{
+  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b',
+  'c', 'd', 'e', 'f'
+};
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
