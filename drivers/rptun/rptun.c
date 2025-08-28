@@ -691,7 +691,7 @@ static uint32_t rptun_recv_command(FAR struct rptun_priv_s *priv, bool ack)
 
   if (ack && cmd != RPTUN_CMD_DONE)
     {
-      rptun_send_command(priv, RPTUN_CMD(RPTUN_CMD_ACK, 0), false);
+      rptun_send_command(priv, RPTUN_CMD(RPTUN_CMD_ACK, 0u), false);
     }
 
   return cmd;
@@ -839,7 +839,7 @@ static int rptun_dev_start(FAR struct rptun_priv_s *priv)
   argv[1] = arg1;
   argv[2] = NULL;
 
-  if (dev->stack != NULL && dev->stack_size != 0)
+  if (dev->stack != NULL && dev->stack_size != 0u)
     {
       priv->pid = kthread_create_with_stack("rptun",
                                             CONFIG_RPTUN_PRIORITY,
@@ -913,7 +913,7 @@ static void rptun_dev_panic(FAR struct rptun_priv_s *priv)
         }
       else
         {
-          rptun_send_command(priv, RPTUN_CMD(RPTUN_CMD_PANIC, 0), true);
+          rptun_send_command(priv, RPTUN_CMD(RPTUN_CMD_PANIC, 0u), true);
         }
 
       priv->rpanic = true;
