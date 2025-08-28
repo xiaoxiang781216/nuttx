@@ -331,6 +331,15 @@ static inline size_t nvs_ate_size(FAR struct nvs_fs *fs)
 }
 
 /****************************************************************************
+ * Name: nvs_is_different_block
+ ****************************************************************************/
+
+static inline bool nvs_is_different_block(uint64_t addr1, uint64_t addr2)
+{
+  return addr1 >> NVS_ADDR_BLOCK_SHIFT != addr2 >> NVS_ADDR_BLOCK_SHIFT;
+}
+
+/****************************************************************************
  * Name: nvs_close_ate_addr
  ****************************************************************************/
 
@@ -1538,6 +1547,7 @@ static int nvs_rebuild_cache(FAR struct nvs_fs *fs)
   FAR struct nvs_cache *cache_entry;
   NVS_ATE(ate, nvs_ate_size(fs));
   uint64_t addr = fs->ate_wra;
+  uint32_t block_count = 1;
   uint8_t cycle_cnt = 0;
   uint32_t count = 0;
   uint64_t ate_addr;
@@ -1552,6 +1562,14 @@ static int nvs_rebuild_cache(FAR struct nvs_fs *fs)
       if (rc)
         {
           return rc;
+        }
+
+      if (nvs_is_different_block(addr, ate_addr))
+        {
+          if (++block_count > fs->nblocks)
+            {
+              return -ERANGE;
+            }
         }
 
       if (ate->id != nvs_special_ate_id(fs) &&
@@ -1609,6 +1627,7 @@ static int nvs_find_ate(FAR struct nvs_fs *fs,
                         FAR struct nvs_ate *ate, FAR uint64_t *ate_addr)
 {
   uint32_t prev_block = NVS_INVALID_BLOCK;
+  uint32_t block_count = 1;
   bool prev_found = false;
   uint8_t cycle_cnt = 0;
   uint64_t prev_addr;
@@ -1622,6 +1641,14 @@ static int nvs_find_ate(FAR struct nvs_fs *fs,
         {
           ferr("Walk to previous ate failed, rc=%d\n", rc);
           return rc;
+        }
+
+      if (nvs_is_different_block(start_addr, prev_addr))
+        {
+          if (++block_count > fs->nblocks)
+            {
+              return -ERANGE;
+            }
         }
 
       if (ate->id == entry->id && ate->key_len == entry->key_len)
@@ -1667,6 +1694,7 @@ static int nvs_find_ate_with_key(FAR struct nvs_fs *fs,
 {
   uint32_t hash_id = nvs_fnv_hash(key, key_len);
   uint32_t prev_block = NVS_INVALID_BLOCK;
+  uint32_t block_count = 1;
   bool prev_found = false;
   uint8_t cycle_cnt = 0;
   uint64_t prev_addr;
@@ -1680,6 +1708,14 @@ static int nvs_find_ate_with_key(FAR struct nvs_fs *fs,
         {
           ferr("Walk to previous ate failed, rc=%d\n", rc);
           return rc;
+        }
+
+      if (nvs_is_different_block(start_addr, prev_addr))
+        {
+          if (++block_count > fs->nblocks)
+            {
+              return -ERANGE;
+            }
         }
 
       if (ate->id == hash_id && ate->key_len == key_len)
@@ -1795,6 +1831,11 @@ static int nvs_gc(FAR struct nvs_fs *fs)
   do
     {
       gc_prev_addr = gc_addr;
+      if (nvs_is_different_block(gc_prev_addr, stop_addr))
+        {
+          return -ERANGE;
+        }
+
       rc = nvs_prev_ate(fs, &gc_addr, gc_ate);
       if (rc)
         {
