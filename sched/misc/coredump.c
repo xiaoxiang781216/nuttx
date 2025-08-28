@@ -105,7 +105,7 @@ static struct lib_blkoutstream_s g_devstream;
 #elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
 static struct lib_mtdoutstream_s g_devstream;
 #elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-static struct lib_fileinstream_s g_devinstream;
+static struct lib_filesistream_s g_devinstream;
 static struct lib_fileoutstream_s g_devstream;
 #endif
 
@@ -1024,7 +1024,7 @@ int coredump_initialize(void)
   ret = lib_mtdoutstream_open(&g_devstream,
                               CONFIG_BOARD_COREDUMP_DEVPATH);
 #elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-  ret = lib_fileinstream_open(&g_devinstream,
+  ret = lib_filesistream_open(&g_devinstream,
                               CONFIG_BOARD_COREDUMP_DEVPATH,
                               O_RDONLY, 0666);
   if (ret < 0)
@@ -1043,7 +1043,7 @@ int coredump_initialize(void)
   if (ret < 0)
     {
 # ifdef CONFIG_BOARD_COREDUMP_MEMDEV
-      lib_fileinstream_close(&g_devinstream);
+      lib_filesistream_close(&g_devinstream);
 # endif
       _alert("%s Coredump device init failed:%d\n",
              CONFIG_BOARD_COREDUMP_DEVPATH, ret);
