@@ -2,6 +2,8 @@
 /risc-v/q[f-z]*
 /risc-v/[r-z]*
 
+-rv-virt:nest-pnsh
+
 # Boards build by CMake
 CMake,rv-virt:smp
 CMake,rv-virt:smp64
