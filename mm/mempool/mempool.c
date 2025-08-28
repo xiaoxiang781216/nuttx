@@ -694,21 +694,19 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
 size_t mempool_navail(FAR struct mempool_s *pool)
 {
   irqstate_t flags;
-  size_t ret;
+  size_t ret = SIZE_MAX;
 
   DEBUGASSERT(pool != NULL);
   mempool_init(pool);
 
   flags = spin_lock_irqsave(&pool->lock);
-  if (pool->maxalloc == 0)
+  if (pool->maxalloc != 0)
     {
-      spin_unlock_irqrestore(&pool->lock, flags);
-      return SIZE_MAX;
+      ret = pool->maxalloc > pool->nalloc ?
+            pool->maxalloc - pool->nalloc : 0;
     }
 
-  ret = pool->maxalloc > pool->nalloc ? pool->maxalloc - pool->nalloc : 0;
   spin_unlock_irqrestore(&pool->lock, flags);
-
   return ret;
 }
 
@@ -877,52 +875,53 @@ int mempool_deinit(FAR struct mempool_s *pool)
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
   FAR sq_entry_t *blk;
   size_t count = 0;
+  int ret = -EBUSY;
 
-  if (pool->nalloc != 0)
+  if (pool->nalloc == 0)
     {
-      return -EBUSY;
-    }
-
-  if (pool->initialsize >= blocksize + MEMPOOL_HEADER_SIZE)
-    {
-      count = (pool->initialsize - MEMPOOL_HEADER_SIZE) / blocksize;
-    }
-
-  if (count == 0)
-    {
-      if (pool->expandsize >= blocksize + MEMPOOL_HEADER_SIZE)
+      if (pool->initialsize >= blocksize + MEMPOOL_HEADER_SIZE)
         {
-          count = (pool->expandsize - MEMPOOL_HEADER_SIZE) / blocksize;
+          count = (pool->initialsize - MEMPOOL_HEADER_SIZE) / blocksize;
         }
-    }
+
+      if (count == 0)
+        {
+          if (pool->expandsize >= blocksize + MEMPOOL_HEADER_SIZE)
+            {
+              count = (pool->expandsize - MEMPOOL_HEADER_SIZE) / blocksize;
+            }
+        }
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
-  mempool_procfs_unregister(&pool->procfs);
+      mempool_procfs_unregister(&pool->procfs);
 #endif
 
-  while ((blk = mempool_remove_queue(pool, &pool->equeue)) != NULL)
-    {
-      blk = (FAR sq_entry_t *)((FAR char *)blk - count * blocksize);
-
-      blk = kasan_unpoison(blk, count * blocksize + MEMPOOL_HEADER_SIZE);
-      pool->free(pool, blk);
-      if (pool->expandsize >= blocksize + MEMPOOL_HEADER_SIZE)
+      while ((blk = mempool_remove_queue(pool, &pool->equeue)) != NULL)
         {
-          count = (pool->expandsize - MEMPOOL_HEADER_SIZE) / blocksize;
+          blk = (FAR sq_entry_t *)((FAR char *)blk - count * blocksize);
+
+          blk = kasan_unpoison(blk, count * blocksize + MEMPOOL_HEADER_SIZE);
+          pool->free(pool, blk);
+          if (pool->expandsize >= blocksize + MEMPOOL_HEADER_SIZE)
+            {
+              count = (pool->expandsize - MEMPOOL_HEADER_SIZE) / blocksize;
+            }
         }
+
+      if (pool->ibase)
+        {
+          pool->ibase = kasan_unpoison(pool->ibase,
+                          pool->interruptsize / blocksize * blocksize);
+          pool->free(pool, pool->ibase);
+        }
+
+      if (pool->wait && pool->expandsize == 0)
+        {
+          nxsem_destroy(&pool->waitsem);
+        }
+
+      ret = OK;
     }
 
-  if (pool->ibase)
-    {
-      pool->ibase = kasan_unpoison(pool->ibase,
-                      pool->interruptsize / blocksize * blocksize);
-      pool->free(pool, pool->ibase);
-    }
-
-  if (pool->wait && pool->expandsize == 0)
-    {
-      nxsem_destroy(&pool->waitsem);
-    }
-
-  return 0;
+  return ret;
 }
