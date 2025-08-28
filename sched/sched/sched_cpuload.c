@@ -65,7 +65,7 @@
 /* The sampling period in system timer ticks */
 
 #define CPULOAD_SAMPLING_PERIOD \
-     (TICK_PER_SEC / CONFIG_SCHED_CPULOAD_TICKSPERSEC)
+     (TICK_PER_SEC / (unsigned int)(CONFIG_SCHED_CPULOAD_TICKSPERSEC))
 
 /****************************************************************************
  * Public Data

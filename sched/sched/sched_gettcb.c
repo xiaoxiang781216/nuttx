@@ -107,7 +107,7 @@ void nxsched_put_tcb(FAR struct tcb_s *tcb)
 
       /* tcb may in EXIT_PROCESSING */
 
-      if (atomic_fetch_sub(&tcb->refs, 1) == 1)
+      if (atomic_fetch_sub(&tcb->refs, 1) == 1u)
         {
           nxsem_post(&tcb->exit_sem);
         }
@@ -120,7 +120,7 @@ void nxsched_put_tcb(FAR struct tcb_s *tcb)
 
           /* this_task may be killed and in KILL_PROCESSING */
 
-          if (atomic_fetch_sub(&tcb->refs, 1) == 1 &&
+          if (atomic_fetch_sub(&tcb->refs, 1) == 1u &&
               (atomic_read(&tcb->flags) & TCB_FLAG_KILL_PROCESSING))
             {
               nxsem_post(&tcb->exit_sem);

@@ -98,7 +98,7 @@ void nxsched_get_stateinfo(FAR struct tcb_s *tcb, FAR char *state,
 
   flags = enter_critical_section();
 
-  if (tcb->task_state == TSTATE_WAIT_SEM &&
+  if ((int)tcb->task_state == (int)TSTATE_WAIT_SEM &&
       ((FAR sem_t *)(tcb->waitobj))->flags & SEM_TYPE_MUTEX)
     {
       pid_t holder = nxmutex_get_holder((FAR mutex_t *)tcb->waitobj);

@@ -176,7 +176,7 @@ void restore_critical_section(uint16_t count);
 struct tasklist_s
 {
   DSEG dq_queue_t *list; /* Pointer to the task list */
-  uint8_t attr;          /* List attribute flags */
+  int attr;              /* List attribute flags */
 };
 
 /* This enumeration defines smp schedule task switch rule */

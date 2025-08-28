@@ -294,7 +294,7 @@ typedef enum tstate_e tstate_t;
 #define FIRST_ASSIGNED_STATE       TSTATE_TASK_ASSIGNED
 #define LAST_ASSIGNED_STATE        TSTATE_TASK_RUNNING
 #define FIRST_BLOCKED_STATE        TSTATE_TASK_INACTIVE
-#define LAST_BLOCKED_STATE         (NUM_TASK_STATES-1)
+#define LAST_BLOCKED_STATE         (tstate_t)(NUM_TASK_STATES - (tstate_t)1)
 
 /* The following is the form of a thread start-up function */
 
@@ -371,7 +371,7 @@ struct child_status_s
 {
   FAR struct child_status_s *flink;
 
-  uint8_t ch_flags;                 /* Child status:  See CHILD_FLAG_* defines */
+  int     ch_flags;                 /* Child status:  See CHILD_FLAG_* defines */
   pid_t   ch_pid;                   /* Child task ID                           */
   int     ch_status;                /* Child exit status                       */
 };

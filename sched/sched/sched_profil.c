@@ -34,7 +34,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define PROFTICK NSEC2TICK(NSEC_PER_SEC / CONFIG_SCHED_PROFILE_TICKSPERSEC)
+#define PROFTICK NSEC2TICK(NSEC_PER_SEC / \
+   (unsigned int)(CONFIG_SCHED_PROFILE_TICKSPERSEC))
 
 /****************************************************************************
  * Private Types
@@ -77,9 +78,9 @@ static int profil_timer_handler_cpu(FAR void *arg)
   flags = spin_lock_irqsave(&prof->lock);
   if (pc >= prof->lowpc && pc < prof->highpc)
     {
-      size_t idx = (pc - prof->lowpc) / 2;
+      size_t idx = (pc - prof->lowpc) / 2u;
 #if UINTMAX_MAX > SIZE_MAX
-      idx = (uintmax_t)idx * prof->scale / 65536;
+      idx = (size_t)((uintmax_t)idx * prof->scale / 65536u);
 #else
       idx = idx / 65536 * prof->scale + idx % 65536 * prof->scale / 65536;
 #endif
@@ -144,12 +145,12 @@ int profil(FAR unsigned short *buf, size_t bufsiz,
   uintptr_t highpc;
   int ret = OK;
 
-  if (scale <= 65536)
+  if (scale <= 65536u)
     {
-      if (buf != NULL && scale != 0)
+      if (buf != NULL && scale != 0u)
         {
           memset(buf, 0, bufsiz);
-          highpc = (uintmax_t)bufsiz * 65536 / scale;
+          highpc = (uintptr_t)((uintmax_t)bufsiz * 65536u / scale);
 
           flags = spin_lock_irqsave(&prof->lock);
           prof->counter = buf;
