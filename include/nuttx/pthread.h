@@ -66,10 +66,10 @@
     PTHREAD_DEFAULT_POLICY,   /* policy */ \
     PTHREAD_EXPLICIT_SCHED,   /* inheritsched */ \
     PTHREAD_CREATE_JOINABLE,  /* detachstate */ \
-    0,                        /* low_priority */ \
-    0,                        /* max_repl */ \
     NULL,                     /* stackaddr */ \
     PTHREAD_STACK_DEFAULT,    /* stacksize */ \
+    0,                        /* low_priority */ \
+    0,                        /* max_repl */ \
     {0, 0},                   /* repl_period */ \
     {0, 0},                   /* budget */ \
   }
