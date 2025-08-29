@@ -1490,13 +1490,14 @@ int sensor_custom_register(FAR struct sensor_lowerhalf_s *lower,
   strlcpy(upper->name, basename((char *)path), sizeof(upper->name));
   upper->state.nbuffer = lower->nbuffer;
   upper->lower = lower;
-  sminfo(upper->name, "Registering %s", path);
   ret = register_driver(path, &g_sensor_fops, 0666, upper);
   if (ret)
     {
+      snerr("ERROR: register failed! path:%s\n", path);
       goto drv_err;
     }
 
+  sminfo(upper->name, "Registering %s", path);
   return ret;
 
 drv_err:
@@ -1585,13 +1586,13 @@ int sensor_custom_unregister(FAR struct sensor_lowerhalf_s *lower,
 #endif
 
   upper = lower->priv;
-  sminfo(upper->name, "UnRegistering");
 
   if (upper->state.nadvertisers != 0 || upper->state.nsubscribers != 0)
     {
       return -EBUSY;
     }
 
+  sminfo(upper->name, "UnRegistering");
   unregister_driver(path);
   nxrmutex_destroy(&upper->lock);
   if (circbuf_is_init(&upper->buffer))
