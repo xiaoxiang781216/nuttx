@@ -76,7 +76,7 @@
               static_assert(GET_ARG_COUNT(__VA_ARGS__) <= 14,               \
                             "The number of sched_note_nprintf "             \
                             "parameters needs to be less than 14");         \
-              sched_note_printf_ip(tag, SCHED_NOTE_IP, __fmt__, __type__,   \
+              sched_note_printf_ip(tag, up_getpc(), __fmt__, __type__,      \
                                   ##__VA_ARGS__);                           \
             }                                                               \
           while (0)
