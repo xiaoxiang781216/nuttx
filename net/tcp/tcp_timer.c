@@ -420,6 +420,7 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
    * the connection.
    */
 
+  conn_lock(&conn->sconn);
   tcp_ip_select(conn);
 
   hdrlen = tcpip_hdrsize(conn);
@@ -437,6 +438,7 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
     {
       /* Nothing to be done */
 
+      conn_unlock(&conn->sconn);
       return;
     }
 
@@ -539,6 +541,7 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
                   /* Finally, we must free this TCP connection structure */
 
                   conn->crefs = 0;
+                  conn_unlock(&conn->sconn);
                   tcp_free(conn);
                   return;
                 }
@@ -833,6 +836,7 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
 
 done:
   tcp_update_timer(conn);
+  conn_unlock(&conn->sconn);
 }
 
 #endif /* CONFIG_NET && CONFIG_NET_TCP */

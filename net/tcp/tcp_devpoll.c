@@ -98,12 +98,10 @@ void tcp_poll(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
 
   /* Discard any currently buffered data */
 
-  conn_lock(&conn->sconn);
   if (conn->timeout)
     {
       conn->timeout = false;
       tcp_timer(dev, conn);
-      conn_unlock(&conn->sconn);
       return;
     }
 
@@ -120,6 +118,7 @@ void tcp_poll(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
        * setup may not actually be used.
        */
 
+      conn_lock(&conn->sconn);
       tcp_ip_select(conn);
 
       /* Perform the callback */
@@ -129,9 +128,8 @@ void tcp_poll(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
       /* Handle the callback response */
 
       tcp_appsend(dev, conn, result);
+      conn_unlock(&conn->sconn);
     }
-
-  conn_unlock(&conn->sconn);
 }
 
 #endif /* CONFIG_NET && CONFIG_NET_TCP */
