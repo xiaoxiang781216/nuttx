@@ -39,7 +39,6 @@ list(
   lib_libnoflush.c
   lib_libsnoflush.c
   lib_syslogstream.c
-  lib_syslograwstream.c
   lib_bufferedoutstream.c
   lib_hexdumpstream.c
   lib_base64outstream.c
@@ -50,6 +49,10 @@ list(
   lib_libvscanf.c
   lib_libvsprintf.c
   lib_ultoa_invert.c)
+
+if(CONFIG_SYSLOG)
+  list(APPEND SRCS lib_syslograwstream.c)
+endif()
 
 if(CONFIG_LIBC_FLOATINGPOINT)
   list(APPEND SRCS lib_dtoa_engine.c lib_dtoa_data.c)

@@ -87,6 +87,7 @@ config DRIVERS_NOTERAM_DEFAULT_NOOVERWRITE
 
 config DRIVERS_NOTERAM_CRASH_DUMP
 	bool "Dump noteram buffer on panic"
+	depends on SYSLOG
 	default n
 	---help---
 		If this option is enabled, dump all contents when a crash occurs.
