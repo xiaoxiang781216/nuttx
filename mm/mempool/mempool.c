@@ -371,111 +371,118 @@ static void mempool_check_callback(FAR struct mempool_s *pool,
 int mempool_init(FAR struct mempool_s *pool)
 {
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
+  int ret = OK;
 
-  if (pool->init)
+  if (!pool->init)
     {
-      return OK;
-    }
-
-  nxmutex_lock(&g_mempool_init_lock);
-  if (pool->init)
-    {
-      nxmutex_unlock(&g_mempool_init_lock);
-      return OK;
-    }
-
-  if (pool->priv == NULL && pool->alloc == NULL &&
-      pool->free == NULL && pool->check == NULL)
-    {
-      /* Default dynamic expand feature */
+      nxmutex_lock(&g_mempool_init_lock);
+      if (!pool->init)
+        {
+          if (pool->priv == NULL && pool->alloc == NULL &&
+              pool->free == NULL && pool->check == NULL)
+            {
+              /* Default dynamic expand feature */
 
 #ifdef __KERNEL__
-      pool->priv = KNR_HEAP;
+              pool->priv = KNR_HEAP;
 #else
-      pool->priv = USR_HEAP;
+              pool->priv = USR_HEAP;
 #endif
-      pool->alloc = mempool_alloc_callback;
-      pool->free  = mempool_free_callback;
-      pool->check = mempool_check_callback;
-    }
-
-  sq_init(&pool->queue);
-  sq_init(&pool->iqueue);
-  sq_init(&pool->equeue);
-  pool->nalloc = 0;
-  if (pool->interruptsize >= blocksize)
-    {
-      size_t ninterrupt = pool->interruptsize / blocksize;
-      size_t size = ninterrupt * blocksize;
-
-      pool->ibase = pool->alloc(pool, size);
-      if (pool->ibase == NULL)
-        {
-          nxmutex_unlock(&g_mempool_init_lock);
-          return -ENOMEM;
-        }
-
-      mempool_add_queue(pool, &pool->iqueue,
-                        pool->ibase, ninterrupt, blocksize);
-      kasan_poison(pool->ibase, size);
-    }
-  else
-    {
-      pool->ibase = NULL;
-    }
-
-  if (pool->initialsize >= blocksize + MEMPOOL_HEADER_SIZE)
-    {
-      size_t ninitial = (pool->initialsize - MEMPOOL_HEADER_SIZE) /
-                        blocksize;
-      size_t size = ninitial * blocksize + MEMPOOL_HEADER_SIZE;
-      FAR char *base;
-
-      if (pool->initialbase == NULL)
-        {
-          base = pool->alloc(pool, size);
-          if (base == NULL)
-            {
-              if (pool->ibase)
-                {
-                  pool->free(pool, pool->ibase);
-                }
-
-              nxmutex_unlock(&g_mempool_init_lock);
-              return -ENOMEM;
+              pool->alloc = mempool_alloc_callback;
+              pool->free  = mempool_free_callback;
+              pool->check = mempool_check_callback;
             }
 
-          mempool_add_queue(pool, &pool->queue, base, ninitial, blocksize);
-          sq_addlast((FAR sq_entry_t *)(base + ninitial * blocksize),
-                      &pool->equeue);
-          kasan_poison(base, size);
-        }
-      else
-        {
-          DEBUGASSERT(pool->initialsize >= size);
-          base = pool->initialbase;
-          mempool_add_queue(pool, &pool->queue, base, ninitial, blocksize);
-        }
-    }
+          sq_init(&pool->queue);
+          sq_init(&pool->iqueue);
+          sq_init(&pool->equeue);
+          pool->nalloc = 0;
 
-  spin_lock_init(&pool->lock);
-  if (pool->wait && pool->expandsize == 0u)
-    {
-      nxsem_init(&pool->waitsem, 0, 0);
-    }
+          if (pool->interruptsize >= blocksize)
+            {
+              size_t ninterrupt = pool->interruptsize / blocksize;
+              size_t size = ninterrupt * blocksize;
+
+              pool->ibase = pool->alloc(pool, size);
+              if (pool->ibase == NULL)
+                {
+                  ret = -ENOMEM;
+                }
+              else
+                {
+                  mempool_add_queue(pool, &pool->iqueue,
+                                    pool->ibase, ninterrupt, blocksize);
+                  kasan_poison(pool->ibase, size);
+                }
+            }
+          else
+            {
+              pool->ibase = NULL;
+            }
+
+          if (ret >= 0 &&
+              pool->initialsize >= blocksize + MEMPOOL_HEADER_SIZE)
+            {
+              size_t ninitial = (pool->initialsize - MEMPOOL_HEADER_SIZE)
+                                / blocksize;
+              size_t size = ninitial * blocksize + MEMPOOL_HEADER_SIZE;
+              FAR char *base;
+
+              if (pool->initialbase == NULL)
+                {
+                  base = pool->alloc(pool, size);
+                  if (base == NULL)
+                    {
+                      if (pool->ibase)
+                        {
+                          pool->free(pool, pool->ibase);
+                        }
+
+                      ret = -ENOMEM;
+                    }
+                  else
+                    {
+                      mempool_add_queue(pool, &pool->queue, base,
+                                        ninitial, blocksize);
+                      sq_addlast((FAR sq_entry_t *)(base + ninitial *
+                                 blocksize), &pool->equeue);
+                      kasan_poison(base, size);
+                    }
+                }
+              else
+                {
+                  DEBUGASSERT(pool->initialsize >= size);
+                  base = pool->initialbase;
+                  mempool_add_queue(pool, &pool->queue, base, ninitial,
+                                    blocksize);
+                }
+            }
+
+          if (ret >= 0)
+            {
+              spin_lock_init(&pool->lock);
+              if (pool->wait && pool->expandsize == 0u)
+                {
+                  nxsem_init(&pool->waitsem, 0, 0);
+                }
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
-  mempool_procfs_register(&pool->procfs, pool->name);
+              mempool_procfs_register(&pool->procfs, pool->name);
 #  ifdef CONFIG_MM_RECORD_STACK_DEFAULT
-  pool->procfs.backtrace = true;
+              pool->procfs.backtrace = true;
 #  elif defined(CONFIG_MM_RECORD_STACK)
-  pool->procfs.backtrace = false;
+              pool->procfs.backtrace = false;
 #  endif
 #endif
 
-  pool->init = true;
-  nxmutex_unlock(&g_mempool_init_lock);
-  return 0;
+              pool->init = true;
+            }
+        }
+
+      nxmutex_unlock(&g_mempool_init_lock);
+    }
+
+  return ret;
 }
 
 /****************************************************************************
