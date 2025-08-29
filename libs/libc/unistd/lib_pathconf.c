@@ -160,6 +160,12 @@ long fpathconf(int fildes, int name)
       case _PC_2_SYMLINKS:
         return -1;
 
+      case _PC_SYNC_IO:
+        return _POSIX_SYNC_IO;
+
+      case _PC_ASYNC_IO:
+        return _POSIX_ASYNC_IO;
+
       default:
         if (name >= 0)
           {
