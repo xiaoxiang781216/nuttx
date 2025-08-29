@@ -2655,8 +2655,6 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
             }
 
           ln_parent->ln_child[index] = ln_old;
-          qsort(ln_parent->ln_child, ln_parent->ln_count,
-                sizeof(*ln_parent->ln_child), lrofs_nodeinfo_compare);
         }
       else
         {
@@ -2669,6 +2667,9 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
               return ret;
             }
         }
+
+        qsort(ln_parent->ln_child, ln_parent->ln_count,
+              sizeof(*ln_parent->ln_child), lrofs_nodeinfo_compare);
     }
 
   if (ln_newpath == ln_parent)
