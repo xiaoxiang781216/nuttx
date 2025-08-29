@@ -90,8 +90,6 @@
 
 #define MPU_RACR_XN              (1 << 12) /* Bit 12: Instruction access disable */
 
-#define MPU_ALIGNMENT            (0xc0) /* MPU alignment in bytes */
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
