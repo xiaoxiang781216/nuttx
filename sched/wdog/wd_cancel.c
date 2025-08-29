@@ -96,13 +96,6 @@ bool wd_cancel_running(FAR struct wdog_s *wdog)
     {
       if (WDOG_GETRUNNING(cpu) == wdog)
         {
-          /* Calling wd_cancel(wdog) in the wdog expiration callback
-           * to cancel the wdog itself can lead to circular-wait,
-           * which is not allowed.
-           */
-
-          DEBUGASSERT(cpu != this_cpu());
-
           /* Mark canceling state to block the remote thread
            * restarting the wdog.
            */
@@ -259,6 +252,13 @@ int wd_cancel(FAR struct wdog_s *wdog)
       while (wd_isrunning_on(wdog, cpu))
         {
           /* CPU Relaxing. */
+
+          /* Calling wd_cancel(wdog) in the wdog expiration callback
+           * to cancel the wdog itself can lead to circular-wait,
+           * which is not allowed.
+           */
+
+          DEBUGASSERT(cpu != this_cpu());
         }
     }
 
