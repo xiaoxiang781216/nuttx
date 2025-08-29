@@ -509,107 +509,108 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout)
 #ifdef CONFIG_MM_RECORD
   FAR struct mempool_record_s *record;
 #endif
-  FAR sq_entry_t *blk;
+  FAR sq_entry_t *blk = NULL;
   irqstate_t flags;
   bool bypass;
+  bool retry;
 
   mempool_init(pool);
 
-retry:
-  flags = spin_lock_irqsave(&pool->lock);
-  if (pool->maxalloc > 0u && pool->nalloc >= pool->maxalloc)
+  do
     {
-      spin_unlock_irqrestore(&pool->lock, flags);
-      merr("ERROR: mempool_allocate: maxalloc=%zu\n", pool->maxalloc);
-      return NULL;
-    }
-
-  bypass = kasan_bypass(true);
-
-  blk = mempool_remove_queue(pool, &pool->queue);
-  if (blk == NULL)
-    {
-      if (up_interrupt_context())
+      retry = false;
+      flags = spin_lock_irqsave(&pool->lock);
+      if (pool->maxalloc > 0u && pool->nalloc >= pool->maxalloc)
         {
-          blk = mempool_remove_queue(pool, &pool->iqueue);
-          if (blk == NULL)
-            {
-              kasan_bypass(bypass);
-              spin_unlock_irqrestore(&pool->lock, flags);
-              return blk;
-            }
+          spin_unlock_irqrestore(&pool->lock, flags);
+          merr("ERROR: mempool_allocate: maxalloc=%zu\n", pool->maxalloc);
         }
       else
         {
-          size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
+          bypass = kasan_bypass(true);
 
-          kasan_bypass(bypass);
-          spin_unlock_irqrestore(&pool->lock, flags);
-          if (pool->expandsize >= blocksize + MEMPOOL_HEADER_SIZE)
+          blk = mempool_remove_queue(pool, &pool->queue);
+          if (blk == NULL)
             {
-              size_t nexpand = (pool->expandsize - MEMPOOL_HEADER_SIZE) /
-                               blocksize;
-              size_t size = nexpand * blocksize + MEMPOOL_HEADER_SIZE;
-              FAR char *base = pool->alloc(pool, size);
-
-              if (base == NULL)
+              if (up_interrupt_context())
                 {
-                  return NULL;
-                }
-
-              kasan_poison(base, size);
-
-              flags = spin_lock_irqsave(&pool->lock);
-              bypass = kasan_bypass(true);
-
-              mempool_add_queue(pool, &pool->queue,
-                                base, nexpand, blocksize);
-              sq_addlast((FAR sq_entry_t *)(base + nexpand * blocksize),
-                         &pool->equeue);
-              blk = mempool_remove_queue(pool, &pool->queue);
-            }
-          else if (!pool->wait || timeout == 0u)
-            {
-              return NULL;
-            }
-          else
-            {
-              int ret;
-
-              if (timeout == UINT_MAX)
-                {
-                  ret = nxsem_wait_uninterruptible(&pool->waitsem);
+                  blk = mempool_remove_queue(pool, &pool->iqueue);
+                  if (blk == NULL)
+                    {
+                      kasan_bypass(bypass);
+                      spin_unlock_irqrestore(&pool->lock, flags);
+                    }
                 }
               else
                 {
-                  ret = nxsem_tickwait_uninterruptible(&pool->waitsem,
-                                                       MSEC2TICK(timeout));
-                }
+                  size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
 
-              if (ret < 0)
-                {
-                  return NULL;
-                }
+                  kasan_bypass(bypass);
+                  spin_unlock_irqrestore(&pool->lock, flags);
+                  if (pool->expandsize >= blocksize + MEMPOOL_HEADER_SIZE)
+                    {
+                      size_t nexpand = (pool->expandsize -
+                                        MEMPOOL_HEADER_SIZE) / blocksize;
+                      size_t size = nexpand * blocksize +
+                                    MEMPOOL_HEADER_SIZE;
+                      FAR char *base = pool->alloc(pool, size);
 
-              goto retry;
+                      if (base != NULL)
+                        {
+                          kasan_poison(base, size);
+
+                          flags = spin_lock_irqsave(&pool->lock);
+                          bypass = kasan_bypass(true);
+
+                          mempool_add_queue(pool, &pool->queue,
+                                            base, nexpand, blocksize);
+                          sq_addlast((FAR sq_entry_t *)(base + nexpand *
+                                     blocksize), &pool->equeue);
+                          blk = mempool_remove_queue(pool, &pool->queue);
+                        }
+                    }
+                  else if (pool->wait && timeout)
+                    {
+                      int ret;
+
+                      if (timeout == UINT_MAX)
+                        {
+                          ret = nxsem_wait_uninterruptible(&pool->waitsem);
+                        }
+                      else
+                        {
+                          ret = nxsem_tickwait_uninterruptible
+                                  (&pool->waitsem, MSEC2TICK(timeout));
+                        }
+
+                      if (ret >= 0)
+                        {
+                          retry = true;
+                        }
+                    }
+                }
             }
         }
     }
+  while (retry);
 
-  pool->nalloc++;
-  kasan_bypass(bypass);
-  spin_unlock_irqrestore(&pool->lock, flags);
+  if (blk != NULL)
+    {
+      pool->nalloc++;
+      kasan_bypass(bypass);
+      spin_unlock_irqrestore(&pool->lock, flags);
 
 #ifdef CONFIG_MM_RECORD
-  record = mempool_get_record_from_block(blk);
-  DEBUGASSERT(record->magic == MEMPOOL_MAGIC_FREE);
-  mempool_record(pool, record, MEMPOOL_MAGIC_ALLOC);
+      record = mempool_get_record_from_block(blk);
+      DEBUGASSERT(record->magic == MEMPOOL_MAGIC_FREE);
+      mempool_record(pool, record, MEMPOOL_MAGIC_ALLOC);
 #endif
 
-  blk = kasan_unpoison(blk, pool->blocksize);
+      blk = kasan_unpoison(blk, pool->blocksize);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-  memset(blk, MM_ALLOC_MAGIC, pool->blocksize);
+      memset(blk, MM_ALLOC_MAGIC, pool->blocksize);
 #endif
+    }
 
   return blk;
 }
