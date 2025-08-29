@@ -113,8 +113,6 @@ void netdev_txnotify_dev(FAR struct net_driver_s *dev)
     {
       /* Notify the device driver that new TX data is available. */
 
-      netdev_lock(dev);
       dev->d_txavail(dev);
-      netdev_unlock(dev);
     }
 }
