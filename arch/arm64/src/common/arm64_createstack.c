@@ -126,12 +126,12 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, int ttype)
       tcb->stack_alloc_ptr =
 #ifdef CONFIG_TLS_ALIGNED
 #  if defined(CONFIG_ARCH_STACK_PROTECT) || defined(CONFIG_ARCH_KSTACK_PROTECT)
-      mm_memalign(*USERSPACE->us_heap, TLS_STACK_ALIGN, stack_size);
+      mm_memalign(USERSPACE_HEAP, TLS_STACK_ALIGN, stack_size);
 #  else
       group_memalign(tcb->group, TLS_STACK_ALIGN, stack_size);
 #  endif
 #elif defined(CONFIG_ARCH_STACK_PROTECT) || defined(CONFIG_ARCH_KSTACK_PROTECT)
-      mm_memalign(*USERSPACE->us_heap, STACK_ALIGNMENT, stack_size);
+      mm_memalign(USERSPACE_HEAP, STACK_ALIGNMENT, stack_size);
 #else
       group_memalign(tcb->group, STACK_ALIGNMENT, stack_size);
 #endif /* CONFIG_TLS_ALIGNED */

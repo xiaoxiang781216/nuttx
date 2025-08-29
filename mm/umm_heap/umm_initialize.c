@@ -92,7 +92,7 @@ void umm_initialize(FAR void *heap_start, size_t heap_size)
  * structure from the userspace interface.
  */
 
-  FAR struct mm_heap_s **heap = &(*USERSPACE->us_heap);
+  FAR struct mm_heap_s **heap = &USERSPACE_HEAP;
 #else
   /* Otherwise, the user heap data structures are in common .bss */
 

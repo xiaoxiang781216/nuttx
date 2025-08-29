@@ -35,7 +35,7 @@
  ****************************************************************************/
 
 #if defined(CONFIG_BUILD_PROTECTED) && defined(__KERNEL__)
-#  define GROUP_HEAP (*USERSPACE->us_heap)
+#  define GROUP_HEAP USERSPACE_HEAP
 #else
 #  define GROUP_HEAP g_mmheap
 #endif
