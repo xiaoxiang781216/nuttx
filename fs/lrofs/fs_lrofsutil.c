@@ -1273,17 +1273,17 @@ static int lrofs_copy_filecontent(FAR struct lrofs_mountpt_s *lm,
 }
 
 /****************************************************************************
- * Name: lrofs_move_renamedfile
+ * Name: lrofs_move_file
  *
  * Description:
- *   Move a renamed file in the disk
+ *   Move a file in the disk
  *
  ****************************************************************************/
 
-static int lrofs_move_renamedfile(FAR struct lrofs_mountpt_s *lm,
-                                  FAR struct lrofs_nodeinfo_s *ln_old,
-                                  FAR struct lrofs_nodeinfo_s *ln_prev,
-                                  FAR const char *newname, bool firstchild)
+static int lrofs_move_file(FAR struct lrofs_mountpt_s *lm,
+                           FAR struct lrofs_nodeinfo_s *ln_old,
+                           FAR struct lrofs_nodeinfo_s *ln_prev,
+                           bool firstchild, FAR const char *newname)
 {
   int ret;
   int16_t ndx;
@@ -1303,7 +1303,15 @@ static int lrofs_move_renamedfile(FAR struct lrofs_mountpt_s *lm,
   info = lrofs_devload32(lm, ndx + LROFS_FHDR_INFO);
   checksum = lrofs_devload32(lm, ndx + LROFS_FHDR_CHKSUM);
   ln_parent = ln_old->ln_parent;
-  fhdr_len = LROFS_ALIGNUP(LROFS_FHDR_NAME + strlen(newname) + 1);
+  if (newname != NULL)
+    {
+      fhdr_len = LROFS_ALIGNUP(LROFS_FHDR_NAME + strlen(newname) + 1);
+    }
+  else
+    {
+      fhdr_len = LROFS_ALIGNUP(LROFS_FHDR_NAME + ln_old->ln_namesize + 1);
+    }
+
   offset = lrofs_add_sparenode(lm, fhdr_len,
                                IS_DIRECTORY(ln_old->ln_next));
   if (offset == 0)
@@ -1331,8 +1339,7 @@ static int lrofs_move_renamedfile(FAR struct lrofs_mountpt_s *lm,
 
       old_offset = ln_old->ln_origoffset +
                    LROFS_ALIGNUP(LROFS_FHDR_NAME + ln_old->ln_namesize + 1);
-      new_offset = offset +
-                   LROFS_ALIGNUP(LROFS_FHDR_NAME + strlen(newname) + 1);
+      new_offset = offset + fhdr_len;
       ret = lrofs_copy_filecontent(lm, ln_old, old_offset, new_offset);
       if (ret < 0)
         {
@@ -1354,8 +1361,17 @@ static int lrofs_move_renamedfile(FAR struct lrofs_mountpt_s *lm,
   lrofs_devwrite32(lm, ndx + LROFS_FHDR_INFO, info);
   lrofs_devwrite32(lm, ndx + LROFS_FHDR_SIZE, ln_old->ln_size);
   lrofs_devwrite32(lm, ndx + LROFS_FHDR_CHKSUM, checksum);
-  memcpy(lm->lm_devbuffer + ndx + LROFS_FHDR_NAME,
-         ln_old->ln_name, strlen(newname) + 1);
+  if (newname != NULL)
+    {
+      memcpy(lm->lm_devbuffer + ndx + LROFS_FHDR_NAME,
+             ln_old->ln_name, strlen(newname) + 1);
+    }
+  else
+    {
+      memcpy(lm->lm_devbuffer + ndx + LROFS_FHDR_NAME,
+             ln_old->ln_name, ln_old->ln_namesize + 1);
+    }
+
   ret = lrofs_devcachewrite(lm, SEC_NSECTORS(lm, offset));
   if (ret < 0)
     {
@@ -2224,11 +2240,9 @@ int lrofs_write_file(FAR struct file *filep, FAR const char *buffer,
     }
 
   if (savedbuflen > 0 &&
-      lrofs_alloc_spareregion(&lm->lm_sparelist,
-                              savedoffset,
-                              savedoffset + savedbuflen) != 0)
+      lrofs_truncate_file(filep, lf->lf_size + savedbuflen) < 0)
     {
-      ferr("ERROR: lrofs_alloc_spareregion failed\n");
+      ferr("ERROR: lrofs_truncate_file failed\n");
       return -ENOSPC;
     }
 
@@ -2354,16 +2368,46 @@ int lrofs_truncate_file(FAR struct file *filep, off_t length)
     }
   else if (length > lf->lf_size)
     {
-      /* Alloc the space on disk */
+      /* Try to extend the space at the original position */
 
       ret = lrofs_alloc_spareregion(&lm->lm_sparelist,
                                     lf->lf_startoffset + lf->lf_size,
                                     lf->lf_startoffset + length);
       if (ret < 0)
         {
-          ferr("ERROR: lrofs_alloc_spareregion failed\n");
-          return ret;
-        }
+          /* Find a longer new space region */
+
+          int fhdr_len;
+          bool firstchild;
+          FAR struct lrofs_nodeinfo_s *ln_prev;
+
+          ln_prev = lrofs_get_prevnode(ln, &firstchild);
+          if (ln_prev == NULL)
+            {
+              return -ENOENT;
+            }
+
+          ret = lrofs_move_file(lm, ln, ln_prev, firstchild, NULL);
+          if (ret < 0)
+            {
+              ferr("ERROR: lrofs_move_file failed\n");
+              return ret;
+            }
+
+          /* Try to alloc space region again */
+
+          fhdr_len = LROFS_ALIGNUP(LROFS_FHDR_NAME + ln->ln_namesize + 1);
+          ret = lrofs_alloc_spareregion(&lm->lm_sparelist,
+                                ln->ln_origoffset + fhdr_len + ln->ln_size,
+                                ln->ln_origoffset + fhdr_len + length);
+          if (ret < 0)
+            {
+              ferr("ERROR: lrofs_alloc_spareregion failed\n");
+              return ret;
+            }
+
+      lf->lf_startoffset = ln->ln_origoffset + fhdr_len;
+    }
 
       lm->lm_volsize += length - lf->lf_size;
     }
@@ -2622,11 +2666,10 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
 
       if (strlen(newname) > LROFS_ALIGNUP(ln_old->ln_namesize + 1))
         {
-          ret = lrofs_move_renamedfile(lm, ln_old, ln_prev, newname,
-                                       firstchild);
+          ret = lrofs_move_file(lm, ln_old, ln_prev, firstchild, newname);
           if (ret < 0)
             {
-              ferr("ERROR: lrofs_move_renamedfile failed: %d\n", ret);
+              ferr("ERROR: lrofs_move_file failed: %d\n", ret);
               return ret;
             }
         }
