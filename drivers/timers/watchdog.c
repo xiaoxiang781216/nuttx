@@ -308,7 +308,7 @@ static void watchdog_automonitor_stop(FAR struct watchdog_upperhalf_s *upper)
 #  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_TIMER)
       upper->timer->ops->stop(upper->timer);
 #  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_WDOG)
-      wd_cancel(&upper->wdog);
+      wd_try_cancel(&upper->wdog);
 #  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_WORKER)
       work_cancel(LPWORK, &upper->work);
 #  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_IDLE)
