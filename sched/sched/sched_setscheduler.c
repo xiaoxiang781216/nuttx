@@ -257,6 +257,10 @@ int nxsched_set_scheduler(pid_t pid, int policy,
             }
         }
     }
+  else
+    {
+      ret = -ESRCH;
+    }
 
   /* Set the new priority */
 
