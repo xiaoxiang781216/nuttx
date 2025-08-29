@@ -158,7 +158,7 @@ void uart_recvchars(FAR uart_dev_t *dev)
     {
       int nexthead = rxbuf->head + 1 < rxbuf->size ? rxbuf->head + 1 : 0;
       bool is_full = (nexthead == rxbuf->tail);
-      FAR char *pbuf = NULL;
+      FAR char *pbuf;
       char ch;
 
 #ifdef CONFIG_SERIAL_IFLOWCONTROL_WATERMARKS
@@ -205,16 +205,11 @@ void uart_recvchars(FAR uart_dev_t *dev)
               break;
             }
         }
-#else
-      if (is_full)
-        {
-          break;
-        }
 #endif
 
       /* Get this next character from the hardware */
 
-      if (dev->ops->recvbuf)
+      if (!is_full && dev->ops->recvbuf)
         {
           ssize_t ret;
 
@@ -245,7 +240,7 @@ void uart_recvchars(FAR uart_dev_t *dev)
               rxbuf->head = 0;
             }
         }
-      else if (dev->ops->receive)
+      else
         {
           unsigned int status;
 
