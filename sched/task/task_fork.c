@@ -48,6 +48,106 @@
 #ifdef CONFIG_ARCH_HAVE_FORK
 
 /****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: task_setup
+ *
+ * Description: allocates and configures the child task's TCB.
+ *
+ * Input Parameters:
+ *   ptcb    - tcb of current calling task
+ *   parent  - tcb of parent task who to fork
+ *   child   - tcb of forked child task
+ *   ttype   - child tcb flag type, KERNEL or TASK
+ *   retaddr - Return address
+ *
+ * Returned Value:
+ *   This is a NuttX internal function so it follows the convention that
+ *   0 (OK) is returned on success and a negated is returned on failure.
+ *
+ ****************************************************************************/
+
+static int task_setup(FAR struct tcb_s *ptcb,
+                      FAR struct tcb_s *parent,
+                      FAR struct tcb_s *child,
+                      int ttype,
+                      start_t retaddr)
+{
+  FAR char **argv;
+  size_t stack_size;
+  int priority;
+  int ret;
+
+  /* Duplicate the parent tasks environment */
+
+  ret = env_dup(child->group, environ);
+  if (ret >= 0)
+    {
+      /* Associate file descriptors with the new task */
+
+      ret = group_setuptaskfiles(child, NULL, false);
+      if (ret >= OK)
+        {
+          /* Set the task name */
+
+          argv = nxsched_get_stackargs(parent);
+          nxtask_setup_name(child, argv[0]);
+
+          /* Allocate the stack for the TCB */
+
+          stack_size = (uintptr_t)ptcb->stack_base_ptr -
+                       (uintptr_t)ptcb->stack_alloc_ptr +
+                       ptcb->adj_stack_size;
+
+          ret = up_create_stack(child, stack_size, ttype);
+          if (ret >= OK)
+            {
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_KERNEL_STACK)
+              /* Allocate the kernel stack */
+
+              if (ttype != TCB_FLAG_TTYPE_KERNEL)
+                {
+                  ret = up_addrenv_kstackalloc(child);
+                }
+#endif
+
+              /* Get the priority of the parent task */
+
+#ifdef CONFIG_PRIORITY_INHERITANCE
+              priority = ptcb->base_priority;   /* "Normal," unboosted priority */
+#else
+              priority = ptcb->sched_priority;  /* Current priority */
+#endif
+
+              /* Initialize the task control block.
+               * This calls up_initial_state()
+               */
+
+              sinfo("Child priority=%d start=%p\n", priority, retaddr);
+              ret = nxtask_setup_scheduler(child, priority, retaddr,
+                                           ptcb->entry.main, ttype);
+              if (ret >= OK)
+                {
+                  /* Setup thread local storage */
+
+                  ret = tls_dup_info(child, parent);
+                  if (ret >= OK)
+                    {
+                      /* Setup to pass parameters to the new task */
+
+                      ret = nxtask_setup_stackargs(child, argv[0], &argv[1]);
+                    }
+                }
+            }
+        }
+    }
+
+  return ret;
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -98,13 +198,10 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
 {
   FAR struct tcb_s *ptcb = this_task();
   FAR struct tcb_s *parent = NULL;
-  FAR struct tcb_s *child;
-  FAR char **argv;
-  size_t stack_size;
+  FAR struct tcb_s *child = NULL;
   size_t heap_size;
-  int ttype;
-  int priority;
-  int ret;
+  int ttype = TCB_FLAG_TTYPE_TASK;
+  int ret = OK;
 
   DEBUGASSERT(retaddr != NULL);
 
@@ -118,172 +215,89 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
       ttype = TCB_FLAG_TTYPE_KERNEL;
       parent = ptcb;
     }
-  else
+  else if ((atomic_read(&ptcb->flags) & TCB_FLAG_TTYPE_MASK) ==
+           TCB_FLAG_TTYPE_TASK)
     {
-      /* Fork'ed from a user task or pthread */
+      parent = ptcb;
+    }
+  else if ((parent = nxsched_get_tcb(ptcb->group->tg_pid)) == NULL)
+    {
+      ret = -ENOENT;
+    }
 
-      ttype = TCB_FLAG_TTYPE_TASK;
-      if ((atomic_read(&ptcb->flags) & TCB_FLAG_TTYPE_MASK) ==
-          TCB_FLAG_TTYPE_TASK)
+  if (ret >= OK)
+    {
+      /* Allocate a TCB for the child task. */
+
+      child = kmm_zalloc(sizeof(struct tcb_s) + sizeof(struct task_group_s));
+      if (!child)
         {
-          parent = ptcb;
+          serr("ERROR: Failed to allocate TCB\n");
+          ret = -ENOMEM;
         }
       else
         {
-          parent = nxsched_get_tcb(ptcb->group->tg_pid);
-          if (parent == NULL)
+          atomic_fetch_or(&child->flags, TCB_FLAG_FREE_TCB);
+
+          /* Initialize the task join */
+
+          nxtask_joininit(child);
+
+          nxsem_init(&child->exit_sem, 0, 0);
+
+          /* Allocate a new task group with the same privileges
+           * as the parent
+           */
+
+#if defined(CONFIG_MM_TASK_HEAP) && !defined(CONFIG_BUILD_KERNEL)
+          heap_size = kumm_malloc_size(parent->group->tg_heap);
+#else
+          heap_size = 0;
+#endif
+
+#if defined(CONFIG_ARCH_ADDRENV)
+          /* Join the parent address environment */
+
+          if (ttype != TCB_FLAG_TTYPE_KERNEL)
             {
-              ret = -ENOENT;
-              goto errout;
+              ret = addrenv_join(parent, child);
+            }
+#endif
+
+          if (ret >= OK)
+            {
+              ret = group_initialize(child, ttype, heap_size);
+              if (ret >= 0)
+                {
+                  ret = task_setup(ptcb, parent, child, ttype, retaddr);
+                  if (ret >= OK)
+                    {
+                      /* Now we have enough in place that we can join
+                       * the group
+                       */
+
+                      group_postinitialize(child);
+                      sinfo("parent=%p, returning child=%p\n",
+                            parent, child);
+                    }
+                }
             }
         }
     }
 
-  /* Allocate a TCB for the child task. */
-
-  child = kmm_zalloc(sizeof(struct tcb_s) + sizeof(struct task_group_s));
-  if (!child)
-    {
-      serr("ERROR: Failed to allocate TCB\n");
-      ret = -ENOMEM;
-      goto errout;
-    }
-
-  atomic_fetch_or(&child->flags, TCB_FLAG_FREE_TCB);
-
-  /* Initialize the task join */
-
-  nxtask_joininit(child);
-
-  nxsem_init(&child->exit_sem, 0, 0);
-
-  /* Allocate a new task group with the same privileges as the parent */
-
-#if defined(CONFIG_MM_TASK_HEAP) && !defined(CONFIG_BUILD_KERNEL)
-  heap_size = kumm_malloc_size(parent->group->tg_heap);
-#else
-  heap_size = 0;
-#endif
-
-#if defined(CONFIG_ARCH_ADDRENV)
-  /* Join the parent address environment */
-
-  if (ttype != TCB_FLAG_TTYPE_KERNEL)
-    {
-      ret = addrenv_join(parent, child);
-      if (ret < 0)
-        {
-          goto errout_with_tcb;
-        }
-    }
-#endif
-
-  ret = group_initialize(child, ttype, heap_size);
-  if (ret < 0)
-    {
-      goto errout_with_tcb;
-    }
-
-  /* Duplicate the parent tasks environment */
-
-  ret = env_dup(child->group, environ);
-  if (ret < 0)
-    {
-      goto errout_with_tcb;
-    }
-
-  /* Associate file descriptors with the new task */
-
-  ret = group_setuptaskfiles(child, NULL, false);
-  if (ret < OK)
-    {
-      goto errout_with_tcb;
-    }
-
-  /* Set the task name */
-
-  argv = nxsched_get_stackargs(parent);
-  nxtask_setup_name(child, argv[0]);
-
-  /* Allocate the stack for the TCB */
-
-  stack_size = (uintptr_t)ptcb->stack_base_ptr -
-               (uintptr_t)ptcb->stack_alloc_ptr + ptcb->adj_stack_size;
-
-  ret = up_create_stack(child, stack_size, ttype);
-  if (ret < OK)
-    {
-      goto errout_with_tcb;
-    }
-
-#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_KERNEL_STACK)
-  /* Allocate the kernel stack */
-
-  if (ttype != TCB_FLAG_TTYPE_KERNEL)
-    {
-      ret = up_addrenv_kstackalloc(child);
-      if (ret < 0)
-        {
-          goto errout_with_tcb;
-        }
-    }
-#endif
-
-  /* Get the priority of the parent task */
-
-#ifdef CONFIG_PRIORITY_INHERITANCE
-  priority = ptcb->base_priority;   /* "Normal," unboosted priority */
-#else
-  priority = ptcb->sched_priority;  /* Current priority */
-#endif
-
-  /* Setup thread local storage */
-
-  ret = tls_dup_info(child, parent);
-  if (ret < OK)
-    {
-      goto errout_with_tcb;
-    }
-
-  /* Setup to pass parameters to the new task */
-
-  ret = nxtask_setup_stackargs(child, argv[0], &argv[1]);
-  if (ret < OK)
-    {
-      goto errout_with_tcb;
-    }
-
-  /* Initialize the task control block.  This calls up_initial_state() */
-
-  sinfo("Child priority=%d start=%p\n", priority, retaddr);
-  ret = nxtask_setup_scheduler(child, priority, retaddr,
-                               ptcb->entry.main, ttype);
-  if (ret < OK)
-    {
-      goto errout_with_tcb;
-    }
-
-  /* Now we have enough in place that we can join the group */
-
-  group_postinitialize(child);
-  sinfo("parent=%p, returning child=%p\n", parent, child);
   if (parent != ptcb)
     {
       nxsched_put_tcb(parent);
+    }
+
+  if (ret < OK)
+    {
+      set_errno(-ret);
+      nxsched_release_tcb(child, ttype);
+      child = NULL;
     }
 
   return child;
-
-errout_with_tcb:
-  nxsched_release_tcb((FAR struct tcb_s *)child, ttype);
-errout:
-  if (parent != ptcb)
-    {
-      nxsched_put_tcb(parent);
-    }
-
-  set_errno(-ret);
-  return NULL;
 }
 
 /****************************************************************************
