@@ -111,6 +111,7 @@
 #define _PERFBASE       (0x4300) /* Perf ioctl commands */
 #define _MSIOCBASE      (0x4400) /* Mouse ioctl commands */
 #define _PTPBASE        (0x4500) /* PTP ioctl commands */
+#define _MTDLOGBASE     (0x4600) /* MTD LOG ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 #define _SAFETYBASE     (0x8c00) /* Safety modules ioctl commands */
 
@@ -787,6 +788,13 @@
 
 #define _PTPIOCVALID(c)       (_IOC_TYPE(c)==_PTPBASE)
 #define _PTPIOC(nr)           _IOC(_PTPBASE,nr)
+
+/* MTD LOG driver ioctl definitions *****************************************/
+
+/* see nuttx/include/mtd_log.h */
+
+#define _MTDLOGIOCVALID(c)    (_IOC_TYPE(c)==_MTDLOGBASE)
+#define _MTDLOGIOC(nr)        _IOC(_MTDLOGBASE,nr)
 
 /****************************************************************************
  * Public Type Definitions

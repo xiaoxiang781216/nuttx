@@ -31,6 +31,10 @@ if(CONFIG_MTD)
     list(APPEND SRCS mtd_config.c)
   endif()
 
+  if(CONFIG_MTDLOG)
+    list(APPEND SRCS mtd_log.c)
+  endif()
+
   if(CONFIG_MTD_PARTITION)
     list(APPEND SRCS mtd_partition.c)
   endif()
