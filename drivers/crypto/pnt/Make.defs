@@ -67,11 +67,13 @@ $(PNT_NANO_DIR): $(PNT_NANO_ZIP)
 	$(Q) mv -T $(PNT_NANO_DIR)-$(PNT_GIT_COMMIT_HASH) $(PNT_NANO_DIR)
 	$(Q) $(foreach PATCH_FILE, $(sort $(wildcard $(PNT_WRAPPER_DIR)/*.patch)), $(PATCH) -d $(PNT_NANO_DIR) < $(PATCH_FILE);)
 
+ifeq ($(wildcard $(PNT_NANO_DIR)/.git),)
 context:: $(PNT_NANO_DIR)
 
 distclean::
 	$(call DELFILE, $(PNT_NANO_ZIP))
 	$(call DELDIR, $(PNT_NANO_DIR))
+endif
 
 # Include crypto device driver build support
 
