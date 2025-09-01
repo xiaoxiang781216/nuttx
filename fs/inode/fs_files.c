@@ -75,7 +75,14 @@ static void fdlist_get_by_index(FAR struct fdlist *list,
   *filep = fdp1->f_file;
   if (*filep != NULL)
     {
-      (*filep)->f_refs++;
+      if ((*filep)->f_refs > 0)
+        {
+          (*filep)->f_refs++;
+        }
+      else
+        {
+          *filep = NULL;
+        }
     }
 
   spin_unlock_irqrestore_notrace(&list->fl_lock, flags);
