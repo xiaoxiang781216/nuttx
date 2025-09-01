@@ -898,7 +898,6 @@ void _assert(FAR const char *filename, int linenum,
 #ifdef CONFIG_ARCH_LOWPUTC
       dump_mini_info(regs);
 #endif
-      panic_notifier_call_chain(PANIC_KERNEL_FINAL, NULL);
       reset_board(); /* Should not return. */
     }
 
