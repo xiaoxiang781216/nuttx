@@ -1728,7 +1728,7 @@ void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
 
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_dump(*driver, tag, type))
+      if (!note_isenabled_dump(*driver, tag, NOTE_DUMP_PRINTF))
         {
           continue;
         }
