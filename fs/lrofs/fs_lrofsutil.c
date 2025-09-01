@@ -2518,6 +2518,7 @@ int lrofs_remove(FAR struct lrofs_mountpt_s *lm,
   struct lrofs_entryname_s le;
   uint32_t totalsize;
   bool firstchild;
+  int i;
   int ret;
 
   if (ln_parent == NULL)
@@ -2594,7 +2595,7 @@ int lrofs_remove(FAR struct lrofs_mountpt_s *lm,
   if (isdir)
     {
       FAR struct lrofs_nodeinfo_s *ln_temp;
-      for (int i = 0; i < ln->ln_count; i++)
+      for (i = 0; i < ln->ln_count; i++)
         {
           ln_temp = ln->ln_child[i];
           totalsize = LROFS_ALIGNUP(LROFS_VHDR_VOLNAME +
@@ -2630,6 +2631,7 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
   FAR struct lrofs_nodeinfo_s *ln_prev;
   FAR struct lrofs_nodeinfo_s *ln_parent;
   bool firstchild;
+  int i;
   int ret;
   int index = -1;
 
@@ -2646,7 +2648,7 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
   /* Get the original index in ln_child */
 
   ln_parent = ln_old->ln_parent;
-  for (int i = 0; i < ln_parent->ln_count; i++)
+  for (i = 0; i < ln_parent->ln_count; i++)
     {
       if (ln_parent->ln_child[i] == ln_old)
         {
@@ -2688,6 +2690,11 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
             }
 
           ln_old = tmp;
+          for (i = 0; i < ln_old->ln_count; i++)
+            {
+              ln_old->ln_child[i]->ln_parent = ln_old;
+            }
+
           ln_old->ln_namesize = strlen(newname);
           memcpy(ln_old->ln_name, newname, strlen(newname) + 1);
           ret = lrofs_update_filename(lm, ln_old);
@@ -2740,7 +2747,7 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
 
   if (ln_parent->ln_count > 1)
     {
-      for (int i = 0; i < ln_parent->ln_count; i++)
+      for (i = 0; i < ln_parent->ln_count; i++)
         {
           if (ln_parent->ln_child[i] == ln_old)
             {
@@ -2767,7 +2774,7 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
 
   /* Get new prev nodeinfo */
 
-  for (int i = 0 ; i < ln_newpath->ln_count; i++)
+  for (i = 0 ; i < ln_newpath->ln_count; i++)
     {
       ln_prev = ln_newpath->ln_child[i];
       if ((ln_prev->ln_next & RFNEXT_OFFSETMASK) == 0)
