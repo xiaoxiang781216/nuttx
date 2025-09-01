@@ -126,6 +126,9 @@
                                  MPU_MAIR_OUTER_RA | MPU_MAIR_OUTER_WA | \
                                  MPU_MAIR_INNER_NT | MPU_MAIR_INNER_WB | \
                                  MPU_MAIR_INNER_RA | MPU_MAIR_INNER_WA)
+
+#define MPU_ALIGN  0x40
+
 struct mpu_region_s
 {
   /* Region Base Address */

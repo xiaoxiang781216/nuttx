@@ -58,52 +58,98 @@
 void qemu_userspace(void)
 {
   uint8_t   *src;
-  uint8_t   *dest;
+  uint8_t   *start;
   uint8_t   *end;
   uintptr_t  datastart;
   uintptr_t  dataend;
 
-  /* Clear all of user-space .bss */
+#ifdef CONFIG_PERCPU_SECTION
+  uintptr_t  offset = USERSPACE->us_offset_percpu * this_cpu();
+#endif
 
-  DEBUGASSERT(USERSPACE->us_bssstart != 0 &&
-              USERSPACE->us_bssend != 0 &&
-              USERSPACE->us_bssstart <= USERSPACE->us_bssend);
-
-  dest = (uint8_t *)USERSPACE->us_bssstart;
-  end  = (uint8_t *)USERSPACE->us_bssend;
-
-  while (dest != end)
+  if (this_cpu() == 0)
     {
-      *dest++ = 0;
+      /* Clear all of user-space .bss */
+
+      DEBUGASSERT(USERSPACE->us_bssstart != 0 &&
+                  USERSPACE->us_bssend != 0 &&
+                  USERSPACE->us_bssstart <= USERSPACE->us_bssend);
+
+      start = (uint8_t *)USERSPACE->us_bssstart;
+      end   = (uint8_t *)USERSPACE->us_bssend;
+
+      memset(start, 0, end - start);
+
+      /* Initialize all of user-space .data */
+
+      DEBUGASSERT(USERSPACE->us_datasource != 0 &&
+                  USERSPACE->us_datastart != 0 &&
+                  USERSPACE->us_dataend != 0 &&
+                  USERSPACE->us_datastart <= USERSPACE->us_dataend);
+
+      src   = (uint8_t *)USERSPACE->us_datasource;
+      start = (uint8_t *)USERSPACE->us_datastart;
+      end   = (uint8_t *)USERSPACE->us_dataend;
+
+      memcpy(start, src, end - start);
+
+      DEBUGASSERT(USERSPACE->us_textend >= USERSPACE->us_textstart);
     }
 
-  /* Initialize all of user-space .data */
-
-  DEBUGASSERT(USERSPACE->us_datasource != 0 &&
-              USERSPACE->us_datastart != 0 &&
-              USERSPACE->us_dataend != 0 &&
-              USERSPACE->us_datastart <= USERSPACE->us_dataend);
-
-  src  = (uint8_t *)USERSPACE->us_datasource;
-  dest = (uint8_t *)USERSPACE->us_datastart;
-  end  = (uint8_t *)USERSPACE->us_dataend;
-
-  while (dest != end)
+#ifdef CONFIG_PERCPU_SECTION
+  if (USERSPACE->us_bssend_percpu - USERSPACE->us_bssstart_percpu != 0)
     {
-      *dest++ = *src++;
+      start = (uint8_t *)USERSPACE->us_bssstart_percpu;
+      end   = (uint8_t *)USERSPACE->us_bssend_percpu;
+      memset(start + offset, 0, end - start);
     }
+
+  if (USERSPACE->us_dataend_percpu - USERSPACE->us_datastart_percpu != 0)
+    {
+      src   = (uint8_t *)USERSPACE->us_datasource_percpu;
+      start = (uint8_t *)USERSPACE->us_datastart_percpu;
+      end   = (uint8_t *)USERSPACE->us_dataend_percpu;
+      memcpy(start + offset, src, end - start);
+    }
+
+  if (USERSPACE->us_bssend_percpu - USERSPACE->us_datastart_percpu != 0)
+    {
+      start = (uint8_t *)USERSPACE->us_datastart_percpu;
+      end   = (uint8_t *)USERSPACE->us_bssend_percpu;
+#ifdef CONFIG_BMP
+      start += offset;
+      end   += offset;
+#else
+      /* When SMP able to access all percpu-data by all cpu */
+
+      end   += USERSPACE->us_offset_percpu * CONFIG_NCPUS;
+#endif
+
+      mpu_user_intsram((uintptr_t)start, end - start);
+    }
+#endif
 
   DEBUGASSERT(USERSPACE->us_textend >= USERSPACE->us_textstart);
 
   datastart = MIN(USERSPACE->us_datastart, USERSPACE->us_bssstart);
   dataend   = MAX(USERSPACE->us_dataend,   USERSPACE->us_bssend);
 
+#ifdef CONFIG_SMP
+  if (this_cpu() != 0)
+    {
+      /* When SMP core-N will not do heap init again. */
+
+      dataend = USRAM_END;
+    }
+#endif
+
   DEBUGASSERT(dataend >= datastart);
 
   /* Configure user FLASH and SRAM spaces */
 
+  mpu_user_intsram(datastart, dataend - datastart);
+
   mpu_showtype();
   mpu_user_flash(UFLASH_START, UFLASH_SIZE);
-  mpu_user_intsram(USRAM_START, dataend - datastart);
   mpu_control(true);
 }

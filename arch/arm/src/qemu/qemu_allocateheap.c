@@ -28,7 +28,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/userspace.h>
-
+#include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
 
 #ifdef CONFIG_MM_KERNEL_HEAP
@@ -81,13 +81,22 @@
 
 void up_allocate_heap(void **heap_start, size_t *heap_size)
 {
-#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
   /* Get the size and position of the user-space heap.
    * This heap begins after the user-space .bss section.
    */
 
-  uintptr_t ubase = (uintptr_t)USERSPACE->us_bssend;
-  size_t    usize = (uintptr_t)USRAM_END - ubase;
+  uintptr_t ubase = USERSPACE->us_bssend;
+  uintptr_t uend  = USRAM_END;
+  size_t    usize = uend - ubase;
+
+#ifdef CONFIG_BMP
+  usize = usize / CONFIG_NCPUS;
+#  ifdef MPU_ALIGN
+  usize = ALIGN_DOWN(usize, MPU_ALIGN);
+#  endif
+
+  ubase += usize * this_cpu();
+#endif
 
   /* Return the user-space heap settings */
 
@@ -99,7 +108,6 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 #endif
 
   /* user space access to user heap is done in qemu_userspace() */
-#endif
 }
 
 /****************************************************************************
@@ -112,13 +120,24 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP) && \
-    defined(__KERNEL__)
+#ifdef CONFIG_MM_KERNEL_HEAP
 void up_allocate_kheap(void **heap_start, size_t *heap_size)
 {
+  uintptr_t base = (uintptr_t)g_idle_topstack;
+  uintptr_t end  = KSRAM_END;
+  uintptr_t size = end - base;
+
+#ifdef CONFIG_BMP
+  size = size / CONFIG_NCPUS;
+  size = ALIGN_DOWN(size, MM_ALIGN);
+  base += size * this_cpu();
+#endif
+
+  DEBUGASSERT(size > CONFIG_MM_KERNEL_HEAPSIZE);
+
   /* Return the kernel heap settings. */
 
-  *heap_start = (void *)g_idle_topstack;
-  *heap_size = KSRAM_END - g_idle_topstack;
+  *heap_start = (void *)base;
+  *heap_size  = size;
 }
-#endif /* CONFIG_BUILD_PROTECTED && CONFIG_MM_KERNEL_HEAP */
+#endif /* CONFIG_MM_KERNEL_HEAP */
