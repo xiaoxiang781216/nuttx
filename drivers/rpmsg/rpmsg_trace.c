@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/rpmsg/rpmsg_note.c
+ * drivers/rpmsg/rpmsg_trace.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -42,83 +42,84 @@
  * Private data
  ****************************************************************************/
 
-static FAR struct note_driver_s *g_rpmsg_note_drv;
-static spinlock_t g_rpmsg_note_lock = SP_UNLOCKED;
+static FAR struct note_driver_s *g_rpmsg_trace_drv;
+static spinlock_t g_rpmsg_trace_lock = SP_UNLOCKED;
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: rpmsg_note_trace
+ * Name: rpmsg_trace
  ****************************************************************************/
 
-void rpmsg_note_trace(FAR const char *name, bool bt, FAR const void *buf,
-                      size_t len, FAR const char *format, ...)
+void rpmsg_trace(FAR const char *name, bool bt, FAR const void *buf,
+                 size_t len, FAR const char *format, ...)
 {
   va_list ap;
 
   va_start(ap, format);
-  rpmsg_note_vtrace(name, bt, buf, len, format, ap);
+  rpmsg_vtrace(name, bt, buf, len, format, ap);
   va_end(ap);
 }
 
 /****************************************************************************
- * Name: rpmsg_note_vtrace
+ * Name: rpmsg_vtrace
  ****************************************************************************/
 
-void rpmsg_note_vtrace(FAR const char *name, bool bt, FAR const void *buf,
-                       size_t len, FAR const char *format, va_list ap)
+void rpmsg_vtrace(FAR const char *name, bool bt, FAR const void *buf,
+                  size_t len, FAR const char *format, va_list ap)
 {
   irqstate_t flags;
 
-  if (rpmsg_procfs_note_allow(name))
+  if (rpmsg_procfs_trace_allow(name))
     {
-#if defined(CONFIG_RPMSG_NOTE_BACKTRACE) && CONFIG_RPMSG_NOTE_BACKTRACE > 0
+#if defined(CONFIG_RPMSG_TRACE_BACKTRACE) && CONFIG_RPMSG_TRACE_BACKTRACE > 0
       if (bt)
         {
-          FAR void *buffer[CONFIG_RPMSG_NOTE_BACKTRACE];
-          char buf[BACKTRACE_BUFFER_SIZE(CONFIG_RPMSG_NOTE_BACKTRACE)];
+          FAR void *buffer[CONFIG_RPMSG_TRACE_BACKTRACE];
+          char buf[BACKTRACE_BUFFER_SIZE(CONFIG_RPMSG_TRACE_BACKTRACE)];
           struct va_format vaf;
           vaf.fmt = format;
           vaf.va = &ap;
 
-          backtrace(buffer, CONFIG_RPMSG_NOTE_BACKTRACE);
+          backtrace(buffer, CONFIG_RPMSG_TRACE_BACKTRACE);
           backtrace_format(buf, sizeof(buf), buffer,
-                          CONFIG_RPMSG_NOTE_BACKTRACE);
-          flags = spin_lock_irqsave(&g_rpmsg_note_lock);
-          note_driver_printf(g_rpmsg_note_drv, NOTE_TAG_RPMSG,
+                          CONFIG_RPMSG_TRACE_BACKTRACE);
+          flags = spin_lock_irqsave(&g_rpmsg_trace_lock);
+          note_driver_printf(g_rpmsg_trace_drv, NOTE_TAG_RPMSG,
                             "%pV, %s", &vaf, buf);
         }
       else
 #endif
         {
-          flags = spin_lock_irqsave(&g_rpmsg_note_lock);
-          note_driver_vprintf(g_rpmsg_note_drv, NOTE_TAG_RPMSG, format, &ap);
+          flags = spin_lock_irqsave(&g_rpmsg_trace_lock);
+          note_driver_vprintf(g_rpmsg_trace_drv, NOTE_TAG_RPMSG,
+                              format, &ap);
         }
 
       while (len > 0)
         {
-          size_t written = note_driver_binary(g_rpmsg_note_drv,
+          size_t written = note_driver_binary(g_rpmsg_trace_drv,
                                               NOTE_TAG_RPMSG, buf, len);
           buf += written;
           len -= written;
         }
 
-      spin_unlock_irqrestore(&g_rpmsg_note_lock, flags);
+      spin_unlock_irqrestore(&g_rpmsg_trace_lock, flags);
     }
 }
 
 /****************************************************************************
- * Name: rpmsg_note_initialize
+ * Name: rpmsg_trace_initialize
  ****************************************************************************/
 
-int rpmsg_note_initialize(void)
+int rpmsg_trace_initialize(void)
 {
-  g_rpmsg_note_drv = noteram_initialize("/dev/note/rpmsg",
-                                        CONFIG_RPMSG_NOTE_BUFSIZE,
+  g_rpmsg_trace_drv = noteram_initialize("/dev/note/rpmsg",
+                                        CONFIG_RPMSG_TRACE_BUFSIZE,
                                         true, true, true);
-  if (g_rpmsg_note_drv == NULL)
+  if (g_rpmsg_trace_drv == NULL)
     {
       rpmsgerr("failed to initialize note driver.\n");
       return -ENOMEM;

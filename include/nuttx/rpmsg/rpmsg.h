@@ -139,13 +139,13 @@ int rpmsg_ioctl(FAR const char *cpuname, int cmd, unsigned long arg);
 int rpmsg_panic(FAR const char *cpuname);
 void rpmsg_dump_all(void);
 
-#ifdef CONFIG_RPMSG_NOTE
-void rpmsg_note_trace(FAR const char *name, bool bt, FAR const void *buf,
+#ifdef CONFIG_RPMSG_TRACE
+void rpmsg_trace(FAR const char *name, bool bt, FAR const void *buf,
                       size_t len, FAR const char *format, ...);
-void rpmsg_note_vtrace(FAR const char *name, bool bt, FAR const void *buf,
+void rpmsg_vtrace(FAR const char *name, bool bt, FAR const void *buf,
                        size_t len, FAR const char *format, va_list ap);
 #else
-#  define rpmsg_note_trace(name, bt, buf, len, format, ...) \
+#  define rpmsg_trace(name, bt, buf, len, format, ...) \
      do \
        { \
          (void)(name); \
@@ -154,7 +154,7 @@ void rpmsg_note_vtrace(FAR const char *name, bool bt, FAR const void *buf,
          (void)(format); \
        } \
      while (0)
-#  define rpmsg_note_vtrace(name, bt, buf, len, format, ap) \
+#  define rpmsg_vtrace(name, bt, buf, len, format, ap) \
      do \
        { \
          (void)(name); \
@@ -164,7 +164,7 @@ void rpmsg_note_vtrace(FAR const char *name, bool bt, FAR const void *buf,
          (void)(ap); \
        } \
      while (0)
-#endif /* CONFIG_RPMSG_NOTE */
+#endif /* CONFIG_RPMSG_TRACE */
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/rpmsg/rpmsg_note.h
+ * drivers/rpmsg/rpmsg_trace.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,8 +20,8 @@
  *
  ****************************************************************************/
 
-#ifndef __DRIVERS_RPMSG_RPMSG_NOTE_H
-#define __DRIVERS_RPMSG_RPMSG_NOTE_H
+#ifndef __DRIVERS_RPMSG_RPMSG_TRACE_H
+#define __DRIVERS_RPMSG_RPMSG_TRACE_H
 
 /****************************************************************************
  * Included Files
@@ -33,10 +33,10 @@
  * Public Function Prototypes
  ****************************************************************************/
 
-#ifdef CONFIG_RPMSG_NOTE
-int rpmsg_note_initialize(void);
+#ifdef CONFIG_RPMSG_TRACE
+int rpmsg_trace_initialize(void);
 #else
-#  define rpmsg_note_initialize()
+#  define rpmsg_trace_initialize()
 #endif
 
-#endif /* __DRIVERS_RPMSG_RPMSG_NOTE_H */
+#endif /* __DRIVERS_RPMSG_RPMSG_TRACE_H */

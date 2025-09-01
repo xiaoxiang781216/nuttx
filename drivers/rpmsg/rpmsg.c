@@ -38,7 +38,7 @@
 #include <nuttx/semaphore.h>
 
 #include "rpmsg.h"
-#include "rpmsg_note.h"
+#include "rpmsg_trace.h"
 #include "rpmsg_test.h"
 #include "rpmsg_router.h"
 #include "rpmsg_procfs.h"
@@ -343,7 +343,7 @@ static int rpmsg_create_wqueues(FAR struct rpmsg_wqueue_s *wqueues,
 
 void rpmsg_initialize(void)
 {
-  rpmsg_note_initialize();
+  rpmsg_trace_initialize();
   rpmsg_procfs_initialize();
 #ifdef CONFIG_RPMSG_WQUEUE_GLOBAL
   rpmsg_create_wqueues(g_rpmsg_wqueues, "glb");

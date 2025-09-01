@@ -465,15 +465,15 @@ static void rpmsg_port_rx_callback(FAR struct rpmsg_port_s *port,
           metal_mutex_release(&rdev->lock);
         }
 
-      rpmsg_note_trace(ept->name, false, rphdr, len,
-                       "[Port] rx ept->cb start cb:%p rdev:%p hdr:%p len:%d",
-                       ept, ept->name, ept->cb, rdev, rphdr, len);
+      rpmsg_trace(ept->name, false, rphdr, len,
+                  "[Port] rx ept->cb start cb:%p rdev:%p hdr:%p len:%d",
+                  ept, ept->name, ept->cb, rdev, rphdr, len);
 
       status = ept->cb(ept, data, rphdr->len, rphdr->src, ept->priv);
 
-      rpmsg_note_trace(ept->name, false, NULL, 0,
-                       "[Port] rx ept->cb start cb:%p rdev:%p hdr:%p len:%d",
-                       ept, ept->name, ept->cb, rdev, rphdr, len);
+      rpmsg_trace(ept->name, false, NULL, 0,
+                  "[Port] rx ept->cb start cb:%p rdev:%p hdr:%p len:%d",
+                  ept, ept->name, ept->cb, rdev, rphdr, len);
 
       if (status < 0 && status != RPMSG_SUCCESS_BUFFER_RELEASED)
         {

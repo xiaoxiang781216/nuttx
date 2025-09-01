@@ -26,8 +26,8 @@ ifeq ($(CONFIG_RPMSG),y)
 
 CSRCS += rpmsg.c
 
-ifeq ($(CONFIG_RPMSG_NOTE),y)
-CSRCS += rpmsg_note.c
+ifeq ($(CONFIG_RPMSG_TRACE),y)
+CSRCS += rpmsg_trace.c
 endif
 
 ifeq ($(CONFIG_RPMSG_PING),y)

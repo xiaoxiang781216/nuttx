@@ -237,10 +237,10 @@ static ssize_t rpmsg_procfs_write(FAR struct file *filep,
  ****************************************************************************/
 
 /****************************************************************************
- * Name: rpmsg_procfs_note_allow
+ * Name: rpmsg_procfs_trace_allow
  ****************************************************************************/
 
-bool rpmsg_procfs_note_allow(FAR const char *ept_name)
+bool rpmsg_procfs_trace_allow(FAR const char *ept_name)
 {
   return fnmatch(g_rpmsg_procfs_filter, ept_name, 0) == 0;
 }
