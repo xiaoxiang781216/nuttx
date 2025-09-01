@@ -265,6 +265,9 @@ long sysconf(int name)
       case _SC_AIO_LISTIO_MAX:
         return AIO_LISTIO_MAX;
 
+      case _SC_MQ_PRIO_MAX:
+        return MQ_PRIO_MAX;
+
       default:
 #if 0 /* Assume valid but not implemented for the time being */
         errcode = EINVAL;
