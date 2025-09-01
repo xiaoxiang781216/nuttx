@@ -111,6 +111,11 @@ static bool
 goldfish_events_send_keyboard_event(FAR struct goldfish_events_s *events,
                                     FAR struct goldfish_input_event *evt)
 {
+  if (events->keyboardlower.priv == NULL)
+    {
+      return false;
+    }
+
   if (evt->type == EV_KEY)
     {
       keyboard_event(&(events->keyboardlower),
@@ -130,6 +135,11 @@ static bool
 goldfish_events_send_mouse_event(FAR struct goldfish_events_s *events,
                                  FAR struct goldfish_input_event *evt)
 {
+  if (events->mouselower.priv == NULL)
+    {
+      return false;
+    }
+
   if (evt->type == EV_REL)
     {
       switch (evt->code)
@@ -191,6 +201,11 @@ goldfish_events_send_touch_event(FAR struct goldfish_events_s *events,
                                  FAR struct goldfish_input_event *evt)
 {
   FAR struct touch_sample_s *touchsample = &events->touchsample[0];
+
+  if (events->touchlower.priv == NULL)
+    {
+      return false;
+    }
 
   if (evt->type == EV_ABS)
     {
