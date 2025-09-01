@@ -270,9 +270,35 @@ static inline_function void write_msr(unsigned int msr, unsigned long val)
                    : "memory");
 }
 
+static inline_function void apic_write(unsigned int offset, unsigned long val)
+{
+#ifdef CONFIG_ARCH_X86_64_X2APIC
+  write_msr((offset >> 4) + MSR_X2APIC_BASE, val);
+#else
+  uintptr_t addr = APIC_BASE + offset;
+
+  /* xAPIC access must be 32-bit aligned */
+
+  *((FAR volatile uint32_t *)addr) = val;
+#endif
+}
+
+static inline_function unsigned long apic_read(unsigned int offset)
+{
+#ifdef CONFIG_ARCH_X86_64_X2APIC
+  return read_msr((offset >> 4) + MSR_X2APIC_BASE);
+#else
+  uintptr_t addr = APIC_BASE + offset;
+
+  /* xAPIC access must be 32-bit aligned */
+
+  return *((FAR volatile uint32_t *)addr);
+#endif
+}
+
 static inline_function unsigned int up_apic_cpu_id(void)
 {
-  return read_msr(MSR_X2APIC_ID);
+  return apic_read(APIC_ID);
 }
 
 /****************************************************************************
@@ -369,6 +395,10 @@ void x86_64_stack_color(void *stackbase, size_t nbytes);
 
 int x86_64_tlb_handler(int irq, void *c, void *arg);
 void x86_64_tlb_shootdown(void);
+
+/* Defined in intel64_irq.c */
+
+void x86_64_icr_write(uint8_t cpu, uint32_t delivery);
 
 #endif /* __ASSEMBLY__ */
 
