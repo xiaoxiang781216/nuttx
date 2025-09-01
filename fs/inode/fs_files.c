@@ -585,6 +585,10 @@ int fdlist_dupfile(FAR struct fdlist *list, int oflags, int minfd,
 #ifdef CONFIG_FDCHECK
   minfd = fdcheck_restore(minfd);
 #endif
+  if (minfd >= OPEN_MAX)
+    {
+      return -EINVAL;
+    }
 
   i = minfd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
   j = minfd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
