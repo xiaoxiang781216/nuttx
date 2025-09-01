@@ -60,11 +60,11 @@
 struct iphdr
 {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-  unsigned int ihl:4;
-  unsigned int version:4;
+  uint8_t ihl:4;
+  uint8_t version:4;
 #elif __BYTE_ORDER == __BIG_ENDIAN
-  unsigned int version:4;
-  unsigned int ihl:4;
+  uint8_t version:4;
+  uint8_t ihl:4;
 #else
 # error "unknown endian"
 #endif
@@ -79,6 +79,33 @@ struct iphdr
   uint32_t daddr;
 
   /* The options start here. */
+};
+
+/* Structure of an internet header, naked of options. */
+
+struct ip
+{
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+  uint8_t ip_hl:4;           /* Header length */
+  uint8_t ip_v:4;            /* Version */
+#endif
+#if __BYTE_ORDER == __BIG_ENDIAN
+  uint8_t ip_v:4;            /* Version */
+  uint8_t ip_hl:4;           /* Header length */
+#endif
+  uint8_t ip_tos;            /* Type of service */
+  uint16_t ip_len;           /* Total length */
+  uint16_t ip_id;            /* Identification */
+  uint16_t ip_off;           /* Fragment offset field */
+#define IP_RF 0x8000         /* Reserved fragment flag */
+#define IP_DF 0x4000         /* Dont fragment flag */
+#define IP_MF 0x2000         /* More fragments flag */
+#define IP_OFFMASK 0x1fff    /* Mask for fragmenting bits */
+  uint8_t ip_ttl;            /* Time to live */
+  uint8_t ip_p;              /* Protocol */
+  uint16_t ip_sum;           /* Checksum */
+  struct in_addr ip_src;     /* Source address */
+  struct in_addr ip_dst;     /* Destination address */
 };
 
 /****************************************************************************
