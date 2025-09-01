@@ -267,7 +267,7 @@ static int arm_start(struct oneshot_lowerhalf_s *lower,
   count  = arm_timer_phy_count();
   count += ts->tv_sec * freq + ts->tv_nsec * freq / NSEC_PER_SEC;
 
-  arm_timer_phy_set_absolute(next_cnt);
+  arm_timer_phy_set_absolute(count);
 
   /* Try to unmask the timer irq in timer controller
    * in case of arm_tick_cancel is called.
