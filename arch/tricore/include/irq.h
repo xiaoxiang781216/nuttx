@@ -44,9 +44,95 @@
 #include <arch/chip/irq.h>
 #include <arch/arch.h>
 
+#include <IfxCpu.h>
+
 /****************************************************************************
  * Pre-processor Prototypes
  ****************************************************************************/
+
+/* Upper CSA */
+
+#define REG_UPCXI           0
+#define REG_PSW             1
+#define REG_A10             2
+#define REG_UA11            3
+#define REG_D8              4
+#define REG_D9              5
+#define REG_D10             6
+#define REG_D11             7
+#define REG_A12             8
+#define REG_A13             9
+#define REG_A14             10
+#define REG_A15             11
+#define REG_D12             12
+#define REG_D13             13
+#define REG_D14             14
+#define REG_D15             15
+
+/* Lower CSA */
+
+#define REG_LPCXI           0
+#define REG_LA11            1
+#define REG_A2              2
+#define REG_A3              3
+#define REG_D0              4
+#define REG_D1              5
+#define REG_D2              6
+#define REG_D3              7
+#define REG_A4              8
+#define REG_A5              9
+#define REG_A6              10
+#define REG_A7              11
+#define REG_D4              12
+#define REG_D5              13
+#define REG_D6              14
+#define REG_D7              15
+
+#define REG_RA              REG_UA11
+#define REG_SP              REG_A10
+#define REG_UPC             REG_UA11
+#define REG_LPC             REG_LA11
+
+#define TC_CONTEXT_REGS     (16)
+#define TC_CONTEXT_SIZE     (sizeof(void *) * TC_CONTEXT_REGS)
+#define TC_CONTEXT_ALIGNED(addr) \
+  (((uintptr_t)(addr) & (TC_CONTEXT_SIZE - 1)) == 0)
+
+#define XCPTCONTEXT_REGS    (TC_CONTEXT_REGS * 2)
+#define XCPTCONTEXT_SIZE    (sizeof(void *) * XCPTCONTEXT_REGS)
+
+/* PSW: Program Status Word Register */
+
+#define PSW_CDE             (1 << 7) /* Bits 7: Call Depth Count Enable */
+#define PSW_IS              (1 << 9) /* Bits 9: Interrupt Stack Control */
+#define PSW_IO              (10)     /* Bits 10-11: Access Privilege Level Control (I/O Privilege) */
+#  define PSW_MODE_MASK     (3 << PSW_IO)
+#  define PSW_IO_USER0      (0 << PSW_IO)
+#  define PSW_IO_USER1      (1 << PSW_IO)
+#  define PSW_IO_SUPERVISOR (2 << PSW_IO)
+
+#define PSW_PRS_MASK        (3 << 12) | (1 << 15)
+#define PSW_PRS_USER_SET    (1)
+#define PSW_PRS_USER        (((PSW_PRS_USER_SET & 3) << 12) | ((PSW_PRS_USER_SET & 4) << 13))
+
+/* PCXI: Previous Context Information and Pointer Register */
+
+#define PCXI_UL             (1 << 20) /* Bits 20: Upper or Lower Context Tag */
+#define PCXI_PIE            (1 << 21) /* Bits 21: Previous Interrupt Enable */
+
+/* FCX: Free CSA List Head Pointer Register */
+
+#define FCX_FCXO            (0)       /* Bits 0-15: FCX Offset Address */
+#define FCX_FCXS            (16)      /* Bits 16-19: FCX Segment Address */
+#define FCX_FCXO_MASK       (0xffff << FCX_FCXO)
+#define FCX_FCXS_MASK       (0xf    << FCX_FCXS)
+#define FCX_FREE            (FCX_FCXS_MASK | FCX_FCXO_MASK) /* Free CSA manipulation */
+
+#define TRICORE_SRCNUM_PER_GPSR  8
+#define TRICORE_SRC2IRQ(src_addr) \
+  (((uintptr_t)(src_addr) - (uintptr_t)&MODULE_SRC) / 4)
+#define TRICORE_GPSR_IRQNUM(src_cpu, dest_cpu)  \
+  TRICORE_SRC2IRQ(&SRC_GPSR0_SR0 + src_cpu * 8 + dest_cpu)
 
 /* For use with EABI and floating point, the stack must be aligned to 8-byte
  * addresses.
@@ -63,6 +149,45 @@ extern "C"
 #else
 #define EXTERN extern
 #endif
+
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
+struct xcptcontext
+{
+  /* These are saved copies of the context used during
+   * signal processing.
+   */
+
+  uintptr_t *saved_regs;
+
+  /* Register save area with XCPTCONTEXT_SIZE, only valid when:
+   * 1.The task isn't running or
+   * 2.The task is interrupted
+   * otherwise task is running, and regs contain the stale value.
+   */
+
+  uintptr_t *regs;
+
+#ifdef CONFIG_LIB_SYSCALL
+  /* The following array holds information needed to return from each nested
+   * system call.
+   */
+
+  int nsyscalls;
+  uintptr_t *syscall_regs[CONFIG_SYS_NNEST];
+#endif
+
+#ifdef CONFIG_BUILD_PROTECTED
+  /* This is the saved address to use when returning from a user-space
+   * signal handler.
+   */
+
+  uint32_t sigreturn;
+
+#endif
+};
 
 /****************************************************************************
  * Public Data
@@ -236,8 +361,6 @@ static inline_function uintptr_t up_getusrsp(void *regs)
   return csaregs[REG_SP];
 }
 
-#endif /* __ASSEMBLY__ */
-
 /****************************************************************************
  * Name: up_getusrpc
  ****************************************************************************/
@@ -249,5 +372,6 @@ static inline_function uintptr_t up_getusrsp(void *regs)
 #ifdef __cplusplus
 }
 #endif
+#endif /* __ASSEMBLY__ */
 
 #endif /* __ARCH_TRICORE_INCLUDE_IRQ_H */
