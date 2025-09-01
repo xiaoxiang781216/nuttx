@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <nuttx/streams.h>
+#include <fcntl.h>
 
 /****************************************************************************
  * Public Functions
@@ -49,6 +50,13 @@ int vfprintf(FAR FILE *stream, FAR const IPTR char *fmt, va_list ap)
   flockfile(stream);
   n = lib_vsprintf(&stdoutstream.common, fmt, ap);
   funlockfile(stream);
+
+  /* Check if the underlying file descriptor has been successfully written */
+
+  if (stream->fs_flags & __FS_FLAG_ERROR)
+    {
+      return ERROR;
+    }
 
   return n;
 }
