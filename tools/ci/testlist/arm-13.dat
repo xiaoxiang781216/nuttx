@@ -2,6 +2,10 @@
 
 /arm/stm32h*,CONFIG_ARM_TOOLCHAIN_CLANG
 
+-nucleo-h743zi:elf
+-olimex-stm32-p407:kelf
+-stm32h745i-disco:lvgl
+
 # Boards build by CMake
 
 CMake,b-l072z-lrwan1:adc

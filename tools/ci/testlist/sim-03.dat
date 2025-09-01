@@ -1,5 +1,10 @@
 /sim/*/*/*/[o-z]*
 
+-sim:posix_test
+-sim:sqlite
+-sim:tflm
+-sim:wamr
+
 # macOS doesn't support 32bit anymore(CONFIG_SIM_M32=y)
 -Darwin,sim:posix_spawn
 -Darwin,sim:rpproxy

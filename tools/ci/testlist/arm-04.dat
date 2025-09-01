@@ -11,3 +11,4 @@
 /arm/lpc54xx,CONFIG_ARM_TOOLCHAIN_CLANG
 
 -lc823450-xgevk:posix_spawn
+-ea3131:pgnsh

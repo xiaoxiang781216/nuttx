@@ -1,1 +1,3 @@
 /risc-v/qemu-rv/rv-virt/configs/[a-c]*
+
+-rv-virt:citest

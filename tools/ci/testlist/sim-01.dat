@@ -1,6 +1,8 @@
 /sim/*/*/*/[a-b]*
 /sim/*/*/*/c[0-i]*
 
+-sim:citest
+
 # macOS doesn't have ALSA
 -Darwin,sim:alsa
 

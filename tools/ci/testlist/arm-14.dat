@@ -10,5 +10,6 @@
 -launchxl-cc1310:nsh
 -lm3s6432-s2e:nsh
 -lm3s6965-ek:qemu-nxflat
+-lm3s6965-ek:qemu-protected
 -tms570ls31x-usb-kit:nsh
 -tlsr8278adk80d:nsh

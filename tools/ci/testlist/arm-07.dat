@@ -12,3 +12,14 @@
 
 -sam3u-ek:knsh
 -same70-qmtech:mcuboot-loader
+-ucans32k146:se05x
+
+# undefined symbol: __atomic_load
+-samd21-xplained:nsh
+-arduino-m0:usbnsh
+-arduino-m0:nsh
+-xiao-seeeduino:nsh
+-samd20-xplained:nsh
+-circuit-express:usbnsh
+-circuit-express:nsh
+-saml21-xplained:nsh
