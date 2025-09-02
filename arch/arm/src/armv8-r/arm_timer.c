@@ -59,7 +59,7 @@
 #  define GIC_IRQ_PHY_TIMER      GIC_IRQ_NONSEC_PHY_TIMER
 #endif
 
-#define ARM_ARCH_TIMER_IRQ       GIC_IRQ_VIRT_TIMER
+#define ARM_ARCH_TIMER_IRQ       GIC_IRQ_PHY_TIMER
 #define ARM_ARCH_TIMER_PRIO      IRQ_DEFAULT_PRIORITY
 #define ARM_ARCH_TIMER_FLAGS     IRQ_TYPE_LEVEL
 
@@ -253,7 +253,7 @@ static int arm_start(struct oneshot_lowerhalf_s *lower,
   uint64_t count;
   struct arm_oneshot_lowerhalf_s *priv =
     (struct arm_oneshot_lowerhalf_s *)lower;
-  uint32_t freq = priv->frequency;
+  uint64_t freq = priv->frequency;
 
   DEBUGASSERT(priv && callback && ts);
 
