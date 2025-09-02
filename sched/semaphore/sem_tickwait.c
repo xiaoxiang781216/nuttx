@@ -107,7 +107,7 @@ int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
 
           /* Stop the watchdog timer */
 
-          wd_try_cancel(&rtcb->waitdog);
+          wd_cancel(&rtcb->waitdog);
         }
     }
 

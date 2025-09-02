@@ -276,7 +276,6 @@ bool wd_insert(FAR struct wdog_s *wdog, clock_t expired,
 int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
                      wdentry_t wdentry, wdparm_t arg)
 {
-  int cpu;
   int ret = -EINVAL;
   irqstate_t flags;
   bool reassess = false;
@@ -295,8 +294,6 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
       /* If the wdog is canceling, restarting the wdog is not allowed. */
 
 #ifdef CONFIG_SCHED_TICKLESS
-      cpu   = this_cpu();
-
       /* We need to reassess timer if the watchdog
        * list head has changed.
        */
@@ -313,7 +310,7 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
        * the reassess proccess is disabled.
        */
 
-      reassess &= !g_wdtimernested[cpu];
+      reassess &= !g_wdtimernested[this_cpu()];
 
       leave_critical_section(flags);
 
@@ -328,7 +325,6 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
         }
 #else
       UNUSED(reassess);
-      UNUSED(cpu);
 
       /* Check if the watchdog has been started. If so, delete it. */
 
