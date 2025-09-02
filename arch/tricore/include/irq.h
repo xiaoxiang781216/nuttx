@@ -213,7 +213,7 @@ EXTERN volatile bool g_interrupt_context[CONFIG_SMP_NCPUS];
 noinstrument_function
 static inline_function int up_cpu_index(void)
 {
-  return IfxCpu_getCoreId();
+  return IfxCpu_getCoreIndex();
 }
 #endif /* CONFIG_ARCH_HAVE_MULTICPU */
 
