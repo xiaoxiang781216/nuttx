@@ -575,6 +575,14 @@ class MMHeap(Value, p.MMHeap):
         self.name = name or "<noname>"
         self._regions = None
 
+        # Check if heap node is accessible
+        try:
+            for start, end in self.regions:
+                start.read_memory()
+                end.read_memory()
+        except gdb.MemoryError:
+            raise ValueError(f"Heap node not accessible: {heap}")
+
     def __repr__(self) -> str:
         regions = [
             f"{hex(start.address)}~{hex(end.address)}" for start, end in self.regions
@@ -647,11 +655,23 @@ def get_heaps() -> List[MMHeap]:
     heaps = []
     meminfo: p.ProcfsMeminfoEntry = utils.gdb_eval_or_none("g_procfs_meminfo")
     if not meminfo and (heap := utils.parse_and_eval("g_mmheap")):
-        heaps.append(MMHeap(heap))
+        try:
+            heaps.append(MMHeap(heap))
+        except Exception:
+            pass
 
-    while meminfo:
-        heaps.append(MMHeap(meminfo.heap, name=meminfo.name.string()))
-        meminfo = meminfo.next
+    try:
+        while meminfo:
+            try:
+                heap = MMHeap(meminfo.heap, name=meminfo.name.string())
+                heaps.append(heap)
+            except Exception:
+                pass
+
+            meminfo = meminfo.next
+    except gdb.MemoryError:
+        # procfs not accessible
+        pass
 
     return heaps
 
