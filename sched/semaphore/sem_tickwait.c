@@ -116,7 +116,7 @@ int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
 
   /* Stop the watchdog timer */
 
-  wd_try_cancel(&rtcb->waitdog);
+  wd_cancel(&rtcb->waitdog);
 
   /* We can now restore interrupts */
 

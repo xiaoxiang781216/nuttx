@@ -83,12 +83,12 @@
 #endif
 
 /****************************************************************************
- * Public Data
+ * Private Data
  ****************************************************************************/
 
-/* The hazard-pointers used for check if cores hold references to wdog. */
-
-FAR volatile struct wdog_s *g_wdrunning[CONFIG_SMP_NCPUS];
+#ifdef CONFIG_SCHED_TICKLESS
+static unsigned int g_wdtimernested[CONFIG_SMP_NCPUS];
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -100,6 +100,7 @@ FAR volatile struct wdog_s *g_wdrunning[CONFIG_SMP_NCPUS];
  * Description:
  *   Check if the timer for the watchdog at the head of list is ready to
  *   run. If so, remove the watchdog from the list and execute it.
+ *   Note: This function should always be called in the interrupt context.
  *
  * Input Parameters:
  *   ticks - current time in ticks
@@ -115,13 +116,17 @@ static inline_function clock_t wd_expiration(clock_t ticks)
   irqstate_t         flags;
   wdentry_t          func;
   wdparm_t           arg;
-  int                cpu;
-  clock_t            ret = 0;
+  clock_t            ret = 0u;
 
-  DEBUGASSERT(up_interrupt_context());
+  flags = enter_critical_section();
 
-  flags = spin_lock_irqsave(&g_wdspinlock);
-  cpu   = this_cpu();
+#ifdef CONFIG_SCHED_TICKLESS
+  /* Increment the nested watchdog timer count to handle cases where wd_start
+   * is called in the watchdog callback functions.
+   */
+
+  g_wdtimernested[this_cpu()]++;
+#endif
 
   /* Process the watchdog at the head of the list as well as any
    * other watchdogs that became ready to run at this time
@@ -139,10 +144,6 @@ static inline_function clock_t wd_expiration(clock_t ticks)
           break;
         }
 
-      /* Acquire the hazard pointer to indicate the wdog is ocupied */
-
-      g_wdrunning[cpu] = wdog;
-
       /* Remove the watchdog from the head of the list */
 
       list_delete(&wdog->node);
@@ -150,27 +151,23 @@ static inline_function clock_t wd_expiration(clock_t ticks)
       /* Indicate that the watchdog is no longer active. */
 
       func = wdog->func;
-      arg  = wdog->arg;
+      arg = wdog->arg;
       wdog->func = NULL;
 
       /* Execute the watchdog function */
 
       up_setpicbase(wdog->picbase);
-      spin_unlock_irqrestore(&g_wdspinlock, flags);
 
       CALL_FUNC(func, arg);
-
-      flags = spin_lock_irqsave(&g_wdspinlock);
     }
 
-  /* Release the hazard-pointer to show no reference held.
-   * Since this function is called only in the interrupt context,
-   * the cpu should not change after the unlock/lock operation.
-   */
+#ifdef CONFIG_SCHED_TICKLESS
+  /* Decrement the nested watchdog timer count */
 
-  g_wdrunning[cpu] = NULL;
+  g_wdtimernested[this_cpu()]--;
+#endif
 
-  spin_unlock_irqrestore(&g_wdspinlock, flags);
+  leave_critical_section(flags);
 
   return ret;
 }
@@ -280,78 +277,75 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
                      wdentry_t wdentry, wdparm_t arg)
 {
   int cpu;
+  int ret = -EINVAL;
   irqstate_t flags;
   bool reassess = false;
 
   /* Verify the wdog and setup parameters */
 
-  if (wdog == NULL || wdentry == NULL)
+  if (wdog != NULL && wdentry != NULL)
     {
-      return -EINVAL;
-    }
-
-  /* NOTE:  There is a race condition here... the caller may receive
-   * the watchdog between the time that wd_start_abstick is called and
-   * the critical section is established.
-   */
-
-  flags = spin_lock_irqsave(&g_wdspinlock);
-  cpu   = this_cpu();
-
-  /* If the wdog is canceling, restarting the wdog is not allowed. */
-
-  if (WDOG_ISCANCELING(wdog, cpu))
-    {
-      spin_unlock_irqrestore(&g_wdspinlock, flags);
-      return -EINVAL;
-    }
-
-#ifdef CONFIG_SCHED_TICKLESS
-  /* We need to reassess timer if the watchdog list head has changed. */
-
-  if (WDOG_ISACTIVE(wdog))
-    {
-      reassess |= list_is_head(&g_wdactivelist, &wdog->node);
-      list_delete(&wdog->node);
-    }
-
-  reassess |= wd_insert(wdog, ticks, wdentry, arg);
-
-  /* If wd_start is called in the expiration callbacks,
-   * the reassess proccess is disabled.
-   * The Hazard-pointers can indicate whether the wd_start
-   * is called in the expiration callback.
-   */
-
-  reassess &= !g_wdrunning[cpu];
-
-  spin_unlock_irqrestore(&g_wdspinlock, flags);
-
-  if (reassess)
-    {
-      /* Resume the interval timer that will generate the next
-       * interval event. If the timer at the head of the list changed,
-       * then this will pick that new delay.
+      /* NOTE:  There is a race condition here... the caller may receive
+       * the watchdog between the time that wd_start_abstick is called and
+       * the critical section is established.
        */
 
-      nxsched_reassess_timer();
-    }
+      flags = enter_critical_section();
+
+      /* If the wdog is canceling, restarting the wdog is not allowed. */
+
+#ifdef CONFIG_SCHED_TICKLESS
+      cpu   = this_cpu();
+
+      /* We need to reassess timer if the watchdog
+       * list head has changed.
+       */
+
+      if (WDOG_ISACTIVE(wdog))
+        {
+          reassess |= list_is_head(&g_wdactivelist, &wdog->node);
+          list_delete(&wdog->node);
+        }
+
+      reassess |= wd_insert(wdog, ticks, wdentry, arg);
+
+      /* If wd_start is called in the expiration callbacks,
+       * the reassess proccess is disabled.
+       */
+
+      reassess &= !g_wdtimernested[cpu];
+
+      leave_critical_section(flags);
+
+      if (reassess)
+        {
+          /* Resume the interval timer that will generate the next
+           * interval event. If the timer at the head of the list
+           * changed, then this will pick that new delay.
+           */
+
+            nxsched_reassess_timer();
+        }
 #else
-  UNUSED(reassess);
+      UNUSED(reassess);
+      UNUSED(cpu);
 
-  /* Check if the watchdog has been started. If so, delete it. */
+      /* Check if the watchdog has been started. If so, delete it. */
 
-  if (WDOG_ISACTIVE(wdog))
-    {
-      list_delete(&wdog->node);
+      if (WDOG_ISACTIVE(wdog))
+        {
+          list_delete(&wdog->node);
+        }
+
+      wd_insert(wdog, ticks, wdentry, arg);
+      leave_critical_section(flags);
+#endif
+      sched_note_wdog(NOTE_WDOG_START, wdentry,
+                      (FAR void *)(uintptr_t)ticks);
+      ret = OK;
     }
 
-  wd_insert(wdog, ticks, wdentry, arg);
-  spin_unlock_irqrestore(&g_wdspinlock, flags);
-#endif
-
-  sched_note_wdog(NOTE_WDOG_START, wdentry, (FAR void *)(uintptr_t)ticks);
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -393,14 +387,16 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
 int wd_start(FAR struct wdog_s *wdog, clock_t delay,
              wdentry_t wdentry, wdparm_t arg)
 {
+  int ret = -EINVAL;
+
   /* Ensure delay is within the range the wdog can handle. */
 
-  if (delay > WDOG_MAX_DELAY)
+  if (delay <= WDOG_MAX_DELAY)
     {
-      return -EINVAL;
+      ret = wd_start_abstick(wdog, clock_delay2abstick(delay), wdentry, arg);
     }
 
-  return wd_start_abstick(wdog, clock_delay2abstick(delay), wdentry, arg);
+  return ret;
 }
 
 /****************************************************************************
@@ -444,7 +440,7 @@ clock_t wd_timer(clock_t ticks, bool noswitches)
     }
   else
     {
-      flags = spin_lock_irqsave(&g_wdspinlock);
+      flags = enter_critical_section();
 
       /* Return the delay for the next watchdog to expire */
 
@@ -459,7 +455,7 @@ clock_t wd_timer(clock_t ticks, bool noswitches)
                  wdog->expired - ticks : 1;
         }
 
-      spin_unlock_irqrestore(&g_wdspinlock, flags);
+      leave_critical_section(flags);
     }
 
   return ret;

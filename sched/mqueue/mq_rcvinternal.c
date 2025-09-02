@@ -199,7 +199,7 @@ int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
 
   if (abstime || ticks >= 0)
     {
-      wd_try_cancel(&rtcb->waitdog);
+      wd_cancel(&rtcb->waitdog);
     }
 
   *rcvmsg = newmsg;
@@ -253,7 +253,10 @@ void nxmq_notify_receive(FAR struct mqueue_inode_s *msgq)
 
       DEBUGASSERT(btcb != NULL);
 
-      wd_try_cancel(&btcb->waitdog);
+      if (WDOG_ISACTIVE(&btcb->waitdog))
+        {
+          wd_cancel(&btcb->waitdog);
+        }
 
       msgq->cmn.nwaitnotfull--;
 

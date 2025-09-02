@@ -520,7 +520,10 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           sigemptyset(&stcb->sigwaitmask);
 
-          wd_try_cancel(&stcb->waitdog);
+          if (WDOG_ISACTIVE(&stcb->waitdog))
+            {
+              wd_cancel(&stcb->waitdog);
+            }
 
           /* Remove the task from waiting list */
 
@@ -585,7 +588,10 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           sigemptyset(&stcb->sigwaitmask);
 
-          wd_try_cancel(&stcb->waitdog);
+          if (WDOG_ISACTIVE(&stcb->waitdog))
+            {
+              wd_cancel(&stcb->waitdog);
+            }
 
           /* Remove the task from waiting list */
 

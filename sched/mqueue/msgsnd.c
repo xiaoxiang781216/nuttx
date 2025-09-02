@@ -245,7 +245,10 @@ int msgsnd(int msqid, FAR const void *msgp, size_t msgsz, int msgflg)
 
           DEBUGASSERT(btcb);
 
-          wd_try_cancel(&btcb->waitdog);
+          if (WDOG_ISACTIVE(&btcb->waitdog))
+            {
+              wd_cancel(&btcb->waitdog);
+            }
 
           msgq->cmn.nwaitnotempty--;
 
