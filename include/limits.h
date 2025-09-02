@@ -301,6 +301,7 @@
 
 /* Required for asynchronous I/O */
 
+#define AIO_PRIO_DELTA_MAX 0
 #define AIO_LISTIO_MAX _POSIX_AIO_LISTIO_MAX
 #define AIO_MAX        _POSIX_AIO_MAX
 

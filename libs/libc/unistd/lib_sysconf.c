@@ -268,6 +268,51 @@ long sysconf(int name)
       case _SC_MQ_PRIO_MAX:
         return MQ_PRIO_MAX;
 
+      case _SC_SEM_VALUE_MAX:
+        return SEM_VALUE_MAX;
+
+      case _SC_AIO_PRIO_DELTA_MAX:
+        return AIO_PRIO_DELTA_MAX;
+
+      case _SC_DELAYTIMER_MAX:
+        return DELAYTIMER_MAX;
+
+      case _SC_MQ_OPEN_MAX:
+        return MQ_OPEN_MAX;
+
+      case _SC_RTSIG_MAX:
+        return RTSIG_MAX;
+
+      case _SC_SEM_NSEMS_MAX:
+        return SEM_NSEMS_MAX;
+
+      case _SC_TIMER_MAX:
+        return TIMER_MAX;
+
+      case _SC_FSYNC:
+        return _POSIX_FSYNC;
+
+      case _SC_MEMLOCK:
+        return _POSIX_MEMLOCK;
+
+      case _SC_MEMLOCK_RANGE:
+        return _POSIX_MEMLOCK_RANGE;
+
+      case _SC_MESSAGE_PASSING:
+        return _POSIX_MESSAGE_PASSING;
+
+      case _SC_SEMAPHORES:
+        return _POSIX_SEMAPHORES;
+
+      case _SC_SHARED_MEMORY_OBJECTS:
+        return _POSIX_SHARED_MEMORY_OBJECTS;
+
+      case _SC_SYNCHRONIZED_IO:
+        return _POSIX_SYNCHRONIZED_IO;
+#ifndef CONFIG_DISABLE_POSIX_TIMERS
+      case _SC_TIMERS:
+        return _POSIX_TIMERS;
+#endif
       default:
 #if 0 /* Assume valid but not implemented for the time being */
         errcode = EINVAL;
