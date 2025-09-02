@@ -3,6 +3,7 @@
 /risc-v/[r-z]*
 
 -rv-virt:nest-pnsh
+-rv-virt:leds64_zig
 
 # Boards build by CMake
 CMake,rv-virt:smp
