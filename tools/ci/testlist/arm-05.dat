@@ -14,6 +14,7 @@
 /arm/[n-q]*,CONFIG_ARM_TOOLCHAIN_GNU_EABI
 
 -moxa:nsh
+-nrf5340-dk:sdc_nimble_cpunet
 
 # Boards build by CMake
 
