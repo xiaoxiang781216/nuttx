@@ -197,7 +197,7 @@ static void memdump_allocnode(FAR void *ptr, size_t size)
   int stacksize;
 
   stack = backtrace_get(buf->stack, &stacksize);
-  if (stack && stacksize)
+  if (stacksize)
     {
       backtrace_format(tmp, sizeof(tmp), stack, stacksize);
     }
