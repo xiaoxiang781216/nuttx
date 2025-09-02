@@ -171,6 +171,8 @@ int nxtask_terminate(pid_t pid)
         {
           dtcb->task_state = task_state;
 
+          leave_critical_section(flags);
+
           /* Perform common task termination logic.  We need to do
            * this as early as possible so that higher level clean-up logic
            * can run in a healthy tasking environment.
@@ -179,8 +181,6 @@ int nxtask_terminate(pid_t pid)
            */
 
           nxtask_exithook(dtcb, EXIT_SUCCESS);
-
-          leave_critical_section(flags);
 
           /* Since all tasks pass through this function as the final step
            * in their exit sequence, this is an appropriate place to inform
