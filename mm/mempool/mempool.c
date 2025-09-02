@@ -397,7 +397,7 @@ int mempool_init(FAR struct mempool_s *pool)
           sq_init(&pool->equeue);
           pool->nalloc = 0;
 
-          if (pool->interruptsize >= blocksize)
+          if (pool->interruptsize >= blocksize && pool->alloc)
             {
               size_t ninterrupt = pool->interruptsize / blocksize;
               size_t size = ninterrupt * blocksize;
@@ -427,7 +427,7 @@ int mempool_init(FAR struct mempool_s *pool)
               size_t size = ninitial * blocksize + MEMPOOL_HEADER_SIZE;
               FAR char *base;
 
-              if (pool->initialbase == NULL)
+              if (pool->initialbase == NULL && pool->alloc)
                 {
                   base = pool->alloc(pool, size);
                   if (base == NULL)
