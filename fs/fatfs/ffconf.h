@@ -298,7 +298,7 @@
  * bit1=1: Do not trust last allocated cluster number in the FSINFO.
  */
 
-#define FF_FS_LOCK         0
+#define FF_FS_LOCK         CONFIG_FS_FATFS_MAX_OPEN_FILES
 /* The option FF_FS_LOCK switches file lock function to control
  * duplicated file open and illegal operation to open objects. This option
  * must be 0 when FF_FS_READONLY is 1.

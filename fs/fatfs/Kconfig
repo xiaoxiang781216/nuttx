@@ -26,3 +26,8 @@ config FS_FATFS_DEBUG
 	depends on DEBUG_FS_ERROR
 	---help---
 		Enable FATFS file system read/write double check.
+
+config FS_FATFS_MAX_OPEN_FILES
+	int "The maximum number of open files in fatfs filesystem"
+	depends on FS_FATFS
+	default 256
