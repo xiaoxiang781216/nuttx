@@ -55,11 +55,11 @@
 
 /* Get/set printf tag. each parameter occupies 2 bits. The highest
  * four bits are used to represent the number of parameters, So up to
- * 14 variable arguments can be passed.
+ * 30 variable arguments can be passed.
  */
 
 #define NOTE_PRINTF_GET_TYPE(tag, index) (((tag) >> (index) * 2) & 0x03)
-#define NOTE_PRINTF_GET_COUNT(tag)       (((tag) >> 28) & 0x0f)
+#define NOTE_PRINTF_GET_COUNT(tag)       ((tag) >> 60)
 
 #define sched_note_event(tag, event, buf, len) \
         sched_note_event_ip(tag, up_getpc(), event, buf, len)
@@ -70,14 +70,20 @@
 #  define sched_note_printf(tag, fmt, ...)                                  \
           do                                                                \
             {                                                               \
-              locate_data("note_format") static const char __fmt__[] = fmt; \
-              locate_data("note_type") static const                         \
-              uint32_t __type__ = (uint32_t)__fmt__;                        \
-              static_assert(GET_ARG_COUNT(__VA_ARGS__) <= 14,               \
+              union fmt_type_u                                              \
+              {                                                             \
+                FAR const char *__fmt__;                                    \
+                uint64_t __type__;                                          \
+              };                                                            \
+              locate_data("note_format") used_data static const             \
+              char __fmt__[] = fmt;                                         \
+              locate_data("note_type") used_data static const               \
+              union fmt_type_u __fmt_type__ = (union fmt_type_u)__fmt__;    \
+              static_assert(GET_ARG_COUNT(__VA_ARGS__) <= 30,               \
                             "The number of sched_note_nprintf "             \
-                            "parameters needs to be less than 14");         \
-              sched_note_printf_ip(tag, up_getpc(), __fmt__, __type__,      \
-                                  ##__VA_ARGS__);                           \
+                            "parameters needs to be less than 30");         \
+              sched_note_printf_ip(tag, up_getpc(), __fmt__,                \
+                                  __fmt_type__.__type__, ##__VA_ARGS__);    \
             }                                                               \
           while (0)
 #else
@@ -376,8 +382,8 @@ struct note_printf_s
   struct note_common_s npt_cmn; /* Common note parameters */
   uintptr_t npt_ip;             /* Instruction pointer called from */
   FAR const char *npt_fmt;      /* Printf format string */
+  uint64_t npt_type;            /* Printf parameter type */
   uint32_t npt_tag;             /* Printf tag */
-  uint32_t npt_type;            /* Printf parameter type */
   char npt_data[4];             /* Print arguments */
 };
 
@@ -520,9 +526,9 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
 void sched_note_event_ip(uint32_t tag, uintptr_t ip, uint8_t event,
                          FAR const void *buf, size_t len);
 void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
-                           uint32_t type, va_list *va) printf_like(3, 0);
+                           uint64_t type, va_list *va) printf_like(3, 0);
 void sched_note_printf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
-                          uint32_t type, ...) printf_like(3, 5);
+                          uint64_t type, ...) printf_like(3, 5);
 #else
 #  define sched_note_event_ip(t,ip,e,b,l)
 #  define sched_note_vprintf_ip(t,ip,f,p,v)

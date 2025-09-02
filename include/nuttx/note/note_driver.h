@@ -470,11 +470,11 @@ int note_initialize(void);
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
 void note_driver_printf_ip(FAR struct note_driver_s *driver, uint32_t tag,
-                           uintptr_t ip, uint32_t type,
+                           uintptr_t ip, uint64_t type,
                            FAR const char *fmt, ...) printf_like(5, 6);
 
 void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint32_t tag,
-                            uintptr_t ip, uint32_t type,
+                            uintptr_t ip, uint64_t type,
                             FAR const char *fmt,
                             va_list *va) printf_like(5, 0);
 

@@ -37,7 +37,7 @@
 
 void sched_note_printf_ip(uint32_t tag, uintptr_t ip,
                           FAR const char *fmt,
-                          uint32_t type, ...)
+                          uint64_t type, ...)
 {
   va_list va;
   va_start(va, type);

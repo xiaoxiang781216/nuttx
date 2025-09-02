@@ -34,7 +34,7 @@ except ModuleNotFoundError as e:
 
 TAG_SECTION = "note_type"
 FORMAT_SECTION = "note_format"
-NOTE_TYPE_SIZE = 4
+NOTE_TYPE_SIZE = 8
 
 
 class NoteTag(Enum):
@@ -108,11 +108,11 @@ class NoteFormatType:
                 typelist.append(NoteTag.STRING)
 
         # Construct the final type type
-        if len(typelist) > 14:
+        if len(typelist) > 30:
             raise ValueError(f"format string {fmt} has too many arguments")
 
         # The number of parameters is placed in the highest 4 bits
-        notetypes = len(typelist) << 28
+        notetypes = len(typelist) << 60
 
         for i, notetype in enumerate(typelist):
             # Each parameter occupies 2 bits
@@ -188,7 +188,7 @@ class NoteFormat:
 
         return self.escape_non_printable(string)
 
-    def get_note_type(self) -> list[int]:
+    def get_note_type(self):
         if self.note_type_section is None:
             return
 
@@ -220,7 +220,7 @@ class NoteFormat:
         note_format_type = NoteFormatType(self.pointer_size)
         for i, (index_addr, format_addr, format_string) in enumerate(typelist):
             typeflags, types = note_format_type.note_format_type(format_string)
-            type_bytes = typeflags.to_bytes(self.pointer_size, byteorder=self.byteorder)
+            type_bytes = typeflags.to_bytes(NOTE_TYPE_SIZE, byteorder=self.byteorder)
             output.write(type_bytes)
             if debug:
                 print(
