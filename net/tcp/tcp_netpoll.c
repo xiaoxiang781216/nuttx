@@ -122,9 +122,7 @@ static uint16_t tcp_poll_eventhandler(FAR struct net_driver_s *dev,
               reason = ENETUNREACH;
             }
 
-          /* TCP_CLOSE: The remote host has closed the connection
-           * TCP_ABORT: The remote host has aborted the connection
-           */
+          /* TCP_ABORT: The remote host has aborted the connection */
 
           else
             {
