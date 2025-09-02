@@ -126,14 +126,12 @@ struct mempool_record_s
                        */
 #  ifdef CONFIG_MM_RECORD_PID
   pid_t pid;
-  pid_t freepid;
 #  endif
 #  ifdef CONFIG_MM_RECORD_SEQNO
   unsigned long seqno; /* The sequence of memory malloc */
 #  endif
 #  ifdef CONFIG_MM_RECORD_STACK
   FAR void *stack;
-  FAR void *freestack;
 #  endif
 };
 #endif

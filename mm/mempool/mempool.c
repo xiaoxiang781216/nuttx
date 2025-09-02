@@ -98,7 +98,6 @@ static inline void mempool_add_queue(FAR struct mempool_s *pool,
       node = (FAR void *)mempool_get_block_from_record(record);
 #  ifdef CONFIG_MM_RECORD_STACK
       record->stack = NULL;
-      record->freestack = NULL;
 #  endif
       record->magic = MEMPOOL_MAGIC_FREE;
 #endif
@@ -111,37 +110,23 @@ static inline void mempool_record(FAR struct mempool_s *pool,
                                   FAR struct mempool_record_s *record,
                                   unsigned int magic)
 {
-#  ifdef CONFIG_MM_RECORD_STACK
-  FAR void **stack;
-#  endif
-
   record->magic = magic;
 #  ifdef CONFIG_MM_RECORD_PID
-  if (magic == MEMPOOL_MAGIC_ALLOC)
-    {
-      record->pid = _SCHED_GETTID();
-    }
-  else
-    {
-      record->freepid = _SCHED_GETTID();
-    }
+  record->pid = _SCHED_GETTID();
 #  endif
 
   backtrace_remove(record->stack);
   MM_INCSEQNO(record);
 
 #  ifdef CONFIG_MM_RECORD_STACK
-  stack = (magic == MEMPOOL_MAGIC_ALLOC ?
-           &record->stack : &record->freestack);
-  backtrace_remove(*stack);
   if (pool->procfs.backtrace)
     {
-      *stack = backtrace_record(
+      record->stack = backtrace_record(
           CONFIG_MM_HEAP_MEMPOOL_RECORD_STACK_SKIP);
     }
   else
     {
-      *stack = NULL;
+      record->stack = NULL;
     }
 #  endif
 }
@@ -228,7 +213,7 @@ static void mempool_memdump_callback(FAR struct mempool_s *pool,
       int stacksize;
 
       stack = backtrace_get(record->stack, &stacksize);
-      if (stack && stacksize)
+      if (stacksize)
         {
           backtrace_format(tmp, sizeof(tmp), stack, stacksize);
         }
@@ -267,29 +252,9 @@ mempool_memdump_free_callback(FAR struct mempool_s *pool,
 
   if (record->magic == MEMPOOL_MAGIC_FREE)
     {
-#ifdef CONFIG_MM_RECORD_STACK
-      char tmp[BACKTRACE_BUFFER_SIZE(CONFIG_LIBC_BACKTRACE_DEPTH)] = "";
-      FAR void **stack;
-      int stacksize;
-
-      stack = backtrace_get(record->freestack, &stacksize);
-      if (stack && stacksize)
-        {
-          backtrace_format(tmp, sizeof(tmp), stack, stacksize);
-        }
-#else
-      FAR const char *tmp = "";
-#endif
-      syslog(LOG_INFO,
-#ifdef CONFIG_MM_RECORD_PID
-             "%6d"
-#endif
-             "%12zu%9zu%*p %s\n",
-#ifdef CONFIG_MM_RECORD_PID
-             record->freepid,
-#endif
+      syslog(LOG_INFO, "%12zu%9zu%*p\n",
              blocksize, overhead, BACKTRACE_PTR_FMT_WIDTH,
-             mempool_get_block_from_record(record), tmp);
+             mempool_get_block_from_record(record));
     }
 }
 #endif
