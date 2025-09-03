@@ -95,6 +95,7 @@ void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
  *
  ****************************************************************************/
 
+#undef syslog
 void syslog(int priority, FAR const IPTR char *fmt, ...)
 {
   va_list ap;
