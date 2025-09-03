@@ -1016,6 +1016,7 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                   /* Copy the real string into a temporary working buffer. */
 
                   fwidth   = 0;
+                  base     = 10;
                   expnt    = false;
                   sign     = false;
                   dot      = false;
@@ -1034,6 +1035,17 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                               stopconv = true;
                             }
                         }
+                      else if (c == 'x' || c == 'X')
+                        {
+                          if (fwidth && tmp[fwidth - 1] == '0')
+                            {
+                              base = 16;
+                            }
+                          else
+                            {
+                              stopconv = true;
+                            }
+                        }
                       else if (c == '.')
                         {
                           if (!dot)
@@ -1046,7 +1058,8 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                               stopconv = true;
                             }
                         }
-                      else if (c == 'e' || c == 'E')
+                      else if (((c == 'e' || c == 'E') && base == 10) ||
+                               ((c == 'p' || c == 'P') && base == 16))
                         {
                           if (!expnt)
                             {
@@ -1058,13 +1071,15 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                               stopconv = true;
                             }
                         }
-                      else if (!(c >= '0' && c <= '9'))
+                      else if ((c >= '0' && c <= '9') ||
+                               (c >= 'a' && c <= 'f') ||
+                               (c >= 'A' && c <= 'F'))
                         {
-                          stopconv = true;
+                          sign = true;
                         }
                       else
                         {
-                          sign = true;
+                          stopconv = true;
                         }
 
                       if (!stopconv)
