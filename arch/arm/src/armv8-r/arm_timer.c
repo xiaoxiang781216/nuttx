@@ -426,7 +426,7 @@ void up_timer_initialize(void)
  * timer interrupt
  ****************************************************************************/
 
-void arm_timer_secondary_init(void)
+void arm_timer_secondary_init(unsigned int freq)
 {
 #ifdef CONFIG_SCHED_TICKLESS
   tmrinfo("arm_arch_timer_secondary_init\n");
