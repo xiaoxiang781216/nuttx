@@ -567,50 +567,6 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
             {
               bool sign;
 
-              /* Get a pointer to the integer value.  We need to do this even
-               * if we have reached the end of the input data in order to
-               * update the 'ap' variable.
-               */
-
-              if (!noassign)
-                {
-                  /* We have to check whether we need to return a long or an
-                   * int.
-                   */
-
-                  switch (modifier)
-                    {
-                    case HH_MOD:
-                      pchar = next_arg(varg, vabuf, FAR unsigned char *);
-                      *pchar = 0;
-                      break;
-
-                    case H_MOD:
-                      pshort = next_arg(varg, vabuf, FAR unsigned short *);
-                      *pshort = 0;
-                      break;
-
-                    case NO_MOD:
-                      pint = next_arg(varg, vabuf, FAR unsigned int *);
-                      *pint = 0;
-                      break;
-
-                    default:
-                    case L_MOD:
-                      plong = next_arg(varg, vabuf, FAR unsigned long *);
-                      *plong = 0;
-                      break;
-
-#ifdef CONFIG_HAVE_LONG_LONG
-                    case LL_MOD:
-                      plonglong = next_arg(varg, vabuf,
-                                           FAR unsigned long long *);
-                      *plonglong = 0;
-                      break;
-#endif
-                    }
-                }
-
               /* Skip over any white space before the integer string */
 
               while (isspace(c))
@@ -895,6 +851,11 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                     }
 
                   set_errno(errsave);
+
+                  /* Get a pointer to the integer value and assign the
+                   * conversion result to the variable.
+                   */
+
                   if (!noassign)
                     {
                       /* We have to check whether we need to return a long or
@@ -904,14 +865,18 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                       switch (modifier)
                         {
                         case HH_MOD:
+                          pchar = next_arg(varg, vabuf, FAR unsigned char *);
                           *pchar = (unsigned char)tmplong;
                           break;
 
                         case H_MOD:
+                          pshort = next_arg(varg, vabuf,
+                                            FAR unsigned short *);
                           *pshort = (unsigned short)tmplong;
                           break;
 
                         case NO_MOD:
+                          pint = next_arg(varg, vabuf, FAR unsigned int *);
                           *pint = (unsigned int)tmplong;
                           break;
 
@@ -919,11 +884,14 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                         case L_MOD:
 #endif
                         default:
+                          plong = next_arg(varg, vabuf, FAR unsigned long *);
                           *plong = tmplong;
                           break;
 
 #ifdef CONFIG_HAVE_LONG_LONG
                         case LL_MOD:
+                          plonglong = next_arg(varg, vabuf,
+                                               FAR unsigned long long *);
                           *plonglong = tmplonglong;
                           break;
 #endif
@@ -965,14 +933,18 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                   if (modifier >= L_MOD)
                     {
                       pd = next_arg(varg, vabuf, FAR double *);
+#  ifndef CONFIG_LIBC_FLOATINGPOINT
                       *pd = 0.0;
+#  endif
                     }
                   else
 #endif
 #ifdef CONFIG_HAVE_FLOAT
                     {
                       pf = next_arg(varg, vabuf, FAR float *);
+#  ifndef CONFIG_LIBC_FLOATINGPOINT
                       *pf = 0.0;
+#  endif
                     }
 #endif
                 }
