@@ -111,8 +111,8 @@ typedef struct ldiv_s ldiv_t;
 
 struct lldiv_s
 {
-  long quot;    /* Quotient */
-  long rem;     /* Remainder */
+  long long int quot;    /* Quotient */
+  long long int rem;     /* Remainder */
 };
 
 typedef struct lldiv_s lldiv_t;
