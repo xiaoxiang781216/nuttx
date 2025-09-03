@@ -41,7 +41,9 @@ if(CONFIG_INPUT)
     list(APPEND SRCS aw86225.c)
   endif()
 
-  if(CONFIG_INPUT_MOUSE)
+  if(CONFIG_INPUT_MOUSE_TOUCH)
+    list(APPEND SRCS mouse_touch.c)
+  elseif(CONFIG_INPUT_MOUSE)
     list(APPEND SRCS mouse_upper.c)
   endif()
 

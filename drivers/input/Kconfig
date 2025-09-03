@@ -79,6 +79,39 @@ config INPUT_MOUSE_WHEEL
 		Enable support for a 4-button mouse report that includes a wheel
 		position.
 
+config INPUT_MOUSE_TOUCH
+	bool "Enable mouse to touch conversion"
+	default n
+	depends on INPUT_TOUCHSCREEN
+	---help---
+		Enable converting mouse events to touch events
+
+if INPUT_MOUSE_TOUCH
+
+config INPUT_MOUSE_TOUCH_ADJUST_NAME
+	bool "Auto register touch driver in mouse_register"
+	default y
+	---help---
+		Automatically register touch driver when mouse_register is called
+
+config INPUT_MOUSE_TOUCH_XMAX
+	int "Maximum X position"
+	default 800
+	range 0 32767
+	---help---
+		This is the maximum value of the X position that will be reported.
+		Default: 800
+
+config INPUT_MOUSE_TOUCH_YMAX
+	int "Maximum Y position"
+	default 480
+	range 0 32767
+	---help---
+		This is the maximum value of the Y position that will be reported.
+		Default: 480
+
+endif # INPUT_MOUSE_TOUCH
+
 endif # INPUT_MOUSE
 
 config INPUT_TOUCHSCREEN
