@@ -261,4 +261,12 @@
 #  endif
 #endif
 
+#ifndef FLT_ROUNDS
+#  define FLT_ROUNDS 1
+#endif
+
+#ifndef FLT_EVAL_METHOD
+#  define FLT_EVAL_METHOD 1
+#endif
+
 #endif /* __INCLUDE_NUTTX_LIB_FLOAT_H */
