@@ -104,6 +104,13 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
           return SEM_FAILED;
         }
     }
+#ifdef CONFIG_FS_NAMED_SEMAPHORES_INITIAL_SLASH
+  else
+    {
+      set_errno(EINVAL);
+      return SEM_FAILED;
+    }
+#endif
 
   /* Off-load the variadic list */
 
