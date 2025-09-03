@@ -92,6 +92,13 @@ config ARCH_INTEL64_TSC_FREQ_VMWARE
 		in virtualized environments.
 endif
 
+config ARCH_INTEL64_APIC_FREQ_HV
+	bool "Use CPUID 0x40000023 to get APIC timer frequency"
+	default n
+	---help---
+		Use CPUID 0x40000023 defined by Hyper-V to get APIC timer frequency
+		in virtualized environments.
+
 if ARCH_INTEL64_TSC
 
 config ARCH_INTEL64_APIC_FREQ_KHZ

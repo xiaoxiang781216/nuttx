@@ -145,7 +145,11 @@ void x86_64_timer_calibrate_freq(void)
 #  endif
     }
 #elif defined(CONFIG_ARCH_INTEL64_TSC)
+#  ifdef CONFIG_ARCH_INTEL64_APIC_FREQ_HV
+  g_x86_64_timer_freq = read_msr(MSR_APIC_FREQUENCY);
+#  else
   g_x86_64_timer_freq = CONFIG_ARCH_INTEL64_APIC_FREQ_KHZ * 1000ul;
+#  endif
 #endif
 
   if (g_x86_64_timer_freq == 0)

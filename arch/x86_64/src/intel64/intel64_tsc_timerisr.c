@@ -113,6 +113,7 @@ static int intel64_timerisr(int irq, uint32_t *regs, void *arg)
 void up_timer_initialize(void)
 {
   uint32_t vector = IRQ0;
+  unsigned int tdcr_value;
 
   irq_attach(IRQ0, (xcpt_t)intel64_timerisr, NULL);
 
@@ -121,6 +122,13 @@ void up_timer_initialize(void)
 #endif
 
   apic_write(APIC_LVTT, vector);
+
+  /* DIV is set to 1 by default */
+
+  tdcr_value = apic_read(APIC_TDCR);
+  apic_write(APIC_TDCR,
+             (tdcr_value & ~(APIC_TDR_DIV_1 | APIC_TDR_DIV_TMBASE)) |
+             APIC_TDR_DIV_1);
 
   __asm__ volatile("mfence" : : : "memory");
 

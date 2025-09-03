@@ -282,6 +282,7 @@
 #define MSR_IA32_PECI_HWP_REQUEST_INFO 0x775
 #define MSR_IA32_HWP_CTL               0x776
 #define MSR_IA32_HWP_STATUS            0x777
+#define MSR_APIC_FREQUENCY             0x40000023
 
 /* APIC */
 
@@ -352,6 +353,15 @@
 #define APIC_TMICT                     0x0380
 #define APIC_TMCCT                     0x0390
 #define APIC_TDCR                      0x03e0
+#  define APIC_TDR_DIV_TMBASE          (1 << 2)    /* Bit 2, used as part of the encoding */
+#  define APIC_TDR_DIV_1               0xb         /* Special encoding = divide by 1 */
+#  define APIC_TDR_DIV_2               0x0         /* Divide by 2 */
+#  define APIC_TDR_DIV_4               0x1         /* Divide by 4 */
+#  define APIC_TDR_DIV_8               0x2         /* Divide by 8 */
+#  define APIC_TDR_DIV_16              0x3         /* Divide by 16 */
+#  define APIC_TDR_DIV_32              0x8         /* Divide by 32 */
+#  define APIC_TDR_DIV_64              0x9         /* Divide by 64 */
+#  define APIC_TDR_DIV_128             0xa         /* Divide by 128 */
 
 /* MSR */
 
