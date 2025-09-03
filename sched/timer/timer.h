@@ -94,7 +94,7 @@ extern spinlock_t g_locktimers;
 
 void timer_initialize(void);
 void timer_deleteall(pid_t pid);
-int timer_release(FAR struct posix_timer_s *timer);
+int timer_release(FAR struct posix_timer_s *timer, bool delay);
 FAR struct posix_timer_s *timer_gethandle(timer_t timerid);
 
 #endif /* CONFIG_DISABLE_POSIX_TIMERS */

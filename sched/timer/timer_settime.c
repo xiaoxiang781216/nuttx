@@ -172,7 +172,7 @@ static void timer_timeout(wdparm_t itimer)
        * the timer was not deleted.
        */
 
-      if (timer_release(timer))
+      if (timer_release(timer, false))
         {
           /* If this is a repetitive timer, the restart the watchdog */
 

@@ -51,7 +51,7 @@
  *
  ****************************************************************************/
 
-static inline void timer_free(struct posix_timer_s *timer)
+static inline void timer_free(struct posix_timer_s *timer, bool delay)
 {
   irqstate_t flags;
 
@@ -74,7 +74,14 @@ static inline void timer_free(struct posix_timer_s *timer)
       /* Otherwise, return it to the heap */
 
       spin_unlock_irqrestore(&g_locktimers, flags);
-      kmm_free(timer);
+      if (delay)
+        {
+          kmm_delayfree(timer);
+        }
+      else
+        {
+          kmm_free(timer);
+        }
     }
 }
 
@@ -93,6 +100,7 @@ static inline void timer_free(struct posix_timer_s *timer)
  * Input Parameters:
  *   timer - The per-thread timer, previously created by the call to
  *     timer_create(), to be deleted.
+ *   delay - If true, timer_free will use delayfree.
  *
  * Returned Value:
  *   If the call succeeds, timer_release() will return 0 (OK) or 1 (meaning
@@ -103,7 +111,7 @@ static inline void timer_free(struct posix_timer_s *timer)
  *
  ****************************************************************************/
 
-int timer_release(FAR struct posix_timer_s *timer)
+int timer_release(FAR struct posix_timer_s *timer, bool delay)
 {
   int ret = OK;
 
@@ -135,7 +143,7 @@ int timer_release(FAR struct posix_timer_s *timer)
 
       /* Release the timer structure */
 
-      timer_free(timer);
+      timer_free(timer, delay);
     }
 
   return ret;

@@ -156,7 +156,7 @@ void timer_deleteall(pid_t pid)
     {
       next = timer->flink;
       sq_rem((FAR sq_entry_t *)timer, (FAR sq_queue_t *)&freetimers);
-      timer_release(timer);
+      timer_release(timer, true);
     }
 }
 
