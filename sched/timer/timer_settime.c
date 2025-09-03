@@ -259,10 +259,16 @@ int timer_settime(timer_t timerid, int flags,
 
   /* Some sanity checks */
 
-  if (!timer || !value)
+  if (timer == NULL ||
+      value->it_interval.tv_nsec < 0 ||
+      value->it_interval.tv_nsec >= NSEC_PER_SEC ||
+      value->it_interval.tv_sec < 0 ||
+      value->it_value.tv_nsec < 0 ||
+      value->it_value.tv_nsec >= NSEC_PER_SEC ||
+      value->it_value.tv_sec < 0)
     {
       set_errno(EINVAL);
-      ret = -EINVAL;
+      return ERROR;
     }
   else
     {
