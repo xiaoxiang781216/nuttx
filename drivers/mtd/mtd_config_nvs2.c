@@ -119,6 +119,8 @@ struct nvs_fs
 #ifdef CONFIG_MTD_CONFIG_FULL_CACHE
   bool                  cache_partial;
 #endif
+  FAR struct pollfd     *fds;
+  pollevent_t           events;
 };
 
 /* Allocation Table Entry */
@@ -2720,6 +2722,43 @@ static int nvs_next(FAR struct nvs_fs *fs, FAR struct file *filep,
 }
 
 /****************************************************************************
+ * Name: mtdconfig_notify
+ *
+ * Description:
+ *   Notify the poll if any waiter, or save events for next setup.
+ *
+ * Input Parameters:
+ *   fs       - Pointer to file system.
+ *   eventset - List of events to check for activity
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+static void mtdconfig_notify(FAR struct nvs_fs *fs, pollevent_t eventset)
+{
+  /* Handle events in two possible ways:
+   * 1. Notify waters directly if any exist(`fs->fds` is not NULL)
+   * 2. Save events for the following scenarios:
+   *    a. Events that have changed but weren't waited for
+   *       before being added to the interest list
+   *    b. Events occurring after `epoll_wait()` returns and
+   *       before it's called again
+   */
+
+  if (fs->fds)
+    {
+      poll_notify(&fs->fds, 1, eventset | fs->events);
+      fs->events = 0;
+    }
+  else
+    {
+      fs->events |= eventset;
+    }
+}
+
+/****************************************************************************
  * Name: mtdconfig_open
  ****************************************************************************/
 
@@ -2799,6 +2838,11 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
         /* Write a nvs item. */
 
         rc = nvs_write(fs, pdata);
+        if (rc >= 0)
+          {
+            mtdconfig_notify(fs, POLLPRI);
+          }
+
         break;
 
       case CFGDIOC_DELCONFIG:
@@ -2806,6 +2850,11 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
         /* Delete a nvs item. */
 
         rc = nvs_delete(fs, pdata);
+        if (rc >= 0)
+          {
+            mtdconfig_notify(fs, POLLPRI);
+          }
+
         break;
 
       case CFGDIOC_FIRSTCONFIG:
@@ -2857,11 +2906,27 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
 static int mtdconfig_poll(FAR struct file *filep, FAR struct pollfd *fds,
                           bool setup)
 {
-  if (setup)
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct nvs_fs *fs = inode->i_private;
+  int ret;
+
+  ret = nxmutex_lock(&fs->nvs_lock);
+  if (ret < 0)
     {
-      poll_notify(&fds, 1, POLLIN | POLLOUT);
+      return ret;
     }
 
+  if (setup)
+    {
+      fs->fds = fds;
+      mtdconfig_notify(fs, POLLIN | POLLOUT);
+    }
+  else
+    {
+      fs->fds = NULL;
+    }
+
+  nxmutex_unlock(&fs->nvs_lock);
   return OK;
 }
 
