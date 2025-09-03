@@ -148,6 +148,10 @@ void up_irqinitialize(void)
 
   sigemptyset(&g_sigset);
 
+  /* Default ignore SIGPIPE */
+
+  signal(SIGPIPE, SIG_IGN);
+
 #ifdef CONFIG_SMP
   /* Register the pause handler */
 
