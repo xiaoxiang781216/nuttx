@@ -702,7 +702,7 @@ def memory_range(heap=True, globals=True) -> List[Tuple[int, int]]:
 
                 memranges.append((start, end))
 
-        idle_topstack = int(utils.parse_and_eval("g_idle_topstack"))
+        idle_topstack = int(utils.parse_and_eval("g_idle_topstack").cast("uintptr_t"))
         idle_stacksize = int(utils.parse_and_eval("CONFIG_IDLETHREAD_STACKSIZE"))
         memranges.append((idle_topstack - idle_stacksize, idle_topstack))
 
