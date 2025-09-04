@@ -169,7 +169,7 @@ static inline_function void spin_lock_notrace(FAR volatile spinlock_t *lock)
 #endif
 }
 #else
-#  define spin_lock_notrace(lock)
+#  define spin_lock_notrace(lock) ((void)(lock))
 #endif /* CONFIG_SPINLOCK */
 
 /****************************************************************************
@@ -219,7 +219,7 @@ static inline_function void spin_lock(FAR volatile spinlock_t *lock)
   sched_note_spinlock(lock, NOTE_SPINLOCK_LOCKED);
 }
 #else
-#  define spin_lock(lock)
+#  define spin_lock(lock) ((void)(lock))
 #endif /* CONFIG_SPINLOCK */
 
 /****************************************************************************
@@ -256,7 +256,7 @@ spin_trylock_notrace(FAR volatile spinlock_t *lock)
 #endif /* CONFIG_TICKET_SPINLOCK */
 }
 #else
-#  define spin_trylock_notrace(lock) true
+#  define spin_trylock_notrace(lock) ((void)(lock), true)
 #endif /* CONFIG_SPINLOCK */
 
 /****************************************************************************
@@ -306,7 +306,7 @@ static inline_function bool spin_trylock(FAR volatile spinlock_t *lock)
   return locked;
 }
 #else
-#  define spin_trylock(lock) true
+#  define spin_trylock(lock) ((void)(lock), true)
 #endif /* CONFIG_SPINLOCK */
 
 /****************************************************************************
@@ -340,7 +340,7 @@ spin_unlock_notrace(FAR volatile spinlock_t *lock)
 #endif
 }
 #else
-#  define spin_unlock_notrace(lock)
+#  define spin_unlock_notrace(lock) ((void)(lock))
 #endif /* CONFIG_SPINLOCK */
 
 /****************************************************************************
@@ -372,7 +372,7 @@ static inline_function void spin_unlock(FAR volatile spinlock_t *lock)
   sched_note_spinlock(lock, NOTE_SPINLOCK_UNLOCK);
 }
 #else
-#  define spin_unlock(lock)
+#  define spin_unlock(lock) ((void)(lock))
 #endif /* CONFIG_SPINLOCK */
 
 /****************************************************************************
