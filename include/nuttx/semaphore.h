@@ -66,7 +66,7 @@
 
 /* Mutex related helper macros */
 
-#define NXSEM_MBLOCKING_BIT   (((int32_t)1) << 31)
+#define NXSEM_MBLOCKING_BIT   ((int32_t)0x80000000)
 #define NXSEM_NO_MHOLDER      ((int32_t)0x7ffffffe)
 #define NXSEM_MRESET          ((int32_t)0x7fffffff)
 
