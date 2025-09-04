@@ -412,8 +412,9 @@ int psock_tcp_connect(FAR struct socket *psock,
               /* Make sure that no further events are processed */
 
               psock_teardown_callbacks(&state, ret);
-              conn_dev_unlock(&conn->sconn, conn->dev);
             }
+
+          conn_dev_unlock(&conn->sconn, conn->dev);
         }
 
       /* Check if the socket was successfully connected. */
