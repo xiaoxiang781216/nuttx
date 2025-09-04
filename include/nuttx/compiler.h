@@ -1345,6 +1345,12 @@
 #  define double long
 #endif
 
+/* Keyword about Atomic */
+
+#if !defined(__clang__) && defined(__cplusplus)
+#  define _Atomic
+#endif
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/

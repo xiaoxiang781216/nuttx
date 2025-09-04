@@ -176,7 +176,7 @@ static inline_function void spin_lock_notrace(FAR volatile spinlock_t *lock)
   int ticket = atomic_fetch_add_relaxed(&lock->next, 1);
   while (atomic_read_acquire(&lock->owner) != ticket);
 #else /* CONFIG_TICKET_SPINLOCK */
-  while (atomic_xchg_acquire((FAR atomic_t *)lock, SP_LOCKED) == SP_LOCKED);
+  while (atomic_xchg_acquire(lock, SP_LOCKED) == SP_LOCKED);
 #endif
 }
 #else
@@ -263,7 +263,7 @@ spin_trylock_notrace(FAR volatile spinlock_t *lock)
   return atomic_cmpxchg_acquire(&lock->next, &lock->owner,
                                 atomic_read_relax(&lock->next) + 1);
 #else /* CONFIG_TICKET_SPINLOCK */
-  return atomic_xchg_acquire((FAR atomic_t *)lock, SP_LOCKED) != SP_LOCKED;
+  return atomic_xchg_acquire(lock, SP_LOCKED) != SP_LOCKED;
 #endif /* CONFIG_TICKET_SPINLOCK */
 }
 #endif /* CONFIG_SPINLOCK */
@@ -341,9 +341,9 @@ static inline_function void
 spin_unlock_notrace(FAR volatile spinlock_t *lock)
 {
 #ifdef CONFIG_TICKET_SPINLOCK
-  atomic_fetch_add_relase(&lock->owner, 1);
+  atomic_fetch_add_release(&lock->owner, 1);
 #else
-  atomic_set_release((FAR atomic_t *)lock, SP_UNLOCKED);
+  atomic_set_release(lock, SP_UNLOCKED);
 #endif
 }
 #else
@@ -651,8 +651,8 @@ void rspin_lock(FAR rspinlock_t *lock)
 
   /* Try seize the ownership of the lock. */
 
-  while (!atomic_cmpxchg_acquire((FAR atomic_t *)&lock->val,
-                                 (FAR atomic_t *)&old_val.val, new_val.val))
+  while (!atomic_cmpxchg_acquire(&lock->val, &old_val.val,
+                                 new_val.val))
     {
       old_val.val = 0;
     }
@@ -730,8 +730,8 @@ static inline_function bool rspin_trylock(FAR rspinlock_t *lock)
 
   /* Try seize the ownership of the lock. */
 
-  return atomic_cmpxchg_acquire((FAR atomic_t *)&lock->val,
-                                (FAR atomic_t *)&old_val.val, new_val.val);
+  return atomic_cmpxchg_acquire(&lock->val, &old_val.val,
+                                new_val.val);
 }
 
 #  define rspin_trylock_irqsave(l, f) \
@@ -976,7 +976,7 @@ bool rspin_unlock(FAR rspinlock_t *lock)
 
   if (--lock->count == 0)
     {
-      atomic_set_release((FAR atomic_t *)&lock->val, 0);
+      atomic_set_release(&lock->val, 0);
       return true;
     }
 

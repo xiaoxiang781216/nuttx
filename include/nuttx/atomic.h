@@ -28,6 +28,7 @@
  ****************************************************************************/
 
 #include <stdbool.h>
+#include <sys/types.h>
 
 #if defined(__has_include) && !defined(CONFIG_LIBC_ARCH_ATOMIC)
 #  if __has_include(<atomic>) && defined(__cplusplus)
@@ -46,22 +47,12 @@ extern "C++"
   using std::atomic_fetch_and_explicit;
   using std::atomic_fetch_or_explicit;
   using std::atomic_fetch_xor_explicit;
-
-  typedef volatile int32_t atomic_t;
-  typedef volatile int64_t atomic64_t;
 }
-#  elif __has_include(<stdatomic.h>) && \
+#  elif __has_include(<stdatomic.h>) && !defined(__STDC_NO_ATOMICS__) && \
         ((defined(__cplusplus) && __cplusplus >= 201103L) || \
-         (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L)) && \
-         !defined(__STDC_NO_ATOMICS__)
-#    if !defined(__clang__) && defined(__cplusplus)
-#      define _Atomic
-#    endif
+         (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L))
 #    include <stdatomic.h>
 #    define ATOMIC_FUNC(f, n) atomic_##f##_explicit
-
-  typedef volatile _Atomic int32_t atomic_t;
-  typedef volatile _Atomic int64_t atomic64_t;
 #  endif
 #endif
 
@@ -90,9 +81,6 @@ extern "C++"
      nx_atomic_compare_exchange_4(obj, expect, desired, false, success, failure)
 #  define nx_atomic_compare_exchange_strong_8(obj, expect, desired, success, failure) \
      nx_atomic_compare_exchange_8(obj, expect, desired, false, success, failure)
-
-typedef volatile int32_t atomic_t;
-typedef volatile int64_t atomic64_t;
 #endif
 
 /****************************************************************************

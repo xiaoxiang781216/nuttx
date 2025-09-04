@@ -28,6 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <sys/types.h>
 
 #undef EXTERN
 #if defined(__cplusplus)
@@ -39,7 +40,7 @@ extern "C"
 #endif
 
 #if defined(CONFIG_RW_SPINLOCK)
-typedef uint32_t rwlock_t;
+typedef atomic_t rwlock_t;
 #  define RW_SP_UNLOCKED      0
 #  define RW_SP_READ_LOCKED   1
 #  define RW_SP_WRITE_LOCKED -1
@@ -48,14 +49,14 @@ typedef uint32_t rwlock_t;
 #if defined(CONFIG_TICKET_SPINLOCK)
 typedef struct spinlock_s
 {
-  uint32_t owner;
-  uint32_t next;
+  atomic_t owner;
+  atomic_t next;
 } spinlock_t;
 
 #  define SP_UNLOCKED (spinlock_t){0, 0}
 #  define SP_LOCKED   (spinlock_t){0, 1}
 #elif defined(CONFIG_SPINLOCK) || !defined(CONFIG_HAVE_ZERO_SIZE_ARRAY)
-typedef uint32_t spinlock_t;
+typedef atomic_t spinlock_t;
 
 #  define SP_UNLOCKED 0
 #  define SP_LOCKED   1
@@ -69,7 +70,7 @@ typedef uint32_t spinlock_t;
 
 struct spinlock_s
 {
-  uint8_t lock[0];
+  atomic_t lock[0];
 };
 
 typedef struct spinlock_s spinlock_t;
@@ -82,7 +83,7 @@ typedef union rspinlock_u
 {
   /* Which cpu is holding spinlock, and taking recursive count */
 
-  uint32_t val;
+  atomic_t val;
   struct
     {
       uint16_t owner;

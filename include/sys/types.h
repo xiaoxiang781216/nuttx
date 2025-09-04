@@ -311,6 +311,18 @@ struct fsid_s
   int val[2];
 };
 
+/* Atomic types */
+
+#if !defined(CONFIG_LIBC_ARCH_ATOMIC) && !defined(__STDC_NO_ATOMICS__) && \
+    ((defined(__cplusplus) && __cplusplus >= 201103L) || \
+     (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L))
+typedef volatile _Atomic int32_t atomic_t;
+typedef volatile _Atomic int64_t atomic64_t;
+#else
+typedef volatile int32_t atomic_t;
+typedef volatile int64_t atomic64_t;
+#endif
+
 /* Task entry point */
 
 typedef CODE int (*main_t)(int argc, FAR char *argv[]);
