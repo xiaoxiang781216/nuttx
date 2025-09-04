@@ -49,8 +49,17 @@ CONFIG_MM_RECORD = (
 mempool_record_s = utils.lookup_type("struct mempool_record_s")
 mm_record_size = 0
 
+g_sections = None
+
 PID_MM_INVALID = -100
 PID_MM_MEMPOOL = -1
+
+
+def get_sections():
+    global g_sections
+    if g_sections is None:
+        g_sections = gdb.execute("info sections", to_string=True)
+    return g_sections
 
 
 def mm_alignup(size: int) -> int:
@@ -689,10 +698,9 @@ def memory_range(heap=True, globals=True) -> List[Tuple[int, int]]:
     # Execute the GDB command to get section info
     memranges = []
     if globals:
-        section = gdb.execute("maintenance info sections", to_string=True)
-
+        sections = get_sections()
         # Parse the output to find sections with ALLOC and LOAD
-        for line in section.splitlines():
+        for line in sections.splitlines():
             if "ALLOC" in line and "READONLY" not in line:
                 parts = line.split()
                 start = int(parts[1].split("->")[0], 16)
