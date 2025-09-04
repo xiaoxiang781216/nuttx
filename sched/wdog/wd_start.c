@@ -426,7 +426,7 @@ clock_t wd_timer(clock_t ticks, bool noswitches)
 {
   FAR struct wdog_s *wdog;
   irqstate_t flags;
-  clock_t    ret = 0;
+  clock_t    ret = 0u;
 
   /* Check if the watchdog at the head of the list is ready to run */
 
@@ -448,7 +448,7 @@ clock_t wd_timer(clock_t ticks, bool noswitches)
 
           wdog = list_first_entry(&g_wdactivelist, struct wdog_s, node);
           ret  = !clock_compare(wdog->expired, ticks) ?
-                 wdog->expired - ticks : 1;
+                 wdog->expired - ticks : 1u;
         }
 
       leave_critical_section(flags);
