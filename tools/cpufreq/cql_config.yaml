@@ -1,0 +1,57 @@
+############################################################################
+# tools/cpufreq/cql_config.yaml
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.  The
+# ASF licenses this file to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance with the
+# License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+############################################################################
+
+device: cuda
+random_seed: 0
+state_dim: 2
+hidden_dim: 6
+action_dim: 3
+learning_rate: 0.0001
+gamma: 0.99
+target_update_freq: 10
+alpha: 1.0
+batch_size: 64
+num_epochs: 150
+eval_interval: 5
+data_path: PATH/TO/YOUR/DATA/app.json
+model_save_dir: ./models/
+final_model_name: final_cql_model.pth
+checkpoint_model_pattern: cql_model_epoch_{}.pth
+reward:
+  power_weight: -0.4
+  fps_weight: 0.6
+  fps_target: 60
+freq_power_mapping:
+  HIGH_FREQ_MHZ: 1.0
+  MID_FREQ_MHZ: 0.8
+  LOW_FREQ_MHZ: 0.8
+  VERY_LOW_FREQ_MHZ: 0.8
+action_freq_mapping:
+  0: LOW_FREQ_MHZ
+  1: MID_FREQ_MHZ
+  2: HIGH_FREQ_MHZ
+action_names:
+  - Low Freq
+  - Mid Freq
+  - High Freq
+num_layers: 3
+params_array_size: 6
