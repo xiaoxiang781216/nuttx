@@ -635,7 +635,7 @@ void rspin_lock(FAR rspinlock_t *lock)
 
   /* Already owned this lock. */
 
-  old_val.val = atomic_load((FAR atomic_t *)&lock->val);
+  old_val.val = atomic_load(&lock->val);
 
   if (old_val.owner == cpu)
     {
@@ -652,8 +652,8 @@ void rspin_lock(FAR rspinlock_t *lock)
         {
           old_val.val = 0;
         }
-      while (!atomic_cmpxchg_acquire((FAR atomic_t *)&lock->val,
-             (FAR atomic_t *)&old_val.val, new_val.val));
+      while (!atomic_cmpxchg_acquire(&lock->val,
+             &old_val.val, new_val.val));
     }
 }
 
@@ -719,7 +719,7 @@ static inline_function bool rspin_trylock(FAR rspinlock_t *lock)
 
   /* Already owned this lock. */
 
-  old_val.val = atomic_load((FAR atomic_t *)&lock->val);
+  old_val.val = atomic_load(&lock->val);
 
   if (old_val.owner == cpu)
     {
@@ -733,8 +733,8 @@ static inline_function bool rspin_trylock(FAR rspinlock_t *lock)
       new_val.count = 1;
       new_val.owner = cpu;
 
-      ret = atomic_cmpxchg_acquire((FAR atomic_t *)&lock->val,
-                                   (FAR atomic_t *)&old_val.val,
+      ret = atomic_cmpxchg_acquire(&lock->val,
+                                   &old_val.val,
                                    new_val.val);
     }
 
@@ -985,7 +985,7 @@ bool rspin_unlock(FAR rspinlock_t *lock)
 
   if (--lock->count == 0)
     {
-      atomic_set_release((FAR atomic_t *)&lock->val, 0);
+      atomic_set_release(&lock->val, 0);
       ret = true;
     }
 
