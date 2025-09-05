@@ -94,6 +94,8 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
                 {
                   worker[wndx].wait_count++;
                   sync_wait = &worker[wndx].wait;
+                  ret = -EBUSY;
+                  break;
                 }
             }
         }
