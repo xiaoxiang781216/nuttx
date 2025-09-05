@@ -41,6 +41,12 @@ config TRACE32_FDX_NOTE_CPUSET
 	---help---
 		CPU set for notefdx
 
+config TRACE32_FDX_NOTE_SECTION
+	string "Trace32 FDX Note driver section"
+	default ""
+	---help---
+		The section in which to place the notefdx buffer.
+
 endif # TRACE32_FDX_NOTE
 
 endmenu # Trace32 drivers

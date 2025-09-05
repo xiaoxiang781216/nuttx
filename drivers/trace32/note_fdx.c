@@ -24,6 +24,9 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
+#include <nuttx/compiler.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/spinlock.h>
 
@@ -52,6 +55,9 @@ static void notefdx_add(FAR struct note_driver_s *drv,
  * Private Data
  ****************************************************************************/
 
+#ifdef TRACE32_FDX_NOTE_SECTION
+locate_data(CONFIG_TRACE32_FDX_NOTE_SECTION)
+#endif
 T32_Fdx_DefineChannel(g_fdx_note_buffer, CONFIG_TRACE32_FDX_NOTE_BUFSIZE);
 
 static const struct note_driver_ops_s g_notefdx_ops =
