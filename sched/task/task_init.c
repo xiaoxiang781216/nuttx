@@ -45,6 +45,129 @@
 #include "tls/tls.h"
 
 /****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: task_setup
+ *
+ * Description: setup and configures the child task's TCB.
+ *
+ * Input Parameters:
+ *   tcb        - Address of the new task's TCB
+ *   name       - Name of the new task (not used)
+ *   entry      - Application start point of the new task
+ *   actions    - File action to be performed.
+ *   attr       - Use attr set stacksize, stackaddr and priority.
+ *   argv       - A pointer to an array of input parameters.
+ *   ttype      - task tcb flag type, KERNEL or TASK
+ *
+ * Returned Value:
+ *   This is a NuttX internal function so it follows the convention that
+ *   0 (OK) is returned on success and a negated is returned on failure.
+ *
+ ****************************************************************************/
+
+static int task_setup(FAR struct tcb_s *tcb, const char *name, main_t entry,
+                      FAR const posix_spawn_file_actions_t *actions,
+                      FAR const posix_spawnattr_t *attr,
+                      FAR char * const argv[], FAR char * const envp[],
+                      int ttype)
+{
+  size_t stacksize = attr->stacksize;
+#ifndef CONFIG_BUILD_KERNEL
+  FAR void *stack = attr->stackaddr;
+#else
+  FAR void *stack = NULL;
+#endif
+  int priority = attr->priority;
+  int ret;
+
+  /* Duplicate the parent tasks environment */
+
+  ret = env_dup(tcb->group, envp);
+  if (ret >= 0)
+    {
+      /* Associate file descriptors with the new task */
+
+      ret = group_setuptaskfiles(tcb, actions, true);
+      if (ret >= 0)
+        {
+          /* Set the task name */
+
+          nxtask_setup_name(tcb, name);
+
+          if (stack)
+            {
+              /* Use pre-allocated stack */
+
+              ret = up_use_stack(tcb, stack, stacksize);
+            }
+          else
+            {
+              /* Allocate the stack for the TCB */
+
+              ret = up_create_stack(tcb, stacksize, ttype);
+            }
+
+          if (ret >= OK)
+            {
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_KERNEL_STACK)
+              /* Allocate the kernel stack */
+
+              if (ttype != TCB_FLAG_TTYPE_KERNEL)
+                {
+                  ret = up_addrenv_kstackalloc(tcb);
+                }
+#endif
+
+              if (ret >= OK)
+                {
+                  /* Initialize the task control block */
+
+                  ret = nxtask_setup_scheduler(tcb, priority, nxtask_start,
+                                               entry, ttype);
+                  if (ret >= OK)
+                    {
+                      /* Initialize thread local storage */
+
+                      ret = tls_init_info(tcb);
+                      if (ret >= OK)
+                        {
+                          /* Setup to pass parameters to the new task */
+
+                          ret = nxtask_setup_stackargs(tcb, name, argv);
+                        }
+                    }
+                }
+            }
+
+          if (ret < OK && !stack && tcb->stack_alloc_ptr)
+            {
+#ifdef CONFIG_BUILD_KERNEL
+              /* If the exiting thread is not a kernel thread, then it has
+               * an address environment. Don't bother to release the stack
+               * memory in this case... There is no point since the memory
+               * lies in the user memory region that will be destroyed anyway
+               * (and the address environment has probably already been
+               * destroyed at this point.. so we would crash if we even tried
+               * it).  But if this is a privileged group, then we still have
+               * to release the memory using the kernel allocator.
+               */
+
+              if (ttype == TCB_FLAG_TTYPE_KERNEL)
+#endif
+                {
+                  up_release_stack(tcb, ttype);
+                }
+            }
+        }
+    }
+
+  return ret;
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -91,19 +214,12 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
                 FAR char * const argv[], FAR char * const envp[])
 {
   int ttype = atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK;
-  size_t stacksize = attr->stacksize;
-#ifndef CONFIG_BUILD_KERNEL
-  FAR void *stack = attr->stackaddr;
-#else
-  FAR void *stack = NULL;
-#endif
 #ifdef CONFIG_MM_TASK_HEAP
   size_t heapsize = attr->heapsize;
 #else
   size_t heapsize = 0;
 #endif
-  int priority = attr->priority;
-  int ret;
+  int ret = OK;
 
   sched_trace_begin();
 
@@ -127,145 +243,54 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
           if (addrenv == NULL)
             {
               ret = -ENOMEM;
-              goto errout;
             }
-
-          addrenv_attach(tcb, addrenv);
+          else
+            {
+              addrenv_attach(tcb, addrenv);
+            }
         }
     }
 
 #endif
 
-  /* Create a new task group */
-
-  ret = group_initialize(tcb, tcb->flags, heapsize);
-  if (ret < 0)
+  if (ret == OK)
     {
-      goto errout;
-    }
+      /* Create a new task group */
 
+      ret = group_initialize(tcb, tcb->flags, heapsize);
+      if (ret >= 0)
+        {
 #ifndef CONFIG_DISABLE_PTHREAD
-  /* Initialize the task join */
+          /* Initialize the task join */
 
-  nxtask_joininit(tcb);
+          nxtask_joininit(tcb);
 #endif
 
-  nxsem_init(&tcb->exit_sem, 0, 0);
+          nxsem_init(&tcb->exit_sem, 0, 0);
 
-  /* Duplicate the parent tasks environment */
+          ret = task_setup(tcb, name, entry, actions, attr, argv,
+                           envp, ttype);
+          if (ret >= 0)
+            {
+              /* Now we have enough in place that we can join the group */
 
-  ret = env_dup(tcb->group, envp);
-  if (ret < 0)
-    {
-      goto errout_with_group;
-    }
+              group_postinitialize(tcb);
+            }
+          else
+            {
+              nxtask_joindestroy(tcb);
 
-  /* Associate file descriptors with the new task */
+              nxsem_destroy(&tcb->exit_sem);
 
-  ret = group_setuptaskfiles(tcb, actions, true);
-  if (ret < 0)
-    {
-      goto errout_with_group;
-    }
-
-  /* Set the task name */
-
-  nxtask_setup_name(tcb, name);
-
-  if (stack)
-    {
-      /* Use pre-allocated stack */
-
-      ret = up_use_stack(tcb, stack, stacksize);
-    }
-  else
-    {
-      /* Allocate the stack for the TCB */
-
-      ret = up_create_stack(tcb, stacksize, ttype);
-    }
-
-  if (ret < OK)
-    {
-      goto errout_with_group;
-    }
-
-#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_KERNEL_STACK)
-  /* Allocate the kernel stack */
-
-  if (ttype != TCB_FLAG_TTYPE_KERNEL)
-    {
-      ret = up_addrenv_kstackalloc(tcb);
-      if (ret < 0)
-        {
-          goto errout_with_group;
-        }
-    }
-#endif
-
-  /* Initialize thread local storage */
-
-  ret = tls_init_info(tcb);
-  if (ret < OK)
-    {
-      goto errout_with_group;
-    }
-
-  /* Setup to pass parameters to the new task */
-
-  ret = nxtask_setup_stackargs(tcb, name, argv);
-  if (ret < OK)
-    {
-      goto errout_with_group;
-    }
-
-  /* Initialize the task control block */
-
-  ret = nxtask_setup_scheduler(tcb, priority, nxtask_start,
-                               entry, ttype);
-  if (ret < OK)
-    {
-      goto errout_with_group;
-    }
-
-  /* Now we have enough in place that we can join the group */
-
-  group_postinitialize(tcb);
-  sched_trace_end();
-  return ret;
-
-errout_with_group:
-  if (!stack && tcb->stack_alloc_ptr)
-    {
-#ifdef CONFIG_BUILD_KERNEL
-      /* If the exiting thread is not a kernel thread, then it has an
-       * address environment.  Don't bother to release the stack memory
-       * in this case... There is no point since the memory lies in the
-       * user memory region that will be destroyed anyway (and the
-       * address environment has probably already been destroyed at
-       * this point.. so we would crash if we even tried it).  But if
-       * this is a privileged group, then we still have to release the
-       * memory using the kernel allocator.
-       */
-
-      if (ttype == TCB_FLAG_TTYPE_KERNEL)
-#endif
-        {
-          up_release_stack(tcb, ttype);
-        }
-    }
-
-  nxtask_joindestroy(tcb);
-
-  nxsem_destroy(&tcb->exit_sem);
-
-  group_leave(tcb);
+              group_leave(tcb);
 
 #ifdef CONFIG_ARCH_ADDRENV
-  addrenv_drop(tcb->group->tg_addrenv_own, false);
+              addrenv_drop(tcb->group->tg_addrenv_own, false);
 #endif
+            }
+        }
+    }
 
-errout:
   sched_trace_end();
   return ret;
 }

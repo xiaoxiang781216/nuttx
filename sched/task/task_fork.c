@@ -113,31 +113,35 @@ static int task_setup(FAR struct tcb_s *ptcb,
                 }
 #endif
 
-              /* Get the priority of the parent task */
-
-#ifdef CONFIG_PRIORITY_INHERITANCE
-              priority = ptcb->base_priority;   /* "Normal," unboosted priority */
-#else
-              priority = ptcb->sched_priority;  /* Current priority */
-#endif
-
-              /* Initialize the task control block.
-               * This calls up_initial_state()
-               */
-
-              sinfo("Child priority=%d start=%p\n", priority, retaddr);
-              ret = nxtask_setup_scheduler(child, priority, retaddr,
-                                           ptcb->entry.main, ttype);
               if (ret >= OK)
                 {
-                  /* Setup thread local storage */
+                  /* Get the priority of the parent task */
 
-                  ret = tls_dup_info(child, parent);
+#ifdef CONFIG_PRIORITY_INHERITANCE
+                  priority = ptcb->base_priority;   /* "Normal," unboosted priority */
+#else
+                  priority = ptcb->sched_priority;  /* Current priority */
+#endif
+
+                  /* Initialize the task control block.
+                   * This calls up_initial_state()
+                   */
+
+                  sinfo("Child priority=%d start=%p\n", priority, retaddr);
+                  ret = nxtask_setup_scheduler(child, priority, retaddr,
+                                               ptcb->entry.main, ttype);
                   if (ret >= OK)
                     {
-                      /* Setup to pass parameters to the new task */
+                      /* Setup thread local storage */
 
-                      ret = nxtask_setup_stackargs(child, argv[0], &argv[1]);
+                      ret = tls_dup_info(child, parent);
+                      if (ret >= OK)
+                        {
+                          /* Setup to pass parameters to the new task */
+
+                          ret = nxtask_setup_stackargs(child,
+                                                       argv[0], &argv[1]);
+                        }
                     }
                 }
             }
