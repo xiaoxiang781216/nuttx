@@ -207,6 +207,7 @@ function(nuttx_add_application)
       endif()
 
       if(DYNLIB_ELF_MODE)
+        add_dependencies(nuttx_apps_mksymtab ${TARGET})
         target_compile_options(
           ${TARGET}
           PRIVATE
