@@ -48,8 +48,8 @@
  */
 
 #define irq_detach(irq) irq_attach(irq, NULL, NULL)
-#define irq_detach_wqueue(irq) irq_attach_wqueue(irq, NULL, NULL, NULL, 0u)
-#define irq_detach_thread(irq) irq_attach_thread(irq, NULL, NULL, NULL, 0u, 0)
+#define irq_detach_wqueue(irq) irq_attach_wqueue(irq, NULL, NULL, NULL, 0)
+#define irq_detach_thread(irq) irq_attach_thread(irq, NULL, NULL, NULL, 0, 0)
 
 /* Maximum/minimum values of IRQ integer types */
 
@@ -265,7 +265,7 @@ int irq_attach(int irq, xcpt_t isr, FAR void *arg);
  ****************************************************************************/
 
 int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
-                      uint8_t priority, int stack_size);
+                      int priority, int stack_size);
 
 /****************************************************************************
  * Name: irq_attach_wqueue
@@ -290,7 +290,7 @@ int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
  ****************************************************************************/
 
 int irq_attach_wqueue(int irq, xcpt_t isr, xcpt_t isrwork,
-                      FAR void *arg, uint8_t priority);
+                      FAR void *arg, int priority);
 
 #ifdef CONFIG_IRQCHAIN
 int irqchain_detach(int irq, xcpt_t isr, FAR void *arg);

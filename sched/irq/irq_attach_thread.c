@@ -141,7 +141,7 @@ static noreturn_function int isr_thread_main(int argc, FAR char *argv[])
  ****************************************************************************/
 
 int irq_attach_thread(int irq, xcpt_t isr, xcpt_t isrthread, FAR void *arg,
-                      uint8_t priority, int stack_size)
+                      int priority, int stack_size)
 {
   int ret = OK;
 #if NR_IRQS > 0
