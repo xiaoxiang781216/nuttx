@@ -84,7 +84,7 @@ static int nxsched_roundrobin_handler(FAR void *cookie)
   if (tcb->task_state == TSTATE_TASK_RUNNING && tcb->cpu == this_cpu() &&
       nxsched_switch_running(tcb->cpu, true))
     {
-      nxscehd_switch(this_task(), tcb);
+      nxsched_switch(this_task(), tcb);
     }
 
   nxsched_put_tcb(tcb);
@@ -206,7 +206,7 @@ uint32_t nxsched_process_roundrobin(FAR struct tcb_s *tcb, uint32_t ticks,
               if (nxsched_reprioritize_rtr(tcb, tcb->sched_priority))
 #endif
                 {
-                  nxscehd_switch(this_task(), rtcb);
+                  nxsched_switch(this_task(), rtcb);
                 }
             }
         }

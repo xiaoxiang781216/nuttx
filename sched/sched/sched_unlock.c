@@ -84,7 +84,7 @@ void nxsched_unlock(FAR struct tcb_s *rtcb)
   if (ptcb && nxsched_merge_pending())
 #endif
     {
-      nxscehd_switch(this_task(), rtcb);
+      nxsched_switch(this_task(), rtcb);
     }
 
 #if CONFIG_RR_INTERVAL > 0

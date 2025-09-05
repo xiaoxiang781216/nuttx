@@ -234,7 +234,7 @@ int nxsem_wait_slow(FAR sem_t *sem)
 
       /* Now, perform the context switch */
 
-      nxscehd_switch(this_task(), rtcb);
+      nxsched_switch(this_task(), rtcb);
 
       /* When we resume at this point, either (1) the semaphore has been
        * assigned to this thread of execution, or (2) the semaphore wait

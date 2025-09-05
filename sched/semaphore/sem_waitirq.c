@@ -75,7 +75,7 @@ void restore_context(FAR struct tcb_s *rtcb, FAR struct tcb_s *wtcb,
 
   if (nxsched_add_readytorun(wtcb))
     {
-      nxscehd_switch(wtcb, rtcb);
+      nxsched_switch(wtcb, rtcb);
     }
 }
 

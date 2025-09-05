@@ -152,7 +152,7 @@ void restore_critical_section(uint16_t count);
 #  endif
 #endif
 
-#define nxscehd_switch(tcb, rtcb) \
+#define nxsched_switch(tcb, rtcb) \
   do \
     { \
       uint16_t count = rspin_lock_count(&g_schedlock); \

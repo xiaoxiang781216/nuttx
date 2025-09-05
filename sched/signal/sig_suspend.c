@@ -137,7 +137,7 @@ int sigsuspend(FAR const sigset_t *set)
 
       /* Now, perform the context switch */
 
-      nxscehd_switch(this_task(), rtcb);
+      nxsched_switch(this_task(), rtcb);
 
       /* We are running again, restore the original sigprocmask */
 
