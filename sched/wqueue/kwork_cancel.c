@@ -46,6 +46,7 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
                         FAR struct work_s *work)
 {
   irqstate_t flags;
+  int ret = OK;
   FAR sem_t *sync_wait = NULL;
 
   if (wqueue == NULL || work == NULL)
@@ -90,6 +91,8 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
             {
               worker[wndx].wait_count++;
               sync_wait = &worker[wndx].wait;
+              ret = -EBUSY;
+              break;
             }
         }
     }
@@ -101,7 +104,7 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
       nxsem_wait_uninterruptible(sync_wait);
     }
 
-  return 0;
+  return ret;
 }
 
 /****************************************************************************
@@ -164,13 +167,30 @@ int work_cancel_wq(FAR struct kwork_wqueue_s *wqueue,
 
 int work_cancel_sync(int qid, FAR struct work_s *work)
 {
-  return work_qcancel(work_qid2wq(qid), true, work);
+  struct kwork_wqueue_s *wqueue = work_qid2wq(qid);
+  int ret;
+
+  do
+    {
+      ret = work_qcancel(wqueue, true, work);
+    }
+  while (ret == -EBUSY);
+
+  return ret;
 }
 
 int work_cancel_sync_wq(FAR struct kwork_wqueue_s *wqueue,
                         FAR struct work_s *work)
 {
-  return work_qcancel(wqueue, true, work);
+  int ret;
+
+  do
+    {
+      ret = work_qcancel(wqueue, true, work);
+    }
+  while (ret == -EBUSY);
+
+  return ret;
 }
 
 #endif /* CONFIG_SCHED_WORKQUEUE */
