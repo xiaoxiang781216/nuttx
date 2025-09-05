@@ -40,8 +40,14 @@ struct notefdx_s
 {
   struct note_driver_s driver;
   FAR void *channel;
-  spinlock_t lock;
   int loss;
+};
+
+struct notefdx_channel_s
+{
+  T32_FDX_BUFFER header;
+  volatile T32_FDX_DATATYPE data[CONFIG_TRACE32_FDX_NOTE_BUFSIZE];
+  spinlock_t lock;
 };
 
 /****************************************************************************
@@ -58,7 +64,7 @@ static void notefdx_add(FAR struct note_driver_s *drv,
 #ifdef TRACE32_FDX_NOTE_SECTION
 locate_data(CONFIG_TRACE32_FDX_NOTE_SECTION)
 #endif
-T32_Fdx_DefineChannel(g_fdx_note_buffer, CONFIG_TRACE32_FDX_NOTE_BUFSIZE);
+static struct notefdx_channel_s g_fdx_note_channel;
 
 static const struct note_driver_ops_s g_notefdx_ops =
 {
@@ -108,12 +114,14 @@ static void notefdx_add(FAR struct note_driver_s *drv,
                         FAR const void *buf, size_t notelen)
 {
   FAR struct notefdx_s *note = (FAR struct notefdx_s *)drv;
+  FAR struct notefdx_channel_s *channel = note->channel;
 
-  if (note->channel != NULL)
+  if (channel != NULL)
     {
-      irqstate_t flags = spin_lock_irqsave(&note->lock);
-      int ret = T32_Fdx_SendPoll(note->channel, (FAR void *)buf, notelen);
-      spin_unlock_irqrestore(&note->lock, flags);
+      FAR spinlock_t *lock = &channel->lock;
+      irqstate_t flags = spin_lock_irqsave(lock);
+      int ret = T32_Fdx_SendPoll(channel, (FAR void *)buf, notelen);
+      spin_unlock_irqrestore(lock, flags);
 
       if (ret > 0)
         {
@@ -148,9 +156,9 @@ static void notefdx_add(FAR struct note_driver_s *drv,
 
 int notefdx_register(void)
 {
-  T32_Fdx_InitChannel(g_fdx_note_buffer);
-  T32_Fdx_EnableChannel(g_fdx_note_buffer);
-  g_notefdx.channel = &g_fdx_note_buffer;
+  T32_Fdx_InitChannel(g_fdx_note_channel);
+  T32_Fdx_EnableChannel(g_fdx_note_channel);
+  g_notefdx.channel = &g_fdx_note_channel;
   return note_driver_register(&g_notefdx.driver);
 }
 
