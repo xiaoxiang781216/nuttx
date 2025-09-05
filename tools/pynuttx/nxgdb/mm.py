@@ -578,8 +578,8 @@ class MMHeap(Value, p.MMHeap):
         # Check if heap node is accessible
         try:
             for start, end in self.regions:
-                start.read_memory()
-                end.read_memory()
+                gdb.selected_inferior().read_memory(start.address, 1)
+                gdb.selected_inferior().read_memory(end.address, 1)
         except gdb.MemoryError:
             raise ValueError(f"Heap node not accessible: {heap}")
 
