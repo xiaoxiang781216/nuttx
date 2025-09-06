@@ -648,22 +648,11 @@ found:
 }
 
 /****************************************************************************
- * Name: fdlist_allocate
+ * Name: fdlist_file_allocate_from_inode
  *
  * Description:
- *   Allocate a struct fd instance and associate it with an empty file
- *   instance. The difference between this function and
- *   file_allocate_from_inode is that this function is only used for
- *   placeholder purposes. Later, the caller will initialize the file entity
- *   through the returned filep.
- *
- *   The fd allocated by this function can be released using fdlist_close.
- *
- *   After the function call is completed, it will hold a reference count
- *   for the filep. Therefore, when the filep is no longer in use, it is
- *   necessary to call file_put to release the reference count, in order
- *   to avoid a race condition where the file might be closed during
- *   this process.
+ *   Allocate a struct fd instance and associate it with an file instance
+ *   with specify list, And initialize them with inode, oflags, pos and priv.
  *
  * Returned Value:
  *   Returns the file descriptor == index into the files array on success;
@@ -671,55 +660,35 @@ found:
  *
  ****************************************************************************/
 
-int fdlist_allocate(FAR struct fdlist *list, int oflags,
-                    int minfd, FAR struct file **filep)
+int fdlist_file_allocate_from_inode(FAR struct fdlist *list,
+                                    FAR struct inode *inode, int oflags,
+                                    off_t pos, FAR void *priv, int minfd)
 {
+  FAR struct file *filep;
   int fd;
 
-  *filep = fs_heap_zalloc(sizeof(struct file));
-  if (*filep == NULL)
+  filep = fs_heap_zalloc(sizeof(struct file));
+  if (filep == NULL)
     {
       return -ENOMEM;
     }
 
-  (*filep)->f_refs++;
-  fd = fdlist_dupfile(list, oflags, minfd, *filep);
+  inode_addref(inode);
+  filep->f_inode  = inode;
+  filep->f_pos    = pos;
+  filep->f_oflags = oflags & ~O_CLOEXEC;
+  filep->f_priv   = priv;
+#if CONFIG_FS_LOCK_BUCKET_SIZE > 0
+  filep->f_locked = false;
+#endif
+  fd = fdlist_dupfile(list, oflags, minfd, filep);
   if (fd < 0)
     {
-      file_put(*filep);
+      inode_release(inode);
+      fs_heap_free(filep);
     }
 
   return fd;
-}
-
-/****************************************************************************
- * Name: file_allocate
- *
- * Description:
- *   Allocate a struct fd instance and associate it with an empty file
- *   instance. The difference between this function and
- *   file_allocate_from_inode is that this function is only used for
- *   placeholder purposes. Later, the caller will initialize the file entity
- *   through the returned filep.
- *
- *   The fd allocated by this function can be released using nx_close.
- *
- *   After the function call is completed, it will hold a reference count
- *   for the filep. Therefore, when the filep is no longer in use, it is
- *   necessary to call file_put to release the reference count, in order
- *   to avoid a race condition where the file might be closed during
- *   this process.
- *
- * Returned Value:
- *   Returns the file descriptor == index into the files array on success;
- *   a negated errno value is returned on any failure.
- *
- ****************************************************************************/
-
-int file_allocate(int oflags, int minfd, FAR struct file **filep)
-{
-  return fdlist_allocate(nxsched_get_fdlist_from_tcb(this_task()),
-                         oflags, minfd, filep);
 }
 
 /****************************************************************************
@@ -738,27 +707,10 @@ int file_allocate(int oflags, int minfd, FAR struct file **filep)
 int file_allocate_from_inode(FAR struct inode *inode, int oflags, off_t pos,
                              FAR void *priv, int minfd)
 {
-  FAR struct file *filep;
-  int fd;
+  FAR struct fdlist *list = nxsched_get_fdlist_from_tcb(this_task());
 
-  fd = file_allocate(oflags, minfd, &filep);
-  if (fd < 0)
-    {
-      return fd;
-    }
-
-  inode_addref(inode);
-  filep->f_inode  = inode;
-  filep->f_pos    = pos;
-  filep->f_oflags = oflags & ~O_CLOEXEC;
-  filep->f_priv   = priv;
-#if CONFIG_FS_LOCK_BUCKET_SIZE > 0
-  filep->f_locked = false;
-#endif
-
-  file_put(filep);
-
-  return fd;
+  return fdlist_file_allocate_from_inode(list, inode, oflags, pos,
+                                         priv, minfd);
 }
 
 /****************************************************************************
