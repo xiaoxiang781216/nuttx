@@ -172,23 +172,23 @@ errout_with_sem:
 
 int shm_open(FAR const char *name, int oflag, mode_t mode)
 {
-  FAR struct file *shm;
+  struct file shm;
   int ret;
   int fd;
 
-  fd = file_allocate(oflag | O_CLOEXEC, 0, &shm);
-  if (fd < 0)
+  ret = file_shm_open(&shm, name, oflag | O_CLOEXEC, mode);
+  if (ret < 0)
     {
-      set_errno(-fd);
+      set_errno(-ret);
       return ERROR;
     }
 
-  ret = file_shm_open(shm, name, oflag, mode);
-  file_put(shm);
-  if (ret < 0)
+  fd = file_allocate_from_inode(shm.f_inode, shm.f_oflags,
+                                shm.f_pos, shm.f_priv, 0);
+  if (fd < 0)
     {
-      nx_close(fd);
-      set_errno(-ret);
+      file_close(&shm);
+      set_errno(-fd);
       return ERROR;
     }
 

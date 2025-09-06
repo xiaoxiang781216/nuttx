@@ -360,23 +360,22 @@ errout:
 
 static mqd_t nxmq_vopen(FAR const char *mq_name, int oflags, va_list ap)
 {
-  FAR struct file *mq;
+  struct file mq;
   int created;
   int ret;
   int fd;
 
-  fd = file_allocate(oflags, 0, &mq);
-  if (fd < 0)
-    {
-      return fd;
-    }
-
-  ret = file_mq_vopen(mq, mq_name, oflags, getumask(), ap, &created);
-  file_put(mq);
+  ret = file_mq_vopen(&mq, mq_name, oflags, getumask(), ap, &created);
   if (ret < 0)
     {
-      nx_close(fd);
       return ret;
+    }
+
+  fd = file_allocate_from_inode(mq.f_inode, mq.f_oflags,
+                                mq.f_pos, mq.f_priv, 0);
+  if (fd < 0)
+    {
+      file_close(&mq);
     }
 
   return fd;
