@@ -34,6 +34,10 @@ ifeq ($(CONFIG_GDBSTUB_NETDEV),y)
   CSRCS += netdev_gdbstub.c
 endif
 
+ifeq ($(CONFIG_MDIO_BUS),y)
+  CSRCS += mdio.c
+endif
+
 ifeq ($(CONFIG_NET_LOOPBACK),y)
   CSRCS += loopback.c
 endif

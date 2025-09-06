@@ -13,6 +13,7 @@ Network Support
   netdev.rst
   netdriver.rst
   netpoll.rst
+  mdio.rst
   netguardsize.rst
   netlink.rst
   slip.rst
