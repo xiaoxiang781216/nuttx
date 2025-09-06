@@ -500,7 +500,7 @@ retry:
 
 void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
 {
-  irqstate_t flags = spin_lock_irqsave(&pool->lock);
+  irqstate_t flags;
   bool bypass = kasan_bypass(true);
 
 #ifdef CONFIG_MM_RECORD
@@ -516,6 +516,8 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
 
   mempool_record(pool, record, MEMPOOL_MAGIC_FREE);
 #endif
+
+  flags = spin_lock_irqsave(&pool->lock);
 
   pool->nalloc--;
 
