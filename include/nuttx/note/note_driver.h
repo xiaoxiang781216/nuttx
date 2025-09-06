@@ -158,12 +158,15 @@
           memset((s), 0, sizeof(struct note_filter_tag_s));
 #  define NOTE_FILTER_TAGMASK_FILL(s) \
           memset((s), 0xff, sizeof(struct note_filter_tag_s))
+#  define NOTE_FILTER_LEVEL_SET(level, s) \
+          ((s)->level = (level))
 #else
 #  define NOTE_FILTER_TAGMASK_SET(tag, s)
 #  define NOTE_FILTER_TAGMASK_CLR(tag, s)
 #  define NOTE_FILTER_TAGMASK_ISSET(tag, s) (0)
 #  define NOTE_FILTER_TAGMASK_ZERO(s)
 #  define NOTE_FILTER_TAGMASK_FILL(s)
+#  define NOTE_FILTER_LEVEL_SET(level, s)
 #endif
 
 /* Sometimes perf_getime is not a syscall */
@@ -312,10 +315,12 @@ struct note_driver_ops_s
                     size_t curused);
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-  CODE void (*event)(FAR struct note_driver_s *drv, uintptr_t ip,
-                     uint8_t event, FAR const void *buf, size_t len);
-  CODE void (*vprintf)(FAR struct note_driver_s *drv, uintptr_t ip,
-                       FAR const char *fmt, va_list va) printf_like(3, 0);
+  CODE void (*event)(FAR struct note_driver_s *drv, uint8_t level,
+                     uintptr_t ip, uint8_t event,
+                     FAR const void *buf, size_t len);
+  CODE void (*vprintf)(FAR struct note_driver_s *drv, uint8_t level,
+                       uintptr_t ip, FAR const char *fmt,
+                       va_list va) printf_like(4, 0);
 #endif
 };
 
@@ -384,6 +389,11 @@ struct note_filter_tag_s
   uint8_t tag_mask[(NOTE_TAG_MAX + 7) / 8];
 };
 
+struct note_filter_level_s
+{
+  uint8_t level;
+};
+
 struct note_filter_named_tag_s
 {
   char name[NAME_MAX];
@@ -395,6 +405,7 @@ struct note_filter_s
   struct note_filter_mode_s mode;
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
   struct note_filter_tag_s tag_mask;
+  struct note_filter_level_s level;
 #  endif
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
   struct note_filter_irq_s irq_mask;
@@ -456,21 +467,21 @@ int note_initialize(void);
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
 void note_driver_printf_ip(FAR struct note_driver_s *driver, uint32_t tag,
-                           uintptr_t ip, uint64_t type,
-                           FAR const char *fmt, ...) printf_like(5, 6);
+                           uint8_t level, uintptr_t ip, uint64_t type,
+                           FAR const char *fmt, ...) printf_like(6, 7);
 
 void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint32_t tag,
-                            uintptr_t ip, uint64_t type,
+                            uint8_t level, uintptr_t ip, uint64_t type,
                             FAR const char *fmt,
-                            va_list *va) printf_like(5, 0);
+                            va_list *va) printf_like(6, 0);
 
 size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
-                            uintptr_t ip, uint8_t event, FAR const void *buf,
-                            size_t len);
+                            uint8_t level, uintptr_t ip, uint8_t event,
+                            FAR const void *buf, size_t len);
 #else
-#  define note_driver_printf_ip(d,t,i,p,f,a)
-#  define note_driver_vprintf_ip(d,t,i,p,f,a)
-#  define note_driver_event_ip(d,t,i,e,b,l)
+#  define note_driver_printf_ip(d,t,l,i,p,f,a)
+#  define note_driver_vprintf_ip(d,t,l,i,p,f,a)
+#  define note_driver_event_ip(d,t,l,i,e,b,n)
 #endif
 
 /****************************************************************************

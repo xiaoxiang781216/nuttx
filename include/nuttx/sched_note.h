@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <syslog.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/macro.h>
@@ -62,13 +63,13 @@
 #define NOTE_PRINTF_GET_TYPE(tag, index) (((tag) >> (index) * 2) & 0x03)
 #define NOTE_PRINTF_GET_COUNT(tag)       ((tag) >> 58)
 
-#define sched_note_event(tag, event, buf, len) \
-        sched_note_event_ip(tag, up_getpc(), event, buf, len)
-#define sched_note_vprintf(tag, fmt, va) \
-        sched_note_vprintf_ip(tag, up_getpc(), fmt, 0, &(va))
+#define sched_note_event(tag, level, event, buf, len) \
+        sched_note_event_ip(tag, level, up_getpc(), event, buf, len)
+#define sched_note_vprintf(tag, level, fmt, va) \
+        sched_note_vprintf_ip(tag, level, up_getpc(), fmt, 0, &(va))
 
 #ifdef CONFIG_DRIVERS_NOTE_STRIP_FORMAT
-#  define sched_note_printf(tag, fmt, ...)                                  \
+#  define sched_note_printf(tag, level, fmt, ...)                           \
           do                                                                \
             {                                                               \
               union fmt_type_u                                              \
@@ -83,25 +84,26 @@
               static_assert(GET_ARG_COUNT(__VA_ARGS__) <= 29,               \
                             "The number of sched_note_nprintf "             \
                             "parameters needs to be less than 29");         \
-              sched_note_printf_ip(tag, up_getpc(), __fmt__,                \
+              sched_note_printf_ip(tag, level, up_getpc(), __fmt__,         \
                                   __fmt_type__.__type__, ##__VA_ARGS__);    \
             }                                                               \
           while (0)
 #else
-#  define sched_note_printf(tag, fmt, ...) \
-          sched_note_printf_ip(tag, up_getpc(), fmt, 0, ##__VA_ARGS__)
+#  define sched_note_printf(tag, level, fmt, ...) \
+          sched_note_printf_ip(tag, level, up_getpc(),                      \
+                               fmt, 0, ##__VA_ARGS__)
 #endif
 
 #define sched_note_begin(tag) \
-        sched_note_event(tag, NOTE_DUMP_BEGIN, NULL, 0)
+        sched_note_event(tag, LOG_INFO, NOTE_DUMP_BEGIN, NULL, 0)
 #define sched_note_end(tag) \
-        sched_note_event(tag, NOTE_DUMP_END, NULL, 0)
+        sched_note_event(tag, LOG_INFO, NOTE_DUMP_END, NULL, 0)
 #define sched_note_beginex(tag, str) \
-        sched_note_event(tag, NOTE_DUMP_BEGIN, str, strlen(str))
+        sched_note_event(tag, LOG_INFO, NOTE_DUMP_BEGIN, str, strlen(str))
 #define sched_note_endex(tag, str) \
-        sched_note_event(tag, NOTE_DUMP_END, str, strlen(str))
+        sched_note_event(tag, LOG_INFO, NOTE_DUMP_END, str, strlen(str))
 #define sched_note_mark(tag, str) \
-        sched_note_event(tag, NOTE_DUMP_MARK, str, strlen(str))
+        sched_note_event(tag, LOG_INFO, NOTE_DUMP_MARK, str, strlen(str))
 
 #define sched_note_counter(tag, name_, value_) \
         do \
@@ -109,7 +111,7 @@
             struct note_counter_s counter; \
             counter.value = value_; \
             strlcpy(counter.name, name_, NAME_MAX); \
-            sched_note_event(tag, NOTE_DUMP_COUNTER, \
+            sched_note_event(tag, level, NOTE_DUMP_COUNTER, \
                              &counter, sizeof(counter)); \
           } \
         while (0)
@@ -119,7 +121,7 @@
           { \
             struct note_threadtime_s threadtime; \
             threadtime.elapsed = (_elapsed); \
-            sched_note_event(NOTE_TAG_SCHED, NOTE_DUMP_THREADTIME, \
+            sched_note_event(NOTE_TAG_SCHED, level, NOTE_DUMP_THREADTIME, \
                              &threadtime, sizeof(threadtime)); \
           } \
         while (0)
@@ -177,14 +179,6 @@ enum note_tag_e
 {
   NOTE_TAG_ALWAYS = 0,
   NOTE_TAG_LOG,
-  NOTE_TAG_LOG_EMERG = NOTE_TAG_LOG,
-  NOTE_TAG_LOG_ALERT,
-  NOTE_TAG_LOG_CRIT,
-  NOTE_TAG_LOG_ERR,
-  NOTE_TAG_LOG_WARNING,
-  NOTE_TAG_LOG_NOTICE,
-  NOTE_TAG_LOG_INFO,
-  NOTE_TAG_LOG_DEBUG,
   NOTE_TAG_APP,
   NOTE_TAG_ARCH,
   NOTE_TAG_AUDIO,
@@ -335,7 +329,7 @@ struct note_heap_s
   size_t used;
 };
 
-/* Mannually aligned to the
+/* Manually aligned to the
  * 4-byte boundary as some compilers
  * like GHS prefers alignment and it's
  * no harm anyway.
@@ -351,6 +345,7 @@ struct note_printf_s
   FAR const char *npt_fmt;      /* Printf format string */
   uint64_t npt_type;            /* Printf parameter type */
   uint32_t npt_tag;             /* Printf tag */
+  uint32_t npt_level;           /* Event level */
   char npt_data[4];             /* Print arguments */
 };
 
@@ -362,6 +357,7 @@ struct note_event_s
   struct note_common_s nev_cmn;      /* Common note parameters */
   uintptr_t nev_ip;                  /* Instruction pointer called from */
   uint32_t nev_tag;                  /* Event tag */
+  uint32_t nev_level;                /* Event level */
   uint8_t nev_data[4];               /* Event data */
 };
 
@@ -453,7 +449,7 @@ void sched_note_csection(FAR struct tcb_s *tcb, bool enter);
 #if defined(CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS) && defined(CONFIG_DRIVERS_NOTE)
 void sched_note_spinlock(FAR volatile spinlock_t *spinlock, int type);
 #else
-#  define sched_note_spinlock(spinlock, type)
+#  define sched_note_spinlock(s,t)
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_SYSCALL) && defined(CONFIG_DRIVERS_NOTE)
@@ -484,66 +480,71 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_DUMP) && defined(CONFIG_DRIVERS_NOTE)
-void sched_note_event_ip(uint32_t tag, uintptr_t ip, uint8_t event,
-                         FAR const void *buf, size_t len);
-void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
-                           uint64_t type, va_list *va) printf_like(3, 0);
-void sched_note_printf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
-                          uint64_t type, ...) printf_like(3, 5);
+void sched_note_event_ip(uint32_t tag, uint8_t level, uintptr_t ip,
+                         uint8_t event, FAR const void *buf,
+                         size_t len);
+void sched_note_vprintf_ip(uint32_t tag, uint8_t level, uintptr_t ip,
+                           FAR const char *fmt, uint64_t type,
+                           va_list *va) printf_like(4, 0);
+void sched_note_printf_ip(uint32_t tag, uint8_t level, uintptr_t ip,
+                          FAR const char *fmt, uint64_t type, ...)
+                          printf_like(4, 6);
 
-void sched_note_event_ip_ratelimit(uint32_t tag, uintptr_t ip, uint8_t event,
-                                   FAR const void *buf, size_t len);
-void sched_note_vprintf_ip_ratelimit(uint32_t tag, uintptr_t ip,
-                                     FAR const char *fmt, uint64_t type,
-                                     va_list *va) printf_like(3, 0);
-void sched_note_printf_ip_ratelimit(uint32_t tag, uintptr_t ip,
-                                    FAR const char *fmt,
-                                    uint64_t type, ...) printf_like(3, 5);
+void sched_note_event_ip_ratelimit(uint32_t tag, uint8_t level, uintptr_t ip,
+                                   uint8_t event, FAR const void *buf,
+                                   size_t len);
+void sched_note_vprintf_ip_ratelimit(uint32_t tag, uint8_t level,
+                                     uintptr_t ip, FAR const char *fmt,
+                                     uint64_t type, va_list *va)
+                                     printf_like(4, 0);
+void sched_note_printf_ip_ratelimit(uint32_t tag, uint8_t level,
+                                    uintptr_t ip, FAR const char *fmt,
+                                    uint64_t type, ...) printf_like(4, 6);
 
-#define sched_note_event_ip_ratelimited(tag, ip, event, buf, len) \
-  ({                                                              \
-    static DEFINE_RATELIMIT_STATE(_rs,                            \
-      CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                     \
-      CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                       \
-    if (!ratelimit_islimited(&_rs))                               \
-      {                                                           \
-        sched_note_event_ip(tag, ip, event, buf, len);            \
-      }                                                           \
+#define sched_note_event_ip_ratelimited(tag, level, ip, event, buf, len) \
+  ({                                                                     \
+    static DEFINE_RATELIMIT_STATE(_rs,                                   \
+      CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                            \
+      CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                              \
+    if (!ratelimit_islimited(&_rs))                                      \
+      {                                                                  \
+        sched_note_event_ip(tag, level, ip, event, buf, len);            \
+      }                                                                  \
   })
 
-#define sched_note_vprintf_ip_ratelimited(tag, ip, fmt, type, va) \
-  ({                                                              \
-    static DEFINE_RATELIMIT_STATE(_rs,                            \
-      CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                     \
-      CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                       \
-    if (!ratelimit_islimited(&_rs))                               \
-      {                                                           \
-        sched_note_vprintf_ip(tag, ip, fmt, type, va);            \
-      }                                                           \
+#define sched_note_vprintf_ip_ratelimited(tag, level, ip, fmt, type, va) \
+  ({                                                                     \
+    static DEFINE_RATELIMIT_STATE(_rs,                                   \
+      CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                            \
+      CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                              \
+    if (!ratelimit_islimited(&_rs))                                      \
+      {                                                                  \
+        sched_note_vprintf_ip(tag, level, ip, fmt, type, va);            \
+      }                                                                  \
   })
 
-#define sched_note_printf_ip_ratelimited(tag, ip, fmt, type, ...) \
-  ({                                                              \
-    static DEFINE_RATELIMIT_STATE(_rs,                            \
-      CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                     \
-      CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                       \
-    if (!ratelimit_islimited(&_rs))                               \
-      {                                                           \
-        sched_note_printf_ip(tag, ip, fmt, type, ##__VA_ARGS__);  \
-      }                                                           \
+#define sched_note_printf_ip_ratelimited(tag, level, ip, fmt, type, ...) \
+  ({                                                                     \
+    static DEFINE_RATELIMIT_STATE(_rs,                                   \
+      CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                            \
+      CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                              \
+    if (!ratelimit_islimited(&_rs))                                      \
+      {                                                                  \
+        sched_note_printf_ip(tag, level, ip, fmt, type, ##__VA_ARGS__);  \
+      }                                                                  \
   })
 
 #else
-#  define sched_note_event_ip(t,ip,e,b,l)
-#  define sched_note_vprintf_ip(t,ip,f,p,v)
-#  define sched_note_printf_ip(t,ip,f,p,...)
-#  define sched_note_event_ip_ratelimit(t,ip,e,b,l)
-#  define sched_note_vprintf_ip_ratelimit(t,ip,f,p,v)
-#  define sched_note_printf_ip_ratelimit(t,ip,f,p,...)
-#  define sched_note_event_ip_ratelimited(tag, ip, event, buf, len)
-#  define sched_note_vprintf_ip_ratelimited(tag, ip, fmt, type, va)
-#  define sched_note_printf_ip_ratelimited(tag, ip, fmt, type, ...)
-#endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP */
+#  define sched_note_event_ip(t,l,i,e,b,n)
+#  define sched_note_vprintf_ip(t,l,i,f,p,v)
+#  define sched_note_printf_ip(t,l,i,f,p,...)
+#  define sched_note_event_ip_ratelimit(t,l,i,e,b,n)
+#  define sched_note_vprintf_ip_ratelimit(t,l,i,f,p,v)
+#  define sched_note_printf_ip_ratelimit(t,l,i,f,p,...)
+#  define sched_note_event_ip_ratelimited(t,l,i,e,b,n)
+#  define sched_note_vprintf_ip_ratelimited(t,l,i,f,p,va)
+#  define sched_note_printf_ip_ratelimited(t,l,i,f,p,...)
+#endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP && CONFIG_DRIVERS_NOTE */
 
 #undef EXTERN
 #if defined(__cplusplus)

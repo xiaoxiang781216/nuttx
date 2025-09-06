@@ -233,9 +233,9 @@ void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
      syslog_like(2, 0);
 #else
 #  define syslog(priority, fmt, ...) \
-          sched_note_printf(NOTE_TAG_LOG + priority, fmt, ##__VA_ARGS__)
+          sched_note_printf(NOTE_TAG_LOG, priority, fmt, ##__VA_ARGS__)
 #  define vsyslog(priority, fmt, ap) \
-          sched_note_vprintf(NOTE_TAG_LOG + priority, fmt, ap)
+          sched_note_vprintf(NOTE_TAG_LOG, priority, fmt, ap)
 #endif
 
 /****************************************************************************

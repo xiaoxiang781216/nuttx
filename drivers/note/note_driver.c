@@ -89,10 +89,10 @@
   ((drv)->ops->heap && ((drv)->ops->heap(drv, event, data, mem, size, used), true))
 #define note_wdog(drv, event, handler, arg)                                  \
   ((drv)->ops->wdog && ((drv)->ops->wdog(drv, event, handler, arg), true))
-#define note_event(drv, ip, event, buf, len)                                 \
-  ((drv)->ops->event && ((drv)->ops->event(drv, ip, event, buf, len), true))
-#define note_vprintf(drv, ip, fmt, va)                                       \
-  ((drv)->ops->vprintf && ((drv)->ops->vprintf(drv, ip, fmt, va), true))
+#define note_event(drv, level, ip, event, buf, len)                          \
+  ((drv)->ops->event && ((drv)->ops->event(drv, level, ip, event, buf, len), true))
+#define note_vprintf(drv, level, ip, fmt, va)                                \
+  ((drv)->ops->vprintf && ((drv)->ops->vprintf(drv, level, ip, fmt, va), true))
 
 #define BUFFER_SIZE 256
 static_assert(BUFFER_SIZE >= sizeof(struct note_event_s),
@@ -437,7 +437,7 @@ static inline int note_isenabled_irq(FAR struct note_driver_s *driver,
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
 static inline int note_isenabled_dump(FAR struct note_driver_s *driver,
-                                      uint32_t tag, int type)
+                                      uint32_t tag, uint8_t level, int type)
 {
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   if (!note_isenabled_type(driver, type))
@@ -448,6 +448,11 @@ static inline int note_isenabled_dump(FAR struct note_driver_s *driver,
   /* If the dump trace is disabled, do nothing. */
 
   if (NOTE_FILTER_TAGMASK_ISSET(tag, &driver->filter.tag_mask))
+    {
+      return false;
+    }
+
+  if (level > driver->filter.level.level)
     {
       return false;
     }
@@ -628,7 +633,8 @@ void sched_note_add(FAR const void *data, size_t len)
             {
               FAR struct note_event_s *nev =
                   (FAR struct note_event_s *)note;
-              if (!note_isenabled_dump(*driver, nev->nev_tag, note->nc_type))
+              if (!note_isenabled_dump(*driver, nev->nev_tag, nev->nev_level,
+                                       note->nc_type))
                 {
                   continue;
                 }
@@ -637,7 +643,8 @@ void sched_note_add(FAR const void *data, size_t len)
             {
               FAR struct note_printf_s *npt =
                   (FAR struct note_printf_s *)note;
-              if (!note_isenabled_dump(*driver, npt->npt_tag, note->nc_type))
+              if (!note_isenabled_dump(*driver, npt->npt_tag, npt->npt_level,
+                                       note->nc_type))
                 {
                   continue;
                 }
@@ -1365,15 +1372,15 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
 size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
-                            uintptr_t ip, uint8_t event, FAR const void *buf,
-                            size_t len)
+                            uint8_t level, uintptr_t ip, uint8_t event,
+                            FAR const void *buf, size_t len)
 {
   FAR struct tcb_s *tcb = running_task();
   FAR struct note_event_s *note;
   char data[BUFFER_SIZE];
   unsigned int length = 0;
 
-  if (note_event(driver, ip, event, buf, len))
+  if (note_event(driver, level, ip, event, buf, len))
     {
       return length;
     }
@@ -1395,6 +1402,7 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
   note_common(tcb, &note->nev_cmn, length, event);
   note->nev_ip = ip;
   note->nev_tag = tag;
+  note->nev_level = level;
   if (buf != NULL)
     {
       memcpy(note->nev_data, buf, length - SIZEOF_NOTE_EVENT(0));
@@ -1407,8 +1415,8 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
 }
 
 void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint32_t tag,
-                            uintptr_t ip, uint64_t type, FAR const char *fmt,
-                            FAR va_list *va)
+                            uint8_t level, uintptr_t ip, uint64_t type,
+                            FAR const char *fmt, FAR va_list *va)
 {
   FAR struct tcb_s *tcb = running_task();
   FAR struct note_printf_s *note;
@@ -1442,7 +1450,7 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint32_t tag,
   note = (FAR struct note_printf_s *)data;
   length = sizeof(data) - SIZEOF_NOTE_PRINTF(0);
 
-  if (note_vprintf(driver, ip, fmt, *va))
+  if (note_vprintf(driver, level, ip, fmt, *va))
     {
       return;
     }
@@ -1531,6 +1539,7 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint32_t tag,
   note->npt_tag = tag;
   note->npt_fmt = fmt;
   note->npt_type = type;
+  note->npt_level = level;
 
   /* Add the note to circular buffer */
 
@@ -1538,44 +1547,46 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint32_t tag,
 }
 
 void note_driver_printf_ip(FAR struct note_driver_s *driver, uint32_t tag,
-                           uintptr_t ip, uint64_t type,
+                           uint8_t level, uintptr_t ip, uint64_t type,
                            FAR const char *fmt, ...)
 {
   va_list va;
   va_start(va, fmt);
-  note_driver_vprintf_ip(driver, tag, ip, type, fmt, &va);
+  note_driver_vprintf_ip(driver, tag, level, ip, type, fmt, &va);
   va_end(va);
 }
 
-void sched_note_event_ip(uint32_t tag, uintptr_t ip, uint8_t event,
-                         FAR const void *buf, size_t len)
+void sched_note_event_ip(uint32_t tag, uint8_t level, uintptr_t ip,
+                         uint8_t event, FAR const void *buf,
+                         size_t len)
 {
   FAR struct note_driver_s **driver;
 
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_dump(*driver, tag, event))
+      if (!note_isenabled_dump(*driver, tag, level, event))
         {
           continue;
         }
 
-      note_driver_event_ip(*driver, tag, ip, event, buf, len);
+      note_driver_event_ip(*driver, tag, level, ip, event, buf, len);
     }
 }
 
-void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
-                           uint64_t type, FAR va_list *va)
+void sched_note_vprintf_ip(uint32_t tag, uint8_t level, uintptr_t ip,
+                           FAR const char *fmt, uint64_t type,
+                           FAR va_list *va)
 {
   FAR struct note_driver_s **driver;
 
   for (driver = g_note_drivers; *driver; driver++)
     {
-      if (!note_isenabled_dump(*driver, tag, NOTE_DUMP_PRINTF))
+      if (!note_isenabled_dump(*driver, tag, level, NOTE_DUMP_PRINTF))
         {
           continue;
         }
 
-      note_driver_vprintf_ip(*driver, tag, ip, type, fmt, va);
+      note_driver_vprintf_ip(*driver, tag, level, ip, type, fmt, va);
     }
 }
 #endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP */

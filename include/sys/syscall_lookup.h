@@ -386,8 +386,8 @@ SYSCALL_LOOKUP(epoll_wait,                 4)
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-  SYSCALL_LOOKUP(sched_note_vprintf_ip,    5)
-  SYSCALL_LOOKUP(sched_note_event_ip,      5)
+  SYSCALL_LOOKUP(sched_note_vprintf_ip,    6)
+  SYSCALL_LOOKUP(sched_note_event_ip,      6)
 #endif
 
 #ifdef CONFIG_COREDUMP
