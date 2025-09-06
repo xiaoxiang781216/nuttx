@@ -71,8 +71,7 @@ mempool_remove_queue(FAR struct mempool_s *pool, FAR sq_queue_t *queue)
 
   if (ret)
     {
-      queue->head = ret->flink;
-      if (!queue->head)
+      if (!ret->flink)
         {
           queue->tail = NULL;
         }
@@ -83,6 +82,7 @@ mempool_remove_queue(FAR struct mempool_s *pool, FAR sq_queue_t *queue)
           pool->check(pool, addr);
         }
 
+      queue->head = ret->flink;
       ret->flink = NULL;
     }
 
