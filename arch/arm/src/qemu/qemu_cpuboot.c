@@ -36,6 +36,9 @@
 #include "sctlr.h"
 #include "scu.h"
 #include "gic.h"
+#ifdef CONFIG_ARM_MPU
+#  include "mpu.h"
+#endif
 
 /* Symbols defined via the linker script */
 
@@ -69,6 +72,10 @@ extern uint8_t _vector_start[]; /* Beginning of vector block */
 #ifdef CONFIG_SMP
 void arm_cpu_boot(int cpu)
 {
+#ifdef CONFIG_ARM_MPU
+  mpu_priv_flash((uintptr_t)_stext, (uintptr_t)_etext - (uintptr_t)_stext);
+#endif
+
   /* Enable SMP cache coherency for the CPU */
 
   arm_enable_smp(cpu);

@@ -39,6 +39,9 @@
 #include "smp.h"
 #include "gic.h"
 #include "scu.h"
+#ifdef CONFIG_ARM_MPU
+#  include "mpu.h"
+#endif
 
 #ifdef CONFIG_DEVICE_TREE
 #  include <nuttx/fdt.h>
@@ -81,6 +84,10 @@ static char g_syslog_rpmsg_buf[4096];
 
 void arm_boot(void)
 {
+#ifdef CONFIG_ARM_MPU
+  mpu_priv_flash((uintptr_t)_stext, (uintptr_t)_etext - (uintptr_t)_stext);
+#endif
+
 #ifdef CONFIG_ARCH_PERF_EVENTS
   /* Perf init */
 
