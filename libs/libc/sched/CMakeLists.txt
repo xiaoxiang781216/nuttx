@@ -24,6 +24,7 @@ set(SRCS
     sched_getprioritymax.c
     sched_getprioritymin.c
     clock_getcpuclockid.c
+    clock_perf.c
     task_cancelpt.c
     task_setcancelstate.c
     task_setcanceltype.c
@@ -40,10 +41,6 @@ endif()
 
 if(NOT CONFIG_BUILD_KERNEL)
   list(APPEND SRCS task_startup.c)
-endif()
-
-if(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS)
-  list(APPEND SRCS clock_perf.c)
 endif()
 
 if(CONFIG_BUILD_PROTECTED)

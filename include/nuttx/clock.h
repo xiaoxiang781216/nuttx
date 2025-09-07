@@ -38,6 +38,8 @@
 #include <nuttx/compiler.h>
 #include <nuttx/lib/math32.h>
 #include <nuttx/macro.h>
+#include <nuttx/spinlock_type.h>
+#include <nuttx/percpu.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -268,6 +270,13 @@ typedef int64_t sclock_t;
 typedef int32_t sclock_t;
 #endif
 
+struct perf_s
+{
+  seqcount_t lock;
+  unsigned long last;
+  unsigned long overflow;
+};
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -278,6 +287,14 @@ extern "C"
 {
 #else
 #define EXTERN extern
+#endif
+
+#if defined(CONFIG_BUILD_PROTECTED) && defined(__KERNEL__) && \
+    defined(CONFIG_PERF_OVERFLOW_CORRECTION)
+#  define g_perf (*(USERSPACE->us_data->us_perf))
+#else
+DECLARE_PER_CPU_BMP(struct perf_s, g_perf);
+#  define g_perf this_cpu_var_bmp(g_perf)
 #endif
 
 /****************************************************************************

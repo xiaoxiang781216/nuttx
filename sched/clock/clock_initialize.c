@@ -259,7 +259,9 @@ void clock_initialize(void)
 
   /* perf settup here */
 
+#ifdef CONFIG_PERF_OVERFLOW_CORRECTION
   perf_setup();
+#endif
 
   sched_trace_end();
 }

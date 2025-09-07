@@ -60,6 +60,10 @@
 static struct userspace_data_s g_userspace_data =
 {
   .us_heap = &g_mmheap,
+#if defined(CONFIG_PERF_OVERFLOW_CORRECTION) && \
+    defined(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS)
+  .us_perf = &g_perf,
+#endif
 };
 
 /****************************************************************************

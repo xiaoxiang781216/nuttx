@@ -26,6 +26,25 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/clock.h>
+#include <nuttx/seqlock.h>
+#include <nuttx/userspace.h>
+
+#if defined(CONFIG_PERF_OVERFLOW_CORRECTION)
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+#undef g_perf
+#if defined(CONFIG_BUILD_PROTECTED) && defined(__KERNEL__)
+#  define g_perf (*(USERSPACE->us_data->us_perf))
+#else
+DEFINE_PER_CPU_BMP(struct perf_s, g_perf) =
+{
+  .lock = SEQLOCK_INITIALIZER,
+};
+#  define g_perf this_cpu_var_bmp(g_perf)
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -37,13 +56,40 @@
 
 clock_t perf_gettime(void)
 {
+  clock_t overflow;
+  clock_t result;
+  uint32_t seq;
+
+  do
+    {
+      seq = read_seqbegin(&g_perf.lock);
+      clock_t now = up_perf_gettime();
+
+      if (now < g_perf.last)
+        {
+          overflow = g_perf.overflow + 1;
+        }
+      else
+        {
+          overflow = g_perf.overflow;
+        }
+
+      result = now | (overflow << CONFIG_ARCH_PERF_COUNT_BITWIDTH);
+    }
+  while (read_seqretry(&g_perf.lock, seq));
+
+  return result;
+}
+
+#elif defined(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS)
+
+/****************************************************************************
+ * perf_gettime
+ ****************************************************************************/
+
+clock_t perf_gettime(void)
+{
   return up_perf_gettime();
 }
 
-/****************************************************************************
- * perf_setup
- ****************************************************************************/
-
-void perf_setup(void)
-{
-}
+#endif

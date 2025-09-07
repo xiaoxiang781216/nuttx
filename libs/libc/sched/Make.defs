@@ -23,7 +23,7 @@
 # Add the sched C files to the build
 
 CSRCS += sched_getprioritymax.c sched_getprioritymin.c
-CSRCS += clock_getcpuclockid.c task_cancelpt.c
+CSRCS += clock_getcpuclockid.c task_cancelpt.c clock_perf.c
 CSRCS += task_setcancelstate.c task_setcanceltype.c
 CSRCS += task_testcancel.c task_getpid.c
 
@@ -38,10 +38,6 @@ endif
 ifneq ($(CONFIG_BUILD_KERNEL),y)
 CSRCS += task_startup.c
 endif # CONFIG_BUILD_KERNEL
-
-ifeq ($(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS),y)
-  CSRCS += clock_perf.c
-endif
 
 ifeq ($(CONFIG_BUILD_PROTECTED),y)
 CSRCS += userspace.c

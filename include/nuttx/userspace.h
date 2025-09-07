@@ -116,10 +116,15 @@
  ****************************************************************************/
 
 struct mm_heap_s; /* Forward reference */
+struct perf_s;    /* Forward reference */
 
 struct userspace_data_s
 {
   FAR struct mm_heap_s **us_heap;
+#if defined(CONFIG_PERF_OVERFLOW_CORRECTION) && \
+    defined(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS)
+  FAR struct perf_s    *us_perf;
+#endif
 };
 
 /* Every user-space blob starts with a header that provides information about
