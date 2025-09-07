@@ -57,33 +57,7 @@ typedef struct sigsetjmp_buf_s sigjmp_buf[1];
  * Public Function Prototypes
  ****************************************************************************/
 
-/****************************************************************************
- * Name: siglongjmp
- *
- * Description:
- *   Restores the program's execution context previously saved by
- *   sigsetjmp().
- *
- * Input Parameters:
- *   env - a pointer to a sigjmp_buf structure
- *   val - return value for sigsetjmp()
- *
- * Returned Value:
- *   This function does not return anything explicitly.
- *
- * Assumptions:
- *
- ****************************************************************************/
-
-static inline_function void siglongjmp(sigjmp_buf env, int val)
-{
-  if (env->savemask)
-    {
-      sigprocmask(SIG_SETMASK, &env->sigmask, NULL);
-    }
-
-  longjmp(env->jmpbuf, val);
-}
+void siglongjmp(sigjmp_buf, int);
 
 /****************************************************************************
  * Name: sigsetjmp

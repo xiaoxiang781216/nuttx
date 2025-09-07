@@ -31,6 +31,7 @@ set(SRCS
     sig_isemptyset.c
     sig_ismember.c
     sig_killpg.c
+    sig_longjmp.c
     sig_nandset.c
     sig_orset.c
     sig_pause.c
