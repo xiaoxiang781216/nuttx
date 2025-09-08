@@ -109,16 +109,6 @@ static METAL_DECLARE_LIST(g_rpmsg);
 
 static rw_semaphore_t g_rpmsg_lock = RWSEM_INITIALIZER;
 
-static const struct file_operations g_rpmsg_dev_ops =
-{
-  NULL,             /* open */
-  NULL,             /* close */
-  NULL,             /* read */
-  NULL,             /* write */
-  NULL,             /* seek */
-  rpmsg_dev_ioctl,  /* ioctl */
-};
-
 #if CONFIG_RPMSG_POOL_COUNT > 0
 MEMPOOL_DEFINE(g_rpmsg_pool, CONFIG_RPMSG_POOL_SIZE,
                CONFIG_RPMSG_POOL_COUNT, CONFIG_RPMSG_POOL_COUNT, 0);
@@ -244,7 +234,7 @@ static int rpmsg_init_workrx(FAR struct rpmsg_s *rpmsg, uint16_t nrx)
   uint16_t i;
   int ret = OK;
 
-  if (nrx != 0)
+  if (nrx != 0u)
     {
       workrx = kmm_zalloc(nrx * sizeof(struct rpmsg_work_s));
       if (workrx != NULL)
@@ -809,6 +799,16 @@ void rpmsg_device_destory(FAR struct rpmsg_s *rpmsg)
 int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
                    FAR const struct rpmsg_ops_s *ops, uint16_t nrx)
 {
+  static const struct file_operations g_rpmsg_dev_ops =
+  {
+    NULL,             /* open */
+    NULL,             /* close */
+    NULL,             /* read */
+    NULL,             /* write */
+    NULL,             /* seek */
+    rpmsg_dev_ioctl,  /* ioctl */
+  };
+
   struct metal_init_params params = METAL_INIT_DEFAULTS;
   int ret;
 
