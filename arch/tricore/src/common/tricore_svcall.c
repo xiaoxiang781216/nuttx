@@ -56,7 +56,6 @@ static void dispatch_syscall(void)
     "st.w      [sp]0, d8\n\t"
     "ld.a      a15, [a14]0\n\t"
     "calli     a15\n\t"
-    "addih.a   sp, sp, #12\n\t"
 #else
     "mov.aa    %%a14, %0\n\t"
     "sh        %%d15, %%d4, 2\n\t"
@@ -67,7 +66,6 @@ static void dispatch_syscall(void)
     "st.w      [%%sp]0, %%d8\n\t"
     "ld.a      %%a15, [%%a14]0\n\t"
     "calli     %%a15\n\t"
-    "addih.a   %%sp, %%sp, 12\n\t"
 #endif
     ::"a"(g_stublookup)
     : "memory"
