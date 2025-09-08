@@ -932,8 +932,16 @@ net_rpmsg_drv_alloc(FAR const char *devname, enum net_lltype_e lltype)
 
   /* Init a random MAC address, the caller can override it. */
 
-  net_getrandom(&netdev->netdev.d_mac.ether.ether_addr_octet,
-                sizeof(netdev->netdev.d_mac.ether.ether_addr_octet));
+#if defined(CONFIG_NET_ETHERNET) || defined(CONFIG_NET_6LOWPAN) || \
+    defined(CONFIG_NET_BLUETOOTH) || defined(CONFIG_NET_IEEE802154) || \
+    defined(CONFIG_NET_TUN)
+  if (lltype != NET_LL_CAN)
+    {
+      net_getrandom(&netdev->netdev.d_mac.ether.ether_addr_octet,
+                    sizeof(netdev->netdev.d_mac.ether.ether_addr_octet));
+    }
+#endif
+
   strlcpy(netdev->netdev.d_ifname, devname, IFNAMSIZ);
 
   netdev_lower_register(netdev, lltype);
@@ -972,7 +980,15 @@ static void net_rpmsg_drv_ns_bind(FAR struct rpmsg_device *rdev,
     }
   else
     {
-      drv = net_rpmsg_drv_alloc(devname, NET_LL_ETHERNET);
+      if (strstr(devname, "can") || strstr(devname, "lin"))
+        {
+          drv = net_rpmsg_drv_alloc(devname, NET_LL_CAN);
+        }
+      else
+        {
+          drv = net_rpmsg_drv_alloc(devname, NET_LL_ETHERNET);
+        }
+
       if (!drv)
         {
           return;
