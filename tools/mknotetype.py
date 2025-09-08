@@ -108,11 +108,11 @@ class NoteFormatType:
                 typelist.append(NoteTag.STRING)
 
         # Construct the final type type
-        if len(typelist) > 30:
+        if len(typelist) > 29:
             raise ValueError(f"format string {fmt} has too many arguments")
 
         # The number of parameters is placed in the highest 4 bits
-        notetypes = len(typelist) << 60
+        notetypes = len(typelist) << 58
 
         for i, notetype in enumerate(typelist):
             # Each parameter occupies 2 bits

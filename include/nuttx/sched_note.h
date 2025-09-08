@@ -55,11 +55,11 @@
 
 /* Get/set printf tag. each parameter occupies 2 bits. The highest
  * four bits are used to represent the number of parameters, So up to
- * 30 variable arguments can be passed.
+ * 29 variable arguments can be passed.
  */
 
 #define NOTE_PRINTF_GET_TYPE(tag, index) (((tag) >> (index) * 2) & 0x03)
-#define NOTE_PRINTF_GET_COUNT(tag)       ((tag) >> 60)
+#define NOTE_PRINTF_GET_COUNT(tag)       ((tag) >> 58)
 
 #define sched_note_event(tag, event, buf, len) \
         sched_note_event_ip(tag, up_getpc(), event, buf, len)
@@ -79,9 +79,9 @@
               char __fmt__[] = fmt;                                         \
               locate_data("note_type") used_data static const               \
               union fmt_type_u __fmt_type__ = (union fmt_type_u)__fmt__;    \
-              static_assert(GET_ARG_COUNT(__VA_ARGS__) <= 30,               \
+              static_assert(GET_ARG_COUNT(__VA_ARGS__) <= 29,               \
                             "The number of sched_note_nprintf "             \
-                            "parameters needs to be less than 30");         \
+                            "parameters needs to be less than 29");         \
               sched_note_printf_ip(tag, up_getpc(), __fmt__,                \
                                   __fmt_type__.__type__, ##__VA_ARGS__);    \
             }                                                               \
