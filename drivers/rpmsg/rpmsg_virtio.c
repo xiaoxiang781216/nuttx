@@ -498,10 +498,10 @@ static void rpmsg_virtio_free_buf(FAR struct rpmsg_s *rpmsg,
  * Name: rpmsg_virtio_rx_update
  ****************************************************************************/
 
-static void rpmsg_virtio_rx_update(FAR struct rpmsg_virtio_priv_s *priv)
+static void rpmsg_virtio_rx_update(FAR struct rpmsg_virtio_priv_s *priv,
+                                   FAR struct virtqueue *rvq)
 {
   FAR struct rpmsg_virtio_device *rvdev = &priv->rvdev;
-  FAR struct virtqueue *rvq = rvdev->rvq;
 
   if (rpmsg_virtio_get_role(rvdev) == RPMSG_HOST)
     {
@@ -624,7 +624,7 @@ static void rpmsg_virtio_rx_callback(FAR struct virtqueue *vq)
   FAR struct rpmsg_virtio_priv_s *priv =
     metal_container_of(vq->vq_dev->priv, struct rpmsg_virtio_priv_s, rvdev);
 
-  rpmsg_virtio_rx_update(priv);
+  rpmsg_virtio_rx_update(priv, vq);
   rpmsg_virtio_rx_dispatch(priv);
 }
 
@@ -768,7 +768,7 @@ static void rpmsg_virtio_start_worker(FAR void *arg)
 
           /* Wake up the rx thread to process message */
 
-          rpmsg_virtio_rx_update(priv);
+          rpmsg_virtio_rx_update(priv, priv->rvdev.rvq);
           rpmsg_virtio_rx_dispatch(priv);
 
           /* Set peer's state to running */
