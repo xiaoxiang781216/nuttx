@@ -33,39 +33,36 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: nxevent_tickwait_core
+ * Name: nxevent_tickwait
  *
  * Description:
- *   Core implementation for various nxevent_*wait APIs.
+ *   Wait for all of the specified events for the specified tick time.
  *
- *   This internal function is separated from wrapper APIs to provide
- *   flexibility in supplying wait object pointers. Avoid using it directly
- *   unless absolutely necessary. In rare cases where thread stacks are
- *   strictly isolated, stack-allocated wait objects become inaccessible.
+ *   This routine waits on event object event until all of the specified
+ *   events have been delivered to the event object, or the maximum wait time
+ *   timeout has expired. A thread may wait on up to 32 distinctly numbered
+ *   events that are expressed as bits in a single 32-bit word.
  *
  * Input Parameters:
- *   event     - Address of the event object
- *   events    - Event set to wait for:
- *               - 0 indicates waiting for any event
- *   nxevent_wait_t
- *             - Per-thread wait object (internal implementation detail)
- *   eflags    - Event flags
- *   delay     - Ticks to wait from start time until event posting:
- *               - 0 ticks behaves identically to nxevent_trywait()
+ *   event  - Address of the event object
+ *   events - Set of events to wait
+ *          - Set events to 0 will indicate wait from any events
+ *   eflags - Events flags
+ *   delay  - Ticks to wait from the start time until the event is
+ *            posted.  If ticks is zero, then this function is equivalent
+ *            to nxevent_trywait().
  *
  * Returned Value:
- *   Internal OS interface - not for application use.
- *   Returns matching event set on success.
- *   Returns 0 if no matching events occurred within specified time.
+ *   This is an internal OS interface and should not be used by applications.
+ *   Return of matching events upon success.
+ *   0 if matching events were not received within the specified time.
  *
  ****************************************************************************/
 
-nxevent_mask_t nxevent_tickwait_core(FAR nxevent_t *event,
-                                     nxevent_mask_t events,
-                                     FAR nxevent_wait_t *wait,
-                                     nxevent_flags_t eflags,
-                                     uint32_t delay)
+nxevent_mask_t nxevent_tickwait(FAR nxevent_t *event, nxevent_mask_t events,
+                                nxevent_flags_t eflags, uint32_t delay)
 {
+  nxevent_wait_t wait;
   irqstate_t flags;
   bool waitany;
   int ret;
@@ -120,27 +117,27 @@ nxevent_mask_t nxevent_tickwait_core(FAR nxevent_t *event,
     {
       /* Initialize event wait */
 
-      nxsem_init(&wait->sem, 0, 0);
-      wait->expect = events;
-      wait->eflags = eflags;
+      nxsem_init(&wait.sem, 0, 0);
+      wait.expect = events;
+      wait.eflags = eflags;
 
-      list_add_tail(&event->list, &wait->node);
+      list_add_tail(&event->list, &wait.node);
       spin_unlock_irqrestore(&event->lock, flags);
 
       /* Wait for the event */
 
       if (delay == UINT32_MAX)
         {
-          ret = nxsem_wait_uninterruptible(&wait->sem);
+          ret = nxsem_wait_uninterruptible(&wait.sem);
         }
       else
         {
-          ret = nxsem_tickwait_uninterruptible(&wait->sem, delay);
+          ret = nxsem_tickwait_uninterruptible(&wait.sem, delay);
         }
 
       /* Destroy local variables */
 
-      nxsem_destroy(&wait->sem);
+      nxsem_destroy(&wait.sem);
 
       flags = spin_lock_irqsave(&event->lock);
 
@@ -151,8 +148,8 @@ nxevent_mask_t nxevent_tickwait_core(FAR nxevent_t *event,
 
       if (ret == 0)
         {
-          events = wait->expect;
-          DEBUGASSERT(!list_in_list(&wait->node));
+          events = wait.expect;
+          DEBUGASSERT(!list_in_list(&wait.node));
         }
       else
         {
@@ -163,41 +160,6 @@ nxevent_mask_t nxevent_tickwait_core(FAR nxevent_t *event,
   spin_unlock_irqrestore(&event->lock, flags);
 
   return events;
-}
-
-/****************************************************************************
- * Name: nxevent_tickwait
- *
- * Description:
- *   Wait for all of the specified events for the specified tick time.
- *
- *   This routine waits on event object event until all of the specified
- *   events have been delivered to the event object, or the maximum wait time
- *   timeout has expired. A thread may wait on up to 32 distinctly numbered
- *   events that are expressed as bits in a single 32-bit word.
- *
- * Input Parameters:
- *   event  - Address of the event object
- *   events - Set of events to wait
- *          - Set events to 0 will indicate wait from any events
- *   eflags - Events flags
- *   delay  - Ticks to wait from the start time until the event is
- *            posted.  If ticks is zero, then this function is equivalent
- *            to nxevent_trywait().
- *
- * Returned Value:
- *   This is an internal OS interface and should not be used by applications.
- *   Return of matching events upon success.
- *   0 if matching events were not received within the specified time.
- *
- ****************************************************************************/
-
-nxevent_mask_t nxevent_tickwait(FAR nxevent_t *event, nxevent_mask_t events,
-                                nxevent_flags_t eflags, uint32_t delay)
-{
-  nxevent_wait_t wait;
-
-  return nxevent_tickwait_core(event, events, &wait, eflags, delay);
 }
 
 /****************************************************************************
