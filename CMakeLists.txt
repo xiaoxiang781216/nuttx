@@ -787,7 +787,7 @@ if(CONFIG_DRIVERS_NOTE_STRIP_FORMAT)
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Processing note tag section for nuttx"
     DEPENDS nuttx)
-  add_dependencies(nuttx_post nuttx_note)
+  add_dependencies(nuttx_post_outputs nuttx_note)
 
   if(TARGET final_nuttx)
     add_dependencies(nuttx_note final_nuttx)
