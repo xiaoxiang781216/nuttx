@@ -577,6 +577,7 @@ int rpmsg_register_callback(FAR void *priv,
                       again = true;
 
                       nxrmutex_lock(&rpmsg->lock);
+                      break;
                     }
                 }
             }
