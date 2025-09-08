@@ -73,6 +73,10 @@ extern int backtrace(void **array, int size);
 
 void host_abort(int status)
 {
+  /* Ignore SIGALRM when abort */
+
+  signal(SIGALRM, SIG_IGN);
+
 #ifndef CONFIG_COVERAGE_NONE
   /* Dump gcov data. */
 
@@ -96,6 +100,10 @@ void host_abort(int status)
 
 void host_reset(int status)
 {
+  /* Ignore SIGALRM during reboot */
+
+  signal(SIGALRM, SIG_IGN);
+
 #ifndef CONFIG_COVERAGE_NONE
   /* Dump gcov data. */
 
