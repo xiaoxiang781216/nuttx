@@ -479,7 +479,7 @@ static int rptun_create_device(FAR struct rptun_priv_s *priv,
             }
         }
 
-      vdev = remoteproc_create_virtio(rproc, index, role, 0);
+      vdev = remoteproc_create_virtio(rproc, (int)index, role, 0);
       if (vdev != NULL)
         {
           ret = rproc_virtio_set_shm_io(vdev, metal_io_get_region());
