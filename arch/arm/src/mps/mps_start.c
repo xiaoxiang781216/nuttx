@@ -124,6 +124,7 @@ void __start(void)
   mpu_early_reset();
 #ifdef CONFIG_ARM_MPU
   mpu_showtype();
+  mpu_priv_flash((uintptr_t)_stext, (uintptr_t)_etext - (uintptr_t)_stext);
 #endif
   arm_fpuconfig();
 
