@@ -17,4 +17,13 @@ config FS_MQUEUE_NPOLLWAITERS
 	---help---
 		The maximum number of waiters for the poll operation.
 
+config FS_MQUEUE_NAME_INITIAL_SLASH
+	bool "Message queue name starts with '/'"
+	default n
+	---help---
+		Require that message queue names (mq_name) must start with a '/' character.
+		When enabled, creating/opening a message queue with a name not starting
+		with '/' will return an error.
+		Disabled by default to maintain backward compatibility.
+
 endif # !DISABLE_MQUEUE
