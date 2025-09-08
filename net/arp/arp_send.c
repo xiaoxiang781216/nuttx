@@ -395,10 +395,6 @@ int arp_send(in_addr_t ipaddr)
 
       netdev_unlock(dev);
 
-      /* Notify the device driver that new TX data is available. */
-
-      netdev_txnotify_dev(dev);
-
       /* MAC address marked with all zeros to limit concurrent task
        * send ARP request for same destination.
        */
@@ -408,6 +404,10 @@ int arp_send(in_addr_t ipaddr)
           arp_update(dev, ipaddr, NULL, 0);
           sending = true;
         }
+
+      /* Notify the device driver that new TX data is available. */
+
+      netdev_txnotify_dev(dev);
 
       /* Wait for the send to complete or an error to occur.
        * net_sem_wait will also terminate if a signal is received.
