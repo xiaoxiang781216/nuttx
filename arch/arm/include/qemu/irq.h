@@ -33,7 +33,9 @@
  * Pre-processor Prototypes
  ****************************************************************************/
 
-#define NR_IRQS                 220  /* Total number of interrupts */
+/* Total number of interrupts */
+
+#define NR_IRQS               288       /* For GIC on virt machine */
 
 /****************************************************************************
  * Public Types
