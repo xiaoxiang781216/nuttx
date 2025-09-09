@@ -27,7 +27,7 @@
 
 #include "x86_64_internal.h"
 
-extern unsigned long g_x86_64_timer_freq;
+extern unsigned long g_x86_64_tsc_freq;
 
 /* REP NOP (PAUSE) is a good thing to insert into busy-wait loops. */
 
@@ -79,7 +79,7 @@ void up_ndelay(unsigned long nanoseconds)
 {
   uint64_t cycles;
 
-  cycles = (nanoseconds * g_x86_64_timer_freq + NSEC_PER_SEC - 1)
+  cycles = (nanoseconds * g_x86_64_tsc_freq + NSEC_PER_SEC - 1)
            / NSEC_PER_SEC;
 
   delay_tsc(cycles);

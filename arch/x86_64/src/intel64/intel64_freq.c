@@ -41,6 +41,7 @@
  ****************************************************************************/
 
 unsigned long g_x86_64_timer_freq;
+unsigned long g_x86_64_tsc_freq;
 
 /****************************************************************************
  * Inline Functions
@@ -133,17 +134,19 @@ static inline uint64_t x86_64_timer_tsc_freq_15h(void)
 
 void x86_64_timer_calibrate_freq(void)
 {
-#ifdef CONFIG_ARCH_INTEL64_TSC_DEADLINE
-  g_x86_64_timer_freq = CONFIG_ARCH_INTEL64_CORE_FREQ_KHZ * 1000ul;
+  g_x86_64_tsc_freq = CONFIG_ARCH_INTEL64_CORE_FREQ_KHZ * 1000ul;
 
   if (CONFIG_ARCH_INTEL64_CORE_FREQ_KHZ == 0)
     {
 #  ifndef CONFIG_ARCH_INTEL64_TSC_FREQ_VMWARE
-      g_x86_64_timer_freq = x86_64_timer_tsc_freq_15h();
+      g_x86_64_tsc_freq = x86_64_timer_tsc_freq_15h();
 #  else
-      g_x86_64_timer_freq = x86_64_timer_tsc_freq_vmware();
+      g_x86_64_tsc_freq = x86_64_timer_tsc_freq_vmware();
 #  endif
     }
+
+#ifdef CONFIG_ARCH_INTEL64_TSC_DEADLINE
+  g_x86_64_timer_freq = g_x86_64_tsc_freq;
 #elif defined(CONFIG_ARCH_INTEL64_TSC)
 #  ifdef CONFIG_ARCH_INTEL64_APIC_FREQ_HV
   g_x86_64_timer_freq = read_msr(MSR_APIC_FREQUENCY);

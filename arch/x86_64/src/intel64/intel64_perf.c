@@ -33,7 +33,7 @@
  * Private Data
  ****************************************************************************/
 
-extern unsigned long g_x86_64_timer_freq;
+extern unsigned long g_x86_64_tsc_freq;
 
 /****************************************************************************
  * Public Functions
@@ -48,7 +48,7 @@ void up_perf_init(void *arg)
 
 unsigned long up_perf_getfreq(void)
 {
-  return g_x86_64_timer_freq;
+  return g_x86_64_tsc_freq;
 }
 
 clock_t up_perf_gettime(void)
@@ -60,9 +60,9 @@ void up_perf_convert(clock_t elapsed, struct timespec *ts)
 {
   clock_t left;
 
-  ts->tv_sec  = elapsed / g_x86_64_timer_freq;
-  left        = elapsed - ts->tv_sec * g_x86_64_timer_freq;
-  ts->tv_nsec = NSEC_PER_SEC * (uint64_t)left / g_x86_64_timer_freq;
+  ts->tv_sec  = elapsed / g_x86_64_tsc_freq;
+  left        = elapsed - ts->tv_sec * g_x86_64_tsc_freq;
+  ts->tv_nsec = NSEC_PER_SEC * (uint64_t)left / g_x86_64_tsc_freq;
 }
 #endif
 
