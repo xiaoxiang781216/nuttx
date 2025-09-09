@@ -478,7 +478,7 @@ void sched_note_cpu_resumed(FAR struct tcb_s *tcb);
 #  define sched_note_cpu_resumed(t)
 #endif
 
-#if defined(CONFIG_SCHEDTRUMENTATION_PREEMPTION) && defined(CONFIG_DRIVERS_NOTE)
+#if defined(CONFIG_SCHED_INSTRUMENTATION_PREEMPTION) && defined(CONFIG_DRIVERS_NOTE)
 void sched_note_preemption(FAR struct tcb_s *tcb, bool locked);
 #else
 #  define sched_note_preemption(t,l)

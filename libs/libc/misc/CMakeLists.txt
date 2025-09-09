@@ -129,7 +129,7 @@ if(CONFIG_FDCHECK)
   list(APPEND SRCS lib_fdcheck.c)
 endif()
 
-if(CONFIG_SCHED_INSTRUMENTATION_DUMP)
+if(CONFIG_DRIVERS_NOTE)
   list(APPEND SRCS lib_note.c)
 endif()
 
