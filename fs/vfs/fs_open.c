@@ -146,8 +146,6 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
   mode &= ~umask;
 #endif
 
-  memset(filep, 0, sizeof(*filep));
-
   /* Get an inode for this file */
 
   SETUP_SEARCH(&desc, path, (oflags & O_NOFOLLOW) != 0);
@@ -313,21 +311,26 @@ errout_with_search:
 static int nx_vopen(FAR struct fdlist *list,
                     FAR const char *path, int oflags, va_list ap)
 {
-  struct file file;
+  FAR struct file *filep;
   int ret;
   int fd;
 
-  ret = file_vopen(&file, path, oflags, getumask(), ap);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  /* Allocate a new file descriptor for the inode */
 
-  fd = file_allocate_from_inode(file.f_inode, file.f_oflags,
-                                file.f_pos, file.f_priv, 0);
+  fd = fdlist_allocate(list, oflags, 0, &filep);
   if (fd < 0)
     {
-      file_close(&file);
+      return fd;
+    }
+
+  /* Let file_vopen() do all of the work */
+
+  ret = file_vopen(filep, path, oflags, getumask(), ap);
+  file_put(filep);
+  if (ret < 0)
+    {
+      fdlist_close(list, fd);
+      return ret;
     }
 
   return fd;
@@ -363,6 +366,8 @@ int file_open(FAR struct file *filep, FAR const char *path, int oflags, ...)
 {
   va_list ap;
   int ret;
+
+  memset(filep, 0, sizeof(*filep));
 
   va_start(ap, oflags);
   ret = file_vopen(filep, path, oflags, 0, ap);
