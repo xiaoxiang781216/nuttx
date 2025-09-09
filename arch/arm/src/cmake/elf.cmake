@@ -40,4 +40,9 @@ nuttx_elf_link_options_ifdef(CONFIG_BUILD_KERNEL -Bstatic)
 
 nuttx_elf_link_options_ifdef(CONFIG_DEBUG_OPT_UNUSED_SECTIONS --gc-sections)
 
+if(CONFIG_BINFMT_ELF_RELOCATABLE)
+  nuttx_elf_compile_options_ifdef(CONFIG_LTO_FULL -fno-lto)
+endif()
+nuttx_mod_compile_options_ifdef(CONFIG_LTO_FULL -fno-lto)
+
 nuttx_elf_link_options(-e __start)
