@@ -61,17 +61,27 @@
 
 void abort(void)
 {
+#ifndef CONFIG_DISABLE_SIGNALS
+  struct sigaction sa;
+  sigset_t set;
+
+  sigemptyset(&set);
+  sigaddset(&set, SIGABRT);
+  sigprocmask(SIG_UNBLOCK, &set, NULL);
+
+  raise(SIGABRT);
+
+  sa.sa_handler = SIG_DFL;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
+  sigaction(SIGABRT, &sa, NULL);
+
+  raise(SIGABRT);
+#endif
+
 #ifdef CONFIG_DEBUG_FEATURES
   dump_stack();
 #endif
-
-  /* NuttX does not support standard signal functionality (like the
-   * behavior of the SIGABRT signal).  So no attempt is made to provide
-   * a conformant version of abort() at this time.  This version does not
-   * signal the calling thread all.
-   *
-   * _exit() will close all open files and terminate the thread.
-   */
 
   _exit(EXIT_FAILURE);
 }
