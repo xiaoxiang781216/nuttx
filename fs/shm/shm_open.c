@@ -74,8 +74,6 @@ static int file_shm_open(FAR struct file *shm, FAR const char *name,
       return -ENAMETOOLONG;
     }
 
-  memset(shm, 0, sizeof(struct file));
-
   /* Get the full path to the shm object */
 
   snprintf(fullpath, sizeof(fullpath),
@@ -174,23 +172,23 @@ errout_with_sem:
 
 int shm_open(FAR const char *name, int oflag, mode_t mode)
 {
-  struct file shm;
+  FAR struct file *shm;
   int ret;
   int fd;
 
-  ret = file_shm_open(&shm, name, oflag | O_CLOEXEC, mode);
-  if (ret < 0)
+  fd = file_allocate(oflag | O_CLOEXEC, 0, &shm);
+  if (fd < 0)
     {
-      set_errno(-ret);
+      set_errno(-fd);
       return ERROR;
     }
 
-  fd = file_allocate_from_inode(shm.f_inode, shm.f_oflags,
-                                shm.f_pos, shm.f_priv, 0);
-  if (fd < 0)
+  ret = file_shm_open(shm, name, oflag, mode);
+  file_put(shm);
+  if (ret < 0)
     {
-      file_close(&shm);
-      set_errno(-fd);
+      nx_close(fd);
+      set_errno(-ret);
       return ERROR;
     }
 

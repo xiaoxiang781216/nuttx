@@ -205,8 +205,6 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
         }
     }
 
-  memset(mq, 0, sizeof(struct file));
-
   mode &= ~umask;
 
   /* Skip over any leading '/'.  All message queue paths are relative to
@@ -362,22 +360,23 @@ errout:
 
 static mqd_t nxmq_vopen(FAR const char *mq_name, int oflags, va_list ap)
 {
-  struct file mq;
+  FAR struct file *mq;
   int created;
   int ret;
   int fd;
 
-  ret = file_mq_vopen(&mq, mq_name, oflags, getumask(), ap, &created);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  fd = file_allocate_from_inode(mq.f_inode, mq.f_oflags,
-                                mq.f_pos, mq.f_priv, 0);
+  fd = file_allocate(oflags, 0, &mq);
   if (fd < 0)
     {
-      file_close(&mq);
+      return fd;
+    }
+
+  ret = file_mq_vopen(mq, mq_name, oflags, getumask(), ap, &created);
+  file_put(mq);
+  if (ret < 0)
+    {
+      nx_close(fd);
+      return ret;
     }
 
   return fd;
