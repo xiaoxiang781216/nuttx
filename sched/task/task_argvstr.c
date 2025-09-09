@@ -85,7 +85,12 @@ size_t nxtask_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size)
           FAR struct pthread_entry_s *entry =
             (FAR struct pthread_entry_s *)(tcb + 1);
 
-          n += snprintf(args, size, " %p %p", tcb->entry.main, entry->arg);
+          int ret = snprintf(args, size, " %p %p",
+                             tcb->entry.main, entry->arg);
+          if (ret > 0)
+            {
+              n += (size_t)ret;
+            }
         }
       else
 #endif
@@ -96,7 +101,13 @@ size_t nxtask_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size)
             {
               while (*argv != NULL && n < size)
                 {
-                  n += snprintf(args + n, size - n, " %s", *argv++);
+                  int ret = snprintf(args + n, size - n, " %s", *argv++);
+                  if (ret < 0)
+                    {
+                      break;
+                    }
+
+                  n += (size_t)ret;
                 }
             }
         }
