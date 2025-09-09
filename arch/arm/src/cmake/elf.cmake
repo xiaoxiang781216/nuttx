@@ -51,4 +51,9 @@ if(CONFIG_BINFMT_ELF_RELOCATABLE)
 endif()
 nuttx_mod_compile_options_ifdef(CONFIG_LTO_FULL -fno-lto)
 
+if(CONFIG_BINFMT_ELF_RELOCATABLE)
+  nuttx_elf_compile_options_ifdef(CONFIG_LTO_FULL -fno-lto)
+endif()
+nuttx_mod_compile_options_ifdef(CONFIG_LTO_FULL -fno-lto)
+
 nuttx_elf_link_options(-e __start)
