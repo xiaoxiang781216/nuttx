@@ -51,3 +51,4 @@ endif()
 
 add_compile_options(${PLATFORM_FLAGS})
 add_link_options(${PLATFORM_FLAGS})
+set_property(DIRECTORY PROPERTY TC_PLATFORM_FLAGS "${PLATFORM_FLAGS}")

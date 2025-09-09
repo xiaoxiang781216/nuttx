@@ -18,6 +18,8 @@
 #
 ############################################################################
 
+STARTUP_OBJS = crt0$(OBJEXT)
+
 HEAD_CSRC += tricore_doirq.c
 
 CMN_CSRCS += tricore_allocateheap.c

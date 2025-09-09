@@ -78,6 +78,11 @@ endif()
 set(IFXFLAGS -DIFX_CFG_EXTEND_TRAP_HOOKS -DIFX_USE_SW_MANAGED_INT)
 
 target_sources(arch PRIVATE ${SRCS})
+nuttx_add_aux_library(STARTUP_OBJS crt0.c)
+target_compile_options(
+  STARTUP_OBJS
+  PRIVATE
+    $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_APP_COMPILE_OPTIONS>>)
 target_sources(nuttx PRIVATE tricore_doirq.c)
 target_compile_options(arch PRIVATE ${IFXFLAGS})
 target_compile_options(nuttx PRIVATE ${IFXFLAGS})
