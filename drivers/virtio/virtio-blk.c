@@ -30,7 +30,6 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/sched_note.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/virtio/virtio.h>
@@ -206,15 +205,6 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
       goto err;
     }
 
-  sched_note_printf(NOTE_TAG_ALWAYS, "Before virtio_blk_rdwr kick:"
-                    "VQ: %s - size=%d; free=%d; queued=%d; desc_head_idx=%d;"
-                    "available_idx=%d; avail.idx=%d; used_cons_idx=%d; "
-                    "used.idx=%d; avail.flags=0x%x; used.flags=0x%x\r\n",
-                    vq->vq_name, vq->vq_nentries, vq->vq_free_cnt,
-                    vq->vq_queued_cnt, vq->vq_desc_head_idx,
-                    vq->vq_available_idx, vq->vq_ring.avail->idx,
-                    vq->vq_used_cons_idx, vq->vq_ring.used->idx,
-                    vq->vq_ring.avail->flags, vq->vq_ring.used->flags);
   virtqueue_kick(vq);
   spin_unlock_irqrestore(&priv->lock, flags);
 
@@ -375,15 +365,6 @@ static int virtio_blk_flush(FAR struct virtio_blk_priv_s *priv)
       return ret;
     }
 
-  sched_note_printf(NOTE_TAG_ALWAYS, "Before virtio_blk_flush kick:"
-                    "VQ: %s - size=%d; free=%d; queued=%d; desc_head_idx=%d;"
-                    "available_idx=%d; avail.idx=%d; used_cons_idx=%d; "
-                    "used.idx=%d; avail.flags=0x%x; used.flags=0x%x\r\n",
-                    vq->vq_name, vq->vq_nentries, vq->vq_free_cnt,
-                    vq->vq_queued_cnt, vq->vq_desc_head_idx,
-                    vq->vq_available_idx, vq->vq_ring.avail->idx,
-                    vq->vq_used_cons_idx, vq->vq_ring.used->idx,
-                    vq->vq_ring.avail->flags, vq->vq_ring.used->flags);
   virtqueue_kick(vq);
   spin_unlock_irqrestore(&priv->lock, flags);
 
@@ -434,15 +415,6 @@ static void virtio_blk_done(FAR struct virtqueue *vq)
   FAR struct virtio_blk_priv_s *priv = vq->vq_dev->priv;
   FAR sem_t *respsem;
 
-  sched_note_printf(NOTE_TAG_ALWAYS, "Enter virtio_blk_done"
-                    "VQ: %s - size=%d; free=%d; queued=%d; desc_head_idx=%d;"
-                    "available_idx=%d; avail.idx=%d; used_cons_idx=%d; "
-                    "used.idx=%d; avail.flags=0x%x; used.flags=0x%x\r\n",
-                    vq->vq_name, vq->vq_nentries, vq->vq_free_cnt,
-                    vq->vq_queued_cnt, vq->vq_desc_head_idx,
-                    vq->vq_available_idx, vq->vq_ring.avail->idx,
-                    vq->vq_used_cons_idx, vq->vq_ring.used->idx,
-                    vq->vq_ring.avail->flags, vq->vq_ring.used->flags);
   for (; ; )
     {
       respsem = virtqueue_get_buffer_lock(vq, NULL, NULL, &priv->lock);
@@ -453,16 +425,6 @@ static void virtio_blk_done(FAR struct virtqueue *vq)
 
       nxsem_post(respsem);
     }
-
-  sched_note_printf(NOTE_TAG_ALWAYS, "Leave virtio_blk_done"
-                    "VQ: %s - size=%d; free=%d; queued=%d; desc_head_idx=%d;"
-                    "available_idx=%d; avail.idx=%d; used_cons_idx=%d; "
-                    "used.idx=%d; avail.flags=0x%x; used.flags=0x%x\r\n",
-                    vq->vq_name, vq->vq_nentries, vq->vq_free_cnt,
-                    vq->vq_queued_cnt, vq->vq_desc_head_idx,
-                    vq->vq_available_idx, vq->vq_ring.avail->idx,
-                    vq->vq_used_cons_idx, vq->vq_ring.used->idx,
-                    vq->vq_ring.avail->flags, vq->vq_ring.used->flags);
 }
 
 /****************************************************************************
