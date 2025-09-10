@@ -57,13 +57,13 @@
 
 static inline void virtio_read_config_bytes(FAR struct virtio_device *vdev,
                                             uint32_t offset, FAR void *dst,
-                                            int len)
+                                            size_t len)
 {
-  int i;
+  size_t i;
 
-  for (i = 0; i < len; i++)
+  for (i = 0u; i < len; i++)
     {
-      virtio_read_config(vdev, offset + i, dst + i, 1);
+      virtio_read_config(vdev, offset + i, dst + i, 1u);
     }
 }
 

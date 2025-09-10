@@ -116,10 +116,10 @@ static void virtio_pci_legacy_set_status(FAR struct virtio_device *vdev,
 static uint8_t virtio_pci_legacy_get_status(FAR struct virtio_device *vdev);
 static void virtio_pci_legacy_write_config(FAR struct virtio_device *vdev,
                                            uint32_t offset, FAR void *dst,
-                                           int length);
+                                           size_t length);
 static void virtio_pci_legacy_read_config(FAR struct virtio_device *vdev,
                                           uint32_t offset, FAR void *dst,
-                                          int length);
+                                          size_t length);
 static uint64_t
 virtio_pci_legacy_get_features(FAR struct virtio_device *vdev);
 static void virtio_pci_legacy_set_features(FAR struct virtio_device *vdev,
@@ -300,7 +300,7 @@ static uint8_t virtio_pci_legacy_get_status(FAR struct virtio_device *vdev)
 
 static void virtio_pci_legacy_write_config(FAR struct virtio_device *vdev,
                                            uint32_t offset, FAR void *src,
-                                           int length)
+                                           size_t length)
 {
   FAR struct virtio_pci_device_s *vpdev =
     (FAR struct virtio_pci_device_s *)vdev;
@@ -310,7 +310,7 @@ static void virtio_pci_legacy_write_config(FAR struct virtio_device *vdev,
   FAR char *config = vpdev->ioaddr + VIRTIO_PCI_CONFIG_OFF(false) + offset;
 #endif
   FAR uint8_t *s = src;
-  int i;
+  size_t i;
 
   for (i = 0; i < length; i++)
     {
@@ -324,7 +324,7 @@ static void virtio_pci_legacy_write_config(FAR struct virtio_device *vdev,
 
 static void virtio_pci_legacy_read_config(FAR struct virtio_device *vdev,
                                           uint32_t offset, FAR void *dst,
-                                          int length)
+                                          size_t length)
 {
   FAR struct virtio_pci_device_s *vpdev =
     (FAR struct virtio_pci_device_s *)vdev;
@@ -334,7 +334,7 @@ static void virtio_pci_legacy_read_config(FAR struct virtio_device *vdev,
   FAR char *config = vpdev->ioaddr + VIRTIO_PCI_CONFIG_OFF(false) + offset;
 #endif
   FAR uint8_t *d = dst;
-  int i;
+  size_t i;
 
   for (i = 0; i < length; i++)
     {

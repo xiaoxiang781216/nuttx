@@ -103,7 +103,7 @@ rpmsg_virtio_lite_negotiate_features(FAR struct virtio_device *vdev,
                                      uint64_t features);
 static void rpmsg_virtio_lite_read_config(struct virtio_device *vdev,
                                           uint32_t offset, void *dst,
-                                          int length);
+                                          size_t length);
 static void rpmsg_virtio_lite_notify(FAR struct virtqueue *vq);
 static void
 rpmsg_virtio_lite_send_command(FAR struct rpmsg_virtio_lite_priv_s *priv,
@@ -296,7 +296,7 @@ rpmsg_virtio_lite_negotiate_features(FAR struct virtio_device *vdev,
 
 static void rpmsg_virtio_lite_read_config(struct virtio_device *vdev,
                                           uint32_t offset, void *dst,
-                                          int length)
+                                          size_t length)
 {
   FAR struct rpmsg_virtio_lite_priv_s *priv =
     rpmsg_virtio_lite_get_priv(vdev);

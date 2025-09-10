@@ -225,10 +225,10 @@ static void virtio_mmio_set_status(FAR struct virtio_device *vdev,
 static uint8_t virtio_mmio_get_status(FAR struct virtio_device *vdev);
 static void virtio_mmio_write_config(FAR struct virtio_device *vdev,
                                      uint32_t offset, void *dst,
-                                     int length);
+                                     size_t length);
 static void virtio_mmio_read_config(FAR struct virtio_device *vdev,
                                     uint32_t offset, FAR void *dst,
-                                    int length);
+                                    size_t length);
 static uint64_t virtio_mmio_get_features(FAR struct virtio_device *vdev);
 static void virtio_mmio_set_features(FAR struct virtio_device *vdev,
                                      uint64_t features);
@@ -559,7 +559,8 @@ static uint8_t virtio_mmio_get_status(FAR struct virtio_device *vdev)
  ****************************************************************************/
 
 static void virtio_mmio_write_config(FAR struct virtio_device *vdev,
-                                     uint32_t offset, void *src, int length)
+                                     uint32_t offset, void *src,
+                                     size_t length)
 {
   FAR struct virtio_mmio_device_s *vmdev =
     (FAR struct virtio_mmio_device_s *)vdev;
@@ -598,7 +599,7 @@ static void virtio_mmio_write_config(FAR struct virtio_device *vdev,
 byte_write:
         {
           FAR char *s = src;
-          int i;
+          size_t i;
           for (i = 0; i < length; i++)
             {
               metal_io_write8(&vmdev->cfg_io, write_offset + i, s[i]);
@@ -613,7 +614,7 @@ byte_write:
 
 static void virtio_mmio_read_config(FAR struct virtio_device *vdev,
                                     uint32_t offset, FAR void *dst,
-                                    int length)
+                                    size_t length)
 {
   FAR struct virtio_mmio_device_s *vmdev =
     (FAR struct virtio_mmio_device_s *)vdev;
@@ -652,7 +653,7 @@ static void virtio_mmio_read_config(FAR struct virtio_device *vdev,
 byte_read:
         {
           FAR char *d = dst;
-          int i;
+          size_t i;
           for (i = 0; i < length; i++)
             {
               d[i] = metal_io_read8(&vmdev->cfg_io, read_offset + i);

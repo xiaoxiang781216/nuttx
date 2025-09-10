@@ -171,10 +171,10 @@ static void virtio_pci_modern_set_status(FAR struct virtio_device *vdev,
 static uint8_t virtio_pci_modern_get_status(FAR struct virtio_device *vdev);
 static void virtio_pci_modern_write_config(FAR struct virtio_device *vdev,
                                            uint32_t offset, FAR void *dst,
-                                           int length);
+                                           size_t length);
 static void virtio_pci_modern_read_config(FAR struct virtio_device *vdev,
                                           uint32_t offset, FAR void *dst,
-                                          int length);
+                                          size_t length);
 static uint64_t
 virtio_pci_modern_get_features(FAR struct virtio_device *vdev);
 static void virtio_pci_modern_set_features(FAR struct virtio_device *vdev,
@@ -429,7 +429,7 @@ static uint8_t virtio_pci_modern_get_status(FAR struct virtio_device *vdev)
 
 static void virtio_pci_modern_write_config(FAR struct virtio_device *vdev,
                                            uint32_t offset, FAR void *src,
-                                           int length)
+                                           size_t length)
 {
   FAR struct virtio_pci_device_s *vpdev =
     (FAR struct virtio_pci_device_s *)vdev;
@@ -468,7 +468,7 @@ static void virtio_pci_modern_write_config(FAR struct virtio_device *vdev,
       default:
         {
           FAR char *s = src;
-          int i;
+          size_t i;
           for (i = 0; i < length; i++)
             {
               pci_write_io_byte(vpdev->dev,
@@ -485,7 +485,7 @@ static void virtio_pci_modern_write_config(FAR struct virtio_device *vdev,
 
 static void virtio_pci_modern_read_config(FAR struct virtio_device *vdev,
                                           uint32_t offset, FAR void *dst,
-                                          int length)
+                                          size_t length)
 {
   FAR struct virtio_pci_device_s *vpdev =
     (FAR struct virtio_pci_device_s *)vdev;
@@ -524,7 +524,7 @@ static void virtio_pci_modern_read_config(FAR struct virtio_device *vdev,
       default:
         {
           FAR char *d = dst;
-          int i;
+          size_t i;
           for (i = 0; i < length; i++)
             {
               pci_read_io_byte(vpdev->dev,
