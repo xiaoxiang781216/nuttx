@@ -922,6 +922,11 @@ static void rptun_dev_panic(FAR struct rptun_priv_s *priv)
 
       priv->rpanic = true;
     }
+  else
+    {
+      metal_log(METAL_LOG_EMERGENCY, "Remote cpu %s already Panic\n",
+                RPTUN_GET_CPUNAME(priv->dev));
+    }
 }
 
 static int rptun_do_ioctl(FAR struct rptun_priv_s *priv, int cmd,
@@ -1194,21 +1199,22 @@ int rptun_initialize(FAR struct rptun_dev_s *dev)
           if (RPTUN_IS_AUTOSTART(priv->dev))
             {
               ret = rptun_dev_start(priv);
-              if (ret >= 0)
-                {
-                  priv->nbpanic.notifier_call = rptun_panic_notifier;
-                  panic_notifier_chain_register(&priv->nbpanic);
-
-                  metal_mutex_acquire(&g_rptun_lock);
-                  metal_list_add_tail(&g_rptun_priv, &priv->node);
-                  metal_mutex_release(&g_rptun_lock);
-                }
-              else
+              if (ret < 0)
                 {
                   unregister_driver(name);
                   kmm_free(priv);
                   rptunerr("rptun start failed %d\n", ret);
                 }
+            }
+
+          if (ret >= 0)
+            {
+              priv->nbpanic.notifier_call = rptun_panic_notifier;
+              panic_notifier_chain_register(&priv->nbpanic);
+
+              metal_mutex_acquire(&g_rptun_lock);
+              metal_list_add_tail(&g_rptun_priv, &priv->node);
+              metal_mutex_release(&g_rptun_lock);
             }
         }
       else
