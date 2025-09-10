@@ -31,9 +31,11 @@
 #include <nuttx/arch.h>
 #include <nuttx/cache.h>
 #include <nuttx/tls.h>
+#include <nuttx/mm/mm.h>
 
 #include "tricore_mpu.h"
 #include "sched/sched.h"
+#include "group/group.h"
 
 /****************************************************************************
  * Private Data
@@ -43,6 +45,10 @@
 
 #ifdef CONFIG_ARCH_STACK_PROTECT
 static unsigned int g_addrenv_stack_region;
+#endif
+
+#ifdef CONFIG_MM_TASK_HEAP
+static unsigned int g_addrenv_heap_region;
 #endif
 
 /****************************************************************************
@@ -94,22 +100,50 @@ int up_addrenv_create(size_t textsize, size_t datasize, size_t heapsize,
   /* When use mpu addrenv info must set by modlib */
 
   addrenv->textsize = textsize;
+  addrenv->datasize = datasize;
+
+#ifdef CONFIG_MM_TASK_HEAP
+  addrenv->heapsize = heapsize;
+
+  /* Allocate the heap memory */
+
+  group_heap_initialize((struct mm_heap_s **)&addrenv->heap,
+                        CONFIG_MM_TASK_HEAP_DEFAULT_ALIGN, heapsize);
+  if (addrenv->heap != 0)
+    {
+      /* Initialize the memory manager */
+
+      mm_initialize("Module", (void *)addrenv->heap,
+                    CONFIG_MM_TASK_HEAP_DEFAULT_SIZE);
+    }
+  else
+    {
+      return -ENOMEM;
+    }
+
   if (textsize != 0)
     {
-      DEBUGASSERT(addrenv->text);
+      addrenv->text =
+        (uintptr_t)mm_memalign((void *)addrenv->heap,
+                               CONFIG_MM_TASK_HEAP_DEFAULT_ALIGN, textsize);
+      if (addrenv->text == 0)
+        {
+          group_heap_uninitialize((void *)addrenv->heap);
+          return -ENOMEM;
+        }
     }
 
-  addrenv->datasize = datasize;
   if (datasize != 0)
     {
-      DEBUGASSERT(addrenv->data);
-    }
-
-#ifdef CONFIG_BUILD_PROTECTED
-  addrenv->heapsize = heapsize;
-  if (heapsize != 0)
-    {
-      DEBUGASSERT(addrenv->heap);
+      addrenv->data =
+        (uintptr_t)mm_memalign((void *)addrenv->heap,
+                               CONFIG_MM_TASK_HEAP_DEFAULT_ALIGN, datasize);
+      if (addrenv->data == 0)
+        {
+          mm_free((void *)addrenv->heap, (void *)addrenv->text);
+          group_heap_uninitialize((void *)addrenv->heap);
+          return -ENOMEM;
+        }
     }
 #endif
 
@@ -136,6 +170,20 @@ int up_addrenv_destroy(arch_addrenv_t *addrenv)
 {
   binfo("addrenv=%p\n", addrenv);
   DEBUGASSERT(addrenv);
+
+#ifdef CONFIG_MM_TASK_HEAP
+  if ((void *)addrenv->text != NULL)
+    {
+      mm_free((void *)addrenv->heap, (void *)addrenv->text);
+    }
+
+  if ((void *)addrenv->data != NULL)
+    {
+      mm_free((void *)addrenv->heap, (void *)addrenv->data);
+    }
+
+  group_heap_uninitialize((void *)addrenv->heap);
+#endif
 
   memset(addrenv, 0, sizeof(arch_addrenv_t));
   return OK;
@@ -217,8 +265,31 @@ int up_addrenv_vdata(arch_addrenv_t *addrenv, uintptr_t textsize,
 
 int up_addrenv_select(const arch_addrenv_t *addrenv)
 {
-  binfo("addrenv=%p\n", addrenv);
-  DEBUGASSERT(addrenv);
+#ifdef CONFIG_MM_TASK_HEAP
+  struct tcb_s *tcb = this_task();
+  struct mpu_region_s conf;
+
+  if (g_addrenv_heap_region == 0)
+    {
+      g_addrenv_heap_region = mpu_allocdataregion();
+    }
+
+  if (tcb->group->tg_heap)
+    {
+      conf.base = (uintptr_t)tcb->group->tg_heap;
+      conf.size = group_heap_size((struct mm_heap_s *)tcb->group->tg_heap);
+      conf.kflags = REGION_TYPE_DATA | REGION_ATTR_RW;
+      conf.uflags = REGION_TYPE_DATA | REGION_ATTR_RW;
+      mpu_control(false);
+      mpu_modify_region(g_mpu_kset, g_addrenv_heap_region,
+                        conf.base, conf.size, conf.kflags);
+#ifdef CONFIG_BUILD_PROTECTED
+      mpu_modify_region(g_mpu_uset, g_addrenv_heap_region,
+                        conf.base, conf.size, conf.uflags);
+#endif
+      mpu_control(true);
+    }
+#endif
 
   return OK;
 }
