@@ -326,7 +326,7 @@ void tricore_trapcall(volatile void *trap)
 
       /* Update the current task's regs */
 
-      g_running_tasks[this_cpu()]->xcp.regs = regs - TC_CONTEXT_REGS;
+      g_running_task->xcp.regs = regs - TC_CONTEXT_REGS;
 
       __mtcr(CPU_FCX, tricore_addr2csa(g_intstackalloc));
       __mtcr(CPU_LCX, tricore_addr2csa(g_intstacktop - 2 * TC_CONTEXT_SIZE));

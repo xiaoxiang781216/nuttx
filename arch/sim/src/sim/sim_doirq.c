@@ -66,7 +66,7 @@ void *sim_doirq(int irq, void *context)
   sim_saveusercontext(regs, ret);
   if (ret == 0)
     {
-      struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+      struct tcb_s **running_task = &g_running_task;
 
       sim_copyfullstate((*running_task)->xcp.regs, regs);
 

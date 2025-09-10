@@ -117,7 +117,7 @@
       {                                                         \
         xcpt_reg_t *env = restoreregs;                          \
         uint32_t *flags = (uint32_t *)&env[JB_FLAG];            \
-        struct tcb_s *tcb_ = g_running_tasks[this_cpu()];       \
+        struct tcb_s *tcb_ = g_running_task;       \
                                                                 \
         up_irq_restore(((uint64_t)flags[1] << 32) | flags[0]);  \
                                                                 \

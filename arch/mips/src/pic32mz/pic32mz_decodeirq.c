@@ -69,7 +69,7 @@
 
 uint32_t *pic32mz_decodeirq(uint32_t *regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
 
   if (*running_task != NULL)
     {

@@ -66,9 +66,9 @@ void up_exit(int status)
    * a context for restoration.
    */
 
-  g_running_tasks[this_cpu()] = NULL;
+  g_running_task = NULL;
 #else
-  g_running_tasks[this_cpu()] = this_task();
+  g_running_task = this_task();
 #endif
 
   /* Then switch contexts */

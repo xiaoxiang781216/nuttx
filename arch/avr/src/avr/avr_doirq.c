@@ -57,7 +57,7 @@
 
 uint8_t *avr_doirq(uint8_t irq, uint8_t *regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
 
   avr_copystate((*running_task)->xcp.regs, regs);
 

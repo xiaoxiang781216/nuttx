@@ -44,7 +44,7 @@
 
 FAR chipreg_t *z80_doirq(uint8_t irq, FAR chipreg_t *regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
   struct tcb_s *tcb;
 
   z80_copystate((*running_task)->xcp.regs, regs)

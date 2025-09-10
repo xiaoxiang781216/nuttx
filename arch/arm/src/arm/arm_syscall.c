@@ -54,8 +54,7 @@
 
 uint32_t *arm_syscall(uint32_t *regs)
 {
-  int cpu = this_cpu();
-  struct tcb_s **running_task = &g_running_tasks[cpu];
+  struct tcb_s **running_task = &g_running_task;
   struct tcb_s *tcb = this_task();
   uint32_t cmd;
 

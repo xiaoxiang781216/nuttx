@@ -150,7 +150,6 @@ int riscv_swint(int irq, void *context, void *arg)
 {
   uintreg_t *regs = (uintreg_t *)context;
   struct tcb_s *tcb = this_task();
-  int cpu = this_cpu();
 
   /* Software interrupt 0 is invoked with REG_A0 (REG_X10) = system call
    * command and REG_A1-6 = variable number of
@@ -175,7 +174,7 @@ int riscv_swint(int irq, void *context, void *arg)
 
       case SYS_switch_context:
         {
-          riscv_savecontext(g_running_tasks[cpu]);
+          riscv_savecontext(g_running_task);
           riscv_restorecontext(tcb);
           break_critical_section();
         }

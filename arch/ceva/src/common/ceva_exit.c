@@ -78,7 +78,7 @@ void _exit(int status)
 
   sched_resume_scheduler(tcb);
 
-  g_running_tasks[this_cpu()] = tcb;
+  g_running_task = tcb;
 
   /* Then switch contexts */
 

@@ -70,7 +70,7 @@
 
 uint32_t *pic32mx_decodeirq(uint32_t *regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
 #ifdef CONFIG_PIC32MX_NESTED_INTERRUPTS
   uint32_t *savestate;
 #endif

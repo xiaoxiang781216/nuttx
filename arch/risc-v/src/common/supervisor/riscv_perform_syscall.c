@@ -37,7 +37,7 @@
 
 void *riscv_perform_syscall(uintreg_t *regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
   bool restore_context = true;
   struct tcb_s *tcb;
 

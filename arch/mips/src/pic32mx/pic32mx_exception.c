@@ -53,7 +53,7 @@
 
 uint32_t *pic32mx_exception(uint32_t *regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
 #ifdef CONFIG_DEBUG_FEATURES
   uint32_t cause;
   uint32_t epc;

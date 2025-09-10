@@ -80,7 +80,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = tcb;
+      g_running_task = tcb;
       regs = tcb->xcp.regs;
     }
 

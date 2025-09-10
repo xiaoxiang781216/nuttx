@@ -89,7 +89,7 @@ static void dispatch_syscall(void)
 void tricore_svcall(volatile void *trap)
 {
   struct tcb_s *tcb = this_task();
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
   uintptr_t *plregs;
   uintptr_t *puregs;
   uintptr_t *cpu_lcx;

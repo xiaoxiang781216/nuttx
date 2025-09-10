@@ -86,7 +86,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   if (regs != tcb->xcp.regs)
     {
-      struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+      struct tcb_s **running_task = &g_running_task;
 
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously

@@ -66,7 +66,7 @@ void up_exit(int status)
 
   tcb = this_task();
 
-  g_running_tasks[this_cpu()] = NULL;
+  g_running_task = NULL;
 
   /* Then switch contexts */
 

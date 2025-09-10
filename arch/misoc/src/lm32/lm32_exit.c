@@ -68,7 +68,7 @@ void up_exit(int status)
 
   /* Adjusts time slice for RR & SPORADIC cases */
 
-  g_running_tasks[this_cpu()] = NULL;
+  g_running_task = NULL;
 
   /* Then switch contexts */
 

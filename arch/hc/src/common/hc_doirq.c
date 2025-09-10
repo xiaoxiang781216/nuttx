@@ -58,7 +58,7 @@
 
 uint8_t *hc_doirq(int irq, uint8_t *regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
   struct tcb_s *tcb;
 
   hc_copystate((*running_task)->xcp.regs);

@@ -58,7 +58,7 @@
 
 uint32_t *renesas_doirq(int irq, uint32_t * regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
   struct tcb_s *tcb;
 
   renesas_copystate((*running_task)->xcp.regs, regs);

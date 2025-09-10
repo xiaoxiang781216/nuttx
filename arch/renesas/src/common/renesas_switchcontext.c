@@ -93,7 +93,7 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 #endif
       /* Record the new "running" task */
 
-      g_running_tasks[this_cpu()] = tcb;
+      g_running_task = tcb;
 
       /* Then switch contexts */
 

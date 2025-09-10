@@ -58,7 +58,7 @@ FAR chipreg_t *z16_doirq(int irq, FAR chipreg_t *regs)
 #else
   if ((unsigned)irq < NR_IRQS)
     {
-      struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+      struct tcb_s **running_task = &g_running_task;
       FAR chipreg_t *savestate;
 
       z16_copystate((*running_task)->xcp.regs, regs)

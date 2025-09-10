@@ -60,7 +60,7 @@ uint32_t *ceva_doirq(int irq, uint32_t *regs)
     }
   else
     {
-      struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+      struct tcb_s **running_task = &g_running_task;
 
       if (*running_task != NULL)
         {

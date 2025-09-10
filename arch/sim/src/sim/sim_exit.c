@@ -67,7 +67,7 @@ void up_exit(int status)
    * NOTE: the API also adjusts the global IRQ control for SMP
    */
 
-  g_running_tasks[this_cpu()] = tcb;
+  g_running_task = tcb;
 
   break_critical_section();
 

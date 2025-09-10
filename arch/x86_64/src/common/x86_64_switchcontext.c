@@ -57,8 +57,6 @@
 
 void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 {
-  int cpu;
-
 #ifdef CONFIG_ARCH_KERNEL_STACK
   /* Update kernel stack top pointer */
 
@@ -83,7 +81,6 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
   else if (!up_saveusercontext(rtcb->xcp.regs))
     {
       struct tcb_s **running_task;
-      cpu = this_cpu();
 
       x86_64_restore_auxstate(tcb);
 
@@ -102,8 +99,8 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 
       /* Update scheduler parameters */
 
-      running_task = &g_running_tasks[cpu];
-      tcb = current_task(cpu);
+      running_task = &g_running_task;
+      tcb = this_task();
 
       /* Record the new "running" task.  g_running_tasks[] is only used by
        * assertion logic for reporting crashes.

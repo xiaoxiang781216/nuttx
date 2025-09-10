@@ -41,7 +41,7 @@
 
 uint32_t *or1k_doirq(int irq, uint32_t *regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
 
   or1k_copyfullstate((*running_task)->xcp.regs, regs);
 

@@ -314,7 +314,7 @@ enum task_deliver_e g_delivertasks[CONFIG_SMP_NCPUS];
  * It is valid only when up_interrupt_context() returns true.
  */
 
-FAR struct tcb_s *g_running_tasks[CONFIG_SMP_NCPUS] =
+DEFINE_PER_CPU(FAR struct tcb_s *, g_running_tasks) =
 {
   &g_idletcb[0],
 #if CONFIG_SMP_NCPUS > 1

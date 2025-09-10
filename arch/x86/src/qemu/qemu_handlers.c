@@ -76,7 +76,7 @@ static void idt_outb(uint8_t val, uint16_t addr)
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
 static uint32_t *common_handler(int irq, uint32_t *regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
   struct tcb_s *tcb;
   board_autoled_on(LED_INIRQ);
 

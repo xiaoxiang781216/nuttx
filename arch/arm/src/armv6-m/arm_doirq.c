@@ -48,7 +48,7 @@ void exception_direct(void)
   arm_ack_irq(irq);
   irq_dispatch(irq, NULL);
 
-  if (g_running_tasks[this_cpu()] != this_task())
+  if (g_running_task != this_task())
     {
       up_trigger_irq(NVIC_IRQ_PENDSV, 0);
     }
@@ -56,7 +56,7 @@ void exception_direct(void)
 
 uint32_t *arm_doirq(int irq, uint32_t *regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
   struct tcb_s *tcb           = *running_task;
 
   /* This judgment proves that (*running_task)->xcp.regs

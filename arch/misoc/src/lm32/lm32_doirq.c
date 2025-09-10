@@ -45,7 +45,7 @@
 
 uint32_t *lm32_doirq(int irq, uint32_t *regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
   struct tcb_s *tcb;
 
   if (*running_task != NULL)
@@ -107,7 +107,7 @@ uint32_t *lm32_doirq(int irq, uint32_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = tcb;
+      g_running_task = tcb;
     }
 
   /* If a context switch occurred while processing the interrupt then

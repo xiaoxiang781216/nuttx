@@ -47,7 +47,7 @@
 
 void z16f_sysexec(FAR chipreg_t *regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
   uint16_t excp;
 
   z16_copystate((*running_task)->xcp.regs, regs)

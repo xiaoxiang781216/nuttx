@@ -505,7 +505,7 @@ int up_debugpoint_remove(int type, void *addr, size_t size)
 
 uint32_t *xtensa_debug_handler(uint32_t *regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
   bool irq = up_interrupt_context();
   uint32_t *saved_regs = NULL;
   uint32_t cause;

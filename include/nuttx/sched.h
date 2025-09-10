@@ -223,7 +223,7 @@
 #  define this_cpu()                 (0)
 #endif
 
-#define running_regs()               ((FAR void **)(g_running_tasks[this_cpu()]->xcp.regs))
+#define running_regs()               ((FAR void **)(g_running_task->xcp.regs))
 
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
 #  define is_idle_task(t)            ((t)->pid < CONFIG_SMP_NCPUS)
@@ -241,7 +241,7 @@
  * during interrupt level context switches.
  */
 
-#define running_task()               (up_interrupt_context() ? g_running_tasks[this_cpu()] : this_task())
+#define running_task()               (up_interrupt_context() ? g_running_task : this_task())
 
 #if defined(up_this_task)
 #  define this_task()                up_this_task()
@@ -937,7 +937,8 @@ EXTERN clock_t g_busywait_total[CONFIG_SMP_NCPUS];
  * It is valid only when up_interrupt_context() returns true.
  */
 
-EXTERN FAR struct tcb_s *g_running_tasks[CONFIG_SMP_NCPUS];
+DECLARE_PER_CPU(FAR struct tcb_s *, g_running_tasks);
+#define g_running_task this_cpu_var(g_running_tasks)
 
 EXTERN const struct tcbinfo_s g_tcbinfo;
 

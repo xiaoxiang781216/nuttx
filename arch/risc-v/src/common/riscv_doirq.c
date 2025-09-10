@@ -87,7 +87,7 @@
 
 static uintreg_t *riscv_doirq_top(int irq, uintreg_t *regs)
 {
-  struct tcb_s **running_task = &g_running_tasks[this_cpu()];
+  struct tcb_s **running_task = &g_running_task;
   bool restore_context = false;
   struct tcb_s *tcb = this_task();
 
