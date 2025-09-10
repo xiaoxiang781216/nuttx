@@ -322,7 +322,7 @@ int fdlist_dup3(FAR struct fdlist *list, int fd1, int fd2, int flags)
 
   /* Get the file descriptor list.  It should not be NULL in this context. */
 
-  if (fd2 < 0)
+  if (fd2 < 0 || fd2 >= OPEN_MAX)
     {
       return -EBADF;
     }
