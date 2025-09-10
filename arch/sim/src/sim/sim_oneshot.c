@@ -61,9 +61,7 @@ struct sim_oneshot_lowerhalf_s
 
   sq_entry_t link;
   struct timespec alarm;
-
-  oneshot_callback_t callback; /* internal handler that receives callback */
-  void *arg;                   /* Argument that is passed to the handler */
+  int running_cpu;
 };
 
 /****************************************************************************
@@ -262,27 +260,15 @@ static void sim_process_tick(sq_entry_t *entry)
 {
   struct sim_oneshot_lowerhalf_s *priv =
     container_of(entry, struct sim_oneshot_lowerhalf_s, link);
-  oneshot_callback_t callback;
-  void *cbarg;
 
   DEBUGASSERT(priv != NULL);
 
   sim_reset_alarm(&priv->alarm);
 
-  if (priv->callback)
+  if (priv->running_cpu == up_this_cpu())
     {
-      /* Sample and nullify BEFORE executing callback (in case the callback
-       * restarts the oneshot).
-       */
-
-      callback       = priv->callback;
-      cbarg          = priv->arg;
-      priv->callback = NULL;
-      priv->arg      = NULL;
-
-      /* Then perform the callback */
-
-      callback(&priv->lh, cbarg);
+      priv->running_cpu = -1;
+      oneshot_process_callback(&priv->lh);
     }
 }
 
@@ -347,11 +333,10 @@ static int sim_start(struct oneshot_lowerhalf_s *lower,
 
   flags = rspin_lock_irqsave(&g_oneshot_list_lock);
 
+  priv->running_cpu = up_this_cpu();
+
   sim_timer_current(&current);
   clock_timespec_add(&current, ts, &priv->alarm);
-
-  priv->callback = callback;
-  priv->arg      = arg;
 
   sim_update_hosttimer();
 
@@ -403,9 +388,6 @@ static int sim_cancel(struct oneshot_lowerhalf_s *lower,
 
   sim_reset_alarm(&priv->alarm);
   sim_update_hosttimer();
-
-  priv->callback = NULL;
-  priv->arg      = NULL;
 
   rspin_unlock_irqrestore(&g_oneshot_list_lock, flags);
 
@@ -503,6 +485,8 @@ struct oneshot_lowerhalf_s *oneshot_initialize(int chan,
     }
 
   /* Initialize the lower-half driver structure */
+
+  priv->running_cpu = -1;
 
   sq_addlast(&priv->link, &g_oneshot_list);
   priv->lh.ops = &g_oneshot_ops;
