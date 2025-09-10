@@ -246,9 +246,6 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
   int ret = OK;
   int i;
 
-  /* Cannot wait in interrupt context. */
-
-  DEBUGASSERT(!up_interrupt_context());
   nxsched_smp_call_init(&data, func, arg);
   cookie.error = 0;
   nxsem_init(&cookie.sem, 0, 0);
