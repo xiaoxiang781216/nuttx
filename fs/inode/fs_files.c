@@ -107,7 +107,6 @@ static int fdlist_extend(FAR struct fdlist *list, size_t row)
   if (CONFIG_NFILE_DESCRIPTORS_PER_BLOCK * (orig_rows + 1) > OPEN_MAX)
     {
       fdlist_dump(list);
-      DEBUGASSERT(0);
       return -EMFILE;
     }
 
