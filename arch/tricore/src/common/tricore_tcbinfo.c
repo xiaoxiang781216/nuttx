@@ -68,7 +68,7 @@ static const struct reginfo_s g_reginfo[] =
   REGINFO_AUTO("a15",    4, 31, TCB_REG_OFF(16 + REG_A15)),
   REGINFO_AUTO("lcx",    4, 32, REGINFO_OFFSET_INVALID),
   REGINFO_AUTO("fcx",    4, 33, REGINFO_OFFSET_INVALID),
-  REGINFO_AUTO("pcx",    4, 34, TCB_REG_OFF(REG_LPCXI)),
+  REGINFO_AUTO("pcx",    4, 34, TCB_REG_OFF(16 + REG_UPCXI)),
   REGINFO_AUTO("psw",    4, 35, TCB_REG_OFF(16 + REG_PSW)),
   REGINFO_AUTO("pc",     4, 36, TCB_REG_OFF(REG_LA11)),
   REGINFO_AUTO("icr",    4, 37, REGINFO_OFFSET_INVALID),
