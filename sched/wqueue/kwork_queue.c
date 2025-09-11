@@ -79,13 +79,13 @@ int work_queue_next_wq(FAR struct kwork_wqueue_s *wqueue,
       return -EINVAL;
     }
 
+  flags = spin_lock_irqsave(&wqueue->lock);
+
   /* Initialize the work structure. */
 
   work->worker = worker; /* Work callback. non-NULL means queued */
   work->arg    = arg;    /* Callback argument */
   work->qtime += delay;  /* Expected time based on last expiration time */
-
-  flags = spin_lock_irqsave(&wqueue->lock);
 
   if (delay)
     {
