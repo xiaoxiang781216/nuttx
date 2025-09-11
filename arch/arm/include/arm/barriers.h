@@ -29,14 +29,14 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* ARM memory barriers */
+/* ARM memory barriers, for default branch ARM926EJ-S, ARMv5TEJ have no
+ * barrier support, use compiler barrier only, do not generate instruments.
+ */
 
-#define arm_dsb()  __asm__ __volatile__ ("dsb " : : : "memory")
-#define arm_isb()  __asm__ __volatile__ ("isb " : : : "memory")
-#define arm_dmb()  __asm__ __volatile__ ("dmb " : : : "memory")
+#define arm_mb()  __asm__ __volatile__ ("" : : : "memory")
 
-#define UP_DSB()  arm_dsb()
-#define UP_ISB()  arm_isb()
-#define UP_DMB()  arm_dmb()
+#define UP_DSB()  arm_mb()
+#define UP_ISB()  arm_mb()
+#define UP_DMB()  arm_mb()
 
 #endif /* __ARCH_ARM_INCLUDE_ARM_BARRIERS_H */
