@@ -148,7 +148,7 @@ ssize_t file_readv(FAR struct file *filep,
     {
       /* No.. File is not read-able */
 
-      ret = -EACCES;
+      ret = -EBADF;
     }
 
   /* Is a driver or mountpoint registered? If so, does it support the read
