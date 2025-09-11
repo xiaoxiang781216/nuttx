@@ -107,11 +107,13 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 
       if (rtcb->lockcount > 0)
         {
-          /* Move all tasks with the higher priority from the ready-to-run
-           * list to the pending list.
+          /* Move all tasks with the higher or the same priority from
+           * the ready-to-run list to the pending list.
+           * If a running task has the same priority as other tasks on
+           * the pending list, it must be executed last.
            */
 
-          do
+          while (sched_priority <= nxttcb->sched_priority)
             {
               bool check = nxsched_remove_readytorun(nxttcb);
               DEBUGASSERT(check == false);
@@ -122,7 +124,6 @@ static inline void nxsched_running_setpriority(FAR struct tcb_s *tcb,
 
               nxttcb = tcb->flink;
             }
-          while (sched_priority < nxttcb->sched_priority);
 
           /* Change the task priority */
 
