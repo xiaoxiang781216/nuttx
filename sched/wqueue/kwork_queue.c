@@ -80,6 +80,7 @@ int work_queue_next_wq(FAR struct kwork_wqueue_s *wqueue,
                                        clock_systime_ticks() + delay;
 
       ret = OK;
+      flags = spin_lock_irqsave(&wqueue->lock);
 
       /* Initialize the work structure. */
 
@@ -89,8 +90,6 @@ int work_queue_next_wq(FAR struct kwork_wqueue_s *wqueue,
       /* Expected time based on last expiration time */
 
       work->qtime  = expected;
-
-      flags = spin_lock_irqsave(&wqueue->lock);
 
       if (delay)
         {
