@@ -49,7 +49,7 @@
  *
  ****************************************************************************/
 
-uint8_t posix_spawnattr_getpriority(FAR posix_spawnattr_t *attr)
+int posix_spawnattr_getpriority(FAR posix_spawnattr_t *attr)
 {
   DEBUGASSERT(attr);
 

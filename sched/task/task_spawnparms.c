@@ -223,7 +223,7 @@ int spawn_execattrs(pid_t pid, FAR const posix_spawnattr_t *attr)
 #ifdef CONFIG_SCHED_SPORADIC
       /* But take the sporadic scheduler parameters from the attributes */
 
-      param.sched_ss_low_priority        = (int)attr->low_priority;
+      param.sched_ss_low_priority        = attr->low_priority;
       param.sched_ss_max_repl            = (int)attr->max_repl;
       param.sched_ss_repl_period.tv_sec  = attr->repl_period.tv_sec;
       param.sched_ss_repl_period.tv_nsec = attr->repl_period.tv_nsec;

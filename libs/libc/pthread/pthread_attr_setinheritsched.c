@@ -70,7 +70,7 @@ int pthread_attr_setinheritsched(FAR pthread_attr_t *attr,
     }
   else
     {
-      attr->inheritsched = (uint8_t)inheritsched;
+      attr->inheritsched = inheritsched;
       ret = OK;
     }
 

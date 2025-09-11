@@ -58,7 +58,7 @@ int posix_spawnattr_getschedparam(FAR const posix_spawnattr_t *attr,
   DEBUGASSERT(attr && param);
   param->sched_priority = attr->priority;
 #ifdef CONFIG_SCHED_SPORADIC
-  param->sched_ss_low_priority        = (int)attr->low_priority;
+  param->sched_ss_low_priority        = attr->low_priority;
   param->sched_ss_max_repl            = (int)attr->max_repl;
   param->sched_ss_repl_period.tv_sec  = attr->repl_period.tv_sec;
   param->sched_ss_repl_period.tv_nsec = attr->repl_period.tv_nsec;

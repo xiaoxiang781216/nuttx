@@ -54,6 +54,6 @@
 int posix_spawnattr_setschedpolicy(FAR posix_spawnattr_t *attr, int policy)
 {
   DEBUGASSERT(attr && (policy >= SCHED_OTHER && policy <= SCHED_SPORADIC));
-  attr->policy = (uint8_t)policy;
+  attr->policy = policy;
   return OK;
 }

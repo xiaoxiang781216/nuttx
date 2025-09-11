@@ -65,9 +65,9 @@ int pthread_attr_setschedparam(FAR pthread_attr_t *attr,
     }
   else
     {
-      attr->priority            = (short)param->sched_priority;
+      attr->priority            = param->sched_priority;
 #ifdef CONFIG_SCHED_SPORADIC
-      attr->low_priority        = (uint8_t)param->sched_ss_low_priority;
+      attr->low_priority        = param->sched_ss_low_priority;
       attr->max_repl            = (uint8_t)param->sched_ss_max_repl;
       attr->repl_period.tv_sec  = param->sched_ss_repl_period.tv_sec;
       attr->repl_period.tv_nsec = param->sched_ss_repl_period.tv_nsec;

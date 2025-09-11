@@ -88,7 +88,7 @@ struct binary_s
    * by the caller between load_module() and exec_module() calls.
    */
 
-  uint8_t priority;                    /* Task execution priority */
+  int priority;                        /* Task execution priority */
   size_t stacksize;                    /* Size of the stack in bytes (unallocated) */
 #ifdef CONFIG_SCHED_USER_IDENTITY
   uid_t uid;                           /* File owner user identity */

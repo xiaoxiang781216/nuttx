@@ -55,6 +55,6 @@ int posix_spawnattr_getschedpolicy(FAR const posix_spawnattr_t *attr,
                                    FAR int *policy)
 {
   DEBUGASSERT(attr && policy);
-  *policy = (int)attr->policy;
+  *policy = attr->policy;
   return OK;
 }

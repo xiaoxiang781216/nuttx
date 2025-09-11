@@ -80,11 +80,11 @@ struct posix_spawnattr_s
   /* Used by posix_spawn, posix_spawnp, and task_spawn */
 
   uint8_t  flags;                /* See POSIX_SPAWN_ definitions */
-  uint8_t  priority;             /* Task scheduling priority */
-  uint8_t  policy;               /* Task scheduling policy */
+  int      priority;             /* Task scheduling priority */
+  int      policy;               /* Task scheduling policy */
 
 #ifdef CONFIG_SCHED_SPORADIC
-  uint8_t  low_priority;         /* Low scheduling priority */
+  int      low_priority;         /* Low scheduling priority */
   uint8_t  max_repl;             /* Maximum pending replenishments */
 #endif
 
@@ -214,8 +214,8 @@ int posix_spawnattr_setstacksize(FAR posix_spawnattr_t *attr,
                                  size_t stacksize);
 
 int posix_spawnattr_setpriority(FAR posix_spawnattr_t *attr,
-                                uint8_t priority);
-uint8_t posix_spawnattr_getpriority(FAR posix_spawnattr_t *attr);
+                                int priority);
+int posix_spawnattr_getpriority(FAR posix_spawnattr_t *attr);
 
 #ifndef CONFIG_BUILD_KERNEL
 int posix_spawnattr_getstackaddr(FAR const posix_spawnattr_t *attr,

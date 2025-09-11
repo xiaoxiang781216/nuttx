@@ -51,7 +51,7 @@
  ****************************************************************************/
 
 int posix_spawnattr_setpriority(FAR posix_spawnattr_t *attr,
-                                uint8_t priority)
+                                int priority)
 {
   DEBUGASSERT(attr);
 

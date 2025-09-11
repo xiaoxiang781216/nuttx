@@ -223,9 +223,9 @@ typedef void (*pthread_trampoline_t)(pthread_startroutine_t, pthread_addr_t);
 
 struct pthread_attr_s
 {
-  uint8_t priority;            /* Priority of the pthread */
-  uint8_t policy;              /* Pthread scheduler policy */
-  uint8_t inheritsched;        /* Inherit parent priority/policy? */
+  int priority;                /* Priority of the pthread */
+  int policy;                  /* Pthread scheduler policy */
+  int inheritsched;            /* Inherit parent priority/policy? */
   uint8_t detachstate;         /* Initialize to the detach state */
 
 #ifdef CONFIG_SMP
@@ -237,7 +237,7 @@ struct pthread_attr_s
   size_t guardsize;            /* Size of the guard area for the pthread's stack */
 
 #ifdef CONFIG_SCHED_SPORADIC
-  uint8_t low_priority;        /* Low scheduling priority */
+  int low_priority;            /* Low scheduling priority */
   uint8_t max_repl;            /* Maximum pending replenishments */
   struct timespec repl_period; /* Replenishment period */
   struct timespec budget;      /* Initial budget */
