@@ -36,6 +36,7 @@
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/mutex.h>
 
+#include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
 
@@ -1270,7 +1271,7 @@ static int yaffs_vfs_unbind(FAR void *handle, FAR struct inode **driver,
 
   /* Unmount */
 
-  ret = yaffs_unmount_reldev(dev);
+  ret = yaffs_unmount2_reldev(dev, flags & MNT_FORCE);
   if (ret >= 0)
     {
       /* Remove and release dev */
