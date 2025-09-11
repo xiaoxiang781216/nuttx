@@ -153,7 +153,7 @@ ssize_t file_writev(FAR struct file *filep,
 
   if ((filep->f_oflags & O_WROK) == 0)
     {
-      return -EACCES;
+      return ret;
     }
 
   /* Is a driver registered? Does it support the write method?
