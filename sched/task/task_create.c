@@ -84,7 +84,7 @@ int nxthread_create(FAR const char *name, int ttype, int priority,
   int ret = -ENOMEM;
 
   posix_spawnattr_init(&attr);
-  posix_spawnattr_setstacksize(&attr, stack_size);
+  posix_spawnattr_setstacksize(&attr, (size_t)stack_size);
   posix_spawnattr_setstackaddr(&attr, stack_addr);
   posix_spawnattr_setpriority(&attr, priority);
 
@@ -259,7 +259,7 @@ int task_create(FAR const char *name, int priority,
  ****************************************************************************/
 
 int kthread_create_with_stack(FAR const char *name, int priority,
-                              FAR void *stack_addr, size_t stack_size,
+                              FAR void *stack_addr, int stack_size,
                               main_t entry, FAR char * const argv[])
 {
   return nxthread_create(name, TCB_FLAG_TTYPE_KERNEL, priority,

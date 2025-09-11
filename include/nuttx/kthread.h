@@ -76,7 +76,7 @@ extern "C"
  ****************************************************************************/
 
 int kthread_create_with_stack(FAR const char *name, int priority,
-                              FAR void *stack_addr, size_t stack_size,
+                              FAR void *stack_addr, int stack_size,
                               main_t entry, FAR char * const argv[]);
 
 /****************************************************************************
