@@ -76,7 +76,6 @@ static int sim_tick_max_delay(struct oneshot_lowerhalf_s *lower,
 static int sim_max_delay(struct oneshot_lowerhalf_s *lower,
                          struct timespec *ts);
 static int sim_start(struct oneshot_lowerhalf_s *lower,
-                     oneshot_callback_t callback, void *arg,
                      const struct timespec *ts);
 static int sim_cancel(struct oneshot_lowerhalf_s *lower,
                       struct timespec *ts);
@@ -321,7 +320,6 @@ static int sim_max_delay(struct oneshot_lowerhalf_s *lower,
  ****************************************************************************/
 
 static int sim_start(struct oneshot_lowerhalf_s *lower,
-                     oneshot_callback_t callback, void *arg,
                      const struct timespec *ts)
 {
   struct sim_oneshot_lowerhalf_s *priv =
@@ -329,7 +327,7 @@ static int sim_start(struct oneshot_lowerhalf_s *lower,
   struct timespec current;
   irqstate_t flags;
 
-  DEBUGASSERT(priv != NULL && callback != NULL && ts != NULL);
+  DEBUGASSERT(priv != NULL && ts != NULL);
 
   flags = rspin_lock_irqsave(&g_oneshot_list_lock);
 

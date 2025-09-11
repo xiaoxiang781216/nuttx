@@ -234,7 +234,6 @@ static int arm64_cancel(struct oneshot_lowerhalf_s *lower,
  ****************************************************************************/
 
 static int arm64_start(struct oneshot_lowerhalf_s *lower,
-                       oneshot_callback_t callback, void *arg,
                        const struct timespec *ts)
 {
   uint64_t count;
@@ -242,7 +241,7 @@ static int arm64_start(struct oneshot_lowerhalf_s *lower,
     (struct arm64_oneshot_lowerhalf_s *)lower;
   uint64_t freq = priv->frequency;
 
-  DEBUGASSERT(priv && callback && ts);
+  DEBUGASSERT(priv && ts);
 
   priv->running = this_cpu();
 

@@ -87,8 +87,6 @@ static int esp_oneshot_isr(int irq, void *context, void *arg);
 static int esp_oneshot_maxdelay(struct oneshot_lowerhalf_s *lower,
                                 struct timespec *ts);
 static int esp_oneshot_start(struct oneshot_lowerhalf_s *lower,
-                             oneshot_callback_t callback,
-                             void *arg,
                              const struct timespec *ts);
 static int esp_oneshot_cancel(struct oneshot_lowerhalf_s *lower,
                               struct timespec *ts);
@@ -183,8 +181,6 @@ static int esp_oneshot_maxdelay(struct oneshot_lowerhalf_s *lower,
  ****************************************************************************/
 
 static int esp_oneshot_start(struct oneshot_lowerhalf_s *lower,
-                             oneshot_callback_t callback,
-                             void *arg,
                              const struct timespec *ts)
 {
   struct esp_oneshot_lowerhalf_s *priv =
@@ -192,7 +188,6 @@ static int esp_oneshot_start(struct oneshot_lowerhalf_s *lower,
   uint64_t timeout_us;
 
   DEBUGASSERT(priv != NULL);
-  DEBUGASSERT(callback != NULL);
   DEBUGASSERT(ts != NULL);
 
   tmrinfo("callback=%p arg=%p, ts=(%lu, %ld)\n",

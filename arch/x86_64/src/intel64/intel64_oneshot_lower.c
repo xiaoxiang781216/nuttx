@@ -58,16 +58,14 @@ static void intel64_oneshot_handler(void *arg);
 static int intel64_max_delay(struct oneshot_lowerhalf_s *lower,
                            struct timespec *ts);
 static int intel64_start(struct oneshot_lowerhalf_s *lower,
-                       oneshot_callback_t callback, void *arg,
-                       const struct timespec *ts);
+                         const struct timespec *ts);
 static int intel64_cancel(struct oneshot_lowerhalf_s *lower,
-                        struct timespec *ts);
+                          struct timespec *ts);
 static int intel64_current(struct oneshot_lowerhalf_s *lower,
                            struct timespec *ts);
 static int intel64_tick_max_delay(struct oneshot_lowerhalf_s *lower,
                                   clock_t *ticks);
 static int intel64_tick_start(struct oneshot_lowerhalf_s *lower,
-                              oneshot_callback_t callback, void *arg,
                               clock_t ticks);
 static int intel64_tick_cancel(struct oneshot_lowerhalf_s *lower,
                                clock_t *ticks);
@@ -188,7 +186,6 @@ static int intel64_max_delay(struct oneshot_lowerhalf_s *lower,
  ****************************************************************************/
 
 static int intel64_start(struct oneshot_lowerhalf_s *lower,
-                         oneshot_callback_t callback, void *arg,
                          const struct timespec *ts)
 {
   struct intel64_oneshot_lowerhalf_s *priv =
@@ -196,7 +193,7 @@ static int intel64_start(struct oneshot_lowerhalf_s *lower,
   irqstate_t flags;
   int        ret;
 
-  DEBUGASSERT(priv != NULL && callback != NULL && ts != NULL);
+  DEBUGASSERT(priv != NULL && ts != NULL);
 
   /* Save the callback information and start the timer */
 
@@ -350,7 +347,6 @@ static int intel64_tick_max_delay(struct oneshot_lowerhalf_s *lower,
  ****************************************************************************/
 
 static int intel64_tick_start(struct oneshot_lowerhalf_s *lower,
-                              oneshot_callback_t callback, void *arg,
                               clock_t ticks)
 {
   struct timespec ts;
@@ -359,7 +355,7 @@ static int intel64_tick_start(struct oneshot_lowerhalf_s *lower,
 
   clock_ticks2time(&ts, ticks);
 
-  return intel64_start(lower, callback, arg, &ts);
+  return intel64_start(lower, &ts);
 }
 
 /****************************************************************************
