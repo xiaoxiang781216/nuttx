@@ -149,39 +149,8 @@ void syslog_dev_uninitialize(FAR syslog_channel_t *channel);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SYSLOG_CHAR
+#if defined(CONFIG_SYSLOG_CONSOLE) || defined(CONFIG_SYSLOG_CHAR) || defined(CONFIG_SYSLOG_FILE)
 FAR syslog_channel_t *syslog_dev_channel(FAR const char *devpath);
-#endif
-
-/****************************************************************************
- * Name: syslog_console_channel
- *
- * Description:
- *   Configure to use the character device (or file) at /dev/console as the
- *   SYSLOG channel.
- *
- *   This tiny function is simply a wrapper around syslog_dev_initialize()
- *   and syslog_channel_register().  It calls syslog_dev_initialize() to
- *   configure the character device at /dev/console then calls
- *   syslog_channel_register() to use that device as the SYSLOG output
- *   channel.
- *
- *   NOTE interrupt level SYSLOG output will be lost in the general case
- *   unless the interrupt buffer is used.  As a special case:  If the serial
- *   console is used and the architecture provides up_putc(), the interrupt
- *   level output will be directed to up_putc() is the interrupt buffer is
- *   disabled.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   A pointer to the new SYSLOG channel; NULL is returned on any failure.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SYSLOG_CONSOLE
-FAR syslog_channel_t *syslog_console_channel(void);
 #endif
 
 /****************************************************************************
