@@ -714,6 +714,8 @@ static void rptun_check_command(FAR struct rptun_priv_s *priv)
         break;
 
       case RPTUN_CMD_PANIC:
+        metal_log(METAL_LOG_EMERGENCY, "FATAL: Panic by remote core: %s\n",
+                  RPTUN_GET_CPUNAME(priv->dev));
         priv->rpanic = true;
         PANIC();
         break;
