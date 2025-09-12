@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 
 #include <nuttx/init.h>
+#include <nuttx/tls.h>
 
 #include <arch/board/board.h>
 #include <arch/multiboot2.h>
