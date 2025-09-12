@@ -214,8 +214,11 @@ static int get_week_year(FAR const struct tm *time)
  *   %A     The full weekday name according to the current locale.
  *   %b     The abbreviated month name according to the current locale.
  *   %B     The full month name according to the current locale.
+ *   %c     The complete date and time representation
+ *          in format "wDay Mon DD HH:MM:SS YYYY"
  *   %C     The century number (year/100) as a 2-digit integer. (SU)
  *   %d     The day of the month as a decimal number (range 01 to 31).
+ *   %D     Date in %m/%d/%y format
  *   %e     Like %d, the day of the month as a decimal number, but a leading
  *          zero is replaced by a space.
  *   %F     The full date format but with no time fields
@@ -257,8 +260,9 @@ static int get_week_year(FAR const struct tm *time)
  *   %X     The locale's appropriate time representation, but without date.
  *   %y     The year as a decimal number without a century (range 00 to 99).
  *   %Y     The year as a decimal number including the century.
- *   %z     The timezone name or abbreviation, or by no bytes if no timezone
- *          information exists.
+ *   %z     Numeric timezone as hour and minute offset from UTC
+ *          "+hhmm" or "-hhmm"
+ *   %Z     Time zone name.
  *   %%     A literal '%' character.
  *
  * Returned Value:
@@ -277,6 +281,12 @@ size_t strftime(FAR char *s, size_t max, FAR const char *format,
   int             chleft = max;
   int             value;
   int             len;
+
+#ifdef CONFIG_LIBC_LOCALTIME
+  /* Ensure tzname is up to date at the beginning of strftime */
+
+  tzset();
+#endif
 
   while (*format && chleft > 0)
     {
@@ -355,7 +365,27 @@ process_next:
 
            case 'C':
              {
-               len = snprintf(dest, chleft, "%02d", tm->tm_year / 100);
+               len = snprintf(dest, chleft, "%02d",
+                              (tm->tm_year + TM_YEAR_BASE) / 100);
+             }
+             break;
+
+           /* %c: Complete date and time representation
+            *     in format "wDay Mon DD HH:MM:SS YYYY".
+            */
+
+           case 'c':
+             {
+               if (tm->tm_wday < 7 && tm->tm_mon < 12)
+                 {
+                   len = snprintf(dest, chleft,
+                                  "%s %s %2d %02d:%02d:%02d %04d",
+                                  g_abbrev_wdayname[tm->tm_wday],
+                                  g_abbrev_monthname[tm->tm_mon],
+                                  tm->tm_mday,
+                                  tm->tm_hour, tm->tm_min, tm->tm_sec,
+                                  tm->tm_year + TM_YEAR_BASE);
+                 }
              }
              break;
 
@@ -366,6 +396,16 @@ process_next:
            case 'd':
              {
                len = snprintf(dest, chleft, "%02d", tm->tm_mday);
+             }
+             break;
+
+           /* %D: Date in %m/%d/%y format */
+
+           case 'D':
+             {
+               len = snprintf(dest, chleft, "%02d/%02d/%02d",
+                              tm->tm_mon + 1, tm->tm_mday,
+                              (tm->tm_year + TM_YEAR_BASE) % 100);
              }
              break;
 
@@ -402,8 +442,8 @@ process_next:
             case 'F':
               {
                 len = snprintf(dest, chleft, "%04d-%02d-%02d",
-                              tm->tm_year + TM_YEAR_BASE, tm->tm_mon,
-                              tm->tm_mday);
+                               tm->tm_year + TM_YEAR_BASE, tm->tm_mon + 1,
+                               tm->tm_mday);
               }
               break;
 
@@ -548,16 +588,18 @@ process_next:
              {
                if (tm->tm_hour >= 12)
                  {
-                   str = "pm";
+                   str = "PM";
                  }
                else
                  {
-                   str = "am";
+                   str = "AM";
                  }
 
-               value = tm->tm_hour == 12 ?
-                          tm->tm_hour == 12 :
-                          tm->tm_hour % (HOURSPERDAY / 2);
+               value = (tm->tm_hour % 12);
+               if (value == 0)
+                 {
+                   value = 12;
+                 }
 
                len = snprintf(dest, chleft, "%02d:%02d:%02d %s",
                               value, tm->tm_min, tm->tm_sec, str);
@@ -672,9 +714,9 @@ process_next:
 
            case 'x':
              {
-                len = snprintf(dest, chleft, "%02d/%02d/%04d",
-                              tm->tm_mon, tm->tm_mday,
-                              tm->tm_year + TM_YEAR_BASE);
+                len = snprintf(dest, chleft, "%02d/%02d/%02d",
+                               tm->tm_mon + 1, tm->tm_mday,
+                               (tm->tm_year + TM_YEAR_BASE) % 100);
              }
              break;
 
@@ -712,10 +754,61 @@ process_next:
 
             case 'z':
               {
-                int hour = tm->tm_gmtoff / 3600;
-                int min = tm->tm_gmtoff % 3600 / 60;
-                int utc_val = hour  * 100 + min;
-                len = snprintf(dest, chleft, "+%04d", utc_val);
+                /* POSIX: when tm_isdst < 0, %z converts to no characters */
+
+                if (tm->tm_isdst < 0)
+                  {
+                    len = 0;
+                  }
+                else
+                  {
+                    int hour = tm->tm_gmtoff / 3600;
+                    int min = tm->tm_gmtoff % 3600 / 60;
+                    int utc_val = hour  * 100 + min;
+                    len = snprintf(dest, chleft, "+%04d", utc_val);
+                  }
+              }
+              break;
+
+            /* %Z: Time zone name */
+
+            case 'Z':
+              {
+                FAR const char *zone_name = NULL;
+
+                /* First try tm_zone if available (most reliable) */
+
+                if (tm->tm_zone != NULL && *tm->tm_zone != '\0')
+                  {
+                    zone_name = tm->tm_zone;
+                  }
+#ifdef CONFIG_LIBC_LOCALTIME
+                else
+                  {
+                    /* Use tzname array with tm_isdst.
+                     * tzset() already called at function start
+                     */
+
+                    if (tm->tm_isdst >= 0 && tm->tm_isdst <= 1 &&
+                        tzname[tm->tm_isdst] != NULL)
+                      {
+                        zone_name = tzname[tm->tm_isdst];
+                      }
+                  }
+
+#endif
+                /* Output the zone name or empty string if not determinable */
+
+                if (zone_name != NULL && *zone_name != '\0')
+                  {
+                    len = snprintf(dest, chleft, "%s", zone_name);
+                  }
+                else
+                  {
+                    /* C99 standard: empty string if not determinable */
+
+                    len = 0;
+                  }
               }
               break;
 
