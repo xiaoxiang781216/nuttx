@@ -66,7 +66,7 @@ uintptr_t *tricore_alloc_csa(struct tcb_s *tcb, uintptr_t pc,
     }
   else
     {
-      pucsa = tcb->xcp.regs + TC_CONTEXT_REGS;
+      pucsa = tcb->xcp.regs +  2 * TC_CONTEXT_REGS;
     }
 
   plcsa = pucsa + TC_CONTEXT_REGS;
@@ -89,7 +89,7 @@ uintptr_t *tricore_alloc_csa(struct tcb_s *tcb, uintptr_t pc,
       plcsa[REG_LPCXI] |= PCXI_PIE;
     }
 
-  return plcsa;
+  return pucsa;
 }
 
 /****************************************************************************

@@ -116,7 +116,7 @@ void tricore_svcall(volatile void *trap)
 
   if (cmd != SYS_restore_context)
     {
-      (*running_task)->xcp.regs = plregs;
+      (*running_task)->xcp.regs = puregs;
     }
   else
     {
@@ -157,12 +157,11 @@ void tricore_svcall(volatile void *trap)
           puregs[REG_UPCXI] = 0;
           tricore_reclaim_csa(tricore_addr2csa(plregs));
 
-          plregs = rtcb->xcp.syscall_regs[index];
-          puregs = tricore_csa2addr(plregs[REG_LPCXI]);
+          puregs = rtcb->xcp.syscall_regs[index];
           puregs[REG_D8] = ret;
 
           rtcb->xcp.nsyscalls = index;
-          rtcb->xcp.regs = plregs;
+          rtcb->xcp.regs = puregs;
         }
         break;
 #endif
@@ -341,21 +340,21 @@ void tricore_svcall(volatile void *trap)
 
           /* Setup to return to dispatch_syscall in privileged mode. */
 
-          rtcb->xcp.syscall_regs[index] = plregs;
+          rtcb->xcp.syscall_regs[index] = puregs;
           rtcb->xcp.nsyscalls = index + 1;
 
           /* New plregs and puregs to dispatch_syscall */
 
-          plregs = tricore_alloc_csa(
+          puregs = tricore_alloc_csa(
             rtcb,
             (uintptr_t)dispatch_syscall,
             STACK_ALIGN_DOWN(puregs[REG_SP]),
             (puregs[REG_PSW] & (~PSW_MODE_MASK) & (~PSW_PRS_MASK)) |
             (PSW_IO_SUPERVISOR),
             !(plregs[REG_LPCXI] & PCXI_PIE));
-          puregs = tricore_csa2addr(plregs[REG_LPCXI]);
 
-          rtcb->xcp.regs = plregs;
+          rtcb->xcp.regs = puregs;
+          plregs = puregs + TC_CONTEXT_REGS;
 
           /* Args passed to dispatch_syscall */
 
@@ -385,8 +384,8 @@ void tricore_svcall(volatile void *trap)
   cpu_lcx =
     (uintptr_t *)((uint8_t *)tcb->stack_base_ptr + tcb->adj_stack_size) -
     2 * TC_CONTEXT_REGS;
-  __mtcr(CPU_PCXI, tricore_addr2csa(tcb->xcp.regs));
-  __mtcr(CPU_FCX, tricore_addr2csa(tcb->xcp.regs + TC_CONTEXT_REGS));
+  __mtcr(CPU_PCXI, tricore_addr2csa(tcb->xcp.regs + TC_CONTEXT_REGS));
+  __mtcr(CPU_FCX, tricore_addr2csa(tcb->xcp.regs + 2 * TC_CONTEXT_REGS));
   __mtcr(CPU_LCX, tricore_addr2csa(cpu_lcx));
   UP_ISB();
 
