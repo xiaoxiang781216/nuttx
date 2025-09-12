@@ -81,27 +81,37 @@ FAR FILE *fdopen(int fd, FAR const char *mode)
       return NULL;
     }
 
-  /* Allocate FILE structure */
-
   if (fd >= 3)
     {
+      ret = nxmutex_lock(&list->sl_lock);
+      if (ret < 0)
+        {
+          set_errno(-ret);
+          return NULL;
+        }
+
+      if (list->sl_count >= _POSIX_STREAM_MAX)
+        {
+          nxmutex_unlock(&list->sl_lock);
+          set_errno(EMFILE);
+          return NULL;
+        }
+
+      /* Allocate FILE structure */
+
       filep = lib_zalloc(sizeof(FILE));
       if (filep == NULL)
         {
-          ret = -ENOMEM;
-          goto errout;
+          nxmutex_unlock(&list->sl_lock);
+          set_errno(ENOMEM);
+          return NULL;
         }
 
       /* Add FILE structure to the stream list */
 
-      ret = nxmutex_lock(&list->sl_lock);
-      if (ret < 0)
-        {
-          lib_free(filep);
-          goto errout;
-        }
-
       sq_addlast(&filep->fs_entry, &list->sl_queue);
+
+      list->sl_count++;
 
       nxmutex_unlock(&list->sl_lock);
 
@@ -155,10 +165,6 @@ FAR FILE *fdopen(int fd, FAR const char *mode)
   filep->fs_iofunc.close = NULL;
 
   return filep;
-
-errout:
-  set_errno(-ret);
-  return NULL;
 }
 
 /****************************************************************************

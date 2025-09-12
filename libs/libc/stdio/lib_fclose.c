@@ -94,6 +94,8 @@ int fclose(FAR FILE *stream)
 
       sq_rem(&stream->fs_entry, &slist->sl_queue);
 
+      slist->sl_count--;
+
       nxmutex_unlock(&slist->sl_lock);
 
       /* Call user custom callback if it is not NULL. */

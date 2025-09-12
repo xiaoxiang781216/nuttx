@@ -57,6 +57,7 @@ static void task_init_stream(FAR struct streamlist *list)
 
   nxmutex_init(&list->sl_lock);
   sq_init(&list->sl_queue);
+  list->sl_count = 3;
 
   /* Initialize stdin, stdout and stderr stream */
 

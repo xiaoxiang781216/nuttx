@@ -573,6 +573,7 @@ struct streamlist
   mutex_t                 sl_lock;   /* For thread safety */
   struct file_struct      sl_std[3];
   sq_queue_t              sl_queue;
+  int                     sl_count;
 };
 #endif /* CONFIG_FILE_STREAM */
 
