@@ -113,7 +113,7 @@ struct lp_wqueue_s aligned_data(64) g_lpwork =
     {
       { 0 }
     },
-    CONFIG_SCHED_HPNTHREADS,
+    CONFIG_SCHED_LPNTHREADS,
     false,
     SEM_INITIALIZER(0),
   }
