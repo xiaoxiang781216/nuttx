@@ -47,6 +47,7 @@
 #define RPTUNIOC_STOP         _RPTUNIOC(101)
 #define RPTUNIOC_RESET        _RPTUNIOC(102)
 #define RPTUNIOC_PANIC        _RPTUNIOC(103)
+#define RPTUNIOC_WAIT         _RPTUNIOC(104)
 
 #define RPTUN_NOTIFY_ALL      UINT32_MAX
 
@@ -317,6 +318,41 @@
                         (d)->ops->panic(d) : UNUSED(d))
 
 /****************************************************************************
+ * Name: RPTUN_SET_PHASE
+ *
+ * Description:
+ *   Set cpu phase
+ *
+ * Input Parameters:
+ *   dev      - Device-specific state data
+ *   phase    - cpu phase
+ *
+ * Returned Value:
+ *   OK unless an error occurs.  Then a negated errno value is returned
+ *
+ ****************************************************************************/
+
+#define RPTUN_SET_PHASE(d, p) ((d)->ops->set_phase ? \
+                               (d)->ops->set_phase(d, p) : -ENOSYS)
+
+/****************************************************************************
+ * Name: RPTUN_GET_PHASE
+ *
+ * Description:
+ *   Get remote cpu phase
+ *
+ * Input Parameters:
+ *   dev      - Device-specific state data
+ *
+ * Returned Value:
+ *   Remote cpu phase on success, a negated errno on failure
+ *
+ ****************************************************************************/
+
+#define RPTUN_GET_PHASE(d) ((d)->ops->get_phase ? \
+                            (d)->ops->get_phase(d) : -ENOSYS)
+
+/****************************************************************************
  * Public Types
  ****************************************************************************/
 
@@ -370,6 +406,9 @@ struct rptun_ops_s
 
   CODE void (*reset)(FAR struct rptun_dev_s *dev, unsigned long value);
   CODE void (*panic)(FAR struct rptun_dev_s *dev);
+
+  CODE int (*set_phase)(FAR struct rptun_dev_s *dev, unsigned long phase);
+  CODE unsigned long (*get_phase)(FAR struct rptun_dev_s *dev);
 };
 
 struct rptun_dev_s
@@ -396,6 +435,7 @@ int rptun_boot(FAR const char *cpuname);
 int rptun_poweroff(FAR const char *cpuname);
 int rptun_reset(FAR const char *cpuname, unsigned long value);
 int rptun_panic(FAR const char *cpuname);
+int rptun_wait(FAR const char *cpuname, unsigned long phase);
 
 #ifdef __cplusplus
 }

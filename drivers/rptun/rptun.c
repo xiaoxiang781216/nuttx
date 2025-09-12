@@ -929,6 +929,19 @@ static void rptun_dev_panic(FAR struct rptun_priv_s *priv)
     }
 }
 
+static int rptun_dev_wait(FAR struct rptun_priv_s *priv, unsigned long phase)
+{
+  int ret;
+
+  ret = RPTUN_SET_PHASE(priv->dev, phase);
+  if (ret == OK)
+    {
+      while (RPTUN_GET_PHASE(priv->dev) < phase);
+    }
+
+  return ret;
+}
+
 static int rptun_do_ioctl(FAR struct rptun_priv_s *priv, int cmd,
                           unsigned long arg)
 {
@@ -959,6 +972,8 @@ static int rptun_do_ioctl(FAR struct rptun_priv_s *priv, int cmd,
       case RPTUNIOC_PANIC:
         rptun_dev_panic(priv);
         break;
+      case RPTUNIOC_WAIT:
+        ret = rptun_dev_wait(priv, arg);
       default:
         ret = -ENOTTY;
         break;
@@ -1245,4 +1260,9 @@ int rptun_reset(FAR const char *cpuname, unsigned long value)
 int rptun_panic(FAR const char *cpuname)
 {
   return rptun_ioctl_foreach(cpuname, RPTUNIOC_PANIC, 0);
+}
+
+int rptun_wait(FAR const char *cpuname, unsigned long phase)
+{
+  return rptun_ioctl_foreach(cpuname, RPTUNIOC_WAIT, phase);
 }
