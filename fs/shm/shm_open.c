@@ -186,7 +186,7 @@ int shm_open(FAR const char *name, int oflag, mode_t mode)
   ret = file_shm_open(shm, name, oflag, mode);
   if (ret < 0)
     {
-      file_free(shm);
+      file_deallocate(shm);
       set_errno(-ret);
       return ERROR;
     }
@@ -195,7 +195,7 @@ int shm_open(FAR const char *name, int oflag, mode_t mode)
   if (fd < 0)
     {
       file_close(shm);
-      file_free(shm);
+      file_deallocate(shm);
       set_errno(-fd);
       return ERROR;
     }

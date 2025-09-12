@@ -324,7 +324,7 @@ static int nx_vopen(FAR struct fdlist *list,
   ret = file_vopen(filep, path, oflags, getumask(), ap);
   if (ret < 0)
     {
-      file_free(filep);
+      file_deallocate(filep);
       return ret;
     }
 
@@ -332,7 +332,7 @@ static int nx_vopen(FAR struct fdlist *list,
   if (fd < 0)
     {
       file_close(filep);
-      file_free(filep);
+      file_deallocate(filep);
     }
 
   return fd;

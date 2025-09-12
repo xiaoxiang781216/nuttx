@@ -677,7 +677,7 @@ int file_allocate_from_inode(FAR struct inode *inode, int oflags, off_t pos,
   if (fd < 0)
     {
       inode_release(inode);
-      file_free(filep);
+      file_deallocate(filep);
     }
 
   return fd;
@@ -790,14 +790,14 @@ FAR struct file *file_allocate(void)
 }
 
 /****************************************************************************
- * Name: file_free
+ * Name: file_deallocate
  *
  * Description:
  *   Free a file instance.
  *
  ****************************************************************************/
 
-void file_free(FAR struct file *filep)
+void file_deallocate(FAR struct file *filep)
 {
   fs_heap_free(filep);
 }

@@ -1195,14 +1195,14 @@ int nx_open(FAR const char *path, int oflags, ...);
 FAR struct file *file_allocate(void);
 
 /****************************************************************************
- * Name: file_free
+ * Name: file_deallocate
  *
  * Description:
  *   Free a file instance.
  *
  ****************************************************************************/
 
-void file_free(FAR struct file *filep);
+void file_deallocate(FAR struct file *filep);
 
 /****************************************************************************
  * Name: file_get2
