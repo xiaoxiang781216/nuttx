@@ -740,6 +740,27 @@ static void tcp_input(FAR struct net_driver_s *dev, uint8_t domain,
     }
 #endif
 
+  /* Calculated the length of the data, if the application has sent
+   * any data to us.
+   */
+
+  len = (tcp->tcpoffset >> 4) << 2;
+
+  if (len < TCP_HDRLEN || dev->d_len < (iplen + len))
+    {
+      /* According RFC 793 chapter 3.1, the TCP header length must be
+       * greater than 20. Meanwhile, the total length of the packet
+       * cannot be less than the sum of the IP header and TCP header.
+       */
+
+#ifdef CONFIG_NET_STATISTICS
+      g_netstats.tcp.drop++;
+      g_netstats.tcp.headerr++;
+#endif
+      nwarn("WARNING: TCP offset info error\n");
+      goto drop;
+    }
+
   /* Demultiplex this segment. First check any active connections. */
 
   conn = tcp_active(dev, tcp);
@@ -1075,21 +1096,9 @@ found:
       goto drop;
     }
 
-  /* Calculated the length of the data, if the application has sent
-   * any data to us.
-   */
-
-  len = (tcp->tcpoffset >> 4) << 2;
-
   /* d_appdata should remove the tcp specific option field. */
 
-  if ((tcp->tcpoffset & 0xf0) > 0x50)
-    {
-      if (dev->d_len >= len)
-        {
-          dev->d_appdata += len - TCP_HDRLEN;
-        }
-    }
+  dev->d_appdata += len - TCP_HDRLEN;
 
   /* d_len will contain the length of the actual TCP data. This is
    * calculated by subtracting the length of the TCP header (in
