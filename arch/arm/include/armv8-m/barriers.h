@@ -25,6 +25,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -36,7 +38,13 @@
 #define arm_dsb(n) __asm__ __volatile__ ("dsb " #n : : : "memory")
 
 #define UP_ISB()  arm_isb()
-#define UP_DMB()  arm_dmb()
+
+#ifdef CONFIG_SMP
+#  define UP_DMB()  arm_dmb()
+#else
+#  define UP_DMB()  asm volatile ("" : : : "memory")
+#endif
+
 #define UP_DSB()  arm_dsb(15)
 
 #endif /* __ARCH_ARM_INCLUDE_ARMV8_M_BARRIERS_H */

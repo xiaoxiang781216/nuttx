@@ -25,6 +25,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 #ifndef __ASSEMBLY__
 
 /****************************************************************************
@@ -41,7 +43,11 @@
  * ARM DDI 0487E.a C6.2.79
  */
 
-#define UP_DMB() __asm__ volatile ("dmb sy" : : : "memory");
+#ifdef CONFIG_SMP
+#  define UP_DMB() __asm__ volatile ("dmb sy" : : : "memory");
+#else
+#  define UP_DMB() __asm__ volatile ("" : : : "memory")
+#endif
 
 /* See Arm® Architecture Reference Manual
  * ARM DDI 0487E.a C6.2.96

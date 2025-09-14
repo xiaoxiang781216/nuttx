@@ -21,13 +21,27 @@
 #ifndef __ARCH_RISCV_INCLUDE_BARRIERS_H
 #define __ARCH_RISCV_INCLUDE_BARRIERS_H
 
+/****************************************************************************
+ * Included Files
+ ****************************************************************************/
+
+#include <nuttx/config.h>
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
 /* Common memory barriers (p=predecessor, s=successor) */
 
 #define __FENCE(p, s) __asm__ __volatile__ ("fence "#p", "#s  ::: "memory")
 
 /* UP_DMB() is used to flush local data caches (memory) */
 
-#define UP_DMB()       __FENCE(rw, rw)
+#ifdef CONFIG_SMP
+#  define UP_DMB()  __FENCE(rw, rw)
+#else
+#  define UP_DMB()  asm volatile ("" : : : "memory")
+#endif
 
 /* UP_DSB() is a full memory barrier */
 

@@ -22,10 +22,21 @@
 #define __ARCH_X86_64_INCLUDE_BARRIERS_H
 
 /****************************************************************************
+ * Included Files
+ ****************************************************************************/
+
+#include <nuttx/config.h>
+
+/****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
 #define UP_DSB() __asm__ __volatile__ ("mfence")
-#define UP_DMB() __asm__ __volatile__ ("mfence")
+
+#ifdef CONFIG_SMP
+#  define UP_DMB() __asm__ __volatile__ ("mfence")
+#else
+#  define UP_DMB() __asm__ __volatile__ ("" : : : "memory")
+#endif
 
 #endif /* __ARCH_X86_64_INCLUDE_BARRIERS_H */

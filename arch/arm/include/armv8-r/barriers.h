@@ -25,6 +25,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -38,7 +40,13 @@
 #define arm_sev()  __asm__ __volatile__ ("sev\n")
 
 #define UP_DSB()  arm_dsb(15)
-#define UP_DMB()  arm_dmb(15)
+
+#ifdef CONFIG_SMP
+#  define UP_DMB()  arm_dmb(15)
+#else
+#  define UP_DMB()  asm volatile ("" : : : "memory")
+#endif
+
 #define UP_ISB()  arm_isb()
 #define UP_NOP()  arm_nop()
 #define UP_SEV()  arm_sev()
