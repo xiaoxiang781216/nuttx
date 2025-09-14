@@ -54,7 +54,7 @@
 #define AUDIO_RPMSG_IS_RESPONSE(cmd) (!!((cmd) & AUDIO_RPMSG_RESPONSE))
 #define AUDIO_RPMSG_GET_COMMAND(cmd) ((cmd) & ~AUDIO_RPMSG_RESPONSE)
 
-#define AUDIO_RPMSG_EPT_PREFIX         "rpmsg-audio-"
+#define AUDIO_RPMSG_EPT_PREFIX       "rpmsg-audio-"
 
 struct audio_rpmsg_cookie_s
 {
@@ -273,7 +273,7 @@ static const struct audio_ops_s g_audio_rpmsg_ops =
  ****************************************************************************/
 
 static int audio_rpmsg_local_configure(FAR struct audio_rpmsg_s *aud,
-                                        FAR const struct audio_caps_s *caps)
+                                       FAR const struct audio_caps_s *caps)
 {
   int ret = OK;
 
@@ -320,17 +320,18 @@ static int audio_rpmsg_local_ioctl(FAR struct audio_rpmsg_s *aud, int cmd,
         /* Report our preferred buffer size and quantity */
 
       case AUDIOIOC_GETBUFFERINFO:
-        {
-          memcpy((FAR void *)(uintptr_t)arg, &aud->binfo,
-                 sizeof(aud->binfo));
-        }
+        memcpy((FAR void *)(uintptr_t)arg, &aud->binfo,
+               sizeof(aud->binfo));
         break;
 
       case AUDIOIOC_SETBUFFERINFO:
-        {
-          memcpy(&aud->binfo, (FAR void *)(uintptr_t)arg,
-                 sizeof(aud->binfo));
-        }
+        memcpy(&aud->binfo, (FAR void *)(uintptr_t)arg,
+               sizeof(aud->binfo));
+        ret = -ENOTTY;
+        break;
+
+      case AUDIOIOC_GETAUDIOINFO:
+        memcpy((FAR void *)(uintptr_t)arg, &aud->info, sizeof(aud->info));
         break;
 
       default:
@@ -1175,6 +1176,8 @@ static ssize_t audio_rpmsg_ioctl_arglen(int cmd, unsigned long arg)
       case AUDIOIOC_GETBUFFERINFO:
       case AUDIOIOC_SETBUFFERINFO:
         return sizeof(struct ap_buffer_info_s);
+      case AUDIOIOC_GETAUDIOINFO:
+        return sizeof(struct audio_info_s);
       default:
         return -ENOTTY;
     }
@@ -1200,7 +1203,7 @@ static int audio_rpmsg_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
   audinfo("cmd=%d arg=%lu\n", cmd, arg);
 
   ret = audio_rpmsg_local_ioctl(aud, cmd, arg);
-  if (ret < 0)
+  if (ret != -ENOTTY)
     {
       auderr("ioctl fail.");
       return ret;
