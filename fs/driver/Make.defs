@@ -26,6 +26,7 @@ CSRCS += fs_registerpipedriver.c fs_unregisterpipedriver.c
 ifeq ($(CONFIG_FS_BLOCK_DRIVER),y)
 CSRCS += fs_registerblockdriver.c fs_unregisterblockdriver.c
 CSRCS += fs_findblockdriver.c fs_openblockdriver.c fs_closeblockdriver.c
+CSRCS += fs_finddriver.c
 
 ifeq ($(CONFIG_BLOCK_PARTITION),y)
 CSRCS += fs_blockpartition.c

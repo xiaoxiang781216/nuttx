@@ -29,6 +29,7 @@ if(CONFIG_FS_BLOCK_DRIVER)
     SRCS
     fs_registerblockdriver.c
     fs_unregisterblockdriver.c
+    fs_finddriver.c
     fs_findblockdriver.c
     fs_openblockdriver.c
     fs_closeblockdriver.c)
