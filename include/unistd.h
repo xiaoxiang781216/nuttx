@@ -92,7 +92,7 @@
 /* Execution time constants (not supported) */
 
 #define _POSIX_CHOWN_RESTRICTED 1
-#undef  _POSIX_NO_TRUNC
+#define _POSIX_NO_TRUNC 1
 #undef  _POSIX_VDISABLE
 
 #define _POSIX_SYNC_IO 1

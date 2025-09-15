@@ -166,6 +166,9 @@ long fpathconf(int fildes, int name)
       case _PC_ASYNC_IO:
         return _POSIX_ASYNC_IO;
 
+      case _PC_NO_TRUNC:
+        return _POSIX_NO_TRUNC;
+
       default:
         if (name >= 0)
           {
