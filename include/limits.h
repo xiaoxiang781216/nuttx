@@ -189,7 +189,7 @@
 
 /* Required for POSIX message passing */
 
-#define _POSIX_MQ_OPEN_MAX    8
+#define _POSIX_MQ_OPEN_MAX    -1
 #define _POSIX_MQ_PRIO_MAX    UCHAR_MAX
 
 /* Required for POSIX semaphores */
