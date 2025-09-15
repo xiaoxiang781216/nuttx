@@ -260,6 +260,15 @@ retry:
           goto errout_with_inode;
         }
 
+#ifdef CONFIG_PSEUDOFS_ATTRIBUTES
+      if (((oflags & O_WRONLY) && !(inode->i_mode & S_IWUSR)) ||
+          ((oflags & O_RDONLY) && !(inode->i_mode & S_IRUSR)))
+        {
+          ret = -EACCES;
+          goto errout_with_inode;
+        }
+#endif
+
       /* Associate the inode with a file structure */
 
       mq->f_oflags = oflags;
