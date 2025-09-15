@@ -635,7 +635,7 @@ void rspin_lock(FAR rspinlock_t *lock)
 
   /* Already owned this lock. */
 
-  old_val.val = atomic_load(&lock->val);
+  old_val.val = atomic_read(&lock->val);
 
   if (old_val.owner == cpu)
     {
@@ -719,7 +719,7 @@ static inline_function bool rspin_trylock(FAR rspinlock_t *lock)
 
   /* Already owned this lock. */
 
-  old_val.val = atomic_load(&lock->val);
+  old_val.val = atomic_read(&lock->val);
 
   if (old_val.owner == cpu)
     {
