@@ -28,11 +28,14 @@ config ARMV7A_GIC_EOIMODE
 		Enable GICC_CTLR.EOImode, this will separates the priority drop and interrupt
 		deactivation operations.
 
-config ARMV7A_GICV2_LEGACY_IRQ0
-	int "pci legacy irq0 default val"
-	default 35
+config ARMV7A_GICV2_LEGACY_IRQ
+	string "Legacy IRQ bases list for PCI domains"
+	default "35"
+	depends on PCI
 	---help---
-		The qemu pci lagacy irq0 default is 35. -1 mean disable
+		Colon separated list of legacy IRQ bases for PCI domains.
+		Default value "35" is for QEMU arm/virt. Use -1 if a domain
+		doesn't need legacy IRQ.
 
 config ARMV7A_GICv2M
 	bool "gic support msi irq"

@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/pci/pci.h>
@@ -759,17 +760,31 @@ void arm_cpu_sgi(int sgi, unsigned int cpuset)
 
 int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin)
 {
-#if CONFIG_ARMV7A_GICV2_LEGACY_IRQ0 >= 0
-  uint8_t slot;
-  uint8_t tmp;
+#ifdef CONFIG_ARMV7A_GICV2_LEGACY_IRQ
+  uint8_t slot = PCI_SLOT(devfn);
+  uint8_t tmp = (pin - 1 + slot) % 4;
+  uint16_t domain = PCI_DOMAIN(devfn);
+  const char *ptr = CONFIG_ARMV7A_GICV2_LEGACY_IRQ;
+  int i = 0;
 
-  UNUSED(line);
-  slot = PCI_SLOT(devfn);
-  tmp = (pin - 1 + slot) % 4;
-  return CONFIG_ARMV7A_GICV2_LEGACY_IRQ0 + tmp;
-#else
-  return -ENOTSUP;
+  while (i != domain && ptr[0])
+    {
+      ptr++;
+      if (':' == ptr[0])
+        {
+          ptr++;
+          i++;
+        }
+    }
+
+  if (ptr[0])
+    {
+      i = strtol(ptr, NULL, 0);
+      return i >= 0 ? i + tmp : -ENOTSUP;
+    }
 #endif
+
+  return -ENOTSUP;
 }
 
 #endif /* CONFIG_ARMV7A_HAVE_GICv2 */
