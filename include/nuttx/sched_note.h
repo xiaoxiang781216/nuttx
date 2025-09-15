@@ -36,6 +36,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/macro.h>
+#include <nuttx/ratelimit.h>
 #include <nuttx/sched.h>
 #include <nuttx/spinlock_type.h>
 
@@ -529,10 +530,59 @@ void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
                            uint64_t type, va_list *va) printf_like(3, 0);
 void sched_note_printf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
                           uint64_t type, ...) printf_like(3, 5);
+
+void sched_note_event_ip_ratelimit(uint32_t tag, uintptr_t ip, uint8_t event,
+                                   FAR const void *buf, size_t len);
+void sched_note_vprintf_ip_ratelimit(uint32_t tag, uintptr_t ip,
+                                     FAR const char *fmt, uint64_t type,
+                                     va_list *va) printf_like(3, 0);
+void sched_note_printf_ip_ratelimit(uint32_t tag, uintptr_t ip,
+                                    FAR const char *fmt,
+                                    uint64_t type, ...) printf_like(3, 5);
+
+#define sched_note_event_ip_ratelimited(tag, ip, event, buf, len) \
+  ({                                                              \
+    static DEFINE_RATELIMIT_STATE(_rs,                            \
+      CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                     \
+      CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                       \
+    if (!ratelimit_islimited(&_rs))                               \
+      {                                                           \
+        sched_note_event_ip(tag, ip, event, buf, len);            \
+      }                                                           \
+  })
+
+#define sched_note_vprintf_ip_ratelimited(tag, ip, fmt, type, va) \
+  ({                                                              \
+    static DEFINE_RATELIMIT_STATE(_rs,                            \
+      CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                     \
+      CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                       \
+    if (!ratelimit_islimited(&_rs))                               \
+      {                                                           \
+        sched_note_vprintf_ip(tag, ip, fmt, type, va);            \
+      }                                                           \
+  })
+
+#define sched_note_printf_ip_ratelimited(tag, ip, fmt, type, ...) \
+  ({                                                              \
+    static DEFINE_RATELIMIT_STATE(_rs,                            \
+      CONFIG_DRIVERS_NOTE_RATELIMIT_INTERVAL,                     \
+      CONFIG_DRIVERS_NOTE_RATELIMIT_BURST);                       \
+    if (!ratelimit_islimited(&_rs))                               \
+      {                                                           \
+        sched_note_printf_ip(tag, ip, fmt, type, ##__VA_ARGS__);  \
+      }                                                           \
+  })
+
 #else
 #  define sched_note_event_ip(t,ip,e,b,l)
 #  define sched_note_vprintf_ip(t,ip,f,p,v)
 #  define sched_note_printf_ip(t,ip,f,p,...)
+#  define sched_note_event_ip_ratelimit(t,ip,e,b,l)
+#  define sched_note_vprintf_ip_ratelimit(t,ip,f,p,v)
+#  define sched_note_printf_ip_ratelimit(t,ip,f,p,...)
+#  define sched_note_event_ip_ratelimited(tag, ip, event, buf, len)
+#  define sched_note_vprintf_ip_ratelimited(tag, ip, fmt, type, va)
+#  define sched_note_printf_ip_ratelimited(tag, ip, fmt, type, ...)
 #endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP */
 
 #undef EXTERN

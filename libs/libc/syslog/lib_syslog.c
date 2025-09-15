@@ -30,9 +30,18 @@
 #include <syslog.h>
 
 #include <nuttx/tls.h>
+#include <nuttx/ratelimit.h>
 #include <nuttx/syslog/syslog.h>
 
 #include "syslog/syslog.h"
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static DEFINE_RATELIMIT_STATE(g_ratelimit,
+  CONFIG_SYSLOG_RATELIMIT_INTERVAL,
+  CONFIG_SYSLOG_RATELIMIT_BURST);
 
 /****************************************************************************
  * Public Functions
@@ -105,4 +114,26 @@ void syslog(int priority, FAR const IPTR char *fmt, ...)
   va_start(ap, fmt);
   vsyslog(priority, fmt, ap);
   va_end(ap);
+}
+
+/****************************************************************************
+ * Name: syslog_ratelimit
+ *
+ * Description:
+ *   The rate-limiting version of syslog. Rate limiting will
+ *   be performed using the global rate limiting state.
+ *
+ ****************************************************************************/
+
+void syslog_ratelimit(int priority,
+                      FAR const IPTR char *fmt, ...)
+{
+  if (!ratelimit_islimited(&g_ratelimit))
+    {
+      va_list ap;
+
+      va_start(ap, fmt);
+      vsyslog(priority, fmt, ap);
+      va_end(ap);
+    }
 }

@@ -36,6 +36,18 @@ config DRIVERS_NOTECTL
 		If this option is selected, the instrumentation filter control device
 		/dev/notectl is provided.
 
+config DRIVERS_NOTE_RATELIMIT_INTERVAL
+	int "NOTE rate limiting interval"
+	default 0
+	---help---
+		"The size of the time window. 0 means no rate limiting"
+
+config DRIVERS_NOTE_RATELIMIT_BURST
+	int "NOTE rate limiting burst"
+	default 0
+	---help---
+		"The burst traffic allowed within the window."
+
 config DRIVERS_NOTERAM
 	bool "Note RAM driver"
 	select DRIVERS_NOTE

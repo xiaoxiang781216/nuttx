@@ -38,6 +38,8 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
+#include <nuttx/ratelimit.h>
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -211,6 +213,37 @@ extern "C"
 
 #ifndef CONFIG_SYSLOG_TO_SCHED_NOTE
 void syslog(int priority, FAR const IPTR char *fmt, ...) syslog_like(2, 3);
+
+/****************************************************************************
+ * Name: syslog_ratelimit
+ *
+ * Description:
+ *   The rate-limiting version of syslog. Rate limiting will
+ *   be performed using the global rate limiting state.
+ *
+ ****************************************************************************/
+
+void syslog_ratelimit(int priority,
+                      FAR const IPTR char *fmt, ...) syslog_like(2, 3);
+
+/****************************************************************************
+ * Name: syslog_ratelimited
+ *
+ * Description:
+ *   The rate-limiting version of syslog. Rate limiting will
+ *   be performed using the private rate limiting state.
+ *
+ ****************************************************************************/
+
+#define syslog_ratelimited(priority, fmt, ...)                          \
+  ({                                                                    \
+    static DEFINE_RATELIMIT_STATE(_rs,                                  \
+      CONFIG_SYSLOG_RATELIMIT_INTERVAL, CONFIG_SYSLOG_RATELIMIT_BURST); \
+    if (!ratelimit_islimited(&_rs))                                     \
+      {                                                                 \
+        syslog(priority, fmt, ##__VA_ARGS__);                           \
+      }                                                                 \
+  })
 
 /****************************************************************************
  * Name: nx_syslog
