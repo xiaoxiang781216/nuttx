@@ -126,11 +126,15 @@ static inline_function clock_t get_time_tick(void)
 static inline_function clock_t update_time_tick(clock_t tick)
 {
   irqstate_t flags;
-  clock_t oldtick;
+  clock_t oldtick = tick;
 
   flags = write_seqlock_irqsave(&g_timer_tick_lock);
-  oldtick = g_timer_tick;
-  g_timer_tick = tick;
+  if ((sclock_t)(tick - g_timer_tick) > 0)
+    {
+      oldtick = g_timer_tick;
+      g_timer_tick = tick;
+    }
+
   write_sequnlock_irqrestore(&g_timer_tick_lock, flags);
 
   return oldtick;
