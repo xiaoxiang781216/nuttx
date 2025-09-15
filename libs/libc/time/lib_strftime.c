@@ -756,11 +756,7 @@ process_next:
               {
                 /* POSIX: when tm_isdst < 0, %z converts to no characters */
 
-                if (tm->tm_isdst < 0)
-                  {
-                    len = 0;
-                  }
-                else
+                if (tm->tm_isdst >= 0)
                   {
                     int hour = tm->tm_gmtoff / 3600;
                     int min = tm->tm_gmtoff % 3600 / 60;
@@ -802,12 +798,6 @@ process_next:
                 if (zone_name != NULL && *zone_name != '\0')
                   {
                     len = snprintf(dest, chleft, "%s", zone_name);
-                  }
-                else
-                  {
-                    /* C99 standard: empty string if not determinable */
-
-                    len = 0;
                   }
               }
               break;
