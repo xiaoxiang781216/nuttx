@@ -87,7 +87,7 @@ timer_t altmdm_timer_start(int first_ms, int interval_ms,
 
   if (set_signal(MY_TIMER_SIGNAL, handler) != OK)
     {
-      return NULL;
+      return 0;
     }
 
   sev.sigev_notify = SIGEV_SIGNAL;
@@ -98,7 +98,7 @@ timer_t altmdm_timer_start(int first_ms, int interval_ms,
   ret = timer_create(CLOCK_REALTIME, &sev, &timerid);
   if (ret != OK)
     {
-      return NULL;
+      return 0;
     }
 
   timer.it_value.tv_sec = first_ms / 1000;
@@ -109,7 +109,7 @@ timer_t altmdm_timer_start(int first_ms, int interval_ms,
   ret = timer_settime(timerid, 0, &timer, NULL);
   if (ret != OK)
     {
-      return NULL;
+      return 0;
     }
 
   return timerid;
