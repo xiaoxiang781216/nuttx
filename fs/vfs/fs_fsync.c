@@ -129,3 +129,16 @@ errout:
   set_errno(-ret);
   return ERROR;
 }
+
+/****************************************************************************
+ * Name: fdatasync
+ *
+ * Description:
+ *   This func is a simple wrapper of fsync()
+ *
+ ****************************************************************************/
+
+int fdatasync(int fd)
+{
+  return fsync(fd);
+}
