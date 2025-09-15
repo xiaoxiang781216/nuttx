@@ -61,7 +61,7 @@ set(CMAKE_C_LINK_EXECUTABLE
 # Architecture flags
 
 add_compile_options(--lsl-core=vtc)
-add_compile_options(--iso=99)
+add_compile_options(--iso=17)
 add_compile_options(--language=+gcc,+volatile,-strings,-kanji)
 
 if(CONFIG_DEBUG_CUSTOMOPT)

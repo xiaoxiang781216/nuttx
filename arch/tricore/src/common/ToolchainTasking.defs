@@ -54,7 +54,7 @@ OBJDUMP           = elfdump
 
 ARCHOPTIMIZATION += --lsl-core=vtc
 LDFLAGS          += --lsl-core=vtc
-ARCHOPTIMIZATION += --iso=99
+ARCHOPTIMIZATION += --iso=17
 ARCHOPTIMIZATION += --language=+gcc,+volatile,-strings,-kanji
 
 # pragma align <4> (default: 0)
