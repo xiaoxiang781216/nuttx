@@ -587,6 +587,7 @@ static ssize_t gsmmux_uart_write(FAR struct gsmmux_s *gsmmux,
 
   /* This is the only write port, so it is safe to operate xmit buffer */
 
+  uart_disabletxint(gsmmux->uart);
   written = len;
   for (i = 0; i < iovcnt; i++)
     {
@@ -608,6 +609,7 @@ static ssize_t gsmmux_uart_write(FAR struct gsmmux_s *gsmmux,
   /* Enable Data transmission */
 
   uart_dmatxavail(gsmmux->uart);
+  uart_enabletxint(gsmmux->uart);
   uart_spinunlock(gsmmux->uart, true, flags);
 
   return written;
