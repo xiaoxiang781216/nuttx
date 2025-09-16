@@ -60,7 +60,7 @@ PID_MM_MEMPOOL = -1
 def get_sections():
     global g_sections
     if g_sections is None:
-        g_sections = gdb.execute("info sections", to_string=True)
+        g_sections = gdb.execute("maintenance info sections", to_string=True)
     return g_sections
 
 
