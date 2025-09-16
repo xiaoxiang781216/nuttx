@@ -48,23 +48,21 @@
 int clock_getres(clockid_t clock_id, struct timespec *res)
 {
   clockid_t clock_type = clock_id & CLOCK_MASK;
-  int       ret = OK;
+  int       ret = -EINVAL;
 
   sinfo("clock_id=%d, clock_type=%d\n", clock_id, clock_type);
 
   switch (clock_type)
     {
-      default:
-        serr("Returning ERROR\n");
-        set_errno(EINVAL);
-        ret = ERROR;
-        break;
-
       case CLOCK_MONOTONIC:
       case CLOCK_BOOTTIME:
       case CLOCK_REALTIME:
       case CLOCK_PROCESS_CPUTIME_ID:
       case CLOCK_THREAD_CPUTIME_ID:
+        if (clock_id >> CLOCK_SHIFT)
+          {
+            break;
+          }
 
         /* Form the timspec using clock resolution in nanoseconds */
 
@@ -73,7 +71,7 @@ int clock_getres(clockid_t clock_id, struct timespec *res)
 
         sinfo("Returning res=(%lld,%ld)\n", (long long)res->tv_sec,
                                             res->tv_nsec);
-        break;
+        return 0;
 
 #ifdef CONFIG_PTP_CLOCK
       case CLOCK_FD:
@@ -83,15 +81,24 @@ int clock_getres(clockid_t clock_id, struct timespec *res)
           ret = ptp_clockid_to_filep(clock_id, &filep);
           if (ret < 0)
             {
-              return ret;
+              break;
             }
 
           ret = file_ioctl(filep, PTP_CLOCK_GETRES, res);
           file_put(filep);
+          if (ret < 0)
+            {
+              break;
+            }
+
+          return 0;
         }
-        break;
 #endif
+
+      default:
+        break;
     }
 
-  return ret;
+    set_errno(-ret);
+    return ERROR;
 }
