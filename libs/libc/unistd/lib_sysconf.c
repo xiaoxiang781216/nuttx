@@ -262,6 +262,9 @@ long sysconf(int name)
       case _SC_THREAD_THREADS_MAX:
         return UINT8_MAX;
 
+      case _SC_TZNAME_MAX:
+        return TZNAME_MAX;
+
       case _SC_AIO_LISTIO_MAX:
         return AIO_LISTIO_MAX;
 
