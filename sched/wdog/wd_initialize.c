@@ -39,7 +39,9 @@
  * this linked list are removed and the function is called.
  */
 
-struct list_node g_wdactivelist;
+#undef g_wdactivelist
+DEFINE_PER_CPU_BSS_BMP(struct list_node, g_wdactivelist);
+#define g_wdactivelist this_cpu_var_bmp(g_wdactivelist)
 
 /****************************************************************************
  * Public Functions

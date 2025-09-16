@@ -55,14 +55,29 @@
 
 #if !defined(CONFIG_SCHED_TICKLESS) && \
     !defined(CONFIG_ALARM_ARCH) && !defined(CONFIG_TIMER_ARCH)
-volatile clock_t g_system_ticks = INITIAL_SYSTEM_TIMER_TICKS;
-seqcount_t g_system_tick_lock = SEQLOCK_INITIALIZER;
+#  undef g_system_ticks
+#  undef g_system_tick_lock
+
+DEFINE_PER_CPU_BMP(volatile clock_t, g_system_ticks) =
+  INITIAL_SYSTEM_TIMER_TICKS;
+DEFINE_PER_CPU_BMP(seqcount_t, g_system_tick_lock) = SEQLOCK_INITIALIZER;
+
+#  define g_system_ticks this_cpu_var_bmp(g_system_ticks)
+#  define g_system_tick_lock this_cpu_var_bmp(g_system_tick_lock)
 #endif
 
 #ifndef CONFIG_CLOCK_TIMEKEEPING
-struct timespec   g_basetime;
-struct timespec   g_monotonic_basetime;
-spinlock_t g_basetime_lock = SP_UNLOCKED;
+#  undef g_basetime
+#  undef g_monotonic_basetime
+#  undef g_basetime_lock
+
+DEFINE_PER_CPU_BSS_BMP(struct timespec, g_basetime);
+DEFINE_PER_CPU_BSS_BMP(struct timespec, g_monotonic_basetime);
+DEFINE_PER_CPU_BMP(spinlock_t, g_basetime_lock) = SP_UNLOCKED;
+
+#  define g_basetime this_cpu_var_bmp(g_basetime)
+#  define g_monotonic_basetime this_cpu_var_bmp(g_monotonic_basetime)
+#  define g_basetime_lock this_cpu_var_bmp(g_basetime_lock)
 #endif
 
 /****************************************************************************

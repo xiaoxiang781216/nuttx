@@ -38,6 +38,7 @@
 #include <nuttx/wdog.h>
 #include <nuttx/list.h>
 #include <nuttx/spinlock_type.h>
+#include <nuttx/sched.h>
 
 /****************************************************************************
  * Public Data
@@ -56,7 +57,8 @@ extern "C"
  * this linked list are removed and the function is called.
  */
 
-extern struct list_node g_wdactivelist;
+DECLARE_PER_CPU_BMP(struct list_node, g_wdactivelist);
+#define g_wdactivelist this_cpu_var_bmp(g_wdactivelist)
 
 /****************************************************************************
  * Public Function Prototypes

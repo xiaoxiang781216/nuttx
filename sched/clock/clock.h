@@ -31,6 +31,7 @@
 
 #include <stdint.h>
 
+#include <nuttx/percpu.h>
 #include <nuttx/clock.h>
 #include <nuttx/compiler.h>
 #include <nuttx/spinlock_type.h>
@@ -64,14 +65,21 @@
    * globally in include/nuttx/clock.h.
    */
 
-extern volatile clock_t g_system_ticks;
-extern seqcount_t g_system_tick_lock;
+DECLARE_PER_CPU_BMP(volatile clock_t, g_system_ticks);
+DECLARE_PER_CPU_BMP(seqcount_t, g_system_tick_lock);
+
+#  define g_system_ticks this_cpu_var_bmp(g_system_ticks)
+#  define g_system_tick_lock this_cpu_var_bmp(g_system_tick_lock)
 #endif
 
 #ifndef CONFIG_CLOCK_TIMEKEEPING
-extern struct timespec  g_basetime;
-extern struct timespec  g_monotonic_basetime;
-extern spinlock_t g_basetime_lock;
+DECLARE_PER_CPU_BMP(struct timespec, g_basetime);
+DECLARE_PER_CPU_BMP(struct timespec, g_monotonic_basetime);
+DECLARE_PER_CPU_BMP(spinlock_t, g_basetime_lock);
+
+#  define g_basetime this_cpu_var_bmp(g_basetime)
+#  define g_monotonic_basetime this_cpu_var_bmp(g_monotonic_basetime)
+#  define g_basetime_lock this_cpu_var_bmp(g_basetime_lock)
 #endif
 
 /****************************************************************************
