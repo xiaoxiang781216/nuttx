@@ -203,15 +203,6 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
     }
 #endif
 
-  /* Initialize the task control block */
-
-  ret = nxtask_setup_scheduler(tcb, priority, nxtask_start,
-                               entry, ttype);
-  if (ret < OK)
-    {
-      goto errout_with_group;
-    }
-
   /* Initialize thread local storage */
 
   ret = tls_init_info(tcb);
@@ -223,6 +214,15 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
   /* Setup to pass parameters to the new task */
 
   ret = nxtask_setup_stackargs(tcb, name, argv);
+  if (ret < OK)
+    {
+      goto errout_with_group;
+    }
+
+  /* Initialize the task control block */
+
+  ret = nxtask_setup_scheduler(tcb, priority, nxtask_start,
+                               entry, ttype);
   if (ret < OK)
     {
       goto errout_with_group;

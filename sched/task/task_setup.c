@@ -44,6 +44,7 @@
 #include "pthread/pthread.h"
 #include "group/group.h"
 #include "task/task.h"
+#include "tls/tls.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -415,6 +416,12 @@ static int nxthread_setup_scheduler(FAR struct tcb_s *tcb, int priority,
   ret = nxtask_assign_pid(tcb);
   if (ret == OK)
     {
+      struct tls_info_s *info = tcb->stack_alloc_ptr;
+
+      /* Save PID to TLS */
+
+      info->tl_tid = tcb->pid;
+
       /* Save task priority and entry point in the TCB */
 
       tcb->sched_priority = (uint8_t)priority;

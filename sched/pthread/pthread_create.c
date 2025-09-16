@@ -372,6 +372,21 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
     }
 #endif
 
+  /* Initialize thread local storage */
+
+  ret = tls_init_info(ptcb);
+  if (ret != OK)
+    {
+      errcode = -ret;
+      goto errout_with_tcb;
+    }
+
+  /* Configure the TCB for a pthread receiving on parameter
+   * passed by value
+   */
+
+  pthread_tcb_setup(ptcb, parent, trampoline, arg);
+
   /* Initialize the task control block */
 
   ret = pthread_setup_scheduler(ptcb, param.sched_priority, pthread_start,
@@ -379,15 +394,6 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
   if (ret != OK)
     {
       errcode = EBUSY;
-      goto errout_with_tcb;
-    }
-
-  /* Initialize thread local storage */
-
-  ret = tls_init_info(ptcb);
-  if (ret != OK)
-    {
-      errcode = -ret;
       goto errout_with_tcb;
     }
 
@@ -404,12 +410,6 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
       ptcb->affinity = attr->affinity;
     }
 #endif
-
-  /* Configure the TCB for a pthread receiving on parameter
-   * passed by value
-   */
-
-  pthread_tcb_setup(ptcb, parent, trampoline, arg);
 
   /* Join the parent's task group */
 

@@ -237,16 +237,6 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
   priority = ptcb->sched_priority;  /* Current priority */
 #endif
 
-  /* Initialize the task control block.  This calls up_initial_state() */
-
-  sinfo("Child priority=%d start=%p\n", priority, retaddr);
-  ret = nxtask_setup_scheduler(child, priority, retaddr,
-                               ptcb->entry.main, ttype);
-  if (ret < OK)
-    {
-      goto errout_with_tcb;
-    }
-
   /* Setup thread local storage */
 
   ret = tls_dup_info(child, parent);
@@ -258,6 +248,16 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
   /* Setup to pass parameters to the new task */
 
   ret = nxtask_setup_stackargs(child, argv[0], &argv[1]);
+  if (ret < OK)
+    {
+      goto errout_with_tcb;
+    }
+
+  /* Initialize the task control block.  This calls up_initial_state() */
+
+  sinfo("Child priority=%d start=%p\n", priority, retaddr);
+  ret = nxtask_setup_scheduler(child, priority, retaddr,
+                               ptcb->entry.main, ttype);
   if (ret < OK)
     {
       goto errout_with_tcb;
