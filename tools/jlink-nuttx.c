@@ -106,6 +106,7 @@ begin_packed_struct struct reginfo_s
   uint8_t           regnum;
   int16_t           toffset;
   int16_t           goffset;
+  int16_t           coffset;
 } end_packed_struct;
 
 begin_packed_struct struct tcbinfo_s
