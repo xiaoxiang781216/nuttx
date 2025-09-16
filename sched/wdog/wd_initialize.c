@@ -39,8 +39,21 @@
  * this linked list are removed and the function is called.
  */
 
-struct list_node g_wdactivelist = LIST_INITIAL_VALUE(g_wdactivelist);
+struct list_node g_wdactivelist;
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: wdlist_initialize
+ *
+ * Description:
+ *   This function do list initialize, list should prefer runtime init.
+ *
+ ****************************************************************************/
+
+void wdlist_initialize(void)
+{
+  list_initialize(&g_wdactivelist);
+}

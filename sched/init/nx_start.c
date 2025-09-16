@@ -619,6 +619,10 @@ void nx_start(void)
 
   sinfo("Entry\n");
 
+  /* Initialize wdog list ***************************************************/
+
+  wdlist_initialize();
+
   /* Initialize task list table *********************************************/
 
   tasklist_initialize();
