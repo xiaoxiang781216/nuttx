@@ -32,6 +32,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/addrenv.h>
 #include <nuttx/arch.h>
+#include <nuttx/tls.h>
 
 #include "addrenv.h"
 #include "riscv_internal.h"
