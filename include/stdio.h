@@ -33,6 +33,7 @@
 #include <stdarg.h>
 #include <time.h>
 
+#include <nuttx/fs/fs.h>
 #include <nuttx/lib/lib.h>
 
 /****************************************************************************
