@@ -123,24 +123,28 @@ static int task_setup(FAR struct tcb_s *ptcb,
                   priority = ptcb->sched_priority;  /* Current priority */
 #endif
 
-                  /* Initialize the task control block.
-                   * This calls up_initial_state()
-                   */
+                  /* Setup thread local storage */
 
-                  sinfo("Child priority=%d start=%p\n", priority, retaddr);
-                  ret = nxtask_setup_scheduler(child, priority, retaddr,
-                                               ptcb->entry.main, ttype);
+                  ret = tls_dup_info(child, parent);
                   if (ret >= OK)
                     {
-                      /* Setup thread local storage */
+                      /* Setup to pass parameters to the new task */
 
-                      ret = tls_dup_info(child, parent);
+                      ret = nxtask_setup_stackargs(child,
+                                                   argv[0], &argv[1]);
+
                       if (ret >= OK)
                         {
-                          /* Setup to pass parameters to the new task */
+                          /* Initialize the task control block.
+                           * This calls up_initial_state()
+                           */
 
-                          ret = nxtask_setup_stackargs(child,
-                                                       argv[0], &argv[1]);
+                          sinfo("Child priority=%d start=%p\n", priority,
+                                                                retaddr);
+                          ret = nxtask_setup_scheduler(child, priority,
+                                                       retaddr,
+                                                       ptcb->entry.main,
+                                                       ttype);
                         }
                     }
                 }

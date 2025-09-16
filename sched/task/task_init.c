@@ -123,20 +123,21 @@ static int task_setup(FAR struct tcb_s *tcb, const char *name, main_t entry,
 
               if (ret >= OK)
                 {
-                  /* Initialize the task control block */
+                  /* Initialize thread local storage */
 
-                  ret = nxtask_setup_scheduler(tcb, priority, nxtask_start,
-                                               entry, ttype);
+                  ret = tls_init_info(tcb);
                   if (ret >= OK)
                     {
-                      /* Initialize thread local storage */
+                      /* Setup to pass parameters to the new task */
 
-                      ret = tls_init_info(tcb);
+                      ret = nxtask_setup_stackargs(tcb, name, argv);
                       if (ret >= OK)
                         {
-                          /* Setup to pass parameters to the new task */
+                          /* Initialize the task control block */
 
-                          ret = nxtask_setup_stackargs(tcb, name, argv);
+                          ret = nxtask_setup_scheduler(tcb, priority,
+                                                       nxtask_start,
+                                                       entry, ttype);
                         }
                     }
                 }
