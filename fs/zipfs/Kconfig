@@ -5,6 +5,7 @@
 
 config FS_ZIPFS
 	bool "ZIP File System"
+	depends on UTILS_LIBARCHIVE
 	default n
 
 if FS_ZIPFS
