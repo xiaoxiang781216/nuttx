@@ -132,8 +132,8 @@ static inline void sim_timer_current(struct timespec *ts)
 
 static inline void sim_reset_alarm(struct timespec *alarm)
 {
-  alarm->tv_sec  = INT_MAX;
-  alarm->tv_nsec = NSEC_PER_SEC - 1;
+  alarm->tv_sec  = CLOCK_MAX / TICK_PER_SEC;
+  alarm->tv_nsec = CLOCK_MAX % TICK_PER_SEC * NSEC_PER_TICK;
 }
 
 /****************************************************************************
@@ -271,8 +271,8 @@ static int sim_max_delay(struct oneshot_lowerhalf_s *lower,
 {
   DEBUGASSERT(ts != NULL);
 
-  ts->tv_sec  = INT_MAX;
-  ts->tv_nsec = NSEC_PER_SEC - 1;
+  ts->tv_sec  = CLOCK_MAX / TICK_PER_SEC;
+  ts->tv_nsec = CLOCK_MAX % TICK_PER_SEC * NSEC_PER_TICK;
   return OK;
 }
 
