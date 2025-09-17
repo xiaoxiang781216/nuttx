@@ -976,6 +976,7 @@ static int rptun_do_ioctl(FAR struct rptun_priv_s *priv, int cmd,
         break;
       case RPTUNIOC_WAIT:
         ret = rptun_dev_wait(priv, arg);
+        break;
       default:
         ret = -ENOTTY;
         break;
