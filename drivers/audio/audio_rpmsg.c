@@ -494,10 +494,17 @@ static int audio_rpmsg_deliver_message(FAR struct audio_rpmsg_s *aud,
       0
     };
 
+  int ret;
+
   req.header.command = cmd;
   req.msgid = msgid;
+  ret = rpmsg_send(&aud->ept, &req, sizeof(req));
+  if (ret < 0)
+    {
+      return ret;
+    }
 
-  return rpmsg_send(&aud->ept, &req, sizeof(req));
+  return OK;
 }
 
 /****************************************************************************
