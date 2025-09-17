@@ -148,7 +148,7 @@ void trif_disable(FAR struct hwtracing_dev_s *trifdev)
                         (uintptr_t)&TRIF_TSR) < 0)
     {
       hterr("timeout TRIF_TSR_STATE\n");
-      return -ETIME;
+      return;
     }
 
   /* init mode */

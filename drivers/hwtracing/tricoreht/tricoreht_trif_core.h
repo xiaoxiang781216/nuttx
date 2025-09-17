@@ -137,6 +137,19 @@ int trif_tfif_register(FAR struct tricoreht_trif_dev_s *trifdev,
 void trif_tfif_unregister(FAR struct tricoreht_trif_dev_s *trifdev);
 
 /****************************************************************************
+ * Name: trif_dap_register
+ ****************************************************************************/
+
+int trif_dap_register(FAR struct hwtracing_dev_s * tfifdev,
+                      FAR const struct hwtracing_desc_s *desc);
+
+/****************************************************************************
+ * Name: trif_dap_unregister
+ ****************************************************************************/
+
+void trif_dap_unregister(FAR struct hwtracing_dev_s * tfifdev);
+
+/****************************************************************************
  * Name: trif_enable
  ****************************************************************************/
 

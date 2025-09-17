@@ -23,6 +23,7 @@
 if(CONFIG_TRICOREHT)
   set(SRCS tricoreht_trif_core.c tricoreht_trif_tfif.c tricoreht_mcds_core.c)
   list(APPEND SRCS tricoreht_mcds_dtu.c)
+  list(APPEND SRCS tricoreht_trif_dap.c)
 
   target_sources(drivers PRIVATE ${SRCS})
 endif()

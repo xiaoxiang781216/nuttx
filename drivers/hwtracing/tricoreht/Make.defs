@@ -23,7 +23,7 @@
 ifeq ($(CONFIG_TRICOREHT),y)
 
 CSRCS += tricoreht_trif_core.c tricoreht_trif_tfif.c tricoreht_mcds_core.c
-CSRCS += tricoreht_mcds_dtu.c
+CSRCS += tricoreht_mcds_dtu.c tricoreht_trif_dap.c
 
 DEPPATH += --dep-path tricoreht
 VPATH += :tricoreht
