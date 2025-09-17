@@ -64,13 +64,6 @@ ssize_t lib_fflush_unlocked(FAR FILE *stream)
   ssize_t bytes_written;
   ssize_t nbuffer;
 
-  /* Return EBADF if the file is not opened for writing */
-
-  if ((stream->fs_oflags & O_WROK) == 0)
-    {
-      return -EBADF;
-    }
-
   /* Check if there is an allocated I/O buffer */
 
   if (stream->fs_bufstart == NULL)
@@ -90,11 +83,14 @@ ssize_t lib_fflush_unlocked(FAR FILE *stream)
 
       if (stream->fs_bufread != stream->fs_bufstart)
         {
-          /* The buffer holds read data... just return zero meaning "no bytes
-           * remaining in the buffer."
+          /* The buffer holds read data.
+           * If file is not already at EOF, and the file is one capable of
+           * seeking, the file offset of the underlying open file
+           * description shall be set to the file position of the stream,
+           * any characters pushed back onto the stream shall be discarded.
            */
 
-          return 0;
+          return lib_rdflush_unlocked(stream);
         }
 
       /* How many bytes of write data are used in the buffer now */
