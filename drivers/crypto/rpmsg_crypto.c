@@ -808,6 +808,10 @@ static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
   if (session->result == 0 && msg->data.dst_data_len > 0)
     {
       memcpy(krp->krp_param[krp->krp_iparams].crp_p, msg->buf, len);
+      if (krp->krp_op == CRK_EXPORT_KEY)
+        {
+          krp->krp_param[1].crp_nbits = len * 8;
+        }
     }
 
   if ((krp->krp_flags & CRYPTO_F_CBIMM) && krp->krp_callback)

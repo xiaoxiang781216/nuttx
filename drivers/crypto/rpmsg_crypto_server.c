@@ -504,6 +504,10 @@ static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
   if (rsp->header.result == 0)
     {
       rsp->header.result = krp.krp_status;
+      if (krp.krp_op == CRK_EXPORT_KEY)
+        {
+          rsp->data.dst_data_len = krp.krp_param[1].crp_nbits / 8;
+        }
     }
 
   return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + rsp->data.dst_data_len);
