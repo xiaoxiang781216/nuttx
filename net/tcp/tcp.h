@@ -233,7 +233,7 @@ struct tcp_conn_s
                            * segment sent */
 #ifdef CONFIG_NET_TCP_DELAYED_ACK
   uint8_t  rx_unackseg;   /* Number of un-ACKed received segments */
-  uint8_t  rx_acktimer;   /* Time since last ACK sent (units: half-seconds) */
+  uint8_t  rx_acktimer;   /* The delayed ACK timer (units: half-seconds) */
 #endif
   uint16_t lport;         /* The local TCP port, in network byte order */
   uint16_t rport;         /* The remoteTCP port, in network byte order */
@@ -1099,6 +1099,19 @@ void tcp_update_retrantimer(FAR struct tcp_conn_s *conn, int timeout);
 
 #ifdef CONFIG_NET_TCP_KEEPALIVE
 void tcp_update_keeptimer(FAR struct tcp_conn_s *conn, int timeout);
+#endif
+
+/****************************************************************************
+ * Name: tcp_update_delaytimer
+ *
+ * Description:
+ *   Update the delayed ACK TCP timer for the provided TCP connection,
+ *   The timeout is accurate
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_TCP_DELAYED_ACK
+void tcp_update_delaytimer(FAR struct tcp_conn_s *conn, int timeout);
 #endif
 
 /****************************************************************************

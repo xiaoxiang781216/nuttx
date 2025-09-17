@@ -258,6 +258,14 @@ static void tcp_sendcommon(FAR struct net_driver_s *dev,
 
       net_incr32(conn->sndseq, 1);
     }
+
+#ifdef CONFIG_NET_TCP_DELAYED_ACK
+  if (conn->rx_unackseg != 0)
+    {
+      conn->rx_unackseg = 0;
+      conn->rx_acktimer = 0;
+    }
+#endif
 }
 
 /****************************************************************************

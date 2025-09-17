@@ -96,9 +96,6 @@ void tcp_appsend(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
   if (tcp_should_send_recvwindow(conn))
     {
       result |= TCP_SNDACK;
-#ifdef CONFIG_NET_TCP_DELAYED_ACK
-      conn->rx_unackseg = 0;
-#endif
     }
 
 #ifdef CONFIG_NET_TCP_DELAYED_ACK
@@ -107,10 +104,6 @@ void tcp_appsend(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
   else if ((result & TCP_SNDACK) != 0)
     {
       /* Yes.. Handle delayed acknowledgments */
-
-      /* Reset the ACK timer in any event. */
-
-      conn->rx_acktimer = 0;
 
       /* Per RFC 1122:  "...in a stream of full-sized segments there
        * SHOULD be an ACK for at least every second segment."
@@ -129,14 +122,8 @@ void tcp_appsend(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
        *    traffic and better performance but seems non-compliant.
        */
 
-      if (conn->rx_unackseg > 0 || dev->d_sndlen > 0 ||
-          result != TCP_SNDACK)
-        {
-          /* Reset the delayed ACK state and send the ACK with this packet. */
-
-          conn->rx_unackseg = 0;
-        }
-      else
+      if (conn->rx_unackseg == 0 && dev->d_sndlen == 0 &&
+          result == TCP_SNDACK)
         {
           /* This is only an ACK and there is no pending delayed ACK and
            * no TX data is being sent.  Indicate that there is one un-ACKed
@@ -144,6 +131,7 @@ void tcp_appsend(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
            */
 
           conn->rx_unackseg = 1;
+          tcp_update_delaytimer(conn, 1);
           return;
         }
     }
@@ -156,7 +144,6 @@ void tcp_appsend(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
   else if (dev->d_sndlen > 0 && conn->rx_unackseg > 0)
     {
       result |= TCP_SNDACK;
-      conn->rx_unackseg = 0;
     }
 #endif
 

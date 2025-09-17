@@ -105,6 +105,13 @@ static int tcp_get_timeout(FAR struct tcp_conn_s *conn)
 {
   int timeout = conn->timer;
 
+#ifdef CONFIG_NET_TCP_DELAYED_ACK
+  if (timeout == 0 || (conn->rx_acktimer > 0 && timeout > conn->rx_acktimer))
+    {
+      timeout = conn->rx_acktimer;
+    }
+#endif
+
 #ifdef CONFIG_NET_TCP_KEEPALIVE
   if (timeout == 0)
     {
@@ -318,6 +325,23 @@ void tcp_update_retrantimer(FAR struct tcp_conn_s *conn, int timeout)
 void tcp_update_keeptimer(FAR struct tcp_conn_s *conn, int timeout)
 {
   conn->keeptimer = timeout;
+  tcp_update_timer(conn);
+}
+#endif
+
+/****************************************************************************
+ * Name: tcp_update_delaytimer
+ *
+ * Description:
+ *   Update the delayed ACK TCP timer for the provided TCP connection,
+ *   The timeout is accurate
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_TCP_DELAYED_ACK
+void tcp_update_delaytimer(FAR struct tcp_conn_s *conn, int timeout)
+{
+  conn->rx_acktimer = timeout;
   tcp_update_timer(conn);
 }
 #endif
@@ -664,8 +688,8 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
        * connection has been established.
        */
 
-      else if ((conn->tcpstateflags & TCP_STATE_MASK) == TCP_ESTABLISHED ||
-               (conn->tcpstateflags & TCP_STATE_MASK) == TCP_CLOSE_WAIT)
+      if ((conn->tcpstateflags & TCP_STATE_MASK) == TCP_ESTABLISHED ||
+          (conn->tcpstateflags & TCP_STATE_MASK) == TCP_CLOSE_WAIT)
         {
 #ifdef CONFIG_NET_TCP_KEEPALIVE
           /* Is this an established connected with KeepAlive enabled? */
@@ -767,26 +791,8 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
 
           if (conn->rx_unackseg > 0)
             {
-              /* Increment the ACK delay. */
-
-              conn->rx_acktimer += hsec;
-
-              /* Per RFC 1122:  "...an ACK should not be excessively
-               * delayed; in particular, the delay must be less than
-               * 0.5 seconds..."
-               */
-
-              if (conn->rx_acktimer >= ACK_DELAY)
-                {
-                  /* Reset the delayed ACK state and send the ACK
-                   * packet.
-                   */
-
-                  conn->rx_unackseg = 0;
-                  conn->rx_acktimer = 0;
-                  tcp_synack(dev, conn, TCP_ACK);
-                  goto done;
-                }
+              tcp_send(dev, conn, TCP_ACK, hdrlen);
+              goto done;
             }
 #endif
 
