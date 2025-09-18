@@ -32,7 +32,7 @@
 #include <nuttx/tls.h>
 #include <nuttx/sched.h>
 
-#if !defined(up_tls_info) && !defined(CONFIG_TLS_ALIGNED)
+#if !defined(up_tls_info) && (defined(__KERNEL__) || !defined(CONFIG_TLS_ALIGNED))
 
 /****************************************************************************
  * Public Functions
