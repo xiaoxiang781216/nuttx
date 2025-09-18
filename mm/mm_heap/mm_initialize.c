@@ -327,7 +327,9 @@ mm_initialize_pool(FAR const struct mm_heap_config_s *config,
                    FAR const struct mm_pool_config_s *poolconfig)
 {
   FAR struct mm_heap_s *heap;
+#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD > 0
   size_t poolsize[MEMPOOL_NPOOLS];
+#endif
   struct mm_pool_config_s def;
 
   if (poolconfig)
@@ -339,6 +341,7 @@ mm_initialize_pool(FAR const struct mm_heap_config_s *config,
       memset(&def, 0, sizeof(struct mm_pool_config_s));
     }
 
+#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD > 0
   if (def.poolsize == 0 || def.npools == 0)
     {
       int i;
@@ -380,23 +383,27 @@ mm_initialize_pool(FAR const struct mm_heap_config_s *config,
     {
       def.dict_expendsize = CONFIG_MM_HEAP_MEMPOOL_DICTIONARY_EXPAND_SIZE;
     }
+#endif
 
   heap = mm_initialize_heap(config);
 
   /* Initialize the multiple mempool in heap */
 
   heap->mm_threshold = def.threshold;
-  heap->mm_mpool = mempool_multiple_init(config->name,
-                                         def.poolsize,
-                                         def.npools,
-                                         mempool_memalign,
-                                         mempool_malloc_size,
-                                         mempool_free,
-                                         heap,
-                                         def.chunksize,
-                                         def.init_chunksize,
-                                         def.expandsize,
-                                         def.dict_expendsize);
+  if (def.poolsize != NULL && def.npools != 0)
+    {
+      heap->mm_mpool = mempool_multiple_init(config->name,
+                                            def.poolsize,
+                                            def.npools,
+                                            mempool_memalign,
+                                            mempool_malloc_size,
+                                            mempool_free,
+                                            heap,
+                                            def.chunksize,
+                                            def.init_chunksize,
+                                            def.expandsize,
+                                            def.dict_expendsize);
+    }
 
   return heap;
 }
