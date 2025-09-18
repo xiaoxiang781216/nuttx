@@ -125,7 +125,7 @@ long fpathconf(int fildes, int name)
         return _POSIX_LINK_MAX;
 
       case _PC_NAME_MAX:
-        return _POSIX_NAME_MAX;
+        return NAME_MAX;
 
       case _PC_PIPE_BUF:
         return _POSIX_PIPE_BUF;
