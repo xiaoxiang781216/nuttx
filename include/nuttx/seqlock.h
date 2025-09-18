@@ -104,7 +104,7 @@ unsigned int read_seqbegin(FAR const seqcount_t *s)
 
   while (predict_false((seq = s->sequence) & 1));
 
-  UP_DMB();
+  SMP_RMB();
   return seq;
 }
 
@@ -129,7 +129,7 @@ unsigned int read_seqretry(FAR const seqcount_t *s, unsigned int start)
 {
   unsigned int seq;
 
-  UP_DMB();
+  SMP_RMB();
   seq = s->sequence;
   return predict_false(seq != start);
 }
