@@ -57,13 +57,14 @@ struct ethosu_lowerhalf_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static int ethosu_aie_init(FAR struct aie_lowerhalf_s *lower,
-                           uintptr_t model);
-static int ethosu_aie_deinit(FAR struct aie_lowerhalf_s *lower, int id);
-static int ethosu_aie_feed_input(FAR struct aie_lowerhalf_s *lower, int id,
-                                 uintptr_t input);
-static int ethosu_aie_get_output(FAR struct aie_lowerhalf_s *lower, int id,
-                                 uintptr_t output);
+static FAR void *ethosu_aie_init(FAR struct aie_lowerhalf_s *lower,
+                                 uintptr_t model);
+static int ethosu_aie_deinit(FAR struct aie_lowerhalf_s *lower,
+                             FAR void *context);
+static int ethosu_aie_feed_input(FAR struct aie_lowerhalf_s *lower,
+                                 FAR void *context, uintptr_t input);
+static int ethosu_aie_get_output(FAR struct aie_lowerhalf_s *lower,
+                                 FAR void *context, uintptr_t output);
 
 /* Local interrupt handler */
 
@@ -128,20 +129,20 @@ static int ethosu_npu_irq_handler(int irq, FAR void *context, FAR void *arg)
  *           Reserved for future session management features.
  *
  * Returned Value:
- *   OK (0)   - on success; a negated errno value on failure:
- *   -EINVAL  - Invalid input parameter (lower is NULL)
+ *   Non-NULL session context pointer on success; NULL on failure.
  *
  * Assumptions:
  *
  ****************************************************************************/
 
-static int ethosu_aie_init(FAR struct aie_lowerhalf_s *lower,
-                           uintptr_t model)
+static FAR void *ethosu_aie_init(FAR struct aie_lowerhalf_s *lower,
+                                 uintptr_t model)
 {
-  UNUSED(lower);
   UNUSED(model);
 
-  return OK;
+  /* Loader not yet implemented; return lower as a simple context token. */
+
+  return lower;
 }
 
 /****************************************************************************
@@ -151,9 +152,9 @@ static int ethosu_aie_init(FAR struct aie_lowerhalf_s *lower,
  *   Deinitialize the Ethos-U driver and clean up resources.
  *
  * Input Parameters:
- *   lower - Pointer to the lower half driver structure.
- *   id    - Session ID (currently unused in simplified implementation).
- *           Reserved for future session management features.
+ *   lower   - Pointer to the lower half driver structure.
+ *   context - Session context pointer (currently unused).
+ *             Reserved for future session management features.
  *
  * Returned Value:
  *   OK (0) on success; a negated errno value on failure:
@@ -163,10 +164,11 @@ static int ethosu_aie_init(FAR struct aie_lowerhalf_s *lower,
  *
  ****************************************************************************/
 
-static int ethosu_aie_deinit(FAR struct aie_lowerhalf_s *lower, int id)
+static int ethosu_aie_deinit(FAR struct aie_lowerhalf_s *lower,
+                             FAR void *context)
 {
   UNUSED(lower);
-  UNUSED(id);
+  UNUSED(context);
 
   return OK;
 }
@@ -180,21 +182,21 @@ static int ethosu_aie_deinit(FAR struct aie_lowerhalf_s *lower, int id)
  *   Reserved for future implementation of inference input handling.
  *
  * Input Parameters:
- *   lower - Pointer to the lower half driver structure (currently unused).
- *   id    - Session/inference ID (currently unused).
- *   input - Input data pointer (currently unused).
+ *   lower   - Pointer to the lower half driver structure (currently unused).
+ *   context - Session/inference context pointer (currently unused).
+ *   input   - Input data pointer (currently unused).
  *
  * Returned Value:
  *   OK (0) - Always returns success in current implementation.
  *
  ****************************************************************************/
 
-static int ethosu_aie_feed_input(FAR struct aie_lowerhalf_s *lower, int id,
-                                 uintptr_t input)
+static int ethosu_aie_feed_input(FAR struct aie_lowerhalf_s *lower,
+                                 FAR void *context, uintptr_t input)
 {
   UNUSED(lower);
   UNUSED(input);
-  UNUSED(id);
+  UNUSED(context);
 
   return OK;
 }
@@ -209,8 +211,8 @@ static int ethosu_aie_feed_input(FAR struct aie_lowerhalf_s *lower, int id,
  *   the driver afterwards.
  *
  * Input Parameters:
- *   lower  - Pointer to the lower half driver structure (currently unused).
- *   id     - Session/inference ID (currently unused).
+ *   lower   - Pointer to the lower half driver structure (currently unused).
+ *   context - Session/inference context pointer (currently unused).
  *   output - Pointer to struct ethosu_aie_invoke_params containing:
  *            - custom_data_ptr: Command stream for NPU
  *            - custom_data_size: Size of command stream
@@ -226,15 +228,15 @@ static int ethosu_aie_feed_input(FAR struct aie_lowerhalf_s *lower, int id,
  *
  ****************************************************************************/
 
-static int ethosu_aie_get_output(FAR struct aie_lowerhalf_s *lower, int id,
-                                 uintptr_t output)
+static int ethosu_aie_get_output(FAR struct aie_lowerhalf_s *lower,
+                                 FAR void *context, uintptr_t output)
 {
   FAR struct ethosu_aie_invoke_params *params;
   FAR struct ethosu_driver *drv;
   int ret;
 
   UNUSED(lower);
-  UNUSED(id);
+  UNUSED(context);
 
   params = (FAR struct ethosu_aie_invoke_params *)output;
   if (params == NULL)

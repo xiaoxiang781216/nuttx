@@ -120,10 +120,10 @@ static int aie_close(FAR struct file *filep)
       return ret;
     }
 
-  ret = (int)(intptr_t)filep->f_priv;
-  if (ret > 0)
+  if (filep->f_priv != NULL)
     {
-      lower->ops->deinit(lower, ret);
+      lower->ops->deinit(lower, filep->f_priv);
+      filep->f_priv = NULL;
     }
 
   nxmutex_unlock(&upper->lock);
@@ -162,37 +162,32 @@ static int aie_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   switch (cmd)
     {
       case AIE_CMD_LOAD:
-        ret = (int)(intptr_t)filep->f_priv;
-        if (ret > 0)
+        if (filep->f_priv != NULL)
           {
             ret = -EINVAL; /* Double load is not allowed */
           }
         else
           {
-            ret = lower->ops->init(lower, arg /* model */);
-            if (ret > 0)
+            filep->f_priv = lower->ops->init(lower, arg /* model */);
+            if (filep->f_priv != NULL)
               {
-                filep->f_priv = (void *)(intptr_t)ret;
                 ret = OK;
               }
           }
         break;
 
       case AIE_CMD_FEED_INPUT:
-        ret = lower->ops->feed_input(lower, (int)(intptr_t)filep->f_priv,
-                                     arg /* input */);
+        ret = lower->ops->feed_input(lower, filep->f_priv, arg /* input */);
         break;
 
       case AIE_CMD_GET_OUTPUT:
-        ret = lower->ops->get_output(lower, (int)(intptr_t)filep->f_priv,
-                                     arg /* output */);
+        ret = lower->ops->get_output(lower, filep->f_priv, arg /* output */);
         break;
 
       default:
         if (lower->ops->control)
           {
-            ret = lower->ops->control(lower, (int)(intptr_t)filep->f_priv,
-                                      cmd, arg);
+            ret = lower->ops->control(lower, filep->f_priv, cmd, arg);
           }
         else
           {

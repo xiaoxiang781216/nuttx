@@ -51,17 +51,17 @@ enum aie_cmd_e
 struct aie_lowerhalf_s;
 struct aie_ops_s
 {
-  CODE int (*init)(FAR struct aie_lowerhalf_s *lower, uintptr_t model);
+  CODE FAR void *(*init)(FAR struct aie_lowerhalf_s *lower, uintptr_t model);
 
-  CODE int (*deinit)(FAR struct aie_lowerhalf_s *lower, int id);
+  CODE int (*deinit)(FAR struct aie_lowerhalf_s *lower, FAR void *context);
 
-  CODE int (*feed_input)(FAR struct aie_lowerhalf_s *lower, int id,
-                         uintptr_t input);
+  CODE int (*feed_input)(FAR struct aie_lowerhalf_s *lower,
+                         FAR void *context, uintptr_t input);
 
-  CODE int (*get_output)(FAR struct aie_lowerhalf_s *lower, int id,
-                         uintptr_t output);
+  CODE int (*get_output)(FAR struct aie_lowerhalf_s *lower,
+                         FAR void *context, uintptr_t output);
 
-  CODE int (*control)(FAR struct aie_lowerhalf_s *lower, int id,
+  CODE int (*control)(FAR struct aie_lowerhalf_s *lower, FAR void *context,
                       int cmd, unsigned long arg);
 };
 
