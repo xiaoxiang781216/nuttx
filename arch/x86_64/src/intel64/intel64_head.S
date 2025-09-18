@@ -606,7 +606,7 @@ no_kstack_switch:
 	/* Save xmm registers */
 	fxsaveq (%rcx)
 #else
-#  ifdef CONFIG_ARCH_CHIP_INTEL64_QEMU
+#  ifdef CONFIG_ARCH_CHIP_QEMU_X86_64
 	/* BUGFIX for QEMU: make sure that xsave header is zeroed!
 	 * QEMU desn't clear these fields during xsave, so if the memory region
 	 * for xsave state was not cleared before use, there may be junk data there,

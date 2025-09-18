@@ -56,9 +56,9 @@ config ARCH_INTEL64
 
 choice
 	prompt "x86_64 chip selection"
-	default ARCH_CHIP_INTEL64_QEMU
+	default ARCH_CHIP_QEMU_X86_64
 
-config ARCH_CHIP_INTEL64_QEMU
+config ARCH_CHIP_QEMU_X86_64
 	bool "qemu x86_64 chip"
 	select ARCH_INTEL64
 	---help---
@@ -85,7 +85,7 @@ endchoice
 
 config ARCH_CHIP
 	string
-	default "qemu"              if ARCH_CHIP_INTEL64_QEMU
+	default "qemu"              if ARCH_CHIP_QEMU_X86_64
 	default "goldfish"          if ARCH_CHIP_GOLDFISH_X86_64
 	default "intel64"           if ARCH_CHIP_INTEL64
 
@@ -166,7 +166,7 @@ if ARCH_INTEL64
 source "arch/x86_64/src/intel64/Kconfig"
 endif # ARCH_INTEL64
 
-if ARCH_CHIP_INTEL64_QEMU
+if ARCH_CHIP_QEMU_X86_64
 source "arch/x86_64/src/qemu/Kconfig"
 endif
 
