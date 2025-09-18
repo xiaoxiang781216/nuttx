@@ -138,6 +138,24 @@ ssize_t lib_fwrite_unlocked(FAR const void *ptr, size_t count,
               goto errout;
             }
         }
+
+      /* POSIX: in line-buffered mode (_IOLBF), flush if any newline
+       * appears in the data written so far by this fwrite call.
+       * We check the bytes from 'start' to 'src' (the data we've
+       * consumed so far from the user's buffer).
+       */
+
+      else if (stream->fs_flags & __FS_FLAG_LBF)
+        {
+          if (memchr(start, '\n', src - start) != NULL)
+            {
+              int bytes_buffered = lib_fflush_unlocked(stream);
+              if (bytes_buffered < 0)
+                {
+                  goto errout;
+                }
+            }
+        }
     }
 
   if (count >= CONFIG_STDIO_BUFFER_SIZE)
@@ -165,6 +183,23 @@ ssize_t lib_fwrite_unlocked(FAR const void *ptr, size_t count,
       memcpy(stream->fs_bufpos, src, count);
       stream->fs_bufpos += count;
       src += count;
+
+      /* If line-buffered, check whether data written so
+       * far contains newline. (This covers
+       * the tail-copy path.)
+       */
+
+      if (stream->fs_flags & __FS_FLAG_LBF)
+        {
+          if (memchr(start, '\n', src - start) != NULL)
+            {
+              int bytes_buffered = lib_fflush_unlocked(stream);
+              if (bytes_buffered < 0)
+                {
+                  goto errout;
+                }
+            }
+        }
     }
 
   /* Return the number of bytes written */
