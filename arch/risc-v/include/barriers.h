@@ -37,11 +37,9 @@
 
 /* UP_DMB() is used to flush local data caches (memory) */
 
-#ifdef CONFIG_SMP
-#  define UP_DMB()  __FENCE(rw, rw)
-#else
-#  define UP_DMB()  asm volatile ("" : : : "memory")
-#endif
+#define UP_DMB()  __FENCE(rw, rw)
+#define UP_RMB()  __FENCE(r, r)
+#define UP_WMB()  __FENCE(w, w)
 
 /* UP_DSB() is a full memory barrier */
 

@@ -35,8 +35,10 @@
 
 #define arm_mb()  __asm__ __volatile__ ("" : : : "memory")
 
-#define UP_DSB()  arm_mb()
-#define UP_ISB()  arm_mb()
-#define UP_DMB()  arm_mb()
+#define UP_DSB() arm_mb()
+#define UP_ISB() arm_mb()
+#define UP_DMB() arm_mb()
+#define UP_RMB() arm_mb()
+#define UP_WMB() arm_mb()
 
 #endif /* __ARCH_ARM_INCLUDE_ARM_BARRIERS_H */
