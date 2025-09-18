@@ -441,6 +441,16 @@ int inode_chstat(FAR struct inode *inode,
           return chstat_recursive(inode->u.i_link, buf, flags, ++resolve);
         }
     }
+
+  else if (INODE_IS_HARDLINK(inode))
+    {
+      /* The inode is a hard link.  The actual inode is referenced
+       * by the i_private field.
+       */
+
+      DEBUGASSERT(inode->i_private != NULL);
+      inode = inode->i_private;
+    }
 #endif
 
 #ifdef CONFIG_PSEUDOFS_ATTRIBUTES
