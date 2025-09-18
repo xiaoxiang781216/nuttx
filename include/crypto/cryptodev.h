@@ -150,6 +150,7 @@ struct cryptoini
   int cri_rnd;       /* Algorithm rounds, where relevant */
   int cri_sid;
   int cri_op;
+  int cri_flags;
   caddr_t cri_key;   /* key to use */
   union
   {
@@ -168,7 +169,15 @@ struct cryptodesc
   int crd_skip;   /* How many bytes to ignore from start */
   int crd_len;    /* How many bytes to process */
   int crd_inject; /* Where to inject results, if applicable */
-  int crd_flags;
+
+  struct cryptoini CRD_INI; /* Initialization/context data */
+  #define crd_esn CRD_INI.cri_esn
+  #define crd_iv CRD_INI.cri_iv
+  #define crd_key CRD_INI.cri_key
+  #define crd_rnd CRD_INI.cri_rnd
+  #define crd_alg CRD_INI.cri_alg
+  #define crd_klen CRD_INI.cri_klen
+  #define crd_flags CRD_INI.cri_flags
 
   #define CRD_F_ENCRYPT 0x01       /* Set when doing encryption */
   #define CRD_F_IV_PRESENT 0x02    /* When encrypting, IV is already in
@@ -179,14 +188,7 @@ struct cryptodesc
   #define CRD_F_ESN 0x20           /* Set when ESN field is provided */
   #define CRD_F_UPDATE 0x40        /* Set just update source */
   #define CRD_F_UPDATE_AAD 0x80    /* Set just update aad */
-
-  struct cryptoini CRD_INI; /* Initialization/context data */
-  #define crd_esn CRD_INI.cri_esn
-  #define crd_iv CRD_INI.cri_iv
-  #define crd_key CRD_INI.cri_key
-  #define crd_rnd CRD_INI.cri_rnd
-  #define crd_alg CRD_INI.cri_alg
-  #define crd_klen CRD_INI.cri_klen
+  #define CRD_F_KEYID 0x100        /* Use key ID instead of data */
 
   FAR struct cryptodesc *crd_next;
 };
@@ -378,6 +380,9 @@ struct session_op
   caddr_t key;
   int mackeylen;      /* mac key */
   caddr_t mackey;
+  int flags;
+
+#define SOP_F_KEYID  1
 
   uint32_t ses;       /* returns: session # */
 };

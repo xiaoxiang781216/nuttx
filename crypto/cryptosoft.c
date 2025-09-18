@@ -1484,6 +1484,12 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
   FAR struct swcr_data **swd;
   FAR const struct auth_hash *axf;
   FAR const struct enc_xform *txf;
+  FAR uint8_t *key = (FAR uint8_t *)cri->cri_key;
+  int keylen = cri->cri_klen / 8;
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+  FAR struct swkey_context_s *ctx = swkey_get_context();
+  uint8_t keybuf[128];
+#endif
   uint32_t i;
   int k;
 
@@ -1613,16 +1619,29 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
                   }
               }
 
-            if (cri->cri_klen / 8 > txf->maxkey ||
-                cri->cri_klen / 8 < txf->minkey)
+            if (cri->cri_flags & CRD_F_KEYID)
+              {
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+                keylen = swkey_read(&ctx->file, *(uint32_t *)cri->cri_key,
+                                    keybuf, sizeof(keybuf));
+                if (keylen < 0)
+                  {
+                    swcr_freesession(i);
+                    return keylen;
+                  }
+
+                key = keybuf;
+#endif
+              }
+
+            if (keylen > txf->maxkey ||
+                keylen < txf->minkey)
               {
                 swcr_freesession(i);
                 return -EINVAL;
               }
 
-            if (txf->setkey((*swd)->sw_kschedule,
-                (FAR uint8_t *)cri->cri_key,
-                cri->cri_klen / 8) < 0)
+            if (txf->setkey((*swd)->sw_kschedule, key, keylen) < 0)
               {
                 swcr_freesession(i);
                 return -EINVAL;
@@ -1663,37 +1682,50 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
                 return -ENOBUFS;
               }
 
-            if (cri->cri_klen / 8 > axf->keysize)
+            if (cri->cri_flags & CRD_F_KEYID)
+              {
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+                keylen = swkey_read(&ctx->file, *(uint32_t *)cri->cri_key,
+                                    keybuf, sizeof(keybuf));
+                if (keylen < 0)
+                  {
+                    swcr_freesession(i);
+                    return keylen;
+                  }
+
+                key = keybuf;
+#endif
+              }
+
+            if (keylen / 8 > axf->keysize)
               {
                 swcr_freesession(i);
                 return -EINVAL;
               }
 
-            for (k = 0; k < cri->cri_klen / 8; k++)
+            for (k = 0; k < keylen; k++)
               {
-                cri->cri_key[k] ^= HMAC_IPAD_VAL;
+                key[k] ^= HMAC_IPAD_VAL;
               }
 
             axf->init((*swd)->sw_ictx);
-            axf->update((*swd)->sw_ictx, (FAR uint8_t *)cri->cri_key,
-                        cri->cri_klen / 8);
+            axf->update((*swd)->sw_ictx, key, keylen);
             axf->update((*swd)->sw_ictx, hmac_ipad_buffer,
-                        axf->blocksize - (cri->cri_klen / 8));
+                        axf->blocksize - keylen);
 
-            for (k = 0; k < cri->cri_klen / 8; k++)
+            for (k = 0; k < keylen; k++)
               {
-                cri->cri_key[k] ^= (HMAC_IPAD_VAL ^ HMAC_OPAD_VAL);
+                key[k] ^= (HMAC_IPAD_VAL ^ HMAC_OPAD_VAL);
               }
 
             axf->init((*swd)->sw_octx);
-            axf->update((*swd)->sw_octx, (FAR uint8_t *)cri->cri_key,
-                        cri->cri_klen / 8);
+            axf->update((*swd)->sw_octx, key, keylen);
             axf->update((*swd)->sw_octx, hmac_opad_buffer,
-                        axf->blocksize - (cri->cri_klen / 8));
+                        axf->blocksize - keylen);
 
-            for (k = 0; k < cri->cri_klen / 8; k++)
+            for (k = 0; k < keylen; k++)
               {
-                cri->cri_key[k] ^= HMAC_OPAD_VAL;
+                key[k] ^= HMAC_OPAD_VAL;
               }
 
             (*swd)->sw_axf = axf;
@@ -1789,9 +1821,23 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
                 return -ENOBUFS;
               }
 
+            if (cri->cri_flags & CRD_F_KEYID)
+              {
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+                keylen = swkey_read(&ctx->file, *(uint32_t *)cri->cri_key,
+                                    keybuf, sizeof(keybuf));
+                if (keylen < 0)
+                  {
+                    swcr_freesession(i);
+                    return keylen;
+                  }
+
+                key = keybuf;
+#endif
+              }
+
             axf->init((*swd)->sw_ictx);
-            axf->setkey((*swd)->sw_ictx, (FAR uint8_t *)cri->cri_key,
-                        cri->cri_klen / 8);
+            axf->setkey((*swd)->sw_ictx, key, keylen);
             bcopy((*swd)->sw_ictx, &(*swd)->sw_ctx, axf->ctxsize);
             (*swd)->sw_axf = axf;
             break;

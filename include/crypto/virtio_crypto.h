@@ -52,6 +52,8 @@
 #define VIRTIO_CRYPTO_CHACHAPOLY_TAG_LEN  16
 #define VIRTIO_CRYPTO_NOUNCE_LEN          4
 
+#define VIRTIO_CRYPTO_KEYID               0x01
+
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/

@@ -264,6 +264,10 @@ rpmsg_crypto_fill_session_request(FAR struct cryptoini *cri,
   /* Pad ctrl header for creating a new session */
 
   ctrl->header.algo = algo;
+  if (cri->cri_flags & CRD_F_KEYID)
+    {
+      ctrl->header.flag |= VIRTIO_CRYPTO_KEYID;
+    }
 
   switch (service)
     {

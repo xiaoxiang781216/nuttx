@@ -179,6 +179,10 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
       crie.cri_alg = txform;
       crie.cri_klen = keylen * 8;
       crie.cri_key = msg->buf;
+      if (msg->ctrl.header.flag & VIRTIO_CRYPTO_KEYID)
+        {
+          crie.cri_flags |= CRD_F_KEYID;
+        }
 
       if (thash)
         {
@@ -192,6 +196,10 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
       cria.cri_sid = -1;
       cria.cri_klen = keylen * 8;
       cria.cri_key = msg->buf;
+      if (msg->ctrl.header.flag & VIRTIO_CRYPTO_KEYID)
+        {
+          cria.cri_flags |= CRD_F_KEYID;
+        }
     }
 
   msg->header.result = crypto_newsession(&rcsdata->tid, txform ?
