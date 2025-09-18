@@ -454,6 +454,11 @@ config ARM64_ICACHE_DISABLE
 	bool "Disable ICACHE at __start"
 	default n
 
+config ARM64_BACKGROUND_REGION
+	bool "Enable Background region"
+	default n
+	depends on ARCH_HAVE_MPU
+
 config ARM64_VA_BITS
 	int "Virtual address space size"
 	default 48

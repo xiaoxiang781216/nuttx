@@ -248,7 +248,9 @@ void arm64_mpu_enable(void)
 #ifndef CONFIG_ARM64_DCACHE_DISABLE
           | SCTLR_C_BIT
 #endif
+#ifdef CONFIG_ARM64_BACKGROUND_REGION
           | SCTLR_BR_BIT             /* Background region enable */
+#endif
          );
   write_sysreg(val, sctlr_el1);
   UP_MB();
