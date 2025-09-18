@@ -160,6 +160,7 @@ int timer_create(clockid_t clockid, FAR struct sigevent *evp,
 {
   FAR struct posix_timer_s *ret = NULL;
   FAR struct tcb_s *tcb = this_task();
+  FAR struct task_group_s *group = tcb->group;
 
   /* Sanity checks. */
 
@@ -174,9 +175,14 @@ int timer_create(clockid_t clockid, FAR struct sigevent *evp,
     {
       /* Allocate a timer instance to contain the watchdog */
 
-      ret = timer_allocate();
-      if (!ret)
+      if (atomic_fetch_add(&group->itimer_count, 1) >= TIMER_MAX)
         {
+          atomic_fetch_sub(&group->itimer_count, 1);
+          set_errno(EAGAIN);
+        }
+      else if (!(ret = timer_allocate()))
+        {
+          atomic_fetch_sub(&group->itimer_count, 1);
           set_errno(EAGAIN);
         }
       else

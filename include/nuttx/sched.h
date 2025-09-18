@@ -622,6 +622,7 @@ struct task_group_s
   /* Interval timer *********************************************************/
 
   timer_t itimer;
+  atomic_t itimer_count;
 #endif
 
   /* PIC data space and address environments ********************************/

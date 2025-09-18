@@ -113,6 +113,7 @@ static inline void timer_free(struct posix_timer_s *timer, bool delay)
 
 int timer_release(FAR struct posix_timer_s *timer, bool delay)
 {
+  FAR struct task_group_s *group = this_task()->group;
   int ret = OK;
 
   /* Some sanity checks */
@@ -145,6 +146,8 @@ int timer_release(FAR struct posix_timer_s *timer, bool delay)
 
       timer_free(timer, delay);
     }
+
+  atomic_fetch_sub(&group->itimer_count, 1);
 
   return ret;
 }

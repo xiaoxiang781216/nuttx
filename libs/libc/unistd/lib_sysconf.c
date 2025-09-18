@@ -277,9 +277,6 @@ long sysconf(int name)
       case _SC_AIO_PRIO_DELTA_MAX:
         return AIO_PRIO_DELTA_MAX;
 
-      case _SC_DELAYTIMER_MAX:
-        return DELAYTIMER_MAX;
-
       case _SC_MQ_OPEN_MAX:
         return MQ_OPEN_MAX;
 
@@ -288,9 +285,6 @@ long sysconf(int name)
 
       case _SC_SEM_NSEMS_MAX:
         return SEM_NSEMS_MAX;
-
-      case _SC_TIMER_MAX:
-        return TIMER_MAX;
 
       case _SC_FSYNC:
         return _POSIX_FSYNC;
@@ -315,6 +309,12 @@ long sysconf(int name)
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
       case _SC_TIMERS:
         return _POSIX_TIMERS;
+
+      case _SC_DELAYTIMER_MAX:
+        return DELAYTIMER_MAX;
+
+      case _SC_TIMER_MAX:
+        return TIMER_MAX;
 #endif
       default:
 #if 0 /* Assume valid but not implemented for the time being */

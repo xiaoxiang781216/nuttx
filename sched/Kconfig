@@ -284,6 +284,15 @@ config START_DAY
 	default 1
 	range 1 31
 
+config POSIX_TIMERS_MAX
+	int "Maximum number of POSIX timers"
+	default 32
+	depends on !DISABLE_POSIX_TIMERS
+	---help---
+		Specifies the per-process/task maximum number of POSIX timers that can be
+		concurrently allocated. If not explicitly configured, the system will use
+		a built-in default of 32 timers.
+
 config PREALLOC_TIMERS
 	int "Number of pre-allocated POSIX timers"
 	default 4 if DEFAULT_SMALL
