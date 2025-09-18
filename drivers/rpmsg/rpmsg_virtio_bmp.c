@@ -246,8 +246,6 @@ int rpmsg_virtio_bmp_init(FAR const char *cpuname, bool master,
       return ret;
     }
 
-  up_enable_irq(dev->irq_event);
-
   ret = rpmsg_virtio_lite_initialize(&dev->rpmsg);
   if (ret < 0)
     {
