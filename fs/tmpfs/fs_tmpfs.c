@@ -220,6 +220,42 @@ const struct mountpt_operations g_tmpfs_operations =
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: tmpfs_get_current_time
+ ****************************************************************************/
+
+static void tmpfs_get_current_time(FAR struct timespec *ts)
+{
+  clock_gettime(CLOCK_REALTIME, ts);
+}
+
+/****************************************************************************
+ * Name: tmpfs_update_atime
+ ****************************************************************************/
+
+static void tmpfs_update_atime(FAR struct tmpfs_object_s *obj)
+{
+  tmpfs_get_current_time(&obj->to_atime);
+}
+
+/****************************************************************************
+ * Name: tmpfs_update_mtime
+ ****************************************************************************/
+
+static void tmpfs_update_mtime(FAR struct tmpfs_object_s *obj)
+{
+  tmpfs_get_current_time(&obj->to_mtime);
+}
+
+/****************************************************************************
+ * Name: tmpfs_update_ctime
+ ****************************************************************************/
+
+static void tmpfs_update_ctime(FAR struct tmpfs_object_s *obj)
+{
+  tmpfs_get_current_time(&obj->to_ctime);
+}
+
+/****************************************************************************
  * Name: tmpfs_realloc_directory
  ****************************************************************************/
 
@@ -584,6 +620,10 @@ tmpfs_alloc_file(FAR struct tmpfs_directory_s *parent)
   tfo->tfo_size   = 0;
   tfo->tfo_data   = NULL;
 
+  tmpfs_update_atime((FAR struct tmpfs_object_s *)tfo);
+  tmpfs_update_mtime((FAR struct tmpfs_object_s *)tfo);
+  tmpfs_update_ctime((FAR struct tmpfs_object_s *)tfo);
+
   nxrmutex_init(&tfo->tfo_lock);
   tmpfs_lock_file(tfo);
 
@@ -732,6 +772,10 @@ tmpfs_alloc_directory(FAR struct tmpfs_directory_s *parent)
   tdo->tdo_parent   = parent;
   tdo->tdo_nentries = 0;
   tdo->tdo_entry    = NULL;
+
+  tmpfs_update_atime((FAR struct tmpfs_object_s *)tdo);
+  tmpfs_update_mtime((FAR struct tmpfs_object_s *)tdo);
+  tmpfs_update_ctime((FAR struct tmpfs_object_s *)tdo);
 
   nxrmutex_init(&tdo->tdo_lock);
 
@@ -1590,6 +1634,13 @@ static ssize_t tmpfs_read(FAR struct file *filep, FAR char *buffer,
     {
       memcpy(buffer, &tfo->tfo_data[startpos], nread);
       filep->f_pos += nread;
+
+      /* Update atime on successful read unless O_NOATIME is set */
+
+      if (!(filep->f_oflags & O_NOATIME))
+        {
+          tmpfs_update_atime((FAR struct tmpfs_object_s *)tfo);
+        }
     }
   else
     {
@@ -1772,6 +1823,46 @@ static int tmpfs_unmap(FAR struct task_group_s *group,
   return ret;
 }
 
+/****************************************************************************
+ * Name: tmpfs_msync
+ *
+ * Description:
+ *   Synchronize memory-mapped file data with the underlying file.
+ *   For tmpfs, this mainly involves updating file timestamps.
+ *
+ ****************************************************************************/
+
+static int tmpfs_msync(FAR struct mm_map_entry_s *entry, FAR void *start,
+                       size_t length, int flags)
+{
+  FAR struct tmpfs_file_s *tfo = entry->priv.p;
+  FAR struct tmpfs_object_s *to;
+  int ret;
+
+  DEBUGASSERT(tfo != NULL);
+
+  /* Lock the file */
+
+  ret = tmpfs_lock_file(tfo);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Update timestamps */
+
+  to = (FAR struct tmpfs_object_s *)tfo;
+  tmpfs_update_atime(to);
+  tmpfs_update_mtime(to);
+  tmpfs_update_ctime(to);
+
+  /* Unlock the file */
+
+  tmpfs_unlock_file(tfo);
+
+  return OK;
+}
+
 static int tmpfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 {
   FAR struct tmpfs_file_s *tfo;
@@ -1799,6 +1890,7 @@ static int tmpfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
         {
           map->priv.p = tfo;
           map->munmap = tmpfs_unmap;
+          map->msync = tmpfs_msync;
           ret = mm_map_add(mm, map);
         }
 
@@ -1806,6 +1898,15 @@ static int tmpfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
         {
           tmpfs_lock_file(tfo);
           tfo->tfo_refs++;
+          /* Mark atime for update on mmap as per POSIX requirement
+           * "The data access time field of a file mapped by a call to
+           *  mmap() shall be marked for update on the first read or write
+           *  reference to a mapped region." Since tmpfs mapping does not
+           *  trap memory accesses, update atime on successful mmap to
+           *  satisfy the requirement.
+           */
+
+          tmpfs_update_atime((FAR struct tmpfs_object_s *)tfo);
           tmpfs_unlock_file(tfo);
         }
     }
@@ -2805,6 +2906,12 @@ static void tmpfs_stat_common(FAR struct tmpfs_object_s *to,
   buf->st_blksize = CONFIG_FS_TMPFS_BLOCKSIZE;
   buf->st_blocks  = (objsize + CONFIG_FS_TMPFS_BLOCKSIZE - 1) /
                     CONFIG_FS_TMPFS_BLOCKSIZE;
+
+  /* Copy timestamps */
+
+  buf->st_atime = to->to_atime.tv_sec;
+  buf->st_mtime = to->to_mtime.tv_sec;
+  buf->st_ctime = to->to_ctime.tv_sec;
 }
 
 /****************************************************************************

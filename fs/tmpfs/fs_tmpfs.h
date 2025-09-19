@@ -82,6 +82,12 @@ struct tmpfs_object_s
   uint8_t  to_type;      /* See enum tmpfs_objtype_e */
   uint8_t  to_refs;      /* Reference count */
   FAR struct tmpfs_directory_s *to_parent;
+
+  /* Add timestamp fields */
+
+  struct timespec to_atime;  /* Time of last access */
+  struct timespec to_mtime;  /* Time of last modification */
+  struct timespec to_ctime;  /* Time of last status change */
 };
 
 /* The form of a directory memory object */
@@ -96,6 +102,10 @@ struct tmpfs_directory_s
   uint8_t  tdo_type;     /* See enum tmpfs_objtype_e */
   uint8_t  tdo_refs;     /* Reference count */
   FAR struct tmpfs_directory_s *tdo_parent;
+
+  struct timespec tdo_atime;  /* Time of last access */
+  struct timespec tdo_mtime;  /* Time of last modification */
+  struct timespec tdo_ctime;  /* Time of last status change */
 
   /* Remaining fields are unique to a directory object */
 
@@ -123,6 +133,10 @@ struct tmpfs_file_s
   uint8_t  tfo_type;     /* See enum tmpfs_objtype_e */
   uint8_t  tfo_refs;     /* Reference count */
   FAR struct tmpfs_directory_s *tfo_parent;
+
+  struct timespec tfo_atime;  /* Time of last access */
+  struct timespec tfo_mtime;  /* Time of last modification */
+  struct timespec tfo_ctime;  /* Time of last status change */
 
   /* Remaining fields are unique to a directory object */
 
