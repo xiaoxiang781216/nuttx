@@ -155,6 +155,7 @@ irqstate_t write_seqlock_irqsave(FAR seqcount_t *s)
   irqstate_t flags = spin_lock_irqsave(&s->lock);
 
   s->sequence++;
+  SMP_WMB();
   return flags;
 }
 
@@ -177,6 +178,7 @@ irqstate_t write_seqlock_irqsave(FAR seqcount_t *s)
 static inline_function
 void write_sequnlock_irqrestore(seqcount_t *s, irqstate_t flags)
 {
+  SMP_WMB();
   s->sequence++;
   spin_unlock_irqrestore(&s->lock, flags);
 }
