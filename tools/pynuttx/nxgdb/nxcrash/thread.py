@@ -59,7 +59,7 @@ class CrashThread(gdb.Command):
             return ThreadInfo(
                 pid=pid,
                 name=utils.get_task_name(tcb),
-                backtrace=utils.Backtrace(utils.get_backtrace(pid)),
+                backtrace=utils.Backtrace(utils.get_backtrace(pid), break_null=False),
                 crashed=True,
             )
 

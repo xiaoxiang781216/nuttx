@@ -80,7 +80,9 @@ class CrashStackOverflow(gdb.Command):
                     "name": utils.get_task_name(tcb),
                     "stacksize": tcb.adj_stack_size,
                     "filled": filled,
-                    "backtrace": utils.Backtrace(utils.get_backtrace(int(tcb["pid"]))),
+                    "backtrace": utils.Backtrace(
+                        utils.get_backtrace(int(tcb["pid"])), break_null=False
+                    ),
                 }
                 for tcb, filled in collected
             ],
