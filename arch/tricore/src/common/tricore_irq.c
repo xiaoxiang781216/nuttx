@@ -41,12 +41,38 @@
  * Private Data
  ****************************************************************************/
 
+const IfxSrc_Tos tricore_tos[] =
+{
+  IfxSrc_Tos_cpu0,
+  IfxSrc_Tos_cpu1,
+  IfxSrc_Tos_cpu2,
+  IfxSrc_Tos_cpu3,
+  IfxSrc_Tos_cpu4,
+  IfxSrc_Tos_cpu5,
+#ifdef CONFIG_ARCH_CHIP_AURIX_TC4XX
+  IfxSrc_Tos_csrm,
+#endif
+};
+
 static spinlock_t g_irqlock = SP_UNLOCKED;
 static int g_irqmap_count = 1;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: tricore_gettos
+ *
+ * Description:
+ *   Get current cpu tos
+ *
+ ****************************************************************************/
+
+static inline_function IfxSrc_Tos tricore_gettos(int cpu_idx)
+{
+  return tricore_tos[cpu_idx];
+}
 
 #ifdef CONFIG_ARCH_HAVE_IRQTRIGGER
 /****************************************************************************
@@ -71,10 +97,10 @@ static void tricore_gpsrinitialize(void)
   for (i = 0; i < CONFIG_NCPUS; i++)
     {
 #ifdef CONFIG_ARCH_CHIP_AURIX_TC3XX
-      IfxSrc_init(src, (cpu_idx == 0 ? IfxSrc_Tos_cpu0 : cpu_idx + 1),
+      IfxSrc_init(src, tricore_gettos(cpu_idx),
                   IRQ_TO_NDX(TRICORE_SRC2IRQ(src)));
 #else
-      IfxSrc_init(src, IfxSrc_Tos_cpu0 + cpu_idx,
+      IfxSrc_init(src, tricore_gettos(cpu_idx),
                   IRQ_TO_NDX(TRICORE_SRC2IRQ(src)),
                   IfxSrc_VmId_none);
 #endif
@@ -86,7 +112,7 @@ static void tricore_gpsrinitialize(void)
 
 #ifndef CONFIG_ARCH_CHIP_AURIX_TC3XX
   src = &SRC_GPSR6_SR0 + cpu_idx;
-  IfxSrc_init(src, IfxSrc_Tos_cpu0 + cpu_idx,
+  IfxSrc_init(src, tricore_gettos(cpu_idx),
               IRQ_TO_NDX(TRICORE_SRC2IRQ(src)),
               IfxSrc_VmId_none);
 #endif
@@ -161,9 +187,9 @@ void up_enable_irq(int irq)
   volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
 
 #ifdef CONFIG_ARCH_CHIP_AURIX_TC3XX
-  IfxSrc_init(src, IfxSrc_Tos_cpu0 + up_cpu_index(), IRQ_TO_NDX(irq));
+  IfxSrc_init(src, tricore_gettos(up_cpu_index()), IRQ_TO_NDX(irq));
 #else
-  IfxSrc_init(src, IfxSrc_Tos_cpu0 + up_cpu_index(), IRQ_TO_NDX(irq),
+  IfxSrc_init(src, tricore_gettos(up_cpu_index()), IRQ_TO_NDX(irq),
               IfxSrc_VmId_none);
 #endif
   IfxSrc_enable(src);
