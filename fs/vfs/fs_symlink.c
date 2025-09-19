@@ -84,9 +84,15 @@ int symlink(FAR const char *path1, FAR const char *path2)
   int errcode;
   int ret;
 
-  if (path1 == NULL)
+  if (path1 == NULL || path2 == NULL)
     {
       errcode = EINVAL;
+      goto errout;
+    }
+
+  if (*path1 == '\0' || *path2 == '\0')
+    {
+      errcode = ENOENT;
       goto errout;
     }
 
@@ -122,6 +128,13 @@ int symlink(FAR const char *path1, FAR const char *path2)
         }
 
       goto errout_with_inode;
+    }
+  else if (ret != -ENOENT)
+    {
+      /* There was an unexpected error during the search */
+
+      errcode = -ret;
+      goto errout_with_search;
     }
 
   /* No inode exists that contains this path.  Create a new inode in the
