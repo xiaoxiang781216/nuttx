@@ -353,7 +353,7 @@ int work_usrstart(void);
 FAR struct kwork_wqueue_s *work_queue_create(FAR const char *name,
                                              int priority,
                                              FAR void *stack_addr,
-                                             size_t stack_size,
+                                             int stack_size,
                                              uint8_t nthreads);
 
 /****************************************************************************
