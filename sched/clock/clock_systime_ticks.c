@@ -95,7 +95,7 @@ clock_t clock_systime_ticks(void)
   return ticks;
 #else
   clock_t ret;
-  unsigned int seq;
+  uint32_t seq;
 
   do
     {

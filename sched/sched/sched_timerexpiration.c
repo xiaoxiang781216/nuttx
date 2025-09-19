@@ -111,7 +111,7 @@ static atomic_t g_timer_interval;
 static inline_function clock_t get_time_tick(void)
 {
   clock_t ret;
-  unsigned int seq;
+  uint32_t seq;
 
   do
     {
