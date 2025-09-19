@@ -41,7 +41,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define ATOMIC_NOTIFIER_INIT(name) {NULL, SP_UNLOCKED}
+#define ATOMIC_NOTIFIER_INITVALUE {NULL, SP_UNLOCKED}
+#define ATOMIC_NOTIFIER_INIT(name) ATOMIC_NOTIFIER_INITVALUE
 
 #define ATOMIC_NOTIFIER_HEAD(name) \
   struct atomic_notifier_head name = ATOMIC_NOTIFIER_INIT(name)
@@ -53,10 +54,11 @@
     } \
   while (0)
 
-#define BLOCKING_NOTIFIER_INIT(name) { \
+#define BLOCKING_NOTIFIER_INITVALUE { \
     NXMUTEX_INITIALIZER, \
     NULL \
   }
+#define BLOCKING_NOTIFIER_INIT(name) BLOCKING_NOTIFIER_INITVALUE
 
 #define BLOCKING_NOTIFIER_HEAD(name) \
   struct blocking_notifier_head name = BLOCKING_NOTIFIER_INIT(name)

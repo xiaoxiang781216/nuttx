@@ -30,7 +30,8 @@
  * Private Data
  ****************************************************************************/
 
-static ATOMIC_NOTIFIER_HEAD(g_clock_notifier_list);
+static struct atomic_notifier_head g_clock_notifier_list =
+                                     ATOMIC_NOTIFIER_INITVALUE;
 
 /****************************************************************************
  * Public Functions

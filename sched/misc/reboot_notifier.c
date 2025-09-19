@@ -35,7 +35,8 @@
  * Private Data
  ****************************************************************************/
 
-static BLOCKING_NOTIFIER_HEAD(g_reboot_notifier_list);
+static struct blocking_notifier_head g_reboot_notifier_list =
+                                       BLOCKING_NOTIFIER_INITVALUE;
 
 /****************************************************************************
  * Public Functions
