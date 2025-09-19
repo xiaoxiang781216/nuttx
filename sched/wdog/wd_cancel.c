@@ -68,11 +68,7 @@ int wd_cancel(FAR struct wdog_s *wdog)
 
   /* Make sure that the watchdog is valid and still active. */
 
-  if (wdog == NULL || !WDOG_ISACTIVE(wdog))
-    {
-      leave_critical_section(flags);
-    }
-  else
+  if (wdog != NULL && WDOG_ISACTIVE(wdog))
     {
       sched_note_wdog(NOTE_WDOG_CANCEL, (FAR void *)wdog->func,
                       (FAR void *)(uintptr_t)wdog->expired);
@@ -90,7 +86,6 @@ int wd_cancel(FAR struct wdog_s *wdog)
       /* Mark the watchdog inactive */
 
       wdog->func = NULL;
-      leave_critical_section(flags);
 
       ret = OK;
 
@@ -105,5 +100,6 @@ int wd_cancel(FAR struct wdog_s *wdog)
         }
     }
 
+  leave_critical_section(flags);
   return ret;
 }
