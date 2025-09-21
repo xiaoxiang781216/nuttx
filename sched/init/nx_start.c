@@ -87,153 +87,7 @@
  * bringing up the rest of the system.
  */
 
-struct tcb_s g_idletcb[CONFIG_SMP_NCPUS] =
-{
-  {
-    .pid        = 0,
-    .task_state = TSTATE_TASK_RUNNING,
-    .lockcount  = 1,
-    .start      = NULL,
-    .entry.main = NULL,
-#if defined(CONFIG_SMP)
-    .flags      = (TCB_FLAG_TTYPE_KERNEL | TCB_FLAG_CPU_LOCKED),
-    .affinity   = (CONFIG_SMP_DEFAULT_CPUSET & SCHED_ALL_CPUS),
-#else
-    .flags      = TCB_FLAG_TTYPE_KERNEL,
-#endif
-#if CONFIG_TASK_NAME_SIZE > 0
-  #if !defined(CONFIG_SMP)
-      .name     = "Idle_Task",
-  #else
-      .name     = "CPU0 IDLE",
-  #endif
-#endif
-      .refs     = 1,
-      .exit_sem = SEM_INITIALIZER(0),
-  },
-#if CONFIG_SMP_NCPUS > 1
-  {
-    .pid        = 1,
-    .task_state = TSTATE_TASK_RUNNING,
-    .lockcount  = 1,
-    .start      = nx_idle_trampoline,
-    .entry.main = (main_t)nx_idle_trampoline,
-    .flags      = (TCB_FLAG_TTYPE_KERNEL | TCB_FLAG_CPU_LOCKED),
-    .cpu        = 1,
-    .affinity   = (CONFIG_SMP_DEFAULT_CPUSET & SCHED_ALL_CPUS),
-#if CONFIG_TASK_NAME_SIZE > 0
-    .name       = "CPU1 IDLE",
-#endif
-    .refs     = 1,
-    .exit_sem = SEM_INITIALIZER(0),
-  },
-#endif
-#if CONFIG_SMP_NCPUS > 2
-  {
-    .pid        = 2,
-    .task_state = TSTATE_TASK_RUNNING,
-    .lockcount  = 1,
-    .start      = nx_idle_trampoline,
-    .entry.main = (main_t)nx_idle_trampoline,
-    .flags      = (TCB_FLAG_TTYPE_KERNEL | TCB_FLAG_CPU_LOCKED),
-    .cpu        = 2,
-    .affinity   = (CONFIG_SMP_DEFAULT_CPUSET & SCHED_ALL_CPUS),
-#if CONFIG_TASK_NAME_SIZE > 0
-    .name       = "CPU2 IDLE",
-#endif
-    .refs       = 1,
-    .exit_sem = SEM_INITIALIZER(0),
-  },
-#endif
-#if CONFIG_SMP_NCPUS > 3
-  {
-    .pid        = 3,
-    .task_state = TSTATE_TASK_RUNNING,
-    .lockcount  = 1,
-    .start      = nx_idle_trampoline,
-    .entry.main = (main_t)nx_idle_trampoline,
-    .flags      = (TCB_FLAG_TTYPE_KERNEL | TCB_FLAG_CPU_LOCKED),
-    .cpu        = 3,
-    .affinity   = (CONFIG_SMP_DEFAULT_CPUSET & SCHED_ALL_CPUS),
-#if CONFIG_TASK_NAME_SIZE > 0
-    .name       = "CPU3 IDLE",
-#endif
-    .refs       = 1,
-    .exit_sem = SEM_INITIALIZER(0),
-  },
-#endif
-#if CONFIG_SMP_NCPUS > 4
-  {
-    .pid        = 4,
-    .task_state = TSTATE_TASK_RUNNING,
-    .lockcount  = 1,
-    .start      = nx_idle_trampoline,
-    .entry.main = (main_t)nx_idle_trampoline,
-    .flags      = (TCB_FLAG_TTYPE_KERNEL | TCB_FLAG_CPU_LOCKED),
-    .cpu        = 4,
-    .affinity   = (CONFIG_SMP_DEFAULT_CPUSET & SCHED_ALL_CPUS),
-#if CONFIG_TASK_NAME_SIZE > 0
-    .name       = "CPU4 IDLE",
-#endif
-    .refs       = 1,
-    .exit_sem = SEM_INITIALIZER(0),
-  },
-#endif
-#if CONFIG_SMP_NCPUS > 5
-  {
-    .pid        = 5,
-    .task_state = TSTATE_TASK_RUNNING,
-    .lockcount  = 1,
-    .start      = nx_idle_trampoline,
-    .entry.main = (main_t)nx_idle_trampoline,
-    .flags      = (TCB_FLAG_TTYPE_KERNEL | TCB_FLAG_CPU_LOCKED),
-    .cpu        = 5,
-    .affinity   = (CONFIG_SMP_DEFAULT_CPUSET & SCHED_ALL_CPUS),
-#if CONFIG_TASK_NAME_SIZE > 0
-    .name       = "CPU5 IDLE",
-#endif
-    .refs       = 1,
-    .exit_sem = SEM_INITIALIZER(0),
-  },
-#endif
-#if CONFIG_SMP_NCPUS > 6
-  {
-    .pid        = 6,
-    .task_state = TSTATE_TASK_RUNNING,
-    .lockcount  = 1,
-    .start      = nx_idle_trampoline,
-    .entry.main = (main_t)nx_idle_trampoline,
-    .flags      = (TCB_FLAG_TTYPE_KERNEL | TCB_FLAG_CPU_LOCKED),
-    .cpu        = 6,
-    .affinity   = (CONFIG_SMP_DEFAULT_CPUSET & SCHED_ALL_CPUS),
-#if CONFIG_TASK_NAME_SIZE > 0
-    .name       = "CPU6 IDLE",
-#endif
-    .refs       = 1,
-    .exit_sem = SEM_INITIALIZER(0),
-  },
-#endif
-#if CONFIG_SMP_NCPUS > 7
-  {
-    .pid        = 7,
-    .task_state = TSTATE_TASK_RUNNING,
-    .lockcount  = 1,
-    .start      = nx_idle_trampoline,
-    .entry.main = (main_t)nx_idle_trampoline,
-    .flags      = (TCB_FLAG_TTYPE_KERNEL | TCB_FLAG_CPU_LOCKED),
-    .cpu        = 7,
-    .affinity   = (CONFIG_SMP_DEFAULT_CPUSET & SCHED_ALL_CPUS),
-#if CONFIG_TASK_NAME_SIZE > 0
-    .name       = "CPU7 IDLE",
-#endif
-    .refs       = 1,
-    .exit_sem = SEM_INITIALIZER(0),
-  },
-#endif
-#if CONFIG_SMP_NCPUS > 8
-#  error This logic needs to extended for CONFIG_SMP_NCPUS > 8,
-#endif
-};
+DEFINE_PER_CPU_BSS(struct tcb_s, g_idletcb);
 
 /* Task Lists ***************************************************************/
 
@@ -255,7 +109,8 @@ struct tcb_s g_idletcb[CONFIG_SMP_NCPUS] =
 dq_queue_t g_readytorun =
 {
 #if !defined(CONFIG_SMP)
-  (FAR dq_entry_t *)&g_idletcb[0], (FAR dq_entry_t *)&g_idletcb[0],
+  (FAR dq_entry_t *)&per_cpu_var(g_idletcb, 0),
+  (FAR dq_entry_t *)&per_cpu_var(g_idletcb, 0),
 #endif
 };
 
@@ -278,70 +133,43 @@ dq_queue_t g_readytorun =
  */
 
 #ifdef CONFIG_SMP
-FAR struct tcb_s *g_assignedtasks[CONFIG_SMP_NCPUS] =
+DEFINE_PER_CPU_SMP(struct tcb_s *, g_assignedtasks) =
 {
-    &g_idletcb[0],
+  &per_cpu_var(g_idletcb, 0),
 #if CONFIG_SMP_NCPUS > 1
-    &g_idletcb[1],
+  &per_cpu_var(g_idletcb, 1),
 #endif
 #if CONFIG_SMP_NCPUS > 2
-    &g_idletcb[2],
+  &per_cpu_var(g_idletcb, 2),
 #endif
 #if CONFIG_SMP_NCPUS > 3
-    &g_idletcb[3],
+  &per_cpu_var(g_idletcb, 3),
 #endif
 #if CONFIG_SMP_NCPUS > 4
-    &g_idletcb[4],
+  &per_cpu_var(g_idletcb, 4),
 #endif
 #if CONFIG_SMP_NCPUS > 5
-    &g_idletcb[5],
+  &per_cpu_var(g_idletcb, 5),
 #endif
 #if CONFIG_SMP_NCPUS > 6
-    &g_idletcb[6],
+  &per_cpu_var(g_idletcb, 6),
 #endif
 #if CONFIG_SMP_NCPUS > 7
-    &g_idletcb[7],
+  &per_cpu_var(g_idletcb, 7),
 #endif
 #if CONFIG_SMP_NCPUS > 8
 #  error This logic needs to extended for CONFIG_SMP_NCPUS > 8,
 #endif
 };
 
-enum task_deliver_e g_delivertasks[CONFIG_SMP_NCPUS];
+DEFINE_PER_CPU_BSS_SMP(enum task_deliver_e, g_delivertasks);
 #endif
 
 /* g_running_tasks[] holds a references to the running task for each CPU.
  * It is valid only when up_interrupt_context() returns true.
  */
 
-DEFINE_PER_CPU(FAR struct tcb_s *, g_running_tasks) =
-{
-  &g_idletcb[0],
-#if CONFIG_SMP_NCPUS > 1
-  &g_idletcb[1],
-#endif
-#if CONFIG_SMP_NCPUS > 2
-  &g_idletcb[2],
-#endif
-#if CONFIG_SMP_NCPUS > 3
-  &g_idletcb[3],
-#endif
-#if CONFIG_SMP_NCPUS > 4
-  &g_idletcb[4],
-#endif
-#if CONFIG_SMP_NCPUS > 5
-  &g_idletcb[5],
-#endif
-#if CONFIG_SMP_NCPUS > 6
-  &g_idletcb[6],
-#endif
-#if CONFIG_SMP_NCPUS > 7
-  &g_idletcb[7],
-#endif
-#if CONFIG_SMP_NCPUS > 8
-#  error This logic needs to extended for CONFIG_SMP_NCPUS > 8,
-#endif
-};
+DEFINE_PER_CPU_BSS(FAR struct tcb_s *, g_running_tasks);
 
 /* This is the list of all tasks that are ready-to-run, but cannot be placed
  * in the g_readytorun list because:  (1) They are higher priority than the
@@ -379,7 +207,7 @@ dq_queue_t g_inactivetasks;
 
 /* This is the value of the last process ID assigned to a task */
 
-volatile pid_t g_lastpid;
+volatile pid_t g_lastpid = CONFIG_SMP_NCPUS - 1;
 
 /* The following hash table is used for two things:
  *
@@ -516,6 +344,84 @@ static void tasklist_initialize(void)
 }
 
 /****************************************************************************
+ * Name: idle_task_initialize
+ *
+ * Description:
+ *   IDLE Task Initialization
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+static void idle_task_initialize(void)
+{
+  FAR struct tcb_s *tcb;
+  int i;
+
+  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+    {
+      tcb             = &per_cpu_var(g_idletcb, i);
+      tcb->pid        = i;
+      tcb->cpu        = i;
+      tcb->flags      = TCB_FLAG_TTYPE_KERNEL | TCB_FLAG_CPU_LOCKED;
+      tcb->affinity   = CONFIG_SMP_DEFAULT_CPUSET & SCHED_ALL_CPUS;
+      if (i != 0)
+        {
+          tcb->start      = nx_idle_trampoline;
+          tcb->entry.main = (main_t)nx_idle_trampoline;
+        }
+      else
+        {
+          tcb->start      = nx_start;
+          tcb->entry.main = (main_t)nx_start;
+        }
+
+      tcb->task_state = TSTATE_TASK_RUNNING;
+      tcb->lockcount  = 1;
+      tcb->refs       = 1;
+
+#if CONFIG_TASK_NAME_SIZE > 0
+      snprintf(tcb->name, CONFIG_TASK_NAME_SIZE, "CPU%d IDLE", i);
+#endif
+      sem_init(&tcb->exit_sem, 0, 0);
+
+      /* Then add the idle task's TCB to the head of the current ready to
+       * run list.
+       */
+
+      per_cpu_var(g_running_tasks, i) = tcb;
+    }
+
+  up_update_task(&this_cpu_var(g_idletcb));
+}
+#else
+static void idle_task_initialize(void)
+{
+  FAR struct tcb_s *tcb = &this_cpu_var(g_idletcb);
+  tcb->pid              = 0;
+  tcb->flags            = TCB_FLAG_TTYPE_KERNEL;
+  tcb->start            = nx_start;
+  tcb->entry.main       = (main_t)nx_start;
+
+  tcb->task_state       = TSTATE_TASK_RUNNING;
+  tcb->lockcount        = 1;
+  tcb->refs             = 1;
+
+#if CONFIG_TASK_NAME_SIZE > 0
+  strlcpy(tcb->name, "Idle_Task", CONFIG_TASK_NAME_SIZE);
+#endif
+  sem_init(&tcb->exit_sem, 0, 0);
+
+  /* Then add the idle task's TCB to the head of the current ready to
+   * run list.
+   */
+
+  g_running_task        = tcb;
+
+  up_update_task(tcb);
+}
+#endif
+
+/****************************************************************************
  * Name: idle_group_initialize
  *
  * Description:
@@ -523,6 +429,7 @@ static void tasklist_initialize(void)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_SMP
 static void idle_group_initialize(void)
 {
   FAR struct tcb_s *tcb;
@@ -533,21 +440,19 @@ static void idle_group_initialize(void)
 
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
-      tcb = &g_idletcb[i];
+      tcb = &per_cpu_var(g_idletcb, i);
 
       hashndx = PIDHASH(i);
       g_pidhash[hashndx] = tcb;
 
       /* Allocate the IDLE group */
 
-      DEBUGVERIFY(
-        group_initialize(tcb, tcb->flags, 0));
+      DEBUGVERIFY(group_initialize(tcb, tcb->flags, 0));
 
       /* Initialize the task join */
 
       nxtask_joininit(tcb);
 
-#ifdef CONFIG_SMP
       /* Create a stack for all CPU IDLE threads (except CPU0 which already
        * has a stack).
        */
@@ -556,7 +461,6 @@ static void idle_group_initialize(void)
         {
           DEBUGVERIFY(up_cpu_idlestack(i, tcb, CONFIG_IDLETHREAD_STACKSIZE));
         }
-#endif
 
       /* Initialize the processor-specific portion of the TCB */
 
@@ -575,6 +479,38 @@ static void idle_group_initialize(void)
                  GROUP_FLAG_NOCLDWAIT | GROUP_FLAG_PRIVILEGED);
     }
 }
+#else
+static void idle_group_initialize(void)
+{
+  FAR struct tcb_s *tcb = &this_cpu_var(g_idletcb);
+
+  g_pidhash[0] = tcb;
+
+  /* Allocate the IDLE group */
+
+  DEBUGVERIFY(group_initialize(tcb, tcb->flags, 0));
+
+  /* Initialize the task join */
+
+  nxtask_joininit(tcb);
+
+  /* Initialize the processor-specific portion of the TCB */
+
+  up_initial_state(tcb);
+
+  /* Initialize the thread local storage */
+
+  tls_init_info(tcb);
+
+  /* Complete initialization of the IDLE group.  Suppress retention
+   * of child status in the IDLE group.
+   */
+
+  group_postinitialize(tcb);
+  atomic_set(&tcb->group->tg_flags,
+              GROUP_FLAG_NOCLDWAIT | GROUP_FLAG_PRIVILEGED);
+}
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -603,19 +539,12 @@ void nx_start(void)
   /* Boot up is complete */
 
   g_nx_initstate = OSINIT_BOOT;
+
+  /* Initialize the IDLE task TCB *******************************************/
+
+  idle_task_initialize();
+
   sched_trace_mark("BOOT");
-
-  /* Init idle task to percpu reg */
-
-  /* Break the relation chain nxstart->g_idletcb->nx_start, make linker not
-   * able to remove both nx_start and g_idletcb when nx_start is called.
-   * For example bootloader case.
-   */
-
-  g_idletcb[0].start      = nx_start;
-  g_idletcb[0].entry.main = (main_t)nx_start;
-
-  up_update_task(&g_idletcb[0]);
 
   sinfo("Entry\n");
 
@@ -723,8 +652,6 @@ void nx_start(void)
 
   idle_group_initialize();
 
-  g_lastpid = CONFIG_SMP_NCPUS - 1;
-
   /* The memory manager is available */
 
   g_nx_initstate = OSINIT_MEMORY;
@@ -810,30 +737,26 @@ void nx_start(void)
 
   /* Announce that the CPU0 IDLE task has started */
 
-  sched_note_start(&g_idletcb[0]);
+  sched_note_start(&this_cpu_var(g_idletcb));
 
   /* Initialize stdio for the IDLE task of each CPU */
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
-    {
-      if (i > 0)
-        {
-          /* Clone stdout, stderr, stdin from the CPU0 IDLE task. */
+  /* Create stdout, stderr, stdin on the CPU0 IDLE task.  These
+   * will be inherited by all of the threads created by the CPU0
+   * IDLE task.
+   */
 
-          DEBUGVERIFY(group_setuptaskfiles(&g_idletcb[i], NULL, true));
-        }
-      else
-        {
-          /* Create stdout, stderr, stdin on the CPU0 IDLE task.  These
-           * will be inherited by all of the threads created by the CPU0
-           * IDLE task.
-           */
-
-          DEBUGVERIFY(group_setupidlefiles());
-        }
-    }
+  DEBUGVERIFY(group_setupidlefiles());
 
 #ifdef CONFIG_SMP
+  for (i = 1; i < CONFIG_SMP_NCPUS; i++)
+    {
+      /* Clone stdout, stderr, stdin from the CPU0 IDLE task. */
+
+      DEBUGVERIFY(group_setuptaskfiles(&per_cpu_var(g_idletcb, i),
+                                        NULL, true));
+    }
+
   /* Start all CPUs *********************************************************/
 
   /* A few basic sanity checks */

@@ -102,7 +102,7 @@ static int perf_swevent_match(FAR struct perf_event_s *event);
  * Private Data
  ****************************************************************************/
 
-static struct perf_event_context_s g_perf_cpu_ctx[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(struct perf_event_context_s, g_perf_cpu_ctx);
 static struct list_node g_perf_pmus = LIST_INITIAL_VALUE(g_perf_pmus);
 static mutex_t g_perf_pmus_lock = NXMUTEX_INITIALIZER;
 volatile static uint64_t g_perf_eventid;
@@ -146,7 +146,7 @@ static struct pmu_s g_perf_cpu_clock =
 
 /* swevent */
 
-static struct swevent_manger_s g_swevent[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(struct swevent_manger_s, g_swevent);
 static struct pmu_ops_s g_perf_swevent_ops =
 {
   .event_init  = perf_swevent_init,
@@ -562,7 +562,7 @@ perf_get_context(FAR struct perf_event_s *event,
 
   if (tcb == NULL)
     {
-      ctx = &g_perf_cpu_ctx[event->cpu];
+      ctx = &per_cpu_var_smp(g_perf_cpu_ctx, event->cpu);
       return ctx;
     }
 
@@ -2517,9 +2517,9 @@ static int perf_swevent_add(FAR struct perf_event_s *event,
 {
   irqstate_t irq_flags;
 
-  irq_flags = spin_lock_irqsave(&g_swevent[this_cpu()].lock);
-  list_add_tail(&g_swevent[this_cpu()].list_swevent, &event->sw_list);
-  spin_unlock_irqrestore(&g_swevent[this_cpu()].lock, irq_flags);
+  irq_flags = spin_lock_irqsave(&this_cpu_var_smp(g_swevent).lock);
+  list_add_tail(&this_cpu_var_smp(g_swevent).list_swevent, &event->sw_list);
+  spin_unlock_irqrestore(&this_cpu_var_smp(g_swevent).lock, irq_flags);
 
   return 0;
 }
@@ -2527,10 +2527,11 @@ static int perf_swevent_add(FAR struct perf_event_s *event,
 static void perf_swevent_del(FAR struct perf_event_s *event,
                              int flags)
 {
-  irqstate_t irq_flags = spin_lock_irqsave(&g_swevent[this_cpu()].lock);
+  irqstate_t irq_flags;
 
+  irq_flags = spin_lock_irqsave(&this_cpu_var_smp(g_swevent).lock);
   list_delete(&event->sw_list);
-  spin_unlock_irqrestore(&g_swevent[this_cpu()].lock, irq_flags);
+  spin_unlock_irqrestore(&this_cpu_var_smp(g_swevent).lock, irq_flags);
 }
 
 static int perf_swevent_start(FAR struct perf_event_s *event,
@@ -2579,9 +2580,9 @@ void perf_swevent(uint32_t event_id, uintptr_t ip)
 
   perf_sample_data_init(&data, 0);
 
-  flags = spin_lock_irqsave(&g_swevent[this_cpu()].lock);
+  flags = spin_lock_irqsave(&this_cpu_var_smp(g_swevent).lock);
 
-  list_for_every_entry(&g_swevent[this_cpu()].list_swevent, node,
+  list_for_every_entry(&this_cpu_var_smp(g_swevent).list_swevent, node,
                        struct perf_event_s, sw_list)
     {
       if (node->attr.type == PERF_TYPE_SOFTWARE &&
@@ -2591,7 +2592,7 @@ void perf_swevent(uint32_t event_id, uintptr_t ip)
         }
     }
 
-  spin_unlock_irqrestore(&g_swevent[this_cpu()].lock, flags);
+  spin_unlock_irqrestore(&this_cpu_var_smp(g_swevent).lock, flags);
 }
 
 /****************************************************************************
@@ -2616,9 +2617,9 @@ int perf_event_init(void)
 
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
-      perf_init_context(&g_perf_cpu_ctx[i]);
-      list_initialize(&g_swevent[i].list_swevent);
-      spin_lock_init(&g_swevent[i].lock);
+      perf_init_context(&per_cpu_var_smp(g_perf_cpu_ctx, i));
+      list_initialize(&per_cpu_var_smp(g_swevent, i).list_swevent);
+      spin_lock_init(&per_cpu_var_smp(g_swevent, i).lock);
     }
 
   /* Register clock event */
