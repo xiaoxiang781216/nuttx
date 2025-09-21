@@ -37,8 +37,9 @@
 #include <pthread.h>
 #include <time.h>
 
-#include <nuttx/clock.h>
 #include <nuttx/irq.h>
+#include <nuttx/percpu.h>
+#include <nuttx/clock.h>
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/queue.h>
