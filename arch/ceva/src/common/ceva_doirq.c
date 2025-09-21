@@ -39,7 +39,8 @@
  * [get/set]_current_regs for portability.
  */
 
-uint32_t *volatile g_current_regs[CONFIG_SMP_NCPUS];
+#undef g_current_regs
+DEFINE_PER_CPU_BSS(uint32_t *volatile, g_current_regs);
 
 /****************************************************************************
  * Public Functions

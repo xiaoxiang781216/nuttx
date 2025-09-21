@@ -29,6 +29,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/percpu.h>
+
 #include <arch/setjmp.h>
 #include <sys/types.h>
 #ifndef __ASSEMBLY__
@@ -83,7 +85,8 @@ extern "C"
  * such value for each processor that can receive an interrupt.
  */
 
-EXTERN volatile xcpt_reg_t *g_current_regs[CONFIG_SMP_NCPUS];
+DECLARE_PER_CPU(volatile xcpt_reg_t *, g_current_regs);
+#define g_current_regs this_cpu_var(g_current_regs)
 
 /****************************************************************************
  * Public Function Prototypes
@@ -122,20 +125,12 @@ void up_irq_enable(void);
 noinstrument_function
 static inline_function xcpt_reg_t *up_current_regs(void)
 {
-#ifdef CONFIG_SMP
-  return (xcpt_reg_t *)g_current_regs[up_cpu_index()];
-#else
-  return (xcpt_reg_t *)g_current_regs[0];
-#endif
+  return (xcpt_reg_t *)g_current_regs;
 }
 
 static inline_function void up_set_current_regs(xcpt_reg_t *regs)
 {
-#ifdef CONFIG_SMP
-  g_current_regs[up_cpu_index()] = regs;
-#else
-  g_current_regs[0] = regs;
-#endif
+  g_current_regs = regs;
 }
 
 /* Return program counter */

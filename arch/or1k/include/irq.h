@@ -37,6 +37,7 @@
 /* Include NuttX-specific IRQ definitions */
 
 #include <nuttx/irq.h>
+#include <nuttx/percpu.h>
 
 /* Include chip-specific IRQ definitions (including IRQ numbers) */
 
@@ -113,7 +114,8 @@ extern "C"
  * such value for each processor that can receive an interrupt.
  */
 
-EXTERN volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
+DECLARE_PER_CPU(volatile uint32_t *, g_current_regs);
+#define g_current_regs this_cpu_var(g_current_regs)
 
 /****************************************************************************
  * Public Function Prototypes
@@ -137,20 +139,12 @@ int up_cpu_index(void) noinstrument_function;
 
 static inline_function uint32_t *up_current_regs(void)
 {
-#ifdef CONFIG_SMP
-  return (uint32_t *)g_current_regs[up_cpu_index()];
-#else
-  return (uint32_t *)g_current_regs[0];
-#endif
+  return (uint32_t *)g_current_regs;
 }
 
 static inline_function void up_set_current_regs(uint32_t *regs)
 {
-#ifdef CONFIG_SMP
-  g_current_regs[up_cpu_index()] = regs;
-#else
-  g_current_regs[0] = regs;
-#endif
+  g_current_regs = regs;
 }
 
 /****************************************************************************

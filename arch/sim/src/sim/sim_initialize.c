@@ -59,6 +59,9 @@ static struct work_s g_x11event_work;          /* Work structure for event loop 
 static struct work_s g_x11update_work;          /* Work structure for event loop */
 #endif
 
+#undef g_current_regs
+DEFINE_PER_CPU_BSS(volatile xcpt_reg_t *, g_current_regs);
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
