@@ -153,22 +153,25 @@ errout:
 
 static int pkt_in(FAR struct net_driver_s *dev)
 {
-  FAR struct pkt_conn_s *conn;
+  FAR struct pkt_conn_s *conn = NULL;
+  uint16_t flags;
   int ret = OK;
 
-  pkt_conn_list_lock();
-  conn = pkt_active(dev);
-  if (conn)
-    {
-      uint16_t flags;
+  /* Setup for the application callback */
 
+  dev->d_appdata = dev->d_buf;
+  dev->d_sndlen  = 0;
+
+  pkt_conn_list_lock();
+
+  while ((conn = pkt_active(dev, conn)) != NULL)
+    {
       if (conn->pendiob == dev->d_iob)
         {
           /* Do not read back the packet sent by oneself */
 
           conn->pendiob = NULL;
-          pkt_conn_list_unlock();
-          return OK;
+          continue;
         }
 
 #if defined(CONFIG_NET_TIMESTAMP) && !defined(CONFIG_ARCH_HAVE_NETDEV_TIMESTAMP)
@@ -180,11 +183,6 @@ static int pkt_in(FAR struct net_driver_s *dev)
           clock_gettime(CLOCK_REALTIME, &dev->d_rxtime);
         }
 #endif /* CONFIG_NET_TIMESTAMP */
-
-      /* Setup for the application callback */
-
-      dev->d_appdata = dev->d_buf;
-      dev->d_sndlen  = 0;
 
       /* Perform the application callback */
 
@@ -206,15 +204,13 @@ static int pkt_in(FAR struct net_driver_s *dev)
 
               nwarn("WARNING: Packet not processed\n");
               ret = -EAGAIN;
+              break;
             }
         }
     }
-  else
-    {
-      ninfo("No PKT listener\n");
-    }
 
   pkt_conn_list_unlock();
+
   return ret;
 }
 
@@ -233,9 +229,9 @@ static int pkt_in(FAR struct net_driver_s *dev)
  *
  * Returned Value:
  *   OK     The packet has been processed  and can be deleted
- *  -EAGAIN There is a matching connection, but could not dispatch the packet
- *          yet.  Useful when a packet arrives before a recv call is in
- *          place.
+ *  -EAGAIN There is a matching connection, but could not dispatch the
+ *          packet yet.  Useful when a packet arrives before a recv call
+ *          is in place.
  *
  * Assumptions:
  *   The network is locked.
