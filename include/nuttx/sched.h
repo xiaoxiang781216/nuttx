@@ -921,16 +921,16 @@ extern "C"
 /* Maximum time with pre-emption disabled or within critical section. */
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
-EXTERN clock_t g_premp_max[CONFIG_SMP_NCPUS];
+DECLARE_PER_CPU(clock_t, g_premp_max);
 #endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION  >= 0 */
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-EXTERN clock_t g_crit_max[CONFIG_SMP_NCPUS];
+DECLARE_PER_CPU(clock_t, g_crit_max);
 #endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 */
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0
-EXTERN clock_t g_busywait_max[CONFIG_SMP_NCPUS];
-EXTERN clock_t g_busywait_total[CONFIG_SMP_NCPUS];
+DECLARE_PER_CPU(clock_t, g_busywait_max);
+DECLARE_PER_CPU(clock_t, g_busywait_total);
 #endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0 */
 
 /* g_running_tasks[] holds a references to the running task for each CPU.

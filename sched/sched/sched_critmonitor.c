@@ -119,16 +119,20 @@ static spinlock_t g_crimonitor_lock = SP_UNLOCKED;
 /* Maximum time with pre-emption disabled or within critical section. */
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
-clock_t g_premp_max[CONFIG_SMP_NCPUS];
+DEFINE_PER_CPU_BSS(clock_t, g_premp_max);
+#  define g_premp_max this_cpu_var(g_premp_max)
 #endif
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-clock_t g_crit_max[CONFIG_SMP_NCPUS];
+DEFINE_PER_CPU_BSS(clock_t, g_crit_max);
+#  define g_crit_max this_cpu_var(g_crit_max)
 #endif
 
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0
-clock_t g_busywait_max[CONFIG_SMP_NCPUS];
-clock_t g_busywait_total[CONFIG_SMP_NCPUS];
+DEFINE_PER_CPU_BSS(clock_t, g_busywait_max);
+#  define g_busywait_max this_cpu_var(g_busywait_max)
+DEFINE_PER_CPU_BSS(clock_t, g_busywait_total);
+#  define g_busywait_total this_cpu_var(g_busywait_total)
 #endif
 
 /****************************************************************************
@@ -228,7 +232,6 @@ void nxsched_critmon_preemption(FAR struct tcb_s *tcb, bool state,
       /* Re-enabling.. Check for the max elapsed time */
 
       clock_t elapsed = current - tcb->premp_start;
-      int cpu         = this_cpu();
 
       if (elapsed > tcb->premp_max)
         {
@@ -239,9 +242,9 @@ void nxsched_critmon_preemption(FAR struct tcb_s *tcb, bool state,
 
       /* Check for the global max elapsed time */
 
-      if (elapsed > g_premp_max[cpu])
+      if (elapsed > g_premp_max)
         {
-          g_premp_max[cpu] = elapsed;
+          g_premp_max = elapsed;
         }
     }
 
@@ -282,7 +285,6 @@ void nxsched_critmon_csection(FAR struct tcb_s *tcb, bool state,
       /* Leaving .. Check for the max elapsed time */
 
       clock_t elapsed = current - tcb->crit_start;
-      int cpu         = this_cpu();
 
       if (elapsed > tcb->crit_max)
         {
@@ -293,9 +295,9 @@ void nxsched_critmon_csection(FAR struct tcb_s *tcb, bool state,
 
       /* Check for the global max elapsed time */
 
-      if (elapsed > g_crit_max[cpu])
+      if (elapsed > g_crit_max)
         {
-          g_crit_max[cpu] = elapsed;
+          g_crit_max = elapsed;
         }
     }
 }
@@ -334,7 +336,6 @@ void nxsched_critmon_busywait(bool state, FAR void *caller)
       /* Entered critical section... Check for the max elapsed time */
 
       clock_t elapsed = current - tcb->busywait_start;
-      int cpu         = this_cpu();
 
       if (elapsed > tcb->busywait_max)
         {
@@ -345,15 +346,15 @@ void nxsched_critmon_busywait(bool state, FAR void *caller)
 
       /* Check for the global max elapsed time */
 
-      if (elapsed > g_busywait_max[cpu])
+      if (elapsed > g_busywait_max)
         {
-          g_busywait_max[cpu] = elapsed;
+          g_busywait_max = elapsed;
         }
 
       /* Update thread-level and cpu-level busywait */
 
       tcb->busywait_total   += elapsed;
-      g_busywait_total[cpu] += elapsed;
+      g_busywait_total += elapsed;
     }
 }
 #endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0 */
@@ -414,8 +415,6 @@ void nxsched_suspend_critmon(FAR struct tcb_s *tcb)
 
   if (tcb->lockcount > 0)
     {
-      int cpu = this_cpu();
-
       /* Possibly re-enabling.. Check for the max elapsed time */
 
       elapsed = current - tcb->premp_start;
@@ -426,9 +425,9 @@ void nxsched_suspend_critmon(FAR struct tcb_s *tcb)
           CHECK_PREEMPTION(tcb->pid, elapsed);
         }
 
-      if (elapsed > g_premp_max[cpu])
+      if (elapsed > g_premp_max)
         {
-          g_premp_max[cpu] = elapsed;
+          g_premp_max = elapsed;
         }
     }
 

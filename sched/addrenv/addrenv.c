@@ -53,8 +53,10 @@
  * REVISIT: Try to get rid of this, global bookkeeping for this is dangerous.
  */
 
-static FAR struct addrenv_s *g_addrenv[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS(FAR struct addrenv_s *, g_addrenv);
 static spinlock_t g_addrenv_lock = SP_UNLOCKED;
+
+#define g_addrenv this_cpu_var(g_addrenv)
 
 /****************************************************************************
  * Private Functions
@@ -126,15 +128,13 @@ int addrenv_switch(FAR struct tcb_s *tcb)
   FAR struct addrenv_s *curr;
   FAR struct addrenv_s *next;
   irqstate_t flags;
-  int cpu;
   int ret;
 
   next = tcb->addrenv_curr;
 
   flags = spin_lock_irqsave(&g_addrenv_lock);
 
-  cpu = this_cpu();
-  curr = g_addrenv[cpu];
+  curr = g_addrenv;
 
   /* Are we going to change address environments? */
 
@@ -174,7 +174,7 @@ int addrenv_switch(FAR struct tcb_s *tcb)
 
       /* Save the new, current address environment group */
 
-      g_addrenv[cpu] = next;
+      g_addrenv = next;
     }
 
 #ifdef CONFIG_ARCH_STACK_PROTECT

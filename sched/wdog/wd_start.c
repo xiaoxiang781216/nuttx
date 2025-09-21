@@ -87,7 +87,8 @@
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_TICKLESS
-static unsigned int g_wdtimernested[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS(unsigned int, g_wdtimernested);
+#  define g_wdtimernested this_cpu_var(g_wdtimernested)
 #endif
 
 /****************************************************************************
@@ -125,7 +126,7 @@ static inline_function clock_t wd_expiration(clock_t ticks)
    * is called in the watchdog callback functions.
    */
 
-  g_wdtimernested[this_cpu()]++;
+  g_wdtimernested++;
 #endif
 
   /* Process the watchdog at the head of the list as well as any
@@ -164,7 +165,7 @@ static inline_function clock_t wd_expiration(clock_t ticks)
 #ifdef CONFIG_SCHED_TICKLESS
   /* Decrement the nested watchdog timer count */
 
-  g_wdtimernested[this_cpu()]--;
+  g_wdtimernested--;
 #endif
 
   leave_critical_section(flags);
@@ -310,7 +311,7 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
        * the reassess proccess is disabled.
        */
 
-      reassess &= !g_wdtimernested[this_cpu()];
+      reassess &= !g_wdtimernested;
 
       if (reassess)
         {

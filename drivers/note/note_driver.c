@@ -134,10 +134,10 @@ struct note_taskname_s
  * Private Data
  ****************************************************************************/
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
-static unsigned int g_note_disabled_irq_nest[CONFIG_SMP_NCPUS];
-#endif
+#if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
+    defined(CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER)
+static DEFINE_PER_CPU_BSS(unsigned int, g_note_disabled_irq_nest);
+#  define g_note_disabled_irq_nest this_cpu_var(g_note_disabled_irq_nest)
 #endif
 
 FAR static struct note_driver_s *
@@ -314,9 +314,7 @@ static inline int note_isenabled_syscall(FAR struct note_driver_s *driver,
   if (up_interrupt_context())
     {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
-      int cpu = this_cpu();
-
-      if (g_note_disabled_irq_nest[cpu] > 0)
+      if (g_note_disabled_irq_nest > 0)
         {
           return false;
         }
@@ -374,15 +372,13 @@ static inline int note_isenabled_irq(FAR struct note_driver_s *driver,
 
   if (NOTE_FILTER_IRQMASK_ISSET(irq, &driver->filter.irq_mask))
     {
-      int cpu = this_cpu();
-
       if (enter)
         {
-          g_note_disabled_irq_nest[cpu]++;
+          g_note_disabled_irq_nest++;
         }
       else
         {
-          g_note_disabled_irq_nest[cpu]--;
+          g_note_disabled_irq_nest--;
         }
 
       return false;

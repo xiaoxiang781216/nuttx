@@ -52,13 +52,12 @@
  */
 
 #ifdef CONFIG_SCHED_IRQMONITOR
-
 #  ifdef CONFIG_ARCH_IRQPRIO
-#    define INC_NESTLEVEL()    atomic_fetch_add(&g_irq_level[this_cpu()], 1)
+#    define INC_NESTLEVEL() atomic_fetch_add(&g_irq_level, 1)
 #    define DEC_NESTLEVEL(ndx) \
        do \
          { \
-           if (atomic_fetch_sub(&g_irq_level[this_cpu()], 1) > 1 && \
+           if (atomic_fetch_sub(&g_irq_level, 1) > 1 && \
                ndx < NUSER_IRQS) \
              { \
                atomic_fetch_add(&g_irqvector[ndx].nests, 1); \
@@ -106,7 +105,8 @@
  ****************************************************************************/
 
 #if defined(CONFIG_SCHED_IRQMONITOR) && defined(CONFIG_ARCH_IRQPRIO)
-static atomic_t g_irq_level[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS(atomic_t, g_irq_level);
+#  define g_irq_level this_cpu_var(g_irq_level)
 #endif
 
 /****************************************************************************

@@ -181,7 +181,27 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
   clock_t elapsed;
   uint32_t rate;
 #endif
-
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
+#  ifdef CONFIG_SMP
+  clock_t *premp_max = &per_cpu_var(g_premp_max, cpu);
+#  else
+  clock_t *premp_max = &this_cpu_var(g_premp_max);
+#  endif
+#endif
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
+#  ifdef CONFIG_SMP
+  clock_t *crit_max = &per_cpu_var(g_crit_max, cpu);
+#  else
+  clock_t *crit_max = &this_cpu_var(g_crit_max);
+#  endif
+#endif
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0
+#  ifdef CONFIG_SMP
+  clock_t *busywait_max = &per_cpu_var(g_busywait_max, cpu);
+#  else
+  clock_t *busywait_max = &this_cpu_var(g_busywait_max);
+#  endif
+#endif
   UNUSED(maxtime);
   UNUSED(linesize);
   UNUSED(copysize);
@@ -205,9 +225,9 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
   /* Convert the for maximum time pre-emption disabled */
 
-  if (g_premp_max[cpu] > 0)
+  if (*premp_max > 0)
     {
-      perf_convert(g_premp_max[cpu], &maxtime);
+      perf_convert(*premp_max, &maxtime);
     }
   else
     {
@@ -217,7 +237,7 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
 
   /* Reset the maximum */
 
-  g_premp_max[cpu] = 0;
+  *premp_max = 0;
 
   /* Generate output for maximum time pre-emption disabled */
 
@@ -239,9 +259,9 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
   /* Convert and generate output for maximum time in a critical section */
 
-  if (g_crit_max[cpu] > 0)
+  if (*crit_max > 0)
     {
-      perf_convert(g_crit_max[cpu], &maxtime);
+      perf_convert(*crit_max, &maxtime);
     }
   else
     {
@@ -251,7 +271,7 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
 
   /* Reset the maximum */
 
-  g_crit_max[cpu] = 0;
+  *crit_max = 0;
 
   /* Generate output for maximum time in a critical section */
 
@@ -273,9 +293,9 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0
   /* Convert and generate output for max busywait time when trying spinlock */
 
-  if (g_busywait_max[cpu] > 0)
+  if (*busywait_max > 0)
     {
-      perf_convert(g_busywait_max[cpu], &maxtime);
+      perf_convert(*busywait_max, &maxtime);
     }
   else
     {
@@ -285,7 +305,7 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
 
   /* Reset the maximum */
 
-  g_busywait_max[cpu] = 0;
+  *busywait_max = 0;
 
   /* Generate output for max busywait time to enter csection(get spinlock) */
 
@@ -305,9 +325,9 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
 
   /* Convert and generate output for all busywait time when trying spinlock */
 
-  if (g_busywait_total[cpu] > 0)
+  if (*busywait_max > 0)
     {
-      perf_convert(g_busywait_total[cpu], &alltime);
+      perf_convert(*busywait_max, &alltime);
     }
   else
     {
@@ -376,7 +396,9 @@ static ssize_t critmon_read(FAR struct file *filep, FAR char *buffer,
                                         &offset, cpu);
 
       ret += nbytes;
+#ifdef CONFIG_SMP
       if (ret > buflen)
+#endif
         {
           break;
         }
