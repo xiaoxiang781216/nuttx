@@ -61,10 +61,6 @@
 
 #define to_arm64_pmu(p) (container_of(p, struct arm64_pmu_s, pmu))
 
-#define per_cpu_ptr(ptr, cpu) ((typeof(*ptr)*) ((ptr) + (cpu)))
-
-#define this_cpu_ptr(ptr) per_cpu_ptr(ptr, this_cpu())
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -129,7 +125,7 @@ struct arm64_pmu_s
 
   /* percpu hw_events */
 
-  struct        pmu_hw_events_s *hw_events;
+  struct        pmu_hw_events_s hw_events[CONFIG_SMP_NCPUS];
 };
 
 /****************************************************************************
@@ -148,8 +144,6 @@ static int arm64pmu_read(FAR struct perf_event_s *event);
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
-static struct pmu_hw_events_s g_hw_events[CONFIG_SMP_NCPUS];
 
 static struct pmu_ops_s g_arm64pmu_ops =
 {
@@ -452,7 +446,7 @@ static int arm64pmu_start(FAR struct perf_event_s *event, int flags)
 static void arm64pmu_del(FAR struct perf_event_s *event, int flags)
 {
   FAR struct arm64_pmu_s *arm64pmu = to_arm64_pmu(event->pmu);
-  FAR struct pmu_hw_events_s *hw_events = this_cpu_ptr(arm64pmu->hw_events);
+  FAR struct pmu_hw_events_s *hw_events = &arm64pmu->hw_events[this_cpu()];
   FAR struct hw_perf_event_s *hwc = &event->hw;
   int idx = hwc->idx;
 
@@ -465,7 +459,7 @@ static void arm64pmu_del(FAR struct perf_event_s *event, int flags)
 static int arm64pmu_add(FAR struct perf_event_s *event, int flags)
 {
   FAR struct arm64_pmu_s *arm64pmu = to_arm64_pmu(event->pmu);
-  FAR struct pmu_hw_events_s *hw_events = this_cpu_ptr(arm64pmu->hw_events);
+  FAR struct pmu_hw_events_s *hw_events = &arm64pmu->hw_events[this_cpu()];
   FAR struct hw_perf_event_s *hwc = &event->hw;
   int idx;
 
@@ -536,7 +530,7 @@ static int arm64pmu_event_init(FAR struct perf_event_s *event)
 static void arm64pmu_enable(FAR struct pmu_s *pmu)
 {
   FAR struct arm64_pmu_s *arm64pmu = to_arm64_pmu(pmu);
-  FAR struct pmu_hw_events_s *hw_events = this_cpu_ptr(arm64pmu->hw_events);
+  FAR struct pmu_hw_events_s *hw_events = &arm64pmu->hw_events[this_cpu()];
 
   if (!cpumask_test_cpu(this_cpu(), arm64pmu->supported_cpus))
     {
@@ -603,7 +597,6 @@ static FAR struct arm64_pmu_s *arm64pmu_alloc(void)
       return NULL;
     }
 
-  arm64pmu->hw_events = g_hw_events;
   arm64pmu->pmu.ops = &g_arm64pmu_ops;
 
   return arm64pmu;
@@ -736,7 +729,7 @@ static inline uint32_t pmuv3_getreset_flags(void)
 static void pmuv3_enable_user_access(FAR struct arm64_pmu_s *cpu_pmu)
 {
   int i;
-  FAR struct pmu_hw_events_s *cpuc = this_cpu_ptr(cpu_pmu->hw_events);
+  FAR struct pmu_hw_events_s *cpuc = &cpu_pmu->hw_events[this_cpu()];
 
   for (i = 0; i < cpu_pmu->num_events; i++)
     {
@@ -812,7 +805,7 @@ static void pmuv3_stop(FAR struct arm64_pmu_s *cpu_pmu)
 static int pmuv3_handle_irq(FAR struct arm64_pmu_s *cpu_pmu)
 {
   uint32_t pmovsr;
-  FAR struct pmu_hw_events_s *cpuc = this_cpu_ptr(cpu_pmu->hw_events);
+  FAR struct pmu_hw_events_s *cpuc = &cpu_pmu->hw_events[this_cpu()];
   int idx;
 
   /* Get the IRQ flags and reset */
@@ -1067,7 +1060,7 @@ static int pmuv3_common_pmu_init(FAR struct arm64_pmu_s *cpu_pmu, char *name,
       struct pmu_hw_events_s *events;
 
       cpu_pmu->supported_cpus |= (1U << cpu);
-      events = per_cpu_ptr(cpu_pmu->hw_events, cpu);
+      events = &cpu_pmu->hw_events[cpu];
       events->irq = 23;
     }
 
