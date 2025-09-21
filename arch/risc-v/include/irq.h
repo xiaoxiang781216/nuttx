@@ -32,6 +32,7 @@
 /* Include chip-specific IRQ definitions (including IRQ numbers) */
 
 #include <nuttx/config.h>
+#include <nuttx/percpu.h>
 
 #include <sys/types.h>
 
@@ -770,7 +771,8 @@ extern "C"
 
 /* g_interrupt_context store irq status */
 
-EXTERN volatile bool g_interrupt_context[CONFIG_SMP_NCPUS];
+DECLARE_PER_CPU(volatile bool, g_interrupt_context);
+#define g_interrupt_context this_cpu_var(g_interrupt_context)
 
 /****************************************************************************
  * Public Function Prototypes
@@ -922,11 +924,7 @@ void up_irq_restore(irqstate_t flags)
 noinstrument_function
 static inline_function void up_set_interrupt_context(bool flag)
 {
-#ifdef CONFIG_SMP
-  g_interrupt_context[up_this_cpu()] = flag;
-#else
-  g_interrupt_context[0] = flag;
-#endif
+  g_interrupt_context = flag;
 }
 
 /****************************************************************************
@@ -942,12 +940,12 @@ noinstrument_function static inline_function bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();
-  bool ret = g_interrupt_context[up_this_cpu()];
-  up_irq_restore(flags);
-  return ret;
-#else
-  return g_interrupt_context[0];
 #endif
+  bool ret = g_interrupt_context;
+#ifdef CONFIG_SMP
+  up_irq_restore(flags);
+#endif
+  return ret;
 }
 
 /****************************************************************************

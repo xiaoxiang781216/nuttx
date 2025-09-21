@@ -33,6 +33,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/irq.h>
+#include <nuttx/percpu.h>
 
 #include <sys/types.h>
 #ifndef __ASSEMBLY__
@@ -475,7 +476,8 @@ extern "C"
 #ifndef __ASSEMBLY__
 /* g_interrupt_context store irq status */
 
-extern volatile bool g_interrupt_context[CONFIG_SMP_NCPUS];
+DECLARE_PER_CPU(volatile bool, g_interrupt_context);
+#define g_interrupt_context this_cpu_var(g_interrupt_context)
 #endif
 
 /****************************************************************************
@@ -534,11 +536,7 @@ static inline_function int up_cpu_index(void)
 noinstrument_function
 static inline_function void up_set_interrupt_context(bool flag)
 {
-#ifdef CONFIG_SMP
-  g_interrupt_context[up_cpu_index()] = flag;
-#else
-  g_interrupt_context[0] = flag;
-#endif
+  g_interrupt_context = flag;
 }
 #endif
 
@@ -556,12 +554,12 @@ noinstrument_function static inline_function bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();
-  bool ret = g_interrupt_context[up_cpu_index()];
-  up_irq_restore(flags);
-  return ret;
-#else
-  return g_interrupt_context[0];
 #endif
+  bool ret = g_interrupt_context;
+#ifdef CONFIG_SMP
+  up_irq_restore(flags);
+#endif
+  return ret;
 }
 #endif
 

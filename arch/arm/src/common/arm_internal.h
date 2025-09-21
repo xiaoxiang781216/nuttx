@@ -162,10 +162,6 @@
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-/* g_interrupt_context store irq status */
-
-extern volatile bool g_interrupt_context[CONFIG_SMP_NCPUS];
-
 typedef void (*up_vector_t)(void);
 #endif
 

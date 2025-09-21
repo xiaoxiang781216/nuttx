@@ -35,7 +35,8 @@
 
 /* g_interrupt_context store irq status */
 
-volatile bool g_interrupt_context[CONFIG_SMP_NCPUS];
+#undef g_interrupt_context
+DEFINE_PER_CPU_BSS(volatile bool, g_interrupt_context);
 
 /****************************************************************************
  * Public Functions
