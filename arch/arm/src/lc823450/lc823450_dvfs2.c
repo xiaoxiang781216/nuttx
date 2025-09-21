@@ -95,13 +95,13 @@ static uint16_t _dvfs_cur_hdiv = 3;
 static uint16_t _dvfs_cur_mdiv = OSCCNT_MAINDIV_1;
 static uint16_t _dvfs_core12v = 0;
 
-static uint8_t  _dvfs_cpu_is_active[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(uint8_t, _dvfs_cpu_is_active);
 
 static void lc823450_dvfs_set_div(int idx, int tbl);
 
-static uint64_t g_idle_starttime[CONFIG_SMP_NCPUS];
-static uint64_t g_idle_totaltime[CONFIG_SMP_NCPUS];
-static uint64_t g_idle_totaltime0[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(uint64_t, g_idle_starttime);
+static DEFINE_PER_CPU_BSS_SMP(uint64_t, g_idle_totaltime);
+static DEFINE_PER_CPU_BSS_SMP(uint64_t, g_idle_totaltime0);
 
 /****************************************************************************
  * Public Data
@@ -146,11 +146,11 @@ static int _dvfs_another_cpu_state(int me)
 {
   if (0 == me)
     {
-      return _dvfs_cpu_is_active[1];
+      return per_cpu_var_smp(_dvfs_cpu_is_active, 1);
     }
   else
     {
-      return _dvfs_cpu_is_active[0];
+      return per_cpu_var_smp(_dvfs_cpu_is_active, 0);
     }
 }
 #endif
@@ -429,10 +429,14 @@ static void lc823450_dvfs_do_auto(uint32_t idle[])
 void lc823450_dvfs_get_idletime(uint64_t idletime[])
 {
   irqstate_t flags = spin_lock_irqsave(&g_dvfs_lock);
+  int i;
 
   /* First, copy g_idle_totaltime to the caller */
 
-  memcpy(idletime, g_idle_totaltime, sizeof(g_idle_totaltime));
+  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+    {
+      idletime[i] = per_cpu_var_smp(g_idle_totaltime, i);
+    }
 
 #if CONFIG_SMP_NCPUS == 2
   int me = this_cpu();
@@ -442,7 +446,8 @@ void lc823450_dvfs_get_idletime(uint64_t idletime[])
       /* Another CPU is in idle, so consider this situation */
 
       int cpu = (me == 0) ? 1 : 0;
-      idletime[cpu] += (_get_current_time64() - g_idle_starttime[cpu]);
+      idletime[cpu] += (_get_current_time64() -
+                        per_cpu_var_smp(g_idle_starttime, cpu));
 
       /* NOTE: g_idletotaltime[cpu] must not be updated */
     }
@@ -486,7 +491,10 @@ void lc823450_dvfs_tick_callback(void)
 
       /* Update g_idle_totaltime0 */
 
-      memcpy(g_idle_totaltime0, tmp_idle_total, sizeof(tmp_idle_total));
+      for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+        {
+          per_cpu_var_smp(g_idle_totaltime0, i) = tmp_idle_total[i];
+        }
 
       /* Do autonomous mode */
 
@@ -510,11 +518,11 @@ void lc823450_dvfs_enter_idle(void)
 
   /* Update my state first : 0 (idle) */
 
-  _dvfs_cpu_is_active[me] = 0;
+  per_cpu_var_smp(_dvfs_cpu_is_active, me) = 0;
 
   /* Update my idle start time */
 
-  g_idle_starttime[me] = _get_current_time64();
+  per_cpu_var_smp(g_idle_starttime, me) = _get_current_time64();
 
   if (0 == g_dvfs_enabled)
     {
@@ -581,20 +589,20 @@ void lc823450_dvfs_exit_idle(int irq)
   lc823450_dvfs_set_div(_dvfs_cur_idx, 0);
 
 exit_with_error:
-  if (0 == _dvfs_cpu_is_active[me])
+  if (0 == per_cpu_var_smp(_dvfs_cpu_is_active, me))
     {
       /* In case of idle to active transition
        * Accumulate idle total time on this CPU
        */
 
       now = _get_current_time64();
-      d = now - g_idle_starttime[me];
-      g_idle_totaltime[me] += d;
+      d = now - per_cpu_var_smp(g_idle_starttime, me);
+      per_cpu_var_smp(g_idle_totaltime, me) += d;
     }
 
   /* Finally update my state : 1 (active) */
 
-  _dvfs_cpu_is_active[me] = 1;
+  per_cpu_var_smp(_dvfs_cpu_is_active, me) = 1;
 
   spin_unlock_irqrestore(&g_dvfs_lock, flags);
 }

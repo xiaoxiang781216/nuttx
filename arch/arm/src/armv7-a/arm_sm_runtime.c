@@ -30,6 +30,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <string.h>
@@ -42,17 +44,16 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define SM_STACK_RESERVE_SIZE     sizeof(struct arm_sm_ctx)
-#define MONITOR_STACK_OFFS        SM_STACK_RESERVE_SIZE
-#define CFG_MONITOR_STACK_EXTRA   0
-#define MONITOR_STACK_SIZE        (CONFIG_ARMV7A_MONITOR_STACK_SIZE + \
-                                   MONITOR_STACK_OFFS + \
-                                   CFG_MONITOR_STACK_EXTRA)
-#define STACK_CANARY_SIZE         (4 * sizeof(long))
-#define MON_STACK_ALIGNMENT       64 /* (sizeof(long) * U(2)) */
+#define MONITOR_STACK_RESERVE_SIZE sizeof(struct arm_sm_ctx)
+#define MONITOR_STACK_CANARY_SIZE  (4 * sizeof(long))
+#define MONITOR_STACK_ALIGNMENT    64 /* (sizeof(long) * U(2)) */
 
-#define ROUNDUP(v, size) (((v) + ((__typeof__(v))(size)-1)) & \
-           ~((__typeof__(v))(size)-1))
+#define MONITOR_STACK_SIZE ALIGN_UP(CONFIG_ARMV7A_MONITOR_STACK_SIZE + \
+                                    MONITOR_STACK_RESERVE_SIZE + \
+                                    MONITOR_STACK_CANARY_SIZE, \
+                                    MONITOR_STACK_ALIGNMENT)
+
+typedef uint8_t monitor_stack_t[MONITOR_STACK_SIZE];
 
 /****************************************************************************
  * Private Data
@@ -65,19 +66,9 @@
  * the arm_sm_init procedure will not work
  */
 
-#ifdef CONFIG_SMP
-static uint32_t g_monitor_stack[CONFIG_SMP_NCPUS][ROUNDUP(
-           MONITOR_STACK_SIZE + STACK_CANARY_SIZE, MON_STACK_ALIGNMENT) \
-           / sizeof(uint32_t)] \
-           __attribute__((section(".monitor_stack"), \
-           aligned(MON_STACK_ALIGNMENT)));
-#else
-static uint32_t g_monitor_stack[ROUNDUP(
-           MONITOR_STACK_SIZE + STACK_CANARY_SIZE, MON_STACK_ALIGNMENT) \
-           / sizeof(uint32_t)] \
-           __attribute__((section(".monitor_stack"), \
-           aligned(MON_STACK_ALIGNMENT)));
-#endif
+static DEFINE_PER_CPU_BSS(monitor_stack_t, g_monitor_stack)
+locate_data(".monitor_stack") aligned_data(MONITOR_STACK_ALIGNMENT);
+#define g_monitor_stack this_cpu_var(g_monitor_stack)
 
 /****************************************************************************
  * Public Functions
@@ -100,14 +91,8 @@ static uint32_t g_monitor_stack[ROUNDUP(
 
 void arm_sm_init(void)
 {
-#ifdef CONFIG_SMP
-  arm_sm_init_stack(((int)&g_monitor_stack[up_cpu_index()]
-                + sizeof(g_monitor_stack[up_cpu_index()]))
-                - MONITOR_STACK_OFFS);
-#else
-  arm_sm_init_stack(((int)&g_monitor_stack + sizeof(g_monitor_stack))
-                - MONITOR_STACK_OFFS);
-#endif
+  arm_sm_init_stack(((uintptr_t)&g_monitor_stack
+                    + MONITOR_STACK_SIZE - MONITOR_STACK_RESERVE_SIZE));
 }
 
 /****************************************************************************

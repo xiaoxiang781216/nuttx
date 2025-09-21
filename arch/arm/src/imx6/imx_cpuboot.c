@@ -47,7 +47,7 @@
  ****************************************************************************/
 
 #if 0 /* Not used */
-static const uint32_t g_cpu_reset[CONFIG_SMP_NCPUS] =
+static DEFINE_PER_CPU_SMP(const uint32_t, g_cpu_reset) =
 {
     SRC_SCR_CORE0_RST
 #if CONFIG_SMP_NCPUS > 1
@@ -62,44 +62,44 @@ static const uint32_t g_cpu_reset[CONFIG_SMP_NCPUS] =
 };
 #endif
 
-static const uint32_t g_cpu_ctrl[CONFIG_SMP_NCPUS] =
+static DEFINE_PER_CPU_SMP(const uint32_t, g_cpu_ctrl) =
 {
     0
-#if CONFIG_SMP_NCPUS > 1
+#if CONFIG_NCPUS > 1
   , SRC_SCR_CORE1_ENABLE
 #endif
-#if CONFIG_SMP_NCPUS > 2
+#if CONFIG_NCPUS > 2
   , SRC_SCR_CORE2_ENABLE
 #endif
-#if CONFIG_SMP_NCPUS > 3
+#if CONFIG_NCPUS > 3
   , SRC_SCR_CORE3_ENABLE
 #endif
 };
 
-static const uintptr_t g_cpu_gpr[CONFIG_SMP_NCPUS] =
+static DEFINE_PER_CPU_SMP(const uintptr_t, g_cpu_gpr) =
 {
     IMX_SRC_GPR1
-#if CONFIG_SMP_NCPUS > 1
+#if CONFIG_NCPUS > 1
   , IMX_SRC_GPR3
 #endif
-#if CONFIG_SMP_NCPUS > 2
+#if CONFIG_NCPUS > 2
   , IMX_SRC_GPR5
 #endif
-#if CONFIG_SMP_NCPUS > 3
+#if CONFIG_NCPUS > 3
   , IMX_SRC_GPR7
 #endif
 };
 
-static const start_t g_cpu_boot[CONFIG_SMP_NCPUS] =
+static DEFINE_PER_CPU_SMP(const start_t, g_cpu_boot) =
 {
   0,
-#if CONFIG_SMP_NCPUS > 1
+#if CONFIG_NCPUS > 1
   __cpu1_start,
 #endif
-#if CONFIG_SMP_NCPUS > 2
+#if CONFIG_NCPUS > 2
   __cpu2_start,
 #endif
-#if CONFIG_SMP_NCPUS > 3
+#if CONFIG_NCPUS > 3
   __cpu3_start
 #endif
 };
@@ -130,7 +130,7 @@ static void imx_cpu_reset(int cpu)
   uint32_t regval;
 
   regval  = getreg32(IMX_SRC_SCR);
-  regval |= g_cpu_reset[cpu];
+  regval |= per_cpu_var_smp(g_cpu_reset, cpu);
   putreg32(regval, IMX_SRC_SCR);
 }
 #endif
@@ -212,14 +212,14 @@ void imx_cpu_enable(void)
 
       /* Set the start up address */
 
-      regaddr  = g_cpu_gpr[cpu];
-      bootaddr = g_cpu_boot[cpu];
+      regaddr  = per_cpu_var_smp(g_cpu_gpr, cpu);
+      bootaddr = per_cpu_var_smp(g_cpu_boot, cpu);
       putreg32((uint32_t)bootaddr, regaddr);
 
       /* Then enable the CPU */
 
       regval   = getreg32(IMX_SRC_SCR);
-      regval  |= g_cpu_ctrl[cpu];
+      regval  |= per_cpu_var_smp(g_cpu_ctrl, cpu);
       putreg32(regval, IMX_SRC_SCR);
     }
 }

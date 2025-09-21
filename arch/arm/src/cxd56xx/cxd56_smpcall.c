@@ -56,7 +56,7 @@
  * Private Data
  ****************************************************************************/
 
-static volatile int g_irq_to_handle[CONFIG_SMP_NCPUS][2];
+static DEFINE_PER_CPU_BSS_SMP(volatile int, g_irq_to_handle[2]);
 
 /****************************************************************************
  * Private Functions
@@ -87,13 +87,13 @@ static bool handle_irqreq(int cpu)
 
   for (i = 0; i < 2; i++)
     {
-      int irqreq = g_irq_to_handle[cpu][i];
+      int irqreq = per_cpu_var_smp(g_irq_to_handle, cpu)[i];
 
       if (irqreq)
         {
           /* Clear g_irq_to_handle[cpu][i] */
 
-          g_irq_to_handle[cpu][i] = 0;
+          per_cpu_var_smp(g_irq_to_handle, cpu)[i] = 0;
 
           if (0 == i)
             {
@@ -221,7 +221,7 @@ void up_send_irqreq(int idx, int irq, int cpu)
 
   /* Set irq for the cpu */
 
-  g_irq_to_handle[cpu][idx] = irq;
+  per_cpu_var_smp(g_irq_to_handle, cpu)[idx] = irq;
 
   /* Generate IRQ for CPU(cpu) */
 
