@@ -48,10 +48,9 @@ struct sim_cpuinfo_s
  * Private Data
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_HAVE_MULTICPU
 static pthread_key_t g_cpu_key;
-
-#ifdef CONFIG_SMP
-static pthread_t     g_cpu_thread[CONFIG_SMP_NCPUS];
+static pthread_t     g_cpu_thread[CONFIG_NCPUS];
 
 /****************************************************************************
  * Private Functions
@@ -254,7 +253,6 @@ void host_send_func_call_ipi(int cpu)
 {
   pthread_kill(g_cpu_thread[cpu], SIGUSR2);
 }
-#endif
 
 /****************************************************************************
  * Name: up_cpu_index
@@ -264,7 +262,6 @@ void host_send_func_call_ipi(int cpu)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_HAVE_MULTICPU
 int up_cpu_index(void)
 {
   void *value = pthread_getspecific(g_cpu_key);

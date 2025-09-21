@@ -207,7 +207,7 @@ int main(int argc, char **argv, char **envp)
 
   /* Start NuttX */
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_HAVE_MULTICPU
   /* Start the CPU0 emulation.  This should not return. */
 
   host_cpu0_start();

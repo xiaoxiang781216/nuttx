@@ -276,7 +276,7 @@ void sim_sigdeliver(void);
 
 /* sim_hostsmp.c ************************************************************/
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_HAVE_MULTICPU
 void host_cpu0_start(void);
 int host_cpu_start(int cpu, void *stack, size_t size);
 void host_send_ipi(int cpu);
@@ -285,7 +285,7 @@ void host_send_func_call_ipi(int cpu);
 
 /* sim_smpsignal.c **********************************************************/
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_HAVE_MULTICPU
 void host_cpu_started(void);
 int sim_init_ipi(int irq);
 int sim_init_func_call_ipi(int irq);
