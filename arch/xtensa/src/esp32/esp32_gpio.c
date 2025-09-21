@@ -58,7 +58,7 @@
  ****************************************************************************/
 
 #ifdef CONFIG_ESP32_GPIO_IRQ
-static int g_gpio_cpuint[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(int, g_gpio_cpuint);
 #endif
 
 static const uint8_t g_pin2func[40] =
@@ -444,9 +444,9 @@ void esp32_gpioirqinitialize(int cpu)
 
   /* Setup the GPIO interrupt. */
 
-  g_gpio_cpuint[cpu] = esp32_setup_irq(cpu, ESP32_PERIPH_CPU_GPIO,
-                                       1, ESP32_CPUINT_LEVEL);
-  DEBUGASSERT(g_gpio_cpuint[cpu] >= 0);
+  per_cpu_var_smp(g_gpio_cpuint, cpu) =
+    esp32_setup_irq(cpu, ESP32_PERIPH_CPU_GPIO, 1, ESP32_CPUINT_LEVEL);
+  DEBUGASSERT(per_cpu_var_smp(g_gpio_cpuint, cpu) >= 0);
 
   /* Attach and enable the interrupt handler */
 

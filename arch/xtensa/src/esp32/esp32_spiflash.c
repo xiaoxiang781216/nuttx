@@ -353,9 +353,9 @@ static struct work_s g_work;
 
 static volatile bool g_flash_op_can_start = false;
 static volatile bool g_flash_op_complete = false;
-static volatile bool g_sched_suspended[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(volatile bool, g_sched_suspended);
 #ifdef CONFIG_SMP
-static sem_t g_disable_non_iram_isr_on_core[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(sem_t, g_disable_non_iram_isr_on_core);
 #endif
 
 /****************************************************************************
@@ -487,7 +487,8 @@ void esp32_spiflash_opstart(void)
     {
       g_flash_op_can_start = false;
 
-      nxsem_post(&g_disable_non_iram_isr_on_core[other_cpu]);
+      nxsem_post(
+        &per_cpu_var_smp(g_disable_non_iram_isr_on_core, other_cpu));
 
       while (!g_flash_op_can_start)
         {
@@ -498,7 +499,7 @@ void esp32_spiflash_opstart(void)
     }
 #endif
 
-  g_sched_suspended[cpu] = true;
+  per_cpu_var_smp(g_sched_suspended, cpu) = true;
 
   sched_lock();
 
@@ -547,10 +548,10 @@ void esp32_spiflash_opdone(void)
 
   sched_unlock();
 
-  g_sched_suspended[cpu] = false;
+  per_cpu_var_smp(g_sched_suspended, cpu) = false;
 
 #ifdef CONFIG_SMP
-  while (g_sched_suspended[other_cpu])
+  while (per_cpu_var_smp(g_sched_suspended, other_cpu))
     {
       /* Busy loop and wait for spi_flash_op_block_task to properly finish
        * and resume scheduler
@@ -2392,7 +2393,7 @@ static int spi_flash_op_block_task(int argc, char *argv[])
        * core) being asked to disable its non-IRAM interrupts.
        */
 
-      nxsem_wait(&g_disable_non_iram_isr_on_core[cpu]);
+      nxsem_wait(&per_cpu_var_smp(g_disable_non_iram_isr_on_core, cpu));
 
       sched_lock();
 
@@ -2577,7 +2578,8 @@ int esp32_spiflash_init(void)
 
   for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
     {
-      nxsem_init(&g_disable_non_iram_isr_on_core[cpu], 0, 0);
+      nxsem_init(
+        &per_cpu_var_smp(g_disable_non_iram_isr_on_core, cpu), 0, 0);
 
       ret = spiflash_init_spi_flash_op_block_task(cpu);
       if (ret != OK)

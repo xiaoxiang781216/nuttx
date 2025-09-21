@@ -154,7 +154,7 @@ static volatile uint8_t g_irqmap[NR_IRQS];
  * content.
  */
 
-static uint32_t g_intenable[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(uint32_t, g_intenable);
 
 /* g_non_iram_int_mask[] is a bitmask of the interrupts that should be
  * disabled during a SPI flash operation. Non-IRAM interrupts should always
@@ -162,17 +162,17 @@ static uint32_t g_intenable[CONFIG_SMP_NCPUS];
  * flash operation.
  */
 
-static uint32_t g_non_iram_int_mask[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(uint32_t, g_non_iram_int_mask);
 
 /* g_non_iram_int_disabled[] keeps track of the interrupts disabled during
  * a SPI flash operation.
  */
 
-static uint32_t g_non_iram_int_disabled[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(uint32_t, g_non_iram_int_disabled);
 
 /* Per-CPU flag to indicate that non-IRAM interrupts were disabled */
 
-static bool g_non_iram_int_disabled_flag[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(bool, g_non_iram_int_disabled_flag);
 
 /* Bitsets for free, unallocated CPU interrupts available to peripheral
  * devices.
@@ -343,7 +343,7 @@ static int esp32s3_getcpuint(int cpu, uint32_t intmask)
 
   if (ret >= 0)
     {
-      xtensa_enable_cpuint(&g_intenable[cpu], ret);
+      xtensa_enable_cpuint(&per_cpu_var_smp(g_intenable, cpu), ret);
     }
 
   return ret;
@@ -471,7 +471,7 @@ void up_irqinitialize(void)
 
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
-      g_non_iram_int_mask[i] = UINT32_MAX;
+      per_cpu_var_smp(g_non_iram_int_mask, i) = UINT32_MAX;
     }
 
   for (i = 0; i < NR_IRQS; i++)
@@ -499,7 +499,7 @@ void up_irqinitialize(void)
 #ifdef CONFIG_ESP32S3_WIFI
   g_cpu0_intmap[ESP32S3_CPUINT_MAC] = CPUINT_ASSIGN(ESP32S3_IRQ_MAC);
   g_cpu0_intmap[ESP32S3_CPUINT_PWR] = CPUINT_ASSIGN(ESP32S3_IRQ_PWR);
-  xtensa_enable_cpuint(&g_intenable[0], ESP32S3_CPUINT_MAC);
+  xtensa_enable_cpuint(&per_cpu_var_smp(g_intenable, 0), ESP32S3_CPUINT_MAC);
 #endif
 
 #ifdef CONFIG_SMP
@@ -571,7 +571,7 @@ void up_disable_irq(int irq)
         }
 #endif
 
-      xtensa_disable_cpuint(&g_intenable[cpu], cpuint);
+      xtensa_disable_cpuint(&per_cpu_var_smp(g_intenable, cpu), cpuint);
     }
   else
     {
@@ -616,7 +616,7 @@ void up_enable_irq(int irq)
 
       /* Enable the CPU interrupt now for internal CPU. */
 
-      xtensa_enable_cpuint(&g_intenable[cpu], cpuint);
+      xtensa_enable_cpuint(&per_cpu_var_smp(g_intenable, cpu), cpuint);
     }
   else
     {
@@ -633,7 +633,8 @@ void up_enable_irq(int irq)
        * IRAM. If so, check if its interrupt handler is located in IRAM.
        */
 
-      bool isr_in_iram = !((g_non_iram_int_mask[cpu] & (1 << cpuint)) > 0);
+      bool isr_in_iram =
+          !((per_cpu_var_smp(g_non_iram_int_mask, cpu) & (1 << cpuint)) > 0);
 
       xcpt_t handler = g_irqvector[irq].handler;
 
@@ -1093,23 +1094,23 @@ void esp32s3_irq_noniram_disable(void)
 
   irqstate = enter_critical_section();
   cpu = this_cpu();
-  non_iram_ints = g_non_iram_int_mask[cpu];
+  non_iram_ints = per_cpu_var_smp(g_non_iram_int_mask, cpu);
 
-  ASSERT(!g_non_iram_int_disabled_flag[cpu]);
+  ASSERT(!per_cpu_var_smp(g_non_iram_int_disabled_flag, cpu));
 
-  g_non_iram_int_disabled_flag[cpu] = true;
-  oldint = g_intenable[cpu];
+  per_cpu_var_smp(g_non_iram_int_disabled_flag, cpu) = true;
+  oldint = per_cpu_var_smp(g_intenable, cpu);
 
   for (bit = 0; bit < ESP32S3_NCPUINTS; bit++)
     {
       mask = 1 << bit;
       if ((non_iram_ints & mask) != 0)
         {
-          xtensa_disable_cpuint(&g_intenable[cpu], bit);
+          xtensa_disable_cpuint(&per_cpu_var_smp(g_intenable, cpu), bit);
         }
     }
 
-  g_non_iram_int_disabled[cpu] = oldint & non_iram_ints;
+  per_cpu_var_smp(g_non_iram_int_disabled, cpu) = oldint & non_iram_ints;
 
   leave_critical_section(irqstate);
 }
@@ -1138,18 +1139,18 @@ void esp32s3_irq_noniram_enable(void)
 
   irqstate = enter_critical_section();
   cpu = this_cpu();
-  non_iram_ints = g_non_iram_int_disabled[cpu];
+  non_iram_ints = per_cpu_var_smp(g_non_iram_int_disabled, cpu);
 
-  ASSERT(g_non_iram_int_disabled_flag[cpu]);
+  ASSERT(per_cpu_var_smp(g_non_iram_int_disabled_flag, cpu));
 
-  g_non_iram_int_disabled_flag[cpu] = false;
+  per_cpu_var_smp(g_non_iram_int_disabled_flag, cpu) = false;
 
   for (bit = 0; bit < ESP32S3_NCPUINTS; bit++)
     {
       mask = 1 << bit;
       if ((non_iram_ints & mask) != 0)
         {
-          xtensa_enable_cpuint(&g_intenable[cpu], bit);
+          xtensa_enable_cpuint(&per_cpu_var_smp(g_intenable, cpu), bit);
         }
     }
 
@@ -1174,7 +1175,7 @@ bool esp32s3_irq_noniram_status(int cpu)
 {
   DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
 
-  return !g_non_iram_int_disabled_flag[cpu];
+  return !per_cpu_var_smp(g_non_iram_int_disabled_flag, cpu);
 }
 
 /****************************************************************************
@@ -1201,7 +1202,7 @@ int esp32s3_irq_set_iram_isr(int irq)
       return -EINVAL;
     }
 
-  g_non_iram_int_mask[cpu] &= ~(1 << cpuint);
+  per_cpu_var_smp(g_non_iram_int_mask, cpu) &= ~(1 << cpuint);
 
   return OK;
 }
@@ -1230,7 +1231,7 @@ int esp32s3_irq_unset_iram_isr(int irq)
       return -EINVAL;
     }
 
-  g_non_iram_int_mask[cpu] |= (1 << cpuint);
+  per_cpu_var_smp(g_non_iram_int_mask, cpu) |= (1 << cpuint);
 
   return OK;
 }

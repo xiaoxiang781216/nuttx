@@ -58,7 +58,7 @@
  * Private Data
  ****************************************************************************/
 
-static uint32_t s_flash_op_cache_state[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(uint32_t, s_flash_op_cache_state);
 
 /****************************************************************************
  * Private Functions
@@ -107,7 +107,7 @@ void IRAM_ATTR spi_disable_cache(int cpu)
     }
 
 #endif
-  s_flash_op_cache_state[cpu] = ret;
+  per_cpu_var_smp(s_flash_op_cache_state, cpu) = ret;
 }
 
 /****************************************************************************
@@ -143,7 +143,7 @@ void IRAM_ATTR spi_enable_cache(int cpu)
 
   regval  = getreg32(ctrl1reg);
   regval &= ~cache_mask;
-  regval |= s_flash_op_cache_state[cpu];
+  regval |= per_cpu_var_smp(s_flash_op_cache_state, cpu);
   putreg32(regval, ctrl1reg);
 }
 

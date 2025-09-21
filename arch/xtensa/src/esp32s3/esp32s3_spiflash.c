@@ -216,15 +216,15 @@ static spi_flash_guard_funcs_t g_spi_flash_guard_funcs =
   .end             = spiflash_end,
 };
 
-static uint32_t s_flash_op_cache_state[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(uint32_t, s_flash_op_cache_state);
 
 static rmutex_t g_flash_op_mutex;
 static volatile bool g_flash_op_can_start = false;
 static volatile bool g_flash_op_complete = false;
 static volatile bool g_spi_flash_cache_suspended = false;
-static volatile bool g_sched_suspended[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(volatile bool, g_sched_suspended);
 #ifdef CONFIG_SMP
-static sem_t g_disable_non_iram_isr_on_core[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(sem_t, g_disable_non_iram_isr_on_core);
 #endif
 
 /****************************************************************************
@@ -311,7 +311,8 @@ void spiflash_start(void)
       cpu = this_cpu();
       other_cpu = cpu ? 0 : 1;
 
-      nxsem_post(&g_disable_non_iram_isr_on_core[other_cpu]);
+      nxsem_post(
+        &per_cpu_var_smp(g_disable_non_iram_isr_on_core, other_cpu));
 
       while (!g_flash_op_can_start)
         {
@@ -322,7 +323,7 @@ void spiflash_start(void)
     }
 #endif
 
-  g_sched_suspended[cpu] = true;
+  per_cpu_var_smp(g_sched_suspended, cpu) = true;
 
   sched_lock();
 
@@ -366,10 +367,10 @@ void spiflash_end(void)
 
   sched_unlock();
 
-  g_sched_suspended[cpu] = false;
+  per_cpu_var_smp(g_sched_suspended, cpu) = false;
 
 #ifdef CONFIG_SMP
-  while (g_sched_suspended[other_cpu])
+  while (per_cpu_var_smp(g_sched_suspended, other_cpu))
     {
       /* Busy loop and wait for spi_flash_op_block_task to properly finish
        * and resume scheduler
@@ -830,7 +831,7 @@ static int spi_flash_op_block_task(int argc, char *argv[])
        * core) being asked to disable its non-IRAM interrupts.
        */
 
-      nxsem_wait(&g_disable_non_iram_isr_on_core[cpu]);
+      nxsem_wait(&per_cpu_var_smp(g_disable_non_iram_isr_on_core, cpu));
 
       sched_lock();
 
@@ -1319,7 +1320,8 @@ int esp32s3_spiflash_init(void)
 
   for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
     {
-      nxsem_init(&g_disable_non_iram_isr_on_core[cpu], 0, 0);
+      nxsem_init(
+        &per_cpu_var_smp(g_disable_non_iram_isr_on_core, cpu), 0, 0);
 
       ret = spiflash_init_spi_flash_op_block_task(cpu);
       if (ret != OK)
