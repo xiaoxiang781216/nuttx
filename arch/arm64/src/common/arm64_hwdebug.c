@@ -71,7 +71,8 @@ struct arm64_debug_s
  * Private Data
  ****************************************************************************/
 
-static struct arm64_debug_s g_arm64_debug[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS(struct arm64_debug_s, g_arm64_debug);
+#define g_arm64_debug this_cpu_var(g_arm64_debug)
 
 /****************************************************************************
  * Private Function
@@ -279,7 +280,7 @@ static int arm64_breakpoint_remove(uintptr_t addr)
 
 static int arm64_watchpoint_match(uint64_t *regs, uint64_t far, uint64_t esr)
 {
-  struct arm64_debugpoint_s *dp = g_arm64_debug[this_cpu()].wrps;
+  struct arm64_debugpoint_s *dp = g_arm64_debug.wrps;
   int num = arm64_get_num_wrps();
   int i;
 
@@ -298,7 +299,7 @@ static int arm64_watchpoint_match(uint64_t *regs, uint64_t far, uint64_t esr)
 
 static int arm64_breakpoint_match(uint64_t *regs, uint64_t far, uint64_t esr)
 {
-  struct arm64_debugpoint_s *dp = g_arm64_debug[this_cpu()].brps;
+  struct arm64_debugpoint_s *dp = g_arm64_debug.brps;
   int num = arm64_get_num_brps();
   int i;
 
@@ -375,20 +376,19 @@ int up_debugpoint_add(int type, void *addr, size_t size,
                       debug_callback_t callback, void *arg)
 {
   struct arm64_debugpoint_s *dp;
-  int cpu = this_cpu();
   int ret = -EINVAL;
 
   if (type == DEBUGPOINT_BREAKPOINT)
     {
       ret = arm64_breakpoint_add((uintptr_t)addr);
-      dp = g_arm64_debug[cpu].brps;
+      dp  = g_arm64_debug.brps;
     }
   else if (type == DEBUGPOINT_WATCHPOINT_RO ||
            type == DEBUGPOINT_WATCHPOINT_WO ||
            type == DEBUGPOINT_WATCHPOINT_RW)
     {
       ret = arm64_watchpoint_add(type, (uintptr_t)addr, size);
-      dp = g_arm64_debug[cpu].wrps;
+      dp  = g_arm64_debug.wrps;
     }
 
   if (ret < 0)
@@ -429,20 +429,19 @@ int up_debugpoint_add(int type, void *addr, size_t size,
 int up_debugpoint_remove(int type, void *addr, size_t size)
 {
   struct arm64_debugpoint_s *dp;
-  int cpu = this_cpu();
   int ret = -EINVAL;
 
   if (type == DEBUGPOINT_BREAKPOINT)
     {
       ret = arm64_breakpoint_remove((uintptr_t)addr);
-      dp = g_arm64_debug[cpu].brps;
+      dp  = g_arm64_debug.brps;
     }
   else if (type == DEBUGPOINT_WATCHPOINT_RO ||
            type == DEBUGPOINT_WATCHPOINT_WO ||
            type == DEBUGPOINT_WATCHPOINT_RW)
     {
       ret = arm64_watchpoint_remove((uintptr_t)addr);
-      dp = g_arm64_debug[cpu].wrps;
+      dp  = g_arm64_debug.wrps;
     }
 
   if (ret < 0)

@@ -80,7 +80,7 @@ struct arm64_fpu_procfs_file_s
 
 #ifdef CONFIG_FS_PROCFS_REGISTER
 
-static struct arm64_cpu_fpu_context g_cpu_fpu_ctx[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS_SMP(struct arm64_cpu_fpu_context, g_cpu_fpu_ctx);
 
 /* procfs methods */
 
@@ -224,7 +224,7 @@ static ssize_t arm64_fpu_procfs_read(struct file *filep, char *buffer,
   linesize = 0;
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
-      ctx = &g_cpu_fpu_ctx[i];
+      ctx = &per_cpu_var_smp(g_cpu_fpu_ctx, i);
       linesize += snprintf(attr->line + linesize,
                            FPU_PROC_LINELEN,
                            "CPU%d: save: %d restore: %d "
