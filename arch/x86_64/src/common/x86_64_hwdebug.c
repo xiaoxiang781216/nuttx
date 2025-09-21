@@ -134,7 +134,8 @@ struct x86_64_debug_ctx_s
 
 /* Save the trigger address info */
 
-static struct x86_64_debug_ctx_s g_dbg_ctx[CONFIG_SMP_NCPUS];
+static DEFINE_PER_CPU_BSS(struct x86_64_debug_ctx_s, g_dbg_ctx);
+#define g_dbg_ctx this_cpu_var(g_dbg_ctx)
 
 /****************************************************************************
  * Private Functions
@@ -305,7 +306,7 @@ static void x86_64_set_dr(uint8_t i, uint8_t g, uint8_t rw, uint8_t len,
 
 static int x86_64_debug_handler(int irq, void *c, void *arg)
 {
-  uint8_t                cpu = this_cpu();
+  struct x86_64_debug_ctx_s *dbg = &g_dbg_ctx;
   union x86_64_dr6_reg_u dr6;
   int                    i;
 
@@ -320,15 +321,15 @@ static int x86_64_debug_handler(int irq, void *c, void *arg)
 
       /* Free step trigger */
 
-      g_dbg_ctx[cpu].step.used = false;
+      dbg->step.used = false;
 
       /* Call the step callback */
 
-      g_dbg_ctx[cpu].step.callback(
-        g_dbg_ctx[cpu].step.type,
-        g_dbg_ctx[cpu].step.address,
-        g_dbg_ctx[cpu].step.size,
-        g_dbg_ctx[cpu].step.arg);
+      dbg->step.callback(
+        dbg->step.type,
+        dbg->step.address,
+        dbg->step.size,
+        dbg->step.arg);
 
       return 0;
     }
@@ -345,13 +346,13 @@ static int x86_64_debug_handler(int irq, void *c, void *arg)
 
           /* Call the trigger callback */
 
-          if (g_dbg_ctx[cpu].trigger[i].callback)
+          if (dbg->trigger[i].callback)
             {
-              g_dbg_ctx[cpu].trigger[i].callback(
-                g_dbg_ctx[cpu].trigger[i].type,
-                g_dbg_ctx[cpu].trigger[i].address,
-                g_dbg_ctx[cpu].trigger[i].size,
-                g_dbg_ctx[cpu].trigger[i].arg);
+              dbg->trigger[i].callback(
+                dbg->trigger[i].type,
+                dbg->trigger[i].address,
+                dbg->trigger[i].size,
+                dbg->trigger[i].arg);
             }
         }
     }
@@ -376,7 +377,7 @@ static int x86_64_debug_handler(int irq, void *c, void *arg)
 int up_debugpoint_add(int type, void *addr, size_t size,
                       debug_callback_t callback, void *arg)
 {
-  uint8_t cpu = this_cpu();
+  struct x86_64_debug_ctx_s *dbg = &g_dbg_ctx;
   uint8_t rw;
   int     i;
 
@@ -414,17 +415,17 @@ int up_debugpoint_add(int type, void *addr, size_t size,
 
   if (type == GDB_STOPREASON_STEPPOINT)
     {
-      if (g_dbg_ctx[cpu].step.used)
+      if (dbg->step.used)
         {
           return -EBUSY;
         }
 
-      g_dbg_ctx[cpu].step.used     = true;
-      g_dbg_ctx[cpu].step.type     = type;
-      g_dbg_ctx[cpu].step.address  = addr;
-      g_dbg_ctx[cpu].step.size     = size;
-      g_dbg_ctx[cpu].step.callback = callback;
-      g_dbg_ctx[cpu].step.arg      = arg;
+      dbg->step.used     = true;
+      dbg->step.type     = type;
+      dbg->step.address  = addr;
+      dbg->step.size     = size;
+      dbg->step.callback = callback;
+      dbg->step.arg      = arg;
 
       /* Enable step mode */
 
@@ -437,16 +438,16 @@ int up_debugpoint_add(int type, void *addr, size_t size,
 
   for (i = 0; i < X86_64_HWBRKP_COUNT; i++)
     {
-      if (!g_dbg_ctx[cpu].trigger[i].used)
+      if (!dbg->trigger[i].used)
         {
           /* Update local table */
 
-          g_dbg_ctx[cpu].trigger[i].used     = true;
-          g_dbg_ctx[cpu].trigger[i].type     = type;
-          g_dbg_ctx[cpu].trigger[i].address  = addr;
-          g_dbg_ctx[cpu].trigger[i].size     = size;
-          g_dbg_ctx[cpu].trigger[i].callback = callback;
-          g_dbg_ctx[cpu].trigger[i].arg      = arg;
+          dbg->trigger[i].used     = true;
+          dbg->trigger[i].type     = type;
+          dbg->trigger[i].address  = addr;
+          dbg->trigger[i].size     = size;
+          dbg->trigger[i].callback = callback;
+          dbg->trigger[i].arg      = arg;
 
           /* Configure DR */
 
@@ -465,14 +466,14 @@ int up_debugpoint_add(int type, void *addr, size_t size,
 
 int up_debugpoint_remove(int type, void *addr, size_t size)
 {
-  uint8_t cpu = this_cpu();
+  struct x86_64_debug_ctx_s *dbg = &g_dbg_ctx;
   int     i;
 
   /* Single step execution */
 
   if (type == GDB_STOPREASON_STEPPOINT)
     {
-      g_dbg_ctx[cpu].step.used = false;
+      dbg->step.used = false;
 
       /* Disable step mode */
 
@@ -485,11 +486,11 @@ int up_debugpoint_remove(int type, void *addr, size_t size)
 
   for (i = 0; i < X86_64_HWBRKP_COUNT; i++)
     {
-      if (g_dbg_ctx[cpu].trigger[i].address == addr)
+      if (dbg->trigger[i].address == addr)
         {
           /* Mark as free */
 
-          g_dbg_ctx[cpu].trigger[i].used = false;
+          dbg->trigger[i].used = false;
 
           /* Clear DR */
 

@@ -54,7 +54,7 @@ static spinlock_t        g_ap_boot;
 
 /* CPU private data */
 
-struct intel64_cpu_s g_cpu_priv[CONFIG_SMP_NCPUS];
+DEFINE_PER_CPU_BSS_SMP(struct intel64_cpu_s, g_cpu_priv);
 
 /* Allocate stack for interrupts and isr */
 
@@ -239,23 +239,25 @@ void x86_64_cpu_init(void)
       ret = acpi_lapic_get(i, &lapic);
       if (ret == OK)
         {
-          g_cpu_priv[i].loapic_id = lapic->apic_id;
-          g_cpu_priv[i].id        = i;
-          g_cpu_priv[i].ready     = false;
+          struct intel64_cpu_s *priv = &per_cpu_var_smp(g_cpu_priv, i);
+
+          priv->loapic_id = lapic->apic_id;
+          priv->id        = i;
+          priv->ready     = false;
 #ifdef CONFIG_ARCH_HAVE_SYSCALL
-          g_cpu_priv[i].ustack    = NULL;
+          priv->ustack    = NULL;
 #  ifdef CONFIG_BUILD_KERNEL
-          g_cpu_priv[i].uvbase    = (uint64_t *)CONFIG_ARCH_TEXT_VBASE;
+          priv->uvbase    = (uint64_t *)CONFIG_ARCH_TEXT_VBASE;
 #  endif
 #endif
 #ifdef CONFIG_ARCH_KERNEL_STACK
-          g_cpu_priv[i].ktopstk   = NULL;
+          priv->ktopstk   = NULL;
 #endif
 
           /* Store private CPU in TSS */
 
           tss = x86_64_cpu_tss_get(i);
-          tss->cpu = &g_cpu_priv[i];
+          tss->cpu = priv;
         }
       else
         {
@@ -271,7 +273,7 @@ void x86_64_cpu_init(void)
 
   /* Set BSP ready flag */
 
-  g_cpu_priv[0].ready = true;
+  per_cpu_var_smp(g_cpu_priv, 0).ready = true;
 }
 
 /****************************************************************************
@@ -288,7 +290,7 @@ uint8_t x86_64_loapic_to_cpu(uint8_t loapic)
 
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
-      if (g_cpu_priv[i].loapic_id == loapic)
+      if (per_cpu_var_smp(g_cpu_priv, i).loapic_id == loapic)
         {
           return i;
         }
@@ -309,7 +311,7 @@ uint8_t x86_64_loapic_to_cpu(uint8_t loapic)
 
 uint8_t x86_64_cpu_to_loapic(uint8_t cpu)
 {
-  return g_cpu_priv[cpu].loapic_id;
+  return per_cpu_var_smp(g_cpu_priv, cpu).loapic_id;
 }
 
 /****************************************************************************
@@ -326,9 +328,9 @@ void x86_64_cpu_ready_set(uint8_t cpu)
 
   flags = spin_lock_irqsave(&g_ap_boot);
 
-  if (!g_cpu_priv[cpu].ready)
+  if (!per_cpu_var_smp(g_cpu_priv, cpu).ready)
     {
-      g_cpu_priv[cpu].ready = true;
+      per_cpu_var_smp(g_cpu_priv, cpu).ready = true;
       g_cpu_count++;
     }
 
@@ -345,7 +347,7 @@ void x86_64_cpu_ready_set(uint8_t cpu)
 
 bool x86_64_cpu_ready_get(uint8_t cpu)
 {
-  struct intel64_cpu_s *priv  = &g_cpu_priv[cpu];
+  struct intel64_cpu_s *priv = &per_cpu_var_smp(g_cpu_priv, cpu);
   irqstate_t flags;
   bool ready;
 
@@ -381,7 +383,7 @@ void x86_64_cpu_priv_set(uint8_t cpu)
 {
   /* Store private data pointer to GSBASE */
 
-  write_gsbase((uintptr_t)&g_cpu_priv[cpu]);
+  write_gsbase((uintptr_t)&per_cpu_var_smp(g_cpu_priv, cpu));
 
 #ifdef CONFIG_ARCH_HAVE_SYSCALL
   /* Configure SYSCALL instruction entry point */
