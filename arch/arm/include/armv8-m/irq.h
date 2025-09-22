@@ -519,11 +519,6 @@ static inline_function uintptr_t up_getusrsp(void *regs)
 
 static inline_function bool up_interrupt_context(void)
 {
-  if (OSINIT_IS_PANIC())
-    {
-      return true;
-    }
-
   return getipsr() != 0;
 }
 
