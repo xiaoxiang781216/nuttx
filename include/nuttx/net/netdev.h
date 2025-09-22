@@ -427,7 +427,11 @@ struct net_driver_s
   /* Remember the outgoing fragments waiting to be sent */
 
 #ifdef CONFIG_NET_IPFRAG
-  FAR struct iob_queue_s d_fragout;
+  struct iob_queue_s d_fragout;
+#endif
+
+#ifdef CONFIG_NET_ARP_SEND_QUEUE
+  struct iob_queue_s d_arpout;
 #endif
 
   /* The d_buf array is used to hold incoming and outgoing packets. The
