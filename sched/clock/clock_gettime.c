@@ -147,9 +147,10 @@ int nxclock_gettime(clockid_t clock_id, FAR struct timespec *tp)
         }
     }
 #endif
-  else
-    {
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD >= 0
+  else if ((clock_id & CLOCK_MASK) == CLOCK_PROCESS_CPUTIME_ID ||
+           (clock_id & CLOCK_MASK) == CLOCK_THREAD_CPUTIME_ID)
+    {
       clockid_t clock_type = clock_id & CLOCK_MASK;
       pid_t pid = clock_id >> CLOCK_SHIFT;
       FAR struct tcb_s *tcb;
@@ -165,18 +166,10 @@ int nxclock_gettime(clockid_t clock_id, FAR struct timespec *tp)
 
       if (tcb)
         {
-          if (clock_type == CLOCK_PROCESS_CPUTIME_ID)
-            {
-              up_perf_convert(clock_process_runtime(tcb), tp);
-            }
-          else if (clock_type == CLOCK_THREAD_CPUTIME_ID)
-            {
-              up_perf_convert(tcb->run_time, tp);
-            }
-          else
-            {
-              ret = -EINVAL;
-            }
+          clock_t elapsed = clock_type == CLOCK_PROCESS_CPUTIME_ID ?
+                            clock_process_runtime(tcb) : tcb->run_time;
+
+          up_perf_convert(elapsed, tp);
 
           if (pid != 0)
             {
@@ -187,9 +180,13 @@ int nxclock_gettime(clockid_t clock_id, FAR struct timespec *tp)
         {
           ret = -EINVAL;
         }
-#else
-    ret = -EINVAL;
+    }
 #endif
+  else
+    {
+      /* POSIX required -EINVAL if clock_id is invalid */
+
+      ret = -EINVAL;
     }
 
   return ret;
