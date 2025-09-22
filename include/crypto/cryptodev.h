@@ -127,11 +127,12 @@
 #define CRYPTO_SHA2_256         32
 #define CRYPTO_SHA2_384         33
 #define CRYPTO_SHA2_512         34
-#define CRYPTO_CRC32            35
-#define CRYPTO_AES_CMAC         36
-#define CRYPTO_AES_128_CMAC     37
-#define CRYPTO_ESN              38 /* Support for Extended Sequence Numbers */
-#define CRYPTO_ALGORITHM_MAX    38 /* Keep updated */
+#define CRYPTO_CRC16            35
+#define CRYPTO_CRC32            36
+#define CRYPTO_AES_CMAC         37
+#define CRYPTO_AES_128_CMAC     38
+#define CRYPTO_ESN              39 /* Support for Extended Sequence Numbers */
+#define CRYPTO_ALGORITHM_MAX    39 /* Keep updated */
 
 /* Algorithm flags */
 

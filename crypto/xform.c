@@ -73,6 +73,7 @@
 #include <crypto/cmac.h>
 #include <crypto/chachapoly.h>
 #include <crypto/poly1305.h>
+#include <nuttx/crc16.h>
 #include <nuttx/crc32.h>
 
 #include "des_locl.h"
@@ -136,6 +137,10 @@ int sha224update_int(FAR void *, FAR const uint8_t *, size_t);
 int sha256update_int(FAR void *, FAR const uint8_t *, size_t);
 int sha384update_int(FAR void *, FAR const uint8_t *, size_t);
 int sha512update_int(FAR void *, FAR const uint8_t *, size_t);
+void crc16init(FAR void *);
+void crc16setkey(FAR void *, FAR const uint8_t *, uint16_t);
+int crc16update(FAR void *, FAR const uint8_t *, size_t);
+void crc16final(FAR uint8_t *, FAR void *);
 void crc32init(FAR void *);
 void crc32setkey(FAR void *, FAR const uint8_t *, uint16_t);
 int crc32update(FAR void *, FAR const uint8_t *, size_t);
@@ -158,6 +163,13 @@ struct aes_ofb_ctx
 {
   AES_CTX ac_key;
   FAR uint8_t *iv;
+};
+
+struct crc16_ctx
+{
+  uint16_t polynomial;
+  uint16_t initial;
+  uint16_t xorout;
 };
 
 struct crc32_ctx
@@ -493,6 +505,13 @@ const struct auth_hash auth_hash_sha2_512 =
   (void (*)(FAR void *)) sha512init, NULL, NULL,
   sha512update_int,
   (void (*)(FAR uint8_t *, FAR void *)) sha512final
+};
+
+const struct auth_hash auth_hash_crc16 =
+{
+  CRYPTO_CRC16, "CRC16",
+  0, 16, 0, sizeof(struct crc16_ctx), 1,
+  crc16init, crc16setkey, NULL, crc16update, crc16final
 };
 
 const struct auth_hash auth_hash_crc32 =
@@ -935,6 +954,50 @@ int sha512update_int(FAR void *ctx, FAR const uint8_t *buf, size_t len)
 {
   sha512update(ctx, buf, len);
   return 0;
+}
+
+void crc16init(FAR void *ctx)
+{
+  FAR struct crc16_ctx *crc = (FAR struct crc16_ctx *)ctx;
+
+  memset(crc, 0, sizeof(struct crc16_ctx));
+}
+
+void crc16setkey(FAR void *ctx, FAR const uint8_t *key, uint16_t len)
+{
+  FAR struct crc16_ctx *crc = (FAR struct crc16_ctx *)ctx;
+  FAR uint16_t *param = (FAR uint16_t *)key;
+
+  crc->polynomial = param[0];
+  crc->initial    = param[1];
+  crc->xorout     = param[2];
+}
+
+int crc16update(FAR void *ctx, FAR const uint8_t *buf, size_t len)
+{
+  FAR struct crc16_ctx *crc = (FAR struct crc16_ctx *)ctx;
+
+  switch (crc->polynomial)
+    {
+      case 0x1021:
+        crc->initial = crc16h1021_part(buf, len, crc->initial);
+        break;
+      case 0x8005:
+        crc->initial = crc16h8005_part(buf, len, crc->initial);
+        break;
+      default:
+        return -EINVAL;
+    }
+
+  return 0;
+}
+
+void crc16final(FAR uint8_t *digest, FAR void *ctx)
+{
+  FAR struct crc16_ctx *crc = (FAR struct crc16_ctx *)ctx;
+
+  crc->initial ^= crc->xorout;
+  memcpy(digest, &crc->initial, sizeof(uint16_t));
 }
 
 void crc32init(FAR void *ctx)
