@@ -504,13 +504,14 @@ irqstate_t spin_lock_irqsave(FAR volatile spinlock_t *lock)
  *
  ****************************************************************************/
 
-#define spin_lock_irqsave_nopreempt(lock) \
-  ({ \
-    irqstate_t _flags; \
-    _flags = spin_lock_irqsave(lock); \
-    sched_lock(); \
-    _flags; \
-  })
+static inline_function
+irqstate_t spin_lock_irqsave_nopreempt(FAR volatile spinlock_t *lock)
+{
+  irqstate_t flags;
+  flags = spin_lock_irqsave(lock);
+  sched_lock();
+  return flags;
+}
 
 /****************************************************************************
  * Name: rspin_lock_is_recursive
@@ -684,13 +685,14 @@ irqstate_t rspin_lock_irqsave(FAR rspinlock_t *lock)
 }
 #endif
 
-#define rspin_lock_irqsave_nopreempt(lock) \
-  ({ \
-    irqstate_t _flags; \
-    _flags = rspin_lock_irqsave(lock); \
-    sched_lock(); \
-    _flags; \
-  })
+static inline_function
+irqstate_t rspin_lock_irqsave_nopreempt(FAR rspinlock_t *lock)
+{
+  irqstate_t flags;
+  flags = rspin_lock_irqsave(lock);
+  sched_lock();
+  return flags;
+}
 
 /****************************************************************************
  * Name: rspin_trylock/rspin_trylock_irqsave/rspin_trylock_irqsave_nopreempt
