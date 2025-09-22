@@ -2705,7 +2705,7 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
         {
           serr("perf event pid fail:%d\n", pid);
           ret = -ESRCH;
-          goto err_with_event;
+          goto exit;
         }
     }
 
@@ -2713,7 +2713,7 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
   if (event == NULL)
     {
       ret = -ENOMEM;
-      goto err_with_event;
+      goto exit;
     }
 
   if (attr->disabled)
@@ -2765,6 +2765,9 @@ int perf_event_open(FAR struct perf_event_attr_s *attr, pid_t pid,
   return event_fd;
 
 err_with_event:
+  perf_free_event(event);
+
+exit:
   if (pid > 0)
     {
       nxsched_put_tcb(tcb);
@@ -2775,7 +2778,6 @@ err_with_event:
       file_put(group_file);
     }
 
-  perf_free_event(event);
   return ret;
 }
 
