@@ -51,7 +51,6 @@ struct audio_peer_s
   struct audio_lowerhalf_s dev;        /* Audio lower half (this device) */
   FAR struct audio_tunnel_s *parent;
   char devname[16];                    /* Device name */
-  bool running;
   struct dq_queue_s pendq;
 };
 
@@ -156,8 +155,7 @@ static void audio_tunnel_deliver_buffer(FAR struct audio_tunnel_s *tunnel)
   FAR struct ap_buffer_s *dst;
 
   nxmutex_lock(&tunnel->mutex);
-  if (!producer->running || !consumer->running ||
-      dq_empty(&producer->pendq) || dq_empty(&consumer->pendq))
+  if (dq_empty(&producer->pendq) || dq_empty(&consumer->pendq))
     {
       nxmutex_unlock(&tunnel->mutex);
       audinfo("audio tunnel not ready.\n");
@@ -414,10 +412,6 @@ static int audio_tunnel_start(FAR struct audio_lowerhalf_s *dev)
   FAR struct audio_peer_s *peer = (FAR struct audio_peer_s *)dev;
   FAR struct audio_tunnel_s *tunnel = peer->parent;
 
-  nxmutex_lock(&tunnel->mutex);
-  peer->running = true;
-  nxmutex_unlock(&tunnel->mutex);
-
   audio_tunnel_deliver_message(peer, AUDIO_MSG_START);
   audio_tunnel_deliver_buffer(tunnel);
 
@@ -454,7 +448,6 @@ static int audio_tunnel_stop(FAR struct audio_lowerhalf_s *dev)
       peer->dev.upper(peer->dev.priv, AUDIO_CALLBACK_DEQUEUE, apb, OK);
     }
 
-  peer->running = false;
   nxmutex_unlock(&tunnel->mutex);
   peer->dev.upper(peer->dev.priv, AUDIO_CALLBACK_COMPLETE, NULL, OK);
 
@@ -478,11 +471,6 @@ static int audio_tunnel_pause(FAR struct audio_lowerhalf_s *dev)
 #endif
 {
   FAR struct audio_peer_s *peer = (FAR struct audio_peer_s *)dev;
-  FAR struct audio_tunnel_s *tunnel = peer->parent;
-
-  nxmutex_lock(&tunnel->mutex);
-  peer->running = false;
-  nxmutex_unlock(&tunnel->mutex);
 
   audio_tunnel_deliver_message(peer, AUDIO_MSG_PAUSE);
   return OK;
@@ -506,10 +494,6 @@ static int audio_tunnel_resume(FAR struct audio_lowerhalf_s *dev)
 {
   FAR struct audio_peer_s *peer = (FAR struct audio_peer_s *)dev;
   FAR struct audio_tunnel_s *tunnel = peer->parent;
-
-  nxmutex_lock(&tunnel->mutex);
-  peer->running = true;
-  nxmutex_unlock(&tunnel->mutex);
 
   audio_tunnel_deliver_message(peer, AUDIO_MSG_RESUME);
   audio_tunnel_deliver_buffer(tunnel);
