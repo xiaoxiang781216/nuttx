@@ -400,7 +400,7 @@ int oneshot_current(FAR struct oneshot_lowerhalf_s *lower,
   uint64_t sec  = oneshot_cnt2sec(lower, cnt);
 
   cnt          -= sec * freq;
-  ts->tv_nsec   = oneshot_delta_cnt2tick(lower, cnt);
+  ts->tv_nsec   = oneshot_delta_cnt2nsec(lower, cnt);
   ts->tv_sec    = sec;
 #else
   ret = lower->ops->current(lower, ts);
