@@ -3,7 +3,7 @@
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
 
-if ARCH_CHIP_QEMU
+if ARCH_CHIP_QEMU_ARM64
 
 menu "Qemu Virt Chip Selection"
 
@@ -47,4 +47,4 @@ config ARCH_CHIP_QEMU_WITH_HV
 
 endmenu # "Qemu Chip Selection"
 
-endif # ARCH_CHIP_QEMU
+endif # ARCH_CHIP_QEMU_ARM64

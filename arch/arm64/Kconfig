@@ -28,7 +28,7 @@ endchoice # ARM64 Toolchain Selection
 
 choice
 	prompt "ARM64 chip selection"
-	default ARCH_CHIP_QEMU
+	default ARCH_CHIP_QEMU_ARM64
 
 config ARCH_CHIP_A64
 	bool "Allwinner A64"
@@ -53,7 +53,7 @@ config ARCH_CHIP_RK3399
 	---help---
 		Rockchip RK3399 SoC
 
-config ARCH_CHIP_QEMU
+config ARCH_CHIP_QEMU_ARM64
 	bool "QEMU virt platform (ARMv8a)"
 	select ARCH_HAVE_ADDRENV
 	select ARCH_HAVE_ELF_EXECUTABLE
@@ -336,7 +336,7 @@ config ARCH_CHIP
 	default "a64"       if ARCH_CHIP_A64
 	default "rk3399"    if ARCH_CHIP_RK3399
 	default "zynq-mpsoc" if ARCH_CHIP_ZYNQ_MPSOC
-	default "qemu"      if ARCH_CHIP_QEMU
+	default "qemu"      if ARCH_CHIP_QEMU_ARM64
 	default "goldfish"  if ARCH_CHIP_GOLDFISH_ARM64
 	default "fvp-v8r"   if ARCH_CHIP_FVP_ARMV8R
 	default "vdk"       if ARCH_CHIP_VDK
@@ -485,7 +485,7 @@ if ARCH_CHIP_RK3399
 source "arch/arm64/src/rk3399/Kconfig"
 endif
 
-if ARCH_CHIP_QEMU
+if ARCH_CHIP_QEMU_ARM64
 source "arch/arm64/src/qemu/Kconfig"
 endif
 

@@ -37,7 +37,7 @@
 #define MB(x)           (KB(x) << 10)
 #define GB(x)           (MB(UINT64_C(x)) << 10)
 
-#if defined(CONFIG_ARCH_CHIP_QEMU)
+#if defined(CONFIG_ARCH_CHIP_QEMU_ARM64)
 
 #if CONFIG_ARM64_GIC_VERSION == 2
 

@@ -2183,7 +2183,7 @@ config ARCH_BOARD_QEMU_ARMV7A
 
 config ARCH_BOARD_QEMU_ARMV8A
 	bool "Qemu ARMv8a CPUs board"
-	depends on ARCH_CHIP_QEMU
+	depends on ARCH_CHIP_QEMU_ARM64
 	select ARCH_HAVE_IRQBUTTONS
 	---help---
 		This options selects support for NuttX on the QEMU ARMv8a + virt
