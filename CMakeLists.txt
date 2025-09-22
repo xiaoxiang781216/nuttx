@@ -700,6 +700,8 @@ if(NOT CONFIG_ARCH_SIM)
     file(APPEND ${CMAKE_BINARY_DIR}/nuttx.manifest uImage)
   endif()
 elseif(WIN32)
+  set(CMAKE_EXECUTABLE_SUFFIX ".exe")
+
   target_link_options(nuttx PUBLIC /SAFESEH:NO)
   math(EXPR LINK_STACKSIZE
        "${CONFIG_SIM_STACKSIZE_ADJUSTMENT} + ${CONFIG_IDLETHREAD_STACKSIZE}"
