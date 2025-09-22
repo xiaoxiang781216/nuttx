@@ -29,7 +29,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/queue.h>
-#include <nuttx/mutex.h>
+#include <nuttx/mutex_type.h>
 #include <nuttx/mm/gran.h>
 
 /****************************************************************************

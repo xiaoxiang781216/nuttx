@@ -33,6 +33,8 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include <nuttx/mutex.h>
+
 #include "sched/sched.h"
 #include "environ/environ.h"
 

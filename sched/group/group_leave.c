@@ -37,6 +37,7 @@
 #include <nuttx/net/net.h>
 #include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/mutex.h>
 
 #ifdef CONFIG_BINFMT_LOADABLE
 #  include <nuttx/binfmt/binfmt.h>

@@ -27,6 +27,7 @@
 #include <nuttx/config.h>
 
 #include <errno.h>
+#include <assert.h>
 
 #include "semaphore/semaphore.h"
 

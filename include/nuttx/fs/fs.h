@@ -43,12 +43,12 @@
 #include <dirent.h>
 
 #include <nuttx/atomic.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/mm/map.h>
 #include <nuttx/spawn.h>
 #include <nuttx/queue.h>
 #include <nuttx/irq.h>
+#include <nuttx/mutex_type.h>
 #include <nuttx/spinlock_type.h>
 
 /****************************************************************************

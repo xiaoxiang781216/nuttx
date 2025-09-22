@@ -36,6 +36,7 @@
 #include <net/if.h>
 #include <net/ethernet.h>
 #include <nuttx/net/netdev.h>
+#include <nuttx/mutex.h>
 
 #include "mld/mld.h"
 #include "utils/utils.h"

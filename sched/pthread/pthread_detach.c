@@ -33,6 +33,8 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/mutex.h>
+
 #include "sched/sched.h"
 #include "group/group.h"
 #include "pthread/pthread.h"

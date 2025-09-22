@@ -32,6 +32,7 @@
 #include <string.h>
 #include <errno.h>
 
+#include <nuttx/mutex.h>
 #ifdef CONFIG_FDSAN
 #  include <android/fdsan.h>
 #endif

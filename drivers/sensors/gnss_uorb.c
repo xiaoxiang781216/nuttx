@@ -32,6 +32,7 @@
 #include <nuttx/sensors/sensor.h>
 #include <nuttx/sensors/gnss.h>
 #include <nuttx/lib/lib.h>
+#include <nuttx/mutex.h>
 
 #include <fcntl.h>
 #include <poll.h>

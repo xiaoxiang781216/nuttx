@@ -31,6 +31,7 @@
 #include <debug.h>
 
 #include <nuttx/nuttx.h>
+#include <nuttx/mutex.h>
 
 #include "group/group.h"
 #include "pthread/pthread.h"

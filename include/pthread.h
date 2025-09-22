@@ -29,7 +29,7 @@
 
 #include <nuttx/config.h>    /* Default settings */
 #include <nuttx/compiler.h>  /* Compiler settings, noreturn_function */
-#include <nuttx/mutex.h>
+#include <nuttx/mutex_type.h>
 
 #include <sys/types.h>       /* Needed for general types */
 #include <stdint.h>          /* C99 fixed width integer types */

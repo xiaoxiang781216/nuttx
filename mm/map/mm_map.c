@@ -28,10 +28,12 @@
 #include <nuttx/mm/map.h>
 #include <nuttx/pgalloc.h>
 #include <nuttx/addrenv.h>
-#include <stdbool.h>
-#include <stddef.h>
 #include <nuttx/sched.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/mutex.h>
+
+#include <stdbool.h>
+#include <stddef.h>
 #include <assert.h>
 #include <debug.h>
 

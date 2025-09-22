@@ -30,39 +30,16 @@
 #include <assert.h>
 #include <stdbool.h>
 
-#include <nuttx/semaphore.h>
 #include <nuttx/clock.h>
+#include <nuttx/mutex_type.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define NXMUTEX_INITIALIZER                                             \
-  {NXSEM_INITIALIZER(NXSEM_NO_MHOLDER, SEM_TYPE_MUTEX | SEM_PRIO_INHERIT)}
-
-#define NXRMUTEX_INITIALIZER   {NXMUTEX_INITIALIZER, 0}
-
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
-
-struct mutex_s
-{
-  sem_t sem;
-#ifdef CONFIG_LIBC_MUTEX_BACKTRACE
-  FAR void *stack;
-#endif
-};
-
-typedef struct mutex_s mutex_t;
-
-struct rmutex_s
-{
-  mutex_t mutex;
-  unsigned int count;
-};
-
-typedef struct rmutex_s rmutex_t;
 
 /****************************************************************************
  * Public Function Prototypes

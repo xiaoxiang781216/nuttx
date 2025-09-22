@@ -38,6 +38,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/net/bluetooth.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/mutex.h>
 
 #include <nuttx/wireless/bluetooth/bt_slip.h>
 

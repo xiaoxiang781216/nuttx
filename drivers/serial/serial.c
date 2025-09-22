@@ -56,6 +56,7 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/kthread.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/mutex.h>
 
 /****************************************************************************
  * Pre-processor Definitions

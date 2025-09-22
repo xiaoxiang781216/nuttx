@@ -39,6 +39,7 @@
 #include <nuttx/sched.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/net.h>
+#include <nuttx/mutex.h>
 
 #include "utils/utils.h"
 

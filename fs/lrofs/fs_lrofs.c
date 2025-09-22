@@ -36,11 +36,12 @@
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
+#include <libgen.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
-#include <libgen.h>
+#include <nuttx/mutex.h>
 
 #include "fs_lrofs.h"
 #include "fs_heap.h"

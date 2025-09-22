@@ -28,6 +28,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/mutex.h>
 #include <pthread.h>
 #include <errno.h>
 #include <debug.h>

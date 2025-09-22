@@ -40,6 +40,7 @@
 #include <nuttx/net/ethernet.h>
 #include <nuttx/net/bluetooth.h>
 #include <nuttx/net/can.h>
+#include <nuttx/mutex.h>
 
 #include "utils/utils.h"
 #include "icmpv6/icmpv6.h"

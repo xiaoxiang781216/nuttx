@@ -38,6 +38,7 @@
 #include <nuttx/mm/mm.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/sched.h>
+#include <nuttx/mutex.h>
 
 #include "sched/sched.h"
 #include "group/group.h"

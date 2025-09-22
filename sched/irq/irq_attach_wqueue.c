@@ -26,13 +26,14 @@
 
 #include <nuttx/config.h>
 
+#include <debug.h>
 #include <errno.h>
 #include <stdio.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/tls.h>
-#include <debug.h>
+#include <nuttx/mutex.h>
 
 #include "irq/irq.h"
 #include "sched/sched.h"

@@ -38,6 +38,7 @@
 
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
+#include <nuttx/mutex.h>
 
 #include "devif/devif.h"
 #include "netdev/netdev.h"

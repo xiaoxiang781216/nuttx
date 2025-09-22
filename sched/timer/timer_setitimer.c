@@ -30,6 +30,8 @@
 #include <time.h>
 #include <sys/time.h>
 
+#include <nuttx/mutex.h>
+
 #include "sched/sched.h"
 
 #ifndef CONFIG_DISABLE_POSIX_TIMERS

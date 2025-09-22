@@ -26,7 +26,9 @@
 
 #include <nuttx/config.h>
 
+#include <nuttx/mutex.h>
 #include <nuttx/nuttx.h>
+
 #include <sys/types.h>
 #include <stdbool.h>
 #include <pthread.h>

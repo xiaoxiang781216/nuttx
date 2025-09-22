@@ -40,12 +40,12 @@
 #include <nuttx/irq.h>
 #include <nuttx/percpu.h>
 #include <nuttx/clock.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/queue.h>
 #include <nuttx/wdog.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/mm/map.h>
+#include <nuttx/mutex_type.h>
 #include <nuttx/spinlock_type.h>
 
 #include <arch/arch.h>

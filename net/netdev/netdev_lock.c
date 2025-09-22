@@ -27,6 +27,7 @@
 #include <nuttx/config.h>
 
 #include <nuttx/net/netdev.h>
+#include <nuttx/mutex.h>
 
 /****************************************************************************
  * Public Functions

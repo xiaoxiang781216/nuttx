@@ -34,6 +34,7 @@
 
 #include <nuttx/cancelpt.h>
 #include <nuttx/pthread.h>
+#include <nuttx/mutex.h>
 
 #include "pthread.h"
 

@@ -37,7 +37,7 @@
 #include <semaphore.h>
 
 #include <nuttx/queue.h>
-#include <nuttx/mutex.h>
+#include <nuttx/mutex_type.h>
 #include <nuttx/mm/map.h>
 #ifdef CONFIG_MM_IOB
 #  include <nuttx/mm/iob.h>

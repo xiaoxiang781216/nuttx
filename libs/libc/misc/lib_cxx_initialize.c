@@ -26,6 +26,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
+#include <nuttx/mutex.h>
 
 #include <assert.h>
 #include <debug.h>

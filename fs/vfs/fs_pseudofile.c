@@ -38,6 +38,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/lib/math32.h>
+#include <nuttx/mutex.h>
 
 #include "inode/inode.h"
 #include "fs_heap.h"

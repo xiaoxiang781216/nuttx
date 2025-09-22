@@ -63,6 +63,7 @@
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/tcp.h>
+#include <nuttx/mutex.h>
 
 #include "devif/devif.h"
 #include "inet/inet.h"

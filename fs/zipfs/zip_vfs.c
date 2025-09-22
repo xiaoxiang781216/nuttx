@@ -40,6 +40,8 @@
 #include <archive_entry.h>
 #include <archive.h>
 
+#include <nuttx/mutex.h>
+
 #include "fs_heap.h"
 
 /****************************************************************************

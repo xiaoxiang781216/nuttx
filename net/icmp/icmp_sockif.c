@@ -37,8 +37,9 @@
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/icmp.h>
-#include <socket/socket.h>
+#include <nuttx/mutex.h>
 
+#include "socket/socket.h"
 #include "icmp/icmp.h"
 #include "inet/inet.h"
 #include "utils/utils.h"
