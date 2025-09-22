@@ -552,6 +552,7 @@ static int audio_tunnel_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
 {
   FAR struct audio_peer_s *peer = (FAR struct audio_peer_s *)dev;
   FAR struct audio_tunnel_s *tunnel = peer->parent;
+  FAR struct ap_buffer_info_s *binfo = NULL;
   int ret = OK;
 
   audinfo("cmd=%d arg=%ld\n", cmd, arg);
@@ -564,21 +565,20 @@ static int audio_tunnel_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
         /* Report our preferred buffer size and quantity */
 
       case AUDIOIOC_GETBUFFERINFO:
-        {
-          FAR struct ap_buffer_info_s *info =
-            (FAR struct ap_buffer_info_s *)arg;
-          info->nbuffers    = tunnel->binfo.nbuffers;
-          info->buffer_size = tunnel->binfo.buffer_size;
-        }
+        binfo = (FAR struct ap_buffer_info_s *)arg;
+        binfo->nbuffers    = tunnel->binfo.nbuffers;
+        binfo->buffer_size = tunnel->binfo.buffer_size;
         break;
 
       case AUDIOIOC_SETBUFFERINFO:
-        {
-          FAR struct ap_buffer_info_s *info =
-            (FAR struct ap_buffer_info_s *)arg;
-          tunnel->binfo.nbuffers = info->nbuffers;
-          tunnel->binfo.buffer_size = info->buffer_size;
-        }
+        binfo = (FAR struct ap_buffer_info_s *)arg;
+        tunnel->binfo.nbuffers = binfo->nbuffers;
+        tunnel->binfo.buffer_size = binfo->buffer_size;
+        break;
+
+      case AUDIOIOC_GETAUDIOINFO:
+        memcpy((FAR void *)(uintptr_t)arg, &tunnel->info,
+          sizeof(tunnel->info));
         break;
 
       default:
