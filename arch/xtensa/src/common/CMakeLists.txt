@@ -70,6 +70,10 @@ if(CONFIG_ARCH_FPU)
   list(APPEND SRCS xtensa_fpucmp.c)
 endif()
 
+if(CONFIG_ARCH_HAVE_DEBUG)
+  list(APPEND SRCS xtensa_debug.c)
+endif()
+
 if(CONFIG_SCHED_BACKTRACE)
   list(APPEND SRCS xtensa_backtrace.c)
 endif()
