@@ -2246,6 +2246,8 @@ int i3c_master_register(FAR struct i3c_master_controller *master,
    */
 
   master->init_done = true;
+  i3c_bus_normaluse_lock(&master->bus);
+  i3c_master_register_new_i3c_devs(master);
 
   if (master->i3c_bus_id < 0)
     {
@@ -2262,6 +2264,8 @@ int i3c_master_register(FAR struct i3c_master_controller *master,
       i3cerr("ERROR: Failed to register I2C%d.\n", master->i3c_bus_id);
       goto err_del_dev;
     }
+
+  i3c_bus_normaluse_unlock(&master->bus);
 
   return 0;
 
