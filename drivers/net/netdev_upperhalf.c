@@ -783,6 +783,10 @@ static void netdev_upper_work(FAR void *arg)
 {
   FAR struct netdev_upperhalf_s *upper = arg;
 
+#ifdef CONFIG_NET_VLAN
+  netdev_upper_vlan_foreach(upper, netdev_lower_txdone);
+#endif
+
   /* RX may release quota and driver buffer, so do RX first. */
 
   netdev_upper_rxpoll_work(upper);
@@ -1603,12 +1607,12 @@ void netdev_lower_rxready(FAR struct netdev_lowerhalf_s *dev)
 
 void netdev_lower_txdone(FAR struct netdev_lowerhalf_s *dev)
 {
-#ifdef CONFIG_NET_VLAN
-  FAR struct netdev_upperhalf_s *upper = dev->netdev.d_private;
-  netdev_upper_vlan_foreach(upper, netdev_lower_txdone);
-#endif
   if (dev->rxtype == NETDEV_RX_DIRECT)
     {
+#ifdef CONFIG_NET_VLAN
+      FAR struct netdev_upperhalf_s *upper = dev->netdev.d_private;
+      netdev_upper_vlan_foreach(upper, netdev_lower_txdone);
+#endif
       netdev_upper_txavail_work(dev->netdev.d_private);
     }
   else
