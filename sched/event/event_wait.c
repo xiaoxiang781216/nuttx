@@ -71,28 +71,28 @@ nxevent_mask_t nxevent_tickwait_wait(FAR nxevent_t *event,
   int ret;
 
   DEBUGASSERT(event != NULL && wait != NULL &&
-              up_interrupt_context() == false);
+              !up_interrupt_context());
 
-  waitany = ((eflags & NXEVENT_WAIT_ALL) == 0);
+  waitany = !(eflags & NXEVENT_WAIT_ALL);
 
-  if (events == 0)
+  if (!events)
     {
-      events = ~0;
+      events = ~0u;
     }
 
   flags = spin_lock_irqsave(&event->lock);
 
-  if ((eflags & NXEVENT_WAIT_RESET) != 0)
+  if (eflags & NXEVENT_WAIT_RESET)
     {
-      event->events = 0;
+      event->events = 0u;
     }
 
   /* Fetch for any event */
 
-  if (waitany && ((events & event->events) != 0))
+  if (waitany && (events & event->events))
     {
       events &= event->events;
-      if ((eflags & NXEVENT_WAIT_NOCLEAR) == 0)
+      if (!(eflags & NXEVENT_WAIT_NOCLEAR))
         {
           event->events &= ~events;
         }
@@ -102,7 +102,7 @@ nxevent_mask_t nxevent_tickwait_wait(FAR nxevent_t *event,
 
   else if (!waitany && (event->events & events) == events)
     {
-      if ((eflags & NXEVENT_WAIT_NOCLEAR) == 0)
+      if (!(eflags & NXEVENT_WAIT_NOCLEAR))
         {
           event->events &= ~events;
         }
@@ -110,9 +110,9 @@ nxevent_mask_t nxevent_tickwait_wait(FAR nxevent_t *event,
 
   /* Return 0 if no event expect in try wait case */
 
-  else if (delay == 0)
+  else if (!delay)
     {
-      events = 0;
+      events = 0u;
     }
 
   /* Let's wait for the event to arrive */
@@ -121,7 +121,7 @@ nxevent_mask_t nxevent_tickwait_wait(FAR nxevent_t *event,
     {
       /* Initialize event wait */
 
-      nxsem_init(&(wait->sem), 0, 0);
+      nxsem_init(&(wait->sem), 0, 0u);
       wait->expect = events;
       wait->eflags = eflags;
 
@@ -156,7 +156,7 @@ nxevent_mask_t nxevent_tickwait_wait(FAR nxevent_t *event,
               list_delete(&(wait->node));
             }
 
-          events = 0;
+          events = 0u;
         }
     }
 
@@ -257,5 +257,5 @@ nxevent_mask_t nxevent_trywait(FAR nxevent_t *event,
                                nxevent_mask_t events,
                                nxevent_flags_t eflags)
 {
-  return nxevent_tickwait(event, events, eflags, 0);
+  return nxevent_tickwait(event, events, eflags, 0u);
 }

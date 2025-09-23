@@ -43,14 +43,14 @@
 
 /* Event Wait Flags */
 
-#define NXEVENT_WAIT_ALL     (1 << 0) /* Bit 0: Wait ALL */
-#define NXEVENT_WAIT_RESET   (1 << 1) /* Bit 1: Reset events before wait */
-#define NXEVENT_WAIT_NOCLEAR (1 << 2) /* Bit 2: Do not clear events after wait */
+#define NXEVENT_WAIT_ALL     (1ul << 0) /* Bit 0: Wait ALL */
+#define NXEVENT_WAIT_RESET   (1ul << 1) /* Bit 1: Reset events before wait */
+#define NXEVENT_WAIT_NOCLEAR (1ul << 2) /* Bit 2: Do not clear events after wait */
 
 /* Event Post Flags */
 
-#define NXEVENT_POST_ALL     (1 << 0) /* Bit 0: Post ALL */
-#define NXEVENT_POST_SET     (1 << 1) /* Bit 1: Set event after post */
+#define NXEVENT_POST_ALL     (1ul << 0) /* Bit 0: Post ALL */
+#define NXEVENT_POST_SET     (1ul << 1) /* Bit 1: Set event after post */
 
 /****************************************************************************
  * Public Type Definitions

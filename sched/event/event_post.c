@@ -68,7 +68,7 @@
 int nxevent_post(FAR nxevent_t *event, nxevent_mask_t events,
                  nxevent_flags_t eflags)
 {
-  nxevent_mask_t clear = 0;
+  nxevent_mask_t clear = 0u;
   FAR nxevent_wait_t *wait;
   FAR nxevent_wait_t *tmp;
   irqstate_t flags;
@@ -78,64 +78,67 @@ int nxevent_post(FAR nxevent_t *event, nxevent_mask_t events,
 
   if (event == NULL)
     {
-      return -EINVAL;
-    }
-
-  flags = spin_lock_irqsave_nopreempt(&event->lock);
-
-  if ((eflags & NXEVENT_POST_SET) != 0)
-    {
-      event->events = events ? events : ~0;
+      ret = -EINVAL;
     }
   else
     {
-      event->events |= events ? events : ~0;
-    }
+      flags = spin_lock_irqsave_nopreempt(&event->lock);
 
-  if (!list_is_empty(&event->list))
-    {
-      postall = ((eflags & NXEVENT_POST_ALL) != 0);
-
-      list_for_every_entry_safe(&event->list, wait, tmp,
-                                nxevent_wait_t, node)
+      if (eflags & NXEVENT_POST_SET)
         {
-          waitall = ((wait->eflags & NXEVENT_WAIT_ALL) != 0);
+          event->events = events ? events : ~0u;
+        }
+      else
+        {
+          event->events |= events ? events : ~0u;
+        }
 
-          if ((!waitall && ((wait->expect & event->events) != 0)) ||
-              (waitall && ((wait->expect & event->events) == wait->expect)))
+      if (!list_is_empty(&event->list))
+        {
+          postall = !!(eflags & NXEVENT_POST_ALL);
+
+          list_for_every_entry_safe(&event->list, wait, tmp,
+                                    nxevent_wait_t, node)
             {
-              list_delete(&wait->node);
+              waitall = !!(wait->eflags & NXEVENT_WAIT_ALL);
 
-              ret = nxsem_post(&wait->sem);
-              if (ret < 0)
+              if ((!waitall && (wait->expect & event->events)) ||
+                  (waitall &&
+                  ((wait->expect & event->events) == wait->expect)))
                 {
-                  continue;
-                }
+                  list_delete(&wait->node);
 
-              if (!waitall)
-                {
-                  wait->expect &= event->events;
-                }
+                  ret = nxsem_post(&wait->sem);
+                  if (ret < 0)
+                    {
+                      continue;
+                    }
 
-              if ((wait->eflags & NXEVENT_WAIT_NOCLEAR) == 0)
-                {
-                  clear |= wait->expect;
-                }
+                  if (!waitall)
+                    {
+                      wait->expect &= event->events;
+                    }
 
-              if (!postall && (event->events & ~clear) == 0)
-                {
-                  break;
+                  if (!(wait->eflags & NXEVENT_WAIT_NOCLEAR))
+                    {
+                      clear |= wait->expect;
+                    }
+
+                  if (!postall && !(event->events & ~clear))
+                    {
+                      break;
+                    }
                 }
+            }
+
+          if (clear)
+            {
+              event->events &= ~clear;
             }
         }
 
-      if (clear)
-        {
-          event->events &= ~clear;
-        }
+      spin_unlock_irqrestore_nopreempt(&event->lock, flags);
     }
-
-  spin_unlock_irqrestore_nopreempt(&event->lock, flags);
 
   return ret;
 }

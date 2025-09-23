@@ -48,5 +48,5 @@
 
 int nxevent_destroy(FAR nxevent_t *event)
 {
-  return nxevent_post(event, 0, NXEVENT_POST_ALL | NXEVENT_POST_SET);
+  return nxevent_post(event, 0u, NXEVENT_POST_ALL | NXEVENT_POST_SET);
 }
