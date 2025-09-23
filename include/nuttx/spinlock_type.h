@@ -45,12 +45,12 @@ extern "C"
 #if defined(CONFIG_SPINLOCK_DEBUG)
 typedef struct spinlock_debug_s
 {
-FAR sq_entry_t *flink;
+sq_entry_t flink;
 FAR struct tcb_s *holder;
 FAR void *caller;
 } spinlock_debug_t;
 #  define SPINLOCK_DEBUG_INFO spinlock_debug_t info;
-#  define SPINLOCK_DEBUG_INIT {NULL, NULL, NULL},
+#  define SPINLOCK_DEBUG_INIT {{NULL}, NULL, NULL},
 #else
 #  define SPINLOCK_DEBUG_INFO
 #  define SPINLOCK_DEBUG_INIT
@@ -75,8 +75,8 @@ typedef struct spinlock_s
   atomic_t next;
 } spinlock_t;
 
-#  define SP_UNLOCKED (spinlock_t){SPINLOCK_DEBUG_INIT 0, 0}
-#  define SP_LOCKED   (spinlock_t){SPINLOCK_DEBUG_INIT 0, 1}
+#  define SP_UNLOCKED {SPINLOCK_DEBUG_INIT 0, 0}
+#  define SP_LOCKED   {SPINLOCK_DEBUG_INIT 0, 1}
 #elif defined(CONFIG_SPINLOCK) || !defined(CONFIG_HAVE_ZERO_SIZE_ARRAY)
 typedef struct spinlock_s
 {
@@ -84,16 +84,12 @@ typedef struct spinlock_s
   atomic_t lock;
 } spinlock_t;
 
-#  define SP_UNLOCKED (spinlock_t){SPINLOCK_DEBUG_INIT 0}
-#  define SP_LOCKED   (spinlock_t){SPINLOCK_DEBUG_INIT 1}
+#  define SP_UNLOCKED {SPINLOCK_DEBUG_INIT 0}
+#  define SP_LOCKED   {SPINLOCK_DEBUG_INIT 1}
 
 #else
-#  define SP_LOCKED      SP_UNLOCKED
-#  define SP_UNLOCKED    \
-     (struct spinlock_s) \
-     {                   \
-       .lock = {}        \
-     }
+#  define SP_LOCKED   SP_UNLOCKED
+#  define SP_UNLOCKED {}
 
 struct spinlock_s
 {
@@ -104,7 +100,7 @@ typedef struct spinlock_s spinlock_t;
 #endif
 
 #define RSPINLOCK_CPU_INVALID (-1)
-#define RSPINLOCK_INITIALIZER (rspinlock_t){SPINLOCK_DEBUG_INIT 0}
+#define RSPINLOCK_INITIALIZER {SPINLOCK_DEBUG_INIT {0}}
 
 typedef struct rspinlock_s
 {

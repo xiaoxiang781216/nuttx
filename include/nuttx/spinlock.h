@@ -101,8 +101,8 @@ extern rspinlock_t g_schedlock;
  *
  ****************************************************************************/
 
-/* void spin_lock_init(FAR spinlock_t *lock); */
-#define spin_lock_init(l) do { *(l) = SP_UNLOCKED; } while (0)
+#define spin_lock_init(l) \
+   do { memset((FAR void *)l, 0, sizeof(*(l))); } while (0)
 
 /****************************************************************************
  * Name: rspin_lock_init
@@ -119,10 +119,8 @@ extern rspinlock_t g_schedlock;
  *
  ****************************************************************************/
 
-static inline_function void rspin_lock_init(FAR rspinlock_t *lock)
-{
-  *lock = RSPINLOCK_INITIALIZER;
-}
+#define rspin_lock_init(l) \
+   do { memset((FAR void *)l, 0, sizeof(*(l))); } while (0)
 
 /****************************************************************************
  * Name: spin_lock_notrace
@@ -394,7 +392,7 @@ static inline_function void spin_unlock(FAR volatile spinlock_t *lock)
 #  define spin_is_locked(l) \
     (atomic_read(&(*l).owner) != atomic_read(&(*l).next))
 #else
-#  define spin_is_locked(l) (atomic_load(&(l)->lock) == 1)
+#  define spin_is_locked(l) (atomic_read(&(l)->lock) == 1)
 #endif
 
 /****************************************************************************
@@ -1115,7 +1113,8 @@ void rspin_restorelock(FAR rspinlock_t *lock, uint16_t count)
  *
  ****************************************************************************/
 
-#define rwlock_init(l) do { (l->lock) = RW_SP_UNLOCKED; } while(0)
+#define rwlock_init(l) \
+   do { memset((FAR void *)l, 0, sizeof(*(l))); } while (0)
 
 /****************************************************************************
  * Name: read_lock
