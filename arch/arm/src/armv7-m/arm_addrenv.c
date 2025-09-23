@@ -309,19 +309,15 @@ int up_addrenv_vdata(arch_addrenv_t *addrenv, uintptr_t textsize,
 int up_addrenv_select(const arch_addrenv_t *addrenv)
 {
 #ifdef CONFIG_MM_TASK_HEAP
-  struct tcb_s *tcb = this_task();
-
   if (g_addrenv_heap_region == 0)
     {
       g_addrenv_heap_region = mpu_allocregion();
     }
 
-  if (tcb->group->tg_heap)
+  if (addrenv->heap)
     {
-      mpu_modify_region(g_addrenv_heap_region,
-                        (uintptr_t)tcb->group->tg_heap,
-                        group_heap_size((struct mm_heap_s *)
-                                        tcb->group->tg_heap),
+      mpu_modify_region(g_addrenv_heap_region, addrenv->heap,
+                        addrenv->heapsize,
                         MPU_RASR_TEX_SO | MPU_RASR_C |
                         MPU_RASR_AP_RWRW);
     }
