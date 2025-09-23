@@ -63,4 +63,13 @@ config FS_YAFFS_DEBUG
 	depends on DEBUG_FS_ERROR
 	---help---
 		Enable YAFFS file system read/write double check.
+
+config FS_YAFFS_POSIX_TIMESTAMP
+	bool "YAFFS POSIX atime/mtime/ctime updates"
+	default n
+	---help---
+		Update access/modification/change times on read, write, open,
+		close and readdir for POSIX conformance. Adds a per-operation
+		flush (flash-wear cost) and PATH_MAX storage per open directory;
+		intended for conformance testing, not production use.
 endif

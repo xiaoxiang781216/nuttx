@@ -27,8 +27,10 @@
 #include <debug.h>
 #include <errno.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
+#include <nuttx/clock.h>
 #include <nuttx/crc16.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
@@ -240,8 +242,18 @@ static int yaffs_vfs_open(FAR struct file *filep,
   FAR struct yaffs_file_s *priv;
   int handle;
   off_t pos;
+#ifdef CONFIG_FS_YAFFS_POSIX_TIMESTAMP
+  struct yaffs_stat stat_buf;
+  bool existed;
+#endif
 
   dev = mountpt_to_yaffs_dev(filep->f_inode);
+
+#ifdef CONFIG_FS_YAFFS_POSIX_TIMESTAMP
+  /* Check if file exists before opening */
+
+  existed = (yaffs_stat_reldev(dev, relpath, &stat_buf) == 0);
+#endif
 
   /* Allocate memory for the open file */
 
@@ -277,6 +289,23 @@ static int yaffs_vfs_open(FAR struct file *filep,
   /* Attach the private date to the struct file instance */
 
   filep->f_priv = priv;
+
+#ifdef CONFIG_FS_YAFFS_POSIX_TIMESTAMP
+  /* A newly created or truncated file must have its mtime and ctime
+   * updated. Route through fchstat now that f_priv is attached.
+   */
+
+  if ((oflags & O_TRUNC) || ((oflags & O_CREAT) && !existed))
+    {
+      struct stat st;
+      struct timespec ts;
+
+      nxclock_gettime(CLOCK_REALTIME, &ts);
+      st.st_mtime = st.st_ctime = ts.tv_sec;
+      yaffs_vfs_fchstat(filep, &st, CH_STAT_MTIME | CH_STAT_CTIME);
+    }
+#endif
+
   return 0;
 
 errout_with_file:
@@ -322,6 +351,21 @@ static ssize_t yaffs_vfs_read(FAR struct file *filep,
   if (totalread >= 0)
     {
       filep->f_pos += totalread;
+
+#ifdef CONFIG_FS_YAFFS_POSIX_TIMESTAMP
+      /* Update access time after a successful read (unless O_NOATIME) */
+
+      if (!(filep->f_oflags & O_NOATIME))
+        {
+          struct stat st;
+          struct timespec ts;
+
+          nxclock_gettime(CLOCK_REALTIME, &ts);
+          st.st_atime = ts.tv_sec;
+          yaffs_vfs_fchstat(filep, &st, CH_STAT_ATIME);
+        }
+#endif
+
       return totalread;
     }
 
@@ -342,6 +386,17 @@ static ssize_t yaffs_vfs_write(FAR struct file *filep,
   totalwritten = yaffs_write(handle, buffer, buflen);
   if (totalwritten >= 0)
     {
+#ifdef CONFIG_FS_YAFFS_POSIX_TIMESTAMP
+      struct stat st;
+      struct timespec ts;
+
+      /* Update modification and change time after a successful write */
+
+      nxclock_gettime(CLOCK_REALTIME, &ts);
+      st.st_mtime = st.st_ctime = ts.tv_sec;
+      yaffs_vfs_fchstat(filep, &st, CH_STAT_MTIME | CH_STAT_CTIME);
+#endif
+
       filep->f_pos += totalwritten;
       return totalwritten;
     }
@@ -557,7 +612,7 @@ static int yaffs_vfs_fchstat(FAR const struct file *filep,
 
   if (flags & (CH_STAT_ATIME | CH_STAT_MTIME))
     {
-      if ((flags & CH_STAT_ATIME) != (flags & CH_STAT_MTIME))
+      if (!(flags & CH_STAT_ATIME) != !(flags & CH_STAT_MTIME))
         {
           ret = yaffs_fstat(handle, &buffer);
           if (ret < 0)
@@ -583,7 +638,39 @@ static int yaffs_vfs_fchstat(FAR const struct file *filep,
         }
 
       ret = yaffs_futime(handle, &timbuf);
+      if (ret < 0)
+        {
+          goto out;
+        }
     }
+
+#ifdef CONFIG_FS_YAFFS_POSIX_TIMESTAMP
+  /* yaffs_utimbuf has no ctime field, so the POSIX ctime update cannot go
+   * through yaffs_futime. Set it on the object directly. The yaffs direct
+   * internals assume the global lock is held, so acquire it here.
+   */
+
+  if (flags & CH_STAT_CTIME)
+    {
+      FAR struct yaffs_obj *obj;
+
+      yaffsfs_Lock();
+      obj = yaffs_get_obj_from_fd(handle);
+      if (obj == NULL)
+        {
+          yaffsfs_SetError(-EBADF);
+          ret = -1;
+        }
+      else
+        {
+          obj->yst_ctime = buf->st_ctime;
+          obj->dirty = 1;
+          ret = yaffs_flush_file(obj, 0, 0, 0) == YAFFS_OK ? 0 : -1;
+        }
+
+      yaffsfs_Unlock();
+    }
+#endif
 
 out:
   return ret < 0 ? yaffsfs_GetLastError() : 0;
@@ -704,6 +791,32 @@ static int yaffs_vfs_readdir(FAR struct inode *mountpt,
 
   entry->d_type = dirent->d_type;
   strlcpy(entry->d_name, dirent->d_name, sizeof(entry->d_name));
+
+#ifdef CONFIG_FS_YAFFS_POSIX_TIMESTAMP
+  /* Update the directory access time after a successful readdir. The
+   * yaffs_DIR handle already holds the directory object, so set the atime
+   * on it directly, mirroring the ctime path in yaffs_vfs_fchstat. The
+   * yaffs direct internals assume the global lock is held, so acquire it
+   * here.
+   */
+
+    {
+      FAR struct yaffs_obj *obj;
+      struct timespec ts;
+
+      yaffsfs_Lock();
+      obj = yaffs_get_obj_from_dir(dirp);
+      if (obj != NULL)
+        {
+          nxclock_gettime(CLOCK_REALTIME, &ts);
+          obj->yst_atime = ts.tv_sec;
+          obj->dirty = 1;
+          yaffs_flush_file(obj, 0, 0, 0);
+        }
+
+      yaffsfs_Unlock();
+    }
+#endif
 
 out:
   return ret;
@@ -895,7 +1008,7 @@ static int yaffs_vfs_chstat(FAR struct inode *mountpt,
 
   if (flags & (CH_STAT_ATIME | CH_STAT_MTIME))
     {
-      if ((flags & CH_STAT_ATIME) != (flags & CH_STAT_MTIME))
+      if (!(flags & CH_STAT_ATIME) != !(flags & CH_STAT_MTIME))
         {
           ret = yaffs_stat_reldev(dev, relpath, &buffer);
           if (ret < 0)
