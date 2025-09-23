@@ -237,11 +237,6 @@ _debug_exception_vector:
 	.align		4
 
 _double_exception_vector:
-
-#if XCHAL_HAVE_DEBUG
-	break	1, 4							/* Unhandled double exception */
-#endif
-
 	/* Can't use exception_entry because there is no relationship between EPC1
 	 * DEPC and the current level.  This can be handled by a separate ifeq
 	 * block in the macro, however this part is not used, so let's not add
@@ -289,11 +284,6 @@ _double_exception_vector:
 	.align		4
 
 _kernel_exception_vector:
-
-#if XCHAL_HAVE_DEBUG
-	break	1, 0							/* Unhandled kernel exception */
-#endif
-
 	wsr		a0, EXCSAVE_1					/* Preserve a0 */
 	call0	_xtensa_kernel_handler
 
