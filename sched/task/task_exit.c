@@ -123,10 +123,10 @@ int nxtask_exit(void)
   nxsched_switch_context(dtcb, rtcb);
 
   sched_note_stop(dtcb);
-  ret = nxsched_release_tcb(dtcb, atomic_read(&dtcb->flags) &
-                            TCB_FLAG_TTYPE_MASK);
 
   rtcb->task_state = TSTATE_TASK_RUNNING;
+  ret = nxsched_release_tcb(dtcb, atomic_read(&dtcb->flags) &
+                            TCB_FLAG_TTYPE_MASK);
 
   /* Decrement the lockcount on rctb. */
 
