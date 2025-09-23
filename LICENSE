@@ -8697,3 +8697,34 @@ http://www.opensource.org/licenses. Any Red Hat trademarks that are
 incorporated in the source code or documentation are not subject to
 the BSD License and may only be used or replicated with the express
 permission of Red Hat, Inc.
+
+tools/devicetree/edtlib_logger.py
+tools/devicetree/gen_defines.py
+tools/devicetree/gen_edt.py
+======================
+
+Copyright (c) 2019 - 2020 Nordic Semiconductor ASA
+Copyright (c) 2019 Linaro Limited
+Copyright (c) 2024 SILA Embedded Solutions GmbH
+SPDX-License-Identifier: BSD-3-Clause
+
+include/nuttx/devicetree.h
+include/nuttx/devicetree/ordinals.h
+include/nuttx/devicetree/time_units.h
+include/nuttx/devicetree/util.h
+include/nuttx/devicetree/util_internal.h
+include/nuttx/devicetree/util_internal_is_eq.h
+include/nuttx/devicetree/util_internal_util_dec.h
+include/nuttx/devicetree/util_internal_util_inc.h
+include/nuttx/devicetree/util_internal_util_x2.h
+include/nuttx/devicetree/util_listify.h
+include/nuttx/devicetree/util_loops.h
+include/nuttx/devicetree/util_macro.h
+devicetree/common/mem.h
+devicetree/common/freq.h
+devicetree/common/skeleton.dtsi
+devicetree/arm/armv7-m.dtsi
+devicetree/bindings/**/*.yaml
+======================
+
+PDX-License-Identifier: Apache-2.0
