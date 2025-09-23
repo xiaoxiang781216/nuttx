@@ -62,6 +62,7 @@ SECTIONS
       _erodata = . ;
     }
 
+  _eronly = ABSOLUTE(.);
   .data DATA :
     {
       _sdata = . ;
