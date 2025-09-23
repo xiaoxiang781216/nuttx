@@ -391,7 +391,7 @@ static int swkey_alloc(FAR struct swkey_context_s *ctx,
 
   for (i = 1; i <= CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT_NKEYS; i++)
     {
-      if (swkey_is_valid(ctx, i))
+      if (swkey_is_valid(ctx, i) == 0)
         {
           *keyid = i;
           return OK;
@@ -530,6 +530,10 @@ static int swkey_export(FAR struct swkey_context_s *ctx,
   else if (ret > buflen)
     {
       return -ENOBUFS;
+    }
+  else if (memcmp(buf, SWKEY_MAGIC_STRING, ret) == 0)
+    {
+      return -ENOENT;
     }
 
   if (ret < CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT_BUFSIZE)
