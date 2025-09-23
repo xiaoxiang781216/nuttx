@@ -157,12 +157,12 @@
 #if (MSEC_PER_TICK * USEC_PER_MSEC) == USEC_PER_TICK
 #  define MSEC2TICK(msec)     div_const_roundup(msec, (uint32_t)MSEC_PER_TICK)
 #else
-#  define MSEC2TICK(msec)     USEC2TICK((msec) * USEC_PER_MSEC)
+#  define MSEC2TICK(msec)     USEC2TICK((msec) * (uint32_t)USEC_PER_MSEC)
 #endif
 
-#define DSEC2TICK(dsec)       MSEC2TICK((dsec) * MSEC_PER_DSEC)
-#define HSEC2TICK(dsec)       MSEC2TICK((dsec) * MSEC_PER_HSEC)
-#define SEC2TICK(sec)         MSEC2TICK((sec)  * MSEC_PER_SEC)
+#define DSEC2TICK(dsec)       MSEC2TICK((dsec) * (uint32_t)MSEC_PER_DSEC)
+#define HSEC2TICK(dsec)       MSEC2TICK((dsec) * (uint32_t)MSEC_PER_HSEC)
+#define SEC2TICK(sec)         MSEC2TICK((sec)  * (uint32_t)MSEC_PER_SEC)
 
 #define TICK2NSEC(tick)       ((tick) * NSEC_PER_TICK)
 #define TICK2USEC(tick)       ((tick) * USEC_PER_TICK)
