@@ -348,87 +348,60 @@ static int mountptrename(FAR const char *oldpath, FAR struct inode *oldinode,
    * If the directory entry at the newrelpath is a regular file, then that
    * file should be removed first.
    *
-   * If the directory entry at the target is a directory, then the source
-   * file should be moved "under" the directory, i.e., if newrelpath is a
-   * directory, then rename(b,a) should use move the oldrelpath should be
-   * moved as if rename(b,a/basename(b)) had been called.
+   * If the directory entry at the newrelpath is an empty directory, then it
+   * can be removed without issue.
+   *
+   * If the directory entry at the newrelpath is a non-empty directory,
+   * then the rename should fail with the error ENOTEMPTY.
    */
 
   if (oldinode->u.i_mops->stat != NULL)
     {
-      struct stat buf;
+      struct stat oldbuf;
+      struct stat newbuf;
 
-next_subdir:
-      ret = oldinode->u.i_mops->stat(oldinode, newrelpath, &buf);
+      ret = oldinode->u.i_mops->stat(oldinode, oldrelpath, &oldbuf);
+      if (ret < 0)
+        {
+          goto errout_with_newinode;
+        }
+
+      oldisdir = S_ISDIR(oldbuf.st_mode);
+
+      ret = oldinode->u.i_mops->stat(oldinode, newrelpath, &newbuf);
       if (ret >= 0)
         {
-          /* Is the directory entry a directory? */
+          newisdir = S_ISDIR(newbuf.st_mode);
 
-          newisdir = S_ISDIR(buf.st_mode);
+          /* Is the new path a directory? */
+
           if (newisdir)
             {
-              FAR char *subdirname;
+              /* It is an error to rename a file to a directory */
 
-              /* Yes.. In this case, the target of the rename must be a
-               * subdirectory of newinode, not the newinode itself.  For
-               * example: mv b a/ must move b to a/b.
-               */
-
-              subdirname = basename((FAR char *)oldrelpath);
-
-              /* Special case the root directory */
-
-              if (*newrelpath == '\0')
+              if (!oldisdir)
                 {
-                  newrelpath = subdirname;
-                }
-              else
-                {
-                  /* Save subdir to free memory may be allocated in
-                   * previous loop.
-                   */
-
-                  FAR void *tmp = subdir;
-
-                  ret = fs_heap_asprintf(&subdir, "%s/%s", newrelpath,
-                                 subdirname);
-                  if (tmp != NULL)
-                    {
-                      lib_free(tmp);
-                    }
-
-                  if (ret < 0)
-                    {
-                      subdir = NULL;
-                      ret = -ENOMEM;
-                      goto errout_with_newinode;
-                    }
-
-                  newrelpath = subdir;
-                }
-
-              /* This can be a recursive, another directory may already
-               * exist at the newrelpath.  In that case, we need to
-               * do this all over again.  A nasty goto is used because
-               * I am lazy.
-               */
-
-              goto next_subdir;
-            }
-          else
-            {
-              /* No.. newrelpath must refer to a regular file.  Make sure
-               * that the file at the oldrelpath actually exists before
-               * performing any further actions with newrelpath
-               */
-
-              ret = oldinode->u.i_mops->stat(oldinode, oldrelpath, &buf);
-              if (ret < 0)
-                {
+                  ret = -EISDIR;
                   goto errout_with_newinode;
                 }
 
-              oldisdir = S_ISDIR(buf.st_mode);
+              /* Remove the newrelpath which already exists.
+               * rmdir will handle the error cases.
+               */
+
+              if (oldinode->u.i_mops->rmdir)
+                {
+                  ret = oldinode->u.i_mops->rmdir(oldinode, newrelpath);
+                  if (ret < 0)
+                    {
+                      goto errout_with_newinode;
+                    }
+                }
+            }
+          else
+            {
+              /* No.. newrelpath must refer to a regular file. */
+
               if (oldisdir)
                 {
                   /* It is an error to rename a directory to a file */
@@ -453,18 +426,6 @@ next_subdir:
                 }
             }
         }
-#ifdef CONFIG_FS_NOTIFY
-      else
-        {
-          ret = oldinode->u.i_mops->stat(oldinode, oldrelpath, &buf);
-          if (ret < 0)
-            {
-              goto errout_with_newinode;
-            }
-
-          oldisdir = S_ISDIR(buf.st_mode);
-        }
-#endif
     }
 
   /* Perform the rename operation using the relative paths at the common
