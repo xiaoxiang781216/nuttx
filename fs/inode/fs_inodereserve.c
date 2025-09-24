@@ -189,7 +189,7 @@ int inode_reserve(FAR const char *path,
 
   if (path[0] == '\0')
     {
-      return -EINVAL;
+      return -ENOENT;
     }
 
   /* Find the location to insert the new subtree */
