@@ -117,6 +117,7 @@
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 #define _SAFETYBASE     (0x8c00) /* Safety modules ioctl commands */
 #define _DMABUFBASE     (0x8d00) /* DMA-Buf modules ioctl commands */
+#define _SENTIOCBASE    (0X8d00) /* Sent modules ioctl commmands */
 
 /* boardctl() commands share the same number space */
 
@@ -391,6 +392,11 @@
 
 #define _SNIOCVALID(c)    (_IOC_TYPE(c)==_SNIOCBASE)
 #define _SNIOC(nr)        _IOC(_SNIOCBASE,nr)
+
+/* NuttX sent ioctl definitions (see nuttx/sent/sent.h) *********************/
+
+#define _SENTIOCVALID(c)  (_IOC_TYPE(c)==_SENTIOCBASE)
+#define _SENTIOC(nr)      _IOC(_SENTIOCBASE,nr)
 
 /* NuttX Analog (DAC/ADC) ioctl commands (see nuttx/analog/ioctl.h **********/
 

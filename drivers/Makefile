@@ -65,6 +65,7 @@ include rmt/Make.defs
 include rpmsg/Make.defs
 include rptun/Make.defs
 include sensors/Make.defs
+include sent/Make.defs
 include serial/Make.defs
 include spi/Make.defs
 include syslog/Make.defs
