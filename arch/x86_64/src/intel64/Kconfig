@@ -193,6 +193,7 @@ config ARCH_INTEL64_HAVE_PCID
 
 config ARCH_INTEL64_HAVE_RDRAND
 	bool "RDRAND support"
+	select ARCH_HAVE_RNG
 	default y
 	---help---
 		Select to enable the use of RDRAND for /dev/random
