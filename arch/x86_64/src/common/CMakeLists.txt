@@ -64,10 +64,6 @@ if(NOT CONFIG_BUILD_FLAT)
   endif()
 endif()
 
-if(NOT CONFIG_ALARM_ARCH)
-  list(APPEND SRCS x86_64_udelay.c x86_64_mdelay.c)
-endif()
-
 if(CONFIG_ARCH_KERNEL_STACK)
   list(APPEND SRCS x86_64_addrenv_kstack.c)
 endif()

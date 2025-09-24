@@ -31,14 +31,6 @@
 #include <nuttx/timers/arch_alarm.h>
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define CONFIG_BOARD_LOOPSPER100USEC ((CONFIG_BOARD_LOOPSPERMSEC+5)/10)
-#define CONFIG_BOARD_LOOPSPER10USEC  ((CONFIG_BOARD_LOOPSPERMSEC+50)/100)
-#define CONFIG_BOARD_LOOPSPERUSEC    ((CONFIG_BOARD_LOOPSPERMSEC+500)/1000)
-
-/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -54,70 +46,6 @@ static DEFINE_PER_CPU_BSS_BMP(clock_t, g_current_tick);
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-static void ndelay_accurate(unsigned long nanoseconds)
-{
-  struct timespec now;
-  struct timespec end;
-  struct timespec delta;
-
-  ONESHOT_CURRENT(g_oneshot_lower, &now);
-
-  clock_nsec2time(&delta, nanoseconds);
-  clock_timespec_add(&now, &delta, &end);
-
-  while (clock_timespec_compare(&now, &end) < 0)
-    {
-      ONESHOT_CURRENT(g_oneshot_lower, &now);
-    }
-}
-
-static void udelay_coarse(useconds_t microseconds)
-{
-  volatile int i;
-
-  /* We'll do this a little at a time because we expect that the
-   * CONFIG_BOARD_LOOPSPERUSEC is very inaccurate during to truncation in
-   * the divisions of its calculation.  We'll use the largest values that
-   * we can in order to prevent significant error buildup in the loops.
-   */
-
-  while (microseconds > 1000)
-    {
-      for (i = 0; i < CONFIG_BOARD_LOOPSPERMSEC; i++)
-        {
-        }
-
-      microseconds -= 1000;
-    }
-
-  while (microseconds > 100)
-    {
-      for (i = 0; i < CONFIG_BOARD_LOOPSPER100USEC; i++)
-        {
-        }
-
-      microseconds -= 100;
-    }
-
-  while (microseconds > 10)
-    {
-      for (i = 0; i < CONFIG_BOARD_LOOPSPER10USEC; i++)
-        {
-        }
-
-      microseconds -= 10;
-    }
-
-  while (microseconds > 0)
-    {
-      for (i = 0; i < CONFIG_BOARD_LOOPSPERUSEC; i++)
-        {
-        }
-
-      microseconds--;
-    }
-}
 
 static void oneshot_callback(FAR struct oneshot_lowerhalf_s *lower,
                              FAR void *arg)
@@ -434,53 +362,3 @@ void up_perf_convert(clock_t elapsed, FAR struct timespec *ts)
 }
 #endif /* CONFIG_ARCH_PERF_EVENTS */
 
-/****************************************************************************
- * Name: up_mdelay
- *
- * Description:
- *   Delay inline for the requested number of milliseconds.
- *   *** NOT multi-tasking friendly ***
- *
- ****************************************************************************/
-
-void weak_function up_mdelay(unsigned int milliseconds)
-{
-  up_udelay(USEC_PER_MSEC * milliseconds);
-}
-
-/****************************************************************************
- * Name: up_udelay
- *
- * Description:
- *   Delay inline for the requested number of microseconds.
- *
- *   *** NOT multi-tasking friendly ***
- *
- ****************************************************************************/
-
-void weak_function up_udelay(useconds_t microseconds)
-{
-  up_ndelay(NSEC_PER_USEC * microseconds);
-}
-
-/****************************************************************************
- * Name: up_ndelay
- *
- * Description:
- *   Delay inline for the requested number of nanoseconds.
- *
- *   *** NOT multi-tasking friendly ***
- *
- ****************************************************************************/
-
-void weak_function up_ndelay(unsigned long nanoseconds)
-{
-  if (g_oneshot_lower != NULL)
-    {
-      ndelay_accurate(nanoseconds);
-    }
-  else /* Oneshot timer hasn't been initialized yet */
-    {
-      udelay_coarse((nanoseconds + NSEC_PER_USEC - 1) / NSEC_PER_USEC);
-    }
-}

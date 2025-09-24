@@ -65,10 +65,6 @@ CMN_CSRCS  += x86_64_pthread_start.c
   endif
 endif
 
-ifndef CONFIG_ALARM_ARCH
-CMN_CSRCS += x86_64_udelay.c x86_64_mdelay.c
-endif
-
 ifeq ($(CONFIG_ARCH_HAVE_DEBUG),y)
 CMN_CSRCS += x86_64_hwdebug.c
 endif
