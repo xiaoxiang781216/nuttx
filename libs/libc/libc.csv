@@ -321,7 +321,7 @@
 "strndup","string.h","","FAR char *","FAR const char *","size_t"
 "strnlen","string.h","","size_t","FAR const char *","size_t"
 "strpbrk","string.h","","FAR char *","FAR const char *","FAR const char *"
-"strptime","time.h","","FAR char *","FAR const char *","FAR const char *","FAR struct tm *"
+"strptime","time.h","defined(CONFIG_ALLOW_MIT_COMPONENTS)","FAR char *","FAR const char *","FAR const char *","FAR struct tm *"
 "strrchr","string.h","","FAR char *","FAR const char *","int"
 "strsep","string.h","","FAR char *","FAR char **","FAR const char *"
 "strspn","string.h","","size_t","FAR const char *","FAR const char *"

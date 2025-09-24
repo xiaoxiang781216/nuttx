@@ -207,8 +207,11 @@ FAR struct tm *localtime_r(FAR const time_t *timep, FAR struct tm *result);
 
 size_t strftime(FAR char *s, size_t max, FAR const char *format,
                 FAR const struct tm *tm) strftime_like(3);
+
+#ifdef CONFIG_ALLOW_MIT_COMPONENTS
 FAR char *strptime(FAR const char *s, FAR const char *format,
                    FAR struct tm *tm);
+#endif
 
 FAR char *asctime(FAR const struct tm *tp);
 FAR char *asctime_r(FAR const struct tm *tp, FAR char *buf);
