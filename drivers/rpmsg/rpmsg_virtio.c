@@ -760,7 +760,6 @@ static void rpmsg_virtio_start_worker(FAR void *arg)
                                         priv->pool, &config);
       if (ret >= 0)
         {
-          priv->rvdev.rdev.lock.is_spinlock = true;
           priv->notifytx = priv->rvdev.svq->notify;
           priv->rvdev.svq->notify = rpmsg_virtio_tx_notify;
           priv->rvdev.notify_wait_cb = rpmsg_virtio_notify_wait;
