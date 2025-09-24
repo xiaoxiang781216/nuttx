@@ -71,9 +71,7 @@ static int pseudorename(FAR const char *oldpath, FAR struct inode *oldinode,
   struct inode_search_s newdesc;
   FAR struct inode *newinode;
   FAR char *subdir = NULL;
-#ifdef CONFIG_FS_NOTIFY
   bool isdir = INODE_IS_PSEUDODIR(oldinode);
-#endif
   int ret;
 
   /* According to POSIX, any new inode at this path should be removed
@@ -165,6 +163,14 @@ next_subdir:
            * inode_reserve() will complain below, and (2) the inode
            * won't really be removed until we call inode_release();
            */
+
+          if (isdir)
+            {
+              /* It is an error to rename a directory to a file */
+
+              ret = -ENOTDIR;
+              goto errout;
+            }
 
           inode_remove(newpath);
 #ifdef CONFIG_FS_NOTIFY
@@ -282,10 +288,8 @@ static int mountptrename(FAR const char *oldpath, FAR struct inode *oldinode,
   FAR struct inode *newinode;
   FAR const char *newrelpath;
   FAR char *subdir = NULL;
-#ifdef CONFIG_FS_NOTIFY
   bool newisdir = false;
   bool oldisdir = false;
-#endif
   int ret;
 
   DEBUGASSERT(oldinode->u.i_mops);
@@ -360,12 +364,8 @@ next_subdir:
         {
           /* Is the directory entry a directory? */
 
-#ifdef CONFIG_FS_NOTIFY
           newisdir = S_ISDIR(buf.st_mode);
           if (newisdir)
-#else
-          if (S_ISDIR(buf.st_mode))
-#endif
             {
               FAR char *subdirname;
 
@@ -428,9 +428,15 @@ next_subdir:
                   goto errout_with_newinode;
                 }
 
-#ifdef CONFIG_FS_NOTIFY
               oldisdir = S_ISDIR(buf.st_mode);
-#endif
+              if (oldisdir)
+                {
+                  /* It is an error to rename a directory to a file */
+
+                  ret = -ENOTDIR;
+                  goto errout_with_newinode;
+                }
+
               if (oldinode->u.i_mops->unlink)
                 {
                   /* Attempt to remove the file before doing the rename.
