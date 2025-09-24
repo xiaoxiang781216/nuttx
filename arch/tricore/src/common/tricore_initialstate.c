@@ -59,7 +59,7 @@ void up_initial_state(struct tcb_s *tcb)
 
   /* Reclaim possible CSA links */
 
-  pcxi = tricore_addr2csa(xcp->regs);
+  pcxi = tricore_addr2csa(xcp->regs + TC_CONTEXT_REGS);
   if (pcxi & FCX_FREE)
     {
       tricore_reclaim_csa(pcxi);

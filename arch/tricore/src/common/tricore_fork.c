@@ -164,7 +164,7 @@ static pid_t tricore_fork(const struct fork_s *context)
   /* Correct the last regs */
 
   sinfo("child set regs=%p\n", csa_prev);
-  child->xcp.regs = csa_prev;
+  child->xcp.regs = csa_prev - TC_CONTEXT_REGS;
 
   /* Correct syscall context */
 
