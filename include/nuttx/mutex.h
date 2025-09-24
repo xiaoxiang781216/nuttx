@@ -29,6 +29,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <execinfo.h>
 
 #include <nuttx/clock.h>
 #include <nuttx/mutex_type.h>
@@ -69,8 +70,16 @@ extern "C"
  ****************************************************************************/
 
 #ifdef CONFIG_LIBC_MUTEX_BACKTRACE
-void nxmutex_add_backtrace(FAR mutex_t *mutex);
-void nxmutex_remove_backtrace(FAR mutex_t *mutex);
+static inline_function void nxmutex_add_backtrace(FAR mutex_t *mutex)
+{
+  mutex->stack = backtrace_record(0);
+}
+
+static inline_function void nxmutex_remove_backtrace(FAR mutex_t *mutex)
+{
+  backtrace_remove(mutex->stack);
+  mutex->stack = NULL;
+}
 #else
 #  define nxmutex_add_backtrace(mutex)
 #  define nxmutex_remove_backtrace(mutex)
@@ -112,6 +121,27 @@ static inline_function int nxmutex_init(FAR mutex_t *mutex)
 }
 
 /****************************************************************************
+ * Name: nxmutex_get_holder
+ *
+ * Description:
+ *   This function get the holder of the mutex referenced by 'mutex'.
+ *   Note that this is inherently racy unless the calling thread is
+ *   holding the mutex.
+ *
+ * Parameters:
+ *   mutex - mutex descriptor.
+ *
+ * Return Value:
+ *
+ ****************************************************************************/
+
+static inline_function pid_t nxmutex_get_holder(FAR mutex_t *mutex)
+{
+  uint32_t mholder = mutex->sem.val.mholder & ~NXSEM_MBLOCKING_BIT;
+  return NXSEM_MACQUIRED(mholder) ? (pid_t)mholder : -1;
+}
+
+/****************************************************************************
  * Name: nxmutex_is_hold
  *
  * Description:
@@ -125,7 +155,11 @@ static inline_function int nxmutex_init(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
-bool nxmutex_is_hold(FAR mutex_t *mutex);
+static inline_function
+bool nxmutex_is_hold(FAR mutex_t *mutex)
+{
+  return nxmutex_get_holder(mutex) == _SCHED_GETTID();
+}
 
 /****************************************************************************
  * Name: nxrmutex_is_hold
@@ -734,31 +768,6 @@ int nxrmutex_restorelock(FAR rmutex_t *rmutex, unsigned int count)
         nxmutex_getprioceiling(&(rmutex)->mutex, prioceiling)
 #define nxrmutex_setprioceiling(rmutex, prioceiling, old_ceiling) \
         nxmutex_setprioceiling(&(rmutex)->mutex, prioceiling, old_ceiling)
-
-/****************************************************************************
- * Inline functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: nxmutex_get_holder
- *
- * Description:
- *   This function get the holder of the mutex referenced by 'mutex'.
- *   Note that this is inherently racy unless the calling thread is
- *   holding the mutex.
- *
- * Parameters:
- *   mutex - mutex descriptor.
- *
- * Return Value:
- *
- ****************************************************************************/
-
-static inline_function pid_t nxmutex_get_holder(FAR mutex_t *mutex)
-{
-  uint32_t mholder = mutex->sem.val.mholder & ~NXSEM_MBLOCKING_BIT;
-  return NXSEM_MACQUIRED(mholder) ? (pid_t)mholder : -1;
-}
 
 /****************************************************************************
  * Name: nxmutex_is_locked
