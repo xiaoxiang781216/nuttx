@@ -257,17 +257,17 @@ static int ipv4_in(FAR struct net_driver_s *dev)
    */
 
   totlen = (ipv4->len[0] << 8) + ipv4->len[1];
-  if (totlen != dev->d_len
-#ifdef CONFIG_NET_IPFRAG
-      && (ipv4->ipoffset[0] & (IP_FLAG_DONTFRAG >> 8))
-#endif
-     )
+  if (totlen < dev->d_len)
+    {
+      iob_update_pktlen(dev->d_iob, totlen, false);
+      dev->d_len = totlen;
+    }
+  else if (totlen > dev->d_len)
     {
 #ifdef CONFIG_NET_STATISTICS
       g_netstats.ipv4.drop++;
 #endif
-      nwarn("WARNING: The actual length of the packet does not match the "
-            "information in the IPv4 header!\n");
+      nwarn("WARNING: IP packet shorter than length in IP header\n");
       goto drop;
     }
 
