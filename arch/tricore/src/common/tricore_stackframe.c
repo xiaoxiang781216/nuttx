@@ -30,6 +30,7 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/tls.h>
 #include <arch/barriers.h>
 
 #include "sched/sched.h"

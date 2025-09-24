@@ -30,6 +30,7 @@
 #include <syslog.h>
 #include <debug.h>
 #include <nuttx/irq.h>
+#include <nuttx/tls.h>
 
 #include "sched/sched.h"
 #include "tricore_internal.h"
