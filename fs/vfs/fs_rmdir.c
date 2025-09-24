@@ -63,7 +63,16 @@ int rmdir(FAR const char *pathname)
   struct inode_search_s desc;
   FAR struct inode *inode;
   int errcode;
+  size_t len;
   int ret;
+
+  len = strlen(pathname);
+  if ((len >= 2 && strcmp(pathname + len - 2, "/.") == 0) ||
+      (len >= 3 && strcmp(pathname + len - 3, "/./") == 0))
+    {
+      errcode = EINVAL;
+      goto errout;
+    }
 
   /* Get an inode for the directory (or for the mountpoint containing the
    * directory).  inode_find() automatically increments the reference count
@@ -171,6 +180,7 @@ errout_with_inode:
   inode_release(inode);
 errout_with_search:
   RELEASE_SEARCH(&desc);
+errout:
   set_errno(errcode);
   return ERROR;
 }
