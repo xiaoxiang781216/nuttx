@@ -231,6 +231,47 @@
 #  define is_idle_task(t)            false
 #endif
 
+#ifdef CONFIG_SMP
+#  define current_task(cpu)          (g_assignedtasks[cpu])
+#else
+#  define current_task(cpu)          ((FAR struct tcb_s *)list_readytorun()->head)
+#endif
+
+/* This macro returns the running task which may different from this_task()
+ * during interrupt level context switches.
+ */
+
+#define running_task()               (up_interrupt_context() ? g_running_tasks[this_cpu()] : this_task())
+
+#if defined(up_this_task)
+#  define this_task()                up_this_task()
+#elif !defined(CONFIG_SMP)
+#  define this_task()                ((FAR struct tcb_s *)g_readytorun.head)
+#else
+noinstrument_function
+static inline_function FAR struct tcb_s *this_task(void)
+{
+  FAR struct tcb_s *tcb;
+  irqstate_t flags;
+
+  /* If the CPU supports suppression of interprocessor interrupts, then
+   * simple disabling interrupts will provide sufficient protection for
+   * the following operations.
+   */
+
+  flags = up_irq_save();
+
+  /* Obtain the TCB which is current running on this CPU */
+
+  tcb = current_task(this_cpu());
+
+  /* Enable local interrupts */
+
+  up_irq_restore(flags);
+  return tcb;
+}
+#endif
+
 #define REGINFO_OFFSET_INVALID       -2 /* Special value for N/A offset value */
 #define REGINFO_OFFSET_AUTO          -1 /* Calculate the offset in GDB g/G packet automatically */
 
@@ -893,6 +934,46 @@ EXTERN FAR struct tcb_s *g_running_tasks[CONFIG_SMP_NCPUS];
 
 EXTERN const struct tcbinfo_s g_tcbinfo;
 
+/* The state of a task is indicated both by the task_state field of the TCB
+ * and by a series of task lists.  All of these tasks lists are declared
+ * below. Although it is not always necessary, most of these lists are
+ * prioritized so that common list handling logic can be used (only the
+ * g_readytorun, the g_pendingtasks, and the g_waitingforsemaphore lists
+ * need to be prioritized).
+ */
+
+/* This is the list of all tasks that are ready to run.  This is a
+ * prioritized list with head of the list holding the highest priority
+ * (unassigned) task.  In the non-SMP case, the head of this list is the
+ * currently active task and the tail of this list, the lowest priority
+ * task, is always the IDLE task.
+ */
+
+extern dq_queue_t g_readytorun;
+
+#ifdef CONFIG_SMP
+/* In order to support SMP, the function of the g_readytorun list changes,
+ * The g_readytorun is still used but in the SMP case it will contain only:
+ *
+ *  - Only tasks/threads that are eligible to run, but not currently running,
+ *    and
+ *  - Tasks/threads that have not been assigned to a CPU.
+ *
+ * Otherwise, the TCB will be retained in an assigned task vector,
+ * g_assignedtasks.  As its name suggests, on 'g_assignedtasks vector for CPU
+ * 'n' would contain only the task/thread which is running on the CPU 'n'.
+ * Tasks/threads would be assigned a particular CPU by one of two
+ * mechanisms:
+ *
+ *  - (Semi-)permanently through an RTOS interfaces such as
+ *    pthread_attr_setaffinity(), or
+ *  - Temporarily through scheduling logic when a previously unassigned task
+ *    is made to run.
+ */
+
+extern FAR struct tcb_s *g_assignedtasks[CONFIG_SMP_NCPUS];
+#endif
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -1541,7 +1622,33 @@ pid_t nxsched_waitpid(pid_t pid, FAR int *stat_loc, int options);
  *
  ****************************************************************************/
 
-pid_t nxsched_gettid(void);
+static inline_function pid_t nxsched_gettid(void)
+{
+  FAR struct tcb_s *rtcb = this_task();
+  pid_t tid = (pid_t)-ESRCH;
+
+  /* Get the TCB at the head of the ready-to-run task list.  That
+   * will usually be the currently executing task.  There are one
+   * exceptions to this:
+   *
+   * 1. As described above, during certain context-switching conditions the
+   *    task at the head of the ready-to-run list may not actually be
+   *    running.
+   */
+
+  /* Check if the task is actually running */
+
+  if (rtcb->task_state == TSTATE_TASK_RUNNING)
+    {
+      /* Yes.. Return the task ID from the TCB at the head of the
+       * ready-to-run task list
+       */
+
+      tid = rtcb->pid;
+    }
+
+  return tid;
+}
 
 /****************************************************************************
  * Name: nxsched_getpid

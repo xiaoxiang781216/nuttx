@@ -66,19 +66,6 @@
  * NOTE: this_task() for SMP is implemented in sched_thistask.c
  */
 
-#ifdef CONFIG_SMP
-#  define current_task(cpu)      (g_assignedtasks[cpu])
-#else
-#  define current_task(cpu)      ((FAR struct tcb_s *)list_readytorun()->head)
-#endif
-
-/* This macro returns the running task which may different from this_task()
- * during interrupt level context switches.
- */
-
-#define running_task() \
-  (up_interrupt_context() ? g_running_tasks[this_cpu()] : this_task())
-
 /* List attribute flags */
 
 #define TLIST_ATTR_PRIORITIZED   (1 << 0) /* Bit 0: List is prioritized */
@@ -191,37 +178,7 @@ enum task_deliver_e
  * need to be prioritized).
  */
 
-/* This is the list of all tasks that are ready to run.  This is a
- * prioritized list with head of the list holding the highest priority
- * (unassigned) task.  In the non-SMP case, the head of this list is the
- * currently active task and the tail of this list, the lowest priority
- * task, is always the IDLE task.
- */
-
-extern dq_queue_t g_readytorun;
-
 #ifdef CONFIG_SMP
-/* In order to support SMP, the function of the g_readytorun list changes,
- * The g_readytorun is still used but in the SMP case it will contain only:
- *
- *  - Only tasks/threads that are eligible to run, but not currently running,
- *    and
- *  - Tasks/threads that have not been assigned to a CPU.
- *
- * Otherwise, the TCB will be retained in an assigned task vector,
- * g_assignedtasks.  As its name suggests, on 'g_assignedtasks vector for CPU
- * 'n' would contain only the task/thread which is running on the CPU 'n'.
- * Tasks/threads would be assigned a particular CPU by one of two
- * mechanisms:
- *
- *  - (Semi-)permanently through an RTOS interfaces such as
- *    pthread_attr_setaffinity(), or
- *  - Temporarily through scheduling logic when a previously unassigned task
- *    is made to run.
- */
-
-extern FAR struct tcb_s *g_assignedtasks[CONFIG_SMP_NCPUS];
-
 /* g_delivertasks is used to indicate that a task switch is scheduled for
  * another cpu to be processed.
  */

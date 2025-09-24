@@ -37,7 +37,6 @@ set(SRCS
     task_spawnparms.c
     task_cancelpt.c
     task_terminate.c
-    task_gettid.c
     task_join.c
     exit.c)
 
