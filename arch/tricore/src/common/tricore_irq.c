@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <debug.h>
+#include <sched.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
@@ -291,3 +292,40 @@ int up_irq_to_ndx(int irq)
 
   return ndx;
 }
+
+/****************************************************************************
+ * Name: up_affinity_irq
+ *
+ * Description:
+ *   Set an IRQ affinity by software.
+ *
+ ****************************************************************************/
+
+#ifndef CONFIG_UP
+void up_affinity_irq(int irq, cpu_set_t cpuset)
+{
+  volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
+  bool enabled = src->B.SRE;
+  int cpu;
+
+  for (cpu = 0; cpu < CONFIG_NCPUS; cpu++)
+    {
+      if (CPU_ISSET(cpu, &cpuset))
+        {
+          IfxSrc_deinit(src);
+#ifdef CONFIG_ARCH_CHIP_AURIX_TC3XX
+          IfxSrc_init(src, tricore_gettos(cpu), IRQ_TO_NDX(irq));
+#else
+          IfxSrc_init(src, tricore_gettos(cpu), IRQ_TO_NDX(irq),
+                      IfxSrc_VmId_none);
+#endif
+          if (enabled)
+            {
+              IfxSrc_enable(src);
+            }
+
+          return;
+        }
+    }
+}
+#endif
