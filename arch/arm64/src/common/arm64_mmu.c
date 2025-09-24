@@ -28,6 +28,7 @@
 #include <assert.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/trace.h>
 #include <arch/barriers.h>
 #include <arch/irq.h>
 #include <arch/chip/chip.h>
@@ -41,13 +42,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* MMU debug option
- * #define CONFIG_MMU_ASSERT 1
- * #define CONFIG_MMU_DEBUG 1
- * #define CONFIG_MMU_DUMP_PTE 1
- */
-
-#ifdef CONFIG_MMU_DEBUG
+#ifdef CONFIG_ARM64_MMU_DEBUG
 
 #define L0_SPACE                        ""
 #define L1_SPACE                        "  "
@@ -59,7 +54,7 @@
    ((level) == 2) ? L2_SPACE : L3_SPACE)
 #endif
 
-#ifdef CONFIG_MMU_ASSERT
+#ifdef CONFIG_ARM64_MMU_ASSERT
 #define __MMU_ASSERT(__cond, fmt, ...)       \
   do                                         \
     {                                        \
@@ -169,7 +164,7 @@
 static uint64_t base_xlat_table[BASE_XLAT_TABLE_SIZE]
 aligned_data(BASE_XLAT_TABLE_ALIGN);
 
-static uint64_t xlat_tables[CONFIG_MAX_XLAT_TABLES][XLAT_TABLE_ENTRIES]
+static uint64_t xlat_tables[CONFIG_ARM64_MAX_XLAT_TABLES][XLAT_TABLE_ENTRIES]
 aligned_data(XLAT_TABLE_ENTRIES * sizeof(uint64_t));
 
 /* NuttX RTOS execution regions with appropriate attributes */
@@ -320,7 +315,7 @@ static uint64_t *calculate_pte_index(uint64_t addr, int level)
 static void set_pte_table_desc(uint64_t *pte, uint64_t *table,
                                unsigned int level)
 {
-#ifdef CONFIG_MMU_DEBUG
+#ifdef CONFIG_ARM64_MMU_DEBUG
   sinfo("%s", XLAT_TABLE_LEVEL_SPACE(level));
   sinfo("%p: [Table] %p\n", pte, table);
 #endif
@@ -397,7 +392,7 @@ static void set_pte_block_desc(uint64_t *pte, uint64_t addr_pa,
       }
     }
 
-#if defined(CONFIG_MMU_DEBUG) && defined(CONFIG_MMU_DUMP_PTE)
+#if defined(CONFIG_ARM64_MMU_DEBUG) && defined(CONFIG_ARM64_MMU_DUMP_PTE)
   sinfo("%s ", XLAT_TABLE_LEVEL_SPACE(level));
   sinfo("%p: ", pte);
   sinfo("%s ",
@@ -418,7 +413,7 @@ static uint64_t *new_prealloc_table(void)
 {
   static unsigned int table_idx;
 
-  __MMU_ASSERT(table_idx < CONFIG_MAX_XLAT_TABLES,
+  __MMU_ASSERT(table_idx < CONFIG_ARM64_MAX_XLAT_TABLES,
                "Enough xlat tables not allocated");
 
   return (uint64_t *)(xlat_tables[table_idx++]);
@@ -436,7 +431,7 @@ static void split_pte_block_desc(uint64_t *pte, int level)
 
   int levelshift = LEVEL_TO_VA_SIZE_SHIFT(level + 1);
 
-#ifdef CONFIG_MMU_DEBUG
+#ifdef CONFIG_ARM64_MMU_DEBUG
   sinfo("Splitting existing PTE %p(L%d)\n", pte, level);
 #endif
 
@@ -470,7 +465,7 @@ static void init_xlat_tables(const struct arm_mmu_region *region)
   uint64_t *new_table;
   uint64_t level_size;
 
-#ifdef CONFIG_MMU_DEBUG
+#ifdef CONFIG_ARM64_MMU_DEBUG
   sinfo("mmap: virt %lux phys %lux size %lux\n", virt, phys, size);
 #endif
 
@@ -597,7 +592,7 @@ static void enable_mmu_el3(unsigned int flags)
   /* Ensure the MMU enable takes effect immediately */
 
   UP_ISB();
-#ifdef CONFIG_MMU_DEBUG
+#ifdef CONFIG_ARM64_MMU_DEBUG
   sinfo("MMU enabled with dcache\n");
 #endif
 }
@@ -629,7 +624,7 @@ static void enable_mmu_el1(unsigned int flags)
   /* Ensure the MMU enable takes effect immediately */
 
   UP_ISB();
-#ifdef CONFIG_MMU_DEBUG
+#ifdef CONFIG_ARM64_MMU_DEBUG
   sinfo("MMU enabled with dcache\n");
 #endif
 }
@@ -692,11 +687,11 @@ int arm64_mmu_init(bool is_primary_core)
   __MMU_ASSERT((val & SCTLR_M_BIT) == 0, "MMU is already enabled\n");
 #endif
 
-#ifdef CONFIG_MMU_DEBUG
+#ifdef CONFIG_ARM64_MMU_DEBUG
   sinfo("xlat tables:\n");
   sinfo("base table(L%d): %p, %d entries\n", XLAT_TABLE_BASE_LEVEL,
         (uint64_t *)base_xlat_table, NUM_BASE_LEVEL_ENTRIES);
-  for (int idx = 0; idx < CONFIG_MAX_XLAT_TABLES; idx++)
+  for (int idx = 0; idx < CONFIG_ARM64_MAX_XLAT_TABLES; idx++)
     {
       sinfo("%d: %p\n", idx, (uint64_t *)(xlat_tables + idx));
     }

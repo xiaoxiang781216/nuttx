@@ -459,6 +459,10 @@ config ARM64_BACKGROUND_REGION
 	default n
 	depends on ARCH_HAVE_MPU
 
+config ARM64_MAX_XLAT_TABLES
+	int "Maximum number of translation tables"
+	default 20
+
 config ARM64_VA_BITS
 	int "Virtual address space size"
 	default 48
@@ -476,6 +480,18 @@ config ARM64_PA_BITS
 		Choose the maximum physical address range that the kernel will support.
 
 		The choice could be: 32, 36, 42, 48
+
+config ARM64_MMU_DEBUG
+	bool "Enable MMU debug"
+	default n
+
+config ARM64_MMU_ASSERT
+	bool "Enable MMU assert"
+	default y if DEBUG_FEATURES
+
+config ARM64_MMU_DUMP_PTE
+	bool "Enable MMU dump PTE"
+	default n
 
 if ARCH_CHIP_A64
 source "arch/arm64/src/a64/Kconfig"
