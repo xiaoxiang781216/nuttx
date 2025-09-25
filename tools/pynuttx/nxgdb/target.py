@@ -21,12 +21,28 @@
 ############################################################################
 
 import multiprocessing
+import socket
 
 import gdb
 import nxstub
 from nxreg.register import get_arch_name
 
 from . import autocompeletion, utils
+
+
+def get_unused_port():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("", 0))
+        return s.getsockname()[1]
+
+
+def is_port_in_use(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("127.0.0.1", port))
+        except OSError:
+            return True
+        return False
 
 
 @autocompeletion.complete
@@ -63,6 +79,11 @@ class Target(gdb.Command):
         if parsed.arch != arch:
             print(f"Warning: current arch {arch} does not match nxstub {parsed.arch}")
 
+        if is_port_in_use(parsed.port):
+            print(f"Port {parsed.port} is already in use, try to use another port.")
+            parsed.port = get_unused_port()
+            print(f"Use port {parsed.port} instead.")
+
         # If currently has connection to target, disconnect it
         if utils.check_inferior_valid():
             gdb.execute("detach", from_tty=True)
@@ -88,7 +109,7 @@ class Target(gdb.Command):
             signal.signal(signal.SIGINT, signal.SIG_IGN)
             nxstub.main(args)
 
-        process = multiprocessing.Process(target=stub_main, args=(args,))
+        process = multiprocessing.Process(target=stub_main, args=(parsed,))
         process.start()
         self.process = process
 

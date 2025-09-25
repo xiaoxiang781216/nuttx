@@ -26,6 +26,7 @@ import multiprocessing
 import os
 import re
 import signal
+import socket
 import subprocess
 import traceback
 from typing import List
@@ -341,14 +342,33 @@ def parse_args(args=None):
     return get_argparser().parse_args(args)
 
 
-def main(args=None):
-    args = parse_args(args)
+def get_unused_port():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("", 0))
+        return s.getsockname()[1]
+
+
+def is_port_in_use(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("127.0.0.1", port))
+        except OSError:
+            return True
+        return False
+
+
+def main(args):
     if args.debug:
         logging.basicConfig(
             format="%(asctime)s:%(levelname)s:%(name)s:%(message)s",
         )
         logging.getLogger(__name__).setLevel(logging.DEBUG)
         logging.getLogger("nxreg").setLevel(logging.DEBUG)
+
+    if is_port_in_use(args.port):
+        print(f"Port {args.port} is already in use, try to use another port.")
+        args.port = get_unused_port()
+        print(f"Use port {args.port} instead.")
 
     gdb = None
     if args.gdb:

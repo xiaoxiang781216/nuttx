@@ -27,4 +27,4 @@ sys.path.insert(0, (os.path.join(here, "pynuttx")))
 
 import nxstub  # noqa: E402
 
-nxstub.main()
+nxstub.main(nxstub.parse_args())
