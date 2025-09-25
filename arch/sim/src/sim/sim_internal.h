@@ -437,13 +437,6 @@ void sim_netdriver_setmtu(int devidx, int mtu);
 int sim_rptun_init(const char *shmemname, const char *cpuname, int master);
 #endif
 
-/* sim_rpmsg_virtio.c *******************************************************/
-
-#ifdef CONFIG_RPMSG_VIRTIO_LITE
-int sim_rpmsg_virtio_init(const char *shmemname, const char *cpuname,
-                          bool master);
-#endif
-
 /* sim_hcisocket.c **********************************************************/
 
 #ifdef CONFIG_SIM_HCISOCKET

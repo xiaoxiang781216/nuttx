@@ -74,18 +74,6 @@ ifeq ($(CONFIG_RPMSG_VIRTIO),y)
 CSRCS += rpmsg_virtio.c
 endif
 
-ifeq ($(CONFIG_RPMSG_VIRTIO_LITE),y)
-CSRCS += rpmsg_virtio_lite.c
-endif
-
-ifeq ($(CONFIG_RPMSG_VIRTIO_BMP),y)
-CSRCS += rpmsg_virtio_bmp.c
-endif
-
-ifeq ($(CONFIG_RPMSG_VIRTIO_IVSHMEM),y)
-CSRCS += rpmsg_virtio_ivshmem.c
-endif
-
 DEPPATH += --dep-path rpmsg
 VPATH += :rpmsg
 

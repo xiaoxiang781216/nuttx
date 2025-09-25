@@ -868,13 +868,6 @@ endif
 
 endmenu
 
-config SIM_RPMSG_VIRTIO_LITE
-	bool "Simulated RPMSG VirtIO Lite"
-	default n
-	select RPMSG_VIRTIO_LITE
-	---help---
-		SIM RPMSG VirtIO Lite
-
 config SIM_USB_DEV
 	bool "Linux USB Device"
 	select USBDEV

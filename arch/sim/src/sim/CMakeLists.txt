@@ -120,10 +120,6 @@ if(CONFIG_LIBM_TOOLCHAIN)
   list(APPEND STDLIBS m)
 endif()
 
-if(CONFIG_RPMSG_VIRTIO_LITE)
-  list(APPEND SRCS sim_rpmsg_vritio.c)
-endif()
-
 if(CONFIG_RPTUN)
   list(APPEND SRCS sim_rptun.c)
 endif()
