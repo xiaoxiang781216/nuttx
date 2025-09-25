@@ -60,7 +60,7 @@ FAR void *memrchr(FAR const void *s, int c, size_t n)
   libc_data_t mask;
   unsigned int i;
 
-  while (UNALIGNED_X(src0))
+  while (UNALIGNED_X(src0 + 1))
     {
       if (!n--)
         {
