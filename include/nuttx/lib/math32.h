@@ -472,7 +472,7 @@ while(0)
 
 static inline_function uint64_t invdiv_umulh64(uint64_t a, uint64_t b)
 {
-#ifndef __SIZEOF_INT128__
+#ifndef __INT128_DEFINED
   /* If the compiler do not support uint128_t */
 
   uint64_t al = a & UINT32_MAX;
@@ -499,7 +499,7 @@ static inline_function uint64_t invdiv_umulh64(uint64_t a, uint64_t b)
    * the inline assembly.
    */
 
-  __uint128_t res128 = (__uint128_t)a * b;
+  uint128_t res128 = (uint128_t)a * b;
   return res128 >> 64;
 #endif
 }
@@ -525,7 +525,7 @@ void invdiv_init_param64(uint64_t d, FAR invdiv_param64_t *param)
   int      l = log2ceil(d);
   uint64_t t = ((uint64_t)1 << l) - d;
 
-#ifndef __SIZEOF_INT128__
+#ifndef __INT128_DEFINED
   /* If the compiler do not support UINT128 */
 
   uint64_t q[2];
@@ -546,7 +546,7 @@ void invdiv_init_param64(uint64_t d, FAR invdiv_param64_t *param)
 
   param->mult = q[0] + 1;
 #else
-  param->mult  = ((__uint128_t)1 << 64) * t / d + 1;
+  param->mult  = ((uint128_t)1 << 64) * t / d + 1;
 #endif
   param->shift = l - 1;
 }
