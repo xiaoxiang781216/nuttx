@@ -149,6 +149,15 @@ struct v4l2_ops_s
                           FAR struct v4l2_encoder_cmd *cmd);
 };
 
+struct vbuf_container_s
+{
+  struct v4l2_buffer       buf;                     /* v4l2_buffer information */
+  FAR void                *vaddr[VIDEO_MAX_PLANES]; /* Kernel address of image_data */
+  struct vbuf_container_s *next;                    /* Pointer to next buffer */
+};
+
+typedef struct vbuf_container_s vbuf_container_t;
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/

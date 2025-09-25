@@ -27,6 +27,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/video/video.h>
 #include <sys/videoio.h>
 
 #include <nuttx/mutex.h>
@@ -35,14 +36,6 @@
 /****************************************************************************
  * Public Types
  ****************************************************************************/
-
-struct vbuf_container_s
-{
-  struct v4l2_buffer       buf;   /* Buffer information */
-  struct vbuf_container_s *next;  /* Pointer to next buffer */
-};
-
-typedef struct vbuf_container_s vbuf_container_t;
 
 struct video_framebuff_s
 {

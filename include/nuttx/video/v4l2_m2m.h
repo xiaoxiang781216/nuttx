@@ -26,6 +26,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/video/video.h>
 #include <sys/videoio.h>
 
 /****************************************************************************
@@ -299,10 +300,10 @@ struct codec_s
 
 int codec_register(FAR const char *devpath, FAR struct codec_s *codec);
 int codec_unregister(FAR const char *devpath);
-FAR struct v4l2_buffer *codec_output_get_buf(FAR void *cookie);
-FAR struct v4l2_buffer *codec_capture_get_buf(FAR void *cookie);
-int codec_output_put_buf(FAR void *cookie, FAR struct v4l2_buffer *buf);
-int codec_capture_put_buf(FAR void *cookie, FAR struct v4l2_buffer *buf);
+FAR vbuf_container_t *codec_output_get_buf(FAR void *cookie);
+FAR vbuf_container_t *codec_capture_get_buf(FAR void *cookie);
+int codec_output_put_buf(FAR void *cookie, FAR vbuf_container_t *cnt);
+int codec_capture_put_buf(FAR void *cookie, FAR vbuf_container_t *cnt);
 int codec_queue_event(FAR void *cookie, FAR struct v4l2_event *evt);
 
 #ifdef __cplusplus
