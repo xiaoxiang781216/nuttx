@@ -212,8 +212,7 @@ int tcp_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
 
   if (!conn || !fds)
     {
-      ret = -EINVAL;
-      goto errout_with_lock;
+      return -EINVAL;
     }
 
   conn_dev_lock(&conn->sconn, conn->dev);
