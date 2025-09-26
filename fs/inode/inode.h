@@ -158,6 +158,7 @@ extern "C"
 
 DECLARE_PER_CPU_BMP(FAR struct inode *, g_root_inode);
 #define g_root_inode this_cpu_var_bmp(g_root_inode)
+extern const struct file_operations g_dir_fileops;
 
 /****************************************************************************
  * Public Function Prototypes

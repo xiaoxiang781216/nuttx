@@ -69,7 +69,7 @@ static int     dir_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
  * Private Data
  ****************************************************************************/
 
-static const struct file_operations g_dir_fileops =
+const struct file_operations g_dir_fileops =
 {
   dir_open,   /* open */
   dir_close,  /* close */
@@ -470,7 +470,7 @@ static int dir_open(FAR struct file *filep)
 {
   FAR struct fs_dirent_s *dir = filep->f_priv;
 
-  return dir_allocate(filep, dir->fd_path);
+  return dir_allocate(filep, dir ? dir->fd_path : NULL);
 }
 
 static int dir_close(FAR struct file *filep)
