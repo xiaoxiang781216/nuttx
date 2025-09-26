@@ -253,6 +253,8 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
 
           nxsem_init(&child->exit_sem, 0, 0);
 
+          child->lockcount = ptcb->lockcount;
+
           /* Allocate a new task group with the same privileges
            * as the parent
            */

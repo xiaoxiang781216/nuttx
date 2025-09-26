@@ -670,6 +670,14 @@ config RR_INTERVAL
 		Round robin scheduling (SCHED_RR) is enabled by setting this
 		interval to a positive, non-zero value.
 
+config SCHED_NOPREEMPT_KERNEL
+	bool "nopreemptive kernel"
+	default n
+	---help---
+		If SCHED_NOPREEMPT_KERNEL is set to y, it enables the non-preemptive kernel mode.
+		In this mode, kernel threads and user tasks executing
+		in the kernel state cannot be preempted.
+
 config SCHED_SPORADIC
 	bool "Support sporadic scheduling"
 	default n

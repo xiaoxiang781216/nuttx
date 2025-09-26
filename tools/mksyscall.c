@@ -467,6 +467,9 @@ static void generate_stub(int nfixed, int nparms)
   fprintf(stream, "#include <nuttx/config.h>\n");
   fprintf(stream, "#include <stdint.h>\n");
   fprintf(stream, "#include <string.h>\n");
+  fprintf(stream, "#ifdef CONFIG_SCHED_NOPREEMPT_KERNEL\n");
+  fprintf(stream, "#  include <nuttx/sched.h>\n");
+  fprintf(stream, "#endif\n");
 
   if (strlen(g_parm[HEADER_INDEX]) > 0)
     {
@@ -527,6 +530,10 @@ static void generate_stub(int nfixed, int nparms)
         }
     }
 
+  fprintf(stream, "#ifdef CONFIG_SCHED_NOPREEMPT_KERNEL\n");
+  fprintf(stream, "  sched_lock();\n");
+  fprintf(stream, "#endif\n");
+
   /* Then call the proxied function.  Functions that have no return value are
    * a special case.
    */
@@ -543,7 +550,8 @@ static void generate_stub(int nfixed, int nparms)
     }
   else
     {
-      fprintf(stream, "  return (uintptr_t)%s(", g_parm[NAME_INDEX]);
+      fprintf(stream, "  uintptr_t ret = (uintptr_t)%s(",
+              g_parm[NAME_INDEX]);
     }
 
   /* The pass all of the system call parameters, casting to the correct type
@@ -590,6 +598,12 @@ static void generate_stub(int nfixed, int nparms)
         }
     }
 
+  fprintf(stream, ");\n");
+
+  fprintf(stream, "#ifdef CONFIG_SCHED_NOPREEMPT_KERNEL\n");
+  fprintf(stream, "  sched_unlock();\n");
+  fprintf(stream, "#endif\n");
+
   /* Tail end of the function.  If the stubs function has no return
    * value, just return zero (OK). If the return type is a pointer
    * then we will return a zero.
@@ -599,11 +613,11 @@ static void generate_stub(int nfixed, int nparms)
       strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0 ||
       check_byref(g_parm[RETTYPE_INDEX]))
     {
-      fprintf(stream, ");\n  return 0;\n}\n");
+      fprintf(stream, "  return 0;\n}\n");
     }
   else
     {
-      fprintf(stream, ");\n}\n");
+      fprintf(stream, "  return ret;\n}\n");
     }
 
   if (g_parm[COND_INDEX][0] != '\0')

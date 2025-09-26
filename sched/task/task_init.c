@@ -267,6 +267,15 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
           nxtask_joininit(tcb);
 #endif
 
+#ifdef CONFIG_SCHED_NOPREEMPT_KERNEL
+          if (ttype == TCB_FLAG_TTYPE_KERNEL)
+            {
+              /* Disable pre-emption for this task */
+
+              tcb->lockcount = 1;
+            }
+#endif
+
           nxsem_init(&tcb->exit_sem, 0, 0);
 
           ret = task_setup(tcb, name, entry, actions, attr, argv,
