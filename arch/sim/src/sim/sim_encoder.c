@@ -459,8 +459,8 @@ static int sim_encoder_subscribe_event(void *priv,
 }
 
 static int sim_encoder_process(sim_encoder_t *sim_encoder,
-                               struct v4l2_buffer *dst_buf,
-                               struct v4l2_buffer *src_buf)
+                               vbuf_container_t *dst_cnt,
+                               vbuf_container_t *src_cnt)
 {
   struct v4l2_event event;
   uint8_t *src_data = NULL;
@@ -469,19 +469,19 @@ static int sim_encoder_process(sim_encoder_t *sim_encoder,
   int64_t dst_pts = 0;
   int ret;
 
-  if (src_buf != NULL)
+  if (src_cnt != NULL)
     {
-      src_data = (uint8_t *)src_buf->m.userptr;
-      src_size = src_buf->bytesused;
-      src_pts  = src_buf->timestamp.tv_sec * 1000000 +
-                 src_buf->timestamp.tv_usec;
+      src_data = (uint8_t *)src_cnt->vaddr[0];
+      src_size = src_cnt->buf.bytesused;
+      src_pts  = src_cnt->buf.timestamp.tv_sec * 1000000 +
+                 src_cnt->buf.timestamp.tv_usec;
     }
 
   ret = x264_wrapper_enqueue(sim_encoder->encoder,
                              src_data, src_size, src_pts);
-  if (ret >= 0 && src_buf != NULL)
+  if (ret >= 0 && src_cnt != NULL)
     {
-      codec_output_put_buf(sim_encoder->cookie, src_buf);
+      codec_output_put_buf(sim_encoder->cookie, src_cnt);
     }
 
   if (ret < 1)
@@ -490,49 +490,49 @@ static int sim_encoder_process(sim_encoder_t *sim_encoder,
     }
 
   ret = x264_wrapper_dequeue(sim_encoder->encoder,
-                             (uint8_t *)dst_buf->m.userptr,
-                             &dst_buf->bytesused,
+                             (uint8_t *)dst_cnt->vaddr[0],
+                             &dst_cnt->buf.bytesused,
                              &dst_pts,
-                             &dst_buf->flags);
-  if (ret == 0 && src_buf == NULL)
+                             &dst_cnt->buf.flags);
+  if (ret == 0 && src_cnt == NULL)
     {
       sim_encoder->flushing = false;
-      dst_buf->flags |= V4L2_BUF_FLAG_LAST;
+      dst_cnt->buf.flags |= V4L2_BUF_FLAG_LAST;
 
       memset(&event, 0, sizeof(event));
       event.type = V4L2_EVENT_EOS;
       codec_queue_event(sim_encoder->cookie, &event);
     }
 
-  dst_buf->timestamp.tv_usec = dst_pts % 1000000;
-  dst_buf->timestamp.tv_sec  = dst_pts / 1000000;
+  dst_cnt->buf.timestamp.tv_usec = dst_pts % 1000000;
+  dst_cnt->buf.timestamp.tv_sec  = dst_pts / 1000000;
 
-  codec_capture_put_buf(sim_encoder->cookie, dst_buf);
+  codec_capture_put_buf(sim_encoder->cookie, dst_cnt);
   return ret;
 }
 
 static void sim_encoder_work(void *encoder)
 {
   sim_encoder_t *sim_encoder = encoder;
-  struct v4l2_buffer *src_buf;
-  struct v4l2_buffer *dst_buf;
+  vbuf_container_t *src_cnt;
+  vbuf_container_t *dst_cnt;
   irqstate_t flags;
   int ret;
 
-  src_buf = codec_output_get_buf(sim_encoder->cookie);
-  if (src_buf == NULL && !sim_encoder->flushing)
+  src_cnt = codec_output_get_buf(sim_encoder->cookie);
+  if (src_cnt == NULL && !sim_encoder->flushing)
     {
       return;
     }
 
-  dst_buf = codec_capture_get_buf(sim_encoder->cookie);
-  if (dst_buf == NULL)
+  dst_cnt = codec_capture_get_buf(sim_encoder->cookie);
+  if (dst_cnt == NULL)
     {
       return;
     }
 
   flags = irq_save_nopreempt();
-  ret = sim_encoder_process(encoder, dst_buf, src_buf);
+  ret = sim_encoder_process(encoder, dst_cnt, src_cnt);
   irq_restore_nopreempt(flags);
 
   if (ret > 0)
