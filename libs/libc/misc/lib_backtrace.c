@@ -549,7 +549,7 @@ int backtrace_format(FAR char *buffer, int size,
   buffer[0] = '\0';
   for (i = 0; i < depth && backtrace[i]; i++)
     {
-      if (i * BACKTRACE_PTR_FMT_WIDTH >= size)
+      if ((i + 1) * BACKTRACE_PTR_FMT_WIDTH >= size)
         {
           break;
         }
