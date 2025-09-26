@@ -35,12 +35,36 @@
 #endif
 
 /****************************************************************************
+ * Private Definitions
+ ****************************************************************************/
+
+#undef g_nx_initstate
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
 static void core_main(void)
 {
   static IfxCpu_syncEvent g_sync_event = 0;
+  int cpu = up_cpu_index();
+
+  UNUSED(cpu);
+
+#ifdef CONFIG_PERCPU_SECTION
+  /* Init percpu section .data & .bss */
+
+  memcpy((void *)((uintptr_t)_sdata_percpu + PERCPU_OFFSET * cpu),
+         _ldata_percpu,
+         (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
+  memset((void *)(uintptr_t)_sbss_percpu + PERCPU_OFFSET * cpu,
+         0, (uintptr_t)_ebss_percpu - (uintptr_t)_sbss_percpu);
+
+  if (cpu > 0)
+    {
+      while (!OSINIT_IDLELOOP());
+    }
+#endif
 
   /* !!WATCHDOG0 AND SAFETY WATCHDOG ARE DISABLED HERE!!
    * Enable the watchdogs and service them periodically if it is required
@@ -52,7 +76,10 @@ static void core_main(void)
   IfxCpu_waitEvent(&g_sync_event, 1);
 
 #ifdef USE_EARLYSERIALINIT
-  tricore_earlyserialinit();
+  if (cpu == 0)
+    {
+      tricore_earlyserialinit();
+    }
 #endif
 
 #ifdef CONFIG_BUILD_PROTECTED
