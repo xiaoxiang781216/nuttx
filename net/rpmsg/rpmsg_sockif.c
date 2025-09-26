@@ -284,6 +284,7 @@ static FAR struct rpmsg_socket_conn_s *rpmsg_socket_alloc(void)
 
   conn->recvsize = CONFIG_NET_RPMSG_RXBUF_SIZE;
   conn->crefs = 1;
+  conn->priority = RPMSG_PRIO_DEFAULT;
   return conn;
 }
 
@@ -557,10 +558,10 @@ static void rpmsg_socket_device_created(FAR struct rpmsg_device *rdev,
       conn->ept.release_cb = rpmsg_socket_ept_release;
       rpmsg_socket_format_name(conn, namebuf);
 
+      rpmsg_set_priority(&conn->ept, conn->priority);
       rpmsg_create_ept(&conn->ept, rdev, namebuf,
                        RPMSG_ADDR_ANY, RPMSG_ADDR_ANY,
                        rpmsg_socket_ept_cb, rpmsg_socket_ns_unbind);
-      rpmsg_set_priority(&conn->ept, conn->priority);
     }
 }
 
@@ -612,6 +613,14 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
   new->server = server;
   new->ept.priv = new;
   new->ept.release_cb = rpmsg_socket_ept_release;
+
+  ret = rpmsg_set_priority(&new->ept, server->priority);
+  if (ret < 0)
+    {
+      rpmsg_socket_free(new);
+      return;
+    }
+
   ret = rpmsg_create_ept(&new->ept, rdev, name,
                          RPMSG_ADDR_ANY, dest,
                          rpmsg_socket_ept_cb, rpmsg_socket_ns_unbind);
@@ -635,13 +644,6 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
 
   server->pending++;
   nxmutex_unlock(&server->recvlock);
-
-  ret = rpmsg_set_priority(&new->ept, server->priority);
-  if (ret < 0)
-    {
-      rpmsg_socket_free(new);
-      return;
-    }
 
   new->rpaddr.rp_family = AF_RPMSG;
   strlcpy(new->rpaddr.rp_cpu, rpmsg_get_cpuname(rdev),
@@ -1620,6 +1622,11 @@ static int rpmsg_socket_setsockopt(FAR struct socket *psock, int level,
             if (_SS_ISCONNECTED(conn->sconn.s_flags))
               {
                 return -EISCONN;
+              }
+
+            if (*(FAR const uint8_t *)value == RPMSG_PRIO_RT)
+              {
+                return -EINVAL;
               }
 
             conn->priority = *(FAR const uint8_t *)value;
