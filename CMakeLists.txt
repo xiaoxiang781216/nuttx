@@ -677,9 +677,7 @@ if(NOT CONFIG_ARCH_SIM)
                         ${LINK_OPTION_FLAG}${ldscript})
     target_link_libraries(
       nuttx
-      PRIVATE ${NUTTX_EXTRA_FLAGS}
-              ${LINK_OPTION_FLAG}${ldscript}
-              $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--start-group>
+      PRIVATE $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--start-group>
               ${nuttx_libs}
               $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--end-group>)
   endif()
