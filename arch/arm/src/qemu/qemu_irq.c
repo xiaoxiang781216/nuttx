@@ -25,6 +25,8 @@
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
 
+#include <assert.h>
+
 #include "arm_internal.h"
 #include "sctlr.h"
 #include "gic.h"

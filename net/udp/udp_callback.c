@@ -30,6 +30,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <debug.h>
+#include <assert.h>
 #include <sys/time.h>
 
 #include <nuttx/net/netconfig.h>

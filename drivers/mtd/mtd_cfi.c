@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <debug.h>
+#include <assert.h>
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/fs/fs.h>

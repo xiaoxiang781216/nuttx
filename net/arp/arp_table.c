@@ -51,6 +51,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <debug.h>
+#include <assert.h>
 
 #include <netinet/in.h>
 #include <net/ethernet.h>

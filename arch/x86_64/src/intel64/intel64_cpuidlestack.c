@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
 #include <sys/types.h>
 
 #include <nuttx/arch.h>

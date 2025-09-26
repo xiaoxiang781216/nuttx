@@ -35,6 +35,7 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/mutex.h>
 
 #include "libc.h"
 

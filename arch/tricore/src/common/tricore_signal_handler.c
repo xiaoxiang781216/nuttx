@@ -24,6 +24,8 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
+
 #include <arch/syscall.h>
 #include <nuttx/arch.h>
 

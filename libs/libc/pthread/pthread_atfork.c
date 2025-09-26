@@ -26,6 +26,7 @@
 
 #include <nuttx/tls.h>
 #include <nuttx/lib/lib.h>
+#include <nuttx/mutex.h>
 
 #include <pthread.h>
 #include <errno.h>

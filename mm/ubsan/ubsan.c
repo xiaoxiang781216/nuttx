@@ -28,6 +28,7 @@
 
 #include <debug.h>
 #include <stdio.h>
+#include <assert.h>
 
 #include <nuttx/nuttx.h>
 

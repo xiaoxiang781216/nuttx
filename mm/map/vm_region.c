@@ -28,6 +28,8 @@
 #include <nuttx/mm/map.h>
 #include <nuttx/mm/gran.h>
 #include <nuttx/pgalloc.h>
+
+#include <assert.h>
 #include <debug.h>
 
 /****************************************************************************

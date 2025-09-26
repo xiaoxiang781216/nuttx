@@ -38,6 +38,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <setjmp.h>
+#include <assert.h>
 #include <sys/ioctl.h>
 
 /****************************************************************************

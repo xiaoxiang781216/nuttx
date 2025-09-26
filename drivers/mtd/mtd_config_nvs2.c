@@ -39,11 +39,13 @@
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/poll.h>
+
 #include <nuttx/bits.h>
 #include <nuttx/crc8.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/mtd/configdata.h>
+#include <nuttx/mutex.h>
 
 /****************************************************************************
  * Pre-processor Definitions

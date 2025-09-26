@@ -40,6 +40,7 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/net.h>
+#include <nuttx/mutex.h>
 
 #include "can/can.h"
 #include "netdev/netdev.h"

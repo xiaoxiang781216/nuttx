@@ -28,6 +28,7 @@
 
 #include <libgen.h>
 #include <dlfcn.h>
+#include <assert.h>
 
 #include <nuttx/envpath.h>
 #include <nuttx/lib/modlib.h>

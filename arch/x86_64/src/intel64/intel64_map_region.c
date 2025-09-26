@@ -24,7 +24,9 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
 #include <debug.h>
+
 #include <nuttx/irq.h>
 #include <nuttx/pgalloc.h>
 

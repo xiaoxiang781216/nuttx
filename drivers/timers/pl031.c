@@ -27,6 +27,7 @@
 #include <nuttx/config.h>
 
 #include <stdio.h>
+#include <assert.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>

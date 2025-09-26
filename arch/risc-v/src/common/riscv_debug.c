@@ -45,6 +45,7 @@
 #include <arch/csr.h>
 
 #include <stdbool.h>
+#include <assert.h>
 
 #include "riscv_internal.h"
 
