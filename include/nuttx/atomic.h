@@ -30,7 +30,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
-#if defined(__has_include) && !defined(CONFIG_LIBC_ARCH_ATOMIC)
+#if !defined(CONFIG_LIBC_ARCH_ATOMIC)
 #  if __has_include(<atomic>) && defined(__cplusplus)
 extern "C++"
 {
@@ -48,7 +48,7 @@ extern "C++"
   using std::atomic_fetch_or_explicit;
   using std::atomic_fetch_xor_explicit;
 }
-#  elif __has_include(<stdatomic.h>) && !defined(__STDC_NO_ATOMICS__) && \
+#  elif !defined(__STDC_NO_ATOMICS__) && \
         ((defined(__cplusplus) && __cplusplus >= 201103L) || \
          (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L))
 #    include <stdatomic.h>
