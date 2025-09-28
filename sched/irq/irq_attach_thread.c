@@ -81,7 +81,7 @@ static int irq_thread_default_handler(int irq, FAR void *context,
   return ret;
 }
 
-static noreturn_function int isr_thread_main(int argc, FAR char *argv[])
+static int isr_thread_main(int argc, FAR char *argv[])
 {
   int irq = atoi(argv[1]);
   xcpt_t isr = (xcpt_t)((uintptr_t)strtoul(argv[2], NULL, 16));
@@ -111,6 +111,8 @@ static noreturn_function int isr_thread_main(int argc, FAR char *argv[])
 
       isrthread(irq, NULL, arg);
     }
+
+  return OK;
 }
 
 /****************************************************************************
