@@ -1445,7 +1445,7 @@ static int ctucanfd_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
 
       /* Set RTR bit */
 
-      fmt.s.rtr = (frame->can_id & CAN_RTR_FLAG);
+      fmt.s.rtr = (frame->can_id & CAN_RTR_FLAG) ? 1 : 0;
 
 #ifdef CONFIG_NET_CAN_EXTID
       if (frame->can_id & CAN_EFF_FLAG)
@@ -1481,7 +1481,7 @@ static int ctucanfd_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
 
       /* CAN FD frame */
 
-      fmt.s.fdf = (frame->flags & CANFD_FDF);
+      fmt.s.fdf = (frame->flags & CANFD_FDF) ? 1 : 0;
 
       /* Set up the DLC */
 
@@ -1489,9 +1489,9 @@ static int ctucanfd_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
 
       /* Set flags */
 
-      fmt.s.rtr     = (frame->can_id & CAN_RTR_FLAG);
-      fmt.s.brs     = (frame->flags & CANFD_BRS);
-      fmt.s.esi_rsv = (frame->flags & CANFD_ESI);
+      fmt.s.rtr     = (frame->can_id & CAN_RTR_FLAG) ? 1 : 0;
+      fmt.s.brs     = (frame->flags & CANFD_BRS) ? 1 : 0;
+      fmt.s.esi_rsv = (frame->flags & CANFD_ESI) ? 1 : 0;
 
 #ifdef CONFIG_NET_CAN_EXTID
       if (frame->can_id & CAN_EFF_FLAG)
@@ -1622,7 +1622,6 @@ static FAR netpkt_t *ctucanfd_sock_recv(FAR struct netdev_lowerhalf_s *dev)
         {
           canerr("ERROR: Received message with extended"
                  " identifier.  Dropped\n");
-          continue;
         }
 
       frame->can_id = rxframe->id.id;
@@ -1686,11 +1685,12 @@ static FAR netpkt_t *ctucanfd_sock_recv(FAR struct netdev_lowerhalf_s *dev)
         {
           canerr("ERROR: Received message with extended"
                  " identifier.  Dropped\n");
-          continue;
         }
 
       frame->can_id = rxframe->id.id;
 #endif
+
+      frame->flags = 0;
 
       /* Extract the RTR bit */
 
@@ -1773,7 +1773,7 @@ static FAR netpkt_t *ctucanfd_sock_error(FAR struct netdev_lowerhalf_s *dev)
 
   /* Copy frame */
 
-  frame->can_id  = errbits;
+  frame->can_id  = errbits | CAN_ERR_FLAG;
   frame->can_dlc = CAN_ERR_DLC;
 
   return pkt;
