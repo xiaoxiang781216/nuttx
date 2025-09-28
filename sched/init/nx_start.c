@@ -406,7 +406,7 @@ struct tasklist_s g_tasklisttable[NUM_TASK_STATES];
  * hardware resources may not yet be available to the kernel logic.
  */
 
-volatile uint8_t g_nx_initstate;  /* See enum nx_initstate_e */
+volatile enum nx_initstate_e g_nx_initstate;  /* See enum nx_initstate_e */
 
 /****************************************************************************
  * Private Data
