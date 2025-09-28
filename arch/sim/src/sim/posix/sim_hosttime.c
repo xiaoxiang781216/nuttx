@@ -36,11 +36,33 @@
  * Private Data
  ****************************************************************************/
 
-static uint64_t g_host_start;
+static uint64_t g_start;
+static timer_t  g_timer;
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: host_inittimer
+ ****************************************************************************/
+
+int host_inittimer(void)
+{
+  struct timespec tp;
+  struct sigevent sigev =
+    {
+      0
+    };
+
+  clock_gettime(CLOCK_MONOTONIC, &tp);
+
+  g_start = 1000000000ull * tp.tv_sec + tp.tv_nsec;
+  sigev.sigev_notify = SIGEV_SIGNAL;
+  sigev.sigev_signo  = SIGALRM;
+
+  return timer_create(CLOCK_MONOTONIC, &sigev, &g_timer);
+}
 
 /****************************************************************************
  * Name: host_gettime
@@ -48,26 +70,13 @@ static uint64_t g_host_start;
 
 uint64_t host_gettime(bool rtc)
 {
-  static uint64_t start;
   struct timespec tp;
   uint64_t current;
 
   clock_gettime(rtc ? CLOCK_REALTIME : CLOCK_MONOTONIC, &tp);
   current = 1000000000ull * tp.tv_sec + tp.tv_nsec;
 
-  if (rtc)
-    {
-      return current;
-    }
-
-  if (start == 0)
-    {
-      start = current;
-      clock_gettime(CLOCK_REALTIME, &tp);
-      g_host_start = 1000000000ull * tp.tv_sec + tp.tv_nsec;
-    }
-
-  return current - start;
+  return rtc ? current : current - g_start;
 }
 
 /****************************************************************************
@@ -110,22 +119,19 @@ void host_sleepuntil(uint64_t nsec)
 
 int host_settimer(uint64_t nsec)
 {
-  struct itimerval it;
+  struct itimerspec tspec =
+    {
+      0
+    };
 
   /* Convert to microseconds and set minimum timer to 1 microsecond. */
 
-  nsec /= 1000;
-  if (nsec == 0)
-    {
-      nsec = 1;
-    }
+  nsec += g_start;
 
-  it.it_interval.tv_sec  = 0;
-  it.it_interval.tv_usec = 0;
-  it.it_value.tv_sec     = nsec / 1000000;
-  it.it_value.tv_usec    = nsec % 1000000;
+  tspec.it_value.tv_sec  = nsec / 1000000000;
+  tspec.it_value.tv_nsec = nsec % 1000000000;
 
-  return setitimer(ITIMER_REAL, &it, NULL);
+  return timer_settime(g_timer, TIMER_ABSTIME, &tspec, NULL);
 }
 
 /****************************************************************************
