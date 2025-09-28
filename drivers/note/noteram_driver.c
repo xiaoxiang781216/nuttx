@@ -586,7 +586,7 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
 
       do
         {
-          uint8_t note[256];
+          aligned_data(sizeof(uintptr_t)) uint8_t note[256];
 
           /* Get the next note (removing it from the buffer) */
 
