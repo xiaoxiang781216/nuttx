@@ -372,4 +372,10 @@
 #  define cpufreq_trace_printf(...)
 #  define cpufreq_trace_diag(...)
 #endif
+
+/* Diagnostic IDs */
+
+#define DIAG_MM_ALLOC_FAIL       0
+#define DIAG_MM_FREE_FAIL        1
+
 #endif /* __INCLUDE_NUTTX_TRACE_H */

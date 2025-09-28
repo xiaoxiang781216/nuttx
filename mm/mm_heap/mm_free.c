@@ -32,6 +32,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
+#include <nuttx/trace.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/mm/kasan.h>
 #include <nuttx/sched_note.h>
@@ -138,6 +139,12 @@ void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
 #endif
 
   /* Sanity check against double-frees */
+
+  if (MM_NODE_IS_ALLOC(node))
+    {
+      mm_trace_diag(DIAG_MM_FREE_FAIL, "address:%p, reason:%s",
+                    mem, "double-free");
+    }
 
   DEBUGASSERT(MM_NODE_IS_ALLOC(node));
   node->size &= ~MM_ALLOC_BIT;

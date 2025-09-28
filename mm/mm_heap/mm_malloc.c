@@ -35,6 +35,7 @@
 #include <nuttx/mm/kasan.h>
 #include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/trace.h>
 
 #include "mm_heap/mm.h"
 
@@ -382,6 +383,12 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       mwarn("Total:%d, used:%d, free:%d, largest:%d, nused:%d, nfree:%d\n",
             minfo.arena, minfo.uordblks, minfo.fordblks,
             minfo.mxordblk, minfo.aordblks, minfo.ordblks);
+
+      mm_trace_diag(DIAG_MM_ALLOC_FAIL,
+                    "size:%zu, total:%d, used:%d, free:%d, "
+                    "largest:%d, nused:%d, nfree:%d",
+                    alignsize, minfo.arena, minfo.uordblks, minfo.fordblks,
+                    minfo.mxordblk, minfo.aordblks, minfo.ordblks);
 #  ifdef CONFIG_MM_RECORD_PID
       nxsched_foreach(mm_dump_handler, heap);
       mm_dump_handler(NULL, heap);
@@ -407,6 +414,8 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       dump.pid = PID_MM_ORPHAN;
       mm_memdump(heap, &dump);
 #  endif
+#else
+    mm_trace_diag(DIAG_MM_ALLOC_FAIL, "size:%zu", alignsize);
 #endif
 #ifdef CONFIG_MM_PANIC_ON_FAILURE
       PANIC();
