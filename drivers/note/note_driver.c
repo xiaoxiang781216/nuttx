@@ -815,7 +815,11 @@ void sched_note_taskname(void)
       ti = (FAR struct note_taskname_info_s *)
             &g_note_taskname.buffer[n];
 
-      sched_note_one_taskname(ti->name, ti->pid);
+      if (ti->pid != INVALID_PROCESS_ID)
+        {
+          sched_note_one_taskname(ti->name, ti->pid);
+        }
+
       n += ti->size;
       if (n >= CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE)
         {
