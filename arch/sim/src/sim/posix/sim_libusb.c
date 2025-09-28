@@ -401,7 +401,7 @@ static int host_libusb_ep0outhandle(struct host_libusb_hostdev_s *dev,
                                          ctrlreq->wIndex,
                                          datareq->data,
                                          datareq->len,
-                                         1000);
+                                         0);
               break;
             default:
               ERROR("Unsupported standard request: 0x%02X\n",
@@ -418,7 +418,7 @@ static int host_libusb_ep0outhandle(struct host_libusb_hostdev_s *dev,
                                    ctrlreq->wIndex,
                                    datareq->data,
                                    datareq->len,
-                                   1000);
+                                   0);
         break;
       default:
         ERROR("Unsupported request type: 0x%02X\n", ctrlreq->bRequestType);
