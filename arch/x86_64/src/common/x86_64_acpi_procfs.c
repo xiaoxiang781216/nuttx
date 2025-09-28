@@ -137,7 +137,7 @@ static int acpi_open(struct file *filep, const char *relpath,
                      int oflags, mode_t mode)
 {
   struct acpi_file_s *acpifile;
-  ssize_t len;
+  size_t len;
 
   finfo("Open '%s'\n", relpath);
 
@@ -164,7 +164,7 @@ static int acpi_open(struct file *filep, const char *relpath,
 
   len = acpi_table_get(relpath, &acpifile->data);
   acpifile->length = len;
-  filep->f_pos     =  0;
+  filep->f_pos     = 0;
 
   /* Save the attributes as the open-specific state in filep->f_priv */
 
