@@ -33,6 +33,8 @@
 #include <stdint.h>
 #include <signal.h>
 
+#include <nuttx/lib/builtin.h>
+
 #ifdef CONFIG_BUILD_PROTECTED
 
 /****************************************************************************
@@ -123,6 +125,13 @@ struct userspace_s
 
 #ifdef CONFIG_LIBC_USRWORK
   CODE int (*work_usrstart)(void);
+#endif
+
+  /* Builtin support */
+
+#ifdef CONFIG_BUILTIN
+  FAR const int *builtin_count;
+  FAR const struct builtin_s *builtins;
 #endif
 };
 
