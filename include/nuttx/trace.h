@@ -41,6 +41,8 @@
 #  define trace_mark(tag, s) sched_note_mark(tag, s)
 #  define trace_printf(tag, fmt, ...) \
     sched_note_printf(tag, LOG_INFO, fmt, ##__VA_ARGS__)
+#  define trace_diag(tag, id, fmt, ...) \
+    sched_note_printf_ip(tag, LOG_EMERG, id, fmt, 0, ##__VA_ARGS__)
 #else
 #  define trace_begin(tag)
 #  define trace_end(tag)
@@ -48,6 +50,7 @@
 #  define trace_endex(tag, name)
 #  define trace_mark(tag, s)
 #  define trace_printf(...)
+#  define trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_APP
@@ -58,6 +61,8 @@
 #  define app_trace_mark(s) trace_mark(NOTE_TAG_APP, s)
 #  define app_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_APP, fmt, ##__VA_ARGS__)
+#  define app_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_APP, id, fmt, ##__VA_ARGS__)
 #else
 #  define app_trace_begin()
 #  define app_trace_end()
@@ -65,6 +70,7 @@
 #  define app_trace_endex(name)
 #  define app_trace_mark(s)
 #  define app_trace_printf(...)
+#  define app_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_ARCH
@@ -75,6 +81,8 @@
 #  define arch_trace_mark(s) trace_mark(NOTE_TAG_ARCH, s)
 #  define arch_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_ARCH, fmt, ##__VA_ARGS__)
+#  define arch_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_ARCH, id, fmt, ##__VA_ARGS__)
 #else
 #  define arch_trace_begin()
 #  define arch_trace_end()
@@ -82,6 +90,7 @@
 #  define arch_trace_endex(name)
 #  define arch_trace_mark(s)
 #  define arch_trace_printf(...)
+#  define arch_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_AUDIO
@@ -92,6 +101,8 @@
 #  define audio_trace_mark(s) trace_mark(NOTE_TAG_AUDIO, s)
 #  define audio_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_AUDIO, fmt, ##__VA_ARGS__)
+#  define audio_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_AUDIO, id, fmt, ##__VA_ARGS__)
 #else
 #  define audio_trace_begin()
 #  define audio_trace_end()
@@ -99,6 +110,7 @@
 #  define audio_trace_endex(name)
 #  define audio_trace_mark(s)
 #  define audio_trace_printf(...)
+#  define audio_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_BOARDS
@@ -109,6 +121,8 @@
 #  define boards_trace_mark(s) trace_mark(NOTE_TAG_BOARDS, s)
 #  define boards_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_BOARDS, fmt, ##__VA_ARGS__)
+#  define boards_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_BOARDS, id, fmt, ##__VA_ARGS__)
 #else
 #  define boards_trace_begin()
 #  define boards_trace_end()
@@ -116,6 +130,7 @@
 #  define boards_trace_endex(name)
 #  define boards_trace_mark(s)
 #  define boards_trace_printf(...)
+#  define boards_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_CRYPTO
@@ -126,6 +141,8 @@
 #  define crypto_trace_mark(s) trace_mark(NOTE_TAG_CRYPTO, s)
 #  define crypto_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_CRYPTO, fmt, ##__VA_ARGS__)
+#  define crypto_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_CRYPTO, id, fmt, ##__VA_ARGS__)
 #else
 #  define crypto_trace_begin()
 #  define crypto_trace_end()
@@ -133,6 +150,7 @@
 #  define crypto_trace_endex(name)
 #  define crypto_trace_mark(s)
 #  define crypto_trace_printf(...)
+#  define crypto_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_DRIVERS
@@ -142,7 +160,9 @@
 #  define drivers_trace_endex(name) trace_endex(NOTE_TAG_DRIVERS, name)
 #  define drivers_trace_mark(s) trace_mark(NOTE_TAG_DRIVERS, s)
 #  define drivers_trace_printf(fmt, ...) \
-    trace_printf(NOTE_TAG_DRIVERS, fmt, )
+    trace_printf(NOTE_TAG_DRIVERS, fmt, ##__VA_ARGS__)
+#  define drivers_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_DRIVERS, id, fmt, ##__VA_ARGS__)
 #else
 #  define drivers_trace_begin()
 #  define drivers_trace_end()
@@ -150,6 +170,7 @@
 #  define drivers_trace_endex(name)
 #  define drivers_trace_mark(s)
 #  define drivers_trace_printf(...)
+#  define drivers_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_FS
@@ -160,6 +181,8 @@
 #  define fs_trace_mark(s) trace_mark(NOTE_TAG_FS, s)
 #  define fs_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_FS, fmt, ##__VA_ARGS__)
+#  define fs_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_FS, id, fmt, ##__VA_ARGS__)
 #else
 #  define fs_trace_begin()
 #  define fs_trace_end()
@@ -167,6 +190,7 @@
 #  define fs_trace_endex(name)
 #  define fs_trace_mark(s)
 #  define fs_trace_printf(...)
+#  define fs_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_GRAPHICS
@@ -177,6 +201,8 @@
 #  define graphics_trace_mark(s) trace_mark(NOTE_TAG_GRAPHICS, s)
 #  define graphics_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_GRAPHICS, fmt, ##__VA_ARGS__)
+#  define graphics_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_GRAPHICS, id, fmt, ##__VA_ARGS__)
 #else
 #  define graphics_trace_begin()
 #  define graphics_trace_end()
@@ -184,6 +210,7 @@
 #  define graphics_trace_endex(name)
 #  define graphics_trace_mark(s)
 #  define graphics_trace_printf(...)
+#  define graphics_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_INPUT
@@ -194,6 +221,8 @@
 #  define input_trace_mark(s) trace_mark(NOTE_TAG_INPUT, s)
 #  define input_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_INPUT, fmt, ##__VA_ARGS__)
+#  define input_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_INPUT, id, fmt, ##__VA_ARGS__)
 #else
 #  define input_trace_begin()
 #  define input_trace_end()
@@ -201,6 +230,7 @@
 #  define input_trace_endex(name)
 #  define input_trace_mark(s)
 #  define input_trace_printf(...)
+#  define input_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_LIBS
@@ -211,6 +241,8 @@
 #  define libs_trace_mark(s) trace_mark(NOTE_TAG_LIBS, s)
 #  define libs_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_LIBS, fmt, ##__VA_ARGS__)
+#  define libs_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_LIBS, id, fmt, ##__VA_ARGS__)
 #else
 #  define libs_trace_begin()
 #  define libs_trace_end()
@@ -218,6 +250,7 @@
 #  define libs_trace_endex(name)
 #  define libs_trace_mark(s)
 #  define libs_trace_printf(...)
+#  define libs_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_MM
@@ -228,6 +261,8 @@
 #  define mm_trace_mark(s) trace_mark(NOTE_TAG_MM, s)
 #  define mm_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_MM, fmt, ##__VA_ARGS__)
+#  define mm_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_MM, id, fmt, ##__VA_ARGS__)
 #else
 #  define mm_trace_begin()
 #  define mm_trace_end()
@@ -235,6 +270,7 @@
 #  define mm_trace_endex(name)
 #  define mm_trace_mark(s)
 #  define mm_trace_printf(...)
+#  define mm_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_NET
@@ -245,6 +281,8 @@
 #  define net_trace_mark(s) trace_mark(NOTE_TAG_NET, s)
 #  define net_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_NET, fmt, ##__VA_ARGS__)
+#  define net_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_NET, id, fmt, ##__VA_ARGS__)
 #else
 #  define net_trace_begin()
 #  define net_trace_end()
@@ -252,6 +290,7 @@
 #  define net_trace_endex(name)
 #  define net_trace_mark(s)
 #  define net_trace_printf(...)
+#  define net_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_SCHED
@@ -262,6 +301,8 @@
 #  define sched_trace_mark(s) trace_mark(NOTE_TAG_SCHED, s)
 #  define sched_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_SCHED, fmt, ##__VA_ARGS__)
+#  define sched_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_SCHED, id, fmt, ##__VA_ARGS__)
 #else
 #  define sched_trace_begin()
 #  define sched_trace_end()
@@ -269,6 +310,7 @@
 #  define sched_trace_endex(name)
 #  define sched_trace_mark(s)
 #  define sched_trace_printf(...)
+#  define sched_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_VIDEO
@@ -279,6 +321,8 @@
 #  define video_trace_mark(s) trace_mark(NOTE_TAG_VIDEO, s)
 #  define video_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_VIDEO, fmt, ##__VA_ARGS__)
+#  define video_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_VIDEO, id, fmt, ##__VA_ARGS__)
 #else
 #  define video_trace_begin()
 #  define video_trace_end()
@@ -286,6 +330,7 @@
 #  define video_trace_endex(name)
 #  define video_trace_mark(s)
 #  define video_trace_printf(...)
+#  define video_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_WIRELESS
@@ -296,6 +341,8 @@
 #  define wireless_trace_mark(s) trace_mark(NOTE_TAG_WIRLESS, s)
 #  define wireless_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_WIRLESS, fmt, ##__VA_ARGS__)
+#  define wireless_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_WIRLESS, id, fmt, ##__VA_ARGS__)
 #else
 #  define wireless_trace_begin()
 #  define wireless_trace_end()
@@ -303,6 +350,7 @@
 #  define wireless_trace_endex(name)
 #  define wireless_trace_mark(s)
 #  define wireless_trace_printf(...)
+#  define wireless_trace_diag(...)
 #endif
 
 #ifdef CONFIG_TRACE_CPUFREQ
@@ -313,6 +361,8 @@
 #  define cpufreq_trace_mark(s) trace_mark(NOTE_TAG_CPUFREQ, s)
 #  define cpufreq_trace_printf(fmt, ...) \
     trace_printf(NOTE_TAG_CPUFREQ, fmt, ##__VA_ARGS__)
+#  define cpufreq_trace_diag(id, fmt, ...) \
+    trace_diag(NOTE_TAG_CPUFREQ, id, fmt, ##__VA_ARGS__)
 #else
 #  define cpufreq_trace_begin()
 #  define cpufreq_trace_end()
@@ -320,6 +370,6 @@
 #  define cpufreq_trace_endex(name)
 #  define cpufreq_trace_mark(s)
 #  define cpufreq_trace_printf(...)
+#  define cpufreq_trace_diag(...)
 #endif
-
 #endif /* __INCLUDE_NUTTX_TRACE_H */
