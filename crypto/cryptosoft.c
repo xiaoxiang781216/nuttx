@@ -1223,12 +1223,7 @@ int swcr_authenc(FAR struct cryptop *crp)
           swa = sw;
           crda = crd;
           axf = swa->sw_axf;
-          if (swa->sw_ictx == 0)
-            {
-              return -EINVAL;
-            }
-
-          bcopy(swa->sw_ictx, &ctx, axf->ctxsize);
+          bcopy(&swa->sw_ctx, &ctx, axf->ctxsize);
           blksz = axf->blocksize;
           break;
           default:
@@ -1359,6 +1354,8 @@ int swcr_authenc(FAR struct cryptop *crp)
               bcopy(blk, crp->crp_dst + i, len);
             }
         }
+
+      bcopy(&ctx, &swa->sw_ctx, axf->ctxsize);
     }
 
   /* Do any required special finalization */

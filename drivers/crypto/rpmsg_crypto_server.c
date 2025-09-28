@@ -372,6 +372,8 @@ rpmsg_crypto_process_mac(FAR struct rpmsg_endpoint *ept,
       crda->crd_flags = 0;
       rsp->header = msg->header;
       rsp->data = msg->data;
+      crp->crp_buf = NULL;
+      crp->crp_ilen = 0;
       crp->crp_olen = result_len;
       crp->crp_mac = rsp->buf;
       rsp->header.result = crypto_invoke(crp);
