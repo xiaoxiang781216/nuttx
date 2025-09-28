@@ -272,6 +272,28 @@ int usrsock_do_request(FAR struct usrsock_conn_s *conn,
                        FAR struct iovec *iov, unsigned int iovcnt);
 
 /****************************************************************************
+ * Name: usrsock_state_alloc
+ *
+ * Description:
+ *   The usrsock_state_alloc() function will return a usrsock_reqstate_s
+ *   structure
+ *
+ ****************************************************************************/
+
+FAR void *usrsock_state_alloc(void);
+
+/****************************************************************************
+ * Name: usrsock_state_release
+ *
+ * Description:
+ *   The usrsock_state_release() function will release the input
+ *   usrsock_reqstate_s structure
+ *
+ ****************************************************************************/
+
+void usrsock_state_release(FAR void *state);
+
+/****************************************************************************
  * Name: usrsock_socket
  *
  * Description:

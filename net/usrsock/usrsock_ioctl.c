@@ -164,9 +164,7 @@ static int do_ioctl_request(FAR struct usrsock_conn_s *conn, int cmd,
 int usrsock_ioctl(FAR struct socket *psock, int cmd, unsigned long arg_)
 {
   FAR struct usrsock_conn_s *conn = psock->s_conn;
-  struct usrsock_data_reqstate_s state =
-  {
-  };
+  FAR struct usrsock_data_reqstate_s *state;
 
   struct iovec inbufs[2] =
   {
@@ -191,6 +189,7 @@ int usrsock_ioctl(FAR struct socket *psock, int cmd, unsigned long arg_)
       return arglen;
     }
 
+  state = usrsock_state_alloc();
   usrsock_lock();
 
   if (conn->state == USRSOCK_CONN_STATE_UNINITIALIZED ||
@@ -209,7 +208,7 @@ int usrsock_ioctl(FAR struct socket *psock, int cmd, unsigned long arg_)
   /* Set up event callback for usrsock. */
 
   ret = usrsock_setup_data_request_callback(
-      conn, &state, ioctl_event,
+      conn, state, ioctl_event,
       USRSOCK_EVENT_ABORT | USRSOCK_EVENT_REQ_COMPLETE);
   if (ret < 0)
     {
@@ -238,18 +237,19 @@ int usrsock_ioctl(FAR struct socket *psock, int cmd, unsigned long arg_)
     {
       /* Wait for completion of request. */
 
-      usrsock_sem_timedwait(&state.reqstate.recvsem, false, UINT_MAX);
-      ret = state.reqstate.result;
+      usrsock_sem_timedwait(&state->reqstate.recvsem, false, UINT_MAX);
+      ret = state->reqstate.result;
 
-      DEBUGASSERT(state.valuelen <= arglen);
-      DEBUGASSERT(state.valuelen <= state.valuelen_nontrunc);
+      DEBUGASSERT(state->valuelen <= arglen);
+      DEBUGASSERT(state->valuelen <= state->valuelen_nontrunc);
     }
 
   usrsock_teardown_datain(conn);
-  usrsock_teardown_data_request_callback(&state);
+  usrsock_teardown_data_request_callback(state);
 
 errout_unlock:
   usrsock_unlock();
+  usrsock_state_release(state);
   return ret;
 }
 

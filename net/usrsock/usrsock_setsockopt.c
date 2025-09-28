@@ -163,9 +163,7 @@ int usrsock_setsockopt(FAR struct socket *psock, int level, int option,
                        FAR const void *value, socklen_t value_len)
 {
   FAR struct usrsock_conn_s *conn = psock->s_conn;
-  struct usrsock_reqstate_s state =
-  {
-  };
+  FAR struct usrsock_reqstate_s *state;
 
   int ret;
 
@@ -177,6 +175,7 @@ int usrsock_setsockopt(FAR struct socket *psock, int level, int option,
       return -ENOPROTOOPT;
     }
 
+  state = usrsock_state_alloc();
   usrsock_lock();
 
   if (conn->state == USRSOCK_CONN_STATE_UNINITIALIZED ||
@@ -194,7 +193,7 @@ int usrsock_setsockopt(FAR struct socket *psock, int level, int option,
 
   /* Set up event callback for usrsock. */
 
-  ret = usrsock_setup_request_callback(conn, &state, setsockopt_event,
+  ret = usrsock_setup_request_callback(conn, state, setsockopt_event,
                                        USRSOCK_EVENT_ABORT |
                                        USRSOCK_EVENT_REQ_COMPLETE);
   if (ret < 0)
@@ -210,11 +209,11 @@ int usrsock_setsockopt(FAR struct socket *psock, int level, int option,
     {
       /* Wait for completion of request. */
 
-      usrsock_sem_timedwait(&state.recvsem, false, UINT_MAX);
-      ret = state.result;
+      usrsock_sem_timedwait(&state->recvsem, false, UINT_MAX);
+      ret = state->result;
     }
 
-  usrsock_teardown_request_callback(&state);
+  usrsock_teardown_request_callback(state);
 
   /* Skip the default socket option handler */
 
@@ -225,6 +224,7 @@ int usrsock_setsockopt(FAR struct socket *psock, int level, int option,
 
 errout_unlock:
   usrsock_unlock();
+  usrsock_state_release(state);
   return ret;
 }
 

@@ -174,9 +174,7 @@ int usrsock_getsockopt(FAR struct socket *psock, int level, int option,
                        FAR void *value, FAR socklen_t *value_len)
 {
   FAR struct usrsock_conn_s *conn = psock->s_conn;
-  struct usrsock_data_reqstate_s state =
-  {
-  };
+  FAR struct usrsock_data_reqstate_s *state;
 
   struct iovec inbufs[1];
   int ret;
@@ -189,6 +187,7 @@ int usrsock_getsockopt(FAR struct socket *psock, int level, int option,
       return -ENOPROTOOPT;
     }
 
+  state = usrsock_state_alloc();
   usrsock_lock();
 
   if (conn->state == USRSOCK_CONN_STATE_UNINITIALIZED ||
@@ -207,7 +206,7 @@ int usrsock_getsockopt(FAR struct socket *psock, int level, int option,
   /* Set up event callback for usrsock. */
 
   ret = usrsock_setup_data_request_callback(
-      conn, &state, getsockopt_event,
+      conn, state, getsockopt_event,
       USRSOCK_EVENT_ABORT | USRSOCK_EVENT_REQ_COMPLETE);
   if (ret < 0)
     {
@@ -227,21 +226,21 @@ int usrsock_getsockopt(FAR struct socket *psock, int level, int option,
     {
       /* Wait for completion of request. */
 
-      usrsock_sem_timedwait(&state.reqstate.recvsem, false, UINT_MAX);
-      ret = state.reqstate.result;
+      usrsock_sem_timedwait(&state->reqstate.recvsem, false, UINT_MAX);
+      ret = state->reqstate.result;
 
-      DEBUGASSERT(state.valuelen <= *value_len);
+      DEBUGASSERT(state->valuelen <= *value_len);
 
       if (ret >= 0)
         {
           /* Store length of data that was written to 'value' buffer. */
 
-          *value_len = state.valuelen;
+          *value_len = state->valuelen;
         }
     }
 
   usrsock_teardown_datain(conn);
-  usrsock_teardown_data_request_callback(&state);
+  usrsock_teardown_data_request_callback(state);
 
   /* Skip the default socket option handler */
 
@@ -252,6 +251,7 @@ int usrsock_getsockopt(FAR struct socket *psock, int level, int option,
 
 errout_unlock:
   usrsock_unlock();
+  usrsock_state_release(state);
   return ret;
 }
 

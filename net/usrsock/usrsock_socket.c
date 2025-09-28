@@ -186,9 +186,7 @@ static int do_socket_request(FAR struct usrsock_conn_s *conn, int domain,
 int usrsock_socket(int domain, int type, int protocol,
                    FAR struct socket *psock)
 {
-  struct usrsock_reqstate_s state =
-  {
-  };
+  FAR struct usrsock_reqstate_s *state;
 
   FAR struct usrsock_conn_s *conn;
   int err;
@@ -205,11 +203,12 @@ int usrsock_socket(int domain, int type, int protocol,
       return -ENOMEM;
     }
 
+  state = usrsock_state_alloc();
   usrsock_lock();
 
   /* Set up event callback for usrsock. */
 
-  err = usrsock_setup_request_callback(conn, &state, socket_event,
+  err = usrsock_setup_request_callback(conn, state, socket_event,
                                        USRSOCK_EVENT_ABORT |
                                        USRSOCK_EVENT_REQ_COMPLETE);
   if (err < 0)
@@ -227,27 +226,29 @@ int usrsock_socket(int domain, int type, int protocol,
 
   /* Wait for completion of request. */
 
-  usrsock_sem_timedwait(&state.recvsem, false, UINT_MAX);
+  usrsock_sem_timedwait(&state->recvsem, false, UINT_MAX);
 
-  if (state.result < 0)
+  if (state->result < 0)
     {
-      err = state.result;
+      err = state->result;
       goto errout_teardown_callback;
     }
 
   psock->s_conn = conn;
   conn->crefs   = 1;
 
-  usrsock_teardown_request_callback(&state);
+  usrsock_teardown_request_callback(state);
 
   usrsock_unlock();
+  usrsock_state_release(state);
   return OK;
 
 errout_teardown_callback:
-  usrsock_teardown_request_callback(&state);
+  usrsock_teardown_request_callback(state);
 errout_free_conn:
   usrsock_free(conn);
   usrsock_unlock();
+  usrsock_state_release(state);
   return err;
 }
 

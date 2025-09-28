@@ -158,9 +158,7 @@ int usrsock_getsockname(FAR struct socket *psock,
                         FAR struct sockaddr *addr, FAR socklen_t *addrlen)
 {
   FAR struct usrsock_conn_s *conn = psock->s_conn;
-  struct usrsock_data_reqstate_s state =
-  {
-  };
+  FAR struct usrsock_data_reqstate_s *state = usrsock_state_alloc();
 
   struct iovec inbufs[1];
   socklen_t outaddrlen = 0;
@@ -184,7 +182,7 @@ int usrsock_getsockname(FAR struct socket *psock,
   /* Set up event callback for usrsock. */
 
   ret = usrsock_setup_data_request_callback(
-      conn, &state, getsockname_event,
+      conn, state, getsockname_event,
       USRSOCK_EVENT_ABORT | USRSOCK_EVENT_REQ_COMPLETE);
   if (ret < 0)
     {
@@ -204,25 +202,26 @@ int usrsock_getsockname(FAR struct socket *psock,
     {
       /* Wait for completion of request. */
 
-      usrsock_sem_timedwait(&state.reqstate.recvsem, false, UINT_MAX);
-      ret = state.reqstate.result;
+      usrsock_sem_timedwait(&state->reqstate.recvsem, false, UINT_MAX);
+      ret = state->reqstate.result;
 
-      DEBUGASSERT(state.valuelen <= *addrlen);
-      DEBUGASSERT(state.valuelen <= state.valuelen_nontrunc);
+      DEBUGASSERT(state->valuelen <= *addrlen);
+      DEBUGASSERT(state->valuelen <= state->valuelen_nontrunc);
 
       if (ret >= 0)
         {
           /* Store length of data that was written to 'value' buffer. */
 
-          outaddrlen = state.valuelen_nontrunc;
+          outaddrlen = state->valuelen_nontrunc;
         }
     }
 
   usrsock_teardown_datain(conn);
-  usrsock_teardown_data_request_callback(&state);
+  usrsock_teardown_data_request_callback(state);
 
 errout_unlock:
   usrsock_unlock();
+  usrsock_state_release(state);
 
   *addrlen = outaddrlen;
   return ret;

@@ -213,9 +213,7 @@ ssize_t usrsock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
   FAR struct sockaddr *from = msg->msg_name;
   FAR socklen_t *fromlen = &msg->msg_namelen;
   FAR struct usrsock_conn_s *conn = psock->s_conn;
-  struct usrsock_data_reqstate_s state =
-  {
-  };
+  FAR struct usrsock_data_reqstate_s *state;
 
   struct iovec inbufs[2];
   socklen_t addrlen = 0;
@@ -237,6 +235,7 @@ ssize_t usrsock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
       addrlen = *fromlen;
     }
 
+  state = usrsock_state_alloc();
   usrsock_lock();
 
   if (conn->state == USRSOCK_CONN_STATE_UNINITIALIZED ||
@@ -319,7 +318,7 @@ ssize_t usrsock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
           /* Wait recv to become avail. */
 
           ret = usrsock_setup_data_request_callback(
-              conn, &state, recvfrom_event,
+              conn, state, recvfrom_event,
               USRSOCK_EVENT_ABORT | USRSOCK_EVENT_RECVFROM_AVAIL |
               USRSOCK_EVENT_REMOTE_CLOSED);
           if (ret < 0)
@@ -330,9 +329,9 @@ ssize_t usrsock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
           /* Wait for receive-avail (or abort, or timeout, or signal). */
 
-          ret = usrsock_sem_timedwait(&state.reqstate.recvsem, true,
+          ret = usrsock_sem_timedwait(&state->reqstate.recvsem, true,
                                       _SO_TIMEOUT(conn->sconn.s_rcvtimeo));
-          usrsock_teardown_data_request_callback(&state);
+          usrsock_teardown_data_request_callback(state);
           if (ret < 0)
             {
               if (ret == -ETIMEDOUT)
@@ -377,7 +376,7 @@ ssize_t usrsock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
       /* Set up event callback for usrsock. */
 
       ret = usrsock_setup_data_request_callback(
-          conn, &state, recvfrom_event,
+          conn, state, recvfrom_event,
           USRSOCK_EVENT_ABORT | USRSOCK_EVENT_REQ_COMPLETE);
       if (ret < 0)
         {
@@ -403,12 +402,12 @@ ssize_t usrsock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
         {
           /* Wait for completion of request. */
 
-          usrsock_sem_timedwait(&state.reqstate.recvsem, false, UINT_MAX);
-          ret = state.reqstate.result;
+          usrsock_sem_timedwait(&state->reqstate.recvsem, false, UINT_MAX);
+          ret = state->reqstate.result;
 
           DEBUGASSERT(ret <= (ssize_t)len);
-          DEBUGASSERT(state.valuelen <= addrlen);
-          DEBUGASSERT(state.valuelen <= state.valuelen_nontrunc);
+          DEBUGASSERT(state->valuelen <= addrlen);
+          DEBUGASSERT(state->valuelen <= state->valuelen_nontrunc);
 
           if (ret >= 0)
             {
@@ -416,7 +415,7 @@ ssize_t usrsock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
                * daemon-side.
                */
 
-              outaddrlen = state.valuelen_nontrunc;
+              outaddrlen = state->valuelen_nontrunc;
 
               /* If the MSG_PEEK flag is enabled, it will only peek
                * from the buffer, so remark the input as ready.
@@ -430,12 +429,13 @@ ssize_t usrsock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
         }
 
       usrsock_teardown_datain(conn);
-      usrsock_teardown_data_request_callback(&state);
+      usrsock_teardown_data_request_callback(state);
     }
   while (ret == -EAGAIN);
 
 errout_unlock:
   usrsock_unlock();
+  usrsock_state_release(state);
 
   if (fromlen)
     {

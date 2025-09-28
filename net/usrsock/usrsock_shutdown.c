@@ -139,9 +139,7 @@ static int do_shutdown_request(FAR struct usrsock_conn_s *conn, int how)
 int usrsock_shutdown(FAR struct socket *psock, int how)
 {
   FAR struct usrsock_conn_s *conn = psock->s_conn;
-  struct usrsock_reqstate_s state =
-  {
-  };
+  FAR struct usrsock_reqstate_s *state = usrsock_state_alloc();
 
   int ret;
 
@@ -160,7 +158,7 @@ int usrsock_shutdown(FAR struct socket *psock, int how)
 
   /* Set up event callback for usrsock. */
 
-  ret = usrsock_setup_request_callback(conn, &state, shutdown_event,
+  ret = usrsock_setup_request_callback(conn, state, shutdown_event,
                                        USRSOCK_EVENT_ABORT |
                                        USRSOCK_EVENT_REQ_COMPLETE);
   if (ret < 0)
@@ -176,14 +174,15 @@ int usrsock_shutdown(FAR struct socket *psock, int how)
     {
       /* Wait for completion of request. */
 
-      usrsock_sem_timedwait(&state.recvsem, false, UINT_MAX);
-      ret = state.result;
+      usrsock_sem_timedwait(&state->recvsem, false, UINT_MAX);
+      ret = state->result;
     }
 
-  usrsock_teardown_request_callback(&state);
+  usrsock_teardown_request_callback(state);
 
 errout:
   usrsock_unlock();
+  usrsock_state_release(state);
   return ret;
 }
 

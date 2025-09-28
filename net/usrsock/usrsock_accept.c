@@ -219,9 +219,7 @@ int usrsock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
                    int flags)
 {
   FAR struct usrsock_conn_s *conn = psock->s_conn;
-  struct usrsock_data_reqstate_s state =
-  {
-  };
+  FAR struct usrsock_data_reqstate_s *state;
 
   FAR struct usrsock_conn_s *newconn;
   struct iovec inbufs[2];
@@ -239,6 +237,7 @@ int usrsock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
       inaddrlen = *addrlen;
     }
 
+  state = usrsock_state_alloc();
   usrsock_lock();
 
   if (conn->state == USRSOCK_CONN_STATE_UNINITIALIZED ||
@@ -317,7 +316,7 @@ int usrsock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
           /* Wait accept to become avail. */
 
           ret = usrsock_setup_data_request_callback(
-              conn, &state, accept_event,
+              conn, state, accept_event,
               USRSOCK_EVENT_ABORT | USRSOCK_EVENT_RECVFROM_AVAIL |
               USRSOCK_EVENT_REMOTE_CLOSED);
           if (ret < 0)
@@ -328,9 +327,9 @@ int usrsock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
 
           /* Wait for receive-avail (or abort, or timeout, or signal). */
 
-          ret = usrsock_sem_timedwait(&state.reqstate.recvsem, true,
+          ret = usrsock_sem_timedwait(&state->reqstate.recvsem, true,
                                       _SO_TIMEOUT(conn->sconn.s_rcvtimeo));
-          usrsock_teardown_data_request_callback(&state);
+          usrsock_teardown_data_request_callback(state);
           if (ret < 0)
             {
               if (ret == -ETIMEDOUT)
@@ -374,7 +373,7 @@ int usrsock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
       /* Set up event callback for usrsock. */
 
       ret = usrsock_setup_data_request_callback(
-          conn, &state, accept_event,
+          conn, state, accept_event,
           USRSOCK_EVENT_ABORT | USRSOCK_EVENT_REQ_COMPLETE);
       if (ret < 0)
         {
@@ -402,11 +401,11 @@ int usrsock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
         {
           /* Wait for completion of request. */
 
-          usrsock_sem_timedwait(&state.reqstate.recvsem, false, UINT_MAX);
-          ret = state.reqstate.result;
+          usrsock_sem_timedwait(&state->reqstate.recvsem, false, UINT_MAX);
+          ret = state->reqstate.result;
 
-          DEBUGASSERT(state.valuelen <= inaddrlen);
-          DEBUGASSERT(state.valuelen <= state.valuelen_nontrunc);
+          DEBUGASSERT(state->valuelen <= inaddrlen);
+          DEBUGASSERT(state->valuelen <= state->valuelen_nontrunc);
 
           if (ret >= 0)
             {
@@ -422,13 +421,13 @@ int usrsock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
                * daemon-side.
                */
 
-              outaddrlen = state.valuelen_nontrunc;
+              outaddrlen = state->valuelen_nontrunc;
               ret = OK;
             }
         }
 
       usrsock_teardown_datain(conn);
-      usrsock_teardown_data_request_callback(&state);
+      usrsock_teardown_data_request_callback(state);
     }
   while (ret == -EAGAIN);
 
@@ -442,6 +441,7 @@ errout_free_conn:
 
 errout_unlock:
   usrsock_unlock();
+  usrsock_state_release(state);
 
   if (addrlen)
     {

@@ -206,9 +206,7 @@ ssize_t usrsock_sendmsg(FAR struct socket *psock,
                         FAR const struct msghdr *msg, int flags)
 {
   FAR struct usrsock_conn_s *conn = psock->s_conn;
-  struct usrsock_reqstate_s state =
-  {
-  };
+  FAR struct usrsock_reqstate_s *state = usrsock_state_alloc();
 
   ssize_t ret;
 
@@ -296,7 +294,7 @@ ssize_t usrsock_sendmsg(FAR struct socket *psock,
 
           /* Wait send to become ready. */
 
-          ret = usrsock_setup_request_callback(conn, &state, sendto_event,
+          ret = usrsock_setup_request_callback(conn, state, sendto_event,
                                                USRSOCK_EVENT_ABORT |
                                                USRSOCK_EVENT_SENDTO_READY |
                                                USRSOCK_EVENT_REMOTE_CLOSED);
@@ -308,9 +306,9 @@ ssize_t usrsock_sendmsg(FAR struct socket *psock,
 
           /* Wait for send-ready (or abort, or timeout, or signal). */
 
-          ret = usrsock_sem_timedwait(&state.recvsem, true,
+          ret = usrsock_sem_timedwait(&state->recvsem, true,
                                       _SO_TIMEOUT(conn->sconn.s_sndtimeo));
-          usrsock_teardown_request_callback(&state);
+          usrsock_teardown_request_callback(state);
           if (ret < 0)
             {
               if (ret == -ETIMEDOUT)
@@ -353,7 +351,7 @@ ssize_t usrsock_sendmsg(FAR struct socket *psock,
 
       /* Set up event callback for usrsock. */
 
-      ret = usrsock_setup_request_callback(conn, &state, sendto_event,
+      ret = usrsock_setup_request_callback(conn, state, sendto_event,
                                            USRSOCK_EVENT_ABORT |
                                            USRSOCK_EVENT_REQ_COMPLETE);
       if (ret < 0)
@@ -373,16 +371,17 @@ ssize_t usrsock_sendmsg(FAR struct socket *psock,
         {
           /* Wait for completion of request. */
 
-          usrsock_sem_timedwait(&state.recvsem, false, UINT_MAX);
-          ret = state.result;
+          usrsock_sem_timedwait(&state->recvsem, false, UINT_MAX);
+          ret = state->result;
         }
 
-      usrsock_teardown_request_callback(&state);
+      usrsock_teardown_request_callback(state);
     }
   while (ret == -EAGAIN);
 
 errout_unlock:
   usrsock_unlock();
+  usrsock_state_release(state);
   return ret;
 }
 

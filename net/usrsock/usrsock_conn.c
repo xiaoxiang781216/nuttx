@@ -73,6 +73,11 @@ MEMPOOL_DEFINE(g_usrsock_connections, sizeof(struct usrsock_conn_s),
                CONFIG_NET_USRSOCK_PREALLOC_CONNS,
                CONFIG_NET_USRSOCK_MAX_CONNS, CONFIG_NET_USRSOCK_ALLOC_CONNS);
 
+MEMPOOL_DEFINE(g_usrsock_state, sizeof(struct usrsock_data_reqstate_s),
+               CONFIG_NET_USRSOCK_PREALLOC_CONNS,
+               CONFIG_NET_USRSOCK_MAX_CONNS,
+               CONFIG_NET_USRSOCK_ALLOC_CONNS);
+
 /* A list of all allocated usrsock connections */
 
 static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_active_usrsock_connections);
@@ -304,6 +309,34 @@ void usrsock_setup_datain(FAR struct usrsock_conn_s *conn,
     {
       conn->resp.datain.total += iov[i].iov_len;
     }
+}
+
+/****************************************************************************
+ * Name: usrsock_state_alloc
+ *
+ * Description:
+ *   The usrsock_state_alloc() function will return a usrsock_reqstate_s
+ *   structure
+ *
+ ****************************************************************************/
+
+FAR void *usrsock_state_alloc(void)
+{
+  return mempool_allocate(&g_usrsock_state, UINT_MAX);
+}
+
+/****************************************************************************
+ * Name: usrsock_state_release
+ *
+ * Description:
+ *   The usrsock_state_release() function will release the input
+ *   usrsock_reqstate_s structure
+ *
+ ****************************************************************************/
+
+void usrsock_state_release(FAR void *state)
+{
+  return mempool_release(&g_usrsock_state, state);
 }
 
 /****************************************************************************

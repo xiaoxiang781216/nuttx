@@ -124,9 +124,7 @@ static int do_close_request(FAR struct usrsock_conn_s *conn)
 
 int usrsock_close(FAR struct usrsock_conn_s *conn)
 {
-  struct usrsock_reqstate_s state =
-  {
-  };
+  FAR struct usrsock_reqstate_s *state = usrsock_state_alloc();
 
   int ret;
 
@@ -145,7 +143,7 @@ int usrsock_close(FAR struct usrsock_conn_s *conn)
 
   /* Set up event callback for usrsock. */
 
-  ret = usrsock_setup_request_callback(conn, &state, close_event,
+  ret = usrsock_setup_request_callback(conn, state, close_event,
                                        USRSOCK_EVENT_ABORT |
                                        USRSOCK_EVENT_REQ_COMPLETE);
   if (ret < 0)
@@ -165,9 +163,9 @@ int usrsock_close(FAR struct usrsock_conn_s *conn)
     {
       /* Wait for completion of request. */
 
-      usrsock_sem_timedwait(&state.recvsem, false, UINT_MAX);
+      usrsock_sem_timedwait(&state->recvsem, false, UINT_MAX);
 
-      ret = state.result;
+      ret = state->result;
       if (ret < 0)
         {
           /* TODO: Error handling for close? Mark closed anyway? There is not
@@ -175,13 +173,13 @@ int usrsock_close(FAR struct usrsock_conn_s *conn)
            */
 
           ninfo("user-space daemon reported error %d for usockid=%d\n",
-                state.result, conn->usockid);
+                state->result, conn->usockid);
 
           ret = OK;
         }
     }
 
-  usrsock_teardown_request_callback(&state);
+  usrsock_teardown_request_callback(state);
 
 close_out:
   conn->state = USRSOCK_CONN_STATE_UNINITIALIZED;
@@ -189,6 +187,7 @@ close_out:
 
 errout:
   usrsock_unlock();
+  usrsock_state_release(state);
   return ret;
 }
 

@@ -150,9 +150,7 @@ int usrsock_connect(FAR struct socket *psock,
                     FAR const struct sockaddr *addr, socklen_t addrlen)
 {
   FAR struct usrsock_conn_s *conn = psock->s_conn;
-  struct usrsock_reqstate_s state =
-  {
-  };
+  FAR struct usrsock_reqstate_s *state = usrsock_state_alloc();
 
   int ret;
 
@@ -193,7 +191,7 @@ int usrsock_connect(FAR struct socket *psock,
 
   /* Set up event callback for usrsock. */
 
-  ret = usrsock_setup_request_callback(conn, &state, connect_event,
+  ret = usrsock_setup_request_callback(conn, state, connect_event,
                                        USRSOCK_EVENT_ABORT |
                                        USRSOCK_EVENT_REMOTE_CLOSED |
                                        USRSOCK_EVENT_REQ_COMPLETE |
@@ -223,7 +221,7 @@ int usrsock_connect(FAR struct socket *psock,
     {
       /* Wait for completion of request (or signal). */
 
-      ret = usrsock_sem_timedwait(&state.recvsem, true, UINT_MAX);
+      ret = usrsock_sem_timedwait(&state->recvsem, true, UINT_MAX);
 
       if (ret < 0)
         {
@@ -232,7 +230,7 @@ int usrsock_connect(FAR struct socket *psock,
           goto errout_teardown;
         }
 
-      ret = state.result;
+      ret = state->result;
     }
   else
     {
@@ -242,9 +240,10 @@ int usrsock_connect(FAR struct socket *psock,
     }
 
 errout_teardown:
-  usrsock_teardown_request_callback(&state);
+  usrsock_teardown_request_callback(state);
 errout_unlock:
   usrsock_unlock();
+  usrsock_state_release(state);
   return ret;
 }
 
