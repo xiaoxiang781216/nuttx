@@ -322,14 +322,17 @@ void tricore_trapcall(volatile void *trap)
 
   if (!up_interrupt_context())
     {
+      uintptr_t istackbase = up_get_intstackbase(up_cpu_index());
+
       up_set_interrupt_context(true);
 
       /* Update the current task's regs */
 
       g_running_task->xcp.regs = regs - TC_CONTEXT_REGS;
 
-      __mtcr(CPU_FCX, tricore_addr2csa(g_intstackalloc));
-      __mtcr(CPU_LCX, tricore_addr2csa(g_intstacktop - 2 * TC_CONTEXT_SIZE));
+      __mtcr(CPU_FCX, tricore_addr2csa(istackbase));
+      __mtcr(CPU_LCX, tricore_addr2csa(istackbase
+                      + CONFIG_ARCH_INTERRUPTSTACK - 2 * TC_CONTEXT_SIZE));
       UP_ISB();
     }
 

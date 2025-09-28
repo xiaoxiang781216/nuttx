@@ -88,8 +88,9 @@ static void dispatch_syscall(void)
 
 void tricore_svcall(volatile void *trap)
 {
-  struct tcb_s *tcb = this_task();
+  uintptr_t istackbase = up_get_intstackbase(up_cpu_index());
   struct tcb_s **running_task = &g_running_task;
+  struct tcb_s *tcb = this_task();
   uintptr_t *plregs;
   uintptr_t *puregs;
   uintptr_t *cpu_lcx;
@@ -104,8 +105,9 @@ void tricore_svcall(volatile void *trap)
 
   /* set registers related to csa */
 
-  __mtcr(CPU_FCX, tricore_addr2csa(g_intstackalloc));
-  __mtcr(CPU_LCX, tricore_addr2csa(g_intstacktop - 2 * TC_CONTEXT_SIZE));
+  __mtcr(CPU_FCX, tricore_addr2csa(istackbase));
+  __mtcr(CPU_LCX, tricore_addr2csa(istackbase + CONFIG_ARCH_INTERRUPTSTACK
+                                              - 2 * TC_CONTEXT_SIZE));
   UP_ISB();
 
   /* Set irq flag */

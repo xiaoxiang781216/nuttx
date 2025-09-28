@@ -143,15 +143,12 @@ typedef struct
 
 extern uintptr_t        __USTACK_END[];
 extern uintptr_t        __USTACK[];
-#define g_idle_topstack __USTACK
 
 /* Address of the saved user stack pointer */
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
 extern uintptr_t        __ISTACK_END[];
 extern uintptr_t        __ISTACK[];
-#define g_intstackalloc __ISTACK_END
-#define g_intstacktop   __ISTACK
 #endif
 
 /* These symbols are setup by the linker script. */
