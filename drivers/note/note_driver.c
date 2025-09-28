@@ -1300,6 +1300,11 @@ void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
   flags = enter_critical_section_notrace();
   for (driver = g_note_drivers; *driver; driver++)
     {
+      if (!note_isenabled_type(*driver, event))
+        {
+          continue;
+        }
+
       if (note_wdog(*driver, event, handler, arg))
         {
           continue;

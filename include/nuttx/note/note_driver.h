@@ -86,6 +86,10 @@
 #define NOTE_FILTER_MODE_FLAG_SPINLOCKS                       \
   ((1ULL << NOTE_SPINLOCK_ENTER) | (1ULL << NOTE_SPINLOCK_EXIT))
 
+#define NOTE_FILTER_MODE_FLAG_WDOG                            \
+  ((1ULL << NOTE_WDOG_START) | (1ULL << NOTE_WDOG_CANCEL) |   \
+   (1ULL << NOTE_WDOG_ENTER) | (1ULL << NOTE_WDOG_LEAVE))
+
 #define NOTE_FILTER_MODE_FLAG_HEAP                            \
   ((1ULL << NOTE_HEAP_ADD) | (1ULL << NOTE_HEAP_REMOVE) |     \
    (1ULL << NOTE_HEAP_ALLOC) | (1ULL << NOTE_HEAP_FREE))
