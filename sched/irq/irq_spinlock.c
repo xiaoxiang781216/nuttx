@@ -31,6 +31,7 @@
 #include <debug.h>
 #include <sys/types.h>
 #include <arch/irq.h>
+#include <execinfo.h>
 
 #include "sched/sched.h"
 
@@ -176,6 +177,40 @@ void write_unlock_irqrestore(rwlock_t *lock, irqstate_t flags)
 }
 #endif /* CONFIG_RW_SPINLOCK */
 
+#ifdef CONFIG_SPINLOCK_BACKTRACE
+
+/****************************************************************************
+ * Name: spinlock_add_backtrace
+ *
+ * Description:
+ *   Record the backtrace of the caller who locks the spinlock.
+ *
+ *   NOTE：The backtrace_record function is relatively complex and
+ *   involves malloc (which may cause context switching).
+ *
+ * Input Parameters:
+ *   info - Caller specific spinlock, not NULL.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static void spinlock_add_backtrace(FAR spinlock_debug_t *info)
+{
+  info->stack = backtrace_record(0);
+}
+
+static void spinlock_remove_backtrace(FAR spinlock_debug_t *info)
+{
+  backtrace_remove(info->stack);
+  info->stack = NULL;
+}
+#else
+#  define spinlock_add_backtrace(info)
+#  define spinlock_remove_backtrace(info)
+#endif
+
 #ifdef CONFIG_SPINLOCK_DEBUG
 static void dump_spinlock(FAR sq_queue_t *hold_spinlock)
 {
@@ -184,7 +219,17 @@ static void dump_spinlock(FAR sq_queue_t *hold_spinlock)
   sq_for_every(hold_spinlock, entry)
     {
       FAR spinlock_debug_t *info = (FAR spinlock_debug_t *)entry;
-      _alert("Spinlock(%p) has been locked by %p\n", info, info->caller);
+#  ifdef CONFIG_SPINLOCK_BACKTRACE
+      char buf[BACKTRACE_BUFFER_SIZE(CONFIG_LIBC_BACKTRACE_DEPTH)];
+      FAR void **stack;
+      int depth;
+
+      stack = backtrace_get(info->stack, &depth);
+      backtrace_format(buf, sizeof(buf), stack, depth);
+      _alert("Spinlock(%p) backtrace: %s\n", info, buf);
+#  else
+      _alert("Spinlock(%p) has been locked\n", info);
+#  endif
     }
 }
 
@@ -214,7 +259,7 @@ void spinlock_mark_locked(FAR spinlock_debug_t *info)
   /* Set info and enqueue. */
 
   info->holder = rtcb;
-  info->caller = return_address(0);
+  spinlock_add_backtrace(info);
   sq_addlast(&info->flink, &rtcb->hold_spinlock);
 }
 
@@ -256,7 +301,7 @@ void spinlock_mark_unlocked(FAR spinlock_debug_t *info)
   /* Reset info and dequeue. */
 
   info->holder = NULL;
-  info->caller = NULL;
+  spinlock_remove_backtrace(info);
   sq_remlast(&rtcb->hold_spinlock);
 }
 

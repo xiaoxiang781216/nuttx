@@ -53,7 +53,7 @@ FAR struct tcb_s *nxsched_get_tcb(pid_t pid)
   irqstate_t flags;
   int hash_ndx;
 
-  flags = spin_lock_irqsave(&g_pidhashlock);
+  flags = spin_lock_irqsave_notrace(&g_pidhashlock);
   if (g_pidhash != NULL && pid >= 0)
     {
       /* The test and the return setup should be atomic.  This still does
@@ -94,7 +94,7 @@ FAR struct tcb_s *nxsched_get_tcb(pid_t pid)
       atomic_fetch_add(&ret->refs, 1);
     }
 
-  spin_unlock_irqrestore(&g_pidhashlock, flags);
+  spin_unlock_irqrestore_notrace(&g_pidhashlock, flags);
 
   return ret;
 }
@@ -147,7 +147,7 @@ FAR struct tcb_s *nxsched_get_tcb_by_index(int index)
   FAR struct tcb_s *ret = NULL;
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(&g_pidhashlock);
+  flags = spin_lock_irqsave_notrace(&g_pidhashlock);
   ret = g_pidhash[index];
 
   if (ret && ret != running_task())
@@ -168,7 +168,7 @@ FAR struct tcb_s *nxsched_get_tcb_by_index(int index)
       atomic_fetch_add(&ret->refs, 1);
     }
 
-  spin_unlock_irqrestore(&g_pidhashlock, flags);
+  spin_unlock_irqrestore_notrace(&g_pidhashlock, flags);
 
   return ret;
 }
@@ -185,7 +185,7 @@ FAR struct tcb_s *nxsched_get_childtcb(FAR struct tcb_s *parent)
    * terminating asynchronously.
    */
 
-  flags = spin_lock_irqsave(&g_pidhashlock);
+  flags = spin_lock_irqsave_notrace(&g_pidhashlock);
 
   for (hash_ndx = 0; hash_ndx < g_npidhash; hash_ndx++)
     {
@@ -219,7 +219,7 @@ FAR struct tcb_s *nxsched_get_childtcb(FAR struct tcb_s *parent)
       atomic_fetch_add(&ret->refs, 1);
     }
 
-  spin_unlock_irqrestore(&g_pidhashlock, flags);
+  spin_unlock_irqrestore_notrace(&g_pidhashlock, flags);
 
   return ret;
 }
