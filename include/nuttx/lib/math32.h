@@ -343,12 +343,12 @@ static inline_function uint64_t div64_const(uint64_t n, uint32_t base)
 }
 
 #  define div_const(n, base) \
-    ((sizeof(n) == sizeof(uint64_t)) ? div64_const(n, base) : ((n) / (base)))
+    ((sizeof(typeof(n)) == sizeof(uint64_t)) ? div64_const(n, base) : ((n) / (base)))
 #  define div_const_roundup(n, base) \
-    ((sizeof(n) == sizeof(uint64_t)) ? div64_const((n) + (base) - 1ul, base) : \
+    ((sizeof(typeof(n)) == sizeof(uint64_t)) ? div64_const((n) + (base) - 1ul, base) : \
      (((n) + (base) - 1ul) / (base)))
 #  define div_const_roundnearest(n, base) \
-    ((sizeof(n) == sizeof(uint64_t)) ? div64_const((n) + ((base) / 2ul), base) : \
+    ((sizeof(typeof(n)) == sizeof(uint64_t)) ? div64_const((n) + ((base) / 2ul), base) : \
      (((n) + ((base) / 2ul)) / (base)))
 #else
 #  define div_const(n, base) ((n) / (base))
