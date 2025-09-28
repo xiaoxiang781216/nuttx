@@ -110,14 +110,6 @@ bool
 spawn_file_is_duplicateable(FAR const posix_spawn_file_actions_t *actions,
                             int fd, bool cloexec);
 
-#ifdef CONFIG_LIBC_EXECFUNCS
-int nxposix_spawn(FAR pid_t *pidp, FAR const char *path,
-                  FAR const posix_spawn_file_actions_t *actions,
-                  FAR const posix_spawnattr_t *attr,
-                  FAR char * const argv[],
-                  FAR char * const envp[]);
-#endif
-
 #ifdef __cplusplus
 }
 #endif

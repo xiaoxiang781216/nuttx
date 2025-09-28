@@ -146,7 +146,7 @@ SYSCALL_LOOKUP(nxsem_wait_slow,            1)
   SYSCALL_LOOKUP(exec,                     4)
 #endif
 #ifdef CONFIG_LIBC_EXECFUNCS
-  SYSCALL_LOOKUP(nxposix_spawn,            6)
+  SYSCALL_LOOKUP(posix_spawn,              6)
   SYSCALL_LOOKUP(execve,                   3)
 #endif
 #endif
