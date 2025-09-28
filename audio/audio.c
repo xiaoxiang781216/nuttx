@@ -509,7 +509,7 @@ static int audio_pause(FAR struct file *filep)
 
   nstate = audio_getnstate(upper, priv);
   if (upper->status->state == AUDIO_STATE_RUNNING &&
-      nstate == AUDIO_STATE_PAUSED)
+      nstate <= AUDIO_STATE_PAUSED)
     {
 #ifdef CONFIG_AUDIO_MULTI_SESSION
       ret = lower->ops->pause(lower, session);
