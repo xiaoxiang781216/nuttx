@@ -120,20 +120,23 @@
 	.balign 32
 
 arm_sm_vect_start:
-	ldr		pc, .				/* 0x00: Reset */
-	ldr		pc, .				/* 0x04: Undefined instruction */
+	ldr		pc, .			/* 0x00: Reset */
+	ldr		pc, .			/* 0x04: Undefined instruction */
 	ldr		pc, .Lsm_smchandler	/* 0x08: Secure monitor call */
-	ldr		pc, .				/* 0x0c: Prefetch abort */
-	ldr		pc, .				/* 0x10: Data abort */
-	ldr		pc, .				/* 0x14: Reserved */
-	ldr		pc, .				/* 0x18: IRQ */
+	ldr		pc, .			/* 0x0c: Prefetch abort */
+	ldr		pc, .			/* 0x10: Data abort */
+	ldr		pc, .			/* 0x14: Reserved */
+	ldr		pc, .Lsm_irqhandler	/* 0x18: IRQ */
 	ldr		pc, .Lsm_fiqhandler	/* 0x1c: FIQ */
 
 	.local	arm_sm_vectorsmc
+	.local	arm_sm_vectorirq
 	.local	arm_sm_vectorfiq
 
 .Lsm_smchandler:
 	.long	arm_sm_vectorsmc
+.Lsm_irqhandler:
+	.long	arm_sm_vectorirq
 .Lsm_fiqhandler:
 	.long	arm_sm_vectorfiq
 
@@ -276,6 +279,7 @@ arm_sm_vectorsmc:
 	/* Update SCR */
 
 	mrc	CP15_SCR(r0)
+	bic	r0, r0, #SCR_IRQ /* Clear IRQ bit in SCR */
 	orr	r0, r0, #(SCR_NS | SCR_FIQ) /* Set NS and FIQ bit in SCR */
 	mcr	CP15_SCR(r0)
 
@@ -295,6 +299,7 @@ arm_sm_vectorsmc:
 	sub	sp, sp, #(SM_CTX_NSEC + SM_NSEC_CTX_R0)
 
 	bic	r1, r1, #(SCR_NS | SCR_FIQ) /* Clear NS and FIQ bit in SCR */
+	orr	r1, r1, #SCR_IRQ /* Set IRQ bit */
 	mcr	CP15_SCR(r1)
 	isb
 
@@ -362,6 +367,7 @@ arm_sm_vectorfiq:
 	/* Update SCR */
 
 	mrc	CP15_SCR(r1)
+	orr	r1, #SCR_IRQ  /* Non-secure interrupt is routed to monitor mode in secure world. */
 	bic	r1, r1, #(SCR_NS | SCR_FIQ) /* Clear NS and FIQ bit in SCR */
 	mcr	CP15_SCR(r1)
 	isb
@@ -390,6 +396,80 @@ arm_sm_vectorfiq:
 
 	.size	arm_sm_vectorfiq, . - arm_sm_vectorfiq
 	.align	4
+
+/****************************************************************************
+ * Name: arm_sm_vectorirq
+ ****************************************************************************/
+
+/* IRQ handling
+ *
+ * Saves CPU context in the same way as arm_sm_vectorsmc() above. The CPU
+ * context will be saved and then restore non-secure context to jump into non-secure
+ * mode to handle IRQ.
+ *
+ * When cpu is running in secure mode, then there are non-secure interrupt
+ * irq is triggered in secure mode, then the secure mode will need to transfer
+ * this irq to the non-secure mode. In order to implement this, this irq will first
+ * trapped into monitor mode, and the monitor mode will save the secure context.
+ * And then restore the non-secure context, exit current monitor mode, Finially cpu is
+ * running the non-secure mode, and this irq will be handled in non-secure mode.
+ */
+
+	.local  arm_sm_vectorirq
+	.type	arm_sm_vectorirq, %function
+arm_sm_vectorirq:
+	/* IRQ has a +4 offset for lr compared to preferred return address */
+
+	sub	lr, lr, #4
+
+	srsdb	sp!, #PSR_MODE_MON
+	push	{r0-r7}
+
+	clrex /* Clear the exclusive monitor */
+
+	/* As we're coming from secure world (NS bit cleared) the stack
+	 * pointer points to arm_sm_ctx.sec.r0 at this stage. After the
+	 * instruction below the stack pointer points to arm_sm_ctx.
+	 */
+
+	sub	sp, sp, #(SM_CTX_SEC + SM_SEC_CTX_R0)
+
+	/* Save secure context */
+
+	add	r0, sp, #SM_CTX_SEC
+
+	/* the arm_sm_save_banked_regs() function will execute "cps #PSR_MODE_MON"
+	 * and help switch to monitor mode
+	 */
+	bl	arm_sm_save_banked_regs
+
+	/* Restore non-secure context */
+
+	add	r0, sp, #SM_CTX_NSEC
+	bl	arm_sm_restore_banked_regs
+
+	/* Return to non-secure world */
+
+	add	r0, sp, #(SM_CTX_NSEC + SM_NSEC_CTX_R8)
+	ldm	r0, {r8-r12}
+
+	/* Update SCR */
+
+	mrc	CP15_SCR(r0)
+	orr	r0, r0, #(SCR_NS | SCR_FIQ) /* Set NS and FIQ bit in SCR */
+	bic r0, r0, #SCR_IRQ /* Clear IRQ bit in SCR. */
+	mcr	CP15_SCR(r0)
+
+	/* isb not needed since we're doing an exception return below
+	 * without dependency to the changes in SCR before that.
+	 */
+
+	add	sp, sp, #(SM_CTX_NSEC + SM_NSEC_CTX_R0)
+	pop	{r0-r7}
+	rfefd	sp!
+
+    .size   arm_sm_vectorirq, . - arm_sm_vectorirq
+    .align  4
 
 /****************************************************************************
  * Name: arm_vectorsmc
@@ -535,6 +615,10 @@ arm_sm_get_nsec_ctx:
 
 arm_sm_switch_nsec:
 	ldr	r0, =TEESMC_RETURN_ENTRY_DONE
+
+	/* Enable irq and fiq in secure mode. */
+
+	cpsie	if
 	smc	#0
 
 	/* SMC should not return */
