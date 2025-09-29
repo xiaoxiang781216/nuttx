@@ -61,6 +61,7 @@
 
 int group_setupidlefiles(void)
 {
+  int ret = OK;
 #if defined(CONFIG_DEV_CONSOLE) || defined(CONFIG_DEV_NULL)
   int fd;
 #endif
@@ -102,7 +103,7 @@ int group_setupidlefiles(void)
         }
 
       sched_trace_end();
-      return -ENFILE;
+      ret = -ENFILE;
     }
 #else
   /* This configuration can confuse user programs and libraries.
@@ -116,5 +117,5 @@ int group_setupidlefiles(void)
 #endif /* defined(CONFIG_DEV_CONSOLE) || defined(CONFIG_DEV_NULL) */
 
   sched_trace_end();
-  return OK;
+  return ret;
 }
