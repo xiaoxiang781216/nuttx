@@ -157,58 +157,56 @@ static int group_cancel_children_handler(pid_t pid, FAR void *arg)
 
 int group_kill_children(FAR struct tcb_s *tcb)
 {
-  int ret;
+  int ret = 0;
 
   DEBUGASSERT(tcb->group);
 
-  if (atomic_fetch_or(&tcb->group->tg_flags, GROUP_FLAG_EXITING) &
-      GROUP_FLAG_EXITING)
+  if (!(atomic_fetch_or(&tcb->group->tg_flags, GROUP_FLAG_EXITING) &
+        GROUP_FLAG_EXITING))
     {
-      return 0;
-    }
-
 #if defined(CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS) && \
             CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS != 0
 
-  if ((atomic_read(&tcb->flags) & TCB_FLAG_FORCED_CANCEL) == 0)
-    {
-      /* Send SIGTERM for each first */
-
-      group_foreachchild(tcb->group, group_kill_children_handler,
-                         (FAR void *)((uintptr_t)tcb->pid));
-
-      /* Wait a bit for child exit */
-
-#  if CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS > 0
-      ret = CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS;
-#  endif
-      while (1)
+      if ((atomic_read(&tcb->flags) & TCB_FLAG_FORCED_CANCEL) == 0)
         {
-          irqstate_t flags = spin_lock_irqsave(&tcb->group->tg_lock);
-          if (sq_empty(&tcb->group->tg_members) ||
-              sq_is_singular(&tcb->group->tg_members))
-            {
-              spin_unlock_irqrestore(&tcb->group->tg_lock, flags);
-              break;
-            }
+          /* Send SIGTERM for each first */
 
-          spin_unlock_irqrestore(&tcb->group->tg_lock, flags);
-          nxsig_usleep(USEC_PER_MSEC);
+          group_foreachchild(tcb->group, group_kill_children_handler,
+                            (FAR void *)((uintptr_t)tcb->pid));
+
+          /* Wait a bit for child exit */
 
 #  if CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS > 0
-          if (--ret < 0)
-            {
-              break;
-            }
+          ret = CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS;
 #  endif
+          for (; ; )
+            {
+              irqstate_t flags = spin_lock_irqsave(&tcb->group->tg_lock);
+              if (sq_empty(&tcb->group->tg_members) ||
+                  sq_is_singular(&tcb->group->tg_members))
+                {
+                  spin_unlock_irqrestore(&tcb->group->tg_lock, flags);
+                  break;
+                }
+
+              spin_unlock_irqrestore(&tcb->group->tg_lock, flags);
+              nxsig_usleep(USEC_PER_MSEC);
+
+#  if CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS > 0
+              if (--ret < 0)
+                {
+                  break;
+                }
+#  endif
+            }
         }
-    }
 #endif
 
-  /* Force cancel/delete again */
+      /* Force cancel/delete again */
 
-  ret = group_foreachchild(tcb->group, group_cancel_children_handler,
-                           (FAR void *)((uintptr_t)tcb->pid));
+      ret = group_foreachchild(tcb->group, group_cancel_children_handler,
+                              (FAR void *)((uintptr_t)tcb->pid));
+    }
 
   return ret;
 }
