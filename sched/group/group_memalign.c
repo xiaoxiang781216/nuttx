@@ -24,6 +24,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <sys/param.h>
 #include <sys/types.h>
 
 #include <assert.h>
@@ -55,6 +56,8 @@
 FAR void *group_memalign(FAR struct task_group_s *group, size_t alignment,
                          size_t nbytes)
 {
+  FAR void *mem = NULL;
+
   /* A NULL group pointer means the current group */
 
   if (!group)
@@ -70,7 +73,7 @@ FAR void *group_memalign(FAR struct task_group_s *group, size_t alignment,
     {
       /* It is a privileged group... use the kernel mode memory allocator */
 
-      return kmm_memalign(alignment, nbytes);
+      mem = kmm_memalign(alignment, nbytes);
     }
   else
     {
@@ -81,26 +84,20 @@ FAR void *group_memalign(FAR struct task_group_s *group, size_t alignment,
 #ifdef CONFIG_MM_TASK_HEAP
       for (; ; )
         {
-          FAR void *mem = mm_memalign(group->tg_heap, alignment, nbytes);
+          mem = mm_memalign(group->tg_heap, alignment, nbytes);
 #  ifdef CONFIG_BUILD_KERNEL
-          if (!mem)
-            {
-              if (mm_sbrk(group->tg_heap,
-                          nbytes < 1 ? 1 : nbytes, NULL) != OK)
-                {
-                  return NULL;
-                }
-            }
-          else
+          if (mem || mm_sbrk(group->tg_heap, MAX(nbytes, 1), NULL) != OK)
 #  endif
             {
-              return mem;
+              break;
             }
         }
 #else
-      return kumm_memalign(alignment, nbytes);
+      mem = kumm_memalign(alignment, nbytes);
 #endif
     }
+
+  return mem;
 }
 
 #endif /* defined(CONFIG_MM_KERNEL_HEAP) || defined(CONFIG_MM_TASK_HEAP) */

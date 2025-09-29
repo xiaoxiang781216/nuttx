@@ -24,6 +24,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <sys/param.h>
 #include <sys/types.h>
 
 #include <assert.h>
@@ -54,6 +55,8 @@
 
 FAR void *group_malloc(FAR struct task_group_s *group, size_t nbytes)
 {
+  FAR void *mem = NULL;
+
   /* A NULL group pointer means the current group */
 
   if (!group)
@@ -69,7 +72,7 @@ FAR void *group_malloc(FAR struct task_group_s *group, size_t nbytes)
     {
       /* It is a privileged group... use the kernel mode memory allocator */
 
-      return kmm_malloc(nbytes);
+      mem = kmm_malloc(nbytes);
     }
   else
     {
@@ -80,26 +83,20 @@ FAR void *group_malloc(FAR struct task_group_s *group, size_t nbytes)
 #ifdef CONFIG_MM_TASK_HEAP
       for (; ; )
         {
-          FAR void *mem = mm_malloc(group->tg_heap, nbytes);
+          mem = mm_malloc(group->tg_heap, nbytes);
 #  ifdef CONFIG_BUILD_KERNEL
-          if (!mem)
-            {
-              if (mm_sbrk(group->tg_heap,
-                          nbytes < 1 ? 1 : nbytes, NULL) != OK)
-                {
-                  return NULL;
-                }
-            }
-          else
+          if (mem || mm_sbrk(group->tg_heap, MAX(nbytes, 1), NULL) != OK)
 #  endif
             {
-              return mem;
+              break;
             }
         }
 #else
-      return kumm_malloc(nbytes);
+      mem = kumm_malloc(nbytes);
 #endif
     }
+
+  return mem;
 }
 
 #endif /* defined(CONFIG_MM_KERNEL_HEAP) || defined(CONFIG_MM_TASK_HEAP) */

@@ -24,6 +24,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <sys/param.h>
 #include <sys/types.h>
 
 #include <assert.h>
@@ -55,6 +56,8 @@
 FAR void *group_realloc(FAR struct task_group_s *group, FAR void *oldmem,
                         size_t newsize)
 {
+  FAR void *mem = NULL;
+
   /* A NULL group pointer means the current group */
 
   if (group == NULL)
@@ -70,7 +73,7 @@ FAR void *group_realloc(FAR struct task_group_s *group, FAR void *oldmem,
     {
       /* It is a privileged group... use the kernel mode memory allocator */
 
-      return kmm_realloc(oldmem, newsize);
+      mem = kmm_realloc(oldmem, newsize);
     }
   else
     {
@@ -81,26 +84,20 @@ FAR void *group_realloc(FAR struct task_group_s *group, FAR void *oldmem,
 #ifdef CONFIG_MM_TASK_HEAP
       for (; ; )
         {
-          FAR void *mem = mm_realloc(group->tg_heap, oldmem, newsize);
+          mem = mm_realloc(group->tg_heap, oldmem, newsize);
 #  ifdef CONFIG_BUILD_KERNEL
-          if (!mem)
-            {
-              if (mm_sbrk(group->tg_heap,
-                          newsize < 1 ? 1 : newsize, NULL) != OK)
-                {
-                  return NULL;
-                }
-            }
-          else
+          if (!mem || mm_sbrk(group->tg_heap, MAX(newsize, 1), NULL) != OK)
 #  endif
             {
-              return mem;
+              break;
             }
         }
 #else
-      return kumm_realloc(oldmem, newsize);
+      mem = kumm_realloc(oldmem, newsize);
 #endif
     }
+
+  return mem;
 }
 
 #endif /* defined(CONFIG_MM_KERNEL_HEAP) || defined(CONFIG_MM_TASK_HEAP) */
