@@ -292,12 +292,12 @@ FAR struct child_status_s *group_find_child(FAR struct task_group_s *group,
       if (child->ch_pid == pid)
         {
           spin_unlock_irqrestore(&group->tg_lock, flags);
-          return child;
+          break;
         }
     }
 
   spin_unlock_irqrestore(&group->tg_lock, flags);
-  return NULL;
+  return child;
 }
 
 /****************************************************************************
@@ -332,12 +332,12 @@ FAR struct child_status_s *group_exit_child(FAR struct task_group_s *group)
       if ((child->ch_flags & CHILD_FLAG_EXITED) != 0)
         {
           spin_unlock_irqrestore(&group->tg_lock, flags);
-          return child;
+          break;
         }
     }
 
   spin_unlock_irqrestore(&group->tg_lock, flags);
-  return NULL;
+  return child;
 }
 
 /****************************************************************************
@@ -402,10 +402,12 @@ FAR struct child_status_s *group_remove_child(FAR struct task_group_s *group,
       curr->flink = NULL;
       spin_unlock_irqrestore(&group->tg_lock, flags);
       group_dump_children(group, "group_remove_child");
-      return curr;
+    }
+  else
+    {
+      spin_unlock_irqrestore(&group->tg_lock, flags);
     }
 
-  spin_unlock_irqrestore(&group->tg_lock, flags);
   return curr;
 }
 
