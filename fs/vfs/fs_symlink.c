@@ -94,7 +94,7 @@ int symlink(FAR const char *path1, FAR const char *path2)
    * 'path2' does not lie on a mounted volume.
    */
 
-  SETUP_SEARCH(&desc, path2, false);
+  SETUP_SEARCH(&desc, path2, true);
 
   ret = inode_find(&desc);
   if (ret >= 0)
