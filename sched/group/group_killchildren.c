@@ -97,7 +97,7 @@ static int group_cancel_children_handler(pid_t pid, FAR void *arg)
 
   /* Cancel all threads except for the one specified by the argument */
 
-  if (pid != (pid_t)((uintptr_t)arg))
+  if (pid != (pid_t)((uintptr_t)(FAR char *)arg))
     {
       rtcb = nxsched_get_tcb(pid);
       if (rtcb != NULL)
@@ -205,7 +205,7 @@ int group_kill_children(FAR struct tcb_s *tcb)
       /* Force cancel/delete again */
 
       ret = group_foreachchild(tcb->group, group_cancel_children_handler,
-                              (FAR void *)((uintptr_t)tcb->pid));
+                              (FAR char *)((uintptr_t)tcb->pid));
     }
 
   return ret;
