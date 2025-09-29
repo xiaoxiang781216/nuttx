@@ -199,6 +199,9 @@ int link(FAR const char *path1, FAR const char *path2)
           INODE_SET_HARDLINK(newinode);
           newinode->i_private = target;
           atomic_fetch_add(&target->i_crefs, INODE_NLINK_INC);
+#ifdef CONFIG_PSEUDOFS_ATTRIBUTES
+          nxclock_gettime(CLOCK_REALTIME, &target->i_ctime);
+#endif
         }
 
       inode_unlock();
