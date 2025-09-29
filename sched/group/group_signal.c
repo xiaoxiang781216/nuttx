@@ -78,6 +78,7 @@ static int group_signal_handler(pid_t pid, FAR void *arg)
   FAR struct group_signal_s *info = (FAR struct group_signal_s *)arg;
   FAR struct tcb_s *tcb;
   FAR sigactq_t *sigact;
+  bool terminate = false;
   int ret = 0;
 
   /* Get the TCB associated with the group member */
@@ -112,25 +113,28 @@ static int group_signal_handler(pid_t pid, FAR void *arg)
            */
 
           ret = nxsig_tcbdispatch(tcb, info->siginfo);
-          if (ret < 0)
+          if (ret >= 0)
             {
-              goto errout;
+              /* Limit to one thread */
+
+              info->apid = pid;
+
+              if (info->ppid != 0 && info->siginfo->si_signo != SIGCHLD)
+                {
+                  ret = 1; /* Terminate the search */
+                  terminate = true;
+                }
             }
-
-          /* Limit to one thread */
-
-          info->apid = pid;
-
-          if (info->ppid != 0 && info->siginfo->si_signo != SIGCHLD)
+          else
             {
-              ret = 1; /* Terminate the search */
-              goto errout;
+              terminate = true;
             }
         }
 
       /* Is this signal unblocked on this thread? */
 
-      if (!nxsig_ismember(&tcb->sigprocmask, info->siginfo->si_signo) &&
+      if (!terminate &&
+          !nxsig_ismember(&tcb->sigprocmask, info->siginfo->si_signo) &&
           !info->ppid && pid != info->apid)
         {
           /* Yes.. remember this TCB if we have not encountered any
@@ -154,24 +158,20 @@ static int group_signal_handler(pid_t pid, FAR void *arg)
                */
 
               ret = nxsig_tcbdispatch(tcb, info->siginfo);
-              if (ret < 0)
+              if (ret >= 0)
                 {
-                  goto errout;
-                }
+                  /* Limit to one thread */
 
-              /* Limit to one thread */
-
-              info->ppid = pid;
-              if (info->apid)
-                {
-                  ret = 1; /* Terminate the search */
-                  goto errout;
+                  info->ppid = pid;
+                  if (info->apid)
+                    {
+                      ret = 1; /* Terminate the search */
+                    }
                 }
             }
         }
     }
 
-errout:
   nxsched_put_tcb(tcb);
   return ret;
 }
@@ -220,54 +220,53 @@ int group_signal(FAR struct task_group_s *group, FAR siginfo_t *siginfo)
   /* Now visit each member of the group and perform signal handling checks. */
 
   ret = group_foreachchild(group, group_signal_handler, &info);
-  if (ret < 0)
+  if (ret >= 0)
     {
-      goto errout;
-    }
-
-  /* We need to dispatch the signal in any event (if nothing else so that it
-   * can be added to the pending signal list). If we found a thread with the
-   * signal unblocked, then use that thread.
-   */
-
-  if (info.apid == 0 && info.ppid == 0)
-    {
-      if (info.upid)
-        {
-          pid = info.upid;
-        }
-
-      /* Otherwise use the default TCB.  There should always be a default
-       * TCB. It will have the signal blocked, but can be used to get the
-       * signal to a pending state.
+      /* We need to dispatch the signal in any event (if nothing else so that
+       * it can be added to the pending signal list). If we found a thread
+       * with the signal unblocked, then use that thread.
        */
 
-      else if (info.dpid)
+      if (info.apid == 0 && info.ppid == 0)
         {
-          pid = info.dpid;
-        }
-      else
-        {
-          ret = -ECHILD;
-          goto errout;
-        }
+          if (info.upid)
+            {
+              pid = info.upid;
+            }
 
-      /* Now deliver the signal to the selected group member */
+          /* Otherwise use the default TCB.  There should always be a default
+           * TCB. It will have the signal blocked, but can be used to get the
+           * signal to a pending state.
+           */
 
-      tcb = nxsched_get_tcb(pid);
-      if (tcb)
-        {
-          ret = nxsig_tcbdispatch(tcb, siginfo);
-        }
-      else
-        {
-          ret = -ESRCH;
-        }
+          else if (info.dpid)
+            {
+              pid = info.dpid;
+            }
+          else
+            {
+              ret = -ECHILD;
+            }
 
-      nxsched_put_tcb(tcb);
+          if (ret >= 0)
+            {
+              /* Now deliver the signal to the selected group member */
+
+              tcb = nxsched_get_tcb(pid);
+              if (tcb)
+                {
+                  ret = nxsig_tcbdispatch(tcb, siginfo);
+                }
+              else
+                {
+                  ret = -ESRCH;
+                }
+
+              nxsched_put_tcb(tcb);
+            }
+        }
     }
 
-errout:
   return ret;
 
 #else
