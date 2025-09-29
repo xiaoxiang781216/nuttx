@@ -122,7 +122,8 @@ static inline void group_inherit_identity(FAR struct task_group_s *group)
 int group_initialize(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
 {
   FAR struct task_group_s *group;
-  int ret;
+  bool initialized = false;
+  int ret = OK;
 
   DEBUGASSERT(tcb && !tcb->group);
 
@@ -136,7 +137,7 @@ int group_initialize(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
       tcb->group = group;
       if (group->tg_info)
         {
-          return OK;
+          initialized = true;
         }
     }
   else if (ttype == TCB_FLAG_TTYPE_TASK)
@@ -159,15 +160,14 @@ int group_initialize(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
           ret = group_heap_initialize(&group->tg_heap,
                                       CONFIG_MM_TASK_HEAP_DEFAULT_ALIGN,
                                       heapsize);
-          if (ret < 0)
+          if (ret >= 0)
             {
-              return ret;
-            }
-
 #  ifdef CONFIG_ARCH_ADDRENV
-          group->tg_addrenv_own->addrenv.heap = (uintptr_t)group->tg_heap;
-          group->tg_addrenv_own->addrenv.heapsize = heapsize;
+              group->tg_addrenv_own->addrenv.heap =
+              (uintptr_t)group->tg_heap;
+              group->tg_addrenv_own->addrenv.heapsize = heapsize;
 #  endif
+            }
         }
 #endif
     }
@@ -176,58 +176,59 @@ int group_initialize(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
       group = tcb->group;
     }
 
-#if defined(CONFIG_MM_KERNEL_HEAP)
-  /* If this group is being created for a privileged thread, then all
-   * elements of the group must be created for privileged access.
-   */
-
-  if ((ttype & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_KERNEL)
+  if (!initialized && ret >= 0)
     {
-      atomic_fetch_or(&group->tg_flags, GROUP_FLAG_PRIVILEGED);
-    }
+#if defined(CONFIG_MM_KERNEL_HEAP)
+      /* If this group is being created for a privileged thread, then all
+       * elements of the group must be created for privileged access.
+       */
+
+      if ((ttype & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_KERNEL)
+        {
+          atomic_fetch_or(&group->tg_flags, GROUP_FLAG_PRIVILEGED);
+        }
 #endif /* defined(CONFIG_MM_KERNEL_HEAP) */
 
 #ifdef HAVE_GROUP_MEMBERS
-  /* Initialize member list of the group */
+      /* Initialize member list of the group */
 
-  sq_init(&group->tg_members);
+      sq_init(&group->tg_members);
 #endif
 
-  /* Attach the group to the TCB */
+      /* Attach the group to the TCB */
 
-  tcb->group = group;
+      tcb->group = group;
 
-  /* Inherit the user identity from the parent task group */
+      /* Inherit the user identity from the parent task group */
 
-  group_inherit_identity(group);
+      group_inherit_identity(group);
 
-  /* Initialize file descriptors for the TCB */
+      /* Initialize file descriptors for the TCB */
 
-  fdlist_init(&group->tg_fdlist);
+      fdlist_init(&group->tg_fdlist);
 
-  /* Alloc task info for group  */
+      /* Alloc task info for group  */
 
-  ret = task_init_info(group);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  nxrmutex_init(&group->tg_mutex);
+      ret = task_init_info(group);
+      if (ret >= 0)
+        {
+          nxrmutex_init(&group->tg_mutex);
 
 #ifndef CONFIG_DISABLE_PTHREAD
-  /* Initialize the task group join */
+          /* Initialize the task group join */
 
-  sq_init(&group->tg_joinqueue);
+          sq_init(&group->tg_joinqueue);
 #endif
 
 #if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
-  /* Initialize the exit/wait semaphores */
+          /* Initialize the exit/wait semaphores */
 
-  nxsem_init(&group->tg_exitsem, 0, 0);
+          nxsem_init(&group->tg_exitsem, 0, 0);
 #endif
+        }
+    }
 
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
