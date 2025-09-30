@@ -68,8 +68,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define DEADLOCK_MAX 8
-
 #ifndef CONFIG_BOARD_RESET_ON_ASSERT
 #  define CONFIG_BOARD_RESET_ON_ASSERT 0
 #endif
@@ -594,8 +592,9 @@ static void dump_lockholder(pid_t tid)
 #ifdef CONFIG_ARCH_DEADLOCKDUMP
 static void dump_deadlock(void)
 {
-  pid_t deadlock[DEADLOCK_MAX];
-  size_t i = nxsched_collect_deadlock(deadlock, DEADLOCK_MAX);
+  pid_t deadlock[CONFIG_ARCH_DEADLOCKDUMP_MAX];
+  size_t i = nxsched_collect_deadlock(deadlock,
+                                      CONFIG_ARCH_DEADLOCKDUMP_MAX);
 
   if (i > 0)
     {
