@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 
+#include <nuttx/init.h>
 #include <arch/barriers.h>
 #include <arch/irq.h>
 #include <sched/sched.h>
@@ -100,6 +101,15 @@ void arm_enable_smp(int cpu)
 
   else
     {
+      /* If we do coloration in assembly, will hard to cover the tls etc.
+       * And we should not do coloration before tcb stack_base_ptr updated.
+       */
+
+#ifdef CONFIG_STACK_COLORATION
+      while (!OSINIT_MM_READY());
+      arm_stack_color(current_task(cpu)->stack_base_ptr, 0);
+#endif
+
       /* Invalidate CPUn L1 data cache so that is will we be reloaded from
        * coherent L2.
        */

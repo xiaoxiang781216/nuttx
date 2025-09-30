@@ -432,22 +432,6 @@ __cpu3_start:
 
 .Lcpu_vstart:
 
-#ifdef CONFIG_STACK_COLORATION
-	/* Write a known value to the IDLE thread stack to support stack
-	 * monitoring logic
-	 */
-
-	adr		r3, .Lstkinit
-	mov		r0, sp		/* R0 = end of IDLE stack */
-	ldmia		r3, {r1, r2}	/* R1 = Size of stack; R2 = coloration */
-
-1:							/* Top of the loop */
-	sub		r1, r1, #1			/* R1 = Number of words remaining */
-	cmp		r1, #0				/* Check (nwords == 0) */
-	str		r2, [r0, #-4]!			/* Save stack color word, increment stack address */
-	bne		1b				/* Bottom of the loop */
-#endif
-
 #ifdef CONFIG_ARCH_TRUSTZONE_SECURE
 	/* Perform init the secure monitor runtime. As the following arm_boot may
 	 * using smc to perform psci related func, so the secure monitor init
@@ -464,20 +448,6 @@ __cpu3_start:
 	mov		r0, r5				/* Input parameter = CPU index */
 	b		arm_cpu_boot			/* Branch to C level CPU initialization */
 	.size	.Lcpu_vstart, .-.Lcpu_vstart
-
-/***************************************************************************
- * Text-section constants
- ***************************************************************************/
-
-	/* Text-section constants: */
-
-#ifdef CONFIG_STACK_COLORATION
-	.type	.Lstkinit, %object
-.Lstkinit:
-	.long	SMP_STACK_WORDS - (XCPTCONTEXT_SIZE / 4)
-	.long	STACK_COLOR				/* Stack coloration word */
-	.size	.Lstkinit, . -.Lstkinit
-#endif
 
 /***************************************************************************
  * .noinit section data
