@@ -106,22 +106,20 @@
 #ifdef CONFIG_SMP
 static noreturn_function int pause_cpu_handler(FAR void *arg);
 #endif
+typedef uintptr_t last_regs_t[XCPTCONTEXT_REGS];
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-static bool g_cpu_paused[CONFIG_SMP_NCPUS];
-#endif
-
-static uintptr_t g_last_regs[CONFIG_SMP_NCPUS][XCPTCONTEXT_REGS]
-                 aligned_data(XCPTCONTEXT_ALIGN);
-
-#ifdef CONFIG_SMP
+static DEFINE_PER_CPU_BSS_SMP(bool, g_cpu_paused);
 static struct smp_call_data_s g_call_data =
 SMP_CALL_INITIALIZER(pause_cpu_handler, NULL);
 #endif
+
+static DEFINE_PER_CPU_BSS(last_regs_t, g_last_regs)
+       aligned_data(XCPTCONTEXT_ALIGN);
 
 /****************************************************************************
  * Private Functions
@@ -629,9 +627,9 @@ static void dump_deadlock(void)
 
 static noreturn_function int pause_cpu_handler(FAR void *arg)
 {
-  up_copyusercontext(g_last_regs[this_cpu()], running_regs(),
-                     sizeof(g_last_regs[0]));
-  g_cpu_paused[this_cpu()] = true;
+  up_copyusercontext(this_cpu_var(g_last_regs), running_regs(),
+                     sizeof(last_regs_t));
+  this_cpu_var_smp(g_cpu_paused) = true;
   up_flush_dcache_all();
   while (1);
 }
@@ -642,21 +640,21 @@ static noreturn_function int pause_cpu_handler(FAR void *arg)
 
 static void pause_all_cpu(void)
 {
-  cpu_set_t cpus = (1 << CONFIG_SMP_NCPUS) - 1;
+  cpu_set_t cpuset = (1 << CONFIG_SMP_NCPUS) - 1;
   int delay = CONFIG_ASSERT_PAUSE_CPU_TIMEOUT;
+  int ncpus = 0;
 
-  CPU_CLR(this_cpu(), &cpus);
-  nxsched_smp_call_async(cpus, &g_call_data);
-  g_cpu_paused[this_cpu()] = true;
+  CPU_CLR(this_cpu(), &cpuset);
+  nxsched_smp_call_async(cpuset, &g_call_data);
+  this_cpu_var_smp(g_cpu_paused) = true;
 
   /* Check if all CPUs paused with timeout */
 
-  cpus = 0;
-  while (delay-- > 0 && cpus < CONFIG_SMP_NCPUS)
+  while (delay-- > 0 && ncpus < CONFIG_SMP_NCPUS)
     {
-      if (g_cpu_paused[cpus])
+      if (per_cpu_var_smp(g_cpu_paused, ncpus))
         {
-          cpus++;
+          ncpus++;
         }
       else
         {
@@ -765,11 +763,12 @@ static void dump_fatal_info(FAR struct tcb_s *rtcb,
         }
 
       _alert("Dump CPU%d: %s\n", cpu,
-             g_cpu_paused[cpu] ? "PAUSED" : "RUNNING");
+             per_cpu_var_smp(g_cpu_paused, cpu) ? "PAUSED" : "RUNNING");
 
-      if (g_cpu_paused[cpu])
+      if (per_cpu_var_smp(g_cpu_paused, cpu))
         {
-          dump_running_task(g_running_tasks[cpu], g_last_regs[cpu]);
+          dump_running_task(g_running_tasks[cpu],
+                            per_cpu_var(g_last_regs, cpu));
         }
     }
 #endif
@@ -896,15 +895,15 @@ void _assert(FAR const char *filename, int linenum,
 
   if (regs == NULL)
     {
-      up_saveusercontext(g_last_regs[this_cpu()]);
+      up_saveusercontext(this_cpu_var(g_last_regs));
     }
   else
     {
-      up_copyusercontext(g_last_regs[this_cpu()], regs,
-                         sizeof(g_last_regs[0]));
+      up_copyusercontext(this_cpu_var(g_last_regs), regs,
+                         sizeof(last_regs_t));
     }
 
-  regs = g_last_regs[this_cpu()];
+  regs = this_cpu_var(g_last_regs);
 
   if (OSINIT_IS_PANIC())
     {
