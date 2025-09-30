@@ -25,7 +25,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/cpufreq/qos.h>
+#include <nuttx/devfreq.h>
 #include <nuttx/list.h>
 #include <nuttx/notifier.h>
 #include <sys/types.h>
@@ -70,12 +70,7 @@ struct cpufreq_policy
   unsigned int cur;                     /* in kHz */
 
   FAR struct cpufreq_governor *governor;
-
-  struct freq_constraints constraints;
-  struct freq_qos_request min_freq_req;
-  struct freq_qos_request max_freq_req;
-
-  FAR const struct cpufreq_frequency_table *freq_table;
+  FAR const uint32_t *freq_table;
   enum cpufreq_table_sorting freq_table_sorted;
 
   struct mutex_s lock;
@@ -99,11 +94,6 @@ struct cpufreq_governor
   CODE void (*limits)(FAR struct cpufreq_policy *policy);
 };
 
-struct cpufreq_frequency_table
-{
-  unsigned int frequency;       /* kHz - should be in order */
-};
-
 struct cpufreq_freqs
 {
   unsigned int old;
@@ -112,8 +102,7 @@ struct cpufreq_freqs
 
 struct cpufreq_driver
 {
-  CODE FAR const struct cpufreq_frequency_table *
-           (*get_table)(FAR struct cpufreq_policy *policy);
+  CODE FAR const uint32_t *(*get_table)(FAR struct cpufreq_policy *policy);
   CODE int (*target_index)(FAR struct cpufreq_policy *policy,
                            unsigned int index);
   CODE int (*get_frequency)(FAR struct cpufreq_policy *policy);
@@ -218,7 +207,7 @@ int cpufreq_get(FAR struct cpufreq_policy *policy);
  * Return qos handle for update and remove, or NULL if fail
  */
 
-FAR struct cpufreq_qos *cpufreq_qos_add_request(
+FAR struct qos_request_s *cpufreq_qos_add_request(
                             FAR struct cpufreq_policy *policy,
                             unsigned int min, unsigned int max);
 
@@ -231,7 +220,7 @@ FAR struct cpufreq_qos *cpufreq_qos_add_request(
  * constraint value for the list of requests it belongs to.
  */
 
-int cpufreq_qos_update_request(FAR struct cpufreq_qos *qos,
+int cpufreq_qos_update_request(FAR struct qos_request_s *qos,
                                unsigned int min, unsigned int max);
 
 /* cpufreq_qos_remove_request - Remove frequency QoS request from its list.
@@ -241,22 +230,7 @@ int cpufreq_qos_update_request(FAR struct cpufreq_qos *qos,
  * belongs to and recompute the effective constraint value for that list.
  */
 
-int cpufreq_qos_remove_request(FAR struct cpufreq_qos *qos);
-
-/****************************************************************************
- * Name: cpufreq_table_count_valid_entries
- *
- * Description:
- *   get cpufreq table count
- *
- * Input Parameters:
- *   policy - the cpu cpufreq_policy
- *
- * Returned Value:
- *   a non-negative value
- ****************************************************************************/
-
-int cpufreq_table_count_valid_entries(FAR struct cpufreq_policy *policy);
+int cpufreq_qos_remove_request(FAR struct qos_request_s *qos);
 
 #undef EXTERN
 #if defined(__cplusplus)

@@ -1,5 +1,5 @@
 ############################################################################
-# drivers/cpufreq/qlearning/Make.defs
+# drivers/devfreq/qlearning/Make.defs
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -18,11 +18,11 @@
 #
 ############################################################################
 
-CPUFREQ_QL_DIR = cpufreq/qlearning
+DEVFREQ_QL_DIR = devfreq/qlearning
 
 CSRCS += \
-	$(CPUFREQ_QL_DIR)/qlearning_manager.c \
-	$(CPUFREQ_QL_DIR)/qlearning_dqn.c
+	$(DEVFREQ_QL_DIR)/qlearning_manager.c \
+	$(DEVFREQ_QL_DIR)/qlearning_dqn.c
 
 CFLAGS += \
-	-I$(TOPDIR)/drivers/cpufreq
+	-I$(TOPDIR)/drivers/devfreq

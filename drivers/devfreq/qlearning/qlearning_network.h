@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/cpufreq/qlearning/qlearning_network.h
+ * drivers/devfreq/qlearning/qlearning_network.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __DRIVER_CPUFREQ_QLEARNING_NETWORK_H
-#define __DRIVER_CPUFREQ_QLEARNING_NETWORK_H
+#ifndef __DRIVER_DEVFREQ_QLEARNING_NETWORK_H
+#define __DRIVER_DEVFREQ_QLEARNING_NETWORK_H
 
 /****************************************************************************
  * Included Files
@@ -32,8 +32,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define MAX_LAYER_SIZE    CONFIG_CPUFREQ_QLEARNING_NEURONS_PER_LAYER
-#define MAX_LAYERS_NUM    CONFIG_CPUFREQ_QLEARNING_NUM_LAYERS
+#define MAX_LAYER_SIZE    CONFIG_DEVFREQ_QLEARNING_NEURONS_PER_LAYER
+#define MAX_LAYERS_NUM    CONFIG_DEVFREQ_QLEARNING_NUM_LAYERS
 
 #define RELU              0
 #define SIGMOID           1
@@ -76,4 +76,4 @@ struct qlearning_params_s
 
 int qlearning_network_forward(FAR struct network_s *net, FAR float *input);
 
-#endif /* __DRIVER_CPUFREQ_QLEARNING_NETWORK_H */
+#endif /* __DRIVER_DEVFREQ_QLEARNING_NETWORK_H */

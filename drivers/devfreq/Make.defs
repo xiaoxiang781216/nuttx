@@ -21,13 +21,22 @@
 # Include devfreq sources
 
 ifeq ($(CONFIG_DEVFREQ),y)
-
 CSRCS += devfreq.c devfreq_performance.c devfreq_powersave.c devfreq_qos.c
 
 ifeq ($(CONFIG_DEVFREQ_PROCFS),y)
-
 CSRCS += devfreq_procfs.c
+endif
 
+ifeq ($(CONFIG_DEVFREQ_GOV_ONDEMAND),y)
+CSRCS += devfreq_ondemand.c
+endif
+
+ifeq ($(CONFIG_DEVFREQ_GOV_QLEARNING),y)
+CSRCS += devfreq_qlearning.c
+endif
+
+ifeq ($(CONFIG_CPUFREQ))
+CSRCS += cpufreq.c
 endif
 
 DEPPATH += --dep-path devfreq

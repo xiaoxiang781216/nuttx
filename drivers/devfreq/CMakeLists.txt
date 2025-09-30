@@ -25,5 +25,17 @@ if(CONFIG_DEVFREQ)
     list(APPEND SRCS devfreq_procfs.c)
   endif()
 
+  if(CONFIG_DEVFREQ_GOV_ONDEMAND)
+    list(APPEND SRCS devfreq_ondemand.c)
+  endif()
+
+  if(CONFIG_DEVFREQ_GOV_QLEARNING)
+    list(APPEND SRCS devfreq_qlearning.c)
+  endif()
+
+  if(NOT CONFIG_CPUFREQ_DEFAULT_GOV_NULL)
+    list(APPEND SRCS cpufreq.c)
+  endif()
+
   target_sources(drivers PRIVATE ${SRCS})
 endif()

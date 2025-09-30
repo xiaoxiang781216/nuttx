@@ -26,4 +26,136 @@ config DEVFREQ_PROCFS_QOS
 	---help---
 		devfreq procfs show qos requests and their callers
 
+config DEVFREQ_GOV_ONDEMAND
+	bool "devfreq_gov_ondemand"
+	default n
+	depends on !SCHED_CPULOAD_NONE
+	---help---
+		devfreq_ondemand governor
+
+if DEVFREQ_GOV_ONDEMAND
+
+config DEVFREQ_SAMPLE_RATE
+	int "the default sample rate (us) to get the cpuload"
+	default 1000000
+	---help---
+		Ondemand sample rate
+
+config DEVFREQ_LOAD_THRESHOLD
+	int "the default cpu load threshold up to max cpu freq"
+	default 80
+	---help---
+		Ondemand cpu load threshold
+
+endif
+
+config DEVFREQ_GOV_QLEARNING
+	bool "devfreq_gov_qlearning"
+	default n
+	depends on !ARCH_PERF_EVENTS && PM
+	---help---
+		devfreq_qlearning governor
+
+if DEVFREQ_GOV_QLEARNING
+
+config DEVFREQ_QLEARNING_WAIT_TIME
+	int "the default wait time (ms) between two samples"
+	default 100
+	---help---
+		wait time between two samples
+
+config DEVFREQ_QLEARNING_INIT_WAIT_TIME
+	int "the default wait time (ms) for system boot"
+	default PM_GOVERNOR_EXPLICIT_RELAX
+	---help---
+		wait for system boot, then read the initial parameters. Reading
+		file will fail if system boot is not finished.
+
+config DEVFREQ_QLEARNING_INIT_FREQ
+	int "the default initial freq(KHz)"
+	default 100000
+	---help---
+		initial freq of devfreq qlearning governor, before reading the
+		parameters from file finished.
+
+config DEVFREQ_QLEARNING_FILE_PATH
+	string "File path of devfreq qlearning parameters"
+	default "/etc/devfreq_qlearning_params.bin"
+	---help---
+		File path of devfreq qlearning parameters
+
+config DEVFREQ_QLEARNING_MIN_FREQ
+	int "the default min cpu freq(KHz)"
+	default 32
+	---help---
+		min freq of devfreq qlearning governor, if current freq is lower
+		than this value, qlearning algorithm will not run. It is a workaround
+		to avoid high overhead cause by running algorithm at low frequency.
+
+config DEVFREQ_QLEARNING_NEURONS_PER_LAYER
+	int "number of neurons in each Q-learning layer"
+	default 10
+	---help---
+		Number of neurons (or units) in each fully-connected layer of the
+		Q-learning neural network. This also determines the size of weight
+		matrices and bias vectors.
+
+config DEVFREQ_QLEARNING_NUM_LAYERS
+	int "number of layers in the Q-learning neural network"
+	default 3
+	---help---
+		Number of fully-connected layers in the Q-learning neural network.
+		More layers can model more complex policies but may increase
+		computation and training time.
+
+config DEVFREQ_QLEARNING_ACTION_OFFSET
+	int "offset of action in the Q-learning neural network"
+	default 0
+	---help---
+		This is the index of the first action in frequency table.
+		When calculating the action, the index of the frequency is
+		adjusted by this offset.
+
+endif
+
+choice
+	prompt "cpufreq default governor"
+	default CPUFREQ_DEFAULT_GOV_NULL
+
+config CPUFREQ_DEFAULT_GOV_NULL
+	bool "null"
+	---help---
+		disable cpufreq
+
+config CPUFREQ_DEFAULT_GOV_PERFORMANCE
+	bool "performance"
+	---help---
+		use devfreq_performance governor
+
+config CPUFREQ_DEFAULT_GOV_POWERSAVE
+	bool "powersave"
+	---help---
+		use devfreq_powersave governor
+
+config CPUFREQ_DEFAULT_GOV_ONDEMAND
+	bool "ondemand"
+	depends on DEVFREQ_GOV_ONDEMAND
+	---help---
+		use devfreq_ondemand governor
+
+config CPUFREQ_DEFAULT_GOV_QLEARNING
+	bool "qlearning"
+	depends on DEVFREQ_GOV_QLEARNING
+	---help---
+		use devfreq_qlearning governor
+
+endchoice
+
+config CPUFREQ_DEVICE_NAME
+	string "cpufreq device name"
+	default "cpu"
+	depends on !CPUFREQ_DEFAULT_GOV_NULL
+	---help---
+		CPUFREQ device name, e.g. "cpu" or "cpu0"
+
 endif

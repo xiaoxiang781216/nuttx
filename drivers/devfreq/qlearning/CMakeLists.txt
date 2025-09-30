@@ -1,5 +1,5 @@
 # ##############################################################################
-# drivers/cpufreq/CMakeLists.txt
+# drivers/devfreq/qlearning/CMakeLists.txt
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -18,30 +18,10 @@
 #
 # ##############################################################################
 
-nuttx_add_subdirectory()
+if(CONFIG_DEVFREQ_GOV_QLEARNING)
+  set(SRCS qlearning_manager.c qlearning_network.c)
 
-if(CONFIG_CPUFREQ)
-  set(SRCS qos.c cpufreq.c freq_table.c)
-
-  if(CONFIG_CPUFREQ_DEFAULT_GOV_PERFORMANCE)
-    list(APPEND SRCS cpufreq_performance.c)
-  endif()
-
-  if(CONFIG_CPUFREQ_DEFAULT_GOV_POWERSAVE)
-    list(APPEND SRCS cpufreq_powersave.c)
-  endif()
-
-  if(CONFIG_CPUFREQ_DEFAULT_GOV_ONDEMAND)
-    list(APPEND SRCS cpufreq_ondemand.c)
-  endif()
-
-  if(CONFIG_CPUFREQ_PROCFS)
-    list(APPEND SRCS cpufreq_procfs.c)
-  endif()
-
-  if(CONFIG_CPUFREQ_DEFAULT_GOV_QLEARNING)
-    list(APPEND SRCS cpufreq_qlearning.c)
-  endif()
+  target_include_directories(drivers PRIVATE ${NUTTX_DIR}/drivers/devfreq)
 
   target_sources(drivers PRIVATE ${SRCS})
 endif()

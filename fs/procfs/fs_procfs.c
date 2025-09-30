@@ -59,7 +59,6 @@
 extern const struct procfs_operations g_clk_operations;
 extern const struct procfs_operations g_cpuinfo_operations;
 extern const struct procfs_operations g_cpuload_operations;
-extern const struct procfs_operations g_cpufreq_operations;
 extern const struct procfs_operations g_critmon_operations;
 extern const struct procfs_operations g_fdt_operations;
 extern const struct procfs_operations g_iobinfo_operations;
@@ -116,10 +115,6 @@ static const struct procfs_entry_s g_procfs_entries[] =
 #if !defined(CONFIG_SCHED_CPULOAD_NONE) && \
     !defined(CONFIG_FS_PROCFS_EXCLUDE_CPULOAD)
   { "cpuload",      &g_cpuload_operations,  PROCFS_FILE_TYPE,   0444 },
-#endif
-
-#if defined(CONFIG_CPUFREQ) && defined(CONFIG_CPUFREQ_PROCFS)
-  { "cpufreq",      &g_cpufreq_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #ifdef CONFIG_SCHED_CRITMONITOR

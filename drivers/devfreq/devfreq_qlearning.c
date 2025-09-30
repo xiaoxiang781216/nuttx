@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/cpufreq/cpufreq_powersave.c
+ * drivers/devfreq/devfreq_qlearning.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,42 +22,68 @@
  * Included Files
  ****************************************************************************/
 
-#include "cpufreq_internal.h"
+#include <nuttx/config.h>
+#include <nuttx/devfreq.h>
+#include "qlearning/qlearning_manager.h"
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
-static void cpufreq_gov_powersave_limits(
-                        FAR struct cpufreq_policy *policy);
+static int devfreq_gov_qlearning_init(FAR struct devfreq_s *dev);
+static int devfreq_gov_qlearning_exit(FAR struct devfreq_s *dev);
+static int devfreq_gov_qlearning_start(FAR struct devfreq_s *dev);
+static void devfreq_gov_qlearning_stop(FAR struct devfreq_s *dev);
+static uint32_t devfreq_gov_qlearning_limit(FAR struct devfreq_s *dev);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static struct cpufreq_governor cpufreq_gov_powersave =
+static struct devfreq_governor_s g_devfreq_gov_qlearning =
 {
-  .name   = "powersave",
-  .limits = cpufreq_gov_powersave_limits,
+  .name   = "qlearning",
+  .init   = devfreq_gov_qlearning_init,
+  .start  = devfreq_gov_qlearning_start,
+  .stop   = devfreq_gov_qlearning_stop,
+  .exit   = devfreq_gov_qlearning_exit,
+  .limit  = devfreq_gov_qlearning_limit,
 };
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-static void cpufreq_gov_powersave_limits(
-                        FAR struct cpufreq_policy *policy)
+static int devfreq_gov_qlearning_init(FAR struct devfreq_s *dev)
 {
-  nxmutex_lock(&policy->lock);
-  cpufreq_driver_target(policy, policy->min, CPUFREQ_RELATION_L);
-  nxmutex_unlock(&policy->lock);
+  return qlearning_manager_init(dev);
+}
+
+static int devfreq_gov_qlearning_start(FAR struct devfreq_s *dev)
+{
+  return qlearning_manager_start(dev);
+}
+
+static void devfreq_gov_qlearning_stop(FAR struct devfreq_s *dev)
+{
+  qlearning_manager_end(dev);
+}
+
+static int devfreq_gov_qlearning_exit(FAR struct devfreq_s *dev)
+{
+  return qlearning_manager_exit(dev);
+}
+
+static uint32_t devfreq_gov_qlearning_limit(FAR struct devfreq_s *dev)
+{
+  return qlearning_manager_limit(dev);
 }
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-FAR struct cpufreq_governor *cpufreq_default_governor(void)
+FAR struct devfreq_governor_s *devfreq_qlearning(void)
 {
-  return &cpufreq_gov_powersave;
+  return &g_devfreq_gov_qlearning;
 }

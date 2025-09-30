@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/cpufreq/cpufreq_performance.c
+ * drivers/devfreq/qlearning/qlearning_manager.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,46 +18,23 @@
  *
  ****************************************************************************/
 
+#ifndef __DRIVERS_DEVFREQ_QLEARNING_MANAGER_H
+#define __DRIVERS_DEVFREQ_QLEARNING_MANAGER_H
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include "cpufreq_internal.h"
+#include <nuttx/devfreq.h>
 
 /****************************************************************************
- * Private Function Prototypes
+ * Public Functions Prototypes
  ****************************************************************************/
 
-static void cpufreq_gov_performance_limits(
-                        FAR struct cpufreq_policy *policy);
+int qlearning_manager_init(FAR struct devfreq_s *dev);
+int qlearning_manager_exit(FAR struct devfreq_s *dev);
+int qlearning_manager_start(FAR struct devfreq_s *dev);
+int qlearning_manager_end(FAR struct devfreq_s *dev);
+uint32_t qlearning_manager_limit(FAR struct devfreq_s *dev);
 
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static struct cpufreq_governor cpufreq_gov_performance =
-{
-  .name   = "performance",
-  .limits = cpufreq_gov_performance_limits,
-};
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-static void cpufreq_gov_performance_limits(
-                        FAR struct cpufreq_policy *policy)
-{
-  nxmutex_lock(&policy->lock);
-  cpufreq_driver_target(policy, policy->max, CPUFREQ_RELATION_H);
-  nxmutex_unlock(&policy->lock);
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-FAR struct cpufreq_governor *cpufreq_default_governor(void)
-{
-  return &cpufreq_gov_performance;
-}
+#endif /* __DRIVERS_DEVFREQ_QLEARNING_MANAGER_H */

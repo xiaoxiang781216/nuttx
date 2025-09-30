@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/cpufreq/qlearning/qlearning_manager.c
+ * drivers/devfreq/qlearning/qlearning_manager.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,11 +22,12 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+#include <nuttx/devfreq/qlearning.h>
+#include <nuttx/devfreq.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/wqueue.h>
-#include <nuttx/cpufreq/qlearning.h>
 
-#include "cpufreq_internal.h"
 #include "qlearning_manager.h"
 #include "qlearning_network.h"
 
@@ -46,10 +47,12 @@ struct qlearning_manager_s
 {
   FAR struct qlearning_lowerhalf_s *lh;
   FAR struct qlearning_params_s *params;
+  FAR struct qos_request_s *req;
   struct work_s qlearning_manager_work;
   struct pm_callback_s cb;
   float perf_data[MAX_LAYER_SIZE];
   uint32_t action[MAX_LAYER_SIZE];
+  uint32_t target_freq;
   clock_t wait;
   uint8_t flags;
 };
@@ -64,31 +67,28 @@ static struct qlearning_manager_s g_qlearning_manager;
  * Private Function Prototypes
  ****************************************************************************/
 
-static int qlearning_manager_worker(FAR struct cpufreq_policy *policy);
-static void qlearning_manager_action_init(FAR struct cpufreq_policy *policy);
+static int qlearning_manager_worker(FAR struct devfreq_s *dev);
+static void qlearning_manager_action_init(FAR struct devfreq_s *dev);
 static int qlearning_manager_argmax(float *arr, size_t size);
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-static void qlearning_manager_action_init(FAR struct cpufreq_policy *policy)
+static void qlearning_manager_action_init(FAR struct devfreq_s *dev)
 {
-  FAR struct qlearning_manager_s *manager = policy->governor_data;
-  FAR const struct cpufreq_frequency_table *table;
-  FAR const struct cpufreq_frequency_table *pos;
+  FAR struct qlearning_manager_s *manager = dev->governor_data;
+  FAR const uint32_t *table;
   int size = 0;
 
-  table = policy->freq_table;
-
-  for (pos = table; pos->frequency != CPUFREQ_TABLE_END; pos++)
+  for (table = dev->freq_table; *table != DEVFREQ_ENTRY_END; table++)
     {
-      if (pos->frequency == CPUFREQ_ENTRY_INVALID)
+      if (*table == DEVFREQ_ENTRY_INVALID)
         {
           continue;
         }
 
-      manager->action[size++] = pos->frequency;
+      manager->action[size++] = *table;
     }
 }
 
@@ -113,9 +113,9 @@ static int qlearning_manager_argmax(float *arr, size_t size)
   return ret;
 }
 
-static int qlearning_manager_worker(FAR struct cpufreq_policy *policy)
+static int qlearning_manager_worker(FAR struct devfreq_s *dev)
 {
-  FAR struct qlearning_manager_s *manager = policy->governor_data;
+  FAR struct qlearning_manager_s *manager = dev->governor_data;
   FAR struct qlearning_params_s *params = manager->params;
   FAR struct layer_s *layer;
   int layer_out;
@@ -130,15 +130,15 @@ static int qlearning_manager_worker(FAR struct cpufreq_policy *policy)
 
   if (!(manager->flags & QLEARNING_FLAG_INIT))
     {
-      qlearning_manager_action_init(policy);
+      qlearning_manager_action_init(dev);
 
-      manager->wait = TICK_PER_MSEC * CONFIG_CPUFREQ_QLEARNING_WAIT_TIME;
+      manager->wait = TICK_PER_MSEC * CONFIG_DEVFREQ_QLEARNING_WAIT_TIME;
       manager->flags |= QLEARNING_FLAG_INIT;
       goto out;
     }
 
-  freq = cpufreq_get(policy);
-  if (freq < CONFIG_CPUFREQ_QLEARNING_MIN_FREQ)
+  freq = devfreq_get_frequency(dev);
+  if (freq < CONFIG_DEVFREQ_QLEARNING_MIN_FREQ)
     {
       goto out;
     }
@@ -153,15 +153,15 @@ static int qlearning_manager_worker(FAR struct cpufreq_policy *policy)
   layer_out = params->net.layers_num - 1;
   layer = &params->net.layers[layer_out];
   action = qlearning_manager_argmax(layer->output, layer->output_size) +
-           CONFIG_CPUFREQ_QLEARNING_ACTION_OFFSET;
-
-  cpufreq_driver_target(policy, manager->action[action], CPUFREQ_RELATION_L);
+           CONFIG_DEVFREQ_QLEARNING_ACTION_OFFSET;
+  manager->target_freq = manager->action[action];
+  devfreq_qos_update_request(dev, manager->req, dev->min, dev->max);
 
 out:
   if (manager->flags & QLEARNING_FLAG_RUNNING)
     {
       work_queue(HPWORK, &manager->qlearning_manager_work,
-                 (worker_t)qlearning_manager_worker, policy,
+                 (worker_t)qlearning_manager_worker, dev,
                  manager->wait);
     }
 
@@ -171,14 +171,16 @@ out:
 static void qlearning_manager_callback(FAR struct pm_callback_s *cb,
                                        int domain, enum pm_state_e pmstate)
 {
-  FAR struct cpufreq_policy *policy = cpufreq_policy_get();
+  FAR struct devfreq_s *dev;
+
+  dev = devfreq_find_by_name(CONFIG_DEVFREQ_DEVICE_NAME);
   if (pmstate == PM_NORMAL)
     {
-      qlearning_manager_start(policy);
+      qlearning_manager_start(dev);
     }
   else if (pmstate == PM_SLEEP)
     {
-      qlearning_manager_end(policy);
+      qlearning_manager_end(dev);
     }
 }
 
@@ -187,72 +189,72 @@ static void qlearning_manager_callback(FAR struct pm_callback_s *cb,
  ****************************************************************************/
 
 /****************************************************************************
- * Name: cpufreq_manager_init
+ * Name: devfreq_manager_init
  *
  * Description:
  *   init qlearning
  *
  * Input Parameters:
- *   policy - cpufreq policy
+ *   dev - devfreq device
  *
  * Returned Value:
  *   zero on success, a negated errno value on failure.
  *
  ****************************************************************************/
 
-int qlearning_manager_init(FAR struct cpufreq_policy *policy)
+int qlearning_manager_init(FAR struct devfreq_s *dev)
 {
   FAR struct qlearning_manager_s *manager;
 
-  manager               = &g_qlearning_manager;
-  policy->governor_data = manager;
-  manager->cb.notify    = qlearning_manager_callback;
-  manager->wait         = TICK_PER_MSEC *
-                          CONFIG_CPUFREQ_QLEARNING_INIT_WAIT_TIME;
-
-  cpufreq_driver_target(policy, CONFIG_CPUFREQ_QLEARNING_INIT_FREQ,
-                        CPUFREQ_RELATION_H);
+  manager              = &g_qlearning_manager;
+  dev->governor_data   = manager;
+  manager->cb.notify   = qlearning_manager_callback;
+  manager->wait        = TICK_PER_MSEC *
+                         CONFIG_DEVFREQ_QLEARNING_INIT_WAIT_TIME;
+  manager->target_freq = CONFIG_DEVFREQ_QLEARNING_INIT_FREQ;
+  manager->req         = devfreq_qos_add_request(dev, dev->min, dev->max);
 
   return pm_domain_register(PM_IDLE_DOMAIN, &manager->cb);
 }
 
 /****************************************************************************
- * Name: cpufreq_manager_exit
+ * Name: devfreq_manager_exit
  *
  * Description:
  *   exit qlearning
  *
  * Input Parameters:
- *   policy - cpufreq policy
+ *   dev - devfreq device
  *
  * Returned Value:
  *   zero on success, a negated errno value on failure.
  *
  ****************************************************************************/
 
-int qlearning_manager_exit(FAR struct cpufreq_policy *policy)
+int qlearning_manager_exit(FAR struct devfreq_s *dev)
 {
-  FAR struct qlearning_manager_s *manager = policy->governor_data;
+  FAR struct qlearning_manager_s *manager = dev->governor_data;
+  devfreq_qos_remove_request(dev, manager->req);
   return pm_domain_unregister(PM_IDLE_DOMAIN, &manager->cb);
 }
 
 /****************************************************************************
- * Name: cpufreq_manager_start
+ * Name: devfreq_manager_start
  *
  * Description:
  *   start qlearning
  *
  * Input Parameters:
- *   policy - cpufreq policy
+ *   dev - devfreq device
  *
  * Returned Value:
  *   zero on success, a negated errno value on failure.
  *
  ****************************************************************************/
 
-int qlearning_manager_start(FAR struct cpufreq_policy *policy)
+int qlearning_manager_start(FAR struct devfreq_s *dev)
 {
-  FAR struct qlearning_manager_s *manager = policy->governor_data;
+  FAR struct qlearning_manager_s *manager = dev->governor_data;
 
   if (!(manager->flags & QLEARNING_FLAG_INIT))
     {
@@ -265,7 +267,7 @@ int qlearning_manager_start(FAR struct cpufreq_policy *policy)
     }
 
   work_queue(LPWORK, &manager->qlearning_manager_work,
-             (worker_t)qlearning_manager_worker, policy,
+             (worker_t)qlearning_manager_worker, dev,
              manager->wait);
   manager->flags |= QLEARNING_FLAG_RUNNING;
 
@@ -273,22 +275,22 @@ int qlearning_manager_start(FAR struct cpufreq_policy *policy)
 }
 
 /****************************************************************************
- * Name: cpufreq_manager_end
+ * Name: devfreq_manager_end
  *
  * Description:
  *   stop qlearning
  *
  * Input Parameters:
- *   policy - cpufreq policy
+ *   dev - devfreq device
  *
  * Returned Value:
  *   zero on success, a negated errno value on failure.
  *
  ****************************************************************************/
 
-int qlearning_manager_end(FAR struct cpufreq_policy *policy)
+int qlearning_manager_end(FAR struct devfreq_s *dev)
 {
-  FAR struct qlearning_manager_s *manager = policy->governor_data;
+  FAR struct qlearning_manager_s *manager = dev->governor_data;
 
   if (!(manager->flags & QLEARNING_FLAG_INIT))
     {
@@ -307,7 +309,39 @@ int qlearning_manager_end(FAR struct cpufreq_policy *policy)
 }
 
 /****************************************************************************
- * Name: cpufreq_qlearning_set
+ * Name: qlearning_manager_limit
+ *
+ * Description:
+ *   get target frequency
+ *
+ * Input Parameters:
+ *   dev - devfreq device
+ *
+ * Returned Value:
+ *   target frequency
+ *
+ ****************************************************************************/
+
+uint32_t qlearning_manager_limit(FAR struct devfreq_s *dev)
+{
+  FAR struct qlearning_manager_s *manager = dev->governor_data;
+  uint32_t freq = manager->target_freq;
+
+  if (freq > dev->max)
+    {
+      freq = dev->max;
+    }
+
+  if (freq < dev->min)
+    {
+      freq = dev->min;
+    }
+
+  return freq;
+}
+
+/****************************************************************************
+ * Name: devfreq_qlearning_set
  *
  * Description:
  *   provide lowerhalf ops and mmap pointer of qlearning params file, please
@@ -322,7 +356,7 @@ int qlearning_manager_end(FAR struct cpufreq_policy *policy)
  *
  ****************************************************************************/
 
-int cpufreq_qlearning_set(FAR struct qlearning_lowerhalf_s *lh,
+int devfreq_qlearning_set(FAR struct qlearning_lowerhalf_s *lh,
                           FAR void *priv)
 {
   g_qlearning_manager.lh = lh;
