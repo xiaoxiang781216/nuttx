@@ -119,37 +119,40 @@ static void task_init_stream(FAR struct streamlist *list)
 int task_init_info(FAR struct task_group_s *group)
 {
   FAR struct task_info_s *info;
+  int ret = OK;
 
   /* Allocate task info for group */
 
   info = group_zalloc(group, sizeof(struct task_info_s));
   if (info == NULL)
     {
-      return -ENOMEM;
+      ret = -ENOMEM;
     }
+  else
+    {
+      /* Initialize user space mutex */
 
-  /* Initialize user space mutex */
-
-  nxmutex_init(&info->ta_lock);
-  group->tg_info = info;
+      nxmutex_init(&info->ta_lock);
+      group->tg_info = info;
 
 #ifdef CONFIG_PTHREAD_ATFORK
-  list_initialize(&info->ta_atfork);
+      list_initialize(&info->ta_atfork);
 #endif
 
 #ifdef CONFIG_FILE_STREAM
-  /* Initialize file streams for the task group */
+      /* Initialize file streams for the task group */
 
-  task_init_stream(&info->ta_streamlist);
+      task_init_stream(&info->ta_streamlist);
 #endif
 
 #ifdef CONFIG_MM_TASK_HEAP
-  info->ta_heap = group->tg_heap;
+      info->ta_heap = group->tg_heap;
 #endif
 
 #ifdef CONFIG_SYSLOG
-  info->ta_syslog_mask = g_syslog_mask;
+      info->ta_syslog_mask = g_syslog_mask;
 #endif
+    }
 
-  return OK;
+  return ret;
 }

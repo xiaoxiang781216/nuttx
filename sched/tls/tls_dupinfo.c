@@ -52,34 +52,37 @@
 int tls_dup_info(FAR struct tcb_s *dst, FAR struct tcb_s *src)
 {
   FAR struct tls_info_s *info;
+  int ret = OK;
 
   /* Allocate thread local storage */
 
   info = up_stack_frame(dst, tls_info_size());
   if (info == NULL)
     {
-      return -ENOMEM;
+      ret = -ENOMEM;
+    }
+  else
+    {
+      DEBUGASSERT(info == dst->stack_alloc_ptr);
+
+      /* Copy thread local storage */
+
+      memcpy(info, src->stack_alloc_ptr, tls_info_size());
+
+      /* Attach per-task info in group to TLS */
+
+      info->tl_task = dst->group->tg_info;
+
+      /* Initialize the starting address of argv to NULL to prevent
+       * it from being misused.
+       */
+
+      info->tl_argv = NULL;
+
+      /* Thread ID */
+
+      info->tl_tid = dst->pid;
     }
 
-  DEBUGASSERT(info == dst->stack_alloc_ptr);
-
-  /* Copy thread local storage */
-
-  memcpy(info, src->stack_alloc_ptr, tls_info_size());
-
-  /* Attach per-task info in group to TLS */
-
-  info->tl_task = dst->group->tg_info;
-
-  /* Initialize the starting address of argv to NULL to prevent
-   * it from being misused.
-   */
-
-  info->tl_argv = NULL;
-
-  /* Thread ID */
-
-  info->tl_tid = dst->pid;
-
-  return OK;
+  return ret;
 }
