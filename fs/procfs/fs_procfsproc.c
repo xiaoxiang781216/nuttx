@@ -733,7 +733,7 @@ static ssize_t proc_loadavg(FAR struct proc_file_s *procfile,
     {
       uint32_t tmp;
 
-      tmp      = (1000 * cpuload.active) / cpuload.total;
+      tmp      = (1000ull * cpuload.active) / cpuload.total;
       intpart  = tmp / 10;
       fracpart = tmp - 10 * intpart;
     }
