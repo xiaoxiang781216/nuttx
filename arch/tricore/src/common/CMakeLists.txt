@@ -75,6 +75,10 @@ if(CONFIG_ARCH_ADDRENV)
   list(APPEND SRCS tricore_addrenv.c)
 endif()
 
+if(CONFIG_ARCH_HAVE_DEBUG)
+  list(APPEND SRCS tricore_hwdebug.c)
+endif()
+
 set(IFXFLAGS -DIFX_CFG_EXTEND_TRAP_HOOKS -DIFX_USE_SW_MANAGED_INT)
 
 target_sources(arch PRIVATE ${SRCS})

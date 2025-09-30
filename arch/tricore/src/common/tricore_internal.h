@@ -221,6 +221,10 @@ void tricore_userspace(void);
 void tricore_mpuinit(void);
 #endif
 
+#ifdef CONFIG_ARCH_HAVE_DEBUG
+int tricore_init_dbgmonitor(void);
+#endif
+
 /* System Timer *************************************************************/
 
 struct oneshot_lowerhalf_s *
