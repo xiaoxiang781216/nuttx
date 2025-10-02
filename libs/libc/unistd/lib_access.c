@@ -92,13 +92,11 @@ int access(FAR const char *path, int amode)
       return 0;
     }
 
-  if (amode & W_OK)
+  if (((amode & W_OK) && !(s.st_mode & S_IWUSR)) ||
+      ((amode & R_OK) && !(s.st_mode & S_IRUSR)) ||
+      ((amode & X_OK) && !(s.st_mode & S_IXUSR)))
     {
-      if (s.st_mode & S_IWUSR)
-        {
-          return 0;
-        }
-
+      set_errno(EACCES);
       return -1;
     }
 
