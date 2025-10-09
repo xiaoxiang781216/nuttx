@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/modlib/gnu-elf.ld.in
+ * libs/libc/elf/gnu-elf.ld.in
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -33,7 +33,7 @@
 #  define DATA
 #endif
 
-#define SECTIONS_ALIGN CONFIG_MODLIB_SECTION_ALIGNMENT
+#define SECTIONS_ALIGN CONFIG_LIBC_ELF_SECTION_ALIGNMENT
 
 SECTIONS
 {

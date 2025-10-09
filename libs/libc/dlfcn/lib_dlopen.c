@@ -31,7 +31,7 @@
 #include <assert.h>
 
 #include <nuttx/envpath.h>
-#include <nuttx/lib/modlib.h>
+#include <nuttx/lib/elf.h>
 #include <nuttx/lib/lib.h>
 
 /****************************************************************************
@@ -49,7 +49,7 @@
  *   Verify that the file is an ELF module binary and, if so, load the
  *   shared library into user memory and initialize it for use.
  *
- *   NOTE: modlib_setsymtab() had to have been called by application logic
+ *   NOTE: libelf_setsymtab() had to have been called by application logic
  *   logic prior to calling this.  Otherwise, dlinsert will be unable to
  *   resolve symbols in the OS module.
  *
@@ -98,7 +98,7 @@ static inline FAR void *dlinsert(FAR const char *filename)
    * name.
    */
 
-  handle = modlib_insert(filename, basename(name));
+  handle = libelf_insert(filename, basename(name));
   lib_free(name);
   return handle;
 }

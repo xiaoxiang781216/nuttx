@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/modlib/modlib_load.c
+ * libs/libc/elf/elf_load.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -40,17 +40,17 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/elf.h>
-#include <nuttx/lib/modlib.h>
+#include <nuttx/lib/elf.h>
 #include <nuttx/fs/ioctl.h>
 
 #include "libc.h"
-#include "modlib/modlib.h"
+#include "elf/elf.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define ELF_ALIGN_MASK   ((1 << CONFIG_MODLIB_ALIGN_LOG2) - 1)
+#define ELF_ALIGN_MASK   ((1 << CONFIG_LIBC_ELF_ALIGN_LOG2) - 1)
 #define ELF_ALIGNUP(a)   (((unsigned long)(a) + ELF_ALIGN_MASK) & ~ELF_ALIGN_MASK)
 #define ELF_ALIGNDOWN(a) ((unsigned long)(a) & ~ELF_ALIGN_MASK)
 
@@ -70,7 +70,7 @@
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
-static int modlib_section_alloc(FAR struct mod_loadinfo_s *loadinfo,
+static int libelf_section_alloc(FAR struct mod_loadinfo_s *loadinfo,
                                 FAR Elf_Shdr *shdr, uint8_t idx)
 {
   if (loadinfo->ehdr.e_type == ET_DYN)
@@ -90,7 +90,7 @@ static int modlib_section_alloc(FAR struct mod_loadinfo_s *loadinfo,
         }
     }
 
-  modlib_sectname(loadinfo, shdr);
+  libelf_sectname(loadinfo, shdr);
   if ((shdr->sh_flags & SHF_WRITE) != 0)
     {
 #  ifdef CONFIG_ARCH_USE_DATA_HEAP
@@ -142,14 +142,14 @@ static int modlib_section_alloc(FAR struct mod_loadinfo_s *loadinfo,
 #endif
 
 /****************************************************************************
- * Name: modlib_elfsize
+ * Name: libelf_elfsize
  *
  * Description:
  *   Calculate total memory allocation for the ELF file.
  *
  ****************************************************************************/
 
-static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo, bool alloc)
+static void libelf_elfsize(FAR struct mod_loadinfo_s *loadinfo, bool alloc)
 {
   size_t textsize = 0;
   size_t datasize = 0;
@@ -207,7 +207,7 @@ static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo, bool alloc)
                   )
                 {
 #ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
-                  if (alloc && modlib_section_alloc(loadinfo, shdr, i) >= 0)
+                  if (alloc && libelf_section_alloc(loadinfo, shdr, i) >= 0)
                     {
                       continue;
                     }
@@ -223,7 +223,7 @@ static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo, bool alloc)
               else
                 {
 #ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
-                  if (alloc && modlib_section_alloc(loadinfo, shdr, i) >= 0)
+                  if (alloc && libelf_section_alloc(loadinfo, shdr, i) >= 0)
                     {
                       continue;
                     }
@@ -247,7 +247,7 @@ static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo, bool alloc)
 }
 
 /****************************************************************************
- * Name: modlib_vma2lma
+ * Name: libelf_vma2lma
  *
  * Description:
  *   Convert section`s VMA to LMA according to PhysAddr(p_paddr) of
@@ -259,7 +259,7 @@ static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo, bool alloc)
  *
  ****************************************************************************/
 
-static int modlib_vma2lma(FAR struct mod_loadinfo_s *loadinfo,
+static int libelf_vma2lma(FAR struct mod_loadinfo_s *loadinfo,
                           FAR Elf_Shdr *shdr, FAR Elf_Addr *lma)
 {
   int i;
@@ -282,7 +282,7 @@ static int modlib_vma2lma(FAR struct mod_loadinfo_s *loadinfo,
 }
 
 /****************************************************************************
- * Name: modlib_set_emptysect_vma
+ * Name: libelf_set_emptysect_vma
  *
  * Description:
  *   Set VMA for empty and unallocated sections, some relocations might
@@ -293,8 +293,8 @@ static int modlib_vma2lma(FAR struct mod_loadinfo_s *loadinfo,
  *
  ****************************************************************************/
 
-static void modlib_set_emptysect_vma(FAR struct mod_loadinfo_s *loadinfo,
-                                    int section)
+static void libelf_set_emptysect_vma(FAR struct mod_loadinfo_s *loadinfo,
+                                     int section)
 {
   FAR Elf_Shdr *shdr = &loadinfo->shdr[section];
 
@@ -315,7 +315,7 @@ static void modlib_set_emptysect_vma(FAR struct mod_loadinfo_s *loadinfo,
 }
 
 /****************************************************************************
- * Name: modlib_loadfile
+ * Name: libelf_loadfile
  *
  * Description:
  *   Read the section data into memory. Section addresses in the shdr[] are
@@ -327,7 +327,7 @@ static void modlib_set_emptysect_vma(FAR struct mod_loadinfo_s *loadinfo,
  *
  ****************************************************************************/
 
-static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo,
+static inline int libelf_loadfile(FAR struct mod_loadinfo_s *loadinfo,
                                   bool is_vma)
 {
   FAR uint8_t *text = (FAR uint8_t *)loadinfo->textalloc;
@@ -350,14 +350,14 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo,
             {
               if (phdr->p_flags & PF_X)
                 {
-                  ret = modlib_read(loadinfo, buffer_data_address(text),
+                  ret = libelf_read(loadinfo, buffer_data_address(text),
                                     phdr->p_filesz,
                                     phdr->p_offset);
                 }
               else
                 {
                   size_t bsssize = phdr->p_memsz - phdr->p_filesz;
-                  ret = modlib_read(loadinfo, data, phdr->p_filesz,
+                  ret = libelf_read(loadinfo, data, phdr->p_filesz,
                                     phdr->p_offset);
                   memset(data + phdr->p_filesz, 0, bsssize);
                 }
@@ -385,7 +385,7 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo,
             {
               /* Set the VMA regardless */
 
-              modlib_set_emptysect_vma(loadinfo, i);
+              libelf_set_emptysect_vma(loadinfo, i);
               continue;
             }
 
@@ -440,7 +440,7 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo,
             {
               if (is_vma)
                 {
-                  ret = modlib_vma2lma(loadinfo, shdr, (FAR Elf_Addr *)pptr);
+                  ret = libelf_vma2lma(loadinfo, shdr, (FAR Elf_Addr *)pptr);
                   if (ret < 0)
                     {
                       berr("ERROR: Failed to convert addr %d: %d\n", i, ret);
@@ -450,7 +450,7 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo,
 
               /* Read the section data from sh_offset to the memory region */
 
-              ret = modlib_read(loadinfo, buffer_data_address(*pptr),
+              ret = libelf_read(loadinfo, buffer_data_address(*pptr),
                                 shdr->sh_size, shdr->sh_offset);
               if (ret < 0)
                 {
@@ -532,7 +532,7 @@ skipload:
  ****************************************************************************/
 
 /****************************************************************************
- * Name: modlib_load
+ * Name: libelf_load_vma
  *
  * Description:
  *   Loads the binary into memory, allocating memory, performing relocations
@@ -544,7 +544,7 @@ skipload:
  *
  ****************************************************************************/
 
-int modlib_load_vma(FAR struct mod_loadinfo_s *loadinfo, bool is_vma)
+int libelf_load_vma(FAR struct mod_loadinfo_s *loadinfo, bool is_vma)
 {
   int ret;
 
@@ -553,14 +553,14 @@ int modlib_load_vma(FAR struct mod_loadinfo_s *loadinfo, bool is_vma)
 
   /* Load section and program headers into memory */
 
-  ret = modlib_loadhdrs(loadinfo);
+  ret = libelf_loadhdrs(loadinfo);
   if (ret < 0)
     {
-      berr("ERROR: modlib_loadhdrs failed: %d\n", ret);
+      berr("ERROR: libelf_loadhdrs failed: %d\n", ret);
       goto errout_with_buffers;
     }
 
-  loadinfo->gotindex = modlib_findsection(loadinfo, ".got");
+  loadinfo->gotindex = libelf_findsection(loadinfo, ".got");
   if (loadinfo->gotindex >= 0)
     {
       binfo("GOT section found! index %d\n", loadinfo->gotindex);
@@ -573,7 +573,7 @@ int modlib_load_vma(FAR struct mod_loadinfo_s *loadinfo, bool is_vma)
 
   /* Determine total size to allocate */
 
-  modlib_elfsize(loadinfo, true);
+  libelf_elfsize(loadinfo, true);
 
   /* Allocate (and zero) memory for the ELF file. */
 
@@ -660,18 +660,18 @@ int modlib_load_vma(FAR struct mod_loadinfo_s *loadinfo, bool is_vma)
 
   /* Load ELF section data into memory */
 
-  ret = modlib_loadfile(loadinfo, is_vma);
+  ret = libelf_loadfile(loadinfo, is_vma);
   if (ret < 0)
     {
-      berr("ERROR: modlib_loadfile failed: %d\n", ret);
+      berr("ERROR: libelf_loadfile failed: %d\n", ret);
       goto errout_with_buffers;
     }
 
-#ifdef CONFIG_MODLIB_EXIDX_SECTNAME
-  ret = modlib_findsection(loadinfo, CONFIG_MODLIB_EXIDX_SECTNAME);
+#ifdef CONFIG_LIBC_ELF_EXIDX_SECTNAME
+  ret = libelf_findsection(loadinfo, CONFIG_LIBC_ELF_EXIDX_SECTNAME);
   if (ret < 0)
     {
-      binfo("modlib_findsection: Exception Index section not found: %d\n",
+      binfo("libelf_findsection: Exception Index section not found: %d\n",
             ret);
     }
   else
@@ -686,12 +686,12 @@ int modlib_load_vma(FAR struct mod_loadinfo_s *loadinfo, bool is_vma)
   /* Error exits */
 
 errout_with_buffers:
-  modlib_unload(loadinfo);
+  libelf_unload(loadinfo);
   return ret;
 }
 
 /****************************************************************************
- * Name: modlib_load_with_addrenv
+ * Name: libelf_load_with_addrenv
  *
  * Description:
  *   Loads the binary into memory, use the address environment to load the
@@ -704,7 +704,7 @@ errout_with_buffers:
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_ADDRENV
-int modlib_load_with_addrenv(FAR struct mod_loadinfo_s *loadinfo,
+int libelf_load_with_addrenv(FAR struct mod_loadinfo_s *loadinfo,
                              bool is_vma)
 {
   int ret;
@@ -714,14 +714,14 @@ int modlib_load_with_addrenv(FAR struct mod_loadinfo_s *loadinfo,
 
   /* Load section and program headers into memory */
 
-  ret = modlib_loadhdrs(loadinfo);
+  ret = libelf_loadhdrs(loadinfo);
   if (ret < 0)
     {
-      berr("ERROR: modlib_loadhdrs failed: %d\n", ret);
+      berr("ERROR: libelf_loadhdrs failed: %d\n", ret);
       goto errout_with_buffers;
     }
 
-  loadinfo->gotindex = modlib_findsection(loadinfo, ".got");
+  loadinfo->gotindex = libelf_findsection(loadinfo, ".got");
   if (loadinfo->gotindex >= 0)
     {
       binfo("GOT section found! index %d\n", loadinfo->gotindex);
@@ -734,9 +734,9 @@ int modlib_load_with_addrenv(FAR struct mod_loadinfo_s *loadinfo,
 
   /* Determine total size to allocate */
 
-  modlib_elfsize(loadinfo, false);
+  libelf_elfsize(loadinfo, false);
 
-  ret = modlib_addrenv_alloc(loadinfo, loadinfo->textsize,
+  ret = libelf_addrenv_alloc(loadinfo, loadinfo->textsize,
                              loadinfo->datasize);
   if (ret < 0)
     {
@@ -749,36 +749,36 @@ int modlib_load_with_addrenv(FAR struct mod_loadinfo_s *loadinfo,
    * temporarily instantiate that address space.
    */
 
-  ret = modlib_addrenv_select(loadinfo);
+  ret = libelf_addrenv_select(loadinfo);
   if (ret < 0)
     {
       berr("ERROR: elf_addrenv_select() failed: %d\n", ret);
       goto errout_with_buffers;
     }
 
-  ret = modlib_loadfile(loadinfo, is_vma);
+  ret = libelf_loadfile(loadinfo, is_vma);
   if (ret < 0)
     {
-      berr("ERROR: modlib_loadfile failed: %d\n", ret);
+      berr("ERROR: libelf_loadfile failed: %d\n", ret);
       goto errout_with_addrenv;
     }
 
   /* Restore the original address environment */
 
-  ret = modlib_addrenv_restore(loadinfo);
+  ret = libelf_addrenv_restore(loadinfo);
   if (ret < 0)
     {
-      berr("ERROR: modlib_addrenv_restore() failed: %d\n", ret);
+      berr("ERROR: libelf_addrenv_restore() failed: %d\n", ret);
       goto errout_with_buffers;
     }
 
   return OK;
 
 errout_with_addrenv:
-  modlib_addrenv_restore(loadinfo);
+  libelf_addrenv_restore(loadinfo);
 
 errout_with_buffers:
-  modlib_unload(loadinfo);
+  libelf_unload(loadinfo);
   return ret;
 }
 #endif

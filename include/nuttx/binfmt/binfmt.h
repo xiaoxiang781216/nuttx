@@ -33,7 +33,7 @@
 #include <sys/types.h>
 
 #include <nuttx/sched.h>
-#include <nuttx/lib/modlib.h>
+#include <nuttx/lib/elf.h>
 
 /****************************************************************************
  * Pre-processor Definitions

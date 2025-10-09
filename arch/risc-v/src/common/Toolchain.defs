@@ -448,7 +448,7 @@ endif
 # Loadable module definitions
 
 CMODULEFLAGS = $(CFLAGS) -fvisibility=hidden
-LDMODULEFLAGS = -r -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/modlib/gnu-elf.ld)
+LDMODULEFLAGS = -r -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/elf/gnu-elf.ld)
 
 ifeq ($(CONFIG_ARCH_RV32),y)
   LDMODULEFLAGS += --oformat elf32-littleriscv
@@ -475,7 +475,7 @@ else
   LDELFFLAGS += --oformat elf64-littleriscv
 endif
 
-LDELFFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/modlib/gnu-elf.ld)
+LDELFFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/elf/gnu-elf.ld)
 
 ifneq ($(CONFIG_BINFMT_ELF_RELOCATABLE)$(CONFIG_LTO_FULL),)
   # Lto not support in relocatable elf
