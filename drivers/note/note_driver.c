@@ -437,7 +437,7 @@ static inline int note_isenabled_irq(FAR struct note_driver_s *driver,
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
 static inline int note_isenabled_dump(FAR struct note_driver_s *driver,
-                                      uint32_t tag, uint8_t level, int type)
+                                      uint8_t tag, uint8_t level, int type)
 {
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   if (!note_isenabled_type(driver, type))
@@ -1376,7 +1376,7 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
+size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t tag,
                             uint8_t level, uintptr_t ip, uint8_t event,
                             FAR const void *buf, size_t len)
 {
@@ -1419,7 +1419,7 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
   return length - SIZEOF_NOTE_EVENT(0);
 }
 
-void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint32_t tag,
+void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
                             uint8_t level, uintptr_t ip, uint64_t type,
                             FAR const char *fmt, FAR va_list *va)
 {
@@ -1551,7 +1551,7 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint32_t tag,
   note_add(driver, note, length, false);
 }
 
-void note_driver_printf_ip(FAR struct note_driver_s *driver, uint32_t tag,
+void note_driver_printf_ip(FAR struct note_driver_s *driver, uint8_t tag,
                            uint8_t level, uintptr_t ip, uint64_t type,
                            FAR const char *fmt, ...)
 {
@@ -1561,7 +1561,7 @@ void note_driver_printf_ip(FAR struct note_driver_s *driver, uint32_t tag,
   va_end(va);
 }
 
-void sched_note_event_ip(uint32_t tag, uint8_t level, uintptr_t ip,
+void sched_note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip,
                          uint8_t event, FAR const void *buf,
                          size_t len)
 {
@@ -1578,7 +1578,7 @@ void sched_note_event_ip(uint32_t tag, uint8_t level, uintptr_t ip,
     }
 }
 
-void sched_note_vprintf_ip(uint32_t tag, uint8_t level, uintptr_t ip,
+void sched_note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
                            FAR const char *fmt, uint64_t type,
                            FAR va_list *va)
 {

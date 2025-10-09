@@ -43,7 +43,7 @@ static DEFINE_RATELIMIT_STATE(g_ratelimit,
  * Public Functions
  ****************************************************************************/
 
-void sched_note_printf_ip(uint32_t tag, uint8_t level, uintptr_t ip,
+void sched_note_printf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
                           FAR const char *fmt,
                           uint64_t type, ...)
 {
@@ -53,7 +53,7 @@ void sched_note_printf_ip(uint32_t tag, uint8_t level, uintptr_t ip,
   va_end(va);
 }
 
-void sched_note_event_ip_ratelimit(uint32_t tag, uint8_t level,
+void sched_note_event_ip_ratelimit(uint8_t tag, uint8_t level,
                                    uintptr_t ip, uint8_t event,
                                    FAR const void *buf,
                                    size_t len)
@@ -64,7 +64,7 @@ void sched_note_event_ip_ratelimit(uint32_t tag, uint8_t level,
     }
 }
 
-void sched_note_vprintf_ip_ratelimit(uint32_t tag, uint8_t level,
+void sched_note_vprintf_ip_ratelimit(uint8_t tag, uint8_t level,
                                      uintptr_t ip, FAR const char *fmt,
                                      uint64_t type, va_list *va)
 {
@@ -74,7 +74,7 @@ void sched_note_vprintf_ip_ratelimit(uint32_t tag, uint8_t level,
     }
 }
 
-void sched_note_printf_ip_ratelimit(uint32_t tag, uint8_t level,
+void sched_note_printf_ip_ratelimit(uint8_t tag, uint8_t level,
                                     uintptr_t ip, FAR const char *fmt,
                                     uint64_t type, ...)
 {

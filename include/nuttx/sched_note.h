@@ -344,25 +344,25 @@ struct note_printf_s
   uintptr_t npt_ip;             /* Instruction pointer called from */
   FAR const char *npt_fmt;      /* Printf format string */
   uint64_t npt_type;            /* Printf parameter type */
-  uint32_t npt_tag;             /* Printf tag */
-  uint32_t npt_level;           /* Event level */
-  char npt_data[4];             /* Print arguments */
+  uint8_t npt_tag;              /* Printf tag */
+  uint8_t npt_level;            /* Event level */
+  char npt_data[2];             /* Print arguments */
 };
 
 #define SIZEOF_NOTE_PRINTF(n) (sizeof(struct note_printf_s) + \
-                              ((n) - 4) * sizeof(uint8_t))
+                              ((n) - 2) * sizeof(uint8_t))
 
 struct note_event_s
 {
   struct note_common_s nev_cmn;      /* Common note parameters */
   uintptr_t nev_ip;                  /* Instruction pointer called from */
-  uint32_t nev_tag;                  /* Event tag */
-  uint32_t nev_level;                /* Event level */
-  uint8_t nev_data[4];               /* Event data */
+  uint8_t nev_tag;                   /* Event tag */
+  uint8_t nev_level;                 /* Event level */
+  uint8_t nev_data[2];               /* Event data */
 };
 
 #define SIZEOF_NOTE_EVENT(n) (sizeof(struct note_event_s) + \
-                             ((n - 4)) * sizeof(uint8_t))
+                             ((n - 2)) * sizeof(uint8_t))
 
 struct note_counter_s
 {
@@ -480,24 +480,24 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_DUMP) && defined(CONFIG_DRIVERS_NOTE)
-void sched_note_event_ip(uint32_t tag, uint8_t level, uintptr_t ip,
+void sched_note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip,
                          uint8_t event, FAR const void *buf,
                          size_t len);
-void sched_note_vprintf_ip(uint32_t tag, uint8_t level, uintptr_t ip,
+void sched_note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
                            FAR const char *fmt, uint64_t type,
                            va_list *va) printf_like(4, 0);
-void sched_note_printf_ip(uint32_t tag, uint8_t level, uintptr_t ip,
+void sched_note_printf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
                           FAR const char *fmt, uint64_t type, ...)
                           printf_like(4, 6);
 
-void sched_note_event_ip_ratelimit(uint32_t tag, uint8_t level, uintptr_t ip,
+void sched_note_event_ip_ratelimit(uint8_t tag, uint8_t level, uintptr_t ip,
                                    uint8_t event, FAR const void *buf,
                                    size_t len);
-void sched_note_vprintf_ip_ratelimit(uint32_t tag, uint8_t level,
+void sched_note_vprintf_ip_ratelimit(uint8_t tag, uint8_t level,
                                      uintptr_t ip, FAR const char *fmt,
                                      uint64_t type, va_list *va)
                                      printf_like(4, 0);
-void sched_note_printf_ip_ratelimit(uint32_t tag, uint8_t level,
+void sched_note_printf_ip_ratelimit(uint8_t tag, uint8_t level,
                                     uintptr_t ip, FAR const char *fmt,
                                     uint64_t type, ...) printf_like(4, 6);
 

@@ -338,13 +338,13 @@ class ParseBinaryLogTool:
         elif res["nc_type"] == 30:  # case: NOTE_DUMP_PRINTF
             one.add(self.symbol_tables.typeinfo["uintptr_t"], "npt_ip")
             one.add(self.symbol_tables.typeinfo["uintptr_t"], "npt_fmt")
-            one.add("uint32", "npt_tag")
-            one.add("uint32", "npt_type")
+            one.add("uint64", "npt_type")
+            one.add("uint8", "npt_tag")
             if res["nc_length"] - one.size() > 0:
                 one.add("uint8", "npt_data", (res["nc_length"] - one.size()))
         elif 31 <= res["nc_type"] <= 36:  # case: NOTE_DUMP_BEGIN ~ NOTE_DUMP_THREADTIME
             one.add(self.symbol_tables.typeinfo["uintptr_t"], "nev_ip")
-            one.add("uint32", "nev_tag")
+            one.add("uint8", "nev_tag")
             if res["nc_length"] - one.size() > 0:
                 one.add("uint8", "nev_data", (res["nc_length"] - one.size()))
         else:
@@ -658,8 +658,8 @@ class TraceDecoder(SymbolTables):
         struct_def.add(self.note_common_define(), "npt_cmn")
         struct_def.add(self.typeinfo["size_t"], "npt_ip")
         struct_def.add(self.typeinfo["size_t"], "npt_fmt")
-        struct_def.add("uint32", "npt_tag")
-        struct_def.add("uint32", "npt_type")
+        struct_def.add("uint64", "npt_type")
+        struct_def.add("uint8", "npt_tag")
         if length > 0:
             struct_def.add("uint8", "npt_data", length=length)
         return struct_def

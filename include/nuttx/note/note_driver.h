@@ -470,16 +470,16 @@ int note_initialize(void);
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-void note_driver_printf_ip(FAR struct note_driver_s *driver, uint32_t tag,
+void note_driver_printf_ip(FAR struct note_driver_s *driver, uint8_t tag,
                            uint8_t level, uintptr_t ip, uint64_t type,
                            FAR const char *fmt, ...) printf_like(6, 7);
 
-void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint32_t tag,
+void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
                             uint8_t level, uintptr_t ip, uint64_t type,
                             FAR const char *fmt,
                             va_list *va) printf_like(6, 0);
 
-size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
+size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t tag,
                             uint8_t level, uintptr_t ip, uint8_t event,
                             FAR const void *buf, size_t len);
 #else
