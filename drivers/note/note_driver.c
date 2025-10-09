@@ -1362,8 +1362,8 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
         {
           formatted = true;
           note_common(tcb, &note.nhp_cmn, sizeof(note), event);
-          note.heap = heap;
-          note.mem = mem;
+          note.heap = (uintptr_t)heap;
+          note.mem = (uintptr_t)mem;
           note.size = size;
           note.used = used;
         }

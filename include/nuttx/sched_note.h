@@ -290,18 +290,18 @@ struct note_spinlock_s
 struct note_syscall_enter_s
 {
   struct note_common_s nsc_cmn;         /* Common note parameters */
-  uint8_t nsc_nr;                       /* System call number */
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER_SYSCALL_ARGS
-  uint8_t nsc_argc;                     /* Number of system call arguments */
   uintptr_t nsc_args[MAX_SYSCALL_ARGS]; /* System call arguments */
+  uint8_t nsc_argc;                     /* Number of system call arguments */
 #endif
+  uint8_t nsc_nr;                       /* System call number */
 };
 
 struct note_syscall_leave_s
 {
   struct note_common_s nsc_cmn;         /* Common note parameters */
-  uint8_t nsc_nr;                       /* System call number */
   uintptr_t nsc_result;                 /* Result of the system call */
+  uint8_t nsc_nr;                       /* System call number */
 };
 
 /* This is the specific form of the NOTE_IRQ_ENTER/LEAVE notes */
@@ -323,8 +323,8 @@ struct note_wdog_s
 struct note_heap_s
 {
   struct note_common_s nhp_cmn;      /* Common note parameters */
-  FAR void *heap;
-  FAR void *mem;
+  uintptr_t heap;
+  uintptr_t mem;
   size_t size;
   size_t used;
 };
