@@ -117,7 +117,9 @@ const struct userspace_s userspace locate_data(".userspace") =
 
   /* Signal handler trampoline */
 
+#ifndef CONFIG_DISABLE_SIGNALS
   .signal_handler   = (void *)sig_trampoline,
+#endif
 
   /* User-space work queue support (declared in include/nuttx/wqueue.h) */
 
