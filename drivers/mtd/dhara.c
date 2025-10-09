@@ -448,7 +448,6 @@ static int dhara_geometry(FAR struct inode *inode,
       geometry->geo_sectorsize   = dev->geo.blocksize;
 
       strcpy(geometry->geo_model, dev->geo.model);
-      nxmutex_unlock(&dev->lock);
       return 0;
     }
 

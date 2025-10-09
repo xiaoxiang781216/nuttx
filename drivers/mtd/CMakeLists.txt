@@ -182,8 +182,8 @@ if(CONFIG_MTD)
       FetchContent_Populate(dhara)
     endif()
 
-    list(APPEND SRCS dhara.c mtd/dhara/dhara/map.c mtd/dhara/dhara/error.c
-         mtd/dhara/dhara/journal.c)
+    list(APPEND SRCS dhara.c dhara/dhara/map.c dhara/dhara/error.c
+         dhara/dhara/journal.c)
     target_include_directories(drivers PRIVATE ${CMAKE_CURRENT_LIST_DIR}/dhara)
   endif()
 
