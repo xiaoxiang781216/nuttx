@@ -44,7 +44,7 @@
 #include <nuttx/compiler.h>
 
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/mutex.h>
+#include <nuttx/mutex_type.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/queue.h>
 

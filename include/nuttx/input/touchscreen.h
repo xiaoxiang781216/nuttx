@@ -39,7 +39,8 @@
 #include <nuttx/config.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/circbuf.h>
-#include <nuttx/semaphore.h>
+#include <nuttx/semaphore_type.h>
+#include <nuttx/clock.h>
 #include <time.h>
 #include <inttypes.h>
 #include <fixedmath.h>
