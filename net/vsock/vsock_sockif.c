@@ -314,16 +314,17 @@ static inline_function void vsock_tx_unlock(FAR struct vsock_conn_s *conn)
  * Name: vsock_breaklock/vsock_restorelock
  ****************************************************************************/
 
-static void vsock_breaklock(FAR struct vsock_conn_s *conn,
-                            FAR unsigned int *rxcount,
-                            FAR unsigned int *txcount)
+static inline_function void vsock_breaklock(FAR struct vsock_conn_s *conn,
+                                            FAR unsigned int *rxcount,
+                                            FAR unsigned int *txcount)
 {
   nxrmutex_breaklock(&conn->tx_lock, txcount);
   nxrmutex_breaklock(&conn->rx_lock, rxcount);
 }
 
-static void vsock_restorelock(FAR struct vsock_conn_s *conn,
-                              unsigned int rxcount, unsigned int txcount)
+static inline_function void vsock_restorelock(FAR struct vsock_conn_s *conn,
+                                              unsigned int rxcount,
+                                              unsigned int txcount)
 {
   nxrmutex_restorelock(&conn->rx_lock, rxcount);
   nxrmutex_restorelock(&conn->tx_lock, txcount);
@@ -337,7 +338,8 @@ static void vsock_restorelock(FAR struct vsock_conn_s *conn,
  *
  ****************************************************************************/
 
-static size_t vsock_get_rx_size(FAR struct vsock_conn_s *conn)
+static inline_function size_t
+vsock_get_rx_size(FAR struct vsock_conn_s *conn)
 {
   size_t rx_size = 0;
 
@@ -495,12 +497,12 @@ static void vsock_free(FAR struct vsock_conn_s *conn)
  *
  ****************************************************************************/
 
-static void vsock_add_ref(FAR struct vsock_conn_s *conn)
+static inline_function void vsock_add_ref(FAR struct vsock_conn_s *conn)
 {
   atomic_fetch_add(&conn->ref, 1);
 }
 
-static void vsock_sub_ref(FAR struct vsock_conn_s *conn)
+static inline_function void vsock_sub_ref(FAR struct vsock_conn_s *conn)
 {
   if (atomic_fetch_sub(&conn->ref, 1) <= 1)
     {
@@ -567,7 +569,7 @@ static FAR struct vsock_conn_s *vsock_alloc(void)
  *
  ****************************************************************************/
 
-static FAR struct vsock_conn_s *
+static inline_function FAR struct vsock_conn_s *
 vsock_find_bound_conn(FAR const struct sockaddr_vm *addr)
 {
   FAR const struct sockaddr_vm *local;
@@ -593,7 +595,7 @@ vsock_find_bound_conn(FAR const struct sockaddr_vm *addr)
   return NULL;
 }
 
-static FAR struct vsock_conn_s *
+static inline_function FAR struct vsock_conn_s *
 vsock_find_connected_conn(FAR const struct sockaddr_vm *remote_addr,
                           FAR const struct sockaddr_vm *local_addr)
 {
@@ -730,7 +732,8 @@ out:
  *
  ****************************************************************************/
 
-static void vsock_unbind_internal(FAR struct vsock_conn_s *conn)
+static inline_function void
+vsock_unbind_internal(FAR struct vsock_conn_s *conn)
 {
   conn->sconn.s_error = 0;
   vsock_remove_conn(conn);
@@ -784,8 +787,9 @@ vsock_get_tx_credit(FAR struct vsock_conn_s *conn)
  * Name: vsock_update_tx_credit
  ****************************************************************************/
 
-static void vsock_update_tx_credit(FAR struct vsock_conn_s *conn,
-                                   FAR struct vsock_pkt_s *pkt)
+static inline_function void
+vsock_update_tx_credit(FAR struct vsock_conn_s *conn,
+                       FAR struct vsock_pkt_s *pkt)
 {
   FAR struct vsock_hdr_s *hdr = vsock_pkt2hdr(pkt);
   irqstate_t flags;
@@ -824,9 +828,9 @@ static inline_function bool vsock_msg_done(FAR const struct vsock_msg_s *msg)
  *
  ****************************************************************************/
 
-static size_t vsock_copy_pkt2msg(FAR struct vsock_conn_s *conn,
-                                 FAR struct vsock_msg_s *msg,
-                                 FAR struct vsock_pkt_s *pkt)
+static inline_function size_t
+vsock_copy_pkt2msg(FAR struct vsock_conn_s *conn,
+                   FAR struct vsock_msg_s *msg, FAR struct vsock_pkt_s *pkt)
 {
   size_t ret = 0;
 
@@ -941,8 +945,9 @@ static size_t vsock_copy_msg2pkt(FAR struct vsock_pkt_s *pkt,
  *
  ****************************************************************************/
 
-static size_t vsock_copy_pkt2circ(FAR struct vsock_conn_s *conn,
-                                   FAR struct vsock_pkt_s *pkt)
+static inline_function size_t
+vsock_copy_pkt2circ(FAR struct vsock_conn_s *conn,
+                    FAR struct vsock_pkt_s *pkt)
 {
   FAR struct circbuf_s *circ = &conn->rx_buf;
   size_t ret = 0;
@@ -1059,7 +1064,7 @@ static int vsock_send_pkt(FAR struct vsock_conn_s *conn,
  * Name: vsock_send_credit
  ****************************************************************************/
 
-static int vsock_send_credit(FAR struct vsock_conn_s *conn)
+static inline_function int vsock_send_credit(FAR struct vsock_conn_s *conn)
 {
   return vsock_send_pkt(conn, NULL, VIRTIO_VSOCK_OP_CREDIT_UPDATE, 0, 0, 0);
 }
@@ -1068,8 +1073,8 @@ static int vsock_send_credit(FAR struct vsock_conn_s *conn)
  * Name: vsock_update_rx_credit
  ****************************************************************************/
 
-static void vsock_update_rx_credit(FAR struct vsock_conn_s *conn,
-                                   size_t size)
+static inline_function void
+vsock_update_rx_credit(FAR struct vsock_conn_s *conn, size_t size)
 {
   irqstate_t flags;
   uint32_t delta;
