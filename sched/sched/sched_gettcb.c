@@ -28,7 +28,8 @@
 
 #include <sched.h>
 
-#include "nuttx/irq.h"
+#include <nuttx/irq.h>
+#include <nuttx/semaphore.h>
 
 #include "sched/sched.h"
 

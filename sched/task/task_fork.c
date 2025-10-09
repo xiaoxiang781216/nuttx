@@ -36,6 +36,7 @@
 
 #include <nuttx/addrenv.h>
 #include <nuttx/queue.h>
+#include <nuttx/semaphore.h>
 
 #include "sched/sched.h"
 #include "environ/environ.h"

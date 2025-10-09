@@ -36,6 +36,7 @@
 #include <nuttx/sched.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/mm/mm.h>
+#include <nuttx/semaphore.h>
 
 #ifdef CONFIG_SCHED_PERF_EVENTS
 #  include <nuttx/perf.h>

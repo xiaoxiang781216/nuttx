@@ -32,6 +32,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/kthread.h>
+#include <nuttx/semaphore.h>
 
 #include "irq/irq.h"
 #include "sched/sched.h"

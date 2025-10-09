@@ -35,6 +35,7 @@
 
 #include <nuttx/cancelpt.h>
 #include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #include "sched/sched.h"
 #include "pthread/pthread.h"

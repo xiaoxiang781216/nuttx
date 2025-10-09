@@ -43,7 +43,6 @@
 #include <dirent.h>
 
 #include <nuttx/atomic.h>
-#include <nuttx/semaphore.h>
 #include <nuttx/mm/map.h>
 #include <nuttx/spawn.h>
 #include <nuttx/queue.h>

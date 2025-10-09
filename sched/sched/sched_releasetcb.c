@@ -32,6 +32,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/addrenv.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/sched.h>
 
 #include "task/task.h"

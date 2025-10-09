@@ -41,7 +41,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/percpu.h>
 #include <nuttx/clock.h>
-#include <nuttx/semaphore.h>
+#include <nuttx/semaphore_type.h>
 #include <nuttx/queue.h>
 #include <nuttx/wdog.h>
 #include <nuttx/fs/fs.h>

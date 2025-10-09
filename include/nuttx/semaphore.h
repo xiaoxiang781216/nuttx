@@ -29,80 +29,13 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
 #include <errno.h>
-#include <semaphore.h>
 
 #include <nuttx/clock.h>
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* Initializers */
-
-#ifdef CONFIG_PRIORITY_INHERITANCE
-#  if CONFIG_SEM_PREALLOCHOLDERS > 0
-/* semcount, flags, waitlist, hhead */
-
-#    define NXSEM_INITIALIZER(c, f) \
-       {{(c)}, (f), SEM_WAITLIST_INITIALIZER, NULL}
-#  else
-/* semcount, flags, waitlist, holder[2] */
-
-#    define NXSEM_INITIALIZER(c, f) \
-       {{(c)}, (f), SEM_WAITLIST_INITIALIZER, SEMHOLDER_INITIALIZER}
-#  endif
-#else /* CONFIG_PRIORITY_INHERITANCE */
-/* semcount, flags, waitlist */
-
-#  define NXSEM_INITIALIZER(c, f) \
-     {{(c)}, (f), SEM_WAITLIST_INITIALIZER}
-#endif /* CONFIG_PRIORITY_INHERITANCE */
-
-/* Macros to retrieve sem count and to check if nxsem is mutex */
-
-#define NXSEM_COUNT(s)        ((FAR atomic_t *)&(s)->val.semcount)
-#define NXSEM_IS_MUTEX(s)     (((s)->flags & SEM_TYPE_MUTEX) != 0)
-
-/* Mutex related helper macros */
-
-#define NXSEM_MBLOCKING_BIT   ((int32_t)0x80000000)
-#define NXSEM_NO_MHOLDER      ((int32_t)0x7ffffffe)
-#define NXSEM_MRESET          ((int32_t)0x7fffffff)
-
-/* Macro to retrieve mutex's atomic holder's ptr */
-
-#define NXSEM_MHOLDER(s)      ((FAR atomic_t *)&(s)->val.mholder)
-
-/* Check if holder value (TID) is not NO_HOLDER or RESET */
-
-#define NXSEM_MACQUIRED(h)    (((h) & NXSEM_NO_MHOLDER) != NXSEM_NO_MHOLDER)
-
-/* Check if mutex is acquired and blocks some other task */
-
-#define NXSEM_MBLOCKING(h)    (((h) & NXSEM_MBLOCKING_BIT) != 0)
-
-/****************************************************************************
- * Public Type Definitions
- ****************************************************************************/
-
-#ifdef CONFIG_FS_NAMED_SEMAPHORES
-/* This is the named semaphore inode */
-
-struct inode;
-struct nsem_inode_s
-{
-  /* This must be the first element of the structure.  In sem_close() this
-   * structure must be cast compatible with sem_t.
-   */
-
-  sem_t ns_sem;                     /* The contained semaphore */
-
-  /* Inode payload unique to named semaphores. */
-
-  FAR struct inode *ns_inode;       /* Containing inode */
-};
-#endif
+#include <nuttx/init.h>
+#include <nuttx/sched.h>
+#include <nuttx/semaphore_type.h>
 
 /****************************************************************************
  * Public Data
@@ -176,7 +109,7 @@ int nxsem_init(FAR sem_t *sem, int pshared, uint32_t value);
 int nxsem_destroy(FAR sem_t *sem);
 
 /****************************************************************************
- * Name: nxsem_wait / nxsem_wait_slow
+ * Name: nxsem_wait_slow
  *
  * Description:
  *   This function attempts to lock the semaphore referenced by 'sem'.  If
@@ -203,7 +136,6 @@ int nxsem_destroy(FAR sem_t *sem);
  *
  ****************************************************************************/
 
-int nxsem_wait(FAR sem_t *sem);
 int nxsem_wait_slow(FAR sem_t *sem);
 
 /****************************************************************************
@@ -353,7 +285,7 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
 int nxsem_tickwait(FAR sem_t *sem, clock_t delay);
 
 /****************************************************************************
- * Name: nxsem_post / nxsem_post_slow
+ * Name: nxsem_post_slow
  *
  * Description:
  *   When a kernel thread has finished with a semaphore, it will call
@@ -381,7 +313,6 @@ int nxsem_tickwait(FAR sem_t *sem, clock_t delay);
  *
  ****************************************************************************/
 
-int nxsem_post(FAR sem_t *sem);
 int nxsem_post_slow(FAR sem_t *sem);
 
 /****************************************************************************
@@ -748,6 +679,195 @@ int nxsem_getprioceiling(FAR const sem_t *sem, FAR int *prioceiling);
 
 int nxsem_setprioceiling(FAR sem_t *sem, int prioceiling,
                          FAR int *old_ceiling);
+
+/****************************************************************************
+ * Inline functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: nxsem_wait
+ *
+ * Description:
+ *   This function attempts to lock the semaphore referenced by 'sem'.  If
+ *   the semaphore value is (<=) zero, then the calling task will not return
+ *   until it successfully acquires the lock.
+ *
+ *   This is an internal OS interface.  It is functionally equivalent to
+ *   sem_wait except that:
+ *
+ *   - It is not a cancellation point, and
+ *   - It does not modify the errno value.
+ *
+ * Input Parameters:
+ *   sem - Semaphore descriptor.
+ *
+ * Returned Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
+ *   Possible returned errors:
+ *
+ *     EINVAL - Invalid attempt to get the semaphore
+ *     EINTR  - The wait was interrupted by the receipt of a signal.
+ *
+ ****************************************************************************/
+
+static inline_function int nxsem_wait(FAR sem_t *sem)
+{
+  bool fastpath = true;
+  bool mutex;
+
+  /* This API should not be called from the idleloop or interrupt */
+
+#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+  DEBUGASSERT(sem != NULL);
+  DEBUGASSERT(!up_interrupt_context());
+  DEBUGASSERT(!OSINIT_IDLELOOP() || !sched_idletask());
+#endif
+
+  mutex = NXSEM_IS_MUTEX(sem);
+
+  /* Disable fast path if priority protection is enabled on the semaphore */
+
+#ifdef CONFIG_PRIORITY_PROTECT
+  if ((sem->flags & SEM_PRIO_MASK) == SEM_PRIO_PROTECT)
+    {
+      fastpath = false;
+    }
+#endif
+
+  /* Disable fast path on a counting semaphore with priority inheritance */
+
+#ifdef CONFIG_PRIORITY_INHERITANCE
+  if (!mutex && (sem->flags & SEM_PRIO_MASK) != SEM_PRIO_NONE)
+    {
+      fastpath = false;
+    }
+#endif
+
+  while (fastpath)
+    {
+      FAR atomic_t *val = mutex ? NXSEM_MHOLDER(sem) : NXSEM_COUNT(sem);
+      int32_t old = atomic_read(val);
+      int32_t new;
+
+      if (mutex)
+        {
+          if (old != NXSEM_NO_MHOLDER)
+            {
+              break;
+            }
+
+          new = _SCHED_GETTID();
+        }
+      else
+        {
+          if (old < 1)
+            {
+              break;
+            }
+
+          new = old - 1;
+        }
+
+      if (atomic_try_cmpxchg_acquire(val, &old, new))
+        {
+          return OK;
+        }
+    }
+
+  return nxsem_wait_slow(sem);
+}
+
+/****************************************************************************
+ * Name: nxsem_post
+ *
+ * Description:
+ *   When a kernel thread has finished with a semaphore, it will call
+ *   nxsem_post().  This function unlocks the semaphore referenced by sem
+ *   by performing the semaphore unlock operation on that semaphore.
+ *
+ *   If the semaphore value resulting from this operation is positive, then
+ *   no tasks were blocked waiting for the semaphore to become unlocked; the
+ *   semaphore is simply incremented.
+ *
+ *   If the value of the semaphore resulting from this operation is zero,
+ *   then one of the tasks blocked waiting for the semaphore shall be
+ *   allowed to return successfully from its call to sem_wait().
+ *
+ * Input Parameters:
+ *   sem - Semaphore descriptor
+ *
+ * Returned Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
+ *
+ * Assumptions:
+ *   This function may be called from an interrupt handler.
+ *
+ ****************************************************************************/
+
+static inline_function int nxsem_post(FAR sem_t *sem)
+{
+  bool fastpath = true;
+  bool mutex;
+
+  DEBUGASSERT(sem != NULL);
+
+  mutex = NXSEM_IS_MUTEX(sem);
+
+  /* Disable fast path if priority protection is enabled on the semaphore */
+
+#ifdef CONFIG_PRIORITY_PROTECT
+  if ((sem->flags & SEM_PRIO_MASK) == SEM_PRIO_PROTECT)
+    {
+      fastpath = false;
+    }
+#endif
+
+  /* Disable fast path on a counting semaphore with priority inheritance */
+
+#ifdef CONFIG_PRIORITY_INHERITANCE
+  if (!mutex && (sem->flags & SEM_PRIO_MASK) != SEM_PRIO_NONE)
+    {
+      fastpath = false;
+    }
+#endif
+
+  while (fastpath)
+    {
+      FAR atomic_t *val = mutex ? NXSEM_MHOLDER(sem) : NXSEM_COUNT(sem);
+      int32_t old = atomic_read(val);
+      int32_t new;
+
+      if (mutex)
+        {
+          if (NXSEM_MBLOCKING(old))
+            {
+              break;
+            }
+
+          new = NXSEM_NO_MHOLDER;
+        }
+      else
+        {
+          if (old < 0)
+            {
+              break;
+            }
+
+          new = old + 1;
+        }
+
+      if (atomic_try_cmpxchg_release(val, &old, new))
+        {
+          return OK;
+        }
+    }
+
+  return nxsem_post_slow(sem);
+}
 
 #undef EXTERN
 #ifdef __cplusplus

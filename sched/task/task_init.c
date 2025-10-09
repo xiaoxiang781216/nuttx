@@ -37,6 +37,7 @@
 #include <nuttx/addrenv.h>
 #include <nuttx/sched.h>
 #include <nuttx/trace.h>
+#include <nuttx/semaphore.h>
 
 #include "sched/sched.h"
 #include "environ/environ.h"

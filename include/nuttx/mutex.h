@@ -33,6 +33,7 @@
 
 #include <nuttx/clock.h>
 #include <nuttx/mutex_type.h>
+#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Pre-processor Definitions

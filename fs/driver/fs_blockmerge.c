@@ -33,6 +33,7 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
+#include <inttypes.h>
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/partition.h>

@@ -29,7 +29,7 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/semaphore.h>
+#include <nuttx/semaphore_type.h>
 
 #undef EXTERN
 #if defined(__cplusplus)

@@ -35,6 +35,7 @@
 #include <nuttx/clock.h>
 #include <nuttx/list.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/semaphore.h>
 
 #include "wqueue/wqueue.h"
 
