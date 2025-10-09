@@ -51,6 +51,7 @@ void up_irqinitialize(void)
 
   /* And finally, enable interrupts */
 
+  or1k_color_intstack();
   up_irq_enable();
 }
 

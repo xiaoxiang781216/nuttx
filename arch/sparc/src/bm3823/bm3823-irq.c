@@ -96,6 +96,7 @@ void up_irqinitialize(void)
    * register
    */
 
+  sparc_color_intstack();
   up_irq_enable();
 }
 
