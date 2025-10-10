@@ -621,19 +621,19 @@ class NoteFactory:
 
     @classmethod
     @functools.lru_cache(maxsize=None)
-    def struct(cls, note_type):
-        note_event_s = Struct(
-            *[
-                field
-                for field in cls.parser.get_type("note_event_s").subcons
-                if field.name != "nev_data"
-            ]
-        )
-        cls.note_event_s = Struct(
-            *[field for field in note_event_s.subcons if field.name != "nev_data"],
-            "nev_data" / Bytes(this.nev_cmn.nc_length - note_event_s.sizeof()),
-        )
+    def _get_note_event_s(cls):
+        struct = cls.parser.get_type("note_event_s")
+        if struct is None:
+            raise ValueError(
+                "Failed to get type 'note_event_s', "
+                "make sure 'CONFIG_SCHED_INSTRUMENTATION_DUMP' is enabled in NuttX config"
+            )
 
+        return Struct(*[field for field in struct.subcons if field.name != "nev_data"])
+
+    @classmethod
+    @functools.lru_cache(maxsize=None)
+    def struct(cls, note_type):
         if note_type in [cls.types.NOTE_START, cls.types.NOTE_TASKNAME]:
             return Struct(
                 "nst_cmn" / cls.note_common_s,
@@ -659,7 +659,7 @@ class NoteFactory:
             cls.types.NOTE_DUMP_MARK,
             cls.types.NOTE_DUMP_BINARY,
         ]:
-            return cls.note_event_s
+            return cls._get_note_event_s(cls)
         elif note_type == cls.types.NOTE_DUMP_PRINTF:
             note_printf_s = cls.parser.get_type("note_printf_s")
             fixed_size = sum(
@@ -673,7 +673,7 @@ class NoteFactory:
             )
         elif note_type == cls.types.NOTE_DUMP_COUNTER:
             note_counter_s = cls.parser.get_type("note_counter_s")
-
+            note_event_s = cls._get_note_event_s()
             return Struct(
                 *note_event_s.subcons,
                 *[field for field in note_counter_s.subcons if field.name != "name"],
@@ -681,6 +681,7 @@ class NoteFactory:
             )
         elif note_type == cls.types.NOTE_DUMP_THREADTIME:
             note_threadtime_s = cls.parser.get_type("note_threadtime_s")
+            note_event_s = cls._get_note_event_s()
             return Struct(
                 *note_event_s.subcons,
                 *note_threadtime_s.subcons,
