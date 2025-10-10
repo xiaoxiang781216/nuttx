@@ -155,7 +155,8 @@ class NoteRamCommand(gdb.Command):
 
     @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
-        args = self.parse_arguments(args)
+        if not (args := self.parse_arguments(args)):
+            return
 
         try:
             noteram = NoteRam(args.driver)
