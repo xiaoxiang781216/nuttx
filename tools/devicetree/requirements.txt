@@ -1,0 +1,2 @@
+pyyaml
+git+https://github.com/zephyrproject-rtos/zephyr.git@main#subdirectory=scripts/dts/python-devicetree
