@@ -1410,6 +1410,64 @@ static int lrofs_move_file(FAR struct lrofs_mountpt_s *lm,
 }
 
 /****************************************************************************
+ * Name: lrofs_extend_file
+ *
+ * Description:
+ *   Extend a file in the disk
+ *
+ ****************************************************************************/
+
+static int lrofs_extend_file(FAR struct lrofs_mountpt_s *lm,
+                             FAR struct lrofs_nodeinfo_s *ln,
+                             FAR struct lrofs_file_s *lf, off_t length)
+{
+  int ret;
+
+  /* Try to extend the space at the original position */
+
+  ret = lrofs_alloc_spareregion(&lm->lm_sparelist,
+                                lf->lf_startoffset + lf->lf_size,
+                                lf->lf_startoffset + length);
+  if (ret < 0)
+    {
+      /* Find a longer new space region */
+
+      int fhdr_len;
+      bool firstchild;
+      FAR struct lrofs_nodeinfo_s *ln_prev;
+
+      ln_prev = lrofs_get_prevnode(ln, &firstchild);
+      if (ln_prev == NULL)
+        {
+          return -ENOENT;
+        }
+
+      ret = lrofs_move_file(lm, ln, ln_prev, firstchild, NULL);
+      if (ret < 0)
+        {
+          ferr("ERROR: lrofs_move_file failed\n");
+          return ret;
+        }
+
+      /* Try to alloc space region again */
+
+      fhdr_len = LROFS_ALIGNUP(LROFS_FHDR_NAME + ln->ln_namesize + 1);
+      ret = lrofs_alloc_spareregion(&lm->lm_sparelist,
+                            ln->ln_origoffset + fhdr_len + ln->ln_size,
+                            ln->ln_origoffset + fhdr_len + length);
+      if (ret < 0)
+        {
+          ferr("ERROR: lrofs_alloc_spareregion failed\n");
+          return ret;
+        }
+
+      lf->lf_startoffset = ln->ln_origoffset + fhdr_len;
+    }
+
+  return ret;
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -2240,9 +2298,9 @@ int lrofs_write_file(FAR struct file *filep, FAR const char *buffer,
     }
 
   if (savedbuflen > 0 &&
-      lrofs_truncate_file(filep, lf->lf_size + savedbuflen) < 0)
+      lrofs_extend_file(lm, ln, lf, lf->lf_size + savedbuflen) < 0)
     {
-      ferr("ERROR: lrofs_truncate_file failed\n");
+      ferr("ERROR: lrofs_extend_file failed\n");
       return -ENOSPC;
     }
 
@@ -2368,46 +2426,12 @@ int lrofs_truncate_file(FAR struct file *filep, off_t length)
     }
   else if (length > lf->lf_size)
     {
-      /* Try to extend the space at the original position */
-
-      ret = lrofs_alloc_spareregion(&lm->lm_sparelist,
-                                    lf->lf_startoffset + lf->lf_size,
-                                    lf->lf_startoffset + length);
+      ret = lrofs_extend_file(lm, ln, lf, length);
       if (ret < 0)
         {
-          /* Find a longer new space region */
-
-          int fhdr_len;
-          bool firstchild;
-          FAR struct lrofs_nodeinfo_s *ln_prev;
-
-          ln_prev = lrofs_get_prevnode(ln, &firstchild);
-          if (ln_prev == NULL)
-            {
-              return -ENOENT;
-            }
-
-          ret = lrofs_move_file(lm, ln, ln_prev, firstchild, NULL);
-          if (ret < 0)
-            {
-              ferr("ERROR: lrofs_move_file failed\n");
-              return ret;
-            }
-
-          /* Try to alloc space region again */
-
-          fhdr_len = LROFS_ALIGNUP(LROFS_FHDR_NAME + ln->ln_namesize + 1);
-          ret = lrofs_alloc_spareregion(&lm->lm_sparelist,
-                                ln->ln_origoffset + fhdr_len + ln->ln_size,
-                                ln->ln_origoffset + fhdr_len + length);
-          if (ret < 0)
-            {
-              ferr("ERROR: lrofs_alloc_spareregion failed\n");
-              return ret;
-            }
-
-      lf->lf_startoffset = ln->ln_origoffset + fhdr_len;
-    }
+          ferr("ERROR: lrofs_extend_file failed\n");
+          return ret;
+        }
 
       lm->lm_volsize += length - lf->lf_size;
     }
