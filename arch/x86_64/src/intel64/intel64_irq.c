@@ -503,19 +503,6 @@ static int x86_64_fault_panic_isr(int irq, void *c, void *arg)
 }
 
 /****************************************************************************
- * Name: x86_64_fault_kill_isr
- ****************************************************************************/
-
-static int x86_64_fault_kill_isr(int irq, void *c, void *arg)
-{
-  __asm__ volatile("fnclex":::"memory");
-
-  nxsig_kill(running_task()->pid, SIGFPE);
-
-  return 0;
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -568,12 +555,12 @@ void up_irqinitialize(void)
 
   /* Attach default handlers for faults */
 
-  irq_attach(ISR0, x86_64_fault_kill_isr, NULL);
+  irq_attach(ISR0, x86_64_fault_panic_isr, NULL);
   irq_attach(ISR6, x86_64_fault_panic_isr, NULL);
   irq_attach(ISR8, x86_64_fault_panic_isr, NULL);
   irq_attach(ISR13, x86_64_fault_panic_isr, NULL);
   irq_attach(ISR14, x86_64_fault_panic_isr, NULL);
-  irq_attach(ISR16, x86_64_fault_kill_isr, NULL);
+  irq_attach(ISR16, x86_64_fault_panic_isr, NULL);
 
 #ifdef CONFIG_SMP
   /* Attach TLB shootdown handler */
