@@ -41,7 +41,7 @@ SECTIONS
 {
   .userspace :
   {
-    *(.userspace)
+    KEEP(*(.userspace))
   } > uflash
 
   .text :
