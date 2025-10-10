@@ -121,8 +121,8 @@ void arm_data_initialize(void);
 
 static inline_function void arm_finish_busy_wait(void)
 {
-#ifdef CONFIG_ARMV7A_SMP_BUSY_WAIT
-  uintptr_t address = CONFIG_ARMV7A_SMP_BUSY_WAIT_FLAG_ADDR;
+#ifdef CONFIG_ARM_BUSY_WAIT
+  uintptr_t address = CONFIG_ARM_BUSY_WAIT_FLAG_ADDR;
   *(uint32_t *)address = 1;
   up_flush_dcache(address, address + sizeof(uint32_t));
 #endif
