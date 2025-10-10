@@ -91,7 +91,7 @@
 
 /* Execution time constants (not supported) */
 
-#undef  _POSIX_CHOWN_RESTRICTED
+#define _POSIX_CHOWN_RESTRICTED 1
 #undef  _POSIX_NO_TRUNC
 #undef  _POSIX_VDISABLE
 
@@ -125,6 +125,7 @@
 #define _PC_SYMLINK_MAX                  0x0011
 #define _PC_SYNC_IO                      0x0012
 #define _PC_VDISABLE                     0x0013
+#define _PC_REC_MAX_XFER_SIZE            0x0014
 
 /* Constants used with POSIX sysconf().  sysconf() will return -1 and set
  * errno to ENOSYS for most of these.
