@@ -108,9 +108,9 @@ void up_initial_state(struct tcb_s *tcb)
   memset(xcp->regs, 0, XCPTCONTEXT_SIZE);
 
 #ifndef CONFIG_ARCH_X86_64_HAVE_XSAVE
-  /* Set the FCW to 1f80 */
+  /* Set the FCW to 037f */
 
-  xcp->regs[1] = (uint64_t)0x0000037f00000000;
+  xcp->regs[0] = (uint64_t)0x000000000000037f;
 
   /* Set the MXCSR to 1f80 */
 
