@@ -58,6 +58,7 @@ ELFDATA2MSB = 2  # Big-endian data encoding
 ET_CORE = 4  # Identifies core dump files
 
 # Program header type constants
+PT_LOAD = 1  # Identifies loadable segment program header entry
 PT_NOTE = 4  # Identifies note type program segment
 
 # NuttX core dump constants
@@ -238,6 +239,79 @@ class ElfHeaderParser:
         return issues
 
 
+def validate_segment_integrity(core_file, header, file_size) -> List[str]:
+    """Validate that all LOAD segments have complete content in core files"""
+    issues = []
+
+    if header.ei_class == ELFCLASS32:
+        # 32-bit ELF program header structure
+        PROG_HEADER_STRUCT = Struct(
+            "p_type" / Int32ul,  # 0-4: segment type
+            "p_offset" / Int32ul,  # 4-8: file offset
+            "p_vaddr" / Int32ul,  # 8-12: virtual address
+            "p_paddr" / Int32ul,  # 12-16: physical address
+            "p_filesz" / Int32ul,  # 16-20: file size
+            "p_memsz" / Int32ul,  # 20-24: memory size
+            "p_flags" / Int32ul,  # 24-28: segment flags
+            "p_align" / Int32ul,  # 28-32: alignment
+        )
+    else:
+        # 64-bit ELF program header structure
+        PROG_HEADER_STRUCT = Struct(
+            "p_type" / Int32ul,  # 0-4: segment type
+            "p_flags" / Int32ul,  # 4-8: segment flags
+            "p_offset" / Int64ul,  # 8-16: file offset
+            "p_vaddr" / Int64ul,  # 16-24: virtual address
+            "p_paddr" / Int64ul,  # 24-32: physical address
+            "p_filesz" / Int64ul,  # 32-40: file size
+            "p_memsz" / Int64ul,  # 40-48: memory size
+            "p_align" / Int64ul,  # 48-56: alignment
+        )
+
+    try:
+        core_file.seek(header.e_phoff)
+
+        for i in range(header.e_phnum):
+            phdr_data = core_file.read(header.e_phentsize)
+            if len(phdr_data) != header.e_phentsize:
+                issues.append(f"Failed to read program header #{i}")
+                continue
+
+            try:
+                seg_header = PROG_HEADER_STRUCT.parse(phdr_data)
+                seg_type = seg_header.p_type
+                seg_offset = seg_header.p_offset
+                seg_vaddr = seg_header.p_vaddr
+                seg_filesz = seg_header.p_filesz
+            except Exception as e:
+                issues.append(f"Failed to parse program header #{i}: {str(e)}")
+                continue
+
+            # Check LOAD segments for truncation
+            if seg_type == PT_LOAD and seg_filesz > 0:
+                seg_end = seg_offset + seg_filesz
+
+                if seg_offset >= file_size:
+                    issues.append(
+                        f"Segment #{i} at 0x{seg_vaddr:08x} is completely missing: "
+                        f"starts at offset {seg_offset} beyond file end {file_size}"
+                    )
+                elif seg_end > file_size:
+                    truncated = seg_end - file_size
+                    available = file_size - seg_offset
+
+                    issues.append(
+                        f"Segment #{i} at 0x{seg_vaddr:08x} is truncated: "
+                        f"declared {seg_filesz} bytes, available {available} bytes, "
+                        f"missing {truncated} bytes (file size: {file_size} bytes)"
+                    )
+
+    except Exception as e:
+        issues.append(f"Error validating segments: {str(e)}")
+
+    return issues
+
+
 def validate_core_file(core_file, header, file_size) -> str:
     """Validate nuttx core dump file, return error string or empty string"""
     if header.e_phnum <= 0:
@@ -337,8 +411,11 @@ def check_elf_integrity(filename) -> List[str]:
             parser = ElfHeaderParser(data)
             issues.extend(parser.validate(file_size))
 
-            # Special validation for core dump files
+            # Only validate segment integrity for core files
             if parser.header and parser.header.is_core:
+                issues.extend(validate_segment_integrity(f, parser.header, file_size))
+
+                # Special validation for NuttX core dump files
                 if error := validate_core_file(f, parser.header, file_size):
                     issues.append(error)
 
