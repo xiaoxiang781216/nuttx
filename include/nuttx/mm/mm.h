@@ -28,6 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/sched.h>
 #include <nuttx/userspace.h>
 
 #include <sys/types.h>
@@ -222,7 +223,8 @@ extern "C"
 #endif
 
 #ifdef CONFIG_MM_RECORD_SEQNO
-extern unsigned long g_mm_seqno;
+DECLARE_PER_CPU_BMP(unsigned long, g_mm_seqno);
+#  define g_mm_seqno this_cpu_var_bmp(g_mm_seqno)
 #endif
 
 /* User heap structure:
@@ -251,13 +253,15 @@ extern unsigned long g_mm_seqno;
 #if !defined(CONFIG_BUILD_PROTECTED) || !defined(__KERNEL__)
 /* Otherwise, the user heap data structures are in common .bss */
 
-EXTERN FAR struct mm_heap_s *g_mmheap;
+DECLARE_PER_CPU_BMP(FAR struct mm_heap_s *, g_mmheap);
+#define g_mmheap this_cpu_var_bmp(g_mmheap)
 #endif
 
 #ifdef CONFIG_MM_KERNEL_HEAP
 /* This is the kernel heap */
 
-EXTERN FAR struct mm_heap_s *g_kmmheap;
+DECLARE_PER_CPU_BMP(FAR struct mm_heap_s *, g_kmmheap);
+#define g_kmmheap this_cpu_var_bmp(g_kmmheap)
 #endif
 
 /****************************************************************************
