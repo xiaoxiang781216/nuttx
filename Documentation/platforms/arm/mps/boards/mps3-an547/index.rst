@@ -62,6 +62,15 @@ Configuring and Running (Single Core)
      (gdb) c
      sudo minicom -b 115200 -D /dev/pts/14
 
+6. elffixup::
+
+     cmake -B ../build -DBOARD_CONFIG=boards/arm/mps/mps3-an547/configs/elffixup
+     cmake --build ../build
+     qemu-system-arm -M mps3-an547 -m 2G -device loader,file=../build/nuttx.hex -gdb tcp::1128 -nographic
+     nsh> hello
+     nsh> ostest
+
+
 Debugging with QEMU
 ===================
 
