@@ -92,6 +92,7 @@
 #include <math.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/mutex.h>
 #include <stdio.h>
 #include <sys/param.h>
 #include <sys/stat.h>

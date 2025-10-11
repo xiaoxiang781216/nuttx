@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
+#include <nuttx/mutex.h>
 
 #include <stdint.h>
 #include <errno.h>
