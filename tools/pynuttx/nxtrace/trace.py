@@ -530,6 +530,38 @@ class DumpThreadTimeProcessor(NoteProcessor):
         ptrace.atrace_int(head, "threadtime", note.elapsed)
 
 
+class HeapAddProcessor(NoteProcessor):
+    def process(self, note, head, sched_state, ptrace: PerfettoTrace, parser):
+        # Use an implicit trace-global track (uuid = 0)
+        ptrace.atrace_instant(
+            head,
+            f"Add heap: 0x{note.heap:x}, size: {note.size}, mem: 0x{note.mem:x}",
+        )
+        ptrace.trace_counter(None, head.ts, f"heap: 0x{note.heap:x}", 0)
+
+
+class HeapRemoveProcessor(NoteProcessor):
+    def process(self, note, head, sched_state, ptrace: PerfettoTrace, parser):
+        # Use size of 0 to indicate heap removal
+        ptrace.atrace_instant(
+            head,
+            f"Remove heap: 0x{note.heap:x}, size: {note.size}, mem: 0x{note.mem:x}",
+        )
+        ptrace.trace_counter(None, head.ts, f"heap: 0x{note.heap:x}", 0)
+
+
+class HeapAllocProcessor(NoteProcessor):
+    def process(self, note, head, sched_state, ptrace: PerfettoTrace, parser):
+        ptrace.atrace_instant(head, f"Alloc: 0x{note.mem:x}, size: {note.size}")
+        ptrace.trace_counter(None, head.ts, f"heap: 0x{note.heap:x}", note.used)
+
+
+class HeapFreeProcessor(NoteProcessor):
+    def process(self, note, head, sched_state, ptrace: PerfettoTrace, parser):
+        ptrace.atrace_instant(head, f"Free: 0x{note.mem:x}, size: {note.size}")
+        ptrace.trace_counter(None, head.ts, f"heap: 0x{note.heap:x}", note.used)
+
+
 class NoteProcessorRegistry:
 
     def __init__(self):
@@ -555,6 +587,10 @@ class NoteProcessorRegistry:
         self.register_processor(types.NOTE_DUMP_PRINTF, DumpPrintfProcessor())
         self.register_processor(types.NOTE_DUMP_BINARY, DumpBinaryProcessor())
         self.register_processor(types.NOTE_DUMP_THREADTIME, DumpThreadTimeProcessor())
+        self.register_processor(types.NOTE_HEAP_ADD, HeapAddProcessor())
+        self.register_processor(types.NOTE_HEAP_REMOVE, HeapRemoveProcessor())
+        self.register_processor(types.NOTE_HEAP_ALLOC, HeapAllocProcessor())
+        self.register_processor(types.NOTE_HEAP_FREE, HeapFreeProcessor())
 
     def get_processor(self, note_type):
         return self.processors.get(note_type)
@@ -686,6 +722,13 @@ class NoteFactory:
                 *note_event_s.subcons,
                 *note_threadtime_s.subcons,
             )
+        elif note_type in [
+            cls.types.NOTE_HEAP_ADD,
+            cls.types.NOTE_HEAP_REMOVE,
+            cls.types.NOTE_HEAP_ALLOC,
+            cls.types.NOTE_HEAP_FREE,
+        ]:
+            return cls.parser.get_type("note_heap_s")
         else:
             logger.error(f"Unknown note type: {note_type}")
             return None
