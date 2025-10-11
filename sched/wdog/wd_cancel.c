@@ -60,9 +60,9 @@
 
 int wd_cancel(FAR struct wdog_s *wdog)
 {
-  int ret = -EINVAL;
   irqstate_t flags;
-  bool head;
+  int ret   = -EINVAL;
+  bool head = false;
 
   if (wdog != NULL)
     {
@@ -91,18 +91,19 @@ int wd_cancel(FAR struct wdog_s *wdog)
       wdog->func = NULL;
 
       ret = OK;
-
-      if (head)
-        {
-          /* If the watchdog is at the head of the timer queue, then
-           * we will need to re-adjust the interval timer that will
-           * generate the next interval event.
-           */
-
-          nxsched_reassess_timer();
-        }
     }
 
   leave_critical_section(flags);
+
+  if (head)
+    {
+      /* If the watchdog is at the head of the timer queue, then
+       * we will need to re-adjust the interval timer that will
+       * generate the next interval event.
+       */
+
+      nxsched_reassess_timer();
+    }
+
   return ret;
 }

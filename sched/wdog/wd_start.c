@@ -313,6 +313,8 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
 
       reassess &= !g_wdtimernested;
 
+      leave_critical_section(flags);
+
       if (reassess)
         {
           /* Resume the interval timer that will generate the next
@@ -320,7 +322,7 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
            * changed, then this will pick that new delay.
            */
 
-            nxsched_reassess_timer();
+          nxsched_reassess_timer();
         }
 #else
       UNUSED(reassess);
@@ -333,8 +335,9 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
         }
 
       wd_insert(wdog, ticks, wdentry, arg);
-#endif
+
       leave_critical_section(flags);
+#endif
       sched_note_wdog(NOTE_WDOG_START, wdentry,
                       (FAR void *)(uintptr_t)ticks);
       ret = OK;

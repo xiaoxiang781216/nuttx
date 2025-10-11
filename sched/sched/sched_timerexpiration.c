@@ -588,7 +588,8 @@ void nxsched_timer_expiration(void)
 
 void nxsched_reassess_timer(void)
 {
-  clock_t ticks;
+  clock_t    ticks;
+  irqstate_t flags = enter_critical_section();
 
   /* Cancel the timer and get the current time */
 
@@ -601,6 +602,8 @@ void nxsched_reassess_timer(void)
 #endif
 
   nxsched_timer_update(ticks, true);
+
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
