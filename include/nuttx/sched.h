@@ -29,6 +29,7 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
 #include <sys/types.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -281,6 +282,35 @@ static inline_function FAR struct tcb_s *this_task(void)
   up_irq_restore(flags);
   return tcb;
 }
+#endif
+
+#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+#  define sched_lock() \
+      do \
+        { \
+          FAR struct tcb_s *tcb_ = this_task(); \
+          DEBUGASSERT(tcb_ && tcb_->lockcount < MAX_LOCK_COUNT); \
+          if (tcb_->lockcount++ == 0) \
+            { \
+              nxsched_lock(tcb_); \
+            } \
+        } \
+      while (0)
+
+#  define sched_unlock() \
+      do \
+        { \
+          FAR struct tcb_s *tcb_ = this_task(); \
+          DEBUGASSERT(tcb_ && tcb_->lockcount > 0); \
+          if (--tcb_->lockcount == 0) \
+            { \
+              nxsched_unlock(tcb_); \
+            } \
+        } \
+      while (0)
+#else
+void sched_lock(void);
+void sched_unlock(void);
 #endif
 
 #define REGINFO_OFFSET_INVALID       -2 /* Special value for N/A offset value */
@@ -1724,6 +1754,18 @@ void nxsched_dumponexit(void);
 #else
 #  define nxsched_dumponexit()
 #endif /* CONFIG_SCHED_DUMP_ON_EXIT */
+
+/* Internal operations of func sched_lock() and sched_unlock() */
+
+#if (defined(CONFIG_SCHED_CRITMONITOR) && \
+     CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0) || \
+    defined(CONFIG_SCHED_INSTRUMENTATION_PREEMPTION)
+void nxsched_lock(FAR struct tcb_s *rtcb);
+#else
+#  define nxsched_lock(rtcb)
+#endif
+
+void nxsched_unlock(FAR struct tcb_s *rtcb);
 
 #ifdef CONFIG_SMP
 /****************************************************************************

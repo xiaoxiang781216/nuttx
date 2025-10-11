@@ -104,30 +104,6 @@
 #  define CRITMONITOR_PANIC(fmt, ...) _alert(fmt, ##__VA_ARGS__)
 #endif
 
-#define sched_lock() \
-    do \
-      { \
-        FAR struct tcb_s *tcb_ = this_task(); \
-        DEBUGASSERT(tcb_ && tcb_->lockcount < MAX_LOCK_COUNT); \
-        if (tcb_->lockcount++ == 0) \
-          { \
-            nxsched_lock(tcb_); \
-          } \
-      } \
-    while (0)
-
-#define sched_unlock() \
-    do \
-      { \
-        FAR struct tcb_s *tcb_ = this_task(); \
-        DEBUGASSERT(tcb_ && tcb_->lockcount > 0); \
-        if (--tcb_->lockcount == 0) \
-          { \
-            nxsched_unlock(tcb_); \
-          } \
-      } \
-    while (0)
-
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 || \
     defined(CONFIG_SCHED_INSTRUMENTATION_CSECTION)
 void restore_critical_section(uint16_t count);
@@ -416,18 +392,6 @@ void nxsched_critmon_csection(FAR struct tcb_s *tcb, bool state,
 struct tls_info_s; /* Forward declare */
 FAR struct tls_info_s *nxsched_get_tls(FAR struct tcb_s *tcb);
 FAR char **nxsched_get_stackargs(FAR struct tcb_s *tcb);
-
-/* Internal operations of func sched_lock() and sched_unlock() */
-
-#if (defined(CONFIG_SCHED_CRITMONITOR) && \
-     CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0) || \
-    defined(CONFIG_SCHED_INSTRUMENTATION_PREEMPTION)
-void nxsched_lock(FAR struct tcb_s *rtcb);
-#else
-#  define nxsched_lock(rtcb)
-#endif
-
-void nxsched_unlock(FAR struct tcb_s *rtcb);
 
 /****************************************************************************
  * Inline functions
