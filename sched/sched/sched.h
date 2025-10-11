@@ -350,35 +350,6 @@ void nxsched_sporadic_lowpriority(FAR struct tcb_s *tcb);
 void nxsched_suspend(FAR struct tcb_s *tcb);
 #endif
 
-#if defined(up_this_task)
-#  define this_task()            up_this_task()
-#elif !defined(CONFIG_SMP)
-#  define this_task()            ((FAR struct tcb_s *)g_readytorun.head)
-#else
-noinstrument_function
-static inline_function FAR struct tcb_s *this_task(void)
-{
-  FAR struct tcb_s *tcb;
-  irqstate_t flags;
-
-  /* If the CPU supports suppression of interprocessor interrupts, then
-   * simple disabling interrupts will provide sufficient protection for
-   * the following operations.
-   */
-
-  flags = up_irq_save();
-
-  /* Obtain the TCB which is current running on this CPU */
-
-  tcb = current_task(this_cpu());
-
-  /* Enable local interrupts */
-
-  up_irq_restore(flags);
-  return tcb;
-}
-#endif
-
 #if defined(CONFIG_STACKCHECK_MARGIN) && \
            (CONFIG_STACKCHECK_MARGIN > 0)
 void nxsched_checkstackoverflow(FAR struct tcb_s *tcb);
