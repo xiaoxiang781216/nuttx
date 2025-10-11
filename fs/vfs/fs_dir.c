@@ -561,6 +561,9 @@ static ssize_t dir_read(FAR struct file *filep, FAR char *buffer,
       /* The node is part of the root pseudo file system */
 
       ret = read_pseudodir(dir, (FAR struct dirent *)buffer);
+#ifdef CONFIG_PSEUDOFS_ATTRIBUTES
+      nxclock_gettime(CLOCK_REALTIME, &dir->fd_root->i_atime);
+#endif
     }
 
   /* ret < 0 is an error. Special case: ret = -ENOENT is end of file */
