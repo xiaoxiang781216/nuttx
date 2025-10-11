@@ -222,6 +222,27 @@
 #endif
 
 #ifdef CONFIG_SMP
+/* In order to support SMP, the function of the g_readytorun list changes,
+ * The g_readytorun is still used but in the SMP case it will contain only:
+ *
+ *  - Only tasks/threads that are eligible to run, but not currently running,
+ *    and
+ *  - Tasks/threads that have not been assigned to a CPU.
+ *
+ * Otherwise, the TCB will be retained in an assigned task vector,
+ * g_assignedtasks.  As its name suggests, on 'g_assignedtasks vector for CPU
+ * 'n' would contain only the task/thread which is running on the CPU 'n'.
+ * Tasks/threads would be assigned a particular CPU by one of two
+ * mechanisms:
+ *
+ *  - (Semi-)permanently through an RTOS interfaces such as
+ *    pthread_attr_setaffinity(), or
+ *  - Temporarily through scheduling logic when a previously unassigned task
+ *    is made to run.
+ */
+
+extern FAR struct tcb_s *g_assignedtasks[CONFIG_SMP_NCPUS];
+
 #  define current_task(cpu)          (g_assignedtasks[cpu])
 #else
 #  define current_task(cpu)          ((FAR struct tcb_s *)list_readytorun()->head)
@@ -948,29 +969,6 @@ EXTERN const struct tcbinfo_s g_tcbinfo;
  */
 
 extern dq_queue_t g_readytorun;
-
-#ifdef CONFIG_SMP
-/* In order to support SMP, the function of the g_readytorun list changes,
- * The g_readytorun is still used but in the SMP case it will contain only:
- *
- *  - Only tasks/threads that are eligible to run, but not currently running,
- *    and
- *  - Tasks/threads that have not been assigned to a CPU.
- *
- * Otherwise, the TCB will be retained in an assigned task vector,
- * g_assignedtasks.  As its name suggests, on 'g_assignedtasks vector for CPU
- * 'n' would contain only the task/thread which is running on the CPU 'n'.
- * Tasks/threads would be assigned a particular CPU by one of two
- * mechanisms:
- *
- *  - (Semi-)permanently through an RTOS interfaces such as
- *    pthread_attr_setaffinity(), or
- *  - Temporarily through scheduling logic when a previously unassigned task
- *    is made to run.
- */
-
-extern FAR struct tcb_s *g_assignedtasks[CONFIG_SMP_NCPUS];
-#endif
 
 /****************************************************************************
  * Public Function Prototypes
