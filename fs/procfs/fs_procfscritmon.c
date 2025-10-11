@@ -183,21 +183,21 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
 #endif
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
 #  ifdef CONFIG_SMP
-  clock_t *premp_max = &per_cpu_var(g_premp_max, cpu);
+  clock_t *premp_max = &per_cpu_var_smp(g_premp_max, cpu);
 #  else
   clock_t *premp_max = &this_cpu_var(g_premp_max);
 #  endif
 #endif
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
 #  ifdef CONFIG_SMP
-  clock_t *crit_max = &per_cpu_var(g_crit_max, cpu);
+  clock_t *crit_max = &per_cpu_var_smp(g_crit_max, cpu);
 #  else
   clock_t *crit_max = &this_cpu_var(g_crit_max);
 #  endif
 #endif
 #if CONFIG_SCHED_CRITMONITOR_MAXTIME_BUSYWAIT >= 0
 #  ifdef CONFIG_SMP
-  clock_t *busywait_max = &per_cpu_var(g_busywait_max, cpu);
+  clock_t *busywait_max = &per_cpu_var_smp(g_busywait_max, cpu);
 #  else
   clock_t *busywait_max = &this_cpu_var(g_busywait_max);
 #  endif

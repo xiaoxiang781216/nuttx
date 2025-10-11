@@ -109,8 +109,8 @@ DEFINE_PER_CPU_BSS(struct tcb_s, g_idletcb);
 dq_queue_t g_readytorun =
 {
 #if !defined(CONFIG_SMP)
-  (FAR dq_entry_t *)&per_cpu_var(g_idletcb, 0),
-  (FAR dq_entry_t *)&per_cpu_var(g_idletcb, 0),
+  (FAR dq_entry_t *)&per_cpu_var_smp(g_idletcb, 0),
+  (FAR dq_entry_t *)&per_cpu_var_smp(g_idletcb, 0),
 #endif
 };
 
@@ -135,27 +135,27 @@ dq_queue_t g_readytorun =
 #ifdef CONFIG_SMP
 DEFINE_PER_CPU_SMP(struct tcb_s *, g_assignedtasks) =
 {
-  &per_cpu_var(g_idletcb, 0),
+  &per_cpu_var_smp(g_idletcb, 0),
 #if CONFIG_SMP_NCPUS > 1
-  &per_cpu_var(g_idletcb, 1),
+  &per_cpu_var_smp(g_idletcb, 1),
 #endif
 #if CONFIG_SMP_NCPUS > 2
-  &per_cpu_var(g_idletcb, 2),
+  &per_cpu_var_smp(g_idletcb, 2),
 #endif
 #if CONFIG_SMP_NCPUS > 3
-  &per_cpu_var(g_idletcb, 3),
+  &per_cpu_var_smp(g_idletcb, 3),
 #endif
 #if CONFIG_SMP_NCPUS > 4
-  &per_cpu_var(g_idletcb, 4),
+  &per_cpu_var_smp(g_idletcb, 4),
 #endif
 #if CONFIG_SMP_NCPUS > 5
-  &per_cpu_var(g_idletcb, 5),
+  &per_cpu_var_smp(g_idletcb, 5),
 #endif
 #if CONFIG_SMP_NCPUS > 6
-  &per_cpu_var(g_idletcb, 6),
+  &per_cpu_var_smp(g_idletcb, 6),
 #endif
 #if CONFIG_SMP_NCPUS > 7
-  &per_cpu_var(g_idletcb, 7),
+  &per_cpu_var_smp(g_idletcb, 7),
 #endif
 #if CONFIG_SMP_NCPUS > 8
 #  error This logic needs to extended for CONFIG_SMP_NCPUS > 8,
@@ -359,7 +359,7 @@ static void idle_task_initialize(void)
 
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
-      tcb             = &per_cpu_var(g_idletcb, i);
+      tcb             = &per_cpu_var_smp(g_idletcb, i);
       tcb->pid        = i;
       tcb->cpu        = i;
       tcb->flags      = TCB_FLAG_TTYPE_KERNEL | TCB_FLAG_CPU_LOCKED;
@@ -388,7 +388,7 @@ static void idle_task_initialize(void)
        * run list.
        */
 
-      per_cpu_var(g_running_tasks, i) = tcb;
+      per_cpu_var_smp(g_running_tasks, i) = tcb;
     }
 
   up_update_task(&this_cpu_var(g_idletcb));
@@ -440,7 +440,7 @@ static void idle_group_initialize(void)
 
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
-      tcb = &per_cpu_var(g_idletcb, i);
+      tcb = &per_cpu_var_smp(g_idletcb, i);
 
       hashndx = PIDHASH(i);
       g_pidhash[hashndx] = tcb;
@@ -753,7 +753,7 @@ void nx_start(void)
     {
       /* Clone stdout, stderr, stdin from the CPU0 IDLE task. */
 
-      DEBUGVERIFY(group_setuptaskfiles(&per_cpu_var(g_idletcb, i),
+      DEBUGVERIFY(group_setuptaskfiles(&per_cpu_var_smp(g_idletcb, i),
                                         NULL, true));
     }
 
