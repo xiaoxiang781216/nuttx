@@ -84,4 +84,7 @@ if(CONFIG_TRICORE_TOOLCHAIN_GNU)
 elseif(CONFIG_TRICORE_TOOLCHAIN_TASKING)
   set(PREPROCESS ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E
                  --preprocess=+noline)
+  if(CONFIG_LIBM_TOOLCHAIN)
+    nuttx_find_toolchain_lib(libm.a)
+  endif()
 endif()

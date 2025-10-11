@@ -188,3 +188,14 @@ function(nuttx_generate_preprocess_target)
     COMMAND ${CMAKE_COMMAND} -E remove ${TARGET_FILE_TEMP}
     DEPENDS ${SOURCE_FILE} ${DEPENDS})
 endfunction()
+
+set(NUTTX_FIND_TOOLCHAIN_LIB_DEFINED true)
+function(nuttx_find_toolchain_lib)
+  get_filename_component(TASKING_ROOT_PATH "${CMAKE_C_COMPILER}" DIRECTORY)
+  string(REGEX REPLACE "^/([a-zA-Z])/(.*)$" "\\1:/\\2" TASKING_ROOT_TEMP_PATH
+                       "${TASKING_ROOT_PATH}")
+  string(STRIP "${TASKING_ROOT_TEMP_PATH}" TASKING_ROOT_PATH)
+  if(ARGN)
+    nuttx_add_extra_library(${TASKING_ROOT_PATH}/../lib/tc18/${ARGN})
+  endif()
+endfunction()
