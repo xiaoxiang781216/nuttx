@@ -87,6 +87,7 @@
 #define _RFIOCBASE      (0x2a00) /* RF devices ioctl commands */
 #define _RPMSGBASE      (0x2b00) /* Remote processor message ioctl commands */
 #define _NOTEBASE       (0x2c00) /* Note ioctl commands */
+#define _RPTUNBASE      (0x2d00) /* Remote processor tunneling ioctl commands */
 #define _RCIOCBASE      (0x2e00) /* Remote Control device ioctl commands */
 #define _HIMEMBASE      (0x2f00) /* Himem device ioctl commands */
 #define _EFUSEBASE      (0x3000) /* Efuse device ioctl commands */
@@ -649,6 +650,11 @@
 
 #define _NOTEIOCVALID(c)      (_IOC_TYPE(c) == _NOTEBASE)
 #define _NOTEIOC(nr)          _IOC(_NOTEBASE, nr)
+
+/* Rptun drivers ************************************************************/
+
+#define _RPTUNIOCVALID(c)     (_IOC_TYPE(c)==_RPTUNBASE)
+#define _RPTUNIOC(nr)         _IOC(_RPTUNBASE,nr)
 
 /* Remote Control drivers ***************************************************/
 
