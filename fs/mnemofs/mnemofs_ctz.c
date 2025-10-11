@@ -99,7 +99,8 @@
 #include <debug.h>
 #include <fcntl.h>
 #include <nuttx/kmalloc.h>
-#include <math.h> 
+#include <math.h>
+#include <assert.h>
 #include <sys/param.h>
 #include <sys/stat.h>
 

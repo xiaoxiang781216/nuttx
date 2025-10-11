@@ -90,6 +90,7 @@
 
 #include <fcntl.h>
 #include <math.h>
+#include <assert.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>

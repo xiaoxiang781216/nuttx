@@ -78,6 +78,7 @@
  ****************************************************************************/
 
 #include <endian.h>
+#include <assert.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
 #include <sys/param.h>

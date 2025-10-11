@@ -26,6 +26,7 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
 #include <debug.h>
 
 #include "nrf52_gpio.h"

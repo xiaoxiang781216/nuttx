@@ -32,6 +32,7 @@
 #include "hardware/mx8mp_i2c.h"
 
 #include <debug.h>
+#include <assert.h>
 #include "arm_internal.h"
 
 /****************************************************************************
