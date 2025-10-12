@@ -66,12 +66,12 @@ struct syslog_intbuffer_s
  * Private Data
  ****************************************************************************/
 
-static struct syslog_intbuffer_s g_syslog_intbuffer =
+static
+DEFINE_PER_CPU_BMP(struct syslog_intbuffer_s, g_syslog_intbuffer) =
 {
-  CIRCBUF_INITIALIZER(g_syslog_intbuffer.buffer,
-                      sizeof(g_syslog_intbuffer.buffer)),
-  SP_UNLOCKED,
+  .splock = SP_UNLOCKED,
 };
+#define g_syslog_intbuffer this_cpu_var_bmp(g_syslog_intbuffer)
 
 /****************************************************************************
  * Private Functions
@@ -107,7 +107,7 @@ static void syslog_flush_internal(bool force, size_t buflen)
    */
 
   flags = spin_lock_irqsave_notrace(&ibuf->splock);
-  if (ibuf->reading == false)
+  if (!ibuf->reading && ibuf->circ.base)
     {
       ibuf->reading = true;
 
@@ -167,6 +167,11 @@ void syslog_add_intbuffer(FAR const char *buffer, size_t buflen)
   /* Disable concurrent modification from interrupt handling logic */
 
   flags = spin_lock_irqsave_notrace(&ibuf->splock);
+
+  if (!ibuf->circ.base)
+    {
+      circbuf_init(&ibuf->circ, ibuf->buffer, CONFIG_SYSLOG_INTBUFSIZE);
+    }
 
   space = circbuf_space(&ibuf->circ);
 
