@@ -97,6 +97,7 @@ static struct syslog_intbuffer_s g_syslog_intbuffer =
 
 static void syslog_flush_internal(bool force, size_t buflen)
 {
+  FAR struct syslog_intbuffer_s *ibuf = &g_syslog_intbuffer;
   FAR const char *buffer;
   irqstate_t flags;
   size_t size;
@@ -105,30 +106,30 @@ static void syslog_flush_internal(bool force, size_t buflen)
    * concurrent modification by other tasks.
    */
 
-  flags = spin_lock_irqsave_notrace(&g_syslog_intbuffer.splock);
-  if (g_syslog_intbuffer.reading == false)
+  flags = spin_lock_irqsave_notrace(&ibuf->splock);
+  if (ibuf->reading == false)
     {
-      g_syslog_intbuffer.reading = true;
+      ibuf->reading = true;
 
       do
         {
-          buffer = circbuf_get_readptr(&g_syslog_intbuffer.circ, &size);
+          buffer = circbuf_get_readptr(&ibuf->circ, &size);
           if (size > 0)
             {
               size = (size >= buflen) ? buflen : size;
-              spin_unlock_irqrestore_notrace(&g_syslog_intbuffer.splock,
+              spin_unlock_irqrestore_notrace(&ibuf->splock,
                                              flags);
               syslog_write_foreach(buffer, size, force);
-              flags = spin_lock_irqsave_notrace(&g_syslog_intbuffer.splock);
-              circbuf_readcommit(&g_syslog_intbuffer.circ, size);
+              flags = spin_lock_irqsave_notrace(&ibuf->splock);
+              circbuf_readcommit(&ibuf->circ, size);
               buflen -= size;
             }
         }
       while (size > 0 && buflen > 0);
-      g_syslog_intbuffer.reading = false;
+      ibuf->reading = false;
     }
 
-  spin_unlock_irqrestore_notrace(&g_syslog_intbuffer.splock, flags);
+  spin_unlock_irqrestore_notrace(&ibuf->splock, flags);
 }
 
 /****************************************************************************
@@ -159,24 +160,25 @@ static void syslog_flush_internal(bool force, size_t buflen)
 
 void syslog_add_intbuffer(FAR const char *buffer, size_t buflen)
 {
+  FAR struct syslog_intbuffer_s *ibuf = &g_syslog_intbuffer;
   irqstate_t flags;
   size_t space;
 
   /* Disable concurrent modification from interrupt handling logic */
 
-  flags = spin_lock_irqsave_notrace(&g_syslog_intbuffer.splock);
+  flags = spin_lock_irqsave_notrace(&ibuf->splock);
 
-  space = circbuf_space(&g_syslog_intbuffer.circ);
+  space = circbuf_space(&ibuf->circ);
 
   if (space >= buflen)
     {
-      circbuf_write(&g_syslog_intbuffer.circ, buffer, buflen);
-      spin_unlock_irqrestore_notrace(&g_syslog_intbuffer.splock, flags);
+      circbuf_write(&ibuf->circ, buffer, buflen);
+      spin_unlock_irqrestore_notrace(&ibuf->splock, flags);
     }
   else
     {
-      spin_unlock_irqrestore_notrace(&g_syslog_intbuffer.splock, flags);
-      syslog_flush_internal(true, sizeof(g_syslog_intbuffer.buffer));
+      spin_unlock_irqrestore_notrace(&ibuf->splock, flags);
+      syslog_flush_internal(true, CONFIG_SYSLOG_INTBUFSIZE);
       syslog_write_foreach(buffer, buflen, true);
     }
 }
