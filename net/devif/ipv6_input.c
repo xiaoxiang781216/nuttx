@@ -301,6 +301,23 @@ static int ipv6_in(FAR struct net_driver_s *dev)
       nxthdr    = exthdr->nxthdr;
     }
 
+#ifdef CONFIG_NET_IPFRAG
+  if (isfrag)
+    {
+      if (ipv6_fragin(dev) == OK)
+        {
+          return OK;
+        }
+      else
+        {
+#ifdef CONFIG_NET_STATISTICS
+          g_netstats.ipv6.fragerr++;
+#endif
+          goto drop;
+        }
+    }
+#endif
+
 #ifdef CONFIG_NET_NAT66
   /* Try NAT inbound, rule matching will be performed in NAT module. */
 
@@ -404,23 +421,6 @@ static int ipv6_in(FAR struct net_driver_s *dev)
     {
       nwarn("WARNING: No IP address assigned\n");
       goto drop;
-    }
-#endif
-
-#ifdef CONFIG_NET_IPFRAG
-  if (isfrag)
-    {
-      if (ipv6_fragin(dev) == OK)
-        {
-          return OK;
-        }
-      else
-        {
-#ifdef CONFIG_NET_STATISTICS
-          g_netstats.ipv6.fragerr++;
-#endif
-          goto drop;
-        }
     }
 #endif
 
