@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/arm/arm_sigdeliver.c
+ * arch/arm/src/arm_a_r/arm_sigdeliver.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -54,6 +54,8 @@
 void arm_sigdeliver(void)
 {
   struct tcb_s *rtcb = this_task();
+  uint32_t *regs = rtcb->xcp.saved_regs;
+  irqstate_t flags;
 
   board_autoled_on(LED_SIGNAL);
 
@@ -61,6 +63,7 @@ void arm_sigdeliver(void)
         rtcb, rtcb->sigdeliver, rtcb->sigpendactionq.head);
   DEBUGASSERT(rtcb->sigdeliver != NULL);
 
+retry:
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
   /* Then make sure that interrupts are enabled.  Signal handlers must always
    * run with interrupts enabled.
@@ -76,10 +79,24 @@ void arm_sigdeliver(void)
   /* Output any debug messages BEFORE restoring errno (because they may
    * alter errno), then disable interrupts again and restore the original
    * errno that is needed by the user logic (it is probably EINTR).
+   *
+   * I would prefer that all interrupts are disabled when
+   * arm_fullcontextrestore() is called, but that may not be necessary.
    */
 
   sinfo("Resuming\n");
+
+#ifndef CONFIG_SUPPRESS_INTERRUPTS
   up_irq_save();
+#endif
+
+  flags = enter_critical_section();
+  if (!sq_empty(&rtcb->sigpendactionq) &&
+      (atomic_read(&rtcb->flags) & TCB_FLAG_SIGNAL_ACTION) == 0)
+    {
+      leave_critical_section(flags);
+      goto retry;
+    }
 
   /* Modify the saved return state with the actual saved values in the
    * TCB.  This depends on the fact that nested signal handling is
@@ -99,4 +116,5 @@ void arm_sigdeliver(void)
 
   rtcb->xcp.regs = rtcb->xcp.saved_regs;
   arm_fullcontextrestore();
+  UNUSED(regs);
 }

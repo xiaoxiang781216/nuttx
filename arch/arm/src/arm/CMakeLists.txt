@@ -35,10 +35,6 @@ list(
   arm_vectortab.S
   arm_saveusercontext.S)
 
-if(NOT CONFIG_DISABLE_SIGNALS)
-  list(APPEND SRCS arm_schedulesigaction.c arm_sigdeliver.c)
-endif()
-
 if(CONFIG_PAGING)
   list(APPEND SRCS arm_pginitialize.c arm_checkmapping.c arm_allocpage.c
        arm_va2pte.c)

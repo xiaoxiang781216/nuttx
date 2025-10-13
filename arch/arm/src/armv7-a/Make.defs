@@ -21,6 +21,7 @@
 # Common ARM files
 
 include common/Make.defs
+include arm_a_r/Make.defs
 
 # The vector table is the "head" object, i.e., the one that must forced into
 # the link in order to draw in all of the other components
@@ -38,10 +39,6 @@ CMN_CSRCS += arm_doirq.c arm_gicv2.c arm_gicv2_dump.c
 CMN_CSRCS += arm_initialstate.c arm_mmu.c arm_prefetchabort.c
 CMN_CSRCS += arm_syscall.c arm_tcbinfo.c arm_undefinedinsn.c
 CMN_CSRCS += arm_perf.c cp15_cacheops.c
-
-ifneq ($(CONFIG_DISABLE_SIGNALS),y)
-  CMN_CSRCS += arm_schedulesigaction.c arm_sigdeliver.c
-endif
 
 ifeq ($(CONFIG_ARMV7A_GICv2M),y)
   CMN_CSRCS += arm_gicv2m.c
@@ -115,3 +112,5 @@ endif
 ifeq ($(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS),y)
   CMN_UCSRCS += arm_perf.c
 endif
+
+VPATH += arm_a_r

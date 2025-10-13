@@ -44,10 +44,6 @@ list(
   arm_perf.c
   cp15_cacheops.c)
 
-if(NOT CONFIG_DISABLE_SIGNALS)
-  list(APPEND SRCS arm_schedulesigaction.c arm_sigdeliver.c)
-endif()
-
 if(CONFIG_ARM_GIC_VERSION EQUAL 2)
   list(APPEND SRCS arm_gicv2.c)
   if(CONFIG_ARMV8R_GICv2M)

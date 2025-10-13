@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/arm/arm_schedulesigaction.c
+ * arch/arm/src/arm_a_r/arm_schedulesigaction.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <sched.h>
+#include <assert.h>
 #include <debug.h>
 
 #include <nuttx/irq.h>
@@ -34,6 +35,7 @@
 #include "arm.h"
 #include "sched/sched.h"
 #include "arm_internal.h"
+#include "irq/irq.h"
 
 /****************************************************************************
  * Public Functions
@@ -80,9 +82,9 @@ void up_schedule_sigaction(struct tcb_s *tcb)
   sinfo("tcb=%p, rtcb=%p current_regs=%p\n", tcb, this_task(),
         this_task()->xcp.regs);
 
-  /* Save the return lr and cpsr and one scratch register
-   * These will be restored by the signal trampoline after
-   * the signals have been delivered.
+  /* Save the return lr and cpsr and one scratch register.  These
+   * will be restored by the signal trampoline after the signals
+   * have been delivered.
    */
 
   /* Save the current register context location */
@@ -108,7 +110,7 @@ void up_schedule_sigaction(struct tcb_s *tcb)
 
   tcb->xcp.regs[REG_LR]    = 0; /* Avoid backtracing back. */
   tcb->xcp.regs[REG_PC]    = (uint32_t)arm_sigdeliver;
-  tcb->xcp.regs[REG_CPSR]  = PSR_MODE_SYS | PSR_I_BIT | PSR_F_BIT;
+  tcb->xcp.regs[REG_CPSR]  = (PSR_MODE_SYS | PSR_I_BIT | PSR_F_BIT);
 #ifdef CONFIG_ARM_THUMB
   tcb->xcp.regs[REG_CPSR] |= PSR_T_BIT;
 #endif
