@@ -22,6 +22,7 @@
 -stm32h745i-disco:nsh_cm4_rptun
 -stm32h745i-disco:nsh_cm4
 -stm32h745i-disco:nsh_cm7_rptu
+-stm32h745i-disco:nsh_cm7_rptun
 -stm32h745i-disco:nsh_cm7
 -weact-stm32h743:nsh
 -weact-stm32h743:nshusb
