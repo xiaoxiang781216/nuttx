@@ -408,15 +408,6 @@ __cpu0_start:
 
 	b		arm_boot
 
-	/* finish busy wait */
-
-#if defined(CONFIG_ARM_BUSY_WAIT) && defined(CONFIG_SMP)
-	ldr		r0, =CONFIG_ARM_BUSY_WAIT_FLAG_ADDR
-	mov		r1, #1
-	str		r1, [r0]
-	dsb		sy
-#endif
-
 	/* .text Data */
 
 .Lstackpointer:

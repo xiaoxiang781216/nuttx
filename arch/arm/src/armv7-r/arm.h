@@ -75,13 +75,20 @@
 #define PSR_Z_BIT         (1 << 30) /* Bit 30: Zero condition flag */
 #define PSR_N_BIT         (1 << 31) /* Bit 31: Negative condition flag */
 
-#define arm_finish_busy_wait()    /* To unify chip boot flow */
-
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
+
+static inline_function void arm_finish_busy_wait(void)
+{
+#ifdef CONFIG_ARM_BUSY_WAIT
+  uintptr_t address = CONFIG_ARM_BUSY_WAIT_FLAG_ADDR;
+  *(uint32_t *)address = 1;
+  up_flush_dcache(address, address + sizeof(uint32_t));
+#endif
+}
 
 #endif /* __ASSEMBLY__ */
 
