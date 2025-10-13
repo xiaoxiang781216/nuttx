@@ -70,6 +70,14 @@ Configuring and Running (Single Core)
      nsh> hello
      nsh> ostest
 
+7. elffixup_protect::
+
+     cmake -B ../build -DBOARD_CONFIG=boards/arm/mps/mps3-an547/configs/elffixup_protect
+     cmake --build ../build
+     qemu-system-arm -M mps3-an547 -m 2G -device loader,file=../build/nuttx -device loader,file=../build/nuttx_user.hex -gdb tcp::1128 -nographic
+     nsh> hello
+     nsh> ostest
+
 
 Debugging with QEMU
 ===================

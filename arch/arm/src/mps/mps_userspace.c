@@ -33,6 +33,7 @@
 #include "mpu.h"
 #include "arm_internal.h"
 #include "mps_userspace.h"
+#include "hardware/mps_memorymap.h"
 
 /****************************************************************************
  * Public Functions
@@ -94,6 +95,10 @@ void mps_userspace(void)
 
   DEBUGASSERT(USERSPACE->us_textend >= USERSPACE->us_textstart);
 
+#ifdef CONFIG_ELF_FIXUP
+  mpu_user_flash(CONFIG_ELF_FIXUP_FLASH_START,
+                 CONFIG_ELF_FIXUP_FLASH_SIZE);
+#endif
   mpu_user_flash(USERSPACE->us_textstart,
                  USERSPACE->us_textend - USERSPACE->us_textstart);
 
