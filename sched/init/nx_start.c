@@ -66,6 +66,7 @@
 #include "init/init.h"
 #include "instrument/instrument.h"
 #include "tls/tls.h"
+#include "wqueue/wqueue.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -551,6 +552,10 @@ void nx_start(void)
   /* Initialize wdog list ***************************************************/
 
   wdlist_initialize();
+
+  /* Initialize wqueue list *************************************************/
+
+  worklist_initialize();
 
   /* Initialize task list table *********************************************/
 

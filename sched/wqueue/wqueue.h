@@ -336,5 +336,17 @@ int work_start_lowpri(void);
 void work_initialize_notifier(void);
 #endif
 
+/****************************************************************************
+ * Name: worklist_initialize
+ *
+ * Description:
+ *   Init worker_list handler BMP case pointer reference core0 value.
+ *
+ ****************************************************************************/
+
+void worklist_initialize(void);
+
+#else
+#  define worklist_initialize()
 #endif /* CONFIG_SCHED_WORKQUEUE */
 #endif /* __SCHED_WQUEUE_WQUEUE_H */

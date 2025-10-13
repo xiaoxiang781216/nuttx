@@ -86,16 +86,24 @@ struct hp_wqueue_s aligned_data(64) g_hpwork =
 {
   {
     SP_UNLOCKED,
-    LIST_INITIAL_VALUE(g_hpwork.wq.expired),
-    LIST_INITIAL_VALUE(g_hpwork.wq.pending),
+    {
+      NULL,
+      NULL,
+    },
+    {
+      NULL,
+      NULL,
+    },
     SEM_INITIALIZER(0),
     {
-      { 0 }
+      {
+        0
+      },
     },
     CONFIG_SCHED_HPNTHREADS,
     false,
     SEM_INITIALIZER(0),
-  }
+  },
 };
 
 #endif /* CONFIG_SCHED_HPWORK */
@@ -107,11 +115,19 @@ struct lp_wqueue_s aligned_data(64) g_lpwork =
 {
   {
     SP_UNLOCKED,
-    LIST_INITIAL_VALUE(g_lpwork.wq.expired),
-    LIST_INITIAL_VALUE(g_lpwork.wq.pending),
+    {
+      NULL,
+      NULL,
+    },
+    {
+      NULL,
+      NULL,
+    },
     SEM_INITIALIZER(0),
     {
-      { 0 }
+      {
+        0
+      },
     },
     CONFIG_SCHED_LPNTHREADS,
     false,
@@ -698,5 +714,38 @@ int work_start_lowpri(void)
                             &g_lpwork.wq);
 }
 #endif /* CONFIG_SCHED_LPWORK */
+
+/****************************************************************************
+ * Name: worklist_initialize
+ *
+ * Description:
+ *   Init worker_list handler BMP case pointer reference core0 value.
+ *
+ ****************************************************************************/
+
+void worklist_initialize(void)
+{
+  FAR struct kwork_wqueue_s *wq;
+
+  UNUSED(wq);
+
+#ifdef CONFIG_SCHED_HPWORK
+  wq = &g_hpwork.wq;
+
+  /* For BMP compile time init will make cpun point to cpu0 */
+
+  list_initialize(&wq->expired);
+  list_initialize(&wq->pending);
+#endif
+
+#ifdef CONFIG_SCHED_LPWORK
+  wq = &g_lpwork.wq;
+
+  /* For BMP compile time init will make cpun point to cpu0 */
+
+  list_initialize(&wq->expired);
+  list_initialize(&wq->pending);
+#endif
+}
 
 #endif /* CONFIG_SCHED_WORKQUEUE */
