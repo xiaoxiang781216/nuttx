@@ -31,6 +31,8 @@
 #include <debug.h>
 #include <errno.h>
 
+#include <nuttx/mm/mm.h>
+#include <nuttx/addrenv.h>
 #include <nuttx/binfmt/binfmt.h>
 #include <nuttx/binfmt/elf_fixup.h>
 #include <nuttx/nuttx.h>
@@ -124,6 +126,52 @@ static int elf_fixup_loadbinary(FAR struct binary_s *binp,
                         fixup->heapsize :
                         CONFIG_MM_TASK_HEAP_DEFAULT_SIZE;
 #endif
+
+#ifdef CONFIG_ARCH_ADDRENV
+      binp->addrenv = addrenv_allocate();
+      for (i = 0; i < CONFIG_ELF_FIXUP_NSEGMENTS; i++)
+        {
+          if (fixup->phdr[i].p_type != PT_LOAD)
+            {
+              continue;
+            }
+
+          if (fixup->phdr[i].p_flags & PF_W)
+            {
+              if (binp->addrenv->addrenv.data == 0)
+                {
+                  binp->addrenv->addrenv.data = fixup->phdr[i].p_vaddr;
+                }
+
+              binp->addrenv->addrenv.datasize += fixup->phdr[i].p_memsz;
+            }
+          else
+            {
+              if (binp->addrenv->addrenv.text == 0)
+                {
+                  binp->addrenv->addrenv.text = fixup->phdr[i].p_vaddr;
+                }
+
+             binp->addrenv->addrenv.textsize += fixup->phdr[i].p_memsz;
+            }
+        }
+
+      /* Will access memory for elffixup, so need select addrenv.
+       * Data include data/bss/heap, we protect data + datasize
+       * will cover heap as well.
+       */
+
+      addrenv_select(binp->addrenv, &binp->oldenv);
+
+#  ifdef CONFIG_MM_TASK_HEAP
+      binp->addrenv->addrenv.heap =
+        (uintptr_t)mm_initialize(fixup->name,
+                                 (FAR void *)fixup->heapstart,
+                                 binp->heapsize);
+      binp->addrenv->addrenv.heapsize = binp->heapsize;
+#  endif
+
+#endif
       for (i = 0; i < CONFIG_ELF_FIXUP_NSEGMENTS; i++)
         {
           if (fixup->phdr[i].p_type != PT_LOAD)
@@ -146,12 +194,18 @@ static int elf_fixup_loadbinary(FAR struct binary_s *binp,
                       fixup->phdr[i].p_memsz -
                       fixup->phdr[i].p_filesz
 #ifdef CONFIG_MM_TASK_HEAP
-                      - binp->heapsize
+                      - ((fixup->phdr[i].p_vaddr <= fixup->heapstart &&
+                        fixup->phdr[i].p_vaddr + fixup->phdr[i].p_memsz
+                        > fixup->heapstart) ?
+                      binp->heapsize : 0)
 #endif
                       );
             }
         }
 
+#ifdef CONFIG_ARCH_ADDRENV
+      addrenv_restore(binp->oldenv);
+#endif
       return OK;
     }
 

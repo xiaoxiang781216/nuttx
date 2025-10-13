@@ -121,5 +121,8 @@ int group_heap_size(FAR struct mm_heap_s *heap)
 void group_heap_uninitialize(FAR struct mm_heap_s *heap)
 {
   mm_uninitialize(heap);
-  mm_free(GROUP_HEAP, heap);
+  if (mm_heapmember(GROUP_HEAP, heap))
+    {
+      mm_free(GROUP_HEAP, heap);
+    }
 }

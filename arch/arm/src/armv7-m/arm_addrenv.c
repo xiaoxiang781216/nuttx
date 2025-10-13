@@ -215,12 +215,12 @@ int up_addrenv_destroy(arch_addrenv_t *addrenv)
   DEBUGASSERT(addrenv);
 
 #ifdef CONFIG_MM_TASK_HEAP
-  if ((void *)addrenv->text != NULL)
+  if (mm_heapmember((void *)addrenv->heap, (void *)addrenv->text))
     {
       mm_free((void *)addrenv->heap, (void *)addrenv->text);
     }
 
-  if ((void *)addrenv->data != NULL)
+  if (mm_heapmember((void *)addrenv->heap, (void *)addrenv->data))
     {
       mm_free((void *)addrenv->heap, (void *)addrenv->data);
     }
@@ -314,10 +314,22 @@ int up_addrenv_select(const arch_addrenv_t *addrenv)
       g_addrenv_heap_region = mpu_allocregion();
     }
 
-  if (addrenv->heap)
+  if (addrenv->heap && (addrenv->data == 0 ||
+      mm_heapmember((void *)addrenv->heap, (void *)addrenv->data)))
     {
+      /* Heap include data or just have heap region */
+
       mpu_modify_region(g_addrenv_heap_region, addrenv->heap,
                         addrenv->heapsize,
+                        MPU_RASR_TEX_SO | MPU_RASR_C |
+                        MPU_RASR_AP_RWRW);
+    }
+  else if (addrenv->heap)
+    {
+      /* Just data region */
+
+      mpu_modify_region(g_addrenv_heap_region, addrenv->data,
+                        addrenv->datasize,
                         MPU_RASR_TEX_SO | MPU_RASR_C |
                         MPU_RASR_AP_RWRW);
     }
