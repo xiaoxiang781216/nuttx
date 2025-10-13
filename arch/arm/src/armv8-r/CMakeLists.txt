@@ -67,7 +67,7 @@ if(CONFIG_ARM_MPU)
   list(APPEND SRCS arm_mpu.c)
 endif()
 
-if(CONFIG_SMP)
+if(NOT CONFIG_UP)
   list(APPEND SRCS arm_cpuhead.S arm_cpustart.c)
   list(APPEND SRCS arm_smpcall.c arm_cpuidlestack.c arm_scu.c)
 endif()

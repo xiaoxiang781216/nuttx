@@ -37,7 +37,7 @@
 #include "gic.h"
 #include "sched/sched.h"
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_ARCH_HAVE_MULTICPU
 
 /****************************************************************************
  * Private Functions
@@ -111,7 +111,7 @@ int up_cpu_start(int cpu)
 {
   sinfo("Starting CPU%d\n", cpu);
 
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS && cpu != this_cpu());
+  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_NCPUS && cpu != up_cpu_index());
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the start event */
@@ -126,4 +126,4 @@ int up_cpu_start(int cpu)
   return OK;
 }
 
-#endif /* CONFIG_SMP */
+#endif /* CONFIG_ARCH_HAVE_MULTICPU */

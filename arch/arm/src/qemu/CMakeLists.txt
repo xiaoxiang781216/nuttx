@@ -24,7 +24,7 @@ if(CONFIG_ARCH_ARMV7A)
   list(APPEND SRCS qemu_pgalloc.c qemu_memorymap.c)
 endif()
 
-if(CONFIG_SMP)
+if(NOT CONFIG_UP)
   list(APPEND SRCS qemu_cpuboot.c)
 endif()
 

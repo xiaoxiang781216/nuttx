@@ -33,7 +33,7 @@
 #include "smp.h"
 #include "arm_internal.h"
 
-#ifdef CONFIG_SMP
+#ifndef CONFIG_UP
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -47,29 +47,29 @@
  * Private Data
  ****************************************************************************/
 
-#if CONFIG_SMP_NCPUS > 1
-static const uint32_t *g_cpu_stackalloc[CONFIG_SMP_NCPUS] =
+#if CONFIG_NCPUS > 1
+static const uint32_t *g_cpu_stackalloc[CONFIG_NCPUS] =
 {
     0
   , g_cpu1_idlestack
-#if CONFIG_SMP_NCPUS > 2
+#if CONFIG_NCPUS > 2
   , g_cpu2_idlestack
-#if CONFIG_SMP_NCPUS > 3
+#if CONFIG_NCPUS > 3
   , g_cpu3_idlestack
-#if CONFIG_SMP_NCPUS > 4
+#if CONFIG_NCPUS > 4
   , g_cpu4_idlestack
-#if CONFIG_SMP_NCPUS > 5
+#if CONFIG_NCPUS > 5
   , g_cpu5_idlestack
-#if CONFIG_SMP_NCPUS > 6
+#if CONFIG_NCPUS > 6
   , g_cpu6_idlestack
-#if CONFIG_SMP_NCPUS > 7
+#if CONFIG_NCPUS > 7
   , g_cpu7_idlestack
-#endif /* CONFIG_SMP_NCPUS > 7 */
-#endif /* CONFIG_SMP_NCPUS > 6 */
-#endif /* CONFIG_SMP_NCPUS > 5 */
-#endif /* CONFIG_SMP_NCPUS > 4 */
-#endif /* CONFIG_SMP_NCPUS > 3 */
-#endif /* CONFIG_SMP_NCPUS > 2 */
+#endif /* CONFIG_NCPUS > 7 */
+#endif /* CONFIG_NCPUS > 6 */
+#endif /* CONFIG_NCPUS > 5 */
+#endif /* CONFIG_NCPUS > 4 */
+#endif /* CONFIG_NCPUS > 3 */
+#endif /* CONFIG_NCPUS > 2 */
 };
 #endif
 
@@ -122,10 +122,10 @@ static const uint32_t *g_cpu_stackalloc[CONFIG_SMP_NCPUS] =
 
 int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
 {
-#if CONFIG_SMP_NCPUS > 1
+#if CONFIG_NCPUS > 1
   uintptr_t stack_alloc;
 
-  DEBUGASSERT(cpu > 0 && cpu < CONFIG_SMP_NCPUS && tcb != NULL &&
+  DEBUGASSERT(cpu > 0 && cpu < CONFIG_NCPUS && tcb != NULL &&
               stack_size <= SMP_STACK_SIZE);
 
   /* Get the top of the stack */
@@ -141,4 +141,4 @@ int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
   return OK;
 }
 
-#endif /* CONFIG_SMP */
+#endif /* !CONFIG_UP */

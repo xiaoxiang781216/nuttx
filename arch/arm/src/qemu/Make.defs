@@ -37,7 +37,7 @@ ifeq ($(CONFIG_ARCH_ARMV7A),y)
 CHIP_CSRCS += qemu_pgalloc.c qemu_memorymap.c
 endif
 
-ifeq ($(CONFIG_SMP),y)
+ifneq ($(CONFIG_UP),y)
   CHIP_CSRCS += qemu_cpuboot.c
 endif
 
