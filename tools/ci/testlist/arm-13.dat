@@ -6,6 +6,33 @@
 -olimex-stm32-p407:kelf
 -stm32h745i-disco:lvgl
 
+# Temporarily closed, will reopen after resolving the compilation issue
+-stm32g071b-disco:oled
+-b-l072z-lrwan1:nxlines_oled
+-stm32f746g-disco:nxterm
+-stm32f746g-disco:nxdemo
+-stm32f777zit6-meadow:f7corecomp
+-stm32f777zit6-meadow:usbnsh
+-stm32f777zit6-meadow:dualcdcacm
+-stm32f777zit6-meadow:meadow_os
+-stm32f777zit6-meadow:i2s
+-stm32f777zit6-meadow:sdram
+-stm32f777zit6-meadow:projectlab
+-nucleo-h563zi:nsh
+-stm32h745i-disco:nsh_cm4_rptun
+-stm32h745i-disco:nsh_cm4
+-stm32h745i-disco:nsh_cm7_rptu
+-stm32h745i-disco:nsh_cm7
+-weact-stm32h743:nsh
+-weact-stm32h743:nshusb
+-stm32h747i-disco:nsh
+-linum-stm32h753bi:socketcan
+-openh743i:usbdev_hs_host_fs
+-openh743i:nsh
+-openh743i:composite_fs
+-openh743i:composite_hs
+-nucleo-h743zi:nxlines_oled
+
 # Boards build by CMake
 
 CMake,b-l072z-lrwan1:adc

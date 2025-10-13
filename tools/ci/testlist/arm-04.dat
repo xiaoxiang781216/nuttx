@@ -12,3 +12,12 @@
 
 -lc823450-xgevk:posix_spawn
 -ea3131:pgnsh
+
+# Temporarily closed, will reopen after resolving the compilation issue
+-lpcxpresso-lpc54628:pwfb
+-lpcxpresso-lpc54628:nxwm
+-lpcxpresso-lpc54628:pwlines
+-lpcxpresso-lpc54628:twm4nx1
+-lpcxpresso-lpc54628:fb
+-lpcxpresso-lpc54628:twm4nx2
+

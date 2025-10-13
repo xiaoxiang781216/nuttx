@@ -14,3 +14,23 @@
 # Sparc-gaisler-elf toolchain doesn't provide macOS binaries
 /sparc
 -xx3823:nsh
+
+# Temporarily closed, will reopen after resolving the compilation issue
+-chipkit-wifire:nsh
+-pic32mz-starterkit:nsh
+-flipnclick-pic32mz:nxlines
+-flipnclick-pic32mz:nsh
+-pic32mx-starterkit:nsh
+-pic32mx-starterkit:nsh2
+-ubw32:nsh
+-mirtoo:nxffs
+-mirtoo:nsh
+-pic32mx7mmb:nsh
+-sure-pic32mx:nsh
+-sure-pic32mx:usbnsh
+-rx65n-grrose:ipv6
+-rx65n-grrose:netnsh
+-rx65n-grrose:nsh
+-rx65n-rsk2mb:ipv6
+-rx65n-rsk2mb:netnsh
+-rx65n-rsk2mb:nsh

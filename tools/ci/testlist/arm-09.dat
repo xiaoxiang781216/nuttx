@@ -13,6 +13,9 @@
 -olimex-stm32-p407:knsh
 -olimex-stm32-p407:kmodule
 
+# Temporarily closed, will reopen after resolving the compilation issue
+-nucleo-l152re:lcd
+
 # Boards build by CMake
 
 CMake,nucleo-f334r8:adc

@@ -13,3 +13,11 @@
 
 /arm/stm32/stm3240g-eval,CONFIG_ARM_TOOLCHAIN_GNU_EABI
 -stm3240g-eval:knxwm
+
+# Temporarily closed, will reopen after resolving the compilation issue
+-nucleo-l152re:lcd
+-stm3210e-eval:pm
+-stm3210e-eval:nxterm
+-stm3210e-eval:nsh2
+-stm3210e-eval:nx
+-shenzhou:nxwm
