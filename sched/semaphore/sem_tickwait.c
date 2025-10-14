@@ -74,16 +74,6 @@ int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
 
   DEBUGASSERT(sem != NULL && up_interrupt_context() == false);
 
-  /* We will disable interrupts until we have completed the semaphore
-   * wait.  We need to do this (as opposed to just disabling pre-emption)
-   * because there could be interrupt handlers that are asynchronously
-   * posting semaphores and to prevent race conditions with watchdog
-   * timeout.  This is not too bad because interrupts will be re-
-   * enabled while we are blocked waiting for the semaphore.
-   */
-
-  flags = enter_critical_section();
-
   /* Try to take the semaphore without waiting. */
 
   ret = nxsem_trywait(sem);
@@ -99,11 +89,17 @@ int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
         {
           /* Start the watchdog with interrupts still disabled */
 
+          flags = enter_critical_section();
+
           wd_start(&rtcb->waitdog, delay, nxsem_timeout, (uintptr_t)rtcb);
 
           /* Now perform the blocking wait */
 
           ret = nxsem_wait(sem);
+
+          /* We can now restore interrupts */
+
+          leave_critical_section(flags);
 
           /* Stop the watchdog timer */
 
@@ -111,9 +107,6 @@ int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
         }
     }
 
-  /* We can now restore interrupts */
-
-  leave_critical_section(flags);
   return ret;
 }
 
