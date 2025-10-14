@@ -1,5 +1,5 @@
 [build-system]
-requires=["setuptools", "wheel"]
+requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -22,6 +22,7 @@ dependencies = [
     "lauterbach-trace32-rcl>=0.0.0",
     "lief>=0.0.0",
     "matplotlib>=0.0.0",
+    "mcp>=0.0.0",
     "numpy>=0.0.0",
     "pandas>=0.0.0",
     "pillow>=0.0.0",
@@ -34,4 +35,4 @@ dependencies = [
 
 
 [tool.setuptools]
-package-dir = {"gdbrpc" = "gdbrpc", "nxgdb" = "nxgdb", "nxelf" = "nxelf", "nxreg" = "nxreg", "nxstub" = "nxstub", "nxtrace" = "nxtrace"}
+package-dir = { "gdbrpc" = "gdbrpc", "nxgdb" = "nxgdb", "nxelf" = "nxelf", "nxreg" = "nxreg", "nxstub" = "nxstub", "nxtrace" = "nxtrace", "nxgdbmcp" = "nxgdbmcp" }

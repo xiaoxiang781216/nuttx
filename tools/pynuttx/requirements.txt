@@ -6,6 +6,7 @@ debugpy
 lauterbach-trace32-rcl
 lief
 matplotlib
+mcp
 numpy
 pandas
 pillow
@@ -15,3 +16,4 @@ pyelftools
 pylink-square
 tqdm
 viztracer
+uvicorn
