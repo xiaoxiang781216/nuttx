@@ -59,6 +59,7 @@
 #include <errno.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/mutex.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/semaphore.h>
 #include <arch/board/board.h>
