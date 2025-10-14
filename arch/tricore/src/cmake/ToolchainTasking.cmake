@@ -175,7 +175,7 @@ function(nuttx_generate_preprocess_target)
     ${ARGN})
 
   get_filename_component(TARGET_DIR ${TARGET_FILE} DIRECTORY)
-  get_filename_component(SOURCE_FILE_NAME ${SOURCE_FILE} NAME_WE)
+  get_filename_component(SOURCE_FILE_NAME ${SOURCE_FILE} NAME)
   set(TARGET_FILE_TEMP "${TARGET_DIR}/${SOURCE_FILE_NAME}.cpp")
 
   add_custom_command(
