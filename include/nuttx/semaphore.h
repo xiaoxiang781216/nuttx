@@ -745,26 +745,23 @@ static inline_function int nxsem_wait(FAR sem_t *sem)
     }
 #endif
 
-  while (fastpath)
+  if (fastpath)
     {
       FAR atomic_t *val = mutex ? NXSEM_MHOLDER(sem) : NXSEM_COUNT(sem);
-      int32_t old = atomic_read(val);
+      int32_t old;
       int32_t new;
 
       if (mutex)
         {
-          if (old != NXSEM_NO_MHOLDER)
-            {
-              break;
-            }
-
+          old = NXSEM_NO_MHOLDER;
           new = _SCHED_GETTID();
         }
       else
         {
+          old = atomic_read(val);
           if (old < 1)
             {
-              break;
+              return nxsem_wait_slow(sem);
             }
 
           new = old - 1;
@@ -835,7 +832,7 @@ static inline_function int nxsem_post(FAR sem_t *sem)
     }
 #endif
 
-  while (fastpath)
+  if (fastpath)
     {
       FAR atomic_t *val = mutex ? NXSEM_MHOLDER(sem) : NXSEM_COUNT(sem);
       int32_t old = atomic_read(val);
@@ -843,18 +840,14 @@ static inline_function int nxsem_post(FAR sem_t *sem)
 
       if (mutex)
         {
-          if (NXSEM_MBLOCKING(old))
-            {
-              break;
-            }
-
+          old = (old & (~NXSEM_MBLOCKING_BIT));
           new = NXSEM_NO_MHOLDER;
         }
       else
         {
           if (old < 0)
             {
-              break;
+              return nxsem_post_slow(sem);
             }
 
           new = old + 1;
