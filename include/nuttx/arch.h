@@ -80,6 +80,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include <arch/arch.h>
 #include <arch/types.h>
@@ -2898,7 +2899,7 @@ void up_lowputc(int ch);
  *
  ****************************************************************************/
 
-#define up_puts(str) up_nputs(str, ~((size_t)0))
+#define up_puts(str) up_nputs(str, strlen(str))
 void up_nputs(FAR const char *str, size_t len);
 
 /****************************************************************************
