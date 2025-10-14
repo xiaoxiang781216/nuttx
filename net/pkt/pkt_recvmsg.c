@@ -42,12 +42,14 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
+#include <nuttx/net/ethernet.h>
 
 #include "netdev/netdev.h"
 #include "devif/devif.h"
 #include "pkt/pkt.h"
 #include "socket/socket.h"
 #include "utils/utils.h"
+#include <netinet/if_ether.h>
 #include <netpacket/packet.h>
 
 /****************************************************************************
@@ -199,9 +201,33 @@ static void pkt_recvfrom_newdata(FAR struct net_driver_s *dev,
  *
  ****************************************************************************/
 
-static inline void pkt_recvfrom_sender(FAR struct net_driver_s *dev,
+static inline void pkt_recvfrom_sender(int ifindex, FAR struct iob_s *iob,
                                        FAR struct pkt_recvfrom_s *pstate)
 {
+  FAR struct sockaddr_ll *from;
+
+  if (pstate->pr_msg->msg_name != NULL)
+    {
+      from = (FAR struct sockaddr_ll *)pstate->pr_msg->msg_name;
+      from->sll_family = AF_PACKET;
+      from->sll_ifindex = ifindex;
+      from->sll_protocol = pstate->pr_type;
+
+      from->sll_halen = ETH_ALEN;
+
+      if (iob != NULL && iob->io_pktlen >= sizeof(struct eth_hdr_s))
+        {
+          FAR struct eth_hdr_s *ethhdr =
+              (FAR struct eth_hdr_s *)iob->io_data;
+          memcpy(from->sll_addr, ethhdr->src, ETH_ALEN);
+        }
+      else
+        {
+          memset(from->sll_addr, 0, sizeof(from->sll_addr));
+        }
+
+      pstate->pr_msg->msg_namelen = sizeof(struct sockaddr_ll);
+    }
 }
 
 /****************************************************************************
@@ -248,7 +274,7 @@ static uint16_t pkt_recvfrom_eventhandler(FAR struct net_driver_s *dev,
 
           /* Save the sender's address in the caller's 'from' location */
 
-          pkt_recvfrom_sender(dev, pstate);
+          pkt_recvfrom_sender(dev->d_ifindex, dev->d_iob, pstate);
 
           /* indicate that the data has been consumed */
 
@@ -371,6 +397,7 @@ static ssize_t pkt_recvfrom_result(int result,
 static inline void pkt_readahead(FAR struct pkt_recvfrom_s *pstate)
 {
   FAR struct pkt_conn_s *conn = pstate->pr_conn;
+  FAR struct net_driver_s *dev;
   FAR struct iob_s *iob;
   int recvlen;
   int offset = 0;
@@ -403,9 +430,10 @@ static inline void pkt_readahead(FAR struct pkt_recvfrom_s *pstate)
 
       /* Copy to user */
 
+      dev = pkt_find_device(conn);
+
       if (pstate->pr_type == SOCK_DGRAM)
         {
-          FAR struct net_driver_s *dev = pkt_find_device(conn);
           if (dev != NULL)
             {
               /* For SOCK_DGRAM, we need skip the l2 header */
@@ -426,6 +454,13 @@ static inline void pkt_readahead(FAR struct pkt_recvfrom_s *pstate)
       pstate->pr_recvlen = recvlen;
 
       ninfo("Received %d bytes (of %u)\n", recvlen, iob->io_pktlen);
+
+      /* Fill in the sender's address information if requested */
+
+      if (dev != NULL && pstate->pr_msg->msg_name != NULL)
+        {
+          pkt_recvfrom_sender(dev->d_ifindex, iob, pstate);
+        }
 
       /* Remove the I/O buffer chain from the head of the read-ahead
        * buffer queue.
@@ -474,7 +509,7 @@ static inline void pkt_readahead(FAR struct pkt_recvfrom_s *pstate)
 ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
                     int flags)
 {
-  FAR struct sockaddr *from = msg->msg_name;
+  FAR struct sockaddr_ll *from = msg->msg_name;
   FAR socklen_t *fromlen = &msg->msg_namelen;
   FAR struct pkt_conn_s *conn = psock->s_conn;
   FAR struct net_driver_s *dev;
@@ -485,7 +520,7 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
    * enough to hold this address family.
    */
 
-  if (from != NULL && *fromlen < sizeof(sa_family_t))
+  if (from != NULL && *fromlen < sizeof(struct sockaddr_ll))
     {
       return -EINVAL;
     }
