@@ -207,6 +207,17 @@ struct noteram_driver_s g_noteram_driver =
         CONFIG_SCHED_INSTRUMENTATION_CPUSET
 #  endif
       },
+
+#  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+        {
+          {
+            0
+          },
+        },
+        {
+          LOG_DEBUG,
+        }
+#  endif
     },
 #endif
     &g_noteram_ops
