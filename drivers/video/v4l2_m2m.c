@@ -33,6 +33,7 @@
 #include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/video/v4l2_m2m.h>
+#include <nuttx/video/video.h>
 #include <sys/param.h>
 
 #include "video_framebuff.h"
@@ -393,6 +394,7 @@ static int codec_qbuf(FAR struct file *filep,
   FAR codec_file_t *cfile = filep->f_priv;
   FAR codec_type_inf_t *type_inf;
   FAR vbuf_container_t *container;
+  size_t buf_size;
 
   if (buf == NULL)
     {
@@ -413,16 +415,27 @@ static int codec_qbuf(FAR struct file *filep,
     }
 
   memcpy(&container->buf, buf, sizeof(struct v4l2_buffer));
-  switch (buf->memory)
+  if (buf->memory == V4L2_MEMORY_MMAP)
     {
-      case V4L2_MEMORY_MMAP:
-        container->vaddr[0] =
-            (FAR void *)(type_inf->bufheap + buf->m.offset -
-            (V4L2_TYPE_IS_OUTPUT(buf->type) ? 0 : CAPTURE_BUF_OFFSET));
-        break;
+      /* only use userptr inside the container */
 
-      default:
-        return -EINVAL;
+      if (V4L2_TYPE_IS_OUTPUT(buf->type))
+        {
+          buf_size = CODEC_OUTPUT_G_BUFSIZE(cmng->codec, cfile->priv);
+        }
+      else
+        {
+          buf_size = CODEC_CAPTURE_G_BUFSIZE(cmng->codec, cfile->priv);
+        }
+
+      if (buf_size == 0)
+        {
+          return -EINVAL;
+        }
+
+      container->buf.length    = buf_size;
+      container->buf.m.userptr = (unsigned long)(type_inf->bufheap +
+                                 container->buf.length * buf->index);
     }
 
   video_framebuff_queue_container(&type_inf->bufinf, container);
@@ -985,7 +998,7 @@ static int codec_poll(FAR struct file *filep,
   return OK;
 }
 
-static FAR vbuf_container_t *codec_get_buf(FAR codec_type_inf_t *type_inf)
+static FAR struct v4l2_buffer *codec_get_buf(FAR codec_type_inf_t *type_inf)
 {
   FAR vbuf_container_t *container;
 
@@ -996,26 +1009,26 @@ static FAR vbuf_container_t *codec_get_buf(FAR codec_type_inf_t *type_inf)
       return NULL;
     }
 
-  return container;
+  return &container->buf;
 }
 
 static int codec_put_buf(FAR codec_file_t *cfile,
                          FAR codec_type_inf_t *type_inf,
-                         FAR vbuf_container_t *cnt)
+                         FAR struct v4l2_buffer *buf)
 {
-  if (cfile == NULL || type_inf == NULL || cnt == NULL)
+  if (cfile == NULL || type_inf == NULL || buf == NULL)
     {
       return -EINVAL;
     }
 
-  if (cnt->buf.flags & V4L2_BUF_FLAG_LAST)
+  if (buf->flags & V4L2_BUF_FLAG_LAST)
     {
       type_inf->buflast = true;
     }
 
   video_framebuff_capture_done(&type_inf->bufinf);
   poll_notify(&cfile->fds, 1,
-              V4L2_TYPE_IS_OUTPUT(cnt->buf.type) ? POLLOUT : POLLIN);
+              V4L2_TYPE_IS_OUTPUT(buf->type) ? POLLOUT : POLLIN);
 
   return OK;
 }
@@ -1063,32 +1076,32 @@ int codec_unregister(FAR const char *devpath)
   return unregister_driver(devpath);
 }
 
-FAR vbuf_container_t *codec_output_get_buf(void *cookie)
+FAR struct v4l2_buffer *codec_output_get_buf(void *cookie)
 {
   FAR codec_file_t *cfile = cookie;
 
   return codec_get_buf(&cfile->output_inf);
 }
 
-FAR vbuf_container_t *codec_capture_get_buf(void *cookie)
+FAR struct v4l2_buffer *codec_capture_get_buf(void *cookie)
 {
   FAR codec_file_t *cfile = cookie;
 
   return codec_get_buf(&cfile->capture_inf);
 }
 
-int codec_output_put_buf(FAR void *cookie, FAR vbuf_container_t *cnt)
+int codec_output_put_buf(FAR void *cookie, FAR struct v4l2_buffer *buf)
 {
   FAR codec_file_t *cfile = cookie;
 
-  return codec_put_buf(cfile, &cfile->output_inf, cnt);
+  return codec_put_buf(cfile, &cfile->output_inf, buf);
 }
 
-int codec_capture_put_buf(FAR void *cookie, FAR vbuf_container_t *cnt)
+int codec_capture_put_buf(FAR void *cookie, FAR struct v4l2_buffer *buf)
 {
   FAR codec_file_t *cfile = cookie;
 
-  return codec_put_buf(cfile, &cfile->capture_inf, cnt);
+  return codec_put_buf(cfile, &cfile->capture_inf, buf);
 }
 
 int codec_queue_event(FAR void *cookie, FAR struct v4l2_event *evt)
