@@ -234,6 +234,9 @@ int iob_clone_partial(FAR struct iob_s *iob1, unsigned int len,
         }
     }
 
+#ifdef CONFIG_NET_TIMESTAMP
+  iob2->io_time = iob1->io_time;
+#endif
   return 0;
 }
 
