@@ -54,8 +54,7 @@
  *   priorities in the above list up to and including p.
  *
  *   Per OpenGroup.org "If the maskpri argument is 0, the current log mask
- *   is not modified."  In this implementation, the value zero is permitted
- *   in order to disable all syslog levels.
+ *   is not modified."
  *
  *   NOTE:  setlogmask is not a thread-safe, re-entrant function.  Concurrent
  *   use of setlogmask() will have undefined behavior.
@@ -77,10 +76,12 @@
 int setlogmask(int mask)
 {
   FAR struct task_info_s *info = task_get_info();
-  uint8_t oldmask;
+  uint8_t oldmask = info->ta_syslog_mask;
 
-  oldmask       = info->ta_syslog_mask;
-  info->ta_syslog_mask = (uint8_t)mask;
+  if (mask != 0)
+    {
+      info->ta_syslog_mask = (uint8_t)mask;
+    }
 
   return oldmask;
 }
