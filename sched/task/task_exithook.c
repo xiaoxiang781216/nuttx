@@ -196,6 +196,8 @@ static inline void nxtask_sigchild(pid_t ppid, FAR struct tcb_s *ctcb,
            * for now.
            */
 
+          memset(&info, 0, sizeof(info));
+
           info.si_signo           = SIGCHLD;
           info.si_code            = CLD_EXITED;
           info.si_errno           = OK;
@@ -250,6 +252,8 @@ static inline void nxtask_sigchild(FAR struct tcb_s *ptcb,
        * for now.
        */
 
+      memset(&info, 0, sizeof(info));
+
       info.si_signo           = SIGCHLD;
       info.si_code            = CLD_EXITED;
       info.si_errno           = OK;
@@ -297,21 +301,17 @@ static inline void nxtask_signalparent(FAR struct tcb_s *ctcb, int status)
    */
 
   ptcb = nxsched_get_tcb(ctcb->group->tg_ppid);
-  if (ptcb == NULL)
+  if (ptcb)
     {
-      /* The parent no longer exists... bail */
+      /* Send SIGCHLD to all members of the parent's task group.  NOTE that
+       * the SIGCHLD signal is only sent once either (1) if this is the final
+       * thread of the task group that is exiting (HAVE_GROUP_MEMBERS) or (2)
+       * if the main thread of the group is exiting (!HAVE_GROUP_MEMBERS).
+       */
 
-      return;
+      nxtask_sigchild(ptcb, ctcb, status);
+      nxsched_put_tcb(ptcb);
     }
-
-  /* Send SIGCHLD to all members of the parent's task group.  NOTE that the
-   * SIGCHLD signal is only sent once either (1) if this is the final thread
-   * of the task group that is exiting (HAVE_GROUP_MEMBERS) or (2) if the
-   * main thread of the group is exiting (!HAVE_GROUP_MEMBERS).
-   */
-
-  nxtask_sigchild(ptcb, ctcb, status);
-  nxsched_put_tcb(ptcb);
 #endif
 }
 #else
