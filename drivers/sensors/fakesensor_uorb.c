@@ -52,7 +52,9 @@ struct fakesensor_s
   union
     {
       struct sensor_lowerhalf_s lower;
+#ifdef CONFIG_SENSORS_GNSS
       struct gnss_lowerhalf_s gnss;
+#endif
     };
 
   int type;
@@ -77,11 +79,13 @@ static int fakesensor_set_interval(FAR struct sensor_lowerhalf_s *lower,
 static int fakesensor_batch(FAR struct sensor_lowerhalf_s *lower,
                             FAR struct file *filep,
                             FAR uint32_t *latency_us);
+#ifdef CONFIG_SENSORS_GNSS
 static int fakegnss_activate(FAR struct gnss_lowerhalf_s *lower,
                              FAR struct file *filep, bool sw);
 static int fakegnss_set_interval(FAR struct gnss_lowerhalf_s *lower,
                                  FAR struct file *filep,
                                  FAR uint32_t *period_us);
+#endif
 static void fakesensor_push_event(FAR struct fakesensor_s *sensor,
                                   uint64_t event_timestamp);
 static int fakesensor_thread(int argc, char** argv);
@@ -97,11 +101,13 @@ static struct sensor_ops_s g_fakesensor_ops =
   .batch = fakesensor_batch,
 };
 
+#ifdef CONFIG_SENSORS_GNSS
 static struct gnss_ops_s g_fakegnss_ops =
 {
   .activate = fakegnss_activate,
   .set_interval = fakegnss_set_interval,
 };
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -246,6 +252,7 @@ fakesensor_read_gyro_uncal(FAR struct fakesensor_s *sensor,
                            sizeof(struct sensor_gyro_uncal));
 }
 
+#ifdef CONFIG_SENSORS_GNSS
 static inline void fakesensor_read_gnss(FAR struct fakesensor_s *sensor)
 {
   char raw[150];
@@ -262,6 +269,7 @@ static inline void fakesensor_read_gnss(FAR struct fakesensor_s *sensor)
         }
     }
 }
+#endif
 
 static inline void fakesensor_read_light(FAR struct fakesensor_s *sensor,
                                          uint64_t event_timestamp)
@@ -330,11 +338,20 @@ static int fakesensor_activate(FAR struct sensor_lowerhalf_s *lower,
   return OK;
 }
 
+#ifdef CONFIG_SENSORS_GNSS
 static int fakegnss_activate(FAR struct gnss_lowerhalf_s *lower,
                              FAR struct file *filep, bool enable)
 {
   return fakesensor_activate((FAR void *)lower, filep, enable);
 }
+
+static int fakegnss_set_interval(FAR struct gnss_lowerhalf_s *lower,
+                                 FAR struct file *filep,
+                                 FAR uint32_t *period_us)
+{
+  return fakesensor_set_interval((FAR void *)lower, filep, period_us);
+}
+#endif
 
 static int fakesensor_set_interval(FAR struct sensor_lowerhalf_s *lower,
                                    FAR struct file *filep,
@@ -344,13 +361,6 @@ static int fakesensor_set_interval(FAR struct sensor_lowerhalf_s *lower,
                                                  struct fakesensor_s, lower);
   sensor->interval = *period_us;
   return OK;
-}
-
-static int fakegnss_set_interval(FAR struct gnss_lowerhalf_s *lower,
-                                 FAR struct file *filep,
-                                 FAR uint32_t *period_us)
-{
-  return fakesensor_set_interval((FAR void *)lower, filep, period_us);
 }
 
 static int fakesensor_batch(FAR struct sensor_lowerhalf_s *lower,
@@ -418,10 +428,12 @@ void fakesensor_push_event(FAR struct fakesensor_s *sensor,
       fakesensor_read_light(sensor, event_timestamp);
       break;
 
+#ifdef CONFIG_SENSORS_GNSS
     case SENSOR_TYPE_GNSS:
     case SENSOR_TYPE_GNSS_SATELLITE:
       fakesensor_read_gnss(sensor);
       break;
+#endif
 
     default:
       snerr("fakesensor: unsupported type sensor type:%d\n", sensor->type);
@@ -525,6 +537,8 @@ int fakesensor_init(int type, FAR const char *file_name,
   FAR struct fakesensor_s *sensor;
   FAR char *argv[2];
   char arg1[32];
+
+#ifdef CONFIG_SENSORS_GNSS
   uint32_t nbuffer[] = {
     [SENSOR_GNSS_IDX_GNSS] = batch_number,
     [SENSOR_GNSS_IDX_GNSS_SATELLITE] = batch_number,
@@ -532,6 +546,7 @@ int fakesensor_init(int type, FAR const char *file_name,
     [SENSOR_GNSS_IDX_GNSS_CLOCK] = batch_number,
     [SENSOR_GNSS_IDX_GNSS_GEOFENCE] = batch_number,
   };
+#endif
 
   int ret;
 
@@ -567,8 +582,12 @@ int fakesensor_init(int type, FAR const char *file_name,
 
   if (type == SENSOR_TYPE_GNSS || type == SENSOR_TYPE_GNSS_SATELLITE)
     {
+#ifdef CONFIG_SENSORS_GNSS
       sensor->gnss.ops = &g_fakegnss_ops;
       gnss_register(&sensor->gnss, devno, nbuffer, nitems(nbuffer));
+#else
+      snerr("fakesensor undefine gnss config");
+#endif
     }
   else
     {
