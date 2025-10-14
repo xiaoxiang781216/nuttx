@@ -81,6 +81,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <assert.h>
+
 #include <nuttx/kmalloc.h>
 #include <sys/stat.h>
 

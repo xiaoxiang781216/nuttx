@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
 #include <nuttx/arch.h>
 #include <nuttx/addrenv.h>
 #include <nuttx/irq.h>

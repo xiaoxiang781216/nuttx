@@ -24,6 +24,7 @@
 
 #include "mx8mp_ipc.h"
 
+#include <assert.h>
 #include <debug.h>
 #include <inttypes.h>
 #include <nuttx/arch.h>

@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
+#include <assert.h>
 #include <debug.h>
 #include <arch/csk6/irq.h>
 

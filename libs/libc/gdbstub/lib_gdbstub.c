@@ -24,6 +24,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <assert.h>
 #include <ctype.h>
 #include <elf.h>
 #include <stdint.h>
