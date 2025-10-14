@@ -60,19 +60,14 @@ int get_blocking(FAR sem_t *sem, bool mutex, bool *blocking)
        * called from nxsem_reset
        */
 
-      DEBUGASSERT(mholder == (NXSEM_MBLOCKING_BIT | NXSEM_MRESET) ||
+      DEBUGASSERT(mholder == (NXSEM_MBLOCKING_BIT | NXSEM_NO_MHOLDER) ||
                   (mholder & (~NXSEM_MBLOCKING_BIT)) == nxsched_gettid());
 
       *blocking = NXSEM_MBLOCKING(mholder);
 
       if (!(*blocking))
         {
-          if (mholder != NXSEM_MRESET)
-            {
-              mholder = NXSEM_NO_MHOLDER;
-            }
-
-          atomic_set(NXSEM_MHOLDER(sem), mholder);
+          atomic_set(NXSEM_MHOLDER(sem), NXSEM_NO_MHOLDER);
         }
     }
   else

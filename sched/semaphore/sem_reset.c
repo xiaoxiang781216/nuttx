@@ -50,7 +50,7 @@ static inline_function void reset_mutex(FAR sem_t *sem, int16_t count)
    */
 
   atomic_set(NXSEM_MHOLDER(sem),
-              NXSEM_MRESET | NXSEM_MBLOCKING_BIT);
+              NXSEM_NO_MHOLDER | NXSEM_MBLOCKING_BIT);
 
   if (!dq_empty(SEM_WAITLIST(sem)))
     {
@@ -58,7 +58,7 @@ static inline_function void reset_mutex(FAR sem_t *sem, int16_t count)
     }
   else
     {
-      atomic_set(NXSEM_MHOLDER(sem), NXSEM_MRESET);
+      atomic_set(NXSEM_MHOLDER(sem), NXSEM_NO_MHOLDER);
     }
 }
 
