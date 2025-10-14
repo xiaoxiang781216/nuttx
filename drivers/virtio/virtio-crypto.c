@@ -24,6 +24,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <alloca.h>
 #include <debug.h>
 
 #include <crypto/virtio_crypto.h>
@@ -339,7 +340,6 @@ static void virtio_crypto_fill_dataq_request_cipher(
   vb[*num_out + (*num_in)++].len = crp->crp_olen;
   vb[*num_out + *num_in].buf = inhdr;
   vb[*num_out + (*num_in)++].len = sizeof(*inhdr);
-  return OK;
 }
 
 static void virtio_crypto_fill_dataq_request_hash(
@@ -365,7 +365,6 @@ static void virtio_crypto_fill_dataq_request_hash(
 
   vb[*num_out + *num_in].buf = inhdr;
   vb[*num_out + (*num_in)++].len = sizeof(*inhdr);
-  return OK;
 }
 
 static void virtio_crypto_fill_dataq_request_mac(
@@ -394,7 +393,6 @@ static void virtio_crypto_fill_dataq_request_mac(
 
   vb[*num_out + *num_in].buf = inhdr;
   vb[*num_out + (*num_in)++].len = sizeof(*inhdr);
-  return OK;
 }
 
 static void virtio_crypto_fill_dataq_request_aead(
@@ -444,7 +442,6 @@ static void virtio_crypto_fill_dataq_request_aead(
 
   vb[*num_out + *num_in].buf = inhdr;
   vb[*num_out + (*num_in)++].len = sizeof(*inhdr);
-  return OK;
 }
 
 static int virtio_crypto_fill_dataq_request(
@@ -490,7 +487,7 @@ static int virtio_crypto_fill_dataq_request(
         virtio_crypto_fill_dataq_request_mac(
                                   crp, vb, data, inhdr,
                                   num_out, num_in);
-        break
+        break;
       case VIRTIO_CRYPTO_SERVICE_AEAD:
         virtio_crypto_fill_dataq_request_aead(
                                   crp, vb, data, inhdr,
@@ -551,6 +548,329 @@ static int virtio_crypto_process(FAR struct cryptop *crp)
   return ret;
 }
 
+static int virtio_crypto_rsa_get_session(FAR struct virtio_crypto_s *vcrypto,
+                                         FAR struct cryptkop *krp,
+                                         FAR uint32_t *sid)
+{
+  struct virtio_crypto_create_session_input_s input;
+  struct virtio_crypto_op_ctrl_req_s ctrl;
+  struct virtqueue_buf vb[3];
+  FAR struct virtqueue *vq;
+  FAR unsigned char *keybuf;
+  FAR struct crparam *n;
+  FAR struct crparam *e;
+  FAR struct crparam *d;
+  FAR struct crparam *p;
+  FAR struct crparam *q;
+  FAR struct crparam *dp;
+  FAR struct crparam *dq;
+  FAR struct crparam *u;
+  uint32_t keybufsize;
+  uint32_t keybits;
+  uint32_t keylen;
+  sem_t sem;
+
+  vq = vcrypto->vdev->vrings_info[vcrypto->max_data_queues].vq;
+  memset(&ctrl, 0, sizeof(struct virtio_crypto_op_ctrl_req_s));
+
+  /* Pad ctrl header for creating a new session */
+
+  ctrl.header.algo = virtio_crypto_asym_get_alg(krp->krp_op);
+  ctrl.header.opcode = VIRTIO_CRYPTO_AKCIPHER_CREATE_SESSION;
+  ctrl.op_flf.akcipher.algo = ctrl.header.algo;
+  ctrl.op_flf.akcipher.key_type =
+                        krp->krp_keytype == CRYPTO_KEY_TYPE_PRIVATE ?
+                        VIRTIO_CRYPTO_AKCIPHER_KEY_TYPE_PRIVATE :
+                        VIRTIO_CRYPTO_AKCIPHER_KEY_TYPE_PUBLIC;
+  ctrl.op_flf.akcipher.algo_flf.rsa.padding_algo = krp->krp_padding;
+  ctrl.op_flf.akcipher.algo_flf.rsa.hash_algo = krp->krp_hash;
+
+  keybits = krp->krp_param[1].crp_nbits;
+  keybufsize = VIRTIO_CRYPTO_RSA_DER_MAX_BYTES(
+                keybits, ctrl.op_flf.akcipher.key_type ==
+                         VIRTIO_CRYPTO_AKCIPHER_KEY_TYPE_PRIVATE);
+  keybuf = (FAR unsigned char *)alloca(keybufsize);
+  if (keybuf == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  if (ctrl.op_flf.akcipher.key_type ==
+                  VIRTIO_CRYPTO_AKCIPHER_KEY_TYPE_PRIVATE)
+    {
+      n = &krp->krp_param[1];
+      e = &krp->krp_param[2];
+      d = &krp->krp_param[3];
+      p = &krp->krp_param[4];
+      q = &krp->krp_param[5];
+      dp = &krp->krp_param[6];
+      dq = &krp->krp_param[7];
+      u = &krp->krp_param[8];
+      keylen = virtio_crypto_write_rsa_key_der(
+          (FAR unsigned char *)n->crp_p, n->crp_nbits / 8,
+          (FAR unsigned char *)e->crp_p, e->crp_nbits / 8,
+          (FAR unsigned char *)d->crp_p, d->crp_nbits / 8,
+          (FAR unsigned char *)p->crp_p, p->crp_nbits / 8,
+          (FAR unsigned char *)q->crp_p, q->crp_nbits / 8,
+          (FAR unsigned char *)dp->crp_p, dq->crp_nbits / 8,
+          (FAR unsigned char *)dq->crp_p, dp->crp_nbits / 8,
+          (FAR unsigned char *)u->crp_p, u->crp_nbits / 8,
+          keybuf, keybufsize);
+    }
+  else
+    {
+      n = &krp->krp_param[1];
+      e = &krp->krp_param[2];
+      keylen = virtio_crypto_write_rsa_pubkey_der(
+                (FAR unsigned char *)n->crp_p, n->crp_nbits / 8,
+                (FAR unsigned char *)e->crp_p, e->crp_nbits / 8,
+                keybuf, keybufsize);
+    }
+
+  ctrl.op_flf.akcipher.key_len = keylen;
+
+  nxsem_init(&sem, 0, 0);
+  input.status = VIRTIO_CRYPTO_ERR;
+
+  vb[0].buf = &ctrl;
+  vb[0].len = sizeof(ctrl);
+  vb[1].buf = keybuf + keybufsize - keylen;
+  vb[1].len = keylen;
+  vb[2].buf = &input;
+  vb[2].len = sizeof(input);
+
+  virtqueue_add_buffer_lock(vq, vb, 2, 1, &sem, &vcrypto->lock);
+
+  virtqueue_kick_lock(vq, &vcrypto->lock);
+
+  nxsem_wait_uninterruptible(&sem);
+
+  nxsem_destroy(&sem);
+  if (input.status != VIRTIO_CRYPTO_OK)
+    {
+      vrterr("virtio_crypto_s: Create session failed status: %u\n",
+                                                     input.status);
+      return virtio_crypto_get_errcode(input.status);
+    }
+
+  *sid = input.session_id;
+  return OK;
+}
+
+static int
+virtio_crypto_asym_get_session(FAR struct virtio_crypto_s *vcrypto,
+                               FAR struct cryptkop *krp,
+                               FAR uint32_t *sid)
+{
+  switch (virtio_crypto_asym_get_alg(krp->krp_op))
+    {
+      case VIRTIO_CRYPTO_AKCIPHER_RSA:
+        return virtio_crypto_rsa_get_session(vcrypto, krp, sid);
+      case VIRTIO_CRYPTO_AKCIPHER_ECDSA:
+        /* TODO: Qemu backend not support ECDSA and
+         *       Vela vhost need to support ECDSA
+         */
+
+        return -ENOTSUP;
+    }
+
+  return -EINVAL;
+}
+
+static void
+virtio_crypto_asym_free_session(FAR struct virtio_crypto_s *vcrypto,
+                                FAR struct cryptkop *krp,
+                                uint32_t session_id)
+{
+  struct virtio_crypto_create_session_input_s input;
+  struct virtio_crypto_op_ctrl_req_s ctrl;
+  struct virtqueue_buf vb[2];
+  FAR struct virtqueue *vq;
+  sem_t sem;
+
+  vq = vcrypto->vdev->vrings_info[vcrypto->max_data_queues].vq;
+  memset(&ctrl, 0, sizeof(ctrl));
+  memset(&input, 0, sizeof(input));
+
+  ctrl.header.opcode = VIRTIO_CRYPTO_AKCIPHER_DESTROY_SESSION;
+  ctrl.op_flf.destroy.session_id = session_id;
+
+  nxsem_init(&sem, 0, 0);
+  input.status = VIRTIO_CRYPTO_ERR;
+
+  vb[0].buf = &ctrl;
+  vb[0].len = sizeof(ctrl);
+  vb[1].buf = &input;
+  vb[1].len = sizeof(input);
+
+  virtqueue_add_buffer_lock(vq, vb, 1, 1, &sem, &vcrypto->lock);
+  virtqueue_kick_lock(vq, &vcrypto->lock);
+
+  nxsem_wait_uninterruptible(&sem);
+
+  nxsem_destroy(&sem);
+  if (input.status != VIRTIO_CRYPTO_OK)
+    {
+      vrterr("virtio_crypto_s: Close session failed status: %u,"
+             "session_id: 0x%lu\n", input.status,
+             ctrl.op_flf.destroy.session_id);
+    }
+}
+
+static int virtio_crypto_rsa_process(FAR struct virtio_crypto_s *vcrypto,
+                                     FAR struct cryptkop *krp,
+                                     uint32_t session_id)
+{
+  struct virtio_crypto_op_data_req_s data;
+  struct virtio_crypto_inhdr_s inhdr;
+  struct virtqueue_buf vb[4];
+  FAR struct virtqueue *vq;
+  FAR struct crparam *dst;
+  FAR struct crparam *src;
+  int iparams = krp->krp_iparams;
+  int oparams = krp->krp_oparams;
+  int num_out = 0;
+  int num_in = 0;
+  sem_t sem;
+
+  src = &krp->krp_param[0];
+  dst = &krp->krp_param[iparams + oparams - 1];
+  vq = vcrypto->vdev->vrings_info[0].vq;
+  memset(&data, 0, sizeof(data));
+  memset(&inhdr, 0, sizeof(inhdr));
+
+  data.header.session_id = session_id;
+  data.header.algo = virtio_crypto_asym_get_alg(krp->krp_op);
+
+  vb[num_out].buf = &data;
+  vb[num_out++].len = sizeof(data);
+
+  switch (krp->krp_optype)
+    {
+      case CRYPTO_OP_DECRYPT:
+        data.header.opcode = VIRTIO_CRYPTO_AKCIPHER_DECRYPT;
+        data.op_flf.akcipher.src_data_len = src->crp_nbits / 8;
+        data.op_flf.akcipher.dst_data_len = dst->crp_nbits / 8;
+        vb[num_out].buf = src->crp_p;
+        vb[num_out++].len = src->crp_nbits / 8;
+        vb[num_out + num_in].buf = dst->crp_p;
+        vb[num_out + num_in++].len = dst->crp_nbits / 8;
+        break;
+      case CRYPTO_OP_ENCRYPT:
+        data.header.opcode = VIRTIO_CRYPTO_AKCIPHER_ENCRYPT;
+        data.op_flf.akcipher.src_data_len = src->crp_nbits / 8;
+        data.op_flf.akcipher.dst_data_len = dst->crp_nbits / 8;
+        vb[num_out].buf = src->crp_p;
+        vb[num_out++].len = src->crp_nbits / 8;
+        vb[num_out + num_in].buf = dst->crp_p;
+        vb[num_out + num_in++].len = dst->crp_nbits / 8;
+        break;
+      case CRYPTO_OP_SIGN:
+        data.header.opcode = VIRTIO_CRYPTO_AKCIPHER_SIGN;
+        data.op_flf.akcipher.src_data_len = src->crp_nbits / 8;
+        data.op_flf.akcipher.dst_data_len = dst->crp_nbits / 8;
+        vb[num_out].buf = src->crp_p;
+        vb[num_out++].len = src->crp_nbits / 8;
+        vb[num_out + num_in].buf = dst->crp_p;
+        vb[num_out + num_in++].len = dst->crp_nbits / 8;
+        break;
+      case CRYPTO_OP_VERIFY:
+        data.header.opcode = VIRTIO_CRYPTO_AKCIPHER_VERIFY;
+        data.op_flf.akcipher.src_data_len = src->crp_nbits / 8;
+        data.op_flf.akcipher.dst_data_len = dst->crp_nbits / 8;
+        vb[num_out].buf = src->crp_p;
+        vb[num_out++].len = src->crp_nbits / 8;
+        vb[num_out].buf = dst->crp_p;
+        vb[num_out++].len = dst->crp_nbits / 8;
+        break;
+      default:
+        return -EINVAL;
+    }
+
+  nxsem_init(&sem, 0, 0);
+  inhdr.status = VIRTIO_CRYPTO_ERR;
+
+  vb[num_out + num_in].buf = &inhdr;
+  vb[num_out + num_in++].len = sizeof(inhdr);
+
+  virtqueue_add_buffer_lock(vq, vb, num_out, num_in, &sem, &vcrypto->lock);
+  virtqueue_kick_lock(vq, &vcrypto->lock);
+
+  nxsem_wait_uninterruptible(&sem);
+
+  nxsem_destroy(&sem);
+  if (inhdr.status != VIRTIO_CRYPTO_OK)
+    {
+      printf("virtio_crypto_s: Akcipher process failed status: %u,"
+             "session_id: 0x%u\n", inhdr.status, session_id);
+      return virtio_crypto_get_errcode(inhdr.status);
+    }
+
+  return inhdr.status;
+}
+
+static int virtio_crypto_asym_process(FAR struct virtio_crypto_s *vcrypto,
+                                      FAR struct cryptkop *krp,
+                                      uint32_t session_id)
+{
+  switch (virtio_crypto_asym_get_alg(krp->krp_op))
+    {
+      case VIRTIO_CRYPTO_AKCIPHER_RSA:
+        return virtio_crypto_rsa_process(vcrypto, krp, session_id);
+      case VIRTIO_CRYPTO_AKCIPHER_ECDSA:
+        /* TODO: Qemu backend not support ECDSA and
+         *       Vela vhost need to support ECDSA
+         */
+
+        return -ENOTSUP;
+    }
+
+  return -EINVAL;
+}
+
+static int virtio_crypto_kprocess(FAR struct cryptkop *krp)
+{
+  FAR struct virtio_crypto_s *vcrypto;
+  uint32_t hid;
+  uint32_t sid = 0;
+  int ret;
+
+  if (krp == NULL)
+    {
+      vrterr("Virtio Crypto kprocess: Invalid parameters\n");
+      return -EINVAL;
+    }
+
+  hid = (uint32_t)krp->krp_hid;
+  vcrypto = crypto_driver_get_priv(hid);
+  if (vcrypto == NULL)
+    {
+      vrterr("Virtio Crypto kprocess: Invalid context\n");
+      return -EINVAL;
+    }
+
+  /* create session */
+
+  ret = virtio_crypto_asym_get_session(vcrypto, krp, &sid);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* process akcipher data */
+
+  ret = virtio_crypto_asym_process(vcrypto, krp, sid);
+  if (ret < 0)
+    {
+      vrterr("Virtio Crypto kprocess failed, ret = %d\n", ret);
+    }
+
+  /* free session */
+
+  virtio_crypto_asym_free_session(vcrypto, krp, sid);
+  return ret;
+}
+
 static void virtio_crypto_notify(FAR struct virtqueue *vq)
 {
   FAR struct virtio_crypto_s *vcrypto = vq->vq_dev->priv;
@@ -608,6 +928,7 @@ static int virtio_crypto_probe(FAR struct virtio_device *vdev)
 {
   FAR struct virtio_crypto_s *vcrypto;
   int algs[CRYPTO_ALGORITHM_MAX + 1];
+  int kalgs[CRK_ALGORITHM_MAX + 1];
   int ret;
   int i;
 
@@ -702,6 +1023,22 @@ static int virtio_crypto_probe(FAR struct virtio_device *vdev)
                         virtio_crypto_freesession, virtio_crypto_process);
   if (ret < 0)
     {
+      goto err;
+    }
+
+  for (i = 0; i < CRK_ALGORITHM_MAX; i++)
+    {
+      kalgs[i] = CRYPTO_ALG_FLAG_SUPPORTED;
+    }
+
+  ret = crypto_kregister(vcrypto->dev_id, kalgs, virtio_crypto_kprocess);
+  if (ret < 0)
+    {
+      for (i = 0; i < CRYPTO_ALGORITHM_MAX; i++)
+        {
+          crypto_unregister(vcrypto->dev_id, i);
+        }
+
       goto err;
     }
 
