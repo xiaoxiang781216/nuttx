@@ -236,11 +236,33 @@ struct cryptop
   caddr_t crp_aad;
 };
 
-#define CRYPTO_BUF_IOV 0x1
-#define CRYPTO_BUF_MBUF 0x2
+#define CRYPTO_BUF_IOV            0x1
+#define CRYPTO_BUF_MBUF           0x2
 
-#define CRYPTO_OP_DECRYPT 0x0
-#define CRYPTO_OP_ENCRYPT 0x1
+#define CRYPTO_OP_DECRYPT         0x0
+#define CRYPTO_OP_ENCRYPT         0x1
+#define CRYPTO_OP_SIGN            0x2
+#define CRYPTO_OP_VERIFY          0x3
+#define CRYPTO_OP_GENKEY          0x4
+
+#define CRYPTO_KEY_TYPE_NONE      0x0
+#define CRYPTO_KEY_TYPE_PUBLIC    0x1
+#define CRYPTO_KEY_TYPE_PRIVATE   0x2
+
+#define CRYPTO_RSA_RAW_PADDING    0x0
+#define CRYPTO_RSA_PKCS1_PADDING  0x1
+#define CRYPTO_RSA_OAEP_PADDING   0x2
+
+#define CRYPTO_RSA_NO_HASH        0x0
+#define CRYPTO_RSA_MD2            0x1
+#define CRYPTO_RSA_MD3            0x2
+#define CRYPTO_RSA_MD4            0x3
+#define CRYPTO_RSA_MD5            0x4
+#define CRYPTO_RSA_SHA1           0x5
+#define CRYPTO_RSA_SHA256         0x6
+#define CRYPTO_RSA_SHA384         0x7
+#define CRYPTO_RSA_SHA512         0x8
+#define CRYPTO_RSA_SHA224         0x9
 
 /* bignum parameter, in packed bytes, ... */
 
@@ -250,7 +272,7 @@ struct crparam
   u_int crp_nbits;
 };
 
-#define CRK_MAXPARAM 8
+#define CRK_MAXPARAM 10
 
 struct crypt_kop
 {
@@ -258,6 +280,10 @@ struct crypt_kop
   u_int crk_status;    /* return status */
   u_short crk_iparams; /* # of input parameters */
   u_short crk_oparams; /* # of output parameters */
+  u_short crk_optype;
+  u_short crk_keytype; /* key type */
+  u_short crk_padding;
+  u_short crk_hash;
   u_int crk_flags;
   struct crparam crk_param[CRK_MAXPARAM];
   uint32_t crk_reqid;
@@ -326,6 +352,10 @@ struct cryptkop
   u_int krp_status;    /* return status */
   u_short krp_iparams; /* # of input parameters */
   u_short krp_oparams; /* # of output parameters */
+  u_short krp_optype;  /* ie. CRYPTO_OP_VERIFY or other */
+  u_short krp_keytype; /* ie. CRYPTO_KEY_TYPE_PUBLIC or other */
+  u_short krp_padding; /* ie. CRYPTO_RSA_PKCS1_PADDING or other in RSA */
+  u_short krp_hash;    /* ie. CRYPTO_RSA_SHA256 or other in RSA */
   uint32_t krp_hid;
   struct crparam krp_param[CRK_MAXPARAM]; /* kvm */
   CODE int (*krp_callback)(FAR struct cryptkop *);
