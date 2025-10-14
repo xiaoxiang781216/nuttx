@@ -84,6 +84,10 @@ class Target(gdb.Command):
             parsed.port = get_unused_port()
             print(f"Use port {parsed.port} instead.")
 
+        if parsed.timeout:
+            gdb.execute(f"set tcp connect-timeout {parsed.timeout}", from_tty=True)
+            print(f"Set GDB timeout: {parsed.timeout}")
+
         # If currently has connection to target, disconnect it
         if utils.check_inferior_valid():
             gdb.execute("detach", from_tty=True)

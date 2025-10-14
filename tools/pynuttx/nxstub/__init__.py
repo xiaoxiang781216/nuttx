@@ -238,8 +238,13 @@ def gdb_start(args):
 
     gdb_init_cmd = args.init_cmd or DEFAULT_GDB_INIT_CMD
     gdb_exec = args.gdb or "gdb-multiarch"
+
+    timeout = f"set tcp connect-timeout {args.timeout}" if args.timeout else ""
+    if timeout:
+        print(f"Set GDB timeout: {args.timeout}")
+
     gdb_cmd = (
-        f"{gdb_exec} {args.elffile} -ex 'target remote localhost:{args.port}' "
+        f"{gdb_exec} {args.elffile} -ex '{timeout}' -ex 'target remote localhost:{args.port}' "
         f"{gdb_init_cmd}"
     )
     print(f"Start GDB session: {gdb_cmd}")
@@ -320,6 +325,11 @@ def get_argparser():
         help="Optional path to GDB executable, once specified, will automatically start GDB session.",
         type=str,
         metavar="file",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=str,
+        help="Timeout in seconds for GDB to wait for gdbserver to startup. Use 'unlimited' or integer value.",
     )
     parser.add_argument(
         "-i",
