@@ -90,7 +90,25 @@ static void tcp_close_connection(FAR struct tcp_conn_s *conn, uint16_t flags)
    * (eventually) be reported as an ENOTCONN error.
    */
 
-  conn->sconn.s_flags &= ~(_SF_CONNECTED | _SF_CLOSED);
+  if ((flags & TCP_ABORT) != 0)
+    {
+      /* The peer gracefully closed the connection.  Marking the
+       * connection as disconnected will suppress some subsequent
+       * ENOTCONN errors from receive.  A graceful disconnection is
+       * not handle as an error but as an "end-of-file"
+       */
+
+      conn->sconn.s_flags &= ~_SF_CONNECTED;
+      conn->sconn.s_flags |= _SF_CLOSED;
+    }
+  else if ((flags & (TCP_TIMEDOUT | NETDEV_DOWN)) != 0)
+    {
+      /* The loss of connection was less than graceful.  This will
+       * (eventually) be reported as an ENOTCONN error.
+       */
+
+      conn->sconn.s_flags &= ~(_SF_CONNECTED | _SF_CLOSED);
+    }
 }
 
 /****************************************************************************
