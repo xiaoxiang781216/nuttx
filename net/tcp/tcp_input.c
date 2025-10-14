@@ -1760,6 +1760,8 @@ skip_rtt:
             ninfo("TCP state: TCP_TIME_WAIT\n");
           }
 
+        goto drop;
+
       case TCP_CLOSE_WAIT:
 #ifdef CONFIG_NET_TCP_KEEPALIVE
         /* If the established socket receives an ACK or any kind of data
@@ -1789,6 +1791,8 @@ skip_rtt:
             tcp_appsend(dev, conn, result);
             return;
           }
+
+        goto drop;
 
       default:
         break;
