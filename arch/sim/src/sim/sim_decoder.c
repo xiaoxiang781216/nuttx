@@ -91,8 +91,8 @@ static int sim_decoder_subscribe_event(void *priv,
 static uint32_t sim_decoder_capture_g_bufsize(void *priv);
 static uint32_t sim_decoder_output_g_bufsize(void *priv);
 static int sim_decoder_process(sim_decoder_t *sim_decoder,
-                               vbuf_container_t *dst_cnt,
-                               vbuf_container_t *src_cnt);
+                               struct v4l2_buffer *dst_buf,
+                               struct v4l2_buffer *src_buf);
 static void sim_decoder_work(void *cookie);
 
 /****************************************************************************
@@ -391,8 +391,8 @@ static uint32_t sim_decoder_output_g_bufsize(void *priv)
 }
 
 static int sim_decoder_process(sim_decoder_t *sim_decoder,
-                               vbuf_container_t *dst_cnt,
-                               vbuf_container_t *src_cnt)
+                               struct v4l2_buffer *dst_buf,
+                               struct v4l2_buffer *src_buf)
 {
   struct v4l2_event event;
   uint8_t *src_data = NULL;
@@ -401,19 +401,19 @@ static int sim_decoder_process(sim_decoder_t *sim_decoder,
   int64_t dst_pts = 0;
   int ret;
 
-  if (src_cnt != NULL)
+  if (src_buf != NULL)
     {
-      src_data = (uint8_t *)src_cnt->vaddr[0];
-      src_size = src_cnt->buf.bytesused;
-      src_pts  = src_cnt->buf.timestamp.tv_sec * 1000000 +
-                 src_cnt->buf.timestamp.tv_usec;
+      src_data = (uint8_t *)src_buf->m.userptr;
+      src_size = src_buf->bytesused;
+      src_pts  = src_buf->timestamp.tv_sec * 1000000 +
+                 src_buf->timestamp.tv_usec;
     }
 
   ret = openh264_decoder_enqueue(sim_decoder->decoder,
                                  src_data, src_pts, src_size);
-  if (ret >= 0 && src_cnt != NULL)
+  if (ret >= 0 && src_buf != NULL)
     {
-      codec_output_put_buf(sim_decoder->cookie, src_cnt);
+      codec_output_put_buf(sim_decoder->cookie, src_buf);
     }
 
   if (ret < 1)
@@ -422,48 +422,48 @@ static int sim_decoder_process(sim_decoder_t *sim_decoder,
     }
 
   ret = openh264_decoder_dequeue(sim_decoder->decoder,
-                                 (uint8_t *)dst_cnt->vaddr[0],
+                                 (uint8_t *)dst_buf->m.userptr,
                                  &dst_pts,
-                                 &dst_cnt->buf.bytesused);
-  if (ret == 0 && src_cnt == NULL)
+                                 &dst_buf->bytesused);
+  if (ret == 0 && src_buf == NULL)
     {
       sim_decoder->flushing = false;
-      dst_cnt->buf.flags |= V4L2_BUF_FLAG_LAST;
+      dst_buf->flags |= V4L2_BUF_FLAG_LAST;
 
       memset(&event, 0, sizeof(event));
       event.type = V4L2_EVENT_EOS;
       codec_queue_event(sim_decoder->cookie, &event);
     }
 
-  dst_cnt->buf.timestamp.tv_usec = dst_pts % 1000000;
-  dst_cnt->buf.timestamp.tv_sec  = dst_pts / 1000000;
+  dst_buf->timestamp.tv_usec = dst_pts % 1000000;
+  dst_buf->timestamp.tv_sec  = dst_pts / 1000000;
 
-  codec_capture_put_buf(sim_decoder->cookie, dst_cnt);
+  codec_capture_put_buf(sim_decoder->cookie, dst_buf);
   return ret;
 }
 
 static void sim_decoder_work(void *decoder)
 {
   sim_decoder_t *sim_decoder = decoder;
-  vbuf_container_t *src_cnt;
-  vbuf_container_t *dst_cnt;
+  struct v4l2_buffer *src_buf;
+  struct v4l2_buffer *dst_buf;
   irqstate_t flags;
   int ret;
 
-  src_cnt = codec_output_get_buf(sim_decoder->cookie);
-  if (src_cnt == NULL && !sim_decoder->flushing)
+  src_buf = codec_output_get_buf(sim_decoder->cookie);
+  if (src_buf == NULL && !sim_decoder->flushing)
     {
       return;
     }
 
-  dst_cnt = codec_capture_get_buf(sim_decoder->cookie);
-  if (dst_cnt == NULL)
+  dst_buf = codec_capture_get_buf(sim_decoder->cookie);
+  if (dst_buf == NULL)
     {
       return;
     }
 
   flags = irq_save_nopreempt();
-  ret = sim_decoder_process(decoder, dst_cnt, src_cnt);
+  ret = sim_decoder_process(decoder, dst_buf, src_buf);
   irq_restore_nopreempt(flags);
 
   if (ret > 0)
