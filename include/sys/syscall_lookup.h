@@ -405,3 +405,7 @@ SYSCALL_LOOKUP(epoll_wait,                 4)
   SYSCALL_LOOKUP(sched_note_vprintf_ip,    5)
   SYSCALL_LOOKUP(sched_note_event_ip,      5)
 #endif
+
+#ifdef CONFIG_COREDUMP
+  SYSCALL_LOOKUP(coredump,                 3)
+#endif
