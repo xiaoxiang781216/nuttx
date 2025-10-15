@@ -1,2 +1,17 @@
 /risc-v/[a-d]*
 /risc-v/e[0-r]*
+
+# adc_main
+-ox64:adc
+
+# signal undefined
+-bl602evb:nsh
+-bl602evb:fpu
+-bl602evb:timer
+-bl602evb:timer
+-bl602evb:spiflash
+-bl602evb:wifi
+-bl602evb:i2c
+-bl602evb:spi
+-bl602evb:elf
+-bl602evb:gpio

@@ -5,6 +5,9 @@
 -rv-virt:nest-pnsh
 -rv-virt:leds64_zig
 
+# signal
+-rv32m1-vega:buttons
+
 # Boards build by CMake
 CMake,rv-virt:smp
 CMake,rv-virt:smp64

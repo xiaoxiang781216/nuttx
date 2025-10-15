@@ -1,3 +1,8 @@
 /arm/[a]*,CONFIG_ARM_TOOLCHAIN_GNU_EABI
 
 /arm/[b-h]*,CONFIG_ARM_TOOLCHAIN_GNU_EABI
+
+# undefined reference to `up_this_cpu'
+-spresense:smp
+-spresense:wifi_smp
+-spresense:rndis_smp

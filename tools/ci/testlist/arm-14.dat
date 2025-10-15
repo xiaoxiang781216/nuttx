@@ -13,3 +13,6 @@
 -lm3s6965-ek:qemu-protected
 -tms570ls31x-usb-kit:nsh
 -tlsr8278adk80d:nsh
+
+# overflowed
+-nucleo-l432kc:wgen

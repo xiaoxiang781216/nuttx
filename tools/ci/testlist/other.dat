@@ -34,3 +34,8 @@
 -rx65n-rsk2mb:ipv6
 -rx65n-rsk2mb:netnsh
 -rx65n-rsk2mb:nsh
+
+# DEBUGASSERT
+-xx3803:nsh
+-s698pm-dkit:smp
+-s698pm-dkit:nsh

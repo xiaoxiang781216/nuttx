@@ -21,3 +21,9 @@
 -lpcxpresso-lpc54628:fb
 -lpcxpresso-lpc54628:twm4nx2
 
+# undefined reference to `up_this_cpu'
+-lc823450-xgevk:bt
+-lc823450-xgevk:rndis
+-lc823450-xgevk:usb
+-lc823450-xgevk:nsh
+-lc823450-xgevk:audio
