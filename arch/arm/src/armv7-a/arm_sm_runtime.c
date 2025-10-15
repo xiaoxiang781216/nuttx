@@ -44,14 +44,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define MONITOR_STACK_RESERVE_SIZE sizeof(struct arm_sm_ctx)
-#define MONITOR_STACK_CANARY_SIZE  (4 * sizeof(long))
-#define MONITOR_STACK_ALIGNMENT    64 /* (sizeof(long) * U(2)) */
-
-#define MONITOR_STACK_SIZE ALIGN_UP(CONFIG_ARMV7A_MONITOR_STACK_SIZE + \
-                                    MONITOR_STACK_RESERVE_SIZE + \
-                                    MONITOR_STACK_CANARY_SIZE, \
-                                    MONITOR_STACK_ALIGNMENT)
+#define MONITOR_STACK_ALIGNMENT 64 /* (sizeof(long) * U(2)) */
+#define MONITOR_STACK_NSEC_SIZE ALIGN_UP(sizeof(struct arm_sm_nsec_ctx), \
+                                         MONITOR_STACK_ALIGNMENT)
+#define MONITOR_STACK_SIZE      ALIGN_UP(CONFIG_ARMV7A_MONITOR_STACK_SIZE, \
+                                         MONITOR_STACK_ALIGNMENT)
 
 typedef uint8_t monitor_stack_t[MONITOR_STACK_SIZE];
 
@@ -92,7 +89,7 @@ locate_data(".monitor_stack") aligned_data(MONITOR_STACK_ALIGNMENT);
 void arm_sm_init(void)
 {
   arm_sm_init_stack(((uintptr_t)&g_monitor_stack
-                    + MONITOR_STACK_SIZE - MONITOR_STACK_RESERVE_SIZE));
+                    + MONITOR_STACK_SIZE - MONITOR_STACK_NSEC_SIZE));
 }
 
 /****************************************************************************
