@@ -27,6 +27,9 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/net/netdev.h>
+#include <nuttx/net/cangw.h>
+
 #include <stdint.h>
 
 /****************************************************************************
@@ -135,6 +138,9 @@ extern "C"
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
+
+int ieee1722acf_send(FAR struct net_driver_s *dev,
+                     FAR struct cangw_rule_s *fwdrule);
 
 #undef EXTERN
 #ifdef __cplusplus

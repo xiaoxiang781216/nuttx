@@ -570,6 +570,10 @@ struct net_driver_s
   sq_queue_t d_cangw_rules; /* CAN gateway rules */
 #endif /* CONFIG_NET_CANFORWARD */
 
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+  sq_queue_t d_1722acf_streams;   /* 1722 ACF streams */
+#endif
+
   /* Drivers may attached device-specific, private information */
 
   FAR void *d_private;

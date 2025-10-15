@@ -28,6 +28,9 @@ NET_CSRCS += netfwd_alloc.c netfwd_forward.c netfwd_poll.c
 
 ifeq ($(CONFIG_NET_CANFORWARD),y)
 NET_CSRCS += can_forward.c
+ifeq ($(CONFIG_NET_CANFORWARD_IEEE1722ACF),y)
+NET_CSRCS += ieee1722acf_send.c
+endif
 endif
 
 ifeq ($(CONFIG_NET_IPFORWARD),y)

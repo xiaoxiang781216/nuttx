@@ -39,6 +39,7 @@
 #include <nuttx/net/netstats.h>
 
 #include "devif/devif.h"
+#include "netforward/ieee1722acf.h"
 #include "netforward/netforward.h"
 
 /****************************************************************************
@@ -242,7 +243,18 @@ int can_forward(FAR struct net_driver_s *dev)
 #endif
               }
             break;
-
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+          case CGW_TYPE_CAN_ETH1722:
+            if (can_forward_filter(&fwdrule->gw.cegw.filter,
+                                   frame->can_id))
+              {
+                ieee1722acf_send(dev, fwdrule);
+#ifdef CONFIG_NET_STATISTICS
+                g_netstats.cangw.recv++;
+#endif
+              }
+            break;
+#endif
           default:
             break;
         }

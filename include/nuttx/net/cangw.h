@@ -63,6 +63,16 @@ struct can_can_gw_s
   struct can_filter filter;
 };
 
+/* CAN-ETH gateway filter */
+
+struct can_eth_gw_s
+{
+  struct can_filter filter;
+  uint8_t stream_index;
+  uint8_t can_bus_id;
+  uint8_t acf_msg_type;
+};
+
 /* The structure define the cangw rule rule that will be used to check if the
  * incoming packet match the rule and need to be forwarded.
  */
@@ -76,6 +86,7 @@ struct cangw_rule_s
   union
   {
     struct can_can_gw_s ccgw;       /* CAN to CAN gateway check rule */
+    struct can_eth_gw_s cegw;       /* CAN to ETH1722ACF gateway check rule */
   } gw;
   uint8_t gwtype;                   /* Route type: CAN-CAN/CAN-ETH/ETH-CAN */
   uint16_t flags;                   /* GW rule flags */
@@ -88,9 +99,11 @@ struct cangw_rule_s
 #ifdef CONFIG_NET_STATISTICS
 struct cangw_stats_s
 {
-  net_stats_t drop;         /* Number of dropped msg */
-  net_stats_t forward;      /* Number of forward msg */
-  net_stats_t recv;         /* Number of received msg */
+  net_stats_t drop;         /* Number of dropped can msg */
+  net_stats_t forward;      /* Number of forward can msg */
+  net_stats_t recv;         /* Number of received can msg */
+  net_stats_t acf_drop;     /* Number of dropped acf stream packet */
+  net_stats_t acf_sent;     /* Number of send acf stream packet */
 };
 #endif
 

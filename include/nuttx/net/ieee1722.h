@@ -23,6 +23,19 @@
 #ifndef __INCLUDE_NUTTX_NET_IEEE1722_H
 #define __INCLUDE_NUTTX_NET_IEEE1722_H
 
+/****************************************************************************
+ * Included Files
+ ****************************************************************************/
+
+#include <nuttx/config.h>
+
+#include <netinet/if_ether.h>
+#include <nuttx/queue.h>
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
 /* IEEE1722 Avtp sub type */
 
 #define IEEE1722_SUBTYPE_61883_IIDC             0x0
@@ -45,5 +58,40 @@
 #define IEEE1722_SUBTYPE_ACMP                   0xFC
 #define IEEE1722_SUBTYPE_MAAP                   0xFE
 #define IEEE1722_SUBTYPE_EF_CONTROL             0xFF
+
+/****************************************************************************
+ * Public Type Definitions
+ ****************************************************************************/
+
+/* Structure representing an IEEE 1722 ACF (AVTP Control Format) stream
+ * configuration and runtime state.
+ */
+
+struct ieee1722acf_stream_s
+{
+  /* List management - used to maintain a single-linked list of
+   * eth1722 acf streams
+   */
+
+  sq_entry_t node;                /* List node for stream management */
+
+  /* Stream configuration - set during stream initialization */
+
+  uint8_t index;                  /* Stream index for fwd processing */
+  uint8_t msgcnt_limit;           /* Max CAN message counter limit per ACF packet
+                                   * (0 or 1 means single message per packet)
+                                   */
+  uint8_t stream_type;            /* Stream type: TSCF or NTSCF */
+  uint8_t dest_mac[ETH_ALEN];     /* Destination MAC address */
+  uint16_t stream_id;             /* IEEE 1722 stream identifier from user setting,
+                                   * will be added into stream packet header
+                                   */
+
+  /* Runtime state - dynamically updated during packet processing */
+
+  uint8_t msg_cnt;                /* Available CAN message counter in the ACF packet */
+  uint8_t stream_seq;             /* Stream packet sequence counter */
+  FAR struct iob_s *iob;          /* I/O buffer holding the ACF stream packet */
+};
 
 #endif /* __INCLUDE_NUTTX_NET_IEEE1722_H */

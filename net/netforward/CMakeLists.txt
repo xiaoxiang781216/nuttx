@@ -27,6 +27,10 @@ if(CONFIG_NET_FORWARD)
 
   if(CONFIG_NET_CANFORWARD)
     list(APPEND SRCS can_forward.c)
+
+    if(CONFIG_NET_CANFORWARD_IEEE1722ACF)
+      list(APPEND SRCS ieee1722acf_send.c)
+    endif()
   endif()
 
   if(CONFIG_NET_IPFORWARD)
