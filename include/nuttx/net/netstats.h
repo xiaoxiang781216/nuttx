@@ -66,6 +66,9 @@
 #ifdef CONFIG_NET_MLD
 #  include <nuttx/net/mld.h>
 #endif
+#ifdef CONFIG_NET_CANFORWARD
+#  include <nuttx/net/cangw.h>
+#endif
 
 #ifdef CONFIG_NET_STATISTICS
 
@@ -113,6 +116,10 @@ struct net_stats_s
 
 #ifdef CONFIG_NET_UDP
   struct udp_stats_s  udp;      /* UDP statistics */
+#endif
+
+#ifdef CONFIG_NET_CAN
+  struct cangw_stats_s cangw;   /* CANGW statistics */
 #endif
 };
 

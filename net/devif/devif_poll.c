@@ -509,7 +509,7 @@ static inline_function int devif_poll_icmpv6(FAR struct net_driver_s *dev,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NET_IPFORWARD
+#ifdef CONFIG_NET_FORWARD
 static inline_function int devif_poll_forward(FAR struct net_driver_s *dev,
                                               devif_poll_callback_t callback)
 {
@@ -984,7 +984,7 @@ static int devif_poll_connections(FAR struct net_driver_s *dev,
             bstop = devif_poll_icmpv6(dev, callback);
             break;
 #endif
-#ifdef CONFIG_NET_IPFORWARD
+#ifdef CONFIG_NET_FORWARD
 
           /* Traverse all of the tasks waiting to forward a packet to this
            * device.
