@@ -192,9 +192,10 @@ static inline_function int can_forward_filter(FAR struct can_filter *filter,
 int can_forward(FAR struct net_driver_s *dev)
 {
 #ifdef CONFIG_NET_CAN_CANFD
-  FAR struct canfd_frame *frame = NETLLBUF;
+  FAR struct canfd_frame *frame
+                            = (FAR struct canfd_frame *)IOB_DATA(dev->d_iob);
 #else
-  FAR struct can_frame *frame = NETLLBUF;
+  FAR struct can_frame *frame = (FAR struct can_frame *)IOB_DATA(dev->d_iob);
 #endif
   FAR const sq_entry_t *entry;
   FAR struct cangw_rule_s *fwdrule;

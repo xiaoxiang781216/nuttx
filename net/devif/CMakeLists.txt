@@ -40,6 +40,11 @@ if(CONFIG_MM_IOB)
 
   if(CONFIG_NET_FORWARD)
     list(APPEND SRCS devif_forward.c)
+
+    if(CONFIG_NET_CANFORWARD_IEEE1722ACF)
+      list(APPEND SRCS ieee1722acf_input.c)
+    endif()
+
   endif()
 
   list(APPEND SRCS devif_poll.c devif_iobsend.c devif_filesend.c)

@@ -44,6 +44,9 @@ ifeq ($(CONFIG_MM_IOB),y)
 
   ifeq ($(CONFIG_NET_FORWARD),y)
     NET_CSRCS += devif_forward.c
+    ifeq ($(CONFIG_NET_CANFORWARD_IEEE1722ACF),y)
+      NET_CSRCS += ieee1722acf_input.c
+    endif
   endif
 
   # I/O buffer chain support required?

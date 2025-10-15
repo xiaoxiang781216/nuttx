@@ -660,6 +660,10 @@ int sixlowpan_input(FAR struct radio_driver_s *ieee,
                     FAR struct iob_s *framelist, FAR const void *metadata);
 #endif
 
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+int ieee1722acf_input(FAR struct net_driver_s *dev, uint8_t subtype);
+#endif
+
 #ifdef CONFIG_NET_ARP
 
 /****************************************************************************

@@ -35,6 +35,11 @@ config NET_CANFORWARD
 		Enable CAN forward function. Packets received will be forwarded to the
 		appropriate network device. Routing table support is required.
 
+config NET_CANFORWARD_IEEE1722ACF
+	bool "Enable ieee1722 acf function support"
+	default n
+	depends on NET_CANFORWARD
+
 config NET_IPFORWARD_BROADCAST
 	bool "Forward broadcast/multicast packets"
 	default n

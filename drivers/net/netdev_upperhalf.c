@@ -37,6 +37,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/can.h>
+#include <nuttx/net/ieee1722.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev_lowerhalf.h>
 #include <nuttx/net/pkt.h>
@@ -618,6 +619,35 @@ static void eth_input(FAR struct net_driver_s *dev)
       /* Handle ARP packet */
 
       arp_input(dev);
+    }
+  else
+#endif
+#ifdef CONFIG_NET_CANFORWARD_IEEE1722ACF
+  if (eth_hdr->type == HTONS(ETHTYPE_AVBTP))
+    {
+      ninfo("avtp frame\n");
+
+      uint8_t subtype = *(FAR uint8_t *)IOB_DATA(dev->d_iob);
+
+      if (subtype == IEEE1722_SUBTYPE_TSCF ||
+          subtype == IEEE1722_SUBTYPE_NTSCF)
+        {
+          /* Handle AVTP ACF packet */
+
+          ieee1722acf_input(dev, subtype);
+        }
+      else
+        {
+          /* Drop non-ACF AVTP packets for now, reserved
+           * for future implementation of other AVTP subtypes.
+           */
+
+          ninfo("INFO: Dropped, not AVTP ACF: %02x\n", subtype);
+          NETDEV_RXDROPPED(dev);
+          dev->d_len = 0;
+          netdev_iob_release(dev);
+          return;
+        }
     }
   else
 #endif
