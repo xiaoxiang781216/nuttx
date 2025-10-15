@@ -24,6 +24,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/can/vcan.h>
 #include <nuttx/clk/clk_provider.h>
 #include <nuttx/crypto/crypto.h>
 #include <nuttx/crypto/rpmsg_crypto.h>
@@ -276,6 +277,12 @@ void drivers_initialize(void)
   /* Initialize the Telnet session factory */
 
   telnet_initialize();
+#endif
+
+#ifdef CONFIG_CAN_VCAN
+  /* Initialize the virtual CAN device */
+
+  vcan_initialize();
 #endif
 
 #ifdef CONFIG_USENSOR

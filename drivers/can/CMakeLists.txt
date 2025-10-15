@@ -38,4 +38,8 @@ if(CONFIG_CAN_CTUCANFD)
   list(APPEND SRCS ctucanfd_pci.c)
 endif()
 
+if(CONFIG_CAN_VCAN)
+  list(APPEND SRCS vcan.c)
+endif()
+
 target_sources(drivers PRIVATE ${SRCS})

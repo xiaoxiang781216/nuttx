@@ -363,4 +363,43 @@ endchoice # "CTU CAN FD PCI CAN device type"
 
 endif # CAN_CTUCANFD
 
+config CAN_VCAN
+	bool "Virtual CAN support"
+	default n
+	depends on NET_CAN
+	---help---
+		Enable Virtual CAN driver.
+
+if CAN_VCAN
+config CAN_VCAN_NDEVICES
+	int "Number of VCAN devices"
+	default 1
+	---help---
+		Specifies the number of VCAN devices that will be registered.
+
+config CAN_VCAN_NPKTS
+	int "Number of RX packets VCAN devices can hold"
+	default 1
+	range 1 32
+	---help---
+		Specifies the number of packets VCAN devices can hold.
+
+config CAN_VCAN_RXDIRECT
+	bool "VCAN RX Direct"
+	default n
+	---help---
+		If selected, the VCAN driver will process the received packets
+		directly on the current thread process. Otherwise, an RX thread
+		is created to process the received packets.
+
+config CAN_VCAN_RXTHREAD_PRIORITY
+	int "VCAN RX thread priority"
+	default 100
+	range 1 255
+	depends on !CAN_VCAN_RXDIRECT
+	---help---
+		The priority for VCAN driv RX thread.
+
+endif # CAN_VCAN
+
 endmenu # CAN Driver Support

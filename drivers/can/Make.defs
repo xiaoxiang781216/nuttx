@@ -42,6 +42,10 @@ ifeq ($(CONFIG_CAN_CTUCANFD),y)
 CSRCS += ctucanfd_pci.c
 endif
 
+ifeq ($(CONFIG_CAN_VCAN),y)
+  CSRCS += vcan.c
+endif
+
 # Include CAN device driver build support
 
 DEPPATH += --dep-path can
