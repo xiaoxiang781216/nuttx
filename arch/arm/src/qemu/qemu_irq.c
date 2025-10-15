@@ -65,6 +65,18 @@ uintptr_t g_irqstack_top[CONFIG_NCPUS] =
 #if CONFIG_NCPUS > 3
   (uintptr_t)g_irqstack_alloc + (4 * INTSTACK_SIZE)
 #endif
+#if CONFIG_NCPUS > 4
+  (uintptr_t)g_irqstack_alloc + (5 * INTSTACK_SIZE),
+#endif
+#if CONFIG_NCPUS > 5
+  (uintptr_t)g_irqstack_alloc + (6 * INTSTACK_SIZE),
+#endif
+#if CONFIG_NCPUS > 6
+  (uintptr_t)g_irqstack_alloc + (7 * INTSTACK_SIZE),
+#endif
+#if CONFIG_NCPUS > 7
+  (uintptr_t)g_irqstack_alloc + (8 * INTSTACK_SIZE),
+#endif
 };
 
 uintptr_t g_fiqstack_top[CONFIG_NCPUS] =
@@ -78,6 +90,18 @@ uintptr_t g_fiqstack_top[CONFIG_NCPUS] =
 #endif
 #if CONFIG_NCPUS > 3
   (uintptr_t)g_fiqstack_alloc + 4 * INTSTACK_SIZE
+#endif
+#if CONFIG_NCPUS > 4
+  (uintptr_t)g_fiqstack_alloc + 5 * INTSTACK_SIZE,
+#endif
+#if CONFIG_NCPUS > 5
+  (uintptr_t)g_fiqstack_alloc + 6 * INTSTACK_SIZE,
+#endif
+#if CONFIG_NCPUS > 6
+  (uintptr_t)g_fiqstack_alloc + 7 * INTSTACK_SIZE,
+#endif
+#if CONFIG_NCPUS > 7
+  (uintptr_t)g_fiqstack_alloc + 8 * INTSTACK_SIZE,
 #endif
 };
 

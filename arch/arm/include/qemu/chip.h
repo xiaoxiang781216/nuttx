@@ -44,7 +44,7 @@
 #define CONFIG_GICR_OFFSET         0x20000
 #else
 
-#error CONFIG_ARM64_GIC_VERSION should be 2, 3 or 4
+#error CONFIG_ARM_GIC_VERSION should be 2, 3 or 4
 
 #endif /* CONFIG_ARM_GIC_VERSION */
 
