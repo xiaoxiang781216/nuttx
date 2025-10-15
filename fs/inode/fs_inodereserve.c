@@ -250,6 +250,16 @@ int inode_reserve(FAR const char *path,
       if (node != NULL)
         {
           inode_insert(node, left, parent);
+#ifdef CONFIG_PSEUDOFS_ATTRIBUTES
+          /* Touch parent directory timestamps on successful insert */
+
+          if (parent != NULL)
+            {
+              nxclock_gettime(CLOCK_REALTIME, &parent->i_ctime);
+              parent->i_mtime = parent->i_ctime;
+            }
+#endif
+
           *inode = node;
           ret = OK;
         }
