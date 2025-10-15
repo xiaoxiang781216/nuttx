@@ -124,7 +124,7 @@ errout:
 }
 
 /****************************************************************************
- * Name: pkt_in
+ * Name: pkt_in_
  *
  * Description:
  *   Handle incoming packet input
@@ -139,6 +139,7 @@ errout:
  *
  * Input Parameters:
  *   dev - The device driver structure containing the received packet
+ *   loopback - Indicate whether it is a loopback packet
  *
  * Returned Value:
  *   OK     The packet has been processed  and can be deleted
@@ -151,7 +152,7 @@ errout:
  *
  ****************************************************************************/
 
-static int pkt_in(FAR struct net_driver_s *dev)
+static int pkt_in_(FAR struct net_driver_s *dev, bool loopback)
 {
   FAR struct pkt_conn_s *conn = NULL;
   uint16_t flags;
@@ -164,7 +165,7 @@ static int pkt_in(FAR struct net_driver_s *dev)
 
   pkt_conn_list_lock();
 
-  while ((conn = pkt_active(dev, conn)) != NULL)
+  while ((conn = pkt_active(dev, conn, loopback)) != NULL)
     {
       if (conn->pendiob == dev->d_iob)
         {
@@ -215,6 +216,32 @@ static int pkt_in(FAR struct net_driver_s *dev)
 }
 
 /****************************************************************************
+ * Name: pkt_in
+ *
+ * Description:
+ *   To be compatible with the old framework, keep this function.
+ *   For more detailed information, please refer to __pkt_input
+ *
+ * Input Parameters:
+ *   dev - The device driver structure containing the received packet
+ *
+ * Returned Value:
+ *   OK     The packet has been processed  and can be deleted
+ *  -EAGAIN There is a matching connection, but could not dispatch the packet
+ *          yet.  Useful when a packet arrives before a recv call is in
+ *          place.
+ *
+ * Assumptions:
+ *   The network is locked.
+ *
+ ****************************************************************************/
+
+static int pkt_in(FAR struct net_driver_s *dev)
+{
+  return pkt_in_(dev, false);
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -262,6 +289,50 @@ int pkt_input(FAR struct net_driver_s *dev)
 
   ret = netdev_input(dev, pkt_in, false);
   netdev_unlock(dev);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: pkt_loopback
+ *
+ * Description:
+ *   Handle looback packet input.
+ *   This function is quite similar to pkt_inpt, and we made a distinction
+ *   to ensure compatibility with old code
+ *
+ * Input Parameters:
+ *   dev - The device driver structure containing the received packet
+ *
+ * Returned Value:
+ *   OK     The packet has been processed  and can be deleted
+ *  -EAGAIN There is a matching connection, but could not dispatch the
+ *          packet yet.  Useful when a packet arrives before a recv call
+ *          is in place.
+ *
+ * Assumptions:
+ *   The network is locked.
+ *
+ ****************************************************************************/
+
+int pkt_loopback(FAR struct net_driver_s *dev)
+{
+  FAR uint8_t *buf;
+  int ret;
+
+  netdev_lock(dev);
+
+  buf = dev->d_buf;
+
+  /* Set the device buffer to l2 */
+
+  dev->d_buf = NETLLBUF;
+
+  ret = pkt_in_(dev, true);
+
+  dev->d_buf = buf;
+
+  netdev_unlock(dev);
+
   return ret;
 }
 
