@@ -295,24 +295,25 @@ int addrenv_join(FAR struct tcb_s *ptcb, FAR struct tcb_s *tcb)
   if (ret < 0)
     {
       berr("ERROR: up_addrenv_attach failed: %d\n", ret);
-      return ret;
     }
-
-  if (group == NULL)
+  else
     {
-      group = (FAR struct task_group_s *)(tcb + 1);
+      if (group == NULL)
+        {
+          group = (FAR struct task_group_s *)(tcb + 1);
+        }
+
+      /* Take a reference to the address environment */
+
+      addrenv_take(ptcb->group->tg_addrenv_own);
+
+      /* Share the parent's address environment */
+
+      group->tg_addrenv_own = ptcb->group->tg_addrenv_own;
+      tcb->addrenv_curr = group->tg_addrenv_own;
     }
 
-  /* Take a reference to the address environment */
-
-  addrenv_take(ptcb->group->tg_addrenv_own);
-
-  /* Share the parent's address environment */
-
-  group->tg_addrenv_own = ptcb->group->tg_addrenv_own;
-  tcb->addrenv_curr = group->tg_addrenv_own;
-
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -471,16 +472,9 @@ int addrenv_give(FAR struct addrenv_s *addrenv)
 
 void addrenv_drop(FAR struct addrenv_s *addrenv, bool deferred)
 {
-  if (addrenv == NULL)
-    {
-      /* No address environment, get out */
-
-      return;
-    }
-
   /* If no more users, the address environment can be dropped */
 
-  if (addrenv_give(addrenv) == 0)
+  if (addrenv != NULL && addrenv_give(addrenv) == 0)
     {
       /* Defer dropping if requested to do so, otherwise drop at once */
 
