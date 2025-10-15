@@ -57,6 +57,31 @@
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: pseudo_isparent
+ *
+ * Description:
+ *   Check if 'parent' is an ancestor of 'child'
+ *
+ ****************************************************************************/
+
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+static bool pseudo_isparent(FAR struct inode *parent,
+                            FAR struct inode *child)
+{
+  FAR struct inode *tmp;
+
+  for (tmp = child; tmp; tmp = tmp->i_parent)
+    {
+      if (tmp == parent)
+        {
+          return true;
+        }
+    }
+
+  return false;
+}
+
+/****************************************************************************
  * Name: pseudorename
  *
  * Description:
@@ -64,7 +89,6 @@
  *
  ****************************************************************************/
 
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
 static int pseudorename(FAR const char *oldpath, FAR struct inode *oldinode,
                         FAR const char *newpath)
 {
@@ -78,21 +102,35 @@ static int pseudorename(FAR const char *oldpath, FAR struct inode *oldinode,
    * first, provided that it is not a directory.
    */
 
-next_subdir:
   SETUP_SEARCH(&newdesc, newpath, true);
   ret = inode_find(&newdesc);
   if (ret >= 0)
     {
       /* We found it.  Get the search results */
 
-      newinode = newdesc.node;
+      FAR struct inode *oldlink = oldinode;
+      FAR struct inode *newlink = newdesc.node;
+
+      newinode = newlink;
       DEBUGASSERT(newinode != NULL);
 
       /* If the old and new inodes are the same, then this is an attempt to
        * move the directory entry onto itself.  Let's not but say we did.
        */
 
-      if (oldinode == newinode)
+      if (INODE_IS_HARDLINK(oldinode))
+        {
+          oldlink = oldinode->i_private;
+          DEBUGASSERT(oldlink != NULL);
+        }
+
+      if (INODE_IS_HARDLINK(newinode))
+        {
+          newlink = newinode->i_private;
+          DEBUGASSERT(newlink != NULL);
+        }
+
+      if (oldinode == newinode || oldlink == newlink)
         {
           inode_release(newinode);
           ret = OK;
@@ -120,41 +158,36 @@ next_subdir:
 #endif
          )
         {
-          FAR char *subdirname;
-
-          inode_release(newinode);
-
-          /* Free memory may be allocated in previous loop */
-
-          if (subdir != NULL)
+          if (!INODE_IS_PSEUDODIR(oldinode))
             {
-              fs_heap_free(subdir);
-              subdir = NULL;
-            }
-
-          /* Yes.. In this case, the target of the rename must be a
-           * subdirectory of newinode, not the newinode itself.  For
-           * example: mv b a/ must move b to a/b.
-           */
-
-          subdirname = basename((FAR char *)oldpath);
-          ret = fs_heap_asprintf(&subdir, "%s/%s", newpath, subdirname);
-          if (ret < 0)
-            {
-              subdir = NULL;
-              ret = -ENOMEM;
+              ret = -EISDIR;
               goto errout;
             }
 
-          newpath = subdir;
+          if (newinode->i_child != NULL)
+            {
+              /* It is an error to rename a directory to a directory
+               * that is not empty.
+               */
 
-          /* This can be a recursive case, another inode may already exist
-           * at oldpth/subdirname.  In that case, we need to do this all
-           * over again.  A nasty goto is used because I am lazy.
-           */
+              ret = -ENOTEMPTY;
+              goto errout;
+            }
 
-          RELEASE_SEARCH(&newdesc);
-          goto next_subdir;
+          if (pseudo_isparent(oldinode, newinode))
+            {
+              /* It is not possible to move a directory into one of its
+               * children
+               */
+
+              ret = -EINVAL;
+              goto errout;
+            }
+
+          inode_remove(newpath);
+#ifdef CONFIG_FS_NOTIFY
+          notify_unlink(newpath);
+#endif
         }
       else
         {
@@ -199,7 +232,15 @@ next_subdir:
        * any new intermediate path segments).
        */
 
-      ret = -EEXIST;
+      goto errout_with_lock;
+    }
+
+  if (pseudo_isparent(oldinode, newinode))
+    {
+      /* It is not possible to move a directory into one of its children */
+
+      inode_remove(newpath);
+      ret = -EINVAL;
       goto errout_with_lock;
     }
 
@@ -208,6 +249,7 @@ next_subdir:
   newinode->i_child   = oldinode->i_child;   /* Link to lower level inode */
   newinode->i_flags   = oldinode->i_flags;   /* Flags for inode */
   newinode->u.i_ops   = oldinode->u.i_ops;   /* Inode operations */
+  newinode->i_ino     = oldinode->i_ino;     /* File serial number */
 #ifdef CONFIG_PSEUDOFS_ATTRIBUTES
   newinode->i_mode    = oldinode->i_mode;    /* Access mode flags */
   newinode->i_owner   = oldinode->i_owner;   /* Owner */
@@ -215,6 +257,11 @@ next_subdir:
   newinode->i_atime   = oldinode->i_atime;   /* Time of last access */
   newinode->i_mtime   = oldinode->i_mtime;   /* Time of last modification */
   newinode->i_ctime   = oldinode->i_ctime;   /* Time of last status change */
+
+  /* Update the timestamps of parents inodes */
+
+  clock_gettime(CLOCK_REALTIME, &newinode->i_parent->i_mtime);
+  newinode->i_parent->i_ctime = newinode->i_parent->i_mtime;
 #endif
   newinode->i_private = oldinode->i_private; /* Per inode driver private data */
 
