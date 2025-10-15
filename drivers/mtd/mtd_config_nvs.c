@@ -94,6 +94,7 @@ struct nvs_fs
   uint32_t              data_wra;      /* Next data write address */
   uint32_t              step_addr;     /* For traverse */
   mutex_t               nvs_lock;
+  uint32_t              write_cnt;     /* Block write counter */
 #if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
   uint32_t              cache[CONFIG_MTD_CONFIG_CACHE_SIZE];
 #endif
@@ -107,8 +108,15 @@ begin_packed_struct struct nvs_ate
 {
   uint32_t id;           /* Data id */
   uint16_t offset;       /* Data offset within block */
-  uint16_t len;          /* Data len within block */
-  uint16_t key_len;      /* Key string len */
+  union
+  {
+    struct
+    {
+      uint16_t len;      /* Data len within block */
+      uint16_t key_len;  /* Key string len */
+    };
+    uint32_t write_cnt;  /* Block write counter */
+  };
   uint8_t  data_crc8;    /* Crc8 check of the data */
   uint8_t  crc8;         /* Crc8 check of the ate entry */
   uint8_t  expired[0];
@@ -798,8 +806,7 @@ static bool nvs_ate_valid(FAR struct nvs_fs *fs,
 static bool nvs_close_ate_valid(FAR struct nvs_fs *fs,
                                FAR const struct nvs_ate *entry)
 {
-  if (!nvs_ate_valid(fs, entry) || entry->len != 0 ||
-      entry->id != nvs_special_ate_id(fs))
+  if (!nvs_ate_valid(fs, entry) || entry->id != nvs_special_ate_id(fs))
     {
       return false;
     }
@@ -1097,10 +1104,13 @@ static int nvs_block_close(FAR struct nvs_fs *fs)
 
   memset(close_ate, fs->erasestate, ate_size);
   close_ate->id = nvs_special_ate_id(fs);
-  close_ate->len = 0;
-  close_ate->key_len = 0;
-  close_ate->offset = (fs->ate_wra + ate_size) & NVS_ADDR_OFFS_MASK;
+  if (fs->ate_wra >> NVS_ADDR_BLOCK_SHIFT == 0)
+    {
+      fs->write_cnt++;
+    }
 
+  close_ate->write_cnt = fs->write_cnt;
+  close_ate->offset = (fs->ate_wra + ate_size) & NVS_ADDR_OFFS_MASK;
   fs->ate_wra &= NVS_ADDR_BLOCK_MASK;
   fs->ate_wra += fs->blocksize - ate_size;
 
@@ -1332,6 +1342,7 @@ static int nvs_startup(FAR struct nvs_fs *fs)
   size_t ate_size = nvs_ate_size(fs);
   NVS_ATE(second_ate, ate_size);
   NVS_ATE(last_ate, ate_size);
+  NVS_ATE(close_ate, ate_size);
 
 #if CONFIG_MTD_CONFIG_BUFFER_SIZE > 0
   DEBUGASSERT(ate_size <= CONFIG_MTD_CONFIG_BUFFER_SIZE);
@@ -1361,11 +1372,22 @@ static int nvs_startup(FAR struct nvs_fs *fs)
     {
       addr = (i << NVS_ADDR_BLOCK_SHIFT) +
              (uint16_t)(fs->blocksize - ate_size);
-      rc = nvs_flash_cmp_const(fs, addr, fs->erasestate, ate_size);
+      rc = nvs_flash_ate_rd(fs, addr, close_ate);
+      if (rc)
+        {
+          return rc;
+        }
+
+      rc = nvs_ate_cmp_const(close_ate, fs->erasestate, ate_size);
       fwarn("rc=%d\n", rc);
       if (rc)
         {
           /* Closed block */
+
+          if (fs->write_cnt == 0 && nvs_close_ate_valid(fs, close_ate))
+            {
+              fs->write_cnt = close_ate->write_cnt;
+            }
 
           closed_blocks++;
           nvs_block_advance(fs, &addr);
@@ -2411,7 +2433,11 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
           {
             rc = nvs_startup(fs);
           }
+        break;
 
+      case MTDIOC_WRITECOUNT:
+        FAR uint32_t *count = (FAR uint32_t *)arg;
+        *count = fs->write_cnt;
         break;
     }
 
@@ -2424,7 +2450,7 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
  ****************************************************************************/
 
 static int mtdconfig_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                       bool setup)
+                          bool setup)
 {
   FAR struct inode *inode = filep->f_inode;
   FAR struct nvs_fs *fs = inode->i_private;
