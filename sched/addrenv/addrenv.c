@@ -51,12 +51,11 @@
  * This must only be accessed with interrupts disabled.
  *
  * REVISIT: Try to get rid of this, global bookkeeping for this is dangerous.
+ *
+ * NOTICE: The following variables are declared at addrenv_switch scope.
+ * static DEFINE_PER_CPU_BSS(FAR struct addrenv_s *, g_addrenv);
+ * static spinlock_t g_addrenv_lock = SP_UNLOCKED;
  */
-
-static DEFINE_PER_CPU_BSS(FAR struct addrenv_s *, g_addrenv);
-static spinlock_t g_addrenv_lock = SP_UNLOCKED;
-
-#define g_addrenv this_cpu_var(g_addrenv)
 
 /****************************************************************************
  * Private Functions
@@ -125,6 +124,10 @@ static void addrenv_destroy(FAR void *arg)
 
 int addrenv_switch(FAR struct tcb_s *tcb)
 {
+  static DEFINE_PER_CPU_BSS(FAR struct addrenv_s *, g_addrenv);
+  static spinlock_t g_addrenv_lock = SP_UNLOCKED;
+  #define g_addrenv this_cpu_var(g_addrenv)
+
   FAR struct addrenv_s *curr;
   FAR struct addrenv_s *next;
   irqstate_t flags;
