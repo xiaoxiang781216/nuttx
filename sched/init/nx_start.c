@@ -563,7 +563,7 @@ static void idle_group_initialize(void)
 
 void nx_start(void)
 {
-  int i;
+  size_t i;
 
   /* Boot up is complete */
 
