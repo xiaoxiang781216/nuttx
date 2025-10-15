@@ -47,7 +47,7 @@
 #include "igmp/igmp.h"
 #include "icmpv6/icmpv6.h"
 #include "mld/mld.h"
-#include "ipforward/ipforward.h"
+#include "netforward/netforward.h"
 #include "sixlowpan/sixlowpan.h"
 #include "ipfilter/ipfilter.h"
 #include "ipfrag/ipfrag.h"
@@ -502,7 +502,7 @@ static inline int devif_poll_forward(FAR struct net_driver_s *dev,
 {
   /* Perform the forwarding poll */
 
-  ipfwd_poll(dev);
+  netfwd_poll(dev);
 
   /* NOTE: that 6LoWPAN packet conversions are handled differently for
    * forwarded packets.  That is because we don't know what the packet

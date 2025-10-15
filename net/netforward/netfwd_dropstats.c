@@ -1,5 +1,5 @@
 /****************************************************************************
- * net/ipforward/ipfwd_dropstats.c
+ * net/netforward/netfwd_dropstats.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -32,7 +32,7 @@
 #include <nuttx/net/ip.h>
 #include <nuttx/net/netstats.h>
 
-#include "ipforward/ipforward.h"
+#include "netforward/netforward.h"
 
 #if defined(CONFIG_NET_IPFORWARD) && defined(CONFIG_NET_STATISTICS)
 
@@ -149,7 +149,7 @@ void ipv4_dropstats(FAR struct ipv4_hdr_s *ipv4)
 #endif
 
 /****************************************************************************
- * Name: ipfwd_dropstats
+ * Name: netfwd_dropstats
  *
  * Description:
  *   Update statistics for a dropped packet.
@@ -162,7 +162,7 @@ void ipv4_dropstats(FAR struct ipv4_hdr_s *ipv4)
  *
  ****************************************************************************/
 
-void ipfwd_dropstats(FAR struct forward_s *fwd)
+void netfwd_dropstats(FAR struct forward_s *fwd)
 {
 #ifdef CONFIG_NET_IPv4
 #ifdef CONFIG_NET_IPv6

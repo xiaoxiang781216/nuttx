@@ -1,5 +1,5 @@
 /****************************************************************************
- * net/ipforward/ipv4_forward.c
+ * net/netforward/ipv4_forward.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -41,7 +41,7 @@
 #include "sixlowpan/sixlowpan.h"
 #include "icmp/icmp.h"
 #include "ipfilter/ipfilter.h"
-#include "ipforward/ipforward.h"
+#include "netforward/netforward.h"
 #include "nat/nat.h"
 #include "devif/devif.h"
 
@@ -257,7 +257,7 @@ static int ipv4_dev_forward(FAR struct net_driver_s *dev,
    * completely zeroed when we receive it.
    */
 
-  fwd = ipfwd_alloc();
+  fwd = netfwd_alloc();
   if (fwd == NULL)
     {
       nwarn("WARNING: Failed to allocate forwarding structure\n");
@@ -323,7 +323,7 @@ static int ipv4_dev_forward(FAR struct net_driver_s *dev,
 
   /* Then set up to forward the packet according to the protocol. */
 
-  ret = ipfwd_forward(fwd);
+  ret = netfwd_forward(fwd);
   if (ret >= 0)
     {
       netdev_iob_clear(dev);
@@ -333,7 +333,7 @@ static int ipv4_dev_forward(FAR struct net_driver_s *dev,
 errout_with_fwd:
   if (fwd != NULL)
     {
-      ipfwd_free(fwd);
+      netfwd_free(fwd);
     }
 
 errout:

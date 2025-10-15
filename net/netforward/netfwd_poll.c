@@ -1,5 +1,5 @@
 /****************************************************************************
- * net/ipforward/ipfwd_poll.c
+ * net/netforward/netfwd_poll.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -34,7 +34,7 @@
 
 #include "devif/devif.h"
 #include "sixlowpan/sixlowpan.h"
-#include "ipforward/ipforward.h"
+#include "netforward/netforward.h"
 
 #ifdef CONFIG_NET_IPFORWARD
 
@@ -147,7 +147,7 @@ static void ipfwd_packet_conversion(FAR struct net_driver_s *dev, int proto)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: ipfwd_poll
+ * Name: netfwd_poll
  *
  * Description:
  *   Poll all pending transfer for ARP requests to send.
@@ -158,7 +158,7 @@ static void ipfwd_packet_conversion(FAR struct net_driver_s *dev, int proto)
  *
  ****************************************************************************/
 
-void ipfwd_poll(FAR struct net_driver_s *dev)
+void netfwd_poll(FAR struct net_driver_s *dev)
 {
   uint16_t flags;
 
