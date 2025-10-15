@@ -122,7 +122,7 @@ class SocketServerStatus(gdb.Command):
         super().__init__("gdbrpc status", gdb.COMMAND_USER)
 
     @classmethod
-    def get_memory_usage():
+    def get_memory_usage(cls):
         process = psutil.Process(os.getpid())
         memory_info = process.memory_info()
         return {
