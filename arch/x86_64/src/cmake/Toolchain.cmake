@@ -20,6 +20,9 @@
 
 # Toolchain
 
+set(CMAKE_SYSTEM_NAME Generic)
+set(CMAKE_SYSTEM_VERSION 1)
+
 set(ARCH_SUBDIR intel64)
 
 # cross-development toolchain selection

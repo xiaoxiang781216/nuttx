@@ -24,6 +24,9 @@ if(CONFIG_ARCH_HAVE_AE)
   set(OPTION_MARCH_FEATURE ae)
 endif()
 
+set(CMAKE_SYSTEM_NAME Generic)
+set(CMAKE_SYSTEM_VERSION 1)
+
 if(CONFIG_ARCH_ARMV8A)
   add_compile_options(-march=armv8-a)
 elseif(CONFIG_ARCH_ARMV8R)

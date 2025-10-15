@@ -18,6 +18,9 @@
 #
 # ##############################################################################
 
+set(CMAKE_SYSTEM_NAME Generic)
+set(CMAKE_SYSTEM_VERSION 1)
+
 if(CONFIG_XTENSA_TOOLCHAIN_XCC OR CONFIG_XTENSA_TOOLCHAIN_XCLANG)
   set(TOOLCHAIN_PREFIX xt)
 endif()
