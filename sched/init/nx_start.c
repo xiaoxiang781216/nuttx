@@ -321,7 +321,7 @@ static void tasklist_initialize(void)
 
   /* TSTATE_WAIT_SEM */
 
-  tlist[TSTATE_WAIT_SEM].list = (FAR void *)offsetof(sem_t, waitlist);
+  tlist[TSTATE_WAIT_SEM].list = (FAR dq_queue_t *)offsetof(sem_t, waitlist);
   tlist[TSTATE_WAIT_SEM].attr = TLIST_ATTR_PRIORITIZED |
                                 TLIST_ATTR_OFFSET;
 
@@ -335,14 +335,14 @@ static void tasklist_initialize(void)
   /* TSTATE_WAIT_MQNOTEMPTY */
 
   tlist[TSTATE_WAIT_MQNOTEMPTY].list =
-    (FAR void *)offsetof(struct mqueue_inode_s, cmn.waitfornotempty);
+    (FAR dq_queue_t *)offsetof(struct mqueue_inode_s, cmn.waitfornotempty);
   tlist[TSTATE_WAIT_MQNOTEMPTY].attr = TLIST_ATTR_PRIORITIZED |
                                        TLIST_ATTR_OFFSET;
 
   /* TSTATE_WAIT_MQNOTFULL */
 
   tlist[TSTATE_WAIT_MQNOTFULL].list =
-    (FAR void *)offsetof(struct mqueue_inode_s, cmn.waitfornotfull);
+    (FAR dq_queue_t *)offsetof(struct mqueue_inode_s, cmn.waitfornotfull);
   tlist[TSTATE_WAIT_MQNOTFULL].attr = TLIST_ATTR_PRIORITIZED |
                                       TLIST_ATTR_OFFSET;
 #endif
