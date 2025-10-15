@@ -1114,8 +1114,7 @@ found:
                 g_netstats.tcp.drop, seq, TCP_SEQ_ADD(seq, dev->d_len),
                 dev->d_len);
 
-          dev->d_len = 0;
-          return;
+          goto drop;
         }
     }
 #endif
