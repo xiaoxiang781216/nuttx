@@ -32,6 +32,7 @@
 #include <nuttx/list_type.h>
 #include <nuttx/compiler.h>
 #include <nuttx/clock.h>
+#include <nuttx/irq.h>
 #include <errno.h>
 #include <stdint.h>
 
