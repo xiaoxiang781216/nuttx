@@ -76,7 +76,7 @@ int register_driver(FAR const char *path,
    */
 
   inode_lock();
-  ret = inode_reserve(path, mode, &node);
+  ret = inode_reserve_path(path, mode, &node);
   if (ret >= 0)
     {
       /* We have it, now populate it with driver specific information.

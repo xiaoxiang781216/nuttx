@@ -192,7 +192,7 @@ int nxsem_open(FAR sem_t **sem, FAR const char *name, int oflags, ...)
        */
 
       inode_lock();
-      ret = inode_reserve(fullpath, mode, &inode);
+      ret = inode_reserve_path(fullpath, mode, &inode);
       if (ret >= 0)
         {
           /* Link to the inode */

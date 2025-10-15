@@ -175,7 +175,7 @@ int nxevent_open(FAR nxevent_t **event, FAR const char *name,
        */
 
       inode_lock();
-      ret = inode_reserve(fullpath, mode, &inode);
+      ret = inode_reserve_path(fullpath, mode, &inode);
       if (ret >= 0)
         {
           /* Link to the inode */

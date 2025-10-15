@@ -372,6 +372,35 @@ int inode_reserve(FAR const char *path,
                   mode_t mode, FAR struct inode **inode);
 
 /****************************************************************************
+ * Name: inode_reserve_path
+ *
+ * Description:
+ *   Reserve an (initialized) inode the pseudo file system.
+ *   If the intermediate nodes do not exist, then create their inodes.
+ *   The initial reference count on the new inode is zero.
+ *
+ * Input Parameters:
+ *   path - The path to the inode to create
+ *   mode - inmode privileges
+ *   inode - The location to return the inode pointer
+ *
+ * Returned Value:
+ *   Zero on success (with the inode point in 'inode'); A negated errno
+ *   value is returned on failure:
+ *
+ *   EINVAL - 'path' is invalid for this operation
+ *   EEXIST - An inode already exists at 'path'
+ *   ENOMEM - Failed to allocate in-memory resources for the operation
+ *
+ * Assumptions:
+ *   Caller must hold the inode semaphore
+ *
+ ****************************************************************************/
+
+int inode_reserve_path(FAR const char *path,
+                       mode_t mode, FAR struct inode **inode);
+
+/****************************************************************************
  * Name: inode_remove
  *
  * Description:

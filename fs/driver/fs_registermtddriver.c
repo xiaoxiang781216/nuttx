@@ -77,7 +77,7 @@ int register_mtddriver(FAR const char *path, FAR struct mtd_dev_s *mtd,
    */
 
   inode_lock();
-  ret = inode_reserve(path, mode, &node);
+  ret = inode_reserve_path(path, mode, &node);
   if (ret >= 0)
     {
       /* We have it, now populate it with block driver specific information.

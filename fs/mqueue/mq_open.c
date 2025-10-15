@@ -295,7 +295,7 @@ retry:
       /* Create an inode in the pseudo-filesystem at this path */
 
       inode_lock();
-      ret = inode_reserve(fullpath, mode, &inode);
+      ret = inode_reserve_path(fullpath, mode, &inode);
 
       /* When two thread try create at same time, should ensure inode
        * relative information modified before inode_unlock.

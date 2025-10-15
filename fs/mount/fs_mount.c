@@ -483,7 +483,7 @@ int nx_mount(FAR const char *source, FAR const char *target,
 
   if (mountpt_inode == NULL)
     {
-      ret = inode_reserve(target, 0777, &mountpt_inode);
+      ret = inode_reserve_path(target, 0777, &mountpt_inode);
       if (ret < 0)
         {
           /* inode_reserve can fail for a couple of reasons, but the most

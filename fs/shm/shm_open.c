@@ -136,7 +136,7 @@ static int file_shm_open(FAR struct file *shm, FAR const char *name,
 
       /* Create an inode in the pseudo-filesystem at this path */
 
-      ret = inode_reserve(fullpath, mode, &inode);
+      ret = inode_reserve_path(fullpath, mode, &inode);
       if (ret < 0)
         {
           goto errout_with_sem;

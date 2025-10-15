@@ -178,20 +178,29 @@ int inode_reserve(FAR const char *path,
                   mode_t mode, FAR struct inode **inode)
 {
   struct inode_search_s desc;
+  FAR struct inode *node;
   FAR struct inode *left;
   FAR struct inode *parent;
   FAR const char *name;
+  FAR const char *nextname;
   int ret;
 
   /* Assume failure */
 
   DEBUGASSERT(path != NULL && inode != NULL);
-  *inode = NULL;
+
+  /* Check if path is empty before inode_search.
+   * Otherwise inode_search will return -ENOENT for any path whose inode
+   * doesn't exist, including empty path. In that case, we cannot distinguish
+   * between empty path and non-empty path whose inode doesn't exist.
+   */
 
   if (path[0] == '\0')
     {
       return -ENOENT;
     }
+
+  *inode = NULL;
 
   /* Find the location to insert the new subtree */
 
@@ -205,6 +214,128 @@ int inode_reserve(FAR const char *path,
        */
 
       ret = -EEXIST;
+      goto errout_with_search;
+    }
+
+  if (ret != -ENOENT)
+    {
+      /* Some other error occurred during the search */
+
+      goto errout_with_search;
+    }
+
+  /* Now we now where to insert the subtree */
+
+  name   = desc.path;
+  left   = desc.peer;
+  parent = desc.parent;
+
+  /* Create a new node -- we need to know if this is the
+   * the leaf node or some intermediary.  We can find this
+   * by looking at the next name.
+   */
+
+  nextname = inode_nextname(name);
+  if (*nextname != '\0')
+    {
+      /* It's an error if the intermediate path doesn't exist */
+
+      ret = -ENOENT;
+      goto errout_with_search;
+    }
+  else
+    {
+      node = inode_alloc(name, mode);
+      if (node != NULL)
+        {
+          inode_insert(node, left, parent);
+          *inode = node;
+          ret = OK;
+        }
+      else
+        {
+          /* We get here on failures to allocate node memory */
+
+          ret = -ENOMEM;
+        }
+    }
+
+errout_with_search:
+  RELEASE_SEARCH(&desc);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: inode_reserve_path
+ *
+ * Description:
+ *   Reserve an (initialized) inode the pseudo file system.
+ *   If the intermediate nodes do not exist, then create their inodes.
+ *   The initial reference count on the new inode is zero.
+ *
+ * Input Parameters:
+ *   path - The path to the inode to create
+ *   mode - inmode privileges
+ *   inode - The location to return the inode pointer
+ *
+ * Returned Value:
+ *   Zero on success (with the inode point in 'inode'); A negated errno
+ *   value is returned on failure:
+ *
+ *   EINVAL - 'path' is invalid for this operation
+ *   EEXIST - An inode already exists at 'path'
+ *   ENOMEM - Failed to allocate in-memory resources for the operation
+ *
+ * Assumptions:
+ *   Caller must hold the inode semaphore
+ *
+ ****************************************************************************/
+
+int inode_reserve_path(FAR const char *path,
+                       mode_t mode, FAR struct inode **inode)
+{
+  struct inode_search_s desc;
+  FAR struct inode *left;
+  FAR struct inode *parent;
+  FAR const char *name;
+  int ret;
+
+  /* Assume failure */
+
+  DEBUGASSERT(path != NULL && inode != NULL);
+
+  /* Check if path is empty before inode_search.
+   * Otherwise inode_search will return -ENOENT for any path whose inode
+   * doesn't exist, including empty path. In that case, we cannot distinguish
+   * between empty path and non-empty path whose inode doesn't exist.
+   */
+
+  if (path[0] == '\0')
+    {
+      return -ENOENT;
+    }
+
+  *inode = NULL;
+
+  /* Find the location to insert the new subtree */
+
+  SETUP_SEARCH(&desc, path, false);
+
+  ret = inode_search(&desc);
+  if (ret >= 0)
+    {
+      /* It is an error if the node already exists in the tree (or if it
+       * lies within a mountpoint, we don't distinguish here).
+       */
+
+      ret = -EEXIST;
+      goto errout_with_search;
+    }
+
+  if (ret != -ENOENT)
+    {
+      /* Some other error occurred during the search */
+
       goto errout_with_search;
     }
 
