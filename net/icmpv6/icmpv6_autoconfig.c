@@ -237,11 +237,13 @@ static int icmpv6_send_message(FAR struct net_driver_s *dev, bool advertise)
    * net_sem_wait will also terminate if a signal is received.
    */
 
+  netdev_unlock(dev);
   do
     {
       net_sem_wait(&state.snd_sem);
     }
   while (!state.snd_sent);
+  netdev_lock(dev);
 
   ret = state.snd_result;
   devif_dev_callback_free(dev, state.snd_cb);
