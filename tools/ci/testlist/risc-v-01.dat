@@ -1,9 +1,6 @@
 /risc-v/[a-d]*
 /risc-v/e[0-r]*
 
-# adc_main
--ox64:adc
-
 # signal undefined
 -bl602evb:nsh
 -bl602evb:fpu

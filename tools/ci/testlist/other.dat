@@ -35,7 +35,5 @@
 -rx65n-rsk2mb:netnsh
 -rx65n-rsk2mb:nsh
 
-# DEBUGASSERT
--xx3803:nsh
+# undefined reference to `up_this_cpu'
 -s698pm-dkit:smp
--s698pm-dkit:nsh
