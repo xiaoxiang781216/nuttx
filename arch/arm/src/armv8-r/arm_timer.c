@@ -70,6 +70,7 @@
 static inline void arm_timer_set_freq(uint32_t freq)
 {
   CP15_SET(CNTFRQ, freq);
+  UP_ISB();
 }
 
 static inline uint64_t arm_timer_phy_count(void)
@@ -91,12 +92,14 @@ static inline void arm_timer_phy_enable(bool enable)
 {
   CP15_MODIFY((uint32_t)enable << CNT_CTL_ENABLE_BIT,
               BIT(CNT_CTL_ENABLE_BIT), CNTP_CTL);
+  UP_ISB();
 }
 
 static inline void arm_timer_phy_set_irq_mask(bool mask)
 {
   CP15_MODIFY((uint32_t)mask << CNT_CTL_IMASK_BIT,
               BIT(CNT_CTL_IMASK_BIT), CNTP_CTL);
+  UP_ISB();
 }
 
 /****************************************************************************
