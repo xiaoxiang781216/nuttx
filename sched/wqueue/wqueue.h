@@ -327,18 +327,6 @@ int work_start_lowpri(void);
 #endif
 
 /****************************************************************************
- * Name: work_initialize_notifier
- *
- * Description:
- *   Set up the notification data structures for normal operation.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_WQUEUE_NOTIFIER
-void work_initialize_notifier(void);
-#endif
-
-/****************************************************************************
  * Name: worklist_initialize
  *
  * Description:
