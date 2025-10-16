@@ -428,8 +428,10 @@ static void idle_task_initialize(void)
   tcb->lockcount        = 1;
   tcb->refs             = 1;
 
-#if CONFIG_TASK_NAME_SIZE > 0
+#if CONFIG_TASK_NAME_SIZE >= 12
   snprintf(tcb->name, CONFIG_TASK_NAME_SIZE, "CPU%d IDLE", up_cpu_index());
+#elif CONFIG_TASK_NAME_SIZE > 0
+  strlcpy(tcb->name, "Idle_Task", CONFIG_TASK_NAME_SIZE);
 #endif
   sem_init(&tcb->exit_sem, 0, 0);
 
