@@ -112,7 +112,7 @@ int psock_socket(int domain, int type, int protocol,
 
   if (ret == 0 || (ret != -ENOSYS && ret != -ENOTSUP && ret != -ENETDOWN))
     {
-      return ret;
+      goto done;
     }
 
 #endif
@@ -142,6 +142,10 @@ int psock_socket(int domain, int type, int protocol,
   psock->s_sockif = sockif;
 
   ret = sockif->si_setup(psock);
+
+#ifdef CONFIG_NET_USRSOCK
+done:
+#endif
   if (ret >= 0)
     {
       FAR struct socket_conn_s *conn = psock->s_conn;
