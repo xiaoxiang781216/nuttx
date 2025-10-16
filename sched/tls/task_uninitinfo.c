@@ -154,6 +154,6 @@ void task_uninit_info(FAR struct task_group_s *group)
 #endif
 
   nxmutex_destroy(&info->ta_lock);
-  group_free(group, info);
   group->tg_info = NULL;
+  group_free(group, info);
 }

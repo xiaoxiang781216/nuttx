@@ -47,7 +47,12 @@ static void task_syslogmask(FAR struct tcb_s *tcb, FAR void *arg)
 {
   FAR struct task_info_s *info = tcb->group->tg_info;
 
-  info->ta_syslog_mask = (uint8_t)(*(FAR const int *)arg);
+  /* When task is exiting, tg_info could be free'd in task_uninit_info */
+
+  if (info)
+    {
+      info->ta_syslog_mask = (uint8_t)(*(FAR const int *)arg);
+    }
 }
 
 /****************************************************************************
