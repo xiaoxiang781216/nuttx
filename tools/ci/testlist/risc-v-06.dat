@@ -8,6 +8,9 @@
 # signal
 -rv32m1-vega:buttons
 
+# fatal error: nuttx/lib/modlib.h
+-rv-virt:nest
+
 # Boards build by CMake
 CMake,rv-virt:smp
 CMake,rv-virt:smp64
