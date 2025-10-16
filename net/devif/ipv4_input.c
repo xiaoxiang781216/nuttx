@@ -391,48 +391,46 @@ static int ipv4_in(FAR struct net_driver_s *dev)
             }
 #endif
         }
-      else
+
 #endif
-        {
-          /* No.. The packet is not destined for us. */
+      /* No.. The packet is not destined for us. */
 
 #ifdef CONFIG_NET_IPFORWARD
-          /* Try to forward the packet */
+      /* Try to forward the packet */
 
-          if (ipv4_forward(dev, ipv4) >= 0)
-            {
-              /* The packet was forwarded.  Return success; d_len will
-               * be set appropriately by the forwarding logic:  Cleared
-               * if the packet is forward via anoother device or non-
-               * zero if it will be forwarded by the same device that
-               * it was received on.
-               */
-
-              goto done;
-            }
-          else
-#endif
-#if defined(NET_UDP_HAVE_STACK) && defined(CONFIG_NET_BINDTODEVICE)
-          /* If the protocol specific socket option NET_BINDTODEVICE
-           * is selected, then we must forward all UDP packets to the bound
-           * socket.
+      if (ipv4_forward(dev, ipv4) >= 0)
+        {
+          /* The packet was forwarded.  Return success; d_len will
+           * be set appropriately by the forwarding logic:  Cleared
+           * if the packet is forward via anoother device or non-
+           * zero if it will be forwarded by the same device that
+           * it was received on.
            */
 
-          if (ipv4->proto != IP_PROTO_UDP)
+          goto done;
+        }
+      else
 #endif
-            {
-              /* Not destined for us and not forwardable... Drop the
-               * packet.
-               */
+#if defined(NET_UDP_HAVE_STACK) && defined(CONFIG_NET_BINDTODEVICE)
+      /* If the protocol specific socket option NET_BINDTODEVICE
+       * is selected, then we must forward all UDP packets to the bound
+       * socket.
+       */
 
-              ninfo("WARNING: Not destined for us; not forwardable... "
-                    "Dropping!\n");
+      if (ipv4->proto != IP_PROTO_UDP)
+#endif
+        {
+          /* Not destined for us and not forwardable... Drop the
+           * packet.
+           */
+
+          ninfo("WARNING: Not destined for us; not forwardable... "
+                "Dropping!\n");
 
 #ifdef CONFIG_NET_STATISTICS
-              g_netstats.ipv4.drop++;
+          g_netstats.ipv4.drop++;
 #endif
-              goto drop;
-            }
+          goto drop;
         }
     }
 #ifdef CONFIG_NET_ICMP
