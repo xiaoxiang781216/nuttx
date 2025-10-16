@@ -71,8 +71,8 @@ int clock_getres(clockid_t clock_id, struct timespec *res)
         res->tv_sec  = 0;
         res->tv_nsec = NSEC_PER_TICK;
 
-        sinfo("Returning res=(%d,%d)\n", (int)res->tv_sec,
-                                         (int)res->tv_nsec);
+        sinfo("Returning res=(%lld,%ld)\n", (long long)res->tv_sec,
+                                            res->tv_nsec);
         break;
 
 #ifdef CONFIG_PTP_CLOCK
