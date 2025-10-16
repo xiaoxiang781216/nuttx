@@ -24,7 +24,7 @@
 
 #include <errno.h>
 #include <string.h>
-#include <nuttx/wqueue.h>
+#include <nuttx/wdog.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/video/imgsensor.h>
 #include <nuttx/video/imgdata.h>
@@ -53,7 +53,7 @@ typedef struct
   uint8_t  *next_buf;
   struct timeval *next_ts;
   struct host_video_dev_s *vdev;
-  struct work_s work;
+  struct wdog_s wdog;
 } sim_camera_priv_t;
 
 /****************************************************************************
@@ -348,7 +348,7 @@ static int sim_camera_data_stop_capture(struct imgdata_s *data)
   return host_video_stop_capture(priv->vdev);
 }
 
-static void sim_camera_work(void *arg)
+static void sim_camera_interrupt(wdparm_t arg)
 {
   sim_camera_priv_t *priv = (sim_camera_priv_t *)arg;
   struct timespec ts;
@@ -369,8 +369,7 @@ static void sim_camera_work(void *arg)
       irq_restore_nopreempt(flags);
     }
 
-  work_queue_next(HPWORK, &priv->work, sim_camera_work, arg,
-                  SIM_CAMERA_PERIOD);
+  wd_start_next(&priv->wdog, SIM_CAMERA_PERIOD, sim_camera_interrupt, arg);
 }
 
 /****************************************************************************
@@ -384,6 +383,7 @@ int sim_camera_initialize(void)
   imgsensor_register(&priv->sensor);
   imgdata_register(&priv->data);
 
-  work_queue(HPWORK, &priv->work, sim_camera_work, priv, SIM_CAMERA_PERIOD);
+  wd_start(&priv->wdog, SIM_CAMERA_PERIOD,
+           sim_camera_interrupt, (wdparm_t)priv);
   return 0;
 }

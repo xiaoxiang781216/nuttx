@@ -28,8 +28,7 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/rptun/rptun.h>
 #include <nuttx/list.h>
-#include <nuttx/wqueue.h>
-#include <nuttx/spinlock.h>
+#include <nuttx/wdog.h>
 
 #include "sim_internal.h"
 
@@ -38,7 +37,7 @@
  ****************************************************************************/
 
 #define SIM_RPTUN_SHMEM_SIZE         0x10000
-#define SIM_RPTUN_WORK_DELAY         MSEC2TICK(1)
+#define SIM_RPTUN_WDOG_DELAY         MSEC2TICK(1)
 
 /* Status byte for master/slave to report progress */
 
@@ -96,7 +95,10 @@ struct sim_rptun_dev_s
   char                      cpuname[RPMSG_NAME_SIZE + 1];
   char                      shmemname[RPMSG_NAME_SIZE + 1];
   pid_t                     pid;
-  struct work_s             work;
+
+  /* Wd timer for transmit */
+
+  struct wdog_s             wdog;
 };
 
 /****************************************************************************
@@ -416,7 +418,7 @@ static void sim_rptun_check_reset(struct sim_rptun_dev_s *priv)
     }
 }
 
-static void sim_rptun_work(void *arg)
+static void sim_rptun_interrupt(wdparm_t arg)
 {
   struct sim_rptun_dev_s *dev = (struct sim_rptun_dev_s *)arg;
   irqstate_t flags = irq_save_nopreempt();
@@ -449,8 +451,8 @@ static void sim_rptun_work(void *arg)
     }
 
   irq_restore_nopreempt(flags);
-  work_queue_next(HPWORK, &dev->work, sim_rptun_work, dev,
-                  SIM_RPTUN_WORK_DELAY);
+  wd_start_next(&dev->wdog, SIM_RPTUN_WDOG_DELAY,
+                sim_rptun_interrupt, (wdparm_t)dev);
 }
 
 /****************************************************************************
@@ -497,8 +499,8 @@ int sim_rptun_init(const char *shmemname, const char *cpuname, int master)
       return ret;
     }
 
-  work_queue(HPWORK, &dev->work, sim_rptun_work, dev,
-             SIM_RPTUN_WORK_DELAY);
+  wd_start(&dev->wdog, 0,
+           sim_rptun_interrupt, (wdparm_t)dev);
 
   return 0;
 }

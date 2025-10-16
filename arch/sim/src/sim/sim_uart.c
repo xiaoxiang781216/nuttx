@@ -27,7 +27,7 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/serial/uart_ram.h>
 #include <nuttx/spinlock.h>
-#include <nuttx/wqueue.h>
+#include <nuttx/wdog.h>
 #include <string.h>
 #include <sys/types.h>
 #include <fcntl.h>
@@ -41,7 +41,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define SIM_UART_WORK_DELAY           USEC2TICK(1000)
+#define SIM_UART_WDOG_DELAY           USEC2TICK(1000)
 
 #ifndef CONFIG_SIM_UART_BUFFER_SIZE
   #define CONFIG_SIM_UART_BUFFER_SIZE 256
@@ -69,7 +69,9 @@ struct tty_priv_s
 
   bool          rxint;
 
-  struct work_s work;
+  /* Wd timer for transmit */
+
+  struct wdog_s wdog;
 };
 
 /****************************************************************************
@@ -428,14 +430,14 @@ static int tty_receive(struct uart_dev_s *dev, uint32_t *status)
 }
 
 /****************************************************************************
- * Name: sim_tty_work
+ * Name: sim_tty_interrupt
  *
  * Description:
  * Notify DMA that there is data to be transferred in the TX buffer
  *
  ****************************************************************************/
 
-static void sim_tty_work(void *arg)
+static void sim_tty_interrupt(wdparm_t arg)
 {
   struct uart_dev_s *dev = (struct uart_dev_s *)arg;
   struct tty_priv_s *priv = dev->priv;
@@ -466,8 +468,7 @@ static void sim_tty_work(void *arg)
     }
 
   irq_restore_nopreempt(flags);
-  work_queue_next(HPWORK, &priv->work, sim_tty_work, arg,
-                  SIM_UART_WORK_DELAY);
+  wd_start_next(&priv->wdog, SIM_UART_WDOG_DELAY, sim_tty_interrupt, arg);
 }
 
 /****************************************************************************
@@ -485,8 +486,8 @@ static void tty_rxint(struct uart_dev_s *dev, bool enable)
   priv->rxint = enable;
   if (enable && !priv->txint)
     {
-      work_queue(HPWORK, &priv->work, sim_tty_work, dev,
-                 SIM_UART_WORK_DELAY);
+      wd_start(&priv->wdog, 0,
+               sim_tty_interrupt, (wdparm_t)dev);
     }
 }
 
@@ -661,8 +662,8 @@ static void tty_txint(struct uart_dev_s *dev, bool enable)
   priv->txint = enable;
   if (enable && !priv->rxint)
     {
-      work_queue(HPWORK, &priv->work, sim_tty_work, dev,
-                 SIM_UART_WORK_DELAY);
+      wd_start(&priv->wdog, 0,
+               sim_tty_interrupt, (wdparm_t)dev);
     }
 }
 

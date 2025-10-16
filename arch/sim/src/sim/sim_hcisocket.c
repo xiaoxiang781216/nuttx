@@ -37,7 +37,7 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/spinlock.h>
-#include <nuttx/wqueue.h>
+#include <nuttx/wdog.h>
 #include <nuttx/net/bluetooth.h>
 #include <nuttx/wireless/bluetooth/bt_driver.h>
 #include <nuttx/wireless/bluetooth/bt_uart.h>
@@ -50,7 +50,7 @@
  ****************************************************************************/
 
 #define SIM_BTHCI_RX_FRAMELEN 2048
-#define SIM_BTHCI_WORK_DELAY  USEC2TICK(1000)
+#define SIM_BTHCI_WDOG_DELAY  USEC2TICK(1000)
 
 /****************************************************************************
  * Private Types
@@ -70,7 +70,10 @@ struct bthcisock_s
   int                fd;
   uint16_t           rxlen;
   uint8_t            rxbuf[SIM_BTHCI_RX_FRAMELEN];
-  struct work_s      work;
+
+  /* Wd timer for transmit */
+
+  struct wdog_s      wdog;
 };
 
 /****************************************************************************
@@ -252,14 +255,14 @@ static void bthcisock_free(struct bthcisock_s *dev)
 }
 
 /****************************************************************************
- * Name: sim_bthcisock_work
+ * Name: sim_bthcisock_interrupt
  *
  * Description:
  *   Feed pending packets on the host sockets into the Bluetooth stack.
  *
  ****************************************************************************/
 
-static void sim_bthcisock_work(void *arg)
+static void sim_bthcisock_interrupt(wdparm_t arg)
 {
   struct bthcisock_s *dev = (struct bthcisock_s *)arg;
   irqstate_t flags = irq_save_nopreempt();
@@ -271,8 +274,8 @@ static void sim_bthcisock_work(void *arg)
 
   irq_restore_nopreempt(flags);
 
-  work_queue_next(HPWORK, &dev->work, sim_bthcisock_work, arg,
-                  SIM_BTHCI_WORK_DELAY);
+  wd_start_next(&dev->wdog, SIM_BTHCI_WDOG_DELAY,
+                sim_bthcisock_interrupt, arg);
 }
 
 /****************************************************************************
@@ -313,8 +316,8 @@ int sim_bthcisock_register(int dev_id)
       return ret;
     }
 
-  work_queue(HPWORK, &dev->work, sim_bthcisock_work, dev,
-             SIM_BTHCI_WORK_DELAY);
+  wd_start(&dev->wdog, 0,
+           sim_bthcisock_interrupt, (wdparm_t)dev);
 
   return 0;
 }

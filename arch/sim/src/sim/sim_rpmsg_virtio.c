@@ -29,7 +29,7 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/rpmsg/rpmsg_virtio_lite.h>
 #include <nuttx/spinlock.h>
-#include <nuttx/wqueue.h>
+#include <nuttx/wdog.h>
 
 #include "sim_internal.h"
 
@@ -66,7 +66,10 @@ struct sim_rpmsg_virtio_dev_s
   struct rpmsg_virtio_lite_addrenv_s raddrenv[2];
   char                               cpuname[RPMSG_NAME_SIZE + 1];
   char                               shmemname[RPMSG_NAME_SIZE + 1];
-  struct work_s                      work;
+
+  /* Wdog for transmit */
+
+  struct wdog_s                      wdog;
 };
 
 /****************************************************************************
@@ -179,7 +182,7 @@ sim_rpmsg_virtio_register_callback(struct rpmsg_virtio_lite_s *dev,
   return 0;
 }
 
-static void sim_rpmsg_virtio_work(void *arg)
+static void sim_rpmsg_virtio_work(wdparm_t arg)
 {
   struct sim_rpmsg_virtio_dev_s *dev = (struct sim_rpmsg_virtio_dev_s *)arg;
   irqstate_t flags = irq_save_nopreempt();
@@ -206,8 +209,8 @@ static void sim_rpmsg_virtio_work(void *arg)
     }
 
   irq_restore_nopreempt(flags);
-  work_queue_next(HPWORK, &dev->work, sim_rpmsg_virtio_work, dev,
-                  SIM_RPMSG_VIRTIO_WORK_DELAY);
+  wd_start(&dev->wdog, SIM_RPMSG_VIRTIO_WORK_DELAY,
+           sim_rpmsg_virtio_work, (wdparm_t)dev);
 }
 
 static int sim_rpmsg_virtio_notify(struct rpmsg_virtio_lite_s *dev,
@@ -279,6 +282,5 @@ int sim_rpmsg_virtio_init(const char *shmemname, const char *cpuname,
       return ret;
     }
 
-  return work_queue(HPWORK, &priv->work, sim_rpmsg_virtio_work, priv,
-                    SIM_RPMSG_VIRTIO_WORK_DELAY);
+  return wd_start(&priv->wdog, 0, sim_rpmsg_virtio_work, (wdparm_t)priv);
 }

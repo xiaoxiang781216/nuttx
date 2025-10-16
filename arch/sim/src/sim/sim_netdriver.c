@@ -65,7 +65,7 @@
 #include <nuttx/compiler.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/spinlock.h>
-#include <nuttx/wqueue.h>
+#include <nuttx/wdog.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev_lowerhalf.h>
 #include <nuttx/net/pkt.h>
@@ -107,7 +107,7 @@ struct sim_netdev_s
   struct netdev_lowerhalf_s dev;
 #endif
   uint8_t buf[SIM_NETDEV_BUFSIZE]; /* Used when packet buffer is fragmented */
-  struct work_s work;
+  struct wdog_s wdog;
 };
 
 /****************************************************************************
@@ -267,7 +267,7 @@ static void netdriver_rxready_interrupt(void *priv)
   netdev_lower_rxready(dev);
 }
 
-static void sim_netdev_interrupt(void *arg)
+static void sim_netdev_interrupt(wdparm_t arg)
 {
   struct sim_netdev_s *priv = (struct sim_netdev_s *)arg;
   struct netdev_lowerhalf_s *dev = (struct netdev_lowerhalf_s *)&priv->dev;
@@ -279,8 +279,7 @@ static void sim_netdev_interrupt(void *arg)
     }
 
   irq_restore_nopreempt(flags);
-  work_queue_next(HPWORK, &priv->work, sim_netdev_interrupt, arg,
-                  SIM_NETDEV_PERIOD);
+  wd_start_next(&priv->wdog, SIM_NETDEV_PERIOD, sim_netdev_interrupt, arg);
 }
 
 /****************************************************************************
@@ -331,9 +330,8 @@ int sim_netdriver_init(void)
 
       netdev_lower_register(dev, devidx < CONFIG_SIM_WIFIDEV_NUMBER ?
                                  NET_LL_IEEE80211 : NET_LL_ETHERNET);
-      work_queue(HPWORK, &g_sim_dev[devidx].work,
-                 sim_netdev_interrupt, &g_sim_dev[devidx],
-                 SIM_NETDEV_PERIOD);
+      wd_start(&g_sim_dev[devidx].wdog, SIM_NETDEV_PERIOD,
+               sim_netdev_interrupt, (wdparm_t)&g_sim_dev[devidx]);
     }
 
   return OK;
