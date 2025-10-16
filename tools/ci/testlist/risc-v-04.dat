@@ -5,6 +5,3 @@
 -hpm6360evk:nsh
 -icicle:rpmsg-sbi
 -icicle:opensbi
-
-# signal
--hifive1-revb:nsh
