@@ -37,7 +37,7 @@
 
 SECTIONS
 {
-  .text TEXT :
+  .text TEXT : SUBALIGN(SECTIONS_ALIGN)
     {
       _stext = . ;
       *(.text)
@@ -63,7 +63,7 @@ SECTIONS
     }
 
   _eronly = ABSOLUTE(.);
-  .data DATA :
+  .data DATA : SUBALIGN(SECTIONS_ALIGN)
     {
       _sdata = . ;
       *(.data)

@@ -117,7 +117,8 @@ extern initializer_t _edtors[];
 
 static void exec_ctors(void)
 {
-  for (initializer_t *ctor = _sctors; ctor != _ectors; ctor++)
+  for (initializer_t *ctor = _sctors;
+       ctor != _ectors && *ctor != NULL; ctor++)
     {
       (*ctor)();
     }
@@ -133,7 +134,8 @@ static void exec_ctors(void)
 
 static void exec_dtors(void)
 {
-  for (initializer_t *dtor = _sdtors; dtor != _edtors; dtor++)
+  for (initializer_t *dtor = _sdtors;
+       dtor != _edtors && *dtor != NULL; dtor++)
     {
       (*dtor)();
     }
