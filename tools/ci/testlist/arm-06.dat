@@ -1,11 +1,1 @@
 /arm/r*,CONFIG_ARM_TOOLCHAIN_GNU_EABI
-
-# undefined reference to `up_this_cpu'
--waveshare-rp2040-lcd-1.28:smp
--raspberrypi-pico-w:smp
--adafruit-qt-py-rp2040:smp
--adafruit-feather-rp2040:smp
--adafruit-kb2040:smp
--raspberrypi-pico:smp
--raspberrypi-pico:lcd1602
--pimoroni-tiny2040:smp

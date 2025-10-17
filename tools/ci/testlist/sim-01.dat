@@ -2,7 +2,6 @@
 /sim/*/*/*/c[0-i]*
 
 -sim:citest
--sim:binder
 
 # macOS doesn't have ALSA
 -Darwin,sim:alsa
