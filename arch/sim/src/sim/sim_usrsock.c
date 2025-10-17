@@ -400,8 +400,8 @@ static void sim_usrsock_work(void *arg)
   host_usrsock_loop();
   irq_restore_nopreempt(flags);
 
-  work_queue_next(HPWORK, &g_usrsock.work, sim_usrsock_work,
-                  NULL, SIM_USRSOCK_PERIOD);
+  work_queue_next_wq(g_work_queue, &g_usrsock.work, sim_usrsock_work,
+                     NULL, SIM_USRSOCK_PERIOD);
 }
 
 /****************************************************************************
@@ -415,8 +415,8 @@ int usrsock_event_callback(int16_t usockid, uint16_t events)
 
 void usrsock_register(void)
 {
-  work_queue(HPWORK, &g_usrsock.work, sim_usrsock_work,
-             NULL, SIM_USRSOCK_PERIOD);
+  work_queue_wq(g_work_queue, &g_usrsock.work, sim_usrsock_work,
+                NULL, SIM_USRSOCK_PERIOD);
 }
 
 /****************************************************************************

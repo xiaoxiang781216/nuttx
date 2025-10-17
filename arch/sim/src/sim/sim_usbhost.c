@@ -40,7 +40,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
 #include <nuttx/spinlock.h>
-#include <nuttx/wdog.h>
+#include <nuttx/wqueue.h>
 #include <nuttx/usb/usb.h>
 #include <nuttx/usb/usbhost.h>
 #include <nuttx/usb/usbhost_trace.h>
@@ -109,7 +109,7 @@ struct sim_usbhost_s
   mutex_t                      lock;               /* Support mutually exclusive access */
   sem_t                        pscsem;             /* Semaphore to wait for port status change events */
   struct usbhost_devaddr_s     devgen;             /* Address generation data */
-  struct wdog_s                wdog;
+  struct work_s                work;
   spinlock_t                   slock;
 };
 
@@ -711,10 +711,10 @@ static void sim_usbhost_rqcomplete(struct sim_usbhost_s *drvr)
 }
 
 /****************************************************************************
- * Name: sim_usbhost_interrupt
+ * Name: sim_usbhost_work
  ****************************************************************************/
 
-static void sim_usbhost_interrupt(wdparm_t arg)
+static void sim_usbhost_work(void *arg)
 {
   struct sim_usbhost_s *priv = (struct sim_usbhost_s *)arg;
   struct usbhost_hubport_s *hport;
@@ -784,8 +784,8 @@ static void sim_usbhost_interrupt(wdparm_t arg)
     }
 
   irq_restore_nopreempt(flags);
-  wd_start_next(&priv->wdog, SIM_USBHOST_PERIOD,
-                sim_usbhost_interrupt, arg);
+  work_queue_next_wq(g_work_queue, &priv->work, sim_usbhost_work, priv,
+                     SIM_USBHOST_PERIOD);
 }
 
 /****************************************************************************
@@ -876,8 +876,8 @@ int sim_usbhost_initialize(void)
       return -ENODEV;
     }
 
-  wd_start(&priv->wdog, SIM_USBHOST_PERIOD,
-           sim_usbhost_interrupt, (wdparm_t)priv);
+  work_queue_wq(g_work_queue, &priv->work, sim_usbhost_work, priv,
+                SIM_USBHOST_PERIOD);
 
   return OK;
 }

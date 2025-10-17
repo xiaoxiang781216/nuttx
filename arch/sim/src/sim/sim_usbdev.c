@@ -36,7 +36,7 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/wdog.h>
+#include <nuttx/wqueue.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/usb/usb.h>
@@ -158,7 +158,7 @@ struct sim_usbdev_s
   uint16_t                     epavail;              /* Bitset of available endpoints */
   struct sim_ep_s              eps[SIM_USB_EPNUM];
   spinlock_t                   lock;                 /* Spinlock */
-  struct wdog_s                wdog;                 /* Watchdog for event loop */
+  struct work_s                work;
 };
 
 struct sim_req_s
@@ -1045,7 +1045,7 @@ static void sim_usbdev_devinit(struct sim_usbdev_s *dev)
   spin_lock_init(&dev->lock);
 }
 
-static void sim_usbdev_interrupt(wdparm_t arg)
+static void sim_usbdev_work(void *arg)
 {
   struct sim_usbdev_s *priv = (struct sim_usbdev_s *)arg;
   struct sim_ep_s *privep;
@@ -1091,7 +1091,8 @@ static void sim_usbdev_interrupt(wdparm_t arg)
   while (do_loop);
 
   irq_restore_nopreempt(flags);
-  wd_start_next(&priv->wdog, SIM_USB_PERIOD, sim_usbdev_interrupt, arg);
+  work_queue_next_wq(g_work_queue, &priv->work, sim_usbdev_work, priv,
+                     SIM_USB_PERIOD);
 }
 
 /****************************************************************************
@@ -1151,8 +1152,8 @@ int usbdev_register(struct usbdevclass_driver_s *driver)
 
   if (ret == 0)
     {
-      wd_start(&priv->wdog, SIM_USB_PERIOD,
-               sim_usbdev_interrupt, (wdparm_t)priv);
+      work_queue_wq(g_work_queue, &priv->work, sim_usbdev_work, priv,
+                    SIM_USB_PERIOD);
     }
 
   return ret;
