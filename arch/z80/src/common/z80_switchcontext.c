@@ -97,7 +97,7 @@ void up_switch_context(FAR struct tcb_s *tcb, FAR struct tcb_s *rtcb)
 
       /* Update scheduler parameters */
 
-      nxsched_switch_context(rtcb, tcb);
+      tcb = nxsched_switch_context(rtcb, tcb);
 
       /* Record the new "running" task */
 

@@ -88,7 +88,7 @@ uint32_t *arm_syscall(uint32_t *regs)
 
         /* Update scheduler parameters */
 
-        nxsched_switch_context(*running_task, tcb);
+        tcb = nxsched_switch_context(*running_task, tcb);
 
       case SYS_restore_context:
 #ifdef CONFIG_ARCH_ADDRENV

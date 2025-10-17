@@ -120,7 +120,7 @@ int nxtask_exit(void)
    * We need to update the scheduling information before tcb is released.
    */
 
-  nxsched_switch_context(dtcb, rtcb);
+  rtcb = nxsched_switch_context(dtcb, rtcb);
 
   sched_note_stop(dtcb);
 
