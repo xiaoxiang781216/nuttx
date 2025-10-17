@@ -56,6 +56,12 @@ struct fs_pseudofile_s
   bool unlinked;
 #endif
   FAR char *content;
+
+  /* Mark the memory for the content is set externally and is not managed by
+   * the pseudofile.
+   */
+
+  bool ext;
 };
 
 /****************************************************************************
@@ -140,7 +146,11 @@ static void pseudofile_remove(FAR struct fs_pseudofile_s *pf)
 {
   nxmutex_unlock(&pf->lock);
   nxmutex_destroy(&pf->lock);
-  fs_large_free(pf->content);
+  if (!pf->ext)
+    {
+      fs_large_free(pf->content);
+    }
+
   fs_heap_free(pf);
 }
 
@@ -177,16 +187,22 @@ static int pseudofile_expand(FAR struct inode *node,
   FAR struct fs_pseudofile_s *pf = node->i_private;
   FAR void *tmp;
 
-  if (pf->content && fs_large_malloc_size(pf->content) >= size)
+  if (!pf->ext && pf->content && fs_large_malloc_size(pf->content) >= size)
     {
       node->i_size = size;
       return 0;
     }
 
-  tmp = fs_large_realloc(pf->content, 1 << LOG2_CEIL(size));
+  tmp = fs_large_realloc(pf->ext ? NULL : pf->content, 1 << LOG2_CEIL(size));
   if (tmp == NULL)
     {
       return -ENOMEM;
+    }
+
+  if (pf->ext)
+    {
+      memcpy(tmp, pf->content, node->i_size);
+      pf->ext = false;
     }
 
   pf->content = tmp;
@@ -328,6 +344,7 @@ static int pseudofile_mmap(FAR struct file *filep,
   if (map->offset >= 0 && map->offset < node->i_size &&
       map->length != 0 && map->offset + map->length <= node->i_size)
     {
+      pseudofile_expand(node, node->i_size);
       map->vaddr = pf->content + map->offset;
       map->munmap = pseudofile_munmap;
       map->priv.p = (FAR void *)node;
@@ -398,6 +415,12 @@ static int pseudofile_truncate(FAR struct file *filep, off_t length)
     {
       FAR void *tmp;
 
+      if (pf->ext)
+        {
+          node->i_size = length;
+          goto out;
+        }
+
       tmp = fs_large_realloc(pf->content, length);
       if (tmp == NULL)
         {
@@ -410,14 +433,13 @@ static int pseudofile_truncate(FAR struct file *filep, off_t length)
     }
   else
     {
-      off_t old_len = node->i_size;
       ret = pseudofile_expand(node, length);
       if (ret < 0)
         {
           goto out;
         }
 
-      memset(pf->content + old_len, 0, length - old_len);
+      memset(pf->content + node->i_size, 0, length - node->i_size);
     }
 
 #ifdef CONFIG_PSEUDOFS_ATTRIBUTES
@@ -453,28 +475,23 @@ static int pseudofile_unlink(FAR struct inode *node)
 }
 #endif
 
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: pseudofile_create
- *
- * Description:
- *   Create the pseudo-file with specified path and mode, and alloc inode
- *   of this pseudo-file.
- *
- ****************************************************************************/
-
-int pseudofile_create(FAR struct inode **node, FAR const char *path,
-                      mode_t mode)
+static int pseudofile_do_create(FAR struct inode **node,
+                                FAR const char *path,
+                                FAR const void *buf, size_t size,
+                                mode_t mode)
 {
   FAR struct fs_pseudofile_s *pf;
+  FAR struct inode *inode;
   int ret;
 
-  if (node == NULL || path == NULL)
+  if (path == NULL)
     {
       return -EINVAL;
+    }
+
+  if (node == NULL)
+    {
+      node = &inode;
     }
 
   pf = fs_heap_zalloc(sizeof(struct fs_pseudofile_s));
@@ -496,6 +513,12 @@ int pseudofile_create(FAR struct inode **node, FAR const char *path,
   (*node)->u.i_ops = &g_pseudofile_ops;
   (*node)->i_private = pf;
   atomic_fetch_add(&(*node)->i_crefs, 1);
+  if (buf && size)
+    {
+      pf->ext = true;
+      pf->content = (FAR char *)buf;
+      (*node)->i_size = size;
+    }
 
   atomic_fetch_add(&(*node)->i_crefs, 1);
 
@@ -510,6 +533,41 @@ reserve_err:
   nxmutex_destroy(&pf->lock);
   fs_heap_free(pf);
   return ret;
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: pseudofile_create
+ *
+ * Description:
+ *   Create the pseudo-file with specified path and mode, and alloc inode
+ *   of this pseudo-file.
+ *
+ ****************************************************************************/
+
+int pseudofile_create(FAR struct inode **node, FAR const char *path,
+                      mode_t mode)
+{
+  return pseudofile_do_create(node, path, NULL, 0, mode);
+}
+
+/****************************************************************************
+ * Name: pseudofile_create_from
+ *
+ * Description:
+ *   Create the pseudo-file with specified path, buf, size and mode.
+ *   The content pointed to by buf will not be modified. When modifications
+ *   are required, memory will be allocated for storage.
+ *
+ ****************************************************************************/
+
+int pseudofile_create_from(FAR const char *path,
+                           FAR const void *buf, size_t size, mode_t mode)
+{
+  return pseudofile_do_create(NULL, path, buf, size, mode);
 }
 
 /****************************************************************************
