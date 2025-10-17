@@ -410,13 +410,14 @@ static int pseudofile_truncate(FAR struct file *filep, off_t length)
     }
   else
     {
+      off_t old_len = node->i_size;
       ret = pseudofile_expand(node, length);
       if (ret < 0)
         {
           goto out;
         }
 
-      memset(pf->content + node->i_size, 0, length - node->i_size);
+      memset(pf->content + old_len, 0, length - old_len);
     }
 
 #ifdef CONFIG_PSEUDOFS_ATTRIBUTES
