@@ -106,13 +106,13 @@ int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
 }
 #else
 
-#define g_idle_topstack __USTACK
-#define g_intstackalloc __ISTACK_END
-#define g_intstacktop   __ISTACK
+#define g_idle_topstack ((uintptr_t)__USTACK)
+#define g_intstackalloc ((uintptr_t)__ISTACK_END)
+#define g_intstacktop   ((uintptr_t)__ISTACK)
 
 uintptr_t up_get_intstackbase(int cpu)
 {
-  return (uintptr_t)g_intstackalloc;
+  return g_intstackalloc;
 }
 
 int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
