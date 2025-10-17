@@ -546,6 +546,122 @@ static inline void mcds_dtu_set_pob(enum mcds_pob_e pob,
         MCDS4P_TCZDTUFLV.U = 0;
         break;
 
+#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+      case MCDS_MCDS2P_POBX:
+
+        /* ---- TCZ: EA ---- */
+
+        MCDS2P_TCXEABND0.U = tc->ea_bnd[0];
+        MCDS2P_TCXEARNG0.U = tc->ea_rng[0];
+        MCDS2P_TCXEABND1.U = tc->ea_bnd[1];
+        MCDS2P_TCXEARNG1.U = tc->ea_rng[1];
+        MCDS2P_TCXEABND2.U = tc->ea_bnd[2];
+        MCDS2P_TCXEARNG2.U = tc->ea_rng[2];
+        MCDS2P_TCXEABND3.U = tc->ea_bnd[3];
+        MCDS2P_TCXEARNG3.U = tc->ea_rng[3];
+        MCDS2P_TCXEABND4.U = tc->ea_bnd[4];
+        MCDS2P_TCXEARNG4.U = tc->ea_rng[4];
+        MCDS2P_TCXEABND5.U = tc->ea_bnd[5];
+        MCDS2P_TCXEARNG5.U = tc->ea_rng[5];
+        MCDS2P_TCXEABND6.U = tc->ea_bnd[6];
+        MCDS2P_TCXEARNG6.U = tc->ea_rng[6];
+        MCDS2P_TCXEABND7.U = tc->ea_bnd[7];
+        MCDS2P_TCXEARNG7.U = tc->ea_rng[7];
+
+        /* ---- TCZ: WD ---- */
+
+        MCDS2P_TCXWDBND0.U  = tc->wd_bnd_lo[0];
+        MCDS2P_TCXWDHBND0.U = tc->wd_bnd_hi[0];
+        MCDS2P_TCXWDBND1.U  = tc->wd_bnd_lo[1];
+        MCDS2P_TCXWDHBND1.U = tc->wd_bnd_hi[1];
+        MCDS2P_TCXWDBND2.U  = tc->wd_bnd_lo[2];
+        MCDS2P_TCXWDHBND2.U = tc->wd_bnd_hi[2];
+        MCDS2P_TCXWDBND3.U  = tc->wd_bnd_lo[3];
+        MCDS2P_TCXWDHBND3.U = tc->wd_bnd_hi[3];
+        MCDS2P_TCXWDRNG0.U  = tc->wd_rng_lo[0];
+        MCDS2P_TCXWDHRNG0.U = tc->wd_rng_hi[0];
+        MCDS2P_TCXWDRNG1.U  = tc->wd_rng_lo[1];
+        MCDS2P_TCXWDHRNG1.U = tc->wd_rng_hi[1];
+        MCDS2P_TCXWDRNG2.U  = tc->wd_rng_lo[2];
+        MCDS2P_TCXWDHRNG2.U = tc->wd_rng_hi[2];
+        MCDS2P_TCXWDRNG3.U  = tc->wd_rng_lo[3];
+        MCDS2P_TCXWDHRNG3.U = tc->wd_rng_hi[3];
+        MCDS2P_TCXWDMSK0.U  = tc->wd_msk_lo[0];
+        MCDS2P_TCXWDHMSK0.U = tc->wd_msk_hi[0];
+        MCDS2P_TCXWDSGN0.U  = tc->wd_sign[0];
+        MCDS2P_TCXWDMSK1.U  = tc->wd_msk_lo[1];
+        MCDS2P_TCXWDHMSK1.U = tc->wd_msk_hi[1];
+        MCDS2P_TCXWDSGN1.U  = tc->wd_sign[1];
+        MCDS2P_TCXWDMSK2.U  = tc->wd_msk_lo[2];
+        MCDS2P_TCXWDHMSK2.U = tc->wd_msk_hi[2];
+        MCDS2P_TCXWDSGN2.U  = tc->wd_sign[2];
+        MCDS2P_TCXWDMSK3.U  = tc->wd_msk_lo[3];
+        MCDS2P_TCXWDHMSK3.U = tc->wd_msk_hi[3];
+        MCDS2P_TCXWDSGN3.U  = tc->wd_sign[3];
+
+        /* ---- DCU fifo level ---- */
+
+        MCDS2P_TCXDTUFLV.U = 0;
+        break;
+
+      case MCDS_MCDS2P_POBW:
+
+        /* ---- TCZ: EA ---- */
+
+        MCDS2P_TCWEABND0.U = tc->ea_bnd[0];
+        MCDS2P_TCWEARNG0.U = tc->ea_rng[0];
+        MCDS2P_TCWEABND1.U = tc->ea_bnd[1];
+        MCDS2P_TCWEARNG1.U = tc->ea_rng[1];
+        MCDS2P_TCWEABND2.U = tc->ea_bnd[2];
+        MCDS2P_TCWEARNG2.U = tc->ea_rng[2];
+        MCDS2P_TCWEABND3.U = tc->ea_bnd[3];
+        MCDS2P_TCWEARNG3.U = tc->ea_rng[3];
+        MCDS2P_TCWEABND4.U = tc->ea_bnd[4];
+        MCDS2P_TCWEARNG4.U = tc->ea_rng[4];
+        MCDS2P_TCWEABND5.U = tc->ea_bnd[5];
+        MCDS2P_TCWEARNG5.U = tc->ea_rng[5];
+        MCDS2P_TCWEABND6.U = tc->ea_bnd[6];
+        MCDS2P_TCWEARNG6.U = tc->ea_rng[6];
+        MCDS2P_TCWEABND7.U = tc->ea_bnd[7];
+        MCDS2P_TCWEARNG7.U = tc->ea_rng[7];
+
+        /* ---- TCZ: WD ---- */
+
+        MCDS2P_TCWWDBND0.U  = tc->wd_bnd_lo[0];
+        MCDS2P_TCWWDHBND0.U = tc->wd_bnd_hi[0];
+        MCDS2P_TCWWDBND1.U  = tc->wd_bnd_lo[1];
+        MCDS2P_TCWWDHBND1.U = tc->wd_bnd_hi[1];
+        MCDS2P_TCWWDBND2.U  = tc->wd_bnd_lo[2];
+        MCDS2P_TCWWDHBND2.U = tc->wd_bnd_hi[2];
+        MCDS2P_TCWWDBND3.U  = tc->wd_bnd_lo[3];
+        MCDS2P_TCWWDHBND3.U = tc->wd_bnd_hi[3];
+        MCDS2P_TCWWDRNG0.U  = tc->wd_rng_lo[0];
+        MCDS2P_TCWWDHRNG0.U = tc->wd_rng_hi[0];
+        MCDS2P_TCWWDRNG1.U  = tc->wd_rng_lo[1];
+        MCDS2P_TCWWDHRNG1.U = tc->wd_rng_hi[1];
+        MCDS2P_TCWWDRNG2.U  = tc->wd_rng_lo[2];
+        MCDS2P_TCWWDHRNG2.U = tc->wd_rng_hi[2];
+        MCDS2P_TCWWDRNG3.U  = tc->wd_rng_lo[3];
+        MCDS2P_TCWWDHRNG3.U = tc->wd_rng_hi[3];
+        MCDS2P_TCWWDMSK0.U  = tc->wd_msk_lo[0];
+        MCDS2P_TCWWDHMSK0.U = tc->wd_msk_hi[0];
+        MCDS2P_TCWWDSGN0.U  = tc->wd_sign[0];
+        MCDS2P_TCWWDMSK1.U  = tc->wd_msk_lo[1];
+        MCDS2P_TCWWDHMSK1.U = tc->wd_msk_hi[1];
+        MCDS2P_TCWWDSGN1.U  = tc->wd_sign[1];
+        MCDS2P_TCWWDMSK2.U  = tc->wd_msk_lo[2];
+        MCDS2P_TCWWDHMSK2.U = tc->wd_msk_hi[2];
+        MCDS2P_TCWWDSGN2.U  = tc->wd_sign[2];
+        MCDS2P_TCWWDMSK3.U  = tc->wd_msk_lo[3];
+        MCDS2P_TCWWDHMSK3.U = tc->wd_msk_hi[3];
+        MCDS2P_TCWWDSGN3.U  = tc->wd_sign[3];
+
+        /* ---- DCU fifo level ---- */
+
+        MCDS2P_TCWDTUFLV.U = 0;
+        break;
+#endif
+
       default:
         return;
     }
@@ -577,6 +693,18 @@ static inline void mcds_dtu_set_tc(uint32_t cpuset,
     {
       mcds_dtu_set_pob(MCDS_MCDS4P_POBZ, &dev->cfg.dtu_tc[3]);
     }
+
+#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+  if (cpuset & (1U << 4))
+    {
+      mcds_dtu_set_pob(MCDS_MCDS2P_POBX, &dev->cfg.dtu_tc[4]);
+    }
+
+  if (cpuset & (1U << 5))
+    {
+      mcds_dtu_set_pob(MCDS_MCDS2P_POBW, &dev->cfg.dtu_tc[5]);
+    }
+#endif
 }
 
 /****************************************************************************
@@ -612,6 +740,10 @@ static inline void mcds_dtu_evt_settrigger(FAR
     (uint32_t *)&MCDS4P_TCYEVT0.U,
     (uint32_t *)&MCDS4P_TCWEVT0.U,
     (uint32_t *)&MCDS4P_TCZEVT0.U,
+#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+    (uintptr_t)(&MCDS2P_TCXEVT0.U),
+    (uintptr_t)(&MCDS2P_TCWEVT0.U),
+#endif
   };
 
   if (reg_type == DTU_DA_TYPE)
@@ -660,6 +792,10 @@ static inline void mcds_dtu_act_setevt(FAR struct tricoreht_mcds_dtu_dev_s
       (uintptr_t)(&MCDS4P_TCYACT0.U + action),
       (uintptr_t)(&MCDS4P_TCWACT0.U + action),
       (uintptr_t)(&MCDS4P_TCZACT0.U + action),
+#ifdef CONFIG_ARCH_CHIP_AURIX_TC4DX
+      (uintptr_t)(&MCDS2P_TCXACT0.U + action),
+      (uintptr_t)(&MCDS2P_TCWACT0.U + action),
+#endif
     };
 
   if (reg_type == DTU_DA_TYPE)

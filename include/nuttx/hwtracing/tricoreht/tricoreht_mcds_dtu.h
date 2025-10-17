@@ -44,7 +44,7 @@
 #define DTU_NR_EA_CMP                             8  /* Number of Effective Address comparators (EABND/EARNG) */
 #define DTU_NR_ATTR_CMP                           4  /* Number of Attribute comparators (ACBND/ACRNG/ACMSK) */
 #define DTU_NR_DATA_CMP                           4  /* Number of Data comparators (WDBND/WDRNG/WDMSK/WDSGN) */
-#define DTU_MAX_NR                                4
+#define DTU_MAX_NR                                6
 #define DTU_NR_TOTAL_CMP  (DTU_NR_EA_CMP + DTU_NR_ATTR_CMP + DTU_NR_DATA_CMP)  /* Total number of comparators */
 
 /* DTU message type enumeration */

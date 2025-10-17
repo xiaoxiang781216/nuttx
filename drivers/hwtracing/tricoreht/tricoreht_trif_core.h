@@ -85,12 +85,12 @@
 #define TRIF_CLC_DISS                 (1U << 1)   /* [1]  Module Disable Status Bit (rh) */
 #define TRIF_CLC_EDIS                 (1U << 3)   /* [3]  Sleep Mode Enable Control (rw) */
 
-/* TRIF_TBUF0FLV bit definitions */
+/* TRIF_TBUFFLV bit definitions */
 
-#define TRIF_TBUF0FLV_CURLVL_MASK     (0x7FFU << 0)    /* [10:0] Current TBUF Fill Level */
-#define TRIF_TBUF0FLV_CURLVL_SHIFT    0
-#define TRIF_TBUF0FLV_MAXLVL_MASK     (0x7FFU << 16)   /* [26:16] Maximum TBUF FIFO Fill Level */
-#define TRIF_TBUF0FLV_MAXLVL_SHIFT    16
+#define TRIF_TBUFFLV_CURLVL_MASK      (0x7FFU << 0)    /* [10:0] Current TBUF Fill Level */
+#define TRIF_TBUFFLV_CURLVL_SHIFT     0
+#define TRIF_TBUFFLV_MAXLVL_MASK      (0x7FFU << 16)   /* [26:16] Maximum TBUF FIFO Fill Level */
+#define TRIF_TBUFFLV_MAXLVL_SHIFT     16
 
 /* TRIF_RST_CTRLA bit definitions */
 
