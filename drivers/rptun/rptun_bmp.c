@@ -96,6 +96,15 @@ static FAR struct resource_table *
 rptun_bmp_get_resource(FAR struct rptun_dev_s *dev)
 {
   FAR struct rptun_bmp_dev_s *priv = (FAR struct rptun_bmp_dev_s *)dev;
+
+  if (!priv->master)
+    {
+      while (priv->rsc->rsc_tbl_hdr.ver == 0)
+        {
+          nxsig_usleep(100);
+        }
+    }
+
   return &priv->rsc->rsc_tbl_hdr;
 }
 
