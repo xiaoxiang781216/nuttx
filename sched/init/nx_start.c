@@ -542,6 +542,73 @@ static void idle_group_initialize(void)
 #endif
 
 /****************************************************************************
+ * Name: memory_initialize
+ *
+ * Description:
+ *   Initialize the memory manager.
+ *
+ ****************************************************************************/
+
+static void memory_initialize(void)
+{
+#if defined(MM_KERNEL_USRHEAP_INIT) || defined(CONFIG_MM_KERNEL_HEAP) || \
+    defined(CONFIG_MM_PGALLOC)
+  /* Initialize the memory manager */
+
+    {
+      FAR void *heap_start;
+      size_t heap_size;
+
+#ifdef MM_KERNEL_USRHEAP_INIT
+      /* Get the user-mode heap from the platform specific code and configure
+       * the user-mode memory allocator.
+       */
+
+      up_allocate_heap(&heap_start, &heap_size);
+      kumm_initialize(heap_start, heap_size);
+#endif
+
+#ifdef CONFIG_MM_KERNEL_HEAP
+      /* Get the kernel-mode heap from the platform specific code and
+       * configure the kernel-mode memory allocator.
+       */
+
+      up_allocate_kheap(&heap_start, &heap_size);
+      kmm_initialize(heap_start, heap_size);
+#endif
+
+#ifdef CONFIG_MM_PGALLOC
+      /* If there is a page allocator in the configuration, then get the page
+       * heap information from the platform-specific code and configure the
+       * page allocator.
+       */
+
+      up_allocate_pgheap(&heap_start, &heap_size);
+      mm_pginitialize(heap_start, heap_size);
+#endif
+    }
+#endif
+
+#ifdef CONFIG_MM_KMAP
+  /* Initialize the kernel dynamic mapping module */
+
+  kmm_map_initialize();
+#endif
+
+#ifdef CONFIG_ARCH_HAVE_EXTRA_HEAPS
+  /* Initialize any extra heap. */
+
+  up_extraheaps_init();
+#endif
+
+#ifdef CONFIG_MM_IOB
+  /* Initialize IO buffering */
+
+  iob_initialize();
+#endif
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -608,61 +675,9 @@ void nx_start(void)
 
   nxsem_initialize();
 
-#if defined(MM_KERNEL_USRHEAP_INIT) || defined(CONFIG_MM_KERNEL_HEAP) || \
-    defined(CONFIG_MM_PGALLOC)
-  /* Initialize the memory manager */
+  /* Initialize the memory manager. */
 
-    {
-      FAR void *heap_start;
-      size_t heap_size;
-
-#ifdef MM_KERNEL_USRHEAP_INIT
-      /* Get the user-mode heap from the platform specific code and configure
-       * the user-mode memory allocator.
-       */
-
-      up_allocate_heap(&heap_start, &heap_size);
-      kumm_initialize(heap_start, heap_size);
-#endif
-
-#ifdef CONFIG_MM_KERNEL_HEAP
-      /* Get the kernel-mode heap from the platform specific code and
-       * configure the kernel-mode memory allocator.
-       */
-
-      up_allocate_kheap(&heap_start, &heap_size);
-      kmm_initialize(heap_start, heap_size);
-#endif
-
-#ifdef CONFIG_MM_PGALLOC
-      /* If there is a page allocator in the configuration, then get the page
-       * heap information from the platform-specific code and configure the
-       * page allocator.
-       */
-
-      up_allocate_pgheap(&heap_start, &heap_size);
-      mm_pginitialize(heap_start, heap_size);
-#endif
-    }
-#endif
-
-#ifdef CONFIG_MM_KMAP
-  /* Initialize the kernel dynamic mapping module */
-
-  kmm_map_initialize();
-#endif
-
-#ifdef CONFIG_ARCH_HAVE_EXTRA_HEAPS
-  /* Initialize any extra heap. */
-
-  up_extraheaps_init();
-#endif
-
-#ifdef CONFIG_MM_IOB
-  /* Initialize IO buffering */
-
-  iob_initialize();
-#endif
+  memory_initialize();
 
 #ifdef CONFIG_SCHED_PERF_EVENTS
   perf_event_init();
