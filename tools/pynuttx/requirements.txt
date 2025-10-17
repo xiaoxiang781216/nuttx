@@ -2,6 +2,7 @@ angr
 capstone
 cloudpickle
 construct
+cxxfilt
 debugpy
 lauterbach-trace32-rcl
 lief
