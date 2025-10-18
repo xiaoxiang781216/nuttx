@@ -54,7 +54,7 @@ static inline_function void reset_mutex(FAR sem_t *sem, int16_t count)
 
   if (!dq_empty(SEM_WAITLIST(sem)))
     {
-      DEBUGVERIFY(nxsem_post(sem));
+      DEBUGVERIFY(nxmutex_post(sem));
     }
   else
     {

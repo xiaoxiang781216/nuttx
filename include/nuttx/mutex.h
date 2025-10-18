@@ -214,7 +214,7 @@ int nxmutex_ticklock(FAR mutex_t *mutex, clock_t delay)
   clock_t end;
   int ret;
 
-  ret = nxsem_trywait(&mutex->sem);
+  ret = nxmutex_trywait(&mutex->sem);
   if (ret >= 0)
     {
       nxmutex_add_backtrace(mutex);
@@ -228,7 +228,7 @@ int nxmutex_ticklock(FAR mutex_t *mutex, clock_t delay)
       for (; ; )
         {
           clock_ticks2time(&ts, clock_delay2abstick(delay));
-          ret = nxsem_clockwait(&mutex->sem, CLOCK_MONOTONIC, &ts);
+          ret = nxsem_clockwait_slow(&mutex->sem, CLOCK_MONOTONIC, &ts);
           if (ret >= 0)
             {
               nxmutex_add_backtrace(mutex);
@@ -281,27 +281,37 @@ int nxmutex_clocklock(FAR mutex_t *mutex, clockid_t clockid,
 {
   int ret;
 
-  /* Wait until we get the lock or until the timeout expires */
+  /* Try to take the semaphore without waiting. */
 
-  for (; ; )
+  ret = nxmutex_trywait(&mutex->sem);
+  if (ret >= 0)
     {
-      if (abstime)
-        {
-          ret = nxsem_clockwait(&mutex->sem, clockid, abstime);
-        }
-      else
-        {
-          ret = nxsem_wait(&mutex->sem);
-        }
+      nxmutex_add_backtrace(mutex);
+    }
+  else
+    {
+      /* Wait until we get the lock or until the timeout expires */
 
-      if (ret >= 0)
+      for (; ; )
         {
-          nxmutex_add_backtrace(mutex);
-          break;
-        }
-      else if (ret != -EINTR && ret != -ECANCELED)
-        {
-          break;
+          if (abstime)
+            {
+              ret = nxsem_clockwait_slow(&mutex->sem, clockid, abstime);
+            }
+          else
+            {
+              ret = nxmutex_wait(&mutex->sem);
+            }
+
+          if (ret >= 0)
+            {
+              nxmutex_add_backtrace(mutex);
+              break;
+            }
+          else if (ret != -EINTR && ret != -ECANCELED)
+            {
+              break;
+            }
         }
     }
 
@@ -376,7 +386,7 @@ static inline_function int nxmutex_lock(FAR mutex_t *mutex)
     {
       /* Take the semaphore (perhaps waiting) */
 
-      ret = nxsem_wait(&mutex->sem);
+      ret = nxmutex_wait(&mutex->sem);
       if (ret >= 0)
         {
           nxmutex_add_backtrace(mutex);
@@ -453,7 +463,7 @@ static inline_function int nxmutex_trylock(FAR mutex_t *mutex)
 {
   int ret;
 
-  ret = nxsem_trywait(&mutex->sem);
+  ret = nxmutex_trywait(&mutex->sem);
   if (ret >= 0)
     {
       nxmutex_add_backtrace(mutex);
@@ -662,7 +672,7 @@ static inline_function
 int nxmutex_unlock(FAR mutex_t *mutex)
 {
   nxmutex_remove_backtrace(mutex);
-  return nxsem_post(&mutex->sem);
+  return nxmutex_post(&mutex->sem);
 }
 
 /****************************************************************************
