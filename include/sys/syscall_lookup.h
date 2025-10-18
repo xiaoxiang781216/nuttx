@@ -76,13 +76,8 @@ SYSCALL_LOOKUP(sethostname,                2)
 
 SYSCALL_LOOKUP(nxsem_destroy,              1)
 SYSCALL_LOOKUP(nxsem_post_slow,            1)
-SYSCALL_LOOKUP(nxsem_clockwait,            3)
-SYSCALL_LOOKUP(
-          nxsem_clockwait_uninterruptible, 3)
+SYSCALL_LOOKUP(nxsem_clockwait_slow,       3)
 SYSCALL_LOOKUP(nxsem_reset,                2)
-SYSCALL_LOOKUP(
-           nxsem_tickwait_uninterruptible, 2)
-SYSCALL_LOOKUP(nxsem_timedwait,            2)
 SYSCALL_LOOKUP(nxsem_trywait_slow,         1)
 SYSCALL_LOOKUP(nxsem_wait_slow,            1)
 

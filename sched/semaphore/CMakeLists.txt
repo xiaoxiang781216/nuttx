@@ -25,8 +25,6 @@ set(CSRCS
     sem_destroy.c
     sem_wait.c
     sem_trywait.c
-    sem_tickwait.c
-    sem_timedwait.c
     sem_clockwait.c
     sem_timeout.c
     sem_post.c
