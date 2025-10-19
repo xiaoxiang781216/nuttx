@@ -785,6 +785,7 @@ static ssize_t net_ioctl_ifreq_arglen(uint8_t domain, int cmd)
       case SIOCSIFNAME:
       case SIOCGIFNAME:
       case SIOCGIFINDEX:
+      case SIOCETHTOOL:
         return sizeof(struct ifreq);
 
       case SIOCSIFADDR:
@@ -1327,6 +1328,19 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
               &req->ifr_ifru.lifru_can_transv_state;
             ret = dev->d_ioctl(dev, cmd,
                           (unsigned long)(uintptr_t)can_transv_state);
+          }
+        else
+          {
+            ret = -ENOSYS;
+          }
+        break;
+#endif
+
+#ifdef CONFIG_NETDEV_ETHTOOL_IOCTL
+      case SIOCETHTOOL:  /* Ethtool ioctl */
+        if (dev->d_ioctl)
+          {
+            ret = dev->d_ioctl(dev, cmd, req->ifr_data);
           }
         else
           {
