@@ -292,7 +292,7 @@ static int audio_rpmsg_local_configure(FAR struct audio_rpmsg_s *aud,
         memcpy(&aud->info.codec, &caps->ac_codec,
                sizeof(caps->ac_codec));
 
-        audinfo("Codec type %u %u %u %u\n",
+        audinfo("Codec type %" PRIu8 " %" PRIu32 " %" PRIu8 " %" PRIu8 "\n",
                 aud->info.format,
                 aud->info.samplerate,
                 aud->info.channels,
@@ -592,7 +592,7 @@ static int audio_rpmsg_ioctl_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct audio_rpmsg_ioctl_s *req = data;
   int ret;
 
-  audinfo("cmd=%d arg=%lld\n", req->request, req->arg);
+  audinfo("cmd=%" PRIu32 " arg=%" PRIu64 "\n", req->request, req->arg);
 
   /* Deal with ioctls passed from the upper-half driver */
 
@@ -664,7 +664,7 @@ static int audio_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept, FAR void *data,
   FAR struct audio_rpmsg_header_s *header = data;
   uint32_t cmd = AUDIO_RPMSG_GET_COMMAND(header->command);
 
-  audinfo("cmd=%d\n", cmd);
+  audinfo("cmd=%" PRIu32 "\n", cmd);
 
   if (cmd < nitems(g_audio_rpmsg_handler))
     {
@@ -679,7 +679,7 @@ static int audio_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept, FAR void *data,
     }
   else
     {
-      auderr("cmd=%d callback handler is null\n", cmd);
+      auderr("cmd=%" PRIu32 " callback handler is null\n", cmd);
       return -EINVAL;
     }
 }
@@ -1195,9 +1195,9 @@ static int audio_rpmsg_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
 {
   FAR struct audio_rpmsg_s *aud = (FAR struct audio_rpmsg_s *)dev;
   struct audio_rpmsg_ioctl_s *req;
+  uint32_t space;
   ssize_t arglen;
   size_t reqlen;
-  size_t space;
   int ret;
 
   audinfo("cmd=%d arg=%lu\n", cmd, arg);
