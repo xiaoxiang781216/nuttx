@@ -105,6 +105,8 @@ static void nxsig_notification_worker(FAR void *arg)
 int nxsig_notification(pid_t pid, FAR struct sigevent *event,
                        int code, FAR struct sigwork_s *work)
 {
+  int ret = event->sigev_notify == SIGEV_NONE ? OK : -ENOSYS;
+
   sinfo("pid=%" PRIu16 " signo=%d code=%d sival_ptr=%p\n",
         pid, event->sigev_signo, code, event->sigev_value.sival_ptr);
 
@@ -118,7 +120,7 @@ int nxsig_notification(pid_t pid, FAR struct sigevent *event,
       /* Yes.. Create the siginfo structure */
 
       info.si_signo  = event->sigev_signo;
-      info.si_code   = code;
+      info.si_code   = (uint8_t)code;
       info.si_errno  = OK;
 #ifdef CONFIG_SCHED_HAVE_PARENT
       info.si_pid    = this_task()->pid;
@@ -144,7 +146,7 @@ int nxsig_notification(pid_t pid, FAR struct sigevent *event,
 
       /* Send the signal */
 
-      return nxsig_dispatch(pid, &info, thread);
+      ret = nxsig_dispatch(pid, &info, thread);
     }
 
 #ifdef CONFIG_SIG_EVTHREAD
@@ -159,12 +161,12 @@ int nxsig_notification(pid_t pid, FAR struct sigevent *event,
 
       /* Then queue the work */
 
-      return work_queue(SIG_EVTHREAD_WORK, &work->work,
-                        nxsig_notification_worker, work, 0);
+      ret = work_queue(SIG_EVTHREAD_WORK, &work->work,
+                       nxsig_notification_worker, work, 0);
     }
 #endif
 
-  return event->sigev_notify == SIGEV_NONE ? OK : -ENOSYS;
+  return ret;
 }
 
 /****************************************************************************
