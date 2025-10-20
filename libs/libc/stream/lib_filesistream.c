@@ -67,7 +67,7 @@ static ssize_t filesistream_gets(FAR struct lib_sistream_s *self,
         }
 
       self->nget += ret;
-      buf += ret;
+      buf = (FAR char *)buf + ret;
       left -= ret;
     }
 

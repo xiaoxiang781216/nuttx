@@ -67,7 +67,7 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size,
     }
 
   end_packed_struct *var;
-  FAR uint8_t *buff = (FAR uint8_t *)buffer;
+  FAR char *buff = (FAR char *)buffer;
   size_t length = size - 1;
   size_t next = 0;
 
@@ -198,7 +198,7 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size,
               return -ENOMEM;
             }
 
-          strlcpy(buffer + next, var->s, len);
+          strlcpy(buff + next, var->s, len);
           next += len;
           infmt = false;
         }
@@ -220,7 +220,7 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size,
                   return -ENOMEM;
                 }
 
-              memcpy(buffer + next, vaf->fmt, len);
+              memcpy(buff + next, vaf->fmt, len);
               next += len;
 
               /* copy the va_list member to the buffer */
@@ -228,11 +228,11 @@ ssize_t lib_bsprintf(FAR void *buffer, size_t size,
 #  ifdef va_copy
               va_list copy;
               va_copy(copy, *vaf->va);
-              ret = lib_bsprintf(buffer + next, length - next,
+              ret = lib_bsprintf(buff + next, length - next,
                                  vaf->fmt, copy);
               va_end(copy);
 #  else
-              ret = lib_bsprintf(buffer + next, length - next,
+              ret = lib_bsprintf(buff + next, length - next,
                                  vaf->fmt, vaf->va);
 #  endif
               if (ret < 0)
