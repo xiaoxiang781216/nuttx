@@ -47,14 +47,16 @@
 int nxsig_lowest(sigset_t *set)
 {
   int signo;
+  int ret = ERROR;
 
   for (signo = MIN_SIGNO; signo <= MAX_SIGNO; signo++)
     {
       if (nxsig_ismember(set, signo))
         {
-          return signo;
+          ret = signo;
+          break;
         }
     }
 
-  return ERROR;
+  return ret;
 }
