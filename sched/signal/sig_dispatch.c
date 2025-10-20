@@ -450,250 +450,249 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
   if ((atomic_read(&stcb->flags) & TCB_FLAG_EXIT_PROCESSING) != 0)
     {
-      return -ESRCH;
+      ret = -ESRCH;
     }
 
   /* Don't actually send a signal for signo 0. */
 
-  if (info->si_signo == 0)
+  else if (info->si_signo != 0)
     {
-      return OK;
-    }
+      /************************ MASKED SIGNAL ACTIONS ***********************/
 
-  /************************** MASKED SIGNAL ACTIONS *************************/
+      flags = enter_critical_section();
 
-  flags = enter_critical_section();
-
-  masked = nxsig_ismember(&stcb->sigprocmask, info->si_signo);
+      masked = nxsig_ismember(&stcb->sigprocmask, info->si_signo);
 
 #ifdef CONFIG_LIB_SYSCALL
-  /* Check if the signal is masked OR if the signal is received while we are
-   * processing a system call -- in either case, it will be added to the
-   * list of pending signals. Unmasked user signal actions will be deferred
-   * while we process the system call.
-   *
-   * If a thread calls a blocking system call, the thread will still be
-   * unblocked when the signal occurs (see OTHER SIGNAL HANDLING below), but
-   * any associated user signal action will be deferred until the system
-   * call returns. For example, if the application calls sem_wait(), the
-   * following would occur:
-   *
-   *   1. System call entry logic will block user signal handling and call
-   *      sem_wait() in kernel mode.
-   *   2. sem_wait() will block,
-   *   3. The receipt of the signal will cause any signal action to pend
-   *      but will unblock sem_wait(),
-   *   4. The sem_wait() system call will awaken and return EINTR,
-   *   5. The pending signal action will occur after the sem_wait() system
-   *      call returns to user mode.
-   *
-   * Syscall handlers (and logic-in-general within the OS) should not use
-   * signal handlers.
-   */
-
-  if ((masked == 1) || (atomic_read(&stcb->flags) & TCB_FLAG_SYSCALL) != 0)
-#else
-  /* Check if the signal is masked. In that case, it will be added to the
-   * list of pending signals.
-   */
-
-  if (masked == 1)
-#endif
-    {
-      /* Check if the task is waiting for this pending signal. If so, then
-       * unblock it. This must be performed in a critical section because
-       * signals can be queued from the interrupt level.
+      /* Check if the signal is masked OR if the signal is received while
+       * we are processing a system call -- in either case, it will be
+       * added to the list of pending signals. Unmasked user signal actions
+       * will be deferred while we process the system call.
+       *
+       * If a thread calls a blocking system call, the thread will still be
+       * unblocked when the signal occurs (see OTHER SIGNAL HANDLING below),
+       * but any associated user signal action will be deferred until the
+       * system call returns. For example, if the application calls
+       * sem_wait(), the following would occur:
+       *
+       *   1. System call entry logic will block user signal handling and
+       *      call sem_wait() in kernel mode.
+       *   2. sem_wait() will block,
+       *   3. The receipt of the signal will cause any signal action to pend
+       *      but will unblock sem_wait(),
+       *   4. The sem_wait() system call will awaken and return EINTR,
+       *   5. The pending signal action will occur after the sem_wait()
+       *      system call returns to user mode.
+       *
+       * Syscall handlers (and logic-in-general within the OS) should not use
+       * signal handlers.
        */
 
-      if (stcb->task_state == TSTATE_WAIT_SIG &&
-          (masked == 0 ||
-           nxsig_ismember(&stcb->sigwaitmask, info->si_signo)))
+      if (masked == 1 || (atomic_read(&stcb->flags) & TCB_FLAG_SYSCALL) != 0)
+#else
+      /* Check if the signal is masked. In that case, it will be added to the
+       * list of pending signals.
+       */
+
+      if (masked == 1)
+#endif
         {
-          if (stcb->sigunbinfo != NULL)
-            {
-              memcpy(stcb->sigunbinfo, info, sizeof(siginfo_t));
-            }
-
-          sigemptyset(&stcb->sigwaitmask);
-
-          if (WDOG_ISACTIVE(&stcb->waitdog))
-            {
-              wd_cancel(&stcb->waitdog);
-            }
-
-          /* Remove the task from waiting list */
-
-          dq_rem((FAR dq_entry_t *)stcb, list_waitingforsignal());
-
-          /* Add the task to ready-to-run task list and
-           * perform the context switch if one is needed
+          /* Check if the task is waiting for this pending signal. If so,
+           * then unblock it. This must be performed in a critical section
+           * because signals can be queued from the interrupt level.
            */
 
-          if (nxsched_add_readytorun(stcb))
+          if (stcb->task_state == TSTATE_WAIT_SIG && (masked == 0 ||
+               nxsig_ismember(&stcb->sigwaitmask, info->si_signo)))
             {
-              nxsched_switch(this_task(), rtcb);
-            }
+              if (stcb->sigunbinfo != NULL)
+                {
+                  memcpy(stcb->sigunbinfo, info, sizeof(siginfo_t));
+                }
+
+              sigemptyset(&stcb->sigwaitmask);
+
+              if (WDOG_ISACTIVE(&stcb->waitdog))
+                {
+                  wd_cancel(&stcb->waitdog);
+                }
+
+              /* Remove the task from waiting list */
+
+              dq_rem((FAR dq_entry_t *)stcb, list_waitingforsignal());
+
+              /* Add the task to ready-to-run task list and
+               * perform the context switch if one is needed
+               */
+
+              if (nxsched_add_readytorun(stcb))
+                {
+                  nxsched_switch(this_task(), rtcb);
+                }
 
 #ifndef CONFIG_DISABLE_SIGNALS
 #  ifdef CONFIG_LIB_SYSCALL
-          /* Must also add signal action if in system call */
+              /* Must also add signal action if in system call */
 
-          if (masked == 0)
+              if (masked == 0)
+                {
+                  sigpend = nxsig_add_pendingsignal(stcb, info);
+                }
+#  endif
+            }
+
+          /* Its not one we are waiting for... Add it to the list of pending
+           * signals.
+           */
+
+          else
             {
               sigpend = nxsig_add_pendingsignal(stcb, info);
+#endif
             }
-#  endif
+
+          leave_critical_section(flags);
         }
 
-      /* Its not one we are waiting for... Add it to the list of pending
-       * signals.
-       */
+      /*********************** UNMASKED SIGNAL ACTIONS **********************/
 
       else
         {
-          sigpend = nxsig_add_pendingsignal(stcb, info);
-#endif
-        }
-
-      leave_critical_section(flags);
-    }
-
-  /************************* UNMASKED SIGNAL ACTIONS ************************/
-
-  else
-    {
-      leave_critical_section(flags);
+          leave_critical_section(flags);
 
 #ifndef CONFIG_DISABLE_SIGNALS
-      /* Find if there is a group sigaction associated with this signal */
+          /* Find if there is a group sigaction associated with this signal */
 
-      sigact = nxsig_find_action(stcb->group, info->si_signo);
+          sigact = nxsig_find_action(stcb->group, info->si_signo);
 
-      /* Queue any sigaction's requested by this task. */
+          /* Queue any sigaction's requested by this task. */
 
-      ret = nxsig_queue_action(stcb, sigact, info);
+          ret = nxsig_queue_action(stcb, sigact, info);
 #endif
 
-      /* Deliver of the signal must be performed in a critical section */
+          /* Deliver of the signal must be performed in a critical section */
 
-      flags = enter_critical_section();
+          flags = enter_critical_section();
 
-      /* Check if the task is waiting for an unmasked signal. If so, then
-       * unblock it. This must be performed in a critical section because
-       * signals can be queued from the interrupt level.
-       */
-
-      if (stcb->task_state == TSTATE_WAIT_SIG)
-        {
-          if (stcb->sigunbinfo != NULL)
-            {
-              memcpy(stcb->sigunbinfo, info, sizeof(siginfo_t));
-            }
-
-          sigemptyset(&stcb->sigwaitmask);
-
-          if (WDOG_ISACTIVE(&stcb->waitdog))
-            {
-              wd_cancel(&stcb->waitdog);
-            }
-
-          /* Remove the task from waiting list */
-
-          dq_rem((FAR dq_entry_t *)stcb, list_waitingforsignal());
-
-          /* Add the task to ready-to-run task list and
-           * perform the context switch if one is needed
+          /* Check if the task is waiting for an unmasked signal. If so, then
+           * unblock it. This must be performed in a critical section because
+           * signals can be queued from the interrupt level.
            */
 
-          if (nxsched_add_readytorun(stcb))
+          if (stcb->task_state == TSTATE_WAIT_SIG)
             {
-              nxsched_switch(this_task(), rtcb);
+              if (stcb->sigunbinfo != NULL)
+                {
+                  memcpy(stcb->sigunbinfo, info, sizeof(siginfo_t));
+                }
+
+              sigemptyset(&stcb->sigwaitmask);
+
+              if (WDOG_ISACTIVE(&stcb->waitdog))
+                {
+                  wd_cancel(&stcb->waitdog);
+                }
+
+              /* Remove the task from waiting list */
+
+              dq_rem((FAR dq_entry_t *)stcb, list_waitingforsignal());
+
+              /* Add the task to ready-to-run task list and
+               * perform the context switch if one is needed
+               */
+
+              if (nxsched_add_readytorun(stcb))
+                {
+                  nxsched_switch(this_task(), rtcb);
+                }
             }
+
+          leave_critical_section(flags);
+
+          /* If the task neither was waiting for the signal nor had a signal
+           * handler attached to the signal, then the default action is
+           * simply to ignore the signal
+           */
         }
 
-      leave_critical_section(flags);
+      /*********************** OTHER SIGNAL HANDLING ************************/
 
-      /* If the task neither was waiting for the signal nor had a signal
-       * handler attached to the signal, then the default action is
-       * simply to ignore the signal
-       */
-    }
-
-  /************************* OTHER SIGNAL HANDLING **************************/
-
-  /* Performed only if the signal is unmasked. These actions also must
-   * happen within a system call.
-   */
-
-  if (masked == 0)
-    {
-      flags = enter_critical_section();
-
-      /* If the task is blocked waiting for a semaphore, then that task must
-       * be unblocked when a signal is received.
+      /* Performed only if the signal is unmasked. These actions also must
+       * happen within a system call.
        */
 
-      if (stcb->task_state == TSTATE_WAIT_SEM)
+      if (masked == 0)
         {
-          nxsem_wait_irq(stcb, EINTR);
-        }
+          flags = enter_critical_section();
+
+          /* If the task is blocked waiting for a semaphore,
+           * then that task must be unblocked when a signal is received.
+           */
+
+          if (stcb->task_state == TSTATE_WAIT_SEM)
+            {
+              nxsem_wait_irq(stcb, EINTR);
+            }
 
 #if !defined(CONFIG_DISABLE_MQUEUE) || !defined(CONFIG_DISABLE_MQUEUE_SYSV)
-      /* If the task is blocked waiting on a message queue, then that task
-       * must be unblocked when a signal is received.
-       */
+          /* If the task is blocked waiting on a message queue,
+           * then that task must be unblocked when a signal is received.
+           */
 
-      else if (stcb->task_state == TSTATE_WAIT_MQNOTEMPTY ||
-          stcb->task_state == TSTATE_WAIT_MQNOTFULL)
-        {
-          nxmq_wait_irq(stcb, EINTR);
-        }
+          else if (stcb->task_state == TSTATE_WAIT_MQNOTEMPTY ||
+                   stcb->task_state == TSTATE_WAIT_MQNOTFULL)
+            {
+              nxmq_wait_irq(stcb, EINTR);
+            }
 #endif
 
 #ifdef CONFIG_SIG_SIGSTOP_ACTION
-      /* If the task was stopped by SIGSTOP or SIGTSTP, then unblock the task
-       * if SIGCONT is received.
-       */
-
-      else if (stcb->task_state == TSTATE_TASK_STOPPED &&
-          info->si_signo == SIGCONT)
-        {
-#ifdef HAVE_GROUP_MEMBERS
-          group_continue(stcb);
-#else
-          /* Remove the task from waiting list */
-
-          dq_rem((FAR dq_entry_t *)stcb, list_stoppedtasks());
-
-          /* Add the task to ready-to-run task list and
-           * perform the context switch if one is needed
+          /* If the task was stopped by SIGSTOP or SIGTSTP,
+           * then unblock the task if SIGCONT is received.
            */
 
-          if (nxsched_add_readytorun(stcb))
+          else if (stcb->task_state == TSTATE_TASK_STOPPED &&
+                   info->si_signo == SIGCONT)
             {
-              nxsched_switch(this_task(), rtcb);
+#ifdef HAVE_GROUP_MEMBERS
+              group_continue(stcb);
+#else
+              /* Remove the task from waiting list */
+
+              dq_rem((FAR dq_entry_t *)stcb, list_stoppedtasks());
+
+              /* Add the task to ready-to-run task list and
+               * perform the context switch if one is needed
+               */
+
+              if (nxsched_add_readytorun(stcb))
+                {
+                  nxsched_switch(this_task(), rtcb);
+                }
+#endif
             }
 #endif
+
+          leave_critical_section(flags);
+        }
+
+#ifndef CONFIG_DISABLE_SIGNALS
+      /* Dispatch kernel action, if needed,
+       * in case a pending signal was added
+       */
+
+      if (sigpend != NULL)
+        {
+          nxsig_dispatch_kernel_action(stcb, &sigpend->info);
         }
 #endif
 
-      leave_critical_section(flags);
-    }
+      /* In case nxsig_ismember failed due to an invalid signal number */
 
-#ifndef CONFIG_DISABLE_SIGNALS
-  /* Dispatch kernel action, if needed, in case a pending signal was added */
-
-  if (sigpend != NULL)
-    {
-      nxsig_dispatch_kernel_action(stcb, &sigpend->info);
-    }
-#endif
-
-  /* In case nxsig_ismember failed due to an invalid signal number */
-
-  if (masked < 0)
-    {
-      ret = -EINVAL;
+      if (masked < 0)
+        {
+          ret = -EINVAL;
+        }
     }
 
   return ret;
