@@ -81,35 +81,36 @@ int nxsig_kill(pid_t pid, int signo)
   FAR struct tcb_s *rtcb = this_task();
 #endif
   siginfo_t info;
-
-  /* We do not support sending signals to process groups */
-
-  if (pid < 0)
-    {
-      return -ENOSYS;
-    }
+  int ret = -ENOSYS;
 
   /* Make sure that the signal is valid */
 
   if (!GOOD_SIGNO(signo))
     {
-      return -EINVAL;
+      ret = -EINVAL;
     }
 
-  /* Create the siginfo structure */
+  /* We do not support sending signals to process groups */
 
-  info.si_signo           = signo;
-  info.si_code            = SI_USER;
-  info.si_errno           = EINTR;
-  info.si_value.sival_ptr = NULL;
+  else if (pid >= 0)
+    {
+      /* Create the siginfo structure */
+
+      info.si_signo           = signo;
+      info.si_code            = SI_USER;
+      info.si_errno           = EINTR;
+      info.si_value.sival_ptr = NULL;
 #ifdef CONFIG_SCHED_HAVE_PARENT
-  info.si_pid             = rtcb->pid;
-  info.si_status          = OK;
+      info.si_pid             = rtcb->pid;
+      info.si_status          = OK;
 #endif
 
-  /* Send the signal */
+      /* Send the signal */
 
-  return nxsig_dispatch(pid, &info, false);
+      ret = nxsig_dispatch(pid, &info, false);
+    }
+
+  return ret;
 }
 
 /****************************************************************************
