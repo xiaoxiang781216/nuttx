@@ -77,7 +77,7 @@ void up_initial_state(struct tcb_s *tcb)
       tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE +
                              CONFIG_SIM_STACKSIZE_ADJUSTMENT;
 
-      tcb->stack_alloc_ptr = g_idle_topstack -
+      tcb->stack_alloc_ptr = (char *)g_idle_topstack -
                              CONFIG_IDLETHREAD_STACKSIZE -
                              CONFIG_SIM_STACKSIZE_ADJUSTMENT;
       tcb->stack_base_ptr  = tcb->stack_alloc_ptr;

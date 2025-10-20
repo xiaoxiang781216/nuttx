@@ -179,8 +179,9 @@ static noinline_function void alloca_idle_stack(void)
 
   g_idle_topstack = alloca(CONFIG_IDLETHREAD_STACKSIZE +
                            CONFIG_SIM_STACKSIZE_ADJUSTMENT);
-  g_idle_topstack += CONFIG_IDLETHREAD_STACKSIZE +
-                     CONFIG_SIM_STACKSIZE_ADJUSTMENT;
+  g_idle_topstack = (char *)g_idle_topstack +
+                    CONFIG_IDLETHREAD_STACKSIZE +
+                    CONFIG_SIM_STACKSIZE_ADJUSTMENT;
 }
 
 /****************************************************************************
