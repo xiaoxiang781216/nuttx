@@ -88,7 +88,7 @@ struct rpmsg_virtio_priv_s
 
 static int rpmsg_virtio_wait(FAR struct rpmsg_s *rpmsg);
 static int rpmsg_virtio_post(FAR struct rpmsg_s *rpmsg);
-static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg);
+static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg, bool verbose);
 static FAR void *rpmsg_virtio_alloc_buf(FAR struct rpmsg_s *rpmsg,
                                         size_t size, size_t align);
 static void rpmsg_virtio_free_buf(FAR struct rpmsg_s *rpmsg,
@@ -110,8 +110,6 @@ static void rpmsg_virtio_tx_notify(FAR struct virtqueue *vq);
  * Name: rpmsg_virtio_buffer_nused
  ****************************************************************************/
 
-#if defined(CONFIG_RPMSG_VIRTIO_DUMP_VERBOSE) || \
-    defined(CONFIG_RPMSG_VIRTIO_PM)
 static uint16_t
 rpmsg_virtio_buffer_nused(FAR struct rpmsg_virtio_device *rvdev, bool rx)
 {
@@ -136,7 +134,6 @@ rpmsg_virtio_buffer_nused(FAR struct rpmsg_virtio_device *rvdev, bool rx)
 
   return nused;
 }
-#endif
 
 /****************************************************************************
  * Name: rpmsg_virtio_pm_callback
@@ -322,7 +319,6 @@ static int rpmsg_virtio_post(FAR struct rpmsg_s *rpmsg)
  * Name: rpmsg_virtio_dump_buffer
  ****************************************************************************/
 
-#ifdef CONFIG_RPMSG_VIRTIO_DUMP_VERBOSE
 static void rpmsg_virtio_dump_buffer(FAR struct rpmsg_virtio_device *rvdev,
                                      bool rx)
 {
@@ -402,13 +398,12 @@ static void rpmsg_virtio_dump_buffer(FAR struct rpmsg_virtio_device *rvdev,
         }
     }
 }
-#endif
 
 /****************************************************************************
  * Name: rpmsg_virtio_dump
  ****************************************************************************/
 
-static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg)
+static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg, bool verbose)
 {
   FAR struct rpmsg_virtio_priv_s *priv =
     (FAR struct rpmsg_virtio_priv_s *)rpmsg;
@@ -429,25 +424,28 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg)
           needunlock = true;
         }
 
-#ifdef CONFIG_RPMSG_VIRTIO_DUMP_VERBOSE
-      metal_log(METAL_LOG_EMERGENCY,
-                "Dump rpmsg info between cpu (master: %s)%s <==> %s:\n",
-                rpmsg_virtio_get_role(rvdev) == RPMSG_HOST ? "yes" : "no",
-                priv->rpmsg.local_cpuname, priv->rpmsg.cpuname);
+      if (verbose)
+        {
+          metal_log(METAL_LOG_EMERGENCY,
+                    "Dump rpmsg info between cpu (master: %s)%s <==> %s:\n",
+                    rpmsg_virtio_get_role(rvdev) == RPMSG_HOST ?
+                    "yes" : "no", priv->rpmsg.local_cpuname,
+                    priv->rpmsg.cpuname);
 
-      rpmsg_dump_epts(rdev);
-#endif
+          rpmsg_dump_epts(rdev);
+        }
 
       metal_log(METAL_LOG_EMERGENCY, "rpmsg vq RX:\n");
       virtqueue_dump(rvdev->rvq);
       metal_log(METAL_LOG_EMERGENCY, "rpmsg vq TX:\n");
       virtqueue_dump(rvdev->svq);
 
-#ifdef CONFIG_RPMSG_VIRTIO_DUMP_VERBOSE
-      metal_log(METAL_LOG_EMERGENCY, "  rpmsg buffer list:\n");
-      rpmsg_virtio_dump_buffer(rvdev, true);
-      rpmsg_virtio_dump_buffer(rvdev, false);
-#endif
+      if (verbose)
+        {
+          metal_log(METAL_LOG_EMERGENCY, "  rpmsg buffer list:\n");
+          rpmsg_virtio_dump_buffer(rvdev, true);
+          rpmsg_virtio_dump_buffer(rvdev, false);
+        }
 
       if (needunlock)
         {

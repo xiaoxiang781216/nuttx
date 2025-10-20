@@ -127,7 +127,7 @@ struct rpmsg_port_ops_s
 
   /* Dump the transport debug informations */
 
-  CODE void (*dump)(FAR struct rpmsg_port_s *port);
+  CODE void (*dump)(FAR struct rpmsg_port_s *port, bool verbose);
 };
 
 struct rpmsg_port_s

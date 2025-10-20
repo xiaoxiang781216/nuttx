@@ -436,7 +436,7 @@ static void rpmsg_port_uart_register_callback(FAR struct rpmsg_port_s *port,
  * Name: rpmsg_port_uart_dump
  ****************************************************************************/
 
-static void rpmsg_port_uart_dump(FAR struct rpmsg_port_s *port)
+static void rpmsg_port_uart_dump(FAR struct rpmsg_port_s *port, bool verbose)
 {
   FAR struct rpmsg_port_uart_s *rpuart =
     (FAR struct rpmsg_port_uart_s *)port;

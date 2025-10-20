@@ -50,7 +50,7 @@
  * Private Function Prototypes
  ****************************************************************************/
 
-static void rpmsg_port_dump(FAR struct rpmsg_s *rpmsg);
+static void rpmsg_port_dump(FAR struct rpmsg_s *rpmsg, bool verbose);
 static int rpmsg_port_get_timestamp(FAR struct rpmsg_s *rpmsg,
                                     FAR const void *data,
                                     FAR struct rpmsg_timestamp_s *ts);
@@ -696,7 +696,7 @@ rpmsg_port_queue_get_available_buffer(FAR struct rpmsg_port_queue_s *queue,
             {
               rpmsgerr("Get buffer timeout, Dump debug informations:\n");
               dump_stack();
-              rpmsg_port_dump(&port->rpmsg);
+              rpmsg_port_dump(&port->rpmsg, true);
             }
         }
     }
@@ -884,7 +884,7 @@ static void rpmsg_port_dump_buffer(FAR struct rpmsg_device *rdev,
  * Name: rpmsg_port_dump
  ****************************************************************************/
 
-static void rpmsg_port_dump(FAR struct rpmsg_s *rpmsg)
+static void rpmsg_port_dump(FAR struct rpmsg_s *rpmsg, bool verbose)
 {
   FAR struct rpmsg_port_s *port = (FAR struct rpmsg_port_s *)rpmsg;
   FAR struct rpmsg_device *rdev = rpmsg_get_rdev_by_rpmsg(rpmsg);
@@ -898,11 +898,13 @@ static void rpmsg_port_dump(FAR struct rpmsg_s *rpmsg)
 
   metal_log(METAL_LOG_EMERGENCY, "Remote: %s state: %d\n",
             port->rpmsg.cpuname, rpmsg_is_running(rdev));
+  if (verbose)
+    {
+      rpmsg_dump_epts(rdev);
 
-  rpmsg_dump_epts(rdev);
-
-  rpmsg_port_dump_buffer(rdev, &port->rxq, true);
-  rpmsg_port_dump_buffer(rdev, &port->txq, false);
+      rpmsg_port_dump_buffer(rdev, &port->rxq, true);
+      rpmsg_port_dump_buffer(rdev, &port->txq, false);
+    }
 
   if (needunlock)
     {
@@ -911,6 +913,6 @@ static void rpmsg_port_dump(FAR struct rpmsg_s *rpmsg)
 
   if (port->ops->dump)
     {
-      port->ops->dump(port);
+      port->ops->dump(port, verbose);
     }
 }

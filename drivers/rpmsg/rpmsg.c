@@ -160,7 +160,7 @@ static int rpmsg_dev_ioctl_(FAR struct rpmsg_s *rpmsg, int cmd,
       case RPMSGIOC_DUMP:
         if (rpmsg->ops->dump)
           {
-            rpmsg->ops->dump(rpmsg);
+            rpmsg->ops->dump(rpmsg, (bool)arg);
             ret = OK;
           }
 
@@ -240,7 +240,11 @@ static int rpmsg_reboot_notifier(FAR struct notifier_block *nb,
 
   if (action == SYS_HALT)
     {
-      ret = rpmsg_dev_ioctl_(rpmsg, RPMSGIOC_DUMP, 0);
+#ifdef CONFIG_RPMSG_PANIC_DUMP_VERBOSE
+      ret = rpmsg_dev_ioctl_(rpmsg, RPMSGIOC_DUMP, 1ul);
+#else
+      ret = rpmsg_dev_ioctl_(rpmsg, RPMSGIOC_DUMP, 0ul);
+#endif
     }
 
   return ret;

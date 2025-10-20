@@ -113,6 +113,13 @@ config RPMSG_POOL_SIZE
 		This macro sets the size of each rpmsg pool, which is used
 		to allocate rpmsg buffers. The default value is 64 bytes.
 
+config RPMSG_PANIC_DUMP_VERBOSE
+	bool "rpmsg panic dump verbose"
+	default !DEFAULT_SMALL
+	---help---
+		Dump verbose info when rpmsg dump, default is y unless
+		DEFAULT_SMALL is y.
+
 endif # RPMSG
 
 config RPMSG_ROUTER
@@ -215,13 +222,6 @@ config RPMSG_VIRTIO
 		part.
 
 if RPMSG_VIRTIO
-
-config RPMSG_VIRTIO_DUMP_VERBOSE
-	bool "rpmsg virtio dump verbose"
-	default !DEFAULT_SMALL
-	---help---
-		Dump verbose info when rpmsg virtio dump, default is y unless
-		DEFAULT_SMALL is y.
 
 config RPMSG_VIRTIO_PM
 	bool "rpmsg virtio power management"

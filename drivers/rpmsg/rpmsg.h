@@ -83,7 +83,7 @@ struct rpmsg_ops_s
   CODE int (*post)(FAR struct rpmsg_s *rpmsg);
   CODE int (*ioctl)(FAR struct rpmsg_s *rpmsg, int cmd, unsigned long arg);
   CODE void (*panic)(FAR struct rpmsg_s *rpmsg);
-  CODE void (*dump)(FAR struct rpmsg_s *rpmsg);
+  CODE void (*dump)(FAR struct rpmsg_s *rpmsg, bool verbose);
   CODE int (*get_timestamp)(FAR struct rpmsg_s *rpmsg, FAR const void *data,
                             FAR struct rpmsg_timestamp_s *ts);
   CODE FAR void *(*alloc_buf)(FAR struct rpmsg_s *rpmsg, size_t size,
