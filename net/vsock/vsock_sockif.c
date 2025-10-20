@@ -53,8 +53,8 @@
 #define VSOCK_NOTIFY_SEND        3
 #define VSOCK_NOTIFY_SHUTDOWN    4
 
-#define VSOCK_IS_SHUTDOWN_RD(s)  ((s) == SHUT_RD)
-#define VSOCK_IS_SHUTDOWN_WR(s)  ((s) == SHUT_WR)
+#define VSOCK_IS_SHUTDOWN_RD(s)  ((s) & SHUT_RD)
+#define VSOCK_IS_SHUTDOWN_WR(s)  ((s) & SHUT_WR)
 #define VSOCK_IS_SHUTDOWN(s)     ((s) == SHUT_RDWR)
 
 #define VSOCK_LAST_RESERVED_PORT 1024
@@ -2077,6 +2077,10 @@ static ssize_t vsock_recvmsg(FAR struct socket *psock,
     {
       vsock_update_rx_credit(conn, ret);
     }
+  else if (VSOCK_IS_SHUTDOWN_RD(conn->shutdown))
+    {
+      ret = 0;
+    }
   else if (_SS_ISNONBLOCK(conn->sconn.s_flags) ||
            (flags & MSG_DONTWAIT) != 0)
     {
@@ -2084,12 +2088,6 @@ static ssize_t vsock_recvmsg(FAR struct socket *psock,
     }
   else /* ret == 0 */
     {
-      if (conn->shutdown & SHUT_RD)
-        {
-          vsock_rx_unlock(conn);
-          return 0;
-        }
-
       /* No data recv, setup the user msg and wait */
 
       DEBUGASSERT(ret == 0);
