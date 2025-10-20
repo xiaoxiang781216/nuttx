@@ -459,74 +459,71 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
       leave_critical_section(flags);
 
       ret = nxsig_clockwait(CLOCK_REALTIME, 0, timeout, NULL);
-      if (ret < 0)
+      if (ret >= 0)
         {
-          rtcb->sigunbinfo = NULL;
-          return ret;
-        }
+          flags = enter_critical_section();
 
-      flags = enter_critical_section();
+          /* We are running again, clear the sigwaitmask */
 
-      /* We are running again, clear the sigwaitmask */
+          sigemptyset(&rtcb->sigwaitmask);
 
-      sigemptyset(&rtcb->sigwaitmask);
-
-      /* When we awaken, the cause will be in the TCB.  Get the signal number
-       * or timeout) that awakened us.
-       */
-
-      if (GOOD_SIGNO(rtcb->sigunbinfo->si_signo))
-        {
-          /* We were awakened by a signal... but is it one of the signals
-           * that we were waiting for?
+          /* When we awaken, the cause will be in the TCB.
+           * Get the signal number or timeout that awakened us.
            */
 
-          if (nxsig_ismember(set, rtcb->sigunbinfo->si_signo))
+          if (GOOD_SIGNO(rtcb->sigunbinfo->si_signo))
             {
-              /* Yes.. the return value is the number of the signal that
-               * awakened us.
+              /* We were awakened by a signal... but is it one of the signals
+               * that we were waiting for?
                */
 
-              ret = rtcb->sigunbinfo->si_signo;
+              if (nxsig_ismember(set, rtcb->sigunbinfo->si_signo))
+                {
+                  /* Yes.. the return value is the number of the signal that
+                   * awakened us.
+                   */
+
+                  ret = rtcb->sigunbinfo->si_signo;
+                }
+              else
+                {
+                  /* No... then report the EINTR error */
+
+                  ret = -EINTR;
+                }
             }
           else
             {
-              /* No... then report the EINTR error */
-
-              ret = -EINTR;
-            }
-        }
-      else
-        {
-          /* Otherwise, we must have been awakened by the timeout or,
-           * perhaps, the wait was cancelled.
-           */
+              /* Otherwise, we must have been awakened by the timeout or,
+               * perhaps, the wait was cancelled.
+               */
 
 #ifdef CONFIG_CANCELLATION_POINTS
-          if (rtcb->sigunbinfo->si_signo == SIG_CANCEL_TIMEOUT)
-            {
-              /* The wait was canceled */
+              if (rtcb->sigunbinfo->si_signo == SIG_CANCEL_TIMEOUT)
+                {
+                  /* The wait was canceled */
 
-              ret = -rtcb->sigunbinfo->si_errno;
-              DEBUGASSERT(ret < 0);
-            }
-          else
+                  ret = -rtcb->sigunbinfo->si_errno;
+                  DEBUGASSERT(ret < 0);
+                }
+              else
 #endif
-            {
-              /* We were awakened by a timeout.  Set EAGAIN and return an
-               * error.
-               */
+                {
+                  /* We were awakened by a timeout.  Set EAGAIN and return an
+                   * error.
+                   */
 
-              DEBUGASSERT(rtcb->sigunbinfo->si_signo == SIG_WAIT_TIMEOUT);
-              ret = -EAGAIN;
+                  DEBUGASSERT(rtcb->sigunbinfo->si_signo ==
+                                                      SIG_WAIT_TIMEOUT);
+                  ret = -EAGAIN;
+                }
             }
         }
 
-      rtcb->sigunbinfo = NULL;
+      leave_critical_section(flags);
     }
 
-  leave_critical_section(flags);
-
+  rtcb->sigunbinfo = NULL;
   return ret;
 }
 
