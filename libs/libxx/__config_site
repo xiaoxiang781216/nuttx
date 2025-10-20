@@ -60,6 +60,10 @@
 #  pragma clang diagnostic pop
 #endif
 
+#ifndef __ULong
+#define __ULong unsigned long
+#endif
+
 #define _SYS_REENT_H_
 
 #endif // _LIBCPP___CONFIG_SITE
