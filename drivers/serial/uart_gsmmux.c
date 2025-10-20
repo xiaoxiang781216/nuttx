@@ -623,7 +623,7 @@ static ssize_t gsmmux_send_packet(FAR struct gsmmux_s *gsmmux,
   uint8_t head[6];
   uint8_t end[2];
   size_t headlen;
-  size_t ret;
+  ssize_t ret;
 
   /* Add Frame Header, including Address, Control, Length */
 
