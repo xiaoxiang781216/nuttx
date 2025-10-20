@@ -87,8 +87,8 @@
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_TICKLESS
-static DEFINE_PER_CPU_BSS(unsigned int, g_wdtimernested);
-#  define g_wdtimernested this_cpu_var(g_wdtimernested)
+static DEFINE_PER_CPU_BSS_BMP(unsigned int, g_wdtimernested);
+#  define g_wdtimernested this_cpu_var_bmp(g_wdtimernested)
 #endif
 
 /****************************************************************************
