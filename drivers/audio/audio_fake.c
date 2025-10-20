@@ -69,7 +69,7 @@ struct audio_fake_s
   uint32_t      bps;            /* Data bytes to sec bps (bytes per sec) */
   clock_t       start_tick;     /* Start time in microseconds */
   uint64_t      total_bytes;    /* Total frame datas */
-  char          mqname[16];     /* Our message queue name */
+  char          mqname[32];     /* Our message queue name */
   struct file   mq;             /* Message queue for receiving messages */
   struct file   file;           /* Audio file for playback or capture */
   void          *sindata;       /* Sin data buffer, surpport 8bit/16bit/32bit  */
