@@ -72,13 +72,10 @@ int fclose(FAR FILE *stream)
     {
       ret = OK;
 
-      /* If the stream was opened for writing, then flush the stream */
+      /* Flush the stream */
 
-      if ((stream->fs_oflags & O_WROK) != 0)
-        {
-          ret = lib_fflush(stream);
-          errcode = get_errno();
-        }
+      ret = lib_fflush(stream);
+      errcode = get_errno();
 
       /* Skip close the builtin streams(stdin, stdout and stderr) */
 
