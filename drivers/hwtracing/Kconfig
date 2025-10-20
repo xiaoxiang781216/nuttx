@@ -19,6 +19,29 @@ config HWTRACING_TIMEOUT
 	int "Timeout us for waiting register state change"
 	default 100
 
+config HWTRACING_NOTE
+	bool "Hwtracing Note Support"
+	depends on DRIVERS_NOTE
+	default n
+
+if HWTRACING_NOTE
+
+config HWTRACING_NOTE_FILTER_DEFAULT_MODE
+	hex "Tricoreht Note driver filter mode"
+	depends on SCHED_INSTRUMENTATION_FILTER
+	default SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
+	---help---
+		Filter mode for notetricoreht
+
+config HWTRACING_NOTE_CPUSET
+	hex "Tricoreht Note driver CPU set"
+	depends on SMP && SCHED_INSTRUMENTATION_FILTER
+	default SCHED_INSTRUMENTATION_CPUSET
+	---help---
+		CPU set for notetricoreht
+
+endif # HWTRACING_NOTE
+
 endif # HWTRACING
 
 source "drivers/hwtracing/coresight/Kconfig"

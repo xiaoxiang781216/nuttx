@@ -31,5 +31,9 @@ endif()
 if(CONFIG_HWTRACING)
   set(SRCS hwtracing.c)
 
+  if(CONFIG_HWTRACING_NOTE)
+    list(APPEND SRCS hwtracing_note.c)
+  endif()
+
   target_sources(drivers PRIVATE ${SRCS})
 endif()

@@ -32,9 +32,15 @@ CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)hwtracing
 
 endif # CONFIG_HWTRACING
 
+ifeq ($(CONFIG_HWTRACING_NOTE),y)
+CSRCS += hwtracing_note.c
+endif
+
 ifeq ($(CONFIG_CORESIGHT),y)
-
 include hwtracing/coresight/Make.defs
-include hwtracing/tricoreht/Make.defs
-
 endif # CONFIG_CORESIGHT
+
+ifeq ($(CONFIG_TRICOREHT),y)
+include hwtracing/tricoreht/Make.defs
+endif # CONFIG_TRICOREHT
+
