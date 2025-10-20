@@ -82,31 +82,32 @@ int nxsig_queue(int pid, int signo, union sigval value)
   FAR struct tcb_s *rtcb = this_task();
 #endif
   siginfo_t info;
+  int ret = -EINVAL;
 
   sinfo("pid=0x%08x signo=%d value=%d\n", pid, signo, value.sival_int);
 
   /* Sanity checks */
 
-  if (!GOOD_SIGNO(signo))
+  if (GOOD_SIGNO(signo))
     {
-      return -EINVAL;
+      /* Create the siginfo structure */
+
+      info.si_signo           = signo;
+      info.si_code            = SI_QUEUE;
+      info.si_errno           = OK;
+      info.si_value           = value;
+#ifdef CONFIG_SCHED_HAVE_PARENT
+      info.si_pid             = rtcb->pid;
+      info.si_status          = OK;
+#endif
+      info.si_user            = NULL; /* Will be set in sig_dispatch.c */
+
+      /* Send the signal */
+
+      ret = nxsig_dispatch(pid, &info, false);
     }
 
-  /* Create the siginfo structure */
-
-  info.si_signo           = signo;
-  info.si_code            = SI_QUEUE;
-  info.si_errno           = OK;
-  info.si_value           = value;
-#ifdef CONFIG_SCHED_HAVE_PARENT
-  info.si_pid             = rtcb->pid;
-  info.si_status          = OK;
-#endif
-  info.si_user            = NULL; /* Will be set in sig_dispatch.c */
-
-  /* Send the signal */
-
-  return nxsig_dispatch(pid, &info, false);
+  return ret;
 }
 
 /****************************************************************************
