@@ -254,10 +254,11 @@ int nxsig_clockwait(int clockid, int flags,
   irqstate_t iflags;
   clock_t expect = 0u;
   clock_t stop   = 0u;
+  int ret = OK;
 
   if (rqtp && (rqtp->tv_nsec < 0 || rqtp->tv_nsec >= 1000000000))
     {
-      return -EINVAL;
+      ret = -EINVAL;
     }
 
   /* If rqtp is zero, yield CPU and return
@@ -272,10 +273,10 @@ int nxsig_clockwait(int clockid, int flags,
    *    openbsd-compat/bsd-misc.c#L243
    */
 
-  if (rqtp && rqtp->tv_sec == 0 && rqtp->tv_nsec == 0)
+  else if (rqtp && rqtp->tv_sec == 0 && rqtp->tv_nsec == 0)
     {
       sched_yield();
-      return -EAGAIN;
+      ret = -EAGAIN;
     }
 
 #ifdef CONFIG_CANCELLATION_POINTS
@@ -284,69 +285,71 @@ int nxsig_clockwait(int clockid, int flags,
    * must exit immediately without waiting.
    */
 
-  if (check_cancellation_point())
+  else if (check_cancellation_point())
     {
       /* If there is a pending cancellation, then do not perform
        * the wait.  Exit now with ECANCELED.
        */
 
-      return -ECANCELED;
+      ret = -ECANCELED;
     }
 #endif
-
-  iflags = enter_critical_section();
-
-  if (rqtp)
+  else
     {
-      /* Start the watchdog timer */
+      iflags = enter_critical_section();
 
-      if ((flags & TIMER_ABSTIME) == 0)
+      if (rqtp)
         {
-          expect = clock_delay2abstick(clock_time2ticks(rqtp));
-          wd_start_abstick(&rtcb->waitdog, expect,
-                           nxsig_timeout, (uintptr_t)rtcb);
+          /* Start the watchdog timer */
+
+          if ((flags & TIMER_ABSTIME) == 0)
+            {
+              expect = clock_delay2abstick(clock_time2ticks(rqtp));
+              wd_start_abstick(&rtcb->waitdog, expect,
+                               nxsig_timeout, (uintptr_t)rtcb);
+            }
+          else if (clockid == CLOCK_REALTIME)
+            {
+              wd_start_realtime(&rtcb->waitdog, rqtp,
+                                nxsig_timeout, (uintptr_t)rtcb);
+            }
+          else
+            {
+              wd_start_abstime(&rtcb->waitdog, rqtp,
+                               nxsig_timeout, (uintptr_t)rtcb);
+            }
         }
-      else if (clockid == CLOCK_REALTIME)
+
+      /* Remove the tcb task from the ready-to-run list. */
+
+      nxsched_remove_self(rtcb);
+
+      /* Add the task to the specified blocked task list */
+
+      rtcb->task_state = TSTATE_WAIT_SIG;
+      dq_addlast((FAR dq_entry_t *)rtcb, &g_waitingforsignal);
+
+      /* Now, perform the context switch if one is needed */
+
+      nxsched_switch(this_task(), rtcb);
+
+      /* We no longer need the watchdog */
+
+      if (rqtp)
         {
-          wd_start_realtime(&rtcb->waitdog, rqtp,
-                            nxsig_timeout, (uintptr_t)rtcb);
+          wd_cancel(&rtcb->waitdog);
+          stop = clock_systime_ticks();
         }
-      else
+
+      leave_critical_section(iflags);
+
+      if (rqtp && rmtp && expect)
         {
-          wd_start_abstime(&rtcb->waitdog, rqtp,
-                           nxsig_timeout, (uintptr_t)rtcb);
+          clock_ticks2time(rmtp, expect > stop ? expect - stop : 0u);
         }
     }
 
-  /* Remove the tcb task from the ready-to-run list. */
-
-  nxsched_remove_self(rtcb);
-
-  /* Add the task to the specified blocked task list */
-
-  rtcb->task_state = TSTATE_WAIT_SIG;
-  dq_addlast((FAR dq_entry_t *)rtcb, &g_waitingforsignal);
-
-  /* Now, perform the context switch if one is needed */
-
-  nxsched_switch(this_task(), rtcb);
-
-  /* We no longer need the watchdog */
-
-  if (rqtp)
-    {
-      wd_cancel(&rtcb->waitdog);
-      stop = clock_systime_ticks();
-    }
-
-  leave_critical_section(iflags);
-
-  if (rqtp && rmtp && expect)
-    {
-      clock_ticks2time(rmtp, expect > stop ? expect - stop : 0);
-    }
-
-  return 0;
+  return ret;
 }
 
 /****************************************************************************
