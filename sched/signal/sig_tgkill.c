@@ -80,51 +80,40 @@ int nxsig_tgkill(pid_t pid, pid_t tid, int signo)
 #endif
   FAR struct tcb_s *stcb;
   siginfo_t info;
-  int ret;
+  int ret = -EINVAL;
 
   /* Make sure that the signal is valid */
 
-  if (!GOOD_SIGNO(signo))
+  if (GOOD_SIGNO(signo))
     {
-      ret = -EINVAL;
-      goto errout;
-    }
+      /* Create the siginfo structure */
 
-  /* Create the siginfo structure */
-
-  info.si_signo           = signo;
-  info.si_code            = SI_USER;
-  info.si_errno           = EINTR;
-  info.si_value.sival_ptr = NULL;
+      memset(&info, 0, sizeof(siginfo_t));
+      info.si_signo = signo;
+      info.si_code  = SI_USER;
+      info.si_errno = EINTR;
 #ifdef CONFIG_SCHED_HAVE_PARENT
-  info.si_pid             = rtcb->pid;
-  info.si_status          = OK;
+      info.si_pid   = rtcb->pid;
 #endif
 
-  /* Get the TCB associated with the thread */
+      /* Get the TCB associated with the thread */
 
-  stcb = nxsched_get_tcb(tid);
-  if (!stcb)
-    {
-      ret = -ESRCH;
-      goto errout;
+      stcb = nxsched_get_tcb(tid);
+      if (stcb)
+        {
+          /* Dispatch the signal to thread, bypassing normal
+           * task group thread dispatch rules.
+           */
+
+          ret = nxsig_tcbdispatch(stcb, &info);
+          nxsched_put_tcb(stcb);
+        }
+      else
+        {
+          ret = -ESRCH;
+        }
     }
 
-  /* Dispatch the signal to thread, bypassing normal task group thread
-   * dispatch rules.
-   */
-
-  ret = nxsig_tcbdispatch(stcb, &info);
-  nxsched_put_tcb(stcb);
-
-  if (ret < 0)
-    {
-      goto errout;
-    }
-
-  return OK;
-
-errout:
   return ret;
 }
 
