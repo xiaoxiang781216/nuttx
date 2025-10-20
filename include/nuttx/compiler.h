@@ -1169,7 +1169,7 @@
 
 /* Memory barrier. */
 
-#  define memory_barrier()
+#  define memory_barrier() _ReadWriteBarrier()
 
 /* TASKING (Infineon AURIX C/C++)-specific definitions **********************/
 
