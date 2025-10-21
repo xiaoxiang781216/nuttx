@@ -104,6 +104,10 @@
 
 void drivers_early_initialize(void)
 {
+#ifdef CONFIG_RPMSG
+  rpmsg_early_initialize();
+#endif
+
 #if defined(CONFIG_SYSLOG_RPMSG_BUFSIZE) && CONFIG_SYSLOG_RPMSG_BUFSIZE != 0
   syslog_rpmsg_init_early(NULL, 0);
 #endif

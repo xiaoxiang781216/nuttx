@@ -104,10 +104,14 @@ static int rpmsg_dev_ioctl(FAR struct file *filep, int cmd,
  * Private Data
  ****************************************************************************/
 
-static METAL_DECLARE_LIST(g_rpmsg_cb);
-static METAL_DECLARE_LIST(g_rpmsg);
+static DEFINE_PER_CPU_BSS_BMP(struct metal_list, g_rpmsg_cb);
+#define g_rpmsg_cb this_cpu_var_bmp(g_rpmsg_cb)
 
-static rw_semaphore_t g_rpmsg_lock = RWSEM_INITIALIZER;
+static DEFINE_PER_CPU_BSS_BMP(struct metal_list, g_rpmsg);
+#define g_rpmsg this_cpu_var_bmp(g_rpmsg)
+
+static DEFINE_PER_CPU_BMP(rw_semaphore_t, g_rpmsg_lock) = RWSEM_INITIALIZER;
+#define g_rpmsg_lock this_cpu_var_bmp(g_rpmsg_lock)
 
 #if CONFIG_RPMSG_POOL_COUNT > 0
 MEMPOOL_DEFINE(g_rpmsg_pool, CONFIG_RPMSG_POOL_SIZE,
@@ -115,7 +119,9 @@ MEMPOOL_DEFINE(g_rpmsg_pool, CONFIG_RPMSG_POOL_SIZE,
 #endif
 
 #ifdef CONFIG_RPMSG_WQUEUE_GLOBAL
-static struct rpmsg_wqueue_s g_rpmsg_wqueues[CONFIG_RPMSG_WQUEUE_NUMBER];
+static DEFINE_PER_CPU_BSS_BMP(struct rpmsg_wqueue_s,
+                              g_rpmsg_wqueues[CONFIG_RPMSG_WQUEUE_NUMBER]);
+#define g_rpmsg_wqueues this_cpu_var_bmp(g_rpmsg_wqueues)
 #endif
 
 /****************************************************************************
@@ -349,6 +355,12 @@ static int rpmsg_create_wqueues(FAR struct rpmsg_wqueue_s *wqueues,
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+void rpmsg_early_initialize(void)
+{
+  metal_list_init(&g_rpmsg);
+  metal_list_init(&g_rpmsg_cb);
+}
 
 void rpmsg_initialize(void)
 {

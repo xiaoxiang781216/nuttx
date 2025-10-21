@@ -42,8 +42,11 @@
  * Private data
  ****************************************************************************/
 
-static FAR struct note_driver_s *g_rpmsg_trace_drv;
-static spinlock_t g_rpmsg_trace_lock = SP_UNLOCKED;
+static DEFINE_PER_CPU_BSS_BMP(struct note_driver_s *, g_rpmsg_trace_drv);
+#define g_rpmsg_trace_drv this_cpu_var_bmp(g_rpmsg_trace_drv)
+
+static DEFINE_PER_CPU_BMP(spinlock_t, g_rpmsg_trace_lock) = SP_UNLOCKED;
+#define g_rpmsg_trace_lock this_cpu_var_bmp(g_rpmsg_trace_lock)
 
 /****************************************************************************
  * Public Functions

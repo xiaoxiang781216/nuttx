@@ -106,7 +106,9 @@ static const struct procfs_entry_s g_rpmsg_procfs_root =
   "rpmsg", &g_rpmsg_procfs_ops, PROCFS_FILE_TYPE
 };
 
-static char g_rpmsg_procfs_filter[RPMSG_PROCFS_LINELEN];
+static DEFINE_PER_CPU_BSS_BMP(char,
+                              g_rpmsg_procfs_filter[RPMSG_PROCFS_LINELEN]);
+#define g_rpmsg_procfs_filter this_cpu_var_bmp(g_rpmsg_procfs_filter)
 
 /****************************************************************************
  * Private Functions

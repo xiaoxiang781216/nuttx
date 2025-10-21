@@ -130,6 +130,7 @@ extern "C"
 #define EXTERN extern
 #endif
 
+void rpmsg_early_initialize(void);
 void rpmsg_initialize(void);
 
 int rpmsg_wait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem);
