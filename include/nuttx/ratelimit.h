@@ -33,7 +33,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#ifdef __KERNEL__
+#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
 #  include <nuttx/spinlock_type.h>
 #else
 #  include <pthread.h>
@@ -43,7 +43,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef __KERNEL__
+#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
 #  define RATELIMIT_LOCK_INITIALIZER SP_UNLOCKED
 #else
 #  define RATELIMIT_LOCK_INITIALIZER PTHREAD_MUTEX_INITIALIZER
@@ -75,7 +75,7 @@ struct ratelimit_state_s
 {
   /* A lock used to protect the current-limiting state. */
 
-#ifdef __KERNEL__
+#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
   spinlock_t lock;
 #else
   pthread_mutex_t lock;

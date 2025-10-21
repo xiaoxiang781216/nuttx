@@ -32,7 +32,7 @@
 #include <nuttx/clock.h>
 #include <nuttx/ratelimit.h>
 
-#ifdef __KERNEL__
+#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
 #  include <nuttx/spinlock.h>
 #else
 #  include <pthread.h>
@@ -54,7 +54,7 @@ bool ratelimit_islimited(FAR struct ratelimit_state_s *state)
 {
   bool result = true;
   clock_t now;
-#ifdef __KERNEL__
+#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
   irqstate_t flags;
 #endif
 
@@ -76,7 +76,7 @@ bool ratelimit_islimited(FAR struct ratelimit_state_s *state)
       return true;
     }
 
-#ifdef __KERNEL__
+#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
   flags = spin_lock_irqsave_notrace(&state->lock);
 #else
   pthread_mutex_lock(&state->lock);
@@ -104,7 +104,7 @@ bool ratelimit_islimited(FAR struct ratelimit_state_s *state)
       result = false;
     }
 
-#ifdef __KERNEL__
+#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
   spin_unlock_irqrestore_notrace(&state->lock, flags);
 #else
   pthread_mutex_unlock(&state->lock);
