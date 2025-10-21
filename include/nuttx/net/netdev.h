@@ -558,6 +558,10 @@ struct net_driver_s
                       unsigned long arg);
 #endif
 
+#ifdef CONFIG_NET_IPFORWARD
+  struct work_s d_fwdwork; /* For concurrent forwarding work */
+#endif
+
   /* Drivers may attached device-specific, private information */
 
   FAR void *d_private;
