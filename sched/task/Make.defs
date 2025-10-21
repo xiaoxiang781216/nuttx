@@ -22,7 +22,7 @@
 
 CSRCS += task_argvstr.c task_create.c task_init.c task_setup.c
 CSRCS += task_activate.c task_start.c task_delete.c task_exit.c
-CSRCS += task_exithook.c task_getpid.c task_prctl.c
+CSRCS += task_exithook.c task_prctl.c
 CSRCS += task_recover.c task_restart.c task_spawnparms.c task_cancelpt.c
 CSRCS += task_terminate.c exit.c task_join.c
 

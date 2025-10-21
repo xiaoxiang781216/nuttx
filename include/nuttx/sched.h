@@ -1694,7 +1694,30 @@ static inline_function pid_t nxsched_gettid(void)
  *
  ****************************************************************************/
 
-pid_t nxsched_getpid(void);
+static inline_function pid_t nxsched_getpid(void)
+{
+  FAR struct tcb_s *rtcb;
+  pid_t ret = IDLE_PROCESS_ID;
+
+  /* Get the TCB at the head of the ready-to-run task list.  That
+   * will usually be the currently executing task.  There is are two
+   * exceptions to this:
+   *
+   * Early in the start-up sequence, the ready-to-run list may be
+   * empty!  In this case, of course, the CPU0 start-up/IDLE thread with
+   * pid == 0 must be running, and
+   */
+
+  rtcb = this_task();
+  if (rtcb->group != NULL)
+    {
+      /* Yes.. Return the Process ID */
+
+      ret = rtcb->group->tg_pid;
+    }
+
+  return ret;
+}
 
 /****************************************************************************
  * Name: nxsched_getppid
