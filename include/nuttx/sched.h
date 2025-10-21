@@ -284,7 +284,7 @@ static inline_function FAR struct tcb_s *this_task(void)
 }
 #endif
 
-#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+#if !defined(CONFIG_LIB_SYSCALL) || defined(__KERNEL__)
 #  define sched_lock() \
       do \
         { \
