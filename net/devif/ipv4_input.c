@@ -198,6 +198,7 @@ static int ipv4_in(FAR struct net_driver_s *dev)
 {
   FAR struct ipv4_hdr_s *ipv4 = IPv4BUF;
   in_addr_t destipaddr;
+  in_addr_t srcipaddr;
   uint16_t totlen;
   int ret = OK;
 
@@ -300,6 +301,18 @@ static int ipv4_in(FAR struct net_driver_s *dev)
       goto drop;
     }
 #endif
+
+  srcipaddr = net_ip4addr_conv32(ipv4->srcipaddr);
+
+  if (net_ipv4addr_cmp(srcipaddr, INADDR_BROADCAST) ||
+      IN_MULTICAST(NTOHL(srcipaddr)))
+    {
+#ifdef CONFIG_NET_STATISTICS
+      g_netstats.ipv4.drop++;
+#endif
+      nerr("WARNING: martian source error\n");
+      goto drop;
+    }
 
 #ifdef CONFIG_NET_NAT44
   /* Try NAT inbound, rule matching will be performed in NAT module. */
