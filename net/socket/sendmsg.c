@@ -72,19 +72,19 @@
 ssize_t psock_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
                        int flags)
 {
+  /* Verify that the sockfd corresponds to valid, allocated socket */
+
+  if (psock == NULL || psock->s_conn == NULL)
+    {
+      return -EBADF;
+    }
+
   /* Verify that non-NULL pointers were passed */
 
   if (msg == NULL || msg->msg_iov == NULL ||
       (psock->s_type != SOCK_DGRAM && msg->msg_iov->iov_base == NULL))
     {
       return -EINVAL;
-    }
-
-  /* Verify that the sockfd corresponds to valid, allocated socket */
-
-  if (psock == NULL || psock->s_conn == NULL)
-    {
-      return -EBADF;
     }
 
   /* Let logic specific to this address family handle the sendmsg()
