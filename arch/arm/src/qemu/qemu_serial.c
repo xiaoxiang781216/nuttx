@@ -60,7 +60,10 @@ void arm_earlyserialinit(void)
 
 void arm_serialinit(void)
 {
-  pl011_serialinit();
+  if (this_cpu() == 0)
+    {
+      pl011_serialinit();
+    }
 }
 
 #endif /* CONFIG_UART_PL011 */
