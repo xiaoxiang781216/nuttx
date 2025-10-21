@@ -80,7 +80,6 @@ SYSCALL_LOOKUP(nxsem_clockwait,            3)
 SYSCALL_LOOKUP(
           nxsem_clockwait_uninterruptible, 3)
 SYSCALL_LOOKUP(nxsem_reset,                2)
-SYSCALL_LOOKUP(nxsem_tickwait,             2)
 SYSCALL_LOOKUP(
            nxsem_tickwait_uninterruptible, 2)
 SYSCALL_LOOKUP(nxsem_timedwait,            2)

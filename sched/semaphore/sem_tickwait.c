@@ -68,8 +68,7 @@
 
 int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
 {
-  FAR struct tcb_s *rtcb = this_task();
-  irqstate_t flags;
+  struct timespec ts;
   int ret;
 
   DEBUGASSERT(sem != NULL && up_interrupt_context() == false);
@@ -87,23 +86,8 @@ int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
         }
       else
         {
-          /* Start the watchdog with interrupts still disabled */
-
-          flags = enter_critical_section();
-
-          wd_start(&rtcb->waitdog, delay, nxsem_timeout, (uintptr_t)rtcb);
-
-          /* Now perform the blocking wait */
-
-          ret = nxsem_wait(sem);
-
-          /* We can now restore interrupts */
-
-          leave_critical_section(flags);
-
-          /* Stop the watchdog timer */
-
-          wd_cancel(&rtcb->waitdog);
+          clock_ticks2time(&ts, clock_delay2abstick(delay));
+          ret = nxsem_clockwait(sem, CLOCK_MONOTONIC, &ts);
         }
     }
 
