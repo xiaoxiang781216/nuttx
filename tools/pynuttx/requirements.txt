@@ -5,7 +5,7 @@ construct
 cxxfilt
 debugpy
 lauterbach-trace32-rcl
-lief
+lief==0.16.5
 matplotlib
 mcp
 numpy
