@@ -33,22 +33,6 @@
  * Private Data
  ****************************************************************************/
 
-#ifdef CONFIG_BUILD_KERNEL
-/* Data is naturally process-specific in the KERNEL build so no special
- * access to process-specific global data is needed.
- */
-
-FAR struct getopt_s g_getopt_vars =
-{
-  NULL,
-  0,
-  1,
-  '?',
-  NULL,
-  false
-};
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -63,15 +47,10 @@ FAR struct getopt_s g_getopt_vars =
 
 FAR struct getopt_s *getoptvars(void)
 {
-#ifndef CONFIG_BUILD_KERNEL
-  FAR struct task_info_s *info;
+  FAR struct task_info_s *info = task_get_info();
 
   /* Get the structure of getopt() variables using the key. */
 
-  info = task_get_info();
   DEBUGASSERT(info != NULL);
   return &info->ta_getopt;
-#else
-  return &g_getopt_vars;
-#endif
 }

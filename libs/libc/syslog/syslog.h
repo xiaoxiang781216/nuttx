@@ -42,10 +42,6 @@ extern "C"
 #define EXTERN extern
 #endif
 
-/* The currently enabled set of syslog priorities */
-
-EXTERN uint8_t g_syslog_mask;
-
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/

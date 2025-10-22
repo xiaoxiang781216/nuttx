@@ -85,13 +85,6 @@ static FAR const char *g_catname[] =
   "LC_ALL",
 };
 
-static mutex_t g_lock = NXMUTEX_INITIALIZER;
-static FAR struct mofile_s *g_mofile;
-
-#ifdef CONFIG_BUILD_KERNEL
-static FAR char g_domain[NAME_MAX];
-#endif
-
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -105,17 +98,9 @@ static FAR const char *evalexpr(FAR struct eval_s *ev,
 
 static FAR char *gettextdomain(void)
 {
-  FAR char *domain;
-#ifdef CONFIG_BUILD_KERNEL
-  domain = g_domain;
-#else
-  FAR struct task_info_s *info;
+  FAR struct task_info_s *info = task_get_info();
 
-  info = task_get_info();
-  domain = info->ta_domain;
-#endif
-
-  return domain;
+  return info->ta_domain;
 }
 
 /* MO file format is documented here:
@@ -613,6 +598,7 @@ FAR char *dcngettext(FAR const char *domainname,
                      unsigned long int n,
                      int category)
 {
+  FAR struct task_info_s *info;
   FAR struct mofile_s *mofile;
   FAR const char *lang;
   FAR char *notrans;
@@ -652,17 +638,18 @@ FAR char *dcngettext(FAR const char *domainname,
            CONFIG_LIBC_LOCALE_PATH"/%s/%s/%s.mo",
            lang, g_catname[category], domainname);
 
-  while (nxmutex_lock(&g_lock) < 0);
+  info = task_get_info();
+  while (nxmutex_lock(&info->ta_lock) < 0);
 
-  mofile = g_mofile;
+  mofile = info->ta_mofile;
   if (!mofile || strcmp(mofile->path, path) != 0)
     {
       mofile_free(mofile);
       mofile = mofile_malloc(path);
-      g_mofile = mofile;
+      info->ta_mofile = mofile;
     }
 
-  nxmutex_unlock(&g_lock); /* Leave look before search */
+  nxmutex_unlock(&info->ta_lock);
   lib_put_tempbuffer(path);
 
   if (mofile == NULL)
