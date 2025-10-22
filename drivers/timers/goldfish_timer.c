@@ -226,9 +226,12 @@ goldfish_timer_initialize(uintptr_t base, int irq)
 
   oneshot_count_init(&lower->lh, NSEC_PER_SEC);
 
+  putreg32(1, base + GOLDFISH_TIMER_CLEAR_ALARM);
+  putreg32(1, base + GOLDFISH_TIMER_CLEAR_INTERRUPT);
+  putreg32(0, base + GOLDFISH_TIMER_IRQ_ENABLED);
+
   irq_attach(irq, goldfish_timer_interrupt, lower);
   up_enable_irq(irq);
-  putreg32(0, base + GOLDFISH_TIMER_IRQ_ENABLED);
 
   return (struct oneshot_lowerhalf_s *)lower;
 }
