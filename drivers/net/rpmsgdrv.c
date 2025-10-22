@@ -976,7 +976,7 @@ static void net_rpmsg_drv_ns_bind(FAR struct rpmsg_device *rdev,
   dev = netdev_findbyname(devname);
   if (dev)
     {
-      drv = container_of(dev, struct net_rpmsg_drv_s, dev);
+      drv = container_of(dev, struct net_rpmsg_drv_s, dev.netdev);
     }
   else
     {
