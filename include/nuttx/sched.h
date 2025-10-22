@@ -242,7 +242,7 @@
  *    is made to run.
  */
 
-extern FAR struct tcb_s *g_assignedtasks[CONFIG_SMP_NCPUS];
+DECLARE_PER_CPU_SMP(FAR struct tcb_s *, g_assignedtasks);
 
 #  define current_task(cpu)          (g_assignedtasks[cpu])
 #else
