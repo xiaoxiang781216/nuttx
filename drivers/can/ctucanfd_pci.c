@@ -106,6 +106,10 @@ struct ctucanfd_can_s
   /* This holds the information visible to the NuttX network */
 
   struct netdev_lowerhalf_s dev;
+
+#ifdef CONFIG_NET_CAN_TXCONFIRM
+  FAR netpkt_t             *tx_pktbuf[CTUCANFD_TXBUF_CNT];
+#endif
 #endif
 
   FAR struct pci_device_s *pcidev;
@@ -204,6 +208,11 @@ static int  ctucanfd_sock_ioctl(FAR struct netdev_lowerhalf_s *dev, int cmd,
 #  ifdef CONFIG_NET_CAN_ERRORS
 static FAR netpkt_t *ctucanfd_sock_error(FAR struct netdev_lowerhalf_s *dev);
 #  endif
+
+#ifdef CONFIG_NET_CAN_TXCONFIRM
+static FAR netpkt_t *ctucanfd_sock_txconfirm(
+  FAR struct netdev_lowerhalf_s *dev);
+#endif
 
 static void ctucanfd_sock_interrupt(FAR struct ctucanfd_driver_s *priv);
 #endif
@@ -1538,9 +1547,16 @@ static int ctucanfd_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
   regval = CTUCANFD_TXCMD_TXCR + (1 << (CTUCANFD_TXCMD_TXB_SHIFT + txidx));
   ctucanfd_putreg(priv, CTUCANFD_TXINFOCMD, regval);
 
+#ifdef CONFIG_NET_CAN_TXCONFIRM
+  /* Set txbuf record used for txconfirm */
+
+  priv->tx_pktbuf[txidx] = pkt;
+#else
+
   /* All is done - free packet */
 
   netpkt_free(dev, pkt, NETPKT_TX);
+#endif
 
   return OK;
 }
@@ -1559,6 +1575,14 @@ static FAR netpkt_t *ctucanfd_sock_recv(FAR struct netdev_lowerhalf_s *dev)
   uint32_t                     regval = 0;
   uint8_t                      bytes;
 
+#ifdef CONFIG_NET_CAN_TXCONFIRM
+  pkt = ctucanfd_sock_txconfirm(dev);
+  if (pkt)
+    {
+      return pkt;
+    }
+
+#endif
   /* Read frame if RX buffer not empty */
 
   regval = ctucanfd_getreg(priv, CTUCANFD_RXSETSTAT);
@@ -1652,7 +1676,7 @@ static FAR netpkt_t *ctucanfd_sock_recv(FAR struct netdev_lowerhalf_s *dev)
 
       /* Get CANFD flags */
 
-      frame->flags = 0;
+      frame->flags = CANFD_FDF;
 
       if (rxframe->fmt.esi_rsv)
         {
@@ -1797,6 +1821,57 @@ static FAR netpkt_t *ctucanfd_sock_error(FAR struct netdev_lowerhalf_s *dev)
 #endif
 
 /*****************************************************************************
+ * Name: ctucanfd_sock_txconfirm
+ *****************************************************************************/
+
+#ifdef CONFIG_NET_CAN_TXCONFIRM
+FAR netpkt_t *ctucanfd_sock_txconfirm(FAR struct netdev_lowerhalf_s *dev)
+{
+  FAR struct ctucanfd_can_s   *priv  = (FAR struct ctucanfd_can_s *)dev;
+  FAR netpkt_t                *pkt   = NULL;
+  int                          i     = 0;
+#ifdef CONFIG_NET_CAN_CANFD
+  FAR struct canfd_frame      *frame = NULL;
+#else
+  FAR struct can_frame        *frame = NULL;
+#endif
+
+  for (i = 0; i < priv->txbufcnt; i++)
+    {
+      if (priv->tx_pktbuf[i])
+        {
+          /* subtract 1 from the RX buffer quota counter */
+
+          if (atomic_fetch_sub(&dev->quota_ptr[NETPKT_RX], 1) <= 0)
+            {
+              atomic_fetch_add(&dev->quota_ptr[NETPKT_RX], 1);
+              canerr("alloc rx buffer failed\n");
+              return NULL;
+            }
+
+          pkt = priv->tx_pktbuf[i];
+          priv->tx_pktbuf[i] = NULL;
+
+          /* add 1 from the TX buffer quota counter */
+
+          atomic_fetch_add(&dev->quota_ptr[NETPKT_TX], 1);
+
+#ifdef CONFIG_NET_CAN_CANFD
+          frame = (struct canfd_frame *)netpkt_getdata(dev, pkt);
+#else
+          frame = (struct can_frame *)netpkt_getdata(dev, pkt);
+#endif
+
+          frame->flags = CAN_TCF;
+          return pkt;
+        }
+    }
+
+  return NULL;
+}
+#endif
+
+/*****************************************************************************
  * Name: ctucanfd_sock_interrupt
  *****************************************************************************/
 
@@ -1838,6 +1913,9 @@ static void ctucanfd_sock_interrupt(FAR struct ctucanfd_driver_s *priv)
               if (CTUCANFD_TXSTAT_GET(regval, txidx) ==
                   CTUCANFD_TXSTAT_TOK)
                 {
+#ifdef CONFIG_NET_CAN_TXCONFIRM
+                  netdev_lower_rxready(&priv->devs[i].dev);
+#endif
                   netdev_lower_txdone(&priv->devs[i].dev);
 
                   /* Mark buffer as empty */

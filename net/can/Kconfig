@@ -165,5 +165,16 @@ config NET_CAN_NBUFFERS
 		This setting determines the number of preallocated CAN buffers
 		available for packet data.
 
+config NET_CAN_TXCONFIRM
+	bool "net can txconfirm ability"
+	default n
+	---help---
+		this section enables the net can txconfirm ability.
+
+		Enabling this feature adds support for the net can txconfirm
+		ability, the ability is used from CAN interrupt handler
+		when the transfer is complete, the ability will notify all
+		readers that the canid has been transferred.
+
 endif # NET_CAN
 endmenu # CAN Socket Support
