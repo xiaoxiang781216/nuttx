@@ -29,21 +29,11 @@
 #include <stdlib.h>
 
 #include <nuttx/lib/lib.h>
+#include <nuttx/tls.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-/* First, second, and thired order congruential generators are supported */
-
-#ifndef CONFIG_LIBC_RAND_ORDER
-#  define CONFIG_LIBC_RAND_ORDER 1
-#endif
-
-#if CONFIG_LIBC_RAND_ORDER > 3
-#  undef CONFIG_LIBC_RAND_ORDER
-#  define CONFIG_LIBC_RAND_ORDER 3
-#endif
 
 #ifndef CONFIG_HAVE_DOUBLE
 typedef float        float_t;
@@ -91,18 +81,6 @@ static float_t frand3(void);
 #endif
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static unsigned long g_randint1;
-#if (CONFIG_LIBC_RAND_ORDER > 1)
-static unsigned long g_randint2;
-#if (CONFIG_LIBC_RAND_ORDER > 2)
-static unsigned long g_randint3;
-#endif
-#endif
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -140,23 +118,24 @@ static float_t frand1(FAR unsigned long *seed)
 #if (CONFIG_LIBC_RAND_ORDER > 1)
 static inline unsigned long fgenerate2(void)
 {
+  FAR struct task_info_s *info = task_get_info();
   unsigned long randint;
 
   /* Second order congruential generator. */
 
-  randint    = (RND2_CONSTK1 * g_randint1 +
-                RND2_CONSTK2 * g_randint2) % RND2_CONSTP;
+  randint    = (RND2_CONSTK1 * info->ta_randint1 +
+                RND2_CONSTK2 * info->ta_randint2) % RND2_CONSTP;
 
-  g_randint2 = g_randint1;
-  g_randint1 = randint;
+  info->ta_randint2 = info->ta_randint1;
+  info->ta_randint1 = randint;
 
   /* We cannot permit both values to become zero.  That would be fatal for
    * the second order random number generator.
    */
 
-  if (g_randint2 == 0 && g_randint1 == 0)
+  if (info->ta_randint2 == 0 && info->ta_randint1 == 0)
     {
-      g_randint2 = 1;
+      info->ta_randint2 = 1;
     }
 
   return randint;
@@ -180,25 +159,27 @@ static float_t frand2(void)
 #if (CONFIG_LIBC_RAND_ORDER > 2)
 static inline unsigned long fgenerate3(void)
 {
+  FAR struct task_info_s *info = task_get_info();
   unsigned long randint;
 
   /* Third order congruential generator. */
 
-  randint    = (RND3_CONSTK1 * g_randint1 +
-                RND3_CONSTK2 * g_randint2 +
-                RND3_CONSTK2 * g_randint3) % RND3_CONSTP;
+  randint    = (RND3_CONSTK1 * info->ta_randint1 +
+                RND3_CONSTK2 * info->ta_randint2 +
+                RND3_CONSTK2 * info->ta_randint3) % RND3_CONSTP;
 
-  g_randint3 = g_randint2;
-  g_randint2 = g_randint1;
-  g_randint1 = randint;
+  info->ta_randint3 = info->ta_randint2;
+  info->ta_randint2 = info->ta_randint1;
+  info->ta_randint1 = randint;
 
   /* We cannot permit all three values to become zero.  That would be fatal
    * for the third order random number generator.
    */
 
-  if (g_randint3 == 0 && g_randint2 == 0 && g_randint1 == 0)
+  if (info->ta_randint3 == 0 && info->ta_randint2 == 0 &&
+      info->ta_randint1 == 0)
     {
-      g_randint3 = 1;
+      info->ta_randint3 = 1;
     }
 
   return randint;
@@ -268,12 +249,14 @@ static unsigned long nrand_r(unsigned long limit,
 
 void srand(unsigned int seed)
 {
-  g_randint1 = seed;
+  FAR struct task_info_s *info = task_get_info();
+
+  info->ta_randint1 = seed;
 #if (CONFIG_LIBC_RAND_ORDER > 1)
-  g_randint2 = seed;
-  fgenerate1(&g_randint1);
+  info->ta_randint2 = seed;
+  fgenerate1(&info->ta_randint1);
 #if (CONFIG_LIBC_RAND_ORDER > 2)
-  g_randint3 = seed;
+  info->ta_randint3 = seed;
   fgenerate2();
 #endif
 #endif
@@ -289,7 +272,9 @@ void srand(unsigned int seed)
 
 unsigned long nrand(unsigned long limit)
 {
-  return nrand_r(limit, &g_randint1);
+  FAR struct task_info_s *info = task_get_info();
+
+  return nrand_r(limit, &info->ta_randint1);
 }
 
 /****************************************************************************

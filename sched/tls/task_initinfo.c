@@ -152,6 +152,13 @@ int task_init_info(FAR struct task_group_s *group)
 #ifdef CONFIG_SYSLOG
       info->ta_syslog_mask = g_syslog_mask;
 #endif
+      info->ta_seed48[0] = 0;
+      info->ta_seed48[1] = 0;
+      info->ta_seed48[2] = 0;
+      info->ta_seed48[3] = 0xe66d;
+      info->ta_seed48[4] = 0xdeec;
+      info->ta_seed48[5] = 0x5;
+      info->ta_seed48[6] = 0xb;
     }
 
   return ret;

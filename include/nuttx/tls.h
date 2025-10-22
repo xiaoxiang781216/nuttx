@@ -33,6 +33,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <pwd.h>
+#include <grp.h>
 #include <search.h>
 #include <shadow.h>
 #include <stdbool.h>
@@ -164,6 +165,20 @@ struct task_info_s
   struct passwd         ta_passwd;
   struct spwd           ta_spwd;
   FAR char             *ta_passwd_buffer;
+  struct group          ta_group;
+  FAR char             *ta_group_buffer;
+  FAR char             *ta_pass;
+  unsigned short int    ta_seed48[7];
+  unsigned long         ta_randint1;
+#if (CONFIG_LIBC_RAND_ORDER > 1)
+  unsigned long         ta_randint2;
+#  if (CONFIG_LIBC_RAND_ORDER > 2)
+  unsigned long         ta_randint3;
+#  endif
+#endif
+#ifndef CONFIG_DISABLE_PTHREAD
+  int                   ta_pthread_concurrency_level;
+#endif
 #ifdef CONFIG_SYSLOG
   uint8_t               ta_syslog_mask;
 #endif

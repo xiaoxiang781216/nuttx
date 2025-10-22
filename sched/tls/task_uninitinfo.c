@@ -146,6 +146,8 @@ void task_uninit_info(FAR struct task_group_s *group)
 #endif /* CONFIG_FILE_STREAM */
 
   task_info_uninit_buffer(info->ta_passwd_buffer);
+  task_info_uninit_buffer(info->ta_group_buffer);
+  task_info_uninit_buffer(info->ta_pass);
 #ifdef CONFIG_LIBC_NETDB
   task_info_uninit_buffer(info->ta_hostbuffer);
 #endif

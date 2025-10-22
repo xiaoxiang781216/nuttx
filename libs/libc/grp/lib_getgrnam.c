@@ -29,6 +29,8 @@
 #include <string.h>
 #include <grp.h>
 
+#include <nuttx/tls.h>
+
 #include "grp/lib_grp.h"
 
 /****************************************************************************
@@ -57,15 +59,18 @@
 FAR struct group *getgrnam(FAR const char *name)
 {
 #ifdef CONFIG_LIBC_GROUP_FILE
+  FAR struct task_info_s *info = task_get_info();
   int ret;
 
-  ret = grp_findby_name(name, &g_group, g_group_buffer, GRPBUF_RESERVE_SIZE);
+  task_info_init_buffer(info->ta_group_buffer, GRPBUF_RESERVE_SIZE);
+  ret = grp_findby_name(name, &info->ta_group, info->ta_group_buffer,
+                        GRPBUF_RESERVE_SIZE);
   if (ret != 1)
     {
       return NULL;
     }
 
-  return &g_group;
+  return &info->ta_group;
 #else
   if (strcmp(name, "root"))
     {

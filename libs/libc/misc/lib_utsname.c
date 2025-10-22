@@ -53,9 +53,10 @@
 
 #if defined(__DATE__) && defined(__TIME__) && \
     !defined(CONFIG_LIBC_UNAME_DISABLE_TIMESTAMP)
-static char g_version[] = CONFIG_VERSION_BUILD " " __DATE__ " " __TIME__;
+static const char g_version[] = CONFIG_VERSION_BUILD \
+                                " " __DATE__ " " __TIME__;
 #else
-static char g_version[] = CONFIG_VERSION_BUILD;
+static const char g_version[] = CONFIG_VERSION_BUILD;
 #endif
 
 static const char g_arch[] = CONFIG_ARCH;

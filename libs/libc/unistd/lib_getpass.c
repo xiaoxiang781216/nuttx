@@ -27,11 +27,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include <nuttx/tls.h>
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
-static char g_password[128];
 
 /****************************************************************************
  * Public Functions
@@ -39,6 +39,7 @@ static char g_password[128];
 
 FAR char *getpass(FAR const char *prompt)
 {
+  FAR struct task_info_s *info = task_get_info();
   struct termios s;
   struct termios t;
   ssize_t total_bytes_read = 0;
@@ -64,10 +65,11 @@ FAR char *getpass(FAR const char *prompt)
       return 0;
     }
 
-  while ((bytes_read = read(fd, g_password + total_bytes_read,
-                            sizeof(g_password) - total_bytes_read)) > 0)
+  task_info_init_buffer(info->ta_pass, 128);
+  while ((bytes_read = read(fd, info->ta_pass + total_bytes_read,
+                            128 - total_bytes_read)) > 0)
     {
-      if (bytes_read > 0 && g_password[total_bytes_read] == '\n')
+      if (bytes_read > 0 && info->ta_pass[total_bytes_read] == '\n')
         {
             break;
         }
@@ -77,12 +79,13 @@ FAR char *getpass(FAR const char *prompt)
 
   if (total_bytes_read >= 0)
     {
-      if (total_bytes_read > 0 && g_password[total_bytes_read - 1] == '\n')
+      if (total_bytes_read > 0 &&
+          info->ta_pass[total_bytes_read - 1] == '\n')
         {
           total_bytes_read--;
         }
 
-      g_password[total_bytes_read] = 0;
+      info->ta_pass[total_bytes_read] = 0;
     }
 
   tcsetattr(fd, TCSAFLUSH, &s);
@@ -92,5 +95,5 @@ FAR char *getpass(FAR const char *prompt)
       close(fd);
     }
 
-  return g_password;
+  return info->ta_pass;
 }

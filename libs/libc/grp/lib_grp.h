@@ -61,13 +61,6 @@ extern "C"
 #define EXTERN extern
 #endif
 
-#ifdef CONFIG_LIBC_GROUP_FILE
-/* Data for non-reentrant group functions */
-
-EXTERN struct group g_group;
-EXTERN char g_group_buffer[GRPBUF_RESERVE_SIZE];
-#endif
-
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/

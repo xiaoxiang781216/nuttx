@@ -26,11 +26,11 @@
 
 #include <pthread.h>
 
+#include <nuttx/tls.h>
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
-
-static int g_pthread_concurrency_level = 0;
 
 /****************************************************************************
  * Public Functions
@@ -56,13 +56,14 @@ static int g_pthread_concurrency_level = 0;
 
 int pthread_setconcurrency(int new_level)
 {
+  FAR struct task_info_s *info = task_get_info();
+
   if (new_level < 0)
     {
       return EINVAL;
     }
 
-  g_pthread_concurrency_level = new_level;
-
+  info->ta_pthread_concurrency_level = new_level;
   return OK;
 }
 
@@ -83,5 +84,7 @@ int pthread_setconcurrency(int new_level)
 
 int pthread_getconcurrency(void)
 {
-  return g_pthread_concurrency_level;
+  FAR struct task_info_s *info = task_get_info();
+
+  return info->ta_pthread_concurrency_level;
 }

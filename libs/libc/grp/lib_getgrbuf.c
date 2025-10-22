@@ -31,15 +31,10 @@
 #include <errno.h>
 #include <grp.h>
 
+#include <nuttx/tls.h>
+
 #include "grp/lib_grp.h"
 #include "libc.h"
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static FAR char *g_buf;
-static FAR struct group *g_grp;
 
 /****************************************************************************
  * Public Functions
@@ -66,6 +61,7 @@ static FAR struct group *g_grp;
 FAR struct group *getgrbuf(gid_t gid, FAR const char *name,
                            FAR const char *passwd)
 {
+  FAR struct task_info_s *info = task_get_info();
   FAR struct group *result;
   FAR char *newbuf;
   size_t buflen;
@@ -73,28 +69,16 @@ FAR struct group *getgrbuf(gid_t gid, FAR const char *name,
 
   buflen = sizeof(FAR char **) + strlen(name) + 1 + strlen(passwd) + 1;
 
-  newbuf = (FAR char *)lib_realloc(g_buf, buflen);
-
+  newbuf = lib_realloc(info->ta_group_buffer, buflen);
   if (!newbuf)
     {
       err = ENOMEM;
       goto error;
     }
 
-  g_buf = newbuf;
-
-  if (!g_grp)
-    {
-      g_grp = (FAR struct group *)lib_malloc(sizeof(struct group));
-    }
-
-  if (!g_grp)
-    {
-      err = ENOMEM;
-      goto error;
-    }
-
-  err = getgrbuf_r(gid, name, passwd, g_grp, g_buf, buflen, &result);
+  info->ta_group_buffer = newbuf;
+  err = getgrbuf_r(gid, name, passwd, &info->ta_group,
+                   info->ta_group_buffer, buflen, &result);
 
   if (err)
     {
@@ -104,11 +88,6 @@ FAR struct group *getgrbuf(gid_t gid, FAR const char *name,
   return result;
 
 error:
-  lib_free(g_grp);
-  lib_free(g_buf);
-  g_grp = NULL;
-  g_buf = NULL;
   set_errno(err);
-
   return NULL;
 }

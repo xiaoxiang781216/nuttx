@@ -41,8 +41,11 @@ FAR struct spwd *getspnam(FAR const char *name)
   FAR struct spwd *result = NULL;
 
 #ifdef CONFIG_LIBC_PASSWD_FILE
-  getspnam_r(name, &g_spwd, g_passwd_buffer,
-             sizeof(g_passwd_buffer), &result);
+  FAR struct task_info_s *info = task_get_info();
+
+  task_info_init_buffer(info->ta_passwd_buffer, CONFIG_LIBC_PASSWD_LINESIZE);
+  getspnam_r(name, &info->ta_spwd, info->ta_passwd_buffer,
+             CONFIG_LIBC_PASSWD_LINESIZE, &result);
 #else
   if (strcmp(name, ROOT_NAME) == 0)
     {

@@ -31,21 +31,11 @@
 #include <string.h>
 
 #include <nuttx/lib/lib.h>
+#include <nuttx/tls.h>
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
-static unsigned short int g_seed48[7] =
-{
-  0,
-  0,
-  0,
-  0xe66d,
-  0xdeec,
-  0x5,
-  0xb
-};
 
 /****************************************************************************
  * Private Functions
@@ -93,10 +83,11 @@ void srand48(long seed)
 
 FAR unsigned short int *seed48(FAR unsigned short int seed16v[3])
 {
+  FAR struct task_info_s *info = task_get_info();
   static unsigned short int p[3];
 
-  memcpy(p, g_seed48, sizeof(p));
-  memcpy(g_seed48, seed16v, sizeof(p));
+  memcpy(p, info->ta_seed48, sizeof(p));
+  memcpy(info->ta_seed48, seed16v, sizeof(p));
   return p;
 }
 
@@ -106,7 +97,9 @@ FAR unsigned short int *seed48(FAR unsigned short int seed16v[3])
 
 void lcong48(FAR unsigned short int p[7])
 {
-  memcpy(g_seed48, p, sizeof(g_seed48));
+  FAR struct task_info_s *info = task_get_info();
+
+  memcpy(info->ta_seed48, p, sizeof(info->ta_seed48));
 }
 
 /****************************************************************************
@@ -121,7 +114,9 @@ void lcong48(FAR unsigned short int p[7])
 #ifdef CONFIG_HAVE_LONG_LONG
 long jrand48(FAR unsigned short int s[3])
 {
-  return (long)(rand48_step(s, g_seed48 + 3) >> 16);
+  FAR struct task_info_s *info = task_get_info();
+
+  return (long)(rand48_step(s, info->ta_seed48 + 3) >> 16);
 }
 
 /****************************************************************************
@@ -135,7 +130,9 @@ long jrand48(FAR unsigned short int s[3])
 
 long mrand48(void)
 {
-  return jrand48(g_seed48);
+  FAR struct task_info_s *info = task_get_info();
+
+  return jrand48(info->ta_seed48);
 }
 
 /****************************************************************************
@@ -149,7 +146,9 @@ long mrand48(void)
 
 long nrand48(FAR unsigned short int s[3])
 {
-  return rand48_step(s, g_seed48 + 3) >> 17;
+  FAR struct task_info_s *info = task_get_info();
+
+  return rand48_step(s, info->ta_seed48 + 3) >> 17;
 }
 
 /****************************************************************************
@@ -163,7 +162,9 @@ long nrand48(FAR unsigned short int s[3])
 
 long lrand48(void)
 {
-  return nrand48(g_seed48);
+  FAR struct task_info_s *info = task_get_info();
+
+  return nrand48(info->ta_seed48);
 }
 
 /****************************************************************************
@@ -178,13 +179,14 @@ long lrand48(void)
 #  ifdef CONFIG_HAVE_DOUBLE
 double erand48(FAR unsigned short int s[3])
 {
+  FAR struct task_info_s *info = task_get_info();
   union
     {
       uint64_t u;
       double f;
     } x;
 
-  x.u = 0x3ff0000000000000ull | rand48_step(s, g_seed48 + 3) << 4;
+  x.u = 0x3ff0000000000000ull | rand48_step(s, info->ta_seed48 + 3) << 4;
   return x.f - 1.0;
 }
 
@@ -199,7 +201,9 @@ double erand48(FAR unsigned short int s[3])
 
 double drand48(void)
 {
-  return erand48(g_seed48);
+  FAR struct task_info_s *info = task_get_info();
+
+  return erand48(info->ta_seed48);
 }
 #  endif
 #endif

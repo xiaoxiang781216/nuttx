@@ -28,6 +28,8 @@
 
 #include <grp.h>
 
+#include <nuttx/tls.h>
+
 #include "grp/lib_grp.h"
 
 /****************************************************************************
@@ -56,15 +58,18 @@
 FAR struct group *getgrgid(gid_t gid)
 {
 #ifdef CONFIG_LIBC_GROUP_FILE
+  FAR struct task_info_s *info = task_get_info();
   int ret;
 
-  ret = grp_findby_gid(gid, &g_group, g_group_buffer, GRPBUF_RESERVE_SIZE);
+  task_info_init_buffer(info->ta_group_buffer, GRPBUF_RESERVE_SIZE);
+  ret = grp_findby_gid(gid, &info->ta_group, info->ta_group_buffer,
+                       GRPBUF_RESERVE_SIZE);
   if (ret != 1)
     {
       return NULL;
     }
 
-  return &g_group;
+  return &info->ta_group;
 #else
   if (gid != ROOT_GID)
     {
