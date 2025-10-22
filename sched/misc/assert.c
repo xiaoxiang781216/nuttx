@@ -233,7 +233,7 @@ static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
 #ifdef CONFIG_SMP
   int cpu = rtcb->cpu;
 #else
-  int cpu = this_cpu();
+  int cpu = up_this_cpu();
 #endif
   UNUSED(cpu);
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
@@ -255,7 +255,7 @@ static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
   bool force = false;
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
-  if (sp >= intstack_base && sp < intstack_top)
+  if (sp >= intstack_base && sp <= intstack_top)
     {
       intstack_sp = sp;
     }
@@ -268,7 +268,7 @@ static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
     }
   else
 #endif
-  if (sp >= tcbstack_base && sp < tcbstack_top)
+  if (sp >= tcbstack_base && sp <= tcbstack_top)
     {
       tcbstack_sp = sp;
     }
@@ -399,7 +399,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
   /* Dump interesting properties of this task */
 
   _alert("   %4d %5d"
-#ifdef CONFIG_SMP
+#ifndef CONFIG_UP
          "  %4d"
 #endif
          " %3d %-8s %-7s %-3c"
@@ -418,6 +418,8 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
          , tcb->group ? tcb->group->tg_pid : -1
 #ifdef CONFIG_SMP
          , tcb->cpu
+#elif !defined(CONFIG_UP)
+         , up_this_cpu()
 #endif
          , tcb->sched_priority
          , g_policy[(atomic_read(&tcb->flags) & TCB_FLAG_POLICY_MASK) >>
@@ -473,13 +475,13 @@ static void dump_fdlist(FAR struct tcb_s *tcb, FAR void *arg)
 static void dump_tasks(void)
 {
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
-  int cpu;
+  int cpu = up_this_cpu();
 #endif
 
   /* Dump interesting properties of each task in the crash environment */
 
   _alert("   PID GROUP"
-#ifdef CONFIG_SMP
+#ifndef CONFIG_UP
          "   CPU"
 #endif
          " PRI POLICY   TYPE    NPX"
@@ -496,8 +498,10 @@ static void dump_tasks(void)
          "   COMMAND\n");
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
+#  ifdef CONFIG_SMP
   for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
     {
+#  endif
 #  ifdef CONFIG_STACK_COLORATION
       size_t stack_used = up_check_intstack(cpu, 0u);
       size_t stack_filled = 0u;
@@ -512,7 +516,7 @@ static void dump_tasks(void)
 #  endif
 
       _alert("  ----   ---"
-#  ifdef CONFIG_SMP
+#  ifndef CONFIG_UP
              "  %4d"
 #  endif
              " --- --------"
@@ -528,7 +532,7 @@ static void dump_tasks(void)
              "     ----"
 #  endif
              "   irq\n"
-#ifdef CONFIG_SMP
+#  ifndef CONFIG_UP
              , cpu
 #endif
              , up_get_intstackbase(cpu)
@@ -540,7 +544,9 @@ static void dump_tasks(void)
              , (stack_filled >= 10u * 80u ? '!' : ' ')
 #  endif
             );
+#  ifdef CONFIG_SMP
     }
+#  endif
 #endif
 
 #ifdef CONFIG_DEBUG_ALERT
