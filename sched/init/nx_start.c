@@ -47,7 +47,6 @@
 #include <nuttx/binfmt/binfmt.h>
 #include <nuttx/drivers/drivers.h>
 #include <nuttx/init.h>
-#include <nuttx/lib/math32.h>
 
 #ifdef CONFIG_SCHED_PERF_EVENTS
 #  include <nuttx/perf.h>
@@ -685,7 +684,7 @@ void nx_start(void)
 
   /* Initialize the logic that determine unique process IDs. */
 
-  i = 1 << LOG2_CEIL(CONFIG_PID_INITIAL_COUNT);
+  i = CONFIG_PID_INITIAL_COUNT;
 #if CONFIG_SMP_NCPUS > CONFIG_PID_INITIAL_COUNT
   while (i <= CONFIG_SMP_NCPUS)
     {
