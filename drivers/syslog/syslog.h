@@ -29,6 +29,8 @@
 
 #include <nuttx/config.h>
 
+#include <nuttx/percpu.h>
+#include <nuttx/syslog/syslog.h>
 #include <stdbool.h>
 
 /****************************************************************************
@@ -68,11 +70,14 @@ void syslog_register(void);
  */
 
 #ifdef CONFIG_SYSLOG
-EXTERN FAR syslog_channel_t *
-#ifndef CONFIG_SYSLOG_REGISTER
-const
-#endif
-g_syslog_channel[CONFIG_SYSLOG_MAX_CHANNELS];
+typedef FAR syslog_channel_t *syslog_channels_t[CONFIG_SYSLOG_MAX_CHANNELS];
+
+#  ifdef CONFIG_SYSLOG_REGISTER
+DECLARE_PER_CPU_BMP(syslog_channels_t, g_syslog_channel);
+#    define g_syslog_channel this_cpu_var_bmp(g_syslog_channel)
+#  else
+EXTERN const syslog_channels_t g_syslog_channel;
+#  endif
 
 /****************************************************************************
  * Public Function Prototypes

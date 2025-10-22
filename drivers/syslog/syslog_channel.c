@@ -34,6 +34,7 @@
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/compiler.h>
 #include <nuttx/mutex.h>
+#include <nuttx/percpu.h>
 
 #ifdef CONFIG_RAMLOG_SYSLOG
 #  include <nuttx/syslog/ramlog.h>
@@ -229,11 +230,12 @@ static syslog_channel_t g_default_channel =
 
 /* This is the current syslog channel in use */
 
-FAR syslog_channel_t *
-#ifndef CONFIG_SYSLOG_REGISTER
-const
+#ifdef CONFIG_SYSLOG_REGISTER
+#  undef g_syslog_channel
+DEFINE_PER_CPU_BMP(syslog_channels_t, g_syslog_channel) =
+#else
+const syslog_channels_t g_syslog_channel =
 #endif
-g_syslog_channel[CONFIG_SYSLOG_MAX_CHANNELS] =
 {
 #ifdef CONFIG_SYSLOG_DEFAULT
   &g_default_channel,
@@ -251,6 +253,10 @@ g_syslog_channel[CONFIG_SYSLOG_MAX_CHANNELS] =
   &g_cdcacm_channel
 #endif
 };
+
+#ifdef CONFIG_SYSLOG_REGISTER
+#  define g_syslog_channel this_cpu_var_bmp(g_syslog_channel)
+#endif
 
 /****************************************************************************
  * Private Functions
