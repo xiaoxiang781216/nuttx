@@ -534,7 +534,24 @@ int nxrmutex_trylock(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
-int nxrmutex_ticklock(FAR rmutex_t *rmutex, uint32_t delay);
+static inline_function
+int nxrmutex_ticklock(FAR rmutex_t *rmutex, uint32_t delay)
+{
+  int ret = OK;
+
+  if (!nxrmutex_is_hold(rmutex))
+    {
+      ret = nxmutex_ticklock(&rmutex->mutex, delay);
+    }
+
+  if (ret >= 0)
+    {
+      DEBUGASSERT(rmutex->count < UINT_MAX);
+      ++rmutex->count;
+    }
+
+  return ret;
+}
 
 /****************************************************************************
  * Name: nxrmutex_clocklock
