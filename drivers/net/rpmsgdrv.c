@@ -937,8 +937,8 @@ net_rpmsg_drv_alloc(FAR const char *devname, enum net_lltype_e lltype)
     defined(CONFIG_NET_TUN)
   if (lltype != NET_LL_CAN)
     {
-      net_getrandom(&netdev->netdev.d_mac.ether.ether_addr_octet,
-                    sizeof(netdev->netdev.d_mac.ether.ether_addr_octet));
+      arc4random_buf(&netdev->netdev.d_mac.ether.ether_addr_octet,
+                     sizeof(netdev->netdev.d_mac.ether.ether_addr_octet));
     }
 #endif
 

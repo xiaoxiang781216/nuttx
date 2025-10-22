@@ -553,21 +553,6 @@ FAR struct iob_s *net_ioballoc(bool throttled);
 #endif
 
 /****************************************************************************
- * Name: net_getrandom
- *
- * Description:
- *   Fill a buffer of arbitrary length with randomness. This function is
- *   guaranteed to be success.
- *
- * Input Parameters:
- *   bytes  - Buffer for returned random bytes
- *   nbytes - Number of bytes requested.
- *
- ****************************************************************************/
-
-void net_getrandom(FAR void *bytes, size_t nbytes);
-
-/****************************************************************************
  * Name: sockfd_allocate
  *
  * Description:
