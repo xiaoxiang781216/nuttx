@@ -503,9 +503,12 @@ int netdev_register(FAR struct net_driver_s *dev, enum net_lltype_e lltype)
       dev->flink = NULL;
 
 #ifdef CONFIG_NET_IGMP
-      /* Configure the device for IGMP support */
+      if ((flags & IFF_MULTICAST) != 0)
+        {
+          /* Configure the device for IGMP support */
 
-      igmp_devinit(dev);
+          igmp_devinit(dev);
+        }
 #endif
 
 #ifdef CONFIG_NET_MLD
