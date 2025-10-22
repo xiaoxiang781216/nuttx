@@ -102,4 +102,8 @@ if(CONFIG_PTP_CLOCK_DUMMY)
   list(APPEND SRCS ptp_clock_dummy.c)
 endif()
 
+if(CONFIG_RPMSG_BOOTTIME)
+  list(APPEND SRCS rpmsg_boottime.c)
+endif()
+
 target_sources(drivers PRIVATE ${SRCS})

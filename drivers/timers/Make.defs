@@ -138,6 +138,12 @@ ifeq ($(CONFIG_PTP_CLOCK_DUMMY),y)
   CSRCS += ptp_clock_dummy.c
 endif
 
+ifeq ($(CONFIG_RPMSG_BOOTTIME),y)
+  CSRCS += rpmsg_boottime.c
+  TMRDEPPATH = --dep-path timers
+  TMRVPATH = :timers
+endif
+
 # Include timer build support (if any were selected)
 
 DEPPATH += $(TMRDEPPATH)
