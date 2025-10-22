@@ -766,7 +766,9 @@ static ssize_t net_ioctl_ifreq_arglen(uint8_t domain, int cmd)
       case SIOCGMIIPHY:
       case SIOCGMIIREG:
       case SIOCSMIIREG:
+#if defined(CONFIG_NETDEV_IOCTL) && defined(CONFIG_NETDEV_DEVPRIVATE_IOCTL)
       case SIOCDEVPRIVATE ... SIOCDEVPRIVATE + 15:
+#endif
       case SIOCGCANBITRATE:
       case SIOCSCANBITRATE:
       case SIOCACANEXTFILTER:
