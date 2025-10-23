@@ -83,7 +83,7 @@ endif
 
 # Note support
 
-ifeq ($(CONFIG_SCHED_INSTRUMENTATION_DUMP),y)
+ifeq ($(CONFIG_DRIVERS_NOTE),y)
 CSRCS += lib_note.c
 endif
 
