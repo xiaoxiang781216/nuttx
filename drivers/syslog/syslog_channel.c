@@ -85,7 +85,8 @@ static ssize_t syslog_cdcacm_write(FAR struct syslog_channel_s *channel,
  ****************************************************************************/
 
 #if defined(CONFIG_SYSLOG_DEFAULT) && defined(CONFIG_ARCH_LOWPUTC)
-static mutex_t g_lowputs_lock = NXMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BMP(mutex_t, g_lowputs_lock) = NXMUTEX_INITIALIZER;
+#  define g_lowputs_lock this_cpu_var_bmp(g_lowputs_lock)
 #endif
 
 #ifdef CONFIG_RAMLOG_SYSLOG
