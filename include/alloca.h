@@ -43,10 +43,8 @@
 #  undef  alloca
 #  define alloca(size)                                          \
     ({                                                          \
-      FAR char *__sp = __get_sp();                              \
-      __sp = (FAR char *)(((uintptr_t)(__sp - (size))) & ~0x7); \
-      __set_sp(__sp);                                           \
-      __sp;                                                     \
+      char __alloca_array[size] aligned_data(8);                \
+      (FAR void *)__alloca_array;                               \
     })
 
 #endif
