@@ -98,6 +98,9 @@ function(nuttx_add_application)
     NAME
     PRIORITY
     STACKSIZE
+    UID
+    GID
+    MODE
     HEAPSIZE
     MODULE
     DYNLIB
@@ -272,6 +275,24 @@ function(nuttx_add_application)
   else()
     set_target_properties(${TARGET} PROPERTIES APP_STACK
                                                ${CONFIG_DEFAULT_TASK_STACKSIZE})
+  endif()
+
+  if(CONFIG_SCHED_USER_IDENTITY)
+    if(UID)
+      set_target_properties(${TARGET} PROPERTIES APP_UID ${UID})
+    else()
+      set_target_properties(${TARGET} PROPERTIES APP_UID 0)
+    endif()
+    if(GID)
+      set_target_properties(${TARGET} PROPERTIES APP_GID ${GID})
+    else()
+      set_target_properties(${TARGET} PROPERTIES APP_GID 0)
+    endif()
+    if(MODE)
+      set_target_properties(${TARGET} PROPERTIES APP_MODE ${MODE})
+    else()
+      set_target_properties(${TARGET} PROPERTIES APP_MODE 0)
+    endif()
   endif()
 
   if(CONFIG_MM_TASK_HEAP)
