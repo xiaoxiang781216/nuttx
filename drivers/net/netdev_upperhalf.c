@@ -1534,7 +1534,9 @@ void netdev_lower_carrier_on(FAR struct netdev_lowerhalf_s *dev)
   netdev_upper_vlan_foreach(upper, netdev_lower_carrier_on);
 #endif
 
+  netdev_lock(&dev->netdev);
   netdev_carrier_on(&dev->netdev);
+  netdev_unlock(&dev->netdev);
 }
 
 /****************************************************************************
@@ -1556,7 +1558,9 @@ void netdev_lower_carrier_off(FAR struct netdev_lowerhalf_s *dev)
   netdev_upper_vlan_foreach(upper, netdev_lower_carrier_off);
 #endif
 
+  netdev_lock(&dev->netdev);
   netdev_carrier_off(&dev->netdev);
+  netdev_unlock(&dev->netdev);
 }
 
 /****************************************************************************
