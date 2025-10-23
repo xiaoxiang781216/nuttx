@@ -95,7 +95,6 @@
 #endif
 
 #define rpmsgerrdump(m,b,s)                lib_dumpbuffer(m, (FAR const uint8_t *)b, s)
-#define rpmsgvbs                           rpmsgerr
 
 /****************************************************************************
  * Private Types
