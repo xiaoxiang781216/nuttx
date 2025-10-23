@@ -36,3 +36,6 @@ endif()
 
 target_sources(mm PRIVATE ${SRCS})
 target_compile_options(mm PRIVATE ${FLAGS})
+if(NOT CONFIG_BUILD_FLAT)
+  target_compile_options(kmm PRIVATE ${FLAGS})
+endif()
