@@ -44,6 +44,10 @@
 
 #define PIDHASH(pid)             ((pid) & (g_npidhash - 1))
 
+/* This set of all CPUs */
+
+#define SCHED_ALL_CPUS           ((1 << CONFIG_SMP_NCPUS) - 1)
+
 /* The state of a task is indicated both by the task_state field of the TCB
  * and by a series of task lists.  All of these tasks lists are declared
  * below. Although it is not always necessary, most of these lists are
