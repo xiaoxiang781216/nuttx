@@ -38,7 +38,13 @@ nuttx_mod_link_options(-r)
 
 nuttx_elf_link_options_ifdef(CONFIG_BUILD_KERNEL -Bstatic)
 
-nuttx_elf_link_options_ifdef(CONFIG_DEBUG_OPT_UNUSED_SECTIONS --gc-sections)
+if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
+  if("${CMAKE_LD}" MATCHES "gcc$")
+    nuttx_elf_link_options(-Wl,--gc-sections)
+  else()
+    nuttx_elf_link_options(--gc-sections)
+  endif()
+endif()
 
 if(CONFIG_BINFMT_ELF_RELOCATABLE)
   nuttx_elf_compile_options_ifdef(CONFIG_LTO_FULL -fno-lto)
