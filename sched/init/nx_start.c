@@ -184,7 +184,7 @@ DEFINE_PER_CPU_BSS(FAR struct tcb_s *, g_running_tasks);
 #  undef g_pendingtasks
 DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_pendingtasks);
 #  define g_pendingtasks this_cpu_var_bmp(g_pendingtasks)
-#endif 
+#endif
 
 /* This is the list of all tasks that are blocked waiting for a signal */
 
@@ -630,7 +630,7 @@ static void memory_initialize(void)
 
 void nx_start(void)
 {
-  size_t i;
+  int i;
 
   /* Boot up is complete */
 
@@ -693,7 +693,7 @@ void nx_start(void)
     }
 #endif
 
-  g_pidhash = kmm_zalloc(sizeof(*g_pidhash) * i);
+  g_pidhash = kmm_zalloc(sizeof(*g_pidhash) * (size_t)i);
   DEBUGASSERT(g_pidhash);
 
   g_npidhash = i;
