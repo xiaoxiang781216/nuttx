@@ -29,6 +29,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/signal.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -36,10 +37,12 @@
 
 /* IOCTL Commands ***********************************************************/
 
-#define CAPIOC_DUTYCYCLE _CAPIOC(1)
-#define CAPIOC_FREQUENCE _CAPIOC(2)
-#define CAPIOC_EDGES     _CAPIOC(3)
-#define CAPIOC_ALL       _CAPIOC(4)
+#define CAPIOC_DUTYCYCLE  _CAPIOC(1)
+#define CAPIOC_FREQUENCE  _CAPIOC(2)
+#define CAPIOC_EDGES      _CAPIOC(3)
+#define CAPIOC_ALL        _CAPIOC(4)
+#define CAPIOC_REGISTER   _CAPIOC(5)
+#define CAPIOC_UNREGISTER _CAPIOC(6)
 
 /****************************************************************************
  * Public Types
@@ -52,11 +55,38 @@ struct cap_all_s
   uint8_t  duty;
 };
 
+struct cap_lowerhalf_s;
+#ifdef CONFIG_CAPTURE_NOTIFY
+
+/* Capture type */
+
+enum cap_type_e
+{
+  CAP_TYPE_RISING,
+  CAP_TYPE_FALLING,
+  CAP_TYPE_BOTH,
+};
+
+/* Capture notify information, used to cmd:CAPIOC_REGISTER */
+
+struct cap_notify_s
+{
+  struct sigevent event; /* The signal to be sent */
+  int chan;              /* Capture channel */
+  enum cap_type_e type;  /* Capture edge type */
+  FAR void *ptr;         /* User data pointer */
+};
+
+/* Capture edge interrupt notification callback */
+
+typedef CODE void (*capture_notify_t)(FAR struct cap_lowerhalf_s *lower,
+                                      FAR void *priv);
+#endif
+
 /* This structure provides the "lower-half" driver operations available to
  * the "upper-half" driver.
  */
 
-struct cap_lowerhalf_s;
 struct cap_ops_s
 {
   /* Required methods *******************************************************/
@@ -83,6 +113,18 @@ struct cap_ops_s
 
   CODE int (*getedges)(FAR struct cap_lowerhalf_s *lower,
                        FAR uint32_t *edges);
+
+#ifdef CONFIG_CAPTURE_NOTIFY
+  /* Bind the capture edge interrupt notification callback */
+
+  CODE int (*bind)(FAR struct cap_lowerhalf_s *lower,
+                   enum cap_type_e type, capture_notify_t cb,
+                   FAR void *priv);
+
+  /* Un-Bind the capture edge interrupt notification callback */
+
+  CODE int (*unbind)(FAR struct cap_lowerhalf_s *lower);
+#endif
 };
 
 /* This structure provides the publicly visible representation of the
