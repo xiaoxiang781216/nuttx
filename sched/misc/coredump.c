@@ -127,16 +127,31 @@ static bool g_stream_initialized;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: elf_flush
+ * Name: elf_emit_finish
  *
  * Description:
- *   Flush the out stream
+ *   Flush and close the out stream
  *
  ****************************************************************************/
 
-static int elf_flush(FAR struct elf_dumpinfo_s *cinfo)
+static int elf_emit_finish(FAR struct elf_dumpinfo_s *cinfo)
 {
-  return lib_stream_flush(cinfo->stream);
+  int ret;
+  ret = lib_stream_flush(cinfo->stream);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+#ifdef CONFIG_BOARD_COREDUMP_BLKDEV
+  lib_blkoutstream_close((FAR struct lib_blkoutstream_s *)cinfo->stream);
+#elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
+  lib_mtdoutstream_close((FAR struct lib_mtdoutstream_s *)cinfo->stream);
+#elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
+  lib_filesistream_close((FAR struct lib_filesistream_s *)cinfo->stream);
+#endif
+
+  return ret;
 }
 
 /****************************************************************************
@@ -1161,9 +1176,8 @@ int coredump(FAR const struct memory_region_s *regions,
 
   elf_emit_info_note(&cinfo);
 
-  /* Flush the dump */
+  /* Flush and close the dump */
 
-  elf_flush(&cinfo);
-
+  elf_emit_finish(&cinfo);
   return OK;
 }
