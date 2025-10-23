@@ -7,6 +7,7 @@ config RPMSG
 	bool
 	default n
 	select OPENAMP
+	select SCHED_WORKQUEUE
 
 if RPMSG
 
