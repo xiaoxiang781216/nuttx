@@ -2572,6 +2572,9 @@ config STACKCHECK_MARGIN
 		Specifies the number of bytes at the end of the stack to check for overflow.
 		A value of -1 disables additional checking. Increase this value for stricter
 		overflow detection, at the cost of additional overhead.
+		STACKCHECK_MARGIN == 0 will only check the SP is in tcb's stack range.
+		STACKCHECK_MARGIN > 0 will check the specified bytes in stack bottom.
+		Recommend 16 in this case.
 
 config STACK_CANARIES
 	bool "Compiler stack canaries"
