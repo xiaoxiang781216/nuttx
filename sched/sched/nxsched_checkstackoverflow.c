@@ -70,7 +70,6 @@
 
 void nxsched_checkstackoverflow(FAR struct tcb_s *tcb)
 {
-#if (CONFIG_STACKCHECK_MARGIN == 0)
   /* Strict stack pointer check:
    * SP must remain within the allocated stack boundaries.
    */
@@ -84,7 +83,7 @@ void nxsched_checkstackoverflow(FAR struct tcb_s *tcb)
       DEBUGASSERT(sp > bot && sp <= top);
     }
 
-#elif defined(CONFIG_STACK_COLORATION) && (CONFIG_STACKCHECK_MARGIN > 0)
+#if defined(CONFIG_STACK_COLORATION) && (CONFIG_STACKCHECK_MARGIN > 0)
   /* Margin-based stack check:
    * Allow some reserved margin area before reporting overflow.
    */
