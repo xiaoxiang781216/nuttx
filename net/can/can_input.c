@@ -87,7 +87,8 @@ static int can_input_conn(FAR struct net_driver_s *dev,
       dev->d_buf = NULL;
       dev->d_iob = NULL;
       flags = CAN_NEWDATA;
-      ret = conn->rxcb(conn->rxarg, frame);
+      ret = conn->rxcb(conn->rxarg, iob);
+
       if (ret == OK)
         {
           flags = 0;

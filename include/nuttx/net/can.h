@@ -78,7 +78,7 @@ extern "C"
  * Public Function Prototypes
  ****************************************************************************/
 
-typedef CODE int (*can_rx_cb_t)(FAR void *arg, FAR const void *frame);
+typedef CODE int (*can_rx_cb_t)(FAR void *arg, FAR struct iob_s *iob);
 
 /****************************************************************************
  * Name: can_set_rx_callback
