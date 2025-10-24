@@ -120,7 +120,7 @@ if SYSLOG_BUFFER
 
 config SYSLOG_BUFSIZE
 	int "Syslog buffer size"
-	default 64
+	default 196
 	---help---
 		The size of the syslog buffer in bytes.
 
