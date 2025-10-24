@@ -308,6 +308,7 @@ static void gsmmux_uart_pollin(FAR struct gsmmux_s *gsmmux)
         }
     }
 
+  uart_dmarxfree(dev);
   uart_spinunlock(dev, true, flags);
 }
 
