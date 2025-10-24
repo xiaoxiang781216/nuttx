@@ -731,6 +731,7 @@ int nxsig_dispatch(pid_t pid, FAR siginfo_t *info, bool thread)
 #ifdef HAVE_GROUP_MEMBERS
   FAR struct tcb_s *stcb = NULL;
   FAR struct task_group_s *group = NULL;
+  int ret = -ESRCH;
 
   /* Get the TCB associated with the pid */
 
@@ -762,11 +763,9 @@ int nxsig_dispatch(pid_t pid, FAR siginfo_t *info, bool thread)
            * with the current thread.
            */
 
-          if (stcb != NULL && group == this_task()->group)
+          if (group == this_task()->group)
             {
-              int ret = nxsig_tcbdispatch(stcb, info);
-              nxsched_put_tcb(stcb);
-              return ret;
+              ret = nxsig_tcbdispatch(stcb, info);
             }
         }
       else
@@ -775,29 +774,29 @@ int nxsig_dispatch(pid_t pid, FAR siginfo_t *info, bool thread)
            * group member.
            */
 
-          nxsched_put_tcb(stcb);
-          return group_signal(group, info);
+          ret = group_signal(group, info);
         }
     }
 
-  nxsched_put_tcb(stcb);
-  return -ESRCH;
+  if (stcb != NULL)
+    {
+      nxsched_put_tcb(stcb);
+    }
 
+  return ret;
 #else
   FAR struct tcb_s *stcb;
-  int ret;
+  int ret = -ESRCH;
 
   /* Get the TCB associated with the pid */
 
   stcb = nxsched_get_tcb(pid);
-  if (stcb == NULL)
+  if (stcb)
     {
-      return -ESRCH;
+      ret = nxsig_tcbdispatch(stcb, info);
+      nxsched_put_tcb(stcb);
     }
 
-  ret = nxsig_tcbdispatch(stcb, info);
-  nxsched_put_tcb(stcb);
   return ret;
-
 #endif
 }
