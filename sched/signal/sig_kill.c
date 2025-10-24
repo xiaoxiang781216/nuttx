@@ -96,13 +96,12 @@ int nxsig_kill(pid_t pid, int signo)
     {
       /* Create the siginfo structure */
 
-      info.si_signo           = signo;
-      info.si_code            = SI_USER;
-      info.si_errno           = EINTR;
-      info.si_value.sival_ptr = NULL;
+      memset(&info, 0, sizeof(siginfo_t));
+      info.si_signo = signo;
+      info.si_code  = SI_USER;
+      info.si_errno = EINTR;
 #ifdef CONFIG_SCHED_HAVE_PARENT
-      info.si_pid             = rtcb->pid;
-      info.si_status          = OK;
+      info.si_pid   = rtcb->pid;
 #endif
 
       /* Send the signal */
