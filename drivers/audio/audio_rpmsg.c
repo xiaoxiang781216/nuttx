@@ -607,7 +607,7 @@ static int audio_rpmsg_ioctl_handler(FAR struct rpmsg_endpoint *ept,
 {
   FAR struct audio_rpmsg_s *aud = ept->priv;
   FAR struct audio_rpmsg_ioctl_s *req = data;
-  int ret;
+  int ret = 0;
 
   audinfo("cmd=%" PRIu32 " arg=%" PRIu64 "\n", req->request, req->arg);
 
