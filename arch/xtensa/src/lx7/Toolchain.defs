@@ -123,6 +123,12 @@ ifeq ($(CONFIG_COVERAGE_ALL),y)
       else
         ARCHOPTIMIZATION += -fprofile-generate -fprofile-update=atomic
       endif
+    else ifeq ($(CONFIG_ARCH_TOOLCHAIN_GCC),y)
+      ifneq ($(shell find $(TOPDIR) -name "*.gcda" 2>/dev/null | head -n 1),)
+        ARCHOPTIMIZATION += -fprofile-use
+      else
+        ARCHOPTIMIZATION += -fprofile-generate -fprofile-update=atomic
+      endif
     endif
   endif
 endif

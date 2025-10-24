@@ -68,8 +68,7 @@ Navigate to:
 Supported Toolchains
 --------------------
 
-Currently, PGO support is primarily implemented for **Clang/LLVM** toolchains.
-GCC support is planned but not yet fully implemented.
+Currently, PGO support is primarily implemented for **Clang/LLVM** and **GCC** toolchains.
 
 Usage Workflow
 ==============
@@ -230,10 +229,15 @@ To start fresh:
 Limitations
 ===========
 
-- **GCC Support**: GCC PGO is planned but not fully implemented
 - **Cross-compilation**: Profile data must be collected on target or simulator
 - **Binary Size**: Instrumented binaries are larger and slower
 - **Profile Validity**: Profile data may become stale as code changes
+- **GCC Concurrency Issues**: When using GCC for PGO, the ``__gcov_indirect_call``
+  global variable has critical concurrency issues in both SMP and single-CPU
+  environments. GCC directly injects code to access this variable without protection
+  mechanisms, leading to race conditions in SMP systems and data corruption from
+  interrupt handlers in single-CPU systems. Consider using Clang/LLVM PGO instead,
+  as it does not rely on global variables for indirect call profiling
 
 Examples
 ========
