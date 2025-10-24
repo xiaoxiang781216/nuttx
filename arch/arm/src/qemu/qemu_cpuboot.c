@@ -72,6 +72,10 @@ extern uint8_t _vector_start[]; /* Beginning of vector block */
 #ifdef CONFIG_SMP
 void arm_cpu_boot(int cpu)
 {
+  /* Initialize the FPU */
+
+  arm_fpuconfig();
+
 #ifdef CONFIG_ARM_MPU
   mpu_priv_flash((uintptr_t)_stext, (uintptr_t)_etext - (uintptr_t)_stext);
 #endif
@@ -79,10 +83,6 @@ void arm_cpu_boot(int cpu)
   /* Enable SMP cache coherency for the CPU */
 
   arm_enable_smp(cpu);
-
-  /* Initialize the FPU */
-
-  arm_fpuconfig();
 
   /* Initialize the Generic Interrupt Controller (GIC) for CPUn (n != 0) */
 

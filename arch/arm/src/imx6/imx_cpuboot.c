@@ -247,13 +247,13 @@ void imx_cpu_enable(void)
 
 void arm_cpu_boot(int cpu)
 {
-  /* Enable SMP cache coherency for the CPU */
-
-  arm_enable_smp(cpu);
-
   /* Initialize the FPU */
 
   arm_fpuconfig();
+
+  /* Enable SMP cache coherency for the CPU */
+
+  arm_enable_smp(cpu);
 
   /* Initialize the Generic Interrupt Controller (GIC) for CPUn (n != 0) */
 
