@@ -53,8 +53,8 @@
 #  error "Maximum channel number exceeds. "
 #endif
 
-#define note_add(drv, note, notelen)                                         \
-  ((drv)->ops->add(drv, note, notelen))
+#define note_add(drv, note, notelen, noswitches)                             \
+  ((drv)->ops->add(drv, note, notelen, noswitches))
 #define note_start(drv, tcb)                                                 \
   ((drv)->ops->start && ((drv)->ops->start(drv, tcb), true))
 #define note_stop(drv, tcb)                                                  \
@@ -582,7 +582,7 @@ static void sched_note_one_taskname(const char *name, pid_t pid)
           note.nsa_cmn.nc_pid = pid;
         }
 
-      note_add(*driver, &note, length);
+      note_add(*driver, &note, length, false);
     }
 }
 #endif
@@ -660,7 +660,7 @@ void sched_note_add(FAR const void *data, size_t len)
 
           /* Add the note to circular buffer */
 
-          note_add(*driver, note, notelen);
+          note_add(*driver, note, notelen, false);
         }
 
       /* The note data from note rpmsg is aligned. When parsing
@@ -754,7 +754,7 @@ void sched_note_start(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, length);
+      note_add(*driver, &note, length, false);
     }
 }
 
@@ -792,7 +792,7 @@ void sched_note_stop(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nsp_cmn.nc_length);
+      note_add(*driver, &note, note.nsp_cmn.nc_length, false);
     }
 }
 
@@ -856,7 +856,7 @@ void sched_note_suspend(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nsu_cmn.nc_length);
+      note_add(*driver, &note, note.nsu_cmn.nc_length, true);
     }
 }
 
@@ -894,7 +894,7 @@ void sched_note_resume(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nre_cmn.nc_length);
+      note_add(*driver, &note, note.nre_cmn.nc_length, true);
     }
 }
 
@@ -934,7 +934,7 @@ void sched_note_cpu_start(FAR struct tcb_s *tcb, int cpu)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.ncs_cmn.nc_length);
+      note_add(*driver, &note, note.ncs_cmn.nc_length, false);
     }
 }
 
@@ -972,7 +972,7 @@ void sched_note_cpu_started(FAR struct tcb_s *tcb)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.ncs_cmn.nc_length);
+      note_add(*driver, &note, note.ncs_cmn.nc_length, false);
     }
 }
 #endif /* CONFIG_SMP */
@@ -1016,7 +1016,7 @@ void sched_note_preemption(FAR struct tcb_s *tcb, bool locked)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.npr_cmn.nc_length);
+      note_add(*driver, &note, note.npr_cmn.nc_length, true);
     }
 
   spin_unlock_irqrestore_notrace(&g_note_lock, flags);
@@ -1061,7 +1061,7 @@ void sched_note_csection(FAR struct tcb_s *tcb, bool enter)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.ncs_cmn.nc_length);
+      note_add(*driver, &note, note.ncs_cmn.nc_length, true);
     }
 }
 #endif
@@ -1120,7 +1120,7 @@ void sched_note_spinlock(FAR volatile spinlock_t *spinlock,
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nsp_cmn.nc_length);
+      note_add(*driver, &note, note.nsp_cmn.nc_length, true);
     }
 }
 #endif
@@ -1189,7 +1189,7 @@ void sched_note_syscall_enter(int nr, int argc, ...)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, length);
+      note_add(*driver, &note, length, false);
     }
 
     va_end(ap);
@@ -1234,7 +1234,7 @@ void sched_note_syscall_leave(int nr, uintptr_t result)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nsc_cmn.nc_length);
+      note_add(*driver, &note, note.nsc_cmn.nc_length, false);
     }
 }
 #endif
@@ -1276,7 +1276,7 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nih_cmn.nc_length);
+      note_add(*driver, &note, note.nih_cmn.nc_length, false);
     }
 }
 #endif
@@ -1313,7 +1313,7 @@ void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nwd_cmn.nc_length);
+      note_add(*driver, &note, note.nwd_cmn.nc_length, false);
     }
 
   leave_critical_section_notrace(flags);
@@ -1358,7 +1358,7 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
 
       /* Add the note to circular buffer */
 
-      note_add(*driver, &note, note.nhp_cmn.nc_length);
+      note_add(*driver, &note, note.nhp_cmn.nc_length, false);
     }
 }
 #endif
@@ -1402,7 +1402,7 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint32_t tag,
 
   /* Add the note to circular buffer */
 
-  note_add(driver, note, length);
+  note_add(driver, note, length, false);
   return length - SIZEOF_NOTE_EVENT(0);
 }
 
@@ -1534,7 +1534,7 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint32_t tag,
 
   /* Add the note to circular buffer */
 
-  note_add(driver, note, length);
+  note_add(driver, note, length, false);
 }
 
 void note_driver_printf_ip(FAR struct note_driver_s *driver, uint32_t tag,

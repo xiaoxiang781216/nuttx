@@ -40,7 +40,8 @@ struct noteitm_s
  ****************************************************************************/
 
 static void noteitm_add(FAR struct note_driver_s *drv,
-                        FAR const void *note, size_t len);
+                        FAR const void *buf, size_t notelen,
+                        bool noswitches);
 
 /****************************************************************************
  * Private Data
@@ -82,6 +83,7 @@ struct noteitm_s g_noteitm =
  * Input Parameters:
  *   buf    - The note buffer
  *   notelen - The buffer length
+ *   noswitches - True: Can't do context switches now.
  *
  * Returned Value:
  *   None
@@ -89,7 +91,8 @@ struct noteitm_s g_noteitm =
  ****************************************************************************/
 
 static void noteitm_add(FAR struct note_driver_s *drv,
-                        FAR const void *buf, size_t notelen)
+                        FAR const void *buf, size_t notelen,
+                        bool noswitches)
 {
   FAR struct noteitm_s *note = (FAR struct noteitm_s *)drv;
 

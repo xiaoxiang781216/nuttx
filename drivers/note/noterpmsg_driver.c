@@ -58,7 +58,8 @@ struct noterpmsg_driver_s
  ****************************************************************************/
 
 static void noterpmsg_add(FAR struct note_driver_s *driver,
-                          FAR const void *note, size_t notelen);
+                          FAR const void *note, size_t notelen,
+                          bool noswitches);
 
 /****************************************************************************
  * Private Data
@@ -202,7 +203,8 @@ static void noterpmsg_work(FAR void *priv)
 }
 
 static void noterpmsg_add(FAR struct note_driver_s *driver,
-                          FAR const void *note, size_t notelen)
+                          FAR const void *note, size_t notelen,
+                          bool noswitches)
 {
   FAR struct noterpmsg_driver_s *drv =
     (FAR struct noterpmsg_driver_s *)driver;
@@ -245,7 +247,7 @@ static void noterpmsg_add(FAR struct note_driver_s *driver,
   drv->head = noterpmsg_next(drv, drv->head, NOTE_ALIGN(notelen));
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
 
-  if (work_available(&drv->work))
+  if (!noswitches && work_available(&drv->work))
     {
       work_queue(HPWORK, &drv->work, noterpmsg_work, drv,
                  NOTE_RPMSG_WORK_DELAY);

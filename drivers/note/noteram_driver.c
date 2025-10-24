@@ -151,7 +151,8 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
 static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
                         bool setup);
 static void noteram_add(FAR struct note_driver_s *drv,
-                        FAR const void *note, size_t len);
+                        FAR const void *note, size_t len,
+                        bool noswitches);
 static void
 noteram_dump_init_context(FAR struct noteram_dump_context_s *ctx);
 static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
@@ -841,6 +842,7 @@ errout:
  * Input Parameters:
  *   note    - The note buffer
  *   notelen - The buffer length
+ *   noswitches - True: Can't do context switches now.
  *
  * Returned Value:
  *   None
@@ -851,7 +853,8 @@ errout:
  ****************************************************************************/
 
 static void noteram_add(FAR struct note_driver_s *driver,
-                        FAR const void *note, size_t notelen)
+                        FAR const void *note, size_t notelen,
+                        bool noswitches)
 {
   FAR const char *buf = note;
   FAR struct noteram_driver_s *drv = (FAR struct noteram_driver_s *)driver;
@@ -913,7 +916,8 @@ static void noteram_add(FAR struct note_driver_s *driver,
   drv->header->head = noteram_next(drv, head, NOTE_ALIGN(notelen));
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
 
-  if (drv->pfd && (noteram_unread_length(drv) >= drv->threshold))
+  if (!noswitches && drv->pfd &&
+      (noteram_unread_length(drv) >= drv->threshold))
     {
       poll_notify(&drv->pfd, 1, POLLIN);
     }
