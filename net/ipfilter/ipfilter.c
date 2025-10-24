@@ -168,6 +168,7 @@ static bool ipfilter_match_proto(FAR const struct ipfilter_entry_s *entry,
             return SPORT_MATCH(entry, NTOHS(udp->srcport)) &&
                    DPORT_MATCH(entry, NTOHS(udp->destport));
           }
+        break;
 
       case IP_PROTO_ICMP:
         if (entry->match_icmp)
@@ -175,6 +176,7 @@ static bool ipfilter_match_proto(FAR const struct ipfilter_entry_s *entry,
             FAR const struct icmp_hdr_s *icmp = l4hdr;
             return ICMP_MATCH(entry, icmp);
           }
+        break;
 
       case IP_PROTO_ICMP6:
         if (entry->match_icmp)
@@ -182,10 +184,13 @@ static bool ipfilter_match_proto(FAR const struct ipfilter_entry_s *entry,
             FAR const struct icmpv6_hdr_s *icmpv6 = l4hdr;
             return ICMP_MATCH(entry, icmpv6);
           }
+        break;
 
       default:
-        return true;
+        break;
     }
+
+  return true;
 }
 
 /****************************************************************************
