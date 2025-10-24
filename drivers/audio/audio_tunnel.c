@@ -190,7 +190,7 @@ static void audio_tunnel_deliver_buffer(FAR struct audio_tunnel_s *tunnel)
 }
 
 static void audio_tunnel_deliver_message(FAR struct audio_peer_s *peer,
-                                        int msg_id)
+                                         int msg_id)
 {
   FAR struct audio_tunnel_s *tunnel = peer->parent;
   struct audio_msg_s msg;
@@ -404,7 +404,7 @@ static int audio_tunnel_shutdown(FAR struct audio_lowerhalf_s *dev)
 
 #ifdef CONFIG_AUDIO_MULTI_SESSION
 static int audio_tunnel_start(FAR struct audio_lowerhalf_s *dev,
-                                FAR void *session)
+                              FAR void *session)
 #else
 static int audio_tunnel_start(FAR struct audio_lowerhalf_s *dev)
 #endif
@@ -487,7 +487,7 @@ static int audio_tunnel_pause(FAR struct audio_lowerhalf_s *dev)
 #ifndef CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME
 #ifdef CONFIG_AUDIO_MULTI_SESSION
 static int audio_tunnel_resume(FAR struct audio_lowerhalf_s *dev,
-                                 FAR void *session)
+                               FAR void *session)
 #else
 static int audio_tunnel_resume(FAR struct audio_lowerhalf_s *dev)
 #endif
@@ -511,7 +511,7 @@ static int audio_tunnel_resume(FAR struct audio_lowerhalf_s *dev)
  ****************************************************************************/
 
 static int audio_tunnel_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
-                                        FAR struct ap_buffer_s *apb)
+                                      FAR struct ap_buffer_s *apb)
 {
   FAR struct audio_peer_s *peer = (FAR struct audio_peer_s *)dev;
   FAR struct audio_tunnel_s *tunnel = peer->parent;
@@ -546,7 +546,11 @@ static int audio_tunnel_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
   nxmutex_lock(&tunnel->mutex);
   switch (cmd)
     {
-        /* Report our preferred buffer size and quantity */
+      case AUDIOIOC_HWRESET:
+        audio_tunnel_deliver_message(peer, AUDIO_MSG_IOERR);
+        break;
+
+      /* Report our preferred buffer size and quantity */
 
       case AUDIOIOC_GETBUFFERINFO:
         binfo = (FAR struct ap_buffer_info_s *)arg;

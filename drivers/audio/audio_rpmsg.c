@@ -317,7 +317,7 @@ static int audio_rpmsg_local_ioctl(FAR struct audio_rpmsg_s *aud, int cmd,
   nxmutex_lock(&aud->mutex);
   switch (cmd)
     {
-        /* Report our preferred buffer size and quantity */
+      /* Report our preferred buffer size and quantity */
 
       case AUDIOIOC_GETBUFFERINFO:
         memcpy((FAR void *)(uintptr_t)arg, &aud->binfo,
@@ -596,9 +596,23 @@ static int audio_rpmsg_ioctl_handler(FAR struct rpmsg_endpoint *ept,
 
   /* Deal with ioctls passed from the upper-half driver */
 
-  ret = audio_rpmsg_local_ioctl(aud, req->request,
-                                req->arglen > 0 ?
-                                (unsigned long)req->data : req->arg);
+  if (req->request == AUDIOIOC_HWRESET)
+    {
+      struct audio_msg_s msg =
+        {
+          0
+        };
+
+      msg.msg_id = AUDIO_MSG_IOERR;
+      audio_rpmsg_callback(aud, AUDIO_CALLBACK_MESSAGE, &msg);
+      ret = 0;
+    }
+  else
+    {
+      ret = audio_rpmsg_local_ioctl(aud, req->request,
+                                    req->arglen > 0 ?
+                                    (unsigned long)req->data : req->arg);
+    }
 
   return audio_rpmsg_send_response(aud, &req->header, len,
                                    ret >= 0 ? req->arglen : ret);
@@ -1173,6 +1187,8 @@ static ssize_t audio_rpmsg_ioctl_arglen(int cmd, unsigned long arg)
 {
   switch (cmd)
     {
+      case AUDIOIOC_HWRESET:
+        return 0;
       case AUDIOIOC_GETBUFFERINFO:
       case AUDIOIOC_SETBUFFERINFO:
         return sizeof(struct ap_buffer_info_s);
