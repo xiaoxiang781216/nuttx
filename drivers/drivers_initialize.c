@@ -56,6 +56,7 @@
 #include <nuttx/syslog/syslog_console.h>
 #include <nuttx/syslog/syslog_rpmsg.h>
 #include <nuttx/thermal.h>
+#include <nuttx/timers/capture.h>
 #include <nuttx/timers/ptp_clock_dummy.h>
 #include <nuttx/trace.h>
 #include <nuttx/usrsock/usrsock_rpmsg.h>
@@ -360,6 +361,10 @@ void drivers_initialize(void)
 
 #ifdef CONFIG_AUDIO_RPMSG
   audio_rpmsg_initialize();
+#endif
+
+#ifdef CONFIG_FAKE_CAPTURE
+  fake_capture_initialize(2);
 #endif
 
   drivers_trace_end();
