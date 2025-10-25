@@ -88,7 +88,7 @@ static DEFINE_PER_CPU_BMP(struct tempbuffer_s, g_tempbuffer) =
  *
  ****************************************************************************/
 
-FAR char *lib_get_tempbuffer(size_t nbytes)
+FAR void *lib_get_tempbuffer(size_t nbytes)
 {
   irqstate_t flags;
   int index;
@@ -134,12 +134,12 @@ FAR char *lib_get_tempbuffer(size_t nbytes)
  *
  ****************************************************************************/
 
-void lib_put_tempbuffer(FAR char *buffer)
+void lib_put_tempbuffer(FAR void *buffer)
 {
   irqstate_t flags;
   int index;
 
-  index = (buffer - &g_tempbuffer.buffer[0][0]) / TEMP_MAX_SIZE;
+  index = ((FAR char *)buffer - &g_tempbuffer.buffer[0][0]) / TEMP_MAX_SIZE;
   if (index >= 0 && index < CONFIG_LIBC_MAX_TEMPBUFFER)
     {
       /* Mark the corresponding bit as free */
