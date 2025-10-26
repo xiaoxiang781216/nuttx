@@ -160,7 +160,7 @@ static int nxtask_assign_pid(FAR struct tcb_s *tcb)
        */
 
       spin_unlock_irqrestore(&g_pidhashlock, flags);
-      pidhash = kmm_zalloc(g_npidhash * 2u * sizeof(*pidhash));
+      pidhash = kmm_zalloc((size_t)g_npidhash * 2u * sizeof(*pidhash));
       if (pidhash == NULL)
         {
           ret = -ENOMEM;
@@ -760,7 +760,7 @@ void nxtask_setup_name(FAR struct tcb_s *tcb, FAR const char *name)
 
   if (!name)
     {
-      name = (FAR char *)g_noname;
+      name = g_noname;
     }
 
   /* Copy the name into the TCB */
@@ -774,7 +774,7 @@ void nxtask_setup_name(FAR struct tcb_s *tcb, FAR const char *name)
           break;
         }
 
-      *dst++ = isspace(c) ? '_' : c;
+      *dst++ = isspace((int)c) ? '_' : c;
     }
 
   *dst = '\0';

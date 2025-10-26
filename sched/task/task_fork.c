@@ -97,8 +97,8 @@ static int task_setup(FAR struct tcb_s *ptcb,
 
           /* Allocate the stack for the TCB */
 
-          stack_size = (uintptr_t)ptcb->stack_base_ptr -
-                       (uintptr_t)ptcb->stack_alloc_ptr +
+          stack_size = (uintptr_t)(FAR char *)ptcb->stack_base_ptr -
+                       (uintptr_t)(FAR char *)ptcb->stack_alloc_ptr +
                        ptcb->adj_stack_size;
 
           ret = up_create_stack(child, stack_size, ttype);
