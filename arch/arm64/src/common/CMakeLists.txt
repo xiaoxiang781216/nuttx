@@ -29,7 +29,7 @@ list(APPEND SRCS arm64_nputs.c arm64_createstack.c)
 list(APPEND SRCS arm64_releasestack.c arm64_stackframe.c arm64_usestack.c)
 list(APPEND SRCS arm64_exit.c arm64_fork.c)
 list(APPEND SRCS arm64_getintstack.c arm64_registerdump.c)
-list(APPEND SRCS arm64_perf.c arm64_tcbinfo.c)
+list(APPEND SRCS arm64_perf.c arm64_tcbinfo.c arm64_cpuidlestack.c)
 
 if(NOT CONFIG_DISABLE_SIGNALS)
   list(APPEND SRCS arm64_schedulesigaction.c arm64_sigdeliver.c)
@@ -82,8 +82,11 @@ if(CONFIG_ARM64_PSCI)
   list(APPEND SRCS arm64_cpu_psci.c)
 endif()
 
+if(NOT CONFIG_UP)
+  list(APPEND SRCS arm64_cpustart.c)
+endif()
+
 if(CONFIG_SMP)
-  list(APPEND SRCS arm64_cpuidlestack.c arm64_cpustart.c)
   list(APPEND SRCS arm64_smpcall.c)
 endif()
 

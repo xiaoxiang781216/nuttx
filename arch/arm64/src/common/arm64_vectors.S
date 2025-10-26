@@ -207,7 +207,7 @@ reserved_syscall:
 #endif
 
     /* Switch to IRQ stack and save current sp on it. */
-#ifdef CONFIG_SMP
+#ifndef CONFIG_UP
     get_cpu_id x0
     ldr    x1, =(g_cpu_int_stacktop)
     lsl    x0, x0, #3
@@ -242,7 +242,7 @@ reserved_syscall:
 GTEXT(arm64_irq_handler)
 SECTION_FUNC(text, arm64_irq_handler)
     /* Switch to IRQ stack and save current sp on it. */
-#ifdef CONFIG_SMP
+#ifndef CONFIG_UP
     get_cpu_id x0
     ldr    x1, =(g_cpu_int_stacktop)
     lsl    x0, x0, #3
