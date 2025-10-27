@@ -30,6 +30,7 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/queue.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/mutex.h>
 #include <sys/param.h>
 
 #include "sim_hostalsa.h"

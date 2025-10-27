@@ -39,6 +39,7 @@
 
 #include <nuttx/audio/audio.h>
 #include <nuttx/usb/audio.h>
+#include <nuttx/mutex.h>
 
 #include "libc.h"
 

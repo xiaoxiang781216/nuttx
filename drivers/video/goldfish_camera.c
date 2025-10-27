@@ -39,6 +39,7 @@
 #include <nuttx/video/imgdata.h>
 #include <nuttx/video/video.h>
 #include <nuttx/video/v4l2_cap.h>
+#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Pre-processor Definitions

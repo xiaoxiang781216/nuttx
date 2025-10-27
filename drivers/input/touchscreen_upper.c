@@ -41,6 +41,7 @@
 #include <nuttx/list.h>
 #include <nuttx/circbuf.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Private Types

@@ -47,6 +47,7 @@
 #include <nuttx/circbuf.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/trace.h>
+#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Pre-processor definitions

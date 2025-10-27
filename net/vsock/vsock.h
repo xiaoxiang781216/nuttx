@@ -35,6 +35,7 @@
 #include <nuttx/list.h>
 #include <nuttx/net/net.h>
 #include <nuttx/virtio/virtio.h>
+#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Pre-processor Definitions
