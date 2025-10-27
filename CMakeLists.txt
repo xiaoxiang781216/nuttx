@@ -819,7 +819,7 @@ if(NOT WIN32)
   add_custom_command(
     OUTPUT System.map
     COMMAND
-      ${CMAKE_NM} nuttx | grep -v
+      ${CMAKE_NM} -C nuttx | grep -v
       '\(compiled\)\|\(\${CMAKE_C_OUTPUT_EXTENSION}$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)'
       | sort > System.map
     DEPENDS ${FINAL_TARGET})
