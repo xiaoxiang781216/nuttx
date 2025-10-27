@@ -765,10 +765,6 @@ static char *noteid[NTYPES] =
 
   "NOTE_CPU_START",       /* type = 4 */
   "NOTE_CPU_STARTED",     /* type = 5 */
-  "NOTE_CPU_PAUSE",       /* type = 6 */
-  "NOTE_CPU_PAUSED",      /* type = 7 */
-  "NOTE_CPU_RESUME",      /* type = 8 */
-  "NOTE_CPU_RESUMED",     /* type = 9 */
 
   "NOTE_PREEMPT_LOCK",    /* type = 10 */
   "NOTE_PREEMPT_UNLOCK",  /* type = 11 */
@@ -872,8 +868,6 @@ int main(int argc, char **argv)
             /* Followed by an 8-bit target CPU number */
 
             case 4: /* NOTE_CPU_START */
-            case 6: /* NOTE_CPU_PAUSE */
-            case 8: /* NOTE_CPU_RESUME */
               printf(" Target CPU%u", (unsigned int)buffer[bufndx]);
               bufndx++;
               remainder--;
@@ -910,8 +904,6 @@ int main(int argc, char **argv)
             case 1: /* NOTE_STOP */
             case 3: /* NOTE_RESUME */
             case 5: /* NOTE_CPU_STARTED */
-            case 7: /* NOTE_CPU_PAUSED */
-            case 9: /* NOTE_CPU_RESUMED */
             default:
               break;
           }

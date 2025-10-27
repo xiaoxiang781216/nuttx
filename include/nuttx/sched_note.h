@@ -140,10 +140,6 @@ enum note_type_e
   NOTE_TASKNAME,
   NOTE_CPU_START,
   NOTE_CPU_STARTED,
-  NOTE_CPU_PAUSE,
-  NOTE_CPU_PAUSED,
-  NOTE_CPU_RESUME,
-  NOTE_CPU_RESUMED,
   NOTE_PREEMPT_LOCK,
   NOTE_PREEMPT_UNLOCK,
   NOTE_CSECTION_ENTER,
@@ -259,36 +255,6 @@ struct note_cpu_start_s
 struct note_cpu_started_s
 {
   struct note_common_s ncs_cmn; /* Common note parameters */
-};
-
-/* This is the specific form of the NOTE_CPU_PAUSE note */
-
-struct note_cpu_pause_s
-{
-  struct note_common_s ncp_cmn; /* Common note parameters */
-  uint8_t ncp_target;           /* CPU being paused */
-};
-
-/* This is the specific form of the NOTE_CPU_PAUSED note */
-
-struct note_cpu_paused_s
-{
-  struct note_common_s ncp_cmn; /* Common note parameters */
-};
-
-/* This is the specific form of the NOTE_CPU_RESUME note */
-
-struct note_cpu_resume_s
-{
-  struct note_common_s ncr_cmn; /* Common note parameters */
-  uint8_t ncr_target;           /* CPU being resumed */
-};
-
-/* This is the specific form of the NOTE_CPU_RESUMED note */
-
-struct note_cpu_resumed_s
-{
-  struct note_common_s ncr_cmn; /* Common note parameters */
 };
 
 /* This is the specific form of the NOTE_PREEMPT_LOCK/UNLOCK note */
@@ -465,17 +431,9 @@ void sched_note_taskname(void);
 #if defined(CONFIG_SMP) && defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH) && defined(CONFIG_DRIVERS_NOTE)
 void sched_note_cpu_start(FAR struct tcb_s *tcb, int cpu);
 void sched_note_cpu_started(FAR struct tcb_s *tcb);
-void sched_note_cpu_pause(FAR struct tcb_s *tcb, int cpu);
-void sched_note_cpu_paused(FAR struct tcb_s *tcb);
-void sched_note_cpu_resume(FAR struct tcb_s *tcb, int cpu);
-void sched_note_cpu_resumed(FAR struct tcb_s *tcb);
 #else
 #  define sched_note_cpu_start(t,c)
 #  define sched_note_cpu_started(t)
-#  define sched_note_cpu_pause(t,c)
-#  define sched_note_cpu_paused(t)
-#  define sched_note_cpu_resume(t,c)
-#  define sched_note_cpu_resumed(t)
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_PREEMPTION) && defined(CONFIG_DRIVERS_NOTE)

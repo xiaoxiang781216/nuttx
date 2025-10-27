@@ -63,9 +63,7 @@
   ((1ULL << NOTE_START)       | (1ULL << NOTE_STOP)        | \
    (1ULL << NOTE_SUSPEND)     | (1ULL << NOTE_RESUME)      | \
    (1ULL << NOTE_TASKNAME)    | (1ULL << NOTE_CPU_START)   | \
-   (1ULL << NOTE_CPU_STARTED) | (1ULL << NOTE_CPU_PAUSE)   | \
-   (1ULL << NOTE_CPU_PAUSED)  | (1ULL << NOTE_CPU_RESUME)  | \
-   (1ULL << NOTE_CPU_RESUMED))
+   (1ULL << NOTE_CPU_STARTED))
 
 #define NOTE_FILTER_MODE_FLAG_SYSCALL                         \
   ((1ULL << NOTE_SYSCALL_ENTER) | (1ULL << NOTE_SYSCALL_LEAVE))
@@ -281,16 +279,6 @@ struct note_driver_ops_s
                          FAR struct tcb_s *tcb, int cpu);
   CODE void (*cpu_started)(FAR struct note_driver_s *drv,
                            FAR struct tcb_s *tcb);
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
-  CODE void (*cpu_pause)(FAR struct note_driver_s *drv,
-                         FAR struct tcb_s *tcb, int cpu);
-  CODE void (*cpu_paused)(FAR struct note_driver_s *drv,
-                          FAR struct tcb_s *tcb);
-  CODE void (*cpu_resume)(FAR struct note_driver_s *drv,
-                          FAR struct tcb_s *tcb, int cpu);
-  CODE void (*cpu_resumed)(FAR struct note_driver_s *drv,
-                           FAR struct tcb_s *tcb);
-#  endif
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
   CODE void (*preemption)(FAR struct note_driver_s *drv,

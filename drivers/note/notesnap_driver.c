@@ -73,16 +73,6 @@ static void notesnap_cpu_start(FAR struct note_driver_s *drv,
                                FAR struct tcb_s *tcb, int cpu);
 static void notesnap_cpu_started(FAR struct note_driver_s *drv,
                                  FAR struct tcb_s *tcb);
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
-static void notesnap_cpu_pause(FAR struct note_driver_s *drv,
-                               FAR struct tcb_s *tcb, int cpu);
-static void notesnap_cpu_paused(FAR struct note_driver_s *drv,
-                                FAR struct tcb_s *tcb);
-static void notesnap_cpu_resume(FAR struct note_driver_s *drv,
-                                FAR struct tcb_s *tcb, int cpu);
-static void notesnap_cpu_resumed(FAR struct note_driver_s *drv,
-                                 FAR struct tcb_s *tcb);
-#  endif
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
 static void notesnap_preemption(FAR struct note_driver_s *drv,
@@ -124,12 +114,6 @@ static const struct note_driver_ops_s g_notesnap_ops =
 #ifdef CONFIG_SMP
   notesnap_cpu_start,
   notesnap_cpu_started,
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
-  notesnap_cpu_pause,
-  notesnap_cpu_paused,
-  notesnap_cpu_resume,
-  notesnap_cpu_resumed,
-#  endif
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION
   notesnap_preemption,
@@ -175,10 +159,6 @@ static FAR const char *g_notesnap_type[] =
   "NOTE_RESUME",
   "NOTE_CPU_START",
   "NOTE_CPU_STARTED",
-  "NOTE_CPU_PAUSE",
-  "NOTE_CPU_PAUSED",
-  "NOTE_CPU_RESUME",
-  "NOTE_CPU_RESUMED",
   "NOTE_PREEMPT_LOCK",
   "NOTE_PREEMPT_UNLOCK",
   "NOTE_CSECTION_ENTER",
@@ -282,32 +262,6 @@ static void notesnap_cpu_started(FAR struct note_driver_s *drv,
 {
   notesnap_common(drv, tcb, NOTE_CPU_STARTED, 0);
 }
-
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
-static void notesnap_cpu_pause(FAR struct note_driver_s *drv,
-                               FAR struct tcb_s *tcb, int cpu)
-{
-  notesnap_common(drv, tcb, NOTE_CPU_PAUSE, cpu);
-}
-
-static void notesnap_cpu_paused(FAR struct note_driver_s *drv,
-                                FAR struct tcb_s *tcb)
-{
-  notesnap_common(drv, tcb, NOTE_CPU_PAUSED, 0);
-}
-
-static void notesnap_cpu_resume(FAR struct note_driver_s *drv,
-                                FAR struct tcb_s *tcb, int cpu)
-{
-  notesnap_common(drv, tcb, NOTE_CPU_RESUME, cpu);
-}
-
-static void notesnap_cpu_resumed(FAR struct note_driver_s *drv,
-                                 FAR struct tcb_s *tcb)
-{
-  notesnap_common(drv, tcb, NOTE_CPU_RESUMED, 0);
-}
-#  endif
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_PREEMPTION

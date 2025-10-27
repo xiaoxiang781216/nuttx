@@ -1250,14 +1250,6 @@ config SCHED_INSTRUMENTATION_SWITCH
 			void sched_note_suspend(FAR struct tcb_s *tcb);
 			void sched_note_resume(FAR struct tcb_s *tcb);
 
-		If CONFIG_SMP is enabled, then these additional interfaces are
-		expected:
-
-			void sched_note_cpu_pause(FAR struct tcb_s *tcb, int cpu);
-			void sched_note_cpu_paused(FAR struct tcb_s *tcb);
-			void sched_note_cpu_resume(FAR struct tcb_s *tcb, int cpu);
-			void sched_note_cpu_resumed(FAR struct tcb_s *tcb);
-
 		NOTE: These are internal OS interfaces and are called at very
 		critical locations in the OS. There is very little that can be
 		done in these interfaces.  For example, normal devices may not be
