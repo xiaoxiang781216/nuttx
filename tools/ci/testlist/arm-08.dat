@@ -10,10 +10,6 @@
 -nucleo-f302r8:ihm07m1_f32
 -nucleo-f302r8:qenco
 
-# overflowed
--b-g431b-esc1:nsh
-
-
 # Boards build by CMake
 
 CMake,nucleo-f103rb:adc
