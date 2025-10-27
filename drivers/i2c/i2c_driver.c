@@ -121,7 +121,7 @@ static const struct file_operations g_i2cdrvr_fops =
 static int i2cdrvr_open(FAR struct file *filep)
 {
   FAR struct i2c_driver_s *priv;
-  int ret;
+  int ret = 0;
 
   /* Sanity check */
 
@@ -133,11 +133,7 @@ static int i2cdrvr_open(FAR struct file *filep)
 
   /* Get exclusive access to the I2C driver state structure */
 
-  ret = nxmutex_lock(&priv->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  nxmutex_lock(&priv->lock);
 
   /* I2c master initialize */
 
@@ -169,7 +165,7 @@ out:
 static int i2cdrvr_close(FAR struct file *filep)
 {
   FAR struct i2c_driver_s *priv;
-  int ret;
+  int ret = 0;
 
   /* Sanity check */
 
@@ -181,11 +177,7 @@ static int i2cdrvr_close(FAR struct file *filep)
 
   /* Get exclusive access to the I2C driver state structure */
 
-  ret = nxmutex_lock(&priv->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  nxmutex_lock(&priv->lock);
 
   /* I2c master uninitialize */
 
@@ -263,11 +255,7 @@ static int i2cdrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   /* Get exclusive access to the I2C driver state structure */
 
-  ret = nxmutex_lock(&priv->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  nxmutex_lock(&priv->lock);
 #endif
 
   /* Process the IOCTL command */
@@ -327,7 +315,6 @@ static int i2cdrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 static int i2cdrvr_unlink(FAR struct inode *inode)
 {
   FAR struct i2c_driver_s *priv;
-  int ret;
 
   /* Sanity check */
 
@@ -339,11 +326,7 @@ static int i2cdrvr_unlink(FAR struct inode *inode)
 
   /* Get exclusive access to the I2C driver state structure */
 
-  ret = nxmutex_lock(&priv->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  nxmutex_lock(&priv->lock);
 
   /* Are there open references to the driver data structure? */
 
@@ -361,7 +344,7 @@ static int i2cdrvr_unlink(FAR struct inode *inode)
 
   priv->unlinked = true;
   nxmutex_unlock(&priv->lock);
-  return ret;
+  return OK;
 }
 #endif
 
