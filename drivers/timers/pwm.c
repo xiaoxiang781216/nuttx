@@ -158,17 +158,13 @@ static int pwm_open(FAR struct file *filep)
   FAR struct inode           *inode = filep->f_inode;
   FAR struct pwm_upperhalf_s *upper = inode->i_private;
   uint8_t                     tmp;
-  int                         ret;
+  int                         ret = OK;
 
   pwminfo("crefs: %d\n", upper->crefs);
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&upper->lock);
-  if (ret < 0)
-    {
-      goto errout;
-    }
+  nxmutex_lock(&upper->lock);
 
   /* Increment the count of references to the device.  If this the first
    * time that the driver has been opened for this device, then initialize
@@ -205,12 +201,10 @@ static int pwm_open(FAR struct file *filep)
   /* Save the new open count on success */
 
   upper->crefs = tmp;
-  ret = OK;
 
 errout_with_lock:
   nxmutex_unlock(&upper->lock);
 
-errout:
   return ret;
 }
 
@@ -226,17 +220,12 @@ static int pwm_close(FAR struct file *filep)
 {
   FAR struct inode           *inode = filep->f_inode;
   FAR struct pwm_upperhalf_s *upper = inode->i_private;
-  int                         ret;
 
   pwminfo("crefs: %d\n", upper->crefs);
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&upper->lock);
-  if (ret < 0)
-    {
-      goto errout;
-    }
+  nxmutex_lock(&upper->lock);
 
   /* Decrement the references to the driver.  If the reference count will
    * decrement to 0, then uninitialize the driver.
@@ -262,11 +251,9 @@ static int pwm_close(FAR struct file *filep)
       lower->ops->shutdown(lower);
     }
 
-  ret = OK;
   nxmutex_unlock(&upper->lock);
 
-errout:
-  return ret;
+  return OK;
 }
 
 /****************************************************************************
@@ -422,17 +409,13 @@ static int pwm_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct inode           *inode = filep->f_inode;
   FAR struct pwm_upperhalf_s *upper = inode->i_private;
   FAR struct pwm_lowerhalf_s *lower = upper->dev;
-  int                         ret;
+  int ret                           = OK;
 
   pwminfo("cmd: %d arg: %ld\n", cmd, arg);
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&upper->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  nxmutex_lock(&upper->lock);
 
   /* Handle built-in ioctl commands */
 
