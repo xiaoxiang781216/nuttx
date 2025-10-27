@@ -50,7 +50,7 @@ static bool is_vararg(const char *type)
 
 static bool is_union(const char *type)
 {
-  return strncmp(type, "union ", 6) == 0;
+  return strstr(type, "union") != NULL;
 }
 
 static const char *check_funcptr(const char *type)
