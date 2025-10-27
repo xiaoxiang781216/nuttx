@@ -5,9 +5,6 @@
 -sim:tflm
 -sim:wamr
 
-# undefined reference to `up_this_cpu'
--sim:smp
-
 # macOS doesn't support 32bit anymore(CONFIG_SIM_M32=y)
 -Darwin,sim:posix_spawn
 -Darwin,sim:rpproxy
