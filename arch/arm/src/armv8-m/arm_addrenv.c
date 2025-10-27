@@ -317,9 +317,7 @@ int up_addrenv_select(const arch_addrenv_t *addrenv)
   if (addrenv->heap)
     {
       mpu_modify_region(g_addrenv_heap_region, addrenv->heap,
-                        addrenv->heapsize,
-                        MPU_RBAR_AP_RWRW,
-                        MPU_RLAR_NONCACHEABLE);
+                        addrenv->heapsize, MPU_RBAR_AP_RWRW, 0);
     }
 #endif
 
@@ -485,8 +483,7 @@ int up_addrenv_ustackswitch(struct tcb_s *tcb)
   mpu_modify_region(g_addrenv_stack_region,
                     (uintptr_t)tcb->stack_alloc_ptr,
                     tcb->adj_stack_size + tls->tl_size,
-                    MPU_RBAR_AP_RWRW,
-                    MPU_RLAR_NONCACHEABLE);
+                    MPU_RBAR_AP_RWRW, 0);
 
   return OK;
 }
@@ -521,8 +518,7 @@ int up_addrenv_kstackswitch(struct tcb_s *tcb)
     }
 
   mpu_modify_region(g_addrenv_stack_region, start, size,
-                    MPU_RBAR_XN | MPU_RBAR_AP_RWRO,
-                    MPU_RLAR_NONCACHEABLE | MPU_RLAR_PXN);
+                    MPU_RBAR_XN | MPU_RBAR_AP_RWRO, 0);
   return OK;
 }
 #  endif
