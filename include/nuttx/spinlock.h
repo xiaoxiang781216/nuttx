@@ -109,7 +109,7 @@ DECLARE_PER_CPU_BMP(rspinlock_t, g_schedlock);
 #define spin_lock_init(l) \
   do \
     { \
-      if (sizeof(*(l)) > 0) \
+      if (sizeof(*(l)) > 0u) \
         { \
           memset((FAR void *)(l), 0, sizeof(*(l))); \
         } \
