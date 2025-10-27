@@ -231,6 +231,10 @@ config ARCH_CHIP_RV32M1
 	select ARCH_RV32
 	select ARCH_RV_ISA_M
 	select ARCH_RV_ISA_C
+	select ONESHOT
+	select ONESHOT_COUNT
+	select ONESHOT_FAST_DIVISION
+	select ALARM_ARCH
 	---help---
 		NXP RV32M1 processor (RISC-V Core with PULP extensions).
 
