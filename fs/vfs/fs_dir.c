@@ -136,6 +136,30 @@ static int open_mountpoint(FAR struct inode *inode, FAR const char *relpath,
 
   return ret;
 }
+
+/****************************************************************************
+ * Name: close_mountpoint
+ *
+ * Description:
+ *   Handle the case where the inode to be closed is within a mountpoint.
+ *
+ * Input Parameters:
+ *   inode -- the inode of the mountpoint to close
+ *   dir -- the dirent structure to be closed
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static void close_mountpoint(FAR struct inode *inode,
+                             FAR struct fs_dirent_s *dir)
+{
+  if (inode->u.i_mops != NULL && inode->u.i_mops->closedir != NULL)
+    {
+      inode->u.i_mops->closedir(inode, dir);
+    }
+}
 #endif
 
 /****************************************************************************
@@ -170,6 +194,33 @@ static int open_pseudodir(FAR struct inode *inode,
   pdir->next        = inode->i_child; /* This next node for readdir */
   inode_addref(inode->i_child);
   return 0;
+}
+
+/****************************************************************************
+ * Name: close_pseudodir
+ *
+ * Description:
+ *   Handle the case where the inode to be closed is within the top-level
+ *   pseudo-file system.
+ *
+ * Input Parameters:
+ *   dir -- the dirent structure to be closed
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static void close_pseudodir(FAR struct fs_dirent_s *dir)
+{
+  FAR struct fs_pseudodir_s *pdir = (FAR struct fs_pseudodir_s *)dir;
+
+  if (pdir->next != NULL)
+    {
+      inode_release(pdir->next);
+    }
+
+  fs_heap_free(pdir);
 }
 
 /****************************************************************************
@@ -602,12 +653,6 @@ int dir_allocate(FAR struct file *filep, FAR const char *relpath)
   FAR char *path_prefix;
   int ret;
 
-  path_prefix = lib_get_tempbuffer(PATH_MAX);
-  if (path_prefix == NULL)
-    {
-      return -ENOMEM;
-    }
-
   /* Is this a node in the pseudo filesystem? Or a mountpoint? */
 
 #ifndef CONFIG_DISABLE_MOUNTPOINT
@@ -618,9 +663,10 @@ int dir_allocate(FAR struct file *filep, FAR const char *relpath)
       ret = open_mountpoint(inode, relpath, &dir);
       if (ret < 0)
         {
-          lib_put_tempbuffer(path_prefix);
           return ret;
         }
+
+      filep->f_inode = &g_dir_inode;
     }
   else
 #endif
@@ -628,23 +674,43 @@ int dir_allocate(FAR struct file *filep, FAR const char *relpath)
       ret = open_pseudodir(inode, &dir);
       if (ret < 0)
         {
-          lib_put_tempbuffer(path_prefix);
           return ret;
         }
+
+      inode->u.i_ops = &g_dir_fileops;
+    }
+
+  path_prefix = lib_get_tempbuffer(PATH_MAX);
+  if (path_prefix == NULL)
+    {
+      ret = -ENOMEM;
+      goto errout;
     }
 
   inode_getpath(inode, path_prefix, PATH_MAX);
   ret = fs_heap_asprintf(&dir->fd_path, "%s%s/", path_prefix, relpath);
+  lib_put_tempbuffer(path_prefix);
   if (ret < 0)
     {
       dir->fd_path = NULL;
-      lib_put_tempbuffer(path_prefix);
-      return ret;
+      goto errout;
     }
 
-  filep->f_inode = &g_dir_inode;
-  filep->f_priv  = dir;
-  inode_addref(&g_dir_inode);
-  lib_put_tempbuffer(path_prefix);
+  inode_addref(filep->f_inode);
+  filep->f_priv = dir;
+  return ret;
+
+errout:
+#ifndef CONFIG_DISABLE_MOUNTPOINT
+  if (INODE_IS_MOUNTPT(inode))
+    {
+      close_mountpoint(inode, dir);
+    }
+  else
+#endif
+    {
+      close_pseudodir(dir);
+    }
+
   return ret;
 }
