@@ -121,7 +121,6 @@ static const struct file_operations g_spidrvr_fops =
 static int spidrvr_open(FAR struct file *filep)
 {
   FAR struct spi_driver_s *priv;
-  int ret;
 
   /* Sanity check */
 
@@ -133,11 +132,7 @@ static int spidrvr_open(FAR struct file *filep)
 
   /* Get exclusive access to the SPI driver state structure */
 
-  ret = nxmutex_lock(&priv->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  nxmutex_lock(&priv->lock);
 
   /* Increment the count of open references on the driver */
 
@@ -157,7 +152,6 @@ static int spidrvr_open(FAR struct file *filep)
 static int spidrvr_close(FAR struct file *filep)
 {
   FAR struct spi_driver_s *priv;
-  int ret;
 
   /* Sanity check */
 
@@ -169,11 +163,7 @@ static int spidrvr_close(FAR struct file *filep)
 
   /* Get exclusive access to the SPI driver state structure */
 
-  ret = nxmutex_lock(&priv->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  nxmutex_lock(&priv->lock);
 
   /* Decrement the count of open references on the driver */
 
@@ -239,11 +229,7 @@ static int spidrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   /* Get exclusive access to the SPI driver state structure */
 
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  ret = nxmutex_lock(&priv->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  nxmutex_lock(&priv->lock);
 #endif
 
   /* Process the IOCTL command */
@@ -288,7 +274,6 @@ static int spidrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 static int spidrvr_unlink(FAR struct inode *inode)
 {
   FAR struct spi_driver_s *priv;
-  int ret;
 
   /* Get our private data structure */
 
@@ -297,11 +282,7 @@ static int spidrvr_unlink(FAR struct inode *inode)
 
   /* Get exclusive access to the SPI driver state structure */
 
-  ret = nxmutex_lock(&priv->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  nxmutex_lock(&priv->lock);
 
   /* Are there open references to the driver data structure? */
 
@@ -319,7 +300,7 @@ static int spidrvr_unlink(FAR struct inode *inode)
 
   priv->unlinked = true;
   nxmutex_unlock(&priv->lock);
-  return ret;
+  return OK;
 }
 #endif
 
