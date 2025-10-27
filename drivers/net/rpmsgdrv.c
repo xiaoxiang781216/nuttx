@@ -232,11 +232,13 @@ static int net_rpmsg_drv_transmit(FAR struct netdev_lowerhalf_s *dev,
   uint32_t len;
   int ret;
 
-  transfer = rpmsg_get_tx_payload_buffer(&drv->ept, &len, true);
+  transfer = rpmsg_get_tx_payload_buffer(&drv->ept, &len, false);
   if (transfer == NULL)
     {
-      nwarn("WARNING: Failed to get buffer for xmit\n");
-      return -ENOMEM;
+      unsigned int count;
+      netdev_breaklock(&dev->netdev, &count);
+      transfer = rpmsg_get_tx_payload_buffer(&drv->ept, &len, true);
+      netdev_restorelock(&dev->netdev, count);
     }
 
   if (len < sizeof(*transfer) + datalen)
