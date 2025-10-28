@@ -84,6 +84,22 @@ static char g_syslog_rpmsg_buf[4096];
 
 void arm_boot(void)
 {
+  arm_fpuconfig();
+
+  /* Percpu section init */
+
+#ifdef CONFIG_PERCPU_SECTION
+  int cpu = 0;
+  for (; cpu < CONFIG_NCPUS; cpu++)
+    {
+      memcpy((void *)((uintptr_t)_sdata_percpu + PERCPU_OFFSET * cpu),
+            _ldata_percpu,
+            (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
+      memset((void *)(uintptr_t)_sbss_percpu + PERCPU_OFFSET * cpu,
+            0, (uintptr_t)_ebss_percpu - (uintptr_t)_sbss_percpu);
+    }
+#endif
+
 #ifdef CONFIG_ARM_MPU
   mpu_priv_flash((uintptr_t)_stext, (uintptr_t)_etext - (uintptr_t)_stext);
 #endif
@@ -105,8 +121,6 @@ void arm_boot(void)
 
   arm_enable_smp(0);
 #endif
-
-  arm_fpuconfig();
 
 #ifdef CONFIG_ARM_PSCI
   arm_psci_init("hvc");

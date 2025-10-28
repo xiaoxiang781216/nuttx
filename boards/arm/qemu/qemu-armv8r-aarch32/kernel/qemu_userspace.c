@@ -33,6 +33,8 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/userspace.h>
 
+#include "arm_internal.h"
+
 #if defined(CONFIG_BUILD_PROTECTED) && !defined(__KERNEL__)
 
 /****************************************************************************
@@ -43,6 +45,10 @@
 
 #ifndef CONFIG_NUTTX_USERSPACE
 #  error "CONFIG_NUTTX_USERSPACE not defined"
+#endif
+
+#ifdef CONFIG_BMP
+#  undef g_mmheap
 #endif
 
 /****************************************************************************
@@ -58,16 +64,6 @@ static struct userspace_data_s g_userspace_data =
  * Public Data
  ****************************************************************************/
 
-/* These 'addresses' of these values are setup by the linker script. */
-
-extern uint8_t _stext[];           /* Start of .text */
-extern uint8_t _etext[];           /* End_1 of .text + .rodata */
-extern const uint8_t _eronly[];    /* End+1 of read only section (.text + .rodata) */
-extern uint8_t _sdata[];           /* Start of .data */
-extern uint8_t _edata[];           /* End+1 of .data */
-extern uint8_t _sbss[];            /* Start of .bss */
-extern uint8_t _ebss[];            /* End+1 of .bss */
-
 const struct userspace_s userspace locate_data(".userspace") =
 {
   /* General memory map */
@@ -75,6 +71,14 @@ const struct userspace_s userspace locate_data(".userspace") =
   .us_entrypoint    = CONFIG_INIT_ENTRYPOINT,
   .us_textstart     = (uintptr_t)_stext,
   .us_textend       = (uintptr_t)_etext,
+#ifdef CONFIG_PERCPU_SECTION
+  .us_datasource_percpu = (uintptr_t)_ldata_percpu,
+  .us_datastart_percpu  = (uintptr_t)_sdata_percpu,
+  .us_dataend_percpu    = (uintptr_t)_edata_percpu,
+  .us_bssstart_percpu   = (uintptr_t)_sbss_percpu,
+  .us_bssend_percpu     = (uintptr_t)_ebss_percpu,
+  .us_offset_percpu     = (uintptr_t)PERCPU_OFFSET,
+#endif
   .us_datasource    = (uintptr_t)_eronly,
   .us_datastart     = (uintptr_t)_sdata,
   .us_dataend       = (uintptr_t)_edata,

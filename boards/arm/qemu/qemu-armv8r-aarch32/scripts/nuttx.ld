@@ -61,6 +61,7 @@ SECTIONS
 #endif
 
   .text : {
+      . = ALIGN(64);         /* Align for MPU */
       _stext = .;            /* Text section */
       __text_start = .;
       KEEP(*(.hyp_vectors))
@@ -106,6 +107,31 @@ SECTIONS
       . = ALIGN(4096);
       _erodata = .;
   } > kflash
+
+#ifdef CONFIG_PERCPU_SECTION
+  . = ALIGN(64);
+  _ldata_percpu = LOADADDR(.percpu_data);
+  .percpu_data : {             /* percpu Data */
+      _sdata_percpu = .;
+      *(.data..percpu)
+      . = ALIGN(8);
+      _edata_percpu = .;
+  } > ksram AT > kflash
+
+  .percpu_bss : {              /* percpu BSS */
+      _sbss_percpu = .;
+      *(.bss..percpu)
+      . = ALIGN(64);
+      _ebss_percpu = .;
+  } > ksram
+
+  _percpu_size = _ebss_percpu - _sdata_percpu;
+  _percpu_offset = _percpu_size;
+
+  .percpu_reserved : {         /* Reserved ram for percpu core-N */
+    . = . + _percpu_size * (CONFIG_NCPUS - 1);
+  } > ksram
+#endif
 
   _eronly = LOADADDR(.data);
   .data : {                    /* Data */

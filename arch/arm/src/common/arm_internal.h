@@ -207,6 +207,15 @@ EXTERN uint8_t _etdata[];          /* End+1 of .tdata */
 EXTERN uint8_t _stbss[];           /* Start of .tbss */
 EXTERN uint8_t _etbss[];           /* End+1 of .tbss */
 
+#ifdef CONFIG_PERCPU_SECTION
+EXTERN uint8_t _ldata_percpu[];    /* Start of .percpu ram */
+EXTERN uint8_t _sdata_percpu[];    /* Start of .percpu_data */
+EXTERN uint8_t _edata_percpu[];    /* End+1 of .percpu_data */
+EXTERN uint8_t _sbss_percpu[];     /* Start of .percpu_bss */
+EXTERN uint8_t _ebss_percpu[];     /* End+1 of .percpu_bss */
+EXTERN uint8_t _percpu_size[];     /* percpu size */
+#endif
+
 /* Sometimes, functions must be executed from RAM.  In this case, the
  * following macro may be used (with GCC!) to specify a function that will
  * execute from RAM.  For example,

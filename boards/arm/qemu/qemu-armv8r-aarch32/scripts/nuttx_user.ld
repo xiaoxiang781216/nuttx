@@ -62,10 +62,34 @@ SECTIONS
 
     __exidx_end = ABSOLUTE(.);
 
-    _eronly = ABSOLUTE(.);
+#ifdef CONFIG_PERCPU_SECTION
+    . = ALIGN(64);
+    _ldata_percpu = LOADADDR(.percpu_data);
+    .percpu_data : {             /* percpu Data */
+        _sdata_percpu = .;
+        *(.data..percpu)
+        . = ALIGN(8);
+        _edata_percpu = .;
+    } > usram AT > uflash
 
-    .data : {
+    .percpu_bss : {              /* percpu BSS */
+        _sbss_percpu = .;
+        *(.bss..percpu)
         . = ALIGN(64);
+        _ebss_percpu = .;
+    } > usram
+
+    _percpu_size = _ebss_percpu - _sdata_percpu;
+    _percpu_offset = _percpu_size;
+
+    .percpu_reserved : {         /* Reserved ram for percpu core-N */
+        . = . + _percpu_size * (CONFIG_NCPUS - 1);
+    } > usram
+#endif
+
+    . = ALIGN(64);
+    _eronly = LOADADDR(.data);
+    .data : {
         _sdata = ABSOLUTE(.);
         *(.data .data.*)
         *(.gnu.linkonce.d.*)

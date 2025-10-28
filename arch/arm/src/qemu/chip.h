@@ -70,7 +70,7 @@
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
+#if !defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
   .macro  cpuindex, index
   mrc  p15, 0, \index, c0, c0, 5  /* Read the MPIDR */
   and  \index, \index, #3         /* Bits 0-1=CPU ID */
@@ -86,7 +86,7 @@
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
+#if !defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
   .macro  setirqstack, tmp1, tmp2
   mrc  p15, 0, \tmp1, c0, c0, 5  /* tmp1=MPIDR */
   and  \tmp1, \tmp1, #3          /* Bits 0-1=CPU ID */
@@ -106,7 +106,7 @@
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
+#if !defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
   .macro  setfiqstack, tmp1, tmp2
   mrc  p15, 0, \tmp1, c0, c0, 5  /* tmp1=MPIDR */
   and  \tmp1, \tmp1, #3          /* Bits 0-1=CPU ID */
