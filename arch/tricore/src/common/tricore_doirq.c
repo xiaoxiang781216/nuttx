@@ -98,7 +98,7 @@ IFX_INT_WRAPPER(CONFIG_CPU_COREID)
     {
       /* Update scheduler parameters */
 
-      tcb = nxsched_switch_context(*running_task, tcb);
+      nxsched_switch_context(*running_task, tcb);
 
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously

@@ -80,7 +80,7 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
     {
       /* Update scheduler parameters */
 
-      tcb = nxsched_switch_context(rtcb, tcb);
+      nxsched_switch_context(rtcb, tcb);
 
       /* Then switch contexts */
 

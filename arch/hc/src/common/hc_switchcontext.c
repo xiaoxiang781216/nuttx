@@ -93,7 +93,7 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 #endif
       /* Update scheduler parameters */
 
-      tcb = nxsched_switch_context(rtcb, tcb);
+      nxsched_switch_context(rtcb, tcb);
 
       /* Record the new "running" task */
 

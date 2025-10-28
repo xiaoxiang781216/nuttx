@@ -124,7 +124,7 @@ static uint32_t *common_handler(int irq, uint32_t *regs)
 
       /* Update scheduler parameters */
 
-      tcb = nxsched_switch_context(*running_task, tcb);
+      nxsched_switch_context(*running_task, tcb);
 
       /* Record the new "running" task when context switch occurred.
        * g_running_tasks[] is only used by assertion logic for reporting

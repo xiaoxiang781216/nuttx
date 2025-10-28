@@ -266,7 +266,7 @@ uint32_t *arm_syscall(uint32_t *regs)
 
         /* Update scheduler parameters */
 
-        tcb = nxsched_switch_context(*running_task, tcb);
+        nxsched_switch_context(*running_task, tcb);
 
       case SYS_restore_context:
 

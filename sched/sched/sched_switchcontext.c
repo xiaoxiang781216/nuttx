@@ -50,11 +50,10 @@
  *   to   - The TCB of the task to be resumed.
  *
  * Returned Value:
- *   this_task
+ *   None
  ****************************************************************************/
 
-FAR struct tcb_s *
-nxsched_switch_context(FAR struct tcb_s *from, FAR struct tcb_s *to)
+void nxsched_switch_context(FAR struct tcb_s *from, FAR struct tcb_s *to)
 {
 #ifdef CONFIG_STACKCHECK_SOFTWARE
   if (from->xcp.regs)
@@ -103,6 +102,4 @@ nxsched_switch_context(FAR struct tcb_s *from, FAR struct tcb_s *to)
   perf_event_task_sched_out(from);
   perf_event_task_sched_in(to);
 #endif
-
-  return this_task();
 }
