@@ -244,7 +244,7 @@
 
 DECLARE_PER_CPU_SMP(FAR struct tcb_s *, g_assignedtasks);
 
-#  define current_task(cpu)          (g_assignedtasks[cpu])
+#  define current_task(cpu)          (per_cpu_var_smp(g_assignedtasks, cpu))
 #else
 #  define current_task(cpu)          ((FAR struct tcb_s *)list_readytorun()->head)
 #endif
