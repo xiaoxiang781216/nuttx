@@ -67,7 +67,7 @@ FAR char *getenv(FAR const char *name)
 
   /* Verify that a string was passed */
 
-  if (name == NULL || up_interrupt_context())
+  if (name == NULL || up_interrupt_context() || sched_idletask())
     {
       ret = -EINVAL;
       goto errout;
