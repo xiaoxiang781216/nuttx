@@ -1267,7 +1267,7 @@ static int audio_poll(FAR struct file *filep,
       if (priv->head - upper->status->tail != upper->periods)
         {
           eventset = POLLIN | POLLOUT;
-          if ((long)(priv->head - upper->status->tail) < 0)
+          if ((long)(priv->head - upper->status->tail) <= 0)
             {
               eventset |= POLLERR;
             }
@@ -1377,7 +1377,7 @@ static inline void audio_dequeuebuffer(FAR struct audio_upperhalf_s *upper,
       if (priv->fd)
         {
           eventset = POLLIN | POLLOUT;
-          if ((long)(priv->head - upper->status->tail) < 0)
+          if ((long)(priv->head - upper->status->tail) <= 0)
             {
               eventset |= POLLERR;
             }
