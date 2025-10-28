@@ -64,15 +64,18 @@ int wd_cancel(FAR struct wdog_s *wdog)
   irqstate_t flags;
   bool head;
 
+  if (wdog != NULL)
+    {
+      sched_note_wdog(NOTE_WDOG_CANCEL, (FAR void *)wdog->func,
+                      (FAR void *)(uintptr_t)wdog->expired);
+    }
+
   flags = enter_critical_section();
 
   /* Make sure that the watchdog is valid and still active. */
 
   if (wdog != NULL && WDOG_ISACTIVE(wdog))
     {
-      sched_note_wdog(NOTE_WDOG_CANCEL, (FAR void *)wdog->func,
-                      (FAR void *)(uintptr_t)wdog->expired);
-
       /* Prohibit timer interactions with the timer queue until the
        * cancellation is complete
        */
