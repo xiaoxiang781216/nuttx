@@ -346,7 +346,7 @@ static int audio_tunnel_configure(FAR struct audio_lowerhalf_s *dev,
   FAR struct audio_peer_s *peer = (struct audio_peer_s *)dev;
   FAR struct audio_tunnel_s *tunnel = peer->parent;
 
-  audinfo("ac_type: %d\n", caps->ac_type);
+  audinfo("ac_type: %" PRIu8 "\n", caps->ac_type);
 
   /* Process the configure operation */
 
@@ -363,7 +363,8 @@ static int audio_tunnel_configure(FAR struct audio_lowerhalf_s *dev,
         memcpy(&tunnel->info.codec, &caps->ac_codec,
                sizeof(caps->ac_codec));
 
-        audinfo("Audio type: %s Codec type %u %d %d %d\n",
+        audinfo("Audio type: %s Codec type %" PRIu8 " \
+                %" PRIu32 " %" PRIu8 " %" PRIu8 "\n",
                 caps->ac_type == AUDIO_TYPE_OUTPUT ? "OUTPUT" : "INPUT",
                 caps->ac_subtype,
                 tunnel->info.samplerate,
@@ -372,7 +373,7 @@ static int audio_tunnel_configure(FAR struct audio_lowerhalf_s *dev,
         break;
 
       default:
-        audinfo("default case: %d\n", caps->ac_type);
+        audinfo("default case: %" PRIu8 "\n", caps->ac_type);
         break;
     }
 
