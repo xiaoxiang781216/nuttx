@@ -339,7 +339,7 @@ static inline void nxtask_save_parent(FAR struct tcb_s *tcb, int ttype)
 
       DEBUGASSERT(atomic_read(&rtcb->group->tg_nchildren) < UINT16_MAX);
 
-      atomic64_fetch_add(&rtcb->group->tg_nchildren, 1);
+      atomic_fetch_add_relaxed(&rtcb->group->tg_nchildren, 1);
 
 #endif /* CONFIG_SCHED_CHILD_STATUS */
     }
