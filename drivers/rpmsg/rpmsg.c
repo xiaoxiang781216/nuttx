@@ -301,13 +301,15 @@ static void rpmsg_rx_worker(FAR void *arg)
   FAR struct rpmsg_work_s *work = arg;
   FAR struct rpmsg_s *rpmsg = work->rpmsg;
   FAR struct rpmsg_device *rdev;
+  rpmsg_worker_t worker = work->worker;
 
   arg = work->arg;
   rdev = rpmsg_get_rdev_by_rpmsg(rpmsg);
   metal_mutex_acquire(&rdev->lock);
   list_add_tail(&work->rpmsg->freerx, &work->work.node);
   metal_mutex_release(&rdev->lock);
-  work->worker(rpmsg, arg);
+  DEBUGASSERT(worker != NULL);
+  worker(rpmsg, arg);
 }
 
 static int rpmsg_create_wqueues(FAR struct rpmsg_wqueue_s *wqueues,
