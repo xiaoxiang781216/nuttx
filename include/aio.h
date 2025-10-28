@@ -163,8 +163,8 @@ ssize_t aio_return(FAR struct aiocb *);
 int aio_suspend(FAR const struct aiocb * const[], int,
                 FAR const struct timespec *);
 int aio_write(FAR struct aiocb *);
-int lio_listio(int, FAR struct aiocb * const[], int,
-               FAR struct sigevent *);
+int lio_listio(int, FAR struct aiocb *restrict const[restrict], int,
+               FAR struct sigevent *restrict);
 
 #undef EXTERN
 #ifdef __cplusplus
