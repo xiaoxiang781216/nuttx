@@ -127,10 +127,12 @@ static const struct file_operations g_gt9xx_fileops =
   NULL,         /* seek */
   NULL,         /* ioctl */
   NULL,         /* truncate */
-  NULL,         /* mmap */
   gt9xx_poll,   /* poll */
   NULL,         /* readv */
   NULL          /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , NULL        /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , NULL        /* unlink */
 #endif

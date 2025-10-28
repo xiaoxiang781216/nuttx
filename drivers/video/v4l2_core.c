@@ -44,8 +44,10 @@ static ssize_t v4l2_write(FAR struct file *filep,
                           FAR const char *buffer, size_t buflen);
 static int v4l2_ioctl(FAR struct file *filep,
                       int cmd, unsigned long arg);
+#ifdef CONFIG_FS_FILEMAP
 static int v4l2_mmap(FAR struct file *filep,
                      FAR struct mm_map_entry_s *map);
+#endif
 static int v4l2_poll(FAR struct file *filep,
                      FAR struct pollfd *fds, bool setup);
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
@@ -64,11 +66,13 @@ static const struct file_operations g_v4l2_fops =
   v4l2_write,              /* write */
   NULL,                    /* seek */
   v4l2_ioctl,              /* ioctl */
-  v4l2_mmap,               /* mmap */
   NULL,                    /* truncate */
   v4l2_poll,               /* poll */
   NULL,                    /* readv */
   NULL,                    /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  v4l2_mmap,               /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   v4l2_unlink,             /* unlink */
 #endif
@@ -501,6 +505,7 @@ static int v4l2_ioctl(FAR struct file *filep,
   return -ENOTTY;
 }
 
+#ifdef CONFIG_FS_FILEMAP
 static int v4l2_mmap(FAR struct file *filep,
                      FAR struct mm_map_entry_s *map)
 {
@@ -514,6 +519,7 @@ static int v4l2_mmap(FAR struct file *filep,
 
   return -ENOTSUP;
 }
+#endif
 
 static int v4l2_poll(FAR struct file *filep,
                      FAR struct pollfd *fds, bool setup)

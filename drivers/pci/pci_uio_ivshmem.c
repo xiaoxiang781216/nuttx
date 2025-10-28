@@ -98,11 +98,13 @@ static ssize_t uio_ivshmem_read(FAR struct file *filep, FAR char *buffer,
                                 size_t buflen);
 static ssize_t uio_ivshmem_write(FAR struct file *filep,
                                  FAR const char *buffer, size_t buflen);
+#ifdef CONFIG_FS_FILEMAP
 static int uio_ivshmem_unmap(FAR struct task_group_s *group,
                              FAR struct mm_map_entry_s *entry,
                              FAR void *start, size_t length);
 static int uio_ivshmem_mmap(FAR struct file *filep,
                             FAR struct mm_map_entry_s *map);
+#endif
 static int uio_ivshmem_poll(FAR struct file *filep, FAR struct pollfd *fds,
                             bool setup);
 
@@ -123,11 +125,13 @@ static const struct file_operations g_uio_ivshmem_fops =
   uio_ivshmem_write, /* write */
   NULL,              /* seek */
   NULL,              /* ioctl */
-  uio_ivshmem_mmap,  /* mmap */
   NULL,              /* truncate */
   uio_ivshmem_poll,  /* poll */
   NULL,              /* readv */
   NULL               /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , uio_ivshmem_mmap /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , NULL             /* unlink */
 #endif
@@ -287,6 +291,8 @@ static ssize_t uio_ivshmem_write(FAR struct file *filep,
   return ivshmem_control_irq(dev->dev, irq_on);
 }
 
+#ifdef CONFIG_FS_FILEMAP
+
 /****************************************************************************
  * Name: uio_ivshmem_unmap
  ****************************************************************************/
@@ -361,6 +367,7 @@ static int uio_ivshmem_mmap(FAR struct file *filep,
 
   return mm_map_add(get_current_mm(), map);
 }
+#endif
 
 /****************************************************************************
  * Name: uio_ivshmem_notify_poll

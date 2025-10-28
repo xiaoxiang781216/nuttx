@@ -179,11 +179,13 @@ const struct mountpt_operations g_rpmsgfs_operations =
   rpmsgfs_write,         /* write */
   rpmsgfs_seek,          /* seek */
   rpmsgfs_ioctl,         /* ioctl */
-  NULL,                  /* mmap */
   rpmsgfs_truncate,      /* truncate */
   NULL,                  /* poll */
   NULL,                  /* readv */
   NULL,                  /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  NULL,                  /* mmap */
+#endif
 
   rpmsgfs_sync,          /* sync */
   rpmsgfs_dup,           /* dup */

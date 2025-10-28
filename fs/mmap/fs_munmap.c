@@ -49,11 +49,13 @@
 static int file_munmap_(FAR void *start, size_t length,
                         enum mm_map_type_e type)
 {
+  int ret = -ENOSYS;
+#if defined(CONFIG_FS_FILEMAP) || defined(CONFIG_FS_RAMMAP) || \
+    defined(CONFIG_FS_ANONMAP)
   FAR struct tcb_s *tcb = this_task();
   FAR struct task_group_s *group = tcb->group;
   FAR struct mm_map_entry_s *entry = NULL;
   FAR struct mm_map_s *mm = get_current_mm();
-  int ret = OK;
 
   if (length == 0)
     {
@@ -90,6 +92,7 @@ static int file_munmap_(FAR void *start, size_t length,
 unlock:
       mm_map_unlock();
     }
+#endif
 
   return ret;
 }

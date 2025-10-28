@@ -244,14 +244,16 @@ struct file_operations
                         size_t buflen);
   CODE off_t   (*seek)(FAR struct file *filep, off_t offset, int whence);
   CODE int     (*ioctl)(FAR struct file *filep, int cmd, unsigned long arg);
-  CODE int     (*mmap)(FAR struct file *filep,
-                       FAR struct mm_map_entry_s *map);
   CODE int     (*truncate)(FAR struct file *filep, off_t length);
 
   CODE int     (*poll)(FAR struct file *filep, FAR struct pollfd *fds,
                        bool setup);
   CODE ssize_t (*readv)(FAR struct file *filep, FAR struct uio *uio);
   CODE ssize_t (*writev)(FAR struct file *filep, FAR struct uio *uio);
+#ifdef CONFIG_FS_FILEMAP
+  CODE int     (*mmap)(FAR struct file *filep,
+                       FAR struct mm_map_entry_s *map);
+#endif
 
   /* The two structures need not be common after this point */
 
@@ -316,13 +318,15 @@ struct mountpt_operations
                         size_t buflen);
   CODE off_t   (*seek)(FAR struct file *filep, off_t offset, int whence);
   CODE int     (*ioctl)(FAR struct file *filep, int cmd, unsigned long arg);
-  CODE int     (*mmap)(FAR struct file *filep,
-                       FAR struct mm_map_entry_s *map);
   CODE int     (*truncate)(FAR struct file *filep, off_t length);
   CODE int     (*poll)(FAR struct file *filep, FAR struct pollfd *fds,
                        bool setup);
   CODE ssize_t (*readv)(FAR struct file *filep, FAR struct uio *uio);
   CODE ssize_t (*writev)(FAR struct file *filep, FAR struct uio *uio);
+#ifdef CONFIG_FS_FILEMAP
+  CODE int     (*mmap)(FAR struct file *filep,
+                       FAR struct mm_map_entry_s *map);
+#endif
 
   /* The two structures need not be common after this point. The following
    * are extended methods needed to deal with the unique needs of mounted

@@ -98,7 +98,6 @@ static const struct file_operations g_timerops =
   timer_write, /* write */
   NULL,        /* seek */
   timer_ioctl, /* ioctl */
-  NULL,        /* mmap */
   NULL,        /* truncate */
   timer_poll,  /* poll */
 };

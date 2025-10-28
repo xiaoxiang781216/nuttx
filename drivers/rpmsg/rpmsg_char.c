@@ -99,7 +99,6 @@ static const struct file_operations g_rpmsg_eptdev_fops =
   rpmsg_eptdev_write, /* write */
   NULL,               /* seek */
   rpmsg_eptdev_ioctl, /* ioctl */
-  NULL,               /* mmap */
   NULL,               /* truncate */
   rpmsg_eptdev_poll,  /* poll */
 };

@@ -57,7 +57,6 @@ const struct mountpt_operations g_nxffs_operations =
   nxffs_write,       /* write */
   NULL,              /* seek -- Use f_pos in struct file */
   nxffs_ioctl,       /* ioctl */
-  NULL,              /* mmap */
 #ifdef __NO_TRUNCATE_SUPPORT__
   nxffs_truncate,    /* truncate */
 #else
@@ -66,6 +65,9 @@ const struct mountpt_operations g_nxffs_operations =
   NULL,              /* poll */
   NULL,              /* readv */
   NULL,              /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  NULL,              /* mmap */
+#endif
 
   NULL,              /* sync -- No buffered data */
   nxffs_dup,         /* dup */

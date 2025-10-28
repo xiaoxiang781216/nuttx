@@ -164,11 +164,13 @@ const struct mountpt_operations g_userfs_operations =
   userfs_write,      /* write */
   userfs_seek,       /* seek */
   userfs_ioctl,      /* ioctl */
-  NULL,              /* mmap */
   userfs_truncate,   /* truncate */
   NULL,              /* poll */
   NULL,              /* readv */
   NULL,              /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  NULL,              /* mmap */
+#endif
 
   userfs_sync,       /* sync */
   userfs_dup,        /* dup */

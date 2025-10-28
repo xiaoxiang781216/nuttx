@@ -290,11 +290,13 @@ const struct mountpt_operations g_procfs_operations =
   procfs_write,      /* write */
   NULL,              /* seek */
   procfs_ioctl,      /* ioctl */
-  NULL,              /* mmap */
   NULL,              /* truncate */
   procfs_poll,       /* poll */
   NULL,              /* readv */
   NULL,              /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  NULL,              /* mmap */
+#endif
 
   NULL,              /* sync */
   procfs_dup,        /* dup */

@@ -362,7 +362,6 @@ static const struct file_operations g_apds9922_alsfops =
   apds9922_als_write, /* write */
   NULL,               /* seek  */
   apds9922_als_ioctl, /* ioctl */
-  NULL,               /* mmap  */
   NULL,               /* truncate */
   apds9922_als_poll,  /* poll  */
 };
@@ -375,7 +374,6 @@ static const struct file_operations g_apds9922_psfops =
   apds9922_ps_write,  /* write */
   NULL,               /* seek  */
   apds9922_ps_ioctl,  /* ioctl */
-  NULL,               /* mmap  */
   NULL,               /* truncate */
   apds9922_ps_poll,   /* poll  */
 };

@@ -100,7 +100,6 @@ static const struct file_operations g_usrsockdevops =
   usrsockdev_write,   /* write */
   usrsockdev_seek,    /* seek */
   NULL,               /* ioctl */
-  NULL,               /* mmap */
   NULL,               /* truncate */
   usrsockdev_poll     /* poll */
 };

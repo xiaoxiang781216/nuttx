@@ -188,11 +188,13 @@ const struct mountpt_operations g_mnemofs_operations =
   mnemofs_write,     /* write */
   mnemofs_seek,      /* seek */
   mnemofs_ioctl,     /* ioctl */
-  NULL,              /* mmap */
   mnemofs_truncate,  /* truncate */
   NULL,              /* poll */
   NULL,              /* readv */
   NULL,              /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  NULL,              /* mmap */
+#endif
 
   mnemofs_sync,      /* sync */
   mnemofs_dup,       /* dup */

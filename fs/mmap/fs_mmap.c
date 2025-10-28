@@ -157,11 +157,13 @@ static int file_mmap_(FAR struct file *filep, FAR void *start,
    * in memory.
    */
 
+#ifdef CONFIG_FS_FILEMAP
   if (filep->f_inode &&
       filep->f_inode->u.i_ops->mmap != NULL)
     {
       ret = filep->f_inode->u.i_ops->mmap(filep, &entry);
     }
+#endif
 
   if (ret == -ENOTTY)
     {

@@ -99,11 +99,13 @@ static const struct file_operations g_i2cdrvr_fops =
   i2cdrvr_write,   /* write */
   NULL,            /* seek */
   i2cdrvr_ioctl,   /* ioctl */
-  NULL,            /* mmap */
   NULL,            /* truncate */
   NULL,            /* poll */
   NULL,            /* readv */
   NULL             /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , NULL           /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , i2cdrvr_unlink /* unlink */
 #endif

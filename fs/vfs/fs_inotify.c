@@ -124,7 +124,6 @@ static const struct file_operations g_inotify_fops =
   NULL,             /* write */
   NULL,             /* seek */
   inotify_ioctl,    /* ioctl */
-  NULL,             /* mmap */
   NULL,             /* truncate */
   inotify_poll,     /* poll */
 };

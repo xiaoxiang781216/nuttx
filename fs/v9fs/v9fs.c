@@ -125,11 +125,13 @@ const struct mountpt_operations g_v9fs_operations =
   v9fs_vfs_write,               /* write */
   v9fs_vfs_seek,                /* seek */
   v9fs_vfs_ioctl,               /* ioctl */
-  NULL,                         /* mmap */
   v9fs_vfs_truncate,            /* truncate */
   NULL,                         /* poll */
   NULL,                         /* readv */
   NULL,                         /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  NULL,                         /* mmap */
+#endif
 
   v9fs_vfs_sync,                /* sync */
   v9fs_vfs_dup,                 /* dup */

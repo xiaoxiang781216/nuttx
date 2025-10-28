@@ -124,7 +124,6 @@ static const struct file_operations g_ads7843e_fops =
   NULL,             /* write */
   NULL,             /* seek */
   ads7843e_ioctl,   /* ioctl */
-  NULL,             /* mmap */
   NULL,             /* truncate */
   ads7843e_poll     /* poll */
 };

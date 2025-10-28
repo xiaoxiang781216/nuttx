@@ -296,8 +296,10 @@ static int capture_enum_frmsize(FAR struct file *filep,
 
 static int capture_open(FAR struct file *filep);
 static int capture_close(FAR struct file *filep);
+#ifdef CONFIG_FS_FILEMAP
 static int capture_mmap(FAR struct file *filep,
                         FAR struct mm_map_entry_s *map);
+#endif
 static int capture_poll(FAR struct file *filep,
                         FAR struct pollfd *fds, bool setup);
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
@@ -354,11 +356,13 @@ static const struct file_operations g_capture_fops =
   NULL,                       /* write */
   NULL,                       /* seek */
   NULL,                       /* ioctl */
-  capture_mmap,               /* mmap */
   NULL,                       /* truncate */
   capture_poll,               /* poll */
   NULL,                       /* readv */
   NULL,                       /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  capture_mmap,               /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   capture_unlink,             /* unlink */
 #endif
@@ -1360,11 +1364,13 @@ static size_t get_bufsize(FAR video_format_t *vf)
     }
 }
 
+#ifdef CONFIG_FS_FILEMAP
 static size_t get_heapsize(FAR capture_type_inf_t *type_inf)
 {
   return type_inf->bufinf.container_size *
          get_bufsize(&type_inf->fmt[CAPTURE_FMT_MAIN]);
 }
+#endif
 
 static bool validate_clip_range(int32_t pos, uint32_t c_sz, uint16_t frm_sz)
 {
@@ -3673,6 +3679,7 @@ static int capture_close(FAR struct file *filep)
   return OK;
 }
 
+#ifdef CONFIG_FS_FILEMAP
 static int capture_mmap(FAR struct file *filep,
                         FAR struct mm_map_entry_s *map)
 {
@@ -3699,6 +3706,7 @@ static int capture_mmap(FAR struct file *filep,
 
   return ret;
 }
+#endif
 
 static int capture_poll(FAR struct file *filep,
                         FAR struct pollfd *fds, bool setup)

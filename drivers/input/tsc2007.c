@@ -211,7 +211,6 @@ static const struct file_operations g_tsc2007_fops =
   NULL,            /* write */
   NULL,            /* seek */
   tsc2007_ioctl,   /* ioctl */
-  NULL,            /* mmap */
   NULL,            /* truncate */
   tsc2007_poll     /* poll */
 };

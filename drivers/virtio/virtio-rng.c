@@ -88,17 +88,6 @@ static const struct file_operations g_virtio_rng_ops =
   NULL,            /* open */
   NULL,            /* close */
   virtio_rng_read, /* read */
-  NULL,            /* write */
-  NULL,            /* seek */
-  NULL,            /* ioctl */
-  NULL,            /* mmap */
-  NULL,            /* truncate */
-  NULL,            /* poll */
-  NULL,            /* readv */
-  NULL,            /* writev */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  NULL,            /* unlink */
-#endif
 };
 
 static DEFINE_PER_CPU_BMP(int, g_virtio_rng_idx);

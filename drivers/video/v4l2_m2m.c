@@ -101,8 +101,10 @@ typedef struct codec_mng_s codec_mng_t;
 
 static int codec_open(FAR struct file *filep);
 static int codec_close(FAR struct file *filep);
+#ifdef CONFIG_FS_FILEMAP
 static int codec_mmap(FAR struct file *filep,
                       FAR struct mm_map_entry_s *map);
+#endif
 static int codec_poll(FAR struct file *filep,
                       FAR struct pollfd *fds, bool setup);
 
@@ -213,9 +215,13 @@ static const struct file_operations g_codec_fops =
   NULL,                  /* write */
   NULL,                  /* seek */
   NULL,                  /* ioctl */
-  codec_mmap,            /* mmap */
   NULL,                  /* truncate */
   codec_poll,            /* poll */
+  NULL,                  /* readv */
+  NULL,                  /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  codec_mmap,            /* mmap */
+#endif
 };
 
 /****************************************************************************
@@ -1038,6 +1044,7 @@ static int codec_close(FAR struct file *filep)
   return OK;
 }
 
+#ifdef CONFIG_FS_FILEMAP
 static int codec_munmap(FAR struct task_group_s *group,
                         FAR struct mm_map_entry_s *entry,
                         FAR void *start, size_t length)
@@ -1089,6 +1096,7 @@ static int codec_mmap(FAR struct file *filep,
 
   return ret;
 }
+#endif
 
 static int codec_poll(FAR struct file *filep,
                       FAR struct pollfd *fds, bool setup)

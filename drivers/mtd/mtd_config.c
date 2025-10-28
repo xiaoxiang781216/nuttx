@@ -123,7 +123,6 @@ static const struct file_operations g_mtdconfig_fops =
   NULL,            /* write */
   NULL,            /* seek */
   mtdconfig_ioctl, /* ioctl */
-  NULL,            /* mmap */
   NULL,            /* truncate */
   mtdconfig_poll   /* poll */
 };

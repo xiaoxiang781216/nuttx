@@ -138,11 +138,13 @@ static const struct file_operations g_spislavefops =
   spi_slave_write,              /* write */
   NULL,                         /* seek */
   NULL,                         /* ioctl */
-  NULL,                         /* mmap */
   NULL,                         /* truncate */
   spi_slave_poll,               /* poll */
   NULL,                         /* readv */
   NULL                          /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , NULL                        /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , spi_slave_unlink            /* unlink */
 #endif

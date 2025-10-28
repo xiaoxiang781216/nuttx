@@ -178,7 +178,6 @@ static const struct file_operations g_noteram_fops =
   NULL,          /* write */
   NULL,          /* seek */
   noteram_ioctl, /* ioctl */
-  NULL,          /* mmap */
   NULL,          /* truncate */
   noteram_poll,  /* poll */
 };

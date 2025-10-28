@@ -142,7 +142,6 @@ static const struct file_operations g_canops =
   can_write, /* write */
   NULL,      /* seek */
   can_ioctl, /* ioctl */
-  NULL,      /* mmap */
   NULL,      /* truncate */
   can_poll   /* poll */
 };

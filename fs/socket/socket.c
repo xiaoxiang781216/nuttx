@@ -53,8 +53,10 @@ static ssize_t sock_file_write(FAR struct file *filep,
                                FAR const char *buffer, size_t buflen);
 static int sock_file_ioctl(FAR struct file *filep, int cmd,
                            unsigned long arg);
+#ifdef CONFIG_FS_FILEMAP
 static int sock_file_mmap(FAR struct file *filep,
                           FAR struct mm_map_entry_s *map);
+#endif
 static int sock_file_poll(FAR struct file *filep, struct pollfd *fds,
                           bool setup);
 static int sock_file_truncate(FAR struct file *filep, off_t length);
@@ -75,11 +77,13 @@ static const struct file_operations g_sock_fileops =
   sock_file_write,    /* write */
   NULL,               /* seek */
   sock_file_ioctl,    /* ioctl */
-  sock_file_mmap,     /* mmap */
   sock_file_truncate, /* truncate */
   sock_file_poll,     /* poll */
   sock_file_readv,    /* readv */
   sock_file_writev,   /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  sock_file_mmap,     /* mmap */
+#endif
 };
 
 static DEFINE_PER_CPU_BMP(struct inode, g_sock_inode) =
@@ -148,11 +152,13 @@ static int sock_file_ioctl(FAR struct file *filep, int cmd,
   return psock_ioctl(filep->f_priv, cmd, arg);
 }
 
+#ifdef CONFIG_FS_FILEMAP
 static int sock_file_mmap(FAR struct file *filep,
                           FAR struct mm_map_entry_s *map)
 {
   return psock_mmap(filep->f_priv, map);
 }
+#endif
 
 static int sock_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
                           bool setup)

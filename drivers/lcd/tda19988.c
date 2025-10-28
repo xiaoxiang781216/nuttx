@@ -173,11 +173,13 @@ static const struct file_operations g_tda19988_fops =
   tda19988_write,    /* write */
   tda19988_seek,     /* seek */
   tda19988_ioctl,    /* ioctl */
-  NULL,              /* mmap */
   NULL,              /* truncate */
   tda19988_poll,     /* poll */
   NULL,              /* readv */
   NULL               /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , NULL             /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , tda19988_unlink  /* unlink */
 #endif

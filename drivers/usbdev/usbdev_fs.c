@@ -169,7 +169,6 @@ static const struct file_operations g_usbdev_fs_fops =
   usbdev_fs_write, /* write */
   NULL,            /* seek */
   NULL,            /* ioctl */
-  NULL,            /* mmap */
   NULL,            /* truncate */
   usbdev_fs_poll   /* poll */
 };

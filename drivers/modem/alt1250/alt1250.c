@@ -101,7 +101,6 @@ static const struct file_operations g_alt1250fops =
   NULL,          /* write */
   NULL,          /* seek */
   alt1250_ioctl, /* ioctl */
-  NULL,          /* mmap */
   NULL,          /* truncate */
   alt1250_poll,  /* poll */
 };

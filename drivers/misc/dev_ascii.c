@@ -60,7 +60,6 @@ static const struct file_operations g_devascii_fops =
   devascii_write, /* write */
   NULL,           /* seek */
   NULL,           /* ioctl */
-  NULL,           /* mmap */
   NULL,           /* truncate */
   devascii_poll   /* poll */
 };

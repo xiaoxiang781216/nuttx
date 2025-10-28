@@ -138,7 +138,6 @@ static const struct file_operations g_pci_ep_test_fops =
   NULL,                     /* write */
   NULL,                     /* seek */
   pci_ep_test_ioctl,        /* ioctl */
-  NULL,                     /* mmap */
 };
 
 static int g_pci_ep_idr = 0;

@@ -88,7 +88,6 @@ static const struct file_operations g_mouse_fops =
   mouse_write,    /* write */
   NULL,           /* seek */
   mouse_ioctl,    /* ioctl */
-  NULL,           /* mmap */
   NULL,           /* truncate */
   mouse_poll      /* poll */
 };

@@ -51,12 +51,14 @@ static int shmfs_truncate(FAR struct file *filep, off_t length);
 static int shmfs_unlink(FAR struct inode *inode);
 #endif
 
+#ifdef CONFIG_FS_FILEMAP
 static int shmfs_mmap(FAR struct file *filep,
                       FAR struct mm_map_entry_s *entry);
 static int shmfs_munmap(FAR struct task_group_s *group,
                         FAR struct mm_map_entry_s *entry,
                         FAR void *start,
                         size_t length);
+#endif
 
 /****************************************************************************
  * Public Data
@@ -70,11 +72,13 @@ const struct file_operations g_shmfs_operations =
   shmfs_write,      /* write */
   NULL,             /* seek */
   NULL,             /* ioctl */
-  shmfs_mmap,       /* mmap */
   shmfs_truncate,   /* truncate */
   NULL,             /* poll */
   NULL,             /* readv */
   NULL,             /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  shmfs_mmap,       /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   shmfs_unlink      /* unlink */
 #endif
@@ -266,6 +270,7 @@ static int shmfs_unlink(FAR struct inode *inode)
 }
 #endif
 
+#ifdef CONFIG_FS_FILEMAP
 /****************************************************************************
  * Name: shmfs_map_object
  ****************************************************************************/
@@ -462,3 +467,4 @@ static int shmfs_munmap(FAR struct task_group_s *group,
 
   return ret;
 }
+#endif /* CONFIG_FS_FILEMAP */

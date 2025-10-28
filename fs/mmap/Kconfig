@@ -3,6 +3,12 @@
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
 
+config FS_FILEMAP
+	bool "File mmap support"
+	default !DEFAULT_SMALL
+	---help---
+		Include support for mmap() and munmap()
+
 config FS_RAMMAP
 	bool "File mapping emulation"
 	default n

@@ -68,8 +68,10 @@ static ssize_t devmem_read(FAR struct file *filep, FAR char *buffer,
 static ssize_t devmem_write(FAR struct file *filep, FAR const char *buffer,
                             size_t buflen);
 static off_t   devmem_seek(FAR struct file *filep, off_t offset, int whence);
+#ifdef CONFIG_FS_FILEMAP
 static int     devmem_mmap(FAR struct file *filep,
                            FAR struct mm_map_entry_s *map);
+#endif
 
 /****************************************************************************
  * Private Data
@@ -83,7 +85,13 @@ static const struct file_operations g_devmem_fops =
   devmem_write,          /* write */
   devmem_seek,           /* seek */
   NULL,                  /* ioctl */
-  devmem_mmap,           /* mmap */
+  NULL,                  /* truncate */
+  NULL,                  /* poll */
+  NULL,                  /* readv */
+  NULL                   /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , devmem_mmap          /* mmap */
+#endif
 };
 
 /****************************************************************************
@@ -191,6 +199,7 @@ static off_t devmem_seek(FAR struct file *filep, off_t offset, int whence)
  * Name: devmem_mmap
  ****************************************************************************/
 
+#ifdef CONFIG_FS_FILEMAP
 static int devmem_mmap(FAR struct file *filep,
                        FAR struct mm_map_entry_s *map)
 {
@@ -218,6 +227,7 @@ static int devmem_mmap(FAR struct file *filep,
 
   return -EINVAL;
 }
+#endif
 
 /****************************************************************************
  * Public Functions

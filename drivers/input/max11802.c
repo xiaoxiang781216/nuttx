@@ -117,7 +117,6 @@ static const struct file_operations g_max11802_fops =
   NULL,             /* write */
   NULL,             /* seek */
   max11802_ioctl,   /* ioctl */
-  NULL,             /* mmap */
   NULL,             /* truncate */
   max11802_poll     /* poll */
 };

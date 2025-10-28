@@ -88,14 +88,11 @@ static const struct file_operations g_usensor_fops =
   usensor_write, /* write */
   NULL,          /* seek  */
   usensor_ioctl, /* ioctl */
-  NULL,          /* mmap */
-  NULL,          /* truncate */
-  NULL,          /* poll  */
 };
 
 static const struct sensor_ops_s g_usensor_ops =
 {
-  .get_info       = usensor_get_info,
+  .get_info = usensor_get_info,
 };
 
 /****************************************************************************

@@ -127,8 +127,10 @@ static ssize_t fb_write(FAR struct file *filep, FAR const char *buffer,
                         size_t buflen);
 static off_t   fb_seek(FAR struct file *filep, off_t offset, int whence);
 static int     fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
+#ifdef CONFIG_FS_FILEMAP
 static int     fb_mmap(FAR struct file *filep,
                        FAR struct mm_map_entry_s *map);
+#endif
 static int     fb_poll(FAR struct file *filep, FAR struct pollfd *fds,
                        bool setup);
 static int     fb_get_panelinfo(FAR struct fb_chardev_s *fb,
@@ -145,7 +147,7 @@ static void    fb_sem_post(FAR struct fb_chardev_s *fb, int overlay);
 static void    fb_sem_reset(FAR struct fb_chardev_s *fb, int overlay);
 #endif
 
-#ifdef CONFIG_BUILD_KERNEL
+#if defined(CONFIG_BUILD_KERNEL) && defined(CONFIG_FS_FILEMAP)
 static int     fb_munmap(FAR struct task_group_s *group,
                          FAR struct mm_map_entry_s *entry,
                          FAR void *start, size_t length);
@@ -163,9 +165,13 @@ static const struct file_operations g_fb_fops =
   fb_write,      /* write */
   fb_seek,       /* seek */
   fb_ioctl,      /* ioctl */
-  fb_mmap,       /* mmap */
   NULL,          /* truncate */
-  fb_poll        /* poll */
+  fb_poll,       /* poll */
+  NULL,          /* readv */
+  NULL           /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , fb_mmap      /* mmap */
+#endif
 };
 
 /****************************************************************************
@@ -1179,7 +1185,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   return ret;
 }
 
-#ifdef CONFIG_BUILD_KERNEL
+#if defined(CONFIG_BUILD_KERNEL) && defined(CONFIG_FS_FILEMAP)
 static int fb_munmap(FAR struct task_group_s *group,
                      FAR struct mm_map_entry_s *entry,
                      FAR void *start, size_t length)
@@ -1195,6 +1201,7 @@ static int fb_munmap(FAR struct task_group_s *group,
 }
 #endif
 
+#ifdef CONFIG_FS_FILEMAP
 static int fb_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 {
   FAR struct inode *inode;
@@ -1240,6 +1247,7 @@ static int fb_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 
   return -EINVAL;
 }
+#endif
 
 /****************************************************************************
  * Name: fb_poll

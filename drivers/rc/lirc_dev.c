@@ -108,7 +108,6 @@ static const struct file_operations g_lirc_fops =
   lirc_write,  /* write */
   NULL,        /* seek */
   lirc_ioctl,  /* ioctl */
-  NULL,        /* mmap */
   NULL,        /* truncate */
   lirc_poll    /* poll */
 };

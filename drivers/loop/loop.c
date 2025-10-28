@@ -57,7 +57,6 @@ static const struct file_operations g_loop_fops =
   NULL,          /* write */
   NULL,          /* seek */
   loop_ioctl,    /* ioctl */
-  NULL,          /* mmap */
   NULL,          /* truncate */
   NULL,          /* poll */
   loop_readv,    /* readv */

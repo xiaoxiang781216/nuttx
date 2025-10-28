@@ -121,11 +121,13 @@ const struct mountpt_operations g_zipfs_operations =
   NULL,                /* write */
   zipfs_seek,          /* seek */
   NULL,                /* ioctl */
-  NULL,                /* mmap */
   NULL,                /* truncate */
   NULL,                /* poll */
   NULL,                /* readv */
   NULL,                /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  NULL,                /* mmap */
+#endif
   NULL,                /* sync */
   zipfs_dup,           /* dup */
   zipfs_fstat,         /* fstat */

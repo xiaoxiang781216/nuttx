@@ -175,9 +175,6 @@ static const struct file_operations g_mtdlog_fops =
   mtdlog_write, /* Write */
   NULL,         /* Seek */
   mtdlog_ioctl, /* Ioctl */
-  NULL,         /* Truncate */
-  NULL,         /* Mmap */
-  NULL          /* Poll */
 };
 
 /****************************************************************************

@@ -461,7 +461,6 @@ static const struct file_operations g_usbdevfops =
   cdcmbim_write, /* write */
   NULL,          /* seek */
   NULL,          /* ioctl */
-  NULL,          /* mmap */
   NULL,          /* truncate */
   cdcmbim_poll   /* poll */
 };

@@ -301,9 +301,6 @@ long sysconf(int name)
       case _SC_SEMAPHORES:
         return _POSIX_SEMAPHORES;
 
-      case _SC_SHARED_MEMORY_OBJECTS:
-        return _POSIX_SHARED_MEMORY_OBJECTS;
-
       case _SC_SYNCHRONIZED_IO:
         return _POSIX_SYNCHRONIZED_IO;
 
@@ -326,9 +323,6 @@ long sysconf(int name)
 
       case _SC_THREAD_PROCESS_SHARED:
         return _POSIX_THREAD_PROCESS_SHARED;
-
-      case _SC_MAPPED_FILES:
-        return _POSIX_MAPPED_FILES;
 
       case _SC_THREAD_DESTRUCTOR_ITERATIONS:
         return _POSIX_THREAD_DESTRUCTOR_ITERATIONS;
@@ -353,6 +347,12 @@ long sysconf(int name)
 
       case _SC_THREADS:
         return _POSIX_THREADS;
+
+      case _SC_MAPPED_FILES:
+        return _POSIX_VERSION;
+
+      case _SC_SHARED_MEMORY_OBJECTS:
+        return _POSIX_VERSION;
 
       default:
 #if 0 /* Assume valid but not implemented for the time being */

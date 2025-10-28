@@ -453,7 +453,6 @@ static const struct file_operations g_sx127x_fops =
   sx127x_write,   /* write */
   NULL,           /* seek */
   sx127x_ioctl,   /* ioctl */
-  NULL,           /* mmap */
   NULL,           /* truncate */
   sx127x_poll     /* poll */
 };

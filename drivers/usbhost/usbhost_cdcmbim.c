@@ -353,7 +353,6 @@ static const struct file_operations g_cdcwdm_fops =
   cdcwdm_write,  /* write */
   NULL,          /* seek */
   NULL,          /* ioctl */
-  NULL,          /* mmap */
   NULL,          /* truncate */
   cdcwdm_poll    /* poll */
 };

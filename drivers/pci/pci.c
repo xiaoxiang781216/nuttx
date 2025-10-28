@@ -149,7 +149,6 @@ static const struct file_operations g_pci_fops =
   NULL,                  /* write */
   NULL,                  /* seek */
   pci_ioctl,             /* ioctl */
-  NULL,                  /* mmap */
 };
 
 /****************************************************************************

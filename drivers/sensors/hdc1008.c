@@ -163,11 +163,13 @@ static const struct file_operations g_hdc1008fops =
   hdc1008_write,    /* write */
   NULL,             /* seek */
   hdc1008_ioctl,    /* ioctl */
-  NULL,             /* mmap */
   NULL,             /* truncate */
   NULL,             /* poll */
   NULL,             /* readv */
   NULL              /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , NULL            /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , hdc1008_unlink  /* unlink */
 #endif

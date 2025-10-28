@@ -76,12 +76,14 @@ static ssize_t pseudofile_read(FAR struct file *filep, FAR char *buffer,
                                size_t buflen);
 static off_t   pseudofile_seek(FAR struct file *filep, off_t offset,
                                int whence);
+#ifdef CONFIG_FS_FILEMAP
 static int     pseudofile_mmap(FAR struct file *filep,
                                FAR struct mm_map_entry_s *map);
 static int     pseudofile_munmap(FAR struct task_group_s *group,
                                  FAR struct mm_map_entry_s *map,
                                  FAR void *start,
                                  size_t length);
+#endif
 static int     pseudofile_truncate(FAR struct file *filep, off_t length);
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
 static int     pseudofile_unlink(FAR struct inode *inode);
@@ -99,11 +101,13 @@ static const struct file_operations g_pseudofile_ops =
   pseudofile_write,    /* write */
   pseudofile_seek,     /* seek */
   NULL,                /* ioctl */
-  pseudofile_mmap,     /* mmap */
   pseudofile_truncate, /* truncate */
   NULL,                /* poll */
   NULL,                /* readv */
   NULL,                /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  pseudofile_mmap,     /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   pseudofile_unlink,   /* unlink */
 #endif
@@ -331,6 +335,7 @@ static off_t pseudofile_seek(FAR struct file *filep, off_t offset,
   return offset;
 }
 
+#ifdef CONFIG_FS_FILEMAP
 static int pseudofile_mmap(FAR struct file *filep,
                            FAR struct mm_map_entry_s *map)
 {
@@ -398,6 +403,7 @@ static int pseudofile_munmap(FAR struct task_group_s *group,
 
   return ret;
 }
+#endif
 
 static int pseudofile_truncate(FAR struct file *filep, off_t length)
 {

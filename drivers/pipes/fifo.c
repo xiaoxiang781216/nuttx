@@ -49,11 +49,13 @@ static const struct file_operations g_fifo_fops =
   pipecommon_write,    /* write */
   NULL,                /* seek */
   pipecommon_ioctl,    /* ioctl */
-  NULL,                /* mmap */
   NULL,                /* truncate */
   pipecommon_poll,     /* poll */
   NULL,                /* readv */
   NULL                 /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , NULL               /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , pipecommon_unlink  /* unlink */
 #endif

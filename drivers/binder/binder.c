@@ -690,6 +690,7 @@ static int poll_wake_function(FAR void * arg, unsigned mode)
   return ret;
 }
 
+#ifdef CONFIG_FS_FILEMAP
 static int binder_munmap(FAR struct task_group_s *group,
                          FAR struct mm_map_entry_s *entry,
                          FAR void *start, size_t length)
@@ -722,6 +723,7 @@ static int binder_mmap(FAR struct file *filep,
 
   return 0;
 }
+#endif
 
 static int binder_poll(FAR struct file *filp,
                        FAR struct pollfd *fds,
@@ -989,9 +991,13 @@ static const struct file_operations g_binder_fops =
   binder_write,
   NULL,
   binder_ioctl,
-  binder_mmap,
   NULL,
   binder_poll,
+  NULL,
+  NULL,
+#ifdef CONFIG_FS_FILEMAP
+  binder_mmap,
+#endif
 };
 
 /****************************************************************************

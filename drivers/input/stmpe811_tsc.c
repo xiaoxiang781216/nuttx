@@ -127,7 +127,6 @@ static const struct file_operations g_stmpe811fops =
   NULL,             /* write */
   NULL,             /* seek */
   stmpe811_ioctl,   /* ioctl */
-  NULL,             /* mmap */
   NULL,             /* truncate */
   stmpe811_poll     /* poll */
 };

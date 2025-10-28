@@ -431,7 +431,6 @@ int safety_register(FAR struct safety_lowerhalf_s *lower,
     NULL,           /* write */
     NULL,           /* seek  */
     safety_ioctl,   /* ioctl */
-    NULL,           /* mmap */
     NULL,           /* truncate */
     safety_poll     /* poll  */
   };

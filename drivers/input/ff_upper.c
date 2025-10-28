@@ -92,7 +92,6 @@ static const struct file_operations g_ff_fops =
   ff_write, /* write */
   NULL,     /* seek */
   ff_ioctl, /* ioctl */
-  NULL,     /* mmap */
   NULL,     /* truncate */
   NULL      /* poll */
 };

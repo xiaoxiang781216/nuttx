@@ -200,11 +200,13 @@ const struct mountpt_operations g_nfs_operations =
   nfs_write,                    /* write */
   nfs_seek,                     /* seek */
   NULL,                         /* ioctl */
-  NULL,                         /* mmap */
   nfs_truncate,                 /* truncate */
   NULL,                         /* poll */
   NULL,                         /* readv */
   NULL,                         /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  NULL,                         /* mmap */
+#endif
 
   nfs_sync,                     /* sync */
   nfs_dup,                      /* dup */

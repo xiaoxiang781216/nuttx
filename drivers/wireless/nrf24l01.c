@@ -241,7 +241,6 @@ static const struct file_operations g_nrf24l01_fops =
   nrf24l01_write,   /* write */
   NULL,             /* seek */
   nrf24l01_ioctl,   /* ioctl */
-  NULL,             /* mmap */
   NULL,             /* truncate */
   nrf24l01_poll     /* poll */
 };

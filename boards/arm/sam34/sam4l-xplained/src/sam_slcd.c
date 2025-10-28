@@ -289,7 +289,6 @@ static const struct file_operations g_slcdops =
   slcd_write,    /* write */
   NULL,          /* seek */
   slcd_ioctl,    /* ioctl */
-  NULL,          /* mmap */
   NULL,          /* truncate */
   slcd_poll      /* poll */
 };

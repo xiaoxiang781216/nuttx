@@ -77,8 +77,10 @@ static ssize_t romfs_read(FAR struct file *filep, FAR char *buffer,
 static off_t   romfs_seek(FAR struct file *filep, off_t offset, int whence);
 static int     romfs_ioctl(FAR struct file *filep, int cmd,
                            unsigned long arg);
+#ifdef CONFIG_FS_FILEMAP
 static int     romfs_mmap(FAR struct file *filep,
                           FAR struct mm_map_entry_s *map);
+#endif
 
 static int     romfs_dup(FAR const struct file *oldp,
                          FAR struct file *newp);
@@ -125,11 +127,13 @@ const struct mountpt_operations g_romfs_operations =
   NULL,            /* write */
   romfs_seek,      /* seek */
   romfs_ioctl,     /* ioctl */
-  romfs_mmap,      /* mmap */
   NULL,            /* truncate */
   NULL,            /* poll */
   NULL,            /* readv */
   NULL,            /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  romfs_mmap,      /* mmap */
+#endif
 
   NULL,            /* sync */
   romfs_dup,       /* dup */
@@ -627,7 +631,8 @@ static int romfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   return -ENOTTY;
 }
 
-#if defined(CONFIG_BUILD_KERNEL) && defined(CONFIG_ARCH_VMA_MAPPING)
+#if defined(CONFIG_FS_FILEMAP) && defined(CONFIG_BUILD_KERNEL) && \
+    defined(CONFIG_ARCH_VMA_MAPPING)
 static int romfs_munmap(FAR struct task_group_s *group,
                         FAR struct mm_map_entry_s *entry,
                         FAR void *start, size_t length)
@@ -643,6 +648,7 @@ static int romfs_munmap(FAR struct task_group_s *group,
 }
 #endif
 
+#ifdef CONFIG_FS_FILEMAP
 static int romfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 {
   FAR struct romfs_mountpt_s *rm;
@@ -665,7 +671,8 @@ static int romfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
       map->length != 0 && map->offset + map->length <= rf->rf_size)
     {
       map->vaddr  = rm->rm_xipbase + rf->rf_startoffset + map->offset;
-#if defined(CONFIG_BUILD_KERNEL) && defined(CONFIG_ARCH_VMA_MAPPING)
+#if defined(CONFIG_FS_FILEMAP) && defined(CONFIG_BUILD_KERNEL) && \
+    defined(CONFIG_ARCH_VMA_MAPPING)
       map->vaddr  = vm_map_region(get_current_mm(), (uintptr_t)map->vaddr,
                                   rf->rf_size);
       map->length = rf->rf_size;
@@ -677,6 +684,7 @@ static int romfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 
   return -ENOTTY;
 }
+#endif
 
 /****************************************************************************
  * Name: romfs_dup

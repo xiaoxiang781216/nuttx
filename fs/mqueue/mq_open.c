@@ -64,7 +64,6 @@ static const struct file_operations g_nxmq_fileops =
   NULL,             /* write */
   NULL,             /* seek */
   NULL,             /* ioctl */
-  NULL,             /* mmap */
   NULL,             /* truncate */
   nxmq_file_poll    /* poll */
 };

@@ -179,7 +179,6 @@ static const struct file_operations g_mtdconfig_fops =
   NULL,            /* Seek */
   mtdconfig_ioctl, /* Ioctl */
   NULL,            /* Truncate */
-  NULL,            /* Mmap */
   mtdconfig_poll   /* Poll */
 };
 

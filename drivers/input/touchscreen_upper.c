@@ -97,7 +97,6 @@ static const struct file_operations g_touch_fops =
   touch_write,    /* write */
   NULL,           /* seek */
   touch_ioctl,    /* ioctl */
-  NULL,           /* mmap */
   NULL,           /* truncate */
   touch_poll      /* poll */
 };

@@ -80,11 +80,13 @@ const struct file_operations g_bch_fops =
   bch_write,   /* write */
   bch_seek,    /* seek */
   bch_ioctl,   /* ioctl */
-  NULL,        /* mmap */
   NULL,        /* truncate */
   bch_poll,    /* poll */
   NULL,        /* readv */
   NULL         /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , NULL       /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , bch_unlink /* unlink */
 #endif

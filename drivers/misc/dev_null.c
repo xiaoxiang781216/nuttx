@@ -57,7 +57,6 @@ static const struct file_operations g_devnull_fops =
   NULL,           /* writev */
   NULL,           /* seek */
   NULL,           /* ioctl */
-  NULL,           /* mmap */
   NULL,           /* truncate */
   devnull_poll,   /* poll */
   devnull_readv,  /* readv */

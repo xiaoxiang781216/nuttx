@@ -67,7 +67,6 @@ static const struct file_operations g_comp_fops =
   NULL,                         /* write */
   NULL,                         /* seek */
   comp_ioctl,                   /* ioctl */
-  NULL,                         /* mmap */
   NULL,                         /* truncate */
   comp_poll                     /* poll */
 };

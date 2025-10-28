@@ -147,8 +147,10 @@ static int  tmpfs_sync(FAR struct file *filep);
 static int  tmpfs_dup(FAR const struct file *oldp, FAR struct file *newp);
 static int  tmpfs_fstat(FAR const struct file *filep, FAR struct stat *buf);
 static int  tmpfs_truncate(FAR struct file *filep, off_t length);
+#ifdef CONFIG_FS_FILEMAP
 static int  tmpfs_mmap(FAR struct file *filep,
                        FAR struct mm_map_entry_s *map);
+#endif
 
 static int  tmpfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
               FAR struct fs_dirent_s **dir);
@@ -187,11 +189,13 @@ const struct mountpt_operations g_tmpfs_operations =
   tmpfs_write,      /* write */
   tmpfs_seek,       /* seek */
   tmpfs_ioctl,      /* ioctl */
-  tmpfs_mmap,       /* mmap */
   tmpfs_truncate,   /* truncate */
   NULL,             /* poll */
   NULL,             /* readv */
   NULL,             /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  tmpfs_mmap,       /* mmap */
+#endif
 
   tmpfs_sync,       /* sync */
   tmpfs_dup,        /* dup */
@@ -1774,6 +1778,7 @@ static off_t tmpfs_seek(FAR struct file *filep, off_t offset, int whence)
   return position;
 }
 
+#ifdef CONFIG_FS_FILEMAP
 static int tmpfs_unmap(FAR struct task_group_s *group,
                        FAR struct mm_map_entry_s *entry,
                        FAR void *start, size_t length)
@@ -1913,6 +1918,7 @@ static int tmpfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 
   return ret;
 }
+#endif /* CONFIG_FS_FILEMAP */
 
 /****************************************************************************
  * Name: tmpfs_ioctl

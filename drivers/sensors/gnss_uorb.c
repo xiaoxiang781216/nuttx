@@ -146,7 +146,6 @@ static const struct file_operations g_gnss_fops =
   gnss_write,  /* write */
   NULL,        /* seek  */
   gnss_ioctl,  /* ioctl */
-  NULL,        /* mmap */
   NULL,        /* truncate */
   gnss_poll    /* poll  */
 };

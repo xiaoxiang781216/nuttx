@@ -201,17 +201,11 @@ static const struct file_operations g_sht4xfops =
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
     .open = sht4x_open,
     .close = sht4x_close,
-#else
-    .open = NULL,
-    .close = NULL,
 #endif
     .read = sht4x_read,
     .write = sht4x_write,
     .seek = NULL,
     .ioctl = sht4x_ioctl,
-    .mmap = NULL,
-    .truncate = NULL,
-    .poll = NULL,
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
     .unlink = sht4x_unlink,
 #endif

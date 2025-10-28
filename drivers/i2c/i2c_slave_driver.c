@@ -134,11 +134,13 @@ static const struct file_operations g_i2cslavefops =
   i2c_slave_write,    /* write */
   NULL,               /* seek */
   NULL,               /* ioctl */
-  NULL,               /* mmap */
   NULL,               /* truncate */
   i2c_slave_poll,     /* poll */
   NULL,               /* readv */
   NULL                /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , NULL              /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , i2c_slave_unlink  /* unlink */
 #endif

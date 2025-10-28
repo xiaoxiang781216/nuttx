@@ -143,7 +143,6 @@ static const struct file_operations g_btn_fops =
   btn_write, /* write */
   NULL,      /* seek */
   btn_ioctl, /* ioctl */
-  NULL,      /* mmap */
   NULL,      /* truncate */
   btn_poll   /* poll */
 };

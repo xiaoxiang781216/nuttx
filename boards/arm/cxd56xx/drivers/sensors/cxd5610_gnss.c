@@ -347,7 +347,6 @@ static const struct file_operations g_cxd5610fops =
   cxd5610_gnss_write, /* write */
   NULL,               /* seek */
   cxd5610_gnss_ioctl, /* ioctl */
-  NULL,               /* mmap */
   NULL,               /* truncate */
   cxd5610_gnss_poll   /* poll */
 };

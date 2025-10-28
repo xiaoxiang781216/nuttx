@@ -118,11 +118,13 @@ static const struct file_operations g_aht10fops =
   aht10_write,    /* write */
   NULL,           /* seek */
   aht10_ioctl,    /* ioctl */
-  NULL,           /* mmap */
   NULL,           /* truncate */
   NULL,           /* poll */
   NULL,           /* readv */
   NULL            /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , NULL          /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , aht10_unlink /* unlink */
 #endif

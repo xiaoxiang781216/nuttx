@@ -162,22 +162,12 @@ static const struct file_operations g_optee_ops =
   NULL,            /* write */
   NULL,            /* seek */
   optee_ioctl,     /* ioctl */
-  NULL,            /* mmap */
-  NULL,            /* truncate */
-  NULL             /* poll */
 };
 
 static const struct file_operations g_optee_shm_ops =
 {
   NULL,            /* open */
   optee_shm_close, /* close */
-  NULL,            /* read */
-  NULL,            /* write */
-  NULL,            /* seek */
-  NULL,            /* ioctl */
-  NULL,            /* mmap */
-  NULL,            /* truncate */
-  NULL             /* poll */
 };
 
 static struct inode g_optee_shm_inode =

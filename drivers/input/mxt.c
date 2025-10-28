@@ -283,7 +283,6 @@ static const struct file_operations g_mxt_fops =
   NULL,        /* write */
   NULL,        /* seek */
   mxt_ioctl,   /* ioctl */
-  NULL,        /* mmap */
   NULL,        /* truncate */
   mxt_poll     /* poll */
 };

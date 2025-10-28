@@ -50,8 +50,10 @@
  * Private Function Prototypes
  ****************************************************************************/
 
+#ifdef CONFIG_FS_FILEMAP
 static int pipe_mmap(FAR struct file *filep,
                      FAR struct mm_map_entry_s *entry);
+#endif
 
 /****************************************************************************
  * Private Data
@@ -65,9 +67,13 @@ static const struct file_operations g_pipe_fops =
   pipecommon_write,    /* write */
   NULL,                /* seek */
   pipecommon_ioctl,    /* ioctl */
-  pipe_mmap,           /* mmap */
   NULL,                /* truncate */
-  pipecommon_poll      /* poll */
+  pipecommon_poll,     /* poll */
+  NULL,                /* readv */
+  NULL                 /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , pipe_mmap          /* mmap */
+#endif
 };
 
 static DEFINE_PER_CPU_BMP(mutex_t, g_pipelock) = NXMUTEX_INITIALIZER;
@@ -108,6 +114,7 @@ static inline int pipe_allocate(void)
  * Name: pipe_mmap
  ****************************************************************************/
 
+#ifdef CONFIG_FS_FILEMAP
 static int pipe_mmap(FAR struct file *filep,
                      FAR struct mm_map_entry_s *entry)
 {
@@ -116,6 +123,7 @@ static int pipe_mmap(FAR struct file *filep,
 
   return -ENODEV;
 }
+#endif
 
 /****************************************************************************
  * Name: pipe_register

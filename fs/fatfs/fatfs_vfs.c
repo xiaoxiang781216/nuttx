@@ -169,11 +169,13 @@ const struct mountpt_operations g_fatfs_operations =
   fatfs_write,         /* write */
   fatfs_seek,          /* seek */
   fatfs_ioctl,         /* ioctl */
-  NULL,                /* mmap */
   fatfs_truncate,      /* truncate */
   NULL,                /* poll */
   NULL,                /* readv */
   NULL,                /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  NULL,                /* mmap */
+#endif
 
   fatfs_sync,          /* sync */
   fatfs_dup,           /* dup */

@@ -97,7 +97,6 @@ static const struct file_operations g_uart_bth4_ops =
   uart_bth4_write,  /* write */
   NULL,             /* seek */
   uart_bth4_ioctl,  /* ioctl */
-  NULL,             /* mmap */
   NULL,             /* truncate */
   uart_bth4_poll    /* poll */
 };

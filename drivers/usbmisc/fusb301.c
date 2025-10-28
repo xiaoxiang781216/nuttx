@@ -96,7 +96,6 @@ static const struct file_operations g_fusb301ops =
   fusb301_write, /* write */
   NULL,          /* seek */
   fusb301_ioctl, /* ioctl */
-  NULL,          /* mmap */
   NULL,          /* truncate */
   fusb301_poll   /* poll */
 };

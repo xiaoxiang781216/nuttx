@@ -70,7 +70,6 @@ static const struct file_operations g_gpio_drvrops =
   gpio_write,  /* write */
   gpio_seek,   /* seek */
   gpio_ioctl,  /* ioctl */
-  NULL,        /* mmap */
   NULL,        /* truncate */
   gpio_poll,   /* poll */
 };

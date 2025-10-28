@@ -155,11 +155,13 @@ const struct mountpt_operations g_hostfs_operations =
   hostfs_write,         /* write */
   hostfs_seek,          /* seek */
   hostfs_ioctl,         /* ioctl */
-  NULL,                 /* mmap */
   hostfs_ftruncate,     /* ftruncate */
   NULL,                 /* poll */
   NULL,                 /* readv */
   NULL,                 /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  NULL,                 /* mmap */
+#endif
 
   hostfs_sync,          /* sync */
   hostfs_dup,           /* dup */

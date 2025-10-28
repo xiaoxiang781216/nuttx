@@ -71,8 +71,10 @@ static ssize_t perf_read(FAR struct file *filep, FAR char *buffer,
 static int perf_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
 static int perf_poll(FAR struct file *filep, FAR struct pollfd *fds,
                      bool setup);
+#ifdef CONFIG_FS_FILEMAP
 static int perf_mmap(FAR struct file *filep,
                      FAR struct mm_map_entry_s *map);
+#endif
 
 static int perf_cpuclock_event_init(FAR struct perf_event_s *event);
 static int perf_cpuclock_event_add(FAR struct perf_event_s *event,
@@ -113,7 +115,9 @@ static const struct file_operations g_perf_fops =
   .read  = perf_read,  /* read */
   .ioctl = perf_ioctl, /* ioctl */
   .poll  = perf_poll,  /* poll */
+#ifdef CONFIG_FS_FILEMAP
   .mmap  = perf_mmap   /* mmap */
+#endif
 };
 
 static struct inode g_perf_inode =
@@ -2290,6 +2294,7 @@ static int perf_poll(FAR struct file *filep, FAR struct pollfd *fds,
   return 0;
 }
 
+#ifdef CONFIG_FS_FILEMAP
 static int perf_mmap(FAR struct file *filep,
                      FAR struct mm_map_entry_s *map)
 {
@@ -2316,6 +2321,7 @@ static int perf_mmap(FAR struct file *filep,
   map->vaddr = event->buf;
   return 0;
 }
+#endif
 
 static int perf_swevent_timer_handle_cpu(FAR void *arg)
 {

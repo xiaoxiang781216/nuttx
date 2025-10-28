@@ -144,11 +144,13 @@ const struct mountpt_operations g_smartfs_operations =
   smartfs_write,         /* write */
   smartfs_seek,          /* seek */
   smartfs_ioctl,         /* ioctl */
-  NULL,                  /* mmap */
   smartfs_truncate,      /* truncate */
   NULL,                  /* poll */
   NULL,                  /* readv */
   NULL,                  /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  NULL,                  /* mmap */
+#endif
 
   smartfs_sync,          /* sync */
   smartfs_dup,           /* dup */

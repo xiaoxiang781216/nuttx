@@ -270,7 +270,6 @@ static const struct file_operations g_tc_fops =
   NULL,       /* write */
   NULL,       /* seek */
   tc_ioctl,   /* ioctl */
-  NULL,       /* mmap */
   NULL,       /* truncate */
   tc_poll     /* poll */
 };

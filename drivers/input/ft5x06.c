@@ -178,7 +178,6 @@ static const struct file_operations g_ft5x06_fops =
   NULL,           /* write */
   NULL,           /* seek */
   ft5x06_ioctl,   /* ioctl */
-  NULL,           /* mmap */
   NULL,           /* truncate */
   ft5x06_poll     /* poll */
 };

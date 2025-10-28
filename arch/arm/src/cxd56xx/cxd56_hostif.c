@@ -145,11 +145,13 @@ static const struct file_operations g_hif_fops =
   hif_write,   /* write */
   hif_seek,    /* seek */
   hif_ioctl,   /* ioctl */
-  NULL,        /* mmap */
   NULL,        /* truncate */
   hif_poll,    /* poll */
   NULL,        /* readv */
   NULL         /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , NULL       /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , hif_unlink /* unlink */
 #endif

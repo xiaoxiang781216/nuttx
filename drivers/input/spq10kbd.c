@@ -257,7 +257,6 @@ static const struct file_operations g_hidkbd_fops =
   spq10kbd_write,            /* write */
   NULL,                      /* seek */
   NULL,                      /* ioctl */
-  NULL,                      /* mmap */
   NULL,                      /* truncate */
   spq10kbd_poll              /* poll */
 };

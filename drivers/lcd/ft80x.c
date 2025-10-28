@@ -136,11 +136,13 @@ static const struct file_operations g_ft80x_fops =
   ft80x_write,   /* write */
   NULL,          /* seek */
   ft80x_ioctl,   /* ioctl */
-  NULL,          /* mmap */
   NULL,          /* truncate */
   NULL,          /* poll */
   NULL,          /* readv */
   NULL           /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  , NULL         /* mmap */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , ft80x_unlink /* unlink */
 #endif

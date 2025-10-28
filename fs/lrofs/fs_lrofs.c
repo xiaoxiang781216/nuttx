@@ -132,11 +132,13 @@ const struct mountpt_operations g_lrofs_operations =
   lrofs_write,     /* write */
   lrofs_seek,      /* seek */
   lrofs_ioctl,     /* ioctl */
-  lrofs_mmap,      /* mmap */
   lrofs_truncate,  /* truncate */
   NULL,            /* poll */
   NULL,            /* readv */
   NULL,            /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  lrofs_mmap,      /* mmap */
+#endif
 
   lrofs_sync,      /* sync */
   lrofs_dup,       /* dup */
@@ -696,6 +698,7 @@ static int lrofs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
  * Name: lrofs_mmap
  ****************************************************************************/
 
+#ifdef CONFIG_FS_FILEMAP
 static int lrofs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 {
   FAR struct lrofs_mountpt_s *lm;
@@ -721,6 +724,7 @@ static int lrofs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 
   return -ENOTTY;
 }
+#endif
 
 /****************************************************************************
  * Name: lrofs_truncate

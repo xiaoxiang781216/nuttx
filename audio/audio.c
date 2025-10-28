@@ -114,8 +114,10 @@ static ssize_t  audio_write(FAR struct file *filep,
 static int      audio_ioctl(FAR struct file *filep,
                             int cmd,
                             unsigned long arg);
+#ifdef CONFIG_FS_FILEMAP
 static int      audio_mmap(FAR struct file *filep,
                            FAR struct mm_map_entry_s *map);
+#endif
 static int      audio_poll(FAR struct file *filep,
                            FAR struct pollfd *fds, bool setup);
 #ifdef CONFIG_AUDIO_MULTI_SESSION
@@ -143,9 +145,13 @@ static const struct file_operations g_audioops =
   audio_write, /* write */
   NULL,        /* seek */
   audio_ioctl, /* ioctl */
-  audio_mmap,  /* mmap */
   NULL,        /* truncate */
   audio_poll,  /* poll */
+  NULL,        /* readv */
+  NULL,        /* writev */
+#ifdef CONFIG_FS_FILEMAP
+  audio_mmap   /* mmap */
+#endif
 };
 
 /****************************************************************************
@@ -1308,12 +1314,14 @@ static int audio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_FS_FILEMAP
 static int audio_munmap(FAR struct task_group_s *group,
                          FAR struct mm_map_entry_s *entry, FAR void *start,
                          size_t length)
 {
   return mm_map_remove(get_group_mm(group), entry);
 }
+#endif
 
 /****************************************************************************
  * Name: audio_mmap
@@ -1322,7 +1330,7 @@ static int audio_munmap(FAR struct task_group_s *group,
  *   The standard mmap method.
  *
  ****************************************************************************/
-
+#ifdef CONFIG_FS_FILEMAP
 static int audio_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 {
   FAR struct inode *inode = filep->f_inode;
@@ -1361,6 +1369,7 @@ static int audio_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
   nxmutex_unlock(&upper->lock);
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: audio_poll

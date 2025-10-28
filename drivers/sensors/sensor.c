@@ -232,7 +232,6 @@ static const struct file_operations g_sensor_fops =
   sensor_write,   /* write */
   NULL,           /* seek  */
   sensor_ioctl,   /* ioctl */
-  NULL,           /* mmap */
   NULL,           /* truncate */
   sensor_poll     /* poll  */
 };
