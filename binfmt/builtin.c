@@ -91,7 +91,6 @@ static int builtin_loadbinary(FAR struct binary_s *binp,
   index = builtin_isavail(filename);
   if (index < 0)
     {
-      berr("ERROR: %s is not a builtin application\n", filename);
       return index;
     }
 

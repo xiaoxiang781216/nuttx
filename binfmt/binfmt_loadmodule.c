@@ -126,10 +126,11 @@ static int load_absmodule(FAR struct binary_s *bin, FAR const char *filename,
 
           bin->unload = binfmt->unload;
           binfmt_dumpmodule(bin);
-          break;
+          return OK;
         }
     }
 
+  berr("Failed to load module %s: %d\n", filename, ret);
   return ret;
 }
 
