@@ -132,50 +132,55 @@ extern "C"
 
 /* Random number generation */
 
-void      srand(unsigned int seed);
+void      srand(unsigned int);
 int       rand(void);
-int       rand_r(FAR unsigned int *seedp);
-void      lcong48(FAR unsigned short int param[7]);
-FAR unsigned short int *seed48(FAR unsigned short int seed16v[3]);
-void      srand48(long int seedval);
+int       rand_r(FAR unsigned int *);
+void      lcong48(FAR unsigned short int[7]);
+FAR unsigned short int *seed48(FAR unsigned short int[3]);
+void      srand48(long int);
 #ifdef CONFIG_HAVE_LONG_LONG
-long int  jrand48(FAR unsigned short int xsubi[3]);
+long int  jrand48(FAR unsigned short int[3]);
 long int  lrand48(void);
 long int  mrand48(void);
-long int  nrand48(FAR unsigned short int xsubi[3]);
+long int  nrand48(FAR unsigned short int[3]);
 #  ifdef CONFIG_HAVE_DOUBLE
 double    drand48(void);
-double    erand48(FAR unsigned short int xsubi[3]);
+double    erand48(FAR unsigned short int[3]);
 #  endif
 #endif
 
 #define   srandom(s) srand(s)
 long      random(void);
 
-void      arc4random_buf(FAR void *bytes, size_t nbytes);
+void      arc4random_buf(FAR void *, size_t);
 uint32_t  arc4random(void);
 
 /* Environment variable support */
 
 FAR char **get_environ_ptr(void);
-FAR char *getenv(FAR const char *name);
-int       putenv(FAR const char *string);
+
+FAR char *getenv(FAR const char *);
+int       putenv(FAR const char *);
+
 int       clearenv(void);
-int       setenv(FAR const char *name, FAR const char *value, int overwrite);
-int       unsetenv(FAR const char *name);
+
+int       setenv(FAR const char *, FAR const char *, int);
+int       unsetenv(FAR const char *);
 
 /* Process exit functions */
 
-void      exit(int status) noreturn_function;
-void      quick_exit(int status) noreturn_function;
+void      exit(int) noreturn_function;
+
+void      quick_exit(int) noreturn_function;
+
 void      abort(void) noreturn_function;
-int       atexit(CODE void (*func)(void));
-int       at_quick_exit(CODE void (*func)(void));
-int       on_exit(CODE void (*func)(int, FAR void *), FAR void *arg);
+int       atexit(CODE void (*)(void));
+int       at_quick_exit(CODE void (*)(void));
+int       on_exit(CODE void (*)(int, FAR void *), FAR void *);
 
 /* _Exit() is a stdlib.h equivalent to the unistd.h _exit() function */
 
-void      _Exit(int status) noreturn_function;
+void      _Exit(int) noreturn_function;
 
 /* System() command is not implemented in the NuttX libc because it is so
  * entangled with shell logic.  There is an experimental version at
@@ -184,48 +189,48 @@ void      _Exit(int status) noreturn_function;
  */
 
 #ifndef __KERNEL__
-int       system(FAR const char *cmd);
+int       system(FAR const char *);
 #endif
 
-FAR char *realpath(FAR const char *path, FAR char *resolved);
+FAR char *realpath(FAR const char *, FAR char *);
 
 /* String to binary conversions */
 
-long      strtol(FAR const char *nptr, FAR char **endptr, int base);
-unsigned long strtoul(FAR const char *nptr, FAR char **endptr, int base);
+long      strtol(FAR const char *, FAR char **, int);
+unsigned long strtoul(FAR const char *, FAR char **, int);
 #ifdef CONFIG_HAVE_LONG_LONG
-long long strtoll(FAR const char *nptr, FAR char **endptr, int base);
-unsigned long long strtoull(FAR const char *nptr, FAR char **endptr,
-                            int base);
+long long strtoll(FAR const char *, FAR char **, int);
+unsigned long long strtoull(FAR const char *, FAR char **,
+                            int);
 #endif
-float     strtof(FAR const char *str, FAR char **endptr);
+float     strtof(FAR const char *, FAR char **);
 #ifdef CONFIG_HAVE_DOUBLE
-double    strtod(FAR const char *str, FAR char **endptr);
+double    strtod(FAR const char *, FAR char **);
 #endif
 #ifdef CONFIG_HAVE_LONG_DOUBLE
-long double strtold(FAR const char *str, FAR char **endptr);
+long double strtold(FAR const char *, FAR char **);
 #endif
 
-int       atoi(FAR const char *nptr);
-long      atol(FAR const char *nptr);
+int       atoi(FAR const char *);
+long      atol(FAR const char *);
 #ifdef CONFIG_HAVE_LONG_LONG
-long long atoll(FAR const char *nptr);
+long long atoll(FAR const char *);
 #endif
 #ifdef CONFIG_HAVE_DOUBLE
-double    atof(FAR const char *nptr);
+double    atof(FAR const char *);
 #endif
 
 /* Binary to string conversions */
 
-FAR char *itoa(int val, FAR char *str, int base);
+FAR char *itoa(int, FAR char *, int);
 
 /* Wide character operations */
 
-int       mblen(FAR const char *s, size_t n);
-int       mbtowc(FAR wchar_t *pwc, FAR const char *s, size_t n);
-size_t    mbstowcs(FAR wchar_t *dst, FAR const char *src, size_t len);
-int       wctomb(FAR char *s, wchar_t wchar);
-size_t    wcstombs(FAR char *dst, FAR const wchar_t *src, size_t len);
+int       mblen(FAR const char *, size_t);
+int       mbtowc(FAR wchar_t *, FAR const char *, size_t);
+size_t    mbstowcs(FAR wchar_t *, FAR const char *, size_t);
+int       wctomb(FAR char *, wchar_t);
+size_t    wcstombs(FAR char *, FAR const wchar_t *, size_t);
 
 /* Memory Management */
 
@@ -236,17 +241,17 @@ FAR void *realloc(FAR void *, size_t) realloc_like(2);
 FAR void *reallocarray(FAR void *, size_t, size_t) realloc_like2(2, 3);
 FAR void *memalign(size_t, size_t) malloc_like1(2);
 FAR void *zalloc(size_t) malloc_like1(1);
-FAR void *calloc(size_t, size_t) malloc_like2(1, 2);
 FAR void *aligned_alloc(size_t, size_t) malloc_like1(2);
+FAR void *calloc(size_t, size_t) malloc_like2(1, 2);
 int       posix_memalign(FAR void **, size_t, size_t);
 
 /* Pseudo-Terminals */
 
 #ifdef CONFIG_PSEUDOTERM
-int       posix_openpt(int oflag);
-FAR char *ptsname(int fd);
-int       ptsname_r(int fd, FAR char *buf, size_t buflen);
-int       unlockpt(int fd);
+int       posix_openpt(int);
+FAR char *ptsname(int);
+int       ptsname_r(int, FAR char *, size_t);
+int       unlockpt(int);
 
 /* int grantpt(int fd); Not implemented */
 
@@ -255,33 +260,33 @@ int       unlockpt(int fd);
 
 /* Arithmetic */
 
-int       abs(int j);
-long int  labs(long int j);
+int       abs(int);
+long int  labs(long int);
 #ifdef CONFIG_HAVE_LONG_LONG
-long long int llabs(long long int j);
+long long int llabs(long long int);
 #endif
 
-div_t     div(int number, int denom);
-ldiv_t    ldiv(long number, long denom);
+div_t     div(int, int);
+ldiv_t    ldiv(long, long);
 #ifdef CONFIG_HAVE_LONG_LONG
-lldiv_t   lldiv(long long number, long long denom);
+lldiv_t   lldiv(long long, long long);
 #endif
 
 /* Temporary files */
 
-FAR char *mktemp(FAR char *path_template);
-int       mkstemp(FAR char *path_template);
-FAR char *mkdtemp(FAR char *path_template);
+FAR char *mktemp(FAR char *);
+int       mkstemp(FAR char *);
+FAR char *mkdtemp(FAR char *);
 
 /* Sorting */
 
-void      qsort(FAR void *base, size_t nel, size_t width,
-                CODE int (*compar)(FAR const void *, FAR const void *));
+void      qsort(FAR void *, size_t, size_t,
+                CODE int (*)(FAR const void *, FAR const void *));
 
 /* Binary search */
 
-FAR void  *bsearch(FAR const void *key, FAR const void *base, size_t nel,
-                   size_t width, CODE int (*compar)(FAR const void *,
+FAR void  *bsearch(FAR const void *, FAR const void *, size_t,
+                   size_t, CODE int (*)(FAR const void *,
                    FAR const void *));
 
 /* Current program name manipulation */
@@ -290,8 +295,8 @@ FAR const char *getprogname(void);
 
 /* Registers a destructor function to be called by exit() */
 
-int __cxa_atexit(CODE void (*func)(FAR void *), FAR void *arg,
-                 FAR void *dso_handle);
+int __cxa_atexit(CODE void (*)(FAR void *), FAR void *,
+                 FAR void *);
 
 #if CONFIG_FORTIFY_SOURCE > 0
 fortify_function(realpath) FAR char *realpath(FAR const char *path,

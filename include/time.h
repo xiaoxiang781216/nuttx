@@ -190,55 +190,55 @@ EXTERN FAR char *tzname[2];
 
 clock_t clock(void);
 
-int clock_settime(clockid_t clockid, FAR const struct timespec *tp);
-int clock_gettime(clockid_t clockid, FAR struct timespec *tp);
-int clock_getres(clockid_t clockid, FAR struct timespec *res);
-int clock_getcpuclockid(pid_t pid, FAR clockid_t *clockid);
-int timespec_get(FAR struct timespec *t, int b);
+int clock_settime(clockid_t, FAR const struct timespec *);
+int clock_gettime(clockid_t, FAR struct timespec *);
+int clock_getres(clockid_t, FAR struct timespec *);
+int clock_getcpuclockid(pid_t pid, FAR clockid_t *);
+int timespec_get(FAR struct timespec *, int);
 
-time_t timegm(FAR struct tm *tp);
-time_t mktime(FAR struct tm *tp);
+time_t timegm(FAR struct tm *);
+time_t mktime(FAR struct tm *);
 
-FAR struct tm *gmtime(FAR const time_t *timep);
-FAR struct tm *gmtime_r(FAR const time_t *timep, FAR struct tm *result);
+FAR struct tm *gmtime(FAR const time_t *);
+FAR struct tm *gmtime_r(FAR const time_t *, FAR struct tm *);
 
-FAR struct tm *localtime(FAR const time_t *timep);
-FAR struct tm *localtime_r(FAR const time_t *timep, FAR struct tm *result);
+FAR struct tm *localtime(FAR const time_t *);
+FAR struct tm *localtime_r(FAR const time_t *, FAR struct tm *);
 
-size_t strftime(FAR char *s, size_t max, FAR const char *format,
-                FAR const struct tm *tm) strftime_like(3);
+size_t strftime(FAR char *, size_t, FAR const char *,
+                FAR const struct tm *) strftime_like(3);
 
 #ifdef CONFIG_ALLOW_MIT_COMPONENTS
-FAR char *strptime(FAR const char *s, FAR const char *format,
-                   FAR struct tm *tm);
+FAR char *strptime(FAR const char *, FAR const char *,
+                   FAR struct tm *);
 #endif
 
-FAR char *asctime(FAR const struct tm *tp);
-FAR char *asctime_r(FAR const struct tm *tp, FAR char *buf);
-FAR char *ctime(FAR const time_t *timep);
-FAR char *ctime_r(FAR const time_t *timep, FAR char *buf);
+FAR char *asctime(FAR const struct tm *);
+FAR char *asctime_r(FAR const struct tm *, FAR char *);
+FAR char *ctime(FAR const time_t *);
+FAR char *ctime_r(FAR const time_t *, FAR char *);
 
-time_t time(FAR time_t *timep);
+time_t time(FAR time_t *);
 
 #ifdef CONFIG_HAVE_DOUBLE
-double difftime(time_t time1, time_t time0);
+double difftime(time_t, time_t);
 #elif defined(CONFIG_HAVE_FLOAT)
-float difftime(time_t time1, time_t time0);
+float difftime(time_t, time_t);
 #endif
 
-int timer_create(clockid_t clockid, FAR struct sigevent *evp,
-                 FAR timer_t *timerid);
-int timer_delete(timer_t timerid);
-int timer_settime(timer_t timerid, int flags,
-                  FAR const struct itimerspec *value,
-                  FAR struct itimerspec *ovalue);
-int timer_gettime(timer_t timerid, FAR struct itimerspec *value);
-int timer_getoverrun(timer_t timerid);
+int timer_create(clockid_t, FAR struct sigevent *,
+                 FAR timer_t *);
+int timer_delete(timer_t);
+int timer_settime(timer_t, int,
+                  FAR const struct itimerspec *,
+                  FAR struct itimerspec *);
+int timer_gettime(timer_t, FAR struct itimerspec *);
+int timer_getoverrun(timer_t);
 
-int clock_nanosleep(clockid_t clockid, int flags,
-                    FAR const struct timespec *rqtp,
-                    FAR struct timespec *rmtp);
-int nanosleep(FAR const struct timespec *rqtp, FAR struct timespec *rmtp);
+int clock_nanosleep(clockid_t, int,
+                    FAR const struct timespec *,
+                    FAR struct timespec *);
+int nanosleep(FAR const struct timespec *, FAR struct timespec *);
 
 #ifdef CONFIG_LIBC_LOCALTIME
 void tzset(void);

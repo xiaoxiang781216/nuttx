@@ -86,8 +86,8 @@ static inline int isspace_l(int c, locale_t locale)
   return isspace(c);
 }
 #else
-int isspace(int c);
-int isspace_l(int c, locale_t locale);
+int isspace(int);
+int isspace_l(int, locale_t locale);
 #endif
 
 /****************************************************************************
@@ -110,8 +110,8 @@ static inline int isascii_l(int c, locale_t locale)
   return isascii(c);
 }
 #else
-int isascii(int c);
-int isascii_l(int c, locale_t locale);
+int isascii(int);
+int isascii_l(int, locale_t locale);
 #endif
 
 /****************************************************************************
@@ -133,8 +133,8 @@ static inline int isprint_l(int c, locale_t locale)
   return isprint(c);
 }
 #else
-int isprint(int c);
-int isprint_l(int c, locale_t locale);
+int isprint(int);
+int isprint_l(int, locale_t locale);
 #endif
 
 /****************************************************************************
@@ -156,8 +156,8 @@ static inline int isgraph_l(int c, locale_t locale)
   return isgraph(c);
 }
 #else
-int isgraph(int c);
-int isgraph_l(int c, locale_t locale);
+int isgraph(int);
+int isgraph_l(int, locale_t locale);
 #endif
 
 /****************************************************************************
@@ -179,8 +179,8 @@ static inline int iscntrl_l(int c, locale_t locale)
   return iscntrl(c);
 }
 #else
-int iscntrl(int c);
-int iscntrl_l(int c, locale_t locale);
+int iscntrl(int);
+int iscntrl_l(int, locale_t locale);
 #endif
 
 /****************************************************************************
@@ -202,8 +202,8 @@ static inline int islower_l(int c, locale_t locale)
   return islower(c);
 }
 #else
-int islower(int c);
-int islower_l(int c, locale_t locale);
+int islower(int);
+int islower_l(int, locale_t locale);
 #endif
 
 /****************************************************************************
@@ -225,8 +225,8 @@ static inline int isupper_l(int c, locale_t locale)
   return isupper(c);
 }
 #else
-int isupper(int c);
-int isupper_l(int c, locale_t locale);
+int isupper(int);
+int isupper_l(int, locale_t locale);
 #endif
 
 /****************************************************************************
@@ -248,8 +248,8 @@ static inline int isalpha_l(int c, locale_t locale)
   return isalpha(c);
 }
 #else
-int isalpha(int c);
-int isalpha_l(int c, locale_t locale);
+int isalpha(int);
+int isalpha_l(int, locale_t locale);
 #endif
 
 /****************************************************************************
@@ -271,8 +271,8 @@ static inline int isblank_l(int c, locale_t locale)
   return isblank(c);
 }
 #else
-int isblank(int c);
-int isblank_l(int c, locale_t locale);
+int isblank(int);
+int isblank_l(int, locale_t locale);
 #endif
 
 /****************************************************************************
@@ -294,8 +294,8 @@ static inline int isdigit_l(int c, locale_t locale)
   return isdigit(c);
 }
 #else
-int isdigit(int c);
-int isdigit_l(int c, locale_t locale);
+int isdigit(int);
+int isdigit_l(int, locale_t locale);
 #endif
 
 /****************************************************************************
@@ -317,8 +317,8 @@ static inline int isalnum_l(int c, locale_t locale)
   return isalnum(c);
 }
 #else
-int isalnum(int c);
-int isalnum_l(int c, locale_t locale);
+int isalnum(int);
+int isalnum_l(int, locale_t locale);
 #endif
 
 /****************************************************************************
@@ -341,8 +341,8 @@ static inline int ispunct_l(int c, locale_t locale)
   return ispunct(c);
 }
 #else
-int ispunct(int c);
-int ispunct_l(int c, locale_t locale);
+int ispunct(int);
+int ispunct_l(int, locale_t locale);
 #endif
 
 /****************************************************************************
@@ -366,8 +366,8 @@ static inline int isxdigit_l(int c, locale_t locale)
   return isxdigit(c);
 }
 #else
-int isxdigit(int c);
-int isxdigit_l(int c, locale_t locale);
+int isxdigit(int);
+int isxdigit_l(int, locale_t locale);
 #endif
 
 /****************************************************************************
@@ -389,8 +389,8 @@ static inline int toupper_l(int c, locale_t locale)
   return toupper(c);
 }
 #else
-int toupper(int c);
-int toupper_l(int c, locale_t locale);
+int toupper(int);
+int toupper_l(int, locale_t locale);
 #endif
 
 /****************************************************************************
@@ -412,8 +412,8 @@ static inline int tolower_l(int c, locale_t locale)
   return tolower(c);
 }
 #else
-int tolower(int c);
-int tolower_l(int c, locale_t locale);
+int tolower(int);
+int tolower_l(int, locale_t locale);
 #endif
 
 #undef EXTERN

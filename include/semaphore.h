@@ -179,20 +179,20 @@ extern "C"
 
 /* Counting Semaphore Interfaces (based on POSIX APIs) */
 
-int        sem_init(FAR sem_t *sem, int pshared, unsigned int value);
-int        sem_destroy(FAR sem_t *sem);
-int        sem_wait(FAR sem_t *sem);
-int        sem_timedwait(FAR sem_t *sem, FAR const struct timespec *abstime);
-int        sem_clockwait(FAR sem_t *sem, clockid_t clockid,
-                         FAR const struct timespec *abstime);
-int        sem_trywait(FAR sem_t *sem);
-int        sem_post(FAR sem_t *sem);
-int        sem_getvalue(FAR sem_t *sem, FAR int *sval);
+int        sem_init(FAR sem_t *, int, unsigned int);
+int        sem_destroy(FAR sem_t *);
+int        sem_wait(FAR sem_t *);
+int        sem_timedwait(FAR sem_t *, FAR const struct timespec *);
+int        sem_clockwait(FAR sem_t *, clockid_t,
+                         FAR const struct timespec *);
+int        sem_trywait(FAR sem_t *);
+int        sem_post(FAR sem_t *);
+int        sem_getvalue(FAR sem_t *, FAR int *);
 
 #ifdef CONFIG_FS_NAMED_SEMAPHORES
-FAR sem_t *sem_open(FAR const char *name, int oflag, ...);
-int        sem_close(FAR sem_t *sem);
-int        sem_unlink(FAR const char *name);
+FAR sem_t *sem_open(FAR const char *, int, ...);
+int        sem_close(FAR sem_t *);
+int        sem_unlink(FAR const char *);
 #endif
 
 /****************************************************************************
@@ -232,7 +232,7 @@ int        sem_unlink(FAR const char *name);
  *
  ****************************************************************************/
 
-int sem_setprotocol(FAR sem_t *sem, int protocol);
+int sem_setprotocol(FAR sem_t *, int);
 
 /****************************************************************************
  * Name: sem_getprotocol
@@ -253,7 +253,7 @@ int sem_setprotocol(FAR sem_t *sem, int protocol);
  *
  ****************************************************************************/
 
-int sem_getprotocol(FAR sem_t *sem, FAR int *protocol);
+int sem_getprotocol(FAR sem_t *, FAR int *);
 
 #undef EXTERN
 #ifdef __cplusplus

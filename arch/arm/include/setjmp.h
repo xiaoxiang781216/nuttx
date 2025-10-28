@@ -87,8 +87,8 @@ extern "C"
 #define EXTERN extern
 #endif
 
-int setjmp(jmp_buf env);
-void longjmp(jmp_buf env, int val) noreturn_function;
+int setjmp(jmp_buf);
+void longjmp(jmp_buf, int) noreturn_function;
 
 #undef EXTERN
 #ifdef __cplusplus

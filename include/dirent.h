@@ -141,25 +141,26 @@ extern "C"
 
 /* POSIX-like File System Interfaces */
 
-int        closedir(FAR DIR *dirp);
-FAR DIR   *opendir(FAR const char *path);
-FAR DIR   *fdopendir(int fd);
-FAR struct dirent *readdir(FAR DIR *dirp);
-int        readdir_r(FAR DIR *dirp, FAR struct dirent *entry,
-                     FAR struct dirent **result);
-void       rewinddir(FAR DIR *dirp);
-void       seekdir(FAR DIR *dirp, off_t loc);
-off_t      telldir(FAR DIR *dirp);
-int        scandir(FAR const char *path, FAR struct dirent ***namelist,
-                   CODE int (*filter)(FAR const struct dirent *),
-                   CODE int (*compar)(FAR const struct dirent **,
-                                      FAR const struct dirent **));
-int        alphasort(FAR const struct dirent **a,
-                     FAR const struct dirent **b);
-int        versionsort(FAR const struct dirent **a,
-                       FAR const struct dirent **b);
+int        closedir(FAR DIR *);
+FAR DIR   *opendir(FAR const char *);
+FAR DIR   *fdopendir(int);
+FAR struct dirent *readdir(FAR DIR *);
+int        readdir_r(FAR DIR *, FAR struct dirent *,
+                     FAR struct dirent **);
+void       rewinddir(FAR DIR *);
+void       seekdir(FAR DIR *, off_t);
+off_t      telldir(FAR DIR *);
 
-int        dirfd(FAR DIR *dirp);
+int        scandir(FAR const char *, FAR struct dirent ** *,
+                   CODE int (*)(FAR const struct dirent *),
+                   CODE int (*)(FAR const struct dirent **,
+                                      FAR const struct dirent **));
+int        alphasort(FAR const struct dirent **,
+                     FAR const struct dirent **);
+int        versionsort(FAR const struct dirent **,
+                       FAR const struct dirent **);
+
+int        dirfd(FAR DIR *);
 
 #undef EXTERN
 #if defined(__cplusplus)

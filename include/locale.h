@@ -111,14 +111,14 @@ extern "C"
 #define EXTERN extern
 #endif
 
-FAR char *setlocale(int category, FAR const char *locale);
+FAR char *setlocale(int, FAR const char *);
 FAR struct lconv *localeconv(void);
 
-locale_t newlocale(int category_mask, FAR const char *locale, locale_t base);
-locale_t duplocale(locale_t locobj);
-void freelocale(locale_t locobj);
+locale_t newlocale(int, FAR const char *, locale_t);
+locale_t duplocale(locale_t);
+void freelocale(locale_t);
 
-locale_t uselocale(locale_t newloc);
+locale_t uselocale(locale_t);
 
 #undef EXTERN
 #ifdef __cplusplus

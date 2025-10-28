@@ -90,7 +90,7 @@ extern "C"
  * Public Function Prototypes
  ****************************************************************************/
 
-int uname(FAR struct utsname *name);
+int uname(FAR struct utsname *);
 
 #undef EXTERN
 #if defined(__cplusplus)

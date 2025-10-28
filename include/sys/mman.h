@@ -197,31 +197,30 @@ extern "C"
  * Public Function Prototypes
  ****************************************************************************/
 
-int mlock(FAR const void *addr, size_t len);
-int mlockall(int flags);
-FAR void *mmap(FAR void *start, size_t length, int prot, int flags, int fd,
-               off_t offset);
-int mprotect(FAR void *addr, size_t len, int prot);
-int msync(FAR void *addr, size_t len, int flags);
-int munlock(FAR const void *addr, size_t len);
+int mlock(FAR const void *, size_t);
+int mlockall(int);
+FAR void *mmap(FAR void *, size_t, int, int, int, off_t);
+int mprotect(FAR void *, size_t, int);
+int msync(FAR void *, size_t, int);
+int munlock(FAR const void *, size_t);
 int munlockall(void);
 
-int munmap(FAR void *start, size_t length);
+int munmap(FAR void *, size_t);
 
-int posix_madvise(FAR void *addr, size_t len, int advice);
-int posix_mem_offset(FAR const void *addr, size_t len, FAR off_t *off,
-                     FAR size_t *contig_len, FAR int *fildes);
-int posix_typed_mem_get_info(int fildes,
-                             FAR struct posix_typed_mem_info *info);
-int posix_typed_mem_open(FAR const char *name, int oflag, int tflag);
+int posix_madvise(FAR void *, size_t, int);
+int posix_mem_offset(FAR const void *, size_t, FAR off_t *,
+                     FAR size_t *, FAR int *);
+int posix_typed_mem_get_info(int,
+                             FAR struct posix_typed_mem_info *);
+int posix_typed_mem_open(FAR const char *, int, int);
 #ifdef CONFIG_FS_SHMFS
-int shm_open(FAR const char *name, int oflag, mode_t mode);
-int shm_unlink(FAR const char *name);
+int shm_open(FAR const char *, int, mode_t);
+int shm_unlink(FAR const char *);
 #else
 #define shm_open(...)   (-ENOSYS)
 #define shm_unlink(...) (-ENOSYS)
 #endif
-int memfd_create(FAR const char *name, unsigned int flags);
+int memfd_create(FAR const char *, unsigned int);
 
 #undef EXTERN
 #if defined(__cplusplus)

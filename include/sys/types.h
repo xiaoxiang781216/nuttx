@@ -325,7 +325,7 @@ typedef volatile int64_t atomic64_t;
 
 /* Task entry point */
 
-typedef CODE int (*main_t)(int argc, FAR char *argv[]);
+typedef CODE int (*main_t)(int, FAR char *[]);
 
 /* POSIX-like OS return values: */
 
@@ -397,7 +397,7 @@ extern "C"
 /* This entry point must be supplied by the application */
 
 #ifdef CONFIG_INIT_ENTRYPOINT
-int CONFIG_INIT_ENTRYPOINT(int argc, FAR char *argv[]);
+int CONFIG_INIT_ENTRYPOINT(int, FAR char *[]);
 #endif
 
 #undef EXTERN

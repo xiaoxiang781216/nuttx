@@ -397,9 +397,9 @@ typedef struct siginfo siginfo_t;
  * These should be used only internally within the NuttX signal logic.
  */
 
-typedef CODE void (*_sa_handler_t)(int signo);
-typedef CODE void (*_sa_sigaction_t)(int signo, FAR siginfo_t *siginfo,
-                                     FAR void *context);
+typedef CODE void (*_sa_handler_t)(int);
+typedef CODE void (*_sa_sigaction_t)(int, FAR siginfo_t *,
+                                     FAR void *);
 
 /* glibc definition of signal handling function types */
 
@@ -451,45 +451,45 @@ extern "C"
 #define EXTERN extern
 #endif
 
-int  kill(pid_t pid, int signo);
-int  killpg(pid_t pgrp, int signo);
-int  tgkill(pid_t pid, pid_t tid, int signo);
-void psignal(int signum, FAR const char *message);
-void psiginfo(FAR const siginfo_t *pinfo, FAR const char *message);
-int  raise(int signo);
-int  sigaction(int signo, FAR const struct sigaction *act,
-               FAR struct sigaction *oact);
-int  sigaddset(FAR sigset_t *set, int signo);
-int  sigandset(FAR sigset_t *dest, FAR const sigset_t *left,
-               FAR const sigset_t *right);
-int  sigdelset(FAR sigset_t *set, int signo);
-int  sigemptyset(FAR sigset_t *set);
-int  sigfillset(FAR sigset_t *set);
-int  sighold(int signo);
-int  sigisemptyset(FAR sigset_t *set);
-int  sigismember(FAR const sigset_t *set, int signo);
-int  sigignore(int signo);
-_sa_handler_t signal(int signo, _sa_handler_t func);
-int  sigorset(FAR sigset_t *dest, FAR const sigset_t *left,
-              FAR const sigset_t *right);
-int  sigpause(int signo);
-int  sigpending(FAR sigset_t *set);
-int  sigprocmask(int how, FAR const sigset_t *set, FAR sigset_t *oset);
-int  sigqueue(int pid, int signo, const union sigval value);
-int  sigrelse(int signo);
-_sa_handler_t sigset(int signo, _sa_handler_t func);
-int  sigwait(FAR const sigset_t *set, FAR int *sig);
-int  sigtimedwait(FAR const sigset_t *set, FAR struct siginfo *value,
-                  FAR const struct timespec *timeout);
-int  sigsuspend(FAR const sigset_t *sigmask);
-int  sigwaitinfo(FAR const sigset_t *set, FAR struct siginfo *value);
-int  sigaltstack(FAR const stack_t *ss, FAR stack_t *oss);
-int  siginterrupt(int signo, int flag);
+int  kill(pid_t, int);
+int  killpg(pid_t, int);
+int  tgkill(pid_t, pid_t, int);
+void psignal(int, FAR const char *);
+void psiginfo(FAR const siginfo_t *, FAR const char *);
+int  raise(int);
+int  sigaction(int, FAR const struct sigaction *,
+               FAR struct sigaction *);
+int  sigaddset(FAR sigset_t *, int);
+int  sigandset(FAR sigset_t *, FAR const sigset_t *,
+               FAR const sigset_t *);
+int  sigdelset(FAR sigset_t *, int);
+int  sigemptyset(FAR sigset_t *);
+int  sigfillset(FAR sigset_t *);
+int  sighold(int);
+int  sigisemptyset(FAR sigset_t *);
+int  sigismember(FAR const sigset_t *, int);
+int  sigignore(int);
+_sa_handler_t signal(int, _sa_handler_t);
+int  sigorset(FAR sigset_t *, FAR const sigset_t *,
+              FAR const sigset_t *);
+int  sigpause(int);
+int  sigpending(FAR sigset_t *);
+int  sigprocmask(int, FAR const sigset_t *, FAR sigset_t *);
+int  sigqueue(int, int, const union sigval);
+int  sigrelse(int);
+_sa_handler_t sigset(int, _sa_handler_t);
+int  sigwait(FAR const sigset_t *, FAR int *);
+int  sigtimedwait(FAR const sigset_t *, FAR struct siginfo *,
+                  FAR const struct timespec *);
+int  sigsuspend(FAR const sigset_t *);
+int  sigwaitinfo(FAR const sigset_t *, FAR struct siginfo *);
+int  sigaltstack(FAR const stack_t *, FAR stack_t *);
+int  siginterrupt(int, int);
 
 /* Pthread signal management APIs */
 
-int pthread_kill(pthread_t thread, int sig);
-int pthread_sigmask(int how, FAR const sigset_t *set, FAR sigset_t *oset);
+int pthread_kill(pthread_t, int);
+int pthread_sigmask(int, FAR const sigset_t *, FAR sigset_t *);
 
 #undef EXTERN
 #ifdef __cplusplus

@@ -224,31 +224,31 @@ extern "C"
 /* Task Control Interfaces (non-standard) */
 
 #ifndef CONFIG_BUILD_KERNEL
-int    task_create(FAR const char *name, int priority, int stack_size,
-                   main_t entry, FAR char * const argv[]);
-int    task_create_with_stack(FAR const char *name, int priority,
-                              FAR void *stack_addr, int stack_size,
-                              main_t entry, FAR char * const argv[]);
+int    task_create(FAR const char *, int, int,
+                   main_t, FAR char * const[]);
+int    task_create_with_stack(FAR const char *, int,
+                              FAR void *, int,
+                              main_t, FAR char * const[]);
 #endif
-int    task_delete(pid_t pid);
-int    task_restart(pid_t pid);
+int    task_delete(pid_t);
+int    task_restart(pid_t);
 
-int    task_setcancelstate(int state, FAR int *oldstate);
-int    task_setcanceltype(int type, FAR int *oldtype);
+int    task_setcancelstate(int, FAR int *);
+int    task_setcanceltype(int, FAR int *);
 void   task_testcancel(void);
 
 /* Task Scheduling Interfaces (based on POSIX APIs) */
 
 int    sched_getcpu(void);
-int    sched_setparam(pid_t pid, FAR const struct sched_param *param);
-int    sched_getparam(pid_t pid, FAR struct sched_param *param);
-int    sched_setscheduler(pid_t pid, int policy,
-                          FAR const struct sched_param *param);
-int    sched_getscheduler(pid_t pid);
+int    sched_setparam(pid_t, FAR const struct sched_param *);
+int    sched_getparam(pid_t, FAR struct sched_param *);
+int    sched_setscheduler(pid_t, int,
+                          FAR const struct sched_param *);
+int    sched_getscheduler(pid_t);
 int    sched_yield(void);
-int    sched_get_priority_max(int policy);
-int    sched_get_priority_min(int policy);
-int    sched_rr_get_interval(pid_t pid, FAR struct timespec *interval);
+int    sched_get_priority_max(int);
+int    sched_get_priority_min(int);
+int    sched_rr_get_interval(pid_t, FAR struct timespec *);
 
 #ifdef CONFIG_SMP
 /* Task affinity */
@@ -274,8 +274,8 @@ bool   sched_idletask(void);
 /* Task Backtrace */
 
 #ifdef CONFIG_SCHED_BACKTRACE
-int    sched_backtrace(pid_t tid, FAR void **buffer, int size, int skip);
-void   sched_dumpstack(pid_t tid);
+int    sched_backtrace(pid_t, FAR void **, int, int);
+void   sched_dumpstack(pid_t);
 #else
 #  define sched_backtrace(tid, buffer, size, skip) 0
 #  define sched_dumpstack(tid)

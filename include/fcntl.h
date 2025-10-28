@@ -208,12 +208,12 @@ extern "C"
 
 /* POSIX-like File System Interfaces */
 
-int creat(FAR const char *pathname, mode_t mode);
-int open(FAR const char *path, int oflag, ...);
-int openat(int dirfd, FAR const char *path, int oflag, ...);
-int fcntl(int fd, int cmd, ...);
+int creat(FAR const char *, mode_t);
+int open(FAR const char *, int, ...);
+int openat(int, FAR const char *, int, ...);
+int fcntl(int, int, ...);
 
-int posix_fallocate(int fd, off_t offset, off_t len);
+int posix_fallocate(int, off_t, off_t);
 
 #undef EXTERN
 #if defined(__cplusplus)

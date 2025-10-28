@@ -63,8 +63,8 @@ extern "C"
 #define EXTERN extern
 #endif
 
-FAR char  *strdup(FAR const char *s) malloc_like;
-FAR char  *strndup(FAR const char *s, size_t size) malloc_like;
+FAR char  *strdup(FAR const char *) malloc_like;
+FAR char  *strndup(FAR const char *, size_t) malloc_like;
 FAR char  *strerror(int);
 int        strerror_r(int, FAR char *, size_t);
 size_t     strlen(FAR const char *);
@@ -74,49 +74,51 @@ size_t     strlcat(FAR char *, FAR const char *, size_t);
 FAR char  *strncat(FAR char *, FAR const char *, size_t);
 int        strcmp(FAR const char *, FAR const char *);
 int        strncmp(FAR const char *, FAR const char *, size_t);
-int        strcoll(FAR const char *, FAR const char *s2);
-FAR char  *strcpy(FAR char *dest, FAR const char *src);
-FAR char  *stpcpy(FAR char *dest, FAR const char *src);
-size_t     strlcpy(FAR char *dst, FAR const char *src, size_t siz);
+int        strcoll(FAR const char *, FAR const char *);
+FAR char  *strcpy(FAR char *, FAR const char *);
+FAR char  *stpcpy(FAR char *, FAR const char *);
+size_t     strlcpy(FAR char *, FAR const char *, size_t);
 FAR char  *strncpy(FAR char *, FAR const char *, size_t);
 FAR char  *stpncpy(FAR char *, FAR const char *, size_t);
 FAR char  *strpbrk(FAR const char *, FAR const char *);
-FAR char  *strchr(FAR const char *s, int c);
-FAR char  *strchrnul(FAR const char *s, int c);
-FAR char  *strrchr(FAR const char *s, int c);
+FAR char  *strchr(FAR const char *, int);
+FAR char  *strchrnul(FAR const char *, int);
+FAR char  *strrchr(FAR const char *, int);
 size_t     strspn(FAR const char *, FAR const char *);
 size_t     strcspn(FAR const char *, FAR const char *);
 FAR char  *strstr(FAR const char *, FAR const char *);
 FAR char  *strcasestr(FAR const char *, FAR const char *);
 FAR char  *strsep(FAR char **, FAR const char *);
-FAR char  *strsignal(int signum);
+FAR char  *strsignal(int);
 FAR char  *strtok(FAR char *, FAR const char *);
 FAR char  *strtok_r(FAR char *, FAR const char *, FAR char **);
-size_t     strxfrm(FAR char *, FAR const char *, size_t n);
-int        strverscmp(FAR const char *s1, FAR const char *s2);
+size_t     strxfrm(FAR char *, FAR const char *, size_t);
+int        strverscmp(FAR const char *, FAR const char *);
 
-FAR void  *memchr(FAR const void *s, int c, size_t n);
-FAR void  *memrchr(FAR const void *s, int c, size_t n);
-FAR void  *rawmemchr(FAR const void *s, int c);
-FAR void  *memccpy(FAR void *s1, FAR const void *s2, int c, size_t n);
-int        memcmp(FAR const void *s1, FAR const void *s2, size_t n);
-FAR void  *memcpy(FAR void *dest, FAR const void *src, size_t n);
-FAR void  *mempcpy(FAR void *dest, FAR const void *src, size_t n);
-FAR void  *memmove(FAR void *dest, FAR const void *src, size_t count);
-FAR void  *memset(FAR void *s, int c, size_t n);
-FAR void  *memmem(FAR const void *haystack, size_t haystacklen,
-                  FAR const void *needle, size_t needlelen);
+FAR void  *memchr(FAR const void *, int, size_t);
+FAR void  *memrchr(FAR const void *, int, size_t);
+#ifndef __VSX_HDR_TESTING
+FAR void  *rawmemchr(FAR const void *, int);
+#endif
+FAR void  *memccpy(FAR void *, FAR const void *, int, size_t);
+int        memcmp(FAR const void *, FAR const void *, size_t);
+FAR void  *memcpy(FAR void *, FAR const void *, size_t);
+FAR void  *mempcpy(FAR void *, FAR const void *, size_t);
+FAR void  *memmove(FAR void *, FAR const void *, size_t);
+FAR void  *memset(FAR void *, int, size_t);
+FAR void  *memmem(FAR const void *, size_t,
+                  FAR const void *, size_t);
 
-void explicit_bzero(FAR void *s, size_t n);
-int timingsafe_bcmp(FAR const void *b1, FAR const void *b2, size_t n);
+void explicit_bzero(FAR void *, size_t);
+int timingsafe_bcmp(FAR const void *, FAR const void *, size_t);
 
 #ifdef __KERNEL__
 #  define strdup(s)       nx_strdup(s)
 #  define strndup(s,sz)   nx_strndup(s,sz)
 #endif
 
-FAR char *nx_strdup(FAR const char *s) malloc_like;
-FAR char *nx_strndup(FAR const char *s, size_t size) malloc_like;
+FAR char *nx_strdup(FAR const char *) malloc_like;
+FAR char *nx_strndup(FAR const char *, size_t) malloc_like;
 
 #if CONFIG_FORTIFY_SOURCE > 0
 fortify_function(strcat) FAR char *strcat(FAR char *dest,

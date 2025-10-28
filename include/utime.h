@@ -73,7 +73,7 @@ extern "C"
  *
  ****************************************************************************/
 
-int utime(FAR const char *path, FAR const struct utimbuf *times);
+int utime(FAR const char *, FAR const struct utimbuf *);
 
 #undef EXTERN
 #if defined(__cplusplus)

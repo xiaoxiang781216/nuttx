@@ -396,58 +396,54 @@ FAR void *sbrk(intptr_t incr);
 /* Special devices */
 
 #define pipe(fd) pipe2(fd, 0)
-int     pipe2(int pipefd[2], int flags);
+int     pipe2(int[2], int);
 
 /* Schedule an alarm */
 
-unsigned int alarm(unsigned int seconds);
+unsigned int alarm(unsigned int);
 
 /* Working directory operations */
 
-int     chdir(FAR const char *path);
-int     fchdir(int fd);
-FAR char *getcwd(FAR char *buf, size_t size);
+int     chdir(FAR const char *);
+int     fchdir(int);
+FAR char *getcwd(FAR char *, size_t);
 FAR char *get_current_dir_name(void);
 
 /* File path operations */
 
-int     access(FAR const char *path, int amode);
-int     faccessat(int dirfd, FAR const char *path, int mode, int flags);
-int     rmdir(FAR const char *pathname);
-int     unlink(FAR const char *pathname);
-int     unlinkat(int dirfd, FAR const char *pathname, int flags);
-int     truncate(FAR const char *path, off_t length);
-int     link(FAR const char *path1, FAR const char *path2);
-int     linkat(int olddirfd, FAR const char *path1,
-               int newdirfd, FAR const char *path2, int flags);
-int     symlink(FAR const char *path1, FAR const char *path2);
-int     symlinkat(FAR const char *path1, int dirfd,
-                  FAR const char *path2);
-ssize_t readlink(FAR const char *path, FAR char *buf, size_t bufsize);
-ssize_t readlinkat(int dirfd, FAR const char *path, FAR char *buf,
-                   size_t bufsize);
-int     chown(FAR const char *path, uid_t owner, gid_t group);
-int     lchown(FAR const char *path, uid_t owner, gid_t group);
-int     fchownat(int dirfd, FAR const char *path, uid_t owner,
-                 gid_t group, int flags);
+int     access(FAR const char *, int);
+int     faccessat(int, FAR const char *, int, int);
+int     rmdir(FAR const char *);
+int     unlink(FAR const char *);
+int     unlinkat(int, FAR const char *, int);
+int     truncate(FAR const char *, off_t);
+int     link(FAR const char *, FAR const char *);
+int     linkat(int, FAR const char *, int, FAR const char *, int);
+int     symlink(FAR const char *, FAR const char *);
+int     symlinkat(FAR const char *, int, FAR const char *);
+ssize_t readlink(FAR const char *, FAR char *, size_t);
+ssize_t readlinkat(int, FAR const char *, FAR char *, size_t);
+int     chown(FAR const char *, uid_t, gid_t);
+int     lchown(FAR const char *, uid_t, gid_t);
+int     fchownat(int, FAR const char *, uid_t, gid_t, int);
 
 /* Execution of programs from files */
 
 #ifdef CONFIG_LIBC_EXECFUNCS
-int     execl(FAR const char *path, FAR const char *arg0, ...);
-int     execle(FAR const char *path, FAR const char *arg0, ...);
-int     execv(FAR const char *path, FAR char * const argv[]);
-int     execve(FAR const char *path, FAR char *const argv[],
-               FAR char *const envp[]);
+int     execl(FAR const char *, FAR const char *, ...);
+int     execle(FAR const char *, FAR const char *, ...);
+int     execv(FAR const char *, FAR char * const[]);
+int     execve(FAR const char *, FAR char *const[],
+               FAR char *const[]);
 #endif
 
 /* Byte operations */
 
-void    swab(FAR const void *src, FAR void *dest, ssize_t nbytes);
+void    swab(FAR const void *, FAR void *, ssize_t);
 
 /* getopt and friends */
 
-int     getopt(int argc, FAR char * const argv[], FAR const char *optstring);
+int     getopt(int, FAR char * const[], FAR const char *);
 
 /* Accessor functions associated with getopt(). */
 
@@ -456,44 +452,42 @@ FAR int   *getopterrp(void);  /* Print error message */
 FAR int   *getoptindp(void);  /* Index into argv */
 FAR int   *getoptoptp(void);  /* Unrecognized option character */
 
-int     gethostname(FAR char *name, size_t namelen);
-int     sethostname(FAR const char *name, size_t namelen);
+int     gethostname(FAR char *, size_t);
+int     sethostname(FAR const char *, size_t);
 
 /* Get configurable system variables */
 
-long    sysconf(int name);
-long    fpathconf(int fildes, int name);
-long    pathconf(FAR const char *path, int name);
-size_t  confstr(int name, FAR char *buf, size_t len);
+long    sysconf(int);
+long    fpathconf(int, int);
+long    pathconf(FAR const char *, int);
+size_t  confstr(int, FAR char *, size_t);
 
 /* User and group identity management */
 
-int     setuid(uid_t uid);
+int     setuid(uid_t);
 uid_t   getuid(void);
-int     setgid(gid_t gid);
+int     setgid(gid_t);
 gid_t   getgid(void);
 
-int     seteuid(uid_t uid);
+int     seteuid(uid_t);
 uid_t   geteuid(void);
-int     setegid(gid_t gid);
+int     setegid(gid_t);
 gid_t   getegid(void);
 
-int     setreuid(uid_t ruid, uid_t euid);
-int     setregid(gid_t rgid, gid_t egid);
+int     setreuid(uid_t, uid_t);
+int     setregid(gid_t, gid_t);
 
-int     getentropy(FAR void *buffer, size_t length);
+int     getentropy(FAR void *, size_t);
 
 void    sync(void);
-int     syncfs(int fd);
+int     syncfs(int);
 
-int     profil(FAR unsigned short *buf, size_t bufsiz,
-               size_t offset, unsigned int scale);
+int     profil(FAR unsigned short *, size_t, size_t, unsigned int);
 
-FAR char *getpass(FAR const char *prompt);
+FAR char *getpass(FAR const char *);
 #ifdef CONFIG_CRYPTO
-FAR char *crypt(FAR const char *key, FAR const char *salt);
-FAR char *crypt_r(FAR const char *key, FAR const char *salt,
-                  FAR char *output);
+FAR char *crypt(FAR const char *, FAR const char *);
+FAR char *crypt_r(FAR const char *, FAR const char *, FAR char *);
 #endif
 
 #if CONFIG_FORTIFY_SOURCE > 0
