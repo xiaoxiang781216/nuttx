@@ -154,13 +154,6 @@
 #define DBG_ESR_EVT_HWWP        (0x2)
 #define DBG_ESR_EVT_BRK         (0x6)
 
-#define __builtin_unreachable()    \
-  do                               \
-    {                              \
-      serr("Unreachable code\n"); \
-      PANIC();                     \
-    } while (true)
-
 /****************************************************************************
  * Public Type Declarations
  ****************************************************************************/

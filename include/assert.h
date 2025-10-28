@@ -76,15 +76,22 @@
 #  define __ASSERT_LINE__ 0
 #endif
 
-#define PANIC() __assert(__ASSERT_FILE__, __ASSERT_LINE__, "panic")
-#define PANIC_WITH_REGS(msg, regs) _assert(__ASSERT_FILE__, \
+#define PANIC()                                                               \
+  do                                                                          \
+    {                                                                         \
+      __assert(__ASSERT_FILE__, __ASSERT_LINE__, "panic");                    \
+      code_unreachable();                                                     \
+    }                                                                         \
+  while(0)
+
+#define PANIC_WITH_REGS(msg, regs) _assert(__ASSERT_FILE__,                   \
                                            __ASSERT_LINE__, msg, regs, true)
 
 #define __ASSERT__(f, file, line, _f) \
-  (predict_false(!(f))) ? __assert(file, line, _f) : ((void)0)
+  (predict_false(!(f))) ? (__assert(file, line, _f), code_unreachable()) : ((void)0)
 
 #define __VERIFY__(f, file, line, _f) \
-  (predict_false((f) < 0)) ? __assert(file, line, _f) : ((void)0)
+  (predict_false((f) < 0)) ? (__assert(file, line, _f), code_unreachable()) : ((void)0)
 
 #ifdef CONFIG_DEBUG_ASSERTIONS_EXPRESSION
 #  define _ASSERT(f,file,line) __ASSERT__(f, file, line, #f)
@@ -196,7 +203,7 @@ void _assert(FAR const char *filename, int linenum,
  ****************************************************************************/
 
 void __assert(FAR const char *filename, int linenum,
-              FAR const char *msg) noreturn_function;
+              FAR const char *msg);
 
 #undef EXTERN
 #ifdef __cplusplus

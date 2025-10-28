@@ -421,7 +421,8 @@ void __ubsan_handle_type_mismatch_v1(FAR void *_data, FAR void *ptr)
 
 void __ubsan_handle_builtin_unreachable(FAR void *data)
 {
-  PANIC();
+  __assert(__ASSERT_FILE__, __ASSERT_LINE__, "ubsan");
+  for (; ; );
 }
 
 void __ubsan_handle_nonnull_arg(FAR void *data)

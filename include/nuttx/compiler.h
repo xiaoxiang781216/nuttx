@@ -214,6 +214,13 @@
 
 #  define noreturn_function __attribute__((noreturn))
 
+/* If control flow reaches the point of the __builtin_unreachable,
+ * the program is undefined. It is useful in situations where
+ * the compiler cannot deduce the unreachability of the code.
+ */
+
+#define code_unreachable() __builtin_unreachable()
+
 /* The pure function attribute informs the compiler that
  * the function is pure or const.
  */
@@ -683,6 +690,7 @@
 #  define noreturn_function
 #  define pure_function
 #  define const_function
+#  define code_unreachable() for (; ; )
 #  define predict_true(x) (x)
 #  define predict_false(x) (x)
 #  define is_constexpr(x)  (0)
@@ -860,6 +868,7 @@
 #  define noreturn_function
 #  define pure_function
 #  define const_function
+#  define code_unreachable() for (; ; )
 #  define predict_true(x) (x)
 #  define predict_false(x) (x)
 #  define is_constexpr(x)  (0)
@@ -993,6 +1002,7 @@
 #  define farcall_function
 #  define pure_function
 #  define const_function
+#  define code_unreachable() for (; ; )
 #  define predict_true(x) (x)
 #  define predict_false(x) (x)
 #  define is_constexpr(x)  (0)
@@ -1107,6 +1117,7 @@
 #  define farcall_function
 #  define pure_function
 #  define const_function
+#  define code_unreachable() __assume(0)
 #  define predict_true(x) (x)
 #  define predict_false(x) (x)
 #  define is_constexpr(x)  (0)
@@ -1208,6 +1219,7 @@
 #  define farcall_function              __attribute__((long_call))
 #  define pure_function
 #  define const_function
+#  define code_unreachable()            __builtin_unreachable()
 #  define predict_true(x) (x)
 #  define predict_false(x) (x)
 #  define is_constexpr(x)  (0)
@@ -1296,6 +1308,7 @@
 #  define farcall_function
 #  define pure_function
 #  define const_function
+#  define code_unreachable() for (; ; )
 #  define predict_true(x) (x)
 #  define predict_false(x) (x)
 #  define is_constexpr(x)  (0)
