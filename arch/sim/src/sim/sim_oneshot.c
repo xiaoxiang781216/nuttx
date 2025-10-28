@@ -32,7 +32,6 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
 #include <nuttx/clock.h>
-#include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/timers/oneshot.h>
@@ -68,7 +67,6 @@ struct sim_oneshot_lowerhalf_s
  ****************************************************************************/
 
 static struct list_node g_oneshot_list = LIST_INITIAL_VALUE(g_oneshot_list);
-static rspinlock_t g_oneshot_list_lock = RSPINLOCK_INITIALIZER;
 
 /****************************************************************************
  * Private Functions
@@ -89,7 +87,7 @@ sim_timer_update_internal(struct sim_oneshot_lowerhalf_s *priv)
 {
   struct sim_oneshot_lowerhalf_s *node;
   bool       is_head;
-  irqstate_t flags = rspin_lock_irqsave(&g_oneshot_list_lock);
+  irqstate_t flags = enter_critical_section();
 
   /* Insert the new oneshot timer to the list. */
 
@@ -112,7 +110,7 @@ sim_timer_update_internal(struct sim_oneshot_lowerhalf_s *priv)
       host_settimer(priv->expire_time);
     }
 
-  rspin_unlock_irqrestore(&g_oneshot_list_lock, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -132,7 +130,7 @@ sim_timer_update_internal(struct sim_oneshot_lowerhalf_s *priv)
 static int sim_timer_handler(int irq, void *context, void *arg)
 {
   struct sim_oneshot_lowerhalf_s *priv;
-  irqstate_t flags = rspin_lock_irqsave(&g_oneshot_list_lock);
+  irqstate_t flags = enter_critical_section();
   uint64_t   curr  = host_gettime(false);
 
   /* Perform the callback if the timer is expired */
@@ -150,7 +148,7 @@ static int sim_timer_handler(int irq, void *context, void *arg)
       oneshot_process_callback(&priv->lh);
     }
 
-  rspin_unlock_irqrestore(&g_oneshot_list_lock, flags);
+  leave_critical_section(flags);
 
   return OK;
 }
@@ -162,13 +160,13 @@ static inline_function
 void sim_oneshot_set_timer(struct sim_oneshot_lowerhalf_s *priv,
                            uint64_t expected_ns)
 {
-  irqstate_t flags = rspin_lock_irqsave(&g_oneshot_list_lock);
+  irqstate_t flags = enter_critical_section();
 
   list_delete(&priv->node);
   priv->expire_time = expected_ns;
 
   sim_timer_update_internal(priv);
-  rspin_unlock_irqrestore(&g_oneshot_list_lock, flags);
+  leave_critical_section(flags);
 }
 
 static clkcnt_t sim_oneshot_max_delay(struct oneshot_lowerhalf_s *lower)
