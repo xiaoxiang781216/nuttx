@@ -403,6 +403,64 @@ static FAR sigpendq_t *nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
 #endif /* !CONFIG_DISABLE_SIGNALS */
 
 /****************************************************************************
+ * Name: nxsig_wakeup_task
+ *
+ * Description:
+ *   This function is responsible for waking up a task that is waiting for
+ *   a signal. It performs the following operations:
+ *
+ *   - Copy the signal information to the task's signal unblock info if
+ *     available.
+ *   - Clear the task's signal wait mask.
+ *   - Cancel the wait timer if it is active.
+ *   - Remove the task from the waiting-for-signal list.
+ *   - Add the task to the ready-to-run list and perform context switch
+ *     if necessary.
+ *
+ *   This function should be called when a signal is delivered to a task
+ *   that is currently blocked waiting for signals, to resume its execution.
+ *
+ * Input Parameters:
+ *   stcb - Pointer to the task control block of the task to be woken up.
+ *   info - Pointer to the signal information that caused the wakeup.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static void nxsig_wakeup_task(FAR struct tcb_s *stcb,
+                              FAR siginfo_t *info)
+{
+  FAR struct tcb_s *rtcb = this_task();
+
+  if (stcb->sigunbinfo != NULL)
+    {
+      memcpy(stcb->sigunbinfo, info, sizeof(siginfo_t));
+    }
+
+  sigemptyset(&stcb->sigwaitmask);
+
+  if (WDOG_ISACTIVE(&stcb->waitdog))
+    {
+      wd_cancel(&stcb->waitdog);
+    }
+
+  /* Remove the task from waiting list */
+
+  dq_rem((FAR dq_entry_t *)stcb, list_waitingforsignal());
+
+  /* Add the task to ready-to-run task list and
+   * perform the context switch if one is needed
+   */
+
+  if (nxsched_add_readytorun(stcb))
+    {
+      nxsched_switch(this_task(), rtcb);
+    }
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -430,7 +488,6 @@ static FAR sigpendq_t *nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
 
 int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 {
-  FAR struct tcb_s *rtcb = this_task();
   irqstate_t flags;
   int masked;
   int ret = OK;
@@ -505,30 +562,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
           if (stcb->task_state == TSTATE_WAIT_SIG && (masked == 0 ||
                nxsig_ismember(&stcb->sigwaitmask, info->si_signo)))
             {
-              if (stcb->sigunbinfo != NULL)
-                {
-                  memcpy(stcb->sigunbinfo, info, sizeof(siginfo_t));
-                }
-
-              sigemptyset(&stcb->sigwaitmask);
-
-              if (WDOG_ISACTIVE(&stcb->waitdog))
-                {
-                  wd_cancel(&stcb->waitdog);
-                }
-
-              /* Remove the task from waiting list */
-
-              dq_rem((FAR dq_entry_t *)stcb, list_waitingforsignal());
-
-              /* Add the task to ready-to-run task list and
-               * perform the context switch if one is needed
-               */
-
-              if (nxsched_add_readytorun(stcb))
-                {
-                  nxsched_switch(this_task(), rtcb);
-                }
+              nxsig_wakeup_task(stcb, info);
 
 #ifndef CONFIG_DISABLE_SIGNALS
 #  ifdef CONFIG_LIB_SYSCALL
@@ -581,30 +615,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           if (stcb->task_state == TSTATE_WAIT_SIG)
             {
-              if (stcb->sigunbinfo != NULL)
-                {
-                  memcpy(stcb->sigunbinfo, info, sizeof(siginfo_t));
-                }
-
-              sigemptyset(&stcb->sigwaitmask);
-
-              if (WDOG_ISACTIVE(&stcb->waitdog))
-                {
-                  wd_cancel(&stcb->waitdog);
-                }
-
-              /* Remove the task from waiting list */
-
-              dq_rem((FAR dq_entry_t *)stcb, list_waitingforsignal());
-
-              /* Add the task to ready-to-run task list and
-               * perform the context switch if one is needed
-               */
-
-              if (nxsched_add_readytorun(stcb))
-                {
-                  nxsched_switch(this_task(), rtcb);
-                }
+              nxsig_wakeup_task(stcb, info);
             }
 
           leave_critical_section(flags);
@@ -657,6 +668,8 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 #ifdef HAVE_GROUP_MEMBERS
               group_continue(stcb);
 #else
+              FAR struct tcb_s *rtcb = this_task();
+
               /* Remove the task from waiting list */
 
               dq_rem((FAR dq_entry_t *)stcb, list_stoppedtasks());
