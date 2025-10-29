@@ -256,7 +256,7 @@ spin_trylock_notrace(FAR volatile spinlock_t *lock)
 {
 #ifdef CONFIG_TICKET_SPINLOCK
   return atomic_cmpxchg_acquire(&lock->next, &lock->owner,
-                                atomic_read_relax(&lock->next) + 1);
+                                atomic_read(&lock->next) + 1);
 #else /* CONFIG_TICKET_SPINLOCK */
   return atomic_xchg_acquire(&lock->lock, 1) != 1;
 #endif /* CONFIG_TICKET_SPINLOCK */
