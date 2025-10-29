@@ -120,7 +120,7 @@ int nxsig_notification(pid_t pid, FAR struct sigevent *event,
       /* Yes.. Create the siginfo structure */
 
       info.si_signo  = event->sigev_signo;
-      info.si_code   = (uint8_t)code;
+      info.si_code   = code;
       info.si_errno  = OK;
 #ifdef CONFIG_SCHED_HAVE_PARENT
       info.si_pid    = this_task()->pid;
