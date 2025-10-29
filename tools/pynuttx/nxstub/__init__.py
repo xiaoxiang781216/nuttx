@@ -83,6 +83,7 @@ def parse_log(elf, arch, logfile):
         return RawMemory(addr, data)
 
     registerdump = []
+    tempmemories = []
     parsing_regs = False
     lines = []
     with open(logfile, "r", errors="ignore") as f:
