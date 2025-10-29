@@ -390,7 +390,6 @@ struct note_filter_named_tag_s
   struct note_filter_tag_s tag_mask;
 };
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
 struct note_filter_s
 {
   struct note_filter_mode_s mode;
@@ -404,7 +403,6 @@ struct note_filter_s
   struct note_filter_syscall_s syscall_mask;
 #  endif
 };
-#endif
 
 struct note_driver_s
 {
