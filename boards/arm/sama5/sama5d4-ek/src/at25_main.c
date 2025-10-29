@@ -35,6 +35,7 @@
 #include <errno.h>
 #include <debug.h>
 #include <hex2bin.h>
+#include <inttypes.h>
 
 #include <nuttx/streams.h>
 #include <arch/irq.h>
