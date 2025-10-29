@@ -50,14 +50,11 @@ SECTIONS
 #ifdef CONFIG_MM_KASAN_GLOBAL
   .kasan.unused : {
     *(.data..LASANLOC*)
-  }
+  } > kdiscard
   .kasan.global : {
     KEEP (*(.data..LASAN0))
     KEEP (*(.data.rel.local..LASAN0))
-  }
-  .kasan.shadows : {
-    *(.kasan.shadows)
-  }
+  } > kdiscard
 #endif
 
   .text : {
@@ -98,6 +95,12 @@ SECTIONS
       *(.ARM.exidx* .gnu.linkonce.armexidx.*)
   } > kflash
   PROVIDE_HIDDEN (__exidx_end = .);
+
+#ifdef CONFIG_MM_KASAN_GLOBAL
+  .kasan.shadows : {
+    *(.kasan.shadows)
+  } > kflash
+#endif
 
   .rodata : {
       _srodata = .;          /* Read-only data */

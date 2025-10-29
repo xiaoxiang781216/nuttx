@@ -25,6 +25,18 @@
 OUTPUT_ARCH(arm)
 SECTIONS
 {
+  /* where the global variable out-of-bounds detection information located */
+
+#ifdef CONFIG_MM_KASAN_GLOBAL
+    .kasan.unused : {
+        *(.data..LASANLOC*)
+    } > udiscard
+    .kasan.global : {
+        KEEP (*(.data..LASAN0))
+        KEEP (*(.data.rel.local..LASAN0))
+    } > udiscard
+#endif
+
     .userspace : {
         KEEP(*(.userspace))
     } > uflash
@@ -61,6 +73,23 @@ SECTIONS
     } > uflash
 
     __exidx_end = ABSOLUTE(.);
+
+#ifdef CONFIG_MM_KASAN_GLOBAL
+    .kasan.shadows : {
+        *(.kasan.shadows)
+    } > uflash
+#endif
+
+    .rodata : {
+        _srodata = .;          /* Read-only data */
+        *(.rodata*)
+        *(.data.rel.ro*)
+        KEEP(*(SORT(.scattered_array*)));
+        . = ALIGN(4096);
+        _erodata = .;
+    } > uflash
+
+    _eronly = ABSOLUTE(.);
 
 #ifdef CONFIG_PERCPU_SECTION
     . = ALIGN(64);

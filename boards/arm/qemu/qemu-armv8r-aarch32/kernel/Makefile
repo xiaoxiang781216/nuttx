@@ -40,6 +40,28 @@ USER_LDFLAGS = --undefined=userspace --undefined=$(ENTRYPT) --entry=$(ENTRYPT) -
 USER_LDLIBS = $(patsubst lib%,-l%,$(basename $(notdir $(USERLIBS))))
 USER_LIBGCC = "${shell "$(CC)" $(ARCHCPUFLAGS) -print-libgcc-file-name}"
 
+# Objects needed for multiple linking
+
+ifeq ($(CONFIG_MM_KASAN_GLOBAL),y)
+EXTRA_UOBJS += kasan_globals$(OBJEXT)
+endif
+ifeq ($(CONFIG_ALLSYMS),y)
+EXTRA_UOBJS += allsyms$(OBJEXT)
+endif
+
+define LINK_ALLSYMS_KASAN
+	$(if $(CONFIG_ALLSYMS),
+	$(Q) $(TOPDIR)/tools/mkallsyms.py nuttx_user allsyms.tmp --orderbyname $(CONFIG_SYMTAB_ORDEREDBYNAME) --section ${CONFIG_ALLSYMS_SECTION}
+	$(Q) $(call COMPILE, allsyms.tmp, allsyms$(OBJEXT), -x c -fno-sanitize=kernel-address)
+	$(Q) $(call DELFILE, allsyms.tmp))
+	$(if $(CONFIG_MM_KASAN_GLOBAL),
+	$(Q) $(TOPDIR)/tools/kasan_global.py -e nuttx_user -o kasan_globals.tmp -a $(CONFIG_MM_KASAN_GLOBAL_ALIGN)
+	$(Q) $(call COMPILE, kasan_globals.tmp, kasan_globals$(OBJEXT), -x c -fno-sanitize=kernel-address)
+	$(Q) $(call DELFILE, kasan_globals.tmp))
+	$(Q) $(LD) $(USER_LDFLAGS) $(USER_LIBPATHS) -o nuttx_user $(OBJS) $(EXTRA_UOBJS) \
+		--start-group $(USER_LDLIBS) $(USER_LIBGCC) --end-group
+endef
+
 # Source files
 
 COBJS = $(CSRCS:.c=$(OBJEXT))
@@ -59,7 +81,14 @@ $(addsuffix .tmp,$(USER_LDSCRIPT)): $(USER_LDSCRIPT)
 # Create the nuttx_user file containing all of the user-mode code
 
 nuttx_user: $(OBJS) $(addsuffix .tmp,$(USER_LDSCRIPT))
+ifeq ($(CONFIG_ALLSYMS)$(CONFIG_MM_KASAN_GLOBAL),)
 	$(Q) $(LD) -o $@ $(USER_LDFLAGS) $(USER_LIBPATHS) $(OBJS) --start-group $(USER_LDLIBS) $(USER_LIBGCC) --end-group
+else
+	$(Q) $(call LINK_ALLSYMS_KASAN)
+	$(Q) $(call LINK_ALLSYMS_KASAN)
+	$(Q) $(call LINK_ALLSYMS_KASAN)
+	$(Q) $(call LINK_ALLSYMS_KASAN)
+endif
 
 $(TOPDIR)$(DELIM)nuttx_user: nuttx_user
 	@echo "LD: nuttx_user"
