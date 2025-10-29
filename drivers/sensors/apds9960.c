@@ -39,6 +39,7 @@
 #include <stdlib.h>
 
 #include <nuttx/kmalloc.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/signal.h>
 #include <nuttx/random.h>
 #include <nuttx/wqueue.h>

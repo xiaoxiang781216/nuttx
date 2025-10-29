@@ -40,6 +40,7 @@
 
 #include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>

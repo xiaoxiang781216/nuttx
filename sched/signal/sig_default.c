@@ -35,6 +35,7 @@
 
 #include <nuttx/pthread.h>
 #include <nuttx/sched.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/signal.h>
 #include <nuttx/tls.h>
