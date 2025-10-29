@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <stdbool.h>
 
+#include <nuttx/percpu.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>
 
@@ -58,7 +59,8 @@ extern "C"
  * NOTE that this duplicates a declaration in net/tcp/tcp.h
  */
 
-EXTERN struct net_driver_s *g_netdevices;
+DECLARE_PER_CPU_BMP(struct net_driver_s *, g_netdevices);
+#define g_netdevices this_cpu_var_bmp(g_netdevices)
 
 #ifdef CONFIG_NETDEV_IFINDEX
 /* The set of network devices that have been registered.  This is used to
@@ -68,7 +70,8 @@ EXTERN struct net_driver_s *g_netdevices;
  * devices to 32 (MAX_IFINDEX).
  */
 
-EXTERN uint32_t g_devset;
+DECLARE_PER_CPU_BMP(uint32_t, g_devset);
+#define g_devset this_cpu_var_bmp(g_devset)
 
 /* The set of network devices that have been freed.  The purpose of this
  * set is to postpone reuse of a interface index for as long as possible,
@@ -76,7 +79,8 @@ EXTERN uint32_t g_devset;
  * have been used.
  */
 
-EXTERN uint32_t g_devfreed;
+DECLARE_PER_CPU_BMP(uint32_t, g_devfreed);
+#define g_devfreed this_cpu_var_bmp(g_devfreed)
 #endif
 
 /****************************************************************************
