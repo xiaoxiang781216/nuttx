@@ -56,14 +56,6 @@ void arm_enable_smp(int cpu)
 {
   uint32_t regval;
 
-  /* We need to confirm that current_task has been initialized. */
-
-  while (!current_task(this_cpu()));
-
-  /* Init idle task to percpu reg */
-
-  up_update_task(current_task(cpu));
-
   /* Handle actions unique to CPU0 which comes up first */
 
   if (cpu == 0)
@@ -102,6 +94,16 @@ void arm_enable_smp(int cpu)
 
   else
     {
+#ifdef CONFIG_SMP
+      /* We need to confirm that current_task has been initialized. */
+
+      while (!current_task(this_cpu()));
+
+      /* Init idle task to percpu reg */
+
+      up_update_task(current_task(cpu));
+#endif
+
       /* Invalidate CPUn L1 data cache so that is will we be reloaded from
        * coherent L2.
        */

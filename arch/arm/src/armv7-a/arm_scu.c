@@ -57,14 +57,6 @@ void arm_enable_smp(int cpu)
 {
   uint32_t regval;
 
-  /* We need to confirm that current_task has been initialized. */
-
-  while (!current_task(this_cpu()));
-
-  /* Init idle task to percpu reg */
-
-  up_update_task(current_task(cpu));
-
   /* Handle actions unique to CPU0 which comes up first */
 
   if (cpu == 0)
@@ -101,6 +93,16 @@ void arm_enable_smp(int cpu)
 
   else
     {
+#ifdef CONFIG_SMP
+      /* We need to confirm that current_task has been initialized. */
+
+      while (!current_task(this_cpu()));
+
+      /* Init idle task to percpu reg */
+
+      up_update_task(current_task(cpu));
+#endif
+
       /* If we do coloration in assembly, will hard to cover the tls etc.
        * And we should not do coloration before tcb stack_base_ptr updated.
        */
