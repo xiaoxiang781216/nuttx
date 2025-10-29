@@ -162,16 +162,12 @@ static int cap_open(FAR struct file *filep)
 {
   FAR struct inode           *inode = filep->f_inode;
   FAR struct cap_upperhalf_s *upper = inode->i_private;
+  int                         ret   = OK;
   uint8_t                     tmp;
-  int                         ret;
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&upper->lock);
-  if (ret < 0)
-    {
-      goto errout;
-    }
+  nxmutex_lock(&upper->lock);
 
   /* Increment the count of references to the device.  If this is the first
    * time that the driver has been opened for this device, then initialize
@@ -212,12 +208,10 @@ static int cap_open(FAR struct file *filep)
   /* Save the new open count on success */
 
   upper->crefs = tmp;
-  ret = OK;
 
 errout_with_lock:
   nxmutex_unlock(&upper->lock);
 
-errout:
   return ret;
 }
 
@@ -233,15 +227,10 @@ static int cap_close(FAR struct file *filep)
 {
   FAR struct inode           *inode = filep->f_inode;
   FAR struct cap_upperhalf_s *upper = inode->i_private;
-  int                         ret;
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&upper->lock);
-  if (ret < 0)
-    {
-      goto errout;
-    }
+  nxmutex_lock(&upper->lock);
 
   /* Decrement the references to the driver.  If the reference count will
    * decrement to 0, then uninitialize the driver.
@@ -269,10 +258,8 @@ static int cap_close(FAR struct file *filep)
     }
 
   nxmutex_unlock(&upper->lock);
-  ret = OK;
 
-errout:
-  return ret;
+  return OK;
 }
 
 /****************************************************************************
@@ -323,7 +310,7 @@ static int cap_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct inode           *inode = filep->f_inode;
   FAR struct cap_upperhalf_s *upper;
   FAR struct cap_lowerhalf_s **lower;
-  int                        ret;
+  int                        ret = -ENOTTY;
   uint8_t                    i;
 
   cpinfo("cmd: %d arg: %ld\n", cmd, arg);
@@ -334,11 +321,7 @@ static int cap_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&upper->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  nxmutex_lock(&upper->lock);
 
   /* Handle built-in ioctl commands */
 
