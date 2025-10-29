@@ -33,6 +33,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <nuttx/mutex.h>
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -64,6 +66,7 @@ struct hostfs_ofile_s
 struct hostfs_mountpt_s
 {
   FAR struct hostfs_ofile_s *fs_head;      /* A singly-linked list of open files */
+  mutex_t                    fs_lock;
   char                       fs_root[HOSTFS_MAX_PATH];
 };
 
