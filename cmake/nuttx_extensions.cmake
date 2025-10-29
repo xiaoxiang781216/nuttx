@@ -498,3 +498,52 @@ function(nuttx_build_host_target target)
     COMMAND cmake --build ${CMAKE_BINARY_DIR}/bin_host --target ${target}
     SOURCES ${ARGN})
 endfunction()
+
+# Macro: nuttx_check_cpp_version
+#
+# define macros to check the C++ version and prepend variables
+#
+# Usage: nuttx_check_cpp_version()
+#
+# message(STATUS "C++ Ver: ${CPP_STANDARD_VERSION}")
+#
+# message(STATUS "C++ 14+: ${CPP_STD_14_OR_ABOVE}")
+#
+# message(STATUS "C++ 17+: ${CPP_STD_17_OR_ABOVE}")
+#
+# message(STATUS "C++ 20+: ${CPP_STD_20_OR_ABOVE}")
+#
+macro(nuttx_check_cpp_version)
+  if("${CONFIG_CXX_STANDARD}" MATCHES "[+]+([0-9]+|[0-9][a-z])")
+    set(_ver "${CMAKE_MATCH_1}")
+    if(_ver STREQUAL "2a") # C++20 draft
+      set(CPP_STANDARD_VERSION 20)
+    elseif(_ver STREQUAL "1z" OR _ver STREQUAL "1y") # C++17 draft
+      set(CPP_STANDARD_VERSION 17)
+    elseif(_ver STREQUAL "1x") # C++14 draft
+      set(CPP_STANDARD_VERSION 14)
+    else()
+      set(CPP_STANDARD_VERSION ${_ver})
+    endif()
+  else()
+    set(CPP_STANDARD_VERSION 0)
+  endif()
+
+  set(CPP_STD_14_OR_ABOVE FALSE)
+  set(CPP_STD_17_OR_ABOVE FALSE)
+  set(CPP_STD_20_OR_ABOVE FALSE)
+  set(CPP_STD_23_OR_ABOVE FALSE)
+
+  if(CPP_STANDARD_VERSION GREATER_EQUAL 14)
+    set(CPP_STD_14_OR_ABOVE TRUE)
+  endif()
+  if(CPP_STANDARD_VERSION GREATER_EQUAL 17)
+    set(CPP_STD_17_OR_ABOVE TRUE)
+  endif()
+  if(CPP_STANDARD_VERSION GREATER_EQUAL 20)
+    set(CPP_STD_20_OR_ABOVE TRUE)
+  endif()
+  if(CPP_STANDARD_VERSION GREATER_EQUAL 23)
+    set(CPP_STD_23_OR_ABOVE TRUE)
+  endif()
+endmacro()
