@@ -87,7 +87,7 @@ static const struct file_operations g_signalfd_fileops =
   signalfd_file_poll    /* poll */
 };
 
-static struct inode g_signalfd_inode =
+static DEFINE_PER_CPU_BMP(struct inode, g_signalfd_inode) =
 {
   NULL,                   /* i_parent */
   NULL,                   /* i_peer */
@@ -98,6 +98,7 @@ static struct inode g_signalfd_inode =
     &g_signalfd_fileops   /* u */
   }
 };
+#define g_signalfd_inode this_cpu_var_bmp(g_signalfd_inode)
 
 /****************************************************************************
  * Private Functions

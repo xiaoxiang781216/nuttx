@@ -135,7 +135,7 @@ static const struct file_operations g_epoll_ops =
   epoll_do_poll     /* poll */
 };
 
-static struct inode g_epoll_inode =
+static DEFINE_PER_CPU_BMP(struct inode, g_epoll_inode) =
 {
   NULL,                   /* i_parent */
   NULL,                   /* i_peer */
@@ -146,6 +146,7 @@ static struct inode g_epoll_inode =
     &g_epoll_ops          /* u */
   }
 };
+#define g_epoll_inode this_cpu_var_bmp(g_epoll_inode)
 
 /****************************************************************************
  * Private Functions

@@ -127,7 +127,7 @@ static const struct file_operations g_timerfd_fops =
 #endif
 };
 
-static struct inode g_timerfd_inode =
+static DEFINE_PER_CPU_BMP(struct inode, g_timerfd_inode) =
 {
   NULL,                   /* i_parent */
   NULL,                   /* i_peer */
@@ -138,6 +138,7 @@ static struct inode g_timerfd_inode =
     &g_timerfd_fops       /* u */
   }
 };
+#define g_timerfd_inode this_cpu_var_bmp(g_timerfd_inode)
 
 /****************************************************************************
  * Private Functions

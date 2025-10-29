@@ -129,7 +129,7 @@ static const struct file_operations g_inotify_fops =
   inotify_poll,     /* poll */
 };
 
-static struct inode g_inotify_inode =
+static DEFINE_PER_CPU_BMP(struct inode, g_inotify_inode) =
 {
   NULL,
   NULL,
@@ -140,11 +140,13 @@ static struct inode g_inotify_inode =
     &g_inotify_fops
   }
 };
+#define g_inotify_inode this_cpu_var_bmp(g_inotify_inode)
 
-static struct inotify_global_s g_inotify =
+static DEFINE_PER_CPU_BMP(struct inotify_global_s, g_inotify) =
 {
   .lock = NXMUTEX_INITIALIZER,
 };
+#define g_inotify this_cpu_var_bmp(g_inotify)
 
 /****************************************************************************
  * Private Functions

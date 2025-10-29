@@ -110,7 +110,7 @@ static const struct file_operations g_eventfd_fops =
 #endif
 };
 
-static struct inode g_eventfd_inode =
+static DEFINE_PER_CPU_BMP(struct inode, g_eventfd_inode) =
 {
   NULL,                   /* i_parent */
   NULL,                   /* i_peer */
@@ -121,6 +121,7 @@ static struct inode g_eventfd_inode =
     &g_eventfd_fops       /* u */
   }
 };
+#define g_eventfd_inode this_cpu_var_bmp(g_eventfd_inode)
 
 /****************************************************************************
  * Private Functions
