@@ -4,6 +4,7 @@
 -sim:sqlite
 -sim:tflm
 -sim:wamr
+-sim:segger
 
 # macOS doesn't support 32bit anymore(CONFIG_SIM_M32=y)
 -Darwin,sim:posix_spawn

@@ -4,6 +4,8 @@
 
 -rv-virt:nest-pnsh
 -rv-virt:leds64_zig
+-rv-virt:leds64_rust
+-rv-virt:smp
 
 # Boards build by CMake
 CMake,rv-virt:smp
