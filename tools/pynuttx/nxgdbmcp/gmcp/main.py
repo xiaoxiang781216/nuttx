@@ -39,6 +39,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="GDB mcp server for NuttX")
     parser.add_argument("--stdio", action="store_true", help="enable stdio transport")
+    parser.add_argument("--port", type=int, default=20819, help="server port")
 
     args = parser.parse_args()
 
@@ -55,7 +56,7 @@ def main():
             instructions=description,
             stateless_http=True,
             host="0.0.0.0",
-            port=20819,
+            port=args.port,
         )
 
     tools.register_command_tools(gdb_mcp)
@@ -71,7 +72,7 @@ def main():
         else:
             import uvicorn
 
-            uvicorn.run(gdb_mcp.streamable_http_app(), host="0.0.0.0", port=20919)
+            uvicorn.run(gdb_mcp.streamable_http_app(), host="0.0.0.0", port=args.port)
     except KeyboardInterrupt:
         print("Cleaning up GDB sessions...")
         session_manager = SessionManager.get_instance()
