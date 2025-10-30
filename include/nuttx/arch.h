@@ -378,6 +378,7 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, int ttype);
  *   - tcb:  The TCB of new task
  *   - stack:  The new stack to be used.
  *   - stack_size:  The allocated stack size.
+ *   - ttype: The thread type.
  *
  *   NOTE:  Unlike up_stack_create() and up_stack_release, this function
  *   does not require the task type (ttype) parameter.  The TCB flags will
@@ -386,7 +387,8 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, int ttype);
  *
  ****************************************************************************/
 
-int up_use_stack(FAR struct tcb_s *tcb, FAR void *stack, size_t stack_size);
+int up_use_stack(FAR struct tcb_s *tcb, FAR void *stack, size_t stack_size,
+                 int ttype);
 
 /****************************************************************************
  * Name: up_stack_frame

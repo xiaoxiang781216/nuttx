@@ -102,7 +102,7 @@ static int task_setup(FAR struct tcb_s *tcb, const char *name, main_t entry,
             {
               /* Use pre-allocated stack */
 
-              ret = up_use_stack(tcb, stack, stacksize);
+              ret = up_use_stack(tcb, stack, stacksize, ttype);
             }
           else
             {

@@ -249,7 +249,8 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
     {
       /* Use pre-allocated stack */
 
-      ret = up_use_stack(ptcb, attr->stackaddr, attr->stacksize);
+      ret = up_use_stack(ptcb, attr->stackaddr, attr->stacksize,
+                         TCB_FLAG_TTYPE_PTHREAD);
     }
   else
     {

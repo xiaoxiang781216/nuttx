@@ -67,8 +67,10 @@
  *
  ****************************************************************************/
 
-int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
+int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size,
+                 int ttype)
 {
+  int ttype = atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK;
   uintptr_t top_of_stack;
   size_t size_of_stack;
 
@@ -82,11 +84,20 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
     {
       stack_size = TLS_MAXSTACK;
     }
+
+  if (ttype == TCB_FLAG_TTYPE_PTHREAD)
+    {
+      /* Make certain that the userspace stack is properly aligned */
+
+      DEBUGASSERT(((uintptr_t)stack & STACK_ALIGN_MASK) == 0);
+    }
+  else
 #endif
+    {
+      /* With Kernel space or Flat build, we can always get tls by tcb */
 
-  /* Make certain that the user provided stack is properly aligned */
-
-  DEBUGASSERT(((uintptr_t)stack & STACK_ALIGN_MASK) == 0);
+      DEBUGASSERT(((uintptr_t)stack & STACKFRAME_ALIGN_MASK) == 0);
+    }
 
   /* Is there already a stack allocated? */
 
@@ -94,7 +105,7 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
     {
       /* Yes.. Release the old stack allocation */
 
-      up_release_stack(tcb, atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK);
+      up_release_stack(tcb, ttype);
     }
 
   /* Save the new stack allocation */
