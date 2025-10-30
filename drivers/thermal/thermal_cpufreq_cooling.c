@@ -35,9 +35,9 @@
 
 struct cpufreq_cooling_device_s
 {
-  FAR const struct cpufreq_frequency_table *table;
+  FAR const uint32_t *table;
   FAR struct cpufreq_policy *policy;
-  FAR struct cpufreq_qos *qos;
+  FAR struct qos_request_s *qos;
   unsigned int cur_state;
   unsigned int max_state;
 };
@@ -94,15 +94,15 @@ static int cpufreq_set_state(FAR struct thermal_cooling_device_s *cdev,
   int ret;
 
   thinfo("CPU Freq cooling %u %u \n",
-                                   cpufreq_cdev->table[index].frequency,
-                                   cpufreq_cdev->table[index + 1].frequency);
+                                   cpufreq_cdev->table[index],
+                                   cpufreq_cdev->table[index + 1]);
 
   if (cpufreq_cdev->qos == NULL)
     {
       cpufreq_cdev->qos = cpufreq_qos_add_request(
                                    cpufreq_cdev->policy,
-                                   cpufreq_cdev->table[index].frequency,
-                                   cpufreq_cdev->table[index + 1].frequency);
+                                   cpufreq_cdev->table[index],
+                                   cpufreq_cdev->table[index + 1]);
       if (!cpufreq_cdev->qos)
         {
           therr("Add qos request failed!");
@@ -113,8 +113,8 @@ static int cpufreq_set_state(FAR struct thermal_cooling_device_s *cdev,
     {
       ret = cpufreq_qos_update_request(
                                    cpufreq_cdev->qos,
-                                   cpufreq_cdev->table[index].frequency,
-                                   cpufreq_cdev->table[index + 1].frequency);
+                                   cpufreq_cdev->table[index],
+                                   cpufreq_cdev->table[index + 1]);
       if (ret < 0)
         {
           therr("Update qos request failed!");
@@ -146,7 +146,7 @@ static int cpufreq_set_state(FAR struct thermal_cooling_device_s *cdev,
 FAR struct thermal_cooling_device_s *thermal_cpufreq_cooling_register(void)
 {
   FAR struct cpufreq_cooling_device_s *cpufreq_cdev;
-  FAR const struct cpufreq_frequency_table *table;
+  FAR const uint32_t *table;
   FAR struct thermal_cooling_device_s *cdev;
   FAR struct cpufreq_driver **driver;
   FAR struct cpufreq_policy *policy;
@@ -168,7 +168,7 @@ FAR struct thermal_cooling_device_s *thermal_cpufreq_cooling_register(void)
       return NULL;
     }
 
-  for (count = 0; table[count].frequency != CPUFREQ_TABLE_END; count++)
+  for (count = 0; table[count] != CPUFREQ_TABLE_END; count++)
     {
     }
 

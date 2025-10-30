@@ -27,7 +27,7 @@ config THERMAL_GOVERNOR_STEP_WISE
 config THERMAL_CDEV_CPUFREQ
 	bool "Thermal cpufreq cooling device"
 	default n
-	depends on CPUFREQ
+	depends on DEVFREQ && !CPUFREQ_DEFAULT_GOV_NULL
 	---help---
 		Enable thermal cpufreq cooling device.
 
@@ -55,7 +55,7 @@ config THERMAL_DUMMY_POLLING_DELAY
 config THERMAL_DUMMY_CPUFREQ
 	bool "Dummy cpufreq driver"
 	default n
-	depends on CPUFREQ
+	depends on DEVFREQ && !CPUFREQ_DEFAULT_GOV_NULL
 	---help---
 		Enable cpufreq dummy driver.
 

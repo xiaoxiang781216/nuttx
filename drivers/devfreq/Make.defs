@@ -35,7 +35,7 @@ ifeq ($(CONFIG_DEVFREQ_GOV_QLEARNING),y)
 CSRCS += devfreq_qlearning.c
 endif
 
-ifeq ($(CONFIG_CPUFREQ))
+ifeq ($(CONFIG_CPUFREQ_DEFAULT_GOV_NULL),)
 CSRCS += cpufreq.c
 endif
 
