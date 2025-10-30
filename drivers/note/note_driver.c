@@ -1265,7 +1265,6 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter)
           formatted = true;
           note_common(tcb, &note.nih_cmn, sizeof(struct note_irqhandler_s),
                       enter ? NOTE_IRQ_ENTER : NOTE_IRQ_LEAVE);
-          DEBUGASSERT(irq <= NR_IRQS);
           note.nih_irq = irq;
           note.nih_handler = (uintptr_t)handler;
         }

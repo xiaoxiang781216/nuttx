@@ -174,6 +174,10 @@ uint32_t *arm_syscall(uint32_t *regs)
 
   up_set_interrupt_context(true);
 
+  /* Note to ram */
+
+  sched_note_irqhandler(NR_IRQS, arm_syscall, true);
+
   /* The SYSCALL command is in R0 on entry.  Parameters follow in R1..R7 */
 
   cmd = regs[REG_R0];
@@ -551,6 +555,10 @@ uint32_t *arm_syscall(uint32_t *regs)
   /* Report what happened */
 
   dump_syscall("Exit", cmd, regs);
+
+  /* Note to ram */
+
+  sched_note_irqhandler(NR_IRQS, arm_syscall, false);
 
   /* Set irq flag */
 
