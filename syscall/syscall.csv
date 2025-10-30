@@ -95,6 +95,7 @@
 "nxsem_reset","nuttx/semaphore.h","","int","FAR sem_t *","int16_t"
 "nxsem_set_protocol","nuttx/semaphore.h","defined(CONFIG_PRIORITY_INHERITANCE)","int","FAR sem_t *","int"
 "nxsem_setprioceiling","nuttx/semaphore.h","defined(CONFIG_PRIORITY_PROTECT)","int","FAR sem_t *","int","FAR int *"
+"nxsem_tickwait_slow","nuttx/semaphore.h","","int","FAR sem_t *","clock_t"
 "nxsem_trywait_slow","nuttx/semaphore.h","","int","FAR sem_t *"
 "nxsem_unlink","nuttx/semaphore.h","defined(CONFIG_FS_NAMED_SEMAPHORES)","int","FAR const char *"
 "nxsem_wait_slow","nuttx/semaphore.h","","int","FAR sem_t *"

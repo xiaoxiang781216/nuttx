@@ -954,7 +954,6 @@ int nxsem_clockwait_uninterruptible(FAR sem_t *sem, clockid_t clockid,
 
 static inline_function int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
 {
-  struct timespec ts;
   int ret;
 
   DEBUGASSERT(sem != NULL && up_interrupt_context() == false);
@@ -972,8 +971,7 @@ static inline_function int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
         }
       else
         {
-          clock_ticks2time(&ts, clock_delay2abstick(delay));
-          ret = nxsem_clockwait_slow(sem, CLOCK_MONOTONIC, &ts);
+          ret = nxsem_tickwait_slow(sem, delay);
         }
     }
 

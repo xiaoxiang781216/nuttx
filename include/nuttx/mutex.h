@@ -210,7 +210,6 @@ static inline_function bool nxrmutex_is_hold(FAR rmutex_t *rmutex)
 static inline_function
 int nxmutex_ticklock(FAR mutex_t *mutex, clock_t delay)
 {
-  struct timespec ts;
   clock_t end;
   int ret;
 
@@ -227,8 +226,7 @@ int nxmutex_ticklock(FAR mutex_t *mutex, clock_t delay)
 
       for (; ; )
         {
-          clock_ticks2time(&ts, clock_delay2abstick(delay));
-          ret = nxsem_clockwait_slow(&mutex->sem, CLOCK_MONOTONIC, &ts);
+          ret = nxsem_tickwait_slow(&mutex->sem, delay);
           if (ret >= 0)
             {
               nxmutex_add_backtrace(mutex);
@@ -240,9 +238,10 @@ int nxmutex_ticklock(FAR mutex_t *mutex, clock_t delay)
             }
 
           delay = end - clock();
-          if ((int32_t)delay < 0)
+          if ((int32_t)delay <= 0)
             {
-              delay = 0u;
+              ret = -ETIMEDOUT;
+              break;
             }
         }
     }
