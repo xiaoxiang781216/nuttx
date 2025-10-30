@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 
 #include <nuttx/kthread.h>
+#include <nuttx/semaphore.h>
 
 #include <debug.h>
 #include <string.h>
