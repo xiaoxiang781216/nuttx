@@ -43,6 +43,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/signal.h>
 #include <nuttx/mqueue.h>
+#include <nuttx/mutex.h>
 #include <nuttx/queue.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
