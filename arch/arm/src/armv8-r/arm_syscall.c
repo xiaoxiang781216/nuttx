@@ -176,13 +176,13 @@ uint32_t *arm_syscall(uint32_t *regs)
 
           regs[REG_PC]        = rtcb->xcp.syscall[index].sysreturn;
 #ifdef CONFIG_BUILD_PROTECTED
-#  ifdef CONFIG_ARMV7R_DECODEFIQ
+#  ifdef CONFIG_ARMV8R_DECODEFIQ
           regs[REG_CPSR]      = rtcb->xcp.syscall[index].cpsr |
                                 (regs[REG_CPSR] & (PSR_F_BIT | PSR_I_BIT));
 #  else
           regs[REG_CPSR]      = rtcb->xcp.syscall[index].cpsr |
                                 (regs[REG_CPSR] & PSR_I_BIT);
-#  endif                    
+#  endif
 #endif
           /* The return value must be in R0-R1.  arm_dispatch_syscall()
            * temporarily moved the value for R0 into R2.
