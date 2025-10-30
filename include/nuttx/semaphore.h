@@ -269,34 +269,6 @@ int nxsem_tickwait_slow(FAR sem_t *sem, clock_t delay);
 int nxsem_post_slow(FAR sem_t *sem);
 
 /****************************************************************************
- * Name:  nxsem_get_value
- *
- * Description:
- *   This function updates the location referenced by 'sval' argument to
- *   have the value of the semaphore referenced by 'sem' without effecting
- *   the state of the semaphore.  The updated value represents the actual
- *   semaphore value that occurred at some unspecified time during the call,
- *   but may not reflect the actual value of the semaphore when it is
- *   returned to the calling task.
- *
- *   If 'sem' is locked, the value return by nxsem_get_value() will either be
- *   zero or a negative number whose absolute value represents the number
- *   of tasks waiting for the semaphore.
- *
- * Input Parameters:
- *   sem - Semaphore descriptor
- *   sval - Buffer by which the value is returned
- *
- * Returned Value:
- *   This is an internal OS interface and should not be used by applications.
- *   It follows the NuttX internal error return policy:  Zero (OK) is
- *   returned on success.  A negated errno value is returned on failure.
- *
- ****************************************************************************/
-
-int nxsem_get_value(FAR sem_t *sem, FAR int *sval);
-
-/****************************************************************************
  * Name: nxsem_open
  *
  * Description:
@@ -470,31 +442,6 @@ int nxsem_reset(FAR sem_t *sem, int16_t count);
  ****************************************************************************/
 
 int nxsem_set_protocol(FAR sem_t *sem, int protocol);
-
-/****************************************************************************
- * Name: nxsem_wait_uninterruptible
- *
- * Description:
- *   This function is wrapped version of nxsem_wait(), which is
- *   uninterruptible and convenient for use.
- *
- * Parameters:
- *   sem - Semaphore descriptor.
- *
- * Return Value:
- *   Zero(OK)  - On success
- *   EINVAL    - Invalid attempt to get the semaphore
- *   ECANCELED - May be returned if the thread is canceled while waiting.
- *
- * NOTE:  It is essential that callers of this function handle the
- * ECANCELED error.  Correct handling is that the function should return the
- * error and the error should propagate back up the calling tree to the
- * cancellation point interface function where the thread termination will
- * be handled gracefully
- *
- ****************************************************************************/
-
-int nxsem_wait_uninterruptible(FAR sem_t *sem);
 
 /****************************************************************************
  * Name: nxsem_getprioceiling
@@ -1159,6 +1106,81 @@ int nxsem_timedwait_uninterruptible(FAR sem_t *sem,
                                     FAR const struct timespec *abstime)
 {
   return nxsem_clockwait_uninterruptible(sem, CLOCK_REALTIME, abstime);
+}
+
+/****************************************************************************
+ * Name: nxsem_wait_uninterruptible
+ *
+ * Description:
+ *   This function is wrapped version of nxsem_wait(), which is
+ *   uninterruptible and convenient for use.
+ *
+ * Parameters:
+ *   sem - Semaphore descriptor.
+ *
+ * Return Value:
+ *   Zero(OK)  - On success
+ *   EINVAL    - Invalid attempt to get the semaphore
+ *   ECANCELED - May be returned if the thread is canceled while waiting.
+ *
+ * NOTE:  It is essential that callers of this function handle the
+ * ECANCELED error.  Correct handling is that the function should return the
+ * error and the error should propagate back up the calling tree to the
+ * cancellation point interface function where the thread termination will
+ * be handled gracefully
+ *
+ ****************************************************************************/
+
+static inline_function int nxsem_wait_uninterruptible(FAR sem_t *sem)
+{
+  int ret;
+
+  do
+    {
+      /* Take the semaphore (perhaps waiting) */
+
+      ret = nxsem_wait(sem);
+    }
+  while (ret == -EINTR);
+
+  return ret;
+}
+
+/****************************************************************************
+ * Name:  nxsem_get_value
+ *
+ * Description:
+ *   This function updates the location referenced by 'sval' argument to
+ *   have the value of the semaphore referenced by 'sem' without effecting
+ *   the state of the semaphore.  The updated value represents the actual
+ *   semaphore value that occurred at some unspecified time during the call,
+ *   but may not reflect the actual value of the semaphore when it is
+ *   returned to the calling task.
+ *
+ *   If 'sem' is locked, the value return by nxsem_get_value() will either be
+ *   zero or a negative number whose absolute value represents the number
+ *   of tasks waiting for the semaphore.
+ *
+ * Input Parameters:
+ *   sem - Semaphore descriptor
+ *   sval - Buffer by which the value is returned
+ *
+ * Returned Value:
+ *   This is an internal OS interface and should not be used by applications.
+ *   It follows the NuttX internal error return policy:  Zero (OK) is
+ *   returned on success.  A negated errno value is returned on failure.
+ *
+ ****************************************************************************/
+
+static inline_function int nxsem_get_value(FAR sem_t *sem, FAR int *sval)
+{
+  if (sem != NULL && sval != NULL && !NXSEM_IS_MUTEX(sem))
+    {
+      *sval = atomic_read(NXSEM_COUNT(sem));
+      return OK;
+    }
+
+  return -EINVAL;
 }
 
 #undef EXTERN
