@@ -34,6 +34,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
+#include <nuttx/mutex.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/can.h>
 #include <nuttx/net/net.h>

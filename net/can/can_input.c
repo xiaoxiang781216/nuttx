@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/mutex.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/can.h>
 #include <nuttx/net/net.h>

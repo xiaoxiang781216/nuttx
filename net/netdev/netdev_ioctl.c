@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <nuttx/mutex.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/ip.h>
 

@@ -34,6 +34,7 @@
 
 #include <arpa/inet.h>
 
+#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>

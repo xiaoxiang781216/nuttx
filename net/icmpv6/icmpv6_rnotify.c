@@ -33,6 +33,7 @@
 
 #include <netinet/in.h>
 
+#include <nuttx/mutex.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
