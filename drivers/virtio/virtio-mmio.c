@@ -768,7 +768,9 @@ static int virtio_mmio_interrupt(int irq, FAR void *context, FAR void *arg)
 
           if (vq->callback != NULL && virtqueue_nused(vq) > 0)
             {
+              sched_note_printf(0xff, "s_mmio, cb %p\n", vq->callback);
               vq->callback(vq);
+              sched_note_printf(0xff, "e_mmio, cb %p\n", vq->callback);
             }
         }
     }
@@ -866,6 +868,8 @@ static int virtio_mmio_init_device(FAR struct virtio_mmio_device_s *vmdev,
 
   vrtinfo("VIRTIO version: %"PRIu32" device: %"PRIu32" vendor: %"PRIx32"\n",
           vdev->id.version, vdev->id.device, vdev->id.vendor);
+  sched_note_printf(0xff, "virtio-mmio regs: %p irq: %d device: %"PRIu32"\n",
+                    regs, irq, vdev->id.device);
 
   /* Reset the virtio device and set ACK */
 
