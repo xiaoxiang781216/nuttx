@@ -520,8 +520,6 @@ static int pseudofile_do_create(FAR struct inode **node,
       (*node)->i_size = size;
     }
 
-  atomic_add(&(*node)->i_crefs, 1);
-
   inode_unlock();
 #ifdef CONFIG_FS_NOTIFY
   notify_create(path);
