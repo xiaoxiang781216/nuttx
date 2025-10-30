@@ -1174,13 +1174,12 @@ static inline_function int nxsem_wait_uninterruptible(FAR sem_t *sem)
 
 static inline_function int nxsem_get_value(FAR sem_t *sem, FAR int *sval)
 {
-  if (sem != NULL && sval != NULL && !NXSEM_IS_MUTEX(sem))
-    {
-      *sval = atomic_read(NXSEM_COUNT(sem));
-      return OK;
-    }
+  DEBUGASSERT(sem != NULL);
+  DEBUGASSERT(!NXSEM_IS_MUTEX(sem));
+  DEBUGASSERT(sval != NULL);
 
-  return -EINVAL;
+  *sval = atomic_read(NXSEM_COUNT(sem));
+  return OK;
 }
 
 #undef EXTERN
