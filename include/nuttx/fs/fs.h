@@ -1908,6 +1908,22 @@ int file_pipe(FAR struct file *filep[2], size_t bufsize, int flags);
 int nx_mkfifo(FAR const char *pathname, mode_t mode, size_t bufsize);
 #endif
 
+#ifdef CONFIG_PSEUDOFS_FILE
+
+/****************************************************************************
+ * Name: pseudofile_create_from
+ *
+ * Description:
+ *   Create the pseudo-file with specified path, buf, size and mode.
+ *   The content pointed to by buf will not be modified. When modifications
+ *   are required, memory will be allocated for storage.
+ *
+ ****************************************************************************/
+
+int pseudofile_create_from(FAR const char *path,
+                           FAR const void *buf, size_t size, mode_t mode);
+#endif
+
 #undef EXTERN
 #if defined(__cplusplus)
 }

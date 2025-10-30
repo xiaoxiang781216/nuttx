@@ -483,18 +483,6 @@ int dir_allocate(FAR struct file *filep, FAR const char *relpath);
 int pseudofile_create(FAR struct inode **node, FAR const char *path,
                       mode_t mode);
 
-/****************************************************************************
- * Name: pseudofile_create_from
- *
- * Description:
- *   Create the pseudo-file with specified path, buf, size and mode.
- *   The content pointed to by buf will not be modified. When modifications
- *   are required, memory will be allocated for storage.
- *
- ****************************************************************************/
-
-int pseudofile_create_from(FAR const char *path,
-                           FAR const void *buf, size_t size, mode_t mode);
 #endif
 
 /****************************************************************************
