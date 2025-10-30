@@ -538,6 +538,7 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout)
           blk = mempool_remove_queue(pool, &pool->queue);
           if (blk == NULL)
             {
+#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
               if (up_interrupt_context())
                 {
                   blk = mempool_remove_queue(pool, &pool->iqueue);
@@ -548,6 +549,7 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout)
                     }
                 }
               else
+#endif
                 {
                   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
 

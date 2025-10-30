@@ -131,7 +131,7 @@ mempool_multiple_find(FAR struct mempool_multiple_s *mpool, size_t size)
           while (left < right)
             {
               mid = (left + right) >> 1;
-              if (mpool->pools[mid].blocksize > size)
+              if (mpool->pools[mid].blocksize >= size)
                 {
                   right = mid;
                 }
