@@ -30,6 +30,7 @@
 #include <nuttx/ratelimit.h>
 #include <nuttx/sched_note.h>
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -41,8 +42,6 @@ static DEFINE_RATELIMIT_STATE(g_ratelimit,
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
 
 void sched_note_printf_ip(uint32_t tag, uintptr_t ip,
                           FAR const char *fmt,
