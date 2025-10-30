@@ -417,7 +417,11 @@ static inline_function irqstate_t up_irq_disable(void)
   __asm__ __volatile__
     (
       "\tmrs    %0, cpsr\n"
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+      "\tcpsid  f\n"
+#else
       "\tcpsid  i\n"
+#endif
       : "=r" (cpsr)
       :
       : "memory"
