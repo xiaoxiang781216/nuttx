@@ -183,18 +183,16 @@ rptun_ivshmem_get_resource(FAR struct rptun_dev_s *dev)
 {
   FAR struct rptun_ivshmem_dev_s *priv =
     (FAR struct rptun_ivshmem_dev_s *)dev;
-  FAR struct rptun_cmd_s *cmd = RPTUN_RSC2CMD(&priv->shmem->rsc);
 
   if (priv->master)
     {
       /* Wait untils salve is ready */
 
-      while (RPTUN_GET_CMD(cmd->cmd_slave) != RPTUN_CMD_READY)
+      while (priv->shmem->rsc.hdr.ver == 0)
         {
-          usleep(1000);
+          nxsig_usleep(100);
         }
 
-      cmd->cmd_slave = 0;
       priv->shmem->basem = (uint64_t)(uintptr_t)priv->shmem;
     }
   else
@@ -204,9 +202,6 @@ rptun_ivshmem_get_resource(FAR struct rptun_dev_s *dev)
       char carveout_name[16];
       FAR struct rptun_ivshmem_rsc_s *rsc = &priv->shmem->rsc;
       memset(priv->shmem, 0, priv->shmem_size);
-
-      rsc->hdr.ver                    = 1;
-      rsc->hdr.num                    = RPTUN_IVSHMEM_RSC_NUM;
 
 #ifdef CONFIG_DRIVERS_VHOST_RNG
       /* Virtio Driver 0, VIRTIO_ID_ENTROPY */
@@ -352,7 +347,9 @@ rptun_ivshmem_get_resource(FAR struct rptun_dev_s *dev)
       memcpy(rsc->vsock_carveout.name, carveout_name, strlen(carveout_name));
 
       priv->shmem->rsc_size           = sizeof(struct rptun_ivshmem_rsc_s);
-      cmd->cmd_slave                  = RPTUN_CMD(RPTUN_CMD_READY, 0);
+
+      rsc->hdr.num                    = RPTUN_IVSHMEM_RSC_NUM;
+      rsc->hdr.ver                    = 1;
 
       /* Wait untils master is ready, salve need use master base to
        * initialize addrenv.
