@@ -1019,7 +1019,7 @@ int nxsem_tickwait_uninterruptible(FAR sem_t *sem, clock_t delay)
           break;
         }
 
-      delay = end - clock_systime_ticks();
+      delay = end - clock();
       if ((int32_t)delay < 0)
         {
           delay = 0;

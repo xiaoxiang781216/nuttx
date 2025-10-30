@@ -223,7 +223,7 @@ int nxmutex_ticklock(FAR mutex_t *mutex, clock_t delay)
     {
       /* Wait until we get the lock or until the timeout expires */
 
-      end = clock() + delay + 1u; /* Similar to clock_delay2abstick(delay) */
+      end = clock_delay2abstick(delay);
 
       for (; ; )
         {
