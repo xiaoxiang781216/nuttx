@@ -166,7 +166,7 @@ static const struct image_store_ops g_rptun_store_ops =
 #endif
 
 static struct metal_list g_rptun_priv = METAL_INIT_LIST(g_rptun_priv);
-static metal_mutex_t g_rptun_lock = METAL_MUTEX_INIT(g_rptun_lock);
+static rmutex_t g_rptun_lock = NXRMUTEX_INITIALIZER;
 
 static struct notifier_block g_rptun_panic_nb =
 {
@@ -1043,7 +1043,7 @@ static int rptun_ioctl_foreach(FAR const char *cpuname, int cmd,
 
   if (!up_interrupt_context())
     {
-      metal_mutex_acquire(&g_rptun_lock);
+      nxrmutex_lock(&g_rptun_lock);
     }
 
   metal_list_for_each(&g_rptun_priv, node)
@@ -1064,7 +1064,7 @@ static int rptun_ioctl_foreach(FAR const char *cpuname, int cmd,
 
   if (!up_interrupt_context())
     {
-      metal_mutex_release(&g_rptun_lock);
+      nxrmutex_unlock(&g_rptun_lock);
     }
 
   return ret;
@@ -1288,9 +1288,9 @@ int rptun_initialize(FAR struct rptun_dev_s *dev)
               panic_notifier_chain_register(&g_rptun_panic_nb);
               register_reboot_notifier(&g_rptun_reboot_nb);
 
-              metal_mutex_acquire(&g_rptun_lock);
+              nxrmutex_lock(&g_rptun_lock);
               metal_list_add_tail(&g_rptun_priv, &priv->node);
-              metal_mutex_release(&g_rptun_lock);
+              nxrmutex_unlock(&g_rptun_lock);
             }
         }
       else
