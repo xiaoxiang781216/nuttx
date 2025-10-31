@@ -33,7 +33,7 @@ CSRCS += sched_sysinfo.c sched_get_stateinfo.c sched_getcpu.c
 CSRCS += sched_switchcontext.c
 
 ifneq ($(CONFIG_STACKCHECK_MARGIN),)
-  ifneq ($(CONFIG_STACKCHECK_MARGIN),-1)
+  ifneq ($(CONFIG_STACKCHECK_MARGIN),0)
     CSRCS += nxsched_checkstackoverflow.c
   endif
 endif

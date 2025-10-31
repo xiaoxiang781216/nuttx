@@ -434,7 +434,7 @@ static inline_function FAR struct tcb_s *this_task(void)
 #endif
 
 #if defined(CONFIG_STACKCHECK_MARGIN) && \
-           (CONFIG_STACKCHECK_MARGIN != -1)
+           (CONFIG_STACKCHECK_MARGIN > 0)
 void nxsched_checkstackoverflow(FAR struct tcb_s *tcb);
 #else
 #  define nxsched_checkstackoverflow(tcb)

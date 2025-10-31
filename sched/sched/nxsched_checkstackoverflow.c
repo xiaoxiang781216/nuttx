@@ -48,16 +48,12 @@
  *   Behavior depends on CONFIG_STACKCHECK_MARGIN:
  *
  *   - CONFIG_STACKCHECK_MARGIN == 0:
- *       Perform a strict boundary check.  The current stack pointer must
- *       remain within the allocated stack region [base, top].
+ *       Stack checking is disabled at build time.  In this case, calls to
+ *       nxsched_checkstackoverflow() are replaced with a no-op macro.
  *
  *   - CONFIG_STACKCHECK_MARGIN > 0:
  *       Perform an architecture-specific check with a safety margin.
  *       The stack must not extend beyond the reserved margin area.
- *
- *   - CONFIG_STACKCHECK_MARGIN < 0:
- *       Stack checking is disabled at build time.  In this case, calls to
- *       nxsched_checkstackoverflow() are replaced with a no-op macro.
  *
  * Input Parameters:
  *   tcb - Pointer to the TCB of the thread to be checked.
@@ -70,20 +66,7 @@
 
 void nxsched_checkstackoverflow(FAR struct tcb_s *tcb)
 {
-  /* Strict stack pointer check:
-   * SP must remain within the allocated stack boundaries.
-   */
-
-  if (tcb->xcp.regs != NULL)
-    {
-      uintptr_t sp = up_getusrsp(tcb->xcp.regs);
-      uintptr_t top = (uintptr_t)tcb->stack_base_ptr + tcb->adj_stack_size;
-      uintptr_t bot = (uintptr_t)tcb->stack_base_ptr;
-
-      DEBUGASSERT(sp > bot && sp <= top);
-    }
-
-#if defined(CONFIG_STACK_COLORATION) && (CONFIG_STACKCHECK_MARGIN > 0)
+#if CONFIG_STACKCHECK_MARGIN > 0
   /* Margin-based stack check:
    * Allow some reserved margin area before reporting overflow.
    */

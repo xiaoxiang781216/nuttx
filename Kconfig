@@ -2566,13 +2566,12 @@ config STACK_COLORATION
 
 config STACKCHECK_MARGIN
 	int "Stack overflow check size (bytes)"
-	depends on DEBUG_ASSERTIONS
-	default -1
+	depends on DEBUG_ASSERTIONS && STACK_COLORATION
+	default 0
 	---help---
 		Specifies the number of bytes at the end of the stack to check for overflow.
 
-		A value of -1 disables additional checking.
-		If the value is equal to 0, this will only check the SP is in tcb's stack range.
+		If the value is equal to 0, this will disable the detection.
 		If the value is greater than 0, this will additionally check specified bytes
 		in stack bottom is untouched.
 
