@@ -41,13 +41,13 @@
  * interrupts when setting the timer, we should set a minimum delay.
  * The minimum delay is calculated based on the CPU frequency and the timer
  * frequency. We assume that the worst-case execution time for setting the
- * timer does not exceed 32 CPU cycles, and calculate the minimum timer
+ * timer does not exceed 40 CPU cycles, and calculate the minimum timer
  * delay accordingly.
- * 32 CPU cycles (80ns at 400Mhz) ~ 8 timer cycles (for 100 Mhz timer).
+ * 40 CPU cycles (100ns at 400Mhz) ~ 10 timer cycles (for 100 Mhz timer).
  */
 
 #define TRICORE_SYSTIMER_MIN_DELAY \
-  (32ull * SCU_FREQUENCY / IFX_CFG_CPU_CLOCK_FREQUENCY)
+  (40ull * SCU_FREQUENCY / IFX_CFG_CPU_CLOCK_FREQUENCY)
 
 /****************************************************************************
  * Private Types
@@ -67,19 +67,6 @@ struct tricore_systimer_lowerhalf_s
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-static uint64_t
-tricore_systimer_get_time(struct tricore_systimer_lowerhalf_s *priv)
-{
-  return IfxStm_get(priv->tbase);
-}
-
-static void
-tricore_systimer_set_timecmp(struct tricore_systimer_lowerhalf_s *priv,
-                             uint64_t value)
-{
-  IfxStm_updateCompare(priv->tbase, IfxStm_Comparator_0, value);
-}
 
 /****************************************************************************
  * Name: tricore_systimer_max_delay
@@ -129,12 +116,17 @@ static void tricore_systimer_start(struct oneshot_lowerhalf_s *lower,
   irqstate_t flags;
   uint64_t   mtime;
 
+  /* The comparator register is 32-bit. */
+
+  DEBUGASSERT(delta <= UINT32_MAX);
+
   delta = delta < TRICORE_SYSTIMER_MIN_DELAY ?
                   TRICORE_SYSTIMER_MIN_DELAY : delta;
   flags = up_irq_save();
-  mtime = tricore_systimer_get_time(priv);
+  mtime = IfxStm_get(priv->tbase);
 
-  tricore_systimer_set_timecmp(priv, mtime + delta);
+  IfxStm_updateCompare(priv->tbase, IfxStm_Comparator_0,
+                       (uint32_t)((mtime + delta) & UINT32_MAX));
 
   up_irq_restore(flags);
 }
@@ -166,10 +158,16 @@ tricore_systimer_start_absolute(struct oneshot_lowerhalf_s *lower,
     (struct tricore_systimer_lowerhalf_s *)lower;
 
   irqstate_t flags = up_irq_save();
-  uint64_t min_expected = tricore_systimer_get_time(priv) +
-                          TRICORE_SYSTIMER_MIN_DELAY;
-  expected = expected < min_expected ? min_expected : expected;
-  tricore_systimer_set_timecmp(priv, expected);
+  uint64_t current = IfxStm_get(priv->tbase);
+
+  /* The comparator register is 32-bit. */
+
+  DEBUGASSERT(expected <= current + UINT32_MAX);
+
+  expected = expected < current + TRICORE_SYSTIMER_MIN_DELAY ?
+             current + TRICORE_SYSTIMER_MIN_DELAY : expected;
+  IfxStm_updateCompare(priv->tbase, IfxStm_Comparator_0,
+                       (uint32_t)(expected & UINT32_MAX));
 
   up_irq_restore(flags);
 }
@@ -198,7 +196,7 @@ static void tricore_systimer_cancel(struct oneshot_lowerhalf_s *lower)
   struct tricore_systimer_lowerhalf_s *priv =
     (struct tricore_systimer_lowerhalf_s *)lower;
 
-  tricore_systimer_set_timecmp(priv, UINT64_MAX);
+  IfxStm_updateCompare(priv->tbase, IfxStm_Comparator_0, UINT32_MAX);
 }
 
 /****************************************************************************
@@ -222,7 +220,7 @@ static clkcnt_t tricore_systimer_current(struct oneshot_lowerhalf_s *lower)
   struct tricore_systimer_lowerhalf_s *priv =
     (struct tricore_systimer_lowerhalf_s *)lower;
 
-  return tricore_systimer_get_time(priv);
+  return IfxStm_get(priv->tbase);
 }
 
 /****************************************************************************
@@ -294,7 +292,7 @@ tricore_systimer_initialize(volatile void *tbase, int irq, uint64_t freq)
       IfxStm_ComparatorInterrupt_ir0);
 
   IfxStm_clearCompareFlag(tbase, IfxStm_Comparator_0);
-  tricore_systimer_set_timecmp(priv, UINT64_MAX);
+  IfxStm_updateCompare(priv->tbase, IfxStm_Comparator_0, UINT32_MAX);
   IfxStm_enableComparatorInterrupt(tbase, IfxStm_Comparator_0);
 
   irq_attach(irq, tricore_systimer_interrupt, priv);
