@@ -41,6 +41,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/mqueue.h>
+#include <nuttx/mutex.h>
 #include <nuttx/queue.h>
 #include <nuttx/clock.h>
 #include <nuttx/wqueue.h>
