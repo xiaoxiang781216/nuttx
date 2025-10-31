@@ -426,7 +426,6 @@ class LiefELF:
         if not self.elf:
             raise BaseException(f"Failed to parse ELF file: {filename}")
 
-        self.symbols = {sym.name.split(".")[0]: sym for sym in self.elf.symbols}
         self.endian = (
             "l"
             if self.elf.abstract.header.endianness == lief.Header.ENDIANNESS.LITTLE
@@ -436,7 +435,13 @@ class LiefELF:
         self.bits = 64 if self.elf.abstract.header.is_64 else 32
 
     def get_symbol(self, symbol):
-        return self.symbols.get(symbol)
+        sym = self.elf.get_symbol(symbol)
+        if not sym:
+            # Try to get LTO private symbol if not found.
+            # This may still not work if LTO renames the symbol, or
+            # it has different suffix.
+            sym = self.elf.get_symbol(f"{symbol}.lto_priv.0")
+        return sym
 
     def read_symbol(
         self, symbol, struct: Construct = None
