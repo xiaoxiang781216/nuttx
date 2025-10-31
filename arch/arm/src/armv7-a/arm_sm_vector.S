@@ -614,7 +614,7 @@ arm_sm_get_nsec_ctx:
 	.type	arm_sm_switch_nsec, %function
 
 arm_sm_switch_nsec:
-	ldr	r0, =TEESMC_RETURN_ENTRY_DONE
+	ldr	r0, =TEESMC_RETURN_FIQ_DONE
 
 	/* Enable irq and fiq in secure mode. */
 

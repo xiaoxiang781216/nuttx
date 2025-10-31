@@ -114,11 +114,14 @@ void arm_sm_boot_nsec(uintptr_t entry)
   FAR struct arm_sm_nsec_ctx *nsec_ctx;
 
   nsec_ctx = arm_sm_get_nsec_ctx();
-  nsec_ctx->mon_lr = entry;
-  nsec_ctx->mon_spsr = PSR_MODE_SVC | PSR_I_BIT;
-  if (entry & 1)
+  if (nsec_ctx->mon_lr == 0)
     {
-      nsec_ctx->mon_spsr |= PSR_T_BIT;
+      nsec_ctx->mon_lr = entry;
+      nsec_ctx->mon_spsr = PSR_MODE_SVC | PSR_I_BIT;
+      if (entry & 1)
+        {
+          nsec_ctx->mon_spsr |= PSR_T_BIT;
+        }
     }
 }
 
