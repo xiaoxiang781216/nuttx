@@ -915,8 +915,8 @@ static int rptun_dev_stop(FAR struct remoteproc *rproc)
           priv->pid = -EINVAL;
         }
 
-      RPTUN_UNREGISTER_CALLBACK(priv->dev);
       rptun_remove_devices(priv);
+      RPTUN_UNREGISTER_CALLBACK(priv->dev);
       remoteproc_shutdown(rproc);
     }
 
