@@ -171,11 +171,12 @@ static uint32_t g_sysbuffer[CONFIG_RAMLOG_BUFSIZE / 4];
  * could be called before the driver initialization logic executes.
  */
 
-static struct ramlog_dev_s g_sysdev =
+static DEFINE_PER_CPU_BMP(struct ramlog_dev_s, g_sysdev) =
 {
   (FAR struct ramlog_header_s *)g_sysbuffer,            /* rl_buffer */
   sizeof(g_sysbuffer) - sizeof(struct ramlog_header_s), /* rl_bufsize */
 };
+#define g_sysdev this_cpu_var_bmp(g_sysdev)
 
 #endif
 
