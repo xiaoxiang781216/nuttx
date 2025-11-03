@@ -42,6 +42,7 @@
 #include <ctype.h>
 #include <sys/boardctl.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/spinlock.h>
@@ -83,7 +84,7 @@ struct ramlog_header_s
 
 struct ramlog_user_s
 {
-  struct list_node  rl_node;       /* The list_node of reader */
+  dq_entry_t        rl_entry;      /* The dq entry of reader */
   volatile uint32_t rl_tail;       /* The tail index (where data is removed) */
   uint32_t          rl_threashold; /* The threashold of the reader to read log */
 #ifndef CONFIG_RAMLOG_NONBLOCKING
@@ -108,7 +109,7 @@ struct ramlog_dev_s
   FAR struct ramlog_header_s *rl_header;
 
   uint32_t                   rl_bufsize;   /* Size of the circular buffer */
-  struct list_node           rl_list;      /* The list of ramlog_user_s */
+  dq_queue_t                 rl_queue;     /* The dq of ramlog_user_s */
   struct ramlog_ratelimit_s  rl_ratelimit; /* The ratelimit for ramlog */
 };
 
@@ -174,7 +175,6 @@ static struct ramlog_dev_s g_sysdev =
 {
   (FAR struct ramlog_header_s *)g_sysbuffer,            /* rl_buffer */
   sizeof(g_sysbuffer) - sizeof(struct ramlog_header_s), /* rl_bufsize */
-  LIST_INITIAL_VALUE(g_sysdev.rl_list)                  /* rl_list */
 };
 
 #endif
@@ -260,12 +260,16 @@ static uint32_t ramlog_bufferused(FAR struct ramlog_dev_s *priv,
 #ifndef CONFIG_RAMLOG_NONBLOCKING
 static void ramlog_readnotify(FAR struct ramlog_dev_s *priv)
 {
-  FAR struct ramlog_user_s *upriv;
+  FAR dq_entry_t *entry;
 
   /* Notify all waiting readers that they can read from the FIFO */
 
-  list_for_every_entry(&priv->rl_list, upriv, struct ramlog_user_s, rl_node)
+  dq_for_every(&priv->rl_queue, entry)
     {
+      FAR struct ramlog_user_s *upriv =
+        container_of(entry, struct ramlog_user_s, rl_entry);
+      upriv->rl_tail = 0;
+
       for (; ; )
         {
           int semcount = 0;
@@ -288,12 +292,14 @@ static void ramlog_readnotify(FAR struct ramlog_dev_s *priv)
 
 static void ramlog_pollnotify(FAR struct ramlog_dev_s *priv)
 {
-  FAR struct ramlog_user_s *upriv;
+  FAR dq_entry_t *entry;
 
   /* This function may be called from an interrupt handler */
 
-  list_for_every_entry(&priv->rl_list, upriv, struct ramlog_user_s, rl_node)
+  dq_for_every(&priv->rl_queue, entry)
     {
+      FAR struct ramlog_user_s *upriv =
+        container_of(entry, struct ramlog_user_s, rl_entry);
       if (ramlog_bufferused(priv, upriv) >= upriv->rl_threashold)
         {
           /* Notify all poll/select waiters that they can read from
@@ -311,11 +317,14 @@ static void ramlog_pollnotify(FAR struct ramlog_dev_s *priv)
 
 static void ramlog_bufferflush(FAR struct ramlog_dev_s *priv)
 {
-  FAR struct ramlog_user_s *upriv;
+  FAR dq_entry_t *entry;
 
   priv->rl_header->rl_head = 0;
-  list_for_every_entry(&priv->rl_list, upriv, struct ramlog_user_s, rl_node)
+
+  dq_for_every(&priv->rl_queue, entry)
     {
+      FAR struct ramlog_user_s *upriv =
+        container_of(entry, struct ramlog_user_s, rl_entry);
       upriv->rl_tail = 0;
     }
 }
@@ -714,7 +723,7 @@ static int ramlog_file_open(FAR struct file *filep)
 #endif
 
   flags = spin_lock_irqsave(&header->rl_lock);
-  list_add_tail(&priv->rl_list, &upriv->rl_node);
+  dq_addlast(&upriv->rl_entry, &priv->rl_queue);
   upriv->rl_tail = header->rl_head > priv->rl_bufsize ?
                    header->rl_head - priv->rl_bufsize : 0;
   spin_unlock_irqrestore(&header->rl_lock, flags);
@@ -738,7 +747,7 @@ static int ramlog_file_close(FAR struct file *filep)
   /* Get exclusive access to the rl_tail index */
 
   flags = spin_lock_irqsave(&header->rl_lock);
-  list_delete(&upriv->rl_node);
+  dq_rem(&upriv->rl_entry, &priv->rl_queue);
   spin_unlock_irqrestore(&header->rl_lock, flags);
 
 #ifndef CONFIG_RAMLOG_NONBLOCKING
@@ -776,7 +785,6 @@ int ramlog_register(FAR const char *devpath, FAR char *buffer, size_t buflen)
     {
       /* Initialize the non-zero values in the RAM logging device structure */
 
-      list_initialize(&priv->rl_list);
       priv->rl_bufsize = buflen - sizeof(struct ramlog_header_s);
       priv->rl_header = (FAR struct ramlog_header_s *)buffer;
 
