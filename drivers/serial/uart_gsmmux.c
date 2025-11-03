@@ -367,7 +367,7 @@ static int gsmmux_uart_open(FAR struct gsmmux_s *gsmmux)
   int ret;
 
   gsmmux_info("gsmmux_uart_open: %s, refcnt: %" PRId32 "\n",
-              gsmmux->devname, atomic_load(&gsmmux->refcnt));
+              gsmmux->devname, atomic_read(&gsmmux->refcnt));
   if (atomic_fetch_add(&gsmmux->refcnt, 1) > 0)
     {
       return OK;
@@ -404,7 +404,7 @@ static int gsmmux_uart_open(FAR struct gsmmux_s *gsmmux)
 static void gsmmux_uart_close(FAR struct gsmmux_s *gsmmux)
 {
   gsmmux_info("gsmmux_uart_close: %s, refcnt: %" PRId32 "\n",
-              gsmmux->devname, atomic_load(&gsmmux->refcnt));
+              gsmmux->devname, atomic_read(&gsmmux->refcnt));
   if (atomic_fetch_sub(&gsmmux->refcnt, 1) > 1)
     {
       return;
