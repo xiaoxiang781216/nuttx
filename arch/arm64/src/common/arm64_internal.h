@@ -234,6 +234,15 @@ EXTERN uint8_t _szdata[];           /* Size of data(.data + .bss) */
 EXTERN uint8_t _e_initstack[];      /* End+1 of .initstack */
 EXTERN uint8_t g_idle_topstack[];   /* End+1 of heap */
 
+#ifdef CONFIG_PERCPU_SECTION
+EXTERN uint8_t _ldata_percpu[];    /* Start of .percpu ram */
+EXTERN uint8_t _sdata_percpu[];    /* Start of .percpu_data */
+EXTERN uint8_t _edata_percpu[];    /* End+1 of .percpu_data */
+EXTERN uint8_t _sbss_percpu[];     /* Start of .percpu_bss */
+EXTERN uint8_t _ebss_percpu[];     /* End+1 of .percpu_bss */
+EXTERN uint8_t _percpu_size[];     /* percpu size */
+#endif
+
 #  define _START_TEXT  _stext
 #  define _END_TEXT    _etext
 #  define _START_BSS   _sbss
