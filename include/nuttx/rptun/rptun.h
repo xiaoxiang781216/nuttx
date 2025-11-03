@@ -49,19 +49,6 @@
 
 #define RPTUN_NOTIFY_ALL      UINT32_MAX
 
-#define RPTUN_CMD_DONE        0x0u
-#define RPTUN_CMD_RESET       0x1u
-#define RPTUN_CMD_ACK         0xffffu
-#define RPTUN_CMD_MASK        0xffffu
-#define RPTUN_CMD_SHIFT       16u
-
-#define RPTUN_CMD(c,v)        (((c) << RPTUN_CMD_SHIFT) | ((v) & RPTUN_CMD_MASK))
-#define RPTUN_GET_CMD(c)      ((c) >> RPTUN_CMD_SHIFT)
-#define RPTUN_GET_CMD_VAL(c)  ((c) & RPTUN_CMD_MASK)
-
-#define RPTUN_RSC2CMD(r)      \
-  ((FAR struct rptun_cmd_s *)&((FAR struct resource_table *)(r))->reserved[0])
-
 #ifdef CONFIG_OPENAMP_CACHE
 #  define RPTUN_INVALIDATE(x) metal_cache_invalidate(&x, sizeof(x))
 #else
@@ -343,12 +330,6 @@ struct rptun_addrenv_s
   uintptr_t da;
   size_t    size;
 };
-
-begin_packed_struct struct rptun_cmd_s
-{
-  uint32_t cmd_master;
-  uint32_t cmd_slave;
-} end_packed_struct;
 
 begin_packed_struct struct rptun_rsc_s
 {
