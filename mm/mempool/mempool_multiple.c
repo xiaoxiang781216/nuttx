@@ -103,47 +103,50 @@ struct mempool_multiple_s
 static inline FAR struct mempool_s *
 mempool_multiple_find(FAR struct mempool_multiple_s *mpool, size_t size)
 {
+  FAR struct mempool_s *ret = NULL;
   size_t right;
   size_t left = 0;
   size_t mid;
 
-  if (mpool == NULL)
+  if (mpool != NULL)
     {
-      return NULL;
-    }
-
-  right = mpool->npools;
-  if (mpool->delta != 0)
-    {
-      left = mpool->pools[0].blocksize;
-      if (left >= size)
+      right = mpool->npools;
+      if (mpool->delta != 0)
         {
-          return &mpool->pools[0];
-        }
-
-      mid = (size - left + mpool->delta - 1) / mpool->delta;
-      return mid < right ? &mpool->pools[mid] : NULL;
-    }
-
-  while (left < right)
-    {
-      mid = (left + right) >> 1;
-      if (mpool->pools[mid].blocksize > size)
-        {
-          right = mid;
+          left = mpool->pools[0].blocksize;
+          if (left >= size)
+            {
+              ret = &mpool->pools[0];
+            }
+          else
+            {
+              mid = (size - left + mpool->delta - 1) / mpool->delta;
+              ret = mid < right ? &mpool->pools[mid] : NULL;
+            }
         }
       else
         {
-          left = mid + 1;
+          while (left < right)
+            {
+              mid = (left + right) >> 1;
+              if (mpool->pools[mid].blocksize > size)
+                {
+                  right = mid;
+                }
+              else
+                {
+                  left = mid + 1;
+                }
+            }
+
+          if (left != mpool->npools)
+            {
+              ret = &mpool->pools[left];
+            }
         }
     }
 
-  if (left == mpool->npools)
-    {
-      return NULL;
-    }
-
-  return &mpool->pools[left];
+  return ret;
 }
 
 static FAR void *
@@ -211,26 +214,27 @@ mempool_multiple_free_chunk(FAR struct mempool_multiple_s *mpool,
   if (mpool->chunksize < mpool->expandsize)
     {
       mpool->free(mpool->arg, ptr);
-      return;
     }
-
-  nxrmutex_lock(&mpool->lock);
-  sq_for_every(&mpool->chunk_queue, entry)
+  else
     {
-      chunk = (FAR struct mpool_chunk_s *)entry;
-      if (ptr >= chunk->start && ptr < chunk->next)
+      nxrmutex_lock(&mpool->lock);
+      sq_for_every(&mpool->chunk_queue, entry)
         {
-          if (--chunk->used == 0)
+          chunk = (FAR struct mpool_chunk_s *)entry;
+          if (ptr >= chunk->start && ptr < chunk->next)
             {
-              sq_rem(&chunk->entry, &mpool->chunk_queue);
-              mpool->free(mpool->arg, chunk->start);
+              if (--chunk->used == 0)
+                {
+                  sq_rem(&chunk->entry, &mpool->chunk_queue);
+                  mpool->free(mpool->arg, chunk->start);
+                }
+
+              break;
             }
-
-          break;
         }
-    }
 
-  nxrmutex_unlock(&mpool->lock);
+      nxrmutex_unlock(&mpool->lock);
+    }
 }
 
 static FAR void *mempool_multiple_alloc_callback(FAR struct mempool_s *pool,
@@ -301,51 +305,46 @@ static FAR struct mpool_dict_s *
 mempool_multiple_get_dict(FAR struct mempool_multiple_s *mpool,
                           FAR void *blk)
 {
+  FAR struct mpool_dict_s *ret = NULL;
   FAR void *addr;
   bool   bypass;
   size_t index;
   size_t row;
   size_t col;
 
-  if (mpool == NULL || blk == NULL || mpool->dict == NULL)
+  if (mpool != NULL && blk != NULL && mpool->dict != NULL)
     {
-      return NULL;
-    }
+      bypass = kasan_bypass(true);
+      addr = (FAR void *)ALIGN_DOWN((uintptr_t)blk, mpool->expandsize);
 
-  bypass = kasan_bypass(true);
-  addr = (FAR void *)ALIGN_DOWN((uintptr_t)blk, mpool->expandsize);
-  if (blk == addr)
-    {
-      /* It is not a memory block allocated by mempool
+      /* When blk is addr, It is not a memory block allocated by mempool
        * Because the blk is need not aligned with the expandsize
        * in head memory.
        */
 
-      return NULL;
+      if (blk != addr)
+        {
+          index = *(FAR size_t *)addr;
+          if (index < mpool->dict_used)
+            {
+              row = index >> mpool->dict_col_num_log2;
+              col = index - (row << mpool->dict_col_num_log2);
+
+              addr = kasan_clear_tag(addr);
+              if (kasan_clear_tag(mpool->dict[row]) != NULL &&
+                  kasan_clear_tag(mpool->dict[row][col].addr) == addr &&
+                  ((FAR char *)kasan_clear_tag(blk) -
+                   (FAR char *)addr < mpool->dict[row][col].size))
+                {
+                  ret = &mpool->dict[row][col];
+                }
+            }
+
+          kasan_bypass(bypass);
+        }
     }
 
-  index = *(FAR size_t *)addr;
-  if (index >= mpool->dict_used)
-    {
-      kasan_bypass(bypass);
-      return NULL;
-    }
-
-  row = index >> mpool->dict_col_num_log2;
-  col = index - (row << mpool->dict_col_num_log2);
-
-  addr = kasan_clear_tag(addr);
-  if (kasan_clear_tag(mpool->dict[row]) == NULL ||
-      kasan_clear_tag(mpool->dict[row][col].addr) != addr ||
-      ((FAR char *)kasan_clear_tag(blk) -
-       (FAR char *)addr >= mpool->dict[row][col].size))
-    {
-      kasan_bypass(bypass);
-      return NULL;
-    }
-
-  kasan_bypass(bypass);
-  return &mpool->dict[row][col];
+  return ret;
 }
 
 /****************************************************************************
@@ -584,25 +583,25 @@ FAR void *mempool_multiple_realloc(FAR struct mempool_multiple_s *mpool,
                                    FAR void *oldblk, size_t size)
 {
   FAR struct mpool_dict_s *dict;
-  FAR void *blk;
+  FAR void *blk = NULL;
 
   if (oldblk == NULL)
     {
-      return mempool_multiple_alloc(mpool, size);
+      blk = mempool_multiple_alloc(mpool, size);
     }
-
-  dict = mempool_multiple_get_dict(mpool, oldblk);
-  if (dict == NULL)
+  else
     {
-      return NULL;
-    }
-
-  blk = mempool_multiple_alloc(mpool, size);
-  if (blk != NULL && oldblk != NULL)
-    {
-      size = MIN(size, dict->pool->blocksize);
-      memcpy(blk, oldblk, size);
-      mempool_multiple_free(mpool, oldblk);
+      dict = mempool_multiple_get_dict(mpool, oldblk);
+      if (dict != NULL)
+        {
+          blk = mempool_multiple_alloc(mpool, size);
+          if (blk != NULL && oldblk != NULL)
+            {
+              size = MIN(size, dict->pool->blocksize);
+              memcpy(blk, oldblk, size);
+              mempool_multiple_free(mpool, oldblk);
+            }
+        }
     }
 
   return blk;
@@ -628,24 +627,25 @@ int mempool_multiple_free(FAR struct mempool_multiple_s *mpool,
                           FAR void *blk)
 {
   FAR struct mpool_dict_s *dict;
+  int ret = -EINVAL;
 
   dict = mempool_multiple_get_dict(mpool, blk);
-  if (dict == NULL)
+  if (dict != NULL)
     {
-      return -EINVAL;
-    }
-
-  blk = (FAR char *)blk - (((FAR char *)kasan_clear_tag(blk) -
-                            ((FAR char *)kasan_clear_tag(dict->addr) +
-                             mpool->minpoolsize)) %
-                           MEMPOOL_REALBLOCKSIZE(dict->pool->blocksize));
+      blk = (FAR char *)blk - (((FAR char *)kasan_clear_tag(blk) -
+                                ((FAR char *)kasan_clear_tag(dict->addr) +
+                                 mpool->minpoolsize)) %
+                               MEMPOOL_REALBLOCKSIZE(dict->pool->blocksize));
 
 #ifdef CONFIG_MM_RECORD
-  blk = mempool_get_block_from_record(blk);
+      blk = mempool_get_block_from_record(blk);
 #endif
 
-  mempool_release(dict->pool, blk);
-  return 0;
+      mempool_release(dict->pool, blk);
+      ret = 0;
+    }
+
+  return ret;
 }
 
 /****************************************************************************
@@ -712,27 +712,27 @@ FAR void *mempool_multiple_memalign(FAR struct mempool_multiple_s *mpool,
 {
   FAR struct mempool_s *end;
   FAR struct mempool_s *pool;
+  FAR void *ret = NULL;
 
   DEBUGASSERT((alignment & (alignment - 1)) == 0);
 
   pool = mempool_multiple_find(mpool, size + alignment);
-  if (pool == NULL)
+  if (pool != NULL)
     {
-      return NULL;
-    }
-
-  end = mpool->pools + mpool->npools;
-  do
-    {
-      FAR char *blk = mempool_allocate(pool, UINT_MAX);
-      if (blk != NULL)
+      end = mpool->pools + mpool->npools;
+      do
         {
-          return (FAR void *)ALIGN_UP((uintptr_t)blk, alignment);
+          FAR char *blk = mempool_allocate(pool, UINT_MAX);
+          if (blk != NULL)
+            {
+              ret = (FAR void *)ALIGN_UP((uintptr_t)blk, alignment);
+              break;
+            }
         }
+      while (++pool < end);
     }
-  while (++pool < end);
 
-  return NULL;
+  return ret;
 }
 
 /****************************************************************************
@@ -847,14 +847,12 @@ void mempool_multiple_memdump(FAR struct mempool_multiple_s *mpool,
 {
   size_t i;
 
-  if (mpool == NULL)
+  if (mpool != NULL)
     {
-      return;
-    }
-
-  for (i = 0; i < mpool->npools; i++)
-    {
-      mempool_memdump(mpool->pools + i, dump);
+      for (i = 0; i < mpool->npools; i++)
+        {
+          mempool_memdump(mpool->pools + i, dump);
+        }
     }
 }
 
