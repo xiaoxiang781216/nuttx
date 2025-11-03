@@ -99,6 +99,14 @@ static FAR struct inode *inode_unlink(FAR const char *path)
       inode->i_peer   = NULL;
       inode->i_parent = NULL;
       atomic_fetch_sub(&inode->i_crefs, 1);
+#ifdef CONFIG_PSEUDOFS_ATTRIBUTES
+      if (desc.parent != NULL)
+        {
+          nxclock_gettime(CLOCK_REALTIME, &desc.parent->i_ctime);
+          desc.parent->i_mtime = desc.parent->i_ctime;
+        }
+
+#endif
 #ifdef CONFIG_FS_LINKS
       if (INODE_IS_HARDLINK(inode))
         {
@@ -106,6 +114,14 @@ static FAR struct inode *inode_unlink(FAR const char *path)
 
           DEBUGASSERT(inode->i_private != NULL);
           target = inode->i_private;
+#ifdef CONFIG_PSEUDOFS_ATTRIBUTES
+          /* POSIX: When a hard link is removed and the link count does not
+           * become zero, the file's ctime is marked for update. Ensure ctime
+           * is updated on every successful unlink of a hard link.
+           */
+
+          nxclock_gettime(CLOCK_REALTIME, &target->i_ctime);
+#endif
           if (atomic_fetch_sub(&target->i_crefs, INODE_NLINK_INC) ==
               INODE_NLINK_INC)
             {
