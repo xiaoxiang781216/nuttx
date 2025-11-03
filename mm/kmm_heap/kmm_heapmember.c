@@ -24,13 +24,9 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <stdbool.h>
 
 #include <nuttx/mm/mm.h>
-
-#ifdef CONFIG_MM_KERNEL_HEAP
 
 /****************************************************************************
  * Public Functions
@@ -56,5 +52,3 @@ bool kmm_heapmember(FAR void *mem)
 {
   return mm_heapmember(KNR_HEAP, mem);
 }
-
-#endif /* CONFIG_MM_KERNEL_HEAP */

@@ -24,11 +24,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <nuttx/mm/mm.h>
-
-#ifdef CONFIG_MM_KERNEL_HEAP
 
 /****************************************************************************
  * Public Functions
@@ -53,5 +49,3 @@ FAR void *kmm_realloc(FAR void *oldmem, size_t newsize)
 {
   return mm_realloc(KNR_HEAP, oldmem, newsize);
 }
-
-#endif /* CONFIG_MM_KERNEL_HEAP */

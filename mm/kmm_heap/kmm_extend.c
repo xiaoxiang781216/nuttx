@@ -24,11 +24,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <nuttx/mm/mm.h>
-
-#ifdef CONFIG_MM_KERNEL_HEAP
 
 /****************************************************************************
  * Public Functions
@@ -47,5 +43,3 @@ void kmm_extend(FAR void *mem, size_t size, int region)
 {
   mm_extend(KNR_HEAP, mem, size, region);
 }
-
-#endif /* CONFIG_MM_KERNEL_HEAP */

@@ -24,11 +24,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <nuttx/mm/mm.h>
-
-#ifdef CONFIG_MM_KERNEL_HEAP
 
 /****************************************************************************
  * Public Functions
@@ -52,5 +48,3 @@ FAR void *kmm_zalloc(size_t size)
 {
   return mm_zalloc(KNR_HEAP, size);
 }
-
-#endif /* CONFIG_MM_KERNEL_HEAP */

@@ -24,11 +24,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <nuttx/mm/mm.h>
-
-#ifdef CONFIG_MM_KERNEL_HEAP
 
 /****************************************************************************
  * Public Functions
@@ -61,4 +57,3 @@ struct mallinfo_task kmm_mallinfo_task(FAR const struct malltask *task)
 {
   return mm_mallinfo_task(KNR_HEAP, task);
 }
-#endif /* CONFIG_MM_KERNEL_HEAP */

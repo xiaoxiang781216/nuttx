@@ -24,14 +24,10 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <assert.h>
 #include <debug.h>
 
 #include <nuttx/mm/mm.h>
-
-#ifdef CONFIG_MM_KERNEL_HEAP
 
 /****************************************************************************
  * Public Functions
@@ -75,5 +71,3 @@ void kmm_delayfree(FAR void *mem)
 {
   mm_delayfree(KNR_HEAP, mem);
 }
-
-#endif /* CONFIG_MM_KERNEL_HEAP */

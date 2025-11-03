@@ -24,11 +24,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <nuttx/mm/mm.h>
-
-#ifdef CONFIG_MM_KERNEL_HEAP
 
 /****************************************************************************
  * Public Functions
@@ -46,5 +42,3 @@ void kmm_checkcorruption(void)
 {
   mm_checkcorruption(KNR_HEAP);
 }
-
-#endif /* CONFIG_MM_KERNEL_HEAP */

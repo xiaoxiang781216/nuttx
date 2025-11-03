@@ -24,13 +24,9 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <stdlib.h>
 
 #include <nuttx/mm/mm.h>
-
-#ifdef CONFIG_MM_KERNEL_HEAP
 
 /****************************************************************************
  * Public Functions
@@ -55,5 +51,3 @@ FAR void *kmm_memalign(size_t alignment, size_t size)
 {
   return mm_memalign(KNR_HEAP, alignment, size);
 }
-
-#endif /* CONFIG_MM_KERNEL_HEAP */

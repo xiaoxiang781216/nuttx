@@ -24,10 +24,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
 #include <nuttx/mm/mm.h>
-
-#ifdef CONFIG_MM_KERNEL_HEAP
 
 /****************************************************************************
  * Public Functions
@@ -45,5 +42,3 @@ void kmm_memdump(FAR const struct mm_memdump_s *dump)
 {
   mm_memdump(KNR_HEAP, dump);
 }
-
-#endif /* CONFIG_MM_KERNEL_HEAP */

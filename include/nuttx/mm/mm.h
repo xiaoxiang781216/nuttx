@@ -499,7 +499,7 @@ FAR void umm_checkcorruption(void);
 #ifdef CONFIG_MM_KERNEL_HEAP
 FAR void kmm_checkcorruption(void);
 #else
-#define kmm_checkcorruption()  umm_checkcorruption()
+#define kmm_checkcorruption  umm_checkcorruption
 #endif
 
 #else /* CONFIG_DEBUG_MM */

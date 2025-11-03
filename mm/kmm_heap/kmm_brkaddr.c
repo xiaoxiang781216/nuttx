@@ -24,13 +24,9 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <assert.h>
 
 #include <nuttx/mm/mm.h>
-
-#ifdef CONFIG_MM_KERNEL_HEAP
 
 /****************************************************************************
  * Public Functions
@@ -48,5 +44,3 @@ FAR void *kmm_brkaddr(int region)
 {
   return mm_brkaddr(KNR_HEAP, region);
 }
-
-#endif /* CONFIG_MM_KERNEL_HEAP */

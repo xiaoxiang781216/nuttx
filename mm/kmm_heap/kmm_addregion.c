@@ -24,11 +24,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <nuttx/mm/mm.h>
-
-#ifdef CONFIG_MM_KERNEL_HEAP
 
 /****************************************************************************
  * Public Functions
@@ -53,5 +49,3 @@ void kmm_addregion(FAR void *heap_start, size_t heap_size)
 {
   mm_addregion(KNR_HEAP, heap_start, heap_size);
 }
-
-#endif /* CONFIG_MM_KERNEL_HEAP */
