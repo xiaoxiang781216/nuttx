@@ -150,15 +150,15 @@ extern "C"
 
 #define INTSTACK_SIZE        (CONFIG_ARCH_INTERRUPTSTACK & ~STACKFRAME_ALIGN_MASK)
 
-#ifdef CONFIG_SMP
+#ifndef CONFIG_UP
 
-INIT_STACK_ARRAY_DEFINE_EXTERN(g_cpu_idlestackalloc, CONFIG_SMP_NCPUS,
+INIT_STACK_ARRAY_DEFINE_EXTERN(g_cpu_idlestackalloc, CONFIG_NCPUS,
                           SMP_STACK_SIZE);
-INIT_STACK_ARRAY_DEFINE_EXTERN(g_interrupt_stacks, CONFIG_SMP_NCPUS,
+INIT_STACK_ARRAY_DEFINE_EXTERN(g_interrupt_stacks, CONFIG_NCPUS,
                           INTSTACK_SIZE);
 
 #ifdef CONFIG_ARM64_DECODEFIQ
-INIT_STACK_ARRAY_DEFINE_EXTERN(g_interrupt_fiq_stacks, CONFIG_SMP_NCPUS,
+INIT_STACK_ARRAY_DEFINE_EXTERN(g_interrupt_fiq_stacks, CONFIG_NCPUS,
                           INTSTACK_SIZE);
 #endif
 #else
