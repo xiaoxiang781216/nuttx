@@ -899,7 +899,7 @@ static int fatfs_truncate(FAR struct file *filep, off_t length)
         }
 
       length -= f_size(&fp->f);
-      buffer = fs_heap_zalloc(SS(&fs->fat));
+      buffer = lib_get_tempbuffer(SS(&fs->fat));
       if (buffer == NULL)
         {
           goto errbuf;
@@ -932,7 +932,7 @@ static int fatfs_truncate(FAR struct file *filep, off_t length)
     }
 
 errbuf:
-  fs_heap_free(buffer);
+  lib_put_tempbuffer(buffer);
 errsem:
   nxmutex_unlock(&fs->lock);
   return ret;
@@ -1177,7 +1177,7 @@ static int fatfs_bind(FAR struct inode *driver, FAR const void *data,
           goto errout_with_open;
         }
 
-      sector = fs_heap_malloc(geo.geo_sectorsize);
+      sector = lib_get_tempbuffer(geo.geo_sectorsize);
       if (sector == NULL)
         {
           ret = -ENOMEM;
@@ -1188,7 +1188,7 @@ static int fatfs_bind(FAR struct inode *driver, FAR const void *data,
       if (ret < 0)
         {
           ferr("Read failed: %d\n", ret);
-          fs_heap_free(sector);
+          lib_put_tempbuffer(sector);
           goto errout_with_open;
         }
 
@@ -1201,7 +1201,7 @@ static int fatfs_bind(FAR struct inode *driver, FAR const void *data,
           g_drv[fs->pdrv].ratio = CONFIG_FS_FATFS_SECTOR_RATIO;
         }
 
-      fs_heap_free(sector);
+      lib_put_tempbuffer(sector);
     }
 
   nxmutex_init(&fs->lock); /* Initialize the access control semaphore */
