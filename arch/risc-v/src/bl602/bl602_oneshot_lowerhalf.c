@@ -66,25 +66,25 @@ struct bl602_oneshot_lowerhalf_s
 
   struct oneshot_lowerhalf_s lh; /* Common lower-half driver fields */
 
-  uint32_t freq;
-
   /* Private lower half data follows */
 
-  uint8_t            tim;      /* timer tim 0,1 */
-  uint8_t            irq;      /* IRQ associated with this timer */
-  bool               started;  /* True: Timer has been started */
+  uint32_t           freq;    /* Timer frequency */
+  uint8_t            tim;     /* timer tim 0,1 */
+  uint8_t            irq;     /* IRQ associated with this timer */
+  bool               started; /* True: Timer has been started */
 };
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
-static int bl602_max_delay(struct oneshot_lowerhalf_s *lower,
-                           struct timespec *           ts);
-static int bl602_start(struct oneshot_lowerhalf_s *lower,
-                       const struct timespec *     ts);
-static int bl602_cancel(struct oneshot_lowerhalf_s *lower,
-                        struct timespec *           ts);
+static clkcnt_t bl602_max_delay(struct oneshot_lowerhalf_s *lower);
+static clkcnt_t bl602_current(struct oneshot_lowerhalf_s *lower);
+static void bl602_start_absolute(struct oneshot_lowerhalf_s *lower,
+                                 clkcnt_t expected);
+static void bl602_start(struct oneshot_lowerhalf_s *lower,
+                        clkcnt_t delta);
+static void bl602_cancel(struct oneshot_lowerhalf_s *lower);
 
 /****************************************************************************
  * Private Data
@@ -92,16 +92,39 @@ static int bl602_cancel(struct oneshot_lowerhalf_s *lower,
 
 /* Lower half operations */
 
-static const struct oneshot_operations_s g_oneshot_ops =
+static const struct oneshot_operations_s g_bl602_ops =
 {
-  .max_delay = bl602_max_delay,
-  .start     = bl602_start,
-  .cancel    = bl602_cancel,
+  .current        = bl602_current,
+  .start          = bl602_start,
+  .start_absolute = bl602_start_absolute,
+  .cancel         = bl602_cancel,
+  .max_delay      = bl602_max_delay
+};
+
+static struct bl602_oneshot_lowerhalf_s g_bl602_lowerhalf =
+{
+  .lh.ops = &g_bl602_ops
 };
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static inline uint64_t bl602_get_nsec(void)
+{
+  struct timespec ts =
+  {
+    0
+  };
+
+  /* Since bl602 can not get current time, it must
+   * rely on the other clocksource, such as mtime.
+   */
+
+  up_timer_gettime(&ts);
+
+  return (uint64_t)ts.tv_nsec + (uint64_t)ts.tv_sec * NSEC_PER_SEC;
+}
 
 /****************************************************************************
  * Name: bl602_oneshot_handler
@@ -120,8 +143,7 @@ static const struct oneshot_operations_s g_oneshot_ops =
 
 static int bl602_oneshot_handler(int irq, void *context, void *arg)
 {
-  struct bl602_oneshot_lowerhalf_s *priv =
-    (struct bl602_oneshot_lowerhalf_s *)arg;
+  struct bl602_oneshot_lowerhalf_s *priv = &g_bl602_lowerhalf;
 
   /* Clear Interrupt Bits */
 
@@ -167,89 +189,39 @@ static int bl602_oneshot_handler(int irq, void *context, void *arg)
   return 0;
 }
 
-/****************************************************************************
- * Name: bl602_max_delay
- *
- * Description:
- *   Determine the maximum delay of the one-shot timer (in microseconds)
- *
- * Input Parameters:
- *   lower   An instance of the lower-half oneshot state structure.  This
- *           structure must have been previously initialized via a call to
- *           oneshot_initialize();
- *   ts      The location in which to return the maximum delay.
- *
- * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returned
- *   on failure.
- *
- ****************************************************************************/
-
-static int bl602_max_delay(struct oneshot_lowerhalf_s *lower,
-                           struct timespec *           ts)
+static clkcnt_t bl602_max_delay(struct oneshot_lowerhalf_s *lower)
 {
-  struct bl602_oneshot_lowerhalf_s *priv =
-    (struct bl602_oneshot_lowerhalf_s *)lower;
-  uint64_t usecs;
-
-  DEBUGASSERT(priv != NULL && ts != NULL);
-  usecs = (uint64_t)(UINT32_MAX / priv->freq) * (uint64_t)USEC_PER_SEC;
-
-  uint64_t sec = usecs / 1000000;
-  usecs -= 1000000 * sec;
-
-  ts->tv_sec  = (time_t)sec;
-  ts->tv_nsec = (long)(usecs * 1000);
-
-  return OK;
+  struct bl602_oneshot_lowerhalf_s *priv = &g_bl602_lowerhalf;
+  return (uint64_t)(UINT32_MAX / priv->freq) * (uint64_t)NSEC_PER_SEC;
 }
 
-/****************************************************************************
- * Name: bl602_start
- *
- * Description:
- *   Start the oneshot timer
- *
- * Input Parameters:
- *   lower   An instance of the lower-half oneshot state structure.  This
- *           structure must have been previously initialized via a call to
- *           oneshot_initialize();
- *   handler The function to call when when the oneshot timer expires.
- *   arg     An opaque argument that will accompany the callback.
- *   ts      Provides the duration of the one shot timer.
- *
- * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returned
- *   on failure.
- *
- ****************************************************************************/
-
-static int bl602_start(struct oneshot_lowerhalf_s *lower,
-                       const struct timespec *     ts)
+static clkcnt_t bl602_current(struct oneshot_lowerhalf_s *lower)
 {
-  struct bl602_oneshot_lowerhalf_s *priv =
-    (struct bl602_oneshot_lowerhalf_s *)lower;
+  return bl602_get_nsec();
+}
+
+static void bl602_start_absolute(struct oneshot_lowerhalf_s *lower,
+                                 clkcnt_t expected)
+{
+  struct bl602_oneshot_lowerhalf_s *priv = &g_bl602_lowerhalf;
   irqstate_t flags;
   uint64_t   usec;
-
-  DEBUGASSERT(priv != NULL && ts != NULL);
 
   if (priv->started == true)
     {
       /* Yes.. then cancel it */
 
       tmrinfo("Already running... cancelling\n");
-      bl602_cancel(lower, NULL);
+      bl602_cancel(lower);
     }
 
   /* Save the callback information and start the timer */
 
   flags = enter_critical_section();
 
-  /* Express the delay in microseconds */
+  /* Express the delay in usec */
 
-  usec = (uint64_t)ts->tv_sec * USEC_PER_SEC +
-         (uint64_t)(ts->tv_nsec / NSEC_PER_USEC);
+  usec = (expected - bl602_current(lower)) / 1000u;
 
   bl602_timer_setcompvalue(
     priv->tim, TIMER_COMP_ID_0, usec / (TIMER_CLK_FREQ / priv->freq));
@@ -262,59 +234,60 @@ static int bl602_start(struct oneshot_lowerhalf_s *lower,
   priv->started = true;
 
   leave_critical_section(flags);
-
-  return OK;
 }
 
-/****************************************************************************
- * Name: bl602_cancel
- *
- * Description:
- *   Cancel the oneshot timer and return the time remaining on the timer.
- *
- *   NOTE: This function may execute at a high rate with no timer running (as
- *   when pre-emption is enabled and disabled).
- *
- * Input Parameters:
- *   lower   Caller allocated instance of the oneshot state structure.  This
- *           structure must have been previously initialized via a call to
- *           oneshot_initialize();
- *   ts      The location in which to return the time remaining on the
- *           oneshot timer.  A time of zero is returned if the timer is
- *           not running.
- *
- * Returned Value:
- *   Zero (OK) is returned on success.  A call to up_timer_cancel() when
- *   the timer is not active should also return success; a negated errno
- *   value is returned on any failure.
- *
- ****************************************************************************/
-
-static int bl602_cancel(struct oneshot_lowerhalf_s *lower,
-                        struct timespec *           ts)
+static void bl602_start(struct oneshot_lowerhalf_s *lower, clkcnt_t delta)
 {
-  struct bl602_oneshot_lowerhalf_s *priv =
-    (struct bl602_oneshot_lowerhalf_s *)lower;
+  struct bl602_oneshot_lowerhalf_s *priv = &g_bl602_lowerhalf;
+  irqstate_t flags;
+  uint64_t   usec;
+
+  if (priv->started == true)
+    {
+      /* Yes.. then cancel it */
+
+      tmrinfo("Already running... cancelling\n");
+      bl602_cancel(lower);
+    }
+
+  /* Save the callback information and start the timer */
+
+  flags = enter_critical_section();
+
+  /* Express the delay in usec */
+
+  usec = delta / 1000u;
+
+  bl602_timer_setcompvalue(
+    priv->tim, TIMER_COMP_ID_0, usec / (TIMER_CLK_FREQ / priv->freq));
+
+  bl602_timer_setpreloadvalue(priv->tim, 0);
+  irq_attach(priv->irq, bl602_oneshot_handler, (void *)priv);
+  up_enable_irq(priv->irq);
+  bl602_timer_intmask(priv->tim, TIMER_INT_COMP_0, 0);
+  bl602_timer_enable(priv->tim);
+  priv->started = true;
+
+  leave_critical_section(flags);
+}
+
+static void bl602_cancel(struct oneshot_lowerhalf_s *lower)
+{
+  struct bl602_oneshot_lowerhalf_s *priv = &g_bl602_lowerhalf;
   irqstate_t flags;
 
   DEBUGASSERT(priv != NULL);
 
   /* Cancel the timer */
 
-  if (priv->started)
-    {
-      flags = enter_critical_section();
+  flags = enter_critical_section();
 
-      bl602_timer_disable(priv->tim);
-      priv->started = false;
-      up_disable_irq(priv->irq);
-      bl602_timer_intmask(priv->tim, TIMER_INT_COMP_0, 1);
+  bl602_timer_disable(priv->tim);
+  priv->started = false;
+  up_disable_irq(priv->irq);
+  bl602_timer_intmask(priv->tim, TIMER_INT_COMP_0, 1);
 
-      leave_critical_section(flags);
-      return OK;
-    }
-
-  return -ENODEV;
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -343,22 +316,12 @@ static int bl602_cancel(struct oneshot_lowerhalf_s *lower,
 struct oneshot_lowerhalf_s *oneshot_initialize(int      chan,
                                                uint16_t resolution)
 {
-  struct bl602_oneshot_lowerhalf_s *priv;
-  struct timer_cfg_s                    timstr;
-
-  /* Allocate an instance of the lower half driver */
-
-  priv = kmm_zalloc(sizeof(struct bl602_oneshot_lowerhalf_s));
-  if (priv == NULL)
-    {
-      tmrerr("ERROR: Failed to initialized state structure\n");
-      return NULL;
-    }
+  struct bl602_oneshot_lowerhalf_s *priv = &g_bl602_lowerhalf;
+  struct timer_cfg_s                timstr;
 
   /* Initialize the lower-half driver structure */
 
   priv->started = false;
-  priv->lh.ops  = &g_oneshot_ops;
   priv->freq    = TIMER_CLK_FREQ / resolution;
   priv->tim     = chan;
   if (priv->tim == TIMER_CH0)
@@ -396,6 +359,8 @@ struct oneshot_lowerhalf_s *oneshot_initialize(int      chan,
   bl602_timer_disable(chan);
 
   bl602_timer_init(&timstr);
+
+  oneshot_count_init(&priv->lh, NSEC_PER_SEC);
 
   return &priv->lh;
 }
