@@ -137,7 +137,7 @@
 
 /* void CPU_ZERO_S(size_t setsize, FAR cpu_set_t *set); */
 
-#define CPU_ZERO_S(n,s) CPU_ZERO_S(s)
+#define CPU_ZERO_S(n,s) memset(s, 0, n)
 
 /* void CPU_SET_S(int cpu, size_t setsize, FAR cpu_set_t *set); */
 
