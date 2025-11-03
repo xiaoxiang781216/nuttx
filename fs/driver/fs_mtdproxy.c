@@ -40,7 +40,6 @@
 #include <nuttx/mutex.h>
 
 #include "driver/driver.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Private Data
