@@ -79,6 +79,7 @@ const struct file_operations g_dir_fileops =
   dir_ioctl,  /* ioctl */
 };
 
+#ifndef CONFIG_DISABLE_MOUNTPOINT
 static DEFINE_PER_CPU_BMP(struct inode, g_dir_inode) =
 {
   NULL,
@@ -89,6 +90,7 @@ static DEFINE_PER_CPU_BMP(struct inode, g_dir_inode) =
   { &g_dir_fileops },
 };
 #define g_dir_inode this_cpu_var_bmp(g_dir_inode)
+#endif
 
 /****************************************************************************
  * Private Functions
