@@ -165,8 +165,10 @@ static const struct image_store_ops g_rptun_store_ops =
 };
 #endif
 
-static struct metal_list g_rptun_priv = METAL_INIT_LIST(g_rptun_priv);
-static rmutex_t g_rptun_lock = NXRMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BSS_BMP(struct metal_list, g_rptun_priv);
+#define g_rptun_priv this_cpu_var_bmp(g_rptun_priv)
+static DEFINE_PER_CPU_BMP(rmutex_t, g_rptun_lock) = NXRMUTEX_INITIALIZER;
+#define g_rptun_lock this_cpu_var_bmp(g_rptun_lock)
 
 static struct notifier_block g_rptun_panic_nb =
 {
@@ -1266,6 +1268,7 @@ int rptun_initialize(FAR struct rptun_dev_s *dev)
     {
       priv->dev = dev;
       priv->pid = -EINVAL;
+      metal_list_init(&g_rptun_priv);
       remoteproc_init(&priv->rproc, &g_rptun_ops, priv);
 
       snprintf(name, sizeof(name), "/dev/rptun/%s", RPTUN_GET_CPUNAME(dev));
