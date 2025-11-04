@@ -137,7 +137,7 @@ if(NOT CONFIG_DEBUG_NOOPT)
 endif()
 
 if(CONFIG_FRAME_POINTER)
-  add_compile_options(-fno-omit-frame-pointer -fno-optimize-sibling-calls)
+  add_compile_options(-fno-omit-frame-pointer)
 else()
   add_compile_options(-fomit-frame-pointer)
 endif()

@@ -237,7 +237,7 @@ ifeq ($(CONFIG_MIPS32_TOOLCHAIN),PINGUINOW)
 endif
 
 ifeq ($(CONFIG_FRAME_POINTER),y)
-  ARCHOPTIMIZATION += -fno-omit-frame-pointer -fno-optimize-sibling-calls
+  ARCHOPTIMIZATION += -fno-omit-frame-pointer
 else
   ARCHOPTIMIZATION += -fomit-frame-pointer
 endif

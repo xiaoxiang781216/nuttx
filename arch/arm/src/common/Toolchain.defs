@@ -50,7 +50,7 @@ ifeq ($(CONFIG_FRAME_POINTER),y)
   ifeq ($(CONFIG_ARCH_TOOLCHAIN_GHS),y)
     ARCHOPTIMIZATION += -ga
   else
-    ARCHOPTIMIZATION += -fno-omit-frame-pointer -fno-optimize-sibling-calls
+    ARCHOPTIMIZATION += -fno-omit-frame-pointer
   endif
 else
   ifeq ($(CONFIG_ARM_TOOLCHAIN_GHS),y)

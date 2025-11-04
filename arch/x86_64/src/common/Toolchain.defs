@@ -50,7 +50,7 @@ else ifeq ($(CONFIG_DEBUG_FULLOPT),y)
 endif
 
 ifeq ($(CONFIG_FRAME_POINTER),y)
-  ARCHOPTIMIZATION += -fno-omit-frame-pointer -fno-optimize-sibling-calls
+  ARCHOPTIMIZATION += -fno-omit-frame-pointer
 endif
 
 ifeq ($(CONFIG_ARCH_INTEL64_DISABLE_CET),y)

@@ -80,7 +80,7 @@ elseif(CONFIG_DEBUG_FULLOPT)
 endif()
 
 if(CONFIG_FRAME_POINTER)
-  add_compile_options(-fno-omit-frame-pointer -fno-optimize-sibling-calls)
+  add_compile_options(-fno-omit-frame-pointer)
 endif()
 
 if(CONFIG_ARCH_INTEL64_DISABLE_CET)
