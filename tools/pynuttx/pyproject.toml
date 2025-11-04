@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pynuttx"
-version = "0.0.1"
+version = "0.0.5"
 description = "python scirpt for NuttX"
 requires-python = ">=3.10"
 classifiers = [
@@ -33,6 +33,9 @@ dependencies = [
     "viztracer>=0.0.0",
 ]
 
-
 [tool.setuptools]
 package-dir = { "gdbrpc" = "gdbrpc", "nxgdb" = "nxgdb", "nxelf" = "nxelf", "nxreg" = "nxreg", "nxstub" = "nxstub", "nxtrace" = "nxtrace", "nxgdbmcp" = "nxgdbmcp" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gdbrpc*", "nxgdb*", "nxelf*", "nxreg*", "nxstub*", "nxtrace*", "nxgdbmcp*"]
