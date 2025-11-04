@@ -105,7 +105,6 @@
 #include <sys/stat.h>
 
 #include "mnemofs.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -456,7 +455,7 @@ int mfs_ctz_wrtnode(FAR struct mfs_sb_s * const sb,
 
   /* So, till cur_idx - 1, the CTZ blocks are common. */
 
-  buf = fs_heap_zalloc(MFS_PGSZ(sb));
+  buf = lib_get_tempbuffer(MFS_PGSZ(sb));
   if (predict_false(buf == NULL))
     {
       ret = -ENOMEM;
@@ -599,7 +598,7 @@ int mfs_ctz_wrtnode(FAR struct mfs_sb_s * const sb,
     }
 
 errout_with_buf:
-  fs_heap_free(buf);
+  lib_put_tempbuffer(buf);
 
 errout:
   return ret;
