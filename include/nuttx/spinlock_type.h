@@ -33,6 +33,10 @@
 #  include <nuttx/queue.h>
 #endif
 
+/****************************************************************************
+ * Public Type Definitions
+ ****************************************************************************/
+
 #undef EXTERN
 #if defined(__cplusplus)
 #define EXTERN extern "C"
@@ -124,6 +128,17 @@ typedef struct rspinlock_s
         };
     };
 } rspinlock_t;
+
+#define SEQLOCK_INITIALIZER { 0u }
+
+typedef struct seqclock
+{
+#ifdef CONFIG_SMP
+  atomic_t sequence;
+#else
+  volatile uint32_t sequence;
+#endif
+} seqcount_t;
 
 #undef EXTERN
 #if defined(__cplusplus)
