@@ -590,13 +590,14 @@ config AUDIO_RPMSG_DEVICE_PARAMS
 	depends on AUDIO_RPMSG
 	---help---
 		This is a params for rpmsg audio device. The format like:
-		{remotecpu, devname, consumer}.
+		{remotecpu, devname, consumer, sharebuf}.
 
 		- remotecpu (string): remote cpu name to be connect.
 		- devname (string): a2dp or le or wtp.
 		- consumer (bool): true for data consumer, false for data producer.
+		- sharebuf (bool): true for using share memory for apb buffer, false for not.
 		e.g:
-			{"audio", "a2dp", false},
-			{"cp", "wtp", true},
+			{"audio", "a2dp", false, true},
+			{"cp", "wtp", true, false},
 
 endif # DRIVERS_AUDIO

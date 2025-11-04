@@ -40,6 +40,7 @@ typedef struct audio_rpmsg_param_s
   FAR const char *remotecpu; /* Remote CPU name to connect. */
   FAR const char *devname;   /* Audio rpmsg device name. */
   bool consumer;             /* True: consumer, false: producer. */
+  bool sharebuf;             /* True: apb in share memory, false: not. */
 } audio_rpmsg_param_t;
 
 /****************************************************************************
@@ -48,7 +49,7 @@ typedef struct audio_rpmsg_param_s
 
 int audio_rpmsg_initialize(void);
 int audio_rpmsg_register(FAR const char *remotecpu, FAR const char *devname,
-                         bool consumer);
+                         bool consumer, bool sharebuf);
 
 #endif /* CONFIG_AUDIO_RPMSG */
 #endif /* __INCLUDE_NUTTX_AUDIO_AUDIO_RPMSG_H */

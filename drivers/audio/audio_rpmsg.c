@@ -49,6 +49,8 @@
 #define AUDIO_RPMSG_RESUME           5
 #define AUDIO_RPMSG_NOTIFY_AVAIL     6
 #define AUDIO_RPMSG_SEND_DATA        7
+#define AUDIO_RPMSG_ALLOCSHM         8
+#define AUDIO_RPMSG_FREESHM          9
 
 #define AUDIO_RPMSG_RESPONSE         (1u << 31)
 #define AUDIO_RPMSG_IS_RESPONSE(cmd) (!!((cmd) & AUDIO_RPMSG_RESPONSE))
@@ -91,6 +93,14 @@ struct audio_rpmsg_msg_s
   uint16_t msgid;
 };
 
+struct audio_rpmsg_alloc_buffer_s
+{
+  struct audio_rpmsg_header_s header;
+  uint64_t addr;  /* Buffer pointer address */
+};
+
+#define audio_rpmsg_free_buffer_s audio_rpmsg_alloc_buffer_s
+
 struct audio_rpmsg_send_data_s
 {
   struct audio_rpmsg_header_s header;
@@ -102,6 +112,7 @@ struct audio_rpmsg_send_data_s
 struct audio_rpmsg_notify_avail_s
 {
   struct audio_rpmsg_header_s header;
+  uint64_t addr;  /* Buffer pointer to dequeue */
 };
 
 struct audio_rpmsg_s
@@ -111,6 +122,7 @@ struct audio_rpmsg_s
   FAR const char *remotecpu;    /* Remote cpu name to connect */
   FAR const char *devname;      /* Audio rpmsg device name */
   bool consumer;                /* True: consumer, false: producer */
+  bool sharebuf;                /* True: share memory, false: not */
   sem_t wait;                   /* Wait sem, used for preventing any
                                  * opreation until the connection
                                  * between two cpu established.
@@ -120,8 +132,13 @@ struct audio_rpmsg_s
   struct audio_info_s info;     /* Formats */
   struct ap_buffer_info_s binfo;
 
+  FAR void *base;               /* Share memory address. */
+  int count;                    /* Local apb allocated buffer count. */
+  int refs;                     /* Share Memory reference count. */
+
   size_t navail;                /* Number of available buffers in peer */
   struct dq_queue_s pendq;
+  struct dq_queue_s waitq;
 };
 
 /****************************************************************************
@@ -168,6 +185,10 @@ static int audio_rpmsg_resume(FAR struct audio_lowerhalf_s *dev);
 #  endif
 #endif
 
+static int audio_rpmsg_allocbuffer(FAR struct audio_lowerhalf_s *dev,
+                                   FAR struct audio_buf_desc_s *bufdesc);
+static int audio_rpmsg_freebuffer(FAR struct audio_lowerhalf_s *dev,
+                                  FAR struct audio_buf_desc_s *bufdesc);
 static int audio_rpmsg_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
                                      FAR struct ap_buffer_s *apb);
 static int audio_rpmsg_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
@@ -202,12 +223,21 @@ static int audio_rpmsg_configure_handler(FAR struct rpmsg_endpoint *ept,
 static int audio_rpmsg_ioctl_handler(FAR struct rpmsg_endpoint *ept,
                                      FAR void *data, size_t len,
                                      uint32_t src, FAR void *priv);
+static int audio_rpmsg_allocshm_handler(FAR struct rpmsg_endpoint *ept,
+                                        FAR void *data, size_t len,
+                                        uint32_t src, FAR void *priv);
+static int audio_rpmsg_freeshm_handler(FAR struct rpmsg_endpoint *ept,
+                                       FAR void *data, size_t len,
+                                       uint32_t src, FAR void *priv);
 static int audio_rpmsg_default_response(FAR struct rpmsg_endpoint *ept,
                                         FAR void *data, size_t len,
                                         uint32_t src, FAR void *priv);
 static int audio_rpmsg_ioctl_response(FAR struct rpmsg_endpoint *ept,
                                       FAR void *data, size_t len,
                                       uint32_t src, FAR void *priv);
+static int audio_rpmsg_allocshm_response(FAR struct rpmsg_endpoint *ept,
+                                         FAR void *data, size_t len,
+                                         uint32_t src, FAR void *priv);
 
 /****************************************************************************
  * Private Data
@@ -230,6 +260,8 @@ static const rpmsg_ept_cb g_audio_rpmsg_handler[] =
   [AUDIO_RPMSG_RESUME]       = audio_rpmsg_message_handler,
   [AUDIO_RPMSG_SEND_DATA]    = audio_rpmsg_send_data_handler,
   [AUDIO_RPMSG_NOTIFY_AVAIL] = audio_rpmsg_notify_avail_handler,
+  [AUDIO_RPMSG_ALLOCSHM]     = audio_rpmsg_allocshm_handler,
+  [AUDIO_RPMSG_FREESHM]      = audio_rpmsg_freeshm_handler,
 };
 
 static const rpmsg_ept_cb g_audio_rpmsg_response[] =
@@ -242,6 +274,7 @@ static const rpmsg_ept_cb g_audio_rpmsg_response[] =
   [AUDIO_RPMSG_RESUME]       = audio_rpmsg_default_response,
   [AUDIO_RPMSG_SEND_DATA]    = audio_rpmsg_default_response,
   [AUDIO_RPMSG_NOTIFY_AVAIL] = audio_rpmsg_default_response,
+  [AUDIO_RPMSG_ALLOCSHM]     = audio_rpmsg_allocshm_response,
 };
 
 static const struct audio_ops_s g_audio_rpmsg_ops =
@@ -257,8 +290,8 @@ static const struct audio_ops_s g_audio_rpmsg_ops =
     audio_rpmsg_pause,         /* pause          */
     audio_rpmsg_resume,        /* resume         */
 #endif
-    NULL,                      /* allocbuffer    */
-    NULL,                      /* freebuffer     */
+    audio_rpmsg_allocbuffer,   /* allocbuffer    */
+    audio_rpmsg_freebuffer,    /* freebuffer     */
     audio_rpmsg_enqueuebuffer, /* enqueue_buffer */
     NULL,                      /* cancel_buffer  */
     audio_rpmsg_ioctl,         /* ioctl          */
@@ -428,25 +461,37 @@ static int audio_rpmsg_send_data(FAR struct audio_rpmsg_s *aud)
           break;
         }
 
-      apb = (FAR struct ap_buffer_s *)dq_peek(&aud->pendq);
-      space -= sizeof(*req);
-      if (space >= apb->nbytes - apb->curbyte)
-        {
-          space = apb->nbytes - apb->curbyte;
-        }
-
+      DEBUGASSERT(space > sizeof(*req));
       req->flags = 0;
-      req->length = space;
       req->header.result = 0;
       req->header.command = AUDIO_RPMSG_SEND_DATA;
-      memcpy(req->data, apb->samp + apb->curbyte, space);
-
-      if ((apb->curbyte + space) == apb->nbytes)
+      apb = (FAR struct ap_buffer_s *)dq_peek(&aud->pendq);
+      if (!aud->sharebuf)
         {
+          space -= sizeof(*req);
+          if (space >= apb->nbytes - apb->curbyte)
+            {
+              space = apb->nbytes - apb->curbyte;
+            }
+
+          memcpy(req->data, apb->samp + apb->curbyte, space);
+          req->length = space;
+
+          if ((apb->curbyte + space) == apb->nbytes)
+            {
+              req->flags = apb->flags;
+            }
+
+          ret = rpmsg_send_nocopy(&aud->ept, req, sizeof(*req) + space);
+        }
+      else
+        {
+          space = apb->nbytes - apb->curbyte;
+          req->length = space;
           req->flags = apb->flags;
+          ret = rpmsg_send_nocopy(&aud->ept, req, sizeof(*req));
         }
 
-      ret = rpmsg_send_nocopy(&aud->ept, req, sizeof(*req) + space);
       if (ret < 0)
         {
           auderr("%s failed to send\n", aud->devname);
@@ -459,12 +504,20 @@ static int audio_rpmsg_send_data(FAR struct audio_rpmsg_s *aud)
       if (apb->curbyte == apb->nbytes)
         {
           dq_remfirst(&aud->pendq);
-          aud->navail--;
-          audio_rpmsg_callback(aud, AUDIO_CALLBACK_DEQUEUE, apb);
-          if (apb->flags & AUDIO_APB_FINAL)
+          if (aud->sharebuf)
             {
-              audio_rpmsg_callback(aud, AUDIO_CALLBACK_COMPLETE, apb);
+              dq_addlast(&apb->dq_entry, &aud->waitq);
             }
+          else
+            {
+              audio_rpmsg_callback(aud, AUDIO_CALLBACK_DEQUEUE, apb);
+              if (apb->flags & AUDIO_APB_FINAL)
+                {
+                  audio_rpmsg_callback(aud, AUDIO_CALLBACK_COMPLETE, apb);
+                }
+            }
+
+          aud->navail--;
         }
     }
 
@@ -475,6 +528,12 @@ static int audio_rpmsg_send_data(FAR struct audio_rpmsg_s *aud)
 static int audio_rpmsg_notify_avail(FAR struct audio_rpmsg_s *aud)
 {
   FAR struct audio_rpmsg_notify_avail_s req;
+  FAR struct ap_buffer_s *apb;
+
+  nxrmutex_lock(&aud->mutex);
+  apb = (FAR struct ap_buffer_s *)dq_tail(&aud->pendq);
+  req.addr = up_addrenv_va_to_pa(apb->samp);
+  nxrmutex_unlock(&aud->mutex);
 
   req.header.result = 0;
   req.header.command = AUDIO_RPMSG_NOTIFY_AVAIL;
@@ -542,7 +601,7 @@ static int audio_rpmsg_ioctl_response(FAR struct rpmsg_endpoint *ept,
 {
   FAR struct audio_rpmsg_header_s *header = data;
   FAR struct audio_rpmsg_cookie_s *cookie =
-      (struct audio_rpmsg_cookie_s *)(uintptr_t)header->cookie;
+    (struct audio_rpmsg_cookie_s *)(uintptr_t)header->cookie;
   FAR struct audio_rpmsg_ioctl_s *req = data;
 
   cookie->result = header->result;
@@ -551,6 +610,24 @@ static int audio_rpmsg_ioctl_response(FAR struct rpmsg_endpoint *ept,
       memcpy(cookie->data, (FAR void *)(uintptr_t)req->data,
              req->arglen);
     }
+
+  rpmsg_post(ept, &cookie->sem);
+  return 0;
+}
+
+static int audio_rpmsg_allocshm_response(FAR struct rpmsg_endpoint *ept,
+                                         FAR void *data, size_t len,
+                                         uint32_t src, FAR void *priv)
+{
+  FAR struct audio_rpmsg_header_s *header = data;
+  FAR struct audio_rpmsg_cookie_s *cookie =
+    (struct audio_rpmsg_cookie_s *)(uintptr_t)header->cookie;
+  FAR struct audio_rpmsg_alloc_buffer_s *req = data;
+  FAR struct audio_rpmsg_alloc_buffer_s *resp =
+    (struct audio_rpmsg_alloc_buffer_s *)cookie->data;
+
+  cookie->result = header->result;
+  resp->addr = req->addr;
 
   rpmsg_post(ept, &cookie->sem);
   return 0;
@@ -653,9 +730,13 @@ static int audio_rpmsg_send_data_handler(FAR struct rpmsg_endpoint *ept,
 
   apb = (FAR struct ap_buffer_s *)dq_peek(&aud->pendq);
 
-  DEBUGASSERT((apb->nmaxbytes - apb->curbyte) >= req->length);
+  if (!aud->sharebuf)
+    {
+      DEBUGASSERT((apb->nmaxbytes - apb->curbyte) >= req->length);
 
-  memcpy(apb->samp + apb->curbyte, req->data, req->length);
+      memcpy(apb->samp + apb->curbyte, req->data, req->length);
+    }
+
   apb->curbyte += req->length;
 
   if (apb->curbyte == apb->nmaxbytes || req->flags & AUDIO_APB_FINAL)
@@ -679,9 +760,25 @@ static int audio_rpmsg_notify_avail_handler(FAR struct rpmsg_endpoint *ept,
                                             uint32_t src, FAR void *priv)
 {
   FAR struct audio_rpmsg_s *aud = ept->priv;
+  FAR struct audio_rpmsg_notify_avail_s *req = data;
+  FAR struct ap_buffer_s *apb;
 
   nxrmutex_lock(&aud->mutex);
   aud->navail++;
+  if (aud->sharebuf && !dq_empty(&aud->waitq))
+    {
+      apb = (FAR struct ap_buffer_s *)dq_peek(&aud->waitq);
+      if (up_addrenv_va_to_pa(apb->samp) == req->addr)
+        {
+          dq_remfirst(&aud->waitq);
+          audio_rpmsg_callback(aud, AUDIO_CALLBACK_DEQUEUE, apb);
+          if (apb->flags & AUDIO_APB_FINAL)
+            {
+              audio_rpmsg_callback(aud, AUDIO_CALLBACK_COMPLETE, apb);
+            }
+        }
+    }
+
   nxrmutex_unlock(&aud->mutex);
 
   return audio_rpmsg_deliver_buffer(aud);
@@ -892,6 +989,190 @@ static int audio_rpmsg_send_recv(FAR struct audio_rpmsg_s *aud,
 
   nxsem_destroy(&cookie.sem);
   return ret;
+}
+
+static int audio_rpmsg_allocshm(FAR struct audio_rpmsg_s *aud)
+{
+  FAR struct rpmsg_endpoint *ept = &aud->ept;
+  FAR struct rpmsg_device *rdev = ept->rdev;
+  int ret;
+  struct audio_rpmsg_alloc_buffer_s req =
+    {
+      0
+    };
+
+  if (aud->refs)
+    {
+      aud->refs++;
+      return 0;
+    }
+
+  /* We fix allocating share memory in consumer core. */
+
+  if (aud->consumer)
+    {
+      size_t shmsize = aud->binfo.buffer_size * aud->binfo.nbuffers;
+      aud->base = rpmsg_alloc_buf(rdev, shmsize, 4);
+      if (aud->base == NULL)
+        {
+          auderr("%s failed to alloc share memory, size:%d!!!\n",
+                 aud->devname, shmsize);
+          return -ENOMEM;
+        }
+
+      memset(aud->base, 0, shmsize);
+    }
+  else
+    {
+      ret = audio_rpmsg_send_recv(aud, AUDIO_RPMSG_ALLOCSHM, true,
+                                  &req.header, sizeof(req), &req);
+      if (ret < 0)
+        {
+          auderr("%s init shm fail:%d.\n", aud->devname, ret);
+          return ret;
+        }
+
+      aud->base = (FAR void *)up_addrenv_pa_to_va(req.addr);
+    }
+
+  aud->refs++;
+  return 0;
+}
+
+static void audio_rpmsg_freeshm(FAR struct audio_rpmsg_s *aud)
+{
+  FAR struct rpmsg_endpoint *ept = &aud->ept;
+  FAR struct rpmsg_device *rdev = ept->rdev;
+  struct audio_rpmsg_free_buffer_s req =
+    {
+      0
+    };
+
+  auderr("%s all buffer freed.\n", aud->devname);
+
+  if (--aud->refs)
+    {
+      return;
+    }
+
+  if (aud->consumer)
+    {
+      rpmsg_free_buf(rdev, aud->base);
+    }
+  else
+    {
+      req.header.command = AUDIO_RPMSG_FREESHM;
+      rpmsg_send(&aud->ept, &req, sizeof(req));
+    }
+
+  aud->base = NULL;
+}
+
+static FAR struct ap_buffer_s *
+audio_rpmsg_alloc_apb(FAR struct audio_rpmsg_s *aud)
+{
+  FAR struct ap_buffer_s *apb;
+  int ret;
+
+  nxrmutex_lock(&aud->mutex);
+  if (aud->count == aud->binfo.nbuffers)
+    {
+      nxrmutex_unlock(&aud->mutex);
+      return NULL;
+    }
+
+  if (aud->count == 0)
+    {
+      ret = audio_rpmsg_allocshm(aud);
+      if (ret < 0)
+        {
+          nxrmutex_unlock(&aud->mutex);
+          return NULL;
+        }
+    }
+
+  apb = kumm_zalloc(sizeof(struct ap_buffer_s));
+  if (!apb)
+    {
+      nxrmutex_unlock(&aud->mutex);
+      return NULL;
+    }
+
+  /* Populate the buffer contents */
+
+  apb->i.channels = 1;
+  apb->crefs = 1;
+  apb->nmaxbytes = aud->binfo.buffer_size;
+#ifdef CONFIG_AUDIO_MULTI_SESSION
+  apb->session = bufdesc->session;
+#endif
+  nxmutex_init(&apb->lock);
+
+  apb->samp = (FAR uint8_t *)(aud->base +
+    aud->binfo.buffer_size * aud->count);
+  aud->count++;
+  nxrmutex_unlock(&aud->mutex);
+  return apb;
+}
+
+static void audio_rpmsg_free_apb(FAR struct audio_rpmsg_s *aud,
+                                FAR struct ap_buffer_s *apb)
+{
+  int crefs;
+
+  DEBUGASSERT(apb != NULL);
+
+  nxmutex_lock(&apb->lock);
+  crefs = --apb->crefs;
+  nxmutex_unlock(&apb->lock);
+  if (crefs != 0)
+    {
+      return;
+    }
+
+  nxmutex_destroy(&apb->lock);
+  kumm_free(apb);
+
+  nxrmutex_lock(&aud->mutex);
+  if (--aud->count == 0)
+    {
+      audio_rpmsg_freeshm(aud);
+    }
+
+  nxrmutex_unlock(&aud->mutex);
+}
+
+static int audio_rpmsg_freeshm_handler(FAR struct rpmsg_endpoint *ept,
+                                       FAR void *data, size_t len,
+                                       uint32_t src, FAR void *priv)
+{
+  FAR struct audio_rpmsg_s *aud = ept->priv;
+
+  DEBUGASSERT(aud->consumer);
+
+  nxrmutex_lock(&aud->mutex);
+  audio_rpmsg_freeshm(aud);
+  nxrmutex_unlock(&aud->mutex);
+  return 0;
+}
+
+static int audio_rpmsg_allocshm_handler(FAR struct rpmsg_endpoint *ept,
+                                        FAR void *data, size_t len,
+                                        uint32_t src, FAR void *priv)
+{
+  FAR struct audio_rpmsg_s *aud = ept->priv;
+  FAR struct audio_rpmsg_alloc_buffer_s *req = data;
+  int ret = 0;
+
+  DEBUGASSERT(aud->consumer);
+
+  audinfo("%s handle allocbuffer:%d\n", aud->devname, aud->refs);
+
+  nxrmutex_lock(&aud->mutex);
+  ret = audio_rpmsg_allocshm(aud);
+  req->addr = up_addrenv_va_to_pa(aud->base);
+  nxrmutex_unlock(&aud->mutex);
+  return audio_rpmsg_send_response(aud, &req->header, sizeof(*req), ret);
 }
 
 /****************************************************************************
@@ -1105,14 +1386,20 @@ static int audio_rpmsg_stop(FAR struct audio_lowerhalf_s *dev)
 #endif
 {
   FAR struct audio_rpmsg_s *aud = (FAR struct audio_rpmsg_s *)dev;
+  FAR struct ap_buffer_s *apb;
 
   audinfo("audio %s stop.\n", aud->devname);
 
   nxrmutex_lock(&aud->mutex);
+  while (!dq_empty(&aud->waitq))
+    {
+      apb = (FAR struct ap_buffer_s *)dq_remfirst(&aud->waitq);
+      audio_rpmsg_callback(aud, AUDIO_CALLBACK_DEQUEUE, apb);
+    }
+
   while (!dq_empty(&aud->pendq))
     {
-      FAR struct ap_buffer_s *apb =
-          (FAR struct ap_buffer_s *)dq_remfirst(&aud->pendq);
+      apb = (FAR struct ap_buffer_s *)dq_remfirst(&aud->pendq);
       audio_rpmsg_callback(aud, AUDIO_CALLBACK_DEQUEUE, apb);
     }
 
@@ -1176,6 +1463,52 @@ static int audio_rpmsg_resume(FAR struct audio_lowerhalf_s *dev)
                                      AUDIO_MSG_RESUME);
 }
 #endif /* CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME */
+
+static int audio_rpmsg_allocbuffer(FAR struct audio_lowerhalf_s *dev,
+                                   FAR struct audio_buf_desc_s *bufdesc)
+{
+  FAR struct audio_rpmsg_s *aud = (FAR struct audio_rpmsg_s *)dev;
+  FAR struct ap_buffer_s *apb;
+
+  audinfo("%s alloc buffer\n", aud->devname);
+
+  DEBUGASSERT(bufdesc->u.pbuffer != NULL);
+
+  if (!aud->sharebuf)
+    {
+      audwarn("%s alloc default apb buffer\n", aud->devname);
+      return apb_alloc(bufdesc);
+    }
+
+  apb = audio_rpmsg_alloc_apb(aud);
+  if (!apb)
+    {
+      return -ENOMEM;
+    }
+
+  *bufdesc->u.pbuffer = apb;
+  return sizeof(struct audio_buf_desc_s);
+}
+
+static int audio_rpmsg_freebuffer(FAR struct audio_lowerhalf_s *dev,
+                                  FAR struct audio_buf_desc_s *bufdesc)
+{
+  FAR struct audio_rpmsg_s *aud = (FAR struct audio_rpmsg_s *)dev;
+  FAR struct ap_buffer_s *apb = (struct ap_buffer_s *)bufdesc->u.pbuffer;
+
+  audinfo("%s free buffer\n", aud->devname);
+
+  if (aud->sharebuf)
+    {
+      audio_rpmsg_free_apb(aud, apb);
+    }
+  else
+    {
+      apb_free(apb);
+    }
+
+  return sizeof(struct audio_buf_desc_s);
+}
 
 static int audio_rpmsg_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
                                      FAR struct ap_buffer_s *apb)
@@ -1279,7 +1612,7 @@ static int audio_rpmsg_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
                               arglen > 0 ? (FAR void *)arg : NULL);
   if (ret < 0)
     {
-      auderr("configure failed, ret=%d\n", ret);
+      auderr("cmd:%d failed, ret=%d\n", cmd, ret);
       return ret;
     }
 
@@ -1324,7 +1657,7 @@ static int audio_rpmsg_release(FAR struct audio_lowerhalf_s *dev)
  ****************************************************************************/
 
 int audio_rpmsg_register(FAR const char *remotecpu, FAR const char *devname,
-                         bool consumer)
+                         bool consumer, bool sharebuf)
 {
   FAR struct audio_rpmsg_s *aud;
   int ret;
@@ -1343,10 +1676,12 @@ int audio_rpmsg_register(FAR const char *remotecpu, FAR const char *devname,
 
   aud->dev.ops = &g_audio_rpmsg_ops;
   dq_init(&aud->pendq);
+  dq_init(&aud->waitq);
 
   aud->remotecpu = remotecpu;
   aud->devname = devname;
   aud->consumer = consumer;
+  aud->sharebuf = sharebuf;
   ret = audio_register(aud->devname, &aud->dev);
   if (ret < 0)
     {
@@ -1396,7 +1731,8 @@ int audio_rpmsg_initialize(void)
     {
       ret = audio_rpmsg_register(g_audio_rpmsg_params[i].remotecpu,
                                  g_audio_rpmsg_params[i].devname,
-                                 g_audio_rpmsg_params[i].consumer);
+                                 g_audio_rpmsg_params[i].consumer,
+                                 g_audio_rpmsg_params[i].sharebuf);
       if (ret < 0)
         {
           auderr("Failed to register rpmsg audio device %s\n",
