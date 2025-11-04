@@ -2457,7 +2457,7 @@ int lrofs_truncate_file(FAR struct file *filep, off_t length)
       uint32_t buff_len = lm->lm_hwsectorsize * lf->lf_ncachesector;
       off_t savepos = filep->f_pos;
 
-      buffer = fs_heap_zalloc(buff_len);
+      buffer = lib_get_tempbuffer(buff_len);
       if (buffer == NULL)
         {
           return -ENOMEM;
@@ -2476,14 +2476,14 @@ int lrofs_truncate_file(FAR struct file *filep, off_t length)
 
           if (ret < 0)
             {
-              fs_heap_free(buffer);
+              lib_put_tempbuffer(buffer);
               return ret;
             }
 
           remain -= ret;
         }
 
-      fs_heap_free(buffer);
+      lib_put_tempbuffer(buffer);
       filep->f_pos = savepos;
     }
 
