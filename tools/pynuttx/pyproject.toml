@@ -5,11 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pynuttx"
 version = "0.0.5"
-description = "python scirpt for NuttX"
+description = "Comprehensive Python debugging and analysis toolkit for NuttX RTOS - includes GDB extensions, memory analysis, crash diagnostics, trace parsing, and remote debugging capabilities"
 requires-python = ">=3.10"
+keywords = ["nuttx", "rtos", "embedded", "gdb", "debugging", "memory-analysis", "crash-analysis", "trace", "profiling"]
 classifiers = [
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Debuggers",
+    "Topic :: Software Development :: Embedded Systems",
+    "Topic :: System :: Operating System Kernels",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: Apache Software License",
 ]
 
@@ -32,6 +39,13 @@ dependencies = [
     "pylink-square>=0.0.0",
     "viztracer>=0.0.0",
 ]
+
+[project.urls]
+Homepage = "https://nuttx.apache.org/"
+Documentation = "https://nuttx.apache.org/docs/latest/"
+Repository = "https://github.com/apache/nuttx"
+Issues = "https://github.com/apache/nuttx/issues"
+Changelog = "https://github.com/apache/nuttx/tags"
 
 [tool.setuptools]
 package-dir = { "gdbrpc" = "gdbrpc", "nxgdb" = "nxgdb", "nxelf" = "nxelf", "nxreg" = "nxreg", "nxstub" = "nxstub", "nxtrace" = "nxtrace", "nxgdbmcp" = "nxgdbmcp" }
