@@ -455,7 +455,8 @@ extern "C"
 {
 #endif
 
-extern rmutex_t g_tcp_connections_lock;
+DECLARE_PER_CPU_BMP(rmutex_t, g_tcp_connections_lock);
+#define g_tcp_connections_lock this_cpu_var_bmp(g_tcp_connections_lock)
 
 /****************************************************************************
  * Inline Functions

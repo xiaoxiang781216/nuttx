@@ -275,7 +275,8 @@ begin_packed_struct struct usrsock_message_socket_event_s
 
 /* Global protection lock for usrsock socket */
 
-extern rmutex_t g_usrsock_lock;
+DECLARE_PER_CPU_BMP(rmutex_t, g_usrsock_lock);
+#define g_usrsock_lock this_cpu_var_bmp(g_usrsock_lock)
 
 /****************************************************************************
  * Inline Functions

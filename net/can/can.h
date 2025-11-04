@@ -161,7 +161,8 @@ EXTERN const struct sock_intf_s g_can_sockif;
 
 /* The CAN connections rmutex */
 
-extern rmutex_t g_can_connections_lock;
+DECLARE_PER_CPU_BMP(rmutex_t, g_can_connections_lock);
+#define g_can_connections_lock this_cpu_var_bmp(g_can_connections_lock)
 
 /****************************************************************************
  * Name: can_conn_list_lock

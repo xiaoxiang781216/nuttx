@@ -66,7 +66,8 @@
 
 /* The PKT connections rmutex */
 
-rmutex_t g_pkt_connections_lock = NXRMUTEX_INITIALIZER;
+#undef g_pkt_connections_lock
+DEFINE_PER_CPU_BMP(rmutex_t, g_pkt_connections_lock) = NXRMUTEX_INITIALIZER;
 
 /****************************************************************************
  * Private Data
@@ -77,10 +78,12 @@ rmutex_t g_pkt_connections_lock = NXRMUTEX_INITIALIZER;
 MEMPOOL_DEFINE(g_pkt_connections, sizeof(struct pkt_conn_s),
                CONFIG_NET_PKT_PREALLOC_CONNS, CONFIG_NET_PKT_MAX_CONNS,
                CONFIG_NET_PKT_ALLOC_CONNS);
+#define g_pkt_connections this_cpu_var_bmp(g_pkt_connections)
 
 /* A list of all allocated packet socket connections */
 
-static dq_queue_t g_active_pkt_connections;
+static DEFINE_PER_CPU_BMP(dq_queue_t, g_active_pkt_connections);
+#define g_active_pkt_connections this_cpu_var_bmp(g_active_pkt_connections)
 
 /****************************************************************************
  * Public Functions

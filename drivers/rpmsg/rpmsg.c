@@ -118,6 +118,7 @@ static DEFINE_PER_CPU_BMP(rw_semaphore_t, g_rpmsg_lock) = RWSEM_INITIALIZER;
 #if CONFIG_RPMSG_POOL_COUNT > 0
 MEMPOOL_DEFINE(g_rpmsg_pool, CONFIG_RPMSG_POOL_SIZE,
                CONFIG_RPMSG_POOL_COUNT, CONFIG_RPMSG_POOL_COUNT, 0);
+#define g_rpmsg_pool this_cpu_var_bmp(g_rpmsg_pool)
 #endif
 
 #ifdef CONFIG_RPMSG_WQUEUE_GLOBAL

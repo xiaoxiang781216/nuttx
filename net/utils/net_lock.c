@@ -53,7 +53,8 @@
  * Private Data
  ****************************************************************************/
 
-static rmutex_t g_netlock = NXRMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BMP(rmutex_t, g_netlock) = NXRMUTEX_INITIALIZER;
+#define g_netlock this_cpu_var_bmp(g_netlock)
 
 /****************************************************************************
  * Public Functions

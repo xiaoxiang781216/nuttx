@@ -40,7 +40,8 @@
 
 /* Increasing number used for the IP ID field. */
 
-static uint16_t g_ipid;
+static DEFINE_PER_CPU_BMP(uint16_t, g_ipid);
+#define g_ipid this_cpu_var_bmp(g_ipid)
 
 /****************************************************************************
  * Public Functions

@@ -66,9 +66,11 @@
 #ifdef CONFIG_NET_TCP_ISN_RFC6528
 /* RFC 6528, Section 3: Key lengths of 128 bits should be adequate. */
 
-static uint32_t g_tcp_isnkey[4];
+static DEFINE_PER_CPU_BSS_BMP(uint32_t, g_tcp_isnkey[4]);
+#define g_tcp_isnkey this_cpu_var_bmp(g_tcp_isnkey)
 #else
-static uint32_t g_tcpsequence;
+static DEFINE_PER_CPU_BSS_BMP(uint32_t, g_tcpsequence);
+#define g_tcpsequence this_cpu_var_bmp(g_tcpsequence)
 #endif
 
 /****************************************************************************

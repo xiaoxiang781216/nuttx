@@ -60,7 +60,9 @@
 
 /* The icmpv6 connections rmutex */
 
-rmutex_t g_icmpv6_connections_lock = NXRMUTEX_INITIALIZER;
+#undef g_icmpv6_connections_lock
+DEFINE_PER_CPU_BMP(rmutex_t, g_icmpv6_connections_lock) =
+                   NXRMUTEX_INITIALIZER;
 
 /****************************************************************************
  * Private Data
@@ -71,10 +73,13 @@ rmutex_t g_icmpv6_connections_lock = NXRMUTEX_INITIALIZER;
 MEMPOOL_DEFINE(g_icmpv6_connections, sizeof(struct icmpv6_conn_s),
                CONFIG_NET_ICMPv6_PREALLOC_CONNS, CONFIG_NET_ICMPv6_MAX_CONNS,
                CONFIG_NET_ICMPv6_ALLOC_CONNS);
+#define g_icmpv6_connections this_cpu_var_bmp(g_icmpv6_connections)
 
 /* A list of all allocated IPPROTO_ICMP socket connections */
 
-static dq_queue_t g_active_icmpv6_connections;
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_active_icmpv6_connections);
+#define g_active_icmpv6_connections \
+        this_cpu_var_bmp(g_active_icmpv6_connections)
 
 /****************************************************************************
  * Public Functions

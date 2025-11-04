@@ -62,7 +62,9 @@
 
 /* The Bluetooth connections rmutex */
 
-rmutex_t g_bluetooth_connections_lock = NXRMUTEX_INITIALIZER;
+#undef g_bluetooth_connections_lock
+DEFINE_PER_CPU_BMP(rmutex_t, g_bluetooth_connections_lock) =
+                             NXRMUTEX_INITIALIZER;
 
 /****************************************************************************
  * Private Data
@@ -76,10 +78,14 @@ MEMPOOL_DEFINE(g_bluetooth_connections, sizeof(struct bluetooth_conn_s),
                CONFIG_NET_BLUETOOTH_PREALLOC_CONNS,
                CONFIG_NET_BLUETOOTH_MAX_CONNS,
                CONFIG_NET_BLUETOOTH_ALLOC_CONNS);
+#define g_bluetooth_connections_buffer \
+        this_cpu_var_bmp(g_bluetooth_connections_buffer)
 
 /* A list of all allocated packet socket connections */
 
-static dq_queue_t g_active_bluetooth_connections;
+static DEFINE_PER_CPU_BMP(dq_queue_t, g_active_bluetooth_connections);
+#define g_active_bluetooth_connections \
+        this_cpu_var_bmp(g_active_bluetooth_connections)
 
 static const bt_addr_t g_any_addr =
 {

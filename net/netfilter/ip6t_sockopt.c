@@ -79,7 +79,7 @@ struct ip6t_error_entry_s
  * Private Data
  ****************************************************************************/
 
-static struct ip6t_table_s g_tables[] =
+static DEFINE_PER_CPU_BMP(struct ip6t_table_s, g_tables[]) =
 {
 #ifdef CONFIG_NET_IPFILTER
   {NULL, ip6t_filter_init, ip6t_filter_apply},
@@ -87,6 +87,7 @@ static struct ip6t_table_s g_tables[] =
   {NULL, NULL, NULL}
 #endif
 };
+#define g_tables this_cpu_var_bmp(g_tables)
 
 /****************************************************************************
  * Private Functions

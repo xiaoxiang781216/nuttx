@@ -90,7 +90,8 @@
 
 /* The TCP connections rmutex */
 
-rmutex_t g_tcp_connections_lock = NXRMUTEX_INITIALIZER;
+#undef g_tcp_connections_lock
+DEFINE_PER_CPU_BMP(rmutex_t, g_tcp_connections_lock) = NXRMUTEX_INITIALIZER;
 
 /****************************************************************************
  * Private Data
@@ -101,10 +102,12 @@ rmutex_t g_tcp_connections_lock = NXRMUTEX_INITIALIZER;
 MEMPOOL_DEFINE(g_tcp_connections, sizeof(struct tcp_conn_s),
                CONFIG_NET_TCP_PREALLOC_CONNS, CONFIG_NET_TCP_MAX_CONNS,
                CONFIG_NET_TCP_ALLOC_CONNS);
+#define g_tcp_connections this_cpu_var_bmp(g_tcp_connections)
 
 /* A list of all connected TCP connections */
 
-static dq_queue_t g_active_tcp_connections;
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_active_tcp_connections);
+#define g_active_tcp_connections this_cpu_var_bmp(g_active_tcp_connections)
 
 /****************************************************************************
  * Private Functions
@@ -530,7 +533,8 @@ int tcp_selectport(uint8_t domain,
                    FAR const union ip_addr_u *ipaddr,
                    uint16_t portno, bool reuseaddr)
 {
-  static uint16_t g_last_tcp_port;
+  static DEFINE_PER_CPU_BMP(uint16_t, g_last_tcp_port);
+  #define g_last_tcp_port this_cpu_var_bmp(g_last_tcp_port)
 
   /* Generate port base dynamically */
 

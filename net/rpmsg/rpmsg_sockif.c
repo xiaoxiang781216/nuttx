@@ -232,7 +232,8 @@ const struct sock_intf_s g_rpmsg_sockif =
  * Private Data
  ****************************************************************************/
 
-static uint32_t g_rpmsg_id;
+static DEFINE_PER_CPU_BSS_BMP(uint32_t, g_rpmsg_id);
+#define g_rpmsg_id this_cpu_var_bmp(g_rpmsg_id)
 
 /****************************************************************************
  * Private Functions

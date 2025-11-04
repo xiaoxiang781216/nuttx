@@ -92,7 +92,9 @@ struct arp_table_info_s
 
 /* The table of known address mappings */
 
-static struct arp_entry_s g_arptable[CONFIG_NET_ARPTAB_SIZE];
+static DEFINE_PER_CPU_BSS_BMP(struct arp_entry_s,
+                              g_arptable[CONFIG_NET_ARPTAB_SIZE]);
+#define g_arptable this_cpu_var_bmp(g_arptable)
 
 static const struct ether_addr g_zero_ethaddr =
 {

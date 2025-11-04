@@ -66,14 +66,17 @@
 MEMPOOL_DEFINE(g_netlink_connections, sizeof(struct netlink_conn_s),
                CONFIG_NETLINK_PREALLOC_CONNS, CONFIG_NETLINK_MAX_CONNS,
                CONFIG_NETLINK_ALLOC_CONNS);
+#define g_netlink_connections this_cpu_var_bmp(g_netlink_connections)
 
 /* A list of all allocated NetLink connections */
 
-static dq_queue_t g_active_netlink_connections;
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_active_netlink_connections);
+#define g_active_netlink_connections this_cpu_var_bmp(g_active_netlink_connections)
 
 /* Global protection lock for netlink */
 
-static rmutex_t g_netlink_lock = NXRMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BMP(rmutex_t, g_netlink_lock) = NXRMUTEX_INITIALIZER;
+#define g_netlink_lock this_cpu_var_bmp(g_netlink_lock)
 
 /****************************************************************************
  * Private Functions

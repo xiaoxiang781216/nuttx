@@ -70,10 +70,14 @@
  ****************************************************************************/
 
 #ifdef CONFIG_NET_IPv4
-static sq_queue_t g_ipv4_filters[IPFILTER_CHAIN_MAX];
+static DEFINE_PER_CPU_BSS_BMP(sq_queue_t,
+                              g_ipv4_filters[IPFILTER_CHAIN_MAX]);
+#define g_ipv4_fileters this_cpu_var_bmp(g_ipv4_filters)
 #endif
 #ifdef CONFIG_NET_IPv6
-static sq_queue_t g_ipv6_filters[IPFILTER_CHAIN_MAX];
+static DEFINE_PER_CPU_BSS_BMP(sq_queue_t,
+                              g_ipv6_filters[IPFILTER_CHAIN_MAX]);
+#define g_ipv6_fileters this_cpu_var_bmp(g_ipv6_filters)
 #endif
 
 /****************************************************************************

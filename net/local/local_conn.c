@@ -44,7 +44,8 @@
 
 /* Global protection lock for local socket */
 
-mutex_t g_local_lock = NXMUTEX_INITIALIZER;
+#undef g_local_lock
+DEFINE_PER_CPU_BMP(mutex_t, g_local_lock) = NXMUTEX_INITIALIZER;
 
 /****************************************************************************
  * Private Data
@@ -52,7 +53,8 @@ mutex_t g_local_lock = NXMUTEX_INITIALIZER;
 
 /* A list of all allocated packet socket connections */
 
-static dq_queue_t g_local_connections;
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_local_connections);
+#define g_local_connections this_cpu_var_bmp(g_local_connections)
 
 /****************************************************************************
  * Public Functions

@@ -89,7 +89,8 @@
 
 /* The UDP connections rmutex */
 
-rmutex_t g_udp_connections_lock = NXRMUTEX_INITIALIZER;
+#undef g_udp_connections_lock
+DEFINE_PER_CPU_BMP(rmutex_t, g_udp_connections_lock) = NXRMUTEX_INITIALIZER;
 
 /****************************************************************************
  * Private Data
@@ -100,10 +101,12 @@ rmutex_t g_udp_connections_lock = NXRMUTEX_INITIALIZER;
 MEMPOOL_DEFINE(g_udp_connections, sizeof(struct udp_conn_s),
                CONFIG_NET_UDP_PREALLOC_CONNS, CONFIG_NET_UDP_MAX_CONNS,
                CONFIG_NET_UDP_ALLOC_CONNS);
+#define g_udp_connections this_cpu_var_bmp(g_udp_connections)
 
 /* A list of all allocated UDP connections */
 
-static dq_queue_t g_active_udp_connections;
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_active_udp_connections);
+#define g_active_udp_connections this_cpu_var_bmp(g_active_udp_connections)
 
 /****************************************************************************
  * Private Functions
@@ -500,7 +503,8 @@ udp_ipv6_active(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn,
 
 uint16_t udp_select_port(uint8_t domain, FAR union ip_binding_u *u)
 {
-  static uint16_t g_last_udp_port;
+  static DEFINE_PER_CPU_BMP(uint16_t, g_last_udp_port);
+  #define g_last_udp_port this_cpu_var_bmp(g_last_udp_port)
   uint16_t portno;
 
   /* Generate port base dynamically */

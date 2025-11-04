@@ -166,7 +166,8 @@ EXTERN const struct sock_intf_s g_icmpv6_sockif;
 
 /* The icmpv6 connections rmutex */
 
-extern rmutex_t g_icmpv6_connections_lock;
+DECLARE_PER_CPU_BMP(rmutex_t, g_icmpv6_connections_lock);
+#define g_icmpv6_connections_lock this_cpu_var_bmp(g_icmpv6_connections_lock)
 
 /****************************************************************************
  * Inline Functions

@@ -199,7 +199,8 @@ EXTERN const struct sock_intf_s g_local_sockif;
 
 /* Global protection lock for local socket */
 
-extern mutex_t g_local_lock;
+DECLARE_PER_CPU_BMP(mutex_t, g_local_lock);
+#define g_local_lock this_cpu_var_bmp(g_local_lock)
 
 /****************************************************************************
  * Inline Functions

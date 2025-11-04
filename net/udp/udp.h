@@ -201,7 +201,8 @@ extern "C"
 
 /* The UDP connection list rmutex */
 
-extern rmutex_t g_udp_connections_lock;
+DECLARE_PER_CPU_BMP(rmutex_t, g_udp_connections_lock);
+#define g_udp_connections_lock this_cpu_var_bmp(g_udp_connections_lock)
 
 /****************************************************************************
  * Inline Functions

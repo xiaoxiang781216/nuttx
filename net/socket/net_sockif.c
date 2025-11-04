@@ -85,10 +85,11 @@ static const struct sock_intf_s g_ctrl_sockif =
 #endif
 };
 
-static struct socket_conn_s g_ctrl_conn =
+static DEFINE_PER_CPU_BMP(struct socket_conn_s, g_ctrl_conn) =
 {
   .s_lock = NXRMUTEX_INITIALIZER,
 };
+#define g_ctrl_conn this_cpu_var_bmp(g_ctrl_conn)
 
 /****************************************************************************
  * Private Functions

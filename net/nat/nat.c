@@ -43,7 +43,8 @@
  * Private Data
  ****************************************************************************/
 
-static mutex_t g_nat_lock = NXMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BMP(mutex_t, g_nat_lock) = NXMUTEX_INITIALIZER;
+#define g_nat_lock this_cpu_var_bmp(g_nat_lock)
 
 /****************************************************************************
  * Private Functions

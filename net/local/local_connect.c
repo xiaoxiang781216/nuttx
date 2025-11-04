@@ -170,7 +170,8 @@ errout_with_conn:
 
 int32_t local_generate_instance_id(void)
 {
-  static int32_t g_next_instance_id = 0;
+  static DEFINE_PER_CPU_BSS_BMP(int32_t, g_next_instance_id);
+  #define g_next_instance_id this_cpu_var_bmp(g_next_instance_id)
   int32_t id;
 
   /* Called from local_connect with local_lock held. */

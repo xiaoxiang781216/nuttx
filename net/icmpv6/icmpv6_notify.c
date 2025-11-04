@@ -54,8 +54,11 @@
 
 /* List of tasks waiting for Neighbor Discover events */
 
-static struct icmpv6_notify_s *g_icmpv6_waiters;
-static spinlock_t g_icmpv6_notify_lock = SP_UNLOCKED;
+static DEFINE_PER_CPU_BSS_BMP(struct icmpv6_notify_s *, g_icmpv6_waiters);
+#define g_icmpv6_waiters this_cpu_var_bmp(g_icmpv6_waiters)
+
+static DEFINE_PER_CPU_BMP(spinlock_t, g_icmpv6_notify_lock) = SP_UNLOCKED;
+#define g_icmpv6_notify_lock this_cpu_var_bmp(g_icmpv6_notify_lock)
 
 /****************************************************************************
  * Private Functions

@@ -63,7 +63,9 @@
 
 /* The tcp_listenports list all currently listening ports. */
 
-static FAR struct tcp_conn_s *tcp_listenports[CONFIG_NET_MAX_LISTENPORTS];
+static DEFINE_PER_CPU_BSS_BMP(FAR struct tcp_conn_s *,
+                              tcp_listenports[CONFIG_NET_MAX_LISTENPORTS]);
+#define tcp_listenports this_cpu_var_bmp(tcp_listenports)
 
 /****************************************************************************
  * Private Functions

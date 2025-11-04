@@ -153,7 +153,8 @@ extern "C"
  * at a time
  */
 
-extern mutex_t g_ipfrag_lock;
+DECLARE_PER_CPU_BMP(mutex_t, g_ipfrag_lock);
+#define g_ipfrag_lock this_cpu_var_bmp(g_ipfrag_lock)
 
 /****************************************************************************
  * Public Function Prototypes

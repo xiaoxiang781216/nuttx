@@ -53,7 +53,8 @@
 
 /* The increasing number used for the IP ID field of IPv6 Fragment Header. */
 
-static uint32_t g_ipv6id;
+static DEFINE_PER_CPU_BMP(uint32_t, g_ipv6id);
+#define g_ipv6id this_cpu_var_bmp(g_ipv6id)
 
 /****************************************************************************
  * Private Function Prototypes

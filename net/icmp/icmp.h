@@ -141,7 +141,8 @@ EXTERN const struct sock_intf_s g_icmp_sockif;
 
 /* The ICMP connections rmutex */
 
-extern rmutex_t g_icmp_connections_lock;
+DECLARE_PER_CPU_BMP(rmutex_t, g_icmp_connections_lock);
+#define g_icmp_connections_lock this_cpu_var_bmp(g_icmp_connections_lock)
 
 /****************************************************************************
  * Inline Functions

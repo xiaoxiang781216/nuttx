@@ -61,7 +61,9 @@
 
 /* The IEEE 802.15.4 connections rmutex */
 
-rmutex_t g_ieee802154_connections_lock = NXRMUTEX_INITIALIZER;
+#undef g_ieee802154_connections_lock
+DEFINE_PER_CPU_BMP(rmutex_t, g_ieee802154_connections_lock) =
+                             NXRMUTEX_INITIALIZER;
 
 /****************************************************************************
  * Private Data
@@ -75,10 +77,13 @@ MEMPOOL_DEFINE(g_ieee802154_connections, sizeof(struct ieee802154_conn_s),
                CONFIG_NET_IEEE802154_PREALLOC_CONNS,
                CONFIG_NET_IEEE802154_MAX_CONNS,
                CONFIG_NET_IEEE802154_ALLOC_CONNS);
+#define g_ieee802154_connections this_cpu_var_bmp(g_ieee802154_connections)
 
 /* A list of all allocated packet socket connections */
 
-static dq_queue_t g_active_ieee802154_connections;
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_active_ieee802154_connections);
+#define g_active_ieee802154_connections \
+        this_cpu_var_bmp(g_active_ieee802154_connections)
 
 /****************************************************************************
  * Public Functions

@@ -58,7 +58,8 @@
 /* IP/TCP/UDP/ICMP statistics for all network interfaces */
 
 #ifdef CONFIG_NET_STATISTICS
-struct net_stats_s g_netstats;
+#  undef g_netstats
+DEFINE_PER_CPU_BSS_BMP(struct net_stats_s, g_netstats);
 #endif
 
 /****************************************************************************
@@ -68,6 +69,7 @@ struct net_stats_s g_netstats;
 MEMPOOL_DEFINE(g_cbprealloc, sizeof(struct devif_callback_s),
                CONFIG_NET_PREALLOC_DEVIF_CALLBACKS, 0,
                CONFIG_NET_ALLOC_DEVIF_CALLBACKS);
+#define g_cbprealloc this_cpu_var_bmp(g_cbprealloc)
 
 /****************************************************************************
  * Private Functions

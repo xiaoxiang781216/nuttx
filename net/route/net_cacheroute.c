@@ -111,39 +111,49 @@ struct net_cache_ipv6_queue_s
 #if defined(CONFIG_ROUTE_IPv4_CACHEROUTE)
 /* The in-memory cache as a singly linked list. */
 
-static struct net_cache_ipv4_queue_s g_ipv4_cache;
+static DEFINE_PER_CPU_BSS_BMP(struct net_cache_ipv4_queue_s, g_ipv4_cache);
+#define g_ipv4_cache this_cpu_var_bmp(g_ipv4_cache)
 
 /* List of free routing table cache entries */
 
-static struct net_cache_ipv4_queue_s g_free_ipv4cache;
+static DEFINE_PER_CPU_BSS_BMP(struct net_cache_ipv4_queue_s,
+                              g_free_ipv4cache);
+#define g_free_ipv4cache this_cpu_var_bmp(g_free_ipv4cache)
 
 /* Pre-allocated routing table cache entries */
 
-static struct net_cache_ipv4_entry_s
-  g_prealloc_ipv4cache[CONFIG_ROUTE_MAX_IPv4_CACHEROUTES];
+static DEFINE_PER_CPU_BSS_BMP(struct net_cache_ipv4_entry_s,
+  g_prealloc_ipv4cache[CONFIG_ROUTE_MAX_IPv4_CACHEROUTES]);
+#define g_prealloc_ipv4cache this_cpu_var_bmp(g_prealloc_ipv4cache)
 
 /* Serializes access to the routing table cache */
 
-static mutex_t g_ipv4_cachelock = NXMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BMP(mutex_t, g_ipv4_cachelock) = NXMUTEX_INITIALIZER;
+#define g_ipv4_cachelock this_cpu_var_bmp(g_ipv4_cachelock)
 #endif
 
 #if defined(CONFIG_ROUTE_IPv6_CACHEROUTE)
 /* The in-memory routing tables are represented as singly linked lists. */
 
-static struct net_cache_ipv6_queue_s g_ipv6_cache;
+static DEFINE_PER_CPU_BSS_BMP(struct net_cache_ipv6_queue_s, g_ipv6_cache);
+#define g_ipv6_cache this_cpu_var_bmp(g_ipv6_cache)
 
 /* List of free routing table cache entries */
 
-static struct net_cache_ipv6_queue_s g_free_ipv6cache;
+static DEFINE_PER_CPU_BSS_BMP(struct net_cache_ipv6_queue_s,
+                              g_free_ipv6cache);
+#define g_free_ipv6cache this_cpu_var_bmp(g_free_ipv6cache)
 
 /* Pre-allocated routing table cache entries */
 
-static struct net_cache_ipv6_entry_s
-  g_prealloc_ipv6cache[CONFIG_ROUTE_MAX_IPv6_CACHEROUTES];
+static DEFINE_PER_CPU_BSS_BMP(struct net_cache_ipv6_entry_s,
+  g_prealloc_ipv6cache[CONFIG_ROUTE_MAX_IPv6_CACHEROUTES]);
+#define g_prealloc_ipv6cache this_cpu_var_bmp(g_prealloc_ipv6cache)
 
 /* Serializes access to the routing table cache */
 
-static mutex_t g_ipv6_cachelock = NXMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BMP(mutex_t, g_ipv6_cachelock) = NXMUTEX_INITIALIZER;
+#define g_ipv6_cachelock this_cpu_var_bmp(g_ipv6_cachelock)
 #endif
 
 /****************************************************************************

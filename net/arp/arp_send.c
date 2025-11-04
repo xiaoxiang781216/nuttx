@@ -70,6 +70,7 @@ struct arp_send_info_s
 MEMPOOL_DEFINE(g_arp_send_infos, sizeof(struct arp_send_info_s),
                CONFIG_NET_ARP_PREALLOC_STATES, CONFIG_NET_ARP_MAX_STATES,
                CONFIG_NET_ARP_ALLOC_STATES);
+#define g_arp_send_infos this_cpu_var_bmp(g_arp_send_infos)
 
 /****************************************************************************
  * Private Functions

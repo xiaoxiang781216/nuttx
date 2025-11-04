@@ -136,7 +136,9 @@ EXTERN const struct sock_intf_s g_ieee802154_sockif;
 
 /* The IEEE 802.15.4 connections rmutex */
 
-extern rmutex_t g_ieee802154_connections_lock;
+DECLARE_PER_CPU_BMP(rmutex_t, g_ieee802154_connections_lock);
+#define g_ieee802154_connections_lock \
+             this_cpu_var_bmp(g_ieee802154_connections_lock)
 
 /****************************************************************************
  * Inline Functions

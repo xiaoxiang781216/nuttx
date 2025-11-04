@@ -58,13 +58,15 @@
 #ifdef CONFIG_ROUTE_IPv4_FILEROUTE
 /* Used to lock a routing table for exclusive write-only access */
 
-static rmutex_t g_ipv4_lock = NXRMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BMP(rmutex_t, g_ipv4_lock) = NXRMUTEX_INITIALIZER;
+#define g_ipv4_lock this_cpu_var_bmp(g_ipv4_lock)
 #endif
 
 #ifdef CONFIG_ROUTE_IPv6_FILEROUTE
 /* Used to lock a routing table for exclusive write-only access */
 
-static rmutex_t g_ipv6_lock = NXRMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BMP(rmutex_t, g_ipv6_lock) = NXRMUTEX_INITIALIZER;
+#define g_ipv6_lock this_cpu_var_bmp(g_ipv6_lock)
 #endif
 
 /****************************************************************************

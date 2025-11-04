@@ -28,6 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/percpu.h>
 
 #include "route/route.h"
 
@@ -106,13 +107,15 @@ struct net_route_ipv6_queue_s
 #if defined(CONFIG_ROUTE_IPv4_RAMROUTE)
 /* The in-memory routing tables are represented as singly linked lists. */
 
-extern struct net_route_ipv4_queue_s g_ipv4_routes;
+DECLARE_PER_CPU_BMP(struct net_route_ipv4_queue_s, g_ipv4_routes);
+#define g_ipv4_routes this_cpu_var_bmp(g_ipv4_routes)
 #endif
 
 #if defined(CONFIG_ROUTE_IPv6_RAMROUTE)
 /* The in-memory routing tables are represented as singly linked lists. */
 
-extern struct net_route_ipv6_queue_s g_ipv6_routes;
+DECLARE_PER_CPU_BMP(struct net_route_ipv6_queue_s, g_ipv6_routes);
+#define g_ipv6_routes this_cpu_var_bmp(g_ipv6_routes)
 #endif
 
 /****************************************************************************

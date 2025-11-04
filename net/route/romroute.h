@@ -44,15 +44,19 @@
 #if defined(CONFIG_ROUTE_IPv4_ROMROUTE)
 /* The in-memory routing tables are represented as a simple array. */
 
-extern struct net_route_ipv4_s g_ipv4_routes[];
-extern const unsigned int g_ipv4_nroutes;
+DECLARE_PER_CPU_BMP(struct net_route_ipv4_s, g_ipv4_routes[]);
+#  define g_ipv4_routes this_cpu_var_bmp(g_ipv4_routes)
+DECLARE_PER_CPU_BMP(const unsigned int, g_ipv4_nroutes);
+#  define g_ipv4_nroutes this_cpu_var_bmp(g_ipv4_nroutes)
 #endif
 
 #if defined(CONFIG_ROUTE_IPv6_ROMROUTE)
 /* The in-memory routing tables are represented as a simple array. */
 
-extern struct net_route_ipv6_s g_ipv6_routes[];
-extern const unsigned int g_ipv6_nroutes;
+DELCARE_PER_CPU_BMP(struct net_route_ipv6_s, g_ipv6_routes[]);
+#  define g_ipv6_routes this_cpu_var_bmp(g_ipv6_routes)
+DELCARE_PER_CPU_BMP(const unsigned int, g_ipv6_nroutes);
+#  define g_ipv6_nroutes this_cpu_var_bmp(g_ipv6_nroutes)
 #endif
 
 /****************************************************************************

@@ -59,7 +59,7 @@ extern "C"
  * NOTE that this duplicates a declaration in net/tcp/tcp.h
  */
 
-DECLARE_PER_CPU_BMP(struct net_driver_s *, g_netdevices);
+DECLARE_PER_CPU_BMP(FAR struct net_driver_s *, g_netdevices);
 #define g_netdevices this_cpu_var_bmp(g_netdevices)
 
 #ifdef CONFIG_NETDEV_IFINDEX

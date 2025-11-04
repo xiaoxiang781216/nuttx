@@ -59,8 +59,11 @@
 
 /* List of tasks waiting for Neighbor Discover events */
 
-static struct icmpv6_rnotify_s *g_icmpv6_rwaiters;
-static spinlock_t g_icmpv6_rnotify_lock = SP_UNLOCKED;
+static DEFINE_PER_CPU_BSS_BMP(struct icmpv6_rnotify_s *, g_icmpv6_rwaiters);
+#define g_icmpv6_rwaiters this_cpu_var_bmp(g_icmpv6_rwaiters)
+
+static DEFINE_PER_CPU_BMP(spinlock_t, g_icmpv6_rnotify_lock) = SP_UNLOCKED;
+#define g_icmpv6_rnotify_lock this_cpu_var_bmp(g_icmpv6_rnotify_lock)
 
 /****************************************************************************
  * Public Functions

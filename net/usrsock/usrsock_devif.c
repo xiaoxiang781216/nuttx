@@ -73,7 +73,7 @@ struct usrsock_req_s
  * if multiple usrsock network interfaces are needed in the future
  */
 
-static struct usrsock_req_s g_usrsock_req =
+static DEFINE_PER_CPU_BMP(struct usrsock_req_s, g_usrsock_req) =
 {
   NXMUTEX_INITIALIZER,
   SEM_INITIALIZER(0),
@@ -82,6 +82,7 @@ static struct usrsock_req_s g_usrsock_req =
   0,
   NULL
 };
+#define g_usrsock_req this_cpu_var_bmp(g_usrsock_req)
 
 /****************************************************************************
  * Private Functions

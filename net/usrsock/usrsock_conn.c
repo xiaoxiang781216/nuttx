@@ -60,7 +60,8 @@
 
 /* Global protection lock for usrsock socket */
 
-rmutex_t g_usrsock_lock = NXRMUTEX_INITIALIZER;
+#undef g_usrsock_lock
+DEFINE_PER_CPU_BMP(rmutex_t, g_usrsock_lock) = NXRMUTEX_INITIALIZER;
 
 /****************************************************************************
  * Private Data
@@ -71,10 +72,12 @@ rmutex_t g_usrsock_lock = NXRMUTEX_INITIALIZER;
 MEMPOOL_DEFINE(g_usrsock_connections, sizeof(struct usrsock_conn_s),
                CONFIG_NET_USRSOCK_PREALLOC_CONNS,
                CONFIG_NET_USRSOCK_MAX_CONNS, CONFIG_NET_USRSOCK_ALLOC_CONNS);
+#define g_usrsock_connections this_cpu_var_bmp(g_usrsock_connections)
 
 /* A list of all allocated usrsock connections */
 
-static dq_queue_t g_active_usrsock_connections;
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_active_usrsock_connections);
+#define g_active_usrsock_connections this_cpu_var_bmp(g_active_usrsock_connections)
 
 /****************************************************************************
  * Public Functions

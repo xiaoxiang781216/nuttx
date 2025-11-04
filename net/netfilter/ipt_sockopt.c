@@ -79,7 +79,7 @@ struct ipt_error_entry_s
  * Private Data
  ****************************************************************************/
 
-static struct ipt_table_s g_tables[] =
+static DEFINE_PER_CPU_BMP(struct ipt_table_s, g_tables[]) =
 {
 #ifdef CONFIG_NET_NAT
   {NULL, ipt_nat_init, ipt_nat_apply},
@@ -88,6 +88,7 @@ static struct ipt_table_s g_tables[] =
   {NULL, ipt_filter_init, ipt_filter_apply},
 #endif
 };
+#define g_tables this_cpu_var_bmp(g_tables)
 
 /****************************************************************************
  * Private Functions

@@ -45,8 +45,11 @@
 
 /* List of tasks waiting for ARP events */
 
-static FAR struct arp_notify_s *g_arp_waiters;
-static spinlock_t g_arp_notify_lock = SP_UNLOCKED;
+static DEFINE_PER_CPU_BSS_BMP(FAR struct arp_notify_s *, g_arp_waiters);
+#define g_arp_waiters this_cpu_var_bmp(g_arp_waiters)
+
+static DEFINE_PER_CPU_BMP(spinlock_t, g_arp_notify_lock) = SP_UNLOCKED;
+#define g_arp_notify_lock this_cpu_var_bmp(g_arp_notify_lock)
 
 /****************************************************************************
  * Public Functions

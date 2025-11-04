@@ -109,27 +109,32 @@ do  \
  * if so, free all resources of this node.
  */
 
-static struct wdog_s g_wdfragtimeout;
+static DEFINE_PER_CPU_BSS_BMP(struct wdog_s, g_wdfragtimeout);
+#define g_wdfragtimeout this_cpu_var_bmp(g_wdfragtimeout)
 
 /* Reassembly timeout work */
 
-static struct work_s g_wkfragtimeout;
+static DEFINE_PER_CPU_BSS_BMP(struct work_s, g_wkfragtimeout);
+#define g_wkfragtimeout this_cpu_var_bmp(g_wkfragtimeout)
 
 /* Remember the number of I/O buffers currently in reassembly cache */
 
-static uint8_t       g_bufoccupy;
+static DEFINE_PER_CPU_BSS_BMP(uint8_t, g_bufoccupy);
+#define	g_bufoccupy this_cpu_var_bmp(g_bufoccupy)
 
 /* Queue header definition, it links all fragments of all NICs by ascending
  * ipid.
  */
 
-static sq_queue_t    g_assemblyhead_ipid;
+static DEFINE_PER_CPU_BSS_BMP(sq_queue_t, g_assemblyhead_ipid);
+#define g_assemblyhead_ipid this_cpu_var_bmp(g_assemblyhead_ipid)
 
 /* Queue header definition, which connects all fragments of all NICs in order
  * of addition time.
  */
 
-static sq_queue_t    g_assemblyhead_time;
+static DEFINE_PER_CPU_BSS_BMP(sq_queue_t, g_assemblyhead_time);
+#define g_assemblyhead_time this_cpu_var_bmp(g_assemblyhead_time)
 
 /****************************************************************************
  * Public Data
@@ -139,7 +144,9 @@ static sq_queue_t    g_assemblyhead_time;
  * at a time.
  */
 
-mutex_t              g_ipfrag_lock = NXMUTEX_INITIALIZER;
+#undef g_ipfrag_lock
+DEFINE_PER_CPU_BMP(mutex_t, g_ipfrag_lock) = NXMUTEX_INITIALIZER;
+#define g_ipfrag_lock this_cpu_var_bmp(g_ipfrag_lock)
 
 /****************************************************************************
  * Private Function Prototypes
