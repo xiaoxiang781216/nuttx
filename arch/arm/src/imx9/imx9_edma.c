@@ -229,10 +229,10 @@ static void imx9_tcd_free(struct imx9_edmatcd_s *tcd)
    * a TCD.
    */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave_nopreempt(&g_edma.lock);
   sq_addlast((sq_entry_t *)tcd, &g_tcd_free);
   nxsem_post(&g_edma.dsem);
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore_nopreempt(&g_edma.lock, flags);
 }
 #endif
 
@@ -458,6 +458,10 @@ static void imx9_dmaterminate(struct imx9_dmach_s *dmach, int result)
   edma_callback_t callback;
   void *arg;
 
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave_nopreempt(&g_edma.lock);
+
   /* Disable channel IRQ requests */
 
   putreg32(EDMA_CH_INT, base + IMX9_EDMA_CH_INT_OFFSET);
@@ -507,6 +511,8 @@ static void imx9_dmaterminate(struct imx9_dmach_s *dmach, int result)
     {
       callback((DMACH_HANDLE)dmach, arg, true, result);
     }
+
+  spin_unlock_irqrestore_nopreempt(&g_edma.lock, flags);
 }
 
 /****************************************************************************
