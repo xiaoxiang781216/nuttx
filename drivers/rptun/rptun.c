@@ -530,7 +530,7 @@ static int rptun_register_device(FAR struct virtio_device *vdev)
 {
   int ret = -ENODEV;
 
-#if defined(CONFIG_DRIVERS_VIRTIO)
+#ifdef CONFIG_DRIVERS_VIRTIO
   if (vdev->role == VIRTIO_DEV_DRIVER)
     {
       ret = virtio_register_device(vdev);
@@ -540,7 +540,8 @@ static int rptun_register_device(FAR struct virtio_device *vdev)
         }
     }
   else
-#elif defined(CONFIG_DRIVERS_VHOST) 
+#endif
+#ifdef CONFIG_DRIVERS_VHOST
   if (vdev->role == VIRTIO_DEV_DEVICE)
     {
       ret = vhost_register_device(vdev);
