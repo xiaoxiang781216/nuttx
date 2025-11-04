@@ -224,7 +224,8 @@ void tricore_mpuinit(void);
 /* System Timer *************************************************************/
 
 struct oneshot_lowerhalf_s *
-tricore_systimer_initialize(volatile void *tbase, int irq, uint64_t freq);
+tricore_systimer_initialize(volatile void *tbase, volatile void *fr_tbase,
+                            int irq, uint64_t freq);
 
 /* Debug ********************************************************************/
 

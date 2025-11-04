@@ -62,6 +62,7 @@ struct tricore_systimer_lowerhalf_s
 {
   struct oneshot_lowerhalf_s lower;
   volatile void             *tbase;
+  volatile void             *freerun_tbase;
 };
 
 /****************************************************************************
@@ -159,6 +160,10 @@ tricore_systimer_start_absolute(struct oneshot_lowerhalf_s *lower,
 
   irqstate_t flags = up_irq_save();
   uint64_t current = IfxStm_get(priv->tbase);
+  if (priv->freerun_tbase)
+    {
+      expected = expected - IfxStm_get(priv->freerun_tbase) + current;
+    }
 
   /* The comparator register is 32-bit. */
 
@@ -220,7 +225,14 @@ static clkcnt_t tricore_systimer_current(struct oneshot_lowerhalf_s *lower)
   struct tricore_systimer_lowerhalf_s *priv =
     (struct tricore_systimer_lowerhalf_s *)lower;
 
-  return IfxStm_get(priv->tbase);
+  if (priv->freerun_tbase)
+    {
+      return IfxStm_get(priv->freerun_tbase);
+    }
+  else
+    {
+      return IfxStm_get(priv->tbase);
+    }
 }
 
 /****************************************************************************
@@ -274,12 +286,14 @@ static DEFINE_PER_CPU_BSS_BMP(struct tricore_systimer_lowerhalf_s,
  ****************************************************************************/
 
 struct oneshot_lowerhalf_s *
-tricore_systimer_initialize(volatile void *tbase, int irq, uint64_t freq)
+tricore_systimer_initialize(volatile void *tbase, volatile void *fr_tbase,
+                            int irq, uint64_t freq)
 {
   struct tricore_systimer_lowerhalf_s *priv = &g_tricore_oneshot_lowerhalf;
 
   priv->lower.ops = &g_tricore_oneshot_ops;
   priv->tbase = tbase;
+  priv->freerun_tbase = fr_tbase;
 
   ASSERT(freq <= UINT32_MAX);
 
