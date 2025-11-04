@@ -167,7 +167,7 @@ static int pkt_in_(FAR struct net_driver_s *dev, bool loopback)
 
   while ((conn = pkt_active(dev, conn, loopback)) != NULL)
     {
-      if (conn->pendiob == dev->d_iob)
+      if (loopback && conn->pendiob == dev->d_iob)
         {
           /* Do not read back the packet sent by oneself */
 
