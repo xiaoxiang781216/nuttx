@@ -380,7 +380,7 @@ static int rpmsg_eptdev_poll(FAR struct file *filep, FAR struct pollfd *fds,
     {
       for (i = 0; i < CONFIG_RPMSG_CHAR_NPOLLWAITERS; i++)
         {
-          if (eptdev->fds[i] != NULL)
+          if (eptdev->fds[i] == NULL)
             {
               /* Bind the poll structure and this slot */
 
