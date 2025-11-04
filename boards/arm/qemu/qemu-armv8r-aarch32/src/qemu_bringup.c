@@ -30,14 +30,19 @@
 #include <syslog.h>
 #include <debug.h>
 
+#include <nuttx/arch.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fdt.h>
+#include <nuttx/rptun/rptun_bmp.h>
+#include <nuttx/serial/uart_rpmsg.h>
 
 #ifdef CONFIG_LIBC_FDT
 #  include <libfdt.h>
 #endif
 
 #include "chip.h"
+#include "gic.h"
 #include "qemu-armv8r.h"
 
 #ifdef CONFIG_IOEXPANDER_PL061
@@ -58,6 +63,10 @@
 #  define QEMU_RESET_PIN        1
 #endif
 
+#ifdef CONFIG_RPTUN_BMP
+#  define QEMU_RSC_TABLE_SIZE     0x10000
+#endif
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -67,6 +76,15 @@ struct restart_gpio_s            /* Data needed to init pl061 IOE */
   uintptr_t base;
   uint32_t pin;
 };
+
+#ifdef CONFIG_RPTUN_BMP
+struct qemu_rptun_rsc
+{
+  struct rptun_rsc_s rsc;
+  uint8_t padding[QEMU_RSC_TABLE_SIZE - sizeof(struct rptun_rsc_s)];
+};
+static struct qemu_rptun_rsc g_rptun_rsc[3];
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -170,9 +188,161 @@ static int fdt_restart_gpio(FAR const void *fdt,
 
 #endif
 
+#ifdef CONFIG_RPTUN_BMP
+
+/****************************************************************************
+ * Name: rptun_setup_shmem
+ ****************************************************************************/
+
+static void rptun_setup_shmem(struct rptun_rsc_s *rsc,
+                              const char *host_cpuname,
+                              const char *remote_cpuname)
+{
+  memset(rsc, 0, sizeof(struct rptun_rsc_s));
+  rsc->offset[0]                = offsetof(struct rptun_rsc_s,
+                                           rpmsg_vdev);
+  rsc->rpmsg_vdev.type          = RSC_VDEV;
+  rsc->rpmsg_vdev.id            = VIRTIO_ID_RPMSG;
+  rsc->rpmsg_vdev.dfeatures     = 1 << VIRTIO_RPMSG_F_NS
+                                | 1 << VIRTIO_RPMSG_F_ACK
+                                | 1 << VIRTIO_RPMSG_F_BUFSZ
+                                | 1 << VIRTIO_RPMSG_F_CPUNAME;
+  rsc->rpmsg_vdev.num_of_vrings = 2;
+  rsc->rpmsg_vdev.notifyid      = RSC_NOTIFY_ID_ANY;
+  rsc->rpmsg_vdev.config_len    = sizeof(struct fw_rsc_config);
+  rsc->rpmsg_vdev.reserved[0]   = VIRTIO_DEV_DRIVER;
+  rsc->rpmsg_vdev.reserved[1]   = 0;
+  rsc->rpmsg_vring0.align       = 8;
+  rsc->rpmsg_vring0.num         = 8;
+  rsc->rpmsg_vring0.notifyid    = RSC_NOTIFY_ID_ANY;
+  rsc->rpmsg_vring0.da          = 0;
+  rsc->rpmsg_vring1.align       = 8;
+  rsc->rpmsg_vring1.num         = 8;
+  rsc->rpmsg_vring1.notifyid    = RSC_NOTIFY_ID_ANY;
+  rsc->rpmsg_vring1.da          = 0;
+  rsc->config.r2h_buf_size      = 0x200;
+  rsc->config.h2r_buf_size      = 0x200;
+  strlcpy((char *)rsc->config.host_cpuname, host_cpuname,
+          VIRTIO_RPMSG_CPUNAME_SIZE);
+  strlcpy((char *)rsc->config.remote_cpuname, remote_cpuname,
+          VIRTIO_RPMSG_CPUNAME_SIZE);
+
+  rsc->offset[1]                = offsetof(struct rptun_rsc_s,
+                                           carveout);
+  rsc->carveout.type            = RSC_CARVEOUT;
+  rsc->carveout.da              = (metal_phys_addr_t)rsc +
+                                  ALIGN_UP(sizeof(struct rptun_rsc_s), 8);
+  rsc->carveout.pa              = FW_RSC_U32_ADDR_ANY;
+  rsc->carveout.len             = 0x200 * 8 * 2 + 0x1000;
+  memcpy(rsc->carveout.name, "vdev0buffer", 11);
+
+  rsc->rsc_tbl_hdr.ver          = 1;
+  rsc->rsc_tbl_hdr.num          = 2;
+  UP_DMB();
+}
+
+/****************************************************************************
+ * Name: qemu_rptun_init
+ ****************************************************************************/
+
+static int qemu_rptun_init(void)
+{
+  struct rptun_rsc_s *rsc = &g_rptun_rsc[0].rsc;
+  cpu_set_t cpuset;
+  int ret = 0;
+
+  CPU_ZERO(&cpuset);
+
+  switch (this_cpu())
+    {
+      case 0:
+        rptun_setup_shmem(rsc, "core0", "core1");
+        CPU_SET(1, &cpuset);
+        ret = rptun_bmp_init("core1", true, rsc, GIC_IRQ_SGI1,
+                            GIC_IRQ_SGI2, cpuset);
+        DEBUGASSERT(ret >= 0);
+
+        rsc = &g_rptun_rsc[1].rsc;
+        rptun_setup_shmem(rsc, "core0", "core2");
+        CPU_ZERO(&cpuset);
+        CPU_SET(2, &cpuset);
+        ret = rptun_bmp_init("core2", true, rsc, GIC_IRQ_SGI3,
+                            GIC_IRQ_SGI4, cpuset);
+        DEBUGASSERT(ret >= 0);
+
+        rsc = &g_rptun_rsc[2].rsc;
+        rptun_setup_shmem(rsc, "core0", "core3");
+        CPU_ZERO(&cpuset);
+        CPU_SET(3, &cpuset);
+        ret = rptun_bmp_init("core3", true, rsc, GIC_IRQ_SGI5,
+                            GIC_IRQ_SGI6, cpuset);
+        DEBUGASSERT(ret >= 0);
+        break;
+      case 1:
+        rsc = &g_rptun_rsc[0].rsc;
+        CPU_SET(0, &cpuset);
+        ret = rptun_bmp_init("core0", false, rsc, GIC_IRQ_SGI2,
+                            GIC_IRQ_SGI1, cpuset);
+        DEBUGASSERT(ret >= 0);
+        break;
+      case 2:
+        rsc = &g_rptun_rsc[1].rsc;
+        CPU_SET(0, &cpuset);
+        ret = rptun_bmp_init("core0", false, rsc, GIC_IRQ_SGI4,
+                            GIC_IRQ_SGI3, cpuset);
+        DEBUGASSERT(ret >= 0);
+        break;
+      case 3:
+        rsc = &g_rptun_rsc[2].rsc;
+        CPU_SET(0, &cpuset);
+        ret = rptun_bmp_init("core0", false, rsc, GIC_IRQ_SGI6,
+                            GIC_IRQ_SGI5, cpuset);
+        DEBUGASSERT(ret >= 0);
+        break;
+      default:
+        break;
+    }
+
+  return ret;
+}
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: rpmsg_serialinit
+ *
+ * Description:
+ *    Initialize the RPMsg UART driver
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_RPMSG_UART
+void rpmsg_serialinit(void)
+{
+  switch (this_cpu())
+    {
+      case 0:
+        uart_rpmsg_init("core1", "CORE1", 256, false);
+        uart_rpmsg_init("core2", "CORE2", 256, false);
+        uart_rpmsg_init("core3", "CORE3", 256, false);
+        break;
+      case 1:
+        uart_rpmsg_init("core0", "CORE1", 256, true);
+        break;
+      case 2:
+        uart_rpmsg_init("core0", "CORE2", 256, true);
+        break;
+      case 3:
+        uart_rpmsg_init("core0", "CORE3", 256, true);
+        break;
+      default:
+        break;
+    }
+}
+#endif
 
 /****************************************************************************
  * Name: qemu_bringup
@@ -209,6 +379,14 @@ int qemu_bringup(void)
 
 #if defined(CONFIG_LIBC_FDT) && defined(CONFIG_DEVICE_TREE)
   register_devices_from_fdt();
+#endif
+
+#ifdef CONFIG_RPTUN_BMP
+  ret = qemu_rptun_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to init rptun: %d\n", ret);
+    }
 #endif
 
   UNUSED(ret);
