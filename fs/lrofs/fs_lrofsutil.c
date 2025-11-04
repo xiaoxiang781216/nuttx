@@ -2154,11 +2154,20 @@ int lrofs_create(FAR struct lrofs_mountpt_s *lm,
   FAR struct lrofs_nodeinfo_s *ln_p1 = NULL;
   FAR struct lrofs_nodeinfo_s *ln_p2 = NULL;
   FAR struct lrofs_nodeinfo_s *ln_parent;
-  FAR char *path = fs_heap_strdup(relpath);
+  size_t relpath_size = strlen(relpath) + 1;
+  FAR char *path;
   FAR char *name;
   uint32_t offset;
   uint32_t size;
   int ret = OK;
+
+  path = lib_get_tempbuffer(relpath_size);
+  if (path == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  memcpy(path, relpath, relpath_size);
 
   /* Get the parent nodeinfo */
 
@@ -2172,7 +2181,7 @@ int lrofs_create(FAR struct lrofs_mountpt_s *lm,
       ln_parent = lrofs_find_parentnode(lm, dirname((FAR char *)path));
       if (ln_parent == NULL)
         {
-          fs_heap_free(path);
+          lib_put_tempbuffer(path);
           return -ENOENT;
         }
     }
@@ -2190,7 +2199,7 @@ int lrofs_create(FAR struct lrofs_mountpt_s *lm,
   offset = lrofs_add_sparenode(lm, size, isdir);
   if (offset == 0)
     {
-      fs_heap_free(path);
+      lib_put_tempbuffer(path);
       return -ENOSPC;
     }
 
@@ -2199,7 +2208,7 @@ int lrofs_create(FAR struct lrofs_mountpt_s *lm,
                            name, false);
   if (ln_new == NULL)
     {
-      fs_heap_free(path);
+      lib_put_tempbuffer(path);
       return -ENOMEM;
     }
 
@@ -2228,7 +2237,7 @@ int lrofs_create(FAR struct lrofs_mountpt_s *lm,
 
   lm->lm_volsize += size;
   *ln = ln_new;
-  fs_heap_free(path);
+  lib_put_tempbuffer(path);
   return ret;
 
 error_out:
@@ -2251,7 +2260,7 @@ error_out:
     }
 
   lrofs_free_spareregion(&lm->lm_sparelist, offset, offset + size);
-  fs_heap_free(path);
+  lib_put_tempbuffer(path);
   return ret;
 }
 
