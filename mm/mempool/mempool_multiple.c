@@ -384,15 +384,11 @@ static void mempool_multiple_check(FAR struct mempool_s *pool,
  *
  * Input Parameters:
  *   name            - The name of memory pool.
- *   poolsize        - The block size array for pools in multiples pool.
- *   npools          - How many pools in multiples pool.
+ *   config          - The mempool config info.
  *   alloc           - The alloc memory function for multiples pool.
  *   alloc_size      - Get the address size of the alloc function.
  *   free            - The free memory function for multiples pool.
- *   arg             - The alloc & free memory functions used arg.
- *   chunksize       - The multiples pool chunk size.
- *   expandsize      - The expand memory for all pools in multiples pool.
- *   dict_expendsize - The expand size for multiple dictionaries.
+ *   arg             - The alloc & free memory fuctions used arg.
  * Returned Value:
  *   Return an initialized multiple pool pointer on success,
  *   otherwise NULL is returned.
@@ -401,12 +397,10 @@ static void mempool_multiple_check(FAR struct mempool_s *pool,
 
 FAR struct mempool_multiple_s *
 mempool_multiple_init(FAR const char *name,
-                      FAR const size_t *poolsize, size_t npools,
+                      FAR const struct mm_pool_config_s *config,
                       mempool_multiple_alloc_t alloc,
                       mempool_multiple_alloc_size_t allocsize,
-                      mempool_multiple_free_t free, FAR void *arg,
-                      size_t chunksize, size_t init_chunksize,
-                      size_t expandsize, size_t dict_expendsize)
+                      mempool_multiple_free_t free, FAR void *arg)
 {
   FAR struct mempool_multiple_s *mpool = NULL;
   FAR struct mempool_s *pools;
@@ -415,25 +409,25 @@ mempool_multiple_init(FAR const char *name,
   size_t mempoolsize;
   int i;
 
-  if (!(expandsize & (expandsize - 1)))
+  if (!(config->expandsize & (config->expandsize - 1)))
     {
-      maxpoolszie = poolsize[0];
-      minpoolsize = poolsize[0];
-      for (i = 0; i < npools; i++)
+      maxpoolszie = config->poolsize[0];
+      minpoolsize = config->poolsize[0];
+      for (i = 0; i < config->npools; i++)
         {
-          if (maxpoolszie < poolsize[i])
+          if (maxpoolszie < config->poolsize[i])
             {
-              maxpoolszie = poolsize[i];
+              maxpoolszie = config->poolsize[i];
             }
 
-          if (minpoolsize > poolsize[i])
+          if (minpoolsize > config->poolsize[i])
             {
-              minpoolsize = poolsize[i];
+              minpoolsize = config->poolsize[i];
             }
         }
 
       mempoolsize = sizeof(struct mempool_multiple_s) +
-                    npools * sizeof(struct mempool_s);
+                    config->npools * sizeof(struct mempool_s);
       mpool = alloc(arg, sizeof(uintptr_t), mempoolsize);
       if (mpool)
         {
@@ -443,22 +437,22 @@ mempool_multiple_init(FAR const char *name,
                   ((uintptr_t)mpool + sizeof(struct mempool_multiple_s));
 
           mpool->alloc_size = allocsize;
-          mpool->expandsize = expandsize;
-          mpool->chunksize = chunksize;
-          mpool->init_chunksize = init_chunksize;
+          mpool->expandsize = config->expandsize;
+          mpool->chunksize = config->chunksize;
+          mpool->init_chunksize = config->init_chunksize;
           mpool->alloc = alloc;
           mpool->free = free;
           mpool->arg = arg;
           mpool->alloced = allocsize(arg, mpool);
           sq_init(&mpool->chunk_queue);
           mpool->pools = pools;
-          mpool->npools = npools;
+          mpool->npools = config->npools;
           mpool->minpoolsize = minpoolsize;
 
-          for (i = 0; i < npools; i++)
+          for (i = 0; i < config->npools; i++)
             {
-              pools[i].blocksize = poolsize[i];
-              pools[i].expandsize = expandsize - mpool->minpoolsize;
+              pools[i].blocksize = config->poolsize[i];
+              pools[i].expandsize = config->expandsize - mpool->minpoolsize;
               pools[i].priv = mpool;
               pools[i].name = name;
               pools[i].alloc = mempool_multiple_alloc_callback;
@@ -467,9 +461,10 @@ mempool_multiple_init(FAR const char *name,
 
               if (mempool_init(pools + i) >= 0)
                 {
-                  if (i + 1 != npools)
+                  if (i + 1 != config->npools)
                     {
-                      size_t delta = poolsize[i + 1] - poolsize[i];
+                      size_t delta = config->poolsize[i + 1] -
+                                     config->poolsize[i];
 
                       if (i == 0)
                         {
@@ -494,10 +489,10 @@ mempool_multiple_init(FAR const char *name,
 
           if (mpool)
             {
-              mpool->dict_col_num_log2 = fls(dict_expendsize /
+              mpool->dict_col_num_log2 = fls(config->dict_expendsize /
                                             sizeof(struct mpool_dict_s));
 
-              mpool->dict_row_num = dict_expendsize /
+              mpool->dict_row_num = config->dict_expendsize /
                                     sizeof(FAR struct mpool_dict_s *);
               mpool->dict =
                   mempool_multiple_alloc_chunk(

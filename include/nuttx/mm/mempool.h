@@ -381,16 +381,11 @@ void mempool_procfs_unregister(FAR struct mempool_procfs_entry_s *entry);
  *
  * Input Parameters:
  *   name            - The name of memory pool.
- *   poolsize        - The block size array for pools in multiples pool.
- *   npools          - How many pools in multiples pool.
+ *   config          - The mempool config info.
  *   alloc           - The alloc memory function for multiples pool.
  *   alloc_size      - Get the address size of the alloc function.
  *   free            - The free memory function for multiples pool.
  *   arg             - The alloc & free memory fuctions used arg.
- *   chunksize       - The multiples pool chunk size.
- *   init_chunksize  - The multiples pool initial chunk size.
- *   expandsize      - The expend mempry for all pools in multiples pool.
- *   dict_expendsize - The expend size for multiple dictnoary.
  * Returned Value:
  *   Return an initialized multiple pool pointer on success,
  *   otherwise NULL is returned.
@@ -401,12 +396,10 @@ struct mempool_multiple_s;
 
 FAR struct mempool_multiple_s *
 mempool_multiple_init(FAR const char *name,
-                      FAR const size_t *poolsize, size_t npools,
+                      FAR const struct mm_pool_config_s *config,
                       mempool_multiple_alloc_t alloc,
                       mempool_multiple_alloc_size_t alloc_size,
-                      mempool_multiple_free_t free, FAR void *arg,
-                      size_t chunksize, size_t init_chunksize,
-                      size_t expandsize, size_t dict_expendsize);
+                      mempool_multiple_free_t free, FAR void *arg);
 
 /****************************************************************************
  * Name: mempool_multiple_alloc
