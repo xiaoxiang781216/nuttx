@@ -360,4 +360,6 @@ void up_irqinitialize(void)
   g_work_queue = work_queue_create("sim_loop_wq",
                                    CONFIG_SCHED_HPWORKPRIORITY, NULL,
                                    CONFIG_SCHED_HPWORKSTACKSIZE, 1u);
+
+  host_irqinitialize();
 }

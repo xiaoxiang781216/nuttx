@@ -201,8 +201,6 @@ int main(int argc, char **argv, char **envp)
   allsyms_relocate();
 #endif
 
-  host_irqinitialize();
-
 #ifdef CONFIG_SYSLOG_RPMSG
   syslog_rpmsg_init_early(g_logbuffer, sizeof(g_logbuffer));
 #endif
