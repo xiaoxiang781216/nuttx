@@ -59,12 +59,6 @@ void nxtask_startup(main_t entrypt, int argc, FAR char *argv[])
 {
   DEBUGASSERT(entrypt);
 
-  /* If C++ initialization for static constructors is supported, then do
-   * that first
-   */
-
-  lib_cxx_initialize();
-
   /* Call the 'main' entry point passing argc and argv, calling exit()
    * if/when the task returns.
    */
