@@ -96,6 +96,7 @@ config ARCH_CHIP_C5471
 	select ARCH_ARM7TDMI
 	select ARCH_HAVE_LOWVECTORS
 	select OTHER_UART_SERIALDRIVER
+	select LIBC_ATOMIC_IRQ
 	---help---
 		TI TMS320 C5471, A180, or DA180 (ARM7TDMI)
 
@@ -119,6 +120,7 @@ config ARCH_CHIP_DM320
 	bool "TMS320 DM320"
 	select ARCH_ARM926EJS
 	select ARCH_HAVE_LOWVECTORS
+	select LIBC_ATOMIC_IRQ
 	---help---
 		TI DMS320 DM320 (ARM926EJS)
 
@@ -201,6 +203,7 @@ config ARCH_CHIP_KINETIS
 config ARCH_CHIP_KL
 	bool "NXP/Freescale Kinetis L"
 	select ARCH_CORTEXM0
+	select LIBC_ATOMIC_IRQ
 	---help---
 		Freescale Kinetis L Architectures (ARM Cortex-M0+)
 
@@ -235,6 +238,7 @@ config ARCH_CHIP_LPC214X
 	bool "NXP LPC214x"
 	select ARCH_ARM7TDMI
 	select ARCH_HAVE_LOWVECTORS
+	select LIBC_ATOMIC_IRQ
 	---help---
 		NXP LPC2145x architectures (ARM7TDMI)
 
@@ -242,6 +246,7 @@ config ARCH_CHIP_LPC2378
 	bool "NXP LPC2378"
 	select ARCH_ARM7TDMI
 	select ARCH_HAVE_LOWVECTORS
+	select LIBC_ATOMIC_IRQ
 	---help---
 		NXP LPC2145x architectures (ARM7TDMI)
 
@@ -249,6 +254,7 @@ config ARCH_CHIP_LPC31XX
 	bool "NXP LPC31XX"
 	select ARCH_ARM926EJS
 	select ARCH_HAVE_LOWVECTORS
+	select LIBC_ATOMIC_IRQ
 	---help---
 		NPX LPC31XX architectures (ARM926EJS).
 
@@ -280,6 +286,7 @@ config ARCH_CHIP_MOXART
 	select ARCH_ARM7TDMI
 	select ARCH_HAVE_RESET
 	select ARCH_HAVE_SERIAL_TERMIOS
+	select LIBC_ATOMIC_IRQ
 	---help---
 		MoxART family
 
@@ -323,6 +330,7 @@ config ARCH_CHIP_NRF91
 config ARCH_CHIP_NUC1XX
 	bool "Nuvoton NUC100/120"
 	select ARCH_CORTEXM0
+	select LIBC_ATOMIC_IRQ
 	---help---
 		Nuvoton NUC100/120 architectures (ARM Cortex-M0).
 
@@ -337,6 +345,7 @@ config ARCH_CHIP_RP2040
 	select ARCH_BOARD_COMMON
 	select ARCH_HAVE_CUSTOM_TESTSET
 	select ARCH_HAVE_CUSTOM_VECTORS
+	select LIBC_ATOMIC_IRQ
 	---help---
 		Raspberry Pi RP2040 architectures (ARM dual Cortex-M0+).
 
@@ -373,12 +382,14 @@ config ARCH_CHIP_SAMA5
 config ARCH_CHIP_SAMD2X
 	bool "Microchip/Atmel SAMD2x"
 	select ARCH_CORTEXM0
+	select LIBC_ATOMIC_IRQ
 	---help---
 		Microchip (formerly Atmel) SAMD2X (ARM Cortex-M0+)
 
 config ARCH_CHIP_SAML2X
 	bool "Microchip/Atmel SAML2x"
 	select ARCH_CORTEXM0
+	select LIBC_ATOMIC_IRQ
 	---help---
 		Microchip (formerly Atmel) SAML2X (ARM Cortex-M0+)
 
@@ -445,18 +456,21 @@ config ARCH_CHIP_STM32
 config ARCH_CHIP_STM32F0
 	bool "STMicro STM32 F0"
 	select ARCH_CORTEXM0
+	select LIBC_ATOMIC_IRQ
 	---help---
 		STMicro STM32F0 architectures (ARM Cortex-M0).
 
 config ARCH_CHIP_STM32L0
 	bool "STMicro STM32 L0"
 	select ARCH_CORTEXM0
+	select LIBC_ATOMIC_IRQ
 	---help---
 		STMicro STM32L0 architectures (ARM Cortex-M0).
 
 config ARCH_CHIP_STM32G0
 	bool "STMicro STM32 G0"
 	select ARCH_CORTEXM0
+	select LIBC_ATOMIC_IRQ
 	---help---
 		STMicro STM32G0 architectures (ARM Cortex-M0).
 
@@ -583,6 +597,7 @@ config ARCH_CHIP_STR71X
 	bool "STMicro STR71x"
 	select ARCH_ARM7TDMI
 	select ARCH_HAVE_LOWVECTORS
+	select LIBC_ATOMIC_IRQ
 	---help---
 		STMicro STR71x architectures (ARM7TDMI).
 
@@ -650,6 +665,7 @@ config ARCH_CHIP_CXD56XX
 config ARCH_CHIP_PHY62XX
 	bool "Phyplus PHY62XX BLE"
 	select ARCH_CORTEXM0
+	select LIBC_ATOMIC_IRQ
 	---help---
 		Phyplus PHY62XX architectures (ARM Cortex-M0).
 
@@ -657,6 +673,7 @@ config ARCH_CHIP_TLSR82
 	bool "Telink TLSR82XX"
 	select ARCH_ARMV6M
 	select ARCH_HAVE_RESET
+	select LIBC_ATOMIC_IRQ
 	---help---
 		Telink tlsr82xx architectures (Customed armv6m)
 
