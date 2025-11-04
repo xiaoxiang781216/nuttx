@@ -280,14 +280,12 @@ int up_addrenv_select(const arch_addrenv_t *addrenv)
       conf.size = group_heap_size((struct mm_heap_s *)tcb->group->tg_heap);
       conf.kflags = REGION_TYPE_DATA | REGION_ATTR_RW;
       conf.uflags = REGION_TYPE_DATA | REGION_ATTR_RW;
-      mpu_control(false);
       mpu_modify_region(g_mpu_kset, g_addrenv_heap_region,
                         conf.base, conf.size, conf.kflags);
 #ifdef CONFIG_BUILD_PROTECTED
       mpu_modify_region(g_mpu_uset, g_addrenv_heap_region,
                         conf.base, conf.size, conf.uflags);
 #endif
-      mpu_control(true);
     }
 #endif
 
@@ -459,14 +457,12 @@ int up_addrenv_ustackswitch(struct tcb_s *tcb)
       g_addrenv_stack_region = mpu_allocdataregion();
     }
 
-  mpu_control(false);
   mpu_modify_region(g_mpu_kset, g_addrenv_stack_region,
                     conf.base, conf.size, conf.kflags);
 #ifdef CONFIG_BUILD_PROTECTED
   mpu_modify_region(g_mpu_uset, g_addrenv_stack_region,
                     conf.base, conf.size, conf.uflags);
 #endif
-  mpu_control(true);
   return OK;
 }
 
@@ -505,14 +501,12 @@ int up_addrenv_kstackswitch(struct tcb_s *tcb)
       g_addrenv_stack_region = mpu_allocdataregion();
     }
 
-  mpu_control(false);
   mpu_modify_region(g_mpu_kset, g_addrenv_stack_region,
                     conf.base, conf.size, conf.kflags);
 #ifdef CONFIG_BUILD_PROTECTED
   mpu_modify_region(g_mpu_uset, g_addrenv_stack_region,
                     conf.base, conf.size, conf.uflags);
 #endif
-  mpu_control(true);
   return OK;
 }
 #endif
