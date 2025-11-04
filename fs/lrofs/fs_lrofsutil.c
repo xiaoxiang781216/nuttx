@@ -1241,7 +1241,7 @@ static int lrofs_copy_filecontent(FAR struct lrofs_mountpt_s *lm,
 
   if (bytes < ln_old->ln_size)
     {
-      FAR char *buffer = fs_heap_zalloc(ln_old->ln_size - bytes);
+      FAR char *buffer = lib_get_tempbuffer(ln_old->ln_size - bytes);
       if (buffer == NULL)
         {
           return -ENOMEM;
@@ -1251,7 +1251,7 @@ static int lrofs_copy_filecontent(FAR struct lrofs_mountpt_s *lm,
       if (ndx < 0)
         {
           ferr("ERROR: lrofs_devcacheload failed: %d\n", ndx);
-          fs_heap_free(buffer);
+          lib_put_tempbuffer(buffer);
           return ndx;
         }
 
@@ -1260,13 +1260,13 @@ static int lrofs_copy_filecontent(FAR struct lrofs_mountpt_s *lm,
       if (ndx < 0)
         {
           ferr("ERROR: lrofs_devcacheload failed: %d\n", ndx);
-          fs_heap_free(buffer);
+          lib_put_tempbuffer(buffer);
           return ndx;
         }
 
       lrofs_devmemcpy(lm, ndx, buffer, ln_old->ln_size - bytes);
       ret = lrofs_devcachewrite(lm, SEC_NSECTORS(lm, new_offset + bytes));
-      fs_heap_free(buffer);
+      lib_put_tempbuffer(buffer);
     }
 
   return ret;
