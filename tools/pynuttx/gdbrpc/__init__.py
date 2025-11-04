@@ -20,8 +20,6 @@
 #
 ############################################################################
 
-import importlib.util
-
 __all__ = [
     "Client",
     "ClientCLI",
@@ -33,11 +31,34 @@ __all__ = [
     "ShellExec",
 ]
 
+from .cli import ClientCLI
+
 # Client must be imported first because ClientCLI depends on it
 from .client import Client
 from .utils import PacketStatus, PostRequest, Request, Response, ShellExec
 
-if importlib.util.find_spec("gdb") is not None:
-    from .server import Server  # noqa: F401
+# Register GDB commands if running inside GDB
+try:
+    from gdb import COMMAND_USER, Command
 
-from .cli import ClientCLI
+    from .commands import (  # noqa: F401
+        SocketServerStatus,
+        StartSocketClient,
+        StartSocketServer,
+        StopSocketServer,
+    )
+
+    class GDBRpcPrefix(Command):
+        """GDB Remote Protocol related commands prefix"""
+
+        def __init__(self):
+            super().__init__("gdbrpc", COMMAND_USER, prefix=True)
+
+    print("Registering gdbrpc commands...")
+    GDBRpcPrefix()
+    StartSocketServer()
+    StopSocketServer()
+    SocketServerStatus()
+    StartSocketClient()
+except ImportError:
+    pass
