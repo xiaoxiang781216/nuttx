@@ -29,7 +29,8 @@ file(STRINGS "${filename}" lines)
 set(filtered_lines "")
 
 foreach(line IN LISTS lines)
-  if(NOT line MATCHES "${search_string}")
+  if(NOT line MATCHES "${search_string}" AND NOT line MATCHES
+                                             "^[ \t]*;?[ \t]*$")
     string(REPLACE ";" "__SEP__" escaped_line "${line}")
     list(APPEND filtered_lines "${escaped_line}")
   endif()
