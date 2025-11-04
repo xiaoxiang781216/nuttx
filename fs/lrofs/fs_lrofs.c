@@ -1671,14 +1671,23 @@ static int lrofs_rename(FAR struct inode *mountpt,
                         FAR const char *oldrelpath,
                         FAR const char *newrelpath)
 {
+  size_t newrelpath_size = strlen(newrelpath) + 1;
   FAR struct lrofs_nodeinfo_s *ln_old;
   FAR struct lrofs_nodeinfo_s *ln_new;
   FAR struct lrofs_nodeinfo_s *ln_newpath;
   FAR struct lrofs_mountpt_s *lm;
-  FAR char *newpath = fs_heap_strdup(newrelpath);
-  FAR char *newname = basename(newpath);
+  FAR char *newpath;
+  FAR char *newname;
   int ret;
 
+  newpath = lib_get_tempbuffer(newrelpath_size);
+  if (newpath == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  memcpy(newpath, newrelpath, newrelpath_size);
+  newname = basename(newpath);
   DEBUGASSERT(mountpt && mountpt->i_private);
 
   /* Get the mountpoint private data from the inode structure */
@@ -1764,7 +1773,7 @@ static int lrofs_rename(FAR struct inode *mountpt,
 
 errout_with_lock:
   nxrmutex_unlock(&lm->lm_lock);
-  fs_heap_free(newpath);
+  lib_put_tempbuffer(newpath);
   return ret;
 }
 
