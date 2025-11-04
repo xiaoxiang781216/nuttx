@@ -65,7 +65,7 @@
  */
 
 #ifdef CONFIG_DISABLE_ENVIRON
-#  define environ NULL
+#  define environ (FAR char *[]){ NULL }
 #else
 #  define environ get_environ_ptr()
 #endif
