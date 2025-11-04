@@ -56,9 +56,9 @@ extern "C"
 #define EXTERN extern
 #endif
 
-nl_catd catopen(FAR const char *name, int oflag);
-FAR char *catgets(nl_catd catd, int set_id, int msg_id, FAR const char *s);
-int catclose(nl_catd catd);
+nl_catd catopen(FAR const char *, int);
+FAR char *catgets(nl_catd, int, int, FAR const char *);
+int catclose(nl_catd);
 
 #undef EXTERN
 #ifdef __cplusplus

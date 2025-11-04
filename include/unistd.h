@@ -350,41 +350,41 @@ extern "C"
 pid_t   fork(void);
 pid_t   vfork(void);
 pid_t   getpid(void);
-pid_t   getpgid(pid_t pid);
+pid_t   getpgid(pid_t);
 pid_t   getpgrp(void);
 pid_t   gettid(void);
 pid_t   getppid(void);
-void    _exit(int status) noreturn_function;
-unsigned int sleep(unsigned int seconds);
-int     usleep(useconds_t usec);
+void    _exit(int) noreturn_function;
+unsigned int sleep(unsigned int);
+int     usleep(useconds_t);
 int     pause(void);
-int     nice(int inc);
+int     nice(int);
 
-int     daemon(int nochdir, int noclose);
+int     daemon(int, int);
 
 /* File descriptor operations */
 
-int     close(int fd);
-int     dup(int fd);
-int     dup2(int fd1, int fd2);
-int     dup3(int fd1, int fd2, int flags);
-int     fsync(int fd);
+int     close(int);
+int     dup(int);
+int     dup2(int, int);
+int     dup3(int, int, int);
+int     fsync(int);
 int     fdatasync(int);
-off_t   lseek(int fd, off_t offset, int whence);
-ssize_t read(int fd, FAR void *buf, size_t nbytes);
-ssize_t write(int fd, FAR const void *buf, size_t nbytes);
-ssize_t pread(int fd, FAR void *buf, size_t nbytes, off_t offset);
-ssize_t pwrite(int fd, FAR const void *buf, size_t nbytes, off_t offset);
-int     ftruncate(int fd, off_t length);
-int     fchown(int fd, uid_t owner, gid_t group);
-int     lockf(int fd, int cmd, off_t len);
+off_t   lseek(int, off_t, int);
+ssize_t read(int, FAR void *, size_t);
+ssize_t write(int, FAR const void *, size_t);
+ssize_t pread(int, FAR void *, size_t, off_t);
+ssize_t pwrite(int, FAR const void *, size_t, off_t);
+int     ftruncate(int, off_t);
+int     fchown(int, uid_t, gid_t);
+int     lockf(int, int, off_t);
 
 /* Check if a file descriptor corresponds to a terminal I/O file */
 
-int     isatty(int fd);
+int     isatty(int);
 
-FAR char *ttyname(int fd);
-int       ttyname_r(int fd, FAR char *buf, size_t buflen);
+FAR char *ttyname(int);
+int       ttyname_r(int, FAR char *, size_t);
 
 /* Memory management */
 

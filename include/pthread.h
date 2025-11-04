@@ -553,7 +553,7 @@ ssize_t pthread_get_stacksize_np(pthread_t);
  */
 
 int pthread_create(FAR pthread_t *, FAR const pthread_attr_t *,
-                   pthread_startroutine_t startroutine, pthread_addr_t);
+                   pthread_startroutine_t, pthread_addr_t);
 
 /* A thread object may be "detached" to specify that the return value and
  * completion status will not be requested.

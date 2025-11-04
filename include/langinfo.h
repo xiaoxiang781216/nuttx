@@ -117,7 +117,7 @@ extern "C"
 #define EXTERN extern
 #endif
 
-FAR char *nl_langinfo(nl_item item);
+FAR char *nl_langinfo(nl_item);
 
 #undef EXTERN
 #ifdef __cplusplus

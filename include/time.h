@@ -193,7 +193,7 @@ clock_t clock(void);
 int clock_settime(clockid_t, FAR const struct timespec *);
 int clock_gettime(clockid_t, FAR struct timespec *);
 int clock_getres(clockid_t, FAR struct timespec *);
-int clock_getcpuclockid(pid_t pid, FAR clockid_t *);
+int clock_getcpuclockid(pid_t, FAR clockid_t *);
 int timespec_get(FAR struct timespec *, int);
 
 time_t timegm(FAR struct tm *);

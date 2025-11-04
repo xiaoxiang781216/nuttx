@@ -72,7 +72,7 @@ extern "C"
  * Public Function Prototypes
  ****************************************************************************/
 
-int ffs(int j);
+int ffs(int);
 
 #ifdef CONFIG_HAVE_BUILTIN_FFS
 #  define ffs(j)  __builtin_ffs(j)
@@ -80,7 +80,7 @@ int ffs(int j);
 #  define ffs(j)  (__builtin_ctz(j) + 1)
 #endif
 
-int ffsl(long j);
+int ffsl(long);
 
 #ifdef CONFIG_HAVE_BUILTIN_FFSL
 #  define ffsl(j) __builtin_ffsl(j)
@@ -90,7 +90,7 @@ int ffsl(long j);
 
 #ifdef CONFIG_HAVE_LONG_LONG
 
-int ffsll(long long j);
+int ffsll(long long);
 
 #  ifdef CONFIG_HAVE_BUILTIN_FFSLL
 #    define ffsll(j)  __builtin_ffsll(j)
@@ -100,19 +100,19 @@ int ffsll(long long j);
 
 #endif
 
-int fls(int j);
+int fls(int);
 
 #ifdef CONFIG_HAVE_BUILTIN_CLZ
 #  define fls(j)  ((8u * sizeof(int)) - (size_t)__builtin_clz(j))
 #endif
 
-int flsl(long j);
+int flsl(long);
 
 #ifdef CONFIG_HAVE_BUILTIN_CLZ
 #  define flsl(j)  ((8u * sizeof(long)) - (size_t)__builtin_clzl(j))
 #endif
 
-int flsll(long long j);
+int flsll(long long);
 
 #ifdef CONFIG_HAVE_LONG_LONG
 #  ifdef CONFIG_HAVE_BUILTIN_CLZ
@@ -120,17 +120,17 @@ int flsll(long long j);
 #  endif
 #endif
 
-unsigned int popcount(unsigned int j);
-unsigned int popcountl(unsigned long j);
-unsigned int popcountll(unsigned long long j);
+unsigned int popcount(unsigned int);
+unsigned int popcountl(unsigned long);
+unsigned int popcountll(unsigned long long);
 
-FAR char *index(FAR const char *s, int c);
-FAR char *rindex(FAR const char *s, int c);
+FAR char *index(FAR const char *, int);
+FAR char *rindex(FAR const char *, int);
 
 int strcasecmp(FAR const char *, FAR const char *);
 int strncasecmp(FAR const char *, FAR const char *, size_t);
 
-void bzero(FAR void *s, size_t n);
+void bzero(FAR void *, size_t);
 
 #if CONFIG_FORTIFY_SOURCE > 0
 fortify_function(bzero) void bzero(FAR void *s, size_t n)

@@ -343,7 +343,7 @@ union sigval
  * to notify a task when a message is available on a queue.
  */
 
-typedef CODE void (*sigev_notify_function_t)(union sigval value);
+typedef CODE void (*sigev_notify_function_t)(union sigval);
 
 typedef struct sigevent
 {

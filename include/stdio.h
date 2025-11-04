@@ -182,7 +182,7 @@ void   setbuf(FAR FILE *, FAR char *);
 int    setvbuf(FAR FILE *, FAR char *, int, size_t);
 void   setbuffer(FAR FILE *, FAR char *, size_t);
 
-int    ungetc(int c, FAR FILE *);
+int    ungetc(int, FAR FILE *);
 
 void flockfile(FAR FILE *);
 int ftrylockfile(FAR FILE *);
@@ -195,7 +195,7 @@ void funlockfile(FAR FILE *);
 void   perror(FAR const char *);
 int    printf(FAR const IPTR char *, ...) printf_like(1, 2);
 int    putc(int, FAR FILE *);
-int    putc_unlocked(int c, FAR FILE *);
+int    putc_unlocked(int, FAR FILE *);
 int    putchar(int);
 int    putchar_unlocked(int);
 int    puts(FAR const IPTR char *);
@@ -216,7 +216,7 @@ int    vasprintf(FAR char **, FAR const IPTR char *, va_list)
        printf_like(2, 0);
 int    vfprintf(FAR FILE *, FAR const IPTR char *,
                 va_list) printf_like(2, 0);
-int    vfscanf(FAR FILE *, FAR const IPTR char *, va_list ap)
+int    vfscanf(FAR FILE *, FAR const IPTR char *, va_list)
        scanf_like(2, 0);
 int    vprintf(FAR const IPTR char *, va_list) printf_like(1, 0);
 int    vscanf(FAR const IPTR char *, va_list) scanf_like(1, 0);
@@ -268,9 +268,9 @@ FILE *popen(FAR const char *, FAR const char *) popen_like;
 #define vasprintf(p, f, a)  nx_vasprintf(p, f, a)
 #endif
 
-int nx_asprintf(FAR char **ptr, FAR const IPTR char *, ...)
+int nx_asprintf(FAR char **, FAR const IPTR char *, ...)
     printf_like(2, 3);
-int nx_vasprintf(FAR char **ptr, FAR const IPTR char *, va_list)
+int nx_vasprintf(FAR char **, FAR const IPTR char *, va_list)
     printf_like(2, 0);
 
 #if CONFIG_FORTIFY_SOURCE > 0
