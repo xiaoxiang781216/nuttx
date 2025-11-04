@@ -617,7 +617,8 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
            * the task restarts.
            */
 
-          ret = conn_dev_sem_timedwait(&state->pr_sem, true, UINT_MAX,
+          ret = conn_dev_sem_timedwait(&state->pr_sem, true,
+                                       _SO_TIMEOUT(conn->sconn.s_rcvtimeo),
                                        &conn->sconn, dev);
 
           /* Make sure that no further events are processed */
