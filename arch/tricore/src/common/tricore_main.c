@@ -46,7 +46,6 @@
 
 static void core_main(void)
 {
-  static IfxCpu_syncEvent g_sync_event = 0;
   int cpu = up_cpu_index();
 
   UNUSED(cpu);
@@ -65,15 +64,6 @@ static void core_main(void)
       while (!OSINIT_IDLELOOP());
     }
 #endif
-
-  /* !!WATCHDOG0 AND SAFETY WATCHDOG ARE DISABLED HERE!!
-   * Enable the watchdogs and service them periodically if it is required
-   */
-
-  /* Wait for CPU sync event */
-
-  IfxCpu_emitEvent(&g_sync_event);
-  IfxCpu_waitEvent(&g_sync_event, 1);
 
 #ifdef USE_EARLYSERIALINIT
   if (cpu == 0)
