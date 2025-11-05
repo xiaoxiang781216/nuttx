@@ -201,10 +201,6 @@ void up_disable_irq(int irq)
 
 void host_irqinitialize(void)
 {
-  /* Initialize the signal set */
-
-  sigemptyset(&g_sigset);
-
   /* Default ignore SIGPIPE */
 
   signal(SIGPIPE, SIG_IGN);
