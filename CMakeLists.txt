@@ -945,3 +945,28 @@ if(CONFIG_BUILD_KERNEL)
   # TODO: generate nuttx-export-xxx.tar.gz for userland development
 
 endif()
+
+if(CONFIG_ELF_FIXUP)
+  get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
+  set(CMAKE_C_ELF_FLAGS -I${CMAKE_SOURCE_DIR}/include
+                        -I${CMAKE_BINARY_DIR}/include ${NUTTX_EXTRA_FLAGS})
+  if(CONFIG_BUILD_PROTECTED)
+    set(FINNAL_ELF nuttx_user)
+  else()
+    set(FINNAL_ELF nuttx)
+  endif()
+
+  add_custom_command(
+    TARGET ${FINNAL_ELF}-hex
+    POST_BUILD
+    COMMAND
+      ${CMAKE_COMMAND} -E env OBJCOPY=${CMAKE_OBJCOPY}; env
+      CFLAGS="${CMAKE_C_ELF_FLAGS}"; env LD=${CMAKE_LD}; env
+      CC=${CMAKE_C_COMPILER}; ${NUTTX_DIR}/tools/elf_fixup.py --indir
+      ${CMAKE_BINARY_DIR}/bin_debug --flash_start
+      ${CONFIG_ELF_FIXUP_FLASH_START} --flash_size
+      ${CONFIG_ELF_FIXUP_FLASH_SIZE} --ram_start ${CONFIG_ELF_FIXUP_RAM_START}
+      --ram_size ${CONFIG_ELF_FIXUP_RAM_SIZE} --elf ${FINNAL_ELF} --outdir
+      ${CMAKE_BINARY_DIR}/bin_fixup --output
+      ${CMAKE_BINARY_DIR}/${FINNAL_ELF}.hex)
+endif()

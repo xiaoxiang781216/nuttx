@@ -29,8 +29,16 @@
 #  define DATA CONFIG_ARCH_DATA_VBASE + ARCH_DATA_RESERVE_SIZE
 
 #else
-#  define TEXT 0x0
-#  define DATA
+#  ifndef TEXT
+#    define TEXT 0x0
+#  endif
+#  ifndef DATA
+#    define DATA
+#  endif
+#endif
+
+#ifndef EXTERN_SYMBOLS
+#  define EXTERN_SYMBOLS
 #endif
 
 #define SECTIONS_ALIGN CONFIG_LIBC_ELF_SECTION_ALIGNMENT
@@ -63,7 +71,7 @@ SECTIONS
     }
 
   _eronly = ABSOLUTE(.);
-  .data DATA : SUBALIGN(SECTIONS_ALIGN)
+  .data DATA : AT(_eronly) SUBALIGN(SECTIONS_ALIGN)
     {
       _sdata = . ;
       *(.data)
@@ -108,12 +116,20 @@ SECTIONS
       *(COMMON)
       . = ALIGN(SECTIONS_ALIGN);
       _ebss = . ;
+
+#ifdef HEAPSIZE
+      _sheap = .;
+      . = . + HEAPSIZE;
+      _eheap = .;
+#endif
     }
 
   .got :
     {
       *(.got*)
     }
+
+  EXTERN_SYMBOLS
 
     /* Stabs debugging sections.    */
 

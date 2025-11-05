@@ -583,6 +583,21 @@ ifeq ($(CONFIG_BUILD_2PASS),y)
 	fi
 	$(Q) $(MAKE) -C $(CONFIG_PASS1_BUILDIR) LINKLIBS="$(LINKLIBS)" USERLIBS="$(USERLIBS)" "$(CONFIG_PASS1_TARGET)"
 endif
+
+ifeq ($(CONFIG_ELF_FIXUP),y)
+ifeq ($(CONFIG_BUILD_PROTECTED),y)
+	$(Q) CC=$(CC) CFLAGS="$(CFLAGS)" LD=$(LD) OBJCOPY=$(OBJCOPY) .$(DELIM)tools$(DELIM)elf_fixup.py --indir $(CONFIG_APPS_DIR)$(DELIM)bin_debug \
+	--flash_start $(CONFIG_ELF_FIXUP_FLASH_START) --flash_size $(CONFIG_ELF_FIXUP_FLASH_SIZE) \
+	--ram_start $(CONFIG_ELF_FIXUP_RAM_START) --ram_size $(CONFIG_ELF_FIXUP_RAM_SIZE) --elf nuttx_user.elf --outdir $(CONFIG_APPS_DIR)$(DELIM)bin_fixup \
+	--output nuttx_user.hex
+else
+	$(Q) CC=$(CC) CFLAGS="$(CFLAGS)" LD=$(LD) OBJCOPY=$(OBJCOPY) .$(DELIM)tools$(DELIM)elf_fixup.py --indir $(CONFIG_APPS_DIR)$(DELIM)bin_debug \
+	--flash_start $(CONFIG_ELF_FIXUP_FLASH_START) --flash_size $(CONFIG_ELF_FIXUP_FLASH_SIZE) \
+	--ram_start $(CONFIG_ELF_FIXUP_RAM_START) --ram_size $(CONFIG_ELF_FIXUP_RAM_SIZE) --elf nuttx --outdir $(CONFIG_APPS_DIR)$(DELIM)bin_fixup \
+	--output nuttx.hex
+endif
+endif
+
 	$(call POSTBUILD, $(TOPDIR))
 
 # flash (or download : DEPRECATED)
@@ -801,6 +816,7 @@ endif
 	$(call DELFILE, .config.orig)
 	$(call DELFILE, .config.backup)
 	$(call DELFILE, .gdbinit)
+	$(call DELDIR, $(APPDIR)$(DELIM)bin_fixup)
 
 # Application housekeeping targets.  The APPDIR variable refers to the user
 # application directory.  A sample apps/ directory is included with NuttX,
