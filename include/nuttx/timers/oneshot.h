@@ -685,10 +685,8 @@ int oneshot_tick_cancel(FAR struct oneshot_lowerhalf_s *lower,
 static inline_function
 void oneshot_process_callback(FAR struct oneshot_lowerhalf_s *lower)
 {
-  if (lower->callback)
-    {
-      lower->callback(lower, lower->arg);
-    }
+  DEBUGASSERT(lower->callback);
+  lower->callback(lower, lower->arg);
 }
 
 /****************************************************************************
