@@ -159,7 +159,7 @@ static int watchdog_automonitor_capture(int irq, FAR void *context,
 
   if (upper->monitor)
     {
-      lower->ops->keepalive(lower);
+      WD_KEEPALIVE(lower);
     }
 
   return 0;
@@ -179,7 +179,7 @@ watchdog_automonitor_oneshot(FAR struct oneshot_lowerhalf_s *oneshot,
         WATCHDOG_AUTOMONITOR_PING_INTERVAL, 0
       };
 
-      lower->ops->keepalive(lower);
+      WD_KEEPALIVE(lower);
       ONESHOT_START(oneshot, &ts);
     }
 }
@@ -192,7 +192,7 @@ static bool watchdog_automonitor_timer(FAR uint32_t *next_interval_us,
 
   if (upper->monitor)
     {
-      lower->ops->keepalive(lower);
+      WD_KEEPALIVE(lower);
     }
 
   return upper->monitor;
@@ -205,7 +205,7 @@ static void watchdog_automonitor_wdog(wdparm_t arg)
 
   if (upper->monitor)
     {
-      lower->ops->keepalive(lower);
+      WD_KEEPALIVE(lower);
       wd_start(&upper->wdog, WATCHDOG_AUTOMONITOR_PING_INTERVAL_TICK,
                watchdog_automonitor_wdog, (wdparm_t)upper);
     }
@@ -219,7 +219,7 @@ static void watchdog_automonitor_worker(FAR void *arg)
 
   if (upper->monitor)
     {
-      lower->ops->keepalive(lower);
+      WD_KEEPALIVE(lower);
 #ifdef CONFIG_WATCHDOG_AUTOMONITOR_BY_HPWORK
       work_queue(HPWORK, &upper->work, watchdog_automonitor_worker,
                  upper, WATCHDOG_AUTOMONITOR_PING_INTERVAL_TICK);
@@ -242,7 +242,7 @@ static void watchdog_automonitor_idle(FAR struct pm_callback_s *cb,
   if (domain == PM_IDLE_DOMAIN &&
       pmstate != PM_RESTORE && upper->monitor)
     {
-      lower->ops->keepalive(lower);
+      WD_KEEPALIVE(lower);
     }
 }
 #endif
@@ -266,7 +266,7 @@ watchdog_automonitor_start(FAR struct watchdog_upperhalf_s *upper)
   if (!upper->monitor)
     {
 #  if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_CAPTURE)
-      lower->ops->capture(lower, watchdog_automonitor_capture);
+      WD_CAPTURE(lower, watchdog_automonitor_capture);
 #  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_ONESHOT)
       struct timespec ts =
       {
@@ -294,12 +294,8 @@ watchdog_automonitor_start(FAR struct watchdog_upperhalf_s *upper)
       pm_register(&upper->idle);
 #  endif
       upper->monitor = true;
-      if (lower->ops->settimeout)
-        {
-          lower->ops->settimeout(lower, WATCHDOG_AUTOMONITOR_TIMEOUT_MSEC);
-        }
-
-      lower->ops->start(lower);
+      WD_SETTIMEOUT(lower, WATCHDOG_AUTOMONITOR_TIMEOUT_MSEC);
+      WD_START(lower);
     }
 }
 
@@ -310,9 +306,9 @@ static void watchdog_automonitor_stop(FAR struct watchdog_upperhalf_s *upper)
   if (upper->monitor)
     {
       upper->monitor = false;
-      lower->ops->stop(lower);
+      WD_STOP(lower);
 #  if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_CAPTURE)
-      lower->ops->capture(lower, NULL);
+      WD_CAPTURE(lower, NULL);
 #  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_ONESHOT)
       ONESHOT_CANCEL(upper->oneshot, NULL);
 #  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_TIMER)
@@ -342,7 +338,7 @@ static int wdog_notifier(FAR struct notifier_block *nb, unsigned long action,
 #ifdef CONFIG_WATCHDOG_AUTOMONITOR
       watchdog_automonitor_stop(upper);
 #else
-      return upper->lower->ops->stop(upper->lower);
+      return WD_STOP(upper->lower);
 #endif
     }
 
@@ -439,7 +435,7 @@ static ssize_t wdog_write(FAR struct file *filep, FAR const char *buffer,
 #ifdef CONFIG_WATCHDOG_AUTOMONITOR
           watchdog_automonitor_stop(upper);
 #else
-          err = lower->ops->stop(lower);
+          err = WD_STOP(lower);
 #endif
           break;
         }
@@ -447,7 +443,7 @@ static ssize_t wdog_write(FAR struct file *filep, FAR const char *buffer,
 
   if (i == buflen)
     {
-      err = lower->ops->keepalive(lower);
+      err = WD_KEEPALIVE(lower);
     }
 
   nxmutex_unlock(&upper->lock);
@@ -515,8 +511,7 @@ static int wdog_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            DEBUGASSERT(lower->ops->start); /* Required */
-            ret = lower->ops->start(lower);
+            ret = WD_START(lower);
           }
       }
       break;
@@ -536,8 +531,7 @@ static int wdog_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            DEBUGASSERT(lower->ops->stop); /* Required */
-            ret = lower->ops->stop(lower);
+            ret = WD_STOP(lower);
           }
       }
       break;
@@ -553,30 +547,23 @@ static int wdog_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
         /* Get the current watchdog timer status */
 
-        if (lower->ops->getstatus) /* Optional */
+        status = (FAR struct watchdog_status_s *)((uintptr_t)arg);
+        if (status)
           {
-            status = (FAR struct watchdog_status_s *)((uintptr_t)arg);
-            if (status)
+            if (user->soft)
               {
-                if (user->soft)
-                  {
-                    status->flags = WDOG_ISACTIVE(&user->wdog);
-                    status->timeout = user->timeout;
-                    status->timeleft = wd_gettime(&user->wdog);
-                  }
-                 else
-                   {
-                     ret = lower->ops->getstatus(lower, status);
-                   }
+                status->flags = WDOG_ISACTIVE(&user->wdog);
+                status->timeout = user->timeout;
+                status->timeleft = wd_gettime(&user->wdog);
               }
             else
               {
-                ret = -EINVAL;
+                ret = WD_GETSTATUS(lower, status);
               }
           }
         else
           {
-            ret = -ENOSYS;
+            ret = -EINVAL;
           }
       }
       break;
@@ -590,22 +577,15 @@ static int wdog_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       {
         /* Set a new timeout value (and reset the watchdog timer) */
 
-        if (lower->ops->settimeout) /* Optional */
+        if (user->soft)
           {
-            if (user->soft)
-            {
-              user->timeout = (uint32_t)arg;
-              ret =
-                wd_start(&user->wdog, user->timeout, wdog_callback, 0);
-            }
-            else
-             {
-               ret = lower->ops->settimeout(lower, (uint32_t)arg);
-             }
+            user->timeout = (uint32_t)arg;
+            ret =
+              wd_start(&user->wdog, user->timeout, wdog_callback, 0);
           }
         else
           {
-            ret = -ENOSYS;
+            ret = WD_SETTIMEOUT(lower, (uint32_t)arg);
           }
       }
       break;
@@ -663,21 +643,14 @@ static int wdog_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
          * "pinging" the watchdog timer or "petting the dog".
          */
 
-        if (lower->ops->keepalive) /* Optional */
+        if (user->soft)
           {
-            if (user->soft)
-              {
-                ret =
-                  wd_start(&user->wdog, user->timeout, wdog_callback, 0);
-              }
-            else
-              {
-                ret = lower->ops->keepalive(lower);
-              }
+            ret =
+              wd_start(&user->wdog, user->timeout, wdog_callback, 0);
           }
         else
           {
-            ret = -ENOSYS;
+            ret = WD_KEEPALIVE(lower);
           }
       }
       break;
@@ -706,14 +679,7 @@ static int wdog_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
          * method.
          */
 
-        if (lower->ops->ioctl) /* Optional */
-          {
-            ret = lower->ops->ioctl(lower, cmd, arg);
-          }
-        else
-          {
-            ret = -ENOTTY;
-          }
+        ret = WD_IOCTL(lower, cmd, arg);
       }
       break;
     }
@@ -870,8 +836,7 @@ void watchdog_unregister(FAR void *handle)
 
   /* Disable the watchdog timer */
 
-  DEBUGASSERT(lower->ops->stop); /* Required */
-  lower->ops->stop(lower);
+  WD_STOP(lower);
 
   /* Unregister the watchdog timer device */
 
