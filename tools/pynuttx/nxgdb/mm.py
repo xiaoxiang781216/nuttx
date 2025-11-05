@@ -61,8 +61,11 @@ def get_sections():
 
 
 def mm_alignup(size: int) -> int:
-    size_t = utils.lookup_type("size_t")
-    align = utils.get_symbol_value("CONFIG_MM_DEFAULT_ALIGNMENT") or 2 * size_t.sizeof
+    size_t = utils.lookup_type("uintptr_t")
+    CONFIG_MM_DEFAULT_ALIGNMENT = 2 * size_t.sizeof
+    align = CONFIG_MM_DEFAULT_ALIGNMENT
+    # @todo: use the actual value of CONFIG_MM_DEFAULT_ALIGNMENT
+    # align = utils.get_symbol_value("CONFIG_MM_DEFAULT_ALIGNMENT") or 2 * size_t.sizeof
     size = (size + align - 1) & ~(align - 1)
     return size
 

@@ -26,12 +26,8 @@ import gdb
 
 from . import utils
 
-try:
-    STACK_COLORATION_PATTERN = utils.get_symbol_value(
-        "STACK_COLOR", locspec="up_create_stack"
-    )
-except gdb.error:
-    STACK_COLORATION_PATTERN = 0xDEADBEEF
+STACK_COLORATION_PATTERN = 0xDEADBEEF
+CONFIG_STACK_COLORATION = utils.get_global_symbol("up_check_tcbstack") is not None
 
 
 class Stack(object):
@@ -111,7 +107,7 @@ class Stack(object):
         return used
 
     def max_usage(self):
-        if not utils.get_symbol_value("CONFIG_STACK_COLORATION"):
+        if not CONFIG_STACK_COLORATION:
             return 0
         return self.check_stack_usage()
 

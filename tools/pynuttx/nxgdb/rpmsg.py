@@ -30,6 +30,8 @@ from .lists import NxList
 RPMSG_HOST = 0
 RPMSG_DEVICE = 1
 
+CONFIG_RPMSG = utils.lookup_type("struct rpmsg_s") is not None
+
 
 @autocompeletion.complete
 class RPMsgDump(gdb.Command):
@@ -77,7 +79,7 @@ class RPMsgDump(gdb.Command):
         return parser
 
     def __init__(self):
-        if utils.get_symbol_value("CONFIG_RPMSG"):
+        if CONFIG_RPMSG:
             super(RPMsgDump, self).__init__("rpmsgdump", gdb.COMMAND_USER)
             self.parser = self.get_argparser()
 

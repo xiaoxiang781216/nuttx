@@ -843,17 +843,13 @@ def is_target_arch(arch, exact=False):
 
 # Kernel Specific Helper Functions
 
+CONFIG_SMP_NCPUS = nitems(parse_and_eval("g_running_tasks"))
+
 
 def is_target_smp():
     """Return Ture if the target use smp"""
 
-    if gdb.lookup_global_symbol("g_assignedtasks"):
-        return True
-    else:
-        return False
-
-
-CONFIG_SMP_NCPUS = nitems(parse_and_eval("g_running_tasks"))
+    return CONFIG_SMP_NCPUS > 1
 
 
 def get_ncpus():
@@ -904,7 +900,7 @@ def get_register_byname(regname, tcb=None):
             thread = get_gdb_thread(tcb["pid"])
         else:
             # For SMP, we need to switch to the thread's CPU
-            if get_ncpus() > 1:
+            if is_target_smp():
                 threads = sorted(threads, key=lambda t: t.num)
                 thread = threads[tcb.cpu]
             else:
@@ -1352,7 +1348,7 @@ class Hexdump(gdb.Command):
         hexdump(address, size)
 
 
-PID0_REPLACE = get_symbol_value("PID0_REPLACE")
+PID0_REPLACE = 0x7FFFFFFF
 MAX_FRAMES = 99
 
 

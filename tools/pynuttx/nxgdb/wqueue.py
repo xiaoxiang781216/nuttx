@@ -30,6 +30,8 @@ from . import lists, utils
 from .protocols import wqueue as p
 from .utils import Value
 
+CONFIG_SCHED_WORKQUEUE = utils.lookup_type("struct kworker_s") is not None
+
 
 class Work(Value, p.Work):
     def __init__(self, work: p.Work):
@@ -160,7 +162,7 @@ class WorkQueueDump(gdb.Command):
     """Show work queue information"""
 
     def __init__(self):
-        if not utils.get_symbol_value("CONFIG_SCHED_WORKQUEUE"):
+        if not CONFIG_SCHED_WORKQUEUE:
             return
 
         super().__init__("worker", gdb.COMMAND_USER)

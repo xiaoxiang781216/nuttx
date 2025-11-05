@@ -21,7 +21,7 @@
 ############################################################################
 
 import argparse
-from enum import Enum, auto
+from enum import Enum
 from typing import Union
 
 import gdb
@@ -31,6 +31,34 @@ from nxreg.register import Registers, get_arch_name
 from . import autocompeletion, utils
 from .stack import Stack
 
+TCB_FLAG_TTYPE_SHIFT = 0
+TCB_FLAG_TTYPE_MASK = 3 << TCB_FLAG_TTYPE_SHIFT
+TCB_FLAG_TTYPE_TASK = 0 << TCB_FLAG_TTYPE_SHIFT
+TCB_FLAG_TTYPE_PTHREAD = 1 << TCB_FLAG_TTYPE_SHIFT
+TCB_FLAG_TTYPE_KERNEL = 2 << TCB_FLAG_TTYPE_SHIFT
+TCB_FLAG_POLICY_SHIFT = 3
+TCB_FLAG_POLICY_MASK = 3 << TCB_FLAG_POLICY_SHIFT
+TCB_FLAG_SCHED_FIFO = 0 << TCB_FLAG_POLICY_SHIFT
+TCB_FLAG_SCHED_RR = 1 << TCB_FLAG_POLICY_SHIFT
+TCB_FLAG_SCHED_SPORADIC = 2 << TCB_FLAG_POLICY_SHIFT
+TCB_FLAG_CPU_LOCKED = 1 << 5
+TCB_FLAG_SIGNAL_ACTION = 1 << 6
+TCB_FLAG_SYSCALL = 1 << 7
+TCB_FLAG_EXIT_PROCESSING = 1 << 8
+TCB_FLAG_FREE_STACK = 1 << 9
+TCB_FLAG_HEAP_CHECK = 1 << 10
+TCB_FLAG_HEAP_DUMP = 1 << 11
+TCB_FLAG_DETACHED = 1 << 12
+TCB_FLAG_FORCED_CANCEL = 1 << 13
+TCB_FLAG_JOIN_COMPLETED = 1 << 14
+TCB_FLAG_FREE_TCB = 1 << 15
+TCB_FLAG_PREEMPT_SCHED = 1 << 16
+TCB_FLAG_KILL_PROCESSING = 1 << 17
+
+_SIGSET_NELEM = utils.get_field_nitems("struct sigset_t", "_elem")
+
+CONFIG_SCHED_CPULOAD_NONE = utils.lookup_type("struct cpuload_s") is None
+
 
 def is_thread_command_supported():
     # Check if the native thread command is available by compare the number of threads.
@@ -38,22 +66,56 @@ def is_thread_command_supported():
     return len(gdb.selected_inferior().threads()) > utils.get_ncpus()
 
 
+def get_task_state_desc(state):
+    tstate = utils.enum("enum tstate_e")
+    state = tstate(int(state))
+
+    """
+    Map task state enum to readable string, just like nxsched_get_stateinfo
+    Avoid using nxsched_get_stateinfo in case it's not available.
+
+    :param state: enum tstate_e
+    :return: readable string
+    """
+    return {
+        "TSTATE_TASK_INVALID": "Invalid",
+        "TSTATE_TASK_PENDING": "Waiting,Unlock",
+        "TSTATE_TASK_READYTORUN": "Ready",
+        "TSTATE_TASK_ASSIGNED": "Assigned",
+        "TSTATE_TASK_RUNNING": "Running",
+        "TSTATE_TASK_INACTIVE": "Inactive",
+        "TSTATE_WAIT_SEM": "Waiting,Semaphore",
+        "TSTATE_WAIT_SIG": "Waiting,Signal",
+        "TSTATE_WAIT_MQNOTEMPTY": "Waiting,MQ empty",
+        "TSTATE_WAIT_MQNOTFULL": "Waiting,MQ full",
+        "TSTATE_WAIT_PAGEFILL": "Waiting,Paging fill",
+        "TSTATE_TASK_STOPPED": "Stopped",
+    }.get(state.name, "Unknown")
+
+
 class NxRegisters:
     saved_regs = None
 
     def __init__(self):
+        self._registers = None
+
+    @property
+    def registers(self):
+        if self._registers:
+            return self._registers
+
         elf = gdb.objfiles()[0]
         elf = LiefELF(elf.filename)
-
-        def read_memory(addr, size):
-            return bytes(gdb.selected_inferior().read_memory(addr, size))
 
         mapped_arch_name = get_arch_name()
         if not mapped_arch_name:
             raise ValueError("Architecture is not found in g_reg_table.\n")
 
-        print(f"Register set for: {mapped_arch_name}")
-        self.registers = Registers(elf, arch=mapped_arch_name, readmem=read_memory)
+        def read_memory(addr, size):
+            return bytes(gdb.selected_inferior().read_memory(addr, size))
+
+        self._registers = Registers(elf, arch=mapped_arch_name, readmem=read_memory)
+        return self._registers
 
     def load(self, regs: Union[int, gdb.Value] = None):
         """Load registers from context register address"""
@@ -203,7 +265,6 @@ class Nxinfothreads(gdb.Command):
     def invoke(self, args, from_tty):
         npidhash = utils.parse_and_eval("g_npidhash")
         pidhash = utils.parse_and_eval("g_pidhash")
-        statenames = utils.parse_and_eval("nxsched_get_stateinfo::g_statenames")
 
         if utils.is_target_smp():
             gdb.write(
@@ -226,7 +287,7 @@ class Nxinfothreads(gdb.Command):
             thread = f"Thread {hex(tcb)}"
             index = f"*{i}" if utils.task_is_running(tcb) else f" {i}"
 
-            statename = statenames[tcb["task_state"]].string()
+            statename = get_task_state_desc(tcb["task_state"])
             statename = f'\x1b{"[32;1m" if statename == "Running" else "[33;1m"}{statename}\x1b[m'
 
             if tcb["task_state"] == utils.parse_and_eval("TSTATE_WAIT_SEM"):
@@ -406,27 +467,6 @@ class TaskSchedPolicy(Enum):
     SPORADIC = 2
 
 
-class TaskState(Enum):
-    Invalid = 0
-    Waiting_Unlock = auto()
-    Ready = auto()
-    if utils.get_symbol_value("CONFIG_SMP"):
-        Assigned = auto()
-    Running = auto()
-    Inactive = auto()
-    Waiting_Semaphore = auto()
-    Waiting_Signal = auto()
-    if not utils.get_symbol_value(
-        "CONFIG_DISABLE_MQUEUE"
-    ) or not utils.get_symbol_value("CONFIG_DISABLE_MQUEUE_SYSV"):
-        Waiting_MQEmpty = auto()
-        Waiting_MQFull = auto()
-    if utils.get_symbol_value("CONFIG_PAGING"):
-        Waiting_PagingFill = auto()
-    if utils.get_symbol_value("CONFIG_SIG_SIGSTOP_ACTION"):
-        Stopped = auto()
-
-
 class Ps(gdb.Command):
     def __init__(self):
         super().__init__("ps", gdb.COMMAND_USER)
@@ -437,21 +477,6 @@ class Ps(gdb.Command):
         self._mutex_t_ptr_type = None
         self._sem_t_ptr_type = None
         self._pthread_tcb_s_ptr_type = None
-        self.macros = {
-            "TCB_FLAG_POLICY_MASK": utils.get_symbol_value("TCB_FLAG_POLICY_MASK"),
-            "TCB_FLAG_POLICY_SHIFT": utils.get_symbol_value("TCB_FLAG_POLICY_SHIFT"),
-            "TCB_FLAG_TTYPE_MASK": utils.get_symbol_value("TCB_FLAG_TTYPE_MASK"),
-            "TCB_FLAG_TTYPE_SHIFT": utils.get_symbol_value("TCB_FLAG_TTYPE_SHIFT"),
-            "TCB_FLAG_EXIT_PROCESSING": utils.get_symbol_value(
-                "TCB_FLAG_EXIT_PROCESSING"
-            ),
-            "TCB_FLAG_TTYPE_PTHREAD": utils.get_symbol_value("TCB_FLAG_TTYPE_PTHREAD"),
-            "_SIGSET_NELEM": utils.get_symbol_value("_SIGSET_NELEM"),
-            "CONFIG_SCHED_CPULOAD_NONE": utils.get_symbol_value(
-                "CONFIG_SCHED_CPULOAD_NONE"
-            ),
-            "CONFIG_SMP": utils.get_symbol_value("CONFIG_SMP"),
-        }
 
     def get_cached_type(self, type_name):
         if type_name == "char_ptr_ptr" and not self._char_ptr_ptr_type:
@@ -478,17 +503,15 @@ class Ps(gdb.Command):
 
         policy = eval2str(
             TaskSchedPolicy,
-            (flags & self.macros.get("TCB_FLAG_POLICY_MASK"))
-            >> self.macros.get("TCB_FLAG_POLICY_SHIFT"),
+            (flags & TCB_FLAG_POLICY_MASK) >> TCB_FLAG_POLICY_SHIFT,
         )
 
         task_type = eval2str(
             TaskType,
-            (flags & self.macros.get("TCB_FLAG_TTYPE_MASK"))
-            >> self.macros.get("TCB_FLAG_TTYPE_SHIFT"),
+            (flags & TCB_FLAG_TTYPE_MASK) >> TCB_FLAG_TTYPE_SHIFT,
         )
 
-        npx = "P" if (flags & self.macros.get("TCB_FLAG_EXIT_PROCESSING")) else "-"
+        npx = "P" if (flags & TCB_FLAG_EXIT_PROCESSING) else "-"
 
         waiter = ""
         if tcb["waitobj"]:
@@ -497,10 +520,10 @@ class Ps(gdb.Command):
                 mutex = tcb["waitobj"].cast(utils.lookup_type("sem_t").pointer())
                 waiter = str(utils.mutex_get_holder(mutex))
 
-        state_and_event = eval2str(TaskState, (tcb["task_state"]))
+        state_and_event = get_task_state_desc(int(tcb["task_state"]))
         if waiter:
             state_and_event += "@MutexHolder: " + waiter
-        state_and_event = state_and_event.split("_")
+        state_and_event = state_and_event.split(",")
 
         # Append a null str here so we don't need to worry
         # about the number of elements as we only want the first two
@@ -509,11 +532,8 @@ class Ps(gdb.Command):
         )
 
         sigmask = "{0:#0{1}x}".format(
-            sum(
-                int(tcb["sigprocmask"]["_elem"][i] << i)
-                for i in range(self.macros.get("_SIGSET_NELEM"))
-            ),
-            self.macros.get("_SIGSET_NELEM") * 8 + 2,
+            sum(int(tcb["sigprocmask"]["_elem"][i] << i) for i in range(_SIGSET_NELEM)),
+            _SIGSET_NELEM * 8 + 2,
         )[
             2:
         ]  # exclude "0x"
@@ -528,16 +548,14 @@ class Ps(gdb.Command):
         used = st.max_usage()
         filled = "{0:.2%}".format(used / stacksz)
 
-        cpu = int(tcb["cpu"]) if self.macros.get("CONFIG_SMP") else 0
+        cpu = int(tcb["cpu"]) if utils.is_target_smp() else 0
 
         # For a task we need to display its cmdline arguments, while for a thread we display
         # pointers to its entry and argument
         cmd = ""
         name = utils.get_task_name(tcb)
 
-        if (flags & self.macros.get("TCB_FLAG_TTYPE_MASK")) == self.macros.get(
-            "TCB_FLAG_TTYPE_PTHREAD"
-        ):
+        if (flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_PTHREAD:
             entry = tcb["entry"]["main"]
             ptcb = tcb.cast(utils.lookup_type("struct pthread_entry_s").pointer())
             arg = ptcb["arg"]
@@ -557,7 +575,7 @@ class Ps(gdb.Command):
                 parg += 1
             cmd = " ".join([name] + args)
 
-        if not self.macros.get("CONFIG_SCHED_CPULOAD_NONE"):
+        if not CONFIG_SCHED_CPULOAD_NONE:
             g_cpuload_total = int(utils.parse_and_eval("g_cpuload_total"))
             load = "{0:.1%}".format(
                 int(tcb["ticks"]) / g_cpuload_total if g_cpuload_total else 0
@@ -648,9 +666,7 @@ class Ps(gdb.Command):
                         self._fmt_wx.format("NPX", width=3),
                         self._fmt_wxl.format("STATE", width=8),
                         self._fmt_wxl.format("EVENT", width=9),
-                        self._fmt_wxl.format(
-                            "SIGMASK", width=utils.get_symbol_value("_SIGSET_NELEM") * 8
-                        ),
+                        self._fmt_wxl.format("SIGMASK", width=_SIGSET_NELEM * 8),
                         self._fmt_wx.format("STACK", width=7),
                         self._fmt_wx.format("USED", width=7),
                         self._fmt_wx.format("FILLED", width=3),

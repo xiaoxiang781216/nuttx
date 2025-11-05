@@ -24,8 +24,8 @@ import gdb
 
 from . import utils
 
-CONFIG_RAMLOG_SYSLOG = utils.get_symbol_value("CONFIG_RAMLOG_SYSLOG")
-CONFIG_SYSLOG_RPMSG = utils.get_symbol_value("CONFIG_SYSLOG_RPMSG")
+CONFIG_RAMLOG_SYSLOG = utils.get_static_symbol("g_ramlog_channel_ops")
+CONFIG_SYSLOG_RPMSG = utils.get_static_symbol("g_rpmsg_channel_ops")
 
 
 class Dmesg(gdb.Command):

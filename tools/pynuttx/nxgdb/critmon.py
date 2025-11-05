@@ -25,6 +25,8 @@ import gdb
 
 from . import utils
 
+CONFIG_SYSTEM_CRITMONITOR = utils.lookup_type("struct critmon_state_s") is not None
+
 
 @dataclass
 class CriticalData:
@@ -86,9 +88,10 @@ class Critmon(gdb.Command):
     """Dump critical resource busy-wait time"""
 
     def __init__(self):
-        if not utils.get_symbol_value("CONFIG_SYSTEM_CRITMONITOR"):
+        if not CONFIG_SYSTEM_CRITMONITOR:
             print("Critmon is not enabled in the current configuration")
             return
+
         super().__init__("critmon", gdb.COMMAND_USER)
 
     def process_task_critical_data(self, tcb):

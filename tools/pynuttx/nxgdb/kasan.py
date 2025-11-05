@@ -27,6 +27,17 @@ import gdb
 
 from . import utils
 
+# Detect which kasan is enabled by check source file name of function
+kasan_set_poison = utils.get_static_symbol("kasan_set_poison")
+kasan_file = kasan_set_poison.symtab.filename if kasan_set_poison else ""
+
+CONFIG_MM_KASAN_GENERIC = "generic.c" in kasan_file
+CONFIG_MM_KASAN_SW_TAGS = "sw_tags.c" in kasan_file
+CONFIG_MM_KASAN_GLOBAL = utils.lookup_type("struct kasan_global_region_s") is not None
+CONFIG_MM_KASAN = (
+    CONFIG_MM_KASAN_GENERIC or CONFIG_MM_KASAN_SW_TAGS or CONFIG_MM_KASAN_GLOBAL
+)
+
 
 class KASanGeneric:
     def __init__(self, scope, begin, end, shadow, bitwidth, scale, shift=0):
@@ -87,7 +98,7 @@ command_actions = {
 class KASan(gdb.Command):
 
     def __init__(self):
-        if utils.get_symbol_value("CONFIG_MM_KASAN") is None:
+        if CONFIG_MM_KASAN is None:
             return
 
         super().__init__("kasan", gdb.COMMAND_USER)
@@ -131,14 +142,15 @@ class KASan(gdb.Command):
 
         """ Common bit width and kasan alignment length in multiple modes """
         bitwidth = utils.sizeof("long") * 8
-        scale = utils.get_symbol_value("KASAN_SHADOW_SCALE")
+        KASAN_SHADOW_SCALE = utils.sizeof("uintptr_t")
+        scale = KASAN_SHADOW_SCALE
 
         """ Get the array of KASan regions """
         region_count = utils.parse_and_eval("g_region_count")
         region = utils.parse_and_eval("g_region")
 
         self.regions: list[KASanGeneric] = []
-        if utils.get_symbol_value("CONFIG_MM_KASAN_GENERIC") is not None:
+        if CONFIG_MM_KASAN_GENERIC:
             print("KASan Mode: Generic")
             for region in utils.ArrayIterator(region, region_count):
                 self.regions.append(
@@ -152,9 +164,10 @@ class KASan(gdb.Command):
                     )
                 )
 
-        if utils.get_symbol_value("CONFIG_MM_KASAN_SW_TAGS") is not None:
+        if CONFIG_MM_KASAN_SW_TAGS:
             print("KASan Mode: Softtags")
-            shift = utils.get_symbol_value("KASAN_TAG_SHIFT")
+            KASAN_TAG_SHIFT = 56
+            shift = KASAN_TAG_SHIFT
             for region in utils.ArrayIterator(region, region_count):
                 self.regions.append(
                     KASanSwtags(
@@ -168,9 +181,9 @@ class KASan(gdb.Command):
                     )
                 )
 
-        if utils.get_symbol_value("CONFIG_MM_KASAN_GLOBAL") is not None:
+        if CONFIG_MM_KASAN_GLOBAL:
             print("KASan Support Checking Global Variables")
-            scale = utils.get_symbol_value("CONFIG_MM_KASAN_GLOBAL_ALIGN")
+            scale = utils.parse_and_eval("g_kasan_global_align")
             global_region = utils.parse_and_eval("g_global_region")
             for index in itertools.count(0):
                 if global_region[index] == 0:

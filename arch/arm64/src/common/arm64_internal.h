@@ -89,7 +89,7 @@
  * logic.
  */
 
-#define STACK_COLOR    0xdeaddead
+#define STACK_COLOR    0xdeadbeef
 #define HEAP_COLOR     'h'
 
 #ifdef CONFIG_SMP

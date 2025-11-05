@@ -24,7 +24,7 @@ import gdb
 
 from . import utils
 
-PM_COUNT = utils.get_symbol_value("PM_COUNT")
+PM_COUNT = utils.get_field_nitems("struct pm_domain_s", "wakelock")
 
 
 class PMStateInfo:
@@ -64,7 +64,8 @@ class Pmconfig(gdb.Command):
     state_header = ("WAKE", "SLEEP", "TOTAL")
 
     def __init__(self):
-        super().__init__("pmconfig", gdb.COMMAND_USER)
+        if PM_COUNT:
+            super().__init__("pmconfig", gdb.COMMAND_USER)
 
     def get_time_str(self, time_val, sum_time):
         percentage = (time_val / sum_time) * 100 if sum_time > 0 else 0

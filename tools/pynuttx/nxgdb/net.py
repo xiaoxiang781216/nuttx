@@ -31,11 +31,20 @@ socket = utils.import_check(
     "socket", errmsg="No socket module found, please try gdb-multiarch instead.\n"
 )
 
-NET_IPv4 = utils.get_symbol_value("CONFIG_NET_IPv4")
-NET_IPv6 = utils.get_symbol_value("CONFIG_NET_IPv6")
+CONFIG_NET = utils.lookup_type("struct socket") is not None
+if CONFIG_NET:
+    CONFIG_NET_IPv4 = utils.has_field("struct net_driver_s", "d_ipaddr")
+    CONFIG_NET_IPv6 = utils.has_field("struct net_driver_s", "d_ipv6draddr")
+else:
+    CONFIG_NET_IPv4 = False
+    CONFIG_NET_IPv6 = False
 
-AF_INET = utils.get_symbol_value("AF_INET")
-AF_INET6 = utils.get_symbol_value("AF_INET6")
+# See include/sys/socket.h
+PF_INET = 2
+PF_INET6 = 10
+
+AF_INET = PF_INET
+AF_INET6 = PF_INET6
 
 
 def ntohs(val):
@@ -49,7 +58,7 @@ def ntohs(val):
 def get_ip_port(conn):
     """Get the IP address and port of a network connection"""
 
-    domain = utils.get_field(conn, "domain", AF_INET if NET_IPv4 else AF_INET6)
+    domain = utils.get_field(conn, "domain", AF_INET if CONFIG_NET_IPv4 else AF_INET6)
     ip_binding = conn["u"]["ipv4" if domain == AF_INET else "ipv6"]
     lport = ntohs(conn["lport"])
     rport = ntohs(conn["rport"])
@@ -101,7 +110,8 @@ def tcp_ofoseg_bufsize(conn):
     """Calculate the pending size of out-of-order buffer of a tcp connection"""
 
     total = 0
-    if utils.get_symbol_value("CONFIG_NET_TCP_OUT_OF_ORDER"):
+    CONFIG_NET_TCP_OUT_OF_ORDER = utils.has_field("struct tcp_conn_s", "ofosegs")
+    if CONFIG_NET_TCP_OUT_OF_ORDER:
         total = sum(
             seg["data"]["io_pktlen"]
             for seg in utils.ArrayIterator(conn["ofosegs"], conn["nofosegs"])
@@ -120,7 +130,7 @@ class NetStats(gdb.Command):
     """
 
     def __init__(self):
-        if utils.get_symbol_value("CONFIG_NET"):
+        if CONFIG_NET:
             super().__init__("netstats", gdb.COMMAND_USER)
 
     def iob_stats(self):
@@ -271,7 +281,7 @@ class NetCheck(gdb.Command):
     """Network check"""
 
     def __init__(self):
-        if utils.get_symbol_value("CONFIG_NET"):
+        if CONFIG_NET:
             super().__init__("netcheck", gdb.COMMAND_USER)
 
     def diagnose(self, *args, **kwargs):

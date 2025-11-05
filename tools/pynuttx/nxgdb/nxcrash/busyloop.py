@@ -23,6 +23,7 @@
 import gdb
 
 from .. import backtrace, utils
+from ..thread import CONFIG_SCHED_CPULOAD_NONE
 
 BUSYLOOP_THRESHOLD = 0.9 / utils.get_ncpus()
 
@@ -31,7 +32,7 @@ class CrashBusyloop(gdb.Command):
     """Analyse and collect the busyloop threads"""
 
     def __init__(self):
-        if not utils.get_symbol_value("CONFIG_SCHED_CPULOAD_NONE"):
+        if not CONFIG_SCHED_CPULOAD_NONE:
             super().__init__("crash busyloop", gdb.COMMAND_USER)
 
     def collect(self, tcbs):

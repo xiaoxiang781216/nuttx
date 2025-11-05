@@ -24,6 +24,8 @@ import gdb
 
 from . import autocompeletion, lists, utils
 
+CONFIG_LIBUV = utils.lookup_type("struct uv_loop_s") is not None
+
 
 @autocompeletion.complete
 class UVDump(gdb.Command):
@@ -56,7 +58,7 @@ class UVDump(gdb.Command):
         return parser
 
     def __init__(self):
-        if not utils.get_symbol_value("CONFIG_LIBUV"):
+        if not CONFIG_LIBUV:
             return
         super(UVDump, self).__init__("uvdump", gdb.COMMAND_USER)
         self.parser = self.get_argparser()

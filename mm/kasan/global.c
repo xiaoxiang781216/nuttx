@@ -40,6 +40,10 @@
 #define KASAN_GLOBAL_LAST_WORD_MASK(end) \
   (UINTPTR_MAX >> (-(end) & (KASAN_BITS_PER_WORD - 1)))
 
+/* Add const variable to make debug easier, see kasan.py */
+
+static const uintptr_t g_kasan_global_align = CONFIG_MM_KASAN_GLOBAL_ALIGN;
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
