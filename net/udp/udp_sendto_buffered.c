@@ -389,6 +389,16 @@ static uint16_t sendto_eventhandler(FAR struct net_driver_s *dev,
 {
   FAR struct udp_conn_s *conn = pvpriv;
 
+  if (dev == NULL)
+    {
+      nerr("ERROR: sendto_eventhandler dev is NULL\n");
+    }
+
+  if (conn == NULL)
+    {
+      nerr("ERROR: sendto_eventhandler conn is NULL\n");
+    }
+
   DEBUGASSERT(dev != NULL && conn != NULL);
 
   ninfo("flags: %04x\n", flags);
