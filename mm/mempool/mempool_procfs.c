@@ -163,7 +163,7 @@ static ssize_t mempool_read(FAR struct file *filep, FAR char *buffer,
         }
     }
 
-  filep->f_pos += totalsize;
+  filep->f_pos += (off_t)totalsize;
   return totalsize;
 }
 

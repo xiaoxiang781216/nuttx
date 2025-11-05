@@ -338,8 +338,8 @@ mempool_multiple_get_dict(FAR struct mempool_multiple_s *mpool,
               addr = kasan_clear_tag(addr);
               if (kasan_clear_tag(mpool->dict[row]) != NULL &&
                   kasan_clear_tag(mpool->dict[row][col].addr) == addr &&
-                  ((FAR char *)kasan_clear_tag(blk) -
-                   (FAR char *)addr < mpool->dict[row][col].size))
+                  ((size_t)((FAR char *)kasan_clear_tag(blk) -
+                   (FAR char *)addr) < mpool->dict[row][col].size))
                 {
                   ret = &mpool->dict[row][col];
                 }
@@ -638,7 +638,7 @@ int mempool_multiple_free(FAR struct mempool_multiple_s *mpool,
   dict = mempool_multiple_get_dict(mpool, blk);
   if (dict != NULL)
     {
-      blk = (FAR char *)blk - (((FAR char *)kasan_clear_tag(blk) -
+      blk = (FAR char *)blk - ((size_t)((FAR char *)kasan_clear_tag(blk) -
                                 ((FAR char *)kasan_clear_tag(dict->addr) +
                                  mpool->minpoolsize)) %
                                MEMPOOL_REALBLOCKSIZE(dict->pool->blocksize));
