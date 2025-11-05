@@ -279,8 +279,9 @@ FAR struct net_driver_s *netdev_default(void);
  *   data is available.
  *
  * Input Parameters:
- *   lipaddr - The local address bound to the socket
- *   ripaddr - The remote address to send the data
+ *   lipaddr  - The local address bound to the socket
+ *   ripaddr  - The remote address to send the data
+ *   polltype - The type of poll to be triggered for the device.
  *
  * Returned Value:
  *  None
@@ -288,7 +289,8 @@ FAR struct net_driver_s *netdev_default(void);
  ****************************************************************************/
 
 #ifdef CONFIG_NET_IPv4
-void netdev_ipv4_txnotify(in_addr_t lipaddr, in_addr_t ripaddr);
+void netdev_ipv4_txnotify(in_addr_t lipaddr, in_addr_t ripaddr,
+                          uint32_t polltype);
 #endif /* CONFIG_NET_IPv4 */
 
 /****************************************************************************
@@ -299,8 +301,9 @@ void netdev_ipv4_txnotify(in_addr_t lipaddr, in_addr_t ripaddr);
  *   data is available.
  *
  * Input Parameters:
- *   lipaddr - The local address bound to the socket
- *   ripaddr - The remote address to send the data
+ *   lipaddr  - The local address bound to the socket
+ *   ripaddr  - The remote address to send the data
+ *   polltype - The type of poll to be triggered for the device.
  *
  * Returned Value:
  *  None
@@ -309,7 +312,8 @@ void netdev_ipv4_txnotify(in_addr_t lipaddr, in_addr_t ripaddr);
 
 #ifdef CONFIG_NET_IPv6
 void netdev_ipv6_txnotify(FAR const net_ipv6addr_t lipaddr,
-                          FAR const net_ipv6addr_t ripaddr);
+                          FAR const net_ipv6addr_t ripaddr,
+                          uint32_t polltype);
 #endif /* CONFIG_NET_IPv6 */
 
 /****************************************************************************
@@ -321,14 +325,15 @@ void netdev_ipv6_txnotify(FAR const net_ipv6addr_t lipaddr,
  *   packet will be routed.
  *
  * Input Parameters:
- *   dev - The network device driver state structure.
+ *   dev      - The network device driver state structure.
+ *   polltype - The type of poll to be triggered for the device.
  *
  * Returned Value:
  *  None
  *
  ****************************************************************************/
 
-void netdev_txnotify_dev(FAR struct net_driver_s *dev);
+void netdev_txnotify_dev(FAR struct net_driver_s *dev, uint32_t polltype);
 
 /****************************************************************************
  * Name: netdev_count
