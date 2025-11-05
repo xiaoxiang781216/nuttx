@@ -981,7 +981,7 @@ config ESP32S2_SPIRAM_BOOT_INIT
 
 config ESP32S2_SPIRAM_IGNORE_NOTFOUND
 	bool "Ignore PSRAM when not found"
-	default "n"
+	default n
 	depends on ESP32S2_SPIRAM_BOOT_INIT && !BOOT_SDRAM_DATA
 	---help---
 		Normally, if PSRAM initialization is enabled during compile time

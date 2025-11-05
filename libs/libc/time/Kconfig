@@ -7,7 +7,7 @@ menu "Time/Time Zone Support"
 
 config LIBC_LOCALTIME
 	bool "localtime API call support"
-	default "n"
+	default n
 	depends on !DISABLE_ENVIRON
 	---help---
 		localtime API call support

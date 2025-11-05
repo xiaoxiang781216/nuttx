@@ -1231,7 +1231,7 @@ config ARCH_USBDUMP
 
 config ARCH_DEADLOCKDUMP
 	bool "Dump dead lock thread"
-	default "n"
+	default n
 	---help---
 		This option will dump the dead lock thread when assert happen.
 
