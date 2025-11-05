@@ -280,6 +280,77 @@ def get_field_nitems(t: TypeOrStr, field: str) -> int:
 
     return 0
 
+
+def get_static_symbol(name: str, domain=None) -> Optional[gdb.Symbol]:
+    """
+    Return a global symbol with static linkage by name.
+
+    Looks up all static symbols matching the given name and returns the first
+    one that is not optimized out. This is useful when multiple static symbols
+    with the same name exist across different compilation units, and some may
+    be optimized away by the compiler.
+
+    Args:
+        name: The symbol name to look up
+        domain: Optional symbol domain (e.g., gdb.SYMBOL_VAR_DOMAIN)
+
+    Returns:
+        The first non-optimized static symbol, or None if not found
+    """
+    try:
+        symbols = (
+            gdb.lookup_static_symbols(name, domain=domain)
+            if domain is not None
+            else gdb.lookup_static_symbols(name)
+        )
+
+        for sym in symbols:
+            if sym.value().is_optimized_out:
+                continue
+            return sym
+    except gdb.error:
+        pass
+
+    return None
+
+
+def get_global_symbol(name: str, domain=None) -> Optional[gdb.Symbol]:
+    """Return the global symbol object"""
+    return (
+        gdb.lookup_global_symbol(name, domain=domain)
+        if domain is not None
+        else gdb.lookup_global_symbol(name)
+    )
+
+
+def get_static_var(name: str) -> Optional[gdb.Symbol]:
+    return get_static_symbol(name, domain=gdb.SYMBOL_VAR_DOMAIN)
+
+
+def get_global_var(name: str) -> Optional[gdb.Symbol]:
+    """Return global symbol by name, including static linkage symbols"""
+    return gdb.lookup_global_symbol(
+        name, domain=gdb.SYMBOL_VAR_DOMAIN
+    ) or get_static_var(name)
+
+
+def get_global_func(name: str) -> Optional[gdb.Symbol]:
+    """Return global function symbol by name"""
+    return gdb.lookup_global_symbol(name, domain=gdb.SYMBOL_FUNCTION_DOMAIN)
+
+
+def get_global_func_block(name: str) -> Optional[gdb.Block]:
+    """Return the function block by function name"""
+    # name to address
+    symbol = get_global_func(name)
+    if not symbol:
+        return None
+
+    address = symbol.value().address
+    # address to block
+    return gdb.block_for_pc(int(address))
+
+
 long_type = lookup_type("long")
 
 
@@ -595,7 +666,7 @@ def alias(name, command):
         pass
 
 
-def nitems(array: Union[gdb.Field, gdb.Type]) -> int:
+def nitems(array: Union[gdb.Field, gdb.Type, gdb.Symbol]) -> int:
     array_type = array.type
     element_type = array_type.target()
     element_size = element_type.sizeof
