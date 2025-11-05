@@ -262,3 +262,37 @@ void elf_fixup_uninitialize(void)
 {
   unregister_binfmt(&g_elf_fixup_binfmt);
 }
+
+/****************************************************************************
+ * Name: elf_fixup_ramstart
+ *
+ * Description:
+ *   Return the start address of RAM segment from elf fixup table
+ *
+ * Returned Value:
+ *   ram start address
+ *
+ ****************************************************************************/
+
+uintptr_t elf_fixup_ramstart(void)
+{
+  FAR const struct elf_fixup_s *fixup = FIXUP_TABLE;
+  uintptr_t ramstart = UINTPTR_MAX;
+  int i;
+
+  for (; fixup->entry != 0; fixup--)
+    {
+      for (i = 0; i < CONFIG_ELF_FIXUP_NSEGMENTS; i++)
+        {
+          if (fixup->phdr[i].p_type == PT_LOAD &&
+              fixup->phdr[i].p_flags & PF_W &&
+              fixup->phdr[i].p_vaddr != 0 &&
+              ramstart > fixup->phdr[i].p_vaddr)
+            {
+              ramstart = fixup->phdr[i].p_vaddr;
+            }
+        }
+    }
+
+  return ramstart;
+}

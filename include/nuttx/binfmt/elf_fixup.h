@@ -55,4 +55,21 @@ struct elf_fixup_s
 };
 #endif
 
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: elf_fixup_ramstart
+ *
+ * Description:
+ *   Return the start address of RAM segment from elf fixup table
+ *
+ * Returned Value:
+ *   ram start address
+ *
+ ****************************************************************************/
+
+uintptr_t elf_fixup_ramstart(void);
+
 #endif /* __INCLUDE_NUTTX_BINFMT_ELF_FIXUP_H */
