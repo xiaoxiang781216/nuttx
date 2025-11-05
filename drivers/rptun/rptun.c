@@ -912,6 +912,10 @@ static int rptun_dev_stop(FAR struct remoteproc *rproc)
 
 static void rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
 {
+  int timeout = CONFIG_RPTUN_STATUS_TIMEOUT_MS;
+  FAR struct rptun_status_s *status =
+    RPTUN_RSC2STATUS(priv->rproc.rsc_table);
+
   if (priv->dev->ops->reset)
     {
       priv->dev->ops->reset(priv->dev, val);
@@ -919,6 +923,17 @@ static void rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
   else
     {
       rptun_set_status(priv, val);
+
+      while (timeout-- > 0)
+        {
+          if (RPTUN_STATUS_CHECK(RPTUN_IS_MASTER(priv->dev) ? status->slave :
+                                 status->master, val))
+            {
+              break;
+            }
+
+          up_udelay(1000);
+        }
     }
 }
 
@@ -1149,10 +1164,8 @@ static int rptun_notifier(FAR struct notifier_block *block,
 {
   if (block == &g_rptun_reboot_nb)
     {
-      if (action == SYS_RESTART || action == SYS_POWER_OFF)
-        {
-          rptun_ioctl_foreach(NULL, RPTUNIOC_RESET, (unsigned long)data);
-        }
+      rptun_ioctl_foreach(NULL, RPTUNIOC_RESET, action == SYS_HALT ?
+        BOARDIOC_SOFTRESETCAUSE_ASSERT : (unsigned long)data);
     }
   else if (action == PANIC_KERNEL_FINAL)
     {
