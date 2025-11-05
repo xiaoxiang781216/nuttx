@@ -205,6 +205,11 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
       pthread_attr_init(&default_attr);
       attr = &default_attr;
     }
+  else if (attr->priority < SCHED_PRIORITY_MIN ||
+           attr->priority > SCHED_PRIORITY_MAX)
+    {
+      return EINVAL;
+    }
 
   /* Allocate a TCB for the new task. */
 
