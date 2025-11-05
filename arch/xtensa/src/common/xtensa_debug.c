@@ -394,7 +394,6 @@ int up_debugpoint_add(int type, void *addr, size_t size,
                       debug_callback_t callback, void *arg)
 {
   int slot;
-  int ret = OK;
 
   switch (type)
     {
