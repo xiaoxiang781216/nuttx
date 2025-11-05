@@ -58,6 +58,9 @@ static char g_version[] = CONFIG_VERSION_BUILD " " __DATE__ " " __TIME__;
 static char g_version[] = CONFIG_VERSION_BUILD;
 #endif
 
+static const char g_arch[] = CONFIG_ARCH;
+static const char g_release[] = CONFIG_VERSION_STRING;
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -103,11 +106,9 @@ int uname(FAR struct utsname *name)
   ret = gethostname(name->nodename, HOST_NAME_MAX);
   name->nodename[HOST_NAME_MAX - 1] = '\0';
 
-  strlcpy(name->release,  CONFIG_VERSION_STRING, sizeof(name->release));
-
+  strlcpy(name->release,  g_release, sizeof(name->release));
   strlcpy(name->version,  g_version, sizeof(name->version));
-
-  strlcpy(name->machine,  CONFIG_ARCH, sizeof(name->machine));
+  strlcpy(name->machine,  g_arch, sizeof(name->machine));
 
   return ret;
 }

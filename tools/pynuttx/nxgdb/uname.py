@@ -42,11 +42,19 @@ def get_commit_id():
         return "unknown"
 
 
+def get_symbol_string(symbol):
+    sym = utils.get_static_var(symbol)
+    if not sym or not sym.value():
+        return ""
+
+    return sym.value().string()
+
+
 kernel_name = "NuttX"
-node_name = str(utils.get_symbol_value("CONFIG_LIBC_HOSTNAME")).replace('"', "")
-kernel_release = str(utils.get_symbol_value("CONFIG_VERSION_STRING")).replace('"', "")
-kernel_version = str(utils.parse_and_eval("g_version")).replace('"', "")
-machine = str(utils.get_symbol_value("CONFIG_ARCH")).replace('"', "")
+node_name = get_symbol_string("g_hostname")
+kernel_release = get_symbol_string("g_release")
+kernel_version = get_symbol_string("g_version")
+machine = get_symbol_string("g_arch")
 tool_version = get_commit_id()
 
 
