@@ -164,11 +164,7 @@ static int oneshot_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&priv->od_lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
+  nxmutex_lock(&priv->od_lock);
 
   /* Handle oneshot timer ioctl commands */
 
