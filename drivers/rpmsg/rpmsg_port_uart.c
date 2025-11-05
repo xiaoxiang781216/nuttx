@@ -135,7 +135,8 @@ rpmsg_port_uart_queue_noavail(FAR struct rpmsg_port_s *port,
                               FAR struct rpmsg_port_queue_s *queue);
 static void rpmsg_port_uart_register_callback(FAR struct rpmsg_port_s *port,
                                               rpmsg_port_rx_cb_t callback);
-static void rpmsg_port_uart_dump(FAR struct rpmsg_port_s *port);
+static void rpmsg_port_uart_dump(FAR struct rpmsg_port_s *port,
+                                 bool verbose);
 
 static void rpmsg_port_uart_rx_worker(FAR struct rpmsg_port_uart_s *rpuart,
                                       bool process_rx);
