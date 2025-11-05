@@ -253,6 +253,43 @@ void mpu_modify_region(unsigned int region, uintptr_t base, size_t size,
 }
 
 /****************************************************************************
+ * Name: mpu_enable_region
+ *
+ * Description:
+ *   Contrl a region enable or disable
+ *
+ * Input Parameters:
+ *   region - The index of the MPU region to modify.
+ *   enable - A boolean indicating whether to enable or disable the region.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void mpu_enable_region(unsigned int region, bool enable)
+{
+  uintptr_t limit;
+
+  /* Select the region */
+
+  putreg32(region, MPU_RNR);
+  limit = getreg32(MPU_RLAR);
+  if (enable)
+    {
+      putreg32(limit | MPU_RLAR_ENABLE, MPU_RLAR);
+    }
+  else
+    {
+      putreg32(limit & ~MPU_RLAR_ENABLE, MPU_RLAR);
+    }
+
+  /* Ensure MPU setting take effects */
+
+  UP_MB();
+}
+
+/****************************************************************************
  * Name: mpu_configure_region
  *
  * Description:
@@ -403,9 +440,10 @@ void mpu_dump_region(void)
       rlar = getreg32(MPU_RLAR);
       rbar = getreg32(MPU_RBAR);
       _info("MPU-%d, 0x%08"PRIx32"-0x%08"PRIx32" SH=%"PRIx32" AP=%"PRIx32""
-            "XN=%"PRIu32"\n", i, rbar & MPU_RBAR_BASE_MASK,
+            "XN=%"PRIu32" ENABLE%"PRIu32"\n", i, rbar & MPU_RBAR_BASE_MASK,
             rlar & MPU_RLAR_LIMIT_MASK, rbar & MPU_RBAR_SH_MASK,
-            rbar & MPU_RBAR_AP_MASK, rbar & MPU_RBAR_XN);
+            rbar & MPU_RBAR_AP_MASK, rbar & MPU_RBAR_XN,
+            rlar & MPU_RLAR_ENABLE);
       if (rlar & MPU_RLAR_ENABLE)
         {
           count++;
