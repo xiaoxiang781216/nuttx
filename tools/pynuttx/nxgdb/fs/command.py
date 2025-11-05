@@ -41,7 +41,16 @@ from nxgdb.fs.inode import (
     inode_gettype,
     print_inode_info,
 )
-from nxgdb.fs.utils import CONFIG_FS_SHMFS
+
+from .utils import (
+    CONFIG_DISABLE_MOUNTPOINT,
+    CONFIG_FS_FATFS,
+    CONFIG_FS_LITTLEFS,
+    CONFIG_FS_LROFS,
+    CONFIG_FS_ROMFS_CACHE_NODE,
+    CONFIG_FS_SHMFS,
+    CONFIG_FS_YAFFS,
+)
 
 
 @autocompeletion.complete
@@ -177,7 +186,7 @@ class Fdinfo(gdb.Command):
 
 class Mount(gdb.Command):
     def __init__(self):
-        if not utils.get_symbol_value("CONFIG_DISABLE_MOUNTPOINT"):
+        if not CONFIG_DISABLE_MOUNTPOINT:
             super().__init__("mount", gdb.COMMAND_USER)
             self.mount_count = 0
 
@@ -259,7 +268,7 @@ class InfoRomfs(gdb.Command):
         return parser
 
     def __init__(self):
-        if utils.get_symbol_value("CONFIG_FS_ROMFS_CACHE_NODE"):
+        if CONFIG_FS_ROMFS_CACHE_NODE:
             super().__init__("info romfs", gdb.COMMAND_USER)
         self.parser = self.get_argparser()
 
@@ -309,7 +318,7 @@ class InfoLittlefs(gdb.Command):
         return parser
 
     def __init__(self):
-        if utils.get_symbol_value("CONFIG_FS_LITTLEFS"):
+        if CONFIG_FS_LITTLEFS:
             super().__init__("info littlefs", gdb.COMMAND_USER)
             self.parser = self.get_argparser()
 
@@ -358,7 +367,7 @@ class InfoYaffs(gdb.Command):
         return parser
 
     def __init__(self):
-        if utils.get_symbol_value("CONFIG_FS_YAFFS"):
+        if CONFIG_FS_YAFFS:
             super().__init__("info yaffs", gdb.COMMAND_USER)
         self.parser = self.get_argparser()
 
@@ -395,7 +404,7 @@ class InfoFatfs(gdb.Command):
     """Show fatfs information"""
 
     def __init__(self):
-        if utils.get_symbol_value("CONFIG_FS_FATFS"):
+        if CONFIG_FS_FATFS:
             super().__init__("info fatfs", gdb.COMMAND_USER)
 
     def parse_arguments(self, argv):
@@ -457,7 +466,7 @@ class InfoLrofs(gdb.Command):
         return parser
 
     def __init__(self):
-        if utils.get_symbol_value("CONFIG_FS_LROFS"):
+        if CONFIG_FS_LROFS:
             super().__init__("info lrofs", gdb.COMMAND_USER)
         self.parser = self.get_argparser()
 

@@ -24,19 +24,30 @@ from .. import utils
 
 FSNODEFLAG_TYPE_MASK = 0x0000000F
 
-CONFIG_PSEUDOFS_FILE = utils.get_symbol_value("CONFIG_PSEUDOFS_FILE")
-CONFIG_PSEUDOFS_ATTRIBUTES = utils.get_symbol_value("CONFIG_PSEUDOFS_ATTRIBUTES")
+CONFIG_PSEUDOFS_FILE = utils.lookup_type("struct fs_pseudofile_s") is not None
+CONFIG_PSEUDOFS_ATTRIBUTES = utils.has_field("struct inode", "i_mode")
 
 CONFIG_FS_BACKTRACE = utils.has_field("struct fd", "f_backtrace")
-CONFIG_FS_SHMFS = utils.get_symbol_value("CONFIG_FS_SHMFS")
+CONFIG_FS_SHMFS = utils.lookup_type("struct shmfs_object_s") is not None
 
 CONFIG_NFILE_DESCRIPTORS_PER_BLOCK = utils.get_field_nitems(
     "struct fdlist", "fl_prefds"
 )
 
-if CONFIG_NFILE_DESCRIPTORS_PER_BLOCK is None:
-    # For some branches, this field does not exist
-    CONFIG_NFILE_DESCRIPTORS_PER_BLOCK = (
-        int(utils.gdb_eval_or_none("CONFIG_NFILE_DESCRIPTORS_PER_BLOCK")) or 8
-    )
-    CONFIG_NFILE_DESCRIPTORS_PER_BLOCK = int(CONFIG_NFILE_DESCRIPTORS_PER_BLOCK)
+# see fs_mount.c
+CONFIG_DISABLE_MOUNTPOINT = utils.lookup_type("struct fsmap_t") is None
+
+# see fs_romfs.c
+CONFIG_FS_ROMFS_CACHE_NODE = utils.has_field("struct romfs_dir_s", "firstnode")
+
+# see lfs_vfs.c
+CONFIG_FS_LITTLEFS = utils.lookup_type("struct littlefs_file_s") is not None
+
+# see yaffs_vfs.c
+CONFIG_FS_YAFFS = utils.lookup_type("struct yaffs_file_s") is not None
+
+# see fatfs_vfs.c
+CONFIG_FS_FATFS = utils.lookup_type("struct fatfs_file_s") is not None
+
+# see fs_Irofs.c
+CONFIG_FS_LROFS = utils.lookup_type("struct lrofs_dir_s") is not None
