@@ -25,11 +25,13 @@
 #include <nuttx/config.h>
 #include <nuttx/init.h>
 
+#include <nuttx/binfmt/elf_fixup.h>
 #include <nuttx/cache.h>
 #include <nuttx/init.h>
 #include <arch/barriers.h>
 #include <arch/board/board.h>
 
+#include "hardware/mps_memorymap.h"
 #include "arm_internal.h"
 #include "nvic.h"
 #include "mps_irq.h"
@@ -41,6 +43,8 @@
  ****************************************************************************/
 
 #define HEAP_BASE ((uintptr_t)_ebss + CONFIG_IDLETHREAD_STACKSIZE)
+#define MPS_PERIPH_BASE    0x40000000
+#define MPS_PERIPH_SIZE    0x20000000
 
 /****************************************************************************
  * Public Data
@@ -182,6 +186,16 @@ void __start(void)
   /* Then enable the MPU */
 
   mpu_control(true, false, true);
+#endif
+
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_FLAT)
+  mpu_priv_intsram((uintptr_t)_sdata,
+                   elf_fixup_ramstart() - (uintptr_t)_sdata);
+  mpu_priv_intsram((uintptr_t)g_intstackalloc, CONFIG_ARCH_INTERRUPTSTACK);
+  mpu_user_flash((uintptr_t)CONFIG_ELF_FIXUP_FLASH_START,
+                 CONFIG_ELF_FIXUP_FLASH_SIZE);
+  mpu_peripheral(MPS_PERIPH_BASE, MPS_PERIPH_SIZE);
+  mpu_control(true, false, false);
 #endif
 
   /* Enable I- and D-Caches */

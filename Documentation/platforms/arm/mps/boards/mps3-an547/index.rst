@@ -78,6 +78,13 @@ Configuring and Running (Single Core)
      nsh> hello
      nsh> ostest
 
+7. flat_addrenv::
+
+     cmake -B ../build -DBOARD_CONFIG=boards/arm/mps/mps3-an547/configs/flat_addrenv
+     cmake --build ../build
+     qemu-system-arm -M mps3-an547 -m 2G -device loader,file=../build/nuttx.hex -gdb tcp::1128 -nographic
+     nsh> hello
+     nsh> ostest
 
 Debugging with QEMU
 ===================

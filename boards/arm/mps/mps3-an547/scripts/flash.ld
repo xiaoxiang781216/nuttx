@@ -95,6 +95,12 @@ SECTIONS
         *(.ram_vectors)
     } > sram1
 
+    .irq_stack : {
+        g_intstackalloc = .;
+        . += CONFIG_ARCH_INTERRUPTSTACK;
+        g_intstacktop = .;
+    } > sram1
+
     .data : ALIGN(4) {
         _sdata = ABSOLUTE(.);
         *(.data .data.*)

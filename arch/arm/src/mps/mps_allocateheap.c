@@ -31,6 +31,7 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/binfmt/elf_fixup.h>
 #include <nuttx/board.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/userspace.h>
@@ -202,6 +203,14 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
   *heap_size -= CONFIG_MM_KERNEL_HEAPSIZE;
 #  endif
 
+#  ifdef CONFIG_ELF_FIXUP
+  uintptr_t ram_start = elf_fixup_ramstart();
+  if ((uintptr_t)*heap_start < ram_start &&
+      ((uintptr_t)*heap_start + (uintptr_t)*heap_size > ram_start))
+    {
+      *heap_size = ram_start - (uintptr_t)*heap_start;
+    }
+#  endif
 #endif
 }
 
