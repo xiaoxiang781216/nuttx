@@ -273,11 +273,12 @@ def get_type_field(obj: Union[TypeOrStr, gdb.Value], field: str) -> gdb.Field:
                 return f
 
 
-def get_field_nitems(t: TypeOrStr, field: str) -> Union[int, None]:
-    """Return the array length of a field in type, or None if no such field"""
+def get_field_nitems(t: TypeOrStr, field: str) -> int:
+    """Return the array length of a field in type, or 0 if no such field"""
     if field := get_type_field(t, field):
         return nitems(field)
 
+    return 0
 
 long_type = lookup_type("long")
 

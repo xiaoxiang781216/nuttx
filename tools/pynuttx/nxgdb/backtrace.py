@@ -7,6 +7,10 @@ import gdb
 
 from . import autocompeletion, utils
 
+CONFIG_LIBC_BACKTRACE_DEPTH = utils.get_field_nitems(
+    "struct backtrace_entry_s", "stack"
+)
+
 
 class Backtrace:
     """

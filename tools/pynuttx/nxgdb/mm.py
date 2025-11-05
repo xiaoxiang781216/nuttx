@@ -28,6 +28,7 @@ from typing import Generator, List, Tuple
 import gdb
 
 from . import autocompeletion, backtrace, lists, utils
+from .backtrace import CONFIG_LIBC_BACKTRACE_DEPTH
 from .protocols import mm as p
 from .utils import Value
 
@@ -35,18 +36,13 @@ from .utils import Value
 # of utils.get_symbol_value("CONFIG_MM_RECORD_STACK") because the latter may report
 # wrong value on some platforms.
 
-CONFIG_MM_RECORD_STACK = utils.get_symbol_value("CONFIG_MM_RECORD_STACK") or 0
-CONFIG_LIBC_BACKTRACE_DEPTH = (
-    utils.get_field_nitems("struct backtrace_entry_s", "stack") or 0
-)
-MM_RECORD_STACK_DEPTH = (
-    int(CONFIG_LIBC_BACKTRACE_DEPTH) if int(CONFIG_MM_RECORD_STACK) else 0
-)
+CONFIG_MM_RECORD_STACK = utils.has_field("struct mm_freenode_s", "stack")
 CONFIG_MM_RECORD_PID = utils.has_field("struct mm_freenode_s", "pid")
 CONFIG_MM_RECORD_SEQNO = utils.has_field("struct mm_freenode_s", "seqno")
 CONFIG_MM_RECORD = (
-    CONFIG_MM_RECORD_STACK > 0 or CONFIG_MM_RECORD_PID or CONFIG_MM_RECORD_SEQNO
+    CONFIG_MM_RECORD_STACK or CONFIG_MM_RECORD_PID or CONFIG_MM_RECORD_SEQNO
 )
+MM_RECORD_STACK_DEPTH = CONFIG_LIBC_BACKTRACE_DEPTH if CONFIG_MM_RECORD_STACK else 0
 
 mempool_record_s = utils.lookup_type("struct mempool_record_s")
 mm_record_size = 0
