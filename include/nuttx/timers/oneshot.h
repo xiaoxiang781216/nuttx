@@ -430,10 +430,10 @@ int oneshot_cancel(FAR struct oneshot_lowerhalf_s *lower,
   int ret = OK;
 #ifdef CONFIG_ONESHOT_COUNT
   lower->ops->cancel(lower);
-  oneshot_current(lower, ts);
 #else
   ret = lower->ops->cancel(lower, ts);
 #endif
+  oneshot_current(lower, ts);
   return ret;
 }
 
@@ -674,19 +674,11 @@ int oneshot_tick_cancel(FAR struct oneshot_lowerhalf_s *lower,
   int ret = OK;
 #ifdef CONFIG_ONESHOT_COUNT
   lower->ops->cancel(lower);
-  oneshot_tick_current(lower, tick);
 #else
-  struct timespec ts =
-  {
-    0
-  };
-
+  struct timespec ts;
   ret = lower->ops->cancel(lower, &ts);
-
-  /* Converting timespec to ticks may overflow. */
-
-  *tick = clock_time2ticks_floor(&ts);
 #endif
+  oneshot_tick_current(lower, tick);
   return ret;
 }
 
