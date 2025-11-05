@@ -49,6 +49,12 @@ ifeq ($(CONFIG_ELF),y)
 CSRCS += elf.c
 endif
 
+# ELF fixup application interfaces
+
+ifeq ($(CONFIG_ELF_FIXUP),y)
+CSRCS += elf_fixup.c
+endif
+
 # NXFLAT application interfaces
 
 ifeq ($(CONFIG_NXFLAT),y)

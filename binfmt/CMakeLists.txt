@@ -54,6 +54,10 @@ if(CONFIG_ELF)
   list(APPEND SRCS elf.c)
 endif()
 
+if(CONFIG_ELF_FIXUP)
+  list(APPEND SRCS elf_fixup.c)
+endif()
+
 if(CONFIG_NXFLAT)
   list(APPEND SRCS nxflat.c)
 endif()

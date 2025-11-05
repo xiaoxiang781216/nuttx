@@ -66,6 +66,14 @@ void binfmt_initialize(void)
     }
 #endif
 
+#ifdef CONFIG_ELF_FIXUP
+  ret = elf_fixup_initialize();
+  if (ret < 0)
+    {
+      berr("ERROR: elf_fixup_initialize failed: %d\n", ret);
+    }
+#endif
+
 #ifdef CONFIG_NXFLAT
   ret = nxflat_initialize();
   if (ret < 0)

@@ -319,6 +319,37 @@ int elf_initialize(void);
 void elf_uninitialize(void);
 #endif
 
+#ifdef CONFIG_ELF_FIXUP
+/****************************************************************************
+ * Name: elf_fixup_initialize
+ *
+ * Description:
+ *   In order to use the elf fixup format, this function must be called
+ *   during system initialize to register the elf fixup binary format.
+ *
+ * Returned Value:
+ *   This is a NuttX internal function so it follows the convention that
+ *   0 (OK) is returned on success and a negated errno is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+int elf_fixup_initialize(void);
+
+/****************************************************************************
+ * Name: elf_fixup_uninitialize
+ *
+ * Description:
+ *   Unregister the elf fixup binary loader
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void elf_fixup_uninitialize(void);
+#endif
+
 #ifdef CONFIG_NXFLAT
 /****************************************************************************
  * Name: nxflat_initialize
