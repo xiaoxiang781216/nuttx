@@ -137,7 +137,6 @@ static void rpmsg_router_hub_ept_release(FAR struct rpmsg_endpoint *ept)
 static void rpmsg_router_hub_unbind(FAR struct rpmsg_endpoint *ept)
 {
   FAR struct rpmsg_endpoint *peer_ept = ept->priv;
-  FAR struct rpmsg_device *rdev = peer_ept->rdev;
 
   rpmsg_destroy_ept(ept);
   if (peer_ept->cb)
@@ -166,8 +165,6 @@ static void rpmsg_router_hub_unbind(FAR struct rpmsg_endpoint *ept)
 static void rpmsg_router_hub_bound(FAR struct rpmsg_endpoint *ept)
 {
   FAR struct rpmsg_endpoint *src_ept = ept->priv;
-  FAR struct rpmsg_device *src_rdev = src_ept->rdev;
-  FAR struct rpmsg_device *rdev = ept->rdev;
   int ret;
 
   /* Create endpoint (r:peer_cpu:name) and send ACK to source edge core */
