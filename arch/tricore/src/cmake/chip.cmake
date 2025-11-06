@@ -45,10 +45,6 @@ elseif(CONFIG_ARCH_CHIP_AURIX_TC48X)
   endif()
 endif()
 
-if(NOT CONFIG_ARCH_HAVE_FPU)
-  list(APPEND PLATFORM_FLAGS -msoft-sp-float -msoft-dp-float)
-endif()
-
 add_compile_options(${PLATFORM_FLAGS})
 add_link_options(${PLATFORM_FLAGS})
 set_property(DIRECTORY PROPERTY TC_PLATFORM_FLAGS "${PLATFORM_FLAGS}")

@@ -146,3 +146,7 @@ endif()
 if(NOT CONFIG_CXX_RTTI)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
 endif()
+
+if(NOT CONFIG_ARCH_HAVE_FPU)
+  list(APPEND PLATFORM_FLAGS -msoft-sp-float -msoft-dp-float)
+endif()

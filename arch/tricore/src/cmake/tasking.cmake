@@ -30,8 +30,8 @@ set(ARCH_SUBDIR chip)
 include(${ARCH_SUBDIR})
 
 set(CMAKE_ASM_COMPILER cctc)
-set(CMAKE_C_COMPILER ${CMAKE_ASM_COMPILER})
-set(CMAKE_CXX_COMPILER cptc)
+set(CMAKE_C_COMPILER cctc)
+set(CMAKE_CXX_COMPILER cctc)
 set(CMAKE_STRIP strip --strip-unneeded)
 set(CMAKE_OBJCOPY tricore-elf-objcopy)
 set(CMAKE_OBJDUMP tricore-elf-objdump)
@@ -42,13 +42,20 @@ set(CMAKE_AR artc)
 set(CMAKE_NM nm)
 set(CMAKE_RANLIB ranlib)
 
+set(CMAKE_C_COMPILE_OBJECT
+    "<CMAKE_C_COMPILER> <DEFINES> <INCLUDES> <FLAGS> --create <SOURCE> -o <OBJECT>"
+)
+set(CMAKE_CXX_COMPILE_OBJECT
+    "<CMAKE_CXX_COMPILER> <DEFINES> <INCLUDES> <FLAGS> --create <SOURCE> -o <OBJECT>"
+)
+
 if(CMAKE_GENERATOR MATCHES "Ninja")
-  set(CMAKE_C_RESPONSE_FILE_FLAG "-f")
-  set(CMAKE_CXX_RESPONSE_FILE_FLAG "-f")
-  set(CMAKE_ASM_RESPONSE_FILE_FLAG "-f")
-  set(CMAKE_C_RESPONSE_FILE_LINK_FLAG "-f")
-  set(CMAKE_CXX_RESPONSE_FILE_LINK_FLAG "-f")
-  set(CMAKE_ASM_RESPONSE_FILE_LINK_FLAG "-f")
+  set(CMAKE_C_RESPONSE_FILE_FLAG "-f ${CMAKE_BINARY_DIR}/")
+  set(CMAKE_CXX_RESPONSE_FILE_FLAG "-f ${CMAKE_BINARY_DIR}/")
+  set(CMAKE_ASM_RESPONSE_FILE_FLAG "-f ${CMAKE_BINARY_DIR}/")
+  set(CMAKE_C_RESPONSE_FILE_LINK_FLAG "-f ${CMAKE_BINARY_DIR}/")
+  set(CMAKE_CXX_RESPONSE_FILE_LINK_FLAG "-f ${CMAKE_BINARY_DIR}/")
+  set(CMAKE_ASM_RESPONSE_FILE_LINK_FLAG "-f ${CMAKE_BINARY_DIR}/")
 endif()
 
 # override the ARCHIVE command
@@ -61,14 +68,40 @@ set(CMAKE_ASM_ARCHIVE_CREATE "<CMAKE_AR> -r <TARGET> <LINK_FLAGS> <OBJECTS>")
 
 add_link_options(-I${CMAKE_BINARY_DIR}/include)
 set(CMAKE_C_LINK_EXECUTABLE
+    "<CMAKE_LINKER> <FLAGS> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>"
+)
+set(CMAKE_CXX_LINK_EXECUTABLE
     "<CMAKE_LINKER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>"
 )
 
 # Architecture flags
 
 add_compile_options(--lsl-core=vtc)
-add_compile_options(--iso=17)
-add_compile_options(--language=+gcc,+volatile,-strings,-kanji)
+add_link_options(-v)
+add_compile_options($<$<COMPILE_LANGUAGE:C>:--iso=17>)
+add_compile_options(
+  $<$<COMPILE_LANGUAGE:C>:--language=+gcc,+volatile,-strings,-kanji>)
+add_compile_options(--no-stdinc)
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:--c++=14>)
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:--g++>)
+add_compile_options(
+  $<$<COMPILE_LANGUAGE:CXX>:--language=+gcc,+volatile,-strings,-kanji>)
+add_compile_options(--pass-c++=-D__CTC__)
+
+function(get_smartcode_ctc_root OUT_VAR)
+  find_program(_CCTC_PATH cctc)
+  if(NOT _CCTC_PATH)
+    message(FATAL_ERROR "get_smartcode_ctc_root: cannot find 'cctc' in PATH")
+  endif()
+  get_filename_component(_BIN_DIR "${_CCTC_PATH}" DIRECTORY)
+  get_filename_component(_ROOT_DIR "${_BIN_DIR}" DIRECTORY)
+  set(${OUT_VAR}
+      "${_ROOT_DIR}"
+      PARENT_SCOPE)
+endfunction()
+
+get_smartcode_ctc_root(SMARTCODE_CTC_ROOT)
+add_compile_options(-I${SMARTCODE_CTC_ROOT}/include)
 
 if(CONFIG_DEBUG_CUSTOMOPT)
   add_compile_options(${CONFIG_DEBUG_OPTLEVEL})
@@ -90,7 +123,7 @@ add_compile_options(--tradeoff=2)
 
 # mergering of sections
 
-add_compile_options(--concatenate-sections)
+add_compile_options(--pass-assembler=--concatenate-sections)
 
 # Debug link map
 
@@ -153,12 +186,35 @@ add_link_options(-lrt)
 # ctc W587: ["stdlib/lib_strtold.c" 571/23] underflow on constant of type "double"
 # ctc W588: ["misc/lib_glob.c" 150/13] dead assignment to "i" eliminated
 # ctc W589: ["inode/fs_inodesearch.c" 72/8] pointer assumed to be nonzero - test removed
+# cptc W0068: ["include/libcxx/string" 878] integer conversion resulted in a change of sign
+# cptc W0161: ["SmartCode/ctc/include/math.h" 390] unrecognized #pragma
+# cptc W0940: ["libcxx/src/include/to_chars_floating_point.h" 1073] missing return statement at end of non-void function "
+# cptc W1097: ["include/libcxx/vector" 1347] unknown attribute "__visibility__"
+# cptc W1105: ["libcxx/src/support/runtime/exception_pointer_unimplemented.ipp" 28] #warning directive: exception_ptr not yet implemented
+# cptc W1315: ["include/libcxx/new" 183] function declared with "noreturn" does return (throw triggered)
+# cptc W1858: ["libcxx/__bit/bit_cast.h" 34] attribute "__always_inline__" does not apply here
+# cptc W2213: ["include/libcxx/string" 4110] GNU attributes on a template redeclaration have no effect (the attributes of the original declaration at line 656 apply instead)
+# cptc W2496: ["include/libcxx/vector" 1429] the "always_inline" attribute is ignored on non-inline functions
+# cptc W2529: ["libcxx/__chrono/duration.h" 559] a user-provided literal suffix must begin with "_"
+# cptc W2964: ["libcxx/src/include/to_chars_floating_point.h" 994] constexpr if statements are a C++17 feature
+# cptc W3085: ["include/libcxx/__charconv/tables.h" 26] inline variables are a C++17 feature
 # cmake-format: on
 
 set(TASKING_WARNINGS
     500,507,508,525,526,527,529,544,549,553,560,562,557,558,587,588,589)
+set(TASKING_CXX_WARNINGS
+    68,161,940,1097,1105,1315,1858,2213,2496,2529,2964,3085)
 
 add_compile_options(--pass-c=--no-warnings=${TASKING_WARNINGS})
+add_compile_options(--pass-c++=--no-warnings=${TASKING_CXX_WARNINGS})
+
+if(NOT CONFIG_CXX_EXCEPTION)
+  add_compile_options(--pass-c++=--no-exceptions)
+endif()
+
+if(CONFIG_CXX_RTTI)
+  add_compile_options(--pass-c++=--rtti)
+endif()
 
 set(NUTTX_TOOLCHAIN_PREPROCESS_DEFINED true)
 
