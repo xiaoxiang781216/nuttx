@@ -1,5 +1,5 @@
 //***************************************************************************
-// libs/libxx/libcxxmini/libxx_delete_sized.cxx
+// libs/libxx/libminiabi/libxx_cxapurevirtual.cxx
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -23,35 +23,32 @@
 // Included Files
 //***************************************************************************
 
-#include <nuttx/compiler.h>
+#include <cassert>
 
-#include <cstddef>
+//***************************************************************************
+// Pre-processor Definitions
+//***************************************************************************
 
-#include <nuttx/lib/lib.h>
-
-#ifdef CONFIG_HAVE_CXX14
+//***************************************************************************
+// Private Data
+//***************************************************************************
 
 //***************************************************************************
 // Operators
 //***************************************************************************
 
 //***************************************************************************
-// Name: delete
+// Name:  __cxa_pure_virtual
 //
-// NOTE:
-//   This should take a type of size_t.  But size_t has an unknown underlying
-//   type.  In the nuttx sys/types.h header file, size_t is typed as uint32_t
-//   (which is determined by architecture-specific logic).  But the C++
-//   compiler may believe that size_t is of a different type resulting in
-//   compilation errors in the operator.  Using the underlying integer type
-//   instead of size_t seems to resolve the compilation issues. Need to
-//   REVISIT this.
+// Description:
+//    Crash when an un-implemented pure virtual function is called
 //
 //***************************************************************************
 
-void operator delete(FAR void *ptr, std::size_t size)
+extern "C"
 {
-  lib_free(ptr);
+  void __cxa_pure_virtual(void)
+  {
+    DEBUGPANIC();
+  }
 }
-
-#endif /* CONFIG_HAVE_CXX14 */

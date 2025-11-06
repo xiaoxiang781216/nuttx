@@ -1,7 +1,5 @@
 //***************************************************************************
-// libs/libxx/libcxxmini/libxx_delete.cxx
-//
-// SPDX-License-Identifier: Apache-2.0
+// libs/libxx/libminiabi/libxx_deletea.cxx
 //
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
@@ -32,10 +30,10 @@
 //***************************************************************************
 
 //***************************************************************************
-// Name: delete
+// Name: delete[]
 //***************************************************************************
 
-void operator delete(FAR void *ptr) throw()
+void operator delete[](FAR void *ptr) throw()
 {
   lib_free(ptr);
 }

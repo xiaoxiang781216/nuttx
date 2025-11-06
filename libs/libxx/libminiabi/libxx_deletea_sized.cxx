@@ -1,5 +1,7 @@
 //***************************************************************************
-// libs/libxx/libcxxmini/libxx_deletea.cxx
+// libs/libxx/libminiabi/libxx_deletea_sized.cxx
+//
+// SPDX-License-Identifier: Apache-2.0
 //
 // Licensed to the Apache Software Foundation (ASF) under one or more
 // contributor license agreements.  See the NOTICE file distributed with
@@ -22,8 +24,13 @@
 //***************************************************************************
 
 #include <nuttx/config.h>
+#include <nuttx/compiler.h>
+
+#include <cstddef>
 
 #include <nuttx/lib/lib.h>
+
+#ifdef CONFIG_HAVE_CXX14
 
 //***************************************************************************
 // Operators
@@ -33,7 +40,9 @@
 // Name: delete[]
 //***************************************************************************
 
-void operator delete[](FAR void *ptr) throw()
+void operator delete[](FAR void *ptr, std::size_t size)
 {
   lib_free(ptr);
 }
+
+#endif /* CONFIG_HAVE_CXX14 */

@@ -1,5 +1,5 @@
 //***************************************************************************
-// libs/libxx/libcxxmini/libxx_cxapurevirtual.cxx
+// libs/libxx/libminiabi/libxx_cxa_guard.cxx
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -16,6 +16,7 @@
 // distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 // WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
 // License for the specific language governing permissions and limitations
+// under the License.
 //
 //***************************************************************************
 
@@ -23,32 +24,72 @@
 // Included Files
 //***************************************************************************
 
-#include <cassert>
+#include <nuttx/compiler.h>
 
 //***************************************************************************
 // Pre-processor Definitions
 //***************************************************************************
 
 //***************************************************************************
+// Private Types
+//***************************************************************************
+
+#ifdef __ARM_EABI__
+// The 32-bit ARM C++ ABI specifies that the guard is a 32-bit
+// variable and the least significant bit contains 0 prior to
+// initialization, and 1 after.
+
+typedef int __guard;
+
+#else
+// The "standard" C++ ABI specifies that the guard is a 64-bit
+// variable and the first byte contains 0 prior to initialization, and
+// 1 after.
+
+__extension__ typedef int __guard __attribute__((mode(__DI__)));
+#endif
+
+//***************************************************************************
 // Private Data
 //***************************************************************************
 
 //***************************************************************************
-// Operators
-//***************************************************************************
-
-//***************************************************************************
-// Name:  __cxa_pure_virtual
-//
-// Description:
-//    Crash when an un-implemented pure virtual function is called
-//
+// Public Functions
 //***************************************************************************
 
 extern "C"
 {
-  void __cxa_pure_virtual(void)
+  //*************************************************************************
+  // Name: __cxa_guard_acquire
+  //*************************************************************************
+
+  int __cxa_guard_acquire(FAR __guard *g)
   {
-    DEBUGPANIC();
+#ifdef __ARM_EABI__
+    return !(*g & 1);
+#else
+    return !*(FAR char *)g;
+#endif
+  }
+
+  //*************************************************************************
+  // Name: __cxa_guard_release
+  //*************************************************************************
+
+  void __cxa_guard_release(FAR __guard *g)
+  {
+#ifdef __ARM_EABI__
+    *g = 1;
+#else
+    *(FAR char *)g = 1;
+#endif
+  }
+
+  //*************************************************************************
+  // Name: __cxa_guard_abort
+  //*************************************************************************
+
+  void __cxa_guard_abort(FAR __guard *)
+  {
   }
 }

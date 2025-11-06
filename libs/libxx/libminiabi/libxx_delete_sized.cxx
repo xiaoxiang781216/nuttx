@@ -1,5 +1,5 @@
 //***************************************************************************
-// libs/libxx/libcxxmini/libxx_newa.cxx
+// libs/libxx/libminiabi/libxx_delete_sized.cxx
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -23,27 +23,20 @@
 // Included Files
 //***************************************************************************
 
-#include <nuttx/config.h>
-#include <assert.h>
+#include <nuttx/compiler.h>
+
 #include <cstddef>
-#include <debug.h>
 
 #include <nuttx/lib/lib.h>
 
-//***************************************************************************
-// Pre-processor Definitions
-//***************************************************************************
-
-//***************************************************************************
-// Private Data
-//***************************************************************************
+#ifdef CONFIG_HAVE_CXX14
 
 //***************************************************************************
 // Operators
 //***************************************************************************
 
 //***************************************************************************
-// Name: new
+// Name: delete
 //
 // NOTE:
 //   This should take a type of size_t.  But size_t has an unknown underlying
@@ -56,34 +49,9 @@
 //
 //***************************************************************************
 
-FAR void *operator new[](std::size_t nbytes)
+void operator delete(FAR void *ptr, std::size_t size)
 {
-  // Perform the allocation
-
-  FAR void *alloc = lib_malloc(nbytes);
-
-#ifdef CONFIG_DEBUG_ERROR
-  if (alloc == 0)
-    {
-      // Oh my.. we are required to return a valid pointer and
-      // we cannot throw an exception!  We are bad.
-
-      _err("ERROR: Failed to allocate\n");
-    }
-#endif
-
-  DEBUGASSERT(alloc != NULL);
-
-  // Return the allocated value
-
-  return alloc;
+  lib_free(ptr);
 }
 
-FAR void *operator new[](std::size_t nbytes, FAR void *ptr)
-{
-  DEBUGASSERT(ptr != NULL);
-
-  // Return the ptr pointer
-
-  return ptr;
-}
+#endif /* CONFIG_HAVE_CXX14 */

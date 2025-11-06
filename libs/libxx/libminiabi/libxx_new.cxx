@@ -1,5 +1,5 @@
 //***************************************************************************
-// libs/libxx/libcxxmini/libxx_deletea_sized.cxx
+// libs/libxx/libminiabi/libxx_new.cxx
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -24,25 +24,58 @@
 //***************************************************************************
 
 #include <nuttx/config.h>
-#include <nuttx/compiler.h>
-
+#include <assert.h>
 #include <cstddef>
+#include <debug.h>
 
 #include <nuttx/lib/lib.h>
-
-#ifdef CONFIG_HAVE_CXX14
 
 //***************************************************************************
 // Operators
 //***************************************************************************
 
 //***************************************************************************
-// Name: delete[]
+// Name: new
+//
+// NOTE:
+//   This should take a type of size_t.  But size_t has an unknown underlying
+//   type.  In the nuttx sys/types.h header file, size_t is typed as uint32_t
+//   (which is determined by architecture-specific logic).  But the C++
+//   compiler may believe that size_t is of a different type resulting in
+//   compilation errors in the operator.  Using the underlying integer type
+//   instead of size_t seems to resolve the compilation issues. Need to
+//   REVISIT this.
+//
 //***************************************************************************
 
-void operator delete[](FAR void *ptr, std::size_t size)
+FAR void *operator new(std::size_t nbytes)
 {
-  lib_free(ptr);
+  // Perform the allocation
+
+  FAR void *alloc = lib_malloc(nbytes);
+
+#ifdef CONFIG_DEBUG_ERROR
+  if (alloc == 0)
+    {
+      // Oh my.. we are required to return a valid pointer and
+      // we cannot throw an exception!  We are bad.
+
+      _err("ERROR: Failed to allocate\n");
+    }
+#endif
+
+  DEBUGASSERT(alloc != NULL);
+
+  // Return the allocated value
+
+  return alloc;
 }
 
-#endif /* CONFIG_HAVE_CXX14 */
+FAR void *operator new(std::size_t nbytes, FAR void *ptr)
+{
+  DEBUGASSERT(ptr != NULL);
+
+  // Return the ptr pointer
+
+  return ptr;
+}
