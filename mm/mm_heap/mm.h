@@ -223,6 +223,7 @@ static_assert(MM_ALIGN >= sizeof(uintptr_t) &&
 struct mm_delaynode_s
 {
   FAR struct mm_delaynode_s *flink;
+  FAR struct mm_heap_s      *heap;
 };
 
 /* This describes one heap (possibly with multiple regions) */
@@ -260,14 +261,6 @@ struct mm_heap_s
    */
 
   struct mm_freenode_s mm_nodelist[MM_NNODES];
-
-  /* Free delay list, as sometimes we can't do free immdiately. */
-
-  FAR struct mm_delaynode_s *mm_delaylist[CONFIG_SMP_NCPUS];
-
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  size_t mm_delaycount[CONFIG_SMP_NCPUS];
-#endif
 
   /* The is a multiple mempool of the heap */
 
@@ -311,6 +304,7 @@ void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem);
 /* Functions contained in mm_malloc.c ***************************************/
 
 void mm_free_delaylist(FAR struct mm_heap_s *heap);
+void mm_try_free_delaylist(FAR struct mm_heap_s *heap);
 
 /****************************************************************************
  * Inline Functions
