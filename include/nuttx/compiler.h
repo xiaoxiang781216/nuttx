@@ -95,6 +95,12 @@
 
 #undef offsetof
 
+/* undef __GNUC__ when __TASKING__ is present */
+#if defined(__TASKING__)
+#  undef __GNUC__
+#  undef __GLIBCXX__  // Do not use libstdc++/libsupc++ when tasking present
+#endif
+
 /* GCC-specific definitions *************************************************/
 
 #ifdef __GNUC__
@@ -1379,7 +1385,7 @@
 
 /* Keyword about Atomic */
 
-#if !defined(__clang__) && defined(__cplusplus)
+#if !defined(__TASKING__) && !defined(__clang__) && defined(__cplusplus)
 #  define _Atomic
 #endif
 
@@ -1393,6 +1399,25 @@
  * Public Function Prototypes
  ****************************************************************************/
 
+/* overloaded version of builtin functions c++ needed */
+
+#if defined(__cplusplus) && defined(__TASKING__)
+
+extern "C++"
+{
+  int __builtin_isinf(float x);
+  int __builtin_isinf(double x);
+  int __builtin_isinf(long double x);
+  int __builtin_isfinite(float x);
+  int __builtin_isfinite(double x);
+  int __builtin_isfinite(long double x);
+  bool __builtin_signbit(float x);
+  bool __builtin_signbit(double x);
+  bool __builtin_signbit(long double x);
+}
+
+#endif  // __cplusplus
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -1404,6 +1429,151 @@ extern "C"
 #else
 #define EXTERN extern
 #endif
+
+#if defined(__TASKING__)
+
+int __builtin_strcmp(const char *s1, const char *s2);
+void __builtin_abort(void);
+long __builtin_labs(long x);
+long long __builtin_llabs(long long x);
+float __builtin_fabsf(float x);
+double __builtin_fabs(double x);
+long double __builtin_fabsl(long double x);
+float __builtin_acosf(float x);
+long double __builtin_acosl(long double x);
+float __builtin_asinf(float x);
+long double __builtin_asinl(long double x);
+float __builtin_atanf(float x);
+long double __builtin_atanl(long double x);
+float __builtin_atan2f(float y, float x);
+long double __builtin_atan2l(long double y, long double x);
+float __builtin_ceilf(float x);
+long double __builtin_ceill(long double x);
+float __builtin_cosf(float x);
+float __builtin_expf(float x);
+long double __builtin_expl(long double x);
+float __builtin_floorf(float x);
+long double __builtin_floorl(long double x);
+float __builtin_fmodf(float x, float y);
+long double __builtin_fmodl(long double x, long double y);
+long double __builtin_cosl(long double x);
+float __builtin_coshf(float x);
+long double __builtin_coshl(long double x);
+float __builtin_frexpf(float x, int *exp);
+long double __builtin_frexpl(long double x, int *exp);
+float __builtin_ldexpf(float x, int exp);
+long double __builtin_ldexpl(long double x, int exp);
+float __builtin_logf(float x);
+long double __builtin_logl(long double x);
+float __builtin_log10f(float x);
+long double __builtin_log10l(long double x);
+float __builtin_modff(float x, float *iptr);
+long double __builtin_modfl(long double x, long double *iptr);
+float __builtin_powf(float x, float y);
+long double __builtin_powl(long double x, long double y);
+float __builtin_sinf(float x);
+long double __builtin_sinl(long double x);
+float __builtin_sinhf(float x);
+long double __builtin_sinhl(long double x);
+float __builtin_sqrtf(float x);
+long double __builtin_sqrtl(long double x);
+float __builtin_tanf(float x);
+long double __builtin_tanl(long double x);
+float __builtin_tanhf(float x);
+long double __builtin_tanhl(long double x);
+float __builtin_acoshf(float x);
+long double __builtin_acoshl(long double x);
+float __builtin_asinhf(float x);
+long double __builtin_asinhl(long double x);
+float __builtin_atanhf(float x);
+long double __builtin_atanhl(long double x);
+float __builtin_cbrtf(float x);
+long double __builtin_cbrtl(long double x);
+float __builtin_copysignf(float x, float y);
+long double __builtin_copysignl(long double x, long double y);
+float __builtin_erff(float x);
+long double __builtin_erfl(long double x);
+float __builtin_erfcf(float x);
+long double __builtin_erfcl(long double x);
+float __builtin_exp2f(float x);
+long double __builtin_exp2l(long double x);
+float __builtin_expm1f(float x);
+long double __builtin_expm1l(long double x);
+float __builtin_fdimf(float x, float y);
+long double __builtin_fdiml(long double x, long double y);
+float __builtin_fmaf(float x, float y, float z);
+long double __builtin_fmal(long double x, long double y, long double z);
+float __builtin_fmaxf(float x, float y);
+long double __builtin_fmaxl(long double x, long double y);
+float __builtin_fminf(float x, float y);
+long double __builtin_fminl(long double x, long double y);
+float __builtin_hypotf(float x, float y);
+long double __builtin_hypotl(long double x, long double y);
+int __builtin_ilogbf(float x);
+int __builtin_ilogbl(long double x);
+float __builtin_lgammaf(float x);
+long double __builtin_lgammal(long double x);
+long long __builtin_llrintf(float x);
+long long __builtin_llrintl(long double x);
+long long __builtin_llroundf(float x);
+long long __builtin_llroundl(long double x);
+float __builtin_log1pf(float x);
+long double __builtin_log1pl(long double x);
+float __builtin_log2f(float x);
+long double __builtin_log2l(long double x);
+float __builtin_logbf(float x);
+long double __builtin_logbl(long double x);
+long __builtin_lrintf(float x);
+long __builtin_lrintl(long double x);
+long __builtin_lroundf(float x);
+long __builtin_lroundl(long double x);
+float __builtin_nearbyintf(float x);
+long double __builtin_nearbyintl(long double x);
+float __builtin_nextafterf(float x, float y);
+long double __builtin_nextafterl(long double x, long double y);
+float __builtin_nexttowardf(float x, long double y);
+long double __builtin_nexttowardl(long double x, long double y);
+float __builtin_remainderf(float x, float y);
+long double __builtin_remainderl(long double x, long double y);
+float __builtin_remquof(float x, float y, int *quo);
+long double __builtin_remquol(long double x, long double y, int *quo);
+float __builtin_rintf(float x);
+long double __builtin_rintl(long double x);
+double __builtin_round(double x);
+long double __builtin_roundl(long double x);
+float __builtin_scalblnf(float x, long int n);
+long double __builtin_scalblnl(long double x, long int n);
+float __builtin_scalbnf(float x, int n);
+long double __builtin_scalbnl(long double x, int n);
+float __builtin_scalbnf(float x, int n);
+long double __builtin_scalbnl(long double x, int n);
+
+float __builtin_tgammaf(float x);
+long double __builtin_tgammal(long double x);
+double __builtin_trunc(double x);
+long double __builtin_truncl(long double x);
+double __builtin_copysign(double x, double y);
+double __builtin_fmax(double x, double y);
+
+void __builtin_unreachable(void);
+void *__builtin_memchr(const void *s, int c, unsigned int  n);
+unsigned int  __builtin_strlen(const char *s);
+int __builtin_memcmp(const void *s1, const void *s2, unsigned int n);
+void *__builtin_memchr(const void *s, int c, unsigned int  n);
+
+int __builtin_isnan(double x);
+int __builtin_isnanf(float x);
+int __builtin_isnanl(long double x);
+
+int __builtin_fpclassify(int __class, ...);
+
+void *__builtin_memmove(void *dest, void *src, unsigned int n);
+void *memcpy(void *dest, const void *src, unsigned int n);
+
+#  define __builtin_memmove(x, y, z) __builtin_memmove(x, (void*)y, z)
+#  define __builtin_memcpy memcpy
+
+#endif  // __TASKING__
 
 #undef EXTERN
 #ifdef __cplusplus
