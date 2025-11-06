@@ -362,6 +362,16 @@ struct mountpt_operations
   CODE int     (*chstat)(FAR struct inode *mountpt, FAR const char *relpath,
                          FAR const struct stat *buf, int flags);
   CODE int     (*syncfs)(FAR struct inode *mountpt);
+#ifdef CONFIG_FS_LINKS
+  CODE int     (*link)(FAR struct inode *mountpt, FAR const char *relpath1,
+                       FAR const char *relpath2);
+  CODE int     (*symlink)(FAR struct inode *mountpt,
+                          FAR const char *path1,
+                          FAR const char *relpath2);
+  CODE ssize_t (*readlink)(FAR struct inode *mountpt,
+                           FAR const char *relpath,
+                           FAR char *buf, size_t bufsize);
+#endif
 };
 #endif /* CONFIG_DISABLE_MOUNTPOINT */
 

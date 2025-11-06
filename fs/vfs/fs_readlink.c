@@ -94,21 +94,47 @@ ssize_t readlink(FAR const char *path, FAR char *buf, size_t bufsize)
   node = desc.node;
   DEBUGASSERT(node != NULL);
 
-  /* An inode was found that includes this path and possibly refers to a
-   * symbolic link.
-   *
-   * Check if the inode is a valid symbolic link.
+#ifndef CONFIG_DISABLE_MOUNTPOINT
+  /* If the inode is a mountpoint, let the mountpoint's readlink
+   * method handle the request.
    */
 
-  if (!INODE_IS_SOFTLINK(node))
+  if (INODE_IS_MOUNTPT(node))
     {
-      errcode = EINVAL;
-      goto errout_with_inode;
+      if (node->u.i_mops && node->u.i_mops->readlink)
+        {
+          ret = node->u.i_mops->readlink(node, desc.relpath, buf, bufsize);
+          if (ret < 0)
+            {
+              errcode = -ret;
+              goto errout_with_inode;
+            }
+        }
+      else
+        {
+          errcode = ENOSYS;
+          goto errout_with_inode;
+        }
     }
+  else
+#endif
+    {
+      /* An inode was found that includes this path and possibly refers to a
+       * symbolic link.
+       *
+       * Check if the inode is a valid symbolic link.
+       */
 
-  /* Copy the link target pathto the user-provided buffer. */
+      if (!INODE_IS_SOFTLINK(node))
+        {
+          errcode = EINVAL;
+          goto errout_with_inode;
+        }
 
-  strlcpy(buf, node->u.i_link, bufsize);
+      /* Copy the link target path to the user-provided buffer. */
+
+      strlcpy(buf, node->u.i_link, bufsize);
+    }
 
   /* Release our reference on the inode and return the length */
 
