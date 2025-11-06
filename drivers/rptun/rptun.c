@@ -606,13 +606,14 @@ static int rptun_register_device(FAR struct virtio_device *vdev)
 
 static void rptun_unregister_device(FAR struct virtio_device *vdev)
 {
-#if defined(CONFIG_DRIVERS_VIRTIO)
+#ifdef CONFIG_DRIVERS_VIRTIO
   if (vdev->role == VIRTIO_DEV_DRIVER)
     {
       virtio_unregister_device(vdev);
     }
   else
-#elif defined(CONFIG_DRIVERS_VHOST)
+#endif
+#ifdef CONFIG_DRIVERS_VHOST
   if (vdev->role == VIRTIO_DEV_DEVICE)
     {
       vhost_unregister_device(vdev);
