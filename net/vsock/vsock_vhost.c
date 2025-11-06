@@ -87,13 +87,14 @@ static ssize_t vsock_vhost_send_pkt(FAR struct vsock_transport_s *t,
  * Private Data
  ****************************************************************************/
 
-static struct vhost_driver g_vsock_vhost_driver =
+static DEFINE_PER_CPU_BSS_BMP(struct vhost_driver, g_vsock_vhost_driver) =
 {
-  LIST_INITIAL_VALUE(g_vsock_vhost_driver.node), /* Node */
+  LIST_INITIAL_CLEARED_VALUE,                    /* Node */
   VIRTIO_ID_VSOCK,                               /* Device id */
   vsock_vhost_probe,                             /* Probe */
   vsock_vhost_remove,                            /* Remove */
 };
+#define g_vsock_vhost_driver this_cpu_var_bmp(g_vsock_vhost_driver)
 
 static const struct vsock_transport_ops_s g_vsock_vhost_transport_ops =
 {

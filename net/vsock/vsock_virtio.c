@@ -106,13 +106,14 @@ static ssize_t vsock_virtio_send_pkt(FAR struct vsock_transport_s *t,
  * Private Data
  ****************************************************************************/
 
-static struct virtio_driver g_vsock_virtio_driver =
+static DEFINE_PER_CPU_BSS_BMP(struct virtio_driver, g_vsock_virtio_driver) =
 {
-  LIST_INITIAL_VALUE(g_vsock_virtio_driver.node), /* node */
+  LIST_INITIAL_CLEARED_VALUE,                     /* node */
   VIRTIO_ID_VSOCK,                                /* device id */
   vsock_virtio_probe,                             /* probe */
   vsock_virtio_remove,                            /* remove */
 };
+#define g_vsock_virtio_driver this_cpu_var_bmp(g_vsock_virtio_driver)
 
 static const struct vsock_transport_ops_s g_vsock_virtio_transport_ops =
 {
