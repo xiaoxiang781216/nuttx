@@ -100,4 +100,6 @@ void clock_timer(void);
 void cpuload_init(void);
 #endif
 
+void perf_setup(void);
+
 #endif /* __SCHED_CLOCK_CLOCK_H */

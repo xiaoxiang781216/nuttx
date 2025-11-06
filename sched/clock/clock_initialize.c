@@ -257,6 +257,10 @@ void clock_initialize(void)
   cpuload_init();
 #endif
 
+  /* perf settup here */
+
+  perf_setup();
+
   sched_trace_end();
 }
 

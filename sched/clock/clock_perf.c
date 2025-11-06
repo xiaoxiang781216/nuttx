@@ -70,17 +70,35 @@ static DEFINE_PER_CPU_BSS_BMP(struct perf_s, g_perf);
 static void perf_update(wdparm_t arg)
 {
   FAR struct perf_s *perf = (FAR struct perf_s *)arg;
-  irqstate_t flags = spin_lock_irqsave(&perf->lock);
-  clock_t timeout = perf->timeout;
-  spin_unlock_irqrestore(&perf->lock, flags);
 
   perf_gettime();
-  wd_start_next(&perf->wdog, timeout, perf_update, arg);
+  wd_start_next(&perf->wdog, perf->timeout, perf_update, arg);
 }
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * perf_setup
+ ****************************************************************************/
+
+void perf_setup(void)
+{
+  FAR struct perf_s *perf = &g_perf;
+
+  /* Settup periodic-wdog here, this function can be called after
+   * perf_gettime(), but suggested to be called in initialization phase.
+   */
+
+  perf->timeout =
+      ((clock_t)1 << (CONFIG_ARCH_PERF_COUNT_BITWIDTH - 1)) *
+      TICK_PER_SEC / up_perf_getfreq();
+
+  /* Periodic check for overflow */
+
+  wd_start(&perf->wdog, perf->timeout, perf_update, (wdparm_t)perf);
+}
 
 /****************************************************************************
  * perf_gettime
@@ -93,17 +111,7 @@ clock_t perf_gettime(void)
   clock_t now = up_perf_gettime();
   clock_t result;
 
-  if (perf->timeout == 0)
-    {
-      perf->timeout =
-        ((clock_t)1 << (CONFIG_ARCH_PERF_COUNT_BITWIDTH - 1)) *
-        TICK_PER_SEC / up_perf_getfreq();
-
-      /* Periodic check for overflow */
-
-      wd_start(&perf->wdog, perf->timeout, perf_update, (wdparm_t)perf);
-    }
-  else if (now < perf->last)
+  if (now < perf->last)
     {
       perf->overflow++;
     }
@@ -121,12 +129,28 @@ clock_t perf_gettime(void)
  * perf_gettime
  ****************************************************************************/
 
+/****************************************************************************
+ * perf_setup
+ ****************************************************************************/
+
+void perf_setup(void)
+{
+}
+
 clock_t perf_gettime(void)
 {
   return up_perf_gettime();
 }
 
 #  else
+
+/****************************************************************************
+ * perf_setup
+ ****************************************************************************/
+
+void perf_setup(void)
+{
+}
 
 /****************************************************************************
  * perf_gettime
