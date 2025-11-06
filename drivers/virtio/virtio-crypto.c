@@ -28,6 +28,7 @@
 #include <debug.h>
 
 #include <crypto/virtio_crypto.h>
+#include <nuttx/percpu.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/virtio/virtio.h>
 #include <nuttx/virtio/virtio-crypto.h>
@@ -116,13 +117,14 @@ static void virtio_crypto_remove(FAR struct virtio_device *vdev);
  * Private Data
  ****************************************************************************/
 
-static struct virtio_driver g_virtio_crypto_driver =
+static DEFINE_PER_CPU_BMP(struct virtio_driver,
+                              g_virtio_crypto_driver) =
 {
-  LIST_INITIAL_VALUE(g_virtio_crypto_driver.node), /* node */
-  VIRTIO_ID_CRYPTO,                                /* device id */
-  virtio_crypto_probe,                             /* probe */
-  virtio_crypto_remove,                            /* remove */
+  VIRTIO_ID_CRYPTO,     /* device id */
+  virtio_crypto_probe,  /* probe */
+  virtio_crypto_remove, /* remove */
 };
+#define g_virtio_crypto_driver this_cpu_var_bmp(g_virtio_crypto_driver)
 
 /****************************************************************************
  * Private Functions

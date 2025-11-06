@@ -34,6 +34,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/netdev_lowerhalf.h>
+#include <nuttx/percpu.h>
 #include <nuttx/virtio/virtio.h>
 #include <nuttx/net/wifi_sim.h>
 
@@ -174,13 +175,13 @@ static void virtio_net_remove(FAR struct virtio_device *vdev);
  * Private Data
  ****************************************************************************/
 
-static struct virtio_driver g_virtio_net_driver =
+static DEFINE_PER_CPU_BMP(struct virtio_driver, g_virtio_net_driver) =
 {
-  LIST_INITIAL_VALUE(g_virtio_net_driver.node), /* node */
-  VIRTIO_ID_NETWORK,                            /* device id */
-  virtio_net_probe,                             /* probe */
-  virtio_net_remove,                            /* remove */
+  VIRTIO_ID_NETWORK, /* device id */
+  virtio_net_probe,  /* probe */
+  virtio_net_remove, /* remove */
 };
+#define g_virtio_net_driver this_cpu_var_bmp(g_virtio_net_driver)
 
 static const struct netdev_ops_s g_virtio_net_ops =
 {
@@ -199,7 +200,8 @@ static const struct netdev_ops_s g_virtio_net_ops =
 };
 
 #ifdef CONFIG_DRIVERS_WIFI_SIM
-static uint8_t g_netdev_num = 0;
+static DEFINE_PER_CPU_BMP(uint8_t, g_netdev_num);
+#define g_netdev_num this_cpu_var_bmp(g_netdev_num)
 #endif
 
 /****************************************************************************

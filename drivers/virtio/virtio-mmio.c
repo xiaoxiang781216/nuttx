@@ -34,6 +34,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/mm/kasan.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/percpu.h>
 #include <nuttx/virtio/virtio.h>
 #include <nuttx/virtio/virtio-mmio.h>
 

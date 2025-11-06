@@ -32,6 +32,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/percpu.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/virtio/virtio.h>
@@ -99,13 +100,13 @@ static void virtio_blk_remove(FAR struct virtio_device *vdev);
  * Private Data
  ****************************************************************************/
 
-static struct virtio_driver g_virtio_blk_driver =
+static DEFINE_PER_CPU_BMP(struct virtio_driver, g_virtio_blk_driver) =
 {
-  LIST_INITIAL_VALUE(g_virtio_blk_driver.node), /* node */
-  VIRTIO_ID_BLOCK,                              /* device id */
-  virtio_blk_probe,                             /* probe */
-  virtio_blk_remove,                            /* remove */
+  VIRTIO_ID_BLOCK,   /* device id */
+  virtio_blk_probe,  /* probe */
+  virtio_blk_remove, /* remove */
 };
+#define g_virtio_blk_driver this_cpu_var_bmp(g_virtio_blk_driver)
 
 static const struct block_operations g_virtio_blk_bops =
 {
@@ -117,7 +118,8 @@ static const struct block_operations g_virtio_blk_bops =
   virtio_blk_ioctl     /* ioctl    */
 };
 
-static int g_virtio_blk_idx = 0;
+static DEFINE_PER_CPU_BMP(int, g_virtio_blk_idx);
+#define g_virtio_blk_idx this_cpu_var_bmp(g_virtio_blk_idx)
 
 /****************************************************************************
  * Private Functions

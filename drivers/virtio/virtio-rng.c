@@ -29,6 +29,7 @@
 #include <debug.h>
 
 #include <nuttx/fs/fs.h>
+#include <nuttx/percpu.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/virtio/virtio.h>
@@ -74,13 +75,13 @@ static void virtio_rng_remove(FAR struct virtio_device *vdev);
  * Private Data
  ****************************************************************************/
 
-static struct virtio_driver g_virtio_rng_driver =
+static DEFINE_PER_CPU_BMP(struct virtio_driver, g_virtio_rng_driver) =
 {
-  LIST_INITIAL_VALUE(g_virtio_rng_driver.node), /* node */
-  VIRTIO_ID_ENTROPY,                            /* device id */
-  virtio_rng_probe,                             /* probe */
-  virtio_rng_remove,                            /* remove */
+  VIRTIO_ID_ENTROPY, /* device id */
+  virtio_rng_probe,  /* probe */
+  virtio_rng_remove, /* remove */
 };
+#define g_virtio_rng_driver this_cpu_var_bmp(g_virtio_rng_driver)
 
 static const struct file_operations g_virtio_rng_ops =
 {
@@ -100,7 +101,8 @@ static const struct file_operations g_virtio_rng_ops =
 #endif
 };
 
-static int g_virtio_rng_idx = 0;
+static DEFINE_PER_CPU_BMP(int, g_virtio_rng_idx);
+#define g_virtio_rng_idx this_cpu_var_bmp(g_virtio_rng_idx)
 
 /****************************************************************************
  * Private Functions

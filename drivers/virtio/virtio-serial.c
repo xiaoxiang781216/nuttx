@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include <nuttx/percpu.h>
 #include <nuttx/serial/serial.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/virtio/virtio.h>
@@ -95,21 +96,23 @@ static void virtio_serial_remove(FAR struct virtio_device *vdev);
  * Private Data
  ****************************************************************************/
 
-static struct virtio_driver g_virtio_serial_driver =
+static DEFINE_PER_CPU_BMP(struct virtio_driver, g_virtio_serial_driver) =
 {
-  LIST_INITIAL_VALUE(g_virtio_serial_driver.node), /* node */
-  VIRTIO_ID_CONSOLE,                               /* device id */
-  virtio_serial_probe,                             /* probe */
-  virtio_serial_remove,                            /* remove */
+  VIRTIO_ID_CONSOLE,    /* device id */
+  virtio_serial_probe,  /* probe */
+  virtio_serial_remove, /* remove */
 };
+#define g_virtio_serial_driver this_cpu_var_bmp(g_virtio_serial_driver)
 
-static struct virtio_driver g_virtio_rprocserial_driver =
+static DEFINE_PER_CPU_BMP(struct virtio_driver,
+                          g_virtio_rprocserial_driver) =
 {
-  LIST_INITIAL_VALUE(g_virtio_rprocserial_driver.node), /* node */
-  VIRTIO_ID_RPROC_SERIAL,                               /* device id */
-  virtio_serial_probe,                                  /* probe */
-  virtio_serial_remove,                                 /* remove */
+  VIRTIO_ID_RPROC_SERIAL, /* device id */
+  virtio_serial_probe,    /* probe */
+  virtio_serial_remove,   /* remove */
 };
+#define g_virtio_rprocserial_driver \
+  this_cpu_var_bmp(g_virtio_rprocserial_driver)
 
 static const struct uart_ops_s g_virtio_serial_ops =
 {
@@ -134,10 +137,12 @@ static const struct uart_ops_s g_virtio_serial_ops =
   virtio_serial_txempty,     /* txempty */
 };
 
-static int g_virtio_serial_idx = 0;
+static DEFINE_PER_CPU_BMP(int, g_virtio_serial_idx);
+#define g_virtio_serial_idx this_cpu_var_bmp(g_virtio_serial_idx)
 
 #ifdef CONFIG_DRIVERS_VIRTIO_SERIAL_CONSOLE
-static struct uart_dev_s *g_virtio_console;
+static DEFINE_PER_CPU_BMP(FAR struct uart_dev_s *, g_virtio_console);
+#define g_virtio_console this_cpu_var_bmp(g_virtio_console)
 #endif
 
 /****************************************************************************

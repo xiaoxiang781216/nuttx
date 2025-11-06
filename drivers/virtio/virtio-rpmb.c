@@ -30,6 +30,7 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/percpu.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/mmcsd.h>
@@ -73,13 +74,13 @@ static int virtio_rpmb_ioctl(FAR struct file *, int, unsigned long);
  * Private Data
  ****************************************************************************/
 
-static struct virtio_driver g_virtio_rpmb_driver =
+static DEFINE_PER_CPU_BMP(struct virtio_driver, g_virtio_rpmb_driver) =
 {
-  LIST_INITIAL_VALUE(g_virtio_rpmb_driver.node), /* node */
-  VIRTIO_ID_RPMB,                                /* device id */
-  virtio_rpmb_probe,                             /* probe */
-  virtio_rpmb_remove,                            /* remove */
+  VIRTIO_ID_RPMB,     /* device id */
+  virtio_rpmb_probe,  /* probe */
+  virtio_rpmb_remove, /* remove */
 };
+#define g_virtio_rpmb_driver this_cpu_var_bmp(g_virtio_rpmb_driver)
 
 static const struct file_operations g_virtio_rpmb_ops =
 {
