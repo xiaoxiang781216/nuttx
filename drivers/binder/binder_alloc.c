@@ -239,8 +239,8 @@ FAR struct binder_buffer *binder_alloc_new_buf(
   if (!buffer)
     {
       binder_debug(BINDER_DEBUG_ERROR,
-                    "alloc->pid=%d failed to alloc new buffer struct\n",
-                    alloc->pid);
+                    "alloc->pid=%d failed to alloc new buffer struct,"
+                    "size=%zu\n", alloc->pid, size);
       return NULL;
     }
 
