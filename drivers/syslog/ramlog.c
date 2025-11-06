@@ -111,6 +111,9 @@ struct ramlog_dev_s
   uint32_t                   rl_bufsize;   /* Size of the circular buffer */
   dq_queue_t                 rl_queue;     /* The dq of ramlog_user_s */
   struct ramlog_ratelimit_s  rl_ratelimit; /* The ratelimit for ramlog */
+#if CONFIG_RAMLOG_POLLTIMEOUT_MS > 0
+  struct wdog_s              rl_wdog;      /* The wdog for poll timeout */
+#endif
 };
 
 /****************************************************************************
@@ -123,6 +126,9 @@ struct ramlog_dev_s
 static void    ramlog_readnotify(FAR struct ramlog_dev_s *priv);
 #endif
 static void    ramlog_pollnotify(FAR struct ramlog_dev_s *priv);
+#if CONFIG_RAMLOG_POLLTIMEOUT_MS > 0
+static void    ramlog_timeout_handler(wdparm_t arg);
+#endif
 
 /* Character driver methods */
 
@@ -183,6 +189,37 @@ static DEFINE_PER_CPU_BMP(struct ramlog_dev_s, g_sysdev) =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#if CONFIG_RAMLOG_POLLTIMEOUT_MS > 0
+static inline_function
+void ramlog_timeout_reset(FAR struct ramlog_dev_s * dev)
+{
+  /* We need locked to ensure the wdog status and dq status aligned. */
+
+  irqstate_t flags = spin_lock_irqsave(&dev->rl_header->rl_lock);
+  if (dq_empty(&dev->rl_queue))
+    {
+      wd_cancel(&dev->rl_wdog);
+    }
+  else
+    {
+      wd_start(&dev->rl_wdog, MSEC2TICK(CONFIG_RAMLOG_POLLTIMEOUT_MS),
+               ramlog_timeout_handler, (wdparm_t)dev);
+    }
+
+  spin_unlock_irqrestore(&dev->rl_header->rl_lock, flags);
+}
+
+static void ramlog_timeout_handler(wdparm_t arg)
+{
+  FAR struct ramlog_dev_s *dev = (FAR struct ramlog_dev_s *)arg;
+
+  ramlog_pollnotify(dev);
+  ramlog_timeout_reset(dev);
+}
+#else
+#  define ramlog_timeout_reset(dev)
+#endif
 
 /****************************************************************************
  * Name: ramlog_ratelimit
@@ -421,6 +458,7 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
    */
 
   spin_unlock_irqrestore_nopreempt(&header->rl_lock, flags);
+  ramlog_timeout_reset(priv);
   return len;
 }
 
@@ -696,6 +734,7 @@ static int ramlog_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
       spin_unlock_irqrestore(&header->rl_lock, flags);
     }
 
+  ramlog_timeout_reset(priv);
   return 0;
 }
 

@@ -102,6 +102,14 @@ config RAMLOG_POLLTHRESHOLD
 	---help---
 		When the length of circular buffer exceeds the threshold value, the poll() will
 		return POLLIN to all poll waiters.
+
+config RAMLOG_POLLTIMEOUT_MS
+	int "The timeout ms if poll requested and no data avaliable"
+	default 0
+	---help---
+		Default 0 to disable this feature, positive value (ms) to make ramlog trigger a
+		wdog to enable idle timeout notify poll waiter.
+
 endif
 
 config SYSLOG_BUFFER
