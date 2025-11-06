@@ -4,10 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pynuttx"
-version = "0.0.5"
+version = "0.0.6"
 description = "Comprehensive Python debugging and analysis toolkit for NuttX RTOS - includes GDB extensions, memory analysis, crash diagnostics, trace parsing, and remote debugging capabilities"
 requires-python = ">=3.10"
 keywords = ["nuttx", "rtos", "embedded", "gdb", "debugging", "memory-analysis", "crash-analysis", "trace", "profiling"]
+license = "Apache-2.0"
+readme = "README.md"
 classifiers = [
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Debuggers",
@@ -17,7 +19,6 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: Apache Software License",
 ]
 
 dependencies = [
@@ -47,8 +48,16 @@ Repository = "https://github.com/apache/nuttx"
 Issues = "https://github.com/apache/nuttx/issues"
 Changelog = "https://github.com/apache/nuttx/tags"
 
+[project.scripts]
+etm2human = "etm2human:main"
+etm2trace = "etm2trace:main"
+traceparse = "traceparse:main"
+rpmsgtrace2pcap = "rpmsgtrace2pcap:main"
+
+
 [tool.setuptools]
 package-dir = { "gdbrpc" = "gdbrpc", "nxgdb" = "nxgdb", "nxelf" = "nxelf", "nxreg" = "nxreg", "nxstub" = "nxstub", "nxtrace" = "nxtrace", "nxgdbmcp" = "nxgdbmcp" }
+py-modules = [ "etm2human", "etm2trace", "rpmsgtrace2pcap", "traceparse"]
 
 [tool.setuptools.packages.find]
 where = ["."]
