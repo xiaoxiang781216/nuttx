@@ -81,7 +81,7 @@ config PSEUDOFS_ATTRIBUTES
 		Enable support for attributes(e.g. mode, uid, gid and time)
 		in the pseudo file system.
 
-config PSEUDOFS_SOFTLINKS
+config FS_LINKS
 	bool "Pseudo-filesystem soft links"
 	default n
 	depends on !DISABLE_PSEUDOFS_OPERATIONS

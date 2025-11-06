@@ -272,7 +272,7 @@ SYSCALL_LOOKUP(futimens,                   2)
 SYSCALL_LOOKUP(msync,                      3)
 SYSCALL_LOOKUP(munmap,                     2)
 
-#if defined(CONFIG_PSEUDOFS_SOFTLINKS)
+#if defined(CONFIG_FS_LINKS)
   SYSCALL_LOOKUP(link,                     2)
   SYSCALL_LOOKUP(symlink,                  2)
   SYSCALL_LOOKUP(readlink,                 3)

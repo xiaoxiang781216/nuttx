@@ -99,7 +99,7 @@ static FAR struct inode *inode_unlink(FAR const char *path)
       inode->i_peer   = NULL;
       inode->i_parent = NULL;
       atomic_fetch_sub(&inode->i_crefs, 1);
-#ifdef CONFIG_PSEUDOFS_SOFTLINKS
+#ifdef CONFIG_FS_LINKS
       if (INODE_IS_HARDLINK(inode))
         {
           FAR struct inode *target;

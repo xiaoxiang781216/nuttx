@@ -149,7 +149,7 @@ int nx_unlink(FAR const char *pathname)
             }
         }
 #endif
-#ifdef CONFIG_PSEUDOFS_SOFTLINKS
+#ifdef CONFIG_FS_LINKS
       else if (INODE_IS_SOFTLINK(inode) || INODE_IS_HARDLINK(inode))
         {
           /* If this is a "dangling" pseudo-file node
