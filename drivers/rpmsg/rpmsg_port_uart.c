@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/crc16.h>
 #include <nuttx/event.h>
 #include <nuttx/fs/fs.h>
