@@ -105,7 +105,7 @@ static int perf_swevent_match(FAR struct perf_event_s *event);
 static DEFINE_PER_CPU_BSS_SMP(struct perf_event_context_s, g_perf_cpu_ctx);
 static struct list_node g_perf_pmus = LIST_INITIAL_VALUE(g_perf_pmus);
 static mutex_t g_perf_pmus_lock = NXMUTEX_INITIALIZER;
-volatile static uint64_t g_perf_eventid;
+volatile static atomic_t g_perf_eventid;
 
 static const struct file_operations g_perf_fops =
 {
