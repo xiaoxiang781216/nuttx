@@ -148,7 +148,17 @@ static int     yaffs_vfs_chstat(FAR struct inode *mountpt,
                                 FAR const char *relpath,
                                 FAR const struct stat *buf, int flags);
 static int     yaffs_vfs_syncfs(FAR struct inode *mountpt);
-
+#ifdef CONFIG_FS_LINKS
+static int     yaffs_vfs_link(FAR struct inode *mountpt,
+                              FAR const char *relpath1,
+                              FAR const char *relpath2);
+static int     yaffs_vfs_symlink(FAR struct inode *mountpt,
+                                 FAR const char *path1,
+                                 FAR const char *relpath2);
+static ssize_t yaffs_vfs_readlink(FAR struct inode *mountpt,
+                                  FAR const char *relpath,
+                                  FAR char *buf, size_t bufsize);
+#endif
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -193,6 +203,11 @@ const struct mountpt_operations g_yaffs_operations =
   yaffs_vfs_stat,          /* stat */
   yaffs_vfs_chstat,        /* chstat */
   yaffs_vfs_syncfs         /* syncfs */
+#ifdef CONFIG_FS_LINKS
+  , yaffs_vfs_link,          /* link */
+  yaffs_vfs_symlink,         /* symlink */
+  yaffs_vfs_readlink         /* readlink */
+#endif
 };
 
 /****************************************************************************
@@ -917,6 +932,56 @@ static int yaffs_vfs_syncfs(FAR struct inode *mountpt)
 
   return ret < 0 ? yaffsfs_GetLastError() : 0;
 }
+
+#ifdef CONFIG_FS_LINKS
+/****************************************************************************
+ * Name: yaffs_vfs_link
+ ****************************************************************************/
+
+static int yaffs_vfs_link(FAR struct inode *mountpt,
+                          FAR const char *relpath1,
+                          FAR const char *relpath2)
+{
+  FAR struct yaffs_dev *dev;
+  int ret;
+
+  dev = mountpt_to_yaffs_dev(mountpt);
+  ret = yaffs_link_reldev(dev, relpath1, relpath2);
+  return ret < 0 ? yaffsfs_GetLastError() : 0;
+}
+
+/****************************************************************************
+ * Name: yaffs_vfs_symlink
+ ****************************************************************************/
+
+static int yaffs_vfs_symlink(FAR struct inode *mountpt,
+                             FAR const char *path1,
+                             FAR const char *relpath2)
+{
+  FAR struct yaffs_dev *dev;
+  int ret;
+
+  dev = mountpt_to_yaffs_dev(mountpt);
+  ret = yaffs_symlink_reldev(dev, path1, relpath2);
+  return ret < 0 ? yaffsfs_GetLastError() : 0;
+}
+
+/****************************************************************************
+ * Name: yaffs_vfs_readlink
+ ****************************************************************************/
+
+static ssize_t yaffs_vfs_readlink(FAR struct inode *mountpt,
+                                  FAR const char *relpath,
+                                  FAR char *buf, size_t bufsize)
+{
+  FAR struct yaffs_dev *dev;
+  ssize_t ret;
+
+  dev = mountpt_to_yaffs_dev(mountpt);
+  ret = yaffs_readlink_reldev(dev, relpath, buf, bufsize);
+  return ret < 0 ? yaffsfs_GetLastError() : 0;
+}
+#endif
 
 /****************************************************************************
  * Name: yaffs_initialise_fn
