@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/arm/arm_tcbinfo.c
+ * arch/arm/src/arm_a_r/arm_tcbinfo.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -34,23 +34,23 @@
 
 static const struct reginfo_s g_reginfo[] =
 {
-  REGINFO_AUTO("r0",   4, 0,  TCB_REG_OFF(REG_R0)),
-  REGINFO_AUTO("r1",   4, 1,  TCB_REG_OFF(REG_R1)),
-  REGINFO_AUTO("r2",   4, 2,  TCB_REG_OFF(REG_R2)),
-  REGINFO_AUTO("r3",   4, 3,  TCB_REG_OFF(REG_R3)),
-  REGINFO_AUTO("r4",   4, 4,  TCB_REG_OFF(REG_R4)),
-  REGINFO_AUTO("r5",   4, 5,  TCB_REG_OFF(REG_R5)),
-  REGINFO_AUTO("r6",   4, 6,  TCB_REG_OFF(REG_R6)),
-  REGINFO_AUTO("r7",   4, 7,  TCB_REG_OFF(REG_R7)),
-  REGINFO_AUTO("r8",   4, 8,  TCB_REG_OFF(REG_R8)),
-  REGINFO_AUTO("r9",   4, 9,  TCB_REG_OFF(REG_R9)),
-  REGINFO_AUTO("r10",  4, 10, TCB_REG_OFF(REG_R10)),
-  REGINFO_AUTO("r11",  4, 11, TCB_REG_OFF(REG_R11)),
-  REGINFO_AUTO("r12",  4, 12, TCB_REG_OFF(REG_R12)),
-  REGINFO_AUTO("sp",   4, 13, TCB_REG_OFF(REG_R13)),
-  REGINFO_AUTO("lr",   4, 14, TCB_REG_OFF(REG_R14)),
-  REGINFO_AUTO("pc",   4, 15, TCB_REG_OFF(REG_R15)),
-  REGINFO_AUTO("cpsr", 4, 25, TCB_REG_OFF(REG_CPSR)),
+  REGINFO_AUTO("r0",  4, 0,  TCB_REG_OFF(REG_R0)),
+  REGINFO_AUTO("r1",  4, 1,  TCB_REG_OFF(REG_R1)),
+  REGINFO_AUTO("r2",  4, 2,  TCB_REG_OFF(REG_R2)),
+  REGINFO_AUTO("r3",  4, 3,  TCB_REG_OFF(REG_R3)),
+  REGINFO_AUTO("r4",  4, 4,  TCB_REG_OFF(REG_R4)),
+  REGINFO_AUTO("r5",  4, 5,  TCB_REG_OFF(REG_R5)),
+  REGINFO_AUTO("r6",  4, 6,  TCB_REG_OFF(REG_R6)),
+  REGINFO_AUTO("r7",  4, 7,  TCB_REG_OFF(REG_R7)),
+  REGINFO_AUTO("r8",  4, 8,  TCB_REG_OFF(REG_R8)),
+  REGINFO_AUTO("r9",  4, 9,  TCB_REG_OFF(REG_R9)),
+  REGINFO_AUTO("r10", 4, 10, TCB_REG_OFF(REG_R10)),
+  REGINFO_AUTO("r11", 4, 11, TCB_REG_OFF(REG_R11)),
+  REGINFO_AUTO("r12", 4, 12, TCB_REG_OFF(REG_R12)),
+  REGINFO_AUTO("sp",  4, 13, TCB_REG_OFF(REG_R13)),
+  REGINFO_AUTO("lr",  4, 14, TCB_REG_OFF(REG_R14)),
+  REGINFO_AUTO("pc",  4, 15, TCB_REG_OFF(REG_R15)),
+  REGINFO("cpsr",  4, 25, TCB_REG_OFF(REG_CPSR), 164, REGINFO_OFFSET_AUTO),
 };
 
 /****************************************************************************

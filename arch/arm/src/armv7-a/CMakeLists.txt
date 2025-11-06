@@ -42,7 +42,6 @@ list(
   arm_mmu.c
   arm_prefetchabort.c
   arm_syscall.c
-  arm_tcbinfo.c
   arm_undefinedinsn.c
   arm_perf.c
   cp15_cacheops.c)
