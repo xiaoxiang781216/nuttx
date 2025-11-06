@@ -103,20 +103,20 @@ int ffsll(long long j);
 int fls(int j);
 
 #ifdef CONFIG_HAVE_BUILTIN_CLZ
-#  define fls(j)  ((8 * sizeof(int)) - __builtin_clz(j))
+#  define fls(j)  ((8u * sizeof(int)) - (size_t)__builtin_clz(j))
 #endif
 
 int flsl(long j);
 
 #ifdef CONFIG_HAVE_BUILTIN_CLZ
-#  define flsl(j)  ((8 * sizeof(long)) - __builtin_clzl(j))
+#  define flsl(j)  ((8u * sizeof(long)) - (size_t)__builtin_clzl(j))
 #endif
 
 int flsll(long long j);
 
 #ifdef CONFIG_HAVE_LONG_LONG
 #  ifdef CONFIG_HAVE_BUILTIN_CLZ
-#    define flsll(j)  ((8 * sizeof(long long)) - __builtin_clzll(j))
+#    define flsll(j)  ((8u * sizeof(long long)) - (size_t)__builtin_clzll(j))
 #  endif
 #endif
 
