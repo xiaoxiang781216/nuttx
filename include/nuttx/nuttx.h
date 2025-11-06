@@ -40,15 +40,15 @@
 /* Align definitions */
 
 #ifndef IS_ALIGNED
-#  define IS_ALIGNED(x,a)      (((x) & ((a) - 1)) == 0)
+#  define IS_ALIGNED(x,a)      (((x) & ((a) - 1u)) == 0u)
 #endif
 
 #ifndef ALIGN_MASK
-#  define ALIGN_MASK(s)        ((1 << (s)) - 1)
+#  define ALIGN_MASK(s)        ((1u << (s)) - 1u)
 #endif
 
 #ifndef ALIGN_UP
-#  define ALIGN_UP(x,a)        ((((x) + (a) - 1) / (a)) * (a))
+#  define ALIGN_UP(x,a)        ((((x) + (a) - 1u) / (a)) * (a))
 #endif
 
 #ifndef ALIGN_UP_MASK
