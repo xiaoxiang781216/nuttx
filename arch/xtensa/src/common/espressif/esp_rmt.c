@@ -39,6 +39,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/mutex.h>
 #include <nuttx/rmt/rmt.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/circbuf.h>
 
