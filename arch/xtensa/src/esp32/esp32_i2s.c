@@ -44,6 +44,7 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/mqueue.h>
+#include <nuttx/mutex.h>
 #include <nuttx/circbuf.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/audio/audio.h>

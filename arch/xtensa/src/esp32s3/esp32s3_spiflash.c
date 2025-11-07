@@ -36,6 +36,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/init.h>
 #include <nuttx/kthread.h>
+#include <nuttx/mutex.h>
 #include <nuttx/signal.h>
 
 #include "sched/sched.h"
