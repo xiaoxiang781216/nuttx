@@ -641,12 +641,6 @@ static int backtrace_unwind(struct unwind_frame_s *frame,
       buffer[cnt++] = (void *)((frame->pc & ~1) - 2);
     }
 
-  if (frame->lr && cnt < size && (*skip)-- <= 0)
-    {
-      buffer[cnt++] = (void *)((frame->lr & ~1) - 2);
-    }
-
-again:
   while (cnt < size)
     {
       if (unwind_frame(frame) < 0 || frame->pc < 0x10)
@@ -668,16 +662,6 @@ again:
             {
               buffer[cnt++] = (void *)frame->pc;
             }
-        }
-    }
-
-  if (cnt < size && cnt == 2 && frame->pc != frame->lr)
-    {
-      entry = unwind_find_entry(frame->lr);
-      if (entry != NULL && entry->content != 1)
-        {
-          frame->pc = frame->lr;
-          goto again;
         }
     }
 
