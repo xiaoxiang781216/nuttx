@@ -35,7 +35,6 @@ set(SRCS
     arm_perf.c
     arm_svcall.c
     arm_systemreset.c
-    arm_tcbinfo.c
     arm_trigger_irq.c
     arm_usagefault.c
     arm_vectors.c
