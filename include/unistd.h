@@ -395,8 +395,8 @@ FAR void *sbrk(intptr_t incr);
 
 /* Special devices */
 
-#define pipe(fd) pipe2(fd, 0)
-int     pipe2(int[2], int);
+int     pipe(int pipefd[2]);
+int     pipe2(int pipefd[2], int flags);
 
 /* Schedule an alarm */
 
