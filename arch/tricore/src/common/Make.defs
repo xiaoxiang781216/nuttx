@@ -82,5 +82,9 @@ ifeq ($(CONFIG_ARCH_ADDRENV),y)
   CMN_CSRCS += tricore_addrenv.c
 endif
 
+ifeq ($(CONFIG_TRICORE_TOOLCHAIN_TASKING),y)
+  CMN_CSRCS += tricore_cxx_initialize.c
+endif
+
 CFLAGS += -DIFX_CFG_EXTEND_TRAP_HOOKS
 CFLAGS += -DIFX_USE_SW_MANAGED_INT
