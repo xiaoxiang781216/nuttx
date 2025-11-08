@@ -70,6 +70,18 @@ SECTIONS
       _erodata = . ;
     }
 
+  .ARM.extab : SUBALIGN(SECTIONS_ALIGN)
+    {
+      *(.ARM.extab*)
+    }
+
+  .ARM.exidx : SUBALIGN(SECTIONS_ALIGN)
+    {
+      __exidx_start = ABSOLUTE(.);
+      *(.ARM.exidx*)
+      __exidx_end = ABSOLUTE(.);
+    }
+
   _eronly = ABSOLUTE(.);
   .data DATA : AT(_eronly) SUBALIGN(SECTIONS_ALIGN)
     {
