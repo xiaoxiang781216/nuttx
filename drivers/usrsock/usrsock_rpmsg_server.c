@@ -1317,6 +1317,15 @@ int usrsock_rpmsg_server_initialize(void)
   int ret;
   int i;
 
+#ifdef CONFIG_NET_USRSOCK_RPMSG_SERVER_CPUID
+  if (this_cpu() != CONFIG_NET_USRSOCK_RPMSG_SERVER_CPUID)
+    {
+      /* Only allow to init on specified rpmsg server CPU */
+
+      return -EINVAL;
+    }
+#endif
+
   priv = kmm_calloc(1, sizeof(*priv));
   if (priv == NULL)
     {

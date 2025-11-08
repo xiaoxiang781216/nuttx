@@ -45,6 +45,10 @@ config NET_USRSOCK_RPMSG_SERVER
 
 if NET_USRSOCK_RPMSG_SERVER
 
+config NET_USRSOCK_RPMSG_SERVER_CPUID
+	int "The cpuid on which the RPMSG server runs"
+	depends on BMP
+
 config NET_USRSOCK_RPMSG_SERVER_NSOCKS
 	int "The maximum number of socket descriptors for usrsock monitoring"
 	default 64

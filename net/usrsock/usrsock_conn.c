@@ -309,6 +309,15 @@ void usrsock_setup_datain(FAR struct usrsock_conn_s *conn,
 
 void usrsock_initialize(void)
 {
+#ifdef CONFIG_NET_USRSOCK_RPMSG_SERVER_CPUID
+  if (this_cpu() == CONFIG_NET_USRSOCK_RPMSG_SERVER_CPUID)
+    {
+      /* Don't allow to register usrsock under rpmsg server CPU */
+
+      return;
+    }
+#endif
+
   /* Register /dev/usrsock character device. */
 
   usrsock_register();

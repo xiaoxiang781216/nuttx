@@ -105,10 +105,11 @@ static const struct file_operations g_usrsockdevops =
   usrsockdev_poll     /* poll */
 };
 
-static struct usrsockdev_s g_usrsockdev =
+static DEFINE_PER_CPU_BMP(struct usrsockdev_s, g_usrsockdev) =
 {
   NXMUTEX_INITIALIZER
 };
+#define g_usrsockdev this_cpu_var_bmp(g_usrsockdev)
 
 /****************************************************************************
  * Private Functions

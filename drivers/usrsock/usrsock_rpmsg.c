@@ -69,10 +69,11 @@ static void usrsock_rpmsg_device_destroy(FAR struct rpmsg_device *rdev,
  * Private Data
  ****************************************************************************/
 
-static struct usrsock_rpmsg_s g_usrsock_rpmsg =
+static DEFINE_PER_CPU_BMP(struct usrsock_rpmsg_s, g_usrsock_rpmsg) =
 {
   SEM_INITIALIZER(0)
 };
+#define g_usrsock_rpmsg this_cpu_var_bmp(g_usrsock_rpmsg)
 
 /****************************************************************************
  * Private Functions

@@ -102,6 +102,15 @@ static int usrsock_sockif_setup(FAR struct socket *psock)
 {
   int ret;
 
+#ifdef CONFIG_NET_USRSOCK_RPMSG_SERVER_CPUID
+  if (this_cpu() == CONFIG_NET_USRSOCK_RPMSG_SERVER_CPUID)
+    {
+      /* Usrsock offload not supported on the master RPMSG CPU */
+
+      return -ENOTSUP;
+    }
+#endif
+
   if (psock->s_domain != PF_INET && psock->s_domain != PF_INET6 &&
       psock->s_domain != PF_NETLINK)
     {
