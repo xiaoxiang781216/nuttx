@@ -101,6 +101,8 @@ function(get_smartcode_ctc_root OUT_VAR)
 endfunction()
 
 get_smartcode_ctc_root(SMARTCODE_CTC_ROOT)
+# search limits.h in this path firstly under include.cxx/support/tasking
+add_compile_options(-I${SMARTCODE_CTC_ROOT}/include.cxx/support/tasking)
 add_compile_options(-I${SMARTCODE_CTC_ROOT}/include)
 
 if(CONFIG_DEBUG_CUSTOMOPT)

@@ -25,6 +25,14 @@
  * Included Files
  ****************************************************************************/
 
+#ifdef __cplusplus
+
+/* ctc/include.cxx/support/tasking/limits.h in Tasking SmartCode */
+
+#  include_next <limits.h>
+
+#endif // end of __cplusplus
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/

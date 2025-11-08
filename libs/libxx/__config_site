@@ -10,6 +10,7 @@
 #define _LIBCPP___CONFIG_SITE
 
 #include <nuttx/config.h>
+#include <nuttx/compiler.h>
 
 #define _LIBCPP_ABI_VERSION 1
 #define _LIBCPP_ABI_NAMESPACE __1
