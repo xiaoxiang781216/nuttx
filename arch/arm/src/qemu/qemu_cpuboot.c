@@ -80,6 +80,12 @@ void arm_cpu_boot(int cpu)
   mpu_priv_flash((uintptr_t)_stext, (uintptr_t)_etext - (uintptr_t)_stext);
 #endif
 
+#ifdef CONFIG_ARCH_PERF_EVENTS
+  /* Perf init */
+
+  up_perf_init(0);
+#endif
+
   /* Enable SMP cache coherency for the CPU */
 
   arm_enable_smp(cpu);
