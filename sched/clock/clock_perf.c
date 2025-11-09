@@ -56,7 +56,8 @@ struct perf_s
  * Private Data
  ****************************************************************************/
 
-static struct perf_s g_perf;
+static DEFINE_PER_CPU_BSS_BMP(struct perf_s, g_perf);
+#define g_perf this_cpu_var_bmp(g_perf)
 
 /****************************************************************************
  * Private Functions
