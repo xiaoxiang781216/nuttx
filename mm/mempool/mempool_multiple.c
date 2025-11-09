@@ -153,10 +153,7 @@ static FAR void *
 mempool_multiple_alloc_chunk(FAR struct mempool_multiple_s *mpool,
                              size_t align, size_t size)
 {
-  FAR struct mpool_chunk_s *chunk;
-  size_t chunksize;
-  FAR char *tmp;
-  FAR void *ret;
+  FAR void *ret = NULL;
 
   if (mpool->chunksize < mpool->expandsize)
     {
@@ -165,42 +162,52 @@ mempool_multiple_alloc_chunk(FAR struct mempool_multiple_s *mpool,
         {
           mpool->alloced += mpool->alloc_size(mpool->arg, ret);
         }
-
-      return ret;
     }
-
-  chunk = (FAR struct mpool_chunk_s *)sq_peek(&mpool->chunk_queue);
-  if (chunk == NULL)
+  else
     {
-retry:
-      chunksize = mpool->init_chunksize != mpool->chunksize ?
-                   mpool->init_chunksize : mpool->chunksize;
-      tmp = mpool->alloc(mpool->arg, mpool->expandsize,
-                         chunksize + sizeof(struct mpool_chunk_s));
+      FAR struct mpool_chunk_s *chunk;
 
-      if (tmp == NULL)
+      chunk = (FAR struct mpool_chunk_s *)sq_peek(&mpool->chunk_queue);
+
+      if (chunk != NULL)
         {
-          return NULL;
+          ret = (FAR void *)ALIGN_UP((uintptr_t)chunk->next, align);
         }
 
-      mpool->init_chunksize = mpool->chunksize;
-      mpool->alloced += mpool->alloc_size(mpool->arg, tmp);
-      chunk = (FAR struct mpool_chunk_s *)(tmp + chunksize);
-      chunk->end = tmp + chunksize;
-      chunk->start = tmp;
-      chunk->next = tmp;
-      chunk->used = 0;
-      sq_addfirst(&chunk->entry, &mpool->chunk_queue);
+      while (chunk == NULL || (uintptr_t)chunk->end - (uintptr_t)ret < size)
+        {
+          size_t chunksize;
+          FAR char *tmp;
+
+          chunksize = mpool->init_chunksize != mpool->chunksize ?
+                       mpool->init_chunksize : mpool->chunksize;
+          tmp = mpool->alloc(mpool->arg, mpool->expandsize,
+                             chunksize + sizeof(struct mpool_chunk_s));
+
+          if (tmp == NULL)
+            {
+              ret = NULL;
+              break;
+            }
+
+          mpool->init_chunksize = mpool->chunksize;
+          mpool->alloced += mpool->alloc_size(mpool->arg, tmp);
+          chunk = (FAR struct mpool_chunk_s *)(tmp + chunksize);
+          chunk->end = tmp + chunksize;
+          chunk->start = tmp;
+          chunk->next = tmp;
+          chunk->used = 0;
+          sq_addfirst(&chunk->entry, &mpool->chunk_queue);
+          ret = (FAR void *)ALIGN_UP((uintptr_t)chunk->next, align);
+        }
+
+      if (ret != NULL)
+        {
+          chunk->used++;
+          chunk->next = (FAR char *)ret + size;
+        }
     }
 
-  ret = (FAR void *)ALIGN_UP((uintptr_t)chunk->next, align);
-  if ((uintptr_t)chunk->end - (uintptr_t)ret < size)
-    {
-      goto retry;
-    }
-
-  chunk->used++;
-  chunk->next = (FAR char *)ret + size;
   return ret;
 }
 
