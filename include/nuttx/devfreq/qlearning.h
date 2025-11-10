@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/cpufreq/qlearning.h
+ * include/nuttx/devfreq/qlearning.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_CPUFREQ_QLEARNING_H
-#define __INCLUDE_NUTTX_CPUFREQ_QLEARNING_H
+#ifndef __INCLUDE_NUTTX_DEVFREQ_QLEARNING_H
+#define __INCLUDE_NUTTX_DEVFREQ_QLEARNING_H
 
 /****************************************************************************
  * Included Files
@@ -46,7 +46,7 @@ struct qlearning_operations_s
  * Public Function Prototypes
  ****************************************************************************/
 
-int cpufreq_qlearning_set(FAR struct qlearning_lowerhalf_s *lh,
+int devfreq_qlearning_set(FAR struct qlearning_lowerhalf_s *lh,
                           FAR void *priv);
 
-#endif /* __INCLUDE_NUTTX_CPUFREQ_QLEARNING_H */
+#endif /* __INCLUDE_NUTTX_DEVFREQ_QLEARNING_H */
