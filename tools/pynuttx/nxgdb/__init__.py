@@ -64,6 +64,10 @@ def register_commands(event):
                 except Exception as e:
                     gdb.write(f"\x1b[31;1mIgnore command: {c}, e: {e}\n\x1b[m")
 
+    # Import GDBVenv firstly, so we can always create venv to install requirements for pynuttx.
+    venv_cmd = importlib.import_module(f"{__package__}.venv")
+    venv_cmd.GDBVenv()
+
     # import utils module
     utils = importlib.import_module(f"{__package__}.utils")
     modules = utils.gather_modules(here)
@@ -84,3 +88,8 @@ if len(gdb.objfiles()) == 0:
     gdb.events.new_objfile.connect(register_commands)
 else:
     register_commands(None)
+
+print(
+    "Hint: use `gdbvenv` to create virtual environment for nxgdb, "
+    "or `gdbvenv --install [path/to/requirements.txt]` to reinstall the packages"
+)
