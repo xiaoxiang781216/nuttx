@@ -153,10 +153,12 @@ static struct notesnap_s g_notesnap =
 
 static FAR const char *g_notesnap_type[] =
 {
+  "NOTE_ALL",
   "NOTE_START",
   "NOTE_STOP",
   "NOTE_SUSPEND",
   "NOTE_RESUME",
+  "NOTE_TASKNAME",
   "NOTE_CPU_START",
   "NOTE_CPU_STARTED",
   "NOTE_PREEMPT_LOCK",
@@ -171,8 +173,21 @@ static FAR const char *g_notesnap_type[] =
   "NOTE_SYSCALL_LEAVE",
   "NOTE_IRQ_ENTER",
   "NOTE_IRQ_LEAVE",
-  "NOTE_DUMP_STRING",
-  "NOTE_DUMP_BINARY"
+  "NOTE_WDOG_START",
+  "NOTE_WDOG_CANCEL",
+  "NOTE_WDOG_ENTER",
+  "NOTE_WDOG_LEAVE",
+  "NOTE_HEAP_ADD",
+  "NOTE_HEAP_REMOVE",
+  "NOTE_HEAP_ALLOC",
+  "NOTE_HEAP_FREE",
+  "NOTE_DUMP_PRINTF",
+  "NOTE_DUMP_BEGIN",
+  "NOTE_DUMP_END",
+  "NOTE_DUMP_MARK",
+  "NOTE_DUMP_BINARY",
+  "NOTE_DUMP_COUNTER",
+  "NOTE_DUMP_THREADTIME",
 };
 
 /****************************************************************************
