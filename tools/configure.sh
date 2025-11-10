@@ -348,6 +348,9 @@ fi
 # Update the CONFIG_BASE_DEFCONFIG setting
 
 posboardconfig=`echo "${boardconfig}" | sed -e 's/\\\\/\\//g'`
+if [[ "$posboardconfig" = /* ]]; then
+    posboardconfig=$(realpath --relative-to="$TOPDIR" "$posboardconfig")
+fi
 echo "CONFIG_BASE_DEFCONFIG=\"$posboardconfig\"" >> "${dest_config}"
 
 # The saved defconfig files are all in compressed format and must be
