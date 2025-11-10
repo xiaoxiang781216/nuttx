@@ -24,11 +24,13 @@
  * Included Files
  ****************************************************************************/
 
+#include <assert.h>
 #include <nuttx/atomic.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/panic_notifier.h>
 #include <nuttx/sched_note.h>
 #include <sched/sched.h>
+#include <sys/param.h>
 
 /****************************************************************************
  * Private Types
@@ -189,6 +191,11 @@ static FAR const char *g_notesnap_type[] =
   "NOTE_DUMP_COUNTER",
   "NOTE_DUMP_THREADTIME",
 };
+
+static_assert(
+  nitems(g_notesnap_type) == NOTE_TYPE_LAST,
+  "g_notesnap_type size mismatch"
+);
 
 /****************************************************************************
  * Private Functions
