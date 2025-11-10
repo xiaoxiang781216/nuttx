@@ -223,6 +223,13 @@ struct task_info_s
 #ifdef CONFIG_CRYPTO
   FAR char             *ta_passwd_buf;
 #endif
+#ifndef CONFIG_DISABLE_ENVIRON
+  /* Environment variables **************************************************/
+
+  FAR char            **ta_envp;    /* Allocated environment strings        */
+  ssize_t               ta_envpc;   /* Maximum entries of environment array */
+  ssize_t               ta_envc;    /* Number of environment strings        */
+#endif
 };
 
 /* struct tls_cleanup_s *****************************************************/

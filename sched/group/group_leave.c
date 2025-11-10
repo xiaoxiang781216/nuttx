@@ -80,6 +80,10 @@ group_release(FAR struct task_group_s *group, int ttype)
 
   nxrmutex_destroy(&group->tg_mutex);
 
+  /* Release all shared environment variables */
+
+  env_release(group);
+
   task_uninit_info(group);
 
 #if defined(CONFIG_SCHED_HAVE_PARENT) && defined(CONFIG_SCHED_CHILD_STATUS)
@@ -109,10 +113,6 @@ group_release(FAR struct task_group_s *group, int ttype)
   /* Free resources held by the file descriptor list */
 
   fdlist_free(&group->tg_fdlist);
-
-  /* Release all shared environment variables */
-
-  env_release(group);
 
 #ifdef CONFIG_BINFMT_LOADABLE
   /* If the exiting task was loaded into RAM from a file, then we need to
