@@ -55,6 +55,9 @@ def is_heap_node_corrupted(heap: mm.MMHeap, node: mm.MMNode) -> str:
         if node.flink and node.flink.blink != node:
             return f"flink not intact: {hex(node.flink.address)}, node: {hex(node.address)}"
 
+        if not node.blink:
+            return "blink is NULL"
+
         if node.blink.flink != node:
             return (
                 f"blink not intact: {hex(node.blink.flink)}, node: {hex(node.address)}"
