@@ -153,7 +153,7 @@ static FAR void *
 mempool_multiple_alloc_chunk(FAR struct mempool_multiple_s *mpool,
                              size_t align, size_t size)
 {
-  FAR void *ret = NULL;
+  FAR char *ret = NULL;
 
   if (mpool->chunksize < mpool->expandsize)
     {
@@ -171,10 +171,11 @@ mempool_multiple_alloc_chunk(FAR struct mempool_multiple_s *mpool,
 
       if (chunk != NULL)
         {
-          ret = (FAR void *)ALIGN_UP((uintptr_t)chunk->next, align);
+          ret = (FAR char *)ALIGN_UP((uintptr_t)(FAR char *)chunk->next,
+                                                            align);
         }
 
-      while (chunk == NULL || (uintptr_t)chunk->end - (uintptr_t)ret < size)
+      while (chunk == NULL || (size_t)((FAR char *)chunk->end - ret) < size)
         {
           size_t chunksize;
           FAR char *tmp;
@@ -198,7 +199,8 @@ mempool_multiple_alloc_chunk(FAR struct mempool_multiple_s *mpool,
           chunk->next = tmp;
           chunk->used = 0;
           sq_addfirst(&chunk->entry, &mpool->chunk_queue);
-          ret = (FAR void *)ALIGN_UP((uintptr_t)chunk->next, align);
+          ret = (FAR char *)ALIGN_UP((uintptr_t)(FAR char *)chunk->next,
+                                                            align);
         }
 
       if (ret != NULL)
