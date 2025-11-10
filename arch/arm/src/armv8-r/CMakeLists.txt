@@ -40,6 +40,7 @@ list(
   arm_syscall.c
   arm_undefinedinsn.c
   arm_perf.c
+  arm_cpuidlestack.c
   cp15_cacheops.c)
 
 if(CONFIG_ARM_GIC_VERSION EQUAL 2)
@@ -63,7 +64,7 @@ endif()
 
 if(NOT CONFIG_UP)
   list(APPEND SRCS arm_cpuhead.S arm_cpustart.c)
-  list(APPEND SRCS arm_smpcall.c arm_cpuidlestack.c arm_scu.c)
+  list(APPEND SRCS arm_smpcall.c arm_scu.c)
 endif()
 
 if(CONFIG_ARCH_ADDRENV)

@@ -33,33 +33,23 @@
 #include "smp.h"
 #include "arm_internal.h"
 
-#ifdef CONFIG_SMP
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* Stack alignment macros */
-
-#define STACK_ISALIGNED(a) ((uintptr_t)(a) & ~SMP_STACK_MASK)
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-#if CONFIG_SMP_NCPUS > 1
-static const uint32_t *g_cpu_stackalloc[CONFIG_SMP_NCPUS] =
+static const uint32_t *g_cpu_stackalloc[CONFIG_NCPUS] =
 {
     0
+#if CONFIG_NCPUS > 1
   , g_cpu1_idlestack
-#if CONFIG_SMP_NCPUS > 2
+#if CONFIG_NCPUS > 2
   , g_cpu2_idlestack
-#if CONFIG_SMP_NCPUS > 3
+#if CONFIG_NCPUS > 3
   , g_cpu3_idlestack
-#endif /* CONFIG_SMP_NCPUS > 3 */
-#endif /* CONFIG_SMP_NCPUS > 2 */
+#endif /* CONFIG_NCPUS > 3 */
+#endif /* CONFIG_NCPUS > 2 */
+#endif /* CONFIG_NCPUS > 1 */
 };
-#endif
 
 /****************************************************************************
  * Public Functions
@@ -110,23 +100,26 @@ static const uint32_t *g_cpu_stackalloc[CONFIG_SMP_NCPUS] =
 
 int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
 {
-#if CONFIG_SMP_NCPUS > 1
   uintptr_t stack_alloc;
 
-  DEBUGASSERT(cpu > 0 && cpu < CONFIG_SMP_NCPUS && tcb != NULL &&
-              stack_size <= SMP_STACK_SIZE);
+  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_NCPUS && tcb != NULL);
 
   /* Get the top of the stack */
 
-  stack_alloc          = (uintptr_t)g_cpu_stackalloc[cpu];
-  DEBUGASSERT(stack_alloc != 0 && STACK_ISALIGNED(stack_alloc));
+  if (cpu == 0)
+    {
+      stack_alloc = (uintptr_t)g_idle_topstack - CONFIG_IDLETHREAD_STACKSIZE;
+    }
+  else
+    {
+      stack_alloc = (uintptr_t)g_cpu_stackalloc[cpu];
+    }
 
-  tcb->adj_stack_size  = SMP_STACK_SIZE;
+  DEBUGASSERT((stack_alloc & STACKFRAME_ALIGN_MASK) == 0);
+
+  tcb->adj_stack_size  = stack_size;
   tcb->stack_alloc_ptr = (void *)stack_alloc;
   tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
-#endif
 
   return OK;
 }
-
-#endif /* CONFIG_SMP */

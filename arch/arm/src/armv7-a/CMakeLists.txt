@@ -43,6 +43,7 @@ list(
   arm_syscall.c
   arm_undefinedinsn.c
   arm_perf.c
+  arm_cpuidlestack.c
   cp15_cacheops.c)
 
 if(CONFIG_ARMV7A_GICv2M)
@@ -110,7 +111,7 @@ if(CONFIG_ARCH_FPU)
 endif()
 
 if(CONFIG_SMP)
-  list(APPEND SRCS arm_cpustart.c arm_smpcall.c arm_cpuidlestack.c arm_scu.c)
+  list(APPEND SRCS arm_cpustart.c arm_smpcall.c arm_scu.c)
 endif()
 
 if(CONFIG_ARM_PSCI)
