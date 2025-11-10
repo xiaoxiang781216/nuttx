@@ -900,7 +900,7 @@ def get_register_byname(regname, tcb=None):
             thread = get_gdb_thread(tcb["pid"])
         else:
             # For SMP, we need to switch to the thread's CPU
-            if is_target_smp():
+            if is_target_smp() and len(threads) > 1:
                 threads = sorted(threads, key=lambda t: t.num)
                 thread = threads[tcb.cpu]
             else:
