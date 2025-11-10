@@ -111,7 +111,7 @@ mempool_multiple_find(FAR struct mempool_multiple_s *mpool, size_t size)
   if (mpool != NULL)
     {
       right = mpool->npools;
-      if (mpool->delta != 0)
+      if (mpool->delta != 0u)
         {
           left = mpool->pools[0].blocksize;
           if (left >= size)
@@ -120,7 +120,7 @@ mempool_multiple_find(FAR struct mempool_multiple_s *mpool, size_t size)
             }
           else
             {
-              mid = (size - left + mpool->delta - 1) / mpool->delta;
+              mid = (size - left + mpool->delta - 1u) / mpool->delta;
               ret = mid < right ? &mpool->pools[mid] : NULL;
             }
         }
@@ -135,7 +135,7 @@ mempool_multiple_find(FAR struct mempool_multiple_s *mpool, size_t size)
                 }
               else
                 {
-                  left = mid + 1;
+                  left = mid + 1u;
                 }
             }
 
@@ -233,7 +233,7 @@ mempool_multiple_free_chunk(FAR struct mempool_multiple_s *mpool,
               chunk = (FAR struct mpool_chunk_s *)entry;
               if (ptr >= chunk->start && ptr < chunk->next)
                 {
-                  if (--chunk->used == 0)
+                  if (--chunk->used == 0u)
                     {
                       sq_rem(&chunk->entry, &mpool->chunk_queue);
                       mpool->free(mpool->arg, chunk->start);
@@ -274,7 +274,7 @@ static FAR void *mempool_multiple_alloc_callback(FAR struct mempool_s *pool,
             {
               mpool->dict[row] =
                 mempool_multiple_alloc_chunk(mpool, sizeof(uintptr_t),
-                                            (1 << mpool->dict_col_num_log2)
+                                            (1u << mpool->dict_col_num_log2)
                                             * sizeof(struct mpool_dict_s));
             }
 
@@ -422,9 +422,9 @@ mempool_multiple_init(FAR const char *name,
   size_t maxpoolszie;
   size_t minpoolsize;
   size_t mempoolsize;
-  int i;
+  size_t i;
 
-  if (!(config->expandsize & (config->expandsize - 1)))
+  if (!(config->expandsize & (config->expandsize - 1u)))
     {
       maxpoolszie = config->poolsize[0];
       minpoolsize = config->poolsize[0];
@@ -476,12 +476,12 @@ mempool_multiple_init(FAR const char *name,
 
               if (mempool_init(pools + i) >= 0)
                 {
-                  if (i + 1 != config->npools)
+                  if (i + 1u != config->npools)
                     {
-                      size_t delta = config->poolsize[i + 1] -
+                      size_t delta = config->poolsize[i + 1u] -
                                      config->poolsize[i];
 
-                      if (i == 0)
+                      if (i == 0u)
                         {
                           mpool->delta = delta;
                         }
@@ -731,7 +731,7 @@ FAR void *mempool_multiple_memalign(FAR struct mempool_multiple_s *mpool,
   FAR struct mempool_s *pool;
   FAR char *ret = NULL;
 
-  DEBUGASSERT((alignment & (alignment - 1)) == 0);
+  DEBUGASSERT((alignment & (alignment - 1u)) == 0u);
 
   pool = mempool_multiple_find(mpool, size + alignment);
   if (pool != NULL)
@@ -826,7 +826,7 @@ struct mallinfo_task
 mempool_multiple_info_task(FAR struct mempool_multiple_s *mpool,
                            FAR const struct malltask *task)
 {
-  int i;
+  size_t i;
   struct mallinfo_task info;
   struct mallinfo_task ret =
     {
