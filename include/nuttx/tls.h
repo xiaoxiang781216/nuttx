@@ -155,7 +155,7 @@ struct task_info_s
 {
   struct getopt_s       ta_getopt; /* Globals used by getopt() */
   mode_t                ta_umask;  /* File mode creation mask */
-  mutex_t               ta_lock;
+  rmutex_t              ta_lock;
   pid_t                 ta_pid; /* Process ID */
   FAR char             *ta_strtokptr;
   char                  ta_asctime[26];

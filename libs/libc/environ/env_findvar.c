@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/environ/env_findvar.c
+ * libs/libc/environ/env_findvar.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,14 +24,8 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
-#ifndef CONFIG_DISABLE_ENVIRON
-
-#include <stdbool.h>
-#include <string.h>
-#include <sched.h>
 #include <assert.h>
+#include <errno.h>
 
 #include <nuttx/tls.h>
 
@@ -87,16 +81,13 @@ static bool env_cmpname(const char *pszname, const char *peqname)
  *
  ****************************************************************************/
 
-ssize_t env_findvar(FAR struct task_group_s *group, FAR const char *pname)
+ssize_t env_findvar(FAR struct task_info_s *info, FAR const char *pname)
 {
-  FAR struct task_info_s *info;
   ssize_t i;
 
   /* Verify input parameters */
 
-  DEBUGASSERT(group != NULL && group->tg_info != NULL && pname != NULL);
-
-  info = group->tg_info;
+  DEBUGASSERT(info != NULL && pname != NULL);
 
   if (info->ta_envp == NULL)
     {
@@ -115,5 +106,3 @@ ssize_t env_findvar(FAR struct task_group_s *group, FAR const char *pname)
 
   return -ENOENT;
 }
-
-#endif /* CONFIG_DISABLE_ENVIRON */

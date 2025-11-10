@@ -38,9 +38,9 @@
 #include <nuttx/sched.h>
 #include <nuttx/trace.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/environ.h>
 
 #include "sched/sched.h"
-#include "environ/environ.h"
 #include "group/group.h"
 #include "task/task.h"
 #include "tls/tls.h"
@@ -86,7 +86,7 @@ static int task_setup(FAR struct tcb_s *tcb, const char *name, main_t entry,
 
   /* Duplicate the parent tasks environment */
 
-  ret = env_dup(tcb->group, envp);
+  ret = env_dup(tcb->group->tg_info, envp);
   if (ret >= 0)
     {
       /* Associate file descriptors with the new task */

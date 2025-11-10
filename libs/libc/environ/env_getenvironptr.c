@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/environ/env_putenv.c
+ * libs/libc/environ/env_getenvironptr.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,82 +24,31 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
+#include <nuttx/tls.h>
 
-#ifndef CONFIG_DISABLE_ENVIRON
-
-#include <stdlib.h>
-#include <sched.h>
-#include <string.h>
-#include <errno.h>
-
-#include <nuttx/lib/lib.h>
-#include <nuttx/kmalloc.h>
+#undef get_environ_ptr
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: putenv
+ * Name: get_environ_ptr
  *
  * Description:
- *   The putenv() function adds or changes the value of environment
- *   variables.
- *   The argument string is of the form name=value. If name does not already
- *   exist in  the  environment, then string is added to the environment. If
- *   name does exist, then the value of name in the environment is changed to
- *   value.
+ *   Return a pointer to the thread specific environ variable.
  *
  * Input Parameters:
- *   name=value string describing the environment setting to add/modify
+ *   None
  *
  * Returned Value:
- *   Zero on success
+ *   A pointer to the per-thread environ variable.
  *
  * Assumptions:
- *   Not called from an interrupt handler
  *
  ****************************************************************************/
 
-int putenv(FAR const char *string)
+FAR char **get_environ_ptr(void)
 {
-  FAR char *pname;
-  FAR char *pequal;
-  int ret = OK;
-
-  /* Verify that a string was passed */
-
-  if (!string)
-    {
-      ret = EINVAL;
-      goto errout;
-    }
-
-  /* Parse the name=value string */
-
-  pname = strdup(string);
-  if (!pname)
-    {
-      ret = ENOMEM;
-      goto errout;
-    }
-
-  pequal = strchr(pname, '=');
-  if (pequal)
-    {
-      /* Then let setenv do all of the work */
-
-      *pequal = '\0';
-      ret = setenv(pname, pequal + 1, TRUE);
-    }
-
-  kmm_free(pname);
-  return ret;
-
-errout:
-  set_errno(ret);
-  return ERROR;
+  return task_get_info()->ta_envp;
 }
-
-#endif /* CONFIG_DISABLE_ENVIRON */

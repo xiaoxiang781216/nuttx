@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/environ/env_clearenv.c
+ * libs/libc/environ/env_getenv.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,15 +24,12 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
+#include <errno.h>
+#include <string.h>
 
-#ifndef CONFIG_DISABLE_ENVIRON
+#include <nuttx/mutex.h>
+#include <nuttx/tls.h>
 
-#include <sched.h>
-#include <stdlib.h>
-#include <assert.h>
-
-#include "sched/sched.h"
 #include "environ/environ.h"
 
 /****************************************************************************
@@ -40,30 +37,68 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: clearenv
+ * Name: getenv
  *
  * Description:
- *   The clearenv() function clears the environment of all name-value pairs
- *   and sets the value of the external variable environ to NULL.
+ *   The getenv() function searches the environment list for a string that
+ *   matches the string pointed to by name.
  *
  * Input Parameters:
- *   None
+ *   name - The name of the variable to find.
  *
  * Returned Value:
- *   None
+ *   The value of the variable (read-only) or NULL on failure
  *
  * Assumptions:
  *   Not called from an interrupt handler
  *
  ****************************************************************************/
 
-int clearenv(void)
+FAR char *getenv(FAR const char *name)
 {
-  FAR struct tcb_s *tcb = this_task();
-  DEBUGASSERT(tcb->group);
+  FAR struct task_info_s *info = task_get_info();
+  FAR char *pvalue = NULL;
+  ssize_t ret = OK;
 
-  env_release(tcb->group);
-  return OK;
+  /* Verify that a string was passed */
+
+  if (name == NULL || info == NULL
+#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+      || up_interrupt_context() || sched_idletask()
+#endif
+     )
+    {
+      ret = -EINVAL;
+      goto errout;
+    }
+
+  nxrmutex_lock(&info->ta_lock);
+  ret = env_findvar(info, name);
+  if (ret < 0)
+    {
+      nxrmutex_unlock(&info->ta_lock);
+      goto errout;
+    }
+
+  /* It does!  Get the value sub-string from the name=value string */
+
+  pvalue = strchr(info->ta_envp[ret], '=');
+  if (pvalue == NULL)
+    {
+      /* The name=value string has no '='  This is a bug! */
+
+      nxrmutex_unlock(&info->ta_lock);
+      ret = -EINVAL;
+      goto errout;
+    }
+
+  /* Adjust the pointer so that it points to the value right after the '=' */
+
+  pvalue++;
+  nxrmutex_unlock(&info->ta_lock);
+  return pvalue;
+
+errout:
+  set_errno(-ret);
+  return NULL;
 }
-
-#endif /* CONFIG_DISABLE_ENVIRON */

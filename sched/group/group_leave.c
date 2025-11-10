@@ -38,12 +38,12 @@
 #include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/mutex.h>
+#include <nuttx/environ.h>
 
 #ifdef CONFIG_BINFMT_LOADABLE
 #  include <nuttx/binfmt/binfmt.h>
 #endif
 
-#include "environ/environ.h"
 #include "signal/signal.h"
 #include "pthread/pthread.h"
 #include "mqueue/mqueue.h"
@@ -79,12 +79,6 @@ group_release(FAR struct task_group_s *group, int ttype)
   /* Destroy the mutex */
 
   nxrmutex_destroy(&group->tg_mutex);
-
-  /* Release all shared environment variables */
-
-  env_release(group);
-
-  task_uninit_info(group);
 
 #if defined(CONFIG_SCHED_HAVE_PARENT) && defined(CONFIG_SCHED_CHILD_STATUS)
   /* Free all un-reaped child exit status */
@@ -139,6 +133,8 @@ group_release(FAR struct task_group_s *group, int ttype)
       group_drop(group);
     }
 #endif
+
+  task_uninit_info(group);
 }
 
 /****************************************************************************

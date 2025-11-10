@@ -61,7 +61,7 @@ static void atfork_prepare(void)
    * so we iterate over the func list in reverse order
    */
 
-  nxmutex_lock(&info->ta_lock);
+  nxrmutex_lock(&info->ta_lock);
   list_for_every_entry_reverse(list, entry,
                                struct pthread_atfork_s, node)
     {
@@ -71,7 +71,7 @@ static void atfork_prepare(void)
          }
     }
 
-  nxmutex_unlock(&info->ta_lock);
+  nxrmutex_unlock(&info->ta_lock);
 }
 
 /****************************************************************************
@@ -90,7 +90,7 @@ static void atfork_child(void)
 
   /* The parent handlers are called in the order of registration */
 
-  nxmutex_lock(&info->ta_lock);
+  nxrmutex_lock(&info->ta_lock);
   list_for_every_entry(list, entry,
                        struct pthread_atfork_s, node)
     {
@@ -100,7 +100,7 @@ static void atfork_child(void)
          }
     }
 
-  nxmutex_unlock(&info->ta_lock);
+  nxrmutex_unlock(&info->ta_lock);
 }
 
 /****************************************************************************
@@ -119,7 +119,7 @@ static void atfork_parent(void)
 
   /* The child handlers are called in the order of registration */
 
-  nxmutex_lock(&info->ta_lock);
+  nxrmutex_lock(&info->ta_lock);
   list_for_every_entry(list, entry,
                        struct pthread_atfork_s, node)
     {
@@ -129,7 +129,7 @@ static void atfork_parent(void)
         }
     }
 
-  nxmutex_unlock(&info->ta_lock);
+  nxrmutex_unlock(&info->ta_lock);
 }
 #endif
 

@@ -1522,7 +1522,7 @@ static ssize_t proc_groupenv(FAR struct proc_file_s *procfile,
 
   /* Generate output for each environment variable */
 
-  env_foreach(group, proc_groupenv_callback, &info);
+  env_foreach(group->tg_info, proc_groupenv_callback, &info);
   return info.totalsize;
 }
 #endif

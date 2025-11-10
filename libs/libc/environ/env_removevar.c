@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/environ/env_getenvironptr.c
+ * libs/libc/environ/env_removevar.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -24,43 +24,75 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
+#include <assert.h>
 
-#ifndef CONFIG_DISABLE_ENVIRON
-
-#include <sched.h>
-#include <stdlib.h>
 #include <nuttx/tls.h>
 
-#include "sched/sched.h"
-
-#undef get_environ_ptr
+#include "environ/environ.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: get_environ_ptr
+ * Name: env_removevar
  *
  * Description:
- *   Return a pointer to the thread specific environ variable.
+ *   Remove the referenced name=value pair from the environment
  *
  * Input Parameters:
- *   None
+ *   info  - The task with the environment containing the name=value
+ *           pair
+ *   index - A index to the name=value pair in the restroom
  *
  * Returned Value:
- *   A pointer to the per-thread environ variable.
+ *   None
  *
  * Assumptions:
+ *   - Not called from an interrupt handler
+ *   - Caller has pre-emption disabled
+ *   - Caller will reallocate the environment structure to the correct size
  *
  ****************************************************************************/
 
-FAR char **get_environ_ptr(void)
+void env_removevar(FAR struct task_info_s *info, ssize_t index)
 {
-  FAR struct tcb_s *tcb = this_task();
+  DEBUGASSERT(info != NULL && index >= 0 && index < info->ta_envc);
 
-  return tcb->group->tg_info->ta_envp;
+  /* Free the allocate environment string */
+
+  lib_ufree(info->ta_envp[index]);
+
+  /* Exchange the last env and the index env */
+
+  info->ta_envc--;
+  if (index == info->ta_envc)
+    {
+      info->ta_envp[index] = NULL;
+    }
+  else
+    {
+      info->ta_envp[index] = info->ta_envp[info->ta_envc];
+      info->ta_envp[info->ta_envc] = NULL;
+    }
+
+  /* Free the old environment (if there was one) */
+
+  if (info->ta_envc == 0)
+    {
+      lib_ufree(info->ta_envp);
+      info->ta_envp = NULL;
+      info->ta_envpc = 0;
+    }
+  else if (info->ta_envc <=
+           (info->ta_envpc - SCHED_ENVIRON_RESERVED * 2))
+    {
+      /* Reallocate the environment to reclaim a little memory */
+
+      info->ta_envpc = info->ta_envc + SCHED_ENVIRON_RESERVED + 1;
+
+      info->ta_envp = lib_urealloc(info->ta_envp,
+         sizeof(*info->ta_envp) * info->ta_envpc);
+      DEBUGASSERT(info->ta_envp != NULL);
+    }
 }
-
-#endif /* CONFIG_DISABLE_ENVIRON */

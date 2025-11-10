@@ -639,7 +639,7 @@ FAR char *dcngettext(FAR const char *domainname,
            lang, g_catname[category], domainname);
 
   info = task_get_info();
-  while (nxmutex_lock(&info->ta_lock) < 0);
+  while (nxrmutex_lock(&info->ta_lock) < 0);
 
   mofile = info->ta_mofile;
   if (!mofile || strcmp(mofile->path, path) != 0)
@@ -649,7 +649,7 @@ FAR char *dcngettext(FAR const char *domainname,
       info->ta_mofile = mofile;
     }
 
-  nxmutex_unlock(&info->ta_lock);
+  nxrmutex_unlock(&info->ta_lock);
   lib_put_tempbuffer(path);
 
   if (mofile == NULL)

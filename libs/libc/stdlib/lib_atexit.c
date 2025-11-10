@@ -82,7 +82,7 @@ int atexit_register(int type, CODE void (*func)(void), FAR void *arg,
 
   if (func)
     {
-      ret = nxmutex_lock(&info->ta_lock);
+      ret = nxrmutex_lock(&info->ta_lock);
       if (ret < 0)
         {
           return -ret;
@@ -101,7 +101,7 @@ int atexit_register(int type, CODE void (*func)(void), FAR void *arg,
           ret = ERROR;
         }
 
-      nxmutex_unlock(&info->ta_lock);
+      nxrmutex_unlock(&info->ta_lock);
     }
 
   return ret;
