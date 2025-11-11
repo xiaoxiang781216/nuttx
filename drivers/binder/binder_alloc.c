@@ -241,6 +241,7 @@ FAR struct binder_buffer *binder_alloc_new_buf(
       binder_debug(BINDER_DEBUG_ERROR,
                     "alloc->pid=%d failed to alloc new buffer struct,"
                     "size=%zu\n", alloc->pid, size);
+      *ret = -ENOMEM;
       return NULL;
     }
 
