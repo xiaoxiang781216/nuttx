@@ -32,7 +32,8 @@ CSRCS += devfreq_ondemand.c
 endif
 
 ifeq ($(CONFIG_DEVFREQ_GOV_QLEARNING),y)
-CSRCS += devfreq_qlearning.c
+CSRCS += devfreq_qlearning.c qlearning/qlearning_manager.c
+         qlearning/qlearning_network.c
 endif
 
 ifeq ($(CONFIG_CPUFREQ_DEFAULT_GOV_NULL),)

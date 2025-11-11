@@ -30,7 +30,8 @@ if(CONFIG_DEVFREQ)
   endif()
 
   if(CONFIG_DEVFREQ_GOV_QLEARNING)
-    list(APPEND SRCS devfreq_qlearning.c)
+    list(APPEND SRCS devfreq_qlearning.c qlearning/qlearning_manager.c
+         qlearning/qlearning_network.c)
   endif()
 
   if(NOT CONFIG_CPUFREQ_DEFAULT_GOV_NULL)
