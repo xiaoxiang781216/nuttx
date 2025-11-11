@@ -1089,6 +1089,7 @@
 /* Pre-processor */
 
 #  undef CONFIG_CPP_HAVE_VARARGS /* No variable argument macros */
+#  undef CONFIG_HAVE_ZERO_SIZE_ARRAY
 
 /* Intriniscs */
 

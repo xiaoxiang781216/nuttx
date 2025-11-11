@@ -260,15 +260,16 @@ int group_initialize(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
 void group_postinitialize(FAR struct tcb_s *tcb)
 {
   FAR struct task_group_s *group;
+  bool kernel;
 
   DEBUGASSERT(tcb && tcb->group);
+  kernel = atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_KERNEL;
   group = tcb->group;
   spin_lock_init(&group->tg_lock);
 
   /* Allocate mm_map list if required */
 
-  mm_map_initialize(&group->tg_mm_map,
-                    (atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_KERNEL) != 0);
+  mm_map_initialize(&group->tg_mm_map, kernel);
 
 #ifdef HAVE_GROUP_MEMBERS
   /* Assign the PID of this new task as a member of the group. */

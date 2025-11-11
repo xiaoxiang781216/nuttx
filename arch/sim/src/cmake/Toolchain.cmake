@@ -24,6 +24,7 @@ if(APPLE)
 endif()
 
 if(WIN32)
+  add_compile_options(/std:c11 /experimental:c11atomics)
   return()
 endif()
 
@@ -183,8 +184,6 @@ if(NOT WIN32)
     -Wno-attributes
     -Wno-unknown-pragmas
     $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>)
-else()
-  add_compile_options(/std:c11 /experimental:c11atomics)
 endif()
 
 if(APPLE)
