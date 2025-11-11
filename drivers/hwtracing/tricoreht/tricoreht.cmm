@@ -1,0 +1,70 @@
+;=========================================================================
+; drivers/hwtracing/tricoreht/tricoreht.cmm
+;
+; SPDX-License-Identifier: Apache-2.0
+;
+; Licensed to the Apache Software Foundation (ASF) under one or more
+; contributor license agreements.  See the NOTICE file distributed with
+; this work for additional information regarding copyright ownership.  The
+; ASF licenses this file to you under the Apache License, Version 2.0 (the
+; "License"); you may not use this file except in compliance with the
+; License.  You may obtain a copy of the License at
+;
+;   http://www.apache.org/licenses/LICENSE-2.0
+;
+; Unless required by applicable law or agreed to in writing, software
+; distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+; WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+; License for the specific language governing permissions and limitations
+; under the License.
+;
+;=========================================================================
+
+SyStem.down
+
+; Enable multi-core trace
+IF CPU()=="TC48X"
+(
+    core.assign 1 2 3 4
+)
+ELSE IF CPU()=="TC4DX"
+(
+    core.assign 1 2 3 4 5 6
+)
+
+SYStem.attach
+
+; Set the JTAG clock to 100MHz, transfer rate is related to clock frequency
+System.JtagClock 100MHZ
+
+If !Symbol.Exist("g_hwtracing_trigger")
+(
+    Printf "ERROR: No ELF file loaded! Please load ELF file."
+    Enddo
+)
+
+; Set trace data breakpoint
+Break.Set g_hwtracing_trigger /Write /tracedata
+MCDS.DataTrace.Mode  Write
+
+; Select multi-core trace
+IF CPU()=="TC48X"
+(
+    MCDS.DataTrace.Agents CORE0,CORE1,CORE2,CORE3
+)
+ELSE IF CPU()=="TC4DX"
+(
+    MCDS.DataTrace.Agents CORE0,CORE1,CORE2,CORE3,CORE4,CORE5
+)
+
+MCDS.ProgramTrace.Agents
+
+; DAP streaming
+TRACE.METHOD CAnalyzer
+TRACE.MODE STREAM
+
+Trace
+break
+Go
+
+ENDDO
