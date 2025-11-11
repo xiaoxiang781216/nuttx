@@ -289,8 +289,8 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
 
       /* Notify the device driver of the availability of TX data */
 
-      conn_dev_unlock(&conn->sconn, conn->dev);
       tcp_send_txnotify(psock, conn);
+      conn_dev_unlock(&conn->sconn, conn->dev);
     }
   else
     {
