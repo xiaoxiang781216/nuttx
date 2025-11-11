@@ -28,6 +28,13 @@ config DRIVERS_NOTE_TASKNAME_BUFSIZE
 		If 0 is specified, this feature is disabled and trace dump shows only
 		the name of the newly created task.
 
+config DRIVERS_NOTE_CLOCKID
+	int "Select ClockId to display timestamp in notecomm"
+	default -1
+	---help---
+		If -1 means disable timestamp add note comm.
+		CLOCK_REALTIME, CLOCK_MONOTONIC etc. clockID
+
 config DRIVERS_NOTECTL
 	bool "Scheduler instrumentation filter control driver"
 	depends on SCHED_INSTRUMENTATION_FILTER

@@ -32,9 +32,11 @@
 #include <errno.h>
 #include <time.h>
 
+#include <nuttx/init.h>
 #include <nuttx/irq.h>
 #include <nuttx/sched.h>
 #include <nuttx/clock.h>
+#include <nuttx/timers/clkcnt.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/spinlock.h>
@@ -167,6 +169,10 @@ static struct note_taskname_s g_note_taskname;
 static spinlock_t g_note_lock;
 #endif
 
+#if CONFIG_DRIVERS_NOTE_CLOCKID >= 0
+static clock_t g_note_perf_offset;
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -192,6 +198,8 @@ static void note_common(FAR struct tcb_s *tcb,
                         FAR struct note_common_s *note,
                         uint8_t length, uint8_t type)
 {
+  clock_t perftime;
+
   /* Save all of the common fields */
 
   note->nc_length = length;
@@ -209,7 +217,25 @@ static void note_common(FAR struct tcb_s *tcb,
       note->nc_pid = tcb->pid;
     }
 
-  note->nc_systime = NOTE_PERF_GETTIME();
+  perftime = NOTE_PERF_GETTIME();
+#if CONFIG_DRIVERS_NOTE_CLOCKID >= 0
+  if (g_note_perf_offset == 0 && OSINIT_HW_READY())
+    {
+      struct timespec ts;
+      unsigned long freq;
+
+      clock_gettime(CONFIG_DRIVERS_NOTE_CLOCKID, &ts);
+      freq = perf_getfreq();
+
+      g_note_perf_offset =
+        clkcnt_delta_time2cnt(ts.tv_nsec, freq, NSEC_PER_SEC) +
+        ts.tv_sec * freq - perftime;
+    }
+
+  note->nc_systime = perftime + g_note_perf_offset;
+#else
+  note->nc_systime = perftime;
+#endif
 }
 
 /****************************************************************************
