@@ -690,7 +690,7 @@ ssize_t mempool_multiple_alloc_size(FAR struct mempool_multiple_s *mpool,
   dict = mempool_multiple_get_dict(mpool, blk);
   if (dict != NULL)
     {
-      ret = dict->pool->blocksize;
+      ret = (ssize_t)dict->pool->blocksize;
     }
 
   return ret;
