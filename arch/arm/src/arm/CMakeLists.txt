@@ -24,7 +24,6 @@ list(
   APPEND
   SRCS
   arm_dataabort.c
-  arm_doirq.c
   arm_initialstate.c
   arm_prefetchabort.c
   arm_syscall.c

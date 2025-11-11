@@ -20,7 +20,7 @@
 
 # Common ARM_A_R files
 
-CMN_CSRCS += arm_tcbinfo.c
+CMN_CSRCS += arm_tcbinfo.c arm_doirq.c
 
 ifneq ($(CONFIG_DISABLE_SIGNALS),y)
   CMN_CSRCS += arm_schedulesigaction.c arm_sigdeliver.c

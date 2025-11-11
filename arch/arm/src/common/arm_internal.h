@@ -300,7 +300,12 @@ void weak_function arm_initialize_stack(void);
 
 /* Interrupt acknowledge and dispatch */
 
+#if defined(CONFIG_ARCH_ARMV7A) || defined(CONFIG_ARCH_ARMV7R) || defined(CONFIG_ARCH_ARMV8R)
+#  define arm_ack_irq(i)
+#else
 void arm_ack_irq(int irq);
+#endif
+
 uint32_t *arm_doirq(int irq, uint32_t *regs);
 
 /* System call handling */

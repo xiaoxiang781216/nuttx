@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/arm_doirq.c
+ * arch/arm/src/arm_a_r/arm_doirq.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -63,6 +63,10 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   DEBUGASSERT(!up_interrupt_context());
 
+  /* Acknowledge the interrupt */
+
+  arm_ack_irq(irq);
+
   /* if irq == GIC_SMP_CPUSTART
    * We are initiating the multi-core jumping state to up_idle,
    * and we will use this_task(). Therefore, it cannot be overridden.
@@ -115,7 +119,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   board_autoled_off(LED_INIRQ);
 
-  /* (*running_task)->xcp.regs is about to become invalid
+  /* tcb->xcp.regs is about to become invalid
    * and will be marked as NULL to avoid misusage.
    */
 
