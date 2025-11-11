@@ -72,7 +72,7 @@ static dq_queue_t g_active_netlink_connections;
 
 /* Global protection lock for netlink */
 
-static mutex_t g_netlink_lock = NXMUTEX_INITIALIZER;
+static rmutex_t g_netlink_lock = NXRMUTEX_INITIALIZER;
 
 /****************************************************************************
  * Private Functions
@@ -475,10 +475,14 @@ int netlink_get_response(FAR struct netlink_conn_s *conn,
         }
       else
         {
+          unsigned int count;
+
           /* Wait for a response to be queued */
 
           tls_cleanup_push(tls_get_info(), netlink_notifier_teardown, conn);
+          nxrmutex_breaklock(&g_netlink_lock, &count);
           ret = net_sem_wait(&waitsem);
+          nxrmutex_restorelock(&g_netlink_lock, count);
           tls_cleanup_pop(tls_get_info(), 0);
         }
 
@@ -531,7 +535,7 @@ bool netlink_check_response(FAR struct netlink_conn_s *conn)
 
 void netlink_lock(void)
 {
-  nxmutex_lock(&g_netlink_lock);
+  nxrmutex_lock(&g_netlink_lock);
 }
 
 /****************************************************************************
@@ -544,7 +548,7 @@ void netlink_lock(void)
 
 void netlink_unlock(void)
 {
-  nxmutex_unlock(&g_netlink_lock);
+  nxrmutex_unlock(&g_netlink_lock);
 }
 
 #endif /* CONFIG_NET_NETLINK */
