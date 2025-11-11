@@ -493,12 +493,13 @@ mempool_multiple_init(FAR const char *name,
                 }
               else
                 {
-                  while (--i >= 0)
+                  while (i-- >= 1u)
                     {
                       mempool_deinit(pools + i);
                     }
 
                   mpool = NULL;
+                  break;
                 }
             }
 
@@ -521,7 +522,7 @@ mempool_multiple_init(FAR const char *name,
                 }
               else
                 {
-                  while (--i >= 0)
+                  while (i-- >= 1u)
                     {
                       mempool_deinit(pools + i);
                     }
