@@ -173,7 +173,7 @@ static void qlearning_manager_callback(FAR struct pm_callback_s *cb,
 {
   FAR struct devfreq_s *dev;
 
-  dev = devfreq_find_by_name(CONFIG_DEVFREQ_DEVICE_NAME);
+  dev = devfreq_find_by_name(CONFIG_CPUFREQ_DEVICE_NAME);
   if (pmstate == PM_NORMAL)
     {
       qlearning_manager_start(dev);
