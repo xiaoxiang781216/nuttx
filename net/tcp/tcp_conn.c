@@ -58,6 +58,7 @@
 
 #include <nuttx/clock.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/mm/mempool.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
@@ -84,14 +85,22 @@
 #endif
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+/* The TCP connections rmutex */
+
+rmutex_t g_tcp_connections_lock = NXRMUTEX_INITIALIZER;
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
 /* The array containing all TCP connections. */
 
-NET_BUFPOOL_DECLARE(g_tcp_connections, sizeof(struct tcp_conn_s),
-                    CONFIG_NET_TCP_PREALLOC_CONNS,
-                    CONFIG_NET_TCP_ALLOC_CONNS, CONFIG_NET_TCP_MAX_CONNS);
+MEMPOOL_DEFINE(g_tcp_connections, sizeof(struct tcp_conn_s),
+               CONFIG_NET_TCP_PREALLOC_CONNS, CONFIG_NET_TCP_MAX_CONNS,
+               CONFIG_NET_TCP_ALLOC_CONNS);
 
 /* A list of all connected TCP connections */
 
@@ -609,7 +618,7 @@ FAR struct tcp_conn_s *tcp_alloc(uint8_t domain)
 
   /* Return the entry from the head of the free list */
 
-  conn = NET_BUFPOOL_TRYALLOC(g_tcp_connections);
+  conn = mempool_allocate(&g_tcp_connections, 0);
 
 #ifndef CONFIG_NET_SOLINGER
   /* Is the free list empty? */
@@ -682,7 +691,7 @@ FAR struct tcp_conn_s *tcp_alloc(uint8_t domain)
            * a new connection.
            */
 
-          conn = NET_BUFPOOL_TRYALLOC(g_tcp_connections);
+          conn = mempool_allocate(&g_tcp_connections, 0);
         }
     }
 #endif
@@ -889,7 +898,7 @@ void tcp_free(FAR struct tcp_conn_s *conn)
 
   /* Free the connection structure */
 
-  NET_BUFPOOL_FREE(g_tcp_connections, conn);
+  mempool_release(&g_tcp_connections, conn);
 }
 
 /****************************************************************************
