@@ -66,7 +66,7 @@ void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
 
   /* Check if this priority is enabled */
 
-  if ((info->ta_syslog_mask & LOG_MASK(priority)) != 0)
+  if ((info && info->ta_syslog_mask & LOG_MASK(priority)) != 0)
     {
       /* Yes.. Perform the nx_vsyslog system call.
        *
