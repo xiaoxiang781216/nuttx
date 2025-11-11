@@ -510,7 +510,7 @@ static ssize_t noteram_get(FAR struct noteram_driver_s *drv,
   drv->header->read = noteram_next(drv, drv->header->read,
                                    NOTE_ALIGN(notelen));
 
-  return notelen;
+  return NOTE_ALIGN(notelen);
 }
 
 /****************************************************************************
