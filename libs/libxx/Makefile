@@ -45,7 +45,7 @@ ifeq ($(CONFIG_LIBCXXABI),y)
 include libcxxabi/Make.defs
 else ifeq ($(CONFIG_LIBSUPCXX),y)
 include libstdc++/libsupc++.defs
-else ifeq ($(LIBMINIABI),y)
+else ifeq ($(CONFIG_LIBMINIABI),y)
 include libminiabi/Make.defs
 endif
 
