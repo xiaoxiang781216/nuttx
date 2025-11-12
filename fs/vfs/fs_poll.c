@@ -42,7 +42,6 @@
 #include <arch/irq.h>
 
 #include "inode/inode.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Private Types
@@ -433,7 +432,7 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
 #if defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)
   /* Allocate kernel memory for the fds */
 
-  kfds = fs_heap_malloc(nfds * sizeof(struct pollfd) + sizeof(sem_t));
+  kfds = lib_get_tempbuffer(nfds * sizeof(struct pollfd) + sizeof(sem_t));
   if (!kfds)
     {
       /* Out of memory */
@@ -541,7 +540,7 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
 
   /* Free the temporary buffer */
 
-  fs_heap_free(kfds);
+  lib_put_tempbuffer(kfds);
 
 out_with_cancelpt:
 #endif
