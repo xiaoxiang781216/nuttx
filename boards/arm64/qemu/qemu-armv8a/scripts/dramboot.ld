@@ -51,8 +51,8 @@ SECTIONS
 #endif
 
   _start = .;
+  _stext = .;      /* Text section */
   .text : {
-        _stext = .;            /* Text section */
        *(.start .start.*)      /* Place __start here */
        *(.text)
        *(.text.cold)
