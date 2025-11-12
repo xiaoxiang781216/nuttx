@@ -96,15 +96,13 @@ LLVM_ABITYPE := sysv
 # We have to use a cross-development toolchain under Cygwin because the native
 # Cygwin toolchains don't generate ELF binaries.
 
-ifeq ($(CONFIG_WINDOWS_CYGWIN),y)
+ifneq ($(CONFIG_X86_64_TOOLCHAIN_GNU_NONE),)
+CROSSDEV ?= x86_64-none-elf-
+else ifneq ($(CONFIG_WINDOWS_CYGWIN),)
 CROSSDEV ?= i486-nuttx-elf-
-endif
-
-ifeq ($(CONFIG_HOST_MACOS),y)
+else ifneq ($(CONFIG_HOST_MACOS),)
 CROSSDEV ?= x86_64-elf-
 endif
-
-CROSSDEV ?= x86_64-none-elf-
 
 ifneq ($(CONFIG_CXX_STANDARD),)
   ARCHCXXFLAGS += -std=$(CONFIG_CXX_STANDARD)
