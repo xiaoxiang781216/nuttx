@@ -75,21 +75,24 @@ extern FAR struct iob_qentry_s *g_iob_qcommitted;
 
 /* semaphores that IOBs need wait */
 
-extern sem_t g_iob_sem;
+DECLARE_PER_CPU_BMP(sem_t, g_iob_sem);
+#define g_iob_sem this_cpu_var_bmp(g_iob_sem)
 
 /* Counts free I/O buffers */
 
 extern int16_t g_iob_count;
 
 #if CONFIG_IOB_THROTTLE > 0
-extern sem_t g_throttle_sem;
+DECLARE_PER_CPU_BMP(sem_t, g_throttle_sem);
+#define g_throttle_sem this_cpu_var_bmp(g_throttle_sem)
 
 /* Wait Counts for throttle */
 
 extern int16_t g_throttle_wait;
 #endif
 #if CONFIG_IOB_NCHAINS > 0
-extern sem_t g_qentry_sem;
+DECLARE_PER_CPU_BMP(sem_t, g_qentry_sem);
+#define g_qentry_sem this_cpu_var_bmp(g_qentry_sem)
 
 /* Wait Counts for qentry */
 

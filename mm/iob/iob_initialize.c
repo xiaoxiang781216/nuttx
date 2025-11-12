@@ -93,7 +93,9 @@ FAR struct iob_qentry_s *g_iob_freeqlist;
 FAR struct iob_qentry_s *g_iob_qcommitted;
 #endif
 
-sem_t g_iob_sem = SEM_INITIALIZER(0);
+#undef g_iob_sem
+DEFINE_PER_CPU_BMP(sem_t, g_iob_sem) = SEM_INITIALIZER(0);
+#define g_iob_sem this_cpu_var_bmp(g_iob_sem)
 
 /* Counting that tracks the number of free IOBs/qentries */
 
@@ -101,7 +103,9 @@ int16_t g_iob_count = CONFIG_IOB_NBUFFERS;
 
 #if CONFIG_IOB_THROTTLE > 0
 
-sem_t g_throttle_sem = SEM_INITIALIZER(0);
+#  undef g_throttle_sem
+DEFINE_PER_CPU_BMP(sem_t, g_throttle_sem) = SEM_INITIALIZER(0);
+#  define g_throttle_sem this_cpu_var_bmp(g_throttle_sem)
 
 /* Wait Counts for throttle */
 
@@ -109,7 +113,10 @@ int16_t g_throttle_wait = 0;
 #endif
 
 #if CONFIG_IOB_NCHAINS > 0
-sem_t g_qentry_sem = SEM_INITIALIZER(0);
+
+#  undef g_qentry_sem
+DEFINE_PER_CPU_BMP(sem_t, g_qentry_sem) = SEM_INITIALIZER(0);
+#  define g_qentry_sem this_cpu_var_bmp(g_qentry_sem)
 
 /* Wait Counts for qentry */
 
