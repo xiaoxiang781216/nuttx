@@ -31,12 +31,11 @@
 #include <locale.h>
 #include <stdlib.h>
 
-#ifdef CONFIG_LIBC_LOCALE
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
+#ifndef CONFIG_DISABLE_ENVIRON
 static const char * const g_locale_env[] =
 {
   "LC_CTYPE",
@@ -46,6 +45,7 @@ static const char * const g_locale_env[] =
   "LC_MONETARY",
   "LC_MESSAGES",
 };
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -102,8 +102,10 @@ static inline FAR char *normalize_locale(FAR const char *locale)
 
 FAR char *setlocale(int category, FAR const char *locale)
 {
+#ifndef CONFIG_DISABLE_ENVIRON
   FAR const char *value;
   int i;
+#endif
 
   /* If category is invalid, return NULL. */
 
@@ -135,6 +137,7 @@ FAR char *setlocale(int category, FAR const char *locale)
    * The environment variables query order is LC_ALL, LC_ *, and LANG.
    */
 
+#ifndef CONFIG_DISABLE_ENVIRON
   if ((value = getenv("LC_ALL")) != NULL)
     {
       return normalize_locale(value);
@@ -162,7 +165,7 @@ FAR char *setlocale(int category, FAR const char *locale)
     {
       return normalize_locale(value);
     }
+#endif
 
   return "C";
 }
-#endif
