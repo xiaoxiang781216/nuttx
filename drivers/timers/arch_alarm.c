@@ -122,12 +122,13 @@ static void udelay_coarse(useconds_t microseconds)
 static void oneshot_callback(FAR struct oneshot_lowerhalf_s *lower,
                              FAR void *arg)
 {
+#ifdef CONFIG_SCHED_TICKLESS
+  nxsched_timer_expiration();
+#else
   clock_t now;
 
   ONESHOT_TICK_CURRENT(g_oneshot_lower, &now);
-#ifdef CONFIG_SCHED_TICKLESS
-  nxsched_alarm_tick_expiration(now);
-#else
+
   /* It is always an error if this progresses more than 1 tick at a time.
    * That would break any timer based on wdog; such timers might timeout
    * early. Add a DEBUGASSERT here to catch those errors. It is not added
