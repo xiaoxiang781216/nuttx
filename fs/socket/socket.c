@@ -82,7 +82,7 @@ static const struct file_operations g_sock_fileops =
   sock_file_writev,   /* writev */
 };
 
-static struct inode g_sock_inode =
+static DEFINE_PER_CPU_BMP(struct inode, g_sock_inode) =
 {
   NULL,                   /* i_parent */
   NULL,                   /* i_peer */
@@ -93,6 +93,7 @@ static struct inode g_sock_inode =
     &g_sock_fileops       /* u */
   }
 };
+#define g_sock_inode this_cpu_var_bmp(g_sock_inode)
 
 /****************************************************************************
  * Private Functions
