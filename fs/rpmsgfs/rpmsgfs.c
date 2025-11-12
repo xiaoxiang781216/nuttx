@@ -1063,6 +1063,7 @@ static int rpmsgfs_rewinddir(FAR struct inode *mountpt,
 static int rpmsgfs_bind(FAR struct inode *blkdriver, FAR const void *data,
                         FAR void **handle)
 {
+  size_t data_size = strlen(data) + 1;
   FAR struct rpmsgfs_mountpt_s  *fs;
   FAR const char *cpuname = NULL;
   FAR char *options;
@@ -1093,12 +1094,14 @@ static int rpmsgfs_bind(FAR struct inode *blkdriver, FAR const void *data,
    *  "timeout=xx", connect timeout, unit (ms)
    */
 
-  options = fs_heap_strdup(data);
+  options = lib_get_tempbuffer(data_size);
   if (!options)
     {
       fs_heap_free(fs);
       return -ENOMEM;
     }
+
+  memcpy(options, data, data_size);
 
   /* Set timeout default value */
 
@@ -1124,7 +1127,7 @@ static int rpmsgfs_bind(FAR struct inode *blkdriver, FAR const void *data,
     }
 
   ret = rpmsgfs_client_bind(&fs->handle, cpuname);
-  fs_heap_free(options);
+  lib_put_tempbuffer(options);
   if (ret < 0)
     {
       fs_heap_free(fs);
