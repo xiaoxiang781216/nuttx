@@ -188,7 +188,7 @@ int mfs_jrnl_rdlog(FAR const struct mfs_sb_s *const sb,
       goto errout;
     }
 
-  buf = fs_heap_zalloc(log_sz);
+  buf = lib_get_tempbuffer(log_sz);
   if (predict_false(buf == NULL))
     {
       ret = -ENOMEM;
@@ -218,7 +218,7 @@ int mfs_jrnl_rdlog(FAR const struct mfs_sb_s *const sb,
     }
 
 errout_with_buf:
-  fs_heap_free(buf);
+  lib_put_tempbuffer(buf);
 
 errout:
   return ret;
@@ -433,7 +433,7 @@ int mfs_jrnl_fmt(FAR struct mfs_sb_s * const sb, FAR mfs_t *blk1,
 
   sz = MFS_JRNL_SUFFIXSZ + ((CONFIG_MNEMOFS_JOURNAL_NBLKS + 2) * 4);
 
-  buf = fs_heap_zalloc(sz);
+  buf = lib_get_tempbuffer(sz);
   if (predict_false(buf == NULL))
     {
       ret = -ENOMEM;
@@ -511,7 +511,7 @@ int mfs_jrnl_fmt(FAR struct mfs_sb_s * const sb, FAR mfs_t *blk1,
   MFS_JRNL(sb).mblk2         = *blk2;
 
 errout_with_buf:
-  fs_heap_free(buf);
+  lib_put_tempbuffer(buf);
 
 errout:
   return ret;
@@ -634,7 +634,7 @@ int mfs_jrnl_wrlog(FAR struct mfs_sb_s * const sb,
   const mfs_t            log_sz   = sizeof(mfs_t) + MFS_LOGSZ(node->depth);
   struct mfs_jrnl_log_s  log;
 
-  buf = fs_heap_zalloc(log_sz); /* For size before log. */
+  buf = lib_get_tempbuffer(log_sz); /* For size before log. */
   if (predict_false(buf == NULL))
     {
       ret = -ENOMEM;
@@ -680,7 +680,7 @@ int mfs_jrnl_wrlog(FAR struct mfs_sb_s * const sb,
   MFS_JRNL(sb).n_logs++;
 
 errout_with_buf:
-  fs_heap_free(buf);
+  lib_put_tempbuffer(buf);
 
 errout:
   return ret;
