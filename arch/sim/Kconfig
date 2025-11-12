@@ -177,7 +177,7 @@ config SIM_LOOP_INTERVAL
 
 config SIM_STACKSIZE_ADJUSTMENT
 	int "The adjustment of stack size for sim"
-	default 65536
+	default 204800
 	---help---
 		The adjustment of stack size for sim. When the task is created,
 		the stack size is increased by this amount.
