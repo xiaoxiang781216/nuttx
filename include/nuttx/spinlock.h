@@ -576,7 +576,17 @@ bool rspin_lock_is_recursive(FAR volatile rspinlock_t *lock)
 static inline_function
 bool rspin_lock_is_hold(FAR volatile rspinlock_t *lock)
 {
-  return lock->owner == this_cpu() + 1;
+  bool ret;
+
+  /* If this interface is not called while holding the rspinlock, the current
+   * task may be switched to another CPU during a context switch,
+   * leading to incorrect judgment.
+   */
+
+  irqstate_t flags = up_irq_save();
+  ret = (lock->owner == this_cpu() + 1);
+  up_irq_restore(flags);
+  return ret;
 }
 
 /****************************************************************************
@@ -1529,6 +1539,22 @@ irqstate_t enter_critical_section(void) noinstrument_function;
 #else
 #  define enter_critical_section() enter_critical_section_notrace()
 #endif
+
+/****************************************************************************
+ * Name: in_critical_section
+ *
+ * Description:
+ *   check whether we are in critical section
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   True if we are in critical section, otherwise returns false.
+ *
+ ****************************************************************************/
+
+#define in_critical_section() rspin_lock_is_hold(&g_schedlock)
 
 /****************************************************************************
  * Name: leave_critical_section
