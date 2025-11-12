@@ -401,8 +401,22 @@ int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
 #ifdef CONFIG_NET_ARP_SEND_QUEUE
   if (!IOB_QEMPTY(&dev->d_arpout))
     {
+      /* in Rx context, we need to backup the dev iob and related members,
+       * as some dirvers netdev_txnotify_dev() excute transmit in sync mode
+       * which will modify iob and other members.
+       * we need to restore the dev iob and related members after
+       * netdev_txnotify_dev() return because iob will be used in left
+       * bottom Rx process.
+       */
+
+      uint16_t len = dev->d_len;
+      FAR struct iob_s *iob = dev->d_iob;
+
+      dev->d_iob = NULL;
       dev->d_buf = NULL;
       netdev_txnotify_dev(dev);
+      netdev_iob_replace(dev, iob);
+      dev->d_len = len;
     }
 #endif
 
