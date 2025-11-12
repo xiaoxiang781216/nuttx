@@ -63,6 +63,7 @@
 struct mm_delaynode_s
 {
   FAR struct mm_delaynode_s *flink;
+  FAR struct mm_heap_s      *heap;
 };
 
 struct mm_heap_s
