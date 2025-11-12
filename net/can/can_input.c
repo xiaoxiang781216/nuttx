@@ -67,7 +67,7 @@
 static int can_input_conn(FAR struct net_driver_s *dev,
                           FAR struct can_conn_s *conn)
 {
-  uint16_t flags;
+  uint32_t flags;
   uint16_t buflen = dev->d_len;
   int ret = OK;
 

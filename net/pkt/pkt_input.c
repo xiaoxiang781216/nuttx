@@ -156,7 +156,7 @@ errout:
 static int pkt_in_(FAR struct net_driver_s *dev, bool loopback)
 {
   FAR struct pkt_conn_s *conn = NULL;
-  uint16_t flags;
+  uint32_t flags;
   int ret = OK;
 
   /* Setup for the application callback */
