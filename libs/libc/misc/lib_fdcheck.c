@@ -135,4 +135,14 @@ int fdcheck_protect(int fd)
   return protect_fd;
 }
 
+#else
+int fdcheck_restore(int val)
+{
+  return val;
+}
+
+int fdcheck_protect(int fd)
+{
+  return fd;
+}
 #endif

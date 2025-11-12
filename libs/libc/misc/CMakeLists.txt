@@ -124,9 +124,7 @@ if(CONFIG_FDSAN)
   list(APPEND SRCS lib_fdsan.c)
 endif()
 
-if(CONFIG_FDCHECK)
-  list(APPEND SRCS lib_fdcheck.c)
-endif()
+list(APPEND SRCS lib_fdcheck.c)
 
 if(CONFIG_DRIVERS_NOTE)
   list(APPEND SRCS lib_note.c)
