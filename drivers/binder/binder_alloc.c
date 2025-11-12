@@ -223,6 +223,14 @@ FAR struct binder_buffer *binder_alloc_new_buf(
 {
   FAR struct binder_buffer *buffer;
   size_t size;
+  struct mm_memdump_s dump =
+    {
+      alloc->pid,
+#ifdef CONFIG_MM_RECORD_SEQNO
+      0,
+      ULONG_MAX
+#endif
+    };
 
   size = sanitized_size(data_size, offsets_size, secctx_sz);
   if (!size)
@@ -242,6 +250,7 @@ FAR struct binder_buffer *binder_alloc_new_buf(
                     "alloc->pid=%d failed to alloc new buffer struct,"
                     "size=%zu\n", alloc->pid, size);
       *ret = -ENOMEM;
+      mm_memdump(alloc->heap, &dump);
       return NULL;
     }
 
