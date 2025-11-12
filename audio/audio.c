@@ -400,7 +400,11 @@ static int audio_try_enqueue(FAR struct audio_upperhalf_s *upper)
 
       for (priv = upper->head; priv != NULL; priv = priv->flink)
         {
-          if (priv->head > upper->status->head)
+          if (priv->state == AUDIO_STATE_OPEN)
+            {
+              continue;
+            }
+          else if (priv->head > upper->status->head)
             {
               ready = true;
             }
