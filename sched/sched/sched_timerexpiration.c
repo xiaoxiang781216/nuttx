@@ -207,8 +207,8 @@ int up_timer_tick_cancel(FAR clock_t *ticks)
  *
  * Returned Value:
  *   The number if ticks remaining until the next time slice expires.
- *   Zero is returned if there is no time slicing (i.e., the task at the
- *   head of the ready-to-run list does not support round robin
+ *   CLOCK_MAX is returned if there is no time slicing (i.e., the task at
+ *   the head of the ready-to-run list does not support round robin
  *   scheduling).
  *
  *   The value one may returned under certain circumstances that probably
@@ -224,7 +224,7 @@ static clock_t nxsched_cpu_scheduler(int cpu, clock_t ticks,
 {
   FAR struct tcb_s *rtcb = current_task(cpu);
   FAR struct tcb_s *ntcb = current_task(cpu);
-  clock_t ret = 0;
+  clock_t ret = CLOCK_MAX;
 
 #if CONFIG_RR_INTERVAL > 0
   /* Check if the currently executing task uses round robin scheduling. */
@@ -302,8 +302,8 @@ static clock_t nxsched_cpu_scheduler(int cpu, clock_t ticks,
  *
  * Returned Value:
  *   The number if ticks remaining until the next time slice expires.
- *   Zero is returned if there is no time slicing (i.e., the task at the
- *   head of the ready-to-run list does not support round robin
+ *   CLOCK_MAX is returned if there is no time slicing (i.e., the task at
+ *   the head of the ready-to-run list does not support round robin
  *   scheduling).
  *
  *   The value one may returned under certain circumstances that probably
@@ -340,17 +340,17 @@ static clock_t nxsched_process_scheduler(clock_t ticks, clock_t elapsed,
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
       timeslice = nxsched_cpu_scheduler(i, ticks, elapsed, noswitches);
-      if (timeslice > 0 && timeslice < minslice)
+      if (timeslice < minslice)
         {
           minslice = timeslice;
         }
     }
 
   leave_critical_section(flags);
-  return minslice < CLOCK_MAX ? minslice : 0;
+  return minslice;
 }
 #else
-#  define nxsched_process_scheduler(t, e, n) (0)
+#  define nxsched_process_scheduler(t, e, n) (CLOCK_MAX)
 #endif
 
 /****************************************************************************
@@ -364,7 +364,7 @@ static clock_t nxsched_process_scheduler(clock_t ticks, clock_t elapsed,
  *   noswitches - True: Can't do context switches now.
  *
  * Returned Value:
- *   The number of ticks to use when setting up the next timer.  Zero if
+ *   The number of ticks to use when setting up the next timer.  CLOCK_MAX if
  *   there is no interesting event to be timed.
  *
  ****************************************************************************/
@@ -374,7 +374,6 @@ static clock_t nxsched_timer_process(clock_t ticks, clock_t elapsed,
 {
   clock_t sched_next_time;
   clock_t wdog_next_time;
-  clock_t next_time;
 
 #ifdef CONFIG_CLOCK_TIMEKEEPING
   /* Process wall time */
@@ -392,15 +391,9 @@ static clock_t nxsched_timer_process(clock_t ticks, clock_t elapsed,
 
   wdog_next_time = wd_timer(ticks, noswitches);
 
-  /* If sched_next_time or wdog_next_time is 0,
-   * then subtracting 1 overflows to the maximum value,
-   * which is never selected.
-   */
+  /* Select the minimum of the two times. */
 
-  next_time  = MIN(sched_next_time - 1, wdog_next_time - 1);
-  next_time += 1;
-
-  return next_time;
+  return MIN(sched_next_time, wdog_next_time);
 }
 
 /****************************************************************************
@@ -422,7 +415,7 @@ static clock_t nxsched_timer_start(clock_t ticks, clock_t interval)
 {
   int ret;
 
-  if (interval > 0)
+  if (interval != CLOCK_MAX)
     {
 #ifdef CONFIG_SCHED_TICKLESS_LIMIT_MAX_SLEEP
       interval = MIN(interval, g_oneshot_maxticks);
@@ -464,7 +457,7 @@ static clock_t nxsched_timer_start(clock_t ticks, clock_t interval)
         }
     }
 
-  atomic_set(&g_timer_interval, interval);
+  atomic_set(&g_timer_interval, interval == CLOCK_MAX ? 0 : interval);
   return interval;
 }
 

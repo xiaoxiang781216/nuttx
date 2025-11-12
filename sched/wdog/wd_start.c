@@ -117,7 +117,7 @@ static inline_function clock_t wd_expiration(clock_t ticks)
   irqstate_t         flags;
   wdentry_t          func;
   wdparm_t           arg;
-  clock_t            ret = 0u;
+  clock_t            ret = CLOCK_MAX;
 
   flags = enter_critical_section();
 
@@ -415,7 +415,7 @@ int wd_start(FAR struct wdog_s *wdog, clock_t delay,
  *
  * Returned Value:
  *   If CONFIG_SCHED_TICKLESS is defined then the number of ticks for the
- *   next delay is provided (zero if no delay).  Otherwise, this function
+ *   next delay is provided (CLOCK_MAX if no delay). Otherwise, this function
  *   has no returned value.
  *
  * Assumptions:
@@ -428,7 +428,7 @@ clock_t wd_timer(clock_t ticks, bool noswitches)
 {
   FAR struct wdog_s *wdog;
   irqstate_t flags;
-  clock_t    ret = 0u;
+  clock_t    ret = CLOCK_MAX;
 
   /* Check if the watchdog at the head of the list is ready to run */
 
@@ -450,7 +450,7 @@ clock_t wd_timer(clock_t ticks, bool noswitches)
 
           wdog = list_first_entry(&g_wdactivelist, struct wdog_s, node);
           ret  = !clock_compare(wdog->expired, ticks) ?
-                 wdog->expired - ticks : 1u;
+                 wdog->expired - ticks : 0u;
         }
 
       leave_critical_section(flags);
