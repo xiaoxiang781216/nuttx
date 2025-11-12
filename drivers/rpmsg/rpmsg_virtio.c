@@ -27,8 +27,10 @@
 #include <debug.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <syslog.h>
 
 #include <nuttx/kmalloc.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/rpmsg/rpmsg_virtio.h>
 #include <nuttx/semaphore.h>
@@ -36,7 +38,6 @@
 #include <nuttx/virtio/virtio.h>
 #include <nuttx/virtio/virtio-config.h>
 #include <nuttx/wdog.h>
-#include <metal/utilities.h>
 #include <openamp/rpmsg_virtio.h>
 
 #include "rpmsg.h"
@@ -346,21 +347,17 @@ static void rpmsg_virtio_dump_buffer(FAR struct rpmsg_virtio_device *rvdev,
 
   if (rx)
     {
-      metal_log(METAL_LOG_EMERGENCY, "    RX buffer total %u\n",
-                vq->vq_nentries);
-      metal_log(METAL_LOG_EMERGENCY, "      unretrieved %u\n", unretrieved);
-      metal_log(METAL_LOG_EMERGENCY, "      retrieved %u\n",
-                vq->vq_queued_cnt);
-      metal_log(METAL_LOG_EMERGENCY, "      pending %u:\n", num);
+      syslog(LOG_EMERG, "    RX buffer total %u\n", vq->vq_nentries);
+      syslog(LOG_EMERG, "      unretrieved %u\n", unretrieved);
+      syslog(LOG_EMERG, "      retrieved %u\n", vq->vq_queued_cnt);
+      syslog(LOG_EMERG, "      pending %u:\n", num);
     }
   else
     {
-      metal_log(METAL_LOG_EMERGENCY, "    TX buffer total %u\n",
-                vq->vq_nentries);
-      metal_log(METAL_LOG_EMERGENCY, "      unretrieved %u\n", unretrieved);
-      metal_log(METAL_LOG_EMERGENCY, "      retrieved %u\n",
-                vq->vq_free_cnt);
-      metal_log(METAL_LOG_EMERGENCY, "      sent %u:\n", num);
+      syslog(LOG_EMERG, "    TX buffer total %u\n", vq->vq_nentries);
+      syslog(LOG_EMERG, "      unretrieved %u\n", unretrieved);
+      syslog(LOG_EMERG, "      retrieved %u\n", vq->vq_free_cnt);
+      syslog(LOG_EMERG, "      sent %u:\n", num);
     }
 
   for (i = 0u; i < num && i < vq->vq_nentries; i++)
@@ -391,9 +388,8 @@ static void rpmsg_virtio_dump_buffer(FAR struct rpmsg_virtio_device *rvdev,
                                         rx ? hdr->dst : hdr->src);
           if (ept)
             {
-              metal_log(METAL_LOG_EMERGENCY,
-                        "        %s buffer %p hold by %s\n",
-                        rx ? "RX" : "TX", hdr, ept->name);
+              syslog(LOG_EMERG, "        %s buffer %p hold by %s\n",
+                                rx ? "RX" : "TX", hdr, ept->name);
             }
         }
     }
@@ -411,10 +407,9 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg, bool verbose)
   FAR struct rpmsg_device *rdev = &rvdev->rdev;
   bool needunlock = false;
 
-  metal_log(METAL_LOG_EMERGENCY,
-            "Local: %s Remote: %s Headrx %u Headtx %u\n",
-            priv->rpmsg.local_cpuname, priv->rpmsg.cpuname, priv->headrx,
-            priv->headtx);
+  syslog(LOG_EMERG, "Local: %s Remote: %s Headrx %u Headtx %u\n",
+                    priv->rpmsg.local_cpuname, priv->rpmsg.cpuname,
+                    priv->headrx, priv->headtx);
 
   if (rvdev->vdev)
     {
@@ -426,23 +421,23 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg, bool verbose)
 
       if (verbose)
         {
-          metal_log(METAL_LOG_EMERGENCY,
-                    "Dump rpmsg info between cpu (master: %s)%s <==> %s:\n",
-                    rpmsg_virtio_get_role(rvdev) == RPMSG_HOST ?
-                    "yes" : "no", priv->rpmsg.local_cpuname,
-                    priv->rpmsg.cpuname);
+          syslog(LOG_EMERG,
+                "Dump rpmsg info between cpu (master: %s)%s <==> %s:\n",
+                rpmsg_virtio_get_role(rvdev) == RPMSG_HOST ?
+                "yes" : "no", priv->rpmsg.local_cpuname,
+                priv->rpmsg.cpuname);
 
           rpmsg_dump_epts(rdev);
         }
 
-      metal_log(METAL_LOG_EMERGENCY, "rpmsg vq RX:\n");
+      syslog(LOG_EMERG, "rpmsg vq RX:\n");
       virtqueue_dump(rvdev->rvq);
-      metal_log(METAL_LOG_EMERGENCY, "rpmsg vq TX:\n");
+      syslog(LOG_EMERG, "rpmsg vq TX:\n");
       virtqueue_dump(rvdev->svq);
 
       if (verbose)
         {
-          metal_log(METAL_LOG_EMERGENCY, "  rpmsg buffer list:\n");
+          syslog(LOG_EMERG, "  rpmsg buffer list:\n");
           rpmsg_virtio_dump_buffer(rvdev, true);
           rpmsg_virtio_dump_buffer(rvdev, false);
         }
@@ -608,7 +603,7 @@ static void rpmsg_virtio_rx_dispatch(FAR struct rpmsg_virtio_priv_s *priv)
 static void rpmsg_virtio_rx_callback(FAR struct virtqueue *vq)
 {
   FAR struct rpmsg_virtio_priv_s *priv =
-    metal_container_of(vq->vq_dev->priv, struct rpmsg_virtio_priv_s, rvdev);
+    container_of(vq->vq_dev->priv, struct rpmsg_virtio_priv_s, rvdev);
 
   rpmsg_virtio_rx_update(priv, vq);
   rpmsg_virtio_rx_dispatch(priv);
@@ -621,7 +616,7 @@ static void rpmsg_virtio_rx_callback(FAR struct virtqueue *vq)
 static void rpmsg_virtio_tx_callback(FAR struct virtqueue *vq)
 {
   FAR struct rpmsg_virtio_priv_s *priv =
-    metal_container_of(vq->vq_dev->priv, struct rpmsg_virtio_priv_s, rvdev);
+    container_of(vq->vq_dev->priv, struct rpmsg_virtio_priv_s, rvdev);
 
   rpmsg_virtio_post(&priv->rpmsg);
 
@@ -640,7 +635,7 @@ static void rpmsg_virtio_tx_callback(FAR struct virtqueue *vq)
 static void rpmsg_virtio_tx_notify(FAR struct virtqueue *vq)
 {
   FAR struct rpmsg_virtio_priv_s *priv =
-    metal_container_of(vq->vq_dev->priv, struct rpmsg_virtio_priv_s, rvdev);
+    container_of(vq->vq_dev->priv, struct rpmsg_virtio_priv_s, rvdev);
 
   /* rpmsg_virtio_tx_notify() called normally means send the buffer to peer,
    * so call rpmsg_virtio_pm_action(true) to hold the pm wakelock to avoid to
@@ -660,7 +655,7 @@ static int rpmsg_virtio_notify_wait(FAR struct rpmsg_device *rdev,
                                     uint32_t id)
 {
   FAR struct rpmsg_virtio_priv_s *priv =
-    metal_container_of(rdev, struct rpmsg_virtio_priv_s, rvdev);
+    container_of(rdev, struct rpmsg_virtio_priv_s, rvdev);
 
   return rpmsg_wait(&priv->rvdev.rdev.ns_ept, &priv->semtx);
 }
@@ -884,7 +879,7 @@ int rpmsg_virtio_probe(FAR struct virtio_device *vdev)
 void rpmsg_virtio_remove(FAR struct virtio_device *vdev)
 {
   FAR struct rpmsg_virtio_priv_s *priv =
-    metal_container_of(vdev->priv, struct rpmsg_virtio_priv_s, rvdev);
+    container_of(vdev->priv, struct rpmsg_virtio_priv_s, rvdev);
   char name[64];
 
 #ifdef CONFIG_RPMSG_VIRTIO_PM

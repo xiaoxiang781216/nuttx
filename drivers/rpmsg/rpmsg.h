@@ -27,6 +27,7 @@
 
 #ifdef CONFIG_RPMSG
 
+#include <nuttx/list.h>
 #include <nuttx/rpmsg/rpmsg.h>
 
 #include "rpmsg_char.h"
@@ -45,9 +46,9 @@ struct rpmsg_wqueue_s
 struct rpmsg_s
 {
   bool                         init;
-  struct metal_list            bind;
+  struct list_node             bind;
   rmutex_t                     lock;
-  struct metal_list            node;
+  struct list_node             node;
   char                         local_cpuname[RPMSG_NAME_SIZE];
   char                         cpuname[RPMSG_NAME_SIZE];
   FAR const struct rpmsg_ops_s *ops;
