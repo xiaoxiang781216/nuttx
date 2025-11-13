@@ -35,16 +35,12 @@
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
 #  include <arch/syscall.h>
-#  include <nuttx/macro.h>
 #endif
-
-/* Include chip-specific IRQ definitions (including IRQ numbers) */
-
-#include <arch/chip/irq.h>
 
 /* Include NuttX-specific IRQ definitions */
 
 #include <nuttx/irq.h>
+#include <arch/arch.h>
 
 /****************************************************************************
  * Pre-processor Prototypes
@@ -55,38 +51,6 @@
 #endif
 
 #define up_getsp()          (uintptr_t)__builtin_frame_address(0)
-
-/* MPIDR_EL1, Multiprocessor Affinity Register */
-
-#define MPIDR_AFFLVL_MASK   (0xff)
-
-#define MPIDR_AFF0_SHIFT    (0)
-#define MPIDR_AFF1_SHIFT    (8)
-#define MPIDR_AFF2_SHIFT    (16)
-#define MPIDR_AFF3_SHIFT    (32)
-
-/* mpidr_el1 register, the register is define:
- *   - bit 0~7:   Aff0
- *   - bit 8~15:  Aff1
- *   - bit 16~23: Aff2
- *   - bit 24:    MT, multithreading
- *   - bit 25~29: RES0
- *   - bit 30:    U, multiprocessor/Uniprocessor
- *   - bit 31:    RES1
- *   - bit 32~39: Aff3
- *   - bit 40~63: RES0
- *   Different ARM64 Core will use different Affn define, the mpidr_el1
- *  value is not CPU number, So we need to change CPU number to mpid
- *  and vice versa
- */
-
-#define GET_MPIDR()                              \
-  ({                                             \
-    uint64_t __val;                              \
-    __asm__ volatile ("mrs %0, mpidr_el1"        \
-                    : "=r" (__val) :: "memory"); \
-    __val;                                       \
-  })
 
 /****************************************************************************
  * Exception stack frame format:
@@ -410,57 +374,6 @@ static inline_function void up_irq_restore(irqstate_t flags)
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
-
-/****************************************************************************
- * Name: up_cpu_index
- *
- * Description:
- *   Return the real core number regardless CONFIG_SMP setting
- *
- ****************************************************************************/
-
-#ifdef CONFIG_ARCH_HAVE_MULTICPU
-#  ifndef MPID_TO_CORE
-#    define MPID_TO_CORE(mpid) \
-            (((mpid) >> MPIDR_AFF0_SHIFT) & MPIDR_AFFLVL_MASK)
-#  endif
-#  define up_cpu_index() ((int)MPID_TO_CORE(GET_MPIDR()))
-#endif /* CONFIG_ARCH_HAVE_MULTICPU */
-
-/****************************************************************************
- * Name:
- *   read_/write_/zero_/modify_ sysreg
- *
- * Description:
- *
- *   ARMv8 Architecture Registers access method
- *   All the macros need a memory clobber
- *
- ****************************************************************************/
-
-#define read_sysreg(reg)                            \
-  ({                                                \
-    uint64_t __val;                                 \
-    __asm__ volatile ("mrs %0, " STRINGIFY(reg)     \
-                    : "=r" (__val) :: "memory");    \
-    __val;                                          \
-  })
-
-#define write_sysreg(__val, reg)                    \
-  ({                                                \
-    __asm__ volatile ("msr " STRINGIFY(reg) ", %x0"  \
-                      : : "r" (__val) : "memory");  \
-  })
-
-#define zero_sysreg(reg)                            \
-  ({                                                \
-    __asm__ volatile ("msr " STRINGIFY(reg) ", xzr" \
-                      ::: "memory");                \
-  })
-
-#define modify_sysreg(v,m,a)                        \
-  write_sysreg((read_sysreg(a) & ~(m)) |            \
-               ((uintptr_t)(v) & (m)), a)
 
 /****************************************************************************
  * Schedule acceleration macros
