@@ -37,9 +37,9 @@
 #include <nuttx/clock.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
-#include <nuttx/list.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/nuttx.h>
+#include <nuttx/queue.h>
 #include <nuttx/rpmsg/rpmsg_virtio.h>
 #include <nuttx/rptun/rptun.h>
 #include <nuttx/vhost/vhost.h>
@@ -78,7 +78,7 @@ struct rptun_priv_s
 {
   FAR struct rptun_dev_s      *dev;
   struct remoteproc           rproc;
-  struct list_node            node;
+  dq_entry_t                  entry;
   bool                        rreset;
   bool                        stop;
   pid_t                       pid;
@@ -165,7 +165,7 @@ static const struct image_store_ops g_rptun_store_ops =
 };
 #endif
 
-static DEFINE_PER_CPU_BSS_BMP(struct list_node, g_rptun_priv);
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_rptun_priv);
 #define g_rptun_priv this_cpu_var_bmp(g_rptun_priv)
 static DEFINE_PER_CPU_BMP(rmutex_t, g_rptun_lock) = NXRMUTEX_INITIALIZER;
 #define g_rptun_lock this_cpu_var_bmp(g_rptun_lock)
@@ -1048,8 +1048,8 @@ static int rptun_ioctl_foreach(FAR const char *cpuname, int cmd,
     {
       nxrmutex_lock(&g_rptun_lock);
     }
-
-  list_for_every_entry(&g_rptun_priv, priv, struct rptun_priv_s, node)
+  
+  dq_for_every_entry(&g_rptun_priv, priv, struct rptun_priv_s, entry)
     {
       if (!cpuname || !strcmp(RPTUN_GET_CPUNAME(priv->dev), cpuname))
         {
@@ -1265,7 +1265,6 @@ int rptun_initialize(FAR struct rptun_dev_s *dev)
     {
       priv->dev = dev;
       priv->pid = -EINVAL;
-      list_initialize(&g_rptun_priv);
       remoteproc_init(&priv->rproc, &g_rptun_ops, priv);
 
       snprintf(name, sizeof(name), "/dev/rptun/%s", RPTUN_GET_CPUNAME(dev));
@@ -1289,7 +1288,7 @@ int rptun_initialize(FAR struct rptun_dev_s *dev)
               register_reboot_notifier(&g_rptun_reboot_nb);
 
               nxrmutex_lock(&g_rptun_lock);
-              list_add_tail(&g_rptun_priv, &priv->node);
+              dq_addlast(&priv->entry, &g_rptun_priv);
               nxrmutex_unlock(&g_rptun_lock);
             }
         }
