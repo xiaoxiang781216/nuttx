@@ -695,7 +695,7 @@ class NoteFactory:
             cls.types.NOTE_DUMP_MARK,
             cls.types.NOTE_DUMP_BINARY,
         ]:
-            return cls._get_note_event_s(cls)
+            return cls._get_note_event_s()
         elif note_type == cls.types.NOTE_DUMP_PRINTF:
             note_printf_s = cls.parser.get_type("note_printf_s")
             fixed_size = sum(
