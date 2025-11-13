@@ -20,6 +20,7 @@
 
 import functools
 import logging
+import math
 import re
 import struct
 import sys
@@ -757,6 +758,7 @@ class NoteFactory:
         notes = []
         view = memoryview(data)
         pos = 0
+        maxpid = 0
         header_size = cls.note_common_s.sizeof()
 
         total_size = len(view)
@@ -792,6 +794,7 @@ class NoteFactory:
                     logger.debug(f"Parsed note type {common.nc_type} {note}")
 
                     cls.ncpus = max(cls.ncpus, common.nc_cpu + 1)
+                    maxpid = max(maxpid, common.nc_pid)
                     pos += total_len
                     # update progress bar every 10KB
                     if pos - last_pos > 10240:
@@ -806,7 +809,7 @@ class NoteFactory:
                     pos += 1
                     continue
 
-        return notes, pos
+        return notes, pos, maxpid
 
     @classmethod
     def dump(
@@ -858,6 +861,7 @@ class NoteParser:
         output=None,
         plugins: Optional[List[NotePlugin]] = [DefaultNoteProcessorPlugin()],
         frequency_hz=1_000_000_000,
+        smp=True,
     ):
         self.notes = list()
         self.cache_size = cache_size
@@ -865,6 +869,7 @@ class NoteParser:
         self.parser = parser
         self.output = output
         self.frequency_hz = frequency_hz
+        self.smp = smp
 
         # Initialize plugin manager
         self.plugin_manager = PluginManager()
@@ -894,10 +899,17 @@ class NoteParser:
 
     def parse(self, data):
         self.buffer.extend(data)
-        parsed_notes, _ = NoteFactory.parse(self.buffer)
+
+        parsed_notes, _, maxpid = NoteFactory.parse(self.buffer)
+        offset = 0
+        if not self.smp:
+            offset = 10 ** math.ceil(math.log10(maxpid + 1))
 
         notes = []
         for note in parsed_notes:
+            if not self.smp and note.nc_pid != 0:
+                note.nc_pid += note.nc_cpu * offset
+
             if note.nc_type == NoteFactory.types.NOTE_TASKNAME:
                 TaskNameCache(note.nc_pid, note.name)
 
