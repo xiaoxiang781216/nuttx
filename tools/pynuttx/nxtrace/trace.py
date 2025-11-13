@@ -94,7 +94,7 @@ class NotePlugin(ABC):
         pass
 
     @abstractmethod
-    def setup(self, context: PluginContext) -> None:
+    def setup(self, contexts: list[PluginContext]) -> None:
         """Set up the plugin context"""
         pass
 
@@ -113,7 +113,7 @@ class NotePlugin(ABC):
         pass
 
     @abstractmethod
-    def teardown(self, context: PluginContext) -> None:
+    def teardown(self, contexts: list[PluginContext]) -> None:
         """Teardown the plugin context"""
         pass
 
@@ -122,7 +122,6 @@ class NotePlugin(ABC):
 
 
 class PluginManager:
-
     def __init__(self):
         self.plugins: List[NotePlugin] = []
         self.plugin_contexts: dict[str, PluginContext] = {}
@@ -141,7 +140,7 @@ class PluginManager:
         for plugin in plugins:
             self.register_plugin(plugin)
 
-    def set_context_data(self, ptrace: PerfettoTrace, parser, note_factory):
+    def set_context_data(self, ncpus, ptrace: PerfettoTrace, parser, note_factory):
         self.ptrace = ptrace
         self.parser = parser
         self.note_factory = note_factory
@@ -150,11 +149,14 @@ class PluginManager:
         self.plugin_contexts = {}
         for plugin in self.plugins:
             plugin_name = plugin.get_name()
-            context = PluginContext(ptrace, parser, note_factory, plugin_name)
-            self.plugin_contexts[plugin_name] = context
+            contexts = [
+                PluginContext(ptrace, parser, note_factory, plugin_name)
+                for _ in range(ncpus)
+            ]
+            self.plugin_contexts[plugin_name] = contexts
 
             try:
-                plugin.setup(context)
+                plugin.setup(contexts)
                 logger.debug(f"Created independent context for plugin: {plugin_name}")
             except Exception as e:
                 logger.error(f"Plugin {plugin_name} setup failed: {e}")
@@ -163,9 +165,9 @@ class PluginManager:
         for plugin in self.plugins:
             try:
                 plugin_name = plugin.get_name()
-                context = self.plugin_contexts.get(plugin_name)
-                if context:
-                    plugin.teardown(context)
+                contexts = self.plugin_contexts.get(plugin_name)
+                if contexts:
+                    plugin.teardown(contexts)
                     logger.debug(f"Teardown completed for plugin: {plugin_name}")
             except Exception as e:
                 logger.error(f"Plugin {plugin.get_name()} teardown failed: {e}")
@@ -179,8 +181,8 @@ class PluginManager:
             if plugin.can_handle(note.nc_type):
                 try:
                     plugin_name = plugin.get_name()
-                    context = self.plugin_contexts[plugin_name]
-                    plugin.process(note, head, context)
+                    contexts = self.plugin_contexts[plugin_name]
+                    plugin.process(note, head, contexts)
                 except Exception as e:
                     logger.error(
                         f"Plugin {plugin.get_name()} failed to process note: {e}"
@@ -602,17 +604,23 @@ class DefaultNoteProcessorPlugin(NotePlugin):
     def can_handle(self, note_type: int) -> bool:
         return True
 
-    def setup(self, context: PluginContext) -> None:
+    def setup(self, contexts: list[PluginContext]) -> None:
         self.processor_registry = NoteProcessorRegistry()
         self.processor_registry.setup_default_processors(NoteFactory.types)
-        context.sched_state = SchedState()
+
+        for context in contexts:
+            context.sched_state = SchedState()
 
     def process(
-        self, note: Container, head: TraceHead, context: PluginContext
+        self, note: Container, head: TraceHead, contexts: list[PluginContext]
     ) -> Optional[Any]:
-        sched_state = context.sched_state
-        ptrace = context.ptrace
-        parser = context.parser
+        try:
+            sched_state = contexts[head.cpu].sched_state
+            ptrace = contexts[head.cpu].ptrace
+            parser = contexts[head.cpu].parser
+        except IndexError:
+            logger.error(f"No context found for CPU {head.cpu}")
+            return None
 
         processor = self.processor_registry.get_processor(note.nc_type)
         if processor:
@@ -647,7 +655,7 @@ class NoteFactory:
         cls.parser = elf_parser
         cls.ptrace = PerfettoTrace(output)
         cls.frequency_hz = frequency_hz
-        cls.NCPUS = elf_parser.macro("CONFIG_SMP_NCPUS")
+        cls.ncpus = 1
         cls.types = elf_parser.get_type("note_type_e")
         global Tstate
         Tstate = elf_parser.get_type("tstate_e")
@@ -762,7 +770,6 @@ class NoteFactory:
 
                     if (
                         common.nc_pid < 0
-                        or common.nc_cpu > cls.NCPUS
                         or common.nc_cpu < 0
                         or common.nc_priority > 255
                         or common.nc_priority < 0
@@ -784,6 +791,7 @@ class NoteFactory:
                     notes.append(note)
                     logger.debug(f"Parsed note type {common.nc_type} {note}")
 
+                    cls.ncpus = max(cls.ncpus, common.nc_cpu + 1)
                     pos += total_len
                     # update progress bar every 10KB
                     if pos - last_pos > 10240:
@@ -810,7 +818,7 @@ class NoteFactory:
         if not plugin_manager:
             raise ValueError("Plugin manager is required")
 
-        plugin_manager.set_context_data(cls.ptrace, cls.parser, cls)
+        plugin_manager.set_context_data(cls.ncpus, cls.ptrace, cls.parser, cls)
         with tqdm(
             desc="Dump notes", unit="notes", total=len(notes), leave=True
         ) as pbar:
