@@ -47,7 +47,7 @@
 #include <nuttx/mm/mm.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
-
+#include <nuttx/mutex.h>
 #include "fs_heap.h"
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_MEMINFO
@@ -136,6 +136,7 @@ const struct procfs_operations g_memdump_operations =
 #endif
 
 static FAR struct procfs_meminfo_entry_s *g_procfs_meminfo = NULL;
+static mutex_t g_procfs_meminfo_lock = NXMUTEX_INITIALIZER;
 
 /****************************************************************************
  * Private Functions
@@ -291,6 +292,7 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
 
   FAR const struct procfs_meminfo_entry_s *entry;
 
+  DEBUGVERIFY(nxmutex_lock(&g_procfs_meminfo_lock));
   for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
     {
       if (buflen > 0)
@@ -328,6 +330,7 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
         }
     }
 
+  DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
 #ifdef CONFIG_MM_PGALLOC
   if (buflen > 0)
     {
@@ -498,20 +501,24 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
 #ifdef CONFIG_MM_RECORD_STACK
   if (strcmp(buffer, "on") == 0)
     {
+      DEBUGVERIFY(nxmutex_lock(&g_procfs_meminfo_lock));
       for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
         {
           entry->backtrace = true;
         }
 
+      DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
       return buflen;
     }
   else if (strcmp(buffer, "off") == 0)
     {
+      DEBUGVERIFY(nxmutex_lock(&g_procfs_meminfo_lock));
       for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
         {
           entry->backtrace = false;
         }
 
+      DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
       return buflen;
     }
   else if ((p = strstr(buffer, "on")) != NULL)
@@ -632,6 +639,7 @@ dump:
 #endif
     }
 
+  DEBUGVERIFY(nxmutex_lock(&g_procfs_meminfo_lock));
   for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
     {
       if (entry->memdump)
@@ -644,6 +652,7 @@ dump:
         }
     }
 
+  DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
   return buflen;
 }
 #endif
@@ -667,8 +676,10 @@ void procfs_register_meminfo(FAR struct procfs_meminfo_entry_s *entry)
 {
   if (entry->name != NULL)
     {
+      DEBUGVERIFY(nxmutex_lock(&g_procfs_meminfo_lock));
       entry->next = g_procfs_meminfo;
       g_procfs_meminfo = entry;
+      DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
     }
 }
 
@@ -687,6 +698,7 @@ void procfs_unregister_meminfo(FAR struct procfs_meminfo_entry_s *entry)
 {
   FAR struct procfs_meminfo_entry_s **cur;
 
+  DEBUGVERIFY(nxmutex_lock(&g_procfs_meminfo_lock));
   for (cur = &g_procfs_meminfo; *cur != NULL; cur = &(*cur)->next)
     {
       if (*cur == entry)
@@ -695,5 +707,7 @@ void procfs_unregister_meminfo(FAR struct procfs_meminfo_entry_s *entry)
           break;
         }
     }
+
+  DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
 }
 #endif /* !CONFIG_FS_PROCFS_EXCLUDE_MEMINFO */
