@@ -2081,6 +2081,7 @@ int uart_register(FAR const char *path, FAR uart_dev_t *dev)
 #if defined(CONFIG_PM) && defined(CONFIG_SERIAL_CONSOLE)
   char buf[NAME_MAX];
 #endif
+  int ret;
 
 #if defined(CONFIG_TTY_SIGINT) || defined(CONFIG_TTY_SIGTSTP)
   /* Initialize  of the task that will receive SIGINT signals. */
@@ -2129,22 +2130,22 @@ int uart_register(FAR const char *path, FAR uart_dev_t *dev)
 
   /* Register the serial driver */
 
-#ifdef CONFIG_SERIAL_GDBSTUB
-  if (uart_gdbstub_register(dev, path) == 0)
-    {
-      /* No need register the device if it is used by gdbstub */
-
-      return 0;
-    }
-#endif
-
 #if defined(CONFIG_PM) && defined(CONFIG_SERIAL_CONSOLE)
   snprintf(buf, sizeof(buf), "console-%s", basename((char *)path));
   pm_wakelock_init(&dev->wakelock, buf, PM_IDLE_DOMAIN, PM_NORMAL);
 #endif
 
   sinfo("Registering %s\n", path);
-  return register_driver(path, &g_serialops, 0666, dev);
+  ret = register_driver(path, &g_serialops, 0666, dev);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+#ifdef CONFIG_SERIAL_GDBSTUB
+  ret = uart_gdbstub_register(dev, path);
+#endif
+  return ret;
 }
 
 /****************************************************************************
