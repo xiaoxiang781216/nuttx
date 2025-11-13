@@ -249,26 +249,25 @@ const struct sock_intf_s g_vsock_sockif =
  * Private Data
  ****************************************************************************/
 
-static DEFINE_PER_CPU_BSS_BMP(atomic_t, g_vsock_port) =
+static DEFINE_PER_CPU_BMP(atomic_t, g_vsock_port) =
   VSOCK_LAST_RESERVED_PORT;
 #define g_vsock_port this_cpu_var_bmp(g_vsock_port)
 
-static DEFINE_PER_CPU_BSS_BMP(FAR struct kwork_wqueue_s *, g_vsock_wqueue);
+static DEFINE_PER_CPU_BMP(FAR struct kwork_wqueue_s *, g_vsock_wqueue);
 #define g_vsock_wqueue this_cpu_var_bmp(g_vsock_wqueue)
 
 /* List and their locks */
 
-static DEFINE_PER_CPU_BSS_BMP(struct list_node, g_vsock_conn);
+static DEFINE_PER_CPU_BMP(struct list_node, g_vsock_conn);
 #define g_vsock_conn this_cpu_var_bmp(g_vsock_conn)
 
-static DEFINE_PER_CPU_BSS_BMP(struct list_node, g_vsock_transport);
+static DEFINE_PER_CPU_BMP(struct list_node, g_vsock_transport);
 #define g_vsock_transport this_cpu_var_bmp(g_vsock_transport)
 
-static DEFINE_PER_CPU_BSS_BMP(spinlock_t, g_vsock_conn_lock) = SP_UNLOCKED;
+static DEFINE_PER_CPU_BMP(spinlock_t, g_vsock_conn_lock) = SP_UNLOCKED;
 #define g_vsock_conn_lock this_cpu_var_bmp(g_vsock_conn_lock)
 
-static DEFINE_PER_CPU_BSS_BMP(spinlock_t, g_vsock_transport_lock) =
-  SP_UNLOCKED;
+static DEFINE_PER_CPU_BMP(spinlock_t, g_vsock_transport_lock) = SP_UNLOCKED;
 #define g_vsock_transport_lock this_cpu_var_bmp(g_vsock_transport_lock)
 
 /****************************************************************************
