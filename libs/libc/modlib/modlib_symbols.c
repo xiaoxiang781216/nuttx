@@ -174,7 +174,7 @@ static int modlib_symname(FAR struct mod_loadinfo_s *loadinfo,
           return ret;
         }
 
-      offset += CONFIG_MODLIB_BUFFERINCR;
+      offset += readlen;
     }
 
   /* We will not get here */
