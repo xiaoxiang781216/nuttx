@@ -87,7 +87,7 @@ void unregister_reboot_notifier(FAR struct notifier_block *nb)
 
 void reboot_notifier_call_chain(unsigned long action, FAR void *data)
 {
-  if (action == SYS_HALT)
+  if (up_interrupt_context())
     {
       notifier_call_chain(g_reboot_notifier_list.head, action, data,
                           -1, NULL);
