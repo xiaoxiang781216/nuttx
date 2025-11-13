@@ -152,7 +152,8 @@ static void xtensa_enable_singlestep(bool enable)
 
   if (enable)
     {
-      icountlevel = XCHAL_EXCM_LEVEL;
+      icountlevel = (g_running_task->xcp.regs[REG_PS] &
+                     PS_INTLEVEL_MASK) + 1;
       icount = 0xfffffffe;
     }
   else
