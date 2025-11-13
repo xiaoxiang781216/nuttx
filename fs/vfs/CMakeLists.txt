@@ -93,4 +93,10 @@ if(CONFIG_SIGNAL_FD)
   list(APPEND SRCS fs_signalfd.c)
 endif()
 
+# Pathcache support
+
+if(CONFIG_FS_PATHCACHE)
+  list(APPEND SRCS fs_pathcache.c)
+endif()
+
 target_sources(fs PRIVATE ${SRCS})

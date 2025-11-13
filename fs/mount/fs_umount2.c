@@ -114,6 +114,15 @@ int nx_umount2(FAR const char *target, unsigned int flags)
   /* Hold the semaphore through the unbind logic */
 
   inode_lock();
+#ifdef CONFIG_FS_PATHCACHE
+  if (INODE_IS_PATHCACHE(mountpt_inode))
+    {
+      /* Invalidate all pathcache entries belonging to this mountpoint */
+
+      pathcache_umount(mountpt_inode);
+    }
+#endif
+
   ret = mountpt_inode->u.i_mops->unbind(mountpt_inode->i_private,
                                        &blkdrvr_inode, flags);
   if (ret < 0)

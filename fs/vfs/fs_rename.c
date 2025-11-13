@@ -498,7 +498,16 @@ static int mountptrename(FAR const char *oldpath, FAR struct inode *oldinode,
                    * method should check that.
                    */
 
-                   oldinode->u.i_mops->unlink(oldinode, newrelpath);
+                  ret = oldinode->u.i_mops->unlink(oldinode, newrelpath);
+#ifdef CONFIG_FS_PATHCACHE
+                  if (ret >= 0 && INODE_IS_PATHCACHE(oldinode))
+                    {
+                      /* Remove cached entry for this file */
+
+                      pathcache_remove(newpath);
+                    }
+#endif
+
 #ifdef CONFIG_FS_NOTIFY
                    notify_unlink(newrelpath);
 #endif
@@ -517,6 +526,15 @@ static int mountptrename(FAR const char *oldpath, FAR struct inode *oldinode,
   if (ret >= 0)
     {
       notify_rename(oldpath, oldisdir, newpath, newisdir);
+    }
+#endif
+
+#ifdef CONFIG_FS_PATHCACHE
+  if (ret >= 0 && INODE_IS_PATHCACHE(oldinode))
+    {
+      /* Rename will change the cache key */
+
+      pathcache_remove(oldpath);
     }
 #endif
 

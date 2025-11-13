@@ -111,6 +111,7 @@
  *
  *   Bit 0-3: Inode type (Bit 3 indicates internal OS types)
  *   Bit 4:   Set if inode has been unlinked and is pending removal.
+ *   Bit 5:   Set if pathcache is enabled on this inode.
  */
 
 #define FSNODEFLAG_TYPE_MASK         0x0000000f /* Isolates type field      */
@@ -128,8 +129,9 @@
 #define   FSNODEFLAG_TYPE_NAMEDEVENT 0x0000000b /*   Named event group      */
 #define   FSNODEFLAG_TYPE_HARDLINK   0x0000000c /*   Hard link              */
 
-#define INODE_IS_TYPE(i,t) \
-  (((i)->i_flags & FSNODEFLAG_TYPE_MASK) == (t))
+#define   FSNODEFLAG_PATHCACHE       (1u << 5)  /*   Enable pathcache       */
+
+#define INODE_IS_TYPE(i,t)     (((i)->i_flags & FSNODEFLAG_TYPE_MASK) == (t))
 
 #define INODE_IS_PSEUDODIR(i)  INODE_IS_TYPE(i,FSNODEFLAG_TYPE_PSEUDODIR)
 #define INODE_IS_DRIVER(i)     INODE_IS_TYPE(i,FSNODEFLAG_TYPE_DRIVER)
@@ -145,7 +147,7 @@
 #define INODE_IS_NAMEDEVENT(i) INODE_IS_TYPE(i,FSNODEFLAG_TYPE_NAMEDEVENT)
 #define INODE_IS_HARDLINK(i)   INODE_IS_TYPE(i,FSNODEFLAG_TYPE_HARDLINK)
 
-#define INODE_GET_TYPE(i)     ((i)->i_flags & FSNODEFLAG_TYPE_MASK)
+#define INODE_GET_TYPE(i)      ((i)->i_flags & FSNODEFLAG_TYPE_MASK)
 #define INODE_SET_TYPE(i,t) \
   do \
     { \
@@ -165,6 +167,14 @@
 #define INODE_SET_PIPE(i)       INODE_SET_TYPE(i,FSNODEFLAG_TYPE_PIPE)
 #define INODE_SET_NAMEDEVENT(i) INODE_SET_TYPE(i,FSNODEFLAG_TYPE_NAMEDEVENT)
 #define INODE_SET_HARDLINK(i)   INODE_SET_TYPE(i,FSNODEFLAG_TYPE_HARDLINK)
+
+#define INODE_IS_PATHCACHE(i)   (((i)->i_flags & FSNODEFLAG_PATHCACHE) != 0)
+#define INODE_ENABLE_PATHCACHE(i) \
+  do \
+    { \
+      (i)->i_flags |= FSNODEFLAG_PATHCACHE; \
+    } \
+  while (0)
 
 /* The status change flags.
  * These should be or-ed together to figure out what want to change.

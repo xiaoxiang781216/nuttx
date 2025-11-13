@@ -123,4 +123,13 @@ void notify_rename(FAR const char *oldpath, bool oldisdir,
 void notify_initialize(void);
 #endif /* CONFIG_FS_NOTIFY */
 
+#ifdef CONFIG_FS_PATHCACHE
+void pathcache_initialize(void);
+int pathcache_open(FAR struct file *filep, FAR const char *relpath,
+                   int oflags, mode_t mode, FAR const char *path);
+int pathcache_close(FAR struct file *filep, FAR const char *path);
+int pathcache_remove(FAR const char *path);
+void pathcache_umount(FAR struct inode *mountpt);
+#endif /* CONFIG_FS_PATHCACHE */
+
 #endif /* __FS_VFS_VFS_H */

@@ -65,6 +65,11 @@ ifeq ($(CONFIG_SIGNAL_FD),y)
 CSRCS += fs_signalfd.c
 endif
 
+# Support for pathcache
+ifeq ($(CONFIG_PATHCACHE),y)
+CSRCS += fs_pathcache.c
+endif
+
 # Include vfs build support
 
 DEPPATH += --dep-path vfs

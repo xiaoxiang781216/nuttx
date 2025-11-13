@@ -101,6 +101,10 @@ void fs_initialize(void)
 
 #endif
 
+#ifdef CONFIG_FS_PATHCACHE
+  pathcache_initialize();
+#endif
+
 #ifdef CONFIG_FS_RPMSGFS_SERVER
   rpmsgfs_server_init();
 #endif

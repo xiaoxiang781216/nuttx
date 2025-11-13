@@ -100,3 +100,32 @@ config FS_BACKTRACE_SKIP
 	depends on FS_BACKTRACE
 	---help---
 		Skip depth of backtrace.
+
+config FS_PATHCACHE
+	bool "Pathcache of struct file"
+	default n
+	depends on !DISABLE_MOUNTPOINT
+	---help---
+		Enable caching of struct file to accelerate file open operations.
+		When a file is opened, its metadata (stored in struct file) is
+		cached and reused on subsequent opens, avoiding the overhead of
+		repeated filesystem-specific open operations.
+
+if FS_PATHCACHE
+
+config FS_PATHCACHE_MAX_ENTRIES
+	int "Maximum number of cached files"
+	default 64
+	---help---
+		The maximum number of file entries that can be cached. When this
+		limit is reached, the least recently used (LRU) entry will be
+		evicted to make room for new entries.
+
+config FS_PATHCACHE_HASH_SIZE
+	int "Pathcache hash table size"
+	default 32
+	---help---
+		The size of the hash table used for the pathcache. The value
+		should be a power of 2 for optimal hash distribution.
+
+endif # FS_PATHCACHE

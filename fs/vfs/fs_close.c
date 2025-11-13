@@ -47,7 +47,7 @@
  * Private Functions
  ****************************************************************************/
 
-#ifdef CONFIG_FS_NOTIFY
+#if defined(CONFIG_FS_NOTIFY) || defined(CONFIG_FS_PATHCACHE)
 static FAR char *file_get_path(FAR struct file *filep)
 {
   FAR char *pathbuffer;
@@ -104,10 +104,13 @@ int file_close(FAR struct file *filep)
     {
 #ifdef CONFIG_FS_NOTIFY
       /* We lose the path and inode during close and release, so obtain it
-       * in advance. Then we pass it to notify_close function.
+       * in advance. Then we pass it to notify_close or pathcache_close.
        */
 
       FAR char *path = file_get_path(filep);
+#elif defined(CONFIG_FS_PATHCACHE)
+      FAR char *path = INODE_IS_PATHCACHE(inode) ? file_get_path(filep) :
+                                                   NULL;
 #endif
 
       file_closelk(filep);
@@ -116,6 +119,15 @@ int file_close(FAR struct file *filep)
 
       if (inode->u.i_ops && inode->u.i_ops->close)
         {
+#ifdef CONFIG_FS_PATHCACHE
+          if (INODE_IS_PATHCACHE(inode))
+            {
+              /* The inode is using pathcache */
+
+              pathcache_close(filep, path);
+            }
+#endif
+
           /* Perform the close operation */
 
           ret = inode->u.i_ops->close(filep);
@@ -135,7 +147,7 @@ int file_close(FAR struct file *filep)
           inode_release(inode);
         }
 
-#ifdef CONFIG_FS_NOTIFY
+#if defined(CONFIG_FS_NOTIFY) || defined(CONFIG_FS_PATHCACHE)
       if (path != NULL)
         {
           lib_put_pathbuffer(path);

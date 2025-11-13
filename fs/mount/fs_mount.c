@@ -505,6 +505,12 @@ int nx_mount(FAR const char *source, FAR const char *target,
   /* We have it, now populate it with driver specific information. */
 
   INODE_SET_MOUNTPT(mountpt_inode);
+#ifdef CONFIG_FS_PATHCACHE
+  if (data != NULL && strstr(data, "pathcache") != NULL)
+    {
+      INODE_ENABLE_PATHCACHE(mountpt_inode);
+    }
+#endif
 
   mountpt_inode->u.i_mops  = mops;
   mountpt_inode->i_private = fshandle;

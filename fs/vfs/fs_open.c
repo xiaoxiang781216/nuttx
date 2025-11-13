@@ -257,7 +257,20 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
     {
       if (inode->u.i_mops->open != NULL)
         {
-          ret = inode->u.i_mops->open(filep, desc.relpath, oflags, mode);
+#ifdef CONFIG_FS_PATHCACHE
+          if (INODE_IS_PATHCACHE(inode))
+            {
+              /* The inode is using pathcache */
+
+              ret = pathcache_open(filep, desc.relpath, oflags, mode,
+                                   path);
+            }
+          else
+#endif
+            {
+              ret = inode->u.i_mops->open(filep, desc.relpath, oflags,
+                                          mode);
+            }
         }
     }
 #endif

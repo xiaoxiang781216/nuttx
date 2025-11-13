@@ -99,6 +99,15 @@ int nx_unlink(FAR const char *pathname)
             {
               goto errout_with_inode;
             }
+
+#ifdef CONFIG_FS_PATHCACHE
+          if (INODE_IS_PATHCACHE(inode))
+            {
+              /* Remove cached entry for this file */
+
+              pathcache_remove(pathname);
+            }
+#endif
         }
       else
         {
