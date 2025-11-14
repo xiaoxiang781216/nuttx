@@ -620,6 +620,8 @@ menu "Timer/counter Configuration"
 config ESP32C3_ONESHOT
 	bool "One-shot wrapper"
 	default n
+	select ONESHOT_COUNT
+	select ONESHOT_FAST_DIVISION
 	---help---
 		Enable a wrapper around the low level timer/counter functions to
 		support one-shot timer.
