@@ -30,7 +30,7 @@ ARCH_INCDIR = $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)include
 LDSCRIPT = ld.script
 ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
 
-ARCHCPUFLAGS += -mno-relax
+ARCHCPUFLAGS += -march=rv32imfc -mno-relax
 ARCHPICFLAGS = -fpic -msingle-pic-base -mpic-register=r10
 
 ifeq ($(CONFIG_STACK_OVERFLOW_CHECK),y)
@@ -48,4 +48,4 @@ AFLAGS += $(CFLAGS) -D__ASSEMBLY__
 
 # ELF module definitions
 
-LDELFFLAGS += -melf32lriscv
+LDELFFLAGS += -march=rv32imfc -melf32lriscv
