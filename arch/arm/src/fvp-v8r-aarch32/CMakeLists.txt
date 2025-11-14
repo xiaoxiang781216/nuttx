@@ -18,6 +18,6 @@
 #
 # ##############################################################################
 
-set(SRCS fvp_boot.c fvp_serial.c)
+set(SRCS fvp_boot.c fvp_serial.c fvp_irq.c)
 
 target_sources(arch PRIVATE ${SRCS})
