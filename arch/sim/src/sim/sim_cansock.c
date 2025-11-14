@@ -30,7 +30,7 @@
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/can.h>
 #include <nuttx/spinlock.h>
-#include <nuttx/wdog.h>
+#include <nuttx/wqueue.h>
 
 #include "sim_hostcan.h"
 #include "sim_internal.h"
@@ -39,7 +39,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define SIM_CAN_WDOG_DELAY  USEC2TICK(1000)
+#define SIM_CAN_WORK_DELAY  USEC2TICK(1000)
 
 /****************************************************************************
  * Private Types
@@ -49,7 +49,7 @@ struct sim_cansock_s
 {
   struct net_driver_s dev;  /* Interface understood by the network */
   struct host_can_s   host; /* Host CAN handler */
-  struct wdog_s       wdog; /* Work queue for RX */
+  struct work_s       work; /* Work queue for RX */
 };
 
 /****************************************************************************
@@ -63,7 +63,7 @@ static int sim_can_txavail(struct net_driver_s *dev);
 static int sim_can_netdev_ioctl(struct net_driver_s *dev, int cmd,
                                 unsigned long arg);
 #endif
-static void sim_can_interrupt(wdparm_t arg);
+static void sim_can_work(void *arg);
 
 /****************************************************************************
  * Private Functions
@@ -86,7 +86,7 @@ static int sim_can_ifup(struct net_driver_s *dev)
 
   /* Start RX work */
 
-  return wd_start(&priv->wdog, 0, sim_can_interrupt, (wdparm_t)priv);
+  return work_queue_wq(g_work_queue, &priv->work, sim_can_work, priv, 0);
 }
 
 /****************************************************************************
@@ -99,7 +99,7 @@ static int sim_can_ifdown(struct net_driver_s *dev)
 
   /* Cancel work */
 
-  wd_cancel(&priv->wdog);
+  work_cancel_wq(g_work_queue, &priv->work);
 
   return host_can_ifdown(&priv->host);
 }
@@ -160,7 +160,7 @@ static int sim_can_netdev_ioctl(struct net_driver_s *dev, int cmd,
 #endif
 
 /****************************************************************************
- * Name: sim_can_interrupt
+ * Name: sim_can_work
  *
  * Description:
  *   Feed pending packets on the host sockets into the CAN stack.
@@ -170,7 +170,7 @@ static int sim_can_netdev_ioctl(struct net_driver_s *dev, int cmd,
  *
  ****************************************************************************/
 
-static void sim_can_interrupt(wdparm_t arg)
+static void sim_can_work(void *arg)
 {
   struct sim_cansock_s *priv = (struct sim_cansock_s *)arg;
   irqstate_t            flags = irq_save_nopreempt();
@@ -206,7 +206,8 @@ static void sim_can_interrupt(wdparm_t arg)
 
   irq_restore_nopreempt(flags);
 nodata:
-  wd_start_next(&priv->wdog, SIM_CAN_WDOG_DELAY, sim_can_interrupt, arg);
+  work_queue_next_wq(g_work_queue, &priv->work, sim_can_work, priv,
+                     SIM_CAN_WORK_DELAY);
 }
 
 /****************************************************************************

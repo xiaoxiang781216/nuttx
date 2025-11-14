@@ -25,7 +25,7 @@
 #include <debug.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/spinlock.h>
-#include <nuttx/wdog.h>
+#include <nuttx/wqueue.h>
 #include <nuttx/ioexpander/gpio.h>
 #include <nuttx/ioexpander/ioexpander.h>
 
@@ -37,7 +37,7 @@
  ****************************************************************************/
 
 #define GPIOCHIP_LINE_BASE        60
-#define SIM_GPIOCHIP_WDOG_DELAY   USEC2TICK(500)
+#define SIM_GPIOCHIP_WORK_DELAY   USEC2TICK(500)
 
 /****************************************************************************
  * Private Types
@@ -57,7 +57,7 @@ struct sim_gpiochip_dev_s
   const struct ioexpander_ops_s *ops;   /* gpiochip vtable */
   struct sim_gpiochip_callback_s cb[CONFIG_IOEXPANDER_NPINS];
   struct host_gpiochip_dev *dev;
-  struct wdog_s wdog;                   /* poll work */
+  struct work_s work;                   /* poll work */
 };
 
 /****************************************************************************
@@ -354,10 +354,10 @@ static void sim_gpiochip_irq_process(struct sim_gpiochip_dev_s *priv)
 }
 
 /****************************************************************************
- * Name: sim_gpiochip_interrupt
+ * Name: sim_gpiochip_work
  *
  * Description:
- *   wdog timer function for gpiochip device
+ *   work queue callback function for gpiochip device
  *
  * Input Parameters:
  *   arg - A pointer to instance of sim gpiochip device.
@@ -367,7 +367,7 @@ static void sim_gpiochip_irq_process(struct sim_gpiochip_dev_s *priv)
  *
  ****************************************************************************/
 
-static void sim_gpiochip_interrupt(wdparm_t arg)
+static void sim_gpiochip_work(void *arg)
 {
   struct sim_gpiochip_dev_s *priv = (struct sim_gpiochip_dev_s *)arg;
 
@@ -377,8 +377,8 @@ static void sim_gpiochip_interrupt(wdparm_t arg)
       sim_gpiochip_irq_process(priv);
       irq_restore_nopreempt(flags);
 
-      wd_start(&priv->wdog, SIM_GPIOCHIP_WDOG_DELAY,
-               sim_gpiochip_interrupt, (wdparm_t)priv);
+      work_queue_next_wq(g_work_queue, &priv->work, sim_gpiochip_work, priv,
+                         SIM_GPIOCHIP_WORK_DELAY);
     }
 }
 
@@ -421,8 +421,8 @@ struct ioexpander_dev_s *sim_gpiochip_initialize(const char *path)
       return NULL;
     }
 
-  wd_start(&priv->wdog, SIM_GPIOCHIP_WDOG_DELAY,
-           sim_gpiochip_interrupt, (wdparm_t)priv);
+  work_queue_wq(g_work_queue, &priv->work, sim_gpiochip_work, priv,
+                SIM_GPIOCHIP_WORK_DELAY);
 
   return (struct ioexpander_dev_s *)priv;
 }
