@@ -27,8 +27,8 @@
 #include <debug.h>
 
 #include <arch/barriers.h>
+#include <arch/mpu.h>
 
-#include "tricore_mpu.h"
 #include "tricore_internal.h"
 
 /****************************************************************************
@@ -1173,35 +1173,6 @@ unsigned int mpu_get_active_set(void)
 
   psw_value.U = __mfcr(CPU_PSW);
   return (psw_value.B.PRS2 << 2) | psw_value.B.PRS;
-}
-
-/****************************************************************************
- * Name: mpu_set_active_set
- *
- * Description:
- *   Set active protection set
- *
- * Input Parameters:
- *   Protection set .
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-void mpu_set_active_set(unsigned int set)
-{
-  /* Check that the set valid */
-
-  DEBUGASSERT(set < CONFIG_ARCH_MPU_NSETS);
-
-  Ifx_CPU_PSW psw_value;
-  psw_value.U = __mfcr(CPU_PSW);
-  psw_value.B.PRS2 = set >> 2;  /* bit[2] */
-  psw_value.B.PRS = set & 0x03; /* bit[1:0] */
-  __mtcr(CPU_PSW, psw_value.U);
-
-  UP_ISB();
 }
 
 /****************************************************************************

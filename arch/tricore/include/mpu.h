@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/tricore/src/common/tricore_mpu.h
+ * arch/tricore/include/mpu.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_TRICORE_SRC_COMMON_TRICORE_MPU_H
-#define __ARCH_TRICORE_SRC_COMMON_TRICORE_MPU_H
+#ifndef __ARCH_TRICORE_INCLUDE_MPU_H
+#define __ARCH_TRICORE_INCLUDE_MPU_H
 
 /****************************************************************************
  * Included Files
@@ -27,6 +27,8 @@
 
 #include <nuttx/config.h>
 #include <sys/types.h>
+
+#include <IfxCpu.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -367,7 +369,16 @@ unsigned int mpu_get_active_set(void);
  *
  ****************************************************************************/
 
-void mpu_set_active_set(unsigned int set);
+static inline void mpu_set_active_set(unsigned int set)
+{
+  Ifx_CPU_PSW psw_value;
+  psw_value.U = __mfcr(CPU_PSW);
+  psw_value.B.PRS2 = set >> 2;  /* bit[2] */
+  psw_value.B.PRS = set & 0x03; /* bit[1:0] */
+  __mtcr(CPU_PSW, psw_value.U);
+
+  UP_ISB();
+}
 
 /****************************************************************************
  * Name: mpu_initialize
@@ -386,4 +397,4 @@ void mpu_set_active_set(unsigned int set);
 
 void mpu_initialize(const struct mpu_region_s *table, size_t count);
 
-#endif /* __ARCH_TRICORE_SRC_COMMON_TRICORE_MPU_H */
+#endif /* __ARCH_TRICORE_INCLUDE_MPU_H */

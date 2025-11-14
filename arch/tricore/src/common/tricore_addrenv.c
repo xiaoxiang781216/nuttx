@@ -33,7 +33,8 @@
 #include <nuttx/tls.h>
 #include <nuttx/mm/mm.h>
 
-#include "tricore_mpu.h"
+#include <arch/mpu.h>
+
 #include "sched/sched.h"
 #include "group/group.h"
 
