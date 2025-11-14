@@ -33,6 +33,7 @@
 #include "smp.h"
 #include "arm_internal.h"
 
+#ifndef CONFIG_UP
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -135,3 +136,22 @@ int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
 
   return OK;
 }
+#else
+int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
+{
+  uintptr_t stack_alloc;
+
+  DEBUGASSERT(tcb != NULL);
+
+  /* Get the top of the stack */
+
+  stack_alloc = (uintptr_t)g_idle_topstack - CONFIG_IDLETHREAD_STACKSIZE;
+  DEBUGASSERT((stack_alloc & STACKFRAME_ALIGN_MASK) == 0);
+
+  tcb->adj_stack_size  = stack_size;
+  tcb->stack_alloc_ptr = (void *)stack_alloc;
+  tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
+
+  return OK;
+}
+#endif
