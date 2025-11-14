@@ -392,6 +392,16 @@ config NUTTX_USERSPACE
 		expect to find and instance of struct userspace_s at this location.
 
 endif # Build 2-pass
+
+config NUTTX_USERSPACE_CUSTOM
+	bool
+	default n
+	---help---
+		If use custom userspace meta data/header. default n Use the general
+		common userspace_s definition, inside nuttx. y select for some case
+		need custom userspace struct with extra data, then should
+		disable the common userspace header, chip/board defined compatible custom.
+
 endmenu # Build Setup
 
 menu "Binary Output Formats"

@@ -25,7 +25,6 @@ set_property(GLOBAL PROPERTY LD_SCRIPT "${NUTTX_BOARD_DIR}/scripts/nuttx.ld")
 add_subdirectory(src)
 
 if(CONFIG_BUILD_PROTECTED)
-  add_subdirectory(kernel)
   set_property(GLOBAL PROPERTY LD_SCRIPT_USER
                                ${CMAKE_CURRENT_LIST_DIR}/scripts/nuttx_user.ld)
 endif()

@@ -660,10 +660,13 @@ endif()
 if(CONFIG_HAVE_CXX)
   file(TOUCH "${CMAKE_CURRENT_BINARY_DIR}/empty.cxx")
   target_sources(nuttx PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/empty.cxx")
-else()
-  file(TOUCH "${CMAKE_CURRENT_BINARY_DIR}/empty.c")
-  target_sources(nuttx PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/empty.c")
 endif()
+
+# Always generata a empty.c avoid we also need a empty.c for BUILD_PROTECT
+# nuttx_user also need at least one file be linking libraries
+
+file(TOUCH "${CMAKE_CURRENT_BINARY_DIR}/empty.c")
+target_sources(nuttx PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/empty.c")
 
 # initialize manifest to hold all generated files
 file(TOUCH ${CMAKE_BINARY_DIR}/nuttx.manifest)
@@ -841,6 +844,8 @@ endif()
 # Userspace portion ##########################################################
 
 if(CONFIG_BUILD_PROTECTED)
+
+  target_sources(nuttx_user PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/empty.c")
 
   get_property(nuttx_system_libs GLOBAL PROPERTY NUTTX_SYSTEM_LIBRARIES)
 
