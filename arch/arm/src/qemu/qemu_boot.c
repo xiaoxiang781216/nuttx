@@ -89,10 +89,17 @@ void arm_boot(void)
   /* Percpu section init */
 
 #ifdef CONFIG_PERCPU_SECTION
-  memcpy((void *)_sdata_percpu, (void *)_ldata_percpu,
-         (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
-  memset((void *)_sbss_percpu, 0,
-         (uintptr_t)_ebss_percpu - (uintptr_t)_sbss_percpu);
+  int cpu = 0;
+#  ifdef CONFIG_SMP
+  for (; cpu < CONFIG_NCPUS; cpu++)
+#  endif
+    {
+      memcpy((void *)((uintptr_t)_sdata_percpu + PERCPU_OFFSET * cpu),
+             (void *)_ldata_percpu,
+             (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
+      memset((void *)((uintptr_t)_sbss_percpu + PERCPU_OFFSET * cpu),
+             0, (uintptr_t)_ebss_percpu - (uintptr_t)_sbss_percpu);
+    }
 #endif
 
 #ifdef CONFIG_ARM_MPU

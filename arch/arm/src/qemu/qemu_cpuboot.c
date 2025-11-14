@@ -92,7 +92,7 @@ void arm_cpu_boot(int cpu)
 
   arm_enable_smp(cpu);
 
-#ifdef CONFIG_PERCPU_SECTION
+#if defined(CONFIG_PERCPU_SECTION) && !defined(CONFIG_SMP)
   memcpy((void *)((uintptr_t)_sdata_percpu + PERCPU_OFFSET * cpu),
          (void *)_ldata_percpu,
          (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
