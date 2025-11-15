@@ -613,13 +613,13 @@ void nx_start(void)
 
   idle_task_initialize();
 
-  sched_trace_mark("BOOT");
-
-  sinfo("Entry\n");
-
   /* Initialize wdog list ***************************************************/
 
   wdlist_initialize();
+
+  sched_trace_mark("BOOT");
+
+  sinfo("Entry\n");
 
   /* Initialize wqueue list *************************************************/
 
