@@ -412,7 +412,7 @@ struct session_op
   caddr_t mackey;
   int flags;
 
-#define SOP_F_KEYID  1
+#define SOP_F_KEYID  0x100
 
   uint32_t ses;       /* returns: session # */
 };

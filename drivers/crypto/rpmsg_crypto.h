@@ -39,7 +39,8 @@
 #define RPMSG_CRYPTO_NEWSESSION      0
 #define RPMSG_CRYPTO_PROCESS         1
 #define RPMSG_CRYPTO_FREESESSION     2
-#define RPMSG_CRYPTO_KEYPROCESS      3
+#define RPMSG_CRYPTO_KPROCESS        3
+#define RPMSG_CRYPTO_KEYPROCESS      4
 
 /****************************************************************************
  * Public Types
@@ -65,6 +66,14 @@ begin_packed_struct struct rpmsg_crypto_newsession_s
 begin_packed_struct struct rpmsg_crypto_process_s
 {
   struct rpmsg_crypto_header_s header;
+  struct virtio_crypto_op_data_req_s data;
+  char buf[];
+} end_packed_struct;
+
+begin_packed_struct struct rpmsg_crypto_kprocess_s
+{
+  struct rpmsg_crypto_header_s header;
+  struct virtio_crypto_op_ctrl_req_s ctrl;
   struct virtio_crypto_op_data_req_s data;
   char buf[];
 } end_packed_struct;
