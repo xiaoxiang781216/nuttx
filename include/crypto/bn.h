@@ -107,6 +107,7 @@ struct bn
   /* Sign: -1 if the bignum is negative, 1 otherwise. */
 
   int s;
+  int length;
   DTYPE array[BN_ARRAY_SIZE];
 };
 
@@ -238,5 +239,12 @@ void bignum_gcd(FAR struct bn *a, FAR struct bn *b, FAR struct bn *g);
 /* Modular inverse: c = a^-1 mod n */
 
 int bignum_inv_mod(FAR struct bn *a, FAR struct bn *n, FAR struct bn *c);
+
+void bignum_update_length(FAR struct bn *n);
+
+void pow_mod_crt(FAR struct bn *t, FAR struct bn *p,
+                 FAR struct bn *q, FAR struct bn *dp,
+                 FAR struct bn *dq, FAR struct bn *qp,
+                 FAR struct bn *res);
 
 #endif /* __INCLUDE_CRYPTO_BIGNUM_H */

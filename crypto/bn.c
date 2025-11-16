@@ -54,6 +54,7 @@
 #include <stdbool.h>
 #include <assert.h>
 #include <crypto/bn.h>
+#include <sys/param.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -84,22 +85,21 @@ static void rshift_word(FAR struct bn *a, int nwords)
 {
   /* Naive method: */
 
+  int movelen;
   int i;
 
   require(a, "a is null");
   require(nwords >= 0, "no negative shifts");
 
-  if (nwords >= BN_ARRAY_SIZE)
+  if (nwords >= BN_ARRAY_SIZE || a->length <= nwords)
     {
-      for (i = 0; i < BN_ARRAY_SIZE; ++i)
-        {
-          a->array[i] = 0;
-        }
-
+      memset(a->array, 0, BN_ARRAY_SIZE * sizeof(DTYPE));
+      a->length = 0;
       return;
     }
 
-  for (i = 0; i < BN_ARRAY_SIZE - nwords; ++i)
+  movelen = a->length - nwords;
+  for (i = 0; i < movelen; ++i)
     {
       a->array[i] = a->array[i + nwords];
     }
@@ -108,10 +108,13 @@ static void rshift_word(FAR struct bn *a, int nwords)
     {
       a->array[i] = 0;
     }
+
+  a->length = movelen;
 }
 
 static void lshift_word(FAR struct bn *a, int nwords)
 {
+  int length;
   int i;
 
   require(a, "a is null");
@@ -119,7 +122,13 @@ static void lshift_word(FAR struct bn *a, int nwords)
 
   /* Shift whole words */
 
-  for (i = (BN_ARRAY_SIZE - 1); i >= nwords; --i)
+  length = a->length + nwords;
+  if (length > BN_ARRAY_SIZE)
+    {
+      length = BN_ARRAY_SIZE;
+    }
+
+  for (i = length - 1; i >= nwords; --i)
     {
       a->array[i] = a->array[i - nwords];
     }
@@ -130,6 +139,8 @@ static void lshift_word(FAR struct bn *a, int nwords)
     {
       a->array[i] = 0;
     }
+
+  a->length = length;
 }
 
 static void lshift_one_bit(FAR struct bn *a)
@@ -145,6 +156,7 @@ static void lshift_one_bit(FAR struct bn *a)
     }
 
   a->array[0] <<= 1;
+  bignum_update_length(a);
 }
 
 static void rshift_one_bit(FAR struct bn *a)
@@ -160,6 +172,7 @@ static void rshift_one_bit(FAR struct bn *a)
     }
 
   a->array[BN_ARRAY_SIZE - 1] >>= 1;
+  bignum_update_length(a);
 }
 
 static
@@ -212,6 +225,7 @@ void bignum_init(FAR struct bn *n)
     }
 
   n->s = 1;
+  n->length = 0;
 }
 
 void bignum_from_int(FAR struct bn *n, DTYPE_TMP i)
@@ -239,6 +253,8 @@ void bignum_from_int(FAR struct bn *n, DTYPE_TMP i)
   n->array[1] = tmp;
 #  endif
 #endif
+
+  bignum_update_length(n);
 }
 
 int bignum_to_int(FAR struct bn *n)
@@ -295,6 +311,8 @@ void bignum_from_string(FAR struct bn *n, FAR char *str, int nbytes)
       j += 1;               /* step one element forward in the
                              * array. */
     }
+
+  bignum_update_length(n);
 }
 
 void bignum_to_string(FAR struct bn *n, FAR char *str, int nbytes)
@@ -358,6 +376,8 @@ void bignum_dec(FAR struct bn *n)
           break;
         }
     }
+
+  bignum_update_length(n);
 }
 
 void bignum_inc(FAR struct bn *n)
@@ -368,7 +388,7 @@ void bignum_inc(FAR struct bn *n)
 
   require(n, "n is null");
 
-  for (i = 0; i < BN_ARRAY_SIZE; ++i)
+  for (i = 0; i < n->length; ++i)
     {
       tmp = n->array[i];
       res = tmp + 1;
@@ -379,6 +399,12 @@ void bignum_inc(FAR struct bn *n)
           break;
         }
     }
+
+  if (i == n->length && n->length < BN_ARRAY_SIZE)
+    {
+      n->array[n->length] = 1;
+      n->length++;
+    }
 }
 
 void bignum_add(FAR struct bn *a, FAR struct bn *b, FAR struct bn *c)
@@ -388,20 +414,34 @@ void bignum_add(FAR struct bn *a, FAR struct bn *b, FAR struct bn *c)
 
 void bignum_add_abs(FAR struct bn *a, FAR struct bn *b, FAR struct bn *c)
 {
+  DTYPE_TMP a_val;
+  DTYPE_TMP b_val;
   DTYPE_TMP tmp;
   int carry = 0;
+  int length;
   int i;
 
   require(a, "a is null");
   require(b, "b is null");
   require(c, "c is null");
 
+  length = MAX(a->length, b->length);
   for (i = 0; i < BN_ARRAY_SIZE; ++i)
     {
-      tmp = (DTYPE_TMP)a->array[i] + b->array[i] + carry;
-      carry = (tmp > MAX_VAL);
+      a_val = (i < a->length) ? a->array[i] : 0;
+      b_val = (i < b->length) ? b->array[i] : 0;
+      tmp = a_val + b_val + carry;
+      carry = (int)(tmp >> 8);
       c->array[i] = (tmp & MAX_VAL);
     }
+
+  if (carry && length < BN_ARRAY_SIZE)
+    {
+      c->array[length] = carry;
+      c->length = length + 1;
+    }
+
+  bignum_update_length(c);
 }
 
 void bignum_sub(FAR struct bn *a, FAR struct bn *b, FAR struct bn *c)
@@ -411,37 +451,46 @@ void bignum_sub(FAR struct bn *a, FAR struct bn *b, FAR struct bn *c)
 
 void bignum_sub_abs(FAR struct bn *a, FAR struct bn *b, FAR struct bn *c)
 {
-  DTYPE_TMP res;
-  DTYPE_TMP tmp1;
-  DTYPE_TMP tmp2;
-  int borrow = 0;
+  DTYPE_TMP borrow = 0;
+  DTYPE_TMP diff;
+  DTYPE a_val;
+  DTYPE b_val;
+  int max_len = MAX(a->length, b->length);
   int i;
 
   require(a, "a is null");
   require(b, "b is null");
   require(c, "c is null");
 
-  for (i = 0; i < BN_ARRAY_SIZE; ++i)
+  for (i = 0; i < max_len; ++i)
     {
-      tmp1 = (DTYPE_TMP)a->array[i] + (MAX_VAL + 1); /* + number_base */
-      tmp2 = (DTYPE_TMP)b->array[i] + borrow;
-      res  = (tmp1 - tmp2);
+      a_val = (i < a->length) ? a->array[i] : 0;
+      b_val = (i < b->length) ? b->array[i] : 0;
+      diff = (DTYPE_TMP)a_val - (DTYPE_TMP)b_val - borrow;
+      if (a_val < (DTYPE_TMP)(b_val + borrow))
+        {
+          borrow = 1;
+        }
+      else
+        {
+          borrow = 0;
+        }
 
-      /* "modulo number_base" == "% (number_base - 1)"
-       * if number_base is 2^N
-       */
-
-      c->array[i] = (DTYPE)(res & MAX_VAL);
-      borrow = (res <= MAX_VAL);
+      c->array[i] = (DTYPE)(diff & MAX_VAL);
     }
+
+  c->length = max_len;
+  bignum_update_length(c);
 }
 
 void bignum_mul(FAR struct bn *a, FAR struct bn *b, FAR struct bn *c)
 {
-  struct bn row;
-  struct bn tmp;
+  DTYPE_TMP temp[BN_ARRAY_SIZE * 2];
+  DTYPE_TMP carry;
+  DTYPE_TMP total;
   int i;
   int j;
+  int k;
 
   require(a, "a is null");
   require(b, "b is null");
@@ -449,27 +498,32 @@ void bignum_mul(FAR struct bn *a, FAR struct bn *b, FAR struct bn *c)
 
   bignum_init(c);
 
-  for (i = 0; i < BN_ARRAY_SIZE; ++i)
+  memset(temp, 0, sizeof(temp));
+  for (i = 0; i < a->length; i++)
     {
-      bignum_init(&row);
-
-      for (j = 0; j < BN_ARRAY_SIZE; ++j)
+      for (j = 0; j < b->length; j++)
         {
-          if (i + j < BN_ARRAY_SIZE)
+          if (i + j < BN_ARRAY_SIZE * 2)
             {
-              bignum_init(&tmp);
-              DTYPE_TMP intermediate =
-                ((DTYPE_TMP)a->array[i] * (DTYPE_TMP)b->array[j]);
-              bignum_from_int(&tmp, intermediate);
-              lshift_word(&tmp, i + j);
-              bignum_add_abs(&tmp, &row, &row);
+              temp[i + j] += (DTYPE_TMP)a->array[i] * (DTYPE_TMP)b->array[j];
             }
         }
-
-      bignum_add_abs(c, &row, c);
     }
 
-  if (bignum_is_zero(c) != 0)
+  carry = 0;
+  for (k = 0; k < BN_ARRAY_SIZE * 2; k++)
+    {
+      total = temp[k] + carry;
+      if (k < BN_ARRAY_SIZE)
+        {
+          c->array[k] = (DTYPE)(total & 0xff);
+        }
+
+      carry = total >> 8;
+    }
+
+  bignum_update_length(c);
+  if (bignum_is_zero(c))
     {
       c->s = 1;
     }
@@ -564,6 +618,8 @@ void bignum_lshift(FAR struct bn *a, FAR struct bn *b, int nbits)
 
       b->array[i] <<= nbits;
     }
+
+  bignum_update_length(b);
 }
 
 void bignum_rshift(FAR struct bn *a, FAR struct bn *b, int nbits)
@@ -596,6 +652,8 @@ void bignum_rshift(FAR struct bn *a, FAR struct bn *b, int nbits)
 
       b->array[i] >>= nbits;
     }
+
+  bignum_update_length(b);
 }
 
 void bignum_mod(FAR struct bn *a, FAR struct bn *b, FAR struct bn *c)
@@ -649,44 +707,65 @@ void bignum_divmod(FAR struct bn *a, FAR struct bn *b,
 
 void bignum_and(FAR struct bn *a, FAR struct bn *b, FAR struct bn *c)
 {
+  int length;
   int i;
 
   require(a, "a is null");
   require(b, "b is null");
   require(c, "c is null");
 
-  for (i = 0; i < BN_ARRAY_SIZE; ++i)
+  bignum_init(c);
+
+  length = MIN(a->length, b->length);
+  for (i = 0; i < length; ++i)
     {
       c->array[i] = (a->array[i] & b->array[i]);
     }
+
+  c->length = length;
+  bignum_update_length(c);
 }
 
 void bignum_or(FAR struct bn *a, FAR struct bn *b, FAR struct bn *c)
 {
+  DTYPE a_val;
+  DTYPE b_val;
+  int max_len;
   int i;
 
   require(a, "a is null");
   require(b, "b is null");
   require(c, "c is null");
 
-  for (i = 0; i < BN_ARRAY_SIZE; ++i)
+  max_len = MAX(a->length, b->length);
+  for (i = 0; i < max_len; ++i)
     {
-      c->array[i] = (a->array[i] | b->array[i]);
+      a_val = (i < a->length) ? a->array[i] : 0;
+      b_val = (i < b->length) ? b->array[i] : 0;
+      c->array[i] = a_val | b_val;
     }
+
+  c->length = max_len;
+  bignum_update_length(c);
 }
 
 void bignum_xor(FAR struct bn *a, FAR struct bn *b, FAR struct bn *c)
 {
+  int max_len;
   int i;
 
   require(a, "a is null");
   require(b, "b is null");
   require(c, "c is null");
 
-  for (i = 0; i < BN_ARRAY_SIZE; ++i)
+  max_len = MAX(a->length, b->length);
+  for (i = 0; i < max_len; ++i)
     {
       c->array[i] = (a->array[i] ^ b->array[i]);
     }
+
+  c->length = max_len;
+  bignum_update_length(c);
 }
 
 int bignum_cmp(FAR struct bn *a, FAR struct bn *b)
@@ -856,12 +935,18 @@ void bignum_assign(FAR struct bn *dst, FAR struct bn *src)
   require(dst, "dst is null");
   require(src, "src is null");
 
-  for (i = 0; i < BN_ARRAY_SIZE; ++i)
+  for (i = 0; i < src->length; ++i)
     {
       dst->array[i] = src->array[i];
     }
 
+  for (; i < BN_ARRAY_SIZE; ++i)
+    {
+      dst->array[i] = 0;
+    }
+
   dst->s = src->s;
+  dst->length = src->length;
 }
 
 void pow_mod_faster(FAR struct bn *a, FAR struct bn *b,
@@ -1082,4 +1167,47 @@ int bignum_inv_mod(FAR struct bn *a, FAR struct bn *n, FAR struct bn *c)
 
   bignum_assign(c, &v1);
   return 0;
+}
+
+void bignum_update_length(FAR struct bn *n)
+{
+  int i;
+
+  for (i = BN_ARRAY_SIZE - 1; i >= 0; i--)
+    {
+      if (n->array[i] != 0)
+        {
+          n->length = i + 1;
+          return;
+        }
+    }
+
+  n->length = 1;
+}
+
+void pow_mod_crt(FAR struct bn *t, FAR struct bn *p,
+                 FAR struct bn *q, FAR struct bn *dp,
+                 FAR struct bn *dq, FAR struct bn *qp,
+                 FAR struct bn *res)
+{
+  struct bn tp;
+  struct bn tq;
+  struct bn h;
+  struct bn tmp;
+
+  bignum_init(&tp);
+  bignum_init(&tq);
+  bignum_init(&h);
+  bignum_init(&tmp);
+
+  pow_mod_faster(t, dp, p, &tp);
+  pow_mod_faster(t, dq, q, &tq);
+
+  bignum_add_sub(&tp, &tq, &h, -1);
+  bignum_mod(&h, p, &tmp);
+  bignum_mul(&tmp, qp, &h);
+  bignum_mod(&h, p, &tmp);
+
+  bignum_mul(&tmp, q, &h);
+  bignum_add(&tq, &h, res);
 }
