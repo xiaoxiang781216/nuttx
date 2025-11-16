@@ -187,4 +187,193 @@ int asn1_write_mpi(FAR unsigned char **p,
   return len;
 }
 
+static inline_function
+int asn1_get_len(FAR unsigned char **p,
+                 FAR const unsigned char *end,
+                 FAR size_t *len)
+{
+  if ((end - *p) < 1)
+    {
+      return -ENOMEM;
+    }
+
+  if ((**p & 0x80) == 0)
+    {
+      *len = *(*p)++;
+    }
+  else
+    {
+      switch (**p & 0x7f)
+        {
+          case 1:
+            if ((end - *p) < 2)
+              {
+                return -ENOMEM;
+              }
+
+            *len = (*p)[1];
+            (*p) += 2;
+            break;
+          case 2:
+            if ((end - *p) < 3)
+              {
+                return -ENOMEM;
+              }
+
+            *len = ((size_t) (*p)[1] << 8) | (*p)[2];
+            (*p) += 3;
+            break;
+          case 3:
+            if ((end - *p) < 4)
+              {
+                return -ENOMEM;
+              }
+
+            *len = ((size_t) (*p)[1] << 16) |
+                    ((size_t) (*p)[2] << 8) | (*p)[3];
+            (*p) += 4;
+            break;
+          case 4:
+            if ((end - *p) < 5)
+              {
+                return -ENOMEM;
+              }
+
+            *len = ((size_t) (*p)[1] << 24) | ((size_t) (*p)[2] << 16) |
+                    ((size_t) (*p)[3] << 8) |           (*p)[4];
+            (*p) += 5;
+            break;
+          default:
+            return -EINVAL;
+        }
+    }
+
+  if (*len > (size_t)(end - *p))
+    {
+      return -ENOMEM;
+    }
+
+  return 0;
+}
+
+static inline_function
+int asn1_get_tag(FAR unsigned char **p,
+                 FAR const unsigned char *end,
+                 FAR size_t *len, int tag)
+{
+  if ((end - *p) < 1)
+    {
+      return -ENOMEM;
+    }
+
+  if (**p != tag)
+    {
+      return -EINVAL;
+    }
+
+  (*p)++;
+  return asn1_get_len(p, end, len);
+}
+
+static inline_function
+int asn1_get_int(FAR unsigned char **p,
+                 FAR const unsigned char *end,
+                 FAR int *val)
+{
+  size_t len;
+  int ret;
+
+  ret = asn1_get_tag(p, end, &len, ASN1_INTEGER);
+  if (ret != 0)
+    {
+      return ret;
+    }
+
+  /* len==0 is malformed (0 must be represented as 020100 for INTEGER,
+   * or 0A0100 for ENUMERATED tags)
+   */
+
+  if (len == 0)
+    {
+      return -EINVAL;
+    }
+
+  /* This is a cryptography library. Reject negative integers. */
+
+  if ((**p & 0x80) != 0)
+    {
+      return -EINVAL;
+    }
+
+  /* Skip leading zeros. */
+
+  while (len > 0 && **p == 0)
+    {
+      ++(*p);
+      --len;
+    }
+
+  /* Reject integers that don't fit in an int. This code assumes that
+   * the int type has no padding bit.
+   */
+
+  if (len > sizeof(int))
+    {
+      return -EINVAL;
+    }
+
+  if (len == sizeof(int) && (**p & 0x80) != 0)
+    {
+      return -EINVAL;
+    }
+
+  *val = 0;
+  while (len-- > 0)
+    {
+      *val = (*val << 8) | **p;
+      (*p)++;
+    }
+
+  return 0;
+}
+
+static inline_function
+int asn1_get_mpi(FAR unsigned char **p,
+                 FAR const unsigned char *end,
+                 FAR unsigned char *mpi, size_t mpilen)
+{
+  uint32_t *left;
+  uint32_t *right;
+  uint32_t tmp;
+  size_t overhead;
+  size_t len;
+  int ret;
+
+  ret = asn1_get_tag(p, end, &len, ASN1_INTEGER);
+  if (ret != 0)
+    {
+      return ret;
+    }
+
+  memset(mpi, 0, mpilen);
+
+  if (len != 0)
+    {
+      overhead = mpilen - len;
+      memcpy(mpi + overhead, *p, len);
+    }
+
+  for (left = mpi, right = mpi + mpilen - sizeof(*right);
+       left <= right; left++, right--)
+    {
+      tmp    = betoh32(*left);
+      *left  = betoh32(*right);
+      *right = tmp;
+    }
+
+  *p += len;
+
+  return ret;
+}
+
 #endif /* __INCLUDE_CRYPTO_ASN1_H */
