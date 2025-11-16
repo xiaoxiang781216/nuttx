@@ -2120,30 +2120,96 @@ done:
   return 0;
 }
 
-int swcr_mod_exp(struct cryptkop *krp)
+int swcr_mod_exp(FAR struct cryptkop *krp)
 {
-  uint8_t *input = (uint8_t *)krp->krp_param[0].crp_p;
-  uint8_t *exp = (uint8_t *)krp->krp_param[1].crp_p;
-  uint8_t *modulus = (uint8_t *)krp->krp_param[2].crp_p;
-  uint8_t *output = (uint8_t *)krp->krp_param[3].crp_p;
-  int input_len = krp->krp_param[0].crp_nbits / 8;
-  int exp_len = krp->krp_param[1].crp_nbits / 8;
-  int modulus_len = krp->krp_param[2].crp_nbits / 8;
-  int output_len = krp->krp_param[3].crp_nbits / 8;
-  struct bn a;
-  struct bn e;
-  struct bn n;
-  struct bn r;
+  FAR struct crparam *src;
+  FAR struct crparam *dst;
+  FAR struct crparam *e;
+  FAR struct crparam *n;
+  struct bn bna;
+  struct bn bne;
+  struct bn bnn;
+  struct bn bnr;
 
-  bignum_init(&a);
-  bignum_init(&e);
-  bignum_init(&n);
-  bignum_init(&r);
-  memcpy(e.array, exp, exp_len);
-  memcpy(n.array, modulus, modulus_len);
-  memcpy(a.array, input, input_len);
-  pow_mod_faster(&a, &e, &n, &r);
-  memcpy(output, r.array, output_len);
+  bignum_init(&bna);
+  bignum_init(&bne);
+  bignum_init(&bnn);
+  bignum_init(&bnr);
+
+  src = &krp->krp_param[0];
+  dst = &krp->krp_param[krp->krp_iparams +
+                        krp->krp_oparams - 1];
+  n = &krp->krp_param[1];
+  e = &krp->krp_param[2];
+  bna.length = src->crp_nbits / 8;
+  bnn.length = n->crp_nbits / 8;
+  bne.length = e->crp_nbits / 8;
+  memcpy(bna.array, src->crp_p, bna.length);
+  memcpy(bne.array, e->crp_p, bne.length);
+  memcpy(bnn.array, n->crp_p, bnn.length);
+  bignum_update_length(&bna);
+  bignum_update_length(&bne);
+  bignum_update_length(&bnn);
+
+  pow_mod_faster(&bna, &bne, &bnn, &bnr);
+  memcpy(dst->crp_p, bnr.array, dst->crp_nbits / 8);
+  return 0;
+}
+
+int swcr_mod_exp_crt(FAR struct cryptkop *krp)
+{
+  FAR struct crparam *src;
+  FAR struct crparam *dst;
+  FAR struct crparam *p;
+  FAR struct crparam *q;
+  FAR struct crparam *dp;
+  FAR struct crparam *dq;
+  FAR struct crparam *qp;
+  struct bn bna;
+  struct bn bnp;
+  struct bn bnq;
+  struct bn bndp;
+  struct bn bndq;
+  struct bn bnqp;
+  struct bn bnr;
+
+  bignum_init(&bna);
+  bignum_init(&bnp);
+  bignum_init(&bnq);
+  bignum_init(&bndp);
+  bignum_init(&bndq);
+  bignum_init(&bnqp);
+  bignum_init(&bnr);
+
+  src = &krp->krp_param[0];
+  dst = &krp->krp_param[krp->krp_iparams +
+                        krp->krp_oparams - 1];
+  p = &krp->krp_param[4];
+  q = &krp->krp_param[5];
+  dp = &krp->krp_param[6];
+  dq = &krp->krp_param[7];
+  qp = &krp->krp_param[8];
+  bna.length = src->crp_nbits / 8;
+  bnp.length = p->crp_nbits / 8;
+  bnq.length = q->crp_nbits / 8;
+  bndp.length = dp->crp_nbits / 8;
+  bndq.length = dq->crp_nbits / 8;
+  bnqp.length = qp->crp_nbits / 8;
+  memcpy(bna.array, src->crp_p, bna.length);
+  memcpy(bnp.array, p->crp_p, bnp.length);
+  memcpy(bnq.array, q->crp_p, bnq.length);
+  memcpy(bndp.array, dp->crp_p, bndp.length);
+  memcpy(bndq.array, dq->crp_p, bndq.length);
+  memcpy(bnqp.array, qp->crp_p, bnqp.length);
+  bignum_update_length(&bna);
+  bignum_update_length(&bnp);
+  bignum_update_length(&bnq);
+  bignum_update_length(&bndp);
+  bignum_update_length(&bndq);
+  bignum_update_length(&bnqp);
+
+  pow_mod_crt(&bna, &bnp, &bnq, &bndp, &bndq, &bnqp, &bnr);
+  memcpy(dst->crp_p, bnr.array, dst->crp_nbits / 8);
   return 0;
 }
 
@@ -2181,31 +2247,37 @@ static int swcr_dh_make_common(FAR struct cryptkop *krp)
 
 int swcr_rsa_verify(struct cryptkop *krp)
 {
-  uint8_t *exp = (uint8_t *)krp->krp_param[0].crp_p;
-  uint8_t *modulus = (uint8_t *)krp->krp_param[1].crp_p;
-  uint8_t *sig = (uint8_t *)krp->krp_param[2].crp_p;
-  uint8_t *hash = (uint8_t *)krp->krp_param[3].crp_p;
-  uint8_t *padding = (uint8_t *)krp->krp_param[4].crp_p;
-  int exp_len = krp->krp_param[0].crp_nbits / 8;
-  int modulus_len = krp->krp_param[1].crp_nbits / 8;
-  int sig_len = krp->krp_param[2].crp_nbits / 8;
-  int hash_len = krp->krp_param[3].crp_nbits / 8;
-  int padding_len = krp->krp_param[4].crp_nbits / 8;
-  struct bn a;
-  struct bn e;
-  struct bn n;
-  struct bn r;
+  FAR struct crparam *src;
+  FAR struct crparam *dst;
+  FAR struct crparam *e;
+  FAR struct crparam *n;
+  struct bn bna;
+  struct bn bne;
+  struct bn bnn;
+  struct bn bnr;
 
-  bignum_init(&a);
-  bignum_init(&e);
-  bignum_init(&n);
-  bignum_init(&r);
-  memcpy(e.array, exp, exp_len);
-  memcpy(n.array, modulus, modulus_len);
-  memcpy(a.array, sig, sig_len);
-  pow_mod_faster(&a, &e, &n, &r);
-  return !!memcmp(r.array, hash, hash_len) +
-         !!memcmp(r.array + hash_len, padding, padding_len);
+  bignum_init(&bna);
+  bignum_init(&bne);
+  bignum_init(&bnn);
+  bignum_init(&bnr);
+
+  src = &krp->krp_param[0];
+  dst = &krp->krp_param[krp->krp_iparams +
+                        krp->krp_oparams - 1];
+  n = &krp->krp_param[1];
+  e = &krp->krp_param[2];
+  bne.length = e->crp_nbits / 8;
+  bnn.length = n->crp_nbits / 8;
+  bna.length = src->crp_nbits / 8;
+  memcpy(bne.array, e->crp_p, bne.length);
+  memcpy(bnn.array, n->crp_p, bnn.length);
+  memcpy(bna.array, src->crp_p, bna.length);
+  bignum_update_length(&bne);
+  bignum_update_length(&bnn);
+  bignum_update_length(&bna);
+
+  pow_mod_faster(&bna, &bne, &bnn, &bnr);
+  return memcmp(bnr.array, dst->crp_p, dst->crp_nbits / 8);
 }
 
 static int swcr_ecc256_genkey(FAR struct cryptkop *krp)
@@ -2273,6 +2345,14 @@ int swcr_kprocess(struct cryptkop *krp)
     {
       case CRK_MOD_EXP:
         if ((krp->krp_status = swcr_mod_exp(krp)) != 0)
+          {
+            goto done;
+          }
+
+        break;
+      case CRK_MOD_EXP_CRT:
+      case CRK_RSA_PKCS15_SIGN:
+        if ((krp->krp_status = swcr_mod_exp_crt(krp)) != 0)
           {
             goto done;
           }
@@ -2393,8 +2473,10 @@ void swcr_init(void)
 
   memset(kalgs, 0, sizeof(kalgs));
   kalgs[CRK_MOD_EXP] = CRYPTO_ALG_FLAG_SUPPORTED;
+  kalgs[CRK_MOD_EXP_CRT] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_DH_MAKE_PUBLIC] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_DH_COMPUTE_KEY] = CRYPTO_ALG_FLAG_SUPPORTED;
+  kalgs[CRK_RSA_PKCS15_SIGN] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_RSA_PKCS15_VERIFY] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_ECDSA_SECP256R1_SIGN] = CRYPTO_ALG_FLAG_SUPPORTED;
   kalgs[CRK_ECDSA_SECP256R1_VERIFY] = CRYPTO_ALG_FLAG_SUPPORTED;
