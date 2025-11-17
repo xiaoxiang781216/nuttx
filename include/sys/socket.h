@@ -320,8 +320,8 @@
 
 /* Desired design of maximum size and alignment (see RFC2553) */
 
-#define SS_MAXSIZE   128               /* Implementation-defined maximum size. */
-#define SS_ALIGNSIZE (sizeof(int64_t)) /* Implementation-defined desired alignment. */
+#define SS_MAXSIZE   128                 /* Implementation-defined maximum size. */
+#define SS_ALIGNSIZE (sizeof(uintptr_t)) /* Implementation-defined desired alignment. */
 
 /* Definitions used for sockaddr_storage structure paddings design */
 #define SS_PAD1SIZE (SS_ALIGNSIZE - sizeof(sa_family_t))
