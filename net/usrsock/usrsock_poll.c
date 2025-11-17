@@ -148,7 +148,7 @@ static int usrsock_pollsetup(FAR struct socket *psock,
     }
 #endif
 
-  net_lock();
+  usrsock_lock();
 
   /* Find a container to hold the poll information */
 
@@ -255,7 +255,7 @@ static int usrsock_pollsetup(FAR struct socket *psock,
   poll_notify(&fds, 1, eventset);
 
 errout_unlock:
-  net_unlock();
+  usrsock_unlock();
   return ret;
 }
 
@@ -290,6 +290,8 @@ static int usrsock_pollteardown(FAR struct socket *psock,
     }
 #endif
 
+  usrsock_lock();
+
   /* Recover the socket descriptor poll state info from the poll structure */
 
   info = (FAR struct usrsock_poll_s *)fds->priv;
@@ -311,6 +313,8 @@ static int usrsock_pollteardown(FAR struct socket *psock,
 
       info->conn = NULL;
     }
+
+  usrsock_unlock();
 
   return OK;
 }

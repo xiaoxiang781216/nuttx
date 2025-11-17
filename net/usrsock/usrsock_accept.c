@@ -239,7 +239,7 @@ int usrsock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
       inaddrlen = *addrlen;
     }
 
-  net_lock();
+  usrsock_lock();
 
   if (conn->state == USRSOCK_CONN_STATE_UNINITIALIZED ||
       conn->state == USRSOCK_CONN_STATE_ABORTED)
@@ -328,8 +328,8 @@ int usrsock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
 
           /* Wait for receive-avail (or abort, or timeout, or signal). */
 
-          ret = net_sem_timedwait(&state.reqstate.recvsem,
-                              _SO_TIMEOUT(conn->sconn.s_rcvtimeo));
+          ret = usrsock_sem_timedwait(&state.reqstate.recvsem, true,
+                                      _SO_TIMEOUT(conn->sconn.s_rcvtimeo));
           usrsock_teardown_data_request_callback(&state);
           if (ret < 0)
             {
@@ -345,7 +345,7 @@ int usrsock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
                 }
               else
                 {
-                  nerr("net_sem_timedwait errno: %d\n", ret);
+                  nerr("usrsock_sem_timedwait errno: %d\n", ret);
                   DEBUGPANIC();
                 }
 
@@ -402,7 +402,7 @@ int usrsock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
         {
           /* Wait for completion of request. */
 
-          net_sem_wait_uninterruptible(&state.reqstate.recvsem);
+          usrsock_sem_timedwait(&state.reqstate.recvsem, false, UINT_MAX);
           ret = state.reqstate.result;
 
           DEBUGASSERT(state.valuelen <= inaddrlen);
@@ -441,7 +441,7 @@ errout_free_conn:
   usrsock_free(newconn);
 
 errout_unlock:
-  net_unlock();
+  usrsock_unlock();
 
   if (addrlen)
     {
