@@ -62,6 +62,12 @@ void pthread_exit(FAR void *exit_value)
 
   task_setcancelstate(TASK_CANCEL_DISABLE, NULL);
 
+  /* Set cancel state to DISABLE
+   * and cancel type to DEFERRED as required by POSIX
+   */
+
+  task_setcanceltype(TASK_CANCEL_DEFERRED, NULL);
+
   tls_cleanup_popall(tls_get_info());
 
 #if defined(CONFIG_TLS_NELEM) && CONFIG_TLS_NELEM > 0
