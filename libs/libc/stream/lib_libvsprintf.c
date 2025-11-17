@@ -601,7 +601,7 @@ flt_oper:
           else if (c == 'g')
             {
               radix = 10;
-              ndigs = prec;
+              ndigs = prec == 0 ? 1 : prec;
               ndecimal = 0;
             }
           else
