@@ -40,6 +40,145 @@
 #include "sched/sched.h"
 #include "pthread/pthread.h"
 
+#ifdef CONFIG_DEBUG_FEATURES
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: is_thread_in_join_queue
+ *
+ * Description:
+ *   Check if a specific thread is in another thread's wait queue.
+ *
+ * Input Parameters:
+ *   joiner - Thread to look for in the wait queue.
+ *   joinee - Thread whose wait queue to check.
+ *
+ * Returned Value:
+ *   true if joiner is in joinee's wait queue, false otherwise.
+ *
+ ****************************************************************************/
+
+static bool is_thread_in_join_queue(FAR struct tcb_s *joiner,
+                                    FAR struct tcb_s *joinee)
+{
+  FAR struct tcb_s *tcb;
+
+  sq_for_every_entry(&joinee->join_queue, tcb, struct tcb_s, join_entry)
+    {
+      if (tcb == joiner)
+        {
+          return true;
+        }
+    }
+
+  return false;
+}
+
+/****************************************************************************
+ * Name: is_thread_waiting_for_join
+ *
+ * Description:
+ *   Check if a thread is currently waiting in a pthread_join operation.
+ *
+ * Input Parameters:
+ *   joiner - Thread to check.
+ *
+ * Returned Value:
+ *   true if thread is waiting in pthread_join, false otherwise.
+ *
+ ****************************************************************************/
+
+static bool is_thread_waiting_for_join(FAR struct tcb_s *joiner)
+{
+  /* Check if the thread is waiting on its own join_sem */
+
+  return joiner->waitobj == &joiner->join_sem;
+}
+
+/****************************************************************************
+ * Name: find_thread_waiting_for_join
+ *
+ * Description:
+ *   Find which thread a given thread is currently waiting for by examining
+ *   all threads in the task group and their wait queues.
+ *
+ * Input Parameters:
+ *   joiner - Thread to check.
+ *
+ * Returned Value:
+ *   Pointer to the thread being waited for, or NULL if not waiting.
+ *
+ ****************************************************************************/
+
+static FAR struct tcb_s *
+find_thread_waiting_for_join(FAR struct tcb_s *joiner)
+{
+  FAR struct task_group_s *group = joiner->group;
+  FAR struct tcb_s *joinee;
+
+  /* Check if the thread is waiting for a join operation */
+
+  if (!is_thread_waiting_for_join(joiner))
+    {
+      return NULL;
+    }
+
+  sq_for_every_entry(&group->tg_members, joinee, struct tcb_s, member)
+    {
+      /* Check if the thread is in this potential joinee's wait queue */
+
+      if (is_thread_in_join_queue(joiner, joinee))
+        {
+          return joinee;
+        }
+    }
+
+  return NULL;
+}
+
+/****************************************************************************
+ * Name: is_thread_deadlook_for_join
+ *
+ * Description:
+ *   Check if attempting to join the target thread would create a deadlock
+ *   situation (circular waiting).
+ *
+ * Input Parameters:
+ *   joiner - Thread attempting to execute pthread_join.
+ *   joinee - Target thread to be joined.
+ *
+ * Returned Value:
+ *   true if deadlock would occur, false otherwise.
+ *
+ ****************************************************************************/
+
+static bool is_thread_deadlook_for_join(FAR struct tcb_s *joiner,
+                                        FAR struct tcb_s *joinee)
+{
+  size_t depth = sq_count(&joinee->group->tg_members);
+
+  /* Check for circular waiting (deadly ring) */
+
+  while (depth-- > 0)
+    {
+      joinee = find_thread_waiting_for_join(joinee);
+      if (joinee == NULL)
+        {
+          return false;  /* Chain ended, no circular wait */
+        }
+
+      if (joinee == joiner)
+        {
+          return true;   /* Found joiner, circular wait detected */
+        }
+    }
+
+  return false; /* No circular wait detected */
+}
+#endif /* CONFIG_DEBUG_FEATURES */
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -141,6 +280,16 @@ int pthread_join(pthread_t thread, FAR pthread_addr_t *pexit_value)
    */
 
   sq_addfirst(&rtcb->join_entry, &tcb->join_queue);
+
+#ifdef CONFIG_DEBUG_FEATURES
+  if (is_thread_deadlook_for_join(rtcb, tcb))
+    {
+      sq_rem(&rtcb->join_entry, &tcb->join_queue);
+      nxsched_put_tcb(tcb);
+      ret = EDEADLK;
+      goto errout;
+    }
+#endif
 
   nxsched_put_tcb(tcb);
   nxrmutex_unlock(&group->tg_mutex);
