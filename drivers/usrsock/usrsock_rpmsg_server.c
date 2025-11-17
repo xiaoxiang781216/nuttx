@@ -603,19 +603,20 @@ static int usrsock_rpmsg_recvfrom_handler(FAR struct rpmsg_endpoint *ept,
       if (ret > 0 && (priv->socks[req->usockid].s_type & SOCK_TYPE_MASK) ==
                       SOCK_STREAM)
         {
+          FAR struct socket_conn_s *conn = priv->socks[req->usockid].s_conn;
           if (outaddrlen < inaddrlen)
             {
               memcpy((FAR void *)(ack + 1) + outaddrlen,
                      (FAR void *)(ack + 1) + inaddrlen, ret);
             }
 
-          /* Hold net_lock to combine get_tx_payload and recvfrom together.
-           * Otherwise we may keep holding tx buffer when waiting net_lock in
-           * recvfrom, which may block rpmsg and may cause dead lock if
-           * another thread tries to get tx buffer with net_lock held.
+          /* Hold conn_lock to combine get_tx_payload and recvfrom together.
+           * Otherwise we may keep holding tx buffer when waiting conn_lock
+           * in recvfrom, which may block rpmsg and may cause dead lock if
+           * another thread tries to get tx buffer with conn_lock held.
            */
 
-          net_lock();
+          nxrmutex_lock(&conn->s_lock);
           while (totlen < buflen &&
                  i < CONFIG_NET_USRSOCK_RPMSG_SERVER_NIOVEC)
             {
@@ -671,7 +672,7 @@ static int usrsock_rpmsg_recvfrom_handler(FAR struct rpmsg_endpoint *ept,
               events |= USRSOCK_EVENT_RECVFROM_AVAIL;
             }
 
-          net_unlock();
+          nxrmutex_unlock(&conn->s_lock);
         }
     }
 
@@ -1196,6 +1197,7 @@ static void usrsock_rpmsg_poll_setup(FAR struct pollfd *pfds,
 {
   FAR struct usrsock_rpmsg_s *priv = (FAR struct usrsock_rpmsg_s *)pfds->arg;
   FAR struct socket *psock = &priv->socks[pfds->fd];
+  FAR struct socket_conn_s *conn = psock->s_conn;
   int ret = 0;
 
   /* No poll for SOCK_CTRL. */
@@ -1205,7 +1207,7 @@ static void usrsock_rpmsg_poll_setup(FAR struct pollfd *pfds,
       return;
     }
 
-  net_lock();
+  nxrmutex_lock(&conn->s_lock);
 
   if (events)
     {
@@ -1240,7 +1242,7 @@ static void usrsock_rpmsg_poll_setup(FAR struct pollfd *pfds,
            pfds->events, pfds->revents);
     }
 
-  net_unlock();
+  nxrmutex_unlock(&conn->s_lock);
 }
 
 static void usrsock_rpmsg_poll_cb(FAR struct pollfd *pfds)
