@@ -359,6 +359,7 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
                       if (prec < 0)
                         {
                           prec = 0;
+                          flags &= ~FL_PREC;
                         }
                     }
                   else
@@ -607,7 +608,7 @@ flt_oper:
             {
               flags |= FL_FLTEXP;
               radix = 16;
-              ndigs = prec + 1;
+              ndigs = MIN(prec + 1 , DBL_MANT_DIG / 4);
               ndecimal = 0;
             }
 
