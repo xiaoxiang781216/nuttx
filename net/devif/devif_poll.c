@@ -341,6 +341,7 @@ devif_poll_bluetooth_connections(FAR struct net_driver_s *dev,
    * action.
    */
 
+  bluetooth_conn_list_lock();
   while (!bstop && (bluetooth_conn = bluetooth_conn_next(bluetooth_conn)))
     {
       /* Perform the packet TX poll */
@@ -354,6 +355,8 @@ devif_poll_bluetooth_connections(FAR struct net_driver_s *dev,
           bstop = callback(dev);
         }
     }
+
+  bluetooth_conn_list_unlock();
 
   return bstop;
 }
