@@ -588,20 +588,22 @@ flt_oper:
             {
               radix = 10;
               ndigs = prec + 1;
+              ndigs = ndigs > DTOA_MAX_DIG ? DTOA_MAX_DIG : ndigs;
               ndecimal = 0;
               flags |= FL_FLTEXP;
             }
           else if (c == 'f')
             {
               radix = 10;
-              ndigs = DTOA_MAX_DIG;
+              ndigs = prec == 0 ? 0 : DTOA_MAX_DIG;
               ndecimal = prec;
               flags |= FL_FLTFIX;
             }
           else if (c == 'g')
             {
               radix = 10;
-              ndigs = prec == 0 ? 1 : prec;
+              ndigs = prec == 0 ? 1 : (prec > DTOA_MAX_DIG ?
+                                       DTOA_MAX_DIG : prec);
               ndecimal = 0;
             }
           else
@@ -610,11 +612,6 @@ flt_oper:
               radix = 16;
               ndigs = MIN(prec + 1 , DBL_MANT_DIG / 4);
               ndecimal = 0;
-            }
-
-          if (ndigs > DTOA_MAX_DIG)
-            {
-              ndigs = DTOA_MAX_DIG;
             }
 
 #ifdef CONFIG_LIBC_NUMBERED_ARGS

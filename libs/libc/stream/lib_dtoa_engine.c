@@ -171,6 +171,16 @@ int __dtoa_engine(double x, FAR struct dtoa_s *dtoa, int max_digits,
           max_digits = MIN(max_digits, max_decimals + MAX(exp + 1, 0));
         }
 
+      /* Only for float in fixed-point form, If limiting decimals, and
+       * precision is 0. Keep the integer part of floating-point numbers
+       * or one significant digit.
+       */
+
+      if (max_decimals == 0 && max_digits == 0)
+        {
+          max_digits = MAX(exp + 1, 1);
+        }
+
       /* Round nearest by adding 1/2 of the last digit before converting to
        * int. Check for overflow and adjust mantissa and exponent values
        */
