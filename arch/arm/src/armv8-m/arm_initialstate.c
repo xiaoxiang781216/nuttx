@@ -173,6 +173,10 @@ void up_initial_state(struct tcb_s *tcb)
   xcp->regs[REG_BASEPRI] = 0;
 
 #endif /* CONFIG_SUPPRESS_INTERRUPTS */
+
+#if defined(CONFIG_BUILD_FLAT) && defined(CONFIG_ARCH_ADDRENV)
+  xcp->nkernels = 1;
+#endif
 }
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 7

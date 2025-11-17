@@ -262,6 +262,12 @@ struct xcptcontext
 
 #endif /* !CONFIG_DISABLE_SIGNALS */
 
+#if defined(CONFIG_BUILD_FLAT) && defined(CONFIG_ARCH_ADDRENV)
+  /* Mark enter kernel region */
+
+  uint8_t nkernels;
+#endif
+
 #ifdef CONFIG_LIB_SYSCALL
   /* The following array holds the return address and the exc_return value
    * needed to return from each nested system call.

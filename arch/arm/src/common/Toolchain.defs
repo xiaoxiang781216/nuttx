@@ -616,6 +616,8 @@ ifneq ($(CONFIG_BINFMT_ELF_RELOCATABLE)$(CONFIG_LTO_FULL),)
   CXXELFFLAGS += -fno-lto
 endif
 
+LDELFFLAGS += $(EXTRALINKCMDS)
+
 # Zig toolchain
 
 include $(TOPDIR)/tools/Zig.defs

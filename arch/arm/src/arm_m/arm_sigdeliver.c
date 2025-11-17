@@ -53,9 +53,13 @@
 
 void arm_sigdeliver(void)
 {
-  struct tcb_s *rtcb = this_task();
-  uint32_t *regs = rtcb->xcp.saved_regs;
+  struct tcb_s *rtcb;
   irqstate_t flags;
+  uint32_t *regs;
+
+  up_addrenv_enter_kernel();
+  rtcb = this_task();
+  regs = rtcb->xcp.saved_regs;
 
   board_autoled_on(LED_SIGNAL);
 
@@ -116,6 +120,7 @@ retry:
 
   board_autoled_off(LED_SIGNAL);
 
+  up_addrenv_leave_kernel();
   arm_fullcontextrestore();
   UNUSED(regs);
 }
