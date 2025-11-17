@@ -76,7 +76,6 @@ function(nuttx_add_aux_library target)
   add_library(${target} OBJECT ${ARGN})
   # make sure context and post time ordering
   add_dependencies(${target} apps_context)
-  add_dependencies(apps_post ${target})
   nuttx_add_library_internal(${target} ${ARGN})
 endfunction()
 
