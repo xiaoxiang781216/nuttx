@@ -88,6 +88,12 @@ void weak_function up_allocate_heap(void **heap_start, size_t *heap_size)
 
   *heap_start = _sheap;
   *heap_size = (uintptr_t)_eheap - (uintptr_t)_sheap;
+
+#if defined(CONFIG_MM_KERNEL_HEAP)
+  *heap_start += CONFIG_MM_KERNEL_HEAPSIZE;
+  *heap_size -= CONFIG_MM_KERNEL_HEAPSIZE;
+#endif
+
 #endif
 }
 
@@ -101,13 +107,14 @@ void weak_function up_allocate_heap(void **heap_start, size_t *heap_size)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
+#if defined(CONFIG_MM_KERNEL_HEAP)
 void weak_function up_allocate_kheap(void **heap_start, size_t *heap_size)
 {
   /* Get the unaligned size and position of the kernel-space heap.
    * This heap begins after the kernel-space idle stack.
    */
 
+#if defined(CONFIG_BUILD_PROTECTED)
   DEBUGASSERT((uintptr_t)_sheap + CONFIG_MM_KERNEL_HEAPSIZE
               <= (uintptr_t)_eheap);
 
@@ -115,5 +122,9 @@ void weak_function up_allocate_kheap(void **heap_start, size_t *heap_size)
 
   *heap_start = _sheap;
   *heap_size = (uintptr_t)_eheap - (uintptr_t)_sheap;
+#else
+  *heap_start = _sheap;
+  *heap_size = CONFIG_MM_KERNEL_HEAPSIZE;
+#endif
 }
 #endif
