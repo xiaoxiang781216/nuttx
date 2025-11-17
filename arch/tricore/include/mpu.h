@@ -68,6 +68,7 @@ struct mpu_region_s
 
 extern unsigned int g_mpu_kset;
 extern unsigned int g_mpu_uset;
+extern unsigned int g_app_set;
 
 /****************************************************************************
  * Public Function Prototypes

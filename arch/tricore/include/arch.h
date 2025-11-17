@@ -37,6 +37,7 @@
 #endif
 
 #include <arch/barriers.h>
+#include <arch/mpu.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -114,6 +115,53 @@ typedef struct arch_addrenv_s arch_addrenv_t;
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
+
+#if defined(CONFIG_BUILD_FLAT) && defined(CONFIG_ARCH_ADDRENV)
+
+/****************************************************************************
+ * Name: up_addrenv_enter_kernel
+ *
+ * Description:
+ *   Enter kernel address environment.
+ *
+ ****************************************************************************/
+
+#define up_addrenv_enter_kernel() \
+do \
+  { \
+    irqstate_t _flags = __disable_and_save(); \
+    mpu_control(false); \
+    mpu_set_active_set(g_mpu_kset); \
+    mpu_control(true); \
+    __restore(_flags); \
+  } \
+while (0);
+
+/****************************************************************************
+ * Name: up_addrenv_leave_kernel
+ *
+ * Description:
+ *   Leave kernel address environment.
+ *
+ ****************************************************************************/
+
+#define up_addrenv_leave_kernel() \
+do \
+  { \
+    irqstate_t _flags = __disable_and_save(); \
+    struct tcb_s *tcb_ = this_task(); \
+    if (tcb_ && tcb_->group && tcb_->group->tg_addrenv_own != NULL && \
+        tcb_->group->tg_addrenv_own->addrenv.data) \
+      { \
+        mpu_control(false); \
+        mpu_set_active_set(g_app_set); \
+        mpu_control(true); \
+      } \
+    __restore(_flags); \
+  } \
+while (0);
+
+#endif
 
 #ifdef __cplusplus
 #define EXTERN extern "C"

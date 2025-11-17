@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/addrenv.h>
 #include <nuttx/arch.h>
 #include <nuttx/cache.h>
 #include <nuttx/tls.h>
@@ -50,6 +51,7 @@ static unsigned int g_addrenv_stack_region;
 
 #ifdef CONFIG_MM_TASK_HEAP
 static unsigned int g_addrenv_heap_region;
+static unsigned int g_addrenv_text_region;
 #endif
 
 /****************************************************************************
@@ -173,12 +175,13 @@ int up_addrenv_destroy(arch_addrenv_t *addrenv)
   DEBUGASSERT(addrenv);
 
 #ifdef CONFIG_MM_TASK_HEAP
-  if ((void *)addrenv->text != NULL)
+  if (mm_heapmember((void *)addrenv->heap, (void *)addrenv->text))
     {
       mm_free((void *)addrenv->heap, (void *)addrenv->text);
     }
 
-  if ((void *)addrenv->data != NULL)
+  if (mm_heapmember((void *)addrenv->heap, (void *)addrenv->data))
+
     {
       mm_free((void *)addrenv->heap, (void *)addrenv->data);
     }
@@ -267,7 +270,6 @@ int up_addrenv_vdata(arch_addrenv_t *addrenv, uintptr_t textsize,
 int up_addrenv_select(const arch_addrenv_t *addrenv)
 {
 #ifdef CONFIG_MM_TASK_HEAP
-  struct tcb_s *tcb = this_task();
   struct mpu_region_s conf;
 
   if (g_addrenv_heap_region == 0)
@@ -275,18 +277,55 @@ int up_addrenv_select(const arch_addrenv_t *addrenv)
       g_addrenv_heap_region = mpu_allocdataregion();
     }
 
-  if (tcb->group->tg_heap)
+  if (g_addrenv_text_region == 0)
     {
-      conf.base = (uintptr_t)tcb->group->tg_heap;
-      conf.size = group_heap_size((struct mm_heap_s *)tcb->group->tg_heap);
+      g_addrenv_text_region = mpu_alloccoderegion();
+    }
+
+  if (addrenv->heap && (
+#ifndef CONFIG_BUILD_FLAT
+      addrenv->data == 0 ||
+#endif
+      mm_heapmember((void *)addrenv->heap, (void *)addrenv->data)))
+    {
+      conf.base = (uintptr_t)addrenv->heap;
+      conf.size = addrenv->heapsize;
       conf.kflags = REGION_TYPE_DATA | REGION_ATTR_RW;
       conf.uflags = REGION_TYPE_DATA | REGION_ATTR_RW;
+      mpu_control(false);
       mpu_modify_region(g_mpu_kset, g_addrenv_heap_region,
                         conf.base, conf.size, conf.kflags);
 #ifdef CONFIG_BUILD_PROTECTED
       mpu_modify_region(g_mpu_uset, g_addrenv_heap_region,
                         conf.base, conf.size, conf.uflags);
 #endif
+      mpu_control(true);
+    }
+  else if (addrenv->data)
+    {
+      /* Heap include data or just have heap region */
+
+      conf.base = (uintptr_t)addrenv->data;
+      conf.size = addrenv->datasize;
+      conf.kflags = REGION_TYPE_DATA | REGION_ATTR_RW;
+      conf.uflags = REGION_TYPE_DATA | REGION_ATTR_RW;
+      mpu_control(false);
+      mpu_modify_region(g_mpu_kset, g_addrenv_heap_region,
+                        conf.base, conf.size, conf.kflags);
+
+      /* Read and write for data */
+
+      mpu_modify_region(g_app_set, g_addrenv_heap_region,
+                        conf.base, conf.size, conf.kflags);
+      conf.base = (uintptr_t)addrenv->text;
+      conf.size = addrenv->textsize;
+      conf.kflags = REGION_TYPE_DATA | REGION_ATTR_RO;
+
+      /* Read only for text  */
+
+      mpu_modify_region(g_app_set, g_addrenv_text_region,
+                        conf.base, conf.size, conf.kflags);
+      mpu_control(true);
     }
 #endif
 

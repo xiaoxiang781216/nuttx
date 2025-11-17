@@ -45,6 +45,7 @@ static unsigned int g_mpu_set;
 
 unsigned int g_mpu_kset;
 unsigned int g_mpu_uset;
+unsigned int g_app_set;
 
 /****************************************************************************
  * Private Functions
@@ -1202,6 +1203,12 @@ void mpu_initialize(const struct mpu_region_s *table, size_t count)
 #ifdef CONFIG_BUILD_PROTECTED
   g_mpu_uset = mpu_alloc_set();
 #endif
+  g_app_set = mpu_alloc_set();
+
+  /* For code backgroud set execute enable */
+
+  mpu_modify_region(g_app_set, mpu_alloccoderegion(),
+                    0x0, 0xffffffff, REGION_TYPE_CODE | REGION_ATTR_XE);
 
   for (index = 0; index < count; index++)
     {
