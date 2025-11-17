@@ -33,6 +33,8 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/userspace.h>
 
+#include <arch/elf.h>
+
 #include "arm_internal.h"
 
 #if defined(CONFIG_BUILD_PROTECTED) && !defined(__KERNEL__)
@@ -84,6 +86,11 @@ const struct userspace_s userspace locate_data(".userspace") =
   .us_dataend       = (uintptr_t)_edata,
   .us_bssstart      = (uintptr_t)_sbss,
   .us_bssend        = (uintptr_t)_ebss,
+
+#ifdef CONFIG_UNWINDER_ARM
+  .us_unwindstart   = (uintptr_t)__exidx_start,
+  .us_unwindend     = (uintptr_t)__exidx_end,
+#endif
 
   /* User data memory structure */
 

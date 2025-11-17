@@ -148,6 +148,11 @@ struct userspace_s
   uintptr_t us_bssend;
   uintptr_t us_heapend;
 
+#ifdef CONFIG_SCHED_BACKTRACE
+  uintptr_t us_unwindstart;
+  uintptr_t us_unwindend;
+#endif
+
   /* User data memory structure */
 
   FAR struct userspace_data_s *us_data;

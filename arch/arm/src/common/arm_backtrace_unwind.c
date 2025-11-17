@@ -48,6 +48,15 @@
 #define BACKTRACE_MAX_DEPTH 32
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifdef CONFIG_BUILD_PROTECTED
+#define UEXIDX_START ((__EIT_entry *)(USERSPACE->us_unwindstart))
+#define UEXIDX_END   ((__EIT_entry *)(USERSPACE->us_unwindend))
+#endif
+
+/****************************************************************************
  * Private Types
  ****************************************************************************/
 
@@ -163,6 +172,13 @@ search_index(unsigned long addr, const struct __EIT_entry *start,
       start = origin;
     }
 
+  /* Possible userspace unwind empty */
+
+  if (start == stop)
+    {
+      return NULL;
+    }
+
   /* Prel31 for address relavive to start */
 
   addr_prel31 = (addr - (unsigned long)start) & 0x7fffffff;
@@ -243,11 +259,26 @@ unwind_find_origin(const struct __EIT_entry *start,
 nosanitize_address
 static const struct __EIT_entry *unwind_find_entry(unsigned long addr)
 {
+  const __EIT_entry *ret = NULL;
+
   /* Main unwind table */
 
-  return search_index(addr, __exidx_start,
-                      unwind_find_origin(__exidx_start, __exidx_end),
-                      __exidx_end);
+  if (addr >= (uintptr_t)_stext && addr < (uintptr_t)_etext)
+    {
+       ret = search_index(addr, __exidx_start,
+                          unwind_find_origin(__exidx_start, __exidx_end),
+                          __exidx_end);
+    }
+#ifdef CONFIG_BUILD_PROTECTED
+  else
+    {
+      ret = search_index(addr, UEXIDX_START,
+                         unwind_find_origin(UEXIDX_START, UEXIDX_END),
+                         UEXIDX_END);
+    }
+#endif
+
+  return ret;
 }
 
 nosanitize_address
