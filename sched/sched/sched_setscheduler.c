@@ -46,7 +46,8 @@
 #ifdef CONFIG_SCHED_SPORADIC
 static inline_function
 int process_sporadic(FAR struct tcb_s *tcb,
-                     FAR const struct sched_param *param)
+                     FAR const struct sched_param *param,
+                     uint32_t flags)
 {
   FAR struct sporadic_s *sporadic;
   sclock_t repl_ticks;
@@ -89,7 +90,7 @@ int process_sporadic(FAR struct tcb_s *tcb,
         {
           /* Initialize/reset current sporadic scheduling */
 
-          if ((atomic_read(&tcb->flags) & TCB_FLAG_POLICY_MASK) ==
+          if ((flags & TCB_FLAG_POLICY_MASK) ==
               TCB_FLAG_SCHED_SPORADIC)
             {
               ret = nxsched_reset_sporadic(tcb);
@@ -207,51 +208,53 @@ int nxsched_set_scheduler(pid_t pid, int policy,
            * while we set up scheduling policy.
            */
 
+#ifdef CONFIG_SCHED_SPORADIC
+          uint32_t flags =
+#endif
           atomic_fetch_and(&tcb->flags, ~TCB_FLAG_POLICY_MASK);
           switch (policy)
             {
+              case SCHED_OTHER:
+#if CONFIG_RR_INTERVAL > 0
+                policy = SCHED_RR;
+#else
+                policy = SCHED_FIFO;
+#endif
               case SCHED_FIFO:
+#if CONFIG_RR_INTERVAL > 0
+              case SCHED_RR:
+#endif
 #ifdef CONFIG_SCHED_SPORADIC
                 /* Cancel any on-going sporadic scheduling */
 
-                if ((atomic_read(&tcb->flags) & TCB_FLAG_POLICY_MASK) ==
+                if ((flags & TCB_FLAG_POLICY_MASK) ==
                     TCB_FLAG_SCHED_SPORADIC)
                   {
                     DEBUGVERIFY(nxsched_stop_sporadic(tcb));
                   }
 #endif
 
-                /* Save the FIFO scheduling parameters */
+                /* Set the new policy flag */
 
-                atomic_fetch_or(&tcb->flags, TCB_FLAG_SCHED_FIFO);
+                atomic_fetch_or(&tcb->flags,
+                                policy << TCB_FLAG_POLICY_SHIFT);
+
+                /* Configure timeslice based on policy */
 #if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC)
-                tcb->timeslice  = 0;
-#endif
-                break;
-
-#if CONFIG_RR_INTERVAL > 0
-              case SCHED_OTHER:
-              case SCHED_RR:
-#  ifdef CONFIG_SCHED_SPORADIC
-                /* Cancel any on-going sporadic scheduling */
-
-                if ((atomic_read(&tcb->flags) & TCB_FLAG_POLICY_MASK) ==
-                    TCB_FLAG_SCHED_SPORADIC)
+                if (policy == SCHED_FIFO)
                   {
-                    DEBUGVERIFY(nxsched_stop_sporadic(tcb));
+                    tcb->timeslice = 0;
                   }
-#  endif
-
-                /* Save the round robin scheduling parameters */
-
-                atomic_fetch_or(&tcb->flags, TCB_FLAG_SCHED_RR);
-                tcb->timeslice  = MSEC2TICK(CONFIG_RR_INTERVAL);
-                break;
+                else
+                  {
+                    tcb->timeslice = MSEC2TICK(CONFIG_RR_INTERVAL);
+                  }
 #endif
+                break;
 
 #ifdef CONFIG_SCHED_SPORADIC
               case SCHED_SPORADIC:
-                ret = process_sporadic(tcb, param);
+                ret = process_sporadic(tcb, param, flags);
                 break;
 #endif
             }
