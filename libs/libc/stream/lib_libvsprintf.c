@@ -705,9 +705,12 @@ flt_oper:
 
               /* Remove trailing zeros */
 
-              while (ndigs > 0 && _dtoa.digits[ndigs - 1] == '0')
+              if (!(flags & FL_ALT))
                 {
-                  ndigs--;
+                  while (ndigs > 0 && _dtoa.digits[ndigs - 1] == '0')
+                    {
+                      ndigs--;
+                    }
                 }
 
               if (-4 <= exp && exp < prec)
