@@ -39,20 +39,6 @@
 #include "mm_heap/mm.h"
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-static DEFINE_PER_CPU_BSS(FAR struct mm_delaynode_s *, g_mm_delay_list);
-#  define g_mm_delay_list this_cpu_var(g_mm_delay_list)
-
-#  if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-static DEFINE_PER_CPU_BSS(size_t, g_mm_delay_count);
-#    define g_mm_delay_count this_cpu_var(g_mm_delay_count)
-#  endif
-#endif
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -81,12 +67,11 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
     }
 #endif
 
-  tmp->flink      = g_mm_delay_list;
-  tmp->heap       = heap;
-  g_mm_delay_list = tmp;
+  tmp->flink = heap->mm_delaylist[this_cpu()];
+  heap->mm_delaylist[this_cpu()] = tmp;
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  g_mm_delay_count++;
+  heap->mm_delaycount[this_cpu()]++;
 #endif
 
   if (asan_check)
@@ -102,76 +87,6 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
   kasan_bypass(bypass);
   up_irq_restore(flags);
 #endif
-}
-
-/****************************************************************************
- * Name: free_delaylist
- *
- * Description:
- *  Free the memory in delay list either added because of mm_lock failed or
- *  added because of CONFIG_MM_FREE_DELAYCOUNT_MAX.
- *  Set force to true to free all the memory in delay list immediately, set
- *  to false will only free delaylist when time is up if
- *  CONFIG_MM_FREE_DELAYCOUNT_MAX is enabled.
- *
- *  Return true if there is memory freed.
- *
- ****************************************************************************/
-
-static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
-{
-  bool ret = false;
-#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  FAR struct mm_delaynode_s *tmp;
-  irqstate_t flags;
-  bool bypass;
-
-  /* Move the delay list to local */
-
-  flags = up_irq_save();
-  bypass = kasan_bypass(true);
-
-  tmp = g_mm_delay_list;
-
-#  if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  if (tmp == NULL || (!force &&
-      g_mm_delay_count < CONFIG_MM_FREE_DELAYCOUNT_MAX))
-    {
-      up_irq_restore(flags);
-      return false;
-    }
-
-  g_mm_delay_count = 0;
-#  endif
-
-  g_mm_delay_list = NULL;
-
-  kasan_bypass(bypass);
-  up_irq_restore(flags);
-
-  /* Test if the delayed is empty */
-
-  ret = !!tmp;
-
-  while (tmp)
-    {
-      FAR void *address;
-
-      /* Get the first delayed deallocation */
-
-      address = tmp;
-      heap    = tmp->heap;
-      tmp     = tmp->flink;
-
-      /* The address should always be non-NULL since that was checked in the
-       * 'while' condition above.
-       */
-
-      mm_forcefree(heap, address);
-    }
-
-#endif
-  return ret;
 }
 
 /****************************************************************************
@@ -308,30 +223,6 @@ void mm_forcefree(FAR struct mm_heap_s *heap, FAR void *mem)
   mm_addfreechunk(heap, node);
   kasan_bypass(bypass);
   DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
-}
-
-/****************************************************************************
- * Name: mm_free_delaylist
- *
- * Description:
- *   force freeing the delaylist of this heap.
- *
- ****************************************************************************/
-
-void mm_free_delaylist(FAR struct mm_heap_s *heap)
-{
-  if (heap)
-    {
-      free_delaylist(heap, true);
-    }
-}
-
-void mm_try_free_delaylist(FAR struct mm_heap_s *heap)
-{
-  if (heap)
-    {
-      free_delaylist(heap, false);
-    }
 }
 
 /****************************************************************************

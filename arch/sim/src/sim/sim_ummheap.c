@@ -119,14 +119,18 @@ struct mm_allocnode_s
 struct mm_delaynode_s
 {
   struct mm_delaynode_s *flink;
-  struct mm_heap_s      *heap;
 };
 
 struct mm_heap_s
 {
   spinlock_t lock;
 
+  struct mm_delaynode_s *delaylist[CONFIG_SMP_NCPUS];
   struct list_node alloclist;
+
+#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
+  size_t delaycount[CONFIG_SMP_NCPUS];
+#endif
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   struct procfs_meminfo_entry_s procfs;
@@ -136,18 +140,6 @@ struct mm_heap_s
   atomic_t uordblks;
   atomic_t usmblks;
 };
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static DEFINE_PER_CPU_BSS(FAR struct mm_delaynode_s *, g_mm_delay_list);
-#define g_mm_delay_list this_cpu_var(g_mm_delay_list)
-
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-static DEFINE_PER_CPU_BSS(size_t, g_mm_delay_count);
-#  define g_mm_delay_count this_cpu_var(g_mm_delay_count)
-#endif
 
 /****************************************************************************
  * Private Data
@@ -245,12 +237,11 @@ static void add_delaylist(struct mm_heap_s *heap, void *mem)
 
   flags = spin_lock_irqsave(&heap->lock);
 
-  tmp->flink      = g_mm_delay_list;
-  tmp->heap       = heap;
-  g_mm_delay_list = tmp;
+  tmp->flink = heap->delaylist[this_cpu()];
+  heap->delaylist[this_cpu()] = tmp;
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  g_mm_delay_count++;
+  heap->delaycount[this_cpu()]++;
 #endif
 
   spin_unlock_irqrestore(&heap->lock, flags);
@@ -292,20 +283,20 @@ static bool free_delaylist(struct mm_heap_s *heap, bool force)
 
   flags = spin_lock_irqsave(&heap->lock);
 
-  tmp = g_mm_delay_list;
+  tmp = heap->delaylist[this_cpu()];
 
 #if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
   if (tmp == NULL ||
       (!force &&
-        g_mm_delay_count < CONFIG_MM_FREE_DELAYCOUNT_MAX))
+        heap->delaycount[this_cpu()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
     {
       spin_unlock_irqrestore(&heap->lock, flags);
       return false;
     }
 
-  g_mm_delay_count = 0;
+  heap->delaycount[this_cpu()] = 0;
 #endif
-  g_mm_delay_list = NULL;
+  heap->delaylist[this_cpu()] = NULL;
 
   spin_unlock_irqrestore(&heap->lock, flags);
 
@@ -320,8 +311,7 @@ static bool free_delaylist(struct mm_heap_s *heap, bool force)
       /* Get the first delayed deallocation */
 
       address = tmp;
-      heap    = tmp->heap;
-      tmp     = tmp->flink;
+      tmp = tmp->flink;
 
       /* The address should always be non-NULL since that was checked in the
        * 'while' condition above.

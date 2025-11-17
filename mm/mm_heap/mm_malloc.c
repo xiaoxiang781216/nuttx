@@ -42,6 +42,75 @@
  * Private Functions
  ****************************************************************************/
 
+/****************************************************************************
+ * Name: free_delaylist
+ *
+ * Description:
+ *  Free the memory in delay list either added because of mm_lock failed or
+ *  added because of CONFIG_MM_FREE_DELAYCOUNT_MAX.
+ *  Set force to true to free all the memory in delay list immediately, set
+ *  to false will only free delaylist when time is up if
+ *  CONFIG_MM_FREE_DELAYCOUNT_MAX is enabled.
+ *
+ *  Return true if there is memory freed.
+ *
+ ****************************************************************************/
+
+static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
+{
+  bool ret = false;
+#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+  FAR struct mm_delaynode_s *tmp;
+  irqstate_t flags;
+  bool bypass;
+
+  /* Move the delay list to local */
+
+  flags = up_irq_save();
+  bypass = kasan_bypass(true);
+
+  tmp = heap->mm_delaylist[this_cpu()];
+
+#  if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
+  if (tmp == NULL || (!force &&
+      heap->mm_delaycount[this_cpu()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
+    {
+      up_irq_restore(flags);
+      return false;
+    }
+
+  heap->mm_delaycount[this_cpu()] = 0;
+#  endif
+
+  heap->mm_delaylist[this_cpu()] = NULL;
+
+  kasan_bypass(bypass);
+  up_irq_restore(flags);
+
+  /* Test if the delayed is empty */
+
+  ret = !!tmp;
+
+  while (tmp)
+    {
+      FAR void *address;
+
+      /* Get the first delayed deallocation */
+
+      address = tmp;
+      tmp = tmp->flink;
+
+      /* The address should always be non-NULL since that was checked in the
+       * 'while' condition above.
+       */
+
+      mm_forcefree(heap, address);
+    }
+
+#endif
+  return ret;
+}
+
 #ifdef CONFIG_MM_RECORD_PID
 void mm_dump_handler(FAR struct tcb_s *tcb, FAR void *arg)
 {
@@ -76,6 +145,22 @@ void mm_mempool_dump_handle(FAR struct mempool_s *pool, FAR void *arg)
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: mm_free_delaylist
+ *
+ * Description:
+ *   force freeing the delaylist of this heap.
+ *
+ ****************************************************************************/
+
+void mm_free_delaylist(FAR struct mm_heap_s *heap)
+{
+  if (heap)
+    {
+       free_delaylist(heap, true);
+    }
+}
+
+/****************************************************************************
  * Name: mm_malloc
  *
  * Description:
@@ -97,7 +182,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
   /* Free the delay list first */
 
-  mm_try_free_delaylist(heap);
+  free_delaylist(heap, false);
 
 #ifdef CONFIG_MM_HEAP_MEMPOOL
   if (heap->mm_mpool)
