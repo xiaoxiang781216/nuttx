@@ -36,6 +36,7 @@
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/reboot_notifier.h>
+#include <nuttx/semaphore.h>
 #include <openamp/rpmsg.h>
 #include <openamp/rpmsg_internal.h>
 
@@ -69,6 +70,8 @@
 #  define rpmsg_pool_alloc(size)        alloca(size)
 #  define rpmsg_pool_free(addr)
 #endif
+
+#define rpmsg_wait(e, s)                rpmsg_tickwait(e, s, CLOCK_MAX)
 
 /****************************************************************************
  * Public Types
@@ -133,7 +136,8 @@ extern "C"
 void rpmsg_early_initialize(void);
 void rpmsg_initialize(void);
 
-int rpmsg_wait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem);
+int rpmsg_tickwait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem,
+                   clock_t delay);
 int rpmsg_post(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem);
 
 FAR const char *rpmsg_get_local_cpuname(FAR struct rpmsg_device *rdev);

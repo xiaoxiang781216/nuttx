@@ -29,8 +29,10 @@
 #include <debug.h>
 #include <stdio.h>
 #include <syslog.h>
+#include <time.h>
 
 #include <metal/sys.h>
+#include <nuttx/clock.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
 #include <nuttx/wqueue.h>
@@ -378,7 +380,8 @@ void rpmsg_initialize(void)
 #endif
 }
 
-int rpmsg_wait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
+int rpmsg_tickwait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem,
+                   clock_t delay)
 {
   FAR struct rpmsg_wqueue_s *wqueue;
   FAR struct rpmsg_s *rpmsg;
@@ -389,17 +392,24 @@ int rpmsg_wait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
       rpmsg = rpmsg_get_by_rdev(ept->rdev);
       if (!rpmsg || !rpmsg->ops->wait)
         {
-          ret = nxsem_wait_uninterruptible(sem);
+          ret = delay >= WDOG_MAX_DELAY ?
+                nxsem_wait_uninterruptible(sem) :
+                nxsem_tickwait_uninterruptible(sem, delay);
         }
       else
         {
           wqueue = rpmsg_get_current_wqueue(rpmsg);
           if (wqueue == NULL)
             {
-              ret = nxsem_wait_uninterruptible(sem);
+              ret = delay >= WDOG_MAX_DELAY ?
+                    nxsem_wait_uninterruptible(sem) :
+                    nxsem_tickwait_uninterruptible(sem, delay);
             }
           else
             {
+              clock_t end = delay >= WDOG_MAX_DELAY ? 0 :
+                            clock_systime_ticks() + delay;
+
               for (; ; )
                 {
                   ret = nxsem_trywait(sem);
@@ -408,17 +418,23 @@ int rpmsg_wait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
                       break;
                     }
 
-                  rpmsg->ops->wait(rpmsg);
-
-                  if (wqueue->recursive >= RPMSG_RECURSIVE_LIMIT)
+                  if (delay < WDOG_MAX_DELAY)
                     {
-                      ret = RPMSG_EOPNOTSUPP;
-                      break;
+                      delay = end - clock_systime_ticks();
+                      if ((sclock_t)delay < 0)
+                        {
+                          ret = -ETIMEDOUT;
+                          break;
+                        }
                     }
 
-                  wqueue->recursive++;
-                  work_qeueue_dispatch(wqueue->kwqueue);
-                  wqueue->recursive--;
+                  rpmsg->ops->wait(rpmsg, delay);
+                  if (wqueue->recursive < RPMSG_RECURSIVE_LIMIT)
+                    {
+                      wqueue->recursive++;
+                      work_qeueue_dispatch(wqueue->kwqueue);
+                      wqueue->recursive--;
+                    }
                 }
             }
         }
