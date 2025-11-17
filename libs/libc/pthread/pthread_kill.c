@@ -61,8 +61,13 @@
 
 int pthread_kill(pthread_t thread, int signo)
 {
-  int ret = tkill(thread, signo);
-  if (ret < 0)
+  int ret = OK;
+
+  if (!GOOD_SIGNO(signo))
+    {
+      ret = EINVAL;
+    }
+  else if (tkill(thread, signo) < 0)
     {
       ret = get_errno();
     }
