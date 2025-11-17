@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/include/armv7-a/cp15.h
+ * arch/arm/include/arm_a_r/cp15.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -27,8 +27,8 @@
  * ARM DDI 0406C.b (ID072512)
  */
 
-#ifndef __ARCH_ARM_SRC_ARMV7_A_CP15_H
-#define __ARCH_ARM_SRC_ARMV7_A_CP15_H
+#ifndef __ARCH_ARM_SRC_ARM_A_R_CP15_H
+#define __ARCH_ARM_SRC_ARM_A_R_CP15_H
 
 /****************************************************************************
  * Included Files
@@ -70,6 +70,8 @@
 #define CP15_CTR(r)        _CP15(0, r, c0, c0, 1)   /* Cache Type Register */
 #define CP15_TCMTR(r)      _CP15(0, r, c0, c0, 2)   /* TCM Type Register */
 #define CP15_TLBTR(r)      _CP15(0, r, c0, c0, 3)   /* TLB Type Register */
+#define CP15_MPUIR(r)      _CP15(0, r, c0, c0, 4)   /* MPU Type Register */
+#define CP15_HMPUIR(r)     _CP15(4, r, c0, c0, 4)   /* Hyp MPU Type Register */
 #define CP15_MPIDR(r)      _CP15(0, r, c0, c0, 5)   /* Multiprocessor Affinity Register */
 #define CP15_REVIDR(r)     _CP15(0, r, c0, c0, 6)   /* Revision ID register (Cortex-A9) */
 #define CP15_MID_PFR0(r)   _CP15(0, r, c0, c1, 0)   /* Processor Feature Register 0 */
@@ -91,6 +93,9 @@
 #define CP15_AIDR(r)       _CP15(1, r, c0, c0, 7)   /* Auxiliary ID Register */
 #define CP15_CSSELR(r)     _CP15(2, r, c0, c0, 0)   /* Cache Size Selection Register */
 
+#define CP15_HSCTLR(r)     _CP15(4, r, c1, c0, 0)   /* Hyp System Control Register */
+#define CP15_HACTLR(r)     _CP15(4, r, c1, c0, 1)   /* Hyp Auxiliary Control Register */
+#define CP15_HCPTR(r)      _CP15(4, r, c1, c1, 2)   /* Hyp Architectural Feature Trap Register */
 #define CP15_SCTLR(r)      _CP15(0, r, c1, c0, 0)   /* System Control Register */
 #define CP15_ACTLR(r)      _CP15(0, r, c1, c0, 1)   /* Auxiliary Control Register */
 #define CP15_CPACR(r)      _CP15(0, r, c1, c0, 2)   /* Coprocessor Access Control Register */
@@ -112,7 +117,18 @@
 
 #define CP15_DFAR(r)       _CP15(0, r, c6, c0, 0)   /* Data Fault Address Register */
 #define CP15_IFAR(r)       _CP15(0, r, c6, c0, 2)   /* Instruction Fault Address Register */
-
+#define CP15_DRBAR(r)      _CP15(0, r, c6, c1, 0)   /* Data Region Base Address Register */
+#define CP15_DRSR(r)       _CP15(0, r, c6, c1, 2)   /* Data Region Size and Enable Register */
+#define CP15_DRACR(r)      _CP15(0, r, c6, c1, 4)   /* Data Region Access Control Register */
+#ifndef CONFIG_ARM_HAVE_MPU_UNIFIED
+#  define CP15_IRBAR(r)    _CP15(0, r, c6, c1, 1)   /* Instruction Region Base Address Register */
+#  define CP15_IRSR(r)     _CP15(0, r, c6, c1, 3)   /* Instruction Region Size and Enable Register */
+#  define CP15_IRACR(r)    _CP15(0, r, c6, c1, 5)   /* Instruction Region Access Control Register */
+#endif
+#define CP15_RGNR(r)       _CP15(0, r, c6, c2, 0)   /* MPU Region Number Register */
+#define CP15_PRSELR(r)     _CP15(0, r, c6, c2, 1)   /* Protection Region Selection Register */
+#define CP15_PRBAR(r)      _CP15(0, r, c6, c3, 0)   /* Protection Region Base Address Register */
+#define CP15_PRLAR(r)      _CP15(0, r, c6, c3, 1)   /* Protection Region Limit Address Register */
 #define CP15_NOP(r)        _CP15(0, r, c7, c0, 4)
 #define CP15_ICIALLUIS(r)  _CP15(0, r, c7, c1, 0)   /* Cache Operations Registers */
 #define CP15_BPIALLIS(r)   _CP15(0, r, c7, c1, 6)
@@ -167,6 +183,11 @@
 #define CP15_PMINTENSET(r) _CP15(0, r, c9, c14, 1)  /* Interrupt Enable Set Register */
 #define CP15_PMINTENCLR(r) _CP15(0, r, c9, c14, 2)  /* Interrupt Enable Clear Register */
 
+#define CP15_MAIR0(r)       _CP15(0, r, c10, c2, 0)  /* Memory Attribute Indirection Registers 0 */
+#define CP15_MAIR1(r)       _CP15(0, r, c10, c2, 1)  /* Memory Attribute Indirection Registers 1 */
+#define CP15_HMAIR0(r)      _CP15(4, r, c10, c2, 0)  /* Hyp Memory Attribute Indirection Registers 0 */
+#define CP15_HMAIR1(r)      _CP15(4, r, c10, c2, 1)  /* Hyp Memory Attribute Indirection Registers 1 */
+
 #define CP15_TLBLCKDOWN(r) _CP15(0, r, c10, c0, 0)  /* TLB Lockdown register (Cortex-A9) */
 #define CP15_PPRRR(r)      _CP15(0, r, c10, c2, 0)  /* Primary Region Remap Register */
 #define CP15_NMRR(r)       _CP15(0, r, c10, c2, 1)  /* Normal Memory Remap Register */
@@ -200,6 +221,16 @@
 #define CP15_CNTVCT(lo,hi)    _CP15_64(1, lo, hi, c14)   /* Virtual Count register */
 #define CP15_CNTV_CVAL(lo,hi) _CP15_64(3, lo, hi, c14)   /* Virtual Timer CompareValue register */
 #define CP15_CNTP_CVAL(lo,hi) _CP15_64(2, lo, hi, c14)   /* Physical Timer CompareValue register */
+#define CP15_CNTV_CVAL(lo,hi) _CP15_64(3, lo, hi, c14)   /* Virtual Timer CompareValue register */
+
+#define CP15_DCIALLU(r)       _CP15(0, r, c15, c5, 0)     /* Invalidate data cache */
+#define CP15_ICC_PMR(r)       _CP15(0, r, c4,  c6,  0)    /* ICC_PMR */
+#define CP15_ICC_IAR1(r)      _CP15(0, r, c12, c12, 0)    /* ICC_IAR1 */
+#define CP15_ICC_EOIR1(r)     _CP15(0, r, c12, c12, 1)    /* ICC_EOIR1 */
+#define CP15_ICC_SRE(r)       _CP15(0, r, c12, c12, 5)    /* ICC_SRE */
+#define CP15_ICC_HSRE(r)      _CP15(4, r, c12,  c9, 5)    /* ICC_HSRE */
+#define CP15_ICC_IGRPEN1(r)   _CP15(0, r, c12, c12, 7)    /* ICC_IGRPEN1 */
+#define CP15_ICC_SGI1R(lo,hi) _CP15_64(0, lo, hi, c12)    /* ICC_SGI1R */
 
 #define CP15_PWRCTRL(r)    _CP15(0, r, c15, c0, 0)  /* Power Control Register (Cortex-A9) */
 #define CP15_NEONBUSY(r)   _CP15(0, r, c15, c1, 1)  /* NEON Busy Register (Cortex-A9) */
@@ -242,13 +273,13 @@
 
 #define CP15_GET(reg)                   \
   ({                                    \
-     uint32_t value;                    \
+     uint32_t _value;                   \
      __asm__ __volatile__               \
      (                                  \
        "mrc " CP15_ ## reg(0) "\n"      \
-       : "=r"(value) :: "memory"        \
+       : "=r"(_value) :: "memory"       \
      );                                 \
-     value;                             \
+     _value;                            \
   })                                    \
 
 #define CP15_SET64(reg, value)          \
@@ -264,13 +295,13 @@
 
 #define CP15_GET64(reg)                 \
   ({                                    \
-     uint64_t value;                    \
+     uint64_t _value;                   \
      __asm__ __volatile__               \
      (                                  \
        "mrrc " CP15_ ## reg(0,0) "\n"   \
-       : "=r"(value) :: "memory"        \
+       : "=r"(_value) :: "memory"       \
      );                                 \
-     value;                             \
+     _value;                            \
   })                                    \
 
 #define CP15_MODIFY(v,m,a) CP15_SET(a, ((CP15_GET(a) & ~(m)) | ((uintptr_t)(v) & (m))))
@@ -314,4 +345,4 @@
     __mpidr; \
   })
 
-#endif /* __ARCH_ARM_SRC_ARMV7_A_CP15_H */
+#endif /* __ARCH_ARM_SRC_ARM_A_R_CP15_H */
