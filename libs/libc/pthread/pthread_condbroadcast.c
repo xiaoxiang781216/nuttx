@@ -33,6 +33,8 @@
 
 #include <nuttx/semaphore.h>
 
+#include "pthread.h"
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -62,7 +64,15 @@ int pthread_cond_broadcast(FAR pthread_cond_t *cond)
 
   sinfo("cond=%p\n", cond);
 
-  DEBUGASSERT(cond != NULL);
+  /* If the implementation detects that the condition variable
+   * specified by cond does not refer to an initialized condition variable:
+   * a call to pthread_cond_broadcast() returns EINVAL.
+   */
+
+  if (!PTHREAD_COND_IS_VALID(cond))
+    {
+      return EINVAL;
+    }
 
   /* Loop until all of the waiting threads have been restarted. */
 

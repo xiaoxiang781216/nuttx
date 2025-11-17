@@ -27,6 +27,8 @@
 #include <pthread.h>
 #include <errno.h>
 
+#include "pthread.h"
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -55,7 +57,14 @@ int pthread_attr_setstack(FAR pthread_attr_t *attr,
 {
   int ret;
 
-  if (!attr || !stackaddr || stacksize < PTHREAD_STACK_MIN)
+  /* If the implementation detects invalid pthread_attr_t objects:
+   * When the attribute object specified by attr is invalid,
+   * then a call to pthread_attr_setstack(attr, stackaddr, stacksize)
+   * returns EINVAL.
+   */
+
+  if (!PTHREAD_ATTR_IS_VALID(attr) || stackaddr == NULL ||
+      stacksize < PTHREAD_STACK_MIN)
     {
       ret = EINVAL;
     }

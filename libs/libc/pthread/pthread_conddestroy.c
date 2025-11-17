@@ -30,6 +30,8 @@
 #include <debug.h>
 #include <errno.h>
 
+#include "pthread.h"
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -60,13 +62,21 @@ int pthread_cond_destroy(FAR pthread_cond_t *cond)
 
   sinfo("cond=%p\n", cond);
 
-  if (!cond)
+  if (!PTHREAD_COND_IS_VALID(cond))
     {
       ret = EINVAL;
     }
 
-  /* Destroy the semaphore contained in the structure */
+  /* If the implementation detects an attempt to destroy the condition
+   * variable referenced by cond while it is referenced by another thread:
+   * a call to pthread_cond_destroy(cond) returns EBUSY without modifying
+   * the state of the condition variable.
+   */
 
+  else if (cond->wait_count > 0)
+    {
+      ret = EBUSY;
+    }
   else
     {
       ret = sem_getvalue(&cond->sem, &sval);
@@ -83,6 +93,11 @@ int pthread_cond_destroy(FAR pthread_cond_t *cond)
           else if (sem_destroy(&cond->sem) != OK)
             {
               ret = get_errno();
+            }
+
+          if (ret == OK)
+            {
+              cond->clockid = 0;
             }
         }
     }

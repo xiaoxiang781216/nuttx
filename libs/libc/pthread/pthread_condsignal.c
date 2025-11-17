@@ -32,6 +32,8 @@
 
 #include <nuttx/semaphore.h>
 
+#include "pthread.h"
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -62,7 +64,15 @@ int pthread_cond_signal(FAR pthread_cond_t *cond)
 
   sinfo("cond=%p\n", cond);
 
-  DEBUGASSERT(cond != NULL);
+  /* If the implementation detects that the condition variable specified
+   * by cond does not refer to an initialized condition variable:
+   * a call to pthread_cond_signal(cond) returns EINVAL.
+   */
+
+  if (!PTHREAD_COND_IS_VALID(cond))
+    {
+      return EINVAL;
+    }
 
   if (cond->wait_count > 0)
     {

@@ -268,7 +268,7 @@ int nxsem_wait_slow(FAR sem_t *sem)
       ret = rtcb->errcode != OK ? -rtcb->errcode : OK;
 
 #ifdef CONFIG_PRIORITY_INHERITANCE
-      if (prioinherit != 0)
+      if (prioinherit != SEM_PRIO_NONE)
         {
           sched_unlock();
         }
