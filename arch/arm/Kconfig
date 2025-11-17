@@ -735,6 +735,7 @@ config ARCH_ARM7TDMI
 	default n
 	select ARCH_DCACHE
 	select ARCH_ICACHE
+	select ARCH_HAVE_DEBUG
 	---help---
 		The Arm7TDMI-S is an excellent workhorse processor capable of a wide
 		array of applications. Traditionally used in mobile handsets, the
@@ -745,6 +746,7 @@ config ARCH_ARM920T
 	default n
 	select ARCH_DCACHE
 	select ARCH_ICACHE
+	select ARCH_HAVE_DEBUG
 	select ARCH_HAVE_MMU
 	select ARCH_USE_MMU
 	---help---
@@ -762,6 +764,7 @@ config ARCH_ARM926EJS
 	default n
 	select ARCH_DCACHE
 	select ARCH_ICACHE
+	select ARCH_HAVE_DEBUG
 	select ARCH_HAVE_MMU
 	select ARCH_USE_MMU
 	---help---
@@ -785,6 +788,7 @@ config ARCH_ARM1136J
 	default n
 	select ARCH_DCACHE
 	select ARCH_ICACHE
+	select ARCH_HAVE_DEBUG
 	select ARCH_HAVE_MMU
 	select ARCH_USE_MMU
 	---help---
@@ -797,6 +801,7 @@ config ARCH_ARM1156T2
 	default n
 	select ARCH_DCACHE
 	select ARCH_ICACHE
+	select ARCH_HAVE_DEBUG
 	select ARCH_HAVE_MMU
 	select ARCH_USE_MMU
 	---help---
@@ -808,6 +813,7 @@ config ARCH_ARM1176JZ
 	default n
 	select ARCH_DCACHE
 	select ARCH_ICACHE
+	select ARCH_HAVE_DEBUG
 	select ARCH_HAVE_MMU
 	select ARCH_USE_MMU
 	---help---
@@ -937,6 +943,7 @@ config ARCH_ARMV7R
 	bool
 	default n
 	select ARCH_HAVE_CPUINFO
+	select ARCH_HAVE_DEBUG
 	select ARCH_HAVE_PERF_EVENTS_USER_ACCESS if !SMP
 
 config ARCH_CORTEXR4
@@ -1056,6 +1063,7 @@ config ARCH_ARMV8R
 	bool
 	default n
 	select ARCH_HAVE_CPUINFO
+	select ARCH_HAVE_DEBUG
 	select ARCH_HAVE_PERF_EVENTS_USER_ACCESS
 	select ONESHOT
 	select ONESHOT_COUNT

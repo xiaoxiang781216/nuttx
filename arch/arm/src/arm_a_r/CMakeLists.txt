@@ -22,6 +22,10 @@ if(NOT CONFIG_DISABLE_SIGNALS)
   set(CSRCS arm_schedulesigaction.c arm_sigdeliver.c)
 endif()
 
-list(APPEND CSRCS arm_tcbinfo.c arm_doirq.c)
+if(CONFIG_ARCH_HAVE_DEBUG)
+  list(APPEND CSRCS arm_hwdebug.c)
+endif()
+
+list(APPEND CSRCS arm_tcbinfo.c arm_doirq.c arm_dataabort.c)
 
 target_sources(arch PRIVATE ${CSRCS})

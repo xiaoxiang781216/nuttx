@@ -34,7 +34,7 @@ CMN_ASRCS += arm_head.S arm_vectors.S arm_saveusercontext.S
 
 # Common C source files
 
-CMN_CSRCS += arm_timer.c arm_cache.c arm_cpuinfo.c arm_dataabort.c
+CMN_CSRCS += arm_timer.c arm_cache.c arm_cpuinfo.c
 CMN_CSRCS += arm_initialstate.c arm_prefetchabort.c
 CMN_CSRCS += arm_syscall.c arm_undefinedinsn.c
 CMN_CSRCS += arm_perf.c arm_cpuidlestack.c cp15_cacheops.c
