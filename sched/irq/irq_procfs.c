@@ -60,11 +60,11 @@
  * may not be wide enough.
  */
 #ifndef CONFIG_ARCH_IRQPRIO
-#  define HDR_FMT "IRQ HANDLER  ARGUMENT      COUNT     RATE TIME\n"
-#  define IRQ_FMT "%3u %08lx %08lx %10lu %4lu.%03lu %4lu\n"
+#  define HDR_FMT "IRQ HANDLER  ARGUMENT      COUNT       RATE  TIME\n"
+#  define IRQ_FMT "%3u %08lx %08lx %10lu %6lu.%03lu %5lu\n"
 #else
-#  define HDR_FMT "IRQ HANDLER  ARGUMENT      COUNT     RATE  TIME  NEST\n"
-#  define IRQ_FMT "%3u %08lx %08lx %10lu %4lu.%03lu %5lu %5lu\n"
+#  define HDR_FMT "IRQ HANDLER  ARGUMENT      COUNT       RATE  TIME  NEST\n"
+#  define IRQ_FMT "%3u %08lx %08lx %10lu %6lu.%03lu %5lu %5lu\n"
 #endif
 
 /* Determines the size of an intermediate buffer that must be large enough
@@ -73,9 +73,9 @@
  */
 
 #ifndef CONFIG_ARCH_IRQPRIO
-#  define IRQ_LINELEN 50
+#  define IRQ_LINELEN 53
 #else
-#  define IRQ_LINELEN 56
+#  define IRQ_LINELEN 58
 #endif
 
 /****************************************************************************
@@ -156,6 +156,9 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
   unsigned long intpart;
   unsigned long fracpart;
   unsigned long count;
+#ifdef CONFIG_HAVE_LONG_LONG
+  uint64_t intcount;
+#endif
 
   DEBUGASSERT(irqfile != NULL);
 
@@ -208,19 +211,11 @@ static int irq_callback(int irq, FAR struct irq_info_s *info,
    * rate    = <interrupt-count> * TICKS_PER_SEC / elapsed
    */
 
-  elapsed = elapsed ? elapsed : 1;
-  intpart = (unsigned int)((copy.count * TICK_PER_SEC) / elapsed);
-  if (intpart >= 10000)
-    {
-      intpart  = 9999;
-      fracpart = 999;
-    }
-  else
-    {
-      uint64_t intcount = ((uint64_t)intpart * elapsed);
-      fracpart = (unsigned int)
-        (((copy.count * TICK_PER_SEC - intcount) * 1000) / elapsed);
-    }
+  elapsed  = elapsed ? elapsed : 1;
+  intcount = (uint64_t)copy.count * TICK_PER_SEC;
+  intpart  = intcount / elapsed;
+  intcount = intcount - intpart * elapsed;
+  fracpart = intcount / elapsed;
 
   /* Make sure that the count is representable with snprintf format */
 
