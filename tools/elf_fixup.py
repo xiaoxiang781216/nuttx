@@ -118,10 +118,12 @@ def run_cc(args, in_src: str, out_obj: str):
     run_command(cmd)
 
 
-def run_ld(args, in_elf, in_ld, out_elf):
+def run_ld(args, in_elf, in_ld, out_elf, gc_sections=True):
     nostart = []
     if args.ld.endswith("cc"):
-        nostart = ["-nostartfiles", "-nostdlib", "-Wl,--gc-sections"]
+        nostart = ["-nostartfiles", "-nostdlib"]
+        if gc_sections:
+            nostart.extend(["-Wl,--gc-sections"])
         nostart.extend(args.cflags)
     else:
         nostart = ["--nostdlib"]
@@ -356,6 +358,7 @@ def generate_fixup_hex(args):
         args.outdir / "fixup" / "elf_fixup.o",
         args.outdir / "ld" / "elf_fixup.ld",
         args.outdir / "elf" / "elf_fixup.elf",
+        gc_sections=False,
     )
 
     run_hex(
