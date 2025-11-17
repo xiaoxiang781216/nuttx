@@ -386,6 +386,7 @@ devif_poll_ieee802154_connections(FAR struct net_driver_s *dev,
    * action.
    */
 
+  ieee802154_conn_list_lock();
   while (!bstop && (ieee802154_conn = ieee802154_conn_next(ieee802154_conn)))
     {
       /* Perform the packet TX poll */
@@ -400,6 +401,7 @@ devif_poll_ieee802154_connections(FAR struct net_driver_s *dev,
         }
     }
 
+  ieee802154_conn_list_unlock();
   return bstop;
 }
 #endif /* CONFIG_NET_IEEE802154 */
