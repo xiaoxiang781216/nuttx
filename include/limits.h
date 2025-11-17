@@ -317,7 +317,7 @@
 
 /* Required for POSIX pthread management */
 
-#define _POSIX_THREAD_DESTRUCTOR_ITERATIONS     4
+#define _POSIX_THREAD_DESTRUCTOR_ITERATIONS     1
 #ifdef CONFIG_TLS_NELEM
 #  define _POSIX_THREAD_KEYS_MAX                CONFIG_TLS_NELEM
 #else
