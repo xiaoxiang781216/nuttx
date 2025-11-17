@@ -29,6 +29,7 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/mutex.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/mld.h>
