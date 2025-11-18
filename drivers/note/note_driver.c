@@ -576,42 +576,6 @@ static void note_record_taskname(pid_t pid, FAR const char *name)
   g_note_taskname.head += ti->size;
 }
 
-/****************************************************************************
- * Name: sched_note_one_taskname
- ****************************************************************************/
-
-static void sched_note_one_taskname(const char *name, pid_t pid)
-{
-  FAR struct note_driver_s **driver;
-  struct note_startalloc_s note;
-  bool formatted = false;
-  unsigned int length;
-
-  for (driver = g_note_drivers; *driver; driver++)
-    {
-      if (!note_isenabled_type(*driver, NOTE_TASKNAME))
-        {
-          continue;
-        }
-
-      if ((*driver)->ops->add == NULL)
-        {
-          continue;
-        }
-
-      if (!formatted)
-        {
-          int namelen = strlen(name);
-          strlcpy(note.nsa_name, name, sizeof(note.nsa_name));
-          length = SIZEOF_NOTE_START(namelen + 1);
-          formatted = true;
-          note_common(NULL, &note.nsa_cmn, length, NOTE_TASKNAME);
-          note.nsa_cmn.nc_pid = pid;
-        }
-
-      note_add(*driver, &note, length, false);
-    }
-}
 #endif
 
 /****************************************************************************
@@ -823,11 +787,16 @@ void sched_note_stop(FAR struct tcb_s *tcb)
     }
 }
 
-void sched_note_taskname(void)
+void sched_note_taskname(void (FAR *handler)(FAR const void *,
+                                             size_t, FAR void *),
+                         FAR void *arg)
 {
 #if CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
   FAR struct note_taskname_info_s *ti;
+  struct note_startalloc_s note;
   int n = g_note_taskname.tail;
+  size_t length;
+  int namelen;
 
   while (n != g_note_taskname.head)
     {
@@ -836,7 +805,12 @@ void sched_note_taskname(void)
 
       if (ti->pid != INVALID_PROCESS_ID)
         {
-          sched_note_one_taskname(ti->name, ti->pid);
+          namelen = strlen(ti->name);
+          strlcpy(note.nsa_name, ti->name, sizeof(note.nsa_name));
+          length = SIZEOF_NOTE_START(namelen + 1);
+          note_common(NULL, &note.nsa_cmn, length, NOTE_TASKNAME);
+          note.nsa_cmn.nc_pid = ti->pid;
+          handler((FAR struct note_common_s *)&note, length, arg);
         }
 
       n += ti->size;

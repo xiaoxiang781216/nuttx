@@ -419,13 +419,15 @@ void sched_note_start(FAR struct tcb_s *tcb);
 void sched_note_stop(FAR struct tcb_s *tcb);
 void sched_note_suspend(FAR struct tcb_s *tcb);
 void sched_note_resume(FAR struct tcb_s *tcb);
-void sched_note_taskname(void);
+void sched_note_taskname(void (FAR *handler)(FAR const void *,
+                                             size_t, FAR void *),
+                         FAR void *arg);
 #else
 #  define sched_note_stop(t)
 #  define sched_note_start(t)
 #  define sched_note_suspend(t)
 #  define sched_note_resume(t)
-#  define sched_note_taskname()
+#  define sched_note_taskname(t,a)
 #endif
 
 #if defined(CONFIG_SMP) && defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH) && defined(CONFIG_DRIVERS_NOTE)

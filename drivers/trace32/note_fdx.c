@@ -40,6 +40,7 @@ struct notefdx_s
 {
   struct note_driver_s driver;
   FAR void *channel;
+  bool enable;
   int loss;
 };
 
@@ -95,6 +96,13 @@ struct notefdx_s g_notefdx =
  * Private Functions
  ****************************************************************************/
 
+static void
+notefdx_taskname_handler(FAR const void *note, size_t len, FAR void *arg)
+{
+  FAR struct notefdx_channel_s *channel = arg;
+  T32_Fdx_Send(channel, (FAR void *)note, len);
+}
+
 /****************************************************************************
  * Name: notefdx_add
  *
@@ -115,29 +123,26 @@ static void notefdx_add(FAR struct note_driver_s *drv,
 {
   FAR struct notefdx_s *note = (FAR struct notefdx_s *)drv;
   FAR struct notefdx_channel_s *channel = note->channel;
+  irqstate_t flags;
 
-  if (channel != NULL)
+  if (channel == NULL || !T32_Fdx_Is_Enable(channel))
     {
-      FAR spinlock_t *lock = &channel->lock;
-      irqstate_t flags = spin_lock_irqsave(lock);
-      int ret = T32_Fdx_SendPoll(channel, (FAR void *)buf, notelen);
-      spin_unlock_irqrestore(lock, flags);
-
-      if (ret > 0)
-        {
-          bool resync = (note->loss >= CONFIG_TRACE32_FDX_NOTE_BUFSIZE);
-          note->loss = 0;
-
-          if (resync)
-            {
-              sched_note_taskname();
-            }
-        }
-      else
-        {
-          note->loss += notelen;
-        }
+      note->enable = false;
+      return;
     }
+
+  flags = spin_lock_irqsave(&channel->lock);
+
+  /* first connect */
+
+  if (!note->enable)
+    {
+      note->enable = true;
+      sched_note_taskname(notefdx_taskname_handler, channel);
+    }
+
+  T32_Fdx_SendPoll(channel, (FAR void *)buf, notelen);
+  spin_unlock_irqrestore(&channel->lock, flags);
 }
 
 /****************************************************************************
