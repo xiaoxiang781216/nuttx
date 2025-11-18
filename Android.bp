@@ -149,7 +149,6 @@ cc_library_static {
         "nuttx_libc_headers",
         "kernel_modules_headers",
     ],
-
     srcs: [
         "libs/libc/misc/lib_crc32.c",
         "libs/libc/netdb/lib_freeaddrinfo.c",
