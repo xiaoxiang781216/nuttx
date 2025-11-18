@@ -445,10 +445,12 @@ int libelf_symvalue(FAR struct module_s *modp,
               (uintptr_t)(sym->st_value + secbase));
 
         sym->st_value += secbase;
+#ifdef CONFIG_LIBC_ELF_GOT
         if (loadinfo->gotindex >= 0)
           {
             sym->st_value -= loadinfo->shdr[sym->st_shndx].sh_offset;
           }
+#endif
       }
       break;
     }

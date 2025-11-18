@@ -109,6 +109,7 @@ static int libelf_section_alloc(FAR struct mod_loadinfo_s *loadinfo,
           loadinfo->datastart = loadinfo->sectalloc[idx];
         }
     }
+#  ifdef CONFIG_LIBC_ELF_GOT
   else if (loadinfo->xipbase != 0)
     {
       loadinfo->sectalloc[idx] = loadinfo->xipbase + shdr->sh_offset;
@@ -117,6 +118,7 @@ static int libelf_section_alloc(FAR struct mod_loadinfo_s *loadinfo,
           loadinfo->textalloc = loadinfo->sectalloc[idx];
         }
     }
+#  endif
   else
     {
 #  ifdef CONFIG_ARCH_USE_TEXT_HEAP
@@ -416,7 +418,9 @@ static inline int libelf_loadfile(FAR struct mod_loadinfo_s *loadinfo,
                   pptr = &text;
                 }
 
+#ifdef CONFIG_LIBC_ELF_GOT
               if (loadinfo->xipbase == 0)
+#endif
                 {
                   /* If xipbase is not set, align the address
                    * xipbase is set, the address can't be aligned
@@ -427,10 +431,12 @@ static inline int libelf_loadfile(FAR struct mod_loadinfo_s *loadinfo,
                 }
             }
 
-          if ((shdr->sh_flags & SHF_WRITE) == 0 && loadinfo->xipbase != 0)
+#ifdef CONFIG_LIBC_ELF_GOT
+          if ((shdr->sh_flags & SHF_WRITE) == 0 && loadinfo->xipbase != 0）
             {
               goto skipload;
             }
+#endif
 
           /* SHT_NOBITS indicates that there is no data in the file for the
            * section.
@@ -471,8 +477,9 @@ static inline int libelf_loadfile(FAR struct mod_loadinfo_s *loadinfo,
                 }
             }
 
+#ifdef CONFIG_LIBC_ELF_GOT
 skipload:
-
+#endif
           /* Update sh_addr to point to copy in memory */
 
           binfo("%d. %08lx->%08lx\n", i,
@@ -498,6 +505,7 @@ skipload:
 
   /* Update GOT table */
 
+#ifdef CONFIG_LIBC_ELF_GOT
   if (loadinfo->gotindex >= 0)
     {
       FAR Elf_Shdr *gotshdr = &loadinfo->shdr[loadinfo->gotindex];
@@ -523,6 +531,7 @@ skipload:
             }
         }
     }
+#endif
 
   return OK;
 }
@@ -560,6 +569,7 @@ int libelf_load_vma(FAR struct mod_loadinfo_s *loadinfo, bool is_vma)
       goto errout_with_buffers;
     }
 
+#ifdef CONFIG_LIBC_ELF_GOT
   loadinfo->gotindex = libelf_findsection(loadinfo, ".got");
   if (loadinfo->gotindex >= 0)
     {
@@ -570,6 +580,7 @@ int libelf_load_vma(FAR struct mod_loadinfo_s *loadinfo, bool is_vma)
           binfo("can use xipbase %zu\n", loadinfo->xipbase);
         }
     }
+#endif
 
   /* Determine total size to allocate */
 
@@ -590,12 +601,15 @@ int libelf_load_vma(FAR struct mod_loadinfo_s *loadinfo, bool is_vma)
           loadinfo->ehdr.e_type == ET_EXEC)
         {
 #  ifndef CONFIG_ARCH_USE_SEPARATED_SECTION
+#    ifdef CONFIG_LIBC_ELF_GOT
           if (loadinfo->xipbase != 0)
             {
               loadinfo->textalloc = loadinfo->xipbase +
                                     loadinfo->shdr[1].sh_offset;
             }
-          else if (loadinfo->textsize > 0)
+          else
+#    endif
+          if (loadinfo->textsize > 0)
             {
 #    ifdef CONFIG_ARCH_USE_TEXT_HEAP
               loadinfo->textalloc = (uintptr_t)
@@ -721,6 +735,7 @@ int libelf_load_with_addrenv(FAR struct mod_loadinfo_s *loadinfo,
       goto errout_with_buffers;
     }
 
+#ifdef CONFIG_LIBC_ELF_GOT
   loadinfo->gotindex = libelf_findsection(loadinfo, ".got");
   if (loadinfo->gotindex >= 0)
     {
@@ -731,6 +746,7 @@ int libelf_load_with_addrenv(FAR struct mod_loadinfo_s *loadinfo,
           binfo("can use xipbase %zu\n", loadinfo->xipbase);
         }
     }
+#endif
 
   /* Determine total size to allocate */
 

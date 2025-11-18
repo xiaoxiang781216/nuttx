@@ -118,4 +118,10 @@ config LIBC_ELF_EXIDX_SECTNAME
 
 		This is needed to support exception handling on loadable ELF modules.
 
+config LIBC_ELF_GOT
+	bool "Find got section when load elf"
+	default n
+	---help---
+		Look for the Global Offset Table (GOT) section when loading ELF modules.
+
 endmenu # Module library configuration

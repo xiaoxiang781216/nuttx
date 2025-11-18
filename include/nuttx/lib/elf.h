@@ -163,10 +163,12 @@ struct module_s
   struct mod_info_s modinfo;           /* Module information */
   FAR void *textalloc;                 /* Allocated kernel text memory */
   FAR void *dataalloc;                 /* Allocated kernel memory */
+#ifdef CONFIG_LIBC_ELF_GOT
   uintptr_t xipbase;                   /* if elf is position independent, and use
                                         * romfs/tmps, we can try get xipbase,
                                         * skip the copy.
                                         */
+#endif
 #ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
   FAR void **sectalloc;                /* All sections memory allocated when ELF file was loaded */
   uint16_t nsect;                      /* Number of entries in sectalloc array */
@@ -238,11 +240,14 @@ struct mod_loadinfo_s
   uint16_t      buflen;      /* size of iobuffer[] */
   int           filfd;       /* Descriptor for the file being loaded */
   int           nexports;    /* ET_DYN - Number of symbols exported */
+
+#ifdef CONFIG_LIBC_ELF_GOT
   int           gotindex;    /* Index to the GOT section */
   uintptr_t     xipbase;     /* if elf is position independent, and use
                               * romfs/tmps, we can try get xipbase,
                               * skip the copy.
                               */
+#endif
 
   /* Address environment.
    *

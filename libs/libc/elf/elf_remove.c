@@ -132,7 +132,10 @@ int libelf_uninit(FAR struct module_s *modp)
           modp->sectalloc = NULL;
           modp->nsect = 0;
 #else
+
+#  ifdef CONFIG_LIBC_ELF_GOT
           if (modp->xipbase == 0)
+#  endif
             {
 #  if defined(CONFIG_ARCH_USE_TEXT_HEAP)
               up_textheap_free((FAR void *)modp->textalloc);

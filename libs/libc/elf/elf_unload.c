@@ -100,7 +100,11 @@ int libelf_unload(FAR struct mod_loadinfo_s *loadinfo)
 
       lib_free(loadinfo->sectalloc);
 #else
-      if (loadinfo->textalloc != 0 && loadinfo->xipbase == 0)
+      if (loadinfo->textalloc != 0
+#  ifdef CONFIG_LIBC_ELF_GOT
+          && loadinfo->xipbase == 0
+#  endif
+         )
         {
 #  if defined(CONFIG_ARCH_USE_TEXT_HEAP)
           up_textheap_free((FAR void *)loadinfo->textalloc);

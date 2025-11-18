@@ -340,6 +340,7 @@ static int libelf_relocate(FAR struct module_s *modp,
 
       /* Calculate the relocation address. */
 
+#ifdef CONFIG_LIBC_ELF_GOT
       if (loadinfo->gotindex >= 0)
         {
           if (sym->st_shndx == SHN_UNDEF)
@@ -395,6 +396,7 @@ static int libelf_relocate(FAR struct module_s *modp,
             }
         }
       else
+#endif
         {
           if (rel->r_offset > dstsec->sh_size)
             {
@@ -1052,7 +1054,9 @@ int libelf_bind(FAR struct module_s *modp,
         }
     }
 
+#ifdef CONFIG_LIBC_ELF_GOT
   modp->xipbase = loadinfo->xipbase;
+#endif
 
   /* Ensure that the I and D caches are coherent before starting the newly
    * loaded module by cleaning the D cache (i.e., flushing the D cache
