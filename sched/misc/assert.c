@@ -233,7 +233,7 @@ static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
 #ifdef CONFIG_SMP
   int cpu = rtcb->cpu;
 #else
-  int cpu = up_this_cpu();
+  int cpu = this_cpu();
 #endif
   UNUSED(cpu);
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
@@ -419,7 +419,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
 #ifdef CONFIG_SMP
          , tcb->cpu
 #elif !defined(CONFIG_UP)
-         , up_this_cpu()
+         , this_cpu()
 #endif
          , tcb->sched_priority
          , g_policy[(atomic_read(&tcb->flags) & TCB_FLAG_POLICY_MASK) >>
@@ -475,7 +475,7 @@ static void dump_fdlist(FAR struct tcb_s *tcb, FAR void *arg)
 static void dump_tasks(void)
 {
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
-  int cpu = up_this_cpu();
+  int cpu = this_cpu();
 #endif
 
   /* Dump interesting properties of each task in the crash environment */
