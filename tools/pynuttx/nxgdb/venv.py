@@ -52,12 +52,11 @@ def install_dependency(
     pip_path = path.join(location, "bin", "pip")
     if not path.exists(pip_path):
         raise RuntimeError(f"pip not found at {pip_path}, please create venv first")
-    pip_cmd = [
-        pip_path,
-        "install",
-        "-r" if requirements else "",
-        requirements or package,
-    ]
+
+    if requirements:
+        pip_cmd = [pip_path, "install", "-r", requirements]
+    else:
+        pip_cmd = [pip_path, "install", package]
 
     try:
         subprocess.check_call(pip_cmd)
