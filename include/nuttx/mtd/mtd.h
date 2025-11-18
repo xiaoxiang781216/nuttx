@@ -55,7 +55,7 @@
                                              * OUT: Geometry structure is populated
                                              *      with data for the MTD */
 #define MTDIOC_BULKERASE    _MTDIOC(0x0003) /* IN:  None
-                                            * OUT: None */
+                                             * OUT: None */
 #define MTDIOC_PROTECT      _MTDIOC(0x0004) /* IN:  Pointer to read-able struct
                                              *      mtd_protects_s that provides
                                              *      the region to protect.
@@ -75,11 +75,13 @@
 #define MTDIOC_ERASESTATE   _MTDIOC(0x000a) /* IN:  Pointer to uint8_t
                                              * OUT: Byte value that represents the
                                              *      erased state of the MTD cell */
-#define MTDIOC_ERASESECTORS _MTDIOC(0x000c) /* IN: Pointer to mtd_erase_s structure
+#define MTDIOC_ERASESECTORS _MTDIOC(0x000c) /* IN:  Pointer to mtd_erase_s structure
                                              * OUT: None */
-#define MTDIOC_ISBAD        _MTDIOC(0x000d) /* IN: Erase block number
+#define MTDIOC_ISBAD        _MTDIOC(0x000d) /* IN:  Erase block number
                                              * OUT: 0=A good block
                                              *      1=A bad block */
+#define MTDIOC_WRITECOUNT   _MTDIOC(0X000e) /* IN:  Pointer to uint32_t
+                                             * OUT: Write count of the block */
 
 /* Macros to hide implementation */
 

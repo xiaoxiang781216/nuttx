@@ -108,6 +108,7 @@ struct nvs_fs
                                         */
   uint64_t              data_wra;      /* Next data write address */
   mutex_t               nvs_lock;
+  uint32_t              write_cnt;     /* Block write counter */
 #if CONFIG_MTD_CONFIG_CACHE_SIZE > 0
   struct nvs_cache      cache[CONFIG_MTD_CONFIG_CACHE_SIZE];
 #endif
@@ -122,8 +123,15 @@ begin_packed_struct struct nvs_ate
 {
   uint32_t id;           /* Data id */
   uint32_t offset;       /* Data offset within block */
-  uint16_t len;          /* Data len within block */
-  uint16_t key_len;      /* Key string len */
+  union
+  {
+    struct
+    {
+      uint16_t len;      /* Data len within block */
+      uint16_t key_len;  /* Key string len */
+    };
+    uint32_t write_cnt;  /* Block write counter */
+  };
   uint8_t  data_crc8;    /* Crc8 check of the data */
   uint8_t  part;         /* Future extension */
   uint8_t  cycle_cnt;    /* cycle counter for non erasable devices */
@@ -946,7 +954,7 @@ static inline bool nvs_close_ate_valid(FAR struct nvs_fs *fs,
                                        FAR const struct nvs_ate *entry)
 {
   return nvs_ate_valid_different_block(fs, entry, entry->cycle_cnt) &&
-         entry->len == 0 && entry->id == nvs_special_ate_id(fs) &&
+         entry->id == nvs_special_ate_id(fs) &&
          (fs->blocksize - entry->offset) % nvs_ate_size(fs) == 0;
 }
 
@@ -1439,8 +1447,12 @@ static int nvs_block_close(FAR struct nvs_fs *fs)
 
   memset(close_ate, fs->erasestate, ate_size);
   close_ate->id = nvs_special_ate_id(fs);
-  close_ate->len = 0;
-  close_ate->key_len = 0;
+  if (fs->ate_wra >> NVS_ADDR_BLOCK_SHIFT == 0)
+    {
+      fs->write_cnt++;
+    }
+
+  close_ate->write_cnt = fs->write_cnt;
   close_ate->offset = (fs->ate_wra + ate_size) &
                       NVS_ADDR_OFFSET_MASK;
   close_ate->cycle_cnt = fs->cycle_cnt;
@@ -2091,6 +2103,11 @@ static int nvs_init(FAR struct nvs_fs *fs)
       if (rc == 1)
         {
           /* Closed block */
+
+          if (fs->write_cnt == 0 && nvs_close_ate_valid(fs, close_ate))
+            {
+              fs->write_cnt = close_ate->write_cnt;
+            }
 
           closed_blocks++;
           nvs_block_advance(fs, &addr);
@@ -2810,6 +2827,11 @@ static int mtdconfig_ioctl(FAR struct file *filep, int cmd,
           }
 
         break;
+
+      case MTDIOC_WRITECOUNT:
+          FAR uint32_t *count = (FAR uint32_t *)arg;
+          *count = fs->write_cnt;
+          break;
 
       default:
         rc = -ENOTTY;
