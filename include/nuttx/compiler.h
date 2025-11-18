@@ -350,6 +350,9 @@
 
 #    undef nosanitize_address
 #    define nosanitize_address
+
+#    undef code_unreachable
+#    define code_unreachable() for (; ; )
 #  endif
 
 #  if defined(__TRICORE__)
@@ -488,6 +491,8 @@
 
 #    undef nosanitize_address
 #    define nosanitize_address
+#    undef code_unreachable
+#    define code_unreachable() for (; ; )
 
 #    if defined(__AVR_2_BYTE_PC__) || defined(__AVR_3_BYTE_PC__)
 /* 2-byte 3-byte PC does not support returnaddress */
