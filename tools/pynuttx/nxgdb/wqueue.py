@@ -89,15 +89,24 @@ class WorkQueue(Value, p.KWorkQueue):
         self.name = name or "<noname>"
 
     @property
-    def workers(self) -> List[Work]:
+    def expired(self) -> List[Work]:
         work_s = utils.lookup_type("struct work_s")
-        expired_work = [
-            Work(worker.cast(work_s.pointer())) for worker in lists.NxList(self.expired)
+        return [
+            Work(worker.cast(work_s.pointer()))
+            for worker in lists.NxList(self["expired"])
         ]
-        pending_work = [
-            Work(worker.cast(work_s.pointer())) for worker in lists.NxList(self.pending)
+
+    @property
+    def pending(self) -> List[Work]:
+        work_s = utils.lookup_type("struct work_s")
+        return [
+            Work(worker.cast(work_s.pointer()))
+            for worker in lists.NxList(self["pending"])
         ]
-        return expired_work + pending_work
+
+    @property
+    def workers(self) -> List[Work]:
+        return self.expired + self.pending
 
     @property
     def threads(self) -> List[KWorker]:
@@ -172,18 +181,25 @@ class WorkQueueDump(gdb.Command):
         queues = get_work_queues()
         for queue in queues:
             print(f"{queue}")
-            if not queue.is_running:
-                continue
-
-            print("    Running:")  # Dump the work that is running
-            running = [thread for thread in queue.threads if thread.is_running]
-            print("\n".join(f"    {thread}" for thread in running))
+            if queue.is_running:
+                print("    Running:")  # Dump the work that is running
+                running = [thread for thread in queue.threads if thread.is_running]
+                print("\n".join(f"    {thread}" for thread in running))
+            else:
+                print("    No running work")
 
             if not queue.workers:
                 continue
 
-            print("    Queued:")
-            print("\n".join(f"    {work}" for work in queue.workers))
+            expired = queue.expired
+            pending = queue.pending
+            if expired:
+                print("    Expired:")
+                print("\n".join(f"    {work}" for work in expired))
+            if pending:
+                print("    Pending:")
+                print("\n".join(f"    {work}" for work in pending))
+            print("")
 
     def diagnose(self, *args, **kwargs):
         return {
