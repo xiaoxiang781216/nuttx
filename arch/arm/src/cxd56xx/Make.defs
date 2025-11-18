@@ -174,3 +174,7 @@ endif
 ifeq ($(CONFIG_CXD56_GNSS_HEAP),y)
 CHIP_CSRCS += cxd56_gnssheap.c
 endif
+
+ifeq ($(CONFIG_LIBC_ATOMIC_HWSPINLOCK),y)
+CHIP_CSRCS += cxd56_atomic.c
+endif

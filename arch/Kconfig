@@ -541,10 +541,6 @@ config ARCH_LDST_16BIT_NOT_ATOMIC
 	(The same applies for non-interrupt context write and interrupt
 	context read.)
 
-config ARCH_HAVE_CUSTOM_TESTSET
-	bool
-	default n
-
 config ARCH_HAVE_THREAD_LOCAL
 	bool
 	default n

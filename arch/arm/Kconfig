@@ -211,8 +211,9 @@ config ARCH_CHIP_LC823450
 	select ARCH_HAVE_HEAPCHECK
 	select ARCH_HAVE_MULTICPU
 	select ARCH_HAVE_I2CRESET
-	select ARCH_HAVE_CUSTOM_TESTSET
 	select ARCH_HAVE_CUSTOM_VECTORS
+	select LIBC_ATOMIC_IRQ if !SMP
+	select LIBC_ATOMIC_HWSPINLOCK if SMP
 	---help---
 		ON Semiconductor LC823450 architectures (ARM dual Cortex-M3)
 
@@ -335,7 +336,8 @@ config ARCH_CHIP_RP2040
 	select ARM_HAVE_WFE_SEV
 	select ARCH_HAVE_PWM_MULTICHAN
 	select ARCH_BOARD_COMMON
-	select ARCH_HAVE_CUSTOM_TESTSET
+	select LIBC_ATOMIC_IRQ if !SMP
+	select LIBC_ATOMIC_HWSPINLOCK if SMP
 	---help---
 		Raspberry Pi RP2040 architectures (ARM dual Cortex-M0+).
 
@@ -641,7 +643,6 @@ config ARCH_CHIP_CXD56XX
 	select ARCH_HAVE_SDIO if MMCSD
 	select ARCH_HAVE_MATH_H
 	select ARCH_HAVE_I2CRESET
-	select ARCH_HAVE_CUSTOM_TESTSET
 	select ARCH_HAVE_CUSTOM_VECTORS
 	---help---
 		Sony CXD56XX (ARM Cortex-M4) architectures

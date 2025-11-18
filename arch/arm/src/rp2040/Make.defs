@@ -101,3 +101,7 @@ ifneq ($(PICO_SDK_PATH),)
 include chip/boot2/Make.defs
 endif
 endif
+
+ifeq ($(CONFIG_LIBC_ATOMIC_HWSPINLOCK),y)
+CHIP_CSRCS += rp2040_atomic.c
+endif

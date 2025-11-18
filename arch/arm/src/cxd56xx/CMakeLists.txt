@@ -176,4 +176,8 @@ if(CONFIG_CXD56_GNSS_HEAP)
   list(APPEND SRCS cxd56_gnssheap.c)
 endif()
 
+if(CONFIG_LIBC_ATOMIC_HWSPINLOCK)
+  list(APPEND SRCS cxd56_atomic.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})
