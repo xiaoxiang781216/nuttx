@@ -28,7 +28,6 @@ from pathlib import Path
 import lief
 from elftools.elf.elffile import ELFFile
 
-
 nuttxroot = Path(__file__).parent.parent
 gnu_ld_in = str(nuttxroot / "libs" / "libc" / "elf" / "gnu-elf.ld.in")
 
@@ -84,18 +83,23 @@ def run_cpp(
     heap_size: int,
     extern_symbols: str,
     out_ld: str,
+    flags: list[str] = [],
 ):
-    cmd = [
-        args.cc,
-        "-E",
-        "-P",
-        "-x",
-        "c",
-        in_ld,
-        f"-DTEXT={hex(flash_start)}",
-        f"-DDATA={hex(ram_start)}",
-        f"-DEXTERN_SYMBOLS={extern_symbols}",
-    ] + args.cflags
+    cmd = (
+        [
+            args.cc,
+            "-E",
+            "-P",
+            "-x",
+            "c",
+            in_ld,
+            f"-DTEXT={hex(flash_start)}",
+            f"-DDATA={hex(ram_start)}",
+            f"-DEXTERN_SYMBOLS={extern_symbols}",
+        ]
+        + args.cflags
+        + flags
+    )
     if heap_size > 0:
         cmd.append(f"-DHEAPSIZE={hex(heap_size)}")
 
@@ -344,6 +348,7 @@ def generate_fixup_hex(args):
         0,
         "",
         str(args.outdir / "ld" / "elf_fixup.ld"),
+        [f"-DSECTIONS_ALIGN={0x8 if args.is_64bit else 0x4}"],
     )
 
     run_ld(
@@ -435,6 +440,10 @@ def parse_args():
     args.objcopy = os.environ.get("OBJCOPY", "objcopy")
     args.cflags = os.environ.get("CFLAGS", "").split()
     args.ld = os.environ.get("LD", "ld")
+
+    elf = lief.parse(str(args.elf))
+    args.is_64bit = elf.header.identity_class == lief.ELF.Header.CLASS.ELF64
+
     return args
 
 
