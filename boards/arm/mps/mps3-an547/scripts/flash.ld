@@ -87,7 +87,7 @@ SECTIONS
         _etbss = ABSOLUTE(.);
     } > flash
 
-    _eronly = ABSOLUTE(.);
+    _eronly = LOADADDR(.data);
 
     /* The RAM vector table (if present) should lie at the beginning of SRAM */
 
