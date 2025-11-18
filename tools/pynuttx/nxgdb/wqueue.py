@@ -105,8 +105,12 @@ class WorkQueue(Value, p.KWorkQueue):
         ]
 
     @property
+    def running(self) -> List[Work]:
+        return [thread.work for thread in self.threads if thread.is_running]
+
+    @property
     def workers(self) -> List[Work]:
-        return self.expired + self.pending
+        return self.expired + self.pending + self.running
 
     @property
     def threads(self) -> List[KWorker]:
