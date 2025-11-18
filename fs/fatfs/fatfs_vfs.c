@@ -904,6 +904,7 @@ static int fatfs_truncate(FAR struct file *filep, off_t length)
           goto errbuf;
         }
 
+      memset(buffer, 0, SS(&fs->fat));
       while (length > 0)
         {
           UINT size;
