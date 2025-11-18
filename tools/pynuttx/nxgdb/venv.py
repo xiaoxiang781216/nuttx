@@ -92,6 +92,7 @@ class GDBVenv(gdb.Command):
     def __init__(self):
         super().__init__("gdbvenv", gdb.COMMAND_USER)
         self.parser = self.get_argparser()
+        self.use_venv()  # If venv already exists, use it immediately
 
     def get_argparser(self):
         parser = argparse.ArgumentParser(
@@ -111,6 +112,18 @@ class GDBVenv(gdb.Command):
         )
         return parser
 
+    def use_venv(self, location: str = venv_dir) -> None:
+        py_version = f"python{sys.version_info.major}.{sys.version_info.minor}"
+        site_packages = path.join(location, "lib", py_version, "site-packages")
+        if site_packages in sys.path:
+            return
+
+        if path.exists(site_packages):
+            print(f"Adding site-packages: {site_packages}")
+            sys.path.insert(0, site_packages)
+        else:
+            print(f"site-packages not found at {site_packages}")
+
     def invoke(self, arg, from_tty):  # type: ignore
         try:
             args = self.parser.parse_args(gdb.string_to_argv(arg))
@@ -128,10 +141,4 @@ class GDBVenv(gdb.Command):
         else:
             init_venv_and_install_dependency(location=args.venvdir)
 
-        py_version = f"python{sys.version_info.major}.{sys.version_info.minor}"
-        site_packages = path.join(args.venvdir, "lib", py_version, "site-packages")
-        if path.exists(site_packages):
-            print(f"Adding site-packages: {site_packages}")
-            sys.path.insert(0, site_packages)
-        else:
-            print(f"site-packages not found at {site_packages}")
+        self.use_venv(location=args.venvdir)
