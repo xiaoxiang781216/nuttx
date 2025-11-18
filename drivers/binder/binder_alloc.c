@@ -38,7 +38,6 @@
 #include <sched.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/android/binder.h>
-#include <nuttx/kmalloc.h>
 
 #include "binder_internal.h"
 

@@ -32,8 +32,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <syslog.h>
 #include <poll.h>
 #include <nuttx/android/binder.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
 #include <nuttx/mutex.h>
 #include <nuttx/mm/mm.h>
@@ -124,6 +126,9 @@ static void binder_debug(int mask, FAR const char *fmt, ...)
 
 #else
 #define binder_debug(mask, x ...)
+#define BINDER_IO_STR(cmd) ""
+#define BINDER_BC_STR(cmd) ""
+#define BINDER_BR_STR(cmd) ""
 #endif
 
 #define WARN_ON(condition)                   \

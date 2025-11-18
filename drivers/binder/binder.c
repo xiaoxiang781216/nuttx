@@ -86,6 +86,7 @@ const char *g_binder_ioctl_str[] =
   "BINDER_ENABLE_ONEWAY_SPAM_DETECTION",
   "BINDER_GET_EXTENDED_ERROR",
   "BINDER_FLUSH",
+  "BINDER_DUMP"
 };
 
 const char *g_binder_command_str[] =
@@ -308,6 +309,231 @@ static int binder_flush(FAR struct file *filp)
   return 0;
 }
 
+static int binder_dump(FAR struct file *filp, unsigned long arg)
+{
+  FAR struct binder_proc *proc;
+  FAR struct binder_thread *thread;
+  FAR struct binder_node *node;
+  FAR struct binder_ref *ref;
+  FAR struct inode *inode = filp->f_inode;
+  FAR struct binder_device *binder_dev = inode->i_private;
+  FAR struct binder_dump *dump = (FAR struct binder_dump *)arg;
+  int fd = dump->fd;
+  pid_t pid = dump->pid;
+
+  if (binder_dev == NULL)
+    {
+      binder_debug(BINDER_DEBUG_ERROR, "binder device is NULL\n");
+      return -EINVAL;
+    }
+
+  nxmutex_lock(&binder_dev->binder_procs_lock);
+
+  if (list_is_empty(&binder_dev->binder_procs_list))
+    {
+      binder_debug(BINDER_DEBUG_ERROR, "No binder processes found\n");
+      nxmutex_unlock(&binder_dev->binder_procs_lock);
+      return -ENOENT;
+    }
+
+  list_for_every_entry(&binder_dev->binder_procs_list, proc,
+                       struct binder_proc, proc_node)
+    {
+      if (proc->pid == pid || pid == -1)
+        {
+          dprintf(fd, "Process Information:\n"
+                  "  Address: %p\n"
+                  "  PID: %d\n"
+                  "  Max Threads: %d\n"
+                  "  Status:\n"
+                  "    Frozen: %s\n"
+                  "    Dead: %s\n"
+                  "  Receive Configuration:\n"
+                  "    Sync: %s\n"
+                  "    Async: %s\n"
+                  "  Counters:\n"
+                  "    Outstanding Transactions: %d\n"
+                  "    Temporary References: %d\n"
+                  "  Threads:\n"
+                  "    Started: %d\n"
+                  "    Requested: %d\n"
+                  "  Priority: %d\n\n",
+                  proc, proc->pid,
+                  proc->max_threads,
+                  proc->is_frozen ? "yes" : "no",
+                  proc->is_dead ? "yes" : "no",
+                  proc->sync_recv ? "yes" : "no",
+                  proc->async_recv ? "yes" : "no",
+                  proc->outstanding_txns,
+                  proc->tmp_ref,
+                  proc->requested_threads_started,
+                  proc->requested_threads,
+                  proc->default_priority.sched_policy);
+
+          list_for_every_entry(&proc->threads, thread,
+                              struct binder_thread, thread_node)
+            {
+              dprintf(fd, "Thread Information:\n"
+                      "  Address: %p\n"
+                      "  TID: %d\n"
+                      "  Looper: %d\n"
+                      "  Temp References: %d\n"
+                      "  Process Todo: %d\n"
+                      "  Is Dead: %s\n"
+                      "  Looper Need Return: %d\n"
+                      "  Return Error: %s\n"
+                      "  Reply Error: %s\n\n",
+                      thread,
+                      thread->tid,
+                      thread->looper,
+                      thread->tmp_ref,
+                      thread->process_todo,
+                      thread->is_dead ? "yes" : "no",
+                      thread->looper_need_return,
+                      BINDER_BR_STR(thread->return_error.cmd),
+                      BINDER_BR_STR(thread->reply_error.cmd));
+
+              if (thread->transaction_stack)
+                {
+                  FAR struct binder_transaction *
+                    t = thread->transaction_stack;
+                  FAR struct binder_buffer *buffer = t->buffer;
+
+                  dprintf(fd, "Transaction Information:\n"
+                          "  Address: %p\n"
+                          "  Debug ID: %d\n"
+                          "  Work Type: %d\n"
+                          "  From Thread: %d\n"
+                          "  From Parent: %p\n"
+                          "  To Process: %d\n"
+                          "  To Thread: %d\n"
+                          "  Need Reply: %u\n"
+                          "  Buffer: %p\n"
+                          "  Allow User Free: %u\n"
+                          "  Async Transaction: %u\n"
+                          "  Target Node: %p\n"
+                          "  Data Size: %d\n"
+                          "  Offsets Size: %d\n"
+                          "  User Data: %p\n\n",
+                          t, t->debug_id, t->work.type,
+                          t->from ? t->from->tid : -1,
+                          t->from_parent,
+                          t->to_proc ? t->to_proc->pid : -1,
+                          t->to_thread ? t->to_thread->tid : -1,
+                          t->need_reply, buffer,
+                          buffer->allow_user_free,
+                          buffer->async_transaction,
+                          buffer->target_node,
+                          buffer->data_size,
+                          buffer->offsets_size,
+                          buffer->user_data);
+                }
+            }
+
+          if (!list_is_empty(&proc->nodes))
+            {
+              list_for_every_entry(&proc->nodes, node,
+                                  struct binder_node, rb_node)
+                {
+                  dprintf(fd, "Node Information:\n"
+                          "  Address: %p\n"
+                          "  Debug ID: %d\n"
+                          "  Work Type: %d\n"
+                          "  Internal Strong Ref: %d\n"
+                          "  Local Strong Ref: %d\n"
+                          "  Local Weak Ref: %d\n"
+                          "  Tmp Ref: %d\n"
+                          "  Ptr: %" PRId64 "\n"
+                          "  Cookie: %" PRId64 "\n"
+                          "  Has Strong Ref: %d\n"
+                          "  Has Pending Strong Ref: %d\n"
+                          "  Has Weak Ref: %d\n"
+                          "  Has Pending Weak Ref: %d\n"
+                          "  Sched Policy: %d\n"
+                          "  Inherit Sched Policy: %d\n"
+                          "  Accepts Fds: %d\n"
+                          "  Txn Security Context: %d\n"
+                          "  MIN Priority: %d\n"
+                          "  Has Async Transactions: %d\n",
+                          node,
+                          node->debug_id,
+                          node->work.type,
+                          node->internal_strong_refs,
+                          node->local_strong_refs,
+                          node->local_weak_refs,
+                          node->tmp_refs,
+                          node->ptr,
+                          node->cookie,
+                          node->has_strong_ref,
+                          node->pending_strong_ref,
+                          node->has_weak_ref,
+                          node->pending_weak_ref,
+                          node->sched_policy,
+                          node->inherit_rt,
+                          node->accept_fds,
+                          node->txn_security_ctx,
+                          node->min_priority,
+                          node->has_async_transaction);
+                }
+            }
+
+          if (!list_is_empty(&proc->refs_by_desc))
+            {
+              list_for_every_entry(&proc->refs_by_desc, ref,
+                                  struct binder_ref, rb_node_desc)
+                {
+                  dprintf(fd, "refs_by_desc Information:\n"
+                          "  Address: %p\n"
+                          "  Ref Data:\n"
+                          "    Debug ID: %d\n"
+                          "    desc: %" PRIu32 "\n"
+                          "    Strong: %d\n"
+                          "    Weak: %d\n",
+                          ref,
+                          ref->data.debug_id,
+                          ref->data.desc,
+                          ref->data.strong,
+                          ref->data.weak);
+                }
+            }
+
+          if (!list_is_empty(&proc->refs_by_node))
+            {
+              list_for_every_entry(&proc->refs_by_node, ref,
+                                  struct binder_ref, rb_node_node)
+                {
+                  dprintf(fd, "refs_by_node Information:\n"
+                          "  Address: %p\n"
+                          "  Ref Data:\n"
+                          "    Debug ID: %d\n"
+                          "    Desc: %" PRIu32 "\n"
+                          "    Strong: %d\n"
+                          "    Weak: %d\n",
+                          ref,
+                          ref->data.debug_id,
+                          ref->data.desc,
+                          ref->data.strong,
+                          ref->data.weak);
+                }
+            }
+
+          dprintf(fd, "Allocation Information:\n"
+                  "  Heap PID: %d\n"
+                  "  Heap Name: %s\n"
+                  "  Heap Address: %p\n"
+                  "  Heap Size: %zu bytes\n\n",
+                  proc->alloc.pid,
+                  proc->alloc.name,
+                  proc->alloc.heap,
+                  proc->alloc.size);
+        }
+    }
+
+  nxmutex_unlock(&binder_dev->binder_procs_lock);
+
+  return 0;
+}
+
 static int binder_ioctl(FAR struct file *filp, int cmd, unsigned long arg)
 {
   FAR struct binder_proc *proc = filp->f_priv;
@@ -424,6 +650,12 @@ static int binder_ioctl(FAR struct file *filp, int cmd, unsigned long arg)
     case BINDER_FLUSH:
     {
       ret = binder_flush(filp);
+      break;
+    }
+
+    case BINDER_DUMP:
+    {
+      ret = binder_dump(filp, arg);
       break;
     }
 

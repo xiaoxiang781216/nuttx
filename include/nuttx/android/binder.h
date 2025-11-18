@@ -55,6 +55,7 @@
 #define BINDER_ENABLE_ONEWAY_SPAM_DETECTION BINDER_IOW('b', 16, uint32_t)
 #define BINDER_GET_EXTENDED_ERROR           BINDER_IOWR('b', 17, struct binder_extended_error)
 #define BINDER_FLUSH                        BINDER_IO('b', 18)
+#define BINDER_DUMP                         BINDER_IO('b', 19)
 
 #define B_PACK_CHARS(c1, c2, c3, c4) \
   (((c1) << 24) | ((c2) << 16) | ((c3) << 8) | (c4))
@@ -483,6 +484,12 @@ struct binder_pri_ptr_cookie
   int32_t priority;
   binder_uintptr_t ptr;
   binder_uintptr_t cookie;
+};
+
+struct binder_dump
+{
+  int fd;
+  pid_t pid;
 };
 
 enum binder_driver_return_protocol

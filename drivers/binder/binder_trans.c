@@ -41,7 +41,6 @@
 #include <nuttx/android/binder.h>
 #include <nuttx/mutex.h>
 #include <nuttx/nuttx.h>
-#include <nuttx/kmalloc.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/sched.h>
 #include <nuttx/wqueue.h>
