@@ -345,11 +345,13 @@ int arp_send(in_addr_t ipaddr)
        * issue.
        */
 
+      netdev_lock(dev);
       ret = arp_find(ipaddr, NULL, dev, true);
       if (ret >= 0 || ret == -ENETUNREACH)
         {
           /* We have it! Break out with ret value */
 
+          netdev_unlock(dev);
           break;
         }
 
@@ -363,6 +365,7 @@ int arp_send(in_addr_t ipaddr)
            * wait arp response notify.
            */
 
+          netdev_unlock(dev);
           goto wait;
         }
 
@@ -371,7 +374,6 @@ int arp_send(in_addr_t ipaddr)
        * want anything to happen until we are ready.
        */
 
-      netdev_lock(dev);
       if (state->snd_cb == NULL)
         {
           state->snd_cb = arp_callback_alloc(dev);
