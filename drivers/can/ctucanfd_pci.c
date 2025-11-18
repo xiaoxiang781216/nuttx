@@ -261,14 +261,16 @@ static const struct pci_device_id_s g_ctucanfd_id_table[] =
   { }
 };
 
-static struct pci_driver_s g_ctucanfd_drv =
+static DEFINE_PER_CPU_BMP(struct pci_driver_s, g_ctucanfd_drv) =
 {
   .id_table = g_ctucanfd_id_table,
   .probe    = ctucanfd_probe,
 };
+#define g_ctucanfd_drv this_cpu_var_bmp(g_ctucanfd_drv)
 
 #ifdef CONFIG_CAN_CTUCANFD_CHARDEV
-static uint8_t g_ctucanfd_count = 0;
+static DEFINE_PER_CPU_BSS_BMP(uint8_t, g_ctucanfd_count);
+#define g_ctucanfd_count this_cpu_var_bmp(g_ctucanfd_count)
 #endif
 
 /*****************************************************************************

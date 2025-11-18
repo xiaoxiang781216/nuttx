@@ -263,14 +263,16 @@ static const struct pci_device_id_s g_kvaser_id_table[] =
   { }
 };
 
-static struct pci_driver_s g_kvaser_drv =
+static DEFINE_PER_CPU_BMP(struct pci_driver_s, g_kvaser_drv) =
 {
   .id_table = g_kvaser_id_table,
   .probe    = kvaser_probe,
 };
+#define g_kvaser_drv this_cpu_var_bmp(g_kvaser_drv)
 
 #ifdef CONFIG_CAN_KVASER_CHARDEV
-static uint8_t g_kvaser_count = 0;
+static DEFINE_PER_CPU_BSS_BMP(uint8_t, g_kvaser_count);
+#define g_kvaser_count this_cpu_var_bmp(g_kvaser_count)
 #endif
 
 /*****************************************************************************
