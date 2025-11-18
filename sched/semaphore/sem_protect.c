@@ -86,23 +86,35 @@ int nxsem_protect_wait(FAR sem_t *sem)
  * Name: nxsem_protect_post
  *
  * Description:
- *   This function attempts to unlock the protected semaphore, restore the
- *   holder tcb priority.
+ *   This function handles priority restoration for semaphores with
+ *   PTHREAD_PRIO_PROTECT protocol. It implements a clever technique to
+ *   ensure that when a thread unlocks a PRIO_PROTECT mutex, it is not
+ *   moved to the tail of the scheduling queue at its priority level.
  *
- *   This is an internal OS interface.  It is functionally equivalent to
- *   sem_wait except that:
+ *   The key insight: by temporarily boosting the priority and then
+ *   immediately restoring it, we trigger the scheduler to re-evaluate
+ *   the thread's position in the ready queue without actually changing
+ *   its execution priority.
  *
- *   - It is not a cancellation point, and
- *   - It does not modify the errno value.
+ *   Workflow:
+ *   1. Temporarily set priority to (saved_priority + 1) - This causes
+ *      the scheduler to keep the thread at the head of ready queue
+ *   2. Immediately restore to saved_priority - Thread maintains original
+ *      priority but keeps its queue position
+ *   3. This satisfies POSIX requirement: "When a thread unlocks a mutex
+ *      with PRIO_PROTECT protocol, it shall not be moved to the tail of
+ *      the scheduling queue at its priority"
  *
  * Input Parameters:
- *   sem - Semaphore descriptor.
+ *   sem - Pointer to the semaphore structure
  *
  * Returned Value:
- *   This is an internal OS interface and should not be used by applications.
- *   It follows the NuttX internal error return policy:  Zero (OK) is
- *   returned on success.  A negated errno value is returned on failure.
- *   Possible returned errors:
+ *   None
+ *
+ * Assumptions:
+ *   - Called from appropriate context with proper synchronization
+ *   - sem->saved contains the original priority to restore
+ *   - This technique relies on the specific behavior of NuttX scheduler
  *
  ****************************************************************************/
 
@@ -110,7 +122,27 @@ void nxsem_protect_post(FAR sem_t *sem)
 {
   if (sem->saved > 0)
     {
-      nxsched_set_priority(this_task(), sem->saved);
+      if (sem->saved < SCHED_PRIORITY_MAX)
+        {
+          /* Temporary priority boost to trigger scheduler re-evaluation
+           * and prevent moving to the tail of the scheduling queue
+           */
+
+          nxsched_set_priority(this_task(), sem->saved + 1);
+
+          /* Restore original priority but keep queue position */
+
+          this_task()->sched_priority = sem->saved;
+        }
+      else
+        {
+          /* Already at max priority, just trigger scheduler re-evaluation */
+
+          nxsched_set_priority(this_task(), sem->saved);
+        }
+
+      /* Clear saved priority */
+
       sem->saved = 0;
     }
 }
