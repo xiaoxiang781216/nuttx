@@ -42,9 +42,11 @@
  * Private Data
  ****************************************************************************/
 
-static mutex_t g_pci_epc_lock = NXMUTEX_INITIALIZER;
-static struct list_node g_pci_epc_device_list =
-                        LIST_INITIAL_VALUE(g_pci_epc_device_list);
+static DEFINE_PER_CPU_BMP(mutex_t, g_pci_epc_lock) = NXMUTEX_INITIALIZER;
+#define g_pci_epc_lock this_cpu_var_bmp(g_pci_epc_lock)
+
+static DEFINE_PER_CPU_BMP(dq_queue_t, g_pci_epc_device_queue);
+#define g_pci_epc_device_queue this_cpu_var_bmp(g_pci_epc_device_queue)
 
 /****************************************************************************
  * Public Functions
@@ -81,8 +83,8 @@ FAR struct pci_epc_ctrl_s *pci_get_epc(FAR const char *epc_name)
       return NULL;
     }
 
-  list_for_every_entry(&g_pci_epc_device_list, epc, struct pci_epc_ctrl_s,
-                       node)
+  dq_for_every_entry(g_pci_epc_device_queue, epc, struct pci_epc_ctrl_s,
+                     node)
     {
       if (strcmp(epc_name, epc->name) == 0)
         {
@@ -748,7 +750,7 @@ int pci_epc_add_epf(FAR struct pci_epc_ctrl_s *epc,
   epf->funcno = funcno;
   epf->epc = epc;
 
-  list_add_tail(&epc->epf, &epf->epc_node);
+  dq_addlast(&epf->epc_node, &epc->epf);
 
 out:
   nxmutex_unlock(&epc->lock);
@@ -816,7 +818,7 @@ void pci_epc_linkup(FAR struct pci_epc_ctrl_s *epc)
     }
 
   nxmutex_lock(&epc->lock);
-  list_for_every_entry(&epc->epf, epf, struct pci_epf_device_s, epc_node)
+  dq_for_every_entry(&epc->epf, epf, struct pci_epf_device_s, epc_node)
     {
       nxmutex_lock(&epf->lock);
       if (epf->event_ops && epf->event_ops->link_up)
@@ -858,7 +860,7 @@ void pci_epc_linkdown(FAR struct pci_epc_ctrl_s *epc)
     }
 
   nxmutex_lock(&epc->lock);
-  list_for_every_entry(&epc->epf, epf, struct pci_epf_device_s, epc_node)
+  dq_for_every_entry(&epc->epf, epf, struct pci_epf_device_s, epc_node)
     {
       nxmutex_lock(&epf->lock);
       if (epf->event_ops && epf->event_ops->link_down)
@@ -900,7 +902,7 @@ void pci_epc_init_notify(FAR struct pci_epc_ctrl_s *epc)
     }
 
   nxmutex_lock(&epc->lock);
-  list_for_every_entry(&epc->epf, epf, struct pci_epf_device_s, epc_node)
+  dq_for_every_entry(&epc->epf, epf, struct pci_epf_device_s, epc_node)
     {
       nxmutex_lock(&epf->lock);
       if (epf->event_ops && epf->event_ops->core_init)
@@ -942,7 +944,7 @@ void pci_epc_bme_notify(FAR struct pci_epc_ctrl_s *epc)
     }
 
   nxmutex_lock(&epc->lock);
-  list_for_every_entry(&epc->epf, epf, struct pci_epf_device_s, epc_node)
+  dq_for_every_entry(&epc->epf, epf, struct pci_epf_device_s, epc_node)
     {
       nxmutex_lock(&epf->lock);
       if (epf->event_ops && epf->event_ops->bme)
@@ -996,11 +998,10 @@ pci_epc_create(FAR const char *name, FAR void *priv,
   epc->priv = priv;
   memcpy(epc->name, name, len);
   nxmutex_init(&epc->lock);
-  list_initialize(&epc->epf);
   epc->ops = ops;
 
   nxmutex_lock(&g_pci_epc_lock);
-  list_add_tail(&g_pci_epc_device_list, &epc->node);
+  dq_addlast(&epc->node, &g_pci_epc_device_queue);
   nxmutex_unlock(&g_pci_epc_lock);
 
   return epc;
@@ -1030,7 +1031,7 @@ void pci_epc_destroy(FAR struct pci_epc_ctrl_s *epc)
     }
 
   nxmutex_lock(&g_pci_epc_lock);
-  list_delete(&epc->node);
+  dq_rem(&epc->node, &g_pci_epc_device_queue);
   nxmutex_unlock(&g_pci_epc_lock);
 
   nxmutex_destroy(&epc->lock);

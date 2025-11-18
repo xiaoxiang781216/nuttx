@@ -129,13 +129,17 @@ static int pci_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
  * Private Data
  ****************************************************************************/
 
-static mutex_t g_pci_lock = NXMUTEX_INITIALIZER;
-static struct list_node g_pci_device_list =
-                        LIST_INITIAL_VALUE(g_pci_device_list);
-static struct list_node g_pci_driver_list =
-                        LIST_INITIAL_VALUE(g_pci_driver_list);
-static struct list_node g_pci_ctrl_list =
-                        LIST_INITIAL_VALUE(g_pci_ctrl_list);
+static DEFINE_PER_CPU_BMP(mutex_t, g_pci_lock) = NXMUTEX_INITIALIZER;
+#define g_pci_lock this_cpu_var_bmp(g_pci_lock)
+
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_pci_device_queue);
+#define g_pci_device_queue this_cpu_var_bmp(g_pci_device_queue)
+
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_pci_driver_queue);
+#define g_pci_driver_queue this_cpu_var_bmp(g_pci_driver_queue)
+
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_pci_ctrl_queue);
+#define g_pci_ctrl_queue this_cpu_var_bmp(g_pci_ctrl_queue)
 
 static const struct file_operations g_pci_fops =
 {
@@ -159,7 +163,7 @@ pci_do_find_device_from_bus(FAR struct pci_bus_s *bus, uint8_t busno,
   FAR struct pci_bus_s *bus_tmp;
   FAR struct pci_device_s *dev;
 
-  list_for_every_entry(&bus->devices, dev, struct pci_device_s, bus_list)
+  dq_for_every_entry(&bus->devices, dev, struct pci_device_s, bus_node)
     {
       if (dev->bus->number == busno && devfn == dev->devfn)
         {
@@ -167,8 +171,8 @@ pci_do_find_device_from_bus(FAR struct pci_bus_s *bus, uint8_t busno,
         }
     }
 
-  list_for_every_entry(&bus->children, bus_tmp,
-                       struct pci_bus_s, node)
+  dq_for_every_entry(&bus->children, bus_tmp,
+                     struct pci_bus_s, node)
     {
       dev = pci_find_device_from_bus(bus_tmp, busno, devfn);
       if (dev != NULL)
@@ -264,7 +268,7 @@ static int pci_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       return ret;
     }
 
-  list_for_every_entry(&g_pci_ctrl_list, ctrl, struct pci_controller_s, node)
+  dq_for_every_entry(&g_pci_ctrl_queue, ctrl, struct pci_controller_s, node)
     {
       if (ctrl->domain == sel->pc_domain)
         {
@@ -274,7 +278,7 @@ static int pci_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   nxmutex_unlock(&g_pci_lock);
 
-  if (&ctrl->node == &g_pci_ctrl_list)
+  if (ctrl == NULL)
     {
       return -ENODEV;
     }
@@ -554,19 +558,7 @@ static uint8_t pci_find_next_cap(FAR struct pci_bus_s *bus,
 
 static FAR struct pci_bus_s *pci_alloc_bus(void)
 {
-  FAR struct pci_bus_s *bus;
-
-  bus = kmm_zalloc(sizeof(*bus));
-  if (bus == NULL)
-    {
-      return NULL;
-    }
-
-  list_initialize(&bus->node);
-  list_initialize(&bus->children);
-  list_initialize(&bus->devices);
-
-  return bus;
+  return kmm_zalloc(sizeof(struct pci_bus_s));
 }
 
 /****************************************************************************
@@ -582,18 +574,7 @@ static FAR struct pci_bus_s *pci_alloc_bus(void)
 
 static FAR struct pci_device_s *pci_alloc_device(void)
 {
-  FAR struct pci_device_s *dev;
-
-  dev = kmm_zalloc(sizeof(*dev));
-  if (dev == NULL)
-    {
-      return NULL;
-    }
-
-  list_initialize(&dev->node);
-  list_initialize(&dev->bus_list);
-
-  return dev;
+  return kmm_zalloc(sizeof(struct pci_device_s));
 }
 
 /****************************************************************************
@@ -614,14 +595,14 @@ static void pci_register_bus_devices(FAR struct pci_bus_s *bus)
 
   /* Activate all devices on this bus */
 
-  list_for_every_entry(&bus->devices, dev, struct pci_device_s, bus_list)
+  dq_for_every_entry(&bus->devices, dev, struct pci_device_s, bus_node)
     {
       pci_register_device(dev);
     }
 
   /* Walk down the hierarchy */
 
-  list_for_every_entry(&bus->children, child_bus, struct pci_bus_s, node)
+  dq_for_every_entry(&bus->children, child_bus, struct pci_bus_s, node)
     {
       pci_register_bus_devices(child_bus);
     }
@@ -858,7 +839,7 @@ static void pci_setup_device(FAR struct pci_device_s *dev, int max_bar,
   pci_write_config_byte(dev, PCI_COMMAND, cmd);
 #endif
 
-  list_add_tail(&dev->bus->devices, &dev->bus_list);
+  dq_addlast(&dev->bus_node, &dev->bus->devices);
 }
 
 /****************************************************************************
@@ -1110,7 +1091,7 @@ static void pci_scan_bus(FAR struct pci_bus_s *bus)
           child_bus->number = bus->ctrl->busno++;
 #endif
 
-          list_add_tail(&bus->children, &child_bus->node);
+          dq_addlast(&child_bus->node, &bus->children);
           dev->subordinate = child_bus;
 
           /* Scan pci hierarchy behind bridge */
@@ -2109,9 +2090,9 @@ int pci_register_driver(FAR struct pci_driver_s *drv)
 
   /* Add the driver to the pci driver list */
 
-  list_add_tail(&g_pci_driver_list, &drv->node);
+  dq_addlast(&drv->node, &g_pci_driver_queue);
 
-  list_for_every_entry(&g_pci_device_list, dev, struct pci_device_s, node)
+  dq_for_every_entry(&g_pci_device_queue, dev, struct pci_device_s, node)
     {
       if (dev->drv != NULL)
         {
@@ -2162,7 +2143,7 @@ int pci_unregister_driver(FAR struct pci_driver_s *drv)
       return ret;
     }
 
-  list_for_every_entry(&g_pci_device_list, dev, struct pci_device_s, node)
+  dq_for_every_entry(&g_pci_device_queue, dev, struct pci_device_s, node)
     {
       if (dev->drv == drv)
         {
@@ -2171,7 +2152,7 @@ int pci_unregister_driver(FAR struct pci_driver_s *drv)
         }
     }
 
-  list_delete(&drv->node);
+  dq_rem(&drv->node, &g_pci_driver_queue);
 
   nxmutex_unlock(&g_pci_lock);
   return ret;
@@ -2203,9 +2184,9 @@ int pci_register_device(FAR struct pci_device_s *dev)
       return ret;
     }
 
-  list_add_tail(&g_pci_device_list, &dev->node);
+  dq_addlast(&dev->node, &g_pci_device_queue);
 
-  list_for_every_entry(&g_pci_driver_list, drv, struct pci_driver_s, node)
+  dq_for_every_entry(&g_pci_driver_queue, drv, struct pci_driver_s, node)
     {
       for (id = drv->id_table; id->vendor; id++)
         {
@@ -2256,7 +2237,7 @@ int pci_unregister_device(FAR struct pci_device_s *dev)
     }
 
   dev->drv = NULL;
-  list_delete(&dev->node);
+  dq_rem(&dev->node, &g_pci_device_queue);
 
   nxmutex_unlock(&g_pci_lock);
   return ret;
@@ -2297,7 +2278,7 @@ int pci_register_controller(FAR struct pci_controller_s *ctrl)
   pci_register_bus_devices(bus);
 
   nxmutex_lock(&g_pci_lock);
-  list_add_tail(&g_pci_ctrl_list, &ctrl->node);
+  dq_addlast(&ctrl->node, &g_pci_ctrl_queue);
   nxmutex_unlock(&g_pci_lock);
 
   return 0;

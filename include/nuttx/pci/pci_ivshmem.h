@@ -32,7 +32,7 @@
 #ifdef CONFIG_PCI_IVSHMEM
 
 #include <nuttx/irq.h>
-#include <nuttx/list.h>
+#include <nuttx/queue.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -48,7 +48,7 @@ struct ivshmem_driver_s
   int              id;
   CODE int         (*probe)(FAR struct ivshmem_device_s *dev);
   CODE void        (*remove)(FAR struct ivshmem_device_s *dev);
-  struct list_node node;
+  dq_entry_t       node;
 };
 
 /****************************************************************************
