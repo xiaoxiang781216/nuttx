@@ -352,7 +352,6 @@
 #    define nosanitize_address
 
 #    undef code_unreachable
-#    define code_unreachable() for (; ; )
 #  endif
 
 #  if defined(__TRICORE__)
@@ -492,7 +491,6 @@
 #    undef nosanitize_address
 #    define nosanitize_address
 #    undef code_unreachable
-#    define code_unreachable() for (; ; )
 
 #    if defined(__AVR_2_BYTE_PC__) || defined(__AVR_3_BYTE_PC__)
 /* 2-byte 3-byte PC does not support returnaddress */
@@ -695,7 +693,6 @@
 #  define noreturn_function
 #  define pure_function
 #  define const_function
-#  define code_unreachable() for (; ; )
 #  define predict_true(x) (x)
 #  define predict_false(x) (x)
 #  define is_constexpr(x)  (0)
@@ -873,7 +870,6 @@
 #  define noreturn_function
 #  define pure_function
 #  define const_function
-#  define code_unreachable() for (; ; )
 #  define predict_true(x) (x)
 #  define predict_false(x) (x)
 #  define is_constexpr(x)  (0)
@@ -1007,7 +1003,6 @@
 #  define farcall_function
 #  define pure_function
 #  define const_function
-#  define code_unreachable() for (; ; )
 #  define predict_true(x) (x)
 #  define predict_false(x) (x)
 #  define is_constexpr(x)  (0)
@@ -1313,7 +1308,6 @@
 #  define farcall_function
 #  define pure_function
 #  define const_function
-#  define code_unreachable() for (; ; )
 #  define predict_true(x) (x)
 #  define predict_false(x) (x)
 #  define is_constexpr(x)  (0)
@@ -1447,6 +1441,17 @@ extern "C"
 {
 #else
 #define EXTERN extern
+#endif
+
+/****************************************************************************
+ * Inline Functions
+ ****************************************************************************/
+
+#if !defined(__ASSEMBLY__) && !defined(code_unreachable)
+noreturn_function static inline void code_unreachable(void)
+{
+  for (; ; );
+}
 #endif
 
 #if defined(__TASKING__)
