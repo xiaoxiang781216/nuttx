@@ -99,14 +99,23 @@ void umm_initialize(FAR void *heap_start, size_t heap_size)
   FAR struct mm_heap_s **heap = &g_mmheap;
 #endif
   struct mm_heap_config_s config;
+#ifdef CONFIG_MM_POOL_PARAM
+  const struct mm_pool_config_s pool_config =
+    {
+      CONFIG_MM_POOL_PARAM
+    };
+#endif
 
   memset(&config, 0, sizeof(config));
   config.start = heap_start;
   config.size  = heap_size;
-#ifdef CONFIG_BUILD_KERNEL
-  *heap = mm_initialize_pool(&config, NULL);
-#else
+#ifndef CONFIG_BUILD_KERNEL
   config.name = "Umem";
+#endif
+
+#ifdef CONFIG_MM_POOL_PARAM
+  *heap = mm_initialize_pool(&config, &pool_config);
+#else
   *heap = mm_initialize_pool(&config, NULL);
 #endif
 }

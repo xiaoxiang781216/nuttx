@@ -30,6 +30,22 @@ config MM_CUSTOMIZE_MANAGER
 
 endchoice
 
+config MM_POOL_PARAM
+	string "Mempool block size and number for user"
+	---help---
+		Configure memory pool parameters as a single string with space-separated
+		values in this strict order:
+		poolsize: array of block size(bytes) for pool
+		poolcount: array of number of blocks in pool
+		npools: total number of pools
+		threshold: max allocation size for pool management
+		chunksize: multiples pool chunk size
+		init_chunksize: multiples pool chunk initial size
+		expandsize: expand size for each mempool in multiple mempool
+		dict_expendsize: expand size for multiple mempool's dictionary
+		example:
+		(sizet[]){4,8,16,32,64,128,256},(sizet[]){256,256,256,256,256,256,256},7,256,4096,65536,4096,4096
+
 config MM_UMM_CUSTOMIZE_MANAGER
 	bool "Customized heap manager"
 	default n
@@ -71,6 +87,23 @@ config MM_KERNEL_HEAPSIZE
 		The remaining of available memory is given to the unprotected
 		user-mode heap.  This value may need to be aligned to units of the
 		size of the smallest memory protection region.
+
+config MM_POOL_PARAM_KERNEL
+	string "Mempool block size and number for kernel"
+	depends on MM_KERNEL_HEAP
+	---help---
+		Configure memory pool parameters as a single string with space-separated
+		values in this strict order:
+		poolsize: array of block size(bytes) for pool
+		poolcount: array of number of blocks in pool
+		npools: total number of pools
+		threshold: max allocation size for pool management
+		chunksize: multiples pool chunk size
+		init_chunksize: multiples pool chunk initial size
+		expandsize: expand size for each mempool in multiple mempool
+		dict_expendsize: expand size for multiple mempool's dictionary
+		example:
+		(sizet[]){4,8,16,32,64,128,256},(sizet[]){256,256,256,256,256,256,256},7,256,4096,65536,4096,4096
 
 config MM_DEFAULT_ALIGNMENT
 	int "Memory default alignment in bytes"

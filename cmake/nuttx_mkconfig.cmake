@@ -65,6 +65,8 @@ set(DEQUOTELIST
     "CONFIG_INIT_ENTRYPOINT" # Name of entry point function
     "CONFIG_LIBC_ELF_SYMTAB_ARRAY" # Symbol table array used by elf functions
     "CONFIG_LIBC_ELF_NSYMBOLS_VAR" # Variable holding number of symbols in the
+    "CONFIG_MM_POOL_PARAM" # Mempool param for user
+    "CONFIG_MM_POOL_PARAM_KERNEL" # Mempool param for kernel
     # table
     "CONFIG_PASS1_BUILDIR" # Pass1 build directory
     "CONFIG_PASS1_TARGET" # Pass1 build target
