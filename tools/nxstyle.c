@@ -659,6 +659,13 @@ static const char *g_white_content_list[] =
   "T32_Fdx_TraceData2",
   "T32_Fdx_GetTimebase",
 
+  /* Ref:
+   * fs/fatfs/fatfs_vfs.c
+   */
+
+  "LBA_t",
+  "FATFS_BytesPerSectorShift_FIELD",
+
   NULL
 };
 
