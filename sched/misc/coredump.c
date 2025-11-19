@@ -243,7 +243,8 @@ static int elf_emit_hdr(FAR struct elf_dumpinfo_s *cinfo,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_BOARD_COREDUMP_MEMDEV
+# if defined(CONFIG_BOARD_COREDUMP_MEMDEV) && \
+     !defined(CONFIG_BOARD_COREDUMP_OVERWRITE)
 static bool elf_exist_hdr(FAR struct lib_instream_s *instream)
 {
   int ret;
