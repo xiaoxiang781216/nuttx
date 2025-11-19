@@ -825,4 +825,42 @@ config NET_IGC_INT_INTERVAL
 
 endif # NET_IGC
 
+config GDBSTUB_NETDEV
+	bool "GDBSTUB to netdev"
+	depends on LIB_GDBSTUB && NETDEVICES && NET_NETPOLL
+	default n
+	---help---
+		Use the netdev as a GDBSTUB device
+
+if GDBSTUB_NETDEV
+
+config GDBSTUB_NETDEV_INTF
+	string "GDBSTUB netdev interface"
+	default "eth0"
+	---help---
+		Network interface used for netdev GDBSTUB.
+
+config GDBSTUB_NETDEV_PORT
+	int "GDBSTUB netdev port"
+	default 31337
+	---help---
+		UDP port for GDBSTUB output.
+
+config GDBSTUB_NETDEV_PANIC_TIMEOUT
+	int "GDBSTUB netdev panic timeout"
+	default 10
+	---help---
+		Timeout in seconds to wait for GDB connection during panic.
+		Negative value: wait indefinitely for debugger.
+		Zero: disable panic gdbstub (no notifier registered).
+		Positive value: wait specified seconds, then continue panic flow.
+
+config GDBSTUB_NETDEV_WAIT_CONNECT
+	bool "GDBSTUB netdev wait for connection"
+	default n
+	---help---
+		Wait for gdbstub to connect before continuing boot.
+
+endif
+
 endif # NETDEVICES

@@ -30,6 +30,10 @@ ifeq ($(CONFIG_MM_IOB),y)
   CSRCS += netdev_upperhalf.c netdev_drivers.c
 endif
 
+ifeq ($(CONFIG_GDBSTUB_NETDEV),y)
+  CSRCS += netdev_gdbstub.c
+endif
+
 ifeq ($(CONFIG_NET_LOOPBACK),y)
   CSRCS += loopback.c
 endif

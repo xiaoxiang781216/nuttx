@@ -29,6 +29,10 @@ if(CONFIG_NET)
     list(APPEND SRCS netdev_upperhalf.c netdev_drivers.c)
   endif()
 
+  if(CONFIG_GDBSTUB_NETDEV)
+    list(APPEND SRCS netdev_gdbstub.c)
+  endif()
+
   if(CONFIG_NET_LOOPBACK)
     list(APPEND SRCS loopback.c)
   endif()

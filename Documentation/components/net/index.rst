@@ -22,6 +22,7 @@ Network Support
   note.rst
   syslog.rst
   console.rst
+  gdbstub.rst
 
 ``net`` Directory Structure ::
 

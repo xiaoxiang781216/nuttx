@@ -36,6 +36,10 @@
 #  include <nuttx/syslog/syslog_netdev.h>
 #endif
 
+#ifdef CONFIG_GDBSTUB_NETDEV
+#  include <nuttx/net/netdev_gdbstub.h>
+#endif
+
 #include "netdev_drivers.h"
 
 /****************************************************************************
@@ -81,6 +85,19 @@ int netdev_drivers_init(FAR struct netdev_lowerhalf_s *dev)
       if (ret < 0)
         {
           nerr("ERROR: netdev_syslog_init failed: %d\n", ret);
+          return ret;
+        }
+    }
+#endif
+
+#ifdef CONFIG_GDBSTUB_NETDEV
+  if (strcmp(dev->netdev.d_ifname, CONFIG_GDBSTUB_NETDEV_INTF) == 0)
+    {
+      ninfo("bind GDBSTUB with netdev = %p\n", dev);
+      ret = netdev_gdbstub_init(dev);
+      if (ret < 0)
+        {
+          nerr("ERROR: netdev_gdbstub_init failed: %d\n", ret);
           return ret;
         }
     }
