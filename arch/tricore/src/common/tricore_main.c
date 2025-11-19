@@ -73,10 +73,6 @@ static void core_main(void)
   tricore_mpuinit();
 #endif
 
-#ifdef CONFIG_TRICOREHT
-  __mtcr(CPU_TRCCFG, __mfcr(CPU_TRCCFG) | (1U << 15));
-#endif
-
   nx_start();
 
   while (1);

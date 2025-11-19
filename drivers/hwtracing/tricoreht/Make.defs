@@ -23,10 +23,14 @@
 ifeq ($(CONFIG_TRICOREHT),y)
 
 CSRCS += tricoreht_trif_core.c tricoreht_trif_tfif.c tricoreht_mcds_core.c
-CSRCS += tricoreht_mcds_dtu.c tricoreht_trif_dap.c
+CSRCS += tricoreht_mcds_dtu.c tricoreht_trif_dap.c tricoreht.c
 
 DEPPATH += --dep-path tricoreht
 VPATH += :tricoreht
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)tricoreht
+
+ifneq ($(CONFIG_TRICOREHT_TRIGGER_SECTION),"")
+  CFLAGS += ${DEFINE_PREFIX}TRICOREHT_TRIGGER_SECTION
+endif
 
 endif # CONFIG_TRICOREHT

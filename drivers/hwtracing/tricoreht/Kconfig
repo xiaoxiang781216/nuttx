@@ -8,3 +8,18 @@ menuconfig TRICOREHT
 	default n
 	---help---
 		Tricoreht drivers support.
+
+if TRICOREHT
+
+config TRICOREHT_NOTE_DTU
+	bool "Note tricoreht use dtu driver"
+	select HWTRACING_NOTE
+	default n
+
+config TRICOREHT_TRIGGER_SECTION
+	string "Ttricoreht trigger section"
+	default ""
+	---help---
+		The section in which to place the trigger buffer.
+
+endif # TRICOREHT
