@@ -29,8 +29,6 @@
 
 #include <sys/types.h>
 
-#include <nuttx/nuttx.h>
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -170,32 +168,12 @@
 #define sq_for_every(q, p) \
   for ((p) = (q)->head; (p) != NULL; (p) = (p)->flink)
 
-#define sq_for_every_entry(q, entry, type, member) \
-  for ((entry) = container_of((q)->head, type, member); \
-       &(entry)->member != NULL; \
-       (entry) = container_of((entry)->member.flink, type, member))
-
 #define sq_for_every_safe(q, p, tmp) \
   for((p) = (q)->head, (tmp) = (p) ? (p)->flink : NULL; \
       (p) != NULL; (p) = (tmp), (tmp) = (p) ? (p)->flink : NULL)
 
-#define sq_for_every_entry_safe(q, entry, tmp, type, member) \
-  for ((entry) = container_of((q)->head, type, member), \
-       (tmp) = &(entry)->member ? \
-       container_of((entry)->member.flink, type, member) : NULL; \
-       &(entry)->member != NULL; \
-       (entry) = (tmp), \
-       (tmp) = &(entry)->member ? \
-       container_of((entry)->member.flink, type, member) : NULL)
-
 #define dq_for_every(q, p) sq_for_every(q, p)
 #define dq_for_every_safe(q, p, tmp) sq_for_every_safe(q, p, tmp)
-
-#define dq_for_every_entry(q, entry, type, member) \
-  sq_for_every_entry(q, entry, type, member)
-
-#define dq_for_every_entry_safe(q, entry, tmp, type, member) \
-  sq_for_every_entry_safe(q, entry, tmp, type, member)
 
 #define sq_rem(p, q) \
   do \
