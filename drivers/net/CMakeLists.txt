@@ -26,7 +26,7 @@ if(CONFIG_NET)
   # Include network interface drivers
 
   if(CONFIG_MM_IOB)
-    list(APPEND SRCS netdev_upperhalf.c)
+    list(APPEND SRCS netdev_upperhalf.c netdev_drivers.c)
   endif()
 
   if(CONFIG_NET_LOOPBACK)

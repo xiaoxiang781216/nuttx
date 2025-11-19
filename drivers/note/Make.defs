@@ -63,6 +63,10 @@ ifneq ($(CONFIG_DRIVERS_NOTERAM_SECTION),"")
   CFLAGS += ${DEFINE_PREFIX}DRIVERS_NOTERAM_SECTION
 endif
 
+ifeq ($(CONFIG_DRIVERS_NOTENET),y)
+  CSRCS += notenet_driver.c
+endif
+
 # Disable instrumentation for note driver to avoid infinite recursion.
 # sched_note_event_ip is called by __cyg_profile_func_enter/exit callbacks.
 

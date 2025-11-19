@@ -181,6 +181,9 @@ FAR static DEFINE_PER_CPU_BMP(note_drivers_t, g_note_drivers) =
   (FAR struct note_driver_s *)&g_notesnap,
 #  endif
 #endif
+#ifdef CONFIG_DRIVERS_NOTENET
+  (FAR struct note_driver_s *)&g_notenet,
+#endif
   NULL
 };
 #define g_note_drivers this_cpu_var_bmp(g_note_drivers)

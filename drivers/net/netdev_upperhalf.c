@@ -44,6 +44,8 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 
+#include "netdev_drivers.h"
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -1335,6 +1337,7 @@ static int netdev_upper_ifup(FAR struct net_driver_s *dev)
 {
   FAR struct netdev_upperhalf_s *upper = dev->d_private;
   int cpu = 1;
+  int ret;
 
   switch (upper->lower->rxtype)
     {
@@ -1376,7 +1379,15 @@ static int netdev_upper_ifup(FAR struct net_driver_s *dev)
 
   if (upper->lower->ops->ifup)
     {
-      return upper->lower->ops->ifup(upper->lower);
+      ret = upper->lower->ops->ifup(upper->lower);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      /* Register netdev drivers */
+
+      return netdev_drivers_init(upper->lower);
     }
 
   return -ENOSYS;
