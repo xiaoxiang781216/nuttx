@@ -247,7 +247,7 @@ static void noterpmsg_add(FAR struct note_driver_s *driver,
   drv->head = noterpmsg_next(drv, drv->head, NOTE_ALIGN(notelen));
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
 
-  if (!noswitches && work_available(&drv->work))
+  if (!noswitches && OSINIT_OS_READY() && work_available(&drv->work))
     {
       work_queue(HPWORK, &drv->work, noterpmsg_work, drv,
                  NOTE_RPMSG_WORK_DELAY);
