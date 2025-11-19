@@ -493,6 +493,47 @@ config SYSLOG_ITM
 	---help---
 		Use ITM as a SYSLOG output device.
 
+config SYSLOG_NETDEV
+	bool "SYSLOG to netdev"
+	depends on NETDEVICES && NET_NETPOLL
+	default n
+	---help---
+		Use the netdev as a SYSLOG output device
+
+if SYSLOG_NETDEV
+
+config SYSLOG_NETDEV_INTF
+	string "Netdev SYSLOG interface"
+	default "eth0"
+	---help---
+		Network interface used for SYSLOG.
+
+config SYSLOG_NETDEV_IPADDR
+	hex "Netdev SYSLOG destination IP address"
+	default 0xffffffff
+	---help---
+		Address where netdev sends SYSLOG output.
+		Default: broadcast IP address.
+
+config SYSLOG_NETDEV_MAC
+	string "Netdev SYSLOG destination MAC"
+	default "ff:ff:ff:ff:ff:ff"
+	---help---
+		MAC address where netdev sends SYSLOG output.
+		Default: broadcast MAC address.
+
+config SYSLOG_NETDEV_PORT
+	int "Netdev SYSLOG port"
+	default 6666
+	---help---
+		UDP port for SYSLOG output.
+
+config SYSLOG_NETDEV_WORK_DELAY
+	int "Netdev SYSLOG work delay(ms)"
+	default 100
+
+endif # SYSLOG_NETDEV
+
 config CONSOLE_SYSLOG
 	bool "Use SYSLOG for /dev/console"
 	default n

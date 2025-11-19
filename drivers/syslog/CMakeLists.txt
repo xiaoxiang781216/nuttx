@@ -85,4 +85,8 @@ if(CONFIG_SYSLOG_ITM)
   list(APPEND SRCS syslog_itmchannel.c)
 endif()
 
+if(CONFIG_SYSLOG_NETDEV)
+  list(APPEND SRCS syslog_netdev.c)
+endif()
+
 target_sources(drivers PRIVATE ${SRCS})

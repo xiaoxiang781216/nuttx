@@ -20,6 +20,7 @@ Network Support
   tcp_network_perf.rst
   delay_act_and_tcp_perf.rst
   note.rst
+  syslog.rst
 
 ``net`` Directory Structure ::
 

@@ -85,6 +85,10 @@ ifeq ($(CONFIG_SYSLOG_ITM),y)
   CSRCS += syslog_itmchannel.c
 endif
 
+ifeq ($(CONFIG_SYSLOG_NETDEV),y)
+  CSRCS += syslog_netdev.c
+endif
+
 # (Add other SYSLOG drivers here)
 
 # Include SYSLOG build support

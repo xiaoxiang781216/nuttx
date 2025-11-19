@@ -44,6 +44,10 @@
 #  include <nuttx/syslog/syslog_rpmsg.h>
 #endif
 
+#ifdef CONFIG_SYSLOG_NETDEV
+#  include <nuttx/syslog/syslog_netdev.h>
+#endif
+
 #ifdef CONFIG_SYSLOG_RTT
 #  include <nuttx/rtt.h>
 #endif
@@ -140,6 +144,28 @@ static syslog_channel_t g_rpmsg_channel =
   &g_rpmsg_channel_ops
 #  ifdef CONFIG_SYSLOG_IOCTL
   , "rpmsg"
+#  endif
+#  ifdef CONFIG_SYSLOG_CRLF
+  , SYSLOG_CHANNEL_DISABLE_CRLF
+#  endif
+};
+#endif
+
+#ifdef CONFIG_SYSLOG_NETDEV
+static const struct syslog_channel_ops_s g_netdev_channel_ops =
+{
+  syslog_netdev_putc,
+  syslog_netdev_putc,
+  syslog_netdev_flush,
+  syslog_netdev_write,
+  syslog_netdev_write
+};
+
+static syslog_channel_t g_netdev_channel =
+{
+  &g_netdev_channel_ops
+#  ifdef CONFIG_SYSLOG_IOCTL
+  , "netdev"
 #  endif
 #  ifdef CONFIG_SYSLOG_CRLF
   , SYSLOG_CHANNEL_DISABLE_CRLF
@@ -261,6 +287,12 @@ static struct notifier_block g_default_channel_nb =
 #  define SYSLOG_RPMSG_AVAILABLE 0
 #endif
 
+#ifdef CONFIG_SYSLOG_NETDEV
+#  define SYSLOG_NETDEV_AVAILABLE 1
+#else
+#  define SYSLOG_NETDEV_AVAILABLE 0
+#endif
+
 #ifdef CONFIG_SYSLOG_RTT
 #  define SYSLOG_RTT_AVAILABLE 1
 #else
@@ -270,6 +302,7 @@ static struct notifier_block g_default_channel_nb =
 #define SYSLOG_NCHANNELS (SYSLOG_DEFAULT_AVAILABLE + \
                           RAMLOG_SYSLOG_AVAILABLE + \
                           SYSLOG_RPMSG_AVAILABLE + \
+                          SYSLOG_NETDEV_AVAILABLE + \
                           SYSLOG_RTT_AVAILABLE)
 
 #if SYSLOG_NCHANNELS > CONFIG_SYSLOG_MAX_CHANNELS
@@ -293,6 +326,9 @@ const syslog_channels_t g_syslog_channel =
 #endif
 #ifdef CONFIG_SYSLOG_RPMSG
   &g_rpmsg_channel,
+#endif
+#ifdef CONFIG_SYSLOG_NETDEV
+  &g_netdev_channel,
 #endif
 #ifdef CONFIG_SYSLOG_RTT
   &g_rtt_channel,

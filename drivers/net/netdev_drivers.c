@@ -32,6 +32,10 @@
 #  include <nuttx/note/notenet_driver.h>
 #endif
 
+#ifdef CONFIG_SYSLOG_NETDEV
+#  include <nuttx/syslog/syslog_netdev.h>
+#endif
+
 #include "netdev_drivers.h"
 
 /****************************************************************************
@@ -64,6 +68,19 @@ int netdev_drivers_init(FAR struct netdev_lowerhalf_s *dev)
       if (ret < 0)
         {
           nerr("ERROR: netdev_note_init failed: %d\n", ret);
+          return ret;
+        }
+    }
+#endif
+
+#ifdef CONFIG_SYSLOG_NETDEV
+  if (strcmp(dev->netdev.d_ifname, CONFIG_SYSLOG_NETDEV_INTF) == 0)
+    {
+      ninfo("bind SYSLOG with netdev = %p\n", dev);
+      ret = syslog_netdev_init(dev);
+      if (ret < 0)
+        {
+          nerr("ERROR: netdev_syslog_init failed: %d\n", ret);
           return ret;
         }
     }
