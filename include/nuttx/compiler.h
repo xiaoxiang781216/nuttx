@@ -1211,6 +1211,7 @@
 
 #  undef  CONFIG_CPP_HAVE_WARNING
 #  undef  CONFIG_HAVE_WEAKFUNCTIONS
+#  undef  code_unreachable
 #  define weak_alias(name, aliasname)
 #  define weak_data                     __attribute__((weak))
 #  define weak_function                 __attribute__((weak))
@@ -1219,7 +1220,6 @@
 #  define farcall_function              __attribute__((long_call))
 #  define pure_function
 #  define const_function
-#  define code_unreachable()            __builtin_unreachable()
 #  define predict_true(x) (x)
 #  define predict_false(x) (x)
 #  define is_constexpr(x)  (0)
