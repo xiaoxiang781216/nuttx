@@ -410,7 +410,7 @@ uintptr_t task_tls_get_value(int tlsindex);
  *
  ****************************************************************************/
 
-#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+#if (defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_ARCH_ADDRENV)) || defined(__KERNEL__)
 #  define tls_get_info() ((FAR struct tls_info_s *)this_task()->stack_alloc_ptr)
 #elif defined(CONFIG_TLS_ALIGNED)
 #  define tls_get_info() TLS_INFO(up_getsp())

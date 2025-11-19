@@ -63,10 +63,10 @@ FAR char *getenv(FAR const char *name)
   /* Verify that a string was passed */
 
   if (name == NULL || info == NULL
-#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+#if (defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_ARCH_ADDRENV)) || defined(__KERNEL__)
       || up_interrupt_context() || sched_idletask()
 #endif
-     )
+    )
     {
       ret = -EINVAL;
       goto errout;
