@@ -37,6 +37,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
 #include <nuttx/mutex.h>
+#include <nuttx/mm/mempool.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
 
@@ -54,16 +55,24 @@
 #endif
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+/* The CAN connections rmutex */
+
+rmutex_t g_can_connections_lock = NXRMUTEX_INITIALIZER;
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
-/* The array containing all NetLink connections. */
+/* The array containing all CAN connections. */
 
-NET_BUFPOOL_DECLARE(g_can_connections, sizeof(struct can_conn_s),
-                    CONFIG_CAN_PREALLOC_CONNS, CONFIG_CAN_ALLOC_CONNS,
-                    CONFIG_CAN_MAX_CONNS);
+MEMPOOL_DEFINE(g_can_connections, sizeof(struct can_conn_s),
+               CONFIG_CAN_PREALLOC_CONNS, CONFIG_CAN_MAX_CONNS,
+               CONFIG_CAN_ALLOC_CONNS);
 
-/* A list of all allocated NetLink connections */
+/* A list of all allocated CAN connections */
 
 static dq_queue_t g_active_can_connections;
 
@@ -86,9 +95,9 @@ FAR struct can_conn_s *can_alloc(void)
 
   /* The free list is protected by a a mutex. */
 
-  NET_BUFPOOL_LOCK(g_can_connections);
+  can_conn_list_lock();
 
-  conn = NET_BUFPOOL_TRYALLOC(g_can_connections);
+  conn = mempool_allocate(&g_can_connections, 0);
   if (conn != NULL)
     {
       /* FIXME SocketCAN default behavior enables loopback */
@@ -114,7 +123,7 @@ FAR struct can_conn_s *can_alloc(void)
       dq_addlast(&conn->sconn.node, &g_active_can_connections);
     }
 
-  NET_BUFPOOL_UNLOCK(g_can_connections);
+  can_conn_list_unlock();
   return conn;
 }
 
@@ -133,7 +142,7 @@ void can_free(FAR struct can_conn_s *conn)
 
   DEBUGASSERT(conn->crefs == 0);
 
-  NET_BUFPOOL_LOCK(g_can_connections);
+  can_conn_list_lock();
 
   /* Remove the connection from the active list */
 
@@ -163,9 +172,9 @@ void can_free(FAR struct can_conn_s *conn)
 
   /* Free the connection. */
 
-  NET_BUFPOOL_FREE(g_can_connections, conn);
+  mempool_release(&g_can_connections, conn);
 
-  NET_BUFPOOL_UNLOCK(g_can_connections);
+  can_conn_list_unlock();
 }
 
 /****************************************************************************
@@ -242,29 +251,6 @@ FAR struct can_conn_s *can_nextconn(FAR struct can_conn_s *conn)
     {
       return (FAR struct can_conn_s *)conn->sconn.node.flink;
     }
-}
-
-/****************************************************************************
- * Name: can_conn_list_lock
- *       can_conn_list_unlock
- *
- * Description:
- *   Lock and unlock the CAN connection list. This is used to protect
- *   the list of active connections.
- *
- * Assumptions:
- *   This function is called from driver.
- *
- ****************************************************************************/
-
-void can_conn_list_lock(void)
-{
-  NET_BUFPOOL_LOCK(g_can_connections);
-}
-
-void can_conn_list_unlock(void)
-{
-  NET_BUFPOOL_UNLOCK(g_can_connections);
 }
 
 /****************************************************************************

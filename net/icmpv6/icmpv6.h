@@ -35,6 +35,7 @@
 #include <netinet/icmp6.h>
 
 #include <nuttx/mm/iob.h>
+#include <nuttx/mutex.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
@@ -162,6 +163,40 @@ extern "C"
 
 EXTERN const struct sock_intf_s g_icmpv6_sockif;
 #endif
+
+/* The icmpv6 connections rmutex */
+
+extern rmutex_t g_icmpv6_connections_lock;
+
+/****************************************************************************
+ * Inline Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: icmpv6_conn_list_lock
+ *
+ * Description:
+ *   Lock the ICMPv6 connection list.
+ *
+ ****************************************************************************/
+
+static inline_function void icmpv6_conn_list_lock(void)
+{
+  nxrmutex_lock(&g_icmpv6_connections_lock);
+}
+
+/****************************************************************************
+ * Name: icmpv6_conn_list_unlock
+ *
+ * Description:
+ *   Unlock the ICMPv6 connection list.
+ *
+ ****************************************************************************/
+
+static inline_function void icmpv6_conn_list_unlock(void)
+{
+  nxrmutex_unlock(&g_icmpv6_connections_lock);
+}
 
 /****************************************************************************
  * Public Function Prototypes

@@ -34,6 +34,7 @@
 #include <assert.h>
 
 #include <nuttx/mm/iob.h>
+#include <nuttx/mutex.h>
 #include <nuttx/net/icmp.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/net.h>
@@ -137,6 +138,37 @@ extern "C"
 
 EXTERN const struct sock_intf_s g_icmp_sockif;
 #endif
+
+/* The ICMP connections rmutex */
+
+extern rmutex_t g_icmp_connections_lock;
+
+/****************************************************************************
+ * Inline Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: icmp_conn_list_lock
+ *       icmp_conn_list_unlock
+ *
+ * Description:
+ *   Lock and unlock the ICMP connection list.  This is used to protect the
+ *   list of active connections.
+ *
+ * Assumptions:
+ *   This function is called from driver.
+ *
+ ****************************************************************************/
+
+static inline_function void icmp_conn_list_lock(void)
+{
+  nxrmutex_lock(&g_icmp_connections_lock);
+}
+
+static inline_function void icmp_conn_list_unlock(void)
+{
+  nxrmutex_unlock(&g_icmp_connections_lock);
+}
 
 /****************************************************************************
  * Public Function Prototypes

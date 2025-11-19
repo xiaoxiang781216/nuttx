@@ -34,6 +34,7 @@
 #include <arch/irq.h>
 
 #include <nuttx/kmalloc.h>
+#include <nuttx/mm/mempool.h>
 #include <nuttx/mutex.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
@@ -54,14 +55,22 @@
 #endif
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+/* The ICMP connections rmutex */
+
+rmutex_t g_icmp_connections_lock = NXRMUTEX_INITIALIZER;
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
 /* The array containing all IPPROTO_ICMP socket connections */
 
-NET_BUFPOOL_DECLARE(g_icmp_connections, sizeof(struct icmp_conn_s),
-                    CONFIG_NET_ICMP_PREALLOC_CONNS,
-                    CONFIG_NET_ICMP_ALLOC_CONNS, CONFIG_NET_ICMP_MAX_CONNS);
+MEMPOOL_DEFINE(g_icmp_connections, sizeof(struct icmp_conn_s),
+               CONFIG_NET_ICMP_PREALLOC_CONNS, CONFIG_NET_ICMP_MAX_CONNS,
+               CONFIG_NET_ICMP_ALLOC_CONNS);
 
 /* A list of all allocated IPPROTO_ICMP socket connections */
 
@@ -87,9 +96,9 @@ FAR struct icmp_conn_s *icmp_alloc(void)
 
   /* The free list is protected by a mutex. */
 
-  NET_BUFPOOL_LOCK(g_icmp_connections);
+  icmp_conn_list_lock();
 
-  conn = NET_BUFPOOL_TRYALLOC(g_icmp_connections);
+  conn = mempool_allocate(&g_icmp_connections, 0);
   if (conn != NULL)
     {
       /* Enqueue the connection into the active list */
@@ -97,7 +106,7 @@ FAR struct icmp_conn_s *icmp_alloc(void)
       dq_addlast(&conn->sconn.node, &g_active_icmp_connections);
     }
 
-  NET_BUFPOOL_UNLOCK(g_icmp_connections);
+  icmp_conn_list_unlock();
 
   return conn;
 }
@@ -119,7 +128,7 @@ void icmp_free(FAR struct icmp_conn_s *conn)
 
   /* Take the mutex (perhaps waiting) */
 
-  NET_BUFPOOL_LOCK(g_icmp_connections);
+  icmp_conn_list_lock();
 
   /* free any read-ahead data */
 
@@ -132,9 +141,9 @@ void icmp_free(FAR struct icmp_conn_s *conn)
 
   /* Free the connection. */
 
-  NET_BUFPOOL_FREE(g_icmp_connections, conn);
+  mempool_release(&g_icmp_connections, conn);
 
-  NET_BUFPOOL_UNLOCK(g_icmp_connections);
+  icmp_conn_list_unlock();
 }
 
 /****************************************************************************
@@ -197,29 +206,6 @@ FAR struct icmp_conn_s *icmp_nextconn(FAR struct icmp_conn_s *conn)
 }
 
 /****************************************************************************
- * Name: icmp_conn_list_lock
- *       icmp_conn_list_unlock
- *
- * Description:
- *   Lock and unlock the ICMP connection list.  This is used to protect the
- *   list of active connections.
- *
- * Assumptions:
- *   This function is called from driver.
- *
- ****************************************************************************/
-
-void icmp_conn_list_lock(void)
-{
-  NET_BUFPOOL_LOCK(g_icmp_connections);
-}
-
-void icmp_conn_list_unlock(void)
-{
-  NET_BUFPOOL_UNLOCK(g_icmp_connections);
-}
-
-/****************************************************************************
  * Name: icmp_findconn
  *
  * Description:
@@ -236,7 +222,7 @@ FAR struct icmp_conn_s *icmp_findconn(FAR struct net_driver_s *dev,
 {
   FAR struct icmp_conn_s *conn;
 
-  NET_BUFPOOL_LOCK(g_icmp_connections);
+  icmp_conn_list_lock();
   for (conn = icmp_nextconn(NULL); conn != NULL; conn = icmp_nextconn(conn))
     {
       if (conn->id == id && conn->dev == dev)
@@ -245,7 +231,7 @@ FAR struct icmp_conn_s *icmp_findconn(FAR struct net_driver_s *dev,
         }
     }
 
-  NET_BUFPOOL_UNLOCK(g_icmp_connections);
+  icmp_conn_list_unlock();
   return conn;
 }
 
@@ -267,7 +253,7 @@ int icmp_foreach(icmp_callback_t callback, FAR void *arg)
   FAR struct icmp_conn_s *conn;
   int ret = 0;
 
-  NET_BUFPOOL_LOCK(g_icmp_connections);
+  icmp_conn_list_lock();
   if (callback != NULL)
     {
       for (conn = icmp_nextconn(NULL); conn != NULL;
@@ -281,7 +267,7 @@ int icmp_foreach(icmp_callback_t callback, FAR void *arg)
         }
     }
 
-  NET_BUFPOOL_UNLOCK(g_icmp_connections);
+  icmp_conn_list_unlock();
   return ret;
 }
 #endif /* CONFIG_NET_ICMP */

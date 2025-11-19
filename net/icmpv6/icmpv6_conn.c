@@ -34,6 +34,7 @@
 #include <arch/irq.h>
 
 #include <nuttx/kmalloc.h>
+#include <nuttx/mm/mempool.h>
 #include <nuttx/mutex.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
@@ -54,15 +55,22 @@
 #endif
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+/* The icmpv6 connections rmutex */
+
+rmutex_t g_icmpv6_connections_lock = NXRMUTEX_INITIALIZER;
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
 /* The array containing all IPPROTO_ICMP socket connections */
 
-NET_BUFPOOL_DECLARE(g_icmpv6_connections, sizeof(struct icmpv6_conn_s),
-                    CONFIG_NET_ICMPv6_PREALLOC_CONNS,
-                    CONFIG_NET_ICMPv6_ALLOC_CONNS,
-                    CONFIG_NET_ICMPv6_MAX_CONNS);
+MEMPOOL_DEFINE(g_icmpv6_connections, sizeof(struct icmpv6_conn_s),
+               CONFIG_NET_ICMPv6_PREALLOC_CONNS, CONFIG_NET_ICMPv6_MAX_CONNS,
+               CONFIG_NET_ICMPv6_ALLOC_CONNS);
 
 /* A list of all allocated IPPROTO_ICMP socket connections */
 
@@ -88,9 +96,9 @@ FAR struct icmpv6_conn_s *icmpv6_alloc(void)
 
   /* The free list is protected by a mutex. */
 
-  NET_BUFPOOL_LOCK(g_icmpv6_connections);
+  icmpv6_conn_list_lock();
 
-  conn = NET_BUFPOOL_TRYALLOC(g_icmpv6_connections);
+  conn = mempool_allocate(&g_icmpv6_connections, 0);
   if (conn != NULL)
     {
       /* Enqueue the connection into the active list */
@@ -98,7 +106,7 @@ FAR struct icmpv6_conn_s *icmpv6_alloc(void)
       dq_addlast(&conn->sconn.node, &g_active_icmpv6_connections);
     }
 
-  NET_BUFPOOL_UNLOCK(g_icmpv6_connections);
+  icmpv6_conn_list_unlock();
 
   return conn;
 }
@@ -120,7 +128,7 @@ void icmpv6_free(FAR struct icmpv6_conn_s *conn)
 
   /* Take the mutex (perhaps waiting) */
 
-  NET_BUFPOOL_LOCK(g_icmpv6_connections);
+  icmpv6_conn_list_lock();
 
   /* Remove the connection from the active list */
 
@@ -129,9 +137,9 @@ void icmpv6_free(FAR struct icmpv6_conn_s *conn)
 
   /* Free the connection. */
 
-  NET_BUFPOOL_FREE(g_icmpv6_connections, conn);
+  mempool_release(&g_icmpv6_connections, conn);
 
-  NET_BUFPOOL_UNLOCK(g_icmpv6_connections);
+  icmpv6_conn_list_unlock();
 }
 
 /****************************************************************************

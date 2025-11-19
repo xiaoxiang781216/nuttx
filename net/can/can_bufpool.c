@@ -28,6 +28,7 @@
 
 #include <debug.h>
 
+#include <nuttx/mm/mempool.h>
 #include <nuttx/net/can.h>
 
 #include "utils/utils.h"
@@ -50,8 +51,7 @@
 
 /* The array containing all CAN buffers */
 
-NET_BUFPOOL_DECLARE(g_can_buffer, CAN_BUFFER_SIZE,
-                    CONFIG_NET_CAN_NBUFFERS, 0, 0);
+MEMPOOL_DEFINE(g_can_buffer, CAN_BUFFER_SIZE, CONFIG_NET_CAN_NBUFFERS, 0, 0);
 
 /****************************************************************************
  * Private Functions
@@ -70,7 +70,7 @@ NET_BUFPOOL_DECLARE(g_can_buffer, CAN_BUFFER_SIZE,
 
 static void can_buf_free(FAR void *buf)
 {
-  NET_BUFPOOL_FREE(g_can_buffer, buf);
+  mempool_release(&g_can_buffer, buf);
 }
 
 /****************************************************************************
@@ -87,7 +87,7 @@ static void can_buf_free(FAR void *buf)
 
 FAR struct iob_s *can_iob_timedalloc(unsigned int timeout)
 {
-  FAR void *buf = NET_BUFPOOL_TIMEDALLOC(g_can_buffer, timeout);
+  FAR void *buf = mempool_allocate(&g_can_buffer, timeout);
 
   if (buf == NULL)
     {
@@ -140,5 +140,5 @@ FAR struct iob_s *can_iob_clone(FAR struct net_driver_s *dev)
 
 int can_iob_navail(void)
 {
-  return NET_BUFPOOL_NAVAIL(g_can_buffer);
+  return mempool_navail(&g_can_buffer);
 }

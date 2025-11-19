@@ -33,6 +33,7 @@
 #include <poll.h>
 
 #include <nuttx/semaphore.h>
+#include <nuttx/mutex.h>
 #include <nuttx/can.h>
 #include <nuttx/net/can.h>
 #include <nuttx/net/net.h>
@@ -157,6 +158,33 @@ extern "C"
 #endif
 
 EXTERN const struct sock_intf_s g_can_sockif;
+
+/* The CAN connections rmutex */
+
+extern rmutex_t g_can_connections_lock;
+
+/****************************************************************************
+ * Name: can_conn_list_lock
+ *       can_conn_list_unlock
+ *
+ * Description:
+ *   Lock and unlock the CAN connection list. This is used to protect
+ *   the list of active connections.
+ *
+ * Assumptions:
+ *   This function is called from driver.
+ *
+ ****************************************************************************/
+
+static inline_function void can_conn_list_lock(void)
+{
+  nxrmutex_lock(&g_can_connections_lock);
+}
+
+static inline_function void can_conn_list_unlock(void)
+{
+  nxrmutex_unlock(&g_can_connections_lock);
+}
 
 /****************************************************************************
  * Public Function Prototypes

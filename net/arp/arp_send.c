@@ -35,6 +35,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
+#include <nuttx/mm/mempool.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/ip.h>
@@ -66,9 +67,9 @@ struct arp_send_info_s
  * Avoid accessing stack memory across threads.
  */
 
-NET_BUFPOOL_DECLARE(g_arp_send_infos, sizeof(struct arp_send_info_s),
-                    CONFIG_NET_ARP_PREALLOC_STATES,
-                    CONFIG_NET_ARP_ALLOC_STATES, CONFIG_NET_ARP_MAX_STATES);
+MEMPOOL_DEFINE(g_arp_send_infos, sizeof(struct arp_send_info_s),
+               CONFIG_NET_ARP_PREALLOC_STATES, CONFIG_NET_ARP_MAX_STATES,
+               CONFIG_NET_ARP_ALLOC_STATES);
 
 /****************************************************************************
  * Private Functions
@@ -98,7 +99,7 @@ static void arp_send_terminate(FAR struct net_driver_s *dev,
       nxsem_destroy(&state->snd_sem);
       arp_callback_free(dev, state->snd_cb);
       state->finish_cb(dev, result);
-      NET_BUFPOOL_FREE(g_arp_send_infos, state);
+      mempool_release(&g_arp_send_infos, state);
     }
 }
 
@@ -310,7 +311,7 @@ int arp_send(in_addr_t ipaddr)
    * want anything to happen until we are ready.
    */
 
-  info = NET_BUFPOOL_ALLOC(g_arp_send_infos);
+  info = mempool_allocate(&g_arp_send_infos, UINT_MAX);
   if (info == NULL)
     {
       nerr("ERROR: Failed to allocate ARP send info\n");
@@ -470,7 +471,7 @@ timeout:
   netdev_lock(dev);
   arp_callback_free(dev, state->snd_cb);
   netdev_unlock(dev);
-  NET_BUFPOOL_FREE(g_arp_send_infos, info);
+  mempool_release(&g_arp_send_infos, info);
   return ret;
 }
 
@@ -500,10 +501,11 @@ timeout:
 int arp_send_async(in_addr_t ipaddr, arp_send_finish_cb_t cb)
 {
   FAR struct net_driver_s *dev;
-  FAR struct arp_send_info_s *info = NET_BUFPOOL_ALLOC(g_arp_send_infos);
+  FAR struct arp_send_info_s *info;
   FAR struct arp_send_s *state;
   int ret = 0;
 
+  info = mempool_allocate(&g_arp_send_infos, UINT_MAX);
   if (!info)
     {
       nerr("ERROR: Out of memory\n");

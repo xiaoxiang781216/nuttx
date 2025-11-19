@@ -465,6 +465,7 @@ static inline_function int devif_poll_icmpv6(FAR struct net_driver_s *dev,
    * action.
    */
 
+  icmpv6_conn_list_lock();
   do
     {
       /* Skip ICMPv6 connections that are bound to other polling devices */
@@ -490,6 +491,7 @@ static inline_function int devif_poll_icmpv6(FAR struct net_driver_s *dev,
     }
   while (!bstop && (conn = icmpv6_nextconn(conn)) != NULL);
 
+  icmpv6_conn_list_unlock();
   return bstop;
 }
 #endif /* CONFIG_NET_ICMPv6_SOCKET || CONFIG_NET_ICMPv6_NEIGHBOR*/

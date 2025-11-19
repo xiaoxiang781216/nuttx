@@ -31,6 +31,7 @@
 
 #include <sys/types.h>
 
+#include <nuttx/mutex.h>
 #include <nuttx/net/net.h>
 
 #ifdef CONFIG_NET_PKT
@@ -128,6 +129,42 @@ extern "C"
 /* The packet socket interface */
 
 EXTERN const struct sock_intf_s g_pkt_sockif;
+
+/* The PKT connections rmutex */
+
+extern rmutex_t g_pkt_connections_lock;
+
+/****************************************************************************
+ * Name: pkt_conn_list_lock()
+ *
+ * Description:
+ *   Lock the packet connection list
+ *
+ * Assumptions:
+ *   This function must be called by driver thread.
+ *
+ ****************************************************************************/
+
+static inline_function void pkt_conn_list_lock(void)
+{
+  nxrmutex_lock(&g_pkt_connections_lock);
+}
+
+/****************************************************************************
+ * Name: pkt_conn_list_unlock()
+ *
+ * Description:
+ *   Unlock the packet connection list
+ *
+ * Assumptions:
+ *   This function must be called by driver thread.
+ *
+ ****************************************************************************/
+
+static inline_function void pkt_conn_list_unlock(void)
+{
+  nxrmutex_unlock(&g_pkt_connections_lock);
+}
 
 /****************************************************************************
  * Public Function Prototypes

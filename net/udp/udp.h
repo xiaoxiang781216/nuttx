@@ -38,6 +38,7 @@
 #include <nuttx/net/net.h>
 #include <nuttx/net/udp.h>
 #include <nuttx/mm/iob.h>
+#include <nuttx/mutex.h>
 
 #ifdef CONFIG_NET_UDP_NOTIFIER
 #  include <nuttx/wqueue.h>
@@ -197,6 +198,46 @@ extern "C"
 #else
 #  define EXTERN extern
 #endif
+
+/* The UDP connection list rmutex */
+
+extern rmutex_t g_udp_connections_lock;
+
+/****************************************************************************
+ * Inline Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: udp_conn_list_lock
+ *
+ * Description:
+ *   Lock the UDP connection list
+ *
+ * Assumptions:
+ *   This function must be called by driver thread.
+ *
+ ****************************************************************************/
+
+static inline_function void udp_conn_list_lock(void)
+{
+  nxrmutex_lock(&g_udp_connections_lock);
+}
+
+/****************************************************************************
+ * Name: udp_conn_list_unlock
+ *
+ * Description:
+ *   Unlock the UDP connection list
+ *
+ * Assumptions:
+ *   This function must be called by driver thread.
+ *
+ ****************************************************************************/
+
+static inline_function void udp_conn_list_unlock(void)
+{
+  nxrmutex_unlock(&g_udp_connections_lock);
+}
 
 /****************************************************************************
  * Public Function Prototypes
