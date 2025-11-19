@@ -56,7 +56,7 @@ struct notefdx_channel_s
  ****************************************************************************/
 
 static void notefdx_add(FAR struct note_driver_s *drv,
-                        FAR const void *note, size_t len);
+                        FAR const void *buf, size_t notelen, bool noswitche);
 
 /****************************************************************************
  * Private Data
@@ -89,7 +89,6 @@ struct notefdx_s g_notefdx =
     &g_notefdx_ops
   },
   NULL,
-  SP_UNLOCKED
 };
 
 /****************************************************************************
@@ -119,7 +118,7 @@ notefdx_taskname_handler(FAR const void *note, size_t len, FAR void *arg)
  ****************************************************************************/
 
 static void notefdx_add(FAR struct note_driver_s *drv,
-                        FAR const void *buf, size_t notelen)
+                        FAR const void *buf, size_t notelen, bool noswitche)
 {
   FAR struct notefdx_s *note = (FAR struct notefdx_s *)drv;
   FAR struct notefdx_channel_s *channel = note->channel;
