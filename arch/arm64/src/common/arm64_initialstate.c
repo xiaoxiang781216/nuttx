@@ -142,12 +142,6 @@ void up_initial_state(struct tcb_s *tcb)
       up_cpu_idlestack(this_cpu(), tcb,
                        CONFIG_IDLETHREAD_STACKSIZE);
 
-      /* set initialize idle thread tcb and exception depth
-       * core 0, idle0
-       */
-
-      write_sysreg(0, tpidrro_el0);
-
 #ifdef CONFIG_STACK_COLORATION
 
       /* If stack debug is enabled, then fill the stack with a

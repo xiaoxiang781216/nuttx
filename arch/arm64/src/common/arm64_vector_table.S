@@ -82,13 +82,7 @@
     str    \xreg0,  [sp, #8 * REG_SCTLR_EL1]
 
     mrs    \xreg0, sp_el0
-    mrs    \xreg1, tpidrro_el0
-    stp    \xreg0, \xreg1, [sp, #8 * REG_SP_EL0]
-
-    /* Increment exception depth */
-
-    add    \xreg1, \xreg1, #1
-    msr    tpidrro_el0, \xreg1
+    str    \xreg0, [sp, #8 * REG_SP_EL0]
 
     /* Save the FPU registers */
 
@@ -272,16 +266,8 @@ SECTION_FUNC(text, arm64_exit_exception)
     msr    sctlr_el1, x0
 #endif
 
-    ldp    x0, x1,   [sp, #8 * REG_SP_EL0]
+    ldr    x0, [sp, #8 * REG_SP_EL0]
     msr    sp_el0,   x0
-    msr    tpidrro_el0,  x1
-
-    /* decrement exception depth */
-
-    mrs    x0, tpidrro_el0
-    mov    x1, #1
-    sub    x0, x0, x1
-    msr    tpidrro_el0, x0
 
     ldp    x0,  x1,  [sp, #8 * REG_X0]
     ldp    x2,  x3,  [sp, #8 * REG_X2]
