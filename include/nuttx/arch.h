@@ -1541,6 +1541,37 @@ int up_addrenv_kstackalloc(FAR struct tcb_s *tcb);
 int up_addrenv_kstackfree(FAR struct tcb_s *tcb);
 #endif
 
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_FLAT)
+
+/****************************************************************************
+ * Name: up_addrenv_enter_kernel
+ *
+ * Description:
+ *   Enter kernel address environment.
+ *
+ ****************************************************************************/
+
+#  ifndef up_addrenv_enter_kernel
+void up_addrenv_enter_kernel(void);
+#  endif
+
+/****************************************************************************
+ * Name: up_addrenv_leave_kernel
+ *
+ * Description:
+ *   Leave kernel address environment.
+ *
+ ****************************************************************************/
+
+#  ifndef up_addrenv_leave_kernel
+void up_addrenv_leave_kernel(void);
+#  endif
+
+#else
+#  define up_addrenv_enter_kernel()
+#  define up_addrenv_leave_kernel()
+#endif
+
 /****************************************************************************
  * Name: up_addrenv_find_page
  *

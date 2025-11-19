@@ -125,6 +125,9 @@ static void pthread_start(void)
   FAR struct tcb_s *ptcb = this_task();
   FAR struct pthread_entry_s *entry =
     (FAR struct pthread_entry_s *)(ptcb + 1);
+  pthread_startroutine_t pthread = ptcb->entry.pthread;
+  pthread_trampoline_t trampoline = entry->trampoline;
+  pthread_addr_t arg = entry->arg;
 
   /* The priority of this thread may have been boosted to avoid priority
    * inversion problems.  If that is the case, then drop to the correct
@@ -141,12 +144,13 @@ static void pthread_start(void)
    * to switch to user-mode before calling into the pthread.
    */
 
-  DEBUGASSERT(entry->trampoline != NULL && ptcb->entry.pthread != NULL);
+  DEBUGASSERT(trampoline != NULL && pthread != NULL);
 
 #ifdef CONFIG_BUILD_FLAT
-  entry->trampoline(ptcb->entry.pthread, entry->arg);
+  up_addrenv_leave_kernel();
+  trampoline(pthread, arg);
 #else
-  up_pthread_start(entry->trampoline, ptcb->entry.pthread, entry->arg);
+  up_pthread_start(trampoline, pthread, arg);
 #endif
 
   /* The thread has returned (should never happen) */

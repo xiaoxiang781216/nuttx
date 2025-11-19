@@ -69,6 +69,7 @@ void nxtask_start(void)
 {
   FAR struct tcb_s *tcb = this_task();
   int ttype = tcb->flags & TCB_FLAG_TTYPE_MASK;
+  main_t main = tcb->entry.main;
   int exitcode = EXIT_FAILURE;
   FAR char **argv;
   int argc;
@@ -96,14 +97,15 @@ void nxtask_start(void)
 
   if (ttype == TCB_FLAG_TTYPE_KERNEL)
     {
-      exitcode = tcb->entry.main(argc, argv);
+      exitcode = main(argc, argv);
     }
   else
     {
 #ifdef CONFIG_BUILD_FLAT
-      nxtask_startup(tcb->entry.main, argc, argv);
+      up_addrenv_leave_kernel();
+      nxtask_startup(main, argc, argv);
 #else
-      up_task_start(tcb->entry.main, argc, argv);
+      up_task_start(main, argc, argv);
 #endif
     }
 
