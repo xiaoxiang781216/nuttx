@@ -50,6 +50,7 @@
 #include <nuttx/rtt.h>
 #include <nuttx/sensors/sensor.h>
 #include <nuttx/serial/gsmmux.h>
+#include <nuttx/serial/netdev_console.h>
 #include <nuttx/serial/pty.h>
 #include <nuttx/serial/uart_hostfs.h>
 #include <nuttx/serial/uart_ram.h>
@@ -215,6 +216,8 @@ void drivers_initialize(void)
   lwlconsole_init();
 #elif defined(CONFIG_CONSOLE_SYSLOG)
   syslog_console_init();
+#elif defined(CONFIG_CONSOLE_NETDEV)
+  netdev_console_init();
 #endif
 
 #ifdef CONFIG_UART_HOSTFS

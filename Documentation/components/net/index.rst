@@ -21,6 +21,7 @@ Network Support
   delay_act_and_tcp_perf.rst
   note.rst
   syslog.rst
+  console.rst
 
 ``net`` Directory Structure ::
 

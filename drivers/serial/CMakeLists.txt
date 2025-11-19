@@ -93,4 +93,10 @@ if(CONFIG_UART_GSMMUX)
   list(APPEND SRCS uart_gsmmux.c)
 endif()
 
+# Netdev console
+
+if(CONFIG_CONSOLE_NETDEV)
+  list(APPEND SRCS netdev_console.c)
+endif()
+
 target_sources(drivers PRIVATE ${SRCS})

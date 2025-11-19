@@ -93,6 +93,12 @@ ifeq ($(CONFIG_UART_GSMMUX),y)
   CSRCS += uart_gsmmux.c
 endif
 
+# Netdev console
+
+ifeq ($(CONFIG_CONSOLE_NETDEV),y)
+  CSRCS += netdev_console.c
+endif
+
 # Include serial build support
 
 DEPPATH += --dep-path serial
