@@ -49,4 +49,11 @@ config TRACE32_FDX_NOTE_SECTION
 
 endif # TRACE32_FDX_NOTE
 
+config STREAM_FDX
+	bool "Stream to/from Trace32 FDX"
+	select TRACE32_FDX
+	default n
+	---help---
+		Use Segger Trace32 FDX as a stream output.
+
 endmenu # Trace32 drivers

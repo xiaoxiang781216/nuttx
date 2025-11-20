@@ -29,6 +29,10 @@ ifeq ($(CONFIG_TRACE32_FDX_NOTE),y)
   CSRCS += note_fdx.c
 endif
 
+ifeq ($(CONFIG_STREAM_FDX),y)
+  CSRCS += stream_fdx.c
+endif
+
 ifneq ($(CONFIG_TRACE32_FDX_NOTE_SECTION),"")
   CFLAGS += ${DEFINE_PREFIX}TRACE32_FDX_NOTE_SECTION
 endif

@@ -30,6 +30,10 @@ if(CONFIG_TRACE32_FDX)
     list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/note_fdx.c)
   endif()
 
+  if(CONFIG_STREAM_FDX)
+    list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/stream_fdx.c)
+  endif()
+
   if(NOT "${CONFIG_TRACE32_FDX_NOTE_SECTION}" STREQUAL "")
     target_compile_definitions(trace32 PRIVATE -DTRACE32_FDX_NOTE_SECTION)
   endif()
