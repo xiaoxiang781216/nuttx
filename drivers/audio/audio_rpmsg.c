@@ -407,12 +407,19 @@ static int audio_rpmsg_send_data(FAR struct audio_rpmsg_s *aud)
   int ret = 0;
 
   nxmutex_lock(&aud->mutex);
+
+  if (aud->navail > 0 && dq_empty(&aud->pendq))
+    {
+      audwarn("%s no data to send.\n", aud->devname);
+    }
+
   while (!dq_empty(&aud->pendq) && aud->navail > 0)
     {
       nxmutex_unlock(&aud->mutex);
       req = audio_rpmsg_get_tx_buffer(aud, &space);
       if (req == NULL)
         {
+          auderr("%s failed to get tx buffer\n", aud->devname);
           return -ENOMEM;
         }
 
@@ -444,6 +451,7 @@ static int audio_rpmsg_send_data(FAR struct audio_rpmsg_s *aud)
       ret = rpmsg_send_nocopy(&aud->ept, req, sizeof(*req) + space);
       if (ret < 0)
         {
+          auderr("%s failed to send\n", aud->devname);
           rpmsg_release_tx_buffer(&aud->ept, req);
           break;
         }
@@ -578,6 +586,15 @@ static int audio_rpmsg_message_handler(FAR struct rpmsg_endpoint *ept,
       0
     };
 
+  audinfo("%s handle message: %d.\n", aud->devname, req->msgid);
+
+  nxmutex_lock(&aud->mutex);
+  if (req->msgid == AUDIO_MSG_STOP)
+    {
+      aud->navail = 0;
+    }
+
+  nxmutex_unlock(&aud->mutex);
   msg.msg_id = req->msgid;
   audio_rpmsg_callback(aud, AUDIO_CALLBACK_MESSAGE, &msg);
 
@@ -677,25 +694,32 @@ static int audio_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept, FAR void *data,
 {
   FAR struct audio_rpmsg_header_s *header = data;
   uint32_t cmd = AUDIO_RPMSG_GET_COMMAND(header->command);
-
-  audinfo("cmd=%" PRIu32 "\n", cmd);
+  int ret = 0;
 
   if (cmd < nitems(g_audio_rpmsg_handler))
     {
       if (AUDIO_RPMSG_IS_RESPONSE(header->command))
         {
-          return g_audio_rpmsg_response[cmd](ept, data, len, src, priv);
+          ret = g_audio_rpmsg_response[cmd](ept, data, len, src, priv);
         }
       else
         {
-          return g_audio_rpmsg_handler[cmd](ept, data, len, src, priv);
+          ret = g_audio_rpmsg_handler[cmd](ept, data, len, src, priv);
         }
     }
   else
     {
       auderr("cmd=%" PRIu32 " callback handler is null\n", cmd);
-      return -EINVAL;
+      ret = -EINVAL;
     }
+
+  if (ret < 0)
+    {
+      auderr("response:%d cmd=%" PRIu32 " fail\n",
+        AUDIO_RPMSG_IS_RESPONSE(header->command), cmd);
+    }
+
+  return ret;
 }
 
 /****************************************************************************
@@ -1094,6 +1118,7 @@ static int audio_rpmsg_stop(FAR struct audio_lowerhalf_s *dev)
       audio_rpmsg_callback(aud, AUDIO_CALLBACK_DEQUEUE, apb);
     }
 
+  aud->navail = 0;
   audio_rpmsg_callback(aud, AUDIO_CALLBACK_COMPLETE, NULL);
   nxmutex_unlock(&aud->mutex);
 
@@ -1221,7 +1246,6 @@ static int audio_rpmsg_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
   ret = audio_rpmsg_local_ioctl(aud, cmd, arg);
   if (ret != -ENOTTY)
     {
-      auderr("ioctl fail.");
       return ret;
     }
 
