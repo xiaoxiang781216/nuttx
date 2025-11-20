@@ -78,6 +78,14 @@ void arm_cpu_boot(int cpu)
 
   arm_fpuconfig();
 
+#if defined(CONFIG_PERCPU_SECTION) && !defined(CONFIG_SMP)
+  memcpy((void *)((uintptr_t)_sdata_percpu + PERCPU_OFFSET * cpu),
+         (void *)_ldata_percpu,
+         (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
+  memset((void *)(uintptr_t)_sbss_percpu + PERCPU_OFFSET * cpu,
+         0, (uintptr_t)_ebss_percpu - (uintptr_t)_sbss_percpu);
+#endif
+
 #ifdef CONFIG_ARM_MPU
   mpu_priv_flash((uintptr_t)_stext, (uintptr_t)_etext - (uintptr_t)_stext);
 #endif
@@ -91,14 +99,6 @@ void arm_cpu_boot(int cpu)
   /* Enable SMP cache coherency for the CPU */
 
   arm_enable_smp(cpu);
-
-#if defined(CONFIG_PERCPU_SECTION) && !defined(CONFIG_SMP)
-  memcpy((void *)((uintptr_t)_sdata_percpu + PERCPU_OFFSET * cpu),
-         (void *)_ldata_percpu,
-         (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
-  memset((void *)(uintptr_t)_sbss_percpu + PERCPU_OFFSET * cpu,
-         0, (uintptr_t)_ebss_percpu - (uintptr_t)_sbss_percpu);
-#endif
 
   /* Initialize the Generic Interrupt Controller (GIC) for CPUn (n != 0) */
 
