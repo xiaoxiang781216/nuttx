@@ -127,6 +127,7 @@ void irq_dispatch(int irq, FAR void *context)
 {
 #ifdef CONFIG_DEBUG_MM
   struct tcb_s *rtcb = this_task();
+  uint32_t heap_check = atomic_read(&rtcb->flags) & TCB_FLAG_HEAP_CHECK;
 #endif
   xcpt_t vector = irq_unexpected_isr;
   FAR void *arg = NULL;
@@ -178,8 +179,8 @@ void irq_dispatch(int irq, FAR void *context)
 #endif
 
 #ifdef CONFIG_DEBUG_MM
-  if ((atomic_read(&rtcb->flags) & TCB_FLAG_HEAP_CHECK) ||
-      (this_task()->flags & TCB_FLAG_HEAP_CHECK))
+  if (heap_check || (atomic_read(&(this_task()->flags)) &
+                     TCB_FLAG_HEAP_CHECK))
     {
       kmm_checkcorruption();
     }

@@ -1245,7 +1245,7 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter)
   struct note_irqhandler_s note;
   FAR struct note_driver_s **driver;
   bool formatted = false;
-  FAR struct tcb_s *tcb = running_task();
+  FAR struct tcb_s *tcb = enter ? running_task() : this_task();
 
   for (driver = g_note_drivers; *driver; driver++)
     {
