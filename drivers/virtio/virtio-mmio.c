@@ -33,6 +33,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/mm/kasan.h>
+#include <nuttx/sched_note.h>
 #include <nuttx/virtio/virtio.h>
 #include <nuttx/virtio/virtio-mmio.h>
 
@@ -746,6 +747,12 @@ static int virtio_mmio_interrupt(int irq, FAR void *context, FAR void *arg)
   unsigned int i;
   uint32_t isr;
 
+  if (irq == 66)
+    {
+      sched_note_printf(NOTE_TAG_ALWAYS, "[IN] vmdev=%p irq=%d context=%p",
+                        vmdev, irq, context);
+    }
+
   isr = metal_io_read32(&vmdev->cfg_io, VIRTIO_MMIO_INTERRUPT_STATUS);
   metal_io_write32(&vmdev->cfg_io, VIRTIO_MMIO_INTERRUPT_ACK, isr);
   if (isr & VIRTIO_MMIO_INTERRUPT_VRING)
@@ -753,11 +760,23 @@ static int virtio_mmio_interrupt(int irq, FAR void *context, FAR void *arg)
       for (i = 0; i < vmdev->vdev.vrings_num; i++)
         {
           vq = vrings_info[i].vq;
+          if (irq == 66)
+            {
+              sched_note_printf(NOTE_TAG_ALWAYS, "i=%d vq=%p callback=%p",
+                                i, vq, vq->callback);
+            }
+
           if (vq->callback != NULL && virtqueue_nused(vq) > 0)
             {
               vq->callback(vq);
             }
         }
+    }
+
+  if (irq == 66)
+    {
+      sched_note_printf(NOTE_TAG_ALWAYS, "[OUT] vmdev=%p irq=%d context=%p",
+                        vmdev, irq, context);
     }
 
   return OK;
