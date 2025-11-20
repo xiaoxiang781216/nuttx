@@ -231,7 +231,7 @@ DEFINE_PER_CPU_BSS_BMP(volatile enum nx_initstate_e, g_nx_initstate);
  ****************************************************************************/
 
 /****************************************************************************
- * Name: tasklist_initialize
+ * Name: tasklist_table_initialize
  *
  * Description:
  *   Initialization of table of task lists.This table is indexed by the
@@ -242,7 +242,7 @@ DEFINE_PER_CPU_BSS_BMP(volatile enum nx_initstate_e, g_nx_initstate);
  *
  ****************************************************************************/
 
-static void tasklist_initialize(void)
+static void tasklist_table_initialize(void)
 {
   FAR struct tasklist_s *tlist = (FAR void *)&g_tasklisttable;
 
@@ -507,15 +507,61 @@ static void idle_group_initialize(void)
 #endif
 
 /****************************************************************************
+ * Name: tasklist_initialize
+ *
+ * Description:
+ *   Tramsition to the OSINIT_TASKLISTS state.
+ *
+ ****************************************************************************/
+
+static void tasklist_initialize(void)
+{
+  /* Initialize the IDLE task TCB *******************************************/
+
+  idle_task_initialize();
+
+  /* Initialize wdog list ***************************************************/
+
+  wdlist_initialize();
+
+  /* Initialize wqueue list *************************************************/
+
+  worklist_initialize();
+
+  /* Initialize task list table *********************************************/
+
+  tasklist_table_initialize();
+
+  /* Initialize early drivers ***********************************************/
+
+  drivers_early_initialize();
+
+  /* Initialize RTOS facilities *********************************************/
+
+  /* Initialize the semaphore facility.  This has to be done very early
+   * because many subsystems depend upon fully functional semaphores.
+   */
+
+  nxsem_initialize();
+
+  /* Task lists are initialized */
+
+  g_nx_initstate = OSINIT_TASKLISTS;
+  sched_trace_mark("TASKLISTS");
+}
+
+/****************************************************************************
  * Name: memory_initialize
  *
  * Description:
- *   Initialize the memory manager.
+ *   Tramsition to the OSINIT_MEMORY state.
  *
  ****************************************************************************/
 
 static void memory_initialize(void)
 {
+  int i;
+
 #if defined(MM_KERNEL_USRHEAP_INIT) || defined(CONFIG_MM_KERNEL_HEAP) || \
     defined(CONFIG_MM_PGALLOC)
   /* Initialize the memory manager */
@@ -571,78 +617,6 @@ static void memory_initialize(void)
 
   iob_initialize();
 #endif
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: nx_start
- *
- * Description:
- *   This function is called to initialize the operating system and to spawn
- *   the user initialization thread of execution.  This is the initial entry
- *   point into NuttX.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   Does not return.
- *
- ****************************************************************************/
-
-void nx_start(void)
-{
-  int i;
-
-  /* Boot up is complete */
-
-  g_nx_initstate = OSINIT_BOOT;
-
-  /* Initialize the IDLE task TCB *******************************************/
-
-  idle_task_initialize();
-
-  /* Initialize wdog list ***************************************************/
-
-  wdlist_initialize();
-
-  sched_trace_mark("BOOT");
-
-  sinfo("Entry\n");
-
-  /* Initialize wqueue list *************************************************/
-
-  worklist_initialize();
-
-  /* Initialize task list table *********************************************/
-
-  tasklist_initialize();
-
-  /* Task lists are initialized */
-
-  g_nx_initstate = OSINIT_TASKLISTS;
-  sched_trace_mark("TASKLISTS");
-
-  /* Initialize RTOS Data ***************************************************/
-
-  drivers_early_initialize();
-
-  sched_trace_begin();
-
-  /* Initialize RTOS facilities *********************************************/
-
-  /* Initialize the semaphore facility.  This has to be done very early
-   * because many subsystems depend upon fully functional semaphores.
-   */
-
-  nxsem_initialize();
-
-  /* Initialize the memory manager. */
-
-  memory_initialize();
 
 #ifdef CONFIG_SCHED_PERF_EVENTS
   perf_event_init();
@@ -671,7 +645,18 @@ void nx_start(void)
 
   g_nx_initstate = OSINIT_MEMORY;
   sched_trace_mark("MEMORY");
+}
 
+/****************************************************************************
+ * Name: hardware_initialize
+ *
+ * Description:
+ *   Tramsition to the OSINIT_HARDWARE state.
+ *
+ ****************************************************************************/
+
+static void hardware_initialize(void)
+{
   /* Initialize tasking data structures */
 
   task_initialize();
@@ -747,6 +732,51 @@ void nx_start(void)
 
   g_nx_initstate = OSINIT_HARDWARE;
   sched_trace_mark("HARDWARE");
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: nx_start
+ *
+ * Description:
+ *   This function is called to initialize the operating system and to spawn
+ *   the user initialization thread of execution.  This is the initial entry
+ *   point into NuttX.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   Does not return.
+ *
+ ****************************************************************************/
+
+void nx_start(void)
+{
+#ifdef CONFIG_SMP
+  int i;
+#endif
+
+  /* Boot up is complete */
+
+  g_nx_initstate = OSINIT_BOOT;
+  sched_trace_begin();
+  sinfo("Entry\n");
+
+  /* Head of ready-to-run/assigned task lists valid */
+
+  tasklist_initialize();
+
+  /* The memory manager has been initialized */
+
+  memory_initialize();
+
+  /* MCU-specific hardware is initialized */
+
+  hardware_initialize();
 
   /* Setup for Multi-Tasking ************************************************/
 
