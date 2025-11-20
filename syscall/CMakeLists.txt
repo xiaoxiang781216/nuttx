@@ -34,14 +34,7 @@ if(CONFIG_LIB_SYSCALL)
   target_sources(stubs PRIVATE syscall_stublookup.c)
 endif()
 
-# TODO: should CONFIG_SCHED_INSTRUMENTATION_SYSCALL depend on
-# CONFIG_LIB_SYSCALL?
-if(CONFIG_SCHED_INSTRUMENTATION_SYSCALL)
-  if(CONFIG_LIB_SYSCALL)
-    target_sources(proxies PRIVATE syscall_names.c)
-    target_sources(stubs PRIVATE syscall_names.c)
-  else()
-    add_subdirectory(wraps)
-    target_sources(wraps PRIVATE syscall_names.c)
-  endif()
+if(CONFIG_LIB_SYSCALL_WRAPPER)
+  add_subdirectory(wraps)
+  target_sources(wraps PRIVATE syscall_names.c)
 endif()

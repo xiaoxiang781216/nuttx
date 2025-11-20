@@ -1359,7 +1359,7 @@ config SCHED_INSTRUMENTATION_SYSCALL
 	bool "System call monitor hooks"
 	default n
 	select SCHED_INSTRUMENTATION
-	depends on ARCH_HAVE_SYSCALL_HOOKS
+	depends on LIB_SYSCALL || LIB_SYSCALL_WRAPPER
 	---help---
 		Enables additional hooks for entry and exit from system call.
 		Board-specific logic must provide this additional logic.

@@ -562,8 +562,8 @@ config ARCH_HAVE_SYSCALL_HOOKS
 	default n
 	---help---
 		Indicates that the architecture supports the system call hooks as
-		required if CONFIG_SCHED_INSTRUMENTATION_SYSCALL is enabled.  Refer
-		to sched/Kconfig for additional information.
+		required if CONFIG_LIB_SYSCALL_WRAPPER is enabled.  Refer
+		to syscall/Kconfig for additional information.
 
 config ARCH_HAVE_BACKTRACE
 	bool

@@ -38,13 +38,10 @@ endif
 
 STUB_SRCS += syscall_names.c
 
-ifeq ($(CONFIG_SCHED_INSTRUMENTATION_SYSCALL),y)
-ifeq ($(CONFIG_LIB_SYSCALL),y)
-PROXY_SRCS += syscall_names.c
-else
-WRAP_SRCS += syscall_names.c
+ifeq ($(CONFIG_LIB_SYSCALL_WRAPPER),y)
+  WRAP_SRCS += syscall_names.c
 endif
-endif
+
 STUB_SRCS += syscall_stublookup.c
 
 AOBJS = $(ASRCS:.S=$(OBJEXT))

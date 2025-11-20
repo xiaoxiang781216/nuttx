@@ -5,7 +5,7 @@
 
 menuconfig LIB_SYSCALL
 	bool "System call support"
-	depends on ARCH_HAVE_SYSCALL
+	depends on ARCH_HAVE_SYSCALL && !BUILD_FLAT
 	default n
 	---help---
 		Build in support for "system calls".  System calls are used to
@@ -73,3 +73,12 @@ config LIB_SYSCALL_EXTENSION
 		nuttx_syscall_utils.cmake for details.
 
 endif # LIB_SYSCALL
+
+config LIB_SYSCALL_WRAPPER
+	bool "Wrap system call functions"
+	default n
+	depends on ARCH_HAVE_SYSCALL_HOOKS
+	---help---
+		Enable this option to wrap system call functions with some
+		functions defined. Can use it to protect kernel. rise
+		privilege to access kernel data.

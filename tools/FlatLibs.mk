@@ -62,14 +62,7 @@ ifeq ($(CONFIG_LIBM_TOOLCHAIN)$(CONFIG_LIBM_NONE),)
 NUTTXLIBS += staging$(DELIM)libm$(LIBEXT)
 endif
 
-ifeq ($(CONFIG_LIB_SYSCALL),y)
-NUTTXLIBS += staging$(DELIM)libstubs$(LIBEXT)
-USERLIBS  += staging$(DELIM)libproxies$(LIBEXT)
-endif
-
-# Add library for system call instrumentation if needed
-
-ifeq ($(CONFIG_SCHED_INSTRUMENTATION_SYSCALL),y)
+ifeq ($(CONFIG_LIB_SYSCALL_WRAPPER),y)
 NUTTXLIBS += staging$(DELIM)libwraps$(LIBEXT)
 endif
 

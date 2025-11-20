@@ -45,7 +45,7 @@ NUTTX = $(call CONVERT_PATH,$(TOPDIR)$(DELIM)nuttx$(EXEEXT))
 
 # Additional rules for system call wrapper
 
-ifeq ($(CONFIG_SCHED_INSTRUMENTATION_SYSCALL),y)
+ifeq ($(CONFIG_LIB_SYSCALL_WRAPPER),y)
   EXTRALINKCMDS += @$(TOPDIR)/syscall/syscall_wraps.ldcmd
 endif
 
