@@ -165,23 +165,3 @@ int notefdx_register(void)
   g_notefdx.channel = &g_fdx_note_channel;
   return note_driver_register(&g_notefdx.driver);
 }
-
-/****************************************************************************
- * Name: T32_Fdx_GetTimebase
- *
- * Description:
- *   Get the timebase for the FDX driver
- *
- * Returned Value:
- *   The timebase for the FDX driver
- *
- * Note:
- *   This function is used to get the timebase for the FDX driver.
- *   It is called by t32fdx.c
- *
- ****************************************************************************/
-
-unsigned long T32_Fdx_GetTimebase(void)
-{
-  return perf_gettime();
-}

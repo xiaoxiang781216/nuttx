@@ -24,6 +24,7 @@ if(CONFIG_TRACE32_FDX)
   nuttx_add_kernel_library(trace32)
 
   set(CSRCS ${CMAKE_CURRENT_LIST_DIR}/t32fdx/t32fdx.c)
+  list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/t32fdx_gettime.c)
 
   if(CONFIG_TRACE32_FDX_NOTE)
     list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/note_fdx.c)

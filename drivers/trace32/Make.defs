@@ -22,6 +22,7 @@
 
 ifeq ($(CONFIG_TRACE32_FDX),y)
   CSRCS += t32fdx/t32fdx.c
+  CSRCS += t32fdx_gettime.c
 endif
 
 ifeq ($(CONFIG_TRACE32_FDX_NOTE),y)
