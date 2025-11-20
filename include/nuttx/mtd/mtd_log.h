@@ -142,7 +142,9 @@ extern "C"
  *
  ****************************************************************************/
 
+#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
 int mtdlog_register(FAR const char *path, FAR struct mtd_dev_s *mtd);
+#endif
 
 /****************************************************************************
  * Name: mtdlog_unregister
@@ -158,7 +160,9 @@ int mtdlog_register(FAR const char *path, FAR struct mtd_dev_s *mtd);
  *
  ****************************************************************************/
 
+#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
 int mtdlog_unregister(FAR const char *path);
+#endif
 
 #undef EXTERN
 #ifdef __cplusplus
