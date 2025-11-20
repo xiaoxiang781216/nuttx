@@ -435,13 +435,15 @@ class LiefELF:
         self.bits = 64 if self.elf.abstract.header.is_64 else 32
 
     def get_symbol(self, symbol):
-        sym = self.elf.get_symbol(symbol)
-        if not sym:
-            # Try to get LTO private symbol if not found.
-            # This may still not work if LTO renames the symbol, or
-            # it has different suffix.
-            sym = self.elf.get_symbol(f"{symbol}.lto_priv.0")
-        return sym
+        # Try to get LTO private symbol if not found.
+        # This may still not work if LTO renames the symbol, or
+        # it has different suffix.
+        # Try to get symbol with .0 suffix too for some static variable defined in function scope, like g_statenames
+        return (
+            self.elf.get_symbol(symbol)
+            or self.elf.get_symbol(f"{symbol}.lto_priv.0")
+            or self.elf.get_symbol(f"{symbol}.0")
+        )
 
     def read_symbol(
         self, symbol, struct: Construct = None
