@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/bl602/bl602_oneshot_lowerhalf.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,8 +32,8 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/timers/oneshot.h>
 
 #include "riscv_internal.h"
@@ -44,7 +46,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Private definetions */
+/* Private definitions */
 #define TIMER_MAX_VALUE (0xFFFFFFFF)
 #define TIMER_CLK_DIV   (160)
 #define TIMER_CLK_FREQ  (160000000UL / (TIMER_CLK_DIV))
@@ -71,7 +73,6 @@ struct bl602_oneshot_lowerhalf_s
   uint32_t           freq;    /* Timer frequency */
   uint8_t            tim;     /* timer tim 0,1 */
   uint8_t            irq;     /* IRQ associated with this timer */
-  bool               started; /* True: Timer has been started */
 };
 
 /****************************************************************************
@@ -151,6 +152,8 @@ static int bl602_oneshot_handler(int irq, void *context, void *arg)
   uint32_t ticr_val;
   uint32_t ticr_addr;
 
+  bl602_cancel(&priv->lh);
+
   if (priv->tim == 0)
     {
       int_id = getreg32(BL602_TIMER_TMSR2);
@@ -191,8 +194,7 @@ static int bl602_oneshot_handler(int irq, void *context, void *arg)
 
 static clkcnt_t bl602_max_delay(struct oneshot_lowerhalf_s *lower)
 {
-  struct bl602_oneshot_lowerhalf_s *priv = &g_bl602_lowerhalf;
-  return (uint64_t)(UINT32_MAX / priv->freq) * (uint64_t)NSEC_PER_SEC;
+  return UINT64_MAX;
 }
 
 static clkcnt_t bl602_current(struct oneshot_lowerhalf_s *lower)
@@ -203,37 +205,13 @@ static clkcnt_t bl602_current(struct oneshot_lowerhalf_s *lower)
 static void bl602_start_absolute(struct oneshot_lowerhalf_s *lower,
                                  clkcnt_t expected)
 {
-  struct bl602_oneshot_lowerhalf_s *priv = &g_bl602_lowerhalf;
-  irqstate_t flags;
-  uint64_t   usec;
+  uint64_t   delay;
+  uint64_t   curr;
 
-  if (priv->started == true)
-    {
-      /* Yes.. then cancel it */
+  curr = bl602_current(lower);
+  delay = expected - curr > expected ? 0 : expected - curr;
 
-      tmrinfo("Already running... cancelling\n");
-      bl602_cancel(lower);
-    }
-
-  /* Save the callback information and start the timer */
-
-  flags = enter_critical_section();
-
-  /* Express the delay in usec */
-
-  usec = (expected - bl602_current(lower)) / 1000u;
-
-  bl602_timer_setcompvalue(
-    priv->tim, TIMER_COMP_ID_0, usec / (TIMER_CLK_FREQ / priv->freq));
-
-  bl602_timer_setpreloadvalue(priv->tim, 0);
-  irq_attach(priv->irq, bl602_oneshot_handler, (void *)priv);
-  up_enable_irq(priv->irq);
-  bl602_timer_intmask(priv->tim, TIMER_INT_COMP_0, 0);
-  bl602_timer_enable(priv->tim);
-  priv->started = true;
-
-  leave_critical_section(flags);
+  bl602_start(lower, delay);
 }
 
 static void bl602_start(struct oneshot_lowerhalf_s *lower, clkcnt_t delta)
@@ -241,14 +219,6 @@ static void bl602_start(struct oneshot_lowerhalf_s *lower, clkcnt_t delta)
   struct bl602_oneshot_lowerhalf_s *priv = &g_bl602_lowerhalf;
   irqstate_t flags;
   uint64_t   usec;
-
-  if (priv->started == true)
-    {
-      /* Yes.. then cancel it */
-
-      tmrinfo("Already running... cancelling\n");
-      bl602_cancel(lower);
-    }
 
   /* Save the callback information and start the timer */
 
@@ -262,11 +232,8 @@ static void bl602_start(struct oneshot_lowerhalf_s *lower, clkcnt_t delta)
     priv->tim, TIMER_COMP_ID_0, usec / (TIMER_CLK_FREQ / priv->freq));
 
   bl602_timer_setpreloadvalue(priv->tim, 0);
-  irq_attach(priv->irq, bl602_oneshot_handler, (void *)priv);
-  up_enable_irq(priv->irq);
   bl602_timer_intmask(priv->tim, TIMER_INT_COMP_0, 0);
   bl602_timer_enable(priv->tim);
-  priv->started = true;
 
   leave_critical_section(flags);
 }
@@ -283,8 +250,6 @@ static void bl602_cancel(struct oneshot_lowerhalf_s *lower)
   flags = enter_critical_section();
 
   bl602_timer_disable(priv->tim);
-  priv->started = false;
-  up_disable_irq(priv->irq);
   bl602_timer_intmask(priv->tim, TIMER_INT_COMP_0, 1);
 
   leave_critical_section(flags);
@@ -321,7 +286,6 @@ struct oneshot_lowerhalf_s *oneshot_initialize(int      chan,
 
   /* Initialize the lower-half driver structure */
 
-  priv->started = false;
   priv->freq    = TIMER_CLK_FREQ / resolution;
   priv->tim     = chan;
   if (priv->tim == TIMER_CH0)
@@ -359,6 +323,11 @@ struct oneshot_lowerhalf_s *oneshot_initialize(int      chan,
   bl602_timer_disable(chan);
 
   bl602_timer_init(&timstr);
+
+  irq_attach(priv->irq, bl602_oneshot_handler, (void *)priv);
+
+  bl602_timer_intmask(priv->tim, TIMER_INT_COMP_0, 1);
+  up_enable_irq(priv->irq);
 
   oneshot_count_init(&priv->lh, NSEC_PER_SEC);
 
