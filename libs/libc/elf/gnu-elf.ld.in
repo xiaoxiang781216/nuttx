@@ -33,7 +33,7 @@
 #    define TEXT 0x0
 #  endif
 #  ifndef DATA
-#    define DATA
+#    define DATA 0x0
 #  endif
 #endif
 
@@ -47,7 +47,10 @@
 
 SECTIONS
 {
-  .text TEXT : SUBALIGN(SECTIONS_ALIGN)
+#if TEXT != 0x0
+  . = TEXT;
+#endif
+  .text : SUBALIGN(SECTIONS_ALIGN)
     {
       _stext = . ;
       *(.text)
@@ -85,7 +88,11 @@ SECTIONS
     }
 
   _eronly = ABSOLUTE(.);
-  .data DATA : AT(_eronly) SUBALIGN(SECTIONS_ALIGN)
+
+#if DATA != 0x0
+  . = DATA;
+#endif
+  .data : AT(_eronly) SUBALIGN(SECTIONS_ALIGN)
     {
       _sdata = . ;
       *(.data)
