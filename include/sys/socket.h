@@ -35,7 +35,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* The socket()domain parameter specifies a communication domain; this
+/**
+ * @cond
+ * The socket()domain parameter specifies a communication domain; this
  * selects the protocol family which will be used for communication.
  */
 
@@ -437,37 +439,804 @@ extern "C"
 #define EXTERN extern
 #endif
 
+/**
+ * @endcond
+ * @brief
+ *   socket() creates an endpoint for communication and returns a
+ *   descriptor.
+ *
+ * @param  domain   The domain argument specifies a communication domain;
+ *     this selects the protocol family which will be used for communication.
+ * @param  type     The socket has the indicated type, which specifies
+ *     the communication semantics.
+ * @param  protocol The protocol specifies a particular protocol to be used
+ *     with the socket.
+ *
+ * @return  A non-negative socket descriptor on success; -1 on error with
+ *     errno set appropriately.
+ *
+ * @retval  EACCES
+ *     Permission to create a socket of the specified type and/or protocol
+ *     is denied.
+ * @retval  EAFNOSUPPORT
+ *     The implementation does not support the specified address family.
+ * @retval  EINVAL
+ *     Unknown protocol, or protocol family not available.
+ * @retval  EMFILE
+ *     Process file table overflow.
+ * @retval  ENFILE
+ *     The system limit on the total number of open files has been reached.
+ * @retval  ENOBUFS
+ *     Insufficient memory is available. The socket cannot be created until
+ *     sufficient resources are freed.
+ * @retval  ENOMEM
+ *     Insufficient memory is available. The socket cannot be created until
+ *     sufficient resources are freed.
+ * @retval  EPROTONOSUPPORT
+ *     The protocol type or the specified protocol is not supported within
+ *     this domain.
+ */
+
 int socket(int domain, int type, int protocol);
+
+/**
+ * @brief
+ *   Create an unbound pair of connected sockets in a specified domain, of a
+ *   specified type, under the protocol optionally specified by the protocol
+ *   argument. The two sockets shall be identical. The file descriptors used
+ *   in referencing the created sockets shall be returned in
+ *   sv[0] and sv[1].
+ *
+ * @param  domain   The domain argument specifies a communication domain;
+ *     this selects the protocol family which will be used for communication.
+ * @param  type     The socket has the indicated type, which specifies
+ *     the communication semantics.
+ * @param  protocol The protocol specifies a particular protocol to be used
+ *     with the socket.
+ * @param  sv[2]    The user provided array in which to catch the pair
+ *     descriptors
+ *
+ * @return
+ *   On success, zero is returned.  On error, -1 is returned, errno is
+ *   set to indicate the error, and sv is left unchanged
+ *
+ * @retval EAFNOSUPPORT
+ *     The specified address family is not supported on this machine.
+ * @retval EFAULT
+ *     The address sv does not specify a valid part of the process
+ *     address space.
+ * @retval EMFILE
+ *     The per-process limit on the number of open file
+ *     descriptors has been reached.
+ * @retval ENFILE
+ *     The system-wide limit on the total number of open files has
+ *     been reached.
+ * @retval EOPNOTSUPP
+ *     The specified protocol does not support creation of socket
+ *     pairs.
+ * @retval EPROTONOSUPPORT
+ *     The specified protocol is not supported on this machine.
+ */
+
 int socketpair(int domain, int type, int protocol, int sv[2]);
+
+/**
+ * @brief
+ *   bind() Gives the socket sockfd the local address addr.addr is addrlen
+ *   bytes long. Traditionally, this is called “assigning a name to a
+ *   socket.” When a socket is created with socket(), it exists in a
+ *   name space (address family) but has no name assigned.
+ *
+ * @param sockfd   Socket descriptor from socket.
+ * @param addr     Socket local address.
+ * @param addrlen  Length of addr.
+ *
+ * @return  0 on success; -1 on error with errno set appropriately.
+ *
+ * @retval  EACCES
+ *     The address is protected, and the user is not the superuser.
+ * @retval  EADDRINUSE
+ *     The given address is already in use.
+ * @retval  EBADF
+ *     sockfd is not a valid descriptor.
+ * @retval  EINVAL
+ *     The socket is already bound to an address.
+ * @retval  ENOTSOCK
+ *     sockfd is a descriptor for a file, not a socket.
+ */
+
 int bind(int sockfd, FAR const struct sockaddr *addr, socklen_t addrlen);
+
+/**
+ * @brief
+ *   connect() connects the socket referred to by the file descriptor
+ *   sockfd to the address specified by addr. The addrlen argument
+ *   specifies the size of addr. The format of the address in addr is
+ *   determined by the address space of the socket sockfd. If the socket
+ *   sockfd is of type SOCK_DGRAM then addr is the address to which
+ *   datagrams are sent by default, and the only address from which
+ *   datagrams are received. If the socket is of type SOCK_STREAM or
+ *   SOCK_SEQPACKET, this call attempts to make a connection to the socket
+ *   that is bound to the address specified by addr. Generally,
+ *   connection-based protocol sockets may successfully connect() only once;
+ *   connectionless protocol sockets may use connect() multiple times to
+ *   change their association. Connectionless sockets may dissolve the
+ *   association by connecting to an address with the sa_family member of
+ *   sockaddr set to AF_UNSPEC.
+ *
+ * @param sockfd  Socket descriptor returned by socket().
+ * @param addr    Server address (form depends on type of socket).
+ * @param addrlen Length of actual addr.
+ *
+ * @return  0 on success; -1 on error with `errno <#ErrnoAccess>`
+ *     __ set appropriately.
+ *
+ * @retval  EACCES or EPERM
+ *     The user tried to connect to a broadcast address without having
+ *     the socket broadcast flag enabled or the connection request
+ *     failed because of a local firewall rule.
+ * @retval  EADDRINUSE
+ *     Local address is already in use.
+ * @retval  EAFNOSUPPORT
+ *     The passed address didn’t have the correct address family in its
+ *     sa_family field.
+ * @retval  EAGAIN
+ *     No more free local ports or insufficient entries in the routing
+ *     cache. For PF_INET.
+ * @retval  EALREADY
+ *     The socket is non-blocking and a previous connection attempt has
+ *     not yet been completed.
+ * @retval  EBADF
+ *     The file descriptor is not a valid index in the descriptor table.
+ * @retval ECONNREFUSED
+ *     No one listening on the remote address.
+ * @retval  EFAULT
+ *     The socket structure address is outside the user’s address space.
+ * @retval  EINPROGRESS
+ *     The socket is non-blocking and the connection cannot be completed
+ *     immediately.
+ * @retval  EINTR
+ *     The system call was interrupted by a signal that was caught.
+ * @retval  EISCONN
+ *     The socket is already connected.
+ * @retval  ENETUNREACH
+ *     Network is unreachable.
+ * @retval ENOTSOCK
+ *     The file descriptor is not associated with a socket.
+ * @retval  ETIMEDOUT
+ *     Timeout while attempting connection. The server may be too busy
+ *     to accept new connections.
+ */
+
 int connect(int sockfd, FAR const struct sockaddr *addr, socklen_t addrlen);
 
+/**
+ * @brief
+ *   To accept connections, a socket is first created with socket(), a
+ *   willingness to accept incoming connections and a queue limit for
+ *   incoming connections are specified with listen(), and then the
+ *   connections are accepted with accept(). The listen() call applies only
+ *   to sockets of type SOCK_STREAM or SOCK_SEQPACKET.
+ *
+ * @param sockfd   Socket descriptor of the bound socket.
+ * @param backlog  The maximum length the queue of pending connections may
+ *     grow. If a connection request arrives with the queue full, the client
+ *     may receive an error with an indication of ECONNREFUSED or, if the
+ *     underlying protocol supports retransmission, the request may be
+ *     ignored so that retries succeed.
+ *
+ * @return  On success, zero is returned. On error, -1 is returned,
+ *     and `errno <#ErrnoAccess>`__ is set appropriately.
+ *
+ * @retval  EADDRINUSE
+ *     The address is protected, and the user is not the superuser.
+ * @retval  EBADF
+ *     The argument sockfd is not a valid descriptor.
+ * @retval  ENOTSOCK
+ *     The argument sockfd is not a socket.
+ * @retval  EOPNOTSUPP
+ *     The socket is not of a type that supports the listen operation.
+ */
+
 int listen(int sockfd, int backlog);
+
+/**
+ * @brief
+ *   The accept() function is used with connection-based socket
+ *   types (SOCK_STREAM, SOCK_SEQPACKET and SOCK_RDM). It extracts the
+ *   first connection request on the queue of pending connections,
+ *   creates a new connected socket with most of the same properties
+ *   as sockfd, and allocates a new socket descriptor for the socket,
+ *   which is returned. The newly created socket is no longer in the
+ *   listening state. The original socket sockfd is unaffected by this
+ *   call. Per file descriptor flags are not inherited across an accept.
+ *
+ *   The sockfd argument is a socket descriptor that has been created
+ *   with socket(), bound to a local address with bind(), and is
+ *   listening for connections after a call to listen().
+ *
+ *   On return, the addr structure is filled in with the address of
+ *   the connecting entity. The addrlen argument initially contains the
+ *   size of the structure pointed to by addr; on return it will contain
+ *   the actual length of the address returned.
+ *
+ *   If no pending connections are present on the queue, and the socket
+ *   is not marked as non-blocking, accept blocks the caller until a
+ *   connection is present. If the socket is marked non-blocking and no
+ *   pending connections are present on the queue, accept returns EAGAIN.
+ *
+ * @param sockfd  Socket descriptor of the listening socket.
+ * @param addr    Receives the address of the connecting client.
+ * @param addrlen Input: allocated size of addr, Return: returned size
+ *     of addr.
+ *
+ * @return  Returns -1 on error. If it succeeds, it returns a
+ *     non-negative integer that is a descriptor for the accepted socket.
+ *
+ * @retval  EAGAIN or EWOULDBLOCK
+ *     The socket is marked non-blocking and no connections are present
+ *     to be accepted.
+ * @retval  EBADF
+ *     The descriptor is invalid.
+ * @retval  ENOTSOCK
+ *     The descriptor references a file, not a socket.
+ * @retval  EOPNOTSUPP
+ *     The referenced socket is not of type SOCK_STREAM.
+ * @retval  EINTR
+ *     The system call was interrupted by a signal that was caught
+ *     before a valid connection arrived.
+ * @retval  ECONNABORTED
+ *     A connection has been aborted.
+ * @retval EINVAL
+ *     Socket is not listening for connections.
+ * @retval  EMFILE
+ *     The per-process limit of open file descriptors has been reached.
+ * @retval  ENFILE
+ *     The system maximum for file descriptors has been reached.
+ * @retval  EFAULT
+ *     The addr parameter is not in a writable part of the user
+ *     address space.
+ * @retval  ENOBUFS or ENOMEM
+ *     Not enough free memory.
+ * @retval  EPROTO
+ *     Protocol error.
+ * @retval  EPERM
+ *     Firewall rules forbid connection.
+ */
+
 int accept(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen);
+
+/**
+ * @cond
+ * @brief
+ *   The accept4 function is used with connection-based socket types
+ *   (SOCK_STREAM, SOCK_SEQPACKET and SOCK_RDM). It extracts the first
+ *   connection request on the queue of pending connections, creates a new
+ *   connected socket with mostly the same properties as 'sockfd', and
+ *   allocates a new socket descriptor for the socket, which is returned.
+ *   The newly created socket is no longer in the listening state. The
+ *   original socket 'sockfd' is unaffected by this call.  Per file
+ *   descriptor flags are not inherited across an accept.
+ *
+ *   The 'sockfd' argument is a socket descriptor that has been created with
+ *   socket(), bound to a local address with bind(), and is listening for
+ *   connections after a call to listen().
+ *
+ *   On return, the 'addr' structure is filled in with the address of the
+ *   connecting entity. The 'addrlen' argument initially contains the size
+ *   of the structure pointed to by 'addr'; on return it will contain the
+ *   actual length of the address returned.
+ *
+ *   If no pending connections are present on the queue, and the socket is
+ *   not marked as non-blocking, accept blocks the caller until a connection
+ *   is present. If the socket is marked non-blocking and no pending
+ *   connections are present on the queue, accept returns EAGAIN.
+ *
+ * @param sockfd   The listening socket descriptor
+ * @param addr     Receives the address of the connecting client
+ * @param addrlen  Input: allocated size of 'addr',
+ *     Return: returned size of 'addr'
+ * @param flags    The flags used for initialization
+ *
+ * @return Returns -1 on error. If it succeeds, it returns a non-negative
+ *    integer that is a descriptor for the accepted socket.
+ *
+ * @retval EAGAIN or EWOULDBLOCK
+ *     The socket is marked non-blocking and no connections are present to
+ *     be accepted.
+ * @retval EBADF
+ *     The descriptor is invalid.
+ * @retval ENOTSOCK
+ *     The descriptor references a file, not a socket.
+ * @retval EOPNOTSUPP
+ *     The referenced socket is not of type SOCK_STREAM.
+ * @retval EINTR
+ *     The system call was interrupted by a signal that was caught before
+ *     a valid connection arrived.
+ * @retval ECONNABORTED
+ *     A connection has been aborted.
+ * @retval EINVAL
+ *     Socket is not listening for connections.
+ * @retval EMFILE
+ *     The per-process limit of open file descriptors has been reached.
+ * @retval ENFILE
+ *     The system maximum for file descriptors has been reached.
+ * @retval EFAULT
+ *     The addr parameter is not in a writable part of the user address
+ *     space.
+ * @retval ENOBUFS or ENOMEM
+ *     Not enough free memory.
+ * @retval EPROTO
+ *     Protocol error.
+ * @retval EPERM
+ *     Firewall rules forbid connection.
+ */
+
 int accept4(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen,
             int flags);
 
+/**
+ * @endcond
+ * @brief
+ *   The send() call may be used only when the socket is in a connected
+ *   state (so that the intended recipient is known). The only difference
+ *   between send() and write() is the presence of flags. With zero flags
+ *   parameter, send() is equivalent to write(). Also, send(sockfd,buf,len,
+ *   flags) is equivalent to sendto(sockfd,buf,len,flags,NULL,0).
+ *
+ * @param  sockfd   Socket descriptor of the socket
+ * @param  buf      Data to send
+ * @param  len      Length of data to send
+ * @param  flags    Send flags
+ *
+ * @return On success, returns the number of characters sent. On error,
+ *     -1 is returned, and errno is set appropriately.
+ *
+ * @retval  EAGAIN or EWOULDBLOCK
+ *     The socket is marked non-blocking and the requested operation
+ *     would block.
+ * @retval  EBADF
+ *     An invalid descriptor was specified.
+ * @retval  ECONNRESET
+ *     Connection reset by peer.
+ * @retval  EDESTADDRREQ
+ *     The socket is not connection-mode, and no peer address is set.
+ * @retval  EFAULT
+ *      An invalid user space address was specified for a parameter.
+ * @retval  EINTR
+ *      A signal occurred before any data was transmitted.
+ * @retval  EINVAL
+ *      Invalid argument passed.
+ * @retval  EISCONN
+ *     The connection-mode socket was connected already but a recipient
+ *     was specified. (Now either this error is returned, or the recipient
+ *     specification is ignored.)
+ * @retval  EMSGSIZE
+ *     The socket type requires that message be sent atomically, and the
+ *     size of the message to be sent made this impossible.
+ * @retval  ENOBUFS
+ *     The output queue for a network interface was full. This generally
+ *     indicates that the interface has stopped sending, but may be
+ *     caused by transient congestion.
+ * @retval  ENOMEM
+ *     No memory available.
+ * @retval  ENOTCONN
+ *     The socket is not connected, and no target has been given.
+ * @retval  ENOTSOCK
+ *     The argument s is not a socket.
+ * @retval  EOPNOTSUPP
+ *     Some bit in the flags argument is inappropriate for the socket
+ *     type.
+ * @retval  EPIPE
+ *     The local end has been shut down on a connection oriented socket.
+ *     In this case the process will also receive a SIGPIPE unless
+ *     MSG_NOSIGNAL is set.
+ */
+
 ssize_t send(int sockfd, FAR const void *buf, size_t len, int flags);
+
+/**
+ * @brief
+ *   If sendto() is used on a connection-mode (SOCK_STREAM, SOCK_SEQPACKET)
+ *   socket, the parameters to and 'tolen' are ignored (and the error
+ *   EISCONN may be returned when they are not NULL and 0), and the error
+ *   ENOTCONN is returned when the socket was not actually connected.
+ *
+ * @param  sockfd   Socket descriptor of socket
+ * @param  buf      Data to send
+ * @param  len      Length of data to send
+ * @param  flags    Send flags
+ * @param  to       Address of recipient
+ * @param  tolen    The length of the address structure
+ *
+ * @return On success, returns the number of characters sent.  On error,
+ *     -1 is returned, and errno is set appropriately.
+ *
+ * @retval  EAGAIN or EWOULDBLOCK
+ *     The socket is marked non-blocking and the requested operation
+ *     would block.
+ * @retval  EBADF
+ *     An invalid descriptor was specified.
+ * @retval  ECONNRESET
+ *     Connection reset by peer.
+ * @retval  EDESTADDRREQ
+ *     The socket is not connection-mode, and no peer address is set.
+ * @retval  EFAULT
+ *      An invalid user space address was specified for a parameter.
+ * @retval  EINTR
+ *      A signal occurred before any data was transmitted.
+ * @retval  EINVAL
+ *      Invalid argument passed.
+ * @retval  EISCONN
+ *     The connection-mode socket was connected already but a recipient
+ *     was specified. (Now either this error is returned, or the recipient
+ *     specification is ignored.)
+ * @retval  EMSGSIZE
+ *     The socket type requires that message be sent atomically, and the
+ *     size of the message to be sent made this impossible.
+ * @retval  ENOBUFS
+ *     The output queue for a network interface was full. This generally
+ *     indicates that the interface has stopped sending, but may be
+ *     caused by transient congestion.
+ * @retval  ENOMEM
+ *     No memory available.
+ * @retval  ENOTCONN
+ *     The socket is not connected, and no target has been given.
+ * @retval  ENOTSOCK
+ *     The argument s is not a socket.
+ * @retval  EOPNOTSUPP
+ *     Some bit in the flags argument is inappropriate for the socket
+ *     type.
+ * @retval  EPIPE
+ *     The local end has been shut down on a connection oriented socket.
+ *     In this case the process will also receive a SIGPIPE unless
+ *     MSG_NOSIGNAL is set.
+ */
+
 ssize_t sendto(int sockfd, FAR const void *buf, size_t len, int flags,
                FAR const struct sockaddr *to, socklen_t tolen);
 
+/**
+ * @brief
+ *   The recv() call is identical to recvfrom() with a NULL from parameter.
+ *
+ * @param  sockfd   Socket descriptor of socket
+ * @param  buf      Buffer to receive data
+ * @param  len      Length of buffer
+ * @param  flags    Receive flags
+ *
+ * @return On success, returns the number of characters received. On error,
+ *     -1 is returned, and errno is set appropriately.
+ */
+
 ssize_t recv(int sockfd, FAR void *buf, size_t len, int flags);
+
+/**
+ * @brief
+ *   recvfrom() receives messages from a socket, and may be used to receive
+ *   data on a socket whether or not it is connection-oriented.
+ *
+ *   If from is not NULL, and the underlying protocol provides the source
+ *   address, this source address is filled in. The argument fromlen
+ *   initialized to the size of the buffer associated with from, and
+ *   modified on return to indicate the actual size of the address stored
+ *   there.
+ *
+ * @param  sockfd    Socket descriptor of socket
+ * @param  buf       Buffer to receive data
+ * @param  len       Length of buffer
+ * @param  flags     Receive flags
+ * @param  from      Address of source (may be NULL)
+ * @param  fromlen   The length of the address structure
+ *
+ * @return On success, returns the number of characters received. On error,
+ *     -1 is returned, and errno is set appropriately.
+ *
+ * @retval  EAGAIN
+ *     The socket is marked non-blocking and the receive operation would
+ *     block, or a receive timeout had been set and the timeout expired
+ *     before data was received.
+ * @retval  EBADF
+ *     The argument sockfd is an invalid descriptor.
+ * @retval  ECONNREFUSED
+ *     A remote host refused to allow the network connection (typically
+ *     because it is not running the requested service).
+ * @retval  EFAULT
+ *     The receive buffer pointer(s) point outside the process's address
+ *     space.
+ * @retval  EINTR
+ *     The receive was interrupted by delivery of a signal before any data
+ *     were available.
+ * @retval  EINVAL
+ *     Invalid argument passed.
+ * @retval  ENOMEM
+ *     Could not allocate memory.
+ * @retval  ENOTCONN
+ *     The socket is associated with a connection-oriented protocol and has
+ *     not been connected.
+ * @retval  ENOTSOCK
+ *     The argument sockfd does not refer to a socket.
+ */
+
 ssize_t recvfrom(int sockfd, FAR void *buf, size_t len, int flags,
                  FAR struct sockaddr *from, FAR socklen_t *fromlen);
 
+/**
+ * @brief
+ *   The shutdown() function will cause all or part of a full-duplex
+ *   connection on the socket associated with the file descriptor socket to
+ *   be shut down.
+ *
+ *   The shutdown() function disables subsequent send and/or receive
+ *   operations on a socket, depending on the value of the how argument.
+ *
+ * @param  sockfd - Specifies the file descriptor of the socket.
+ * @param  how    - Specifies the type of shutdown. The values are as
+ *   follows:
+ *     SHUT_RD    - Disables further receive operations.
+ *     SHUT_WR    - Disables further send operations.
+ *     SHUT_RDWR  - Disables further send and receive operations.
+ *
+ * @return Upon successful completion, shutdown() will return 0; otherwise,
+ *     -1 will be returned and errno set to indicate the error.
+ *
+ * @retval    EBADF      - The socket argument is not a valid file
+ *     descriptor.
+ * @retval    EINVAL     - The how argument is invalid.
+ * @retval    ENOTCONN   - The socket is not connected.
+ * @retval    ENOTSOCK   - The socket argument does not refer to a socket.
+ * @retval    ENOBUFS    - Insufficient resources were available in the
+ *     system to perform the operation.
+ * @retval    EOPNOTSUPP - The operation is not supported for this
+ *     socket's protocol
+ */
+
 int shutdown(int sockfd, int how);
+
+/**
+ * @brief
+ *   setsockopt() sets the option specified by the 'option' argument,
+ *   at the protocol level specified by the 'level' argument, to the value
+ *   pointed to by the 'value' argument for the socket associated with the
+ *   file descriptor specified by the 'sockfd' argument.
+ *
+ *   The 'level' argument specifies the protocol level of the option.  To
+ *   set options at the socket level, specify the level argument as
+ *   SOL_SOCKET.
+ *
+ *   See <sys/socket.h> a complete list of values for the socket level
+ *   'option' argument.
+ *
+ *   Protocol level options, such as SOL_TCP, are defined in
+ *   protocol-specific header files, for example include/netinet/tcp.h
+ *
+ * @param  sockfd    Socket descriptor of socket
+ * @param  level     Protocol level to set the option
+ * @param  option    identifies the option to set
+ * @param  value     Points to the argument value
+ * @param  value_len The length of the argument value
+ *
+ * @return 0 on success; -1 on failure.
+ *
+ * @retval  EBADF
+ *     The 'sockfd' argument is not a valid socket descriptor.
+ * @retval  EDOM
+ *     The send and receive timeout values are too big to fit into the
+ *     timeout fields in the socket structure.
+ * @retval  EINVAL
+ *     The specified option is invalid at the specified socket 'level' or
+ *     the socket has been shut down.
+ * @retval  EISCONN
+ *     The socket is already connected, and a specified option cannot be set
+ *     while the socket is connected.
+ * @retval  ENOPROTOOPT
+ *     The 'option' is not supported by the protocol.
+ * @retval  ENOTSOCK
+ *     The 'sockfd' argument does not refer to a socket.
+ * @retval  ENOMEM
+ *     There was insufficient memory available for the operation to
+ *     complete.
+ * @retval  ENOBUFS
+ *     Insufficient resources are available in the system to complete the
+ *     call.
+ */
 
 int setsockopt(int sockfd, int level, int option,
                FAR const void *value, socklen_t value_len);
+
+/**
+ * @brief
+ *   getsockopt() retrieve the value for the option specified by the
+ *   'option' argument for the socket specified by the 'sockfd' argument. If
+ *   the size of the option value is greater than 'value_len', the value
+ *   stored in the object pointed to by the 'value' argument will be
+ *   silently truncated.
+ *   Otherwise, the length pointed to by the 'value_len' argument
+ *   will be modified to indicate the actual length of the 'value'.
+ *
+ *   The 'level' argument specifies the protocol level of the option. To
+ *   retrieve options at the socket level, specify the level argument as
+ *   SOL_SOCKET; to retrieve options at the TCP-protocol level, the level
+ *   argument is SOL_TCP.
+ *
+ *   See <sys/socket.h> a complete list of values for the socket-level
+ *   'option' argument.  Protocol-specific options are are protocol specific
+ *   header files (such as netinet/tcp.h for the case of the TCP protocol).
+ *
+ * @param  sockfd    Socket descriptor of socket
+ * @param  level     Protocol level to set the option
+ * @param  option    identifies the option to get
+ * @param  value     Points to the argument value
+ * @param  value_len The length of the argument value
+ *
+ * @return Returns zero (OK) on success.  On failure, -1 (ERROR) is
+ *     returned and the errno variable is set appropriately
+ *
+ * @retval  EBADF
+ *     The 'sockfd' argument is not a valid socket descriptor.
+ * @retval  EINVAL
+ *     The specified option is invalid at the specified socket 'level' or
+ *     the socket has been shutdown.
+ * @retval  ENOPROTOOPT
+ *     The 'option' is not supported by the protocol.
+ * @retval  ENOTSOCK
+ *     The 'sockfd' argument does not refer to a socket.
+ * @retval  ENOBUFS
+ *     Insufficient resources are available in the system to complete the
+ *     call.
+ */
+
 int getsockopt(int sockfd, int level, int option,
                FAR void *value, FAR socklen_t *value_len);
 
+/**
+ * @brief
+ *   The getsockname() function retrieves the locally-bound name of the
+ *   specified socket, stores this address in the sockaddr structure pointed
+ *   to by the 'addr' argument, and stores the length of this address in the
+ *   object pointed to by the 'addrlen' argument.
+ *
+ *   If the actual length of the address is greater than the length of the
+ *   supplied sockaddr structure, the stored address will be truncated.
+ *
+ *   If the socket has not been bound to a local name, the value stored in
+ *   the object pointed to by address is unspecified.
+ *
+ * @param  sockfd   Socket descriptor of socket [in]
+ * @param  addr     sockaddr structure to receive data [out]
+ * @param  addrlen  Length of sockaddr structure [in/out]
+ *
+ * @return On success, 0 is returned, the 'addr' argument points to the
+ *     address of the socket, and the 'addrlen' argument points to the
+ *     length of the address. Otherwise, -1 is returned and errno is set
+ *     to indicate the error. Possible errno values that may be returned
+ *     include:
+ *
+ * @retval  EBADF      - The socket argument is not a valid file descriptor.
+ * @retval  ENOTSOCK   - The socket argument does not refer to a socket.
+ * @retval  EOPNOTSUPP - The operation is not supported for this socket's
+ *     protocol.
+ * @retval  EINVAL     - The socket has been shut down.
+ * @retval  ENOBUFS    - Insufficient resources were available in the system
+ *     to complete the function.
+ */
+
 int getsockname(int sockfd, FAR struct sockaddr *addr,
                 FAR socklen_t *addrlen);
+
+/**
+ * @brief
+ *   The getpeername() function retrieves the remote-connected name of the
+ *   specified socket, stores this address in the sockaddr structure pointed
+ *   to by the 'addr' argument, and stores the length of this address in the
+ *   object pointed to by the 'addrlen' argument.
+ *
+ *   If the actual length of the address is greater than the length of the
+ *   supplied sockaddr structure, the stored address will be truncated.
+ *
+ *   If the socket has not been bound to a local name, the value stored in
+ *   the object pointed to by address is unspecified.
+ *
+ * @param  sockfd   Socket descriptor of socket [in]
+ * @param  addr     sockaddr structure to receive data [out]
+ * @param  addrlen  Length of sockaddr structure [in/out]
+ *
+ * @return On success, 0 is returned, the 'addr' argument points to the
+ *     address of the socket, and the 'addrlen' argument points to the
+ *     length of the address. Otherwise, -1 is returned and errno is set
+ *     to indicate the error. Possible errno values that may be returned
+ *     include:
+ *
+ * @retval  EBADF      - The socket argument is not a valid file descriptor.
+ * @retval  ENOTSOCK   - The socket argument does not refer to a socket.
+ * @retval  EOPNOTSUPP - The operation is not supported for this socket's
+ *     protocol.
+ * @retval  EINVAL     - The socket has been shut down.
+ * @retval  ENOBUFS    - Insufficient resources were available in the system
+ *     to complete the function.
+ */
+
 int getpeername(int sockfd, FAR struct sockaddr *addr,
                 FAR socklen_t *addrlen);
 
+/**
+ * @brief
+ *   recvmsg() receives messages from a socket, and may be used to
+ *   receive data on a socket whether or not it is connection-oriented.
+ *
+ * @param  sockfd   Socket descriptor of socket
+ * @param  msg      Buffer to receive the message
+ * @param  flags    Receive flags
+ *
+ * @return On success, returns the number of characters received. On error,
+ *     -1 is returned, and errno is set appropriately.
+ *
+ * @retval  EAGAIN
+ *     The socket is marked non-blocking and the receive operation would
+ *     block, or a receive timeout had been set and the timeout expired
+ *     before data was received.
+ * @retval  EBADF
+ *     The argument sockfd is an invalid descriptor.
+ * @retval  ECONNREFUSED
+ *     A remote host refused to allow the network connection (typically
+ *     because it is not running the requested service).
+ * @retval  EFAULT
+ *     The receive buffer pointer(s) point outside the process's address
+ *     space.
+ * @retval  EINTR
+ *     The receive was interrupted by delivery of a signal before any data
+ *     were available.
+ * @retval  EINVAL
+ *     Invalid argument passed.
+ * @retval  ENOMEM
+ *     Could not allocate memory.
+ * @retval  ENOTCONN
+ *     The socket is associated with a connection-oriented protocol and has
+ *     not been connected.
+ * @retval  ENOTSOCK
+ *     The argument sockfd does not refer to a socket.
+ */
+
 ssize_t recvmsg(int sockfd, FAR struct msghdr *msg, int flags);
+
+/**
+ * @brief
+ *   The sendmsg() call is identical to sendfrom() with a NULL from
+ *   parameter.
+ *
+ * @param  sockfd   Socket descriptor of socket
+ * @param  msg      Buffer to receive the message
+ * @param  flags    Receive flags
+ *
+ * @return On success, returns the number of characters received. On error,
+ *     -1 is returned, and errno is set appropriately.
+ *
+ * @retval  EAGAIN
+ *     The socket is marked non-blocking and the receive operation would
+ *     block, or a receive timeout had been set and the timeout expired
+ *     before data was received.
+ * @retval  EBADF
+ *     The argument sockfd is an invalid descriptor.
+ * @retval  ECONNREFUSED
+ *     A remote host refused to allow the network connection (typically
+ *     because it is not running the requested service).
+ * @retval  EFAULT
+ *     The receive buffer pointer(s) point outside the process's address
+ *     space.
+ * @retval  EINTR
+ *     The receive was interrupted by delivery of a signal before any data
+ *     were available.
+ * @retval  EINVAL
+ *     Invalid argument passed.
+ * @retval  ENOMEM
+ *     Could not allocate memory.
+ * @retval  ENOTCONN
+ *     The socket is associated with a connection-oriented protocol and has
+ *     not been connected.
+ * @retval  ENOTSOCK
+ *     The argument sockfd does not refer to a socket.
+ */
+
 ssize_t sendmsg(int sockfd, FAR const struct msghdr *msg, int flags);
 
 #if CONFIG_FORTIFY_SOURCE > 0

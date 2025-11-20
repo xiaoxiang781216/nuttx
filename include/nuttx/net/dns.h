@@ -2,7 +2,8 @@
  * include/nuttx/net/dns.h
  *
  * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 2007-2009, 2011-2012, 2014-2015, 2018 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2007-2009, 2011-2012, 2014-2015, 2018 Gregory
+ * Nutt. All rights reserved.
  * SPDX-FileCopyrightText: 2002-2003, Adam Dunkels. All rights reserved.
  * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
  * SPDX-FileContributor: Adam Dunkels <adam@dunkels.com>
@@ -51,7 +52,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* DNS classes */
+/**
+ * @cond
+ * DNS classes
+ */
 
 #define DNS_CLASS_IN                 1 /* RFC 1035 Internet */
 #define DNS_CLASS_CH                 3 /* N/A      Chaos */
@@ -192,64 +196,78 @@ extern "C"
 #define EXTERN extern
 #endif
 
-/****************************************************************************
- * Name: dns_add_nameserver
- *
- * Description:
+/**
+ * @endcond
+ * @brief
  *   Configure a DNS server to use for queries.  Set the port number to zero
  *   to use the default DNS server port.
  *
- ****************************************************************************/
+ * @param addr    Address of the DNS server (sockaddr_in or sockaddr_in6).
+ * @param addrlen Length of the address structure.
+ *
+ * @return
+ *   0 on success; a negated errno value on failure.
+ */
 
 int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen);
 
-/****************************************************************************
- * Name: dns_default_nameserver
- *
- * Description:
+/**
+ * @brief
  *   Reset the resolver to use only the default DNS server, if any.
  *
- ****************************************************************************/
+ * @return
+ *   0 on success; a negated errno value on failure.
+ */
 
 int dns_default_nameserver(void);
 
-/****************************************************************************
- * Name: dns_foreach_nameserver
- *
- * Description:
+/**
+ * @brief
  *   Traverse each nameserver entry and perform the provided callback.
  *
- ****************************************************************************/
+ * @param callback Callback function to invoke for each DNS server.
+ *
+ * @return
+ *   0 on success; a negated errno value on failure.
+ */
 
 int dns_foreach_nameserver(dns_callback_t callback, FAR void *arg);
 
-/****************************************************************************
- * Name: dns_register_notify
- *
- * Description:
+/**
+ * @brief
  *   This function is called in order to receive the nameserver change.
  *
- ****************************************************************************/
+ * @param callback Callback function to invoke on nameserver changes.
+ * @param arg      User argument to pass to the callback function.
+ *
+ * @return
+ *   0 on success; a negated errno value on failure.
+ */
 
 int dns_register_notify(dns_callback_t callback, FAR void *arg);
 
-/****************************************************************************
- * Name: dns_unregister_notify
- *
- * Description:
+/**
+ * @brief
  *   This function is called in order to unsubscribe the notification.
  *
- ****************************************************************************/
+ * @param callback Callback function to unregister.
+ * @param arg      User argument provided during registration.
+ *
+ * @return
+ *   0 on success; a negated errno value on failure.
+ */
 
 int dns_unregister_notify(dns_callback_t callback, FAR void *arg);
 
-/****************************************************************************
- * Name: dns_set_queryfamily
- *
- * Description:
+/**
+ * @brief
  *   Configure the address family to be used for queries.
  *
- ****************************************************************************/
+ * @param family Address family.
+ *
+ * @return
+ *   0 on success; a negated errno value on failure.
+ */
 
 int dns_set_queryfamily(sa_family_t family);
 
