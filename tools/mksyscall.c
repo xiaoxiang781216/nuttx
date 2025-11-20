@@ -913,6 +913,7 @@ static void generate_wrapper(int nfixed, int nparms)
     }
 
   fprintf(stream, ");\n\n");
+  fprintf(stream, "  up_addrenv_enter_kernel();\n");
 
   /* Then call the wrapped (real) function.  Functions that have no return
    * value are a special case.
@@ -945,6 +946,8 @@ static void generate_wrapper(int nfixed, int nparms)
     }
 
   fprintf(stream, ");\n\n");
+
+  fprintf(stream, "  up_addrenv_leave_kernel();\n");
 
   /* Call system call leave hook function */
 
