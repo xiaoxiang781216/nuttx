@@ -458,6 +458,7 @@ static void generate_stub(int nfixed, int nparms)
   FILE *stream = open_stub();
   char formal[MAX_PARMSIZE];
   char actual[MAX_PARMSIZE];
+  char fieldname[MAX_PARMSIZE];
   int i;
 
   /* Generate "up-front" information, include correct header files */
@@ -467,6 +468,8 @@ static void generate_stub(int nfixed, int nparms)
   fprintf(stream, "#include <nuttx/config.h>\n");
   fprintf(stream, "#include <stdint.h>\n");
   fprintf(stream, "#include <string.h>\n");
+  fprintf(stream, "#include <syscall.h>\n");
+  fprintf(stream, "#include <nuttx/sched_note.h>\n");
   fprintf(stream, "#ifdef CONFIG_SCHED_NOPREEMPT_KERNEL\n");
   fprintf(stream, "#  include <nuttx/sched.h>\n");
   fprintf(stream, "#endif\n");
@@ -534,6 +537,33 @@ static void generate_stub(int nfixed, int nparms)
   fprintf(stream, "  sched_lock();\n");
   fprintf(stream, "#endif\n");
 
+  /* Call system call enter hook function */
+
+  fprintf(stream, "\n  sched_note_syscall_enter(SYS_%s, %d",
+          g_parm[NAME_INDEX], nparms);
+
+  for (i = 0; i < nparms; i++)
+    {
+      /* Is the parameter a union member */
+
+      if (is_union(g_parm[PARM1_INDEX + i]))
+        {
+          /* Then we will have to pick a field name that can be cast to a
+           * uintptr_t.  There probably should be some error handling here<
+           * to catch the case where the fieldname was not supplied.
+           */
+
+          get_fieldname(g_parm[PARM1_INDEX + i], fieldname);
+          fprintf(stream, ", (uintptr_t)_parm%d.%s", i + 1, fieldname);
+        }
+      else
+        {
+          fprintf(stream, ", (uintptr_t)parm%d", i + 1);
+        }
+    }
+
+  fprintf(stream, ");\n\n");
+
   /* Then call the proxied function.  Functions that have no return value are
    * a special case.
    */
@@ -600,6 +630,20 @@ static void generate_stub(int nfixed, int nparms)
 
   fprintf(stream, ");\n");
 
+  /* Call system call leave hook function */
+
+  fprintf(stream, "  sched_note_syscall_leave(SYS_%s, ", g_parm[NAME_INDEX]);
+  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0 ||
+      strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
+    {
+      fprintf(stream, "0");
+    }
+  else
+    {
+      fprintf(stream, "(uintptr_t)ret");
+    }
+
+  fprintf(stream, ");\n\n");
   fprintf(stream, "#ifdef CONFIG_SCHED_NOPREEMPT_KERNEL\n");
   fprintf(stream, "  sched_unlock();\n");
   fprintf(stream, "#endif\n");
