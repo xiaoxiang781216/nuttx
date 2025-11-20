@@ -38,6 +38,7 @@
 #include <nuttx/net/netdev.h>
 #include <nuttx/mutex.h>
 
+#include "devif/devif.h"
 #include "mld/mld.h"
 #include "utils/utils.h"
 #include "netdev/netdev.h"
@@ -181,6 +182,7 @@ int netdev_unregister(FAR struct net_driver_s *dev)
 #else
       ninfo("Unregistered dev: %s\n", dev->d_ifname);
 #endif
+      devif_dev_event(dev, NETDEV_DOWN);
       return OK;
     }
 
