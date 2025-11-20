@@ -200,12 +200,13 @@ static void generate_return_ref(FILE *stream)
     }
 }
 
-static FILE *open_proxy(void)
+static FILE *open_proxy(bool ppcs)
 {
   char filename[MAX_PARMSIZE + 10];
   FILE *stream;
 
-  snprintf(filename, MAX_PARMSIZE + 9, "PROXY_%s.c", g_parm[NAME_INDEX]);
+  snprintf(filename, MAX_PARMSIZE + 9, "%s_%s.c", ppcs ? "PPC" : "PROXY",
+           g_parm[NAME_INDEX]);
   filename[MAX_PARMSIZE + 9] = '\0';
 
   stream = fopen(filename, "w");
@@ -218,17 +219,19 @@ static FILE *open_proxy(void)
   return stream;
 }
 
-static void generate_proxy_call(FILE *stream, int nparms, bool ret_ref)
+static void generate_proxy_call(FILE *stream, int nparms, bool ret_ref,
+                                bool ppcs)
 {
   int i;
 
-  fprintf(stream, "sys_call%d(", ret_ref ? nparms + 1 : nparms);
+  fprintf(stream, "%s_call%d(", ppcs ? "ppc" : "sys",
+          ret_ref ? nparms + 1 : nparms);
 
   /* Create the parameter list with the matching types.  The first parameter
    * is always the syscall number.
    */
 
-  fprintf(stream, "SYS_%s", g_parm[NAME_INDEX]);
+  fprintf(stream, "%s_%s", ppcs ? "PPC" : "SYS", g_parm[NAME_INDEX]);
 
   for (i = 0; i < nparms; i++)
     {
@@ -247,9 +250,9 @@ static void generate_proxy_call(FILE *stream, int nparms, bool ret_ref)
   fprintf(stream, ");\n");
 }
 
-static void generate_proxy(int nfixed, int nparms)
+static void generate_proxy(int nfixed, int nparms, bool ppcs)
 {
-  FILE *stream = open_proxy();
+  FILE *stream = open_proxy(ppcs);
   char formal[MAX_PARMSIZE];
   char actual[MAX_PARMSIZE];
   int i = 0;
@@ -274,7 +277,14 @@ static void generate_proxy(int nfixed, int nparms)
       fprintf(stream, "#include <%s>\n", g_parm[HEADER_INDEX]);
     }
 
-  fprintf(stream, "#include <syscall.h>\n\n");
+  if (ppcs)
+    {
+      fprintf(stream, "#include \"ppccall.h\"\n\n");
+    }
+  else
+    {
+      fprintf(stream, "#include <syscall.h>\n\n");
+    }
 
   if (g_parm[COND_INDEX][0] != '\0')
     {
@@ -399,13 +409,13 @@ static void generate_proxy(int nfixed, int nparms)
       strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
     {
       fprintf(stream, "  ");
-      generate_proxy_call(stream, nparms, false);
+      generate_proxy_call(stream, nparms, false, ppcs);
     }
   else if (nparms >= MAX_SYSCALL_PARMS)
     {
       fprintf(stream, "  %s ret;\n\n  ret = (%s)",
               g_parm[RETTYPE_INDEX], g_parm[RETTYPE_INDEX]);
-      generate_proxy_call(stream, nparms, false);
+      generate_proxy_call(stream, nparms, false, ppcs);
     }
   else
     {
@@ -413,12 +423,12 @@ static void generate_proxy(int nfixed, int nparms)
       fprintf(stream, "  if (RET_REF)\n");
       fprintf(stream, "    {\n");
       fprintf(stream, "      ");
-      generate_proxy_call(stream, nparms, true);
+      generate_proxy_call(stream, nparms, true, ppcs);
       fprintf(stream, "    }\n");
       fprintf(stream, "  else\n");
       fprintf(stream, "    {\n");
       fprintf(stream, "      ret = (%s)", g_parm[RETTYPE_INDEX]);
-      generate_proxy_call(stream, nparms, false);
+      generate_proxy_call(stream, nparms, false, ppcs);
       fprintf(stream, "    }\n\n");
     }
 
@@ -1046,36 +1056,47 @@ static void generate_wrapper(int nfixed, int nparms)
   fclose(stream);
 }
 
-static FILE *open_lookup(void)
+static FILE *open_lookup(bool ppcs)
 {
+  const char *filename = ppcs ? "ppccall_lookup.h" : "syscall_lookup.h";
+
   if (!g_lookupstream)
     {
-      g_lookupstream = fopen("syscall_lookup.h", "w");
+      g_lookupstream = fopen(filename, "w");
       if (g_lookupstream == NULL)
         {
-          fprintf(stderr, "Failed to open syscall_lookup.h: %s\n",
-                  strerror(errno));
+          fprintf(stderr, "Failed to open %s: %s\n",
+                  filename, strerror(errno));
           exit(11);
         }
 
       fprintf(g_lookupstream,
-              "/* Auto-generated syscall_lookup.h header file -- "
-              "do not edit */\n\n");
+              "/* Auto-generated %s header file -- do not edit */\n\n",
+              filename);
     }
 
   return g_lookupstream;
 }
 
-static void generate_lookup(int nparms)
+static void generate_lookup(int nparms, bool ppcs)
 {
-  FILE *lookup = open_lookup();
+  FILE *lookup = open_lookup(ppcs);
 
   if (g_parm[COND_INDEX][0] != '\0')
     {
       fprintf(lookup, "#if %s\n", g_parm[COND_INDEX]);
     }
 
-  fprintf(lookup, "SYSCALL_LOOKUP(%s, %d)\n", g_parm[NAME_INDEX], nparms);
+  if (ppcs)
+    {
+      fprintf(lookup, "PPCCALL_LOOKUP(%s, %d)\n", g_parm[NAME_INDEX],
+              nparms);
+    }
+  else
+    {
+      fprintf(lookup, "SYSCALL_LOOKUP(%s, %d)\n", g_parm[NAME_INDEX],
+              nparms);
+    }
 
   if (g_parm[COND_INDEX][0] != '\0')
     {
@@ -1091,6 +1112,7 @@ static void show_usage(const char *progname)
   fprintf(stderr, "\t-s : Generate stubs\n");
   fprintf(stderr, "\t-i : Generate proxies as static inline functions\n");
   fprintf(stderr, "\t-w : Generate wrappers\n");
+  fprintf(stderr, "\t-c : Generate ppc loopup table and proxy functions\n");
   fprintf(stderr, "\t-d : Enable debug output\n");
   exit(1);
 }
@@ -1105,6 +1127,7 @@ int main(int argc, char **argv, char **envp)
   bool proxies = false;
   bool wrappers = false;
   bool lookup = false;
+  bool ppcs = false;
   FILE *stream;
   char *ptr;
   int ch;
@@ -1117,7 +1140,7 @@ int main(int argc, char **argv, char **envp)
   g_stubstream = NULL;
   g_lookupstream = NULL;
 
-  while ((ch = getopt(argc, argv, ":dpswl")) > 0)
+  while ((ch = getopt(argc, argv, ":dpswcl")) > 0)
     {
       switch (ch)
         {
@@ -1139,6 +1162,11 @@ int main(int argc, char **argv, char **envp)
 
           case 'w' :
             wrappers = true;
+            break;
+
+          case 'c':
+            proxies = true;
+            ppcs = true;
             break;
 
           case 'l':
@@ -1240,11 +1268,16 @@ int main(int argc, char **argv, char **envp)
 
           if (lookup)
             {
-              generate_lookup(nargs - PARM1_INDEX);
+              generate_lookup(nargs - PARM1_INDEX, false);
             }
           else if (proxies)
             {
-              generate_proxy(nfixed, nargs - PARM1_INDEX);
+              if (ppcs)
+                {
+                  generate_lookup(nargs - PARM1_INDEX, ppcs);
+                }
+
+              generate_proxy(nfixed, nargs - PARM1_INDEX, ppcs);
             }
           else if (wrappers)
             {

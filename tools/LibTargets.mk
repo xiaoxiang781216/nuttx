@@ -163,6 +163,12 @@ syscall$(DELIM)libwraps$(LIBEXT): pass2dep
 staging$(DELIM)libwraps$(LIBEXT): syscall$(DELIM)libwraps$(LIBEXT)
 	$(Q) $(call INSTALL_LIB,$<,$@)
 
+syscall$(DELIM)libppcs$(LIBEXT): pass2dep
+	$(Q) $(MAKE) -C syscall libppcs$(LIBEXT) EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)"
+
+staging$(DELIM)libppcs$(LIBEXT): syscall$(DELIM)libppcs$(LIBEXT)
+	$(Q) $(call INSTALL_LIB,$<,$@)
+
 # Special case
 
 ifeq ($(CONFIG_BUILD_FLAT),y)

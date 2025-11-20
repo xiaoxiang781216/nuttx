@@ -30,4 +30,8 @@ if(CONFIG_COREDUMP)
   list(APPEND SRCS coredump.c)
 endif()
 
+if(CONFIG_LIB_PPCCALL)
+  list(APPEND SRCS ppccall.c)
+endif()
+
 target_sources(sched PRIVATE ${SRCS})

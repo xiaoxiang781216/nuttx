@@ -23,6 +23,7 @@ include(nuttx_syscall_utils)
 
 # Get all the system call CSV files
 set(SYSCALLFILES)
+set(LOOKUPFILE "${CMAKE_BINARY_DIR}/include/syscall_lookup.h")
 list(APPEND SYSCALLFILES ${NUTTX_DIR}/syscall/syscall.csv)
 if(NOT CONFIG_LIB_SYSCALL_FILES STREQUAL "")
   foreach(file IN LISTS CONFIG_LIB_SYSCALL_FILES)
@@ -33,11 +34,23 @@ endif()
 # Parse CSV file to get expected output source files for each target
 parse_syscall_csv(SYSCALLS ${SYSCALLFILES})
 
+# Parse ppccall CSV file
+set(PPCCALLFILES)
+set(PPCLOOKUPFILE)
+if(CONFIG_LIB_PPCCALL)
+  foreach(file IN LISTS CONFIG_LIB_PPCCALL_FILES)
+    list(APPEND PPCCALLFILES "${NUTTX_DIR}/${file}")
+  endforeach()
+  message(STATUS "PPCCALLFILES:" ${PPCCALLFILES})
+  parse_syscall_csv(PPCCALLS ${PPCCALLFILES})
+  set(PPCLOOKUPFILE "${CMAKE_BINARY_DIR}/include/ppccall_lookup.h")
+endif()
+
 if(CONFIG_LIB_SYSCALL_WRAPPER OR CONFIG_LIB_SYSCALL)
-# generate the host tool
+  # generate the host tool
   nuttx_build_host_target(mksyscall ${CMAKE_SOURCE_DIR}/tools/mksyscall.c)
 
-# generate the syscall lookup table
+  # generate the syscall lookup table
   generate_syscall_files(
     OUTPUT_VAR
     GENERATED_LOOKUP
@@ -50,7 +63,6 @@ if(CONFIG_LIB_SYSCALL_WRAPPER OR CONFIG_LIB_SYSCALL)
     CSV_FILES
     ${SYSCALLFILES})
 
-  set(LOOKUPFILE "${CMAKE_BINARY_DIR}/include/syscall_lookup.h")
   add_custom_command(
     OUTPUT ${LOOKUPFILE}
     COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/syscall_lookup.h ${LOOKUPFILE}
@@ -67,6 +79,10 @@ if(CONFIG_LIB_SYSCALL)
   add_subdirectory(stubs)
 
   target_sources(stubs PRIVATE syscall_stublookup.c)
+endif()
+
+if(CONFIG_LIB_PPCCALL)
+  add_subdirectory(ppcs)
 endif()
 
 if(CONFIG_LIB_SYSCALL_WRAPPER)

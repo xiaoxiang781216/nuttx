@@ -4,6 +4,7 @@
 /stdarg.h
 /setjmp.h
 /syscall_lookup.h
+/ppccall_lookup.h
 /features.h
 /uClibc++
 /libcxx

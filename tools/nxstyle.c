@@ -188,6 +188,7 @@ static const char *g_white_prefix[] =
   "ASCII_",  /* Ref:  include/nuttx/ascii.h */
   "Dl_info", /* Ref:  include/dlfcn.h */
   "Elf",     /* Ref:  include/elf.h, include/elf32.h, include/elf64.h */
+  "PPC_",    /* Ref:  syscall/ppccall.c include/nuttx/ppccall.h */
   "PRId",    /* Ref:  inttypes.h */
   "PRIi",    /* Ref:  inttypes.h */
   "PRIo",    /* Ref:  inttypes.h */
@@ -736,6 +737,12 @@ static const char *g_white_files[] =
   "syscall.h",
   "syscall_names.c",
   "syscall_stublookup.c",
+
+  /* Skip ppccall file headers
+   * include/nuttx/ppccall.h
+   */
+
+  "ppccall.h",
 
   /* Skip assembler file headers
    * Ref:
