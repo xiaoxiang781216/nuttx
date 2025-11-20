@@ -1146,8 +1146,6 @@ static int virtio_snd_init(FAR struct virtio_snd_s *priv)
       virtqueue_enable_cb(priv->vdev->vrings_info[i].vq);
     }
 
-  virtio_set_status(priv->vdev, VIRTIO_CONFIG_STATUS_DRIVER_OK);
-
   virtio_read_config(priv->vdev, 0, &priv->config,
                      sizeof(struct virtio_snd_config));
   vrtinfo("jacks:%"PRIu32" streams:%"PRIu32" chmap:%"PRIu32"\n",
@@ -1267,6 +1265,8 @@ static int virtio_snd_probe(FAR struct virtio_device *vdev)
     {
       goto err_with_vq;
     }
+
+  virtio_set_status(priv->vdev, VIRTIO_CONFIG_STATUS_DRIVER_OK);
 
   return ret;
 
