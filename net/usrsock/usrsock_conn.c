@@ -38,6 +38,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/mm/mempool.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/usrsock.h>
@@ -67,10 +68,9 @@ rmutex_t g_usrsock_lock = NXRMUTEX_INITIALIZER;
 
 /* The array containing all usrsock connections. */
 
-NET_BUFPOOL_DECLARE(g_usrsock_connections, sizeof(struct usrsock_conn_s),
-                    CONFIG_NET_USRSOCK_PREALLOC_CONNS,
-                    CONFIG_NET_USRSOCK_ALLOC_CONNS,
-                    CONFIG_NET_USRSOCK_MAX_CONNS);
+MEMPOOL_DEFINE(g_usrsock_connections, sizeof(struct usrsock_conn_s),
+               CONFIG_NET_USRSOCK_PREALLOC_CONNS,
+               CONFIG_NET_USRSOCK_MAX_CONNS, CONFIG_NET_USRSOCK_ALLOC_CONNS);
 
 /* A list of all allocated usrsock connections */
 
@@ -95,9 +95,9 @@ FAR struct usrsock_conn_s *usrsock_alloc(void)
 
   /* The free list is protected by a a mutex. */
 
-  NET_BUFPOOL_LOCK(g_usrsock_connections);
+  usrsock_lock();
 
-  conn = NET_BUFPOOL_TRYALLOC(g_usrsock_connections);
+  conn = mempool_zallocate(&g_usrsock_connections, 0);
   if (conn)
     {
       /* Make sure that the connection is marked as uninitialized */
@@ -112,7 +112,7 @@ FAR struct usrsock_conn_s *usrsock_alloc(void)
       dq_addlast(&conn->sconn.node, &g_active_usrsock_connections);
     }
 
-  NET_BUFPOOL_UNLOCK(g_usrsock_connections);
+  usrsock_unlock();
   return conn;
 }
 
@@ -131,7 +131,7 @@ void usrsock_free(FAR struct usrsock_conn_s *conn)
 
   DEBUGASSERT(conn->crefs == 0);
 
-  NET_BUFPOOL_LOCK(g_usrsock_connections);
+  usrsock_lock();
 
   /* Remove the connection from the active list */
 
@@ -144,9 +144,9 @@ void usrsock_free(FAR struct usrsock_conn_s *conn)
 
   /* Free the connection. */
 
-  NET_BUFPOOL_FREE(g_usrsock_connections, conn);
+  mempool_release(&g_usrsock_connections, conn);
 
-  NET_BUFPOOL_UNLOCK(g_usrsock_connections);
+  usrsock_unlock();
 }
 
 /****************************************************************************
