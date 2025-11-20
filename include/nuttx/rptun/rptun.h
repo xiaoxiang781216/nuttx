@@ -46,6 +46,7 @@
 #define RPTUNIOC_STOP         _RPTUNIOC(2)
 #define RPTUNIOC_RESET        _RPTUNIOC(3)
 #define RPTUNIOC_WAIT         _RPTUNIOC(4)
+#define RPTUNIOC_DUMP         _RPTUNIOC(5)
 
 #define RPTUN_NOTIFY_ALL      UINT32_MAX
 
