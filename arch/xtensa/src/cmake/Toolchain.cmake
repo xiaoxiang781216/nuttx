@@ -215,3 +215,7 @@ endif()
 if(CONFIG_DEBUG_SYMBOLS)
   add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
 endif()
+
+if(CONFIG_XTENSA_TOOLCHAIN_XCC OR CONFIG_XTENSA_TOOLCHAIN_XCLANG)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-femulated-tls>)
+endif()

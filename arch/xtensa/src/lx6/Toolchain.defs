@@ -150,6 +150,10 @@ ifneq ($(CONFIG_CXX_RTTI),y)
   ARCHCXXFLAGS += -fno-rtti
 endif
 
+ifneq ($(filter y,$(CONFIG_XTENSA_TOOLCHAIN_XCC)$(CONFIG_XTENSA_TOOLCHAIN_XCLANG)),)
+  ARCHCXXFLAGS += -femulated-tls
+endif
+
 LDFLAGS += -nostdlib
 
 SHMODULEFLAGS = -Bsymbolic -G -Bdynamic --entry=__start
