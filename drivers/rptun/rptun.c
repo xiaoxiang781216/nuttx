@@ -733,12 +733,21 @@ static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
                 RPTUN_GET_CPUNAME(priv->dev));
       PANIC();
     }
-#ifdef CONFIG_BOARDCTL_RESET
   else if(status != 0u)
     {
-      boardctl(BOARDIOC_RESET, RPTUN_REASON_GET(status));
-    }
+      if (RPTUN_STATUS_CHECK(status, BOARDIOC_SOFTRESETCAUSE_POWEROFF))
+        {
+#ifdef CONFIG_BOARDCTL_POWEROFF
+          boardctl(BOARDIOC_SOFTRESETCAUSE_POWEROFF, 0u);
 #endif
+        }
+      else
+        {
+#ifdef CONFIG_BOARDCTL_RESET
+          boardctl(BOARDIOC_RESET, RPTUN_REASON_GET(status));
+#endif
+        }
+    }
 }
 
 static int rptun_callback(FAR void *arg, uint32_t vqid)
@@ -1162,10 +1171,24 @@ static metal_phys_addr_t rptun_da_to_pa(FAR struct rptun_dev_s *dev,
 static int rptun_notifier(FAR struct notifier_block *block,
                           unsigned long action, void *data)
 {
+  unsigned long val;
+
   if (block == &g_rptun_reboot_nb)
     {
-      rptun_ioctl_foreach(NULL, RPTUNIOC_RESET, action == SYS_HALT ?
-        BOARDIOC_SOFTRESETCAUSE_ASSERT : (unsigned long)data);
+      if (action == SYS_POWER_OFF)
+        {
+          val = BOARDIOC_SOFTRESETCAUSE_POWEROFF;
+        }
+      else if (action == SYS_HALT)
+        {
+          val = BOARDIOC_SOFTRESETCAUSE_ASSERT;
+        }
+      else
+        {
+          val = (unsigned long)data;
+        }
+
+      rptun_ioctl_foreach(NULL, RPTUNIOC_RESET, val);
     }
   else if (action == PANIC_KERNEL_FINAL)
     {
