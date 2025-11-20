@@ -102,14 +102,14 @@ void arm_cpu_boot(int cpu)
 
   /* Initialize the Generic Interrupt Controller (GIC) for CPUn (n != 0) */
 
+#  undef g_nx_initstate
+  while (!OSINIT_MM_READY());
+
   up_irqinitialize();
 
   /* Then transfer control to the IDLE task */
 
 #ifdef CONFIG_BMP
-#  undef g_nx_initstate
-  while (OSINIT_OS_INITIALIZING());
-
 #  ifdef CONFIG_BUILD_PROTECTED
   qemu_userspace();
 #  endif
