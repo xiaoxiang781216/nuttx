@@ -518,7 +518,7 @@ ssize_t tcp_sendfile(FAR struct socket *psock, FAR struct file *infile,
 
   /* Notify the device driver of the availability of TX data */
 
-  tcp_send_txnotify(psock, conn);
+  netdev_txnotify_dev(conn->dev, TCP_POLL);
 
   conn_dev_unlock(&conn->sconn, conn->dev);
   for (; ; )

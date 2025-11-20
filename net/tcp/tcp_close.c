@@ -286,7 +286,7 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
           if (conn->sconn.s_linger == 0)
             {
               /* Directly set timeout to avoid the priority of the
-               * schedule tcp_timer_expiry and tcp_send_txnotify
+               * schedule tcp_timer_expiry
                */
 
               conn->timeout = true;
@@ -300,7 +300,7 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
 
       /* Notify the device driver of the availability of TX data */
 
-      tcp_send_txnotify(psock, conn);
+      netdev_txnotify_dev(conn->dev, TCP_POLL);
       conn_dev_unlock(&conn->sconn, conn->dev);
     }
   else
