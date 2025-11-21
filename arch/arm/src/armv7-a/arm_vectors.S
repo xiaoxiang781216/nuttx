@@ -290,6 +290,8 @@ arm_vectorirq:
 	.type	arm_vectorsvc, %function
 
 arm_vectorsvc:
+	.cfi_sections	.debug_frame
+	.cfi_startproc
 
 	/* Save the LR and SPSR onto the SYS mode stack before switch. */
 
@@ -352,6 +354,11 @@ arm_vectorsvc:
 #endif
 
 	bic		sp, sp, #7			/* Force 8-byte alignment */
+	mov		fp,	r0
+	.cfi_def_cfa	fp,	0			/* Register in fp, so we just set fp as frame */
+	.cfi_offset	pc,	REG_PC	*	4
+	.cfi_offset	sp,	REG_SP	*	4
+	.cfi_offset	lr,	REG_LR	*	4
 	bl		arm_syscall			/* Call the handler */
 	mov		sp, r4				/* Restore the possibly unaligned stack pointer */
 
@@ -380,6 +387,7 @@ arm_vectorsvc:
 	/* Restore the CPSR, SYS mode registers and return. */
 
 	rfeia		r14
+	.cfi_endproc
 	.size	arm_vectorsvc, . - arm_vectorsvc
 
 	.align	5
