@@ -48,6 +48,10 @@
 #  include <nuttx/segger/rtt.h>
 #endif
 
+#ifdef CONFIG_SYSLOG_FDX
+#  include <nuttx/trace32/fdx.h>
+#endif
+
 #ifdef CONFIG_SYSLOG_CDCACM
 #  include <nuttx/usb/cdcacm.h>
 #endif
@@ -155,6 +159,28 @@ static syslog_channel_t g_rtt_channel =
 };
 #endif
 
+#ifdef CONFIG_SYSLOG_FDX
+static const struct syslog_channel_ops_s g_fdx_channel_ops =
+{
+  syslog_fdx_putc,
+  syslog_fdx_putc,
+  NULL,
+  syslog_fdx_write,
+  syslog_fdx_write
+};
+
+static syslog_channel_t g_fdx_channel =
+{
+  &g_fdx_channel_ops
+#  ifdef CONFIG_SYSLOG_IOCTL
+  , "fdx"
+#  endif
+#  ifdef CONFIG_SYSLOG_CRLF
+  , SYSLOG_CHANNEL_DISABLE_CRLF
+#  endif
+};
+#endif
+
 #ifdef CONFIG_SYSLOG_CDCACM
 static const struct syslog_channel_ops_s g_cdcacm_channel_ops =
 {
@@ -249,6 +275,9 @@ const syslog_channels_t g_syslog_channel =
 #endif
 #ifdef CONFIG_SYSLOG_RTT
   &g_rtt_channel,
+#endif
+#ifdef CONFIG_SYSLOG_FDX
+  &g_fdx_channel,
 #endif
 #ifdef CONFIG_SYSLOG_CDCACM
   &g_cdcacm_channel

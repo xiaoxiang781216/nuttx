@@ -56,4 +56,18 @@ config STREAM_FDX
 	---help---
 		Use Segger Trace32 FDX as a stream output.
 
+config SYSLOG_FDX
+	bool "Log to Trace32 FDX"
+	select TRACE32_FDX
+	default n
+	---help---
+		Use Trace32 FDX as a SYSLOG output device.
+
+config SYSLOG_FDX_BUFSIZE
+	int "Trace32 FDX syslog driver buffer size"
+	depends on SYSLOG_FDX
+	default 1024
+	---help---
+		The size of the FDX syslog buffer (in bytes).
+
 endmenu # Trace32 drivers
