@@ -46,11 +46,11 @@
                                     (size_t)CONFIG_MM_NODE_GUARDSIZE)
 
 #ifdef CONFIG_MM_RECORD
-#  define MEMPOOL_REALBLOCKSIZE(s) (ALIGN_UP((s) + \
-                                    sizeof(struct mempool_record_s), \
-                                    MM_ALIGN))
 #  define MEMPOOL_RECORD_SIZE      (ALIGN_UP( \
                                     sizeof(struct mempool_record_s), \
+                                    MM_ALIGN))
+#  define MEMPOOL_REALBLOCKSIZE(s) (ALIGN_UP((s) + \
+                                    MEMPOOL_RECORD_SIZE, \
                                     MM_ALIGN))
 #else
 #  define MEMPOOL_REALBLOCKSIZE(s) (s)
