@@ -27,6 +27,7 @@
 #include <nuttx/config.h>
 #include <nuttx/reboot_notifier.h>
 #include <nuttx/trace.h>
+#include <nuttx/irq.h>
 
 #include "rpmsgfs/rpmsgfs.h"
 #include "inode/inode.h"
@@ -45,7 +46,8 @@
 static int sync_reboot_handler(FAR struct notifier_block *nb,
                                unsigned long action, FAR void *data)
 {
-  if (action == SYS_POWER_OFF || action == SYS_RESTART)
+  if ((action == SYS_POWER_OFF || action == SYS_RESTART) &&
+       !up_interrupt_context())
     {
       sync();
     }
