@@ -160,7 +160,7 @@ FAR struct netlink_conn_s *netlink_alloc(void)
 
   netlink_lock();
 
-  conn = mempool_allocate(&g_netlink_connections, 0);
+  conn = mempool_zallocate(&g_netlink_connections, 0);
   if (conn != NULL)
     {
       /* Enqueue the connection into the active list */

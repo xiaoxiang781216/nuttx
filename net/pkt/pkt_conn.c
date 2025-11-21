@@ -103,7 +103,7 @@ FAR struct pkt_conn_s *pkt_alloc(void)
 
   pkt_conn_list_lock();
 
-  conn = mempool_allocate(&g_pkt_connections, 0);
+  conn = mempool_zallocate(&g_pkt_connections, 0);
   if (conn)
     {
       /* Enqueue the connection into the active list */

@@ -311,7 +311,7 @@ int arp_send(in_addr_t ipaddr)
    * want anything to happen until we are ready.
    */
 
-  info = mempool_allocate(&g_arp_send_infos, UINT_MAX);
+  info = mempool_zallocate(&g_arp_send_infos, UINT_MAX);
   if (info == NULL)
     {
       nerr("ERROR: Failed to allocate ARP send info\n");
@@ -505,7 +505,7 @@ int arp_send_async(in_addr_t ipaddr, arp_send_finish_cb_t cb)
   FAR struct arp_send_s *state;
   int ret = 0;
 
-  info = mempool_allocate(&g_arp_send_infos, UINT_MAX);
+  info = mempool_zallocate(&g_arp_send_infos, UINT_MAX);
   if (!info)
     {
       nerr("ERROR: Out of memory\n");

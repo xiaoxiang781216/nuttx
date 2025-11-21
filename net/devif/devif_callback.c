@@ -256,7 +256,7 @@ devif_callback_alloc(FAR struct net_driver_s *dev,
 
   /* Get a callback structure */
 
-  ret = mempool_allocate(&g_cbprealloc, 0);
+  ret = mempool_zallocate(&g_cbprealloc, 0);
   if (ret)
     {
       /* Add the newly allocated instance to the head of the device event

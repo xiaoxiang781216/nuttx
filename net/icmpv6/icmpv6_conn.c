@@ -98,7 +98,7 @@ FAR struct icmpv6_conn_s *icmpv6_alloc(void)
 
   icmpv6_conn_list_lock();
 
-  conn = mempool_allocate(&g_icmpv6_connections, 0);
+  conn = mempool_zallocate(&g_icmpv6_connections, 0);
   if (conn != NULL)
     {
       /* Enqueue the connection into the active list */

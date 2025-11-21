@@ -89,7 +89,7 @@ FAR struct udp_wrbuffer_s *udp_wrbuffer_alloc(void)
    * buffer
    */
 
-  wrb = mempool_allocate(&g_wrbuffer, UINT_MAX);
+  wrb = mempool_zallocate(&g_wrbuffer, UINT_MAX);
   DEBUGASSERT(wrb);
 
   /* Now get the first I/O buffer for the write buffer structure */
@@ -135,7 +135,7 @@ FAR struct udp_wrbuffer_s *udp_wrbuffer_timedalloc(unsigned int timeout)
    * buffer
    */
 
-  wrb = mempool_allocate(&g_wrbuffer, timeout);
+  wrb = mempool_zallocate(&g_wrbuffer, timeout);
   if (wrb == NULL)
     {
       return NULL;
@@ -193,7 +193,7 @@ FAR struct udp_wrbuffer_s *udp_wrbuffer_tryalloc(void)
    * buffer
    */
 
-  wrb = mempool_allocate(&g_wrbuffer, 0);
+  wrb = mempool_zallocate(&g_wrbuffer, 0);
   if (wrb == NULL)
     {
       return NULL;

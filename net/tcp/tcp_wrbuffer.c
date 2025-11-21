@@ -93,7 +93,7 @@ FAR struct tcp_wrbuffer_s *tcp_wrbuffer_timedalloc(unsigned int timeout)
    * buffer
    */
 
-  wrb = mempool_allocate(&g_wrbuffer, timeout);
+  wrb = mempool_zallocate(&g_wrbuffer, timeout);
   if (wrb == NULL)
     {
       return NULL;

@@ -109,7 +109,7 @@ FAR struct net_route_ipv4_s *net_allocroute_ipv4(void)
    * then remove the first entry from the g_ipv4routes pool
    */
 
-  route = mempool_allocate(&g_ipv4routes, 0);
+  route = mempool_zallocate(&g_ipv4routes, 0);
   if (!route)
     {
       return NULL;
@@ -128,7 +128,7 @@ FAR struct net_route_ipv6_s *net_allocroute_ipv6(void)
    * then remove the first entry from the g_ipv6routes pool
    */
 
-  route = mempool_allocate(&g_ipv6routes, 0);
+  route = mempool_zallocate(&g_ipv6routes, 0);
   if (!route)
     {
       return NULL;

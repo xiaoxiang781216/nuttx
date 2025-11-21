@@ -98,7 +98,7 @@ FAR struct icmp_conn_s *icmp_alloc(void)
 
   icmp_conn_list_lock();
 
-  conn = mempool_allocate(&g_icmp_connections, 0);
+  conn = mempool_zallocate(&g_icmp_connections, 0);
   if (conn != NULL)
     {
       /* Enqueue the connection into the active list */

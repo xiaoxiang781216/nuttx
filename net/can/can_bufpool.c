@@ -87,7 +87,7 @@ static void can_buf_free(FAR void *buf)
 
 FAR struct iob_s *can_iob_timedalloc(unsigned int timeout)
 {
-  FAR void *buf = mempool_allocate(&g_can_buffer, timeout);
+  FAR void *buf = mempool_zallocate(&g_can_buffer, timeout);
 
   if (buf == NULL)
     {

@@ -559,7 +559,7 @@ FAR struct udp_conn_s *udp_alloc(uint8_t domain)
 
   udp_conn_list_lock();
 
-  conn = mempool_allocate(&g_udp_connections, 0);
+  conn = mempool_zallocate(&g_udp_connections, 0);
 
   if (conn)
     {

@@ -97,7 +97,7 @@ FAR struct can_conn_s *can_alloc(void)
 
   can_conn_list_lock();
 
-  conn = mempool_allocate(&g_can_connections, 0);
+  conn = mempool_zallocate(&g_can_connections, 0);
   if (conn != NULL)
     {
       /* FIXME SocketCAN default behavior enables loopback */
