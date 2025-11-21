@@ -94,18 +94,6 @@ static void devif_callback_free(FAR struct net_driver_s *dev,
 
   if (cb)
     {
-#ifdef CONFIG_DEBUG_FEATURES
-      /* Check for double freed callbacks */
-
-      curr = (FAR struct devif_callback_s *)g_cbprealloc.queue.head;
-
-      while (curr != NULL)
-        {
-          DEBUGASSERT(cb != curr);
-          curr = curr->nxtconn;
-        }
-#endif
-
       /* Remove the callback structure from the data notification list if
        * it is supposed to be in the data notification list.
        */
