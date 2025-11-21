@@ -54,7 +54,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define RPTUN_RETRY_PERIOD_US    1000000
+#define RPTUN_RETRY_PERIOD_US    1000
 
 #define RPTUN_STATUS_CHECK(s, v) ((s) & (1u << (v))) != 0
 #define RPTUN_STATUS_SET(s, v)   ((s) |= (1u << (v)))
