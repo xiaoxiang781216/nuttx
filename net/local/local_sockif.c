@@ -39,6 +39,7 @@
 #include <sys/param.h>
 
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/net/net.h>
 #include <socket/socket.h>
 
@@ -78,6 +79,8 @@ static int        local_setsockopt(FAR struct socket *psock, int level,
                                    int option, FAR const void *value,
                                    socklen_t value_len);
 #endif
+static int        local_mmap(FAR struct socket *psock,
+                             FAR struct mm_map_entry_s *mmap);
 
 /****************************************************************************
  * Public Data
@@ -113,6 +116,10 @@ const struct sock_intf_s g_local_sockif =
   , local_getsockopt /* si_getsockopt */
   , local_setsockopt /* si_setsockopt */
 #endif
+#ifdef CONFIG_NET_SENDFILE
+  ,  NULL            /* si_sendfile */
+#endif
+  , local_mmap       /* si_mmap */
 };
 
 /****************************************************************************
@@ -1160,6 +1167,54 @@ static int local_shutdown(FAR struct socket *psock, int how)
       default:
         return -EBADF;
     }
+}
+
+/****************************************************************************
+ * Name: local_munmap
+ *
+ * Description:
+ *     Unmap a previously mapped memory region.
+ *
+ ****************************************************************************/
+
+static int local_munmap(FAR struct task_group_s *group,
+                        FAR struct mm_map_entry_s *mmap,
+                        FAR void *start, size_t length)
+{
+  FAR void *addr = mmap->vaddr;
+
+  mm_map_remove(get_current_mm(), mmap);
+  kumm_free(addr);
+  return OK;
+}
+
+/****************************************************************************
+ * Name: local_mmap
+ *
+ * Description:
+ *     Map a memory region.
+ *
+ ****************************************************************************/
+
+static int local_mmap(FAR struct socket *psock,
+                      FAR struct mm_map_entry_s *mmap)
+{
+  FAR void *addr;
+  int ret = OK;
+
+  addr = kumm_malloc(mmap->length);
+  if (addr == NULL)
+    {
+      ret = -ENOMEM;
+    }
+  else
+    {
+      mmap->vaddr = addr;
+      mmap->munmap = local_munmap;
+      mm_map_add(get_current_mm(), mmap);
+    }
+
+  return ret;
 }
 
 /****************************************************************************
