@@ -727,6 +727,16 @@ static const char *g_white_headers[] =
 
 static const char *g_white_files[] =
 {
+  /* Skip syscall file headers
+   * include/sys/syscall.h
+   * syscall/syscall_names.c
+   * syscall/syscall_stublookup.c
+   */
+
+  "syscall.h",
+  "syscall_names.c",
+  "syscall_stublookup.c",
+
   /* Skip assembler file headers
    * Ref:
    * libs/libc/machine/arm/arm-acle-compat.h

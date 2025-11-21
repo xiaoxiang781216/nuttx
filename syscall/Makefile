@@ -28,6 +28,7 @@ include wraps/Make.defs
 
 MKSYSCALL = "$(TOPDIR)$(DELIM)tools$(DELIM)mksyscall$(HOSTEXEEXT)"
 CSVFILE = "$(TOPDIR)$(DELIM)syscall$(DELIM)syscall.csv"
+LOOKUPFILE = "$(TOPDIR)$(DELIM)include$(DELIM)syscall_lookup.h"
 
 STUB_SRCS += syscall_names.c
 
@@ -90,7 +91,11 @@ makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
 depend: .depend
 
 .context: syscall.csv
+ifneq ($(filter y,$(CONFIG_LIB_SYSCALL)$(CONFIG_LIB_SYSCALL_WRAPPER)),)
 	$(Q) $(MAKE) -C $(TOPDIR)$(DELIM)tools -f Makefile.host mksyscall
+	$(Q) $(MKSYSCALL) -l $(CSVFILE)
+	$(Q) cp syscall_lookup.h $(LOOKUPFILE)
+endif
 ifeq ($(CONFIG_LIB_SYSCALL),y)
 	$(Q) (cd proxies; $(MKSYSCALL) -p $(CSVFILE);)
 	$(Q) (cd stubs; $(MKSYSCALL) -s $(CSVFILE);)
@@ -117,6 +122,7 @@ distclean: clean
 	$(call DELFILE, proxies$(DELIM)*.c)
 	$(call DELFILE, stubs$(DELIM)*.c)
 	$(call DELFILE, wraps$(DELIM)*.c)
+	$(call DELFILE, $(LOOKUPFILE))
 	$(call DELFILE, $(SYSCALLWRAPS))
 
 -include Make.dep

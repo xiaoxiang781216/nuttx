@@ -43,6 +43,7 @@
 
 static bool g_inline;
 static FILE *g_stubstream;
+static FILE *g_lookupstream;
 
 /****************************************************************************
  * Private Functions
@@ -1045,6 +1046,43 @@ static void generate_wrapper(int nfixed, int nparms)
   fclose(stream);
 }
 
+static FILE *open_lookup(void)
+{
+  if (!g_lookupstream)
+    {
+      g_lookupstream = fopen("syscall_lookup.h", "w");
+      if (g_lookupstream == NULL)
+        {
+          fprintf(stderr, "Failed to open syscall_lookup.h: %s\n",
+                  strerror(errno));
+          exit(11);
+        }
+
+      fprintf(g_lookupstream,
+              "/* Auto-generated syscall_lookup.h header file -- "
+              "do not edit */\n\n");
+    }
+
+  return g_lookupstream;
+}
+
+static void generate_lookup(int nparms)
+{
+  FILE *lookup = open_lookup();
+
+  if (g_parm[COND_INDEX][0] != '\0')
+    {
+      fprintf(lookup, "#if %s\n", g_parm[COND_INDEX]);
+    }
+
+  fprintf(lookup, "SYSCALL_LOOKUP(%s, %d)\n", g_parm[NAME_INDEX], nparms);
+
+  if (g_parm[COND_INDEX][0] != '\0')
+    {
+      fprintf(lookup, "#endif /* %s */\n", g_parm[COND_INDEX]);
+    }
+}
+
 static void show_usage(const char *progname)
 {
   fprintf(stderr, "USAGE: %s [-p|s|i] <CSV file>\n\n", progname);
@@ -1066,6 +1104,7 @@ int main(int argc, char **argv, char **envp)
   char *csvpath;
   bool proxies = false;
   bool wrappers = false;
+  bool lookup = false;
   FILE *stream;
   char *ptr;
   int ch;
@@ -1076,8 +1115,9 @@ int main(int argc, char **argv, char **envp)
   g_debug = false;
   g_inline = false;
   g_stubstream = NULL;
+  g_lookupstream = NULL;
 
-  while ((ch = getopt(argc, argv, ":dpsw")) > 0)
+  while ((ch = getopt(argc, argv, ":dpswl")) > 0)
     {
       switch (ch)
         {
@@ -1099,6 +1139,10 @@ int main(int argc, char **argv, char **envp)
 
           case 'w' :
             wrappers = true;
+            break;
+
+          case 'l':
+            lookup = true;
             break;
 
           case '?' :
@@ -1194,7 +1238,11 @@ int main(int argc, char **argv, char **envp)
                 }
             }
 
-          if (proxies)
+          if (lookup)
+            {
+              generate_lookup(nargs - PARM1_INDEX);
+            }
+          else if (proxies)
             {
               generate_proxy(nfixed, nargs - PARM1_INDEX);
             }
@@ -1221,6 +1269,11 @@ int main(int argc, char **argv, char **envp)
     {
       fprintf(g_stubstream, "\n#endif /* __STUB_H */\n");
       fclose(g_stubstream);
+    }
+
+  if (g_lookupstream != NULL)
+    {
+      fclose(g_lookupstream);
     }
 
   return 0;

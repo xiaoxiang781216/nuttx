@@ -37,7 +37,7 @@ set(SYSCALLWRAPS "${CMAKE_BINARY_DIR}/wrapsymbol.cmd")
 
 nuttx_generate_preprocess_target(
   SOURCE_FILE ${CMAKE_CURRENT_LIST_DIR}/../syscall_wraps.h TARGET_FILE
-  ${SYSCALLWRAPS}tmp)
+  ${SYSCALLWRAPS}tmp DEPENDS ${LOOKUPFILE})
 
 add_custom_command(
   OUTPUT ${SYSCALLWRAPS}

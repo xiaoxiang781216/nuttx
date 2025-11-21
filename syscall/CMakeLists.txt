@@ -24,8 +24,34 @@ include(nuttx_syscall_utils)
 # Parse CSV file to get expected output source files for each target
 parse_syscall_csv(SYSCALLS syscall.csv)
 
+if(CONFIG_LIB_SYSCALL_WRAPPER OR CONFIG_LIB_SYSCALL)
 # generate the host tool
-nuttx_build_host_target(mksyscall ${CMAKE_SOURCE_DIR}/tools/mksyscall.c)
+  nuttx_build_host_target(mksyscall ${CMAKE_SOURCE_DIR}/tools/mksyscall.c)
+
+# generate the syscall lookup table
+  generate_syscall_files(
+    OUTPUT_VAR
+    GENERATED_LOOKUP
+    MODE
+    LOOKUP
+    OUTPATH
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ALL_SYSCALLS
+    ${SYSCALLS}
+    CSV_FILES
+    ${CMAKE_CURRENT_LIST_DIR}/syscall.csv)
+
+  set(LOOKUPFILE "${CMAKE_BINARY_DIR}/include/syscall_lookup.h")
+  add_custom_command(
+    OUTPUT ${LOOKUPFILE}
+    COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/syscall_lookup.h ${LOOKUPFILE}
+    DEPENDS ${GENERATED_LOOKUP}
+    COMMENT "Copying syscall_lookup.h to include"
+    VERBATIM)
+
+  add_custom_target(syscall_lookup_header DEPENDS ${LOOKUPFILE})
+  add_dependencies(nuttx_context syscall_lookup_header)
+endif()
 
 if(CONFIG_LIB_SYSCALL)
   add_subdirectory(proxies)

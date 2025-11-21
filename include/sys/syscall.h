@@ -59,7 +59,7 @@ enum
   SYS_reserved = CONFIG_SYS_RESERVED - 1,
 #  define SYSCALL_LOOKUP_(f)   SYS_##f
 #  define SYSCALL_LOOKUP(f,n)  SYSCALL_LOOKUP_(f),
-#  include "syscall_lookup.h"
+#  include <syscall_lookup.h>
 #  ifdef CONFIG_LIB_SYSCALL_EXTENSION
 #    include "syscall_ext_lookup.h"
 #  endif

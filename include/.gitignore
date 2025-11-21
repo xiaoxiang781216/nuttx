@@ -3,6 +3,7 @@
 /float.h
 /stdarg.h
 /setjmp.h
+/syscall_lookup.h
 /features.h
 /uClibc++
 /libcxx

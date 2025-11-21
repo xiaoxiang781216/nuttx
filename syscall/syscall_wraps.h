@@ -35,4 +35,4 @@
 
 WRAPOPTSTARTS
 
-#include <sys/syscall_lookup.h>
+#include <syscall_lookup.h>
