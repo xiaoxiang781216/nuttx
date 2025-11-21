@@ -237,6 +237,10 @@ static inline void nxtask_sigchild(FAR struct tcb_s *ptcb,
 
       nxtask_exitstatus(ptcb->group, status);
 
+      /* Mark the group child status as exited */
+
+      nxtask_groupexit(ptcb->group);
+
 #else /* CONFIG_SCHED_CHILD_STATUS */
       /* Exit status is not retained.  Just decrement the number of
        * children from this parent.
