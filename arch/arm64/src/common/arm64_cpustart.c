@@ -228,7 +228,7 @@ int up_cpu_start(int cpu)
 void arm64_boot_secondary_c_routine(void)
 {
 #ifdef CONFIG_PERCPU_SECTION
-  write_sysreg(this_cpu() * PERCPU_OFFSET, tpidr_el0);
+  write_sysreg(this_cpu() * PERCPU_OFFSET, tpidr_el1);
 #  ifdef CONFIG_BUILD_PROTECTED
   write_sysreg(this_cpu() * USERSPACE->us_offset_percpu, tpidrro_el0);
 #  endif
@@ -252,10 +252,6 @@ void arm64_boot_secondary_c_routine(void)
 #if defined(CONFIG_BMP)
   nx_start();
 #elif defined(CONFIG_SMP)
-
-  /* Init idle task to percpu reg */
-
-  up_update_task(current_task(this_cpu()));
 
   arm64_smp_init_top();
 #endif

@@ -69,7 +69,7 @@ uint64_t *arm64_doirq(int irq, uint64_t * regs)
 
   /* Set irq flag */
 
-  write_sysreg((uintptr_t)tcb | 1, tpidr_el1);
+  g_interrupt_context = true;
 
   tcb->xcp.regs = regs;
 
@@ -102,6 +102,10 @@ uint64_t *arm64_doirq(int irq, uint64_t * regs)
       tcb = this_task();
 #endif
 
+      /* Update the TLS pointer */
+
+      write_sysreg(tcb->stack_alloc_ptr, tpidr_el0);
+
       /* Record the new "running" task when context switch occurred.
        * g_running_tasks[] is only used by assertion logic for reporting
        * crashes.
@@ -113,7 +117,7 @@ uint64_t *arm64_doirq(int irq, uint64_t * regs)
 
   /* Clear irq flag */
 
-  write_sysreg((uintptr_t)tcb & ~1ul, tpidr_el1);
+  g_interrupt_context = false;
 
   /* (*running_task)->xcp.regs is about to become invalid
    * and will be marked as NULL to avoid misusage.

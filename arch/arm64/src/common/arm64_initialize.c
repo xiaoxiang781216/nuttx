@@ -68,6 +68,10 @@ INIT_STACK_ARRAY_DEFINE(g_interrupt_stack, CONFIG_NCPUS,
 INIT_STACK_ARRAY_DEFINE(g_interrupt_fiq_stack, CONFIG_NCPUS,
                         INTSTACK_SIZE);
 #endif
+
+#undef g_interrupt_context
+DEFINE_PER_CPU_BSS(volatile bool, g_interrupt_context);
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/

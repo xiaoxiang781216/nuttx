@@ -35,6 +35,7 @@
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
 #  include <arch/syscall.h>
+#  include <nuttx/percpu.h>
 #endif
 
 /* Include NuttX-specific IRQ definitions */
@@ -219,6 +220,13 @@ extern "C"
  * Public Data
  ****************************************************************************/
 
+DECLARE_PER_CPU(volatile bool, g_interrupt_context);
+#define g_interrupt_context this_cpu_var(g_interrupt_context)
+
+/****************************************************************************
+ * Public Types
+ ****************************************************************************/
+
 struct xcptcontext
 {
 #ifndef CONFIG_DISABLE_SIGNALS
@@ -283,6 +291,10 @@ struct xcptcontext
 #  endif
 #endif
 };
+
+/****************************************************************************
+ * Inline functions
+ ****************************************************************************/
 
 /* Return program counter */
 
@@ -371,6 +383,19 @@ static inline_function void up_irq_restore(irqstate_t flags)
   __asm__ __volatile__("msr daif, %0" :: "r" (flags): "memory");
 }
 
+static inline_function bool up_interrupt_context(void)
+{
+#ifdef CONFIG_SMP
+  irqstate_t flags = up_irq_save();
+#endif
+  bool ret = g_interrupt_context;
+
+#ifdef CONFIG_SMP
+  up_irq_restore(flags);
+#endif
+  return ret;
+}
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -383,9 +408,7 @@ static inline_function void up_irq_restore(irqstate_t flags)
  * interrupt context and 0 indicates being in a thread context.
  ****************************************************************************/
 
-#define up_this_task()         ((struct tcb_s *)(read_sysreg(tpidr_el1) & ~1ul))
-#define up_update_task(t)      modify_sysreg(t, ~1ul, tpidr_el1)
-#define up_interrupt_context() (read_sysreg(tpidr_el1) & 1)
+#define up_tls_info() ((struct tls_info_s *)read_sysreg(tpidr_el0))
 
 #define up_switch_context(tcb, rtcb)                                      \
   do                                                                      \

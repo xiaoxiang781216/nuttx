@@ -560,7 +560,7 @@ uint64_t *arm64_fatal_handler(uint64_t *regs)
 
   /* Set irq flag */
 
-  write_sysreg((uintptr_t)tcb | 1, tpidr_el1);
+  g_interrupt_context = true;
 
   ret = arm64_exception_handler(regs);
 
@@ -573,7 +573,7 @@ uint64_t *arm64_fatal_handler(uint64_t *regs)
 
   /* Clear irq flag */
 
-  write_sysreg((uintptr_t)tcb & ~1ul, tpidr_el1);
+  g_interrupt_context = false;
 
   return regs;
 }

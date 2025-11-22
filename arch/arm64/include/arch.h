@@ -84,7 +84,7 @@
 
 #ifdef CONFIG_PERCPU_SECTION
 #  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__) /* Kernel Space */
-#    define up_this_cpu_var(v) (*(typeof(v) *)(read_sysreg(tpidr_el0) + (uintptr_t)&(v)))
+#    define up_this_cpu_var(v) (*(typeof(v) *)(read_sysreg(tpidr_el1) + (uintptr_t)&(v)))
 #  else /* User Space */
 #    define up_this_cpu_var(v) (*(typeof(v) *)(read_sysreg(tpidrro_el0) + (uintptr_t)&(v)))
 #  endif
