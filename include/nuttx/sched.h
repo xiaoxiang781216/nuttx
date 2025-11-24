@@ -923,14 +923,14 @@ typedef CODE void (*nxsched_foreach_t)(FAR struct tcb_s *tcb, FAR void *arg);
 
 typedef CODE int (*nxsched_smp_call_t)(FAR void *arg);
 
-#ifdef CONFIG_SMP
+#ifndef CONFIG_UP
 struct smp_call_cookie_s;
 struct smp_call_data_s
 {
   nxsched_smp_call_t            func;
   FAR void                     *arg;
   FAR struct smp_call_cookie_s *cookie;
-  sq_entry_t                    node[CONFIG_SMP_NCPUS];
+  sq_entry_t                    node[CONFIG_NCPUS];
 };
 
 struct smp_call_delay_data_s
@@ -1788,7 +1788,7 @@ void nxsched_lock(FAR struct tcb_s *rtcb);
 
 void nxsched_unlock(FAR struct tcb_s *rtcb);
 
-#ifdef CONFIG_SMP
+#ifndef CONFIG_UP
 /****************************************************************************
  * Name: nxsched_smp_call_handler
  *

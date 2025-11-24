@@ -113,7 +113,7 @@ if(CONFIG_SCHED_DUMP_ON_EXIT)
   list(APPEND SRCS sched_dumponexit.c)
 endif()
 
-if(CONFIG_SMP)
+if(NOT CONFIG_UP)
   list(APPEND SRCS sched_smp.c)
 endif()
 

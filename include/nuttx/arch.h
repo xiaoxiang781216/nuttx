@@ -2400,9 +2400,7 @@ int up_cpu_idlestack(int cpu, FAR struct tcb_s *tcb, size_t stack_size);
 
 #ifdef CONFIG_SMP
 int up_cpu_start(int cpu);
-#endif
 
-#ifdef CONFIG_SMP
 /****************************************************************************
  * Name: up_send_smp_sched
  *
@@ -2423,6 +2421,7 @@ int up_cpu_start(int cpu);
  ****************************************************************************/
 
 int up_send_smp_sched(int cpu);
+#endif
 
 /****************************************************************************
  * Name: up_send_smp_call
@@ -2432,6 +2431,7 @@ int up_send_smp_sched(int cpu);
  *
  ****************************************************************************/
 
+#ifndef CONFIG_UP
 void up_send_smp_call(cpu_set_t cpuset);
 #endif
 

@@ -395,7 +395,7 @@ int nxsched_smp_call_async(cpu_set_t cpuset,
       goto out;
     }
 
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
+  for (i = 0; i < CONFIG_NCPUS; i++)
     {
       if (CPU_ISSET(i, &cpuset))
         {
