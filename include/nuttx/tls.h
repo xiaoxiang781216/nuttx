@@ -47,6 +47,7 @@
 #include <nuttx/atexit.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/lib/lib.h>
+#include <nuttx/sched.h>
 
 #ifdef CONFIG_PTHREAD_ATFORK
 #  include <nuttx/list.h>
@@ -402,10 +403,12 @@ uintptr_t task_tls_get_value(int tlsindex);
  *
  ****************************************************************************/
 
-#if defined(up_tls_info)
-#  define tls_get_info() up_tls_info()
-#elif defined(CONFIG_TLS_ALIGNED) && !defined(__KERNEL__)
+#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+#  define tls_get_info() ((FAR struct tls_info_s *)this_task()->stack_alloc_ptr)
+#elif defined(CONFIG_TLS_ALIGNED)
 #  define tls_get_info() TLS_INFO(up_getsp())
+#elif defined(up_tls_info)
+#  define tls_get_info() up_tls_info()
 #else
 FAR struct tls_info_s *tls_get_info(void);
 #endif
