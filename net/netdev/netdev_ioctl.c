@@ -1340,7 +1340,8 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
       case SIOCETHTOOL:  /* Ethtool ioctl */
         if (dev->d_ioctl)
           {
-            ret = dev->d_ioctl(dev, cmd, req->ifr_data);
+            ret = dev->d_ioctl(dev, cmd,
+                          (unsigned long)(uintptr_t)req->ifr_data);
           }
         else
           {
