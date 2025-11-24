@@ -201,6 +201,7 @@ struct mm_heap_config_s
 struct mm_pool_config_s
 {
   FAR const size_t *poolsize;
+  FAR const size_t *poolcount;
   size_t            npools;
   size_t            threshold;
   size_t            chunksize;

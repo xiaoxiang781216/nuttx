@@ -393,11 +393,11 @@ mm_initialize_pool(FAR const struct mm_heap_config_s *config,
   if (def.poolsize != NULL && def.npools != 0)
     {
       heap->mm_mpool = mempool_multiple_init(config->name,
-                                            &def,
-                                            mempool_memalign,
-                                            mempool_malloc_size,
-                                            mempool_free,
-                                            heap);
+                                             &def,
+                                             mempool_memalign,
+                                             mempool_malloc_size,
+                                             mempool_free,
+                                             heap);
     }
 
   return heap;
