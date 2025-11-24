@@ -1021,6 +1021,7 @@ int main(int argc, char **argv, char **envp)
 
   g_debug = false;
   g_inline = false;
+  g_stubstream = NULL;
 
   while ((ch = getopt(argc, argv, ":dpswr")) > 0)
     {
@@ -1157,13 +1158,7 @@ int main(int argc, char **argv, char **envp)
             }
           else
             {
-              g_stubstream = NULL;
               generate_stub(nfixed, nargs - PARM1_INDEX);
-              if (g_stubstream != NULL)
-                {
-                  fprintf(g_stubstream, "\n#endif /* __STUB_H */\n");
-                  fclose(g_stubstream);
-                }
             }
         }
 
@@ -1174,6 +1169,12 @@ int main(int argc, char **argv, char **envp)
       /* Move to the next CSV file */
 
       optind++;
+    }
+
+  if (g_stubstream != NULL)
+    {
+      fprintf(g_stubstream, "\n#endif /* __STUB_H */\n");
+      fclose(g_stubstream);
     }
 
   return 0;
