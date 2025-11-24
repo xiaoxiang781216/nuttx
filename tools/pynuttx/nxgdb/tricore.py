@@ -23,7 +23,7 @@ import argparse
 
 import gdb
 
-from . import utils
+from . import autocompeletion, utils
 from .backtrace import Backtrace
 
 FCX_FREE_MASK = (0xFFFF << 0) | (0xF << 16)
@@ -71,72 +71,161 @@ upper_offsets = [
 ]
 
 
-class TricoreCSA(gdb.Command):
-    """Dump TriCore CSA list."""
+def csa2addr(csa):
+    return (csa & 0x000F0000) << 12 | (csa & 0x0000FFFF) << 6
 
-    def csa2addr(self, csa):
-        return (csa & 0x000F0000) << 12 | (csa & 0x0000FFFF) << 6
 
-    def get_pcxi_from_tcb(self, tcb):
-        return int(tcb["xcp"]["regs"])
+class TricoreCSA:
+    def __init__(self, addr, isupper=True):
+        """
+        Initialize TriCore CSA from memory address.
+        Default is upper CSA, since tcb->xcp.regs points to upper CSA.
 
-    def dump_csa(self, pid, csa_addr):
-        print(f"pid:{pid}")
-        address = []
-        is_upper = False
+        :param addr: Memory address of the CSA
+        :param upper: True for upper CSA, False for lower CSA
+
+        """
+        self.addr = addr
+        self.isupper = isupper
+        self.regs = {}
+        for name, offset in upper_offsets if isupper else lower_offsets:
+            try:
+                self.regs[name] = utils.read_uint(addr + offset * 4)
+            except Exception:
+                print(
+                    f"Error: failed to read register {name} at {hex(addr + offset * 4)}"
+                )
+                self.regs[name] = 0
+
+    def dump_registers(self):
+        """Dump all registers in the CSA."""
         line = ""
-        while csa_addr != 0:
-            offsets = upper_offsets if is_upper else lower_offsets
-            pc = utils.read_uint(csa_addr + (REG_UPC if is_upper else REG_LPC) * 4)
-            if pc:
-                address.append(pc)
-            print(f"CSA addr:{hex(csa_addr)} is {'upper' if is_upper else 'lower'}")
-            for i, (name, offset) in enumerate(offsets, 1):
-                val = utils.read_uint(csa_addr + offset * 4)
-                line += f"{name}:0x{val:08X}  "
-                if i % 4 == 0:
-                    print(line)
-                    line = ""
+        for name, value in self.regs.items():
+            line += f"{name}:0x{value:08X}  "
+            if len(line) > 60:
+                print(line)
+                line = ""
+        if line:
+            print(line)
 
-            pcxi = utils.read_uint(csa_addr)  # next CSA
-            is_upper = bool(pcxi & PCXI_UL)
-            csa_addr = self.csa2addr(pcxi & FCX_FREE_MASK)
-        print(str(Backtrace(address)))
+    def dump(self):
+        """Dump CSA information."""
+        print(self)
+        self.dump_registers()
 
-    def handle_all(self):
-        for tcb in utils.get_tcbs():
-            print(
-                f"see tid:{tcb['pid']}, state={tcb['task_state']}, regs={tcb['xcp']['regs']}"
-            )
-            self.dump_csa(int(tcb["pid"]), self.get_pcxi_from_tcb(tcb))
+    @property
+    def pc(self):
+        """Get the PC value from the CSA."""
+        return self.regs["UA11"] if self.isupper else self.regs["LA11"]
 
-    def handle_pid(self, pid):
-        tcb = utils.get_tcb(pid)
-        if not tcb:
-            print(f"error: no tcb with pid={pid}")
-            return
-        self.dump_csa(pid, self.get_pcxi_from_tcb(tcb))
+    @property
+    def pcxi(self):
+        """Get the PCXI value from the CSA."""
+        return self.regs["UPCXI" if self.isupper else "LPCXI"]
 
-    def handle_pcxi(self, csa_addr):
-        self.dump_csa(-1, csa_addr)
+    @property
+    def next(self):
+        """Get the next CSA from the current CSA."""
+        pcxi = self.pcxi  # next CSA
+        isupper = bool(pcxi & PCXI_UL)
+        csa_addr = csa2addr(pcxi & FCX_FREE_MASK)
+        return TricoreCSA(csa_addr, isupper) if csa_addr != 0 else None
+
+    # iterator of all csa list from this one
+    def __iter__(self):
+        csa = self
+        while csa:
+            yield csa
+            csa = csa.next
+
+    # support using dict-like access
+    def __getitem__(self, key):
+        return self.regs[key]
+
+    def __repr__(self):
+        return f"{'Upper' if self.isupper else 'Lower'}CSA@{hex(self.addr)} PC=0x{self.pc:08X}"
+
+    def __str__(self):
+        return self.__repr__()
+
+
+def csa_from_context(regs) -> TricoreCSA:
+    """
+    Get the TriCoreCSA from context regs.
+
+    :param regs: The context registers address, usually from tcb->xcp.regs
+    """
+    # The CSA pointed by tcb->xcp.regs is always upper CSA
+    # The lower CSA is stored above by one CSA size (0x40)
+    # The lower CSA and upper CSA are linked together
+    return TricoreCSA(int(regs) + 0x40, isupper=False)
+
+
+def csa_from_tcb(tcb) -> TricoreCSA:
+    """
+    Get the TriCoreCSA from TCB.
+
+    :param tcb: The TCB structure
+    """
+    if tcb is None:
+        return None
+
+    try:
+        regs = int(tcb["xcp"]["regs"])
+        # The CSA pointed by tcb->xcp.regs is always upper CSA
+        return csa_from_context(regs)
+    except gdb.error:
+        return None
+
+
+def csa_from_pcxi(pcxi) -> TricoreCSA:
+    """
+    Get the TriCoreCSA from PCXI value.
+
+    :param pcxi: The PCXI value
+    """
+    isupper = bool(pcxi & PCXI_UL)
+    csa_addr = csa2addr(pcxi & FCX_FREE_MASK)
+    return TricoreCSA(csa_addr, isupper) if csa_addr != 0 else None
+
+
+def dump_csa_chain(csa):
+    """
+    Dump the CSA chain starting from the given CSA.
+    :param csa: The starting CSA
+    """
+
+    address = []
+    for csa in list(csa):
+        address.append(csa.pc)
+        csa.dump()
+    print(str(Backtrace(address)))
+
+
+@autocompeletion.complete
+class TricoreCSADump(gdb.Command):
+    """Dump TriCore CSA list."""
 
     def get_argparser(self):
         parser = argparse.ArgumentParser(description=self.__doc__)
-        parser.add_argument(
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument(
             "-p",
-            "-pid",
+            "--pid",
             type=int,
-            dest="pid",
             default=None,
-            help="Output the CSA chain of the specified pid",
+            help="PID of the task to dump CSA",
         )
 
-        parser.add_argument(
-            "-u",
-            "-pcxi",
-            dest="pcxi",
-            type=lambda s: int(s, 16),
-            help="Output the CSA chain of the specified CSA addr",
+        group.add_argument(
+            "-a",
+            "--addr",
+            help="The context register address from TCB",
+        )
+
+        group.add_argument(
+            "--pcxi",
+            help="The PCXI register value to dump the CSA chain",
         )
         return parser
 
@@ -150,17 +239,29 @@ class TricoreCSA(gdb.Command):
         arch = gdb.selected_inferior().architecture()
         if arch.name().startswith("TriCore"):
             super().__init__("tricore-dumpcsa", gdb.COMMAND_USER)
-            self.dont_repeat()
             self.parser = self.get_argparser()
 
+    @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
         args = self.parse_argument(gdb.string_to_argv(args))
         if args is None:
-            print("Error:Invalid arg")
             return
+
         if args.pid is not None:
-            self.handle_pid(args.pid)
+            csa = csa_from_tcb(utils.get_tcb(args.pid))
+            dump_csa_chain(csa)
         elif args.pcxi is not None:
-            self.handle_pcxi(args.pcxi)
+            pcxi = utils.parse_arg(args.pcxi)
+            csa = csa_from_pcxi(pcxi)
+            dump_csa_chain(csa)
+        elif args.addr is not None:
+            addr = utils.parse_arg(args.addr)
+            csa = csa_from_context(addr)
+            dump_csa_chain(csa)
         else:
-            self.handle_all()
+            for tcb in utils.get_tcbs():
+                print(
+                    f"PID:{tcb['pid']}, state={tcb['task_state']}, regs={tcb['xcp']['regs']}"
+                )
+                csa = csa_from_tcb(tcb)
+                dump_csa_chain(csa)
