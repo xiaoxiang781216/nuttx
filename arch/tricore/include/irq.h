@@ -112,9 +112,35 @@
 #  define PSW_IO_USER1      (1 << PSW_IO)
 #  define PSW_IO_SUPERVISOR (2 << PSW_IO)
 
-#define PSW_PRS_MASK        (3 << 12) | (1 << 15)
+#define PSW_PRS_KERNEL_SET  (0)
 #define PSW_PRS_USER_SET    (1)
-#define PSW_PRS_USER        (((PSW_PRS_USER_SET & 3) << 12) | ((PSW_PRS_USER_SET & 4) << 13))
+#ifdef CONFIG_ARCH_HAVE_PPRS
+  #define PSW_PRS_MASK                           (0)
+  #define PSW_PRS_USER                           (0)
+  #define tricore_change_pprs(tcb, val)          (tcb)->xcp.pprs = (val)
+  #define tricore_load_pprs(tcb)                 (tcb)->xcp.pprs
+  #define tricore_restore_pprs(tcb)              __mtcr(CPU_PPRS, (tcb)->xcp.pprs)
+  #define tricore_store_pprs(tcb)                (tcb)->xcp.pprs = __mfcr(CPU_PPRS)
+  #define tricore_syscall_load_pprs(tcb ,index)  (tcb)->xcp.syscall_pprs[index]
+  #define tricore_syscall_store_pprs(tcb ,index) (tcb)->xcp.syscall_pprs[index] = __mfcr(CPU_PPRS)
+  #define tricore_sig_change_pprs(tcb ,val)      (tcb)->xcp.saved_pprs = (val)
+  #define tricore_sig_load_pprs(tcb)             (tcb)->xcp.saved_pprs
+  #define tricore_pprs_to_prs(pprs)              (((pprs & 3) << 12) | ((pprs & 4) << 13))
+  #define tricore_prs_to_pprs(prs)               (((prs >> 12) & 3) | ((prs >> 13) & 4))
+#else
+  #define PSW_PRS_MASK                           (3 << 12) | (1 << 15)
+  #define PSW_PRS_USER                           (((PSW_PRS_USER_SET & 3) << 12) | ((PSW_PRS_USER_SET & 4) << 13))
+  #define tricore_change_pprs(tcb, val)          do { } while (0)
+  #define tricore_load_pprs(tcb)                 (0)
+  #define tricore_restore_pprs(tcb)              do { } while (0)
+  #define tricore_store_pprs(tcb)                do { } while (0)
+  #define tricore_syscall_load_pprs(tcb ,index)  (0)
+  #define tricore_syscall_store_pprs(tcb ,index) do { } while (0)
+  #define tricore_sig_change_pprs(tcb ,val)      do { } while (0)
+  #define tricore_sig_load_pprs(tcb)             (0)
+  #define tricore_pprs_to_prs(pprs)              (0)
+  #define tricore_prs_to_pprs(prs)               (0)
+#endif
 
 /* PCXI: Previous Context Information and Pointer Register */
 
@@ -180,6 +206,9 @@ struct xcptcontext
 
   int nsyscalls;
   uintptr_t *syscall_regs[CONFIG_SYS_NNEST];
+#ifdef CONFIG_ARCH_HAVE_PPRS
+  uint32_t syscall_pprs[CONFIG_SYS_NNEST];
+#endif
 #endif
 
 #ifdef CONFIG_BUILD_PROTECTED
@@ -189,6 +218,11 @@ struct xcptcontext
 
   uint32_t sigreturn;
 
+#endif
+
+#ifdef CONFIG_ARCH_HAVE_PPRS
+  uint32_t pprs;
+  uint32_t saved_pprs;
 #endif
 };
 

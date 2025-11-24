@@ -104,6 +104,11 @@ IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
       tcb = this_task();
 #endif
 
+      /* Updata PPRS register */
+
+      tricore_store_pprs(*running_task);
+      tricore_restore_pprs(tcb);
+
       /* Record the new "running" task when context switch occurred.
        * g_running_tasks[] is only used by assertion logic for reporting
        * crashes.
@@ -126,11 +131,14 @@ IFX_INTERRUPT_INTERNAL(tricore_doirq, 0, 255)
 
   up_set_interrupt_context(false);
 
-  /* (*running_task)->xcp.regs is about to become invalid
-   * and will be marked as NULL to avoid misusage.
+  /* (*running_task)->xcp.regs is about to become invalid and
+   * will be marked as NULL to avoid misusage. the same applies
+   * to (*running_task)->xcp.pprs.
    */
 
   (*running_task)->xcp.regs = NULL;
+  tricore_change_pprs(*running_task, UINT32_MAX);
+
   board_autoled_off(LED_INIRQ);
 #endif
 }
