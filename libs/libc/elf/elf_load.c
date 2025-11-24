@@ -432,7 +432,7 @@ static inline int libelf_loadfile(FAR struct mod_loadinfo_s *loadinfo,
             }
 
 #ifdef CONFIG_LIBC_ELF_GOT
-          if ((shdr->sh_flags & SHF_WRITE) == 0 && loadinfo->xipbase != 0）
+          if ((shdr->sh_flags & SHF_WRITE) == 0 && loadinfo->xipbase != 0)
             {
               goto skipload;
             }
