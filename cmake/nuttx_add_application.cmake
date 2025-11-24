@@ -153,7 +153,7 @@ function(nuttx_add_application)
         if(TARGET STARTUP_OBJS)
           add_dependencies(${TARGET} STARTUP_OBJS)
         endif()
-        if(NOT "${CMAKE_LD}" MATCHES "gcc$")
+        if(NOT "${CMAKE_C_COMPILER}" MATCHES "gcc$")
           set(USE_LINKER True)
         endif()
         if(STACKSIZE)
@@ -190,12 +190,14 @@ function(nuttx_add_application)
                                 nx_heapsize=${CONFIG_MM_TASK_HEAP_DEFAULT_SIZE})
           endif()
         endif()
+        get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
         add_custom_command(
           TARGET ${TARGET}
           POST_BUILD
           COMMAND
             # add default link option
-            ${CMAKE_LD} -T ${CMAKE_BINARY_DIR}/gnu-elf.ld
+            ${CMAKE_C_COMPILER} ${NUTTX_EXTRA_FLAGS} -T
+            ${CMAKE_BINARY_DIR}/gnu-elf.ld
             # add global MOD link option if dynlib link
             $<$<BOOL:${DYNLIB_ELF_MODE}>:$<TARGET_PROPERTY:nuttx_global,NUTTX_MOD_APP_LINK_OPTIONS>>
             # add global ELF link option if m&kernel link
