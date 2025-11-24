@@ -31,7 +31,7 @@ generate_syscall_files(
   ALL_SYSCALLS
   ${SYSCALLS}
   CSV_FILES
-  ${CMAKE_CURRENT_LIST_DIR}/../syscall.csv)
+  ${SYSCALLFILES})
 
 # add sources to target
 target_sources(proxies PRIVATE ${GENERATED_PROXIES})

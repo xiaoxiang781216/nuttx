@@ -21,8 +21,17 @@
 # ##############################################################################
 include(nuttx_syscall_utils)
 
+# Get all the system call CSV files
+set(SYSCALLFILES)
+list(APPEND SYSCALLFILES ${NUTTX_DIR}/syscall/syscall.csv)
+if(NOT CONFIG_LIB_SYSCALL_FILES STREQUAL "")
+  foreach(file IN LISTS CONFIG_LIB_SYSCALL_FILES)
+    list(APPEND SYSCALLFILES "${NUTTX_DIR}/${file}")
+  endforeach()
+endif()
+
 # Parse CSV file to get expected output source files for each target
-parse_syscall_csv(SYSCALLS syscall.csv)
+parse_syscall_csv(SYSCALLS ${SYSCALLFILES})
 
 if(CONFIG_LIB_SYSCALL_WRAPPER OR CONFIG_LIB_SYSCALL)
 # generate the host tool
@@ -39,7 +48,7 @@ if(CONFIG_LIB_SYSCALL_WRAPPER OR CONFIG_LIB_SYSCALL)
     ALL_SYSCALLS
     ${SYSCALLS}
     CSV_FILES
-    ${CMAKE_CURRENT_LIST_DIR}/syscall.csv)
+    ${SYSCALLFILES})
 
   set(LOOKUPFILE "${CMAKE_BINARY_DIR}/include/syscall_lookup.h")
   add_custom_command(

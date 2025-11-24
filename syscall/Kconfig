@@ -45,11 +45,11 @@ config SYS_NNEST
 		current design so the default maximum nesting level of 2 should be
 		more than sufficient.
 
-config LIB_SYSCALL_EXTENSION
-	bool "Custom system call support"
-	default n
+config LIB_SYSCALL_FILES
+	string "system call csv files"
+	default ""
 	---help---
-		This allows users to extend syscalls in flat, protected, or kernel
+		This allows users to define syscalls in flat, protected, or kernel
 		build modes without modifying the original library syscalls or
 		the reserved architecture-specific syscalls.
 		It comes helpful when you have some custom libraries
@@ -59,18 +59,11 @@ config LIB_SYSCALL_EXTENSION
 		mode switching.
 		With the custom syscall extension mechanism, you can meet these
 		specialized requirements without altering the built-in or common syscalls.
-		To use this feature, follow these steps:
-		1. Create a custom syscall lookup header:
-		Write your own syscall_ext_lookup.h file and place it in your
-		module's directory. This file maps syscall numbers to their corresponding
-		functions.
-		2. Define a syscall CSV file:
-		Define one/more syscall CSV files, pls see syscals.csv for example
-		3. Configure the build system:
-		Update your CMakeLists.txt or Makefile to invoke NuttX's mksyscall tool,
-		which generates the necessary stubs and proxies for your syscalls.
-		For Cmake, we have helper functions to achieve such, pls refer to
-		nuttx_syscall_utils.cmake for details.
+		To use this feature, only need define one/more syscall CSV files and use
+		';' to separate them.
+		For the csv file format, please see syscals.csv for example.
+		e.g. CONFIG_LIB_SYSCALL_FILES="<path relative to nuttx>/syscall_ext1.csv;
+		<path relative to nuttx>/syscall_ext2.csv"
 
 endif # LIB_SYSCALL
 

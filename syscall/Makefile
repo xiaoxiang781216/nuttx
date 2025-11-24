@@ -27,7 +27,10 @@ include stubs/Make.defs
 include wraps/Make.defs
 
 MKSYSCALL = "$(TOPDIR)$(DELIM)tools$(DELIM)mksyscall$(HOSTEXEEXT)"
-CSVFILE = "$(TOPDIR)$(DELIM)syscall$(DELIM)syscall.csv"
+CSVFILE = $(TOPDIR)$(DELIM)syscall$(DELIM)syscall.csv
+ifneq ($(CONFIG_LIB_SYSCALL_FILES),"")
+  CSVFILE += $(addprefix $(TOPDIR)$(DELIM),$(subst ",,$(subst ;, ,$(CONFIG_LIB_SYSCALL_FILES))))
+endif
 LOOKUPFILE = "$(TOPDIR)$(DELIM)include$(DELIM)syscall_lookup.h"
 
 STUB_SRCS += syscall_names.c
@@ -90,7 +93,7 @@ makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
 
 depend: .depend
 
-.context: syscall.csv
+.context: $(CSVFILE)
 ifneq ($(filter y,$(CONFIG_LIB_SYSCALL)$(CONFIG_LIB_SYSCALL_WRAPPER)),)
 	$(Q) $(MAKE) -C $(TOPDIR)$(DELIM)tools -f Makefile.host mksyscall
 	$(Q) $(MKSYSCALL) -l $(CSVFILE)

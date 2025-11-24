@@ -72,9 +72,6 @@
 
 #define SYSCALL_LOOKUP(f,n)  STUB_PROT(f, n);
 #include <syscall_lookup.h>
-#ifdef  CONFIG_LIB_SYSCALL_EXTENSION
-#  include <syscall_ext_lookup.h>
-#endif
 #undef SYSCALL_LOOKUP
 
 /****************************************************************************
@@ -90,9 +87,6 @@ const uintptr_t g_stublookup[SYS_nsyscalls] =
 {
 #  define SYSCALL_LOOKUP(f,n)  (uintptr_t)STUB_NAME(f),
 #  include <syscall_lookup.h>
-#  ifdef CONFIG_LIB_SYSCALL_EXTENSION
-#    include <syscall_ext_lookup.h>
-#  endif
 #  undef SYSCALL_LOOKUP
 };
 
