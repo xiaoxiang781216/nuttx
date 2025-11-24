@@ -117,6 +117,12 @@ class Target(gdb.Command):
         process.start()
         self.process = process
 
+        # Check if the process exits immediately
+        process.join(timeout=1)
+        if not process.is_alive():
+            self.process = None
+            return
+
         gdb.events.gdb_exiting.connect(kill)
         print("")
 
