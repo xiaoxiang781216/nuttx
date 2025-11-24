@@ -239,7 +239,7 @@ static void ip_fragin_timerwork(FAR void *arg)
             {
               FAR struct net_driver_s *dev = node->dev;
 
-              net_lock();
+              netdev_lock(dev);
 
               netdev_iob_replace(dev, node->frags->frag);
               node->frags->frag = NULL;
@@ -273,7 +273,7 @@ static void ip_fragin_timerwork(FAR void *arg)
                   netdev_txnotify_dev(dev, IPFRAG_POLL);
                 }
 
-              net_unlock();
+              netdev_unlock(dev);
             }
 #endif
 

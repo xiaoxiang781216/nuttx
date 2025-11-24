@@ -449,43 +449,6 @@ int net_sem_timedwait(FAR sem_t *sem, unsigned int timeout);
 int net_sem_wait(FAR sem_t *sem);
 
 /****************************************************************************
- * Name: net_sem_timedwait_uninterruptible
- *
- * Description:
- *   This function is wrapped version of net_sem_timedwait(), which is
- *   uninterruptible and convenient for use.
- *
- * Input Parameters:
- *   sem     - A reference to the semaphore to be taken.
- *   timeout - The relative time to wait until a timeout is declared.
- *
- * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returned on
- *   any failure.
- *
- ****************************************************************************/
-
-int net_sem_timedwait_uninterruptible(FAR sem_t *sem, unsigned int timeout);
-
-/****************************************************************************
- * Name: net_sem_wait_uninterruptible
- *
- * Description:
- *   This function is wrapped version of net_sem_wait(), which is
- *   uninterruptible and convenient for use.
- *
- * Input Parameters:
- *   sem - A reference to the semaphore to be taken.
- *
- * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returned on
- *   any failure.
- *
- ****************************************************************************/
-
-int net_sem_wait_uninterruptible(FAR sem_t *sem);
-
-/****************************************************************************
  * Name: net_sem_timedwait2
  *
  * Description:
