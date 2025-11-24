@@ -56,16 +56,15 @@
 
 enum
 {
+  SYS_reserved = CONFIG_SYS_RESERVED - 1,
 #  define SYSCALL_LOOKUP_(f)   SYS_##f
-#  define SYSCALL_LOOKUP1(f,n) SYSCALL_LOOKUP_(f) = CONFIG_SYS_RESERVED
-#  define SYSCALL_LOOKUP(f,n)  , SYSCALL_LOOKUP_(f)
+#  define SYSCALL_LOOKUP(f,n)  SYSCALL_LOOKUP_(f),
 #  include "syscall_lookup.h"
 #  ifdef CONFIG_LIB_SYSCALL_EXTENSION
 #    include "syscall_ext_lookup.h"
 #  endif
-  , SYS_maxsyscall
+  SYS_maxsyscall
 #  undef SYSCALL_LOOKUP_
-#  undef SYSCALL_LOOKUP1
 #  undef SYSCALL_LOOKUP
 };
 

@@ -70,13 +70,11 @@
  * Stub Function Prototypes
  ****************************************************************************/
 
-#define SYSCALL_LOOKUP1(f,n) STUB_PROT(f, n);
 #define SYSCALL_LOOKUP(f,n)  STUB_PROT(f, n);
 #include <sys/syscall_lookup.h>
 #ifdef  CONFIG_LIB_SYSCALL_EXTENSION
 #  include <syscall_ext_lookup.h>
 #endif
-#undef SYSCALL_LOOKUP1
 #undef SYSCALL_LOOKUP
 
 /****************************************************************************
@@ -90,13 +88,11 @@
 
 const uintptr_t g_stublookup[SYS_nsyscalls] =
 {
-#  define SYSCALL_LOOKUP1(f,n) (uintptr_t)STUB_NAME(f)
-#  define SYSCALL_LOOKUP(f,n)  , (uintptr_t)STUB_NAME(f)
+#  define SYSCALL_LOOKUP(f,n)  (uintptr_t)STUB_NAME(f),
 #  include <sys/syscall_lookup.h>
 #  ifdef CONFIG_LIB_SYSCALL_EXTENSION
 #    include <syscall_ext_lookup.h>
 #  endif
-#  undef SYSCALL_LOOKUP1
 #  undef SYSCALL_LOOKUP
 };
 

@@ -31,7 +31,6 @@
 #define UP_WRAPOPT(f) --wrap f
 #endif
 
-#define SYSCALL_LOOKUP1(f,n) UP_WRAPOPT(f)
 #define SYSCALL_LOOKUP(f,n)  UP_WRAPOPT(f)
 
 WRAPOPTSTARTS

@@ -26,7 +26,7 @@
  * configuration
  */
 
-SYSCALL_LOOKUP1(_exit,                     1)
+SYSCALL_LOOKUP(_exit,                      1)
 SYSCALL_LOOKUP(prctl,                      2)
 
 #ifdef CONFIG_SCHED_HAVE_PARENT

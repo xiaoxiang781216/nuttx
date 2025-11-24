@@ -42,9 +42,7 @@
 
 const char *g_funcnames[SYS_nsyscalls] =
 {
-#  define SYSCALL_LOOKUP1(f,n) #f
-#  define SYSCALL_LOOKUP(f,n)  , #f
+#  define SYSCALL_LOOKUP(f,n) #f,
 #  include <sys/syscall_lookup.h>
-#  undef SYSCALL_LOOKUP1
 #  undef SYSCALL_LOOKUP
 };
