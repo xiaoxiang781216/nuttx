@@ -470,6 +470,18 @@ config PERCPU_SECTION
 
 endchoice
 
+config SMP_CALL_POOL_COUNT
+	int "Number of pre-allocated SMP CALl cookie etc"
+	depends on BMP
+	default 0
+	---help---
+		Default 0 feature disabled. Set to >0 value In BMP mode to
+		use prealloc smp call param pool.
+		For SMP case is not required and always use stack variable,
+		Disabled feature or SMP should use stack variable.
+		For BMP or protected, disable feature will not compatibility
+		with asynchronous smp call.
+
 config SMP_NCPUS
 	int "Number of CPUs"
 	default 4 if !UP

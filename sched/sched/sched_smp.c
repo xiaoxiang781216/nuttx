@@ -33,8 +33,17 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/sched.h>
 #include <nuttx/spinlock.h>
+#include <nuttx/mm/mempool.h>
 
 #include "sched/sched.h"
+
+/****************************************************************************
+ * Private Predefinitions
+ ****************************************************************************/
+
+#ifndef CONFIG_SMP_CALL_POOL_COUNT
+#  define CONFIG_SMP_CALL_POOL_COUNT 0
+#endif
 
 /****************************************************************************
  * Private Types
@@ -42,8 +51,15 @@
 
 struct smp_call_cookie_s
 {
-  sem_t       sem;
-  int         error;
+  struct smp_call_data_s req;
+  sem_t  sem;
+  int    error;
+#if CONFIG_SMP_CALL_POOL_COUNT > 0
+  /* Use prealloc smp_call cookie */
+
+  int    cpu;
+  struct smp_call_data_s ack;
+#endif
 };
 
 /****************************************************************************
@@ -51,7 +67,12 @@ struct smp_call_cookie_s
  ****************************************************************************/
 
 static sq_queue_t g_smp_call_queue[CONFIG_NCPUS];
-static spinlock_t g_smp_call_lock;
+static spinlock_t g_smp_call_lock = SP_UNLOCKED;
+
+#if CONFIG_SMP_CALL_POOL_COUNT > 0
+MEMPOOL_DEFINE(g_smp_call_pool, sizeof(struct smp_call_cookie_s),
+               CONFIG_SMP_CALL_POOL_COUNT, CONFIG_SMP_CALL_POOL_COUNT, 0);
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -108,6 +129,45 @@ static void nxsched_smp_call_delay_cb(wdparm_t arg)
   nxsched_smp_call_async(data->cpuset, &data->call);
 }
 
+#if CONFIG_SMP_CALL_POOL_COUNT > 0
+static int nxsched_smp_call_ack_cb(FAR void *arg)
+{
+  FAR struct smp_call_cookie_s *cookie = arg;
+  sem_post(&cookie->sem);
+  return OK;
+}
+
+static inline_function
+FAR struct smp_call_cookie_s *nxsched_smp_call_cookie_alloc(void)
+{
+  return mempool_allocate(&g_smp_call_pool, 0);
+}
+#endif
+
+static inline_function void
+nxsched_smp_call_cookie_free(FAR struct smp_call_cookie_s *c)
+{
+  nxsem_destroy(&c->sem);
+
+#if CONFIG_SMP_CALL_POOL_COUNT > 0
+  mempool_release(&g_smp_call_pool, c);
+#endif
+}
+
+static inline_function void
+nxsched_smp_call_cookie_init(FAR struct smp_call_cookie_s *c,
+                             nxsched_smp_call_t func, FAR void *arg)
+{
+  nxsched_smp_call_init(&c->req, func, arg);
+  nxsem_init(&c->sem, 0, 0);
+  c->req.cookie = c;
+  c->error = 0;
+#if CONFIG_SMP_CALL_POOL_COUNT > 0
+  c->cpu = this_cpu();
+  nxsched_smp_call_init(&c->ack, nxsched_smp_call_ack_cb, c);
+#endif
+}
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -144,6 +204,7 @@ int nxsched_smp_call_handler(int irq, FAR void *context,
     {
       FAR struct smp_call_data_s *data =
         container_of(curr, struct smp_call_data_s, node[cpu]);
+      FAR struct smp_call_cookie_s *cookie;
       int ret;
 
       sq_rem(&data->node[cpu], call_queue);
@@ -154,14 +215,25 @@ int nxsched_smp_call_handler(int irq, FAR void *context,
 
       flags = spin_lock_irqsave(&g_smp_call_lock);
 
-      if (data->cookie != NULL)
+      cookie = data->cookie;
+      if (cookie != NULL)
         {
           if (ret < 0)
             {
-              data->cookie->error = ret;
+              cookie->error = ret;
             }
 
-          nxsem_post(&data->cookie->sem);
+          /* Insert ack back to original cpu call queue,
+           * add direct avoid nxsched_smp_call_add g_smp_call_lock again.
+           */
+
+#if CONFIG_SMP_CALL_POOL_COUNT > 0
+          sq_addlast(&cookie->ack.node[cookie->cpu],
+                     &g_smp_call_queue[cookie->cpu]);
+          up_send_smp_call(1 << cookie->cpu);
+#else
+          nxsem_post(&cookie->sem);
+#endif
         }
     }
 
@@ -240,23 +312,27 @@ int nxsched_smp_call_single(int cpuid, nxsched_smp_call_t func,
 int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
                      FAR void *arg)
 {
-  struct smp_call_data_s data;
-  struct smp_call_cookie_s cookie;
+  FAR struct smp_call_cookie_s *c;
   int semcount;
   int cpucnt;
   int ret = OK;
   int i;
 
-  nxsched_smp_call_init(&data, func, arg);
-  cookie.error = 0;
-  nxsem_init(&cookie.sem, 0, 0);
+#if CONFIG_SMP_CALL_POOL_COUNT > 0
+  c = nxsched_smp_call_cookie_alloc();
+#else
+  struct smp_call_cookie_s cookie;
 
-  data.cookie = &cookie;
-  ret = nxsched_smp_call_async(cpuset, &data);
+  c = &cookie;
+#endif
+
+  nxsched_smp_call_cookie_init(c, func, arg);
+
+  ret = nxsched_smp_call_async(cpuset, &c->req);
 
   if (ret < 0)
     {
-      nxsem_destroy(&cookie.sem);
+      nxsem_destroy(&c->sem);
       return ret;
     }
 
@@ -267,7 +343,7 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
 
       do
         {
-          nxsem_get_value(&cookie.sem, &semcount);
+          nxsem_get_value(&c->sem, &semcount);
         }
       while (semcount != cpucnt);
     }
@@ -275,7 +351,7 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
     {
       for (i = 0; i < cpucnt; i++)
         {
-          int rc = nxsem_wait_uninterruptible(&cookie.sem);
+          int rc = nxsem_wait_uninterruptible(&c->sem);
           if (rc < 0)
             {
               ret = rc;
@@ -283,13 +359,12 @@ int nxsched_smp_call(cpu_set_t cpuset, nxsched_smp_call_t func,
         }
     }
 
-  if (cookie.error < 0)
+  if (c->error < 0)
     {
-      ret = cookie.error;
+      ret = c->error;
     }
 
-  nxsem_destroy(&cookie.sem);
-
+  nxsched_smp_call_cookie_free(c);
   return ret;
 }
 
