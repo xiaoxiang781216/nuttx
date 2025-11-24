@@ -3,6 +3,11 @@
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
 
+config ARCH_CHIP_TC397
+	bool "AURIX Family TC397"
+	---help---
+		AURIX TC39x family: TC397
+
 comment "TC3XX Configuration Options"
 
 menu "TC3XX Peripheral Support"

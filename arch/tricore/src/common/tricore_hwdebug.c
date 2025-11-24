@@ -53,10 +53,10 @@
 
 /* Register TREVT[2:0] have difference between tc3xx and tc4xx */
 
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC3XX
+#ifdef CONFIG_ARCH_CHIP_TC3XX
   #define TREVT_CFG_REG_EN_MASK       IFX_CPU_TR_EVT_EVTA_MSK
   #define TREVT_CFG_REG_EN_VALUE      TREVT_DEBUG_MATCH_TRAPMODE
-#elif defined(CONFIG_ARCH_CHIP_AURIX_TC4XX)
+#elif defined(CONFIG_ARCH_CHIP_TC4XX)
   #define TREVT_CFG_REG_EN_MASK       IFX_CPU_TR_EVT_EN_MSK
   #define TREVT_CFG_REG_EN_VALUE      0x01
 #endif
@@ -285,7 +285,7 @@ int tricore_init_dbgmonitor(void)
       CBS_OEC.U = 0x5e;
     }
 
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4XX
+#ifdef CONFIG_ARCH_CHIP_TC4XX
   Ifx_CPU_DBGCFG dbgcfg;
   Ifx_CPU_DBGACT dbgact;
 

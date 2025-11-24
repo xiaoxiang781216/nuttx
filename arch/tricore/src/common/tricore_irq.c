@@ -50,7 +50,7 @@ const IfxSrc_Tos tricore_tos[] =
   IfxSrc_Tos_cpu3,
   IfxSrc_Tos_cpu4,
   IfxSrc_Tos_cpu5,
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC4XX
+#ifdef CONFIG_ARCH_CHIP_TC4XX
   IfxSrc_Tos_csrm,
 #endif
 };
@@ -126,7 +126,7 @@ static void tricore_gpsrinitialize(void)
 
   for (i = 0; i < CONFIG_NCPUS; i++)
     {
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC3XX
+#ifdef CONFIG_ARCH_CHIP_TC3XX
       IfxSrc_init(src, tricore_gettos(cpu_idx),
                   IRQ_TO_NDX(TRICORE_SRC2IRQ(src)));
 #else
@@ -140,7 +140,7 @@ static void tricore_gpsrinitialize(void)
 
   /* Cpucs gpsr init */
 
-#ifndef CONFIG_ARCH_CHIP_AURIX_TC3XX
+#ifdef CONFIG_HAVE_SECURITY_CORE
   src = &SRC_GPSR6_SR0 + cpu_idx;
   IfxSrc_init(src, tricore_gettos(cpu_idx),
               IRQ_TO_NDX(TRICORE_SRC2IRQ(src)),
@@ -218,7 +218,7 @@ void up_enable_irq(int irq)
 {
   volatile Ifx_SRC_SRCR *src = &SRC_CPU_CPU0_SB + irq;
 
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC3XX
+#ifdef CONFIG_ARCH_CHIP_TC3XX
   IfxSrc_init(src, tricore_gettos(up_cpu_index()), IRQ_TO_NDX(irq));
 #else
   IfxSrc_init(src, tricore_gettos(up_cpu_index()), IRQ_TO_NDX(irq),
@@ -314,7 +314,7 @@ void up_affinity_irq(int irq, cpu_set_t cpuset)
       if (CPU_ISSET(cpu, &cpuset))
         {
           IfxSrc_deinit(src);
-#ifdef CONFIG_ARCH_CHIP_AURIX_TC3XX
+#ifdef CONFIG_ARCH_CHIP_TC3XX
           IfxSrc_init(src, tricore_gettos(cpu), IRQ_TO_NDX(irq));
 #else
           IfxSrc_init(src, tricore_gettos(cpu), IRQ_TO_NDX(irq),
