@@ -80,6 +80,6 @@ int coredump_add_memory_region(FAR const void *ptr, size_t size,
 
 int coredump(FAR const struct memory_region_s *regions,
              FAR struct lib_outstream_s *stream,
-             pid_t pid, FAR void *regs);
+             pid_t pid);
 
 #endif /* __INCLUDE_NUTTX_COREDUMP_H */

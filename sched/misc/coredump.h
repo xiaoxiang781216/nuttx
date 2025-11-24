@@ -50,10 +50,9 @@ int coredump_initialize(void);
  *
  * Input Parameters:
  *   pid - The task/thread ID of the thread to dump
- *   regs - Pointer to the task's saved context
  *
  ****************************************************************************/
 
-void coredump_dump(pid_t pid, FAR void *regs);
+void coredump_dump(pid_t pid);
 
 #endif /* __SCHED_MISC_COREDUMP_H */
