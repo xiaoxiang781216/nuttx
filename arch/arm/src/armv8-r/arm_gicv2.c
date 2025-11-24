@@ -965,6 +965,14 @@ static void arm_gic_init(void)
 
 #endif
 
+#ifdef CONFIG_BMP
+  /* The GICD_ISENABLER0 is mixed type register, 0-15 SGI bits are RO,
+   * We should ensure handler already attach before enable whole
+   */
+
+  DEBUGVERIFY(irq_attach(GIC_SMP_CALL, nxsched_smp_call_handler, NULL));
+#endif
+
   /* Write the final ICCICR value to enable the GIC. */
 
   putreg32(iccicr, GIC_ICCICR);

@@ -36,7 +36,7 @@
 #include "gic.h"
 #include "sched/sched.h"
 
-#ifdef CONFIG_SMP
+#ifndef CONFIG_UP
 
 /****************************************************************************
  * Private Data
@@ -54,7 +54,7 @@
  *
  *   1. It saves the current task state at the head of the current assigned
  *      task list.
- *   2. It porcess g_delivertasks
+ *   2. It process g_delivertasks
  *   3. Returns from interrupt, restoring the state of the new task at the
  *      head of the ready to run list.
  *
@@ -66,6 +66,7 @@
  *
  ****************************************************************************/
 
+#ifdef CONFIG_SMP
 int arm_smp_sched_handler(int irq, void *context, void *arg)
 {
   nxsched_process_delivered(this_cpu());
@@ -97,6 +98,7 @@ int up_send_smp_sched(int cpu)
 
   return OK;
 }
+#endif
 
 /****************************************************************************
  * Name: up_send_smp_call
@@ -117,4 +119,4 @@ void up_send_smp_call(cpu_set_t cpuset)
   up_trigger_irq(GIC_SMP_CALL, cpuset);
 }
 
-#endif /* CONFIG_SMP */
+#endif /* !CONFIG_UP */
