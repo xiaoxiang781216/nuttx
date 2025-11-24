@@ -43,6 +43,10 @@ ifeq ($(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS),y)
   CSRCS += clock_perf.c
 endif
 
+ifeq ($(CONFIG_BUILD_PROTECTED),y)
+CSRCS += userspace.c
+endif
+
 # Add the sched directory to the build
 
 DEPPATH += --dep-path sched

@@ -66,43 +66,30 @@ extern void macho_call_saved_init_funcs(void);
 void lib_cxx_initialize(void)
 {
 #ifdef CONFIG_HAVE_CXXINITIALIZE
-  static DEFINE_PER_CPU_BMP(mutex_t, lock) = NXMUTEX_INITIALIZER;
-  static DEFINE_PER_CPU_BSS_BMP(int, inited);
+#  if defined(CONFIG_ARCH_SIM) && defined(CONFIG_HOST_MACOS)
+  macho_call_saved_init_funcs();
+#  else
+  initializer_t *initp;
 
-#  define lock this_cpu_var_bmp(lock)
-#  define inited this_cpu_var_bmp(inited)
+  sinfo("_sinit: %p _einit: %p\n", _sinit, _einit);
 
-  nxmutex_lock(&lock);
-  if (inited == 0)
+  /* Visit each entry in the initialization table */
+
+  for (initp = _sinit; initp < _einit; initp++)
     {
-      inited = 1;
-#if defined(CONFIG_ARCH_SIM) && defined(CONFIG_HOST_MACOS)
-      macho_call_saved_init_funcs();
-#else
-      initializer_t *initp;
+      initializer_t initializer = *initp;
+      sinfo("initp: %p initializer: %p\n", initp, initializer);
 
-      sinfo("_sinit: %p _einit: %p\n", _sinit, _einit);
+      /* Make sure that the address is non-NULL. Some toolchains may put
+       * NULL values or counts in the initialization table.
+       */
 
-      /* Visit each entry in the initialization table */
-
-      for (initp = _sinit; initp < _einit; initp++)
+      if (initializer)
         {
-          initializer_t initializer = *initp;
-          sinfo("initp: %p initializer: %p\n", initp, initializer);
-
-          /* Make sure that the address is non-NULL. Some toolchains may put
-           * NULL values or counts in the initialization table.
-           */
-
-          if (initializer)
-            {
-              sinfo("Calling %p\n", initializer);
-              initializer();
-            }
+          sinfo("Calling %p\n", initializer);
+          initializer();
         }
-#endif
     }
-
-  nxmutex_unlock(&lock);
+#  endif
 #endif
 }

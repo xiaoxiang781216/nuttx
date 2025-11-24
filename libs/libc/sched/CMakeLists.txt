@@ -47,4 +47,8 @@ if(CONFIG_ARCH_PERF_EVENTS_USER_ACCESS)
   list(APPEND SRCS clock_perf.c)
 endif()
 
+if(CONFIG_BUILD_PROTECTED)
+  list(APPEND SRCS userspace.c)
+endif()
+
 target_sources(c PRIVATE ${SRCS})

@@ -193,6 +193,16 @@ extern "C"
  * Public Function Prototypes
  ****************************************************************************/
 
+/****************************************************************************
+ * Name: nxuser_init
+ *
+ * Description:
+ *   User-space application entry point.
+ *
+ ****************************************************************************/
+
+int nxuser_init(int argc, char *argv[]);
+
 #undef EXTERN
 #ifdef __cplusplus
 }

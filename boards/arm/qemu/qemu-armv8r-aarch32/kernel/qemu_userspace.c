@@ -68,7 +68,7 @@ const struct userspace_s userspace locate_data(".userspace") =
 {
   /* General memory map */
 
-  .us_entrypoint    = CONFIG_INIT_ENTRYPOINT,
+  .us_entrypoint    = nxuser_init,
   .us_textstart     = (uintptr_t)_stext,
   .us_textend       = (uintptr_t)_etext,
 #ifdef CONFIG_PERCPU_SECTION
