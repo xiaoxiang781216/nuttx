@@ -77,9 +77,9 @@ bool ratelimit_islimited(FAR struct ratelimit_state_s *state)
     }
 
 #if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
-  flags = spin_lock_irqsave_notrace(&state->lock);
+  flags = spin_lock_irqsave_notrace(&state->lock.spin);
 #else
-  pthread_mutex_lock(&state->lock);
+  pthread_mutex_lock(&state->lock.mutex);
 #endif
 
   now = TICK2SEC(clock());
@@ -105,9 +105,9 @@ bool ratelimit_islimited(FAR struct ratelimit_state_s *state)
     }
 
 #if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
-  spin_unlock_irqrestore_notrace(&state->lock, flags);
+  spin_unlock_irqrestore_notrace(&state->lock.spin, flags);
 #else
-  pthread_mutex_unlock(&state->lock);
+  pthread_mutex_unlock(&state->lock.mutex);
 #endif
 
   return result;

@@ -33,30 +33,32 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
-#  include <nuttx/spinlock_type.h>
-#else
-#  include <pthread.h>
-#endif
+#include <nuttx/spinlock_type.h>
+#include <pthread.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
 #if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
-#  define RATELIMIT_LOCK_INITIALIZER SP_UNLOCKED
-#else
-#  define RATELIMIT_LOCK_INITIALIZER PTHREAD_MUTEX_INITIALIZER
-#endif
-
 #define RATELIMIT_STATE_INITIALIZER(interval_init, burst_init) \
   {                                                            \
-    .lock     = RATELIMIT_LOCK_INITIALIZER,                    \
+    .lock     = { .spin = SP_UNLOCKED },                       \
     .interval = interval_init,                                 \
     .burst    = burst_init,                                    \
     .begin    = 0,                                             \
     .count    = 0,                                             \
   }
+#else
+#define RATELIMIT_STATE_INITIALIZER(interval_init, burst_init) \
+  {                                                            \
+    .lock     = { .mutex = PTHREAD_MUTEX_INITIALIZER },        \
+    .interval = interval_init,                                 \
+    .burst    = burst_init,                                    \
+    .begin    = 0,                                             \
+    .count    = 0,                                             \
+  }
+#endif
 
 #define DEFINE_RATELIMIT_STATE(name, interval_init, burst_init) \
   struct ratelimit_state_s name =                               \
@@ -75,11 +77,11 @@ struct ratelimit_state_s
 {
   /* A lock used to protect the current-limiting state. */
 
-#if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
-  spinlock_t lock;
-#else
-  pthread_mutex_t lock;
-#endif
+  union
+    {
+      spinlock_t spin;
+      pthread_mutex_t mutex;
+    } lock;
 
   unsigned int interval; /* The size of the time window (in seconds). */
   unsigned int burst;    /* The burst traffic allowed within the window. */
