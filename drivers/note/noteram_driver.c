@@ -119,6 +119,9 @@ struct noteram_driver_s
   FAR struct pollfd *pfd;
   struct notifier_block nb;
   struct noteram_ratelimit_s ratelimit;
+#if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
+  struct wdog_s wdog;
+#endif
 };
 
 /* The structure to hold the context data of trace dump */
@@ -158,6 +161,10 @@ static void
 noteram_dump_init_context(FAR struct noteram_dump_context_s *ctx);
 static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
                             FAR struct noteram_dump_context_s *ctx);
+
+#if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
+static void noteram_timeout_handler(wdparm_t arg);
+#endif
 
 /****************************************************************************
  * Private Data
@@ -235,6 +242,41 @@ struct noteram_driver_s g_noteram_driver =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
+static inline_function
+void noteram_timeout_reset(FAR struct noteram_driver_s *drv)
+{
+  /* We need locked to ensure the wdog status and dq status aligned. */
+
+  irqstate_t flags = spin_lock_irqsave(&drv->header->lock);
+  if (!drv->pfd)
+    {
+      wd_cancel(&drv->wdog);
+    }
+  else
+    {
+      wd_start(&drv->wdog, MSEC2TICK(CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS),
+               noteram_timeout_handler, (wdparm_t)drv);
+    }
+
+  spin_unlock_irqrestore(&drv->header->lock, flags);
+}
+
+static void noteram_timeout_handler(wdparm_t arg)
+{
+  FAR struct noteram_driver_s *drv = (FAR struct noteram_driver_s *)arg;
+
+  if (drv->pfd)
+    {
+      poll_notify(&drv->pfd, 1, POLLIN);
+    }
+
+  noteram_timeout_reset(drv);
+}
+#else
+#  define noteram_timeout_reset(drv)
+#endif /* CONFIG_RAMLOG_POLLTIMEOUT_MS > 0 */
 
 /****************************************************************************
  * Name: noteram_header_init
@@ -876,6 +918,7 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
 errout:
   spin_unlock_irqrestore_notrace(&drv->header->lock, flags);
+  noteram_timeout_reset(drv);
   return ret;
 }
 
@@ -965,6 +1008,8 @@ static void noteram_add(FAR struct note_driver_s *driver,
     {
       poll_notify(&drv->pfd, 1, POLLIN);
     }
+
+  noteram_timeout_reset(drv);
 }
 
 /****************************************************************************

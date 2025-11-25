@@ -122,6 +122,13 @@ config DRIVERS_NOTERAM_CRASH_DUMP
 	---help---
 		If this option is enabled, dump all contents when a crash occurs.
 
+config DRIVERS_NOTERAM_POLLTIMEOUT_MS
+	int "The timeout ms if poll requested and no data avaliable"
+	default 0
+	---help---
+		Default 0 to disable this feature, positive value (ms) to make noteram trigger a
+		wdog to enable idle timeout notify poll waiter.
+
 endif # DRIVERS_NOTERAM
 
 config DRIVERS_NOTE_STRIP_FORMAT
