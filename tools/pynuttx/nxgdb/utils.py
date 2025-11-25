@@ -930,7 +930,14 @@ def get_register_byname(regname, tcb=None):
                 xcpregs = xcpregs.cast(lookup_type("char").pointer())
             value = gdb.Value(int(xcpregs) + reg.toffset)
             value = value.cast(lookup_type("uintptr_t").pointer())
-            return int(value.dereference())
+            try:
+                return int(value.dereference())
+            except gdb.MemoryError:
+                print(
+                    f"Failed to read memory at {value}, tcb: {tcb['pid']}\n"
+                    "Possible reason: The task is going to run soon, so tcb.xcp.regs is null"
+                )
+                return 0
 
 
 def get_sp(tcb=None):
