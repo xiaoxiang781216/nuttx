@@ -656,7 +656,7 @@ FAR struct tcp_conn_s *tcp_alloc_accept(FAR struct net_driver_s *dev,
 
 int tcp_selectport(uint8_t domain,
                    FAR const union ip_addr_u *ipaddr,
-                   uint16_t portno);
+                   uint16_t portno, bool reuseaddr);
 
 /****************************************************************************
  * Name: tcp_bind

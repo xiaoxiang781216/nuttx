@@ -239,13 +239,13 @@ uint16_t nat_port_select(FAR struct net_driver_s *dev,
 #ifndef CONFIG_NET_TCP_NO_STACK
           /* Try to select local_port first. */
 
-          int ret = tcp_selectport(domain, external_ip, local_port);
+          int ret = tcp_selectport(domain, external_ip, local_port, false);
 
           /* If failed, try select another unused port. */
 
           if (ret < 0)
             {
-              ret = tcp_selectport(domain, external_ip, 0);
+              ret = tcp_selectport(domain, external_ip, 0, false);
             }
 
           return ret > 0 ? ret : 0;

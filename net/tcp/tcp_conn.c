@@ -72,6 +72,7 @@
 #include "nat/nat.h"
 #include "netdev/netdev.h"
 #include "utils/utils.h"
+#include "socket/socket.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -112,8 +113,8 @@ static dq_queue_t g_active_tcp_connections;
  ****************************************************************************/
 
 static FAR struct tcp_conn_s *
-  tcp_listener(uint8_t domain, FAR const union ip_addr_u *ipaddr,
-               uint16_t portno)
+tcp_listener(uint8_t domain, FAR const union ip_addr_u *ipaddr,
+             uint16_t portno, bool reuseaddr)
 {
   FAR struct tcp_conn_s *conn = NULL;
 
@@ -126,6 +127,7 @@ static FAR struct tcp_conn_s *
        */
 
       if (conn->tcpstateflags != TCP_CLOSED &&
+          (conn->tcpstateflags != TCP_TIME_WAIT || !reuseaddr) &&
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
           tcp_conn_cmp(domain, ipaddr, portno, conn)
 #else
@@ -164,7 +166,7 @@ static FAR struct tcp_conn_s *
 
 #ifdef CONFIG_NET_IPv4
 static inline FAR struct tcp_conn_s *
-  tcp_ipv4_active(FAR struct net_driver_s *dev, FAR struct tcp_hdr_s *tcp)
+tcp_ipv4_active(FAR struct net_driver_s *dev, FAR struct tcp_hdr_s *tcp)
 {
   FAR struct ipv4_hdr_s *ip = IPv4BUF;
   FAR struct tcp_conn_s *conn;
@@ -231,7 +233,7 @@ static inline FAR struct tcp_conn_s *
 
 #ifdef CONFIG_NET_IPv6
 static inline FAR struct tcp_conn_s *
-  tcp_ipv6_active(FAR struct net_driver_s *dev, FAR struct tcp_hdr_s *tcp)
+tcp_ipv6_active(FAR struct net_driver_s *dev, FAR struct tcp_hdr_s *tcp)
 {
   FAR struct ipv6_hdr_s *ip = IPv6BUF;
   FAR struct tcp_conn_s *conn;
@@ -343,7 +345,13 @@ static inline int tcp_ipv4_bind(FAR struct tcp_conn_s *conn,
 
   port = tcp_selectport(PF_INET,
                        (FAR const union ip_addr_u *)&addr->sin_addr.s_addr,
-                       addr->sin_port);
+                       addr->sin_port,
+#ifdef CONFIG_NET_SOCKOPTS
+                       _SO_GETOPT(conn->sconn.s_options, SO_REUSEADDR)
+#else
+                       false
+#endif
+                       );
   if (port < 0)
     {
       nerr("ERROR: tcp_selectport failed: %d\n", port);
@@ -439,7 +447,13 @@ static inline int tcp_ipv6_bind(FAR struct tcp_conn_s *conn,
 
   port = tcp_selectport(PF_INET6,
                 (FAR const union ip_addr_u *)addr->sin6_addr.in6_u.u6_addr16,
-                addr->sin6_port);
+                addr->sin6_port,
+#ifdef CONFIG_NET_SOCKOPTS
+                _SO_GETOPT(conn->sconn.s_options, SO_REUSEADDR)
+#else
+                false
+#endif
+                );
   if (port < 0)
     {
       nerr("ERROR: tcp_selectport failed: %d\n", port);
@@ -504,7 +518,7 @@ static inline int tcp_ipv6_bind(FAR struct tcp_conn_s *conn,
 
 int tcp_selectport(uint8_t domain,
                    FAR const union ip_addr_u *ipaddr,
-                   uint16_t portno)
+                   uint16_t portno, bool reuseaddr)
 {
   static uint16_t g_last_tcp_port;
 
@@ -539,7 +553,7 @@ int tcp_selectport(uint8_t domain,
               return -EADDRINUSE;
             }
         }
-      while (tcp_listener(domain, ipaddr, portno)
+      while (tcp_listener(domain, ipaddr, portno, false)
 #ifdef CONFIG_NET_NAT
              || nat_port_inuse(domain, IP_PROTO_TCP, ipaddr, portno)
 #endif
@@ -551,7 +565,7 @@ int tcp_selectport(uint8_t domain,
        * connection is using this local port.
        */
 
-      if (tcp_listener(domain, ipaddr, portno)
+      if (tcp_listener(domain, ipaddr, portno, reuseaddr)
 #ifdef CONFIG_NET_NAT
           || nat_port_inuse(domain, IP_PROTO_TCP, ipaddr, portno)
 #endif
@@ -1298,7 +1312,7 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 
           port = tcp_selectport(PF_INET,
                                 (FAR const union ip_addr_u *)
-                                &conn->u.ipv4.laddr, 0);
+                                &conn->u.ipv4.laddr, 0, false);
         }
 #endif /* CONFIG_NET_IPv4 */
 
@@ -1313,7 +1327,7 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 
           port = tcp_selectport(PF_INET6,
                                 (FAR const union ip_addr_u *)
-                                conn->u.ipv6.laddr, 0);
+                                conn->u.ipv6.laddr, 0, false);
         }
 #endif /* CONFIG_NET_IPv6 */
 
