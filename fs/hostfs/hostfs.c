@@ -123,6 +123,21 @@ static int     hostfs_chstat(FAR struct inode *mountpt,
                              FAR const char *relpath,
                              FAR const struct stat *buf, int flags);
 
+#ifdef CONFIG_FS_LINKS
+static int     hostfs_link(FAR struct inode *mountpt,
+                           FAR const char *relpath1,
+                           FAR const char *relpath2);
+static int     hostfs_symlink(FAR struct inode *mountpt,
+                              FAR const char *path1,
+                              FAR const char *relpath2);
+static ssize_t hostfs_readlink(FAR struct inode *mountpt,
+                               FAR const char *relpath,
+                               FAR char *buf, size_t bufsize);
+static int     hostfs_lstat(FAR struct inode *mountpt,
+                            FAR const char *relpath,
+                            FAR struct stat *buf);
+#endif
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -166,6 +181,13 @@ const struct mountpt_operations g_hostfs_operations =
   hostfs_rename,        /* rename */
   hostfs_stat,          /* stat */
   hostfs_chstat,        /* chstat */
+  NULL,                 /* syncfs */
+#ifdef CONFIG_FS_LINKS
+  hostfs_link,          /* link */
+  hostfs_symlink,       /* symlink */
+  hostfs_readlink,      /* readlink */
+  hostfs_lstat,         /* lstat */
+#endif
 };
 
 /****************************************************************************
@@ -243,7 +265,7 @@ static int hostfs_open(FAR struct file *filep, FAR const char *relpath,
   FAR struct inode *inode;
   FAR struct hostfs_mountpt_s *fs;
   FAR struct hostfs_ofile_s  *hf;
-  char path[HOSTFS_MAX_PATH];
+  FAR char *path;
   size_t len;
   int ret;
 
@@ -260,12 +282,18 @@ static int hostfs_open(FAR struct file *filep, FAR const char *relpath,
 
   DEBUGASSERT(fs != NULL);
 
+  path = lib_get_tempbuffer(HOSTFS_MAX_PATH);
+  if (path == NULL)
+    {
+      return -ENOMEM;
+    }
+
   /* Take the lock */
 
   ret = nxmutex_lock(&fs->fs_lock);
   if (ret < 0)
     {
-      return ret;
+      goto errout_with_path;
     }
 
   /* Allocate memory for the open file */
@@ -280,7 +308,7 @@ static int hostfs_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Append to the host's root directory */
 
-  hostfs_mkpath(fs, relpath, path, sizeof(path));
+  hostfs_mkpath(fs, relpath, path, HOSTFS_MAX_PATH);
 
   /* Try to open the file in the host file system */
 
@@ -334,6 +362,10 @@ errout_with_buffer:
 
 errout_with_lock:
   nxmutex_unlock(&fs->fs_lock);
+
+errout_with_path:
+  lib_put_tempbuffer(path);
+
   if (ret == -EINVAL)
     {
       ret = -EIO;
@@ -845,12 +877,18 @@ static int hostfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
 {
   FAR struct hostfs_mountpt_s *fs;
   FAR struct hostfs_dir_s *hdir;
-  char path[HOSTFS_MAX_PATH];
+  FAR char *path;
   int ret;
 
   /* Sanity checks */
 
   DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
+
+  path = lib_get_tempbuffer(HOSTFS_MAX_PATH);
+  if (path == NULL)
+    {
+      return -ENOMEM;
+    }
 
   /* Recover our private data from the inode instance */
 
@@ -858,7 +896,8 @@ static int hostfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
   hdir = fs_heap_zalloc(sizeof(struct hostfs_dir_s));
   if (hdir == NULL)
     {
-      return -ENOMEM;
+      ret = -ENOMEM;
+      goto errout_with_path;
     }
 
   /* Take the lock */
@@ -871,7 +910,7 @@ static int hostfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
 
   /* Append to the host's root directory */
 
-  hostfs_mkpath(fs, relpath, path, sizeof(path));
+  hostfs_mkpath(fs, relpath, path, HOSTFS_MAX_PATH);
 
   /* Call the host's opendir function */
 
@@ -884,6 +923,7 @@ static int hostfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
 
   *dir = (FAR struct fs_dirent_s *)hdir;
   nxmutex_unlock(&fs->fs_lock);
+  lib_put_tempbuffer(path);
   return OK;
 
 errout_with_lock:
@@ -891,6 +931,9 @@ errout_with_lock:
 
 errout_with_hdir:
   fs_heap_free(hdir);
+
+errout_with_path:
+  lib_put_tempbuffer(path);
   return ret;
 }
 
@@ -1210,12 +1253,18 @@ static int hostfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
 static int hostfs_unlink(FAR struct inode *mountpt, FAR const char *relpath)
 {
   FAR struct hostfs_mountpt_s *fs;
-  char path[HOSTFS_MAX_PATH];
+  FAR char *path;
   int ret;
 
   /* Sanity checks */
 
   DEBUGASSERT(mountpt && mountpt->i_private);
+
+  path = lib_get_tempbuffer(HOSTFS_MAX_PATH);
+  if (path == NULL)
+    {
+      return -ENOMEM;
+    }
 
   /* Get the mountpoint private data from the inode structure */
 
@@ -1224,18 +1273,21 @@ static int hostfs_unlink(FAR struct inode *mountpt, FAR const char *relpath)
   ret = nxmutex_lock(&fs->fs_lock);
   if (ret < 0)
     {
-      return ret;
+      goto errout_with_path;
     }
 
   /* Append to the host's root directory */
 
-  hostfs_mkpath(fs, relpath, path, sizeof(path));
+  hostfs_mkpath(fs, relpath, path, HOSTFS_MAX_PATH);
 
   /* Call the host fs to perform the unlink */
 
   ret = host_unlink(path);
 
   nxmutex_unlock(&fs->fs_lock);
+
+errout_with_path:
+  lib_put_tempbuffer(path);
   return ret;
 }
 
@@ -1250,12 +1302,18 @@ static int hostfs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
                         mode_t mode)
 {
   FAR struct hostfs_mountpt_s *fs;
-  char path[HOSTFS_MAX_PATH];
+  FAR char *path;
   int ret;
 
   /* Sanity checks */
 
   DEBUGASSERT(mountpt && mountpt->i_private);
+
+  path = lib_get_tempbuffer(HOSTFS_MAX_PATH);
+  if (path == NULL)
+    {
+      return -ENOMEM;
+    }
 
   /* Get the mountpoint private data from the inode structure */
 
@@ -1264,18 +1322,21 @@ static int hostfs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
   ret = nxmutex_lock(&fs->fs_lock);
   if (ret < 0)
     {
-      return ret;
+      goto errout_with_path;
     }
 
   /* Append to the host's root directory */
 
-  hostfs_mkpath(fs, relpath, path, sizeof(path));
+  hostfs_mkpath(fs, relpath, path, HOSTFS_MAX_PATH);
 
   /* Call the host FS to do the mkdir */
 
   ret = host_mkdir(path, mode);
 
   nxmutex_unlock(&fs->fs_lock);
+
+errout_with_path:
+  lib_put_tempbuffer(path);
   return ret;
 }
 
@@ -1289,12 +1350,18 @@ static int hostfs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
 int hostfs_rmdir(FAR struct inode *mountpt, FAR const char *relpath)
 {
   FAR struct hostfs_mountpt_s *fs;
-  char path[HOSTFS_MAX_PATH];
+  FAR char *path;
   int ret;
 
   /* Sanity checks */
 
   DEBUGASSERT(mountpt && mountpt->i_private);
+
+  path = lib_get_tempbuffer(HOSTFS_MAX_PATH);
+  if (path == NULL)
+    {
+      return -ENOMEM;
+    }
 
   /* Get the mountpoint private data from the inode structure */
 
@@ -1305,18 +1372,21 @@ int hostfs_rmdir(FAR struct inode *mountpt, FAR const char *relpath)
   ret = nxmutex_lock(&fs->fs_lock);
   if (ret < 0)
     {
-      return ret;
+      goto errout_with_path;
     }
 
   /* Append to the host's root directory */
 
-  hostfs_mkpath(fs, relpath, path, sizeof(path));
+  hostfs_mkpath(fs, relpath, path, HOSTFS_MAX_PATH);
 
   /* Call the host FS to do the mkdir */
 
   ret = host_rmdir(path);
 
   nxmutex_unlock(&fs->fs_lock);
+
+errout_with_path:
+  lib_put_tempbuffer(path);
   return ret;
 }
 
@@ -1331,13 +1401,26 @@ int hostfs_rename(FAR struct inode *mountpt, FAR const char *oldrelpath,
                   FAR const char *newrelpath)
 {
   FAR struct hostfs_mountpt_s *fs;
-  char oldpath[HOSTFS_MAX_PATH];
-  char newpath[HOSTFS_MAX_PATH];
+  FAR char *oldpath;
+  FAR char *newpath;
   int ret;
 
   /* Sanity checks */
 
   DEBUGASSERT(mountpt && mountpt->i_private);
+
+  oldpath = lib_get_tempbuffer(HOSTFS_MAX_PATH);
+  if (oldpath == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  newpath = lib_get_tempbuffer(HOSTFS_MAX_PATH);
+  if (newpath == NULL)
+    {
+      ret = -ENOMEM;
+      goto errout_with_oldpath;
+    }
 
   /* Get the mountpoint private data from the inode structure */
 
@@ -1346,7 +1429,7 @@ int hostfs_rename(FAR struct inode *mountpt, FAR const char *oldrelpath,
   ret = nxmutex_lock(&fs->fs_lock);
   if (ret < 0)
     {
-      return ret;
+      goto errout_with_newpath;
     }
 
   /* Append to the host's root directory */
@@ -1361,6 +1444,12 @@ int hostfs_rename(FAR struct inode *mountpt, FAR const char *oldrelpath,
   ret = host_rename(oldpath, newpath);
 
   nxmutex_unlock(&fs->fs_lock);
+
+errout_with_newpath:
+  lib_put_tempbuffer(newpath);
+
+errout_with_oldpath:
+  lib_put_tempbuffer(oldpath);
   return ret;
 }
 
@@ -1375,12 +1464,18 @@ static int hostfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
                        FAR struct stat *buf)
 {
   FAR struct hostfs_mountpt_s *fs;
-  char path[HOSTFS_MAX_PATH];
+  FAR char *path;
   int ret;
 
   /* Sanity checks */
 
   DEBUGASSERT(mountpt && mountpt->i_private);
+
+  path = lib_get_tempbuffer(HOSTFS_MAX_PATH);
+  if (path == NULL)
+    {
+      return -ENOMEM;
+    }
 
   /* Get the mountpoint private data from the inode structure */
 
@@ -1389,18 +1484,21 @@ static int hostfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
   ret = nxmutex_lock(&fs->fs_lock);
   if (ret < 0)
     {
-      return ret;
+      goto errout_with_path;
     }
 
   /* Append to the host's root directory */
 
-  hostfs_mkpath(fs, relpath, path, sizeof(path));
+  hostfs_mkpath(fs, relpath, path, HOSTFS_MAX_PATH);
 
   /* Call the host FS to do the stat operation */
 
   ret = host_stat(path, buf);
 
   nxmutex_unlock(&fs->fs_lock);
+
+errout_with_path:
+  lib_put_tempbuffer(path);
   return ret;
 }
 
@@ -1415,12 +1513,18 @@ static int hostfs_chstat(FAR struct inode *mountpt, FAR const char *relpath,
                          FAR const struct stat *buf, int flags)
 {
   FAR struct hostfs_mountpt_s *fs;
-  char path[HOSTFS_MAX_PATH];
+  FAR char *path;
   int ret;
 
   /* Sanity checks */
 
   DEBUGASSERT(mountpt && mountpt->i_private);
+
+  path = lib_get_tempbuffer(HOSTFS_MAX_PATH);
+  if (path == NULL)
+    {
+      return -ENOMEM;
+    }
 
   /* Get the mountpoint private data from the inode structure */
 
@@ -1429,20 +1533,238 @@ static int hostfs_chstat(FAR struct inode *mountpt, FAR const char *relpath,
   ret = nxmutex_lock(&fs->fs_lock);
   if (ret < 0)
     {
-      return ret;
+      goto errout_with_path;
     }
 
   /* Append to the host's root directory */
 
-  hostfs_mkpath(fs, relpath, path, sizeof(path));
+  hostfs_mkpath(fs, relpath, path, HOSTFS_MAX_PATH);
 
   /* Call the host FS to do the chstat operation */
 
   ret = host_chstat(path, buf, flags);
 
   nxmutex_unlock(&fs->fs_lock);
+
+errout_with_path:
+  lib_put_tempbuffer(path);
   return ret;
 }
+
+#ifdef CONFIG_FS_LINKS
+/****************************************************************************
+ * Name: hostfs_link
+ *
+ * Description: Create a hard link
+ *
+ ****************************************************************************/
+
+static int hostfs_link(FAR struct inode *mountpt, FAR const char *relpath1,
+                       FAR const char *relpath2)
+{
+  FAR struct hostfs_mountpt_s *fs;
+  FAR char *path1;
+  FAR char *path2;
+  int ret;
+
+  /* Sanity checks */
+
+  DEBUGASSERT(mountpt && mountpt->i_private);
+
+  path1 = lib_get_tempbuffer(HOSTFS_MAX_PATH);
+  if (path1 == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  path2 = lib_get_tempbuffer(HOSTFS_MAX_PATH);
+  if (path2 == NULL)
+    {
+      ret = -ENOMEM;
+      goto errout_with_path1;
+    }
+
+  /* Get the mountpoint private data from the inode structure */
+
+  fs = mountpt->i_private;
+
+  ret = nxmutex_lock(&fs->fs_lock);
+  if (ret < 0)
+    {
+      goto errout_with_path2;
+    }
+
+  /* Append to the host's root directory */
+
+  hostfs_mkpath(fs, relpath1, path1, HOSTFS_MAX_PATH);
+  hostfs_mkpath(fs, relpath2, path2, HOSTFS_MAX_PATH);
+
+  /* Call the host FS to create the hard link */
+
+  ret = host_link(path1, path2);
+
+  nxmutex_unlock(&fs->fs_lock);
+
+errout_with_path2:
+  lib_put_tempbuffer(path2);
+
+errout_with_path1:
+  lib_put_tempbuffer(path1);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: hostfs_symlink
+ *
+ * Description: Create a symbolic link
+ *
+ ****************************************************************************/
+
+static int hostfs_symlink(FAR struct inode *mountpt,
+                          FAR const char *path1,
+                          FAR const char *relpath2)
+{
+  FAR struct hostfs_mountpt_s *fs;
+  FAR char *fullpath2;
+  int ret;
+
+  /* Sanity checks */
+
+  DEBUGASSERT(mountpt && mountpt->i_private);
+
+  fullpath2 = lib_get_tempbuffer(HOSTFS_MAX_PATH);
+  if (fullpath2 == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  /* Get the mountpoint private data from the inode structure */
+
+  fs = mountpt->i_private;
+
+  ret = nxmutex_lock(&fs->fs_lock);
+  if (ret < 0)
+    {
+      goto errout_with_path;
+    }
+
+  /* Build the full path for the link location (relpath2)
+   * The target (path1) is used as-is, allowing relative or absolute paths
+   */
+
+  hostfs_mkpath(fs, relpath2, fullpath2, HOSTFS_MAX_PATH);
+
+  /* Call the host FS to create the symbolic link */
+
+  ret = host_symlink(path1, fullpath2);
+
+  nxmutex_unlock(&fs->fs_lock);
+
+errout_with_path:
+  lib_put_tempbuffer(fullpath2);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: hostfs_readlink
+ *
+ * Description: Read the target of a symbolic link
+ *
+ ****************************************************************************/
+
+static ssize_t hostfs_readlink(FAR struct inode *mountpt,
+                               FAR const char *relpath,
+                               FAR char *buf, size_t bufsize)
+{
+  FAR struct hostfs_mountpt_s *fs;
+  FAR char *path;
+  ssize_t ret;
+
+  /* Sanity checks */
+
+  DEBUGASSERT(mountpt && mountpt->i_private);
+
+  path = lib_get_tempbuffer(HOSTFS_MAX_PATH);
+  if (path == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  /* Get the mountpoint private data from the inode structure */
+
+  fs = mountpt->i_private;
+
+  ret = nxmutex_lock(&fs->fs_lock);
+  if (ret < 0)
+    {
+      goto errout_with_path;
+    }
+
+  /* Append to the host's root directory */
+
+  hostfs_mkpath(fs, relpath, path, HOSTFS_MAX_PATH);
+
+  /* Call the host FS to read the symbolic link */
+
+  ret = host_readlink(path, buf, bufsize);
+
+  nxmutex_unlock(&fs->fs_lock);
+
+errout_with_path:
+  lib_put_tempbuffer(path);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: hostfs_lstat
+ *
+ * Description: Return information about a file or directory (don't follow
+ *              symbolic links)
+ *
+ ****************************************************************************/
+
+static int hostfs_lstat(FAR struct inode *mountpt, FAR const char *relpath,
+                        FAR struct stat *buf)
+{
+  FAR struct hostfs_mountpt_s *fs;
+  FAR char *path;
+  int ret;
+
+  /* Sanity checks */
+
+  DEBUGASSERT(mountpt && mountpt->i_private);
+
+  path = lib_get_tempbuffer(HOSTFS_MAX_PATH);
+  if (path == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  /* Get the mountpoint private data from the inode structure */
+
+  fs = mountpt->i_private;
+
+  ret = nxmutex_lock(&fs->fs_lock);
+  if (ret < 0)
+    {
+      goto errout_with_path;
+    }
+
+  /* Append to the host's root directory */
+
+  hostfs_mkpath(fs, relpath, path, HOSTFS_MAX_PATH);
+
+  /* Call the host FS to do the lstat operation */
+
+  ret = host_lstat(path, buf);
+
+  nxmutex_unlock(&fs->fs_lock);
+
+errout_with_path:
+  lib_put_tempbuffer(path);
+  return ret;
+}
+#endif /* CONFIG_FS_LINKS */
 
 /****************************************************************************
  * Public Functions
