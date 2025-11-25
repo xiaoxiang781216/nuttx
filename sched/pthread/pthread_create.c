@@ -466,11 +466,6 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
   return OK;
 
 errout_with_tcb:
-
-  /* Since we do not join the group, assign group to NULL to clear binding */
-
-  ptcb->group = NULL;
-
   nxsched_release_tcb(ptcb, TCB_FLAG_TTYPE_PTHREAD);
   return errcode;
 }
