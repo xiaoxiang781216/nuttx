@@ -200,6 +200,7 @@ static void dump_stackinfo(FAR const char *tag, uintptr_t sp,
                            uintptr_t base, size_t size, size_t used)
 {
   uintptr_t top = base + size;
+  uintptr_t dump_end = top;
 
   _alert("%s Stack:\n", tag);
   _alert("  base: %p\n", (FAR void *)base);
@@ -216,7 +217,14 @@ static void dump_stackinfo(FAR const char *tag, uintptr_t sp,
           sp -= DUMP_STRIDE;
         }
 
-      stack_dump(sp, top);
+#if CONFIG_ARCH_STACKDUMP_MAX_LENGTH > 0
+      if (top - sp > CONFIG_ARCH_STACKDUMP_MAX_LENGTH)
+        {
+          dump_end = sp + CONFIG_ARCH_STACKDUMP_MAX_LENGTH;
+        }
+#endif
+
+      stack_dump(sp, dump_end);
     }
   else
     {
