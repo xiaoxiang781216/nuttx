@@ -103,6 +103,10 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
       tcb = this_task();
 #endif
 
+      /* Update tls info */
+
+      CP15_SET(TPIDRURW, (uintptr_t)tcb->stack_alloc_ptr);
+
       /* Record the new "running" task when context switch occurred.
        * g_running_tasks[] is only used by assertion logic for reporting
        * crashes.

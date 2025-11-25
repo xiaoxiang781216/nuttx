@@ -495,6 +495,10 @@ uint32_t *arm_syscall(uint32_t *regs)
 
   dump_syscall("Exit", cmd, regs);
 
+  /* Update tls info */
+
+  CP15_SET(TPIDRURW, (uintptr_t)tcb->stack_alloc_ptr);
+
   /* Set irq flag */
 
   up_set_interrupt_context(false);

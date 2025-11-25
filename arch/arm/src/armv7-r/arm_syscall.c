@@ -497,6 +497,10 @@ uint32_t *arm_syscall(uint32_t *regs)
 
   sched_note_irqhandler(NR_IRQS, arm_syscall, false);
 
+  /* Update tls info */
+
+  CP15_SET(TPIDRURW, (uintptr_t)tcb->stack_alloc_ptr);
+
   /* Set irq flag */
 
   up_set_interrupt_context(false);

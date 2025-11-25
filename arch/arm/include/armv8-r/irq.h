@@ -31,6 +31,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/irq.h>
+#include <nuttx/percpu.h>
 
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
@@ -210,6 +211,14 @@
 
 #ifndef __ASSEMBLY__
 
+#ifdef __cplusplus
+#define EXTERN extern "C"
+extern "C"
+{
+#else
+#define EXTERN extern
+#endif
+
 /* This structure represents the return state from a system call */
 
 #ifdef CONFIG_LIB_SYSCALL
@@ -310,6 +319,13 @@ struct xcptcontext
 #endif
 #endif
 };
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+DECLARE_PER_CPU(volatile bool, g_interrupt_context);
+#define g_interrupt_context this_cpu_var(g_interrupt_context)
 
 /****************************************************************************
  * Inline functions
@@ -456,24 +472,23 @@ static inline_function uintptr_t up_getusrsp(void *regs)
 noinstrument_function
 static inline_function void up_set_interrupt_context(bool flag)
 {
-  CP15_MODIFY(flag, 1u, TPIDRPRW);
+  g_interrupt_context = flag;
 }
 
-#define up_this_task()         ((struct tcb_s *)(CP15_GET(TPIDRPRW) & ~1u))
-#define up_update_task(t)      CP15_MODIFY(t, ~1u, TPIDRPRW)
-#define up_interrupt_context() (CP15_GET(TPIDRPRW) & 1u)
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
-#ifdef __cplusplus
-#define EXTERN extern "C"
-extern "C"
+static inline_function bool up_interrupt_context(void)
 {
-#else
-#define EXTERN extern
+#ifdef CONFIG_SMP
+  irqstate_t flags = up_irq_save();
 #endif
+  bool ret = g_interrupt_context;
+
+#ifdef CONFIG_SMP
+  up_irq_restore(flags);
+#endif
+  return ret;
+}
+
+#define up_tls_info() ((struct tls_info_s *)CP15_GET(TPIDRURW))
 
 /****************************************************************************
  * Public Function Prototypes
