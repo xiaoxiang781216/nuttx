@@ -30,6 +30,7 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/sched_note.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/virtio/virtio.h>
@@ -37,6 +38,16 @@
 #include <nuttx/init.h>
 
 #include "virtio-blk.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifdef CONFIG_FS_LARGEFILE
+#  define priblkcnt PRIu64
+#else
+#  define priblkcnt PRIu32
+#endif
 
 /****************************************************************************
  * Private Types
@@ -196,6 +207,9 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
       virtqueue_disable_cb_lock(vq, &priv->lock);
     }
 
+  sched_note_printf(NOTE_TAG_ALWAYS,
+                    "[virtblk] %p Start add buffer:%p s:%" priblkcnt " n:%u",
+                    priv, buffer, startsector, nsectors);
   flags = spin_lock_irqsave(&priv->lock);
   ret = virtqueue_add_buffer(vq, vb, readnum, 3 - readnum, &respsem);
   if (ret < 0)
@@ -207,11 +221,15 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
 
   virtqueue_kick(vq);
   spin_unlock_irqrestore(&priv->lock, flags);
+  sched_note_printf(NOTE_TAG_ALWAYS, "[virtblk] %p End add buffer sem: %p",
+                    priv, &respsem);
 
   /* Wait for the request completion */
 
   virtio_blk_wait_complete(vq, &respsem);
 
+  sched_note_printf(NOTE_TAG_ALWAYS, "[virtblk] %p Wait %p success %d",
+                    priv, &respsem, resp.status);
   if (resp.status != VIRTIO_BLK_S_OK)
     {
       vrterr("%s Error\n", write ? "Write" : "Read");
@@ -423,6 +441,7 @@ static void virtio_blk_done(FAR struct virtqueue *vq)
           break;
         }
 
+      sched_note_printf(NOTE_TAG_ALWAYS, "[virtblk] Post sem %p", respsem);
       nxsem_post(respsem);
     }
 }
