@@ -149,9 +149,7 @@ errout_with_outfd:
 errout_with_conn:
   local_release_fifos(conn);
   client->lc_state = LOCAL_STATE_BOUND;
-  local_lock();
   local_free(conn);
-  local_unlock();
 
   return ret;
 }
