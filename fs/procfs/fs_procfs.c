@@ -1013,43 +1013,54 @@ static int procfs_readdir(FAR struct inode *mountpt,
        * subdirectory are listed in order in the procfs_entry array.
        */
 
-      if (level1->base.index < g_procfs_entrycount &&
-          level1->firstindex < g_procfs_entrycount &&
-          strncmp(g_procfs_entries[level1->base.index].pathpattern,
-                  g_procfs_entries[level1->firstindex].pathpattern,
-                  level1->subdirlen) == 0)
+      for (; level1->base.index < g_procfs_entrycount; level1->base.index++)
         {
-          /* This entry matches.  Report the subdir entry */
-
-          name = &g_procfs_entries[level1->base.index].
-                    pathpattern[level1->subdirlen + 1];
-          level1->lastlen = strcspn(name, "/");
-          level1->lastread = name;
-          strlcpy(entry->d_name, name, level1->lastlen + 1);
-
-          /* Some of the search entries contain '**' wildcards.  When we
-           * report the entry name, we must remove this wildcard search
-           * specifier.
-           */
-
-          while (entry->d_name[level1->lastlen - 1] == '*')
+          if (level1->firstindex < g_procfs_entrycount &&
+              strncmp(g_procfs_entries[level1->base.index].pathpattern,
+                      g_procfs_entries[level1->firstindex].pathpattern,
+                      level1->subdirlen) == 0)
             {
-              level1->lastlen--;
-            }
+              /* This entry matches.  Report the subdir entry */
 
-          entry->d_name[level1->lastlen] = '\0';
+              name = &g_procfs_entries[level1->base.index].
+                        pathpattern[level1->subdirlen + 1];
+              if (level1->lastlen &&
+                  strncmp(name, level1->lastread, level1->lastlen) == 0)
+                {
+                  /* Duplicate Skip this entry */
 
-          if (name[level1->lastlen] == '/')
-            {
-              entry->d_type = DTYPE_DIRECTORY;
-            }
-          else
-            {
-              entry->d_type = DTYPE_FILE;
-            }
+                  continue;
+                }
 
-          level1->base.index++;
-          ret = OK;
+              level1->lastlen = strcspn(name, "/");
+              level1->lastread = name;
+              strlcpy(entry->d_name, name, level1->lastlen + 1);
+
+              /* Some of the search entries contain '**' wildcards.  When we
+               * report the entry name, we must remove this wildcard search
+               * specifier.
+               */
+
+              while (entry->d_name[level1->lastlen - 1] == '*')
+                {
+                  level1->lastlen--;
+                }
+
+              entry->d_name[level1->lastlen] = '\0';
+
+              if (name[level1->lastlen] == '/')
+                {
+                  entry->d_type = DTYPE_DIRECTORY;
+                }
+              else
+                {
+                  entry->d_type = DTYPE_FILE;
+                }
+
+              level1->base.index++;
+              ret = OK;
+              break;
+            }
         }
     }
   else
@@ -1237,6 +1248,20 @@ static int procfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
   return ret;
 }
 
+#ifdef CONFIG_FS_PROCFS_REGISTER
+
+static int procfs_compare_entry(const void *a, const void *b)
+{
+  FAR const struct procfs_entry_s *entry1 = a;
+  FAR const struct procfs_entry_s *entry2 = b;
+
+  return strcmp(entry1->pathpattern, entry2->pathpattern);
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
 /****************************************************************************
  * Name: procfs_initialize
  *
@@ -1251,7 +1276,6 @@ static int procfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_FS_PROCFS_REGISTER
 int procfs_initialize(void)
 {
   /* Are we already initialized? */
@@ -1275,11 +1299,6 @@ int procfs_initialize(void)
 
   return OK;
 }
-#endif
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 /****************************************************************************
  * Name: procfs_register
@@ -1299,7 +1318,6 @@ int procfs_initialize(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_FS_PROCFS_REGISTER
 int procfs_register(FAR const struct procfs_entry_s *entry)
 {
   FAR struct procfs_entry_s *newtable;
@@ -1339,6 +1357,8 @@ int procfs_register(FAR const struct procfs_entry_s *entry)
 
       g_procfs_entries    = newtable;
       g_procfs_entrycount = newcount;
+      qsort(newtable, newcount, sizeof(struct procfs_entry_s),
+            procfs_compare_entry);
       ret = OK;
     }
 
