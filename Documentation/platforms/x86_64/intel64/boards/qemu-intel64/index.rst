@@ -218,3 +218,23 @@ fb
 ---
 
 Configuration that enables NuttX framebuffer examples.
+
+eth_note
+--------
+
+Configuration demonstrates Note over e1000 network device.
+
+eth_syslog
+----------
+
+Configuration demonstrates Syslog over e1000 network device.
+
+eth_gdbstub
+-----------
+
+Configuration demonstrates GDBSTUB over e1000 network device.
+
+eth_console
+-----------
+
+Configuration demonstrates Console over e1000 network device.
