@@ -78,59 +78,55 @@
 int pthread_mutex_consistent(FAR pthread_mutex_t *mutex)
 {
   int ret = EINVAL;
+  pid_t pid;
 
   sinfo("mutex=%p\n", mutex);
   DEBUGASSERT(mutex != NULL);
 
-  if (mutex != NULL)
+  pid = mutex_get_holder(&mutex->mutex);
+
+  /* Is the mutex available? */
+
+  DEBUGASSERT(pid != 0); /* < 0: available, >0 owned, ==0 error */
+  if (pid >= 0)
     {
-      pid_t pid;
+      /* No.. Verify that the thread associated with the PID still
+       * exists.  We may be destroying the mutex after cancelling a
+       * pthread and the mutex may have been in a bad state owned by
+       * the dead pthread.  NOTE: The following is unspecified behavior
+       * (see pthread_mutex_consistent()).
+       *
+       * If the holding thread is still valid, then we should be able to
+       * map its PID to the underlying TCB.  That is what
+       * nxsched_get_tcb() does.
+       */
 
-      pid = mutex_get_holder(&mutex->mutex);
-
-      /* Is the mutex available? */
-
-      DEBUGASSERT(pid != 0); /* < 0: available, >0 owned, ==0 error */
-      if (pid >= 0)
+      if (pthread_kill(pid, 0) != 0)
         {
-          /* No.. Verify that the thread associated with the PID still
-           * exists.  We may be destroying the mutex after cancelling a
-           * pthread and the mutex may have been in a bad state owned by
-           * the dead pthread.  NOTE: The following is unspecified behavior
-           * (see pthread_mutex_consistent()).
-           *
-           * If the holding thread is still valid, then we should be able to
-           * map its PID to the underlying TCB.  That is what
-           * nxsched_get_tcb() does.
+          /* Reset the semaphore.  This has the same affect as if the
+           * dead task had called pthread_mutex_unlock().
            */
 
-          if (pthread_kill(pid, 0) != 0)
-            {
-              /* Reset the semaphore.  This has the same affect as if the
-               * dead task had called pthread_mutex_unlock().
-               */
+          mutex_reset(&mutex->mutex);
 
-              mutex_reset(&mutex->mutex);
-
-              /* The thread associated with the PID no longer exists */
-
-              mutex->flags &= _PTHREAD_MFLAGS_ROBUST;
-              ret = OK;
-            }
-
-          /* Otherwise the mutex is held by some active thread.  Let's not
-           * touch anything!
-           */
-        }
-      else
-        {
-          /* There is no holder of the mutex.  Just make sure the
-           * inconsistent flag is cleared and the number of locks is zero.
-           */
+          /* The thread associated with the PID no longer exists */
 
           mutex->flags &= _PTHREAD_MFLAGS_ROBUST;
           ret = OK;
         }
+
+      /* Otherwise the mutex is held by some active thread.  Let's not
+       * touch anything!
+       */
+    }
+  else
+    {
+      /* There is no holder of the mutex.  Just make sure the
+       * inconsistent flag is cleared and the number of locks is zero.
+       */
+
+      mutex->flags &= _PTHREAD_MFLAGS_ROBUST;
+      ret = OK;
     }
 
   sinfo("Returning %d\n", ret);

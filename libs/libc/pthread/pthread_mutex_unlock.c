@@ -76,10 +76,6 @@ int pthread_mutex_unlock(FAR pthread_mutex_t *mutex)
 
   sinfo("mutex=%p\n", mutex);
   DEBUGASSERT(mutex != NULL);
-  if (mutex == NULL)
-    {
-      return EINVAL;
-    }
 
   /* The unlock operation is only performed if the mutex is actually locked.
    * EPERM *must* be returned if the mutex type is PTHREAD_MUTEX_ERRORCHECK

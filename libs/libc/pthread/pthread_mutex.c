@@ -151,58 +151,56 @@ void pthread_mutex_remove(FAR struct pthread_mutex_s *mutex)
 int pthread_mutex_take(FAR struct pthread_mutex_s *mutex,
                        FAR const struct timespec *abs_timeout)
 {
-  int ret = EINVAL;
+  int ret;
 
   /* Verify input parameters */
 
   DEBUGASSERT(mutex != NULL);
-  if (mutex != NULL)
-    {
-      /* Error out if the mutex is already in an inconsistent state. */
 
-      if ((mutex->flags & _PTHREAD_MFLAGS_INCONSISTENT) != 0)
-        {
-          ret = EOWNERDEAD;
-        }
+  /* Error out if the mutex is already in an inconsistent state. */
+
+  if ((mutex->flags & _PTHREAD_MFLAGS_INCONSISTENT) != 0)
+    {
+      ret = EOWNERDEAD;
+    }
 #ifdef CONFIG_PTHREAD_MUTEX_TYPES
-      else if (mutex_is_hold(&mutex->mutex) &&
-               mutex->type != PTHREAD_MUTEX_RECURSIVE)
-        {
-          ret = EDEADLK;
-        }
+  else if (mutex_is_hold(&mutex->mutex) &&
+           mutex->type != PTHREAD_MUTEX_RECURSIVE)
+    {
+      ret = EDEADLK;
+    }
 #endif
-      else
+  else
+    {
+      /* mutex_clocklock returns zero when successful, and the negative
+       * errno value is returned when failed.
+       */
+
+      ret = -mutex_clocklock(&mutex->mutex, abs_timeout);
+      if (ret == OK)
         {
-          /* mutex_clocklock returns zero when successful, and the negative
-           * errno value is returned when failed.
+          /* Check if the holder of the mutex has terminated without
+           * releasing.  In that case, the state of the mutex is
+           * inconsistent and we return EOWNERDEAD.
            */
 
-          ret = -mutex_clocklock(&mutex->mutex, abs_timeout);
-          if (ret == OK)
+          if ((mutex->flags & _PTHREAD_MFLAGS_INCONSISTENT) != 0)
             {
-              /* Check if the holder of the mutex has terminated without
-               * releasing.  In that case, the state of the mutex is
-               * inconsistent and we return EOWNERDEAD.
+              /* If the holder thread has terminated, we need to reset
+               * the mutex and return an error.
                */
 
-              if ((mutex->flags & _PTHREAD_MFLAGS_INCONSISTENT) != 0)
-                {
-                  /* If the holder thread has terminated, we need to reset
-                   * the mutex and return an error.
-                   */
+              mutex_reset(&mutex->mutex);
+              ret = EOWNERDEAD;
+            }
 
-                  mutex_reset(&mutex->mutex);
-                  ret = EOWNERDEAD;
-                }
+          /* If mutex is recursion, it is already in the linked list,
+           * and we should not add it to the link list again.
+           */
 
-              /* If mutex is recursion, it is already in the linked list,
-               * and we should not add it to the link list again.
-               */
-
-              else if (!mutex_is_recursive(&mutex->mutex))
-                {
-                  pthread_mutex_add(mutex);
-                }
+          else if (!mutex_is_recursive(&mutex->mutex))
+            {
+              pthread_mutex_add(mutex);
             }
         }
     }
@@ -229,43 +227,41 @@ int pthread_mutex_take(FAR struct pthread_mutex_s *mutex,
 
 int pthread_mutex_trytake(FAR struct pthread_mutex_s *mutex)
 {
-  int ret = EINVAL;
+  int ret;
 
   /* Verify input parameters */
 
   DEBUGASSERT(mutex != NULL);
-  if (mutex != NULL)
+
+  /* Error out if the mutex is already in an inconsistent state. */
+
+  if ((mutex->flags & _PTHREAD_MFLAGS_INCONSISTENT) != 0)
     {
-      /* Error out if the mutex is already in an inconsistent state. */
-
-      if ((mutex->flags & _PTHREAD_MFLAGS_INCONSISTENT) != 0)
-        {
-          ret = EOWNERDEAD;
-        }
+      ret = EOWNERDEAD;
+    }
 #ifdef CONFIG_PTHREAD_MUTEX_TYPES
-      else if (mutex_is_hold(&mutex->mutex) &&
-               mutex->type != PTHREAD_MUTEX_RECURSIVE)
-        {
-          ret = EBUSY;
-        }
+  else if (mutex_is_hold(&mutex->mutex) &&
+           mutex->type != PTHREAD_MUTEX_RECURSIVE)
+    {
+      ret = EBUSY;
+    }
 #endif
-      else
+  else
+    {
+      /* Try to take the semaphore underlying the mutex */
+
+      ret = mutex_trylock(&mutex->mutex);
+      if (ret < 0)
         {
-          /* Try to take the semaphore underlying the mutex */
+          ret = -ret;
+        }
+      else if (!mutex_is_recursive(&mutex->mutex))
+        {
+          /* If we successfully acquire the mutex, and we didn't get
+           * it before, add the mutex to the linked list.
+           */
 
-          ret = mutex_trylock(&mutex->mutex);
-          if (ret < 0)
-            {
-              ret = -ret;
-            }
-          else if (!mutex_is_recursive(&mutex->mutex))
-            {
-              /* If we successfully acquire the mutex, and we didn't get
-               * it before, add the mutex to the linked list.
-               */
-
-              pthread_mutex_add(mutex);
-            }
+          pthread_mutex_add(mutex);
         }
     }
 
@@ -289,67 +285,53 @@ int pthread_mutex_trytake(FAR struct pthread_mutex_s *mutex)
 
 int pthread_mutex_give(FAR struct pthread_mutex_s *mutex)
 {
-  int ret = EINVAL;
-
   /* Verify input parameters */
 
   DEBUGASSERT(mutex != NULL);
-  if (mutex != NULL)
+
+  /* Remove the mutex from the list of mutexes held by this task */
+
+  if (!mutex_is_recursive(&mutex->mutex))
     {
-      /* Remove the mutex from the list of mutexes held by this task */
-
-      if (!mutex_is_recursive(&mutex->mutex))
-        {
-          pthread_mutex_remove(mutex);
-        }
-
-      /* Now release the underlying mutex */
-
-      ret = -mutex_unlock(&mutex->mutex);
+      pthread_mutex_remove(mutex);
     }
 
-  return ret;
+  /* Now release the underlying mutex */
+
+  return -mutex_unlock(&mutex->mutex);
 }
 
 int pthread_mutex_breaklock(FAR struct pthread_mutex_s *mutex,
                             FAR unsigned int *breakval)
 {
-  int ret = EINVAL;
-
   /* Verify input parameters */
 
   DEBUGASSERT(mutex != NULL);
-  if (mutex != NULL)
-    {
-      /* Remove the mutex from the list of mutexes held by this task */
 
-      pthread_mutex_remove(mutex);
+  /* Remove the mutex from the list of mutexes held by this task */
 
-      /* Now release the underlying mutex */
+  pthread_mutex_remove(mutex);
 
-      ret = -mutex_breaklock(&mutex->mutex, breakval);
-    }
+  /* Now release the underlying mutex */
 
-  return ret;
+  return -mutex_breaklock(&mutex->mutex, breakval);
 }
 
 int pthread_mutex_restorelock(FAR struct pthread_mutex_s *mutex,
                               unsigned int breakval)
 {
-  int ret = EINVAL;
+  int ret;
 
   /* Verify input parameters */
 
   DEBUGASSERT(mutex != NULL);
-  if (mutex != NULL)
-    {
-      ret = -mutex_restorelock(&mutex->mutex, breakval);
-      if (ret == OK)
-        {
-          /* Add the mutex to the list of mutexes held by this task */
 
-          pthread_mutex_add(mutex);
-        }
+  ret = -mutex_restorelock(&mutex->mutex, breakval);
+  if (ret == OK)
+    {
+      /* Add the mutex to the list of mutexes held by this task */
+
+      pthread_mutex_add(mutex);
     }
 
   return ret;

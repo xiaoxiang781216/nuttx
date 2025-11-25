@@ -82,58 +82,40 @@
 int pthread_mutex_timedlock(FAR pthread_mutex_t *mutex,
                             FAR const struct timespec *abs_timeout)
 {
-  int ret = EINVAL;
+  int ret = EDEADLK;
 
   sinfo("mutex=%p\n", mutex);
   DEBUGASSERT(mutex != NULL);
 
-  if (mutex != NULL)
-    {
 #ifdef CONFIG_PTHREAD_MUTEX_TYPES
-      /* All mutex types except for NORMAL (and DEFAULT) will return
-       * an error if the caller does not hold the mutex.
-       */
+  /* All mutex types except for NORMAL (and DEFAULT) will return
+   * an error if the caller does not hold the mutex.
+   */
 
-      if (mutex->type != PTHREAD_MUTEX_NORMAL &&
-          mutex_is_hold(&mutex->mutex))
+  if (mutex->type != PTHREAD_MUTEX_NORMAL &&
+      mutex_is_hold(&mutex->mutex))
+    {
+      /* Yes... Is this a recursive mutex? */
+
+      if (mutex->type == PTHREAD_MUTEX_RECURSIVE)
         {
-          /* Yes... Is this a recursive mutex? */
-
-          if (mutex->type == PTHREAD_MUTEX_RECURSIVE)
-            {
-              /* Yes... just increment the number of locks held and return
-               * success.
-               */
-
-              ret = pthread_mutex_take(mutex, abs_timeout);
-            }
-          else
-            {
-              /* No, then we would deadlock... return an error (default
-               * behavior is like PTHREAD_MUTEX_ERRORCHECK)
-               *
-               * NOTE: This is the correct behavior for a 'robust', NORMAL
-               * mutex.  Compliant behavior for non-robust mutex should not
-               * include these checks.  In that case, the deadlock condition
-               * should not be detected and the thread should be permitted
-               * to deadlock.
-               */
-
-              serr("ERROR: Returning EDEADLK\n");
-              ret = EDEADLK;
-            }
-        }
-      else
-#endif /* CONFIG_PTHREAD_MUTEX_TYPES */
-
-        {
-          /* Take the underlying semaphore, waiting if necessary.  NOTE that
-           * is required to deadlock for the case of the non-robust NORMAL
-           * or default mutex.
+          /* Yes... just increment the number of locks held and return
+           * success.
            */
 
           ret = pthread_mutex_take(mutex, abs_timeout);
         }
+    }
+  else
+#endif /* CONFIG_PTHREAD_MUTEX_TYPES */
+
+    {
+      /* Take the underlying semaphore, waiting if necessary.  NOTE that
+       * is required to deadlock for the case of the non-robust NORMAL
+       * or default mutex.
+       */
+
+      ret = pthread_mutex_take(mutex, abs_timeout);
     }
 
   sinfo("Returning %d\n", ret);

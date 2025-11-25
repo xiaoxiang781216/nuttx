@@ -73,92 +73,70 @@
 
 int pthread_mutex_trylock(FAR pthread_mutex_t *mutex)
 {
-  int status;
-  int ret = EINVAL;
+  int ret;
 
   sinfo("mutex=%p\n", mutex);
   DEBUGASSERT(mutex != NULL);
 
-  if (mutex != NULL)
+  /* Try to get the semaphore. */
+
+  ret = pthread_mutex_trytake(mutex);
+  if (ret == EAGAIN)
     {
 #ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
       pid_t pid = mutex_get_holder(&mutex->mutex);
-#endif
 
-      /* Try to get the semaphore. */
-
-      status = pthread_mutex_trytake(mutex);
-      if (status == OK)
-        {
-          ret = OK;
-        }
-
-      /* pthread_mutex_trytake failed.  Did it fail because the semaphore
-       * was not available?
+      /* The calling thread does not hold the semaphore.  The correct
+       * behavior for the 'robust' mutex is to verify that the holder of
+       * the mutex is still valid.  This is protection from the case
+       * where the holder of the mutex has exitted without unlocking it.
        */
-
-      else if (status == EAGAIN)
-        {
-#ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
-          /* The calling thread does not hold the semaphore.  The correct
-           * behavior for the 'robust' mutex is to verify that the holder of
-           * the mutex is still valid.  This is protection from the case
-           * where the holder of the mutex has exitted without unlocking it.
-           */
 
 #ifdef CONFIG_PTHREAD_MUTEX_BOTH
 #ifdef CONFIG_PTHREAD_MUTEX_TYPES
-          /* Check if this NORMAL mutex is robust */
+      /* Check if this NORMAL mutex is robust */
 
-          if (pid > 0 &&
-              ((mutex->flags & _PTHREAD_MFLAGS_ROBUST) != 0 ||
-               mutex->type != PTHREAD_MUTEX_NORMAL) &&
-              pthread_kill(pid, 0) != 0)
+      if (pid > 0 &&
+          ((mutex->flags & _PTHREAD_MFLAGS_ROBUST) != 0 ||
+            mutex->type != PTHREAD_MUTEX_NORMAL) &&
+          pthread_kill(pid, 0) != 0)
 
 #else /* CONFIG_PTHREAD_MUTEX_TYPES */
-          /* Check if this NORMAL mutex is robust */
+      /* Check if this NORMAL mutex is robust */
 
-          if (pid > 0 &&
-              (mutex->flags & _PTHREAD_MFLAGS_ROBUST) != 0 &&
-              pthread_kill(pid, 0) != 0)
+      if (pid > 0 &&
+          (mutex->flags & _PTHREAD_MFLAGS_ROBUST) != 0 &&
+          pthread_kill(pid, 0) != 0)
 
 #endif /* CONFIG_PTHREAD_MUTEX_TYPES */
 #else /* CONFIG_PTHREAD_MUTEX_ROBUST */
-          /* This mutex is always robust, whatever type it is. */
+      /* This mutex is always robust, whatever type it is. */
 
-          if (pid > 0 && pthread_kill(pid, 0) != 0)
+      if (pid > 0 && pthread_kill(pid, 0) != 0)
 #endif
-            {
-              /* < 0: available, >0 owned, ==0 error */
+        {
+          /* < 0: available, >0 owned, ==0 error */
 
-              DEBUGASSERT(pid != 0);
-              DEBUGASSERT((mutex->flags & _PTHREAD_MFLAGS_INCONSISTENT)
-                          != 0);
+          DEBUGASSERT(pid != 0);
+          DEBUGASSERT((mutex->flags & _PTHREAD_MFLAGS_INCONSISTENT)
+                      != 0);
 
-              /* A thread holds the mutex, but there is no such thread.
-               * POSIX requires that the 'robust' mutex return EOWNERDEAD
-               * in this case. It is then the caller's responsibility to
-               * call pthread_mutex_consistent() to fix the mutex.
-               */
+          /* A thread holds the mutex, but there is no such thread.
+           * POSIX requires that the 'robust' mutex return EOWNERDEAD
+           * in this case. It is then the caller's responsibility to
+           * call pthread_mutex_consistent() to fix the mutex.
+           */
 
-              mutex->flags |= _PTHREAD_MFLAGS_INCONSISTENT;
-              ret           = EOWNERDEAD;
-            }
-
-          /* The mutex is locked by another, active thread */
-
-          else
-#endif /* CONFIG_PTHREAD_MUTEX_UNSAFE */
-            {
-              ret = EBUSY;
-            }
+          mutex->flags |= _PTHREAD_MFLAGS_INCONSISTENT;
+          ret           = EOWNERDEAD;
         }
 
-      /* Some other, unhandled error occurred */
+      /* The mutex is locked by another, active thread */
 
       else
+#endif /* CONFIG_PTHREAD_MUTEX_UNSAFE */
         {
-          ret = status;
+          ret = EBUSY;
         }
     }
 
