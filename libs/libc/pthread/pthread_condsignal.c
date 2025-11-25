@@ -62,18 +62,13 @@ int pthread_cond_signal(FAR pthread_cond_t *cond)
 
   sinfo("cond=%p\n", cond);
 
-  if (!cond)
+  DEBUGASSERT(cond != NULL);
+
+  if (cond->wait_count > 0)
     {
-      ret = EINVAL;
-    }
-  else
-    {
-      if (cond->wait_count > 0)
-        {
-          sinfo("Signalling...\n");
-          cond->wait_count--;
-          ret = -nxsem_post(&cond->sem);
-        }
+      sinfo("Signalling...\n");
+      cond->wait_count--;
+      ret = -nxsem_post(&cond->sem);
     }
 
   sinfo("Returning %d\n", ret);
