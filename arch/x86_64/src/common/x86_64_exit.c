@@ -76,17 +76,12 @@ void up_exit(int status)
   tcb = this_task();
 #endif
 
-  /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases
-   * NOTE: the API also adjusts the global IRQ control for SMP
-   */
-
-  g_running_task = tcb;
-
   /* Context switch, rearrange MMU */
 
   x86_64_restore_auxstate(tcb);
 
   break_critical_section();
+  g_running_task = tcb;
 
 #ifdef CONFIG_ARCH_KERNEL_STACK
   /* Update kernel stack top pointer */

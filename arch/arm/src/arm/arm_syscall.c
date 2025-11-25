@@ -95,9 +95,8 @@ uint32_t *arm_syscall(uint32_t *regs)
          * need to update scheduler parameters.
          */
 
-        *running_task = tcb;
-
         break_critical_section();
+        *running_task = tcb;
         break;
 
       default:

@@ -80,17 +80,14 @@ void restore_critical_section(uint16_t count)
 
 uint16_t break_critical_section(void)
 {
-  if (!up_interrupt_context())
-    {
-      FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb = running_task();
 
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-      sched_note_csection(rtcb, false);
+  sched_note_csection(rtcb, false);
 #  endif
 #  if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-      nxsched_critmon_csection(rtcb, false, return_address(0));
+  nxsched_critmon_csection(rtcb, false, return_address(0));
 #  endif
-    }
 
   return rspin_breaklock(&g_schedlock);
 }

@@ -203,8 +203,8 @@ uint64_t *arm64_syscall(uint64_t *regs)
         tcb = this_task();
 #endif
 
-        *running_task = tcb;
         break_critical_section();
+        *running_task = tcb;
         break;
 
 #if (defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)) && \

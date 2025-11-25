@@ -277,9 +277,8 @@ uint32_t *arm_syscall(uint32_t *regs)
         tcb = this_task();
 #endif
 
-        *running_task = tcb;
-
         break_critical_section();
+        *running_task = tcb;
         regs = tcb->xcp.regs;
         break;
 

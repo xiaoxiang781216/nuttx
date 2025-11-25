@@ -57,7 +57,7 @@
 
 void nxsched_unlock(FAR struct tcb_s *rtcb)
 {
-  irqstate_t flags = enter_critical_section_notrace();
+  irqstate_t flags = enter_critical_section();
   FAR struct tcb_s *ptcb;
 
   /* In non-SMP:
@@ -166,7 +166,7 @@ void nxsched_unlock(FAR struct tcb_s *rtcb)
     }
 #endif
 
-  leave_critical_section_notrace(flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
