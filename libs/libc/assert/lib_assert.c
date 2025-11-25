@@ -25,6 +25,7 @@
  ****************************************************************************/
 
 #include <nuttx/arch.h>
+#include <nuttx/init.h>
 
 #include <assert.h>
 #include <stdlib.h>
@@ -38,7 +39,7 @@
 void __assert(FAR const char *filename, int linenum, FAR const char *msg)
 {
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  if (up_interrupt_context())
+  if (up_interrupt_context() || !OSINIT_HW_READY())
     {
       _assert(filename, linenum, msg, NULL, true);
     }
