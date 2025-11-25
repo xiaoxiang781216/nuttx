@@ -318,7 +318,11 @@
 /* Required for POSIX pthread management */
 
 #define _POSIX_THREAD_DESTRUCTOR_ITERATIONS     4
-#define _POSIX_THREAD_KEYS_MAX                  CONFIG_TLS_NELEM
+#ifdef CONFIG_TLS_NELEM
+#  define _POSIX_THREAD_KEYS_MAX                CONFIG_TLS_NELEM
+#else
+#  define _POSIX_THREAD_KEYS_MAX                4
+#endif
 #define _POSIX_THREAD_THREADS_MAX               64
 
 /* Required for readv() and writev() */
