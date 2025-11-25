@@ -141,6 +141,17 @@ void iob_initialize(void)
 {
   int i;
   uintptr_t buf;
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(&g_iob_lock);
+
+  if (g_iob_freelist != NULL)
+    {
+      /* Already initialized */
+
+      spin_unlock_irqrestore(&g_iob_lock, flags);
+      return;
+    }
 
   /* Get a start address which plus offsetof(struct iob_s, io_data) is
    * aligned to the IOB_ALIGNMENT memory boundary
@@ -182,4 +193,6 @@ void iob_initialize(void)
       g_iob_freeqlist = iobq;
     }
 #endif
+
+  spin_unlock_irqrestore(&g_iob_lock, flags);
 }
