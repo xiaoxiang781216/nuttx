@@ -476,7 +476,9 @@ __cpu7_boot:
    */
 
   mov   r0, #0
+  mcr   CP15_TPIDRPRW(r0) /* Initialize percpu reg TPIDRPRW */
   mcr   CP15_TPIDRURW(r0) /* Initialize percpu reg TPIDRURW */
+  mcr   CP15_TPIDRURO(r0) /* Initialize percpu reg TPIDRURO */
   mcr   CP15_BPIALL(r0)   /* Invalidate entire branch prediction array */
   isb
 

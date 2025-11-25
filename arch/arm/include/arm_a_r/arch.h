@@ -62,6 +62,16 @@ static inline_function int up_cpu_index(void)
 }
 #endif /* CONFIG_ARCH_HAVE_MULTICPU */
 
+#ifdef CONFIG_PERCPU_SECTION
+#  define up_this_cpu_var_user(v) (*(typeof(v) *)(CP15_GET(TPIDRURO) + (uintptr_t)&(v)))
+
+#  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__) /* Kernel Space */
+#    define up_this_cpu_var(v)    (*(typeof(v) *)(CP15_GET(TPIDRPRW) + (uintptr_t)&(v)))
+#  else /* User Space */
+#    define up_this_cpu_var(v)    up_this_cpu_var_user(v)
+#  endif
+#endif
+
 #endif /* __ASSEMBLY__ */
 
 #endif /* __ARCH_ARM_INCLUDE_ARMV_A_R_ARCH_H */

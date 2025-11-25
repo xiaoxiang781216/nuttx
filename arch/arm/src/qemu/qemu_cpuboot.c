@@ -78,12 +78,19 @@ void arm_cpu_boot(int cpu)
 
   arm_fpuconfig();
 
-#if defined(CONFIG_PERCPU_SECTION) && !defined(CONFIG_SMP)
+#if defined(CONFIG_PERCPU_SECTION)
+  CP15_SET(TPIDRPRW, PERCPU_OFFSET * cpu);
+#  ifdef CONFIG_BUILD_PROTECTED
+  CP15_SET(TPIDRURO, USERSPACE->us_offset_percpu * cpu);
+#  endif
+
+#  if !defined(CONFIG_SMP)
   memcpy((void *)((uintptr_t)_sdata_percpu + PERCPU_OFFSET * cpu),
          (void *)_ldata_percpu,
          (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
   memset((void *)(uintptr_t)_sbss_percpu + PERCPU_OFFSET * cpu,
          0, (uintptr_t)_ebss_percpu - (uintptr_t)_sbss_percpu);
+#  endif
 #endif
 
 #ifdef CONFIG_ARM_MPU
