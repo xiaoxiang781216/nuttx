@@ -37,6 +37,7 @@
 "fsync","unistd.h","","int","int"
 "ftruncate","unistd.h","","int","int","off_t"
 "futimens","sys/stat.h","","int","int","const struct timespec [2]|FAR const struct timespec *"
+"gcov","gcov.h","defined(CONFIG_COVERAGE_ALL)","int","int"
 "getegid","unistd.h","defined(CONFIG_SCHED_USER_IDENTITY)","gid_t"
 "geteuid","unistd.h","defined(CONFIG_SCHED_USER_IDENTITY)","uid_t"
 "getgid","unistd.h","defined(CONFIG_SCHED_USER_IDENTITY)","gid_t"
