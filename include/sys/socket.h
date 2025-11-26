@@ -231,14 +231,26 @@
 #define SO_TIMESTAMPNS  20 /* Generates a timestamp in ns for each incoming packet
                             * arg: integer value
                             */
+#define SO_TIMESTAMPING 21 /* Generates timestamp for each output packet
+                            */
 
 /* Protocol-level socket options may begin with this value
- * Note: __SO_PROTOCOL was moved from 16 to 21 to avoid conflict with
+ * Note: __SO_PROTOCOL was moved from 16 to 22 to avoid conflict with
  * SO_TIMESTAMPNS (20). This ensures protocol-specific options don't
  * collide with socket-level options.
  */
 
-#define __SO_PROTOCOL   21
+#define __SO_PROTOCOL   22
+
+/* Timestamp generation */
+
+#define SOF_TIMESTAMPING_TX_HARDWARE  (1 << SO_TIMESTAMPING)
+#define SOF_TIMESTAMPING_TX_SOFTWARE  SOF_TIMESTAMPING_TX_HARDWARE
+
+/* Timestamp reporting */
+
+#define SOF_TIMESTAMPING_SOFTWARE     SOF_TIMESTAMPING_TX_SOFTWARE
+#define SOF_TIMESTAMPING_RAW_HARDWARE SOF_TIMESTAMPING_TX_HARDWARE
 
 /* The options are unsupported but included for compatibility
  * and portability
