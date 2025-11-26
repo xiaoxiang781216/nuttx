@@ -776,35 +776,42 @@ int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
   irqstate_t flags;
   bool bypass;
+  int ret = OK;
 
-  DEBUGASSERT(pool != NULL && info != NULL);
-  mempool_init(pool);
-
-  flags = spin_lock_irqsave(&pool->lock);
-  bypass = kasan_bypass(true);
-
-  info->ordblks = sq_count(&pool->queue);
-  info->iordblks = sq_count(&pool->iqueue);
-  info->aordblks = pool->nalloc;
-  info->arena = sq_count(&pool->equeue) * MEMPOOL_HEADER_SIZE +
-    (info->aordblks + info->ordblks + info->iordblks) * blocksize;
-  info->maxalloc = pool->maxalloc;
-  kasan_bypass(bypass);
-  spin_unlock_irqrestore(&pool->lock, flags);
-  info->sizeblks = blocksize;
-  if (pool->wait && pool->expandsize == 0u)
+  if (pool != NULL && info != NULL)
     {
-      int semcount = 0;
+      mempool_init(pool);
 
-      nxsem_get_value(&pool->waitsem, &semcount);
-      info->nwaiter = (unsigned long)-semcount;
+      flags = spin_lock_irqsave(&pool->lock);
+      bypass = kasan_bypass(true);
+
+      info->ordblks = sq_count(&pool->queue);
+      info->iordblks = sq_count(&pool->iqueue);
+      info->aordblks = pool->nalloc;
+      info->arena = sq_count(&pool->equeue) * MEMPOOL_HEADER_SIZE +
+        (info->aordblks + info->ordblks + info->iordblks) * blocksize;
+      info->maxalloc = pool->maxalloc;
+      kasan_bypass(bypass);
+      spin_unlock_irqrestore(&pool->lock, flags);
+      info->sizeblks = blocksize;
+      if (pool->wait && pool->expandsize == 0u)
+        {
+          int semcount = 0;
+
+          nxsem_get_value(&pool->waitsem, &semcount);
+          info->nwaiter = (unsigned long)-semcount;
+        }
+      else
+        {
+          info->nwaiter = 0;
+        }
     }
   else
     {
-      info->nwaiter = 0;
+      ret = -EINVAL;
     }
 
-  return 0;
+  return ret;
 }
 
 /****************************************************************************
