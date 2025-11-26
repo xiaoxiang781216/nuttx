@@ -27,7 +27,7 @@
 ;
 
 ; Check if ELF file is loaded, exit if not
-If !Symbol.Exist("g_fdx_note_buffer")
+If !Symbol.Exist("g_fdx_note_channel")
 (
     Printf "ERROR: No ELF file loaded! Please load ELF file."
     Enddo
@@ -44,11 +44,11 @@ If !State.Run()
 ; Set the JTAG clock to 100MHz, transfer rate is related to clock frequency
 System.JtagClock 100MHZ
 
-Fdx.Outchannel g_fdx_note_buffer
+Fdx.Outchannel g_fdx_note_channel
 
-Fdx.Address g_fdx_note_buffer
+Fdx.Address g_fdx_note_channel
 
-Fdx.DisableChannel g_fdx_note_buffer
+Fdx.DisableChannel g_fdx_note_channel
 
 Fdx.Clear
 
@@ -62,4 +62,4 @@ Wait 10ms
 Printf "FDX record start..."
 
 ; Write the trace data to trace.bin
-Fdx.Write g_fdx_note_buffer trace.bin
+Fdx.Write g_fdx_note_channel trace.bin
