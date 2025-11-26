@@ -53,7 +53,7 @@ def generate_macro_definitions(board_nums, output_file):
         macro_value = ""
         for item in value:
             macro_value += f"{item} : \\\n"
-        macro_value += f"{key.replace('_DYNAMIC', '')}\n"
+        macro_value += f"{key.replace('_DYNAMIC', '').replace('id, ', '', 1)}\n"
 
         output.append(f"{macro_name}{macro_value}")
 
@@ -64,16 +64,14 @@ def generate_macro_definitions(board_nums, output_file):
 
 
 def dynamic_foreach_macro_write(file, board_list):
-    # DT_FOREACH_DTNAMIC(g_board_id, node_id, fn_foreach, fn)
-    foreach_macro = (
-        "\n#define DT_FOREACH_DYNAMIC(g_board_id, node_id, fn_foreach, fn) \\\n"
-    )
+    # DT_FOREACH_DTNAMIC(id, node_id, fn_foreach, fn)
+    foreach_macro = "\n#define DT_FOREACH_DYNAMIC(id, node_id, fn_foreach, fn) \\\n"
     foreach_macro += "  do { \\\n"
     for bid in board_list:
         if bid == 1:
-            foreach_macro += f"    if (g_board_id == {bid}) \\\n"
+            foreach_macro += f"    if (id == {bid}) \\\n"
         else:
-            foreach_macro += f"    else if (g_board_id == {bid}) \\\n"
+            foreach_macro += f"    else if (id == {bid}) \\\n"
         foreach_macro += "      { \\\n"
         foreach_macro += f"        fn_foreach(DT_CAT(B{bid}_, node_id), fn); \\\n"
         foreach_macro += "      } \\\n"
@@ -83,14 +81,16 @@ def dynamic_foreach_macro_write(file, board_list):
     foreach_macro += "      } \\\n"
     foreach_macro += "  } while(0)"
 
-    # DT_FOREACH_VARGS_DYNAMIC(g_board_id, node_id, fn_foreach, fn, ...)
-    foreach_vargs_macro = "\n#define DT_FOREACH_VARGS_DYNAMIC(g_board_id, node_id, fn_foreach, fn, ...) \\\n"
+    # DT_FOREACH_VARGS_DYNAMIC(id, node_id, fn_foreach, fn, ...)
+    foreach_vargs_macro = (
+        "\n#define DT_FOREACH_VARGS_DYNAMIC(id, node_id, fn_foreach, fn, ...) \\\n"
+    )
     foreach_vargs_macro += "  do { \\\n"
     for bid in board_list:
         if bid == 1:
-            foreach_vargs_macro += f"    if (g_board_id == {bid}) \\\n"
+            foreach_vargs_macro += f"    if (id == {bid}) \\\n"
         else:
-            foreach_vargs_macro += f"    else if (g_board_id == {bid}) \\\n"
+            foreach_vargs_macro += f"    else if (id == {bid}) \\\n"
         foreach_vargs_macro += "      { \\\n"
         foreach_vargs_macro += (
             f"        fn_foreach(DT_CAT(B{bid}_, node_id), fn, __VA_ARGS__); \\\n"
@@ -102,16 +102,16 @@ def dynamic_foreach_macro_write(file, board_list):
     foreach_vargs_macro += "      } \\\n"
     foreach_vargs_macro += "  } while(0)"
 
-    # DT_FOREACH_STATUS_OKAY_DYNAMIC(g_board_id, compat, fn)
+    # DT_FOREACH_STATUS_OKAY_DYNAMIC(id, compat, fn)
     foreach_status_okay_macro = (
-        "\n#define DT_FOREACH_STATUS_OKAY_DYNAMIC(g_board_id, compat, fn) \\\n"
+        "\n#define DT_FOREACH_STATUS_OKAY_DYNAMIC(id, compat, fn) \\\n"
     )
     foreach_status_okay_macro += "  do { \\\n"
     for bid in board_list:
         if bid == 1:
-            foreach_status_okay_macro += f"    if (g_board_id == {bid}) \\\n"
+            foreach_status_okay_macro += f"    if (id == {bid}) \\\n"
         else:
-            foreach_status_okay_macro += f"    else if (g_board_id == {bid}) \\\n"
+            foreach_status_okay_macro += f"    else if (id == {bid}) \\\n"
         foreach_status_okay_macro += "      { \\\n"
         foreach_status_okay_macro += (
             f"        COND_CODE_1(DT_CAT3(B{bid}_, DT_COMPAT_HAS_OKAY_, compat), \\\n"
@@ -124,21 +124,21 @@ def dynamic_foreach_macro_write(file, board_list):
     foreach_status_okay_macro += (
         "        COND_CODE_1(DT_CAT(DT_COMPAT_HAS_OKAY_, compat), \\\n"
     )
-    foreach_status_okay_macro += (
-        "        (DT_CAT(DT_FOREACH_OKAY_, compat)(fn)), \\\n"
-    )
+    foreach_status_okay_macro += "        (DT_CAT(DT_FOREACH_OKAY_, compat)(fn)), \\\n"
     foreach_status_okay_macro += "        ()) \\\n"
     foreach_status_okay_macro += "      } \\\n"
     foreach_status_okay_macro += "  } while(0)"
 
-    # DT_FOREACH_STATUS_OKAY_VARGS_DYNAMIC(g_board_id, compat, fn, ...)
-    foreach_status_okay_vagrs_macro = "\n#define DT_FOREACH_STATUS_OKAY_VARGS_DYNAMIC(g_board_id, compat, fn, ...) \\\n"
+    # DT_FOREACH_STATUS_OKAY_VARGS_DYNAMIC(id, compat, fn, ...)
+    foreach_status_okay_vagrs_macro = (
+        "\n#define DT_FOREACH_STATUS_OKAY_VARGS_DYNAMIC(id, compat, fn, ...) \\\n"
+    )
     foreach_status_okay_vagrs_macro += "  do { \\\n"
     for bid in board_list:
         if bid == 1:
-            foreach_status_okay_vagrs_macro += f"    if (g_board_id == {bid}) \\\n"
+            foreach_status_okay_vagrs_macro += f"    if (id == {bid}) \\\n"
         else:
-            foreach_status_okay_vagrs_macro += f"    else if (g_board_id == {bid}) \\\n"
+            foreach_status_okay_vagrs_macro += f"    else if (id == {bid}) \\\n"
         foreach_status_okay_vagrs_macro += "      { \\\n"
         foreach_status_okay_vagrs_macro += (
             f"        COND_CODE_1(DT_CAT3(B{bid}_, DT_COMPAT_HAS_OKAY_, compat), \\\n"

@@ -41,7 +41,7 @@ def main():
 
     if board_id != "":
         board_id_num = re.findall(r"\d+", board_id)[0]
-        board_id_var = "g_board_id"
+        board_id_var = "id"
     select_macros_dict = {}
 
     print("args.edt_pickle: ", args.edt_pickle)
@@ -85,7 +85,7 @@ def main():
 
             out_comment("Node's full path:")
             out_dt_define(f"{node.z_path_id}_PATH", f'"{escape(node.path)}"')
-            dynamic_macro_make("DT_NODE_PATH_DYNAMIC(node_id)", select_macros_dict)
+            dynamic_macro_make("DT_NODE_PATH_DYNAMIC(id, node_id)", select_macros_dict)
 
             out_comment("Node's name with unit-address:")
             out_dt_define(f"{node.z_path_id}_FULL_NAME", f'"{escape(node.name)}"')
@@ -389,7 +389,7 @@ def write_regs(node: edtlib.Node) -> None:
 
     if node.regs is not None:
         idx_vals.append((f"{path_id}_REG_NUM", len(node.regs)))
-        dynamic_macro_make("DT_NUM_REGS_DYNAMIC(node_id)", select_macros_dict)
+        dynamic_macro_make("DT_NUM_REGS_DYNAMIC(id, node_id)", select_macros_dict)
 
     for i, reg in enumerate(node.regs):
         idx_vals.append((f"{path_id}_REG_IDX_{i}_EXISTS", 1))
@@ -397,7 +397,8 @@ def write_regs(node: edtlib.Node) -> None:
             idx_macro = f"{path_id}_REG_IDX_{i}_VAL_ADDRESS"
             idx_vals.append((idx_macro, f"{reg.addr} /* {hex(reg.addr)} */"))
             dynamic_macro_make(
-                "DT_REG_ADDR_BY_IDX_DYNAMIC(node_id, idx)", select_macros_dict
+                "DT_REG_ADDR_BY_IDX_DYNAMIC(id, node_id, idx)",
+                select_macros_dict,
             )
 
             if reg.name:
@@ -405,21 +406,24 @@ def write_regs(node: edtlib.Node) -> None:
                 name_macro = f"{path_id}_REG_NAME_{reg.name}_VAL_ADDRESS"
                 name_vals.append((name_macro, f"{board_id}DT_{idx_macro}"))
                 dynamic_macro_make(
-                    "DT_REG_ADDR_BY_NAME_DYNAMIC(node_id, name)", select_macros_dict
+                    "DT_REG_ADDR_BY_NAME_DYNAMIC(id, node_id, name)",
+                    select_macros_dict,
                 )
 
         if reg.size is not None:
             idx_macro = f"{path_id}_REG_IDX_{i}_VAL_SIZE"
             idx_vals.append((idx_macro, f"{reg.size} /* {hex(reg.size)} */"))
             dynamic_macro_make(
-                "DT_REG_SIZE_BY_IDX_DYNAMIC(node_id, idx)", select_macros_dict
+                "DT_REG_SIZE_BY_IDX_DYNAMIC(id, node_id, idx)",
+                select_macros_dict,
             )
 
             if reg.name:
                 name_macro = f"{path_id}_REG_NAME_{reg.name}_VAL_SIZE"
                 name_vals.append((name_macro, f"{board_id}DT_{idx_macro}"))
                 dynamic_macro_make(
-                    "DT_REG_SIZE_BY_NAME_DYNAMIC(node_id, name)", select_macros_dict
+                    "DT_REG_SIZE_BY_NAME_DYNAMIC(id, node_id, name)",
+                    select_macros_dict,
                 )
 
     for macro, val in idx_vals:
@@ -475,7 +479,7 @@ def write_interrupts(node: edtlib.Node) -> None:
             idx_vals.append((idx_macro, cell_value))
             idx_vals.append((idx_macro + "_EXISTS", 1))
             dynamic_macro_make(
-                "DT_IRQN_BY_IDX_DYNAMIC(node_id, idx)", select_macros_dict
+                "DT_IRQN_BY_IDX_DYNAMIC(id, node_id, idx)", select_macros_dict
             )
 
             if irq.name:
@@ -629,8 +633,10 @@ def write_children(node: edtlib.Node) -> None:
         ),
     )
 
-    dynamic_macro_make("DT_CHILD_NUM_DYNAMIC(node_id)", select_macros_dict)
-    dynamic_macro_make("DT_CHILD_NUM_STATUS_OKAY_DYNAMIC(node_id)", select_macros_dict)
+    dynamic_macro_make("DT_CHILD_NUM_DYNAMIC(id, node_id)", select_macros_dict)
+    dynamic_macro_make(
+        "DT_CHILD_NUM_STATUS_OKAY_DYNAMIC(id, node_id)", select_macros_dict
+    )
 
 
 def write_status(node: edtlib.Node) -> None:
@@ -772,10 +778,10 @@ def write_vanilla_props(node: edtlib.Node) -> None:
         # DT_N_<node-id>_P_<prop-id>_EXISTS
         macro2val[f"{macro}_EXISTS"] = 1
 
-        dynamic_macro_make("DT_PROP_DYNAMIC(node_id, prop)", select_macros_dict)
-        dynamic_macro_make("DT_PROP_LEN_DYNAMIC(node_id, prop)", select_macros_dict)
+        dynamic_macro_make("DT_PROP_DYNAMIC(id, node_id, prop)", select_macros_dict)
+        dynamic_macro_make("DT_PROP_LEN_DYNAMIC(id, node_id, prop)", select_macros_dict)
         dynamic_macro_make(
-            "DT_PROP_BY_IDX_DYNAMIC(node_id, prop, idx)", select_macros_dict
+            "DT_PROP_BY_IDX_DYNAMIC(id, node_id, prop, idx)", select_macros_dict
         )
 
     if macro2val:
@@ -1255,63 +1261,65 @@ def dynamic_macro_make(macro_name: str, select_dict: dict):
         return
     if macro_name in select_dict:
         return
-    if macro_name == "DT_NODE_PATH_DYNAMIC(node_id)":
-        select_macros_name = "node_id_PATH_SELECT(node_id)"
+    if macro_name == "DT_NODE_PATH_DYNAMIC(id, node_id)":
+        select_macros_name = "node_id_PATH_SELECT(id, node_id)"
         select_statment = f"({board_id_var}) == {board_id_num} ? \
             COND_CODE_1(IS_ENABLED(DT_CAT3({board_id}, node_id, _EXISTS)), \
             (DT_CAT3({board_id}, node_id, _PATH)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_NUM_REGS_DYNAMIC(node_id)":
-        select_macros_name = "node_id_REG_NUM_SELECT(node_id)"
+    elif macro_name == "DT_NUM_REGS_DYNAMIC(id, node_id)":
+        select_macros_name = "node_id_REG_NUM_SELECT(id, node_id)"
         select_statment = f"({board_id_var}) == {board_id_num} ? \
             COND_CODE_1(IS_ENABLED(DT_CAT3({board_id}, node_id, _EXISTS)), \
             (DT_CAT3({board_id}, node_id, _REG_NUM)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_REG_ADDR_BY_IDX_DYNAMIC(node_id, idx)":
-        select_macros_name = "node_id_REG_IDX_idx_VAL_ADDRESS_SELECT(node_id, idx)"
+    elif macro_name == "DT_REG_ADDR_BY_IDX_DYNAMIC(id, node_id, idx)":
+        select_macros_name = "node_id_REG_IDX_idx_VAL_ADDRESS_SELECT(id, node_id, idx)"
         select_statment = f"({board_id_var}) == {board_id_num} ? \
             COND_CODE_1(IS_ENABLED(DT_CAT5({board_id}, node_id,_REG_IDX_, idx, _EXISTS)), \
             (DT_CAT5({board_id}, node_id, _REG_IDX_, idx, _VAL_ADDRESS)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_REG_ADDR_BY_NAME_DYNAMIC(node_id, name)":
-        select_macros_name = "node_id_REG_NAME_name_VAL_ADDRESS_SELECT(node_id, name)"
+    elif macro_name == "DT_REG_ADDR_BY_NAME_DYNAMIC(id, node_id, name)":
+        select_macros_name = (
+            "node_id_REG_NAME_name_VAL_ADDRESS_SELECT(id, node_id, name)"
+        )
         select_statment = f"({board_id_var}) == {board_id_num} ? \
             COND_CODE_1(IS_ENABLED(DT_CAT5({board_id}, node_id,_REG_NAME_, name, _EXISTS)), \
             (DT_CAT5({board_id}, node_id, _REG_NAME_, name, _VAL_ADDRESS)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_REG_SIZE_BY_IDX_DYNAMIC(node_id, idx)":
-        select_macros_name = "node_id_REG_IDX_idx_VAL_SIZE_SELECT(node_id, idx)"
+    elif macro_name == "DT_REG_SIZE_BY_IDX_DYNAMIC(id, node_id, idx)":
+        select_macros_name = "node_id_REG_IDX_idx_VAL_SIZE_SELECT(id, node_id, idx)"
         select_statment = f"({board_id_var}) == {board_id_num} ? \
             COND_CODE_1(IS_ENABLED(DT_CAT5({board_id}, node_id,_REG_IDX_, idx, _EXISTS)), \
             (DT_CAT5({board_id}, node_id, _REG_IDX_, idx, _VAL_SIZE)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_REG_SIZE_BY_NAME_DYNAMIC(node_id, name)":
-        select_macros_name = "node_id_REG_NAME_name_VAL_SIZE_SELECT(node_id, name)"
+    elif macro_name == "DT_REG_SIZE_BY_NAME_DYNAMIC(id, node_id, name)":
+        select_macros_name = "node_id_REG_NAME_name_VAL_SIZE_SELECT(id, node_id, name)"
         select_statment = f"({board_id_var}) == {board_id_num} ? \
             COND_CODE_1(IS_ENABLED(DT_CAT5({board_id}, node_id,_REG_NAME_, name, _EXISTS)), \
             (DT_CAT5({board_id}, node_id, _REG_NAME_, name, _VAL_SIZE)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_IRQN_BY_IDX_DYNAMIC(node_id, idx)":
-        select_macros_name = "node_id_IRQ_IDX_idx_VAL_irq_SELECT(node_id, idx)"
+    elif macro_name == "DT_IRQN_BY_IDX_DYNAMIC(id, node_id, idx)":
+        select_macros_name = "node_id_IRQ_IDX_idx_VAL_irq_SELECT(id, node_id, idx)"
         select_statment = f"({board_id_var}) == {board_id_num} ? \
             COND_CODE_1(IS_ENABLED(DT_CAT5({board_id}, node_id, _IRQ_IDX_, idx, _EXISTS)), \
             (DT_CAT6({board_id}, node_id, _IRQ_IDX_, idx, _VAL_, irq)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_CHILD_NUM_DYNAMIC(node_id)":
-        select_macros_name = "node_id_CHILD_NUM_SELECT(node_id)"
+    elif macro_name == "DT_CHILD_NUM_DYNAMIC(id, node_id)":
+        select_macros_name = "node_id_CHILD_NUM_SELECT(id, node_id)"
         select_statment = f"({board_id_var}) == {board_id_num} ? \
             COND_CODE_1(IS_ENABLED(DT_CAT3({board_id}, node_id, _EXISTS)), \
             (DT_CAT3({board_id}, node_id, _CHILD_NUM)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_CHILD_NUM_STATUS_OKAY_DYNAMIC(node_id)":
-        select_macros_name = "node_id_CHILD_NUM_STATUS_OKAY_SELECT(node_id)"
+    elif macro_name == "DT_CHILD_NUM_STATUS_OKAY_DYNAMIC(id, node_id)":
+        select_macros_name = "node_id_CHILD_NUM_STATUS_OKAY_SELECT(id, node_id)"
         select_statment = f"({board_id_var}) == {board_id_num} ? \
             COND_CODE_1(IS_ENABLED(DT_CAT3({board_id}, node_id, _EXISTS)), \
             (DT_CAT3({board_id}, node_id, _CHILD_NUM_STATUS_OKAY)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_PROP_DYNAMIC(node_id, prop)":
-        select_macros_name = "node_id_P_prop_SELECT(node_id, prop)"
+    elif macro_name == "DT_PROP_DYNAMIC(id, node_id, prop)":
+        select_macros_name = "node_id_P_prop_SELECT(id, node_id, prop)"
         select_statment = f"({board_id_var}) == {board_id_num} ? \
             COND_CODE_1(IS_ENABLED(DT_CAT5({board_id}, node_id, _P_, prop, _EXISTS)), \
             (DT_CAT4({board_id}, node_id, _P_, prop)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_PROP_LEN_DYNAMIC(node_id, prop)":
-        select_macros_name = "node_id_P_prop_LEN_SELECT(node_id, prop)"
+    elif macro_name == "DT_PROP_LEN_DYNAMIC(id, node_id, prop)":
+        select_macros_name = "node_id_P_prop_LEN_SELECT(id, node_id, prop)"
         select_statment = f"({board_id_var}) == {board_id_num} ? \
             COND_CODE_1(IS_ENABLED(DT_CAT5({board_id}, node_id, _P_, prop, _EXISTS)), \
             (DT_CAT5({board_id}, node_id, _P_, prop, _LEN)), (0))\n"
-    elif macro_name == "DT_PROP_BY_IDX_DYNAMIC(node_id, prop, idx)":
-        select_macros_name = "node_id_P_prop_BY_IDX_SELECT(node_id, prop, idx)"
+    elif macro_name == "DT_PROP_BY_IDX_DYNAMIC(id, node_id, prop, idx)":
+        select_macros_name = "node_id_P_prop_BY_IDX_SELECT(id, node_id, prop, idx)"
         select_statment = f"({board_id_var}) == {board_id_num} ? \
             COND_CODE_1(IS_ENABLED(DT_CAT7({board_id}, node_id, _P_, prop, _IDX_, idx, _EXISTS)), \
             (DT_CAT6({board_id}, node_id, _P_, prop, _IDX_, idx)), (0))\n"
