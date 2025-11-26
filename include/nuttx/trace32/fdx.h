@@ -42,6 +42,14 @@ struct lib_fdxoutstream_s
   FAR void *channel;
   spinlock_t lock;
 };
+
+struct lib_fdxinstream_s
+{
+  struct lib_instream_s common;
+  FAR void *channel;
+  spinlock_t lock;
+};
+
 #endif
 
 /****************************************************************************

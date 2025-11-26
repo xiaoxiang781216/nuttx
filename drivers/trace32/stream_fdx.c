@@ -77,6 +77,36 @@ static ssize_t fdxstream_puts(FAR struct lib_outstream_s *self,
 }
 
 /****************************************************************************
+ * Name: fdxstream_getc
+ ****************************************************************************/
+
+static int fdxstream_getc(FAR struct lib_instream_s *self)
+{
+  FAR struct lib_fdxinstream_s *stream =
+                                (FAR struct lib_fdxinstream_s *)self;
+  char ch = -1;
+
+  stream->common.nget += T32_Fdx_Receive(stream->channel, &ch, 1);
+  return ch;
+}
+
+/****************************************************************************
+ * Name: fdxstream_gets
+ ****************************************************************************/
+
+static ssize_t fdxstream_gets(FAR struct lib_instream_s *self,
+                              FAR void * buffer, size_t size)
+{
+  FAR struct lib_fdxinstream_s *stream =
+                                (FAR struct lib_fdxinstream_s *)self;
+  ssize_t ret;
+
+  ret = T32_Fdx_Receive(stream->channel, buffer, size);
+  stream->common.nget += ret;
+  return ret;
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -84,13 +114,13 @@ static ssize_t fdxstream_puts(FAR struct lib_outstream_s *self,
  * Name: lib_fdxoutstream_open
  *
  * Description:
- *   Initializes a stream for use with the configured RTT interface.
+ *   Initializes a stream for use with the configured FDX interface.
  *
  * Input Parameters:
  *   stream - User allocated, uninitialized instance of struct
  *            lib_fdxoutstream_s to be initialized.
- *   channel - SEGGER RTT channel number
- *   bufsize - Size of the RTT buffer
+ *   channel - SEGGER FDX channel number
+ *   bufsize - Size of the FDX buffer
  *
  * Returned Value:
  *   None (User allocated instance initialized).
@@ -115,6 +145,33 @@ void lib_fdxoutstream_open(FAR struct lib_fdxoutstream_s *stream,
  ****************************************************************************/
 
 void lib_fdxoutstream_close(FAR struct lib_fdxoutstream_s *stream)
+{
+  FAR struct fdx_channel_s *channel =
+                            (FAR struct fdx_channel_s *)stream->channel;
+  T32_Fdx_DisableChannel(*channel);
+}
+
+/****************************************************************************
+ * Name: lib_fdxinstream_open
+ ****************************************************************************/
+
+void lib_fdxinstream_open(FAR struct lib_fdxinstream_s *stream,
+                          FAR void *buf, size_t size)
+{
+  FAR struct fdx_channel_s *channel = (FAR struct fdx_channel_s *)buf;
+  stream->common.getc = fdxstream_getc;
+  stream->common.gets = fdxstream_gets;
+  stream->common.nget = 0;
+  stream->channel = buf;
+  T32_Fdx_InitChannel(*channel);
+  channel->header.size = size - sizeof(T32_FDX_BUFFER);
+}
+
+/****************************************************************************
+ * Name: lib_fdxinstream_close
+ ****************************************************************************/
+
+void lib_fdxinstream_close(FAR struct lib_fdxoutstream_s *stream)
 {
   FAR struct fdx_channel_s *channel =
                             (FAR struct fdx_channel_s *)stream->channel;
