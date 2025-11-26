@@ -81,12 +81,15 @@ class MemPoolBlock:
 
     MAGIC_ALLOC = 0xAAAA_AAAA
 
-    def __init__(self, addr: int, blocksize: int, overhead: int) -> None:
+    def __init__(
+        self, addr: int, blocksize: int, overhead: int, pool: MemPool = None
+    ) -> None:
         """
         Initialize the memory pool block instance.
         block: must be start address of the block,
         blocksize: block size without backtrace overhead,
         overhead: backtrace overhead size.
+        pool: the MemPool instance that this block belongs to.
         """
         self.overhead = overhead
         self.from_pool = True
@@ -96,6 +99,7 @@ class MemPoolBlock:
         self.nodesize = int(blocksize) + self.overhead
         self.usersize = self.blocksize
         self.useraddress = self.address
+        self.pool = pool
         # Lazy evaluation
         self._backtrace = self._pid = self._seqno = self._magic = self._record = None
 
@@ -132,7 +136,7 @@ class MemPoolBlock:
     @property
     def is_free(self) -> bool:
         if not CONFIG_MM_RECORD:
-            return None
+            return self.pool.is_free(self) if self.pool else None
 
         if not self._magic:
             self._magic = int(self.record["magic"])
@@ -169,12 +173,12 @@ class MemPoolBlock:
     @property
     def prevnode(self) -> MemPoolBlock:
         addr = self.address - self.nodesize
-        return MemPoolBlock(addr, self.blocksize, self.overhead)
+        return MemPoolBlock(addr, self.blocksize, self.overhead, pool=self.pool)
 
     @property
     def nextnode(self) -> MemPoolBlock:
         addr = self.address + self.nodesize
-        return MemPoolBlock(addr, self.blocksize, self.overhead)
+        return MemPoolBlock(addr, self.blocksize, self.overhead, pool=self.pool)
 
     def read_memory(self) -> memoryview:
         return gdb.selected_inferior().read_memory(self.address, self.blocksize)
@@ -193,6 +197,7 @@ class MemPool(Value, p.MemPool):
         self._nfree = None
         self._nifree = None
         self._overhead = None
+        self._free_blks = None
 
     def __repr__(self) -> str:
         return f"{self.name}@{hex(self.address)},size:{self.size}/{self['blocksize']},nused:{self.nused},nfree:{self.nfree}"
@@ -295,7 +300,9 @@ class MemPool(Value, p.MemPool):
         def iterate(entry, nblocks):
             base = int(entry) - nblocks * blksize
             while nblocks > 0:
-                yield MemPoolBlock(base + mm_record_size, blocksize, self.overhead)
+                yield MemPoolBlock(
+                    base + mm_record_size, blocksize, self.overhead, pool=self
+                )
                 base += blksize
                 nblocks -= 1
 
@@ -333,7 +340,7 @@ class MemPool(Value, p.MemPool):
         def get_blk(base):
             blkstart = base + (address - base) // blksize * blksize
             blkstart += mm_record_size
-            return MemPoolBlock(blkstart, blocksize, self.overhead)
+            return MemPoolBlock(blkstart, blocksize, self.overhead, pool=self)
 
         if self.ibase:
             # Check if it belongs to interrupt pool
@@ -361,11 +368,32 @@ class MemPool(Value, p.MemPool):
         """Iterate over all free blocks in the pool"""
         blocksize = self["blocksize"]
         for entry in lists.NxSQueue(self.queue):
-            yield MemPoolBlock(int(entry), blocksize, self.overhead)
+            yield MemPoolBlock(int(entry), blocksize, self.overhead, pool=self)
 
     def blks_used(self) -> Generator[MemPoolBlock, None, None]:
         """Iterate over all used blocks in the pool"""
         return filter(lambda blk: not blk.is_free, self.blks)
+
+    def is_free(self, blk: MemPoolBlock) -> bool:
+        """Check if the given block is free in the pool"""
+        if self._free_blks is None:
+            try:
+                self._free_blks = set(free.address for free in self.blks_free())
+            except Exception:
+                self._free_blks = set()
+
+            # monitor GDB stop event to clear cache
+            def clear_free_blks(event):
+                self._free_blks = None
+
+            gdb.events.stop.connect(clear_free_blks)
+
+        # If self._free_blks is empty, it's high possible there's problem reading free blocks
+        # instead of all memory is used.
+        if not self._free_blks:
+            return None
+
+        return blk.address in self._free_blks
 
 
 class MemPoolMultiple(Value, p.MemPoolMultiple):
