@@ -42,6 +42,10 @@ ifeq ($(CONFIG_RPMSG_TEST),y)
 CSRCS += rpmsg_test.c
 endif
 
+ifeq ($(CONFIG_RPMSG_HEAP),y)
+CSRCS += rpmsg_heap.c
+endif
+
 ifeq ($(CONFIG_RPMSG_PROCFS),y)
 CSRCS += rpmsg_procfs.c
 endif

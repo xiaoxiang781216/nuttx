@@ -37,6 +37,10 @@ if(CONFIG_RPMSG)
     list(APPEND SRCS rpmsg_ping.c)
   endif()
 
+  if(CONFIG_RPMSG_HEAP)
+    list(APPEND SRCS rpmsg_heap.c)
+  endif()
+
   if(CONFIG_RPMSG_PORT)
     list(APPEND SRCS rpmsg_port.c)
   endif()

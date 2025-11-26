@@ -90,6 +90,13 @@ config RPMSG_WAKELOCK
 	---help---
 		rpmsg wakelock enable option, both for client and server.
 
+config RPMSG_HEAP
+	bool "rpmsg heap manage support"
+	default n
+	---help---
+		This is for rpmsg heap manage, it can be used to allocate/free
+		shm for slave.
+
 config RPMSG_PROCFS
 	bool "Include rpmsg info in procfs"
 	depends on FS_PROCFS_REGISTER
