@@ -62,29 +62,24 @@ int pthread_cond_broadcast(FAR pthread_cond_t *cond)
 
   sinfo("cond=%p\n", cond);
 
-  if (!cond)
+  DEBUGASSERT(cond != NULL);
+
+  /* Loop until all of the waiting threads have been restarted. */
+
+  while (cond->wait_count > 0)
     {
-      ret = EINVAL;
-    }
-  else
-    {
-      /* Loop until all of the waiting threads have been restarted. */
+      /* If the value is less than zero (meaning that one or more
+       * thread is waiting), then post the condition semaphore.
+       * Only the highest priority waiting thread will get to execute
+       */
 
-      while (cond->wait_count > 0)
-        {
-          /* If the value is less than zero (meaning that one or more
-           * thread is waiting), then post the condition semaphore.
-           * Only the highest priority waiting thread will get to execute
-           */
+      ret = -nxsem_post(&cond->sem);
 
-          ret = -nxsem_post(&cond->sem);
+      /* Increment the semaphore count (as was done by the
+       * above post).
+       */
 
-          /* Increment the semaphore count (as was done by the
-           * above post).
-           */
-
-          cond->wait_count--;
-        }
+      cond->wait_count--;
     }
 
   sinfo("Returning %d\n", ret);
