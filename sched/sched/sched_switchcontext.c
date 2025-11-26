@@ -40,6 +40,96 @@
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: nxsched_suspend_scheduler
+ *
+ * Description:
+ *   Called by architecture specific implementations that starts task
+ *   execution.  This function prepares the scheduler for the thread that is
+ *   about to be restarted.
+ *
+ * Input Parameters:
+ *   tcb - The TCB of the thread that is being suspended.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void nxsched_suspend_scheduler(FAR struct tcb_s *tcb)
+{
+  nxsched_checkstackoverflow(tcb);
+
+#ifdef CONFIG_SPINLOCK_DEBUG
+  spinlock_switch_context(tcb);
+#endif
+
+#ifdef CONFIG_SCHED_SPORADIC
+  /* Perform sporadic schedule operations */
+
+  if ((tcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_SPORADIC)
+    {
+      DEBUGVERIFY(nxsched_suspend_sporadic(tcb));
+    }
+#endif
+
+  /* Indicate that the task has been suspended */
+
+#ifdef CONFIG_SCHED_CRITMONITOR
+  nxsched_suspend_critmon(tcb);
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION
+  sched_note_suspend(tcb);
+#endif
+
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  perf_event_task_sched_out(tcb);
+#endif
+}
+
+/****************************************************************************
+ * Name: nxsched_resume_scheduler
+ *
+ * Description:
+ *   Called by architecture specific implementations that block task
+ *   execution.  This function prepares the scheduler for the thread that is
+ *   about to be restarted.
+ *
+ * Input Parameters:
+ *   tcb - The TCB of the thread to be restarted.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void nxsched_resume_scheduler(FAR struct tcb_s *tcb)
+{
+#ifdef CONFIG_SCHED_SPORADIC
+  if ((tcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_SPORADIC)
+    {
+      /* Reset the replenishment cycle if it is appropriate to do so */
+
+      DEBUGVERIFY(nxsched_resume_sporadic(tcb));
+    }
+#endif
+
+  /* Indicate the task has been resumed */
+
+#ifdef CONFIG_SCHED_CRITMONITOR
+  nxsched_resume_critmon(tcb);
+#endif
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION
+  sched_note_resume(tcb);
+#endif
+
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  perf_event_task_sched_in(tcb);
+#endif
+}
+
+/****************************************************************************
  * Name: nxsched_switch_context
  *
  * Description:
@@ -55,42 +145,8 @@
 
 void nxsched_switch_context(FAR struct tcb_s *from, FAR struct tcb_s *to)
 {
-  nxsched_checkstackoverflow(from);
-
-#ifdef CONFIG_SPINLOCK_DEBUG
-  spinlock_switch_context(from);
-#endif
-
-#ifdef CONFIG_SCHED_SPORADIC
-  /* Perform sporadic schedule operations */
-
-  if ((from->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_SPORADIC)
-    {
-      DEBUGVERIFY(nxsched_suspend_sporadic(from));
-    }
-
-  if ((to->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_SPORADIC)
-    {
-      DEBUGVERIFY(nxsched_resume_sporadic(to));
-    }
-#endif
-
-  /* Indicate that the task has been suspended */
-
-#ifdef CONFIG_SCHED_CRITMONITOR
-  nxsched_suspend_critmon(from);
-  nxsched_resume_critmon(to);
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION
-  sched_note_suspend(from);
-  sched_note_resume(to);
-#endif
-
-#ifdef CONFIG_SCHED_PERF_EVENTS
-  perf_event_task_sched_out(from);
-  perf_event_task_sched_in(to);
-#endif
+  nxsched_suspend_scheduler(from);
+  nxsched_resume_scheduler(to);
 }
 
 void nxsched_switch(FAR struct tcb_s *tcb, FAR struct tcb_s *rtcb)

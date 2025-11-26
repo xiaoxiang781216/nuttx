@@ -447,9 +447,10 @@ void nxsched_process_cpuload_ticks(clock_t ticks);
 #define nxsched_process_cpuload() nxsched_process_cpuload_ticks(1)
 #endif
 
-/* Critical section monitor */
+void nxsched_suspend_scheduler(FAR struct tcb_s *tcb);
+void nxsched_resume_scheduler(FAR struct tcb_s *tcb);
 
-void nxsched_switch_context(FAR struct tcb_s *from, FAR struct tcb_s *to);
+/* Critical section monitor */
 
 #ifdef CONFIG_SCHED_CRITMONITOR
 void nxsched_suspend_critmon(FAR struct tcb_s *tcb);
