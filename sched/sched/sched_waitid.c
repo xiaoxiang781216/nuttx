@@ -88,6 +88,7 @@ int waittcb(FAR struct tcb_s *rtcb, idtype_t idtype, int options,
 #endif
   int errcode = OK;
   sigset_t set;
+  irqstate_t flags;
   int ret;
 
   /* Create a signal set that contains only SIGCHLD */
@@ -99,6 +100,8 @@ int waittcb(FAR struct tcb_s *rtcb, idtype_t idtype, int options,
 
   while (errcode == OK)
     {
+      flags = enter_critical_section();
+
 #ifdef CONFIG_SCHED_CHILD_STATUS
       /* Check if the task has already died. Signals are not queued in
        * NuttX.  So a possibility is that the child has died and we
@@ -118,6 +121,7 @@ int waittcb(FAR struct tcb_s *rtcb, idtype_t idtype, int options,
                */
 
               exited_child(rtcb, child, info);
+              leave_critical_section(flags);
               break;
             }
         }
@@ -142,6 +146,7 @@ int waittcb(FAR struct tcb_s *rtcb, idtype_t idtype, int options,
                */
 
               exited_child(rtcb, child, info);
+              leave_critical_section(flags);
               break;
             }
         }
@@ -162,6 +167,7 @@ int waittcb(FAR struct tcb_s *rtcb, idtype_t idtype, int options,
                */
 
               errcode = ECHILD;
+              leave_critical_section(flags);
               break;
             }
         }
@@ -181,6 +187,7 @@ int waittcb(FAR struct tcb_s *rtcb, idtype_t idtype, int options,
            */
 
           errcode = ECHILD;
+          leave_critical_section(flags);
           break;
         }
 #endif
@@ -198,12 +205,14 @@ int waittcb(FAR struct tcb_s *rtcb, idtype_t idtype, int options,
 
           info->si_signo = 0;
           info->si_pid = 0;
+          leave_critical_section(flags);
           break;
         }
 
       /* Wait for any death-of-child signal */
 
       ret = nxsig_waitinfo(&set, info);
+      leave_critical_section(flags);
       if (ret < 0)
         {
           errcode = -ret;
