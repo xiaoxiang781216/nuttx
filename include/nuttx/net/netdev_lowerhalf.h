@@ -249,9 +249,9 @@ struct wireless_ops_s
 struct ethtool_ops_s
 {
   CODE int (*get_channels)(FAR struct netdev_lowerhalf_s *dev,
-                           FAR struct ethtool_chns_s *chns);
+                           FAR struct ethtool_chns *chns);
   CODE int (*set_channels)(FAR struct netdev_lowerhalf_s *dev,
-                           FAR struct ethtool_chns_s *chns);
+                           FAR struct ethtool_chns *chns);
   CODE int (*get_channels2)(FAR struct netdev_lowerhalf_s *dev,
                             FAR struct ethtool_chns2 *chns);
   CODE int (*set_channels2)(FAR struct netdev_lowerhalf_s *dev,
