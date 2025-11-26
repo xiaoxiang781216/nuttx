@@ -20,6 +20,9 @@
 #
 # ##############################################################################
 
+set(CMAKE_C_COMPILER_FORCED TRUE)
+set(CMAKE_CXX_COMPILER_FORCED TRUE)
+
 set(CMAKE_ASM_COMPILER clang)
 set(CMAKE_C_COMPILER clang)
 set(CMAKE_CXX_COMPILER clang++)
