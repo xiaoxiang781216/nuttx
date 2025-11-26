@@ -104,7 +104,6 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 
       running_task = &g_running_tasks[cpu];
       tcb = current_task(cpu);
-      nxsched_switch_context(*running_task, tcb);
 
       /* Record the new "running" task.  g_running_tasks[] is only used by
        * assertion logic for reporting crashes.

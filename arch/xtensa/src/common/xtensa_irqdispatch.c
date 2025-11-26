@@ -94,10 +94,6 @@ uint32_t *xtensa_irq_dispatch(int irq, uint32_t *regs)
       tcb = this_task();
 #endif
 
-      /* Update scheduler parameters */
-
-      nxsched_switch_context(*running_task, tcb);
-
       /* Record the new "running" task when context switch occurred.
        * g_running_tasks[] is only used by assertion logic for reporting
        * crashes.

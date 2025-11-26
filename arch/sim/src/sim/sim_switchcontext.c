@@ -85,10 +85,6 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
     {
       sinfo("New Active Task TCB=%p\n", tcb);
 
-      /* Update scheduler parameters */
-
-      nxsched_switch_context(rtcb, tcb);
-
       break_critical_section();
 
       /* Record the new "running" task */

@@ -95,10 +95,6 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
       addrenv_switch(tcb);
       tcb = this_task();
 #endif
-      /* Update scheduler parameters */
-
-      nxsched_switch_context(rtcb, tcb);
-
       /* Record the new "running" task */
 
       g_running_tasks[this_cpu()] = tcb;

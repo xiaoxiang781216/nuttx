@@ -68,12 +68,6 @@ void *riscv_perform_syscall(uintreg_t *regs)
       addrenv_switch(tcb);
       tcb = this_task();
 #endif
-      /* Update scheduler parameters */
-
-      if (!restore_context)
-        {
-          nxsched_switch_context(*running_task, tcb);
-        }
 
       /* Record the new "running" task.  g_running_tasks[] is only used by
        * assertion logic for reporting crashes.

@@ -81,10 +81,6 @@ void up_switch_context(FAR struct tcb_s *tcb, FAR struct tcb_s *rtcb)
 
   else if (!SAVE_USERCONTEXT(rtcb))
     {
-      /* Update scheduler parameters */
-
-      nxsched_switch_context(rtcb, tcb);
-
       /* Record the new "running" task */
 
       g_running_tasks[this_cpu()] = tcb;

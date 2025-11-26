@@ -129,26 +129,6 @@ void nxsched_resume_scheduler(FAR struct tcb_s *tcb)
 #endif
 }
 
-/****************************************************************************
- * Name: nxsched_switch_context
- *
- * Description:
- *   This function is used to switch context between two tasks.
- *
- * Input Parameters:
- *   from - The TCB of the task to be suspended.
- *   to   - The TCB of the task to be resumed.
- *
- * Returned Value:
- *   None
- ****************************************************************************/
-
-void nxsched_switch_context(FAR struct tcb_s *from, FAR struct tcb_s *to)
-{
-  nxsched_suspend_scheduler(from);
-  nxsched_resume_scheduler(to);
-}
-
 void nxsched_switch(FAR struct tcb_s *tcb, FAR struct tcb_s *rtcb)
 {
   uint16_t count;
@@ -163,7 +143,11 @@ void nxsched_switch(FAR struct tcb_s *tcb, FAR struct tcb_s *rtcb)
 #endif
 
   count = rspin_lock_count(&g_schedlock);
+
+  nxsched_suspend_scheduler(rtcb);
   up_switch_context(tcb, rtcb);
+  nxsched_resume_scheduler(rtcb);
+
   if (!up_interrupt_context())
     {
       restore_critical_section(count);

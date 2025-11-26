@@ -112,21 +112,19 @@ int nxtask_exit(void)
 
   dtcb->task_state = TSTATE_TASK_INACTIVE;
 
-  /* Update scheduler parameters.
-   *
-   * When the thread exits, SYS_restore_context is called to
-   * restore the context, which does not update the scheduling
-   * information.
-   * We need to update the scheduling information before tcb is released.
-   */
+  /* Update scheduler parameters. */
 
-  nxsched_switch_context(dtcb, rtcb);
+  nxsched_suspend_scheduler(dtcb);
 
   sched_note_stop(dtcb);
 
   rtcb->task_state = TSTATE_TASK_RUNNING;
   ret = nxsched_release_tcb(dtcb, atomic_read(&dtcb->flags) &
                             TCB_FLAG_TTYPE_MASK);
+
+  /* Update scheduler parameters. */
+
+  nxsched_resume_scheduler(rtcb);
 
   /* Decrement the lockcount on rctb. */
 

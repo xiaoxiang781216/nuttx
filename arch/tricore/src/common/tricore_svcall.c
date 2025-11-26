@@ -128,8 +128,6 @@ void tricore_svcall(volatile void *trap)
   switch (cmd)
     {
       case SYS_switch_context:
-        nxsched_switch_context(*running_task, tcb);
-
       case SYS_restore_context:
         *running_task = tcb;
 

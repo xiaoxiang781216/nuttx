@@ -96,10 +96,6 @@ IFX_INT_WRAPPER(CONFIG_CPU_COREID)
 
   if (*running_task != tcb)
     {
-      /* Update scheduler parameters */
-
-      nxsched_switch_context(*running_task, tcb);
-
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
        * running task is closed down gracefully (data caches dump,

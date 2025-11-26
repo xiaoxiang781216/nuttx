@@ -204,11 +204,7 @@ uint64_t *arm64_syscall(uint64_t *regs)
         tcb = this_task();
 #endif
 
-        /* Update scheduler parameters */
-
-        nxsched_switch_context(*running_task, tcb);
         *running_task = tcb;
-
         break_critical_section();
         break;
 

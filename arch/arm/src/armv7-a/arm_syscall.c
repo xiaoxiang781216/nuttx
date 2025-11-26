@@ -263,11 +263,6 @@ uint32_t *arm_syscall(uint32_t *regs)
 #endif
 
       case SYS_switch_context:
-
-        /* Update scheduler parameters */
-
-        nxsched_switch_context(*running_task, tcb);
-
       case SYS_restore_context:
 
 #ifdef CONFIG_ARCH_ADDRENV
@@ -278,10 +273,6 @@ uint32_t *arm_syscall(uint32_t *regs)
         addrenv_switch(tcb);
         tcb = this_task();
 #endif
-        /* No context switch occurs in SYS_restore_context, or the
-         * context switch has been completed, so there is no
-         * need to update scheduler parameters.
-         */
 
         *running_task = tcb;
 
