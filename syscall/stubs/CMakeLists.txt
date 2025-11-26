@@ -21,12 +21,6 @@
 # ##############################################################################
 nuttx_add_kernel_library(stubs)
 
-if(NOT (CONFIG_ARCH_64BIT) AND CONFIG_FS_LARGEFILE)
-  # off_t is 64bit, so off_t need be passed as pointer on 32bit arch
-
-  set(OPTIONS -r off_t)
-endif()
-
 generate_syscall_files(
   OUTPUT_VAR
   GENERATED_STUBS
@@ -37,9 +31,7 @@ generate_syscall_files(
   ALL_SYSCALLS
   ${SYSCALLS}
   CSV_FILES
-  ${CMAKE_CURRENT_LIST_DIR}/../syscall.csv
-  TYPE_REFERENCES
-  ${OPTIONS})
+  ${CMAKE_CURRENT_LIST_DIR}/../syscall.csv)
 
 # add sources to target
 target_sources(stubs PRIVATE ${GENERATED_STUBS})

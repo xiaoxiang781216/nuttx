@@ -72,7 +72,7 @@ function(generate_syscall_files)
   # Parse function arguments
   set(OPTIONS)
   set(ONEVALUEARG OUTPUT_VAR OUTPATH MODE)
-  set(MULTIVALUEARGS ALL_SYSCALLS CSV_FILES TYPE_REFERENCES)
+  set(MULTIVALUEARGS ALL_SYSCALLS CSV_FILES)
   cmake_parse_arguments(ARG "${OPTIONS}" "${ONEVALUEARG}" "${MULTIVALUEARGS}"
                         ${ARGN})
 
