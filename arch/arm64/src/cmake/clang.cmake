@@ -176,6 +176,10 @@ endif()
 
 add_link_options(-no-pie)
 
+if(CONFIG_LIBM_TOOLCHAIN)
+  add_compile_options(--config=newlib.cfg)
+endif()
+
 # override nuttx_find_toolchain_lib
 
 set(NUTTX_FIND_TOOLCHAIN_LIB_DEFINED true)

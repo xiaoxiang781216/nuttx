@@ -229,10 +229,13 @@ else ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
   NM      = llvm-nm
   OBJCOPY = llvm-objcopy
   OBJDUMP = llvm-objdump
+
+  ARCHCPUFLAGS += --target=aarch64-none-elf
+
 else ifeq ($(CONFIG_ARCH_TOOLCHAIN_ARMCLANG),y)
   CC      = armclang
   CXX     = armclang
-  CPP     = armclang -E -P -x c --target=aarch64-arm-none-eabi
+  CPP     = armclang -E -P -x c
   LD      = armlink
   STRIP   = llvm-strip --strip-unneeded
   AR      = armar -rcs
@@ -240,12 +243,13 @@ else ifeq ($(CONFIG_ARCH_TOOLCHAIN_ARMCLANG),y)
   OBJCOPY = llvm-objcopy
   OBJDUMP = llvm-objdump
 
+  ARCHCPUFLAGS += --target=aarch64-arm-none-eabi
+
   # Since the no_builtin attribute is not fully supported on Clang
   # disable the built-in functions, refer:
   # https://github.com/apache/nuttx/pull/5971
 
   ARCHOPTIMIZATION += -fno-builtin
-  ARCHOPTIMIZATION += --target=aarch64-arm-none-eabi
 
   # Suppress license warning
 
@@ -298,6 +302,9 @@ endif
 EXTRA_LIBS += $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name))
 
 ifeq ($(CONFIG_LIBM_TOOLCHAIN),y)
+  ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+    ARCHCPUFLAGS += --config=newlib.cfg
+  endif
   EXTRA_LIBS += $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libm.a))
 endif
 
