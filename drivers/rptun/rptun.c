@@ -924,12 +924,14 @@ static void rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
   int timeout = CONFIG_RPTUN_STATUS_TIMEOUT_MS;
   FAR struct rptun_status_s *status =
     RPTUN_RSC2STATUS(priv->rproc.rsc_table);
+  int ret = -ENOTSUP;
 
   if (priv->dev->ops->reset)
     {
-      priv->dev->ops->reset(priv->dev, val);
+      ret = priv->dev->ops->reset(priv->dev, val);
     }
-  else
+
+  if (ret == -ENOTSUP)
     {
       rptun_set_status(priv, val);
 
