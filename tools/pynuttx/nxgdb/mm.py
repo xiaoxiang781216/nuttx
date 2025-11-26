@@ -132,7 +132,7 @@ class MemPoolBlock:
     @property
     def is_free(self) -> bool:
         if not CONFIG_MM_RECORD:
-            return False
+            return None
 
         if not self._magic:
             self._magic = int(self.record["magic"])
