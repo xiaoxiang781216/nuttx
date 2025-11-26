@@ -738,7 +738,7 @@ static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
       if (RPTUN_STATUS_CHECK(status, BOARDIOC_SOFTRESETCAUSE_POWEROFF))
         {
 #ifdef CONFIG_BOARDCTL_POWEROFF
-          boardctl(BOARDIOC_SOFTRESETCAUSE_POWEROFF, 0u);
+          boardctl(BOARDIOC_POWEROFF, 0u);
 #endif
         }
       else
