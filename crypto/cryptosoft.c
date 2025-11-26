@@ -687,7 +687,7 @@ static int swkey_save(FAR struct swkey_context_s *ctx, uint32_t keyid)
       swkey_promote_cache_data(ctx, data);
     }
 
-  return ret;
+  return OK;
 }
 
 /****************************************************************************
@@ -2122,6 +2122,9 @@ done:
 
 int swcr_mod_exp(FAR struct cryptkop *krp)
 {
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+  FAR struct swkey_context_s *ctx = swkey_get_context();
+#endif
   FAR struct crparam *src;
   FAR struct crparam *dst;
   FAR struct crparam *e;
@@ -2141,15 +2144,37 @@ int swcr_mod_exp(FAR struct cryptkop *krp)
                         krp->krp_oparams - 1];
   n = &krp->krp_param[1];
   e = &krp->krp_param[2];
+  if (krp->krp_flags & CRD_F_KEYID)
+    {
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+      bnn.length = swkey_read(&ctx->file, *(uint32_t *)n->crp_p,
+                              bnn.array, sizeof(bnn.array));
+      if (bnn.length < 0)
+        {
+          return bnn.length;
+        }
+
+      bne.length = swkey_read(&ctx->file, *(uint32_t *)e->crp_p,
+                              bne.array, sizeof(bne.array));
+      if (bne.length < 0)
+        {
+          return bne.length;
+        }
+#endif
+    }
+  else
+    {
+      bnn.length = n->crp_nbits / 8;
+      bne.length = e->crp_nbits / 8;
+      memcpy(bne.array, e->crp_p, bne.length);
+      memcpy(bnn.array, n->crp_p, bnn.length);
+      bignum_update_length(&bne);
+      bignum_update_length(&bnn);
+    }
+
   bna.length = src->crp_nbits / 8;
-  bnn.length = n->crp_nbits / 8;
-  bne.length = e->crp_nbits / 8;
   memcpy(bna.array, src->crp_p, bna.length);
-  memcpy(bne.array, e->crp_p, bne.length);
-  memcpy(bnn.array, n->crp_p, bnn.length);
   bignum_update_length(&bna);
-  bignum_update_length(&bne);
-  bignum_update_length(&bnn);
 
   pow_mod_faster(&bna, &bne, &bnn, &bnr);
   memcpy(dst->crp_p, bnr.array, dst->crp_nbits / 8);
@@ -2158,6 +2183,9 @@ int swcr_mod_exp(FAR struct cryptkop *krp)
 
 int swcr_mod_exp_crt(FAR struct cryptkop *krp)
 {
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+  FAR struct swkey_context_s *ctx = swkey_get_context();
+#endif
   FAR struct crparam *src;
   FAR struct crparam *dst;
   FAR struct crparam *p;
@@ -2189,24 +2217,67 @@ int swcr_mod_exp_crt(FAR struct cryptkop *krp)
   dp = &krp->krp_param[6];
   dq = &krp->krp_param[7];
   qp = &krp->krp_param[8];
+  if (krp->krp_flags & CRD_F_KEYID)
+    {
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+      bnp.length = swkey_read(&ctx->file, *(uint32_t *)p->crp_p,
+                              bnp.array, sizeof(bnp.array));
+      if (bnp.length < 0)
+        {
+          return bnp.length;
+        }
+
+      bnq.length = swkey_read(&ctx->file, *(uint32_t *)q->crp_p,
+                              bnq.array, sizeof(bnq.array));
+      if (bnq.length < 0)
+        {
+          return bnq.length;
+        }
+
+      bndp.length = swkey_read(&ctx->file, *(uint32_t *)dp->crp_p,
+                                bndp.array, sizeof(bndp.array));
+      if (bndp.length < 0)
+        {
+          return bndp.length;
+        }
+
+      bndq.length = swkey_read(&ctx->file, *(uint32_t *)dq->crp_p,
+                                bndq.array, sizeof(bndq.array));
+      if (bndq.length < 0)
+        {
+          return bndq.length;
+        }
+
+      bnqp.length = swkey_read(&ctx->file, *(uint32_t *)qp->crp_p,
+                                bnqp.array, sizeof(bnqp.array));
+      if (bnqp.length < 0)
+        {
+          return bnqp.length;
+        }
+#endif
+    }
+  else
+    {
+      bnp.length = p->crp_nbits / 8;
+      bnq.length = q->crp_nbits / 8;
+      bndp.length = dp->crp_nbits / 8;
+      bndq.length = dq->crp_nbits / 8;
+      bnqp.length = qp->crp_nbits / 8;
+      memcpy(bnp.array, p->crp_p, bnp.length);
+      memcpy(bnq.array, q->crp_p, bnq.length);
+      memcpy(bndp.array, dp->crp_p, bndp.length);
+      memcpy(bndq.array, dq->crp_p, bndq.length);
+      memcpy(bnqp.array, qp->crp_p, bnqp.length);
+      bignum_update_length(&bnp);
+      bignum_update_length(&bnq);
+      bignum_update_length(&bndp);
+      bignum_update_length(&bndq);
+      bignum_update_length(&bnqp);
+    }
+
   bna.length = src->crp_nbits / 8;
-  bnp.length = p->crp_nbits / 8;
-  bnq.length = q->crp_nbits / 8;
-  bndp.length = dp->crp_nbits / 8;
-  bndq.length = dq->crp_nbits / 8;
-  bnqp.length = qp->crp_nbits / 8;
   memcpy(bna.array, src->crp_p, bna.length);
-  memcpy(bnp.array, p->crp_p, bnp.length);
-  memcpy(bnq.array, q->crp_p, bnq.length);
-  memcpy(bndp.array, dp->crp_p, bndp.length);
-  memcpy(bndq.array, dq->crp_p, bndq.length);
-  memcpy(bnqp.array, qp->crp_p, bnqp.length);
   bignum_update_length(&bna);
-  bignum_update_length(&bnp);
-  bignum_update_length(&bnq);
-  bignum_update_length(&bndp);
-  bignum_update_length(&bndq);
-  bignum_update_length(&bnqp);
 
   pow_mod_crt(&bna, &bnp, &bnq, &bndp, &bndq, &bnqp, &bnr);
   memcpy(dst->crp_p, bnr.array, dst->crp_nbits / 8);
@@ -2247,6 +2318,9 @@ static int swcr_dh_make_common(FAR struct cryptkop *krp)
 
 int swcr_rsa_verify(struct cryptkop *krp)
 {
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+  FAR struct swkey_context_s *ctx = swkey_get_context();
+#endif
   FAR struct crparam *src;
   FAR struct crparam *dst;
   FAR struct crparam *e;
@@ -2266,14 +2340,36 @@ int swcr_rsa_verify(struct cryptkop *krp)
                         krp->krp_oparams - 1];
   n = &krp->krp_param[1];
   e = &krp->krp_param[2];
-  bne.length = e->crp_nbits / 8;
-  bnn.length = n->crp_nbits / 8;
+  if (krp->krp_flags & CRD_F_KEYID)
+    {
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+      bnn.length = swkey_read(&ctx->file, *(uint32_t *)n->crp_p,
+                              bnn.array, sizeof(bnn.array));
+      if (bnn.length < 0)
+        {
+          return bnn.length;
+        }
+
+      bne.length = swkey_read(&ctx->file, *(uint32_t *)e->crp_p,
+                              bne.array, sizeof(bne.array));
+      if (bne.length < 0)
+        {
+          return bne.length;
+        }
+#endif
+    }
+  else
+    {
+      bne.length = e->crp_nbits / 8;
+      bnn.length = n->crp_nbits / 8;
+      memcpy(bne.array, e->crp_p, bne.length);
+      memcpy(bnn.array, n->crp_p, bnn.length);
+      bignum_update_length(&bne);
+      bignum_update_length(&bnn);
+    }
+
   bna.length = src->crp_nbits / 8;
-  memcpy(bne.array, e->crp_p, bne.length);
-  memcpy(bnn.array, n->crp_p, bnn.length);
   memcpy(bna.array, src->crp_p, bna.length);
-  bignum_update_length(&bne);
-  bignum_update_length(&bnn);
   bignum_update_length(&bna);
 
   pow_mod_faster(&bna, &bne, &bnn, &bnr);
