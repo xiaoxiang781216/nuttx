@@ -32,6 +32,12 @@
 #include "csvparser.h"
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define MAX_SYSCALL_PARMS 6
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -50,6 +56,11 @@ static bool is_vararg(const char *type)
 static bool is_union(const char *type)
 {
   return strstr(type, "union") != NULL;
+}
+
+static bool is_struct(const char *type)
+{
+  return strstr(type, "struct") != NULL;
 }
 
 static const char *check_funcptr(const char *type)
@@ -167,6 +178,27 @@ static void get_fieldname(const char *arg, char *fieldname)
   exit(15);
 }
 
+static void generate_return_ref(FILE *stream)
+{
+  char formal[MAX_PARMSIZE];
+
+  if (strcmp(g_parm[RETTYPE_INDEX], "noreturn") != 0 &&
+      strcmp(g_parm[RETTYPE_INDEX], "void") != 0)
+    {
+      get_formalparmtype(g_parm[RETTYPE_INDEX], formal);
+      if (is_union(formal) || is_struct(formal))
+        {
+          fprintf(stream, "#define RET_REF 1\n");
+        }
+      else
+        {
+          fprintf(stream,
+                  "#define RET_REF (sizeof(%s) > sizeof(uintptr_t))\n",
+                  g_parm[RETTYPE_INDEX]);
+        }
+    }
+}
+
 static FILE *open_proxy(void)
 {
   char filename[MAX_PARMSIZE + 10];
@@ -185,12 +217,40 @@ static FILE *open_proxy(void)
   return stream;
 }
 
+static void generate_proxy_call(FILE *stream, int nparms, bool ret_ref)
+{
+  int i;
+
+  fprintf(stream, "sys_call%d(", ret_ref ? nparms + 1 : nparms);
+
+  /* Create the parameter list with the matching types.  The first parameter
+   * is always the syscall number.
+   */
+
+  fprintf(stream, "SYS_%s", g_parm[NAME_INDEX]);
+
+  for (i = 0; i < nparms; i++)
+    {
+      fprintf(stream, ", PARM%d", i + 1);
+    }
+
+  if (ret_ref)
+    {
+      /* If the return type need be passed by reference. */
+
+      fprintf(stream, ", (uintptr_t)&ret");
+    }
+
+  /* Handle the tail end of the function. */
+
+  fprintf(stream, ");\n");
+}
+
 static void generate_proxy(int nfixed, int nparms)
 {
   FILE *stream = open_proxy();
   char formal[MAX_PARMSIZE];
   char actual[MAX_PARMSIZE];
-  char fieldname[MAX_PARMSIZE];
   int i = 0;
 
   /* Generate "up-front" information, include correct header files */
@@ -219,6 +279,30 @@ static void generate_proxy(int nfixed, int nparms)
     {
       fprintf(stream, "#if %s\n\n", g_parm[COND_INDEX]);
     }
+
+  generate_return_ref(stream);
+
+  for (i = 0; i < nparms; i++)
+    {
+      get_actualparmtype(g_parm[PARM1_INDEX + i], actual);
+      get_formalparmtype(g_parm[PARM1_INDEX + i], formal);
+
+      if (is_union(formal) || is_struct(formal))
+        {
+          fprintf(stream,
+                  "#define PARM%d ((uintptr_t)(&parm%d))\n",
+                  i + 1, i + 1);
+        }
+      else
+        {
+          fprintf(stream,
+                  "#define PARM%d (sizeof(%s) > sizeof(uintptr_t) ?"
+                  " (uintptr_t)(&parm%d) : (uintptr_t)(parm%d))\n",
+                  i + 1, actual , i + 1, i + 1);
+        }
+    }
+
+  fprintf(stream, "\n");
 
   /* Generate the function definition that matches standard function
    * prototype
@@ -313,49 +397,51 @@ static void generate_proxy(int nfixed, int nparms)
   if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0 ||
       strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
     {
-      fprintf(stream, "  sys_call%d(", nparms);
+      fprintf(stream, "  ");
+      generate_proxy_call(stream, nparms, false);
+    }
+  else if (nparms >= MAX_SYSCALL_PARMS)
+    {
+      fprintf(stream, "  %s ret;\n\n  ret = (%s)",
+              g_parm[RETTYPE_INDEX], g_parm[RETTYPE_INDEX]);
+      generate_proxy_call(stream, nparms, false);
     }
   else
     {
-      fprintf(stream, "  return (%s)sys_call%d(", g_parm[RETTYPE_INDEX],
-              nparms);
+      fprintf(stream, "  %s ret;\n\n", g_parm[RETTYPE_INDEX]);
+      fprintf(stream, "  if (RET_REF)\n");
+      fprintf(stream, "    {\n");
+      fprintf(stream, "      ");
+      generate_proxy_call(stream, nparms, true);
+      fprintf(stream, "    }\n");
+      fprintf(stream, "  else\n");
+      fprintf(stream, "    {\n");
+      fprintf(stream, "      ret = (%s)", g_parm[RETTYPE_INDEX]);
+      generate_proxy_call(stream, nparms, false);
+      fprintf(stream, "    }\n\n");
     }
 
-  /* Create the parameter list with the matching types.  The first parameter
-   * is always the syscall number.
-   */
-
-  fprintf(stream, "(unsigned int)SYS_%s", g_parm[NAME_INDEX]);
-
-  for (i = 0; i < nparms; i++)
-    {
-      /* Is the parameter a union member */
-
-      if (is_union(g_parm[PARM1_INDEX + i]))
-        {
-          /* Then we will have to pick a field name that can be cast to a
-           * uintptr_t.  There probably should be some error handling here
-           * to catch the case where the fieldname was not supplied.
-           */
-
-          get_fieldname(g_parm[PARM1_INDEX + i], fieldname);
-          fprintf(stream, ", (uintptr_t)parm%d.%s", i + 1, fieldname);
-        }
-      else
-        {
-          fprintf(stream, ", (uintptr_t)parm%d", i + 1);
-        }
-    }
-
-  /* Handle the tail end of the function. */
-
-  fprintf(stream, ");\n");
   if (strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
     {
         fprintf(stream, "  while(1);\n");
     }
+  else if (strcmp(g_parm[RETTYPE_INDEX], "void") != 0)
+    {
+      fprintf(stream, "  return ret;\n");
+    }
 
   fprintf(stream, "}\n");
+
+  if (strcmp(g_parm[RETTYPE_INDEX], "noreturn") != 0 &&
+      strcmp(g_parm[RETTYPE_INDEX], "void") != 0)
+    {
+      fprintf(stream, "#undef RET_REF\n");
+    }
+
+  for (i = 0; i < nparms; i++)
+    {
+      fprintf(stream, "#undef PARM%d\n", i + 1);
+    }
 
   if (g_parm[COND_INDEX][0] != '\0')
     {
@@ -415,6 +501,33 @@ static void stub_close(FILE *stream)
     }
 }
 
+static void generate_stub_call(FILE *stream, int nparms)
+{
+  int i;
+
+  fprintf(stream, "%s(", g_parm[NAME_INDEX]);
+
+  /* The pass all of the system call parameters, casting to the correct type
+   * as necessary.
+   */
+
+  for (i = 0; i < nparms; i++)
+    {
+      /* Treat the first argument in the list differently from the others..
+       * It does not need a comma before it.
+       */
+
+      if (i > 0)
+        {
+          fprintf(stream, ", ");
+        }
+
+      fprintf(stream, "PARM%d", i + 1);
+    }
+
+  fprintf(stream, ");\n");
+}
+
 static void generate_stub(int nfixed, int nparms)
 {
   FILE *stream = open_stub();
@@ -452,18 +565,61 @@ static void generate_stub(int nfixed, int nparms)
    * prototype
    */
 
+  generate_return_ref(stream);
+
+  for (i = 0; i < nparms; i++)
+    {
+      get_actualparmtype(g_parm[PARM1_INDEX + i], actual);
+      get_formalparmtype(g_parm[PARM1_INDEX + i], formal);
+
+      if (is_union(formal))
+        {
+          fprintf(stream,
+                  "#define PARM%d (*(FAR %s *)(parm%d))\n",
+                  i + 1, formal, i + 1);
+        }
+      else if (is_struct(formal))
+        {
+          fprintf(stream,
+                  "#define PARM%d (*(FAR %s *)(parm%d))\n",
+                  i + 1, actual, i + 1);
+        }
+      else
+        {
+          fprintf(stream,
+                  "#define PARM%d (sizeof(%s) > sizeof(uintptr_t) ?"
+                  " (*(FAR %s *)parm%d) : ((%s)parm%d))\n",
+                  i + 1, actual, actual, i + 1, actual, i + 1);
+        }
+    }
+
   if (g_inline)
     {
       fprintf(stream, "static inline ");
     }
 
-  fprintf(stream, "uintptr_t STUB_%s(int nbr", g_parm[NAME_INDEX]);
+  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0 ||
+      strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
+    {
+      fprintf(stream, "void STUB_%s(int nbr", g_parm[NAME_INDEX]);
+    }
+  else
+    {
+      fprintf(stream, "uintptr_t STUB_%s(int nbr", g_parm[NAME_INDEX]);
+    }
 
   /* Generate the formal parameter list */
 
   for (i = 0; i < nparms; i++)
     {
       fprintf(stream, ", uintptr_t parm%d", i + 1);
+    }
+
+  if (nparms < MAX_SYSCALL_PARMS)
+    {
+      /* If the return type need be passed by pointer. */
+
+      fprintf(stream, ", uintptr_t ret");
     }
 
   fprintf(stream, ")\n{\n");
@@ -489,7 +645,7 @@ static void generate_stub(int nfixed, int nparms)
            */
 
           get_fieldname(g_parm[PARM1_INDEX + i], fieldname);
-          fprintf(stream, ", (uintptr_t)_parm%d.%s", i + 1, fieldname);
+          fprintf(stream, ", (uintptr_t)parm%d.%s", i + 1, fieldname);
         }
       else
         {
@@ -506,51 +662,27 @@ static void generate_stub(int nfixed, int nparms)
   if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0 ||
       strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
     {
-      fprintf(stream, "  %s(", g_parm[NAME_INDEX]);
+      fprintf(stream, "  ");
+      generate_stub_call(stream, nparms);
+    }
+  else if (nparms >= MAX_SYSCALL_PARMS)
+    {
+      fprintf(stream, "  uintptr_t ret = (uintptr_t)");
+      generate_stub_call(stream, nparms);
     }
   else
     {
-      fprintf(stream, "  uintptr_t ret = (uintptr_t)%s(",
-              g_parm[NAME_INDEX]);
+      fprintf(stream, "  if (RET_REF)\n");
+      fprintf(stream, "    {\n");
+      fprintf(stream, "      *(FAR %s *)ret = ", g_parm[RETTYPE_INDEX]);
+      generate_stub_call(stream, nparms);
+      fprintf(stream, "    }\n");
+      fprintf(stream, "  else\n");
+      fprintf(stream, "    {\n");
+      fprintf(stream, "      ret = (uintptr_t)");
+      generate_stub_call(stream, nparms);
+      fprintf(stream, "    }\n\n");
     }
-
-  /* The pass all of the system call parameters, casting to the correct type
-   * as necessary.
-   */
-
-  for (i = 0; i < nparms; i++)
-    {
-      /* Get the formal type of the parameter, and get the type that we
-       * actually have to cast to.  For example for a formal type like
-       * 'int parm[]' we have to cast the actual parameter to 'int *'.
-       * The worst is a union type like 'union sigval' where we have to
-       * cast to (union sigval)((FAR void *)parm)
-       * -- Yech.
-       */
-
-     get_formalparmtype(g_parm[PARM1_INDEX + i], formal);
-     get_actualparmtype(g_parm[PARM1_INDEX + i], actual);
-
-      /* Treat the first argument in the list differently from the others..
-       * It does not need a comma before it.
-       */
-
-      if (i > 0)
-        {
-          fprintf(stream, ", ");
-        }
-
-      if (is_union(formal))
-        {
-          fprintf(stream, "(%s)((%s)parm%d)", formal, actual, i + 1);
-        }
-      else
-        {
-          fprintf(stream, "(%s)parm%d", actual, i + 1);
-        }
-    }
-
-  fprintf(stream, ");\n");
 
   /* Call system call leave hook function */
 
@@ -570,18 +702,23 @@ static void generate_stub(int nfixed, int nparms)
   fprintf(stream, "  sched_unlock();\n");
   fprintf(stream, "#endif\n");
 
-  /* Tail end of the function.  If the stubs function has no return
-   * value, just return zero (OK).
-   */
-
-  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0 ||
-      strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
+  if (strcmp(g_parm[RETTYPE_INDEX], "void") != 0 &&
+      strcmp(g_parm[RETTYPE_INDEX], "noreturn") != 0)
     {
-      fprintf(stream, "  return 0;\n}\n");
+      fprintf(stream, "  return ret;\n");
     }
-  else
+
+  fprintf(stream, "}\n");
+
+  if (strcmp(g_parm[RETTYPE_INDEX], "noreturn") != 0 &&
+      strcmp(g_parm[RETTYPE_INDEX], "void") != 0)
     {
-      fprintf(stream, "  return ret;\n}\n");
+      fprintf(stream, "#undef RET_REF\n");
+    }
+
+  for (i = 0; i < nparms; i++)
+    {
+      fprintf(stream, "#undef PARM%d\n", i + 1);
     }
 
   if (g_parm[COND_INDEX][0] != '\0')
