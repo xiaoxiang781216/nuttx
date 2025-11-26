@@ -49,6 +49,34 @@
 #define tricore_addr2csa(addr) ((uintptr_t)(((((uintptr_t)(addr)) & 0xF0000000) >> 12) \
                                             | (((uintptr_t)(addr) & 0x003FFFC0) >> 6)))
 
+/* write/read */
+
+#ifdef CONFIG_TRICORE_TOOLCHAIN_TASKING
+  #define read_sysreg(reg)                                                 \
+    ({                                                                     \
+      uint32_t __val;                                                      \
+      __asm__ volatile("mov.d\t %0, "#reg"" : "=d" (__val) :: "memory");   \
+      __val;                                                               \
+    })
+
+  #define write_sysreg(__val, reg)                                         \
+    ({                                                                     \
+      __asm__ volatile("mov.a\t "#reg", %0" :: "d" (__val) : "memory");    \
+    })
+#else
+  #define read_sysreg(reg)                                                 \
+    ({                                                                     \
+      uint32_t __val;                                                      \
+      __asm__ volatile("mov.d\t %0, %%"#reg"" : "=d" (__val) :: "memory"); \
+      __val;                                                               \
+    })
+
+  #define write_sysreg(__val, reg)                                         \
+    ({                                                                     \
+      __asm__ volatile("mov.a\t %%"#reg", %0" :: "d" (__val) : "memory");  \
+    })
+#endif
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/

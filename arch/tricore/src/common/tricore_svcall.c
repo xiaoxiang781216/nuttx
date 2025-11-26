@@ -143,6 +143,11 @@ void tricore_svcall(volatile void *trap)
     {
       case SYS_switch_context:
       case SYS_restore_context:
+
+        /* Update the TLS pointer */
+
+        tricore_set_tls_info(tcb->stack_alloc_ptr);
+
         *running_task = tcb;
 
 #ifdef CONFIG_ARCH_ADDRENV
