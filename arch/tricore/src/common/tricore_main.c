@@ -135,6 +135,5 @@ void core5_main(void)
 
 void core6_main(void)
 {
-  tricore_csrm_apu_init();
   core_main();
 }
