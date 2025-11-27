@@ -79,6 +79,10 @@ struct arch_addrenv_s
 typedef struct arch_addrenv_s arch_addrenv_t;
 #endif
 
+#ifdef CONFIG_PERCPU_SECTION
+#  define up_this_cpu_var(v) (v)
+#endif
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/

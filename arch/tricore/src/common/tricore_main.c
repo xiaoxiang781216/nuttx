@@ -38,8 +38,6 @@
  * Private Definitions
  ****************************************************************************/
 
-#undef g_nx_initstate
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -58,11 +56,6 @@ static void core_main(void)
          (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
   memset((void *)(uintptr_t)_sbss_percpu + PERCPU_OFFSET * cpu,
          0, (uintptr_t)_ebss_percpu - (uintptr_t)_sbss_percpu);
-
-  if (cpu > 0)
-    {
-      while (!OSINIT_IDLELOOP());
-    }
 #endif
 
 #ifdef USE_EARLYSERIALINIT
