@@ -676,11 +676,12 @@ get_property(nuttx_extra_libs GLOBAL PROPERTY NUTTX_EXTRA_LIBRARIES)
 
 if(CONFIG_BUILD_FLAT)
   get_property(nuttx_system_libs GLOBAL PROPERTY NUTTX_SYSTEM_LIBRARIES)
+  get_property(nuttx_user_libs GLOBAL PROPERTY NUTTX_USER_LIBRARIES)
   get_property(nuttx_apps_libs GLOBAL PROPERTY NUTTX_APPS_LIBRARIES)
 endif()
 
-set(nuttx_libs ${nuttx_kernel_libs} ${nuttx_system_libs} ${nuttx_apps_libs}
-               ${nuttx_extra_libs})
+set(nuttx_libs ${nuttx_apps_libs} ${nuttx_user_libs} ${nuttx_system_libs}
+               ${nuttx_kernel_libs} ${nuttx_extra_libs})
 
 # Remove executable suffix
 set(CMAKE_EXECUTABLE_SUFFIX "")
@@ -849,6 +850,8 @@ if(CONFIG_BUILD_PROTECTED)
 
   get_property(nuttx_system_libs GLOBAL PROPERTY NUTTX_SYSTEM_LIBRARIES)
 
+  get_property(nuttx_user_libs GLOBAL PROPERTY NUTTX_USER_LIBRARIES)
+
   get_property(nuttx_apps_libs GLOBAL PROPERTY NUTTX_APPS_LIBRARIES)
 
   get_property(nuttx_user_extra_libs GLOBAL PROPERTY NUTTX_USER_EXTRA_LIBRARIES)
@@ -900,15 +903,17 @@ if(CONFIG_BUILD_PROTECTED)
 
   if(CONFIG_ARCH_TOOLCHAIN_TASKING)
     target_link_libraries(
-      nuttx_user PRIVATE --lsl-file=${user_ldscript} ${nuttx_system_libs}
-                         ${nuttx_apps_libs} ${nuttx_user_extra_libs})
+      nuttx_user
+      PRIVATE --lsl-file=${user_ldscript} ${nuttx_apps_libs} ${nuttx_user_libs}
+              ${nuttx_system_libs} ${nuttx_user_extra_libs})
   else()
     target_link_libraries(
       nuttx_user
       PRIVATE ${LINK_OPTION_FLAG}${user_ldscript}
               $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--start-group>
-              ${nuttx_system_libs}
               ${nuttx_apps_libs}
+              ${nuttx_user_libs}
+              ${nuttx_system_libs}
               ${nuttx_user_extra_libs}
               $<$<NOT:$<BOOL:${DISABLE_LINK_GROUP}>>:-Wl,--end-group>)
   endif()
