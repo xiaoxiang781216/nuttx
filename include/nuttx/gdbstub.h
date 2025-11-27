@@ -55,6 +55,8 @@ typedef CODE ssize_t (*gdb_recv_func_t)(FAR void *priv, FAR void *buf,
 typedef CODE int (*gdb_monitor_func_t)(FAR struct gdb_state_s *state,
                                        FAR const char *cmd);
 
+#ifdef CONFIG_ARCH_HAVE_DEBUG
+
 /****************************************************************************
  * Name: gdbstub_debugpoint_add
  ****************************************************************************/
@@ -67,6 +69,8 @@ int gdb_debugpoint_add(int type, void *addr, size_t size,
  ****************************************************************************/
 
 int gdb_debugpoint_remove(int type, void *addr, size_t size);
+
+#endif /* CONFIG_ARCH_HAVE_DEBUG */
 
 /****************************************************************************
  * Name: gdb_state_init

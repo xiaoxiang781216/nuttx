@@ -24,10 +24,13 @@ ifeq ($(CONFIG_LIB_GDBSTUB),y)
 
 # Add the internal C files to the build
 
-CSRCS += lib_gdbstub.c
+CSRCS += lib_gdbstub.c pkt.c cmd.c debugpoint.c
 
 ifneq ($(CONFIG_MM_KASAN),)
 lib_gdbstub.c_CFLAGS += -fno-sanitize=kernel-address
+pkt.c_CFLAGS += -fno-sanitize=kernel-address
+cmd.c_CFLAGS += -fno-sanitize=kernel-address
+debugpoint.c_CFLAGS += -fno-sanitize=kernel-address
 endif
 
 # Add the userfs directory to the build

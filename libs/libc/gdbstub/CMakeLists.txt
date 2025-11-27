@@ -21,11 +21,13 @@
 # ##############################################################################
 
 if(CONFIG_LIB_GDBSTUB)
-  target_sources(c PRIVATE lib_gdbstub.c)
+  set(SRCS lib_gdbstub.c pkt.c cmd.c debugpoint.c)
+
+  target_sources(c PRIVATE ${SRCS})
 
   if(CONFIG_MM_KASAN)
     set_source_files_properties(
-      lib_gdbstub.c DIRECTORY .. PROPERTIES COMPILE_FLAGS
-                                            -fno-sanitize=kernel-address)
+      ${SRCS} DIRECTORY .. PROPERTIES COMPILE_FLAGS
+                                      -fno-sanitize=kernel-address)
   endif()
 endif()
