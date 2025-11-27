@@ -139,6 +139,9 @@ int group_initialize(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
     {
       group = &g_kthread_group;
       tcb->group = group;
+#ifdef CONFIG_MM_TASK_HEAP
+      group->tg_heap = KNR_HEAP;
+#endif
       if (group->tg_info)
         {
           initialized = true;
