@@ -1516,32 +1516,6 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 }
 
 /****************************************************************************
- * Name: tcp_conn_list_lock
- *
- * Description:
- *   Lock the TCP connection list.
- *
- ****************************************************************************/
-
-void tcp_conn_list_lock(void)
-{
-  NET_BUFPOOL_LOCK(g_tcp_connections);
-}
-
-/****************************************************************************
- * Name: tcp_conn_list_unlock
- *
- * Description:
- *   Unlock the TCP connection list.
- *
- ****************************************************************************/
-
-void tcp_conn_list_unlock(void)
-{
-  NET_BUFPOOL_UNLOCK(g_tcp_connections);
-}
-
-/****************************************************************************
  * Name: tcp_add_active_conn
  *
  * Description:
