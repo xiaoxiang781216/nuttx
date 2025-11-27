@@ -52,7 +52,8 @@
                                       1 << VIRTIO_RPMSG_F_ACK | \
                                       1 << VIRTIO_RPMSG_F_BUFSZ | \
                                       1 << VIRTIO_RPMSG_F_CPUNAME | \
-                                      1 << VIRTIO_RPMSG_F_BUFADDR)
+                                      1 << VIRTIO_RPMSG_F_BUFADDR | \
+                                      1 << VIRTIO_RPMSG_F_PRIORITY)
 
 #ifdef CONFIG_OPENAMP_CACHE
 #  define RPMSG_VIRTIO_INVALIDATE(x) metal_cache_invalidate(&x, sizeof(x))
@@ -807,6 +808,7 @@ int rpmsg_virtio_probe(FAR struct virtio_device *vdev)
 {
   FAR struct rpmsg_virtio_priv_s *priv;
   uint64_t features;
+  uint8_t priority;
 #ifdef CONFIG_RPMSG_VIRTIO_PM
   char name[64];
 #endif
@@ -854,7 +856,17 @@ int rpmsg_virtio_probe(FAR struct virtio_device *vdev)
                              VIRTIO_RPMSG_CPUNAME_SIZE);
         }
 
-      ret = rpmsg_init_wqueues(&priv->rpmsg);
+      if (virtio_has_feature(vdev, VIRTIO_RPMSG_F_PRIORITY))
+        {
+          virtio_read_config(vdev, offsetof(struct fw_rsc_config, priority),
+                             &priority, sizeof(priority));
+        }
+      else
+        {
+          priority = CONFIG_RPMSG_WQUEUE_PRIORITY;
+        }
+
+      ret = rpmsg_init_wqueues(&priv->rpmsg, priority);
       if (ret >= 0)
         {
           rpmsg_queue_work(&priv->rpmsg, RPMSG_PRIO_DEFAULT,
