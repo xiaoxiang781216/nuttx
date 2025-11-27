@@ -600,7 +600,7 @@ config ARCH_PERF_EVENTS_USER_ACCESS
 config ARCH_PERF_EVENTS
 	bool "Configure hardware performance counting"
 	default SCHED_CRITMONITOR || SCHED_IRQMONITOR || RPMSG_PING || SEGGER_SYSVIEW
-	depends on ARCH_HAVE_PERF_EVENTS
+	depends on ARCH_HAVE_PERF_EVENTS && !SMP
 	---help---
 		Enable hardware performance counter support for perf events. If
 		disabled, perf events will use software events only.
