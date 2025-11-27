@@ -104,4 +104,3 @@ if(CONFIG_ETHOSU)
                               PROPERTIES COMPILE_FLAGS "-w")
 
 endif()
-endif()
