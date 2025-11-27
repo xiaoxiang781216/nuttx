@@ -126,13 +126,14 @@ void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode)
     }
 #endif
 
-  mutex = NXSEM_IS_MUTEX(sem);
-
   /* It is possible that an interrupt/context switch beat us to the punch
    * and already changed the task's state.
    */
 
   DEBUGASSERT(sem != NULL);
+
+  mutex = NXSEM_IS_MUTEX(sem);
+
   DEBUGASSERT(mutex || atomic_read(NXSEM_COUNT(sem)) < 0);
   DEBUGASSERT(!mutex || NXSEM_MBLOCKING(atomic_read(NXSEM_MHOLDER(sem))));
 
