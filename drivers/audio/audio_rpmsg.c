@@ -649,8 +649,8 @@ static int audio_rpmsg_send_data_handler(FAR struct rpmsg_endpoint *ept,
   if (dq_empty(&aud->pendq))
     {
       nxmutex_unlock(&aud->mutex);
-      auderr("%s no buffer available\n", aud->devname);
-      return -ENOSPC;
+      audwarn("%s no buffer available\n", aud->devname);
+      return 0;
     }
 
   apb = (FAR struct ap_buffer_s *)dq_peek(&aud->pendq);
