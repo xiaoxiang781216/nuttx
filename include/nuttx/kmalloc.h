@@ -84,6 +84,8 @@ extern "C"
 #define kumm_free(p)             free(p)
 #define kumm_delayfree(p)        umm_delayfree(p)
 #define kumm_mallinfo()          mallinfo()
+#define kumm_memdump(p)          umm_memdump(p)
+#define kumm_heapmember(p)       umm_heapmember(p)
 
 /* This family of allocators is used to manage kernel protected memory */
 
@@ -105,8 +107,8 @@ extern "C"
 #  define kmm_free(p)            kumm_free(p)
 #  define kmm_delayfree(p)       kumm_delayfree(p)
 #  define kmm_mallinfo()         kumm_mallinfo()
-#  define kmm_heapmember(p)      kumm_umm_heapmember(p)
-#  define kmm_memdump(p)         kumm_umm_memdump(p)
+#  define kmm_heapmember(p)      kumm_heapmember(p)
+#  define kmm_memdump(p)         kumm_memdump(p)
 
 #else
 /* Otherwise, the kernel-space allocators are declared in
