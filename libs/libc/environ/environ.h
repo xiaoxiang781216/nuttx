@@ -29,6 +29,9 @@
 
 #include <nuttx/config.h>
 
+#include <nuttx/lib/lib.h>
+#include <nuttx/mm/mm.h>
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -36,6 +39,16 @@
 #ifndef CONFIG_DISABLE_ENVIRON
 
 #  define SCHED_ENVIRON_RESERVED (4)
+
+#  ifdef CONFIG_MM_TASK_HEAP
+#    define env_malloc(i, s)     mm_malloc(i->ta_heap, s)
+#    define env_realloc(i, p, s) mm_realloc(i->ta_heap, p, s)
+#    define env_free(i, p)       mm_free(i->ta_heap, p)
+#  else
+#    define env_malloc(i, s)     lib_umalloc(s)
+#    define env_realloc(i, p, s) lib_urealloc(p, s)
+#    define env_free(i, p)       lib_ufree(p)
+#  endif
 
 /****************************************************************************
  * Public Data

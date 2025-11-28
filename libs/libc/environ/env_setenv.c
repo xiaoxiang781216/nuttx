@@ -141,7 +141,7 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
 
   /* Then allocate or reallocate the environment buffer */
 
-  pvar = lib_umalloc(varlen);
+  pvar = env_malloc(info, varlen);
   if (pvar == NULL)
     {
       ret = ENOMEM;
@@ -154,7 +154,7 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
     {
       envpc = SCHED_ENVIRON_RESERVED + 2;
 
-      envp = lib_umalloc(sizeof(*envp) * envpc);
+      envp = env_malloc(info, sizeof(*envp) * envpc);
       if (envp == NULL)
         {
           ret = ENOMEM;
@@ -168,7 +168,7 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
     {
       envpc = envc + SCHED_ENVIRON_RESERVED + 2;
 
-      envp = lib_urealloc(info->ta_envp, sizeof(*envp) * envpc);
+      envp = env_realloc(info, info->ta_envp, sizeof(*envp) * envpc);
       if (envp == NULL)
         {
           ret = ENOMEM;
@@ -192,7 +192,7 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
   return OK;
 
 errout_with_var:
-  lib_ufree(pvar);
+  env_free(info, pvar);
 errout_with_lock:
   nxrmutex_unlock(&info->ta_lock);
 errout:
