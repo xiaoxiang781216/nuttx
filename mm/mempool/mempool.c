@@ -311,7 +311,11 @@ mempool_memdump_free_callback(FAR struct mempool_s *pool,
 static FAR void *mempool_alloc_callback(FAR struct mempool_s *pool,
                                         size_t size)
 {
-  return mm_malloc(pool->priv, size);
+#if defined(CONFIG_MM_KERNEL_HEAP) && defined(__KERNEL__)
+  return kmm_malloc(size);
+#else
+  return malloc(size);
+#endif
 }
 
 /****************************************************************************
@@ -324,7 +328,11 @@ static FAR void *mempool_alloc_callback(FAR struct mempool_s *pool,
 
 static void mempool_free_callback(FAR struct mempool_s *pool, FAR void *addr)
 {
-  mm_free(pool->priv, addr);
+#if defined(CONFIG_MM_KERNEL_HEAP) && defined(__KERNEL__)
+  kmm_free(addr);
+#else
+  free(addr);
+#endif
 }
 
 /****************************************************************************
@@ -338,7 +346,11 @@ static void mempool_free_callback(FAR struct mempool_s *pool, FAR void *addr)
 static void mempool_check_callback(FAR struct mempool_s *pool,
                                    FAR void *addr)
 {
-  DEBUGASSERT(mm_heapmember(pool->priv, addr));
+#if defined(CONFIG_MM_KERNEL_HEAP) && defined(__KERNEL__)
+  kmm_heapmember(addr);
+#else
+  umm_heapmember(addr);
+#endif
 }
 
 /****************************************************************************
@@ -389,11 +401,6 @@ int mempool_init(FAR struct mempool_s *pool)
             {
               /* Default dynamic expand feature */
 
-#ifdef __KERNEL__
-              pool->priv = KNR_HEAP;
-#else
-              pool->priv = USR_HEAP;
-#endif
               pool->alloc = mempool_alloc_callback;
               pool->free  = mempool_free_callback;
               pool->check = mempool_check_callback;
@@ -404,7 +411,7 @@ int mempool_init(FAR struct mempool_s *pool)
           sq_init(&pool->equeue);
           pool->nalloc = 0;
 
-          if (pool->interruptsize >= blocksize && pool->alloc && pool->priv)
+          if (pool->interruptsize >= blocksize && pool->alloc)
             {
               size_t ninterrupt = pool->interruptsize / blocksize;
               size_t size = ninterrupt * blocksize;
@@ -434,7 +441,7 @@ int mempool_init(FAR struct mempool_s *pool)
               size_t size = ninitial * blocksize + MEMPOOL_HEADER_SIZE;
               FAR char *base;
 
-              if (pool->initialbase == NULL && pool->alloc && pool->priv)
+              if (pool->initialbase == NULL && pool->alloc)
                 {
                   base = pool->alloc(pool, size);
                   if (base == NULL)
