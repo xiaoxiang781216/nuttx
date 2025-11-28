@@ -58,28 +58,51 @@ class SymbolTables(object):
             return None
         return symbol
 
-    def print_symbol_tables(self, isnoconst=False):
-        noconst = "const"
-        if not isnoconst:
-            noconst = ""
+    def print_symbol_tables(self, section):
+
+        locate = (
+            f'locate_data("{section}")'
+            if section != "" and section is not None
+            else "const"
+        )
 
         self.emitline("#include <nuttx/compiler.h>")
         self.emitline("#include <nuttx/symtab.h>\n")
-        self.emitline("extern int g_nallsyms;\n")
+        self.emitline("extern %s int g_nallsyms;\n" % locate)
         self.emitline(
-            "extern struct symtab_s g_allsyms[%d + 2];\n" % len(self.symbol_list)
+            "extern %s struct symtab_s g_allsyms[%d + 2];\n"
+            % (locate, len(self.symbol_list))
         )
-        self.emitline("%s int g_nallsyms = %d + 2;" % (noconst, len(self.symbol_list)))
+
+        self.emitline('static %s char g_sym_unknown[] = "Unknown";' % locate)
+        for index, symbol in enumerate(self.symbol_list):
+            self.emitline(
+                'static %s char g_sym_%d[] = "%s";\n'
+                % (
+                    locate,
+                    index,
+                    symbol[1],
+                )
+            )
+
+        self.emitline(
+            "%s int g_nallsyms = %d + 2;"
+            % (
+                locate,
+                len(self.symbol_list),
+            )
+        )
         self.emitline(
             "%s struct symtab_s g_allsyms[%d + 2] =\n{"
-            % (noconst, len(self.symbol_list))
-        )
-        self.emitline('  { "Unknown", (FAR %s void *)0x00000000 },' % (noconst))
-        for symbol in self.symbol_list:
-            self.emitline(
-                '  { "%s", (FAR %s void *)%s },' % (symbol[1], noconst, hex(symbol[0]))
+            % (
+                locate,
+                len(self.symbol_list),
             )
-        self.emitline('  { "Unknown", (FAR %s void *)0xffffffff }\n};' % (noconst))
+        )
+        self.emitline("  { g_sym_unknown, (FAR void *)0x00000000 },")
+        for index, symbol in enumerate(self.symbol_list):
+            self.emitline("  { g_sym_%d, (FAR void *)%s }," % (index, hex(symbol[0])))
+        self.emitline("  { g_sym_unknown, (FAR void *)0xffffffff }\n};")
 
     def get_symtable(self):
         symbol_tables = [
@@ -123,9 +146,7 @@ class SymbolTables(object):
 
 
 def usage():
-    print(
-        "Usage: mkallsyms.py [noconst] <ELFBIN> [output file] [order symbols by name]"
-    )
+    print("Usage: mkallsyms.py <ELFBIN> [output file] [order symbols by name]")
     os._exit(errno.ENOENT)
 
 
@@ -141,7 +162,13 @@ if __name__ == "__main__":
         default=sys.stdout,
         help="Output file to write symbols to (default: stdout).",
     )
-    parser.add_argument("--noconst", action="store_true", help="Exclude const symbols.")
+    parser.add_argument(
+        "--section",
+        nargs="?",
+        type=str,
+        default="",
+        help="Location of the symbol table storage section",
+    )
     parser.add_argument(
         "--version",
         action="version",
@@ -158,4 +185,4 @@ if __name__ == "__main__":
 
     readelf = SymbolTables(args.elffile, args.outfile)
     readelf.parse_symbol(args.orderbyname)
-    readelf.print_symbol_tables(args.noconst)
+    readelf.print_symbol_tables(args.section)

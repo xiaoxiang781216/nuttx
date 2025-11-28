@@ -411,7 +411,7 @@ define LINK_ALLSYMS_KASAN
 	$(if $(CONFIG_ALLSYMS), \
 		$(if $(CONFIG_HOST_MACOS), \
 			$(Q) $(TOPDIR)/tools/mkallsyms.sh noconst $(NUTTX) $(CROSSDEV) > allsyms.tmp, \
-			$(Q) $(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp --orderbyname $(CONFIG_SYMTAB_ORDEREDBYNAME)))
+			$(Q) $(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp --orderbyname $(CONFIG_SYMTAB_ORDEREDBYNAME))) --section ${CONFIG_ALLSYMS_SECTION}
 	$(if $(CONFIG_ALLSYMS), \
 		$(Q) $(call COMPILE, allsyms.tmp, allsyms$(OBJEXT), -x c -fno-sanitize=kernel-address)
 		$(Q) $(call DELFILE, allsyms.tmp))

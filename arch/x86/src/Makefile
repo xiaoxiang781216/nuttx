@@ -124,7 +124,7 @@ endif
 
 define LINK_ALLSYMS_KASAN
 	$(if $(CONFIG_ALLSYMS),
-	$(Q) $(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp --orderbyname $(CONFIG_SYMTAB_ORDEREDBYNAME)
+	$(Q) $(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp --orderbyname $(CONFIG_SYMTAB_ORDEREDBYNAME) --section ${CONFIG_ALLSYMS_SECTION}
 	$(Q) $(call COMPILE, allsyms.tmp, allsyms$(OBJEXT), -x c -fno-sanitize=kernel-address)
 	$(Q) $(call DELFILE, allsyms.tmp))
 	$(if $(CONFIG_MM_KASAN_GLOBAL),

@@ -12,6 +12,13 @@ config ALLSYMS
 		symbolic stack backtraces. This increases the size of the nuttx
 		somewhat, as all symbols have to be loaded into the nuttx image.
 
+config ALLSYMS_SECTION
+	string "Symbol table storage section"
+	depends on ALLSYMS
+	default ""
+	---help---
+		Location of the symbol table storage section
+
 config SYMTAB_ORDEREDBYNAME
 	bool "Symbol Tables Ordered by Name"
 	default n

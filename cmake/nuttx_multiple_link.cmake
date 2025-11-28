@@ -88,7 +88,7 @@ macro(define_multiple_link_target inter_target dep_target linktimes)
     add_custom_command(
       OUTPUT ${LINK_ALLSYMS_SOURCE} POST_BUILD
       COMMAND ${NUTTX_DIR}/tools/mkallsyms.py ${CMAKE_BINARY_DIR}/${dep_target}
-              ${LINK_ALLSYMS_SOURCE}
+              ${LINK_ALLSYMS_SOURCE} --section ${CONFIG_ALLSYMS_SECTION}
       DEPENDS ${dep_target}
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       COMMAND_EXPAND_LISTS)

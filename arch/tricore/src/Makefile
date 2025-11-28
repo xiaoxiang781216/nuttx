@@ -158,7 +158,7 @@ board$(DELIM)libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
 
 define LINK_ALLSYMS
-	$(Q) $(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.c --orderbyname $(CONFIG_SYMTAB_ORDEREDBYNAME)
+	$(Q) $(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.c --orderbyname $(CONFIG_SYMTAB_ORDEREDBYNAME) --section ${CONFIG_ALLSYMS_SECTION}
 	$(Q) $(call COMPILE, allsyms.c, allsyms$(OBJEXT))
 	$(Q) $(LD) $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
 		-o $(NUTTX) $(HEAD_COBJ) allsyms$(OBJEXT) $(EXTRA_OBJS) \
