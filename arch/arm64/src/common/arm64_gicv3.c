@@ -924,8 +924,14 @@ static void arm64_gic_init(void)
 
   gicv3_cpuif_init();
 
+#ifdef CONFIG_BMP
+  DEBUGVERIFY(irq_attach(GIC_SMP_CALL, nxsched_smp_call_handler, NULL));
+#endif
+
 #ifdef CONFIG_SMP
   up_enable_irq(GIC_SMP_SCHED);
+#endif
+#ifndef CONFIG_UP
   up_enable_irq(GIC_SMP_CALL);
 #endif
 }
