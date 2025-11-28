@@ -232,6 +232,14 @@
                             * arg: integer value
                             */
 
+/* Protocol-level socket options may begin with this value
+ * Note: __SO_PROTOCOL was moved from 16 to 21 to avoid conflict with
+ * SO_TIMESTAMPNS (20). This ensures protocol-specific options don't
+ * collide with socket-level options.
+ */
+
+#define __SO_PROTOCOL   21
+
 /* The options are unsupported but included for compatibility
  * and portability
  */
