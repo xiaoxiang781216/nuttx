@@ -1169,7 +1169,7 @@ static int audio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case AUDIOIOC_RESETSTATUS:
         {
-          flags = spin_lock_irqsave(&upper->spinlock);
+          flags = spin_lock_irqsave_nopreempt(&upper->spinlock);
           priv->head = MAX(upper->status->head,
                            upper->status->tail + upper->periods - 1);
           if (priv->state == AUDIO_STATE_XRUN)
@@ -1178,7 +1178,7 @@ static int audio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             }
 
           audio_try_enqueue(upper);
-          spin_unlock_irqrestore(&upper->spinlock, flags);
+          spin_unlock_irqrestore_nopreempt(&upper->spinlock, flags);
         }
         break;
 
