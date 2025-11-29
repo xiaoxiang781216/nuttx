@@ -512,12 +512,6 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
   uint32_t tail;
   uint32_t pos;
 
-  /* If the circular buffer is empty, then wait for something to be written
-   * to it.  This function may NOT be called from an interrupt handler.
-   */
-
-  DEBUGASSERT(!up_interrupt_context());
-
   /* Get exclusive access to the rl_tail index */
 
   flags = spin_lock_irqsave(&header->rl_lock);
@@ -531,6 +525,15 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
       if (header->rl_head == upriv->rl_tail)
         {
           /* The circular buffer is empty. */
+
+          /* If the function be called from an interrupt handler,
+           * then just break out of the loop.
+           */
+
+          if (up_interrupt_context())
+            {
+              break;
+            }
 
 #ifdef CONFIG_RAMLOG_NONBLOCKING
           /* Return what we have (with zero mean the end-of-file) */
