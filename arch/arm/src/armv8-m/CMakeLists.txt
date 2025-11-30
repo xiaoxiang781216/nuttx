@@ -80,8 +80,4 @@ if(CONFIG_ARCH_ADDRENV)
   list(APPEND SRCS arm_addrenv.c)
 endif()
 
-if(CONFIG_LIB_SYSCALL)
-  list(APPEND SRCS arm_dispatch_syscall.S)
-endif()
-
 target_sources(arch PRIVATE ${SRCS})
