@@ -116,6 +116,7 @@
 #define _MTDLOGBASE     (0x4600) /* MTD LOG ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 #define _SAFETYBASE     (0x8c00) /* Safety modules ioctl commands */
+#define _DMABUFBASE     (0x8d00) /* DMA-Buf modules ioctl commands */
 
 /* boardctl() commands share the same number space */
 
@@ -796,6 +797,13 @@
 
 #define _MTDLOGIOCVALID(c)    (_IOC_TYPE(c)==_MTDLOGBASE)
 #define _MTDLOGIOC(nr)        _IOC(_MTDLOGBASE,nr)
+
+/* DMA-Buf driver ioctl definitions *****************************************/
+
+/* see nuttx/include/dma-buf.h */
+
+#define _DMABUFIOCVALID(c)    (_IOC_TYPE(c)==_DMABUFBASE)
+#define _DMABUFIOC(nr)        _IOC(_DMABUFBASE,nr)
 
 /****************************************************************************
  * Public Type Definitions
