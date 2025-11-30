@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv6-m/arm_saveusercontext.S
+ * arch/arm/src/arm_m/arm_saveusercontext.S
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -28,8 +28,12 @@
 	.file	"arm_saveusercontext.S"
 
 	.text
+#ifdef __ghs__
+	.thumb2
+#else
 	.syntax	unified
 	.thumb
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -43,7 +47,7 @@
  *
  *   int up_saveusercontext(void *saveregs);
  *
- *   R0 = saveregs = pinter saved array
+ *   R0 = saveregs = pointer saved array
  *
  * Returned Value:
  *   None
@@ -52,7 +56,11 @@
 
 	.globl	up_saveusercontext
 	.globl	up_saveusercontext
+#ifdef __ghs__
+	.type	up_saveusercontext, $function
+#else
 	.type	up_saveusercontext, %function
+#endif
 
 up_saveusercontext:
 
@@ -76,9 +84,17 @@ up_saveusercontext:
 	mrs		r1, XPSR
 	str		r1, [r0, #(4*REG_XPSR)]
 
-	/* Save r13, primask, r4~r7 */
+#ifdef CONFIG_ARCH_FPU
+	add		r1, r0, #(4*REG_S0)
+	vstmia		r1!, {s0-s15}
+	vmrs		r2, fpscr
+	str		r2, [r1]
+#endif
+
+	/* Save r13, primask, r4~r11 */
 
 	mov		r2, sp
+#ifdef CONFIG_ARCH_ARMV6M
 	mrs		r3, primask
 	stmia		r0!, {r2-r7}
 
@@ -98,6 +114,30 @@ up_saveusercontext:
 	movs		r2, #0
 	subs		r2, #1
 	stmia		r0!, {r1-r2}
+#else
+	mrs		r3, basepri
+	stmia		r0!, {r2-r11}
+
+	/* Save EXC_RETURN to 0xffffffff */
+
+	mov		r1, #-1
+	stmia		r0!, {r1}
+#endif
+
+#ifdef CONFIG_ARCH_FPU
+	vstmia		r0!, {s16-s31}
+#endif
+
+#ifdef CONFIG_ARMV8M_STACKCHECK_HARDWARE
+	mrs		r2, control
+	tst		r2, #0x2
+	ite		eq
+	mrseq		r1, msplim
+	mrsne		r1, psplim
+	str		r1, [r0]
+#endif
+
+	/* We don't care APSR/NZCV here */
 
 	movs		r0, #0
 	bx		lr
