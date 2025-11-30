@@ -60,6 +60,16 @@ void nxsched_unlock(FAR struct tcb_s *rtcb)
   irqstate_t flags = enter_critical_section_notrace();
   FAR struct tcb_s *ptcb;
 
+  /* In non-SMP:
+   * If lockcount equals 0 and interrupts are not masked,
+   * an interrupt may occur just before processing the g_pendingtasks queue,
+   * causing the scheduler to switch to and start executing a lower-priority
+   * task. At this moment, if there is a higher-priority task in the
+   * g_pendingtasks queue, priority inversion will occur.
+   */
+
+  rtcb->lockcount = 0;
+
   /* Note that we no longer have pre-emption disabled. */
 
   if (!up_interrupt_context())
@@ -187,8 +197,12 @@ void sched_unlock(void)
    * then pre-emption has been re-enabled.
    */
 
-  if (--rtcb->lockcount == 0)
+  if (rtcb->lockcount == 1)
     {
       nxsched_unlock(rtcb);
+    }
+  else
+    {
+      rtcb->lockcount--;
     }
 }

@@ -302,9 +302,13 @@ static inline_function FAR struct tcb_s *this_task(void)
         { \
           FAR struct tcb_s *tcb_ = this_task(); \
           DEBUGASSERT(tcb_ && tcb_->lockcount > 0); \
-          if (--tcb_->lockcount == 0) \
+          if (tcb_->lockcount == 1) \
             { \
               nxsched_unlock(tcb_); \
+            } \
+          else \
+            { \
+              tcb_->lockcount--; \
             } \
         } \
       while (0)
