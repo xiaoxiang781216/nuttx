@@ -32,6 +32,7 @@
 #include <nuttx/drivers/drivers.h>
 #include <nuttx/drivers/rpmsgdev.h>
 #include <nuttx/drivers/rpmsgblk.h>
+#include <nuttx/dma-heap.h>
 #include <nuttx/fs/loop.h>
 #include <nuttx/fs/smart.h>
 #include <nuttx/fs/loopmtd.h>
@@ -368,6 +369,10 @@ void drivers_initialize(void)
 
 #ifdef CONFIG_FAKE_CAPTURE
   fake_capture_initialize(2);
+#endif
+
+#ifdef CONFIG_DMABUF_HEAPS
+  dmabuf_system_heap_create();
 #endif
 
   drivers_trace_end();

@@ -37,6 +37,7 @@
 
 #define DMA_BUF_IOCTL_SYNC            _DMABUFIOC(0x1)
 #define DMA_BUF_SET_NAME              _DMABUFIOC(0x2)
+#define DMA_BUF_HEAP_IOCTL_ALLOC      _DMABUFIOC(0x3)
 
 #define DMA_BUF_SYNC_READ             (1 << 0)
 #define DMA_BUF_SYNC_WRITE            (2 << 0)
