@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/include/armv7-m/irq.h
+ * arch/arm/include/arm_m/irq.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,8 +22,8 @@
  * through nuttx/irq.h
  */
 
-#ifndef __ARCH_ARM_INCLUDE_ARMV7_M_IRQ_H
-#define __ARCH_ARM_INCLUDE_ARMV7_M_IRQ_H
+#ifndef __ARCH_ARM_INCLUDE_ARM_M_IRQ_H
+#define __ARCH_ARM_INCLUDE_ARM_M_IRQ_H
 
 /****************************************************************************
  * Included Files
@@ -43,7 +43,13 @@
  ****************************************************************************/
 
 #ifdef __ghs__
-#  define __ARM_ARCH 7
+#  ifdef CONFIG_ARCH_ARMV8M
+#    define __ARM_ARCH 8
+#  elif defined(CONFIG_ARCH_ARMV7M)
+#    define __ARM_ARCH 7
+#  elif defined(CONFIG_ARCH_ARMV6M)
+#    define __ARM_ARCH 6
+#  endif
 #endif
 
 /* Configuration ************************************************************/
@@ -63,7 +69,11 @@
  */
 
 #define REG_R13             (0)  /* R13 = SP at time of interrupt */
-#define REG_BASEPRI         (1)  /* BASEPRI */
+#ifdef CONFIG_ARCH_ARMV6M
+#  define REG_PRIMASK       (1)  /* PRIMASK */
+#else
+#  define REG_BASEPRI       (1)  /* BASEPRI */
+#endif
 #define REG_R4              (2)  /* R4 */
 #define REG_R5              (3)  /* R5 */
 #define REG_R6              (4)  /* R6 */
@@ -106,7 +116,20 @@
 
 /* The total number of registers saved by software */
 
-#define SW_XCPT_REGS        (SW_INT_REGS + SW_FPU_REGS)
+#ifdef CONFIG_ARMV8M_STACKCHECK_HARDWARE
+#  define REG_SPLIM         (SW_INT_REGS + SW_FPU_REGS + 0) /* REG_SPLIM */
+
+/* REG_ALIGN For 8-bytes align
+ * If Enabling CONFIG_ARMV8M_STACKCHECK_HARDWARE
+ * it will push a value to this location
+ */
+
+#  define REG_ALIGN         (SW_INT_REGS + SW_FPU_REGS + 1)
+#  define SW_XCPT_REGS      (SW_INT_REGS + SW_FPU_REGS + 2)
+#else
+#  define SW_XCPT_REGS      (SW_INT_REGS + SW_FPU_REGS)
+#endif
+
 #define SW_XCPT_SIZE        (4 * SW_XCPT_REGS)
 
 #if SW_XCPT_SIZE % 8 != 0
@@ -190,6 +213,11 @@
 
 /* CONTROL register */
 
+#define CONTROL_UPAC_EN     (1 << 7) /* Bit 7: Unprivileged pointer authentication enable */
+#define CONTROL_PAC_EN      (1 << 6) /* Bit 6: Privileged pointer authentication enable */
+#define CONTROL_UBTI_EN     (1 << 5) /* Bit 5: Unprivileged branch target identification enable */
+#define CONTROL_BTI_EN      (1 << 4) /* Bit 4: Privileged branch target identification enable */
+#define CONTROL_SFPA        (1 << 3) /* Bit 3: Secure Floating-point active */
 #define CONTROL_FPCA        (1 << 2) /* Bit 2: Floating-point context active */
 #define CONTROL_SPSEL       (1 << 1) /* Bit 1: Stack-pointer select */
 #define CONTROL_NPRIV       (1 << 0) /* Bit 0: Not privileged */
@@ -231,6 +259,7 @@ struct xcptcontext
   uint32_t sigreturn;
 
 #endif
+
 #endif /* !CONFIG_DISABLE_SIGNALS */
 
 #ifdef CONFIG_LIB_SYSCALL
@@ -271,7 +300,7 @@ struct xcptcontext
 
 /* Get/set the PRIMASK register */
 
-static always_inline_function uint8_t getprimask(void)
+static inline_function uint8_t getprimask(void)
 {
   uint32_t primask;
   __asm__ __volatile__
@@ -284,7 +313,7 @@ static always_inline_function uint8_t getprimask(void)
   return (uint8_t)primask;
 }
 
-static always_inline_function void setprimask(uint32_t primask)
+static inline_function void setprimask(uint32_t primask)
 {
   __asm__ __volatile__
     (
@@ -294,23 +323,13 @@ static always_inline_function void setprimask(uint32_t primask)
       : "memory");
 }
 
-static always_inline_function void cpsie(void)
-{
-  __asm__ __volatile__ ("\tcpsie  i\n");
-}
-
-static always_inline_function void cpsid(void)
-{
-  __asm__ __volatile__ ("\tcpsid  i\n");
-}
-
 /* Get/set the BASEPRI register.  The BASEPRI register defines the minimum
  * priority for exception processing. When BASEPRI is set to a nonzero
  * value, it prevents the activation of all exceptions with the same or
  * lower priority level as the BASEPRI value.
  */
 
-static always_inline_function uint8_t getbasepri(void)
+static inline_function uint8_t getbasepri(void)
 {
   uint32_t basepri;
 
@@ -324,7 +343,7 @@ static always_inline_function uint8_t getbasepri(void)
   return (uint8_t)basepri;
 }
 
-static always_inline_function void setbasepri(uint32_t basepri)
+static inline_function void setbasepri(uint32_t basepri)
 {
   __asm__ __volatile__
     (
@@ -375,7 +394,57 @@ static always_inline_function void raisebasepri(uint32_t basepri)
 
 /* Disable IRQs */
 
-static always_inline_function void up_irq_disable(void)
+#ifdef CONFIG_ARCH_ARMV6M
+static inline_function void up_irq_disable(void)
+{
+  __asm__ __volatile__ ("\tcpsid  i\n");
+}
+
+/* Save the current primask state & disable IRQs */
+
+static inline_function irqstate_t up_irq_save(void)
+{
+  unsigned short primask;
+
+  /* Return the current value of primask register and set
+   * bit 0 of the primask register to disable interrupts
+   */
+
+  __asm__ __volatile__
+    (
+     "\tmrs    %0, primask\n"
+     "\tcpsid  i\n"
+     : "=r" (primask)
+     :
+     : "memory");
+
+  return primask;
+}
+
+/* Enable IRQs */
+
+static inline_function void up_irq_enable(void)
+{
+  __asm__ __volatile__ ("\tcpsie  i\n");
+}
+
+/* Restore saved primask state */
+
+static inline_function void up_irq_restore(irqstate_t flags)
+{
+  /* If bit 0 of the primask is 0, then we need to restore
+   * interrupts.
+   */
+
+  __asm__ __volatile__
+    (
+      "\tmsr primask, %0\n"
+      :
+      : "r" (flags)
+      : "memory");
+}
+#else
+static inline_function void up_irq_disable(void)
 {
   /* Probably raising priority */
 
@@ -384,7 +453,7 @@ static always_inline_function void up_irq_disable(void)
 
 /* Save the current primask state & disable IRQs */
 
-static always_inline_function irqstate_t up_irq_save(void)
+static inline_function irqstate_t up_irq_save(void)
 {
   /* Probably raising priority */
 
@@ -395,7 +464,7 @@ static always_inline_function irqstate_t up_irq_save(void)
 
 /* Enable IRQs */
 
-static always_inline_function void up_irq_enable(void)
+static inline_function void up_irq_enable(void)
 {
   /* In this case, we are always retaining or lowering the priority value */
 
@@ -405,16 +474,18 @@ static always_inline_function void up_irq_enable(void)
 
 /* Restore saved primask state */
 
-static always_inline_function void up_irq_restore(irqstate_t flags)
+static inline_function
+void up_irq_restore(irqstate_t flags)
 {
   /* In this case, we are always retaining or lowering the priority value */
 
   setbasepri((uint32_t)flags);
 }
+#endif
 
 /* Get/set IPSR */
 
-static always_inline_function uint32_t getipsr(void)
+static inline_function uint32_t getipsr(void)
 {
   uint32_t ipsr;
   __asm__ __volatile__
@@ -429,7 +500,7 @@ static always_inline_function uint32_t getipsr(void)
 
 /* Get/set FAULTMASK */
 
-static always_inline_function uint32_t getfaultmask(void)
+static inline_function uint32_t getfaultmask(void)
 {
   uint32_t faultmask;
   __asm__ __volatile__
@@ -442,7 +513,7 @@ static always_inline_function uint32_t getfaultmask(void)
   return faultmask;
 }
 
-static always_inline_function void setfaultmask(uint32_t faultmask)
+static inline_function void setfaultmask(uint32_t faultmask)
 {
   __asm__ __volatile__
     (
@@ -454,7 +525,7 @@ static always_inline_function void setfaultmask(uint32_t faultmask)
 
 /* Get/set CONTROL */
 
-static always_inline_function uint32_t getcontrol(void)
+static inline_function uint32_t getcontrol(void)
 {
   uint32_t control;
   __asm__ __volatile__
@@ -467,7 +538,7 @@ static always_inline_function uint32_t getcontrol(void)
   return control;
 }
 
-static always_inline_function void setcontrol(uint32_t control)
+static inline_function void setcontrol(uint32_t control)
 {
   __asm__ __volatile__
     (
@@ -477,7 +548,7 @@ static always_inline_function void setcontrol(uint32_t control)
       : "memory");
 }
 
-static always_inline_function uint32_t getpsp(void)
+static inline_function uint32_t getpsp(void)
 {
   uint32_t psp;
 
@@ -505,9 +576,9 @@ int up_cpu_index(void) noinstrument_function;
 
 /* Return program counter */
 
-static always_inline_function uint32_t up_getpc(void)
+static inline_function uint32_t up_getpc(void)
 {
-  register uint32_t pc;
+  uint32_t pc;
 
   __asm__ __volatile__
   (
@@ -518,9 +589,9 @@ static always_inline_function uint32_t up_getpc(void)
   return pc;
 }
 
-static always_inline_function uint32_t up_getsp(void)
+static inline_function uint32_t up_getsp(void)
 {
-  register uint32_t sp;
+  uint32_t sp;
 
   __asm__ __volatile__
   (
@@ -531,13 +602,13 @@ static always_inline_function uint32_t up_getsp(void)
   return sp;
 }
 
-static always_inline_function uintptr_t up_getusrsp(void *regs)
+static inline_function uintptr_t up_getusrsp(void *regs)
 {
   uint32_t *ptr = (uint32_t *)regs;
   return ptr[REG_SP];
 }
 
-static always_inline_function bool up_interrupt_context(void)
+static inline_function bool up_interrupt_context(void)
 {
   return getipsr() != 0;
 }
@@ -560,4 +631,4 @@ extern "C"
 #endif
 #endif /* __ASSEMBLY__ */
 
-#endif /* __ARCH_ARM_INCLUDE_ARMV7_M_IRQ_H */
+#endif /* __ARCH_ARM_INCLUDE_ARM_M_IRQ_H */
