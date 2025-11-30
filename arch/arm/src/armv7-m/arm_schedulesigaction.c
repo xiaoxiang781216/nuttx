@@ -31,7 +31,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <arch/armv7-m/nvicpri.h>
+#include <arch/arm_m/nvicpri.h>
 
 #include "psr.h"
 #include "exc_return.h"

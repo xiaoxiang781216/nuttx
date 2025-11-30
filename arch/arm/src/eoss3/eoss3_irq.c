@@ -32,7 +32,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
-#include <arch/armv7-m/nvicpri.h>
+#include <arch/arm_m/nvicpri.h>
 
 #include "nvic.h"
 #include "ram_vectors.h"
