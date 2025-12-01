@@ -31,7 +31,7 @@
 #include <errno.h>
 #include <grp.h>
 
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 
 #include "grp/lib_grp.h"
 #include "libc.h"

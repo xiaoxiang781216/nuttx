@@ -28,7 +28,7 @@
 
 #include <pwd.h>
 
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 
 #include "pwd/lib_pwd.h"
 

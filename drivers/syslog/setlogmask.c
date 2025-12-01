@@ -29,7 +29,7 @@
 #include <stdint.h>
 #include <syslog.h>
 
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 #include <nuttx/sched.h>
 #include <nuttx/syslog/syslog.h>
 

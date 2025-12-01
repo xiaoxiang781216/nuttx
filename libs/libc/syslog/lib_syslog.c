@@ -29,7 +29,7 @@
 #include <stdarg.h>
 #include <syslog.h>
 
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 #include <nuttx/ratelimit.h>
 #include <nuttx/syslog/syslog.h>
 

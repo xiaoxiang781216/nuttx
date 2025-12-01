@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 
 /****************************************************************************
  * Private Data

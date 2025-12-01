@@ -28,7 +28,7 @@
 #include <string.h>
 
 #include <nuttx/mutex.h>
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 
 #include "environ/environ.h"
 

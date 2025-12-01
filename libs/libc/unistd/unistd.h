@@ -28,7 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 
 #include <stdbool.h>
 #include <getopt.h>

@@ -29,7 +29,7 @@
 #include <stdlib.h>
 
 #include <nuttx/lib/lib.h>
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 
 /****************************************************************************
  * Pre-processor Definitions

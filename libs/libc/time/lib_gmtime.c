@@ -31,7 +31,7 @@
 #include <debug.h>
 
 #include <nuttx/clock.h>
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 
 /****************************************************************************
  * Public Functions

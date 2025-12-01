@@ -28,7 +28,7 @@
 
 #include <time.h>
 
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 
 /****************************************************************************
  * Public Functions
