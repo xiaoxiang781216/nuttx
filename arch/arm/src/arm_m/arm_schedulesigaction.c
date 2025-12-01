@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-m/arm_schedulesigaction.c
+ * arch/arm/src/arm_m/arm_schedulesigaction.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -127,7 +127,11 @@ void up_schedule_sigaction(struct tcb_s *tcb)
        */
 
       tcb->xcp.regs[REG_PC]         = (uint32_t)arm_sigdeliver;
+#ifdef CONFIG_ARCH_ARMV6M
+      tcb->xcp.regs[REG_PRIMASK]    = 1;
+#else
       tcb->xcp.regs[REG_BASEPRI]    = NVIC_SYSH_DISABLE_PRIORITY;
+#endif
       tcb->xcp.regs[REG_XPSR]       = ARM_XPSR_T;
 #ifdef CONFIG_BUILD_PROTECTED
       tcb->xcp.regs[REG_LR]         = EXC_RETURN_THREAD;

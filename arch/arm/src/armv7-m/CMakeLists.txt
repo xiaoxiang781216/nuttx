@@ -39,10 +39,6 @@ set(SRCS
     arm_vectors.c
     arm_dbgmonitor.c)
 
-if(NOT CONFIG_DISABLE_SIGNALS)
-  list(APPEND SRCS arm_schedulesigaction.c arm_sigdeliver.c)
-endif()
-
 if(CONFIG_ARMV7M_SYSTICK)
   list(APPEND SRCS arm_systick.c)
 endif()

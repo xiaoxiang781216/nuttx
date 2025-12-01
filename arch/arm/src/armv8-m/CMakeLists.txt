@@ -39,10 +39,6 @@ set(SRCS
     arm_usagefault.c
     arm_vectors.c)
 
-if(NOT CONFIG_DISABLE_SIGNALS)
-  list(APPEND SRCS arm_sigdeliver.c arm_schedulesigaction.c)
-endif()
-
 if(CONFIG_ARMV8M_SYSTICK)
   list(APPEND SRCS arm_systick.c)
 endif()
