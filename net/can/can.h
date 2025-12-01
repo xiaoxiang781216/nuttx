@@ -126,7 +126,7 @@ struct can_conn_s
    * socket events.
    */
 
-  struct can_poll_s pollinfo[4]; /* FIXME make dynamic */
+  struct can_poll_s pollinfo[CONFIG_NET_CAN_NPOLLWAITERS];
 
   /* Rx sync callback.
    *

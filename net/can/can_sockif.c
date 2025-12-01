@@ -415,13 +415,12 @@ static int can_poll_local(FAR struct socket *psock, FAR struct pollfd *fds,
                           bool setup)
 {
   FAR struct can_conn_s *conn;
-  FAR struct can_poll_s *info;
+  FAR struct can_poll_s *info = NULL;
   FAR struct devif_callback_s *cb;
   pollevent_t eventset = 0;
   int ret = OK;
 
   conn = psock->s_conn;
-  info = conn->pollinfo;
 
   /* FIXME add NETDEV_DOWN support */
 
@@ -429,7 +428,24 @@ static int can_poll_local(FAR struct socket *psock, FAR struct pollfd *fds,
 
   if (setup)
     {
+      int i;
+
       conn_dev_lock(&conn->sconn, conn->dev);
+
+      for (i = 0; i < CONFIG_NET_CAN_NPOLLWAITERS; i++)
+        {
+          if (conn->pollinfo[i].fds == NULL)
+            {
+              info = &conn->pollinfo[i];
+              break;
+            }
+        }
+
+      if (info == NULL)
+        {
+          ret = -EBUSY;
+          goto errout_with_lock;
+        }
 
       info->dev = conn->dev;
 
@@ -504,15 +520,16 @@ errout_with_lock:
 
           conn_dev_lock(&conn->sconn, info->dev);
           can_callback_free(info->dev, conn, info->cb);
-          conn_dev_unlock(&conn->sconn, info->dev);
 
           /* Release the poll/select data slot */
 
           info->fds->priv = NULL;
+          info->fds = NULL;
 
           /* Then free the poll info container */
 
           info->psock = NULL;
+          conn_dev_unlock(&conn->sconn, info->dev);
         }
     }
 

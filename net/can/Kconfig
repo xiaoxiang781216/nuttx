@@ -175,6 +175,12 @@ config NET_CAN_TXCONFIRM
 		ability, the ability is used from CAN interrupt handler
 		when the transfer is complete, the ability will notify all
 		readers that the canid has been transferred.
+config NET_CAN_NPOLLWAITERS
+	int "Number of poll threads"
+	default 4
+	---help---
+		Maximum number of threads than can be waiting for POLL events.
+		Default: 4
 
 endif # NET_CAN
 endmenu # CAN Socket Support
