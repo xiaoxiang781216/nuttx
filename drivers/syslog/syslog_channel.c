@@ -49,7 +49,7 @@
 #endif
 
 #ifdef CONFIG_SYSLOG_FDX
-#  include <nuttx/trace32/fdx.h>
+#  include <nuttx/t32.h>
 #endif
 
 #ifdef CONFIG_SYSLOG_CDCACM

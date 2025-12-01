@@ -29,7 +29,7 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/streams.h>
 #include <nuttx/spinlock.h>
-#include <nuttx/trace32/fdx.h>
+#include <nuttx/t32.h>
 
 #include "t32fdx/t32fdx.h"
 

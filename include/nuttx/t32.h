@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/trace32/note_fdx.h
+ * include/nuttx/t32.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,14 +20,37 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_TRACE32_NOTE_FDX_H
-#define __INCLUDE_NUTTX_TRACE32_NOTE_FDX_H
+#ifndef __INCLUDE_NUTTX_T32_H
+#define __INCLUDE_NUTTX_T32_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/streams.h>
+#include <nuttx/syslog/syslog.h>
+
+/****************************************************************************
+ * Type Declarations
+ ****************************************************************************/
+
+#ifdef CONFIG_STREAM_FDX
+struct lib_fdxoutstream_s
+{
+  struct lib_outstream_s common;
+  FAR void *channel;
+  spinlock_t lock;
+};
+
+struct lib_fdxinstream_s
+{
+  struct lib_instream_s common;
+  FAR void *channel;
+  spinlock_t lock;
+};
+
+#endif
 
 /****************************************************************************
  * Public Function Prototypes
@@ -51,4 +74,25 @@
 int notefdx_register(void);
 #endif
 
-#endif /* __INCLUDE_NUTTX_TRACE32_NOTE_FDX_H */
+#ifdef CONFIG_STREAM_FDX
+/****************************************************************************
+ * Name: lib_fdxoutstream_open
+ ****************************************************************************/
+
+void lib_fdxoutstream_open(FAR struct lib_fdxoutstream_s *stream,
+                           FAR void *buf, size_t size);
+
+/****************************************************************************
+ * Name: lib_fdxoutstream_close
+ ****************************************************************************/
+
+void lib_fdxoutstream_close(FAR struct lib_fdxoutstream_s *stream);
+#endif
+
+#ifdef CONFIG_SYSLOG_FDX
+int syslog_fdx_putc(FAR syslog_channel_t *channel, int ch);
+ssize_t syslog_fdx_write(FAR syslog_channel_t *channel,
+                         FAR const char *buffer, size_t buflen);
+#endif
+
+#endif /* __INCLUDE_NUTTX_T32_H */
