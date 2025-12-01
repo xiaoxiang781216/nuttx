@@ -27,6 +27,7 @@
 #include <debug.h>
 #include <errno.h>
 #include <stdio.h>
+#include <time.h>
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
@@ -178,6 +179,9 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
   sem_t respsem;
   ssize_t ret;
   int readnum;
+  struct timespec ts;
+  struct tm tm;
+  char timefmt[32];
 
   nxsem_init(&respsem, 0, 0);
 
@@ -207,8 +211,13 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
       virtqueue_disable_cb_lock(vq, &priv->lock);
     }
 
+  clock_gettime(CLOCK_REALTIME, &ts);
+  localtime_r(&ts.tv_sec, &tm);
+  strftime(timefmt, sizeof(timefmt), "%d/%m/%y %H:%M:%S", &tm);
   sched_note_printf(NOTE_TAG_ALWAYS,
-                    "[virtblk] %p Start add buffer:%p s:%" priblkcnt " n:%u",
+                    "[virtblk] [%s.%06ld] %p Start add buffer:%p s:%"
+                    priblkcnt " n:%u",
+                    timefmt, ts.tv_nsec / NSEC_PER_USEC,
                     priv, buffer, startsector, nsectors);
   flags = spin_lock_irqsave(&priv->lock);
   ret = virtqueue_add_buffer(vq, vb, readnum, 3 - readnum, &respsem);
