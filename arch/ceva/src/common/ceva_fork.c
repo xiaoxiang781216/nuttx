@@ -151,6 +151,8 @@ pid_t ceva_fork(const uint32_t *regs)
 
   newsp -= XCPTCONTEXT_SIZE;
   memcpy(newsp, regs, XCPTCONTEXT_SIZE);
+
+  memcpy(&child->xcp, &parent->xcp, sizeof(child->xcp));
   child->xcp.regs = newsp;
 
   /* Was there a frame pointer in place before? */
@@ -180,23 +182,6 @@ pid_t ceva_fork(const uint32_t *regs)
   child->xcp.regs[REG_FP] = newfp;           /* Frame pointer */
   child->xcp.regs[REG_PC] = regs[REG_LR];    /* Program counter */
   child->xcp.regs[REG_SP] = (uint32_t)newsp; /* Stack pointer */
-
-#ifdef CONFIG_LIB_SYSCALL
-  /* If we got here via a syscall, then we are going to have to setup some
-   * syscall return information as well.
-   */
-
-  if (parent->xcp.nsyscalls > 0)
-    {
-      int index;
-      for (index = 0; index < parent->xcp.nsyscalls; index++)
-        {
-          child->xcp.syscall[index] = parent->xcp.syscall[index];
-        }
-
-      child->xcp.nsyscalls = parent->xcp.nsyscalls;
-    }
-#endif
 
   /* And, finally, start the child task.  On a failure, nxtask_start_fork()
    * will discard the TCB by calling nxtask_abort_fork().

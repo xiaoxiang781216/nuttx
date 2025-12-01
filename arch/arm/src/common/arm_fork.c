@@ -153,6 +153,8 @@ pid_t arm_fork(const struct fork_s *context)
   memcpy((void *)(newsp - XCPTCONTEXT_SIZE),
          child->xcp.regs, XCPTCONTEXT_SIZE);
 
+  memcpy(&child->xcp, &parent->xcp, sizeof(child->xcp));
+
   child->xcp.regs = (void *)(newsp - XCPTCONTEXT_SIZE);
 
   memcpy((void *)newsp, (const void *)oldsp, stackutil);
@@ -210,50 +212,6 @@ pid_t arm_fork(const struct fork_s *context)
   child->xcp.regs[REG_R11] = context->r11; /* Volatile register r11 */
   child->xcp.regs[REG_FP]  = newfp;        /* Frame pointer */
   child->xcp.regs[REG_SP]  = newsp;        /* Stack pointer */
-
-#ifdef CONFIG_LIB_SYSCALL
-  /* If we got here via a syscall, then we are going to have to setup some
-   * syscall return information as well.
-   */
-
-  if (parent->xcp.nsyscalls > 0)
-    {
-      int index;
-      for (index = 0; index < parent->xcp.nsyscalls; index++)
-        {
-          child->xcp.syscall[index].sysreturn =
-            parent->xcp.syscall[index].sysreturn;
-
-          /* REVISIT:  This logic is *not* common. */
-
-#if defined(CONFIG_ARCH_ARMV7A)
-#  ifdef CONFIG_BUILD_KERNEL
-
-          child->xcp.syscall[index].cpsr =
-            parent->xcp.syscall[index].cpsr;
-
-#  endif
-
-#elif defined(CONFIG_ARCH_ARMV7R) || defined(CONFIG_ARCH_ARMV8R)
-#  ifdef CONFIG_BUILD_PROTECTED
-
-          child->xcp.syscall[index].cpsr =
-            parent->xcp.syscall[index].cpsr;
-
-#  endif
-#elif defined(CONFIG_ARCH_ARMV6M) || defined(CONFIG_ARCH_ARMV7M) || \
-      defined(CONFIG_ARCH_ARMV8M)
-
-          child->xcp.syscall[index].excreturn =
-            parent->xcp.syscall[index].excreturn;
-#else
-#  error Missing logic
-#endif
-        }
-
-      child->xcp.nsyscalls = parent->xcp.nsyscalls;
-    }
-#endif
 
   /* And, finally, start the child task.  On a failure, nxtask_start_fork()
    * will discard the TCB by calling nxtask_abort_fork().
