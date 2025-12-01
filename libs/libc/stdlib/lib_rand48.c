@@ -24,6 +24,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/compiler.h>
 #include <nuttx/config.h>
 
 #include <sys/types.h>
@@ -86,6 +87,9 @@ FAR unsigned short int *seed48(FAR unsigned short int seed16v[3])
   FAR struct task_info_s *info = task_get_info();
   static unsigned short int p[3];
 
+  compiler_assume(info != NULL);
+  compiler_assume(info->ta_seed48 != NULL);
+
   memcpy(p, info->ta_seed48, sizeof(p));
   memcpy(info->ta_seed48, seed16v, sizeof(p));
   return p;
@@ -98,6 +102,9 @@ FAR unsigned short int *seed48(FAR unsigned short int seed16v[3])
 void lcong48(FAR unsigned short int p[7])
 {
   FAR struct task_info_s *info = task_get_info();
+
+  compiler_assume(info != NULL);
+  compiler_assume(info->ta_seed48 != NULL);
 
   memcpy(info->ta_seed48, p, sizeof(info->ta_seed48));
 }
