@@ -47,6 +47,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/crypto/crypto.h>
 #include <nuttx/drivers/drivers.h>
+#include <nuttx/percpu.h>
 
 #include <crypto/xform.h>
 #include <crypto/cryptodev.h>
@@ -56,8 +57,12 @@
  * Public Data
  ****************************************************************************/
 
-extern FAR struct cryptocap *crypto_drivers;
-extern int crypto_drivers_num;
+DECLARE_PER_CPU_BMP(FAR struct cryptocap *, crypto_drivers);
+#define crypto_drivers this_cpu_var_bmp(crypto_drivers)
+
+DECLARE_PER_CPU_BMP(int, crypto_drivers_num);
+#define crypto_drivers_num this_cpu_var_bmp(crypto_drivers_num)
+
 int usercrypto = 1;         /* userland may do crypto requests */
 int userasymcrypto = 1;     /* userland may do asymmetric crypto reqs */
 #ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_CRYPTO

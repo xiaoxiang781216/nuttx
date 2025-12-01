@@ -39,13 +39,17 @@
 #include <nuttx/mutex.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/crypto/crypto.h>
+#include <nuttx/percpu.h>
 
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
-FAR struct cryptocap *crypto_drivers = NULL;
-int crypto_drivers_num = 0;
+DEFINE_PER_CPU_BSS_BMP(FAR struct cryptocap *, crypto_drivers);
+#define crypto_drivers this_cpu_var_bmp(crypto_drivers)
+
+DEFINE_PER_CPU_BSS_BMP(int, crypto_drivers_num);
+#define crypto_drivers_num this_cpu_var_bmp(crypto_drivers_num)
 
 /****************************************************************************
  * Private Data
