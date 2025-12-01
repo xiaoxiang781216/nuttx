@@ -121,6 +121,10 @@ int iob_clone_partial(FAR struct iob_s *iob1, unsigned int len,
   unsigned int avail2;
   int ret;
 
+#ifdef CONFIG_NET_TIMESTAMP
+  iob2->io_time = iob1->io_time;
+#endif
+
   /* Copy the total packet size from the I/O buffer at the head of the
    * chain.
    */
@@ -234,9 +238,6 @@ int iob_clone_partial(FAR struct iob_s *iob1, unsigned int len,
         }
     }
 
-#ifdef CONFIG_NET_TIMESTAMP
-  iob2->io_time = iob1->io_time;
-#endif
   return 0;
 }
 
@@ -244,7 +245,7 @@ int iob_clone_partial(FAR struct iob_s *iob1, unsigned int len,
  * Name: iob_clone
  *
  * Description:
- *   Duplicate (and pack) the data in iob1 in iob2.  iob2 must be empty.
+ *   Duplicate (and pack) the data in iob1 to iob2.  iob2 must be empty.
  *
  ****************************************************************************/
 
