@@ -20,9 +20,7 @@
 #
 # ##############################################################################
 
-set(KCONFIG_CONFIG ${CMAKE_ARGV3})
-set(NUTTX_DIR ${CMAKE_ARGV4})
-set(CMAKE_BINARY_DIR ${CMAKE_ARGV5})
+# KCONFIG_CONFIG, NUTTX_DIR, and CMAKE_BINARY_DIR are set by -D flags
 
 include(cmake/nuttx_kconfig.cmake)
 nuttx_export_kconfig(${KCONFIG_CONFIG})
@@ -316,8 +314,6 @@ endfunction()
 # ~~~
 function(nuttx_generate_dts)
   if(NOT "${CONFIG_DEVICETREE_HEADER_GENERATION}" STREQUAL "y")
-    message(STATUS "Device tree header generation disabled
-                skipped device tree generation")
     return()
   endif()
 
