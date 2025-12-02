@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-r/arm_syscall.c
+ * arch/arm/src/arm_a_r/arm_syscall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -24,16 +24,19 @@
 
 #include <nuttx/config.h>
 
+#include <inttypes.h>
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
 #include <debug.h>
 #include <syscall.h>
 
+#include <nuttx/addrenv.h>
 #include <nuttx/arch.h>
 #include <nuttx/macro.h>
 #include <nuttx/sched.h>
 
+#include "addrenv.h"
 #include "arm.h"
 #include "arm_internal.h"
 #include "sched/sched.h"
@@ -99,9 +102,9 @@ static void dump_syscall(const char *tag, uint32_t cmd, const uint32_t *regs)
 uint32_t *arm_syscall(uint32_t *regs)
 {
   struct tcb_s **running_task = &g_running_task;
-  FAR struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb = this_task();
   uint32_t cmd;
-#ifdef CONFIG_BUILD_PROTECTED
+#ifndef CONFIG_BUILD_FLAT
   uint32_t cpsr;
 #endif
 
@@ -129,9 +132,9 @@ uint32_t *arm_syscall(uint32_t *regs)
     {
       (*running_task)->xcp.regs = regs;
     }
+#ifndef CONFIG_DISABLE_SIGNALS
   else
     {
-#ifndef CONFIG_DISABLE_SIGNALS
       if (tcb->xcp.saved_regs)
         {
           /* When restore from sigdeliver, should ignore regs and use
@@ -141,8 +144,8 @@ uint32_t *arm_syscall(uint32_t *regs)
           tcb->xcp.regs = tcb->xcp.saved_regs;
           tcb->xcp.saved_regs = NULL;
         }
-#endif
     }
+#endif
 
   /* The SVCall software interrupt is called with R0 = system call command
    * and R1..R7 =  variable number of arguments depending on the system call.
@@ -181,8 +184,9 @@ uint32_t *arm_syscall(uint32_t *regs)
            */
 
           regs[REG_PC]        = rtcb->xcp.syscall[index].sysreturn;
-#ifdef CONFIG_BUILD_PROTECTED
-          regs[REG_CPSR]      = rtcb->xcp.syscall[index].cpsr;
+#ifndef CONFIG_BUILD_FLAT
+          regs[REG_CPSR]      = rtcb->xcp.syscall[index].cpsr |
+                                (regs[REG_CPSR] & (PSR_F_BIT | PSR_I_BIT));
 #endif
           /* The return value must be in R0-R1.  arm_dispatch_syscall()
            * temporarily moved the value for R0 into R2.
@@ -220,7 +224,12 @@ uint32_t *arm_syscall(uint32_t *regs)
 
       case SYS_switch_context:
       case SYS_restore_context:
+
 #ifdef CONFIG_ARCH_ADDRENV
+        /* The addrenv_switch may change this_task, for example addrenv drop
+         * will post sem to hpwork, so we have to call before restore context
+         */
+
         addrenv_switch(tcb);
         tcb = this_task();
 #endif
@@ -243,18 +252,28 @@ uint32_t *arm_syscall(uint32_t *regs)
        *   R3 = argv
        */
 
-#ifdef CONFIG_BUILD_PROTECTED
+#ifndef CONFIG_BUILD_FLAT
       case SYS_task_start:
         {
-          /* Set up to return to the user-space task start-up function in
-           * unprivileged mode.
+          /* Set up to return to the user-space _start function in
+           * unprivileged mode.  We need:
+           *
+           *   R0   = argc
+           *   R1   = argv
+           *   PC   = taskentry
+           *   CSPR = user mode
            */
 
+#ifdef CONFIG_BUILD_KERNEL
+          regs[REG_PC]   = regs[REG_R1];
+          regs[REG_R0]   = regs[REG_R2];
+          regs[REG_R1]   = regs[REG_R3];
+#else
           regs[REG_PC]   = (uint32_t)USERSPACE->task_startup & ~1;
-
           regs[REG_R0]   = regs[REG_R1];
           regs[REG_R1]   = regs[REG_R2];
           regs[REG_R2]   = regs[REG_R3];
+#endif
 
           cpsr           = regs[REG_CPSR] & ~PSR_MODE_MASK;
           regs[REG_CPSR] = cpsr | PSR_MODE_USR;
@@ -280,9 +299,9 @@ uint32_t *arm_syscall(uint32_t *regs)
           /* Set up to enter the user-space pthread start-up function in
            * unprivileged mode. We need:
            *
-           *   R0   = startup
+           *   R0   = entrypt
            *   R1   = arg
-           *   PC   = entrypt
+           *   PC   = startup
            *   CSPR = user mode
            */
 
@@ -296,7 +315,7 @@ uint32_t *arm_syscall(uint32_t *regs)
         break;
 #endif
 
-#if defined(CONFIG_BUILD_PROTECTED) && !defined(CONFIG_DISABLE_SIGNALS)
+#if !defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_DISABLE_SIGNALS)
       /* R0=SYS_signal_handler:  This a user signal handler callback
        *
        * void signal_handler(_sa_sigaction_t sighand, int signo,
@@ -308,7 +327,7 @@ uint32_t *arm_syscall(uint32_t *regs)
        *   R1 = sighand
        *   R2 = signo
        *   R3 = info
-       *   R4 = ucontext
+       *        ucontext (on the stack)
        */
 
       case SYS_signal_handler:
@@ -324,7 +343,11 @@ uint32_t *arm_syscall(uint32_t *regs)
            * unprivileged mode.
            */
 
+#ifdef CONFIG_BUILD_KERNEL
+          regs[REG_PC]   = (uint32_t)ARCH_DATA_RESERVE->ar_sigtramp;
+#else
           regs[REG_PC]   = (uint32_t)USERSPACE->signal_handler & ~1;
+#endif
           cpsr           = regs[REG_CPSR] & ~PSR_MODE_MASK;
           regs[REG_CPSR] = cpsr | PSR_MODE_USR;
 
@@ -376,9 +399,9 @@ uint32_t *arm_syscall(uint32_t *regs)
 #endif
         }
         break;
-#endif /* CONFIG_BUILD_PROTECTED && !CONFIG_DISABLE_SIGNALS */
+#endif /* !defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_DISABLE_SIGNALS) */
 
-#if defined(CONFIG_BUILD_PROTECTED) && !defined(CONFIG_DISABLE_SIGNALS)
+#if !defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_DISABLE_SIGNALS)
       /* R0=SYS_signal_handler_return:  This a user signal handler callback
        *
        *   void signal_handler_return(void);
@@ -417,7 +440,7 @@ uint32_t *arm_syscall(uint32_t *regs)
 #endif
         }
         break;
-#endif /* CONFIG_BUILD_PROTECTED && !CONFIG_DISABLE_SIGNALS */
+#endif /* !defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_DISABLE_SIGNALS) */
       case SYS_assert_handler:
         {
           _assert((const char *)regs[REG_R1], (int)regs[REG_R2],
@@ -455,12 +478,12 @@ uint32_t *arm_syscall(uint32_t *regs)
           /* Setup to return to arm_dispatch_syscall in privileged mode. */
 
           rtcb->xcp.syscall[index].sysreturn = regs[REG_PC];
-#ifdef CONFIG_BUILD_PROTECTED
+#ifndef CONFIG_BUILD_FLAT
           rtcb->xcp.syscall[index].cpsr      = regs[REG_CPSR];
 #endif
 
           regs[REG_PC]   = (uint32_t)arm_dispatch_syscall;
-#ifdef CONFIG_BUILD_PROTECTED
+#ifndef CONFIG_BUILD_FLAT
           cpsr           = regs[REG_CPSR] & ~PSR_MODE_MASK;
           regs[REG_CPSR] = cpsr | PSR_MODE_SYS;
 #endif
