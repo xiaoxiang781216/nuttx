@@ -520,6 +520,7 @@ int binder_node_release(FAR struct binder_node *node, int refs)
   int death = 0;
   FAR struct binder_ref *ref;
   FAR struct binder_proc *proc = node->proc;
+  UNUSED(death);
 
   binder_release_work(proc, &node->async_todo);
 

@@ -286,6 +286,7 @@ static int binder_flush(FAR struct file *filp)
   FAR struct binder_thread *thread;
   FAR struct binder_thread *thread_itr;
   int wake_count = 0;
+  UNUSED(wake_count);
 
   binder_inner_proc_lock(proc);
 
@@ -867,6 +868,10 @@ static int binder_close(FAR struct file *filep)
   int incoming_refs;
   int outgoing_refs;
   int active_transactions;
+  UNUSED(threads);
+  UNUSED(nodes);
+  UNUSED(outgoing_refs);
+  UNUSED(active_transactions);
 
   if (binder_flush(filep) < 0)
     {
