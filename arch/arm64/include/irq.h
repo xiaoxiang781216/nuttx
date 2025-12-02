@@ -426,7 +426,7 @@ static inline_function bool up_interrupt_context(void)
  ****************************************************************************/
 
 #define up_getusrpc(regs) \
-    (((uintptr_t *)((regs) ? (regs) : running_regs()))[REG_ELR])
+    (((uintptr_t *)((regs) ? (regs) : (void *)running_regs()))[REG_ELR])
 
 #ifndef CONFIG_BUILD_KERNEL
 #  define up_getusrsp(regs) \
