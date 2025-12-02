@@ -25,6 +25,13 @@ ifeq ($(CONFIG_TRACE32_FDX),y)
   CSRCS += t32fdx_gettime.c
 endif
 
+ifeq ($(CONFIG_TRACE32_TERM),y)
+  CSRCS += t32term/t32term.c
+  CSRCS += t32term/t32term_memory.c
+  CFLAGS += ${DEFINE_PREFIX}T32_TERM_BLOCKED
+  CFLAGS += ${DEFINE_PREFIX}TT32_TERM_MEMORY_BLOCKED_SIZE=$(CONFIG_TRACE32_TERM_MEMORY_BLOCKED_SIZE)
+endif
+
 ifeq ($(CONFIG_TRACE32_FDX_NOTE),y)
   CSRCS += note_fdx.c
 endif
@@ -35,6 +42,10 @@ endif
 
 ifeq ($(CONFIG_SYSLOG_FDX),y)
   CSRCS += syslog_fdx.c
+endif
+
+ifeq ($(CONFIG_SERIAL_T32TERM),y)
+  CSRCS += serial_t32term.c
 endif
 
 ifneq ($(CONFIG_TRACE32_FDX_NOTE_SECTION),"")

@@ -95,4 +95,6 @@ ssize_t syslog_fdx_write(FAR syslog_channel_t *channel,
                          FAR const char *buffer, size_t buflen);
 #endif
 
+void serial_t32term_initialize(void);
+
 #endif /* __INCLUDE_NUTTX_T32_H */

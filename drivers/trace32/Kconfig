@@ -11,6 +11,22 @@ config TRACE32_FDX
 	---help---
 		The Trace32 FDX driver.
 
+config TRACE32_TERM
+	bool
+	default n
+	---help---
+		The Trace32 term driver.
+
+config TRACE32_TERM_MEMORY_BLOCKED_SIZE
+	hex "Trace32 Term up/down buffer size"
+	depends on TRACE32_TERM
+	range 0x100 0x3C00
+	default 0x1000
+	---help---
+		The buffer block size for trace32 term up and down is used for
+		the buffer size of the serial's own trace (tx) and trace (rx),
+		and also for the size in the trace term protocol.
+
 config TRACE32_FDX_NOTE
 	bool "Trace32 FDX Note driver"
 	select DRIVERS_NOTE
@@ -69,5 +85,28 @@ config SYSLOG_FDX_BUFSIZE
 	default 1024
 	---help---
 		The size of the FDX syslog buffer (in bytes).
+
+config SERIAL_T32TERM
+	bool "Serial Device Trace32 Term"
+	select TRACE32_TERM
+	default n
+	---help---
+		Trace32 term protocol serial port
+
+if SERIAL_T32TERM
+
+config SERIAL_T32TERM_CONSOLE
+	bool "Serial Device Trace32 Term Console"
+	default n
+	---help---
+		Terminal based on the trace32 term protocol serial port
+
+config SERIAL_T32TERM_POLLING_INTERVAL
+	int "Trace32 Term serial pilling interval (us)"
+	default USEC_PER_TICK
+	---help---
+		This option is used to configure the Trace32 term serial polling interval
+
+endif # SERIAL_T32TERM
 
 endmenu # Trace32 drivers

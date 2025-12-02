@@ -662,6 +662,16 @@ static const char *g_white_content_list[] =
   "T32_Fdx_DisableChannel",
 
   /* Ref:
+   * drivers/trace32/t32term/t32term_memory.c
+   */
+
+  "T32_Term_PutBlock",
+  "T32_Term_GetBlock",
+  "T32_Term_GetBlockNoWait",
+  "T32_Term_IsReadable",
+  "T32_Term_IsWritable",
+
+  /* Ref:
    * fs/fatfs/fatfs_vfs.c
    */
 

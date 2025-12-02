@@ -21,26 +21,37 @@
 # ##############################################################################
 
 if(CONFIG_TRACE32_FDX)
-  nuttx_add_kernel_library(trace32)
-
-  set(CSRCS ${CMAKE_CURRENT_LIST_DIR}/t32fdx/t32fdx.c)
-  list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/t32fdx_gettime.c)
-
-  if(CONFIG_TRACE32_FDX_NOTE)
-    list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/note_fdx.c)
-  endif()
-
-  if(CONFIG_STREAM_FDX)
-    list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/stream_fdx.c)
-  endif()
-
-  if(CONFIG_SYSLOG_FDX)
-    list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/syslog_fdx.c)
-  endif()
-
-  if(NOT "${CONFIG_TRACE32_FDX_NOTE_SECTION}" STREQUAL "")
-    target_compile_definitions(trace32 PRIVATE -DTRACE32_FDX_NOTE_SECTION)
-  endif()
-
-  target_sources(trace32 PRIVATE ${CSRCS})
+  list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/t32fdx/t32fdx.c
+       ${CMAKE_CURRENT_LIST_DIR}/t32fdx_gettime.c)
 endif()
+
+if(CONFIG_TRACE32_FDX_NOTE)
+  list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/note_fdx.c)
+  if(NOT "${CONFIG_TRACE32_FDX_NOTE_SECTION}" STREQUAL "")
+    target_compile_definitions(drivers PRIVATE -DTRACE32_FDX_NOTE_SECTION)
+  endif()
+endif()
+
+if(CONFIG_STREAM_FDX)
+  list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/stream_fdx.c)
+endif()
+
+if(CONFIG_SYSLOG_FDX)
+  list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/syslog_fdx.c)
+endif()
+
+if(CONFIG_TRACE32_TERM)
+  list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/t32term/t32term.c
+       ${CMAKE_CURRENT_LIST_DIR}/t32term/t32term_memory.c)
+  target_compile_definitions(
+    drivers
+    PRIVATE
+      -DT32_TERM_MEMORY_BLOCKED_SIZE=${CONFIG_TRACE32_TERM_MEMORY_BLOCKED_SIZE}
+      -DT32_TERM_BLOCKED)
+endif()
+
+if(CONFIG_SERIAL_T32TERM)
+  list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/serial_t32term.c)
+endif()
+
+target_sources(drivers PRIVATE ${CSRCS})

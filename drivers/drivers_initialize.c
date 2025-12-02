@@ -58,6 +58,7 @@
 #include <nuttx/thermal.h>
 #include <nuttx/timers/capture.h>
 #include <nuttx/timers/ptp_clock_dummy.h>
+#include <nuttx/t32.h>
 #include <nuttx/trace.h>
 #include <nuttx/usrsock/usrsock_rpmsg.h>
 #include <nuttx/vhost/vhost.h>
@@ -145,6 +146,10 @@ void drivers_initialize(void)
 
 #ifdef CONFIG_SERIAL_RTT
   serial_rtt_initialize();
+#endif
+
+#ifdef CONFIG_SERIAL_T32TERM
+  serial_t32term_initialize();
 #endif
 
 #if defined(CONFIG_DEVFREQ_PROCFS)

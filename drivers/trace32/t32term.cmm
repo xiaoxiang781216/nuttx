@@ -1,0 +1,40 @@
+; --------------------------------------------------------------------------------
+; @Title: Demo script for terminal demo for TC397XE on TriBoard-TC3x7
+; @Description:
+;   The example shows how a simple terminal can be implemented using TRACE32
+;   and a dualport/runtime-memory access. The BufferE mode uses two arrays
+;   for the communction from/to the target. This example detects the size
+;   of the buffer from the T32_Term_Tar2HostBufferSize variable.
+;   A mutex is used to synchronize the multiple core access to the output array
+;   Term_Memory_Tar2HostBuffer.
+;   The communication buffers need to be placed in a non cached memory.
+;
+; @Keywords: Infineon, multicore, semihosting, t32term, terminal, TriCore, virtual
+; @Author: HDA
+; @Board: TriBoard-TC3x7
+; @Chip: TC397XE
+; @Copyright: (C) 1989-2019 Lauterbach GmbH, licensed for use with TRACE32(R) only
+; --------------------------------------------------------------------------------
+; $Id: t32term_demo.cmm 14181 2019-03-25 16:26:36Z hdammak $
+
+; make sure the shared memory buffer is cleared
+Var.Assign T32_Term_Memory_Tar2HostBuffer[0..3] = 0
+Var.Assign T32_Term_Memory_Host2TarBuffer[0..3] = 0
+
+WinCLEAR
+TERM.RESet
+IF ((Var.VALUE(T32_Term_Tar2HostBufferSize)>0x100)||(Var.VALUE(T32_Term_Host2TarBufferSize)>0x100))
+(
+  TERM.METHOD BufferE E:Var.VALUE(&T32_Term_Memory_Tar2HostBuffer[0])++(Var.VALUE(T32_Term_Tar2HostBufferSize)-0x1) E:Var.VALUE(&T32_Term_Memory_Host2TarBuffer[0])++(Var.VALUE(T32_Term_Host2TarBufferSize)-0x1)
+)
+ELSE
+(
+  ; default buffer size 256 byte
+  TERM.METHOD BufferE E:Var.VALUE(&T32_Term_Memory_Tar2HostBuffer[0]) E:Var.VALUE(&T32_Term_Memory_Host2TarBuffer[0])
+)
+TERM.GATE
+
+; start the example
+Go.direct
+
+ENDDO
