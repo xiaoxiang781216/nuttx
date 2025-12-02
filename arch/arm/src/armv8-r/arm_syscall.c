@@ -125,6 +125,18 @@ uint32_t *arm_syscall(uint32_t *regs)
     {
       (*running_task)->xcp.regs = regs;
     }
+  else
+    {
+      if (tcb->xcp.saved_regs)
+        {
+          /* When restore from sigdeliver, should ignore regs and use
+           * saved_regs.
+           */
+
+          tcb->xcp.regs = tcb->xcp.saved_regs;
+          tcb->xcp.saved_regs = NULL;
+        }
+    }
 
   /* The SVCall software interrupt is called with R0 = system call command
    * and R1..R7 =  variable number of arguments depending on the system call.

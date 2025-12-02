@@ -124,6 +124,17 @@ void tricore_svcall(volatile void *trap)
   else
     {
       tricore_reclaim_csa(tricore_addr2csa(plregs));
+#ifndef CONFIG_DISABLE_SIGNALS
+      if (tcb->xcp.saved_regs)
+        {
+          /* When restore from sigdeliver, should ignore regs and use
+           * saved_regs.
+           */
+
+          tcb->xcp.regs = tcb->xcp.saved_regs;
+          tcb->xcp.saved_regs = NULL;
+        }
+#endif
     }
 
   /* Handle the SVCall according to the command in R0 */

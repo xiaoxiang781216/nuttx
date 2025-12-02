@@ -107,7 +107,6 @@ retry:
    */
 
   rtcb->sigdeliver = NULL;  /* Allows next handler to be scheduled */
-  rtcb->xcp.regs = rtcb->xcp.saved_regs;
 
   /* Then restore the correct state for this thread of execution. */
 

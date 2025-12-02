@@ -116,7 +116,6 @@ retry:
 
   board_autoled_off(LED_SIGNAL);
 
-  rtcb->xcp.regs = rtcb->xcp.saved_regs;
   arm_fullcontextrestore();
   UNUSED(regs);
 }
