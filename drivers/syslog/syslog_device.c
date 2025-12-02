@@ -385,6 +385,7 @@ static int syslog_dev_putc(FAR syslog_channel_t *channel, int ch)
       return ret;
     }
 
+  uch = (uint8_t)ch;
   nbytes = file_write(&syslog_dev->sl_file, &uch, 1);
   if (nbytes < 0)
     {
