@@ -211,17 +211,17 @@ int load_module(FAR struct binary_s *bin, FAR const char *filename,
               /* Release the traversal handle */
 
               envpath_release(handle);
+              return ret;
             }
         }
-      else
-#endif
-        {
-          /* We already have the one and only absolute path to the file to
-           * be loaded.
-           */
 
-          ret = load_absmodule(bin, filename, exports, nexports);
-        }
+#endif
+
+      /* We already have the one and only absolute path to the file to
+       * be loaded.
+       */
+
+      ret = load_absmodule(bin, filename, exports, nexports);
     }
 
   return ret;
