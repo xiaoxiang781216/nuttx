@@ -148,24 +148,11 @@ static int vlan_transmit(FAR struct netdev_lowerhalf_s *dev,
 
   if (data - base < 4)
     {
-      /* We don't have enough space for the VLAN tag, so realloc it. */
+      /* TODO: Support backup path for too small CONFIG_NET_LL_GUARDSIZE */
 
-      FAR netpkt_t *newpkt = netpkt_realloc_reserved(dev, pkt, 4);
-
-      nwarn("WARNING: Headroom of packet is too small to add VLAN tag, "
-            "please consider to increase CONFIG_NET_LL_GUARDSIZE\n");
-
-      if (newpkt == NULL)
-        {
-          nerr("ERROR: Failed to reallocate packet\n");
-          return -ENOMEM;
-        }
-
-      /* Set the new packet as the packet to be transmitted */
-
-      pkt  = newpkt;
-      base = netpkt_getbase(pkt);
-      data = netpkt_getdata(dev, pkt);
+      nerr("ERROR: No headroom for VLAN tag, please enlarge "
+           "CONFIG_NET_LL_GUARDSIZE\n");
+      return -ENOMEM;
     }
 
   /* Move the data to make space for the VLAN tag */
