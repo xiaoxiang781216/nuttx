@@ -150,8 +150,10 @@ static void rptun_free_buf(FAR struct virtio_device *vdev, FAR void *buf);
 static void rptun_set_status(FAR struct rptun_priv_s *priv,
                              unsigned long reason);
 
+#ifndef CONFIG_RPTUN_AUTO_RESET_DISABLE
 static int rptun_notifier(FAR struct notifier_block *block,
                           unsigned long action, void *data);
+#endif
 
 /****************************************************************************
  * Private Data
@@ -172,18 +174,22 @@ static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_rptun_priv);
 static DEFINE_PER_CPU_BMP(rmutex_t, g_rptun_lock) = NXRMUTEX_INITIALIZER;
 #define g_rptun_lock this_cpu_var_bmp(g_rptun_lock)
 
+#ifdef CONFIG_RPTUN_AUTO_RESET_IN_PANIC_NOTIFIER
 static DEFINE_PER_CPU_BMP(struct notifier_block, g_rptun_panic_nb) =
 {
   .notifier_call = rptun_notifier,
 };
-#define g_rptun_panic_nb this_cpu_var_bmp(g_rptun_panic_nb)
+#  define g_rptun_panic_nb this_cpu_var_bmp(g_rptun_panic_nb)
+#endif
 
+#ifndef CONFIG_RPTUN_AUTO_RESET_DISABLE
 static DEFINE_PER_CPU_BMP(struct notifier_block, g_rptun_reboot_nb) =
 {
   .notifier_call = rptun_notifier,
   .priority = INT_MIN, /* Reboot notifier should be called at the last */
 };
-#define g_rptun_reboot_nb this_cpu_var_bmp(g_rptun_reboot_nb)
+#  define g_rptun_reboot_nb this_cpu_var_bmp(g_rptun_reboot_nb)
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -1206,6 +1212,7 @@ static metal_phys_addr_t rptun_da_to_pa(FAR struct rptun_dev_s *dev,
   return pa;
 }
 
+#ifndef CONFIG_RPTUN_AUTO_RESET_DISABLE
 static int rptun_notifier(FAR struct notifier_block *block,
                           unsigned long action, void *data)
 {
@@ -1219,6 +1226,10 @@ static int rptun_notifier(FAR struct notifier_block *block,
         }
       else if (action == SYS_HALT)
         {
+#ifdef CONFIG_RPTUN_AUTO_RESET_IN_REBOOT_NOTIFIER
+          rptun_ioctl_foreach(NULL, RPTUNIOC_RESET,
+                              (unsigned long)BOARDIOC_SOFTRESETCAUSE_PANIC);
+#endif
           val = BOARDIOC_SOFTRESETCAUSE_ASSERT;
         }
       else
@@ -1228,14 +1239,17 @@ static int rptun_notifier(FAR struct notifier_block *block,
 
       rptun_ioctl_foreach(NULL, RPTUNIOC_RESET, val);
     }
+#ifdef CONFIG_RPTUN_AUTO_RESET_IN_PANIC_NOTIFIER
   else if (action == PANIC_KERNEL_FINAL)
     {
       rptun_ioctl_foreach(NULL, RPTUNIOC_RESET,
                           (unsigned long)BOARDIOC_SOFTRESETCAUSE_PANIC);
     }
+#endif
 
   return 0;
 }
+#endif
 
 static void rptun_dump_vdev_rsc(FAR void *rsc, uint32_t index)
 {
@@ -1336,8 +1350,12 @@ int rptun_initialize(FAR struct rptun_dev_s *dev)
 
           if (ret >= 0)
             {
+#ifdef CONFIG_RPTUN_AUTO_RESET_IN_PANIC_NOTIFIER
               panic_notifier_chain_register(&g_rptun_panic_nb);
+#endif
+#ifndef CONFIG_RPTUN_AUTO_RESET_DISABLE
               register_reboot_notifier(&g_rptun_reboot_nb);
+#endif
 
               nxrmutex_lock(&g_rptun_lock);
               dq_addlast(&priv->entry, &g_rptun_priv);
