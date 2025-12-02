@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/arm_dispatch_syscall.S
+ * arch/arm/src/arm_a_r/arm_dispatch_syscall.S
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -71,7 +71,11 @@
 
 	.text
 	.syntax	unified
+#ifdef CONFIG_ARM_THUMB
 	.thumb
+#else
+	.arm
+#endif
 	.type	arm_dispatch_syscall, function
 arm_dispatch_syscall:
 	.cfi_sections	.debug_frame
