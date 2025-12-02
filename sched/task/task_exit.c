@@ -116,15 +116,20 @@ int nxtask_exit(void)
 
   nxsched_suspend_scheduler(dtcb);
 
+  /* When task exits, need to trace before release tcb. */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
+  sched_note_csection(dtcb, false);
+#endif
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
+  nxsched_critmon_csection(dtcb, false, NULL);
+#endif
+
   sched_note_stop(dtcb);
 
   rtcb->task_state = TSTATE_TASK_RUNNING;
   ret = nxsched_release_tcb(dtcb, atomic_read(&dtcb->flags) &
                             TCB_FLAG_TTYPE_MASK);
-
-  /* Update scheduler parameters. */
-
-  nxsched_resume_scheduler(rtcb);
 
   /* Decrement the lockcount on rctb. */
 

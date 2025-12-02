@@ -82,12 +82,17 @@ uint16_t break_critical_section(void)
 {
   FAR struct tcb_s *rtcb = running_task();
 
+  /* If rtcb is NULL, it means rtcb has exited. */
+
+  if (rtcb != NULL)
+    {
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-  sched_note_csection(rtcb, false);
+      sched_note_csection(rtcb, false);
 #  endif
 #  if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-  nxsched_critmon_csection(rtcb, false, return_address(0));
+      nxsched_critmon_csection(rtcb, false, return_address(0));
 #  endif
+    }
 
   return rspin_breaklock(&g_schedlock);
 }

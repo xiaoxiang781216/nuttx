@@ -72,7 +72,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
    * is invalid, and we can safely overwrite it.
    */
 
-  if (!(NVIC_IRQ_SVCALL == irq && regs[REG_R0] == SYS_restore_context))
+  if (tcb != NULL)
     {
       tcb->xcp.regs = regs;
     }
@@ -94,7 +94,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
       irq_dispatch(irq, regs);
 #endif
 #ifndef CONFIG_DISABLE_SIGNALS
-      if (tcb->sigdeliver)
+      if (tcb && tcb->sigdeliver)
         {
           /* Pendsv able to access running tcb with no critical section */
 

@@ -59,9 +59,12 @@
 uint32_t *avr_doirq(int irq, uint32_t *regs)
 {
   struct tcb_s **running_task = &g_running_task;
-  struct tcb_s *tcb;
+  struct tcb_s *tcb = *running_task;
 
-  avr_copystate((*running_task)->xcp.regs, regs);
+  if (tcb != NULL)
+    {
+      avr_copystate(tcb->xcp.regs, regs);
+    }
 
   board_autoled_on(LED_INIRQ);
 #ifdef CONFIG_SUPPRESS_INTERRUPTS

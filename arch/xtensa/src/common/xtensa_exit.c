@@ -60,7 +60,7 @@ void up_exit(int status)
 
   /* Update g_running_tasks */
 
-  g_running_task = this_task();
+  g_running_task = NULL;
 
   /* Then switch contexts */
 

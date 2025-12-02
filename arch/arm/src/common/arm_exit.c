@@ -60,16 +60,7 @@ void up_exit(int status)
 
   /* Update g_running_tasks */
 
-#ifdef CONFIG_ARCH_ARMV6M
-  /* ARMV6M syscal may trigger hard fault， We use
-   * running_task != NULL to determine whether it is
-   * a context for restoration.
-   */
-
   g_running_task = NULL;
-#else
-  g_running_task = this_task();
-#endif
 
   /* Then switch contexts */
 

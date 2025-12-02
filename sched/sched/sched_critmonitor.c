@@ -432,32 +432,6 @@ void nxsched_suspend_critmon(FAR struct tcb_s *tcb)
     }
 
 #endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION */
-
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
-
-  /* Is this task in a critical section? */
-
-  if (in_critical_section())
-    {
-      /* Possibly leaving .. Check for the max elapsed time */
-
-      elapsed = current - tcb->crit_start;
-
-      if (elapsed > tcb->crit_max)
-        {
-          tcb->crit_max        = elapsed;
-          tcb->crit_max_caller = tcb->crit_caller;
-          CHECK_CSECTION(tcb->pid, elapsed);
-        }
-
-      /* Check for the global max elapsed time */
-
-      if (elapsed > g_crit_max)
-        {
-          g_crit_max = elapsed;
-        }
-    }
-#endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION */
 }
 
 /****************************************************************************

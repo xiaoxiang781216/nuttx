@@ -193,14 +193,6 @@ uint64_t *arm64_syscall(uint64_t *regs)
     {
       case SYS_restore_context:
 
-        break_critical_section();
-#ifdef CONFIG_ARCH_ADDRENV
-        addrenv_switch(tcb);
-        tcb = this_task();
-        *running_task = tcb;
-#endif
-        break;
-
       case SYS_switch_context:
 
 #ifdef CONFIG_ARCH_ADDRENV

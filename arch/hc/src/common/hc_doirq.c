@@ -59,9 +59,12 @@
 uint8_t *hc_doirq(int irq, uint8_t *regs)
 {
   struct tcb_s **running_task = &g_running_task;
-  struct tcb_s *tcb;
+  struct tcb_s *tcb = *running_task;
 
-  hc_copystate((*running_task)->xcp.regs);
+  if (tcb != NULL)
+    {
+      hc_copystate(tcb->xcp.regs);
+    }
 
   board_autoled_on(LED_INIRQ);
 #ifdef CONFIG_SUPPRESS_INTERRUPTS

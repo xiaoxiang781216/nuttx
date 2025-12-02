@@ -81,7 +81,7 @@ void up_exit(int status)
 
   /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases */
 
-  g_running_task = tcb;
+  g_running_task = NULL;
 
   /* Then switch contexts */
 

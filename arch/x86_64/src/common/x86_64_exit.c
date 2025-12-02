@@ -80,7 +80,11 @@ void up_exit(int status)
 
   x86_64_restore_auxstate(tcb);
 
+  g_running_task = NULL;
   break_critical_section();
+
+  /* x86_64 require g_running_task->xcp.regs is always valid. */
+
   g_running_task = tcb;
 
 #ifdef CONFIG_ARCH_KERNEL_STACK

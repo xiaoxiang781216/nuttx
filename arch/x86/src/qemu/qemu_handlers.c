@@ -77,7 +77,7 @@ static void idt_outb(uint8_t val, uint16_t addr)
 static uint32_t *common_handler(int irq, uint32_t *regs)
 {
   struct tcb_s **running_task = &g_running_task;
-  struct tcb_s *tcb;
+  struct tcb_s *tcb = *running_task;
   board_autoled_on(LED_INIRQ);
 
   /* Current regs non-zero indicates that we are processing an interrupt;
@@ -89,7 +89,10 @@ static uint32_t *common_handler(int irq, uint32_t *regs)
   DEBUGASSERT(up_current_regs() == NULL);
   up_set_current_regs(regs);
 
-  x86_savestate((*running_task)->xcp.regs);
+  if (tcb != NULL)
+    {
+      x86_savestate(tcb->xcp.regs);
+    }
 
   /* Deliver the IRQ */
 

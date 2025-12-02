@@ -45,9 +45,12 @@
 FAR chipreg_t *z80_doirq(uint8_t irq, FAR chipreg_t *regs)
 {
   struct tcb_s **running_task = &g_running_task;
-  struct tcb_s *tcb;
+  struct tcb_s *tcb = *running_task;
 
-  z80_copystate((*running_task)->xcp.regs, regs)
+  if (tcb != NULL)
+    {
+      z80_copystate(tcb->xcp.regs, regs);
+    }
 
   board_autoled_on(LED_INIRQ);
 
