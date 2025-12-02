@@ -29,6 +29,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <arch/arm_a_r/cp15.h>
+
 #include <nuttx/irq.h>
 #include <nuttx/percpu.h>
 #ifndef __ASSEMBLY__
