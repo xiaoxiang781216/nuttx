@@ -58,11 +58,9 @@
 
 int arm_svcall(int irq, void *context, void *arg)
 {
-  uint32_t *regs = (uint32_t *)context;
-  struct tcb_s *tcb;
-  uint32_t cmd;
-
-  cmd = regs[REG_R0];
+  uint32_t *regs    = (uint32_t *)context;
+  struct tcb_s *tcb = this_task();
+  uint32_t cmd      = regs[REG_R0];
 
   /* The SVCall software interrupt is called with R0 = system call command
    * and R1..R7 =  variable number of arguments depending on the system call.
@@ -92,7 +90,6 @@ int arm_svcall(int irq, void *context, void *arg)
       case SYS_restore_context:
       case SYS_switch_context:
         {
-          tcb = this_task();
           break_critical_section();
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
@@ -116,8 +113,7 @@ int arm_svcall(int irq, void *context, void *arg)
 #ifdef CONFIG_LIB_SYSCALL
       case SYS_syscall_return:
         {
-          struct tcb_s *rtcb = this_task();
-          int index = (int)rtcb->xcp.nsyscalls - 1;
+          int index = (int)tcb->xcp.nsyscalls - 1;
 
           /* Make sure that there is a saved syscall return address. */
 
@@ -127,10 +123,10 @@ int arm_svcall(int irq, void *context, void *arg)
            * the original mode.
            */
 
-          regs[REG_PC]         = rtcb->xcp.syscall[index].sysreturn;
-          regs[REG_EXC_RETURN] = rtcb->xcp.syscall[index].excreturn;
-          regs[REG_CONTROL]    = rtcb->xcp.syscall[index].ctrlreturn;
-          rtcb->xcp.nsyscalls  = index;
+          regs[REG_PC]         = tcb->xcp.syscall[index].sysreturn;
+          regs[REG_EXC_RETURN] = tcb->xcp.syscall[index].excreturn;
+          regs[REG_CONTROL]    = tcb->xcp.syscall[index].ctrlreturn;
+          tcb->xcp.nsyscalls  = index;
 
           /* The return value must be in R0-R1.  arm_dispatch_syscall()
            * temporarily moved the value for R0 into R2.
@@ -142,7 +138,7 @@ int arm_svcall(int irq, void *context, void *arg)
            * the system call.
            */
 
-          atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SYSCALL);
+          atomic_fetch_and(&tcb->flags, ~TCB_FLAG_SYSCALL);
           nxsig_unmask_pendingsignal();
         }
         break;
@@ -239,12 +235,10 @@ int arm_svcall(int irq, void *context, void *arg)
 #if defined(CONFIG_BUILD_PROTECTED) && !defined(CONFIG_DISABLE_SIGNALS)
       case SYS_signal_handler:
         {
-          struct tcb_s *rtcb   = this_task();
-
           /* Remember the caller's return address */
 
-          DEBUGASSERT(rtcb->xcp.sigreturn == 0);
-          rtcb->xcp.sigreturn  = regs[REG_PC];
+          DEBUGASSERT(tcb->xcp.sigreturn == 0);
+          tcb->xcp.sigreturn  = regs[REG_PC];
 
           /* Set up to return to the user-space trampoline function in
            * unprivileged mode.
@@ -281,19 +275,17 @@ int arm_svcall(int irq, void *context, void *arg)
 #if defined(CONFIG_BUILD_PROTECTED) && !defined(CONFIG_DISABLE_SIGNALS)
       case SYS_signal_handler_return:
         {
-          struct tcb_s *rtcb   = this_task();
-
           /* Set up to return to the kernel-mode signal dispatching logic. */
 
-          DEBUGASSERT(rtcb->xcp.sigreturn != 0);
+          DEBUGASSERT(tcb->xcp.sigreturn != 0);
 
-          regs[REG_PC]         = rtcb->xcp.sigreturn;
+          regs[REG_PC]         = tcb->xcp.sigreturn;
           regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
 
           /* Return privileged mode */
 
           regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
-          rtcb->xcp.sigreturn  = 0;
+          tcb->xcp.sigreturn  = 0;
         }
         break;
 #endif
@@ -312,8 +304,7 @@ int arm_svcall(int irq, void *context, void *arg)
       default:
         {
 #ifdef CONFIG_LIB_SYSCALL
-          struct tcb_s *rtcb = this_task();
-          int index = rtcb->xcp.nsyscalls;
+          int index = tcb->xcp.nsyscalls;
 
           /* Verify that the SYS call number is within range */
 
@@ -333,10 +324,10 @@ int arm_svcall(int irq, void *context, void *arg)
 
           /* Setup to return to arm_dispatch_syscall in privileged mode. */
 
-          rtcb->xcp.syscall[index].sysreturn  = regs[REG_PC];
-          rtcb->xcp.syscall[index].excreturn  = regs[REG_EXC_RETURN];
-          rtcb->xcp.syscall[index].ctrlreturn = regs[REG_CONTROL];
-          rtcb->xcp.nsyscalls  = index + 1;
+          tcb->xcp.syscall[index].sysreturn  = regs[REG_PC];
+          tcb->xcp.syscall[index].excreturn  = regs[REG_EXC_RETURN];
+          tcb->xcp.syscall[index].ctrlreturn = regs[REG_CONTROL];
+          tcb->xcp.nsyscalls  = index + 1;
 
           regs[REG_PC]         = (uint32_t)arm_dispatch_syscall;
           regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
@@ -351,7 +342,7 @@ int arm_svcall(int irq, void *context, void *arg)
 
           /* Indicate that we are in a syscall handler. */
 
-          atomic_fetch_or(&rtcb->flags, TCB_FLAG_SYSCALL);
+          atomic_fetch_or(&tcb->flags, TCB_FLAG_SYSCALL);
 #else
           svcerr("ERROR: Bad SYS call: %" PRId32 "\n", regs[REG_R0]);
 #endif
