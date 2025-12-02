@@ -111,7 +111,7 @@ void __start(void)
 
   /* Disable interrupts for the case that started by loader */
 
-  cpsid();
+  up_irq_disable();
 
 #ifdef CONFIG_ARMV7M_STACKCHECK
   /* Set the stack limit before we attempt to call any functions */

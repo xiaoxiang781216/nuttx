@@ -92,7 +92,7 @@ static void cleanup_arm_nvic(void)
   /* Allow any pending interrupts to be recognized */
 
   UP_ISB();
-  cpsid();
+  up_irq_disable();
 
   /* Disable all interrupts */
 
