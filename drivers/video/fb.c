@@ -142,6 +142,7 @@ static int     fb_sem_wait(FAR struct fb_chardev_s *fb,
                            FAR struct fb_priv_s *priv,
                            int overlay);
 static void    fb_sem_post(FAR struct fb_chardev_s *fb, int overlay);
+static void    fb_sem_reset(FAR struct fb_chardev_s *fb, int overlay);
 #endif
 
 #ifdef CONFIG_BUILD_KERNEL
@@ -222,6 +223,13 @@ static int fb_add_paninfo(FAR struct fb_chardev_s *fb,
       gwarn("WARNING: circbuf_write(panbuf) failed\n");
     }
 
+#ifdef CONFIG_FB_SYNC
+  if (circbuf_is_full(panbuf))
+    {
+      fb_sem_reset(fb, overlay);
+    }
+
+#endif
   return ret <= 0 ? -ENOSPC : OK;
 }
 
@@ -1467,7 +1475,7 @@ static void fb_sem_post(FAR struct fb_chardev_s *fb, int overlay)
           int semcount = 0;
 
           sem_getvalue(&priv->wait, &semcount);
-          if (semcount >= 0)
+          if (semcount > 0)
             {
               break;
             }
@@ -1479,6 +1487,33 @@ static void fb_sem_post(FAR struct fb_chardev_s *fb, int overlay)
     }
 
   spin_unlock_irqrestore_nopreempt(&fb->lock, flags);
+}
+
+static void fb_sem_reset(FAR struct fb_chardev_s *fb, int overlay)
+{
+  FAR struct fb_priv_s * priv;
+  irqstate_t flags;
+
+  DEBUGASSERT(fb != NULL);
+
+  flags = spin_lock_irqsave(&fb->lock);
+
+  for (priv = fb->head; priv; priv = priv->flink)
+    {
+      if (priv->overlay != overlay)
+        {
+          continue;
+        }
+
+      int semcount = 0;
+      sem_getvalue(&priv->wait, &semcount);
+      if (semcount > 0)
+        {
+          nxsem_reset(&priv->wait, 0);
+        }
+    }
+
+  spin_unlock_irqrestore(&fb->lock, flags);
 }
 #endif
 
