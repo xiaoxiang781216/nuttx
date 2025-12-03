@@ -44,8 +44,10 @@
 
 void exception_direct(void)
 {
-  int irq = getipsr();
+  int irq;
 
+  up_addrenv_enter_kernel();
+  irq = getipsr();
   arm_ack_irq(irq);
   irq_dispatch(irq, NULL);
 
@@ -53,12 +55,18 @@ void exception_direct(void)
     {
       up_trigger_irq(NVIC_IRQ_PENDSV, 0);
     }
+
+  up_addrenv_leave_kernel();
 }
 
 uint32_t *arm_doirq(int irq, uint32_t *regs)
 {
-  struct tcb_s **running_task = &g_running_task;
-  struct tcb_s *tcb           = *running_task;
+  struct tcb_s **running_task;
+  struct tcb_s *tcb;
+
+  up_addrenv_enter_kernel();
+  running_task = &g_running_task;
+  tcb = *running_task;
 
   /* This judgment proves that (*running_task)->xcp.regs
    * is invalid, and we can safely overwrite it.
@@ -134,5 +142,6 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
    */
 
   (*running_task)->xcp.regs = NULL;
+  up_addrenv_leave_kernel();
   return regs;
 }

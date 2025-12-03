@@ -77,13 +77,24 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/addrenv.h>
 #include <nuttx/cache.h>
 #include <nuttx/tls.h>
 #include <nuttx/mm/mm.h>
 
+#include "arm_internal.h"
+#include "nvic.h"
 #include "mpu.h"
 #include "sched/sched.h"
 #include "group/group.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef CONFIG_ARCH_MPU_KERNEL_REGION
+#  define CONFIG_ARCH_MPU_KERNEL_REGION 0
+#endif
 
 /****************************************************************************
  * Private Data
@@ -314,7 +325,10 @@ int up_addrenv_select(const arch_addrenv_t *addrenv)
       g_addrenv_heap_region = mpu_allocregion();
     }
 
-  if (addrenv->heap && (addrenv->data == 0 ||
+  if (addrenv->heap && (
+#ifndef CONFIG_BUILD_FLAT
+      addrenv->data == 0 ||
+#endif
       mm_heapmember((void *)addrenv->heap, (void *)addrenv->data)))
     {
       /* Heap include data or just have heap region */
@@ -324,7 +338,7 @@ int up_addrenv_select(const arch_addrenv_t *addrenv)
                         MPU_RASR_TEX_SO | MPU_RASR_C |
                         MPU_RASR_AP_RWRW);
     }
-  else if (addrenv->heap)
+  else if (addrenv->data)
     {
       /* Just data region */
 
@@ -545,4 +559,72 @@ int up_addrenv_kstackswitch(struct tcb_s *tcb)
   return OK;
 }
 #  endif
+#endif
+#ifdef CONFIG_BUILD_FLAT
+
+/****************************************************************************
+ * Name: up_addrenv_enter_kernel
+ *
+ * Description:
+ *   Enter kernel address environment.
+ *
+ ****************************************************************************/
+
+void up_addrenv_enter_kernel(void)
+{
+  irqstate_t flags = up_irq_save();
+  struct tcb_s *tcb;
+
+  mpu_enable_region(CONFIG_ARCH_MPU_KERNEL_REGION, true);
+  if (!up_interrupt_context())
+    {
+      tcb = this_task();
+      if (tcb != NULL && tcb->group != NULL &&
+          tcb->group->tg_addrenv_own != NULL &&
+          tcb->group->tg_addrenv_own->addrenv.data)
+        {
+          tcb->xcp.nkernels++;
+        }
+    }
+
+  up_irq_restore(flags);
+}
+
+/****************************************************************************
+ * Name: up_addrenv_leave_kernel
+ *
+ * Description:
+ *   Leave kernel address environment.
+ *
+ ****************************************************************************/
+
+void up_addrenv_leave_kernel(void)
+{
+  irqstate_t flags = up_irq_save();
+  struct tcb_s *tcb = this_task();
+
+  if (up_interrupt_context())
+    {
+      if ((getreg32(NVIC_INTCTRL) & NVIC_INTCTRL_RETTOBASE) == 0 &&
+          tcb != NULL && tcb->group != NULL &&
+          tcb->group->tg_addrenv_own != NULL &&
+          tcb->group->tg_addrenv_own->addrenv.data &&
+          tcb->xcp.nkernels == 0)
+        {
+          mpu_enable_region(CONFIG_ARCH_MPU_KERNEL_REGION, false);
+        }
+    }
+  else
+    {
+      if (tcb != NULL && tcb->group != NULL &&
+          tcb->group->tg_addrenv_own != NULL &&
+          tcb->group->tg_addrenv_own->addrenv.data &&
+          --tcb->xcp.nkernels == 0)
+        {
+          mpu_enable_region(CONFIG_ARCH_MPU_KERNEL_REGION, false);
+        }
+    }
+
+  up_irq_restore(flags);
+}
 #endif
