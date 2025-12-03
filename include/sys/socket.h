@@ -234,14 +234,6 @@
 #define SO_TIMESTAMPING 21 /* Generates timestamp for each output packet
                             */
 
-/* Protocol-level socket options may begin with this value
- * Note: __SO_PROTOCOL was moved from 16 to 22 to avoid conflict with
- * SO_TIMESTAMPNS (20). This ensures protocol-specific options don't
- * collide with socket-level options.
- */
-
-#define __SO_PROTOCOL   22
-
 /* Timestamp generation */
 
 #define SOF_TIMESTAMPING_TX_HARDWARE  (1 << SO_TIMESTAMPING)
