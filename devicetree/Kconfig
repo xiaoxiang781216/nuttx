@@ -43,12 +43,4 @@ config DTS_CUSTOM_DT_BINDINGS_INCLUDE_DIR
 		This option specifies the directory containing the
 		custom device tree header files.
 
-config DTS_DYNAMIC_API_SUPPORT
-	bool "Dynamic device tree API support"
-	default n
-	---help---
-		This option enables support for generation dynamic
-		device tree API macros, even if there is only one device
-		tree source file.
-
 endif # if DEVICETREE_HEADER_GENERATION
