@@ -29,6 +29,9 @@
 #include <debug.h>
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
+#ifdef CONFIG_SIM_ASAN
+#  include <sanitizer/common_interface_defs.h>
+#endif
 
 #include "clock/clock.h"
 #include "sim_internal.h"
@@ -97,6 +100,12 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
     }
   else
     {
+#ifdef CONFIG_SIM_ASAN
+      /* Notify ASan that fiber switch has completed */
+
+      __sanitizer_finish_switch_fiber(NULL, NULL, NULL);
+#endif
+
       /* The way that we handle signals in the simulation is kind of
        * a kludge.  This would be unsafe in a truly multi-threaded,
        * interrupt driven environment.

@@ -26,8 +26,9 @@
 
 #include <stdint.h>
 #include <string.h>
-#if defined(CONFIG_SIM_ASAN) || defined(CONFIG_MM_KASAN_SIM)
-#include <sanitizer/asan_interface.h>
+#ifdef CONFIG_SIM_ASAN
+#  include <sanitizer/asan_interface.h>
+#  include <sanitizer/common_interface_defs.h>
 #endif
 
 #include <nuttx/arch.h>
@@ -42,6 +43,12 @@
 static void pre_start(void)
 {
   struct tcb_s *tcb = this_task();
+
+#ifdef CONFIG_SIM_ASAN
+  /* Notify ASan that fiber switch has completed */
+
+  __sanitizer_finish_switch_fiber(NULL, NULL, NULL);
+#endif
 
   /* Enable signal delivery */
 

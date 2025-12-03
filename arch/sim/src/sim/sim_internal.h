@@ -33,8 +33,11 @@
 #  include <sys/types.h>
 #  include <stdbool.h>
 #  include <stdint.h>
-#  if defined(CONFIG_SIM_NETDEV_TAP)
+#  ifdef CONFIG_SIM_NETDEV_TAP
 #    include <netinet/in.h>
+#  endif
+#  ifdef CONFIG_SIM_ASAN
+#    include <sanitizer/common_interface_defs.h>
 #  endif
 #endif
 
@@ -108,7 +111,25 @@
       }                                                         \
     while (0)
 
-#define sim_fullcontextrestore(restoreregs)                     \
+#ifdef CONFIG_SIM_ASAN
+#  define sim_fullcontextrestore(restoreregs)                   \
+    do                                                          \
+      {                                                         \
+        xcpt_reg_t *env = restoreregs;                          \
+        uint32_t *flags = (uint32_t *)&env[JB_FLAG];            \
+        struct tcb_s *tcb_ = g_running_tasks[this_cpu()];       \
+                                                                \
+        up_irq_restore(((uint64_t)flags[1] << 32) | flags[0]);  \
+                                                                \
+        host_errno_set(env[JB_ERRNO]);                          \
+        __sanitizer_start_switch_fiber(NULL,                    \
+                                       tcb_->stack_base_ptr,    \
+                                       tcb_->adj_stack_size);   \
+        longjmp(env, 1);                                        \
+      }                                                         \
+    while (0)
+#else
+#  define sim_fullcontextrestore(restoreregs)                   \
     do                                                          \
       {                                                         \
         xcpt_reg_t *env = restoreregs;                          \
@@ -120,6 +141,7 @@
         longjmp(env, 1);                                        \
       }                                                         \
     while (0)
+#endif
 
 #define host_uninterruptible(func, ...)                         \
     ({                                                          \

@@ -28,6 +28,9 @@
 #include <nuttx/arch.h>
 #include <sched/sched.h>
 #include <nuttx/init.h>
+#ifdef CONFIG_SIM_ASAN
+#  include <sanitizer/common_interface_defs.h>
+#endif
 
 #include "sim_internal.h"
 
@@ -101,6 +104,14 @@ void *sim_doirq(int irq, void *context)
       /* Then switch contexts */
 
       sim_fullcontextrestore(regs);
+    }
+  else
+    {
+#ifdef CONFIG_SIM_ASAN
+      /* Notify ASan that fiber switch has completed */
+
+      __sanitizer_finish_switch_fiber(NULL, NULL, NULL);
+#endif
     }
 
   return NULL;
