@@ -736,6 +736,7 @@ static void generate_wrapper(int nfixed, int nparms)
   /* Define macros to get wrapper symbol */
 
   fprintf(stream, "#include <nuttx/arch.h>\n\n");
+  fprintf(stream, "#include <nuttx/addrenv.h>\n");
 
   if (g_parm[COND_INDEX][0] != '\0')
     {
