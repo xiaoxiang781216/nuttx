@@ -65,6 +65,16 @@
 #  define DBL_DIG 15
 #endif
 
+#if DBL_MANT_DIG == 24
+#  undef DBL_MANT_DIG
+#  define DBL_MANT_DIG 24
+#endif
+
+#if DBL_MANT_DIG == 53
+#  undef DBL_MANT_DIG
+#  define DBL_MANT_DIG 53
+#endif
+
 #define PASTE(a)          1e##a
 #define SUBSTITUTE(a)     PASTE(a)
 #define MIN_MANT          (SUBSTITUTE(DBL_DIG))
