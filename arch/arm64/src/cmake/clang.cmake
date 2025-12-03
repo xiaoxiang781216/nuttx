@@ -42,6 +42,7 @@ add_link_options(-nostdlib)
 set(NO_LTO "-fno-lto")
 
 add_compile_options(--target=aarch64-none-elf)
+add_link_options(--target=aarch64-none-elf)
 
 if(CONFIG_DEBUG_CUSTOMOPT)
   add_compile_options(${CONFIG_DEBUG_OPTLEVEL})
@@ -204,13 +205,13 @@ if(CONFIG_BUILTIN_TOOLCHAIN)
     else()
       execute_process(
         COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-                --print-libgcc-file-name
+                --print-libgcc-file-name -rtlib=compiler-rt
         OUTPUT_STRIP_TRAILING_WHITESPACE
         OUTPUT_VARIABLE libgcc_path)
       get_filename_component(libgcc_name ${libgcc_path} NAME)
       execute_process(
         COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} ${NUTTX_EXTRA_FLAGS}
-                --print-file-name=${libgcc_name}
+                --print-file-name=${libgcc_name} -rtlib=compiler-rt
         OUTPUT_STRIP_TRAILING_WHITESPACE
         OUTPUT_VARIABLE libgcc)
       nuttx_add_extra_library(${libgcc})
