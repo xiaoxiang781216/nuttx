@@ -29,24 +29,8 @@ from devicetree import edtlib
 def main():
     global header_file
     global flash_area_num
-    global board_id
-    global select_macros_dict
-    global board_id_var
-    global board_id_num
 
     args = parse_args()
-
-    board_id = args.board_id + "_" if args.board_id else ""
-    print("board_id:" + board_id + "\n")
-
-    if board_id != "":
-        board_id_num = re.findall(r"\d+", board_id)[0]
-        board_id_var = "g_board_id"
-    select_macros_dict = {}
-
-    print("args.edt_pickle: ", args.edt_pickle)
-    print("args.header_out: ", args.header_out)
-    print("args.board_id: ", args.board_id)
 
     edtlib_logger.setup_edtlib_logging()
 
@@ -68,14 +52,14 @@ def main():
         for node in sorted_nodes:
             node.z_path_id = node_z_path_id(node)
 
-        # Check to see if we have duplicate "nuttx,memory-region" property values.
+        # Check to see if we have duplicate "zephyr,memory-region" property values.
         regions = dict()
         for node in sorted_nodes:
-            if "nuttx,memory-region" in node.props:
-                region = node.props["nuttx,memory-region"].val
+            if "zephyr,memory-region" in node.props:
+                region = node.props["zephyr,memory-region"].val
                 if region in regions:
                     sys.exit(
-                        f"ERROR: Duplicate 'nuttx,memory-region' ({region}) properties "
+                        f"ERROR: Duplicate 'zephyr,memory-region' ({region}) properties "
                         f"between {regions[region].path} and {node.path}"
                     )
                 regions[region] = node
@@ -85,7 +69,6 @@ def main():
 
             out_comment("Node's full path:")
             out_dt_define(f"{node.z_path_id}_PATH", f'"{escape(node.path)}"')
-            dynamic_macro_make("DT_NODE_PATH_DYNAMIC(node_id)", select_macros_dict)
 
             out_comment("Node's name with unit-address:")
             out_dt_define(f"{node.z_path_id}_FULL_NAME", f'"{escape(node.name)}"')
@@ -132,14 +115,6 @@ def main():
         write_chosen(edt)
         write_global_macros(edt)
 
-        if board_id != "":
-            for key, (macro, val) in select_macros_dict.items():
-                out_dt_define(macro, val)
-                select_macros_dict[key] = f"{board_id}DT_{macro}"
-            # save the select macros to a file
-            with open(f"select_macros_{board_id_num}.pickle", "wb") as f:
-                pickle.dump(select_macros_dict, f)
-
 
 def node_z_path_id(node: edtlib.Node) -> str:
     # Return the node specific bit of the node's path identifier:
@@ -168,9 +143,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--header-out", required=True, help="path to write header to")
     parser.add_argument(
         "--edt-pickle", help="path to read pickled edtlib.EDT object from"
-    )
-    parser.add_argument(
-        "--board-id", default="", help="board identifier to use in generated header"
     )
 
     return parser.parse_args()
@@ -254,18 +226,18 @@ Binding (compatible = {node.matching_compat}):
 
 
 def relativize(path) -> Optional[str]:
-    # If 'path' is within $NUTTX_BASE, returns it relative to $NUTTX_BASE,
-    # with a "$NUTTX_BASE/..." hint at the start of the string. Otherwise,
+    # If 'path' is within $ZEPHYR_BASE, returns it relative to $ZEPHYR_BASE,
+    # with a "$ZEPHYR_BASE/..." hint at the start of the string. Otherwise,
     # returns 'path' unchanged.
 
-    zbase = os.getenv("NUTTX_BASE")
+    zbase = os.getenv("ZEPHYR_BASE")
     if zbase is None:
         return path
 
     try:
-        return str("$NUTTX_BASE" / pathlib.Path(path).relative_to(zbase))
+        return str("$ZEPHYR_BASE" / pathlib.Path(path).relative_to(zbase))
     except ValueError:
-        # Not within NUTTX_BASE
+        # Not within ZEPHYR_BASE
         return path
 
 
@@ -287,9 +259,9 @@ def write_idents_and_existence(node: edtlib.Node) -> None:
 
     # Only determine maxlen if we have any idents
     if idents:
-        maxlen = max(len(f"{board_id}DT_{ident}") for ident in idents)
+        maxlen = max(len(f"DT_{ident}") for ident in idents)
     for ident in idents:
-        out_dt_define(ident, f"{board_id}DT_{node.z_path_id}", width=maxlen)
+        out_dt_define(ident, f"DT_{node.z_path_id}", width=maxlen)
 
 
 def write_bus(node: edtlib.Node) -> None:
@@ -372,9 +344,7 @@ def write_ranges(node: edtlib.Node) -> None:
 
     out_dt_define(
         f"{path_id}_FOREACH_RANGE(fn)",
-        " ".join(
-            f"fn({board_id}DT_{path_id}, {i})" for i, range in enumerate(node.ranges)
-        ),
+        " ".join(f"fn(DT_{path_id}, {i})" for i, range in enumerate(node.ranges)),
     )
 
 
@@ -389,48 +359,28 @@ def write_regs(node: edtlib.Node) -> None:
 
     if node.regs is not None:
         idx_vals.append((f"{path_id}_REG_NUM", len(node.regs)))
-        dynamic_macro_make("DT_NUM_REGS_DYNAMIC(node_id)", select_macros_dict)
 
     for i, reg in enumerate(node.regs):
         idx_vals.append((f"{path_id}_REG_IDX_{i}_EXISTS", 1))
         if reg.addr is not None:
             idx_macro = f"{path_id}_REG_IDX_{i}_VAL_ADDRESS"
             idx_vals.append((idx_macro, f"{reg.addr} /* {hex(reg.addr)} */"))
-            dynamic_macro_make(
-                "DT_REG_ADDR_BY_IDX_DYNAMIC(node_id, idx)", select_macros_dict
-            )
-
             if reg.name:
                 name_vals.append((f"{path_id}_REG_NAME_{reg.name}_EXISTS", 1))
                 name_macro = f"{path_id}_REG_NAME_{reg.name}_VAL_ADDRESS"
-                name_vals.append((name_macro, f"{board_id}DT_{idx_macro}"))
-                dynamic_macro_make(
-                    "DT_REG_ADDR_BY_NAME_DYNAMIC(node_id, name)", select_macros_dict
-                )
+                name_vals.append((name_macro, f"DT_{idx_macro}"))
 
         if reg.size is not None:
             idx_macro = f"{path_id}_REG_IDX_{i}_VAL_SIZE"
             idx_vals.append((idx_macro, f"{reg.size} /* {hex(reg.size)} */"))
-            dynamic_macro_make(
-                "DT_REG_SIZE_BY_IDX_DYNAMIC(node_id, idx)", select_macros_dict
-            )
-
             if reg.name:
                 name_macro = f"{path_id}_REG_NAME_{reg.name}_VAL_SIZE"
-                name_vals.append((name_macro, f"{board_id}DT_{idx_macro}"))
-                dynamic_macro_make(
-                    "DT_REG_SIZE_BY_NAME_DYNAMIC(node_id, name)", select_macros_dict
-                )
+                name_vals.append((name_macro, f"DT_{idx_macro}"))
 
     for macro, val in idx_vals:
         out_dt_define(macro, val)
     for macro, val in name_vals:
         out_dt_define(macro, val)
-
-    out_dt_define(
-        f"{path_id}_FOREACH_REG(fn)",
-        " ".join(f"fn(DT_{path_id}, {i})" for i, reg in enumerate(node.regs)),
-    )
 
 
 def write_interrupts(node: edtlib.Node) -> None:
@@ -474,10 +424,6 @@ def write_interrupts(node: edtlib.Node) -> None:
             idx_macro = f"{path_id}_IRQ_IDX_{i}_VAL_{name}"
             idx_vals.append((idx_macro, cell_value))
             idx_vals.append((idx_macro + "_EXISTS", 1))
-            dynamic_macro_make(
-                "DT_IRQN_BY_IDX_DYNAMIC(node_id, idx)", select_macros_dict
-            )
-
             if irq.name:
                 name_macro = f"{path_id}_IRQ_NAME_{str2ident(irq.name)}_VAL_{name}"
                 name_vals.append((name_macro, f"DT_{idx_macro}"))
@@ -510,7 +456,7 @@ def write_interrupts(node: edtlib.Node) -> None:
 
 def write_compatibles(node: edtlib.Node) -> None:
     # Writes a macro for each of the node's compatibles. We don't care
-    # about whether edtlib / Nuttx's binding language recognizes
+    # about whether edtlib / Zephyr's binding language recognizes
     # them. The compatibles the node provides are what is important.
 
     for i, compat in enumerate(node.compats):
@@ -542,7 +488,7 @@ def write_parent(node: edtlib.Node) -> None:
     out_dt_define(
         f"{node.z_path_id}_FOREACH_ANCESTOR(fn)",
         " ".join(
-            f"fn({board_id}DT_{parent.z_path_id})"
+            f"fn(DT_{parent.z_path_id})"
             for parent in _visit_parent_node(node)
             if parent is not None
         ),
@@ -565,38 +511,34 @@ def write_children(node: edtlib.Node) -> None:
 
     out_dt_define(
         f"{node.z_path_id}_FOREACH_CHILD(fn)",
-        " ".join(
-            f"fn({board_id}DT_{child.z_path_id})" for child in node.children.values()
-        ),
+        " ".join(f"fn(DT_{child.z_path_id})" for child in node.children.values()),
     )
 
     out_dt_define(
         f"{node.z_path_id}_FOREACH_CHILD_SEP(fn, sep)",
         " DT_DEBRACKET_INTERNAL sep ".join(
-            f"fn({board_id}DT_{child.z_path_id})" for child in node.children.values()
+            f"fn(DT_{child.z_path_id})" for child in node.children.values()
         ),
     )
 
     out_dt_define(
         f"{node.z_path_id}_FOREACH_CHILD_VARGS(fn, ...)",
         " ".join(
-            f"fn({board_id}DT_{child.z_path_id}, __VA_ARGS__)"
-            for child in node.children.values()
+            f"fn(DT_{child.z_path_id}, __VA_ARGS__)" for child in node.children.values()
         ),
     )
 
     out_dt_define(
         f"{node.z_path_id}_FOREACH_CHILD_SEP_VARGS(fn, sep, ...)",
         " DT_DEBRACKET_INTERNAL sep ".join(
-            f"fn({board_id}DT_{child.z_path_id}, __VA_ARGS__)"
-            for child in node.children.values()
+            f"fn(DT_{child.z_path_id}, __VA_ARGS__)" for child in node.children.values()
         ),
     )
 
     out_dt_define(
         f"{node.z_path_id}_FOREACH_CHILD_STATUS_OKAY(fn)",
         " ".join(
-            f"fn({board_id}DT_{child.z_path_id})"
+            f"fn(DT_{child.z_path_id})"
             for child in node.children.values()
             if child.status == "okay"
         ),
@@ -605,7 +547,7 @@ def write_children(node: edtlib.Node) -> None:
     out_dt_define(
         f"{node.z_path_id}_FOREACH_CHILD_STATUS_OKAY_SEP(fn, sep)",
         " DT_DEBRACKET_INTERNAL sep ".join(
-            f"fn({board_id}DT_{child.z_path_id})"
+            f"fn(DT_{child.z_path_id})"
             for child in node.children.values()
             if child.status == "okay"
         ),
@@ -614,7 +556,7 @@ def write_children(node: edtlib.Node) -> None:
     out_dt_define(
         f"{node.z_path_id}_FOREACH_CHILD_STATUS_OKAY_VARGS(fn, ...)",
         " ".join(
-            f"fn({board_id}DT_{child.z_path_id}, __VA_ARGS__)"
+            f"fn(DT_{child.z_path_id}, __VA_ARGS__)"
             for child in node.children.values()
             if child.status == "okay"
         ),
@@ -623,14 +565,11 @@ def write_children(node: edtlib.Node) -> None:
     out_dt_define(
         f"{node.z_path_id}_FOREACH_CHILD_STATUS_OKAY_SEP_VARGS(fn, sep, ...)",
         " DT_DEBRACKET_INTERNAL sep ".join(
-            f"fn({board_id}DT_{child.z_path_id}, __VA_ARGS__)"
+            f"fn(DT_{child.z_path_id}, __VA_ARGS__)"
             for child in node.children.values()
             if child.status == "okay"
         ),
     )
-
-    dynamic_macro_make("DT_CHILD_NUM_DYNAMIC(node_id)", select_macros_dict)
-    dynamic_macro_make("DT_CHILD_NUM_STATUS_OKAY_DYNAMIC(node_id)", select_macros_dict)
 
 
 def write_status(node: edtlib.Node) -> None:
@@ -740,28 +679,26 @@ def write_vanilla_props(node: edtlib.Node) -> None:
         if plen is not None:
             # DT_N_<node-id>_P_<prop-id>_FOREACH_PROP_ELEM
             macro2val[f"{macro}_FOREACH_PROP_ELEM(fn)"] = " \\\n\t".join(
-                f"fn({board_id}DT_{node.z_path_id}, {prop_id}, {i})"
-                for i in range(plen)
+                f"fn(DT_{node.z_path_id}, {prop_id}, {i})" for i in range(plen)
             )
 
             # DT_N_<node-id>_P_<prop-id>_FOREACH_PROP_ELEM_SEP
             macro2val[f"{macro}_FOREACH_PROP_ELEM_SEP(fn, sep)"] = (
                 " DT_DEBRACKET_INTERNAL sep \\\n\t".join(
-                    f"fn({board_id}DT_{node.z_path_id}, {prop_id}, {i})"
-                    for i in range(plen)
+                    f"fn(DT_{node.z_path_id}, {prop_id}, {i})" for i in range(plen)
                 )
             )
 
             # DT_N_<node-id>_P_<prop-id>_FOREACH_PROP_ELEM_VARGS
             macro2val[f"{macro}_FOREACH_PROP_ELEM_VARGS(fn, ...)"] = " \\\n\t".join(
-                f"fn({board_id}DT_{node.z_path_id}, {prop_id}, {i}, __VA_ARGS__)"
+                f"fn(DT_{node.z_path_id}, {prop_id}, {i}, __VA_ARGS__)"
                 for i in range(plen)
             )
 
             # DT_N_<node-id>_P_<prop-id>_FOREACH_PROP_ELEM_SEP_VARGS
             macro2val[f"{macro}_FOREACH_PROP_ELEM_SEP_VARGS(fn, sep, ...)"] = (
                 " DT_DEBRACKET_INTERNAL sep \\\n\t".join(
-                    f"fn({board_id}DT_{node.z_path_id}, {prop_id}, {i}, __VA_ARGS__)"
+                    f"fn(DT_{node.z_path_id}, {prop_id}, {i}, __VA_ARGS__)"
                     for i in range(plen)
                 )
             )
@@ -771,12 +708,6 @@ def write_vanilla_props(node: edtlib.Node) -> None:
 
         # DT_N_<node-id>_P_<prop-id>_EXISTS
         macro2val[f"{macro}_EXISTS"] = 1
-
-        dynamic_macro_make("DT_PROP_DYNAMIC(node_id, prop)", select_macros_dict)
-        dynamic_macro_make("DT_PROP_LEN_DYNAMIC(node_id, prop)", select_macros_dict)
-        dynamic_macro_make(
-            "DT_PROP_BY_IDX_DYNAMIC(node_id, prop, idx)", select_macros_dict
-        )
 
     if macro2val:
         out_comment("Generic property macros:")
@@ -942,7 +873,7 @@ def phandle_macros(prop: edtlib.Property, macro: str) -> dict:
     #
     # These are currently special because we can't serialize their
     # values without using label properties, which we're trying to get
-    # away from needing in Nuttx. (Label properties are great for
+    # away from needing in Zephyr. (Label properties are great for
     # humans, but have drawbacks for code size and boot time.)
     #
     # The names look a bit weird to make it easier for devicetree.h
@@ -952,14 +883,14 @@ def phandle_macros(prop: edtlib.Property, macro: str) -> dict:
 
     if prop.type == "phandle":
         # A phandle is treated as a phandles with fixed length 1.
-        ret[f"{macro}"] = f"{board_id}DT_{prop.val.z_path_id}"
-        ret[f"{macro}_IDX_0"] = f"{board_id}DT_{prop.val.z_path_id}"
-        ret[f"{macro}_IDX_0_PH"] = f"{board_id}DT_{prop.val.z_path_id}"
+        ret[f"{macro}"] = f"DT_{prop.val.z_path_id}"
+        ret[f"{macro}_IDX_0"] = f"DT_{prop.val.z_path_id}"
+        ret[f"{macro}_IDX_0_PH"] = f"DT_{prop.val.z_path_id}"
         ret[f"{macro}_IDX_0_EXISTS"] = 1
     elif prop.type == "phandles":
         for i, node in enumerate(prop.val):
-            ret[f"{macro}_IDX_{i}"] = f"{board_id}DT_{node.z_path_id}"
-            ret[f"{macro}_IDX_{i}_PH"] = f"{board_id}DT_{node.z_path_id}"
+            ret[f"{macro}_IDX_{i}"] = f"DT_{node.z_path_id}"
+            ret[f"{macro}_IDX_{i}_PH"] = f"DT_{node.z_path_id}"
             ret[f"{macro}_IDX_{i}_EXISTS"] = 1
     elif prop.type == "phandle-array":
         for i, entry in enumerate(prop.val):
@@ -1023,10 +954,8 @@ def write_chosen(edt: edtlib.EDT):
     out_comment("Chosen nodes\n")
     chosen = {}
     for name, node in edt.chosen_nodes.items():
-        chosen[f"{board_id}DT_CHOSEN_{str2ident(name)}"] = (
-            f"{board_id}DT_{node.z_path_id}"
-        )
-        chosen[f"{board_id}DT_CHOSEN_{str2ident(name)}_EXISTS"] = 1
+        chosen[f"DT_CHOSEN_{str2ident(name)}"] = f"DT_{node.z_path_id}"
+        chosen[f"DT_CHOSEN_{str2ident(name)}_EXISTS"] = 1
     max_len = max(map(len, chosen), default=0)
     for macro, value in chosen.items():
         out_define(macro, value, width=max_len)
@@ -1038,27 +967,22 @@ def write_global_macros(edt: edtlib.EDT):
 
     out_comment("Macros for iterating over all nodes and enabled nodes")
     out_dt_define(
-        "FOREACH_HELPER(fn)",
-        " ".join(f"fn({board_id}DT_{node.z_path_id})" for node in edt.nodes),
+        "FOREACH_HELPER(fn)", " ".join(f"fn(DT_{node.z_path_id})" for node in edt.nodes)
     )
     out_dt_define(
         "FOREACH_OKAY_HELPER(fn)",
         " ".join(
-            f"fn({board_id}DT_{node.z_path_id})"
-            for node in edt.nodes
-            if node.status == "okay"
+            f"fn(DT_{node.z_path_id})" for node in edt.nodes if node.status == "okay"
         ),
     )
     out_dt_define(
         "FOREACH_VARGS_HELPER(fn, ...)",
-        " ".join(
-            f"fn({board_id}DT_{node.z_path_id}, __VA_ARGS__)" for node in edt.nodes
-        ),
+        " ".join(f"fn(DT_{node.z_path_id}, __VA_ARGS__)" for node in edt.nodes),
     )
     out_dt_define(
         "FOREACH_OKAY_VARGS_HELPER(fn, ...)",
         " ".join(
-            f"fn({board_id}DT_{node.z_path_id}, __VA_ARGS__)"
+            f"fn(DT_{node.z_path_id}, __VA_ARGS__)"
             for node in edt.nodes
             if node.status == "okay"
         ),
@@ -1079,11 +1003,11 @@ def write_global_macros(edt: edtlib.EDT):
 
         # Helpers for non-INST for-each macros that take node
         # identifiers as arguments.
-        for_each_macros[f"{board_id}DT_FOREACH_OKAY_{ident}(fn)"] = " ".join(
-            f"fn({board_id}DT_{node.z_path_id})" for node in okay_nodes
+        for_each_macros[f"DT_FOREACH_OKAY_{ident}(fn)"] = " ".join(
+            f"fn(DT_{node.z_path_id})" for node in okay_nodes
         )
-        for_each_macros[f"{board_id}DT_FOREACH_OKAY_VARGS_{ident}(fn, ...)"] = " ".join(
-            f"fn({board_id}DT_{node.z_path_id}, __VA_ARGS__)" for node in okay_nodes
+        for_each_macros[f"DT_FOREACH_OKAY_VARGS_{ident}(fn, ...)"] = " ".join(
+            f"fn(DT_{node.z_path_id}, __VA_ARGS__)" for node in okay_nodes
         )
 
         # Helpers for INST versions of for-each macros, which take
@@ -1114,7 +1038,7 @@ def write_global_macros(edt: edtlib.EDT):
     out_comment('Macros for compatibles with status "okay" nodes\n')
     for compat, okay_nodes in edt.compat2okay.items():
         if okay_nodes:
-            out_define(f"{board_id}DT_COMPAT_HAS_OKAY_{str2ident(compat)}", 1)
+            out_define(f"DT_COMPAT_HAS_OKAY_{str2ident(compat)}", 1)
 
     out_comment('Macros for status "okay" instances of each compatible\n')
     for macro, value in n_okay_macros.items():
@@ -1135,7 +1059,7 @@ def str2ident(s: str) -> str:
 
 
 def list2init(list: Iterable[str]) -> str:
-    # Converts 'list', a Python list (or iterable), to a C array initializer
+    # Converts 'l', a Python list (or iterable), to a C array initializer
 
     return "{" + ", ".join(list) + "}"
 
@@ -1157,7 +1081,7 @@ def out_dt_define(
     # generate a warning if used, via __WARN(<deprecation_msg>)).
     #
     # Returns the full generated macro for 'macro', with leading "DT_".
-    ret = f"{board_id}DT_{macro}"
+    ret = f"DT_{macro}"
     out_define(ret, val, width=width, deprecation_msg=deprecation_msg)
     return ret
 
@@ -1247,75 +1171,6 @@ def escape_unquoted(s: str) -> str:
 
 def err(s: str) -> NoReturn:
     raise Exception(s)
-
-
-def dynamic_macro_make(macro_name: str, select_dict: dict):
-    # This function generates a dynamic macro for the given macro name.
-    if board_id == "":
-        return
-    if macro_name in select_dict:
-        return
-    if macro_name == "DT_NODE_PATH_DYNAMIC(node_id)":
-        select_macros_name = "node_id_PATH_SELECT(node_id)"
-        select_statment = f"({board_id_var}) == {board_id_num} ? \
-            COND_CODE_1(IS_ENABLED(DT_CAT3({board_id}, node_id, _EXISTS)), \
-            (DT_CAT3({board_id}, node_id, _PATH)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_NUM_REGS_DYNAMIC(node_id)":
-        select_macros_name = "node_id_REG_NUM_SELECT(node_id)"
-        select_statment = f"({board_id_var}) == {board_id_num} ? \
-            COND_CODE_1(IS_ENABLED(DT_CAT3({board_id}, node_id, _EXISTS)), \
-            (DT_CAT3({board_id}, node_id, _REG_NUM)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_REG_ADDR_BY_IDX_DYNAMIC(node_id, idx)":
-        select_macros_name = "node_id_REG_IDX_idx_VAL_ADDRESS_SELECT(node_id, idx)"
-        select_statment = f"({board_id_var}) == {board_id_num} ? \
-            COND_CODE_1(IS_ENABLED(DT_CAT5({board_id}, node_id,_REG_IDX_, idx, _EXISTS)), \
-            (DT_CAT5({board_id}, node_id, _REG_IDX_, idx, _VAL_ADDRESS)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_REG_ADDR_BY_NAME_DYNAMIC(node_id, name)":
-        select_macros_name = "node_id_REG_NAME_name_VAL_ADDRESS_SELECT(node_id, name)"
-        select_statment = f"({board_id_var}) == {board_id_num} ? \
-            COND_CODE_1(IS_ENABLED(DT_CAT5({board_id}, node_id,_REG_NAME_, name, _EXISTS)), \
-            (DT_CAT5({board_id}, node_id, _REG_NAME_, name, _VAL_ADDRESS)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_REG_SIZE_BY_IDX_DYNAMIC(node_id, idx)":
-        select_macros_name = "node_id_REG_IDX_idx_VAL_SIZE_SELECT(node_id, idx)"
-        select_statment = f"({board_id_var}) == {board_id_num} ? \
-            COND_CODE_1(IS_ENABLED(DT_CAT5({board_id}, node_id,_REG_IDX_, idx, _EXISTS)), \
-            (DT_CAT5({board_id}, node_id, _REG_IDX_, idx, _VAL_SIZE)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_REG_SIZE_BY_NAME_DYNAMIC(node_id, name)":
-        select_macros_name = "node_id_REG_NAME_name_VAL_SIZE_SELECT(node_id, name)"
-        select_statment = f"({board_id_var}) == {board_id_num} ? \
-            COND_CODE_1(IS_ENABLED(DT_CAT5({board_id}, node_id,_REG_NAME_, name, _EXISTS)), \
-            (DT_CAT5({board_id}, node_id, _REG_NAME_, name, _VAL_SIZE)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_IRQN_BY_IDX_DYNAMIC(node_id, idx)":
-        select_macros_name = "node_id_IRQ_IDX_idx_VAL_irq_SELECT(node_id, idx)"
-        select_statment = f"({board_id_var}) == {board_id_num} ? \
-            COND_CODE_1(IS_ENABLED(DT_CAT5({board_id}, node_id, _IRQ_IDX_, idx, _EXISTS)), \
-            (DT_CAT6({board_id}, node_id, _IRQ_IDX_, idx, _VAL_, irq)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_CHILD_NUM_DYNAMIC(node_id)":
-        select_macros_name = "node_id_CHILD_NUM_SELECT(node_id)"
-        select_statment = f"({board_id_var}) == {board_id_num} ? \
-            COND_CODE_1(IS_ENABLED(DT_CAT3({board_id}, node_id, _EXISTS)), \
-            (DT_CAT3({board_id}, node_id, _CHILD_NUM)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_CHILD_NUM_STATUS_OKAY_DYNAMIC(node_id)":
-        select_macros_name = "node_id_CHILD_NUM_STATUS_OKAY_SELECT(node_id)"
-        select_statment = f"({board_id_var}) == {board_id_num} ? \
-            COND_CODE_1(IS_ENABLED(DT_CAT3({board_id}, node_id, _EXISTS)), \
-            (DT_CAT3({board_id}, node_id, _CHILD_NUM_STATUS_OKAY)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_PROP_DYNAMIC(node_id, prop)":
-        select_macros_name = "node_id_P_prop_SELECT(node_id, prop)"
-        select_statment = f"({board_id_var}) == {board_id_num} ? \
-            COND_CODE_1(IS_ENABLED(DT_CAT5({board_id}, node_id, _P_, prop, _EXISTS)), \
-            (DT_CAT4({board_id}, node_id, _P_, prop)), (DT_NODE_DEFAULT))\n"
-    elif macro_name == "DT_PROP_LEN_DYNAMIC(node_id, prop)":
-        select_macros_name = "node_id_P_prop_LEN_SELECT(node_id, prop)"
-        select_statment = f"({board_id_var}) == {board_id_num} ? \
-            COND_CODE_1(IS_ENABLED(DT_CAT5({board_id}, node_id, _P_, prop, _EXISTS)), \
-            (DT_CAT5({board_id}, node_id, _P_, prop, _LEN)), (0))\n"
-    elif macro_name == "DT_PROP_BY_IDX_DYNAMIC(node_id, prop, idx)":
-        select_macros_name = "node_id_P_prop_BY_IDX_SELECT(node_id, prop, idx)"
-        select_statment = f"({board_id_var}) == {board_id_num} ? \
-            COND_CODE_1(IS_ENABLED(DT_CAT7({board_id}, node_id, _P_, prop, _IDX_, idx, _EXISTS)), \
-            (DT_CAT6({board_id}, node_id, _P_, prop, _IDX_, idx)), (0))\n"
-    select_macros_dict[macro_name] = (select_macros_name, select_statment)
 
 
 if __name__ == "__main__":
