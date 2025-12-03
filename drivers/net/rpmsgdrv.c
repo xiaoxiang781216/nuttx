@@ -199,11 +199,6 @@ static const struct netdev_ops_s g_net_rpmsg_drv_ops =
  * Private Functions
  ****************************************************************************/
 
-static void net_rpmsg_drv_wait(FAR sem_t *sem)
-{
-  net_sem_wait_uninterruptible(sem);
-}
-
 /****************************************************************************
  * Name: net_rpmsg_drv_transmit
  *
@@ -629,7 +624,8 @@ static int net_rpmsg_drv_send_recv(FAR struct netdev_lowerhalf_s *dev,
       goto out;
     }
 
-  net_rpmsg_drv_wait(&cookie.sem);
+  net_sem_timedwait2(&cookie.sem, false, UINT_MAX, &dev->netdev.d_lock,
+                     NULL);
   ret = cookie.header->result;
 
 out:
@@ -678,7 +674,7 @@ static int net_rpmsg_drv_ifup(FAR struct netdev_lowerhalf_s *dev)
         dev->netdev.d_ipv6addr[6], dev->netdev.d_ipv6addr[7]);
 #endif
 
-  net_lock();
+  netdev_lock(&dev->netdev);
 
   /* Prepare the message */
 
@@ -702,7 +698,7 @@ static int net_rpmsg_drv_ifup(FAR struct netdev_lowerhalf_s *dev)
   ret = net_rpmsg_drv_send_recv(dev, &msg, NET_RPMSG_IFUP, sizeof(msg));
   if (ret < 0)
     {
-      net_unlock();
+      netdev_unlock(&dev->netdev);
       return ret;
     }
 
@@ -722,7 +718,7 @@ static int net_rpmsg_drv_ifup(FAR struct netdev_lowerhalf_s *dev)
   net_ipv6addr_copy(dev->netdev.d_ipv6netmask, msg.ipv6netmask);
 #endif
 
-  net_unlock();
+  netdev_unlock(&dev->netdev);
 
 #ifdef CONFIG_NETDB_DNSCLIENT
 #  ifdef CONFIG_NET_IPv4
