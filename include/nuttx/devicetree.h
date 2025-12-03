@@ -5358,30 +5358,6 @@
 #define DT_CAT8(a1, a2, a3, a4, a5, a6, a7, a8) \
     a1 ## a2 ## a3 ## a4 ## a5 ## a6 ## a7 ## a8
 
-/**
- * @brief Concatenation helper with evaluation, 2 arguments
- *
- * This macro is used to paste two arguments together with "##"
- * after forcing expansion on each argument. This ensures that any
- * macros within the arguments are fully expanded before concatenation.
- */
-#define DT_CAT_EVAL(a1, a2) DT_CAT(a1, a2)
-/** @brief Concatenation helper with evaluation, 3 arguments */
-#define DT_CAT3_EVAL(a1, a2, a3) DT_CAT3(a1, a2, a3)
-/** @brief Concatenation helper with evaluation, 4 arguments */
-#define DT_CAT4_EVAL(a1, a2, a3, a4) DT_CAT4(a1, a2, a3, a4)
-/** @brief Concatenation helper with evaluation, 5 arguments */
-#define DT_CAT5_EVAL(a1, a2, a3, a4, a5) DT_CAT5(a1, a2, a3, a4, a5)
-/** @brief Concatenation helper with evaluation, 6 arguments */
-#define DT_CAT6_EVAL(a1, a2, a3, a4, a5, a6) \
-    DT_CAT6(a1, a2, a3, a4, a5, a6)
-/** @brief Concatenation helper with evaluation, 7 arguments */
-#define DT_CAT7_EVAL(a1, a2, a3, a4, a5, a6, a7) \
-    DT_CAT7(a1, a2, a3, a4, a5, a6, a7)
-/** @brief Concatenation helper with evaluation, 8 arguments */
-#define DT_CAT8_EVAL(a1, a2, a3, a4, a5, a6, a7, a8) \
-    DT_CAT8(a1, a2, a3, a4, a5, a6, a7, a8)
-
 /* If you need to define a bigger DT_CATN(), do so here. Don't leave
  * any "holes" of undefined macros, please.
  */
