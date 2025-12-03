@@ -895,7 +895,8 @@ void _assert(FAR const char *filename, int linenum,
   struct panic_notifier_s notifier_data;
   irqstate_t flags = 0; /* Suppress GCC warning */
 
-  static spinlock_t g_assert_lock = SP_UNLOCKED;
+  static DEFINE_PER_CPU_BMP(spinlock_t, g_assert_lock) = SP_UNLOCKED;
+#define g_assert_lock this_cpu_var_bmp(g_assert_lock)
 
   /* Try to save current context if regs is null */
 
