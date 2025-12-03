@@ -20,6 +20,14 @@ Running with qemu::
 
   $ qemu-system-arm -M mps2-an500 -nographic -kernel nuttx.bin
 
+2. flat_addrenv::
+
+     cmake -B ../build -DBOARD_CONFIG=boards/arm/mps/mps2-an500/configs/flat_addrenv
+     cmake --build ../build
+     qemu-system-arm -M mps2-an500  -device loader,file=../build/nuttx.hex -gdb tcp::1128 -nographic
+     nsh> hello
+     nsh> ostest
+
 Debugging with QEMU
 ===================
 

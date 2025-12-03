@@ -22,6 +22,7 @@ config ARCH_CHIP_MPS2_AN386
 config ARCH_CHIP_MPS2_AN500
 	bool "MPS2 AN500 Processor Cortexm7"
 	select ARCH_CORTEXM7
+	select ARCH_HAVE_ADDRENV
 	select ARCH_HAVE_MPU
 	select ARM_HAVE_MPU_UNIFIED
 	select ARCH_HAVE_FPU

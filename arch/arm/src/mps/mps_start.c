@@ -189,6 +189,7 @@ void __start(void)
 #endif
 
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_FLAT)
+  mpu_control(false, false, false);
   mpu_priv_intsram((uintptr_t)_sdata,
                    elf_fixup_ramstart() - (uintptr_t)_sdata);
   mpu_priv_intsram((uintptr_t)g_intstackalloc, CONFIG_ARCH_INTERRUPTSTACK);
