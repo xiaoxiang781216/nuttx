@@ -457,9 +457,10 @@ int up_addrenv_ustackswitch(struct tcb_s *tcb)
       g_addrenv_stack_region = mpu_allocdataregion();
     }
 
+#ifdef CONFIG_BUILD_FLAT
   mpu_modify_region(g_mpu_kset, g_addrenv_stack_region,
                     conf.base, conf.size, conf.kflags);
-#ifdef CONFIG_BUILD_PROTECTED
+#else
   mpu_modify_region(g_mpu_uset, g_addrenv_stack_region,
                     conf.base, conf.size, conf.uflags);
 #endif
@@ -503,10 +504,6 @@ int up_addrenv_kstackswitch(struct tcb_s *tcb)
 
   mpu_modify_region(g_mpu_kset, g_addrenv_stack_region,
                     conf.base, conf.size, conf.kflags);
-#ifdef CONFIG_BUILD_PROTECTED
-  mpu_modify_region(g_mpu_uset, g_addrenv_stack_region,
-                    conf.base, conf.size, conf.uflags);
-#endif
   return OK;
 }
 #endif

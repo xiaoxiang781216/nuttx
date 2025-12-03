@@ -50,7 +50,7 @@ unsigned int g_mpu_uset;
  * Private Functions
  ****************************************************************************/
 
-static Ifx_CPU_DPRE get_dpre_value(unsigned int set)
+static inline_function Ifx_CPU_DPRE get_dpre_value(unsigned int set)
 {
   Ifx_CPU_DPRE dpre_value;
 
@@ -90,7 +90,8 @@ static Ifx_CPU_DPRE get_dpre_value(unsigned int set)
   return dpre_value;
 }
 
-static void set_dpre_value(unsigned int set, Ifx_CPU_DPRE dpre_value)
+static inline_function void set_dpre_value(unsigned int set,
+                                           Ifx_CPU_DPRE dpre_value)
 {
   switch (set)
     {
@@ -127,7 +128,7 @@ static void set_dpre_value(unsigned int set, Ifx_CPU_DPRE dpre_value)
   UP_ISB();
 }
 
-static Ifx_CPU_DPWE get_dpwe_value(unsigned int set)
+static inline_function Ifx_CPU_DPWE get_dpwe_value(unsigned int set)
 {
   Ifx_CPU_DPWE dpwe_value;
 
@@ -167,7 +168,8 @@ static Ifx_CPU_DPWE get_dpwe_value(unsigned int set)
   return dpwe_value;
 }
 
-static void set_dpwe_value(unsigned int set, Ifx_CPU_DPWE dpwe_value)
+static inline_function void set_dpwe_value(unsigned int set,
+                                           Ifx_CPU_DPWE dpwe_value)
 {
   switch (set)
     {
@@ -204,7 +206,7 @@ static void set_dpwe_value(unsigned int set, Ifx_CPU_DPWE dpwe_value)
   UP_ISB();
 }
 
-static Ifx_CPU_CPXE get_cpxe_value(unsigned int set)
+static inline_function Ifx_CPU_CPXE get_cpxe_value(unsigned int set)
 {
   Ifx_CPU_CPXE cpxe_value;
 
@@ -244,7 +246,8 @@ static Ifx_CPU_CPXE get_cpxe_value(unsigned int set)
   return cpxe_value;
 }
 
-static void set_cpxe_value(unsigned int set, Ifx_CPU_CPXE cpxe_value)
+static inline_function void set_cpxe_value(unsigned int set,
+                                           Ifx_CPU_CPXE cpxe_value)
 {
   switch (set)
     {
@@ -281,9 +284,9 @@ static void set_cpxe_value(unsigned int set, Ifx_CPU_CPXE cpxe_value)
   UP_ISB();
 }
 
-static int get_dpr_addrass_value(unsigned int region,
-                                 Ifx_CPU_DPR_L *dpr_l,
-                                 Ifx_CPU_DPR_U *dpr_u)
+static inline_function int get_dpr_addrass_value(unsigned int region,
+                                                 Ifx_CPU_DPR_L *dpr_l,
+                                                 Ifx_CPU_DPR_U *dpr_u)
 {
   switch (region)
     {
@@ -392,9 +395,9 @@ static int get_dpr_addrass_value(unsigned int region,
   return 0;
 }
 
-static void set_dpr_address_value(unsigned int region,
-                                  Ifx_CPU_DPR_L dpr_l,
-                                  Ifx_CPU_DPR_U dpr_u)
+static inline_function void set_dpr_address_value(unsigned int region,
+                                                  Ifx_CPU_DPR_L dpr_l,
+                                                  Ifx_CPU_DPR_U dpr_u)
 {
   switch (region)
     {
@@ -503,9 +506,9 @@ static void set_dpr_address_value(unsigned int region,
   UP_ISB();
 }
 
-static int get_cpr_address_region(unsigned int region,
-                                  Ifx_CPU_CPR_L *cpr_l,
-                                  Ifx_CPU_CPR_U *cpr_u)
+static inline_function int get_cpr_address_region(unsigned int region,
+                                                  Ifx_CPU_CPR_L *cpr_l,
+                                                  Ifx_CPU_CPR_U *cpr_u)
 {
   switch (region)
     {
@@ -582,9 +585,9 @@ static int get_cpr_address_region(unsigned int region,
   return 0;
 }
 
-static void set_cpr_address_value(unsigned int region,
-                                  Ifx_CPU_CPR_L cpr_l,
-                                  Ifx_CPU_CPR_U cpr_u)
+static inline_function void set_cpr_address_value(unsigned int region,
+                                                  Ifx_CPU_CPR_L cpr_l,
+                                                  Ifx_CPU_CPR_U cpr_u)
 {
   switch (region)
     {
@@ -659,8 +662,9 @@ static void set_cpr_address_value(unsigned int region,
   UP_ISB();
 }
 
-static void mpu_modify_data_region(unsigned int region, uintptr_t base,
-                                   size_t size)
+static inline_function void mpu_modify_data_region(unsigned int region,
+                                                   uintptr_t base,
+                                                   size_t size)
 {
   /* Check valid */
 
@@ -676,8 +680,9 @@ static void mpu_modify_data_region(unsigned int region, uintptr_t base,
   set_dpr_address_value(region, dpr_l_value, dpr_u_value);
 }
 
-static void mpu_modify_code_region(unsigned int region, uintptr_t base,
-                                   size_t size)
+static inline_function void mpu_modify_code_region(unsigned int region,
+                                                   uintptr_t base,
+                                                   size_t size)
 {
   /* Check valid */
 
@@ -693,8 +698,9 @@ static void mpu_modify_code_region(unsigned int region, uintptr_t base,
   set_cpr_address_value(region, cpr_l_value, cpr_u_value);
 }
 
-static void mpu_modify_data_set(unsigned int set, unsigned int region,
-                                int flags)
+static inline_function void mpu_modify_data_set(unsigned int set,
+                                                unsigned int region,
+                                                int flags)
 {
   /* Check valid */
 
@@ -717,8 +723,9 @@ static void mpu_modify_data_set(unsigned int set, unsigned int region,
   set_dpwe_value(set, dpwe_value);
 }
 
-static void mpu_modify_code_set(unsigned int set, unsigned int region,
-                                int flags)
+static inline_function void mpu_modify_code_set(unsigned int set,
+                                                unsigned int region,
+                                                int flags)
 {
   /* Check valid */
 
