@@ -964,7 +964,7 @@ static int rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
 
   if (priv->rproc.rsc_table == NULL)
     {
-      return;
+      return -EINVAL;
     }
 
   status = RPTUN_RSC2STATUS(priv->rproc.rsc_table);
