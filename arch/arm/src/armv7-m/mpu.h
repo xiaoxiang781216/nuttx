@@ -387,6 +387,23 @@ void mpu_modify_regions(unsigned int region, uintptr_t base, size_t size,
                         uint32_t flags);
 
 /****************************************************************************
+ * Name: mpu_enable_region
+ *
+ * Description:
+ *   Contrl a region enable or disable
+ *
+ * Input Parameters:
+ *   region - The index of the MPU region to modify.
+ *   enable - A boolean indicating whether to enable or disable the region.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void mpu_enable_region(unsigned int region, uint32_t enable);
+
+/****************************************************************************
  * Name: mpu_configure_region
  *
  * Description:

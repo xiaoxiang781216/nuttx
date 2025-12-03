@@ -582,6 +582,43 @@ void mpu_modify_regions(unsigned int region, uintptr_t base, size_t size,
 }
 
 /****************************************************************************
+ * Name: mpu_enable_region
+ *
+ * Description:
+ *   Contrl a region enable or disable
+ *
+ * Input Parameters:
+ *   region - The index of the MPU region to modify.
+ *   enable - A boolean indicating whether to enable or disable the region.
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+void mpu_enable_region(unsigned int region, uint32_t enable)
+{
+  uintptr_t limit;
+
+  /* Select the region */
+
+  putreg32(region, MPU_RNR);
+  limit = getreg32(MPU_RASR);
+  if (enable)
+    {
+      putreg32(limit | MPU_RASR_ENABLE, MPU_RASR);
+    }
+  else
+    {
+      putreg32(limit & ~MPU_RASR_ENABLE, MPU_RASR);
+    }
+
+  /* Ensure MPU setting take effects */
+
+  UP_MB();
+}
+
+/****************************************************************************
  * Name: mpu_configure_region
  *
  * Description:
