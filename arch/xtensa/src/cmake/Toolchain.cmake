@@ -76,6 +76,14 @@ set(CMAKE_ASM_ARCHIVE_FINISH ${CMAKE_RANLIB_COMMAND})
 
 set(NO_LTO "-fno-lto")
 
+# Link Time Optimization
+
+if(CONFIG_LTO_THIN)
+  add_compile_options(-flto=thin)
+elseif(CONFIG_LTO_FULL)
+  add_compile_options(-flto)
+endif()
+
 add_compile_options(-mlongcalls)
 
 if(CONFIG_MM_KASAN_INSTRUMENT_ALL)
