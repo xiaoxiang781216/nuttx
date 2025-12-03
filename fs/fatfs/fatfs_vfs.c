@@ -68,7 +68,6 @@ struct fatfs_dir_s
 
 struct fatfs_file_s
 {
-  int        refs;
   char       path[PATH_MAX + 3];
   FIL        f;
 };
@@ -395,7 +394,6 @@ static int fatfs_open(FAR struct file *filep, FAR const char *relpath,
       filep->f_pos = f_size(&fp->f);
     }
 
-  fp->refs = 1;
   filep->f_priv = fp;
 
 errsem:
@@ -411,7 +409,6 @@ static int fatfs_close(FAR struct file *filep)
 {
   FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_file_s *fp;
-  int crefs;
   int ret;
 
   fp = filep->f_priv;
@@ -422,18 +419,9 @@ static int fatfs_close(FAR struct file *filep)
       return ret;
     }
 
-  crefs = --fp->refs;
-  if (crefs <= 0)
-    {
-      ret = fatfs_convert_result(f_close(&fp->f));
-      if (ret < 0)
-        {
-          fp->refs++;
-        }
-    }
-
+  ret = fatfs_convert_result(f_close(&fp->f));
   nxmutex_unlock(&fs->lock);
-  if (crefs <= 0 && ret >= 0)
+  if (ret >= 0)
     {
       fs_heap_free(fp);
     }
@@ -671,30 +659,58 @@ static int fatfs_sync(FAR struct file *filep)
  * Name: fatfs_dup
  *
  * Description: Duplicate open file data in the new file structure.
+ * Deep copy implementation for file cache optimization.
  *
  ****************************************************************************/
 
 static int fatfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 {
   FAR struct fatfs_mountpt_s *fs;
-  FAR struct fatfs_file_s *fp;
+  FAR struct fatfs_file_s *oldfp;
+  FAR struct fatfs_file_s *newfp;
+  size_t alloc_size;
+  int oflags;
   int ret;
 
   /* Recover our private data from the struct file instance */
 
-  fp = oldp->f_priv;
+  oldfp = oldp->f_priv;
   fs = oldp->f_inode->i_private;
+
+  /* Calculate allocation size based on sector size */
+
+  alloc_size = sizeof(*newfp) - FF_MAX_SS + SS(&fs->fat);
+
+  /* Allocate a new file structure */
+
+  newfp = fs_heap_malloc(alloc_size);
+  if (newfp == NULL)
+    {
+      return -ENOMEM;
+    }
+
   ret = nxmutex_lock(&fs->lock);
   if (ret < 0)
     {
+      fs_heap_free(newfp);
       return ret;
     }
 
-  fp->refs++;
-  newp->f_priv = fp;
-  nxmutex_unlock(&fs->lock);
+  /* Copy the old file structure to the new one */
 
-  return ret;
+  memcpy(newfp, oldfp, alloc_size);
+
+  /* But update the flags */
+
+  oflags = fatfs_convert_oflags(newp->f_oflags);
+  newfp->f.flag = oflags;
+
+  /* Set the private data in the new file descriptor */
+
+  newp->f_priv = newfp;
+
+  nxmutex_unlock(&fs->lock);
+  return OK;
 }
 
 /****************************************************************************
