@@ -950,7 +950,7 @@ static int rptun_dev_stop(FAR struct remoteproc *rproc)
   return ret;
 }
 
-static void rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
+static int rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
 {
   int timeout = CONFIG_RPTUN_STATUS_TIMEOUT_MS;
   FAR struct rptun_status_s *status;
@@ -971,17 +971,21 @@ static void rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
     {
       rptun_set_status(priv, val);
 
+      ret = -ETIMEDOUT;
       while (timeout-- > 0)
         {
           if (RPTUN_STATUS_CHECK(RPTUN_IS_MASTER(priv->dev) ? status->slave :
                                  status->master, val))
             {
+              ret = OK;
               break;
             }
 
           up_udelay(1000);
         }
     }
+
+  return ret;
 }
 
 static int rptun_dev_wait(FAR struct rptun_priv_s *priv, unsigned long phase)
@@ -1022,7 +1026,7 @@ static int rptun_do_ioctl(FAR struct rptun_priv_s *priv, int cmd,
         ret = rptun_dev_stop(&priv->rproc);
         break;
       case RPTUNIOC_RESET:
-        rptun_dev_reset(priv, arg);
+        ret = rptun_dev_reset(priv, arg);
         break;
       case RPTUNIOC_WAIT:
         ret = rptun_dev_wait(priv, arg);
