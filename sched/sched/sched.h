@@ -375,6 +375,8 @@ uint32_t nxsched_process_roundrobin(FAR struct tcb_s *tcb, uint32_t ticks,
                                     bool noswitches);
 #endif
 
+void nxsched_switch(FAR struct tcb_s *tcb, FAR struct tcb_s *rtcb);
+
 #ifdef CONFIG_SCHED_SPORADIC
 int  nxsched_initialize_sporadic(FAR struct tcb_s *tcb);
 int  nxsched_start_sporadic(FAR struct tcb_s *tcb);
@@ -487,27 +489,6 @@ void nxsched_unlock(FAR struct tcb_s *rtcb);
 /****************************************************************************
  * Inline functions
  ****************************************************************************/
-
-static inline_function
-void nxsched_switch(FAR struct tcb_s *tcb, FAR struct tcb_s *rtcb)
-{
-  uint16_t count;
-#if defined(CONFIG_SCHED_TICKLESS) && CONFIG_RR_INTERVAL > 0
-  /* Before the context switch, we should set the timer for RR. */
-
-  if ((tcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_RR)
-    {
-      nxsched_reassess_timer();
-    }
-#endif
-  count = rspin_lock_count(&g_schedlock);
-  up_switch_context(tcb, rtcb);
-  if (!up_interrupt_context())
-    {
-      restore_critical_section(count);
-    }
-  UNUSED(count);
-}
 
 static inline_function bool nxsched_add_prioritized(FAR struct tcb_s *tcb,
                                                     DSEG dq_queue_t *list)

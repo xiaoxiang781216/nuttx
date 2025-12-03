@@ -91,3 +91,26 @@ void nxsched_switch_context(FAR struct tcb_s *from, FAR struct tcb_s *to)
   perf_event_task_sched_in(to);
 #endif
 }
+
+void nxsched_switch(FAR struct tcb_s *tcb, FAR struct tcb_s *rtcb)
+{
+  uint16_t count;
+
+#if defined(CONFIG_SCHED_TICKLESS) && CONFIG_RR_INTERVAL > 0
+  /* Before the context switch, we should set the timer for RR. */
+
+  if ((tcb->flags & TCB_FLAG_POLICY_MASK) == TCB_FLAG_SCHED_RR)
+    {
+      nxsched_reassess_timer();
+    }
+#endif
+
+  count = rspin_lock_count(&g_schedlock);
+  up_switch_context(tcb, rtcb);
+  if (!up_interrupt_context())
+    {
+      restore_critical_section(count);
+    }
+
+  UNUSED(count);
+}
