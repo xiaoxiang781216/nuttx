@@ -65,10 +65,10 @@
  */
 
 #define MEMPOOL_DEFINE(name, blksize, prealloc, maxalloc, dynalloc) \
-  static DEFINE_PER_CPU_BSS_BMP(char, CONCATENATE(name, _buffer) \
+  static char CONCATENATE(name, _buffer) \
   [(prealloc) * MEMPOOL_REALBLOCKSIZE(blksize) + MEMPOOL_HEADER_SIZE] \
-  aligned_data(sizeof(uintptr_t))); \
-  static DEFINE_PER_CPU_BMP(struct mempool_s, name) = \
+  aligned_data(sizeof(uintptr_t)); \
+  static struct mempool_s name = \
     { \
       CONCATENATE(name, _buffer), \
       MEMPOOL_REALBLOCKSIZE(blksize) * (prealloc) + MEMPOOL_HEADER_SIZE, \
