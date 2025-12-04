@@ -84,6 +84,34 @@
       NULL, \
     }
 
+/* Static mempool definition related macros for bmp mode, in which:
+ *   name:     The name of the static mempool
+ *   blksize:  The size of each node in the mempool
+ *   prealloc: The number of pre-allocated buffers
+ *   maxalloc: The number of max allocations, 0 means no limit
+ *   dynalloc: The number per dynamic allocations
+ */
+
+#define MEMPOOL_DEFINE_BMP(name, blksize, prealloc, maxalloc, dynalloc) \
+  static DEFINE_PER_CPU_BSS_BMP(char, CONCATENATE(name, _buffer) \
+  [(prealloc) * MEMPOOL_REALBLOCKSIZE(blksize) + MEMPOOL_HEADER_SIZE] \
+  aligned_data(sizeof(uintptr_t))); \
+  static DEFINE_PER_CPU_BMP(struct mempool_s, name) = \
+    { \
+      CONCATENATE(name, _buffer), \
+      MEMPOOL_REALBLOCKSIZE(blksize) * (prealloc) + MEMPOOL_HEADER_SIZE, \
+      (blksize), \
+      0, \
+      MEMPOOL_REALBLOCKSIZE(blksize) * (dynalloc) + MEMPOOL_HEADER_SIZE, \
+      (maxalloc), \
+      true, \
+      NULL, \
+      "bmp_" STRINGIFY(name), \
+      NULL, \
+      NULL, \
+      NULL, \
+    }
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/

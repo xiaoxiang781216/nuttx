@@ -381,12 +381,21 @@ static void mempool_check_callback(FAR struct mempool_s *pool,
 
 int mempool_init(FAR struct mempool_s *pool)
 {
-  static mutex_t g_mempool_init_lock = NXMUTEX_INITIALIZER;
+  static DEFINE_PER_CPU_BMP(mutex_t, g_mempool_init_lock) =
+                                     NXMUTEX_INITIALIZER;
+  #define g_mempool_init_lock this_cpu_var_bmp(g_mempool_init_lock)
   size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
   int ret = OK;
 
   if (!pool->init)
     {
+#ifdef CONFIG_PERCPU_SECTION
+      if (strcmp(pool->name, "bmp_") == 0)
+        {
+          pool->initialbase += PERCPU_OFFSET * this_cpu();
+        }
+#endif
+
       nxmutex_lock(&g_mempool_init_lock);
       if (!pool->init)
         {

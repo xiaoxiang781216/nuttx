@@ -78,7 +78,9 @@ const struct procfs_operations g_mempool_operations =
   mempool_read,   /* read */
 };
 
-static FAR struct mempool_procfs_entry_s *g_mempool_procfs = NULL;
+static DEFINE_PER_CPU_BSS_BMP(FAR struct mempool_procfs_entry_s *,
+                              g_mempool_procfs);
+#define g_mempool_procfs this_cpu_var_bmp(g_mempool_procfs)
 
 /****************************************************************************
  * Private Functions
