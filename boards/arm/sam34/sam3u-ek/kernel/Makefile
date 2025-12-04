@@ -34,7 +34,7 @@ USER_LIBPATHS = $(addprefix -L,$(call CONVERT_PATH,$(addprefix $(TOPDIR)$(DELIM)
 USER_LDSCRIPT = -T $(call CONVERT_PATH,$(BOARD_DIR)$(DELIM)scripts$(DELIM)memory.ld)
 USER_LDSCRIPT += -T $(call CONVERT_PATH,$(BOARD_DIR)$(DELIM)scripts$(DELIM)user-space.ld)
 
-USER_LDFLAGS = --undefined=$(ENTRYPT) --entry=$(ENTRYPT) $(USER_LDSCRIPT)
+USER_LDFLAGS = --undefined=userspace --undefined=$(ENTRYPT) --entry=$(ENTRYPT) $(USER_LDSCRIPT)
 USER_LDLIBS = $(patsubst lib%,-l%,$(basename $(notdir $(USERLIBS))))
 USER_LIBGCC = "${shell "$(CC)" $(ARCHCPUFLAGS) -print-libgcc-file-name}"
 

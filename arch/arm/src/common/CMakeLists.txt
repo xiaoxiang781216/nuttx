@@ -63,7 +63,9 @@ if(CONFIG_BUILD_PROTECTED OR CONFIG_BUILD_KERNEL)
       target_sources(arch_interface
                      PRIVATE ${ARCH_TOOLCHAIN_PATH}/arm_signal_handler.S)
       if(NOT CONFIG_NUTTX_USERSPACE_CUSTOM)
-        target_sources(arch_interface PRIVATE arm_userspace.c)
+        # We have to put userspace in separate .o to avoid the archive to .a
+        # archive to .a may cause the userspace be stripped
+        target_sources(nuttx_user PRIVATE arm_userspace.c)
       endif()
     endif()
   endif()
