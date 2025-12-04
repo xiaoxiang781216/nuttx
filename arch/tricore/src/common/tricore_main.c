@@ -44,25 +44,8 @@
 
 static void core_main(void)
 {
-  int cpu = up_cpu_index();
-
-  UNUSED(cpu);
-
-#ifdef CONFIG_PERCPU_SECTION
-  /* Init percpu section .data & .bss */
-
-  memcpy((void *)((uintptr_t)_sdata_percpu + PERCPU_OFFSET * cpu),
-         _ldata_percpu,
-         (uintptr_t)_edata_percpu - (uintptr_t)_sdata_percpu);
-  memset((void *)(uintptr_t)_sbss_percpu + PERCPU_OFFSET * cpu,
-         0, (uintptr_t)_ebss_percpu - (uintptr_t)_sbss_percpu);
-#endif
-
 #ifdef USE_EARLYSERIALINIT
-  if (cpu == 0)
-    {
-      tricore_earlyserialinit();
-    }
+  tricore_earlyserialinit();
 #endif
 
 #ifdef CONFIG_BUILD_PROTECTED
