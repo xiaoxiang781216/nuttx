@@ -35,7 +35,6 @@
 #include <stdint.h>
 #include <sched.h>
 #include <signal.h>
-#include <pthread.h>
 #include <time.h>
 
 #include <nuttx/irq.h>
@@ -373,6 +372,9 @@ enum tstate_e
 
 typedef enum tstate_e tstate_t;
 
+typedef CODE void *(*pthread_startroutine_t)(void *);
+typedef void (*pthread_trampoline_t)(pthread_startroutine_t, void *);
+
 /* The following definitions are determined by tstate_t.  Ordering of values
  * in the enumeration is important!
  */
@@ -516,7 +518,7 @@ struct task_join_s
 {
   sq_entry_t     entry;                  /* Implements link list            */
   pid_t          pid;                    /* Includes pid                    */
-  pthread_addr_t exit_value;             /* Returned data                   */
+  FAR void      *exit_value;             /* Returned data                   */
 };
 
 /* struct task_group_s ******************************************************/
@@ -692,7 +694,7 @@ struct tcb_s
   sq_queue_t     join_queue;             /* List of wait entries for task   */
   sq_entry_t     join_entry;             /* List entry of task join         */
   sem_t          join_sem;               /* Semaphore for task join         */
-  pthread_addr_t join_val;               /* Returned data                   */
+  FAR void      *join_val;               /* Returned data                   */
 #endif
 
   FAR struct addrenv_s *addrenv_curr;    /* Current active memory mappings  */
@@ -869,7 +871,7 @@ struct pthread_entry_s
   /* Task Management Fields *************************************************/
 
   pthread_trampoline_t trampoline;       /* User-space startup function     */
-  pthread_addr_t arg;                    /* Startup argument                */
+  FAR void *arg;                         /* Startup argument                */
 };
 #endif /* !CONFIG_DISABLE_PTHREAD */
 

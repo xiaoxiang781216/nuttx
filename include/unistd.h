@@ -28,8 +28,10 @@
  ****************************************************************************/
 
 #include <sys/types.h>
-#include <nuttx/compiler.h>
 #include <limits.h>
+
+#include <nuttx/compiler.h>
+#include <nuttx/tls.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -352,7 +354,6 @@ pid_t   vfork(void);
 pid_t   getpid(void);
 pid_t   getpgid(pid_t);
 pid_t   getpgrp(void);
-pid_t   gettid(void);
 pid_t   getppid(void);
 void    _exit(int) noreturn_function;
 unsigned int sleep(unsigned int);
@@ -489,6 +490,30 @@ FAR char *getpass(FAR const char *);
 FAR char *crypt(FAR const char *, FAR const char *);
 FAR char *crypt_r(FAR const char *, FAR const char *, FAR char *);
 #endif
+
+/****************************************************************************
+ * Inline Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: gettid
+ *
+ * Description:
+ *   Get the thread ID of the currently executing thread.
+ *
+ * Input parameters:
+ *   None
+ *
+ * Returned Value:
+ *   On success, returns the thread ID of the calling process.
+ *
+ ****************************************************************************/
+
+static inline_function pid_t gettid(void)
+{
+  FAR struct tls_info_s *tls = tls_get_info();
+  return tls ? tls->tl_tid : IDLE_PROCESS_ID;
+}
 
 #if CONFIG_FORTIFY_SOURCE > 0
 fortify_function(getcwd) FAR char *getcwd(FAR char *buf,
