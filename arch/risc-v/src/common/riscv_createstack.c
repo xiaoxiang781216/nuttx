@@ -34,6 +34,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/tls.h>
 #include <nuttx/board.h>
+#include <nuttx/atomic.h>
 #include <arch/board/board.h>
 
 #include "riscv_internal.h"

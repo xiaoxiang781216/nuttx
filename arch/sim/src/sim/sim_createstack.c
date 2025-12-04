@@ -32,6 +32,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/tls.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/atomic.h>
 
 #include "sim_internal.h"
 

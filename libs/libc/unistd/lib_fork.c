@@ -27,7 +27,7 @@
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
 #include <nuttx/mutex.h>
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 
 #include <unistd.h>
 #include <stdio.h>

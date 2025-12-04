@@ -33,6 +33,7 @@
 #include <errno.h>
 
 #include <nuttx/mqueue.h>
+#include <nuttx/atomic.h>
 
 #include "inode/inode.h"
 #include "mqueue/mqueue.h"

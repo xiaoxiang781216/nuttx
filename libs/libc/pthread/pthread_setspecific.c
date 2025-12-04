@@ -29,7 +29,7 @@
 #include <pthread.h>
 #include <assert.h>
 
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 
 #if defined(CONFIG_TLS_NELEM) && CONFIG_TLS_NELEM > 0
 

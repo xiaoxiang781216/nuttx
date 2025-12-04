@@ -38,7 +38,7 @@
 #include <unistd.h>
 
 #include <nuttx/mutex.h>
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 
 #include "libc.h"
 

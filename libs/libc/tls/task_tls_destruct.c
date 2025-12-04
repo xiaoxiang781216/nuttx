@@ -29,7 +29,7 @@
 #include <sched.h>
 #include <errno.h>
 
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 #include <nuttx/mutex.h>
 #include <assert.h>
 

@@ -657,7 +657,7 @@ void up_task_start(main_t taskentry, int argc, FAR char *argv[])
 #if !defined(CONFIG_BUILD_FLAT) && defined(__KERNEL__) && \
     !defined(CONFIG_DISABLE_PTHREAD)
 void up_pthread_start(pthread_trampoline_t startup,
-                      pthread_startroutine_t entrypt, pthread_addr_t arg)
+                      pthread_startroutine_t entrypt, void *arg)
        noreturn_function;
 #endif
 

@@ -28,6 +28,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/atomic.h>
 
 /****************************************************************************
  * Public Functions

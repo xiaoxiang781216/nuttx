@@ -31,6 +31,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/tls.h>
 #include <nuttx/board.h>
+#include <nuttx/atomic.h>
 #include <arch/irq.h>
 
 #include "arm64_internal.h"

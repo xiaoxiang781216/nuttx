@@ -35,6 +35,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/lib/lib.h>
+#include <nuttx/atomic.h>
 
 #include "inode/inode.h"
 #include "fs_heap.h"

@@ -174,11 +174,9 @@
 #endif
 
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-#  define _SCHED_GETTID()            nxsched_gettid()
 #  define _SCHED_GETPID()            nxsched_getpid()
 #  define _SCHED_GETPPID()           nxsched_getppid()
 #else
-#  define _SCHED_GETTID()            gettid()
 #  define _SCHED_GETPID()            getpid()
 #  define _SCHED_GETPPID()           getppid()
 #endif

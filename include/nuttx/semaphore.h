@@ -31,11 +31,13 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <nuttx/clock.h>
 #include <nuttx/init.h>
 #include <nuttx/sched.h>
 #include <nuttx/semaphore_type.h>
+#include <nuttx/atomic.h>
 
 /****************************************************************************
  * Public Data

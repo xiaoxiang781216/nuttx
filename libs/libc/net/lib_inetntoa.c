@@ -31,7 +31,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 
 #if defined(CONFIG_NET_IPv4) || defined(CONFIG_LIBC_IPv4_ADDRCONV)
 

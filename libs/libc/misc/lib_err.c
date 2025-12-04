@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <nuttx/sched.h>
 #include <nuttx/streams.h>

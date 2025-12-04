@@ -30,7 +30,7 @@
 
 #include <nuttx/atexit.h>
 #include <nuttx/mutex.h>
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 
 #if CONFIG_LIBC_MAX_EXITFUNS > 0
 

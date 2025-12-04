@@ -34,6 +34,7 @@
 #include <debug.h>
 
 #include <nuttx/fs/fs.h>
+#include <nuttx/atomic.h>
 
 #include "driver/driver.h"
 #include "inode/inode.h"

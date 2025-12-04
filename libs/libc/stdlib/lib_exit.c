@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 #include <nuttx/pthread.h>
 
 #if defined(CONFIG_BUILD_FLAT) || !defined(__KERNEL__)

@@ -32,6 +32,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/atomic.h>
 
 #include "inode/inode.h"
 

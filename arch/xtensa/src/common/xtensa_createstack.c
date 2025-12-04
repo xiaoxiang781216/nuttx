@@ -34,6 +34,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/tls.h>
 #include <nuttx/board.h>
+#include <nuttx/atomic.h>
 
 #include <arch/xtensa/xtensa_coproc.h>
 #include <arch/chip/tie.h>

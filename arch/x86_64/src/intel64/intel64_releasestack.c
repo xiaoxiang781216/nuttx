@@ -29,6 +29,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/atomic.h>
 
 #include "x86_64_internal.h"
 #include "arch/io.h"

@@ -29,6 +29,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/atomic.h>
 
 #include "arm_internal.h"
 

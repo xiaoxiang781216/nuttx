@@ -35,6 +35,7 @@
 
 #include <nuttx/lib/lib.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/atomic.h>
 
 #include "inode/inode.h"
 #include "vfs.h"

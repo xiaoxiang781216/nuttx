@@ -24,7 +24,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/tls.h>
+#include <nuttx/tls_task.h>
 #include <nuttx/lib/lib.h>
 #include <nuttx/mutex.h>
 

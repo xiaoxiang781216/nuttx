@@ -45,7 +45,6 @@
 #include "inode/inode.h"
 #include "fs_heap.h"
 
-#define DIR DIR_
 #include "ff.h"
 #include "diskio.h"
 
