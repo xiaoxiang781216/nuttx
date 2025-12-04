@@ -74,7 +74,6 @@ static void up_handle_irq(int irq, siginfo_t *info, void *context)
  *
  ****************************************************************************/
 
-__attribute__((no_sanitize_address))
 uint64_t up_irq_flags(void)
 {
   union sigset_u omask;
