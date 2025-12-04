@@ -34,13 +34,9 @@ class GdbSession:
     ):
 
         self.id = session_id
-        self.host = host
-        self.port = port
-        self.session = (
-            gdbrpc.Client(self.host, self.port)
-            if self.host and self.port
-            else gdbrpc.Client()
-        )
+        self.host = host if host else "localhost"
+        self.port = port if port else 20819
+        self.session = gdbrpc.Client(self.host, self.port)
 
         assert self.session.connect()
 
