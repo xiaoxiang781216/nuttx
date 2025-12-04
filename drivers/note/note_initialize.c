@@ -30,8 +30,7 @@
 #include <nuttx/note/note_driver.h>
 #include <nuttx/note/noteram_driver.h>
 #include <nuttx/note/notestream_driver.h>
-#include <nuttx/segger/note_rtt.h>
-#include <nuttx/segger/sysview.h>
+#include <nuttx/rtt.h>
 #include <nuttx/t32.h>
 
 #include "note_driver.h"
