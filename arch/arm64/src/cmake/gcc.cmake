@@ -129,7 +129,7 @@ if(CONFIG_ARCH_INSTRUMENT_ALL)
 endif()
 
 if(CONFIG_COVERAGE_ALL)
-  if(CONFIG_ARCH_TOOLCHAIN_GCC)
+  if(CONFIG_COVERAGE_SOURCE)
     add_compile_options(-fprofile-arcs -ftest-coverage -fno-inline)
   endif()
 endif()

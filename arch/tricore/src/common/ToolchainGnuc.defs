@@ -59,11 +59,17 @@ ifneq ($(CONFIG_STACK_USAGE_WARNING),0)
 endif
 
 ifeq ($(CONFIG_COVERAGE_ALL),y)
-  ARCHOPTIMIZATION += -fprofile-arcs -ftest-coverage -fno-inline
-endif
-
-ifeq ($(CONFIG_MM_UBSAN_ALL),y)
-  ARCHOPTIMIZATION += $(CONFIG_MM_UBSAN_OPTION)
+  ifeq ($(CONFIG_COVERAGE_SOURCE),y)
+    ARCHOPTIMIZATION += -fprofile-arcs -ftest-coverage -fno-inline
+   else ifeq ($(CONFIG_COVERAGE_PGO),y)
+    ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+      ifneq ($(wildcard $(TOPDIR)/default.profdata),)
+        ARCHOPTIMIZATION += -fprofile-use
+      else
+        ARCHOPTIMIZATION += -fprofile-generate
+      endif
+    endif
+  endif
 endif
 
 ifeq ($(CONFIG_MM_UBSAN_TRAP_ON_ERROR),y)

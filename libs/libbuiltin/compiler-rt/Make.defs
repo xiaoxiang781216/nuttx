@@ -122,8 +122,9 @@ else ifeq ($(CONFIG_COVERAGE_MINI)$(CONFIG_ARCH_TOOLCHAIN_CLANG),yy)
 
 FLAGS += ${INCDIR_PREFIX}$(CURDIR)/compiler-rt/compiler-rt/lib/profile
 FLAGS += -fno-profile-instr-generate -fno-coverage-mapping
+FLAGS += -fno-profile-generate -fno-fprofile-use
 
-CSRCS += coverage.c
+CSRCS += coverage.c profile_value.c profile_write.c
 
 endif
 

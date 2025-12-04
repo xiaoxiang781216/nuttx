@@ -121,6 +121,27 @@ config COVERAGE_ALL
 		-fcoverage-mapping' parameter to all module.
 		The data can then be printed nsh run "gcov dump -d /xxx/xxx"
 
+choice
+	prompt "Coverage mode"
+	default COVERAGE_SOURCE
+	depends on COVERAGE_ALL
+
+config COVERAGE_SOURCE
+	bool "Source-based code coverage"
+	---help---
+		Enable source-based code coverage.
+		For GCC, it adds "-fprofile-arcs -ftest-coverage".
+		For Clang, it adds "-fprofile-instr-generate -fcoverage-mapping".
+
+config COVERAGE_PGO
+	bool "Profile Guided Optimization"
+	---help---
+		Enable Profile Guided Optimization (PGO) instrumentation.
+		For GCC and Clang, it adds "-fprofile-generate" (IR-based for Clang).
+		Use this option to generate profiling data for later optimization use,
+		or to use the data for optimization.
+
+endchoice
 
 config PROFILE_ALL
 	bool "Enable gprof call graph for all modules"

@@ -79,7 +79,9 @@ if(CONFIG_STACK_CANARIES)
 endif()
 
 if(CONFIG_COVERAGE_ALL)
-  add_compile_options(-fprofile-arcs -ftest-coverage -fno-inline)
+  if(CONFIG_COVERAGE_SOURCE)
+    add_compile_options(-fprofile-arcs -ftest-coverage -fno-inline)
+  endif()
 endif()
 
 # Optimization of unused sections

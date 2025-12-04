@@ -157,7 +157,17 @@ if(${CONFIG_STACK_USAGE_WARNING})
 endif()
 
 if(CONFIG_COVERAGE_ALL)
-  add_compile_options(-fprofile-arcs -ftest-coverage -fno-inline)
+  if(CONFIG_COVERAGE_SOURCE)
+    add_compile_options(-fprofile-arcs -ftest-coverage -fno-inline)
+  elseif(CONFIG_COVERAGE_PGO)
+    if(CONFIG_ARCH_TOOLCHAIN_CLANG)
+      if(EXISTS "${CMAKE_BINARY_DIR}/default.profdata")
+        add_compile_options(-fprofile-use)
+      else()
+        add_compile_options(-fprofile-generate)
+      endif()
+    endif()
+  endif()
 endif()
 
 add_compile_options(

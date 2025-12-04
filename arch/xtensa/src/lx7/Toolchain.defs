@@ -110,10 +110,20 @@ ifneq ($(CONFIG_STACK_USAGE_WARNING),0)
 endif
 
 ifeq ($(CONFIG_COVERAGE_ALL),y)
-  ifeq ($(CONFIG_ARCH_TOOLCHAIN_GCC),y)
-    ARCHOPTIMIZATION += -fprofile-arcs -ftest-coverage -fno-inline
-  else ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
-    ARCHOPTIMIZATION += -fprofile-instr-generate -fcoverage-mapping
+  ifeq ($(CONFIG_COVERAGE_SOURCE),y)
+    ifeq ($(CONFIG_ARCH_TOOLCHAIN_GCC),y)
+      ARCHOPTIMIZATION += -fprofile-arcs -ftest-coverage -fno-inline
+    else ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+      ARCHOPTIMIZATION += -fprofile-instr-generate -fcoverage-mapping
+    endif
+  else ifeq ($(CONFIG_COVERAGE_PGO),y)
+    ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+      ifneq ($(wildcard $(TOPDIR)/default.profdata),)
+        ARCHOPTIMIZATION += -fprofile-use
+      else
+        ARCHOPTIMIZATION += -fprofile-generate
+      endif
+    endif
   endif
 endif
 

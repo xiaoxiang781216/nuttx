@@ -118,7 +118,9 @@ if(CONFIG_STACK_USAGE_WARNING AND NOT "${CONFIG_STACK_USAGE_WARNING}" STREQUAL
 endif()
 
 if(CONFIG_COVERAGE_ALL)
-  add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+  if(CONFIG_COVERAGE_SOURCE)
+    add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+  endif()
 endif()
 
 if(CONFIG_PROFILE_ALL)

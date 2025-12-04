@@ -136,7 +136,9 @@ if(CONFIG_STACK_USAGE_WARNING AND NOT "${CONFIG_STACK_USAGE_WARNING}" STREQUAL
 endif()
 
 if(CONFIG_COVERAGE_ALL)
-  add_compile_options(-fprofile-arcs -ftest-coverage -fno-inline)
+  if(CONFIG_COVERAGE_SOURCE)
+    add_compile_options(-fprofile-arcs -ftest-coverage -fno-inline)
+  endif()
 endif()
 
 if(CONFIG_MM_UBSAN_ALL)
