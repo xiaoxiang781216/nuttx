@@ -48,7 +48,8 @@ list(
   lib_ratelimit.c
   lib_utimensat.c
   lib_mallopt.c
-  lib_getnprocs.c)
+  lib_getnprocs.c
+  lib_lrucache.c)
 
 if(CONFIG_LIBC_TEMPBUFFER)
   list(APPEND SRCS lib_tempbuffer.c)
