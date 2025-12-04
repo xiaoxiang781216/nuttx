@@ -52,10 +52,6 @@ void *g_idle_topstack;
  * Private Data
  ****************************************************************************/
 
-#ifdef CONFIG_SYSLOG_RPMSG
-static char g_logbuffer[4096];
-#endif
-
 #ifdef CONFIG_ALLSYMS
 extern struct symtab_s g_allsyms[];
 extern int             g_nallsyms;
@@ -194,10 +190,6 @@ int main(int argc, char **argv, char **envp)
 
 #ifdef CONFIG_ALLSYMS
   allsyms_relocate();
-#endif
-
-#ifdef CONFIG_SYSLOG_RPMSG
-  syslog_rpmsg_init_early(g_logbuffer, sizeof(g_logbuffer));
 #endif
 
   /* Start NuttX */

@@ -83,10 +83,6 @@ const struct arm_mmu_config g_mmu_config =
   .mmu_regions = g_mmu_regions,
 };
 
-#ifdef CONFIG_SYSLOG_RPMSG
-static char g_syslog_rpmsg_buf[4096];
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -185,10 +181,6 @@ void arm64_chip_boot(void)
    */
 
   arm64_earlyserialinit();
-#endif
-
-#ifdef CONFIG_SYSLOG_RPMSG
-  syslog_rpmsg_init_early(g_syslog_rpmsg_buf, sizeof(g_syslog_rpmsg_buf));
 #endif
 
 #ifdef CONFIG_ARCH_PERF_EVENTS

@@ -45,14 +45,6 @@
 #include <nuttx/syslog/syslog_rpmsg.h>
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-#ifdef CONFIG_SYSLOG_RPMSG
-static char g_syslog_rpmsg_buf[4096];
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -98,10 +90,6 @@ void arm_boot(void)
    */
 
   arm_earlyserialinit();
-#endif
-
-#ifdef CONFIG_SYSLOG_RPMSG
-  syslog_rpmsg_init_early(g_syslog_rpmsg_buf, sizeof(g_syslog_rpmsg_buf));
 #endif
 }
 
