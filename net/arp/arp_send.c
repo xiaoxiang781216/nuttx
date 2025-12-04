@@ -338,6 +338,7 @@ int arp_send(in_addr_t ipaddr)
 
   ret = -ETIMEDOUT; /* Assume a timeout failure */
 
+  netdev_lock(dev);
   while (state->snd_retries < CONFIG_ARP_SEND_MAXTRIES)
     {
       /* Check if the address mapping is present in the ARP table.  This
@@ -347,13 +348,11 @@ int arp_send(in_addr_t ipaddr)
        * issue.
        */
 
-      netdev_lock(dev);
       ret = arp_find(ipaddr, NULL, dev);
       if (ret >= 0 || ret == -ENETUNREACH)
         {
           /* We have it! Break out with ret value */
 
-          netdev_unlock(dev);
           break;
         }
 
@@ -367,7 +366,6 @@ int arp_send(in_addr_t ipaddr)
            * wait arp response notify.
            */
 
-          netdev_unlock(dev);
           goto wait;
         }
 
@@ -382,7 +380,6 @@ int arp_send(in_addr_t ipaddr)
           if (!state->snd_cb)
             {
               nerr("ERROR: Failed to allocate a callback\n");
-              netdev_unlock(dev);
               ret = -ENOMEM;
               break;
             }
@@ -415,12 +412,10 @@ int arp_send(in_addr_t ipaddr)
        * nxsem_tickwait will also terminate if a signal is received.
        */
 
-      netdev_unlock(dev);
-
       do
         {
-          ret = nxsem_tickwait(&state->snd_sem,
-                               MSEC2TICK(CONFIG_ARP_SEND_DELAYMSEC));
+          ret = conn_dev_sem_timedwait(&state->snd_sem, true,
+                                       CONFIG_ARP_SEND_DELAYMSEC, NULL, dev);
           if (ret == -ETIMEDOUT)
             {
               arp_wait_cancel(notify);
@@ -444,7 +439,7 @@ int arp_send(in_addr_t ipaddr)
       /* Now wait for response to the ARP response to be received. */
 
 wait:
-      ret = arp_wait(notify, CONFIG_ARP_SEND_DELAYMSEC);
+      ret = arp_wait(dev, notify, CONFIG_ARP_SEND_DELAYMSEC);
 
       /* arp_wait will return OK if and only if the matching ARP response
        * is received.  Otherwise, it will return -ETIMEDOUT.
@@ -468,7 +463,6 @@ timeout:
     }
 
   nxsem_destroy(&state->snd_sem);
-  netdev_lock(dev);
   arp_callback_free(dev, state->snd_cb);
   netdev_unlock(dev);
   mempool_release(&g_arp_send_infos, info);

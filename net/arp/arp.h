@@ -384,9 +384,10 @@ int arp_wait_cancel(FAR struct arp_notify_s *notify);
  ****************************************************************************/
 
 #ifdef CONFIG_NET_ARP_SEND
-int arp_wait(FAR struct arp_notify_s *notify, unsigned int timeout);
+int arp_wait(FAR struct net_driver_s *dev, FAR struct arp_notify_s *notify,
+             unsigned int timeout);
 #else
-#  define arp_wait(n,t) (0)
+#  define arp_wait(d,n,t) (0)
 #endif
 
 /****************************************************************************
@@ -650,7 +651,7 @@ int arp_queue_iob(FAR struct net_driver_s *dev, in_addr_t ipaddr,
 #  define arp_poll(d,c) (0)
 #  define arp_wait_setup(i,n)
 #  define arp_wait_cancel(n) (0)
-#  define arp_wait(n,t) (0)
+#  define arp_wait(d,n,t) (0)
 #  define arp_notify(i)
 #  define arp_find(i,e,d) (-ENOSYS)
 #  define arp_delete(i,d) (-ENOSYS)
