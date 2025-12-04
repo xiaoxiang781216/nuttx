@@ -466,7 +466,9 @@ timeout:
     }
 
   nxsem_destroy(&state->snd_sem);
+  netdev_lock(dev);
   arp_callback_free(dev, state->snd_cb);
+  netdev_unlock(dev);
   NET_BUFPOOL_FREE(g_arp_send_infos, info);
   return ret;
 }
