@@ -39,7 +39,7 @@ nuttx_mod_link_options(-r)
 nuttx_elf_link_options_ifdef(CONFIG_BUILD_KERNEL -Bstatic)
 
 if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
-  if("${CMAKE_C_COMPILER}" MATCHES "gcc$")
+  if("${CMAKE_C_COMPILER}" MATCHES "gcc$|clang$")
     nuttx_elf_link_options(-Wl,--gc-sections)
   else()
     nuttx_elf_link_options(--gc-sections)
