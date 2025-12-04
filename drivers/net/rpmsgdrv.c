@@ -390,6 +390,7 @@ static int net_rpmsg_drv_sockioctl_handler(FAR struct rpmsg_endpoint *ept,
   FAR char *argv[3];
   char arg1[16];
   char arg2[16];
+  int ret;
 
   /* Save pointers into argv */
 
@@ -403,8 +404,20 @@ static int net_rpmsg_drv_sockioctl_handler(FAR struct rpmsg_endpoint *ept,
   /* Move the action into a temp thread to avoid the deadlock */
 
   rpmsg_hold_rx_buffer(ept, data);
-  kthread_create("rpmsg-net", CONFIG_NET_RPMSG_PRIORITY,
+  ret = kthread_create("rpmsg-net", CONFIG_NET_RPMSG_PRIORITY,
           CONFIG_NET_RPMSG_STACKSIZE, net_rpmsg_drv_sockioctl_task, argv);
+  if (ret < 0)
+    {
+      FAR struct net_rpmsg_ioctl_s *msg =
+                                        (FAR struct net_rpmsg_ioctl_s *)data;
+      if (msg->header.cookie)
+        {
+          rpmsg_send_response(ept, &msg->header, sizeof(*msg), ret);
+        }
+
+      rpmsg_release_rx_buffer(ept, data);
+      nerr("ERROR: Failed to create sockioctl task\n");
+    }
 
   return 0;
 }
