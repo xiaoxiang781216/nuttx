@@ -58,11 +58,28 @@
     } \
   while(0)
 
+#define hashtable_init_n(table, size) \
+  do \
+    { \
+      int i; \
+      for (i = 0; i < (size); i++) \
+        { \
+          dq_init(&table[i]); \
+        } \
+    } \
+  while(0)
+
 #define hashtable_add(table, item, key) \
   dq_addfirst(item, &table[HASH(key, hashtable_bits(table))])
 
+#define hashtable_add_n(table, item, key, size) \
+  dq_addfirst(item, &table[HASH(key, LOG2_FLOOR(size))])
+
 #define hashtable_delete(table, item, key) \
   dq_rem(item, &table[HASH(key, hashtable_bits(table))])
+
+#define hashtable_delete_n(table, item, key, size) \
+  dq_rem(item, &table[HASH(key, LOG2_FLOOR(size))])
 
 /* Iterate over whole hashtable. */
 
@@ -74,6 +91,14 @@
   for ((i) = 0; (i) < hashtable_size(table); (i)++)    \
     sq_for_every_safe(&table[i], item, temp)
 
+#define hashtable_for_every_n(table, item, i, size)  \
+  for ((i) = 0; (i) < (size); (i)++)                 \
+    sq_for_every(&table[i], item)
+
+#define hashtable_for_every_safe_n(table, item, temp, i, size) \
+  for ((i) = 0; (i) < (size); (i)++)                           \
+    sq_for_every_safe(&table[i], item, temp)
+
 /* Iterate over all possible objects hashing to the same bucket. */
 
 #define hashtable_for_every_possible(table, item, key) \
@@ -81,6 +106,12 @@
 
 #define hashtable_for_every_possible_safe(table, item, temp, key) \
   sq_for_every_safe(&table[HASH(key, hashtable_bits(table))], item, temp)
+
+#define hashtable_for_every_possible_n(table, item, key, size) \
+  sq_for_every(&table[HASH(key, LOG2_FLOOR(size))], item)
+
+#define hashtable_for_every_possible_safe_n(table, item, temp, key, size) \
+  sq_for_every_safe(&table[HASH(key, LOG2_FLOOR(size))], item, temp)
 
 /****************************************************************************
  * Public Types
