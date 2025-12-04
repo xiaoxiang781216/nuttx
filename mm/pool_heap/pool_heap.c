@@ -94,25 +94,26 @@ static FAR void *mempool_memalign(FAR void *arg, size_t alignment,
                                   size_t size)
 {
   FAR struct mm_heap_s *heap = (FAR struct mm_heap_s *)arg;
-  FAR char *ret;
+  FAR void *ret = NULL;
   int i;
 
   DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
   for (i = 0; i < CONFIG_MM_REGIONS; i++)
     {
-      ret = (void *)ALIGN_UP((uintptr_t)(char *)heap->mm_heapnext[i],
-                              alignment);
-      if (ret + size <= (char *)heap->mm_heapend[i])
+      FAR char *addr = (FAR char *)heap->mm_heapnext[i];
+
+      addr = (FAR char *)ALIGN_UP((uintptr_t)addr, alignment);
+      if (addr + size <= (FAR char *)heap->mm_heapend[i])
         {
-          heap->mm_heapnext[i] = ret + size;
+          heap->mm_heapnext[i] = addr + size;
           heap->mm_curused += size;
-          DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
-          return ret;
+          ret = addr;
+          break;
         }
     }
 
   DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
-  return NULL;
+  return ret;
 }
 
 static void mempool_free(FAR void *arg, FAR void *mem)
@@ -281,27 +282,27 @@ mm_initialize_pool(FAR const struct mm_heap_config_s *config,
 
   memcpy(&def, poolconfig, sizeof(struct mm_pool_config_s));
 
-  if (def.threshold == 0)
+  if (def.threshold == 0u)
     {
       def.threshold = CONFIG_MM_HEAP_MEMPOOL_THRESHOLD;
     }
 
-  if (def.chunksize == 0)
+  if (def.chunksize == 0u)
     {
       def.chunksize = CONFIG_MM_HEAP_MEMPOOL_CHUNK_SIZE;
     }
 
-  if (def.init_chunksize == 0)
+  if (def.init_chunksize == 0u)
     {
       def.init_chunksize = CONFIG_MM_HEAP_MEMPOOL_INIT_CHUNK_SIZE;
     }
 
-  if (def.expandsize == 0)
+  if (def.expandsize == 0u)
     {
       def.expandsize = CONFIG_MM_HEAP_MEMPOOL_EXPAND_SIZE;
     }
 
-  if (def.dict_expendsize == 0)
+  if (def.dict_expendsize == 0u)
     {
       def.dict_expendsize = CONFIG_MM_HEAP_MEMPOOL_DICTIONARY_EXPAND_SIZE;
     }
@@ -310,7 +311,7 @@ mm_initialize_pool(FAR const struct mm_heap_config_s *config,
 
   /* Initialize the multiple mempool in heap */
 
-  if (def.poolsize != NULL && def.npools != 0)
+  if (def.poolsize != NULL && def.npools != 0u)
     {
       heap->mm_mpool = mempool_multiple_init(config->name,
                                              &def,
@@ -451,7 +452,7 @@ FAR void *mm_calloc(FAR struct mm_heap_s *heap, size_t n, size_t elem_size)
    * Refer to SEI CERT C Coding Standard.
    */
 
-  if (elem_size == 0 || n <= (SIZE_MAX / elem_size))
+  if (elem_size == 0u || n <= (SIZE_MAX / elem_size))
     {
       mem = mm_zalloc(heap, n * elem_size);
     }
@@ -550,7 +551,15 @@ size_t mm_heapfree_largest(FAR struct mm_heap_s *heap)
 
 size_t mm_malloc_size(FAR struct mm_heap_s *heap, FAR void *mem)
 {
-  return mempool_multiple_alloc_size(heap->mm_mpool, mem);
+  ssize_t size;
+
+  size = mempool_multiple_alloc_size(heap->mm_mpool, mem);
+  if (size < 0)
+    {
+      size = 0;
+    }
+
+  return size;
 }
 
 /****************************************************************************
@@ -645,7 +654,7 @@ void mm_memdump(FAR struct mm_heap_s *heap,
 #endif
                   );
 
-  if (info.aordblks > 0)
+  if (info.aordblks > 0u)
     {
       mempool_multiple_memdump(heap->mm_mpool, dump);
     }

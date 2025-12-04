@@ -163,7 +163,7 @@
 #endif
 
 #if CONFIG_MM_DEFAULT_ALIGNMENT == 0
-#  define MM_ALIGN       (2 * sizeof(uintptr_t))
+#  define MM_ALIGN       (2u * sizeof(uintptr_t))
 #else
 #  define MM_ALIGN       CONFIG_MM_DEFAULT_ALIGNMENT
 #endif

@@ -783,7 +783,7 @@ size_t mempool_navail(FAR struct mempool_s *pool)
 
 int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
 {
-  size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
+  size_t blocksize;
   irqstate_t flags;
   bool bypass;
   int ret = OK;
@@ -792,6 +792,7 @@ int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
     {
       mempool_init(pool);
 
+      blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
       flags = spin_lock_irqsave(&pool->lock);
       bypass = kasan_bypass(true);
 

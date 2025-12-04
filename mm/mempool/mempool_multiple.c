@@ -386,11 +386,11 @@ mempool_multiple_pool_check(FAR struct mempool_multiple_s *mpool,
                             FAR struct mempool_s *pool)
 {
   FAR struct mempool_s *start = &mpool->pools[0];
-  FAR struct mempool_s *end = &mpool->pools[mpool->npools - 1];
+  FAR struct mempool_s *end = &mpool->pools[mpool->npools - 1u];
   bool ret = false;
 
   if (pool >= start && pool <= end &&
-      ((uintptr_t)pool - (uintptr_t)start) % sizeof(struct mempool_s) == 0)
+      ((uintptr_t)pool - (uintptr_t)start) % sizeof(struct mempool_s) == 0u)
     {
       ret = true;
     }
@@ -420,7 +420,7 @@ mempool_multiple_get_pool(FAR struct mempool_multiple_s *mpool,
   FAR struct mempool_s *pool = NULL;
   bool   bypass;
 
-  if (mpool != NULL && blk != NULL && mpool->headsize != 0)
+  if (mpool != NULL && blk != NULL && mpool->headsize != 0u)
     {
       bypass = kasan_bypass(true);
       pool = *(struct mempool_s **)((uintptr_t)(FAR char *)blk -
@@ -507,7 +507,7 @@ mempool_multiple_init(FAR const char *name,
         {
           if (config->poolcount && config->poolcount[i])
             {
-              headsize = sizeof(struct mempool_s *);
+              headsize = sizeof(FAR struct mempool_s *);
             }
 
           if (maxpoolszie < config->poolsize[i])
@@ -551,7 +551,7 @@ mempool_multiple_init(FAR const char *name,
               pools[i].blocksize = config->poolsize[i] +
                                    mpool->headsize;
               pools[i].priv = mpool;
-              if (config->poolcount && config->poolcount[i] != 0)
+              if (config->poolcount && config->poolcount[i] != 0u)
                 {
                   pools[i].expandsize = 0;
                   pools[i].initialsize =
@@ -565,7 +565,7 @@ mempool_multiple_init(FAR const char *name,
                       break;
                     }
 
-                    mpool->alloced += pools[i].initialsize;
+                  mpool->alloced += pools[i].initialsize;
                 }
               else
                 {
@@ -611,7 +611,7 @@ mempool_multiple_init(FAR const char *name,
               free(arg, mpool);
               mpool = NULL;
             }
-          else if (mpool->headsize == 0)
+          else if (mpool->headsize == 0u)
             {
               mpool->dict_col_num_log2 = fls(config->dict_expendsize /
                                             sizeof(struct mpool_dict_s));
@@ -682,7 +682,7 @@ FAR void *mempool_multiple_alloc(FAR struct mempool_multiple_s *mpool,
               if (mpool->headsize)
                 {
                   *(struct mempool_s **)blk = pool;
-                  blk = (void *)((uintptr_t)(char *)blk + mpool->headsize);
+                  blk = (FAR char *)blk + mpool->headsize;
                 }
 
               break;
