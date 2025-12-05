@@ -37,8 +37,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#  define CAN_BUFFER_SIZE ALIGN_UP(sizeof(struct iob_s) + NET_CAN_PKTSIZE + \
-                                   CONFIG_NET_LL_GUARDSIZE, IOB_ALIGNMENT)
+#define CAN_BUFFER_SIZE ALIGN_UP(ALIGN_UP(sizeof(struct iob_s), \
+                                 IOB_ALIGNMENT) + NET_CAN_PKTSIZE + \
+                                 CONFIG_NET_LL_GUARDSIZE, IOB_ALIGNMENT)
 
 /****************************************************************************
  * Private Data
