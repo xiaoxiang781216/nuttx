@@ -447,17 +447,7 @@ uint32_t devif_conn_event(FAR struct net_driver_s *dev, uint32_t flags,
            * beginning of the list (which will be ignored on this pass)
            */
 
-          if (dev == NULL)
-            {
-              nerr("ERROR: devif_conn_event dev is NULL\n");
-            }
-
-          if (list->priv == NULL)
-            {
-              nerr("ERROR: devif_conn_event list->priv is NULL\n");
-            }
-
-            flags = list->event(dev, list->priv, flags);
+          flags = list->event(dev, list->priv, flags);
         }
 
       /* Set up for the next time through the loop */
