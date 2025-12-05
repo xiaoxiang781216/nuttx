@@ -371,6 +371,9 @@ struct mountpt_operations
   CODE ssize_t (*readlink)(FAR struct inode *mountpt,
                            FAR const char *relpath,
                            FAR char *buf, size_t bufsize);
+  CODE int     (*lstat)(FAR struct inode *mountpt,
+                        FAR const char *relpath,
+                        FAR struct stat *buf);
 #endif
 };
 #endif /* CONFIG_DISABLE_MOUNTPOINT */
