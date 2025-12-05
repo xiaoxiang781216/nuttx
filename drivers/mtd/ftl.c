@@ -112,12 +112,6 @@ static int     ftl_ioctl(FAR struct inode *inode, int cmd,
 static int     ftl_unlink(FAR struct inode *inode);
 #endif
 
-static ssize_t ftl_mtd_bread(FAR struct ftl_struct_s *dev,
-                             off_t startblock, size_t nblocks,
-                             FAR uint8_t *buffer);
-static ssize_t ftl_mtd_erase(FAR struct ftl_struct_s *dev,
-                             off_t startblock);
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -266,168 +260,6 @@ static int ftl_close(FAR struct inode *inode)
 }
 
 /****************************************************************************
- * Name: ftl_is_erasedblock
- *
- * Description: Check whether the specified block is erased block.
- *
- ****************************************************************************/
-
-static bool ftl_is_erasedblock(FAR struct ftl_struct_s *dev, off_t block,
-                               FAR uint8_t *buffer)
-{
-  FAR uint64_t *buf64 = (FAR uint64_t *)buffer;
-  uint64_t cmpbuf = -1;
-  uint8_t erasebyte = 0xff;
-  size_t i;
-  size_t k;
-  ssize_t ret;
-
-  ret = MTD_IOCTL(dev->mtd, MTDIOC_ERASESTATE,
-                 (unsigned long)((uintptr_t)&erasebyte));
-  erasebyte = ret < 0 ? 0xff : erasebyte;
-  memset(&cmpbuf, erasebyte, sizeof(cmpbuf));
-
-  for (i = 0; i < dev->blkper; i++)
-    {
-      ret = ftl_mtd_bread(dev, block * dev->blkper, 1, buffer);
-      if (ret != 1)
-        {
-          ferr("ERROR:ftl_is_erasedlock Read block %" PRIdOFF
-               "failed: %zd\n", block, ret);
-          return false;
-        }
-
-      for (k = 0; k < dev->geo.blocksize / sizeof(cmpbuf); k++)
-        {
-          if (buf64[k] != cmpbuf)
-            {
-              return false;
-            }
-        }
-    }
-
-  return true;
-}
-
-/****************************************************************************
- * Name: ftl_get_endblock
- *
- * Description: Get the last non-empty block from startblock to the end.
- *
- ****************************************************************************/
-
-static off_t ftl_get_endblock(FAR struct ftl_struct_s *dev,
-                              off_t startblock, FAR uint8_t *buffer)
-{
-  off_t endblock = dev->lpcount - 1;
-
-  /* Get the last block which is not empty */
-
-  while (endblock > startblock)
-    {
-      if (!ftl_is_erasedblock(dev, endblock, buffer))
-        {
-          break;
-        }
-
-      endblock--;
-      usleep(1000);
-    }
-
-  return endblock;
-}
-
-/****************************************************************************
- * Name: ftl_mtd_bmove
- *
- * Description: Move all data from startblock to the end block to the next
- *              physical block.
- *
- ****************************************************************************/
-
-static int ftl_mtd_bmove(FAR struct ftl_struct_s *dev, off_t startblock)
-{
-  FAR uint8_t *tmpbuffer;
-  off_t endblock;
-  int ret = OK;
-
-  tmpbuffer = kmm_malloc(dev->geo.blocksize);
-  if (tmpbuffer == NULL)
-    {
-      return -ENOMEM;
-    }
-
-  endblock = ftl_get_endblock(dev, startblock, tmpbuffer);
-  if (endblock <= startblock)
-    {
-      ret = OK;
-      goto out;
-    }
-
-  if (endblock >= dev->lpcount - 1)
-    {
-      ret = -ENOSPC;
-      goto out;
-    }
-
-  fwarn("ftl_mtd_bmove start move block from %" PRIdOFF
-        " to %" PRIdOFF "\n", startblock + 1, endblock);
-
-  while (endblock > startblock)
-    {
-      fwarn("ftl_mtd_bmove move block %" PRIdOFF
-            " to block %" PRIdOFF "\n", endblock, endblock + 1);
-
-      ret = ftl_mtd_erase(dev, endblock + 1);
-      if (ret < 0)
-        {
-          ferr("ERROR:ftl_mtd_bmove Erase block %"
-               PRIdOFF " failed: %d\n", endblock + 1, ret);
-          goto out;
-        }
-
-      for (size_t i = 0; i < dev->blkper; i++)
-        {
-          ret = ftl_mtd_bread(dev, endblock * dev->blkper + i,
-                              1, tmpbuffer);
-          if (ret != 1)
-            {
-              ferr("ERROR:ftl_mtd_bmove Read block %"
-                   PRIdOFF " failed: %d\n", endblock, ret);
-              ret = -EIO;
-              goto out;
-            }
-
-          ret = MTD_BWRITE(dev->mtd,
-                           dev->lptable[endblock + 1] * dev->blkper + i,
-                           1, tmpbuffer);
-          if (ret != 1)
-            {
-              ret = ftl_mtd_bmove(dev, endblock + 1);
-              if (ret < 0)
-                {
-                  ferr("ftl_mtd_bmove failed: %d endblock + 1 %"
-                       PRIdOFF "\n", ret, endblock + 1);
-                  goto out;
-                }
-
-              MTD_MARKBAD(dev->mtd, dev->lptable[endblock + 1]);
-              ftl_update_map(dev, endblock + 1);
-            }
-        }
-
-      endblock--;
-      usleep(1000);
-    }
-
-  fwarn("ftl_mtd_bmove move block done\n");
-
-out:
-  kmm_free(tmpbuffer);
-  return ret;
-}
-
-/****************************************************************************
  * Name: ftl_mtd_bread
  *
  * Description:
@@ -537,23 +369,8 @@ static ssize_t ftl_mtd_bwrite(FAR struct ftl_struct_s *dev, off_t startblock,
           return ret;
         }
 
-      ret = ftl_mtd_bmove(dev, starteraseblock);
-      if (ret < 0)
-        {
-          ferr("ftl_mtd_bmove failed: %zd starteraseblock %"
-               PRIdOFF "\n", ret, starteraseblock);
-          return ret;
-        }
-
       MTD_MARKBAD(dev->mtd, dev->lptable[starteraseblock]);
       ftl_update_map(dev, starteraseblock);
-      ret = ftl_mtd_erase(dev, starteraseblock);
-      if (ret < 0)
-        {
-          ferr("ERROR: Erase block %" PRIdOFF " for write failed: %zd\n",
-               starteraseblock, ret);
-          return ret;
-        }
     }
 }
 
@@ -596,14 +413,6 @@ static ssize_t ftl_mtd_erase(FAR struct ftl_struct_s *dev, off_t startblock)
       if (ret >= 0 || ret == -ENOSYS)
         {
           return OK;
-        }
-
-      ret = ftl_mtd_bmove(dev, startblock);
-      if (ret < 0)
-        {
-          ferr("ftl_mtd_bmove failed: %zd startblock %" PRIdOFF " \n",
-               ret, startblock);
-          return ret;
         }
 
       MTD_MARKBAD(dev->mtd, dev->lptable[startblock]);
