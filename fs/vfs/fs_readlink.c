@@ -133,14 +133,19 @@ ssize_t readlink(FAR const char *path, FAR char *buf, size_t bufsize)
 
       /* Copy the link target path to the user-provided buffer. */
 
-      strlcpy(buf, node->u.i_link, bufsize);
+      ret = strlcpy(buf, node->u.i_link, bufsize);
     }
 
   /* Release our reference on the inode and return the length */
 
   inode_release(node);
   RELEASE_SEARCH(&desc);
-  return strlen(buf);
+
+  /* According to POSIX, readlink doesn't need to null-terminate the buffer.
+   * So we should return ret instead of strlen(buf).
+   */
+
+  return ret;
 
 errout_with_inode:
   inode_release(node);
