@@ -313,8 +313,12 @@ void up_initialize(void)
 #endif
 
 #ifdef CONFIG_AUDIO_TUNNEL
-  audio_tunnel_initialize("a2dpsrc"); /* a2dpsrc0c provide format */
-  audio_tunnel_initialize("a2dpsnk"); /* a2dpsnk0p provide format */
+  audio_tunnel_initialize("a2dpsrc"); /* a2dpsrcc provide format */
+  audio_tunnel_initialize("a2dpsnk"); /* a2dpsnkp provide format */
+  audio_tunnel_initialize("blesrc");  /* blesrcc provide format */
+  audio_tunnel_initialize("blesnk");  /* blesnkp provide format */
+  audio_tunnel_initialize("wtpsrc");  /* wtpsrcc provide format */
+  audio_tunnel_initialize("wtpsnk");  /* wtpsnkp provide format */
 #endif
 
 #ifdef CONFIG_SIM_USB_DEV
