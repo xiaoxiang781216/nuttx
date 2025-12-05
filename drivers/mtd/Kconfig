@@ -50,6 +50,10 @@ config FTL_READAHEAD
 	default n
 	depends on DRVR_READAHEAD
 
+config FTL_USLEEP
+	int "Add usleep to avoid watchdog time out"
+	default 0
+
 config MTD_SECT512
 	bool "512B sector conversion"
 	default n
