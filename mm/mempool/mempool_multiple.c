@@ -399,6 +399,57 @@ mempool_multiple_pool_check(FAR struct mempool_multiple_s *mpool,
 }
 
 /****************************************************************************
+ * Name: mempool_multiple_get_pool_with_dict
+ *
+ * Description:
+ *   Obtain the pool through mpool and blk
+ *
+ * Input Parameters:
+ *   mpool - The handle of the multiple memory pool to be used.
+ *   blk   - The pointer of memory block.
+ *   dict  - The pointer of dict.
+ *
+ * Returned Value:
+ *   Address of the pool to be used or NULL is not find.
+ *
+ ****************************************************************************/
+
+static FAR struct mempool_s *
+mempool_multiple_get_pool_with_dict(FAR struct mempool_multiple_s *mpool,
+                                    FAR void *blk,
+                                    FAR struct mpool_dict_s **dict)
+{
+  FAR struct mpool_dict_s *ret;
+  FAR struct mempool_s *pool = NULL;
+  bool bypass;
+
+  ret = mempool_multiple_get_dict(mpool, blk);
+  if (ret != NULL)
+    {
+      pool = ret->pool;
+    }
+  else if (mpool != NULL && blk != NULL && mpool->headsize != 0u)
+    {
+      bypass = kasan_bypass(true);
+      pool = *(FAR struct mempool_s **)((FAR char *)blk -
+                                        mpool->headsize);
+      if (!mempool_multiple_pool_check(mpool, pool))
+        {
+          pool = NULL;
+        }
+
+      kasan_bypass(bypass);
+    }
+
+  if (dict)
+    {
+      *dict = ret;
+    }
+
+  return pool;
+}
+
+/****************************************************************************
  * Name: mempool_multiple_get_pool
  *
  * Description:
@@ -417,23 +468,7 @@ static FAR struct mempool_s *
 mempool_multiple_get_pool(FAR struct mempool_multiple_s *mpool,
                           FAR void *blk)
 {
-  FAR struct mempool_s *pool = NULL;
-  bool   bypass;
-
-  if (mpool != NULL && blk != NULL && mpool->headsize != 0u)
-    {
-      bypass = kasan_bypass(true);
-      pool = *(struct mempool_s **)((uintptr_t)(FAR char *)blk -
-                                      mpool->headsize);
-      if (!mempool_multiple_pool_check(mpool, pool))
-        {
-          pool = NULL;
-        }
-
-      kasan_bypass(bypass);
-    }
-
-  return pool;
+  return mempool_multiple_get_pool_with_dict(mpool, blk, NULL);
 }
 
 /****************************************************************************
@@ -451,7 +486,7 @@ mempool_multiple_get_pool(FAR struct mempool_multiple_s *mpool,
 static void mempool_multiple_check(FAR struct mempool_s *pool,
                                    FAR void *blk)
 {
-  assert(mempool_multiple_get_dict(pool->priv, blk));
+  assert(mempool_multiple_get_pool(pool->priv, blk));
 }
 
 /****************************************************************************
@@ -706,7 +741,7 @@ FAR void *mempool_multiple_alloc(FAR struct mempool_multiple_s *mpool,
 FAR void *mempool_multiple_realloc(FAR struct mempool_multiple_s *mpool,
                                    FAR void *oldblk, size_t size)
 {
-  FAR struct mpool_dict_s *dict;
+  FAR struct mempool_s *pool;
   FAR void *blk = NULL;
 
   if (oldblk == NULL)
@@ -715,13 +750,13 @@ FAR void *mempool_multiple_realloc(FAR struct mempool_multiple_s *mpool,
     }
   else
     {
-      dict = mempool_multiple_get_dict(mpool, oldblk);
-      if (dict != NULL)
+      pool = mempool_multiple_get_pool(mpool, oldblk);
+      if (pool != NULL)
         {
           blk = mempool_multiple_alloc(mpool, size);
           if (blk != NULL && oldblk != NULL)
             {
-              size = MIN(size, dict->pool->blocksize);
+              size = MIN(size, pool->blocksize);
               memcpy(blk, oldblk, size);
               mempool_multiple_free(mpool, oldblk);
             }
@@ -751,26 +786,21 @@ int mempool_multiple_free(FAR struct mempool_multiple_s *mpool,
                           FAR void *blk)
 {
   FAR struct mpool_dict_s *dict;
-  FAR struct mempool_s *pool = NULL;
+  FAR struct mempool_s *pool;
   int ret = -EINVAL;
   FAR char *start;
 
-  dict = mempool_multiple_get_dict(mpool, blk);
+  pool = mempool_multiple_get_pool_with_dict(mpool, blk, &dict);
   if (dict != NULL)
     {
       start = (char *)dict->addr + mpool->minpoolsize;
-      pool = dict->pool;
     }
-  else
+  else if (pool != NULL)
     {
-      pool = mempool_multiple_get_pool(mpool, blk);
-      if (pool != NULL)
-        {
-          start = pool->initialbase;
-        }
+      start = pool->initialbase;
     }
 
-  if (pool)
+  if (pool != NULL)
     {
       blk = (FAR char *)blk - ((size_t)((FAR char *)kasan_clear_tag(blk) -
                                 (FAR char *)kasan_clear_tag(start)) %
@@ -805,15 +835,14 @@ int mempool_multiple_free(FAR struct mempool_multiple_s *mpool,
 ssize_t mempool_multiple_alloc_size(FAR struct mempool_multiple_s *mpool,
                                     FAR void *blk)
 {
-  FAR struct mpool_dict_s *dict;
+  FAR struct mempool_s *pool;
   ssize_t ret = -EINVAL;
 
   DEBUGASSERT(blk != NULL);
-
-  dict = mempool_multiple_get_dict(mpool, blk);
-  if (dict != NULL)
+  pool = mempool_multiple_get_pool(mpool, blk);
+  if (pool != NULL)
     {
-      ret = (ssize_t)dict->pool->blocksize;
+      ret = (ssize_t)pool->blocksize;
     }
 
   return ret;
@@ -1065,6 +1094,5 @@ void mempool_multiple_deinit(FAR struct mempool_multiple_s *mpool)
 bool mempool_multiple_member(FAR struct mempool_multiple_s *mpool,
                              FAR void *blk)
 {
-  return (mempool_multiple_get_dict(mpool, blk) != NULL ||
-          mempool_multiple_get_pool(mpool, blk) != NULL);
+  return mempool_multiple_get_pool(mpool, blk) != NULL;
 }
