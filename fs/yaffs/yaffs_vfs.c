@@ -158,6 +158,9 @@ static int     yaffs_vfs_symlink(FAR struct inode *mountpt,
 static ssize_t yaffs_vfs_readlink(FAR struct inode *mountpt,
                                   FAR const char *relpath,
                                   FAR char *buf, size_t bufsize);
+static int     yaffs_vfs_lstat(FAR struct inode *mountpt,
+                               FAR const char *relpath,
+                               FAR struct stat *buf);
 #endif
 /****************************************************************************
  * Public Data
@@ -206,7 +209,8 @@ const struct mountpt_operations g_yaffs_operations =
 #ifdef CONFIG_FS_LINKS
   , yaffs_vfs_link,          /* link */
   yaffs_vfs_symlink,         /* symlink */
-  yaffs_vfs_readlink         /* readlink */
+  yaffs_vfs_readlink,        /* readlink */
+  yaffs_vfs_lstat            /* lstat */
 #endif
 };
 
@@ -466,6 +470,31 @@ errout:
 }
 
 /****************************************************************************
+ * Name: yaffs_get_statbuf
+ *
+ * Description:
+ *   Copy the YAFFS-specific stat structure to the standard stat structure.
+ *
+ ****************************************************************************/
+
+static void yaffs_get_statbuf(FAR struct stat *st,
+                              FAR struct yaffs_stat *yst)
+{
+  memset(st, 0, sizeof(*st));
+  st->st_dev   = yst->st_dev;
+  st->st_ino   = yst->st_ino;
+  st->st_mode  = yst->st_mode;
+  st->st_nlink = yst->st_nlink;
+  st->st_uid   = yst->st_uid;
+  st->st_gid   = yst->st_gid;
+  st->st_rdev  = yst->st_rdev;
+  st->st_size  = yst->st_size;
+  st->st_atime = yst->yst_atime;
+  st->st_mtime = yst->yst_mtime;
+  st->st_ctime = yst->yst_ctime;
+}
+
+/****************************************************************************
  * Name: yaffs_vfs_fstat
  *
  * Description:
@@ -488,18 +517,7 @@ static int yaffs_vfs_fstat(FAR const struct file *filep,
       goto errout;
     }
 
-  memset(buf, 0, sizeof(*buf));
-  buf->st_dev   = buffer.st_dev;
-  buf->st_ino   = buffer.st_ino;
-  buf->st_mode  = buffer.st_mode;
-  buf->st_nlink = buffer.st_nlink;
-  buf->st_uid   = buffer.st_uid;
-  buf->st_gid   = buffer.st_gid;
-  buf->st_rdev  = buffer.st_rdev;
-  buf->st_size  = buffer.st_size;
-  buf->st_atime = buffer.yst_atime;
-  buf->st_mtime = buffer.yst_mtime;
-  buf->st_ctime = buffer.yst_ctime;
+  yaffs_get_statbuf(buf, &buffer);
 
   return 0;
 
@@ -836,18 +854,7 @@ static int yaffs_vfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
       goto errout;
     }
 
-  memset(buf, 0, sizeof(*buf));
-  buf->st_dev   = buffer.st_dev;
-  buf->st_ino   = buffer.st_ino;
-  buf->st_mode  = buffer.st_mode;
-  buf->st_nlink = buffer.st_nlink;
-  buf->st_uid   = buffer.st_uid;
-  buf->st_gid   = buffer.st_gid;
-  buf->st_rdev  = buffer.st_rdev;
-  buf->st_size  = buffer.st_size;
-  buf->st_atime = buffer.yst_atime;
-  buf->st_mtime = buffer.yst_mtime;
-  buf->st_ctime = buffer.yst_ctime;
+  yaffs_get_statbuf(buf, &buffer);
 
   return 0;
 
@@ -979,7 +986,36 @@ static ssize_t yaffs_vfs_readlink(FAR struct inode *mountpt,
 
   dev = mountpt_to_yaffs_dev(mountpt);
   ret = yaffs_readlink_reldev(dev, relpath, buf, bufsize);
-  return ret < 0 ? yaffsfs_GetLastError() : 0;
+
+  /* yaffs_readlink_reldev returns 0 on success, but POSIX readlink()
+   * should return the number of bytes placed in buf. Calculate the
+   * actual length of the string that was copied.
+   */
+
+  return ret < 0 ? yaffsfs_GetLastError() : strlen(buf);
+}
+
+/****************************************************************************
+ * Name: yaffs_vfs_lstat
+ ****************************************************************************/
+
+static int yaffs_vfs_lstat(FAR struct inode *mountpt,
+                           FAR const char *relpath, FAR struct stat *buf)
+{
+  FAR struct yaffs_dev *dev;
+  struct yaffs_stat buffer;
+  int ret;
+
+  dev = mountpt_to_yaffs_dev(mountpt);
+  ret = yaffs_lstat_reldev(dev, relpath, &buffer);
+  if (ret < 0)
+    {
+      return yaffsfs_GetLastError();
+    }
+
+  yaffs_get_statbuf(buf, &buffer);
+
+  return 0;
 }
 #endif
 
