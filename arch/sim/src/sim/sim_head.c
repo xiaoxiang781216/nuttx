@@ -110,11 +110,6 @@ static void allsyms_relocate(void)
  ****************************************************************************/
 
 #if defined(CONFIG_SIM_ASAN) || defined(CONFIG_MM_KASAN_SIM)
-noprofile_function const char *__asan_default_suppressions(void)
-{
-  return "interceptor_via_lib:libasan.so";
-}
-
 noprofile_function const char *__asan_default_options(void)
 {
   return "abort_on_error=1"
