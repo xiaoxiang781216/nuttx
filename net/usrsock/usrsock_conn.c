@@ -72,7 +72,6 @@ DEFINE_PER_CPU_BMP(rmutex_t, g_usrsock_lock) = NXRMUTEX_INITIALIZER;
 MEMPOOL_DEFINE(g_usrsock_connections, sizeof(struct usrsock_conn_s),
                CONFIG_NET_USRSOCK_PREALLOC_CONNS,
                CONFIG_NET_USRSOCK_MAX_CONNS, CONFIG_NET_USRSOCK_ALLOC_CONNS);
-#define g_usrsock_connections this_cpu_var_bmp(g_usrsock_connections)
 
 /* A list of all allocated usrsock connections */
 

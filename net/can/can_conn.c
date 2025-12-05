@@ -72,7 +72,6 @@ DEFINE_PER_CPU_BMP(rmutex_t, g_can_connections_lock) = NXRMUTEX_INITIALIZER;
 MEMPOOL_DEFINE(g_can_connections, sizeof(struct can_conn_s),
                CONFIG_CAN_PREALLOC_CONNS, CONFIG_CAN_MAX_CONNS,
                CONFIG_CAN_ALLOC_CONNS);
-#define g_can_connections this_cpu_var_bmp(g_can_connections)
 
 /* A list of all allocated CAN connections */
 

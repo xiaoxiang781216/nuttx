@@ -66,7 +66,6 @@
 MEMPOOL_DEFINE(g_netlink_connections, sizeof(struct netlink_conn_s),
                CONFIG_NETLINK_PREALLOC_CONNS, CONFIG_NETLINK_MAX_CONNS,
                CONFIG_NETLINK_ALLOC_CONNS);
-#define g_netlink_connections this_cpu_var_bmp(g_netlink_connections)
 
 /* A list of all allocated NetLink connections */
 

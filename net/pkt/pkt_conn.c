@@ -78,7 +78,6 @@ DEFINE_PER_CPU_BMP(rmutex_t, g_pkt_connections_lock) = NXRMUTEX_INITIALIZER;
 MEMPOOL_DEFINE(g_pkt_connections, sizeof(struct pkt_conn_s),
                CONFIG_NET_PKT_PREALLOC_CONNS, CONFIG_NET_PKT_MAX_CONNS,
                CONFIG_NET_PKT_ALLOC_CONNS);
-#define g_pkt_connections this_cpu_var_bmp(g_pkt_connections)
 
 /* A list of all allocated packet socket connections */
 

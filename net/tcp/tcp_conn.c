@@ -102,7 +102,6 @@ DEFINE_PER_CPU_BMP(rmutex_t, g_tcp_connections_lock) = NXRMUTEX_INITIALIZER;
 MEMPOOL_DEFINE(g_tcp_connections, sizeof(struct tcp_conn_s),
                CONFIG_NET_TCP_PREALLOC_CONNS, CONFIG_NET_TCP_MAX_CONNS,
                CONFIG_NET_TCP_ALLOC_CONNS);
-#define g_tcp_connections this_cpu_var_bmp(g_tcp_connections)
 
 /* A list of all connected TCP connections */
 

@@ -75,7 +75,6 @@ MEMPOOL_DEFINE(g_fwdpool, sizeof(struct forward_s),
                CONFIG_NET_FORWARD_NSTRUCT,
                CONFIG_IOB_NBUFFERS - CONFIG_IOB_THROTTLE,
                CONFIG_NET_FORWARD_ALLOC_STRUCT);
-#define g_fwdpool this_cpu_var_bmp(g_fwdpool)
 
 /****************************************************************************
  * Public Functions

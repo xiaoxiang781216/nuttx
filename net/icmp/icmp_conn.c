@@ -72,7 +72,6 @@ DEFINE_PER_CPU_BMP(rmutex_t, g_icmp_connections_lock) = NXRMUTEX_INITIALIZER;
 MEMPOOL_DEFINE(g_icmp_connections, sizeof(struct icmp_conn_s),
                CONFIG_NET_ICMP_PREALLOC_CONNS, CONFIG_NET_ICMP_MAX_CONNS,
                CONFIG_NET_ICMP_ALLOC_CONNS);
-#define g_icmp_connections this_cpu_var_bmp(g_icmp_connections)
 
 /* A list of all allocated IPPROTO_ICMP socket connections */
 

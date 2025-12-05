@@ -58,7 +58,6 @@
 MEMPOOL_DEFINE(g_wrbuffer, sizeof(struct tcp_wrbuffer_s),
                CONFIG_NET_TCP_NWRBCHAINS, 0,
                CONFIG_NET_TCP_ALLOC_WRBCHAINS);
-#define g_wrbuffer this_cpu_var_bmp(g_wrbuffer)
 
 /****************************************************************************
  * Public Functions

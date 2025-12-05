@@ -68,7 +68,6 @@ DEFINE_PER_CPU_BSS_BMP(struct net_route_ipv6_queue_s, g_ipv6_routes);
 #ifdef CONFIG_ROUTE_IPv4_RAMROUTE
 MEMPOOL_DEFINE(g_ipv4routes, sizeof(struct net_route_ipv4_entry_s),
                CONFIG_ROUTE_MAX_IPv4_RAMROUTES, 0, 0);
-#define g_ipv4routes this_cpu_var_bmp(g_ipv4routes)
 
 /* The IPv4 routes connections rmutex */
 
@@ -80,7 +79,6 @@ DEFINE_PER_CPU_BMP(rmutex_t, g_ipv4routes_lock) = NXRMUTEX_INITIALIZER;
 #ifdef CONFIG_ROUTE_IPv6_RAMROUTE
 MEMPOOL_DEFINE(g_ipv6routes, sizeof(struct net_route_ipv6_entry_s),
                CONFIG_ROUTE_MAX_IPv6_RAMROUTES, 0, 0);
-#define g_ipv6routes this_cpu_var_bmp(g_ipv6routes)
 
 /* The IPv6 routes connections rmutex */
 

@@ -47,7 +47,6 @@
 /* The array containing all CAN buffers */
 
 MEMPOOL_DEFINE(g_can_buffer, CAN_BUFFER_SIZE, CONFIG_NET_CAN_NBUFFERS, 0, 0);
-#define g_can_buffer this_cpu_var_bmp(g_can_buffer)
 
 /****************************************************************************
  * Private Functions

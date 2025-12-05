@@ -78,8 +78,6 @@ MEMPOOL_DEFINE(g_bluetooth_connections, sizeof(struct bluetooth_conn_s),
                CONFIG_NET_BLUETOOTH_PREALLOC_CONNS,
                CONFIG_NET_BLUETOOTH_MAX_CONNS,
                CONFIG_NET_BLUETOOTH_ALLOC_CONNS);
-#define g_bluetooth_connections_buffer \
-        this_cpu_var_bmp(g_bluetooth_connections_buffer)
 
 /* A list of all allocated packet socket connections */
 

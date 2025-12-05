@@ -77,7 +77,6 @@ MEMPOOL_DEFINE(g_ieee802154_connections, sizeof(struct ieee802154_conn_s),
                CONFIG_NET_IEEE802154_PREALLOC_CONNS,
                CONFIG_NET_IEEE802154_MAX_CONNS,
                CONFIG_NET_IEEE802154_ALLOC_CONNS);
-#define g_ieee802154_connections this_cpu_var_bmp(g_ieee802154_connections)
 
 /* A list of all allocated packet socket connections */
 

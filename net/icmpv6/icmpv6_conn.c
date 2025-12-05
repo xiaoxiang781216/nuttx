@@ -73,7 +73,6 @@ DEFINE_PER_CPU_BMP(rmutex_t, g_icmpv6_connections_lock) =
 MEMPOOL_DEFINE(g_icmpv6_connections, sizeof(struct icmpv6_conn_s),
                CONFIG_NET_ICMPv6_PREALLOC_CONNS, CONFIG_NET_ICMPv6_MAX_CONNS,
                CONFIG_NET_ICMPv6_ALLOC_CONNS);
-#define g_icmpv6_connections this_cpu_var_bmp(g_icmpv6_connections)
 
 /* A list of all allocated IPPROTO_ICMP socket connections */
 
