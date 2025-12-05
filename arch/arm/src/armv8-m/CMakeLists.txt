@@ -19,7 +19,6 @@
 # ##############################################################################
 
 set(SRCS
-    arm_exception.S
     arm_busfault.c
     arm_dbgmonitor.c
     arm_cache.c
@@ -36,8 +35,7 @@ set(SRCS
     arm_svcall.c
     arm_systemreset.c
     arm_trigger_irq.c
-    arm_usagefault.c
-    arm_vectors.c)
+    arm_usagefault.c)
 
 if(CONFIG_ARMV8M_SYSTICK)
   list(APPEND SRCS arm_systick.c)

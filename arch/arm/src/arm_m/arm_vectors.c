@@ -1,5 +1,8 @@
 /****************************************************************************
- * arch/arm/src/armv8-m/arm_vectors.c
+ * arch/arm/src/arm_m/arm_vectors.c
+ *
+ *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
  *   Copyright (C) 2012 Michael Smith. All rights reserved.
  *
@@ -47,10 +50,18 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_ARMV6M
+#  define ARM_PERIPHERAL_INTERRUPTS ARMV6M_PERIPHERAL_INTERRUPTS
+#elif defined(CONFIG_ARCH_ARMV7M)
+#  define ARM_PERIPHERAL_INTERRUPTS ARMV7M_PERIPHERAL_INTERRUPTS
+#elif defined(CONFIG_ARCH_ARMV8M)
+#  define ARM_PERIPHERAL_INTERRUPTS ARMV8M_PERIPHERAL_INTERRUPTS
+#endif
+
 #define IDLE_STACK      (_ebss + CONFIG_IDLETHREAD_STACKSIZE)
 
-#ifndef ARMV8M_PERIPHERAL_INTERRUPTS
-#  error ARMV8M_PERIPHERAL_INTERRUPTS must be defined to the number of I/O interrupts to be supported
+#ifndef ARM_PERIPHERAL_INTERRUPTS
+#  error ARM_PERIPHERAL_INTERRUPTS must be defined to the number of I/O interrupts to be supported
 #endif
 
 /****************************************************************************
@@ -69,8 +80,10 @@ static void start(void)
 
   /* Zero lr to mark the end of backtrace */
 
-  asm volatile ("mov lr, #0\n\t"
-                "b  __start\n\t");
+  asm volatile ("mov lr, %0\n\t"
+                "bx      %1\n\t"
+                :
+                : "r"(0), "r"(__start));
 }
 
 /****************************************************************************
@@ -86,7 +99,7 @@ extern void exception_direct(void);
  * Public data
  ****************************************************************************/
 
-/* The v8m vector table consists of an array of function pointers, with the
+/* The arm_m vector table consists of an array of function pointers, with the
  * first slot (vector zero) used to hold the initial stack pointer.
  *
  * As all exceptions (interrupts) are routed via exception_common, we just
@@ -109,6 +122,6 @@ const void * const _vectors[] locate_data(".vectors")
   /* Vectors 2 - n point directly at the generic handler */
 
   [2 ... NVIC_IRQ_PENDSV] = &exception_common,
-  [(NVIC_IRQ_PENDSV + 1) ... (15 + ARMV8M_PERIPHERAL_INTERRUPTS)]
+  [(NVIC_IRQ_PENDSV + 1) ... (15 + ARM_PERIPHERAL_INTERRUPTS)]
                           = &exception_direct
 };

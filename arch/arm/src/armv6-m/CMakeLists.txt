@@ -18,15 +18,8 @@
 #
 # ##############################################################################
 
-set(SRCS
-    arm_exception.S
-    arm_doirq.c
-    arm_hardfault.c
-    arm_initialstate.c
-    arm_svcall.c
-    arm_systemreset.c
-    arm_trigger_irq.c
-    arm_vectors.c)
+set(SRCS arm_doirq.c arm_hardfault.c arm_initialstate.c arm_svcall.c
+         arm_systemreset.c arm_trigger_irq.c)
 
 if((DEFINED CONFIG_DEBUG_FEATURES AND CONFIG_DEBUG_FEATURES)
    OR (DEFINED CONFIG_ARM_COREDUMP_REGION AND CONFIG_ARM_COREDUMP_REGION))
