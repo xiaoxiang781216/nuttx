@@ -1226,11 +1226,7 @@ static int rptun_notifier(FAR struct notifier_block *block,
         }
       else if (action == SYS_HALT)
         {
-#ifdef CONFIG_RPTUN_AUTO_RESET_IN_REBOOT_NOTIFIER
-          rptun_ioctl_foreach(NULL, RPTUNIOC_RESET,
-                              (unsigned long)BOARDIOC_SOFTRESETCAUSE_PANIC);
-#endif
-          val = BOARDIOC_SOFTRESETCAUSE_ASSERT;
+          val = BOARDIOC_SOFTRESETCAUSE_PANIC;
         }
       else
         {
