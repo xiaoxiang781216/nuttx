@@ -106,6 +106,12 @@ const struct userspace_s userspace locate_data(".userspace") =
   .signal_handler   = up_signal_handler,
 #endif
 
+  /* PPC call trampoline */
+
+#ifdef CONFIG_LIB_PPCCALL
+  .ppccall_handler  = up_ppccall_handler,
+#endif
+
   /* User-space work queue support (declared in include/nuttx/wqueue.h) */
 
 #ifdef CONFIG_LIBC_USRWORK

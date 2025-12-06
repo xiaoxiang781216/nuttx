@@ -34,6 +34,7 @@
 #include <signal.h>
 
 #include <nuttx/percpu.h>
+#include <nuttx/ppccall.h>
 #include <nuttx/lib/builtin.h>
 
 #ifdef CONFIG_BUILD_PROTECTED
@@ -166,6 +167,13 @@ struct userspace_s
 #ifndef CONFIG_DISABLE_SIGNALS
   CODE void (*signal_handler)(_sa_sigaction_t sighand, int signo,
     FAR siginfo_t *info, FAR void *ucontext);
+#endif
+
+  /* Ppccall handler trampoline */
+
+#ifdef CONFIG_LIB_PPCCALL
+  CODE void (*ppccall_handler)(uintptr_t func,
+                               FAR struct ppccall_param_s *param);
 #endif
 
   /* User-space work queue support */

@@ -34,6 +34,7 @@
 #include <arch/irq.h>
 #include <nuttx/addrenv.h>
 #include <nuttx/macro.h>
+#include <nuttx/ppccall.h>
 #include <nuttx/sched.h>
 #include <nuttx/userspace.h>
 
@@ -45,6 +46,36 @@
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#ifdef CONFIG_LIB_PPCCALL
+static bool arm_dispatch_ppccall(uint32_t *regs)
+{
+  struct ppccall_param_s *param = (struct ppccall_param_s *)regs[REG_R1];
+  const struct ppccall_info_s *info = ppccall_find_info(param->nbr);
+
+  if (info == NULL)
+    {
+      serr("ERROR: No ppc info found for func_id %d\n", param->nbr);
+      regs[REG_R0] = -ENOENT;
+      return false;
+    }
+
+  if ((atomic_read(&info->tcb->flags) & TCB_FLAG_TTYPE_MASK) ==
+      TCB_FLAG_TTYPE_KERNEL)
+    {
+      regs[REG_CONTROL] &= ~CONTROL_NPRIV;
+      regs[REG_PC]       = (uint32_t)up_ppccall_handler & ~1;
+    }
+  else
+    {
+      regs[REG_CONTROL] |= CONTROL_NPRIV;
+      regs[REG_PC]       = (uint32_t)USERSPACE->ppccall_handler & ~1;
+    }
+
+  regs[REG_R0] = info->func;
+  return true;
+}
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -309,13 +340,15 @@ int arm_svcall(int irq, void *context, void *arg)
        */
 
       default:
-        {
 #ifdef CONFIG_LIB_SYSCALL
+        /* Verify that the SYS call number is within range */
+
+        DEBUGASSERT(cmd >= CONFIG_SYS_RESERVED && cmd < SYS_maxsyscall);
+#  ifdef CONFIG_LIB_PPCCALL
+      case SYS_ppccall:
+#  endif
+        {
           int index = tcb->xcp.nsyscalls;
-
-          /* Verify that the SYS call number is within range */
-
-          DEBUGASSERT(cmd >= CONFIG_SYS_RESERVED && cmd < SYS_maxsyscall);
 
           /* Make sure that there is a no saved syscall return address.  We
            * cannot yet handle nested system calls.
@@ -323,37 +356,50 @@ int arm_svcall(int irq, void *context, void *arg)
 
           DEBUGASSERT(index < CONFIG_SYS_NNEST);
 
-          /* Use ip to create a debug frame.
-           * we can use gdb backtrace from syscall to user space.
-           */
-
-          regs[REG_IP] = regs[REG_PC];
-
           /* Setup to return to arm_dispatch_syscall in privileged mode. */
 
           tcb->xcp.syscall[index].sysreturn  = regs[REG_PC];
           tcb->xcp.syscall[index].excreturn  = regs[REG_EXC_RETURN];
           tcb->xcp.syscall[index].ctrlreturn = regs[REG_CONTROL];
+
+#  ifdef CONFIG_LIB_PPCCALL
+          if (cmd == SYS_ppccall)
+            {
+              if (!arm_dispatch_ppccall(regs))
+                {
+                  break;
+                }
+            }
+          else
+#  endif
+            {
+              regs[REG_PC]      = (uint32_t)arm_dispatch_syscall & ~1;
+
+              /* Return privileged mode */
+
+              regs[REG_CONTROL] = getcontrol() & ~CONTROL_NPRIV;
+
+              /* Offset R0 to account for the reserved values */
+
+              regs[REG_R0]     -= CONFIG_SYS_RESERVED;
+            }
+
           tcb->xcp.nsyscalls  = index + 1;
 
-          regs[REG_PC]         = (uint32_t)arm_dispatch_syscall & ~1;
+          /* Use ip to create a debug frame.
+           * we can use gdb backtrace from syscall to user space.
+           */
+
+          regs[REG_IP]         = tcb->xcp.syscall[index].sysreturn;
           regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
-
-          /* Return privileged mode */
-
-          regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
-
-          /* Offset R0 to account for the reserved values */
-
-          regs[REG_R0]        -= CONFIG_SYS_RESERVED;
 
           /* Indicate that we are in a syscall handler. */
 
           atomic_or(&tcb->flags, TCB_FLAG_SYSCALL);
-#else
-          svcerr("ERROR: Bad SYS call: %" PRId32 "\n", regs[REG_R0]);
-#endif
         }
+#else
+        svcerr("ERROR: Bad SYS call: %" PRId32 "\n", regs[REG_R0]);
+#endif
         break;
     }
 

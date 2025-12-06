@@ -87,6 +87,7 @@
 
 #include <nuttx/compiler.h>
 #include <nuttx/percpu.h>
+#include <nuttx/ppccall.h>
 #include <nuttx/cache.h>
 #include <nuttx/sched.h>
 
@@ -717,6 +718,30 @@ void up_signal_dispatch(_sa_sigaction_t sighand, int signo,
 #if defined(CONFIG_BUILD_PROTECTED) && !defined(__KERNEL__)
 void up_signal_handler(_sa_sigaction_t sighand, int signo,
                        FAR siginfo_t *info, FAR void *ucontext)
+       noreturn_function;
+#endif
+
+/****************************************************************************
+ * Name: up_ppccall_handler
+ *
+ * Description:
+ *   This function is both the the user-space and kernel-space ppccall
+ *   handler trampoline function. It is called when exit the syscall
+ *   SYS_ppccall, this function is called in user-space and kernel-space
+ *   depends on the target function located at which space.
+ *
+ * Input Parameters:
+ *   func  - the ppccall function to be called
+ *   param - the parameter to be passed to the ppccall function
+ *
+ * Returned Value:
+ *   None.  This function does not return in the normal sense.  It returns
+ *   via the SYS_ppccall_return (see syscall.h)
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_LIB_PPCCALL
+void up_ppccall_handler(uintptr_t func, FAR struct ppccall_param_s *param)
        noreturn_function;
 #endif
 

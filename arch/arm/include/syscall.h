@@ -57,10 +57,12 @@
  * be reserved.
  */
 
-#ifndef CONFIG_BUILD_FLAT
-#  define CONFIG_SYS_RESERVED 9
+#if defined(CONFIG_BUILD_FLAT)
+#  define CONFIG_SYS_RESERVED   5
+#elif defined(CONFIG_LIB_PPCCALL)
+#  define CONFIG_SYS_RESERVED   10
 #else
-#  define CONFIG_SYS_RESERVED 5
+#  define CONFIG_SYS_RESERVED   9
 #endif
 
 /* Cortex-M system calls ****************************************************/
@@ -128,6 +130,17 @@
  */
 
 #define SYS_signal_handler_return (8)
+
+#ifdef CONFIG_LIB_PPCCALL
+/* SYS call 9:
+ *
+ * void ppccall(struct ppccall_param_s *param);
+ */
+
+#  define SYS_ppccall             (9)
+#  define SYS_ppccall_return      SYS_syscall_return
+#endif /* CONFIG_LIB_PPCCALL */
+
 #endif /* !CONFIG_BUILD_FLAT */
 
 /****************************************************************************
