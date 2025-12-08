@@ -142,6 +142,7 @@ void iob_initialize(void)
   int i;
   uintptr_t buf;
   irqstate_t flags;
+  size_t offset;
 
   flags = spin_lock_irqsave(&g_iob_lock);
 
@@ -157,8 +158,12 @@ void iob_initialize(void)
    * aligned to the IOB_ALIGNMENT memory boundary
    */
 
-  buf = ALIGN_UP((uintptr_t)g_iob_buffer + offsetof(struct iob_s, io_data),
-                 IOB_ALIGNMENT) - offsetof(struct iob_s, io_data);
+#ifdef CONFIG_IOB_ALLOC
+  offset = sizeof(struct iob_s);
+#else
+  offset = offsetof(struct iob_s, io_data);
+#endif
+  buf = ALIGN_UP((uintptr_t)g_iob_buffer + offset, IOB_ALIGNMENT) - offset;
 
   /* Get I/O buffer instance from the start address and add each I/O buffer
    * to the free list
