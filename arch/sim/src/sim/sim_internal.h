@@ -117,17 +117,21 @@
       {                                                         \
         xcpt_reg_t *env = restoreregs;                          \
         uint32_t *flags = (uint32_t *)&env[JB_FLAG];            \
-        struct tcb_s *tcb_ = g_running_task;       \
                                                                 \
         up_irq_restore(((uint64_t)flags[1] << 32) | flags[0]);  \
                                                                 \
         host_errno_set(env[JB_ERRNO]);                          \
-        __sanitizer_start_switch_fiber(NULL,                    \
-                                       tcb_->stack_base_ptr,    \
-                                       tcb_->adj_stack_size);   \
         longjmp(env, 1);                                        \
       }                                                         \
     while (0)
+
+#  define sim_asan_start_switch(tcb)                            \
+    __sanitizer_start_switch_fiber(NULL,                        \
+                                   (tcb)->stack_base_ptr,       \
+                                   (tcb)->adj_stack_size)
+
+#  define sim_asan_finish_switch()                              \
+    __sanitizer_finish_switch_fiber(NULL, NULL, NULL)
 #else
 #  define sim_fullcontextrestore(restoreregs)                   \
     do                                                          \
@@ -141,6 +145,9 @@
         longjmp(env, 1);                                        \
       }                                                         \
     while (0)
+
+#  define sim_asan_start_switch(tcb)
+#  define sim_asan_finish_switch()
 #endif
 
 #define host_uninterruptible(func, ...)                         \

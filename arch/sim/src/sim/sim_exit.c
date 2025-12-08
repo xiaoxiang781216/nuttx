@@ -72,6 +72,7 @@ void up_exit(int status)
 
   /* Then switch contexts */
 
+  sim_asan_start_switch(tcb);
   sim_fullcontextrestore(tcb->xcp.regs);
 
   /* The function does not return */

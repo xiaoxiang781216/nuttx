@@ -25,12 +25,10 @@
 #include <nuttx/config.h>
 
 #include <stdbool.h>
+#include <setjmp.h>
 #include <nuttx/arch.h>
 #include <sched/sched.h>
 #include <nuttx/init.h>
-#ifdef CONFIG_SIM_ASAN
-#  include <sanitizer/common_interface_defs.h>
-#endif
 
 #include "sim_internal.h"
 
@@ -57,6 +55,7 @@ void *sim_doirq(int irq, void *context)
 
   xcpt_reg_t tmp[XCPTCONTEXT_REGS];
   void *regs = (void *)tmp;
+  bool switch_ctx = false;
   int ret;
 
   /* current_regs non-zero indicates that we are processing an interrupt.
@@ -90,6 +89,7 @@ void *sim_doirq(int irq, void *context)
            */
 
           *running_task = this_task();
+          switch_ctx = true;
         }
 
       regs = up_current_regs();
@@ -101,17 +101,26 @@ void *sim_doirq(int irq, void *context)
 
       up_set_current_regs(NULL);
 
-      /* Then switch contexts */
+      /* Then switch contexts. Only call fiber switch API when actually
+       * switching to a different task, not when returning to the same
+       * task that was interrupted. This prevents corrupting ASan's
+       * internal state during signal handling.
+       */
+
+      if (switch_ctx)
+        {
+          sim_asan_start_switch(this_task());
+        }
 
       sim_fullcontextrestore(regs);
     }
-  else
+  else if (switch_ctx)
     {
-#ifdef CONFIG_SIM_ASAN
-      /* Notify ASan that fiber switch has completed */
+      /* Notify ASan that fiber switch has completed, but only if we
+       * actually switched to a different task.
+       */
 
-      __sanitizer_finish_switch_fiber(NULL, NULL, NULL);
-#endif
+      sim_asan_finish_switch();
     }
 
   return NULL;

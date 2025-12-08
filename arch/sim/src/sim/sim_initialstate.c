@@ -44,11 +44,9 @@ static void pre_start(void)
 {
   struct tcb_s *tcb = this_task();
 
-#ifdef CONFIG_SIM_ASAN
   /* Notify ASan that fiber switch has completed */
 
-  __sanitizer_finish_switch_fiber(NULL, NULL, NULL);
-#endif
+  sim_asan_finish_switch();
 
   /* Enable signal delivery */
 
