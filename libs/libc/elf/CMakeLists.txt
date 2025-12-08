@@ -45,17 +45,18 @@ if(CONFIG_LIBC_ELF)
     elf_insert.c
     elf_remove.c)
 
-  list(APPEND SRCS elf_globals.S)
+  if(NOT CONFIG_TRICORE_TOOLCHAIN_TASKING)
+    list(APPEND SRCS elf_globals.S)
+    set(ELF_LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/gnu-elf.ld")
+
+    nuttx_generate_preprocess_target(
+      SOURCE_FILE ${NUTTX_DIR}/libs/libc/elf/gnu-elf.ld.in TARGET_FILE
+      ${ELF_LD_SCRIPT_TMP})
+
+    add_custom_target(elfldscript_tmp DEPENDS ${ELF_LD_SCRIPT_TMP})
+    add_dependencies(nuttx elfldscript_tmp)
+    add_dependencies(apps_post elfldscript_tmp)
+  endif()
 
   target_sources(c PRIVATE ${SRCS})
-
-  set(ELF_LD_SCRIPT_TMP "${CMAKE_BINARY_DIR}/gnu-elf.ld")
-
-  nuttx_generate_preprocess_target(
-    SOURCE_FILE ${NUTTX_DIR}/libs/libc/elf/gnu-elf.ld.in TARGET_FILE
-    ${ELF_LD_SCRIPT_TMP})
-
-  add_custom_target(elfldscript_tmp DEPENDS ${ELF_LD_SCRIPT_TMP})
-  add_dependencies(nuttx elfldscript_tmp)
-  add_dependencies(apps_post elfldscript_tmp)
 endif()

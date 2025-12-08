@@ -69,8 +69,13 @@ struct eptable_s
  * Public Data
  ****************************************************************************/
 
+#ifdef CONFIG_TRICORE_TOOLCHAIN_TASKING
+FAR struct eptable_s *global_table;
+int nglobals;
+#else
 extern struct eptable_s global_table[];
 extern int nglobals;
+#endif
 
 /****************************************************************************
  * Private Functions

@@ -261,3 +261,158 @@ function(nuttx_find_toolchain_lib)
     nuttx_add_extra_library(${TASKING_ROOT_PATH}/lib/tc18/${ARGN})
   endif()
 endfunction()
+
+function(nuttx_add_elf_app)
+  nuttx_parse_function_args(
+    FUNC
+    nuttx_add_elf_app
+    ONE_VALUE
+    NAME
+    PRIORITY
+    STACKSIZE
+    UID
+    GID
+    MODE
+    HEAPSIZE
+    MODULE
+    DYNLIB
+    MULTI_VALUE
+    COMPILE_FLAGS
+    LINK_FLAGS
+    INCLUDE_DIRECTORIES
+    SRCS
+    DEPENDS
+    DEFINITIONS
+    OPTIONS
+    ARGN
+    ${ARGN})
+
+  # create as standalone executable (loadable application or "module")
+  set(ELF_TARGET "${NAME}")
+
+  # determine the compiled elf mode
+  if(CONFIG_BUILD_KERNEL)
+    set(KERNEL_ELF_MODE True) # kernel elf will link all user libs
+  elseif("${MODULE}" STREQUAL "m")
+    set(LOADABLE_ELF_MODE True) # loadable elf only link extra libs
+  elseif("${DYNLIB}" STREQUAL "y")
+    set(DYNLIB_ELF_MODE True) # dynlib elf dont need start obj and other lib
+  endif()
+
+  # Use ELF capable toolchain, by building manually and overwriting the non-elf
+  # output
+  if(NOT CMAKE_C_ELF_COMPILER)
+    set(ELF_NAME "${NAME}")
+    set(ELF_TARGET "ELF_${NAME}")
+    add_library(${ELF_TARGET} ${SRCS})
+    add_dependencies(${ELF_TARGET} apps_post)
+    if(TARGET STARTUP_OBJS)
+      add_dependencies(${ELF_TARGET} STARTUP_OBJS)
+    endif()
+
+    if(STACKSIZE)
+      set(SYMBOL_STACKSIZE --add-symbol nx_stacksize=${STACKSIZE})
+    endif()
+    if(PRIORITY)
+      if(PRIORITY STREQUAL "SCHED_PRIORITY_DEFAULT")
+        set(PRIORITY "0")
+      endif()
+      set(SYMBOL_PRIORITY --add-symbol nx_priority=${PRIORITY})
+    endif()
+    if(CONFIG_SCHED_USER_IDENTITY)
+      if(UID)
+        set(SYMBOL_UID --add-symbol nx_uid=${UID})
+      endif()
+      if(GID)
+        set(SYMBOL_GID --add-symbol nx_gid=${GID})
+      endif()
+      if(MODE)
+        set(SYMBOL_MODE --add-symbol nx_mode=${MODE})
+      endif()
+    endif()
+    if(CONFIG_MM_TASK_HEAP)
+      if(HEAPSIZE)
+        set(SYMBOL_HEAPSIZE --add-symbol nx_heapsize=${HEAPSIZE})
+      else()
+        set(SYMBOL_HEAPSIZE --add-symbol
+                            nx_heapsize=${CONFIG_MM_TASK_HEAP_DEFAULT_SIZE})
+      endif()
+    endif()
+    get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
+    add_custom_command(
+      TARGET ${ELF_TARGET}
+      POST_BUILD
+      COMMAND
+        # add default link option
+        ${CMAKE_LINKER} -r -e__start -I${CMAKE_BINARY_DIR}/include
+        -I${NUTTX_DIR}/include
+        --lsl-file=${CMAKE_SOURCE_DIR}/libs/libc/elf/tasking-elf.lsl
+        # add global MOD link option if dynlib link
+        $<$<BOOL:${DYNLIB_ELF_MODE}>:$<TARGET_PROPERTY:nuttx_global,NUTTX_MOD_APP_LINK_OPTIONS>>
+        # add global ELF link option if m&kernel link
+        $<$<OR:$<BOOL:${KERNEL_ELF_MODE}>,$<BOOL:${LOADABLE_ELF_MODE}>>:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_APP_LINK_OPTIONS>>
+        # add local link option lastest
+        ${LINK_FLAGS}
+        # link startup obj if m&kernel link
+        $<$<AND:$<TARGET_EXISTS:STARTUP_OBJS>,$<NOT:$<BOOL:${DYNLIB_ELF_MODE}>>>:$<TARGET_OBJECTS:STARTUP_OBJS>>
+        # link user lib if kernel link
+        $<$<BOOL:${KERNEL_ELF_MODE}>:$<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_LINK_LIBRARIES>>>
+        # always link extra libs
+        $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_LINK_EXTRA_LIBRARIES>>
+        $<TARGET_FILE:${ELF_TARGET}> -o
+        ${CMAKE_BINARY_DIR}/bin_debug/${ELF_NAME}
+      COMMAND
+        ${CMAKE_OBJCOPY} ${SYMBOL_STACKSIZE} ${SYMBOL_PRIORITY} ${SYMBOL_UID}
+        ${SYMBOL_GID} ${SYMBOL_MODE} ${SYMBOL_HEAPSIZE}
+        ${CMAKE_BINARY_DIR}/bin_debug/${ELF_NAME}
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/bin_debug/${ELF_NAME}
+              ${CMAKE_BINARY_DIR}/bin/${ELF_NAME}
+      COMMAND ${CMAKE_COMMAND} -E remove
+              ${CMAKE_BINARY_DIR}/bin_debug/${ELF_NAME}.mdf
+      COMMENT "Building ELF:${ELF_NAME}"
+      COMMAND_EXPAND_LISTS)
+  else()
+    add_executable(${ELF_TARGET} ${SRCS})
+    target_link_options(
+      ${ELF_TARGET} PRIVATE
+      $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_APP_LINK_OPTIONS>>)
+  endif()
+
+  # easy access to final ELF, regardless of how it was created
+  set_property(TARGET ${ELF_TARGET}
+               PROPERTY ELF_BINARY ${CMAKE_CURRENT_BINARY_DIR}/${ELF_TARGET})
+
+  nuttx_add_library_internal(${ELF_TARGET})
+
+  # loadable build requires applying ELF flags to all applications
+
+  if(CONFIG_MODULES)
+    add_dependencies(nuttx_apps_mksymtab ${ELF_TARGET})
+    target_compile_options(
+      ${ELF_TARGET}
+      PRIVATE
+        $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_ELF_APP_COMPILE_OPTIONS>>
+    )
+  endif()
+
+  if(DYNLIB_ELF_MODE)
+    add_dependencies(nuttx_apps_mksymtab ${ELF_TARGET})
+    target_compile_options(
+      ${ELF_TARGET}
+      PRIVATE
+        $<GENEX_EVAL:$<TARGET_PROPERTY:nuttx_global,NUTTX_MOD_APP_COMPILE_OPTIONS>>
+    )
+  endif()
+
+  install(TARGETS ${ELF_TARGET})
+  set_property(
+    TARGET nuttx
+    APPEND
+    PROPERTY NUTTX_LOADABLE_APPS ${ELF_TARGET})
+
+  # Return target name to parent scope
+  set(RESULT_TARGET
+      ${ELF_TARGET}
+      PARENT_SCOPE)
+
+endfunction()
