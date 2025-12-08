@@ -121,4 +121,12 @@ config SERIAL_T32TERM_POLLING_INTERVAL
 
 endif # SERIAL_T32TERM
 
+config HOSTFS_T32TERM
+	bool "Host FS Trace32 Term"
+	select TRACE32_TERM
+	depends on FS_HOSTFS
+	default n
+	---help---
+		Use Trace32 Term protocol for host filesystem access
+
 endmenu # Trace32 drivers

@@ -685,6 +685,19 @@ static const char *g_white_content_list[] =
   "T32_Term_IsWritable",
 
   /* Ref:
+   * drivers/trace32/t32term/t32term.c
+   */
+
+  "T32_Term_OpenFile",
+  "T32_Term_CloseFile",
+  "T32_Term_ReadFile",
+  "T32_Term_WriteFile",
+  "T32_Term_SeekFile",
+  "T32_Term_TellSizeFile",
+  "T32_Term_Rename",
+  "T32_Term_Remove",
+
+  /* Ref:
    * fs/fatfs/fatfs_vfs.c
    */
 
