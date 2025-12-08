@@ -117,7 +117,8 @@ DEFINE_PER_CPU_BSS_BMP(uint32_t, g_devfreed);
  * Private Data
  ****************************************************************************/
 
-static DEFINE_PER_CPU_BMP(mutex_t, g_netdevices_lock) = NXMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BMP(rmutex_t, g_netdevices_lock) =
+                                            NXRMUTEX_INITIALIZER;
 #define g_netdevices_lock this_cpu_var_bmp(g_netdevices_lock)
 
 /****************************************************************************
@@ -241,7 +242,7 @@ static int get_ifindex(void)
 
 void netdev_list_lock(void)
 {
-  nxmutex_lock(&g_netdevices_lock);
+  nxrmutex_lock(&g_netdevices_lock);
 }
 
 /****************************************************************************
@@ -254,7 +255,7 @@ void netdev_list_lock(void)
 
 void netdev_list_unlock(void)
 {
-  nxmutex_unlock(&g_netdevices_lock);
+  nxrmutex_unlock(&g_netdevices_lock);
 }
 
 /****************************************************************************
