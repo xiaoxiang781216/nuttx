@@ -35,19 +35,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Since the tricore hardware timer triggers an interrupt only when the
- * compare value is equal to the counter, setting a compare value that has
- * already timed out will not trigger an interrupt. To avoid missing
- * interrupts when setting the timer, we should set a minimum delay.
- * The minimum delay is calculated based on the CPU frequency and the timer
- * frequency. We assume that the worst-case execution time for setting the
- * timer does not exceed 40 CPU cycles, and calculate the minimum timer
- * delay accordingly.
- * 40 CPU cycles (100ns at 400Mhz) ~ 10 timer cycles (for 100 Mhz timer).
- */
-
-#define TRICORE_SYSTIMER_MIN_DELAY \
-  (40ull * SCU_FREQUENCY / IFX_CFG_CPU_CLOCK_FREQUENCY)
+#define systimer_trigger_irq TRICORE_GPSR_IRQNUM(up_this_cpu(), up_this_cpu())
 
 /****************************************************************************
  * Private Types
@@ -102,6 +90,7 @@ static void tricore_systimer_updata(struct oneshot_lowerhalf_s *lower,
   irqstate_t flags;
   uint64_t   expected;
   uint64_t   current;
+  cpu_set_t  cpuset;
 
   flags = up_irq_save();
 
@@ -115,17 +104,20 @@ static void tricore_systimer_updata(struct oneshot_lowerhalf_s *lower,
       expected = expected - IfxStm_get(priv->freerun_tbase) + current;
     }
 
-  /* Mini_delay time processing */
-
-  expected = expected < current + TRICORE_SYSTIMER_MIN_DELAY ?
-             current + TRICORE_SYSTIMER_MIN_DELAY : expected;
-
   /* The comparator register is 32-bits. */
 
   DEBUGASSERT(expected <= current + UINT32_MAX);
 
   IfxStm_updateCompare(priv->tbase, IfxStm_Comparator_0,
                        (uint32_t)(expected & UINT32_MAX));
+
+  if (IfxStm_get(priv->tbase) > expected)
+    {
+      IfxStm_clearCompareFlag(priv->tbase, IfxStm_Comparator_0);
+      CPU_ZERO(&cpuset);
+      CPU_SET(up_this_cpu(), &cpuset);
+      up_trigger_irq(systimer_trigger_irq, cpuset);
+    }
 
   up_irq_restore(flags);
 }
@@ -314,7 +306,9 @@ tricore_systimer_initialize(volatile void *tbase, volatile void *fr_tbase,
   IfxStm_enableComparatorInterrupt(tbase, IfxStm_Comparator_0);
 
   irq_attach(irq, tricore_systimer_interrupt, priv);
+  irq_attach(systimer_trigger_irq, tricore_systimer_interrupt, priv);
   up_enable_irq(irq);
+  up_enable_irq(systimer_trigger_irq);
 
   return (struct oneshot_lowerhalf_s *)priv;
 }
