@@ -113,6 +113,22 @@
 #define hashtable_for_every_possible_safe_n(table, item, temp, key, size) \
   sq_for_every_safe(&table[HASH(key, LOG2_FLOOR(size))], item, temp)
 
+/* Iterate over all possible entries hashing to the same bucket.
+ * entry should be the container structure type.
+ */
+
+#define hashtable_for_every_entry_possible(table, entry, key, type, member) \
+  sq_for_every_entry(&table[HASH(key, hashtable_bits(table))], entry, type, member)
+
+#define hashtable_for_every_entry_possible_safe(table, entry, temp, key, type, member) \
+  sq_for_every_entry_safe(&table[HASH(key, hashtable_bits(table))], entry, temp, type, member)
+
+#define hashtable_for_every_entry_possible_n(table, entry, key, size, type, member) \
+  sq_for_every_entry(&table[HASH(key, LOG2_FLOOR(size))], entry, type, member)
+
+#define hashtable_for_every_entry_possible_safe_n(table, entry, temp, key, size, type, member) \
+  sq_for_every_entry_safe(&table[HASH(key, LOG2_FLOOR(size))], entry, temp, type, member)
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
