@@ -268,7 +268,7 @@ static void noteram_timeout_handler(wdparm_t arg)
 {
   FAR struct noteram_driver_s *drv = (FAR struct noteram_driver_s *)arg;
 
-  if (drv->pfd)
+  if (drv->pfd && (noteram_unread_length(drv) >= drv->threshold))
     {
       poll_notify(&drv->pfd, 1, POLLIN);
     }
