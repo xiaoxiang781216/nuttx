@@ -328,6 +328,7 @@ exception_common:
 #endif /* CONFIG_ARCH_ARMV6M */
 
 	msr		control, r12				/* Restore control */
+	isb		sy
 
 	/* Always return with R14 containing the special value that will: (1)
 	 * return to thread mode, and (2) select the correct stack.
