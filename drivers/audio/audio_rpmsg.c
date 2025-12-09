@@ -632,7 +632,7 @@ static int audio_rpmsg_ioctl_handler(FAR struct rpmsg_endpoint *ept,
     }
 
   return audio_rpmsg_send_response(aud, &req->header, len,
-                                   ret >= 0 ? req->arglen : ret);
+                                   ret >= 0 ? (int)req->arglen : ret);
 }
 
 static int audio_rpmsg_send_data_handler(FAR struct rpmsg_endpoint *ept,
