@@ -666,6 +666,12 @@ static const char *g_white_content_list[] =
   "LBA_t",
   "FATFS_BytesPerSectorShift_FIELD",
 
+  /* Ref:
+   * apps/audioutils/alsa-lib/pcm_dmix.c
+   */
+
+  "SpeexResamplerState",
+
   NULL
 };
 
