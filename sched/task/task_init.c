@@ -125,9 +125,9 @@ static int task_setup(FAR struct tcb_s *tcb, const char *name, main_t entry,
                     {
                       ret = up_addrenv_kstackalloc(tcb);
                     }
-#endif
 
                   if (ret >= OK)
+#endif
                     {
                       /* Setup to pass parameters to the new task */
 
