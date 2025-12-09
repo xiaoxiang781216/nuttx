@@ -575,6 +575,10 @@ static inline_function int nxmutex_post(FAR sem_t *sem)
       FAR atomic_t *val = NXSEM_MHOLDER(sem);
       int32_t old = (atomic_read(val) & (~NXSEM_MBLOCKING_BIT));
 
+      /* Allow NXSEM_NO_MHOLDER for reset scenario */
+
+      DEBUGASSERT(old == _SCHED_GETTID() || old == NXSEM_NO_MHOLDER);
+
       if (atomic_try_cmpxchg_release(val, &old, NXSEM_NO_MHOLDER))
         {
           return OK;

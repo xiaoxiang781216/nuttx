@@ -776,6 +776,7 @@ int nxrmutex_unlock(FAR rmutex_t *rmutex)
 {
   int ret = OK;
 
+  DEBUGASSERT(nxrmutex_is_hold(rmutex));
   DEBUGASSERT(rmutex->count > 0u);
 
   if (--rmutex->count == 0u)
