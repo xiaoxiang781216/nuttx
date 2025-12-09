@@ -25,7 +25,9 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/compiler.h>
 
+#include <stdint.h>
 #include <sys/types.h>
 #include <sched.h>
 #include <fcntl.h>
@@ -81,8 +83,13 @@
 #  define TASK_NAME_SIZE 16
 #endif
 
+/* Magic to indicate buffer is being initialized, or initialized.
+ * When initialized(ready), lower 16 bits holds the size of the buffer,
+ * higher 16 bits holds fixed magic number 0x6f6e ('on')
+ */
+
 #define NOTERAM_MAGIC_INIT  0x6e6f7466
-#define NOTERAM_MAGIC_READY 0x6e6f7467
+#define NOTERAM_MAGIC_READY (sizeof(struct noteram_header_s) | 0x6f6e0000)
 
 #define NOTERAM_BUFSIZE (CONFIG_DRIVERS_NOTERAM_BUFSIZE -                    \
                          sizeof(struct noteram_header_s))
@@ -99,13 +106,14 @@ struct noteram_ratelimit_s
   unsigned long begin;   /* The timestamp in seconds */
 };
 
+aligned_data(sizeof(uintptr_t))
 struct noteram_header_s
 {
-  volatile unsigned int head;
-  volatile unsigned int tail;
-  volatile unsigned int read;
-  spinlock_t lock;
   atomic_t magic;
+  volatile uint32_t head;
+  volatile uint32_t tail;
+  volatile uint32_t read;
+  spinlock_t lock;
 };
 
 struct noteram_driver_s
@@ -441,7 +449,7 @@ static inline unsigned int noteram_next(FAR struct noteram_driver_s *drv,
 
 static unsigned int noteram_length(FAR struct noteram_driver_s *drv)
 {
-  unsigned int head = drv->header->head;
+  uint32_t head = drv->header->head;
   unsigned int tail = drv->header->tail;
 
   if (tail > head)
@@ -468,8 +476,8 @@ static unsigned int noteram_length(FAR struct noteram_driver_s *drv)
 
 static unsigned int noteram_unread_length(FAR struct noteram_driver_s *drv)
 {
-  unsigned int head = drv->header->head;
-  unsigned int read = drv->header->read;
+  uint32_t head = drv->header->head;
+  uint32_t read = drv->header->read;
 
   if (read > head)
     {
@@ -546,8 +554,8 @@ static ssize_t noteram_get(FAR struct noteram_driver_s *drv,
                            FAR uint8_t *buffer, size_t buflen)
 {
   FAR struct note_common_s *note;
-  unsigned int remaining;
-  unsigned int read;
+  uint32_t remaining;
+  uint32_t read;
   ssize_t notelen;
   size_t circlen;
 
@@ -583,7 +591,7 @@ static ssize_t noteram_get(FAR struct noteram_driver_s *drv,
 
   /* Loop until the note has been transferred to the user buffer */
 
-  remaining = (unsigned int)notelen;
+  remaining = (uint32_t)notelen;
   while (remaining > 0)
     {
       /* Copy the next byte at the read index */
@@ -948,9 +956,9 @@ static void noteram_add(FAR struct note_driver_s *driver,
 {
   FAR const char *buf = note;
   FAR struct noteram_driver_s *drv = (FAR struct noteram_driver_s *)driver;
-  unsigned int head;
-  unsigned int remain;
-  unsigned int space;
+  uint32_t head;
+  uint32_t remain;
+  uint32_t space;
   irqstate_t flags;
 
   /* Initialize the noteram header if it has not been initialized yet. */
@@ -1683,6 +1691,8 @@ noteram_initialize_with_buffer(FAR const char *devpath,
   FAR struct noteram_driver_s *drv;
   size_t len = 0;
   int ret;
+
+  DEBUGASSERT(NOTE_ALIGN((uintptr_t)buffer) == (uintptr_t)buffer);
 
   if (!buffer || bufsize <= sizeof(struct noteram_header_s))
     {
