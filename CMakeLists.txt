@@ -964,9 +964,12 @@ if(CONFIG_BUILD_KERNEL)
 endif()
 
 if(CONFIG_ELF_FIXUP)
+  get_target_property(NUTTX_INCLUDES nuttx NUTTX_INCLUDE_DIRECTORIES)
+  list(TRANSFORM NUTTX_INCLUDES PREPEND -I)
   get_property(NUTTX_EXTRA_FLAGS GLOBAL PROPERTY NUTTX_EXTRA_FLAGS)
-  set(CMAKE_C_ELF_FLAGS -I${CMAKE_SOURCE_DIR}/include
-                        -I${CMAKE_BINARY_DIR}/include ${NUTTX_EXTRA_FLAGS})
+  set(CMAKE_C_ELF_FLAGS
+      -I${CMAKE_SOURCE_DIR}/include -I${CMAKE_BINARY_DIR}/include
+      ${NUTTX_INCLUDES} ${NUTTX_EXTRA_FLAGS})
   if(CONFIG_BUILD_PROTECTED)
     set(FINNAL_ELF nuttx_user)
   else()
@@ -978,7 +981,7 @@ if(CONFIG_ELF_FIXUP)
     POST_BUILD
     COMMAND
       ${CMAKE_COMMAND} -E env OBJCOPY=${CMAKE_OBJCOPY}; env
-      CFLAGS="${CMAKE_C_ELF_FLAGS}"; env LD=${CMAKE_LD}; env
+      CFLAGS="${CMAKE_C_ELF_FLAGS}"; env LD=${CMAKE_LINKER}; env
       CC=${CMAKE_C_COMPILER}; ${NUTTX_DIR}/tools/elf_fixup.py --indir
       ${CMAKE_BINARY_DIR}/bin_debug --flash_start
       ${CONFIG_ELF_FIXUP_FLASH_START} --flash_size

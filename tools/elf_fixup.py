@@ -23,6 +23,7 @@ import argparse
 import logging
 import os
 import subprocess
+import tempfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -154,6 +155,94 @@ class GnuToolchain(Toolchain):
         ]
         cmd.extend(nostart)
         run_command(cmd)
+
+    def run_hex(self, args, in_elf, out_hex, extern=[]):
+        cmd = [args.objcopy, "-O", "ihex", in_elf, out_hex] + extern
+        run_command(cmd)
+
+
+class TaskingToolchain(Toolchain):
+
+    def run_cpp(
+        self,
+        args,
+        flash_start: int,
+        ram_start: int,
+        heap_size: int,
+        extern_symbols: str,
+        out_ld: str,
+        flags: list[str] = [],
+    ):
+        tmp_lsl = tempfile.NamedTemporaryFile(suffix=".cpp", mode="w")
+        tmp_out = tempfile.NamedTemporaryFile(suffix=".lsl", mode="w+")
+        fd = open(str(nuttxroot / "libs" / "libc" / "elf" / "tasking-elf.lsl"), "r")
+        tmp_lsl.write(fd.read())
+        tmp_lsl.flush()
+        fd.close()
+
+        extern_symbols_str = ""
+        for name, addr in extern_symbols.items():
+            extern_symbols_str += f'"{name}"=0x{addr:x};'
+
+        toolchain_lsl = args.cc.replace("bin/cctc", "include.lsl")
+        cmd = (
+            [
+                args.cc,
+                "-E",
+                "--preprocess=+noline",
+                tmp_lsl.name,
+                f"-DTEXT={hex(flash_start)}",
+                f"-DDATA={hex(ram_start)}",
+                f"-DEXTERN_SYMBOLS={extern_symbols_str}",
+                f"-I{toolchain_lsl}",
+                f"-o{tmp_out.name}",
+            ]
+            + args.cflags
+            + flags
+        )
+
+        if heap_size > 0:
+            cmd.append(f"-DHEAPSIZE={heap_size}")
+
+        run_command(cmd)
+        tmp_lsl.close()
+        tmp_out.flush()
+        tmp_out.seek(0)
+        with open(out_ld, "w") as f:
+            for line in tmp_out:
+                if line.strip() == "" or "__builtin" in line:
+                    continue
+                f.write(line)
+
+    def run_cc(self, args, in_src: str, out_obj: str):
+        cmd = [
+            args.cc,
+            "--create",
+            in_src,
+            "-o",
+            out_obj,
+        ] + args.cflags
+        run_command(cmd)
+
+    def run_ld(self, args, in_elf, in_ld, out_elf, gc_sections=True):
+
+        tmp = tempfile.NamedTemporaryFile(suffix=".o", mode="wb")
+        with open(in_elf, "rb") as f:
+            tmp.write(f.read())
+            tmp.flush()
+
+        cmd = [
+            args.ld,
+            "--user-provided-initialization-code",
+            f"--lsl-file={in_ld}",
+            tmp.name,
+            "-o",
+            out_elf,
+        ]
+
+        run_command(cmd)
+        tmp.close()
+        Path(str(out_elf).split(".")[0] + ".mdf").unlink(missing_ok=True)
 
     def run_hex(self, args, in_elf, out_hex, extern=[]):
         cmd = [args.objcopy, "-O", "ihex", in_elf, out_hex] + extern
@@ -470,6 +559,12 @@ def parse_args():
     elf = elf_parse(str(args.elf))
     args.is_64bit = elf.header.identity_class == lief.ELF.Header.CLASS.ELF64
     args.toolchain = GnuToolchain()
+
+    if "cctc" in args.cc:
+        args.toolchain = TaskingToolchain()
+    else:
+        args.toolchain = GnuToolchain()
+
     return args
 
 
