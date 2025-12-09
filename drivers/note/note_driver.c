@@ -1124,7 +1124,7 @@ void sched_note_spinlock(FAR volatile spinlock_t *spinlock,
           note_common(tcb, &note.nsp_cmn, sizeof(struct note_spinlock_s),
                       type);
           note.nsp_spinlock = (uintptr_t)spinlock;
-          note.nsp_value = (uint8_t)spinlock->lock;
+          note.nsp_value = (uint8_t)(uintptr_t)spinlock->lock;
         }
 
       /* Add the note to circular buffer */
