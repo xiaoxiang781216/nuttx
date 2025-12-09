@@ -23,13 +23,141 @@ import argparse
 import logging
 import os
 import subprocess
+from abc import ABC, abstractmethod
 from pathlib import Path
 
 import lief
 from elftools.elf.elffile import ELFFile
 
 nuttxroot = Path(__file__).parent.parent
-gnu_ld_in = str(nuttxroot / "libs" / "libc" / "elf" / "gnu-elf.ld.in")
+
+
+def run_command(cmd: list[str], stdout=None):
+    try:
+        cmd_str = [str(c) for c in cmd]
+        logging.debug(f"Running command: {' '.join(cmd_str)}")
+        if stdout:
+            subprocess.run(
+                cmd, stdout=stdout, stderr=subprocess.PIPE, text=True, check=True
+            )
+        else:
+            subprocess.run(cmd, text=True, check=True)
+
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Command failed with error: {e.stderr}")
+        raise RuntimeError(f"Command failed: {' '.join(cmd)}") from e
+
+
+def elf_parse(elf):
+    config = lief.ELF.ParserConfig()
+    config.parse_notes = False
+    config.parse_relocations = False
+    config.parse_symtab_symbols = True
+
+    return lief.ELF.parse(str(elf), config)
+
+
+class Toolchain(ABC):
+
+    @abstractmethod
+    def run_cpp(
+        self,
+        args,
+        flash_start: int,
+        ram_start: int,
+        heap_size: int,
+        extern_symbols,
+        out_ld: str,
+        flags: list[str] = [],
+    ):
+        pass
+
+    @abstractmethod
+    def run_cc(self, args, in_src: str, out_obj: str):
+        pass
+
+    @abstractmethod
+    def run_ld(self, args, in_elf, in_ld, out_elf, gc_sections=True):
+        pass
+
+    @abstractmethod
+    def run_hex(self, args, in_elf, out_hex, extern):
+        pass
+
+
+class GnuToolchain(Toolchain):
+
+    def run_cpp(
+        self,
+        args,
+        flash_start: int,
+        ram_start: int,
+        heap_size: int,
+        extern_symbols,
+        out_ld: str,
+        flags: list[str] = [],
+    ):
+
+        extern_symbols_str = ""
+        for name, addr in extern_symbols.items():
+            extern_symbols_str += f"{name} = 0x{addr:x};"
+        cmd = (
+            [
+                args.cc,
+                "-E",
+                "-P",
+                "-x",
+                "c",
+                str(nuttxroot / "libs" / "libc" / "elf" / "gnu-elf.ld.in"),
+                f"-DTEXT={hex(flash_start)}",
+                f"-DDATA={hex(ram_start)}",
+                f"-DEXTERN_SYMBOLS={extern_symbols_str}",
+            ]
+            + args.cflags
+            + flags
+        )
+        if heap_size > 0:
+            cmd.append(f"-DHEAPSIZE={hex(heap_size)}")
+
+        with open(out_ld, "w") as f:
+            run_command(cmd, stdout=f)
+
+    def run_cc(self, args, in_src: str, out_obj: str):
+        cmd = [
+            args.cc,
+            "-c",
+            in_src,
+            "-o",
+            out_obj,
+        ] + args.cflags
+        run_command(cmd)
+
+    def run_ld(self, args, in_elf, in_ld, out_elf, gc_sections=True):
+        nostart = []
+        if args.ld.endswith("cc"):
+            nostart = ["-nostartfiles", "-nostdlib"]
+            if gc_sections:
+                nostart.extend(["-Wl,--gc-sections"])
+            nostart.extend(args.cflags)
+        else:
+            nostart = ["--nostdlib"]
+
+        cmd = [
+            args.ld,
+            "-e",
+            "__start",
+            "-T",
+            str(in_ld),
+            str(in_elf),
+            "-o",
+            out_elf,
+        ]
+        cmd.extend(nostart)
+        run_command(cmd)
+
+    def run_hex(self, args, in_elf, out_hex, extern=[]):
+        cmd = [args.objcopy, "-O", "ihex", in_elf, out_hex] + extern
+        run_command(cmd)
 
 
 def get_elf_fixup_s_size(elf_path: Path) -> int:
@@ -59,94 +187,6 @@ def align_down(value: int, alignment: int) -> int:
     return value // alignment * alignment
 
 
-def run_command(cmd: list[str], stdout=None):
-    try:
-        cmd_str = [str(c) for c in cmd]
-        logging.debug(f"Running command: {' '.join(cmd_str)}")
-        if stdout:
-            subprocess.run(
-                cmd, stdout=stdout, stderr=subprocess.PIPE, text=True, check=True
-            )
-        else:
-            subprocess.run(cmd, text=True, check=True)
-
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Command failed with error: {e.stderr}")
-        raise RuntimeError(f"Command failed: {' '.join(cmd)}") from e
-
-
-def run_cpp(
-    args,
-    in_ld: str,
-    flash_start: int,
-    ram_start: int,
-    heap_size: int,
-    extern_symbols: str,
-    out_ld: str,
-    flags: list[str] = [],
-):
-    cmd = (
-        [
-            args.cc,
-            "-E",
-            "-P",
-            "-x",
-            "c",
-            in_ld,
-            f"-DTEXT={hex(flash_start)}",
-            f"-DDATA={hex(ram_start)}",
-            f"-DEXTERN_SYMBOLS={extern_symbols}",
-        ]
-        + args.cflags
-        + flags
-    )
-    if heap_size > 0:
-        cmd.append(f"-DHEAPSIZE={hex(heap_size)}")
-
-    with open(out_ld, "w") as f:
-        run_command(cmd, stdout=f)
-
-
-def run_cc(args, in_src: str, out_obj: str):
-    cmd = [
-        args.cc,
-        "-c",
-        in_src,
-        "-o",
-        out_obj,
-    ] + args.cflags
-    run_command(cmd)
-
-
-def run_ld(args, in_elf, in_ld, out_elf, gc_sections=True):
-    nostart = []
-    if args.ld.endswith("cc"):
-        nostart = ["-nostartfiles", "-nostdlib"]
-        if gc_sections:
-            nostart.extend(["-Wl,--gc-sections"])
-        nostart.extend(args.cflags)
-    else:
-        nostart = ["--nostdlib"]
-
-    cmd = [
-        args.ld,
-        "-e",
-        "__start",
-        "-T",
-        str(in_ld),
-        str(in_elf),
-        "-o",
-        out_elf,
-    ]
-    cmd.extend(nostart)
-    run_command(cmd)
-
-
-def run_hex(args, in_elf, out_hex):
-    cmd = [args.objcopy, "-O", "ihex", in_elf, out_hex]
-    run_command(cmd)
-
-
 def generate_link_script(
     args,
     in_elf: Path,
@@ -157,13 +197,13 @@ def generate_link_script(
     ram_remaining: int,
     out_ld: str,
 ):
-    elf = lief.parse(str(in_elf))
+    elf = elf_parse(str(in_elf))
     flash_used = 0
     ram_used = 0
     heap_size = 0
     flash_start_aligned = 0
     ram_start_aligned = 0
-    extern_symbols = ""
+    extern_symbols = {}
 
     if nuttx_symbols:
         for symbol in elf.symbols:
@@ -177,7 +217,7 @@ def generate_link_script(
                 )
                 if not nuttx_symbol:
                     continue
-                extern_symbols += f"{nuttx_symbol.name} = 0x{nuttx_symbol.value:x};"
+                extern_symbols[nuttx_symbol.name] = nuttx_symbol.value
 
     for section in elf.sections:
         logging.debug(
@@ -203,9 +243,8 @@ def generate_link_script(
     elf_ram_start = align_down(elf_ram_start, ram_start_aligned)
     ram_used = ram_start + ram_remaining - elf_ram_start
 
-    run_cpp(
+    args.toolchain.run_cpp(
         args,
-        gnu_ld_in,
         elf_flash_start,
         elf_ram_start,
         heap_size,
@@ -217,7 +256,7 @@ def generate_link_script(
 
 
 def generate_elf_hex(args):
-    nuttx_symbols = lief.parse(args.elf).symbols
+    nuttx_symbols = elf_parse(args.elf).symbols
     flash_base, flash_remaining = args.flash
     ram_base, ram_remaining = args.ram
 
@@ -252,9 +291,9 @@ def generate_elf_hex(args):
         )
 
         elf_out = str(args.outdir / "elf" / os.path.basename(elf_file))
-        run_ld(args, elf_file, ld_file, elf_out)
+        args.toolchain.run_ld(args, elf_file, ld_file, elf_out)
         hex_out = str(args.outdir / "hex" / f"{elf_file.stem}.hex")
-        run_hex(args, elf_out, hex_out)
+        args.toolchain.run_hex(args, elf_out, hex_out)
 
     args.flash = (flash_base, flash_remaining)
     args.ram = (ram_base, ram_remaining)
@@ -265,7 +304,7 @@ def generate_fixup_src(args, in_dir, out_src: str):
     elf_fixup += 'const struct elf_fixup_s g_elf_fixup[] locate_data(".rodata") = \n{\n'
     elf_fixup += "  {{0}}" + ",\n"
     for elf_file in sorted(in_dir.rglob("*")):
-        elf = lief.parse(str(elf_file))
+        elf = elf_parse(str(elf_file))
         if elf is None:
             logging.error(f"Failed to parse ELF file: {elf_file}")
             continue
@@ -296,21 +335,21 @@ def generate_fixup_src(args, in_dir, out_src: str):
             heap_start = ""
 
         phdr = "    .phdr =\n"
-        phdr += "  {\n"
+        phdr += "    {\n"
         for ph in elf.segments:
             phdr += (
-                "    {\n"
-                f"      .p_type=0x{ph.type.value:x},\n"
-                f"      .p_offset=0x{ph.file_offset:x},\n"
-                f"      .p_vaddr=0x{ph.virtual_address:x},\n"
-                f"      .p_paddr=0x{ph.physical_address:x},\n"
-                f"      .p_filesz=0x{ph.physical_size:x},\n"
-                f"      .p_memsz=0x{ph.virtual_size:x},\n"
-                f"      .p_flags={ph.flags.value},\n"
-                f"      .p_align=0x{ph.alignment:x},\n"
-                "    },\n"
+                "      {\n"
+                f"        .p_type=0x{ph.type.value:x},\n"
+                f"        .p_offset=0x{ph.file_offset:x},\n"
+                f"        .p_vaddr=0x{ph.virtual_address:x},\n"
+                f"        .p_paddr=0x{ph.physical_address:x},\n"
+                f"        .p_filesz=0x{ph.physical_size:x},\n"
+                f"        .p_memsz=0x{ph.virtual_size:x},\n"
+                f"        .p_flags={ph.flags.value},\n"
+                f"        .p_align=0x{ph.alignment:x},\n"
+                "      },\n"
             )
-        phdr += "  },\n"
+        phdr += "    },\n"
 
         entry = elf.entrypoint if elf.entrypoint else 0
         elf_fixup += (
@@ -336,42 +375,26 @@ def generate_fixup_src(args, in_dir, out_src: str):
 def generate_fixup_hex(args):
     generate_fixup_src(args, args.outdir / "elf", args.outdir / "fixup" / "elf_fixup.c")
 
-    run_cc(
+    args.toolchain.run_cc(
         args,
         str(args.outdir / "fixup" / "elf_fixup.c"),
         str(args.outdir / "fixup" / "elf_fixup.o"),
     )
 
-    run_cpp(
-        args,
-        gnu_ld_in,
-        args.fixup_addr,
-        0,
-        0,
-        "",
-        str(args.outdir / "ld" / "elf_fixup.ld"),
-        [f"-DSECTIONS_ALIGN={0x8 if args.is_64bit else 0x4}"],
-    )
+    rodata_cmd = ["--change-section-address", f".rodata={args.fixup_addr}"]
 
-    run_ld(
+    args.toolchain.run_hex(
         args,
-        args.outdir / "fixup" / "elf_fixup.o",
-        args.outdir / "ld" / "elf_fixup.ld",
-        args.outdir / "elf" / "elf_fixup.elf",
-        gc_sections=False,
-    )
-
-    run_hex(
-        args,
-        args.outdir / "elf" / "elf_fixup.elf",
+        str(args.outdir / "fixup" / "elf_fixup.o"),
         str(args.outdir / "hex" / "elf_fixup.hex"),
+        extern=rodata_cmd,
     )
 
 
 def generate_merge_hex(args):
     hex_cmd = ["srec_cat", "-o", args.output, "-Intel"]
 
-    run_hex(args, args.elf, str(args.outdir / "hex" / f"{args.elf}.hex"))
+    args.toolchain.run_hex(args, args.elf, str(args.outdir / "hex" / f"{args.elf}.hex"))
     for hex_file in sorted((args.outdir / "hex").rglob("*")):
         hex_cmd.extend([str(hex_file), "-Intel"])
 
@@ -441,12 +464,12 @@ def parse_args():
     args.indir = Path(args.indir)
     args.cc = os.environ.get("CC", "gcc")
     args.objcopy = os.environ.get("OBJCOPY", "objcopy")
-    args.cflags = os.environ.get("CFLAGS", "").split()
+    args.cflags = list(dict.fromkeys(os.environ.get("CFLAGS", "").split()))
     args.ld = os.environ.get("LD", "ld")
 
-    elf = lief.parse(str(args.elf))
+    elf = elf_parse(str(args.elf))
     args.is_64bit = elf.header.identity_class == lief.ELF.Header.CLASS.ELF64
-
+    args.toolchain = GnuToolchain()
     return args
 
 
