@@ -750,7 +750,8 @@ static int virtio_mmio_interrupt(int irq, FAR void *context, FAR void *arg)
 
   if (irq == 66)
     {
-      sched_note_printf(NOTE_TAG_ALWAYS, "[IN] vmdev=%p irq=%d context=%p",
+      sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
+                        "[IN] vmdev=%p irq=%d context=%p",
                         vmdev, irq, context);
     }
 
@@ -763,22 +764,26 @@ static int virtio_mmio_interrupt(int irq, FAR void *context, FAR void *arg)
           vq = vrings_info[i].vq;
           if (irq == 66)
             {
-              sched_note_printf(NOTE_TAG_ALWAYS, "i=%d vq=%p callback=%p",
+              sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
+                                "i=%d vq=%p callback=%p",
                                 i, vq, vq->callback);
             }
 
           if (vq->callback != NULL && virtqueue_nused(vq) > 0)
             {
-              sched_note_printf(0xff, LOG_INFO, "s_mmio, cb %p\n", vq->callback);
+              sched_note_printf(0xff, LOG_INFO, "s_mmio, cb %p\n",
+                                vq->callback);
               vq->callback(vq);
-              sched_note_printf(0xff, LOG_INFO, "e_mmio, cb %p\n", vq->callback);
+              sched_note_printf(0xff, LOG_INFO, "e_mmio, cb %p\n",
+                                vq->callback);
             }
         }
     }
 
   if (irq == 66)
     {
-      sched_note_printf(NOTE_TAG_ALWAYS, "[OUT] vmdev=%p irq=%d context=%p",
+      sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
+                        "[OUT] vmdev=%p irq=%d context=%p",
                         vmdev, irq, context);
     }
 
@@ -869,7 +874,8 @@ static int virtio_mmio_init_device(FAR struct virtio_mmio_device_s *vmdev,
 
   vrtinfo("VIRTIO version: %"PRIu32" device: %"PRIu32" vendor: %"PRIx32"\n",
           vdev->id.version, vdev->id.device, vdev->id.vendor);
-  sched_note_printf(0xff, LOG_INFO,"virtio-mmio regs: %p irq: %d device: %"PRIu32"\n",
+  sched_note_printf(0xff, LOG_INFO,
+                    "virtio-mmio regs: %p irq: %d device: %"PRIu32"\n",
                     regs, irq, vdev->id.device);
 
   /* Reset the virtio device and set ACK */

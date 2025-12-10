@@ -216,7 +216,7 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
   clock_gettime(CLOCK_REALTIME, &ts);
   localtime_r(&ts.tv_sec, &tm);
   strftime(timefmt, sizeof(timefmt), "%d/%m/%y %H:%M:%S", &tm);
-  sched_note_printf(NOTE_TAG_ALWAYS,
+  sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
                     "[virtblk] [%s.%06ld] %p Start add buffer:%p s:%"
                     priblkcnt " n:%u",
                     timefmt, ts.tv_nsec / NSEC_PER_USEC,
@@ -232,14 +232,16 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
 
   virtqueue_kick(vq);
   spin_unlock_irqrestore(&priv->lock, flags);
-  sched_note_printf(NOTE_TAG_ALWAYS, "[virtblk] %p End add buffer sem: %p",
+  sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
+                    "[virtblk] %p End add buffer sem: %p",
                     priv, &respsem);
 
   /* Wait for the request completion */
 
   virtio_blk_wait_complete(vq, &respsem);
 
-  sched_note_printf(NOTE_TAG_ALWAYS, "[virtblk] %p Wait %p success %d",
+  sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
+                    "[virtblk] %p Wait %p success %d",
                     priv, &respsem, resp.status);
   if (resp.status != VIRTIO_BLK_S_OK)
     {
@@ -452,7 +454,8 @@ static void virtio_blk_done(FAR struct virtqueue *vq)
           break;
         }
 
-      sched_note_printf(NOTE_TAG_ALWAYS, "[virtblk] Post sem %p", respsem);
+      sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
+                        "[virtblk] Post sem %p", respsem);
       nxsem_post(respsem);
     }
 }

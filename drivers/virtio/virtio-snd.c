@@ -346,7 +346,8 @@ static void virtio_snd_pcm_notify_cb(FAR struct virtqueue *vq)
   irqstate_t flags;
 
   flags = spin_lock_irqsave(&priv->lock);
-  sched_note_printf(NOTE_TAG_ALWAYS, "[IN] virtio_snd_pcm_notify_cb");
+  sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
+                    "[IN] virtio_snd_pcm_notify_cb");
   for (; ; )
     {
       FAR struct virtio_snd_buffer_s *buf;
@@ -362,26 +363,30 @@ static void virtio_snd_pcm_notify_cb(FAR struct virtqueue *vq)
       if (sdev->running &&
           buf->status->latency_bytes < sdev->period_bytes)
         {
-          sched_note_printf(NOTE_TAG_ALWAYS, "[0] buf=%p dev=%p upper=%p",
+          sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
+                            "[0] buf=%p dev=%p upper=%p",
                             buf, buf->dev, buf->dev->upper);
           buf->dev->upper(buf->dev->priv, AUDIO_CALLBACK_UNDERRUN,
                           NULL, OK);
         }
 
 #ifdef CONFIG_AUDIO_MULTI_SESSION
-      sched_note_printf(NOTE_TAG_ALWAYS, "[1] buf=%p dev=%p upper=%p",
+      sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
+                        "[1] buf=%p dev=%p upper=%p",
                         buf, buf->dev, buf->dev->upper);
       buf->dev->upper(buf->dev->priv, AUDIO_CALLBACK_DEQUEUE,
                       &buf->apb, OK, NULL);
 #else
-      sched_note_printf(NOTE_TAG_ALWAYS, "[1] buf=%p dev=%p upper=%p",
+      sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
+                        "[1] buf=%p dev=%p upper=%p",
                         buf, buf->dev, buf->dev->upper);
       buf->dev->upper(buf->dev->priv, AUDIO_CALLBACK_DEQUEUE,
                       &buf->apb, OK);
 #endif
     }
 
-  sched_note_printf(NOTE_TAG_ALWAYS, "[OUT] virtio_snd_pcm_notify_cb");
+  sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
+                    "[OUT] virtio_snd_pcm_notify_cb");
   spin_unlock_irqrestore(&priv->lock, flags);
 }
 
