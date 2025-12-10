@@ -152,6 +152,7 @@ extern "C"
 #define sched_note_async_end_track(tag, track, name, cookie) \
         sched_note_async(tag, NOTE_DUMP_ASYNC_END, track, name, cookie)
 
+
 #if defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH) && defined(CONFIG_DRIVERS_NOTE)
 #  define sched_note_start(t) \
        do \
