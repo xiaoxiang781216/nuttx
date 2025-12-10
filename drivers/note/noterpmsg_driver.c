@@ -60,6 +60,9 @@ struct noterpmsg_driver_s
 static void noterpmsg_add(FAR struct note_driver_s *driver,
                           FAR const void *note, size_t notelen,
                           bool noswitches);
+static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
+                              uint8_t level, uintptr_t ip, uint64_t type,
+                              FAR const char *fmt, va_list va);
 
 /****************************************************************************
  * Private Data
@@ -69,7 +72,8 @@ static uint8_t g_noterpmsg_buffer[CONFIG_DRIVERS_NOTERPMSG_BUFSIZE];
 
 static const struct note_driver_ops_s g_noterpmsg_ops =
 {
-  noterpmsg_add
+  .add = noterpmsg_add,
+  .vprintf = noterpmsg_vprintf,
 };
 
 struct noterpmsg_driver_s g_noterpmsg_driver =
@@ -252,6 +256,38 @@ static void noterpmsg_add(FAR struct note_driver_s *driver,
       work_queue(HPWORK, &drv->work, noterpmsg_work, drv,
                  NOTE_RPMSG_WORK_DELAY);
     }
+}
+
+static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
+                              uint8_t level, uintptr_t ip, uint64_t type,
+                              FAR const char *fmt, va_list va)
+{
+  FAR struct tcb_s *tcb = running_task();
+  FAR struct note_printf_s *note;
+  uint8_t data[NOTE_BUFFER_SIZE];
+  size_t length;
+  size_t fmtlen;
+  size_t next;
+
+  note = (FAR struct note_printf_s *)data;
+  fmtlen = strlen(fmt) + 1;
+  memcpy(note->npt_data, fmt, fmtlen);
+
+  length = sizeof(data) - SIZEOF_NOTE_PRINTF(0) - fmtlen;
+  next = lib_bsprintf(note->npt_data + fmtlen, length, fmt, va);
+  DEBUGASSERT(next < sizeof(data) - sizeof(*note));
+
+  length = SIZEOF_NOTE_PRINTF(next + fmtlen);
+  note_common(tcb, &note->npt_cmn, length, NOTE_DUMP_PRINTF);
+  note->npt_ip = ip;
+  note->npt_tag = tag;
+  note->npt_fmt = NULL;
+  note->npt_type = type;
+  note->npt_level = level;
+
+  /* Add the note to circular buffer */
+
+  noterpmsg_add(drv, note, length, false);
 }
 
 static int noterpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,

@@ -174,72 +174,6 @@ static clock_t g_note_perf_offset;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: note_common
- *
- * Description:
- *   Fill in some of the common fields in the note structure.
- *
- * Input Parameters:
- *   tcb    - The TCB containing the information
- *   note   - The common note structure to use
- *   length - The total lengthof the note structure
- *   type   - The type of the note
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void note_common(FAR struct tcb_s *tcb,
-                        FAR struct note_common_s *note,
-                        uint8_t length, uint8_t type)
-{
-  clock_t perftime;
-
-  /* Save all of the common fields */
-
-  note->nc_length = length;
-  note->nc_type   = type;
-
-#ifdef CONFIG_DRIVERS_NOTE_CPUID
-  note->nc_cpu    = CONFIG_DRIVERS_NOTE_CPUID;
-#else
-  note->nc_cpu    = this_cpu();
-#endif
-
-  if (tcb == NULL)
-    {
-      note->nc_priority = CONFIG_INIT_PRIORITY;
-      note->nc_pid = 0;
-    }
-  else
-    {
-      note->nc_priority = tcb->sched_priority;
-      note->nc_pid = tcb->pid;
-    }
-
-  perftime = NOTE_PERF_GETTIME();
-#if CONFIG_DRIVERS_NOTE_CLOCKID >= 0
-  if (g_note_perf_offset == 0 && OSINIT_HW_READY())
-    {
-      struct timespec ts;
-      unsigned long freq;
-
-      clock_gettime(CONFIG_DRIVERS_NOTE_CLOCKID, &ts);
-      freq = perf_getfreq();
-
-      g_note_perf_offset =
-        clkcnt_delta_time2cnt(ts.tv_nsec, freq, NSEC_PER_SEC) +
-        ts.tv_sec * freq - perftime;
-    }
-
-  note->nc_systime = perftime + g_note_perf_offset;
-#else
-  note->nc_systime = perftime;
-#endif
-}
-
-/****************************************************************************
  * Name: note_isenabled
  *
  * Description:
@@ -582,6 +516,71 @@ static void note_record_taskname(pid_t pid, FAR const char *name)
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: note_common
+ *
+ * Description:
+ *   Fill in some of the common fields in the note structure.
+ *
+ * Input Parameters:
+ *   tcb    - The TCB containing the information
+ *   note   - The common note structure to use
+ *   length - The total lengthof the note structure
+ *   type   - The type of the note
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void note_common(FAR struct tcb_s *tcb, FAR struct note_common_s *note,
+                 uint8_t length, uint8_t type)
+{
+  clock_t perftime;
+
+  /* Save all of the common fields */
+
+  note->nc_length = length;
+  note->nc_type   = type;
+
+#ifdef CONFIG_DRIVERS_NOTE_CPUID
+  note->nc_cpu    = CONFIG_DRIVERS_NOTE_CPUID;
+#else
+  note->nc_cpu    = this_cpu();
+#endif
+
+  if (tcb == NULL)
+    {
+      note->nc_priority = CONFIG_INIT_PRIORITY;
+      note->nc_pid = 0;
+    }
+  else
+    {
+      note->nc_priority = tcb->sched_priority;
+      note->nc_pid = tcb->pid;
+    }
+
+  perftime = NOTE_PERF_GETTIME();
+#if CONFIG_DRIVERS_NOTE_CLOCKID >= 0
+  if (g_note_perf_offset == 0 && OSINIT_HW_READY())
+    {
+      struct timespec ts;
+      unsigned long freq;
+
+      clock_gettime(CONFIG_DRIVERS_NOTE_CLOCKID, &ts);
+      freq = perf_getfreq();
+
+      g_note_perf_offset =
+        clkcnt_delta_time2cnt(ts.tv_nsec, freq, NSEC_PER_SEC) +
+        ts.tv_sec * freq - perftime;
+    }
+
+  note->nc_systime = perftime + g_note_perf_offset;
+#else
+  note->nc_systime = perftime;
+#endif
+}
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
 

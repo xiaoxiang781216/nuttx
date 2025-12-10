@@ -76,6 +76,26 @@ extern struct notestream_driver_s g_notestream_lowerout;
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: note_common
+ *
+ * Description:
+ *   Fill in some of the common fields in the note structure.
+ *
+ * Input Parameters:
+ *   tcb    - The TCB containing the information
+ *   note   - The common note structure to use
+ *   length - The total lengthof the note structure
+ *   type   - The type of the note
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void note_common(FAR struct tcb_s *tcb, FAR struct note_common_s *note,
+                 uint8_t length, uint8_t type);
+
+/****************************************************************************
  * Name: note_get_taskname
  *
  * Description:
