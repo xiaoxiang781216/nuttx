@@ -180,27 +180,30 @@ int irqchain_attach(int ndx, xcpt_t isr, FAR void *arg)
 
               g_irqvector[ndx].handler = irqchain_dispatch;
               g_irqvector[ndx].arg     = node;
+            }
+        }
 
-              node = (FAR struct irqchain_s *)
-                     sq_remfirst(&g_irqchainfreelist);
-              if (node == NULL)
+      if (ret == OK)
+        {
+          node = (FAR struct irqchain_s *)
+                  sq_remfirst(&g_irqchainfreelist);
+          if (node == NULL)
+            {
+              ret = -ENOMEM;
+            }
+          else
+            {
+              node->handler = isr;
+              node->arg     = arg;
+              node->next    = NULL;
+
+              curr = g_irqvector[ndx].arg;
+              while (curr->next != NULL)
                 {
-                  ret = -ENOMEM;
+                  curr = curr->next;
                 }
-              else
-                {
-                  node->handler = isr;
-                  node->arg     = arg;
-                  node->next    = NULL;
 
-                  curr = g_irqvector[ndx].arg;
-                  while (curr->next != NULL)
-                    {
-                      curr = curr->next;
-                    }
-
-                  curr->next = node;
-                }
+              curr->next = node;
             }
         }
     }
