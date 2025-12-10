@@ -30,6 +30,8 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <syscall.h>
+#include <sys/types.h>
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/note/note_driver.h>
@@ -46,6 +48,50 @@
 #define NOTE_BUFFER_SIZE 256
 static_assert(NOTE_BUFFER_SIZE >= sizeof(struct note_event_s),
               "Buffer size too small");
+
+/* Sometimes perf_getime is not a syscall */
+
+#ifdef CONFIG_ARCH_PERF_EVENTS_USER_ACCESS
+#  define NOTE_PERF_GETTIME perf_gettime
+#else
+clock_t UP_REALSYM(perf_gettime)(void);
+#  define NOTE_PERF_GETTIME UP_REALSYM(perf_gettime)
+#endif
+
+#define note_driver_event(driver, tag, event, buf, len) \
+        note_driver_event_ip(driver, tag, up_getpc(), event, buf, len)
+#define note_driver_vprintf(driver, tag, fmt, va) \
+        note_driver_vprintf_ip(driver, tag, up_getpc(), 0, fmt, va)
+#define note_driver_printf(driver, tag, fmt, ...) \
+        note_driver_printf_ip(driver, tag, up_getpc(), 0, fmt, ##__VA_ARGS__)
+
+#define note_driver_begin(driver, tag) \
+        note_driver_event(driver, tag, NOTE_DUMP_BEGIN, NULL, 0)
+#define note_driver_end(driver, tag) \
+        note_driver_event(driver, tag, NOTE_DUMP_END, NULL, 0)
+#define note_driver_mark(driver, tag, buf) \
+        note_driver_event(driver, tag, NOTE_DUMP_MARK, buf, strlen(buf))
+#define note_driver_binary(driver, tag, buf, len) \
+        note_driver_event(driver, tag, NOTE_DUMP_BINARY, buf, len)
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+void note_driver_printf_ip(FAR struct note_driver_s *driver, uint8_t tag,
+                           uint8_t level, uintptr_t ip, uint64_t type,
+                           FAR const char *fmt, ...) printf_like(6, 7);
+
+void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
+                            uint8_t level, uintptr_t ip, uint64_t type,
+                            FAR const char *fmt,
+                            va_list *va) printf_like(6, 0);
+
+size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t tag,
+                            uint8_t level, uintptr_t ip, uint8_t event,
+                            FAR const void *buf, size_t len);
+#else
+#  define note_driver_printf_ip(d,t,l,i,p,f,a)
+#  define note_driver_vprintf_ip(d,t,l,i,p,f,a)
+#  define note_driver_event_ip(d,t,l,i,e,b,n)
+#endif
 
 /****************************************************************************
  * Public Types

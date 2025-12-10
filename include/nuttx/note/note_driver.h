@@ -32,17 +32,18 @@
 #include <stddef.h>
 
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
 
 /* For system call numbers definition */
 
-#ifdef CONFIG_LIB_SYSCALL
-#  include <syscall.h>
-#else
-#  define CONFIG_LIB_SYSCALL
-#  include <syscall.h>
-#  undef CONFIG_LIB_SYSCALL
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
+  #ifdef CONFIG_LIB_SYSCALL
+  #  include <syscall.h>
+  #else
+  #  define CONFIG_LIB_SYSCALL
+  #  include <syscall.h>
+  #  undef CONFIG_LIB_SYSCALL
+  #endif
 #endif
 
 /****************************************************************************
@@ -173,31 +174,6 @@
 #  define NOTE_FILTER_LEVEL_SET(level, s)
 #endif
 
-/* Sometimes perf_getime is not a syscall */
-
-#ifdef CONFIG_ARCH_PERF_EVENTS_USER_ACCESS
-#  define NOTE_PERF_GETTIME perf_gettime
-#else
-clock_t UP_REALSYM(perf_gettime)(void);
-#  define NOTE_PERF_GETTIME UP_REALSYM(perf_gettime)
-#endif
-
-#define note_driver_event(driver, tag, event, buf, len) \
-        note_driver_event_ip(driver, tag, up_getpc(), event, buf, len)
-#define note_driver_vprintf(driver, tag, fmt, va) \
-        note_driver_vprintf_ip(driver, tag, up_getpc(), 0, fmt, va)
-#define note_driver_printf(driver, tag, fmt, ...) \
-        note_driver_printf_ip(driver, tag, up_getpc(), 0, fmt, ##__VA_ARGS__)
-
-#define note_driver_begin(driver, tag) \
-        note_driver_event(driver, tag, NOTE_DUMP_BEGIN, NULL, 0)
-#define note_driver_end(driver, tag) \
-        note_driver_event(driver, tag, NOTE_DUMP_END, NULL, 0)
-#define note_driver_mark(driver, tag, buf) \
-        note_driver_event(driver, tag, NOTE_DUMP_MARK, buf, strlen(buf))
-#define note_driver_binary(driver, tag, buf, len) \
-        note_driver_event(driver, tag, NOTE_DUMP_BINARY, buf, len)
-
 /* IOCTL Commands ***********************************************************/
 
 /* NOTE_CLEAR
@@ -269,6 +245,7 @@ clock_t UP_REALSYM(perf_gettime)(void);
  * Public Types
  ****************************************************************************/
 
+struct tcb_s;
 struct note_driver_s;
 
 struct note_driver_ops_s
@@ -377,6 +354,7 @@ struct note_filter_named_syscall_s
  * NOTECTL_SETIRQFILTER ioctls
  */
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
 struct note_filter_irq_s
 {
   uint8_t irq_mask[(NR_IRQS + 7) / 8];
@@ -387,6 +365,7 @@ struct note_filter_named_irq_s
   char name[NAME_MAX];
   struct note_filter_irq_s irq_mask;
 };
+#endif
 
 struct note_filter_tag_s
 {
@@ -413,10 +392,10 @@ struct note_filter_s
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
   struct note_filter_irq_s irq_mask;
-#  endif
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
   struct note_filter_syscall_s syscall_mask;
-#  endif
+#endif
 };
 
 struct note_driver_s
@@ -467,32 +446,13 @@ int note_early_initialize(void);
  ****************************************************************************/
 
 int note_initialize(void);
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-void note_driver_printf_ip(FAR struct note_driver_s *driver, uint8_t tag,
-                           uint8_t level, uintptr_t ip, uint64_t type,
-                           FAR const char *fmt, ...) printf_like(6, 7);
-
-void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
-                            uint8_t level, uintptr_t ip, uint64_t type,
-                            FAR const char *fmt,
-                            va_list *va) printf_like(6, 0);
-
-size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t tag,
-                            uint8_t level, uintptr_t ip, uint8_t event,
-                            FAR const void *buf, size_t len);
-#else
-#  define note_driver_printf_ip(d,t,l,i,p,f,a)
-#  define note_driver_vprintf_ip(d,t,l,i,p,f,a)
-#  define note_driver_event_ip(d,t,l,i,e,b,n)
-#endif
 
 /****************************************************************************
  * Name: note_driver_register
  ****************************************************************************/
 
 int note_driver_register(FAR struct note_driver_s *driver);
+#endif
 
 /****************************************************************************
  * Name: note_filter_mode
@@ -576,4 +536,5 @@ void note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
 void note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
                      FAR struct note_filter_named_tag_s *newf);
 #endif
+
 #endif /* __INCLUDE_NUTTX_NOTE_NOTE_DRIVER_H */
