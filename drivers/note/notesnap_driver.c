@@ -185,7 +185,7 @@ static_assert(
  * Public Data
  ****************************************************************************/
 
-DEFINE_PER_CPU_BMP(struct notesnap_s, g_notesnap) =
+struct notesnap_s g_notesnap =
 {
   {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
@@ -208,7 +208,6 @@ DEFINE_PER_CPU_BMP(struct notesnap_s, g_notesnap) =
     &g_notesnap_ops
   }
 };
-#define g_notesnap this_cpu_var_bmp(g_notesnap)
 
 /****************************************************************************
  * Name: notesnap_common
@@ -244,6 +243,14 @@ static inline void notesnap_common(FAR struct note_driver_s *drv,
 /****************************************************************************
  * Name: notesnap_*
  ****************************************************************************/
+
+static void notesnap_dump(void)
+{
+  struct lib_syslograwstream_s stream;
+  lib_syslograwstream_open(&stream);
+  notesnap_dump_with_stream(&stream.common);
+  lib_syslograwstream_close(&stream);
+}
 
 static void notesnap_start(FAR struct note_driver_s *drv,
                            FAR struct tcb_s *tcb)
@@ -335,15 +342,6 @@ static void notesnap_syscall_leave(FAR struct note_driver_s *drv, int nr,
 }
 #endif
 
-#ifdef CONFIG_DRIVERS_NOTESNAP_CRASH_DUMP
-static void notesnap_dump(void)
-{
-  struct lib_syslograwstream_s stream;
-  lib_syslograwstream_open(&stream);
-  notesnap_dump_with_stream(&stream.common);
-  lib_syslograwstream_close(&stream);
-}
-
 static int notesnap_notifier(FAR struct notifier_block *nb,
                              unsigned long action, FAR void *data)
 {
@@ -354,7 +352,6 @@ static int notesnap_notifier(FAR struct notifier_block *nb,
 
   return 0;
 }
-#endif
 
 /****************************************************************************
  * Public Functions
@@ -364,13 +361,11 @@ static int notesnap_notifier(FAR struct notifier_block *nb,
  * Name: notesnap_notify_register
  ****************************************************************************/
 
-#ifdef CONFIG_DRIVERS_NOTESNAP_CRASH_DUMP
 void notesnap_notify_register(void)
 {
   g_notesnap.nb.notifier_call = notesnap_notifier;
   panic_notifier_chain_register(&g_notesnap.nb);
 }
-#endif
 
 /****************************************************************************
  * Name: notesnap_dump_with_stream
@@ -392,7 +387,7 @@ void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream)
           [(index + i) % CONFIG_DRIVERS_NOTESNAP_NBUFFERS];
       struct timespec time;
 
-      NOTE_PERF_CONVERT(note->count, &time);
+      UP_REALSYM(perf_convert)(note->count, &time);
       lib_sprintf(stream,
                   "snapshoot: [%" PRIu64 ".%09u] "
 #ifdef CONFIG_SMP

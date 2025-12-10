@@ -35,7 +35,6 @@
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/note/note_driver.h>
-#include <nuttx/percpu.h>
 #include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/streams.h>
@@ -54,12 +53,9 @@ static_assert(NOTE_BUFFER_SIZE >= sizeof(struct note_event_s),
 
 #ifdef CONFIG_ARCH_PERF_EVENTS_USER_ACCESS
 #  define NOTE_PERF_GETTIME perf_gettime
-#  define NOTE_PERF_CONVERT(e, t) perf_convert(e, t)
 #else
 clock_t UP_REALSYM(perf_gettime)(void);
-void UP_REALSYM(perf_convert)(clock_t elapsed, FAR struct timespec *ts);
 #  define NOTE_PERF_GETTIME UP_REALSYM(perf_gettime)
-#  define NOTE_PERF_CONVERT(e, t) UP_REALSYM(perf_convert)(e, t)
 #endif
 
 #define note_driver_event(driver, tag, event, buf, len) \
@@ -106,27 +102,27 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t tag,
  ****************************************************************************/
 
 #ifdef CONFIG_DRIVERS_NOTELOG
-DECLARE_PER_CPU_BMP(struct note_driver_s, g_notelog_driver);
+extern struct note_driver_s g_notelog_driver;
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTERAM
-DECLARE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver);
+extern struct noteram_driver_s g_noteram_driver;
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTERPMSG
-DECLARE_PER_CPU_BMP(struct noterpmsg_driver_s, g_noterpmsg_driver);
+extern struct noterpmsg_driver_s g_noterpmsg_driver;
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTELOWEROUT
-DECLARE_PER_CPU_BMP(struct notestream_driver_s, g_notestream_lowerout);
+extern struct notestream_driver_s g_notestream_lowerout;
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTET32FDX
-DECLARE_PER_CPU_BMP(struct notefdx_s, g_notefdx);
+extern struct notefdx_s g_notefdx;
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTESNAP
-DECLARE_PER_CPU_BMP(struct notesnap_s, g_notesnap);
+extern struct notesnap_s g_notesnap;
 #endif
 
 /****************************************************************************
@@ -154,6 +150,43 @@ void note_common(FAR struct tcb_s *tcb, FAR struct note_common_s *note,
                  uint8_t length, uint8_t type);
 
 /****************************************************************************
+ * Name: note_get_taskname
+ *
+ * Description:
+ *   Get the task name string of the specified PID
+ *
+ * Input Parameters:
+ *   PID - Task ID
+ *   buf - A writable buffer to hold the task name
+ *   len - The length of the buffer
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void note_get_taskname(pid_t pid, FAR char *buf, size_t len);
+
+/****************************************************************************
+ * Name: notectl_register
+ *
+ * Description:
+ *   Register a driver at /dev/notectl that can be used by an application to
+ *   control the note filter.
+ *
+ * Input Parameters:
+ *   None.
+ *
+ * Returned Value:
+ *   Zero on succress. A negated errno value is returned on a failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_DRIVERS_NOTECTL
+int notectl_register(void);
+#endif
+
+/****************************************************************************
  * Name: noteram_register
  *
  * Description:
@@ -176,17 +209,13 @@ int noteram_register(void);
  * Name: notesnap_notify_register
  ****************************************************************************/
 
-#ifdef CONFIG_DRIVERS_NOTESNAP_CRASH_DUMP
+#ifdef CONFIG_DRIVERS_NOTESNAP
 void notesnap_notify_register(void);
-#else
-#define notesnap_notify_register()
-#endif
 
 /****************************************************************************
  * Name: notesnap_dump_with_stream
  ****************************************************************************/
 
-#ifdef CONFIG_DRIVERS_NOTESNAP
 void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream);
 #endif
 
@@ -205,11 +234,5 @@ int noterpmsg_server_init(void);
 #ifdef CONFIG_DRIVERS_NOTERPMSG
 int noterpmsg_init(void);
 #endif
-
-/****************************************************************************
- * Name: note_driver_initialize
- ****************************************************************************/
-
-int note_driver_initialize(void);
 
 #endif /* __NUTTX_DRIVERS_NOTE_NOTE_DRIVER_H */
