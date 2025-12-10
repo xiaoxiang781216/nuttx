@@ -27,8 +27,21 @@
 #include <nuttx/arch.h>
 #include <nuttx/elf.h>
 
+#include <debug.h>
+
 #include "sched/sched.h"
 #include "arm_internal.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* Maximum iterations for binary search to prevent infinite loops
+ * in case of corrupted .exidx tables. Binary search on 2^20 entries
+ * needs only 20 iterations, so 32 is safe for embedded environments.
+ */
+
+#define BACKTRACE_MAX_DEPTH 32
 
 /****************************************************************************
  * Private Types
@@ -119,6 +132,7 @@ search_index(unsigned long addr, const struct __EIT_entry *start,
              const struct __EIT_entry *stop)
 {
   unsigned long addr_prel31;
+  int iterations = 0;
 
   /* Only search in the section with the matching sign. This way the
    * prel31 numbers can be compared as unsigned longs.
@@ -144,6 +158,16 @@ search_index(unsigned long addr, const struct __EIT_entry *start,
   while (start < stop - 1)
     {
       const struct __EIT_entry *mid = start + ((stop - start) >> 1);
+
+      /* Guard against infinite loops in corrupted .exidx tables */
+
+      if (++iterations > BACKTRACE_MAX_DEPTH)
+        {
+          sinfo("search_index: exceeded max iterations at addr 0x%lx, "
+                "possible corrupted .exidx table (start=%p, stop=%p)\n",
+                addr, start, stop);
+          return NULL;
+        }
 
       /* As addr_prel31 is relative to start an offset is needed to
        * make it relative to mid.
@@ -171,9 +195,20 @@ unwind_find_origin(const struct __EIT_entry *start,
                    const struct __EIT_entry *stop)
 {
   const struct __EIT_entry *mid;
+  int iterations = 0;
 
   while (start < stop)
     {
+      /* Guard against infinite loops in corrupted .exidx tables */
+
+      if (++iterations > BACKTRACE_MAX_DEPTH)
+        {
+          sinfo("unwind_find_origin: exceeded max iterations, "
+                "possible corrupted .exidx table (start=%p, stop=%p)\n",
+                start, stop);
+          return stop;
+        }
+
       mid = start + ((stop - start) >> 1);
 
       if (mid->fnoffset >= 0x40000000)
