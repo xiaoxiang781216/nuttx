@@ -274,18 +274,20 @@ static long_double scalbnx(long_double number,
  *   Convert a decimal string to a long_double value
  *
  * Input Parameters:
- *   ptr    - A decimal string
- *   endptr - If have ,the part that holds all but the numbers
- *   flag   - TYPE_FLOAT: string -> float
- *            TYPE_DOUBLE: string -> double
- *            TYPE_LONG_DOUBLE: string- > long double
+ *   ptr      - A decimal string
+ *   endptr   - If have ,the part that holds all but the numbers
+ *   flag     - TYPE_FLOAT: string -> float
+ *              TYPE_DOUBLE: string -> double
+ *              TYPE_LONG_DOUBLE: string- > long double
+ *   negative - The sign of num, true: negative, false: positive
  *
  * Returned Value:
  *   A long_double number about ptr
  *
  ****************************************************************************/
 
-static long_double decfloat(FAR char *ptr, FAR char **endptr, int flag)
+static long_double decfloat(FAR char *ptr, FAR char **endptr, int flag,
+                            bool negative)
 {
   FAR char *f;
   FAR char *s;
@@ -367,7 +369,7 @@ static long_double decfloat(FAR char *ptr, FAR char **endptr, int flag)
 
   k = 0;
   x = 0;
-  y = 0.;
+  y = negative ? -0. : 0.;
   gotrad = 0;
 
   while (chtou(*f, 10, &x) || *f == '.')
@@ -395,14 +397,14 @@ static long_double decfloat(FAR char *ptr, FAR char **endptr, int flag)
       if (++k == 9)
         {
           k = 0;
-          y = 1000000000 * y + x;
+          y = 1000000000 * y + (negative ? -1.0 : 1.0) * x;
           x = 0;
         }
     }
 
   if (num_digit < 9 && num_decimal == 0)
     {
-      return x;
+      return (negative ? -1.0 : 1.0) * x;
     }
   else if (num_digit + num_decimal > ldbl_max_10_exp)
     {
@@ -415,7 +417,7 @@ static long_double decfloat(FAR char *ptr, FAR char **endptr, int flag)
 
   if (k % 9)
     {
-      y = y * p10s[k % 9 - 1] + x;
+      y = y * p10s[k % 9 - 1] + (negative ? -1.0 : 1.0) * x;
     }
 
   y *= 1.;
@@ -455,18 +457,19 @@ static long_double decfloat(FAR char *ptr, FAR char **endptr, int flag)
  *   Convert a hexadecimal string to a long_double value
  *
  * Input Parameters:
- *   ptr    - The hexadecimal string
- *   endptr - If have ,the part that holds all but the numbers
- *   bits   - LDBL_MANT_DIG
- *   emin   - LDBL_MIN_EXP - bits
+ *   ptr      - The hexadecimal string
+ *   endptr   - If have ,the part that holds all but the numbers
+ *   bits     - LDBL_MANT_DIG
+ *   emin     - LDBL_MIN_EXP - bits
+ *   negative - the sign of num, true: negative, false: positive
  *
  * Returned Value:
  *   A long_double number about ptr
  *
  ****************************************************************************/
 
-static long_double hexfloat(FAR char *ptr,
-                            FAR char **endptr, int bits, int emin)
+static long_double hexfloat(FAR char *ptr, FAR char **endptr, int bits,
+                            int emin, bool negative)
 {
   FAR char *f = ptr;
   int d;
@@ -536,11 +539,11 @@ static long_double hexfloat(FAR char *ptr,
             }
           else if (dc < ldbl_mant_dig / 4 + 1)
             {
-              y += d * (scale /= 16);
+              y += negative ? -d * (scale /= 16) : d * (scale /= 16);
             }
           else if (d && !gottail)
             {
-              y += 0.5 * scale;
+              y += negative ? -0.5 * scale : 0.5 * scale;
               gottail = 1;
             }
 
@@ -605,10 +608,10 @@ static long_double hexfloat(FAR char *ptr,
 
   while (x < 0x80000000)
     {
-      if (y >= 0.5)
+      if (fabs(y) >= 0.5)
         {
           x += x + 1;
-          y += y - 1;
+          y += y + (negative ? 1 : -1);
         }
       else
         {
@@ -631,6 +634,7 @@ static long_double hexfloat(FAR char *ptr,
   if (bits < ldbl_mant_dig)
     {
       bias = scalbnx(1, 2., 32 + ldbl_mant_dig - bits - 1);
+      bias = negative ? -bias : bias;
     }
 
   if (bits < 32 && y && !(x & 1))
@@ -638,7 +642,7 @@ static long_double hexfloat(FAR char *ptr,
       x++, y = 0;
     }
 
-  y = bias + x + y;
+  y = bias + (negative ? -1.0 : 1.0) * x + y;
   y -= bias;
 
   /* If it's a wrong number we will set errno and return it */
@@ -747,11 +751,11 @@ static long_double strtox(FAR const char *str, FAR char **endptr, int flag)
   if (*s == '0' && (*(s + 1) | 32) == 'x')
     {
       s += 2;
-      y = hexfloat(s, endptr, bits, emin);
+      y = hexfloat(s, endptr, bits, emin, negative);
     }
   else if (isdigit(*s) || (*s == '.' && isdigit(*(s + 1))))
     {
-      y = decfloat(s, endptr, flag);
+      y = decfloat(s, endptr, flag, negative);
     }
   else
     {
@@ -759,7 +763,7 @@ static long_double strtox(FAR const char *str, FAR char **endptr, int flag)
       return 0;
     }
 
-  return negative ? -y : y;
+  return y;
 }
 
 /****************************************************************************
