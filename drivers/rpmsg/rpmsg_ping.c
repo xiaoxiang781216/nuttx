@@ -264,6 +264,8 @@ int rpmsg_ping(FAR struct rpmsg_ping_dev_s *dev,
         }
     }
 
+  syslog(LOG_EMERG, "core info: %s <-> %s\n",
+         rpmsg_get_local_cpuname(ept->rdev), rpmsg_get_cpuname(ept->rdev));
   syslog(LOG_EMERG, "ping times: %d\n", ping->times);
   syslog(LOG_EMERG, "buffer_len: %" PRIu32 ", send_len: %d\n",
                     buf_len, send_len);
