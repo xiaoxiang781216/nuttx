@@ -89,10 +89,10 @@
   ((drv)->ops->heap && ((drv)->ops->heap(drv, event, data, mem, size, used), true))
 #define note_wdog(drv, event, handler, arg)                                  \
   ((drv)->ops->wdog && ((drv)->ops->wdog(drv, event, handler, arg), true))
-#define note_event(drv, level, ip, event, buf, len)                          \
-  ((drv)->ops->event && ((drv)->ops->event(drv, level, ip, event, buf, len), true))
-#define note_vprintf(drv, level, ip, fmt, va)                                \
-  ((drv)->ops->vprintf && ((drv)->ops->vprintf(drv, level, ip, fmt, va), true))
+#define note_event(drv, tag, level, ip, event, buf, len)                          \
+  ((drv)->ops->event && ((drv)->ops->event(drv, tag, level, ip, event, buf, len), true))
+#define note_vprintf(drv, tag, level, ip, type, fmt, va)                                \
+  ((drv)->ops->vprintf && ((drv)->ops->vprintf(drv, tag, level, ip, type, fmt, va), true))
 
 #define BUFFER_SIZE 256
 static_assert(BUFFER_SIZE >= sizeof(struct note_event_s),
@@ -1385,7 +1385,7 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t tag,
   char data[BUFFER_SIZE];
   unsigned int length = 0;
 
-  if (note_event(driver, level, ip, event, buf, len))
+  if (note_event(driver, tag, level, ip, event, buf, len))
     {
       return length;
     }
@@ -1455,7 +1455,7 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
   note = (FAR struct note_printf_s *)data;
   length = sizeof(data) - SIZEOF_NOTE_PRINTF(0);
 
-  if (note_vprintf(driver, level, ip, fmt, *va))
+  if (note_vprintf(driver, tag, level, ip, type, fmt, *va))
     {
       return;
     }

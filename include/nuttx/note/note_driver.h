@@ -319,12 +319,12 @@ struct note_driver_ops_s
                     size_t curused);
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-  CODE void (*event)(FAR struct note_driver_s *drv, uint8_t level,
-                     uintptr_t ip, uint8_t event,
+  CODE void (*event)(FAR struct note_driver_s *drv, uint8_t tag,
+                     uint8_t level, uintptr_t ip, uint8_t event,
                      FAR const void *buf, size_t len);
-  CODE void (*vprintf)(FAR struct note_driver_s *drv, uint8_t level,
-                       uintptr_t ip, FAR const char *fmt,
-                       va_list va) printf_like(4, 0);
+  CODE void (*vprintf)(FAR struct note_driver_s *drv, uint8_t tag,
+                       uint8_t level, uintptr_t ip, uint64_t type,
+                       FAR const char *fmt, va_list va) printf_like(6, 0);
 #endif
 };
 
