@@ -50,7 +50,7 @@ static IfxCpu_Trap g_trapinfo;
  * Private Functions
  ****************************************************************************/
 
-static void tricore_trapinfo(volatile void *trap)
+static inline_function void tricore_trapinfo(volatile void *trap)
 {
   IfxCpu_Trap *ctrap = (IfxCpu_Trap *)trap;
 

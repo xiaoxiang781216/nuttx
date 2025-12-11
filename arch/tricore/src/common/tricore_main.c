@@ -42,7 +42,7 @@
  * Private Functions
  ****************************************************************************/
 
-static void core_main(void)
+static inline_function void core_main(void)
 {
 #ifdef USE_EARLYSERIALINIT
   tricore_earlyserialinit();

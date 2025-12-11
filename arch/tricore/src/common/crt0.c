@@ -63,7 +63,7 @@ int main(int argc, char *argv[]);
  *
  ****************************************************************************/
 
-static void exec_ctors(void)
+static inline_function void exec_ctors(void)
 {
   for (initializer_t *ctor = _sctors;
        ctor != _ectors && *ctor != NULL; ctor++)
@@ -80,7 +80,7 @@ static void exec_ctors(void)
  *
  ****************************************************************************/
 
-static void exec_dtors(void)
+static inline_function void exec_dtors(void)
 {
   for (initializer_t *dtor = _sdtors;
        dtor != _edtors && *dtor != NULL; dtor++)

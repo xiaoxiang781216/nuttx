@@ -43,7 +43,7 @@
  ****************************************************************************/
 
 #ifdef CONFIG_LIB_SYSCALL
-static void dispatch_syscall(void)
+static inline_function void dispatch_syscall(void)
 {
   __asm__ __volatile__ (
 #ifdef CONFIG_TRICORE_TOOLCHAIN_TASKING

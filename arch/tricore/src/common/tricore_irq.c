@@ -113,7 +113,7 @@ static inline_function IfxSrc_Tos tricore_gettos(int cpu_idx)
  *
  ****************************************************************************/
 
-static void tricore_gpsrinitialize(void)
+static inline_function void tricore_gpsrinitialize(void)
 {
   volatile Ifx_SRC_SRCR *src;
   int cpu_idx;

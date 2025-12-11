@@ -35,14 +35,14 @@
 #include "tricore_internal.h"
 
 /****************************************************************************
- * Public Functions
+ * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
  * Name: tricore_dump_upcsa
  ****************************************************************************/
 
-void tricore_dump_upcsa(volatile uint32_t *regs)
+static inline_function void tricore_dump_upcsa(volatile uint32_t *regs)
 {
   _alert("UPCXI:%-13.8" PRIX32 "PSW:%-15.8" PRIX32
          "SP:%-16.8" PRIX32 "A11:%-15.8" PRIX32 "\n",
@@ -62,7 +62,7 @@ void tricore_dump_upcsa(volatile uint32_t *regs)
  * Name: tricore_dump_lowcsa
  ****************************************************************************/
 
-void tricore_dump_lowcsa(volatile uint32_t *regs)
+static inline_function void tricore_dump_lowcsa(volatile uint32_t *regs)
 {
   _alert("LPCXI:%-13.8" PRIX32 "PC:%-16.8" PRIX32
          "A2:%-16.8" PRIX32 "A3:%-16.8" PRIX32 "\n",
@@ -83,13 +83,17 @@ void tricore_dump_lowcsa(volatile uint32_t *regs)
  * Name: tricore_dump_trapctrl
  ****************************************************************************/
 
-void tricore_dump_trapctrl(void)
+static inline_function void tricore_dump_trapctrl(void)
 {
   _alert("PSTR:%-14.8" PRIX32 "DSTR:%-14.8" PRIX32
          "DATR:%-14.8" PRIX32 "DEADD:%-13.8" PRIX32 "\n\n",
          (uint32_t)__mfcr(CPU_PSTR), (uint32_t)__mfcr(CPU_DSTR),
          (uint32_t)__mfcr(CPU_DATR), (uint32_t)__mfcr(CPU_DEADD));
 }
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
 
 /****************************************************************************
  * Name: tricore_dump_csachain

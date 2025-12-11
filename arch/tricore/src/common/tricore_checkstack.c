@@ -64,8 +64,8 @@
  *
  ****************************************************************************/
 
-static size_t tricore_stack_check(uintptr_t alloc, size_t size,
-                                  size_t checksize)
+static inline_function
+size_t tricore_stack_check(uintptr_t alloc, size_t size, size_t checksize)
 {
   uintptr_t start;
   uintptr_t end;

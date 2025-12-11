@@ -133,7 +133,7 @@ static DEFINE_PER_CPU(struct tricore_debug_s, g_trevt_debugs);
  * Private Function
  ****************************************************************************/
 
-static uint32_t tricore_convert_type(int type)
+static inline_function uint32_t tricore_convert_type(int type)
 {
   switch (type)
     {
@@ -172,7 +172,8 @@ static uint32_t tricore_convert_type(int type)
  *
  ****************************************************************************/
 
-static int tricore_trevt_add(int type, uint32_t addr, size_t size)
+static inline_function int tricore_trevt_add(int type, uint32_t addr,
+                                             size_t size)
 {
   int i;
 
@@ -204,7 +205,7 @@ static int tricore_trevt_add(int type, uint32_t addr, size_t size)
  *
  ****************************************************************************/
 
-static int tricore_trevt_remove(uint32_t addr)
+static inline_function int tricore_trevt_remove(uint32_t addr)
 {
   int i;
 
@@ -231,7 +232,7 @@ static int tricore_trevt_remove(uint32_t addr)
  *
  ****************************************************************************/
 
-static void tricore_dbgmonitor(void)
+static inline_function void tricore_dbgmonitor(void)
 {
   __asm__ __volatile__ (
     "svlcx\n\t"
