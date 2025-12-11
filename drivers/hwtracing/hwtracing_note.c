@@ -50,7 +50,8 @@ struct hwtracing_note_s
  ****************************************************************************/
 
 static void hwtracing_note_add(FAR struct note_driver_s *drv,
-                               FAR const void *note, size_t len);
+                               FAR const void *note, size_t len,
+                               bool noswitches);
 
 /****************************************************************************
  * Private Data
@@ -122,7 +123,8 @@ static inline void hwtracing_note_trigger(FAR uintptr_t *note_addr,
  ****************************************************************************/
 
 static void hwtracing_note_add(FAR struct note_driver_s *drv,
-                               FAR const void *buf, size_t notelen)
+                               FAR const void *buf, size_t notelen,
+                               bool noswitches)
 {
   FAR struct hwtracing_note_s *note = (FAR struct hwtracing_note_s *)drv;
   irqstate_t flags = spin_lock_irqsave(&note->lock);
@@ -163,7 +165,7 @@ int hwtracing_note_register(FAR uintptr_t *note_addr,
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   drv->driver.name = "hwtracing";
-  drv->driver.filter.mode.flag =
+  drv->driver.filter.mode.type_mask =
                       CONFIG_HWTRACING_NOTE_FILTER_DEFAULT_MODE;
 
 #  ifdef CONFIG_SMP
