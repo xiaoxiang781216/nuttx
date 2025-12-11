@@ -44,18 +44,9 @@
 
 /* Configuration ************************************************************/
 
-/* This logic uses three system calls {0,1,2} for context switching and one
- * for the syscall return.
- * So a minimum of four syscall values must be reserved.
- * If CONFIG_BUILD_PROTECTED is defined, then four more syscall values must
- * be reserved.
- */
+/* Reserved syscall for special os feature */
 
-#ifndef CONFIG_BUILD_FLAT
-#  define CONFIG_SYS_RESERVED 6
-#else
-#  define CONFIG_SYS_RESERVED 4
-#endif
+#define CONFIG_SYS_RESERVED 6
 
 /* system calls */
 
@@ -87,9 +78,7 @@
 
 #define SYS_assert_handler        (3)
 
-#ifndef CONFIG_BUILD_FLAT
-
-/* SYS call 6:
+/* SYS call 6: only valid when not in FLAT mode
  *
  * void signal_handler(_sa_sigaction_t sighand,
  *                     int signo, siginfo_t *info,
@@ -98,13 +87,12 @@
 
 #define SYS_signal_handler        (4)
 
-/* SYS call 7:
+/* SYS call 7: only valid when not in FLAT mode
  *
  * void signal_handler_return(void);
  */
 
 #define SYS_signal_handler_return (5)
-#endif /* !CONFIG_BUILD_FLAT */
 
 #define ARM_SMCC_RES_A0       (0)
 #define ARM_SMCC_RES_A1       (1)

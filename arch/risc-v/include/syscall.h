@@ -43,17 +43,9 @@
 
 /* Configuration ************************************************************/
 
-/* This logic uses three system calls {0,1,2} for context switching and one
- * for the syscall return.  So a minimum of four syscall values must be
- * reserved.  If CONFIG_BUILD_FLAT isn't defined, then four more syscall
- * values must be reserved.
- */
+/* Reserved syscall for special os feature */
 
-#ifndef CONFIG_BUILD_FLAT
-#  define CONFIG_SYS_RESERVED 6
-#else
-#  define CONFIG_SYS_RESERVED 4
-#endif
+#define CONFIG_SYS_RESERVED 6
 
 /* RV64GC system calls ******************************************************/
 
@@ -84,9 +76,7 @@
 
 #define SYS_assert_handler        (3)
 
-#ifndef CONFIG_BUILD_FLAT
-
-/* SYS call 4:
+/* SYS call 4: only valid when not in FLAT mode
  *
  * void signal_handler(_sa_sigaction_t sighand, int signo,
  *                     siginfo_t *info, void *ucontext);
@@ -94,13 +84,12 @@
 
 #define SYS_signal_handler        (4)
 
-/* SYS call 5:
+/* SYS call 5: only valid when not in FLAT mode
  *
  * void signal_handler_return(void);
  */
 
 #define SYS_signal_handler_return (5)
-#endif /* !CONFIG_BUILD_FLAT */
 
 /****************************************************************************
  * Public Types

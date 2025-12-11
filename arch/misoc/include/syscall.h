@@ -43,17 +43,9 @@
 
 /* Configuration ************************************************************/
 
-/* SYS call 1 and 2 are defined for internal use by the MINERVA port (see
- * arch/miscoc/include/minerva/syscall.h).  In addition, SYS call 3 is the
- * return from a SYS call in kernel mode.  The first four syscall values
- * must, therefore, be reserved (0 is not used).
- */
+/* Reserved syscall for special os feature */
 
-#ifndef CONFIG_BUILD_FLAT
-#  define CONFIG_SYS_RESERVED 5
-#else
-#  define CONFIG_SYS_RESERVED 4
-#endif
+#define CONFIG_SYS_RESERVED 5
 
 /* sys_call macros **********************************************************/
 
@@ -94,17 +86,13 @@
 
 #define SYS_assert_handler (3)
 
-#ifdef CONFIG_BUILD_KERNEL
-
-/* SYS call 4:
+/* SYS call 4: only valid when enable CONFIG_BUILD_KERNEL
  *
  * void up_syscall_return(void);
  */
 
 #define SYS_syscall_return (4)
 #define up_syscall_return() sys_call0(SYS_syscall_return)
-
-#endif
 
 /****************************************************************************
  * Public Types

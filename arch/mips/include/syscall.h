@@ -43,17 +43,9 @@
 
 /* Configuration ************************************************************/
 
-/* SYS call 1 and 2 are defined for internal use by the PIC32MX port (see
- * arch/mips/include/mips32/syscall.h).  In addition, SYS call 3 is the
- * return from a SYS call in kernel mode.  The first four syscall values
- * must, therefore, be reserved (0 is not used).
- */
+/* Reserved syscall for special os feature */
 
-#ifndef CONFIG_BUILD_FLAT
-#  define CONFIG_SYS_RESERVED 5
-#else
-#  define CONFIG_SYS_RESERVED 4
-#endif
+#define CONFIG_SYS_RESERVED 5
 
 /* sys_call macros **********************************************************/
 
@@ -161,16 +153,13 @@
 #define mips_switchcontext(saveregs, restoreregs) \
   sys_call2(SYS_switch_context, (uintptr_t)saveregs, (uintptr_t)restoreregs)
 
-#ifdef CONFIG_BUILD_KERNEL
-/* SYS call 3:
+/* SYS call 3: only valid when enable CONFIG_BUILD_KERNEL
  *
  * void up_syscall_return(void);
  */
 
 #define SYS_syscall_return (3)
 #define up_syscall_return() sys_call0(SYS_syscall_return)
-
-#endif
 
 /* SYS call 4:
  *

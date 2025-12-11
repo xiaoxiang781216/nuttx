@@ -50,20 +50,9 @@
 
 /* Configuration ************************************************************/
 
-/* This logic uses three system calls {0,1,2} for context switching and one
- * for the syscall return.
- * So a minimum of four syscall values must be reserved.
- * If CONFIG_BUILD_FLAT isn't defined, then four more syscall values must
- * be reserved.
- */
+/* Reserved syscall for special os feature */
 
-#if defined(CONFIG_BUILD_FLAT)
-#  define CONFIG_SYS_RESERVED   5
-#elif defined(CONFIG_LIB_PPCCALL)
-#  define CONFIG_SYS_RESERVED   10
-#else
-#  define CONFIG_SYS_RESERVED   9
-#endif
+#define CONFIG_SYS_RESERVED 10
 
 /* Cortex-M system calls ****************************************************/
 
@@ -81,14 +70,12 @@
 
 #define SYS_switch_context        (2)
 
-#ifdef CONFIG_LIB_SYSCALL
-/* SYS call 3:
+/* SYS call 3: only valid when enable CONFIG_LIB_SYSCALL
  *
  * void arm_syscall_return(void);
  */
 
 #define SYS_syscall_return        (3)
-#endif /* CONFIG_LIB_SYSCALL */
 
 /* SYS call 4:
  *
@@ -97,8 +84,7 @@
 
 #define SYS_assert_handler        (4)
 
-#ifndef CONFIG_BUILD_FLAT
-/* SYS call 5:
+/* SYS call 5: only valid when not in FLAT mode
  *
  * void up_task_start(main_t taskentry, int argc, char *argv[])
  *        noreturn_function;
@@ -106,7 +92,7 @@
 
 #define SYS_task_start            (5)
 
-/* SYS call 6:
+/* SYS call 6: only valid when not in FLAT mode
  *
  * void up_pthread_start((pthread_startroutine_t startup,
  *                        pthread_startroutine_t entrypt, pthread_addr_t arg)
@@ -115,7 +101,7 @@
 
 #define SYS_pthread_start         (6)
 
-/* SYS call 7:
+/* SYS call 7: only valid when not in FLAT mode
  *
  * void signal_handler(_sa_sigaction_t sighand,
  *                     int signo, siginfo_t *info,
@@ -124,24 +110,20 @@
 
 #define SYS_signal_handler        (7)
 
-/* SYS call 8:
+/* SYS call 8: only valid when not in FLAT mode
  *
  * void signal_handler_return(void);
  */
 
 #define SYS_signal_handler_return (8)
 
-#ifdef CONFIG_LIB_PPCCALL
 /* SYS call 9:
  *
  * void ppccall(struct ppccall_param_s *param);
  */
 
-#  define SYS_ppccall             (9)
-#  define SYS_ppccall_return      SYS_syscall_return
-#endif /* CONFIG_LIB_PPCCALL */
-
-#endif /* !CONFIG_BUILD_FLAT */
+#define SYS_ppccall               (9)
+#define SYS_ppccall_return        SYS_syscall_return
 
 /****************************************************************************
  * Public Types

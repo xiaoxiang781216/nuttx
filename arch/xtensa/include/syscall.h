@@ -44,17 +44,9 @@
 
 #define SYS_syscall 0x00
 
-/* This logic uses three system calls {0,1,2} for context switching and one
- * for the syscall return.  So a minimum of four syscall values must be
- * reserved.  If CONFIG_BUILD_FLAT isn't defined, then four more syscall
- * values must be reserved.
- */
+/* Reserved syscall for special os feature */
 
-#ifndef CONFIG_BUILD_FLAT
-#  define CONFIG_SYS_RESERVED 10
-#else
-#  define CONFIG_SYS_RESERVED 6
-#endif
+#define CONFIG_SYS_RESERVED 10
 
 /* Xtensa system calls ******************************************************/
 
@@ -86,15 +78,12 @@
 
 #define SYS_flush_context         (3)
 
-#ifdef CONFIG_LIB_SYSCALL
-
-/* SYS call 4:
+/* SYS call 4: only valid when enable CONFIG_LIB_SYSCALL
  *
  * void xtensa_syscall_return(void);
  */
 
 #define SYS_syscall_return        (4)
-#endif /* CONFIG_LIB_SYSCALL */
 
 /* SYS call 5:
  *
@@ -103,8 +92,7 @@
 
 #define SYS_assert_handler        (5)
 
-#ifndef CONFIG_BUILD_FLAT
-/* SYS call 6:
+/* SYS call 6: only valid when not in FLAT mode
  *
  * void up_task_start(main_t taskentry, int argc, char *argv[])
  *        noreturn_function;
@@ -112,7 +100,7 @@
 
 #define SYS_task_start            (6)
 
-/* SYS call 7:
+/* SYS call 7: only valid when not in FLAT mode
  *
  * void up_pthread_start(pthread_trampoline_t startup,
  *                       pthread_startroutine_t entrypt, pthread_addr_t arg)
@@ -121,7 +109,7 @@
 
 #define SYS_pthread_start         (7)
 
-/* SYS call 8:
+/* SYS call 8: only valid when not in FLAT mode
  *
  * void signal_handler(_sa_sigaction_t sighand, int signo,
  *                     siginfo_t *info, void *ucontext);
@@ -129,13 +117,12 @@
 
 #define SYS_signal_handler        (8)
 
-/* SYS call 9:
+/* SYS call 9: only valid when not in FLAT mode
  *
  * void signal_handler_return(void);
  */
 
 #define SYS_signal_handler_return (9)
-#endif /* !CONFIG_BUILD_FLAT */
 
 /****************************************************************************
  * Public Types

@@ -43,17 +43,9 @@
 
 /* Configuration ************************************************************/
 
-/* SYS call 1 and 2 are defined for internal use by the RISC-V port (see
- * arch/riscv/include/mips32/syscall.h).  In addition, SYS call 3 is the
- * return from a SYS call in kernel mode.  The first four syscall values must
- * therefore, be reserved (0 is not used).
- */
+/* Reserved syscall for special os feature */
 
-#ifndef CONFIG_BUILD_FLAT
-#  define CONFIG_SYS_RESERVED 5
-#else
-#  define CONFIG_SYS_RESERVED 4
-#endif
+#define CONFIG_SYS_RESERVED 5
 
 /* sys_call macros **********************************************************/
 

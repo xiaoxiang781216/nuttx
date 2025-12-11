@@ -38,11 +38,9 @@
 
 /* Configuration ************************************************************/
 
-#ifndef CONFIG_BUILD_FLAT
-#  define CONFIG_SYS_RESERVED 4
-#else
-#  define CONFIG_SYS_RESERVED 1
-#endif
+/* Reserved syscall for special os feature */
+
+#define CONFIG_SYS_RESERVED 4
 
 /* system calls */
 
@@ -51,43 +49,40 @@
  * void _assert(const char *filename, int linenum, const char *msg);
  */
 
-#define SYS_assert_handler          (0)
+#define SYS_assert_handler        (0)
 
-#ifndef CONFIG_BUILD_FLAT
-/* SYS call 1:
+/* SYS call 1: only valid when not in FLAT mode
  *
  * void up_task_start(main_t taskentry, int argc, char *argv[])
  *        noreturn_function;
  */
 
-#  define SYS_task_start            (1)
+#define SYS_task_start            (1)
 
-/* SYS call 2:
+/* SYS call 2: only valid when not in FLAT mode
  *
  * void up_pthread_start((pthread_startroutine_t startup,
  *                        pthread_startroutine_t entrypt, pthread_addr_t arg)
  *        noreturn_function
  */
 
-#  define SYS_pthread_start         (2)
+#define SYS_pthread_start         (2)
 
-/* SYS call 3:
+/* SYS call 3: only valid when not in FLAT mode
  *
  * void signal_handler(_sa_sigaction_t sighand,
  *                     int signo, siginfo_t *info,
  *                     void *ucontext);
  */
 
-#  define SYS_signal_handler        (3)
+#define SYS_signal_handler        (3)
 
-/* SYS call 4:
+/* SYS call 4: only valid when not in FLAT mode
  *
  * void signal_handler_return(void);
  */
 
-#  define SYS_signal_handler_return (4)
-
-#endif /* !CONFIG_BUILD_FLAT */
+#define SYS_signal_handler_return (4)
 
 /****************************************************************************
  * Public Types
