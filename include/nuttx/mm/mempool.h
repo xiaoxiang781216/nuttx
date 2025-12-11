@@ -53,7 +53,7 @@
                                     MEMPOOL_RECORD_SIZE, \
                                     MM_ALIGN))
 #else
-#  define MEMPOOL_REALBLOCKSIZE(s) (s)
+#  define MEMPOOL_REALBLOCKSIZE(s) (ALIGN_UP((s), MM_ALIGN))
 #endif
 
 /* Static mempool definition related macros, in which:
@@ -70,7 +70,7 @@
                                      dynalloc, throttle) \
   static char CONCATENATE(name, _buffer) \
   [(prealloc) * MEMPOOL_REALBLOCKSIZE(blksize) + MEMPOOL_HEADER_SIZE] \
-  aligned_data(sizeof(uintptr_t)); \
+  aligned_data(MM_ALIGN); \
   static struct mempool_s name = \
     { \
       CONCATENATE(name, _buffer), \
@@ -105,7 +105,7 @@
                                          maxalloc, dynalloc, throttle) \
   static DEFINE_PER_CPU_BSS_BMP(char, CONCATENATE(name, _buffer) \
   [(prealloc) * MEMPOOL_REALBLOCKSIZE(blksize) + MEMPOOL_HEADER_SIZE] \
-  aligned_data(sizeof(uintptr_t))); \
+  aligned_data(MM_ALIGN)); \
   static DEFINE_PER_CPU_BMP(struct mempool_s, name) = \
     { \
       CONCATENATE(name, _buffer), \
