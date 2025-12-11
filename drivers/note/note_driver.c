@@ -1925,17 +1925,45 @@ void note_get_taskname(pid_t pid, FAR char *buf, size_t len)
 
 int note_driver_register(FAR struct note_driver_s *driver)
 {
+  int ret = -ENOMEM;
+  irqstate_t flags;
   int i;
 
   DEBUGASSERT(driver);
+  flags = spin_lock_irqsave_notrace(&g_note_lock);
   for (i = 0; i < CONFIG_DRIVERS_NOTE_MAX; i++)
     {
       if (g_note_drivers[i] == NULL)
         {
           g_note_drivers[i] = driver;
-          return OK;
+          ret = 0;
+          break;
         }
     }
 
-  return -ENOMEM;
+  spin_unlock_irqrestore_notrace(&g_note_lock, flags);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: note_driver_unregister
+ ****************************************************************************/
+
+void note_driver_unregister(FAR struct note_driver_s *driver)
+{
+  irqstate_t flags;
+  int i;
+
+  DEBUGASSERT(driver);
+  flags = spin_lock_irqsave_notrace(&g_note_lock);
+  for (i = 0; i < CONFIG_DRIVERS_NOTE_MAX; i++)
+    {
+      if (g_note_drivers[i] == driver)
+        {
+          g_note_drivers[i] = NULL;
+          break;
+        }
+    }
+
+  spin_unlock_irqrestore_notrace(&g_note_lock, flags);
 }

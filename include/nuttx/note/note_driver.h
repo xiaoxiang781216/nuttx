@@ -455,6 +455,12 @@ int note_driver_register(FAR struct note_driver_s *driver);
 #endif
 
 /****************************************************************************
+ * Name: note_driver_unregister
+ ****************************************************************************/
+
+void note_driver_unregister(FAR struct note_driver_s *driver);
+
+/****************************************************************************
  * Name: note_filter_mode
  *
  * Description:

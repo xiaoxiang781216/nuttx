@@ -57,6 +57,8 @@ FAR struct note_driver_s *
 noteram_initialize_with_buffer(FAR const char *devpath,
                                FAR void *buffer, size_t bufsize,
                                bool overwrite, bool crashdump, bool regnote);
+
+void noteram_deinitialize(struct note_driver_s *drv);
 #endif
 
 #endif /* __INCLUDE_NUTTX_NOTE_NOTERAM_DRIVER_H */

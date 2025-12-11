@@ -1706,7 +1706,6 @@ noteram_initialize_with_buffer(FAR const char *devpath,
     }
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-  memcpy(drv + 1, devpath, len);
   drv->driver.name = (FAR const char *)(drv + 1);
   drv->driver.filter.mode.type_mask =
     CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE;
@@ -1759,4 +1758,37 @@ noteram_initialize_with_buffer(FAR const char *devpath,
     }
 
   return &drv->driver;
+}
+
+/****************************************************************************
+ * Name: noteram_deinitialize
+ *
+ * Description:
+ *   Unregister noteram driver.
+ *
+ * Input Parameters:
+ *  drv: the ptr of note_driver_s.
+ *
+ * Returned Value:
+ *  None.
+ *
+ ****************************************************************************/
+
+void noteram_deinitialize(struct note_driver_s *drv)
+{
+  uint32_t magic;
+  FAR struct noteram_driver_s *noteram_drv =
+      container_of(drv, struct noteram_driver_s, driver);
+
+  atomic_cmpxchg_relaxed(&noteram_drv->header->magic, &magic, 0);
+
+#ifdef CONFIG_DRIVERS_NOTERAM_CRASH_DUMP
+  panic_notifier_chain_unregister(&noteram_drv->nb);
+#endif
+
+  note_driver_unregister(drv);
+
+  unregister_driver((char *)(noteram_drv + 1));
+
+  kmm_free(noteram_drv);
 }
