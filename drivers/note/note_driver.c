@@ -31,7 +31,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <time.h>
-#include <syslog.h>
 
 #include <nuttx/init.h>
 #include <nuttx/irq.h>
@@ -39,11 +38,9 @@
 #include <nuttx/clock.h>
 #include <nuttx/timers/clkcnt.h>
 #include <nuttx/note/note_driver.h>
-#include <nuttx/syslog/syslog.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/streams.h>
-#include <nuttx/fs/fs.h>
 
 #include "note_driver.h"
 #include "sched/sched.h"
@@ -115,43 +112,25 @@ struct note_startalloc_s
 #  define SIZEOF_NOTE_START(n) (sizeof(struct note_common_s))
 #endif
 
-struct note_taskname_foreach_s
+#if CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
+struct note_taskname_info_s
 {
-  CODE void (*handler)(FAR const void *, size_t, FAR void *);
-  FAR void *arg;
+  pid_t pid;
+  uint8_t size;
+  char name[1];
 };
 
-typedef struct note_driver_s *
-note_drivers_t[CONFIG_DRIVERS_NOTE_MAX + 1];
-
-/****************************************************************************
- * Private Function Prototypes
- ****************************************************************************/
-
-static int note_driver_open(FAR struct file *filep);
-static int note_driver_close(FAR struct file *filep);
-static ssize_t note_driver_read(FAR struct file *filep,
-                                FAR char *buffer, size_t buflen);
-static ssize_t note_driver_write(FAR struct file *filep,
-                                 FAR const char *buffer, size_t buflen);
-static int note_driver_ioctl(FAR struct file *filep, int cmd,
-                             unsigned long arg);
-static int note_driver_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                            bool setup);
+struct note_taskname_s
+{
+  size_t head;
+  size_t tail;
+  char buffer[CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE];
+};
+#endif
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
-static const struct file_operations g_note_fops =
-{
-  .open  = note_driver_open,  /* open */
-  .close = note_driver_close, /* close */
-  .read  = note_driver_read,  /* read */
-  .write = note_driver_write, /* write */
-  .ioctl = note_driver_ioctl, /* ioctl */
-  .poll  = note_driver_poll,  /* poll */
-};
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
     defined(CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER)
@@ -159,357 +138,46 @@ static DEFINE_PER_CPU_BSS(unsigned int, g_note_disabled_irq_nest);
 #  define g_note_disabled_irq_nest this_cpu_var(g_note_disabled_irq_nest)
 #endif
 
-FAR static DEFINE_PER_CPU_BMP(note_drivers_t, g_note_drivers) =
+FAR static struct note_driver_s *
+  g_note_drivers[CONFIG_DRIVERS_NOTE_MAX + 1] =
 {
-#ifndef CONFIG_BMP
-#  ifdef CONFIG_DRIVERS_NOTERAM
+#ifdef CONFIG_DRIVERS_NOTERAM
   (FAR struct note_driver_s *)&g_noteram_driver,
-#  endif
-#  ifdef CONFIG_DRIVERS_NOTELOG
+#endif
+#ifdef CONFIG_DRIVERS_NOTELOG
   (FAR struct note_driver_s *)&g_notelog_driver,
-#  endif
-#  ifdef CONFIG_DRIVERS_NOTELOWEROUT
+#endif
+#ifdef CONFIG_DRIVERS_NOTELOWEROUT
   (FAR struct note_driver_s *)&g_notestream_lowerout,
-#  endif
-#  ifdef CONFIG_DRIVERS_NOTERPMSG
+#endif
+#ifdef CONFIG_DRIVERS_NOTERPMSG
   (FAR struct note_driver_s *)&g_noterpmsg_driver,
-#  endif
-#  ifdef CONFIG_DRIVERS_NOTET32FDX
+#endif
+#ifdef CONFIG_DRIVERS_NOTET32FDX
   (FAR struct note_driver_s *)&g_notefdx,
-#  endif
-#  ifdef CONFIG_DRIVERS_NOTESNAP
+#endif
+#ifdef CONFIG_DRIVERS_NOTESNAP
   (FAR struct note_driver_s *)&g_notesnap,
-#  endif
 #endif
   NULL
 };
-#define g_note_drivers this_cpu_var_bmp(g_note_drivers)
+
+#if CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0 && \
+    defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH)
+static struct note_taskname_s g_note_taskname;
+#endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER)
-static DEFINE_PER_CPU_BSS_BMP(spinlock_t, g_note_lock);
-#  define g_note_lock this_cpu_var_bmp(g_note_lock)
+static spinlock_t g_note_lock;
 #endif
 
 #if CONFIG_DRIVERS_NOTE_CLOCKID >= 0
-static DEFINE_PER_CPU_BSS_BMP(clock_t, g_note_perf_offset);
-#  define g_note_perf_offset this_cpu_var_bmp(g_note_perf_offset)
+static clock_t g_note_perf_offset;
 #endif
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-#ifdef CONFIG_BMP
-static void note_drivers_initialize(void)
-{
-  int i = 0;
-
-  if (g_note_drivers[0] == NULL)
-    {
-#  ifdef CONFIG_DRIVERS_NOTERAM
-      g_note_drivers[i++] = (FAR struct note_driver_s *)&g_noteram_driver;
-#  endif
-#  ifdef CONFIG_DRIVERS_NOTELOG
-      g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notelog_driver;
-#  endif
-#  ifdef CONFIG_DRIVERS_NOTELOWEROUT
-      g_note_drivers[i++] =
-        (FAR struct note_driver_s *)&g_notestream_lowerout;
-#  endif
-#  ifdef CONFIG_DRIVERS_NOTERPMSG
-      g_note_drivers[i++] = (FAR struct note_driver_s *)&g_noterpmsg_driver;
-#  endif
-#  ifdef CONFIG_DRIVERS_NOTET32FDX
-      g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notefdx;
-#  endif
-#  ifdef CONFIG_DRIVERS_NOTESNAP
-      g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notesnap;
-#  endif
-    }
-}
-#else
-#  define note_drivers_initialize()
-#endif
-
-/****************************************************************************
- * Name: note_driver_fs_register
- *
- * Description:
- *   Open.the note driver.
- *
- ****************************************************************************/
-
-static int note_driver_fs_register(FAR struct note_driver_s *driver)
-{
-  char devpath[32];
-  int ret = 0;
-
-  if (driver->name != NULL && driver->name[0] != '\0')
-    {
-      snprintf(devpath, sizeof(devpath), "/dev/note/%s", driver->name);
-
-      /* Use driver's private fops if available, otherwise use common fops */
-
-      ret = register_driver(devpath, &g_note_fops, 0666, driver);
-    }
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: note_driver_fs_unregister
- *
- * Description:
- *   Open.the note driver.
- *
- ****************************************************************************/
-
-static void note_driver_fs_unregister(FAR struct note_driver_s *driver)
-{
-  char devpath[32];
-
-  snprintf(devpath, sizeof(devpath), "/dev/note/%s", driver->name);
-  unregister_driver(devpath);
-}
-
-/****************************************************************************
- * Name: note_driver_open
- *
- * Description:
- *   Open.the note driver.
- *
- ****************************************************************************/
-
-static int note_driver_open(FAR struct file *filep)
-{
-  FAR struct note_driver_s *driver = filep->f_inode->i_private;
-
-  if (driver != NULL && driver->ops != NULL &&
-      driver->ops->open != NULL)
-    {
-      return driver->ops->open(filep);
-    }
-
-  return 0;
-}
-
-/****************************************************************************
- * Name: note_driver_close
- *
- * Description:
- *   Close the note driver.
- *
- ****************************************************************************/
-
-static int note_driver_close(FAR struct file *filep)
-{
-  FAR struct note_driver_s *driver = filep->f_inode->i_private;
-
-  if (driver != NULL && driver->ops != NULL &&
-      driver->ops->close != NULL)
-    {
-      return driver->ops->close(filep);
-    }
-
-  return 0;
-}
-
-/****************************************************************************
- * Name: note_driver_read
- *
- * Description:
- *   Read from the note driver.
- *
- ****************************************************************************/
-
-static ssize_t note_driver_read(FAR struct file *filep, FAR char *buffer,
-                                size_t len)
-{
-  FAR struct note_driver_s *driver = filep->f_inode->i_private;
-
-  if (driver != NULL && driver->ops != NULL &&
-      driver->ops->read != NULL)
-    {
-      return driver->ops->read(filep, buffer, len);
-    }
-
-  return -ENOSYS;
-}
-
-/****************************************************************************
- * Name: note_driver_write
- *
- * Description:
- *   Write to the note driver.
- *
- ****************************************************************************/
-
-static ssize_t note_driver_write(FAR struct file *filep,
-                                 FAR const char *buffer, size_t len)
-{
-  FAR struct note_driver_s *driver = filep->f_inode->i_private;
-
-  if (driver != NULL && driver->ops != NULL &&
-      driver->ops->write != NULL)
-    {
-      return driver->ops->write(filep, buffer, len);
-    }
-
-  return -ENOSYS;
-}
-
-/****************************************************************************
- * Name: note_driver_ioctl
- *
- * Description:
- *   Common ioctl handler for note filter control.
- *
- ****************************************************************************/
-
-static int note_driver_ioctl(FAR struct file *filep, int cmd,
-                             unsigned long arg)
-{
-  int ret = OK;
-  irqstate_t irq_mask;
-  FAR struct note_driver_s *driver = filep->f_inode->i_private;
-
-  irq_mask = spin_lock_irqsave_notrace(&g_note_lock);
-  switch (cmd)
-    {
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-      case NOTE_GETFILTER:
-        {
-          FAR struct note_filter_mode_s *mode =
-                         (FAR struct note_filter_mode_s *)arg;
-          mode->type_mask = driver->filter.mode.type_mask;
-#ifdef CONFIG_SMP
-          mode->cpuset = driver->filter.mode.cpuset;
-#endif
-        }
-        break;
-
-      case NOTE_SETFILTER:
-        {
-          FAR struct note_filter_mode_s *mode =
-                        (FAR struct note_filter_mode_s *)arg;
-          driver->filter.mode.type_mask = mode->type_mask;
-#ifdef CONFIG_SMP
-          driver->filter.mode.cpuset = mode->cpuset;
-#endif
-        }
-        break;
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
-      case NOTE_GETSYSCALLFILTER:
-        {
-          FAR struct note_filter_syscall_s *filter =
-                        (FAR struct note_filter_syscall_s *)arg;
-          *filter = driver->filter.syscall_mask;
-        }
-        break;
-
-      case NOTE_SETSYSCALLFILTER:
-        {
-          FAR struct note_filter_syscall_s *filter =
-                        (FAR struct note_filter_syscall_s *)arg;
-          driver->filter.syscall_mask = *filter;
-        }
-        break;
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
-      case NOTE_GETIRQFILTER:
-        {
-          FAR struct note_filter_irq_s *filter =
-                        (FAR struct note_filter_irq_s *)arg;
-          *filter = driver->filter.irq_mask;
-        }
-        break;
-
-      case NOTE_SETIRQFILTER:
-        {
-          FAR struct note_filter_irq_s *filter =
-                        (FAR struct note_filter_irq_s *)arg;
-          driver->filter.irq_mask = *filter;
-        }
-        break;
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-      case NOTE_GETTAGFILTER:
-        {
-          FAR struct note_filter_tag_s *filter =
-                        (FAR struct note_filter_tag_s *)arg;
-          *filter = driver->filter.tag_mask;
-        }
-        break;
-
-      case NOTE_SETTAGFILTER:
-        {
-          FAR struct note_filter_tag_s *filter =
-                        (FAR struct note_filter_tag_s *)arg;
-          driver->filter.tag_mask = *filter;
-        }
-        break;
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-      case NOTE_GETLEVEL:
-        {
-          FAR struct note_filter_level_s *level =
-                        (FAR struct note_filter_level_s *)arg;
-          level->level = driver->filter.level.level;
-        }
-        break;
-
-      case NOTE_SETLEVEL:
-        {
-          FAR struct note_filter_level_s *level =
-                        (FAR struct note_filter_level_s *)arg;
-          driver->filter.level.level = level->level;
-        }
-        break;
-#endif
-
-      default:
-        ret = -ENOTTY;
-        break;
-    }
-
-  spin_unlock_irqrestore_notrace(&g_note_lock, irq_mask);
-
-  if (ret == -ENOTTY && driver->ops != NULL && driver->ops->ioctl != NULL)
-    {
-      /* Let the driver handle special ioctls */
-
-      ret = driver->ops->ioctl(filep, cmd, arg);
-    }
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: note_driver_poll
- *
- * Description:
- *   Poll the note driver.
- *
- ****************************************************************************/
-
-static int note_driver_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                            bool setup)
-{
-  FAR struct note_driver_s *driver = filep->f_inode->i_private;
-
-  if (driver != NULL && driver->ops != NULL &&
-      driver->ops->poll != NULL)
-    {
-      return driver->ops->poll(filep, fds, setup);
-    }
-
-  return -ENOSYS;
-}
 
 /****************************************************************************
  * Name: note_isenabled
@@ -707,16 +375,6 @@ static inline int note_isenabled_irq(FAR struct note_driver_s *driver,
 static inline int note_isenabled_dump(FAR struct note_driver_s *driver,
                                       uint8_t tag, uint8_t level, int type)
 {
-#  ifdef CONFIG_SYSLOG_TO_SCHED_NOTE
-  if (tag == NOTE_TAG_LOG)
-    {
-      /* For NOTE_TAG_LOG, use the syslog level mask */
-
-      return (g_syslog_mask & LOG_MASK(level)) != 0;
-    }
-
-#endif
-
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   if (!note_isenabled_type(driver, type))
     {
@@ -738,6 +396,127 @@ static inline int note_isenabled_dump(FAR struct note_driver_s *driver,
 
   return true;
 }
+#endif
+
+#if defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH) && \
+    (CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0)
+/****************************************************************************
+ * Name: note_find_taskname
+ *
+ * Description:
+ *   Find task name info corresponding to the specified PID
+ *
+ * Input Parameters:
+ *   PID - Task ID
+ *
+ * Returned Value:
+ *   Pointer to the task name info
+ *   If the corresponding info doesn't exist in the buffer, NULL is returned.
+ *
+ ****************************************************************************/
+
+static FAR struct note_taskname_info_s *note_find_taskname(pid_t pid)
+{
+  FAR struct note_taskname_info_s *ti;
+  int n = g_note_taskname.tail;
+
+  while (n != g_note_taskname.head)
+    {
+      ti = (FAR struct note_taskname_info_s *)
+            &g_note_taskname.buffer[n];
+      if (ti->pid == pid)
+        {
+          return ti;
+        }
+
+      n += ti->size;
+      if (n >= CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE)
+        {
+          n -= CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE;
+        }
+    }
+
+  return NULL;
+}
+
+/****************************************************************************
+ * Name: note_record_taskname
+ *
+ * Description:
+ *   Record the task name info of the specified task
+ *
+ * Input Parameters:
+ *   PID - Task ID
+ *   name - task name
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static void note_record_taskname(pid_t pid, FAR const char *name)
+{
+  FAR struct note_taskname_info_s *ti;
+  size_t tilen;
+  size_t namelen;
+  size_t skiplen;
+  size_t remain;
+
+  namelen = strlen(name);
+  DEBUGASSERT(namelen <= CONFIG_TASK_NAME_SIZE);
+  tilen = sizeof(struct note_taskname_info_s) + namelen;
+  DEBUGASSERT(tilen <= UCHAR_MAX);
+
+  skiplen = CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE - g_note_taskname.head;
+  if (skiplen >= tilen + sizeof(struct note_taskname_info_s))
+    {
+      skiplen = 0; /* Have enough space at the tail - needn't skip */
+    }
+
+  if (g_note_taskname.head >= g_note_taskname.tail)
+    {
+      remain = CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE -
+               (g_note_taskname.head - g_note_taskname.tail);
+    }
+  else
+    {
+      remain = g_note_taskname.tail - g_note_taskname.head;
+    }
+
+  while (skiplen + tilen >= remain)
+    {
+      /* No enough space, drop the old info */
+
+      ti = (FAR struct note_taskname_info_s *)
+            &g_note_taskname.buffer[g_note_taskname.tail];
+      g_note_taskname.tail = (g_note_taskname.tail + ti->size) %
+                             CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE;
+      remain += ti->size;
+    }
+
+  if (skiplen)
+    {
+      /* Fill the skipped region with an invalid info */
+
+      ti = (FAR struct note_taskname_info_s *)
+            &g_note_taskname.buffer[g_note_taskname.head];
+      ti->size = skiplen;
+      ti->pid = INVALID_PROCESS_ID;
+      ti->name[0] = '\0';
+
+      /* Move to the begin of circle buffer */
+
+      g_note_taskname.head = 0;
+    }
+
+  ti = (FAR struct note_taskname_info_s *)
+        &g_note_taskname.buffer[g_note_taskname.head];
+  ti->size = NOTE_ALIGN(tilen);
+  ti->pid = pid;
+  strlcpy(ti->name, name, namelen + 1);
+  g_note_taskname.head += ti->size;
+}
+
 #endif
 
 /****************************************************************************
@@ -834,7 +613,6 @@ void sched_note_add(FAR const void *data, size_t len)
 {
   DEBUGASSERT(data);
 
-  note_drivers_initialize();
   while (len >= sizeof(struct note_common_s))
     {
       FAR struct note_common_s *note = (FAR struct note_common_s *)data;
@@ -884,10 +662,12 @@ void sched_note_add(FAR const void *data, size_t len)
           note_add(*driver, note, notelen, false);
         }
 
-      /* The note data no longer has alignment padding. */
+      /* The note data from note rpmsg is aligned. When parsing
+       * the data, it is necessary to align the notelen.
+       */
 
-      data += notelen;
-      len -= notelen;
+      data += NOTE_ALIGN(notelen);
+      len -= NOTE_ALIGN(notelen);
     }
 }
 #endif
@@ -923,9 +703,10 @@ void sched_note_start(FAR struct tcb_s *tcb)
   int namelen = 0;
 #endif
 
-  nxtask_namepool_record(tcb->pid, tcb->name);
+#if CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
+  note_record_taskname(tcb->pid, tcb->name);
+#endif
 
-  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_START))
@@ -982,7 +763,6 @@ void sched_note_stop(FAR struct tcb_s *tcb)
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
-  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_STOP))
@@ -1015,31 +795,39 @@ void sched_note_stop(FAR struct tcb_s *tcb)
     }
 }
 
-static void note_taskname_handler(pid_t pid, FAR const char *name,
-                                  FAR void *arg)
-{
-  FAR struct note_taskname_foreach_s *ctx = arg;
-  struct note_startalloc_s note;
-  size_t length;
-  int namelen;
-
-  namelen = strlen(name);
-  strlcpy(note.nsa_name, name, sizeof(note.nsa_name));
-  length = SIZEOF_NOTE_START(namelen + 1);
-  note_common(NULL, &note.nsa_cmn, length, NOTE_TASKNAME);
-  note.nsa_cmn.nc_pid = pid;
-  ctx->handler(&note, length, ctx->arg);
-}
-
 void sched_note_taskname(void (FAR *handler)(FAR const void *,
                                              size_t, FAR void *),
                          FAR void *arg)
 {
-  struct note_taskname_foreach_s ctx;
+#if CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
+  FAR struct note_taskname_info_s *ti;
+  struct note_startalloc_s note;
+  int n = g_note_taskname.tail;
+  size_t length;
+  int namelen;
 
-  ctx.handler = handler;
-  ctx.arg = arg;
-  nxtask_namepool_foreach(note_taskname_handler, &ctx);
+  while (n != g_note_taskname.head)
+    {
+      ti = (FAR struct note_taskname_info_s *)
+            &g_note_taskname.buffer[n];
+
+      if (ti->pid != INVALID_PROCESS_ID)
+        {
+          namelen = strlen(ti->name);
+          strlcpy(note.nsa_name, ti->name, sizeof(note.nsa_name));
+          length = SIZEOF_NOTE_START(namelen + 1);
+          note_common(NULL, &note.nsa_cmn, length, NOTE_TASKNAME);
+          note.nsa_cmn.nc_pid = ti->pid;
+          handler((FAR struct note_common_s *)&note, length, arg);
+        }
+
+      n += ti->size;
+      if (n >= CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE)
+        {
+          n -= CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE;
+        }
+    }
+#endif
 }
 
 void sched_note_suspend(FAR struct tcb_s *tcb)
@@ -1048,7 +836,6 @@ void sched_note_suspend(FAR struct tcb_s *tcb)
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
-  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_SUSPEND))
@@ -1088,7 +875,6 @@ void sched_note_resume(FAR struct tcb_s *tcb)
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
-  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_RESUME))
@@ -1128,7 +914,6 @@ void sched_note_cpu_start(FAR struct tcb_s *tcb, int cpu)
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
-  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_CPU_START))
@@ -1168,7 +953,6 @@ void sched_note_cpu_started(FAR struct tcb_s *tcb)
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
-  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_CPU_STARTED))
@@ -1211,7 +995,6 @@ void sched_note_preemption(FAR struct tcb_s *tcb, bool locked)
   bool formatted = false;
   irqstate_t flags;
 
-  note_drivers_initialize();
   flags = spin_lock_irqsave_notrace(&g_note_lock);
   for (driver = g_note_drivers; *driver; driver++)
     {
@@ -1256,7 +1039,6 @@ void sched_note_csection(FAR struct tcb_s *tcb, bool enter)
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
-  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_CSECTION_ENTER + enter))
@@ -1317,7 +1099,6 @@ void sched_note_spinlock(FAR volatile spinlock_t *spinlock,
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
-  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, type))
@@ -1363,7 +1144,6 @@ void sched_note_syscall_enter(int nr, int argc, ...)
   unsigned int length = 0;
   va_list ap;
 
-  note_drivers_initialize();
   va_start(ap, argc);
   for (driver = g_note_drivers; *driver; driver++)
     {
@@ -1431,7 +1211,6 @@ void sched_note_syscall_leave(int nr, uintptr_t result)
   bool formatted = false;
   FAR struct tcb_s *tcb = running_task();
 
-  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_syscall(*driver, NOTE_SYSCALL_LEAVE, nr))
@@ -1477,7 +1256,6 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter)
   bool formatted = false;
   FAR struct tcb_s *tcb = enter ? running_task() : this_task();
 
-  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_irq(*driver, irq, enter))
@@ -1520,7 +1298,6 @@ void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
   FAR struct tcb_s *tcb = this_task();
   irqstate_t flags;
 
-  note_drivers_initialize();
   flags = enter_critical_section_notrace();
   for (driver = g_note_drivers; *driver; driver++)
     {
@@ -1565,7 +1342,6 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
   bool formatted = false;
   FAR struct tcb_s *tcb = running_task();
 
-  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, event))
@@ -1760,17 +1536,14 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
   else
     {
       next = lib_bsprintf(note->npt_data, length, fmt, *va);
-      if ((ssize_t)next < 0)
-        {
-          return;
-        }
+      DEBUGASSERT(next < sizeof(data) - sizeof(*note));
     }
 
   length = SIZEOF_NOTE_PRINTF(next);
   note_common(tcb, &note->npt_cmn, length, NOTE_DUMP_PRINTF);
   note->npt_ip = ip;
   note->npt_tag = tag;
-  note->npt_fmt = (uintptr_t)fmt;
+  note->npt_fmt = fmt;
   note->npt_type = type;
   note->npt_level = level;
 
@@ -1795,7 +1568,6 @@ void sched_note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip,
 {
   FAR struct note_driver_s **driver;
 
-  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_dump(*driver, tag, level, event))
@@ -1813,45 +1585,335 @@ void sched_note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
 {
   FAR struct note_driver_s **driver;
 
-  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
-      va_list copy;
       if (!note_isenabled_dump(*driver, tag, level, NOTE_DUMP_PRINTF))
         {
           continue;
         }
 
-      va_copy(copy, *va);
-      note_driver_vprintf_ip(*driver, tag, level, ip, type, fmt, &copy);
-      va_end(copy);
+      note_driver_vprintf_ip(*driver, tag, level, ip, type, fmt, va);
     }
 }
 #endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP */
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+
 /****************************************************************************
- * Name: note_driver_initialize
+ * Name: note_filter_mode
+ *
+ * Description:
+ *   Set and get note filter mode.
+ *   (Same as NOTECTL_GETMODE / NOTECTL_SETMODE ioctls)
+ *
+ * Input Parameters:
+ *   oldm - A writable pointer to struct note_filter_mode_s to get current
+ *          filter mode
+ *          If 0, no data is written.
+ *   newm - A read-only pointer to struct note_filter_mode_s which holds the
+ *          new filter mode
+ *          If 0, the filter mode is not updated.
+ *
+ * Returned Value:
+ *   None
+ *
  ****************************************************************************/
 
-int note_driver_initialize(void)
+void note_filter_mode(FAR struct note_filter_named_mode_s *oldm,
+                      FAR struct note_filter_named_mode_s *newm)
 {
-  int i;
-  int ret = 0;
+  irqstate_t irq_mask;
+  FAR struct note_driver_s **driver;
 
-  note_drivers_initialize();
-  for (i = 0; i < CONFIG_DRIVERS_NOTE_MAX; i++)
+  irq_mask = spin_lock_irqsave_notrace(&g_note_lock);
+
+  if (oldm != NULL)
     {
-      if (g_note_drivers[i] != NULL)
+      for (driver = g_note_drivers; *driver; driver++)
         {
-          ret = note_driver_fs_register(g_note_drivers[i]);
-          if (ret < 0)
+          if (oldm->name[0] == '\0')
             {
+              oldm->mode = (*driver)->filter.mode;
+              strlcpy(oldm->name, (*driver)->name, NAME_MAX);
+              break;
+            }
+          else if (strcmp((*driver)->name, oldm->name) == 0)
+            {
+              oldm->mode = (*driver)->filter.mode;
               break;
             }
         }
     }
 
-  return ret;
+  if (newm != NULL)
+    {
+      for (driver = g_note_drivers; *driver; driver++)
+        {
+          if (newm->name[0] == '\0')
+            {
+               (*driver)->filter.mode = newm->mode;
+            }
+          else if (0 == strcmp((*driver)->name, newm->name))
+            {
+               (*driver)->filter.mode = newm->mode;
+               break;
+            }
+        }
+    }
+
+  spin_unlock_irqrestore_notrace(&g_note_lock, irq_mask);
+}
+
+/****************************************************************************
+ * Name: note_filter_syscall
+ *
+ * Description:
+ *   Set and get syscall filter setting
+ *   (Same as NOTECTL_GETSYSCALLFILTER / NOTECTL_SETSYSCALLFILTER ioctls)
+ *
+ * Input Parameters:
+ *   oldf - A writable pointer to struct note_filter_syscall_s to get
+ *          current syscall filter setting
+ *          If 0, no data is written.
+ *   newf - A read-only pointer to struct note_filter_syscall_s of the
+ *          new syscall filter setting
+ *          If 0, the setting is not updated.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
+void note_filter_syscall(FAR struct note_filter_named_syscall_s *oldf,
+                         FAR struct note_filter_named_syscall_s *newf)
+{
+  irqstate_t irq_mask;
+  FAR struct note_driver_s **driver;
+
+  irq_mask = spin_lock_irqsave_notrace(&g_note_lock);
+
+  if (oldf != NULL)
+    {
+      for (driver = g_note_drivers; *driver; driver++)
+        {
+          if (oldf->name[0] == '\0')
+            {
+              oldf->syscall_mask = (*driver)->filter.syscall_mask;
+              strlcpy(oldf->name, (*driver)->name, NAME_MAX);
+              break;
+            }
+          else if (strcmp((*driver)->name, oldf->name) == 0)
+            {
+              oldf->syscall_mask = (*driver)->filter.syscall_mask;
+              break;
+            }
+        }
+    }
+
+  if (newf != NULL)
+    {
+      for (driver = g_note_drivers; *driver; driver++)
+        {
+          if (newf->name[0] == '\0')
+            {
+               (*driver)->filter.syscall_mask = newf->syscall_mask;
+            }
+          else if (0 == strcmp((*driver)->name, newf->name))
+            {
+               (*driver)->filter.syscall_mask = newf->syscall_mask;
+               break;
+            }
+        }
+    }
+
+  spin_unlock_irqrestore_notrace(&g_note_lock, irq_mask);
+}
+#endif
+
+/****************************************************************************
+ * Name: note_filter_irq
+ *
+ * Description:
+ *   Set and get IRQ filter setting
+ *   (Same as NOTECTL_GETIRQFILTER / NOTECTL_SETIRQFILTER ioctls)
+ *
+ * Input Parameters:
+ *   oldf - A writable pointer to struct note_filter_irq_s to get
+ *          current IRQ filter setting
+ *          If 0, no data is written.
+ *   newf - A read-only pointer to struct note_filter_irq_s of the new
+ *          IRQ filter setting
+ *          If 0, the setting is not updated.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
+void note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
+                     FAR struct note_filter_named_irq_s *newf)
+{
+  irqstate_t irq_mask;
+  FAR struct note_driver_s **driver;
+
+  irq_mask = spin_lock_irqsave_notrace(&g_note_lock);
+
+  if (oldf != NULL)
+    {
+      for (driver = g_note_drivers; *driver; driver++)
+        {
+          if (oldf->name[0] == '\0')
+            {
+              oldf->irq_mask = (*driver)->filter.irq_mask;
+              strlcpy(oldf->name, (*driver)->name, NAME_MAX);
+              break;
+            }
+          else if (strcmp((*driver)->name, oldf->name) == 0)
+            {
+              oldf->irq_mask = (*driver)->filter.irq_mask;
+              break;
+            }
+        }
+    }
+
+  if (newf != NULL)
+    {
+      for (driver = g_note_drivers; *driver; driver++)
+        {
+          if (newf->name[0] == '\0')
+            {
+               (*driver)->filter.irq_mask = newf->irq_mask;
+            }
+          else if (0 == strcmp((*driver)->name, newf->name))
+            {
+               (*driver)->filter.irq_mask = newf->irq_mask;
+               break;
+            }
+        }
+    }
+
+  spin_unlock_irqrestore_notrace(&g_note_lock, irq_mask);
+}
+#endif
+
+/****************************************************************************
+ * Name: note_filter_tag
+ *
+ * Description:
+ *   Set and get tag filter setting
+ *   (Same as NOTECTL_GETDUMPFILTER / NOTECTL_SETDUMPFILTER ioctls)
+ *
+ * Input Parameters:
+ *   oldf - A writable pointer to struct note_filter_tag_s to get
+ *          current dump filter setting
+ *          If 0, no data is written.
+ *   newf - A read-only pointer to struct note_filter_tag_s of the
+ *          new dump filter setting
+ *          If 0, the setting is not updated.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+void note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
+                     FAR struct note_filter_named_tag_s *newf)
+{
+  FAR struct note_driver_s **driver;
+  irqstate_t irq_mask;
+
+  irq_mask = spin_lock_irqsave_notrace(&g_note_lock);
+
+  if (oldf != NULL)
+    {
+      for (driver = g_note_drivers; *driver; driver++)
+        {
+          if (oldf->name[0] == '\0')
+            {
+              oldf->tag_mask = (*driver)->filter.tag_mask;
+              strlcpy(oldf->name, (*driver)->name, NAME_MAX);
+              break;
+            }
+          else if (strcmp((*driver)->name, oldf->name) == 0)
+            {
+              oldf->tag_mask = (*driver)->filter.tag_mask;
+              break;
+            }
+        }
+    }
+
+  if (newf != NULL)
+    {
+      for (driver = g_note_drivers; *driver; driver++)
+        {
+          if (newf->name[0] == '\0')
+            {
+               (*driver)->filter.tag_mask = newf->tag_mask;
+            }
+          else if (0 == strcmp((*driver)->name, newf->name))
+            {
+               (*driver)->filter.tag_mask = newf->tag_mask;
+               break;
+            }
+        }
+    }
+
+  spin_unlock_irqrestore_notrace(&g_note_lock, irq_mask);
+}
+#endif
+
+#endif /* CONFIG_SCHED_INSTRUMENTATION_FILTER */
+
+/****************************************************************************
+ * Name: note_get_taskname
+ *
+ * Description:
+ *   Get the task name string of the specified PID
+ *
+ * Input Parameters:
+ *   PID - Task ID
+ *   buf - A writable buffer to hold the task name
+ *   len - The length of the buffer
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void note_get_taskname(pid_t pid, FAR char *buf, size_t len)
+{
+#if CONFIG_TASK_NAME_SIZE > 0
+  FAR struct tcb_s *tcb = nxsched_get_tcb(pid);
+
+  if (tcb != NULL)
+    {
+      strlcpy(buf, tcb->name, len);
+      nxsched_put_tcb(tcb);
+    }
+  else
+    {
+#  if defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH) && \
+      (CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0)
+      FAR struct note_taskname_info_s *ti = note_find_taskname(pid);
+
+      if (ti != NULL)
+        {
+          strlcpy(buf, ti->name, len);
+        }
+      else
+        {
+          strlcpy(buf, "<noname>", len);
+        }
+#  else
+      strlcpy(buf, "<noname>", len);
+#  endif
+    }
+#else
+  strlcpy(buf, "<noname>", len);
+#endif
 }
 
 /****************************************************************************
@@ -1860,34 +1922,24 @@ int note_driver_initialize(void)
 
 int note_driver_register(FAR struct note_driver_s *driver)
 {
-  irqstate_t flags;
   int i;
+  int ret = -ENOMEM;
+  irqstate_t irq_mask;
 
   DEBUGASSERT(driver);
-  flags = spin_lock_irqsave_notrace(&g_note_lock);
-
-  /* Find an empty slot to register the driver */
-
-  note_drivers_initialize();
+  irq_mask = spin_lock_irqsave_notrace(&g_note_lock);
   for (i = 0; i < CONFIG_DRIVERS_NOTE_MAX; i++)
     {
       if (g_note_drivers[i] == NULL)
         {
           g_note_drivers[i] = driver;
+          ret = 0;
           break;
         }
     }
 
-  spin_unlock_irqrestore_notrace(&g_note_lock, flags);
-
-  if (i == CONFIG_DRIVERS_NOTE_MAX)
-    {
-      return -ENOSPC;
-    }
-
-  /* Register device node /dev/note/xxx */
-
-  return note_driver_fs_register(driver);
+  spin_unlock_irqrestore_notrace(&g_note_lock, irq_mask);
+  return ret;
 }
 
 /****************************************************************************
@@ -1896,22 +1948,19 @@ int note_driver_register(FAR struct note_driver_s *driver)
 
 void note_driver_unregister(FAR struct note_driver_s *driver)
 {
-  irqstate_t flags;
   int i;
+  irqstate_t irq_mask;
 
   DEBUGASSERT(driver);
-  note_drivers_initialize();
-  flags = spin_lock_irqsave_notrace(&g_note_lock);
-
+  irq_mask = spin_lock_irqsave_notrace(&g_note_lock);
   for (i = 0; i < CONFIG_DRIVERS_NOTE_MAX; i++)
     {
       if (g_note_drivers[i] == driver)
         {
-          note_driver_fs_unregister(driver);
           g_note_drivers[i] = NULL;
           break;
         }
     }
 
-  spin_unlock_irqrestore_notrace(&g_note_lock, flags);
+  spin_unlock_irqrestore_notrace(&g_note_lock, irq_mask);
 }
