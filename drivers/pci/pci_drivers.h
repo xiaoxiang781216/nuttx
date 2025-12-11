@@ -72,6 +72,18 @@ int pci_register_uio_ivshmem_driver(void);
 #endif
 
 /****************************************************************************
+ * Name: pci_register_noteram_ivshmem_driver
+ *
+ * Description:
+ *   Register noteram ivshmem device pci driver
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_PCI_NOTERAM_IVSHMEM
+int pci_register_noteram_ivshmem_driver(void);
+#endif
+
+/****************************************************************************
  * Name: pci_register_ramdisk_ivshmem_driver
  *
  * Description:

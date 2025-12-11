@@ -100,7 +100,21 @@ config PCI_RTT_IVSHMEM_IDX
 	default 0
 	depends on PCI_RTT_IVSHMEM
 	---help---
-	    The index of the ivshmem pci device used for syslog rtt
+		The index of the ivshmem pci device used for syslog rtt
+
+config PCI_NOTERAM_IVSHMEM
+	bool "PCI noteram ivshmem driver"
+	default n
+	depends on PCI_IVSHMEM && DRIVERS_NOTERAM
+	---help---
+		Enable noteram ivshemem
+
+config PCI_NOTERAM_IVSHMEM_IDX
+	int "The ivshmem id for note ram"
+	default 2
+	depends on PCI_NOTERAM_IVSHMEM
+	---help---
+		The index of the ivshmem pci device used for noteram share memory.
 
 config PCI_EP_TEST
 	bool "PCI endpoint test"

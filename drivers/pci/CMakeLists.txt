@@ -44,6 +44,10 @@ if(CONFIG_PCI)
     list(APPEND SRCS pci_uio_ivshmem.c)
   endif()
 
+  if(CONFIG_PCI_NOTERAM_IVSHMEM)
+    list(APPEND SRCS pci_noteram_ivshmem.c)
+  endif()
+
   if(CONFIG_PCI_EP_TEST)
     list(APPEND SRCS pci_ep_test.c)
   endif()
