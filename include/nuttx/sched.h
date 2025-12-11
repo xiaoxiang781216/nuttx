@@ -275,7 +275,7 @@ static inline_function FAR struct tcb_s *this_task(void)
 
   /* Obtain the TCB which is current running on this CPU */
 
-  tcb = current_task(this_cpu());
+  tcb = this_cpu_var(g_assignedtasks);
 
   /* Enable local interrupts */
 
