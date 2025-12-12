@@ -94,10 +94,6 @@
 #define note_vprintf(drv, tag, level, ip, type, fmt, va)                                \
   ((drv)->ops->vprintf && ((drv)->ops->vprintf(drv, tag, level, ip, type, fmt, va), true))
 
-#define BUFFER_SIZE 256
-static_assert(BUFFER_SIZE >= sizeof(struct note_event_s),
-              "Buffer size too small");
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -1382,7 +1378,7 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t tag,
 {
   FAR struct tcb_s *tcb = running_task();
   FAR struct note_event_s *note;
-  char data[BUFFER_SIZE];
+  char data[NOTE_BUFFER_SIZE];
   unsigned int length = 0;
 
   if (note_event(driver, tag, level, ip, event, buf, len))
@@ -1425,7 +1421,7 @@ void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
 {
   FAR struct tcb_s *tcb = running_task();
   FAR struct note_printf_s *note;
-  uint8_t data[BUFFER_SIZE];
+  uint8_t data[NOTE_BUFFER_SIZE];
   size_t length = 0;
 
   /* Format the note */

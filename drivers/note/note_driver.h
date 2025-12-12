@@ -43,6 +43,10 @@
 
 #define NOTERPMSG_EPT_NAME           "rpmsg-note"
 
+#define NOTE_BUFFER_SIZE 256
+static_assert(NOTE_BUFFER_SIZE >= sizeof(struct note_event_s),
+              "Buffer size too small");
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
