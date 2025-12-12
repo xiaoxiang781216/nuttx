@@ -313,8 +313,6 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
 
       reassess &= !g_wdtimernested;
 
-      leave_critical_section(flags);
-
       if (reassess)
         {
           /* Resume the interval timer that will generate the next
@@ -335,9 +333,8 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
         }
 
       wd_insert(wdog, ticks, wdentry, arg);
-
-      leave_critical_section(flags);
 #endif
+      leave_critical_section(flags);
       sched_note_wdog(NOTE_WDOG_START, wdentry,
                       (FAR void *)(uintptr_t)ticks);
       ret = OK;

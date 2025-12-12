@@ -93,8 +93,6 @@ int wd_cancel(FAR struct wdog_s *wdog)
       ret = OK;
     }
 
-  leave_critical_section(flags);
-
   if (head)
     {
       /* If the watchdog is at the head of the timer queue, then
@@ -104,6 +102,8 @@ int wd_cancel(FAR struct wdog_s *wdog)
 
       nxsched_reassess_timer();
     }
+
+  leave_critical_section(flags);
 
   return ret;
 }
