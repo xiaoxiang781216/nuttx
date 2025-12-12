@@ -2236,3 +2236,9 @@ config COREDUMP
 		The memory state embeds a snapshot of all segments mapped in the
 		memory space of the program. The CPU state contains register values
 		when the core dump has been generated.
+
+config HRTIMER
+	bool "High resolution timer support"
+	default n
+	---help---
+		Enable to support high resolution timer
