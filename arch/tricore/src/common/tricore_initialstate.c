@@ -75,6 +75,7 @@ void up_initial_state(struct tcb_s *tcb)
     {
       up_cpu_idlestack(up_cpu_index(), tcb,
                        CONFIG_IDLETHREAD_STACKSIZE);
+      tricore_set_tls_info(tcb->stack_alloc_ptr);
 
 #ifdef CONFIG_STACK_COLORATION
       /* If stack debug is enabled, then fill the stack with a
