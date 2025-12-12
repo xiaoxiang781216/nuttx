@@ -55,19 +55,12 @@
 static int32_t hardware_chksum_start(FAR struct iob_s *iob,
                                      uint16_t iphdrlen)
 {
-  int32_t start = 0;
-
-  if (iphdrlen > iob->io_len)
+  if (!iob || iphdrlen > iob->io_len)
     {
       return -EINVAL;
     }
 
-  if (iob != NULL)
-    {
-      start = iob->io_offset + iphdrlen;
-    }
-
-  return start;
+  return iob->io_offset + iphdrlen;
 }
 #endif
 
