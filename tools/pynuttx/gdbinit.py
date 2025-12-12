@@ -37,9 +37,12 @@ if __name__ == "__main__":
 
     if path.exists(libcxx_path):
         sys.path.insert(0, libcxx_path)
-        from printers import register_libcxx_printer_loader
+        import gdb
+        import printers
 
-        register_libcxx_printer_loader()
+        printer = printers.LibcxxPrettyPrinter("libcxx")
+        gdb.pretty_printers.append(printer)
+        printers.register_libcxx_printer_loader()
 
     modules = ("gdbrpc", "nxelf", "nxgdb", "nxreg", "nxstub", "nxtrace")
     for key in list(sys.modules):
