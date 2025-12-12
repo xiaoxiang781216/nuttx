@@ -142,7 +142,7 @@ static void rpmsg_router_hub_unbind(FAR struct rpmsg_endpoint *ept)
   if (peer_ept->cb)
     {
       rpmsg_send_ns_message(peer_ept, RPMSG_NS_DESTROY);
-      rpmsg_ept_decref(ept);
+      rpmsg_ept_decref(peer_ept);
     }
   else
     {
