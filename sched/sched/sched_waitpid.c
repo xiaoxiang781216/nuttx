@@ -53,7 +53,6 @@ int waittcb(FAR struct tcb_s *rtcb, pid_t pid, int options,
 #ifdef CONFIG_SCHED_CHILD_STATUS
   FAR struct child_status_s *child = NULL;
 #endif
-  FAR struct tcb_s *ctcb;
   FAR struct siginfo info;
   irqstate_t flags;
   sigset_t set;
@@ -66,6 +65,13 @@ int waittcb(FAR struct tcb_s *rtcb, pid_t pid, int options,
 
   while (ret >= 0)
     {
+      /* The actions of checking if subtask exists and waiting for subtask
+       * must be atomic to ensure that the subtask does not exit
+       * between these two actions.
+       */
+
+      flags = enter_critical_section();
+
 #ifdef CONFIG_SCHED_CHILD_STATUS
       /* Check if the task has already died. Signals are not queued in
        * NuttX.  So a possibility is that the child has died and we
@@ -99,6 +105,7 @@ int waittcb(FAR struct tcb_s *rtcb, pid_t pid, int options,
 
               group_remove_child(rtcb->group, child->ch_pid);
               group_free_child(child);
+              leave_critical_section(flags);
               break;
             }
         }
@@ -134,6 +141,7 @@ int waittcb(FAR struct tcb_s *rtcb, pid_t pid, int options,
                 }
 
               ret = pid;
+              leave_critical_section(flags);
               break;
             }
         }
@@ -154,6 +162,7 @@ int waittcb(FAR struct tcb_s *rtcb, pid_t pid, int options,
                */
 
               ret = -ECHILD;
+              leave_critical_section(flags);
               break;
             }
         }
@@ -175,6 +184,7 @@ int waittcb(FAR struct tcb_s *rtcb, pid_t pid, int options,
            */
 
           ret = -ECHILD;
+          leave_critical_section(flags);
           break;
         }
 
@@ -183,33 +193,13 @@ int waittcb(FAR struct tcb_s *rtcb, pid_t pid, int options,
       if ((options & WNOHANG) != 0)
         {
           ret = 0;
+          leave_critical_section(flags);
           break;
         }
 
       /* Wait for any death-of-child signal */
 
-      flags = enter_critical_section();
-
-      if (pid != INVALID_PROCESS_ID)
-        {
-          ctcb = nxsched_get_tcb(pid);
-        }
-      else
-        {
-          ctcb = nxsched_get_childtcb(rtcb);
-        }
-
-      if (ctcb && ctcb->group &&
-          !(atomic_read(&ctcb->group->tg_flags) & GROUP_FLAG_EXITING))
-        {
-          ret = nxsig_waitinfo(&set, &info);
-        }
-      else
-        {
-          ret = -ECHILD;
-        }
-
-      nxsched_put_tcb(ctcb);
+      ret = nxsig_waitinfo(&set, &info);
       leave_critical_section(flags);
 
       if (ret < 0)
