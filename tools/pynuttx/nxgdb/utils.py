@@ -31,7 +31,7 @@ import sys
 import traceback
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Iterator, List, Optional, Union
 
 import gdb
 from nxelf.macros import fetch_macro_info, try_expand
@@ -1016,6 +1016,12 @@ def get_tid(tcb):
         return None
 
 
+def get_pid_by_name(name):
+    for tcb in get_tcbs():
+        if get_task_name(tcb) == name:
+            return tcb["pid"]
+
+
 def get_task_name(tcb_or_pid):
     if isinstance(tcb_or_pid, int):
         tcb = get_tcb(tcb_or_pid)
@@ -1370,21 +1376,22 @@ def get_gdb_thread(pid: int) -> Optional[gdb.InferiorThread]:
     return None
 
 
-def get_thread_frames(arg: Union[gdb.InferiorThread, int]) -> Union[List[gdb.Frame]]:
+def get_thread_frames(
+    arg: Union[gdb.InferiorThread, int, gdb.Value],
+) -> Iterator[gdb.Frame]:
     thread = arg if not isinstance(arg, int) else get_gdb_thread(arg)
     if not thread:
-        return []
+        return
 
     thread.switch()
 
-    frames = []
     frame = gdb.newest_frame()
 
-    while len(frames) < MAX_FRAMES and frame and frame.is_valid():
-        frames.append(frame)
+    for _ in range(MAX_FRAMES):
+        if not frame or not frame.is_valid():
+            break
+        yield frame
         frame = frame.older()
-
-    return frames
 
 
 def get_backtrace(arg: Union[gdb.InferiorThread, int]) -> List[int]:

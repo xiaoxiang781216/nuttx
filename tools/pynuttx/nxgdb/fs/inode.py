@@ -227,12 +227,15 @@ def get_fstype(node: p.Inode):
 
 
 def fstype_filter(fstype):
-    """Filter inodes by filesystem type"""
+    """Filter inodes by filesystem type or inode type."""
 
     def filter(item):
         inode, path = item
-        if inode_gettype(inode) != InodeType.MOUNTPT:
-            return False
-        return get_fstype(inode) == fstype
+        node_type = inode_gettype(inode)
+
+        if node_type == InodeType.MOUNTPT:
+            return get_fstype(inode) == fstype
+        else:
+            return node_type.name.lower() == fstype.lower()
 
     return filter
