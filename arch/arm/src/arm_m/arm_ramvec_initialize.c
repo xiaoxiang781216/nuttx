@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-m/arm_ramvec_initialize.c
+ * arch/arm/src/arm_m/arm_ramvec_initialize.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -26,6 +26,7 @@
 
 #include <assert.h>
 #include <debug.h>
+#include <inttypes.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
@@ -58,7 +59,7 @@
  * the highest alignment possible.
  */
 
-up_vector_t g_ram_vectors[ARMV8M_VECTAB_SIZE]
+up_vector_t g_ram_vectors[ARM_VECTAB_SIZE]
   locate_data(".ram_vectors") aligned_data(VECTAB_ALIGN);
 
 /****************************************************************************
@@ -94,7 +95,7 @@ void arm_ramvec_initialize(void)
 
   irqinfo("src=%p dest=%p\n", src, dest);
 
-  for (i = 0; i < ARMV8M_VECTAB_SIZE; i++)
+  for (i = 0; i < ARM_VECTAB_SIZE; i++)
     {
       *dest++ = *src++;
     }

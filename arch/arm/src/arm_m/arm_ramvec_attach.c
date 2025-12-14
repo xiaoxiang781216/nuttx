@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-m/arm_ramvec_attach.c
+ * arch/arm/src/arm_m/arm_ramvec_attach.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -64,7 +64,7 @@ int arm_ramvec_attach(int irq, up_vector_t vector)
 
   irqinfo("%s IRQ%d\n", vector ? "Attaching" : "Detaching", irq);
 
-  if ((unsigned)irq < ARMV8M_VECTAB_SIZE)
+  if ((unsigned)irq < ARM_VECTAB_SIZE)
     {
       irqstate_t flags;
 
