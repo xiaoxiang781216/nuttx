@@ -29,6 +29,7 @@
 
 #include <nuttx/arch.h>
 
+#include "ram_vectors.h"
 #include "arm_internal.h"
 #include "mps_irq.h"
 #include "nvic.h"
@@ -180,7 +181,7 @@ void up_irqinitialize(void)
    * vector table that requires special initialization.
    */
 
-  up_ramvec_initialize();
+  arm_ramvec_initialize();
 #endif
 
   /* Set all interrupts (and exceptions) to the default priority */
