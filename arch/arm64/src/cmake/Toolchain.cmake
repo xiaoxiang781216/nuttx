@@ -18,22 +18,30 @@
 #
 # ##############################################################################
 
+set(CMAKE_SYSTEM_NAME Generic)
+set(CMAKE_SYSTEM_VERSION 1)
+
 set(OPTION_MARCH_FEATURE)
 
 if(CONFIG_ARCH_HAVE_AE)
   set(OPTION_MARCH_FEATURE ae)
 endif()
 
-set(CMAKE_SYSTEM_NAME Generic)
-set(CMAKE_SYSTEM_VERSION 1)
+if(CONFIG_ARM64_MTE)
+  set(OPTION_MARCH_FEATURE ${OPTION_MARCH_FEATURE}+memtag)
+endif()
 
 if(CONFIG_ARCH_ARMV8A)
-  add_compile_options(-march=armv8-a)
+  if(CONFIG_ARCH_AS_HAS_ARMV8_5)
+    add_compile_options(-march=armv8.5-a${OPTION_MARCH_FEATURE})
+  else()
+    add_compile_options(-march=armv8-a${OPTION_MARCH_FEATURE})
+  endif()
 elseif(CONFIG_ARCH_ARMV8R)
   if(CONFIG_ARCH_FPU)
-    add_compile_options(-march=armv8-r)
+    add_compile_options(-march=armv8-r${OPTION_MARCH_FEATURE})
   else()
-    add_compile_options(-march=armv8-r+nofp)
+    add_compile_options(-march=armv8-r+nofp${OPTION_MARCH_FEATURE})
   endif()
 endif()
 
