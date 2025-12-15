@@ -106,64 +106,125 @@ def register_control_flow_tools(gdb_mcp):
     async def gdb_set_breakpoint(
         ctx: Context, session_id: str, location: str, condition: Optional[str] = None
     ) -> str:
-        """Set a breakpoint"""
+        """Set a breakpoint at the specified location.
+
+        Args:
+            session_id: The GDB session identifier
+            location: A string specifying where to set the breakpoint
+                (e.g., "main", "file.c:123", "*0x12345678")
+            condition: Optional string containing a conditional expression
+                (e.g., "x > 10", "ptr != NULL")
+        """
         return await _set_breakpoint(ctx, session_id, location, condition)
 
     @gdb_mcp.tool()
     async def gdb_continue(ctx: Context, session_id: str) -> str:
-        """Continue program execution"""
+        """Continue program execution until the next breakpoint or program termination.
+
+        Args:
+            session_id: The GDB session identifier
+        """
         return await _exec_command(ctx, session_id, "continue")
 
     @gdb_mcp.tool()
     async def gdb_step(
         ctx: Context, session_id: str, instructions: bool = False
     ) -> str:
-        """Step program execution"""
+        """Step into the next line of code, entering function calls.
+
+        Args:
+            session_id: The GDB session identifier
+            instructions: If True, step one machine instruction; if False, step one source line
+        """
         return await _step(ctx, session_id, instructions)
 
     @gdb_mcp.tool()
     async def gdb_next(
         ctx: Context, session_id: str, instructions: bool = False
     ) -> str:
-        """Step over function calls"""
+        """Step over the next line of code, not entering function calls.
+
+        Args:
+            session_id: The GDB session identifier
+            instructions: If True, step over one machine instruction; if False, step over one source line
+        """
         return await _next(ctx, session_id, instructions)
 
     @gdb_mcp.tool()
     async def gdb_finish(ctx: Context, session_id: str) -> str:
-        """Execute until the current function returns"""
+        """Execute until the current function returns.
+
+        Args:
+            session_id: The GDB session identifier
+        """
         return await _exec_command(ctx, session_id, "finish")
 
     @gdb_mcp.tool()
     async def gdb_backtrace(
         ctx: Context, session_id: str, full: bool = False, limit: Optional[int] = None
     ) -> str:
+        """Display the call stack backtrace.
+
+        Args:
+            session_id: The GDB session identifier
+            full: If True, display local variables and arguments for each frame
+            limit: Optional integer to limit the number of frames displayed
+        """
         return await _backtrace(ctx, session_id, full, limit)
 
     @gdb_mcp.tool()
     async def gdb_breakpoint_list(ctx: Context, session_id: str) -> str:
-        """List all breakpoints"""
+        """List all currently set breakpoints.
+
+        Args:
+            session_id: The GDB session identifier
+        """
         return await _exec_command(ctx, session_id, "info breakpoints")
 
     @gdb_mcp.tool()
     async def gdb_breakpoint_delete(
         ctx: Context, session_id: str, breakpoint_id: int
     ) -> str:
-        """Delete a breakpoint"""
-        return await _exec_command(ctx, session_id, f"delete {breakpoint_id}")
+        """Delete a specific breakpoint by its ID.
+
+        Args:
+            session_id: The GDB session identifier
+            breakpoint_id: The numeric ID of the breakpoint to delete (integer, not a string)
+        """
+        return await _exec_command(
+            ctx, session_id, f"delete breakpoints {breakpoint_id}"
+        )
 
     @gdb_mcp.tool()
     async def gdb_thread_list(ctx: Context, session_id: str) -> str:
-        """List all threads in the current host process"""
+        """List all threads in the current host process (standard GDB thread model).
+
+        Args:
+            session_id: The GDB session identifier
+
+        Note: For NuttX-specific thread information, use nxgdb_list_thread instead.
+        """
         return await _exec_command(ctx, session_id, "info threads")
 
     @gdb_mcp.tool()
     async def gdb_thread_select(ctx: Context, session_id: str, thread_id: int) -> str:
-        """Select a specific thread"""
+        """Select a specific thread by GDB thread ID (standard GDB thread model).
+
+        Args:
+            session_id: The GDB session identifier
+            thread_id: The GDB thread ID (integer, not a string). Use gdb_thread_list to see available IDs.
+
+        Note: For NuttX-specific thread selection, use nxgdb_thread_select instead.
+        """
         return await _exec_command(ctx, session_id, f"thread {thread_id}")
 
     @gdb_mcp.tool()
     async def gdb_process_info(ctx: Context, session_id: str) -> str:
-        """Get information about the current process"""
+        """Get information about the current process being debugged.
+
+        Args:
+            session_id: The GDB session identifier
+        """
         return await _process_info(ctx, session_id)
 
     @gdb_mcp.tool()
@@ -196,10 +257,9 @@ def register_control_flow_tools(gdb_mcp):
         - 'cmd' is the GDB command to execute (e.g., 'bt')
 
         Args:
-            ctx (Context): The context object containing runtime/session information.
-            session_id (str): Identifier for the GDB debugging session.
-            ids (str): 'all' or a list of thread IDs.
-            cmd (str): The GDB command to execute for each thread.
+            session_id: Identifier for the GDB debugging session
+            ids: A string that is either "all" or a list of NuttX thread ID Hashes (e.g., "1,2,3" or "1 2 3")
+            cmd: A string containing the GDB command to execute for each thread (e.g., "bt", "info registers")
 
         Returns:
             str: The output from the 'nthread apply' command for the specified threads.
@@ -212,5 +272,9 @@ def register_control_flow_tools(gdb_mcp):
 
         The 'nxthread <pid>' command switches to the thread with the given NuttX thread model pid
         by restoring the registers for that thread context.
+
+        Args:
+            session_id: The GDB session identifier
+            thread_id: The NuttX thread PID (integer, not a string). Use nxgdb_list_thread to see available PIDs.
         """
         return await _exec_command(ctx, session_id, f"nxthread {thread_id}")

@@ -32,7 +32,15 @@ def register_util_tools(gdb_mcp):
     async def gdb_disassemble(
         ctx: Context, session_id: str, location: Optional[str] = None, count: int = 10
     ) -> str:
-        """Disassemble code"""
+        """Disassemble code at the specified location or current program counter.
+
+        Args:
+            session_id: The GDB session identifier
+            location: Optional string specifying where to disassemble
+                (e.g., "main", "*0x12345678", "file.c:123").
+                If None, disassembles at current PC.
+            count: Number of instructions to disassemble (currently not used by the implementation)
+        """
         try:
             session = get_session(ctx, session_id)
             command = "disassemble"
@@ -50,7 +58,14 @@ def register_util_tools(gdb_mcp):
     async def gdb_help(
         ctx: Context, session_id: str, command: Optional[str] = None
     ) -> str:
-        """Get help for GDB commands"""
+        """Get help for GDB commands.
+
+        Args:
+            session_id: The GDB session identifier
+            command: Optional string containing the GDB command name to get help for
+                (e.g., "break", "print", "step").
+                If None, displays general GDB help overview.
+        """
         try:
             session = get_session(ctx, session_id)
             if command:

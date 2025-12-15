@@ -77,7 +77,13 @@ async def _watchpoint(
 def register_value_tools(gdb_mcp):
     @gdb_mcp.tool()
     async def gdb_print(ctx: Context, session_id: str, expression: str) -> str:
-        """Print value of expression"""
+        """Print value of expression.
+
+        Args:
+            session_id: The GDB session identifier
+            expression: A string containing the GDB expression to evaluate
+                (e.g., "variable_name", "*ptr", "array[0]")
+        """
         return await _exec_command(ctx, session_id, f"print {expression}")
 
     @gdb_mcp.tool()
@@ -88,14 +94,37 @@ def register_value_tools(gdb_mcp):
         format: str = "x",
         count: int = 1,
     ) -> str:
-        """Examine memory"""
+        """Examine memory at the specified address or expression.
+
+        Args:
+            session_id: The GDB session identifier
+            expression: A string containing the memory address or expression
+                (e.g., "0x12345678", "&variable", "ptr")
+            format: Display format:
+                "x" (hex)
+                "d" (decimal)
+                "u" (unsigned)
+                "o" (octal)
+                "t" (binary)
+                "i" (instruction)
+                "c" (char)
+                "f" (float)
+                "s" (string)
+            count: Number of items to display
+        """
         return await _examine(ctx, session_id, expression, format, count)
 
     @gdb_mcp.tool()
     async def gdb_info_registers(
         ctx: Context, session_id: str, register: Optional[str] = None
     ) -> str:
-        """Display registers"""
+        """Display CPU register values.
+
+        Args:
+            session_id: The GDB session identifier
+            register: Optional register name as a string
+                (e.g., "rax", "rsp", "pc"). If None, displays all registers.
+        """
         command = "info registers"
         command += f" {register}" if register is not None else ""
         return await _exec_command(ctx, session_id, command)
@@ -104,10 +133,23 @@ def register_value_tools(gdb_mcp):
     async def gdb_watchpoint(
         ctx: Context, session_id: str, expression: str, watch_type: str = "write"
     ) -> str:
-        """Set a watchpoint on a variable or memory address"""
+        """Set a watchpoint on a variable or memory address.
+
+        Args:
+            session_id: The GDB session identifier
+            expression: A string containing the variable name or memory address to watch
+                (e.g., "my_variable", "*0x12345678")
+            watch_type: Type of watchpoint - "write" (default), "read", or "read_write"
+        """
         return await _watchpoint(ctx, session_id, expression, watch_type)
 
     @gdb_mcp.tool()
     async def gdb_expression(ctx: Context, session_id: str, expression: str) -> str:
-        """Evaluate an expression in the current frame"""
+        """Evaluate an expression in the current frame.
+
+        Args:
+            session_id: The GDB session identifier
+            expression: A string containing the expression to evaluate
+                (e.g., "x + y", "func(arg)", "sizeof(struct)")
+        """
         return await _exec_command(ctx, session_id, f"print {expression}")
