@@ -566,7 +566,6 @@ class HeapFreeProcessor(NoteProcessor):
 
 
 class NoteProcessorRegistry:
-
     def __init__(self):
         self.processors = {}
 
@@ -674,7 +673,10 @@ class NoteFactory:
                 "make sure 'CONFIG_SCHED_INSTRUMENTATION_DUMP' is enabled in NuttX config"
             )
 
-        return Struct(*[field for field in struct.subcons if field.name != "nev_data"])
+        return Struct(
+            *[field for field in struct.subcons if field.name != "nev_data"],
+            "nev_data" / Bytes(this.nev_cmn.nc_length - struct.sizeof()),
+        )
 
     @classmethod
     @functools.lru_cache(maxsize=None)
@@ -853,7 +855,6 @@ class NoteFactory:
 
 
 class NoteParser:
-
     def __init__(
         self,
         parser,
