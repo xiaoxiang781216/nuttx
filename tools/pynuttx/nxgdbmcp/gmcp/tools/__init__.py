@@ -24,6 +24,7 @@ __all__ = [
     "register_session_tools",
     "register_command_tools",
     "register_control_flow_tools",
+    "register_nxthread_tools",
     "register_memory_tools",
     "register_session_tools",
     "register_util_tools",
@@ -31,7 +32,7 @@ __all__ = [
 ]
 
 from .command import register_command_tools
-from .controlflow import register_control_flow_tools
+from .controlflow import register_control_flow_tools, register_nxthread_tools
 from .memory import register_memory_tools
 from .session import register_session_tools
 from .utils import register_util_tools

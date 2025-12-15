@@ -40,6 +40,12 @@ def main():
     parser = argparse.ArgumentParser(description="GDB mcp server for NuttX")
     parser.add_argument("--stdio", action="store_true", help="enable stdio transport")
     parser.add_argument("--port", type=int, default=20819, help="server port")
+    parser.add_argument(
+        "--enable-nxthread",
+        action="store_true",
+        help="Enable NuttX-specific thread commands (nxthread, info nxthreads). "
+        "Only use when GDB native thread commands are insufficient or unavailable.",
+    )
 
     args = parser.parse_args()
 
@@ -65,6 +71,10 @@ def main():
     tools.register_session_tools(gdb_mcp)
     tools.register_util_tools(gdb_mcp)
     tools.register_value_tools(gdb_mcp)
+
+    # Only register NuttX-specific thread commands if explicitly enabled
+    if args.enable_nxthread:
+        tools.register_nxthread_tools(gdb_mcp)
 
     try:
         if args.stdio:

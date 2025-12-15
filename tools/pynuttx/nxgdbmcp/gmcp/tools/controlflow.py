@@ -197,24 +197,20 @@ def register_control_flow_tools(gdb_mcp):
 
     @gdb_mcp.tool()
     async def gdb_thread_list(ctx: Context, session_id: str) -> str:
-        """List all threads in the current host process (standard GDB thread model).
+        """List all threads in the current host process.
 
         Args:
             session_id: The GDB session identifier
-
-        Note: For NuttX-specific thread information, use nxgdb_list_thread instead.
         """
         return await _exec_command(ctx, session_id, "info threads")
 
     @gdb_mcp.tool()
     async def gdb_thread_select(ctx: Context, session_id: str, thread_id: int) -> str:
-        """Select a specific thread by GDB thread ID (standard GDB thread model).
+        """Select a specific thread by GDB thread ID.
 
         Args:
             session_id: The GDB session identifier
             thread_id: The GDB thread ID (integer, not a string). Use gdb_thread_list to see available IDs.
-
-        Note: For NuttX-specific thread selection, use nxgdb_thread_select instead.
         """
         return await _exec_command(ctx, session_id, f"thread {thread_id}")
 
@@ -227,6 +223,8 @@ def register_control_flow_tools(gdb_mcp):
         """
         return await _process_info(ctx, session_id)
 
+
+def register_nxthread_tools(gdb_mcp):
     @gdb_mcp.tool()
     async def nxgdb_list_thread(ctx: Context, session_id: str) -> str:
         """List all NuttX threads in the current system.
