@@ -48,6 +48,94 @@
 #ifdef CONFIG_FS_LINKS
 
 /****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+#ifndef CONFIG_DISABLE_MOUNTPOINT
+
+/****************************************************************************
+ * Name: get_relative_path
+ *
+ * Description:
+ *   Calculate the relative path from symlink location to target.
+ *   Both paths are relative to the same mountpoint.
+ *
+ * Input Parameters:
+ *   t             - Target path relative to mountpoint
+ *   s             - Symlink path relative to mountpoint
+ *   result        - Buffer to store the resulting relative path
+ *   result_size   - Size of the buffer
+ *
+ * Returned Value:
+ *   OK on success, or negative errno on failure.
+ *
+ * Example:
+ *   t             = "dir1/file"
+ *   s             = "dir2/link"
+ *   result        = "../dir1/file"
+ *
+ ****************************************************************************/
+
+static int get_relative_path(FAR const char *t, FAR const char *s,
+                             FAR char *result, size_t result_size)
+{
+  FAR char *end = result + result_size;
+  int levels_up = 0;
+
+  /* Count directory levels in symlink's path, handling ".." components.
+   * Each regular component increases depth, ".." decreases it.
+   */
+
+  while (*s != '\0')
+    {
+      /* Check if current component is ".." */
+
+      if (s[0] == '.' && s[1] == '.' && (s[2] == '/' || s[2] == '\0'))
+        {
+          levels_up--;
+        }
+      else
+        {
+          levels_up++;
+        }
+
+      s = inode_nextname(s);
+    }
+
+  /* Count out the filename of the symlink */
+
+  if (--levels_up < 0)
+    {
+      return -EINVAL;
+    }
+
+  /* Build result: add "../" for each level */
+
+  while (levels_up--)
+    {
+      if (result + 3 > end)
+        {
+          return -ENAMETOOLONG;
+        }
+
+      *result++ = '.';
+      *result++ = '.';
+      *result++ = '/';
+    }
+
+  /* Append the complete target path */
+
+  if (result + strlen(t) >= end)
+    {
+      return -ENAMETOOLONG;
+    }
+
+  strlcpy(result, t, end - result);
+  return OK;
+}
+#endif /* CONFIG_DISABLE_MOUNTPOINT */
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -59,10 +147,7 @@
  *   existing file, path2.  This implementation is simplified for use with
  *   NuttX in these ways:
  *
- *   - Links may be created only within the NuttX top-level, pseudo file
- *     system.  No file system currently supported by NuttX provides
- *     symbolic links.
- *   - For the same reason, only soft links are implemented.
+ *   - Links may be created only within the same mountpoint.
  *   - File privileges are ignored.
  *   - c_time is not updated.
  *
@@ -79,6 +164,7 @@
 
 int symlink(FAR const char *path1, FAR const char *path2)
 {
+  struct inode_search_s target_desc;
   struct inode_search_s desc;
   FAR struct inode *inode = NULL;
   int errcode;
@@ -117,13 +203,61 @@ int symlink(FAR const char *path1, FAR const char *path2)
         {
           if (desc.node->u.i_mops && desc.node->u.i_mops->symlink)
             {
-              ret = desc.node->u.i_mops->symlink(desc.node, path1,
-                                                 desc.relpath);
+              SETUP_SEARCH(&target_desc, path1, true);
+              ret = inode_search(&target_desc);
+              if (ret < 0 || target_desc.node != desc.node)
+                {
+                  /* This file does not exist or is not on the same
+                   * mountpoint with the symlink, which is not
+                   * supported in our system, so return error.
+                   */
+
+                  errcode = ENOSYS;
+                  goto errout_with_target_desc;
+                }
+
+              /* Now we have:
+               * desc.relpath - symlink path relative to mountpoint
+               * target_desc.relpath - target path relative to mountpoint
+               * If path1 is absolute, convert target_desc.relpath to
+               * relative path from symlink's directory.
+               * If path1 is relative, use it as-is.
+               */
+
+              if (path1[0] == '/')
+                {
+                  FAR char *target_relpath = lib_get_tempbuffer(PATH_MAX);
+
+                  /* Get relative path from symlink's directory to target */
+
+                  ret = get_relative_path(target_desc.relpath,
+                                          desc.relpath,
+                                          target_relpath, PATH_MAX);
+                  if (ret < 0)
+                    {
+                      errcode = -ret;
+                      lib_put_tempbuffer(target_relpath);
+                      goto errout_with_target_desc;
+                    }
+
+                  ret = desc.node->u.i_mops->symlink(desc.node,
+                                                     target_relpath,
+                                                     desc.relpath);
+                  lib_put_tempbuffer(target_relpath);
+                }
+              else
+                {
+                  ret = desc.node->u.i_mops->symlink(desc.node, path1,
+                                                     desc.relpath);
+                }
+
               if (ret < 0)
                 {
                   errcode = -ret;
-                  goto errout_with_inode;
+                  goto errout_with_target_desc;
                 }
+
+              RELEASE_SEARCH(&target_desc);
             }
           else
             {
@@ -197,6 +331,9 @@ int symlink(FAR const char *path1, FAR const char *path2)
   notify_create(path2);
 #endif
   return OK;
+
+errout_with_target_desc:
+  RELEASE_SEARCH(&target_desc);
 
 errout_with_inode:
   inode_release(inode);
