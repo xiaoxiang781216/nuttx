@@ -1085,7 +1085,6 @@ class NxMemoryFind(gdb.Command):
             value = value.to_bytes((value.bit_length() + 7) // 8, "little")
 
         print(f"Searching for pattern {binascii.hexlify(value)} in memory")
-        pattern = re.compile(value)
 
         memrange = mm.get_memrange(args.memrange, args.heap_only, args.globals_only)
         for start, end in memrange:
@@ -1095,7 +1094,12 @@ class NxMemoryFind(gdb.Command):
                 print(f"Failed to read memory range {start:#x} - {end:#x}")
                 continue
 
-            matches = [match.start() for match in pattern.finditer(data)]
-            for offset in matches:
+            # Find all occurrences of the byte pattern
+            offset = 0
+            while True:
+                offset = data.find(value, offset)
+                if offset == -1:
+                    break
                 print(f"Found pattern @ {offset + start:#x}")
+                offset += 1
         print("Done")
