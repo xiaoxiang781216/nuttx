@@ -39,39 +39,117 @@ genrule {
     srcs: [
         "include/debug.h",
         "include/netdb.h",
+        "include/mqueue.h",
+        "include/semaphore.h",
         "include/nuttx/compiler.h",
         "include/nuttx/crc32.h",
         "include/nuttx/kmalloc.h",
         "include/nuttx/lib/lib.h",
+        "include/nuttx/lib/math32.h",
         "include/nuttx/net/dns.h",
         "include/nuttx/net/ethernet.h",
         "include/nuttx/net/netconfig.h",
         "include/nuttx/streams.h",
-    ],
+        "include/nuttx/fs/ioctl.h",
+        "include/nuttx/fs/fs.h",
+        "include/nuttx/fs/uio.h",
+        "include/nuttx/serial/tioctl.h",
+        "include/nuttx/mm/mm.h",
+        "include/nuttx/mm/map.h",
+        "include/nuttx/mm/gran.h",
+        "include/nuttx/userspace.h",
+        "include/nuttx/mmcsd.h",
+        "include/nuttx/atomic.h",
+        "include/nuttx/mutex.h",
+        "include/nuttx/semaphore.h",
+        "include/nuttx/clock.h",
+        "include/nuttx/macro.h",
+        "include/nuttx/queue.h",
+        "include/nuttx/spawn.h",
+        "include/nuttx/irq.h",
+        "include/nuttx/spinlock_type.h",
+        "include/nuttx/drivers/rpmsgdev.h",
+        "include/sys/ioctl.h",
+        "include/poll.h",
+        "include/sys/poll.h",
+     ],
     cmd: "mkdir -p $(genDir)/nuttx/lib; " +
          "mkdir -p $(genDir)/nuttx/net; " +
+         "mkdir -p $(genDir)/nuttx/fs; " +
+         "mkdir -p $(genDir)/nuttx/serial; " +
+         "mkdir -p $(genDir)/nuttx/mm; " +
+         "mkdir -p $(genDir)/nuttx/drivers; " +
          "touch $(out); " +
          "for f in $(in); do " +
          "cp $$f $(genDir)/$${f#*include/};" +
-         "done;",
+         "done; " +
+         "sed -i '/^struct winsize/,/^};/s/^/\\/\\/ /' $(genDir)/nuttx/serial/tioctl.h; " +
+         "mkdir -p $(genDir)/arch; " +
+         "echo '#ifndef __ARCH_IRQ_H' > $(genDir)/arch/irq.h; " +
+         "echo '#define __ARCH_IRQ_H' >> $(genDir)/arch/irq.h; " +
+         "echo '' >> $(genDir)/arch/irq.h; " +
+         "echo '// Stub definitions for user-space testing' >> $(genDir)/arch/irq.h; " +
+         "echo '' >> $(genDir)/arch/irq.h; " +
+         "echo '#endif // __ARCH_IRQ_H' >> $(genDir)/arch/irq.h; " +
+         "echo '' >> $(genDir)/nuttx/fs/ioctl.h; " +
+         "echo '// Force NuttX ioctl macro definitions to override Bionic' >> $(genDir)/nuttx/fs/ioctl.h; " +
+         "echo '#undef _IOC' >> $(genDir)/nuttx/fs/ioctl.h; " +
+         "echo '#undef _IOC_TYPE' >> $(genDir)/nuttx/fs/ioctl.h; " +
+         "echo '#undef _IOC_NR' >> $(genDir)/nuttx/fs/ioctl.h; " +
+         "echo '#undef _IOC_MASK' >> $(genDir)/nuttx/fs/ioctl.h; " +
+         "echo '#define _IOC_MASK (0x00ff)' >> $(genDir)/nuttx/fs/ioctl.h; " +
+         "echo '#define _IOC_TYPE(cmd) ((cmd) & ~_IOC_MASK)' >> $(genDir)/nuttx/fs/ioctl.h; " +
+         "echo '#define _IOC_NR(cmd) ((cmd) & _IOC_MASK)' >> $(genDir)/nuttx/fs/ioctl.h; " +
+         "echo '#define _IOC(type,nr) ((type)|(nr))' >> $(genDir)/nuttx/fs/ioctl.h",
     out: [
         "debug.h",
         "netdb.h",
+        "mqueue.h",
+        "semaphore.h",
+        "poll.h",
         "nuttx/compiler.h",
         "nuttx/config.h",
         "nuttx/crc32.h",
         "nuttx/kmalloc.h",
         "nuttx/lib/lib.h",
+        "nuttx/lib/math32.h",
         "nuttx/net/dns.h",
         "nuttx/net/ethernet.h",
         "nuttx/net/netconfig.h",
         "nuttx/streams.h",
+        "nuttx/fs/ioctl.h",
+        "nuttx/fs/fs.h",
+        "nuttx/fs/uio.h",
+        "nuttx/serial/tioctl.h",
+        "nuttx/mm/mm.h",
+        "nuttx/mm/map.h",
+        "nuttx/mm/gran.h",
+        "nuttx/userspace.h",
+        "nuttx/mmcsd.h",
+        "nuttx/atomic.h",
+        "nuttx/mutex.h",
+        "nuttx/semaphore.h",
+        "nuttx/clock.h",
+        "nuttx/macro.h",
+        "nuttx/queue.h",
+        "nuttx/spawn.h",
+        "nuttx/irq.h",
+        "arch/irq.h",
+        "nuttx/spinlock_type.h",
+        "nuttx/drivers/rpmsgdev.h",
+        "sys/ioctl.h",
+        "sys/poll.h",
+
     ],
 }
 
 cc_library_static {
     name: "libnuttx_libc",
-    header_libs: ["nuttx_libc_headers"],
+    header_libs: [
+        "nuttx_libc_headers",
+        "kernel_modules_headers",
+    ],
+
     srcs: [
         "libs/libc/misc/lib_crc32.c",
         "libs/libc/netdb/lib_freeaddrinfo.c",
