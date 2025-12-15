@@ -33,6 +33,8 @@
 #include <nuttx/net/pkt.h>
 #include <nuttx/net/netdev.h>
 
+#include "devif/devif.h"
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -54,21 +56,45 @@ bool devif_is_loopback(FAR struct net_driver_s *dev)
 {
   if (dev->d_len > 0)
     {
-#ifdef CONFIG_NET_IPv4
-      if ((IPv4BUF->vhl & IP_VERSION_MASK) == IPv4_VERSION &&
-           net_ipv4addr_hdrcmp(IPv4BUF->destipaddr, &dev->d_ipaddr))
+      switch (dev->d_lltype)
         {
-          return true;
-        }
+#ifdef CONFIG_NET_CAN
+          case NET_LL_CAN:
+            break;            /* No need loopback for can dev */
+#endif
+#ifdef CONFIG_NET_LOOPBACK
+          case NET_LL_LOOPBACK:
+            return true;      /* Always loopback for lo dev */
+#endif
+#ifdef CONFIG_NET_ETHERNET
+          case NET_LL_ETHERNET:
+          case NET_LL_IEEE80211:
+            if (ETHBUF->type == HTONS(ETHTYPE_AVBTP))
+              {
+                /* Do not loopback AVTP packet for regular eth dev */
+
+                return false;
+              }
+#endif
+
+          default:
+#ifdef CONFIG_NET_IPv4
+            if ((IPv4BUF->vhl & IP_VERSION_MASK) == IPv4_VERSION &&
+                net_ipv4addr_hdrcmp(IPv4BUF->destipaddr, &dev->d_ipaddr))
+              {
+                return true;
+              }
 #endif
 
 #ifdef CONFIG_NET_IPv6
-      if ((IPv6BUF->vtc & IP_VERSION_MASK) == IPv6_VERSION &&
-          NETDEV_IS_MY_V6ADDR(dev, IPv6BUF->destipaddr))
-        {
-          return true;
-        }
+            if ((IPv6BUF->vtc & IP_VERSION_MASK) == IPv6_VERSION &&
+                NETDEV_IS_MY_V6ADDR(dev, IPv6BUF->destipaddr))
+              {
+                return true;
+              }
 #endif
+            break;
+        }
     }
 
   return false;
