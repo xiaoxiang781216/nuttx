@@ -781,16 +781,26 @@ def get_memrange(
     Parse memory range from string or get from heap and globals,
     the string should be in the format of "start1,end1,attr1 start2,end2,attr2".
     """
+
+    memrange = []
     if rangestr:
         values = rangestr.replace('"', "").split(",")
-        memrange = []
         for i in range(0, len(values), 3):
             start = utils.parse_arg(values[i])
             end = utils.parse_arg(values[i + 1])
             memrange.append((start, end))
-        return memrange
     else:
-        return memory_range(heap=not globals_only, globals=not heap_only)
+        memrange = memory_range(heap=not globals_only, globals=not heap_only)
+
+    # Merge overlapping ranges
+    merged_ranges = []
+    for start, end in sorted(memrange):
+        if merged_ranges and start <= merged_ranges[-1][1]:
+            merged_ranges[-1] = (merged_ranges[-1][0], max(merged_ranges[-1][1], end))
+        else:
+            merged_ranges.append((start, end))
+
+    return merged_ranges
 
 
 def get_nodes_dict():
