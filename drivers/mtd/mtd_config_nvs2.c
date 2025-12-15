@@ -83,6 +83,12 @@
 #define ate_len                         u.s.len
 #define ate_write_cnt                   u.write_cnt
 
+#ifdef CONFIG_MTD_CONFIG_NAMED
+#  define NVS_MAX_KEY_LEN               CONFIG_MTD_CONFIG_NAME_LEN
+#else
+#  define NVS_MAX_KEY_LEN               (sizeof(uint16_t) + sizeof(int))
+#endif
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -142,6 +148,7 @@ begin_packed_struct struct nvs_ate
   uint8_t  part;         /* Future extension */
   uint8_t  cycle_cnt;    /* cycle counter for non erasable devices */
   uint8_t  crc8;         /* Crc8 check of the ate entry */
+  uint8_t  data[0];
 } end_packed_struct;
 
 /****************************************************************************
@@ -666,54 +673,6 @@ static int nvs_flash_block_cmp(FAR struct nvs_fs *fs, uint64_t addr,
 }
 
 /****************************************************************************
- * Name: nvs_flash_cmp_direct
- *
- * Description:
- *   Compares the data in flash at addr1 and addr2
- *   of len in blocks of size NVS_BLOCK_SIZE aligned to fs->write_block_size.
- *   Returns 0 if equal, 1 if not equal, errcode if error.
- *
- ****************************************************************************/
-
-static int nvs_flash_cmp_direct(FAR struct nvs_fs *fs, uint64_t addr1,
-                                uint64_t addr2, size_t len)
-{
-  uint8_t buf1[NVS_BUFFER_SIZE(fs)];
-  uint8_t buf2[NVS_BUFFER_SIZE(fs)];
-  size_t buf_size = nvs_align_down(fs, sizeof(buf1));
-  size_t bytes_to_cmp;
-  int rc;
-
-  while (len > 0)
-    {
-      bytes_to_cmp = MIN(buf_size, len);
-      rc = nvs_flash_rd(fs, addr1, buf1, bytes_to_cmp);
-      if (rc)
-        {
-          return rc;
-        }
-
-      rc = nvs_flash_rd(fs, addr2, buf2, bytes_to_cmp);
-      if (rc)
-        {
-          return rc;
-        }
-
-      rc = memcmp(buf1, buf2, bytes_to_cmp);
-      if (rc)
-        {
-          return 1;
-        }
-
-      len -= bytes_to_cmp;
-      addr1 += bytes_to_cmp;
-      addr2 += bytes_to_cmp;
-    }
-
-  return 0;
-}
-
-/****************************************************************************
  * Name: nvs_flash_cmp_const
  *
  * Description:
@@ -749,6 +708,244 @@ static int nvs_flash_cmp_const(FAR struct nvs_fs *fs, uint64_t addr,
 }
 
 /****************************************************************************
+ * Name: nvs_free_space_in_ate
+ ****************************************************************************/
+
+static inline size_t nvs_free_space_in_ate(FAR struct nvs_fs *fs)
+{
+  return nvs_ate_size(fs) - sizeof(struct nvs_ate);
+}
+
+/****************************************************************************
+ * Name: nvs_key_in_ate
+ ****************************************************************************/
+
+static inline bool nvs_key_in_ate(FAR struct nvs_fs *fs,
+                                   FAR const struct nvs_ate *entry)
+{
+  return entry->ate_key_len <= nvs_free_space_in_ate(fs);
+}
+
+/****************************************************************************
+ * Name: nvs_data_in_ate
+ ****************************************************************************/
+
+static inline bool nvs_data_in_ate(FAR struct nvs_fs *fs,
+                                   FAR const struct nvs_ate *entry)
+{
+  return (entry->ate_key_len + entry->ate_len) <= nvs_free_space_in_ate(fs);
+}
+
+/****************************************************************************
+ * Name: nvs_rd_key
+ ****************************************************************************/
+
+static int nvs_rd_key(FAR struct nvs_fs *fs, FAR const struct nvs_ate *entry,
+                      uint64_t addr, FAR void *key, size_t key_len)
+{
+  int rc = 0;
+
+  key_len = MIN(key_len, entry->ate_key_len);
+  if (nvs_key_in_ate(fs, entry))
+    {
+      memcpy(key, entry->data, key_len);
+    }
+  else
+    {
+      addr &= NVS_ADDR_BLOCK_MASK;
+      addr += entry->offset;
+      rc = nvs_flash_rd(fs, addr, key, key_len);
+      if (rc)
+        {
+          ferr("Key read failed, rc=%d\n", rc);
+        }
+    }
+
+  if (nvs_fnv_hash_id(nvs_fnv_hash(key, key_len)) != entry->id)
+    {
+      ferr("Key hash mismatch\n");
+      return -EIO;
+    }
+
+  return rc;
+}
+
+/****************************************************************************
+ * Name: nvs_rd_data
+ ****************************************************************************/
+
+static int nvs_rd_data(FAR struct nvs_fs *fs,
+                       FAR const struct nvs_ate *entry, uint64_t addr,
+                       FAR void *data, size_t len)
+{
+  FAR uint8_t *data8 = (FAR uint8_t *)data;
+  uint8_t data_crc8 = 0;
+  int rc = 0;
+
+  len = MIN(len, entry->ate_len);
+  if (nvs_data_in_ate(fs, entry))
+    {
+      data_crc8 = crc8part(entry->data + entry->ate_key_len, len, data_crc8);
+      memcpy(data8, entry->data + entry->ate_key_len, len);
+    }
+  else
+    {
+      uint8_t buf[NVS_BUFFER_SIZE(fs)];
+      size_t buf_size = nvs_align_down(fs, sizeof(buf));
+      size_t left = entry->ate_len;
+
+      addr &= NVS_ADDR_BLOCK_MASK;
+      addr += entry->offset;
+      if (!nvs_key_in_ate(fs, entry))
+        {
+          addr += entry->ate_key_len;
+        }
+
+      while (left > 0)
+        {
+          size_t bytes_rd;
+
+          bytes_rd = MIN(buf_size, left);
+          rc = nvs_flash_rd(fs, addr, buf, bytes_rd);
+          if (rc)
+            {
+              ferr("Data read failed, rc=%d\n", rc);
+              return rc;
+            }
+
+          data_crc8 = crc8part(buf, bytes_rd, data_crc8);
+
+          if (len > 0)
+            {
+              size_t bytes_cp;
+
+              bytes_cp = MIN(len, bytes_rd);
+              memcpy(data8, buf, bytes_cp);
+              len -= bytes_cp;
+              data8 += bytes_cp;
+            }
+
+          left -= bytes_rd;
+          addr += bytes_rd;
+        }
+    }
+
+  if (data_crc8 != entry->data_crc8)
+    {
+      ferr("Data crc8 mismatch\n");
+      return -EIO;
+    }
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: nvs_cmp_key_direct
+ *
+ * Description:
+ *   Compares the keys of two ate entries.
+ *   Returns 0 if equal, 1 if not equal, errcode if error.
+ *
+ ****************************************************************************/
+
+static int nvs_cmp_key_direct(FAR struct nvs_fs *fs,
+                              FAR const struct nvs_ate *ate1, uint64_t addr1,
+                              FAR const struct nvs_ate *ate2, uint64_t addr2)
+{
+  uint8_t key1[NVS_MAX_KEY_LEN];
+  uint8_t key2[NVS_MAX_KEY_LEN];
+  int rc;
+
+  if (ate1->ate_key_len != ate2->ate_key_len)
+    {
+      return 1;
+    }
+
+  rc = nvs_rd_key(fs, ate1, addr1, key1, ate1->ate_key_len);
+  if (rc)
+    {
+      return rc;
+    }
+
+  rc = nvs_rd_key(fs, ate2, addr2, key2, ate2->ate_key_len);
+  if (rc)
+    {
+      return rc;
+    }
+
+  rc = memcmp(key1, key2, ate1->ate_key_len);
+  if (rc)
+    {
+      return 1;
+    }
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: nvs_cmp_key
+ * Description:
+ *   Compares the key in flash to key.
+ *   Returns 0 if equal, 1 if not equal, errcode if error.
+ ****************************************************************************/
+
+static int nvs_cmp_key(FAR struct nvs_fs *fs,
+                       FAR const struct nvs_ate *entry, uint64_t addr,
+                       FAR const void *key, size_t key_len)
+{
+  int rc;
+
+  if (key_len != entry->ate_key_len)
+    {
+      return 1;
+    }
+
+  if (nvs_key_in_ate(fs, entry))
+    {
+      rc = memcmp(entry->data, key, key_len);
+      return rc ? 1 : 0;
+    }
+
+  addr &= NVS_ADDR_BLOCK_MASK;
+  addr += entry->offset;
+  return nvs_flash_block_cmp(fs, addr, key, key_len);
+}
+
+/****************************************************************************
+ * Name: nvs_cmp_data
+ * Description:
+ *   Compares the data in flash to data.
+ *   Returns 0 if equal, 1 if not equal, errcode if error.
+ ****************************************************************************/
+
+static int nvs_cmp_data(FAR struct nvs_fs *fs,
+                        FAR const struct nvs_ate *entry, uint64_t addr,
+                        FAR const void *data, size_t len)
+{
+  int rc;
+
+  if (len != entry->ate_len)
+    {
+      return 1;
+    }
+
+  if (nvs_data_in_ate(fs, entry))
+    {
+      rc = memcmp(entry->data + entry->ate_key_len, data, len);
+      return rc ? 1 : 0;
+    }
+
+  addr &= NVS_ADDR_BLOCK_MASK;
+  addr += entry->offset;
+  if (!nvs_key_in_ate(fs, entry))
+    {
+      addr += entry->ate_key_len;
+    }
+
+  return nvs_flash_block_cmp(fs, addr, data, len);
+}
+
+/****************************************************************************
  * Name: nvs_flash_block_move
  *
  * Description:
@@ -761,14 +958,45 @@ static int nvs_flash_block_move(FAR struct nvs_fs *fs,
                                 FAR struct nvs_ate *entry, uint64_t addr)
 {
   size_t len = nvs_align_up(fs, entry->ate_key_len + entry->ate_len);
-  uint64_t data_begin = addr + entry->ate_key_len;
-  uint64_t data_end = data_begin + entry->ate_len;
   uint8_t buf[NVS_BUFFER_SIZE(fs)];
   size_t buf_size = nvs_align_down(fs, sizeof(buf));
   uint32_t hash = NVS_HASH_INITIAL_VALUE;
+  uint64_t data_begin = addr;
+  uint64_t data_end;
   uint8_t data_crc8 = 0;
   int rc;
 
+  if (nvs_data_in_ate(fs, entry))
+    {
+      hash = nvs_fnv_hash_id(nvs_fnv_hash(entry->data, entry->ate_key_len));
+      if (hash != entry->id)
+        {
+          return -EBADMSG;
+        }
+
+      data_crc8 = crc8part(entry->data + entry->ate_key_len,
+                           entry->ate_len, data_crc8);
+      if (data_crc8 != entry->data_crc8)
+        {
+          return -EBADMSG;
+        }
+
+      return 0;
+    }
+  else if (nvs_key_in_ate(fs, entry))
+    {
+      hash = nvs_fnv_hash_id(nvs_fnv_hash(entry->data, entry->ate_key_len));
+      if (hash != entry->id)
+        {
+          return -EBADMSG;
+        }
+    }
+  else
+    {
+      data_begin += entry->ate_key_len;
+    }
+
+  data_end = data_begin + entry->ate_len;
   while (len)
     {
       size_t bytes_to_copy = MIN(buf_size, len);
@@ -789,7 +1017,8 @@ static int nvs_flash_block_move(FAR struct nvs_fs *fs,
           uint64_t end_addr = MIN(data_end, addr + bytes_to_copy);
           uint64_t begin_addr = MAX(data_begin, addr);
 
-          if (nvs_fnv_hash_id(hash) != entry->id)
+          if (!nvs_key_in_ate(fs, entry) &&
+              nvs_fnv_hash_id(hash) != entry->id)
             {
               return -EBADMSG;
             }
@@ -1070,6 +1299,31 @@ static int nvs_flash_write_multi_blk(FAR struct nvs_fs *fs,
 }
 
 /****************************************************************************
+ * Name: nvs_flash_write_with_padding
+ ****************************************************************************/
+
+static int nvs_flash_write_with_padding(FAR struct nvs_fs *fs,
+                                        FAR const void *data, size_t len)
+{
+  uint8_t buf[NVS_BUFFER_SIZE(fs)];
+  int rc;
+
+  rc = nvs_flash_write_multi_blk(fs, data, len);
+  if (rc > 0)
+    {
+      memset(buf, fs->erasestate, fs->progsize);
+      memcpy(buf, data + len - rc, rc);
+      rc = nvs_flash_data_wrt(fs, buf, fs->progsize);
+      if (rc)
+        {
+          ferr("Write padding value failed, rc=%d\n", rc);
+        }
+    }
+
+  return rc;
+}
+
+/****************************************************************************
  * Name: nvs_flash_wrt_entry
  *
  * Description:
@@ -1092,63 +1346,74 @@ static int nvs_flash_wrt_entry(FAR struct nvs_fs *fs, uint32_t id,
 
   memset(entry, fs->erasestate, ate_size);
   entry->id = id;
-  entry->offset = fs->data_wra & NVS_ADDR_OFFSET_MASK;
   entry->ate_len = len;
   entry->ate_key_len = key_len;
   entry->cycle_cnt = fs->cycle_cnt;
   entry->data_crc8 = crc8(data, len);
 
+  if (nvs_data_in_ate(fs, entry))
+    {
+      entry->offset = 0;
+      memcpy(entry->data, key, key_len);
+      memcpy(entry->data + key_len, data, len);
+    }
+  else if (nvs_key_in_ate(fs, entry))
+    {
+      entry->offset = fs->data_wra & NVS_ADDR_OFFSET_MASK;
+
+      /* Let's save data into flash, key stays in ate */
+
+      memcpy(entry->data, key8, key_len);
+
+      /* Data write */
+
+      rc = nvs_flash_write_with_padding(fs, data8, len);
+      if (rc < 0)
+        {
+          return rc;
+        }
+    }
+  else
+    {
+      entry->offset = fs->data_wra & NVS_ADDR_OFFSET_MASK;
+
+      /* Let's save key and data into one, key comes first, then data */
+
+      rc = nvs_flash_write_multi_blk(fs, key8, key_len);
+      if (rc < 0)
+        {
+          return rc;
+        }
+
+      if (rc)
+        {
+          /* Write align block which inlcude part key + part data */
+
+          left = rc;
+          memset(buf, fs->erasestate, fs->progsize);
+
+          copy_len = left + len <= fs->progsize ?
+                    len : fs->progsize - left;
+
+          memcpy(buf, key8 + key_len - left, left);
+          memcpy(buf + left, data8, copy_len);
+          rc = nvs_flash_data_wrt(fs, buf, fs->progsize);
+          if (rc)
+            {
+              ferr("Write value failed, rc=%d\n", rc);
+              return rc;
+            }
+        }
+
+      rc = nvs_flash_write_with_padding(fs, data8 + copy_len,
+                                        len - copy_len);
+      if (rc < 0)
+        {
+          return rc;
+        }
+    }
+
   nvs_ate_crc8_update(entry);
-
-  /* Let's save key and data into one, key comes first, then data */
-
-  rc = nvs_flash_write_multi_blk(fs, key8, key_len);
-  if (rc < 0)
-    {
-      return rc;
-    }
-
-  if (rc)
-    {
-      /* Write align block which inlcude part key + part data */
-
-      left = rc;
-      memset(buf, fs->erasestate, fs->progsize);
-
-      copy_len = left + len <= fs->progsize ?
-                 len : fs->progsize - left;
-
-      memcpy(buf, key8 + key_len - left, left);
-      memcpy(buf + left, data8, copy_len);
-      rc = nvs_flash_data_wrt(fs, buf, fs->progsize);
-      if (rc)
-        {
-          ferr("Write value failed, rc=%d\n", rc);
-          return rc;
-        }
-    }
-
-  rc = nvs_flash_write_multi_blk(fs, data8 + copy_len, len - copy_len);
-  if (rc < 0)
-    {
-      return rc;
-    }
-
-  if (rc)
-    {
-      /* Add padding at the end of data */
-
-      left = rc;
-      memset(buf, fs->erasestate, fs->progsize);
-      memcpy(buf, data8 + len - left, left);
-
-      rc = nvs_flash_data_wrt(fs, buf, fs->progsize);
-      if (rc)
-        {
-          ferr("Write value failed, rc=%d\n", rc);
-          return rc;
-        }
-    }
 
   /* Last, let's save entry to flash */
 
@@ -1196,16 +1461,28 @@ static int nvs_recover_last_ate(FAR struct nvs_fs *fs, FAR uint64_t *addr,
           return rc;
         }
 
-      if (nvs_ate_valid(fs, end_ate) &&
-          end_ate->offset >= (data_end_addr & NVS_ADDR_OFFSET_MASK))
+      if (nvs_ate_valid(fs, end_ate))
         {
           /* Found a valid ate, update data_end_addr and *addr */
 
-          data_end_addr &= NVS_ADDR_BLOCK_MASK;
-          data_end_addr += end_ate->offset +
-                           nvs_align_up(fs, end_ate->ate_key_len +
-                           end_ate->ate_len);
-          *addr = ate_end_addr;
+          if (!(nvs_data_in_ate(fs, end_ate)) &&
+              end_ate->offset >= (data_end_addr & NVS_ADDR_OFFSET_MASK))
+            {
+              data_end_addr &= NVS_ADDR_BLOCK_MASK;
+              data_end_addr += end_ate->offset;
+              if (nvs_key_in_ate(fs, end_ate))
+                {
+                  data_end_addr += nvs_align_up(fs, end_ate->ate_len);
+                }
+              else
+                {
+                  data_end_addr += nvs_align_up(fs, end_ate->ate_key_len +
+                                   end_ate->ate_len);
+                }
+
+              *addr = ate_end_addr;
+            }
+
           found = true;
         }
 
@@ -1466,7 +1743,7 @@ static int nvs_block_close(FAR struct nvs_fs *fs)
   nvs_ate_crc8_update(close_ate);
 
   memset(garbage_ate, fs->erasestate, ate_size);
-  while (fs->ate_wra >= fs->data_wra)
+  while ((fs->ate_wra & NVS_ADDR_OFFSET_MASK) && fs->ate_wra >= fs->data_wra)
     {
       rc = nvs_flash_ate_wrt(fs, garbage_ate);
       if (rc)
@@ -1730,9 +2007,7 @@ static int nvs_find_ate(FAR struct nvs_fs *fs,
             }
 
           if (nvs_ate_valid_different_block(fs, ate, cycle_cnt) &&
-              !nvs_flash_cmp_direct(fs, (prev_addr & NVS_ADDR_BLOCK_MASK) +
-                          ate->offset, (entry_addr & NVS_ADDR_BLOCK_MASK) +
-                                        entry->offset, entry->ate_key_len))
+              !nvs_cmp_key_direct(fs, ate, prev_addr, entry, entry_addr))
             {
               prev_found = true;
               break;
@@ -1797,8 +2072,7 @@ static int nvs_find_ate_with_key(FAR struct nvs_fs *fs,
             }
 
           if (nvs_ate_valid_different_block(fs, ate, cycle_cnt) &&
-              !nvs_flash_block_cmp(fs, (prev_addr & NVS_ADDR_BLOCK_MASK) +
-                                   ate->offset, key, key_len))
+              !nvs_cmp_key(fs, ate, prev_addr, key, key_len))
             {
               prev_found = true;
               break;
@@ -2362,7 +2636,6 @@ static int nvs_read(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
 {
   NVS_ATE(wlk_ate, nvs_ate_size(fs));
   uint64_t wlk_addr = fs->ate_wra;
-  uint8_t data_crc8;
   int rc;
 
 #ifdef CONFIG_MTD_CONFIG_NAMED
@@ -2398,28 +2671,11 @@ static int nvs_read(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
 
   if (pdata->configdata && pdata->len)
     {
-      wlk_addr &= NVS_ADDR_BLOCK_MASK;
-      wlk_addr += wlk_ate->offset + wlk_ate->ate_key_len;
-      rc = nvs_flash_rd(fs, wlk_addr, pdata->configdata,
-                        MIN(pdata->len, wlk_ate->ate_len));
+      rc = nvs_rd_data(fs, wlk_ate, wlk_addr, pdata->configdata,
+                       pdata->len);
       if (rc)
         {
-          ferr("Data read failed, rc=%d\n", rc);
           return rc;
-        }
-
-      if (pdata->len >= wlk_ate->ate_len &&
-          wlk_ate->data_crc8 != fs->erasestate)
-        {
-          /* Do not compute CRC for partial reads as CRC won't match */
-
-          data_crc8 = crc8(pdata->configdata, wlk_ate->ate_len);
-          if (wlk_ate->data_crc8 != data_crc8)
-            {
-              ferr("Invalid data crc: %" PRIx8 ", wlk_ate->data_crc8: "
-                    "%" PRIx8 "\n", data_crc8, wlk_ate->data_crc8);
-              return -EIO;
-            }
         }
     }
 
@@ -2447,8 +2703,8 @@ static int nvs_write(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
 {
   size_t ate_size = nvs_ate_size(fs);
   uint64_t wlk_addr = fs->ate_wra;
+  uint32_t required_space = 0;
   NVS_ATE(wlk_ate, ate_size);
-  uint32_t required_space;
   uint32_t gc_count;
   uint32_t hash_id;
   int rc = 0;
@@ -2465,7 +2721,14 @@ static int nvs_write(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
 
   /* Data now contains input data and input key, input key first. */
 
-  required_space = nvs_align_up(fs, key_len + pdata->len);
+  if (key_len > nvs_free_space_in_ate(fs))
+    {
+      required_space = nvs_align_up(fs, key_len + pdata->len);
+    }
+  else if (key_len + pdata->len > nvs_free_space_in_ate(fs))
+    {
+      required_space = nvs_align_up(fs, pdata->len);
+    }
 
   /* The maximum required space is block size - 4 ate
    * where: 1 ate for data, 1 ate for block close, 1 ate for empty,
@@ -2514,17 +2777,10 @@ static int nvs_write(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
               return 0;
             }
         }
-      else if (pdata->len == wlk_ate->ate_len)
+      else
         {
-          /* Do not try to compare if lengths are not equal
-           * or prev one is deleted.
-           * Compare the data and if equal return 0.
-           */
-
-          wlk_addr &= NVS_ADDR_BLOCK_MASK;
-          wlk_addr += wlk_ate->offset + wlk_ate->ate_key_len;
-          rc = nvs_flash_block_cmp(fs, wlk_addr, pdata->configdata,
-                                   pdata->len);
+          rc = nvs_cmp_data(fs, wlk_ate, wlk_addr, pdata->configdata,
+                            pdata->len);
           if (rc <= 0)
             {
               return rc;
@@ -2540,7 +2796,8 @@ static int nvs_write(FAR struct nvs_fs *fs, FAR struct config_data_s *pdata)
 
   for (gc_count = 0; gc_count < fs->nblocks; gc_count++)
     {
-      if (fs->ate_wra >= fs->data_wra + required_space)
+      if (fs->ate_wra >= fs->data_wra + required_space &&
+          (fs->ate_wra & NVS_ADDR_OFFSET_MASK))
         {
           rc = nvs_flash_wrt_entry(fs, hash_id, key, key_len,
                                    pdata->configdata, pdata->len);
@@ -2620,16 +2877,16 @@ static int nvs_next(FAR struct nvs_fs *fs, FAR struct file *filep,
   uint32_t prev_block = NVS_INVALID_BLOCK;
   NVS_ATE(step_ate, nvs_ate_size(fs));
   NVS_ATE(wlk_ate, nvs_ate_size(fs));
+  uint16_t key_len = NVS_MAX_KEY_LEN;
   uint8_t cycle_cnt = 0;
   uint64_t wlk_addr;
   uint64_t rd_addr;
-  uint16_t key_len;
   int rc;
 
 #ifdef CONFIG_MTD_CONFIG_NAMED
   FAR uint8_t *key = (FAR uint8_t *)pdata->name;
 #else
-  uint8_t key[sizeof(pdata->id) + sizeof(pdata->instance)];
+  uint8_t key[NVS_MAX_KEY_LEN];
 #endif
 
   if (first)
@@ -2687,18 +2944,9 @@ static int nvs_next(FAR struct nvs_fs *fs, FAR struct file *filep,
         }
     }
 
-#ifdef CONFIG_MTD_CONFIG_NAMED
-  key_len = MIN(step_ate->ate_key_len, CONFIG_MTD_CONFIG_NAME_LEN);
-#else
-  key_len = MIN(step_ate->ate_key_len, sizeof(key));
-#endif
-
-  rd_addr &= NVS_ADDR_BLOCK_MASK;
-  rd_addr += step_ate->offset;
-  rc = nvs_flash_rd(fs, rd_addr, key, key_len);
+  rc = nvs_rd_key(fs, step_ate, rd_addr, key, key_len);
   if (rc)
     {
-      ferr("Key read failed, rc=%d\n", rc);
       return rc;
     }
 
@@ -2709,16 +2957,10 @@ static int nvs_next(FAR struct nvs_fs *fs, FAR struct file *filep,
   memcpy(&pdata->instance, key + sizeof(pdata->id), sizeof(pdata->instance));
 #endif
 
-  rc = nvs_flash_rd(fs, rd_addr + step_ate->ate_key_len, pdata->configdata,
-                    MIN(pdata->len, step_ate->ate_len));
-  if (rc)
-    {
-      ferr("Value read failed, rc=%d\n", rc);
-      return rc;
-    }
+  rc = nvs_rd_data(fs, step_ate, rd_addr, pdata->configdata, pdata->len);
 
   pdata->len = step_ate->ate_len;
-  return OK;
+  return rc;
 }
 
 /****************************************************************************
