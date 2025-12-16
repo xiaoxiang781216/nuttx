@@ -312,9 +312,6 @@ static int stm32_tickless_setchannel(uint8_t channel)
 
 static void stm32_interval_handler(void)
 {
-#ifdef CONFIG_SCHED_TICKLESS_ALARM
-  struct timespec tv;
-#endif
   tmrinfo("Expired...\n");
 
   /* Disable the compare interrupt now. */
@@ -324,12 +321,7 @@ static void stm32_interval_handler(void)
 
   g_tickless.pending = false;
 
-#ifndef CONFIG_SCHED_TICKLESS_ALARM
   nxsched_timer_expiration();
-#else
-  up_timer_gettime(&tv);
-  nxsched_alarm_expiration(&tv);
-#endif
 }
 
 /****************************************************************************
