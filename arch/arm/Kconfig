@@ -1439,7 +1439,7 @@ config ARM_SEMIHOSTING_HOSTFS_CACHE_COHERENCE
 	bool "Cache coherence in semihosting hostfs"
 	depends on ARCH_DCACHE
 	---help---
-		Flush & Invalidte cache before & after bkpt instruction.
+		Flush & Invalidate cache before & after bkpt instruction.
 
 endif # ARM_SEMIHOSTING_HOSTFS
 
@@ -1478,6 +1478,9 @@ endchoice # Choose ARM unwinder
 
 endif
 
+if ARCH_ARM_M
+source "arch/arm/src/arm_m/Kconfig"
+endif
 if ARCH_ARMV6M
 source "arch/arm/src/armv6-m/Kconfig"
 endif
