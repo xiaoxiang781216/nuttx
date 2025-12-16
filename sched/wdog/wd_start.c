@@ -83,15 +83,6 @@
 #endif
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-#ifdef CONFIG_SCHED_TICKLESS
-static DEFINE_PER_CPU_BSS_BMP(unsigned int, g_wdtimernested);
-#  define g_wdtimernested this_cpu_var_bmp(g_wdtimernested)
-#endif
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -120,14 +111,6 @@ static inline_function clock_t wd_expiration(clock_t ticks)
   clock_t            ret = CLOCK_MAX;
 
   flags = enter_critical_section();
-
-#ifdef CONFIG_SCHED_TICKLESS
-  /* Increment the nested watchdog timer count to handle cases where wd_start
-   * is called in the watchdog callback functions.
-   */
-
-  g_wdtimernested++;
-#endif
 
   /* Process the watchdog at the head of the list as well as any
    * other watchdogs that became ready to run at this time
@@ -161,12 +144,6 @@ static inline_function clock_t wd_expiration(clock_t ticks)
 
       CALL_FUNC(func, arg);
     }
-
-#ifdef CONFIG_SCHED_TICKLESS
-  /* Decrement the nested watchdog timer count */
-
-  g_wdtimernested--;
-#endif
 
   leave_critical_section(flags);
 
@@ -306,12 +283,6 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
         }
 
       reassess |= wd_insert(wdog, ticks, wdentry, arg);
-
-      /* If wd_start is called in the expiration callbacks,
-       * the reassess proccess is disabled.
-       */
-
-      reassess &= !g_wdtimernested;
 
       if (reassess)
         {

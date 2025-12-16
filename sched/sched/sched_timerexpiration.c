@@ -108,6 +108,11 @@ DEFINE_PER_CPU_BMP(seqcount_t, g_timer_tick_lock) = SEQLOCK_INITIALIZER;
 static DEFINE_PER_CPU_BSS_BMP(atomic_t, g_timer_interval);
 #define g_timer_interval this_cpu_var_bmp(g_timer_interval)
 
+#ifdef CONFIG_SCHED_TICKLESS
+static DEFINE_PER_CPU_BSS_BMP(unsigned int, g_timernested);
+#  define g_wdtimernested this_cpu_var_bmp(g_timernested)
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -494,12 +499,19 @@ clock_t nxsched_timer_update(clock_t ticks, bool noswitches)
 void nxsched_timer_expiration(void)
 {
   clock_t ticks;
+  irqstate_t flags = enter_critical_section();
 
   /* Get the interval associated with last expiration */
+
+  g_timernested++;
 
   up_timer_gettick(&ticks);
 
   nxsched_timer_update(ticks, false);
+
+  g_timernested--;
+
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -543,17 +555,20 @@ void nxsched_reassess_timer(void)
 {
   clock_t ticks;
 
-  /* Cancel the timer and get the current time */
+  if (!g_timernested)
+    {
+      /* Cancel the timer and get the current time */
 
 #ifdef CONFIG_SCHED_TICKLESS_ALARM
-  up_alarm_tick_cancel(&ticks);
+      up_alarm_tick_cancel(&ticks);
 #else
-  clock_t elapsed;
-  up_timer_gettick(&ticks);
-  up_timer_tick_cancel(&elapsed);
+      clock_t elapsed;
+      up_timer_gettick(&ticks);
+      up_timer_tick_cancel(&elapsed);
 #endif
 
-  nxsched_timer_update(ticks, true);
+      nxsched_timer_update(ticks, true);
+    }
 }
 
 /****************************************************************************
