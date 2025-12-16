@@ -1,0 +1,107 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+if ARCH_CHIP_NRF51
+
+config NRF51_UART
+	bool
+	default n
+
+config NRF51_UART0
+	bool "nRF51 UART0"
+	default n
+	select UART0_SERIALDRIVER
+	select NRF51_UART
+	---help---
+		Enable support for nRF51 UART0
+
+if NRF51_UART0
+
+config NRF51_UART0_BASE
+	hex "UART0 base address"
+	default 0x40002000
+
+config NRF51_UART0_IRQ
+	int "UART0 IRQ number"
+	default 18
+	---help---
+		IRQ number for UART0
+
+config NRF51_UART0_BAUD
+	int "UART0 baud rate"
+	default 115200
+	---help---
+		Baud rate for UART0
+
+config NRF51_UART0_RXBUFSIZE
+	int "UART0 RX buffer size"
+	default 256
+	---help---
+		Size of the RX buffer for UART0
+
+config NRF51_UART0_TXBUFSIZE
+	int "UART0 TX buffer size"
+	default 256
+	---help---
+		Size of the TX buffer for UART0
+
+config NRF51_UART0_SERIAL_CONSOLE
+	bool "UART0 serial console"
+	default n
+	select SERIAL_CONSOLE
+	select ARCH_HAVE_SERIAL_TERMIOS
+	---help---
+		Use UART0 as the serial console
+
+endif # NRF51_UART0
+
+config NRF51_UART1
+	bool "nRF51 UART1"
+	default n
+	select UART1_SERIALDRIVER
+	select NRF51_UART
+	---help---
+		Enable support for nRF51 UART1
+
+if NRF51_UART1
+
+config NRF51_UART1_BASE
+	hex "UART1 base address"
+	default 0x40003000
+
+config NRF51_UART1_IRQ
+	int "UART1 IRQ number"
+	default 3
+	---help---
+		IRQ number for UART1
+
+config NRF51_UART1_BAUD
+	int "UART1 baud rate"
+	default 115200
+	---help---
+		Baud rate for UART1
+
+config NRF51_UART1_RXBUFSIZE
+	int "UART1 RX buffer size"
+	default 256
+	---help---
+		Size of the RX buffer for UART1
+
+config NRF51_UART1_TXBUFSIZE
+	int "UART1 TX buffer size"
+	default 256
+	---help---
+		Size of the TX buffer for UART1
+
+config NRF51_UART1_SERIAL_CONSOLE
+	bool "UART1 serial console"
+	default n
+	select SERIAL_CONSOLE
+	select ARCH_HAVE_SERIAL_TERMIOS
+	---help---
+		Use UART1 as the serial console
+
+endif # NRF51_UART1
+endif

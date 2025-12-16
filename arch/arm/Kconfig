@@ -665,6 +665,13 @@ config ARCH_CHIP_MPS
 	---help---
 		MPS platform (MPS2 MPS3)
 
+config ARCH_CHIP_NRF51
+	bool "Nordic nRF51 (Cortex-M0)"
+	select ARCH_CORTEXM0
+	select ARM_SYSTICK
+	---help---
+		Nordic nRF51 SoC (nRF51822) with ARM Cortex-M0.
+
 config ARCH_CHIP_QEMU_ARM
 	bool "QEMU virt platform (ARMv7a)"
 	select ARCH_HAVE_POWEROFF
@@ -1115,6 +1122,7 @@ config ARCH_CHIP
 	default "lpc54xx"	if ARCH_CHIP_LPC54XX
 	default "max326xx"	if ARCH_CHIP_MAX326XX
 	default "moxart"	if ARCH_CHIP_MOXART
+	default "nrf51"		if ARCH_CHIP_NRF51
 	default "nrf52"		if ARCH_CHIP_NRF52
 	default "nrf53"		if ARCH_CHIP_NRF53
 	default "nrf91"		if ARCH_CHIP_NRF91
@@ -1660,6 +1668,9 @@ source "arch/arm/src/tlsr82/Kconfig"
 endif
 if ARCH_CHIP_QEMU_ARM
 source "arch/arm/src/qemu/Kconfig"
+endif
+if ARCH_CHIP_NRF51
+source "arch/arm/src/nrf51/Kconfig"
 endif
 if ARCH_CHIP_MPS
 source "arch/arm/src/mps/Kconfig"

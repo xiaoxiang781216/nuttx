@@ -2163,6 +2163,14 @@ config ARCH_BOARD_MPS3_AN547
 		This options selects support for NuttX on the MPS3 AN547
 		board featuring the Cortex-M55.
 
+config ARCH_BOARD_NRF51_MICROBIT
+	bool "NRF51 microbit"
+	depends on ARCH_CHIP_NRF51
+	select ARCH_HAVE_IRQBUTTONS
+	---help---
+		This option selects support for the qemu:microbit board
+		based on nRF51822 (ARM Cortex-M0).
+
 config ARCH_BOARD_SABRE_6QUAD
 	bool "NXP/Freescale i.MX6 Sabre-6Quad board"
 	depends on ARCH_CHIP_IMX6_6QUAD
@@ -3508,6 +3516,7 @@ config ARCH_BOARD
 	default "mps2-an500"                if ARCH_BOARD_MPS2_AN500
 	default "mps2-an521"                if ARCH_BOARD_MPS2_AN521
 	default "mps3-an547"                if ARCH_BOARD_MPS3_AN547
+	default "nrf51-microbit"            if ARCH_BOARD_NRF51_MICROBIT
 	default "rv32m1-vega"               if ARCH_BOARD_RV32M1_VEGA
 	default "rv-virt"                   if ARCH_BOARD_QEMU_RV_VIRT
 	default "star64"                    if ARCH_BOARD_JH7110_STAR64
@@ -3738,6 +3747,9 @@ source "boards/arm/mps/mps2-an521/Kconfig"
 endif
 if ARCH_BOARD_MPS3_AN547
 source "boards/arm/mps/mps3-an547/Kconfig"
+endif
+if ARCH_BOARD_NRF51_MICROBIT
+source "boards/arm/nrf51/nrf51-microbit/Kconfig"
 endif
 if ARCH_BOARD_QEMU_ARMV7A
 source "boards/arm/qemu/qemu-armv7a/Kconfig"
