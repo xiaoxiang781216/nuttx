@@ -40,6 +40,7 @@
 #include <arch/irq.h>
 
 #include <nuttx/semaphore.h>
+#include <nuttx/mm/mempool.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/ethernet.h>
@@ -66,6 +67,19 @@ struct pkt_recvfrom_s
   int                          pr_result;  /* Success:OK, failure:negated errno */
   uint8_t                      pr_type;    /* Protocol type */
 };
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+/* This is the pool of pre-allocated pkt receive states.  The pool is used to
+ * hold the state of an pkt recieve until the connection recieve a packet.
+ * Avoid accessing stack memory across threads.
+ */
+
+MEMPOOL_DEFINE(g_pkt_state_infos, sizeof(struct pkt_recvfrom_s),
+               CONFIG_NET_PKT_PREALLOC_CONNS,
+               CONFIG_NET_PKT_ALLOC_CONNS, CONFIG_NET_PKT_MAX_CONNS);
 
 /****************************************************************************
  * Name: pkt_add_recvlen
@@ -494,7 +508,7 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
   FAR socklen_t *fromlen = &msg->msg_namelen;
   FAR struct pkt_conn_s *conn = psock->s_conn;
   FAR struct net_driver_s *dev;
-  struct pkt_recvfrom_s state;
+  struct pkt_recvfrom_s *state;
   ssize_t ret = 0;
 
   /* If a 'from' address has been provided, verify that it is large
@@ -531,7 +545,15 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
    * locked because we don't want anything to happen until we are ready.
    */
 
-  pkt_recvfrom_initialize(conn, msg, &state, psock->s_type);
+  state = mempool_zallocate(&g_pkt_state_infos, UINT_MAX);
+
+  if (state == NULL)
+    {
+      nerr("ERROR: Failed to allocate pkt recieve state\n");
+      return -ENOMEM;
+    }
+
+  pkt_recvfrom_initialize(conn, msg, state, psock->s_type);
 
   conn_dev_lock(&conn->sconn, dev);
 
@@ -540,7 +562,7 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
     {
       if (!IOB_QEMPTY(&conn->errahead))
         {
-          ret = pkt_readdata(&state, &conn->errahead, append_timestamping);
+          ret = pkt_readdata(state, &conn->errahead, append_timestamping);
         }
       else
         {
@@ -556,7 +578,7 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
   if (!IOB_QEMPTY(&conn->readahead))
     {
-      ret = pkt_readdata(&state, &conn->readahead, append_timestamp);
+      ret = pkt_readdata(state, &conn->readahead, append_timestamp);
     }
   else if (_SS_ISNONBLOCK(conn->sconn.s_flags) ||
            (flags & MSG_DONTWAIT) != 0)
@@ -581,12 +603,12 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
       /* Set up the callback in the connection */
 
-      state.pr_cb = pkt_callback_alloc(dev, conn);
-      if (state.pr_cb)
+      state->pr_cb = pkt_callback_alloc(dev, conn);
+      if (state->pr_cb)
         {
-          state.pr_cb->flags  = (PKT_NEWDATA | PKT_POLL);
-          state.pr_cb->priv   = (FAR void *)&state;
-          state.pr_cb->event  = pkt_recvfrom_eventhandler;
+          state->pr_cb->flags  = (PKT_NEWDATA | PKT_POLL);
+          state->pr_cb->priv   = (FAR void *)state;
+          state->pr_cb->event  = pkt_recvfrom_eventhandler;
 
           /* Wait for either the receive to complete or for an error/timeout
            * to occur. NOTES:  (1) conn_dev_sem_timedwait will also terminate
@@ -595,13 +617,13 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
            * the task restarts.
            */
 
-          ret = conn_dev_sem_timedwait(&state.pr_sem, true, UINT_MAX,
+          ret = conn_dev_sem_timedwait(&state->pr_sem, true, UINT_MAX,
                                        &conn->sconn, dev);
 
           /* Make sure that no further events are processed */
 
-          pkt_callback_free(dev, conn, state.pr_cb);
-          ret = pkt_recvfrom_result(ret, &state);
+          pkt_callback_free(dev, conn, state->pr_cb);
+          ret = pkt_recvfrom_result(ret, state);
         }
       else
         {
@@ -610,8 +632,8 @@ ssize_t pkt_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
     }
 
   conn_dev_unlock(&conn->sconn, dev);
-
-  pkt_recvfrom_uninitialize(&state);
+  pkt_recvfrom_uninitialize(state);
+  mempool_release(&g_pkt_state_infos, state);
 
   return ret;
 }

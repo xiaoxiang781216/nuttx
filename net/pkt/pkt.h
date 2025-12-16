@@ -47,6 +47,10 @@
 #define pkt_callback_free(dev,conn,cb) \
   devif_conn_callback_free(dev, cb, &conn->sconn.s_list, &conn->sconn.s_listtail)
 
+#ifndef CONFIG_NET_PKT_MAX_CONNS
+#  define CONFIG_NET_PKT_MAX_CONNS 0
+#endif
+
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
