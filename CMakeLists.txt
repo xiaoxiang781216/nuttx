@@ -493,6 +493,23 @@ add_dependencies(nuttx_context dts_generator)
 
 # Setup main nuttx target ####################################################
 
+if(CONFIG_LIB_SYSCALL_WRAPPER)
+  set(CMAKE_C_COMPILE_OBJECT
+      ${CMAKE_C_COMPILE_OBJECT}
+      "${CMAKE_BINARY_DIR}/bin_host/wrapsymbol <OBJECT> @${CMAKE_BINARY_DIR}/wrapsymbol.cmd"
+  )
+
+  set(CMAKE_ASM_COMPILE_OBJECT
+      ${CMAKE_C_COMPILE_OBJECT}
+      "${CMAKE_BINARY_DIR}/bin_host/wrapsymbol <OBJECT> @${CMAKE_BINARY_DIR}/wrapsymbol.cmd"
+  )
+
+  set(CMAKE_CXX_COMPILE_OBJECT
+      ${CMAKE_CXX_COMPILE_OBJECT}
+      "${CMAKE_BINARY_DIR}/bin_host/wrapsymbol <OBJECT> @${CMAKE_BINARY_DIR}/wrapsymbol.cmd"
+  )
+endif()
+
 add_executable(nuttx)
 add_custom_target(nuttx_post)
 if(CONFIG_BUILD_PROTECTED)

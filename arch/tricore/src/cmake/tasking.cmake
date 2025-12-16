@@ -243,12 +243,16 @@ function(nuttx_generate_preprocess_target)
   get_filename_component(TARGET_DIR ${TARGET_FILE} DIRECTORY)
   get_filename_component(SOURCE_FILE_NAME ${SOURCE_FILE} NAME)
   set(TARGET_FILE_TEMP "${TARGET_DIR}/${SOURCE_FILE_NAME}.cpp")
+  get_target_property(NUTTX_INCLUDES nuttx NUTTX_INCLUDE_DIRECTORIES)
+  list(TRANSFORM NUTTX_INCLUDES PREPEND -I)
 
   add_custom_command(
     OUTPUT ${TARGET_FILE}
     COMMAND ${CMAKE_COMMAND} -E copy ${SOURCE_FILE} ${TARGET_FILE_TEMP}
-    COMMAND ${PREPROCESS} -I${CMAKE_BINARY_DIR}/include ${TARGET_FILE_TEMP} -o
-            ${TARGET_FILE}
+    COMMAND
+      ${PREPROCESS} -I${CMAKE_BINARY_DIR}/include -I${NUTTX_DIR}/include
+      -I${NUTTX_CHIP_ABS_DIR} ${NUTTX_INCLUDES} ${TARGET_FILE_TEMP} -o
+      ${TARGET_FILE}
     COMMAND ${CMAKE_COMMAND} ${TARGET_FILE} "__builtin" -P
             ${NUTTX_DIR}/cmake/nuttx_remove_lines.cmake
     COMMAND ${CMAKE_COMMAND} -E remove ${TARGET_FILE_TEMP}

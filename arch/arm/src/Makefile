@@ -59,12 +59,6 @@ AFLAGS += $(INCLUDES)
 
 NUTTX = $(call CONVERT_PATH,$(TOPDIR)$(DELIM)nuttx$(EXEEXT))
 
-# Additional rules for system call wrapper
-
-ifeq ($(CONFIG_LIB_SYSCALL_WRAPPER),y)
-  EXTRALINKCMDS += @$(TOPDIR)/syscall/syscall_wraps.ldcmd
-endif
-
 # The "head" object
 
 HEAD_OBJ = $(HEAD_ASRC:.S=$(OBJEXT))

@@ -68,7 +68,7 @@ endif
 
 # Add library for system call instrumentation if needed
 
-ifeq ($(CONFIG_SCHED_INSTRUMENTATION_SYSCALL),y)
+ifeq ($(CONFIG_LIB_SYSCALL_WRAPPER),y)
 NUTTXLIBS += staging$(DELIM)libwraps$(LIBEXT)
 endif
 

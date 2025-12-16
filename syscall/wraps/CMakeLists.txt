@@ -33,26 +33,23 @@ generate_syscall_files(
   CSV_FILES
   ${CMAKE_CURRENT_LIST_DIR}/../syscall.csv)
 
-set(WRAP_LD_CMD "${CMAKE_BINARY_DIR}/syscall_wraps.ldcmd")
-get_target_property(NUTTX_INCLUDES nuttx NUTTX_INCLUDE_DIRECTORIES)
-list(TRANSFORM NUTTX_INCLUDES PREPEND -I)
+set(SYSCALLWRAPS "${CMAKE_BINARY_DIR}/wrapsymbol.cmd")
+
+nuttx_generate_preprocess_target(
+  SOURCE_FILE ${CMAKE_CURRENT_LIST_DIR}/../syscall_wraps.h TARGET_FILE
+  ${SYSCALLWRAPS}tmp)
+
 add_custom_command(
-  OUTPUT ${WRAP_LD_CMD}
-  COMMAND
-    ${PREPROCESS} -I${CMAKE_BINARY_DIR}/include -I${NUTTX_DIR}/include
-    -I${NUTTX_CHIP_ABS_DIR} ${NUTTX_INCLUDES}
-    ${CMAKE_CURRENT_LIST_DIR}/../syscall_wraps.h > ${WRAP_LD_CMD}tmp
+  OUTPUT ${SYSCALLWRAPS}
   COMMAND
     bash -c
-    "sed -e '1,/WRAPOPTSTARTS/d' -e '/^#/d' -e 's/--wrap /-Wl,--wrap=/g' ${WRAP_LD_CMD}tmp > ${WRAP_LD_CMD}"
-  DEPENDS ${CMAKE_CURRENT_LIST_DIR}/../syscall_wraps.h
+    "sed -e '1,/WRAPOPTSTARTS/d' -e '/^#/d' -e 's/--wrap /--wrap=/g' ${SYSCALLWRAPS}tmp > ${SYSCALLWRAPS}"
+  DEPENDS ${SYSCALLWRAPS}tmp wrapsymbol
   VERBATIM)
 
-add_custom_target(wrap_ld_cmd DEPENDS ${WRAP_LD_CMD})
-add_dependencies(nuttx_context wrap_ld_cmd)
-
-target_link_options(nuttx PRIVATE "@${WRAP_LD_CMD}")
-nuttx_elf_link_options("@${WRAP_LD_CMD}")
+add_custom_target(syscallwraps DEPENDS ${SYSCALLWRAPS})
+add_dependencies(nuttx_context syscallwraps)
+nuttx_build_host_target(wrapsymbol ${CMAKE_SOURCE_DIR}/tools/wrapsymbol.c)
 
 # add sources to target
 target_sources(wraps PRIVATE ${GENERATED_WRAPS})

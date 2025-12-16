@@ -336,12 +336,6 @@ ifneq ($(CONFIG_HOST_MACOS),y)
   LDENDGROUP ?= --end-group
 endif
 
-# Additional rules for system call wrapper
-
-ifeq ($(CONFIG_LIB_SYSCALL_WRAPPER),y)
-  EXTRALINKCMDS += @$(TOPDIR)/syscall/syscall_wraps.ldcmd
-endif
-
 LDFLAGS += $(addprefix -T,$(call CONVERT_PATH,$(ARCHSCRIPT)))
 
 # Determine which NuttX libraries will need to be linked in

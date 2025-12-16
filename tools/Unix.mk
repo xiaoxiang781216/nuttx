@@ -446,7 +446,22 @@ endif
 
 CONTEXTDIRS_DEPS = $(patsubst %,%/.context,$(CONTEXTDIRS))
 
-context: tools/incdir$(HOSTEXEEXT) include/nuttx/config.h include/nuttx/version.h .dirlinks $(CONTEXTDIRS_DEPS) | staging
+# Early context for syscall wrapper
+
+MKSYSCALL = "$(TOPDIR)$(DELIM)tools$(DELIM)mksyscall$(HOSTEXEEXT)"
+CSVFILE = "$(TOPDIR)$(DELIM)syscall$(DELIM)syscall.csv"
+SYSCALLWRAPS = wrapsymbol.cmd
+
+wrapper_symbol:
+ifeq ($(CONFIG_LIB_SYSCALL_WRAPPER),y)
+	$(Q) $(MAKE) -C $(TOPDIR)$(DELIM)tools -f Makefile.host mksyscall
+	$(Q) $(MAKE) -C $(TOPDIR)$(DELIM)tools -f Makefile.host wrapsymbol
+	$(Q) (cd $(TOPDIR)$(DELIM)syscall$(DELIM)wraps; $(MKSYSCALL) -w $(CSVFILE);)
+	$(Q) $(CPP) $(CPPFLAGS) $(TOPDIR)$(DELIM)syscall$(DELIM)$(SYSCALLWRAPS:.ldcmd=.h) | \
+	  sed -e '1,/WRAPOPTSTARTS/d' -e '/^#/d' -e 's/--wrap /--wrap=/g' > $(TOPDIR)$(DELIM)syscall$(DELIM)$(SYSCALLWRAPS)
+endif
+
+context: wrapper_symbol tools/incdir$(HOSTEXEEXT) include/nuttx/config.h include/nuttx/version.h .dirlinks $(CONTEXTDIRS_DEPS) | staging
 
 staging:
 	$(Q) mkdir -p $@

@@ -102,11 +102,6 @@ ifeq ($(CONFIG_LIB_SYSCALL),y)
 	$(Q) (cd proxies; $(MKSYSCALL) -p $(CSVFILE) $(OPTIONS);)
 	$(Q) (cd stubs; $(MKSYSCALL) -s $(CSVFILE) $(OPTIONS);)
 endif
-ifeq ($(CONFIG_SCHED_INSTRUMENTATION_SYSCALL),y)
-	$(Q) (cd wraps; $(MKSYSCALL) -w $(CSVFILE);)
-	$(Q) $(CPP) $(CPPFLAGS) $(SYSCALLWRAPS:.ldcmd=.h) | \
-	  sed -e '1,/WRAPOPTSTARTS/d' -e '/^#/d' > $(SYSCALLWRAPS)
-endif
 	$(Q) touch $@
 
 context: .context
