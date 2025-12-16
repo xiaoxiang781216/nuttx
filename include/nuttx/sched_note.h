@@ -34,17 +34,19 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <syslog.h>
-#include <limits.h>
 
-#ifdef CONFIG_SCHED_INSTRUMENTATION
-  #include <nuttx/arch.h>
-  #include <nuttx/macro.h>
-  #include <nuttx/ratelimit.h>
-#endif
+#include <nuttx/arch.h>
+#include <nuttx/macro.h>
+#include <nuttx/ratelimit.h>
+#include <nuttx/sched.h>
+#include <nuttx/spinlock_type.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#define NOTE_ALIGN(a) (((a) + sizeof(uint64_t) - 1) & \
+                       ~(sizeof(uint64_t) - 1))
 
 /* Printf argument type */
 
@@ -78,8 +80,7 @@
               locate_data("note_format") used_data static const             \
               char __fmt__[] = fmt;                                         \
               locate_data("note_type") used_data static const               \
-              union fmt_type_u __fmt_type__ =                               \
-                (union fmt_type_u){.__fmt__ = __fmt__};                     \
+              union fmt_type_u __fmt_type__ = (union fmt_type_u)__fmt__;    \
               static_assert(GET_ARG_COUNT(__VA_ARGS__) <= 29,               \
                             "The number of sched_note_nprintf "             \
                             "parameters needs to be less than 29");         \
@@ -209,8 +210,8 @@ struct note_common_s
   uint8_t nc_type;             /* See enum note_type_e */
   uint8_t nc_priority;         /* Thread/task priority */
   uint8_t nc_cpu;              /* CPU thread/task running on */
-  uint32_t nc_pid;             /* ID of the thread/task */
-  uint64_t nc_systime;         /* Time when note was buffered */
+  pid_t   nc_pid;              /* ID of the thread/task */
+  clock_t nc_systime;          /* Time when note was buffered */
 };
 
 /* This is the specific form of the NOTE_STOP note */
@@ -341,7 +342,7 @@ struct note_printf_s
 {
   struct note_common_s npt_cmn; /* Common note parameters */
   uintptr_t npt_ip;             /* Instruction pointer called from */
-  uintptr_t npt_fmt;            /* Printf format string */
+  FAR const char *npt_fmt;      /* Printf format string */
   uint64_t npt_type;            /* Printf parameter type */
   uint8_t npt_tag;              /* Printf tag */
   uint8_t npt_level;            /* Event level */
@@ -372,15 +373,6 @@ struct note_counter_s
 struct note_threadtime_s
 {
   clock_t elapsed;
-};
-
-/* Maximum note structure for temporary buffer when copying from byte stream.
- */
-
-struct note_max_s
-{
-  struct note_common_s cmn;
-  uint8_t data[256 - sizeof(struct note_common_s)];
 };
 
 /****************************************************************************
