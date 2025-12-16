@@ -75,7 +75,7 @@ if(CONFIG_SEGGER_RTT)
     list(APPEND RTT_SRCS syslog_rtt.c)
   endif()
 
-  if(CONFIG_NOTE_RTT)
+  if(CONFIG_DRIVERS_NOTERTT)
     list(APPEND RTT_SRCS note_rtt.c)
   endif()
 

@@ -140,7 +140,7 @@ int note_sysview_initialize(void);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NOTE_RTT
+#ifdef CONFIG_DRIVERS_NOTERTT
 int notertt_register(void);
 #endif
 

@@ -61,9 +61,9 @@ struct notertt_s g_notertt =
     "rtt",
     {
       {
-        CONFIG_NOTE_RTT_FILTER_DEFAULT_MODE,
+        CONFIG_DRIVERS_NOTERTT_FILTER_DEFAULT_MODE,
 #  ifdef CONFIG_SMP
-        CONFIG_NOTE_RTT_CPUSET
+        CONFIG_DRIVERS_NOTERTT_CPUSET
 #  endif
       },
     },
@@ -116,7 +116,7 @@ static void notertt_add(FAR struct note_driver_s *drv,
 int notertt_register(void)
 {
   lib_rttoutstream_open(&g_notertt.stream,
-                        CONFIG_NOTE_RTT_CHANNEL,
-                        CONFIG_NOTE_RTT_BUFFER_SIZE_UP);
+                        CONFIG_DRIVERS_NOTERTT_CHANNEL,
+                        CONFIG_DRIVERS_NOTERTT_BUFFER_SIZE_UP);
   return note_driver_register(&g_notertt.driver);
 }

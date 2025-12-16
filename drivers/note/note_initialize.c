@@ -174,7 +174,7 @@ int note_initialize(void)
     }
 #endif
 
-#ifdef CONFIG_NOTE_RTT
+#ifdef CONFIG_DRIVERS_NOTERTT
   ret = notertt_register();
   if (ret < 0)
     {

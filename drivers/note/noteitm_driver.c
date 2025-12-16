@@ -59,9 +59,9 @@ struct noteitm_s g_noteitm =
     "itm",
     {
       {
-        CONFIG_NOTE_RTT_FILTER_DEFAULT_MODE,
+        CONFIG_DRIVERS_NOTERTT_FILTER_DEFAULT_MODE,
 #  ifdef CONFIG_SMP
-        CONFIG_NOTE_RTT_CPUSET
+        CONFIG_DRIVERS_NOTERTT_CPUSET
 #  endif
       },
     },

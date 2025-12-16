@@ -53,7 +53,7 @@ ifeq ($(CONFIG_SYSLOG_RTT),y)
   CSRCS += segger/syslog_rtt.c
 endif
 
-ifeq ($(CONFIG_NOTE_RTT),y)
+ifeq ($(CONFIG_DRIVERS_NOTERTT),y)
   CSRCS += segger/note_rtt.c
 endif
 
