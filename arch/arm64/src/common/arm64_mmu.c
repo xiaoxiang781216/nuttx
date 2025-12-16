@@ -55,15 +55,14 @@
 #endif
 
 #ifdef CONFIG_ARM64_MMU_ASSERT
-#define __MMU_ASSERT(__cond, fmt, ...)       \
-  do                                         \
-    {                                        \
-      if (!(__cond))                         \
-        {                                    \
-          trace_printf(fmt, ## __VA_ARGS__); \
-          PANIC();                           \
-        }                                    \
-    }                                        \
+#define __MMU_ASSERT(__cond, fmt, ...) \
+  do                                   \
+    {                                  \
+      if (!(__cond))                   \
+        {                              \
+          PANIC();                     \
+        }                              \
+    }                                  \
   while (false)
 #else
 #define __MMU_ASSERT(test, fmt, ...)
