@@ -47,7 +47,7 @@ struct notefdx_s
 struct notefdx_channel_s
 {
   T32_FDX_BUFFER header;
-  volatile T32_FDX_DATATYPE data[CONFIG_TRACE32_FDX_NOTE_BUFSIZE];
+  volatile T32_FDX_DATATYPE data[CONFIG_DRIVERS_NOTET32FDX_BUFSIZE];
   spinlock_t lock;
 };
 
@@ -62,8 +62,8 @@ static void notefdx_add(FAR struct note_driver_s *drv,
  * Private Data
  ****************************************************************************/
 
-#ifdef TRACE32_FDX_NOTE_SECTION
-locate_data(CONFIG_TRACE32_FDX_NOTE_SECTION)
+#ifdef DRIVERS_NOTET32FDX_SECTION
+locate_data(CONFIG_DRIVERS_NOTET32FDX_SECTION)
 #endif
 static struct notefdx_channel_s g_fdx_note_channel;
 
@@ -79,9 +79,9 @@ struct notefdx_s g_notefdx =
     "fdx",
     {
       {
-        CONFIG_TRACE32_FDX_NOTE_FILTER_DEFAULT_MODE,
+        CONFIG_DRIVERS_NOTET32FDX_FILTER_DEFAULT_MODE,
 #  ifdef CONFIG_SMP
-        CONFIG_TRACE32_FDX_NOTE_CPUSET
+        CONFIG_DRIVERS_NOTET32FDX_CPUSET
 #  endif
       },
     },

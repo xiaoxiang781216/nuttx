@@ -210,7 +210,7 @@ int note_initialize(void)
     }
 #endif
 
-#ifdef CONFIG_TRACE32_FDX_NOTE
+#ifdef CONFIG_DRIVERS_NOTET32FDX
   ret = notefdx_register();
   if (ret < 0)
     {

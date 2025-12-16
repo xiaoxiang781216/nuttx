@@ -27,7 +27,7 @@ config TRACE32_TERM_MEMORY_BLOCKED_SIZE
 		the buffer size of the serial's own trace (tx) and trace (rx),
 		and also for the size in the trace term protocol.
 
-config TRACE32_FDX_NOTE
+config DRIVERS_NOTET32FDX
 	bool "Trace32 FDX Note driver"
 	select DRIVERS_NOTE
 	select TRACE32_FDX
@@ -35,35 +35,35 @@ config TRACE32_FDX_NOTE
 	---help---
 		The Note driver output to trace32 FDX.
 
-if TRACE32_FDX_NOTE
+if DRIVERS_NOTET32FDX
 
-config TRACE32_FDX_NOTE_FILTER_DEFAULT_MODE
+config DRIVERS_NOTET32FDX_FILTER_DEFAULT_MODE
 	hex "Trace32 FDX Note driver filter mode"
 	depends on SCHED_INSTRUMENTATION_FILTER
 	default SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
 	---help---
 		Filter mode for notefdx
 
-config TRACE32_FDX_NOTE_BUFSIZE
+config DRIVERS_NOTET32FDX_BUFSIZE
 	int "Trace32 FDX Note driver buffer size"
 	default 1024
 	---help---
 		The size of the FDX buffer (in bytes).
 
-config TRACE32_FDX_NOTE_CPUSET
+config DRIVERS_NOTET32FDX_CPUSET
 	hex "Trace32 FDX Note driver CPU set"
 	depends on SMP && SCHED_INSTRUMENTATION_FILTER
 	default SCHED_INSTRUMENTATION_CPUSET
 	---help---
 		CPU set for notefdx
 
-config TRACE32_FDX_NOTE_SECTION
+config DRIVERS_NOTET32FDX_SECTION
 	string "Trace32 FDX Note driver section"
 	default ""
 	---help---
 		The section in which to place the notefdx buffer.
 
-endif # TRACE32_FDX_NOTE
+endif # DRIVERS_NOTET32FDX
 
 config STREAM_FDX
 	bool "Stream to/from Trace32 FDX"

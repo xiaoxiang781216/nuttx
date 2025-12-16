@@ -25,10 +25,10 @@ if(CONFIG_TRACE32_FDX)
        ${CMAKE_CURRENT_LIST_DIR}/t32fdx_gettime.c)
 endif()
 
-if(CONFIG_TRACE32_FDX_NOTE)
+if(CONFIG_DRIVERS_NOTET32FDX)
   list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/note_fdx.c)
-  if(NOT "${CONFIG_TRACE32_FDX_NOTE_SECTION}" STREQUAL "")
-    target_compile_definitions(drivers PRIVATE -DTRACE32_FDX_NOTE_SECTION)
+  if(NOT "${CONFIG_DRIVERS_NOTET32FDX_SECTION}" STREQUAL "")
+    target_compile_definitions(drivers PRIVATE -DDRIVERS_NOTET32FDX_SECTION)
   endif()
 endif()
 

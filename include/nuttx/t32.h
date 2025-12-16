@@ -70,7 +70,7 @@ struct lib_fdxinstream_s
  *
  ****************************************************************************/
 
-#ifdef CONFIG_TRACE32_FDX_NOTE
+#ifdef CONFIG_DRIVERS_NOTET32FDX
 int notefdx_register(void);
 #endif
 
