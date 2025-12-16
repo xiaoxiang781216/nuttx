@@ -29,15 +29,152 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdint.h>
+
+/****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+typedef enum
+{
+  ARCH_32BIT,   /* Source data from 32-bit architecture */
+  ARCH_64BIT,   /* Source data from 64-bit architecture */
+  ARCH_NATIVE   /* Source data from native architecture */
+} osprintf_arch_e;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
+/* Helper functions to read architecture-dependent types */
+
+static long read_long_value(FAR const void *ptr, osprintf_arch_e arch)
+{
+  if (arch == ARCH_32BIT)
+    {
+      int32_t val;
+      memcpy(&val, ptr, sizeof(val));
+      return (long)val;
+    }
+  else if (arch == ARCH_64BIT)
+    {
+      int64_t val;
+      memcpy(&val, ptr, sizeof(val));
+      return (long)val;
+    }
+  else /* ARCH_NATIVE */
+    {
+      long val;
+      memcpy(&val, ptr, sizeof(val));
+      return val;
+    }
+}
+
+static size_t read_sizet_value(FAR const void *ptr, osprintf_arch_e arch)
+{
+  if (arch == ARCH_32BIT)
+    {
+      uint32_t val;
+      memcpy(&val, ptr, sizeof(val));
+      return (size_t)val;
+    }
+  else if (arch == ARCH_64BIT)
+    {
+      uint64_t val;
+      memcpy(&val, ptr, sizeof(val));
+      return (size_t)val;
+    }
+  else /* ARCH_NATIVE */
+    {
+      size_t val;
+      memcpy(&val, ptr, sizeof(val));
+      return val;
+    }
+}
+
+static ptrdiff_t read_ptrdiff_value(FAR const void *ptr,
+                                    osprintf_arch_e arch)
+{
+  if (arch == ARCH_32BIT)
+    {
+      int32_t val;
+      memcpy(&val, ptr, sizeof(val));
+      return (ptrdiff_t)val;
+    }
+  else if (arch == ARCH_64BIT)
+    {
+      int64_t val;
+      memcpy(&val, ptr, sizeof(val));
+      return (ptrdiff_t)val;
+    }
+  else /* ARCH_NATIVE */
+    {
+      ptrdiff_t val;
+      memcpy(&val, ptr, sizeof(val));
+      return val;
+    }
+}
+
+static FAR void *read_pointer_value(FAR const void *ptr,
+                                    osprintf_arch_e arch)
+{
+  if (arch == ARCH_32BIT)
+    {
+      uint32_t val;
+      memcpy(&val, ptr, sizeof(val));
+      return (FAR void *)(uintptr_t)val;
+    }
+  else if (arch == ARCH_64BIT)
+    {
+      uint64_t val;
+      memcpy(&val, ptr, sizeof(val));
+      return (FAR void *)(uintptr_t)val;
+    }
+  else /* ARCH_NATIVE */
+    {
+      FAR void *val;
+      memcpy(&val, ptr, sizeof(val));
+      return val;
+    }
+}
+
+static size_t get_arch_dependent_size(char type, osprintf_arch_e arch)
+{
+  /* Returns size of architecture-dependent types based on source arch
+   * type: 'l' for long, 'z' for size_t, 't' for ptrdiff_t, 'p' for ptr
+   */
+
+  if (arch == ARCH_32BIT)
+    {
+      return 4;  /* 32-bit architecture */
+    }
+  else if (arch == ARCH_64BIT)
+    {
+      return 8;  /* 64-bit architecture */
+    }
+  else /* ARCH_NATIVE */
+    {
+      switch (type)
+        {
+          case 'l':
+            return sizeof(long);
+          case 'z':
+            return sizeof(size_t);
+          case 't':
+            return sizeof(ptrdiff_t);
+          case 'p':
+            return sizeof(uintptr_t);
+          default:
+            return sizeof(int);
+        }
+    }
+}
+
 static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
                                  FAR const IPTR char *fmt,
                                  FAR const void *buf,
-                                 FAR size_t *offset)
+                                 FAR size_t *offset,
+                                 osprintf_arch_e arch)
 {
   begin_packed_struct union
     {
@@ -107,18 +244,22 @@ static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
 #endif
           else if (*(fmt - 2) == 'l')
             {
-              *offset += sizeof(var->l);
-              ret += lib_sprintf(s, fmtstr, var->l);
+              long long_val = read_long_value(data + *offset, arch);
+              *offset += get_arch_dependent_size('l', arch);
+              ret += lib_sprintf(s, fmtstr, long_val);
             }
           else if (*(fmt - 2) == 'z')
             {
-              *offset += sizeof(var->sz);
-              ret += lib_sprintf(s, fmtstr, var->sz);
+              size_t sizet_val = read_sizet_value(data + *offset, arch);
+              *offset += get_arch_dependent_size('z', arch);
+              ret += lib_sprintf(s, fmtstr, sizet_val);
             }
           else if (*(fmt - 2) == 't')
             {
-              *offset += sizeof(var->pd);
-              ret += lib_sprintf(s, fmtstr, var->pd);
+              ptrdiff_t ptrdiff_val = read_ptrdiff_value(data + *offset,
+                                                         arch);
+              *offset += get_arch_dependent_size('t', arch);
+              ret += lib_sprintf(s, fmtstr, ptrdiff_val);
             }
           else if (*(fmt - 2) == 'h' && *(fmt - 3) == 'h')
             {
@@ -191,14 +332,17 @@ static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
             {
               size_t off = 0;
               len = strlen(var->s) + 1;
-              ret += lib_osprintf_internal(s, var->s, var->s + len, &off);
+              ret += lib_osprintf_internal(s, var->s, var->s + len, &off,
+                                           arch);
               *offset += len + off;
               fmt++;
             }
           else
             {
-              *offset += sizeof(var->p);
-              ret += lib_sprintf(s, fmtstr, var->p);
+              FAR void *ptr_val = read_pointer_value(data + *offset,
+                                                     arch);
+              *offset += get_arch_dependent_size('p', arch);
+              ret += lib_sprintf(s, fmtstr, ptr_val);
             }
         }
       else if (c == '.')
@@ -214,10 +358,54 @@ static int lib_osprintf_internal(FAR struct lib_outstream_s *s,
  * Public Functions
  ****************************************************************************/
 
+/****************************************************************************
+ * Name: lib_osprintf
+ *
+ * Description:
+ *   Parse buffer using native architecture type sizes.
+ *
+ ****************************************************************************/
+
 int lib_osprintf(FAR struct lib_outstream_s *s,
-                 FAR const char *fmt,
+                 FAR const IPTR char *fmt,
                  FAR const void *buf)
 {
   size_t offset = 0;
-  return lib_osprintf_internal(s, fmt, buf, &offset);
+  return lib_osprintf_internal(s, fmt, buf, &offset, ARCH_NATIVE);
+}
+
+/****************************************************************************
+ * Name: lib_osprintf_32
+ *
+ * Description:
+ *   Parse buffer assuming data came from a 32-bit CPU architecture.
+ *   Architecture-dependent types (long, size_t, ptrdiff_t, pointers)
+ *   are treated as 32-bit values.
+ *
+ ****************************************************************************/
+
+int lib_osprintf_32(FAR struct lib_outstream_s *s,
+                    FAR const IPTR char *fmt,
+                    FAR const void *buf)
+{
+  size_t offset = 0;
+  return lib_osprintf_internal(s, fmt, buf, &offset, ARCH_32BIT);
+}
+
+/****************************************************************************
+ * Name: lib_osprintf_64
+ *
+ * Description:
+ *   Parse buffer assuming data came from a 64-bit CPU architecture.
+ *   Architecture-dependent types (long, size_t, ptrdiff_t, pointers)
+ *   are treated as 64-bit values.
+ *
+ ****************************************************************************/
+
+int lib_osprintf_64(FAR struct lib_outstream_s *s,
+                    FAR const IPTR char *fmt,
+                    FAR const void *buf)
+{
+  size_t offset = 0;
+  return lib_osprintf_internal(s, fmt, buf, &offset, ARCH_64BIT);
 }

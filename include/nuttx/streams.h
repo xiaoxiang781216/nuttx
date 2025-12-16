@@ -852,12 +852,40 @@ int lib_sprintf(FAR struct lib_outstream_s *stream,
  *
  * Description:
  *  Implementation of sprintf formatted output buffer data. Structure data
- *  types must be one-byte aligned.
+ *  types must be one-byte aligned. Uses native architecture for parsing.
  *
  ****************************************************************************/
 
 int lib_osprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
                  FAR const void *buf);
+
+/****************************************************************************
+ * Name: lib_osprintf_32
+ *
+ * Description:
+ *  Parse buffer data from a 32-bit CPU architecture. This function handles
+ *  architecture-dependent types (long, size_t, ptrdiff_t, pointers) as
+ *  32-bit values, regardless of the current CPU architecture.
+ *
+ ****************************************************************************/
+
+int lib_osprintf_32(FAR struct lib_outstream_s *s,
+                    FAR const IPTR char *fmt,
+                    FAR const void *buf);
+
+/****************************************************************************
+ * Name: lib_osprintf_64
+ *
+ * Description:
+ *  Parse buffer data from a 64-bit CPU architecture. This function handles
+ *  architecture-dependent types (long, size_t, ptrdiff_t, pointers) as
+ *  64-bit values, regardless of the current CPU architecture.
+ *
+ ****************************************************************************/
+
+int lib_osprintf_64(FAR struct lib_outstream_s *s,
+                    FAR const IPTR char *fmt,
+                    FAR const void *buf);
 
 /****************************************************************************
  * Name: lib_bsprintf
