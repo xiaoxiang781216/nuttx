@@ -503,7 +503,7 @@ static int pseudofile_do_create(FAR struct inode **node,
   nxmutex_init(&pf->lock);
 
   inode_lock();
-  ret = inode_reserve(path, mode, node);
+  ret = inode_reserve_path(path, mode, node);
   if (ret < 0)
     {
       goto reserve_err;
