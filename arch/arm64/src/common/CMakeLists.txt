@@ -86,7 +86,7 @@ if(NOT CONFIG_UP)
   list(APPEND SRCS arm64_cpustart.c)
 endif()
 
-if(CONFIG_SMP)
+if(NOT CONFIG_UP)
   list(APPEND SRCS arm64_smpcall.c)
 endif()
 
