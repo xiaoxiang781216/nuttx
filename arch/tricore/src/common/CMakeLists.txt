@@ -49,6 +49,11 @@ if(NOT CONFIG_DISABLE_SIGNALS)
   list(APPEND SRCS tricore_schedulesigaction.c tricore_sigdeliver.c)
 endif()
 
+if(CONFIG_LIB_PPCCALL)
+  list(APPEND SRCS tricore_ppccall_handler.c)
+  target_sources(arch_interface PRIVATE tricore_ppccall_handler.c)
+endif()
+
 if(CONFIG_BUILD_PROTECTED OR CONFIG_BUILD_KERNEL)
   list(APPEND SRCS tricore_task_start.c tricore_pthread_start.c)
 

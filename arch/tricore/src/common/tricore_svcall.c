@@ -34,6 +34,7 @@
 #include <arch/irq.h>
 #include <sched/sched.h>
 #include <nuttx/addrenv.h>
+#include <nuttx/ppccall.h>
 #include <nuttx/sched.h>
 
 #include "tricore_internal.h"
@@ -71,6 +72,56 @@ static inline_function void dispatch_syscall(void)
     : "memory"
   );
   sys_call0(SYS_syscall_return);
+}
+#endif
+
+#ifdef CONFIG_LIB_PPCCALL
+static bool dispatch_ppccall(struct tcb_s *rtcb, uintptr_t *puregs,
+                             uintptr_t *plregs)
+{
+  struct ppccall_param_s *param = (struct ppccall_param_s *)puregs[REG_D9];
+  const struct ppccall_info_s *info = ppccall_find_info(param->nbr);
+  uintptr_t *nplregs;
+  uintptr_t psw;
+  uintptr_t pc;
+
+  if (info == NULL)
+    {
+      serr("ERROR: No ppc info found for nbr %" PRIuPTR "\n", param->nbr);
+      plregs[REG_D2] = -ENOENT;
+      return false;
+    }
+
+  psw = puregs[REG_PSW] & ~PSW_MODE_MASK & ~PSW_PRS_MASK;
+  if ((atomic_read(&info->tcb->flags) & TCB_FLAG_TTYPE_MASK) ==
+      TCB_FLAG_TTYPE_KERNEL)
+    {
+      psw |= PSW_IO_SUPERVISOR;
+      pc   = (uintptr_t)up_ppccall_handler;
+      tricore_change_pprs(rtcb, PSW_PRS_KERNEL_SET);
+    }
+  else
+    {
+      psw |= PSW_IO_USER0 | PSW_PRS_USER;
+      pc   = (uintptr_t)USERSPACE->ppccall_handler;
+      tricore_change_pprs(rtcb, PSW_PRS_USER_SET);
+    }
+
+  /* New plregs and puregs to ppccall_handler */
+
+  puregs = tricore_alloc_csa(rtcb, pc, STACK_ALIGN_DOWN(puregs[REG_SP]),
+                             psw, !(plregs[REG_LPCXI] & PCXI_PIE));
+
+  rtcb->xcp.regs = puregs;
+  nplregs = puregs + TC_CONTEXT_REGS;
+
+  /* Args passed to ppccall_handler */
+
+  puregs[REG_UPCXI] = tricore_addr2csa(plregs);
+  puregs[REG_UA11] = (uintptr_t)__getA11();
+  nplregs[REG_D4] = info->func;
+  nplregs[REG_A4] = (uintptr_t)param;
+  return true;
 }
 #endif
 
@@ -350,13 +401,18 @@ void tricore_svcall(volatile void *trap)
 #endif
 
       default:
-        {
 #ifdef CONFIG_LIB_SYSCALL
+        /* Verify that the SYS call number is within range */
+
+        DEBUGASSERT(cmd >= CONFIG_SYS_RESERVED && cmd < SYS_maxsyscall);
+#  ifdef CONFIG_LIB_PPCCALL
+      case SYS_ppccall:
+#  endif
+        {
           struct tcb_s *rtcb = nxsched_self();
           uintptr_t *regs = plregs;
           int index = rtcb->xcp.nsyscalls;
 
-          DEBUGASSERT(cmd >= CONFIG_SYS_RESERVED && cmd < SYS_maxsyscall);
           DEBUGASSERT(index < CONFIG_SYS_NNEST);
 
           /* Setup to return to dispatch_syscall in privileged mode. */
@@ -364,39 +420,52 @@ void tricore_svcall(volatile void *trap)
           tricore_syscall_store_pprs(rtcb, index);
 
           rtcb->xcp.syscall_regs[index] = puregs;
+
+#  ifdef CONFIG_LIB_PPCCALL
+          if (cmd == SYS_ppccall)
+            {
+              if (!dispatch_ppccall(rtcb, puregs, plregs))
+                {
+                  break;
+                }
+            }
+          else
+#  endif
+            {
+              /* New plregs and puregs to dispatch_syscall */
+
+              puregs = tricore_alloc_csa(
+                rtcb,
+                (uintptr_t)dispatch_syscall,
+                STACK_ALIGN_DOWN(puregs[REG_SP]),
+                (puregs[REG_PSW] & (~PSW_MODE_MASK) & (~PSW_PRS_MASK)) |
+                (PSW_IO_SUPERVISOR),
+                !(plregs[REG_LPCXI] & PCXI_PIE));
+
+              tricore_change_pprs(rtcb, PSW_PRS_KERNEL_SET);
+
+              rtcb->xcp.regs = puregs;
+              plregs = puregs + TC_CONTEXT_REGS;
+
+              /* Args passed to dispatch_syscall */
+
+              puregs[REG_UPCXI] = tricore_addr2csa(regs);
+              puregs[REG_UA11] = (uintptr_t)__getA11();
+              regs = tricore_csa2addr(regs[REG_LPCXI]);
+              puregs[REG_D8] = regs[REG_D12];
+              puregs[REG_D9] = regs[REG_D13];
+              puregs[REG_D10] = regs[REG_D14];
+              plregs[REG_D4] = regs[REG_D8] - CONFIG_SYS_RESERVED;
+              plregs[REG_D5] = regs[REG_D9];
+              plregs[REG_D6] = regs[REG_D10];
+              plregs[REG_D7] = regs[REG_D11];
+            }
+
           rtcb->xcp.nsyscalls = index + 1;
-
-          /* New plregs and puregs to dispatch_syscall */
-
-          puregs = tricore_alloc_csa(
-            rtcb,
-            (uintptr_t)dispatch_syscall,
-            STACK_ALIGN_DOWN(puregs[REG_SP]),
-            (puregs[REG_PSW] & (~PSW_MODE_MASK) & (~PSW_PRS_MASK)) |
-            (PSW_IO_SUPERVISOR),
-            !(plregs[REG_LPCXI] & PCXI_PIE));
-
-          tricore_change_pprs(rtcb, PSW_PRS_KERNEL_SET);
-
-          rtcb->xcp.regs = puregs;
-          plregs = puregs + TC_CONTEXT_REGS;
-
-          /* Args passed to dispatch_syscall */
-
-          puregs[REG_UPCXI] = tricore_addr2csa(regs);
-          puregs[REG_UA11] = (uintptr_t)__getA11();
-          regs = tricore_csa2addr(regs[REG_LPCXI]);
-          puregs[REG_D8] = regs[REG_D12];
-          puregs[REG_D9] = regs[REG_D13];
-          puregs[REG_D10] = regs[REG_D14];
-          plregs[REG_D4] = regs[REG_D8] - CONFIG_SYS_RESERVED;
-          plregs[REG_D5] = regs[REG_D9];
-          plregs[REG_D6] = regs[REG_D10];
-          plregs[REG_D7] = regs[REG_D11];
+        }
 #else
         svcerr("ERROR: Bad SYS call: %d\n", (int)puregs[REG_D8]);
 #endif
-        }
         break;
     }
 
