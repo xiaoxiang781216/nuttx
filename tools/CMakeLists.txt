@@ -70,3 +70,7 @@ install(TARGETS mkdeps DESTINATION bin)
 
 add_executable(incdir incdir.c)
 install(TARGETS incdir DESTINATION bin)
+
+add_executable(wrapsymbol wrapsymbol.c)
+install(TARGETS wrapsymbol DESTINATION bin)
+target_link_libraries(wrapsymbol PRIVATE elf)

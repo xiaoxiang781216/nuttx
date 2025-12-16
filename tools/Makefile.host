@@ -38,7 +38,7 @@ all: b16$(HOSTEXEEXT) bdf-converter$(HOSTEXEEXT) cmpconfig$(HOSTEXEEXT) \
     cnvwindeps$(HOSTEXEEXT) nxstyle$(HOSTEXEEXT) initialconfig$(HOSTEXEEXT) \
     gencromfs$(HOSTEXEEXT) convert-comments$(HOSTEXEEXT) lowhex$(HOSTEXEEXT) \
     detab$(HOSTEXEEXT) rmcr$(HOSTEXEEXT) incdir$(HOSTEXEEXT) \
-    jlink-nuttx$(HOSTDYNEXT)
+    jlink-nuttx$(HOSTDYNEXT) wrapsymbol(HOSTEXEEXT)
 default: mkconfig$(HOSTEXEEXT) mksyscall$(HOSTEXEEXT) mkdeps$(HOSTEXEEXT) \
     cnvwindeps$(HOSTEXEEXT) incdir$(HOSTEXEEXT)
 
@@ -239,6 +239,15 @@ endif
 cmux$(HOSTEXEEXT): cmux.c
 	$(Q) $(HOSTCC) $(HOSTCFLAGS) $^ -o $@
 
+# wrapsymbol - Wrap symbol to __wrap and __real
+
+wrapsymbol$(HOSTEXEEXT): wrapsymbol.c
+	$(Q) $(HOSTCC) $(HOSTCFLAGS) -o wrapsymbol$(HOSTEXEEXT) wrapsymbol.c -lelf
+
+ifdef HOSTEXEEXT
+wrapsymbol: wrapsymbol$(HOSTEXEEXT)
+endif
+
 clean:
 	$(call DELFILE, b16)
 	$(call DELFILE, b16.exe)
@@ -278,6 +287,8 @@ clean:
 	$(call DELFILE, jlink-nuttx.so)
 	$(call DELFILE, jlink-nuttx.dll)
 	$(call DELFILE, cmux$(HOSTEXEEXT))
+	$(call DELFILE, wrapsymbol)
+	$(call DELFILE, wrapsymbol.exe)
 ifneq ($(CONFIG_WINDOWS_NATIVE),y)
 	$(Q) rm -rf *.dSYM
 endif

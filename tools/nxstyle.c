@@ -393,6 +393,15 @@ static const char *g_white_content_list[] =
   "RTOS_UpdateThreads",
 
   /* Ref:
+   * tools/wrapsymbol.c
+   */
+
+  "Elf",
+  "Elf_Scn",
+  "GElf_Shdr",
+  "GElf_Sym",
+
+  /* Ref:
    * sim/posix/sim_x11eventloop.c
    */
 
