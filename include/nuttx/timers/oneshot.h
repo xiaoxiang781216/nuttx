@@ -298,7 +298,7 @@ void oneshot_count_init(FAR struct oneshot_lowerhalf_s *lower,
   result = clkcnt_delta_cnt2nsec_fast(frequency, lower->cnt2nsec_mult,
                                       lower->cnt2nsec_shift);
 
-  ASSERT(NSEC_PER_SEC - 5 <= result && NSEC_PER_SEC + 5 >= result);
+  ASSERT(NSEC_PER_SEC - 5 <= result && NSEC_PER_SEC >= result);
 
 #  ifdef CONFIG_ONESHOT_FAST_DIVISION
   /* invdiv requires the invariant-divsor > 1. */
@@ -402,6 +402,8 @@ int oneshot_current(FAR struct oneshot_lowerhalf_s *lower,
   cnt          -= sec * freq;
   ts->tv_nsec   = oneshot_delta_cnt2nsec(lower, cnt);
   ts->tv_sec    = sec;
+
+  DEBUGASSERT(cnt < freq && ts->tv_nsec < NSEC_PER_SEC);
 #else
   ret = lower->ops->current(lower, ts);
 #endif
