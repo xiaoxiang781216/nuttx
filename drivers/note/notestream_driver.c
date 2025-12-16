@@ -121,7 +121,7 @@ int notefile_register(FAR const char *filename)
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   memcpy(notefile + 1, filename, len);
   notefile->driver.driver.name  = (FAR const char *)(notefile + 1);
-  notefile->driver.driver.filter.mode.flag =
+  notefile->driver.driver.filter.mode.type_mask =
                       CONFIG_DRIVERS_NOTEFILE_FILTER_DEFAULT_MODE;
 
 #  ifdef CONFIG_SMP
@@ -132,7 +132,7 @@ int notefile_register(FAR const char *filename)
 #endif
 
   notefile->driver.stream = &notefile->filestream.common;
-  notfile->driver.driver.ops = &g_notestream_ops;
+  notefile->driver.driver.ops = &g_notestream_ops;
   ret = lib_fileoutstream_open(&notefile->filestream,
                                filename, O_WRONLY, 0666);
   if (ret < 0)
