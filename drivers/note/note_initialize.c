@@ -113,12 +113,7 @@ int note_early_initialize(void)
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTESNAP
-  ret = notesnap_register();
-  if (ret < 0)
-    {
-      serr("notesnap_register failed %d\n", ret);
-      return ret;
-    }
+  notesnap_notify_register();
 #endif
 
   return ret;

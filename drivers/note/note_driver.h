@@ -75,6 +75,10 @@ extern struct notestream_driver_s g_notestream_lowerout;
 extern struct notefdx_s g_notefdx;
 #endif
 
+#ifdef CONFIG_DRIVERS_NOTESNAP
+extern struct notesnap_s g_notesnap;
+#endif
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -156,11 +160,11 @@ int noteram_register(void);
 #endif
 
 /****************************************************************************
- * Name: notesnap_register
+ * Name: notesnap_notify_register
  ****************************************************************************/
 
 #ifdef CONFIG_DRIVERS_NOTESNAP
-int notesnap_register(void);
+void notesnap_notify_register(void);
 
 /****************************************************************************
  * Name: notesnap_dump_with_stream

@@ -156,6 +156,9 @@ FAR static struct note_driver_s *
 #ifdef CONFIG_DRIVERS_NOTET32FDX
   (FAR struct note_driver_s *)&g_notefdx,
 #endif
+#ifdef CONFIG_DRIVERS_NOTESNAP
+  (FAR struct note_driver_s *)&g_notesnap,
+#endif
   NULL
 };
 

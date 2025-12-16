@@ -135,24 +135,6 @@ static const struct note_driver_ops_s g_notesnap_ops =
 #endif
 };
 
-static struct notesnap_s g_notesnap =
-{
-  {
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-    "snap",
-    {
-      {
-        CONFIG_DRIVERS_NOTESNAP_FILTER_DEFAULT_MODE,
-#  ifdef CONFIG_SMP
-        CONFIG_DRIVERS_NOTESNAP_CPUSET
-#  endif
-      },
-    },
-#endif
-    &g_notesnap_ops
-  }
-};
-
 static FAR const char *g_notesnap_type[] =
 {
   "NOTE_ALL",
@@ -196,6 +178,28 @@ static_assert(
   nitems(g_notesnap_type) == NOTE_TYPE_LAST,
   "g_notesnap_type size mismatch"
 );
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+struct notesnap_s g_notesnap =
+{
+  {
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+    "snap",
+    {
+      {
+        CONFIG_DRIVERS_NOTESNAP_FILTER_DEFAULT_MODE,
+#  ifdef CONFIG_SMP
+        CONFIG_DRIVERS_NOTESNAP_CPUSET
+#  endif
+      },
+    },
+#endif
+    &g_notesnap_ops
+  }
+};
 
 /****************************************************************************
  * Private Functions
@@ -352,14 +356,13 @@ static int notesnap_notifier(FAR struct notifier_block *nb,
  ****************************************************************************/
 
 /****************************************************************************
- * Name: notesnap_register
+ * Name: notesnap_notify_register
  ****************************************************************************/
 
-int notesnap_register(void)
+void notesnap_notify_register(void)
 {
   g_notesnap.nb.notifier_call = notesnap_notifier;
   panic_notifier_chain_register(&g_notesnap.nb);
-  return note_driver_register(&g_notesnap.driver);
 }
 
 /****************************************************************************
