@@ -210,14 +210,5 @@ int note_initialize(void)
     }
 #endif
 
-#ifdef CONFIG_DRIVERS_NOTET32FDX
-  ret = notefdx_register();
-  if (ret < 0)
-    {
-      serr("notefdx_register failed %d\n", ret);
-      return ret;
-    }
-#endif
-
   return ret;
 }

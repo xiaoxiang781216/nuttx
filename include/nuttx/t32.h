@@ -56,24 +56,6 @@ struct lib_fdxinstream_s
  * Public Function Prototypes
  ****************************************************************************/
 
-/****************************************************************************
- * Name: notefdx_register
- *
- * Description:
- *   Register a trace32 fdx driver using note_driver_register
- *
- * Input Parameters:
- *   None.
- *
- * Returned Value:
- *   Zero on succress. A negated errno value is returned on a failure.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_DRIVERS_NOTET32FDX
-int notefdx_register(void);
-#endif
-
 #ifdef CONFIG_STREAM_FDX
 /****************************************************************************
  * Name: lib_fdxoutstream_open

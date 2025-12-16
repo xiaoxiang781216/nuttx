@@ -65,12 +65,34 @@ static void notefdx_add(FAR struct note_driver_s *drv,
 #ifdef DRIVERS_NOTET32FDX_SECTION
 locate_data(CONFIG_DRIVERS_NOTET32FDX_SECTION)
 #endif
-static struct notefdx_channel_s g_fdx_note_channel;
+static struct notefdx_channel_s g_fdx_note_channel =
+{
+  .header =
+    {
+      .enable = 0,
+      .size = sizeof(g_fdx_note_channel.data),
+      .hostindex = 0,
+      .targetindex = 0,
+      .stall = 0,
+      .pending = 0,
+      .transferlen = 0,
+      .transferchannel = 0x1,
+    },
+  .data =
+    {
+      0
+    },
+  .lock = SP_UNLOCKED,
+};
 
 static const struct note_driver_ops_s g_notefdx_ops =
 {
   notefdx_add,
 };
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
 
 struct notefdx_s g_notefdx =
 {
@@ -88,6 +110,7 @@ struct notefdx_s g_notefdx =
 #endif
     &g_notefdx_ops
   },
+  .channel = &g_fdx_note_channel,
   NULL,
 };
 
@@ -142,26 +165,4 @@ static void notefdx_add(FAR struct note_driver_s *drv,
 
   T32_Fdx_SendPoll(channel, (FAR void *)buf, notelen);
   spin_unlock_irqrestore(&channel->lock, flags);
-}
-
-/****************************************************************************
- * Name: notefdx_register
- *
- * Description:
- *   Register a trace32 fdx driver using note_driver_register
- *
- * Input Parameters:
- *   None.
- *
- * Returned Value:
- *   Zero on succress. A negated errno value is returned on a failure.
- *
- ****************************************************************************/
-
-int notefdx_register(void)
-{
-  T32_Fdx_InitChannel(g_fdx_note_channel);
-  T32_Fdx_EnableChannel(g_fdx_note_channel);
-  g_notefdx.channel = &g_fdx_note_channel;
-  return note_driver_register(&g_notefdx.driver);
 }

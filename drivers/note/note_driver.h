@@ -71,6 +71,10 @@ extern struct noterpmsg_driver_s g_noterpmsg_driver;
 extern struct notestream_driver_s g_notestream_lowerout;
 #endif
 
+#ifdef CONFIG_DRIVERS_NOTET32FDX
+extern struct notefdx_s g_notefdx;
+#endif
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/

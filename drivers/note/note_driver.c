@@ -153,6 +153,9 @@ FAR static struct note_driver_s *
 #ifdef CONFIG_DRIVERS_NOTERPMSG
   (FAR struct note_driver_s *)&g_noterpmsg_driver,
 #endif
+#ifdef CONFIG_DRIVERS_NOTET32FDX
+  (FAR struct note_driver_s *)&g_notefdx,
+#endif
   NULL
 };
 
