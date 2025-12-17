@@ -100,6 +100,9 @@ void host_abort(int status)
 
 void host_reset(int status)
 {
+  char path[PATH_MAX];
+  ssize_t len = PATH_MAX;
+
   /* Ignore SIGALRM during reboot */
 
   signal(SIGALRM, SIG_IGN);
@@ -110,7 +113,19 @@ void host_reset(int status)
   host_uninterruptible_no_return(__gcov_dump);
 #endif
 
-  /* exit the simulation */
+  /* Get and restart with the absolute path of the executable file */
+
+#ifdef CONFIG_HOST_LINUX
+  len = host_uninterruptible(readlink, "/proc/self/exe", path, len);
+#elif defined (CONFIG_HOST_MACOS)
+  host_uninterruptible_no_return(_NSGetExecutablePath, path, &len);
+#endif
+
+  if (len > 0 && len < PATH_MAX)
+    {
+      path[len] = '\0';
+      host_uninterruptible_no_return(execv, path, g_argv);
+    }
 
   host_uninterruptible_no_return(execvp, g_argv[0], g_argv);
 }
