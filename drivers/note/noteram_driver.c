@@ -161,6 +161,7 @@ static void
 noteram_dump_init_context(FAR struct noteram_dump_context_s *ctx);
 static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
                             FAR struct noteram_dump_context_s *ctx);
+static unsigned int noteram_unread_length(FAR struct noteram_driver_s *drv);
 
 #if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
 static void noteram_timeout_handler(wdparm_t arg);
