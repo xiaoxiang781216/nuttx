@@ -66,7 +66,7 @@ uintptr_t *tricore_alloc_csa(struct tcb_s *tcb, uintptr_t pc,
     }
   else
     {
-      pucsa = tcb->xcp.regs +  2 * TC_CONTEXT_REGS;
+      pucsa = tcb->xcp.regs +  XCPTCONTEXT_REGS;
     }
 
   plcsa = pucsa + TC_CONTEXT_REGS;
@@ -104,7 +104,7 @@ void tricore_reclaim_csa(uintptr_t pcxi)
     {
       tail = tricore_csa2addr(pcxi);
       pcxi = tail[0];
-      tail[0] = tricore_addr2csa(tail +TC_CONTEXT_REGS);
+      tail[0] = tricore_addr2csa(tail + TC_CONTEXT_REGS);
     }
 }
 

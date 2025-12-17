@@ -123,7 +123,6 @@ void tricore_svcall(volatile void *trap)
     }
   else
     {
-      tricore_reclaim_csa(tricore_addr2csa(plregs));
 #ifndef CONFIG_DISABLE_SIGNALS
       if (tcb->xcp.saved_regs)
         {
@@ -131,6 +130,12 @@ void tricore_svcall(volatile void *trap)
            * saved_regs.
            */
 
+          uintptr_t *relregs =
+            tcb->xcp.regs ? (tcb->xcp.regs + TC_CONTEXT_REGS) : plregs;
+
+          ((uintptr_t *)(tcb->xcp.saved_regs +
+              XCPTCONTEXT_REGS))[REG_UPCXI] = 0;
+          tricore_reclaim_csa(tricore_addr2csa(relregs));
           tcb->xcp.regs = tcb->xcp.saved_regs;
           tcb->xcp.saved_regs = NULL;
         }
@@ -410,9 +415,9 @@ void tricore_svcall(volatile void *trap)
 
   cpu_lcx =
     (uintptr_t *)((uint8_t *)tcb->stack_base_ptr + tcb->adj_stack_size) -
-    2 * TC_CONTEXT_REGS;
+    XCPTCONTEXT_REGS;
   __mtcr(CPU_PCXI, tricore_addr2csa(tcb->xcp.regs + TC_CONTEXT_REGS));
-  __mtcr(CPU_FCX, tricore_addr2csa(tcb->xcp.regs + 2 * TC_CONTEXT_REGS));
+  __mtcr(CPU_FCX, tricore_addr2csa(tcb->xcp.regs + XCPTCONTEXT_REGS));
   __mtcr(CPU_LCX, tricore_addr2csa(cpu_lcx));
 
   /* Updata PPRS register */
