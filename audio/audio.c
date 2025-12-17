@@ -663,6 +663,7 @@ static int audio_stop(FAR struct file *filep)
   FAR struct audio_lowerhalf_s *lower = upper->dev;
   FAR struct audio_openpriv_s *priv = filep->f_priv;
   int nstate;
+  int tstate;
   int ret;
 
   DEBUGASSERT(upper != NULL && lower->ops->stop != NULL);
@@ -673,6 +674,8 @@ static int audio_stop(FAR struct file *filep)
       nstate == AUDIO_STATE_OPEN)
     {
       audinfo("stop: nstate=%d status=%d\n", nstate, upper->status->state);
+      tstate = upper->status->state;
+      audio_setstate(upper, AUDIO_STATE_DRAINING);
 #ifdef CONFIG_AUDIO_MULTI_SESSION
       ret = lower->ops->stop(lower, session);
 #else
@@ -680,17 +683,11 @@ static int audio_stop(FAR struct file *filep)
 #endif
       if (ret != OK)
         {
+          audio_setstate(upper, tstate);
           return ret;
         }
 
       memset(&upper->info, 0, sizeof(upper->info));
-
-      /* Audio_complete may have set state to AUDIO_STATE_OPEN */
-
-      if (upper->status->state != AUDIO_STATE_OPEN)
-        {
-          audio_setstate(upper, AUDIO_STATE_DRAINING);
-        }
     }
   else if (nstate == AUDIO_STATE_PAUSED)
     {
@@ -1487,7 +1484,7 @@ static inline void audio_complete(FAR struct audio_upperhalf_s *upper,
 
   audinfo("Entry\n");
 
-  if (upper->status)
+  if (upper->status && (upper->status->state == AUDIO_STATE_DRAINING))
     {
       audio_setstate(upper, AUDIO_STATE_OPEN);
     }
