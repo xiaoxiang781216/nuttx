@@ -27,9 +27,4 @@ set(SRCS
     arm_trigger_irq.c
     arm_cpuinfo.c)
 
-if((DEFINED CONFIG_DEBUG_FEATURES AND CONFIG_DEBUG_FEATURES)
-   OR (DEFINED CONFIG_ARM_COREDUMP_REGION AND CONFIG_ARM_COREDUMP_REGION))
-  list(APPEND SRCS arm_dumpnvic.c)
-endif()
-
 target_sources(arch PRIVATE ${SRCS})
