@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-m/fpb.h
+ * arch/arm/src/arm_m/fpb.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_ARMV7_M_FPB_H
-#define __ARCH_ARM_SRC_ARMV7_M_FPB_H
+#ifndef __ARCH_ARM_SRC_ARM_M_FPB_H
+#define __ARCH_ARM_SRC_ARM_M_FPB_H
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -29,7 +29,7 @@
 
 /* FPB Register Base Address ************************************************/
 
-#define FPB_BASE                  0xe0002000
+#define FPB_BASE              0xe0002000
 
 /* FPB Register Offsets *****************************************************/
 
@@ -81,7 +81,7 @@
  */
 
 #define FPB_CTRL_NUM_CODE2_SHIFT  12
-#define FPB_CTRL_NUM_CODE2_MASK   0x00003000
+#define FPB_CTRL_NUM_CODE2_MASK   0x00007000
 
 /* NUM_LIT
  *
@@ -114,7 +114,7 @@
 
 #define FPB_CTRL_KEY_SHIFT        1
 #define FPB_CTRL_KEY_MASK         0x00000002
-#  define FPB_CTRL_KEY            0x00000002
+#define FPB_CTRL_KEY              0x00000002
 
 /* ENABLE
  *
@@ -126,7 +126,7 @@
 
 #define FPB_CTRL_ENABLE_SHIFT     0
 #define FPB_CTRL_ENABLE_MASK      0x00000001
-#  define FPB_CTRL_ENABLE         0x00000001
+#define FPB_CTRL_ENABLE           0x00000001
 
 /* FPB_REMAP */
 
@@ -137,6 +137,15 @@
 
 #define FPB_REMAP_REMAP_SHIFT     5
 #define FPB_REMAP_REMAP_MASK      0x1fffffe0
+
+/* REMAP
+ *
+ * Remap supported field.
+ */
+
+#define FPB_REMAP_RMPSPT_SHIFT    29
+#define FPB_REMAP_RMPSPT_MASK     0x20000000
+#define FPB_REMAP_RMPSPT          0x20000000
 
 /* FPB_COMP0 - FPB_COMP7 */
 
@@ -173,6 +182,6 @@
 
 #define FPB_COMP0_ENABLE_MASK     0x00000001
 #define FPB_COMP0_ENABLE_SHIFT    0
-#  define FPB_COMP0_ENABLE        0x00000001
+#define FPB_COMP0_ENABLE          0x00000001
 
-#endif /* __ARCH_ARM_SRC_ARMV7_M_FPB_H */
+#endif /* __ARCH_ARM_SRC_ARM_M_FPB_H */

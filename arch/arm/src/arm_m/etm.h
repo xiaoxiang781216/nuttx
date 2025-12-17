@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-m/etm.h
+ * arch/arm/src/arm_m/etm.h
  *
  *  Copyright 2014 Silicon Laboratories, Inc. http://www.silabs.com</b>
  *
@@ -58,8 +58,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_ARMV7_M_ETM_H
-#define __ARCH_ARM_SRC_ARMV7_M_ETM_H
+#ifndef __ARCH_ARM_SRC_ARM_M_ETM_H
+#define __ARCH_ARM_SRC_ARM_M_ETM_H
 
 /****************************************************************************
  * Included Files
@@ -533,7 +533,7 @@
 #define _ETM_ETMCCER_EICEWPNT_MASK                    0xF0000UL                              /* Bit mask for ETM_EICEWPNT */
 #define _ETM_ETMCCER_EICEWPNT_DEFAULT                 0x00000004UL                           /* Mode DEFAULT for ETM_ETMCCER */
 #define ETM_ETMCCER_EICEWPNT_DEFAULT                  (_ETM_ETMCCER_EICEWPNT_DEFAULT << 16)  /* Shifted mode DEFAULT for ETM_ETMCCER */
-#define ETM_ETMCCER_TEICEWPNT                         (0x1UL << 20)                          /* Trace Sart/Stop Block Uses EmbeddedICE watchpoint inputs */
+#define ETM_ETMCCER_TEICEWPNT                         (0x1UL << 20)                          /* Trace Start/Stop Block Uses EmbeddedICE watchpoint inputs */
 #define _ETM_ETMCCER_TEICEWPNT_SHIFT                  20                                     /* Shift value for ETM_TEICEWPNT */
 #define _ETM_ETMCCER_TEICEWPNT_MASK                   0x100000UL                             /* Bit mask for ETM_TEICEWPNT */
 #define _ETM_ETMCCER_TEICEWPNT_DEFAULT                0x00000001UL                           /* Mode DEFAULT for ETM_ETMCCER */
@@ -914,4 +914,4 @@
 #define _ETM_ETMCIDR3_PREAMB_DEFAULT                  0x000000B1UL                        /* Mode DEFAULT for ETM_ETMCIDR3 */
 #define ETM_ETMCIDR3_PREAMB_DEFAULT                   (_ETM_ETMCIDR3_PREAMB_DEFAULT << 0) /* Shifted mode DEFAULT for ETM_ETMCIDR3 */
 
-#endif /* __ARCH_ARM_SRC_ARMV7_M_ETM_H */
+#endif /* __ARCH_ARM_SRC_ARM_M_ETM_H */

@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-m/sau.h
+ * arch/arm/src/arm_m/sau.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_ARMV8_M_SAU_H
-#define __ARCH_ARM_SRC_ARMV8_M_SAU_H
+#ifndef __ARCH_ARM_SRC_ARM_M_SAU_H
+#define __ARCH_ARM_SRC_ARM_M_SAU_H
 
 /****************************************************************************
  * Included Files
@@ -188,4 +188,4 @@ void sau_configure_region(uintptr_t base, size_t size, uint32_t flags);
 #endif
 
 #endif /* __ASSEMBLY__ */
-#endif /* __ARCH_ARM_SRC_ARMV8_M_SAU_H */
+#endif /* __ARCH_ARM_SRC_ARM_M_SAU_H */

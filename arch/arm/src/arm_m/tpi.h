@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-m/tpi.h
+ * arch/arm/src/arm_m/tpi.h
  *
  *   Copyright (c) 2009 - 2013 ARM LIMITED
  *
@@ -61,8 +61,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_ARMV7_M_TPI_H
-#define __ARCH_ARM_SRC_ARMV7_M_TPI_H
+#ifndef __ARCH_ARM_SRC_ARM_M_TPI_H
+#define __ARCH_ARM_SRC_ARM_M_TPI_H
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -198,4 +198,4 @@
 #define TPI_DEVTYPE_MajorType_SHIFT   4
 #define TPI_DEVTYPE_MajorType_MASK    (0xful << TPI_DEVTYPE_MajorType_SHIFT)
 
-#endif /* __ARCH_ARM_SRC_ARMV7_M_TPI_H */
+#endif /* __ARCH_ARM_SRC_ARM_M_TPI_H */

@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-m/itm.h
+ * arch/arm/src/arm_m/itm.h
  *
  *   Copyright (c) 2009 - 2013 ARM LIMITED
  *
@@ -61,8 +61,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_ARMV8_M_ITM_H
-#define __ARCH_ARM_SRC_ARMV8_M_ITM_H
+#ifndef __ARCH_ARM_SRC_ARM_M_ITM_H
+#define __ARCH_ARM_SRC_ARM_M_ITM_H
 
 /****************************************************************************
  * Included Files
@@ -183,4 +183,4 @@ int32_t itm_checkchar(void);
 }
 #endif
 
-#endif /* __ARCH_ARM_SRC_ARMV8_M_ITM_H */
+#endif /* __ARCH_ARM_SRC_ARM_M_ITM_H */
