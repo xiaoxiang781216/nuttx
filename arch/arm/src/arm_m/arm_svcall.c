@@ -60,6 +60,9 @@ static bool arm_dispatch_ppccall(uint32_t *regs)
       return false;
     }
 
+#ifdef CONFIG_BUILD_FLAT
+  regs[REG_PC] = (uint32_t)up_ppccall_handler & ~1;
+#else
   if ((atomic_read(&info->tcb->flags) & TCB_FLAG_TTYPE_MASK) ==
       TCB_FLAG_TTYPE_KERNEL)
     {
@@ -71,9 +74,17 @@ static bool arm_dispatch_ppccall(uint32_t *regs)
       regs[REG_CONTROL] |= CONTROL_NPRIV;
       regs[REG_PC]       = (uint32_t)USERSPACE->ppccall_handler & ~1;
     }
+#endif
 
   regs[REG_R0] = info->func;
   return true;
+}
+#else
+static inline_function bool arm_dispatch_ppccall(uint32_t *regs)
+{
+  serr("ERROR: PPCALL not supported\n");
+  regs[REG_R0] = -ENOENT;
+  return false;
 }
 #endif
 
@@ -147,7 +158,7 @@ int arm_svcall(int irq, void *context, void *arg)
        * unprivileged thread mode.
        */
 
-#ifdef CONFIG_LIB_SYSCALL
+#if defined(CONFIG_LIB_SYSCALL) || defined(CONFIG_LIB_PPCCALL)
       case SYS_syscall_return:
         {
           int index = (int)tcb->xcp.nsyscalls - 1;
@@ -406,13 +417,13 @@ int arm_svcall(int irq, void *context, void *arg)
        */
 
       default:
-#ifdef CONFIG_LIB_SYSCALL
+#if defined(CONFIG_LIB_SYSCALL) || defined(CONFIG_LIB_PPCCALL)
         /* Verify that the SYS call number is within range */
 
+#  ifdef CONFIG_LIB_SYSCALL
         DEBUGASSERT(cmd >= CONFIG_SYS_RESERVED && cmd < SYS_maxsyscall);
-#  ifdef CONFIG_LIB_PPCCALL
-      case SYS_ppccall:
 #  endif
+      case SYS_ppccall:
         {
           int index = tcb->xcp.nsyscalls;
 
@@ -428,7 +439,6 @@ int arm_svcall(int irq, void *context, void *arg)
           tcb->xcp.syscall[index].excreturn  = regs[REG_EXC_RETURN];
           tcb->xcp.syscall[index].ctrlreturn = regs[REG_CONTROL];
 
-#  ifdef CONFIG_LIB_PPCCALL
           if (cmd == SYS_ppccall)
             {
               if (!arm_dispatch_ppccall(regs))
@@ -437,7 +447,6 @@ int arm_svcall(int irq, void *context, void *arg)
                 }
             }
           else
-#  endif
             {
               regs[REG_PC]      = (uint32_t)arm_dispatch_syscall & ~1;
 

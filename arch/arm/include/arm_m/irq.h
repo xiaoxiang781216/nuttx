@@ -229,7 +229,7 @@
 
 /* This structure represents the return state from a system call */
 
-#ifdef CONFIG_LIB_SYSCALL
+#if defined(CONFIG_LIB_SYSCALL) || defined(CONFIG_LIB_PPCCALL)
 struct xcpt_syscall_s
 {
   uint32_t excreturn;   /* The EXC_RETURN value */
@@ -268,7 +268,7 @@ struct xcptcontext
   uint8_t nkernels;
 #endif
 
-#ifdef CONFIG_LIB_SYSCALL
+#if defined(CONFIG_LIB_SYSCALL) || defined(CONFIG_LIB_PPCCALL)
   /* The following array holds the return address and the exc_return value
    * needed to return from each nested system call.
    */

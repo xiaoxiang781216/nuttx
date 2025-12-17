@@ -312,6 +312,8 @@ uint32_t *arm_doirq(int irq, uint32_t *regs);
 
 #ifdef CONFIG_LIB_SYSCALL
 void arm_dispatch_syscall(void);
+#else
+#  define arm_dispatch_syscall NULL
 #endif
 
 /* Exception handling logic unique to the Cortex-M family */

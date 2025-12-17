@@ -55,8 +55,10 @@ endif()
 
 if(CONFIG_LIB_PPCCALL)
   list(APPEND SRCS ${ARCH_TOOLCHAIN_PATH}/arm_ppccall_handler.S)
-  target_sources(arch_interface
-                 PRIVATE ${ARCH_TOOLCHAIN_PATH}/arm_ppccall_handler.S)
+  if(CONFIG_BUILD_PROTECTED OR CONFIG_BUILD_KERNEL)
+    target_sources(arch_interface
+                   PRIVATE ${ARCH_TOOLCHAIN_PATH}/arm_ppccall_handler.S)
+  endif()
 endif()
 
 if(CONFIG_BUILD_PROTECTED OR CONFIG_BUILD_KERNEL)

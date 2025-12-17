@@ -44,7 +44,9 @@ endif
 
 ifeq ($(CONFIG_LIB_PPCCALL),y)
   CMN_ASRCS += arm_ppccall_handler.S
-  CMN_UASRCS += arm_ppccall_handler.S
+  ifeq ($(CONFIG_BUILD_PROTECTED)$(CONFIG_BUILD_KERNEL),y)
+    CMN_UASRCS += arm_ppccall_handler.S
+  endif
 endif
 
 ifeq ($(CONFIG_BUILD_PROTECTED)$(CONFIG_BUILD_KERNEL),y)

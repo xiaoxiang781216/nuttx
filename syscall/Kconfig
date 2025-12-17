@@ -65,9 +65,10 @@ config LIB_SYSCALL_FILES
 		e.g. CONFIG_LIB_SYSCALL_FILES="<path relative to nuttx>/syscall_ext1.csv;
 		<path relative to nuttx>/syscall_ext2.csv"
 
+endif # LIB_SYSCALL
+
 config LIB_PPCCALL
 	bool "Protected Procedure Call"
-	depends on BUILD_PROTECTED
 	default n
 	---help---
 		This allows application in user or kernel to call the function that located
@@ -80,8 +81,6 @@ config LIB_PPCCALL_FILES
 		This is the path to the CSV file that defines the custom functions
 		for the protected procedure call mechanism. The CSV file format is same
 		as the syscall CSV file.
-
-endif # LIB_SYSCALL
 
 config LIB_SYSCALL_WRAPPER
 	bool "Wrap system call functions"

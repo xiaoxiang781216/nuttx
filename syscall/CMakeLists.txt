@@ -46,10 +46,14 @@ if(CONFIG_LIB_PPCCALL)
   set(PPCLOOKUPFILE "${CMAKE_BINARY_DIR}/include/ppccall_lookup.h")
 endif()
 
-if(CONFIG_LIB_SYSCALL_WRAPPER OR CONFIG_LIB_SYSCALL)
+if(CONFIG_LIB_SYSCALL_WRAPPER
+   OR CONFIG_LIB_SYSCALL
+   OR CONFIG_LIB_PPCCALL)
   # generate the host tool
   nuttx_build_host_target(mksyscall ${CMAKE_SOURCE_DIR}/tools/mksyscall.c)
+endif()
 
+if(CONFIG_LIB_SYSCALL_WRAPPER OR CONFIG_LIB_SYSCALL)
   # generate the syscall lookup table
   generate_syscall_files(
     OUTPUT_VAR
