@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-m/arm_gen_nonsecfault.c
+ * arch/arm/src/arm_m/arm_gen_nonsecfault.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -84,8 +84,8 @@ bool weak_function arm_should_gen_nonsecurefault(void)
  *
  *   Here we provide a way to resolve this problem:
  *   1. Set the securefault & busfault to TEE
- *   2. busfault happend from TEE, then directly dump TEE
- *   3. busfault happend from REE, then generate nonsecurefault
+ *   2. busfault happened from TEE, then directly dump TEE
+ *   3. busfault happened from REE, then generate nonsecurefault
  *   4. Back to REE, and dump
  *
  * Return values:
@@ -119,7 +119,7 @@ int arm_gen_nonsecurefault(int irq, uint32_t *regs)
           return 0;
         }
 
-      /* Redict busfault to REE */
+      /* Redirect busfault to REE */
 
       up_secure_irq(NVIC_IRQ_BUSFAULT, false);
     }

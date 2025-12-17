@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-m/arm_busfault.c
+ * arch/arm/src/arm_m/arm_busfault.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -101,6 +101,13 @@ int arm_busfault(int irq, void *context, void *arg)
     {
       bfalert("\tFloating-point lazy state preservation error\n");
     }
+
+#ifdef CONFIG_DEBUG_BUSFAULT
+  if (arm_gen_nonsecurefault(irq, context))
+    {
+      return OK;
+    }
+#endif
 
   up_irq_save();
   PANIC_WITH_REGS("panic", context);

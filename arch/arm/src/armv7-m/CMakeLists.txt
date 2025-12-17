@@ -21,20 +21,14 @@
 # TODO: do not use config to detect this
 
 set(SRCS
-    arm_busfault.c
     arm_dbgmonitor.c
     arm_cache.c
     arm_cpuinfo.c
     arm_doirq.c
-    arm_hardfault.c
     arm_initialstate.c
     arm_itm.c
-    arm_memfault.c
     arm_perf.c
     arm_svcall.c
-    arm_systemreset.c
-    arm_trigger_irq.c
-    arm_usagefault.c
     arm_dbgmonitor.c)
 
 if(CONFIG_ARMV7M_ITMSYSLOG)

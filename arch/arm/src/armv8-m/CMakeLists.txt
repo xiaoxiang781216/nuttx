@@ -19,23 +19,16 @@
 # ##############################################################################
 
 set(SRCS
-    arm_busfault.c
     arm_dbgmonitor.c
     arm_cache.c
     arm_cpuinfo.c
     arm_doirq.c
-    arm_hardfault.c
     arm_initialstate.c
     arm_itm.c
-    arm_memfault.c
     arm_perf.c
     arm_sau.c
-    arm_securefault.c
     arm_secure_irq.c
-    arm_svcall.c
-    arm_systemreset.c
-    arm_trigger_irq.c
-    arm_usagefault.c)
+    arm_svcall.c)
 
 if(CONFIG_ARMV8M_ITMSYSLOG)
   list(APPEND SRCS arm_itm_syslog.c)
@@ -51,10 +44,6 @@ endif()
 
 if(CONFIG_ARM_MPU OR CONFIG_ARM_MPU_EARLY_RESET)
   list(APPEND SRCS arm_mpu.c)
-endif()
-
-if(CONFIG_ARCH_TRUSTZONE_SECURE)
-  list(APPEND SRCS arm_gen_nonsecfault.c)
 endif()
 
 if(CONFIG_ARCH_ADDRENV)

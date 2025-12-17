@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv6-m/arm_hardfault.c
+ * arch/arm/src/arm_m/arm_securefault.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -24,6 +24,8 @@
 
 #include <nuttx/config.h>
 
+#include <nuttx/syslog/syslog.h>
+
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
@@ -32,94 +34,96 @@
 #include <arch/irq.h>
 
 #include "nvic.h"
+#include "sau.h"
 #include "arm_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_DEBUG_HARDFAULT_ALERT
-#  define hfalert(format, ...) _alert(format, ##__VA_ARGS__)
+#ifdef CONFIG_DEBUG_SECUREFAULT
+#  define sfalert(format, ...)  _alert(format, ##__VA_ARGS__)
 #else
-#  define hfalert(x...)
+#  define sfalert(...)
 #endif
-
-#ifdef CONFIG_DEBUG_HARDFAULT_INFO
-#  define hfinfo(format, ...)  _info(format, ##__VA_ARGS__)
-#else
-#  define hfinfo(x...)
-#endif
-
-#define INSN_SVC0        0xdf00 /* insn: svc 0 */
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm_hardfault
+ * Name: arm_securefault
  *
  * Description:
- *   This is Hard Fault exception handler.  It also catches SVC call
+ *   This is Secure Fault exception handler.  It also catches SVC call
  *   exceptions that are performed in bad contexts.
  *
  ****************************************************************************/
 
-int arm_hardfault(int irq, void *context, void *arg)
+int arm_securefault(int irq, void *context, void *arg)
 {
-  uint32_t *regs = (uint32_t *)context;
+  uint32_t sfsr = getreg32(SAU_SFSR);
 
-  /* Get the value of the program counter where the fault occurred */
+  sfalert("PANIC!!! Secure Fault:\n");
+  sfalert("\tIRQ: %d regs: %p\n", irq, context);
+  sfalert("\tBASEPRI: %08" PRIx8 " PRIMASK: %08" PRIx8 " IPSR: %08"
+          PRIx32 " CONTROL: %08" PRIx32 "\n",
+          getbasepri(), getprimask(), getipsr(), getcontrol());
+  sfalert("\tCFSR: %08" PRIx32 " HFSR: %08" PRIx32 " DFSR: %08" PRIx32 "\n",
+          getreg32(NVIC_CFAULTS), getreg32(NVIC_HFAULTS),
+          getreg32(NVIC_DFAULTS));
+  sfalert("\tBFAR: %08" PRIx32 " AFSR: %08" PRIx32 " SFAR: %08" PRIx32 "\n",
+          getreg32(NVIC_BFAULT_ADDR), getreg32(NVIC_AFAULTS),
+          getreg32(SAU_SFAR));
 
-  uint16_t *pc = (uint16_t *)regs[REG_PC] - 1;
-
-  /* Check if the pc lies in known FLASH memory.
-   * REVISIT:  What if the PC lies in "unknown" external memory?
-   */
-
-#ifdef CONFIG_BUILD_PROTECTED
-  /* In the kernel build, SVCalls are expected in either the base, kernel
-   * FLASH region or in the user FLASH region.
-   */
-
-  if (((uintptr_t)pc >= (uintptr_t)_stext &&
-       (uintptr_t)pc <  (uintptr_t)_etext) ||
-      ((uintptr_t)pc >= (uintptr_t)USERSPACE->us_textstart &&
-       (uintptr_t)pc <  (uintptr_t)USERSPACE->us_textend))
-#else
-  /* SVCalls are expected only from the base, kernel FLASH region */
-
-  if ((uintptr_t)pc >= (uintptr_t)_stext &&
-      (uintptr_t)pc <  (uintptr_t)_etext)
-#endif
+  sfalert("Secure Fault Reason:\n");
+  if (sfsr & SAU_SFSR_INVEP)
     {
-      /* Fetch the instruction that caused the Hard fault */
-
-      uint16_t insn = *pc;
-      hfinfo("  PC: %p INSN: %04x\n", pc, insn);
-
-      /* If this was the instruction 'svc 0', then forward processing
-       * to the SVCall handler
-       */
-
-      if (insn == INSN_SVC0)
-        {
-          hfinfo("Forward SVCall\n");
-          return arm_svcall(irq, context, NULL);
-        }
+      sfalert("\tInvalid entry point\n");
     }
 
-#if defined(CONFIG_DEBUG_HARDFAULT_ALERT)
-  /* Dump some hard fault info */
+  if (sfsr & SAU_SFSR_INVIS)
+    {
+      sfalert("\tInvalid integrity signature\n");
+    }
 
-  hfalert("\nHard Fault:\n");
-  hfalert("  IRQ: %d regs: %p\n", irq, regs);
-  hfalert("  PRIMASK: %08x IPSR: %08x\n",
-          getprimask(), getipsr());
+  if (sfsr & SAU_SFSR_INVER)
+    {
+      sfalert("\tInvalid exception return\n");
+    }
+
+  if (sfsr & SAU_SFSR_AUVIOL)
+    {
+      sfalert("\tAttribution unit violation\n");
+    }
+
+  if (sfsr & SAU_SFSR_INVTRAN)
+    {
+      sfalert("\tInvalid transition\n");
+    }
+
+  if (sfsr & SAU_SFSR_LSPERR)
+    {
+      sfalert("\tLazy state preservation\n");
+    }
+
+  if (sfsr & SAU_SFSR_LSERR)
+    {
+      sfalert("\tLazy state error\n");
+    }
+
+#ifdef CONFIG_DEBUG_SECUREFAULT
+  if (arm_gen_nonsecurefault(irq, context))
+    {
+      putreg32(0xff, SAU_SFSR);
+      return OK;
+    }
 #endif
 
+  putreg32(0xff, SAU_SFSR);
+
   up_irq_save();
-  hfalert("PANIC!!! Hard fault\n");
   PANIC_WITH_REGS("panic", context);
-  return OK; /* Won't get here */
+
+  return OK;
 }
