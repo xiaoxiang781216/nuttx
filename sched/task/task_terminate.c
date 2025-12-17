@@ -132,7 +132,6 @@ int nxtask_terminate(pid_t pid)
        */
 
       nxsched_put_tcb(dtcb);
-      nxsched_release_pid(pid);
 
       flags = enter_critical_section();
 
@@ -179,6 +178,12 @@ int nxtask_terminate(pid_t pid)
            */
 
           nxtask_exithook(dtcb, EXIT_SUCCESS);
+
+          /* Release the task's PID sequence should align with
+           * nx_pthread_exit, with in critical_section and after exit hook.
+           */
+
+          nxsched_release_pid(pid);
 
           leave_critical_section(flags);
 
