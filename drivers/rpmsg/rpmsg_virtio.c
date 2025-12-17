@@ -611,8 +611,10 @@ static void rpmsg_virtio_rx_callback(FAR struct virtqueue *vq)
   FAR struct rpmsg_virtio_priv_s *priv =
     container_of(vq->vq_dev->priv, struct rpmsg_virtio_priv_s, rvdev);
 
-  if (rpmsg_is_running(&priv->rvdev.rdev))
+  if (priv->rvdev.rdev.ns_unbind_cb != NULL)
     {
+      /* Start response interrupt when rpmsg virtio initialized */
+
       rpmsg_virtio_rx_update(priv, vq);
       rpmsg_virtio_rx_dispatch(priv);
     }
@@ -769,10 +771,6 @@ static void rpmsg_virtio_start_worker(FAR void *arg)
           priv->rvdev.svq->notify = rpmsg_virtio_tx_notify;
           priv->rvdev.notify_wait_cb = rpmsg_virtio_notify_wait;
           priv->rvdev.rdev.ns_unbind_cb = rpmsg_ns_unbind;
-
-          /* Set peer's state to running */
-
-          rpmsg_modify_signals(&priv->rpmsg, RPMSG_SIGNAL_RUNNING, 0);
 
           /* Wake up the rx thread to process message */
 
