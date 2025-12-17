@@ -76,6 +76,7 @@ struct rpmsg_virtio_priv_s
   vq_notify                       notifytx;
   uint16_t                        headrx;
   uint16_t                        headtx;
+  int                             sleepertx;
   struct work_s                   startwork;
 #ifdef CONFIG_RPMSG_VIRTIO_PM
   spinlock_t                      lock;
@@ -673,10 +674,39 @@ static int rpmsg_virtio_notify_wait(FAR struct rpmsg_device *rdev,
 {
   FAR struct rpmsg_virtio_priv_s *priv =
     container_of(rdev, struct rpmsg_virtio_priv_s, rvdev);
-  int ret;
+  FAR struct virtqueue *vq = priv->rvdev.svq;
+  int ret = 0;
 
-  ret = rpmsg_tickwait(&priv->rvdev.rdev.ns_ept, &priv->semtx,
-                       MSEC2TICK(RPMSG_VIRTIO_TIMEOUT_MS));
+  metal_mutex_acquire(&rdev->lock);
+  if (priv->sleepertx++ == 0)
+    {
+      /* We are the first sleeping context, enable tx-complete interrupts */
+
+      virtqueue_enable_cb(vq);
+    }
+
+  if ((priv->vdev->role == VIRTIO_DEV_DRIVER && virtqueue_nused(vq) == 0) ||
+      (priv->vdev->role == VIRTIO_DEV_DEVICE && virtqueue_navail(vq) == 0))
+    {
+      metal_mutex_release(&rdev->lock);
+      ret = rpmsg_tickwait(&priv->rvdev.rdev.ns_ept, &priv->semtx,
+                           MSEC2TICK(RPMSG_VIRTIO_TIMEOUT_MS));
+      metal_mutex_acquire(&rdev->lock);
+    }
+
+  /* Disable "tx-complete" interrupts after waking up if we're the last
+   * sleeper. This avoids redundant interrupt overhead when buffers are
+   * available.
+   */
+
+  if (--priv->sleepertx == 0)
+    {
+      /* We are the last sleeping context, disable tx-complete interrupts */
+
+      virtqueue_disable_cb(vq);
+    }
+
+  metal_mutex_release(&rdev->lock);
   return ret == -ETIMEDOUT ? 0 : ret;
 }
 
@@ -786,10 +816,6 @@ static void rpmsg_virtio_start_worker(FAR void *arg)
           /* Broadcast device_created to all registers */
 
           rpmsg_device_created(&priv->rpmsg);
-
-          /* Open tx buffer return callback */
-
-          virtqueue_enable_cb(priv->rvdev.svq);
         }
       else
         {
