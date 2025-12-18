@@ -102,27 +102,27 @@ derivative DERIVATIVE
             }
         }
 
-        group data (align = SECTIONS_ALIGN, ordered, contiguous, run_addr = mem:RAM)
+        group data (align = SECTIONS_ALIGN, ordered, contiguous, load_addr = mem:ROM, run_addr = mem:RAM)
         {
-            "_sdata"="_lc_gb_data";
-            "_edata"="_lc_ge_data";
-            section ".data" (blocksize = 4, attributes = rw);
-            {
-              select "(.data.*)";
-            }
+           "_sdata"="_lc_gb_data";
+           "_edata"="_lc_ge_data";
+           section ".data" (blocksize = 4, attributes = rw)
+           {
+             select "(.data|.data.*)";
+           }
         }
 
         group bss (align = SECTIONS_ALIGN, ordered, contiguous, run_addr = mem:RAM, fill=0x0)
         {
-            section ".bss" (blocksize = 4, attributes = rw, fill=0x0)
+            section ".bss" (blocksize = 4, attributes = rw)
             {
-              select "(.bss.*)";
+              select "(.bss|.bss.*)";
             }
 
 #ifdef HEAPSIZE
             "_eheap"="_lc_ge_bss";
             "_sheap"="_eheap" - HEAPSIZE;
-            section ".heap" (blocksize = HEAPSIZE, attributes = rw, fill=0x0)
+            section ".heap" (blocksize = HEAPSIZE, attributes = rw)
             {
             }
 #endif
