@@ -577,10 +577,10 @@ int nxtask_setup_stackargs(FAR struct tcb_s *tcb,
            */
 
           strtablen += (strlen(argv[argc]) + 1u);
-          DEBUGASSERT(strtablen < tcb->adj_stack_size);
           if (strtablen >= tcb->adj_stack_size)
             {
               ret = -ENAMETOOLONG;
+              break;
             }
           else
             {
@@ -590,10 +590,10 @@ int nxtask_setup_stackargs(FAR struct tcb_s *tcb,
                * happens in normal usage.
                */
 
-              DEBUGASSERT(argc <= MAX_STACK_ARGS);
               if (++argc > MAX_STACK_ARGS)
                 {
                   ret = -E2BIG;
+                  break;
                 }
             }
         }
@@ -609,7 +609,6 @@ int nxtask_setup_stackargs(FAR struct tcb_s *tcb,
       argvlen   = (size_t)(argc + 2) * sizeof(FAR char *);
       stackargv = (FAR char **)up_stack_frame(tcb, argvlen + strtablen);
 
-      DEBUGASSERT(stackargv != NULL);
       if (stackargv == NULL)
         {
           ret = -ENOMEM;
