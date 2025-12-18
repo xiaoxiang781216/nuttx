@@ -96,23 +96,6 @@ static void release_tcb_cb(FAR void *arg)
 #endif
 
   nxsem_destroy(&tcb->exit_sem);
-
-  /* And, finally, release the TCB itself */
-
-  if (atomic_read(&tcb->flags) & TCB_FLAG_FREE_TCB)
-    {
-      if ((tcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_TASK)
-        {
-#if !defined(CONFIG_BUILD_KERNEL) && !defined(CONFIG_ARCH_ADDRENV)
-          /* Kernel build not use group_heap_initialize.
-           * If use addrenv, it will uninitialized
-           * in up_addrenv_destroy.
-           */
-
-          group_heap_uninitialize(tcb->group->tg_heap);
-#endif
-        }
-    }
 }
 
 /****************************************************************************
@@ -185,38 +168,17 @@ void nxsched_release_pid(pid_t pid)
 
 int nxsched_release_tcb(FAR struct tcb_s *tcb, int ttype)
 {
-#ifndef CONFIG_DISABLE_PTHREAD
-  FAR struct task_group_s *group;
-#endif
-  bool skipfree = false;
-
   if (tcb)
     {
 #ifndef CONFIG_DISABLE_PTHREAD
       /* Destroy the pthread join mutex */
 
       nxtask_joindestroy(tcb);
-
-      /* Task still referenced by pthread */
-
-      if (ttype == TCB_FLAG_TTYPE_TASK)
-        {
-          group = tcb->group;
-          if (!sq_empty(&group->tg_members)
-#if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
-              || group->tg_nwaiters > 0
-#endif
-              )
-            {
-              /* Mark the group as deleted now */
-
-              atomic_or(&group->tg_flags, GROUP_FLAG_DELETED);
-              skipfree = true;
-            }
-        }
 #endif
 
-      if (!skipfree)
+      /* And, finally, release the TCB itself */
+
+      if (atomic_read(&tcb->flags) & TCB_FLAG_FREE_TCB)
         {
           kmm_delayfreecb(tcb, release_tcb_cb);
         }

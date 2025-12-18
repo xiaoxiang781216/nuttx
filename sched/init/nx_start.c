@@ -445,7 +445,7 @@ static void idle_group_initialize(void)
 
       /* Allocate the IDLE group */
 
-      DEBUGVERIFY(group_initialize(tcb, atomic_read(&tcb->flags), 0));
+      DEBUGVERIFY(group_allocate(tcb, atomic_read(&tcb->flags), 0));
 
       /* Initialize the task join */
 
@@ -472,7 +472,7 @@ static void idle_group_initialize(void)
        * of child status in the IDLE group.
        */
 
-      group_postinitialize(tcb);
+      group_initialize(tcb);
       atomic_set(&tcb->group->tg_flags,
                  GROUP_FLAG_NOCLDWAIT | GROUP_FLAG_PRIVILEGED);
     }
@@ -486,7 +486,7 @@ static void idle_group_initialize(void)
 
   /* Allocate the IDLE group */
 
-  DEBUGVERIFY(group_initialize(tcb, atomic_read(&tcb->flags), 0));
+  DEBUGVERIFY(group_allocate(tcb, atomic_read(&tcb->flags), 0));
 
   /* Initialize the task join */
 
@@ -504,7 +504,7 @@ static void idle_group_initialize(void)
    * of child status in the IDLE group.
    */
 
-  group_postinitialize(tcb);
+  group_initialize(tcb);
   atomic_set(&tcb->group->tg_flags,
               GROUP_FLAG_NOCLDWAIT | GROUP_FLAG_PRIVILEGED);
 }

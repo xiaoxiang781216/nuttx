@@ -259,7 +259,8 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
     {
       /* Create a new task group */
 
-      ret = group_initialize(tcb, atomic_read(&tcb->flags), heapsize);
+      ret = group_allocate(tcb, atomic_read(&tcb->flags), heapsize);
+      if (ret >= 0)
       if (ret >= 0)
         {
 #ifndef CONFIG_DISABLE_PTHREAD
@@ -285,7 +286,7 @@ int nxtask_init(FAR struct tcb_s *tcb, const char *name, main_t entry,
             {
               /* Now we have enough in place that we can join the group */
 
-              group_postinitialize(tcb);
+              group_initialize(tcb);
             }
           else
             {

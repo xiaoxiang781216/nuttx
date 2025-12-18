@@ -73,8 +73,7 @@
  *
  ****************************************************************************/
 
-static inline void
-group_release(FAR struct task_group_s *group, int ttype)
+static inline void group_release(FAR struct task_group_s *group)
 {
   /* Destroy the mutex */
 
@@ -123,18 +122,13 @@ group_release(FAR struct task_group_s *group, int ttype)
 
   task_uninit_info(group);
 
+  /* Mark the group as deleted now */
+
+  atomic_or(&group->tg_flags, GROUP_FLAG_DELETED);
+
   /* Then drop the group freeing the allocated memory */
 
-#ifndef CONFIG_DISABLE_PTHREAD
-  if (ttype == TCB_FLAG_TTYPE_PTHREAD)
-    {
-      /* Mark the group as deleted now */
-
-      atomic_or(&group->tg_flags, GROUP_FLAG_DELETED);
-
-      group_drop(group);
-    }
-#endif
+  group_drop(group);
 }
 
 /****************************************************************************
@@ -193,9 +187,14 @@ void group_leave(FAR struct tcb_s *tcb)
         {
           /* Yes.. Release all of the resource held by the task group */
 
-          group_release(group,
-                        atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK);
+          group_release(group);
         }
+
+      /* In any event, we can detach the group from the TCB so that we won't
+       * do this again.
+       */
+
+      tcb->group = NULL;
     }
 }
 
@@ -222,8 +221,6 @@ void group_leave(FAR struct tcb_s *tcb)
 
 void group_drop(FAR struct task_group_s *group)
 {
-  FAR struct tcb_s *tcb;
-
 #if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
   /* If there are threads waiting for this group to be freed, then we cannot
    * yet free the memory resources.  Instead just mark the group deleted
@@ -238,30 +235,21 @@ void group_drop(FAR struct task_group_s *group)
     }
   else
 #endif
+
   /* Finally, if no one needs the group and it has been deleted, remove it */
 
   if ((atomic_read(&group->tg_flags) & GROUP_FLAG_DELETED))
     {
-      tcb = (FAR struct tcb_s *)
-        ((uintptr_t)group - sizeof(struct tcb_s));
+#if !defined(CONFIG_BUILD_KERNEL) && !defined(CONFIG_ARCH_ADDRENV)
+      /* Kernel build not use group_heap_initialize.
+       * If use addrenv, it will uninitialized in up_addrenv_destroy.
+       */
+
+      group_heap_uninitialize(group->tg_heap);
+#endif
 
       /* Release the group container itself */
 
-      if (atomic_read(&tcb->flags) & TCB_FLAG_FREE_TCB)
-        {
-          if ((atomic_read(&tcb->flags) & TCB_FLAG_TTYPE_MASK) ==
-              TCB_FLAG_TTYPE_TASK)
-            {
-#if !defined(CONFIG_BUILD_KERNEL) && !defined(CONFIG_ARCH_ADDRENV)
-              /* Kernel build not use group_heap_initialize.
-               * If use addrenv, it will uninitialized in up_addrenv_destroy.
-               */
-
-              group_heap_uninitialize(group->tg_heap);
-#endif
-            }
-
-          kmm_free(tcb);
-        }
+      kmm_free(group);
     }
 }

@@ -88,7 +88,7 @@ static int nxtask_spawn_create(FAR const char *name, main_t entry,
 
   /* Allocate a TCB for the new task. */
 
-  tcb = kmm_zalloc(sizeof(struct tcb_s) + sizeof(struct task_group_s));
+  tcb = kmm_zalloc(sizeof(struct tcb_s));
   if (tcb == NULL)
     {
       serr("ERROR: Failed to allocate TCB\n");

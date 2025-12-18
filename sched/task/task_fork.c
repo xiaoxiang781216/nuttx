@@ -238,7 +238,7 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
     {
       /* Allocate a TCB for the child task. */
 
-      child = kmm_zalloc(sizeof(struct tcb_s) + sizeof(struct task_group_s));
+      child = kmm_zalloc(sizeof(struct tcb_s));
       if (!child)
         {
           serr("ERROR: Failed to allocate TCB\n");
@@ -277,7 +277,7 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
 
           if (ret >= OK)
             {
-              ret = group_initialize(child, ttype, heap_size);
+              ret = group_allocate(child, ttype, heap_size);
               if (ret >= 0)
                 {
                   ret = task_setup(ptcb, parent, child, ttype, retaddr);
@@ -287,7 +287,7 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
                        * the group
                        */
 
-                      group_postinitialize(child);
+                      group_initialize(child);
                       sinfo("parent=%p, returning child=%p\n",
                             parent, child);
                     }

@@ -183,7 +183,7 @@ int exec_module(FAR struct binary_s *binp,
 
   /* Allocate a TCB for the new task. */
 
-  tcb = kmm_zalloc(sizeof(struct tcb_s) + sizeof(struct task_group_s));
+  tcb = kmm_zalloc(sizeof(struct tcb_s));
   if (!tcb)
     {
       return -ENOMEM;
