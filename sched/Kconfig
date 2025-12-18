@@ -380,6 +380,10 @@ config PREALLOC_IRQCHAIN
 
 endif # IRQCHAIN
 
+config IRQ_UNEXPECTED_PANIC
+	bool "Panic when unexpected IRQ occurs"
+	default n
+
 config IRQ_NWORKS
 	int "Max num of active irq wqueue"
 	default 8
