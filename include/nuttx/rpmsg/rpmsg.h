@@ -31,6 +31,7 @@
 #include <nuttx/atomic.h>
 
 #include <alloca.h>
+#include <termios.h>
 
 #ifdef CONFIG_RPMSG
 

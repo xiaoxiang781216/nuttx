@@ -28,6 +28,7 @@
 
 #include <sys/ioctl.h>
 #include <stdlib.h>
+#include <termios.h>
 
 #ifdef CONFIG_PSEUDOTERM
 

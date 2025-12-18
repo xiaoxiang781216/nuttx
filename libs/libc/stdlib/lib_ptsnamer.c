@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <termios.h>
 
 #ifdef CONFIG_PSEUDOTERM
 

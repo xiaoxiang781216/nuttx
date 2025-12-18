@@ -29,6 +29,7 @@
 
 #include <nuttx/config.h>
 
+#include <limits.h>
 #include <stdbool.h>
 #include <sys/types.h>
 
@@ -137,12 +138,6 @@
 #define _TIOC(nr)       _IOC(_TIOCBASE,nr)
 
 /* Terminal I/O IOCTL definitions are retained in tioctl.h */
-
-/****************************************************************************
- * Included Files
- ****************************************************************************/
-
-#include <nuttx/serial/tioctl.h>
 
 /* Watchdog driver ioctl commands *******************************************/
 
