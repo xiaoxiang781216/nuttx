@@ -344,7 +344,7 @@
 "sysconf","unistd.h","","long","int"
 "syslog","syslog.h","","void","int","FAR const IPTR char *","..."
 "task_testcancel","sched.h","defined(CONFIG_CANCELLATION_POINTS)","void"
-"task_tls_alloc","nuttx/tls.h","!defined(CONFIG_BUILD_KERNEL) && CONFIG_TLS_TASK_NELEM > 0","int","tls_dtor_t"
+"task_tls_alloc","nuttx/tls_task.h","!defined(CONFIG_BUILD_KERNEL) && CONFIG_TLS_TASK_NELEM > 0","int","tls_dtor_t"
 "task_tls_get_value","nuttx/tls.h","CONFIG_TLS_TASK_NELEM > 0","uintptr_t","int"
 "task_tls_set_value","nuttx/tls.h","CONFIG_TLS_TASK_NELEM > 0","int","int","uintptr_t"
 "tcflush","termios.h","","int","int","int"
