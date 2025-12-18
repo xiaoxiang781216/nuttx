@@ -269,45 +269,27 @@ def setup_logging(verbose: bool):
 
 
 def align_up(value: int, alignment: int) -> int:
+    if alignment == 0:
+        return value
     return (value + alignment - 1) // alignment * alignment
 
 
 def align_down(value: int, alignment: int) -> int:
+    if alignment == 0:
+        return value
     return value // alignment * alignment
 
 
-def generate_link_script(
+def calculate_elf_size(
     args,
     in_elf: Path,
-    nuttx_symbols,
-    flash_start: int,
-    flash_remaining: int,
-    ram_start: int,
-    ram_remaining: int,
-    out_ld: str,
 ):
-    elf = elf_parse(str(in_elf))
     flash_used = 0
+    flash_aligned = 0
     ram_used = 0
-    heap_size = 0
-    flash_start_aligned = 0
-    ram_start_aligned = 0
-    extern_symbols = {}
+    ram_aligned = 0
 
-    if nuttx_symbols:
-        for symbol in elf.symbols:
-            if symbol.name == "nx_heapsize":
-                heap_size = symbol.value
-                ram_used += heap_size
-
-            if symbol.shndx == 0 and symbol.name != "":
-                nuttx_symbol = next(
-                    (s for s in nuttx_symbols if s.name == symbol.name), None
-                )
-                if not nuttx_symbol:
-                    continue
-                extern_symbols[nuttx_symbol.name] = nuttx_symbol.value
-
+    elf = elf_parse(str(in_elf))
     for section in elf.sections:
         logging.debug(
             f"Section: {section.name}, Size: {section.size}, Type: {section.type}, Flags: {section.flags}"
@@ -317,31 +299,52 @@ def generate_link_script(
                 if section.type != lief.ELF.Section.TYPE.NOBITS:
                     flash_used += align_up(section.size, section.alignment)
                 ram_used += align_up(section.size, section.alignment)
-                if ram_start_aligned < section.alignment:
-                    ram_start_aligned = section.alignment
+                if ram_aligned < section.alignment:
+                    ram_aligned = section.alignment
             else:
                 flash_used += align_up(section.size, section.alignment)
-                if flash_start_aligned < section.alignment:
-                    flash_start_aligned = section.alignment
+                if flash_aligned < section.alignment:
+                    flash_aligned = section.alignment
 
-    elf_flash_start = flash_start + flash_remaining - flash_used
-    elf_flash_start = align_down(elf_flash_start, flash_start_aligned)
-    flash_used = flash_start + flash_remaining - elf_flash_start
+    return flash_used, flash_aligned, ram_used, ram_aligned
 
-    elf_ram_start = ram_start + ram_remaining - ram_used
-    elf_ram_start = align_down(elf_ram_start, ram_start_aligned)
-    ram_used = ram_start + ram_remaining - elf_ram_start
+
+def generate_link_script(
+    args,
+    in_elf: Path,
+    nuttx_symbols,
+    flash_start: int,
+    ram_start: int,
+    out_ld: str,
+    extern_symbols=None,
+    heap_size=0,
+):
+    elf = elf_parse(str(in_elf))
+
+    if not extern_symbols and nuttx_symbols:
+        extern_symbols = {}
+        for symbol in elf.symbols:
+            if symbol.name == "nx_heapsize":
+                heap_size = symbol.value
+
+            if symbol.shndx == 0 and symbol.name != "":
+                nuttx_symbol = next(
+                    (s for s in nuttx_symbols if s.name == symbol.name), None
+                )
+                if not nuttx_symbol:
+                    continue
+                extern_symbols[nuttx_symbol.name] = nuttx_symbol.value
 
     args.toolchain.run_cpp(
         args,
-        elf_flash_start,
-        elf_ram_start,
+        flash_start,
+        ram_start,
         heap_size,
         extern_symbols,
         out_ld,
     )
 
-    return flash_used, ram_used
+    return extern_symbols, heap_size
 
 
 def generate_elf_hex(args):
@@ -356,33 +359,51 @@ def generate_elf_hex(args):
         logging.debug(f"Processing ELF file: {elf_file}")
 
         ld_file = args.outdir / "ld" / f"{elf_file.stem}.ld"
-        flash_used, ram_used = generate_link_script(
+
+        # Frist preliminary link to determine sizes
+        extern_symbols, heap_size = generate_link_script(
             args,
             elf_file,
             nuttx_symbols,
-            flash_base,
-            flash_remaining,
-            ram_base,
-            ram_remaining,
+            0,
+            0x80000000,
             ld_file,
         )
 
-        # Update the remaining memory
+        elf_out = str(args.outdir / "elf" / os.path.basename(elf_file))
+        args.toolchain.run_ld(args, elf_file, ld_file, elf_out)
+        flash_used, flash_aligned, ram_used, ram_aligned = calculate_elf_size(
+            args, elf_out
+        )
         flash_remaining -= flash_used
         ram_remaining -= ram_used
 
+        real_flash_start = align_down(flash_base + flash_remaining, flash_aligned)
+        real_ram_start = align_down(ram_base + ram_remaining, ram_aligned)
+
+        # Second link with actual used sizes
+        generate_link_script(
+            args,
+            elf_file,
+            nuttx_symbols,
+            real_flash_start,
+            real_ram_start,
+            ld_file,
+            extern_symbols,
+            heap_size,
+        )
+
         logging.info(f"{elf_file.name}: Linker script written to {ld_file}")
+        args.toolchain.run_ld(args, elf_file, ld_file, elf_out)
+        hex_out = str(args.outdir / "hex" / f"{elf_file.stem}.hex")
+        args.toolchain.run_hex(args, elf_out, hex_out)
+
         logging.debug(
             f"Remaining: FLASH=0x{flash_remaining:x}, RAM=0x{ram_remaining:x}"
         )
         print(
             f"{elf_file.name} Current Flash used: 0x{flash_used:x}, RAM used: 0x{ram_used:x}"
         )
-
-        elf_out = str(args.outdir / "elf" / os.path.basename(elf_file))
-        args.toolchain.run_ld(args, elf_file, ld_file, elf_out)
-        hex_out = str(args.outdir / "hex" / f"{elf_file.stem}.hex")
-        args.toolchain.run_hex(args, elf_out, hex_out)
 
     args.flash = (flash_base, flash_remaining)
     args.ram = (ram_base, ram_remaining)
