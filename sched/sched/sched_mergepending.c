@@ -101,14 +101,6 @@ bool nxsched_merge_pending(void)
             {
             }
 
-          /* Add the ptcb to the spot found in the list.  Check if the
-           * ptcb goes at the ends of the ready-to-run list. This would be
-           * error condition since the idle test must always be at the end of
-           * the ready-to-run list!
-           */
-
-          DEBUGASSERT(rtcb);
-
           /* The ptcb goes just before rtcb */
 
           rprev = rtcb->blink;
