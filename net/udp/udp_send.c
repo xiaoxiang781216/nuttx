@@ -93,6 +93,8 @@ static void udp_send_loopback(FAR struct net_driver_s *dev)
       return;
     }
 
+  devif_out(dev);
+
 #ifdef CONFIG_NET_IPv4
 #ifdef CONFIG_NET_IPv6
   if (IFF_IS_IPv4(dev->d_flags))
