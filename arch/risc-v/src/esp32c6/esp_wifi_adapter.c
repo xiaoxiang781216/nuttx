@@ -3324,7 +3324,7 @@ static void task_delete_wrapper(void *task_handle)
  *
  * Description:
  *   This function gets the current task's PID and returns it as a void
- *   pointer. This is a wrapper around the NuttX function nxsched_gettid.
+ *   pointer. This is a wrapper around the NuttX function gettid.
  *
  * Input Parameters:
  *   None
@@ -3336,7 +3336,7 @@ static void task_delete_wrapper(void *task_handle)
 
 static void *task_get_current_task_wrapper(void)
 {
-  pid_t pid = nxsched_gettid();
+  pid_t pid = gettid();
 
   return (void *)((uintptr_t)pid);
 }
@@ -3652,7 +3652,7 @@ int esp_wifi_notify_subscribe(pid_t pid, struct sigevent *event)
             {
               if (pid == 0)
                 {
-                  pid = nxsched_gettid();
+                  pid = gettid();
                   wlinfo("Actual PID=%d\n", pid);
                 }
 

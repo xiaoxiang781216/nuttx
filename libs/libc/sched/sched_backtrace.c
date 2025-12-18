@@ -114,7 +114,7 @@ int sched_backtrace(pid_t tid, FAR void **buffer, int size, int skip)
 {
   struct trace_arg arg;
 
-  if (tid != _SCHED_GETTID())
+  if (tid != gettid())
     {
       return 0;
     }

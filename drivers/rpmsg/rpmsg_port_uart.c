@@ -411,7 +411,7 @@ rpmsg_port_uart_queue_noavail(FAR struct rpmsg_port_s *port,
   FAR struct rpmsg_port_uart_s *rpuart =
     (FAR struct rpmsg_port_uart_s *)port;
 
-  if (nxsched_gettid() != rpuart->rx_tid || queue != &rpuart->port.txq)
+  if (gettid() != rpuart->rx_tid || queue != &rpuart->port.txq)
     {
       return -ENOTSUP;
     }
@@ -784,7 +784,7 @@ static int rpmsg_port_uart_rx_thread(int argc, FAR char *argv[])
   FAR struct rpmsg_port_uart_s *rpuart =
     (FAR struct rpmsg_port_uart_s *)(uintptr_t)strtoul(argv[2], NULL, 16);
 
-  rpuart->rx_tid = nxsched_gettid();
+  rpuart->rx_tid = gettid();
 
   for (; ; )
     {
@@ -805,7 +805,7 @@ static int rpmsg_port_uart_tx_thread(int argc, FAR char *argv[])
   FAR struct rpmsg_port_queue_s *txq = &rpuart->port.txq;
   FAR struct rpmsg_port_header_s *hdr;
 
-  rpuart->tx_tid = nxsched_gettid();
+  rpuart->tx_tid = gettid();
 
   rpmsg_port_uart_staywake(rpuart);
   if (!rpmsg_port_uart_check(rpuart, RPMSG_PORT_UART_EVT_CONNED))

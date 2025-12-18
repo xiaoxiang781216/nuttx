@@ -126,11 +126,11 @@ static inline void mempool_record(FAR struct mempool_s *pool,
 #  ifdef CONFIG_MM_RECORD_PID
   if (magic == MEMPOOL_MAGIC_ALLOC)
     {
-      record->pid = _SCHED_GETTID();
+      record->pid = gettid();
     }
   else
     {
-      record->freepid = _SCHED_GETTID();
+      record->freepid = gettid();
     }
 #  endif
 

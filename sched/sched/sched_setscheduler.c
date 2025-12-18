@@ -175,7 +175,7 @@ int nxsched_set_scheduler(pid_t pid, int policy,
 
   if (pid == 0)
     {
-      pid = nxsched_gettid();
+      pid = gettid();
     }
 
   /* Prohibit any context switches while we muck with priority and scheduler

@@ -45,5 +45,5 @@
 
 int raise(int signo)
 {
-  return tkill(_SCHED_GETTID(), signo);
+  return tkill(gettid(), signo);
 }

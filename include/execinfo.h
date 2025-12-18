@@ -45,8 +45,8 @@
 
 #define BACKTRACE_BUFFER_SIZE(d) (BACKTRACE_PTR_FMT_WIDTH * (d) + 1)
 
-#define backtrace(b, s) sched_backtrace(_SCHED_GETTID(), b, s, 0)
-#define dump_stack()    sched_dumpstack(_SCHED_GETTID())
+#define backtrace(b, s) sched_backtrace(gettid(), b, s, 0)
+#define dump_stack()    sched_dumpstack(gettid())
 
 #ifndef CONFIG_LIBC_BACKTRACE_DEPTH
 #  define CONFIG_LIBC_BACKTRACE_DEPTH 0

@@ -337,7 +337,7 @@ FAR void *backtrace_record(int skip)
   uint32_t slot;
   int depth;
 
-  depth = sched_backtrace(_SCHED_GETTID(), buffer,
+  depth = sched_backtrace(gettid(), buffer,
                           CONFIG_LIBC_BACKTRACE_DEPTH, skip);
   if (depth <= 0)
     {

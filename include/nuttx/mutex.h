@@ -170,7 +170,7 @@ bool nxmutex_is_hold(FAR mutex_t *mutex);
 static inline_function
 bool nxmutex_is_hold(FAR mutex_t *mutex)
 {
-  return nxmutex_get_holder(mutex) == _SCHED_GETTID();
+  return nxmutex_get_holder(mutex) == gettid();
 }
 #endif
 

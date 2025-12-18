@@ -531,7 +531,7 @@ static inline_function int nxmutex_wait(FAR sem_t *sem)
       FAR atomic_t *val = NXSEM_MHOLDER(sem);
       int32_t old = NXSEM_NO_MHOLDER;
 
-      if (atomic_try_cmpxchg_acquire(val, &old, _SCHED_GETTID()))
+      if (atomic_try_cmpxchg_acquire(val, &old, gettid()))
         {
           return OK;
         }
@@ -644,7 +644,7 @@ static inline_function int nxmutex_trywait(FAR sem_t *sem)
               break;
             }
 
-          if (atomic_try_cmpxchg_acquire(val, &old, _SCHED_GETTID()))
+          if (atomic_try_cmpxchg_acquire(val, &old, gettid()))
             {
               ret = OK;
               break;

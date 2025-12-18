@@ -99,7 +99,7 @@ int nxsem_wait_slow(FAR sem_t *sem)
 
       /* Avoid mutex recursion, which is not allowed. */
 
-      DEBUGASSERT((mholder & (~NXSEM_MBLOCKING_BIT)) != nxsched_gettid());
+      DEBUGASSERT((mholder & (~NXSEM_MBLOCKING_BIT)) != gettid());
 
       if (NXSEM_MACQUIRED(mholder))
         {

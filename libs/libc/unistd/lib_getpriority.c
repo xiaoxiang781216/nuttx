@@ -77,7 +77,7 @@ int getpriority(int which, id_t who)
 
   if (who == 0)
     {
-      who = _SCHED_GETTID();
+      who = gettid();
     }
 
   ret = sched_getparam(who, &param);

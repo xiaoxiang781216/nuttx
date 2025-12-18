@@ -73,9 +73,9 @@ void vwarn(FAR const char *fmt, va_list ap)
 #  endif
 
 #  ifdef CONFIG_FILE_STREAM
-  fprintf(stderr, "%d: %pV: %s\n", _SCHED_GETTID(), &vaf, strerror(error));
+  fprintf(stderr, "%d: %pV: %s\n", gettid(), &vaf, strerror(error));
 #  else
-  dprintf(STDERR_FILENO, "%d: %pV: %s\n", _SCHED_GETTID(),
+  dprintf(STDERR_FILENO, "%d: %pV: %s\n", gettid(),
                                           &vaf, strerror(error));
 #  endif
 
@@ -113,9 +113,9 @@ void vwarnx(FAR const char *fmt, va_list ap)
 #  endif
 
 #  ifdef CONFIG_FILE_STREAM
-  fprintf(stderr, "%d: %pV\n", _SCHED_GETTID(), &vaf);
+  fprintf(stderr, "%d: %pV\n", gettid(), &vaf);
 #  else
-  dprintf(STDERR_FILENO, "%d: %pV\n", _SCHED_GETTID(), &vaf);
+  dprintf(STDERR_FILENO, "%d: %pV\n", gettid(), &vaf);
 #  endif
 
 #  ifdef va_copy

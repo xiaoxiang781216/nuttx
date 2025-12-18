@@ -262,7 +262,7 @@ static int netlink_bind(FAR struct socket *psock,
   nladdr = (FAR struct sockaddr_nl *)addr;
   conn   = psock->s_conn;
 
-  conn->pid    = nladdr->nl_pid ? nladdr->nl_pid : nxsched_gettid();
+  conn->pid    = nladdr->nl_pid ? nladdr->nl_pid : gettid();
   conn->groups = nladdr->nl_groups;
 
   return OK;

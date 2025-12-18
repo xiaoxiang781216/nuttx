@@ -302,7 +302,7 @@ static void memdump_backtrace(FAR struct mm_heap_s *heap,
 #  endif
 
 #  ifdef CONFIG_MM_RECORD_PID
-  buf->pid = _SCHED_GETTID();
+  buf->pid = gettid();
 #  endif
   MM_INCSEQNO(buf);
 #  ifdef CONFIG_MM_RECORD_STACK

@@ -1706,48 +1706,6 @@ pid_t nxsched_waitpid(pid_t pid, FAR int *stat_loc, int options);
 #endif
 
 /****************************************************************************
- * Name: nxsched_gettid
- *
- * Description:
- *   Get the thread ID of the currently executing thread.
- *
- * Input parameters:
- *   None
- *
- * Returned Value:
- *   On success, returns the thread ID of the calling process.
- *
- ****************************************************************************/
-
-static inline_function pid_t nxsched_gettid(void)
-{
-  FAR struct tcb_s *rtcb = this_task();
-  pid_t tid = (pid_t)-ESRCH;
-
-  /* Get the TCB at the head of the ready-to-run task list.  That
-   * will usually be the currently executing task.  There are one
-   * exceptions to this:
-   *
-   * 1. As described above, during certain context-switching conditions the
-   *    task at the head of the ready-to-run list may not actually be
-   *    running.
-   */
-
-  /* Check if the task is actually running */
-
-  if (rtcb->task_state == TSTATE_TASK_RUNNING)
-    {
-      /* Yes.. Return the task ID from the TCB at the head of the
-       * ready-to-run task list
-       */
-
-      tid = rtcb->pid;
-    }
-
-  return tid;
-}
-
-/****************************************************************************
  * Name: nxsched_getpid
  *
  * Description:

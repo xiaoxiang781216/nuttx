@@ -182,7 +182,7 @@ static ssize_t gdb_put_memory(FAR struct gdb_state_s *state,
 
 void gdb_update_regcache(FAR struct gdb_state_s *state)
 {
-  if (state->pid == _SCHED_GETTID())
+  if (state->pid == gettid())
     {
       if (up_interrupt_context() && running_regs())
         {
@@ -916,7 +916,7 @@ int gdb_send_stop(FAR struct gdb_state_s *state, int stopreason,
   int ret;
   int pid;
 
-  state->pid = pid = _SCHED_GETTID();
+  state->pid = pid = gettid();
   if (pid == 0)
     {
       pid = PID0_REPLACE;

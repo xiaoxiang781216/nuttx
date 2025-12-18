@@ -61,7 +61,7 @@ int get_blocking(FAR sem_t *sem, bool mutex, bool *blocking)
        */
 
       DEBUGASSERT(mholder == (NXSEM_MBLOCKING_BIT | NXSEM_NO_MHOLDER) ||
-                  (mholder & (~NXSEM_MBLOCKING_BIT)) == nxsched_gettid());
+                  (mholder & (~NXSEM_MBLOCKING_BIT)) == gettid());
 
       *blocking = NXSEM_MBLOCKING(mholder);
 

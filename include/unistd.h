@@ -339,12 +339,6 @@
 #define F_TLOCK                          2
 #define F_TEST                           3
 
-#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-#  define _SCHED_GETTID()            nxsched_gettid()
-#else
-#  define _SCHED_GETTID()            gettid()
-#endif
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/

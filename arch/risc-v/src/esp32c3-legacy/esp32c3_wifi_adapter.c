@@ -2089,7 +2089,7 @@ static int32_t esp_task_ms_to_tick(uint32_t ms)
 
 static void *esp_task_get_current_task(void)
 {
-  pid_t pid = nxsched_gettid();
+  pid_t pid = gettid();
 
   return (void *)((uintptr_t)pid);
 }
@@ -4764,7 +4764,7 @@ int esp_wifi_notify_subscribe(pid_t pid, struct sigevent *event)
             {
               if (pid == 0)
                 {
-                  pid = nxsched_gettid();
+                  pid = gettid();
                   wlinfo("Actual PID=%d\n", pid);
                 }
 

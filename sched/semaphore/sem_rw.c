@@ -74,7 +74,7 @@ int down_read_trylock(FAR rw_semaphore_t *rwsem)
    * lock to avoid deadlock.
    */
 
-  if (rwsem->holder == _SCHED_GETTID())
+  if (rwsem->holder == gettid())
     {
       rwsem->writer++;
     }
@@ -119,7 +119,7 @@ void down_read(FAR rw_semaphore_t *rwsem)
    * lock to avoid deadlock.
    */
 
-  if (rwsem->holder == _SCHED_GETTID())
+  if (rwsem->holder == gettid())
     {
       rwsem->writer++;
     }
@@ -164,7 +164,7 @@ void up_read(FAR rw_semaphore_t *rwsem)
    * to the procedures for releasing a write lock.
    */
 
-  if (rwsem->holder == _SCHED_GETTID())
+  if (rwsem->holder == gettid())
     {
       if (--rwsem->writer <= 0)
         {
@@ -201,7 +201,7 @@ void up_read(FAR rw_semaphore_t *rwsem)
 
 int down_write_trylock(FAR rw_semaphore_t *rwsem)
 {
-  pid_t tid = _SCHED_GETTID();
+  pid_t tid = gettid();
   int ret = 1;
 
   nxmutex_lock(&rwsem->protected);
@@ -237,7 +237,7 @@ int down_write_trylock(FAR rw_semaphore_t *rwsem)
 
 void down_write(FAR rw_semaphore_t *rwsem)
 {
-  pid_t tid = _SCHED_GETTID();
+  pid_t tid = gettid();
 
   nxmutex_lock(&rwsem->protected);
 
@@ -274,7 +274,7 @@ void up_write(FAR rw_semaphore_t *rwsem)
   nxmutex_lock(&rwsem->protected);
 
   DEBUGASSERT(rwsem->writer > 0);
-  DEBUGASSERT(rwsem->holder == _SCHED_GETTID());
+  DEBUGASSERT(rwsem->holder == gettid());
 
   if (--rwsem->writer <= 0)
     {
@@ -302,7 +302,7 @@ void downgrade_write(FAR rw_semaphore_t *rwsem)
 
   DEBUGASSERT(rwsem->writer == 1);
   DEBUGASSERT(rwsem->reader == 0);
-  DEBUGASSERT(rwsem->holder == _SCHED_GETTID());
+  DEBUGASSERT(rwsem->holder == gettid());
 
   rwsem->writer = 0;
   rwsem->reader++;

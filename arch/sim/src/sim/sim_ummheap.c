@@ -79,7 +79,7 @@
      do \
        { \
          struct mm_allocnode_s *tmp = (struct mm_allocnode_s *)(ptr); \
-         pid_t tid = _SCHED_GETTID(); \
+         pid_t tid = gettid(); \
          UNUSED(tid); \
          MM_INCSEQNO(tmp); \
          MM_RECORD_PID(tmp, tid); \

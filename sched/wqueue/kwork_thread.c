@@ -418,7 +418,7 @@ static int work_thread_create(FAR const char *name, int priority,
 void work_qeueue_dispatch(FAR struct kwork_wqueue_s *wqueue)
 {
   FAR struct kworker_s *kworker = wq_get_worker(wqueue);
-  pid_t pid = nxsched_gettid();
+  pid_t pid = gettid();
   uint8_t wndx;
 
   for (wndx = 0; wndx < wqueue->nthreads; wndx++)
@@ -582,7 +582,7 @@ int work_queue_free(FAR struct kwork_wqueue_s *wqueue)
 bool work_queue_in_queue(FAR struct kwork_wqueue_s *wqueue)
 {
   FAR struct kworker_s *worker = wq_get_worker(wqueue);
-  pid_t pid = nxsched_gettid();
+  pid_t pid = gettid();
   bool ret = false;
   uint8_t i;
 
