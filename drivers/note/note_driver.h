@@ -53,9 +53,12 @@ static_assert(NOTE_BUFFER_SIZE >= sizeof(struct note_event_s),
 
 #ifdef CONFIG_ARCH_PERF_EVENTS_USER_ACCESS
 #  define NOTE_PERF_GETTIME perf_gettime
+#  define NOTE_PERF_CONVERT(e, t) perf_convert(e, t)
 #else
 clock_t UP_REALSYM(perf_gettime)(void);
+void UP_REALSYM(perf_convert)(clock_t elapsed, FAR struct timespec *ts);
 #  define NOTE_PERF_GETTIME UP_REALSYM(perf_gettime)
+#  define NOTE_PERF_CONVERT(e, t) UP_REALSYM(perf_convert)(e, t)
 #endif
 
 #define note_driver_event(driver, tag, event, buf, len) \

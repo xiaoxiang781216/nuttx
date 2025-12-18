@@ -387,7 +387,7 @@ void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream)
           [(index + i) % CONFIG_DRIVERS_NOTESNAP_NBUFFERS];
       struct timespec time;
 
-      UP_REALSYM(perf_convert)(note->count, &time);
+      NOTE_PERF_CONVERT(note->count, &time);
       lib_sprintf(stream,
                   "snapshoot: [%" PRIu64 ".%09u] "
 #ifdef CONFIG_SMP
