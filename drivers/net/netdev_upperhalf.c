@@ -253,6 +253,11 @@ static inline bool netdev_upper_can_tx(FAR struct netdev_upperhalf_s *upper)
       quota = netdev_lower_quota_load(lower, NETPKT_TX);
     }
 
+  if (quota <= 0)
+    {
+      lower->txdone = true;
+    }
+
   return quota > 0;
 }
 
@@ -1691,17 +1696,21 @@ void netdev_lower_rxready(FAR struct netdev_lowerhalf_s *dev)
 
 void netdev_lower_txdone(FAR struct netdev_lowerhalf_s *dev)
 {
-  if (dev->rxtype == NETDEV_RX_DIRECT)
+  if (dev->txdone)
     {
+      dev->txdone = false;
+      if (dev->rxtype == NETDEV_RX_DIRECT)
+        {
 #ifdef CONFIG_NET_VLAN
-      FAR struct netdev_upperhalf_s *upper = dev->netdev.d_private;
-      netdev_upper_vlan_foreach(upper, netdev_lower_txdone);
+          FAR struct netdev_upperhalf_s *upper = dev->netdev.d_private;
+          netdev_upper_vlan_foreach(upper, netdev_lower_txdone);
 #endif
-      netdev_upper_txavail_work(dev->netdev.d_private);
-    }
-  else
-    {
-      netdev_upper_queue_work(&dev->netdev);
+          netdev_upper_txavail_work(dev->netdev.d_private);
+        }
+      else
+        {
+          netdev_upper_queue_work(&dev->netdev);
+        }
     }
 
   NETDEV_TXDONE(&dev->netdev);
