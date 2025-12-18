@@ -2165,7 +2165,14 @@ int swcr_mod_exp(FAR struct cryptkop *krp)
                               bne.array, sizeof(bne.array));
       if (bne.length < 0)
         {
-          return bne.length;
+          if (e->crp_nbits != 0)
+            {
+              return bne.length; /* e keyid not exist */
+            }
+          else
+            {
+              bignum_from_int(&bne, 65537); /* use default e */
+            }
         }
 #endif
     }

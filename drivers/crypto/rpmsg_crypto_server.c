@@ -31,6 +31,7 @@
 
 #include <crypto/cryptodev.h>
 #include <crypto/virtio_crypto.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/rpmsg/rpmsg.h>
 
@@ -447,10 +448,13 @@ static int rpmsg_crypto_read_mpi(FAR unsigned char **pos,
     }
 
   rpmsg_crypto_read_binary(pos, buf, len);
+  if (len != 1 || *buf != 0)
+    {
+      mpi->crp_p = (caddr_t)buf;
+      mpi->crp_nbits = len * 8;
+    }
 
-  mpi->crp_p = (caddr_t)buf;
-  mpi->crp_nbits = len * 8;
-  return len;
+  return ALIGN_UP(len, 4); /* round up to aligend size */
 }
 
 static int

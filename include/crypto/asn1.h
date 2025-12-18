@@ -163,11 +163,18 @@ int asn1_write_mpi(FAR unsigned char **p,
 
   (*p) -= len;
 
-  /* convert to big-endian */
-
-  for (i = 0; i < len; i++)
+  if (mpilen == 0)
     {
-      (*p)[len - i - 1] = mpi[i];
+      (*p)[0] = 0x00;
+    }
+  else
+    {
+      /* convert to big-endian */
+
+      for (i = 0; i < len; i++)
+        {
+          (*p)[len - i - 1] = mpi[i];
+        }
     }
 
   if (**p & 0x80)
