@@ -83,7 +83,8 @@ struct lo_driver_s
  * Private Data
  ****************************************************************************/
 
-static struct lo_driver_s g_loopback;
+static DEFINE_PER_CPU_BSS_BMP(struct lo_driver_s, g_loopback);
+#define g_loopback this_cpu_var_bmp(g_loopback)
 
 /****************************************************************************
  * Private Function Prototypes
