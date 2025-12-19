@@ -32,6 +32,7 @@
 #include <nuttx/mm/mm.h>
 #include <nuttx/random.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/tls.h>
 
 #include "irq/irq.h"
 #include "clock/clock.h"
@@ -126,8 +127,8 @@ static DEFINE_PER_CPU_BSS(atomic_t, g_irq_level);
 void irq_dispatch(int irq, FAR void *context)
 {
 #ifdef CONFIG_DEBUG_MM
-  struct tcb_s *rtcb = this_task();
-  uint32_t heap_check = atomic_read(&rtcb->flags) & TCB_FLAG_HEAP_CHECK;
+  FAR struct tls_info_s *info = tls_get_info();
+  int heap_check = info && (info->tl_flags & TLS_FLAG_HEAP_CHECK);
 #endif
   xcpt_t vector = irq_unexpected_isr;
   FAR void *arg = NULL;
@@ -179,10 +180,17 @@ void irq_dispatch(int irq, FAR void *context)
 #endif
 
 #ifdef CONFIG_DEBUG_MM
-  if (heap_check || (atomic_read(&(this_task()->flags)) &
-                     TCB_FLAG_HEAP_CHECK))
+  if (heap_check)
     {
       kmm_checkcorruption();
+    }
+  else
+    {
+      FAR struct tls_info_s *info_now = tls_get_info();
+      if (info_now && info_now->tl_flags & TLS_FLAG_HEAP_CHECK)
+        {
+          kmm_checkcorruption();
+        }
     }
 #endif
 

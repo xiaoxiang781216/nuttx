@@ -1013,8 +1013,10 @@ static ssize_t proc_heapcheck(FAR struct proc_file_s *procfile,
   size_t copysize;
   size_t totalsize = 0;
   size_t heapcheck = 0;
+  FAR struct tls_info_s *info;
 
-  if (atomic_read(&tcb->flags) & TCB_FLAG_HEAP_CHECK)
+  info = nxsched_get_tls(tcb);
+  if (info && info->tl_flags & TLS_FLAG_HEAP_CHECK)
     {
       heapcheck = 1;
     }
@@ -1033,13 +1035,21 @@ static ssize_t proc_heapcheck_write(FAR struct proc_file_s *procfile,
                                     FAR const char *buffer,
                                     size_t buflen, off_t offset)
 {
+  FAR struct tls_info_s *info;
+
+  info = nxsched_get_tls(tcb);
+  if (info == NULL)
+    {
+      return -EINVAL;
+    }
+
   switch (buffer[0])
     {
       case '0':
-        atomic_and(&tcb->flags, ~TCB_FLAG_HEAP_CHECK);
+        info->tl_flags &= ~TLS_FLAG_HEAP_CHECK;
         break;
       case '1':
-        atomic_or(&tcb->flags, TCB_FLAG_HEAP_CHECK);
+        info->tl_flags |= TLS_FLAG_HEAP_CHECK;
         break;
       default:
         ferr("ERROR: invalid argument\n");

@@ -48,7 +48,10 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/mutex.h>
+#include <nuttx/tls.h>
+
 #include "fs_heap.h"
+#include "sched/sched.h"
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_MEMINFO
 
@@ -527,6 +530,8 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
     }
   else if ((p = strstr(buffer, "on")) != NULL)
     {
+      FAR struct tls_info_s *info;
+
       *p = '\0';
       dump.pid = atoi(buffer);
       tcb = nxsched_get_tcb(dump.pid);
@@ -535,12 +540,19 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
           return -EINVAL;
         }
 
-      atomic_or(&tcb->flags, TCB_FLAG_HEAP_DUMP);
+      info = nxsched_get_tls(tcb);
+      if (info != NULL)
+        {
+          info->tl_flags |= TLS_FLAG_HEAP_DUMP;
+        }
+
       nxsched_put_tcb(tcb);
       return buflen;
     }
   else if ((p = strstr(buffer, "off")) != NULL)
     {
+      FAR struct tls_info_s *info;
+
       *p = '\0';
       dump.pid = atoi(buffer);
       tcb = nxsched_get_tcb(dump.pid);
@@ -549,7 +561,12 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
           return -EINVAL;
         }
 
-      atomic_and(&tcb->flags, ~TCB_FLAG_HEAP_DUMP);
+      info = nxsched_get_tls(tcb);
+      if (info != NULL)
+        {
+          info->tl_flags &= ~TLS_FLAG_HEAP_DUMP;
+        }
+
       nxsched_put_tcb(tcb);
       return buflen;
     }

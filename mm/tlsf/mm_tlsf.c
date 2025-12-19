@@ -44,6 +44,7 @@
 #include <nuttx/mm/kasan.h>
 #include <nuttx/mm/mempool.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/tls.h>
 #include <nuttx/pgalloc.h>
 
 #include "tlsf/tlsf.h"
@@ -294,7 +295,7 @@ static void memdump_backtrace(FAR struct mm_heap_s *heap,
                               FAR struct memdump_record_s *buf)
 {
 #  ifdef CONFIG_MM_RECORD_STACK
-  FAR struct tcb_s *tcb;
+  FAR struct tls_info_s *info = tls_get_info();
 #  endif
 
 #  ifdef CONFIG_MM_RECORD_PID
@@ -302,14 +303,11 @@ static void memdump_backtrace(FAR struct mm_heap_s *heap,
 #  endif
   MM_INCSEQNO(buf);
 #  ifdef CONFIG_MM_RECORD_STACK
-  tcb = nxsched_get_tcb(buf->pid);
   if (heap->mm_procfs.backtrace ||
-      (tcb && atomic_read(&tcb->flags) & TCB_FLAG_HEAP_DUMP))
+      (info && info->tl_flags & TLS_FLAG_HEAP_DUMP))
     {
       buf->stack = backtrace_record(CONFIG_LIBC_BACKTRACE_DEPTH);
     }
-
-  nxsched_put_tcb(tcb);
 #  endif
 }
 #endif

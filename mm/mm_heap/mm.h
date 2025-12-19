@@ -35,6 +35,7 @@
 #include <nuttx/lib/math32.h>
 #include <nuttx/mm/mempool.h>
 #include <nuttx/mm/mm.h>
+#include <nuttx/tls.h>
 
 #include <assert.h>
 #include <execinfo.h>
@@ -83,9 +84,9 @@
 #  define MM_RECORD_STACK(node, tid) \
     do \
       { \
-        FAR struct tcb_s *tcb = nxsched_get_tcb(tid); \
+        FAR struct tls_info_s *info = tls_get_info(); \
         if ((heap)->mm_procfs.backtrace || \
-            (tcb && tcb->flags & TCB_FLAG_HEAP_DUMP)) \
+            (info && info->tl_flags & TLS_FLAG_HEAP_DUMP)) \
           { \
             (node)->stack = backtrace_record(CONFIG_MM_RECORD_STACK_SKIP); \
           } \
@@ -93,7 +94,6 @@
           { \
             (node)->stack = NULL; \
           } \
-        nxsched_put_tcb(tcb); \
       } \
     while (0)
 #else

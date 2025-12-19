@@ -58,9 +58,9 @@
 #  define MM_RECORD_STACK(heap, node, tid) \
     do \
       { \
-        struct tcb_s *tcb = nxsched_get_tcb(tid); \
+        struct tls_info_s *info = tls_get_info(); \
         if ((heap)->procfs.backtrace || \
-            (tcb && tcb->flags & TCB_FLAG_HEAP_DUMP)) \
+            (info && info->tl_flags & TLS_FLAG_HEAP_DUMP)) \
           { \
             (node)->stack = backtrace_record(CONFIG_MM_RECORD_STACK_SKIP); \
           } \
@@ -68,7 +68,6 @@
           { \
             (node)->stack = NULL; \
           } \
-        nxsched_put_tcb(tcb); \
       } \
     while (0)
 #else

@@ -102,14 +102,12 @@
 #define TCB_FLAG_SYSCALL           (1 << 7)                      /* Bit 7: In a system call */
 #define TCB_FLAG_EXIT_PROCESSING   (1 << 8)                      /* Bit 8: Exiting */
 #define TCB_FLAG_FREE_STACK        (1 << 9)                      /* Bit 9: Free stack after exit */
-#define TCB_FLAG_HEAP_CHECK        (1 << 10)                     /* Bit 10: Heap check */
-#define TCB_FLAG_HEAP_DUMP         (1 << 11)                     /* Bit 11: Heap dump */
-#define TCB_FLAG_DETACHED          (1 << 12)                     /* Bit 12: Pthread detached */
-#define TCB_FLAG_FORCED_CANCEL     (1 << 13)                     /* Bit 13: Pthread cancel is forced */
-#define TCB_FLAG_JOIN_COMPLETED    (1 << 14)                     /* Bit 14: Pthread join completed */
-#define TCB_FLAG_FREE_TCB          (1 << 15)                     /* Bit 15: Free tcb after exit */
-#define TCB_FLAG_PREEMPT_SCHED     (1 << 16)                     /* Bit 16: tcb is PREEMPT_SCHED */
-#define TCB_FLAG_KILL_PROCESSING   (1 << 17)                     /* Bit 17: tcb is killed */
+#define TCB_FLAG_DETACHED          (1 << 10)                     /* Bit 10: Pthread detached */
+#define TCB_FLAG_FORCED_CANCEL     (1 << 11)                     /* Bit 11: Pthread cancel is forced */
+#define TCB_FLAG_JOIN_COMPLETED    (1 << 12)                     /* Bit 12: Pthread join completed */
+#define TCB_FLAG_FREE_TCB          (1 << 13)                     /* Bit 13: Free tcb after exit */
+#define TCB_FLAG_PREEMPT_SCHED     (1 << 14)                     /* Bit 14: tcb is PREEMPT_SCHED */
+#define TCB_FLAG_KILL_PROCESSING   (1 << 15)                     /* Bit 15: tcb is killed */
 
 /* Values for struct task_group tg_flags */
 

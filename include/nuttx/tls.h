@@ -57,6 +57,11 @@
 #  define TLS_INFO(sp)     ((FAR struct tls_info_s *)((sp) & ~TLS_STACK_MASK))
 #endif
 
+/* Values for struct tls_info_s tl_flags bits */
+
+#define TLS_FLAG_HEAP_CHECK (1 << 0)  /* Bit 0: Heap check */
+#define TLS_FLAG_HEAP_DUMP  (1 << 1)  /* Bit 1: Heap dump */
+
 #if (defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_ARCH_ADDRENV)) || defined(__KERNEL__)
 #  define TLS_FROM_TCB
 #endif
@@ -133,11 +138,12 @@ struct tls_info_s
    */
 
 #if CONFIG_TLS_NCLEANUP > 0
-  uint8_t                     tl_tos;
   struct tls_cleanup_s        tl_stack[CONFIG_TLS_NCLEANUP];
+  uint8_t                     tl_tos;
 #endif
 
   uint8_t                     tl_cpstate; /* Cancellation state */
+  uint8_t                     tl_flags;   /* Thread local flags */
 
 #ifdef CONFIG_CANCELLATION_POINTS
   int16_t                     tl_cpcount; /* Nested cancellation point count */
