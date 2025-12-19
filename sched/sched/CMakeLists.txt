@@ -50,7 +50,7 @@ set(SRCS
     sched_switchcontext.c)
 
 if(DEFINED CONFIG_STACKCHECK_MARGIN)
-  if(NOT CONFIG_STACKCHECK_MARGIN EQUAL 0)
+  if(NOT CONFIG_STACKCHECK_MARGIN EQUAL -1)
     list(APPEND SRCS nxsched_checkstackoverflow.c)
   endif()
 endif()

@@ -344,7 +344,7 @@ void nxsched_suspend(FAR struct tcb_s *tcb);
 #endif
 
 #if defined(CONFIG_STACKCHECK_MARGIN) && \
-           (CONFIG_STACKCHECK_MARGIN > 0)
+           (CONFIG_STACKCHECK_MARGIN != -1)
 void nxsched_checkstackoverflow(FAR struct tcb_s *tcb);
 #else
 #  define nxsched_checkstackoverflow(tcb)
