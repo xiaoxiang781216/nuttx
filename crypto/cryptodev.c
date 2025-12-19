@@ -63,16 +63,6 @@ DECLARE_PER_CPU_BMP(FAR struct cryptocap *, crypto_drivers);
 DECLARE_PER_CPU_BMP(int, crypto_drivers_num);
 #define crypto_drivers_num this_cpu_var_bmp(crypto_drivers_num)
 
-int usercrypto = 1;         /* userland may do crypto requests */
-int userasymcrypto = 1;     /* userland may do asymmetric crypto reqs */
-#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_CRYPTO
-int cryptodevallowsoft = 1; /* 0 is only use hardware crypto
-                             * 1 is use hardware & software crypto
-                             */
-#else
-int cryptodevallowsoft = 0;
-#endif
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -327,9 +317,7 @@ static int cryptof_ioctl(FAR struct file *filep,
               }
           }
 
-        error = crypto_newsession(&sid, txform ? &crie : &cria,
-                                  !cryptodevallowsoft);
-
+        error = crypto_newsession(&sid, txform ? &crie : &cria, 1);
         if (error)
           {
             goto bail;
@@ -987,8 +975,7 @@ static int cryptof_open(FAR struct file *filep)
             }
         }
 
-      ret = crypto_newsession(&sid, cse->txform ? &crie : &cria,
-                              !cryptodevallowsoft);
+      ret = crypto_newsession(&sid, cse->txform ? &crie : &cria, 1);
       if (ret < 0)
         {
           goto bail;
@@ -1030,11 +1017,6 @@ bail:
 
 static int cryptoopen(FAR struct file *filep)
 {
-  if (usercrypto == 0)
-    {
-      return -ENXIO;
-    }
-
   return 0;
 }
 

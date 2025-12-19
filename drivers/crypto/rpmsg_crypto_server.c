@@ -96,8 +96,6 @@ static const rpmsg_ept_cb g_rpmsg_crypto_handler[] =
  * Public Data
  ****************************************************************************/
 
-extern int cryptodevallowsoft;
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -208,8 +206,7 @@ static int rpmsg_crypto_newsession_handler(FAR struct rpmsg_endpoint *ept,
     }
 
   msg->header.result = crypto_newsession(&rcsdata->tid, txform ?
-                                         &crie : &cria,
-                                         !cryptodevallowsoft);
+                                         &crie : &cria, 1);
   if (msg->header.result != 0)
     {
       kmm_free(rcsdata);

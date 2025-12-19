@@ -108,6 +108,7 @@ int crypto_newsession(FAR uint64_t *sid,
               continue;
             }
 
+#ifndef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_CRYPTO
           if (cpc->cc_flags & CRYPTOCAP_F_SOFTWARE)
             {
               /* Thread round of search only for software */
@@ -117,7 +118,9 @@ int crypto_newsession(FAR uint64_t *sid,
                   continue;
                 }
             }
-          else if (cpc->cc_flags & CRYPTOCAP_F_REMOTE)
+          else
+#endif
+          if (cpc->cc_flags & CRYPTOCAP_F_REMOTE)
             {
               /* Second round of search only for remote */
 
@@ -502,7 +505,6 @@ int crypto_unregister(uint32_t driverid, int alg)
 
 int crypto_kinvoke(FAR struct cryptkop *krp)
 {
-  extern int cryptodevallowsoft;
   uint32_t hid;
   int error;
 
@@ -516,11 +518,12 @@ int crypto_kinvoke(FAR struct cryptkop *krp)
   nxmutex_lock(&g_crypto_lock);
   for (hid = 0; hid < crypto_drivers_num; hid++)
     {
-      if ((crypto_drivers[hid].cc_flags & CRYPTOCAP_F_SOFTWARE) &&
-          cryptodevallowsoft == 0)
+#ifndef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_CRYPTO
+      if ((crypto_drivers[hid].cc_flags & CRYPTOCAP_F_SOFTWARE))
         {
           continue;
         }
+#endif
 
       if (crypto_drivers[hid].cc_kprocess == NULL)
         {
@@ -641,24 +644,18 @@ migrate:
 
 int crypto_getfeat(FAR int *featp)
 {
-  extern int cryptodevallowsoft;
-  extern int userasymcrypto;
   int hid;
   int kalg;
   int feat = 0;
 
-  if (userasymcrypto == 0)
-    {
-      goto out;
-    }
-
   for (hid = 0; hid < crypto_drivers_num; hid++)
     {
-      if ((crypto_drivers[hid].cc_flags & CRYPTOCAP_F_SOFTWARE) &&
-          cryptodevallowsoft == 0)
+#ifndef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_CRYPTO
+      if ((crypto_drivers[hid].cc_flags & CRYPTOCAP_F_SOFTWARE))
         {
           continue;
         }
+#endif
 
       if (crypto_drivers[hid].cc_kprocess == NULL)
         {
@@ -675,7 +672,6 @@ int crypto_getfeat(FAR int *featp)
         }
     }
 
-out:
   *featp = feat;
   return 0;
 }
