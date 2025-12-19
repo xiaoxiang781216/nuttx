@@ -28,7 +28,6 @@ set(SRCS
     arm_initialstate.c
     arm_itm.c
     arm_perf.c
-    arm_svcall.c
     arm_dbgmonitor.c)
 
 if(CONFIG_ARMV7M_ITMSYSLOG)

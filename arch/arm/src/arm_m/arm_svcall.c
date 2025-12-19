@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv6-m/arm_svcall.c
+ * arch/arm/src/arm_m/arm_svcall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -32,8 +32,10 @@
 #include <syscall.h>
 
 #include <arch/irq.h>
+#include <nuttx/addrenv.h>
 #include <nuttx/macro.h>
 #include <nuttx/sched.h>
+#include <nuttx/userspace.h>
 
 #include "sched/sched.h"
 #include "signal/signal.h"
@@ -78,8 +80,8 @@ int arm_svcall(int irq, void *context, void *arg)
       svcinfo("  R8: %08x %08x %08x %08x %08x %08x %08x %08x\n",
               regs[REG_R8],  regs[REG_R9],  regs[REG_R10], regs[REG_R11],
               regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15]);
-      svcinfo(" PSR: %08x PRIMASK: %08x EXC_RETURN: %08x\n",
-              regs[REG_XPSR], regs[REG_PRIMASK], regs[REG_EXC_RETURN]);
+      svcinfo(" PSR: %08x EXC_RETURN: %08x CONTROL: %08x\n",
+              regs[REG_XPSR], regs[REG_EXC_RETURN], regs[REG_CONTROL]);
     }
 #endif
 
@@ -90,6 +92,10 @@ int arm_svcall(int irq, void *context, void *arg)
       case SYS_restore_context:
       case SYS_switch_context:
         {
+#ifdef CONFIG_ARCH_ADDRENV
+          addrenv_switch(tcb); /* this_task maybe changed */
+          tcb = this_task();
+#endif
           break_critical_section();
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
@@ -147,7 +153,7 @@ int arm_svcall(int irq, void *context, void *arg)
       /* R0=SYS_task_start:  This a user task start
        *
        *   void up_task_start(main_t taskentry, int argc, char *argv[])
-       *     noreturn_function;
+       *          noreturn_function;
        *
        * At this point, the following values are saved in context:
        *
@@ -164,7 +170,7 @@ int arm_svcall(int irq, void *context, void *arg)
            * unprivileged mode.
            */
 
-          regs[REG_PC]         = (uint32_t)USERSPACE->task_startup;
+          regs[REG_PC]         = (uint32_t)USERSPACE->task_startup & ~1;
           regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
 
           /* Return unprivileged mode */
@@ -190,8 +196,9 @@ int arm_svcall(int irq, void *context, void *arg)
        * At this point, the following values are saved in context:
        *
        *   R0 = SYS_pthread_start
-       *   R1 = entrypt
-       *   R2 = arg
+       *   R1 = startup (trampoline)
+       *   R2 = entrypt
+       *   R3 = arg
        */
 
 #if !defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_DISABLE_PTHREAD)
@@ -201,7 +208,7 @@ int arm_svcall(int irq, void *context, void *arg)
            * unprivileged mode.
            */
 
-          regs[REG_PC]         = (uint32_t)regs[REG_R1]; /* startup */
+          regs[REG_PC]         = (uint32_t)regs[REG_R1] & ~1;  /* startup */
           regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
 
           /* Return unprivileged mode */
@@ -244,7 +251,7 @@ int arm_svcall(int irq, void *context, void *arg)
            * unprivileged mode.
            */
 
-          regs[REG_PC]         = (uint32_t)USERSPACE->signal_handler;
+          regs[REG_PC]         = (uint32_t)USERSPACE->signal_handler & ~1;
           regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
 
           /* Return unprivileged mode */
@@ -279,7 +286,7 @@ int arm_svcall(int irq, void *context, void *arg)
 
           DEBUGASSERT(tcb->xcp.sigreturn != 0);
 
-          regs[REG_PC]         = tcb->xcp.sigreturn;
+          regs[REG_PC]         = tcb->xcp.sigreturn & ~1;
           regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
 
           /* Return privileged mode */
@@ -329,7 +336,7 @@ int arm_svcall(int irq, void *context, void *arg)
           tcb->xcp.syscall[index].ctrlreturn = regs[REG_CONTROL];
           tcb->xcp.nsyscalls  = index + 1;
 
-          regs[REG_PC]         = (uint32_t)arm_dispatch_syscall;
+          regs[REG_PC]         = (uint32_t)arm_dispatch_syscall & ~1;
           regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
 
           /* Return privileged mode */
