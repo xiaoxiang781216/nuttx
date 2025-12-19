@@ -119,8 +119,8 @@ static DEFINE_PER_CPU_BSS_BMP(struct work_s, g_wkfragtimeout);
 
 /* Remember the number of I/O buffers currently in reassembly cache */
 
-static DEFINE_PER_CPU_BSS_BMP(uint8_t, g_bufoccupy);
-#define	g_bufoccupy this_cpu_var_bmp(g_bufoccupy)
+static DEFINE_PER_CPU_BSS_BMP(uint16_t, g_bufoccupy);
+#define g_bufoccupy this_cpu_var_bmp(g_bufoccupy)
 
 /* Queue header definition, it links all fragments of all NICs by ascending
  * ipid.
