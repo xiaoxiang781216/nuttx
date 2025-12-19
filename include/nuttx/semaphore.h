@@ -627,7 +627,7 @@ static inline_function int nxmutex_trywait(FAR sem_t *sem)
   /* Disable fast path if priority protection is enabled on the semaphore */
 
 #ifdef CONFIG_PRIORITY_PROTECT
-  if ((sem->flags & SEM_PRIO_MASK) == SEM_PRIO_PROTECT)
+  if ((sem->flags & SEM_PRIO_MASK) != SEM_PRIO_PROTECT)
     {
 #endif
       for (; ; )
