@@ -215,6 +215,34 @@ static inline bool devif_event_trigger(uint32_t events, uint32_t triggers)
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: devif_count_callbacks
+ *
+ * Description:
+ *   Count the number of callback structures in a list based on the specified
+ *   flags.
+ *
+ * Assumptions:
+ *   This function is called with the network locked.
+ *
+ ****************************************************************************/
+
+int devif_count_callbacks(FAR struct devif_callback_s *list, uint32_t flags)
+{
+  FAR struct devif_callback_s *cb;
+  int count = 0;
+
+  for (cb = list; cb != NULL; cb = cb->nxtconn)
+    {
+      if ((cb->flags & flags) != 0)
+        {
+          count++;
+        }
+    }
+
+  return count;
+}
+
+/****************************************************************************
  * Name: devif_callback_alloc
  *
  * Description:

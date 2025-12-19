@@ -9,6 +9,14 @@ config NET_FORWARD
 	--help--
 		Enable forwarding function.
 
+config NET_FORWARD_NCALLBACKS
+	int "Temporary cached forward callbacks max number"
+	default 0
+	depends on NET_FORWARD
+	--help--
+		Default temporary cached forward callbacks max number for each
+		device to avoid overconsumption. Zero means no limit.
+
 config NET_IPFORWARD
 	bool "Enable L2 forwarding"
 	default n

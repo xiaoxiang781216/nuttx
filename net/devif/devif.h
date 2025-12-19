@@ -317,6 +317,20 @@ extern "C"
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: devif_count_callbacks
+ *
+ * Description:
+ *   Count the number of callback structures in a list based on the specified
+ *   flags.
+ *
+ * Assumptions:
+ *   This function is called with the network locked.
+ *
+ ****************************************************************************/
+
+int devif_count_callbacks(FAR struct devif_callback_s *list, uint32_t flags);
+
+/****************************************************************************
  * Name: devif_callback_alloc
  *
  * Description:
