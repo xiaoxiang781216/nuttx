@@ -771,6 +771,10 @@ static inline_function int nxsem_post(FAR sem_t *sem)
 
       if (old >= 0)
         {
+          if (old >= SEM_VALUE_MAX)
+            {
+              return -EOVERFLOW;
+            }
           if (atomic_try_cmpxchg_release(val, &old, old + 1))
             {
               return OK;
