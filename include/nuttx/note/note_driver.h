@@ -407,11 +407,11 @@ struct note_filter_named_tag_s
 struct note_filter_s
 {
   struct note_filter_mode_s mode;
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-  struct note_filter_tag_s tag_mask;
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
   struct note_filter_level_s level;
-#  endif
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
+  struct note_filter_tag_s tag_mask;
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
   struct note_filter_irq_s irq_mask;
 #  endif
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL

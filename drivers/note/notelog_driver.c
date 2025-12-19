@@ -119,6 +119,12 @@ struct note_driver_s g_notelog_driver =
         CONFIG_DRIVERS_NOTELOG_CPUSET
 #  endif
       },
+
+#  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+      {
+        CONFIG_DRIVERS_NOTE_DEFAULT_LEVEL,
+      },
+#  endif
     },
 #endif
   &g_notelog_ops,

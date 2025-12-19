@@ -76,6 +76,12 @@ struct notestream_driver_s g_notestream_lowerout =
         CONFIG_DRIVERS_NOTELOWEROUT_CPUSET
 #  endif
       },
+
+#  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+      {
+        CONFIG_DRIVERS_NOTE_DEFAULT_LEVEL,
+      },
+#  endif
     },
 #endif
     &g_notestream_ops

@@ -217,14 +217,9 @@ DEFINE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver) =
       },
 
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-        {
-          {
-            0
-          },
-        },
-        {
-          LOG_DEBUG,
-        }
+      {
+        CONFIG_DRIVERS_NOTE_DEFAULT_LEVEL,
+      },
 #  endif
     },
 #endif

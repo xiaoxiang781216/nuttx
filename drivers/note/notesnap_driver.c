@@ -195,6 +195,12 @@ struct notesnap_s g_notesnap =
         CONFIG_DRIVERS_NOTESNAP_CPUSET
 #  endif
       },
+
+#  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+      {
+        CONFIG_DRIVERS_NOTE_DEFAULT_LEVEL,
+      },
+#  endif
     },
 #endif
     &g_notesnap_ops

@@ -88,6 +88,12 @@ struct noterpmsg_driver_s g_noterpmsg_driver =
         CONFIG_DRIVERS_NOTERPMSG_CPUSET
 #  endif
       },
+
+#  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+      {
+        CONFIG_DRIVERS_NOTE_DEFAULT_LEVEL,
+      },
+#  endif
     },
 #endif
     &g_noterpmsg_ops

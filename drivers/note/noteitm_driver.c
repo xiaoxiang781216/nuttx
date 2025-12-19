@@ -64,6 +64,12 @@ struct noteitm_s g_noteitm =
         CONFIG_DRIVERS_NOTERTT_CPUSET
 #  endif
       },
+
+#  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+      {
+        CONFIG_DRIVERS_NOTE_DEFAULT_LEVEL,
+      },
+#  endif
     },
 #endif
     &g_noteitm_ops

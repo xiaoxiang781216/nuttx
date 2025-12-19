@@ -66,6 +66,23 @@ config DRIVERS_NOTE_RATELIMIT_BURST
 	---help---
 		"The burst traffic allowed within the window."
 
+config DRIVERS_NOTE_DEFAULT_LEVEL
+	int "NOTE driver default level"
+	range 0 7
+	default 7
+	depends on SCHED_INSTRUMENTATION_DUMP
+	---help---
+		The note driver default level for SCHED_INSTRUMENTATION_DUMP
+		Refer to syslog for level definition.
+		LOG_EMERG     0  /* System is unusable */
+		LOG_ALERT     1  /* Action must be taken immediately */
+		LOG_CRIT      2  /* Critical conditions */
+		LOG_ERR       3  /* Error conditions */
+		LOG_WARNING   4  /* Warning conditions */
+		LOG_NOTICE    5  /* Normal, but significant, condition */
+		LOG_INFO      6  /* Informational message */
+		LOG_DEBUG     7  /* Debug-level message */
+
 config DRIVERS_NOTERAM
 	bool "Note RAM driver"
 	select DRIVERS_NOTE
