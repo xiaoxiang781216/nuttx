@@ -110,6 +110,53 @@ static unsigned int g_addrenv_stack_region;
 static unsigned int g_addrenv_heap_region;
 #endif
 
+#ifdef CONFIG_LIB_PPCCALL
+static unsigned int g_addrenv_callee_region;
+#endif
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+static int addrenv_select_region(unsigned int *region,
+                                 const arch_addrenv_t *addrenv)
+{
+#ifdef CONFIG_MM_TASK_HEAP
+  if (*region == 0)
+    {
+      *region = mpu_allocregion();
+    }
+
+  if (addrenv == NULL)
+    {
+      return -EINVAL;
+    }
+
+  if (addrenv->heap && (
+#ifndef CONFIG_BUILD_FLAT
+      addrenv->data == 0 ||
+#endif
+      (addrenv->data > addrenv->heap &&
+       addrenv->data + addrenv->datasize <=
+       addrenv->heap + addrenv->heapsize)))
+    {
+      /* Heap include data or just have heap region */
+
+      mpu_modify_region(*region, addrenv->heap, addrenv->heapsize,
+                        MPU_RBAR_AP_RWRW, 0);
+    }
+  else if (addrenv->data)
+    {
+      /* Just data region */
+
+      mpu_modify_region(*region, addrenv->data, addrenv->datasize,
+                        MPU_RBAR_AP_RWRW, 0);
+    }
+#endif
+
+  return OK;
+}
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -319,32 +366,20 @@ int up_addrenv_vdata(arch_addrenv_t *addrenv, uintptr_t textsize,
 
 int up_addrenv_select(const arch_addrenv_t *addrenv)
 {
-#ifdef CONFIG_MM_TASK_HEAP
-  if (g_addrenv_heap_region == 0)
-    {
-      g_addrenv_heap_region = mpu_allocregion();
-    }
-
-  if (addrenv->heap && (
-#ifndef CONFIG_BUILD_FLAT
-      addrenv->data == 0 ||
+#ifdef CONFIG_LIB_PPCCALL
+  FAR struct tcb_s *tcb = this_task();
 #endif
-      (addrenv->data > addrenv->heap &&
-       addrenv->data + addrenv->datasize <=
-       addrenv->heap + addrenv->heapsize)))
-    {
-      /* Heap include data or just have heap region */
 
-      mpu_modify_region(g_addrenv_heap_region, addrenv->heap,
-                        addrenv->heapsize, MPU_RBAR_AP_RWRW, 0);
-    }
-  else if (addrenv->data)
-    {
-      /* Just data region */
+#ifdef CONFIG_MM_TASK_HEAP
+  addrenv_select_region(&g_addrenv_heap_region, addrenv);
 
-      mpu_modify_region(g_addrenv_heap_region, addrenv->data,
-                        addrenv->datasize, MPU_RBAR_AP_RWRW, 0);
+#  ifdef CONFIG_LIB_PPCCALL
+  if (addrenv_select_region(&g_addrenv_callee_region,
+                            &tcb->addrenv_callee->addrenv) < 0)
+    {
+      mpu_enable_region(g_addrenv_callee_region, false);
     }
+#  endif
 #endif
 
   return OK;

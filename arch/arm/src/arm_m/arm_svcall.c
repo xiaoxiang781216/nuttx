@@ -34,6 +34,7 @@
 #include <arch/irq.h>
 #include <nuttx/addrenv.h>
 #include <nuttx/macro.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/ppccall.h>
 #include <nuttx/sched.h>
 #include <nuttx/userspace.h>
@@ -52,12 +53,24 @@ static bool arm_dispatch_ppccall(uint32_t *regs)
 {
   struct ppccall_param_s *param = (struct ppccall_param_s *)regs[REG_R1];
   const struct ppccall_info_s *info = ppccall_find_info(param->nbr);
+  struct tcb_s *tcb = this_task();
+  struct addrenv_s *addrenv_callee;
+  struct addrenv_s *addrenv;
 
   if (info == NULL)
     {
       serr("ERROR: No ppc info found for func_id %d\n", param->nbr);
       regs[REG_R0] = -ENOENT;
       return false;
+    }
+
+  addrenv_callee = info->tcb->group->tg_addrenv_own;
+  addrenv = tcb->group->tg_addrenv_own;
+  if (addrenv_callee != NULL && addrenv != NULL)
+    {
+      addrenv_take(addrenv_callee);
+      tcb->addrenv_callee = addrenv_callee;
+      up_addrenv_select(&addrenv->addrenv);
     }
 
 #ifdef CONFIG_BUILD_FLAT
@@ -159,6 +172,7 @@ int arm_svcall(int irq, void *context, void *arg)
        */
 
 #if defined(CONFIG_LIB_SYSCALL) || defined(CONFIG_LIB_PPCCALL)
+      case SYS_ppccall_return:
       case SYS_syscall_return:
         {
           int index = (int)tcb->xcp.nsyscalls - 1;
@@ -181,6 +195,21 @@ int arm_svcall(int irq, void *context, void *arg)
            */
 
           regs[REG_R0]         = regs[REG_R2];
+
+#  ifdef CONFIG_LIB_PPCCALL
+          if (cmd == SYS_ppccall_return)
+            {
+              struct addrenv_s *addrenv = tcb->group->tg_addrenv_own;
+              struct addrenv_s *addrenv_callee = tcb->addrenv_callee;
+
+              if (addrenv != NULL && addrenv_callee != NULL)
+                {
+                  tcb->addrenv_callee = NULL;
+                  up_addrenv_select(&addrenv->addrenv);
+                  addrenv_drop(addrenv_callee, true);
+                }
+            }
+#  endif
 
           /* Handle any signal actions that were deferred while processing
            * the system call.
