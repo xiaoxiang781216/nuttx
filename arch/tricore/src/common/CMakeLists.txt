@@ -72,6 +72,10 @@ if(CONFIG_SCHED_BACKTRACE)
   list(APPEND SRCS tricore_backtrace.c)
 endif()
 
+if(CONFIG_ARCH_HAVE_FPU)
+  list(APPEND SRCS tricore_fpu.c)
+endif()
+
 if(CONFIG_ARCH_USE_MPU)
   list(APPEND SRCS tricore_mpu.c)
 endif()

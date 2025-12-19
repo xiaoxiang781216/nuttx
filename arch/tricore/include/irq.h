@@ -168,6 +168,18 @@
 
 #define STACKFRAME_ALIGN  TC_CONTEXT_SIZE
 
+/* FPU registers */
+
+#ifdef COINFIG_ARCH_TC1V6
+#  define FPU_SYNC_TRAP_REG  CPU_FPU_TRAP_CON
+#  define FPU_ASYNC_TRAP_REG CPU_FPU_TRAP_CON
+#else
+#  define FPU_SYNC_TRAP_REG  CPU_FPU_SYNC_TRAP_CON
+#  define FPU_ASYNC_TRAP_REG CPU_FPU_TRAP_CON
+#endif
+#define FPU_TRAP_FZE_SHIFT   20
+#define FPU_TRAP_TCL_SHIFT   1
+
 /* tls_info */
 
 #define up_tls_info()  ((struct tls_info_s *)read_sysreg(a8))

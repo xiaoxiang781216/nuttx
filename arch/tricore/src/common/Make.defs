@@ -79,6 +79,10 @@ ifeq ($(CONFIG_BUILD_PROTECTED)$(CONFIG_BUILD_KERNEL),y)
   endif
 endif
 
+ifeq ($(CONFIG_ARCH_HAVE_FPU),y)
+  CMN_CSRCS += tricore_fpu.c
+endif
+
 ifeq ($(CONFIG_ARCH_USE_MPU),y)
   CMN_CSRCS += tricore_mpu.c
 endif

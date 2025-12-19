@@ -44,6 +44,10 @@
 
 static inline_function void core_main(void)
 {
+#ifdef CONFIG_ARCH_HAVE_FPU
+  tricore_fpuinit();
+#endif
+
 #ifdef USE_EARLYSERIALINIT
   tricore_earlyserialinit();
 #endif
