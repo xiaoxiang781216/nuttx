@@ -73,13 +73,14 @@ int mm_map_lock(void)
 {
   FAR struct tcb_s *tcb = this_task();
   FAR struct task_group_s *group = tcb->group;
+  int ret = -EINVAL;
 
-  if (group == NULL)
+  if (group != NULL)
     {
-      return -EINVAL;
+      ret = nxrmutex_lock(&group->tg_mm_map.mm_map_mutex);
     }
 
-  return nxrmutex_lock(&group->tg_mm_map.mm_map_mutex);
+  return ret;
 }
 
 /****************************************************************************
@@ -95,12 +96,10 @@ void mm_map_unlock(void)
   FAR struct tcb_s *tcb = this_task();
   FAR struct task_group_s *group = tcb->group;
 
-  if (group == NULL)
+  if (group != NULL)
     {
-      return;
+      DEBUGVERIFY(nxrmutex_unlock(&group->tg_mm_map.mm_map_mutex));
     }
-
-  DEBUGVERIFY(nxrmutex_unlock(&group->tg_mm_map.mm_map_mutex));
 }
 
 /****************************************************************************
@@ -200,35 +199,33 @@ void mm_map_destroy(FAR struct mm_map_s *mm)
 int mm_map_add(FAR struct mm_map_s *mm, FAR struct mm_map_entry_s *entry)
 {
   FAR struct mm_map_entry_s *new_entry;
-  int ret;
+  int ret = -EINVAL;
 
-  if (!entry)
+  if (entry)
     {
-      return -EINVAL;
+      /* Copy the provided mapping and add to the list */
+
+      new_entry = kmm_malloc(sizeof(struct mm_map_entry_s));
+      if (new_entry)
+        {
+          *new_entry = *entry;
+
+          ret = nxrmutex_lock(&mm->mm_map_mutex);
+          if (ret < 0)
+            {
+              kmm_free(new_entry);
+            }
+          else
+            {
+              mm->map_count++;
+              sq_addfirst((sq_entry_t *)new_entry, &mm->mm_map_sq);
+              nxrmutex_unlock(&mm->mm_map_mutex);
+              ret = OK;
+            }
+        }
     }
 
-  /* Copy the provided mapping and add to the list */
-
-  new_entry = kmm_malloc(sizeof(struct mm_map_entry_s));
-  if (!new_entry)
-    {
-      return -EINVAL;
-    }
-
-  *new_entry = *entry;
-
-  ret = nxrmutex_lock(&mm->mm_map_mutex);
-  if (ret < 0)
-    {
-      kmm_free(new_entry);
-      return ret;
-    }
-
-  mm->map_count++;
-  sq_addfirst((sq_entry_t *)new_entry, &mm->mm_map_sq);
-  nxrmutex_unlock(&mm->mm_map_mutex);
-
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -307,66 +304,70 @@ int mm_map_remove(FAR struct mm_map_s *mm,
 {
   FAR struct mm_map_entry_s *prev_entry;
   FAR struct mm_map_entry_s *removed_entry = NULL;
-  int ret;
+  int ret = OK;
 
-  if (!mm || !entry)
+  if (mm && entry)
     {
-      return OK;
-    }
-
-  ret = nxrmutex_lock(&mm->mm_map_mutex);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  prev_entry = (struct mm_map_entry_s *)sq_peek(&mm->mm_map_sq);
-
-  /* Check if the list was empty */
-
-  if (!prev_entry)
-    {
-      nxrmutex_unlock(&mm->mm_map_mutex);
-      return -ENOENT;
-    }
-
-  /* Check if removing the first item */
-
-  if (entry == prev_entry)
-    {
-      sq_remfirst(&mm->mm_map_sq);
-      mm->map_count--;
-      removed_entry = prev_entry;
-    }
-  else
-    {
-      /* Loop through the remaining items to find the one to be removed */
-
-      while ((removed_entry = (struct mm_map_entry_s *)
-              sq_next(((sq_entry_t *)prev_entry))))
+      ret = nxrmutex_lock(&mm->mm_map_mutex);
+      if (ret >= 0)
         {
-          if (entry == removed_entry)
-            {
-              sq_remafter((sq_entry_t *)prev_entry, &mm->mm_map_sq);
-              mm->map_count--;
-              break;
-            }
+          prev_entry = (struct mm_map_entry_s *)sq_peek(&mm->mm_map_sq);
 
-          prev_entry = removed_entry;
+          /* Check if the list was empty */
+
+          if (!prev_entry)
+            {
+              nxrmutex_unlock(&mm->mm_map_mutex);
+              ret = -ENOENT;
+            }
+          else
+            {
+              /* Check if removing the first item */
+
+              if (entry == prev_entry)
+                {
+                  sq_remfirst(&mm->mm_map_sq);
+                  mm->map_count--;
+                  removed_entry = prev_entry;
+                }
+              else
+                {
+                  /* Loop through the remaining items to
+                   * find the one to be removed.
+                   */
+
+                  while ((removed_entry = (struct mm_map_entry_s *)
+                          sq_next(((sq_entry_t *)prev_entry))))
+                    {
+                      if (entry == removed_entry)
+                        {
+                          sq_remafter((sq_entry_t *)prev_entry,
+                               &mm->mm_map_sq);
+                          mm->map_count--;
+                          break;
+                        }
+
+                      prev_entry = removed_entry;
+                    }
+                }
+
+              nxrmutex_unlock(&mm->mm_map_mutex);
+
+              /* If the item was removed, also delete the entry struct */
+
+              if (removed_entry)
+                {
+                  kmm_free(removed_entry);
+                }
+              else
+                {
+                  ret = -ENOENT;
+                }
+            }
         }
     }
 
-  nxrmutex_unlock(&mm->mm_map_mutex);
-
-  /* If the item was removed, also delete the entry struct */
-
-  if (removed_entry)
-    {
-      kmm_free(removed_entry);
-      return OK;
-    }
-
-  return -ENOENT;
+  return ret;
 }
 
 #endif /* defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__) */
