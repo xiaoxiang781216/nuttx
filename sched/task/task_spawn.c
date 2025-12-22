@@ -86,8 +86,6 @@ static int nxtask_spawn_create(FAR const char *name, main_t entry,
   pid_t pid;
   int ret;
 
-  DEBUGASSERT(attr);
-
   /* Allocate a TCB for the new task. */
 
   tcb = kmm_zalloc(sizeof(struct tcb_s) + sizeof(struct task_group_s));
