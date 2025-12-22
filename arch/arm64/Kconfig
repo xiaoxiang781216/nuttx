@@ -63,6 +63,7 @@ config ARCH_CHIP_QEMU_ARM64
 	select ARCH_HAVE_RESET
 	select ARCH_HAVE_TEXT_HEAP
 	select ARM64_HAVE_PSCI
+	select ARCH_HAVE_SHADOWSTACK
 	---help---
 		QEMU virt platform (ARMv8a)
 

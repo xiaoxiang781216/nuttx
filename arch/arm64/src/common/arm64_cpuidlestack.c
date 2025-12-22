@@ -89,11 +89,22 @@
 
 int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
 {
+#ifdef CONFIG_ARCH_SHADOW_STACK
+  size_t shadow_size = (stack_size >> 7) * CONFIG_ARCH_STACK_SPLIT_RATIO;
+  shadow_size = STACK_ALIGN_DOWN(shadow_size);
+  stack_size -= shadow_size;
+#endif
+
   DEBUGASSERT(cpu >= 0 && cpu < CONFIG_NCPUS && tcb != NULL);
 
   tcb->adj_stack_size  = stack_size;
   tcb->stack_alloc_ptr = (void *)g_cpu_idlestackalloc[cpu];
   tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
+
+#ifdef CONFIG_ARCH_SHADOW_STACK
+  tcb->shadow_base_ptr = (uintptr_t)tcb->stack_base_ptr + stack_size;
+  tcb->shadow_top_ptr  = tcb->shadow_base_ptr + shadow_size;
+#endif
 
   return OK;
 }

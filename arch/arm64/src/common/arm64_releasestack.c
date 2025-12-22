@@ -104,4 +104,8 @@ void up_release_stack(struct tcb_s *dtcb, int ttype)
   dtcb->stack_alloc_ptr = NULL;
   dtcb->stack_base_ptr = NULL;
   dtcb->adj_stack_size = 0;
+#ifdef CONFIG_ARCH_SHADOW_STACK
+  dtcb->shadow_base_ptr = 0;
+  dtcb->shadow_top_ptr = 0;
+#endif
 }

@@ -153,6 +153,14 @@ pid_t arm64_fork(const struct fork_s *context)
   newsp = newtop - stackutil;
   memcpy((void *)newsp, (const void *)context->sp, stackutil);
 
+#ifdef CONFIG_ARCH_SHADOW_STACK
+  DEBUGASSERT(context->regs[REG_X18] >= parent->shadow_base_ptr);
+  DEBUGASSERT(context->regs[REG_X18] <= parent->shadow_top_ptr);
+  stackutil = context->regs[REG_X18] - parent->shadow_base_ptr;
+  memcpy((void *)child->shadow_base_ptr, (void *)parent->shadow_base_ptr,
+         stackutil);
+#endif
+
   /* Was there a frame pointer in place before? */
 
   if (context->fp >= context->sp && context->fp < stacktop)
@@ -205,6 +213,10 @@ pid_t arm64_fork(const struct fork_s *context)
   child->xcp.regs[REG_X28]    = context->regs[REG_X28];
   child->xcp.regs[REG_FP]     = newfp;
 
+#ifdef CONFIG_ARCH_SHADOW_STACK
+  child->xcp.regs[REG_X18]    = child->shadow_base_ptr + stackutil;
+#endif
+
 #if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
   child->xcp.regs[REG_SPSR]   = SPSR_MODE_EL3H;
 #else
@@ -221,11 +233,11 @@ pid_t arm64_fork(const struct fork_s *context)
 
   child->xcp.regs[REG_ELR]    = (uint64_t)context->lr;
 
-  child->xcp.regs[REG_SP_ELX]    = newsp - XCPTCONTEXT_SIZE;
+  child->xcp.regs[REG_SP_ELX] = newsp - XCPTCONTEXT_SIZE;
 #ifdef CONFIG_ARCH_KERNEL_STACK
-  child->xcp.regs[REG_SP_EL0]    = (uint64_t)child->xcp.ustkptr;
+  child->xcp.regs[REG_SP_EL0] = (uint64_t)child->xcp.ustkptr;
 #else
-  child->xcp.regs[REG_SP_EL0]    = newsp - XCPTCONTEXT_SIZE;
+  child->xcp.regs[REG_SP_EL0] = newsp - XCPTCONTEXT_SIZE;
 #endif
 
   /* And, finally, start the child task.  On a failure, nxtask_start_fork()

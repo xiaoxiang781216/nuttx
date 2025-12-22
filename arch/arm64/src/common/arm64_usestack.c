@@ -83,6 +83,10 @@
 int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size,
                  int ttype)
 {
+#ifdef CONFIG_ARCH_SHADOW_STACK
+  size_t shadow_size;
+#endif
+
 #ifdef CONFIG_TLS_ALIGNED
   /* The allocated stack size must not exceed the maximum possible for the
    * TLS feature.
@@ -117,6 +121,12 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size,
       up_release_stack(tcb, ttype);
     }
 
+#ifdef CONFIG_ARCH_SHADOW_STACK
+  shadow_size = (stack_size >> 7) * CONFIG_ARCH_STACK_SPLIT_RATIO;
+  shadow_size = STACK_ALIGN_DOWN(shadow_size);
+  stack_size -= shadow_size;
+#endif
+
   /* The ARM uses a "full descending" stack:
    * the stack grows toward lower addresses in memory.
    * The stack pointer register, points to the last pushed item
@@ -145,6 +155,12 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size,
 
   arm64_stack_color(tcb->stack_base_ptr, tcb->adj_stack_size);
 #endif /* CONFIG_STACK_COLORATION */
+
+#ifdef CONFIG_ARCH_SHADOW_STACK
+  tcb->shadow_base_ptr =
+    STACKFRAME_ALIGN_UP((uintptr_t)stack + tcb->adj_stack_size);
+  tcb->shadow_top_ptr = tcb->shadow_base_ptr + shadow_size;
+#endif
 
   return OK;
 }

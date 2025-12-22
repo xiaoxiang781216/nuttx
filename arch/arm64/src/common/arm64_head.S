@@ -176,6 +176,11 @@ real_start:
     add    x24, x24, #(CONFIG_IDLETHREAD_STACKSIZE)
 #  endif
 
+#ifdef CONFIG_ARCH_SHADOW_STACK
+    sub    x24, x24, #(IDLETHREAD_SHADOW)  /* Adjust stack top */
+    mov    x18, x24                        /* Shadow grows up */
+#endif
+
     /* Initialize percpu reg */
 
     msr    tpidr_el1, xzr
@@ -205,6 +210,11 @@ primary_core:
 
     ldr    x24, =(g_cpu_idlestackalloc + CONFIG_IDLETHREAD_STACKSIZE)
 #endif /* CONFIG_SMP */
+
+#ifdef CONFIG_ARCH_SHADOW_STACK
+    sub    x24, x24, #(IDLETHREAD_SHADOW)  /* Adjust stack top */
+    mov    x18, x24                        /* Shadow grows up */
+#endif
 
     /* Initialize percpu reg */
 

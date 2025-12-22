@@ -92,6 +92,10 @@
 
 int up_create_stack(struct tcb_s *tcb, size_t stack_size, int ttype)
 {
+#ifdef CONFIG_ARCH_SHADOW_STACK
+  size_t shadow_size;
+#endif
+
   stack_size = STACKFRAME_ALIGN_UP(stack_size);
 
 #ifdef CONFIG_TLS_ALIGNED
@@ -158,6 +162,12 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, int ttype)
        * Items on the stack are referenced as positive word offsets from sp.
        */
 
+#ifdef CONFIG_ARCH_SHADOW_STACK
+      shadow_size = (stack_size >> 7) * CONFIG_ARCH_STACK_SPLIT_RATIO;
+      shadow_size = STACK_ALIGN_DOWN(shadow_size);
+      stack_size -= shadow_size;
+#endif
+
       /* Since both stack_alloc_ptr and stack_size are in
        * CONFIG_STACK_ALIGNMENT, and the stack ptr is decremented before
        * the first write, we can directly save our variables to struct
@@ -175,6 +185,12 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, int ttype)
 
       arm64_stack_color(tcb->stack_base_ptr, tcb->adj_stack_size);
 #endif /* CONFIG_STACK_COLORATION */
+
+#ifdef CONFIG_ARCH_SHADOW_STACK
+      tcb->shadow_base_ptr = (uintptr_t)tcb->stack_base_ptr + stack_size;
+      tcb->shadow_top_ptr = tcb->shadow_base_ptr + shadow_size;
+#endif
+
       atomic_or(&tcb->flags, TCB_FLAG_FREE_STACK);
 
       return OK;

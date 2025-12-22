@@ -64,6 +64,10 @@ if(CONFIG_STACK_CANARIES)
   add_compile_options(-fstack-protector-all)
 endif()
 
+if(CONFIG_ARCH_SHADOW_STACK)
+  add_compile_options(-fsanitize=shadow-call-stack -ffixed-x18)
+endif()
+
 if(CONFIG_STACK_USAGE)
   add_compile_options(-fstack-usage)
 endif()

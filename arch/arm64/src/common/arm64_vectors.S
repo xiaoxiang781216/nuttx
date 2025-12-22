@@ -257,6 +257,11 @@ reserved_syscall:
     ldr    x1, =(g_interrupt_stack + CONFIG_ARCH_INTERRUPTSTACK)
 #endif
 
+#ifdef CONFIG_ARCH_SHADOW_STACK
+    sub    x1, x1, #(INTERRUPTSTACK_SHADOW)
+    mov    x18, x1              /* Software shadow grows up */
+#endif
+
     mov    x19, sp              /* Save sp for unwind */
     .cfi_def_cfa_register x19
     mov    sp, x1
@@ -334,6 +339,11 @@ SECTION_FUNC(text, arm64_irq_handler)
     ldr    x1, [x1, x0]
 #else
     ldr    x1, =(g_interrupt_stack + CONFIG_ARCH_INTERRUPTSTACK)
+#endif
+
+#ifdef CONFIG_ARCH_SHADOW_STACK
+    sub    x1, x1, #(INTERRUPTSTACK_SHADOW)
+    mov    x18, x1              /* Software shadow grows up */
 #endif
 
     mov    x19, sp
@@ -531,6 +541,11 @@ SECTION_FUNC(text, arm64_fiq_handler)
     ldr    x1, [x1, x0]
 #else
     ldr    x1, =(g_interrupt_fiq_stack + CONFIG_ARCH_INTERRUPTSTACK)
+#endif
+
+#ifdef CONFIG_ARCH_SHADOW_STACK
+    sub    x1, x1, #(INTERRUPTSTACK_SHADOW)
+    mov    x18, x1              /* Software shadow grows up */
 #endif
 
     mov    x19, sp

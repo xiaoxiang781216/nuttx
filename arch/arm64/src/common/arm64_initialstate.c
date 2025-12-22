@@ -87,6 +87,10 @@ void arm64_new_task(struct tcb_s * tcb)
   xcp->regs[REG_SCTLR_EL1] = read_sysreg(sctlr_el1) | SCTLR_TCF1_BIT;
 #endif
 
+#ifdef CONFIG_ARCH_SHADOW_STACK
+  xcp->regs[REG_X18]       = tcb->shadow_base_ptr;
+#endif
+
 #ifndef CONFIG_ARM64_DECODEFIQ
   xcp->regs[REG_SPSR]     |= DAIF_FIQ_BIT;
 #endif

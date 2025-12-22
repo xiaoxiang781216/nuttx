@@ -74,6 +74,10 @@ static void arm64_init_signal_process(struct tcb_s *tcb, uint64_t *regs)
   tcb->xcp.regs[REG_SP_EL0] = regs[REG_SP_ELX] - XCPTCONTEXT_SIZE * 2;
 #endif
   tcb->xcp.regs[REG_SP_ELX] = regs[REG_SP_ELX] - XCPTCONTEXT_SIZE;
+
+#ifdef CONFIG_ARCH_SHADOW_STACK
+  tcb->xcp.regs[REG_X18]    = regs[REG_X18];
+#endif
 }
 
 /****************************************************************************

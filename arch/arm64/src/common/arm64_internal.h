@@ -35,6 +35,7 @@
 #  include <stdint.h>
 #  include <syscall.h>
 #endif
+#include <nuttx/irq.h>
 
 #include "arm64_arch.h"
 
@@ -104,6 +105,16 @@
       sys_call0(SYS_restore_context); \
     } \
   while (1)
+
+#ifdef CONFIG_ARCH_SHADOW_STACK
+#  define IDLETHREAD_SHADOW STACKFRAME_ALIGN_DOWN( \
+          CONFIG_ARCH_STACK_SPLIT_RATIO * (CONFIG_IDLETHREAD_STACKSIZE >> 7))
+#  define INTERRUPTSTACK_SHADOW STACKFRAME_ALIGN_DOWN( \
+          CONFIG_ARCH_STACK_SPLIT_RATIO * (CONFIG_ARCH_INTERRUPTSTACK >> 7))
+#else
+#  define IDLETHREAD_SHADOW 0
+#  define INTERRUPTSTACK_SHADOW 0
+#endif
 
 /****************************************************************************
  * Public Types

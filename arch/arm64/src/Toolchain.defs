@@ -82,6 +82,10 @@ ifeq ($(CONFIG_STACK_CANARIES),y)
   ARCHOPTIMIZATION += -fstack-protector-all
 endif
 
+ifeq ($(CONFIG_ARCH_SHADOW_STACK),y)
+  ARCHOPTIMIZATION += -fsanitize=shadow-call-stack -ffixed-x18
+endif
+
 ifeq ($(CONFIG_MM_UBSAN_ALL),y)
   ARCHOPTIMIZATION += $(CONFIG_MM_UBSAN_OPTION)
 endif
