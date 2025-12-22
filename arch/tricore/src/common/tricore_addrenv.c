@@ -286,7 +286,9 @@ int up_addrenv_select(const arch_addrenv_t *addrenv)
 #ifndef CONFIG_BUILD_FLAT
       addrenv->data == 0 ||
 #endif
-      mm_heapmember((void *)addrenv->heap, (void *)addrenv->data)))
+      (addrenv->data > addrenv->heap &&
+       addrenv->data + addrenv->datasize <=
+       addrenv->heap + addrenv->heapsize)))
     {
       conf.base = (uintptr_t)addrenv->heap;
       conf.size = addrenv->heapsize;

@@ -315,7 +315,9 @@ int up_addrenv_select(const arch_addrenv_t *addrenv)
     }
 
   if (addrenv->heap && (addrenv->data == 0 ||
-      mm_heapmember((void *)addrenv->heap, (void *)addrenv->data)))
+      (addrenv->data > addrenv->heap &&
+       addrenv->data + addrenv->datasize <=
+       addrenv->heap + addrenv->heapsize)))
     {
       /* Heap include data or just have heap region */
 
