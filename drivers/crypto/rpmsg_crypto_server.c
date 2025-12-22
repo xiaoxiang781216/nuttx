@@ -40,6 +40,8 @@
  * Pre-processor definitions
  ****************************************************************************/
 
+#define RSA_PRIVATE_KEY_MAX_SIZE 1152
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -430,14 +432,34 @@ static void rpmsg_crypto_read_binary(FAR unsigned char **p,
   *p += len;
 }
 
-static int
-rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
-                          FAR struct rpmsg_crypto_kprocess_s *msg,
-                          size_t len, uint32_t src, FAR void *priv)
+static int rpmsg_crypto_read_mpi(FAR unsigned char **pos,
+                                 FAR unsigned char *end,
+                                 FAR unsigned char *buf,
+                                 FAR struct crparam *mpi)
 {
-  FAR struct rpmsg_crypto_kprocess_s *rsp = NULL;
-  FAR struct crparam *output = NULL;
-  FAR struct crparam *input = NULL;
+  size_t len;
+  int ret;
+
+  ret = asn1_get_tag(pos, end, &len, ASN1_INTEGER);
+  if (ret != 0)
+    {
+      return ret;
+    }
+
+  rpmsg_crypto_read_binary(pos, buf, len);
+
+  mpi->crp_p = (caddr_t)buf;
+  mpi->crp_nbits = len * 8;
+  return len;
+}
+
+static int
+rpmsg_crypto_rsa_parse_private_key(FAR char *msg, int msglen,
+                                   FAR unsigned char *buf,
+                                   FAR struct cryptkop *krp)
+{
+  FAR unsigned char *end = NULL;
+  FAR unsigned char *pos = NULL;
   FAR struct crparam *n = NULL;
   FAR struct crparam *e = NULL;
   FAR struct crparam *d = NULL;
@@ -446,15 +468,119 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
   FAR struct crparam *dp = NULL;
   FAR struct crparam *dq = NULL;
   FAR struct crparam *qp = NULL;
+  size_t buflen = 0;
+  size_t len;
+  int ver;
+  int ret;
+
+  pos = (FAR unsigned char *)msg;
+  end = pos + msglen;
+
+  n = &krp->krp_param[1];
+  e = &krp->krp_param[2];
+  d = &krp->krp_param[3];
+  p = &krp->krp_param[4];
+  q = &krp->krp_param[5];
+  dp = &krp->krp_param[6];
+  dq = &krp->krp_param[7];
+  qp = &krp->krp_param[8];
+
+  ret = asn1_get_tag(&pos, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  if (ret != 0)
+    {
+      return ret;
+    }
+
+  ret = asn1_get_int(&pos, end, &ver);
+  if (ret != 0)
+    {
+      return ret;
+    }
+
+  /* Import N */
+
+  buflen += rpmsg_crypto_read_mpi(&pos, end, buf + buflen, n);
+
+  /* Import E */
+
+  buflen += rpmsg_crypto_read_mpi(&pos, end, buf + buflen, e);
+
+  /* Import D */
+
+  buflen += rpmsg_crypto_read_mpi(&pos, end, buf + buflen, d);
+
+  /* Import P */
+
+  buflen += rpmsg_crypto_read_mpi(&pos, end, buf + buflen, p);
+
+  /* Import Q */
+
+  buflen += rpmsg_crypto_read_mpi(&pos, end, buf + buflen, q);
+
+  /* Import DP */
+
+  buflen += rpmsg_crypto_read_mpi(&pos, end, buf + buflen, dp);
+
+  /* Import DQ */
+
+  buflen += rpmsg_crypto_read_mpi(&pos, end, buf + buflen, dq);
+
+  /* Import QP */
+
+  buflen += rpmsg_crypto_read_mpi(&pos, end, buf + buflen, qp);
+  return buflen;
+}
+
+static int
+rpmsg_crypto_rsa_parse_public_key(FAR char *msg, int msglen,
+                                  FAR unsigned char *buf,
+                                  FAR struct cryptkop *krp)
+{
   FAR unsigned char *end = NULL;
   FAR unsigned char *pos = NULL;
+  FAR struct crparam *n = NULL;
+  FAR struct crparam *e = NULL;
+  size_t buflen = 0;
+  size_t len;
+  int ret;
+
+  pos = (FAR unsigned char *)msg;
+  end = pos + msglen;
+
+  ret = asn1_get_tag(&pos, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+  if (ret != 0)
+    {
+      return ret;
+    }
+
+  n = &krp->krp_param[1];
+  e = &krp->krp_param[2];
+
+  /* Import N */
+
+  buflen += rpmsg_crypto_read_mpi(&pos, end, buf + buflen, n);
+
+  /* Import E */
+
+  buflen += rpmsg_crypto_read_mpi(&pos, end, buf + buflen, e);
+  return buflen;
+}
+
+static int
+rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
+                          FAR struct rpmsg_crypto_kprocess_s *msg,
+                          size_t len, uint32_t src, FAR void *priv)
+{
+  FAR struct rpmsg_crypto_kprocess_s *rsp = NULL;
+  FAR struct crparam *output = NULL;
+  FAR struct crparam *input = NULL;
+  FAR struct crparam *dp = NULL;
   struct cryptkop krp;
+  unsigned char keybuf[RSA_PRIVATE_KEY_MAX_SIZE];
   uint32_t data_len = 0;
   uint32_t space;
   uint32_t keylen;
-  size_t slen;
-  int version;
-  int ret;
+  int ret = 0;
 
   memset(&krp, 0, sizeof(krp));
   keylen = msg->ctrl.op_flf.akcipher.key_len;
@@ -463,163 +589,25 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
 
   /* Import key */
 
-  pos = (FAR unsigned char *)msg->buf;
-  end = pos + keylen;
-
   if (msg->ctrl.op_flf.akcipher.key_type ==
                          VIRTIO_CRYPTO_AKCIPHER_KEY_TYPE_PRIVATE)
     {
-      n = &krp.krp_param[1];
-      e = &krp.krp_param[2];
-      d = &krp.krp_param[3];
-      p = &krp.krp_param[4];
-      q = &krp.krp_param[5];
-      dp = &krp.krp_param[6];
-      dq = &krp.krp_param[7];
-      qp = &krp.krp_param[8];
-      ret = asn1_get_tag(&pos, end, &slen, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
-      if (ret != 0)
-        {
-          return -EINVAL;
-        }
-
-      end = pos + slen;
-      ret = asn1_get_int(&pos, end, &version);
-      if (ret != 0)
-        {
-          return -EINVAL;
-        }
-
-      /* Import N */
-
-      ret = asn1_get_tag(&pos, end, &slen, ASN1_INTEGER);
-      if (ret != 0)
-        {
-          return ret;
-        }
-
-      n->crp_p = alloca(slen);
-      n->crp_nbits = slen * 8;
-      rpmsg_crypto_read_binary(&pos, (FAR unsigned char *)n->crp_p, slen);
-
-      /* Import E */
-
-      ret = asn1_get_tag(&pos, end, &slen, ASN1_INTEGER);
-      if (ret != 0)
-        {
-          return ret;
-        }
-
-      e->crp_p = alloca(slen);
-      e->crp_nbits = slen * 8;
-      rpmsg_crypto_read_binary(&pos, (FAR unsigned char *)e->crp_p, slen);
-
-      /* Import D */
-
-      ret = asn1_get_tag(&pos, end, &slen, ASN1_INTEGER);
-      if (ret != 0)
-        {
-          return ret;
-        }
-
-      d->crp_p = alloca(slen);
-      d->crp_nbits = slen * 8;
-      rpmsg_crypto_read_binary(&pos, (FAR unsigned char *)d->crp_p, slen);
-
-      /* Import P */
-
-      ret = asn1_get_tag(&pos, end, &slen, ASN1_INTEGER);
-      if (ret != 0)
-        {
-          return ret;
-        }
-
-      p->crp_p = alloca(slen);
-      p->crp_nbits = slen * 8;
-      rpmsg_crypto_read_binary(&pos, (FAR unsigned char *)p->crp_p, slen);
-
-      /* Import Q */
-
-      ret = asn1_get_tag(&pos, end, &slen, ASN1_INTEGER);
-      if (ret != 0)
-        {
-          return ret;
-        }
-
-      q->crp_p = alloca(slen);
-      q->crp_nbits = slen * 8;
-      rpmsg_crypto_read_binary(&pos, (FAR unsigned char *)q->crp_p, slen);
-
-      /* Import DP */
-
-      ret = asn1_get_tag(&pos, end, &slen, ASN1_INTEGER);
-      if (ret != 0)
-        {
-          return ret;
-        }
-
-      dp->crp_p = alloca(slen);
-      dp->crp_nbits = slen * 8;
-      rpmsg_crypto_read_binary(&pos, (FAR unsigned char *)dp->crp_p, slen);
-
-      /* Import DQ */
-
-      ret = asn1_get_tag(&pos, end, &slen, ASN1_INTEGER);
-      if (ret != 0)
-        {
-          return ret;
-        }
-
-      dq->crp_p = alloca(slen);
-      dq->crp_nbits = slen * 8;
-      rpmsg_crypto_read_binary(&pos, (FAR unsigned char *)dq->crp_p, slen);
-
-      /* Import QP */
-
-      ret = asn1_get_tag(&pos, end, &slen, ASN1_INTEGER);
-      if (ret != 0)
-        {
-          return ret;
-        }
-
-      qp->crp_p = alloca(slen);
-      qp->crp_nbits = slen * 8;
-      rpmsg_crypto_read_binary(&pos, (FAR unsigned char *)qp->crp_p, slen);
+      ret = rpmsg_crypto_rsa_parse_private_key(msg->buf, keylen,
+                                               keybuf, &krp);
+      krp.krp_keytype = CRYPTO_KEY_TYPE_PRIVATE;
     }
   else if (msg->ctrl.op_flf.akcipher.key_type ==
                          VIRTIO_CRYPTO_AKCIPHER_KEY_TYPE_PUBLIC)
     {
-      n = &krp.krp_param[1];
-      e = &krp.krp_param[2];
-      ret = asn1_get_tag(&pos, end, &slen, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
-      if (ret != 0)
-        {
-          return -EINVAL;
-        }
+      ret = rpmsg_crypto_rsa_parse_public_key(msg->buf, keylen,
+                                              keybuf, &krp);
+      krp.krp_keytype = CRYPTO_KEY_TYPE_PUBLIC;
+    }
 
-      /* Import N */
-
-      ret = asn1_get_tag(&pos, end, &slen, ASN1_INTEGER);
-      if (ret != 0)
-        {
-          return ret;
-        }
-
-      n->crp_p = alloca(slen);
-      n->crp_nbits = slen * 8;
-      rpmsg_crypto_read_binary(&pos, (FAR unsigned char *)n->crp_p, slen);
-
-      /* Import E */
-
-      ret = asn1_get_tag(&pos, end, &slen, ASN1_INTEGER);
-      if (ret != 0)
-        {
-          return ret;
-        }
-
-      e->crp_p = alloca(slen);
-      e->crp_nbits = slen * 8;
-      rpmsg_crypto_read_binary(&pos, (FAR unsigned char *)e->crp_p, slen);
+  if (ret < 0)
+    {
+      rpmsgerr("rpmsg crypto rsa parse key failed\n");
+      return ret;
     }
 
   input = &krp.krp_param[0];
@@ -638,6 +626,7 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
   rsp->ctrl = msg->ctrl;
   rsp->data = msg->data;
   krp.krp_flags = msg->data.header.flag;
+  dp = &krp.krp_param[6];
   switch (msg->data.header.opcode)
     {
       case VIRTIO_CRYPTO_AKCIPHER_DECRYPT:
