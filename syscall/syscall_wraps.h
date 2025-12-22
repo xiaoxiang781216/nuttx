@@ -28,7 +28,7 @@
 #include <nuttx/arch.h>
 
 #ifndef UP_WRAPOPT
-#define UP_WRAPOPT(f) --wrap f
+#define UP_WRAPOPT(f) --wrap=f
 #endif
 
 #define SYSCALL_LOOKUP(f,n)  UP_WRAPOPT(f)

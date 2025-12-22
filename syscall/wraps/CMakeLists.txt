@@ -43,7 +43,7 @@ add_custom_command(
   OUTPUT ${SYSCALLWRAPS}
   COMMAND
     bash -c
-    "sed -e '1,/WRAPOPTSTARTS/d' -e '/^#/d' -e 's/--wrap /--wrap=/g' ${SYSCALLWRAPS}tmp > ${SYSCALLWRAPS}"
+    "sed -e '1,/WRAPOPTSTARTS/d' -e '/^#/d' ${SYSCALLWRAPS}tmp > ${SYSCALLWRAPS}"
   DEPENDS ${SYSCALLWRAPS}tmp wrapsymbol
   VERBATIM)
 

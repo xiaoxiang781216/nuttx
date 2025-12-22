@@ -458,7 +458,7 @@ ifeq ($(CONFIG_LIB_SYSCALL_WRAPPER),y)
 	$(Q) $(MAKE) -C $(TOPDIR)$(DELIM)tools -f Makefile.host wrapsymbol
 	$(Q) (cd $(TOPDIR)$(DELIM)syscall$(DELIM)wraps; $(MKSYSCALL) -w $(CSVFILE);)
 	$(Q) $(CPP) $(CPPFLAGS) $(TOPDIR)$(DELIM)syscall$(DELIM)$(SYSCALLWRAPS:.ldcmd=.h) | \
-	  sed -e '1,/WRAPOPTSTARTS/d' -e '/^#/d' -e 's/--wrap /--wrap=/g' > $(TOPDIR)$(DELIM)syscall$(DELIM)$(SYSCALLWRAPS)
+	  sed -e '1,/WRAPOPTSTARTS/d' -e '/^#/d' > $(TOPDIR)$(DELIM)syscall$(DELIM)$(SYSCALLWRAPS)
 endif
 
 context: wrapper_symbol tools/incdir$(HOSTEXEEXT) include/nuttx/config.h include/nuttx/version.h .dirlinks $(CONTEXTDIRS_DEPS) | staging
