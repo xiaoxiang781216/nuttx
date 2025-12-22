@@ -248,7 +248,7 @@ int main(int argc, char **argv, char **envp)
 int board_power_off(int status)
 {
 #ifdef CONFIG_RPTUN
-  rptun_poweroff(NULL);
+  rptun_reset(NULL, BOARDIOC_SOFTRESETCAUSE_POWEROFF);
 #endif
 
   /* Abort simulator */
