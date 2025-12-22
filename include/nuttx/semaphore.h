@@ -697,7 +697,7 @@ static inline_function int nxsem_wait(FAR sem_t *sem)
 {
   /* This API should not be called from the idleloop or interrupt */
 
-#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+#if (defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_ARCH_ADDRENV)) || defined(__KERNEL__)
   DEBUGASSERT(!up_interrupt_context());
   DEBUGASSERT(!OSINIT_IDLELOOP() || !sched_idletask());
 #endif
