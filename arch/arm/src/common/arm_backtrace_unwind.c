@@ -32,6 +32,10 @@
 #include "sched/sched.h"
 #include "arm_internal.h"
 
+#ifdef CONFIG_ARCH_ARM_M
+#  include "exc_return.h"
+#endif
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -58,6 +62,14 @@ enum regs
   LR = 14,
   PC = 15
 };
+
+#ifdef CONFIG_ARCH_ARM_M
+enum exc_regs
+{
+  EXC_LR = 5,
+  EXC_PC = 6,
+};
+#endif
 
 /****************************************************************************
  * Private Data Types
@@ -780,10 +792,28 @@ int up_backtrace(struct tcb_s *tcb,
           ret = backtrace_unwind(&frame, buffer, size, &skip);
           if (ret < size)
             {
-              frame.fp = ((uint32_t *)running_regs())[REG_FP];
-              frame.sp = ((uint32_t *)running_regs())[REG_SP];
-              frame.pc = ((uint32_t *)running_regs())[REG_PC];
-              frame.lr = ((uint32_t *)running_regs())[REG_LR];
+#ifdef CONFIG_ARCH_ARM_M
+              if (frame.lr == EXC_RETURN_THREAD)
+                {
+                  uint32_t *stack_ptr = (uint32_t *)getpsp();
+                  frame.sp = (uint32_t)stack_ptr + HW_XCPT_SIZE;
+                  frame.pc = stack_ptr[EXC_PC];
+                  frame.lr = stack_ptr[EXC_LR];
+                }
+              else
+#endif
+              if (running_regs())
+                {
+                  frame.fp = ((uint32_t *)running_regs())[REG_FP];
+                  frame.sp = ((uint32_t *)running_regs())[REG_SP];
+                  frame.pc = ((uint32_t *)running_regs())[REG_PC];
+                  frame.lr = ((uint32_t *)running_regs())[REG_LR];
+                }
+              else
+                {
+                  return ret;
+                }
+
               frame.stack_base = (unsigned long)rtcb->stack_base_ptr;
               frame.stack_top = frame.stack_base + rtcb->adj_stack_size;
               ret += backtrace_unwind(&frame, &buffer[ret],
