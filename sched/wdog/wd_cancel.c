@@ -84,7 +84,7 @@ int wd_cancel(FAR struct wdog_s *wdog)
 
       /* Now, remove the watchdog from the timer queue */
 
-      list_delete(&wdog->node);
+      list_delete_fast(&wdog->node);
 
       /* Mark the watchdog inactive */
 
