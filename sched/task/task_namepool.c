@@ -79,7 +79,8 @@ struct taskname_buffer_s
  * Private Data
  ****************************************************************************/
 
-static struct taskname_buffer_s g_taskname_buffer;
+static DEFINE_PER_CPU_BSS_BMP(struct taskname_buffer_s, g_taskname_buffer);
+#define g_taskname_buffer this_cpu_var_bmp(g_taskname_buffer)
 
 /****************************************************************************
  * Private Functions
