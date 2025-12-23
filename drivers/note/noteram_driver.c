@@ -157,7 +157,8 @@ static void noteram_add(FAR struct note_driver_s *drv,
                         bool noswitches);
 static void
 noteram_dump_init_context(FAR struct noteram_dump_context_s *ctx);
-static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
+static int noteram_dump_one(FAR const struct note_max_s *p,
+                            FAR struct lib_outstream_s *s,
                             FAR struct noteram_dump_context_s *ctx);
 static unsigned int noteram_unread_length(FAR struct noteram_driver_s *drv);
 
@@ -506,7 +507,7 @@ static void noteram_remove(FAR struct noteram_driver_s *drv)
 
   /* Get the length of the note at the tail index */
 
-  length = NOTE_ALIGN(drv->buffer[tail]);
+  length = drv->buffer[tail];
   DEBUGASSERT(length <= noteram_length(drv));
 
   /* Increment the tail index to remove the entire note from the circular
@@ -543,7 +544,6 @@ static void noteram_remove(FAR struct noteram_driver_s *drv)
 static ssize_t noteram_get(FAR struct noteram_driver_s *drv,
                            FAR uint8_t *buffer, size_t buflen)
 {
-  FAR struct note_common_s *note;
   uint32_t remaining;
   uint32_t read;
   ssize_t notelen;
@@ -566,8 +566,7 @@ static ssize_t noteram_get(FAR struct noteram_driver_s *drv,
 
   /* Get the length of the note at the read index */
 
-  note = (FAR struct note_common_s *)&drv->buffer[read];
-  notelen = note->nc_length;
+  notelen = drv->buffer[read];
   DEBUGASSERT(notelen <= circlen);
 
   /* Is the user buffer large enough to hold the note? */
@@ -594,10 +593,9 @@ static ssize_t noteram_get(FAR struct noteram_driver_s *drv,
       remaining--;
     }
 
-  drv->header->read = noteram_next(drv, drv->header->read,
-                                   NOTE_ALIGN(notelen));
+  drv->header->read = noteram_next(drv, drv->header->read, notelen);
 
-  return NOTE_ALIGN(notelen);
+  return notelen;
 }
 
 /****************************************************************************
@@ -673,12 +671,12 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
 
       do
         {
-          aligned_data(sizeof(uintptr_t)) uint8_t note[256];
+          struct note_max_s note;
 
           /* Get the next note (removing it from the buffer) */
 
           flags = spin_lock_irqsave_notrace(&drv->header->lock);
-          ret = noteram_get(drv, note, sizeof(note));
+          ret = noteram_get(drv, (FAR uint8_t *)&note, sizeof(note));
           spin_unlock_irqrestore_notrace(&drv->header->lock, flags);
           if (ret <= 0)
             {
@@ -687,8 +685,8 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
 
           /* Parse notes into text format */
 
-          ret = noteram_dump_one(note, (FAR struct lib_outstream_s *)&stream,
-                                 ctx);
+          ret = noteram_dump_one(&note,
+                                 (FAR struct lib_outstream_s *)&stream, ctx);
         }
       while (ret == 0);
 
@@ -982,7 +980,7 @@ static void noteram_add(FAR struct note_driver_s *driver,
   DEBUGASSERT(note != NULL && notelen < drv->bufsize);
   remain = drv->bufsize - noteram_length(drv);
 
-  if (remain <= NOTE_ALIGN(notelen))
+  if (remain <= notelen)
     {
       if (drv->overwrite == NOTE_MODE_OVERWRITE_DISABLE)
         {
@@ -1001,7 +999,7 @@ static void noteram_add(FAR struct note_driver_s *driver,
           noteram_remove(drv);
           remain = drv->bufsize - noteram_length(drv);
         }
-      while (remain <= NOTE_ALIGN(notelen));
+      while (remain <= notelen);
     }
 
   head = drv->header->head;
@@ -1009,7 +1007,7 @@ static void noteram_add(FAR struct note_driver_s *driver,
   space = space < notelen ? space : notelen;
   memcpy(drv->buffer + head, note, space);
   memcpy(drv->buffer, buf + space, notelen - space);
-  drv->header->head = noteram_next(drv, head, NOTE_ALIGN(notelen));
+  drv->header->head = noteram_next(drv, head, notelen);
   spin_unlock_irqrestore_notrace(&drv->header->lock, flags);
 
   if (!noswitches && drv->pfd &&
@@ -1048,7 +1046,7 @@ static void noteram_dump_init_context(FAR struct noteram_dump_context_s *ctx)
  ****************************************************************************/
 
 static int noteram_dump_header(FAR struct lib_outstream_s *s,
-                               FAR struct note_common_s *note,
+                               FAR const struct note_common_s *note,
                                FAR struct noteram_dump_context_s *ctx)
 {
   struct timespec ts;
@@ -1080,7 +1078,7 @@ static int noteram_dump_header(FAR struct lib_outstream_s *s,
  ****************************************************************************/
 
 static int noteram_dump_sched_switch(FAR struct lib_outstream_s *s,
-                                     FAR struct note_common_s *note,
+                                     FAR const struct note_common_s *note,
                                      FAR struct noteram_dump_context_s *ctx)
 {
   FAR struct noteram_dump_cpu_context_s *cctx;
@@ -1183,10 +1181,11 @@ static int noteram_dump_printf(FAR struct lib_outstream_s *s,
  * Name: noteram_dump_one
  ****************************************************************************/
 
-static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
+static int noteram_dump_one(FAR const struct note_max_s *p,
+                            FAR struct lib_outstream_s *s,
                             FAR struct noteram_dump_context_s *ctx)
 {
-  FAR struct note_common_s *note = (FAR struct note_common_s *)p;
+  FAR const struct note_common_s *note = &p->cmn;
   FAR struct noteram_dump_cpu_context_s *cctx;
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   char buf[TASK_NAME_SIZE];
@@ -1553,7 +1552,7 @@ static void noteram_dump(FAR struct noteram_driver_s *drv)
 {
   struct noteram_dump_context_s ctx;
   struct lib_syslograwstream_s stream;
-  uint8_t note[256];
+  struct note_max_s note;
 
   memset(&ctx, 0, sizeof(ctx));
   lib_syslograwstream_open(&stream);
@@ -1563,13 +1562,13 @@ static void noteram_dump(FAR struct noteram_driver_s *drv)
     {
       ssize_t ret;
 
-      ret = noteram_get(drv, note, sizeof(note));
+      ret = noteram_get(drv, (FAR uint8_t *)&note, sizeof(note));
       if (ret <= 0)
         {
           break;
         }
 
-      noteram_dump_one(note, &stream.common, &ctx);
+      noteram_dump_one(&note, &stream.common, &ctx);
     }
 
   lib_syslograwstream_close(&stream);
@@ -1691,8 +1690,6 @@ noteram_initialize_with_buffer(FAR const char *devpath,
   FAR struct noteram_driver_s *drv;
   size_t len = 0;
   int ret;
-
-  DEBUGASSERT(NOTE_ALIGN((uintptr_t)buffer) == (uintptr_t)buffer);
 
   if (!buffer || bufsize <= sizeof(struct noteram_header_s))
     {
