@@ -79,4 +79,8 @@ void up_dump_register(void *dumpregs)
 #ifdef REG_EXC_RETURN
   _alert("EXC_RETURN: %08" PRIx32 "\n", regs[REG_EXC_RETURN]);
 #endif
+
+#ifdef CONFIG_ARCH_ARM_M
+  _alert("PSP: %08" PRIx32 "\n", getpsp());
+#endif
 }
