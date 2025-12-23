@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/include/armv8-r/irq.h
+ * arch/arm/include/arm_a_r/irq.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,8 +22,8 @@
  * through nuttx/irq.h
  */
 
-#ifndef __ARCH_ARM_INCLUDE_ARMV8_R_IRQ_H
-#define __ARCH_ARM_INCLUDE_ARMV8_R_IRQ_H
+#ifndef __ARCH_ARM_INCLUDE_ARM_A_R_IRQ_H
+#define __ARCH_ARM_INCLUDE_ARM_A_R_IRQ_H
 
 /****************************************************************************
  * Included Files
@@ -37,14 +37,18 @@
 #  include <stdint.h>
 #endif
 
-#include <arch/arm_a_r/cp15.h>
+#include <arch/arch.h>
 
 /****************************************************************************
  * Pre-processor Prototypes
  ****************************************************************************/
 
 #ifdef __ghs__
-#  define __ARM_ARCH 8
+#  if defined(CONFIG_ARCH_ARMV7A) || defined(CONFIG_ARCH_ARMV7R)
+#    define __ARM_ARCH 7
+#  elif defined(CONFIG_ARCH_ARMV8R)
+#    define __ARM_ARCH 8
+#  endif
 #endif
 
 /* IRQ Stack Frame Format:
@@ -209,8 +213,6 @@
  * Public Types
  ****************************************************************************/
 
-#ifndef __ASSEMBLY__
-
 #ifdef __cplusplus
 #define EXTERN extern "C"
 extern "C"
@@ -219,12 +221,14 @@ extern "C"
 #define EXTERN extern
 #endif
 
+#ifndef __ASSEMBLY__
+
 /* This structure represents the return state from a system call */
 
 #ifdef CONFIG_LIB_SYSCALL
 struct xcpt_syscall_s
 {
-#ifdef CONFIG_BUILD_PROTECTED
+#ifndef CONFIG_BUILD_FLAT
   uint32_t cpsr;        /* The CPSR value */
 #endif
   uint32_t sysreturn;   /* The return PC */
@@ -252,19 +256,22 @@ struct xcpt_syscall_s
 
 struct xcptcontext
 {
+#ifndef CONFIG_DISABLE_SIGNALS
   /* These are saved copies of the context used during
    * signal processing.
    */
 
   uint32_t *saved_regs;
 
-#ifdef CONFIG_BUILD_PROTECTED
+#ifndef CONFIG_BUILD_FLAT
   /* This is the saved address to use when returning from a user-space
    * signal handler.
    */
 
   uint32_t sigreturn;
+
 #endif
+#endif /* !CONFIG_DISABLE_SIGNALS */
 
   /* Register save area with XCPTCONTEXT_SIZE, only valid when:
    * 1.The task isn't running or
@@ -295,13 +302,15 @@ struct xcptcontext
 
 #ifdef CONFIG_ARCH_ADDRENV
 #ifdef CONFIG_ARCH_STACK_DYNAMIC
-  /* This array holds the physical address of the level 2 page table used
+  /* Experimental support for dynamically sized stacks.  We using per-task
+   * l1entry, so only record the ustack virtual address base.
+   * This array holds the physical address of the level 2 page table used
    * to map the thread's stack memory.  This array will be initially of
    * zeroed and would be back-up up with pages during page fault exception
    * handling to support dynamically sized stacks for each thread.
    */
 
-  uintptr_t *ustack[ARCH_STACK_NSECTS];
+  uintptr_t ustackbase;
 #endif
 
 #ifdef CONFIG_ARCH_KERNEL_STACK
@@ -360,6 +369,7 @@ static inline_function irqstate_t irqstate(void)
 /* Disable IRQs and return the previous IRQ state */
 
 noinstrument_function static inline_function irqstate_t up_irq_save(void)
+#if defined(CONFIG_ARCH_ARMV7A) || defined(CONFIG_ARCH_ARMV7R) || defined(CONFIG_ARCH_ARMV8R)
 {
   unsigned int cpsr;
 
@@ -378,10 +388,26 @@ noinstrument_function static inline_function irqstate_t up_irq_save(void)
 
   return cpsr;
 }
+#else
+{
+  unsigned int cpsr;
+  unsigned int temp;
+  __asm__ __volatile__
+    (
+     "\tmrs    %0, cpsr\n"
+     "\torr    %1, %0, #128\n"
+     "\tmsr    cpsr_c, %1"
+     : "=r" (cpsr), "=r" (temp)
+     :
+     : "cc", "memory");
+  return cpsr;
+}
+#endif
 
 /* Enable IRQs and return the previous IRQ state */
 
 static inline_function irqstate_t up_irq_enable(void)
+#if defined(CONFIG_ARCH_ARMV7A) || defined(CONFIG_ARCH_ARMV7R) || defined(CONFIG_ARCH_ARMV8R)
 {
   unsigned int cpsr;
 
@@ -402,23 +428,27 @@ static inline_function irqstate_t up_irq_enable(void)
 
   return cpsr;
 }
+#else
+{
+  unsigned int cpsr;
+  unsigned int temp;
+  __asm__ __volatile__
+    (
+     "\tmrs    %0, cpsr\n"
+     "\tbic    %1, %0, #128\n"
+     "\tmsr    cpsr_c, %1"
+     : "=r" (cpsr), "=r" (temp)
+     :
+     : "cc", "memory");
+  return cpsr;
+}
+#endif
 
 /* Disable IRQs and return the previous IRQ state */
 
 static inline_function irqstate_t up_irq_disable(void)
 {
-  unsigned int cpsr;
-
-  __asm__ __volatile__
-    (
-      "\tmrs    %0, cpsr\n"
-      "\tcpsid  i\n"
-      : "=r" (cpsr)
-      :
-      : "memory"
-    );
-
-  return cpsr;
+  return up_irq_save();
 }
 
 /* Restore saved IRQ & FIQ state */
@@ -500,4 +530,4 @@ static inline_function bool up_interrupt_context(void)
 #endif
 #endif /* __ASSEMBLY__ */
 
-#endif /* __ARCH_ARM_INCLUDE_ARMV8_R_IRQ_H */
+#endif /* __ARCH_ARM_INCLUDE_ARM_A_R_IRQ_H */
