@@ -32,10 +32,6 @@ if(CONFIG_ARMV8M_ITMSYSLOG)
   list(APPEND SRCS arm_itm_syslog.c)
 endif()
 
-if(CONFIG_ARMV8M_STACKCHECK)
-  list(APPEND SRCS arm_stackcheck.c)
-endif()
-
 if(CONFIG_ARCH_FPU)
   list(APPEND SRCS arm_fpuconfig.c arm_fpucmp.c)
 endif()

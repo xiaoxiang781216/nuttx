@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-m/arm_stackcheck.c
+ * arch/arm/src/arm_m/arm_stackcheck.c
  *
  *   Copyright (c) 2013, 2014 PX4 Development Team. All rights reserved.
  *
@@ -38,7 +38,7 @@
 
 #include <nuttx/config.h>
 
-#ifdef CONFIG_ARMV7M_STACKCHECK
+#ifdef CONFIG_ARM_STACKCHECK
 
 /* Support per function call stack checking.
  * This code uses R10 to check for a stack overflow within function calls.
@@ -79,7 +79,7 @@ void __stack_overflow_trap(void)
 
   uint32_t regval;
 
-#ifdef CONFIG_ARMV7M_STACKCHECK_BREAKPOINT
+#ifdef CONFIG_ARM_STACKCHECK_BREAKPOINT
   regval = getreg32(NVIC_DHCSR);
   if (regval & NVIC_DHCSR_C_DEBUGEN)
     {
@@ -121,6 +121,10 @@ static void stack_check_enter(void *func, void *caller, void *arg)
             "   bx lr               \n"
     );
 }
+
+/****************************************************************************
+ * Name: arm_stack_check_init
+ ****************************************************************************/
 
 void noinstrument_function arm_stack_check_init(void)
 {

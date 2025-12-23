@@ -41,6 +41,10 @@ ifeq ($(CONFIG_ARCH_ARMV8M),y)
   CMN_CSRCS += arm_securefault.c
 endif
 
+ifeq ($(CONFIG_ARM_STACKCHECK),y)
+  CMN_CSRCS += arm_stackcheck.c
+endif
+
 ifneq ($(CONFIG_DISABLE_SIGNALS),y)
   CMN_CSRCS += arm_schedulesigaction.c arm_sigdeliver.c
 endif
