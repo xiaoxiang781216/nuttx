@@ -792,12 +792,13 @@ static int swkey_kprocess(FAR struct cryptkop *krp)
       return -EINVAL;
     }
 
-  if (krp->krp_param[0].crp_nbits != sizeof(uint32_t) * 8)
+  if (krp->krp_param[0].crp_p == NULL ||
+      krp->krp_param[0].crp_nbits != sizeof(uint32_t) * 8)
     {
       return -EINVAL;
     }
 
-  keyid = *(uint32_t *)krp->krp_param[0].crp_p;
+  keyid = *(FAR uint32_t *)krp->krp_param[0].crp_p;
 
   /* Go through crypto descriptors, processing as we go */
 
@@ -843,7 +844,7 @@ static int swkey_kprocess(FAR struct cryptkop *krp)
             return -EINVAL;
           }
 
-        keylen = *(uint32_t *)krp->krp_param[1].crp_p;
+        keylen = *(FAR uint32_t *)krp->krp_param[1].crp_p;
         if (keylen != 16 && keylen != 24 && keylen != 32)
           {
             return -EINVAL;
@@ -858,7 +859,7 @@ static int swkey_kprocess(FAR struct cryptkop *krp)
             return -EINVAL;
           }
 
-        pub_keyid = *(uint32_t *)krp->krp_param[1].crp_p;
+        pub_keyid = *(FAR uint32_t *)krp->krp_param[1].crp_p;
         krp->krp_status = swkey_gen_secp256r1_key(ctx, priv_keyid,
                                                        pub_keyid);
         break;
@@ -1629,7 +1630,8 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
             if (cri->cri_flags & CRD_F_KEYID)
               {
 #ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
-                keylen = swkey_read(&ctx->file, *(uint32_t *)cri->cri_key,
+                keylen = swkey_read(&ctx->file,
+                                    *(FAR uint32_t *)cri->cri_key,
                                     keybuf, sizeof(keybuf));
                 if (keylen < 0)
                   {
@@ -1692,7 +1694,8 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
             if (cri->cri_flags & CRD_F_KEYID)
               {
 #ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
-                keylen = swkey_read(&ctx->file, *(uint32_t *)cri->cri_key,
+                keylen = swkey_read(&ctx->file,
+                                    *(FAR uint32_t *)cri->cri_key,
                                     keybuf, sizeof(keybuf));
                 if (keylen < 0)
                   {
@@ -1831,7 +1834,8 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
             if (cri->cri_flags & CRD_F_KEYID)
               {
 #ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
-                keylen = swkey_read(&ctx->file, *(uint32_t *)cri->cri_key,
+                keylen = swkey_read(&ctx->file,
+                                    *(FAR uint32_t *)cri->cri_key,
                                     keybuf, sizeof(keybuf));
                 if (keylen < 0)
                   {
@@ -2154,14 +2158,14 @@ int swcr_mod_exp(FAR struct cryptkop *krp)
   if (krp->krp_flags & CRD_F_KEYID)
     {
 #ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
-      bnn.length = swkey_read(&ctx->file, *(uint32_t *)n->crp_p,
+      bnn.length = swkey_read(&ctx->file, *(FAR uint32_t *)n->crp_p,
                               bnn.array, sizeof(bnn.array));
       if (bnn.length < 0)
         {
           return bnn.length;
         }
 
-      bne.length = swkey_read(&ctx->file, *(uint32_t *)e->crp_p,
+      bne.length = swkey_read(&ctx->file, *(FAR uint32_t *)e->crp_p,
                               bne.array, sizeof(bne.array));
       if (bne.length < 0)
         {
@@ -2234,35 +2238,35 @@ int swcr_mod_exp_crt(FAR struct cryptkop *krp)
   if (krp->krp_flags & CRD_F_KEYID)
     {
 #ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
-      bnp.length = swkey_read(&ctx->file, *(uint32_t *)p->crp_p,
+      bnp.length = swkey_read(&ctx->file, *(FAR uint32_t *)p->crp_p,
                               bnp.array, sizeof(bnp.array));
       if (bnp.length < 0)
         {
           return bnp.length;
         }
 
-      bnq.length = swkey_read(&ctx->file, *(uint32_t *)q->crp_p,
+      bnq.length = swkey_read(&ctx->file, *(FAR uint32_t *)q->crp_p,
                               bnq.array, sizeof(bnq.array));
       if (bnq.length < 0)
         {
           return bnq.length;
         }
 
-      bndp.length = swkey_read(&ctx->file, *(uint32_t *)dp->crp_p,
+      bndp.length = swkey_read(&ctx->file, *(FAR uint32_t *)dp->crp_p,
                                 bndp.array, sizeof(bndp.array));
       if (bndp.length < 0)
         {
           return bndp.length;
         }
 
-      bndq.length = swkey_read(&ctx->file, *(uint32_t *)dq->crp_p,
+      bndq.length = swkey_read(&ctx->file, *(FAR uint32_t *)dq->crp_p,
                                 bndq.array, sizeof(bndq.array));
       if (bndq.length < 0)
         {
           return bndq.length;
         }
 
-      bnqp.length = swkey_read(&ctx->file, *(uint32_t *)qp->crp_p,
+      bnqp.length = swkey_read(&ctx->file, *(FAR uint32_t *)qp->crp_p,
                                 bnqp.array, sizeof(bnqp.array));
       if (bnqp.length < 0)
         {
@@ -2357,14 +2361,14 @@ int swcr_rsa_verify(struct cryptkop *krp)
   if (krp->krp_flags & CRD_F_KEYID)
     {
 #ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
-      bnn.length = swkey_read(&ctx->file, *(uint32_t *)n->crp_p,
+      bnn.length = swkey_read(&ctx->file, *(FAR uint32_t *)n->crp_p,
                               bnn.array, sizeof(bnn.array));
       if (bnn.length < 0)
         {
           return bnn.length;
         }
 
-      bne.length = swkey_read(&ctx->file, *(uint32_t *)e->crp_p,
+      bne.length = swkey_read(&ctx->file, *(FAR uint32_t *)e->crp_p,
                               bne.array, sizeof(bne.array));
       if (bne.length < 0)
         {
@@ -2409,9 +2413,31 @@ static int swcr_ecc256_genkey(FAR struct cryptkop *krp)
 
 static int swcr_ecc256_sign(struct cryptkop *krp)
 {
-  uint8_t *d = (uint8_t *)krp->krp_param[0].crp_p;
-  uint8_t *hash = (uint8_t *)krp->krp_param[1].crp_p;
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+  FAR struct swkey_context_s *ctx = swkey_get_context();
+#endif
+  FAR uint8_t *hash = (uint8_t *)krp->krp_param[1].crp_p;
   uint8_t sig[secp256r1 * 2];
+  uint8_t d[secp256r1];
+
+  if (krp->krp_flags & CRD_F_KEYID)
+    {
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+      int length;
+      length = swkey_read(&ctx->file,
+                          *(FAR uint32_t *)krp->krp_param[0].crp_p,
+                          d, secp256r1);
+      if (length < 0)
+        {
+          return length;
+        }
+#endif
+    }
+  else
+    {
+      memcpy(d, krp->krp_param[0].crp_p,
+             krp->krp_param[0].crp_nbits / 8);
+    }
 
   if (ecdsa_sign(d, hash, sig) == 0)
     {
@@ -2425,18 +2451,51 @@ static int swcr_ecc256_sign(struct cryptkop *krp)
 
 static int swcr_ecc256_verify(struct cryptkop *krp)
 {
-  uint8_t *x = (uint8_t *)krp->krp_param[0].crp_p;
-  uint8_t *y = (uint8_t *)krp->krp_param[1].crp_p;
-  uint8_t *r = (uint8_t *)krp->krp_param[3].crp_p;
-  uint8_t *s = (uint8_t *)krp->krp_param[4].crp_p;
-  uint8_t *hash = (uint8_t *)krp->krp_param[5].crp_p;
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+  FAR struct swkey_context_s *ctx = swkey_get_context();
+#endif
   uint8_t publickey[secp256r1 + 1];
   uint8_t signature[secp256r1 * 2];
+  uint8_t point[secp256r1 * 2];
+  uint8_t hash[secp256r1];
+  FAR uint8_t *x;
+  FAR uint8_t *y;
 
-  memcpy(publickey + 1, x, secp256r1);
+  if (krp->krp_flags & CRD_F_KEYID)
+    {
+#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE_KEYMGMT
+      int length;
+      length = swkey_read(&ctx->file,
+                          *(FAR uint32_t *)krp->krp_param[0].crp_p,
+                          point, secp256r1 * 2);
+      if (length < 0)
+        {
+          return length;
+        }
+#endif
+    }
+  else
+    {
+      memcpy(point, krp->krp_param[0].crp_p,
+             krp->krp_param[0].crp_nbits / 8);
+      memcpy(point + secp256r1, krp->krp_param[1].crp_p,
+             krp->krp_param[1].crp_nbits / 8);
+    }
+
+  /* Compressed public key */
+
+  x = point;
+  y = point + secp256r1;
   publickey[0] = 2 + (y[secp256r1 - 1] & 0x01);
-  memcpy(signature, r, secp256r1);
-  memcpy(signature + secp256r1, s, secp256r1);
+  memcpy(publickey + 1, x, secp256r1);
+
+  /* Padding signature and result */
+
+  memcpy(signature, krp->krp_param[3].crp_p,
+                    krp->krp_param[3].crp_nbits / 8);
+  memcpy(signature + secp256r1, krp->krp_param[4].crp_p,
+                                krp->krp_param[4].crp_nbits / 8);
+  memcpy(hash, krp->krp_param[5].crp_p, krp->krp_param[5].crp_nbits / 8);
   return ecdsa_verify(publickey, hash, signature) == 0;
 }
 
