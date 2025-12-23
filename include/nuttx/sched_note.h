@@ -46,9 +46,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define NOTE_ALIGN(a) (((a) + sizeof(uintptr_t) - 1) & \
-                       ~(sizeof(uintptr_t) - 1))
-
 /* Printf argument type */
 
 #define NOTE_PRINTF_UINT32 0
@@ -374,6 +371,15 @@ struct note_counter_s
 struct note_threadtime_s
 {
   clock_t elapsed;
+};
+
+/* Maximum note structure for temporary buffer when copying from byte stream.
+ */
+
+struct note_max_s
+{
+  struct note_common_s cmn;
+  uint8_t data[256 - sizeof(struct note_common_s)];
 };
 
 /****************************************************************************

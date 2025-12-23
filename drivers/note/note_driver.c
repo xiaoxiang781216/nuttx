@@ -511,7 +511,7 @@ static void note_record_taskname(pid_t pid, FAR const char *name)
 
   ti = (FAR struct note_taskname_info_s *)
         &g_note_taskname.buffer[g_note_taskname.head];
-  ti->size = NOTE_ALIGN(tilen);
+  ti->size = tilen;
   ti->pid = pid;
   strlcpy(ti->name, name, namelen + 1);
   g_note_taskname.head += ti->size;
@@ -662,12 +662,10 @@ void sched_note_add(FAR const void *data, size_t len)
           note_add(*driver, note, notelen, false);
         }
 
-      /* The note data from note rpmsg is aligned. When parsing
-       * the data, it is necessary to align the notelen.
-       */
+      /* The note data no longer has alignment padding. */
 
-      data += NOTE_ALIGN(notelen);
-      len -= NOTE_ALIGN(notelen);
+      data += notelen;
+      len -= notelen;
     }
 }
 #endif

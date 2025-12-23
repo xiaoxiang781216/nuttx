@@ -69,9 +69,8 @@ class NoteRam:
         self.buffer = self._process_events(rawdata)
 
     def _process_events(self, rawdata):
-        """Process all trace data with alignment"""
+        """Process all trace data without alignment padding"""
 
-        uintptr_size = utils.sizeof("uintptr_t")
         tracedata = bytes()
         offset = 0
 
@@ -81,7 +80,7 @@ class NoteRam:
                 raise BufferError(f"Invalid event length: {notelen}")
 
             event = rawdata[offset : offset + notelen]
-            offset += (notelen + uintptr_size - 1) & ~(uintptr_size - 1)
+            offset += notelen  # No alignment padding
             tracedata += event
 
         return tracedata

@@ -136,7 +136,7 @@ static inline void noterpmsg_remove(FAR struct noterpmsg_driver_s *drv)
   uint8_t notelen = drv->buffer[tail];
 
   DEBUGASSERT(notelen <= noterpmsg_length(drv));
-  drv->tail = noterpmsg_next(drv, tail, NOTE_ALIGN(notelen));
+  drv->tail = noterpmsg_next(drv, tail, notelen);
 }
 
 static bool noterpmsg_transfer(FAR struct noterpmsg_driver_s *drv,
@@ -179,8 +179,8 @@ static bool noterpmsg_transfer(FAR struct noterpmsg_driver_s *drv,
           len = 0;
           while (len + notelen <= space)
             {
-              pos = noterpmsg_next(drv, pos, NOTE_ALIGN(notelen));
-              len += NOTE_ALIGN(notelen);
+              pos = noterpmsg_next(drv, pos, notelen);
+              len += notelen;
               notelen = drv->buffer[pos];
             }
         }
@@ -196,7 +196,7 @@ static bool noterpmsg_transfer(FAR struct noterpmsg_driver_s *drv,
           rpmsg_release_tx_buffer(&drv->ept, buffer);
         }
 
-      drv->tail = noterpmsg_next(drv, drv->tail, NOTE_ALIGN(len));
+      drv->tail = noterpmsg_next(drv, drv->tail, len);
       spin_unlock_irqrestore_notrace(&drv->lock, flags);
     }
 }
@@ -225,7 +225,7 @@ static void noterpmsg_add(FAR struct note_driver_s *driver,
   flags = spin_lock_irqsave_notrace(&drv->lock);
 
   space = CONFIG_DRIVERS_NOTERPMSG_BUFSIZE - noterpmsg_length(drv);
-  if (space < NOTE_ALIGN(notelen))
+  if (space < notelen)
     {
       if (!up_interrupt_context() && !sched_idletask())
         {
@@ -244,7 +244,7 @@ static void noterpmsg_add(FAR struct note_driver_s *driver,
               space = CONFIG_DRIVERS_NOTERPMSG_BUFSIZE -
                       noterpmsg_length(drv);
             }
-          while (space < NOTE_ALIGN(notelen));
+          while (space < notelen);
         }
     }
 
@@ -254,7 +254,7 @@ static void noterpmsg_add(FAR struct note_driver_s *driver,
   memcpy(drv->buffer + drv->head, note, space);
   memcpy(drv->buffer, note + space, notelen - space);
 
-  drv->head = noterpmsg_next(drv, drv->head, NOTE_ALIGN(notelen));
+  drv->head = noterpmsg_next(drv, drv->head, notelen);
   spin_unlock_irqrestore_notrace(&drv->lock, flags);
 
   if (!noswitches && OSINIT_OS_READY() && work_available(&drv->work))
