@@ -48,9 +48,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define NOTE_ALIGN(a) (((a) + sizeof(uint64_t) - 1) & \
-                       ~(sizeof(uint64_t) - 1))
-
 #ifdef __cplusplus
 extern "C"
 {
