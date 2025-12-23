@@ -60,50 +60,49 @@
 
 int wd_cancel(FAR struct wdog_s *wdog)
 {
-  irqstate_t flags;
-  int ret   = -EINVAL;
-  bool head = false;
+  FAR struct wdog_s *first;
+  irqstate_t         flags;
+  int                  ret = -EINVAL;
 
   if (wdog != NULL)
-    {
-      sched_note_wdog(NOTE_WDOG_CANCEL, (FAR void *)wdog->func,
-                      (FAR void *)(uintptr_t)wdog->expired);
-    }
-
-  flags = enter_critical_section();
-
-  /* Make sure that the watchdog is valid and still active. */
-
-  if (wdog != NULL && WDOG_ISACTIVE(wdog))
     {
       /* Prohibit timer interactions with the timer queue until the
        * cancellation is complete
        */
 
-      head = list_is_head(&g_wdactivelist, &wdog->node);
+      flags = enter_critical_section();
 
-      /* Now, remove the watchdog from the timer queue */
+      /* Make sure that the watchdog is valid and still active. */
 
-      list_delete_fast(&wdog->node);
+      if (WDOG_ISACTIVE(wdog))
+        {
+          first = list_first_entry(&g_wdactivelist, struct wdog_s, node);
 
-      /* Mark the watchdog inactive */
+          /* Now, remove the watchdog from the timer queue */
 
-      wdog->func = NULL;
+          list_delete_fast(&wdog->node);
 
-      ret = OK;
+          /* Mark the watchdog inactive */
+
+          wdog->func = NULL;
+
+          if (first == wdog)
+            {
+              /* If the watchdog is at the head of the timer queue, then
+               * we will need to re-adjust the interval timer that will
+               * generate the next interval event.
+               */
+
+              nxsched_reassess_timer();
+            }
+
+          ret = OK;
+        }
+
+      leave_critical_section(flags);
+      sched_note_wdog(NOTE_WDOG_CANCEL, (FAR void *)wdog->func,
+                      (FAR void *)(uintptr_t)wdog->expired);
     }
-
-  if (head)
-    {
-      /* If the watchdog is at the head of the timer queue, then
-       * we will need to re-adjust the interval timer that will
-       * generate the next interval event.
-       */
-
-      nxsched_reassess_timer();
-    }
-
-  leave_critical_section(flags);
 
   return ret;
 }

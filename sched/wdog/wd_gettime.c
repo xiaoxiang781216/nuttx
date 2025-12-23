@@ -28,6 +28,7 @@
 
 #include <nuttx/wdog.h>
 #include <nuttx/irq.h>
+#include <nuttx/spinlock.h>
 
 #include "wdog/wdog.h"
 
@@ -54,12 +55,18 @@
 
 clock_t wd_gettime(FAR struct wdog_s *wdog)
 {
-  sclock_t delay = 0;
+  irqstate_t flags;
+  clock_t    expired;
+  sclock_t   delay = 0;
 
   if (wdog && WDOG_ISACTIVE(wdog))
     {
-      delay = (sclock_t)(wdog->expired - clock_systime_ticks());
-      delay = delay < 0 ? 0 : delay;
+      flags   = enter_critical_section();
+      expired = wdog->expired;
+      leave_critical_section(flags);
+
+      delay   = (sclock_t)(expired - clock_systime_ticks());
+      delay   = delay >= 0 ? delay : 0;
     }
 
   return (clock_t)delay;
