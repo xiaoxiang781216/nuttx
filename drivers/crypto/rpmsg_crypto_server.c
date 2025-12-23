@@ -710,6 +710,128 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
   return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + data_len);
 }
 
+static int
+rpmsg_crypto_kprocess_ecdsa(FAR struct rpmsg_endpoint *ept,
+                            FAR struct rpmsg_crypto_kprocess_s *msg,
+                            size_t len, uint32_t src, FAR void *priv)
+{
+  FAR struct rpmsg_crypto_kprocess_s *rsp;
+  FAR struct crparam *dst;
+  FAR struct crparam *d;
+  FAR struct crparam *x;
+  FAR struct crparam *y;
+  FAR struct crparam *r;
+  FAR struct crparam *s;
+  struct cryptkop krp;
+  uint32_t data_len = 0;
+  uint32_t siglen;
+  uint32_t keylen;
+  uint32_t space;
+
+  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  if (rsp == NULL)
+    {
+      rpmsgerr("get tx payload failed or no enough space\n");
+      return -ENOMEM;
+    }
+
+  rsp->header = msg->header;
+  rsp->ctrl = msg->ctrl;
+  rsp->data = msg->data;
+
+  memset(&krp, 0, sizeof(krp));
+  krp.krp_flags = msg->data.header.flag;
+  switch (msg->data.header.opcode)
+    {
+      case VIRTIO_CRYPTO_AKCIPHER_SIGN:
+        d = &krp.krp_param[0];
+        r = &krp.krp_param[2];
+        s = &krp.krp_param[3];
+        dst = &krp.krp_param[1];
+        krp.krp_op = CRK_ECDSA_SECP256R1_SIGN;
+        krp.krp_optype = CRYPTO_OP_SIGN;
+        krp.krp_keytype = CRYPTO_KEY_TYPE_PRIVATE;
+        krp.krp_iparams = 2;
+        krp.krp_oparams = 2;
+
+        /* import private key */
+
+        keylen = msg->ctrl.op_flf.akcipher.key_len;
+        d->crp_p = (caddr_t)msg->buf;
+        d->crp_nbits = keylen * 8;
+
+        /* import source data */
+
+        dst->crp_p = (caddr_t)msg->buf + keylen;
+        dst->crp_nbits = msg->data.op_flf.akcipher.src_data_len * 8;
+
+        siglen = msg->data.op_flf.akcipher.dst_data_len;
+        r->crp_p = (caddr_t)rsp->buf;
+        r->crp_nbits = siglen / 2 * 8;
+        s->crp_p = (caddr_t)rsp->buf + siglen / 2;
+        s->crp_nbits = siglen / 2 * 8;
+        data_len += siglen;
+        break;
+      case VIRTIO_CRYPTO_AKCIPHER_VERIFY:
+        x = &krp.krp_param[0];
+        y = &krp.krp_param[1];
+        r = &krp.krp_param[3];
+        s = &krp.krp_param[4];
+        dst = &krp.krp_param[5];
+        krp.krp_op = CRK_ECDSA_SECP256R1_VERIFY;
+        krp.krp_optype = CRYPTO_OP_VERIFY;
+        krp.krp_keytype = CRYPTO_KEY_TYPE_PUBLIC;
+        krp.krp_iparams = 6;
+        krp.krp_oparams = 0;
+
+        /* import public key */
+
+        keylen = msg->ctrl.op_flf.akcipher.key_len;
+        x->crp_p = (caddr_t)msg->buf;
+        x->crp_nbits = keylen / 2 * 8;
+        y->crp_p = (caddr_t)msg->buf + keylen / 2;
+        y->crp_nbits = keylen / 2 * 8;
+
+        /* import signature */
+
+        siglen = msg->data.op_flf.akcipher.src_data_len;
+        r->crp_p = (caddr_t)msg->buf + keylen;
+        r->crp_nbits = siglen / 2 * 8;
+        s->crp_p = (caddr_t)msg->buf + keylen + siglen / 2;
+        s->crp_nbits = siglen / 2 * 8;
+
+        /* import source data */
+
+        dst->crp_p = (caddr_t)msg->buf + keylen + siglen;
+        dst->crp_nbits = msg->data.op_flf.akcipher.dst_data_len * 8;
+        break;
+      case VIRTIO_CRYPTO_AKCIPHER_GENKEY:
+        d = &krp.krp_param[0];
+        x = &krp.krp_param[1];
+        y = &krp.krp_param[2];
+
+        krp.krp_op = CRK_ECDSA_SECP256R1_GENKEY;
+        keylen = msg->data.op_flf.akcipher.src_data_len;
+        d->crp_p = rsp->buf;
+        d->crp_nbits = keylen * 8;
+        data_len += keylen;
+
+        keylen = msg->data.op_flf.akcipher.dst_data_len;
+        x->crp_p = rsp->buf + data_len;
+        x->crp_nbits = keylen / 2 * 8;
+        data_len += keylen / 2;
+        y->crp_p = rsp->buf + data_len;
+        y->crp_nbits = keylen / 2 * 8;
+        data_len += keylen / 2;
+        break;
+      default:
+        return -EINVAL;
+    }
+
+  rsp->header.result = crypto_kinvoke(&krp);
+  return rpmsg_send_nocopy(ept, rsp, sizeof(*rsp) + data_len);
+}
+
 /****************************************************************************
  * Name: rpmsg_crypto_process_handler
  ****************************************************************************/
@@ -770,9 +892,8 @@ static int rpmsg_crypto_kprocess_handler(FAR struct rpmsg_endpoint *ept,
       case VIRTIO_CRYPTO_AKCIPHER_RSA:
         return rpmsg_crypto_kprocess_rsa(ept, msg, len, src, priv);
       case VIRTIO_CRYPTO_AKCIPHER_ECDSA:
-        /* TODO: Need to support ECDSA
-         */
-
+        return rpmsg_crypto_kprocess_ecdsa(ept, msg, len, src, priv);
+      default:
         return -ENOTSUP;
     }
 
