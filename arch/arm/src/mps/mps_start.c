@@ -128,7 +128,6 @@ void __start(void)
   mpu_early_reset();
 #ifdef CONFIG_ARM_MPU
   mpu_showtype();
-  mpu_priv_flash((uintptr_t)_stext, (uintptr_t)_etext - (uintptr_t)_stext);
 #endif
   arm_fpuconfig();
 
@@ -185,6 +184,7 @@ void __start(void)
 #ifdef CONFIG_ARM_MPU
   /* Then enable the MPU */
 
+  mpu_priv_flash((uintptr_t)_stext, (uintptr_t)_etext - (uintptr_t)_stext);
   mpu_control(true, false, true);
 #endif
 
