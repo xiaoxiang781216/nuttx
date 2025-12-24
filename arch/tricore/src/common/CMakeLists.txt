@@ -51,7 +51,9 @@ endif()
 
 if(CONFIG_LIB_PPCCALL)
   list(APPEND SRCS tricore_ppccall_handler.c)
-  target_sources(arch_interface PRIVATE tricore_ppccall_handler.c)
+  if(CONFIG_BUILD_PROTECTED OR CONFIG_BUILD_KERNEL)
+    target_sources(arch_interface PRIVATE tricore_ppccall_handler.c)
+  endif()
 endif()
 
 if(CONFIG_BUILD_PROTECTED OR CONFIG_BUILD_KERNEL)

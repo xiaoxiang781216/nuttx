@@ -73,6 +73,8 @@ static inline_function void dispatch_syscall(void)
   );
   sys_call0(SYS_syscall_return);
 }
+#else
+#  define dispatch_syscall NULL
 #endif
 
 #ifdef CONFIG_LIB_PPCCALL
@@ -92,6 +94,10 @@ static bool dispatch_ppccall(struct tcb_s *rtcb, uintptr_t *puregs,
       return false;
     }
 
+#ifdef CONFIG_BUILD_FLAT
+  psw = puregs[REG_PSW];
+  pc  = (uintptr_t)up_ppccall_handler;
+#else
   psw = puregs[REG_PSW] & ~PSW_MODE_MASK & ~PSW_PRS_MASK;
   if ((atomic_read(&info->tcb->flags) & TCB_FLAG_TTYPE_MASK) ==
       TCB_FLAG_TTYPE_KERNEL)
@@ -106,6 +112,7 @@ static bool dispatch_ppccall(struct tcb_s *rtcb, uintptr_t *puregs,
       pc   = (uintptr_t)USERSPACE->ppccall_handler;
       tricore_change_pprs(rtcb, PSW_PRS_USER_SET);
     }
+#endif
 
   /* New plregs and puregs to ppccall_handler */
 
@@ -122,6 +129,15 @@ static bool dispatch_ppccall(struct tcb_s *rtcb, uintptr_t *puregs,
   nplregs[REG_D4] = info->func;
   nplregs[REG_A4] = (uintptr_t)param;
   return true;
+}
+#else
+static inline_function bool dispatch_ppccall(struct tcb_s *rtcb,
+                                             uintptr_t *puregs,
+                                             uintptr_t *plregs)
+{
+  serr("ERROR: PPCALL not supported\n");
+  plregs[REG_D2] = -ENOENT;
+  return false;
 }
 #endif
 
@@ -209,7 +225,7 @@ void tricore_svcall(volatile void *trap)
         }
         break;
 
-#ifdef CONFIG_LIB_SYSCALL
+#if defined(CONFIG_LIB_SYSCALL) || defined(CONFIG_LIB_PPCCALL)
       case SYS_syscall_return:
         {
           struct tcb_s *rtcb = this_task();
@@ -401,13 +417,13 @@ void tricore_svcall(volatile void *trap)
 #endif
 
       default:
-#ifdef CONFIG_LIB_SYSCALL
+#if defined(CONFIG_LIB_SYSCALL) || defined(CONFIG_LIB_PPCCALL)
         /* Verify that the SYS call number is within range */
 
+#  ifdef CONFIG_LIB_SYSCALL
         DEBUGASSERT(cmd >= CONFIG_SYS_RESERVED && cmd < SYS_maxsyscall);
-#  ifdef CONFIG_LIB_PPCCALL
-      case SYS_ppccall:
 #  endif
+      case SYS_ppccall:
         {
           struct tcb_s *rtcb = nxsched_self();
           uintptr_t *regs = plregs;
@@ -421,7 +437,6 @@ void tricore_svcall(volatile void *trap)
 
           rtcb->xcp.syscall_regs[index] = puregs;
 
-#  ifdef CONFIG_LIB_PPCCALL
           if (cmd == SYS_ppccall)
             {
               if (!dispatch_ppccall(rtcb, puregs, plregs))
@@ -430,7 +445,6 @@ void tricore_svcall(volatile void *trap)
                 }
             }
           else
-#  endif
             {
               /* New plregs and puregs to dispatch_syscall */
 

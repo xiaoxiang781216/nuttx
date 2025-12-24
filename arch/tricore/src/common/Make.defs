@@ -55,7 +55,9 @@ endif
 
 ifeq ($(CONFIG_LIB_PPCCALL),y)
   CMN_CSRCS += tricore_ppccall_handler.c
-  CMN_UASRCS += tricore_ppccall_handler.c
+  ifeq ($(CONFIG_BUILD_PROTECTED)$(CONFIG_BUILD_KERNEL),y)
+    CMN_UASRCS += tricore_ppccall_handler.c
+  endif
 endif
 
 ifeq ($(CONFIG_SCHED_BACKTRACE),y)

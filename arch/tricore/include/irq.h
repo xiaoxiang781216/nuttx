@@ -51,6 +51,10 @@
  * Pre-processor Prototypes
  ****************************************************************************/
 
+#ifndef CONFIG_SYS_NNEST
+#  define CONFIG_SYS_NNEST 2
+#endif
+
 /* Upper CSA */
 
 #define REG_UPCXI           0
@@ -216,7 +220,7 @@ struct xcptcontext
 
   uintptr_t *regs;
 
-#ifdef CONFIG_LIB_SYSCALL
+#if defined(CONFIG_LIB_SYSCALL) || defined(CONFIG_LIB_PPCCALL)
   /* The following array holds information needed to return from each nested
    * system call.
    */
