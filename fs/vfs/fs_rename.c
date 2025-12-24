@@ -498,14 +498,16 @@ static int mountptrename(FAR const char *oldpath, FAR struct inode *oldinode,
                    * method should check that.
                    */
 
-                  ret = oldinode->u.i_mops->unlink(oldinode, newrelpath);
 #ifdef CONFIG_FS_PATHCACHE
+                  ret = oldinode->u.i_mops->unlink(oldinode, newrelpath);
                   if (ret >= 0 && INODE_IS_PATHCACHE(oldinode))
                     {
                       /* Remove cached entry for this file */
 
                       pathcache_remove(newpath);
                     }
+#else
+                  oldinode->u.i_mops->unlink(oldinode, newrelpath);
 #endif
 
 #ifdef CONFIG_FS_NOTIFY
