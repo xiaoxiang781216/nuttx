@@ -255,6 +255,8 @@ clock_t UP_REALSYM(perf_gettime)(void);
 #define NOTE_GETFREQ                     _NOTEIOC(0x0E)
 #define NOTE_GETRATELIMIT                _NOTEIOC(0x0F)
 #define NOTE_SETRATELIMIT                _NOTEIOC(0x10)
+#define NOTE_GETLEVEL                    _NOTEIOC(0x11)
+#define NOTE_SETLEVEL                    _NOTEIOC(0x12)
 
 /* Overwrite mode definitions */
 
