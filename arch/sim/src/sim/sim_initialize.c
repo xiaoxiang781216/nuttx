@@ -261,10 +261,6 @@ void up_initialize(void)
   host_init_cwd();
 #endif
 
-  g_work_queue = work_queue_create("sim_loop_wq",
-                                   CONFIG_SCHED_HPWORKPRIORITY, NULL,
-                                   CONFIG_SCHED_HPWORKSTACKSIZE, 1u);
-
 #ifdef CONFIG_PM
   /* Initialize the power management subsystem.  This MCU-specific function
    * must be called *very* early in the initialization sequence *before* any
