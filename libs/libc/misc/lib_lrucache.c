@@ -198,6 +198,13 @@ int lru_cache_init(FAR struct lru_cache_s *cache, size_t max_entries,
   DEBUGASSERT(cache != NULL && ops != NULL && ops->get_cb != NULL
               && ops->put_cb != NULL);
 
+  /* Limit hash_size to make sure correct HASH calculations */
+
+  if (hash_size == 0 || hash_size > (1UL << 31))
+    {
+      return -EINVAL;
+    }
+
   cache->hash_table = lib_malloc(hash_size * sizeof(hash_head_t));
   if (cache->hash_table == NULL)
     {
