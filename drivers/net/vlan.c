@@ -327,6 +327,10 @@ int vlan_register(FAR struct netdev_lowerhalf_s *real, uint16_t vid,
   vlan->dev.priority  = real->priority;
   vlan->dev.ops       = &g_vlan_ops;
 
+  /* Copy MTU from the real device */
+
+  vlan->dev.netdev.d_pktsize = real->netdev.d_pktsize;
+
   /* Set the VLAN device name, use a buffer to make compiler happy */
 
   snprintf(vlanifname, sizeof(vlanifname), VLAN_DEV_NAME_FMT,

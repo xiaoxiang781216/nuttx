@@ -74,7 +74,7 @@
 #include "sim_internal.h"
 #include "sim_wifihost.h"
 
-#define SIM_NETDEV_BUFSIZE (CONFIG_SIM_NETDEV_MTU + ETH_HDRLEN + \
+#define SIM_NETDEV_BUFSIZE (CONFIG_SIM_NETDEV_MTU + ETH_8021Q_HDRLEN + \
                             CONFIG_NET_GUARDSIZE)
 #define SIM_NETDEV_PERIOD  MSEC2TICK(CONFIG_SIM_LOOP_INTERVAL)
 
