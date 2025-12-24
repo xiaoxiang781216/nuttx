@@ -105,6 +105,9 @@ static inline_function void nxmutex_remove_backtrace(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxmutex_init(FAR mutex_t *mutex);
+#else
 static inline_function int nxmutex_init(FAR mutex_t *mutex)
 {
   int ret = nxsem_init(&mutex->sem, 0, NXSEM_NO_MHOLDER);
@@ -120,6 +123,7 @@ static inline_function int nxmutex_init(FAR mutex_t *mutex)
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: nxmutex_get_holder
@@ -136,11 +140,15 @@ static inline_function int nxmutex_init(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+pid_t nxmutex_get_holder(FAR mutex_t *mutex);
+#else
 static inline_function pid_t nxmutex_get_holder(FAR mutex_t *mutex)
 {
   uint32_t mholder = mutex->sem.val.mholder & ~NXSEM_MBLOCKING_BIT;
   return NXSEM_MACQUIRED(mholder) ? (pid_t)mholder : -1;
 }
+#endif
 
 /****************************************************************************
  * Name: nxmutex_is_hold
@@ -156,11 +164,15 @@ static inline_function pid_t nxmutex_get_holder(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+bool nxmutex_is_hold(FAR mutex_t *mutex);
+#else
 static inline_function
 bool nxmutex_is_hold(FAR mutex_t *mutex)
 {
   return nxmutex_get_holder(mutex) == _SCHED_GETTID();
 }
+#endif
 
 /****************************************************************************
  * Name: nxrmutex_is_hold
@@ -176,10 +188,14 @@ bool nxmutex_is_hold(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+bool nxrmutex_is_hold(FAR rmutex_t *rmutex);
+#else
 static inline_function bool nxrmutex_is_hold(FAR rmutex_t *rmutex)
 {
   return nxmutex_is_hold(&rmutex->mutex);
 }
+#endif
 
 /****************************************************************************
  * Name: nxmutex_ticklock
@@ -207,6 +223,9 @@ static inline_function bool nxrmutex_is_hold(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxmutex_ticklock(FAR mutex_t *mutex, clock_t delay);
+#else
 static inline_function
 int nxmutex_ticklock(FAR mutex_t *mutex, clock_t delay)
 {
@@ -248,6 +267,7 @@ int nxmutex_ticklock(FAR mutex_t *mutex, clock_t delay)
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: nxmutex_clocklock
@@ -274,6 +294,10 @@ int nxmutex_ticklock(FAR mutex_t *mutex, clock_t delay)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxmutex_clocklock(FAR mutex_t *mutex, clockid_t clockid,
+                      FAR const struct timespec *abstime);
+#else
 static inline_function
 int nxmutex_clocklock(FAR mutex_t *mutex, clockid_t clockid,
                       FAR const struct timespec *abstime)
@@ -316,6 +340,7 @@ int nxmutex_clocklock(FAR mutex_t *mutex, clockid_t clockid,
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: nxmutex_timedlock
@@ -341,6 +366,9 @@ int nxmutex_clocklock(FAR mutex_t *mutex, clockid_t clockid,
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxmutex_timedlock(FAR mutex_t *mutex, unsigned int timeout);
+#else
 static inline_function
 int nxmutex_timedlock(FAR mutex_t *mutex, unsigned int timeout)
 {
@@ -356,6 +384,7 @@ int nxmutex_timedlock(FAR mutex_t *mutex, unsigned int timeout)
 
   return nxmutex_clocklock(mutex, CLOCK_MONOTONIC, &rqtp);
 }
+#endif
 
 /****************************************************************************
  * Name: nxmutex_lock
@@ -377,6 +406,9 @@ int nxmutex_timedlock(FAR mutex_t *mutex, unsigned int timeout)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxmutex_lock(FAR mutex_t *mutex);
+#else
 static inline_function int nxmutex_lock(FAR mutex_t *mutex)
 {
   int ret;
@@ -399,6 +431,7 @@ static inline_function int nxmutex_lock(FAR mutex_t *mutex)
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: nrxmutex_lock
@@ -419,6 +452,9 @@ static inline_function int nxmutex_lock(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxrmutex_lock(FAR rmutex_t *rmutex);
+#else
 static inline_function int nxrmutex_lock(FAR rmutex_t *rmutex)
 {
   int ret = OK;
@@ -436,6 +472,7 @@ static inline_function int nxrmutex_lock(FAR rmutex_t *rmutex)
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: nxmutex_trylock
@@ -458,6 +495,9 @@ static inline_function int nxrmutex_lock(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxmutex_trylock(FAR mutex_t *mutex);
+#else
 static inline_function int nxmutex_trylock(FAR mutex_t *mutex)
 {
   int ret;
@@ -470,6 +510,7 @@ static inline_function int nxmutex_trylock(FAR mutex_t *mutex)
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: nxrmutex_trylock
@@ -494,6 +535,9 @@ static inline_function int nxmutex_trylock(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxrmutex_trylock(FAR rmutex_t *rmutex);
+#else
 static inline_function
 int nxrmutex_trylock(FAR rmutex_t *rmutex)
 {
@@ -512,6 +556,7 @@ int nxrmutex_trylock(FAR rmutex_t *rmutex)
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: nxrmutex_ticklock
@@ -539,6 +584,9 @@ int nxrmutex_trylock(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxrmutex_ticklock(FAR rmutex_t *rmutex, uint32_t delay);
+#else
 static inline_function
 int nxrmutex_ticklock(FAR rmutex_t *rmutex, uint32_t delay)
 {
@@ -557,6 +605,7 @@ int nxrmutex_ticklock(FAR rmutex_t *rmutex, uint32_t delay)
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: nxrmutex_clocklock
@@ -583,6 +632,10 @@ int nxrmutex_ticklock(FAR rmutex_t *rmutex, uint32_t delay)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxrmutex_clocklock(FAR rmutex_t *rmutex, clockid_t clockid,
+                       FAR const struct timespec *abstime);
+#else
 static inline_function
 int nxrmutex_clocklock(FAR rmutex_t *rmutex, clockid_t clockid,
                        FAR const struct timespec *abstime)
@@ -602,6 +655,7 @@ int nxrmutex_clocklock(FAR rmutex_t *rmutex, clockid_t clockid,
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: nxrmutex_timedlock
@@ -628,6 +682,9 @@ int nxrmutex_clocklock(FAR rmutex_t *rmutex, clockid_t clockid,
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxrmutex_timedlock(FAR rmutex_t *rmutex, unsigned int timeout);
+#else
 static inline_function
 int nxrmutex_timedlock(FAR rmutex_t *rmutex, unsigned int timeout)
 {
@@ -646,6 +703,7 @@ int nxrmutex_timedlock(FAR rmutex_t *rmutex, unsigned int timeout)
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: nxmutex_unlock
@@ -667,12 +725,16 @@ int nxrmutex_timedlock(FAR rmutex_t *rmutex, unsigned int timeout)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxmutex_unlock(FAR mutex_t *mutex);
+#else
 static inline_function
 int nxmutex_unlock(FAR mutex_t *mutex)
 {
   nxmutex_remove_backtrace(mutex);
   return nxmutex_post(&mutex->sem);
 }
+#endif
 
 /****************************************************************************
  * Name: nxrmutex_unlock
@@ -695,6 +757,9 @@ int nxmutex_unlock(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxrmutex_unlock(FAR rmutex_t *rmutex);
+#else
 static inline_function
 int nxrmutex_unlock(FAR rmutex_t *rmutex)
 {
@@ -713,6 +778,8 @@ int nxrmutex_unlock(FAR rmutex_t *rmutex)
 
   return ret;
 }
+#endif
+
 /****************************************************************************
  * Name: nrxmutex_breaklock
  *
@@ -730,6 +797,9 @@ int nxrmutex_unlock(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxrmutex_breaklock(FAR rmutex_t *rmutex, FAR unsigned int *count);
+#else
 static inline_function
 int nxrmutex_breaklock(FAR rmutex_t *rmutex, FAR unsigned int *count)
 {
@@ -749,6 +819,7 @@ int nxrmutex_breaklock(FAR rmutex_t *rmutex, FAR unsigned int *count)
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: nxrmutex_restorelock
@@ -767,6 +838,9 @@ int nxrmutex_breaklock(FAR rmutex_t *rmutex, FAR unsigned int *count)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxrmutex_restorelock(FAR rmutex_t *rmutex, unsigned int count);
+#else
 static inline_function
 int nxrmutex_restorelock(FAR rmutex_t *rmutex, unsigned int count)
 {
@@ -783,6 +857,7 @@ int nxrmutex_restorelock(FAR rmutex_t *rmutex, unsigned int count)
 
   return ret;
 }
+#endif
 
 #define nxrmutex_set_protocol(rmutex, protocol) \
         nxmutex_set_protocol(&(rmutex)->mutex, protocol)
@@ -806,10 +881,14 @@ int nxrmutex_restorelock(FAR rmutex_t *rmutex, unsigned int count)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+bool nxmutex_is_locked(FAR mutex_t *mutex);
+#else
 static inline_function bool nxmutex_is_locked(FAR mutex_t *mutex)
 {
   return NXSEM_MACQUIRED(mutex->sem.val.mholder);
 }
+#endif
 
 /****************************************************************************
  * Name: nxmutex_destroy
@@ -830,10 +909,14 @@ static inline_function bool nxmutex_is_locked(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxmutex_destroy(FAR mutex_t *mutex);
+#else
 static inline_function int nxmutex_destroy(FAR mutex_t *mutex)
 {
   return nxsem_destroy(&mutex->sem);
 }
+#endif
 
 /****************************************************************************
  * Name: nxmutex_reset
@@ -846,11 +929,15 @@ static inline_function int nxmutex_destroy(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+void nxmutex_reset(FAR mutex_t *mutex);
+#else
 static inline_function void nxmutex_reset(FAR mutex_t *mutex)
 {
   nxmutex_remove_backtrace(mutex);
   nxsem_reset(&mutex->sem, 1);
 }
+#endif
 
 /****************************************************************************
  * Name: nxmutex_breaklock
@@ -870,6 +957,10 @@ static inline_function void nxmutex_reset(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxmutex_breaklock(FAR mutex_t *mutex,
+                                             FAR unsigned int *locked);
+#else
 static inline_function int nxmutex_breaklock(FAR mutex_t *mutex,
                                              FAR unsigned int *locked)
 {
@@ -884,6 +975,7 @@ static inline_function int nxmutex_breaklock(FAR mutex_t *mutex,
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: nxmutex_restorelock
@@ -902,11 +994,15 @@ static inline_function int nxmutex_breaklock(FAR mutex_t *mutex,
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxmutex_restorelock(FAR mutex_t *mutex, unsigned int locked);
+#else
 static inline_function int nxmutex_restorelock(FAR mutex_t *mutex,
                                                unsigned int locked)
 {
   return locked ? nxmutex_lock(mutex) : OK;
 }
+#endif
 
 /****************************************************************************
  * Name: nxmutex_set_protocol
@@ -925,11 +1021,15 @@ static inline_function int nxmutex_restorelock(FAR mutex_t *mutex,
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxmutex_set_protocol(FAR mutex_t *mutex, int protocol);
+#else
 static inline_function int nxmutex_set_protocol(FAR mutex_t *mutex,
                                                 int protocol)
 {
   return nxsem_set_protocol(&mutex->sem, protocol);
 }
+#endif
 
 /****************************************************************************
  * Name: nxmutex_getprioceiling
@@ -949,11 +1049,16 @@ static inline_function int nxmutex_set_protocol(FAR mutex_t *mutex,
  ****************************************************************************/
 
 #ifdef CONFIG_PRIORITY_PROTECT
+#  ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int
+nxmutex_getprioceiling(FAR const mutex_t *mutex, FAR int *prioceiling);
+#  else
 static inline_function int nxmutex_getprioceiling(FAR const mutex_t *mutex,
                                                   FAR int *prioceiling)
 {
   return nxsem_getprioceiling(&mutex->sem, prioceiling);
 }
+#  endif
 #endif
 
 /****************************************************************************
@@ -975,12 +1080,17 @@ static inline_function int nxmutex_getprioceiling(FAR const mutex_t *mutex,
  ****************************************************************************/
 
 #ifdef CONFIG_PRIORITY_PROTECT
+#  ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxmutex_setprioceiling(FAR mutex_t *mutex, int prioceiling,
+                           FAR int *old_ceiling);
+#  else
 static inline_function int nxmutex_setprioceiling(FAR mutex_t *mutex,
                                                   int prioceiling,
                                                   FAR int *old_ceiling)
 {
   return nxsem_setprioceiling(&mutex->sem, prioceiling, old_ceiling);
 }
+#  endif
 #endif
 
 /****************************************************************************
@@ -1003,11 +1113,15 @@ static inline_function int nxmutex_setprioceiling(FAR mutex_t *mutex,
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxrmutex_init(FAR rmutex_t *rmutex);
+#else
 static inline_function int nxrmutex_init(FAR rmutex_t *rmutex)
 {
   rmutex->count = 0;
   return nxmutex_init(&rmutex->mutex);
 }
+#endif
 
 /****************************************************************************
  * Name: nxrmutex_destroy
@@ -1025,6 +1139,9 @@ static inline_function int nxrmutex_init(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxrmutex_destroy(FAR rmutex_t *rmutex);
+#else
 static inline_function int nxrmutex_destroy(FAR rmutex_t *rmutex)
 {
   int ret = nxmutex_destroy(&rmutex->mutex);
@@ -1036,6 +1153,7 @@ static inline_function int nxrmutex_destroy(FAR rmutex_t *rmutex)
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: nxrmutex_is_recursive
@@ -1055,10 +1173,14 @@ static inline_function int nxrmutex_destroy(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+bool nxrmutex_is_recursive(FAR rmutex_t *rmutex);
+#else
 static inline_function bool nxrmutex_is_recursive(FAR rmutex_t *rmutex)
 {
   return rmutex->count > 1;
 }
+#endif
 
 /****************************************************************************
  * Name: nxrmutex_get_holder
@@ -1075,10 +1197,14 @@ static inline_function bool nxrmutex_is_recursive(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+int nxrmutex_get_holder(FAR rmutex_t *rmutex);
+#else
 static inline_function int nxrmutex_get_holder(FAR rmutex_t *rmutex)
 {
   return nxmutex_get_holder(&rmutex->mutex);
 }
+#endif
 
 /****************************************************************************
  * Name: nxrmutex_is_locked
@@ -1096,10 +1222,14 @@ static inline_function int nxrmutex_get_holder(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+bool nxrmutex_is_locked(FAR rmutex_t *rmutex);
+#else
 static inline_function bool nxrmutex_is_locked(FAR rmutex_t *rmutex)
 {
   return nxmutex_is_locked(&rmutex->mutex);
 }
+#endif
 
 /****************************************************************************
  * Name: nxrmutex_reset
@@ -1112,11 +1242,15 @@ static inline_function bool nxrmutex_is_locked(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
+void nxrmutex_reset(FAR rmutex_t *rmutex);
+#else
 static inline_function void nxrmutex_reset(FAR rmutex_t *rmutex)
 {
   rmutex->count = 0;
   nxmutex_reset(&rmutex->mutex);
 }
+#endif
 
 #undef EXTERN
 #ifdef __cplusplus

@@ -17,6 +17,12 @@ config LIBC_CRC32_SLOW
 	---help---
 		Optional disable the CRC32 lookup table to decrease rodata usage.
 
+config LIBC_SEM_MUTEX_NOINLINE
+	bool "Use no inline function to decrease text size"
+	default DEFAULT_SMALL
+	---help---
+		Optional disable the inline function to decrease text usage.
+
 config LIBC_KBDCODEC
 	bool "Keyboard CODEC"
 	default n
