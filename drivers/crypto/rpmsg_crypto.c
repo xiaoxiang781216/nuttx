@@ -489,6 +489,7 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_crypto_s *rdev,
 
       data_size = MIN(data_size, remaining);
       memcpy(buf, crp->crp_buf + offset, data_size);
+      session->data = crp->crp_dst + offset;
       ret = rpmsg_crypto_send_recv(rdev, session, &msg->header,
                                    RPMSG_CRYPTO_PROCESS,
                                    header_size + data_size, true);
@@ -520,6 +521,7 @@ rpmsg_crypto_process_hash_mac(FAR struct rpmsg_crypto_s *rdev,
   uint32_t offset = 0;
   int ret;
 
+  session->data = crp->crp_mac;
   do
     {
       msg = rpmsg_crypto_get_process_msg(rdev, info);
@@ -592,7 +594,6 @@ static int rpmsg_crypto_process(FAR struct cryptop *crp)
     }
 
   info.header.tid = session->tid;
-  session->data = crp;
   if (info.data.header.opcode == VIRTIO_CRYPTO_CIPHER_ENCRYPT ||
       info.data.header.opcode == VIRTIO_CRYPTO_CIPHER_DECRYPT)
     {
@@ -952,23 +953,13 @@ static int rpmsg_crypto_process_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct rpmsg_crypto_session_s *session =
     (FAR struct rpmsg_crypto_session_s *)(uintptr_t)header->cookie;
   FAR struct rpmsg_crypto_process_s *msg = data;
-  FAR struct cryptop *crp = session->data;
+  FAR unsigned char *dst = session->data;
 
   len -= sizeof(*msg);
   session->result = header->result;
   if (session->result == 0 && len > 0)
     {
-      if (msg->data.header.opcode == VIRTIO_CRYPTO_CIPHER_ENCRYPT ||
-          msg->data.header.opcode == VIRTIO_CRYPTO_CIPHER_DECRYPT)
-        {
-          memcpy(crp->crp_opaque, msg->buf, len);
-          crp->crp_opaque += len;
-        }
-      else if (msg->data.header.opcode == VIRTIO_CRYPTO_HASH ||
-               msg->data.header.opcode == VIRTIO_CRYPTO_MAC)
-        {
-          memcpy(crp->crp_mac, msg->buf, len);
-        }
+      memcpy(dst, msg->buf, len);
     }
 
   return rpmsg_post(ept, &session->sem);
