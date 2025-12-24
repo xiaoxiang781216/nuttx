@@ -384,7 +384,6 @@ static int work_thread_create(FAR const char *name, int priority,
       ret = kthread_create_with_stack(name, priority, stack,
                                       stack_size, work_thread, argv);
 
-      DEBUGASSERT(ret > 0);
       if (ret < 0)
         {
           serr("ERROR: work_thread_create %d failed: %d\n", wndx, ret);
