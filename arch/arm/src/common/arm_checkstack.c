@@ -222,7 +222,7 @@ size_t up_check_tcbstack(struct tcb_s *tcb, size_t check_size)
 #ifdef CONFIG_ARCH_ADDRENV
   struct addrenv_s *oldenv;
 
-  if (tcb->group->tg_addrenv_own != NULL)
+  if (tcb != g_running_task && tcb->group->tg_addrenv_own != NULL)
     {
       addrenv_select(tcb->group->tg_addrenv_own, &oldenv);
     }
@@ -231,7 +231,7 @@ size_t up_check_tcbstack(struct tcb_s *tcb, size_t check_size)
   size = arm_stack_check(tcb->stack_base_ptr, check_size);
 
 #ifdef CONFIG_ARCH_ADDRENV
-  if (tcb->group->tg_addrenv_own != NULL)
+  if (tcb != g_running_task && tcb->group->tg_addrenv_own != NULL)
     {
       addrenv_restore(oldenv);
     }
