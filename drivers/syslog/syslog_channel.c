@@ -60,6 +60,10 @@
 #  include <nuttx/arch.h>
 #endif
 
+#ifdef CONFIG_SYSLOG_DEFAULT_PANIC_ONLY
+#  include <nuttx/panic_notifier.h>
+#endif
+
 #include "syslog.h"
 
 /****************************************************************************
@@ -75,6 +79,12 @@ static int syslog_default_putc(FAR syslog_channel_t *channel,
                                int ch);
 static ssize_t syslog_default_write(FAR syslog_channel_t *channel,
                                     FAR const char *buffer, size_t buflen);
+#endif
+
+#ifdef CONFIG_SYSLOG_DEFAULT_PANIC_ONLY
+static int syslog_default_panic_notifier(FAR struct notifier_block *nb,
+                                         unsigned long event,
+                                         FAR void *data);
 #endif
 
 #ifdef CONFIG_SYSLOG_CDCACM
@@ -215,7 +225,19 @@ static syslog_channel_t g_default_channel =
 #  ifdef CONFIG_SYSLOG_IOCTL
   , "default"
 #  endif
+
+#  ifdef CONFIG_SYSLOG_DEFAULT_PANIC_ONLY
+  , true,
+#  endif
 };
+
+#  ifdef CONFIG_SYSLOG_DEFAULT_PANIC_ONLY
+static struct notifier_block g_default_channel_nb =
+{
+  .notifier_call = syslog_default_panic_notifier,
+  .priority      = INT_MAX - 100,
+};
+#  endif
 #endif
 
 /* This is a simply sanity check to avoid we have more elements than the
@@ -291,6 +313,14 @@ const syslog_channels_t g_syslog_channel =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+#ifdef CONFIG_SYSLOG_DEFAULT_PANIC_ONLY
+static int syslog_default_panic_notifier(FAR struct notifier_block *nb,
+                                         unsigned long event, FAR void *data)
+{
+  g_default_channel.sc_state = false;
+  return OK;
+}
+#endif
 
 /****************************************************************************
  * Name: syslog_default_putc
@@ -464,5 +494,12 @@ int syslog_channel_unregister(FAR syslog_channel_t *channel)
     }
 
   return -EINVAL;
+}
+#endif
+
+#ifdef CONFIG_SYSLOG_DEFAULT_PANIC_ONLY
+void syslog_panic_notifier_register(void)
+{
+  panic_notifier_chain_register(&g_default_channel_nb);
 }
 #endif
