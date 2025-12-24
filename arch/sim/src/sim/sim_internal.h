@@ -72,7 +72,7 @@
 #ifndef CONFIG_DEV_CONSOLE
 #  undef USE_DEVCONSOLE
 #else
-#  ifdef CONFIG_SYSLOG_RPMSG
+#  if defined(CONFIG_SYSLOG_RPMSG) || defined(CONFIG_UART_GSMMUX_CONSOLE)
 #    undef USE_DEVCONSOLE
 #  else
 #    define USE_DEVCONSOLE 1
