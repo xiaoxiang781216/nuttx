@@ -846,6 +846,16 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         ret = OK;
         break;
 
+      case NOTE_GETLEVEL:
+        *(FAR unsigned long *)arg = drv->driver.filter.level.level;
+        ret = OK;
+        break;
+
+      case NOTE_SETLEVEL:
+        drv->driver.filter.level.level = *(FAR unsigned long *)arg;
+        ret = OK;
+        break;
+
       default:
         break;
     }
