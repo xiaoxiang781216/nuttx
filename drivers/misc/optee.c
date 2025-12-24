@@ -330,7 +330,9 @@ static int optee_shm_register(FAR struct optee_priv_data *priv,
 {
   FAR struct optee_msg_arg *msg;
   uintptr_t page_list_pa;
+#ifdef CONFIG_BUILD_KERNEL
   FAR void *page_list;
+#endif
   int ret = -ENOMEM;
 
   optee_msg_alloc(priv, 1, msg);
@@ -339,15 +341,21 @@ static int optee_shm_register(FAR struct optee_priv_data *priv,
       return -ENOMEM;
     }
 
+#ifdef CONFIG_BUILD_KERNEL
   page_list = optee_shm_to_page_list(shm, &page_list_pa);
   if (page_list == NULL)
     {
       goto errout_with_msg;
     }
+#else
+  page_list_pa = shm->paddr;
+#endif
 
   msg->cmd = OPTEE_MSG_CMD_REGISTER_SHM;
-  msg->params[0].attr = OPTEE_MSG_ATTR_TYPE_TMEM_OUTPUT |
-                        OPTEE_MSG_ATTR_NONCONTIG;
+  msg->params[0].attr = OPTEE_MSG_ATTR_TYPE_TMEM_OUTPUT;
+#ifdef CONFIG_BUILD_KERNEL
+  msg->params[0].attr |= OPTEE_MSG_ATTR_NONCONTIG;
+#endif
   msg->params[0].u.tmem.buf_ptr = page_list_pa;
   msg->params[0].u.tmem.shm_ref = (uintptr_t)shm;
   msg->params[0].u.tmem.size = shm->length;
@@ -364,8 +372,10 @@ static int optee_shm_register(FAR struct optee_priv_data *priv,
     }
 
 errout_with_list:
+#ifdef CONFIG_BUILD_KERNEL
   kmm_free(page_list);
 errout_with_msg:
+#endif
   optee_msg_free(priv, msg);
   return ret;
 }
@@ -419,6 +429,23 @@ errout_with_msg:
   return ret;
 }
 
+static int optee_shm_munmap(FAR struct task_group_s *group,
+                            FAR struct mm_map_entry_s *entry,
+                            FAR void *start,
+                            size_t length)
+{
+  FAR struct optee_shm *shm = (FAR struct optee_shm *)entry->priv.p;
+  int ret;
+
+  DEBUGASSERT(shm != NULL);
+
+  entry->priv.p = shm->p;
+  ret = shm->munmap(group, entry, start, length);
+
+  optee_shm_free(shm);
+  return ret;
+}
+
 /****************************************************************************
  * Name: optee_shm_close
  *
@@ -437,7 +464,7 @@ static int optee_shm_close(FAR struct file *filep)
 {
   FAR struct optee_shm *shm = filep->f_priv;
 
-  if (shm != NULL && shm->id > -1)
+  if (shm != NULL && shm->id > -1 && shm->munmap == NULL)
     {
       filep->f_priv = NULL;
       optee_shm_free(shm);
@@ -465,6 +492,8 @@ static int optee_shm_mmap(FAR struct file *filep,
                           FAR struct mm_map_entry_s *map)
 {
   FAR struct optee_shm *shm = filep->f_priv;
+  FAR struct optee_priv_data *priv = shm->priv;
+  FAR struct mm_map_entry_s *entry;
   int32_t ret = OK;
 
   if ((map->flags & MAP_PRIVATE) && (map->flags & MAP_SHARED))
@@ -488,13 +517,30 @@ static int optee_shm_mmap(FAR struct file *filep,
       return -EINVAL;
     }
 
-  ret = map_anonymous(map, false);
+  ret = optee_transport_mmap(priv, map, shm);
 
   if (ret == OK)
     {
       DEBUGASSERT(map->vaddr != NULL);
-      shm->vaddr = (uint64_t)map->vaddr;
+      shm->vaddr = (uintptr_t)map->vaddr;
       shm->paddr = optee_va_to_pa(map->vaddr);
+      shm->flags |= TEE_SHM_REGISTER;
+
+      entry = mm_map_find(get_current_mm(), map->vaddr, map->length);
+      DEBUGASSERT(entry != NULL);
+
+      shm->munmap = entry->munmap;
+      entry->munmap = optee_shm_munmap;
+      shm->p = entry->priv.p;
+      entry->priv.p = shm;
+
+      ret = optee_shm_register(priv, shm);
+      if (ret < 0)
+        {
+          shm->munmap(this_task()->group, entry,
+                      entry->vaddr, entry->length);
+          optee_shm_free(shm);
+        }
     }
 
   return ret;
@@ -577,12 +623,20 @@ static int optee_close(FAR struct file *filep)
   idr_for_each_entry(priv->shms, shm, id)
     {
       /* Here, we only free, unfreed kernel allocations, the rest will be
-       * done by optee_shm_close().
+       * done by optee_shm_munmap()/optee_shm_close().
        */
 
       if (shm->fd == -1)
         {
           optee_shm_free(shm);
+        }
+      else
+        {
+          /* The content recorded in priv is about to become invalid;
+           * we set shm->priv = NULL here
+           */
+
+          shm->priv = NULL;
         }
     }
 
@@ -598,56 +652,6 @@ static int optee_close(FAR struct file *filep)
   return 0;
 }
 
-#ifdef CONFIG_OPTEE_OPENVELA_COMPAT
-static int optee_memref_to_msg_param(FAR struct optee_priv_data *priv,
-                                     FAR struct optee_msg_param *mp,
-                                     FAR const struct tee_ioctl_param *p)
-{
-  FAR struct optee_shm *shm;
-
-  /* Τhe case for non-registered memrefs below is a hack to work with
-   * openvela. Normally, non-registered memory should be specified as
-   * OPTEE_MSG_ATTR_TYPE_TMEM_* (note the 'T') and `buf_ptr` should be set
-   * to the physical address of its page list representation (see
-   * alternative optee_memref_to_msg_param() implementation below).
-   *
-   * Related openvela patches:
-   *  - external_optee_optee_os@1a29df42 core/tee/entry_std.c#L160
-   *  - frameworks_security_optee_vela@54b377d5c compat/mobj_dyn_shm.c#L25
-   */
-
-  mp->attr = OPTEE_MSG_ATTR_TYPE_RMEM_INPUT + p->attr -
-             TEE_IOCTL_PARAM_ATTR_TYPE_MEMREF_INPUT;
-  if (p->c != TEE_MEMREF_NULL)
-    {
-      shm = idr_find(priv->shms, p->c);
-      if (shm == NULL)
-        {
-          return -EINVAL;
-        }
-
-      if (shm->flags & TEE_SHM_REGISTER)
-        {
-          mp->u.rmem.shm_ref = (uintptr_t)shm;
-        }
-      else
-        {
-          /* hack to comply with openvela */
-
-          mp->u.rmem.shm_ref = shm->addr;
-        }
-    }
-  else
-    {
-      mp->u.rmem.shm_ref = 0;
-    }
-
-  mp->u.rmem.size = p->b;
-  mp->u.rmem.offs = p->a;
-  return 0;
-}
-
-#else /* !CONFIG_OPTEE_OPENVELA_COMPAT */
 static int optee_memref_to_msg_param(FAR struct optee_priv_data *priv,
                                      FAR struct optee_msg_param *mp,
                                      FAR const struct tee_ioctl_param *p)
@@ -726,7 +730,6 @@ static int optee_memref_to_msg_param(FAR struct optee_priv_data *priv,
 
   return 0;
 }
-#endif /* !CONFIG_OPTEE_OPENVELA_COMPAT */
 
 static int optee_close_session(FAR struct optee_priv_data *priv,
                                uint32_t session)
@@ -931,16 +934,14 @@ optee_ioctl_close_session(FAR struct optee_priv_data *priv,
   return optee_close_session(priv, arg->session);
 }
 
-static int optee_ioctl_version(FAR struct tee_ioctl_version_data *vers)
+static int optee_ioctl_version(FAR struct optee_priv_data *priv,
+                               FAR struct tee_ioctl_version_data *vers)
 {
+  vers->gen_caps |= priv->capabilities;
   vers->impl_id = TEE_IMPL_ID_OPTEE;
   vers->impl_caps = TEE_OPTEE_CAP_TZ;
   vers->gen_caps = TEE_GEN_CAP_GP |
                    TEE_GEN_CAP_MEMREF_NULL;
-
-#ifndef CONFIG_OPTEE_OPENVELA_COMPAT
-  vers->gen_caps |= TEE_GEN_CAP_REG_MEM;
-#endif
 
   return 0;
 }
@@ -990,7 +991,7 @@ optee_ioctl_shm_alloc(FAR struct optee_priv_data *priv,
     }
 
   ret = file_allocate_from_inode(&g_optee_shm_inode,
-                                 O_CLOEXEC | O_RDOK, 0, shm, 0);
+                                 O_CLOEXEC | O_RDOK | O_WROK, 0, shm, 0);
 
   if (ret < 0)
     {
@@ -1232,7 +1233,7 @@ static int optee_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   switch (cmd)
     {
       case TEE_IOC_VERSION:
-        return optee_ioctl_version(parg);
+        return optee_ioctl_version(priv, parg);
       case TEE_IOC_OPEN_SESSION:
         return optee_ioctl_open_session(priv, parg);
       case TEE_IOC_INVOKE:

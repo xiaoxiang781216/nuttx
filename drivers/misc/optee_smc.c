@@ -278,6 +278,7 @@ int optee_transport_open(FAR struct optee_priv_data **priv_)
 
   priv->base.alignment = OPTEE_MSG_NONCONTIG_PAGE_SIZE;
   priv->smc_fn = smc_conduit;
+  priv->base.capabilities |= TEE_GEN_CAP_REG_MEM;
   *priv_ = (FAR struct optee_priv_data *)priv;
   return 0;
 }
@@ -361,4 +362,11 @@ int optee_transport_call(FAR struct optee_priv_data *priv_,
           return (int)res.a0;
         }
     }
+}
+
+int optee_transport_mmap(FAR struct optee_priv_data *priv,
+                         FAR struct mm_map_entry_s *entry,
+                         FAR struct optee_shm *shm)
+{
+  return map_anonymous(entry, false);
 }
