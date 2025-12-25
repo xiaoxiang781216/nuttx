@@ -78,6 +78,7 @@
 #endif
 	.type	arm_dispatch_syscall, function
 arm_dispatch_syscall:
+	.fnstart
 	.cfi_sections	.debug_frame
 	.cfi_startproc
 	sub	sp, sp, #32
@@ -92,6 +93,8 @@ arm_dispatch_syscall:
 	.cfi_offset lr, -20
 	str	ip, [sp, #16]
 	.cfi_offset pc, -16
+	.save {r4, r5, r6, lr}
+	.pad #32
 	ldr	ip, =g_stublookup
 	ldr	ip, [ip, r0, lsl #2]
 	blx	ip
@@ -101,5 +104,6 @@ arm_dispatch_syscall:
 	mov	r0, SYS_syscall_return
 	svc	SYS_syscall
 	.cfi_endproc
+	.fnend
 	.size	arm_dispatch_syscall, .-arm_dispatch_syscall
 	.end
