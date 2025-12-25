@@ -31,6 +31,7 @@
 
 #include <nuttx/nuttx.h>
 #include <nuttx/sched.h>
+#include <nuttx/spinlock.h>
 
 #include "task/task.h"
 
@@ -68,6 +69,7 @@ static_assert(
 
 struct taskname_buffer_s
 {
+  spinlock_t lock;
   size_t head;
   size_t tail;
   char buffer[CONFIG_TASK_NAMEPOOL_SIZE];
@@ -94,6 +96,9 @@ static struct taskname_buffer_s g_taskname_buffer;
  *
  * Returned Value:
  *   Pointer to the task name info, or NULL if not found.
+ *
+ * Assumptions:
+ *   Caller holds the spinlock.
  *
  ****************************************************************************/
 
@@ -146,6 +151,9 @@ void nxtask_namepool_record(pid_t pid, FAR const char *name)
   size_t namelen;
   size_t skiplen;
   size_t remain;
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave_notrace(&g_taskname_buffer.lock);
 
   namelen = strlen(name);
   DEBUGASSERT(namelen <= CONFIG_TASK_NAME_SIZE);
@@ -201,6 +209,8 @@ void nxtask_namepool_record(pid_t pid, FAR const char *name)
   ti->pid = pid;
   strlcpy(ti->name, name, namelen + 1);
   g_taskname_buffer.head += ti->size;
+
+  spin_unlock_irqrestore_notrace(&g_taskname_buffer.lock, flags);
 }
 
 /****************************************************************************
@@ -230,8 +240,15 @@ void nxtask_namepool_get(pid_t pid, FAR char *buf, size_t len)
     }
   else
     {
-      FAR struct taskname_info_s *ti = taskname_find(pid);
+      FAR struct taskname_info_s *ti;
+      irqstate_t flags;
+
+      flags = spin_lock_irqsave_notrace(&g_taskname_buffer.lock);
+
+      ti = taskname_find(pid);
       strlcpy(buf, ti != NULL ? ti->name : "<noname>", len);
+
+      spin_unlock_irqrestore_notrace(&g_taskname_buffer.lock, flags);
     }
 }
 
@@ -254,7 +271,11 @@ void nxtask_namepool_foreach(nxtask_namepool_handler_t handler,
                               FAR void *arg)
 {
   FAR struct taskname_info_s *ti;
-  int n = g_taskname_buffer.tail;
+  irqstate_t flags;
+  int n;
+
+  flags = spin_lock_irqsave_notrace(&g_taskname_buffer.lock);
+  n = g_taskname_buffer.tail;
 
   while (n != g_taskname_buffer.head)
     {
@@ -271,6 +292,8 @@ void nxtask_namepool_foreach(nxtask_namepool_handler_t handler,
           n -= CONFIG_TASK_NAMEPOOL_SIZE;
         }
     }
+
+  spin_unlock_irqrestore_notrace(&g_taskname_buffer.lock, flags);
 }
 
 #else
