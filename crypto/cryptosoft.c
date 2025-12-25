@@ -1192,7 +1192,7 @@ int swcr_authenc(FAR struct cryptop *crp)
   FAR struct cryptodesc *crda = NULL;
   FAR struct cryptodesc *crde = NULL;
   FAR struct swcr_data *sw;
-  FAR struct swcr_data *swa;
+  FAR struct swcr_data *swa = NULL;
   FAR struct swcr_data *swe = NULL;
   FAR const struct auth_hash *axf = NULL;
   FAR const struct enc_xform *exf = NULL;
