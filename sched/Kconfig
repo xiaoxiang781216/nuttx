@@ -790,6 +790,22 @@ config TASK_NAME_SIZE
 		will be TASK_NAME_SIZE + 1.  The default of 31 then results in
 		a align-able 32-byte allocation.
 
+config TASK_NAMEPOOL_BUFSIZE
+	int "Task name cache buffer size"
+	default 0
+	depends on TASK_NAME_SIZE > 0
+	---help---
+		Value greater than 0 to enable task name caching functionality.
+		This provides a circular buffer to cache task names for PIDs,
+		useful for tracing and instrumentation when tasks may have been
+		destroyed. This allows multiple modules (trace, log, debug, etc.)
+		to retrieve task names for terminated processes.
+
+		The size of the circular buffer (in bytes) used to cache task names.
+		Larger values allow caching more task names but consume more memory.
+		Each task name entry uses approximately (sizeof(struct) + name_length)
+		bytes, aligned to sizeof(uintptr_t).
+
 config SCHED_HAVE_PARENT
 	bool "Support parent/child task relationships"
 	default n

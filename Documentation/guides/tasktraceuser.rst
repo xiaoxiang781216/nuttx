@@ -42,7 +42,7 @@ The following configurations are configurable parameters for trace.
     - Bit 2 = Enable IRQ instrumentation
     - Bit 3 = Enable collecting syscall arguments
 
-- ``CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE``
+- ``CONFIG_TASK_NAMEPOOL_BUFSIZE``
 
   - Specify the task name buffer size in bytes.
     The buffer is used to hold the name of the task during instrumentation.

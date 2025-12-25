@@ -659,6 +659,9 @@ struct task_group_s
 #endif
 };
 
+typedef void (*nxtask_namepool_handler_t)(pid_t pid, FAR const char *name,
+                                          FAR void *arg);
+
 /* struct tcb_s *************************************************************/
 
 /* This is the common part of the task control block (TCB).
@@ -1338,6 +1341,77 @@ void nxtask_abort_fork(FAR struct tcb_s *child, int errcode);
  ****************************************************************************/
 
 size_t nxtask_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size);
+
+/****************************************************************************
+ * Name: nxtask_namepool_record
+ *
+ * Description:
+ *   Record a task name into the namepool cache buffer. This function caches
+ *   the task name so it can be retrieved later even after the task
+ *   terminates. Useful for tracing and debugging to maintain task name
+ *   history.
+ *
+ * Input Parameters:
+ *   pid  - Process ID of the task
+ *   name - Task name string to cache
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions:
+ *   CONFIG_TASKNAME_POOL is enabled.
+ *
+ ****************************************************************************/
+
+void nxtask_namepool_record(pid_t pid, FAR const char *name);
+
+/****************************************************************************
+ * Name: nxtask_namepool_get
+ *
+ * Description:
+ *   Get the task name for a given PID. First checks the active task
+ *   control block, then falls back to the cached namepool buffer if the
+ *   task has already terminated. Returns "<noname>" if the name cannot
+ *   be found.
+ *
+ * Input Parameters:
+ *   pid - Process ID of the task
+ *   buf - Buffer to hold the task name
+ *   len - Length of the buffer
+ *
+ * Returned Value:
+ *   None. The buffer will contain the task name or "<noname>" if not found.
+ *
+ * Assumptions:
+ *   CONFIG_TASKNAME_POOL is enabled.
+ *
+ ****************************************************************************/
+
+void nxtask_namepool_get(pid_t pid, FAR char *buf, size_t len);
+
+/****************************************************************************
+ * Name: nxtask_namepool_foreach
+ *
+ * Description:
+ *   Iterate over all cached task names in the namepool and call the
+ *   provided handler function for each valid entry. Useful for dumping
+ *   or analyzing the history of tasks that have run on the system.
+ *
+ * Input Parameters:
+ *   handler - Callback function to invoke for each cached task name.
+ *             The function receives the PID, task name, and user argument.
+ *   arg     - User argument passed to the handler callback
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions:
+ *   CONFIG_TASKNAME_POOL is enabled.
+ *
+ ****************************************************************************/
+
+void nxtask_namepool_foreach(nxtask_namepool_handler_t handler,
+                             FAR void *arg);
 
 /****************************************************************************
  * Name: nxsched_get_param

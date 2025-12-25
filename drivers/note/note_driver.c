@@ -112,21 +112,11 @@ struct note_startalloc_s
 #  define SIZEOF_NOTE_START(n) (sizeof(struct note_common_s))
 #endif
 
-#if CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
-struct note_taskname_info_s
+struct note_taskname_foreach_s
 {
-  pid_t pid;
-  uint8_t size;
-  char name[1];
+  CODE void (*handler)(FAR const void *, size_t, FAR void *);
+  FAR void *arg;
 };
-
-struct note_taskname_s
-{
-  size_t head;
-  size_t tail;
-  char buffer[CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE];
-};
-#endif
 
 /****************************************************************************
  * Private Data
@@ -161,11 +151,6 @@ FAR static struct note_driver_s *
 #endif
   NULL
 };
-
-#if CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0 && \
-    defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH)
-static struct note_taskname_s g_note_taskname;
-#endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER)
 static spinlock_t g_note_lock;
@@ -398,127 +383,6 @@ static inline int note_isenabled_dump(FAR struct note_driver_s *driver,
 }
 #endif
 
-#if defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH) && \
-    (CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0)
-/****************************************************************************
- * Name: note_find_taskname
- *
- * Description:
- *   Find task name info corresponding to the specified PID
- *
- * Input Parameters:
- *   PID - Task ID
- *
- * Returned Value:
- *   Pointer to the task name info
- *   If the corresponding info doesn't exist in the buffer, NULL is returned.
- *
- ****************************************************************************/
-
-static FAR struct note_taskname_info_s *note_find_taskname(pid_t pid)
-{
-  FAR struct note_taskname_info_s *ti;
-  int n = g_note_taskname.tail;
-
-  while (n != g_note_taskname.head)
-    {
-      ti = (FAR struct note_taskname_info_s *)
-            &g_note_taskname.buffer[n];
-      if (ti->pid == pid)
-        {
-          return ti;
-        }
-
-      n += ti->size;
-      if (n >= CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE)
-        {
-          n -= CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE;
-        }
-    }
-
-  return NULL;
-}
-
-/****************************************************************************
- * Name: note_record_taskname
- *
- * Description:
- *   Record the task name info of the specified task
- *
- * Input Parameters:
- *   PID - Task ID
- *   name - task name
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void note_record_taskname(pid_t pid, FAR const char *name)
-{
-  FAR struct note_taskname_info_s *ti;
-  size_t tilen;
-  size_t namelen;
-  size_t skiplen;
-  size_t remain;
-
-  namelen = strlen(name);
-  DEBUGASSERT(namelen <= CONFIG_TASK_NAME_SIZE);
-  tilen = sizeof(struct note_taskname_info_s) + namelen;
-  DEBUGASSERT(tilen <= UCHAR_MAX);
-
-  skiplen = CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE - g_note_taskname.head;
-  if (skiplen >= tilen + sizeof(struct note_taskname_info_s))
-    {
-      skiplen = 0; /* Have enough space at the tail - needn't skip */
-    }
-
-  if (g_note_taskname.head >= g_note_taskname.tail)
-    {
-      remain = CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE -
-               (g_note_taskname.head - g_note_taskname.tail);
-    }
-  else
-    {
-      remain = g_note_taskname.tail - g_note_taskname.head;
-    }
-
-  while (skiplen + tilen >= remain)
-    {
-      /* No enough space, drop the old info */
-
-      ti = (FAR struct note_taskname_info_s *)
-            &g_note_taskname.buffer[g_note_taskname.tail];
-      g_note_taskname.tail = (g_note_taskname.tail + ti->size) %
-                             CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE;
-      remain += ti->size;
-    }
-
-  if (skiplen)
-    {
-      /* Fill the skipped region with an invalid info */
-
-      ti = (FAR struct note_taskname_info_s *)
-            &g_note_taskname.buffer[g_note_taskname.head];
-      ti->size = skiplen;
-      ti->pid = INVALID_PROCESS_ID;
-      ti->name[0] = '\0';
-
-      /* Move to the begin of circle buffer */
-
-      g_note_taskname.head = 0;
-    }
-
-  ti = (FAR struct note_taskname_info_s *)
-        &g_note_taskname.buffer[g_note_taskname.head];
-  ti->size = tilen;
-  ti->pid = pid;
-  strlcpy(ti->name, name, namelen + 1);
-  g_note_taskname.head += ti->size;
-}
-
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -701,9 +565,7 @@ void sched_note_start(FAR struct tcb_s *tcb)
   int namelen = 0;
 #endif
 
-#if CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
-  note_record_taskname(tcb->pid, tcb->name);
-#endif
+  nxtask_namepool_record(tcb->pid, tcb->name);
 
   for (driver = g_note_drivers; *driver; driver++)
     {
@@ -793,39 +655,31 @@ void sched_note_stop(FAR struct tcb_s *tcb)
     }
 }
 
+static void note_taskname_handler(pid_t pid, FAR const char *name,
+                                  FAR void *arg)
+{
+  FAR struct note_taskname_foreach_s *ctx = arg;
+  struct note_startalloc_s note;
+  size_t length;
+  int namelen;
+
+  namelen = strlen(name);
+  strlcpy(note.nsa_name, name, sizeof(note.nsa_name));
+  length = SIZEOF_NOTE_START(namelen + 1);
+  note_common(NULL, &note.nsa_cmn, length, NOTE_TASKNAME);
+  note.nsa_cmn.nc_pid = pid;
+  ctx->handler(&note, length, ctx->arg);
+}
+
 void sched_note_taskname(void (FAR *handler)(FAR const void *,
                                              size_t, FAR void *),
                          FAR void *arg)
 {
-#if CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
-  FAR struct note_taskname_info_s *ti;
-  struct note_startalloc_s note;
-  int n = g_note_taskname.tail;
-  size_t length;
-  int namelen;
+  struct note_taskname_foreach_s ctx;
 
-  while (n != g_note_taskname.head)
-    {
-      ti = (FAR struct note_taskname_info_s *)
-            &g_note_taskname.buffer[n];
-
-      if (ti->pid != INVALID_PROCESS_ID)
-        {
-          namelen = strlen(ti->name);
-          strlcpy(note.nsa_name, ti->name, sizeof(note.nsa_name));
-          length = SIZEOF_NOTE_START(namelen + 1);
-          note_common(NULL, &note.nsa_cmn, length, NOTE_TASKNAME);
-          note.nsa_cmn.nc_pid = ti->pid;
-          handler((FAR struct note_common_s *)&note, length, arg);
-        }
-
-      n += ti->size;
-      if (n >= CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE)
-        {
-          n -= CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE;
-        }
-    }
-#endif
+  ctx.handler = handler;
+  ctx.arg = arg;
+  nxtask_namepool_foreach(note_taskname_handler, &ctx);
 }
 
 void sched_note_suspend(FAR struct tcb_s *tcb)
@@ -1867,55 +1721,6 @@ void note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
 #endif
 
 #endif /* CONFIG_SCHED_INSTRUMENTATION_FILTER */
-
-/****************************************************************************
- * Name: note_get_taskname
- *
- * Description:
- *   Get the task name string of the specified PID
- *
- * Input Parameters:
- *   PID - Task ID
- *   buf - A writable buffer to hold the task name
- *   len - The length of the buffer
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void note_get_taskname(pid_t pid, FAR char *buf, size_t len)
-{
-#if CONFIG_TASK_NAME_SIZE > 0
-  FAR struct tcb_s *tcb = nxsched_get_tcb(pid);
-
-  if (tcb != NULL)
-    {
-      strlcpy(buf, tcb->name, len);
-      nxsched_put_tcb(tcb);
-    }
-  else
-    {
-#  if defined(CONFIG_SCHED_INSTRUMENTATION_SWITCH) && \
-      (CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0)
-      FAR struct note_taskname_info_s *ti = note_find_taskname(pid);
-
-      if (ti != NULL)
-        {
-          strlcpy(buf, ti->name, len);
-        }
-      else
-        {
-          strlcpy(buf, "<noname>", len);
-        }
-#  else
-      strlcpy(buf, "<noname>", len);
-#  endif
-    }
-#else
-  strlcpy(buf, "<noname>", len);
-#endif
-}
 
 /****************************************************************************
  * Name: note_driver_register
