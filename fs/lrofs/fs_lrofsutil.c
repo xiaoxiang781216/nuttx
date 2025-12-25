@@ -2837,6 +2837,7 @@ int lrofs_rename_file(FAR struct lrofs_mountpt_s *lm,
 
   /* Update the parent nodeinfo */
 
+  ln_old->ln_parent = ln_newpath;
   ret = lrofs_update_parentnode(ln_newpath, ln_old);
   if (ret < 0)
     {
