@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/arm_vectors.S
+ * arch/arm/src/arm_a_r/arm_vectors.S
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -43,21 +43,6 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: cpuindex
- *
- * Description:
- *   Return an index idenifying the current CPU.  Single CPU case.  Must be
- *   provided by MCU-specific logic in chip.h for the SMP case.
- *
- ****************************************************************************/
-
-#if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-	.macro	cpuindex, index
-	.mov		\index, #0
-	.endm
-#endif
-
-/****************************************************************************
  * Name: setirqstack
  *
  * Description:
@@ -66,7 +51,7 @@
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
+#if defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
 	.macro	setirqstack, tmp1, tmp2
 	ldr		sp, .Lirqstacktop		/* SP = IRQ stack top */
 	.endm
@@ -81,7 +66,7 @@
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
+#if defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
 	.macro	setfiqstack, tmp1, tmp2
 	ldr		sp, .Lfiqstacktop		/* SP = FIQ stack top */
 	.endm
@@ -181,10 +166,10 @@ arm_vectorirq:
 
 	/* Switch to SYS mode */
 
-#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
-	cpsid		i, #PSR_MODE_SYS
-#else
+#if defined(CONFIG_ARM_DECODEFIQ) && !defined(CONFIG_ARCH_HIPRI_INTERRUPT)
 	cpsid		if, #PSR_MODE_SYS
+#else
+	cpsid		i, #PSR_MODE_SYS
 #endif
 
 	/* Create a context structure.  First set aside a stack frame
@@ -234,11 +219,11 @@ arm_vectorirq:
 #endif
 
 	bic		sp, sp, #7			/* Force 8-byte alignment */
-	mov		fp,	r0
-	.cfi_def_cfa	fp,	0			/* Register in fp, so we just set fp as frame */
-	.cfi_offset	pc,	REG_PC	*	4
-	.cfi_offset	sp,	REG_SP	*	4
-	.cfi_offset	lr,	REG_LR	*	4
+	mov		fp, r0
+	.cfi_def_cfa	fp, 0				/* Register in fp, so we just set fp as frame */
+	.cfi_offset	pc, REG_PC * 4
+	.cfi_offset	sp, REG_SP * 4
+	.cfi_offset	lr, REG_LR * 4
 	bl		arm_decodeirq			/* Call the handler */
 	mov		sp, r4				/* Restore the possibly unaligned stack pointer */
 
@@ -268,7 +253,7 @@ arm_vectorirq:
 
 	rfeia		r14
 
-#if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
+#if defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
 .Lirqstacktop:
 	.word	g_intstacktop
 #endif
@@ -299,10 +284,10 @@ arm_vectorsvc:
 
 	/* Switch to SYS mode */
 
-#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
-	cpsid		i, #PSR_MODE_SYS
-#else
+#if defined(CONFIG_ARM_DECODEFIQ) && !defined(CONFIG_ARCH_HIPRI_INTERRUPT)
 	cpsid		if, #PSR_MODE_SYS
+#else
+	cpsid		i, #PSR_MODE_SYS
 #endif
 
 	/* Create a context structure.  First set aside a stack frame
@@ -418,10 +403,10 @@ arm_vectordata:
 
 	/* Switch to SYS mode */
 
-#ifdef CONFIG_ARCH_HIPRI_INTERRUPT
-	cpsid		i, #PSR_MODE_SYS
-#else
+#if defined(CONFIG_ARM_DECODEFIQ) && !defined(CONFIG_ARCH_HIPRI_INTERRUPT)
 	cpsid		if, #PSR_MODE_SYS
+#else
+	cpsid		i, #PSR_MODE_SYS
 #endif
 
 	/* Create a context structure.  First set aside a stack frame
@@ -447,17 +432,16 @@ arm_vectordata:
 	 * void arm_dataabort(struct xcptcontext *xcp)
 	 */
 
-	mov		fp, #0				/* Init frame pointer */
 	mov		r0, sp				/* Get r0=xcp */
 	mrc		CP15_DFAR(r1)			/* Get R1=DFAR */
 	mrc		CP15_DFSR(r2)			/* Get r2=DFSR */
 	mov		r4, sp				/* Save the SP in a preserved register */
 	bic		sp, sp, #7			/* Force 8-byte alignment */
-	mov		fp,	r0
-	.cfi_def_cfa	fp,	0			/* Register in fp, so we just set fp as frame */
-	.cfi_offset	pc,	REG_PC	*	4
-	.cfi_offset	sp,	REG_SP	*	4
-	.cfi_offset	lr,	REG_LR	*	4
+	mov		fp, r0				/* Init frame pointer */
+	.cfi_def_cfa	fp, 0				/* Register in fp, so we just set fp as frame */
+	.cfi_offset	pc, REG_PC * 4
+	.cfi_offset	sp, REG_SP * 4
+	.cfi_offset	lr, REG_LR * 4
 	bl		arm_dataabort			/* Call the handler */
 	mov		sp, r4				/* Restore the possibly unaligned stack pointer */
 
@@ -540,17 +524,16 @@ arm_vectorprefetch:
 	 * void arm_prefetchabort(struct xcptcontext *xcp)
 	 */
 
-	mov		fp, #0				/* Init frame pointer */
 	mov		r0, sp				/* Get r0=xcp */
 	mrc		CP15_IFAR(r1)			/* Get R1=IFAR */
 	mrc		CP15_IFSR(r2)			/* Get r2=IFSR */
 	mov		r4, sp				/* Save the SP in a preserved register */
 	bic		sp, sp, #7			/* Force 8-byte alignment */
-	mov		fp,	r0
-	.cfi_def_cfa	fp,	0			/* Register in fp, so we just set fp as frame */
-	.cfi_offset	pc,	REG_PC	*	4
-	.cfi_offset	sp,	REG_SP	*	4
-	.cfi_offset	lr,	REG_LR	*	4
+	mov		fp, r0				/* Init frame pointer */
+	.cfi_def_cfa	fp, 0				/* Register in fp, so we just set fp as frame */
+	.cfi_offset	pc, REG_PC * 4
+	.cfi_offset	sp, REG_SP * 4
+	.cfi_offset	lr, REG_LR * 4
 	bl		arm_prefetchabort		/* Call the handler */
 	mov		sp, r4				/* Restore the possibly unaligned stack pointer */
 
@@ -600,6 +583,7 @@ arm_vectorprefetch:
 arm_vectorundefinsn:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
+
 	/* Save the LR and SPSR onto the SYS mode stack before switch. */
 
 	srsdb		sp!, #PSR_MODE_SYS
@@ -629,15 +613,14 @@ arm_vectorundefinsn:
 	 * void arm_undefinedinsn(struct xcptcontext *xcp)
 	 */
 
-	mov		fp, #0				/* Init frame pointer */
 	mov		r0, sp				/* Get r0=xcp */
 	mov		r4, sp				/* Save the SP in a preserved register */
 	bic		sp, sp, #7			/* Force 8-byte alignment */
-	mov		fp,	r0
-	.cfi_def_cfa	fp,	0			/* Register in fp, so we just set fp as frame */
-	.cfi_offset	pc,	REG_PC	*	4
-	.cfi_offset	sp,	REG_SP	*	4
-	.cfi_offset	lr,	REG_LR	*	4
+	mov		fp, r0				/* Init frame pointer */
+	.cfi_def_cfa	fp, 0				/* Register in fp, so we just set fp as frame */
+	.cfi_offset	pc, REG_PC * 4
+	.cfi_offset	sp, REG_SP * 4
+	.cfi_offset	lr, REG_LR * 4
 	bl		arm_undefinedinsn		/* Call the handler */
 	mov		sp, r4				/* Restore the possibly unaligned stack pointer */
 
@@ -680,7 +663,7 @@ arm_vectorundefinsn:
  *
  ****************************************************************************/
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
+#ifdef CONFIG_ARM_DECODEFIQ
 	.globl	arm_decodefiq
 #endif
 	.globl	arm_vectorfiq
@@ -689,7 +672,7 @@ arm_vectorundefinsn:
 arm_vectorfiq:
 	.cfi_sections	.debug_frame
 	.cfi_startproc
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
+#ifdef CONFIG_ARM_DECODEFIQ
 
 	/* Save the LR and SPSR onto the SYS mode stack before switch. */
 
@@ -719,7 +702,6 @@ arm_vectorfiq:
 
 	/* Then call the FIQ handler with interrupts disabled. */
 
-	mov		fp, #0				/* Init frame pointer */
 	mov		r0, sp				/* Get r0=xcp */
 
 	mov		r4, sp				/* Save the SP in a preserved register */
@@ -731,11 +713,11 @@ arm_vectorfiq:
 #endif
 
 	bic		sp, sp, #7			/* Force 8-byte alignment */
-	mov		fp,	r0
-	.cfi_def_cfa	fp,	0			/* Register in fp, so we just set fp as frame */
-	.cfi_offset	pc,	REG_PC	*	4
-	.cfi_offset	sp,	REG_SP	*	4
-	.cfi_offset	lr,	REG_LR	*	4
+	mov		fp, r0				/* Init frame pointer */
+	.cfi_def_cfa	fp, 0				/* Register in fp, so we just set fp as frame */
+	.cfi_offset	pc, REG_PC * 4
+	.cfi_offset	sp, REG_SP * 4
+	.cfi_offset	lr, REG_LR * 4
 	bl		arm_decodefiq			/* Call the handler */
 	mov		sp, r4				/* Restore the possibly unaligned stack pointer */
 
@@ -767,7 +749,7 @@ arm_vectorfiq:
 
 	rfeia		r14
 
-#if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
+#if defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
 .Lfiqstacktop:
 	.word	g_fiqstacktop
 #endif
@@ -798,7 +780,7 @@ arm_vectoraddrexcptn:
  *  Name: g_intstackalloc/g_intstacktop
  ****************************************************************************/
 
-#if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
+#if defined(CONFIG_UP) && CONFIG_ARCH_INTERRUPTSTACK > 7
 	.bss
 	.balign	8
 
@@ -817,7 +799,7 @@ g_intstacktop:
  *  Name: g_fiqstackalloc/g_fiqstacktop
  ****************************************************************************/
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
+#ifdef CONFIG_ARM_DECODEFIQ
 	.globl	g_fiqstackalloc
 	.type	g_fiqstackalloc, object
 	.globl	g_fiqstacktop

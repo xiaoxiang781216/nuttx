@@ -55,6 +55,7 @@ config ARMV8R_DECODEFIQ
 	bool "FIQ Handler"
 	default n
 	depends on ARMV8R_HAVE_DECODEFIQ
+	select ARM_DECODEFIQ
 	---help---
 		Select this option if your platform supports the function
 		arm_decodefiq().

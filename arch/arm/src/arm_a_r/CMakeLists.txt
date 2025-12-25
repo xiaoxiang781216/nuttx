@@ -18,8 +18,10 @@
 #
 # ##############################################################################
 
+set(CSRCS arm_vectors.S)
+
 if(NOT CONFIG_DISABLE_SIGNALS)
-  set(CSRCS arm_schedulesigaction.c arm_sigdeliver.c)
+  list(APPEND CSRCS arm_schedulesigaction.c arm_sigdeliver.c)
 endif()
 
 if(CONFIG_ARCH_HAVE_DEBUG)
