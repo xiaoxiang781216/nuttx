@@ -153,24 +153,6 @@ void note_common(FAR struct tcb_s *tcb, FAR struct note_common_s *note,
                  uint8_t length, uint8_t type);
 
 /****************************************************************************
- * Name: note_get_taskname
- *
- * Description:
- *   Get the task name string of the specified PID
- *
- * Input Parameters:
- *   PID - Task ID
- *   buf - A writable buffer to hold the task name
- *   len - The length of the buffer
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void note_get_taskname(pid_t pid, FAR char *buf, size_t len);
-
-/****************************************************************************
  * Name: notectl_register
  *
  * Description:
