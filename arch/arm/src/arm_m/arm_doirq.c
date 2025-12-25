@@ -45,10 +45,9 @@
 
 void exception_direct(void)
 {
-  int irq;
+  int irq = getipsr();
 
   up_addrenv_enter_kernel();
-  irq = getipsr();
 #ifdef CONFIG_ARCH_FPU
   __asm__ __volatile__
     (
@@ -56,6 +55,7 @@ void exception_direct(void)
       "vmsr fpscr, r0\n"
       :
       : "i" (ARM_FPSCR_LTPSIZE_NONE)
+      : "r0"
     );
 #endif
 
