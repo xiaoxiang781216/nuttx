@@ -943,7 +943,9 @@ static int rptun_dev_stop(FAR struct remoteproc *rproc)
         {
           priv->stop = true;
           nxsig_kill(priv->pid, SIGKILL);
+#ifdef CONFIG_SCHED_WAITPID
           nxsched_waitpid(priv->pid, NULL, WEXITED);
+#endif
           priv->stop = false;
           priv->pid = -EINVAL;
         }
@@ -1062,7 +1064,7 @@ static int rptun_ioctl_foreach(FAR const char *cpuname, int cmd,
     {
       nxrmutex_lock(&g_rptun_lock);
     }
-  
+
   dq_for_every_entry(&g_rptun_priv, priv, struct rptun_priv_s, entry)
     {
       if (!cpuname || !strcmp(RPTUN_GET_CPUNAME(priv->dev), cpuname))
