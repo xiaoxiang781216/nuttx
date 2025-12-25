@@ -32,6 +32,7 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/atomic.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/arch.h>
 #include <nuttx/tls.h>
