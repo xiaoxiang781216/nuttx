@@ -46,7 +46,6 @@
 #include <nuttx/power/pm.h>
 #include <nuttx/power/regulator.h>
 #include <nuttx/reset/reset-controller.h>
-#include <nuttx/rpmsg/rpmsg.h>
 #include <nuttx/rtt.h>
 #include <nuttx/sensors/sensor.h>
 #include <nuttx/serial/gsmmux.h>
@@ -107,8 +106,8 @@
 
 void drivers_early_initialize(void)
 {
-#ifdef CONFIG_RPMSG
-  rpmsg_early_initialize();
+#if defined(CONFIG_SYSLOG_RPMSG_BUFSIZE) && CONFIG_SYSLOG_RPMSG_BUFSIZE != 0
+  syslog_rpmsg_init_early(NULL, 0);
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTE

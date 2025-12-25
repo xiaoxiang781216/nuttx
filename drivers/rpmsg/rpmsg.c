@@ -35,6 +35,7 @@
 #include <nuttx/clock.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
+#include <nuttx/queue.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/mm/mempool.h>
 #include <nuttx/mutex.h>
@@ -79,7 +80,7 @@ struct rpmsg_cb_s
   rpmsg_dev_cb_t    device_destroy;
   rpmsg_match_cb_t  ns_match;
   rpmsg_bind_cb_t   ns_bind;
-  struct list_node  node;
+  dq_entry_t        node;
 };
 
 struct rpmsg_ioctl_s
@@ -108,10 +109,10 @@ static int rpmsg_dev_ioctl(FAR struct file *filep, int cmd,
  * Private Data
  ****************************************************************************/
 
-static DEFINE_PER_CPU_BSS_BMP(struct list_node, g_rpmsg_cb);
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_rpmsg_cb);
 #define g_rpmsg_cb this_cpu_var_bmp(g_rpmsg_cb)
 
-static DEFINE_PER_CPU_BSS_BMP(struct list_node, g_rpmsg);
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_rpmsg);
 #define g_rpmsg this_cpu_var_bmp(g_rpmsg)
 
 static DEFINE_PER_CPU_BMP(rw_semaphore_t, g_rpmsg_lock) = RWSEM_INITIALIZER;
@@ -362,12 +363,6 @@ static int rpmsg_create_wqueues(FAR struct rpmsg_wqueue_s *wqueues,
  * Public Functions
  ****************************************************************************/
 
-void rpmsg_early_initialize(void)
-{
-  list_initialize(&g_rpmsg);
-  list_initialize(&g_rpmsg_cb);
-}
-
 void rpmsg_initialize(void)
 {
   rpmsg_trace_initialize();
@@ -574,9 +569,9 @@ int rpmsg_register_callback(FAR void *priv,
       cb->ns_bind        = ns_bind;
 
       down_write(&g_rpmsg_lock);
-      list_add_tail(&g_rpmsg_cb, &cb->node);
+      dq_addlast(&cb->node, &g_rpmsg_cb);
       downgrade_write(&g_rpmsg_lock);
-      list_for_every_entry(&g_rpmsg, rpmsg, struct rpmsg_s, node)
+      dq_for_every_entry(&g_rpmsg, rpmsg, struct rpmsg_s, node)
         {
           FAR struct rpmsg_device *rdev = rpmsg_get_rdev_by_rpmsg(rpmsg);
 
@@ -640,7 +635,7 @@ void rpmsg_unregister_callback(FAR void *priv,
   FAR struct rpmsg_s *rpmsg;
 
   down_write(&g_rpmsg_lock);
-  list_for_every_entry(&g_rpmsg_cb, cb, struct rpmsg_cb_s, node)
+  dq_for_every_entry(&g_rpmsg_cb, cb, struct rpmsg_cb_s, node)
     {
       if (cb->priv == priv &&
           cb->device_created == device_created &&
@@ -648,7 +643,7 @@ void rpmsg_unregister_callback(FAR void *priv,
           cb->ns_match == ns_match &&
           cb->ns_bind == ns_bind)
         {
-          list_delete(&cb->node);
+          dq_rem(&cb->node, &g_rpmsg_cb);
           kmm_free(cb);
           break;
         }
@@ -657,7 +652,7 @@ void rpmsg_unregister_callback(FAR void *priv,
   downgrade_write(&g_rpmsg_lock);
   if (device_destroy)
     {
-      list_for_every_entry(&g_rpmsg, rpmsg, struct rpmsg_s, node)
+      dq_for_every_entry(&g_rpmsg, rpmsg, struct rpmsg_s, node)
         {
           FAR struct rpmsg_device *rdev = rpmsg_get_rdev_by_rpmsg(rpmsg);
 
@@ -680,7 +675,7 @@ void rpmsg_ns_bind(FAR struct rpmsg_device *rdev,
   bool matched = false;
 
   down_read(&g_rpmsg_lock);
-  list_for_every_entry(&g_rpmsg_cb, cb, struct rpmsg_cb_s, node)
+  dq_for_every_entry(&g_rpmsg_cb, cb, struct rpmsg_cb_s, node)
     {
       if (cb->ns_match && cb->ns_match(rdev, cb->priv, name, dest))
         {
@@ -739,7 +734,7 @@ void rpmsg_device_created(FAR struct rpmsg_s *rpmsg)
   FAR struct rpmsg_cb_s *cb;
 
   down_write(&g_rpmsg_lock);
-  list_for_every_entry_safe(&g_rpmsg_cb, cb, tmp, struct rpmsg_cb_s, node)
+  dq_for_every_entry_safe(&g_rpmsg_cb, cb, tmp, struct rpmsg_cb_s, node)
     {
       if (cb->device_created)
         {
@@ -806,7 +801,7 @@ void rpmsg_device_destory(FAR struct rpmsg_s *rpmsg)
   down_write(&g_rpmsg_lock);
   rpmsg->init = false;
   downgrade_write(&g_rpmsg_lock);
-  list_for_every_entry_safe(&g_rpmsg_cb, cb, cb_tmp, struct rpmsg_cb_s, node)
+  dq_for_every_entry_safe(&g_rpmsg_cb, cb, cb_tmp, struct rpmsg_cb_s, node)
     {
       if (cb->device_destroy)
         {
@@ -867,7 +862,7 @@ int rpmsg_register(FAR const char *path, FAR struct rpmsg_s *rpmsg,
               /* Add priv to list */
 
               down_write(&g_rpmsg_lock);
-              list_add_tail(&g_rpmsg, &rpmsg->node);
+              dq_addlast(&rpmsg->node, &g_rpmsg);
               up_write(&g_rpmsg_lock);
 
               rpmsg->nbreboot.notifier_call = rpmsg_reboot_notifier;
@@ -895,7 +890,7 @@ void rpmsg_unregister(FAR const char *path, FAR struct rpmsg_s *rpmsg)
   unregister_reboot_notifier(&rpmsg->nbreboot);
 
   down_write(&g_rpmsg_lock);
-  list_delete(&rpmsg->node);
+  dq_rem(&rpmsg->node, &g_rpmsg);
   up_write(&g_rpmsg_lock);
 
   rpmsg_deinit_workrx(rpmsg);
@@ -943,7 +938,7 @@ int rpmsg_foreach(rpmsg_foreach_t handler, FAR void *arg)
       down_read(&g_rpmsg_lock);
     }
 
-  list_for_every_entry(&g_rpmsg, rpmsg, struct rpmsg_s, node)
+  dq_for_every_entry(&g_rpmsg, rpmsg, struct rpmsg_s, node)
     {
       ret = handler(rpmsg, arg);
       if (ret < 0)
