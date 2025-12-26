@@ -113,20 +113,20 @@ static int task_setup(FAR struct tcb_s *tcb, const char *name, main_t entry,
 
           if (ret >= OK)
             {
-#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_KERNEL_STACK)
-              /* Allocate the kernel stack */
+              /* Initialize thread local storage */
 
-              if (ttype != TCB_FLAG_TTYPE_KERNEL)
-                {
-                  ret = up_addrenv_kstackalloc(tcb);
-                }
-#endif
-
+              ret = tls_init_info(tcb);
               if (ret >= OK)
                 {
-                  /* Initialize thread local storage */
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_KERNEL_STACK)
+                  /* Allocate the kernel stack */
 
-                  ret = tls_init_info(tcb);
+                  if (ttype != TCB_FLAG_TTYPE_KERNEL)
+                    {
+                      ret = up_addrenv_kstackalloc(tcb);
+                    }
+#endif
+
                   if (ret >= OK)
                     {
                       /* Setup to pass parameters to the new task */
