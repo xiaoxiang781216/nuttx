@@ -577,7 +577,7 @@ static inline_function int nxmutex_post(FAR sem_t *sem)
 
       /* Allow NXSEM_NO_MHOLDER for reset scenario */
 
-      DEBUGASSERT(old == _SCHED_GETTID() || old == NXSEM_NO_MHOLDER);
+      DEBUGASSERT(old == gettid() || old == NXSEM_NO_MHOLDER);
 
       if (atomic_try_cmpxchg_release(val, &old, NXSEM_NO_MHOLDER))
         {
