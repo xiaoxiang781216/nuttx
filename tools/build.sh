@@ -34,10 +34,6 @@ function mount_unionfs()
   unionfs-fuse -o cow ${OUTDIR}=RW:${ROOTDIR}=RO ${MOUNTDIR}
 }
 
-function setup_environment()
-{
-  source ${ROOTDIR}/build/envsetup.sh
-}
 
 function build_board()
 {
@@ -135,41 +131,30 @@ function build_board_cmake()
     echo "EXTRA_FLAGS are required to update the when using the GHS toolchain."
     EXTRA_FLAGS=$(echo "$EXTRA_FLAGS" | sed 's/-Wno-cpp//' | xargs)
   fi
-
-  # check if cmake configuration is required
-  if [ ! -d "${CMAKE_BINARY_DIR}" ]; then
-    echo -e "Build CMake configuration:"
-    echo -e "  cmake -B ${CMAKE_BINARY_DIR} -S ${NUTTXDIR} -DBOARD_CONFIG=$1 -DEXTRA_FLAGS=\"${EXTRA_FLAGS}\" ${CMAKE_GENERATOR}"
-    if ! cmake -B ${CMAKE_BINARY_DIR} -S ${NUTTXDIR} -DBOARD_CONFIG=$1 -DEXTRA_FLAGS="${EXTRA_FLAGS}" ${CMAKE_GENERATOR}; then
-      echo "Error: ############# config ${1} fail ##############"
-      exit 1
-    fi
-  fi
+  export VELA_EXTRA_FLAGS="$EXTRA_FLAGS"
+  # let use lunch directily
+  echo " lunch $1 ${CMAKE_BINARY_DIR} "
+  lunch $1 ${CMAKE_BINARY_DIR}
+  echo
   # check if the command target is `Xconfig`
   for arg in "${@:2}"
   do
     if [[ $arg == *config ]]; then
-      echo -e "  cmake --build ${CMAKE_BINARY_DIR} -t $arg"
-      if ! cmake --build ${CMAKE_BINARY_DIR} -t $arg; then
-        echo "Error: ############# CMake -t $arg fail ##############"
+      if ! m $arg; then
+        echo "Error: #############  m $arg fail ##############"
         exit 2
       else
         return 0
       fi
     fi
     if [[ "$arg" =~ ^V=1$ ]]; then
-      v_arg+="-v"
+      v_arg+="V=1"
     fi
   done
   # do cmake build
-  echo -e "  cmake --build ${CMAKE_BINARY_DIR} $j_arg $v_arg"
-  if ! ${BEAR} cmake --build ${CMAKE_BINARY_DIR} $j_arg $v_arg; then
+  if ! m $j_arg $v_arg; then
     echo "Error: ############# build ${1} fail ##############"
     exit 2
-  else
-    if [ -f "${COMPILE_COMMANDS}" ]; then
-      cp ${COMPILE_COMMANDS} ${COMPILE_COMMANDS_BACKUP}
-    fi
   fi
 }
 
@@ -297,7 +282,7 @@ TOOLSDIR=${NUTTXDIR}/tools
 board_config=$1
 shift
 
-setup_environment $board_config
+source ${ROOTDIR}/build/envsetup.sh
 
 EXTRA_FLAGS="-Wno-cpp -Wno-deprecated-declarations"
 while [[ "$1" == "-e" ]]; do
@@ -334,18 +319,18 @@ if [ "$1" == "-c" ]; then
   shift
 fi
 
+# Determine the config path
 if [ -d ${ROOTDIR}/${board_config} ]; then
-  if [ -z "$CMAKE_BUILD" ]; then
-    build_board ${ROOTDIR}/${board_config} $*
-  else
-    build_board_cmake ../${board_config} $*
-  fi
+  config_path="${ROOTDIR}/${board_config}"
 else
-  if [ -z "$CMAKE_BUILD" ]; then
-    build_board ${board_config} $*
-  else
-    build_board_cmake ${board_config} $*
-  fi
+  config_path="${board_config}"
+fi
+
+# Build with appropriate method
+if [ -z "$CMAKE_BUILD" ]; then
+  build_board ${config_path} $*
+else
+  build_board_cmake ${board_config} $*
 fi
 
 pack_sdk ${board_config} $*
