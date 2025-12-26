@@ -607,8 +607,8 @@ static int audio_tunnel_release(FAR struct audio_lowerhalf_s *dev)
 int audio_tunnel_initialize(FAR const char *prefix)
 {
   FAR struct audio_tunnel_s *tunnel;
-  size_t i;
   int ret;
+  int i;
 
   /* Allocate the tunnel audio device structure */
 
