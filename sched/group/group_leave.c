@@ -121,6 +121,8 @@ group_release(FAR struct task_group_s *group, int ttype)
     }
 #endif
 
+  task_uninit_info(group);
+
   /* Then drop the group freeing the allocated memory */
 
 #ifndef CONFIG_DISABLE_PTHREAD
@@ -133,8 +135,6 @@ group_release(FAR struct task_group_s *group, int ttype)
       group_drop(group);
     }
 #endif
-
-  task_uninit_info(group);
 }
 
 /****************************************************************************
