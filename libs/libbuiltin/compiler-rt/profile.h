@@ -24,6 +24,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <stdatomic.h>
 #include <unistd.h>
 #include <nuttx/streams.h>
 
@@ -94,7 +95,7 @@ typedef struct aligned_data(8) __llvm_profile_data
   const intptr_t counter_ptr;
   const intptr_t bitmap_ptr;
   const intptr_t func_ptr;
-  intptr_t       values;
+  atomic_intptr_t values;
   const uint32_t num_counters;
   const uint16_t num_value_sites[IPVK_LAST + 1];
   const uint32_t num_bitmap_bytes;

@@ -39,8 +39,8 @@
 
 typedef struct llvm_value_prof_node
 {
-  uint64_t value;
-  uint64_t count;
+  atomic_ulong value;
+  atomic_ulong count;
   struct llvm_value_prof_node *next;
 } llvm_value_prof_node;
 
@@ -345,9 +345,11 @@ llvm_get_next_n_value_data(uint32_t vk, uint32_t site,
 static int
 llvm_allocate_value_profile_counters(FAR __llvm_profile_data *data)
 {
-  uint64_t num_vsites = 0;
   uint32_t vki;
+  uint64_t num_vsites = 0;
+  intptr_t expected = 0;
   FAR llvm_value_prof_node **mem = NULL;
+  FAR atomic_intptr_t *ptr = &data->values;
 
   /* This function will never be called when value site array is
    * allocated statically at compile time.
@@ -377,8 +379,7 @@ llvm_allocate_value_profile_counters(FAR __llvm_profile_data *data)
       return -1;
     }
 
-  if (!__sync_bool_compare_and_swap((FAR uintptr_t *)(&data->values), 0,
-                                    (uintptr_t)mem))
+  if (!atomic_compare_exchange_strong(ptr, &expected, (intptr_t)mem))
     {
       free(mem);
       return -1;
@@ -423,9 +424,9 @@ static FAR llvm_value_prof_node *llvm_allocate_one_node(void)
       return 0;
     }
 
-  node = (FAR llvm_value_prof_node *)__sync_fetch_and_add(
-                                        (long *)&llvm_profile_current_vnode,
-                                        sizeof(llvm_value_prof_node));
+  node = (FAR llvm_value_prof_node *)atomic_fetch_add(
+          (atomic_intptr_t *)&llvm_profile_current_vnode,
+          sizeof(llvm_value_prof_node));
 
   /* Due to section padding, end_vnode point to a byte which is one pass
    * an incomplete vnode, so we need to skip the last incomplete node.
@@ -500,27 +501,33 @@ FAR llvm_profile_data_reader *llvm_get_profile_data_reader(void)
 void __llvm_profile_instrument_target(uint64_t target_value, FAR void *data,
                                       uint32_t counter_index)
 {
+  uint32_t vdata_count = 0;
+  uint64_t min_count = UINT64_MAX;
   FAR __llvm_profile_data *pdata = (__llvm_profile_data *)data;
-  FAR llvm_value_prof_node **value_counters =
-    (FAR llvm_value_prof_node **)pdata->values;
+  FAR llvm_value_prof_node *cur_vnode = NULL;
   FAR llvm_value_prof_node *prev_vnode = NULL;
   FAR llvm_value_prof_node *min_count_vnode = NULL;
-  FAR llvm_value_prof_node *cur_vnode = value_counters[counter_index];
-  uint64_t min_count = UINT64_MAX;
-  uint8_t vdata_count = 0;
+  FAR struct llvm_value_prof_node **value_counters = NULL;
 
   if (!pdata)
     {
       return;
     }
 
-  if (!pdata->values)
+  if (predict_false(!pdata->values))
     {
+      /* Normally, this function should not be called.
+       * Because LLVM inserts sections for value profile counters.
+       */
+
       if (llvm_allocate_value_profile_counters(pdata))
         {
           return;
         }
     }
+
+  value_counters = (FAR struct llvm_value_prof_node **)pdata->values;
+  cur_vnode = value_counters[counter_index];
 
   while (cur_vnode)
     {
@@ -578,18 +585,21 @@ void __llvm_profile_instrument_target(uint64_t target_value, FAR void *data,
   cur_vnode->value = target_value;
   cur_vnode->count += 1;
 
-  uint32_t success = 0;
+  bool success = 0;
+  intptr_t expected = 0;
   if (!value_counters[counter_index])
     {
-      success = __sync_bool_compare_and_swap(&value_counters[counter_index],
-                                             0,
-                                             cur_vnode);
+      success = atomic_compare_exchange_strong(
+                  (FAR atomic_intptr_t *)&value_counters[counter_index],
+                  &expected,
+                  (intptr_t)cur_vnode);
     }
   else if (prev_vnode && !prev_vnode->next)
     {
-      success = __sync_bool_compare_and_swap(&(prev_vnode->next),
-                                             0,
-                                             cur_vnode);
+      success = atomic_compare_exchange_strong(
+                  (atomic_intptr_t *)&(prev_vnode->next),
+                  &expected,
+                  (intptr_t)cur_vnode);
     }
 
   if (!success && !llvm_profile_has_static_counters)
