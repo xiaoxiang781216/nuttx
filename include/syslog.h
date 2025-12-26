@@ -224,9 +224,12 @@ void syslog(int priority, FAR const IPTR char *fmt, ...) syslog_like(2, 3);
  ****************************************************************************/
 
 #  ifdef __KERNEL__
+#    ifdef CONFIG_SYSLOG
 #    define syslog(priority, fmt, ...) nx_syslog(priority, fmt, ##__VA_ARGS__)
+#    else
+#    define syslog(priority, fmt, ...)
+#    endif
 #  endif
-
 void nx_syslog(int priority, FAR const IPTR char *fmt, ...)
      syslog_like(2, 3);
 void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
