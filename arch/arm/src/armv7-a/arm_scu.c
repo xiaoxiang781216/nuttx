@@ -96,7 +96,8 @@ void arm_enable_smp(int cpu)
 #ifdef CONFIG_SMP
       /* We need to confirm that current_task has been initialized. */
 
-      while (!current_task(this_cpu()));
+      while (!current_task(this_cpu()))
+          ;
 
       /* Init idle task to percpu reg */
 
