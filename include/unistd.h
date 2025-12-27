@@ -526,8 +526,12 @@ FAR char *crypt_r(FAR const char *, FAR const char *, FAR char *);
 
 static inline_function pid_t gettid(void)
 {
+#ifdef TLS_FROM_TCB
+  return this_task()->pid;
+#else
   FAR struct tls_info_s *tls = tls_get_info();
   return tls ? tls->tl_tid : IDLE_PROCESS_ID;
+#endif
 }
 
 #if CONFIG_FORTIFY_SOURCE > 0

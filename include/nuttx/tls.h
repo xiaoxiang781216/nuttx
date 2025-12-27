@@ -57,6 +57,10 @@
 #  define TLS_INFO(sp)     ((FAR struct tls_info_s *)((sp) & ~TLS_STACK_MASK))
 #endif
 
+#if (defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_ARCH_ADDRENV)) || defined(__KERNEL__)
+#  define TLS_FROM_TCB
+#endif
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -172,7 +176,7 @@ struct tls_info_s
  *
  ****************************************************************************/
 
-#if (defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_ARCH_ADDRENV)) || defined(__KERNEL__)
+#ifdef TLS_FROM_TCB
 #  define tls_get_info() ((FAR struct tls_info_s *)this_task()->stack_alloc_ptr)
 #elif defined(CONFIG_TLS_ALIGNED)
 #  define tls_get_info() TLS_INFO(up_getsp())
