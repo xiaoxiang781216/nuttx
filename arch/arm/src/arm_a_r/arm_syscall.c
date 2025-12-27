@@ -191,6 +191,8 @@ uint32_t *arm_syscall(uint32_t *regs)
            * final return to user code.
            */
 
+          regs[REG_R11]         = rtcb->xcp.syscall[index].r11;
+
           if (index == 0 && rtcb->xcp.ustkptr != NULL)
             {
               regs[REG_SP]      = (uint32_t)rtcb->xcp.ustkptr;
@@ -266,6 +268,11 @@ uint32_t *arm_syscall(uint32_t *regs)
           regs[REG_R2]   = regs[REG_R3];
 #endif
 
+          /* LR should be zero in user mode
+           * Make gdb end of stack backtrace correctly
+           */
+
+          regs[REG_LR]   = 0;
           cpsr           = regs[REG_CPSR] & ~PSR_MODE_MASK;
           regs[REG_CPSR] = cpsr | PSR_MODE_USR;
         }
@@ -487,6 +494,11 @@ uint32_t *arm_syscall(uint32_t *regs)
           atomic_or(&rtcb->flags, TCB_FLAG_SYSCALL);
 
 #ifdef CONFIG_ARCH_KERNEL_STACK
+          /* Save sp to help unwind through arm_dispatch_syscall */
+
+          rtcb->xcp.syscall[index].r11 = regs[REG_R11];
+          regs[REG_R11]                = regs[REG_SP];
+
           /* If this is the first SYSCALL and if there is an allocated
            * kernel stack, then switch to the kernel stack.
            */

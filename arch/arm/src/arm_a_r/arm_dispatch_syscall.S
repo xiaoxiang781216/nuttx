@@ -94,6 +94,10 @@ arm_dispatch_syscall:
 	str	ip, [sp, #16]
 	.cfi_offset pc, -16
 	.save {r4, r5, r6, lr}
+#ifdef CONFIG_ARCH_KERNEL_STACK
+	str	r11, [sp, #20]
+	.cfi_offset sp, -12
+#endif
 	.pad #32
 	ldr	ip, =g_stublookup
 	ldr	ip, [ip, r0, lsl #2]
