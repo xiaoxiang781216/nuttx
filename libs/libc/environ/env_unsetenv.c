@@ -59,7 +59,8 @@ int unsetenv(FAR const char *name)
 
   /* Check the incoming parameter */
 
-  if (name == NULL || *name == '\0' || strchr(name, '=') != NULL)
+  if (name == NULL || *name == '\0' || strchr(name, '=') != NULL ||
+      info == NULL)
     {
       set_errno(EINVAL);
       return ERROR;
@@ -68,7 +69,7 @@ int unsetenv(FAR const char *name)
   /* Check if the variable exists */
 
   nxrmutex_lock(&info->ta_lock);
-  if (info && (idx = env_findvar(info, name)) >= 0)
+  if ((idx = env_findvar(info, name)) >= 0)
     {
       /* It does!  Remove the name=value pair from the environment. */
 
