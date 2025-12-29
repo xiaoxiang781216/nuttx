@@ -223,6 +223,22 @@ static int inet_udp_alloc(FAR struct socket *psock)
   DEBUGASSERT(conn->crefs == 0);
   conn->crefs = 1;
 
+#ifdef CONFIG_NET_SOCKOPTS
+#ifdef CONFIG_NET_IGMP
+  if (psock->s_domain == PF_INET)
+    {
+      _SO_SETOPT(conn->sconn.s_options, IP_MULTICAST_LOOP);
+    }
+#endif /* CONFIG_NET_IGMP */
+
+#ifdef CONFIG_NET_MLD
+  if (psock->s_domain == PF_INET6)
+    {
+      _SO_SETOPT(conn->sconn.s_options, IPV6_MULTICAST_LOOP);
+    }
+#endif /* CONFIG_NET_MLD */
+#endif /* CONFIG_NET_SOCKOPTS */
+
   /* Save the pre-allocated connection in the socket structure */
 
   psock->s_conn = conn;
