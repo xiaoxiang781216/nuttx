@@ -162,17 +162,39 @@ pid_t arm_fork(const struct fork_s *context)
   kstack = child->xcp.kstack;
 #endif
   memcpy(&child->xcp, &parent->xcp, sizeof(child->xcp));
+
+  child->xcp.regs = (void *)(newsp - XCPTCONTEXT_SIZE);
+
+  memcpy((void *)newsp, (const void *)oldsp, stackutil);
+
 #ifdef CONFIG_ARCH_KERNEL_STACK
   /* Restore child's kernel stack - it has its own kernel stack allocated
    * by up_addrenv_kstackalloc() and must not share with parent.
    */
 
   child->xcp.kstack = kstack;
-#endif
+
+  child->xcp.ustkptr = (void *)newsp;
+
+  newsp = (uint32_t)child->xcp.kstack -
+          (uint32_t)parent->xcp.kstack + context->sp;
+
+  /* Copy regs to child kstack */
+
+  memcpy((void *)(newsp - XCPTCONTEXT_SIZE),
+         child->xcp.regs, XCPTCONTEXT_SIZE);
+
+  /* Set regs to kstack regs */
 
   child->xcp.regs = (void *)(newsp - XCPTCONTEXT_SIZE);
 
-  memcpy((void *)newsp, (const void *)oldsp, stackutil);
+  /* Copy kernel stack */
+
+  memcpy((void *)newsp, (const void *)context->sp,
+         (uint32_t)parent->xcp.kstack +
+         CONFIG_ARCH_KERNEL_STACKSIZE - context->sp);
+
+#endif
 
   /* Was there a frame pointer in place before? */
 
@@ -227,10 +249,6 @@ pid_t arm_fork(const struct fork_s *context)
   child->xcp.regs[REG_R11] = context->r11; /* Volatile register r11 */
   child->xcp.regs[REG_FP]  = newfp;        /* Frame pointer */
   child->xcp.regs[REG_SP]  = newsp;        /* Stack pointer */
-
-#ifdef CONFIG_ARCH_KERNEL_STACK
-  child->xcp.ustkptr = (uint32_t *)newsp;
-#endif
 
   /* And, finally, start the child task.  On a failure, nxtask_start_fork()
    * will discard the TCB by calling nxtask_abort_fork().

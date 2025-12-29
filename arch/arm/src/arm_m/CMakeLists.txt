@@ -71,4 +71,8 @@ if(CONFIG_ARCH_TRUSTZONE_SECURE)
   list(APPEND SRCS arm_gen_nonsecfault.c)
 endif()
 
+if(CONFIG_ARCH_KERNEL_STACK)
+  list(APPEND SRCS arm_addrenv_kstack.c)
+endif()
+
 target_sources(arch PRIVATE ${SRCS})

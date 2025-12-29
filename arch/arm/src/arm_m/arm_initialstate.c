@@ -56,6 +56,9 @@
 void up_initial_state(struct tcb_s *tcb)
 {
   struct xcptcontext *xcp = &tcb->xcp;
+#ifdef CONFIG_ARCH_KERNEL_STACK
+  uint32_t *kstack = xcp->kstack;
+#endif
 
   /* Initialize the initial exception register context structure */
 
@@ -81,6 +84,10 @@ void up_initial_state(struct tcb_s *tcb)
 
       return;
     }
+
+#ifdef CONFIG_ARCH_KERNEL_STACK
+  xcp->kstack = kstack;
+#endif
 
   /* Initialize the context registers to stack top */
 

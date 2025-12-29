@@ -278,6 +278,20 @@ struct xcptcontext
 
 #endif
 
+#ifdef CONFIG_ARCH_KERNEL_STACK
+  /* In this configuration, all syscalls execute from an internal kernel
+   * stack.  Why?  Because when we instantiate and initialize the address
+   * environment of the new user process, we will temporarily lose the
+   * address environment of the old user process, including its stack
+   * contents.  The kernel C logic will crash immediately with no valid
+   * stack in place.
+   */
+
+  uint32_t *ustkptr;
+  uint32_t *kstkptr;
+  uint32_t *kstack;   /* Allocate base of the (aligned) kernel stack */
+#endif
+
   /* Register save area with XCPTCONTEXT_SIZE, only valid when:
    * 1.The task isn't running or
    * 2.The task is interrupted

@@ -14,6 +14,7 @@ config ARCH_ARM
 	select ARCH_HAVE_FORK
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_CUSTOMOPT
+	select ARCH_HAVE_KERNEL_STACK
 	select ARCH_HAVE_STDARG_H
 	select ARCH_HAVE_SETJMP if !ARCH_TOOLCHAIN_IAR
 	select ARCH_HAVE_SYSCALL if !ARCH_CHIP_TLSR82
@@ -33,6 +34,7 @@ config ARCH_ARM64
 	select ARCH_HAVE_FORK if !BUILD_KERNEL && !BUILD_PROTECTED
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_CUSTOMOPT
+	select ARCH_HAVE_KERNEL_STACK
 	select ARCH_HAVE_STDARG_H
 	select ARCH_HAVE_SETJMP
 	select ARCH_HAVE_SYSCALL
@@ -93,6 +95,7 @@ config ARCH_RISCV
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_FORK
 	select ARCH_HAVE_CUSTOMOPT
+	select ARCH_HAVE_KERNEL_STACK
 	select ARCH_HAVE_SETJMP
 	select ARCH_HAVE_STDARG_H
 	select ARCH_HAVE_SYSCALL
@@ -147,6 +150,7 @@ config ARCH_X86_64
 	select ARCH_HAVE_MULTICPU
 	select ARCH_HAVE_INTERRUPTSTACK
 	select ARCH_HAVE_CUSTOMOPT
+	select ARCH_HAVE_KERNEL_STACK
 	select ARCH_HAVE_THREAD_LOCAL
 	select PCI_LATE_DRIVERS_REGISTER if PCI
 	select ARCH_TOOLCHAIN_GNU
@@ -573,6 +577,10 @@ config ARCH_HAVE_MEMTAG
 	bool "Architecture have memory tagging support"
 	default n
 
+config ARCH_HAVE_KERNEL_STACK
+	bool
+	default n
+
 config ARCH_HAVE_PERF_EVENTS
 	bool
 	default n
@@ -841,6 +849,39 @@ config ARCH_KSTACK_PROTECT
 
 endif # ARCH_STACK_PROTECT
 
+config ARCH_KERNEL_STACK
+	bool "Kernel process stack"
+	default LIBC_EXECFUNCS
+	depends on BUILD_KERNEL || BUILD_PROTECTED
+	depends on ARCH_HAVE_KERNEL_STACK
+	---help---
+		It this option is selected, then every user process will have two
+		stacks:  A large, potentially dynamically sized user stack and small
+		kernel stack that is used during system call process.
+
+		If this option is not selected, then kernel system calls will simply
+		use the caller's user stack.  So, in most cases, this option is not
+		required.  However, this option is *required* if both BUILD_KERNEL
+		and LIBC_EXECFUNCS are selected.  Why?  Because when we instantiate
+		and initialize the address environment of the new user process, we
+		will temporarily lose the address environment of the old user
+		process, including its stack contents.  The kernel C logic will
+		crash immediately with no valid stack in place.
+
+		When this option is selected, the smaller kernel stack stays in
+		place during system call processing event though the original user
+		stack may or may not be accessible.
+
+if ARCH_KERNEL_STACK
+
+config ARCH_KERNEL_STACKSIZE
+	int "Kernel stack size"
+	default 1568
+	---help---
+		The common size of each process's kernel stack
+
+endif # ARCH_KERNEL_STACK
+
 if ARCH_NEED_ADDRENV_MAPPING
 
 config ARCH_TEXT_VBASE
@@ -966,38 +1007,6 @@ config ARCH_STACK_NPAGES
 		the stack virtual address space. Default is 1.
 
 endif # ARCH_STACK_DYNAMIC
-
-config ARCH_KERNEL_STACK
-	bool "Kernel process stack"
-	default LIBC_EXECFUNCS
-	depends on BUILD_KERNEL || BUILD_PROTECTED
-	---help---
-		It this option is selected, then every user process will have two
-		stacks:  A large, potentially dynamically sized user stack and small
-		kernel stack that is used during system call process.
-
-		If this option is not selected, then kernel system calls will simply
-		use the caller's user stack.  So, in most cases, this option is not
-		required.  However, this option is *required* if both BUILD_KERNEL
-		and LIBC_EXECFUNCS are selected.  Why?  Because when we instantiate
-		and initialize the address environment of the new user process, we
-		will temporarily lose the address environment of the old user
-		process, including its stack contents.  The kernel C logic will
-		crash immediately with no valid stack in place.
-
-		When this option is selected, the smaller kernel stack stays in
-		place during system call processing event though the original user
-		stack may or may not be accessible.
-
-if ARCH_KERNEL_STACK
-
-config ARCH_KERNEL_STACKSIZE
-	int "Kernel stack size"
-	default 1568
-	---help---
-		The common size of each process's kernel stack
-
-endif # ARCH_KERNEL_STACK
 
 config ARCH_PGPOOL_MAPPING
 	bool "Have page pool mapping"

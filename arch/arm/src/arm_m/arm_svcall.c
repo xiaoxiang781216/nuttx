@@ -177,6 +177,21 @@ int arm_svcall(int irq, void *context, void *arg)
 
           atomic_and(&tcb->flags, ~TCB_FLAG_SYSCALL);
           nxsig_unmask_pendingsignal();
+
+#ifdef CONFIG_ARCH_KERNEL_STACK
+          /* If this is the outermost SYSCALL and if there is a saved user
+           * stack pointer, then restore the user stack pointer on this
+           * final return to user code.
+           */
+
+          if (index == 0 && tcb->xcp.ustkptr != NULL)
+            {
+              regs[REG_SP] = (uint32_t)tcb->xcp.ustkptr;
+              memcpy(tcb->xcp.ustkptr, regs, XCPTCONTEXT_SIZE);
+              tcb->xcp.regs = tcb->xcp.ustkptr;
+              tcb->xcp.ustkptr = NULL;
+            }
+#endif
         }
         break;
 #endif
@@ -297,6 +312,40 @@ int arm_svcall(int irq, void *context, void *arg)
           regs[REG_R1]         = regs[REG_R2]; /* signal */
           regs[REG_R2]         = regs[REG_R3]; /* info */
           regs[REG_R3]         = regs[REG_R4]; /* ucontext */
+
+#ifdef CONFIG_ARCH_KERNEL_STACK
+          /* If we are signalling a user process, then we must be operating
+           * on the kernel stack now.  We need to switch back to the user
+           * stack before dispatching the signal handler to the user code.
+           * The existence of an allocated kernel stack is sufficient
+           * information to make this decision.
+           */
+
+          if (tcb->xcp.kstack != NULL)
+            {
+              uint32_t usp;
+
+              DEBUGASSERT(tcb->xcp.kstkptr == NULL);
+
+              /* Copy "info" into user stack */
+
+              usp = (uint32_t)tcb->xcp.ustkptr;
+
+              /* Create a frame for info and copy the kernel info */
+
+              usp = usp - sizeof(siginfo_t);
+              memcpy((void *)usp, (void *)regs[REG_R2], sizeof(siginfo_t));
+
+              /* Now set the updated SP and user copy of "info" to R2 */
+
+              tcb->xcp.kstkptr = (uint32_t *)regs;
+
+              regs[REG_SP] = usp + sizeof(siginfo_t);
+              regs[REG_R2] = usp;
+              memcpy((void *)regs[REG_SP], regs, XCPTCONTEXT_SIZE);
+              tcb->xcp.regs = (void *)regs[REG_SP];
+            }
+#endif
         }
         break;
 #endif
@@ -324,6 +373,23 @@ int arm_svcall(int irq, void *context, void *arg)
 
           regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
           tcb->xcp.sigreturn  = 0;
+#ifdef CONFIG_ARCH_KERNEL_STACK
+          /* We must enter here be using the user stack.  We need to switch
+           * to back to the kernel user stack before returning to the kernel
+           * mode signal trampoline.
+           */
+
+          if (tcb->xcp.kstack != NULL)
+            {
+              DEBUGASSERT(tcb->xcp.kstkptr != NULL);
+
+              regs[REG_SP]      = (uint32_t)tcb->xcp.kstkptr;
+              tcb->xcp.kstkptr = NULL;
+
+              tcb->xcp.regs = (void *)regs[REG_SP];
+              memcpy((void *)tcb->xcp.regs, regs, XCPTCONTEXT_SIZE);
+            }
+#endif
         }
         break;
 #endif
@@ -396,6 +462,21 @@ int arm_svcall(int irq, void *context, void *arg)
           /* Indicate that we are in a syscall handler. */
 
           atomic_or(&tcb->flags, TCB_FLAG_SYSCALL);
+
+#  ifdef CONFIG_ARCH_KERNEL_STACK
+          /* If this is the first SYSCALL and if there is an allocated
+           * kernel stack, then switch to the kernel stack.
+           */
+
+          if (index == 0 && tcb->xcp.kstack)
+            {
+              regs[REG_SP] = (uint32_t)tcb->xcp.kstack +
+                             ARCH_KERNEL_STACKSIZE - XCPTCONTEXT_SIZE;
+              memcpy((void *)regs[REG_SP], tcb->xcp.regs, XCPTCONTEXT_SIZE);
+              tcb->xcp.ustkptr = tcb->xcp.regs;
+              tcb->xcp.regs = (void *)regs[REG_SP];
+            }
+#  endif
         }
 #else
         svcerr("ERROR: Bad SYS call: %" PRId32 "\n", regs[REG_R0]);
