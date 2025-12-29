@@ -121,7 +121,10 @@ class NxRegisters:
         """Load registers from context register address"""
         self.registers.load(regs)
         for reg in self.registers:
-            gdb.execute(f"set ${reg.name} = {reg.value}")
+            try:
+                gdb.execute(f"set ${reg.name} = {reg.value}")
+            except gdb.error:
+                print(f"Ignore register {reg.name}, value {hex(reg.value)}")
 
     def switch(self, pid):
         """Switch to the specified thread"""
@@ -235,9 +238,7 @@ class SetRegs(gdb.Command):
             return
 
         if args and args.regs:
-            regs = utils.parse_and_eval(f"{args.regs}").cast(
-                utils.lookup_type("char").pointer()
-            )
+            regs = utils.parse_arg(f"{args.regs}")
         else:
             try:
                 current_regs = utils.parse_and_eval("g_running_tasks[0].xcp.regs")
