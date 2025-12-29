@@ -248,8 +248,6 @@ static int audio_close(FAR struct file *filep)
       upper->head = priv->flink;
     }
 
-  spin_unlock_irqrestore(&upper->spinlock, flags);
-
   kmm_free(priv);
 
   /*  If the reference head decrement to NULL,
@@ -269,6 +267,8 @@ static int audio_close(FAR struct file *filep)
       kumm_free(upper->status);
       upper->status = NULL;
     }
+
+  spin_unlock_irqrestore(&upper->spinlock, flags);
 
   ret = OK;
   nxmutex_unlock(&upper->lock);
@@ -1481,13 +1481,17 @@ static inline void audio_complete(FAR struct audio_upperhalf_s *upper,
 #endif
 {
   struct audio_msg_s    msg;
+  irqstate_t flags;
 
   audinfo("Entry\n");
 
+  flags = spin_lock_irqsave(&upper->spinlock);
   if (upper->status && (upper->status->state == AUDIO_STATE_DRAINING))
     {
-      audio_setstate(upper, AUDIO_STATE_OPEN);
+      upper->status->state = AUDIO_STATE_OPEN;
     }
+
+  spin_unlock_irqrestore(&upper->spinlock, flags);
 
   /* Send a dequeue message to the user if a message queue is registered */
 
