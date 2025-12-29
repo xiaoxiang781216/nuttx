@@ -174,9 +174,9 @@ add_compile_options(
   $<$<COMPILE_LANGUAGE:ASM>:-Wa,--divide>)
 
 # LLVM target definitions
-set(LLVM_ARCH "x86_64")
-set(LLVM_CPU "x86-64")
-set(LLVM_ABI "sysv")
+set(LLVM_ARCHTYPE "x86_64")
+set(LLVM_CPUTYPE "x86-64")
+set(LLVM_ABITYPE "sysv")
 
 if(CONFIG_CXX_STANDARD)
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-std=${CONFIG_CXX_STANDARD}>)
