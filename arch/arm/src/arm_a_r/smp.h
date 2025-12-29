@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-r/smp.h
+ * arch/arm/src/arm_a_r/smp.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_ARMV7_R_SMP_H
-#define __ARCH_ARM_SRC_ARMV7_R_SMP_H
+#ifndef __ARCH_ARM_SRC_ARM_A_R_SMP_H
+#define __ARCH_ARM_SRC_ARM_A_R_SMP_H
 
 /****************************************************************************
  * Included Files
@@ -27,7 +27,7 @@
 
 #include <nuttx/config.h>
 
-#ifdef CONFIG_SMP
+#ifndef CONFIG_UP
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -49,18 +49,30 @@
 
 #ifndef __ASSEMBLY__
 
-#if CONFIG_SMP_NCPUS > 1
+#if CONFIG_NCPUS > 1
 extern uint32_t g_cpu1_idlestack[SMP_STACK_WORDS];
-#if CONFIG_SMP_NCPUS > 2
+#if CONFIG_NCPUS > 2
 extern uint32_t g_cpu2_idlestack[SMP_STACK_WORDS];
-#if CONFIG_SMP_NCPUS > 3
+#if CONFIG_NCPUS > 3
 extern uint32_t g_cpu3_idlestack[SMP_STACK_WORDS];
-#if CONFIG_SMP_NCPUS > 4
-#  error This logic needs to extended for CONFIG_SMP_NCPUS > 4
-#endif /* CONFIG_SMP_NCPUS > 4 */
-#endif /* CONFIG_SMP_NCPUS > 3 */
-#endif /* CONFIG_SMP_NCPUS > 2 */
-#endif /* CONFIG_SMP_NCPUS > 1 */
+#if CONFIG_NCPUS > 4
+extern uint32_t g_cpu4_idlestack[SMP_STACK_WORDS];
+#if CONFIG_NCPUS > 5
+extern uint32_t g_cpu5_idlestack[SMP_STACK_WORDS];
+#if CONFIG_NCPUS > 6
+extern uint32_t g_cpu6_idlestack[SMP_STACK_WORDS];
+#if CONFIG_NCPUS > 7
+extern uint32_t g_cpu7_idlestack[SMP_STACK_WORDS];
+#if CONFIG_NCPUS > 8
+#  error This logic needs to extended for CONFIG_NCPUS > 8
+#endif /* CONFIG_NCPUS > 8 */
+#endif /* CONFIG_NCPUS > 7 */
+#endif /* CONFIG_NCPUS > 6 */
+#endif /* CONFIG_NCPUS > 5 */
+#endif /* CONFIG_NCPUS > 4 */
+#endif /* CONFIG_NCPUS > 3 */
+#endif /* CONFIG_NCPUS > 2 */
+#endif /* CONFIG_NCPUS > 1 */
 
 /****************************************************************************
  * Public Function Prototypes
@@ -86,20 +98,36 @@ extern uint32_t g_cpu3_idlestack[SMP_STACK_WORDS];
 
 void __start(void);
 
-#if CONFIG_SMP_NCPUS > 1
+#if CONFIG_NCPUS > 1
 void __cpu1_start(void);
 #endif
 
-#if CONFIG_SMP_NCPUS > 2
+#if CONFIG_NCPUS > 2
 void __cpu2_start(void);
 #endif
 
-#if CONFIG_SMP_NCPUS > 3
+#if CONFIG_NCPUS > 3
 void __cpu3_start(void);
 #endif
 
-#if CONFIG_SMP_NCPUS > 4
-#  error This logic needs to extended for CONFIG_SMP_NCPUS > 4
+#if CONFIG_NCPUS > 4
+void __cpu4_start(void);
+#endif
+
+#if CONFIG_NCPUS > 5
+void __cpu5_start(void);
+#endif
+
+#if CONFIG_NCPUS > 6
+void __cpu6_start(void);
+#endif
+
+#if CONFIG_NCPUS > 7
+void __cpu7_start(void);
+#endif
+
+#if CONFIG_NCPUS > 8
+#  error This logic needs to extended for CONFIG_NCPUS > 8
 #endif
 
 /****************************************************************************
@@ -126,5 +154,5 @@ void __cpu3_start(void);
 void arm_cpu_boot(int cpu);
 
 #endif /* __ASSEMBLY__ */
-#endif /* CONFIG_SMP */
-#endif /* __ARCH_ARM_SRC_ARMV7_R_SMP_H */
+#endif /* !CONFIG_UP */
+#endif /* __ARCH_ARM_SRC_ARM_A_R_SMP_H */
