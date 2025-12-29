@@ -65,12 +65,6 @@ static uint8_t g_iob_buffer[IOB_BUFFER_SIZE]
 static uint8_t g_iob_buffer[IOB_BUFFER_SIZE];
 #endif
 
-#if CONFIG_IOB_NCHAINS > 0
-/* This is a pool of pre-allocated iob_qentry_s buffers */
-
-static struct iob_qentry_s g_iob_qpool[CONFIG_IOB_NCHAINS];
-#endif
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -83,21 +77,11 @@ FAR struct iob_s *g_iob_freelist;
 
 FAR struct iob_s *g_iob_committed;
 
-#if CONFIG_IOB_NCHAINS > 0
-/* A list of all free, unallocated I/O buffer queue containers */
-
-FAR struct iob_qentry_s *g_iob_freeqlist;
-
-/* A list of I/O buffer queue containers that are committed for allocation */
-
-FAR struct iob_qentry_s *g_iob_qcommitted;
-#endif
-
 #undef g_iob_sem
 DEFINE_PER_CPU_BMP(sem_t, g_iob_sem) = SEM_INITIALIZER(0);
 #define g_iob_sem this_cpu_var_bmp(g_iob_sem)
 
-/* Counting that tracks the number of free IOBs/qentries */
+/* Counting that tracks the number of free IOBs */
 
 int16_t g_iob_count = CONFIG_IOB_NBUFFERS;
 
@@ -110,17 +94,6 @@ DEFINE_PER_CPU_BMP(sem_t, g_throttle_sem) = SEM_INITIALIZER(0);
 /* Wait Counts for throttle */
 
 int16_t g_throttle_wait = 0;
-#endif
-
-#if CONFIG_IOB_NCHAINS > 0
-
-#  undef g_qentry_sem
-DEFINE_PER_CPU_BMP(sem_t, g_qentry_sem) = SEM_INITIALIZER(0);
-#  define g_qentry_sem this_cpu_var_bmp(g_qentry_sem)
-
-/* Wait Counts for qentry */
-
-int16_t g_qentry_wait = 0;
 #endif
 
 volatile spinlock_t g_iob_lock = SP_UNLOCKED;
@@ -173,6 +146,8 @@ void iob_initialize(void)
     {
       FAR struct iob_s *iob = (FAR struct iob_s *)(buf + i * IOB_ALIGN_SIZE);
 
+      DEBUGASSERT(((uintptr_t)iob & IOB_FLAGS_MASK) == 0);
+
       /* Add the pre-allocate I/O buffer to the head of the free list */
 
       iob->io_flink   = g_iob_freelist;
@@ -182,22 +157,6 @@ void iob_initialize(void)
 #endif
       g_iob_freelist  = iob;
     }
-
-#if CONFIG_IOB_NCHAINS > 0
-  /* Add each I/O buffer chain queue container to the free list */
-
-  for (i = 0; i < CONFIG_IOB_NCHAINS; i++)
-    {
-      FAR struct iob_qentry_s *iobq = &g_iob_qpool[i];
-
-      /* Add the pre-allocate buffer container to the head of the free
-       * list
-       */
-
-      iobq->qe_flink  = g_iob_freeqlist;
-      g_iob_freeqlist = iobq;
-    }
-#endif
 
   spin_unlock_irqrestore(&g_iob_lock, flags);
 }
