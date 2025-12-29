@@ -33,7 +33,7 @@ SECTIONS
         *(.realmode)
     }
 
-    . = 0x1M;
+    . = 0x100000;
     _kernel_physical_start = .;
 
     .multiboot1 : {
@@ -123,6 +123,7 @@ SECTIONS
         KEEP(*(.eh_frame))
     }
 
+    . = ALIGN(8);
     .tdata_tbss ALIGN(0x1000) :
     {
         _ertonly = ABSOLUTE(.);      /* For tls_initialize() */
