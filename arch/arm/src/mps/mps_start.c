@@ -184,7 +184,10 @@ void __start(void)
 #ifdef CONFIG_ARM_MPU
   /* Then enable the MPU */
 
+#  ifndef CONFIG_ELF_FIXUP
   mpu_priv_flash((uintptr_t)_stext, (uintptr_t)_etext - (uintptr_t)_stext);
+#  endif
+
   mpu_control(true, false, true);
 #endif
 
