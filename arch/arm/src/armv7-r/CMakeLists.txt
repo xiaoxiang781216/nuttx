@@ -36,7 +36,6 @@ list(
   arm_initialstate.c
   arm_undefinedinsn.c
   arm_perf.c
-  arm_cpuidlestack.c
   cp15_cacheops.c)
 
 if(NOT CONFIG_ARCH_CHIP STREQUAL tms570)

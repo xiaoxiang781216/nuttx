@@ -37,7 +37,6 @@ list(
   arm_initialstate.c
   arm_undefinedinsn.c
   arm_perf.c
-  arm_cpuidlestack.c
   cp15_cacheops.c)
 
 if(CONFIG_ARM_GIC_VERSION EQUAL 2)
