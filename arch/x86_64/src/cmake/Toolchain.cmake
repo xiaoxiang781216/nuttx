@@ -37,19 +37,34 @@ else()
   set(TOOLCHAIN_PREFIX)
 endif()
 
-set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}gcc)
-set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}g++)
-set(CMAKE_ASM_COMPILER ${CMAKE_C_COMPILER})
-set(CMAKE_PREPROCESSOR ${TOOLCHAIN_PREFIX}gcc -E -P -x c)
-set(CMAKE_STRIP ${TOOLCHAIN_PREFIX}strip --strip-unneeded)
-set(CMAKE_OBJCOPY ${TOOLCHAIN_PREFIX}objcopy)
-set(CMAKE_OBJDUMP ${TOOLCHAIN_PREFIX}objdump)
-set(CMAKE_LINKER ${TOOLCHAIN_PREFIX}ld)
-set(CMAKE_LD ${TOOLCHAIN_PREFIX}ld)
-set(CMAKE_AR ${TOOLCHAIN_PREFIX}ar)
-set(CMAKE_NM ${TOOLCHAIN_PREFIX}nm)
-set(CMAKE_AS ${TOOLCHAIN_PREFIX}as)
-set(CMAKE_RANLIB ${TOOLCHAIN_PREFIX}ranlib)
+if(CONFIG_ARCH_TOOLCHAIN_CLANG)
+  set(CMAKE_ASM_COMPILER clang)
+  set(CMAKE_C_COMPILER clang)
+  set(CMAKE_CXX_COMPILER clang++)
+  set(CMAKE_PREPROCESSOR clang -E -P -x c)
+  set(CMAKE_STRIP llvm-strip --strip-unneeded)
+  set(CMAKE_OBJCOPY llvm-objcopy)
+  set(CMAKE_OBJDUMP llvm-objdump)
+  set(CMAKE_LINKER ld.lld)
+  set(CMAKE_LD ld.lld)
+  set(CMAKE_AR llvm-ar)
+  set(CMAKE_NM llvm-nm)
+  set(CMAKE_RANLIB llvm-ranlib)
+else()
+  set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}gcc)
+  set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}g++)
+  set(CMAKE_ASM_COMPILER ${CMAKE_C_COMPILER})
+  set(CMAKE_PREPROCESSOR ${TOOLCHAIN_PREFIX}gcc -E -P -x c)
+  set(CMAKE_STRIP ${TOOLCHAIN_PREFIX}strip --strip-unneeded)
+  set(CMAKE_OBJCOPY ${TOOLCHAIN_PREFIX}objcopy)
+  set(CMAKE_OBJDUMP ${TOOLCHAIN_PREFIX}objdump)
+  set(CMAKE_LINKER ${TOOLCHAIN_PREFIX}ld)
+  set(CMAKE_LD ${TOOLCHAIN_PREFIX}ld)
+  set(CMAKE_AR ${TOOLCHAIN_PREFIX}ar)
+  set(CMAKE_NM ${TOOLCHAIN_PREFIX}nm)
+  set(CMAKE_AS ${TOOLCHAIN_PREFIX}as)
+  set(CMAKE_RANLIB ${TOOLCHAIN_PREFIX}ranlib)
+endif()
 
 # override the ARCHIVE command
 set(CMAKE_ARCHIVE_COMMAND "<CMAKE_AR> rcs <TARGET> <LINK_FLAGS> <OBJECTS>")
@@ -139,7 +154,7 @@ if(CONFIG_COVERAGE_ALL)
 endif()
 
 if(CONFIG_HOST_LINUX)
-  add_link_options(-Wl,-z noexecstack)
+  add_link_options(-Wl,-z,noexecstack)
 endif()
 
 # Architecture flags
@@ -170,8 +185,13 @@ add_compile_options(
   -Wundef
   -Wno-attributes
   -Wno-unknown-pragmas
-  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
-  $<$<COMPILE_LANGUAGE:ASM>:-Wa,--divide>)
+  $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>)
+
+if(CONFIG_ARCH_TOOLCHAIN_CLANG)
+  add_compile_options($<$<COMPILE_LANGUAGE:ASM>:-fno-integrated-as>)
+else()
+  add_compile_options($<$<COMPILE_LANGUAGE:ASM>:-Wa,--divide>)
+endif()
 
 # LLVM target definitions
 set(LLVM_ARCHTYPE "x86_64")

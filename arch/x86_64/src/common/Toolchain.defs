@@ -36,8 +36,11 @@
 ARCHDEFINES += -U_AIX -U_WIN32 -U__APPLE__ -U__FreeBSD__
 ARCHDEFINES += -U__NetBSD__ -U__linux__ -U__sun__ -U__unix__
 ARCHDEFINES += -U__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__
-ARCHDEFINES += -Wa,--divide
 ARCHDEFINES += -mcmodel=large
+
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),)
+  ARCHDEFINES += -Wa,--divide
+endif
 
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
   ARCHOPTIMIZATION = $(CONFIG_DEBUG_SYMBOLS_LEVEL)
@@ -172,15 +175,27 @@ ifeq ($(CONFIG_MM_KASAN_INSTRUMENT_ALL),y)
   endif
 endif
 
-CC = $(CROSSDEV)gcc
-CXX = $(CROSSDEV)g++
-CPP = $(CROSSDEV)gcc -E -P -x c
-LD = $(CROSSDEV)ld
-STRIP = $(CROSSDEV)strip --strip-unneeded
-AR = $(CROSSDEV)ar rcs
-NM = $(CROSSDEV)nm
-OBJCOPY = $(CROSSDEV)objcopy
-OBJDUMP = $(CROSSDEV)objdump
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),)
+  CC = $(CROSSDEV)gcc
+  CXX = $(CROSSDEV)g++
+  CPP = $(CROSSDEV)gcc -E -P -x c
+  LD = $(CROSSDEV)ld
+  STRIP = $(CROSSDEV)strip --strip-unneeded
+  AR = $(CROSSDEV)ar rcs
+  NM = $(CROSSDEV)nm
+  OBJCOPY = $(CROSSDEV)objcopy
+  OBJDUMP = $(CROSSDEV)objdump
+else
+  CC = clang
+  CXX = clang++
+  CPP = clang -E -P -x c
+  LD = ld.lld
+  STRIP = llvm-strip --strip-unneeded
+  AR = llvm-ar rcs
+  NM = llvm-nm
+  OBJCOPY = llvm-objcopy
+  OBJDUMP = llvm-objdump
+endif
 
 ifeq ($(CONFIG_ARCH_TOOLCHAIN_GNU),y)
   ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),)
@@ -261,6 +276,10 @@ CFLAGS := $(ARCHWARNINGS) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) $(ARCHINCLUDES) $(
 CXXFLAGS := $(ARCHOPTIMIZATION) $(ARCHCXXFLAGS) $(ARCHXXINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS)
 CPPFLAGS := $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS)
 AFLAGS := $(CFLAGS) -D__ASSEMBLY__
+
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
+  AFLAGS += -fno-integrated-as
+endif
 
 # Loadable module definitions
 

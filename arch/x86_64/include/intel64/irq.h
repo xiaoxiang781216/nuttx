@@ -597,7 +597,7 @@ static inline_function void set_cr3(uint64_t cr3)
 static inline_function uint64_t get_cr3(void)
 {
   uint64_t cr3;
-  __asm__ volatile("mov %%cr3, %0" : "=rm"(cr3) : : "memory");
+  __asm__ volatile("movq %%cr3, %0" : "=r"(cr3) : : "memory");
   return cr3;
 }
 

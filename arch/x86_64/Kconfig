@@ -14,6 +14,14 @@ choice
 	prompt "x86_64 Toolchain Selection"
 	default X86_64_TOOLCHAIN_GNU_NONE
 
+config X86_64_TOOLCHAIN_CLANG_HOST
+	bool "Host Clang toolchain"
+	select ARCH_TOOLCHAIN_CLANG
+
+config X86_64_TOOLCHAIN_CLANG_NONE
+	bool "Baremetal Clang toolchain"
+	select ARCH_TOOLCHAIN_CLANG
+
 config X86_64_TOOLCHAIN_GNU_HOST
 	bool "Use host x86_64 toolchain"
 	select ARCH_TOOLCHAIN_GCC
