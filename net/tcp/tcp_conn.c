@@ -644,12 +644,13 @@ FAR struct tcp_conn_s *tcp_alloc(uint8_t domain)
           /* Is this connection in a state we can sacrifice. */
 
           if ((tmp->crefs == 0) &&
-              (tmp->tcpstateflags == TCP_CLOSED    ||
-              tmp->tcpstateflags == TCP_CLOSING    ||
-              tmp->tcpstateflags == TCP_FIN_WAIT_1 ||
-              tmp->tcpstateflags == TCP_FIN_WAIT_2 ||
-              tmp->tcpstateflags == TCP_TIME_WAIT  ||
-              tmp->tcpstateflags == TCP_LAST_ACK))
+              (tmp->tcpstateflags == TCP_CLOSED     ||
+               tmp->tcpstateflags == TCP_CLOSING    ||
+               tmp->tcpstateflags == TCP_FIN_WAIT_1 ||
+               tmp->tcpstateflags == TCP_FIN_WAIT_2 ||
+               tmp->tcpstateflags == TCP_TIME_WAIT  ||
+               tmp->tcpstateflags == TCP_LAST_ACK)  &&
+              (tmp->flags & TCP_CLOSE_ARRANGED) == 0)
             {
               /* Yes.. Is it the oldest one we have seen so far? */
 
@@ -805,7 +806,8 @@ void tcp_free(FAR struct tcp_conn_s *conn)
 
   /* Cancel close work */
 
-  if ((conn->flags & TCP_CLOSE_ARRANGED) &&
+  if ((conn->flags & TCP_CLOSE_DIRECT) == 0 &&
+      (conn->flags & TCP_CLOSE_ARRANGED) &&
       work_cancel(LPWORK, &conn->clswork) != OK)
     {
       /* Close work is already running, tcp_free will be called again. */

@@ -54,7 +54,7 @@ static void tcp_close_work(FAR void *param)
 {
   FAR struct tcp_conn_s *conn = (FAR struct tcp_conn_s *)param;
 
-  conn->flags &= ~TCP_CLOSE_ARRANGED;
+  conn->flags |= TCP_CLOSE_DIRECT;
   if (conn->crefs == 0 && conn->tcpstateflags == TCP_CLOSED)
     {
       /* Stop the network monitor for all sockets */
@@ -303,8 +303,9 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
       netdev_txnotify_dev(conn->dev, TCP_POLL);
       conn_dev_unlock(&conn->sconn, conn->dev);
     }
-  else if (conn->tcpstateflags == TCP_SYN_SENT ||
-           conn->tcpstateflags == TCP_SYN_RCVD)
+  else if ((conn->tcpstateflags == TCP_SYN_SENT ||
+            conn->tcpstateflags == TCP_SYN_RCVD) &&
+           work_cancel(LPWORK, &conn->work) != OK)
     {
       /* Free network resources */
 
