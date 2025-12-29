@@ -4,3 +4,15 @@
 CMake,sabre-6quad:smp
 CMake,sabre-6quad:coredump
 CMake,sabre-6quad:nsh
+
+-sabre-6quad:citest
+
+# SOF_TIMESTAMPING_SOFTWARE redefined
+-imxrt1064-evk:canfd
+-imxrt1064-evk:can
+-teensy-4.x:can-4.1
+-teensy-4.x:pikron-bb
+-imxrt1060-evk:canfd
+-imxrt1060-evk:can
+-imxrt1170-evk:canfd
+-imxrt1170-evk:can

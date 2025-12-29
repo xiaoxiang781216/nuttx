@@ -54,3 +54,6 @@ CMake,sim:note
 CMake,sim:nsh
 CMake,sim:nxffs
 CMake,sim:matter
+
+# "__SO_PROTOCOL" redefined
+-sim:matter

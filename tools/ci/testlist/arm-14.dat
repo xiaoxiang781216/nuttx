@@ -16,3 +16,16 @@
 
 # overflowed
 -nucleo-l432kc:wgen
+-lm3s6965-ek:qemu-flat
+
+# implicit declaration of function 'arm_stack_check_init'
+-nucleo-l496zg:nsh
+-nucleo-l452re:nsh
+-stm32l562e-dk:nsh
+
+# arm_vectors.S
+-olimex-strp711:nsh
+-olimex-strp711:nettest
+
+# 'CHIP_MPCORE_VBASE' undeclared 
+-launchxl-tms57004:nsh

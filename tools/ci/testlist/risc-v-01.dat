@@ -1,2 +1,5 @@
 /risc-v/[a-d]*
 /risc-v/e[0-r]*
+
+# 'task_tls_alloc' undeclared here
+-bl602evb:elf

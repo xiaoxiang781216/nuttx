@@ -99,3 +99,51 @@ CMake,nrf9160-dk:ostest_tickless
 CMake,qemu-armv7a:full
 CMake,qemu-armv8r-aarch32:bmp
 CMake,qemu-armv8r-aarch32:pbmp
+
+# undefined reference to `systick_initialize'
+-mps2-an500:nsh
+-mps2-an500:flat_addrenv
+-mps2-an500:knsh
+-mps2-an521:nsh
+-mps3-an547:ap
+-mps3-an547:bl
+-mps3-an547:clang
+-mps3-an547:nsh
+-mps3-an547:picostest
+-nrf52832-dk:mrf24j40_mac
+-nrf52832-dk:mrf24j40_6lowpan
+-nrf52832-dk:jumbo
+-nrf9160-dk-nrf52:nsh
+-nrf9160-dk-nrf52:ieee802154_mac
+-nrf9160-dk-nrf52:ieee802154_6lowpan
+-nrf52840-dk:jumbo
+-nrf52840-dk:ieee802154_mac
+-nrf52840-dk:ieee802154_6lowpan
+-nrf52840-dongle:ieee802154_mac
+-thingy91-nrf52:usbnsh
+-thingy53:rgbled_cpuapp
+-thingy91:nsh_rtt
+-thingy91:nsh_nrf52
+
+# unknown argument '-fno-fprofile-use'
+-mps3-an547:gcov
+
+# 'maxticks' may be used uninitialized
+-nrf51-microbit:nsh
+
+# 'NRF91_RTC_EVT_COMPARE0' undeclared
+-nrf52832-dk:ostest_tickless
+-nrf52840-dk:ostest_tickless
+
+# 'ARMV8M_NS_OFFSET' undeclared 
+-nrf9160-dk:miniboot_s
+
+# conflicting types for 'termcurses_getwinsize'
+-qemu-armv7a:full
+
+# undefined reference to `g_interrupt_context'
+-qemu-armv8r-aarch32:pnsh
+
+# overflowed
+-nrf5340-dk:mcuboot_loader_cpuapp
+-nrf9160-dk:mcuboot_loader

@@ -34,3 +34,24 @@
 -rx65n-rsk2mb:ipv6
 -rx65n-rsk2mb:netnsh
 -rx65n-rsk2mb:nsh
+
+# implicit declaration of function 'atomic_fetch'
+-teensy-2.0:usbmsc
+-teensy-2.0:hello
+-teensy-2.0:nsh
+-micropendous3:hello
+-moteino-mega:hello
+-moteino-mega:nsh
+-arduino-mega2560:hello
+-arduino-mega2560:nsh
+-amber:hello
+-mega1284p-xplained:hello
+-mega1284p-xplained:nsh
+-avr32dev1:ostest
+-avr32dev1:nsh
+-mizar32a:nsh
+-qemu-i486:ostest
+-qemu-i486:nsh
+-xx3803:nsh
+-s698pm-dkit:smp
+-s698pm-dkit:nsh

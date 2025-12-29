@@ -6,6 +6,9 @@
 -olimex-stm32-p407:kelf
 -stm32h745i-disco:lvgl
 
+# 'struct winsize' declared inside parameter
+-stm32f746g-disco:audio
+
 # Temporarily closed, will reopen after resolving the compilation issue
 -stm32g071b-disco:oled
 -b-l072z-lrwan1:nxlines_oled

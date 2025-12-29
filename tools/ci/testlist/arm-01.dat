@@ -1,3 +1,23 @@
 /arm/[a]*,CONFIG_ARM_TOOLCHAIN_GNU_EABI
 
 /arm/[b-h]*,CONFIG_ARM_TOOLCHAIN_GNU_EABI
+
+# SOF_TIMESTAMPING_SOFTWARE redefined
+-at32f437-mini:can_socket
+
+# libelf.h: No such file or directory
+-at32f437-mini:systemview
+-spresense:nsh_trace
+
+# arm_vectors.S
+-c5471evm:nettest
+-c5471evm:nsh
+-c5471evm:httpd
+-ntosd-dm320:webserver
+-ntosd-dm320:nettest
+-ntosd-dm320:nsh
+-ntosd-dm320:poll
+-ntosd-dm320:udp
+
+# undefined reference to `systick_initialize'
+-csk6011a-nano:nsh

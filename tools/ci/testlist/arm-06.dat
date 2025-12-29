@@ -3,3 +3,6 @@
 # Boards build by CMake
 
 CMake,raspberrypi-pico:bmp280
+
+# PICO_SDK_PATH environment variable is not set
+-raspberrypi-pico:bmp280

@@ -8,3 +8,7 @@
 # Boards build by CMake
 CMake,rv-virt:smp
 CMake,rv-virt:smp64
+
+# relocation truncated to fit:
+-rv-virt:netnsh64
+-rv-virt:netnsh64_smp

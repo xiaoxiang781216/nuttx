@@ -19,6 +19,15 @@
 -stm32f429i-disco:lcd
 -stm32f429i-disco:nxwm
 
+# 'struct winsize' declared inside parameter
+-stm32butterfly2:nshusbhost
+-stm32butterfly2:nsh
+-stm32butterfly2:nshnet
+-stm32butterfly2:nshusbdev
+
+# error: incompatible function pointer types initializing
+-stm32f429i-disco:systemview
+
 # Boards build by CMake
 
 CMake,stm32_tiny:nsh

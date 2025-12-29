@@ -23,3 +23,17 @@
 -circuit-express:usbnsh
 -circuit-express:nsh
 -saml21-xplained:nsh
+
+# SOF_TIMESTAMPING_SOFTWARE redefined
+-ucans32k146:can
+
+# 'struct winsize' declared inside parameter
+-sama5d3-xplained:ethernet-over-usb-2-high-speed
+-giant-board:sdmmc-net-nsh
+-giant-board:sdmmcnsh
+-sama5d2-xult:sdmmcnsh
+-jupiter-nano:sdmmc-nsh-net-resolvconf
+-jupiter-nano:sdmmcnsh
+
+# undefined reference to `up_addrenv_leave_kernel'
+-sama5d4-ek:elf

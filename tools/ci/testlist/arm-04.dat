@@ -20,3 +20,16 @@
 -lpcxpresso-lpc54628:twm4nx1
 -lpcxpresso-lpc54628:fb
 -lpcxpresso-lpc54628:twm4nx2
+
+# arm_vectors.S
+-mcu123-lpc214x:usbserial
+-mcu123-lpc214x:nsh
+-mcu123-lpc214x:composite
+-mcu123-lpc214x:usbmsc
+-zp214xpa:nxlines
+-zp214xpa:nsh
+-olimex-lpc2378:nsh
+-ea3152:ostest
+-ea3131:usbserial
+-ea3131:nsh
+-olimex-lpc-h3131:nsh

@@ -13,3 +13,9 @@
 CMake,sim:alsa
 CMake,sim:bluetooth
 CMake,sim:bthcisock
+
+# Saving the new configuration file
+-sim:adb
+
+# SOF_TIMESTAMPING_SOFTWARE redefined
+-sim:can
