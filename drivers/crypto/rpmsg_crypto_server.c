@@ -41,8 +41,6 @@
  * Pre-processor definitions
  ****************************************************************************/
 
-#define RSA_PRIVATE_KEY_MAX_SIZE 1152
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -489,6 +487,13 @@ rpmsg_crypto_rsa_parse_private_key(FAR char *msg, int msglen,
   dq = &krp->krp_param[7];
   qp = &krp->krp_param[8];
 
+  /* Skip leading zeros */
+
+  while (pos < end && *pos == 0)
+    {
+      pos++;
+    }
+
   ret = asn1_get_tag(&pos, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
   if (ret != 0)
     {
@@ -551,6 +556,13 @@ rpmsg_crypto_rsa_parse_public_key(FAR char *msg, int msglen,
   pos = (FAR unsigned char *)msg;
   end = pos + msglen;
 
+  /* Skip leading zeros */
+
+  while (pos < end && *pos == 0)
+    {
+      pos++;
+    }
+
   ret = asn1_get_tag(&pos, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
   if (ret != 0)
     {
@@ -580,7 +592,7 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
   FAR struct crparam *input = NULL;
   FAR struct crparam *dp = NULL;
   struct cryptkop krp;
-  unsigned char keybuf[RSA_PRIVATE_KEY_MAX_SIZE];
+  unsigned char keybuf[RPMSG_CRYPTO_RSA_PRIVATE_KEY_SIZE];
   uint32_t data_len = 0;
   uint32_t space;
   uint32_t keylen;
@@ -685,9 +697,9 @@ rpmsg_crypto_kprocess_rsa(FAR struct rpmsg_endpoint *ept,
         if (krp.krp_padding == CRYPTO_RSA_PKCS1_PADDING)
           {
             krp.krp_op = CRK_RSA_PKCS15_VERIFY;
-            output = &krp.krp_param[krp.krp_iparams + krp.krp_oparams - 1];
             krp.krp_iparams = 5;
             krp.krp_oparams = 0;
+            output = &krp.krp_param[krp.krp_iparams + krp.krp_oparams - 1];
           }
         else if (krp.krp_padding == CRYPTO_RSA_OAEP_PADDING)
           {

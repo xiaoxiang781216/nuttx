@@ -32,6 +32,7 @@
 #include <crypto/virtio_crypto.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/rpmsg/rpmsg.h>
 
 #include "rpmsg_crypto.h"
@@ -242,6 +243,14 @@ static int rpmsg_crypto_put_session(FAR struct rpmsg_crypto_s *rdev,
 
   nxsem_destroy(&rdev->sessions[sid].sem);
   rdev->sessions[sid].used = false;
+  return OK;
+}
+
+static int
+rpmsg_crypto_clean_session(FAR struct rpmsg_crypto_session_s *session)
+{
+  nxsem_destroy(&session->sem);
+  session->used = false;
   return OK;
 }
 
@@ -463,6 +472,11 @@ rpmsg_crypto_process_endec(FAR struct rpmsg_crypto_s *rdev,
   FAR char *buf;
   int ret;
 
+  if (crp->crp_dst == NULL)
+    {
+      return -EINVAL;
+    }
+
   while (remaining > 0)
     {
       msg = rpmsg_crypto_get_process_msg(rdev, info);
@@ -661,7 +675,6 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
   FAR struct rpmsg_crypto_session_s *session;
   FAR struct rpmsg_crypto_kprocess_s *msg;
   FAR struct rpmsg_crypto_s *rdev;
-  FAR unsigned char *keybuf;
   FAR struct crparam *dst;
   FAR struct crparam *src;
   FAR struct crparam *n;
@@ -672,6 +685,7 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
   FAR struct crparam *dp;
   FAR struct crparam *dq;
   FAR struct crparam *u;
+  unsigned char keybuf[RPMSG_CRYPTO_RSA_PRIVATE_KEY_SIZE];
   uint32_t data_len = 0;
   uint32_t keybufsize;
   uint32_t keybits;
@@ -700,6 +714,7 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
   keybits = krp->krp_param[1].crp_nbits;
   keybufsize = VIRTIO_CRYPTO_RSA_DER_MAX_BYTES(
                 keybits, krp->krp_keytype == CRYPTO_KEY_TYPE_PRIVATE);
+  keybufsize = ALIGN_UP(keybufsize, 4);
   if (sizeof(*msg) + keybufsize + keybits > space)
     {
       rpmsgerr("No share memory space for key\n");
@@ -707,14 +722,7 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
       return -ENOMEM;
     }
 
-  keybuf = (FAR unsigned char *)alloca(keybufsize);
-  if (keybuf == NULL)
-    {
-      rpmsgerr("No stack space for keybuf\n");
-      rpmsg_release_tx_buffer(&rdev->ept, msg);
-      return -ENOMEM;
-    }
-
+  memset(keybuf, 0, keybufsize);
   sid = rpmsg_crypto_get_session(rdev);
   session = &rdev->sessions[sid];
 
@@ -761,6 +769,7 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
                 (FAR unsigned char *)keybuf, keybufsize);
     }
 
+  keylen = ALIGN_UP(keylen, 4); /* keysize align to 4 bytes */
   ctrl->op_flf.akcipher.key_len = keylen;
   memcpy(msg->buf, keybuf + keybufsize - keylen, keylen);
   data_len += keylen;
@@ -820,7 +829,11 @@ static int rpmsg_crypto_rsa_process(FAR struct cryptkop *krp)
       return ret;
     }
 
-  rpmsg_crypto_put_session(rdev, sid);
+  if (!(krp->krp_flags & CRYPTO_F_CBIMM))
+    {
+      rpmsg_crypto_put_session(rdev, sid);
+    }
+
   return OK;
 }
 
@@ -968,7 +981,11 @@ static int rpmsg_crypto_ecdsa_process(FAR struct cryptkop *krp)
       return ret;
     }
 
-  rpmsg_crypto_put_session(rdev, sid);
+  if (!(krp->krp_flags & CRYPTO_F_CBIMM))
+    {
+      rpmsg_crypto_put_session(rdev, sid);
+    }
+
   return OK;
 }
 
@@ -1069,7 +1086,11 @@ static int rpmsg_crypto_keyprocess(FAR struct cryptkop *krp)
       return ret;
     }
 
-  rpmsg_crypto_put_session(rdev, sid);
+  if (!(krp->krp_flags & CRYPTO_F_CBIMM))
+    {
+      rpmsg_crypto_put_session(rdev, sid);
+    }
+
   return OK;
 }
 
@@ -1102,7 +1123,7 @@ static int rpmsg_crypto_process_handler(FAR struct rpmsg_endpoint *ept,
 
   len -= sizeof(*msg);
   session->result = header->result;
-  if (session->result == 0 && len > 0)
+  if (session->result == 0 && len > 0 && dst != NULL)
     {
       memcpy(dst, msg->buf, len);
     }
@@ -1176,6 +1197,7 @@ static int rpmsg_crypto_kprocess_handler(FAR struct rpmsg_endpoint *ept,
 
   if ((krp->krp_flags & CRYPTO_F_CBIMM) && krp->krp_callback)
     {
+      rpmsg_crypto_clean_session(session);
       return krp->krp_callback(krp);
     }
 
@@ -1206,6 +1228,7 @@ static int rpmsg_crypto_keyprocess_handler(FAR struct rpmsg_endpoint *ept,
 
   if ((krp->krp_flags & CRYPTO_F_CBIMM) && krp->krp_callback)
     {
+      rpmsg_crypto_clean_session(session);
       return krp->krp_callback(krp);
     }
 
