@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/arm_initialstate.c
+ * arch/arm/src/arm_a_r/arm_initialstate.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -54,6 +54,9 @@ void up_initial_state(struct tcb_s *tcb)
 {
   struct xcptcontext *xcp = &tcb->xcp;
   uint32_t cpsr;
+#ifdef CONFIG_ARCH_KERNEL_STACK
+  uint32_t *kstack = xcp->kstack;
+#endif
 
   /* Initialize the initial exception register context structure */
 
@@ -76,6 +79,10 @@ void up_initial_state(struct tcb_s *tcb)
 
       return;
     }
+
+#ifdef CONFIG_ARCH_KERNEL_STACK
+  xcp->kstack = kstack;
+#endif
 
   /* Initialize the context registers to stack top */
 
@@ -127,25 +134,27 @@ void up_initial_state(struct tcb_s *tcb)
 
   cpsr |= (PSR_I_BIT | PSR_F_BIT);
 
-#else /* CONFIG_SUPPRESS_INTERRUPTS */
-  /* Leave IRQs enabled (Also FIQs if CONFIG_ARMV8R_DECODEFIQ is selected) */
+#elif defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+  /* In tee, we need to disable the IRQ interrupt to make the A core
+   * policy consistent with the M core.
+   */
 
-#ifndef CONFIG_ARMV8R_DECODEFIQ
+  cpsr |= PSR_I_BIT;
+#elif !defined(CONFIG_ARCH_HIPRI_INTERRUPT) && !defined(CONFIG_ARM_DECODEFIQ)
+  /* Leave IRQs enabled (Also FIQs if CONFIG_ARCH_TRUSTZONE_SECURE or
+   * CONFIG_ARCH_HIPRI_INTERRUPT is selected)
+   */
 
   cpsr |= PSR_F_BIT;
-
-#endif /* !CONFIG_ARMV8R_DECODEFIQ */
+#endif
 
 #ifdef CONFIG_ARM_THUMB
   cpsr |= PSR_T_BIT;
 #endif
 
 #ifdef CONFIG_ENDIAN_BIG
-
   cpsr |= PSR_E_BIT;
-
 #endif /* CONFIG_ENDIAN_BIG */
-#endif /* CONFIG_SUPPRESS_INTERRUPTS */
 
   xcp->regs[REG_CPSR] = cpsr;
 }

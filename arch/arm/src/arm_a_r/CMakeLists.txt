@@ -40,6 +40,7 @@ list(
   arm_dataabort.c
   arm_syscall.c
   arm_cpuidlestack.c
+  arm_initialstate.c
   arm_prefetchabort.c)
 
 target_sources(arch PRIVATE ${CSRCS})
