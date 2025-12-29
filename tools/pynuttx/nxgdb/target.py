@@ -65,7 +65,7 @@ class Target(gdb.Command):
 
         arch = get_arch_name()  # Convert to nxstub arch name
 
-        if "-a" not in args and "--arch" not in args:
+        if " -a " not in args and "--arch" not in args:
             args += f" -a {arch}"
         else:
             print(f"Hint: no need to specify architecture, current arch: {arch}")
