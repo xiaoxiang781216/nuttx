@@ -138,6 +138,9 @@ void tricore_svcall(volatile void *trap)
           tricore_reclaim_csa(tricore_addr2csa(relregs));
           tcb->xcp.regs = tcb->xcp.saved_regs;
           tcb->xcp.saved_regs = NULL;
+
+          tricore_change_pprs(tcb, tricore_sig_load_pprs(tcb));
+          tricore_sig_change_pprs(tcb, UINT32_MAX);
         }
 #endif
     }
