@@ -1326,7 +1326,7 @@ static int audio_poll(FAR struct file *filep,
       priv->fd = fds;
       fds->priv = &priv->fd;
 
-      if (priv->head - upper->status->tail <= AUDIO_ENQUEUE_THRESHOLD)
+      if (priv->head - upper->status->tail != upper->periods)
         {
           eventset = POLLIN | POLLOUT;
           if ((long)(priv->head - upper->status->tail) <= 0)
