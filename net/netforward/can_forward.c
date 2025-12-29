@@ -199,6 +199,13 @@ int can_forward(FAR struct net_driver_s *dev)
   FAR const sq_entry_t *entry;
   FAR struct cangw_rule_s *fwdrule;
 
+  if (dev->d_iob->io_conn != NULL)
+    {
+      /* Do not forward transmit confirmation frames */
+
+      return OK;
+    }
+
   /* Search for a valid fwdrule */
 
   sq_for_every(&dev->d_cangw_rules, entry)

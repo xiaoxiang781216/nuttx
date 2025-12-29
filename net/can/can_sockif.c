@@ -262,6 +262,13 @@ static int can_setup(FAR struct socket *psock)
 
       conn->crefs = 1;
 
+#ifdef CONFIG_NET_CANPROTO_OPTIONS
+
+      /* By default loopback is enabled */
+
+      _SO_SETOPT(conn->sconn.s_options, CAN_RAW_LOOPBACK);
+#endif
+
       /* Attach the connection instance to the socket */
 
       psock->s_conn = conn;

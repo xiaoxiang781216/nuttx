@@ -125,6 +125,8 @@ int iob_clone_partial(FAR struct iob_s *iob1, unsigned int len,
   iob2->io_time = iob1->io_time;
 #endif
 
+  iob2->io_conn = iob1->io_conn;
+
   /* Copy the total packet size from the I/O buffer at the head of the
    * chain.
    */
