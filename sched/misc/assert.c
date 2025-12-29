@@ -898,18 +898,9 @@ void _assert(FAR const char *filename, int linenum,
   static DEFINE_PER_CPU_BMP(spinlock_t, g_assert_lock) = SP_UNLOCKED;
 #define g_assert_lock this_cpu_var_bmp(g_assert_lock)
 
-  /* Try to save current context if regs is null */
+  /* Save registers to this point */
 
-  if (regs == NULL)
-    {
-      up_saveusercontext(this_cpu_var(g_last_regs));
-    }
-  else
-    {
-      up_copyusercontext(this_cpu_var(g_last_regs), regs,
-                         sizeof(last_regs_t));
-    }
-
+  up_saveusercontext(this_cpu_var(g_last_regs));
   regs = this_cpu_var(g_last_regs);
 
   if (OSINIT_IS_PANIC())
