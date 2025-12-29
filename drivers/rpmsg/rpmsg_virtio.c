@@ -537,17 +537,16 @@ static void rpmsg_virtio_rx_dispatch(FAR struct rpmsg_virtio_priv_s *priv)
   FAR struct rpmsg_endpoint *ept;
   FAR struct rpmsg_hdr *hdr;
   bool release = false;
-  bool last = false;
   uint32_t len;
   uint16_t idx;
   int status;
 
   metal_mutex_acquire(&rdev->lock);
-  while (!last)
+  while (1)
     {
       /* Process the received data from remote node */
 
-      hdr = rpmsg_virtio_get_rx_buffer(rvdev, &len, &idx, &last);
+      hdr = rpmsg_virtio_get_rx_buffer(rvdev, &len, &idx);
       if (hdr == NULL)
         {
           break;
