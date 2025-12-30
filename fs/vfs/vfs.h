@@ -127,6 +127,8 @@ void notify_initialize(void);
 void pathcache_initialize(void);
 int pathcache_open(FAR struct file *filep, FAR const char *relpath,
                    int oflags, mode_t mode, FAR const char *path);
+int pathcache_opendir(FAR struct inode *inode, FAR const char *relpath,
+                      FAR struct fs_dirent_s **dir, FAR const char *path);
 int pathcache_close(FAR struct file *filep, FAR const char *path);
 int pathcache_remove(FAR const char *path);
 void pathcache_umount(FAR struct inode *mountpt);

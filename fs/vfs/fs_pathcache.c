@@ -94,7 +94,7 @@ static void pathcache_get(FAR void *value)
  *   value - Pointer to the cached file structure
  *
  * Returned Value:
- *   Reference count before decrement
+ *   None
  *
  ****************************************************************************/
 
@@ -104,7 +104,22 @@ static void pathcache_put(FAR void *value)
 
   if (atomic_sub(&filep->f_refs, 1) == 1)
     {
-      filep->f_inode->u.i_mops->close(filep);
+      /* Check if this is a directory or regular file */
+
+      if (filep->f_oflags & O_DIRECTORY)
+        {
+          FAR struct fs_dirent_s *dir = filep->f_priv;
+          FAR struct inode *inode = dir->fd_root;
+
+          inode->u.i_mops->closedir(inode, dir);
+        }
+      else
+        {
+          /* Regular file: call close */
+
+          filep->f_inode->u.i_mops->close(filep);
+        }
+
       inode_release(filep->f_inode);
       file_deallocate(filep);
     }
@@ -177,6 +192,7 @@ errout_with_cached_file:
   inode->u.i_mops->close(cached_file);
 
 errout_with_file:
+  inode_release(inode);
   file_deallocate(cached_file);
   return ret;
 }
@@ -252,6 +268,7 @@ int pathcache_open(FAR struct file *filep, FAR const char *relpath,
   abspath = lib_realpath(path, pathbuffer, true);
   if (abspath == NULL)
     {
+      ret = -EINVAL;
       goto errout_with_pathbuffer;
     }
 
@@ -330,6 +347,129 @@ errout_with_filep:
 
 errout_with_pathbuffer:
   lib_put_tempbuffer(pathbuffer);
+  return ret;
+}
+
+/****************************************************************************
+ * Name: pathcache_opendir
+ *
+ * Description:
+ *   Open a directory with caching support.
+ *
+ * Input Parameters:
+ *   inode   - Mountpoint inode
+ *   relpath - Relative path within the mountpoint
+ *   dir     - Pointer to receive the allocated directory structure
+ *   path    - Absolute path, which has already been canonicalized
+ *
+ * Returned Value:
+ *   OK on success; a negated errno value on failure
+ *
+ ****************************************************************************/
+
+int pathcache_opendir(FAR struct inode *inode, FAR const char *relpath,
+                      FAR struct fs_dirent_s **dir, FAR const char *path)
+{
+  FAR struct file *cached_file;
+  struct file tmpfile;
+  int ret;
+
+  /* Look up for cached entry (internally locked) */
+
+  cached_file = lru_cache_lookup(&g_pathcache, path);
+
+  /* Cache miss */
+
+  if (cached_file == NULL)
+    {
+      FAR struct fs_dirent_s *dirent;
+
+      /* Call the real opendir implementation */
+
+      ret = inode->u.i_mops->opendir(inode, relpath, dir);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      /* Allocate the cached file structure */
+
+      cached_file = file_allocate();
+      if (cached_file == NULL)
+        {
+          /* Allocation failed, but dir is already opened successfully.
+           * Return OK - caching is optional.
+           */
+
+          return OK;
+        }
+
+      inode_addref(inode);
+
+      /* Initialize the cached_file's VFS fields */
+
+      cached_file->f_oflags = O_DIRECTORY;
+      cached_file->f_inode  = inode;
+
+      /* Prepare a temporary file structure with the opened directory */
+
+      tmpfile.f_oflags = O_DIRECTORY;
+      tmpfile.f_inode  = inode;
+      tmpfile.f_priv   = *dir;
+
+      /* Duplicate the directory structure into the cached_file */
+
+      if (inode->u.i_mops->dup == NULL ||
+          inode->u.i_mops->dup(&tmpfile, cached_file) < 0)
+        {
+          goto errout_with_file;
+        }
+
+      /* Set fd_root for the cached directory */
+
+      dirent = cached_file->f_priv;
+      dirent->fd_root = inode;
+
+      /* Insert the cached_file into cache (internally locked) */
+
+      if (lru_cache_insert(&g_pathcache, path, cached_file) < 0)
+        {
+          goto errout_with_dir;
+        }
+    }
+  else
+    {
+      /* Cache hit */
+
+      tmpfile.f_oflags = O_DIRECTORY;
+      tmpfile.f_inode  = inode;
+      tmpfile.f_priv   = NULL;
+
+      DEBUGASSERT(inode->u.i_mops->dup != NULL);
+      ret = inode->u.i_mops->dup(cached_file, &tmpfile);
+
+      /* Put the cache entry */
+
+      pathcache_put(cached_file);
+
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      /* Return the duplicated directory structure */
+
+      *dir = tmpfile.f_priv;
+    }
+
+  return OK;
+
+errout_with_dir:
+  inode->u.i_mops->closedir(inode, cached_file->f_priv);
+
+errout_with_file:
+  inode_release(inode);
+  file_deallocate(cached_file);
   return ret;
 }
 

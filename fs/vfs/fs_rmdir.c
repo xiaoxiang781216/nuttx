@@ -112,6 +112,13 @@ int rmdir(FAR const char *pathname)
               errcode = -ret;
               goto errout_with_inode;
             }
+
+#ifdef CONFIG_FS_PATHCACHE
+          if (INODE_IS_PATHCACHE(inode))
+            {
+              pathcache_remove(pathname);
+            }
+#endif
         }
       else
         {

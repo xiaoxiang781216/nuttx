@@ -39,6 +39,7 @@
 
 #include "inode/inode.h"
 #include "fs_heap.h"
+#include "vfs.h"
 
 /****************************************************************************
  * Private Types
@@ -107,6 +108,7 @@ static DEFINE_PER_CPU_BMP(struct inode, g_dir_inode) =
  *   inode -- the inode of the mountpoint to open
  *   relpath -- the relative path within the mountpoint to open
  *   dir -- the dirent structure to be initialized
+ *   abspath -- the absolute path of the directory being opened
  *
  * Returned Value:
  *   On success, 0 is returned; Otherwise, a negative errno is returned.
@@ -115,7 +117,8 @@ static DEFINE_PER_CPU_BMP(struct inode, g_dir_inode) =
 
 #ifndef CONFIG_DISABLE_MOUNTPOINT
 static int open_mountpoint(FAR struct inode *inode, FAR const char *relpath,
-                           FAR struct fs_dirent_s **dir)
+                           FAR struct fs_dirent_s **dir,
+                           FAR const char *abspath)
 {
   int ret;
 
@@ -131,7 +134,17 @@ static int open_mountpoint(FAR struct inode *inode, FAR const char *relpath,
       return -ENOSYS;
     }
 
-  ret = inode->u.i_mops->opendir(inode, relpath, dir);
+#ifdef CONFIG_FS_PATHCACHE
+  if (INODE_IS_PATHCACHE(inode))
+    {
+      ret = pathcache_opendir(inode, relpath, dir, abspath);
+    }
+  else
+#endif
+    {
+      ret = inode->u.i_mops->opendir(inode, relpath, dir);
+    }
+
   if (ret >= 0)
     {
       (*dir)->fd_root = inode;
@@ -656,8 +669,36 @@ int dir_allocate(FAR struct file *filep, FAR const char *relpath)
 {
   FAR struct fs_dirent_s *dir;
   FAR struct inode *inode = filep->f_inode;
-  FAR char *path_prefix;
+  FAR char *tempbuf;
+  FAR char *tempbuf2;
   int ret;
+
+  tempbuf = lib_get_tempbuffer(PATH_MAX);
+  if (tempbuf == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  ret = inode_getpath(inode, tempbuf, PATH_MAX);
+  if (ret < 0)
+    {
+      goto errout_with_tempbuf;
+    }
+
+  strlcat(tempbuf, relpath, PATH_MAX);
+  strlcat(tempbuf, "/", PATH_MAX);
+  tempbuf2 = lib_get_tempbuffer(PATH_MAX);
+  if (tempbuf2 == NULL)
+    {
+      ret = -ENOMEM;
+      goto errout_with_tempbuf;
+    }
+
+  if (lib_realpath(tempbuf, tempbuf2, true) == NULL)
+    {
+      ret = -ENOENT;
+      goto errout_with_tempbuf2;
+    }
 
   /* Is this a node in the pseudo filesystem? Or a mountpoint? */
 
@@ -666,10 +707,10 @@ int dir_allocate(FAR struct file *filep, FAR const char *relpath)
     {
       /* Open the directory at the relative path */
 
-      ret = open_mountpoint(inode, relpath, &dir);
+      ret = open_mountpoint(inode, relpath, &dir, tempbuf2);
       if (ret < 0)
         {
-          return ret;
+          goto errout_with_tempbuf2;
         }
 
       filep->f_inode = &g_dir_inode;
@@ -680,33 +721,28 @@ int dir_allocate(FAR struct file *filep, FAR const char *relpath)
       ret = open_pseudodir(inode, &dir);
       if (ret < 0)
         {
-          return ret;
+          goto errout_with_tempbuf2;
         }
 
       inode->u.i_ops = &g_dir_fileops;
     }
 
-  path_prefix = lib_get_tempbuffer(PATH_MAX);
-  if (path_prefix == NULL)
+  /* Assign the pre-allocated absolute path to fd_path */
+
+  dir->fd_path = fs_heap_strdup(tempbuf2);
+  if (dir->fd_path == NULL)
     {
       ret = -ENOMEM;
-      goto errout;
-    }
-
-  inode_getpath(inode, path_prefix, PATH_MAX);
-  ret = fs_heap_asprintf(&dir->fd_path, "%s%s/", path_prefix, relpath);
-  lib_put_tempbuffer(path_prefix);
-  if (ret < 0)
-    {
-      dir->fd_path = NULL;
-      goto errout;
+      goto errout_with_dir;
     }
 
   inode_addref(filep->f_inode);
   filep->f_priv = dir;
-  return ret;
+  lib_put_tempbuffer(tempbuf2);
+  lib_put_tempbuffer(tempbuf);
+  return OK;
 
-errout:
+errout_with_dir:
 #ifndef CONFIG_DISABLE_MOUNTPOINT
   if (INODE_IS_MOUNTPT(inode))
     {
@@ -718,5 +754,10 @@ errout:
       close_pseudodir(dir);
     }
 
+errout_with_tempbuf2:
+  lib_put_tempbuffer(tempbuf2);
+
+errout_with_tempbuf:
+  lib_put_tempbuffer(tempbuf);
   return ret;
 }
