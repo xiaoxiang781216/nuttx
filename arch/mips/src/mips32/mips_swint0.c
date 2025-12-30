@@ -213,13 +213,6 @@ int mips_swint0(int irq, void *context, void *arg)
           up_current_regs()[REG_EPC] = rtcb->xcp.syscall[index].sysreturn;
 #error "Missing logic -- need to restore the original mode"
           rtcb->xcp.nsyscalls     = index;
-
-          /* Handle any signal actions that were deferred while processing
-           * the system call.
-           */
-
-          atomic_and(&rtcb->flags, ~TCB_FLAG_SYSCALL);
-          nxsig_unmask_pendingsignal();
         }
         break;
 #endif
@@ -263,10 +256,6 @@ int mips_swint0(int irq, void *context, void *arg)
           /* Offset R0 to account for the reserved values */
 
           up_current_regs()[REG_R0] -= CONFIG_SYS_RESERVED;
-
-          /* Indicate that we are in a syscall handler. */
-
-          atomic_or(&rtcb->flags, TCB_FLAG_SYSCALL);
 #else
           svcerr("ERROR: Bad SYS call: %" PRId32 "\n", regs[REG_A0]);
 #endif

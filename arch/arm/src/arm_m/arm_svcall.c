@@ -221,13 +221,6 @@ int arm_svcall(int irq, void *context, void *arg)
             }
 #  endif
 
-          /* Handle any signal actions that were deferred while processing
-           * the system call.
-           */
-
-          atomic_and(&tcb->flags, ~TCB_FLAG_SYSCALL);
-          nxsig_unmask_pendingsignal();
-
 #ifdef CONFIG_ARCH_KERNEL_STACK
           /* If this is the outermost SYSCALL and if there is a saved user
            * stack pointer, then restore the user stack pointer on this
@@ -517,11 +510,6 @@ int arm_svcall(int irq, void *context, void *arg)
 
           regs[REG_IP]         = tcb->xcp.syscall[index].sysreturn;
           regs[REG_EXC_RETURN] = EXC_RETURN_THREAD;
-
-          /* Indicate that we are in a syscall handler. */
-
-          atomic_or(&tcb->flags, TCB_FLAG_SYSCALL);
-
 #  ifdef CONFIG_ARCH_KERNEL_STACK
           /* If this is the first SYSCALL and if there is an allocated
            * kernel stack, then switch to the kernel stack.

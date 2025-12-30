@@ -520,60 +520,23 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
       masked = nxsig_ismember(&stcb->sigprocmask, info->si_signo);
 
-#ifdef CONFIG_LIB_SYSCALL
-      /* Check if the signal is masked OR if the signal is received while
-       * we are processing a system call -- in either case, it will be
-       * added to the list of pending signals. Unmasked user signal actions
-       * will be deferred while we process the system call.
-       *
-       * If a thread calls a blocking system call, the thread will still be
-       * unblocked when the signal occurs (see OTHER SIGNAL HANDLING below),
-       * but any associated user signal action will be deferred until the
-       * system call returns. For example, if the application calls
-       * sem_wait(), the following would occur:
-       *
-       *   1. System call entry logic will block user signal handling and
-       *      call sem_wait() in kernel mode.
-       *   2. sem_wait() will block,
-       *   3. The receipt of the signal will cause any signal action to pend
-       *      but will unblock sem_wait(),
-       *   4. The sem_wait() system call will awaken and return EINTR,
-       *   5. The pending signal action will occur after the sem_wait()
-       *      system call returns to user mode.
-       *
-       * Syscall handlers (and logic-in-general within the OS) should not use
-       * signal handlers.
-       */
-
-      if (masked == 1 || (atomic_read(&stcb->flags) & TCB_FLAG_SYSCALL) != 0)
-#else
       /* Check if the signal is masked. In that case, it will be added to the
        * list of pending signals.
        */
 
       if (masked == 1)
-#endif
         {
           /* Check if the task is waiting for this pending signal. If so,
            * then unblock it. This must be performed in a critical section
            * because signals can be queued from the interrupt level.
            */
 
-          if (stcb->task_state == TSTATE_WAIT_SIG && (masked == 0 ||
-               nxsig_ismember(&stcb->sigwaitmask, info->si_signo)))
+          if (stcb->task_state == TSTATE_WAIT_SIG &&
+              nxsig_ismember(&stcb->sigwaitmask, info->si_signo))
             {
               nxsig_wakeup_task(stcb, info);
-
-#ifndef CONFIG_DISABLE_SIGNALS
-#  ifdef CONFIG_LIB_SYSCALL
-              /* Must also add signal action if in system call */
-
-              if (masked == 0)
-                {
-                  sigpend = nxsig_add_pendingsignal(stcb, info);
-                }
-#  endif
             }
+#ifndef CONFIG_DISABLE_SIGNALS
 
           /* Its not one we are waiting for... Add it to the list of pending
            * signals.
@@ -582,8 +545,8 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
           else
             {
               sigpend = nxsig_add_pendingsignal(stcb, info);
-#endif
             }
+#endif
 
           leave_critical_section(flags);
         }

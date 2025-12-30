@@ -86,10 +86,6 @@ uintptr_t dispatch_syscall(unsigned int nbr, uintptr_t parm1,
 {
   struct tcb_s *rtcb         = this_task();
 
-  /* Indicate that we are in a syscall handler */
-
-  atomic_or(&rtcb->flags, TCB_FLAG_SYSCALL);
-
   register long a0 asm("a0") = (long)(nbr);
   register long a1 asm("a1") = (long)(parm1);
   register long a2 asm("a2") = (long)(parm2);
@@ -124,14 +120,6 @@ uintptr_t dispatch_syscall(unsigned int nbr, uintptr_t parm1,
   /* Run the system call, save return value locally */
 
   ret = do_syscall(a0, a1, a2, a3, a4, a5, a6);
-
-  /* System call is now done */
-
-  atomic_and(&rtcb->flags, ~TCB_FLAG_SYSCALL);
-
-  /* Unmask any pending signals now */
-
-  nxsig_unmask_pendingsignal();
 
   return ret;
 }

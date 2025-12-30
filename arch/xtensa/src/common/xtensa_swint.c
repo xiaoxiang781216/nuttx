@@ -149,13 +149,6 @@ int xtensa_swint(int irq, void *context, void *arg)
           /* Save the new syscall nesting level */
 
           rtcb->xcp.nsyscalls = index;
-
-          /* Handle any signal actions that were deferred while processing
-           * the system call.
-           */
-
-          atomic_and(&rtcb->flags, ~TCB_FLAG_SYSCALL);
-          nxsig_unmask_pendingsignal();
         }
         break;
 #endif
@@ -361,10 +354,6 @@ int xtensa_swint(int irq, void *context, void *arg)
           /* Offset A2 to account for the reserved values */
 
           regs[REG_A2]        -= CONFIG_SYS_RESERVED;
-
-          /* Indicate that we are in a syscall handler. */
-
-          atomic_or(&rtcb->flags, TCB_FLAG_SYSCALL);
 #else
           svcerr("ERROR: Bad SYSCALL: %" PRIu32 "\n", cmd);
 #endif

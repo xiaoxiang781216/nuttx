@@ -256,13 +256,6 @@ uint32_t *arm_syscall(uint32_t *regs)
           /* Save the new SYSCALL nesting level */
 
           rtcb->xcp.nsyscalls   = index;
-
-          /* Handle any signal actions that were deferred while processing
-           * the system call.
-           */
-
-          atomic_and(&rtcb->flags, ~TCB_FLAG_SYSCALL);
-          nxsig_unmask_pendingsignal();
           regs                  = tcb->xcp.regs;
         }
         break;
@@ -564,10 +557,6 @@ uint32_t *arm_syscall(uint32_t *regs)
            */
 
           regs[REG_IP] = rtcb->xcp.syscall[index].sysreturn;
-
-          /* Indicate that we are in a syscall handler. */
-
-          atomic_or(&rtcb->flags, TCB_FLAG_SYSCALL);
 
 #ifdef CONFIG_ARCH_KERNEL_STACK
           /* Save sp to help unwind through arm_dispatch_syscall */
