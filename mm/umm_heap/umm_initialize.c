@@ -114,9 +114,9 @@ void umm_initialize(FAR void *heap_start, size_t heap_size)
 #endif
 
 #ifdef CONFIG_MM_POOL_PARAM
-  *heap = mm_initialize_pool(&config, &pool_config);
+  mm_initialize_pool(&config, &pool_config, heap);
 #else
-  *heap = mm_initialize_pool(&config, NULL);
+  mm_initialize_pool(&config, NULL, heap);
 #endif
 }
 

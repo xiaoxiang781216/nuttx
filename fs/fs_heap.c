@@ -59,7 +59,7 @@ void fs_heap_initialize(void)
   config.size  = CONFIG_FS_HEAPSIZE;
   memset(&poolconfig, 0, sizeof(struct mm_pool_config_s));
   poolconfig.init_chunksize = CONFIG_FS_HEAP_MEMPOOL_INIT_CHUNK_SIZE;
-  g_fs_heap = mm_initialize_pool(&config, &poolconfig);
+  mm_initialize_pool(&config, &poolconfig, &g_fs_heap);
 }
 
 struct mallinfo_task fs_heap_mallinfo_task(FAR const struct malltask *task)

@@ -271,29 +271,34 @@ DECLARE_PER_CPU_BMP(FAR struct mm_heap_s *, g_kmmheap);
 
 /* Functions contained in mm_initialize.c ***********************************/
 
-FAR struct mm_heap_s *
-mm_initialize_heap(FAR const struct mm_heap_config_s *config);
+void mm_initialize_heap(FAR const struct mm_heap_config_s *config,
+                        FAR struct mm_heap_s **heap);
 
 static inline_function FAR struct mm_heap_s *
 mm_initialize(FAR const char *name, FAR void *heapstart, size_t heapsize)
 {
   struct mm_heap_config_s config;
+  FAR struct mm_heap_s *heap;
 
   memset(&config, 0, sizeof(config));
   config.name  = name;
   config.start = heapstart;
   config.size  = heapsize;
 
-  return mm_initialize_heap(&config);
+  mm_initialize_heap(&config, &heap);
+
+  return heap;
 }
 
-#ifdef CONFIG_MM_HEAP_MEMPOOL
-FAR struct mm_heap_s *
-mm_initialize_pool(FAR const struct mm_heap_config_s *config,
-                   FAR const struct mm_pool_config_s *poolconfig);
+/* mm_initialize_pool: initialize heap with optional mempool */
 
+#ifdef CONFIG_MM_HEAP_MEMPOOL
+void mm_initialize_pool(FAR const struct mm_heap_config_s *config,
+                        FAR const struct mm_pool_config_s *poolconfig,
+                        FAR struct mm_heap_s **heap);
 #else
-#  define mm_initialize_pool(config, poolconfig) mm_initialize_heap(config)
+#  define mm_initialize_pool(config, poolconfig, heap) \
+          mm_initialize_heap(config, heap)
 #endif
 
 void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,

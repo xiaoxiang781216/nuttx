@@ -354,7 +354,7 @@ static int rptun_init_carveout(FAR struct rptun_priv_s *priv,
 
       carveout->base = shmbase;
       carveout->size = shmlen;
-      carveout->heap = mm_initialize_heap(&config);
+      mm_initialize_heap(&config, &carveout->heap);
       if (carveout->heap != NULL)
         {
           ret = OK;

@@ -209,47 +209,44 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
  *
  * Input Parameters:
  *   config - The heap config structure
+ *   heap - The heap instance
  *
  * Returned Value:
- *   Return the address of a new heap instance.
+ *   None
  *
  * Assumptions:
  *
  ****************************************************************************/
 
-FAR struct mm_heap_s *
-mm_initialize_heap(FAR const struct mm_heap_config_s *config)
+void mm_initialize_heap(FAR const struct mm_heap_config_s *config,
+                        FAR struct mm_heap_s **heap)
 {
-  FAR struct mm_heap_s *heap;
-
   minfo("Heap: name=%s, start=%p size=%zu\n", config->name, config->start,
         config->size);
-  heap = (struct mm_heap_s *)config->start;
-  memset(heap, 0, sizeof(struct mm_heap_s));
-  heap->name = config->name;
+  *heap = (struct mm_heap_s *)config->start;
+  memset(*heap, 0, sizeof(struct mm_heap_s));
+  (*heap)->name = config->name;
 
   /* Initialize the malloc mutex (to support one-at-
    * a-time access to private data sets).
    */
 
-  nxrmutex_init(&heap->mm_lock);
-  heap->mm_curused = sizeof(struct mm_heap_s);
-  heap->mm_heapnext[0] = (char *)config->start +
+  nxrmutex_init(&(*heap)->mm_lock);
+  (*heap)->mm_curused = sizeof(struct mm_heap_s);
+  (*heap)->mm_heapnext[0] = (char *)config->start +
                           sizeof(struct mm_heap_s);
-  mm_addregion(heap, config->start, config->size);
+  mm_addregion(*heap, config->start, config->size);
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
 #  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  heap->mm_procfs.name = config->name;
-  heap->mm_procfs.heap = heap;
+  (*heap)->mm_procfs.name = config->name;
+  (*heap)->mm_procfs.heap = *heap;
 #    ifdef CONFIG_MM_RECORD_STACK_DEFAULT
-  heap->mm_procfs.backtrace = true;
+  (*heap)->mm_procfs.backtrace = true;
 #    endif
-  procfs_register_meminfo(&heap->mm_procfs);
+  procfs_register_meminfo(&(*heap)->mm_procfs);
 #  endif
 #endif
-
-  return heap;
 }
 
 /****************************************************************************
@@ -260,20 +257,21 @@ mm_initialize_heap(FAR const struct mm_heap_config_s *config)
  *   initial multiple mempool region.
  *
  * Input Parameters:
+ *   poolconfig - The multiple mempool config structure
  *   config - The heap config structure
+ *   heap - The created heap instance
  *
  * Returned Value:
- *   Return the address of a new multiple mempool instance.
+ *   None
  *
  * Assumptions:
  *
  ****************************************************************************/
 
-FAR struct mm_heap_s *
-mm_initialize_pool(FAR const struct mm_heap_config_s *config,
-                   FAR const struct mm_pool_config_s *poolconfig)
+void mm_initialize_pool(FAR const struct mm_heap_config_s *config,
+                        FAR const struct mm_pool_config_s *poolconfig,
+                        FAR struct mm_heap_s **heap)
 {
-  struct mm_heap_s *heap;
   struct mm_pool_config_s def;
 
   DEBUGASSERT(poolconfig);
@@ -307,22 +305,20 @@ mm_initialize_pool(FAR const struct mm_heap_config_s *config,
       def.dict_expendsize = CONFIG_MM_HEAP_MEMPOOL_DICTIONARY_EXPAND_SIZE;
     }
 
-  heap = mm_initialize_heap(config);
+  mm_initialize_heap(config, heap);
 
   /* Initialize the multiple mempool in heap */
 
   if (def.poolsize != NULL && def.npools != 0u)
     {
-      heap->mm_mpool = mempool_multiple_init(config->name,
-                                             &def,
-                                             mempool_memalign,
-                                             mempool_malloc_size,
-                                             mempool_free,
-                                             heap);
-      DEBUGASSERT(heap->mm_mpool);
+      (*heap)->mm_mpool = mempool_multiple_init(config->name,
+                                                &def,
+                                                mempool_memalign,
+                                                mempool_malloc_size,
+                                                mempool_free,
+                                                *heap);
+      DEBUGASSERT((*heap)->mm_mpool);
     }
-
-  return heap;
 }
 
 /****************************************************************************

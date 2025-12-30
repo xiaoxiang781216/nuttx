@@ -72,8 +72,8 @@ void kmm_initialize(FAR void *heap_start, size_t heap_size)
   config.size  = heap_size;
 
 #ifdef CONFIG_MM_POOL_PARAM_KERNEL
-  g_kmmheap = mm_initialize_pool(&config, &pool_config);
+  mm_initialize_pool(&config, &pool_config, &g_kmmheap);
 #else
-  g_kmmheap = mm_initialize_pool(&config, NULL);
+  mm_initialize_pool(&config, NULL, &g_kmmheap);
 #endif
 }

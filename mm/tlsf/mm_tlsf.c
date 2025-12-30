@@ -1007,18 +1007,18 @@ bool mm_heapmember(FAR struct mm_heap_s *heap, FAR void *mem)
  *
  * Input Parameters:
  *   config - The heap config structure
+ *   heap - The heap instance
  *
  * Returned Value:
- *   Return the address of a new heap instance.
+ *   Node
  *
  * Assumptions:
  *
  ****************************************************************************/
 
-FAR struct mm_heap_s *
-mm_initialize_heap(FAR const struct mm_heap_config_s *config)
+void mm_initialize_heap(FAR const struct mm_heap_config_s *config,
+                        FAR struct mm_heap_s **heap)
 {
-  FAR struct mm_heap_s *heap;
   FAR const char *name = config->name;
   FAR void *heapstart = config->start;
   size_t heapsize = config->size;
@@ -1029,30 +1029,27 @@ mm_initialize_heap(FAR const struct mm_heap_config_s *config)
       /* Reserve a block space for mm_heap_s context */
 
       DEBUGASSERT(heapsize > sizeof(struct mm_heap_s));
-      heap = (FAR struct mm_heap_s *)heapstart;
+      *heap = (FAR struct mm_heap_s *)heapstart;
       heapstart += sizeof(struct mm_heap_s);
       heapsize -= sizeof(struct mm_heap_s);
 
-      memset(heap, 0, sizeof(struct mm_heap_s));
-      heap->mm_curused = sizeof(struct mm_heap_s);
+      memset(*heap, 0, sizeof(struct mm_heap_s));
+      (*heap)->mm_curused = sizeof(struct mm_heap_s);
     }
   else
     {
-      heap = lib_memalign(MM_ALIGN, sizeof(struct mm_heap_s));
-      if (heap == NULL)
-        {
-          return NULL;
-        }
+      *heap = lib_memalign(MM_ALIGN, sizeof(struct mm_heap_s));
+      DEBUGASSERT(*heap != NULL);
 
-      memset(heap, 0, sizeof(struct mm_heap_s));
+      memset(*heap, 0, sizeof(struct mm_heap_s));
     }
 
-  heap->mm_nokasan = config->nokasan;
+  (*heap)->mm_nokasan = config->nokasan;
 
   /* Allocate and create TLSF context */
 
   DEBUGASSERT(heapsize > tlsf_size());
-  heap->mm_tlsf = tlsf_create(heapstart);
+  (*heap)->mm_tlsf = tlsf_create(heapstart);
   heapstart += tlsf_size();
   heapsize -= tlsf_size();
 
@@ -1060,32 +1057,29 @@ mm_initialize_heap(FAR const struct mm_heap_config_s *config)
    * a-time access to private data sets).
    */
 
-  nxrmutex_init(&heap->mm_lock);
+  nxrmutex_init(&(*heap)->mm_lock);
 
   /* Add the initial region of memory to the heap */
 
-  mm_addregion(heap, heapstart, heapsize);
+  mm_addregion(*heap, heapstart, heapsize);
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  heap->mm_procfs.name = name;
-  heap->mm_procfs.heap = heap;
+  (*heap)->mm_procfs.name = name;
+  (*heap)->mm_procfs.heap = *heap;
 #  ifdef CONFIG_MM_RECORD_STACK_DEFAULT
-  heap->mm_procfs.backtrace = true;
+  (*heap)->mm_procfs.backtrace = true;
 #  endif
-  procfs_register_meminfo(&heap->mm_procfs);
+  procfs_register_meminfo(&(*heap)->mm_procfs);
 #endif
 #endif
-
-  return heap;
 }
 
 #ifdef CONFIG_MM_HEAP_MEMPOOL
-FAR struct mm_heap_s *
-mm_initialize_pool(FAR const struct mm_heap_config_s *config,
-                   FAR const struct mm_pool_config_s *poolconfig)
+void mm_initialize_pool(FAR const struct mm_heap_config_s *config,
+                        FAR const struct mm_pool_config_s *poolconfig,
+                        FAR struct mm_heap_s **heap)
 {
-  FAR struct mm_heap_s *heap;
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD > 0
   size_t poolsize[MEMPOOL_NPOOLS];
 #endif
@@ -1144,22 +1138,20 @@ mm_initialize_pool(FAR const struct mm_heap_config_s *config,
     }
 #endif
 
-  heap = mm_initialize_heap(config);
+  mm_initialize_heap(config, heap);
 
   /* Initialize the multiple mempool in heap */
 
-  heap->mm_threshold = def.threshold;
+  (*heap)->mm_threshold = def.threshold;
   if (def.poolsize != NULL && def.npools != 0)
     {
-      heap->mm_mpool = mempool_multiple_init(config->name,
-                                             &def,
-                                             mempool_memalign,
-                                             mempool_malloc_size,
-                                             mempool_free,
-                                             heap);
+      (*heap)->mm_mpool = mempool_multiple_init(config->name,
+                                                &def,
+                                                mempool_memalign,
+                                                mempool_malloc_size,
+                                                mempool_free,
+                                                *heap);
     }
-
-  return heap;
 }
 #endif
 
