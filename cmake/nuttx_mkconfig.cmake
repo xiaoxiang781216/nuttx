@@ -98,7 +98,7 @@ file(APPEND ${CONFIG_H}
      "/* General Definitions ***********************************/\n")
 file(APPEND ${CONFIG_H} "#define CONFIG_BASE_DEFCONFIG \"${BASE_DEFCONFIG}\"\n")
 
-file(STRINGS ${CMAKE_BINARY_DIR}/.config ConfigContents)
+file(STRINGS ${CMAKE_BINARY_DIR}/.config ConfigContents ENCODING UTF-8)
 encode_brackets(ConfigContents)
 foreach(NameAndValue ${ConfigContents})
   decode_brackets(NameAndValue)
