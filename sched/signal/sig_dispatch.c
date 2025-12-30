@@ -750,19 +750,20 @@ int nxsig_dispatch(pid_t pid, FAR siginfo_t *info, bool thread)
 
   if (pid == 0)
     {
-      group = this_task()->group;
+      stcb = this_task();
     }
   else
     {
       stcb = nxsched_get_tcb(pid);
-      if (stcb != NULL)
-        {
-          /* The task/thread associated with this PID is still active.
-           * Get its task group.
-           */
+    }
 
-          group = stcb->group;
-        }
+  if (stcb != NULL)
+    {
+      /* The task/thread associated with this PID is still active.
+       * Get its task group.
+       */
+
+      group = stcb->group;
     }
 
   /* Did we locate the group? */
