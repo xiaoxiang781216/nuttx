@@ -638,6 +638,25 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                       break;
 
                     case 'p':
+                      if (sizeof(void *) == sizeof(unsigned short))
+                        {
+                          modifier = H_MOD;
+                        }
+                      else if (sizeof(void *) == sizeof(unsigned long))
+                        {
+                          modifier = L_MOD;
+                        }
+#if defined(CONFIG_HAVE_LONG_LONG) && ULLONG_MAX != ULONG_MAX
+                      else if (sizeof(void *) == sizeof(unsigned long long))
+                        {
+                          modifier = LL_MOD;
+                        }
+#endif
+                      else if (sizeof(void *) == sizeof(unsigned int))
+                        {
+                          modifier = NO_MOD;
+                        }
+
                     case 'x':
                     case 'X':
                       while (fwidth < width && !stopconv)
