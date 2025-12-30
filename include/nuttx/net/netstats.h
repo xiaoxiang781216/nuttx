@@ -118,7 +118,7 @@ struct net_stats_s
   struct udp_stats_s  udp;      /* UDP statistics */
 #endif
 
-#ifdef CONFIG_NET_CAN
+#ifdef CONFIG_NET_CANFORWARD
   struct cangw_stats_s cangw;   /* CANGW statistics */
 #endif
 };
