@@ -96,6 +96,7 @@ command_actions = {
 
 
 class KASan(gdb.Command):
+    __doc__ = "KASan memory tag commands"
 
     def __init__(self):
         if CONFIG_MM_KASAN is None:
@@ -105,9 +106,7 @@ class KASan(gdb.Command):
 
     @utils.dont_repeat_decorator
     def invoke(self, args, from_tty):
-        parser = argparse.ArgumentParser(
-            description="Memory Tagging Commands", add_help=False
-        )
+        parser = argparse.ArgumentParser(description=self.__doc__, add_help=False)
         subparsers = parser.add_subparsers(dest="command")
         subparsers.add_parser(
             "check",

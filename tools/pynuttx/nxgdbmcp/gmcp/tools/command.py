@@ -26,16 +26,7 @@ from ..utils import _exec_command
 
 
 def register_command_tools(gdb_mcp):
-
     @gdb_mcp.tool()
     async def gdb_command(ctx: Context, session_id: str, command: str) -> str:
         """Execute a GDB command"""
         return await _exec_command(ctx, session_id, command)
-
-    @gdb_mcp.tool()
-    async def gdb_get_nxgdb_cmd_list(ctx: Context, session_id: str) -> str:
-        """Get nxgdb command help info, nxgdb is a set of gdb scripts for debugging NuttX.
-        Note that nxgdb may have issues. When analyzing NuttX crashes,
-        you need to determine whether the problem is with nxgdb or with NuttX itself.
-        """
-        return await _exec_command(ctx, session_id, "help user-defined")

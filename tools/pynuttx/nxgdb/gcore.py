@@ -36,9 +36,10 @@ def create_file_with_size(filename, size):
 
 @autocompeletion.complete
 class NXGcore(gdb.Command):
+    __doc__ = "Generate a core file with specified memory range."
 
     def get_argparser(self):
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument("-o", "--output", metavar="file", help="Gcore output file")
         parser.add_argument(
             "-p",

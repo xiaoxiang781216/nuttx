@@ -103,6 +103,8 @@ def get_proc_list() -> lists.NxList | list:
 
 
 class BinderDump(gdb.Command):
+    __doc__ = "Dump Android binder state"
+
     def __init__(self):
         super().__init__("binderdump", gdb.COMMAND_USER)
         self.parser = self.get_argparse()

@@ -39,9 +39,10 @@ CONFIG_ARCH_USE_SEPARATED_SECTION = has_field("struct module_s", "sectalloc")
 
 @autocompeletion.complete
 class ElfImport(gdb.Command):
+    __doc__ = "Import ELF symbols into GDB for dynamically loaded running app."
 
     def get_argparser(self):
-        parser = argparse.ArgumentParser(description="import elf symbols to gdb")
+        parser = argparse.ArgumentParser(description=self.__doc__)
         parser.add_argument(
             "elfpath", type=str, metavar="file", help="elf file path, etc: apps/bin"
         )

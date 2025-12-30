@@ -29,6 +29,8 @@ CONFIG_SYSLOG_RPMSG = utils.get_static_symbol("g_rpmsg_channel_ops")
 
 
 class Dmesg(gdb.Command):
+    __doc__ = "Dump RAM log / syslog"
+
     def __init__(self):
         if CONFIG_RAMLOG_SYSLOG or CONFIG_SYSLOG_RPMSG:
             super().__init__("dmesg", gdb.COMMAND_USER)

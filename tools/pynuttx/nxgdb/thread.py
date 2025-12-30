@@ -326,7 +326,7 @@ class Nxinfothreads(gdb.Command):
             index = f"*{i}" if utils.task_is_running(tcb) else f" {i}"
 
             statename = get_task_state_desc(tcb["task_state"])
-            statename = f'\x1b{"[32;1m" if statename == "Running" else "[33;1m"}{statename}\x1b[m'
+            statename = f"\x1b{'[32;1m' if statename == 'Running' else '[33;1m'}{statename}\x1b[m"
 
             if tcb["task_state"] == utils.parse_and_eval("TSTATE_WAIT_SEM"):
                 mutex = tcb["waitobj"].cast(utils.lookup_type("sem_t").pointer())
@@ -506,6 +506,8 @@ class TaskSchedPolicy(Enum):
 
 
 class Ps(gdb.Command):
+    __doc__ = "Show NuttX task/thread status"
+
     def __init__(self):
         super().__init__("ps", gdb.COMMAND_USER)
         self._fmt_wxl = "{0: <{width}}"

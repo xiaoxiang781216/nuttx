@@ -661,9 +661,26 @@ def parse_arg(arg: str) -> Union[gdb.Value, int]:
 
 def alias(name, command):
     try:
-        gdb.execute(f"alias {name} = {command}")
+
+        class _Alias(gdb.Command):
+            __doc__ = f"Alias for '{command}'."
+
+            def __init__(self):
+                super().__init__(name, gdb.COMMAND_USER)
+
+            def invoke(self, arg, from_tty):
+                if arg:
+                    gdb.execute(f"{command} {arg}", from_tty=from_tty)
+                else:
+                    gdb.execute(command, from_tty=from_tty)
+
+        _Alias()
+
     except gdb.error:
-        pass
+        try:
+            gdb.execute(f"alias {name} = {command}")
+        except gdb.error:
+            pass
 
 
 def nitems(array: Union[gdb.Field, gdb.Type, gdb.Symbol]) -> int:
@@ -1178,7 +1195,7 @@ def get_task_argvstr(tcb: Tcb) -> List[str]:
             if tcb.type.code != gdb.TYPE_CODE_PTR:
                 tcb = tcb.address
             ptcb = tcb.cast(lookup_type("struct pthread_entry_s").pointer())
-            return ["", f"{tcb['entry']['main']}", f'{ptcb["arg"]}']
+            return ["", f"{tcb['entry']['main']}", f"{ptcb['arg']}"]
 
         tls_info_s = lookup_type("struct tls_info_s").pointer()
         tls = tcb.stack_alloc_ptr.cast(tls_info_s)

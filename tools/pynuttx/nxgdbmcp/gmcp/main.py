@@ -28,24 +28,12 @@ from mcp.server.fastmcp import FastMCP
 from . import tools
 from .session import SessionManager, app_lifespan
 
-description = "nuttx-gdb is used to debug the NuttX kernel. It can start gdb with nuttx and crash coredump. "
-description += "It can also load nxgdb gdbinit.py to use nxgdb commands, which include `memdump`, `memfind`, etc. "
-description += (
-    "However, nxgdb commands maybe are not high quality, so the output may be poor."
-)
-
 
 def main():
 
     parser = argparse.ArgumentParser(description="GDB mcp server for NuttX")
     parser.add_argument("--stdio", action="store_true", help="enable stdio transport")
-    parser.add_argument("--port", type=int, default=20819, help="server port")
-    parser.add_argument(
-        "--enable-nxthread",
-        action="store_true",
-        help="Enable NuttX-specific thread commands (nxthread, info nxthreads). "
-        "Only use when GDB native thread commands are insufficient or unavailable.",
-    )
+    parser.add_argument("--port", type=int, default=20819, help="mcp server port")
 
     args = parser.parse_args()
 
@@ -53,28 +41,18 @@ def main():
         gdb_mcp = FastMCP(
             "nuttx-gdb",
             lifespan=app_lifespan,
-            instructions=description,
         )
     else:
         gdb_mcp = FastMCP(
             "nuttx-gdb",
             lifespan=app_lifespan,
-            instructions=description,
             stateless_http=True,
             host="0.0.0.0",
             port=args.port,
         )
 
-    tools.register_command_tools(gdb_mcp)
-    tools.register_control_flow_tools(gdb_mcp)
-    tools.register_memory_tools(gdb_mcp)
     tools.register_session_tools(gdb_mcp)
-    tools.register_util_tools(gdb_mcp)
-    tools.register_value_tools(gdb_mcp)
-
-    # Only register NuttX-specific thread commands if explicitly enabled
-    if args.enable_nxthread:
-        tools.register_nxthread_tools(gdb_mcp)
+    tools.register_command_tools(gdb_mcp)
 
     try:
         if args.stdio:

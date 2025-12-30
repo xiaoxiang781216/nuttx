@@ -185,6 +185,8 @@ class Fdinfo(gdb.Command):
 
 
 class Mount(gdb.Command):
+    __doc__ = "List mounted filesystems"
+
     def __init__(self):
         if not CONFIG_DISABLE_MOUNTPOINT:
             super().__init__("mount", gdb.COMMAND_USER)
