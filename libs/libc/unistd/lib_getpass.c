@@ -66,6 +66,11 @@ FAR char *getpass(FAR const char *prompt)
     }
 
   task_info_init_buffer(info->ta_pass, 128);
+  if (info->ta_pass == NULL)
+    {
+      goto out;
+    }
+
   while ((bytes_read = read(fd, info->ta_pass + total_bytes_read,
                             128 - total_bytes_read)) > 0)
     {
@@ -88,6 +93,7 @@ FAR char *getpass(FAR const char *prompt)
       info->ta_pass[total_bytes_read] = 0;
     }
 
+out:
   tcsetattr(fd, TCSAFLUSH, &s);
 
   if (fd > STDERR_FILENO)
