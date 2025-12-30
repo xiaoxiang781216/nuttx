@@ -29,7 +29,6 @@
 
 #include <nuttx/config.h>
 
-#include <assert.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -509,16 +508,6 @@ int nxsem_setprioceiling(FAR sem_t *sem, int prioceiling,
 
 static inline_function int nxmutex_wait(FAR sem_t *sem)
 {
-  /* This API should not be called from the idleloop or interrupt */
-
-#if (defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_ARCH_ADDRENV)) || defined(__KERNEL__)
-  DEBUGASSERT(!up_interrupt_context());
-  DEBUGASSERT(!OSINIT_IDLELOOP() || !sched_idletask());
-#endif
-
-  DEBUGASSERT(sem != NULL);
-  DEBUGASSERT(NXSEM_IS_MUTEX(sem));
-
   /* Disable fast path if priority protection is enabled on the semaphore */
 
 #ifdef CONFIG_PRIORITY_PROTECT
@@ -556,9 +545,6 @@ static inline_function int nxmutex_wait(FAR sem_t *sem)
 
 static inline_function int nxmutex_post(FAR sem_t *sem)
 {
-  DEBUGASSERT(sem != NULL);
-  DEBUGASSERT(NXSEM_IS_MUTEX(sem));
-
   /* Disable fast path if priority protection is enabled on the semaphore */
 
 #ifdef CONFIG_PRIORITY_PROTECT
@@ -567,10 +553,6 @@ static inline_function int nxmutex_post(FAR sem_t *sem)
     {
       FAR atomic_t *val = NXSEM_MHOLDER(sem);
       int32_t old = (atomic_read(val) & (~NXSEM_MBLOCKING_BIT));
-
-      /* Allow NXSEM_NO_MHOLDER for reset scenario */
-
-      DEBUGASSERT(old == gettid() || old == NXSEM_NO_MHOLDER);
 
       if (atomic_try_cmpxchg_release(val, &old, NXSEM_NO_MHOLDER))
         {
@@ -635,16 +617,6 @@ int nxmutex_trywait(FAR sem_t *sem);
 
 static inline_function int nxsem_wait(FAR sem_t *sem)
 {
-  /* This API should not be called from the idleloop or interrupt */
-
-#if (defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_ARCH_ADDRENV)) || defined(__KERNEL__)
-  DEBUGASSERT(!up_interrupt_context());
-  DEBUGASSERT(!OSINIT_IDLELOOP() || !sched_idletask());
-#endif
-
-  DEBUGASSERT(sem != NULL);
-  DEBUGASSERT(!NXSEM_IS_MUTEX(sem));
-
   /* Disable fast path if priority protection is enabled on the semaphore */
 
 #if defined(CONFIG_PRIORITY_INHERITANCE) || defined(CONFIG_PRIORITY_PROTECT)
@@ -697,9 +669,6 @@ static inline_function int nxsem_wait(FAR sem_t *sem)
 
 static inline_function int nxsem_post(FAR sem_t *sem)
 {
-  DEBUGASSERT(sem != NULL);
-  DEBUGASSERT(!NXSEM_IS_MUTEX(sem));
-
   /* Disable fast path if priority protection is enabled on the semaphore */
 
 #if defined(CONFIG_PRIORITY_INHERITANCE) || defined(CONFIG_PRIORITY_PROTECT)
@@ -715,6 +684,7 @@ static inline_function int nxsem_post(FAR sem_t *sem)
             {
               return -EOVERFLOW;
             }
+
           if (atomic_try_cmpxchg_release(val, &old, old + 1))
             {
               return OK;
@@ -1003,10 +973,6 @@ int nxsem_wait_uninterruptible(FAR sem_t *sem);
 
 static inline_function int nxsem_get_value(FAR sem_t *sem, FAR int *sval)
 {
-  DEBUGASSERT(sem != NULL);
-  DEBUGASSERT(!NXSEM_IS_MUTEX(sem));
-  DEBUGASSERT(sval != NULL);
-
   *sval = atomic_read(NXSEM_COUNT(sem));
   return OK;
 }
