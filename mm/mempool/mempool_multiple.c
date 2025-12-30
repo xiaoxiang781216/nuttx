@@ -603,9 +603,9 @@ mempool_multiple_init(FAR const char *name,
 
           if (i < config->npools)
             {
-              while (i-- >= 1u)
+              while (i > 0u)
                 {
-                  mempool_deinit(pools + i);
+                  mempool_deinit(pools + --i);
                 }
 
               free(arg, mpool);
@@ -629,9 +629,9 @@ mempool_multiple_init(FAR const char *name,
                 }
               else
                 {
-                  while (i-- >= 1u)
+                  while (i > 0u)
                     {
-                      mempool_deinit(pools + i);
+                      mempool_deinit(pools + --i);
                     }
 
                   free(arg, mpool);
