@@ -661,57 +661,94 @@ static int fatfs_sync(FAR struct file *filep)
  * Name: fatfs_dup
  *
  * Description: Duplicate open file data in the new file structure.
- * Deep copy implementation for file cache optimization.
+ * Deep copy implementation for pathcache optimization.
+ *
+ * This function now supports both regular files and directories:
+ * - For files: copies FIL structure with file position and state
+ * - For directories: copies DIR structure with traversal position
  *
  ****************************************************************************/
 
 static int fatfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 {
   FAR struct fatfs_mountpt_s *fs;
-  FAR struct fatfs_file_s *oldfp;
-  FAR struct fatfs_file_s *newfp;
-  size_t alloc_size;
-  int oflags;
   int ret;
 
-  /* Recover our private data from the struct file instance */
-
-  oldfp = oldp->f_priv;
   fs = oldp->f_inode->i_private;
 
-  /* Calculate allocation size based on sector size */
+  /* Check if this is a directory or a regular file */
 
-  alloc_size = sizeof(*newfp) - FF_MAX_SS + SS(&fs->fat);
-
-  /* Allocate a new file structure */
-
-  newfp = fs_heap_malloc(alloc_size);
-  if (newfp == NULL)
+  if (oldp->f_oflags & O_DIRECTORY)
     {
-      return -ENOMEM;
+      FAR struct fatfs_dir_s *newdir;
+
+      /* Allocate a new directory structure */
+
+      newdir = fs_heap_malloc(sizeof(*newdir));
+      if (newdir == NULL)
+        {
+          return -ENOMEM;
+        }
+
+      ret = nxmutex_lock(&fs->lock);
+      if (ret < 0)
+        {
+          fs_heap_free(newdir);
+          return ret;
+        }
+
+      memcpy(newdir, oldp->f_priv, sizeof(*newdir));
+
+      /* Set the private data in the new file descriptor */
+
+      newp->f_priv = newdir;
+      nxmutex_unlock(&fs->lock);
+    }
+  else
+    {
+      /* Duplicate file structure */
+
+      FAR struct fatfs_file_s *oldfp;
+      FAR struct fatfs_file_s *newfp;
+      size_t alloc_size;
+      int oflags;
+
+      oldfp = oldp->f_priv;
+
+      /* Calculate allocation size based on sector size */
+
+      alloc_size = sizeof(*newfp) - FF_MAX_SS + SS(&fs->fat);
+
+      /* Allocate a new file structure */
+
+      newfp = fs_heap_malloc(alloc_size);
+      if (newfp == NULL)
+        {
+          return -ENOMEM;
+        }
+
+      ret = nxmutex_lock(&fs->lock);
+      if (ret < 0)
+        {
+          fs_heap_free(newfp);
+          return ret;
+        }
+
+      /* Copy the old file structure to the new one */
+
+      memcpy(newfp, oldfp, alloc_size);
+
+      /* But update the flags */
+
+      oflags = fatfs_convert_oflags(newp->f_oflags);
+      newfp->f.flag = oflags;
+
+      /* Set the private data in the new file descriptor */
+
+      newp->f_priv = newfp;
+      nxmutex_unlock(&fs->lock);
     }
 
-  ret = nxmutex_lock(&fs->lock);
-  if (ret < 0)
-    {
-      fs_heap_free(newfp);
-      return ret;
-    }
-
-  /* Copy the old file structure to the new one */
-
-  memcpy(newfp, oldfp, alloc_size);
-
-  /* But update the flags */
-
-  oflags = fatfs_convert_oflags(newp->f_oflags);
-  newfp->f.flag = oflags;
-
-  /* Set the private data in the new file descriptor */
-
-  newp->f_priv = newfp;
-
-  nxmutex_unlock(&fs->lock);
   return OK;
 }
 
