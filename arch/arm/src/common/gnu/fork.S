@@ -82,25 +82,38 @@
 #else
 	.type	up_fork, function
 #endif
+	.thumb_func
 
 up_fork:
+	.cfi_sections .debug_frame
+	.cfi_startproc
 	/* Create a stack frame */
 
 	mov		r0, sp			/* Save the value of the stack on entry */
 	sub		sp, sp, #FORK_SIZEOF	/* Allocate the structure on the stack */
+	.cfi_def_cfa_offset FORK_SIZEOF
 
 	/* CPU registers */
 	/* Save the volatile registers */
 
 	mov		r1, sp
 	stmia		r1!, {r4-r7}		/* Save r4-r7 in the structure */
+	.cfi_offset r4, FORK_R4_OFFSET-FORK_SIZEOF
+	.cfi_offset r5, FORK_R5_OFFSET-FORK_SIZEOF
+	.cfi_offset r6, FORK_R6_OFFSET-FORK_SIZEOF
+	.cfi_offset r7, FORK_R7_OFFSET-FORK_SIZEOF
 	mov		r4, r8			/* Copy high registers to low registers */
 	mov		r5, r9
 	mov		r6, r10
 	mov		r7, r11
 	stmia		r1!, {r4-r7}		/* Save r8-r11 in the structure */
+	.cfi_offset r8, FORK_R8_OFFSET-FORK_SIZEOF
+	.cfi_offset r9, FORK_R9_OFFSET-FORK_SIZEOF
+	.cfi_offset r10, FORK_R10_OFFSET-FORK_SIZEOF
+	.cfi_offset r11, FORK_SP_OFFSET-FORK_SIZEOF
 	mov		r5, lr			/* Copy lr to a low register */
 	stmia		r1!, {r0,r5}		/* Save sp and lr in the structure */
+	.cfi_offset lr, FORK_LR_OFFSET-FORK_SIZEOF
 
 	/* Then, call arm_fork(), passing it a pointer to the stack structure */
 
@@ -111,13 +124,20 @@ up_fork:
 
 	mov		r1, sp
 	ldmia		r1!, {r4-r7}
+	.cfi_restore r4
+	.cfi_restore r5
+	.cfi_restore r6
+	.cfi_restore r7
 
 	/* Release the stack data and return the value returned by up_fork */
 
 	ldr		r1, [sp, #FORK_LR_OFFSET]
 	mov		r14, r1
+	.cfi_restore lr
 	add		sp, sp, #FORK_SIZEOF
+	.cfi_def_cfa_offset 0
 	bx		lr
+	.cfi_endproc
 
 	.size	up_fork, .-up_fork
 	.end
