@@ -106,6 +106,8 @@ struct ctucanfd_can_s
   /* This holds the information visible to the NuttX network */
 
   struct netdev_lowerhalf_s dev;
+
+  FAR netpkt_t             *tx_pktbuf[CTUCANFD_TXBUF_CNT];
 #endif
 
   FAR struct pci_device_s *pcidev;
@@ -1538,11 +1540,49 @@ static int ctucanfd_sock_transmit(FAR struct netdev_lowerhalf_s *dev,
   regval = CTUCANFD_TXCMD_TXCR + (1 << (CTUCANFD_TXCMD_TXB_SHIFT + txidx));
   ctucanfd_putreg(priv, CTUCANFD_TXINFOCMD, regval);
 
-  /* All is done - free packet */
+  /* Set txbuf record used for txconfirm */
 
-  netpkt_free(dev, pkt, NETPKT_TX);
+  priv->tx_pktbuf[txidx] = pkt;
 
   return OK;
+}
+
+/*****************************************************************************
+ * Name: ctucanfd_sock_txconfirm
+ *****************************************************************************/
+
+static FAR netpkt_t *
+ctucanfd_sock_txconfirm(FAR struct netdev_lowerhalf_s *dev)
+{
+  FAR struct ctucanfd_can_s *priv = (FAR struct ctucanfd_can_s *)dev;
+  FAR netpkt_t              *pkt;
+  uint8_t                    i;
+
+  for (i = 0; i < priv->txbufcnt; i++)
+    {
+      if (priv->tx_pktbuf[i])
+        {
+          /* subtract 1 from the RX buffer quota counter */
+
+          if (atomic_sub(&dev->quota_ptr[NETPKT_RX], 1) <= 0)
+            {
+              atomic_add(&dev->quota_ptr[NETPKT_RX], 1);
+              canerr("alloc rx buffer failed\n");
+              return NULL;
+            }
+
+          pkt = priv->tx_pktbuf[i];
+          priv->tx_pktbuf[i] = NULL;
+
+          /* add 1 from the TX buffer quota counter */
+
+          atomic_add(&dev->quota_ptr[NETPKT_TX], 1);
+
+          return pkt;
+        }
+    }
+
+  return NULL;
 }
 
 /*****************************************************************************
@@ -1558,6 +1598,12 @@ static FAR netpkt_t *ctucanfd_sock_recv(FAR struct netdev_lowerhalf_s *dev)
   int                          i      = 0;
   uint32_t                     regval = 0;
   uint8_t                      bytes;
+
+  pkt = ctucanfd_sock_txconfirm(dev);
+  if (pkt)
+    {
+      return pkt;
+    }
 
   /* Read frame if RX buffer not empty */
 
@@ -1836,6 +1882,7 @@ static void ctucanfd_sock_interrupt(FAR struct ctucanfd_driver_s *priv)
               if (CTUCANFD_TXSTAT_GET(regval, txidx) ==
                   CTUCANFD_TXSTAT_TOK)
                 {
+                  netdev_lower_rxready(&priv->devs[i].dev);
                   netdev_lower_txdone(&priv->devs[i].dev);
 
                   /* Mark buffer as empty */
@@ -2100,6 +2147,10 @@ static int ctucanfd_probe(FAR struct pci_device_s *dev)
       netdev->quota[NETPKT_TX] = CTUCANFD_TX_QUOTA;
       netdev->quota[NETPKT_RX] = CTUCANFD_RX_QUOTA;
       netdev->ops = &g_ctucanfd_net_ops;
+
+      /* Set the IFF Loopback flag */
+
+      IFF_SET_LOOPBACK(netdev->netdev.d_flags);
 
       /* Register the network interface. */
 
