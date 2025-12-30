@@ -329,9 +329,23 @@ int nxsig_clockwait(int clockid, int flags,
       rtcb->task_state = TSTATE_WAIT_SIG;
       dq_addlast((FAR dq_entry_t *)rtcb, &g_waitingforsignal);
 
+      /* Initialize the errcode used to communication wake-up error
+       * conditions.
+       */
+
+      rtcb->errcode = OK;
+
       /* Now, perform the context switch if one is needed */
 
       nxsched_switch(this_task(), rtcb);
+
+      /* Check if an error occurred while we were sleeping.  Expected
+       * errors include EINTR meaning that we were awakened by a signal
+       * or ETIMEDOUT meaning that the timer expired for the case of
+       * sem_timedwait().
+       */
+
+      ret = rtcb->errcode != OK ? -rtcb->errcode : OK;
 
       /* We no longer need the watchdog */
 
