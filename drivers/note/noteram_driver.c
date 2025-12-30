@@ -1677,11 +1677,7 @@ noteram_initialize_with_buffer(FAR const char *devpath,
                                bool overwrite, bool crashdump, bool regnote)
 {
   FAR struct noteram_driver_s *drv;
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-  size_t len = strlen(devpath) + 1;
-#else
   size_t len = 0;
-#endif
   int ret;
 
   if (!buffer || bufsize <= sizeof(struct noteram_header_s))
@@ -1689,10 +1685,20 @@ noteram_initialize_with_buffer(FAR const char *devpath,
       return NULL;
     }
 
+  if (devpath)
+    {
+      len = strlen(devpath) + 1;
+    }
+
   drv = kmm_zalloc(sizeof(*drv) + len);
   if (drv == NULL)
     {
       return NULL;
+    }
+
+  if (devpath)
+    {
+      memcpy(drv + 1, devpath, len);
     }
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
