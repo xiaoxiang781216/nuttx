@@ -105,21 +105,7 @@ static inline_function void nxmutex_remove_backtrace(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
-static inline_function int nxmutex_init(FAR mutex_t *mutex)
-{
-  int ret = nxsem_init(&mutex->sem, 0, NXSEM_NO_MHOLDER);
-
-  if (ret >= 0)
-    {
-#ifdef CONFIG_PRIORITY_INHERITANCE
-      nxsem_set_protocol(&mutex->sem, SEM_TYPE_MUTEX | SEM_PRIO_INHERIT);
-#else
-      nxsem_set_protocol(&mutex->sem, SEM_TYPE_MUTEX);
-#endif
-    }
-
-  return ret;
-}
+int nxmutex_init(FAR mutex_t *mutex);
 
 /****************************************************************************
  * Name: nxmutex_get_holder
@@ -207,47 +193,7 @@ static inline_function bool nxrmutex_is_hold(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
-static inline_function
-int nxmutex_ticklock(FAR mutex_t *mutex, clock_t delay)
-{
-  clock_t end;
-  int ret;
-
-  ret = nxmutex_trywait(&mutex->sem);
-  if (ret >= 0)
-    {
-      nxmutex_add_backtrace(mutex);
-    }
-  else
-    {
-      /* Wait until we get the lock or until the timeout expires */
-
-      end = clock_delay2abstick(delay);
-
-      for (; ; )
-        {
-          ret = nxsem_tickwait_slow(&mutex->sem, delay);
-          if (ret >= 0)
-            {
-              nxmutex_add_backtrace(mutex);
-              break;
-            }
-          else if (ret != -EINTR && ret != -ECANCELED)
-            {
-              break;
-            }
-
-          delay = end - clock();
-          if ((int32_t)delay <= 0)
-            {
-              ret = -ETIMEDOUT;
-              break;
-            }
-        }
-    }
-
-  return ret;
-}
+int nxmutex_ticklock(FAR mutex_t *mutex, clock_t delay);
 
 /****************************************************************************
  * Name: nxmutex_clocklock
@@ -274,48 +220,8 @@ int nxmutex_ticklock(FAR mutex_t *mutex, clock_t delay)
  *
  ****************************************************************************/
 
-static inline_function
 int nxmutex_clocklock(FAR mutex_t *mutex, clockid_t clockid,
-                      FAR const struct timespec *abstime)
-{
-  int ret;
-
-  /* Try to take the semaphore without waiting. */
-
-  ret = nxmutex_trywait(&mutex->sem);
-  if (ret >= 0)
-    {
-      nxmutex_add_backtrace(mutex);
-    }
-  else
-    {
-      /* Wait until we get the lock or until the timeout expires */
-
-      for (; ; )
-        {
-          if (abstime)
-            {
-              ret = nxsem_clockwait_slow(&mutex->sem, clockid, abstime);
-            }
-          else
-            {
-              ret = nxmutex_wait(&mutex->sem);
-            }
-
-          if (ret >= 0)
-            {
-              nxmutex_add_backtrace(mutex);
-              break;
-            }
-          else if (ret != -EINTR && ret != -ECANCELED)
-            {
-              break;
-            }
-        }
-    }
-
-  return ret;
-}
+                      FAR const struct timespec *abstime);
 
 /****************************************************************************
  * Name: nxmutex_timedlock
@@ -341,21 +247,7 @@ int nxmutex_clocklock(FAR mutex_t *mutex, clockid_t clockid,
  *
  ****************************************************************************/
 
-static inline_function
-int nxmutex_timedlock(FAR mutex_t *mutex, unsigned int timeout)
-{
-  struct timespec now;
-  struct timespec delay;
-  struct timespec rqtp;
-
-  clock_gettime(CLOCK_MONOTONIC, &now);
-  clock_ticks2time(&delay, MSEC2TICK(timeout));
-  clock_timespec_add(&now, &delay, &rqtp);
-
-  /* Wait until we get the lock or until the timeout expires */
-
-  return nxmutex_clocklock(mutex, CLOCK_MONOTONIC, &rqtp);
-}
+int nxmutex_timedlock(FAR mutex_t *mutex, unsigned int timeout);
 
 /****************************************************************************
  * Name: nxmutex_lock
@@ -419,34 +311,7 @@ static inline_function int nxmutex_lock(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
-static inline_function int nxrmutex_lock(FAR rmutex_t *rmutex)
-{
-  int ret = OK;
-
-  if (!nxrmutex_is_hold(rmutex))
-    {
-      for (; ; )
-        {
-          /* Take the semaphore (perhaps waiting) */
-
-          ret = nxmutex_wait(&rmutex->mutex.sem);
-          if (ret >= 0 || (ret != -EINTR && ret != -ECANCELED))
-            {
-              break;
-            }
-        }
-    }
-
-  if (ret >= 0)
-    {
-      DEBUGASSERT(rmutex->count < UINT_MAX);
-      ++rmutex->count;
-
-      nxmutex_add_backtrace(&rmutex->mutex);
-    }
-
-  return ret;
-}
+int nxrmutex_lock(FAR rmutex_t *rmutex);
 
 /****************************************************************************
  * Name: nxmutex_trylock
@@ -469,18 +334,7 @@ static inline_function int nxrmutex_lock(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
-static inline_function int nxmutex_trylock(FAR mutex_t *mutex)
-{
-  int ret;
-
-  ret = nxmutex_trywait(&mutex->sem);
-  if (ret >= 0)
-    {
-      nxmutex_add_backtrace(mutex);
-    }
-
-  return ret;
-}
+int nxmutex_trylock(FAR mutex_t *mutex);
 
 /****************************************************************************
  * Name: nxrmutex_trylock
@@ -505,24 +359,7 @@ static inline_function int nxmutex_trylock(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
-static inline_function
-int nxrmutex_trylock(FAR rmutex_t *rmutex)
-{
-  int ret = OK;
-
-  if (!nxrmutex_is_hold(rmutex))
-    {
-      ret = nxmutex_trylock(&rmutex->mutex);
-    }
-
-  if (ret >= 0)
-    {
-      DEBUGASSERT(rmutex->count < UINT_MAX);
-      ++rmutex->count;
-    }
-
-  return ret;
-}
+int nxrmutex_trylock(FAR rmutex_t *rmutex);
 
 /****************************************************************************
  * Name: nxrmutex_ticklock
@@ -550,24 +387,7 @@ int nxrmutex_trylock(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
-static inline_function
-int nxrmutex_ticklock(FAR rmutex_t *rmutex, uint32_t delay)
-{
-  int ret = OK;
-
-  if (!nxrmutex_is_hold(rmutex))
-    {
-      ret = nxmutex_ticklock(&rmutex->mutex, delay);
-    }
-
-  if (ret >= 0)
-    {
-      DEBUGASSERT(rmutex->count < UINT_MAX);
-      ++rmutex->count;
-    }
-
-  return ret;
-}
+int nxrmutex_ticklock(FAR rmutex_t *rmutex, uint32_t delay);
 
 /****************************************************************************
  * Name: nxrmutex_clocklock
@@ -594,25 +414,8 @@ int nxrmutex_ticklock(FAR rmutex_t *rmutex, uint32_t delay)
  *
  ****************************************************************************/
 
-static inline_function
 int nxrmutex_clocklock(FAR rmutex_t *rmutex, clockid_t clockid,
-                       FAR const struct timespec *abstime)
-{
-  int ret = OK;
-
-  if (!nxrmutex_is_hold(rmutex))
-    {
-      ret = nxmutex_clocklock(&rmutex->mutex, clockid, abstime);
-    }
-
-  if (ret >= 0)
-    {
-      DEBUGASSERT(rmutex->count < UINT_MAX);
-      ++rmutex->count;
-    }
-
-  return ret;
-}
+                       FAR const struct timespec *abstime);
 
 /****************************************************************************
  * Name: nxrmutex_timedlock
@@ -639,24 +442,7 @@ int nxrmutex_clocklock(FAR rmutex_t *rmutex, clockid_t clockid,
  *
  ****************************************************************************/
 
-static inline_function
-int nxrmutex_timedlock(FAR rmutex_t *rmutex, unsigned int timeout)
-{
-  int ret = OK;
-
-  if (!nxrmutex_is_hold(rmutex))
-    {
-      ret = nxmutex_timedlock(&rmutex->mutex, timeout);
-    }
-
-  if (ret >= 0)
-    {
-      DEBUGASSERT(rmutex->count < UINT_MAX);
-      ++rmutex->count;
-    }
-
-  return ret;
-}
+int nxrmutex_timedlock(FAR rmutex_t *rmutex, unsigned int timeout);
 
 /****************************************************************************
  * Name: nxmutex_unlock
@@ -678,8 +464,7 @@ int nxrmutex_timedlock(FAR rmutex_t *rmutex, unsigned int timeout)
  *
  ****************************************************************************/
 
-static inline_function
-int nxmutex_unlock(FAR mutex_t *mutex)
+static inline_function int nxmutex_unlock(FAR mutex_t *mutex)
 {
   nxmutex_remove_backtrace(mutex);
   return nxmutex_post(&mutex->sem);
@@ -706,25 +491,8 @@ int nxmutex_unlock(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
-static inline_function
-int nxrmutex_unlock(FAR rmutex_t *rmutex)
-{
-  int ret = OK;
+int nxrmutex_unlock(FAR rmutex_t *rmutex);
 
-  DEBUGASSERT(nxrmutex_is_hold(rmutex));
-  DEBUGASSERT(rmutex->count > 0u);
-
-  if (--rmutex->count == 0u)
-    {
-      ret = nxmutex_unlock(&rmutex->mutex);
-      if (ret < 0)
-        {
-          ++rmutex->count;
-        }
-    }
-
-  return ret;
-}
 /****************************************************************************
  * Name: nrxmutex_breaklock
  *
@@ -742,25 +510,7 @@ int nxrmutex_unlock(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
-static inline_function
-int nxrmutex_breaklock(FAR rmutex_t *rmutex, FAR unsigned int *count)
-{
-  int ret = OK;
-
-  *count = 0u;
-  if (nxrmutex_is_hold(rmutex))
-    {
-      *count = rmutex->count;
-      rmutex->count = 0u;
-      ret = nxmutex_unlock(&rmutex->mutex);
-      if (ret < 0)
-        {
-          rmutex->count = *count;
-        }
-    }
-
-  return ret;
-}
+int nxrmutex_breaklock(FAR rmutex_t *rmutex, FAR unsigned int *count);
 
 /****************************************************************************
  * Name: nxrmutex_restorelock
@@ -779,22 +529,7 @@ int nxrmutex_breaklock(FAR rmutex_t *rmutex, FAR unsigned int *count)
  *
  ****************************************************************************/
 
-static inline_function
-int nxrmutex_restorelock(FAR rmutex_t *rmutex, unsigned int count)
-{
-  int ret = OK;
-
-  if (count != 0u)
-    {
-      ret = nxmutex_lock(&rmutex->mutex);
-      if (ret >= 0)
-        {
-          rmutex->count = count;
-        }
-    }
-
-  return ret;
-}
+int nxrmutex_restorelock(FAR rmutex_t *rmutex, unsigned int count);
 
 #define nxrmutex_set_protocol(rmutex, protocol) \
         nxmutex_set_protocol(&(rmutex)->mutex, protocol)
@@ -882,20 +617,7 @@ static inline_function void nxmutex_reset(FAR mutex_t *mutex)
  *
  ****************************************************************************/
 
-static inline_function int nxmutex_breaklock(FAR mutex_t *mutex,
-                                             FAR unsigned int *locked)
-{
-  int ret = OK;
-
-  *locked = false;
-  ret = nxmutex_unlock(mutex);
-  if (ret >= 0)
-    {
-      *locked = true;
-    }
-
-  return ret;
-}
+int nxmutex_breaklock(FAR mutex_t *mutex, FAR unsigned int *locked);
 
 /****************************************************************************
  * Name: nxmutex_restorelock
@@ -1037,17 +759,7 @@ static inline_function int nxrmutex_init(FAR rmutex_t *rmutex)
  *
  ****************************************************************************/
 
-static inline_function int nxrmutex_destroy(FAR rmutex_t *rmutex)
-{
-  int ret = nxmutex_destroy(&rmutex->mutex);
-
-  if (ret >= 0)
-    {
-      rmutex->count = 0;
-    }
-
-  return ret;
-}
+int nxrmutex_destroy(FAR rmutex_t *rmutex);
 
 /****************************************************************************
  * Name: nxrmutex_is_recursive

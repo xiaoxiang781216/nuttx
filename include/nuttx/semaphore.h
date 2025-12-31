@@ -603,52 +603,7 @@ static inline_function int nxmutex_post(FAR sem_t *sem)
  *
  ****************************************************************************/
 
-static inline_function int nxmutex_trywait(FAR sem_t *sem)
-{
-  int ret = -EAGAIN;
-
-  /* This API should not be called from the idleloop or interrupt */
-
-#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  DEBUGASSERT(!up_interrupt_context());
-  DEBUGASSERT(!OSINIT_IDLELOOP() || !sched_idletask());
-#endif
-
-  DEBUGASSERT(sem != NULL);
-  DEBUGASSERT(NXSEM_IS_MUTEX(sem));
-
-  /* Disable fast path if priority protection is enabled on the semaphore */
-
-#ifdef CONFIG_PRIORITY_PROTECT
-  if ((sem->flags & SEM_PRIO_MASK) != SEM_PRIO_PROTECT)
-    {
-#endif
-      for (; ; )
-        {
-          FAR atomic_t *val = NXSEM_MHOLDER(sem);
-          int32_t old = atomic_read(val);
-
-          if (old != NXSEM_NO_MHOLDER)
-            {
-              break;
-            }
-
-          if (atomic_try_cmpxchg_acquire(val, &old, gettid()))
-            {
-              ret = OK;
-              break;
-            }
-        }
-#ifdef CONFIG_PRIORITY_PROTECT
-    }
-  else
-    {
-      ret = nxsem_trywait_slow(sem);
-    }
-#endif
-
-  return ret;
-}
+int nxmutex_trywait(FAR sem_t *sem);
 
 /****************************************************************************
  * Name: nxsem_wait
@@ -792,52 +747,7 @@ static inline_function int nxsem_post(FAR sem_t *sem)
  *
  ****************************************************************************/
 
-static inline_function int nxsem_trywait(FAR sem_t *sem)
-{
-  int ret = -EAGAIN;
-
-  /* This API should not be called from the idleloop or interrupt */
-
-#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  DEBUGASSERT(!up_interrupt_context());
-  DEBUGASSERT(!OSINIT_IDLELOOP() || !sched_idletask());
-#endif
-
-  DEBUGASSERT(sem != NULL);
-  DEBUGASSERT(!NXSEM_IS_MUTEX(sem));
-
-  /* Disable fast path if priority protection is enabled on the semaphore */
-
-#if defined(CONFIG_PRIORITY_INHERITANCE) || defined(CONFIG_PRIORITY_PROTECT)
-  if ((sem->flags & SEM_PRIO_MASK) == SEM_PRIO_NONE)
-    {
-#endif
-      for (; ; )
-        {
-          FAR atomic_t *val = NXSEM_COUNT(sem);
-          int32_t old = atomic_read(val);
-
-          if (old < 1)
-            {
-              break;
-            }
-
-          if (atomic_try_cmpxchg_acquire(val, &old, old - 1))
-            {
-              ret = OK;
-              break;
-            }
-        }
-#if defined(CONFIG_PRIORITY_INHERITANCE) || defined(CONFIG_PRIORITY_PROTECT)
-    }
-  else
-    {
-      ret = nxsem_trywait_slow(sem);
-    }
-#endif
-
-  return ret;
-}
+int nxsem_trywait(FAR sem_t *sem);
 
 /****************************************************************************
  * Name: nxsem_clockwait
@@ -883,22 +793,8 @@ static inline_function int nxsem_trywait(FAR sem_t *sem)
  *
  ****************************************************************************/
 
-static inline_function
 int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
-                    FAR const struct timespec *abstime)
-{
-  int ret = -EINVAL;
-
-  /* Try to take the semaphore without waiting. */
-
-  ret = nxsem_trywait(sem);
-  if (ret != OK)
-    {
-      ret = nxsem_clockwait_slow(sem, clockid, abstime);
-    }
-
-  return ret;
-}
+                    FAR const struct timespec *abstime);
 
 /****************************************************************************
  * Name: nxsem_clockwait_uninterruptible
@@ -924,22 +820,8 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
  *
  ****************************************************************************/
 
-static inline_function
 int nxsem_clockwait_uninterruptible(FAR sem_t *sem, clockid_t clockid,
-                                    FAR const struct timespec *abstime)
-{
-  int ret;
-
-  do
-    {
-      /* Take the semaphore (perhaps waiting) */
-
-      ret = nxsem_clockwait(sem, clockid, abstime);
-    }
-  while (ret == -EINTR);
-
-  return ret;
-}
+                                    FAR const struct timespec *abstime);
 
 /****************************************************************************
  * Name: nxsem_tickwait
@@ -962,31 +844,7 @@ int nxsem_clockwait_uninterruptible(FAR sem_t *sem, clockid_t clockid,
  *
  ****************************************************************************/
 
-static inline_function int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
-{
-  int ret;
-
-  DEBUGASSERT(sem != NULL && up_interrupt_context() == false);
-
-  /* Try to take the semaphore without waiting. */
-
-  ret = nxsem_trywait(sem);
-  if (ret != OK)
-    {
-      if (delay == 0u)
-        {
-          /* Timed out already before waiting */
-
-          ret = -ETIMEDOUT;
-        }
-      else
-        {
-          ret = nxsem_tickwait_slow(sem, delay);
-        }
-    }
-
-  return ret;
-}
+int nxsem_tickwait(FAR sem_t *sem, clock_t delay);
 
 /****************************************************************************
  * Name: nxsem_tickwait_uninterruptible
@@ -1011,31 +869,7 @@ static inline_function int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
  *
  ****************************************************************************/
 
-static inline_function
-int nxsem_tickwait_uninterruptible(FAR sem_t *sem, clock_t delay)
-{
-  clock_t end = clock_delay2abstick(delay);
-  int ret;
-
-  for (; ; )
-    {
-      /* Take the semaphore (perhaps waiting) */
-
-      ret = nxsem_tickwait(sem, delay);
-      if (ret != -EINTR)
-        {
-          break;
-        }
-
-      delay = end - clock();
-      if ((int32_t)delay < 0)
-        {
-          delay = 0;
-        }
-    }
-
-  return ret;
-}
+int nxsem_tickwait_uninterruptible(FAR sem_t *sem, clock_t delay);
 
 /****************************************************************************
  * Name: nxsem_timedwait
@@ -1139,20 +973,7 @@ int nxsem_timedwait_uninterruptible(FAR sem_t *sem,
  *
  ****************************************************************************/
 
-static inline_function int nxsem_wait_uninterruptible(FAR sem_t *sem)
-{
-  int ret;
-
-  do
-    {
-      /* Take the semaphore (perhaps waiting) */
-
-      ret = nxsem_wait(sem);
-    }
-  while (ret == -EINTR);
-
-  return ret;
-}
+int nxsem_wait_uninterruptible(FAR sem_t *sem);
 
 /****************************************************************************
  * Name:  nxsem_get_value
