@@ -73,7 +73,6 @@
       CONCATENATE(name, _buffer), \
       MEMPOOL_REALBLOCKSIZE(blksize) * (prealloc) + MEMPOOL_HEADER_SIZE, \
       (blksize), \
-      0, \
       MEMPOOL_REALBLOCKSIZE(blksize) * (dynalloc) + MEMPOOL_HEADER_SIZE, \
       (maxalloc), \
       true, \
@@ -101,7 +100,6 @@
       CONCATENATE(name, _buffer), \
       MEMPOOL_REALBLOCKSIZE(blksize) * (prealloc) + MEMPOOL_HEADER_SIZE, \
       (blksize), \
-      0, \
       MEMPOOL_REALBLOCKSIZE(blksize) * (dynalloc) + MEMPOOL_HEADER_SIZE, \
       (maxalloc), \
       true, \
@@ -157,7 +155,6 @@ struct mempool_s
   FAR void  *initialbase;   /* The initial base pointer of normal mempool */
   size_t     initialsize;   /* The initialize size in normal mempool */
   size_t     blocksize;     /* The size for every block in mempool */
-  size_t     interruptsize; /* The initialize size in interrupt mempool */
   size_t     expandsize;    /* The size of expand block every time for mempool */
   size_t     maxalloc;      /* The maximum allowed alloc number, 0 means not limit */
   bool       wait;          /* The flag of need to wait when mempool is empty */
@@ -169,9 +166,7 @@ struct mempool_s
 
   /* Private data for memory pool */
 
-  FAR char  *ibase;   /* The inerrupt mempool base pointer */
   sq_queue_t queue;   /* The free block queue in normal mempool */
-  sq_queue_t iqueue;  /* The free block queue in interrupt mempool */
   sq_queue_t equeue;  /* The expand block queue for normal mempool */
   size_t     nalloc;  /* The number of used block in mempool */
   spinlock_t lock;    /* The protect lock to mempool */
@@ -206,7 +201,6 @@ struct mempoolinfo_s
 {
   unsigned long arena;    /* This is the total size of mempool */
   unsigned long ordblks;  /* This is the number of free blocks for normal mempool */
-  unsigned long iordblks; /* This is the number of free blocks for interrupt mempool */
   unsigned long aordblks; /* This is the number of used blocks */
   unsigned long sizeblks; /* This is the size of a mempool blocks */
   unsigned long nwaiter;  /* This is the number of waiter for mempool */
@@ -232,7 +226,7 @@ extern "C"
  * Description:
  *   Initialize a memory pool.
  *   The user needs to specify the initialization information of mempool
- *   including blocksize, initialsize, expandsize, interruptsize.
+ *   including blocksize, initialsize, expandsize.
  *
  * Input Parameters:
  *   pool - Address of the memory pool to be used.
@@ -424,7 +418,7 @@ void mempool_procfs_unregister(FAR struct mempool_procfs_entry_s *entry);
  *   Initialize multiple memory pool, each element represents a memory pool.
  *   The user needs to specify the initialization information of each mempool
  *   in the array, including blocksize, initialsize, expandsize,
- *   interruptsize, wait. These mempool will be initialized by mempool_init.
+ *   wait. These mempool will be initialized by mempool_init.
  *   The name of all mempool are "name".
  *
  *   This function will initialize the member delta by detecting the

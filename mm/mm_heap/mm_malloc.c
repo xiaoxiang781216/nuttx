@@ -136,9 +136,9 @@ void mm_mempool_dump_handle(FAR struct mempool_s *pool, FAR void *arg)
   struct mempoolinfo_s info;
 
   mempool_info(pool, &info);
-  mwarn("%9lu%11lu%9lu%9lu%9lu%9lu\n",
+  mwarn("%9lu%11lu%9lu%9lu%9lu\n",
         info.sizeblks, info.arena, info.aordblks,
-        info.ordblks, info.iordblks, info.nwaiter);
+        info.ordblks, info.nwaiter);
 }
 #endif
 

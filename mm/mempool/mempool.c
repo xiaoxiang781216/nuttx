@@ -162,17 +162,6 @@ static void mempool_foreach(FAR struct mempool_s *pool,
   FAR char *base;
   size_t nblks;
 
-  if (pool->ibase != NULL)
-    {
-      nblks = pool->interruptsize / blocksize;
-      while (nblks--)
-        {
-          record = (FAR struct mempool_record_s *)
-                   (pool->ibase + nblks * blocksize);
-          callback(pool, record, input, output);
-        }
-    }
-
   sq_for_every(&pool->equeue, entry)
     {
       nblks = (pool->expandsize - MEMPOOL_HEADER_SIZE) / blocksize;
@@ -363,7 +352,7 @@ static void mempool_check_callback(FAR struct mempool_s *pool,
  * Description:
  *   Initialize a memory pool.
  *   The user needs to specify the initialization information of mempool
- *   including blocksize, initialsize, expandsize, interruptsize.
+ *   including blocksize, initialsize, expandsize.
  *   This function is also used to auto init the mempool if user do not
  *   call the mempool_init() explictly.
  *   And if user do not specified the `priv`, `alloc`, `free` and `check`
@@ -410,34 +399,10 @@ int mempool_init(FAR struct mempool_s *pool)
             }
 
           sq_init(&pool->queue);
-          sq_init(&pool->iqueue);
           sq_init(&pool->equeue);
           pool->nalloc = 0;
 
-          if (pool->interruptsize >= blocksize && pool->alloc)
-            {
-              size_t ninterrupt = pool->interruptsize / blocksize;
-              size_t size = ninterrupt * blocksize;
-
-              pool->ibase = pool->alloc(pool, size);
-              if (pool->ibase == NULL)
-                {
-                  ret = -ENOMEM;
-                }
-              else
-                {
-                  mempool_add_queue(pool, &pool->iqueue,
-                                    pool->ibase, ninterrupt, blocksize);
-                  kasan_poison(pool->ibase, size);
-                }
-            }
-          else
-            {
-              pool->ibase = NULL;
-            }
-
-          if (ret >= 0 &&
-              pool->initialsize >= blocksize + MEMPOOL_HEADER_SIZE)
+          if (pool->initialsize >= blocksize + MEMPOOL_HEADER_SIZE)
             {
               size_t ninitial = (pool->initialsize - MEMPOOL_HEADER_SIZE)
                                 / blocksize;
@@ -449,11 +414,6 @@ int mempool_init(FAR struct mempool_s *pool)
                   base = pool->alloc(pool, size);
                   if (base == NULL)
                     {
-                      if (pool->ibase)
-                        {
-                          pool->free(pool, pool->ibase);
-                        }
-
                       ret = -ENOMEM;
                     }
                   else
@@ -548,63 +508,49 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout)
           blk = mempool_remove_queue(pool, &pool->queue);
           if (blk == NULL)
             {
-#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-              if (up_interrupt_context())
+              size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
+
+              kasan_bypass(bypass);
+              spin_unlock_irqrestore(&pool->lock, flags);
+              if (pool->expandsize >= blocksize + MEMPOOL_HEADER_SIZE)
                 {
-                  blk = mempool_remove_queue(pool, &pool->iqueue);
-                  if (blk == NULL)
+                  size_t nexpand = (pool->expandsize -
+                                    MEMPOOL_HEADER_SIZE) / blocksize;
+                  size_t size = nexpand * blocksize +
+                                MEMPOOL_HEADER_SIZE;
+                  FAR char *base = pool->alloc(pool, size);
+
+                  if (base != NULL)
                     {
-                      kasan_bypass(bypass);
-                      spin_unlock_irqrestore(&pool->lock, flags);
+                      kasan_poison(base, size);
+
+                      flags = spin_lock_irqsave(&pool->lock);
+                      bypass = kasan_bypass(true);
+
+                      mempool_add_queue(pool, &pool->queue,
+                                        base, nexpand, blocksize);
+                      sq_addlast((FAR sq_entry_t *)(base + nexpand *
+                                 blocksize), &pool->equeue);
+                      blk = mempool_remove_queue(pool, &pool->queue);
                     }
                 }
-              else
-#endif
+              else if (pool->wait && timeout)
                 {
-                  size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool->blocksize);
+                  int ret;
 
-                  kasan_bypass(bypass);
-                  spin_unlock_irqrestore(&pool->lock, flags);
-                  if (pool->expandsize >= blocksize + MEMPOOL_HEADER_SIZE)
+                  if (timeout == UINT_MAX)
                     {
-                      size_t nexpand = (pool->expandsize -
-                                        MEMPOOL_HEADER_SIZE) / blocksize;
-                      size_t size = nexpand * blocksize +
-                                    MEMPOOL_HEADER_SIZE;
-                      FAR char *base = pool->alloc(pool, size);
-
-                      if (base != NULL)
-                        {
-                          kasan_poison(base, size);
-
-                          flags = spin_lock_irqsave(&pool->lock);
-                          bypass = kasan_bypass(true);
-
-                          mempool_add_queue(pool, &pool->queue,
-                                            base, nexpand, blocksize);
-                          sq_addlast((FAR sq_entry_t *)(base + nexpand *
-                                     blocksize), &pool->equeue);
-                          blk = mempool_remove_queue(pool, &pool->queue);
-                        }
+                      ret = nxsem_wait_uninterruptible(&pool->waitsem);
                     }
-                  else if (pool->wait && timeout)
+                  else
                     {
-                      int ret;
+                      ret = nxsem_tickwait_uninterruptible
+                              (&pool->waitsem, MSEC2TICK(timeout));
+                    }
 
-                      if (timeout == UINT_MAX)
-                        {
-                          ret = nxsem_wait_uninterruptible(&pool->waitsem);
-                        }
-                      else
-                        {
-                          ret = nxsem_tickwait_uninterruptible
-                                  (&pool->waitsem, MSEC2TICK(timeout));
-                        }
-
-                      if (ret >= 0)
-                        {
-                          retry = true;
-                        }
+                  if (ret >= 0)
+                    {
+                      retry = true;
                     }
                 }
             }
@@ -702,22 +648,7 @@ void mempool_release(FAR struct mempool_s *pool, FAR void *blk)
   memset(blk, MM_FREE_MAGIC, pool->blocksize);
 #endif
 
-  if (pool->ibase)
-    {
-      if ((FAR char *)blk >= pool->ibase &&
-          (FAR char *)blk < pool->ibase + pool->interruptsize)
-        {
-          sq_addlast(blk, &pool->iqueue);
-        }
-      else
-        {
-          sq_addlast(blk, &pool->queue);
-        }
-    }
-  else
-    {
-      sq_addlast(blk, &pool->queue);
-    }
+  sq_addlast(blk, &pool->queue);
 
   kasan_poison(blk, pool->blocksize);
   kasan_bypass(bypass);
@@ -797,10 +728,9 @@ int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
       bypass = kasan_bypass(true);
 
       info->ordblks = sq_count(&pool->queue);
-      info->iordblks = sq_count(&pool->iqueue);
       info->aordblks = pool->nalloc;
       info->arena = sq_count(&pool->equeue) * MEMPOOL_HEADER_SIZE +
-        (info->aordblks + info->ordblks + info->iordblks) * blocksize;
+        (info->aordblks + info->ordblks) * blocksize;
       info->maxalloc = pool->maxalloc;
       kasan_bypass(bypass);
       spin_unlock_irqrestore(&pool->lock, flags);
@@ -846,8 +776,7 @@ mempool_info_task(FAR struct mempool_s *pool,
     {
       irqstate_t flags = spin_lock_irqsave(&pool->lock);
       bypass = kasan_bypass(true);
-      size_t count = sq_count(&pool->queue) +
-                     sq_count(&pool->iqueue);
+      size_t count = sq_count(&pool->queue);
 
       kasan_bypass(bypass);
       spin_unlock_irqrestore(&pool->lock, flags);
@@ -971,13 +900,6 @@ int mempool_deinit(FAR struct mempool_s *pool)
             {
               count = (pool->expandsize - MEMPOOL_HEADER_SIZE) / blocksize;
             }
-        }
-
-      if (pool->ibase)
-        {
-          pool->ibase = kasan_unpoison(pool->ibase,
-                          pool->interruptsize / blocksize * blocksize);
-          pool->free(pool, pool->ibase);
         }
 
       if (pool->wait && pool->expandsize == 0u)

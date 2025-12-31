@@ -965,9 +965,8 @@ mempool_multiple_mallinfo(FAR struct mempool_multiple_s *mpool)
               struct mempoolinfo_s poolinfo;
 
               mempool_info(mpool->pools + i, &poolinfo);
-              info.fordblks += (poolinfo.ordblks + poolinfo.iordblks)
-                              * poolinfo.sizeblks;
-              info.ordblks += poolinfo.ordblks + poolinfo.iordblks;
+              info.fordblks += poolinfo.ordblks * poolinfo.sizeblks;
+              info.ordblks += poolinfo.ordblks;
               info.aordblks += poolinfo.aordblks;
               if (info.mxordblk < poolinfo.sizeblks)
                 {
