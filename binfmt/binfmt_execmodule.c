@@ -276,25 +276,48 @@ int exec_module(FAR struct binary_s *binp,
   if (!attr)
     {
       posix_spawnattr_init(&tmp);
-      posix_spawnattr_setstackaddr(&tmp, stackaddr);
-      posix_spawnattr_setpriority(&tmp, binp->priority);
-      posix_spawnattr_setstacksize(&tmp, binp->stacksize);
-      posix_spawnattr_setheapsize(&tmp, binp->heapsize);
-      attr = &tmp;
     }
+  else
+    {
+      memcpy(&tmp, attr, sizeof(tmp));
+    }
+
+#ifndef CONFIG_BUILD_KERNEL
+  if (tmp.stackaddr == NULL)
+    {
+      posix_spawnattr_setstackaddr(&tmp, stackaddr);
+    }
+#endif
+
+  if (tmp.priority == 0)
+    {
+      posix_spawnattr_setpriority(&tmp, binp->priority);
+    }
+
+  if (tmp.stacksize == 0)
+    {
+      posix_spawnattr_setstacksize(&tmp, binp->stacksize);
+    }
+
+#ifdef CONFIG_MM_TASK_HEAP
+  if (tmp.heapsize == 0)
+    {
+      posix_spawnattr_setheapsize(&tmp, binp->heapsize);
+    }
+#endif
 
   if (argv && argv[0])
     {
-      ret = nxtask_init(tcb, argv[0], binp->entrypt, actions, attr,
+      ret = nxtask_init(tcb, argv[0], binp->entrypt, actions, &tmp,
                         &argv[1], envp);
     }
   else
     {
-      ret = nxtask_init(tcb, filename, binp->entrypt, actions, attr,
+      ret = nxtask_init(tcb, filename, binp->entrypt, actions, &tmp,
                         argv, envp);
     }
 
-  if (attr == &tmp)
+  if (!attr)
     {
       posix_spawnattr_destroy(&tmp);
     }
@@ -307,7 +330,7 @@ int exec_module(FAR struct binary_s *binp,
 
   /* The copied argv and envp can now be released */
 
-  if (attr != &tmp)
+  if (attr)
     {
       binfmt_freeattr(attr);
     }
@@ -362,9 +385,9 @@ int exec_module(FAR struct binary_s *binp,
 
   /* Set the attributes */
 
-  if (attr != &tmp)
+  if (attr)
     {
-      ret = spawn_execattrs(pid, attr);
+      ret = spawn_execattrs(pid, &tmp);
       if (ret < 0)
         {
           goto errout_with_tcbinit;
@@ -396,7 +419,7 @@ errout_with_addrenv:
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
   addrenv_restore(binp->oldenv);
 errout_with_attr:
-  if (attr != &tmp)
+  if (attr)
     {
       binfmt_freeattr(attr);
     }

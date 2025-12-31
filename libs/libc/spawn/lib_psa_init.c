@@ -75,8 +75,6 @@ int posix_spawnattr_init(posix_spawnattr_t *attr)
       return _SCHED_ERRNO(ret);
     }
 
-  attr->priority            = param.sched_priority;
-
   /* Set the default scheduler policy to the policy of this task */
 
   ret = _SCHED_GETSCHEDULER(0);
@@ -100,18 +98,6 @@ int posix_spawnattr_init(posix_spawnattr_t *attr)
   attr->repl_period.tv_nsec = param.sched_ss_repl_period.tv_nsec;
   attr->budget.tv_sec       = param.sched_ss_init_budget.tv_sec;
   attr->budget.tv_nsec      = param.sched_ss_init_budget.tv_nsec;
-#endif
-
-  /* Default stack size */
-
-  attr->stacksize           = CONFIG_POSIX_SPAWN_DEFAULT_STACKSIZE;
-
-#ifndef CONFIG_BUILD_KERNEL
-  attr->stackaddr           = NULL;
-#endif
-
-#ifdef CONFIG_MM_TASK_HEAP
-  attr->heapsize            = CONFIG_MM_TASK_HEAP_DEFAULT_SIZE;
 #endif
 
   return OK;

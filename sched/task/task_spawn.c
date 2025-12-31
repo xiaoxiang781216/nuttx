@@ -192,29 +192,45 @@ static int nxtask_spawn_exec(FAR pid_t *pidp, FAR const char *name,
 
   if (!attr)
     {
-      struct sched_param param;
-
-      /* Set the default priority to the same priority as this task */
-
-      ret = nxsched_get_param(0, &param);
-      if (ret == OK)
-        {
-          posix_spawnattr_init(&tmp);
-          posix_spawnattr_setschedparam(&tmp, &param);
-          posix_spawnattr_setstacksize(&tmp,
-                                       CONFIG_POSIX_SPAWN_DEFAULT_STACKSIZE);
-          attr = &tmp;
-        }
+      ret = posix_spawnattr_init(&tmp);
+    }
+  else
+    {
+      memcpy(&tmp, attr, sizeof(tmp));
     }
 
   if (ret == OK)
     {
+      if (tmp.priority == 0)
+        {
+          struct sched_param param;
+
+          /* Set the default priority to the same priority as this task */
+
+          nxsched_get_param(0, &param);
+          posix_spawnattr_setpriority(&tmp, param.sched_priority);
+        }
+
+      if (tmp.stacksize == 0)
+        {
+          posix_spawnattr_setstacksize(&tmp,
+                                       CONFIG_POSIX_SPAWN_DEFAULT_STACKSIZE);
+        }
+
+#ifdef CONFIG_MM_TASK_HEAP
+      if (tmp.heapsize == 0)
+        {
+          posix_spawnattr_setheapsize(&tmp,
+                                      CONFIG_MM_TASK_HEAP_DEFAULT_SIZE);
+        }
+#endif
+
       /* Start the task */
 
-      pid = nxtask_spawn_create(name, entry, actions, attr, argv,
+      pid = nxtask_spawn_create(name, entry, actions, &tmp, argv,
                                 envp ? envp : environ);
 
-      if (attr == &tmp)
+      if (!attr)
         {
           posix_spawnattr_destroy(&tmp);
         }
