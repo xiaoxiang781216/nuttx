@@ -22,6 +22,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/compiler.h>
 #include <nuttx/config.h>
 
 #include <stdio.h>
@@ -33,9 +34,41 @@
 
 #include "arm_internal.h"
 
+#ifdef CONFIG_ARCH_ARM_M
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
+
+/* The PSP register value after crash, saved to variable for GDB to unwind */
+
+static DEFINE_PER_CPU_BSS(volatile uint32_t, g_psps);
+#define g_psp this_cpu_var(g_psps)
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: arm_getpsp
+ *
+ * Description:
+ *   Get the Process Stack Pointer (PSP) value. Used by GDB to manually
+ *   retrieve the PSP value during a backtrace operation.
+ *
+ * Input Parameters:
+ *   None.
+ *
+ * Returned Value:
+ *   The current PSP value.
+ *
+ ****************************************************************************/
+
+static noinline_function uint32_t arm_getpsp(void)
+{
+  return getpsp();
+}
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -81,6 +114,7 @@ void up_dump_register(void *dumpregs)
 #endif
 
 #ifdef CONFIG_ARCH_ARM_M
-  _alert("PSP: %08" PRIx32 "\n", getpsp());
+  g_psp = arm_getpsp();
+  _alert("PSP: %08" PRIx32 "\n", g_psp);
 #endif
 }
