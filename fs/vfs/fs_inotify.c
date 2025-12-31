@@ -1064,6 +1064,7 @@ int inotify_add_watch(int fd, FAR const char *pathname, uint32_t mask)
   FAR struct inotify_watch_s *old;
   FAR struct inotify_device_s *dev;
   FAR struct file *filep;
+  FAR char *tmpbuffer;
   FAR char *abspath;
   struct stat buf;
   int ret;
@@ -1081,11 +1082,21 @@ int inotify_add_watch(int fd, FAR const char *pathname, uint32_t mask)
       return ERROR;
     }
 
-  abspath = lib_realpath(pathname, NULL, mask & IN_DONT_FOLLOW);
-  if (abspath == NULL)
+  /* Allocate temporary buffer for realpath */
+
+  tmpbuffer = lib_get_tempbuffer(PATH_MAX);
+  if (tmpbuffer == NULL)
     {
       file_put(filep);
+      set_errno(ENOMEM);
       return ERROR;
+    }
+
+  abspath = lib_realpath(pathname, tmpbuffer, mask & IN_DONT_FOLLOW);
+  if (abspath == NULL)
+    {
+      ret = -ENOENT;
+      goto out_free;
     }
 
   ret = nx_stat(abspath, &buf, 1);
@@ -1156,7 +1167,7 @@ out:
 
 out_free:
   file_put(filep);
-  fs_heap_free(abspath);
+  lib_put_tempbuffer(tmpbuffer);
   if (ret < 0)
     {
       set_errno(-ret);
