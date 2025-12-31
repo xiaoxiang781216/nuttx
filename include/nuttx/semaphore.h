@@ -507,9 +507,6 @@ int nxsem_setprioceiling(FAR sem_t *sem, int prioceiling,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
-int nxmutex_wait(FAR sem_t *sem);
-#else
 static inline_function int nxmutex_wait(FAR sem_t *sem)
 {
   /* This API should not be called from the idleloop or interrupt */
@@ -539,7 +536,6 @@ static inline_function int nxmutex_wait(FAR sem_t *sem)
 
   return nxsem_wait_slow(sem);
 }
-#endif
 
 /****************************************************************************
  * Name: nxmutex_post
@@ -558,9 +554,6 @@ static inline_function int nxmutex_wait(FAR sem_t *sem)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
-int nxmutex_post(FAR sem_t *sem);
-#else
 static inline_function int nxmutex_post(FAR sem_t *sem)
 {
   DEBUGASSERT(sem != NULL);
@@ -587,7 +580,6 @@ static inline_function int nxmutex_post(FAR sem_t *sem)
 
   return nxsem_post_slow(sem);
 }
-#endif
 
 /****************************************************************************
  * Name: nxmutex_trywait
@@ -611,9 +603,6 @@ static inline_function int nxmutex_post(FAR sem_t *sem)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
-int nxmutex_trywait(FAR sem_t *sem);
-#else
 static inline_function int nxmutex_trywait(FAR sem_t *sem)
 {
   int ret = -EAGAIN;
@@ -660,7 +649,6 @@ static inline_function int nxmutex_trywait(FAR sem_t *sem)
 
   return ret;
 }
-#endif
 
 /****************************************************************************
  * Name: nxsem_wait
@@ -690,9 +678,6 @@ static inline_function int nxmutex_trywait(FAR sem_t *sem)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
-int nxsem_wait(FAR sem_t *sem);
-#else
 static inline_function int nxsem_wait(FAR sem_t *sem)
 {
   /* This API should not be called from the idleloop or interrupt */
@@ -725,7 +710,6 @@ static inline_function int nxsem_wait(FAR sem_t *sem)
 
   return nxsem_wait_slow(sem);
 }
-#endif
 
 /****************************************************************************
  * Name: nxsem_post
@@ -756,9 +740,6 @@ static inline_function int nxsem_wait(FAR sem_t *sem)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
-int nxsem_post(FAR sem_t *sem);
-#else
 static inline_function int nxsem_post(FAR sem_t *sem)
 {
   DEBUGASSERT(sem != NULL);
@@ -788,7 +769,6 @@ static inline_function int nxsem_post(FAR sem_t *sem)
 
   return nxsem_post_slow(sem);
 }
-#endif
 
 /****************************************************************************
  * Name: nxsem_trywait
@@ -812,9 +792,6 @@ static inline_function int nxsem_post(FAR sem_t *sem)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
-int nxsem_trywait(FAR sem_t *sem);
-#else
 static inline_function int nxsem_trywait(FAR sem_t *sem)
 {
   int ret = -EAGAIN;
@@ -861,7 +838,6 @@ static inline_function int nxsem_trywait(FAR sem_t *sem)
 
   return ret;
 }
-#endif
 
 /****************************************************************************
  * Name: nxsem_clockwait
@@ -907,10 +883,6 @@ static inline_function int nxsem_trywait(FAR sem_t *sem)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
-int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
-                    FAR const struct timespec *abstime);
-#else
 static inline_function
 int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
                     FAR const struct timespec *abstime)
@@ -927,7 +899,6 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
 
   return ret;
 }
-#endif
 
 /****************************************************************************
  * Name: nxsem_clockwait_uninterruptible
@@ -953,10 +924,6 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
-int nxsem_clockwait_uninterruptible(FAR sem_t *sem, clockid_t clockid,
-                                    FAR const struct timespec *abstime);
-#else
 static inline_function
 int nxsem_clockwait_uninterruptible(FAR sem_t *sem, clockid_t clockid,
                                     FAR const struct timespec *abstime)
@@ -973,7 +940,6 @@ int nxsem_clockwait_uninterruptible(FAR sem_t *sem, clockid_t clockid,
 
   return ret;
 }
-#endif
 
 /****************************************************************************
  * Name: nxsem_tickwait
@@ -996,9 +962,6 @@ int nxsem_clockwait_uninterruptible(FAR sem_t *sem, clockid_t clockid,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
-int nxsem_tickwait(FAR sem_t *sem, clock_t delay);
-#else
 static inline_function int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
 {
   int ret;
@@ -1024,7 +987,6 @@ static inline_function int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
 
   return ret;
 }
-#endif
 
 /****************************************************************************
  * Name: nxsem_tickwait_uninterruptible
@@ -1049,9 +1011,6 @@ static inline_function int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
-int nxsem_tickwait_uninterruptible(FAR sem_t *sem, clock_t delay);
-#else
 static inline_function
 int nxsem_tickwait_uninterruptible(FAR sem_t *sem, clock_t delay)
 {
@@ -1077,7 +1036,6 @@ int nxsem_tickwait_uninterruptible(FAR sem_t *sem, clock_t delay)
 
   return ret;
 }
-#endif
 
 /****************************************************************************
  * Name: nxsem_timedwait
@@ -1122,15 +1080,11 @@ int nxsem_tickwait_uninterruptible(FAR sem_t *sem, clock_t delay)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
-int nxsem_timedwait(FAR sem_t *sem, FAR const struct timespec *abstime);
-#else
 static inline_function
 int nxsem_timedwait(FAR sem_t *sem, FAR const struct timespec *abstime)
 {
   return nxsem_clockwait(sem, CLOCK_REALTIME, abstime);
 }
-#endif
 
 /****************************************************************************
  * Name: nxsem_timedwait_uninterruptible
@@ -1155,17 +1109,12 @@ int nxsem_timedwait(FAR sem_t *sem, FAR const struct timespec *abstime)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
-int nxsem_timedwait_uninterruptible(FAR sem_t *sem,
-                                    FAR const struct timespec *abstime);
-#else
 static inline_function
 int nxsem_timedwait_uninterruptible(FAR sem_t *sem,
                                     FAR const struct timespec *abstime)
 {
   return nxsem_clockwait_uninterruptible(sem, CLOCK_REALTIME, abstime);
 }
-#endif
 
 /****************************************************************************
  * Name: nxsem_wait_uninterruptible
@@ -1190,9 +1139,6 @@ int nxsem_timedwait_uninterruptible(FAR sem_t *sem,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
-int nxsem_wait_uninterruptible(FAR sem_t *sem);
-#else
 static inline_function int nxsem_wait_uninterruptible(FAR sem_t *sem)
 {
   int ret;
@@ -1207,7 +1153,6 @@ static inline_function int nxsem_wait_uninterruptible(FAR sem_t *sem)
 
   return ret;
 }
-#endif
 
 /****************************************************************************
  * Name:  nxsem_get_value
@@ -1235,9 +1180,6 @@ static inline_function int nxsem_wait_uninterruptible(FAR sem_t *sem)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LIBC_SEM_MUTEX_NOINLINE
-int nxsem_get_value(FAR sem_t *sem, FAR int *sval);
-#else
 static inline_function int nxsem_get_value(FAR sem_t *sem, FAR int *sval)
 {
   DEBUGASSERT(sem != NULL);
@@ -1247,7 +1189,6 @@ static inline_function int nxsem_get_value(FAR sem_t *sem, FAR int *sval)
   *sval = atomic_read(NXSEM_COUNT(sem));
   return OK;
 }
-#endif
 
 #undef EXTERN
 #ifdef __cplusplus

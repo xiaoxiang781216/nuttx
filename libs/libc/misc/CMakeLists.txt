@@ -49,7 +49,6 @@ list(
   lib_utimensat.c
   lib_mallopt.c
   lib_getnprocs.c
-  lib_sem_mutex_noinline.c
   lib_lrucache.c)
 
 if(CONFIG_LIBC_TEMPBUFFER)
