@@ -37,7 +37,6 @@
 #endif
 
 #include <arch/barriers.h>
-#include <arch/mpu.h>
 
 /****************************************************************************
  * Pre-processor Definitions
