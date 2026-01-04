@@ -194,6 +194,14 @@
 #  define offsetof(a, b) __builtin_offsetof(a, b)
 #  define return_address(x) __builtin_return_address(x)
 
+#  define PRAGMA(x)         _Pragma(#x)
+
+#  if defined(__clang__)
+#    define unroll_loop(n)  PRAGMA(clang loop unroll_count(n))
+#  else
+#    define unroll_loop(n)  PRAGMA(GCC unroll n)
+#  endif
+
 /* Attributes
  *
  * GCC supports weak symbols which can be used to reduce code size because
@@ -849,6 +857,9 @@
 #  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
 #  define return_address(x) 0
 
+#  define PRAGMA(x)
+#  define unroll_loop(n)
+
 #  define no_builtin(n)
 
 /* Warning about usage of deprecated features. */
@@ -1014,6 +1025,9 @@
 #  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
 #  define return_address(x) 0
 
+#  define PRAGMA(x)
+#  define unroll_loop(n)
+
 #  define no_builtin(n)
 
 /* Warning about usage of deprecated features. */
@@ -1107,6 +1121,9 @@
 
 #  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
 #  define return_address(x) 0
+
+#  define PRAGMA(x)
+#  define unroll_loop(n)
 
 #  define no_builtin(n)
 
@@ -1211,6 +1228,9 @@
 
 #  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
 #  define return_address(x) 0
+
+#  define PRAGMA(x)
+#  define unroll_loop(n)
 
 #  define no_builtin(n)
 
@@ -1354,6 +1374,9 @@
 #  define offsetof(a, b) ((size_t)((char *)&(((a *)(0))->b)))
 #  define return_address(x) __get_return_address()
 
+#  define PRAGMA(x)
+#  define unroll_loop(n)
+
 #  define no_builtin(n)
 
 /* Warning about usage of deprecated features. */
@@ -1472,6 +1495,9 @@
 
 #  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
 #  define return_address(x) 0
+
+#  define PRAGMA(x)
+#  define unroll_loop(n)
 
 #  define no_builtin(n)
 
