@@ -39,7 +39,7 @@
  * Private Data
  ****************************************************************************/
 
-static DEFINE_PER_CPU_BSS_BMP(g_pci_epf_device_queue);
+static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_pci_epf_device_queue);
 #define g_pci_epf_device_queue this_cpu_var_bmp(g_pci_epf_device_queue)
 
 static DEFINE_PER_CPU_BSS_BMP(dq_queue_t, g_pci_epf_driver_queue);
