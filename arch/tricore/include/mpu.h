@@ -26,6 +26,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/percpu.h>
 #include <sys/types.h>
 
 #include <IfxCpu.h>
@@ -66,9 +67,12 @@ struct mpu_region_s
  * Public Data
  ****************************************************************************/
 
-extern unsigned int g_mpu_kset;
-extern unsigned int g_mpu_uset;
-extern unsigned int g_app_set;
+DECLARE_PER_CPU_BMP(unsigned int, g_mpu_kset);
+DECLARE_PER_CPU_BMP(unsigned int, g_mpu_uset);
+DECLARE_PER_CPU_BMP(unsigned int, g_app_set);
+#define g_mpu_kset this_cpu_var_bmp(g_mpu_kset)
+#define g_mpu_uset this_cpu_var_bmp(g_mpu_uset)
+#define g_app_set  this_cpu_var_bmp(g_app_set)
 
 /****************************************************************************
  * Public Function Prototypes

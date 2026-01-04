@@ -26,6 +26,8 @@
 #include <stdio.h>
 #include <debug.h>
 
+#include <nuttx/percpu.h>
+
 #include <arch/barriers.h>
 #include <arch/mpu.h>
 
@@ -35,17 +37,26 @@
  * Private Variables
  ****************************************************************************/
 
-static unsigned int g_mpu_data_region;
-static unsigned int g_mpu_code_region;
-static unsigned int g_mpu_set;
+static DEFINE_PER_CPU_BMP(unsigned int, g_mpu_data_region);
+static DEFINE_PER_CPU_BMP(unsigned int, g_mpu_code_region);
+static DEFINE_PER_CPU_BMP(unsigned int, g_mpu_set);
+#define g_mpu_data_region this_cpu_var_bmp(g_mpu_data_region)
+#define g_mpu_code_region this_cpu_var_bmp(g_mpu_code_region)
+#define g_mpu_set         this_cpu_var_bmp(g_mpu_set)
 
 /****************************************************************************
  * Public Variables
  ****************************************************************************/
 
-unsigned int g_mpu_kset;
-unsigned int g_mpu_uset;
-unsigned int g_app_set;
+#undef g_mpu_kset
+#undef g_mpu_uset
+#undef g_app_set
+DEFINE_PER_CPU_BSS_BMP(unsigned int, g_mpu_kset);
+DEFINE_PER_CPU_BSS_BMP(unsigned int, g_mpu_uset);
+DEFINE_PER_CPU_BSS_BMP(unsigned int, g_app_set);
+#define g_mpu_kset this_cpu_var_bmp(g_mpu_kset)
+#define g_mpu_uset this_cpu_var_bmp(g_mpu_uset)
+#define g_app_set  this_cpu_var_bmp(g_app_set)
 
 /****************************************************************************
  * Private Functions
@@ -1205,7 +1216,7 @@ void mpu_initialize(const struct mpu_region_s *table, size_t count)
 #endif
   g_app_set = mpu_alloc_set();
 
-  /* For code backgroud set execute enable */
+  /* For code background set execute enable */
 
   mpu_modify_region(g_app_set, mpu_alloccoderegion(),
                     0x0, 0xffffffff, REGION_TYPE_CODE | REGION_ATTR_XE);
