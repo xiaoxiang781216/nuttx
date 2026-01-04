@@ -731,13 +731,16 @@ static int sensor_open(FAR struct file *filep)
   FAR struct sensor_user_s *user;
   int ret = 0;
 
-  nxrmutex_lock(&upper->lock);
   user = kmm_zalloc(sizeof(struct sensor_user_s));
   if (user == NULL)
     {
       ret = -ENOMEM;
       goto errout_with_lock;
     }
+
+  /* The lower ops have upper lock protection, so no additional locking
+   * protection is needed.
+   */
 
   if ((filep->f_oflags & O_DIRECT) == 0 && lower->ops->open)
     {
@@ -748,6 +751,7 @@ static int sensor_open(FAR struct file *filep)
         }
     }
 
+  nxrmutex_lock(&upper->lock);
   if (filep->f_oflags & O_RDOK)
     {
       if (upper->state.nsubscribers == 0 && lower->ops->activate)
@@ -829,13 +833,16 @@ static int sensor_close(FAR struct file *filep)
   sensor_update_latency(filep, upper, user, UINT32_MAX);
   sensor_update_wakeup(filep, upper, user, false);
 
-  nxrmutex_lock(&upper->lock);
+  /* The lower ops have upper lock protection, so no additional locking
+   * protection is needed.
+   */
 
   if ((filep->f_oflags & O_DIRECT) == 0 && lower->ops->close)
     {
       lower->ops->close(lower, filep);
     }
 
+  nxrmutex_lock(&upper->lock);
   if (filep->f_oflags & O_RDOK)
     {
       upper->state.nsubscribers--;
