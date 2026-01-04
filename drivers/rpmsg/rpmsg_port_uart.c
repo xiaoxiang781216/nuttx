@@ -218,7 +218,7 @@ rpmsg_port_uart_send_one(FAR struct rpmsg_port_uart_s *rpuart, uint8_t ch)
   ssize_t ret = file_write(&rpuart->file, &ch, 1);
   if (ret != 1)
     {
-      rpmsgerr("Send ch %u failed, ret=%d\n", ch, ret);
+      rpmsgerr("Send ch %u failed, ret=%zd\n", ch, ret);
       PANIC();
     }
 }
