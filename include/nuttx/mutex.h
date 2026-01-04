@@ -461,13 +461,24 @@ static inline_function int nxrmutex_lock(FAR rmutex_t *rmutex)
 
   if (!nxrmutex_is_hold(rmutex))
     {
-      ret = nxmutex_lock(&rmutex->mutex);
+      for (; ; )
+        {
+          /* Take the semaphore (perhaps waiting) */
+
+          ret = nxmutex_wait(&rmutex->mutex.sem);
+          if (ret >= 0 || (ret != -EINTR && ret != -ECANCELED))
+            {
+              break;
+            }
+        }
     }
 
   if (ret >= 0)
     {
       DEBUGASSERT(rmutex->count < UINT_MAX);
       ++rmutex->count;
+
+      nxmutex_add_backtrace(&rmutex->mutex);
     }
 
   return ret;
