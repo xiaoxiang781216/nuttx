@@ -213,10 +213,21 @@ handle_irq:
 
   mv         a0, s2               /* exception cause */
   mv         a1, sp               /* context = sp */
-  mv         fp, a1               /* Use fp to debug frame */
-  .cfi_def_cfa fp, 0              /* Register in fp, so we just set fp as frame */
-  .cfi_offset x2, 8               /* Toolchain not support macro, is REG_X2 * 4 */
-  .cfi_offset ra, 0               /* Toolchain not support macro, is REG_EPC * 4 */
+  mv         s11, a1              /* Save exception context to s11 (callee-saved) */
+
+  /* CFI: Use s11 (x27, DWARF register 27) as CFA base. s11 is callee-saved
+   * and won't be modified by C function calls.
+   */
+
+  .cfi_def_cfa s11, 0             /* CFA = s11 = exception context address */
+  .cfi_signal_frame
+
+  /* In exception context: REG_EPC at offset 0 contains the interrupted PC */
+
+  .cfi_return_column 0            /* Use REG_EPC_NDX (0) as return address */
+  .cfi_offset 0,  REG_EPC         /* PC (REG_EPC) saved at CFA+0 */
+  .cfi_offset ra, REG_X1          /* ra (REG_X1) saved at CFA+4 */
+  .cfi_offset sp, REG_X2          /* sp (REG_X2) saved at CFA+8 */
 
 #ifdef CONFIG_SCHED_BACKTRACE
   REGLOAD    ra, REG_EPC(sp)
