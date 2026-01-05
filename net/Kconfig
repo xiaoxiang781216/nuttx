@@ -67,6 +67,15 @@ config NET_DEFAULT_MAX_PORT
 	---help---
 		Default Network max port
 
+config NET_NETPOLL
+	bool "Support Netpoll interface"
+	default n
+	---help---
+		Support Netpoll interface based on NETDEV lower-half interface.
+		Netpoll allows sending and receiving packets bypassing the network
+		stack, which makes it possible to use its interface from the interrupt
+		context
+
 menu "Driver buffer configuration"
 
 config NET_ETH_PKTSIZE
