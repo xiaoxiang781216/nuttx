@@ -84,6 +84,53 @@ static void dump_syscall(const char *tag, uint32_t cmd, const uint32_t *regs)
 }
 
 /****************************************************************************
+ * Name: arm_dispatch_ppccall
+ ****************************************************************************/
+
+#ifdef CONFIG_LIB_PPCCALL
+static bool arm_dispatch_ppccall(uint32_t *regs)
+{
+  struct ppccall_param_s *param = (struct ppccall_param_s *)regs[REG_R1];
+  const struct ppccall_info_s *info = ppccall_find_info(param->nbr);
+  uint32_t cpsr;
+
+  if (info == NULL)
+    {
+      serr("ERROR: No ppc info found for func_id %d\n", param->nbr);
+      regs[REG_R0] = -ENOENT;
+      return false;
+    }
+
+#ifdef CONFIG_BUILD_FLAT
+  regs[REG_PC] = (uint32_t)up_ppccall_handler & ~1;
+#else
+  cpsr = regs[REG_CPSR] & ~PSR_MODE_MASK;
+  if ((atomic_read(&info->tcb->flags) & TCB_FLAG_TTYPE_MASK) ==
+      TCB_FLAG_TTYPE_KERNEL)
+    {
+      regs[REG_CPSR] = cpsr | PSR_MODE_SYS;
+      regs[REG_PC]   = (uint32_t)up_ppccall_handler & ~1;
+    }
+  else
+    {
+      regs[REG_CPSR] = cpsr | PSR_MODE_USR;
+      regs[REG_PC]   = (uint32_t)USERSPACE->ppccall_handler & ~1;
+    }
+#endif
+
+  regs[REG_R0] = info->func;
+  return true;
+}
+#else
+static inline_function bool arm_dispatch_ppccall(uint32_t *regs)
+{
+  serr("ERROR: PPCALL not supported\n");
+  regs[REG_R0] = -ENOENT;
+  return false;
+}
+#endif
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -160,7 +207,7 @@ uint32_t *arm_syscall(uint32_t *regs)
        * unprivileged thread mode.
        */
 
-#ifdef CONFIG_LIB_SYSCALL
+#if defined(CONFIG_LIB_SYSCALL) || defined(CONFIG_LIB_PPCCALL)
       case SYS_syscall_return:
         {
           struct tcb_s *rtcb = this_task();
@@ -452,14 +499,16 @@ uint32_t *arm_syscall(uint32_t *regs)
        */
 
       default:
-        {
-#ifdef CONFIG_LIB_SYSCALL
-          struct tcb_s *rtcb = this_task();
-          int index = rtcb->xcp.nsyscalls;
-
+#if defined(CONFIG_LIB_SYSCALL) || defined(CONFIG_LIB_PPCCALL)
           /* Verify that the SYS call number is within range */
 
+#  ifdef CONFIG_LIB_SYSCALL
           DEBUGASSERT(cmd >= CONFIG_SYS_RESERVED && cmd < SYS_maxsyscall);
+#  endif
+      case SYS_ppccall:
+        {
+          struct tcb_s *rtcb = this_task();
+          int index = rtcb->xcp.nsyscalls;
 
           /* Make sure that there is a no saved SYSCALL return address.  We
            * cannot yet handle nested system calls.
@@ -467,27 +516,37 @@ uint32_t *arm_syscall(uint32_t *regs)
 
           DEBUGASSERT(index < CONFIG_SYS_NNEST);
 
+          /* Setup to return to arm_dispatch_syscall in privileged mode. */
+
+          rtcb->xcp.syscall[index].sysreturn = regs[REG_PC];
+#  ifndef CONFIG_BUILD_FLAT
+          rtcb->xcp.syscall[index].cpsr      = regs[REG_CPSR];
+#  endif
+
+          if (cmd == SYS_ppccall)
+            {
+              if (!arm_dispatch_ppccall(regs))
+                {
+                  break;
+                }
+            }
+          else
+            {
+              regs[REG_PC]   = (uint32_t)arm_dispatch_syscall;
+#    ifndef CONFIG_BUILD_FLAT
+              cpsr           = regs[REG_CPSR] & ~PSR_MODE_MASK;
+              regs[REG_CPSR] = cpsr | PSR_MODE_SYS;
+#    endif
+              /* Offset R0 to account for the reserved values */
+
+              regs[REG_R0]  -= CONFIG_SYS_RESERVED;
+            }
+
           /* Use ip to create a debug frame.
            * we can use gdb backtrace from syscall to user space.
            */
 
-          regs[REG_IP] = regs[REG_PC];
-
-          /* Setup to return to arm_dispatch_syscall in privileged mode. */
-
-          rtcb->xcp.syscall[index].sysreturn = regs[REG_PC];
-#ifndef CONFIG_BUILD_FLAT
-          rtcb->xcp.syscall[index].cpsr      = regs[REG_CPSR];
-#endif
-
-          regs[REG_PC]   = (uint32_t)arm_dispatch_syscall;
-#ifndef CONFIG_BUILD_FLAT
-          cpsr           = regs[REG_CPSR] & ~PSR_MODE_MASK;
-          regs[REG_CPSR] = cpsr | PSR_MODE_SYS;
-#endif
-          /* Offset R0 to account for the reserved values */
-
-          regs[REG_R0]  -= CONFIG_SYS_RESERVED;
+          regs[REG_IP] = rtcb->xcp.syscall[index].sysreturn;
 
           /* Indicate that we are in a syscall handler. */
 
@@ -521,10 +580,10 @@ uint32_t *arm_syscall(uint32_t *regs)
           /* Save the new SYSCALL nesting level */
 
           rtcb->xcp.nsyscalls   = index + 1;
-#else
-          svcerr("ERROR: Bad SYS call: 0x%" PRIx32 "\n", regs[REG_R0]);
-#endif
         }
+#else
+        svcerr("ERROR: Bad SYS call: 0x%" PRIx32 "\n", regs[REG_R0]);
+#endif
         break;
     }
 
