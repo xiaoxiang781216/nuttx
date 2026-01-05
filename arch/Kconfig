@@ -547,6 +547,69 @@ config ARCH_HAVE_THREAD_LOCAL
 	bool
 	default n
 
+config ARCH_HAVE_SAFESTACK
+	bool
+	default n
+
+config ARCH_HAVE_SHADOWSTACK
+	bool
+	default n
+
+config ARCH_HAVE_HW_SHADOWSTACK
+	bool
+	default n
+	select ARCH_HAVE_SHADOWSTACK
+
+choice
+	prompt "Return Flow Security"
+	default ARCH_UNSAFE_STACK
+	---help---
+		Return flow security choices against ROP attacks.
+		They put return addresses in separate regions to
+		reduce exposure to ROP attacks.
+
+config ARCH_UNSAFE_STACK
+	bool "No return flow security"
+
+config ARCH_SAFE_STACK
+	bool "Enable safe stack"
+	depends on ARCH_HAVE_SAFESTACK && SCHED_THREAD_LOCAL
+	---help---
+		This enables software based return flow security via
+		"-fsanitize=safe-stack" of Clang alike compilers.
+		When enabled, threads have safe and unsafe stacks,
+		with dangerous variables live in unsafe stack only.
+
+config ARCH_SHADOW_STACK
+	bool "Enable safe stack"
+	depends on ARCH_HAVE_SHADOWSTACK
+	---help---
+		This enables software based return flow security via
+		"-fsanitize=shadow-call-stack -ffixed-x18" option of
+		Clang alike compilers. When enabled, threads have
+		normal and shadow stacks, the latter contains return
+		addresses only.
+
+config ARCH_HW_SHADOW_STACK
+	bool "Hardware shadow stack"
+	depends on ARCH_HAVE_HW_SHADOWSTACK
+	---help---
+		Enable hardware assisted shadow stack for better
+		security and performance.
+
+endchoice # Return flow security
+
+config ARCH_STACK_SPLIT_RATIO
+	int "Separate stack region size ratio"
+	range 4 96
+	default 32 if ARCH_SAFE_STACK
+	default 8 if ARCH_SHADOW_STACK || ARCH_HW_SHADOW_STACK
+	depends on !ARCH_UNSAFE_STACK
+	---help---
+		The ratio of split region size assuming the total
+		stack size is 128. This is the unsafe region for
+		SAFE_STACK and the shadow region for SHADOW_STACK.
+
 config ARCH_HAVE_RTC_SUBSECONDS
 	bool
 	default n

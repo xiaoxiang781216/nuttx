@@ -750,6 +750,10 @@ struct tcb_s
   FAR void *stack_base_ptr;              /* Adjusted initial stack pointer  */
                                          /* after the frame has been        */
                                          /* removed from the stack.         */
+#if defined(CONFIG_ARCH_SHADOW_STACK) || defined(CONFIG_ARCH_HW_SHADOW_STACK)
+  uintptr_t shadow_base_ptr;             /* Ptr to shadow bottom            */
+  uintptr_t shadow_top_ptr;              /* Ptr to shadow top               */
+#endif
 
   /* External Module Support ************************************************/
 
