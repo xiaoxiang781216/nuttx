@@ -113,6 +113,8 @@ retry:
 
   board_autoled_off(LED_SIGNAL);
 
+  rtcb->xcp.regs = rtcb->xcp.saved_regs;
+  rtcb->xcp.saved_regs = NULL;
   xtensa_context_restore();
   UNUSED(regs);
 }

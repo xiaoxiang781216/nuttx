@@ -115,6 +115,6 @@ retry:
 
   board_autoled_off(LED_SIGNAL);
 
+  rtcb->xcp.regs = regs;
   riscv_fullcontextrestore();
-  UNUSED(regs);
 }

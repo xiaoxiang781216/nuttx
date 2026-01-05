@@ -187,17 +187,6 @@ uint64_t *arm64_syscall(uint64_t *regs)
   switch (cmd)
     {
       case SYS_restore_context:
-#ifndef CONFIG_DISABLE_SIGNALS
-        if (tcb->xcp.saved_regs)
-          {
-            /* When restore from sigdeliver, should ignore regs and use
-            * saved_regs.
-            */
-
-            tcb->xcp.regs = tcb->xcp.saved_regs;
-            tcb->xcp.saved_regs = NULL;
-          }
-#endif
 
         break_critical_section();
 #ifdef CONFIG_ARCH_ADDRENV

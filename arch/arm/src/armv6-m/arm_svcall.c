@@ -88,20 +88,6 @@ int arm_svcall(int irq, void *context, void *arg)
   switch (cmd)
     {
       case SYS_restore_context:
-        {
-#ifndef CONFIG_DISABLE_SIGNALS
-          if (tcb->xcp.saved_regs)
-            {
-              /* When restore from sigdeliver, should ignore regs and use
-               * saved_regs.
-               */
-
-              tcb->xcp.regs = tcb->xcp.saved_regs;
-              tcb->xcp.saved_regs = NULL;
-            }
-#endif
-        }
-
       case SYS_switch_context:
         {
           break_critical_section();

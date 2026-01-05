@@ -113,5 +113,11 @@ retry:
 
   board_autoled_off(LED_SIGNAL);
 
+  rtcb->xcp.regs = rtcb->xcp.saved_regs;
+  rtcb->xcp.saved_regs = NULL;
+
+  tricore_change_pprs(rtcb, tricore_sig_load_pprs(rtcb));
+  tricore_sig_change_pprs(rtcb, UINT32_MAX);
+
   tricore_fullcontextrestore();
 }
