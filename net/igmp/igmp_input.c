@@ -50,7 +50,6 @@
 #include <inttypes.h>
 #include <stdint.h>
 
-#include <nuttx/wdog.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/netstats.h>
 #include <nuttx/net/ip.h>
@@ -285,7 +284,7 @@ void igmp_input(struct net_driver_s *dev)
             {
               /* This is on a specific group we have already looked up */
 
-              wd_cancel(&group->wdog);
+              work_cancel(LPWORK, &group->work);
               SET_IDLEMEMBER(group->flags);
               CLR_LASTREPORT(group->flags);
             }

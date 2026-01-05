@@ -57,7 +57,6 @@
 #include <arch/irq.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/wdog.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
 #include <nuttx/semaphore.h>
@@ -218,10 +217,6 @@ void igmp_grpfree(FAR struct net_driver_s *dev,
 
   grpinfo("Free: %p flags: %02x\n", group, group->flags);
 
-  /* Cancel the wdog */
-
-  wd_cancel(&group->wdog);
-
   /* Cancel the workqueue */
 
   blresult = net_breaklock(&count);
@@ -238,10 +233,6 @@ void igmp_grpfree(FAR struct net_driver_s *dev,
   /* Destroy the wait semaphore */
 
   nxsem_destroy(&group->sem);
-
-  /* Cancel the watchdog timer */
-
-  wd_cancel(&group->wdog);
 
   /* Then release the group structure resources. */
 

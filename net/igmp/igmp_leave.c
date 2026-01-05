@@ -50,7 +50,6 @@
 
 #include <netinet/in.h>
 
-#include <nuttx/wdog.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netstats.h>
@@ -158,7 +157,7 @@ int igmp_leavegroup(struct net_driver_s *dev,
        * Reports that could interfere with the Leave Group.
        */
 
-      wd_cancel(&group->wdog);
+      work_cancel(LPWORK, &group->work);
       CLR_SCHEDMSG(group->flags);
       CLR_WAITMSG(group->flags);
 

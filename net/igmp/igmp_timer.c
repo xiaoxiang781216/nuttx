@@ -49,7 +49,6 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/wdog.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
@@ -138,41 +137,6 @@ static void igmp_timeout_work(FAR void *arg)
 }
 
 /****************************************************************************
- * Name:  igmp_timeout
- *
- * Description:
- *   Timeout watchdog handler.
- *
- * Assumptions:
- *   This function is called from the wdog timer handler which runs in the
- *   context of the timer interrupt handler.
- *
- ****************************************************************************/
-
-static void igmp_timeout(wdparm_t arg)
-{
-  FAR struct igmp_group_s *group;
-  int ret;
-
-  ninfo("Timeout!\n");
-
-  /* Recover the reference to the group */
-
-  group = (FAR struct igmp_group_s *)arg;
-  DEBUGASSERT(group != NULL);
-
-  /* Perform the timeout-related operations on (preferably) the low priority
-   * work queue.
-   */
-
-  ret = work_queue(LPWORK, &group->work, igmp_timeout_work, group, 0);
-  if (ret < 0)
-    {
-      nerr("ERROR: Failed to queue timeout work: %d\n", ret);
-    }
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -195,7 +159,7 @@ void igmp_startticks(FAR struct igmp_group_s *group, unsigned int ticks)
 
   gtmrinfo("ticks: %d\n", ticks);
 
-  ret = wd_start(&group->wdog, ticks, igmp_timeout, (wdparm_t)group);
+  ret = work_queue(LPWORK, &group->work, igmp_timeout_work, group, ticks);
 
   DEBUGASSERT(ret == OK);
   UNUSED(ret);
@@ -227,25 +191,25 @@ void igmp_starttimer(FAR struct igmp_group_s *group, uint8_t decisecs)
 
 bool igmp_cmptimer(FAR struct igmp_group_s *group, int maxticks)
 {
-  int remaining;
+  sclock_t remaining;
 
   /* Get the timer remaining on the watchdog.  A time of <= zero means that
    * the watchdog was never started.
    */
 
-  remaining = wd_gettime(&group->wdog);
+  remaining = group->work.qtime - clock_systime_ticks();
 
   /* A remaining time of zero means that the watchdog was never started
    * or has already expired.  That case should be covered in the following
    * test as well.
    */
 
-  gtmrinfo("maxticks: %d remaining: %d\n", maxticks, remaining);
-  if (maxticks > remaining)
+  gtmrinfo("maxticks: %d remaining: %lld\n", maxticks, (long long)remaining);
+  if ((sclock_t)maxticks > remaining)
     {
-      /* Cancel the watchdog timer and return true */
+      /* Cancel the work and return true */
 
-      wd_cancel(&group->wdog);
+      work_cancel(LPWORK, &group->work);
       return true;
     }
 
