@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-r/arm_undefinedinsn.c
+ * arch/arm/src/arm_a_r/arm_undefinedinsn.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

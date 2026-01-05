@@ -370,7 +370,6 @@ uint32_t *arm_va2pte(uintptr_t vaddr);
 uint32_t *arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr);
 uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr);
 uint32_t *arm_syscall(uint32_t *regs);
-uint32_t *arm_undefinedinsn(uint32_t *regs);
 
 /* Exception handling logic common to other ARM7 and ARM9 family. */
 
@@ -391,10 +390,10 @@ uint32_t * arm_dataabort(uint32_t *regs, uint32_t dfar, uint32_t dfsr);
 
 uint32_t *arm_prefetchabort(uint32_t *regs, uint32_t ifar, uint32_t ifsr);
 uint32_t *arm_syscall(uint32_t *regs);
-void arm_undefinedinsn(uint32_t *regs);
 
 #endif /* CONFIG_ARCH_ARMV[6-8]M */
 
+uint32_t *arm_undefinedinsn(uint32_t *regs);
 void arm_vectorundefinsn(void);
 void arm_vectorsvc(void);
 void arm_vectorprefetch(void);

@@ -34,7 +34,6 @@ list(
   arm_timer.c
   arm_cache.c
   arm_cpuinfo.c
-  arm_undefinedinsn.c
   arm_perf.c
   cp15_cacheops.c)
 
