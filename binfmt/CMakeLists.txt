@@ -39,7 +39,6 @@ list(
   binfmt_exec.c
   binfmt_copyargv.c
   binfmt_copyactions.c
-  binfmt_copyattr.c
   binfmt_dumpmodule.c)
 
 if(CONFIG_BINFMT_LOADABLE)

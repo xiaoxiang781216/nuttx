@@ -214,12 +214,6 @@ int exec_module(FAR struct binary_s *binp,
       goto errout_with_envp;
     }
 
-  ret = binfmt_copyattr(&attr, attr);
-  if (ret < 0)
-    {
-      goto errout_with_actions;
-    }
-
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
   /* If there is no argument vector, the process name must be copied here */
 
@@ -235,7 +229,7 @@ int exec_module(FAR struct binary_s *binp,
   if (ret < 0)
     {
       berr("ERROR: addrenv_select() failed: %d\n", ret);
-      goto errout_with_attr;
+      goto errout_with_addrenv;
     }
 
   ret = up_addrenv_vheap(addrenv, &vheap);
@@ -330,11 +324,6 @@ int exec_module(FAR struct binary_s *binp,
 
   /* The copied argv and envp can now be released */
 
-  if (attr)
-    {
-      binfmt_freeattr(attr);
-    }
-
   binfmt_freeactions(actions);
   binfmt_freeargv(argv);
   binfmt_freeenv(envp);
@@ -418,14 +407,7 @@ errout_with_tcbinit:
 errout_with_addrenv:
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
   addrenv_restore(binp->oldenv);
-errout_with_attr:
-  if (attr)
-    {
-      binfmt_freeattr(attr);
-    }
-
 #endif
-errout_with_actions:
   binfmt_freeactions(actions);
 errout_with_envp:
   binfmt_freeenv(envp);
