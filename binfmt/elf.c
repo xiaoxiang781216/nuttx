@@ -222,7 +222,7 @@ static int elf_loadbinary(FAR struct binary_s *binp,
     }
   else
     {
-      binp->priority = CONFIG_MM_TASK_HEAP_DEFAULT_SIZE;
+      binp->heapsize = 0;
     }
 #endif
 
