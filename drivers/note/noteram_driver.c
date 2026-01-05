@@ -844,6 +844,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         ret = OK;
         break;
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
       case NOTE_GETLEVEL:
         *(FAR unsigned long *)arg = drv->driver.filter.level.level;
         ret = OK;
@@ -853,6 +854,7 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         drv->driver.filter.level.level = *(FAR unsigned long *)arg;
         ret = OK;
         break;
+#endif
 
       default:
         break;
