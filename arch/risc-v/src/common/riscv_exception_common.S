@@ -232,6 +232,8 @@ handle_irq:
 #ifdef CONFIG_SCHED_BACKTRACE
   REGLOAD    ra, REG_EPC(sp)
   REGLOAD    s0, REG_X8(sp)
+  mv         s10, ra              /* Save to s10 (callee-saved, already saved in context) */
+  mv         s9, s0               /* Save to s9 (callee-saved, already saved in context) */
 #endif
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 15
@@ -240,26 +242,17 @@ handle_irq:
 
   setintstack t0, t1
 
-  addi       sp, sp, -(INT_REG_SIZE * 2)
-  REGSTORE   ra, INT_REG_SIZE(sp)
-  REGSTORE   s0, 0(sp)
-  add        s0, sp, (INT_REG_SIZE * 2)
-
   /* Call interrupt handler in C */
 
   jal        x1, riscv_dispatch_irq
 
-  REGLOAD    ra, INT_REG_SIZE(sp)
-  REGLOAD    s0, 0(sp)
-  add        sp, sp, (INT_REG_SIZE * 2)
+#ifdef CONFIG_SCHED_BACKTRACE
+  mv         ra, s10              /* Restore from s10 */
+  mv         s0, s9               /* Restore from s9 */
+#endif
 
 #else
   /* Reserve some space for current_regs if interrupt stack disabled */
-
-  addi       sp, sp, -(INT_REG_SIZE * 2)
-  REGSTORE   ra, INT_REG_SIZE(sp)
-  REGSTORE   s0, 0(sp)
-  add        s0, sp, (INT_REG_SIZE * 2)
 
 #ifndef CONFIG_DISABLE_SIGNALS
   addi       sp, sp, -XCPTCONTEXT_SIZE
@@ -269,9 +262,10 @@ handle_irq:
 
   jal        x1, riscv_dispatch_irq
 
-  REGLOAD    ra, INT_REG_SIZE(sp)
-  REGLOAD    s0, 0(sp)
-  add        sp, sp, (INT_REG_SIZE * 2)
+#ifdef CONFIG_SCHED_BACKTRACE
+  mv         ra, s10              /* Restore from s10 */
+  mv         s0, s9               /* Restore from s9 */
+#endif
 
 #ifndef CONFIG_DISABLE_SIGNALS
   /* Restore sp */
