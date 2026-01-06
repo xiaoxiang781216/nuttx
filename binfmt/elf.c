@@ -188,29 +188,17 @@ static int elf_loadbinary(FAR struct binary_s *binp,
     {
       binp->uid = sym.st_value;
     }
-  else
-    {
-      binp->uid = 0;
-    }
 
   ret = libelf_findsymbol(&loadinfo, "nx_gid", &sym);
   if (ret == 0)
     {
       binp->gid = sym.st_value;
     }
-  else
-    {
-      binp->gid = 0;
-    }
 
   ret = libelf_findsymbol(&loadinfo, "nx_mode", &sym);
   if (ret == 0)
     {
       binp->mode = sym.st_value;
-    }
-  else
-    {
-      binp->mode = 0;
     }
 #endif
 
@@ -219,10 +207,6 @@ static int elf_loadbinary(FAR struct binary_s *binp,
   if (ret == 0)
     {
       binp->heapsize = sym.st_value;
-    }
-  else
-    {
-      binp->heapsize = 0;
     }
 #endif
 
