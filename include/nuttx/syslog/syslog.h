@@ -398,9 +398,7 @@ int nx_vsyslog(int priority, FAR const IPTR char *src, FAR va_list *ap);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SYSLOG
 int nx_setlogmask(int mask);
-#endif
 
 #undef EXTERN
 #ifdef __cplusplus

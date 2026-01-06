@@ -23,7 +23,7 @@
 ############################################################################
 # Include SYSLOG Infrastructure
 
-CSRCS += syslog_initialize.c
+CSRCS += syslog_initialize.c setlogmask.c
 
 ifeq ($(CONFIG_SYSLOG),y)
 CSRCS += setlogmask.c vsyslog.c syslog_channel.c

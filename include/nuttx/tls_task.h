@@ -162,9 +162,7 @@ struct task_info_s
 #ifndef CONFIG_DISABLE_PTHREAD
   int                   ta_pthread_concurrency_level;
 #endif
-#ifdef CONFIG_SYSLOG
   uint8_t               ta_syslog_mask;
-#endif
 #if CONFIG_TLS_TASK_NELEM > 0
   uintptr_t             ta_telem[CONFIG_TLS_TASK_NELEM]; /* Task local storage elements */
 #endif
