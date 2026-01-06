@@ -35,6 +35,7 @@
 #include <nuttx/coredump.h>
 #include <nuttx/elf.h>
 #include <nuttx/sched.h>
+#include <nuttx/percpu.h>
 
 #include "sched/sched.h"
 #include "coredump.h"
@@ -80,43 +81,56 @@ struct elf_dumpinfo_s
   pid_t                       pid;
 };
 
+typedef uint8_t running_regs_t[XCPTCONTEXT_SIZE]
+                aligned_data(XCPTCONTEXT_ALIGN);
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static uint8_t g_running_regs[XCPTCONTEXT_SIZE]
-               aligned_data(XCPTCONTEXT_ALIGN);
+static DEFINE_PER_CPU_BSS_BMP(running_regs_t, g_running_regs);
+#define g_running_regs this_cpu_var_bmp(g_running_regs)
 
 #ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
-static struct lib_lzfoutstream_s  g_lzfstream;
+static DEFINE_PER_CPU_BSS_BMP(struct lib_lzfoutstream_s, g_lzfstream);
+#define g_lzfstream this_cpu_var_bmp(g_lzfstream)
 #endif
 
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
-static struct lib_syslogstream_s  g_syslogstream;
+static DEFINE_PER_CPU_BSS_BMP(struct lib_syslogstream_s, g_syslogstream);
+#define g_syslogstream this_cpu_var_bmp(g_syslogstream)
 #  ifdef CONFIG_BOARD_COREDUMP_BASE64STREAM
-static struct lib_base64outstream_s g_base64stream;
+static DEFINE_PER_CPU_BSS_BMP(struct lib_base64outstream_s, g_base64stream);
+#define g_base64stream this_cpu_var_bmp(g_base64stream)
 #  else
-static struct lib_hexdumpstream_s g_hexstream;
+static DEFINE_PER_CPU_BSS_BMP(struct lib_hexdumpstream_s, g_hexstream);
+#define g_hexstream this_cpu_var_bmp(g_hexstream)
 #  endif
 #endif
 
 #ifdef CONFIG_BOARD_COREDUMP_BLKDEV
-static struct lib_blkoutstream_s g_devstream;
+static DEFINE_PER_CPU_BSS_BMP(struct lib_blkoutstream_s, g_devstream);
+#define g_devstream this_cpu_var_bmp(g_devstream)
 #elif defined(CONFIG_BOARD_COREDUMP_MTDDEV)
-static struct lib_mtdoutstream_s g_devstream;
+static DEFINE_PER_CPU_BSS_BMP(struct lib_mtdoutstream_s, g_devstream);
+#define g_devstream this_cpu_var_bmp(g_devstream)
 #elif defined(CONFIG_BOARD_COREDUMP_MEMDEV)
-static struct lib_filesistream_s g_devinstream;
-static struct lib_fileoutstream_s g_devstream;
+static DEFINE_PER_CPU_BSS_BMP(struct lib_filesistream_s, g_devinstream);
+#define g_devinstream this_cpu_var_bmp(g_devinstream)
+static DEFINE_PER_CPU_BSS_BMP(struct lib_fileoutstream_s, g_devstream);
+#define g_devstream this_cpu_var_bmp(g_devstream)
 #endif
 
 #ifdef CONFIG_BOARD_MEMORY_RANGE
-static struct memory_region_s g_memory_region[] =
+static const struct memory_region_s g_memory_region[] =
   {
     CONFIG_BOARD_MEMORY_RANGE
   };
 #endif
-static const struct memory_region_s *g_regions;
-static bool g_stream_initialized;
+static DEFINE_PER_CPU_BSS_BMP(const struct memory_region_s *, g_regions);
+#define g_regions this_cpu_var_bmp(g_regions)
+static DEFINE_PER_CPU_BSS_BMP(bool, g_stream_initialized);
+#define g_stream_initialized this_cpu_var_bmp(g_stream_initialized)
 
 /****************************************************************************
  * Private Functions
