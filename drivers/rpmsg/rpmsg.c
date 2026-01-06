@@ -128,6 +128,8 @@ MEMPOOL_DEFINE(g_rpmsg_pool, CONFIG_RPMSG_POOL_SIZE,
 static DEFINE_PER_CPU_BSS_BMP(struct rpmsg_wqueue_s,
                               g_rpmsg_wqueues[CONFIG_RPMSG_WQUEUE_NUMBER]);
 #define g_rpmsg_wqueues this_cpu_var_bmp(g_rpmsg_wqueues)
+static DEFINE_PER_CPU_BMP(spinlock_t, g_rpmsg_wqueue_lock) = SP_UNLOCKED;
+#define g_rpmsg_wqueue_lock this_cpu_var_bmp(g_rpmsg_wqueue_lock)
 #endif
 
 /****************************************************************************
@@ -341,7 +343,7 @@ static int rpmsg_create_wqueues(FAR struct rpmsg_wqueue_s *wqueues,
       snprintf(wqname, sizeof(wqname), "rpmsg-%.*s-%d", RPMSG_NAME_SIZE,
                name, i);
       wqueue = &wqueues[i];
-      wqueue->kwqueue = work_queue_create(wqname, priority + i, NULL,
+      wqueue->kwqueue = work_queue_create(wqname, priority, NULL,
                                           CONFIG_RPMSG_WQUEUE_STACKSIZE, 1);
       if (wqueue->kwqueue == NULL)
         {
@@ -349,6 +351,7 @@ static int rpmsg_create_wqueues(FAR struct rpmsg_wqueue_s *wqueues,
           while (--i >= 0)
             {
               work_queue_free(wqueues[i].kwqueue);
+              wqueues[i].kwqueue = NULL;
             }
 
           ret = -ENOMEM;
@@ -1002,14 +1005,19 @@ void rpmsg_modify_signals(FAR struct rpmsg_s *rpmsg,
     }
 }
 
-#ifndef CONFIG_RPMSG_WQUEUE_GLOBAL
 int rpmsg_init_wqueues(FAR struct rpmsg_s *rpmsg, uint8_t priority)
 {
+  rpmsg->priority = priority;
+
+#ifndef CONFIG_RPMSG_WQUEUE_GLOBAL
   return rpmsg_create_wqueues(rpmsg->wqueues, rpmsg->cpuname, priority);
+#endif
+  return OK;
 }
 
 void rpmsg_deinit_wqueues(FAR struct rpmsg_s *rpmsg)
 {
+#ifndef CONFIG_RPMSG_WQUEUE_GLOBAL
   int i;
 
   for (i = 0; i < CONFIG_RPMSG_WQUEUE_NUMBER; i++)
@@ -1019,24 +1027,51 @@ void rpmsg_deinit_wqueues(FAR struct rpmsg_s *rpmsg)
           work_queue_free(rpmsg->wqueues[i].kwqueue);
         }
     }
-}
 #endif
+}
 
 int rpmsg_queue_work(FAR struct rpmsg_s *rpmsg, uint8_t priority,
                      FAR struct work_s *work, worker_t worker, FAR void *arg)
 {
   FAR struct rpmsg_wqueue_s *wqueues = rpmsg_get_wqueues(rpmsg);
-  int idx;
+#ifdef CONFIG_RPMSG_WQUEUE_GLOBAL
+  irqstate_t flags;
+#endif
+  int idx = 0;
+  int i;
 
-  idx = (int)priority - RPMSG_PRIO_DEFAULT + RPMSG_DEFAULT_WQUEUE_IDX;
-  if (idx < 0)
+  priority = priority - RPMSG_PRIO_DEFAULT + rpmsg->priority;
+
+#ifdef CONFIG_RPMSG_WQUEUE_GLOBAL
+  flags = spin_lock_irqsave(&g_rpmsg_wqueue_lock);
+#endif
+  for (i = 0; i < CONFIG_RPMSG_WQUEUE_NUMBER; i++)
     {
-      idx = 0;
+      if (priority == wqueues[i].priority)
+        {
+          idx = i;
+          break;
+        }
+
+      if (wqueues[i].priority == 0)
+        {
+          DEBUGVERIFY(work_queue_setpriority_wq(wqueues[i].kwqueue,
+                                                priority) == 0);
+          wqueues[i].priority = priority;
+          idx = i;
+          break;
+        }
+
+      if (abs(priority - wqueues[i].priority) <
+          abs(priority - wqueues[idx].priority))
+        {
+          idx = i;
+        }
     }
-  else if (idx >= CONFIG_RPMSG_WQUEUE_NUMBER)
-    {
-      idx = CONFIG_RPMSG_WQUEUE_NUMBER - 1;
-    }
+
+#ifdef CONFIG_RPMSG_WQUEUE_GLOBAL
+  spin_unlock_irqrestore(&g_rpmsg_wqueue_lock, flags);
+#endif
 
   return work_queue_wq(wqueues[idx].kwqueue, work, worker, arg, 0);
 }
