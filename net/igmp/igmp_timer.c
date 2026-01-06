@@ -197,7 +197,7 @@ bool igmp_cmptimer(FAR struct igmp_group_s *group, int maxticks)
    * the watchdog was never started.
    */
 
-  remaining = group->work.qtime - clock_systime_ticks();
+  remaining = work_timeleft(&group->work);
 
   /* A remaining time of zero means that the watchdog was never started
    * or has already expired.  That case should be covered in the following
