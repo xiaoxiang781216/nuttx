@@ -49,8 +49,13 @@
  *   the processor specific portions of the new TCB.
  *
  *   This function must setup the initial architecture registers
- *   and/or  stack so that execution will begin at tcb->start
+ *   and/or stack so that execution will begin at tcb->start
  *   on the next context switch.
+ *
+ *   The xcp structure must be zeroed for proper task restart. However,
+ *   some fields may have been pre-allocated (e.g., shadow stack, vector
+ *   registers) before this function is called. These are saved and
+ *   restored after the memset to preserve resources across restarts.
  *
  ****************************************************************************/
 
@@ -66,9 +71,19 @@ void up_initial_state(struct tcb_s *tcb)
   uintptr_t *kstack = xcp->kstack;
 #endif
 
+#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+  uintreg_t *sstack_alloc = xcp->sstack_alloc_ptr;
+  uintreg_t *sstack_top = xcp->sstack_top_ptr;
+#endif
+
   /* Initialize the initial exception register context structure */
 
   memset(xcp, 0, sizeof(struct xcptcontext));
+
+#ifdef CONFIG_ARCH_RV_SHADOW_STACK
+  xcp->sstack_alloc_ptr = sstack_alloc;
+  xcp->sstack_top_ptr = sstack_top;
+#endif
 
 #if defined(CONFIG_ARCH_RV_ISA_V) && (CONFIG_ARCH_RV_VECTOR_BYTE_LENGTH == 0)
 
