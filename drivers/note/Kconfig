@@ -237,6 +237,14 @@ config DRIVERS_NOTESNAP_NBUFFERS
 	default 128
 	---help---
 		Number of last scheduling information buffers.
+
+config DRIVERS_NOTESNAP_CRASH_DUMP
+	bool "Dump notesnap buffer on panic"
+	depends on SYSLOG
+	default n
+	---help---
+		If this option is enabled, dump all contents when a crash occurs.
+
 endif
 
 config DRIVERS_NOTEITM
