@@ -225,7 +225,11 @@ int nxsem_tickwait(FAR sem_t *sem, clock_t delay)
 {
   int ret;
 
-  DEBUGASSERT(sem != NULL && up_interrupt_context() == false);
+#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+  DEBUGASSERT(up_interrupt_context() == false);
+#endif
+
+  DEBUGASSERT(sem != NULL);
 
   /* Try to take the semaphore without waiting. */
 
