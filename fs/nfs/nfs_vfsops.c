@@ -563,7 +563,7 @@ static int nfs_fileopen(FAR struct nfsmount *nmp, FAR struct nfsnode *np,
 
   /* Find the NFS node associate with the path */
 
-  ret = nfs_findnode(nmp, relpath, &fhandle, &fattr, NULL);
+  ret = nfs_findnode(nmp, relpath, &fhandle, &fattr, NULL, false);
   if (ret != OK)
     {
       ferr("ERROR: nfs_findnode returned: %d\n", ret);
@@ -1526,7 +1526,7 @@ static int nfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
 
   /* Find the NFS node associate with the path */
 
-  ret = nfs_findnode(nmp, relpath, &fhandle, &obj_attributes, NULL);
+  ret = nfs_findnode(nmp, relpath, &fhandle, &obj_attributes, NULL, false);
   if (ret != OK)
     {
       ferr("ERROR: nfs_findnode failed: %d\n", ret);
@@ -2943,7 +2943,7 @@ static int nfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
 
   /* Get the file handle attributes of the requested node */
 
-  ret = nfs_findnode(nmp, relpath, &fhandle, &attributes, NULL);
+  ret = nfs_findnode(nmp, relpath, &fhandle, &attributes, NULL, false);
   if (ret != OK)
     {
       ferr("ERROR: nfs_findnode failed: %d\n", ret);
@@ -2988,6 +2988,7 @@ static int nfs_chstat(FAR struct inode *mountpt, FAR const char *relpath,
 {
   FAR struct nfsmount *nmp;
   struct file_handle fhandle;
+  struct nfs_fattr attributes;
   struct nfsnode np;
   int ret;
 
@@ -3008,7 +3009,7 @@ static int nfs_chstat(FAR struct inode *mountpt, FAR const char *relpath,
 
   /* Get the file handle of the requested node */
 
-  ret = nfs_findnode(nmp, relpath, &fhandle, NULL, NULL);
+  ret = nfs_findnode(nmp, relpath, &fhandle, &attributes, NULL, false);
   if (ret != OK)
     {
       ferr("ERROR: nfs_findnode failed: %d\n", ret);
