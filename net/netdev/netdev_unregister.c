@@ -153,16 +153,6 @@ int netdev_unregister(FAR struct net_driver_s *dev)
 #ifdef CONFIG_NETDEV_IFINDEX
       free_ifindex(dev->d_ifindex);
 #endif
-
-#ifdef CONFIG_NET_MLD
-      if ((dev->d_flags & IFF_MULTICAST) != 0)
-        {
-          /* MLD is only supported on multicast capable devices */
-
-          mld_grpfree_all(dev);
-        }
-#endif
-
       netdev_list_unlock();
 
       nxrmutex_destroy(&dev->d_lock);

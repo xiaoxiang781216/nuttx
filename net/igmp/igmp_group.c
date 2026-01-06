@@ -240,4 +240,31 @@ void igmp_grpfree(FAR struct net_driver_s *dev,
   kmm_free(group);
 }
 
+/****************************************************************************
+ * Name:  igmp_grpfree_all
+ *
+ * Description:
+ *   Release all groups in the group list.
+ *
+ * Assumptions:
+ *   The network is locked.
+ *
+ ****************************************************************************/
+
+void igmp_grpfree_all(FAR struct net_driver_s *dev)
+{
+  FAR struct igmp_group_s *group =
+                         (FAR struct igmp_group_s *)dev->d_igmp_grplist.head;
+  FAR struct igmp_group_s *next;
+
+  /* Free all group structures in the device structure's group list */
+
+  while (group != NULL)
+    {
+      next = group->next;
+      igmp_grpfree(dev, group);
+      group = next;
+    }
+}
+
 #endif /* CONFIG_NET_IGMP */

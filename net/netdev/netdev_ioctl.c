@@ -84,6 +84,7 @@
 #include "netdev/netdev.h"
 #include "devif/devif.h"
 #include "igmp/igmp.h"
+#include "mld/mld.h"
 #include "icmpv6/icmpv6.h"
 #include "route/route.h"
 #include "netlink/netlink.h"
@@ -2094,6 +2095,26 @@ int netdev_ifup(FAR struct net_driver_s *dev)
 
               dev->d_flags |= IFF_UP;
 
+              if (IFF_IS_MULTICAST(dev->d_flags))
+                {
+#ifdef CONFIG_NET_IGMP
+                  /* Configure the device for IGMP support */
+
+                  igmp_devinit(dev);
+#endif
+#ifdef CONFIG_NET_MLD
+                  /* Configure the device for MLD support */
+
+                  mld_devinit(dev);
+#endif
+                }
+
+#ifdef NET_ICMPv6_HAVE_STACK
+              /* Configure the device for ICMPv6 support */
+
+              icmpv6_devinit(dev);
+#endif
+
               /* Update the driver status */
 
               netlink_device_notify(dev);
@@ -2124,6 +2145,20 @@ int netdev_ifdown(FAR struct net_driver_s *dev)
 
           if ((ret = dev->d_ifdown(dev)) == OK)
             {
+              if (IFF_IS_MULTICAST(dev->d_flags))
+                {
+#ifdef CONFIG_NET_IGMP
+                  /* Free all IGMP groups */
+
+                  igmp_grpfree_all(dev);
+#endif
+#ifdef CONFIG_NET_MLD
+                  /* Free all MLD groups */
+
+                  mld_grpfree_all(dev);
+#endif
+                }
+
               /* Mark the interface as down */
 
               dev->d_flags &= ~(IFF_UP | IFF_RUNNING);

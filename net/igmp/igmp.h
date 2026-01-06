@@ -216,6 +216,16 @@ void igmp_grpfree(FAR struct net_driver_s *dev,
                   FAR struct igmp_group_s *group);
 
 /****************************************************************************
+ * Name:  igmp_grpfree_all
+ *
+ * Description:
+ *   Release all groups in the group list.
+ *
+ ****************************************************************************/
+
+void igmp_grpfree_all(FAR struct net_driver_s *dev);
+
+/****************************************************************************
  * Name: igmp_schedmsg
  *
  * Description:

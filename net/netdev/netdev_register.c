@@ -512,32 +512,6 @@ int netdev_register(FAR struct net_driver_s *dev, enum net_lltype_e lltype)
 
       dev->flink = NULL;
 
-#ifdef CONFIG_NET_IGMP
-      if ((flags & IFF_MULTICAST) != 0)
-        {
-          /* Configure the device for IGMP support */
-
-          igmp_devinit(dev);
-        }
-#endif
-
-#ifdef CONFIG_NET_MLD
-      /* Configure the device for MLD support */
-
-      if ((flags & IFF_MULTICAST) != 0)
-        {
-          /* MLD is only supported on multicast capable devices */
-
-          mld_devinit(dev);
-        }
-#endif
-
-#ifdef NET_ICMPv6_HAVE_STACK
-      /* Configure the device for ICMPv6 support */
-
-      icmpv6_devinit(dev);
-#endif
-
       netdev_list_unlock();
 
 #if defined(CONFIG_NET_ETHERNET) || defined(CONFIG_DRIVERS_IEEE80211)
