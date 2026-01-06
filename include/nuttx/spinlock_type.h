@@ -28,7 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <sys/types.h>
+#include <nuttx/atomic.h>
 #if defined(CONFIG_SPINLOCK_DEBUG)
 #  include <nuttx/queue.h>
 #endif
