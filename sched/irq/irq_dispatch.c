@@ -53,14 +53,14 @@
 
 #ifdef CONFIG_SCHED_IRQMONITOR
 #  ifdef CONFIG_ARCH_IRQPRIO
-#    define INC_NESTLEVEL() atomic_fetch_add(&g_irq_level, 1)
+#    define INC_NESTLEVEL() atomic_add(&g_irq_level, 1)
 #    define DEC_NESTLEVEL(ndx) \
        do \
          { \
-           if (atomic_fetch_sub(&g_irq_level, 1) > 1 && \
+           if (atomic_sub(&g_irq_level, 1) > 1 && \
                ndx < NUSER_IRQS) \
              { \
-               atomic_fetch_add(&g_irqvector[ndx].nests, 1); \
+               atomic_add(&g_irqvector[ndx].nests, 1); \
              } \
           } \
        while (0)
@@ -80,7 +80,7 @@
          elapsed = perf_gettime() - start; \
          if (ndx < NUSER_IRQS) \
            { \
-             atomic_fetch_add(&g_irqvector[ndx].count, 1); \
+             atomic_add(&g_irqvector[ndx].count, 1); \
              if (elapsed > g_irqvector[ndx].time) \
                { \
                  g_irqvector[ndx].time = elapsed; \

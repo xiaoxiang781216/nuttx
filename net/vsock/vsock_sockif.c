@@ -507,12 +507,12 @@ static void vsock_free(FAR struct vsock_conn_s *conn)
 
 static inline_function void vsock_add_ref(FAR struct vsock_conn_s *conn)
 {
-  atomic_fetch_add(&conn->ref, 1);
+  atomic_add(&conn->ref, 1);
 }
 
 static inline_function void vsock_sub_ref(FAR struct vsock_conn_s *conn)
 {
-  if (atomic_fetch_sub(&conn->ref, 1) <= 1)
+  if (atomic_sub(&conn->ref, 1) <= 1)
     {
       vsock_free(conn);
     }
@@ -703,7 +703,7 @@ static int vsock_bind_internal(FAR struct vsock_conn_s *conn,
 
       for (; ; )
         {
-          new_addr.svm_port = atomic_fetch_add(&g_vsock_port, 1);
+          new_addr.svm_port = atomic_add(&g_vsock_port, 1);
           if (vsock_find_bound_conn(&new_addr) == NULL)
             {
               goto out;

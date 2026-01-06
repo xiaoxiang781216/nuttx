@@ -1036,10 +1036,10 @@ static ssize_t proc_heapcheck_write(FAR struct proc_file_s *procfile,
   switch (buffer[0])
     {
       case '0':
-        atomic_fetch_and(&tcb->flags, ~TCB_FLAG_HEAP_CHECK);
+        atomic_and(&tcb->flags, ~TCB_FLAG_HEAP_CHECK);
         break;
       case '1':
-        atomic_fetch_or(&tcb->flags, TCB_FLAG_HEAP_CHECK);
+        atomic_or(&tcb->flags, TCB_FLAG_HEAP_CHECK);
         break;
       default:
         ferr("ERROR: invalid argument\n");

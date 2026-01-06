@@ -75,7 +75,7 @@ static void fdlist_get_by_index(FAR struct fdlist *list,
   *filep = fdp1->f_file;
   if (*filep != NULL)
     {
-      atomic_fetch_add(&(*filep)->f_refs, 1);
+      atomic_add(&(*filep)->f_refs, 1);
     }
 
   spin_unlock_irqrestore_notrace(&list->fl_lock, flags);
@@ -220,7 +220,7 @@ static void fdlist_install(FAR struct fdlist *list, int fd,
   fdp1 = &list->fl_fds[l1][l2];
   filep1 = fdp1->f_file;
   fdp1->f_file = filep;
-  atomic_fetch_add(&filep->f_refs, 1);
+  atomic_add(&filep->f_refs, 1);
   fdp1->f_cloexec = !!(oflags & O_CLOEXEC);
   FS_ADD_BACKTRACE(fdp1);
   if (copy)
@@ -616,7 +616,7 @@ int fdlist_dupfile(FAR struct fdlist *list, int oflags, int minfd,
           fdp = &list->fl_fds[i][j];
           if (fdp->f_file == NULL)
             {
-              atomic_fetch_add(&filep->f_refs, 1);
+              atomic_add(&filep->f_refs, 1);
               fdp->f_file        = filep;
               fdp->f_cloexec     = !!(oflags & O_CLOEXEC);
  #ifdef CONFIG_FDSAN
@@ -853,7 +853,7 @@ void file_ref(FAR struct file *filep)
   /* This interface is used to increase the reference count of filep */
 
   flags = spin_lock_irqsave_notrace(&list->fl_lock);
-  atomic_fetch_add(&filep->f_refs, 1);
+  atomic_add(&filep->f_refs, 1);
   spin_unlock_irqrestore_notrace(&list->fl_lock, flags);
 }
 
@@ -887,7 +887,7 @@ int file_put(FAR struct file *filep)
   /* If refs is zero, the close() had called, closing it now. */
 
   flags = spin_lock_irqsave_notrace(&list->fl_lock);
-  if (atomic_fetch_sub(&filep->f_refs, 1) == 1)
+  if (atomic_sub(&filep->f_refs, 1) == 1)
     {
       spin_unlock_irqrestore_notrace(&list->fl_lock, flags);
       ret = file_close(filep);

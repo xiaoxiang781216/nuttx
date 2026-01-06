@@ -1842,9 +1842,9 @@ FAR netpkt_t *ctucanfd_sock_txconfirm(FAR struct netdev_lowerhalf_s *dev)
         {
           /* subtract 1 from the RX buffer quota counter */
 
-          if (atomic_fetch_sub(&dev->quota_ptr[NETPKT_RX], 1) <= 0)
+          if (atomic_sub(&dev->quota_ptr[NETPKT_RX], 1) <= 0)
             {
-              atomic_fetch_add(&dev->quota_ptr[NETPKT_RX], 1);
+              atomic_add(&dev->quota_ptr[NETPKT_RX], 1);
               canerr("alloc rx buffer failed\n");
               return NULL;
             }
@@ -1854,7 +1854,7 @@ FAR netpkt_t *ctucanfd_sock_txconfirm(FAR struct netdev_lowerhalf_s *dev)
 
           /* add 1 from the TX buffer quota counter */
 
-          atomic_fetch_add(&dev->quota_ptr[NETPKT_TX], 1);
+          atomic_add(&dev->quota_ptr[NETPKT_TX], 1);
 
 #ifdef CONFIG_NET_CAN_CANFD
           frame = (struct canfd_frame *)netpkt_getdata(dev, pkt);

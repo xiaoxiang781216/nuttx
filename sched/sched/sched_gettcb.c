@@ -89,10 +89,10 @@ FAR struct tcb_s *nxsched_get_tcb(pid_t pid)
            * number of references that this_task makes to other tasks.
            */
 
-          atomic_fetch_add(&this_task()->refs, 1);
+          atomic_add(&this_task()->refs, 1);
         }
 
-      atomic_fetch_add(&ret->refs, 1);
+      atomic_add(&ret->refs, 1);
     }
 
   spin_unlock_irqrestore_notrace(&g_pidhashlock, flags);
@@ -108,7 +108,7 @@ void nxsched_put_tcb(FAR struct tcb_s *tcb)
 
       /* tcb may in EXIT_PROCESSING */
 
-      if (atomic_fetch_sub(&tcb->refs, 1) == 1u)
+      if (atomic_sub(&tcb->refs, 1) == 1u)
         {
           nxsem_post(&tcb->exit_sem);
         }
@@ -121,7 +121,7 @@ void nxsched_put_tcb(FAR struct tcb_s *tcb)
 
           /* this_task may be killed and in KILL_PROCESSING */
 
-          if (atomic_fetch_sub(&tcb->refs, 1) == 1u &&
+          if (atomic_sub(&tcb->refs, 1) == 1u &&
               (atomic_read(&tcb->flags) & TCB_FLAG_KILL_PROCESSING))
             {
               nxsem_post(&tcb->exit_sem);
@@ -163,10 +163,10 @@ FAR struct tcb_s *nxsched_get_tcb_by_index(int index)
            * number of references that this_task makes to other tasks.
            */
 
-          atomic_fetch_add(&this_task()->refs, 1);
+          atomic_add(&this_task()->refs, 1);
         }
 
-      atomic_fetch_add(&ret->refs, 1);
+      atomic_add(&ret->refs, 1);
     }
 
   spin_unlock_irqrestore_notrace(&g_pidhashlock, flags);
@@ -214,10 +214,10 @@ FAR struct tcb_s *nxsched_get_childtcb(FAR struct tcb_s *parent)
            * number of references that this_task makes to other tasks.
            */
 
-          atomic_fetch_add(&this_task()->refs, 1);
+          atomic_add(&this_task()->refs, 1);
         }
 
-      atomic_fetch_add(&ret->refs, 1);
+      atomic_add(&ret->refs, 1);
     }
 
   spin_unlock_irqrestore_notrace(&g_pidhashlock, flags);

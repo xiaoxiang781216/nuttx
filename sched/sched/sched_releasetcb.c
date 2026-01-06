@@ -75,7 +75,7 @@ void nxsched_release_pid(pid_t pid)
   spin_unlock_irqrestore(&g_pidhashlock, flags);
 
   DEBUGASSERT(atomic_read(&tcb->refs) > 0);
-  atomic_fetch_sub(&tcb->refs, 1);
+  atomic_sub(&tcb->refs, 1);
 
   /* Wait tcb->refs to be 0 */
 
@@ -184,7 +184,7 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, int ttype)
             {
               /* Mark the group as deleted now */
 
-              atomic_fetch_or(&group->tg_flags, GROUP_FLAG_DELETED);
+              atomic_or(&group->tg_flags, GROUP_FLAG_DELETED);
               skipfree = true;
             }
         }

@@ -87,7 +87,7 @@ void _exit(int status)
    * once, or does something very naughty.
    */
 
-  if (atomic_fetch_or(&tcb->flags, TCB_FLAG_EXIT_PROCESSING) &
+  if (atomic_or(&tcb->flags, TCB_FLAG_EXIT_PROCESSING) &
       TCB_FLAG_EXIT_PROCESSING)
     {
       /* If the TCB is already in the exiting state, we

@@ -99,7 +99,7 @@ void nxsig_deliver(FAR struct tcb_s *stcb)
 
       /* Indicate that a signal is being delivered */
 
-      atomic_fetch_or(&stcb->flags, TCB_FLAG_SIGNAL_ACTION);
+      atomic_or(&stcb->flags, TCB_FLAG_SIGNAL_ACTION);
 
       sinfo("Deliver signal %d to PID %d\n",
             sigq->info.si_signo, stcb->pid);
@@ -177,7 +177,7 @@ void nxsig_deliver(FAR struct tcb_s *stcb)
       /* Indicate that a signal has been delivered */
 
       flags             = enter_critical_section();
-      atomic_fetch_and(&stcb->flags, ~TCB_FLAG_SIGNAL_ACTION);
+      atomic_and(&stcb->flags, ~TCB_FLAG_SIGNAL_ACTION);
 
       /* Restore the original sigprocmask.
        *

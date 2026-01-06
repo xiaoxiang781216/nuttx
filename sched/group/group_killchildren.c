@@ -104,7 +104,7 @@ static int group_cancel_children_handler(pid_t pid, FAR void *arg)
         {
           /* Cancel this thread.  This is a forced cancellation. */
 
-          atomic_fetch_or(&rtcb->flags, TCB_FLAG_FORCED_CANCEL);
+          atomic_or(&rtcb->flags, TCB_FLAG_FORCED_CANCEL);
 
           /* 'pid' could refer to the main task of the thread.  That pid
            * will appear in the group member list as well!
@@ -161,7 +161,7 @@ int group_kill_children(FAR struct tcb_s *tcb)
 
   DEBUGASSERT(tcb->group);
 
-  if (!(atomic_fetch_or(&tcb->group->tg_flags, GROUP_FLAG_EXITING) &
+  if (!(atomic_or(&tcb->group->tg_flags, GROUP_FLAG_EXITING) &
         GROUP_FLAG_EXITING))
     {
 #if defined(CONFIG_GROUP_KILL_CHILDREN_TIMEOUT_MS) && \

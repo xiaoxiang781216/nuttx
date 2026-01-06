@@ -180,11 +180,11 @@ int task_reparent(pid_t ppid, pid_t chpid)
 
               /* The original parent now has one few children */
 
-              atomic_fetch_sub(&ogrp->tg_nchildren, 1);
+              atomic_sub(&ogrp->tg_nchildren, 1);
 
               /* The new parent has one additional child */
 
-              atomic_fetch_add(&pgrp->tg_nchildren, 1);
+              atomic_add(&pgrp->tg_nchildren, 1);
 
 #endif /* CONFIG_SCHED_CHILD_STATUS */
 
@@ -302,11 +302,11 @@ int task_reparent(pid_t ppid, pid_t chpid)
 
               /* The original parent now has one few children */
 
-              atomic_fetch_sub(&otcb->group->tg_nchildren, 1);
+              atomic_sub(&otcb->group->tg_nchildren, 1);
 
               /* The new parent has one additional child */
 
-              atomic_fetch_add(&ptcb->group->tg_nchildren, 1);
+              atomic_add(&ptcb->group->tg_nchildren, 1);
               ret = OK;
 
 #endif /* CONFIG_SCHED_CHILD_STATUS */

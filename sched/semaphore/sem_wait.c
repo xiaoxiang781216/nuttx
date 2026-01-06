@@ -95,7 +95,7 @@ int nxsem_wait_slow(FAR sem_t *sem)
        * this is all that is needed if we block
        */
 
-      mholder = atomic_fetch_or(NXSEM_MHOLDER(sem), NXSEM_MBLOCKING_BIT);
+      mholder = atomic_or(NXSEM_MHOLDER(sem), NXSEM_MBLOCKING_BIT);
 
       /* Avoid mutex recursion, which is not allowed. */
 
@@ -122,7 +122,7 @@ int nxsem_wait_slow(FAR sem_t *sem)
     }
   else
     {
-      unlocked = atomic_fetch_sub(NXSEM_COUNT(sem), 1) > 0;
+      unlocked = atomic_sub(NXSEM_COUNT(sem), 1) > 0;
     }
 
   if (unlocked)
@@ -139,7 +139,7 @@ int nxsem_wait_slow(FAR sem_t *sem)
             }
           else
             {
-              atomic_fetch_add(NXSEM_COUNT(sem), 1);
+              atomic_add(NXSEM_COUNT(sem), 1);
             }
 
           leave_critical_section(flags);

@@ -154,7 +154,7 @@ int xtensa_swint(int irq, void *context, void *arg)
            * the system call.
            */
 
-          atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SYSCALL);
+          atomic_and(&rtcb->flags, ~TCB_FLAG_SYSCALL);
           nxsig_unmask_pendingsignal();
         }
         break;
@@ -364,7 +364,7 @@ int xtensa_swint(int irq, void *context, void *arg)
 
           /* Indicate that we are in a syscall handler. */
 
-          atomic_fetch_or(&rtcb->flags, TCB_FLAG_SYSCALL);
+          atomic_or(&rtcb->flags, TCB_FLAG_SYSCALL);
 #else
           svcerr("ERROR: Bad SYSCALL: %" PRIu32 "\n", cmd);
 #endif

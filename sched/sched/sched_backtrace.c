@@ -72,7 +72,7 @@ static int sched_backtrace_handler(FAR void *cookie)
 
   if (arg->need_restore)
     {
-      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_CPU_LOCKED);
+      atomic_and(&tcb->flags, ~TCB_FLAG_CPU_LOCKED);
     }
 
   arg->stacksize = up_backtrace(tcb, arg->buffer, arg->size, arg->skip);
@@ -120,7 +120,7 @@ int sched_backtrace(pid_t tid, FAR void **buffer, int size, int skip)
               int cpu = tcb->cpu;
 
               arg.pid = tcb->pid;
-              if (atomic_fetch_or(&tcb->flags, TCB_FLAG_CPU_LOCKED) &
+              if (atomic_or(&tcb->flags, TCB_FLAG_CPU_LOCKED) &
                   TCB_FLAG_CPU_LOCKED)
                 {
                   arg.need_restore = false;

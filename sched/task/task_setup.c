@@ -339,7 +339,7 @@ static inline void nxtask_save_parent(FAR struct tcb_s *tcb, int ttype)
 
       DEBUGASSERT(atomic_read(&rtcb->group->tg_nchildren) < UINT16_MAX);
 
-      atomic_fetch_add_relaxed(&rtcb->group->tg_nchildren, 1);
+      atomic_add_relaxed(&rtcb->group->tg_nchildren, 1);
 
 #endif /* CONFIG_SCHED_CHILD_STATUS */
     }
@@ -446,17 +446,17 @@ static int nxthread_setup_scheduler(FAR struct tcb_s *tcb, int priority,
        */
 
       ttype              &= TCB_FLAG_TTYPE_MASK;
-      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_TTYPE_MASK);
-      atomic_fetch_or(&tcb->flags, ttype);
+      atomic_and(&tcb->flags, ~TCB_FLAG_TTYPE_MASK);
+      atomic_or(&tcb->flags, ttype);
 
       /* Set the appropriate scheduling policy in the TCB */
 
-      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_POLICY_MASK);
+      atomic_and(&tcb->flags, ~TCB_FLAG_POLICY_MASK);
 #if CONFIG_RR_INTERVAL > 0
-      atomic_fetch_or(&tcb->flags, TCB_FLAG_SCHED_RR);
+      atomic_or(&tcb->flags, TCB_FLAG_SCHED_RR);
       tcb->timeslice      = MSEC2TICK(CONFIG_RR_INTERVAL);
 #else
-      atomic_fetch_or(&tcb->flags, TCB_FLAG_SCHED_FIFO);
+      atomic_or(&tcb->flags, TCB_FLAG_SCHED_FIFO);
 #endif
 
       /* Save the task ID of the parent task in the TCB and allocate

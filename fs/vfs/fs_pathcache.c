@@ -81,7 +81,7 @@ static const struct lru_cache_ops_s g_pathcache_ops =
 static void pathcache_get(FAR void *value)
 {
   FAR struct file *filep = value;
-  atomic_fetch_add(&filep->f_refs, 1);
+  atomic_add(&filep->f_refs, 1);
 }
 
 /****************************************************************************
@@ -102,7 +102,7 @@ static void pathcache_put(FAR void *value)
 {
   FAR struct file *filep = value;
 
-  if (atomic_fetch_sub(&filep->f_refs, 1) == 1)
+  if (atomic_sub(&filep->f_refs, 1) == 1)
     {
       filep->f_inode->u.i_mops->close(filep);
       inode_release(filep->f_inode);

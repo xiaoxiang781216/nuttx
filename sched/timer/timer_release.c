@@ -147,7 +147,7 @@ int timer_release(FAR struct posix_timer_s *timer, bool delay)
       timer_free(timer, delay);
     }
 
-  atomic_fetch_sub(&group->itimer_count, 1);
+  atomic_sub(&group->itimer_count, 1);
 
   return ret;
 }

@@ -419,7 +419,7 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               }
 #endif
 
-            if (atomic_fetch_add(&dev->register_count, 1) > 0)
+            if (atomic_add(&dev->register_count, 1) > 0)
               {
                 break;
               }
@@ -494,7 +494,7 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             spin_unlock_irqrestore(&dev->lock, flags);
 #endif
 
-            if (atomic_fetch_sub(&dev->register_count, 1) > 1)
+            if (atomic_sub(&dev->register_count, 1) > 1)
               {
                 break;
               }

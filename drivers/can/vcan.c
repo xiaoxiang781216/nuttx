@@ -107,8 +107,8 @@ static FAR netpkt_t *vcan_receive(FAR struct netdev_lowerhalf_s *dev)
       return NULL;
     }
 
-  atomic_fetch_sub(&dev->quota_ptr[NETPKT_RX], 1);
-  atomic_fetch_add(&dev->quota_ptr[NETPKT_TX], 1);
+  atomic_sub(&dev->quota_ptr[NETPKT_RX], 1);
+  atomic_add(&dev->quota_ptr[NETPKT_TX], 1);
   netdev_lower_txdone(dev);
 
   return pkt;

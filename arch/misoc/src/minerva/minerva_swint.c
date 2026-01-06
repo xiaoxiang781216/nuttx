@@ -187,7 +187,7 @@ int minerva_swint(int irq, void *context, void *arg)
          * the system call.
          */
 
-        atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_SYSCALL);
+        atomic_and(&rtcb->flags, ~TCB_FLAG_SYSCALL);
         (void)nxsig_unmask_pendingsignal();
       }
       break;
@@ -236,7 +236,7 @@ int minerva_swint(int irq, void *context, void *arg)
 
         /* Indicate that we are in a syscall handler. */
 
-        atomic_fetch_or(&rtcb->flags, TCB_FLAG_SYSCALL);
+        atomic_or(&rtcb->flags, TCB_FLAG_SYSCALL);
 #else
         svcerr("ERROR: Bad SYS call: %d\n", regs[REG_A0]);
 #endif

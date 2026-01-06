@@ -535,7 +535,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
           return -EINVAL;
         }
 
-      atomic_fetch_or(&tcb->flags, TCB_FLAG_HEAP_DUMP);
+      atomic_or(&tcb->flags, TCB_FLAG_HEAP_DUMP);
       nxsched_put_tcb(tcb);
       return buflen;
     }
@@ -549,7 +549,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
           return -EINVAL;
         }
 
-      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_HEAP_DUMP);
+      atomic_and(&tcb->flags, ~TCB_FLAG_HEAP_DUMP);
       nxsched_put_tcb(tcb);
       return buflen;
     }

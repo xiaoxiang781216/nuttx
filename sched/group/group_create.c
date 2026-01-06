@@ -192,7 +192,7 @@ int group_initialize(FAR struct tcb_s *tcb, int ttype, size_t heapsize)
 
       if ((ttype & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_KERNEL)
         {
-          atomic_fetch_or(&group->tg_flags, GROUP_FLAG_PRIVILEGED);
+          atomic_or(&group->tg_flags, GROUP_FLAG_PRIVILEGED);
         }
 #endif /* defined(CONFIG_MM_KERNEL_HEAP) */
 

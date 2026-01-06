@@ -116,7 +116,7 @@ int nxtask_terminate(pid_t pid)
     {
       ret = -ESRCH;
     }
-  else if (atomic_fetch_or(&dtcb->flags, TCB_FLAG_EXIT_PROCESSING) &
+  else if (atomic_or(&dtcb->flags, TCB_FLAG_EXIT_PROCESSING) &
                            TCB_FLAG_EXIT_PROCESSING)
     {
       nxsched_put_tcb(dtcb);
@@ -124,7 +124,7 @@ int nxtask_terminate(pid_t pid)
     }
   else
     {
-      atomic_fetch_or(&dtcb->flags, TCB_FLAG_KILL_PROCESSING);
+      atomic_or(&dtcb->flags, TCB_FLAG_KILL_PROCESSING);
 
       /* Even if we decrease the reference count here,
        * dtcb won't be released elsewhere, because TCB already
@@ -144,7 +144,7 @@ int nxtask_terminate(pid_t pid)
         {
           atomic_t tcb_flags;
 
-          tcb_flags = atomic_fetch_or(&dtcb->flags, TCB_FLAG_CPU_LOCKED);
+          tcb_flags = atomic_or(&dtcb->flags, TCB_FLAG_CPU_LOCKED);
 
           ret = nxsched_smp_call_single(dtcb->cpu, terminate_handler,
                                         (FAR void *)(uintptr_t)dtcb);

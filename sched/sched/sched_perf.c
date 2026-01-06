@@ -121,7 +121,7 @@ static struct inode g_perf_inode =
   NULL,                   /* i_parent */
   NULL,                   /* i_peer */
   NULL,                   /* i_child */
-  ATOMIC_VAR_INIT(1),     /* i_crefs */
+  1,                      /* i_crefs */
   FSNODEFLAG_TYPE_DRIVER, /* i_flags */
   {
     &g_perf_fops          /* u */
@@ -400,7 +400,7 @@ static void perf_buffer_release(FAR struct perf_event_s *event)
 
 static uint64_t perf_assign_eventid(void)
 {
-  return atomic_fetch_add(&g_perf_eventid, 1);
+  return atomic_add(&g_perf_eventid, 1);
 }
 
 /****************************************************************************

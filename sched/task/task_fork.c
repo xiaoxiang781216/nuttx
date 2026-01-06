@@ -246,7 +246,7 @@ FAR struct tcb_s *nxtask_setup_fork(start_t retaddr)
         }
       else
         {
-          atomic_fetch_or(&child->flags, TCB_FLAG_FREE_TCB);
+          atomic_or(&child->flags, TCB_FLAG_FREE_TCB);
 
           /* Initialize the task join */
 

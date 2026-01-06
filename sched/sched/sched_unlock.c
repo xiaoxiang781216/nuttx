@@ -120,11 +120,11 @@ void nxsched_unlock(FAR struct tcb_s *rtcb)
           rtcb->timeslice = MSEC2TICK(CONFIG_RR_INTERVAL);
         }
 #  ifdef CONFIG_SCHED_TICKLESS
-      else if ((atomic_fetch_or(&rtcb->flags, TCB_FLAG_PREEMPT_SCHED) &
+      else if ((atomic_or(&rtcb->flags, TCB_FLAG_PREEMPT_SCHED) &
                 TCB_FLAG_PREEMPT_SCHED) == 0)
         {
           nxsched_reassess_timer();
-          atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_PREEMPT_SCHED);
+          atomic_and(&rtcb->flags, ~TCB_FLAG_PREEMPT_SCHED);
         }
 #  endif
     }
@@ -156,11 +156,11 @@ void nxsched_unlock(FAR struct tcb_s *rtcb)
        */
 
       if (rtcb == this_task() &&
-          (atomic_fetch_or(&rtcb->flags, TCB_FLAG_PREEMPT_SCHED) &
+          (atomic_or(&rtcb->flags, TCB_FLAG_PREEMPT_SCHED) &
            TCB_FLAG_PREEMPT_SCHED) == 0)
         {
           nxsched_reassess_timer();
-          atomic_fetch_and(&rtcb->flags, ~TCB_FLAG_PREEMPT_SCHED);
+          atomic_and(&rtcb->flags, ~TCB_FLAG_PREEMPT_SCHED);
         }
 #  endif
     }

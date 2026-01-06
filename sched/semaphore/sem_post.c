@@ -54,7 +54,7 @@ int get_blocking(FAR sem_t *sem, bool mutex, bool *blocking)
 
       /* Lock the mutex for us by setting the blocking bit */
 
-      mholder = atomic_fetch_or(NXSEM_MHOLDER(sem), NXSEM_MBLOCKING_BIT);
+      mholder = atomic_or(NXSEM_MHOLDER(sem), NXSEM_MBLOCKING_BIT);
 
       /* Mutex post from another thread is not allowed, unless
        * called from nxsem_reset

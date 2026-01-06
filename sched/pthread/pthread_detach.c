@@ -100,7 +100,7 @@ int pthread_detach(pthread_t thread)
     }
   else
     {
-      atomic_fetch_or(&tcb->flags, TCB_FLAG_DETACHED);
+      atomic_or(&tcb->flags, TCB_FLAG_DETACHED);
       ret = OK;
     }
 

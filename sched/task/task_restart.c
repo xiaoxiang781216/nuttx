@@ -78,7 +78,7 @@ static int restart_handler(FAR void *cookie)
 
   if (arg->need_restore)
     {
-      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_CPU_LOCKED);
+      atomic_and(&tcb->flags, ~TCB_FLAG_CPU_LOCKED);
     }
 
   nxsched_remove_readytorun(tcb);
@@ -112,7 +112,7 @@ static void nxtask_reset_task(FAR struct tcb_s *tcb, bool remove)
 
   /* Reset the group flags to indicate that the task is no longer exiting. */
 
-  atomic_fetch_and(&tcb->group->tg_flags, ~GROUP_FLAG_EXITING);
+  atomic_and(&tcb->group->tg_flags, ~GROUP_FLAG_EXITING);
 #endif
 
   /* Remove the TCB from whatever list it is in.  After this point, the TCB
@@ -238,7 +238,7 @@ static int nxtask_restart(pid_t pid)
       int cpu = tcb->cpu;
 
       arg.pid = tcb->pid;
-      if (atomic_fetch_or(&tcb->flags, TCB_FLAG_CPU_LOCKED) &
+      if (atomic_or(&tcb->flags, TCB_FLAG_CPU_LOCKED) &
           TCB_FLAG_CPU_LOCKED)
         {
           arg.need_restore = false;

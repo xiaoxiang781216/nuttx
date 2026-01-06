@@ -130,7 +130,7 @@ group_release(FAR struct task_group_s *group, int ttype)
     {
       /* Mark the group as deleted now */
 
-      atomic_fetch_or(&group->tg_flags, GROUP_FLAG_DELETED);
+      atomic_or(&group->tg_flags, GROUP_FLAG_DELETED);
 
       group_drop(group);
     }

@@ -376,7 +376,7 @@ static uint64_t arm64pmu_event_update(FAR struct perf_event_s *event)
 
   delta = (new_raw_count) & max_period;
 
-  atomic_fetch_add(&event->count, delta);
+  atomic_add(&event->count, delta);
 
   return new_raw_count;
 }

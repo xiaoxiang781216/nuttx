@@ -160,7 +160,7 @@ DECLARE_PER_CPU_BMP(rspinlock_t, g_schedlock);
 static inline_function void spin_lock_notrace(FAR volatile spinlock_t *lock)
 {
 #ifdef CONFIG_TICKET_SPINLOCK
-  int ticket = atomic_fetch_add_relaxed(&lock->next, 1);
+  int ticket = atomic_add_relaxed(&lock->next, 1);
   while (atomic_read_acquire(&lock->owner) != ticket);
 #else /* CONFIG_TICKET_SPINLOCK */
   while (atomic_xchg_acquire(&lock->lock, 1) == 1);
@@ -1261,7 +1261,7 @@ static inline_function void read_unlock(FAR volatile rwlock_t *lock)
 {
   DEBUGASSERT(atomic_read(&lock->lock) >= RW_SP_READ_LOCKED);
 
-  atomic_fetch_sub_release(&lock->lock, 1);
+  atomic_sub_release(&lock->lock, 1);
 }
 
 /****************************************************************************

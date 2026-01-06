@@ -115,7 +115,7 @@ int pthread_completejoin(pid_t pid, FAR void *exit_value)
         }
     }
 
-  atomic_fetch_or(&tcb->flags, TCB_FLAG_JOIN_COMPLETED);
+  atomic_or(&tcb->flags, TCB_FLAG_JOIN_COMPLETED);
 
   nxrmutex_unlock(&group->tg_mutex);
 

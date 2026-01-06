@@ -83,7 +83,7 @@ static int sig_handler(FAR void *cookie)
 
   if (arg->need_restore)
     {
-      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_CPU_LOCKED);
+      atomic_and(&tcb->flags, ~TCB_FLAG_CPU_LOCKED);
     }
 
   if (tcb->sigdeliver)
@@ -172,7 +172,7 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb,
                   uint16_t count;
 
                   arg.pid = stcb->pid;
-                  if (atomic_fetch_or(&stcb->flags, TCB_FLAG_CPU_LOCKED) &
+                  if (atomic_or(&stcb->flags, TCB_FLAG_CPU_LOCKED) &
                       TCB_FLAG_CPU_LOCKED)
                     {
                       arg.need_restore = false;

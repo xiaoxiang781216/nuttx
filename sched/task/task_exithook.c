@@ -248,7 +248,7 @@ static inline void nxtask_sigchild(FAR struct tcb_s *ptcb,
 
       DEBUGASSERT(ptcb->group != NULL &&
                   atomic_read(&ptcb->group->tg_nchildren) > 0);
-      atomic_fetch_sub(&ptcb->group->tg_nchildren, 1);
+      atomic_sub(&ptcb->group->tg_nchildren, 1);
 
 #endif /* CONFIG_SCHED_CHILD_STATUS */
 

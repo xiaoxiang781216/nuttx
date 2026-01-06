@@ -104,7 +104,7 @@ int process_sporadic(FAR struct tcb_s *tcb,
 
           if (ret >= 0)
             {
-              atomic_fetch_or(&tcb->flags, TCB_FLAG_SCHED_SPORADIC);
+              atomic_or(&tcb->flags, TCB_FLAG_SCHED_SPORADIC);
               tcb->timeslice         = budget_ticks;
 
               sporadic               = tcb->sporadic;
@@ -211,7 +211,7 @@ int nxsched_set_scheduler(pid_t pid, int policy,
 #ifdef CONFIG_SCHED_SPORADIC
           uint32_t flags =
 #endif
-          atomic_fetch_and(&tcb->flags, ~TCB_FLAG_POLICY_MASK);
+          atomic_and(&tcb->flags, ~TCB_FLAG_POLICY_MASK);
           switch (policy)
             {
               case SCHED_OTHER:
@@ -236,7 +236,7 @@ int nxsched_set_scheduler(pid_t pid, int policy,
 
                 /* Set the new policy flag */
 
-                atomic_fetch_or(&tcb->flags,
+                atomic_or(&tcb->flags,
                                 policy << TCB_FLAG_POLICY_SHIFT);
 
                 /* Configure timeslice based on policy */

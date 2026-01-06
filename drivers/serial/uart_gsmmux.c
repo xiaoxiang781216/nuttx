@@ -368,7 +368,7 @@ static int gsmmux_uart_open(FAR struct gsmmux_s *gsmmux)
 
   gsmmux_info("gsmmux_uart_open: %s, refcnt: %" PRId32 "\n",
               gsmmux->devname, atomic_read(&gsmmux->refcnt));
-  if (atomic_fetch_add(&gsmmux->refcnt, 1) > 0)
+  if (atomic_add(&gsmmux->refcnt, 1) > 0)
     {
       return OK;
     }
@@ -376,7 +376,7 @@ static int gsmmux_uart_open(FAR struct gsmmux_s *gsmmux)
   ret = file_open(&gsmmux->file, gsmmux->devname, O_RDWR | O_NONBLOCK);
   if (ret < 0)
     {
-      atomic_fetch_sub(&gsmmux->refcnt, 1);
+      atomic_sub(&gsmmux->refcnt, 1);
       gsmmux_err("Failed to open %s: %d\n", gsmmux->devname, ret);
       return ret;
     }
@@ -405,7 +405,7 @@ static void gsmmux_uart_close(FAR struct gsmmux_s *gsmmux)
 {
   gsmmux_info("gsmmux_uart_close: %s, refcnt: %" PRId32 "\n",
               gsmmux->devname, atomic_read(&gsmmux->refcnt));
-  if (atomic_fetch_sub(&gsmmux->refcnt, 1) > 1)
+  if (atomic_sub(&gsmmux->refcnt, 1) > 1)
     {
       return;
     }

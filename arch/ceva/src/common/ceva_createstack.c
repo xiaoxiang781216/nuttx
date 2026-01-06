@@ -212,7 +212,7 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, int ttype)
 
 #endif /* CONFIG_STACK_COLORATION */
 
-      atomic_fetch_or(&tcb->flags, TCB_FLAG_FREE_STACK);
+      atomic_or(&tcb->flags, TCB_FLAG_FREE_STACK);
       return OK;
     }
 

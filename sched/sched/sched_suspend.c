@@ -74,7 +74,7 @@ static int nxsched_suspend_handler(FAR void *cookie)
 
   if (arg->need_restore)
     {
-      atomic_fetch_and(&tcb->flags, ~TCB_FLAG_CPU_LOCKED);
+      atomic_and(&tcb->flags, ~TCB_FLAG_CPU_LOCKED);
     }
 
   nxsched_remove_readytorun(tcb);
@@ -168,7 +168,7 @@ void nxsched_suspend(FAR struct tcb_s *tcb)
           struct suspend_arg_s arg;
 
           arg.pid = tcb->pid;
-          if (atomic_fetch_or(&tcb->flags, TCB_FLAG_CPU_LOCKED) &
+          if (atomic_or(&tcb->flags, TCB_FLAG_CPU_LOCKED) &
               TCB_FLAG_CPU_LOCKED)
             {
               arg.need_restore = false;

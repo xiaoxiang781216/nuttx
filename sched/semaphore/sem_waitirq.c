@@ -54,11 +54,11 @@ void restore_context(FAR struct tcb_s *rtcb, FAR struct tcb_s *wtcb,
 
   if (!mutex)
     {
-      atomic_fetch_add(NXSEM_COUNT(sem), 1);
+      atomic_add(NXSEM_COUNT(sem), 1);
     }
   else if (dq_empty(SEM_WAITLIST(sem)))
     {
-      atomic_fetch_and(NXSEM_MHOLDER(sem), ~NXSEM_MBLOCKING_BIT);
+      atomic_and(NXSEM_MHOLDER(sem), ~NXSEM_MBLOCKING_BIT);
     }
 
   /* Indicate that the wait is over. */

@@ -152,7 +152,7 @@ int nx_umount2(FAR const char *target, unsigned int flags)
     {
       /* Just decrement the reference count (without deleting it) */
 
-      atomic_fetch_sub(&mountpt_inode->i_crefs, 1);
+      atomic_sub(&mountpt_inode->i_crefs, 1);
       inode_unlock();
     }
   else

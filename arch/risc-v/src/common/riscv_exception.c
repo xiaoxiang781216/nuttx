@@ -108,7 +108,7 @@ int riscv_exception(int mcause, void *regs, void *args)
       _alert("Segmentation fault in PID %d: %s\n",
              tcb->pid, get_task_name(tcb));
 
-      atomic_fetch_or(&tcb->flags, TCB_FLAG_FORCED_CANCEL);
+      atomic_or(&tcb->flags, TCB_FLAG_FORCED_CANCEL);
 
       /* Return to _exit function in privileged mode with argument SIGSEGV */
 
