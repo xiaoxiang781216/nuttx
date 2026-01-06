@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/can/can_sender.h
+ * drivers/can/can_sender.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -30,14 +30,9 @@
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
 
-#include <sys/types.h>
 #include <stdint.h>
 #include <stdbool.h>
-
 #include <nuttx/list.h>
-#include <nuttx/fs/fs.h>
-#include <nuttx/fs/ioctl.h>
-#include <nuttx/mutex.h>
 #include <nuttx/can/can.h>
 
 #ifdef CONFIG_CAN

@@ -26,7 +26,8 @@
 
 #include <nuttx/config.h>
 #include <nuttx/nuttx.h>
-#include <nuttx/can/can_sender.h>
+
+#include "can_sender.h"
 
 /****************************************************************************
  * Public Functions

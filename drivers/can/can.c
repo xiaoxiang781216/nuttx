@@ -44,10 +44,11 @@
 #include <nuttx/signal.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/can/can.h>
-#include <nuttx/can/can_sender.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/irq.h>
 #include <nuttx/spinlock.h>
+
+#include "can_sender.h"
 
 /****************************************************************************
  * Pre-processor Definitions
