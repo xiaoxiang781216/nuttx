@@ -72,7 +72,7 @@ static void release_shadow_stack(struct tcb_s *dtcb)
     {
       /* Free the shadow stack */
 
-      kmm_free(dtcb->xcp.sstack_alloc_ptr);
+      kmm_delayfree(dtcb->xcp.sstack_alloc_ptr);
 
       /* Clear the shadow stack pointers */
 
