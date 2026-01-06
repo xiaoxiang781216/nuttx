@@ -103,6 +103,10 @@ FAR struct icmp_conn_s *icmp_alloc(void)
   conn = mempool_zallocate(&g_icmp_connections, 0);
   if (conn != NULL)
     {
+      /* Use conn_init to initialize the connection structure */
+
+      conn_init(&conn->sconn);
+
       /* Enqueue the connection into the active list */
 
       dq_addlast(&conn->sconn.s_node, &g_active_icmp_connections);
@@ -139,7 +143,10 @@ void icmp_free(FAR struct icmp_conn_s *conn)
   /* Remove the connection from the active list */
 
   dq_rem(&conn->sconn.s_node, &g_active_icmp_connections);
-  nxrmutex_destroy(&conn->sconn.s_lock);
+
+  /* Use conn_uninit to release all connection resources */
+
+  conn_uninit(&conn->sconn);
 
   /* Free the connection. */
 
