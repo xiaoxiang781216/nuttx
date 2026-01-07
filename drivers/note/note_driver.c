@@ -157,6 +157,21 @@ static int note_reboot_handler(FAR struct notifier_block *nb,
                                unsigned long action, FAR void *data);
 
 /****************************************************************************
+ * Private Function Prototypes
+ ****************************************************************************/
+
+static int note_driver_open(FAR struct file *filep);
+static int note_driver_close(FAR struct file *filep);
+static ssize_t note_driver_read(FAR struct file *filep,
+                                FAR char *buffer, size_t buflen);
+static ssize_t note_driver_write(FAR struct file *filep,
+                                 FAR const char *buffer, size_t buflen);
+static int note_driver_ioctl(FAR struct file *filep, int cmd,
+                             unsigned long arg);
+static int note_driver_poll(FAR struct file *filep, FAR struct pollfd *fds,
+                            bool setup);
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 

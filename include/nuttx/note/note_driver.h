@@ -805,6 +805,7 @@ int note_initialize(void);
  ****************************************************************************/
 
 int note_driver_register(FAR struct note_driver_s *driver);
+#endif
 
 /****************************************************************************
  * Name: note_driver_unregister
