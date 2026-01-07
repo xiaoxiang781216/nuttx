@@ -596,6 +596,8 @@ uint32_t *arm_syscall(uint32_t *regs)
 
   sched_note_irqhandler(NR_IRQS, arm_syscall, false);
 
+  nxsched_resume_scheduler(tcb);
+
   /* Update the TLS pointer.
    * The TLS pointer must skip over the
    * tls_info_s structure to align with compiler-generated TLS
