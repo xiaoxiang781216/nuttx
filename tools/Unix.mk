@@ -604,12 +604,12 @@ ifeq ($(CONFIG_BUILD_PROTECTED),y)
 	$(Q) CC=$(CC) CFLAGS="$(CFLAGS)" LD=$(LD) OBJCOPY=$(OBJCOPY) .$(DELIM)tools$(DELIM)elf_fixup.py --indir $(CONFIG_APPS_DIR)$(DELIM)bin_debug \
 	--flash_start $(CONFIG_ELF_FIXUP_FLASH_START) --flash_size $(CONFIG_ELF_FIXUP_FLASH_SIZE) \
 	--ram_start $(CONFIG_ELF_FIXUP_RAM_START) --ram_size $(CONFIG_ELF_FIXUP_RAM_SIZE) --elf nuttx_user.elf --outdir $(CONFIG_APPS_DIR)$(DELIM)bin_fixup \
-	--output nuttx_user.hex
+	--output nuttx_user.hex --custom ${CONFIG_ELF_FIXUP_CUSTOM_LAYOUT}
 else
 	$(Q) CC=$(CC) CFLAGS="$(CFLAGS)" LD=$(LD) OBJCOPY=$(OBJCOPY) .$(DELIM)tools$(DELIM)elf_fixup.py --indir $(CONFIG_APPS_DIR)$(DELIM)bin_debug \
 	--flash_start $(CONFIG_ELF_FIXUP_FLASH_START) --flash_size $(CONFIG_ELF_FIXUP_FLASH_SIZE) \
 	--ram_start $(CONFIG_ELF_FIXUP_RAM_START) --ram_size $(CONFIG_ELF_FIXUP_RAM_SIZE) --elf nuttx --outdir $(CONFIG_APPS_DIR)$(DELIM)bin_fixup \
-	--output nuttx.hex
+	--output nuttx.hex --custom ${CONFIG_ELF_FIXUP_CUSTOM_LAYOUT}
 endif
 endif
 

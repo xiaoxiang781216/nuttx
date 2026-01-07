@@ -73,6 +73,14 @@ config ELF_FIXUP_NSEGMENTS
 		Describes how many memory segments the loaded
 		elf can load at most.
 
+config ELF_FIXUP_CUSTOM_LAYOUT
+	string "Elf fixup custom layout"
+	default ""
+	---help---
+		ELF Fixup allows for customized memory allocation for apps,
+		formatted as follows: app1, [app2, [app3]], flash start, flash size, ram start, ram size [, appX, flash startX, flash sizeX, ram startX, ram sizeX]
+		app1, app2, and app3 will allocate memory from flash start and ram start. Multiple app groups can be parsed.
+
 endif # ELF_FIXUP
 
 config NXFLAT

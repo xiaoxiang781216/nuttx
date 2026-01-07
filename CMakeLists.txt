@@ -1006,5 +1006,6 @@ if(CONFIG_ELF_FIXUP)
       ${CONFIG_ELF_FIXUP_FLASH_SIZE} --ram_start ${CONFIG_ELF_FIXUP_RAM_START}
       --ram_size ${CONFIG_ELF_FIXUP_RAM_SIZE} --elf ${FINNAL_ELF} --outdir
       ${CMAKE_BINARY_DIR}/bin_fixup --output
-      ${CMAKE_BINARY_DIR}/${FINNAL_ELF}.hex)
+      ${CMAKE_BINARY_DIR}/${FINNAL_ELF}.hex --custom
+      ${CONFIG_ELF_FIXUP_CUSTOM_LAYOUT})
 endif()

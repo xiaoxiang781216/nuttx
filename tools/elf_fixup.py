@@ -527,12 +527,12 @@ def generate_link_script(
     return extern_symbols, heap_size
 
 
-def generate_elf_hex(args):
+def generate_elf_hex(args, apps, flash_start, flash_size, ram_start, ram_size):
     nuttx_symbols = elf_parse(args.elf).symbols
-    flash_base, flash_remaining = args.flash
-    ram_base, ram_remaining = args.ram
+    flash_base, flash_remaining = flash_start, flash_size
+    ram_base, ram_remaining = ram_start, ram_size
 
-    for elf_file in sorted(args.indir.rglob("*")):
+    for elf_file in apps:
         if not elf_file.is_file():
             continue
 
@@ -585,8 +585,63 @@ def generate_elf_hex(args):
             f"{elf_file.name} Current Flash used: 0x{flash_used:x}, RAM used: 0x{ram_used:x}"
         )
 
-    args.flash = (flash_base, flash_remaining)
-    args.ram = (ram_base, ram_remaining)
+
+def generate_elf_out(args):
+    all_elf_files = {f.stem: f for f in sorted(args.indir.rglob("*")) if f.is_file()}
+
+    # Parse custom_layout: app1,app2,flash_start,flash_size,ram_start,ram_size,...
+    tokens = [t.strip() for t in args.custom_layout.split(",")]
+
+    i = 0
+    while i < len(tokens):
+        # Collect app names
+        app_names = []
+        while i < len(tokens):
+            token = tokens[i]
+            # Check if token is a hex number or decimal number (memory address/size)
+            try:
+                int(token, 0)
+                break
+            except ValueError:
+                app_names.append(token)
+                i += 1
+
+        # Now expect 4 numeric values: flash_start, flash_size, ram_start, ram_size
+        if i + 4 > len(tokens):
+            logging.error(
+                f"Invalid custom_layout format: missing memory parameters after apps {app_names}"
+            )
+            break
+
+        flash_start = int(tokens[i], 0)
+        flash_size = int(tokens[i + 1], 0)
+        ram_start = int(tokens[i + 2], 0)
+        ram_size = int(tokens[i + 3], 0)
+        i += 4
+
+        # Handle wildcard: replace "*" with all remaining apps
+        if "*" in app_names:
+            app_names = [name for name in sorted(all_elf_files.keys())]
+            all_elf_files.clear()
+        else:
+            # Find matching ELF files for this region
+            for app_name in app_names:
+                if app_name not in all_elf_files:
+                    logging.error(f"App '{app_name}' not found in {args.indir}")
+                    os._exit(1)
+                del all_elf_files[app_name]
+
+        # Convert app names to file paths
+        app_files = [all_elf_files.get(name) or args.indir / name for name in app_names]
+
+        if app_files:
+            logging.info(
+                f"Processing region with apps {app_names}: "
+                f"FLASH=0x{flash_start:x}/0x{flash_size:x}, RAM=0x{ram_start:x}/0x{ram_size:x}"
+            )
+            generate_elf_hex(
+                args, app_files, flash_start, flash_size, ram_start, ram_size
+            )
 
 
 def generate_fixup_src(args, in_dir, out_src: str):
@@ -702,6 +757,17 @@ def parse_args():
         "--outdir", type=str, required=True, help="Output directory for generated files"
     )
     parser.add_argument(
+        "--custom_layout",
+        type=str,
+        nargs="?",
+        default=None,
+        help="formatted as follows:"
+        "app1, [app2, [app3]], flash start, flash size, ram start, ram size"
+        "[, appX, flash startX, flash sizeX, ram startX, ram sizeX]"
+        "app1, app2, and app3 will allocate memory from flash start and ram start. Multiple app groups can be parsed."
+        "Use * to match all remaining apps.",
+    )
+    parser.add_argument(
         "--output",
         type=str,
         required=True,
@@ -749,12 +815,18 @@ def parse_args():
     else:
         args.toolchain = GnuToolchain()
 
+    # Ensure custom_layout always exists and has * for remaining apps
+    if not args.custom_layout:
+        args.custom_layout = f"*,{hex(args.flash[0])},{hex(args.flash[1])},{hex(args.ram[0])},{hex(args.ram[1])}"
+    elif "*" not in args.custom_layout:
+        args.custom_layout += f",*,{hex(args.flash[0])},{hex(args.flash[1])},{hex(args.ram[0])},{hex(args.ram[1])}"
+
     return args
 
 
 def run():
     args = parse_args()
-    generate_elf_hex(args)
+    generate_elf_out(args)
     generate_fixup_hex(args)
     generate_merge_hex(args)
     print("Fixed ELF generation completed successfully.")
