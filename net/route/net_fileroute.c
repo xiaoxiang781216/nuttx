@@ -42,16 +42,6 @@
 #if defined(CONFIG_ROUTE_IPv4_FILEROUTE) || defined(CONFIG_ROUTE_IPv6_FILEROUTE)
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* Special "impossible" PID value used to indicate that there is no holder
- * of the lock.
- */
-
-#define NO_HOLDER (INVALID_PROCESS_ID)
-
-/****************************************************************************
  * Private Data
  ****************************************************************************/
 

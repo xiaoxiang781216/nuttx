@@ -70,10 +70,11 @@ MEMPOOL_DEFINE(g_wrbuffer, sizeof(struct tcp_wrbuffer_s),
  *   Allocate a TCP write buffer by taking a pre-allocated buffer from
  *   the free list.  This function is called from TCP logic when a buffer
  *   of TCP data is about to sent
- *   This function is wrapped version of tcp_wrbuffer_alloc(),
  *   this wait will be terminated when the specified timeout expires.
  *
  * Input Parameters:
+ *   sconn     - The socket connection structure.
+ *   dev       - The network device structure.
  *   timeout   - The relative time to wait until a timeout is declared.
  *
  * Assumptions:
@@ -81,7 +82,9 @@ MEMPOOL_DEFINE(g_wrbuffer, sizeof(struct tcp_wrbuffer_s),
  *
  ****************************************************************************/
 
-FAR struct tcp_wrbuffer_s *tcp_wrbuffer_timedalloc(unsigned int timeout)
+FAR struct tcp_wrbuffer_s *
+tcp_wrbuffer_timedalloc(FAR struct socket_conn_s *sconn,
+                        FAR struct net_driver_s *dev, unsigned int timeout)
 {
   FAR struct tcp_wrbuffer_s *wrb;
 
@@ -101,7 +104,7 @@ FAR struct tcp_wrbuffer_s *tcp_wrbuffer_timedalloc(unsigned int timeout)
 
   /* Now get the first I/O buffer for the write buffer structure */
 
-  wrb->wb_iob = net_iobtimedalloc(true, timeout);
+  wrb->wb_iob = conn_dev_iobtimedalloc(true, timeout, sconn, dev);
 
   /* Did we get an IOB?  We should always get one except under some really
    * weird error conditions.
@@ -115,27 +118,6 @@ FAR struct tcp_wrbuffer_s *tcp_wrbuffer_timedalloc(unsigned int timeout)
     }
 
   return wrb;
-}
-
-/****************************************************************************
- * Name: tcp_wrbuffer_alloc
- *
- * Description:
- *   Allocate a TCP write buffer by taking a pre-allocated buffer from
- *   the free list.  This function is called from TCP logic when a buffer
- *   of TCP data is about to sent
- *
- * Input Parameters:
- *   None
- *
- * Assumptions:
- *   Called from user logic with the network locked.
- *
- ****************************************************************************/
-
-FAR struct tcp_wrbuffer_s *tcp_wrbuffer_alloc(void)
-{
-  return tcp_wrbuffer_timedalloc(UINT_MAX);
 }
 
 /****************************************************************************
@@ -158,7 +140,7 @@ FAR struct tcp_wrbuffer_s *tcp_wrbuffer_alloc(void)
 
 FAR struct tcp_wrbuffer_s *tcp_wrbuffer_tryalloc(void)
 {
-  return tcp_wrbuffer_timedalloc(0);
+  return tcp_wrbuffer_timedalloc(NULL, NULL, 0);
 }
 
 /****************************************************************************

@@ -352,9 +352,6 @@ ssize_t net_ioctl_arglen(uint8_t domain, int cmd);
  *   net_unlock()      - Unlocks the network.
  *   net_sem_wait()    - Like pthread_cond_wait() except releases the
  *                       network momentarily to wait on another semaphore.
- *   net_ioballoc()    - Like iob_alloc() except releases the network
- *                       momentarily to wait for an IOB to become
- *                       available.
  *
  ****************************************************************************/
 
@@ -374,25 +371,6 @@ ssize_t net_ioctl_arglen(uint8_t domain, int cmd);
  ****************************************************************************/
 
 int net_lock(void);
-
-/****************************************************************************
- * Name: net_trylock
- *
- * Description:
- *   Try to take the network lock only when it is currently not locked.
- *   Otherwise, it locks the semaphore.  In either
- *   case, the call returns without blocking.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returned on
- *   failured (probably -EAGAIN).
- *
- ****************************************************************************/
-
-int net_trylock(void);
 
 /****************************************************************************
  * Name: net_unlock
@@ -481,15 +459,16 @@ int net_sem_timedwait2(FAR sem_t *sem, bool interruptible,
                        unsigned int timeout, FAR rmutex_t *mutex1,
                        FAR rmutex_t *mutex2);
 
+struct net_driver_s; /* Forward reference */
 #ifdef CONFIG_MM_IOB
 
 /****************************************************************************
- * Name: net_iobtimedalloc
+ * Name: conn_dev_iobtimedalloc
  *
  * Description:
  *   Allocate an IOB.  If no IOBs are available, then atomically wait for
  *   for the IOB while temporarily releasing the lock on the network.
- *   This function is wrapped version of net_ioballoc(), this wait will
+ *   This function is wrapped version of conn_dev_ioballoc(), this wait will
  *   be terminated when the specified timeout expires.
  *
  *   Caution should be utilized.  Because the network lock is relinquished
@@ -500,6 +479,8 @@ int net_sem_timedwait2(FAR sem_t *sem, bool interruptible,
  * Input Parameters:
  *   throttled  - An indication of the IOB allocation is "throttled"
  *   timeout    - The relative time to wait until a timeout is declared.
+ *   sconn      - The socket connection structure.
+ *   dev        - The network device structure.
  *
  * Returned Value:
  *   A pointer to the newly allocated IOB is returned on success.  NULL is
@@ -507,22 +488,27 @@ int net_sem_timedwait2(FAR sem_t *sem, bool interruptible,
  *
  ****************************************************************************/
 
-FAR struct iob_s *net_iobtimedalloc(bool throttled, unsigned int timeout);
+FAR struct iob_s *
+conn_dev_iobtimedalloc(bool throttled, unsigned int timeout,
+                       FAR struct socket_conn_s *sconn,
+                       FAR struct net_driver_s *dev);
 
 /****************************************************************************
- * Name: net_ioballoc
+ * Name: conn_dev_ioballoc
  *
  * Description:
  *   Allocate an IOB.  If no IOBs are available, then atomically wait for
  *   for the IOB while temporarily releasing the lock on the network.
  *
  *   Caution should be utilized.  Because the network lock is relinquished
- *   during the wait, there could changes in the network state that occur
+ *   during the wait, there could be changes in the network state that occur
  *   before the lock is recovered.  Your design should account for this
  *   possibility.
  *
  * Input Parameters:
  *   throttled  - An indication of the IOB allocation is "throttled"
+ *   sconn      - The socket connection structure.
+ *   dev        - The network device structure.
  *
  * Returned Value:
  *   A pointer to the newly allocated IOB is returned on success.  NULL is
@@ -530,7 +516,9 @@ FAR struct iob_s *net_iobtimedalloc(bool throttled, unsigned int timeout);
  *
  ****************************************************************************/
 
-FAR struct iob_s *net_ioballoc(bool throttled);
+FAR struct iob_s *conn_dev_ioballoc(bool throttled,
+                                    FAR struct socket_conn_s *sconn,
+                                    FAR struct net_driver_s *dev);
 #endif
 
 /****************************************************************************
@@ -1461,7 +1449,6 @@ int psock_socketpair(int domain, int type, int protocol,
  *
  ****************************************************************************/
 
-struct net_driver_s; /* Forward reference */
 int netdev_register(FAR struct net_driver_s *dev, enum net_lltype_e lltype);
 
 /****************************************************************************

@@ -331,7 +331,7 @@ static uint32_t ieee802154_sendto_eventhandler(FAR struct net_driver_s *dev,
 
       /* Allocate an IOB to hold the frame data */
 
-      iob = net_ioballoc(false);
+      iob = conn_dev_ioballoc(false, pstate->is_sock->s_conn, dev);
       if (iob == NULL)
         {
           nwarn("WARNING: Failed to allocate IOB\n");
@@ -354,6 +354,7 @@ static uint32_t ieee802154_sendto_eventhandler(FAR struct net_driver_s *dev,
       if (ret < 0)
         {
           nerr("ERROR: r_req_data() failed: %d\n", ret);
+          iob_free_chain(iob);
           goto errout;
         }
 
