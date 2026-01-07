@@ -251,12 +251,21 @@ static int nfs_filecreate(FAR struct nfsmount *nmp, FAR struct nfsnode *np,
 {
   struct file_handle  fhandle;
   struct nfs_fattr    fattr;
-  char                filename[NAME_MAX + 1];
+  FAR char           *filename;
   FAR uint32_t       *ptr;
   uint32_t            tmp;
   int                 namelen;
   int                 reqlen;
   int                 ret;
+
+  /* Allocate buffer for filename */
+
+  filename = lib_get_tempbuffer(NAME_MAX + 1);
+  if (filename == NULL)
+    {
+      ferr("ERROR: Failed to allocate buffer for filename\n");
+      return -ENOMEM;
+    }
 
   /* Find the NFS node of the directory containing the file to be created */
 
@@ -264,7 +273,7 @@ static int nfs_filecreate(FAR struct nfsmount *nmp, FAR struct nfsnode *np,
   if (ret != OK)
     {
       ferr("ERROR: nfs_finddir returned: %d\n", ret);
-      return ret;
+      goto errout_with_filename;
     }
 
   /* Create the CREATE RPC call arguments */
@@ -358,7 +367,8 @@ static int nfs_filecreate(FAR struct nfsmount *nmp, FAR struct nfsnode *np,
       if (!tmp)
         {
           ferr("ERROR: no file handle follows\n");
-          return -EINVAL;
+          ret = -EINVAL;
+          goto errout_with_filename;
         }
 
       tmp = *ptr++;
@@ -386,6 +396,8 @@ static int nfs_filecreate(FAR struct nfsmount *nmp, FAR struct nfsnode *np,
       /* Any following dir_wcc data is ignored for now */
     }
 
+errout_with_filename:
+  lib_put_tempbuffer(filename);
   return ret;
 }
 
@@ -2454,7 +2466,7 @@ static int nfs_remove(FAR struct inode *mountpt, FAR const char *relpath)
   FAR struct nfsmount *nmp;
   struct file_handle   fhandle;
   struct nfs_fattr     fattr;
-  char                 filename[NAME_MAX + 1];
+  FAR char            *filename;
   FAR uint32_t        *ptr;
   int                  namelen;
   int                  reqlen;
@@ -2468,10 +2480,19 @@ static int nfs_remove(FAR struct inode *mountpt, FAR const char *relpath)
 
   nmp = mountpt->i_private;
 
+  /* Allocate buffer for filename */
+
+  filename = lib_get_tempbuffer(NAME_MAX + 1);
+  if (filename == NULL)
+    {
+      ferr("ERROR: Failed to allocate buffer for filename\n");
+      return -ENOMEM;
+    }
+
   ret = nxmutex_lock(&nmp->nm_lock);
   if (ret < 0)
     {
-      return ret;
+      goto errout_with_filename;
     }
 
   /* Find the NFS node of the directory containing the file to be deleted */
@@ -2516,6 +2537,9 @@ static int nfs_remove(FAR struct inode *mountpt, FAR const char *relpath)
 
 errout_with_lock:
   nxmutex_unlock(&nmp->nm_lock);
+
+errout_with_filename:
+  lib_put_tempbuffer(filename);
   return ret;
 }
 
@@ -2536,7 +2560,7 @@ static int nfs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
   FAR struct nfsmount *nmp;
   struct file_handle   fhandle;
   struct nfs_fattr     fattr;
-  char                 dirname[NAME_MAX + 1];
+  FAR char            *dirname;
   FAR uint32_t        *ptr;
   uint32_t             tmp;
   int                  namelen;
@@ -2551,10 +2575,19 @@ static int nfs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
 
   nmp = mountpt->i_private;
 
+  /* Allocate buffer for dirname */
+
+  dirname = lib_get_tempbuffer(NAME_MAX + 1);
+  if (dirname == NULL)
+    {
+      ferr("ERROR: Failed to allocate buffer for dirname\n");
+      return -ENOMEM;
+    }
+
   ret = nxmutex_lock(&nmp->nm_lock);
   if (ret < 0)
     {
-      return ret;
+      goto errout_with_dirname;
     }
 
   /* Find the NFS node of the directory containing the directory to be
@@ -2643,6 +2676,9 @@ static int nfs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
 
 errout_with_lock:
   nxmutex_unlock(&nmp->nm_lock);
+
+errout_with_dirname:
+  lib_put_tempbuffer(dirname);
   return ret;
 }
 
@@ -2662,7 +2698,7 @@ static int nfs_rmdir(FAR struct inode *mountpt, FAR const char *relpath)
   FAR struct nfsmount *nmp;
   struct file_handle   fhandle;
   struct nfs_fattr     fattr;
-  char                 dirname[NAME_MAX + 1];
+  FAR char            *dirname;
   FAR uint32_t        *ptr;
   int                  namelen;
   int                  reqlen;
@@ -2676,10 +2712,19 @@ static int nfs_rmdir(FAR struct inode *mountpt, FAR const char *relpath)
 
   nmp = mountpt->i_private;
 
+  /* Allocate buffer for dirname */
+
+  dirname = lib_get_tempbuffer(NAME_MAX + 1);
+  if (dirname == NULL)
+    {
+      ferr("ERROR: Failed to allocate buffer for dirname\n");
+      return -ENOMEM;
+    }
+
   ret = nxmutex_lock(&nmp->nm_lock);
   if (ret < 0)
     {
-      return ret;
+      goto errout_with_dirname;
     }
 
   /* Find the NFS node of the directory containing the directory to be
@@ -2726,6 +2771,9 @@ static int nfs_rmdir(FAR struct inode *mountpt, FAR const char *relpath)
 
 errout_with_lock:
   nxmutex_unlock(&nmp->nm_lock);
+
+errout_with_dirname:
+  lib_put_tempbuffer(dirname);
   return ret;
 }
 
@@ -2746,8 +2794,8 @@ static int nfs_rename(FAR struct inode *mountpt, FAR const char *oldrelpath,
   FAR struct nfsmount *nmp;
   struct file_handle   from_handle;
   struct file_handle   to_handle;
-  char                 from_name[NAME_MAX + 1];
-  char                 to_name[NAME_MAX + 1];
+  FAR char            *from_name;
+  FAR char            *to_name;
   struct nfs_fattr     fattr;
   FAR uint32_t        *ptr;
   int                  namelen;
@@ -2762,10 +2810,27 @@ static int nfs_rename(FAR struct inode *mountpt, FAR const char *oldrelpath,
 
   nmp = mountpt->i_private;
 
+  /* Allocate buffers for from_name and to_name */
+
+  from_name = lib_get_tempbuffer(NAME_MAX + 1);
+  if (from_name == NULL)
+    {
+      ferr("ERROR: Failed to allocate buffer for from_name\n");
+      return -ENOMEM;
+    }
+
+  to_name = lib_get_tempbuffer(NAME_MAX + 1);
+  if (to_name == NULL)
+    {
+      ferr("ERROR: Failed to allocate buffer for to_name\n");
+      ret = -ENOMEM;
+      goto errout_with_from_name;
+    }
+
   ret = nxmutex_lock(&nmp->nm_lock);
   if (ret < 0)
     {
-      return ret;
+      goto errout_with_to_name;
     }
 
   /* Find the NFS node of the directory containing the 'from' object */
@@ -2839,6 +2904,12 @@ static int nfs_rename(FAR struct inode *mountpt, FAR const char *oldrelpath,
 
 errout_with_lock:
   nxmutex_unlock(&nmp->nm_lock);
+
+errout_with_to_name:
+  lib_put_tempbuffer(to_name);
+
+errout_with_from_name:
+  lib_put_tempbuffer(from_name);
   return ret;
 }
 
