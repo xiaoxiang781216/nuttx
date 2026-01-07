@@ -203,30 +203,36 @@ int symlink(FAR const char *path1, FAR const char *path2)
         {
           if (desc.node->u.i_mops && desc.node->u.i_mops->symlink)
             {
-              SETUP_SEARCH(&target_desc, path1, true);
-              ret = inode_search(&target_desc);
-              if (ret < 0 || target_desc.node != desc.node)
-                {
-                  /* This file does not exist or is not on the same
-                   * mountpoint with the symlink, which is not
-                   * supported in our system, so return error.
-                   */
-
-                  errcode = ENOSYS;
-                  goto errout_with_target_desc;
-                }
-
-              /* Now we have:
-               * desc.relpath - symlink path relative to mountpoint
-               * target_desc.relpath - target path relative to mountpoint
-               * If path1 is absolute, convert target_desc.relpath to
-               * relative path from symlink's directory.
-               * If path1 is relative, use it as-is.
-               */
-
               if (path1[0] == '/')
                 {
-                  FAR char *target_relpath = lib_get_tempbuffer(PATH_MAX);
+                  FAR char *target_relpath;
+
+                  SETUP_SEARCH(&target_desc, path1, true);
+                  ret = inode_search(&target_desc);
+                  if (ret < 0 || target_desc.node != desc.node)
+                    {
+                      /* This file does not exist or is not on the same
+                       * mountpoint with the symlink, which is not
+                       * supported in our system, so return error.
+                       */
+
+                      errcode = ENOSYS;
+                      goto errout_with_target_desc;
+                    }
+
+                  /* Now we have:
+                   * desc.relpath - symlink path relative to mountpoint
+                   * target_desc.relpath - target path relative to mountpoint
+                   * Convert target_desc.relpath to relative path from
+                   * symlink's directory.
+                   */
+
+                  target_relpath = lib_get_tempbuffer(PATH_MAX);
+                  if (target_relpath == NULL)
+                    {
+                      errcode = ENOMEM;
+                      goto errout_with_target_desc;
+                    }
 
                   /* Get relative path from symlink's directory to target */
 
@@ -244,6 +250,7 @@ int symlink(FAR const char *path1, FAR const char *path2)
                                                      target_relpath,
                                                      desc.relpath);
                   lib_put_tempbuffer(target_relpath);
+                  RELEASE_SEARCH(&target_desc);
                 }
               else
                 {
@@ -254,10 +261,8 @@ int symlink(FAR const char *path1, FAR const char *path2)
               if (ret < 0)
                 {
                   errcode = -ret;
-                  goto errout_with_target_desc;
+                  goto errout_with_inode;
                 }
-
-              RELEASE_SEARCH(&target_desc);
             }
           else
             {
