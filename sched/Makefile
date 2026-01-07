@@ -42,6 +42,7 @@ include timer/Make.defs
 include tls/Make.defs
 include wdog/Make.defs
 include wqueue/Make.defs
+include hrtimer/Make.defs
 
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)sched
 
