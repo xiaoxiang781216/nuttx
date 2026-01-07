@@ -105,7 +105,7 @@ FAR struct icmp_conn_s *icmp_alloc(void)
     {
       /* Enqueue the connection into the active list */
 
-      dq_addlast(&conn->sconn.node, &g_active_icmp_connections);
+      dq_addlast(&conn->sconn.s_node, &g_active_icmp_connections);
     }
 
   icmp_conn_list_unlock();
@@ -138,7 +138,7 @@ void icmp_free(FAR struct icmp_conn_s *conn)
 
   /* Remove the connection from the active list */
 
-  dq_rem(&conn->sconn.node, &g_active_icmp_connections);
+  dq_rem(&conn->sconn.s_node, &g_active_icmp_connections);
   nxrmutex_destroy(&conn->sconn.s_lock);
 
   /* Free the connection. */
@@ -178,7 +178,7 @@ FAR struct icmp_conn_s *icmp_active(uint16_t id)
 
       /* Look at the next active connection */
 
-      conn = (FAR struct icmp_conn_s *)conn->sconn.node.flink;
+      conn = (FAR struct icmp_conn_s *)conn->sconn.s_node.flink;
     }
 
   return conn;
@@ -203,7 +203,7 @@ FAR struct icmp_conn_s *icmp_nextconn(FAR struct icmp_conn_s *conn)
     }
   else
     {
-      return (FAR struct icmp_conn_s *)conn->sconn.node.flink;
+      return (FAR struct icmp_conn_s *)conn->sconn.s_node.flink;
     }
 }
 

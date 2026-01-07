@@ -123,7 +123,7 @@ uint32_t can_callback(FAR struct net_driver_s *dev,
   if (conn)
     {
       conn_lock(&conn->sconn);
-      flags = devif_conn_event(dev, flags, conn->sconn.list);
+      flags = devif_conn_event(dev, flags, conn->sconn.s_list);
       conn_unlock(&conn->sconn);
 
       /* Either we did not get the lock or there is no application listening

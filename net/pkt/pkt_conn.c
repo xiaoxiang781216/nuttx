@@ -110,7 +110,7 @@ FAR struct pkt_conn_s *pkt_alloc(void)
     {
       /* Enqueue the connection into the active list */
 
-      dq_addlast(&conn->sconn.node, &g_active_pkt_connections);
+      dq_addlast(&conn->sconn.s_node, &g_active_pkt_connections);
     }
 
   pkt_conn_list_unlock();
@@ -136,7 +136,7 @@ void pkt_free(FAR struct pkt_conn_s *conn)
 
   /* Remove the connection from the active list */
 
-  dq_rem(&conn->sconn.node, &g_active_pkt_connections);
+  dq_rem(&conn->sconn.s_node, &g_active_pkt_connections);
   nxrmutex_destroy(&conn->sconn.s_lock);
 
 #ifdef CONFIG_NET_PKT_WRITE_BUFFERS
@@ -171,7 +171,7 @@ FAR struct pkt_conn_s *pkt_nextconn(FAR struct pkt_conn_s *conn)
     }
   else
     {
-      return (FAR struct pkt_conn_s *)conn->sconn.node.flink;
+      return (FAR struct pkt_conn_s *)conn->sconn.s_node.flink;
     }
 }
 

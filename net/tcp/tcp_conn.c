@@ -224,7 +224,7 @@ tcp_ipv4_active(FAR struct net_driver_s *dev, FAR struct tcp_hdr_s *tcp)
 
       /* Look at the next active connection */
 
-      conn = (FAR struct tcp_conn_s *)conn->sconn.node.flink;
+      conn = (FAR struct tcp_conn_s *)conn->sconn.s_node.flink;
     }
 
   return conn;
@@ -291,7 +291,7 @@ tcp_ipv6_active(FAR struct net_driver_s *dev, FAR struct tcp_hdr_s *tcp)
 
       /* Look at the next active connection */
 
-      conn = (FAR struct tcp_conn_s *)conn->sconn.node.flink;
+      conn = (FAR struct tcp_conn_s *)conn->sconn.s_node.flink;
     }
 
   return conn;
@@ -664,7 +664,7 @@ FAR struct tcp_conn_s *tcp_alloc(uint8_t domain)
 
           /* Look at the next active connection */
 
-          tmp = (FAR struct tcp_conn_s *)tmp->sconn.node.flink;
+          tmp = (FAR struct tcp_conn_s *)tmp->sconn.s_node.flink;
         }
 
       /* Did we find a connection that we can re-use? */
@@ -824,7 +824,7 @@ void tcp_free(FAR struct tcp_conn_s *conn)
    * callback for CONFIG_NET_TCP_WRITE_BUFFERS is left.
    */
 
-  for (cb = conn->sconn.list; cb; cb = next)
+  for (cb = conn->sconn.s_list; cb; cb = next)
     {
       next = cb->nxtconn;
       tcp_callback_free(conn, cb);
@@ -841,7 +841,7 @@ void tcp_free(FAR struct tcp_conn_s *conn)
       /* Remove the connection from the active list */
 
       tcp_conn_list_lock();
-      dq_rem(&conn->sconn.node, &g_active_tcp_connections);
+      dq_rem(&conn->sconn.s_node, &g_active_tcp_connections);
       tcp_conn_list_unlock();
     }
 
@@ -1024,7 +1024,7 @@ FAR struct tcp_conn_s *tcp_nextconn(FAR struct tcp_conn_s *conn)
     }
   else
     {
-      return (FAR struct tcp_conn_s *)conn->sconn.node.flink;
+      return (FAR struct tcp_conn_s *)conn->sconn.s_node.flink;
     }
 }
 
@@ -1530,7 +1530,7 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 void tcp_add_active_conn(FAR struct tcp_conn_s *conn)
 {
   tcp_conn_list_lock();
-  dq_addlast(&conn->sconn.node, &g_active_tcp_connections);
+  dq_addlast(&conn->sconn.s_node, &g_active_tcp_connections);
   tcp_conn_list_unlock();
 }
 
@@ -1547,7 +1547,7 @@ void tcp_add_active_conn(FAR struct tcp_conn_s *conn)
 
 void tcp_removeconn(FAR struct tcp_conn_s *conn)
 {
-  dq_rem(&conn->sconn.node, &g_active_tcp_connections);
+  dq_rem(&conn->sconn.s_node, &g_active_tcp_connections);
 }
 
 /****************************************************************************
@@ -1572,7 +1572,7 @@ void tcp_remove_syn_backlog(FAR struct tcp_conn_s *listener)
   while (next)
     {
       conn = next;
-      next = (FAR struct tcp_conn_s *)conn->sconn.node.flink;
+      next = (FAR struct tcp_conn_s *)conn->sconn.s_node.flink;
       if (conn->tcpstateflags == TCP_SYN_RCVD &&
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
           tcp_conn_cmp(listener->domain,

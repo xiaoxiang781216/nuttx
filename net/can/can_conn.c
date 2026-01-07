@@ -122,7 +122,7 @@ FAR struct can_conn_s *can_alloc(void)
 
       /* Enqueue the connection into the active list */
 
-      dq_addlast(&conn->sconn.node, &g_active_can_connections);
+      dq_addlast(&conn->sconn.s_node, &g_active_can_connections);
     }
 
   can_conn_list_unlock();
@@ -148,7 +148,7 @@ void can_free(FAR struct can_conn_s *conn)
 
   /* Remove the connection from the active list */
 
-  dq_rem(&conn->sconn.node, &g_active_can_connections);
+  dq_rem(&conn->sconn.s_node, &g_active_can_connections);
   nxrmutex_destroy(&conn->sconn.s_lock);
 
 #ifdef CONFIG_NET_CAN_WRITE_BUFFERS
@@ -251,7 +251,7 @@ FAR struct can_conn_s *can_nextconn(FAR struct can_conn_s *conn)
     }
   else
     {
-      return (FAR struct can_conn_s *)conn->sconn.node.flink;
+      return (FAR struct can_conn_s *)conn->sconn.s_node.flink;
     }
 }
 
