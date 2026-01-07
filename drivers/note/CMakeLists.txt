@@ -42,10 +42,6 @@ if(CONFIG_DRIVERS_NOTELOG)
   list(APPEND SRCS notelog_driver.c)
 endif()
 
-if(CONFIG_DRIVERS_NOTECTL)
-  list(APPEND SRCS notectl_driver.c)
-endif()
-
 if(CONFIG_DRIVERS_NOTESNAP)
   list(APPEND SRCS notesnap_driver.c)
 endif()

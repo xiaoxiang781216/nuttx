@@ -142,6 +142,13 @@ int note_initialize(void)
   instrument_register(&g_note_instrument);
 #endif
 
+  ret = note_driver_initialize();
+  if (ret < 0)
+    {
+      serr("note_driver_initialize failed %d\n", ret);
+      return ret;
+    }
+
 #ifdef CONFIG_DRIVERS_NOTERAM
   ret = noteram_register();
   if (ret < 0)
@@ -174,15 +181,6 @@ int note_initialize(void)
   if (ret < 0)
     {
       serr("notertt_register failed %d\n", ret);
-      return ret;
-    }
-#endif
-
-#ifdef CONFIG_DRIVERS_NOTECTL
-  ret = notectl_register();
-  if (ret < 0)
-    {
-      serr("notectl_register failed %d\n", ret);
       return ret;
     }
 #endif

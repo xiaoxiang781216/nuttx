@@ -3,26 +3,30 @@ Note Driver Interface
 =====================
 
 Note driver is the interface to access the instrumentation data.
-The following devices are provided.
+Each note driver registers its own device node at ``/dev/note/<driver_name>``.
+For example:
 
-- :ref:`notectl`
-- :ref:`noteram`
+- ``/dev/note/ram`` - RAM note driver
+- ``/dev/note/log`` - Log note driver
+- ``/dev/note/rpmsg`` - RPMSG note driver
 
-.. _notectl:
+Each device node supports ioctl commands to control its own instrumentation filter.
 
-Notectl Device (``/dev/notectl``)
-=================================
+.. _noteram:
 
-  ``/dev/notectl`` is the device to control an instrumentation filter in NuttX kernel.
-  The device has only ioctl function to control the filter.
+Note Device (``/dev/note/<driver_name>``)
+=========================================
 
-``/dev/notectl`` Header Files
------------------------------
+  ``/dev/note/<driver_name>`` is the device to access instrumentation data and control filters.
+  Each note driver registers its own device node with its driver name.
 
-  The header file ``include/nuttx/note/notectl_driver.h`` provides the interface definitions of the device.
+Common Header Files
+-------------------
 
-``/dev/notectl`` Data Structures
---------------------------------
+  The header file ``include/nuttx/note/note_driver.h`` provides the common interface definitions.
+
+Common Data Structures
+----------------------
 
 .. c:struct:: note_filter_mode_s
 
@@ -30,25 +34,13 @@ Notectl Device (``/dev/notectl``)
 
     struct note_filter_mode_s
     {
-      unsigned int flag;          /* Filter mode flag */
+      unsigned int type_mask;     /* Filter mode type mask */
     #ifdef CONFIG_SMP
-      unsigned int cpuset;        /* The set of monitored CPUs */
+      cpu_set_t cpuset;           /* The set of monitored CPUs */
     #endif
     };
 
-  - ``flag`` : Filter mode flag. The bitwise OR of the following defines are available.
-
-    .. c:macro:: NOTE_FILTER_MODE_FLAG_ENABLE
-
-      Enable instrumentation
-
-    .. c:macro:: NOTE_FILTER_MODE_FLAG_SYSCALL
-
-      Enable syscall instrumentation
-
-    .. c:macro:: NOTE_FILTER_MODE_FLAG_IRQ
-
-      Enable IRQ instrumentaiton
+  - ``type_mask`` : Filter mode type mask. Controls which types of notes are recorded.
 
   - ``cpuset`` : (SMP only) Monitor only CPUs in the bitset. Bit 0=CPU0, Bit1=CPU1, etc.
 
@@ -108,97 +100,127 @@ Notectl Device (``/dev/notectl``)
 
       Clear all masks.
 
-``/dev/notectl`` Ioctls
------------------------
+.. c:struct:: note_filter_tag_s
 
-.. c:macro:: NOTECTL_GETMODE
+  .. code-block:: c
 
-  Get note filter mode
+    struct note_filter_tag_s
+    {
+      uint8_t tag_mask[];
+    };
+
+  - ``tag_mask`` : A bitmap array of the tag filter. If a bit is set, the corresponding tag is not recorded.
+    The following helper macros are available:
+
+    .. c:macro:: NOTE_FILTER_TAGMASK_SET(nr, s)
+
+      Set tag number `nr` as masked.
+
+    .. c:macro:: NOTE_FILTER_TAGMASK_CLR(nr, s)
+
+      Set tag number `nr` as unmasked.
+
+    .. c:macro:: NOTE_FILTER_TAGMASK_ISSET(nr, s)
+
+      Check whether tag number `nr` is masked or not. True if masked.
+
+    .. c:macro:: NOTE_FILTER_TAGMASK_ZERO(s)
+
+      Clear all masks.
+
+Common Ioctls
+-------------
+
+  The following ioctl commands are supported by all note driver device nodes.
+
+.. c:macro:: NOTE_GETFILTER
+
+  Get note filter mode for this driver
 
   :argument: A writable pointer to :c:struct:`note_filter_mode_s`
 
   :return: If success, 0 (``OK``) is returned and current note filter mode is stored into the given pointer.
     If failed, a negated ``errno`` is returned.
 
-.. c:macro:: NOTECTL_SETMODE
+.. c:macro:: NOTE_SETFILTER
 
-  Set note filter mode
+  Set note filter mode for this driver
 
   :argument: A read-only pointer to :c:struct:`note_filter_mode_s`
 
   :return: If success, 0 (``OK``) is returned and the given filter mode is set as the current settings.
     If failed, a negated ``errno`` is returned.
 
-.. c:macro:: NOTECTL_GETSYSCALLFILTER
+.. c:macro:: NOTE_GETSYSCALLFILTER
 
-  Get syscall filter setting
+  Get syscall filter setting for this driver
 
   :argument: A writable pointer to :c:struct:`note_filter_syscall_s`
 
   :return: If success, 0 (``OK``) is returned and current syscall filter mode is stored into the given pointer.
     If failed, a negated ``errno`` is returned.
 
-.. c:macro:: NOTECTL_SETSYSCALLFILTER
+.. c:macro:: NOTE_SETSYSCALLFILTER
 
-  Set syscall filter setting
+  Set syscall filter setting for this driver
 
   :argument: A read-only pointer to :c:struct:`note_filter_syscall_s`
 
   :return: If success, 0 (``OK``) is returned and the given syscall filter mode is set as the current settings.
     If failed, a negated ``errno`` is returned.
 
-.. c:macro:: NOTECTL_GETIRQFILTER
+.. c:macro:: NOTE_GETIRQFILTER
 
-  Get IRQ filter setting
+  Get IRQ filter setting for this driver
 
   :argument: A writable pointer to :c:struct:`note_filter_irq_s`
 
   :return: If success, 0 (``OK``) is returned and current IRQ filter mode is stored into the given pointer.
     If failed, a negated ``errno`` is returned.
 
-.. c:macro:: NOTECTL_SETIRQFILTER
+.. c:macro:: NOTE_SETIRQFILTER
 
-  Set IRQ filter setting
+  Set IRQ filter setting for this driver
 
   :argument: A read-only pointer to :c:struct:`note_filter_irq_s`
 
   :return: If success, 0 (``OK``) is returned and the given IRQ filter mode is set as the current settings.
     If failed, a negated ``errno`` is returned.
 
-.. _noteram:
+.. c:macro:: NOTE_GETTAGFILTER
 
-Noteram Device (``/dev/note``)
-==============================
+  Get tag filter setting for this driver
 
-  ``/dev/note`` is the device to get the trace (instrumentation) data.
-  The device has read function to get the data and ioctl function to control the buffer mode.
+  :argument: A writable pointer to :c:struct:`note_filter_tag_s`
 
-``/dev/note`` Header Files
---------------------------
+  :return: If success, 0 (``OK``) is returned and current tag filter mode is stored into the given pointer.
+    If failed, a negated ``errno`` is returned.
+
+.. c:macro:: NOTE_SETTAGFILTER
+
+  Set tag filter setting for this driver
+
+  :argument: A read-only pointer to :c:struct:`note_filter_tag_s`
+
+  :return: If success, 0 (``OK``) is returned and the given tag filter mode is set as the current settings.
+    If failed, a negated ``errno`` is returned.
+
+Noteram Device (``/dev/note/ram``)
+==================================
+
+  ``/dev/note/ram`` is the RAM-based note driver device.
+  In addition to common ioctls, it provides read function to get the trace data
+  and additional ioctls to control the buffer mode.
+
+``/dev/note/ram`` Header Files
+------------------------------
 
   The header file ``include/nuttx/note/noteram_driver.h`` provides the interface definitions of the device.
 
-``/dev/note`` Data Structures
---------------------------------
+``/dev/note/ram`` Additional Ioctls
+-----------------------------------
 
-.. c:struct:: noteram_get_taskname_s
-
-  .. code-block:: c
-
-    struct noteram_get_taskname_s
-    {
-      pid_t pid;
-      char taskname[CONFIG_TASK_NAME_SIZE + 1];
-    };
-
-  - ``pid`` : Task ID to get the task name.
-
-  - ``taskname`` : The task name string corresponding to given pid.
-
-``/dev/note`` Ioctls
---------------------
-
-.. c:macro:: NOTERAM_CLEAR
+.. c:macro:: NOTE_CLEAR
 
   Clear all contents of the circular buffer
 
@@ -206,29 +228,29 @@ Noteram Device (``/dev/note``)
 
   :return: Always returns 0.
 
-.. c:macro:: NOTERAM_GETMODE
+.. c:macro:: NOTE_GETMODE
 
   Get overwrite mode
 
   :argument: A writable pointer to ``unsigned int``.
     The overwrite mode takes one of the following values.
 
-    .. c:macro:: NOTERAM_MODE_OVERWRITE_DISABLE
+    .. c:macro:: NOTE_MODE_OVERWRITE_DISABLE
 
       Overwrite mode is disabled. When the buffer is full, accepting the data will be stopped.
 
-    .. c:macro:: NOTERAM_MODE_OVERWRITE_ENABLE
+    .. c:macro:: NOTE_MODE_OVERWRITE_ENABLE
 
       Overwrite mode is enabled.
 
-    .. c:macro:: NOTERAM_MODE_OVERWRITE_OVERFLOW
+    .. c:macro:: NOTE_MODE_OVERWRITE_OVERFLOW
 
       Overwrite mode is disabled and the buffer is already full.
 
   :return: If success, 0 (``OK``) is returned and current overwrite mode is stored into the given pointer.
            If failed, a negated ``errno`` is returned.
 
-.. c:macro:: NOTERAM_SETMODE
+.. c:macro:: NOTE_SETMODE
 
   Set overwrite mode
 
@@ -237,49 +259,21 @@ Noteram Device (``/dev/note``)
   :return: If success, 0 (``OK``) is returned and the given overwriter mode is set as the current settings.
     If failed, a negated ``errno`` is returned.
 
-Filter control APIs
-===================
+.. c:macro:: NOTE_GETREADMODE
 
-The following APIs are the functions to control note filters directly.
-These are kernel APIs and application can use them only in FLAT build.
+  Get read mode (binary or text)
 
-The header file ``include/nuttx/sched_note.h`` is needed to use the following APIs.
+  :argument: A writable pointer to ``unsigned int``.
 
-API description
----------------
+  :return: If success, 0 (``OK``) is returned and current read mode is stored into the given pointer.
+           If failed, a negated ``errno`` is returned.
 
-.. c:function:: void sched_note_filter_mode(struct note_filter_mode_s *oldm, struct note_filter_mode_s *newm);
+.. c:macro:: NOTE_SETREADMODE
 
-  Set and get note filter mode.
-  (Same as :c:macro:`NOTECTL_GETMODE` / :c:macro:`NOTECTL_SETMODE` ioctls)
+  Set read mode (binary or text)
 
-  :param oldm: A writable pointer to :c:struct:`note_filter_mode_s` to get current filter mode.
-    If 0, no data is written.
-  :param newm: A read-only pointer to :c:struct:`note_filter_mode_s` which holds the new filter mode.
-    If 0, the filter mode is not updated.
+  :argument: A read-only pointer to ``unsigned int``.
 
-  :return: None
+  :return: If success, 0 (``OK``) is returned and the given read mode is set as the current settings.
+    If failed, a negated ``errno`` is returned.
 
-.. c:function:: void sched_note_filter_syscall(struct note_filter_syscall_s *oldf, struct note_filter_syscall_s *newf);
-
-  Set and get syscall filter setting.
-  (Same as :c:macro:`NOTECTL_GETSYSCALLFILTER` / :c:macro:`NOTECTL_SETSYSCALLFILTER` ioctls)
-
-  :param oldf: A writable pointer to :c:struct:`note_filter_syscall_s` to get current syscall filter setting.
-    If 0, no data is written.
-  :param newf: A read-only pointer to :c:struct:`note_filter_syscall_s` of the new syscall filter setting.
-    If 0, the setting is not updated.
-
-  :return: None
-
-.. c:function:: void sched_note_filter_irq(struct note_filter_irq_s *oldf, struct note_filter_irq_s *newf);
-
-  Set and get IRQ filter setting.
-  (Same as :c:macro:`NOTECTL_GETIRQFILTER` / :c:macro:`NOTECTL_SETIRQFILTER` ioctls)
-
-  :param oldf: A writable pointer to :c:struct:`note_filter_irq_s` to get current IRQ filter setting.
-    If 0, no data is written.
-  :param newf: A read-only pointer to :c:struct:`note_filter_irq_s` of the new IRQ filter setting.
-    If 0, the setting is not updated.
-
-  :return: None

@@ -153,25 +153,6 @@ void note_common(FAR struct tcb_s *tcb, FAR struct note_common_s *note,
                  uint8_t length, uint8_t type);
 
 /****************************************************************************
- * Name: notectl_register
- *
- * Description:
- *   Register a driver at /dev/notectl that can be used by an application to
- *   control the note filter.
- *
- * Input Parameters:
- *   None.
- *
- * Returned Value:
- *   Zero on succress. A negated errno value is returned on a failure.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_DRIVERS_NOTECTL
-int notectl_register(void);
-#endif
-
-/****************************************************************************
  * Name: noteram_register
  *
  * Description:
@@ -223,5 +204,11 @@ int noterpmsg_server_init(void);
 #ifdef CONFIG_DRIVERS_NOTERPMSG
 int noterpmsg_init(void);
 #endif
+
+/****************************************************************************
+ * Name: note_driver_initialize
+ ****************************************************************************/
+
+int note_driver_initialize(void);
 
 #endif /* __NUTTX_DRIVERS_NOTE_NOTE_DRIVER_H */

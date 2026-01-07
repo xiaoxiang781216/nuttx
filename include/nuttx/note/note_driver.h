@@ -305,6 +305,15 @@ struct note_driver_ops_s
                        uint8_t level, uintptr_t ip, uint64_t type,
                        FAR const char *fmt, va_list va) printf_like(6, 0);
 #endif
+  CODE int (*open)(FAR struct file *filep);
+  CODE int (*close)(FAR struct file *filep);
+  CODE ssize_t (*read)(FAR struct file *filep, FAR char *buffer,
+                       size_t buflen);
+  CODE ssize_t (*write)(FAR struct file *filep, FAR const char *buffer,
+                        size_t buflen);
+  CODE int (*ioctl)(FAR struct file *filep, int cmd, unsigned long arg);
+  CODE int (*poll)(FAR struct file *filep, FAR struct pollfd *fds,
+                   bool setup);
 };
 
 /* This is the type of the argument passed to the NOTE_GETRATELIMIT and
@@ -461,88 +470,5 @@ int note_driver_register(FAR struct note_driver_s *driver);
  ****************************************************************************/
 
 void note_driver_unregister(FAR struct note_driver_s *driver);
-
-/****************************************************************************
- * Name: note_filter_mode
- *
- * Description:
- *   Set and get note filter mode.
- *   (Same as NOTECTL_GETMODE / NOTECTL_SETMODE ioctls)
- *
- * Input Parameters:
- *   oldm - A writable pointer to struct note_filter_mode_s to get current
- *          filter mode
- *          If 0, no data is written.
- *   newm - A read-only pointer to struct note_filter_mode_s which holds the
- *          new filter mode
- *          If 0, the filter mode is not updated.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-void note_filter_mode(FAR struct note_filter_named_mode_s *oldm,
-                      FAR struct note_filter_named_mode_s *newm);
-#endif
-
-/****************************************************************************
- * Name: note_filter_syscall
- *
- * Description:
- *   Set and get syscall filter setting
- *   (Same as NOTECTL_GETSYSCALLFILTER / NOTECTL_SETSYSCALLFILTER ioctls)
- *
- * Input Parameters:
- *   oldf - A writable pointer to struct note_filter_syscall_s to get
- *          current syscall filter setting
- *          If 0, no data is written.
- *   newf - A read-only pointer to struct note_filter_syscall_s of the
- *          new syscall filter setting
- *          If 0, the setting is not updated.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
-    defined(CONFIG_SCHED_INSTRUMENTATION_SYSCALL)
-void note_filter_syscall(FAR struct note_filter_named_syscall_s *oldf,
-                         FAR struct note_filter_named_syscall_s *newf);
-#endif
-
-/****************************************************************************
- * Name: note_filter_irq
- *
- * Description:
- *   Set and get IRQ filter setting
- *   (Same as NOTECTL_GETIRQFILTER / NOTECTL_SETIRQFILTER ioctls)
- *
- * Input Parameters:
- *   oldf - A writable pointer to struct note_filter_irq_s to get
- *          current IRQ filter setting
- *          If 0, no data is written.
- *   newf - A read-only pointer to struct note_filter_irq_s of the new
- *          IRQ filter setting
- *          If 0, the setting is not updated.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
-    defined(CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER)
-void note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
-                     FAR struct note_filter_named_irq_s *newf);
-#endif
-
-#if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
-    defined(CONFIG_SCHED_INSTRUMENTATION_DUMP)
-void note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
-                     FAR struct note_filter_named_tag_s *newf);
-#endif
 
 #endif /* __INCLUDE_NUTTX_NOTE_NOTE_DRIVER_H */

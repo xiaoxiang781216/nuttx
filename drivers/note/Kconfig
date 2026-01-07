@@ -34,14 +34,6 @@ config DRIVERS_NOTE_CLOCKID
 		If -1 means disable timestamp add note comm.
 		CLOCK_REALTIME, CLOCK_MONOTONIC etc. clockID
 
-config DRIVERS_NOTECTL
-	bool "Scheduler instrumentation filter control driver"
-	depends on SCHED_INSTRUMENTATION_FILTER
-	default SCHED_INSTRUMENTATION_FILTER
-	---help---
-		If this option is selected, the instrumentation filter control device
-		/dev/notectl is provided.
-
 config DRIVERS_NOTE_RATELIMIT_INTERVAL
 	int "NOTE rate limiting interval"
 	default 0

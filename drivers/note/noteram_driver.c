@@ -170,19 +170,6 @@ static void noteram_timeout_handler(wdparm_t arg);
  * Private Data
  ****************************************************************************/
 
-static const struct file_operations g_noteram_fops =
-{
-  noteram_open,  /* open */
-  noteram_close, /* close */
-  noteram_read,  /* read */
-  NULL,          /* write */
-  NULL,          /* seek */
-  noteram_ioctl, /* ioctl */
-  NULL,          /* mmap */
-  NULL,          /* truncate */
-  noteram_poll,  /* poll */
-};
-
 static
 #ifdef DRIVERS_NOTERAM_SECTION
 locate_data(CONFIG_DRIVERS_NOTERAM_SECTION)
@@ -195,7 +182,12 @@ struct noteram_buffer_s
 
 static const struct note_driver_ops_s g_noteram_ops =
 {
-  noteram_add
+  .add = noteram_add,
+  .open = noteram_open,
+  .close = noteram_close,
+  .read = noteram_read,
+  .ioctl = noteram_ioctl,
+  .poll = noteram_poll,
 };
 
 /****************************************************************************
@@ -843,18 +835,6 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         drv->threshold = (uint32_t)arg;
         ret = OK;
         break;
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-      case NOTE_GETLEVEL:
-        *(FAR unsigned long *)arg = drv->driver.filter.level.level;
-        ret = OK;
-        break;
-
-      case NOTE_SETLEVEL:
-        drv->driver.filter.level.level = *(FAR unsigned long *)arg;
-        ret = OK;
-        break;
-#endif
 
       default:
         break;
@@ -1624,8 +1604,7 @@ int noteram_register(void)
 #ifdef CONFIG_DRIVERS_NOTERAM_CRASH_DUMP
   noteram_crash_dump_register(&g_noteram_driver);
 #endif
-  return register_driver("/dev/note/ram", &g_noteram_fops, 0666,
-                         &g_noteram_driver);
+  return 0;
 }
 
 /****************************************************************************
@@ -1636,7 +1615,7 @@ int noteram_register(void)
  *   application to read data from the circular note buffer.
  *
  * Input Parameters:
- *  devpath: The path of the Noteram device
+ *  devname: The name of the Noteram device
  *  bufsize: The size of the circular buffer
  *  overwrite: The overwrite mode
  *  crashdump: If used by the crash dump
@@ -1648,7 +1627,7 @@ int noteram_register(void)
  ****************************************************************************/
 
 FAR struct note_driver_s *
-noteram_initialize(FAR const char *devpath, size_t bufsize,
+noteram_initialize(FAR const char *devname, size_t bufsize,
                    bool overwrite, bool crashdump, bool regnote)
 {
   FAR void *buffer;
@@ -1660,7 +1639,7 @@ noteram_initialize(FAR const char *devpath, size_t bufsize,
       return NULL;
     }
 
-  return noteram_initialize_with_buffer(devpath, buffer, bufsize,
+  return noteram_initialize_with_buffer(devname, buffer, bufsize,
                                         overwrite, crashdump, regnote);
 }
 
@@ -1672,7 +1651,7 @@ noteram_initialize(FAR const char *devpath, size_t bufsize,
  *   application to read data from the circular note buffer.
  *
  * Input Parameters:
- *  devpath: The path of the Noteram device
+ *  devname: The name of the Noteram device
  *  buffer: The buffer to use by the noteram driver
  *  bufsize: The size of the circular buffer
  *  overwrite: The overwrite mode
@@ -1685,7 +1664,7 @@ noteram_initialize(FAR const char *devpath, size_t bufsize,
  ****************************************************************************/
 
 FAR struct note_driver_s *
-noteram_initialize_with_buffer(FAR const char *devpath,
+noteram_initialize_with_buffer(FAR const char *devname,
                                FAR void *buffer, size_t bufsize,
                                bool overwrite, bool crashdump, bool regnote)
 {
@@ -1698,9 +1677,9 @@ noteram_initialize_with_buffer(FAR const char *devpath,
       return NULL;
     }
 
-  if (devpath)
+  if (devname)
     {
-      len = strlen(devpath) + 1;
+      len = strlen(devname) + 1;
     }
 
   drv = kmm_zalloc(sizeof(*drv) + len);
@@ -1709,9 +1688,9 @@ noteram_initialize_with_buffer(FAR const char *devpath,
       return NULL;
     }
 
-  if (devpath)
+  if (devname)
     {
-      memcpy(drv + 1, devpath, len);
+      memcpy(drv + 1, devname, len);
     }
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
@@ -1752,18 +1731,6 @@ noteram_initialize_with_buffer(FAR const char *devpath,
           kmm_free(drv);
           return NULL;
         }
-    }
-
-  if (devpath == NULL)
-    {
-      return &drv->driver;
-    }
-
-  ret = register_driver(devpath, &g_noteram_fops, 0666, drv);
-  if (ret < 0)
-    {
-      kmm_free(drv);
-      return NULL;
     }
 
   return &drv->driver;
