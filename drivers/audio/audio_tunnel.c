@@ -174,7 +174,7 @@ static void audio_tunnel_deliver_buffer(FAR struct audio_tunnel_s *tunnel)
   consumer->dev.upper(consumer->dev.priv, AUDIO_CALLBACK_DEQUEUE,
                       dst, OK, NULL);
   producer->dev.upper(producer->dev.priv, AUDIO_CALLBACK_DEQUEUE,
-                      src, OK, NULL)
+                      src, OK, NULL);
 #else
   consumer->dev.upper(consumer->dev.priv, AUDIO_CALLBACK_DEQUEUE, dst, OK);
   producer->dev.upper(producer->dev.priv, AUDIO_CALLBACK_DEQUEUE, src, OK);
