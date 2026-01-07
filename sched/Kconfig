@@ -2239,6 +2239,7 @@ config COREDUMP
 
 config HRTIMER
 	bool "High resolution timer support"
+	depends on SYSTEM_TIME64
 	default n
 	---help---
 		Enable to support high resolution timer
