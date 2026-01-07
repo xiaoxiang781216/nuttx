@@ -343,25 +343,32 @@ virtio_snd_get_support_formats(FAR const struct virtio_snd_pcm_info *info,
 static void virtio_snd_pcm_notify_cb(FAR struct virtqueue *vq)
 {
   FAR struct virtio_snd_s *priv = vq->vq_dev->priv;
+  FAR struct virtio_snd_buffer_s *buf;
+  FAR struct virtio_snd_dev_s *sdev;
   irqstate_t flags;
+  bool underrun;
 
-  flags = spin_lock_irqsave(&priv->lock);
   sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
                     "[IN] virtio_snd_pcm_notify_cb");
   for (; ; )
     {
-      FAR struct virtio_snd_buffer_s *buf;
-      FAR struct virtio_snd_dev_s *sdev;
+      flags = spin_lock_irqsave(&priv->lock);
       buf = virtqueue_get_buffer(vq, NULL, NULL);
       if (buf == NULL)
         {
+          spin_unlock_irqrestore(&priv->lock, flags);
           break;
         }
 
       sdev = (FAR struct virtio_snd_dev_s *)buf->dev;
       sdev->cache_buffers--;
-      if (sdev->running &&
-          buf->status->latency_bytes < sdev->period_bytes)
+      underrun = sdev->running &&
+                 buf->status->latency_bytes < sdev->period_bytes;
+      spin_unlock_irqrestore(&priv->lock, flags);
+
+      /* Invoke callbacks without holding the lock to avoid deadlock */
+
+      if (underrun)
         {
           sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
                             "[0] buf=%p dev=%p upper=%p",
@@ -387,7 +394,6 @@ static void virtio_snd_pcm_notify_cb(FAR struct virtqueue *vq)
 
   sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
                     "[OUT] virtio_snd_pcm_notify_cb");
-  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
