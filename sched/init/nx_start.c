@@ -570,15 +570,6 @@ static void memory_initialize(void)
       FAR void *heap_start;
       size_t heap_size;
 
-#ifdef MM_KERNEL_USRHEAP_INIT
-      /* Get the user-mode heap from the platform specific code and configure
-       * the user-mode memory allocator.
-       */
-
-      up_allocate_heap(&heap_start, &heap_size);
-      kumm_initialize(heap_start, heap_size);
-#endif
-
 #ifdef CONFIG_MM_KERNEL_HEAP
       /* Get the kernel-mode heap from the platform specific code and
        * configure the kernel-mode memory allocator.
@@ -586,6 +577,15 @@ static void memory_initialize(void)
 
       up_allocate_kheap(&heap_start, &heap_size);
       kmm_initialize(heap_start, heap_size);
+#endif
+
+#ifdef MM_KERNEL_USRHEAP_INIT
+      /* Get the user-mode heap from the platform specific code and configure
+       * the user-mode memory allocator.
+       */
+
+      up_allocate_heap(&heap_start, &heap_size);
+      kumm_initialize(heap_start, heap_size);
 #endif
 
 #ifdef CONFIG_MM_PGALLOC

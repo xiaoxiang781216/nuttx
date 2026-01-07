@@ -177,7 +177,8 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
     !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO) && \
     (defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__))
   minfo("[%s] Region %d: base=%p size=%zu\n",
-        heap->mm_procfs.name, idx + 1, heapstart, heapsize);
+        heap->mm_procfs ? heap->mm_procfs->name : "unknown",
+        idx + 1, heapstart, heapsize);
 #else
   minfo("Region %d: base=%p size=%zu\n", idx + 1, heapstart, heapsize);
 #endif
@@ -296,23 +297,13 @@ void mm_initialize_heap(FAR const struct mm_heap_config_s *config,
 
   nxrmutex_init(&(*heap)->mm_lock);
 
-#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
-#  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  (*heap)->mm_procfs.name = name;
-  (*heap)->mm_procfs.heap = *heap;
-#    ifdef CONFIG_MM_RECORD_STACK_DEFAULT
-  (*heap)->mm_procfs.backtrace = true;
-#    endif
-#  endif
-#endif
-
   /* Add the initial region of memory to the heap */
 
   mm_addregion(*heap, heapstart, heapsize);
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
 #  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  procfs_register_meminfo(&(*heap)->mm_procfs);
+  (*heap)->mm_procfs = procfs_register_meminfo(name, *heap, NULL, NULL);
 #  endif
 #endif
 }
@@ -435,7 +426,7 @@ void mm_uninitialize(FAR struct mm_heap_s *heap)
 
 #if defined(CONFIG_FS_PROCFS) && (defined(CONFIG_BUILD_FLAT) || \
     defined(__KERNEL__)) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
-  procfs_unregister_meminfo(&heap->mm_procfs);
+  procfs_unregister_meminfo(heap->mm_procfs);
 #endif
   nxrmutex_destroy(&heap->mm_lock);
 }

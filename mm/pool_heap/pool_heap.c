@@ -70,7 +70,7 @@ struct mm_heap_s
   size_t mm_curused;
   FAR struct mempool_multiple_s *mm_mpool;
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
-  struct procfs_meminfo_entry_s mm_procfs;
+  FAR struct procfs_meminfo_entry_s *mm_procfs;
 #endif
 
   /* Kasan is disable or enable for this heap */
@@ -239,12 +239,8 @@ void mm_initialize_heap(FAR const struct mm_heap_config_s *config,
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
 #  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  (*heap)->mm_procfs.name = config->name;
-  (*heap)->mm_procfs.heap = *heap;
-#    ifdef CONFIG_MM_RECORD_STACK_DEFAULT
-  (*heap)->mm_procfs.backtrace = true;
-#    endif
-  procfs_register_meminfo(&(*heap)->mm_procfs);
+  (*heap)->mm_procfs = procfs_register_meminfo(config->name, *heap,
+                                               NULL, NULL);
 #  endif
 #endif
 }

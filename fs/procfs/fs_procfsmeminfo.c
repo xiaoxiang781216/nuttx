@@ -687,21 +687,57 @@ dump:
  *
  * Description:
  *   Add a new meminfo entry to the procfs file system.
+ *   Allocates an entry dynamically and initializes it.
  *
  * Input Parameters:
- *   entry - Describes the entry to be registered.
+ *   name      - The name of the memory region
+ *   heap      - The heap to register
+ *   mallinfo_handler  - Optional custom mallinfo handler
+ *   memdump_handler   - Optional custom memdump handler
+ *
+ * Returned Value:
+ *   Pointer to the allocated entry on success, NULL on failure.
+ *   This pointer must be passed to procfs_unregister_meminfo.
  *
  ****************************************************************************/
 
-void procfs_register_meminfo(FAR struct procfs_meminfo_entry_s *entry)
+FAR struct procfs_meminfo_entry_s *
+procfs_register_meminfo(FAR const char *name, FAR struct mm_heap_s *heap,
+                        mm_mallinfo_handler_t mallinfo_handler,
+                        mm_memdump_handler_t memdump_handler)
 {
-  if (entry->name != NULL)
+  FAR struct procfs_meminfo_entry_s *entry;
+
+  /* Allocate entry from kernel heap */
+
+  entry = kmm_zalloc(sizeof(struct procfs_meminfo_entry_s));
+  if (entry == NULL)
     {
-      DEBUGVERIFY(nxmutex_lock(&g_procfs_meminfo_lock));
-      entry->next = g_procfs_meminfo;
-      g_procfs_meminfo = entry;
-      DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
+      return NULL;
     }
+
+  /* Initialize the entry */
+
+  entry->name      = name;
+  entry->heap      = heap;
+  entry->mallinfo  = mallinfo_handler;
+  entry->memdump   = memdump_handler;
+#ifdef CONFIG_MM_RECORD_STACK
+#  ifdef CONFIG_MM_RECORD_STACK_DEFAULT
+  entry->backtrace = true;
+#  else
+  entry->backtrace = false;
+#  endif
+#endif
+
+  /* Add to linked list */
+
+  DEBUGVERIFY(nxmutex_lock(&g_procfs_meminfo_lock));
+  entry->next = g_procfs_meminfo;
+  g_procfs_meminfo = entry;
+  DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
+
+  return entry;
 }
 
 /****************************************************************************
@@ -709,9 +745,10 @@ void procfs_register_meminfo(FAR struct procfs_meminfo_entry_s *entry)
  *
  * Description:
  *   Remove a meminfo entry from the procfs file system.
+ *   Frees the entry that was allocated by procfs_register_meminfo.
  *
  * Input Parameters:
- *   entry - Describes the entry to be unregistered.
+ *   entry - The entry returned by procfs_register_meminfo.
  *
  ****************************************************************************/
 
@@ -730,5 +767,7 @@ void procfs_unregister_meminfo(FAR struct procfs_meminfo_entry_s *entry)
     }
 
   DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
+
+  kmm_delayfree(entry);
 }
 #endif /* !CONFIG_FS_PROCFS_EXCLUDE_MEMINFO */

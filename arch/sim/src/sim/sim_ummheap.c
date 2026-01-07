@@ -59,7 +59,7 @@
     do \
       { \
         struct tls_info_s *info = tls_get_info(); \
-        if ((heap)->procfs.backtrace || \
+        if (((heap)->procfs && (heap)->procfs->backtrace) || \
             (info && info->tl_flags & TLS_FLAG_HEAP_DUMP)) \
           { \
             (node)->stack = backtrace_record(CONFIG_MM_RECORD_STACK_SKIP); \
@@ -144,7 +144,7 @@ struct mm_heap_s
   mm_delaylist_t delay;
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
-  struct procfs_meminfo_entry_s procfs;
+  struct procfs_meminfo_entry_s *procfs;
 #endif
 
   atomic_t aordblks;
@@ -821,11 +821,9 @@ void umm_initialize(void *heap_start, size_t heap_size)
   spin_lock_init(&g_mmheap->lock);
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
-  g_mmheap->procfs.name = "Umem";
-  g_mmheap->procfs.heap = g_mmheap;
-  g_mmheap->procfs.mallinfo = mallinfo_callback;
-  g_mmheap->procfs.memdump = memdump_callback;
-  procfs_register_meminfo(&g_mmheap->procfs);
+  g_mmheap->procfs = procfs_register_meminfo("Umem", g_mmheap,
+                                             mallinfo_callback,
+                                             memdump_callback);
 #endif
 }
 

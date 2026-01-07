@@ -85,7 +85,7 @@
     do \
       { \
         FAR struct tls_info_s *info = tls_get_info(); \
-        if ((heap)->mm_procfs.backtrace || \
+        if (((heap)->mm_procfs && (heap)->mm_procfs->backtrace) || \
             (info && info->tl_flags & TLS_FLAG_HEAP_DUMP)) \
           { \
             (node)->stack = backtrace_record(CONFIG_MM_RECORD_STACK_SKIP); \
@@ -288,7 +288,7 @@ struct mm_heap_s
 #endif
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
-  struct procfs_meminfo_entry_s mm_procfs;
+  FAR struct procfs_meminfo_entry_s *mm_procfs;
 #endif
 
   /* Kasan is disable or enable for this heap */

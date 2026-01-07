@@ -124,7 +124,7 @@ struct mm_heap_s
   mm_delaylist_t delay;
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
-  struct procfs_meminfo_entry_s mm_procfs;
+  FAR struct procfs_meminfo_entry_s *mm_procfs;
 #endif
 
   /* Kasan is disable or enable for this heap */
@@ -303,7 +303,7 @@ static void memdump_backtrace(FAR struct mm_heap_s *heap,
 #  endif
   MM_INCSEQNO(buf);
 #  ifdef CONFIG_MM_RECORD_STACK
-  if (heap->mm_procfs.backtrace ||
+  if ((heap->mm_procfs && heap->mm_procfs->backtrace) ||
       (info && info->tl_flags & TLS_FLAG_HEAP_DUMP))
     {
       buf->stack = backtrace_record(CONFIG_LIBC_BACKTRACE_DEPTH);
@@ -1063,12 +1063,7 @@ void mm_initialize_heap(FAR const struct mm_heap_config_s *config,
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  (*heap)->mm_procfs.name = name;
-  (*heap)->mm_procfs.heap = *heap;
-#  ifdef CONFIG_MM_RECORD_STACK_DEFAULT
-  (*heap)->mm_procfs.backtrace = true;
-#  endif
-  procfs_register_meminfo(&(*heap)->mm_procfs);
+  (*heap)->mm_procfs = procfs_register_meminfo(name, *heap, NULL, NULL);
 #endif
 #endif
 }
@@ -1756,7 +1751,7 @@ void mm_uninitialize(FAR struct mm_heap_s *heap)
 
 #if defined(CONFIG_FS_PROCFS) && (defined(CONFIG_BUILD_FLAT) || \
     defined(__KERNEL__)) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
-  procfs_unregister_meminfo(&heap->mm_procfs);
+  procfs_unregister_meminfo(heap->mm_procfs);
 #endif
   nxrmutex_destroy(&heap->mm_lock);
   tlsf_destroy(&heap->mm_tlsf);

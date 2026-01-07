@@ -128,14 +128,19 @@ struct mallinfo;
 struct mm_heap_s;
 struct mm_memdump_s;
 
+/* Function pointer types for memory info handlers */
+
+typedef struct mallinfo (*mm_mallinfo_handler_t)(FAR struct mm_heap_s *heap);
+typedef void (*mm_memdump_handler_t)(FAR struct mm_heap_s *heap,
+                                     FAR const struct mm_memdump_s *dump);
+
 struct procfs_meminfo_entry_s
 {
   FAR const char *name;
   FAR struct mm_heap_s *heap;
   FAR struct procfs_meminfo_entry_s *next;
-  struct mallinfo (*mallinfo)(FAR struct mm_heap_s *);
-  void (*memdump)(FAR struct mm_heap_s *,
-                  FAR const struct mm_memdump_s *);
+  mm_mallinfo_handler_t mallinfo;
+  mm_memdump_handler_t memdump;
 #ifdef CONFIG_MM_RECORD_STACK
 
   /* This is dynamic control flag whether to turn on backtrace in the heap,
@@ -272,22 +277,34 @@ int procfs_register(FAR const struct procfs_entry_s *entry);
  *
  * Description:
  *   Add a new meminfo entry to the procfs file system.
+ *   Allocates an entry dynamically and initializes it.
  *
  * Input Parameters:
- *   entry - Describes the entry to be registered.
+ *   name      - The name of the memory region
+ *   heap      - The heap to register
+ *   mallinfo  - Optional custom mallinfo handler (NULL to use default)
+ *   memdump   - Optional custom memdump handler (NULL to use default)
+ *
+ * Returned Value:
+ *   Pointer to the allocated entry on success, NULL on failure.
+ *   This pointer must be passed to procfs_unregister_meminfo.
  *
  ****************************************************************************/
 
-void procfs_register_meminfo(FAR struct procfs_meminfo_entry_s *entry);
+FAR struct procfs_meminfo_entry_s *
+procfs_register_meminfo(FAR const char *name, FAR struct mm_heap_s *heap,
+                        mm_mallinfo_handler_t mallinfo,
+                        mm_memdump_handler_t memdump);
 
 /****************************************************************************
  * Name: procfs_unregister_meminfo
  *
  * Description:
  *   Remove a meminfo entry from the procfs file system.
+ *   Frees the entry that was allocated by procfs_register_meminfo.
  *
  * Input Parameters:
- *   entry - Describes the entry to be unregistered.
+ *   entry - The entry returned by procfs_register_meminfo.
  *
  ****************************************************************************/
 
