@@ -163,7 +163,7 @@ static void stack_dump(uintptr_t sp, uintptr_t stack_top)
     {
       FAR uintptr_t *ptr = (FAR uintptr_t *)stack;
 
-      _alert(DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT
+      _alert(DUMP_FORMAT ":" DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT
              DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT DUMP_FORMAT "\n",
              stack, DUMP_PTR(ptr, 0), DUMP_PTR(ptr, 1),
              DUMP_PTR(ptr, 2), DUMP_PTR(ptr, 3), DUMP_PTR(ptr, 4),

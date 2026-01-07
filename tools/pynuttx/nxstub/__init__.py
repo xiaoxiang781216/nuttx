@@ -68,7 +68,7 @@ def parse_log(elf, arch, logfile):
 
     def parse_stack(line):
         result = re.match(
-            r".*stack_dump: (?P<ADDR>[0-9a-fxA-FX]+): (?P<VALS>( ?\w+)+)", line
+            r".*stack_dump:\s*(?P<ADDR>[0-9a-fxA-FX]+): (?P<VALS>( ?\w+)+)", line
         )
         if result is None:
             return None
