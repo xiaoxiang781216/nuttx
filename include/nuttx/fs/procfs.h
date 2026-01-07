@@ -141,6 +141,7 @@ struct procfs_meminfo_entry_s
   FAR struct procfs_meminfo_entry_s *next;
   mm_mallinfo_handler_t mallinfo;
   mm_memdump_handler_t memdump;
+  int refs;                /* Reference count for safe traversal */
 #ifdef CONFIG_MM_RECORD_STACK
 
   /* This is dynamic control flag whether to turn on backtrace in the heap,

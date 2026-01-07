@@ -47,7 +47,7 @@
 #include <nuttx/mm/mm.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
-#include <nuttx/mutex.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/tls.h>
 
 #include "fs_heap.h"
@@ -141,13 +141,50 @@ const struct procfs_operations g_memdump_operations =
 static DEFINE_PER_CPU_BSS_BMP(FAR struct procfs_meminfo_entry_s *,
                               g_procfs_meminfo);
 #define g_procfs_meminfo this_cpu_var_bmp(g_procfs_meminfo)
-static
-DEFINE_PER_CPU_BMP(mutex_t, g_procfs_meminfo_lock) = NXMUTEX_INITIALIZER;
+static DEFINE_PER_CPU_BMP(spinlock_t, g_procfs_meminfo_lock);
 #define g_procfs_meminfo_lock this_cpu_var_bmp(g_procfs_meminfo_lock)
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: meminfo_release_entry_locked
+ *
+ * Description:
+ *   Decrement reference count while holding spinlock. If refs reaches 0,
+ *   remove entry from list and return it for deferred free.
+ *   Caller must hold g_procfs_meminfo_lock.
+ *
+ * Returned Value:
+ *   Pointer to next entry in list.
+ *
+ ****************************************************************************/
+
+FAR struct procfs_meminfo_entry_s *
+meminfo_release_entry_locked(FAR struct procfs_meminfo_entry_s *entry)
+{
+  FAR struct procfs_meminfo_entry_s **cur;
+  FAR struct procfs_meminfo_entry_s *next = entry->next;
+
+  if (--entry->refs == 0)
+    {
+      /* Last reference, remove from list */
+
+      for (cur = &g_procfs_meminfo; *cur != NULL; cur = &(*cur)->next)
+        {
+          if (*cur == entry)
+            {
+              *cur = entry->next;
+              break;
+            }
+        }
+
+      kmm_delayfree(entry);
+    }
+
+  return next;
+}
 
 /****************************************************************************
  * Name: meminfo_progmem
@@ -268,7 +305,10 @@ static int meminfo_close(FAR struct file *filep)
 static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
                             size_t buflen)
 {
+  FAR struct procfs_meminfo_entry_s *entry;
   FAR struct meminfo_file_s *procfile;
+  struct mallinfo info;
+  irqstate_t flags;
   size_t linesize;
   size_t copysize;
   size_t totalsize;
@@ -295,49 +335,53 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
                             &offset);
   totalsize = copysize;
 
-  /* Followed by information about the memory resources */
+  flags = spin_lock_irqsave(&g_procfs_meminfo_lock);
+  entry = g_procfs_meminfo;
 
-  FAR const struct procfs_meminfo_entry_s *entry;
-
-  DEBUGVERIFY(nxmutex_lock(&g_procfs_meminfo_lock));
-  for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
+  while (entry != NULL && buflen > 0)
     {
-      if (buflen > 0)
+      entry->refs++;
+      spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
+
+      /* Get heap information (without holding lock) */
+
+      if (entry->mallinfo)
         {
-          struct mallinfo info;
-
-          buffer    += copysize;
-          buflen    -= copysize;
-
-          /* Show heap information */
-
-          if (entry->mallinfo)
-            {
-              info = entry->mallinfo(entry->heap);
-            }
-          else
-            {
-              info = mm_mallinfo(entry->heap);
-            }
-
-          linesize   = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
-                                       "%11lu%11lu%11lu%11lu%11lu"
-                                       "%7lu%7lu %s\n",
-                                       (unsigned long)info.arena,
-                                       (unsigned long)info.uordblks,
-                                       (unsigned long)info.fordblks,
-                                       (unsigned long)info.usmblks,
-                                       (unsigned long)info.mxordblk,
-                                       (unsigned long)info.aordblks,
-                                       (unsigned long)info.ordblks,
-                                       entry->name);
-          copysize   = procfs_memcpy(procfile->line, linesize, buffer,
-                                     buflen, &offset);
-          totalsize += copysize;
+          info = entry->mallinfo(entry->heap);
         }
+      else
+        {
+          info = mm_mallinfo(entry->heap);
+        }
+
+      /* Format and output the result */
+
+      buffer    += copysize;
+      buflen    -= copysize;
+
+      linesize   = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
+                                   "%11lu%11lu%11lu%11lu%11lu"
+                                   "%7lu%7lu %s\n",
+                                   (unsigned long)info.arena,
+                                   (unsigned long)info.uordblks,
+                                   (unsigned long)info.fordblks,
+                                   (unsigned long)info.usmblks,
+                                   (unsigned long)info.mxordblk,
+                                   (unsigned long)info.aordblks,
+                                   (unsigned long)info.ordblks,
+                                   entry->name);
+      copysize   = procfs_memcpy(procfile->line, linesize, buffer,
+                                 buflen, &offset);
+      totalsize += copysize;
+
+      /* Get next entry's refs and release current entry atomically */
+
+      flags = spin_lock_irqsave(&g_procfs_meminfo_lock);
+      entry = meminfo_release_entry_locked(entry);
     }
 
-  DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
+  spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
+
 #ifdef CONFIG_MM_PGALLOC
   if (buflen > 0)
     {
@@ -482,6 +526,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
 {
   FAR struct procfs_meminfo_entry_s *entry;
   FAR struct meminfo_file_s *procfile;
+  irqstate_t flags;
   struct mm_memdump_s dump =
     {
       PID_MM_ALLOC,
@@ -508,24 +553,24 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
 #ifdef CONFIG_MM_RECORD_STACK
   if (strcmp(buffer, "on") == 0)
     {
-      DEBUGVERIFY(nxmutex_lock(&g_procfs_meminfo_lock));
+      flags = spin_lock_irqsave(&g_procfs_meminfo_lock);
       for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
         {
           entry->backtrace = true;
         }
 
-      DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
+      spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
       return buflen;
     }
   else if (strcmp(buffer, "off") == 0)
     {
-      DEBUGVERIFY(nxmutex_lock(&g_procfs_meminfo_lock));
+      flags = spin_lock_irqsave(&g_procfs_meminfo_lock);
       for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
         {
           entry->backtrace = false;
         }
 
-      DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
+      spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
       return buflen;
     }
   else if ((p = strstr(buffer, "on")) != NULL)
@@ -660,9 +705,18 @@ dump:
 #endif
     }
 
-  DEBUGVERIFY(nxmutex_lock(&g_procfs_meminfo_lock));
-  for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
+  /* Use reference counting for safe heap access (same as meminfo_read) */
+
+  flags = spin_lock_irqsave(&g_procfs_meminfo_lock);
+  entry = g_procfs_meminfo;
+
+  while (entry != NULL)
     {
+      entry->refs++;
+      spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
+
+      /* Dump heap (without holding lock) */
+
       if (entry->memdump)
         {
           entry->memdump(entry->heap, &dump);
@@ -671,9 +725,15 @@ dump:
         {
           mm_memdump(entry->heap, &dump);
         }
+
+      /* Get next entry's refs and release current entry atomically */
+
+      flags = spin_lock_irqsave(&g_procfs_meminfo_lock);
+      entry = meminfo_release_entry_locked(entry);
     }
 
-  DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
+  spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
+
   return buflen;
 }
 #endif
@@ -707,6 +767,7 @@ procfs_register_meminfo(FAR const char *name, FAR struct mm_heap_s *heap,
                         mm_memdump_handler_t memdump_handler)
 {
   FAR struct procfs_meminfo_entry_s *entry;
+  irqstate_t flags;
 
   /* Allocate entry from kernel heap */
 
@@ -716,12 +777,13 @@ procfs_register_meminfo(FAR const char *name, FAR struct mm_heap_s *heap,
       return NULL;
     }
 
-  /* Initialize the entry */
+  /* Initialize the entry with refs = 1 (for the linked list reference) */
 
   entry->name      = name;
   entry->heap      = heap;
   entry->mallinfo  = mallinfo_handler;
   entry->memdump   = memdump_handler;
+  entry->refs      = 1;
 #ifdef CONFIG_MM_RECORD_STACK
 #  ifdef CONFIG_MM_RECORD_STACK_DEFAULT
   entry->backtrace = true;
@@ -732,10 +794,10 @@ procfs_register_meminfo(FAR const char *name, FAR struct mm_heap_s *heap,
 
   /* Add to linked list */
 
-  DEBUGVERIFY(nxmutex_lock(&g_procfs_meminfo_lock));
+  flags = spin_lock_irqsave(&g_procfs_meminfo_lock);
   entry->next = g_procfs_meminfo;
   g_procfs_meminfo = entry;
-  DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
+  spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
 
   return entry;
 }
@@ -745,7 +807,9 @@ procfs_register_meminfo(FAR const char *name, FAR struct mm_heap_s *heap,
  *
  * Description:
  *   Remove a meminfo entry from the procfs file system.
- *   Frees the entry that was allocated by procfs_register_meminfo.
+ *   Decrements reference count. If no readers are referencing the entry,
+ *   removes from list and frees immediately. Otherwise, the last reader
+ *   will remove and free it when refs reaches 0.
  *
  * Input Parameters:
  *   entry - The entry returned by procfs_register_meminfo.
@@ -754,20 +818,15 @@ procfs_register_meminfo(FAR const char *name, FAR struct mm_heap_s *heap,
 
 void procfs_unregister_meminfo(FAR struct procfs_meminfo_entry_s *entry)
 {
-  FAR struct procfs_meminfo_entry_s **cur;
+  irqstate_t flags;
 
-  DEBUGVERIFY(nxmutex_lock(&g_procfs_meminfo_lock));
-  for (cur = &g_procfs_meminfo; *cur != NULL; cur = &(*cur)->next)
-    {
-      if (*cur == entry)
-        {
-          *cur = entry->next;
-          break;
-        }
-    }
+  /* Decrement reference count. If refs becomes 0, remove entry from
+   * list and free it. Otherwise, readers are still using it and the
+   * last reader will handle cleanup.
+   */
 
-  DEBUGVERIFY(nxmutex_unlock(&g_procfs_meminfo_lock));
-
-  kmm_delayfree(entry);
+  flags = spin_lock_irqsave(&g_procfs_meminfo_lock);
+  meminfo_release_entry_locked(entry);
+  spin_unlock_irqrestore(&g_procfs_meminfo_lock, flags);
 }
 #endif /* !CONFIG_FS_PROCFS_EXCLUDE_MEMINFO */
