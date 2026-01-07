@@ -769,6 +769,10 @@ static int ramlog_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
       fds->priv = NULL;
       spin_unlock_irqrestore(&header->rl_lock, flags);
     }
+  else
+    {
+      spin_unlock_irqrestore(&header->rl_lock, flags);
+    }
 
   ramlog_timeout_reset(priv);
   return 0;
