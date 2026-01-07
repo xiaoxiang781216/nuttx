@@ -290,7 +290,6 @@ config SYSLOG_RPMSG
 
 config SYSLOG_RPMSG_BUFSIZE
 	int "RPMSG SYSLOG buffer size"
-	default 0
 	depends on SYSLOG_RPMSG
 	---help---
 		Size of the console RPMSG syslog.  Default: 0
