@@ -141,30 +141,29 @@ int nxsem_wait_slow(FAR sem_t *sem)
             {
               atomic_add(NXSEM_COUNT(sem), 1);
             }
-
-          leave_critical_section(flags);
-          return ret;
-        }
-#endif
-
-      /* For mutexes, we only add the holder to the tasks list at the
-       * time when a task blocks on the mutex, for priority restoration
-       */
-
-      if (mutex)
-        {
-          mholder = rtcb->pid;
-
-          if (!dq_empty(SEM_WAITLIST(sem)))
-            {
-              mholder |= NXSEM_MBLOCKING_BIT;
-            }
-
-          atomic_set(NXSEM_MHOLDER(sem), mholder);
         }
       else
+#endif
         {
-          nxsem_add_holder(sem);
+          /* For mutexes, we only add the holder to the tasks list at the
+           * time when a task blocks on the mutex, for priority restoration
+           */
+
+          if (mutex)
+            {
+              mholder = rtcb->pid;
+
+              if (!dq_empty(SEM_WAITLIST(sem)))
+                {
+                  mholder |= NXSEM_MBLOCKING_BIT;
+                }
+
+              atomic_set(NXSEM_MHOLDER(sem), mholder);
+            }
+          else
+            {
+              nxsem_add_holder(sem);
+            }
         }
     }
 
