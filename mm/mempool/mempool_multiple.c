@@ -493,7 +493,6 @@ mempool_multiple_init(FAR const char *name,
 {
   FAR struct mempool_multiple_s *mpool = NULL;
   FAR struct mempool_s *pools;
-  size_t maxpoolszie;
   size_t minpoolsize;
   size_t mempoolsize;
   size_t headsize = 0;
@@ -501,18 +500,12 @@ mempool_multiple_init(FAR const char *name,
 
   if (!(config->expandsize & (config->expandsize - 1u)))
     {
-      maxpoolszie = config->poolsize[0];
       minpoolsize = config->poolsize[0];
       for (i = 0; i < config->npools; i++)
         {
           if (config->poolcount && config->poolcount[i])
             {
               headsize = sizeof(FAR struct mempool_s *);
-            }
-
-          if (maxpoolszie < config->poolsize[i])
-            {
-              maxpoolszie = config->poolsize[i];
             }
 
           if (minpoolsize > config->poolsize[i])

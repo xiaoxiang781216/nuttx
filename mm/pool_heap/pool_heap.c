@@ -559,7 +559,7 @@ size_t mm_malloc_size(FAR struct mm_heap_s *heap, FAR void *mem)
       size = 0;
     }
 
-  return size;
+  return (size_t)size;
 }
 
 /****************************************************************************
