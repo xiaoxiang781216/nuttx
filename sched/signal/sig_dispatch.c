@@ -496,12 +496,12 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
   FAR sigactq_t *sigact;
 #endif
 
+  DEBUGASSERT(stcb != NULL && info != NULL);
+
   sinfo("TCB=%p pid=%d signo=%d code=%d value=%d masked=%s\n",
         stcb, stcb->pid, info->si_signo, info->si_code,
         info->si_value.sival_int,
         sigismember(&stcb->sigprocmask, info->si_signo) == 1 ? "YES" : "NO");
-
-  DEBUGASSERT(stcb != NULL && info != NULL);
 
   /* Return ESRCH when thread was in exit processing */
 
