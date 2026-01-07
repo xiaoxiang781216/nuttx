@@ -376,7 +376,7 @@ uint32_t *arm_syscall(uint32_t *regs)
 
               if (rtcb->sigdeliver)
                 {
-                  usp = rtcb->xcp.saved_regs[REG_SP];
+                  usp = (uint32_t)rtcb->xcp.ustkptr;
                 }
               else
                 {
