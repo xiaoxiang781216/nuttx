@@ -41,7 +41,6 @@ ifeq ($(CONFIG_DRIVERS_NOTELOG),y)
   NOTE_CSRCS += notelog_driver.c
 endif
 
-
 ifeq ($(CONFIG_DRIVERS_NOTESNAP),y)
   NOTE_CSRCS += notesnap_driver.c
 endif

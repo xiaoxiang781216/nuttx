@@ -32,17 +32,18 @@
 #include <stddef.h>
 
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
 
 /* For system call numbers definition */
 
-#ifdef CONFIG_LIB_SYSCALL
-#  include <syscall.h>
-#else
-#  define CONFIG_LIB_SYSCALL
-#  include <syscall.h>
-#  undef CONFIG_LIB_SYSCALL
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
+  #ifdef CONFIG_LIB_SYSCALL
+  #  include <syscall.h>
+  #else
+  #  define CONFIG_LIB_SYSCALL
+  #  include <syscall.h>
+  #  undef CONFIG_LIB_SYSCALL
+  #endif
 #endif
 
 /****************************************************************************
@@ -173,31 +174,6 @@
 #  define NOTE_FILTER_LEVEL_SET(level, s)
 #endif
 
-/* Sometimes perf_getime is not a syscall */
-
-#ifdef CONFIG_ARCH_PERF_EVENTS_USER_ACCESS
-#  define NOTE_PERF_GETTIME perf_gettime
-#else
-clock_t UP_REALSYM(perf_gettime)(void);
-#  define NOTE_PERF_GETTIME UP_REALSYM(perf_gettime)
-#endif
-
-#define note_driver_event(driver, tag, event, buf, len) \
-        note_driver_event_ip(driver, tag, up_getpc(), event, buf, len)
-#define note_driver_vprintf(driver, tag, fmt, va) \
-        note_driver_vprintf_ip(driver, tag, up_getpc(), 0, fmt, va)
-#define note_driver_printf(driver, tag, fmt, ...) \
-        note_driver_printf_ip(driver, tag, up_getpc(), 0, fmt, ##__VA_ARGS__)
-
-#define note_driver_begin(driver, tag) \
-        note_driver_event(driver, tag, NOTE_DUMP_BEGIN, NULL, 0)
-#define note_driver_end(driver, tag) \
-        note_driver_event(driver, tag, NOTE_DUMP_END, NULL, 0)
-#define note_driver_mark(driver, tag, buf) \
-        note_driver_event(driver, tag, NOTE_DUMP_MARK, buf, strlen(buf))
-#define note_driver_binary(driver, tag, buf, len) \
-        note_driver_event(driver, tag, NOTE_DUMP_BINARY, buf, len)
-
 /* IOCTL Commands ***********************************************************/
 
 /* NOTE_CLEAR
@@ -271,6 +247,7 @@ clock_t UP_REALSYM(perf_gettime)(void);
  * Public Types
  ****************************************************************************/
 
+struct tcb_s;
 struct note_driver_s;
 
 struct note_driver_ops_s
@@ -328,6 +305,15 @@ struct note_driver_ops_s
                        uint8_t level, uintptr_t ip, uint64_t type,
                        FAR const char *fmt, va_list va) printf_like(6, 0);
 #endif
+  CODE int (*open)(FAR struct file *filep);
+  CODE int (*close)(FAR struct file *filep);
+  CODE ssize_t (*read)(FAR struct file *filep, FAR char *buffer,
+                       size_t buflen);
+  CODE ssize_t (*write)(FAR struct file *filep, FAR const char *buffer,
+                        size_t buflen);
+  CODE int (*ioctl)(FAR struct file *filep, int cmd, unsigned long arg);
+  CODE int (*poll)(FAR struct file *filep, FAR struct pollfd *fds,
+                   bool setup);
 };
 
 /* This is the type of the argument passed to the NOTE_GETRATELIMIT and
@@ -379,6 +365,7 @@ struct note_filter_named_syscall_s
  * NOTECTL_SETIRQFILTER ioctls
  */
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
 struct note_filter_irq_s
 {
   uint8_t irq_mask[(NR_IRQS + 7) / 8];
@@ -389,6 +376,7 @@ struct note_filter_named_irq_s
   char name[NAME_MAX];
   struct note_filter_irq_s irq_mask;
 };
+#endif
 
 struct note_filter_tag_s
 {
@@ -415,10 +403,10 @@ struct note_filter_s
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
   struct note_filter_irq_s irq_mask;
-#  endif
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
   struct note_filter_syscall_s syscall_mask;
-#  endif
+#endif
 };
 
 struct note_driver_s
@@ -469,32 +457,13 @@ int note_early_initialize(void);
  ****************************************************************************/
 
 int note_initialize(void);
-#endif
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-void note_driver_printf_ip(FAR struct note_driver_s *driver, uint8_t tag,
-                           uint8_t level, uintptr_t ip, uint64_t type,
-                           FAR const char *fmt, ...) printf_like(6, 7);
-
-void note_driver_vprintf_ip(FAR struct note_driver_s *driver, uint8_t tag,
-                            uint8_t level, uintptr_t ip, uint64_t type,
-                            FAR const char *fmt,
-                            va_list *va) printf_like(6, 0);
-
-size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t tag,
-                            uint8_t level, uintptr_t ip, uint8_t event,
-                            FAR const void *buf, size_t len);
-#else
-#  define note_driver_printf_ip(d,t,l,i,p,f,a)
-#  define note_driver_vprintf_ip(d,t,l,i,p,f,a)
-#  define note_driver_event_ip(d,t,l,i,e,b,n)
-#endif
 
 /****************************************************************************
  * Name: note_driver_register
  ****************************************************************************/
 
 int note_driver_register(FAR struct note_driver_s *driver);
+#endif
 
 /****************************************************************************
  * Name: note_driver_unregister
@@ -502,86 +471,4 @@ int note_driver_register(FAR struct note_driver_s *driver);
 
 void note_driver_unregister(FAR struct note_driver_s *driver);
 
-/****************************************************************************
- * Name: note_filter_mode
- *
- * Description:
- *   Set and get note filter mode.
- *   (Same as NOTECTL_GETMODE / NOTECTL_SETMODE ioctls)
- *
- * Input Parameters:
- *   oldm - A writable pointer to struct note_filter_mode_s to get current
- *          filter mode
- *          If 0, no data is written.
- *   newm - A read-only pointer to struct note_filter_mode_s which holds the
- *          new filter mode
- *          If 0, the filter mode is not updated.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-void note_filter_mode(FAR struct note_filter_named_mode_s *oldm,
-                      FAR struct note_filter_named_mode_s *newm);
-#endif
-
-/****************************************************************************
- * Name: note_filter_syscall
- *
- * Description:
- *   Set and get syscall filter setting
- *   (Same as NOTECTL_GETSYSCALLFILTER / NOTECTL_SETSYSCALLFILTER ioctls)
- *
- * Input Parameters:
- *   oldf - A writable pointer to struct note_filter_syscall_s to get
- *          current syscall filter setting
- *          If 0, no data is written.
- *   newf - A read-only pointer to struct note_filter_syscall_s of the
- *          new syscall filter setting
- *          If 0, the setting is not updated.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
-    defined(CONFIG_SCHED_INSTRUMENTATION_SYSCALL)
-void note_filter_syscall(FAR struct note_filter_named_syscall_s *oldf,
-                         FAR struct note_filter_named_syscall_s *newf);
-#endif
-
-/****************************************************************************
- * Name: note_filter_irq
- *
- * Description:
- *   Set and get IRQ filter setting
- *   (Same as NOTECTL_GETIRQFILTER / NOTECTL_SETIRQFILTER ioctls)
- *
- * Input Parameters:
- *   oldf - A writable pointer to struct note_filter_irq_s to get
- *          current IRQ filter setting
- *          If 0, no data is written.
- *   newf - A read-only pointer to struct note_filter_irq_s of the new
- *          IRQ filter setting
- *          If 0, the setting is not updated.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
-    defined(CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER)
-void note_filter_irq(FAR struct note_filter_named_irq_s *oldf,
-                     FAR struct note_filter_named_irq_s *newf);
-#endif
-
-#if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
-    defined(CONFIG_SCHED_INSTRUMENTATION_DUMP)
-void note_filter_tag(FAR struct note_filter_named_tag_s *oldf,
-                     FAR struct note_filter_named_tag_s *newf);
-#endif
 #endif /* __INCLUDE_NUTTX_NOTE_NOTE_DRIVER_H */
