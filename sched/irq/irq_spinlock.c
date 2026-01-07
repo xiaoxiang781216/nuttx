@@ -238,9 +238,13 @@ void spinlock_mark_locking(FAR spinlock_debug_t *info)
   /* Since it is not allowed to call enter_critical_section while holding
    * spinlock, it destroys the deadlock condition of waiting in a loop.
    * So no mark is required.
+   *
+   * Calling `spinlock_mark_locking` does not necessarily disable interrupts.
+   * If interrupts are not disabled, an interrupt might corrupt the previous
+   * `wait_spinlock` information. So, interrupt context is not considered.
    */
 
-  if (info == &g_schedlock.info)
+  if (info == &g_schedlock.info || up_interrupt_context())
     {
       return;
     }
@@ -272,7 +276,7 @@ void spinlock_mark_locked(FAR spinlock_debug_t *info)
    * repeated locking, no mark is required.
    */
 
-  if (info == &g_schedlock.info)
+  if (info == &g_schedlock.info || up_interrupt_context())
     {
       return;
     }
@@ -317,7 +321,7 @@ void spinlock_mark_unlocked(FAR spinlock_debug_t *info)
    * repeated locking, no mark is required.
    */
 
-  if (info == &g_schedlock.info)
+  if (info == &g_schedlock.info || up_interrupt_context())
     {
       return;
     }
@@ -353,7 +357,7 @@ void spinlock_mark_unlocked(FAR spinlock_debug_t *info)
 
 void spinlock_switch_context(FAR struct tcb_s *from)
 {
-  if (!sq_empty(&from->hold_spinlock))
+  if (!sq_empty(&from->hold_spinlock) && !up_interrupt_context())
     {
       _alert("Detect thread(%d) switches context while holding spinlock!\n",
              from->pid);
