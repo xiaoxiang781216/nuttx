@@ -93,7 +93,20 @@ SECTIONS
       _erodata = .;
   } > ROM
 
+  .tdata : {
+      _stdata = ABSOLUTE(.);
+      *(.tdata .tdata.* .gnu.linkonce.td.*);
+      _etdata = ABSOLUTE(.);
+  } > ROM
+
+  .tbss : {
+      _stbss = ABSOLUTE(.);
+      *(.tbss .tbss.* .gnu.linkonce.tb.* .tcommon);
+      _etbss = ABSOLUTE(.);
+  } > ROM
+
   _eronly = LOADADDR(.data);
+
   .data : {                    /* Data */
       _sdata = .;
       *(.data*)
