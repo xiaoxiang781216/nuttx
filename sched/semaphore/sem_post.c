@@ -131,7 +131,7 @@ int nxsem_post_slow(FAR sem_t *sem)
   FAR struct tcb_s *stcb = NULL;
   irqstate_t flags;
 #if defined(CONFIG_PRIORITY_INHERITANCE) || defined(CONFIG_PRIORITY_PROTECT)
-  uint8_t proto;
+  int proto;
 #endif
   bool blocking = false;
   bool mutex = NXSEM_IS_MUTEX(sem);
