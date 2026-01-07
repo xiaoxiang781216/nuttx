@@ -70,13 +70,15 @@
 
 static void pkt_sendbuffer_notify(FAR struct pkt_conn_s *conn)
 {
+#if CONFIG_NET_SEND_BUFSIZE > 0
   int val = 0;
 
-  nxsem_get_value(&conn->sndsem, &val);
+  nxsem_get_value(&conn->sconn.s_sndsem, &val);
   if (val < 0)
     {
-      nxsem_post(&conn->sndsem);
+      nxsem_post(&conn->sconn.s_sndsem);
     }
+#endif
 }
 
 /****************************************************************************
@@ -244,7 +246,7 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
              (flags & MSG_DONTWAIT) != 0;
 
 #if CONFIG_NET_SEND_BUFSIZE > 0
-  if ((iob_get_queue_size(&conn->write_q) + len) >= conn->sndbufs)
+  if ((iob_get_queue_size(&conn->write_q) + len) >= conn->sconn.s_sndbufs)
     {
       /* send buffer size exceeds the send limit */
 
@@ -255,7 +257,7 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
           goto errout_with_lock;
         }
 
-      ret = conn_dev_sem_timedwait(&conn->sndsem, false,
+      ret = conn_dev_sem_timedwait(&conn->sconn.s_sndsem, false,
                                    _SO_TIMEOUT(conn->sconn.s_sndtimeo),
                                    &conn->sconn, dev);
       if (ret < 0)

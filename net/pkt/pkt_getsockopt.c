@@ -94,25 +94,6 @@ int pkt_getsockopt(FAR struct socket *psock, int level, int option,
 
   switch (option)
     {
-#if defined(CONFIG_NET_PKT_WRITE_BUFFERS) && CONFIG_NET_SEND_BUFSIZE > 0
-      case SO_SNDBUF:
-        {
-          FAR struct pkt_conn_s *conn;
-          conn = psock->s_conn;
-          /* Verify that option is the size of an 'int'.  Should also check
-           * that 'value' is properly aligned for an 'int'
-           */
-
-          if (*value_len < sizeof(int))
-            {
-              return -EINVAL;
-            }
-
-            *(FAR int *)value = conn->sndbufs;
-            break;
-          }
-#endif
-
       default:
         nerr("ERROR: Unrecognized RAW PKT socket option: %d\n", option);
         ret = -ENOPROTOOPT;

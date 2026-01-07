@@ -174,9 +174,9 @@ int can_datahandler(FAR struct net_driver_s *dev,
   conn_lock(&conn->sconn);
 #if CONFIG_NET_RECV_BUFSIZE > 0
 #  if CONFIG_NET_CAN_NBUFFERS > 0
-  int bufnum = div_const_roundup(conn->rcvbufs, NET_CAN_PKTSIZE);
+  int bufnum = div_const_roundup(conn->sconn.s_rcvbufs, NET_CAN_PKTSIZE);
 #  else
-  int bufnum = div_const_roundup(conn->rcvbufs, CONFIG_IOB_BUFSIZE);
+  int bufnum = div_const_roundup(conn->sconn.s_rcvbufs, CONFIG_IOB_BUFSIZE);
 #  endif
   /* Check the frame count pending on conn->readahead */
 

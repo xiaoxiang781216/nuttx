@@ -242,6 +242,54 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
         }
 #endif
 
+      case SO_RCVBUF:
+      case SO_SNDBUF:
+        {
+          int buffersize;
+
+          if (value_len != sizeof(int))
+            {
+              return -EINVAL;
+            }
+
+          buffersize = *(FAR int *)value;
+          if (buffersize < 0)
+            {
+              return -EINVAL;
+            }
+
+          if (option == SO_RCVBUF)
+            {
+#if CONFIG_NET_RECV_BUFSIZE > 0
+              /* Clamp to configured max if enabled */
+#if CONFIG_NET_MAX_RECV_BUFSIZE > 0
+              buffersize = MIN(buffersize, CONFIG_NET_MAX_RECV_BUFSIZE);
+#endif
+              conn_lock(conn);
+              conn->s_rcvbufs = buffersize;
+              conn_unlock(conn);
+              return OK;
+#else
+              return -ENOPROTOOPT;
+#endif
+            }
+          else /* SO_SNDBUF */
+            {
+#if CONFIG_NET_SEND_BUFSIZE > 0
+              /* Clamp to configured max if enabled */
+#if CONFIG_NET_MAX_SEND_BUFSIZE > 0
+              buffersize = MIN(buffersize, CONFIG_NET_MAX_SEND_BUFSIZE);
+#endif
+              conn_lock(conn);
+              conn->s_sndbufs = buffersize;
+              conn_unlock(conn);
+              return OK;
+#else
+              return -ENOPROTOOPT;
+#endif
+            }
+        }
+
       /* There options are only valid when used with getopt */
 
       case SO_ACCEPTCONN: /* Reports whether socket listening is enabled */

@@ -165,10 +165,6 @@ void can_free(FAR struct can_conn_s *conn)
 
 #endif
 
-#if CONFIG_NET_SEND_BUFSIZE > 0
-  nxsem_destroy(&conn->sndsem);
-#endif
-
   /* Use conn_uninit to release all connection resources */
 
   conn_uninit(&conn->sconn);

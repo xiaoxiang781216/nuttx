@@ -725,7 +725,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
    */
 
   conn_lock(&conn->sconn);
-  while (udp_wrbuffer_inqueue_size(conn) + len > conn->sndbufs)
+  while (udp_wrbuffer_inqueue_size(conn) + len > conn->sconn.s_sndbufs)
     {
       if (nonblock)
         {
@@ -733,7 +733,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
           return -EAGAIN;
         }
 
-      ret = conn_dev_sem_timedwait(&conn->sndsem, false,
+      ret = conn_dev_sem_timedwait(&conn->sconn.s_sndsem, false,
                                    udp_send_gettimeout(start, timeout),
                                    &conn->sconn, NULL);
       if (ret < 0)
@@ -987,10 +987,10 @@ void udp_sendbuffer_notify(FAR struct udp_conn_s *conn)
 {
   int val = 0;
 
-  nxsem_get_value(&conn->sndsem, &val);
+  nxsem_get_value(&conn->sconn.s_sndsem, &val);
   if (val < 0)
     {
-      nxsem_post(&conn->sndsem);
+      nxsem_post(&conn->sconn.s_sndsem);
     }
 }
 #endif /* CONFIG_NET_SEND_BUFSIZE */

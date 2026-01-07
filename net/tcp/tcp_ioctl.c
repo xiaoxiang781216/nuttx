@@ -86,11 +86,11 @@ static void tcp_path(FAR struct tcp_conn_s *conn, FAR char *buf, size_t len)
            ntohs(conn->rport),
 #if CONFIG_NET_SEND_BUFSIZE > 0
            tcp_wrbuffer_inqueue_size(conn),
-           conn->snd_bufs,
+           conn->sconn.s_sndbufs,
 #endif
 #if CONFIG_NET_RECV_BUFSIZE > 0
            (conn->readahead) ? conn->readahead->io_pktlen : 0,
-           conn->rcv_bufs,
+           conn->sconn.s_rcvbufs,
 #  ifdef CONFIG_NET_TCP_OUT_OF_ORDER
            tcp_ofoseg_bufsize(conn),
 #  endif
@@ -139,11 +139,10 @@ int tcp_ioctl(FAR struct tcp_conn_s *conn, int cmd, unsigned long arg)
       case FIONSPACE:
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
 #  if CONFIG_NET_SEND_BUFSIZE == 0
-        *(FAR int *)((uintptr_t)arg) =
-                                iob_navail(true) * CONFIG_IOB_BUFSIZE;
+        *(FAR int *)((uintptr_t)arg) = iob_navail(true) * CONFIG_IOB_BUFSIZE;
 #  else
-        *(FAR int *)((uintptr_t)arg) =
-                        conn->snd_bufs - tcp_wrbuffer_inqueue_size(conn);
+        *(FAR int *)((uintptr_t)arg) = conn->sconn.s_sndbufs -
+                                       tcp_wrbuffer_inqueue_size(conn);
 #  endif
 #else
         *(FAR int *)((uintptr_t)arg) = MIN_TCP_MSS;

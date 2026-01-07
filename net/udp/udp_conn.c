@@ -575,14 +575,7 @@ FAR struct udp_conn_s *udp_alloc(uint8_t domain)
       conn->domain      = domain;
 #endif
       conn->lport       = 0;
-#if CONFIG_NET_RECV_BUFSIZE > 0
-      conn->rcvbufs     = CONFIG_NET_RECV_BUFSIZE;
-#endif
-#if CONFIG_NET_SEND_BUFSIZE > 0
-      conn->sndbufs     = CONFIG_NET_SEND_BUFSIZE;
 
-      nxsem_init(&conn->sndsem, 0, 0);
-#endif
       /* Use conn_init to initialize the connection structure */
 
       conn_init(&conn->sconn);
@@ -646,10 +639,6 @@ void udp_free(FAR struct udp_conn_s *conn)
   udp_sendbuffer_notify(conn);
 #endif /* CONFIG_NET_SEND_BUFSIZE */
 
-#endif
-
-#if CONFIG_NET_SEND_BUFSIZE > 0
-  nxsem_destroy(&conn->sndsem);
 #endif
 
   /* Use conn_uninit to release all connection resources */

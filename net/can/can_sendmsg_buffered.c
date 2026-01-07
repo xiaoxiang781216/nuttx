@@ -253,7 +253,7 @@ ssize_t can_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
 
 #if CONFIG_NET_SEND_BUFSIZE > 0
   if ((iob_get_queue_size(&conn->write_q) + msg->msg_iov->iov_len) >
-      conn->sndbufs)
+      conn->sconn.s_sndbufs)
     {
       /* send buffer size exceeds the send limit */
 
@@ -264,7 +264,7 @@ ssize_t can_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
           goto errout_with_lock;
         }
 
-      ret = conn_dev_sem_timedwait(&conn->sndsem, false,
+      ret = conn_dev_sem_timedwait(&conn->sconn.s_sndsem, false,
                                    _SO_TIMEOUT(conn->sconn.s_sndtimeo),
                                    &conn->sconn, dev);
       if (ret < 0)
@@ -451,7 +451,7 @@ int psock_can_cansend(FAR struct socket *psock)
 
   if (can_iob_navail() <= 0
 #if CONFIG_NET_SEND_BUFSIZE > 0
-      || iob_get_queue_size(&conn->write_q) >= conn->sndbufs
+      || iob_get_queue_size(&conn->write_q) >= conn->sconn.s_sndbufs
 #endif
      )
     {
@@ -480,10 +480,10 @@ void can_sendbuffer_notify(FAR struct can_conn_s *conn)
 {
   int val = 0;
 
-  nxsem_get_value(&conn->sndsem, &val);
+  nxsem_get_value(&conn->sconn.s_sndsem, &val);
   if (val < 0)
     {
-      nxsem_post(&conn->sndsem);
+      nxsem_post(&conn->sconn.s_sndsem);
     }
 }
 

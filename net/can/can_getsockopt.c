@@ -169,37 +169,6 @@ int can_getsockopt(FAR struct socket *psock, int level, int option,
           *value_len        = sizeof(int);
           break;
 
-#if CONFIG_NET_RECV_BUFSIZE > 0
-      case SO_RCVBUF:
-        /* Verify that option is the size of an 'int'.  Should also check
-         * that 'value' is properly aligned for an 'int'
-         */
-
-        if (*value_len != sizeof(int))
-          {
-            return -EINVAL;
-          }
-
-        *(FAR int *)value = conn->rcvbufs;
-
-        break;
-#endif
-
-#if CONFIG_NET_SEND_BUFSIZE > 0
-      case SO_SNDBUF:
-        /* Verify that option is the size of an 'int'.  Should also check
-          * that 'value' is properly aligned for an 'int'
-          */
-
-        if (*value_len < sizeof(int))
-          {
-            return -EINVAL;
-        }
-
-        *(FAR int *)value = conn->sndbufs;
-        break;
-#endif
-
       default:
         nerr("ERROR: Unrecognized RAW CAN socket option: %d\n", option);
         ret = -ENOPROTOOPT;

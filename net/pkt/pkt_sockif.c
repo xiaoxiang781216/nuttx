@@ -127,16 +127,6 @@ static int pkt_sockif_alloc(FAR struct socket *psock)
 
   conn->type = psock->s_proto;
 
-#if CONFIG_NET_RECV_BUFSIZE > 0
-  conn->rcvbufs = CONFIG_NET_RECV_BUFSIZE;
-#endif
-#ifdef CONFIG_NET_PKT_WRITE_BUFFERS
-#  if CONFIG_NET_SEND_BUFSIZE > 0
-  conn->sndbufs = CONFIG_NET_SEND_BUFSIZE;
-#  endif
-  nxsem_init(&conn->sndsem, 0, 0);
-#endif
-
   /* Save the pre-allocated connection in the socket structure */
 
   psock->s_conn = conn;
@@ -379,11 +369,13 @@ static int pkt_close(FAR struct socket *psock)
 
               if (conn->sndcb != NULL)
                 {
+#if CONFIG_NET_SEND_BUFSIZE > 0
                   int ret;
 
                   while (iob_get_queue_entry_count(&conn->write_q) != 0)
                     {
-                      ret = conn_dev_sem_timedwait(&conn->sndsem, false,
+                      ret = conn_dev_sem_timedwait(&conn->sconn.s_sndsem,
+                                         false,
                                          _SO_TIMEOUT(conn->sconn.s_sndtimeo),
                                          &conn->sconn, dev);
                       if (ret < 0)
@@ -391,6 +383,7 @@ static int pkt_close(FAR struct socket *psock)
                           break;
                         }
                     }
+#endif
 
                   pkt_callback_free(dev, conn, conn->sndcb);
                   conn->sndcb = NULL;

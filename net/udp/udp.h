@@ -118,13 +118,6 @@ struct udp_conn_s
   uint8_t  domain;        /* IP domain: PF_INET or PF_INET6 */
   uint8_t  crefs;         /* Reference counts on this instance */
 
-#if CONFIG_NET_RECV_BUFSIZE > 0
-  int32_t  rcvbufs;       /* Maximum amount of bytes queued in recv */
-#endif
-#if CONFIG_NET_SEND_BUFSIZE > 0
-  int32_t  sndbufs;       /* Maximum amount of bytes queued in send */
-  sem_t    sndsem;        /* Semaphore signals send completion */
-#endif
 #ifdef CONFIG_NETDEV_RSS
   int      rcvcpu;        /* Last recvfrom cpuid */
 #endif

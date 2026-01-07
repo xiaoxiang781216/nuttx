@@ -1459,7 +1459,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
        * wait for the write buffer to be released
        */
 
-      while (tcp_wrbuffer_inqueue_size(conn) >= conn->snd_bufs)
+      while (tcp_wrbuffer_inqueue_size(conn) >= conn->sconn.s_sndbufs)
         {
           struct tcp_callback_s info;
 
@@ -1475,10 +1475,10 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
 
           info.tc_conn = conn;
           info.tc_cb   = &conn->sndcb;
-          info.tc_sem  = &conn->snd_sem;
+          info.tc_sem  = &conn->sconn.s_sndsem;
           tls_cleanup_push(tls_get_info(), tcp_callback_cleanup, &info);
 
-          ret = conn_dev_sem_timedwait(&conn->snd_sem, false,
+          ret = conn_dev_sem_timedwait(&conn->sconn.s_sndsem, false,
                                        tcp_send_gettimeout(start, timeout),
                                        &conn->sconn, conn->dev);
           tls_cleanup_pop(tls_get_info(), 0);
@@ -1776,7 +1776,7 @@ int psock_tcp_cansend(FAR struct tcp_conn_s *conn)
 
   if (tcp_wrbuffer_test() < 0 || iob_navail(true) <= 0
 #if CONFIG_NET_SEND_BUFSIZE > 0
-      || tcp_wrbuffer_inqueue_size(conn) >= conn->snd_bufs
+      || tcp_wrbuffer_inqueue_size(conn) >= conn->sconn.s_sndbufs
 #endif
      )
     {
@@ -1805,10 +1805,10 @@ void tcp_sendbuffer_notify(FAR struct tcp_conn_s *conn)
 {
   int val = 0;
 
-  nxsem_get_value(&conn->snd_sem, &val);
+  nxsem_get_value(&conn->sconn.s_sndsem, &val);
   if (val < 0)
     {
-      nxsem_post(&conn->snd_sem);
+      nxsem_post(&conn->sconn.s_sndsem);
     }
 }
 #endif /* CONFIG_NET_SEND_BUFSIZE */

@@ -82,13 +82,13 @@ static void udp_path(FAR struct udp_conn_s *conn, FAR char *buf, size_t len)
            (uint32_t)0,
 #endif
 #if CONFIG_NET_SEND_BUFSIZE > 0
-           conn->sndbufs,
+           conn->sconn.s_sndbufs,
 #else
            (int32_t)0,
 #endif
            (conn->readahead) ? conn->readahead->io_pktlen : 0,
 #if CONFIG_NET_RECV_BUFSIZE > 0
-           conn->rcvbufs,
+           conn->sconn.s_rcvbufs,
 #else
            (int32_t)0,
 #endif
@@ -138,11 +138,10 @@ int udp_ioctl(FAR struct udp_conn_s *conn, int cmd, unsigned long arg)
       case FIONSPACE:
 #ifdef CONFIG_NET_UDP_WRITE_BUFFERS
 #  if CONFIG_NET_SEND_BUFSIZE == 0
-        *(FAR int *)((uintptr_t)arg) =
-                                iob_navail(true) * CONFIG_IOB_BUFSIZE;
+        *(FAR int *)((uintptr_t)arg) = iob_navail(true) * CONFIG_IOB_BUFSIZE;
 #  else
-        *(FAR int *)((uintptr_t)arg) =
-                        conn->sndbufs - udp_wrbuffer_inqueue_size(conn);
+        *(FAR int *)((uintptr_t)arg) = conn->sconn.s_sndbufs -
+                                       udp_wrbuffer_inqueue_size(conn);
 #  endif
 #else
         *(FAR int *)((uintptr_t)arg) = MIN_UDP_MSS;

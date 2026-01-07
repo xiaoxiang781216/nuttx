@@ -34,6 +34,7 @@
 
 #include <nuttx/mutex.h>
 #include <nuttx/net/net.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>
 
@@ -112,6 +113,7 @@ extern "C"
  *
  * Description:
  *   Initialize a connection structure, including s_lock mutex
+ *   buffer and s_sndsem semaphore.
  *
  * Parameters:
  *   sconn - Pointer to the socket_conn_s structure to initialize
@@ -128,6 +130,22 @@ static inline_function void conn_init(FAR struct socket_conn_s *sconn)
   /* Initialize the connection lock */
 
   nxrmutex_init(&sconn->s_lock);
+
+  /* Set the receive buffer size */
+
+#if CONFIG_NET_RECV_BUFSIZE > 0
+  sconn->s_rcvbufs = CONFIG_NET_RECV_BUFSIZE;
+#endif
+
+  /* Set the send buffer size */
+
+#if CONFIG_NET_SEND_BUFSIZE > 0
+  sconn->s_sndbufs = CONFIG_NET_SEND_BUFSIZE;
+
+  /* Initialize the send semaphore */
+
+  nxsem_init(&sconn->s_sndsem, 0, 0);
+#endif
 }
 
 /****************************************************************************
@@ -144,6 +162,13 @@ static inline_function void conn_init(FAR struct socket_conn_s *sconn)
 static inline_function void conn_uninit(FAR struct socket_conn_s *sconn)
 {
     DEBUGASSERT(sconn != NULL);
+
+#if CONFIG_NET_SEND_BUFSIZE > 0
+
+    /* Destroy the send semaphore */
+
+    nxsem_destroy(&sconn->s_sndsem);
+#endif
 
     /* Destroy the connection lock */
 

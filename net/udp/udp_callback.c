@@ -81,7 +81,7 @@ static uint16_t udp_datahandler(FAR struct net_driver_s *dev,
 
   conn_lock(&conn->sconn);
 #if CONFIG_NET_RECV_BUFSIZE > 0
-  if (conn->readahead && conn->readahead->io_pktlen > conn->rcvbufs)
+  if (conn->readahead && conn->readahead->io_pktlen > conn->sconn.s_rcvbufs)
     {
       conn_unlock(&conn->sconn);
       netdev_iob_release(dev);

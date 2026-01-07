@@ -32,7 +32,6 @@
 #include <sys/types.h>
 #include <poll.h>
 
-#include <nuttx/semaphore.h>
 #include <nuttx/mutex.h>
 #include <nuttx/can.h>
 #include <nuttx/net/can.h>
@@ -94,15 +93,6 @@ struct can_conn_s
    */
 
   struct iob_queue_s readahead;      /* remove Read-ahead buffering */
-
-#if CONFIG_NET_RECV_BUFSIZE > 0
-  int32_t  rcvbufs;                  /* Maximum amount of bytes queued in receive */
-#endif
-
-#if CONFIG_NET_SEND_BUFSIZE > 0
-  int32_t  sndbufs;                  /* Maximum amount of bytes queued in send */
-  sem_t    sndsem;                   /* Semaphore signals send completion */
-#endif
 
 #ifdef CONFIG_NET_CAN_WRITE_BUFFERS
   /* Write buffering

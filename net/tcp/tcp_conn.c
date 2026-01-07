@@ -717,14 +717,7 @@ FAR struct tcp_conn_s *tcp_alloc(uint8_t domain)
       conn->keepintvl     = 2 * DSEC_PER_SEC;
       conn->keepcnt       = 3;
 #endif
-#if CONFIG_NET_RECV_BUFSIZE > 0
-      conn->rcv_bufs      = CONFIG_NET_RECV_BUFSIZE;
-#endif
-#if CONFIG_NET_SEND_BUFSIZE > 0
-      conn->snd_bufs      = CONFIG_NET_SEND_BUFSIZE;
 
-      nxsem_init(&conn->snd_sem, 0, 0);
-#endif
       /* Use conn_init to initialize the connection structure */
 
       conn_init(&conn->sconn);
@@ -874,10 +867,6 @@ void tcp_free(FAR struct tcp_conn_s *conn)
   tcp_sendbuffer_notify(conn);
 #endif /* CONFIG_NET_SEND_BUFSIZE */
 
-#endif
-
-#if CONFIG_NET_SEND_BUFSIZE > 0
-  nxsem_destroy(&conn->snd_sem);
 #endif
 
   /* Use conn_uninit to release all connection resources */
@@ -1160,10 +1149,10 @@ FAR struct tcp_conn_s *tcp_alloc_accept(FAR struct net_driver_s *dev,
       conn->sconn.s_tos      = listener->sconn.s_tos;
       conn->sconn.s_ttl      = listener->sconn.s_ttl;
 #if CONFIG_NET_RECV_BUFSIZE > 0
-      conn->rcv_bufs         = listener->rcv_bufs;
+      conn->sconn.s_rcvbufs  = listener->sconn.s_rcvbufs;
 #endif
 #if CONFIG_NET_SEND_BUFSIZE > 0
-      conn->snd_bufs         = listener->snd_bufs;
+      conn->sconn.s_sndbufs  = listener->sconn.s_sndbufs;
 #endif
       conn->mss              = listener->mss;
 

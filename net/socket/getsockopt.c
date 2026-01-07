@@ -208,6 +208,34 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
         }
         break;
 
+#if CONFIG_NET_RECV_BUFSIZE > 0
+      case SO_RCVBUF:
+        {
+          if (*value_len < sizeof(int))
+            {
+              return -EINVAL;
+            }
+
+          *(FAR int *)value = conn->s_rcvbufs;
+          *value_len = sizeof(int);
+        }
+        break;
+#endif
+
+#if CONFIG_NET_SEND_BUFSIZE > 0
+      case SO_SNDBUF:
+        {
+          if (*value_len < sizeof(int))
+            {
+              return -EINVAL;
+            }
+
+          *(FAR int *)value = conn->s_sndbufs;
+          *value_len = sizeof(int);
+        }
+        break;
+#endif
+
       default:
         return -ENOPROTOOPT;
     }

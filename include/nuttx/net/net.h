@@ -244,6 +244,14 @@ struct socket_conn_s
 #  endif
 #endif
 
+#if CONFIG_NET_RECV_BUFSIZE > 0
+  uint32_t      s_rcvbufs;  /* Receive buffer size in bytes */
+#endif
+#if CONFIG_NET_SEND_BUFSIZE > 0
+  uint32_t      s_sndbufs;  /* Send buffer size in bytes */
+  sem_t         s_sndsem;   /* Semaphore for send buffering */
+#endif
+
   /* Definitions of 8-bit socket flags */
 
   uint8_t       s_flags;     /* See _SF_* definitions */

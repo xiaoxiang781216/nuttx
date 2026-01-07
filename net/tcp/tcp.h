@@ -265,13 +265,6 @@ struct tcp_conn_s
 #endif
   uint32_t snd_wl1;
   uint32_t snd_wl2;
-#if CONFIG_NET_RECV_BUFSIZE > 0
-  int32_t  rcv_bufs;      /* Maximum amount of bytes queued in recv */
-#endif
-#if CONFIG_NET_SEND_BUFSIZE > 0
-  int32_t  snd_bufs;      /* Maximum amount of bytes queued in send */
-  sem_t    snd_sem;       /* Semaphore signals send completion */
-#endif
 #if defined(CONFIG_NET_TCP_WRITE_BUFFERS) || \
     defined(CONFIG_NET_TCP_WINDOW_SCALE)
   uint32_t tx_unacked;    /* Number bytes sent but not yet ACKed */

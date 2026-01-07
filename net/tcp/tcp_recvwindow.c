@@ -66,9 +66,9 @@ static uint32_t tcp_calc_rcvsize(FAR struct tcp_conn_s *conn,
   uint32_t desire;
 
   recvsize = conn->readahead ? conn->readahead->io_pktlen : 0;
-  if (conn->rcv_bufs > recvsize)
+  if (conn->sconn.s_rcvbufs > recvsize)
     {
-      desire = conn->rcv_bufs - recvsize;
+      desire = conn->sconn.s_rcvbufs - recvsize;
       if (recvwndo > desire)
         {
           recvwndo = desire;
