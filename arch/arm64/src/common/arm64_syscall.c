@@ -165,6 +165,11 @@ uint64_t *arm64_syscall(uint64_t *regs)
 
   g_interrupt_context = true;
 
+  if (*running_task != NULL)
+    {
+      nxsched_suspend_scheduler(*running_task);
+    }
+
   /* Nested interrupts are not supported */
 
   DEBUGASSERT(regs);
@@ -333,6 +338,8 @@ uint64_t *arm64_syscall(uint64_t *regs)
     }
 
   regs = tcb->xcp.regs;
+
+  nxsched_resume_scheduler(tcb);
 
   /* (*running_task)->xcp.regs is about to become invalid
    * and will be marked as NULL to avoid misusage.

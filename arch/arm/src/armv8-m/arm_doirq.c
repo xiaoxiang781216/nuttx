@@ -81,11 +81,13 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   /* This judgment proves that (*running_task)->xcp.regs
    * is invalid, and we can safely overwrite it.
+   * And suspend the scheduler for the current task.
    */
 
   if (!(NVIC_IRQ_SVCALL == irq && regs[REG_R0] == SYS_restore_context))
     {
       tcb->xcp.regs = regs;
+      nxsched_suspend_scheduler(tcb);
     }
 
   board_autoled_on(LED_INIRQ);
@@ -122,7 +124,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   tcb = this_task();
 
-  if (tcb != *running_task)
+  if (*running_task != tcb)
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -142,6 +144,10 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
       *running_task = tcb;
     }
+
+  /* Resume the new task (or the same task if no context switch) */
+
+  nxsched_resume_scheduler(tcb);
 
   regs = tcb->xcp.regs;
 #endif

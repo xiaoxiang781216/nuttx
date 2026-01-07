@@ -83,6 +83,8 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   up_set_interrupt_context(true);
 
+  nxsched_suspend_scheduler(tcb);
+
   /* Deliver the IRQ */
 
   irq_dispatch(irq, regs);
@@ -115,6 +117,8 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
       *running_task = tcb;
       regs = tcb->xcp.regs;
     }
+
+  nxsched_resume_scheduler(tcb);
 
   /* Set irq flag */
 

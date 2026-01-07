@@ -114,6 +114,11 @@ void tricore_svcall(volatile void *trap)
 
   up_set_interrupt_context(true);
 
+  if (*running_task != NULL)
+    {
+      nxsched_suspend_scheduler(*running_task);
+    }
+
   cmd = puregs[REG_D8];
 
   if (cmd != SYS_restore_context)
@@ -407,6 +412,8 @@ void tricore_svcall(volatile void *trap)
   /* Updata PPRS register */
 
   tricore_restore_pprs(tcb);
+
+  nxsched_resume_scheduler(tcb);
 
   UP_ISB();
 

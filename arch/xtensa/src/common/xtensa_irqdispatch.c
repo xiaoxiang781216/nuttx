@@ -67,9 +67,11 @@ uint32_t *xtensa_irq_dispatch(int irq, uint32_t *regs)
    * is invalid, and we can safely overwrite it.
    */
 
-  if (!(XTENSA_IRQ_SYSCALL == irq && regs[REG_A2] == SYS_restore_context))
+  tcb = *running_task;
+  if (tcb != NULL)
     {
-      (*running_task)->xcp.regs = regs;
+      tcb->xcp.regs = regs;
+      nxsched_suspend_scheduler(tcb);
     }
 
   /* Deliver the IRQ */
@@ -101,6 +103,8 @@ uint32_t *xtensa_irq_dispatch(int irq, uint32_t *regs)
 
       *running_task = tcb;
     }
+
+  nxsched_resume_scheduler(tcb);
 
   /* Set irq flag */
 

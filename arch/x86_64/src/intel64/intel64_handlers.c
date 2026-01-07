@@ -69,6 +69,12 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
 
   up_set_interrupt_context(true);
 
+  tcb = *running_task;
+  if (tcb != NULL)
+    {
+      nxsched_suspend_scheduler(tcb);
+    }
+
   /* Deliver the IRQ */
 
   irq_dispatch(irq, regs);
@@ -82,8 +88,6 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
 
   if (*running_task != tcb)
     {
-      tcb = this_task();
-
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
        * running task is closed down gracefully (data caches dump,
@@ -102,6 +106,8 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
 
       *running_task = tcb;
     }
+
+  nxsched_resume_scheduler(tcb);
 
   /* Clear irq flag */
 

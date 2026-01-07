@@ -125,6 +125,8 @@ static uintreg_t *riscv_doirq_top(int irq, uintreg_t *regs)
   up_set_interrupt_context(true);
   UP_DMB();
 
+  nxsched_suspend_scheduler(tcb);
+
   /* Deliver the IRQ */
 
   IRQ_DISPATCH(irq, regs);
@@ -152,6 +154,8 @@ static uintreg_t *riscv_doirq_top(int irq, uintreg_t *regs)
 
       *running_task = tcb;
     }
+
+  nxsched_resume_scheduler(tcb);
 
   /* Set irq flag */
 
