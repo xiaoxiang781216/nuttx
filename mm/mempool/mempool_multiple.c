@@ -884,27 +884,33 @@ FAR void *mempool_multiple_memalign(FAR struct mempool_multiple_s *mpool,
 
   DEBUGASSERT((alignment & (alignment - 1u)) == 0u);
 
-  pool = mempool_multiple_find(mpool, size + alignment);
-  if (pool != NULL)
-    {
-      end = mpool->pools + mpool->npools;
-      do
-        {
-          FAR char *blk = mempool_allocate(pool, UINT_MAX);
-          if (blk != NULL)
-            {
-              ret = (FAR char *)ALIGN_UP((uintptr_t)blk + mpool->headsize,
-                                          alignment);
-              if (mpool->headsize)
-                {
-                  *(struct mempool_s **)((uintptr_t)ret - mpool->headsize) =
-                           pool;
-                }
+  /* Check integer overflow */
 
-              break;
+  if (size <= size + alignment)
+    {
+      pool = mempool_multiple_find(mpool, size + alignment);
+      if (pool != NULL)
+        {
+          end = mpool->pools + mpool->npools;
+          do
+            {
+              FAR char *blk = mempool_allocate(pool, UINT_MAX);
+              if (blk != NULL)
+                {
+                  ret = (FAR char *)ALIGN_UP((uintptr_t)blk +
+                                              mpool->headsize,
+                                              alignment);
+                  if (mpool->headsize)
+                    {
+                      *(struct mempool_s **)((uintptr_t)ret -
+                                             mpool->headsize) = pool;
+                    }
+
+                  break;
+                }
             }
+          while (++pool < end);
         }
-      while (++pool < end);
     }
 
   return ret;
