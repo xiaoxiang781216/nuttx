@@ -358,3 +358,9 @@ ifneq ($(CONFIG_BINFMT_ELF_RELOCATABLE)$(CONFIG_LTO_FULL),)
   CELFFLAGS += -fno-lto
   CXXELFFLAGS += -fno-lto
 endif
+
+# Thread pointer access method
+
+ifeq ($(CONFIG_SCHED_THREAD_LOCAL),y)
+  ARCHOPTIMIZATION += -mtp=tpidr_el0
+endif

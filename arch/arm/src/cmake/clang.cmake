@@ -212,6 +212,16 @@ if(CONFIG_DEBUG_SYMBOLS)
   add_compile_options(${CONFIG_DEBUG_SYMBOLS_LEVEL})
 endif()
 
+# Thread pointer access method
+
+if(CONFIG_SCHED_THREAD_LOCAL)
+  if(CONFIG_ARCH_ARM_A_R)
+    add_compile_options(-mtp=tpidrurw)
+  else()
+    add_compile_options(-mtp=soft)
+  endif()
+endif()
+
 add_compile_options(
   -Wno-attributes -Wno-unknown-pragmas
   $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>

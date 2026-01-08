@@ -197,6 +197,16 @@ elseif(CONFIG_LTO_FAT)
   add_compile_options(-flto -ffat-lto-objects)
 endif()
 
+# Thread pointer access method
+
+if(CONFIG_SCHED_THREAD_LOCAL)
+  if(CONFIG_ARCH_ARM_A_R)
+    add_compile_options(-mtp=tpidrurw)
+  else()
+    add_compile_options(-mtp=soft)
+  endif()
+endif()
+
 # The arm clang toolchain requires to pass the linker option will gcc tool chain
 # can automatically perform lto at linking time if it found any object files are
 # compiled with flto

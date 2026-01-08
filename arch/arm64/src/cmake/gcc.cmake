@@ -214,3 +214,9 @@ if(GCCVER GREATER_EQUAL 12)
 endif()
 
 set(PREPROCESS ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)
+
+# Thread pointer access method
+
+if(CONFIG_SCHED_THREAD_LOCAL)
+  add_compile_options(-mtp=tpidr_el0)
+endif()

@@ -165,6 +165,16 @@ else ifeq ($(CONFIG_LTO_FULL),y)
   endif
 endif
 
+# Thread pointer access method
+
+ifeq ($(CONFIG_SCHED_THREAD_LOCAL),y)
+  ifeq ($(CONFIG_ARCH_ARM_A_R,y)
+    ARCHOPTIMIZATION += -mtp=tpidrurw
+  else
+    ARCHOPTIMIZATION += -mtp=soft
+  endif
+endif
+
 # NuttX buildroot under Linux or Cygwin
 
 ifeq ($(CONFIG_ARM_TOOLCHAIN_BUILDROOT),y)
