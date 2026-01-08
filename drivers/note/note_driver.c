@@ -119,6 +119,9 @@ struct note_taskname_foreach_s
   FAR void *arg;
 };
 
+typedef struct note_driver_s *
+note_drivers_t[CONFIG_DRIVERS_NOTE_MAX + 1];
+
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -154,39 +157,77 @@ static DEFINE_PER_CPU_BSS(unsigned int, g_note_disabled_irq_nest);
 #  define g_note_disabled_irq_nest this_cpu_var(g_note_disabled_irq_nest)
 #endif
 
-FAR static struct note_driver_s *
-  g_note_drivers[CONFIG_DRIVERS_NOTE_MAX + 1] =
+FAR static DEFINE_PER_CPU_BMP(note_drivers_t, g_note_drivers) =
 {
-#ifdef CONFIG_DRIVERS_NOTERAM
+#ifndef CONFIG_BMP
+#  ifdef CONFIG_DRIVERS_NOTERAM
   (FAR struct note_driver_s *)&g_noteram_driver,
-#endif
-#ifdef CONFIG_DRIVERS_NOTELOG
+#  endif
+#  ifdef CONFIG_DRIVERS_NOTELOG
   (FAR struct note_driver_s *)&g_notelog_driver,
-#endif
-#ifdef CONFIG_DRIVERS_NOTELOWEROUT
+#  endif
+#  ifdef CONFIG_DRIVERS_NOTELOWEROUT
   (FAR struct note_driver_s *)&g_notestream_lowerout,
-#endif
-#ifdef CONFIG_DRIVERS_NOTERPMSG
+#  endif
+#  ifdef CONFIG_DRIVERS_NOTERPMSG
   (FAR struct note_driver_s *)&g_noterpmsg_driver,
-#endif
-#ifdef CONFIG_DRIVERS_NOTET32FDX
+#  endif
+#  ifdef CONFIG_DRIVERS_NOTET32FDX
   (FAR struct note_driver_s *)&g_notefdx,
-#endif
-#ifdef CONFIG_DRIVERS_NOTESNAP
+#  endif
+#  ifdef CONFIG_DRIVERS_NOTESNAP
   (FAR struct note_driver_s *)&g_notesnap,
+#  endif
 #endif
   NULL
 };
+#define g_note_drivers this_cpu_var_bmp(g_note_drivers)
 
-static spinlock_t g_note_lock;
+#if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER)
+static DEFINE_PER_CPU_BSS_BMP(spinlock_t, g_note_lock);
+#  define g_note_lock this_cpu_var_bmp(g_note_lock)
+#endif
 
 #if CONFIG_DRIVERS_NOTE_CLOCKID >= 0
-static clock_t g_note_perf_offset;
+static DEFINE_PER_CPU_BSS_BMP(clock_t, g_note_perf_offset);
+#  define g_note_perf_offset this_cpu_var_bmp(g_note_perf_offset)
 #endif
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#ifdef CONFIG_BMP
+static void note_drivers_initialize(void)
+{
+  int i = 0;
+
+  if (g_note_drivers[0] == NULL)
+    {
+#  ifdef CONFIG_DRIVERS_NOTERAM
+      g_note_drivers[i++] = (FAR struct note_driver_s *)&g_noteram_driver;
+#  endif
+#  ifdef CONFIG_DRIVERS_NOTELOG
+      g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notelog_driver;
+#  endif
+#  ifdef CONFIG_DRIVERS_NOTELOWEROUT
+      g_note_drivers[i++] =
+        (FAR struct note_driver_s *)&g_notestream_lowerout;
+#  endif
+#  ifdef CONFIG_DRIVERS_NOTERPMSG
+      g_note_drivers[i++] = (FAR struct note_driver_s *)&g_noterpmsg_driver;
+#  endif
+#  ifdef CONFIG_DRIVERS_NOTET32FDX
+      g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notefdx;
+#  endif
+#  ifdef CONFIG_DRIVERS_NOTESNAP
+      g_note_drivers[i++] = (FAR struct note_driver_s *)&g_notesnap;
+#  endif
+    }
+}
+#else
+#  define note_drivers_initialize()
+#endif
 
 /****************************************************************************
  * Name: note_driver_fs_register
@@ -781,6 +822,7 @@ void sched_note_add(FAR const void *data, size_t len)
 {
   DEBUGASSERT(data);
 
+  note_drivers_initialize();
   while (len >= sizeof(struct note_common_s))
     {
       FAR struct note_common_s *note = (FAR struct note_common_s *)data;
@@ -871,6 +913,7 @@ void sched_note_start(FAR struct tcb_s *tcb)
 
   nxtask_namepool_record(tcb->pid, tcb->name);
 
+  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_START))
@@ -927,6 +970,7 @@ void sched_note_stop(FAR struct tcb_s *tcb)
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
+  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_STOP))
@@ -992,6 +1036,7 @@ void sched_note_suspend(FAR struct tcb_s *tcb)
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
+  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_SUSPEND))
@@ -1031,6 +1076,7 @@ void sched_note_resume(FAR struct tcb_s *tcb)
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
+  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_RESUME))
@@ -1070,6 +1116,7 @@ void sched_note_cpu_start(FAR struct tcb_s *tcb, int cpu)
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
+  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_CPU_START))
@@ -1109,6 +1156,7 @@ void sched_note_cpu_started(FAR struct tcb_s *tcb)
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
+  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_CPU_STARTED))
@@ -1151,6 +1199,7 @@ void sched_note_preemption(FAR struct tcb_s *tcb, bool locked)
   bool formatted = false;
   irqstate_t flags;
 
+  note_drivers_initialize();
   flags = spin_lock_irqsave_notrace(&g_note_lock);
   for (driver = g_note_drivers; *driver; driver++)
     {
@@ -1195,6 +1244,7 @@ void sched_note_csection(FAR struct tcb_s *tcb, bool enter)
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
+  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, NOTE_CSECTION_ENTER + enter))
@@ -1255,6 +1305,7 @@ void sched_note_spinlock(FAR volatile spinlock_t *spinlock,
   FAR struct note_driver_s **driver;
   bool formatted = false;
 
+  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, type))
@@ -1300,6 +1351,7 @@ void sched_note_syscall_enter(int nr, int argc, ...)
   unsigned int length = 0;
   va_list ap;
 
+  note_drivers_initialize();
   va_start(ap, argc);
   for (driver = g_note_drivers; *driver; driver++)
     {
@@ -1367,6 +1419,7 @@ void sched_note_syscall_leave(int nr, uintptr_t result)
   bool formatted = false;
   FAR struct tcb_s *tcb = running_task();
 
+  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_syscall(*driver, NOTE_SYSCALL_LEAVE, nr))
@@ -1412,6 +1465,7 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter)
   bool formatted = false;
   FAR struct tcb_s *tcb = enter ? running_task() : this_task();
 
+  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_irq(*driver, irq, enter))
@@ -1454,6 +1508,7 @@ void sched_note_wdog(uint8_t event, FAR void *handler, FAR const void *arg)
   FAR struct tcb_s *tcb = this_task();
   irqstate_t flags;
 
+  note_drivers_initialize();
   flags = enter_critical_section_notrace();
   for (driver = g_note_drivers; *driver; driver++)
     {
@@ -1498,6 +1553,7 @@ void sched_note_heap(uint8_t event, FAR void *heap, FAR void *mem,
   bool formatted = false;
   FAR struct tcb_s *tcb = running_task();
 
+  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_type(*driver, event))
@@ -1724,6 +1780,7 @@ void sched_note_event_ip(uint8_t tag, uint8_t level, uintptr_t ip,
 {
   FAR struct note_driver_s **driver;
 
+  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_dump(*driver, tag, level, event))
@@ -1741,6 +1798,7 @@ void sched_note_vprintf_ip(uint8_t tag, uint8_t level, uintptr_t ip,
 {
   FAR struct note_driver_s **driver;
 
+  note_drivers_initialize();
   for (driver = g_note_drivers; *driver; driver++)
     {
       if (!note_isenabled_dump(*driver, tag, level, NOTE_DUMP_PRINTF))
@@ -1762,6 +1820,7 @@ int note_driver_initialize(void)
   int i;
   int ret = 0;
 
+  note_drivers_initialize();
   for (i = 0; i < CONFIG_DRIVERS_NOTE_MAX; i++)
     {
       if (g_note_drivers[i] != NULL)
@@ -1791,6 +1850,7 @@ int note_driver_register(FAR struct note_driver_s *driver)
 
   /* Find an empty slot to register the driver */
 
+  note_drivers_initialize();
   for (i = 0; i < CONFIG_DRIVERS_NOTE_MAX; i++)
     {
       if (g_note_drivers[i] == NULL)
@@ -1822,6 +1882,8 @@ void note_driver_unregister(FAR struct note_driver_s *driver)
   irqstate_t irq_mask;
 
   DEBUGASSERT(driver);
+
+  note_drivers_initialize();
   irq_mask = spin_lock_irqsave_notrace(&g_note_lock);
   for (i = 0; i < CONFIG_DRIVERS_NOTE_MAX; i++)
     {

@@ -185,7 +185,7 @@ static_assert(
  * Public Data
  ****************************************************************************/
 
-struct notesnap_s g_notesnap =
+DEFINE_PER_CPU_BMP(struct notesnap_s, g_notesnap) =
 {
   {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
@@ -208,6 +208,7 @@ struct notesnap_s g_notesnap =
     &g_notesnap_ops
   }
 };
+#define g_notesnap this_cpu_var_bmp(g_notesnap)
 
 /****************************************************************************
  * Name: notesnap_common

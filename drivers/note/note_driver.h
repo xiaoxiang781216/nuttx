@@ -35,6 +35,7 @@
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/note/note_driver.h>
+#include <nuttx/percpu.h>
 #include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/streams.h>
@@ -105,27 +106,27 @@ size_t note_driver_event_ip(FAR struct note_driver_s *driver, uint8_t tag,
  ****************************************************************************/
 
 #ifdef CONFIG_DRIVERS_NOTELOG
-extern struct note_driver_s g_notelog_driver;
+DECLARE_PER_CPU_BMP(struct note_driver_s, g_notelog_driver);
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTERAM
-extern struct noteram_driver_s g_noteram_driver;
+DECLARE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver);
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTERPMSG
-extern struct noterpmsg_driver_s g_noterpmsg_driver;
+DECLARE_PER_CPU_BMP(struct noterpmsg_driver_s, g_noterpmsg_driver);
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTELOWEROUT
-extern struct notestream_driver_s g_notestream_lowerout;
+DECLARE_PER_CPU_BMP(struct notestream_driver_s, g_notestream_lowerout);
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTET32FDX
-extern struct notefdx_s g_notefdx;
+DECLARE_PER_CPU_BMP(struct notefdx_s, g_notefdx);
 #endif
 
 #ifdef CONFIG_DRIVERS_NOTESNAP
-extern struct notesnap_s g_notesnap;
+DECLARE_PER_CPU_BMP(struct notesnap_s, g_notesnap);
 #endif
 
 /****************************************************************************
