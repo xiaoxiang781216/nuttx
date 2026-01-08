@@ -89,6 +89,7 @@ uint64_t *arm64_doirq(int irq, uint64_t * regs)
   if (regs != tcb->xcp.regs)
     {
       struct tcb_s **running_task = &g_running_task;
+      uintptr_t tpidr;
 
       /* need to do a context switch */
 
@@ -103,9 +104,19 @@ uint64_t *arm64_doirq(int irq, uint64_t * regs)
       tcb = this_task();
 #endif
 
-      /* Update the TLS pointer */
+      /* Update the TLS pointer.
+       * The TLS pointer must skip over the
+       * tls_info_s structure to align with compiler-generated TLS
+       * variable access. The compiler's built-in TLS support (for
+       * thread_local variables) expects the TLS pointer to point directly
+       * to the TLS data area, not to our manually-maintained tls_info_s
+       * metadata structure. By adding sizeof(struct tls_info_s), we
+       * ensure that compiler-generated code accesses the correct memory
+       * location, bypassing our internal bookkeeping structure.
+       */
 
-      write_sysreg(tcb->stack_alloc_ptr, tpidr_el0);
+      tpidr = (uintptr_t)tcb->stack_alloc_ptr + sizeof(struct tls_info_s);
+      write_sysreg(tpidr, tpidr_el0);
 
       /* Record the new "running" task when context switch occurred.
        * g_running_tasks[] is only used by assertion logic for reporting

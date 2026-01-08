@@ -154,6 +154,7 @@ uint32_t *arm_syscall(uint32_t *regs)
 #ifndef CONFIG_BUILD_FLAT
   uint32_t cpsr;
 #endif
+  uintptr_t tpidr;
 
   /* Nested interrupts are not supported */
 
@@ -595,9 +596,19 @@ uint32_t *arm_syscall(uint32_t *regs)
 
   sched_note_irqhandler(NR_IRQS, arm_syscall, false);
 
-  /* Update tls info */
+  /* Update the TLS pointer.
+   * The TLS pointer must skip over the
+   * tls_info_s structure to align with compiler-generated TLS
+   * variable access. The compiler's built-in TLS support (for
+   * thread_local variables) expects the TLS pointer to point directly
+   * to the TLS data area, not to our manually-maintained tls_info_s
+   * metadata structure. By adding sizeof(struct tls_info_s), we
+   * ensure that compiler-generated code accesses the correct memory
+   * location, bypassing our internal bookkeeping structure.
+   */
 
-  CP15_SET(TPIDRURW, (uintptr_t)tcb->stack_alloc_ptr);
+  tpidr = (uintptr_t)tcb->stack_alloc_ptr + sizeof(struct tls_info_s);
+  CP15_SET(TPIDRURW, tpidr);
 
   /* Resume the scheduler for the new task */
 

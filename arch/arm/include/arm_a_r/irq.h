@@ -521,7 +521,7 @@ static inline_function bool up_interrupt_context(void)
   return ret;
 }
 
-#define up_tls_info() ((struct tls_info_s *)CP15_GET(TPIDRURW))
+#define up_tls_info() ((struct tls_info_s *)CP15_GET(TPIDRURW) - 1)
 
 /****************************************************************************
  * Public Function Prototypes

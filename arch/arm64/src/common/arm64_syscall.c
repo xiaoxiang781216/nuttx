@@ -158,8 +158,9 @@ uint64_t *arm64_syscall(uint64_t *regs)
   struct tcb_s *tcb = this_task();
   uint64_t cmd;
 #if defined(CONFIG_BUILD_KERNEL) || defined(CONFIG_BUILD_PROTECTED)
-  uint64_t             spsr;
+  uint64_t spsr;
 #endif
+  uintptr_t tpidr;
 
   /* Set irq flag */
 
@@ -343,9 +344,19 @@ uint64_t *arm64_syscall(uint64_t *regs)
 
   g_interrupt_context = false;
 
-  /* Update the TLS pointer */
+  /* Update the TLS pointer.
+   * The TLS pointer must skip over the
+   * tls_info_s structure to align with compiler-generated TLS
+   * variable access. The compiler's built-in TLS support (for
+   * thread_local variables) expects the TLS pointer to point directly
+   * to the TLS data area, not to our manually-maintained tls_info_s
+   * metadata structure. By adding sizeof(struct tls_info_s), we
+   * ensure that compiler-generated code accesses the correct memory
+   * location, bypassing our internal bookkeeping structure.
+   */
 
-  write_sysreg(tcb->stack_alloc_ptr, tpidr_el0);
+  tpidr = (uintptr_t)tcb->stack_alloc_ptr + sizeof(struct tls_info_s);
+  write_sysreg(tpidr, tpidr_el0);
 
   return regs;
 }

@@ -411,7 +411,7 @@ static inline_function bool up_interrupt_context(void)
  * interrupt context and 0 indicates being in a thread context.
  ****************************************************************************/
 
-#define up_tls_info() ((struct tls_info_s *)read_sysreg(tpidr_el0))
+#define up_tls_info() ((struct tls_info_s *)read_sysreg(tpidr_el0) - 1)
 
 #define up_switch_context(tcb, rtcb)                                      \
   do                                                                      \
