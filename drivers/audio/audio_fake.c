@@ -515,7 +515,7 @@ static void audio_fake_frame_delay(FAR struct audio_fake_s *priv,
   diff_time = TICK2USEC(clock_systime_ticks() - priv->start_tick);
   if (diff_time >= total_time)
     {
-      audwarn("WARN: diff_time %" PRIu64 " > total_time %" PRIu64 ".\n",
+      auderr("ERROR: diff_time %" PRIu64 " > total_time %" PRIu64 ".\n",
               diff_time, total_time);
     }
   else
