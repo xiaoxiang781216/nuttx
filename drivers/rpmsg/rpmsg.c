@@ -56,7 +56,7 @@
 #define RPMSG_RECURSIVE_LIMIT    8
 #define RPMSG_DEFAULT_WQUEUE_IDX (CONFIG_RPMSG_WQUEUE_NUMBER / 2)
 
-#ifdef CONFIG_RPMSG_GLOBAL_WQUEUE
+#ifdef CONFIG_RPMSG_WQUEUE_GLOBAL
 #  define rpmsg_get_wqueues(rpmsg) g_rpmsg_wqueues
 #else
 #  define rpmsg_get_wqueues(rpmsg) ((rpmsg)->wqueues)
@@ -367,9 +367,6 @@ void rpmsg_initialize(void)
 {
   rpmsg_trace_initialize();
   rpmsg_procfs_initialize();
-#ifdef CONFIG_RPMSG_WQUEUE_GLOBAL
-  rpmsg_create_wqueues(g_rpmsg_wqueues, "glb", CONFIG_RPMSG_WQUEUE_PRIORITY);
-#endif
 }
 
 int rpmsg_tickwait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem,
@@ -1002,14 +999,25 @@ void rpmsg_modify_signals(FAR struct rpmsg_s *rpmsg,
     }
 }
 
-#ifndef CONFIG_RPMSG_WQUEUE_GLOBAL
 int rpmsg_init_wqueues(FAR struct rpmsg_s *rpmsg, uint8_t priority)
 {
+#ifdef CONFIG_RPMSG_WQUEUE_GLOBAL
+  int ret = OK;
+
+  if (g_rpmsg_wqueues[0].kwqueue == NULL)
+    {
+      ret = rpmsg_create_wqueues(g_rpmsg_wqueues, "glb", priority);
+    }
+
+  return ret;
+#else
   return rpmsg_create_wqueues(rpmsg->wqueues, rpmsg->cpuname, priority);
+#endif
 }
 
 void rpmsg_deinit_wqueues(FAR struct rpmsg_s *rpmsg)
 {
+#ifndef CONFIG_RPMSG_WQUEUE_GLOBAL
   int i;
 
   for (i = 0; i < CONFIG_RPMSG_WQUEUE_NUMBER; i++)
@@ -1019,8 +1027,8 @@ void rpmsg_deinit_wqueues(FAR struct rpmsg_s *rpmsg)
           work_queue_free(rpmsg->wqueues[i].kwqueue);
         }
     }
-}
 #endif
+}
 
 int rpmsg_queue_work(FAR struct rpmsg_s *rpmsg, uint8_t priority,
                      FAR struct work_s *work, worker_t worker, FAR void *arg)
