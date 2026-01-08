@@ -187,7 +187,10 @@ static int igc_transmit(FAR struct netdev_lowerhalf_s *dev,
 /* Interrupt handling */
 
 static FAR netpkt_t *igc_receive(FAR struct netdev_lowerhalf_s *dev);
-static void igc_txdone(FAR struct netdev_lowerhalf_s *dev);
+static bool igc_txdone(FAR struct netdev_lowerhalf_s *dev);
+#ifdef CONFIG_NET_NETPOLL
+static void igc_txpoll(FAR struct netdev_lowerhalf_s *dev);
+#endif
 
 static void igc_msix_interrupt(FAR struct igc_driver_s *priv);
 static int igc_interrupt(int irq, FAR void *context, FAR void *arg);
@@ -263,6 +266,9 @@ static const struct netdev_ops_s g_igc_ops =
 #ifdef CONFIG_NET_MCASTGROUP
   .addmac   = igc_addmac,
   .rmmac    = igc_rmmac,
+#endif
+#ifdef CONFIG_NET_NETPOLL
+  .txpoll   = igc_txpoll
 #endif
 };
 
@@ -581,6 +587,37 @@ static int igc_transmit(FAR struct netdev_lowerhalf_s *dev,
   return OK;
 }
 
+#ifdef CONFIG_NET_NETPOLL
+/*****************************************************************************
+ * Name: igc_txpoll
+ *
+ * Description:
+ *   Wait for TX done
+ *
+ * Input Parameters:
+ *   dev - Reference to the driver state structure
+ *
+ * Returned Value:
+ *   None
+ *
+ *****************************************************************************/
+
+static void igc_txpoll(FAR struct netdev_lowerhalf_s *dev)
+{
+  FAR struct igc_driver_s *priv = (FAR struct igc_driver_s *)dev;
+
+  /* Wait for TX done with interrupt disabled */
+
+  igc_putreg_mem(priv, IGC_EIMC, IGC_MSIX_EIMS);
+  igc_putreg_mem(priv, IGC_IMC, IGC_MSIX_IMS);
+
+  while (!igc_txdone(dev));
+
+  igc_putreg_mem(priv, IGC_EIMS, IGC_MSIX_EIMS);
+  igc_putreg_mem(priv, IGC_IMS, IGC_MSIX_IMS);
+}
+#endif
+
 /*****************************************************************************
  * Name: igc_receive
  *
@@ -670,16 +707,14 @@ static FAR netpkt_t *igc_receive(FAR struct netdev_lowerhalf_s *dev)
  *   priv - Reference to the driver state structure
  *
  * Returned Value:
- *   None
- *
- * Assumptions:
- *   The network is locked.
+ *   Return true if any netpk has been released, otherwise return flase
  *
  *****************************************************************************/
 
-static void igc_txdone(FAR struct netdev_lowerhalf_s *dev)
+static bool igc_txdone(FAR struct netdev_lowerhalf_s *dev)
 {
   FAR struct igc_driver_s *priv = (FAR struct igc_driver_s *)dev;
+  bool ret = false;
 
   while (priv->tx_now != priv->tx_done)
     {
@@ -701,9 +736,12 @@ static void igc_txdone(FAR struct netdev_lowerhalf_s *dev)
       /* Next descriptor */
 
       priv->tx_done = (priv->tx_done + 1) % IGC_TX_DESC;
+      ret = true;
     }
 
   netdev_lower_txdone(dev);
+
+  return ret;
 }
 
 /*****************************************************************************

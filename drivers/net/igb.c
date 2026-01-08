@@ -187,7 +187,10 @@ static int igb_transmit(FAR struct netdev_lowerhalf_s *dev,
 /* Interrupt handling */
 
 static FAR netpkt_t *igb_receive(FAR struct netdev_lowerhalf_s *dev);
-static void igb_txdone(FAR struct netdev_lowerhalf_s *dev);
+static bool igb_txdone(FAR struct netdev_lowerhalf_s *dev);
+#ifdef CONFIG_NET_NETPOLL
+static void igb_txpoll(FAR struct netdev_lowerhalf_s *dev);
+#endif
 
 static void igb_msix_interrupt(FAR struct igb_driver_s *priv);
 static int igb_interrupt(int irq, FAR void *context, FAR void *arg);
@@ -267,6 +270,9 @@ static const struct netdev_ops_s g_igb_ops =
 #ifdef CONFIG_NET_MCASTGROUP
   .addmac   = igb_addmac,
   .rmmac    = igb_rmmac,
+#endif
+#ifdef CONFIG_NET_NETPOLL
+  txpoll    = igb_txpoll
 #endif
 };
 
@@ -605,6 +611,84 @@ static int igb_transmit(FAR struct netdev_lowerhalf_s *dev,
 }
 
 /*****************************************************************************
+ * Name: igb_txdone
+ *
+ * Description:
+ *   An interrupt was received indicating that the last TX packet(s) is done
+ *
+ * Input Parameters:
+ *   priv - Reference to the driver state structure
+ *
+ * Returned Value:
+ *   Return true if any netpk has been released, otherwise return flase
+ *
+ *****************************************************************************/
+
+static bool igb_txdone(FAR struct netdev_lowerhalf_s *dev)
+{
+  FAR struct igb_driver_s *priv = (FAR struct igb_driver_s *)dev;
+  bool ret = false;
+
+  while (priv->tx_now != priv->tx_done)
+    {
+      if (priv->tx[priv->tx_done].status == 0)
+        {
+          break;
+        }
+
+      if (!(priv->tx[priv->tx_done].status & IGB_TDESC_STATUS_DD))
+        {
+          nerr("tx failed: 0x%" PRIx32 "\n", priv->tx[priv->tx_done].status);
+          NETDEV_TXERRORS(&priv->dev.netdev);
+        }
+
+      /* Free net packet */
+
+      netpkt_free(dev, priv->tx_pkt[priv->tx_done], NETPKT_TX);
+
+      /* Next descriptor */
+
+      priv->tx_done = (priv->tx_done + 1) % IGB_TX_DESC;
+      ret = true;
+    }
+
+  netdev_lower_txdone(dev);
+
+  return ret;
+}
+
+#ifdef CONFIG_NET_NETPOLL
+/*****************************************************************************
+ * Name: igb_txpoll
+ *
+ * Description:
+ *   Wait for TX done
+ *
+ * Input Parameters:
+ *   dev - Reference to the driver state structure
+ *
+ * Returned Value:
+ *   None
+ *
+ *****************************************************************************/
+
+static void igb_txpoll(FAR struct netdev_lowerhalf_s *dev)
+{
+  FAR struct igb_driver_s *priv = (FAR struct igb_driver_s *)dev;
+
+  /* Wait for TX done with interrupt disabled */
+
+  igb_putreg_mem(priv, IGB_EIMC, IGB_MSIX_EIMS);
+  igb_putreg_mem(priv, IGB_IMC, IGB_MSIX_IMS);
+
+  while (!igb_txdone(dev));
+
+  igb_putreg_mem(priv, IGB_EIMS, IGB_MSIX_EIMS);
+  igb_putreg_mem(priv, IGB_IMS, IGB_MSIX_IMS);
+}
+#endif
+
+/*****************************************************************************
  * Name: igb_receive
  *
  * Description:
@@ -681,52 +765,6 @@ static FAR netpkt_t *igb_receive(FAR struct netdev_lowerhalf_s *dev)
     }
 
   return pkt;
-}
-
-/*****************************************************************************
- * Name: igb_txdone
- *
- * Description:
- *   An interrupt was received indicating that the last TX packet(s) is done
- *
- * Input Parameters:
- *   priv - Reference to the driver state structure
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *   The network is locked.
- *
- *****************************************************************************/
-
-static void igb_txdone(FAR struct netdev_lowerhalf_s *dev)
-{
-  FAR struct igb_driver_s *priv = (FAR struct igb_driver_s *)dev;
-
-  while (priv->tx_now != priv->tx_done)
-    {
-      if (priv->tx[priv->tx_done].status == 0)
-        {
-          break;
-        }
-
-      if (!(priv->tx[priv->tx_done].status & IGB_TDESC_STATUS_DD))
-        {
-          nerr("tx failed: 0x%" PRIx32 "\n", priv->tx[priv->tx_done].status);
-          NETDEV_TXERRORS(&priv->dev.netdev);
-        }
-
-      /* Free net packet */
-
-      netpkt_free(dev, priv->tx_pkt[priv->tx_done], NETPKT_TX);
-
-      /* Next descriptor */
-
-      priv->tx_done = (priv->tx_done + 1) % IGB_TX_DESC;
-    }
-
-  netdev_lower_txdone(dev);
 }
 
 /*****************************************************************************

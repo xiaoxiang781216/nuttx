@@ -195,11 +195,14 @@ static void e1000_rxclean(FAR struct e1000_driver_s *priv);
 
 static int e1000_transmit(FAR struct netdev_lowerhalf_s *dev,
                           FAR netpkt_t *pkt);
+#ifdef CONFIG_NET_NETPOLL
+static void e1000_txpoll(FAR struct netdev_lowerhalf_s *dev);
+#endif
 
 /* Interrupt handling */
 
 static FAR netpkt_t *e1000_receive(FAR struct netdev_lowerhalf_s *dev);
-static void e1000_txdone(FAR struct netdev_lowerhalf_s *dev);
+static bool e1000_txdone(FAR struct netdev_lowerhalf_s *dev);
 
 static void e1000_msi_interrupt(FAR struct e1000_driver_s *priv);
 #ifdef CONFIG_PCI_MSIX
@@ -311,6 +314,9 @@ static const struct netdev_ops_s g_e1000_ops =
 #ifdef CONFIG_NET_MCASTGROUP
   .addmac   = e1000_addmac,
   .rmmac    = e1000_rmmac,
+#endif
+#ifdef CONFIG_NET_NETPOLL
+  .txpoll   = e1000_txpoll
 #endif
 };
 
@@ -718,16 +724,14 @@ static FAR netpkt_t *e1000_receive(FAR struct netdev_lowerhalf_s *dev)
  *   priv - Reference to the driver state structure
  *
  * Returned Value:
- *   None
- *
- * Assumptions:
- *   The network is locked.
+ *   Return true if any netpk has been released, otherwise return flase
  *
  *****************************************************************************/
 
-static void e1000_txdone(FAR struct netdev_lowerhalf_s *dev)
+static bool e1000_txdone(FAR struct netdev_lowerhalf_s *dev)
 {
   FAR struct e1000_driver_s *priv = (FAR struct e1000_driver_s *)dev;
+  bool ret = false;
 
   while (priv->tx_now != priv->tx_done)
     {
@@ -749,10 +753,42 @@ static void e1000_txdone(FAR struct netdev_lowerhalf_s *dev)
       /* Next descriptor */
 
       priv->tx_done = (priv->tx_done + 1) % E1000_TX_DESC;
+      ret = true;
     }
 
   netdev_lower_txdone(dev);
+
+  return ret;
 }
+
+#ifdef CONFIG_NET_NETPOLL
+/*****************************************************************************
+ * Name: e1000_txpoll
+ *
+ * Description:
+ *   Wait for TX done
+ *
+ * Input Parameters:
+ *   dev - Reference to the driver state structure
+ *
+ * Returned Value:
+ *   None
+ *
+ *****************************************************************************/
+
+static void e1000_txpoll(FAR struct netdev_lowerhalf_s *dev)
+{
+  FAR struct e1000_driver_s *priv = (FAR struct e1000_driver_s *)dev;
+
+  /* Wait for TX done with interrupt disabled */
+
+  e1000_putreg_mem(priv, E1000_IMC, priv->irqs);
+
+  while (!e1000_txdone(dev));
+
+  e1000_putreg_mem(priv, E1000_IMS, priv->irqs);
+}
+#endif
 
 /*****************************************************************************
  * Name: e1000_link_work
