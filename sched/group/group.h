@@ -65,7 +65,7 @@ int group_heap_size(FAR struct mm_heap_s *heap);
 void group_heap_uninitialize(FAR struct mm_heap_s *heap);
 #else
 #  define group_heap_initialize(heap, alignment, heapsize) (0)
-#  define group_heap_malloc_size(heap) (0)
+#  define group_heap_size(heap) (0)
 #  define group_heap_uninitialize(heap)
 #endif
 
