@@ -154,8 +154,8 @@ static ssize_t mempool_read(FAR struct file *filep, FAR char *buffer,
 
           mempool_info(pool, &minfo);
           linesize   = procfs_snprintf(procfile->line, MEMPOOLINFO_LINELEN,
-                                       "%12s:%11lu%9lu%9lu%9lu%9lu%9lu%9lu"
-                                       "\n", entry->name, minfo.arena,
+                                       "%12.12s:%11lu%9lu%9lu%9lu%9lu%9lu"
+                                       "%9lu\n", entry->name, minfo.arena,
                                        minfo.sizeblks, minfo.aordblks,
                                        minfo.ordblks, minfo.nwaiter,
                                        minfo.maxalloc, minfo.throttle);
