@@ -73,11 +73,12 @@ static void note_driver_instrument_leave(FAR void *this_fn,
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FUNCTION
-static struct instrument_s g_note_instrument =
+static DEFINE_PER_CPU_BMP(struct instrument_s, g_note_instrument) =
 {
   .enter = note_driver_instrument_enter,
   .leave = note_driver_instrument_leave,
 };
+#  define g_note_instrument this_cpu_var_bmp(g_note_instrument)
 #endif
 
 /****************************************************************************

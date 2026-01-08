@@ -68,7 +68,10 @@ static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
  * Private Data
  ****************************************************************************/
 
-static uint8_t g_noterpmsg_buffer[CONFIG_DRIVERS_NOTERPMSG_BUFSIZE];
+typedef uint8_t noterpmsg_buffer_t[CONFIG_DRIVERS_NOTERPMSG_BUFSIZE];
+
+static DEFINE_PER_CPU_BSS_BMP(noterpmsg_buffer_t, g_noterpmsg_buffer);
+#define g_noterpmsg_buffer this_cpu_var_bmp(g_noterpmsg_buffer)
 
 static const struct note_driver_ops_s g_noterpmsg_ops =
 {
@@ -76,7 +79,7 @@ static const struct note_driver_ops_s g_noterpmsg_ops =
   .vprintf = noterpmsg_vprintf,
 };
 
-struct noterpmsg_driver_s g_noterpmsg_driver =
+DEFINE_PER_CPU_BMP(struct noterpmsg_driver_s, g_noterpmsg_driver) =
 {
   {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
@@ -98,12 +101,27 @@ struct noterpmsg_driver_s g_noterpmsg_driver =
 #endif
     &g_noterpmsg_ops
   },
+#ifndef CONFIG_BMP
   g_noterpmsg_buffer
+#endif
 };
+#define g_noterpmsg_driver this_cpu_var_bmp(g_noterpmsg_driver)
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#ifdef CONFIG_BMP
+static void noterpmsg_driver_initialize(void)
+{
+  if (g_noterpmsg_driver.buffer == NULL)
+    {
+      g_noterpmsg_driver.buffer = g_noterpmsg_buffer;
+    }
+}
+#else
+#  define noterpmsg_driver_initialize()
+#endif
 
 static inline size_t noterpmsg_next(FAR struct noterpmsg_driver_s *drv,
                                     size_t pos, size_t offset)
@@ -222,6 +240,8 @@ static void noterpmsg_add(FAR struct note_driver_s *driver,
   irqstate_t flags;
   size_t space;
 
+  noterpmsg_driver_initialize();
+
   flags = spin_lock_irqsave_notrace(&drv->lock);
 
   space = CONFIG_DRIVERS_NOTERPMSG_BUFSIZE - noterpmsg_length(drv);
@@ -274,6 +294,8 @@ static void noterpmsg_vprintf(FAR struct note_driver_s *drv, uint8_t tag,
   size_t length;
   size_t fmtlen;
   size_t next;
+
+  noterpmsg_driver_initialize();
 
   note = (FAR struct note_printf_s *)data;
   fmtlen = strlen(fmt) + 1;

@@ -62,15 +62,20 @@ static void notefdx_add(FAR struct note_driver_s *drv,
  * Private Data
  ****************************************************************************/
 
+static
 #ifdef DRIVERS_NOTET32FDX_SECTION
 locate_data(CONFIG_DRIVERS_NOTET32FDX_SECTION)
 #endif
-static struct notefdx_channel_s g_fdx_note_channel =
+#ifdef CONFIG_DRIVERS_NOTET32FDX_SECTION_SHARED
+struct notefdx_channel_s g_fdx_note_channel =
+#else
+DEFINE_PER_CPU_BMP(struct notefdx_channel_s, g_fdx_note_channel) =
+#endif
 {
   .header =
     {
       .enable = 0,
-      .size = sizeof(g_fdx_note_channel.data),
+      .size = sizeof(((FAR struct notefdx_channel_s *)0)->data),
       .hostindex = 0,
       .targetindex = 0,
       .stall = 0,
@@ -84,6 +89,7 @@ static struct notefdx_channel_s g_fdx_note_channel =
     },
   .lock = SP_UNLOCKED,
 };
+#define g_fdx_note_channel this_cpu_var_bmp(g_fdx_note_channel)
 
 static const struct note_driver_ops_s g_notefdx_ops =
 {
@@ -94,7 +100,7 @@ static const struct note_driver_ops_s g_notefdx_ops =
  * Public Data
  ****************************************************************************/
 
-struct notefdx_s g_notefdx =
+DEFINE_PER_CPU_BMP(struct notefdx_s, g_notefdx) =
 {
   {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
@@ -110,13 +116,27 @@ struct notefdx_s g_notefdx =
 #endif
     &g_notefdx_ops
   },
+#ifndef CONFIG_BMP
   .channel = &g_fdx_note_channel,
-  NULL,
+#endif
 };
+#define g_notefdx this_cpu_var_bmp(g_notefdx)
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#ifdef CONFIG_BMP
+static void notefdx_initialize(void)
+{
+  if (g_notefdx.channel == NULL)
+    {
+      g_notefdx.channel = &g_fdx_note_channel;
+    }
+}
+#else
+#  define notefdx_initialize()
+#endif
 
 static void
 notefdx_taskname_handler(FAR const void *note, size_t len, FAR void *arg)
@@ -146,6 +166,8 @@ static void notefdx_add(FAR struct note_driver_s *drv,
   FAR struct notefdx_s *note = (FAR struct notefdx_s *)drv;
   FAR struct notefdx_channel_s *channel = note->channel;
   irqstate_t flags;
+
+  notefdx_initialize();
 
   if (channel == NULL || !T32_Fdx_Is_Enable(channel))
     {

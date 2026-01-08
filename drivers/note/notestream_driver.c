@@ -64,35 +64,50 @@ static const struct note_driver_ops_s g_notestream_ops =
  ****************************************************************************/
 
 #ifdef CONFIG_DRIVERS_NOTELOWEROUT
-struct notestream_driver_s g_notestream_lowerout =
+DEFINE_PER_CPU_BMP(struct notestream_driver_s, g_notestream_lowerout) =
 {
   {
-#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+#  ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
     "lowerout",
     {
       {
         CONFIG_DRIVERS_NOTELOWEROUT_FILTER_DEFAULT_MODE,
-#  ifdef CONFIG_SMP
+#    ifdef CONFIG_SMP
         CONFIG_DRIVERS_NOTELOWEROUT_CPUSET
-#  endif
+#    endif
       },
 
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
+#    ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
       {
         CONFIG_DRIVERS_NOTE_DEFAULT_LEVEL,
       },
-#  endif
+#    endif
     },
-#endif
+#  endif
     &g_notestream_ops
   },
+#  ifndef CONFIG_BMP
   &g_lowoutstream
+#  endif
 };
+#  define g_notestream_lowerout this_cpu_var_bmp(g_notestream_lowerout)
 #endif
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#if defined(CONFIG_BMP) && defined(CONFIG_DRIVERS_NOTELOWEROUT)
+static void notestream_lowerout_initialize(void)
+{
+  if (g_notestream_lowerout.stream == NULL)
+    {
+      g_notestream_lowerout.stream = &g_lowoutstream;
+    }
+}
+#else
+#  define notestream_lowerout_initialize()
+#endif
 
 static void notestream_add(FAR struct note_driver_s *drv,
                            FAR const void *note, size_t len,
@@ -100,6 +115,9 @@ static void notestream_add(FAR struct note_driver_s *drv,
 {
   FAR struct notestream_driver_s *drivers =
       (FAR struct notestream_driver_s *)drv;
+
+  notestream_lowerout_initialize();
+
   lib_stream_puts(drivers->stream, note, len);
 }
 

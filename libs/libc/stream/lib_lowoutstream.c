@@ -47,13 +47,14 @@ static ssize_t lowoutstream_puts(FAR struct lib_outstream_s *self,
  * Public Data
  ****************************************************************************/
 
-struct lib_outstream_s g_lowoutstream =
+DEFINE_PER_CPU_BMP(struct lib_outstream_s, g_lowoutstream) =
 {
   0,
   lowoutstream_putc,
   lowoutstream_puts,
   lib_noflush
 };
+#define g_lowoutstream this_cpu_var_bmp(g_lowoutstream)
 
 /****************************************************************************
  * Private Functions

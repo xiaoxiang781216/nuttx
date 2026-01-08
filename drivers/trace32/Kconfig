@@ -57,8 +57,20 @@ config DRIVERS_NOTET32FDX_CPUSET
 	---help---
 		CPU set for notefdx
 
+config DRIVERS_NOTET32FDX_SECTION_SHARED
+	bool "Note RAM section shared in the BMP"
+	depends on BMP
+	default y
+	---help---
+		In the BMP, is the noteram section shared among multiple cores?
+		If the noteram section is shared among multiple cores, there will
+		be only one global buffer. If each core has its own noteram section,
+		then the DRIVERS_NOTET32FDX_SECTION must be configured as a percpu
+		buffer, which is usually supported by the hardware.
+
 config DRIVERS_NOTET32FDX_SECTION
 	string "Trace32 FDX Note driver section"
+	depends on !BMP || DRIVERS_NOTET32FDX_SECTION_SHARED
 	default ""
 	---help---
 		The section in which to place the notefdx buffer.

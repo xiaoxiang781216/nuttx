@@ -108,7 +108,7 @@ static const struct note_driver_ops_s g_notelog_ops =
  * Public Data
  ****************************************************************************/
 
-struct note_driver_s g_notelog_driver =
+DEFINE_PER_CPU_BMP(struct note_driver_s, g_notelog_driver) =
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
     "log",
@@ -129,6 +129,7 @@ struct note_driver_s g_notelog_driver =
 #endif
   &g_notelog_ops,
 };
+#define g_notelog_driver this_cpu_var_bmp(g_notelog_driver)
 
 /****************************************************************************
  * Private Functions

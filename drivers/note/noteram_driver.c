@@ -170,15 +170,22 @@ static void noteram_timeout_handler(wdparm_t arg);
  * Private Data
  ****************************************************************************/
 
-static
-#ifdef DRIVERS_NOTERAM_SECTION
-locate_data(CONFIG_DRIVERS_NOTERAM_SECTION)
-#endif
 struct noteram_buffer_s
 {
   struct noteram_header_s header;
   uint8_t buffer[NOTERAM_BUFSIZE];
-} g_ramnote_buffer;
+};
+
+static
+#ifdef DRIVERS_NOTERAM_SECTION
+locate_data(CONFIG_DRIVERS_NOTERAM_SECTION)
+#endif
+#ifdef CONFIG_DRIVERS_NOTERAM_SECTION_SHARED
+struct noteram_buffer_s g_ramnote_buffer;
+#else
+DEFINE_PER_CPU_BSS_BMP(struct noteram_buffer_s, g_ramnote_buffer);
+#  define g_ramnote_buffer this_cpu_var_bmp(g_ramnote_buffer)
+#endif
 
 static const struct note_driver_ops_s g_noteram_ops =
 {
@@ -216,7 +223,11 @@ DEFINE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver) =
 #endif
     &g_noteram_ops
   },
+#ifndef CONFIG_BMP
   &g_ramnote_buffer.header,
+#else
+  NULL,
+#endif
   NOTERAM_BUFSIZE,
 #ifdef CONFIG_DRIVERS_NOTERAM_DEFAULT_NOOVERWRITE
   NOTE_MODE_OVERWRITE_DISABLE
@@ -229,6 +240,18 @@ DEFINE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver) =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#ifdef CONFIG_BMP
+static void noteram_driver_initialize(void)
+{
+  if (g_noteram_driver.header == NULL)
+    {
+      g_noteram_driver.header = &g_ramnote_buffer.header;
+    }
+}
+#else
+#  define noteram_driver_initialize()
+#endif
 
 #if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
 static inline_function
@@ -599,6 +622,8 @@ static int noteram_open(FAR struct file *filep)
   FAR struct noteram_driver_s *drv = (FAR struct noteram_driver_s *)
                                      filep->f_inode->i_private;
 
+  noteram_driver_initialize();
+
   /* Reset the read index of the circular buffer */
 
   drv->header->read = drv->header->tail;
@@ -939,6 +964,8 @@ static void noteram_add(FAR struct note_driver_s *driver,
   uint32_t remain;
   uint32_t space;
   irqstate_t flags;
+
+  noteram_driver_initialize();
 
   /* Initialize the noteram header if it has not been initialized yet. */
 

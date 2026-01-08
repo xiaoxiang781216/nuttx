@@ -28,6 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/compiler.h>
+#include <nuttx/percpu.h>
 
 #ifdef CONFIG_LIBC_LZF
 #  include <lzf.h>
@@ -358,7 +359,7 @@ extern "C"
 #  define EXTERN extern
 #endif
 
-extern struct lib_outstream_s g_lowoutstream;
+DECLARE_PER_CPU_BMP(struct lib_outstream_s, g_lowoutstream);
 
 /****************************************************************************
  * Public Function Prototypes
