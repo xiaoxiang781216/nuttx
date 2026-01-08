@@ -1282,11 +1282,7 @@ found:
 
       /* Check if no packet need to retransmission, clear timer. */
 
-      if (conn->tx_unacked == 0 && (conn->tcpstateflags == TCP_SYN_SENT ||
-                                    conn->tcpstateflags == TCP_SYN_RCVD ||
-                                    conn->tcpstateflags == TCP_ESTABLISHED ||
-                                    conn->tcpstateflags == TCP_CLOSE_WAIT ||
-                                    conn->tcpstateflags == TCP_FIN_WAIT_1))
+      if (conn->tx_unacked == 0)
         {
           timeout = 0;
         }
