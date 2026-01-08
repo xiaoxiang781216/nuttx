@@ -313,7 +313,7 @@ devif_poll_can_connections(FAR struct net_driver_s *dev,
 #endif
                  )
                 {
-                  FAR struct iob_s *iob = can_iob_clone(dev);
+                  FAR struct iob_s *iob = can_iob_clone(dev, false);
 
                   bstop = callback(dev);
 

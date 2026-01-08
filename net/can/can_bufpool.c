@@ -47,7 +47,9 @@
 
 /* The array containing all CAN buffers */
 
-MEMPOOL_DEFINE(g_can_buffer, CAN_BUFFER_SIZE, CONFIG_NET_CAN_NBUFFERS, 0, 0);
+MEMPOOL_DEFINE_WITH_THROTTLE(g_can_buffer, CAN_BUFFER_SIZE,
+                             CONFIG_NET_CAN_NBUFFERS, 0, 0,
+                             CONFIG_NET_CAN_IOB_THROTTLE);
 
 /****************************************************************************
  * Private Functions
@@ -81,9 +83,10 @@ static void can_buf_free(FAR void *buf)
  *
  ****************************************************************************/
 
-FAR struct iob_s *can_iob_timedalloc(unsigned int timeout)
+FAR struct iob_s *can_iob_timedalloc(bool throttled, unsigned int timeout)
 {
-  FAR void *buf = mempool_zallocate(&g_can_buffer, timeout);
+  FAR void *buf = mempool_zallocate_throttled(&g_can_buffer, timeout,
+                                              throttled);
 
   if (buf == NULL)
     {
@@ -102,11 +105,11 @@ FAR struct iob_s *can_iob_timedalloc(unsigned int timeout)
  *
  ****************************************************************************/
 
-FAR struct iob_s *can_iob_clone(FAR struct net_driver_s *dev)
+FAR struct iob_s *can_iob_clone(FAR struct net_driver_s *dev, bool throttled)
 {
   FAR struct iob_s *iob;
 
-  iob = can_iob_timedalloc(0);
+  iob = can_iob_timedalloc(throttled, 0);
   if (iob == NULL)
     {
       return NULL;

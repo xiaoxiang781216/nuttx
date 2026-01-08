@@ -276,11 +276,11 @@ ssize_t can_sendmsg(FAR struct socket *psock, FAR const struct msghdr *msg,
 
   if (nonblock)
     {
-      wb_iob = can_iob_timedalloc(0);
+      wb_iob = can_iob_timedalloc(true, 0);
     }
   else
     {
-      wb_iob = can_iob_timedalloc(_SO_TIMEOUT(conn->sconn.s_sndtimeo));
+      wb_iob = can_iob_timedalloc(true, _SO_TIMEOUT(conn->sconn.s_sndtimeo));
     }
 
   if (wb_iob == NULL)

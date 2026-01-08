@@ -165,6 +165,18 @@ config NET_CAN_NBUFFERS
 		This setting determines the number of preallocated CAN buffers
 		available for packet data.
 
+config NET_CAN_IOB_THROTTLE
+	int "I/O buffer throttle value"
+	default 0 if !NET_CAN_WRITE_BUFFERS
+	default 8 if NET_CAN_WRITE_BUFFERS
+	---help---
+		CAN write buffering and read-ahead buffer use the same pool of free
+		I/O buffers.  In order to prevent uncontrolled incoming CAN packets
+		from hogging all of the available, pre-allocated I/O buffers, a
+		throttling value is required.  This throttle value assures that
+		I/O buffers will be denied to the read-ahead logic before CAN writes
+		are halted.
+
 config NET_CAN_NPOLLWAITERS
 	int "Number of poll threads"
 	default 4

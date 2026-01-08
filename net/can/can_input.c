@@ -193,7 +193,7 @@ static int can_in(FAR struct net_driver_s *dev)
        * We need to clone the packet and deliver it to each listener.
        */
 
-      FAR struct iob_s *iob = can_iob_clone(dev);
+      FAR struct iob_s *iob = can_iob_clone(dev, false);
 
       if (iob == NULL)
         {

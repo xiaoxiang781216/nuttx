@@ -136,9 +136,9 @@ int can_input(FAR struct net_driver_s *dev);
  ****************************************************************************/
 
 #if CONFIG_NET_CAN_NBUFFERS > 0
-FAR struct iob_s *can_iob_timedalloc(unsigned int timeout);
+FAR struct iob_s *can_iob_timedalloc(bool throttled, unsigned int timeout);
 #else
-#define can_iob_timedalloc(t) net_iobtimedalloc(true, t)
+#define can_iob_timedalloc(th, t) net_iobtimedalloc(th, t)
 #endif
 
 /****************************************************************************
@@ -150,9 +150,10 @@ FAR struct iob_s *can_iob_timedalloc(unsigned int timeout);
  ****************************************************************************/
 
 #if CONFIG_NET_CAN_NBUFFERS > 0
-FAR struct iob_s *can_iob_clone(FAR struct net_driver_s *dev);
+FAR struct iob_s *can_iob_clone(FAR struct net_driver_s *dev,
+                                bool throttled);
 #else
-#define can_iob_clone(d) netdev_iob_clone(d, false)
+#define can_iob_clone(d, th) netdev_iob_clone(d, th)
 #endif
 
 /****************************************************************************
