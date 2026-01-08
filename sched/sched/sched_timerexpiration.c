@@ -80,8 +80,6 @@ static clock_t nxsched_cpu_scheduler(int cpu, clock_t ticks,
 #endif
 static clock_t nxsched_process_scheduler(clock_t ticks, clock_t elapsed,
                                          bool noswitches);
-static clock_t nxsched_timer_process(clock_t ticks, clock_t elapsed,
-                                     bool noswitches);
 static clock_t nxsched_timer_start(clock_t ticks, clock_t interval);
 
 /****************************************************************************
@@ -108,10 +106,10 @@ DEFINE_PER_CPU_BMP(seqcount_t, g_timer_tick_lock) = SEQLOCK_INITIALIZER;
 static DEFINE_PER_CPU_BSS_BMP(atomic_t, g_timer_interval);
 #define g_timer_interval this_cpu_var_bmp(g_timer_interval)
 
-#ifdef CONFIG_SCHED_TICKLESS
-static DEFINE_PER_CPU_BSS_BMP(unsigned int, g_timernested);
-#  define g_wdtimernested this_cpu_var_bmp(g_timernested)
-#endif
+/* Wdog timer for scheduler event. */
+
+static DEFINE_PER_CPU_BSS_BMP(struct wdog_s, g_sched_event);
+#define g_sched_event this_cpu_var_bmp(g_sched_event)
 
 /****************************************************************************
  * Private Functions
@@ -187,58 +185,25 @@ int up_timer_gettick(FAR clock_t *ticks)
 }
 #endif
 
-#ifdef CONFIG_SCHED_TICKLESS_ALARM
-static inline_function
-int nxsched_timer_tick_start(clock_t ticks, clock_t delay)
+static void nxsched_process_event(wdparm_t noswitches)
 {
-#  ifndef CONFIG_ALARM_ARCH
-  struct timespec ts;
-  clock_ticks2time(&ts, ticks + delay);
-  return up_alarm_start(&ts);
-#  else
-  return up_alarm_tick_start(ticks + delay);
-#  endif
-}
+  clock_t ticks;
+  clock_t next;
+  clock_t elapsed;
 
-static inline_function
-int nxsched_timer_tick_cancel(clock_t *ticks)
-{
-  int    ret;
-#  ifndef CONFIG_ALARM_ARCH
-  struct timespec ts;
-  ret    = up_alarm_cancel(&ts);
-  *ticks = clock_time2ticks_floor(&ts);
-#  else
-  ret    = up_alarm_tick_cancel(ticks);
-#  endif
-  return ret;
-}
+  /* Get the current time. */
 
-#else
-static inline_function
-int nxsched_timer_tick_start(clock_t ticks, clock_t delay)
-{
-#  ifndef CONFIG_TIMER_ARCH
-  struct timespec ts;
-  clock_ticks2time(&ts, delay);
-  return up_timer_start(&ts);
-#  else
-  return up_timer_tick_start(delay);
-#  endif
-}
+  up_timer_gettick(&ticks);
 
-static inline_function
-int nxsched_timer_tick_cancel(clock_t *ticks)
-{
-#  ifndef CONFIG_TIMER_ARCH
-  struct timespec ts;
-  up_timer_cancel(&ts);
-#  else
-  up_timer_tick_cancel(ticks);
-#  endif
-  return up_timer_gettick(ticks);
+  /* Calculate the elapsed time and update clock tickbase. */
+
+  elapsed = ticks - update_time_tick(ticks);
+
+  /* Process the timer ticks and set up the next interval (or not) */
+
+  next = nxsched_process_scheduler(ticks, elapsed, (bool)noswitches);
+  nxsched_timer_start(ticks, next);
 }
-#endif
 
 /****************************************************************************
  * Name:  nxsched_cpu_scheduler
@@ -396,49 +361,6 @@ clock_t nxsched_process_scheduler(clock_t ticks, clock_t elapsed,
 }
 
 /****************************************************************************
- * Name:  nxsched_timer_process
- *
- * Description:
- *   Process events on timer expiration.
- *
- * Input Parameters:
- *   ticks - The number of ticks that have elapsed on the interval timer.
- *   noswitches - True: Can't do context switches now.
- *
- * Returned Value:
- *   The number of ticks to use when setting up the next timer.  CLOCK_MAX if
- *   there is no interesting event to be timed.
- *
- ****************************************************************************/
-
-static clock_t nxsched_timer_process(clock_t ticks, clock_t elapsed,
-                                     bool noswitches)
-{
-  clock_t sched_next_time;
-  clock_t wdog_next_time;
-
-#ifdef CONFIG_CLOCK_TIMEKEEPING
-  /* Process wall time */
-
-  clock_update_wall_time();
-#endif
-
-  /* Check for operations specific to scheduling policy of the currently
-   * active task.
-   */
-
-  sched_next_time = nxsched_process_scheduler(ticks, elapsed, noswitches);
-
-  /* Process watchdogs */
-
-  wdog_next_time = wd_timer(ticks, noswitches);
-
-  /* Select the minimum of the two times. */
-
-  return MIN(sched_next_time, wdog_next_time);
-}
-
-/****************************************************************************
  * Name:  nxsched_timer_start
  *
  * Description:
@@ -458,25 +380,16 @@ static clock_t nxsched_timer_start(clock_t ticks, clock_t interval)
   if (interval != CLOCK_MAX)
     {
       interval = adjust_next_interval(interval);
-      nxsched_timer_tick_start(ticks, interval);
+      wd_start_abstick(&g_sched_event, ticks + interval,
+                       nxsched_process_event, 0u);
+    }
+  else
+    {
+      wd_cancel(&g_sched_event);
     }
 
   atomic_set(&g_timer_interval, interval == CLOCK_MAX ? 0 : interval);
   return interval;
-}
-
-static inline_function
-clock_t nxsched_timer_update(clock_t ticks, bool noswitches)
-{
-  clock_t elapsed;
-
-  /* Calculate the elapsed time and update clock tickbase. */
-
-  elapsed = ticks - update_time_tick(ticks);
-
-  /* Process the timer ticks and set up the next interval (or not) */
-
-  return nxsched_timer_process(ticks, elapsed, noswitches);
 }
 
 /****************************************************************************
@@ -503,20 +416,12 @@ void nxsched_timer_expiration(void)
 {
   irqstate_t flags;
   clock_t ticks;
-  clock_t next;
 
   up_timer_gettick(&ticks);
 
   flags = enter_critical_section();
 
-  /* Get the interval associated with last expiration */
-
-  g_timernested++;
-
-  next = nxsched_timer_update(ticks, false);
-  nxsched_timer_start(ticks, next);
-
-  g_timernested--;
+  wd_timer(ticks);
 
   leave_critical_section(flags);
 }
@@ -560,20 +465,7 @@ void nxsched_timer_expiration(void)
 
 void nxsched_reassess_timer(void)
 {
-  clock_t ticks;
-  clock_t next;
-
-  if (g_timernested <= 1)
-    {
-      /* If the timer is nested deep, should skip the timer reassessment.
-       * And cancel the timer and get the current time. when not nested or
-       * in first level of nesting.
-       */
-
-      nxsched_timer_tick_cancel(&ticks);
-      next = nxsched_timer_update(ticks, true);
-      nxsched_timer_start(ticks, next);
-    }
+  nxsched_process_event(1u);
 }
 
 /****************************************************************************
