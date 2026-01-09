@@ -234,7 +234,7 @@ int nxsched_timer_tick_cancel(clock_t *ticks)
   struct timespec ts;
   up_timer_cancel(&ts);
 #  else
-  up_timer_cancel(ticks);
+  up_timer_tick_cancel(ticks);
 #  endif
   return up_timer_gettick(ticks);
 }
