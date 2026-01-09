@@ -115,7 +115,7 @@ struct audio_rpmsg_s
                                  * opreation until the connection
                                  * between two cpu established.
                                  */
-  mutex_t mutex;
+  rmutex_t mutex;
 
   struct audio_info_s info;     /* Formats */
   struct ap_buffer_info_s binfo;
@@ -279,7 +279,7 @@ static int audio_rpmsg_local_configure(FAR struct audio_rpmsg_s *aud,
 
   /* Process the configure operation */
 
-  nxmutex_lock(&aud->mutex);
+  nxrmutex_lock(&aud->mutex);
   switch (caps->ac_type)
     {
       case AUDIO_TYPE_OUTPUT:
@@ -305,7 +305,7 @@ static int audio_rpmsg_local_configure(FAR struct audio_rpmsg_s *aud,
         break;
     }
 
-  nxmutex_unlock(&aud->mutex);
+  nxrmutex_unlock(&aud->mutex);
   return ret;
 }
 
@@ -314,7 +314,7 @@ static int audio_rpmsg_local_ioctl(FAR struct audio_rpmsg_s *aud, int cmd,
 {
   int ret = OK;
 
-  nxmutex_lock(&aud->mutex);
+  nxrmutex_lock(&aud->mutex);
   switch (cmd)
     {
       /* Report our preferred buffer size and quantity */
@@ -339,7 +339,7 @@ static int audio_rpmsg_local_ioctl(FAR struct audio_rpmsg_s *aud, int cmd,
         break;
     }
 
-  nxmutex_unlock(&aud->mutex);
+  nxrmutex_unlock(&aud->mutex);
   return ret;
 }
 
@@ -406,7 +406,7 @@ static int audio_rpmsg_send_data(FAR struct audio_rpmsg_s *aud)
   uint32_t space;
   int ret = 0;
 
-  nxmutex_lock(&aud->mutex);
+  nxrmutex_lock(&aud->mutex);
 
   if (aud->navail > 0 && dq_empty(&aud->pendq))
     {
@@ -415,7 +415,6 @@ static int audio_rpmsg_send_data(FAR struct audio_rpmsg_s *aud)
 
   while (!dq_empty(&aud->pendq) && aud->navail > 0)
     {
-      nxmutex_unlock(&aud->mutex);
       req = audio_rpmsg_get_tx_buffer(aud, &space);
       if (req == NULL)
         {
@@ -423,7 +422,6 @@ static int audio_rpmsg_send_data(FAR struct audio_rpmsg_s *aud)
           return -ENOMEM;
         }
 
-      nxmutex_lock(&aud->mutex);
       if (dq_empty(&aud->pendq) || aud->navail == 0)
         {
           rpmsg_release_tx_buffer(&aud->ept, req);
@@ -470,7 +468,7 @@ static int audio_rpmsg_send_data(FAR struct audio_rpmsg_s *aud)
         }
     }
 
-  nxmutex_unlock(&aud->mutex);
+  nxrmutex_unlock(&aud->mutex);
   return ret;
 }
 
@@ -588,13 +586,13 @@ static int audio_rpmsg_message_handler(FAR struct rpmsg_endpoint *ept,
 
   audinfo("%s handle message: %d.\n", aud->devname, req->msgid);
 
-  nxmutex_lock(&aud->mutex);
+  nxrmutex_lock(&aud->mutex);
   if (req->msgid == AUDIO_MSG_STOP)
     {
       aud->navail = 0;
     }
 
-  nxmutex_unlock(&aud->mutex);
+  nxrmutex_unlock(&aud->mutex);
   msg.msg_id = req->msgid;
   audio_rpmsg_callback(aud, AUDIO_CALLBACK_MESSAGE, &msg);
 
@@ -645,10 +643,10 @@ static int audio_rpmsg_send_data_handler(FAR struct rpmsg_endpoint *ept,
 
   /* handle data sent from producer */
 
-  nxmutex_lock(&aud->mutex);
+  nxrmutex_lock(&aud->mutex);
   if (dq_empty(&aud->pendq))
     {
-      nxmutex_unlock(&aud->mutex);
+      nxrmutex_unlock(&aud->mutex);
       audwarn("%s no buffer available\n", aud->devname);
       return 0;
     }
@@ -672,7 +670,7 @@ static int audio_rpmsg_send_data_handler(FAR struct rpmsg_endpoint *ept,
         }
     }
 
-  nxmutex_unlock(&aud->mutex);
+  nxrmutex_unlock(&aud->mutex);
   return 0;
 }
 
@@ -682,9 +680,9 @@ static int audio_rpmsg_notify_avail_handler(FAR struct rpmsg_endpoint *ept,
 {
   FAR struct audio_rpmsg_s *aud = ept->priv;
 
-  nxmutex_lock(&aud->mutex);
+  nxrmutex_lock(&aud->mutex);
   aud->navail++;
-  nxmutex_unlock(&aud->mutex);
+  nxrmutex_unlock(&aud->mutex);
 
   return audio_rpmsg_deliver_buffer(aud);
 }
@@ -913,7 +911,7 @@ static int audio_rpmsg_getcaps(FAR struct audio_lowerhalf_s *dev, int type,
   memset(&caps->ac_controls, 0, sizeof(caps->ac_controls));
   memset(&caps->ac_codec, 0, sizeof(caps->ac_codec));
 
-  nxmutex_lock(&aud->mutex);
+  nxrmutex_lock(&aud->mutex);
   switch (caps->ac_type)
     {
       case AUDIO_TYPE_QUERY:
@@ -928,7 +926,7 @@ static int audio_rpmsg_getcaps(FAR struct audio_lowerhalf_s *dev, int type,
 
               if (aud->info.subformat == 0)
                 {
-                  nxmutex_unlock(&aud->mutex);
+                  nxrmutex_unlock(&aud->mutex);
                   return -ENOSYS;
                 }
 
@@ -998,7 +996,7 @@ static int audio_rpmsg_getcaps(FAR struct audio_lowerhalf_s *dev, int type,
         break;
     }
 
-  nxmutex_unlock(&aud->mutex);
+  nxrmutex_unlock(&aud->mutex);
 
   /* Return the length of the audio_caps_s struct for validation of
    * proper Audio device type.
@@ -1110,7 +1108,7 @@ static int audio_rpmsg_stop(FAR struct audio_lowerhalf_s *dev)
 
   audinfo("audio %s stop.\n", aud->devname);
 
-  nxmutex_lock(&aud->mutex);
+  nxrmutex_lock(&aud->mutex);
   while (!dq_empty(&aud->pendq))
     {
       FAR struct ap_buffer_s *apb =
@@ -1120,7 +1118,7 @@ static int audio_rpmsg_stop(FAR struct audio_lowerhalf_s *dev)
 
   aud->navail = 0;
   audio_rpmsg_callback(aud, AUDIO_CALLBACK_COMPLETE, NULL);
-  nxmutex_unlock(&aud->mutex);
+  nxrmutex_unlock(&aud->mutex);
 
   /* Notify peer to stop */
 
@@ -1184,10 +1182,10 @@ static int audio_rpmsg_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
 {
   FAR struct audio_rpmsg_s *aud = (FAR struct audio_rpmsg_s *)dev;
 
-  nxmutex_lock(&aud->mutex);
+  nxrmutex_lock(&aud->mutex);
   dq_addlast(&apb->dq_entry, &aud->pendq);
   apb->curbyte = 0;
-  nxmutex_unlock(&aud->mutex);
+  nxrmutex_unlock(&aud->mutex);
 
   return audio_rpmsg_deliver_buffer(aud);
 }
@@ -1341,7 +1339,7 @@ int audio_rpmsg_register(FAR const char *remotecpu, FAR const char *devname,
     }
 
   nxsem_init(&aud->wait, 0, 0);
-  nxmutex_init(&aud->mutex);
+  nxrmutex_init(&aud->mutex);
 
   aud->dev.ops = &g_audio_rpmsg_ops;
   dq_init(&aud->pendq);
@@ -1372,7 +1370,7 @@ int audio_rpmsg_register(FAR const char *remotecpu, FAR const char *devname,
   return OK;
 
 error:
-  nxmutex_destroy(&aud->mutex);
+  nxrmutex_destroy(&aud->mutex);
   kmm_free(aud);
   return ret;
 }
