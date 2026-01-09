@@ -51,7 +51,20 @@ static int lzfoutstream_flush(FAR struct lib_outstream_s *self)
                             stream->offset, stream->state, &header);
       if (outlen > 0)
         {
-          lib_stream_puts(stream->backend, header, outlen);
+          size_t written = 0;
+          while (written < outlen)
+            {
+              ssize_t ret;
+              ret = lib_stream_puts(stream->backend,
+                              (FAR const char *)header + written,
+                              outlen - written);
+              if (ret < 0)
+                {
+                  return ret;
+                }
+
+              written += ret;
+            }
         }
 
       stream->offset = 0;
@@ -96,10 +109,18 @@ static ssize_t lzfoutstream_puts(FAR struct lib_outstream_s *self,
                                 &header);
           if (outlen > 0)
             {
-              ret = lib_stream_puts(stream->backend, header, outlen);
-              if (ret < 0)
+              size_t written = 0;
+              while (written < outlen)
                 {
-                  return ret;
+                  ret = lib_stream_puts(stream->backend,
+                                  (FAR const char *)header + written,
+                                  outlen - written);
+                  if (ret < 0)
+                    {
+                      return ret;
+                    }
+
+                  written += ret;
                 }
             }
 
