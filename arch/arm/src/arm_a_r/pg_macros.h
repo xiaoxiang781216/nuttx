@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/arm/pg_macros.h
+ * arch/arm/src/arm_a_r/pg_macros.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -23,8 +23,8 @@
  * assure that some file inclusion ordering dependencies are enforced.
  */
 
-#ifndef __ARCH_ARM_SRC_ARM_PG_MACROS_H
-#define __ARCH_ARM_SRC_ARM_PG_MACROS_H
+#ifndef __ARCH_ARM_SRC_ARM_A_R_PG_MACROS_H
+#define __ARCH_ARM_SRC_ARM_A_R_PG_MACROS_H
 
 /****************************************************************************
  * Included Files
@@ -509,4 +509,4 @@
 #ifndef __ASSEMBLY__
 
 #endif /* __ASSEMBLY__ */
-#endif /* __ARCH_ARM_SRC_ARM_PG_MACROS_H */
+#endif /* __ARCH_ARM_SRC_ARM_A_R_PG_MACROS_H */
