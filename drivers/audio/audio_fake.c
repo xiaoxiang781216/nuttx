@@ -1083,6 +1083,46 @@ static int audio_fake_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
 }
 
 /****************************************************************************
+ * Name: audio_fake_get_latency
+ *
+ * Description: calculate latency in frames.
+ *
+ ****************************************************************************/
+
+static int audio_fake_get_latency(struct audio_lowerhalf_s *dev,
+                                  unsigned long arg)
+{
+  int ret = OK;
+  FAR long *latency = (FAR long *)arg;
+#ifdef CONFIG_AUDIO_DRIVER_SPECIFIC_BUFFERS
+  FAR struct audio_fake_s *priv;
+  struct mq_attr attr;
+  uint32_t period_frames;
+
+  priv = (FAR struct audio_fake_s *)dev;
+
+  ret = file_mq_getattr(&priv->mq, &attr);
+  if (ret < 0)
+    {
+      *latency = 0;
+      auderr("failed to get mq attributes, error: %d\n", ret);
+      return ret;
+    }
+
+  period_frames = (priv->sample_rate * priv->params->period_time) / 1000;
+  *latency = attr.mq_curmsgs * period_frames;
+
+  audinfo("mq_curmsgs: %ld, period_frames: %"PRIu32"\n",
+          attr.mq_curmsgs, period_frames);
+#else
+  *latency = 0;
+  audinfo("AUDIOIOC_GETLATENCY not implemented\n");
+#endif
+
+  return ret;
+}
+
+/****************************************************************************
  * Name: audio_fake_ioctl
  *
  * Description: Perform a device ioctl
@@ -1120,12 +1160,23 @@ static int audio_fake_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
 #endif
         }
         break;
+      case AUDIOIOC_GETLATENCY:
+        if (!dev || !arg)
+          {
+            auderr("invalid params dev: %p, arg: %lu.\n", dev, arg);
+            ret = -EINVAL;
+          }
+        else
+          {
+            ret = audio_fake_get_latency(dev, arg);
+          }
+        break;
       default:
         ret = -ENOTTY;
         break;
     }
 
-  audinfo("Return OK\n");
+  audinfo("Return ret: %d\n", ret);
   return ret;
 }
 
