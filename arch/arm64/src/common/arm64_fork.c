@@ -221,7 +221,6 @@ pid_t arm64_fork(const struct fork_s *context)
 
   child->xcp.regs[REG_ELR]    = (uint64_t)context->lr;
 
-  child->xcp.regs[REG_EXE_DEPTH] = 0;
   child->xcp.regs[REG_SP_ELX]    = newsp - XCPTCONTEXT_SIZE;
 #ifdef CONFIG_ARCH_KERNEL_STACK
   child->xcp.regs[REG_SP_EL0]    = (uint64_t)child->xcp.ustkptr;
