@@ -731,6 +731,16 @@ static const char *g_white_files[] =
    */
 
   "phy62xx/uart.c",
+
+  /* Skip Mixed case
+   * Ref:
+   * apps/crypto/openssl_mbedtls_wrapper/mbedtls/ssl_lib.c
+   * apps/crypto/openssl_mbedtls_wrapper/include/openssl/ssl_local.h
+   */
+
+  "ssl_lib.c",
+  "ssl_local.h",
+
   NULL
 };
 
