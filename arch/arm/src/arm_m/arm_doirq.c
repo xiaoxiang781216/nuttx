@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv6-m/arm_doirq.c
+ * arch/arm/src/arm_m/arm_doirq.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -28,6 +28,7 @@
 #include <assert.h>
 
 #include <nuttx/irq.h>
+#include <nuttx/addrenv.h>
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
 #include <arch/board/board.h>
@@ -36,6 +37,7 @@
 #include "arm_internal.h"
 #include "exc_return.h"
 #include "nvic.h"
+#include "psr.h"
 
 /****************************************************************************
  * Public Functions
@@ -43,7 +45,19 @@
 
 void exception_direct(void)
 {
-  int irq = getipsr();
+  int irq;
+
+  up_addrenv_enter_kernel();
+  irq = getipsr();
+#ifdef CONFIG_ARCH_FPU
+  __asm__ __volatile__
+    (
+      "mov r0, %0\n"
+      "vmsr fpscr, r0\n"
+      :
+      : "i" (ARM_FPSCR_LTPSIZE_NONE)
+    );
+#endif
 
   arm_ack_irq(irq);
   irq_dispatch(irq, NULL);
@@ -52,20 +66,28 @@ void exception_direct(void)
     {
       up_trigger_irq(NVIC_IRQ_PENDSV, 0);
     }
+
+  up_addrenv_leave_kernel();
 }
 
 uint32_t *arm_doirq(int irq, uint32_t *regs)
 {
-  struct tcb_s **running_task = &g_running_task;
-  struct tcb_s *tcb           = *running_task;
+  struct tcb_s **running_task;
+  struct tcb_s *tcb;
+
+  up_addrenv_enter_kernel();
+  running_task = &g_running_task;
+  tcb = *running_task;
 
   /* This judgment proves that (*running_task)->xcp.regs
    * is invalid, and we can safely overwrite it.
+   * And suspend the scheduler for the current task.
    */
 
-  if (*running_task != NULL)
+  if (tcb != NULL)
     {
       tcb->xcp.regs = regs;
+      nxsched_suspend_scheduler(tcb);
     }
 
   board_autoled_on(LED_INIRQ);
@@ -102,7 +124,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   tcb = this_task();
 
-  if (tcb != *running_task)
+  if (*running_task != tcb)
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -123,15 +145,33 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
       *running_task = tcb;
     }
 
+  /* Resume the new task (or the same task if no context switch) */
+
+  nxsched_resume_scheduler(tcb);
+
   regs = tcb->xcp.regs;
 #endif
 
   board_autoled_off(LED_INIRQ);
+
+#ifdef CONFIG_ARMV8M_TRUSTZONE_HYBRID
+  if (((1 << this_cpu()) & CONFIG_ARMV8M_TRUSTZONE_CPU_BITMASK) == 0)
+    {
+      regs[REG_EXC_RETURN] &=
+        ~(EXC_RETURN_EXC_SECURE | EXC_RETURN_SECURE_STACK);
+    }
+  else
+    {
+      regs[REG_EXC_RETURN] |=
+        (EXC_RETURN_EXC_SECURE | EXC_RETURN_SECURE_STACK);
+    }
+#endif
 
   /* (*running_task)->xcp.regs is about to become invalid
    * and will be marked as NULL to avoid misusage.
    */
 
   (*running_task)->xcp.regs = NULL;
+  up_addrenv_leave_kernel();
   return regs;
 }
