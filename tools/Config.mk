@@ -310,7 +310,7 @@ define COMPILE
 	$(ECHO_BEGIN)"CC: $1 "
 	$(Q) $(CCACHE) $(CC) -c $(CFLAGS) $3 $($(strip $1)_CFLAGS) $1 -o $2
 	$(ECHO_END)
-	$(if $(CONFIG_LIB_SYSCALL_WRAPPER), $(WRAPSYMBOL) $2 @$(TOPDIR)$(DELIM)syscall$(DELIM)wrapsymbol.cmd)
+	$(if $(CONFIG_LIB_SYSCALL_WRAPPER), $(WRAPSYMBOL) $2 @$(TOPDIR)$(DELIM)syscall$(DELIM)wrapsymbol.cmd) --cflags="$(CFLAGS) $($(strip $1)_CFLAGS)"
 endef
 
 # COMPILEXX - Default macro to compile one C++ file
@@ -330,7 +330,7 @@ define COMPILEXX
 	$(ECHO_BEGIN)"CXX: $1 "
 	$(Q) $(CCACHE) $(CXX) -c $(CXXFLAGS) $3 $($(strip $1)_CXXFLAGS) $1 -o $2
 	$(ECHO_END)
-	$(if $(CONFIG_LIB_SYSCALL_WRAPPER), $(WRAPSYMBOL) $2 @$(TOPDIR)$(DELIM)syscall$(DELIM)wrapsymbol.cmd)
+	$(if $(CONFIG_LIB_SYSCALL_WRAPPER), $(WRAPSYMBOL) $2 @$(TOPDIR)$(DELIM)syscall$(DELIM)wrapsymbol.cmd) --cflags="$(CXXFLAGS) $($(strip $1)_CXXFLAGS)"
 endef
 
 # COMPILERUST - Default macro to compile one Rust file
@@ -432,7 +432,7 @@ endef
 define ASSEMBLE
 	$(ECHO_BEGIN)"AS: $1 "
 	$(Q) $(CCACHE) $(CC) -c $(AFLAGS) $1 $($(strip $1)_AFLAGS) -o $2
-	$(if $(CONFIG_LIB_SYSCALL_WRAPPER),$(Q) $(WRAPSYMBOL) $2 @$(TOPDIR)$(DELIM)syscall$(DELIM)wrapsymbol.cmd)
+	$(if $(CONFIG_LIB_SYSCALL_WRAPPER),$(Q) $(WRAPSYMBOL) $2 @$(TOPDIR)$(DELIM)syscall$(DELIM)wrapsymbol.cmd) --cflags="$(CXXFLAGS) $($(strip $1)_CXXFLAGS)"
 	$(ECHO_END)
 endef
 

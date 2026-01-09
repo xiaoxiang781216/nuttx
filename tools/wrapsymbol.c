@@ -57,7 +57,8 @@ typedef struct
  * Private Data
  ****************************************************************************/
 
-static int g_verbose = 0;
+static int g_kernel_mode;
+static int g_verbose;
 const char *g_input_filename;
 const char *g_output_filename;
 
@@ -270,6 +271,17 @@ static int process_single_option(const char *opt,
   else if (strcmp(opt, "-v") == 0 || strcmp(opt, "--verbose") == 0)
     {
       g_verbose = 1;
+    }
+  else if (strncmp(opt, "--cflags=", sizeof("--cflags=") - 1) == 0)
+    {
+      opt += sizeof("--cflags=") - 1;
+
+      /* If __KERNEL__ in cflags, set kernel mode */
+
+      if (strstr(opt, "__KERNEL__") != NULL)
+        {
+          g_kernel_mode = 1;
+        }
     }
   else
     {
@@ -607,7 +619,15 @@ static size_t modify_symbols(Elf_Data *symtab_data,
         {
           /* Undefined symbol -> __wrap_xxxx */
 
-          snprintf(new_name, sizeof(new_name), "__wrap_%s", name);
+          if (g_kernel_mode)
+            {
+              snprintf(new_name, sizeof(new_name), "__real_%s", name);
+            }
+          else
+            {
+              snprintf(new_name, sizeof(new_name), "__wrap_%s", name);
+            }
+
           log_verbose("Renaming undefined symbol '%s' to '%s'\n",
                       name, new_name);
         }

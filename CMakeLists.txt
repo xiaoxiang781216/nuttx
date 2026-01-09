@@ -496,17 +496,17 @@ add_dependencies(nuttx_context dts_generator)
 if(CONFIG_LIB_SYSCALL_WRAPPER)
   set(CMAKE_C_COMPILE_OBJECT
       ${CMAKE_C_COMPILE_OBJECT}
-      "${CMAKE_BINARY_DIR}/bin_host/wrapsymbol <OBJECT> @${CMAKE_BINARY_DIR}/wrapsymbol.cmd"
+      "${CMAKE_BINARY_DIR}/bin_host/wrapsymbol <OBJECT> @${CMAKE_BINARY_DIR}/wrapsymbol.cmd --cflags=\"<DEFINES>\""
   )
 
   set(CMAKE_ASM_COMPILE_OBJECT
       ${CMAKE_C_COMPILE_OBJECT}
-      "${CMAKE_BINARY_DIR}/bin_host/wrapsymbol <OBJECT> @${CMAKE_BINARY_DIR}/wrapsymbol.cmd"
+      "${CMAKE_BINARY_DIR}/bin_host/wrapsymbol <OBJECT> @${CMAKE_BINARY_DIR}/wrapsymbol.cmd --cflags=\"<DEFINES>\""
   )
 
   set(CMAKE_CXX_COMPILE_OBJECT
       ${CMAKE_CXX_COMPILE_OBJECT}
-      "${CMAKE_BINARY_DIR}/bin_host/wrapsymbol <OBJECT> @${CMAKE_BINARY_DIR}/wrapsymbol.cmd"
+      "${CMAKE_BINARY_DIR}/bin_host/wrapsymbol <OBJECT> @${CMAKE_BINARY_DIR}/wrapsymbol.cmd --cflags=\"<DEFINES>\""
   )
 endif()
 
