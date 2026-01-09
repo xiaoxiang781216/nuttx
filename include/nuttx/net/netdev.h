@@ -564,10 +564,6 @@ struct net_driver_s
                       unsigned long arg);
 #endif
 
-#ifdef CONFIG_NET_FORWARD
-  struct work_s d_fwdwork; /* For concurrent forwarding work */
-#endif
-
   /* CAN gateway */
 
 #ifdef CONFIG_NET_CANFORWARD

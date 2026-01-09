@@ -77,6 +77,7 @@ struct forward_s
   FAR struct net_driver_s     *f_dev;     /* Forwarding device */
   FAR struct iob_s            *f_iob;     /* IOB chain containing the packet */
   FAR struct devif_callback_s *f_cb;      /* Reference to callback instance */
+  struct work_s                f_work;    /* For concurrent forwarding work */
   uint8_t                      f_domain;  /* Domain: PF_INET or PF_INET6
                                            * or PF_CAN */
 };

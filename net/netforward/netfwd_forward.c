@@ -203,6 +203,38 @@ static uint32_t netfwd_eventhandler(FAR struct net_driver_s *dev,
 }
 
 /****************************************************************************
+ * Name: netfwd_forward_notify
+ *
+ * Description:
+ *   Perform the forwarding operation.
+ *
+ * Input Parameters:
+ *   fwd - An initialized instance of the common forwarding structure that
+ *         includes everything needed to perform the forwarding operation.
+ *
+ ****************************************************************************/
+
+static inline_function int netfwd_forward_notify(FAR struct forward_s *fwd)
+{
+  /* Set up the callback in the connection */
+
+  fwd->f_cb = netfwd_callback_alloc(fwd->f_dev);
+  if (fwd->f_cb != NULL)
+    {
+      fwd->f_cb->flags = (IPFWD_POLL | NETDEV_DOWN);
+      fwd->f_cb->priv  = (FAR void *)fwd;
+      fwd->f_cb->event = netfwd_eventhandler;
+
+      /* Notify the device driver of the availability of TX data */
+
+      netdev_txnotify_dev(fwd->f_dev, IPFWD_POLL);
+      return OK;
+    }
+
+  return -ENOMEM;
+}
+
+/****************************************************************************
  * Name: netfwd_forward_work
  *
  * Description:
@@ -217,10 +249,26 @@ static uint32_t netfwd_eventhandler(FAR struct net_driver_s *dev,
 static void netfwd_forward_work(void *arg)
 {
   FAR struct forward_s *fwd = (FAR struct forward_s *)arg;
+  int ret;
+
+  netdev_lock(fwd->f_dev);
 
   /* Notify the device driver of the availability of TX data */
 
-  netdev_txnotify_dev(fwd->f_dev, IPFWD_POLL);
+  ret = netfwd_forward_notify(fwd);
+
+  if (ret < 0)
+    {
+      nwarn("WARNING: Failed to notify forwarding device: %d\n", ret);
+      if (fwd->f_iob != NULL)
+        {
+          iob_free_chain(fwd->f_iob);
+        }
+
+      netfwd_free(fwd);
+    }
+
+  netdev_unlock(fwd->f_dev);
 }
 
 /****************************************************************************
@@ -253,54 +301,40 @@ static void netfwd_forward_work(void *arg)
 int netfwd_forward(FAR struct net_driver_s *dev, FAR struct forward_s *fwd)
 {
   FAR struct net_driver_s *fwddev;
+  int ret;
 
   DEBUGASSERT(fwd != NULL && fwd->f_iob != NULL && fwd->f_dev != NULL);
 
   fwddev = fwd->f_dev;
 
-  /* Set up the callback in the connection */
-
-  fwd->f_cb = netfwd_callback_alloc(fwddev);
-  if (fwd->f_cb != NULL)
+  if (nxrmutex_trylock(&fwddev->d_lock) != OK)
     {
-      fwd->f_cb->flags = (IPFWD_POLL | NETDEV_DOWN);
-      fwd->f_cb->priv  = (FAR void *)fwd;
-      fwd->f_cb->event = netfwd_eventhandler;
+      ret = work_queue(LPWORK, &fwd->f_work, netfwd_forward_work, fwd, 0);
+    }
+  else
+    {
+      FAR struct iob_s *iob = dev->d_iob;
+      FAR uint8_t *buf = dev->d_buf;
+      int len = dev->d_len;
 
-      if (nxrmutex_trylock(&fwddev->d_lock) != OK)
-        {
-          if (work_available(&fwddev->d_fwdwork))
-            {
-              work_queue(LPWORK, &fwddev->d_fwdwork, netfwd_forward_work,
-                         fwd, 0);
-            }
-        }
-      else
-        {
-          FAR struct iob_s *iob = dev->d_iob;
-          FAR uint8_t *buf = dev->d_buf;
-          int len = dev->d_len;
+      /* Save the current state of the device, avoid damaging the
+       * current d_iob and other resources when forwarding recursion
+       */
 
-          /* Save the current state of the device, avoid damaging the
-           * current d_iob and other resources when forwarding recursion
-           */
+      dev->d_iob = NULL;
+      dev->d_buf = NULL;
+      dev->d_len = 0;
 
-          dev->d_iob = NULL;
-          dev->d_buf = NULL;
-          dev->d_len = 0;
+      /* Notify the device driver of the availability of TX data */
 
-          /* Notify the device driver of the availability of TX data */
+      ret = netfwd_forward_notify(fwd);
 
-          netdev_txnotify_dev(fwddev, IPFWD_POLL);
+      dev->d_iob = iob;
+      dev->d_buf = buf;
+      dev->d_len = len;
 
-          dev->d_iob = iob;
-          dev->d_buf = buf;
-          dev->d_len = len;
-          nxrmutex_unlock(&fwddev->d_lock);
-        }
-
-      return OK;
+      nxrmutex_unlock(&fwddev->d_lock);
     }
 
-  return -EBUSY;
+  return ret;
 }
