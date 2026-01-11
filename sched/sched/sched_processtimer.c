@@ -49,6 +49,7 @@
  * Private Functions
  ****************************************************************************/
 
+#ifndef CONFIG_SCHED_TICKLESS
 /****************************************************************************
  * Name:  nxsched_cpu_scheduler
  *
@@ -147,19 +148,7 @@ static inline void nxsched_process_scheduler(void)
 #endif
 
 /****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * System Timer Hooks
- *
- * These are standard interfaces that are exported by the OS
- * for use by the architecture specific logic
- *
- ****************************************************************************/
-
-/****************************************************************************
- * Name:  nxsched_process_timer
+ * Name:  nxsched_process_tick
  *
  * Description:
  *   This function handles system timer events.
@@ -176,7 +165,7 @@ static inline void nxsched_process_scheduler(void)
  *
  ****************************************************************************/
 
-void nxsched_process_timer(void)
+static void nxsched_process_tick(void)
 {
 #ifdef CONFIG_CLOCK_TIMEKEEPING
   /* Process wall time */
@@ -204,5 +193,29 @@ void nxsched_process_timer(void)
    */
 
   board_timerhook();
+#endif
+}
+#endif
+
+/****************************************************************************
+ * System Timer Hooks
+ *
+ * These are standard interfaces that are exported by the OS
+ * for use by the architecture specific logic
+ *
+ ****************************************************************************/
+
+void nxsched_process_timer(void)
+{
+#ifdef CONFIG_SCHED_TICKLESS
+  /* Tickless scheduling */
+
+  nxsched_timer_expiration();
+
+#else
+  /* Periodic tick-based scheduling */
+
+  nxsched_process_tick();
+
 #endif
 }
