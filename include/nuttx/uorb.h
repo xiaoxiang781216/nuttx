@@ -874,10 +874,12 @@ struct sensor_hall          /* Type: HALL */
   int32_t hall;             /* Hall state */
 };
 
-struct sensor_uv            /* Type: Ultraviolet Light */
+struct sensor_uv
 {
-  uint64_t timestamp;       /* Units is microseconds */
-  float uvi;                /* the value range is 0 - 15 */
+  uint64_t timestamp;           /* Units is microseconds */
+  float uvi;                    /* the value range is 0 - 15 */
+  int32_t raw_data[3];          /* uv sensor's rawdata  [0]photopic/als [1]ir [2]uv */
+  uint32_t als_lux_data;        /* uv sensor's als luxdata */
 };
 
 struct sensor_angle         /* Type: Angle */
