@@ -61,6 +61,8 @@ static int        pkt_bind(FAR struct socket *psock,
 static int        pkt_netpoll(FAR struct socket *psock,
                               FAR struct pollfd *fds, bool setup);
 static int        pkt_close(FAR struct socket *psock);
+static int        pkt_ioctl(FAR struct socket *psock, int cmd,
+                            unsigned long arg);
 
 /****************************************************************************
  * Public Data
@@ -81,7 +83,7 @@ const struct sock_intf_s g_pkt_sockif =
   pkt_sendmsg,     /* si_sendmsg */
   pkt_recvmsg,     /* si_recvmsg */
   pkt_close,       /* si_close */
-  NULL,            /* si_ioctl */
+  pkt_ioctl,       /* si_ioctl */
   NULL,            /* si_socketpair */
   NULL             /* si_shutdown */
 #if defined(CONFIG_NET_SOCKOPTS) && defined(CONFIG_NET_PKTPROTO_OPTIONS)
@@ -318,6 +320,44 @@ static int pkt_netpoll(FAR struct socket *psock, FAR struct pollfd *fds,
 
       return pkt_pollteardown(psock, fds);
     }
+}
+
+/****************************************************************************
+ * Name: pkt_ioctl
+ *
+ * Description:
+ *   This function performs network device specific operations.
+ *
+ * Parameters:
+ *   psock    A reference to the socket structure of the socket
+ *   cmd      The ioctl command
+ *   arg      The argument of the ioctl cmd
+ *
+ ****************************************************************************/
+
+static int pkt_ioctl(FAR struct socket *psock, int cmd, unsigned long arg)
+{
+  FAR struct pkt_conn_s *conn = psock->s_conn;
+  int ret = OK;
+
+  switch (cmd)
+    {
+      case FIOC_FILEPATH:
+        snprintf((FAR char *)(uintptr_t)arg, PATH_MAX,
+                  "pkt:[%04x,tx %d,rx %d]", NTOHS(conn->type),
+#ifdef CONFIG_NET_PKT_WRITE_BUFFERS
+                 iob_get_queue_size(&conn->write_q),
+#else
+                 0,
+#endif
+                 iob_get_queue_size(&conn->readahead));
+        break;
+      default:
+        ret = -ENOTTY;
+        break;
+    }
+
+  return ret;
 }
 
 /****************************************************************************
