@@ -438,7 +438,8 @@ static int audio_try_enqueue(FAR struct audio_upperhalf_s *upper)
           return OK;
         }
 
-      if (upper->info.type == AUDIO_TYPE_OUTPUT && upper->dump)
+      if (upper->info.type == AUDIO_TYPE_OUTPUT &&
+          upper->dump && !up_interrupt_context())
         {
           file_write(
               &upper->file,
@@ -1503,7 +1504,7 @@ static inline void audio_dequeuebuffer(FAR struct audio_upperhalf_s *upper,
     }
   else
     {
-      if (upper->dump)
+      if (upper->dump && !up_interrupt_context())
         {
           file_write(&upper->file, apb->samp, apb->nbytes);
         }
