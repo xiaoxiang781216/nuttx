@@ -212,7 +212,6 @@ static const struct netdev_ops_s g_virtio_net_ops =
 #ifdef CONFIG_NETDEV_IOCTL
   virtio_net_ioctl,
 #endif
-  virtio_net_txfree,
 #ifdef CONFIG_NET_NETPOLL
   virtio_net_txpoll,
 #endif
