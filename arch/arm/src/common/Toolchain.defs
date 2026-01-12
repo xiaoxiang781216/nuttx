@@ -168,7 +168,7 @@ endif
 # Thread pointer access method
 
 ifeq ($(CONFIG_SCHED_THREAD_LOCAL),y)
-  ifeq ($(CONFIG_ARCH_ARM_A_R,y)
+  ifeq ($(CONFIG_ARCH_ARM_A_R),y)
     ARCHOPTIMIZATION += -mtp=tpidrurw
   else
     ARCHOPTIMIZATION += -mtp=soft
