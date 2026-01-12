@@ -29,6 +29,7 @@ from nxelf.elf import LiefELF
 from nxreg.register import Registers, get_arch_name
 
 from . import autocompeletion, utils
+from .parseregs import parse_registers
 from .stack import Stack
 
 TCB_FLAG_TTYPE_SHIFT = 0
@@ -201,12 +202,19 @@ class RegInfoCommand(gdb.Command):
 
 @autocompeletion.complete
 class SetRegs(gdb.Command):
-    """Load registers from TCB context memory address.
+    """Load registers from TCB context memory address or parse from string.
     Usage: setregs [regs]
+           setregs -s <string>
 
+    Memory mode (default):
     Etc: setregs
          setregs tcb->xcp.regs
          setregs g_pidhash[0]->xcp.regs
+
+    String mode (-s):
+    Etc: setregs -s "PC: 0x1234 SP: 5678 LR: 0xABC"
+         setregs -s "PC:0x1234 SP:5678 LR:0xABC"
+         setregs -s "PC 0x1234 SP 5678 LR 0xABC"
 
     Default to load from g_running_tasks if no args are provided.
     If the memory address is NULL, it will not set registers.
@@ -215,6 +223,13 @@ class SetRegs(gdb.Command):
     def get_argparser(self):
         parser = argparse.ArgumentParser(
             description="Set registers to the specified values"
+        )
+
+        parser.add_argument(
+            "-s",
+            "--string",
+            action="store_true",
+            help="Parse register values from a string format (e.g., 'PC: 0x1234 SP: 5678')",
         )
 
         parser.add_argument(
@@ -237,6 +252,28 @@ class SetRegs(gdb.Command):
         except SystemExit:
             return
 
+        # String mode: parse and set registers from string
+        if args.string:
+            registers = parse_registers(args.regs)
+
+            if not registers:
+                if args.regs:
+                    gdb.write("No register patterns found in the input string.\n")
+                else:
+                    gdb.write("Usage: setregs -s <string>\n")
+                    gdb.write('Example: setregs -s "PC: 0x1234 SP 5678 LR: 0xABC"\n')
+                return
+
+            for reg_name, value in registers:
+                try:
+                    gdb.execute(f"set ${reg_name} = {value}", to_string=True)
+                    gdb.write(f"  ✓ ${reg_name} = 0x{value:X}\n")
+                except gdb.error as e:
+                    gdb.write(f"  ✗ Failed to set ${reg_name}: {e}\n")
+
+            return
+
+        # Memory mode: load registers from TCB context memory address
         if args and args.regs:
             regs = utils.parse_arg(f"{args.regs}")
         else:
