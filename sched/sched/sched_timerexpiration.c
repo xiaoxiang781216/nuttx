@@ -353,7 +353,7 @@ static void nxsched_timer_start(clock_t ticks, clock_t interval)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: nxsched_timer_expiration
+ * Name: nxsched_tick_expiration
  *
  * Description:
  *   if CONFIG_SCHED_TICKLESS is defined, then this function is provided by
@@ -368,7 +368,7 @@ static void nxsched_timer_start(clock_t ticks, clock_t interval)
  *
  ****************************************************************************/
 
-void nxsched_timer_expiration(void)
+void nxsched_tick_expiration(void)
 {
   irqstate_t flags;
   clock_t ticks;
