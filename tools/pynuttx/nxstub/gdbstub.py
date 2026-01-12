@@ -296,4 +296,4 @@ class GDBStub:
             # Notify the stub when it's stopped
             self.target.cont(stopped)
         else:
-            self.send_unsupported()
+            self.send_packet("E01")
