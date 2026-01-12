@@ -47,7 +47,7 @@
  * Private Functions
  ****************************************************************************/
 
-#ifdef CONFIG_LIB_PPCCALL
+#if defined(CONFIG_LIB_PPCCALL)
 static bool arm_dispatch_ppccall(uint32_t *regs)
 {
   struct ppccall_param_s *param = (struct ppccall_param_s *)regs[REG_R1];
@@ -79,7 +79,7 @@ static bool arm_dispatch_ppccall(uint32_t *regs)
   regs[REG_R0] = info->func;
   return true;
 }
-#else
+#elif defined(CONFIG_LIB_SYSCALL)
 static inline_function bool arm_dispatch_ppccall(uint32_t *regs)
 {
   serr("ERROR: PPCALL not supported\n");

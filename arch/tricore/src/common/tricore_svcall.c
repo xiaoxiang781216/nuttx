@@ -77,7 +77,7 @@ static inline_function void dispatch_syscall(void)
 #  define dispatch_syscall NULL
 #endif
 
-#ifdef CONFIG_LIB_PPCCALL
+#if defined(CONFIG_LIB_PPCCALL)
 static bool dispatch_ppccall(struct tcb_s *rtcb, uintptr_t *puregs,
                              uintptr_t *plregs)
 {
@@ -130,7 +130,7 @@ static bool dispatch_ppccall(struct tcb_s *rtcb, uintptr_t *puregs,
   nplregs[REG_A4] = (uintptr_t)param;
   return true;
 }
-#else
+#elif defined(CONFIG_LIB_SYSCALL)
 static inline_function bool dispatch_ppccall(struct tcb_s *rtcb,
                                              uintptr_t *puregs,
                                              uintptr_t *plregs)
