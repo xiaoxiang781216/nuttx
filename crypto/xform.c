@@ -726,7 +726,7 @@ int aes_ctr_setkey(FAR void *sched, FAR uint8_t *key, int len)
     }
 
   ctx = (FAR struct aes_ctr_ctx *)sched;
-  if (aes_setkey(&ctx->ac_key, key, len - AESCTR_NONCESIZE) != 0)
+  if (aes_setkey(&ctx->ac_key, key, len) != 0)
     {
       return -1;
     }

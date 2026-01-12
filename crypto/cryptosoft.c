@@ -1115,6 +1115,13 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
         }
     }
 
+  if (crd->crd_alg == CRYPTO_AES_CBC)
+    {
+      /* AES-CBC need update IV */
+
+      bcopy(((FAR AES_CTX *)sw->sw_kschedule)->iv, crp->crp_iv, ivlen);
+    }
+
   return 0; /* Done with encryption/decryption */
 }
 
