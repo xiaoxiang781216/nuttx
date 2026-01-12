@@ -29,6 +29,7 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include <sys/param.h>
 #include <sched.h>
 #include <fcntl.h>
 #include <assert.h>
@@ -44,10 +45,12 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/note/noteram_driver.h>
+#include <nuttx/lib/math32.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/panic_notifier.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/streams.h>
+#include <nuttx/queue.h>
 
 #include "note_driver.h"
 
@@ -73,16 +76,9 @@
 #  define TASK_NAME_SIZE 16
 #endif
 
-/* Magic to indicate buffer is being initialized, or initialized.
- * When initialized(ready), lower 16 bits holds the size of the buffer,
- * higher 16 bits holds fixed magic number 0x6f6e ('on')
- */
+#define NOTERAM_MAGIC   0x6e6f7465   /* "note" */
 
-#define NOTERAM_MAGIC_INIT  0x6e6f7466
-#define NOTERAM_MAGIC_READY (sizeof(struct noteram_header_s) | 0x6f6e0000)
-
-#define NOTERAM_BUFSIZE (CONFIG_DRIVERS_NOTERAM_BUFSIZE -                    \
-                         sizeof(struct noteram_header_s))
+#define NOTERAM_BUFSIZE CONFIG_DRIVERS_NOTERAM_BUFSIZE
 
 /****************************************************************************
  * Private Types
@@ -99,11 +95,10 @@ struct noteram_ratelimit_s
 aligned_data(sizeof(uintptr_t))
 struct noteram_header_s
 {
-  atomic_t magic;
+  volatile uint32_t magic;
   volatile uint32_t head;
   volatile uint32_t tail;
-  volatile uint32_t read;
-  spinlock_t lock;
+  volatile uint32_t reserved;
   uint8_t buffer[0];
 };
 
@@ -113,10 +108,16 @@ struct noteram_driver_s
   FAR struct noteram_header_s *header;
   size_t bufsize;
   unsigned int overwrite;
-  unsigned int threshold;
-  FAR struct pollfd *pfd;
+
+  /* 0 if power of 2 (use natural overflow),
+   * else align_down(UINT32_MAX, bufsize)
+   */
+
+  uint32_t max_index;
   struct notifier_block nb;
   struct noteram_ratelimit_s ratelimit;
+  dq_queue_t poll_list;     /* Registered poll users list */
+  spinlock_t lock;
 #if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
   struct wdog_s wdog;
 #endif
@@ -139,6 +140,11 @@ struct noteram_dump_context_s
 {
   struct noteram_dump_cpu_context_s cpu[NCPUS];
   unsigned int mode;
+  uint32_t read;
+  spinlock_t lock;          /* Serialize readers on same fd */
+  unsigned int threshold;   /* Per-file poll threshold */
+  FAR struct pollfd *pfd;   /* Per-file pollfd pointer */
+  dq_entry_t poll_node;     /* Poll list node */
 };
 
 /****************************************************************************
@@ -160,7 +166,8 @@ noteram_dump_init_context(FAR struct noteram_dump_context_s *ctx);
 static int noteram_dump_one(FAR const struct note_max_s *p,
                             FAR struct lib_outstream_s *s,
                             FAR struct noteram_dump_context_s *ctx);
-static unsigned int noteram_unread_length(FAR struct noteram_driver_s *drv);
+static uint32_t noteram_unread_length(FAR struct noteram_driver_s *drv,
+                                      uint32_t read);
 
 #if CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS > 0
 static void noteram_timeout_handler(wdparm_t arg);
@@ -180,12 +187,8 @@ static
 #ifdef DRIVERS_NOTERAM_SECTION
 locate_data(CONFIG_DRIVERS_NOTERAM_SECTION)
 #endif
-#ifdef CONFIG_DRIVERS_NOTERAM_SECTION_SHARED
-struct noteram_buffer_s g_ramnote_buffer;
-#else
 DEFINE_PER_CPU_BSS_BMP(struct noteram_buffer_s, g_ramnote_buffer);
-#  define g_ramnote_buffer this_cpu_var_bmp(g_ramnote_buffer)
-#endif
+#define g_ramnote_buffer this_cpu_var_bmp(g_ramnote_buffer)
 
 static const struct note_driver_ops_s g_noteram_ops =
 {
@@ -230,9 +233,12 @@ DEFINE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver) =
 #endif
   NOTERAM_BUFSIZE,
 #ifdef CONFIG_DRIVERS_NOTERAM_DEFAULT_NOOVERWRITE
-  NOTE_MODE_OVERWRITE_DISABLE
+  NOTE_MODE_OVERWRITE_DISABLE,
 #else
-  NOTE_MODE_OVERWRITE_ENABLE
+  NOTE_MODE_OVERWRITE_ENABLE,
+#endif
+#if !IS_POWER_OF_2(NOTERAM_BUFSIZE)
+  ALIGN_DOWN(UINT32_MAX, NOTERAM_BUFSIZE)
 #endif
 };
 #define g_noteram_driver this_cpu_var_bmp(g_noteram_driver)
@@ -257,10 +263,7 @@ static void noteram_driver_initialize(void)
 static inline_function
 void noteram_timeout_reset(FAR struct noteram_driver_s *drv)
 {
-  /* We need locked to ensure the wdog status and dq status aligned. */
-
-  irqstate_t flags = spin_lock_irqsave(&drv->header->lock);
-  if (!drv->pfd)
+  if (dq_empty(&drv->poll_list))
     {
       wd_cancel(&drv->wdog);
     }
@@ -269,20 +272,34 @@ void noteram_timeout_reset(FAR struct noteram_driver_s *drv)
       wd_start(&drv->wdog, MSEC2TICK(CONFIG_DRIVERS_NOTERAM_POLLTIMEOUT_MS),
                noteram_timeout_handler, (wdparm_t)drv);
     }
-
-  spin_unlock_irqrestore(&drv->header->lock, flags);
 }
 
 static void noteram_timeout_handler(wdparm_t arg)
 {
   FAR struct noteram_driver_s *drv = (FAR struct noteram_driver_s *)arg;
+  irqstate_t flags = spin_lock_irqsave_notrace(&drv->lock);
+  FAR struct noteram_dump_context_s *ctx;
 
-  if (drv->pfd && (noteram_unread_length(drv) >= drv->threshold))
+  sched_lock();
+  dq_for_every_entry(&drv->poll_list, ctx,
+                     struct noteram_dump_context_s, poll_node)
     {
-      poll_notify(&drv->pfd, 1, POLLIN);
+      /* Relaxed read of ctx->read and ctx->threshold without
+       * ctx->lock: we already hold drv lock which serializes with
+       * poll_list add/remove, so ctx stays valid.  A stale value
+       * only causes a harmless extra or missed notification.
+       */
+
+      if (ctx->pfd &&
+          noteram_unread_length(drv, ctx->read) >= ctx->threshold)
+        {
+          poll_notify(&ctx->pfd, 1, POLLIN);
+        }
     }
 
+  sched_unlock();
   noteram_timeout_reset(drv);
+  spin_unlock_irqrestore_notrace(&drv->lock, flags);
 }
 #else
 #  define noteram_timeout_reset(drv)
@@ -304,21 +321,10 @@ static void noteram_timeout_handler(wdparm_t arg)
 
 static inline void noteram_header_init(FAR struct noteram_driver_s *drv)
 {
-  uint32_t magic;
-
-  while ((magic = atomic_read_acquire(&drv->header->magic)) !=
-         NOTERAM_MAGIC_READY)
+  if (drv->header->magic != NOTERAM_MAGIC)
     {
-      while (magic != NOTERAM_MAGIC_INIT &&
-             atomic_cmpxchg_relaxed(&drv->header->magic, &magic,
-                                    NOTERAM_MAGIC_INIT))
-        {
-          drv->header->head = 0;
-          drv->header->tail = 0;
-          drv->header->read = 0;
-          spin_lock_init(&drv->header->lock);
-          atomic_set_release(&drv->header->magic, NOTERAM_MAGIC_READY);
-        }
+      memset(drv->header, 0, sizeof(struct noteram_header_s));
+      drv->header->magic = NOTERAM_MAGIC;
     }
 }
 
@@ -382,56 +388,141 @@ static bool noteram_ratelimit(FAR struct noteram_driver_s *drv)
 }
 
 /****************************************************************************
- * Name: noteram_buffer_clear
- *
- * Description:
- *   Clear all contents of the circular buffer.
- *
- * Input Parameters:
- *   None.
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-static void noteram_buffer_clear(FAR struct noteram_driver_s *drv)
-{
-  drv->header->tail = drv->header->head;
-  drv->header->read = drv->header->head;
-
-  if (drv->overwrite == NOTE_MODE_OVERWRITE_OVERFLOW)
-    {
-      drv->overwrite = NOTE_MODE_OVERWRITE_DISABLE;
-    }
-}
-
-/****************************************************************************
  * Name: noteram_next
  *
  * Description:
- *   Return the circular buffer index at offset from the specified index
- *   value, handling wraparound
+ *   Return the logical index advanced by offset. When max_index is 0
+ *   (power-of-2 bufsize), relies on natural uint overflow. Otherwise,
+ *   wraps at max_index boundary.
  *
  * Input Parameters:
- *   ndx - Old circular buffer index
+ *   drv    - Driver instance
+ *   idx    - Current logical index
+ *   offset - Number of bytes to advance
  *
  * Returned Value:
- *   New circular buffer index
+ *   New logical index
  *
  ****************************************************************************/
 
-static inline unsigned int noteram_next(FAR struct noteram_driver_s *drv,
-                                        unsigned int ndx,
-                                        unsigned int offset)
+static inline uint32_t noteram_next(FAR struct noteram_driver_s *drv,
+                                    uint32_t idx, uint32_t offset)
 {
-  ndx += offset;
-  if (ndx >= drv->bufsize)
+  idx += offset;
+  if (drv->max_index != 0 && idx >= drv->max_index)
     {
-      ndx -= drv->bufsize;
+      idx -= drv->max_index;
     }
 
-  return ndx;
+  return idx;
+}
+
+/****************************************************************************
+ * Name: noteram_dist
+ *
+ * Description:
+ *   Calculate the unsigned distance between two logical indices in the
+ *   circular index space. When max_index is 0 (power-of-2 bufsize), relies
+ *   on natural uint overflow. Otherwise, calculates distance in
+ *   [0, max_index) space.
+ *
+ * Input Parameters:
+ *   drv - Driver instance
+ *   a   - First logical index (typically head)
+ *   b   - Second logical index (typically tail or read)
+ *
+ * Returned Value:
+ *   Unsigned distance from b to a in the circular space
+ *
+ ****************************************************************************/
+
+static inline uint32_t noteram_dist(FAR struct noteram_driver_s *drv,
+                                    uint32_t a, uint32_t b)
+{
+  if (drv->max_index == 0)
+    {
+      return a - b;
+    }
+
+  return (a >= b) ? (a - b) : (a + drv->max_index - b);
+}
+
+/****************************************************************************
+ * Name: noteram_offset
+ *
+ * Description:
+ *   Convert a logical index to physical buffer offset. When max_index is 0
+ *   (power-of-2 bufsize), uses fast bitwise AND. Otherwise, uses modulo.
+ *
+ * Input Parameters:
+ *   drv - Driver instance
+ *   idx - Logical index
+ *
+ * Returned Value:
+ *   Physical offset in buffer [0, bufsize)
+ *
+ ****************************************************************************/
+
+static inline uint32_t noteram_offset(FAR struct noteram_driver_s *drv,
+                                      uint32_t idx)
+{
+  if (drv->max_index == 0)
+    {
+      return idx & (drv->bufsize - 1);
+    }
+
+  return idx % drv->bufsize;
+}
+
+/****************************************************************************
+ * Name: noteram_is_overrun
+ *
+ * Description:
+ *   Check if the read position has been overrun by the writer.
+ *   This happens when read falls outside the valid window [tail, head).
+ *
+ * Input Parameters:
+ *   drv  - Driver instance
+ *   head - Current head (next write position)
+ *   tail - Current tail (oldest valid data)
+ *   read - Reader's current position
+ *
+ * Returned Value:
+ *   true if read has been overrun (data at read is no longer valid)
+ *
+ ****************************************************************************/
+
+static inline bool noteram_is_overrun(FAR struct noteram_driver_s *drv,
+                                      uint32_t head, uint32_t tail,
+                                      uint32_t read)
+{
+  return noteram_dist(drv, head, read) > noteram_dist(drv, head, tail);
+}
+
+/****************************************************************************
+ * Name: noteram_is_complete
+ *
+ * Description:
+ *   Check if head is far enough ahead of read to contain size bytes.
+ *   This is a necessary (but not sufficient) condition for the entry
+ *   to be readable — the caller must re-check for overrun after copy.
+ *
+ * Input Parameters:
+ *   drv  - Driver instance
+ *   head - Current head (next write position)
+ *   read - Start of the range to check
+ *   size - Size of the range in bytes
+ *
+ * Returned Value:
+ *   true if head is at least size bytes ahead of read
+ *
+ ****************************************************************************/
+
+static inline bool noteram_is_complete(FAR struct noteram_driver_s *drv,
+                                       uint32_t head, uint32_t read,
+                                       uint32_t size)
+{
+  return noteram_dist(drv, head, read) >= size;
 }
 
 /****************************************************************************
@@ -448,17 +539,9 @@ static inline unsigned int noteram_next(FAR struct noteram_driver_s *drv,
  *
  ****************************************************************************/
 
-static unsigned int noteram_length(FAR struct noteram_driver_s *drv)
+static uint32_t noteram_length(FAR struct noteram_driver_s *drv)
 {
-  uint32_t head = drv->header->head;
-  unsigned int tail = drv->header->tail;
-
-  if (tail > head)
-    {
-      head += drv->bufsize;
-    }
-
-  return head - tail;
+  return noteram_dist(drv, drv->header->head, drv->header->tail);
 }
 
 /****************************************************************************
@@ -475,17 +558,18 @@ static unsigned int noteram_length(FAR struct noteram_driver_s *drv)
  *
  ****************************************************************************/
 
-static unsigned int noteram_unread_length(FAR struct noteram_driver_s *drv)
+static uint32_t noteram_unread_length(FAR struct noteram_driver_s *drv,
+                                      uint32_t read)
 {
+  uint32_t tail = drv->header->tail;
   uint32_t head = drv->header->head;
-  uint32_t read = drv->header->read;
 
-  if (read > head)
+  if (noteram_is_overrun(drv, head, tail, read))
     {
-      head += drv->bufsize;
+      read = tail;
     }
 
-  return head - read;
+  return noteram_dist(drv, head, read);
 }
 
 /****************************************************************************
@@ -502,34 +586,27 @@ static unsigned int noteram_unread_length(FAR struct noteram_driver_s *drv)
  *
  * Assumptions:
  *   We are within a critical section.
+ *   The buffer is not empty (caller must check noteram_length > 0).
  *
  ****************************************************************************/
 
 static void noteram_remove(FAR struct noteram_driver_s *drv)
 {
-  unsigned int tail;
-  unsigned int length;
+  uint32_t tail;
+  uint32_t length;
 
   /* Get the tail index of the circular buffer */
 
   tail = drv->header->tail;
-  DEBUGASSERT(tail < drv->bufsize);
 
   /* Get the length of the note at the tail index */
 
-  length = drv->header->buffer[tail];
+  length = drv->header->buffer[noteram_offset(drv, tail)];
   DEBUGASSERT(length <= noteram_length(drv));
 
   /* Increment the tail index to remove the entire note from the circular
    * buffer.
    */
-
-  if (drv->header->read == drv->header->tail)
-    {
-      /* The read index also needs increment. */
-
-      drv->header->read = noteram_next(drv, tail, length);
-    }
 
   drv->header->tail = noteram_next(drv, tail, length);
 }
@@ -540,9 +617,26 @@ static void noteram_remove(FAR struct noteram_driver_s *drv)
  * Description:
  *   Get the next note from the read index of the circular buffer.
  *
+ *   This function is lock-free on the reader side. Each file descriptor
+ *   maintains its own read position (ctx->read), so multiple readers do
+ *   not conflict with each other. For read-write concurrency, instead of
+ *   holding the spinlock (which would block the writer in noteram_add),
+ *   we use a seqlock-like retry mechanism:
+ *
+ *   1. Snapshot tail/head before reading
+ *   2. Validate read position and copy data
+ *   3. Re-check tail/head after copy to detect concurrent overwrites
+ *   4. Retry if data was overwritten during the copy
+ *
+ *   This approach ensures data consistency without blocking the writer,
+ *   which is critical for trace instrumentation where noteram_add may be
+ *   called from interrupt context or with interrupts disabled.
+ *
  * Input Parameters:
+ *   drv    - Driver instance
  *   buffer - Location to return the next note
- *   buflen - The length of the user provided buffer.
+ *   buflen - The length of the user provided buffer
+ *   pread  - Pointer to the reader's current position (updated on success)
  *
  * Returned Value:
  *   On success, the positive, non-zero length of the return note is
@@ -552,59 +646,91 @@ static void noteram_remove(FAR struct noteram_driver_s *drv)
  ****************************************************************************/
 
 static ssize_t noteram_get(FAR struct noteram_driver_s *drv,
-                           FAR uint8_t *buffer, size_t buflen)
+                           FAR uint8_t *buffer, size_t buflen,
+                           FAR uint32_t *pread)
 {
-  uint32_t remaining;
+  uint32_t head;
+  uint32_t tail;
   uint32_t read;
-  ssize_t notelen;
-  size_t circlen;
+  uint32_t notelen;
+  uint32_t first;
+  uint32_t offset;
 
   DEBUGASSERT(buffer != NULL);
+  DEBUGASSERT(pread != NULL);
 
-  /* Verify that the circular buffer is not empty */
+  tail = drv->header->tail;
+  head = drv->header->head;
+  read  = *pread;
 
-  circlen = noteram_unread_length(drv);
-  if (circlen <= 0)
+  if (noteram_is_overrun(drv, head, tail, read))
+    {
+      *pread = tail;
+      read = tail;
+    }
+
+  if (noteram_dist(drv, head, read) == 0)
     {
       return 0;
     }
 
-  /* Get the read index of the circular buffer */
+  notelen = drv->header->buffer[noteram_offset(drv, read)];
 
-  read = drv->header->read;
-  DEBUGASSERT(read < drv->bufsize);
+  /* Invalid entry length: either zero (corrupted) or exceeds buffer
+   * size. This can happen if the entry was overwritten during read,
+   * or if the buffer contains corrupted data.
+   */
 
-  /* Get the length of the note at the read index */
-
-  notelen = drv->header->buffer[read];
-  DEBUGASSERT(notelen <= circlen);
-
-  /* Is the user buffer large enough to hold the note? */
-
-  if (buflen < notelen)
+  if (notelen == 0 || notelen > drv->bufsize)
     {
-      /* and return an error */
+      /* If overrun happen during this period, then try again */
 
+      *pread = tail; /* Move up read position to tail for next try */
+      if (noteram_is_overrun(drv, drv->header->head,
+                             drv->header->tail, read))
+        {
+          return -EAGAIN;
+        }
+      else
+        {
+          return -EIO;
+        }
+    }
+
+  if (notelen > buflen)
+    {
       return -EFBIG;
     }
 
-  /* Loop until the note has been transferred to the user buffer */
-
-  remaining = (uint32_t)notelen;
-  while (remaining > 0)
+  if (!noteram_is_complete(drv, head, read, notelen))
     {
-      /* Copy the next byte at the read index */
-
-      *buffer++ = drv->header->buffer[read];
-
-      /* Adjust indices and counts */
-
-      read = noteram_next(drv, read, 1);
-      remaining--;
+      return -EAGAIN;
     }
 
-  drv->header->read = noteram_next(drv, drv->header->read, notelen);
+  offset = noteram_offset(drv, read);
+  first = drv->bufsize - offset;
 
+  if (first > notelen)
+    {
+      first = notelen;
+    }
+
+  memcpy(buffer, drv->header->buffer + offset, first);
+  if (first < notelen)
+    {
+      memcpy(buffer + first, drv->header->buffer, notelen - first);
+    }
+
+  tail = drv->header->tail;
+  head = drv->header->head;
+
+  if (noteram_is_overrun(drv, head, tail, read))
+    {
+      *pread = tail;
+      return -EAGAIN;
+    }
+
+  *pread = noteram_next(drv, read, notelen);
   return notelen;
 }
 
@@ -614,22 +740,21 @@ static ssize_t noteram_get(FAR struct noteram_driver_s *drv,
 
 static int noteram_open(FAR struct file *filep)
 {
-  FAR struct noteram_dump_context_s *ctx;
   FAR struct noteram_driver_s *drv = (FAR struct noteram_driver_s *)
                                      filep->f_inode->i_private;
+  FAR struct noteram_dump_context_s *ctx;
 
   noteram_driver_initialize();
 
-  /* Reset the read index of the circular buffer */
-
-  drv->header->read = drv->header->tail;
   ctx = kmm_zalloc(sizeof(*ctx));
   if (ctx == NULL)
     {
       return -ENOMEM;
     }
 
-  drv->threshold = sizeof(struct note_common_s);
+  ctx->read = drv->header->tail;
+  ctx->threshold = sizeof(struct note_common_s);
+  spin_lock_init(&ctx->lock);
 
   filep->f_priv = ctx;
   noteram_dump_init_context(ctx);
@@ -638,8 +763,19 @@ static int noteram_open(FAR struct file *filep)
 
 int noteram_close(FAR struct file *filep)
 {
+  FAR struct noteram_driver_s *drv = filep->f_inode->i_private;
   FAR struct noteram_dump_context_s *ctx = filep->f_priv;
+  irqstate_t flags = spin_lock_irqsave_notrace(&drv->lock);
 
+  /* If poll is registered, remove from the list */
+
+  if (ctx->pfd != NULL)
+    {
+      dq_rem(&ctx->poll_node, &drv->poll_list);
+      ctx->pfd = NULL;
+    }
+
+  spin_unlock_irqrestore_notrace(&drv->lock, flags);
   filep->f_priv = NULL;
   kmm_free(ctx);
   return OK;
@@ -655,17 +791,18 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
   FAR struct noteram_dump_context_s *ctx = filep->f_priv;
   FAR struct noteram_driver_s *drv = filep->f_inode->i_private;
   FAR struct lib_memoutstream_s stream;
-  ssize_t ret;
   irqstate_t flags;
+  ssize_t ret = 0;
+
+  flags = spin_lock_irqsave_notrace(&ctx->lock);
 
   if (ctx->mode == NOTE_MODE_READ_BINARY)
     {
       size_t nread = 0;
-      flags = spin_lock_irqsave_notrace(&drv->header->lock);
       while (nread < buflen)
         {
           ret = noteram_get(drv, (FAR uint8_t *)buffer + nread,
-                            buflen - nread);
+                            buflen - nread, &ctx->read);
           if (ret <= 0)
             {
               break;
@@ -674,8 +811,8 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
           nread += ret;
         }
 
-      spin_unlock_irqrestore_notrace(&drv->header->lock, flags);
-      return nread;
+      spin_unlock_irqrestore_notrace(&ctx->lock, flags);
+      return nread > 0 ? nread : ret;
     }
   else
     {
@@ -687,11 +824,11 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
 
           /* Get the next note (removing it from the buffer) */
 
-          flags = spin_lock_irqsave_notrace(&drv->header->lock);
-          ret = noteram_get(drv, (FAR uint8_t *)&note, sizeof(note));
-          spin_unlock_irqrestore_notrace(&drv->header->lock, flags);
+          ret = noteram_get(drv, (FAR uint8_t *)&note, sizeof(note),
+                            &ctx->read);
           if (ret <= 0)
             {
+              spin_unlock_irqrestore_notrace(&ctx->lock, flags);
               return ret;
             }
 
@@ -702,6 +839,7 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
         }
       while (ret == 0);
 
+      spin_unlock_irqrestore_notrace(&ctx->lock, flags);
       return stream.common.nput;
     }
 }
@@ -712,9 +850,10 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
 
 static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
-  int ret = -ENOTTY;
+  FAR struct noteram_dump_context_s *ctx = filep->f_priv;
   FAR struct noteram_driver_s *drv = filep->f_inode->i_private;
-  irqstate_t flags = spin_lock_irqsave_notrace(&drv->header->lock);
+  irqstate_t flags;
+  int ret = -ENOTTY;
 
   /* Handle the ioctl commands */
 
@@ -726,7 +865,14 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
        */
 
       case NOTE_CLEAR:
-        noteram_buffer_clear(drv);
+        flags = spin_lock_irqsave_notrace(&drv->lock);
+        drv->header->tail = drv->header->head;
+        if (drv->overwrite == NOTE_MODE_OVERWRITE_OVERFLOW)
+          {
+            drv->overwrite = NOTE_MODE_OVERWRITE_DISABLE;
+          }
+
+        spin_unlock_irqrestore_notrace(&drv->lock, flags);
         ret = OK;
         break;
 
@@ -742,7 +888,9 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
+            flags = spin_lock_irqsave_notrace(&drv->lock);
             *(FAR unsigned int *)arg = drv->overwrite;
+            spin_unlock_irqrestore_notrace(&drv->lock, flags);
             ret = OK;
           }
         break;
@@ -759,7 +907,9 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
+            flags = spin_lock_irqsave_notrace(&drv->lock);
             drv->overwrite = *(FAR unsigned int *)arg;
+            spin_unlock_irqrestore_notrace(&drv->lock, flags);
             ret = OK;
           }
         break;
@@ -776,9 +926,9 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            FAR struct noteram_dump_context_s *ctx = filep->f_priv;
-
+            flags = spin_lock_irqsave_notrace(&ctx->lock);
             *(FAR unsigned int *)arg = ctx->mode;
+            spin_unlock_irqrestore_notrace(&ctx->lock, flags);
             ret = OK;
           }
         break;
@@ -795,9 +945,9 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            FAR struct noteram_dump_context_s *ctx = filep->f_priv;
-
+            flags = spin_lock_irqsave_notrace(&ctx->lock);
             ctx->mode = *(FAR unsigned int *)arg;
+            spin_unlock_irqrestore_notrace(&ctx->lock, flags);
             ret = OK;
           }
         break;
@@ -812,8 +962,10 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             FAR struct note_ratelimit_s *limit =
               (FAR struct note_ratelimit_s *)arg;
 
+            flags = spin_lock_irqsave_notrace(&drv->lock);
             limit->interval = drv->ratelimit.interval;
             limit->burst = drv->ratelimit.burst;
+            spin_unlock_irqrestore_notrace(&drv->lock, flags);
             ret = OK;
           }
         break;
@@ -828,8 +980,10 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             FAR struct note_ratelimit_s *limit =
               (FAR struct note_ratelimit_s *)arg;
 
+            flags = spin_lock_irqsave_notrace(&drv->lock);
             drv->ratelimit.interval = limit->interval;
             drv->ratelimit.burst = limit->burst;
+            spin_unlock_irqrestore_notrace(&drv->lock, flags);
             ret = OK;
           }
         break;
@@ -846,13 +1000,17 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           }
         else
           {
-            *(FAR unsigned int *)arg = noteram_unread_length(drv);
+            flags = spin_lock_irqsave_notrace(&drv->lock);
+            *(FAR unsigned int *)arg = noteram_unread_length(drv, ctx->read);
+            spin_unlock_irqrestore_notrace(&drv->lock, flags);
             ret = OK;
           }
         break;
 
       case PIPEIOC_POLLINTHRD:
-        drv->threshold = (uint32_t)arg;
+        flags = spin_lock_irqsave_notrace(&ctx->lock);
+        ctx->threshold = (uint32_t)arg;
+        spin_unlock_irqrestore_notrace(&ctx->lock, flags);
         ret = OK;
         break;
 
@@ -860,7 +1018,6 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
     }
 
-  spin_unlock_irqrestore_notrace(&drv->header->lock, flags);
   return ret;
 }
 
@@ -874,6 +1031,7 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
   int ret = 0;
   FAR struct inode *inode;
   FAR struct noteram_driver_s *drv;
+  FAR struct noteram_dump_context_s *ctx;
   irqstate_t flags;
 
   DEBUGASSERT(filep != NULL && fds != NULL);
@@ -881,8 +1039,9 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   DEBUGASSERT(inode != NULL && inode->i_private != NULL);
   drv = inode->i_private;
+  ctx = filep->f_priv;
 
-  flags = spin_lock_irqsave_notrace(&drv->header->lock);
+  flags = spin_lock_irqsave_notrace(&drv->lock);
 
   /* Ignore waits that do not include POLLIN */
 
@@ -896,38 +1055,34 @@ static int noteram_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   if (setup)
     {
-      /* Check if we can accept this poll.
-       * For now, only one thread can poll the device at any time
-       * (shorter / simpler code)
-       */
+      /* Check if this file handle already has poll registered */
 
-      if (drv->pfd)
+      if (ctx->pfd != NULL)
         {
           ret = -EBUSY;
           goto errout;
         }
 
-      drv->pfd = fds;
+      /* Register poll: store pfd and add to list */
 
-      /* Is there unread data in noteram? then trigger POLLIN now -
-       * don't wait for RX.
-       */
-
-      if (noteram_unread_length(drv) >= drv->threshold)
+      ctx->pfd = fds;
+      dq_addlast(&ctx->poll_node, &drv->poll_list);
+      if (noteram_unread_length(drv, ctx->read) >= ctx->threshold)
         {
-          spin_unlock_irqrestore_notrace(&drv->header->lock, flags);
-          poll_notify(&drv->pfd, 1, POLLIN);
-          return ret;
+          sched_lock();
+          poll_notify(&ctx->pfd, 1, POLLIN);
+          sched_unlock();
         }
     }
-  else /* Tear it down */
+  else if (ctx->pfd != NULL) /* Tear it down */
     {
-      drv->pfd = NULL;
+      dq_rem(&ctx->poll_node, &drv->poll_list);
+      ctx->pfd = NULL;
     }
 
 errout:
-  spin_unlock_irqrestore_notrace(&drv->header->lock, flags);
   noteram_timeout_reset(drv);
+  spin_unlock_irqrestore_notrace(&drv->lock, flags);
   return ret;
 }
 
@@ -963,22 +1118,20 @@ static void noteram_add(FAR struct note_driver_s *driver,
 
   noteram_driver_initialize();
 
+  flags = spin_lock_irqsave_notrace(&drv->lock);
+
   /* Initialize the noteram header if it has not been initialized yet. */
 
   noteram_header_init(drv);
 
-  flags = spin_lock_irqsave_notrace(&drv->header->lock);
-
   if (noteram_ratelimit(drv))
     {
-      spin_unlock_irqrestore_notrace(&drv->header->lock, flags);
-      return;
+      goto out;
     }
 
   if (drv->overwrite == NOTE_MODE_OVERWRITE_OVERFLOW)
     {
-      spin_unlock_irqrestore_notrace(&drv->header->lock, flags);
-      return;
+      goto out;
     }
 
   DEBUGASSERT(note != NULL && notelen < drv->bufsize);
@@ -991,11 +1144,10 @@ static void noteram_add(FAR struct note_driver_s *driver,
           /* Stop recording if not in overwrite mode */
 
           drv->overwrite = NOTE_MODE_OVERWRITE_OVERFLOW;
-          spin_unlock_irqrestore_notrace(&drv->header->lock, flags);
-          return;
+          goto out;
         }
 
-      /* Remove the note at the tail index , make sure there is enough space
+      /* Remove the note at the tail index, make sure there is enough space
        */
 
       do
@@ -1007,20 +1159,40 @@ static void noteram_add(FAR struct note_driver_s *driver,
     }
 
   head = drv->header->head;
-  space = drv->bufsize - head;
+  space = drv->bufsize - noteram_offset(drv, head);
   space = space < notelen ? space : notelen;
-  memcpy(drv->header->buffer + head, note, space);
+  memcpy(drv->header->buffer + noteram_offset(drv, head), note, space);
   memcpy(drv->header->buffer, buf + space, notelen - space);
   drv->header->head = noteram_next(drv, head, notelen);
-  spin_unlock_irqrestore_notrace(&drv->header->lock, flags);
 
-  if (!noswitches && drv->pfd &&
-      (noteram_unread_length(drv) >= drv->threshold))
+  if (!noswitches && !dq_empty(&drv->poll_list))
     {
-      poll_notify(&drv->pfd, 1, POLLIN);
+      FAR struct noteram_dump_context_s *ctx;
+
+      sched_lock();
+      dq_for_every_entry(&drv->poll_list, ctx,
+                          struct noteram_dump_context_s, poll_node)
+        {
+          /* Relaxed read of ctx->read and ctx->threshold without
+            * ctx->lock: we already hold drv lock which serializes with
+            * poll_list add/remove, so ctx stays valid.  A stale value
+            * only causes a harmless extra or missed notification.
+            */
+
+          if (ctx->pfd &&
+              noteram_unread_length(drv, ctx->read) >= ctx->threshold)
+            {
+              poll_notify(&ctx->pfd, 1, POLLIN);
+            }
+        }
+
+      sched_unlock();
+
+      noteram_timeout_reset(drv);
     }
 
-  noteram_timeout_reset(drv);
+out:
+  spin_unlock_irqrestore_notrace(&drv->lock, flags);
 }
 
 /****************************************************************************
@@ -1557,8 +1729,10 @@ static void noteram_dump(FAR struct noteram_driver_s *drv)
   struct noteram_dump_context_s ctx;
   struct lib_syslograwstream_s stream;
   struct note_max_s note;
+  uint32_t read;
 
   memset(&ctx, 0, sizeof(ctx));
+  read = drv->header->tail;
   lib_syslograwstream_open(&stream);
   lib_sprintf(&stream.common, "# tracer:nop\n#\n");
 
@@ -1566,7 +1740,7 @@ static void noteram_dump(FAR struct noteram_driver_s *drv)
     {
       ssize_t ret;
 
-      ret = noteram_get(drv, (FAR uint8_t *)&note, sizeof(note));
+      ret = noteram_get(drv, (FAR uint8_t *)&note, sizeof(note), &read);
       if (ret <= 0)
         {
           break;
@@ -1652,6 +1826,7 @@ FAR struct note_driver_s *
 noteram_initialize(FAR const char *devname, size_t bufsize,
                    bool overwrite, bool crashdump, bool regnote)
 {
+  FAR struct note_driver_s *drv;
   FAR void *buffer;
 
   bufsize += sizeof(struct noteram_header_s);
@@ -1661,8 +1836,14 @@ noteram_initialize(FAR const char *devname, size_t bufsize,
       return NULL;
     }
 
-  return noteram_initialize_with_buffer(devname, buffer, bufsize,
-                                        overwrite, crashdump, regnote);
+  drv = noteram_initialize_with_buffer(devname, buffer, bufsize,
+                                       overwrite, crashdump, regnote);
+  if (drv == NULL)
+    {
+      kmm_free(buffer);
+    }
+
+  return drv;
 }
 
 /****************************************************************************
@@ -1742,7 +1923,14 @@ noteram_initialize_with_buffer(FAR const char *devname,
   noteram_header_init(drv);
 
   drv->bufsize = bufsize;
+
+  if (!IS_POWER_OF_2(bufsize))
+    {
+      drv->max_index = ALIGN_DOWN(UINT32_MAX, bufsize);
+    }
+
   drv->overwrite = overwrite;
+  dq_init(&drv->poll_list);
 
   if (regnote)
     {
@@ -1773,7 +1961,6 @@ noteram_initialize_with_buffer(FAR const char *devname,
 
 void noteram_deinitialize(struct note_driver_s *drv)
 {
-  uint32_t magic;
   FAR struct noteram_driver_s *noteram_drv;
 
   if (drv == NULL)
@@ -1783,7 +1970,7 @@ void noteram_deinitialize(struct note_driver_s *drv)
 
   noteram_drv = container_of(drv, struct noteram_driver_s, driver);
 
-  atomic_cmpxchg_relaxed(&noteram_drv->header->magic, &magic, 0);
+  noteram_drv->header->magic = ~NOTERAM_MAGIC;
 
 #ifdef CONFIG_DRIVERS_NOTERAM_CRASH_DUMP
   panic_notifier_chain_unregister(&noteram_drv->nb);
