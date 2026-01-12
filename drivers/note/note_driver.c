@@ -178,9 +178,7 @@ FAR static struct note_driver_s *
   NULL
 };
 
-#if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER)
 static spinlock_t g_note_lock;
-#endif
 
 #if CONFIG_DRIVERS_NOTE_CLOCKID >= 0
 static clock_t g_note_perf_offset;
