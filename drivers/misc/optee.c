@@ -618,7 +618,7 @@ static int optee_close(FAR struct file *filep)
 {
   FAR struct optee_priv_data *priv = filep->f_priv;
   FAR struct optee_shm *shm;
-  int id = 0;
+  unsigned long id = 0;
 
   idr_for_each_entry(priv->shms, shm, id)
     {
@@ -1013,6 +1013,7 @@ optee_shm_register_supplicant(FAR struct optee_priv_data *priv,
 {
   FAR struct optee_shm *shm;
   uintptr_t page_list_pa;
+  unsigned long id;
   int ret = 0;
 
   shm = kmm_zalloc(sizeof(struct optee_shm));
@@ -1029,15 +1030,16 @@ optee_shm_register_supplicant(FAR struct optee_priv_data *priv,
   shm->flags = TEE_SHM_REGISTER | TEE_SHM_SUPP;
   shm->page_list = optee_shm_to_page_list(shm, &page_list_pa);
   shm->paddr = page_list_pa;
-  shm->id = idr_alloc(priv->shms, shm, 0, 0);
+  ret = idr_alloc(priv->shms, shm, 0, 0, &id);
 
-  if (shm->id < 0)
+  if (ret < 0)
     {
       kmm_free(shm->page_list);
       kmm_free(shm);
       return -ENOMEM;
     }
 
+  shm->id = id;
   return ret;
 }
 #endif
@@ -1429,6 +1431,7 @@ int optee_shm_alloc(FAR struct optee_priv_data *priv, FAR void *addr,
                     FAR struct optee_shm **shmp)
 {
   FAR struct optee_shm *shm;
+  unsigned long id;
   FAR void *ptr;
   int ret = -ENOMEM;
 
@@ -1465,13 +1468,14 @@ int optee_shm_alloc(FAR struct optee_priv_data *priv, FAR void *addr,
   shm->paddr = shm->vaddr ? optee_va_to_pa((FAR void *)shm->vaddr) : 0;
   shm->length = size;
   shm->flags = flags;
-  shm->id = idr_alloc(priv->shms, shm, 0, 0);
+  ret = idr_alloc(priv->shms, shm, 0, 0, &id);
 
-  if (shm->id < 0)
+  if (ret < 0)
     {
       goto err;
     }
 
+  shm->id = id;
   if (flags & TEE_SHM_REGISTER)
     {
       ret = optee_shm_register(priv, shm);
