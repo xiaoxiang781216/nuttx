@@ -85,8 +85,14 @@ int nxsem_destroy(FAR sem_t *sem)
   old = atomic_read(val);
   do
     {
-      if ((mutex && NXSEM_MBLOCKING(old)) ||
-          (!mutex && old < 0))
+      if (mutex)
+        {
+          if (NXSEM_MBLOCKING(old))
+            {
+              break;
+            }
+        }
+      else if(old < 0)
         {
           break;
         }
