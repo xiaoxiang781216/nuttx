@@ -134,6 +134,7 @@ struct mallinfo mm_mallinfo(FAR struct mm_heap_s *heap)
 #endif
 
   memset(&info, 0, sizeof(info));
+  mm_free_delaylist(heap);
   mm_foreach(heap, mallinfo_handler, &info);
   info.arena = heap->mm_heapsize;
   info.arena += sizeof(struct mm_heap_s);
@@ -176,6 +177,7 @@ struct mallinfo_task mm_mallinfo_task(FAR struct mm_heap_s *heap,
 
   handle.task = task;
   handle.info = &info;
+  mm_free_delaylist(heap);
   mm_foreach(heap, mallinfo_task_handler, &handle);
 
   return info;

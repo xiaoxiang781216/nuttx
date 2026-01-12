@@ -348,6 +348,7 @@ void mm_memdump(FAR struct mm_heap_s *heap,
 
   memdump_dump_pool(&priv, heap);
 
+  mm_free_delaylist(heap);
   mm_foreach(heap, memdump_handler, &priv);
 
 #if CONFIG_MM_HEAP_BIGGEST_COUNT > 0

@@ -77,5 +77,10 @@ static void checkcorruption_handler(FAR struct mm_allocnode_s *node,
 
 void mm_checkcorruption(FAR struct mm_heap_s *heap)
 {
+  if (!up_interrupt_context())
+    {
+      mm_free_delaylist(heap);
+    }
+
   mm_foreach(heap, checkcorruption_handler, NULL);
 }

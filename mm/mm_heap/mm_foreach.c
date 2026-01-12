@@ -29,8 +29,11 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/mm/kasan.h>
 #include <nuttx/mm/mm.h>
+#include <nuttx/mutex.h>
+#include <sched.h>
 
 #include "mm_heap/mm.h"
 
@@ -53,6 +56,7 @@ void mm_foreach(FAR struct mm_heap_s *heap, mm_node_handler_t handler,
   FAR struct mm_allocnode_s *prev;
   size_t nodesize;
   bool bypass;
+  bool locked = false;
 #if CONFIG_MM_REGIONS > 1
   int region;
 #else
@@ -60,7 +64,6 @@ void mm_foreach(FAR struct mm_heap_s *heap, mm_node_handler_t handler,
 #endif
 
   DEBUGASSERT(handler);
-  mm_free_delaylist(heap);
 
   /* Visit each region */
 
@@ -74,7 +77,31 @@ void mm_foreach(FAR struct mm_heap_s *heap, mm_node_handler_t handler,
        * Retake the mutex for each region to reduce latencies
        */
 
+#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+      if (up_interrupt_context())
+        {
+#ifdef CONFIG_SMP
+          return;
+#else
+          if (nxrmutex_is_locked(&heap->mm_lock))
+            {
+              return;
+            }
+#endif
+        }
+      else
+        {
+          DEBUGASSERT(!sched_idletask());
+          DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
+          locked = true;
+        }
+#else
+      /* User space in kernel build cannot check interrupt context */
+
       DEBUGVERIFY(nxrmutex_lock(&heap->mm_lock));
+      locked = true;
+#endif
+
       bypass = kasan_bypass(true);
 
       for (node = heap->mm_heapstart[region];
@@ -101,7 +128,10 @@ void mm_foreach(FAR struct mm_heap_s *heap, mm_node_handler_t handler,
       handler(node, arg);
 
       kasan_bypass(bypass);
-      DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
+      if (locked)
+        {
+          DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
+        }
     }
 #undef region
 }
