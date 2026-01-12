@@ -47,6 +47,10 @@ DEFINE_PER_CPU_BSS_BMP(struct list_node, g_wdactivelist);
 #undef g_wdtimernested
 DEFINE_PER_CPU_BSS_BMP(bool, g_wdtimernested);
 #  define g_wdtimernested this_cpu_var_bmp(g_wdtimernested)
+
+#undef g_wdexpired
+DEFINE_PER_CPU_BSS_BMP(clock_t, g_wdexpired);
+#  define g_wdexpired this_cpu_var_bmp(g_wdexpired)
 #endif
 
 /****************************************************************************
