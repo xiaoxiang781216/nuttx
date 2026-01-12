@@ -99,6 +99,19 @@ SECTIONS
   . = ALIGN(4096);
   _erodata = .;                /* End of read-only data */
   _szrodata = _erodata - _srodata;
+
+  .tdata : {
+      _stdata = ABSOLUTE(.);
+      *(.tdata .tdata.* .gnu.linkonce.td.*);
+      _etdata = ABSOLUTE(.);
+  } :text
+
+  .tbss : {
+      _stbss = ABSOLUTE(.);
+      *(.tbss .tbss.* .gnu.linkonce.tb.* .tcommon);
+      _etbss = ABSOLUTE(.);
+  } :text
+
   _eronly = .;  /* End of read-only data */
 
   . = ALIGN(4096);

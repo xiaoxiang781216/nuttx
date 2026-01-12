@@ -76,6 +76,10 @@ ifeq ($(CONFIG_ARCH_HAVE_EL3),y)
 CMN_ASRCS += arm64_smccc.S
 endif
 
+ifeq ($(CONFIG_SCHED_THREAD_LODAL),y)
+CMN_ASRCS += arm64_tls.c
+endif
+
 ifeq ($(CONFIG_ARCH_HAVE_MMU),y)
 CMN_CSRCS += arm64_mmu.c
 endif

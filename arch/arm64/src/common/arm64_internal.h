@@ -216,6 +216,10 @@ EXTERN uint8_t _ebss[];             /* End+1 of .bss */
 EXTERN uint8_t _szdata[];           /* Size of data(.data + .bss) */
 EXTERN uint8_t _e_initstack[];      /* End+1 of .initstack */
 EXTERN uint8_t g_idle_topstack[];   /* End+1 of heap */
+EXTERN uint8_t _stdata[];           /* Start of .tdata */
+EXTERN uint8_t _etdata[];           /* End+1 of .tdata */
+EXTERN uint8_t _stbss[];            /* Start of .tbss */
+EXTERN uint8_t _etbss[];            /* End+1 of .tbss */
 
 #ifdef CONFIG_PERCPU_SECTION
 EXTERN uint8_t _ldata_percpu[];    /* Start of .percpu ram */
@@ -233,6 +237,10 @@ EXTERN uint8_t _percpu_size[];     /* percpu size */
 #  define _DATA_INIT   _eronly
 #  define _START_DATA  _sdata
 #  define _END_DATA    _edata
+#  define _START_TDATA _stdata
+#  define _END_TDATA   _etdata
+#  define _START_TBSS  _stbss
+#  define _END_TBSS    _etbss
 
 /****************************************************************************
  * Inline Functions
