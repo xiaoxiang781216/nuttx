@@ -420,6 +420,7 @@ int mempool_init(FAR struct mempool_s *pool)
                     {
                       mempool_add_queue(pool, &pool->queue, base,
                                         ninitial, blocksize);
+                      pool->ntotal = ninitial;
                       sq_addlast((FAR sq_entry_t *)(base + ninitial *
                                  blocksize), &pool->equeue);
                       kasan_poison(base, size);
@@ -431,6 +432,7 @@ int mempool_init(FAR struct mempool_s *pool)
                   base = pool->initialbase;
                   mempool_add_queue(pool, &pool->queue, base, ninitial,
                                     blocksize);
+                  pool->ntotal = ninitial;
                 }
             }
 
@@ -462,10 +464,14 @@ int mempool_init(FAR struct mempool_s *pool)
 }
 
 /****************************************************************************
- * Name: mempool_allocate
+ * Name: mempool_allocate_throttled
  *
  * Description:
  *   Allocate an block from a specific memory pool.
+ *
+ *   If `throttled` is true, the allocation will be denied and return NULL
+ *   if the number of currently free blocks is less than or equal to the
+ *   throttle limit.
  *
  *   If there isn't enough memory blocks, This function will expand memory
  *   pool if expandsize isn't zero.
@@ -474,13 +480,15 @@ int mempool_init(FAR struct mempool_s *pool)
  *   pool    - Address of the memory pool to be used.
  *   timeout - The maximum time (ms) to wait for a buffer to become
  *             available.
+ *   throttled - An indication of the mempool allocation is "throttled".
  *
  * Returned Value:
  *   The pointer to the allocated block on success; NULL on any failure.
  *
  ****************************************************************************/
 
-FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout)
+FAR void *mempool_allocate_throttled(FAR struct mempool_s *pool,
+                                     unsigned int timeout, bool throttled)
 {
 #ifdef CONFIG_MM_RECORD
   FAR struct mempool_record_s *record;
@@ -500,6 +508,13 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout)
         {
           spin_unlock_irqrestore(&pool->lock, flags);
           merr("ERROR: mempool_allocate: maxalloc=%zu\n", pool->maxalloc);
+        }
+      else if (throttled && pool->throttle &&
+               (pool->ntotal - pool->nalloc <= pool->throttle))
+        {
+          spin_unlock_irqrestore(&pool->lock, flags);
+          merr("ERROR: mempool_allocate: free:%zu throttle=%zu\n",
+               pool->ntotal - pool->nalloc, pool->throttle);
         }
       else
         {
@@ -529,6 +544,7 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout)
 
                       mempool_add_queue(pool, &pool->queue,
                                         base, nexpand, blocksize);
+                      pool->ntotal += nexpand;
                       sq_addlast((FAR sq_entry_t *)(base + nexpand *
                                  blocksize), &pool->equeue);
                       blk = mempool_remove_queue(pool, &pool->queue);
@@ -580,11 +596,15 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout)
 }
 
 /****************************************************************************
- * Name: mempool_zallocate
+ * Name: mempool_zallocate_throttled
  *
  * Description:
  *   Allocate an block from a specific memory pool and zero the allocated
  *   block.
+ *
+ *   If `throttled` is true, the allocation will be denied and return NULL
+ *   if the number of currently free blocks is less than or equal to the
+ *   throttle limit.
  *
  *   If there isn't enough memory blocks, This function will expand memory
  *   pool if expandsize isn't zero.
@@ -593,15 +613,18 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout)
  *   pool    - Address of the memory pool to be used.
  *   timeout - The maximum time (ms) to wait for a buffer to become
  *             available.
+ *   throttled - An indication of the mempool allocation is "throttled".
  *
  * Returned Value:
  *   The pointer to the allocated block on success; NULL on any failure.
  *
  ****************************************************************************/
 
-FAR void *mempool_zallocate(FAR struct mempool_s *pool, unsigned int timeout)
+FAR void *mempool_zallocate_throttled(FAR struct mempool_s *pool,
+                                      unsigned int timeout,
+                                      bool throttled)
 {
-  FAR void *blk = mempool_allocate(pool, timeout);
+  FAR void *blk = mempool_allocate_throttled(pool, timeout, throttled);
   if (blk != NULL)
     {
       memset(blk, 0, pool->blocksize);
@@ -727,10 +750,16 @@ int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
       flags = spin_lock_irqsave(&pool->lock);
       bypass = kasan_bypass(true);
 
-      info->ordblks = sq_count(&pool->queue);
+      info->ordblks = pool->ntotal - pool->nalloc;
       info->aordblks = pool->nalloc;
+      info->throttle = 0;
+      if (info->ordblks > pool->throttle)
+        {
+          info->throttle = info->ordblks - pool->throttle;
+        }
+
       info->arena = sq_count(&pool->equeue) * MEMPOOL_HEADER_SIZE +
-        (info->aordblks + info->ordblks) * blocksize;
+                    pool->ntotal * blocksize;
       info->maxalloc = pool->maxalloc;
       kasan_bypass(bypass);
       spin_unlock_irqrestore(&pool->lock, flags);
@@ -776,7 +805,7 @@ mempool_info_task(FAR struct mempool_s *pool,
     {
       irqstate_t flags = spin_lock_irqsave(&pool->lock);
       bypass = kasan_bypass(true);
-      size_t count = sq_count(&pool->queue);
+      size_t count = pool->ntotal - pool->nalloc;
 
       kasan_bypass(bypass);
       spin_unlock_irqrestore(&pool->lock, flags);

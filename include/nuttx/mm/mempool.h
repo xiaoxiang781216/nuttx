@@ -62,9 +62,12 @@
  *   prealloc: The number of pre-allocated buffers
  *   maxalloc: The number of max allocations, 0 means no limit
  *   dynalloc: The number per dynamic allocations
+ *   throttle: The throttle number when mempool is exhausted,
+ *             0 means no limit
  */
 
-#define MEMPOOL_DEFINE(name, blksize, prealloc, maxalloc, dynalloc) \
+#define MEMPOOL_DEFINE_WITH_THROTTLE(name, blksize, prealloc, maxalloc, \
+                                     dynalloc, throttle) \
   static char CONCATENATE(name, _buffer) \
   [(prealloc) * MEMPOOL_REALBLOCKSIZE(blksize) + MEMPOOL_HEADER_SIZE] \
   aligned_data(sizeof(uintptr_t)); \
@@ -75,6 +78,7 @@
       (blksize), \
       MEMPOOL_REALBLOCKSIZE(blksize) * (dynalloc) + MEMPOOL_HEADER_SIZE, \
       (maxalloc), \
+      (throttle), \
       true, \
       NULL, \
       STRINGIFY(name), \
@@ -83,15 +87,22 @@
       NULL, \
     }
 
+#define MEMPOOL_DEFINE(name, blksize, prealloc, maxalloc, dynalloc) \
+  MEMPOOL_DEFINE_WITH_THROTTLE(name, blksize, prealloc, maxalloc, \
+                               dynalloc, 0)
+
 /* Static mempool definition related macros for bmp mode, in which:
  *   name:     The name of the static mempool
  *   blksize:  The size of each node in the mempool
  *   prealloc: The number of pre-allocated buffers
  *   maxalloc: The number of max allocations, 0 means no limit
  *   dynalloc: The number per dynamic allocations
+ *   throttle: The throttle number when mempool is exhausted,
+ *             0 means no limit
  */
 
-#define MEMPOOL_DEFINE_BMP(name, blksize, prealloc, maxalloc, dynalloc) \
+#define MEMPOOL_DEFINE_BMP_WITH_THROTTLE(name, blksize, prealloc, \
+                                         maxalloc, dynalloc, throttle) \
   static DEFINE_PER_CPU_BSS_BMP(char, CONCATENATE(name, _buffer) \
   [(prealloc) * MEMPOOL_REALBLOCKSIZE(blksize) + MEMPOOL_HEADER_SIZE] \
   aligned_data(sizeof(uintptr_t))); \
@@ -102,6 +113,7 @@
       (blksize), \
       MEMPOOL_REALBLOCKSIZE(blksize) * (dynalloc) + MEMPOOL_HEADER_SIZE, \
       (maxalloc), \
+      (throttle), \
       true, \
       NULL, \
       "bmp_" STRINGIFY(name), \
@@ -109,6 +121,10 @@
       NULL, \
       NULL, \
     }
+
+#define MEMPOOL_DEFINE_BMP(name, blksize, prealloc, maxalloc, dynalloc) \
+  MEMPOOL_DEFINE_BMP_WITH_THROTTLE(name, blksize, prealloc, maxalloc, \
+                                   dynalloc, 0)
 
 /****************************************************************************
  * Public Types
@@ -157,6 +173,7 @@ struct mempool_s
   size_t     blocksize;     /* The size for every block in mempool */
   size_t     expandsize;    /* The size of expand block every time for mempool */
   size_t     maxalloc;      /* The maximum allowed alloc number, 0 means not limit */
+  size_t     throttle;      /* The throttle number when mempool is exhausted, 0 means no limit */
   bool       wait;          /* The flag of need to wait when mempool is empty */
   FAR void  *priv;          /* This pointer is used to store the user's private data */
   FAR const char *name;     /* The name of the mempool */
@@ -168,6 +185,7 @@ struct mempool_s
 
   sq_queue_t queue;   /* The free block queue in normal mempool */
   sq_queue_t equeue;  /* The expand block queue for normal mempool */
+  size_t     ntotal;  /* The number of total block in mempool */
   size_t     nalloc;  /* The number of used block in mempool */
   spinlock_t lock;    /* The protect lock to mempool */
   sem_t      waitsem; /* The semaphore of waiter get free block */
@@ -205,6 +223,7 @@ struct mempoolinfo_s
   unsigned long sizeblks; /* This is the size of a mempool blocks */
   unsigned long nwaiter;  /* This is the number of waiter for mempool */
   unsigned long maxalloc; /* This is the maximum allowed alloc number, 0 means not limit */
+  unsigned long throttle; /* This is the number of free blocks throttle limit */
 };
 
 /****************************************************************************
@@ -239,6 +258,33 @@ extern "C"
 int mempool_init(FAR struct mempool_s *pool);
 
 /****************************************************************************
+ * Name: mempool_allocate_throttled
+ *
+ * Description:
+ *   Allocate an block from a specific memory pool.
+ *
+ *   If `throttled` is true, the allocation will be denied and return NULL
+ *   if the number of currently free blocks is less than or equal to the
+ *   throttle limit.
+ *
+ *   If there isn't enough memory blocks, This function will expand memory
+ *   pool if expandsize isn't zero.
+ *
+ * Input Parameters:
+ *   pool    - Address of the memory pool to be used.
+ *   timeout - The maximum time (ms) to wait for a buffer to become
+ *             available.
+ *   throttled - An indication of the mempool allocation is "throttled".
+ *
+ * Returned Value:
+ *   The pointer to the allocated block on success; NULL on any failure.
+ *
+ ****************************************************************************/
+
+FAR void *mempool_allocate_throttled(FAR struct mempool_s *pool,
+                                     unsigned int timeout, bool throttled);
+
+/****************************************************************************
  * Name: mempool_allocate
  *
  * Description:
@@ -257,7 +303,40 @@ int mempool_init(FAR struct mempool_s *pool);
  *
  ****************************************************************************/
 
-FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout);
+static inline_function
+FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout)
+{
+  return mempool_allocate_throttled(pool, timeout, true);
+}
+
+/****************************************************************************
+ * Name: mempool_zallocate_throttled
+ *
+ * Description:
+ *   Allocate an block from a specific memory pool and zero the allocated
+ *   block.
+ *
+ *   If `throttled` is true, the allocation will be denied and return NULL
+ *   if the number of currently free blocks is less than or equal to the
+ *   throttle limit.
+ *
+ *   If there isn't enough memory blocks, This function will expand memory
+ *   pool if expandsize isn't zero.
+ *
+ * Input Parameters:
+ *   pool    - Address of the memory pool to be used.
+ *   timeout - The maximum time (ms) to wait for a buffer to become
+ *             available.
+ *   throttled - An indication of the mempool allocation is "throttled".
+ *
+ * Returned Value:
+ *   The pointer to the allocated block on success; NULL on any failure.
+ *
+ ****************************************************************************/
+
+FAR void *mempool_zallocate_throttled(FAR struct mempool_s *pool,
+                                      unsigned int timeout,
+                                      bool throttled);
 
 /****************************************************************************
  * Name: mempool_zallocate
@@ -279,8 +358,12 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool, unsigned int timeout);
  *
  ****************************************************************************/
 
+static inline_function
 FAR void *mempool_zallocate(FAR struct mempool_s *pool,
-                            unsigned int timeout);
+                            unsigned int timeout)
+{
+  return mempool_zallocate_throttled(pool, timeout, true);
+}
 
 /****************************************************************************
  * Name: mempool_release
