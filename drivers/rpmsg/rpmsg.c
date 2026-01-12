@@ -903,13 +903,12 @@ void rpmsg_dump_epts(FAR struct rpmsg_device *rdev)
   FAR struct rpmsg_endpoint *ept;
   FAR struct metal_list *node;
 
-  syslog(LOG_EMERG, "  rpmsg ept list:\n");
+  syslog(LOG_EMERG, "rpmsg ept list:\n");
   metal_list_for_each(&rdev->endpoints, node)
     {
       ept = container_of(node, struct rpmsg_endpoint, node);
-      syslog(LOG_EMERG, "    ept %s %p: addr=%" PRIu32 " "
-                        "dest=%" PRIu32 " refcnt=%" PRIu32 " "
-                        "priority=%" PRIu8 " priv=%p\n",
+      syslog(LOG_EMERG, "  ept %s %p: s=%" PRIu32 " d=%" PRIu32 " "
+                        "r=%" PRIu32 " pr=%" PRIu8 " p=%p\n",
                         ept->name, ept, ept->addr, ept->dest_addr,
                         ept->refcnt, ept->priority, ept->priv);
     }

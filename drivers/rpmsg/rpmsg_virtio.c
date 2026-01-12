@@ -353,17 +353,15 @@ static void rpmsg_virtio_dump_buffer(FAR struct rpmsg_virtio_device *rvdev,
 
   if (rx)
     {
-      syslog(LOG_EMERG, "    RX buffer total %u\n", vq->vq_nentries);
-      syslog(LOG_EMERG, "      unretrieved %u\n", unretrieved);
-      syslog(LOG_EMERG, "      retrieved %u\n", vq->vq_queued_cnt);
-      syslog(LOG_EMERG, "      pending %u:\n", num);
+      syslog(LOG_EMERG, "  RX buffer total %u unretrieved %u "
+             "retrieved %u pending %u:\n", vq->vq_nentries, unretrieved,
+             vq->vq_queued_cnt, num);
     }
   else
     {
-      syslog(LOG_EMERG, "    TX buffer total %u\n", vq->vq_nentries);
-      syslog(LOG_EMERG, "      unretrieved %u\n", unretrieved);
-      syslog(LOG_EMERG, "      retrieved %u\n", vq->vq_free_cnt);
-      syslog(LOG_EMERG, "      sent %u:\n", num);
+      syslog(LOG_EMERG, "  TX buffer total %u unretrieved %u "
+             "retrieved %u sent %u:\n", vq->vq_nentries, unretrieved,
+            vq->vq_free_cnt, num);
     }
 
   for (i = 0u; i < num && i < vq->vq_nentries; i++)
@@ -394,7 +392,7 @@ static void rpmsg_virtio_dump_buffer(FAR struct rpmsg_virtio_device *rvdev,
                                         rx ? hdr->dst : hdr->src);
           if (ept)
             {
-              syslog(LOG_EMERG, "        %s buffer %p hold by %s\n",
+              syslog(LOG_EMERG, "    %s buffer %p hold by %s\n",
                                 rx ? "RX" : "TX", hdr, ept->name);
             }
         }
@@ -436,14 +434,13 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg, bool verbose)
           rpmsg_dump_epts(rdev);
         }
 
-      syslog(LOG_EMERG, "rpmsg vq RX:\n");
+      syslog(LOG_EMERG, "rpmsg virtqueues:\n");
       virtqueue_dump(rvdev->rvq);
-      syslog(LOG_EMERG, "rpmsg vq TX:\n");
       virtqueue_dump(rvdev->svq);
 
       if (verbose)
         {
-          syslog(LOG_EMERG, "  rpmsg buffer list:\n");
+          syslog(LOG_EMERG, "rpmsg buffer list:\n");
           rpmsg_virtio_dump_buffer(rvdev, true);
           rpmsg_virtio_dump_buffer(rvdev, false);
         }
