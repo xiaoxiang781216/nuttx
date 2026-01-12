@@ -176,10 +176,13 @@ int irq_attach_wqueue(int irq, xcpt_t isr, xcpt_t isrwork,
                       FAR void *arg, int priority)
 {
 #ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE
-  static struct irq_work_info_s
-  g_irq_work_vector[CONFIG_ARCH_NUSER_INTERRUPTS];
+  static DEFINE_PER_CPU_BSS_BMP(struct irq_work_info_s,
+        g_irq_work_vector[CONFIG_ARCH_NUSER_INTERRUPTS]);
+  #define g_irq_work_vector this_cpu_var_bmp(g_irq_work_vector)
 #else
-  static struct irq_work_info_s g_irq_work_vector[NR_IRQS];
+  static DEFINE_PER_CPU_BSS_BMP(struct irq_work_info_s,
+        g_irq_work_vector[NR_IRQS]);
+  #define g_irq_work_vector this_cpu_var_bmp(g_irq_work_vector)
 #endif
 
   FAR struct irq_work_info_s *info;

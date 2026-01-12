@@ -36,10 +36,14 @@
  * Private Data
  ****************************************************************************/
 
-static spinlock_t g_irqlock = SP_UNLOCKED;
+#undef g_irqlock
+static DEFINE_PER_CPU_BMP(spinlock_t, g_irqlock) = SP_UNLOCKED;
+#define g_irqlock this_cpu_var_bmp(g_irqlock)
 #if defined(CONFIG_ARCH_MINIMAL_VECTORTABLE_DYNAMIC) && \
     !defined(CONFIG_ARCH_IRQ_TO_NDX)
-static int g_irqmap_count = 1;
+#undef g_irqmap_count
+DEFINE_PER_CPU_BMP(int, g_irqmap_count) = 1;
+#define g_irqmap_count this_cpu_var_bmp(g_irqmap_count)
 #endif
 
 /****************************************************************************
@@ -58,9 +62,13 @@ static int g_irqmap_count = 1;
  */
 
 #  if !defined(CONFIG_ARCH_IRQ_TO_NDX)
-irq_mapped_t g_irqmap[NR_IRQS];
+#undef g_irqmap
+DEFINE_PER_CPU_BSS_BMP(irq_mapped_t, g_irqmap[NR_IRQS]);
+#define g_irqmap this_cpu_var_bmp(g_irqmap)
 #  endif
-int g_irqrevmap[CONFIG_ARCH_NUSER_INTERRUPTS];
+#undef g_irqrevmap
+DEFINE_PER_CPU_BSS_BMP(int, g_irqrevmap[CONFIG_ARCH_NUSER_INTERRUPTS]);
+#define g_irqrevmap this_cpu_var_bmp(g_irqrevmap)
 #endif
 
 /****************************************************************************
