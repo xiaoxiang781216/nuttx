@@ -239,7 +239,7 @@ static int rtc_handler(int irq, void *context, void *arg)
 
       /* let scheduler now of alarm firing */
 
-      nxsched_timer_expiration();
+      nxsched_process_timer();
     }
 
   leave_critical_section(flags);
@@ -350,5 +350,5 @@ void up_timer_initialize(void)
 
   /* kick off alarm scheduling */
 
-  nxsched_timer_expiration();
+  nxsched_process_timer();
 }
