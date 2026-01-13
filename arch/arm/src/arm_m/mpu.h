@@ -86,6 +86,10 @@
 
 #if defined(CONFIG_ARCH_ARMV8M)
 
+/* Armv8-M MPU requires 32-byte alignment for region base addresses */
+
+#define MPU_ALGNMENT            32
+
 /****************************************************************************
  * ARMv8-M Specific MPU Definitions (PMSAv8)
  ****************************************************************************/

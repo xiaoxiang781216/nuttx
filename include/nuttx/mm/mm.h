@@ -144,6 +144,12 @@ typedef CODE void (*mm_delaycb_t)(FAR void *mem);
 #  define MM_INTERNAL_HEAP(heap) ((heap) == USR_HEAP)
 #endif
 
+#if defined(CONFIG_BUILD_PROTECTED) && defined(__KERNEL__)
+#  define STK_HEAP USERSPACE_HEAP
+#else
+#  define STK_HEAP g_mmheap
+#endif
+
 #ifdef CONFIG_MM_RECORD_PID
 #  define MM_DUMP_ALLOC(dump, node) \
     ((node) != NULL && (dump)->pid == PID_MM_ALLOC && \

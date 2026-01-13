@@ -157,6 +157,28 @@ static int addrenv_select_region(unsigned int *region,
 }
 #endif
 
+static void addrenv_enter_kernel(bool enter)
+{
+  /* The stack may overlap with the kernel region,
+   * so the two cannot be enabled simultaneously.
+   */
+
+#ifdef CONFIG_ARCH_STACK_PROTECT
+  mpu_control(false, false, false);
+  if (g_addrenv_stack_region == 0)
+    {
+      g_addrenv_stack_region = mpu_allocregion();
+    }
+
+  mpu_enable_region(g_addrenv_stack_region, !enter);
+#endif
+  mpu_enable_region(CONFIG_ARCH_MPU_KERNEL_REGION, enter);
+
+#ifdef CONFIG_ARCH_STACK_PROTECT
+  mpu_control(true, false, false);
+#endif
+}
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -541,10 +563,18 @@ int up_addrenv_ustackswitch(struct tcb_s *tcb)
       g_addrenv_stack_region = mpu_allocregions(MPU_ADDRENV_NREGIONS);
     }
 
-  mpu_modify_regions(g_addrenv_stack_region,
-                     (uintptr_t)tcb->stack_alloc_ptr,
-                     tcb->adj_stack_size + tls->tl_size,
-                     MPU_USER_INTSRAM);
+  if (tcb != NULL && tcb->group != NULL &&
+      tcb->group->tg_addrenv_own != NULL &&
+      tcb->group->tg_addrenv_own->addrenv.data)
+    {
+      mpu_modify_regions(g_addrenv_stack_region,
+                        (uintptr_t)tcb->stack_alloc_ptr,
+                        tcb->adj_stack_size + tls->tl_size,
+                        MPU_USER_INTSRAM);
+
+      mpu_enable_region(g_addrenv_stack_region, false);
+    }
+
   return OK;
 }
 
@@ -601,7 +631,7 @@ void up_addrenv_enter_kernel(void)
   irqstate_t flags = up_irq_save();
   struct tcb_s *tcb;
 
-  mpu_enable_region(CONFIG_ARCH_MPU_KERNEL_REGION, true);
+  addrenv_enter_kernel(true);
   if (!up_interrupt_context())
     {
       tcb = this_task();
@@ -637,7 +667,7 @@ void up_addrenv_leave_kernel(void)
           tcb->group->tg_addrenv_own->addrenv.data &&
           tcb->xcp.nkernels == 0)
         {
-          mpu_enable_region(CONFIG_ARCH_MPU_KERNEL_REGION, false);
+          addrenv_enter_kernel(false);
         }
     }
   else
@@ -647,7 +677,7 @@ void up_addrenv_leave_kernel(void)
           tcb->group->tg_addrenv_own->addrenv.data &&
           --tcb->xcp.nkernels == 0)
         {
-          mpu_enable_region(CONFIG_ARCH_MPU_KERNEL_REGION, false);
+          addrenv_enter_kernel(false);
         }
     }
 

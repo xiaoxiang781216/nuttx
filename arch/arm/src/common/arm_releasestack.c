@@ -28,6 +28,8 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/addrenv.h>
+#include <nuttx/mm/mm.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/atomic.h>
 
@@ -75,7 +77,18 @@ void up_release_stack(struct tcb_s *dtcb, int ttype)
   if (dtcb->stack_alloc_ptr &&
       (atomic_read(&dtcb->flags) & TCB_FLAG_FREE_STACK))
     {
-      group_free(dtcb->group, dtcb->stack_alloc_ptr);
+#if defined(CONFIG_ARCH_STACK_PROTECT)
+      if (dtcb->group != NULL &&
+          dtcb->group->tg_addrenv_own != NULL &&
+          dtcb->group->tg_addrenv_own->addrenv.data)
+        {
+          mm_free(STK_HEAP, dtcb->stack_alloc_ptr);
+        }
+      else
+#endif
+        {
+          group_free(dtcb->group, dtcb->stack_alloc_ptr);
+        }
     }
 
   /* Mark the stack freed */

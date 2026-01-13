@@ -31,6 +31,8 @@
 #include <assert.h>
 #include <debug.h>
 
+#include <nuttx/addrenv.h>
+#include <nuttx/mm/mm.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/arch.h>
 #include <nuttx/tls.h>
@@ -39,6 +41,17 @@
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
+#ifdef CONFIG_ARCH_USE_MPU
+#  include "mpu.h"
+#endif
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef MPU_ALGNMENT
+#  define MPU_ALGNMENT sizeof(uintptr_t)
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -98,6 +111,8 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, int ttype)
     }
 #elif CONFIG_STACK_ALIGN_SIZE > 0
   size_t alignment = CONFIG_STACK_ALIGN_SIZE;
+#else
+  size_t alignment = sizeof(uintptr_t);
 #endif
 
   /* Is there already a stack allocated of a different size? */
@@ -117,13 +132,20 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, int ttype)
        * then create a zeroed stack to make stack dumps easier to trace.
        * If TLS is enabled, then we must allocate aligned stacks.
        */
-
-       tcb->stack_alloc_ptr =
-#if defined(CONFIG_TLS_ALIGNED) || (CONFIG_STACK_ALIGN_SIZE > 0)
-        group_memalign(tcb->group, alignment, stack_size);
-#else /* CONFIG_TLS_ALIGNED || CONFIG_STACK_ALIGN_SIZE > 0 */
-        group_malloc(tcb->group, stack_size);
-#endif /* CONFIG_TLS_ALIGNED */
+#if defined(CONFIG_ARCH_STACK_PROTECT)
+      if (tcb->group != NULL &&
+          tcb->group->tg_addrenv_own != NULL &&
+          tcb->group->tg_addrenv_own->addrenv.data)
+        {
+          tcb->stack_alloc_ptr =
+            mm_memalign(STK_HEAP, MPU_ALGNMENT, stack_size);
+        }
+      else
+#endif
+        {
+          tcb->stack_alloc_ptr =
+            group_memalign(tcb->group, alignment, stack_size);
+        }
 
 #ifdef CONFIG_DEBUG_FEATURES
       /* Was the allocation successful? */
