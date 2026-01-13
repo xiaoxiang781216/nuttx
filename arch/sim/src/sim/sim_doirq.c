@@ -66,8 +66,12 @@ void *sim_doirq(int irq, void *context)
   if (ret == 0)
     {
       struct tcb_s **running_task = &g_running_task;
+      struct tcb_s *tcb = *running_task;
 
-      sim_copyfullstate((*running_task)->xcp.regs, regs);
+      if (tcb != NULL)
+        {
+          sim_copyfullstate(tcb->xcp.regs, regs);
+        }
 
       up_set_current_regs(regs);
 
