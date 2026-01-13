@@ -211,7 +211,7 @@ static int pkt_in_(FAR struct net_driver_s *dev, bool loopback)
 
 #if CONFIG_NET_RECV_BUFSIZE > 0
           if ((iob_get_queue_size(&conn->readahead) + dev->d_len) >
-              conn->rcvbufs)
+              conn->sconn.s_rcvbufs)
             {
               nwarn("WARNING: Full read-ahead buffer, dropping packet\n");
               continue;
