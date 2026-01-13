@@ -1,5 +1,7 @@
 /****************************************************************************
- * arch/arm/src/armv7-a/arm_checkmapping.c
+ * arch/arm/src/arm_a_r/arm_checkmapping.c
+ * Check if the current task's fault address has been mapped into the virtual
+ * address space.
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -36,14 +38,26 @@
 #ifdef CONFIG_LEGACY_PAGING
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm_checkmapping()
+ * Name: up_checkmapping()
  *
  * Description:
- *  The function arm_checkmapping() returns an indication if the page fill
+ *  The function up_checkmapping() returns an indication if the page fill
  *  still needs to performed or not. In certain conditions, the page fault
  *  may occur on several threads and be queued multiple times. This function
  *  will prevent the same page from be filled multiple times.
@@ -69,7 +83,7 @@
  *
  ****************************************************************************/
 
-bool arm_checkmapping(struct tcb_s *tcb)
+bool up_checkmapping(struct tcb_s *tcb)
 {
   uintptr_t vaddr;
   uint32_t *pte;
