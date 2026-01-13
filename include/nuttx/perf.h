@@ -709,6 +709,7 @@ enum perf_event_type_e
 struct perf_sample_data_s
 {
   uint64_t sample_flags;
+  uint64_t period;
   uint64_t dyn_size;
 
   struct
@@ -717,8 +718,17 @@ struct perf_sample_data_s
     pid_t tid;
   } tid_entry;
 
+  uint64_t time;
   uint64_t id;
+
+  struct
+  {
+    uint32_t cpu;
+    uint32_t reserved;
+  } cpu_entry;
+
   uint64_t ip;
+  uint64_t stream_id;
 };
 
 struct perf_event_header_s
