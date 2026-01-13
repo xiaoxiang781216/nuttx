@@ -513,8 +513,8 @@ FAR void *mempool_allocate_throttled(FAR struct mempool_s *pool,
                (pool->ntotal - pool->nalloc <= pool->throttle))
         {
           spin_unlock_irqrestore(&pool->lock, flags);
-          merr("ERROR: mempool_allocate: free:%zu throttle=%zu\n",
-               pool->ntotal - pool->nalloc, pool->throttle);
+          minfo("INFO: mempool_allocate: free:%zu throttle=%zu\n",
+                pool->ntotal - pool->nalloc, pool->throttle);
         }
       else
         {
