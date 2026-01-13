@@ -38,13 +38,14 @@ config MM_POOL_PARAM
 		poolsize: array of block size(bytes) for pool
 		poolcount: array of number of blocks in pool
 		npools: total number of pools
+		throttle: throttle threshold when allocate from the mempool, 0 means no limit
 		threshold: max allocation size for pool management
 		chunksize: multiples pool chunk size
 		init_chunksize: multiples pool chunk initial size
 		expandsize: expand size for each mempool in multiple mempool
 		dict_expandsize: expand size for multiple mempool's dictionary
 		example:
-		(sizet[]){4,8,16,32,64,128,256},(sizet[]){256,256,256,256,256,256,256},7,256,4096,65536,4096,4096
+		(sizet[]){4,8,16,32,64,128,256},(sizet[]){256,256,256,256,256,256,256},7,0,256,4096,65536,4096,4096
 
 config MM_UMM_CUSTOMIZE_MANAGER
 	bool "Customized heap manager"
@@ -97,13 +98,14 @@ config MM_POOL_PARAM_KERNEL
 		poolsize: array of block size(bytes) for pool
 		poolcount: array of number of blocks in pool
 		npools: total number of pools
+		throttle: throttle threshold when allocate from the mempool, 0 means no limit
 		threshold: max allocation size for pool management
 		chunksize: multiples pool chunk size
 		init_chunksize: multiples pool chunk initial size
 		expandsize: expand size for each mempool in multiple mempool
 		dict_expandsize: expand size for multiple mempool's dictionary
 		example:
-		(sizet[]){4,8,16,32,64,128,256},(sizet[]){256,256,256,256,256,256,256},7,256,4096,65536,4096,4096
+		(sizet[]){4,8,16,32,64,128,256},(sizet[]){256,256,256,256,256,256,256},7,0,256,4096,65536,4096,4096
 
 config MM_DEFAULT_ALIGNMENT
 	int "Memory default alignment in bytes"

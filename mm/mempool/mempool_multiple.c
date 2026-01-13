@@ -578,6 +578,7 @@ mempool_multiple_init(FAR const char *name,
             {
               pools[i].blocksize = config->poolsize[i] +
                                    mpool->headsize;
+              pools[i].throttle = config->throttle;
               pools[i].priv = mpool;
               if (config->poolcount && config->poolcount[i] != 0u)
                 {
@@ -673,7 +674,7 @@ mempool_multiple_init(FAR const char *name,
 }
 
 /****************************************************************************
- * Name: mempool_multiple_alloc
+ * Name: mempool_multiple_alloc_throttled
  *
  * Description:
  *   Allocate an block from specific multiple memory pool.
@@ -684,14 +685,19 @@ mempool_multiple_init(FAR const char *name,
  * Input Parameters:
  *   mpool - The handle of multiple memory pool to be used.
  *   size  - The size of alloc blk.
+ *   timeout - The maximum time (ms) to wait for a buffer to become
+ *             available.
+ *   throttled - The flag to indicate whether the allocation is throttled.
  *
  * Returned Value:
  *   The pointer to the allocated block on success; NULL on any failure.
  *
  ****************************************************************************/
 
-FAR void *mempool_multiple_alloc(FAR struct mempool_multiple_s *mpool,
-                                 size_t size)
+FAR void *
+mempool_multiple_alloc_throttled(FAR struct mempool_multiple_s *mpool,
+                                 size_t size, unsigned int timeout,
+                                 bool throttled)
 {
   FAR struct mempool_s *end;
   FAR struct mempool_s *pool;
@@ -703,7 +709,7 @@ FAR void *mempool_multiple_alloc(FAR struct mempool_multiple_s *mpool,
       end = mpool->pools + mpool->npools;
       do
         {
-          blk = mempool_allocate(pool, UINT_MAX);
+          blk = mempool_allocate_throttled(pool, timeout, throttled);
 
           if (blk)
             {

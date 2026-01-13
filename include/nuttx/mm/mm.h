@@ -203,6 +203,7 @@ struct mm_pool_config_s
   FAR const size_t *poolsize;
   FAR const size_t *poolcount;
   size_t            npools;
+  size_t            throttle;
   size_t            threshold;
   size_t            chunksize;
   size_t            init_chunksize;

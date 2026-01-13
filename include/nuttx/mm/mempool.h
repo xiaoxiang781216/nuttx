@@ -530,6 +530,32 @@ mempool_multiple_init(FAR const char *name,
                       mempool_multiple_free_t free, FAR void *arg);
 
 /****************************************************************************
+ * Name: mempool_multiple_alloc_throttled
+ *
+ * Description:
+ *   Allocate an block from specific multiple memory pool.
+ *   If the mempool of the corresponding size doesn't have free block,
+ *   it will continue to alloc memory for a larger memory pool until last
+ *   mempool in multiple mempools.
+ *
+ * Input Parameters:
+ *   mpool - The handle of multiple memory pool to be used.
+ *   size  - The size of alloc blk.
+ *   timeout - The maximum time (ms) to wait for a buffer to become
+ *             available.
+ *   throttled - The flag to indicate whether the allocation is throttled.
+ *
+ * Returned Value:
+ *   The pointer to the allocated block on success; NULL on any failure.
+ *
+ ****************************************************************************/
+
+FAR void *
+mempool_multiple_alloc_throttled(FAR struct mempool_multiple_s *mpool,
+                                 size_t size, unsigned int timeout,
+                                 bool throttled);
+
+/****************************************************************************
  * Name: mempool_multiple_alloc
  *
  * Description:
@@ -547,8 +573,12 @@ mempool_multiple_init(FAR const char *name,
  *
  ****************************************************************************/
 
+static inline_function
 FAR void *mempool_multiple_alloc(FAR struct mempool_multiple_s *mpool,
-                                 size_t size);
+                                 size_t size)
+{
+  return mempool_multiple_alloc_throttled(mpool, size, UINT_MAX, true);
+}
 
 /****************************************************************************
  * Name: mempool_multiple_realloc
