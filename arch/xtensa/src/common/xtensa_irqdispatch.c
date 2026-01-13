@@ -68,9 +68,13 @@ uint32_t *xtensa_irq_dispatch(int irq, uint32_t *regs)
    */
 
   tcb = *running_task;
-  if (tcb != NULL)
+  if (!(XTENSA_IRQ_SYSCALL == irq && regs[REG_A2] == SYS_restore_context))
     {
       tcb->xcp.regs = regs;
+    }
+
+  if (tcb != NULL)
+    {
       nxsched_suspend_scheduler(tcb);
     }
 
