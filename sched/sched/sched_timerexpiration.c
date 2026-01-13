@@ -563,9 +563,12 @@ void nxsched_reassess_timer(void)
   clock_t ticks;
   clock_t next;
 
-  if (!g_timernested)
+  if (g_timernested <= 1)
     {
-      /* Cancel the timer and get the current time */
+      /* If the timer is nested deep, should skip the timer reassessment.
+       * And cancel the timer and get the current time. when not nested or
+       * in first level of nesting.
+       */
 
       nxsched_timer_tick_cancel(&ticks);
       next = nxsched_timer_update(ticks, true);
