@@ -257,6 +257,8 @@ static void netfwd_forward_work(void *arg)
 
   ret = netfwd_forward_notify(fwd);
 
+  netdev_unlock(fwd->f_dev);
+
   if (ret < 0)
     {
       nwarn("WARNING: Failed to notify forwarding device: %d\n", ret);
@@ -267,8 +269,6 @@ static void netfwd_forward_work(void *arg)
 
       netfwd_free(fwd);
     }
-
-  netdev_unlock(fwd->f_dev);
 }
 
 /****************************************************************************
