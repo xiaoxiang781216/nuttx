@@ -124,6 +124,7 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
  *
  ****************************************************************************/
 
+nosanitize_safestack
 uint64_t *irq_handler(uint64_t *regs, uint64_t irq_no)
 {
   board_autoled_on(LED_INIRQ);

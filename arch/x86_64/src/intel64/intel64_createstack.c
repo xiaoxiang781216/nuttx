@@ -147,6 +147,10 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, int ttype)
     {
       uintptr_t top_of_stack;
       size_t size_of_stack;
+#ifdef CONFIG_ARCH_SAFE_STACK
+      size_t unsafe_size = UNSAFE_SIZE(stack_size);
+      stack_size -= unsafe_size;
+#endif
 
       /* The x86_64 uses a push-down stack:  the stack grows toward lower
        * addresses in memory.  The stack pointer register, points to the
@@ -171,6 +175,14 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, int ttype)
       tcb->stack_base_ptr = tcb->stack_alloc_ptr;
       tcb->adj_stack_size = size_of_stack;
       atomic_or(&tcb->flags, TCB_FLAG_FREE_STACK);
+
+#ifdef CONFIG_ARCH_SAFE_STACK
+      stack_size += unsafe_size;
+      top_of_stack = (uintptr_t)tcb->stack_alloc_ptr + stack_size;
+      top_of_stack &= ~0x0f;
+      tcb->shadow_top_ptr  = top_of_stack;
+      tcb->shadow_base_ptr = tcb->shadow_top_ptr - unsafe_size;
+#endif
 
       /* Yes.. If stack debug is enabled, then fill the stack with a
        * recognizable value that we can use later to test for high

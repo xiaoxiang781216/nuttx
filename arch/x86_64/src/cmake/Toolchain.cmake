@@ -153,6 +153,10 @@ if(CONFIG_COVERAGE_ALL)
   endif()
 endif()
 
+if(CONFIG_ARCH_SAFE_STACK)
+  add_compile_options(-fsanitize=safe-stack)
+endif()
+
 if(CONFIG_HOST_LINUX)
   add_link_options(-Wl,-z,noexecstack)
 endif()

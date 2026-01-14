@@ -23,6 +23,9 @@ get_directory_property(TOOLCHAIN_DIR_FLAGS DIRECTORY ${CMAKE_SOURCE_DIR}
 
 set(NUTTX_EXTRA_FLAGS "")
 foreach(FLAG ${TOOLCHAIN_DIR_FLAGS})
+  if(FLAG MATCHES "-fsanitize=safe-stack")
+    continue() # Skip host safe-stack library
+  endif()
   if(NOT FLAG MATCHES "^\\$<.*>$")
     list(APPEND NUTTX_EXTRA_FLAGS ${FLAG})
   else()

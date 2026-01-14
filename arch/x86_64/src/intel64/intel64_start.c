@@ -33,6 +33,7 @@
 #include <arch/acpi.h>
 
 #include <debug.h>
+#include <threads.h>
 
 #include "x86_64_internal.h"
 
@@ -166,6 +167,10 @@ void __nxstart(void)
   /* Make sure that FS_BASE is not null */
 
   x86_64_tp_boot(0);
+#endif
+
+#ifdef CONFIG_ARCH_SAFE_STACK
+  __safestack_unsafe_stack_ptr = (void *)g_idle_topstack[0];
 #endif
 
   /* Low-level, pre-OS initialization */

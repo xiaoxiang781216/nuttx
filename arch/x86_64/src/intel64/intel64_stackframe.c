@@ -95,6 +95,10 @@ void *up_stack_frame(struct tcb_s *tcb, size_t frame_size)
   x86_64_tp_init(tcb);
 #endif
 
+#ifdef CONFIG_ARCH_SAFE_STACK
+  x86_64_unsafe_init(tcb);
+#endif
+
   /* Save the adjusted stack values in the struct tcb_s */
 
   tcb->stack_base_ptr  = (uint8_t *)tcb->stack_base_ptr + frame_size;

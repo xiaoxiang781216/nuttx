@@ -73,6 +73,9 @@ void up_initial_state(struct tcb_s *tcb)
 #ifdef CONFIG_ARCH_KERNEL_STACK
   uintptr_t *kstack = xcp->kstack;
 #endif
+#ifdef CONFIG_ARCH_SAFE_STACK
+  size_t unsafe_size;
+#endif
 
   /* Initialize the idle thread stack */
 
@@ -83,6 +86,16 @@ void up_initial_state(struct tcb_s *tcb)
       tcb->stack_alloc_ptr = stack_ptr;
       tcb->stack_base_ptr  = stack_ptr;
       tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE;
+
+#ifdef CONFIG_ARCH_SAFE_STACK
+      unsafe_size = UNSAFE_SIZE(tcb->adj_stack_size);
+      DEBUGASSERT(unsafe_size < tcb->adj_stack_size);
+      tcb->adj_stack_size -= unsafe_size;
+      tcb->shadow_base_ptr = (uintptr_t)stack_ptr + tcb->adj_stack_size;
+      tcb->shadow_top_ptr  = tcb->shadow_base_ptr + unsafe_size;
+      DEBUGASSERT(tcb->shadow_top_ptr == (uintptr_t)g_idle_topstack[0]);
+#endif
+
 #ifdef CONFIG_STACK_COLORATION
       /* If stack debug is enabled, then fill the stack with a
        * recognizable value that we can use later to test for high

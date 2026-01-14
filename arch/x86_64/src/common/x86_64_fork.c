@@ -193,6 +193,14 @@ pid_t x86_64_fork(const struct fork_s *context)
   child->xcp.regs[REG_FSBASE] = x86_64_tp_addr(child);
 #endif
 
+#ifdef CONFIG_ARCH_SAFE_STACK
+  stackutil = parent->shadow_top_ptr - *x86_64_unsafe_addr(parent);
+  newsp = child->shadow_top_ptr - stackutil;
+  DEBUGASSERT(child->shadow_base_ptr < newsp);
+  memcpy((void *)newsp, x86_64_unsafe_addr(parent), stackutil);
+  *x86_64_unsafe_addr(child) = newsp;
+#endif
+
   /* And, finally, start the child task.  On a failure, nxtask_start_fork()
    * will discard the TCB by calling nxtask_abort_fork().
    */

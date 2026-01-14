@@ -51,6 +51,7 @@
  *
  ****************************************************************************/
 
+nosanitize_safestack
 void x86_64_sigdeliver(void)
 {
   struct tcb_s *rtcb = this_task();

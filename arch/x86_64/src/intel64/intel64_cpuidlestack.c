@@ -83,9 +83,16 @@ int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
 {
 #if CONFIG_SMP_NCPUS > 1
   uintptr_t stack_alloc;
+#  ifdef CONFIG_ARCH_SAFE_STACK
+  size_t unsafe_size = UNSAFE_SIZE(stack_size);
+#  endif
 
   DEBUGASSERT(cpu > 0 && cpu < CONFIG_SMP_NCPUS && tcb != NULL &&
               stack_size <= CONFIG_IDLETHREAD_STACKSIZE);
+
+#  ifdef CONFIG_ARCH_SAFE_STACK
+  stack_size -= unsafe_size;
+#  endif
 
   /* Get the top of the stack */
 
@@ -94,6 +101,11 @@ int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
   tcb->adj_stack_size  = stack_size - 8;
   tcb->stack_alloc_ptr = (void *)stack_alloc;
   tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
+
+#  ifdef CONFIG_ARCH_SAFE_STACK
+  tcb->shadow_base_ptr = (uintptr_t)tcb->stack_base_ptr + stack_size;
+  tcb->shadow_top_ptr  = tcb->shadow_base_ptr + unsafe_size;
+#  endif
 #endif
   return OK;
 }

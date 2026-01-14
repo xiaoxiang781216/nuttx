@@ -26,6 +26,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/irq.h>
 
 #ifndef __ASSEMBLY__
 #  include <nuttx/compiler.h>
@@ -35,6 +36,7 @@
 #  include <arch/irq.h>
 #  include <arch/multiboot2.h>
 #  include <tls/tls.h>
+#  include <threads.h>
 #endif
 
 /****************************************************************************
@@ -113,6 +115,12 @@
 #  define IRQ_STACK_SIZE 0x2000
 #else
 #  define IRQ_STACK_SIZE CONFIG_ARCH_INTERRUPTSTACK
+#endif
+
+#ifdef CONFIG_ARCH_SAFE_STACK
+#  define UNSAFE_SIZE(s)          STACKFRAME_ALIGN_DOWN(((s) >> 7) * \
+                                            CONFIG_ARCH_STACK_SPLIT_RATIO)
+#  define IDLETHREAD_UNSAFE_SIZE  UNSAFE_SIZE(CONFIG_IDLETHREAD_STACKSIZE)
 #endif
 
 /* Linker defined section addresses */
@@ -348,6 +356,37 @@ static inline_function void x86_64_tp_boot(int cpu)
   fsbase += x86_64_tp_offset();
   *(uintptr_t *)fsbase = fsbase;
   write_fsbase(fsbase);
+}
+#endif
+
+#ifdef CONFIG_ARCH_SAFE_STACK
+/****************************************************************************
+ * Name: x86_64_unsafe_addr
+ *
+ * Description:
+ *   Return address of unsafe stack ptr of given thread.
+ *   Caller should have valid thread pointer already.
+ *
+ ****************************************************************************/
+
+static inline_function uintptr_t *x86_64_unsafe_addr(struct tcb_s *tcb)
+{
+  uintptr_t ptr = x86_64_tp_addr(tcb);
+  intptr_t  off = (uintptr_t)__builtin_thread_pointer() -
+                  (uintptr_t)&__safestack_unsafe_stack_ptr;
+  DEBUGASSERT(off > 0);
+  DEBUGASSERT(*(uintptr_t *)ptr == ptr);
+
+  return (uintptr_t *)(ptr - off);
+}
+
+static inline_function void x86_64_unsafe_init(struct tcb_s *tcb)
+{
+  uintptr_t *ptr = x86_64_unsafe_addr(tcb);
+  DEBUGASSERT(tcb->shadow_top_ptr > tcb->shadow_base_ptr);
+  DEBUGASSERT(tcb->shadow_base_ptr >= (uintptr_t)tcb->stack_base_ptr +
+                                      tcb->adj_stack_size);
+  *ptr = tcb->shadow_top_ptr;
 }
 #endif
 

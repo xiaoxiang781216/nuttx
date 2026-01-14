@@ -28,6 +28,8 @@
 #include <arch/multiboot2.h>
 #include <sys/types.h>
 
+#include "x86_64_internal.h"
+
 	.file "intel64_head.S"
 
 /****************************************************************************
@@ -388,6 +390,10 @@ start64:
 	movabs  $g_idle_topstack,    %rbx
 	mov     (%rbx),   %rsp
 
+#ifdef CONFIG_ARCH_SAFE_STACK
+  leaq    -IDLETHREAD_UNSAFE_SIZE(%rsp), %rsp
+#endif
+
 	/* Allocate space XCPTCONTEXT */
 	leaq    -XCPTCONTEXT_SIZE(%rsp), %rsp
 
@@ -415,6 +421,10 @@ ap_start:
 	imul    $8, %eax, %eax
 	add     %rax, %rbx
 	mov     (%rbx),   %rsp
+
+#ifdef CONFIG_ARCH_SAFE_STACK
+  leaq    -IDLETHREAD_UNSAFE_SIZE(%rsp), %rsp
+#endif
 
 	/* Move initial RSP below IDLE TCB regs */
 	sub     $XCPTCONTEXT_SIZE, %rsp

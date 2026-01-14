@@ -73,6 +73,9 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size,
 {
   uintptr_t top_of_stack;
   size_t size_of_stack;
+#ifdef CONFIG_ARCH_SAFE_STACK
+  size_t unsafe_size;
+#endif
 
 #ifdef CONFIG_TLS_ALIGNED
   /* The allocated stack size must not exceed the maximum possible for the
@@ -112,6 +115,11 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size,
 
   tcb->stack_alloc_ptr = stack;
 
+#ifdef CONFIG_ARCH_SAFE_STACK
+  unsafe_size = UNSAFE_SIZE(stack_size);
+  stack_size -= unsafe_size;
+#endif
+
   /* The intel64 uses a push-down stack:  the stack grows toward lower
    * addresses in memory.  The stack pointer register, points to the lowest,
    * valid work address (the "top" of the stack).  Items on the stack are
@@ -134,6 +142,11 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size,
 
   tcb->stack_base_ptr = tcb->stack_alloc_ptr;
   tcb->adj_stack_size = size_of_stack;
+
+#ifdef CONFIG_ARCH_SAFE_STACK
+  tcb->shadow_base_ptr = top_of_stack;
+  tcb->shadow_top_ptr  = top_of_stack + unsafe_size;
+#endif
 
 #ifdef CONFIG_STACK_COLORATION
   /* If stack debug is enabled, then fill the stack with a

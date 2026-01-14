@@ -117,6 +117,10 @@ else
   ARCHOPTIMIZATION += -fno-stack-protector
 endif
 
+ifeq ($(CONFIG_ARCH_SAFE_STACK),y)
+  ARCHOPTIMIZATION += -fsanitize=safe-stack
+endif
+
 ifneq ($(CONFIG_CXX_EXCEPTION),y)
   ARCHCXXFLAGS += -fno-exceptions -fcheck-new
 endif
