@@ -193,6 +193,7 @@ static void memdump_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
         {
           memdump_record_biggest(priv, node);
         }
+#endif
       else if ((MM_DUMP_ASSIGN(dump, node) || MM_DUMP_ALLOC(dump, node) ||
                 MM_DUMP_LEAK(dump, node)) && MM_DUMP_SEQNO(dump, node))
         {
@@ -200,7 +201,6 @@ static void memdump_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
           priv->info.uordblks += nodesize;
           memdump_allocnode(node);
         }
-#endif
     }
   else if (dump->pid == PID_MM_FREE)
     {
