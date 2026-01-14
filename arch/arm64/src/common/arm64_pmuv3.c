@@ -33,21 +33,23 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define ARM64PMU_V3P5_VERSION         0x06
+
 /* Hardware counters are supported at most */
 
-#define ARM64PMU_MAX_HWEVENTS                32
+#define ARM64PMU_MAX_HWEVENTS         32
 
 /* The maximum value of the event ID */
 
-#define ARM64PMU_MAX_COMMON_EVENTS           0x40
+#define ARM64PMU_MAX_COMMON_EVENTS    0x40
 
 /* Event uses a 64bit counter */
 
-#define ARM64PMU_EVT_64BIT                   0x00001
+#define ARM64PMU_EVT_64BIT            0x00001
 
-#define HW_OP_UNSUPPORTED                  0xFFFF
-#define CACHE_OP_UNSUPPORTED               0xFFFF
-#define C(_x)                              PERF_COUNT_HW_CACHE_##_x
+#define HW_OP_UNSUPPORTED             0xFFFF
+#define CACHE_OP_UNSUPPORTED          0xFFFF
+#define C(_x)                         PERF_COUNT_HW_CACHE_##_x
 
 #define PERF_MAP_ALL_UNSUPPORTED                                   \
         [0 ... PERF_COUNT_HW_MAX - 1] = HW_OP_UNSUPPORTED
@@ -504,6 +506,12 @@ static int arm64pmu_event_init(FAR struct perf_event_s *event)
       return -ENOENT;
     }
 
+  if (event->attr.config == PERF_COUNT_HW_CPU_CYCLES ||
+      arm64pmu->pmuver >= ARM64PMU_V3P5_VERSION)
+    {
+      event->attr.config1 |= ARM64PMU_EVT_64BIT;
+    }
+
   hwc->flags = 0;
   mapping = arm64pmu->map_event(event);
 
@@ -638,7 +646,7 @@ static int arm64pmu_map_event(FAR struct perf_event_s *event,
 
 static inline bool pmuv3_event_is_64bit(FAR struct perf_event_s *event)
 {
-  return (bool)(event->attr.config1 & 0x1);
+  return (bool)(event->attr.config1 & ARM64PMU_EVT_64BIT);
 }
 
 static inline void pmuv3_pmcr_write(uint32_t val)
