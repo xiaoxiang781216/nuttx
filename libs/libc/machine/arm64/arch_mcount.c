@@ -55,6 +55,7 @@ static inline noinstrument_function void *strip_pac(void *p)
  ****************************************************************************/
 
 noinstrument_function
+noprofile_function
 void _mcount(void *frompc)
 {
   mcount_internal((uintptr_t)strip_pac(frompc),

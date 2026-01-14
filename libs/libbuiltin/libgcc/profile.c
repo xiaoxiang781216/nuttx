@@ -450,6 +450,7 @@ void _mcleanup(void)
  */
 
 noinstrument_function
+noprofile_function
 void mcount_internal(uintptr_t frompc, uintptr_t selfpc)
 {
   FAR struct gmonparam *p = &g_monparam;
