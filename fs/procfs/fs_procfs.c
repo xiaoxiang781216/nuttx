@@ -61,7 +61,6 @@ extern const struct procfs_operations g_cpuinfo_operations;
 extern const struct procfs_operations g_cpuload_operations;
 extern const struct procfs_operations g_critmon_operations;
 extern const struct procfs_operations g_fdt_operations;
-extern const struct procfs_operations g_iobinfo_operations;
 extern const struct procfs_operations g_irq_operations;
 extern const struct procfs_operations g_meminfo_operations;
 extern const struct procfs_operations g_memdump_operations;
@@ -139,10 +138,6 @@ static const struct procfs_entry_s g_procfs_entries[] =
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_USAGE
   { "fs/usage",     &g_mount_operations,    PROCFS_FILE_TYPE,   0444 },
-#endif
-
-#if defined(CONFIG_MM_IOB) && !defined(CONFIG_FS_PROCFS_EXCLUDE_IOBINFO)
-  { "iobinfo",      &g_iobinfo_operations,  PROCFS_FILE_TYPE,   0444 },
 #endif
 
 #ifdef CONFIG_SCHED_IRQMONITOR

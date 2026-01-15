@@ -58,11 +58,6 @@ config FS_PROCFS_EXCLUDE_FDT
 		Causes the flatted device tree information to be excluded from the
 		procfs system.  This will reduce code space slightly.
 
-config FS_PROCFS_EXCLUDE_IOBINFO
-	bool "Exclude iobinfo"
-	depends on MM_IOB
-	default DEFAULT_SMALL
-
 config FS_PROCFS_EXCLUDE_PROCESS
 	bool "Exclude process information"
 	default DEFAULT_SMALL

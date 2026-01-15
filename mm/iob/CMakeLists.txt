@@ -37,7 +37,6 @@ if(CONFIG_MM_IOB)
       iob_pack.c
       iob_peek_queue.c
       iob_remove_queue.c
-      iob_statistics.c
       iob_trimhead.c
       iob_trimhead_queue.c
       iob_trimtail.c

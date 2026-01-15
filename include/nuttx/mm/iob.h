@@ -32,6 +32,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/param.h>
+#include <nuttx/mm/mm.h>
+#include <nuttx/mm/mempool.h>
 
 #ifdef CONFIG_IOB_NOTIFIER
 #  include <nuttx/wqueue.h>
@@ -79,7 +81,7 @@
 
 /* Default config of alignment and head padding size */
 
-#define IOB_ALIGNMENT    MAX(CONFIG_IOB_ALIGNMENT, sizeof(uintptr_t))
+#define IOB_ALIGNMENT    MAX(CONFIG_IOB_ALIGNMENT, MM_ALIGN)
 
 /* IOB helpers */
 
@@ -169,7 +171,7 @@ struct iob_s
   iob_free_cb_t io_free;  /* Custom free callback */
   FAR uint8_t  *io_data;
 #else
-  uint8_t       io_data[CONFIG_IOB_BUFSIZE];
+  uint8_t       io_data[CONFIG_IOB_BUFSIZE] aligned_data(IOB_ALIGNMENT);
 #endif
 };
 
@@ -196,16 +198,6 @@ struct iob_stats_s
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
-
-/****************************************************************************
- * Name: iob_initialize
- *
- * Description:
- *   Set up the I/O buffers for normal operations.
- *
- ****************************************************************************/
-
-void iob_initialize(void);
 
 /****************************************************************************
  * Name: iob_timedalloc
@@ -706,26 +698,6 @@ void iob_dump(FAR const char *msg, FAR struct iob_s *iob, unsigned int len,
               unsigned int offset);
 #else
 #  define iob_dump(wrb)
-#endif
-
-/****************************************************************************
- * Name: iob_getuserstats
- *
- * Description:
- *   Return a reference to the IOB usage statistics for the IOB
- *   consumer/producer
- *
- * Input Parameters:
- *   userid - id representing the IOB producer/consumer
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS) && \
-    !defined(CONFIG_FS_PROCFS_EXCLUDE_IOBINFO)
-void iob_getstats(FAR struct iob_stats_s *stats);
 #endif
 
 #endif /* CONFIG_MM_IOB */

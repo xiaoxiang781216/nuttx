@@ -37,6 +37,7 @@
 #endif
 #include <nuttx/nuttx.h>
 #include <nuttx/mm/iob.h>
+#include <nuttx/mm/mempool.h>
 
 #include "iob.h"
 
@@ -80,9 +81,8 @@
 FAR struct iob_s *iob_free(FAR struct iob_s *iob)
 {
   FAR struct iob_s *next = IOB_LINK_GET(iob);
-  irqstate_t flags;
 #ifdef CONFIG_IOB_NOTIFIER
-  int16_t navail;
+  int navail;
 #endif
 
   iobinfo("iob=%p io_pktlen=%u io_len=%u next=%p\n",
@@ -137,48 +137,9 @@ FAR struct iob_s *iob_free(FAR struct iob_s *iob)
     }
 #endif
 
-  /* Free the I/O buffer by adding it to the head of the free or the
-   * committed list. We don't know what context we are called from so
-   * we use extreme measures to protect the free list:  We disable
-   * interrupts very briefly.
-   */
+  /* Free the I/O buffer using mempool */
 
-  flags = spin_lock_irqsave(&g_iob_lock);
-
-  /* Which list?  If there is a task waiting for an IOB, then put
-   * the IOB on either the free list or on the committed list where
-   * it is reserved for that allocation (and not available to
-   * iob_tryalloc()). This is true for both throttled and non-throttled
-   * cases.
-   */
-
-  if (g_iob_count < 0)
-    {
-      g_iob_count++;
-      iob->io_flink   = g_iob_committed;
-      g_iob_committed = iob;
-      spin_unlock_irqrestore(&g_iob_lock, flags);
-      nxsem_post(&g_iob_sem);
-    }
-#if CONFIG_IOB_THROTTLE > 0
-  else if (g_throttle_wait > 0 && g_iob_count >= CONFIG_IOB_THROTTLE)
-    {
-      iob->io_flink   = g_iob_committed;
-      g_iob_committed = iob;
-      g_throttle_wait--;
-      spin_unlock_irqrestore(&g_iob_lock, flags);
-      nxsem_post(&g_throttle_sem);
-    }
-#endif
-  else
-    {
-      g_iob_count++;
-      iob->io_flink   = g_iob_freelist;
-      g_iob_freelist  = iob;
-      spin_unlock_irqrestore(&g_iob_lock, flags);
-    }
-
-  DEBUGASSERT(g_iob_count <= CONFIG_IOB_NBUFFERS);
+  mempool_release(g_iob_pool[0], iob);
 
 #ifdef CONFIG_IOB_NOTIFIER
   /* Check if the IOB was claimed by a thread that is blocked waiting

@@ -612,12 +612,6 @@ static void memory_initialize(void)
   up_extraheaps_init();
 #endif
 
-#ifdef CONFIG_MM_IOB
-  /* Initialize IO buffering */
-
-  iob_initialize();
-#endif
-
 #ifdef CONFIG_PERF_EVENTS
   perf_event_init();
 #endif

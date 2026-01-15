@@ -37,6 +37,7 @@
 #endif
 #include <nuttx/nuttx.h>
 #include <nuttx/mm/iob.h>
+#include <nuttx/mm/mempool.h>
 
 #include "iob.h"
 
@@ -44,183 +45,57 @@
  * Private Functions
  ****************************************************************************/
 
-static clock_t iob_allocwait_gettimeout(clock_t start, unsigned int timeout)
-{
-  sclock_t tick;
-
-  tick = clock_systime_ticks() - start;
-  if (tick >= MSEC2TICK(timeout))
-    {
-      tick = 0;
-    }
-  else
-    {
-      tick = MSEC2TICK(timeout) - tick;
-    }
-
-  return tick;
-}
-
 /****************************************************************************
- * Name: iob_alloc_committed
+ * Name: iob_alloc_internal
  *
  * Description:
- *   Allocate an I/O buffer by taking the buffer at the head of the committed
- *   list.
+ *   Internal allocation using mempool.
  *
  ****************************************************************************/
 
-static FAR struct iob_s *iob_alloc_committed(void)
+static FAR struct iob_s *iob_alloc_internal(bool throttled,
+                                            unsigned int timeout)
 {
-  FAR struct iob_s *iob = NULL;
-  irqstate_t flags;
+  FAR struct iob_s *iob;
 
-  /* We don't know what context we are called from so we use extreme measures
-   * to protect the committed list:  We disable interrupts very briefly.
-   */
+  if (timeout == 0)
+    {
+      iob = mempool_tryallocate_throttled(g_iob_pool[0], throttled);
+    }
+  else
+    {
+      iob = mempool_allocate_throttled(g_iob_pool[0], timeout, throttled);
+    }
 
-  flags = spin_lock_irqsave(&g_iob_lock);
-
-  /* Take the I/O buffer from the head of the committed list */
-
-  iob = g_iob_committed;
   if (iob != NULL)
     {
-      /* Remove the I/O buffer from the committed list */
+      /* Verify IOB address alignment for flag bits in io_flink */
 
-      g_iob_committed = IOB_LINK_GET(iob);
+      DEBUGASSERT(((uintptr_t)iob & IOB_FLAGS_MASK) == 0);
 
-      /* Put the I/O buffer in a known state */
+      /* Initialize the IOB */
 
       iob->io_flink  = NULL; /* Not in a chain */
       iob->io_len    = 0;    /* Length of the data in the entry */
       iob->io_offset = 0;    /* Offset to the beginning of data */
       iob->io_pktlen = 0;    /* Total length of the packet */
       iob->io_conn   = NULL;
-    }
-
-  spin_unlock_irqrestore(&g_iob_lock, flags);
-  return iob;
-}
-
-static FAR struct iob_s *iob_tryalloc_internal(bool throttled)
-{
-  FAR struct iob_s *iob;
-#if CONFIG_IOB_THROTTLE > 0
-  int16_t count = (throttled ? g_iob_count - CONFIG_IOB_THROTTLE :
-                   g_iob_count);
-
-  /* If there are free I/O buffers for this allocation */
-
-  if (count > 0)
+#ifdef CONFIG_IOB_ALLOC
+      iob->io_bufsize = CONFIG_IOB_BUFSIZE;
+      iob->io_data    = (FAR uint8_t *)ALIGN_UP((uintptr_t)(iob + 1),
+                                                IOB_ALIGNMENT);
 #endif
+
+      /* Verify IOB and IOB data address alignment */
+
+      DEBUGASSERT((uintptr_t)iob % IOB_ALIGNMENT == 0);
+      DEBUGASSERT((uintptr_t)iob->io_data % IOB_ALIGNMENT == 0);
+    }
+  else
     {
-      /* Take the I/O buffer from the head of the free list */
-
-      iob = g_iob_freelist;
-      if (iob != NULL)
-        {
-          /* Remove the I/O buffer from the free list and decrement the
-           * counting semaphore(s) that tracks the number of available
-           * IOBs.
-           */
-
-          g_iob_freelist = IOB_LINK_GET(iob);
-
-          g_iob_count--;
-          DEBUGASSERT(g_iob_count >= 0);
-
-          /* Put the I/O buffer in a known state */
-
-          iob->io_flink  = NULL; /* Not in a chain */
-          iob->io_len    = 0;    /* Length of the data in the entry */
-          iob->io_offset = 0;    /* Offset to the beginning of data */
-          iob->io_pktlen = 0;    /* Total length of the packet */
-          iob->io_conn   = NULL;
-
-          return iob;
-        }
+      ioberr("iob_alloc_internal: Failed to allocate IOB\n");
     }
 
-  return NULL;
-}
-
-/****************************************************************************
- * Name: iob_allocwait
- *
- * Description:
- *   Allocate an I/O buffer, waiting if necessary.  This function cannot be
- *   called from any interrupt level logic.
- *
- ****************************************************************************/
-
-static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout)
-{
-  FAR struct iob_s *iob;
-  irqstate_t flags;
-  FAR sem_t *sem;
-  clock_t start;
-  int ret = OK;
-
-#if CONFIG_IOB_THROTTLE > 0
-  /* Select the semaphore to wait. */
-
-  sem = (throttled ? &g_throttle_sem : &g_iob_sem);
-#else
-  sem = &g_iob_sem;
-#endif
-
-  /* The following must be atomic; interrupt must be disabled so that there
-   * is no conflict with interrupt level I/O buffer allocations.  This is
-   * not as bad as it sounds because interrupts will be re-enabled while
-   * we are waiting for I/O buffers to become free.
-   */
-
-  flags = spin_lock_irqsave(&g_iob_lock);
-
-  /* Try to get an I/O buffer */
-
-  iob = iob_tryalloc_internal(throttled);
-  if (iob == NULL)
-    {
-#if CONFIG_IOB_THROTTLE > 0
-      if (throttled)
-        {
-          g_throttle_wait++;
-        }
-      else
-#endif
-        {
-          g_iob_count--;
-        }
-
-      spin_unlock_irqrestore(&g_iob_lock, flags);
-
-      if (timeout == UINT_MAX)
-        {
-          ret = nxsem_wait_uninterruptible(sem);
-        }
-      else
-        {
-          start = clock_systime_ticks();
-          ret = nxsem_tickwait_uninterruptible(sem,
-                                   iob_allocwait_gettimeout(start, timeout));
-        }
-
-      if (ret >= 0)
-        {
-          /* When we wake up from wait successfully, an I/O buffer was
-           * freed and we hold a count for one IOB.
-           */
-
-          iob = iob_alloc_committed();
-          DEBUGASSERT(iob != NULL);
-        }
-
-      return iob;
-    }
-
-  spin_unlock_irqrestore(&g_iob_lock, flags);
   return iob;
 }
 
@@ -263,17 +138,17 @@ FAR struct iob_s *iob_timedalloc(bool throttled, unsigned int timeout)
 {
   /* Were we called from the interrupt level? */
 
-  if (up_interrupt_context() || sched_idletask() || timeout == 0)
+  if (up_interrupt_context() || sched_idletask())
     {
       /* Yes, then try to allocate an I/O buffer without waiting */
 
-      return iob_tryalloc(throttled);
+      return iob_alloc_internal(throttled, 0);
     }
   else
     {
-      /* Then allocate an I/O buffer, waiting as necessary */
+      /* Then allocate an I/O buffer, with optional waiting */
 
-      return iob_allocwait(throttled, timeout);
+      return iob_alloc_internal(throttled, timeout);
     }
 }
 
@@ -301,17 +176,7 @@ FAR struct iob_s *iob_alloc(bool throttled)
 
 FAR struct iob_s *iob_tryalloc(bool throttled)
 {
-  FAR struct iob_s *iob;
-  irqstate_t flags;
-
-  /* We don't know what context we are called from so we use extreme measures
-   * to protect the free list:  We disable interrupts very briefly.
-   */
-
-  flags = spin_lock_irqsave(&g_iob_lock);
-  iob = iob_tryalloc_internal(throttled);
-  spin_unlock_irqrestore(&g_iob_lock, flags);
-  return iob;
+  return iob_alloc_internal(throttled, 0);
 }
 
 #ifdef CONFIG_IOB_ALLOC

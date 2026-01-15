@@ -30,6 +30,7 @@
 
 #include <nuttx/nuttx.h>
 #include <nuttx/mm/iob.h>
+#include <nuttx/mm/mempool.h>
 
 #include "iob.h"
 
@@ -40,14 +41,27 @@
 /* Fix the I/O Buffer size with specified alignment size */
 
 #ifdef CONFIG_IOB_ALLOC
-#  define IOB_ALIGN_SIZE  ALIGN_UP(sizeof(struct iob_s) + CONFIG_IOB_BUFSIZE, \
-                                   IOB_ALIGNMENT)
+#  define IOB_ALIGN_SIZE(blksize)  ALIGN_UP(ALIGN_UP(sizeof(struct iob_s), \
+                                            IOB_ALIGNMENT) + blksize, \
+                                            IOB_ALIGNMENT)
 #else
-#  define IOB_ALIGN_SIZE  ALIGN_UP(sizeof(struct iob_s), IOB_ALIGNMENT)
+#  define IOB_ALIGN_SIZE(blksize)  ALIGN_UP(offsetof(struct iob_s, io_data) + \
+                                            blksize, IOB_ALIGNMENT)
 #endif
 
-#define IOB_BUFFER_SIZE   (IOB_ALIGN_SIZE * CONFIG_IOB_NBUFFERS + \
-                           IOB_ALIGNMENT - 1)
+#ifdef IOB_SECTION
+#  define IOBPOOL_DEFINE(name, blksize, blkcnt) \
+  MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, IOB_ALIGN_SIZE(blksize), \
+                                             blkcnt, 0, 0, \
+                                             CONFIG_IOB_THROTTLE, \
+                                             IOB_ALIGNMENT, IOB_SECTION);
+#else
+#  define IOBPOOL_DEFINE(name, blksize, blkcnt) \
+  MEMPOOL_DEFINE_WITH_THROTTLE_ALIGN_SECTION(name, IOB_ALIGN_SIZE(blksize), \
+                                             blkcnt, 0, 0, \
+                                             CONFIG_IOB_THROTTLE, \
+                                             IOB_ALIGNMENT);
+#endif
 
 /****************************************************************************
  * Private Data
@@ -58,105 +72,19 @@
  * to the IOB_ALIGNMENT memory boundary.
  */
 
-#ifdef IOB_SECTION
-static uint8_t g_iob_buffer[IOB_BUFFER_SIZE]
-  locate_data(CONFIG_IOB_SECTION);
-#else
-static uint8_t g_iob_buffer[IOB_BUFFER_SIZE];
-#endif
+IOBPOOL_DEFINE(g_iob1, CONFIG_IOB_BUFSIZE, CONFIG_IOB_NBUFFERS);
 
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
-/* A list of all free, unallocated I/O buffers */
+/* Multiple mempool for I/O buffers */
 
-FAR struct iob_s *g_iob_freelist;
-
-/* A list of I/O buffers that are committed for allocation */
-
-FAR struct iob_s *g_iob_committed;
-
-#undef g_iob_sem
-DEFINE_PER_CPU_BMP(sem_t, g_iob_sem) = SEM_INITIALIZER(0);
-#define g_iob_sem this_cpu_var_bmp(g_iob_sem)
-
-/* Counting that tracks the number of free IOBs */
-
-int16_t g_iob_count = CONFIG_IOB_NBUFFERS;
-
-#if CONFIG_IOB_THROTTLE > 0
-
-#  undef g_throttle_sem
-DEFINE_PER_CPU_BMP(sem_t, g_throttle_sem) = SEM_INITIALIZER(0);
-#  define g_throttle_sem this_cpu_var_bmp(g_throttle_sem)
-
-/* Wait Counts for throttle */
-
-int16_t g_throttle_wait = 0;
-#endif
-
-volatile spinlock_t g_iob_lock = SP_UNLOCKED;
+FAR struct mempool_s *g_iob_pool[1] =
+{
+  &g_iob1,
+};
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: iob_initialize
- *
- * Description:
- *   Set up the I/O buffers for normal operations.
- *
- ****************************************************************************/
-
-void iob_initialize(void)
-{
-  int i;
-  uintptr_t buf;
-  irqstate_t flags;
-  size_t offset;
-
-  flags = spin_lock_irqsave(&g_iob_lock);
-
-  if (g_iob_freelist != NULL)
-    {
-      /* Already initialized */
-
-      spin_unlock_irqrestore(&g_iob_lock, flags);
-      return;
-    }
-
-  /* Get a start address which plus offsetof(struct iob_s, io_data) is
-   * aligned to the IOB_ALIGNMENT memory boundary
-   */
-
-#ifdef CONFIG_IOB_ALLOC
-  offset = sizeof(struct iob_s);
-#else
-  offset = offsetof(struct iob_s, io_data);
-#endif
-  buf = ALIGN_UP((uintptr_t)g_iob_buffer + offset, IOB_ALIGNMENT) - offset;
-
-  /* Get I/O buffer instance from the start address and add each I/O buffer
-   * to the free list
-   */
-
-  for (i = 0; i < CONFIG_IOB_NBUFFERS; i++)
-    {
-      FAR struct iob_s *iob = (FAR struct iob_s *)(buf + i * IOB_ALIGN_SIZE);
-
-      DEBUGASSERT(((uintptr_t)iob & IOB_FLAGS_MASK) == 0);
-
-      /* Add the pre-allocate I/O buffer to the head of the free list */
-
-      iob->io_flink   = g_iob_freelist;
-#ifdef CONFIG_IOB_ALLOC
-      iob->io_bufsize = CONFIG_IOB_BUFSIZE;
-      iob->io_data    = (FAR uint8_t *)(iob + 1);
-#endif
-      g_iob_freelist  = iob;
-    }
-
-  spin_unlock_irqrestore(&g_iob_lock, flags);
-}

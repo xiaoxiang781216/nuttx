@@ -29,6 +29,7 @@
 #include <stdbool.h>
 
 #include <nuttx/mm/iob.h>
+#include <nuttx/mm/mempool.h>
 
 #include "iob.h"
 
@@ -46,28 +47,5 @@
 
 int iob_navail(bool throttled)
 {
-  int ret;
-
-#if CONFIG_IOB_NBUFFERS > 0
-  ret = g_iob_count;
-
-#if CONFIG_IOB_THROTTLE > 0
-  /* Subtract the throttle value is so requested */
-
-  if (throttled)
-    {
-      ret -= CONFIG_IOB_THROTTLE;
-    }
-#endif
-
-  if (ret < 0)
-    {
-      ret = 0;
-    }
-
-#else
-  ret = 0;
-#endif
-
-  return ret;
+  return mempool_navail_throttled(g_iob_pool[0], throttled);
 }

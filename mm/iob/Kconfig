@@ -10,7 +10,7 @@ config MM_IOB
 	default n
 	---help---
 		This setting will build the common I/O buffer (IOB) support
-		library.
+		library using mempool for memory management.
 
 if MM_IOB
 
