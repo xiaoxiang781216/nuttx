@@ -770,7 +770,7 @@ config TASK_NAME_SIZE
 		will be TASK_NAME_SIZE + 1.  The default of 31 then results in
 		a align-able 32-byte allocation.
 
-config TASK_NAMEPOOL_BUFSIZE
+config TASK_NAMEPOOL_SIZE
 	int "Task name cache buffer size"
 	default 0
 	depends on TASK_NAME_SIZE > 0
