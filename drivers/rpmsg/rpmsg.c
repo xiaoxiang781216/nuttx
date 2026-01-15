@@ -1044,13 +1044,10 @@ int rpmsg_queue_work(FAR struct rpmsg_s *rpmsg, uint8_t priority,
 void rpmsg_queue_rx_work(FAR struct rpmsg_s *rpmsg, uint8_t priority,
                          rpmsg_worker_t worker, FAR void *arg)
 {
-  FAR struct rpmsg_device *rdev = rpmsg_get_rdev_by_rpmsg(rpmsg);
   FAR struct rpmsg_work_s *work;
 
-  metal_mutex_acquire(&rdev->lock);
   work = list_remove_head_type(&rpmsg->freerx, struct rpmsg_work_s,
                                work.node);
-  metal_mutex_release(&rdev->lock);
   DEBUGASSERT(work != NULL);
   work->arg = arg;
   work->rpmsg = rpmsg;
