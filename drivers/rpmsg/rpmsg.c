@@ -56,7 +56,7 @@
 #define RPMSG_RECURSIVE_LIMIT    8
 #define RPMSG_DEFAULT_WQUEUE_IDX (CONFIG_RPMSG_WQUEUE_NUMBER / 2)
 
-#ifdef CONFIG_RPMSG_GLOBAL_WQUEUE
+#ifdef CONFIG_RPMSG_WQUEUE_GLOBAL
 #  define rpmsg_get_wqueues(rpmsg) g_rpmsg_wqueues
 #else
 #  define rpmsg_get_wqueues(rpmsg) ((rpmsg)->wqueues)
