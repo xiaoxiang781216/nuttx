@@ -58,7 +58,7 @@
 #define VIRT_IO_SECSIZE          (96*1024*1024)
 #define VIRT_SEC_MEM_SECSIZE     (16*1024*1024)
 #define VIRT_PCIE_SECSIZE        (3*256*1024*1024)
-#define VIRT_DDR_SECSIZE         (256*1024*1024)
+#define VIRT_DDR_SECSIZE         (512*1024*1024)
 
 /****************************************************************************
  * Public Function Prototypes
