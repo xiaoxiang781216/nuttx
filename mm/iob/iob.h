@@ -50,6 +50,15 @@
 #  define iobinfo                _none
 #endif /* CONFIG_DEBUG_FEATURES && CONFIG_IOB_DEBUG */
 
+#ifdef CONFIG_IOB_ALLOC
+#  define IOB_ALIGN_SIZE(blksize) ALIGN_UP(ALIGN_UP(sizeof(struct iob_s), \
+                                           IOB_ALIGNMENT) + blksize, \
+                                           IOB_ALIGNMENT)
+#else
+#  define IOB_ALIGN_SIZE(blksize) ALIGN_UP(offsetof(struct iob_s, io_data) + \
+                                           blksize, IOB_ALIGNMENT)
+#endif
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/

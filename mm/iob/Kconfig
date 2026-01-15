@@ -14,25 +14,84 @@ config MM_IOB
 
 if MM_IOB
 
+config IOB_NPOOLS
+	int "Number of IOB mempool levels"
+	default 1
+	range 1 3
+	---help---
+		Configure the number of mempool levels for IOB.
+		Each level can have different buffer sizes and counts.
+
+		  1: Single-level pool (default, backward compatible)
+		  2-3: Multi-level pool with different buffer sizes
+
+		Level 1 uses IOB_BUFSIZE and IOB_NBUFFERS (primary/default pool).
+		Additional levels use IOB_BUFSIZEN and IOB_NBUFFERSN (N=2 to 3).
+
+		IMPORTANT: Buffer sizes must be configured in descending order:
+		           IOB_BUFSIZE >= IOB_BUFSIZE2 >= IOB_BUFSIZE3
+		           This ensures the default pool (Level 1) is tried first,
+		           with smaller pools used for small packet optimization.
+
 config IOB_NBUFFERS
-	int "Number of pre-allocated I/O buffers"
+	int "Number of pre-allocated I/O buffers (Level 1)"
 	default 36 if NET_WRITE_BUFFERS
 	default 24 if !NET_WRITE_BUFFERS && NET_READAHEAD
 	default 8 if !NET_WRITE_BUFFERS && !NET_READAHEAD
 	---help---
 		Each packet is represented by a series of small I/O buffers in a
 		chain.  This setting determines the number of preallocated I/O
-		buffers available for packet data.
+		buffers available for packet data at the first level.
 
 config IOB_BUFSIZE
-	int "Payload size of one I/O buffer"
+	int "Payload size of one I/O buffer (Level 1)"
 	range 196 65535 if NET_TCP_SELECTIVE_ACK && NET_IPv6 && RNDIS
 	range 128 65535 if NET_TCP_SELECTIVE_ACK && (NET_IPv4 || NET_IPv6)
 	default 196
 	---help---
 		Each packet is represented by a series of small I/O buffers in a
-		chain.  This setting determines the data payload each preallocated
-		I/O buffer.
+		chain.  This setting determines the data payload of each preallocated
+		I/O buffer at the first level (primary/default pool).
+
+		NOTE: IOB buffer sizes must be configured in descending order:
+		      IOB_BUFSIZE >= IOB_BUFSIZE2 >= IOB_BUFSIZE3
+		      Level 1 is the default pool that is tried first.
+
+config IOB_NBUFFERS2
+	int "Number of I/O buffers (Level 2)"
+	default IOB_NBUFFERS
+	depends on IOB_NPOOLS > 1
+	---help---
+		Number of preallocated I/O buffers for the second level mempool.
+
+config IOB_BUFSIZE2
+	int "Payload size of I/O buffer (Level 2)"
+	range 1 IOB_BUFSIZE
+	default 128
+	depends on IOB_NPOOLS > 1
+	---help---
+		Data payload size of each I/O buffer at the second level.
+
+		NOTE: This value must be <= IOB_BUFSIZE (enforced by range).
+		      Use smaller buffers for small packet optimization to save memory.
+
+config IOB_NBUFFERS3
+	int "Number of I/O buffers (Level 3)"
+	default IOB_NBUFFERS2
+	depends on IOB_NPOOLS > 2
+	---help---
+		Number of preallocated I/O buffers for the third level mempool.
+
+config IOB_BUFSIZE3
+	int "Payload size of I/O buffer (Level 3)"
+	range 1 IOB_BUFSIZE2
+	default 64
+	depends on IOB_NPOOLS > 2
+	---help---
+		Data payload size of each I/O buffer at the third level.
+
+		NOTE: This value must be <= IOB_BUFSIZE2 (enforced by range).
+		      Use smaller buffers for small packet optimization to save memory.
 
 config IOB_ALIGNMENT
 	int "Alignment size of each I/O buffer"

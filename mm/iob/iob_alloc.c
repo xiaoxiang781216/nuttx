@@ -45,26 +45,70 @@
  * Private Functions
  ****************************************************************************/
 
+static inline FAR struct mempool_s *
+iob_find_mempool(size_t size, FAR int *idx)
+{
+  int i = CONFIG_IOB_NPOOLS - 1;
+
+  if (size > CONFIG_IOB_BUFSIZE)
+    {
+      return NULL;
+    }
+  else if (CONFIG_IOB_NPOOLS == 1)
+    {
+      *idx = 0;
+      return g_iob_pool[0];
+    }
+
+  do
+    {
+      if (IOB_ALIGN_SIZE(size) <= g_iob_pool[i]->blocksize)
+        {
+          *idx = i;
+          return g_iob_pool[i];
+        }
+    }
+  while (--i >= 0);
+
+  return NULL;
+}
+
 /****************************************************************************
  * Name: iob_alloc_internal
  *
  * Description:
- *   Internal allocation using mempool.
+ *   Internal allocation using mempool with specific size.
  *
  ****************************************************************************/
 
-static FAR struct iob_s *iob_alloc_internal(bool throttled,
+static FAR struct iob_s *iob_alloc_internal(size_t size, bool throttled,
                                             unsigned int timeout)
 {
+  FAR struct mempool_s *mempool;
   FAR struct iob_s *iob;
+  int idx;
+
+  mempool = iob_find_mempool(size, &idx);
+  if (mempool == NULL)
+    {
+      return NULL;
+    }
 
   if (timeout == 0)
     {
-      iob = mempool_tryallocate_throttled(g_iob_pool[0], throttled);
+      do
+        {
+          iob = mempool_tryallocate_throttled(mempool, throttled);
+          if (iob != NULL)
+            {
+              break;
+            }
+        }
+      while (--idx >= 0 && (mempool = g_iob_pool[idx]) != NULL);
     }
   else
     {
-      iob = mempool_allocate_throttled(g_iob_pool[0], timeout, throttled);
+      iob = mempool_allocate_throttled(mempool, timeout, throttled);
     }
 
   if (iob != NULL)
@@ -75,25 +119,24 @@ static FAR struct iob_s *iob_alloc_internal(bool throttled,
 
       /* Initialize the IOB */
 
-      iob->io_flink  = NULL; /* Not in a chain */
-      iob->io_len    = 0;    /* Length of the data in the entry */
-      iob->io_offset = 0;    /* Offset to the beginning of data */
-      iob->io_pktlen = 0;    /* Total length of the packet */
-      iob->io_conn   = NULL;
+#if CONFIG_IOB_NPOOLS > 1
+      iob->io_pool    = mempool;
+#endif
+      iob->io_flink   = NULL; /* Not in a chain */
+      iob->io_len     = 0;    /* Length of the data in the entry */
+      iob->io_offset  = 0;    /* Offset to the beginning of data */
+      iob->io_pktlen  = 0;    /* Total length of the packet */
+      iob->io_conn    = NULL;
 #ifdef CONFIG_IOB_ALLOC
-      iob->io_bufsize = CONFIG_IOB_BUFSIZE;
       iob->io_data    = (FAR uint8_t *)ALIGN_UP((uintptr_t)(iob + 1),
                                                 IOB_ALIGNMENT);
+      iob->io_bufsize = mempool->blocksize - IOB_ALIGN_SIZE(0);
 #endif
 
       /* Verify IOB and IOB data address alignment */
 
       DEBUGASSERT((uintptr_t)iob % IOB_ALIGNMENT == 0);
       DEBUGASSERT((uintptr_t)iob->io_data % IOB_ALIGNMENT == 0);
-    }
-  else
-    {
-      ioberr("iob_alloc_internal: Failed to allocate IOB\n");
     }
 
   return iob;
@@ -122,19 +165,21 @@ static void iob_free_dynamic(FAR void *data)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: iob_timedalloc
+ * Name: iob_timedalloc_with_size
  *
  * Description:
- *  Allocate an I/O buffer by taking the buffer at the head of the free list.
- *  This wait will be terminated when the specified timeout expires.
+ *  Allocate an I/O buffer with specified size. This wait will be terminated
+ *  when the specified timeout expires.
  *
  * Input Parameters:
+ *   size       - The size of buffer to allocate
  *   throttled  - An indication of the IOB allocation is "throttled"
  *   timeout    - Timeout value in milliseconds.
  *
  ****************************************************************************/
 
-FAR struct iob_s *iob_timedalloc(bool throttled, unsigned int timeout)
+FAR struct iob_s *iob_timedalloc_with_size(uint16_t size, bool throttled,
+                                           unsigned int timeout)
 {
   /* Were we called from the interrupt level? */
 
@@ -142,41 +187,14 @@ FAR struct iob_s *iob_timedalloc(bool throttled, unsigned int timeout)
     {
       /* Yes, then try to allocate an I/O buffer without waiting */
 
-      return iob_alloc_internal(throttled, 0);
+      return iob_alloc_internal(size, throttled, 0);
     }
   else
     {
       /* Then allocate an I/O buffer, with optional waiting */
 
-      return iob_alloc_internal(throttled, timeout);
+      return iob_alloc_internal(size, throttled, timeout);
     }
-}
-
-/****************************************************************************
- * Name: iob_alloc
- *
- * Description:
- *  Allocate an I/O buffer by taking the buffer at the head of the free list.
- *
- ****************************************************************************/
-
-FAR struct iob_s *iob_alloc(bool throttled)
-{
-  return iob_timedalloc(throttled, UINT_MAX);
-}
-
-/****************************************************************************
- * Name: iob_tryalloc
- *
- * Description:
- *   Try to allocate an I/O buffer by taking the buffer at the head of the
- *   free list without waiting for a buffer to become free.
- *
- ****************************************************************************/
-
-FAR struct iob_s *iob_tryalloc(bool throttled)
-{
-  return iob_alloc_internal(throttled, 0);
 }
 
 #ifdef CONFIG_IOB_ALLOC

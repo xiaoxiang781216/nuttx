@@ -119,6 +119,9 @@
 
 #ifdef CONFIG_IOB_ALLOC
 #  define IOB_BUFSIZE(p) ((p)->io_bufsize)
+#if CONFIG_IOB_NPOOLS > 1
+#  define IOB_BUFSIZE(p) ((p)->io_pool->blocksize - \
+                          ALIGN_UP(offsetof(struct iob_s, io_data), IOB_ALIGNMENT))
 #else
 #  define IOB_BUFSIZE(p) CONFIG_IOB_BUFSIZE
 #endif
@@ -167,6 +170,12 @@ struct iob_s
   struct timespec io_time;
 #endif
 
+#if CONFIG_IOB_NPOOLS > 1
+  FAR struct mempool_s *io_pool; /* Reference to the mempool from which
+                                  * this IOB was allocated
+                                  */
+#endif
+
 #ifdef CONFIG_IOB_ALLOC
   iob_free_cb_t io_free;  /* Custom free callback */
   FAR uint8_t  *io_data;
@@ -200,6 +209,24 @@ struct iob_stats_s
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: iob_timedalloc_with_size
+ *
+ * Description:
+ *  Allocate an I/O buffer with specified size. This wait will be terminated
+ *  when the specified timeout expires. Useful for multi-level mempool
+ *  configurations.
+ *
+ * Input Parameters:
+ *   size       - The size of buffer to allocate
+ *   throttled  - An indication of the IOB allocation is "throttled"
+ *   timeout    - Timeout value in milliseconds.
+ *
+ ****************************************************************************/
+
+FAR struct iob_s *iob_timedalloc_with_size(uint16_t size, bool throttled,
+                                           unsigned int timeout);
+
+/****************************************************************************
  * Name: iob_timedalloc
  *
  * Description:
@@ -212,7 +239,11 @@ struct iob_stats_s
  *
  ****************************************************************************/
 
-FAR struct iob_s *iob_timedalloc(bool throttled, unsigned int timeout);
+static inline_function
+FAR struct iob_s *iob_timedalloc(bool throttled, unsigned int timeout)
+{
+  return iob_timedalloc_with_size(CONFIG_IOB_BUFSIZE, throttled, timeout);
+}
 
 /****************************************************************************
  * Name: iob_alloc
@@ -223,7 +254,30 @@ FAR struct iob_s *iob_timedalloc(bool throttled, unsigned int timeout);
  *
  ****************************************************************************/
 
-FAR struct iob_s *iob_alloc(bool throttled);
+static inline_function FAR struct iob_s *iob_alloc(bool throttled)
+{
+  return iob_timedalloc(throttled, UINT_MAX);
+}
+
+/****************************************************************************
+ * Name: iob_tryalloc_with_size
+ *
+ * Description:
+ *   Try to allocate an I/O buffer with specified size without waiting
+ *   for a buffer to become free. Useful for multi-level mempool
+ *   configurations.
+ *
+ * Input Parameters:
+ *   size       - The size of buffer to allocate
+ *   throttled  - An indication of the IOB allocation is "throttled"
+ *
+ ****************************************************************************/
+
+static inline_function FAR struct iob_s *
+iob_tryalloc_with_size(uint16_t size, bool throttled)
+{
+  return iob_timedalloc_with_size(size, throttled, 0);
+}
 
 /****************************************************************************
  * Name: iob_tryalloc
@@ -234,7 +288,29 @@ FAR struct iob_s *iob_alloc(bool throttled);
  *
  ****************************************************************************/
 
-FAR struct iob_s *iob_tryalloc(bool throttled);
+static inline_function FAR struct iob_s *iob_tryalloc(bool throttled)
+{
+  return iob_tryalloc_with_size(CONFIG_IOB_BUFSIZE, throttled);
+}
+
+/****************************************************************************
+ * Name: iob_alloc_with_size
+ *
+ * Description:
+ *  Allocate an I/O buffer with specified size by taking the buffer from
+ *  the appropriate size pool. Useful for multi-level mempool configurations.
+ *
+ * Input Parameters:
+ *   size       - The size of buffer to allocate
+ *   throttled  - An indication of the IOB allocation is "throttled"
+ *
+ ****************************************************************************/
+
+static inline_function
+FAR struct iob_s *iob_alloc_with_size(uint16_t size, bool throttled)
+{
+  return iob_timedalloc_with_size(size, throttled, UINT_MAX);
+}
 
 #ifdef CONFIG_IOB_ALLOC
 /****************************************************************************

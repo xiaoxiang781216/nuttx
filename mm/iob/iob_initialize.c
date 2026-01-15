@@ -26,9 +26,6 @@
 
 #include <nuttx/config.h>
 
-#include <stdbool.h>
-
-#include <nuttx/nuttx.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/mm/mempool.h>
 
@@ -37,17 +34,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-/* Fix the I/O Buffer size with specified alignment size */
-
-#ifdef CONFIG_IOB_ALLOC
-#  define IOB_ALIGN_SIZE(blksize)  ALIGN_UP(ALIGN_UP(sizeof(struct iob_s), \
-                                            IOB_ALIGNMENT) + blksize, \
-                                            IOB_ALIGNMENT)
-#else
-#  define IOB_ALIGN_SIZE(blksize)  ALIGN_UP(offsetof(struct iob_s, io_data) + \
-                                            blksize, IOB_ALIGNMENT)
-#endif
 
 #ifdef IOB_SECTION
 #  define IOBPOOL_DEFINE(name, blksize, blkcnt) \
@@ -67,12 +53,15 @@
  * Private Data
  ****************************************************************************/
 
-/* Following raw buffer will be divided into iob_s instances, the initial
- * procedure will ensure that the member io_data of each iob_s is aligned
- * to the IOB_ALIGNMENT memory boundary.
- */
+/* Static buffer for IOB mempool. */
 
 IOBPOOL_DEFINE(g_iob1, CONFIG_IOB_BUFSIZE, CONFIG_IOB_NBUFFERS);
+#if CONFIG_IOB_NPOOLS > 1
+IOBPOOL_DEFINE(g_iob2, CONFIG_IOB_BUFSIZE2, CONFIG_IOB_NBUFFERS2);
+#endif
+#if CONFIG_IOB_NPOOLS > 2
+IOBPOOL_DEFINE(g_iob3, CONFIG_IOB_BUFSIZE3, CONFIG_IOB_NBUFFERS3);
+#endif
 
 /****************************************************************************
  * Public Data
@@ -80,8 +69,14 @@ IOBPOOL_DEFINE(g_iob1, CONFIG_IOB_BUFSIZE, CONFIG_IOB_NBUFFERS);
 
 /* Multiple mempool for I/O buffers */
 
-FAR struct mempool_s *g_iob_pool[1] =
+FAR struct mempool_s *g_iob_pool[CONFIG_IOB_NPOOLS] =
 {
+#if CONFIG_IOB_NPOOLS > 2
+  &g_iob3,
+#endif
+#if CONFIG_IOB_NPOOLS > 1
+  &g_iob2,
+#endif
   &g_iob1,
 };
 

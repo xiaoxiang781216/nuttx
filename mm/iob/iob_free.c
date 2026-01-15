@@ -139,7 +139,11 @@ FAR struct iob_s *iob_free(FAR struct iob_s *iob)
 
   /* Free the I/O buffer using mempool */
 
+#if CONFIG_IOB_NPOOLS > 1
+  mempool_release(iob->io_pool, iob);
+#else
   mempool_release(g_iob_pool[0], iob);
+#endif
 
 #ifdef CONFIG_IOB_NOTIFIER
   /* Check if the IOB was claimed by a thread that is blocked waiting
