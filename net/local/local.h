@@ -288,6 +288,9 @@ void local_free(FAR struct local_conn_s *conn);
  * Returned Value:
  *   None
  *
+ * Assumptions:
+ *   Called with local lock held
+ *
  ****************************************************************************/
 
 void local_addref(FAR struct local_conn_s *conn);
@@ -304,6 +307,9 @@ void local_addref(FAR struct local_conn_s *conn);
  *
  * Returned Value:
  *   None
+ *
+ * Assumptions:
+ *   Called with local lock held
  *
  ****************************************************************************/
 
@@ -393,6 +399,9 @@ int psock_local_connect(FAR struct socket *psock,
  *
  * Input Parameters:
  *   conn - A reference to local connection structure
+ *
+ * Assumptions:
+ *   Called with local lock held
  *
  ****************************************************************************/
 
