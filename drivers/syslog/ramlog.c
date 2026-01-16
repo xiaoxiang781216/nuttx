@@ -54,6 +54,10 @@
 #include <nuttx/list.h>
 #include <nuttx/irq.h>
 
+#ifdef CONFIG_RAMLOG_DUMP_ON_PANIC
+#  include <nuttx/panic_notifier.h>
+#endif
+
 #ifdef CONFIG_RAMLOG
 
 /****************************************************************************
@@ -182,13 +186,126 @@ static DEFINE_PER_CPU_BMP(struct ramlog_dev_s, g_sysdev) =
   (FAR struct ramlog_header_s *)g_sysbuffer,            /* rl_buffer */
   sizeof(g_sysbuffer) - sizeof(struct ramlog_header_s), /* rl_bufsize */
 };
-#define g_sysdev this_cpu_var_bmp(g_sysdev)
+#  define g_sysdev this_cpu_var_bmp(g_sysdev)
+#endif
 
+#ifdef CONFIG_RAMLOG_DUMP_ON_PANIC
+static int ramlog_panic_notifier(FAR struct notifier_block *nb,
+                                 unsigned long action,
+                                 FAR void *data);
+
+static DEFINE_PER_CPU_BMP(struct notifier_block, g_ramlog_panic_nb) =
+{
+  ramlog_panic_notifier,  /* notifier_call */
+};
+#  define g_ramlog_panic_nb this_cpu_var_bmp(g_ramlog_panic_nb)
 #endif
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+#ifdef CONFIG_RAMLOG_DUMP_ON_PANIC
+/****************************************************************************
+ * Name: ramlog_dump
+ *
+ * Description:
+ *   Dump the RAMLOG content to serial output using up_nputs.
+ *   This function is designed to work in panic context with minimal
+ *   stack usage by directly outputting from the ramlog buffer.
+ *
+ ****************************************************************************/
+
+static void ramlog_dump(void)
+{
+  FAR struct ramlog_header_s *header = g_sysdev.rl_header;
+  uint32_t bufsize = g_sysdev.rl_bufsize;
+  uint32_t head;
+  uint32_t tail;
+  uint32_t used;
+  uint32_t pos;
+  uint32_t len;
+
+  /* Verify ramlog is initialized */
+
+  if ((header->rl_magic != RAMLOG_MAGIC_READY)
+    {
+      return;
+    }
+
+  /* Output begin marker */
+
+  up_puts("\r\n========== RAMLOG DUMP BEGIN ==========\r\n");
+
+  head = header->rl_head;
+  used = ramlog_bufferused(&g_sysdev);
+  tail = head - used;
+
+  /* Apply length limit */
+
+#if CONFIG_RAMLOG_DUMP_ON_PANIC_SIZE > 0
+  if (used > CONFIG_RAMLOG_DUMP_ON_PANIC_SIZE)
+    {
+      up_puts("[TRUNCATED]\r\n");
+      tail = head - CONFIG_RAMLOG_DUMP_ON_PANIC_SIZE;
+      used = CONFIG_RAMLOG_DUMP_ON_PANIC_SIZE;
+    }
+#endif
+
+  if (used == 0)
+    {
+      up_puts("[EMPTY]\r\n");
+    }
+  else
+    {
+      /* Calculate actual position in buffer */
+
+      pos = tail % bufsize;
+      len = bufsize - pos;
+
+      if (used <= len)
+        {
+          /* No wrap-around, output in one call */
+
+          up_nputs(&header->rl_buffer[pos], used);
+        }
+      else
+        {
+          /* Wrap-around, output in two segments */
+
+          up_nputs(&header->rl_buffer[pos], len);
+          up_nputs(header->rl_buffer, used - len);
+        }
+    }
+
+  /* Output end marker */
+
+  up_puts("\r\n========== RAMLOG DUMP END ==========\r\n");
+}
+
+/****************************************************************************
+ * Name: ramlog_panic_notifier
+ *
+ * Description:
+ *   Panic notifier callback to dump RAMLOG content.
+ *
+ ****************************************************************************/
+
+static int ramlog_panic_notifier(FAR struct notifier_block *nb,
+                                 unsigned long action,
+                                 FAR void *data)
+{
+  UNUSED(nb);
+  UNUSED(data);
+
+  if (action == PANIC_KERNEL)
+    {
+      ramlog_dump();
+    }
+
+  return 0;
+}
+#endif
 
 #if CONFIG_RAMLOG_POLLTIMEOUT_MS > 0
 static inline_function
@@ -251,6 +368,9 @@ static inline_function void ramlog_header_init(FAR struct ramlog_dev_s *dev)
           dev->rl_header->rl_head = 0;
           spin_lock_init(&dev->rl_header->rl_lock);
           atomic_set_release(&dev->rl_header->rl_magic, RAMLOG_MAGIC_READY);
+#ifdef CONFIG_RAMLOG_DUMP_ON_PANIC
+          panic_notifier_chain_register(&g_ramlog_panic_nb);
+#endif
         }
 
         up_irq_restore(flags);

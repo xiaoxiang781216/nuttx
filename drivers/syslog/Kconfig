@@ -355,6 +355,26 @@ config RAMLOG_BUFSIZE
 	---help---
 		Size of the console RAM log.  Default: 1024
 
+config RAMLOG_DUMP_ON_PANIC
+	bool "Dump RAMLOG on panic"
+	default n
+	depends on ARCH_LOWPUTC
+	---help---
+		When enabled, the system will automatically dump the RAMLOG
+		content to serial output when a panic occurs. This helps
+		developers debug crash issues by providing the log history
+		before the crash.
+
+config RAMLOG_DUMP_ON_PANIC_SIZE
+	int "Maximum bytes to dump on panic"
+	default 0
+	depends on RAMLOG_DUMP_ON_PANIC
+	---help---
+		Maximum number of bytes to dump from RAMLOG on panic.
+		Set to 0 to dump all available log data.
+		When set to a positive value, only the most recent N bytes
+		will be dumped.
+
 endif # RAMLOG_SYSLOG
 
 if SYSLOG_DEFAULT
