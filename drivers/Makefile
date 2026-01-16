@@ -91,6 +91,7 @@ include hwtracing/Make.defs
 include aie/Make.defs
 include safety/Make.defs
 include trace32/Make.defs
+include tee/Make.defs
 
 ifeq ($(CONFIG_SPECIFIC_DRIVERS),y)
 -include platform/Make.defs

@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/misc/optee_rpc.h
+ * drivers/tee/optee_rpc.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,8 +20,8 @@
  *
  ****************************************************************************/
 
-#ifndef __DRIVERS_MISC_OPTEE_RPC_H
-#define __DRIVERS_MISC_OPTEE_RPC_H
+#ifndef __DRIVERS_TEE_OPTEE_RPC_H
+#define __DRIVERS_TEE_OPTEE_RPC_H
 
 /****************************************************************************
  * Included Files
@@ -50,4 +50,4 @@ void optee_rpc_handle_cmd(FAR struct optee_priv_data *priv,
 #if defined(__cplusplus)
 }
 #endif
-#endif /* __DRIVERS_MISC_OPTEE_RPC_H */
+#endif /* __DRIVERS_TEE_OPTEE_RPC_H */

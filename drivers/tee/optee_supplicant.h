@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/misc/optee_supplicant.h
+ * drivers/tee/optee_supplicant.h
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -20,8 +20,8 @@
  *
  ****************************************************************************/
 
-#ifndef __DRIVERS_MISC_OPTEE_SUPPLICANT_H
-#define __DRIVERS_MISC_OPTEE_SUPPLICANT_H
+#ifndef __DRIVERS_TEE_OPTEE_SUPPLICANT_H
+#define __DRIVERS_TEE_OPTEE_SUPPLICANT_H
 
 /****************************************************************************
  * Included Files
@@ -66,4 +66,4 @@ int optee_supplicant_recv(FAR uint32_t *func, FAR uint32_t *num_params,
 #if defined(__cplusplus)
 }
 #endif
-#endif /* __DRIVERS_MISC_OPTEE_SUPPLICANT_H */
+#endif /* __DRIVERS_TEE_OPTEE_SUPPLICANT_H */
