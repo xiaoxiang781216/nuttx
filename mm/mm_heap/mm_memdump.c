@@ -311,32 +311,40 @@ void mm_memdump(FAR struct mm_heap_s *heap,
         break;
     }
 
-  syslog(LOG_INFO,
+  if (pid != PID_MM_FREE)
+    {
+      syslog(LOG_INFO,
 #ifdef CONFIG_MM_RECORD_PID
-                   "%6s"
+                       "%6s"
 #endif
-                   "%12s%9s"
+                       "%12s%9s"
 #  ifdef CONFIG_MM_RECORD_SEQNO
-                   "%12s"
+                       "%12s"
 #  endif
-                   "%*s "
+                       "%*s "
 #ifdef CONFIG_MM_RECORD_STACK
-                   "%s"
+                       "%s"
 #endif
-                   "\n",
+                       "\n",
 #ifdef CONFIG_MM_RECORD_PID
-                   "PID",
+                       "PID",
 #endif
-                   "Size", "Overhead",
+                       "Size", "Overhead",
 #ifdef CONFIG_MM_RECORD_SEQNO
-                   "Sequence",
+                       "Sequence",
 #  endif
-                    BACKTRACE_PTR_FMT_WIDTH,
-                   "Address"
+                       BACKTRACE_PTR_FMT_WIDTH,
+                       "Address"
 #ifdef CONFIG_MM_RECORD_STACK
-                   , " Backtrace"
+                       , " Backtrace"
 #endif
-                  );
+                      );
+    }
+  else
+    {
+      syslog(LOG_INFO, "%12s%9s%*s\n",
+             "Size", "Overhead", BACKTRACE_PTR_FMT_WIDTH, "Address");
+    }
 
   memdump_dump_pool(&priv, heap);
 
