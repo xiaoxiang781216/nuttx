@@ -763,13 +763,14 @@ static void rptun_check_peer_status(FAR struct rptun_priv_s *priv)
 
   if (RPTUN_STATUS_CHECK(status, BOARDIOC_SOFTRESETCAUSE_PANIC))
     {
-      syslog(LOG_EMERG,
-             "FATAL: Panic by remote core: %s\n",
+      syslog(LOG_EMERG, "FATAL: Panic by remote core: %s\n",
              RPTUN_GET_CPUNAME(priv->dev));
       PANIC();
     }
   else if(status != 0u)
     {
+      syslog(LOG_EMERG, "FATAL: Reset by remote core: %s reason: %u\n",
+             RPTUN_GET_CPUNAME(priv->dev), RPTUN_REASON_GET(status));
       if (RPTUN_STATUS_CHECK(status, BOARDIOC_SOFTRESETCAUSE_POWEROFF))
         {
 #ifdef CONFIG_BOARDCTL_POWEROFF
@@ -972,11 +973,15 @@ static int rptun_dev_reset(FAR struct rptun_priv_s *priv, unsigned long val)
   status = RPTUN_RSC2STATUS(priv->rproc.rsc_table);
   if (priv->dev->ops->reset)
     {
+      syslog(LOG_EMERG, "Rptun driver reset remote %s reason: %lu\n",
+             RPTUN_GET_CPUNAME(priv->dev), val);
       ret = priv->dev->ops->reset(priv->dev, val);
     }
 
   if (ret == -ENOTSUP)
     {
+      syslog(LOG_EMERG, "Rptun default reset remote %s reason: %lu\n",
+             RPTUN_GET_CPUNAME(priv->dev), val);
       rptun_set_status(priv, val);
 
       ret = -ETIMEDOUT;
