@@ -242,6 +242,10 @@ void arm64_boot_secondary_c_routine(void)
   arm64_mmu_init(false);
 #endif
 
+#ifdef CONFIG_ARM64_MTE
+  arm64_mte_init();
+#endif
+
 #undef g_nx_initstate
   while (OSINIT_OS_INITIALIZING());
 
