@@ -1,0 +1,15 @@
+cc_library_headers {
+    name: "minmea_headers",
+    export_include_dirs: ["."],
+    proprietary: true,
+}
+
+cc_library_static {
+    name: "libminmea",
+    header_libs: ["minmea_headers"],
+    srcs: [
+        "minmea/minmea.c",
+    ],
+    local_include_dirs:["./"],
+    proprietary: true,
+}
