@@ -473,7 +473,7 @@ static int dir_open(FAR struct file *filep)
 {
   FAR struct fs_dirent_s *dir = filep->f_priv;
 
-  return dir_allocate(filep, dir ? dir->fd_path : NULL);
+  return dir_allocate(filep, dir ? dir->fd_path : "");
 }
 
 static int dir_close(FAR struct file *filep)
