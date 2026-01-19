@@ -31,6 +31,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <time.h>
+#include <syslog.h>
 
 #include <nuttx/init.h>
 #include <nuttx/irq.h>
@@ -38,6 +39,7 @@
 #include <nuttx/clock.h>
 #include <nuttx/timers/clkcnt.h>
 #include <nuttx/note/note_driver.h>
+#include <nuttx/syslog/syslog.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/streams.h>
@@ -705,6 +707,16 @@ static inline int note_isenabled_irq(FAR struct note_driver_s *driver,
 static inline int note_isenabled_dump(FAR struct note_driver_s *driver,
                                       uint8_t tag, uint8_t level, int type)
 {
+#  ifdef CONFIG_SYSLOG_TO_SCHED_NOTE
+  if (tag == NOTE_TAG_LOG)
+    {
+      /* For NOTE_TAG_LOG, use the syslog level mask */
+
+      return (g_syslog_mask & LOG_MASK(level)) != 0;
+    }
+
+#endif
+
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   if (!note_isenabled_type(driver, type))
     {
