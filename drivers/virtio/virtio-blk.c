@@ -31,7 +31,6 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/sched_note.h>
 #include <nuttx/percpu.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
@@ -181,9 +180,6 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
   sem_t respsem;
   ssize_t ret;
   int readnum;
-  struct timespec ts;
-  struct tm tm;
-  char timefmt[32];
 
   nxsem_init(&respsem, 0, 0);
 
@@ -213,14 +209,6 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
       virtqueue_disable_cb_lock(vq, &priv->lock);
     }
 
-  clock_gettime(CLOCK_REALTIME, &ts);
-  localtime_r(&ts.tv_sec, &tm);
-  strftime(timefmt, sizeof(timefmt), "%d/%m/%y %H:%M:%S", &tm);
-  sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
-                    "[virtblk] [%s.%06ld] %p Start add buffer:%p s:%"
-                    priblkcnt " n:%u",
-                    timefmt, ts.tv_nsec / NSEC_PER_USEC,
-                    priv, buffer, startsector, nsectors);
   flags = spin_lock_irqsave(&priv->lock);
   ret = virtqueue_add_buffer(vq, vb, readnum, 3 - readnum, &respsem);
   if (ret < 0)
@@ -232,17 +220,11 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
 
   virtqueue_kick(vq);
   spin_unlock_irqrestore(&priv->lock, flags);
-  sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
-                    "[virtblk] %p End add buffer sem: %p",
-                    priv, &respsem);
 
   /* Wait for the request completion */
 
   virtio_blk_wait_complete(vq, &respsem);
 
-  sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
-                    "[virtblk] %p Wait %p success %d",
-                    priv, &respsem, resp.status);
   if (resp.status != VIRTIO_BLK_S_OK)
     {
       vrterr("%s Error\n", write ? "Write" : "Read");
@@ -454,8 +436,6 @@ static void virtio_blk_done(FAR struct virtqueue *vq)
           break;
         }
 
-      sched_note_printf(NOTE_TAG_ALWAYS, LOG_INFO,
-                        "[virtblk] Post sem %p", respsem);
       nxsem_post(respsem);
     }
 }
