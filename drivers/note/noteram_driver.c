@@ -104,13 +104,13 @@ struct noteram_header_s
   volatile uint32_t tail;
   volatile uint32_t read;
   spinlock_t lock;
+  uint8_t buffer[0];
 };
 
 struct noteram_driver_s
 {
   struct note_driver_s driver;
   FAR struct noteram_header_s *header;
-  FAR uint8_t *buffer;
   size_t bufsize;
   unsigned int overwrite;
   unsigned int threshold;
@@ -217,7 +217,6 @@ DEFINE_PER_CPU_BMP(struct noteram_driver_s, g_noteram_driver) =
     &g_noteram_ops
   },
   &g_ramnote_buffer.header,
-  g_ramnote_buffer.buffer,
   NOTERAM_BUFSIZE,
 #ifdef CONFIG_DRIVERS_NOTERAM_DEFAULT_NOOVERWRITE
   NOTE_MODE_OVERWRITE_DISABLE
@@ -495,7 +494,7 @@ static void noteram_remove(FAR struct noteram_driver_s *drv)
 
   /* Get the length of the note at the tail index */
 
-  length = drv->buffer[tail];
+  length = drv->header->buffer[tail];
   DEBUGASSERT(length <= noteram_length(drv));
 
   /* Increment the tail index to remove the entire note from the circular
@@ -554,7 +553,7 @@ static ssize_t noteram_get(FAR struct noteram_driver_s *drv,
 
   /* Get the length of the note at the read index */
 
-  notelen = drv->buffer[read];
+  notelen = drv->header->buffer[read];
   DEBUGASSERT(notelen <= circlen);
 
   /* Is the user buffer large enough to hold the note? */
@@ -573,7 +572,7 @@ static ssize_t noteram_get(FAR struct noteram_driver_s *drv,
     {
       /* Copy the next byte at the read index */
 
-      *buffer++ = drv->buffer[read];
+      *buffer++ = drv->header->buffer[read];
 
       /* Adjust indices and counts */
 
@@ -983,8 +982,8 @@ static void noteram_add(FAR struct note_driver_s *driver,
   head = drv->header->head;
   space = drv->bufsize - head;
   space = space < notelen ? space : notelen;
-  memcpy(drv->buffer + head, note, space);
-  memcpy(drv->buffer, buf + space, notelen - space);
+  memcpy(drv->header->buffer + head, note, space);
+  memcpy(drv->header->buffer, buf + space, notelen - space);
   drv->header->head = noteram_next(drv, head, notelen);
   spin_unlock_irqrestore_notrace(&drv->header->lock, flags);
 
@@ -1715,7 +1714,6 @@ noteram_initialize_with_buffer(FAR const char *devname,
 
   noteram_header_init(drv);
 
-  drv->buffer = (FAR uint8_t *)(drv->header + 1);
   drv->bufsize = bufsize;
   drv->overwrite = overwrite;
 
