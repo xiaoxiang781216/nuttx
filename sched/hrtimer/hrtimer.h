@@ -55,7 +55,9 @@
  * being the left-most (minimum) node in the tree.
  */
 
+#ifdef CONFIG_HRTIMER_TREE
 RB_HEAD(hrtimer_tree_s, hrtimer_node_s);
+#endif
 
 /****************************************************************************
  * Public Data
@@ -65,9 +67,15 @@ RB_HEAD(hrtimer_tree_s, hrtimer_node_s);
 
 extern seqcount_t g_hrtimer_lock;
 
+#ifdef CONFIG_HRTIMER_TREE
 /* Red-Black tree containing all active high-resolution timers */
 
 extern struct hrtimer_tree_s g_hrtimer_tree;
+#else
+/* List containing all active high-resolution timers */
+
+extern struct list_node g_hrtimer_list;
+#endif
 
 /* Array of pointers to currently running high-resolution timers
  * for each CPU in SMP configurations. Index corresponds to CPU ID.
@@ -176,6 +184,7 @@ static inline_function void hrtimer_reprogram(uint64_t next_expired)
  *   >=0 if a expires after b
  ****************************************************************************/
 
+#ifdef CONFIG_HRTIMER_TREE
 static inline_function
 int hrtimer_compare(FAR const hrtimer_node_t *a,
                     FAR const hrtimer_node_t *b)
@@ -185,6 +194,7 @@ int hrtimer_compare(FAR const hrtimer_node_t *a,
 
   return clock_compare(atimer->expired, btimer->expired) ? -1 : 1;
 }
+#endif
 
 /****************************************************************************
  * Red-Black Tree Prototype for high-resolution timers
@@ -195,7 +205,9 @@ int hrtimer_compare(FAR const hrtimer_node_t *a,
  *   operations based on timer expiration time.
  ****************************************************************************/
 
+#ifdef CONFIG_HRTIMER_TREE
 RB_PROTOTYPE(hrtimer_tree_s, hrtimer_node_s, entry, hrtimer_compare);
+#endif
 
 /****************************************************************************
  * Name: hrtimer_is_armed
@@ -221,7 +233,11 @@ static inline_function bool hrtimer_is_armed(FAR hrtimer_t *hrtimer)
 
 static inline_function void hrtimer_remove(FAR hrtimer_t *hrtimer)
 {
+#ifdef CONFIG_HRTIMER_TREE
   RB_REMOVE(hrtimer_tree_s, &g_hrtimer_tree, &hrtimer->node);
+#else
+  list_delete_fast(&hrtimer->node.entry);
+#endif
 
   /* Explicitly clear parent to mark the timer as unarmed */
 
@@ -237,7 +253,24 @@ static inline_function void hrtimer_remove(FAR hrtimer_t *hrtimer)
 
 static inline_function void hrtimer_insert(FAR hrtimer_t *hrtimer)
 {
+#ifdef CONFIG_HRTIMER_TREE
   RB_INSERT(hrtimer_tree_s, &g_hrtimer_tree, &hrtimer->node);
+#else
+  FAR hrtimer_t *curr;
+  uint64_t expired = hrtimer->expired;
+
+  list_for_every_entry(&g_hrtimer_list, curr, hrtimer_t, node.entry)
+    {
+      /* Until curr->expired has not timed out relative to expired */
+
+      if (!clock_compare(curr->expired, expired))
+        {
+          break;
+        }
+    }
+
+  list_add_before(&curr->node.entry, &hrtimer->node.entry);
+#endif
 }
 
 /****************************************************************************
@@ -252,7 +285,11 @@ static inline_function void hrtimer_insert(FAR hrtimer_t *hrtimer)
 
 static inline_function FAR hrtimer_t *hrtimer_get_first(void)
 {
+#ifdef CONFIG_HRTIMER_TREE
   return (FAR hrtimer_t *)RB_MIN(hrtimer_tree_s, &g_hrtimer_tree);
+#else
+  return list_first_entry(&g_hrtimer_list, FAR hrtimer_t, node.entry);
+#endif
 }
 
 /****************************************************************************
@@ -276,7 +313,11 @@ static inline_function FAR hrtimer_t *hrtimer_get_first(void)
 
 static inline_function bool hrtimer_is_first(FAR hrtimer_t *hrtimer)
 {
+#ifdef CONFIG_HRTIMER_TREE
   return RB_LEFT(&hrtimer->node, entry) == NULL;
+#else
+  return hrtimer == list_first_entry(&g_hrtimer_list, hrtimer_t, node.entry);
+#endif
 }
 
 /****************************************************************************
