@@ -1007,9 +1007,9 @@ static int audio_rpmsg_allocshm(FAR struct audio_rpmsg_s *aud)
       return 0;
     }
 
-  /* We fix allocating share memory in consumer core. */
+  /* We fix allocating share memory in master core. */
 
-  if (aud->consumer)
+  if (rpmsg_alloc_local(rdev))
     {
       size_t shmsize = aud->binfo.buffer_size * aud->binfo.nbuffers;
       aud->base = rpmsg_alloc_buf(rdev, shmsize, 4);
@@ -1055,7 +1055,7 @@ static void audio_rpmsg_freeshm(FAR struct audio_rpmsg_s *aud)
       return;
     }
 
-  if (aud->consumer)
+  if (rpmsg_alloc_local(rdev))
     {
       rpmsg_free_buf(rdev, aud->base);
     }
@@ -1147,8 +1147,9 @@ static int audio_rpmsg_freeshm_handler(FAR struct rpmsg_endpoint *ept,
                                        uint32_t src, FAR void *priv)
 {
   FAR struct audio_rpmsg_s *aud = ept->priv;
+  FAR struct rpmsg_device *rdev = ept->rdev;
 
-  DEBUGASSERT(aud->consumer);
+  DEBUGASSERT(rpmsg_alloc_local(rdev));
 
   nxrmutex_lock(&aud->mutex);
   audio_rpmsg_freeshm(aud);
@@ -1161,10 +1162,11 @@ static int audio_rpmsg_allocshm_handler(FAR struct rpmsg_endpoint *ept,
                                         uint32_t src, FAR void *priv)
 {
   FAR struct audio_rpmsg_s *aud = ept->priv;
+  FAR struct rpmsg_device *rdev = ept->rdev;
   FAR struct audio_rpmsg_alloc_buffer_s *req = data;
   int ret = 0;
 
-  DEBUGASSERT(aud->consumer);
+  DEBUGASSERT(rpmsg_alloc_local(rdev));
 
   audinfo("%s handle allocbuffer:%d\n", aud->devname, aud->refs);
 
