@@ -48,7 +48,7 @@ set(SRCS
     sched_sysinfo.c
     sched_get_stateinfo.c
     sched_switchcontext.c
-    sched_processtimer.c)
+    sched_timer.c)
 
 if(DEFINED CONFIG_STACKCHECK_MARGIN)
   if(NOT CONFIG_STACKCHECK_MARGIN EQUAL -1)
@@ -97,7 +97,9 @@ if(NOT CONFIG_SCHED_CPULOAD_NONE)
 endif()
 
 if(CONFIG_SCHED_TICKLESS)
-  list(APPEND SRCS sched_timerexpiration.c)
+  list(APPEND SRCS sched_tickexpiration.c)
+else()
+  list(APPEND SRCS sched_processtick.c)
 endif()
 
 if(CONFIG_SCHED_CRITMONITOR)

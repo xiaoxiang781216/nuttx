@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/sched/sched_processtimer.c
+ * sched/sched/sched_processtick.c
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -165,7 +165,7 @@ static inline void nxsched_process_scheduler(void)
  *
  ****************************************************************************/
 
-static void nxsched_process_tick(void)
+void nxsched_process_tick(void)
 {
 #ifdef CONFIG_CLOCK_TIMEKEEPING
   /* Process wall time */
