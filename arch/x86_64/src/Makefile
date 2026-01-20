@@ -70,7 +70,7 @@ EXTRA_LIBS += $(wildcard $(APPDIR)$(DELIM)staging$(DELIM)*$(LIBEXT))
 LDSTARTGROUP ?= --start-group
 LDENDGROUP ?= --end-group
 
-LDFLAGS += -z max-page-size=0x1000 $(addprefix -T,$(call CONVERT_PATH,$(ARCHSCRIPT)))
+LDFLAGS += -z max-page-size=0x1000 $(addprefix -T,$(addsuffix .tmp,$(call CONVERT_PATH,$(ARCHSCRIPT))))
 LOADER_LDFLAGS += $(LOADER_ARCHSCRIPT)
 
 BOARDMAKE = $(if $(wildcard board$(DELIM)Makefile),y,)
