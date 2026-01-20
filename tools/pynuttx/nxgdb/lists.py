@@ -50,6 +50,7 @@ class NxList:
         self.container_type = container_type
         self.member = member
         self.current = self._get_first()
+        self._visited = set()  # Track visited nodes to detect cycles
 
     def _get_first(self):
         """Get the initial node based on the direction of traversal."""
@@ -76,6 +77,14 @@ class NxList:
             raise StopIteration
 
         node = self.current
+        node_addr = int(node)
+
+        # Detect cycle: if we've seen this node before, stop iteration
+        if node_addr in self._visited:
+            gdb.write(f"Warning: cycle detected in list at node {node_addr:#x}\n")
+            raise StopIteration
+
+        self._visited.add(node_addr)
         self.current = self._get_prev(node) if self.reverse else self._get_next(node)
         return (
             utils.container_of(node, self.container_type, self.member)
