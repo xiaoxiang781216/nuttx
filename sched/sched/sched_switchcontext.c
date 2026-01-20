@@ -27,7 +27,7 @@
 #include "sched/sched.h"
 #include <nuttx/sched_note.h>
 
-#ifdef CONFIG_SCHED_PERF_EVENTS
+#ifdef CONFIG_PERF_EVENTS
 #  include <nuttx/perf.h>
 #endif
 
@@ -82,7 +82,7 @@ void nxsched_suspend_scheduler(FAR struct tcb_s *tcb)
   sched_note_suspend(tcb);
 #endif
 
-#ifdef CONFIG_SCHED_PERF_EVENTS
+#ifdef CONFIG_PERF_EVENTS
   perf_event_task_sched_out(tcb);
 #endif
 }
@@ -124,7 +124,7 @@ void nxsched_resume_scheduler(FAR struct tcb_s *tcb)
   sched_note_resume(tcb);
 #endif
 
-#ifdef CONFIG_SCHED_PERF_EVENTS
+#ifdef CONFIG_PERF_EVENTS
   perf_event_task_sched_in(tcb);
 #endif
 }

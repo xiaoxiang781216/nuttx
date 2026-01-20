@@ -147,7 +147,7 @@ ifeq ($(CONFIG_ARM64_SEMIHOSTING_HOSTFS),y)
   CMN_CSRCS += arm64_hostfs.c
 endif
 
-ifeq ($(CONFIG_SCHED_PERF_EVENTS),y)
+ifeq ($(CONFIG_PERF_EVENTS),y)
 CMN_CSRCS += arm64_pmuv3.c
 endif
 

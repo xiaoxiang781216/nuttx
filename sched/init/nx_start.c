@@ -48,7 +48,7 @@
 #include <nuttx/drivers/drivers.h>
 #include <nuttx/init.h>
 
-#ifdef CONFIG_SCHED_PERF_EVENTS
+#ifdef CONFIG_PERF_EVENTS
 #  include <nuttx/perf.h>
 #endif
 
@@ -618,7 +618,7 @@ static void memory_initialize(void)
   iob_initialize();
 #endif
 
-#ifdef CONFIG_SCHED_PERF_EVENTS
+#ifdef CONFIG_PERF_EVENTS
   perf_event_init();
 #endif
 
