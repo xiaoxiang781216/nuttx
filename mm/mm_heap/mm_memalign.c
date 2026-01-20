@@ -283,10 +283,9 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
   sched_note_heap(NOTE_HEAP_ALLOC, heap, (FAR void *)alignedchunk, size,
                   heap->mm_curused);
 
+  MM_RECORD(heap, node);
   kasan_bypass(bypass);
   DEBUGVERIFY(nxrmutex_unlock(&heap->mm_lock));
-
-  MM_RECORD(heap, node);
 
   alignedchunk = (uintptr_t)kasan_unpoison((FAR const void *)alignedchunk,
                                            size - MM_ALLOCNODE_OVERHEAD);

@@ -97,6 +97,7 @@ static inline void mempool_add_queue(FAR struct mempool_s *pool,
   while (nblks-- > 0u)
     {
       FAR sq_entry_t *node = (FAR sq_entry_t *)(base + blocksize * nblks);
+      bool bypass;
 #ifdef CONFIG_MM_RECORD
       FAR struct mempool_record_s *record = (FAR void *)node;
 
@@ -109,7 +110,9 @@ static inline void mempool_add_queue(FAR struct mempool_s *pool,
 #  endif
       record->magic = MEMPOOL_MAGIC_FREE;
 #endif
+      bypass = kasan_bypass(true);
       sq_addlast(node, queue);
+      kasan_bypass(bypass);
     }
 }
 
@@ -577,14 +580,13 @@ FAR void *mempool_allocate_throttled(FAR struct mempool_s *pool,
   if (blk != NULL)
     {
       pool->nalloc++;
-      kasan_bypass(bypass);
-      spin_unlock_irqrestore(&pool->lock, flags);
-
 #ifdef CONFIG_MM_RECORD
       record = mempool_get_record_from_block(blk);
       DEBUGASSERT(record->magic == MEMPOOL_MAGIC_FREE);
       mempool_record(pool, record, MEMPOOL_MAGIC_ALLOC);
 #endif
+      kasan_bypass(bypass);
+      spin_unlock_irqrestore(&pool->lock, flags);
 
       blk = kasan_unpoison(blk, pool->blocksize);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS

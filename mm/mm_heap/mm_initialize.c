@@ -68,9 +68,11 @@ static FAR void *mempool_memalign(FAR void *arg, size_t alignment,
   ret = mm_memalign(arg, alignment, size);
   if (ret)
     {
+      bool bypass = kasan_bypass(true);
       node = (FAR struct mm_allocnode_s *)
       ((uintptr_t)ret - MM_SIZEOF_ALLOCNODE);
       node->pid = PID_MM_MEMPOOL;
+      kasan_bypass(bypass);
     }
 
   return ret;

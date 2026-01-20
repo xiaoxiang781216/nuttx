@@ -165,6 +165,12 @@
 #define MM_PREVNODE_IS_ALLOC(node) (((node)->size & MM_PREVFREE_BIT) == 0)
 #define MM_PREVNODE_IS_FREE(node) (((node)->size & MM_PREVFREE_BIT) != 0)
 
+#ifdef CONFIG_MM_KASAN_HW_TAGS
+#  define aligned_node aligned_data(MM_ALIGN)
+#else
+#  define aligned_node
+#endif
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -179,7 +185,7 @@ typedef size_t mmsize_t;
 
 /* This describes an allocated chunk */
 
-struct mm_allocnode_s
+struct aligned_node mm_allocnode_s
 {
   mmsize_t preceding;                       /* Physical preceding chunk size */
   mmsize_t size;                            /* Size of this chunk */

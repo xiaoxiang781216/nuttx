@@ -334,6 +334,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
     {
       sched_note_heap(NOTE_HEAP_ALLOC, heap, ret, nodesize,
                       heap->mm_curused);
+      MM_RECORD(heap, node);
     }
 
   kasan_bypass(bypass);
@@ -341,7 +342,6 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
   if (ret)
     {
-      MM_RECORD(heap, node);
       ret = kasan_unpoison(ret, nodesize - MM_ALLOCNODE_OVERHEAD);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
       memset(ret, MM_ALLOC_MAGIC, alignsize - MM_ALLOCNODE_OVERHEAD);
