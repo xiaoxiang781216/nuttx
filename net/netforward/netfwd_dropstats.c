@@ -82,7 +82,6 @@ static int proto_dropstats(int proto)
 
   return OK;
 }
-#endif
 
 /****************************************************************************
  * Public Functions
@@ -147,6 +146,7 @@ void ipv4_dropstats(FAR struct ipv4_hdr_s *ipv4)
   g_netstats.ipv4.drop++;
 }
 #endif
+#endif /* CONFIG_NET_IPFORWARD */
 
 /****************************************************************************
  * Name: netfwd_dropstats
@@ -166,6 +166,7 @@ void netfwd_dropstats(FAR struct forward_s *fwd)
 {
   switch (fwd->f_domain)
   {
+#ifdef CONFIG_NET_IPFORWARD
 #ifdef CONFIG_NET_IPv4
     case PF_INET:
       {
@@ -180,6 +181,8 @@ void netfwd_dropstats(FAR struct forward_s *fwd)
       }
       break;
 #endif
+#endif /* CONFIG_NET_IPFORWARD */
+
 #ifdef CONFIG_NET_CANFORWARD
     case PF_CAN:
       {
