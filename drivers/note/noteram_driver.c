@@ -292,10 +292,12 @@ static void noteram_timeout_handler(wdparm_t arg)
 static inline void noteram_header_init(FAR struct noteram_driver_s *drv)
 {
   uint32_t magic;
+  irqstate_t flags;
 
   while ((magic = atomic_read_acquire(&drv->header->magic)) !=
          NOTERAM_MAGIC_READY)
     {
+      flags = up_irq_save();
       while (magic != NOTERAM_MAGIC_INIT &&
              atomic_cmpxchg_relaxed(&drv->header->magic, &magic,
                                     NOTERAM_MAGIC_INIT))
@@ -306,6 +308,8 @@ static inline void noteram_header_init(FAR struct noteram_driver_s *drv)
           spin_lock_init(&drv->header->lock);
           atomic_set_release(&drv->header->magic, NOTERAM_MAGIC_READY);
         }
+
+      up_irq_restore(flags);
     }
 }
 
