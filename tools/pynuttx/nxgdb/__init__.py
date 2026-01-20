@@ -48,6 +48,8 @@ def register_commands(event):
     gdb.write("set python print-stack full\n")
     gdb.execute('handle SIGUSR1 "nostop" "pass" "noprint"')
     gdb.write('"handle SIGUSR1 "nostop" "pass" "noprint"\n')
+    gdb.execute("set trust-readonly-sections on")
+    gdb.write("set trust-readonly-sections on")
 
     def init_gdb_commands(m: str):
         try:
