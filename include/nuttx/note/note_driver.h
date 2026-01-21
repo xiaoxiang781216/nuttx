@@ -338,12 +338,6 @@ struct note_filter_mode_s
 #endif
 };
 
-struct note_filter_named_mode_s
-{
-  char name[NAME_MAX];
-  struct note_filter_mode_s mode;
-};
-
 /* This is the type of the argument passed to the NOTECTL_GETSYSCALLFILTER
  * and NOTECTL_SETSYSCALLFILTER ioctls
  */
@@ -352,12 +346,6 @@ struct note_filter_named_mode_s
 struct note_filter_syscall_s
 {
   uint8_t syscall_mask[(SYS_nsyscalls + 7) / 8];
-};
-
-struct note_filter_named_syscall_s
-{
-  char name[NAME_MAX];
-  struct note_filter_syscall_s syscall_mask;
 };
 #endif
 
@@ -370,12 +358,6 @@ struct note_filter_irq_s
 {
   uint8_t irq_mask[(NR_IRQS + 7) / 8];
 };
-
-struct note_filter_named_irq_s
-{
-  char name[NAME_MAX];
-  struct note_filter_irq_s irq_mask;
-};
 #endif
 
 struct note_filter_tag_s
@@ -386,12 +368,6 @@ struct note_filter_tag_s
 struct note_filter_level_s
 {
   uint8_t level;
-};
-
-struct note_filter_named_tag_s
-{
-  char name[NAME_MAX];
-  struct note_filter_tag_s tag_mask;
 };
 
 struct note_filter_s
