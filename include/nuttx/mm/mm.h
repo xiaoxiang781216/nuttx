@@ -207,7 +207,7 @@ struct mm_pool_config_s
   size_t            chunksize;
   size_t            init_chunksize;
   size_t            expandsize;
-  size_t            dict_expendsize;
+  size_t            dict_expandsize;
 };
 
 /****************************************************************************

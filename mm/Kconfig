@@ -42,7 +42,7 @@ config MM_POOL_PARAM
 		chunksize: multiples pool chunk size
 		init_chunksize: multiples pool chunk initial size
 		expandsize: expand size for each mempool in multiple mempool
-		dict_expendsize: expand size for multiple mempool's dictionary
+		dict_expandsize: expand size for multiple mempool's dictionary
 		example:
 		(sizet[]){4,8,16,32,64,128,256},(sizet[]){256,256,256,256,256,256,256},7,256,4096,65536,4096,4096
 
@@ -101,7 +101,7 @@ config MM_POOL_PARAM_KERNEL
 		chunksize: multiples pool chunk size
 		init_chunksize: multiples pool chunk initial size
 		expandsize: expand size for each mempool in multiple mempool
-		dict_expendsize: expand size for multiple mempool's dictionary
+		dict_expandsize: expand size for multiple mempool's dictionary
 		example:
 		(sizet[]){4,8,16,32,64,128,256},(sizet[]){256,256,256,256,256,256,256},7,256,4096,65536,4096,4096
 

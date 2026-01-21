@@ -641,10 +641,10 @@ mempool_multiple_init(FAR const char *name,
             }
           else if (mpool->headsize == 0u)
             {
-              mpool->dict_col_num_log2 = fls(config->dict_expendsize /
+              mpool->dict_col_num_log2 = fls(config->dict_expandsize /
                                             sizeof(struct mpool_dict_s));
 
-              mpool->dict_row_num = config->dict_expendsize /
+              mpool->dict_row_num = config->dict_expandsize /
                                     sizeof(FAR struct mpool_dict_s *);
               mpool->dict =
                   mempool_multiple_alloc_chunk(

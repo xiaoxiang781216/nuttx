@@ -1167,9 +1167,9 @@ void mm_initialize_pool(FAR const struct mm_heap_config_s *config,
       def.expandsize = CONFIG_MM_HEAP_MEMPOOL_EXPAND_SIZE;
     }
 
-  if (def.dict_expendsize == 0)
+  if (def.dict_expandsize == 0)
     {
-      def.dict_expendsize = CONFIG_MM_HEAP_MEMPOOL_DICTIONARY_EXPAND_SIZE;
+      def.dict_expandsize = CONFIG_MM_HEAP_MEMPOOL_DICTIONARY_EXPAND_SIZE;
     }
 #endif
 
