@@ -407,19 +407,11 @@ static void ramlog_copybuf(FAR struct ramlog_dev_s *priv,
 static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
                              FAR const char *buffer, size_t len)
 {
-  size_t buflen = len;
-  irqstate_t flags;
-
 #ifdef CONFIG_RAMLOG_SYSLOG
   FAR struct ramlog_header_s *header = priv->rl_header;
-
-  if (header->rl_magic != RAMLOG_MAGIC_NUMBER && priv == &g_sysdev)
-    {
-      memset(header, 0, sizeof(g_sysbuffer));
-      header->rl_magic = RAMLOG_MAGIC_NUMBER;
-      spin_lock_init(&header->rl_lock);
-    }
 #endif
+  size_t buflen = len;
+  irqstate_t flags;
 
   /* Disable interrupts (in case we are NOT called from interrupt handler) */
 
@@ -430,6 +422,14 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
       spin_unlock_irqrestore_nopreempt(&priv->rl_lock, flags);
       return len;
     }
+
+#ifdef CONFIG_RAMLOG_SYSLOG
+  if (header->rl_magic != RAMLOG_MAGIC_NUMBER && priv == &g_sysdev)
+    {
+      memset(header, 0, sizeof(g_sysbuffer));
+      header->rl_magic = RAMLOG_MAGIC_NUMBER;
+    }
+#endif
 
   if (buflen > priv->rl_bufsize)
     {
