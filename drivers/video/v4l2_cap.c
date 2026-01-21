@@ -318,10 +318,11 @@ static int capture_dma_attach(FAR struct dma_buf *dmabuf,
                               FAR struct dma_buf_attachment *attachment);
 static void capture_dma_detach(FAR struct dma_buf *dmabuf,
                                FAR struct dma_buf_attachment *attachment);
-static void *capture_dma_map_buf(FAR struct dma_buf_attachment *attachment,
-                                 enum dma_data_direction direction);
+static uintptr_t
+capture_dma_map_buf(FAR struct dma_buf_attachment *attachment,
+                    enum dma_data_direction direction);
 static void capture_dma_unmap_buf(FAR struct dma_buf_attachment *attachment,
-                                  FAR void *buf,
+                                  uintptr_t buf,
                                   enum dma_data_direction direction);
 static void capture_dma_release(FAR struct dma_buf *dmabuf);
 static int capture_dma_begin_cpu_access(FAR struct dma_buf *dmabuf,
@@ -612,15 +613,16 @@ static void capture_dma_detach(FAR struct dma_buf *dmabuf,
 {
 }
 
-static void *capture_dma_map_buf(FAR struct dma_buf_attachment *attachment,
-                                 enum dma_data_direction direction)
+static uintptr_t
+capture_dma_map_buf(FAR struct dma_buf_attachment *attachment,
+                    enum dma_data_direction direction)
 {
   FAR v4l2_buffer_t *buf = (FAR v4l2_buffer_t *)attachment->priv;
-  return buf->m.vaddr;
+  return (uintptr_t)buf->m.vaddr;
 }
 
 static void capture_dma_unmap_buf(FAR struct dma_buf_attachment *attachment,
-                                  FAR void *buf,
+                                  uintptr_t buf,
                                   enum dma_data_direction direction)
 {
 }
