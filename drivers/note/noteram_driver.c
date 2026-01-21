@@ -283,12 +283,10 @@ static void noteram_timeout_handler(wdparm_t arg)
 static inline void noteram_header_init(FAR struct noteram_driver_s *drv)
 {
   uint32_t magic;
-  irqstate_t flags;
 
   while ((magic = atomic_read_acquire(&drv->header->magic)) !=
          NOTERAM_MAGIC_READY)
     {
-      flags = up_irq_save();
       while (magic != NOTERAM_MAGIC_INIT &&
              atomic_cmpxchg_relaxed(&drv->header->magic, &magic,
                                     NOTERAM_MAGIC_INIT))
@@ -299,8 +297,6 @@ static inline void noteram_header_init(FAR struct noteram_driver_s *drv)
           spin_lock_init(&drv->header->lock);
           atomic_set_release(&drv->header->magic, NOTERAM_MAGIC_READY);
         }
-
-      up_irq_restore(flags);
     }
 }
 
@@ -1694,7 +1690,6 @@ noteram_initialize_with_buffer(FAR const char *devname,
     }
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-  memcpy(drv + 1, devpath, len);
   drv->driver.name = (FAR const char *)(drv + 1);
   drv->driver.filter.mode.type_mask =
     CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE;
@@ -1735,4 +1730,43 @@ noteram_initialize_with_buffer(FAR const char *devname,
     }
 
   return &drv->driver;
+}
+
+/****************************************************************************
+ * Name: noteram_deinitialize
+ *
+ * Description:
+ *   Unregister noteram driver.
+ *
+ * Input Parameters:
+ *  drv: the ptr of note_driver_s.
+ *
+ * Returned Value:
+ *  None.
+ *
+ ****************************************************************************/
+
+void noteram_deinitialize(struct note_driver_s *drv)
+{
+  uint32_t magic;
+  FAR struct noteram_driver_s *noteram_drv;
+
+  if (drv == NULL)
+    {
+      return;
+    }
+
+  noteram_drv = container_of(drv, struct noteram_driver_s, driver);
+
+  atomic_cmpxchg_relaxed(&noteram_drv->header->magic, &magic, 0);
+
+#ifdef CONFIG_DRIVERS_NOTERAM_CRASH_DUMP
+  panic_notifier_chain_unregister(&noteram_drv->nb);
+#endif
+
+  note_driver_unregister(drv);
+
+  unregister_driver((char *)(noteram_drv + 1));
+
+  kmm_free(noteram_drv);
 }
