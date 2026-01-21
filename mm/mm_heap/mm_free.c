@@ -58,6 +58,40 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
   bypass = kasan_bypass(true);
 
 #ifdef CONFIG_DEBUG_ASSERTIONS
+  /* Check for double-free:
+   * Step 1: Check magic first (fast path, filters 99.99% cases)
+   * Step 2: If magic matches, verify it's actually in delay list
+   *         (slow path, handles extreme case where user data == magic)
+   */
+
+  if (tmp->magic == ~(uintptr_t)mem)
+    {
+      /* Magic matches, but could be false positive from user data.
+       * Traverse delay list to confirm this is really a duplicate.
+       */
+
+      FAR struct mm_delaynode_s *node;
+
+      for (node = delay->head; node != NULL; node = node->flink)
+        {
+          if (node == tmp)
+            {
+              /* Confirmed: this memory is already in delay list.
+               * This is a real double-free!
+               */
+
+              kasan_bypass(bypass);
+              up_irq_restore(flags);
+              DEBUGASSERT(false);  /* Double-free detected! */
+              return;
+            }
+        }
+
+      /* Magic matched but not in list - just user data coincidence.
+       * Continue with normal flow.
+       */
+    }
+
 #  ifdef CONFIG_MM_HEAP_MEMPOOL
   if (!heap->mm_mpool || !mempool_multiple_member(heap->mm_mpool, mem))
 #  endif
@@ -67,6 +101,8 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem,
              MM_SIZEOF_ALLOCNODE);
       DEBUGASSERT(MM_NODE_IS_ALLOC(node));
     }
+
+  tmp->magic = ~(uintptr_t)mem;
 #endif
 
   tmp->flink  = delay->head;

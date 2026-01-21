@@ -118,6 +118,9 @@ struct mm_allocnode_s
 struct mm_delaynode_s
 {
   struct mm_delaynode_s *flink;
+#ifdef CONFIG_DEBUG_ASSERTIONS
+  uintptr_t magic;  /* Magic (~addr) to detect double-free */
+#endif
 };
 
 struct mm_delayhead_s
@@ -258,6 +261,43 @@ static void add_delaylist(struct mm_heap_s *heap, void *mem)
   /* Delay the deallocation until a more appropriate time. */
 
   flags = spin_lock_irqsave(&heap->lock);
+
+#ifdef CONFIG_DEBUG_ASSERTIONS
+  /* Check for double-free:
+   * Step 1: Check magic first (fast path, filters 99.99% cases)
+   * Step 2: If magic matches, verify it's actually in delay list
+   *         (slow path, handles extreme case where user data == magic)
+   */
+
+  if (tmp->magic == ~(uintptr_t)mem)
+    {
+      /* Magic matches, but could be false positive from user data.
+       * Traverse delay list to confirm this is really a duplicate.
+       */
+
+      FAR struct mm_delaynode_s *node;
+
+      for (node = delay->head; node != NULL; node = node->flink)
+        {
+          if (node == tmp)
+            {
+              /* Confirmed: this memory is already in delay list.
+               * This is a real double-free!
+               */
+
+              up_irq_restore(flags);
+              DEBUGASSERT(false);  /* Double-free detected! */
+              return;
+            }
+        }
+
+      /* Magic matched but not in list - just user data coincidence.
+       * Continue with normal flow.
+       */
+    }
+
+  tmp->magic = ~(uintptr_t)mem;
+#endif
 
   tmp->flink  = delay->head;
   delay->head = tmp;
