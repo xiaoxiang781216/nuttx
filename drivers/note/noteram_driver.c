@@ -1753,8 +1753,14 @@ noteram_initialize_with_buffer(FAR const char *devname,
 void noteram_deinitialize(struct note_driver_s *drv)
 {
   uint32_t magic;
-  FAR struct noteram_driver_s *noteram_drv =
-      container_of(drv, struct noteram_driver_s, driver);
+  FAR struct noteram_driver_s *noteram_drv;
+
+  if (drv == NULL)
+    {
+      return;
+    }
+
+  noteram_drv = container_of(drv, struct noteram_driver_s, driver);
 
   atomic_cmpxchg_relaxed(&noteram_drv->header->magic, &magic, 0);
 
