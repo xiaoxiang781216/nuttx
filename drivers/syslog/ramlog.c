@@ -60,8 +60,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define RAMLOG_MAGIC_INIT  0x12340000
-#define RAMLOG_MAGIC_READY 0x12345678
+#define RAMLOG_MAGIC_NUMBER 0x12345678
 
 /****************************************************************************
  * Private Types
@@ -77,7 +76,7 @@ struct ramlog_ratelimit_s
 
 struct ramlog_header_s
 {
-  atomic_t          rl_magic;    /* The rl_magic number for ramlog buffer init */
+  uint32_t          rl_magic;    /* The rl_magic number for ramlog buffer init */
   volatile uint32_t rl_head;     /* The head index (where data is added,natural growth) */
   char              rl_buffer[]; /* Circular RAM buffer */
 };
@@ -221,38 +220,6 @@ static void ramlog_timeout_handler(wdparm_t arg)
 #else
 #  define ramlog_timeout_reset(dev)
 #endif
-
-/****************************************************************************
- * Name: ramlog_header_init
- *
- * Description:
- *   Initialize the header of circular buffer.
- *
- * Input Parameters:
- *   driver - The channel of note driver
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-static inline_function void ramlog_header_init(FAR struct ramlog_dev_s *dev)
-{
-  uint32_t magic;
-
-  while ((magic = atomic_read_acquire(&dev->rl_header->rl_magic)) !=
-         RAMLOG_MAGIC_READY)
-    {
-      while (magic != RAMLOG_MAGIC_INIT &&
-             atomic_cmpxchg_relaxed(&dev->rl_header->rl_magic, &magic,
-                                    RAMLOG_MAGIC_INIT))
-        {
-          dev->rl_header->rl_head = 0;
-          spin_lock_init(&dev->rl_lock);
-          atomic_set_release(&dev->rl_header->rl_magic, RAMLOG_MAGIC_READY);
-        }
-    }
-}
 
 /****************************************************************************
  * Name: ramlog_ratelimit
@@ -443,12 +410,14 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
   size_t buflen = len;
   irqstate_t flags;
 
-  /* Initialize the ramlog header if it has not been initialized yet. */
-
 #ifdef CONFIG_RAMLOG_SYSLOG
-  if (priv == &g_sysdev)
+  FAR struct ramlog_header_s *header = priv->rl_header;
+
+  if (header->rl_magic != RAMLOG_MAGIC_NUMBER && priv == &g_sysdev)
     {
-      ramlog_header_init(priv);
+      memset(header, 0, sizeof(g_sysbuffer));
+      header->rl_magic = RAMLOG_MAGIC_NUMBER;
+      spin_lock_init(&header->rl_lock);
     }
 #endif
 
@@ -864,10 +833,6 @@ int ramlog_register(FAR const char *devpath, FAR char *buffer, size_t buflen)
 
       priv->rl_bufsize = buflen - sizeof(struct ramlog_header_s);
       priv->rl_header = (FAR struct ramlog_header_s *)buffer;
-
-      /* Initialize the ramlog header if it has not been initialized yet. */
-
-      ramlog_header_init(priv);
 
       /* Register the character driver */
 
