@@ -641,20 +641,16 @@ static int capture_dma_begin_cpu_access(FAR struct dma_buf *dmabuf,
                                         enum dma_data_direction direction)
 {
   FAR v4l2_buffer_t *buf = (FAR v4l2_buffer_t *)dmabuf->priv;
-  uintptr_t start;
-  uintptr_t end;
 
   if (buf == NULL)
     {
       return -EINVAL;
     }
 
-  start = (uintptr_t)buf->m.vaddr;
-  end = start + buf->length;
-
   if (direction == DMA_FROM_DEVICE || direction == DMA_BIDIRECTIONAL)
     {
-      up_invalidate_dcache(start, end);
+      up_invalidate_dcache((uintptr_t)buf->m.vaddr,
+                           (uintptr_t)(buf->m.vaddr + buf->length));
     }
 
   return 0;
@@ -664,20 +660,16 @@ static int capture_dma_end_cpu_access(FAR struct dma_buf *dmabuf,
                                       enum dma_data_direction direction)
 {
   FAR v4l2_buffer_t *buf = (FAR v4l2_buffer_t *)dmabuf->priv;
-  uintptr_t start;
-  uintptr_t end;
 
   if (buf == NULL)
     {
       return -EINVAL;
     }
 
-  start = (uintptr_t)buf->m.vaddr;
-  end = start + buf->length;
-
   if (direction == DMA_TO_DEVICE || direction == DMA_BIDIRECTIONAL)
     {
-      up_clean_dcache(start, end);
+      up_clean_dcache((uintptr_t)buf->m.vaddr,
+                      (uintptr_t)(buf->m.vaddr + buf->length));
     }
 
   return 0;
