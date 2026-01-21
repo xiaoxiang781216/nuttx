@@ -78,7 +78,8 @@
               locate_data("note_format") used_data static const             \
               char __fmt__[] = fmt;                                         \
               locate_data("note_type") used_data static const               \
-              union fmt_type_u __fmt_type__ = (union fmt_type_u)__fmt__;    \
+              union fmt_type_u __fmt_type__ =                               \
+                (union fmt_type_u){.__fmt__ = __fmt__};                     \
               static_assert(GET_ARG_COUNT(__VA_ARGS__) <= 29,               \
                             "The number of sched_note_nprintf "             \
                             "parameters needs to be less than 29");         \
