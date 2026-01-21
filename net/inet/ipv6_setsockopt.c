@@ -84,7 +84,6 @@ int ipv6_setsockopt(FAR struct socket *psock, int option,
       return -EINVAL;
     }
 
-  conn_lock(psock->s_conn);
   switch (option)
     {
 #ifdef CONFIG_NET_MLD
@@ -103,8 +102,10 @@ int ipv6_setsockopt(FAR struct socket *psock, int option,
         {
           FAR struct socket_conn_s *conn = psock->s_conn;
 
+          conn_lock(conn);
           conn->s_ttl = (value_len >= sizeof(int)) ?
                         *(FAR int *)value : (int)*(FAR unsigned char *)value;
+          conn_unlock(conn);
           ret = OK;
         }
         break;
@@ -127,16 +128,22 @@ int ipv6_setsockopt(FAR struct socket *psock, int option,
               }
 
 #ifdef CONFIG_NET_BINDTODEVICE
+            conn_lock(&conn->sconn);
             if (conn->sconn.s_boundto &&
                 ifindex != conn->sconn.s_boundto)
               {
+                conn_unlock(&conn->sconn);
                 ret = -EINVAL;
                 break;
               }
+
+            conn_unlock(&conn->sconn);
 #endif
           }
 
+        conn_lock(&conn->sconn);
         conn->mreq.imr_ifindex = ifindex;
+        conn_unlock(&conn->sconn);
 
         ret = OK;
         break;
@@ -156,8 +163,10 @@ int ipv6_setsockopt(FAR struct socket *psock, int option,
         {
           FAR struct socket_conn_s *conn = psock->s_conn;
 
+          conn_lock(conn);
           conn->s_ttl = (value_len >= sizeof(int)) ?
                         *(FAR int *)value : (int)*(FAR unsigned char *)value;
+          conn_unlock(conn);
           ret = OK;
         }
         break;
@@ -173,6 +182,7 @@ int ipv6_setsockopt(FAR struct socket *psock, int option,
           int enable = (value_len >= sizeof(int)) ?
                        *(FAR int *)value : (int)*(FAR unsigned char *)value;
 
+          conn_lock(conn);
           if (enable)
             {
               _SO_SETOPT(conn->s_options, option);
@@ -182,6 +192,7 @@ int ipv6_setsockopt(FAR struct socket *psock, int option,
               _SO_CLROPT(conn->s_options, option);
             }
 
+          conn_unlock(conn);
           ret = OK;
         }
         break;
@@ -214,7 +225,9 @@ int ipv6_setsockopt(FAR struct socket *psock, int option,
                   tclass = 0;
                 }
 
+              conn_lock(conn);
               conn->s_tclass = tclass;
+              conn_unlock(conn);
               ret = OK;
             }
         }
@@ -232,7 +245,6 @@ int ipv6_setsockopt(FAR struct socket *psock, int option,
         break;
     }
 
-  conn_unlock(psock->s_conn);
   return ret;
 }
 

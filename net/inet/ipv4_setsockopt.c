@@ -87,7 +87,6 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
    * REVISIT:  Clone the logic from netdev_ioctl.c here.
    */
 
-  conn_lock(psock->s_conn);
   switch (option)
     {
 #ifdef CONFIG_NET_IGMP
@@ -179,21 +178,27 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
                   else
                     {
                       ret = igmp_joingroup(dev, &mrec->imr_multiaddr);
+                      conn_lock(&conn->sconn);
                       if (ret == OK)
                         {
                           conn->mreq.imr_multiaddr = mrec->imr_multiaddr;
                           conn->mreq.imr_ifindex   = dev->d_ifindex;
                         }
+
+                      conn_unlock(&conn->sconn);
                     }
                 }
               else
                 {
                   ret = igmp_leavegroup(dev, &mrec->imr_multiaddr);
+                  conn_lock(&conn->sconn);
                   if (ret == OK)
                     {
                       conn->mreq.imr_multiaddr.s_addr = 0;
                       conn->mreq.imr_ifindex          = 0;
                     }
+
+                  conn_unlock(&conn->sconn);
                 }
             }
         }
@@ -224,7 +229,9 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
           else
             {
               conn = psock->s_conn;
+              conn_lock(conn);
               conn->s_ttl = ttl;
+              conn_unlock(conn);
               ret = OK;
             }
         }
@@ -267,8 +274,10 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
             {
               if (net_ipv4addr_cmp(mreq.imr_multiaddr.s_addr, INADDR_ANY))
                 {
+                  conn_lock(&conn->sconn);
                   conn->mreq.imr_address.s_addr = 0;
                   conn->mreq.imr_ifindex = 0;
+                  conn_unlock(&conn->sconn);
                   ret = OK;
                   break;
                 }
@@ -290,10 +299,12 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
               break;
             }
 
+          conn_lock(&conn->sconn);
 #ifdef CONFIG_NET_BINDTODEVICE
           if (conn->sconn.s_boundto &&
               mreq.imr_ifindex != conn->sconn.s_boundto)
             {
+              conn_unlock(&conn->sconn);
               ret = -EINVAL;
               break;
             }
@@ -301,6 +312,7 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
 
           conn->mreq.imr_address.s_addr = mreq.imr_multiaddr.s_addr;
           conn->mreq.imr_ifindex = mreq.imr_ifindex;
+          conn_unlock(&conn->sconn);
           ret = OK;
           break;
         }
@@ -347,6 +359,7 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
             *(FAR int *)value : (int)*(FAR unsigned char *)value;
 
           conn = psock->s_conn;
+          conn_lock(conn);
           if (enable)
             {
               _SO_SETOPT(conn->s_options, option);
@@ -356,6 +369,7 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
               _SO_CLROPT(conn->s_options, option);
             }
 
+          conn_unlock(conn);
           ret = OK;
         }
         break;
@@ -374,7 +388,9 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
             }
           else
             {
+              conn_lock(conn);
               conn->s_tos = tos;
+              conn_unlock(conn);
               ret = OK;
             }
         }
@@ -392,7 +408,6 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
         break;
     }
 
-  conn_unlock(psock->s_conn);
   return ret;
 }
 
