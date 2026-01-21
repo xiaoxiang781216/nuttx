@@ -168,6 +168,12 @@ static int audio_open(FAR struct file *filep)
   irqstate_t flags;
   int ret;
 
+  priv = kmm_zalloc(sizeof(*priv));
+  if (priv == NULL)
+    {
+      return -ENOMEM;
+    }
+
   /* Get exclusive access to the device structures */
 
   ret = nxmutex_lock(&upper->lock);
@@ -189,13 +195,6 @@ static int audio_open(FAR struct file *filep)
         }
     }
 
-  priv = kmm_zalloc(sizeof(*priv));
-  if (priv == NULL)
-    {
-      ret = -ENOMEM;
-      goto errout;
-    }
-
   flags = spin_lock_irqsave(&upper->spinlock);
   priv->flink = upper->head;
   filep->f_priv = priv;
@@ -205,6 +204,11 @@ static int audio_open(FAR struct file *filep)
 
 errout:
   nxmutex_unlock(&upper->lock);
+  if (ret < 0)
+    {
+      kumm_free(priv);
+    }
+
   return ret;
 }
 
