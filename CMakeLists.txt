@@ -828,6 +828,7 @@ if(CONFIG_DRIVERS_NOTE_STRIP_FORMAT)
   add_custom_target(
     nuttx_note ALL
     COMMAND ${NUTTX_DIR}/tools/mknotetype.py -e nuttx -c ${CMAKE_OBJCOPY}
+    COMMAND ${CMAKE_OBJCOPY} --only-section=note_format nuttx nuttx.fmt
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Processing note tag section for nuttx"
     DEPENDS nuttx)

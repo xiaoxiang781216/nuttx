@@ -55,6 +55,18 @@ config SYSLOG_DEFAULT_MASK
 	hex "syslog mask default value"
 	default 0xff
 
+config SYSLOG_RATELIMIT_INTERVAL
+	int "SYSLOG rate limiting interval"
+	default 0
+	---help---
+		"The size of the time window. 0 means no rate limiting"
+
+config SYSLOG_RATELIMIT_BURST
+	int "SYSLOG rate limiting burst"
+	default 0
+	---help---
+		"The burst traffic allowed within the window."
+
 if SYSLOG
 comment "SYSLOG options"
 
@@ -70,18 +82,6 @@ config SYSLOG_MAX_CHANNELS
 	default 1
 	---help---
 		Maximum number of supported SYSLOG channels.
-
-config SYSLOG_RATELIMIT_INTERVAL
-	int "SYSLOG rate limiting interval"
-	default 0
-	---help---
-		"The size of the time window. 0 means no rate limiting"
-
-config SYSLOG_RATELIMIT_BURST
-	int "SYSLOG rate limiting burst"
-	default 0
-	---help---
-		"The burst traffic allowed within the window."
 
 config RAMLOG
 	bool "RAM log device support"
