@@ -218,8 +218,10 @@ static const struct procfs_entry_s g_procfs_entries[] =
 static const uint8_t g_base_entrycount = sizeof(g_base_entries) /
                                          sizeof(struct procfs_entry_s);
 
-static FAR struct procfs_entry_s *g_procfs_entries;
-static uint8_t g_procfs_entrycount;
+static DEFINE_PER_CPU_BSS_BMP(FAR struct procfs_entry_s *, g_procfs_entries);
+#  define g_procfs_entries this_cpu_var_bmp(g_procfs_entries)
+static DEFINE_PER_CPU_BSS_BMP(uint8_t, g_procfs_entrycount);
+#  define g_procfs_entrycount this_cpu_var_bmp(g_procfs_entrycount)
 #else
 static const uint8_t g_procfs_entrycount = sizeof(g_procfs_entries) /
                                            sizeof(struct procfs_entry_s);
