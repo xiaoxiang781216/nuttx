@@ -112,7 +112,10 @@ static int usrsock_sockif_setup(FAR struct socket *psock)
 #endif
 
   if (psock->s_domain != PF_INET && psock->s_domain != PF_INET6 &&
-      psock->s_domain != PF_NETLINK && psock->s_domain != PF_PACKET)
+#ifdef CONFIG_NET_USRSOCK_PKT
+      psock->s_domain != PF_PACKET &&
+#endif
+      psock->s_domain != PF_NETLINK)
     {
       return -ENOTSUP; /* Only ipv4, ipv6 and netlink support the offload */
     };

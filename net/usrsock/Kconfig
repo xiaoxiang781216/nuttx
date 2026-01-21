@@ -91,5 +91,15 @@ config NET_USRSOCK_ICMPv6
 	select NET_ICMPv6_NO_STACK
 	default n
 
+config NET_USRSOCK_PKT
+	bool "User-space daemon provides PACKET sockets"
+	default n
+	---help---
+		Enable PF_PACKET socket offload to user-space daemon.
+		When enabled, PF_PACKET sockets will be handled by the
+		user-space networking daemon through usrsock interface.
+		When disabled, PF_PACKET sockets will be handled by the
+		kernel networking stack directly.
+
 endif # NET_USRSOCK
 endmenu # User-space networking stack API
