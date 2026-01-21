@@ -24,11 +24,11 @@ LIBSTDCXX_VERSION=$(patsubst "%",%,$(CONFIG_LIBSTDCXX_VERSION))
 # Download and unpack tarball if no git repo found
 ifeq ($(wildcard libstdc++/libstdc++/.git),)
 libstdc++-v3.tar.gz:
-	$(call DOWNLOAD,https://gnu.googlesource.com/gcc/+archive/refs/tags/releases/gcc-$(LIBSTDCXX_VERSION)/libstdc++-v3.tar.gz,$@)
+	$(call DOWNLOAD,https://gnu.googlesource.com/gcc/+archive/refs/tags/releases/gcc-$(LIBSTDCXX_VERSION),libstdc++-v3.tar.gz)
 
-libstdc++: libstdc++-v3.tar.gz
-	$(Q) mkdir -p libstdc++
-	$(Q) tar -xzf libstdc++.tar.gz -C libstdc++
+libstdc++/libstdc++: libstdc++-v3.tar.gz
+	$(Q) mkdir -p $@
+	$(Q) tar -xzf $< -C $@
 endif
 
 C++DIR = $(TOPDIR)/include/c++
@@ -43,17 +43,19 @@ else
 CPU_CONFIG = generic
 endif
 
-$(BITSDIR): libstdc++
+$(BITSDIR): libstdc++/libstdc++
 	$(Q) mkdir -p $(BITSDIR)
 
 copy_headers: $(BITSDIR)
+	$(Q) cp libstdc++/c++config.h $(INCDIR)/bits
 	$(Q) cp $(SUPDIR)/compare $(C++DIR)
 	$(Q) cp $(SUPDIR)/exception $(C++DIR)
 	$(Q) cp $(SUPDIR)/initializer_list $(C++DIR)
 	$(Q) cp $(SUPDIR)/new $(C++DIR)
 	$(Q) cp $(SUPDIR)/typeinfo $(C++DIR)
-	$(Q) cp $(TOPDIR)/libs/libxx/libstdc++/gthr.h $(C++DIR)
-	$(Q) cp $(TOPDIR)/libs/libxx/libstdc++/gthr-default.h $(C++DIR)
+	$(Q) cp $(TOPDIR)/libs/libbuiltin/libgcc/libgcc/gthr.h $(C++DIR)
+	$(Q) cp $(TOPDIR)/libs/libbuiltin/libgcc/libgcc/gthr-posix.h $(C++DIR)/gthr-default.h
+	$(Q) cp $(TOPDIR)/libs/libbuiltin/libgcc/libgcc/unwind-pe.h libstdc++
 	$(Q) cp $(SUPDIR)/atomic_lockfree_defines.h $(BITSDIR)
 	$(Q) cp $(SUPDIR)/cxxabi_forced.h $(BITSDIR)
 	$(Q) cp $(SUPDIR)/exception_defines.h $(BITSDIR)
@@ -71,6 +73,7 @@ context:: copy_headers
 
 distclean::
 	$(call DELDIR, $(BITSDIR))
+	$(call DELFILE, $(INCDIR)/bits/c++config.h)
 ifeq ($(wildcard libstdc++/libstdc++/.git),)
 	$(call DELDIR, libstdc++)
 	$(call DELFILE, libstdc++.tar.gz)
