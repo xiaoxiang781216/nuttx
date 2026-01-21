@@ -110,7 +110,7 @@ static int dummy_cpufreq_resume (FAR struct cpufreq_policy *driver);
 
 static const struct thermal_zone_trip_s g_dummy_trips[] =
 {
-  {.name = "cpu_crit",   .temp = 90, .hyst = 5, .type = THERMAL_CRITICAL},
+  {.name = "cpu_crit",   .temp = 90, .hyst = 5, .type = THERMAL_HOT},
   {.name = "cpu_alert1", .temp = 70, .hyst = 5, .type = THERMAL_HOT},
   {.name = "cpu_alert0", .temp = 60, .hyst = 5, .type = THERMAL_PASSIVE},
 };
