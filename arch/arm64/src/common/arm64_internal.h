@@ -209,6 +209,7 @@ EXTERN uint8_t _srodata[];          /* Start of .rodata */
 EXTERN uint8_t _erodata[];          /* End+1 of .rodata */
 EXTERN uint8_t _szrodata[];         /* Size of .rodata */
 EXTERN const uint8_t _eronly[];     /* End+1 of read only section (.text + .rodata) */
+EXTERN const uint8_t _ertonly[];    /* End+1 of read only section + data section */
 EXTERN uint8_t _sdata[];            /* Start of .data */
 EXTERN uint8_t _edata[];            /* End+1 of .data */
 EXTERN uint8_t _sbss[];             /* Start of .bss */

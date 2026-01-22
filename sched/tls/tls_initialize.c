@@ -1,5 +1,7 @@
 /****************************************************************************
- * arch/arm64/src/common/arm64_tls.c
+ * sched/tls/tls_initialize.c
+ *
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -23,17 +25,22 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/arch.h>
-#include <nuttx/tls.h>
+#include <stdint.h>
 
-#include "arm64_internal.h"
+#include "tls.h"
+
+extern uint8_t _ertonly[];
+extern uint8_t _stdata[];
+extern uint8_t _etdata[];
+extern uint8_t _stbss[];
+extern uint8_t _etbss[];
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_tls_size
+ * Name: tls_size
  *
  * Description:
  *   Get TLS (sizeof(struct tls_info_s) + tdata + tbss) section size.
@@ -43,17 +50,15 @@
  *
  ****************************************************************************/
 
-int up_tls_size(void)
+size_t tls_size(void)
 {
-  /* Extra 8 bytes (2 pointer) according to GCC */
-
   return sizeof(struct tls_info_s) +
-         sizeof(void *) * 2 +
-         (_END_TBSS - _START_TDATA);
+         ARCH_TP_OFFSET +
+         (_etbss - _stdata);
 }
 
 /****************************************************************************
- * Name: up_tls_initialize
+ * Name: tls_initialize
  *
  * Description:
  *   Initialize thread local region.
@@ -61,14 +66,15 @@ int up_tls_size(void)
  * Input Parameters:
  *   info - The TLS structure to initialize.
  *
+ * Note:
+ *  Must be called after allocating the TLS region. In that case, the tbss
+ *  area is initialized to be zeroed.
+ *
  ****************************************************************************/
 
-void up_tls_initialize(struct tls_info_s *info)
+void tls_initialize(struct tls_info_s *info)
 {
-  uint8_t *tls_data = (uint8_t *)(info + 1) + sizeof(void *) * 2;
-  uint32_t tdata_len = _END_TDATA - _START_TDATA;
-  uint32_t tbss_len = _END_TBSS - _START_TBSS;
-
-  memcpy(tls_data, _START_TDATA, tdata_len);
-  memset(tls_data + tdata_len + (_START_TBSS - _END_TDATA), 0, tbss_len);
+  uint8_t *tls_data = (uint8_t *)(info + 1) + ARCH_TP_OFFSET;
+  uint32_t tdata_len = (_etdata - _stdata);
+  memcpy(tls_data, _ertonly, tdata_len);
 }

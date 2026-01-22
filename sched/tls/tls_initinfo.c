@@ -54,7 +54,7 @@ int tls_init_info(FAR struct tcb_s *tcb)
 
   /* Allocate thread local storage */
 
-  info = up_stack_frame(tcb, tls_info_size());
+  info = up_stack_frame(tcb, tls_size());
   if (info == NULL)
     {
       ret = -ENOMEM;
@@ -65,7 +65,7 @@ int tls_init_info(FAR struct tcb_s *tcb)
 
       /* Initialize thread local storage */
 
-      up_tls_initialize(info);
+      tls_initialize(info);
 
       /* Derive tl_size w/o arch knowledge */
 

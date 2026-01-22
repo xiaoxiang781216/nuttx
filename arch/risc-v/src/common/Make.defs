@@ -91,10 +91,6 @@ CMN_ASRCS += fork.S
 CMN_CSRCS += riscv_fork.c
 endif
 
-ifeq ($(CONFIG_SCHED_THREAD_LOCAL),y)
-CMN_CSRCS += riscv_tls.c
-endif
-
 ifeq ($(CONFIG_ARCH_FPU),y)
 CMN_ASRCS += riscv_fpu.S
 CMN_CSRCS += riscv_fpucmp.c

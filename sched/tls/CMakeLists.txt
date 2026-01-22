@@ -20,5 +20,10 @@
 #
 # ##############################################################################
 
-target_sources(sched PRIVATE task_initinfo.c task_uninitinfo.c tls_initinfo.c
-                             tls_dupinfo.c)
+set(SRCS task_initinfo.c task_uninitinfo.c tls_initinfo.c tls_dupinfo.c)
+
+if(CONFIG_SCHED_THREAD_LOCAL)
+  list(APPEND SRCS tls_initialize.c)
+endif()
+
+target_sources(sched PRIVATE ${SRCS})

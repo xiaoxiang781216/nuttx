@@ -104,6 +104,8 @@ SECTIONS
     _einit = .;
   } > flash
 
+  _ertonly = LOADADDR(.tdata);
+
   .tdata :
   {
     _stdata = ABSOLUTE(.);

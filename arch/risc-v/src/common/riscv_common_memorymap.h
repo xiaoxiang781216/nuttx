@@ -129,6 +129,7 @@ EXTERN uint8_t g_intstacktop[];   /* Initial top of interrupt stack */
 EXTERN uint8_t _stext[];           /* Start of .text */
 EXTERN uint8_t _etext[];           /* End_1 of .text + .rodata */
 EXTERN const uint8_t _eronly[];    /* End+1 of read only section (.text + .rodata) */
+EXTERN const uint8_t _ertonly[];   /* End+1 of read only section + data section */
 EXTERN uint8_t _sdata[];           /* Start of .data */
 EXTERN uint8_t _edata[];           /* End+1 of .data */
 EXTERN uint8_t _sbss[];            /* Start of .bss */

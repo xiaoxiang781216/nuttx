@@ -1,5 +1,7 @@
 /****************************************************************************
- * arch/x86_64/src/common/x86_64_tls.c
+ * libs/libc/machine/arm/arm_tls.c
+ *
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,50 +24,47 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-#include <nuttx/arch.h>
 #include <nuttx/tls.h>
-
-#include "x86_64_internal.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_tls_size
+ * Name: arm_read_tp
  *
  * Description:
- *   Get TLS (sizeof(struct tls_info_s) + tdata + tbss) section size.
- *
- * Returned Value:
- *   Size of (sizeof(struct tls_info_s) + tdata + tbss).
+ *   Helper function for __aeabi_read_tp.
  *
  ****************************************************************************/
 
-int up_tls_size(void)
+void *arm_read_tp(void)
 {
-  return sizeof(struct tls_info_s) +
-         _END_TBSS - _START_TDATA + sizeof(void *);
+  return (void *)(tls_get_info() + 1);
 }
 
 /****************************************************************************
- * Name: up_tls_initialize
+ * Name: __aeabi_read_tp
  *
  * Description:
- *   Initialize thread local region.
+ *   Read thread local storage region pointer.
  *
- * Input Parameters:
- *   info - The TLS structure to initialize.
+ *   This function follows the ARM EABI specification for TLS helper
+ *   functions:
+ *   - Only r0 is modified (return value)
+ *   - r1-r3 must be preserved for the caller
+ *
+ *   The naked attribute ensures strict register usage compliance.
  *
  ****************************************************************************/
 
-void up_tls_initialize(struct tls_info_s *info)
+__attribute__((naked))
+void *__aeabi_read_tp(void)
 {
-  uint8_t  *tls_data  = (uint8_t *)(info + 1);
-  uint32_t  tdata_len = _END_TDATA - _START_TDATA;
-  uint32_t  tbss_len  = _END_TBSS - _START_TBSS;
-
-  memcpy(tls_data, _START_TDATA, tdata_len);
-  memset(tls_data + tdata_len, 0, tbss_len);
+  __asm__ __volatile__
+    (
+      "push {r1-r3, lr}\n\t"
+      "bl arm_read_tp\n\t"
+      "pop {r1-r3, pc}\n\t"
+    );
 }

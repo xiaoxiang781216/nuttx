@@ -87,10 +87,6 @@ if(CONFIG_ARM_SEMIHOSTING_HOSTFS)
   list(APPEND SRCS arm_hostfs.c)
 endif()
 
-if(CONFIG_SCHED_THREAD_LOCAL)
-  list(APPEND SRCS arm_tls.c)
-endif()
-
 if(CONFIG_UNWINDER_FRAME_POINTER)
   list(APPEND SRCS arm_backtrace_fp.c)
 endif()

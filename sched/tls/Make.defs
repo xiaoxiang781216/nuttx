@@ -22,6 +22,10 @@
 
 CSRCS += task_initinfo.c task_uninitinfo.c tls_initinfo.c tls_dupinfo.c
 
+ifeq ($(CONFIG_SCHED_THREAD_LOCAL),y)
+CSRCS += tls_initialize.c
+endif
+
 # Include tls build support
 
 DEPPATH += --dep-path tls

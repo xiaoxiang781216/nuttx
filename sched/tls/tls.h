@@ -36,23 +36,6 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_tls_size
- *
- * Description:
- *   Get TLS (sizeof(struct tls_info_s) + tdata + tbss) section size.
- *
- * Returned Value:
- *   Size of (sizeof(struct tls_info_s) + tdata + tbss).
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SCHED_THREAD_LOCAL
-#  define tls_info_size() up_tls_size()
-#else
-#  define tls_info_size() sizeof(struct tls_info_s)
-#endif
-
-/****************************************************************************
  * Name: task_init_info
  *
  * Description:
@@ -116,5 +99,39 @@ int tls_init_info(FAR struct tcb_s *tcb);
  ****************************************************************************/
 
 int tls_dup_info(FAR struct tcb_s *dst, FAR struct tcb_s *src);
+
+/****************************************************************************
+ * Name: tls_size
+ *
+ * Description:
+ *   Get TLS (sizeof(struct tls_info_s) + tdata + tbss) section size.
+ *
+ * Returned Value:
+ *   Size of (sizeof(struct tls_info_s) + tdata + tbss).
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_THREAD_LOCAL
+size_t tls_size(void);
+#else
+#  define tls_size() (sizeof(struct tls_info_s))
+#endif
+
+/****************************************************************************
+ * Name: tls_initialize
+ *
+ * Description:
+ *   Initialize thread local region.
+ *
+ * Input Parameters:
+ *   info - The TLS structure to initialize.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_THREAD_LOCAL
+void tls_initialize(struct tls_info_s *info);
+#else
+#  define tls_initialize(a)
+#endif
 
 #endif /* __SCHED_TLS_TLS_H */

@@ -70,10 +70,6 @@ ifeq ($(CONFIG_ARM_SEMIHOSTING_HOSTFS),y)
   CMN_CSRCS += arm_hostfs.c
 endif
 
-ifeq ($(CONFIG_SCHED_THREAD_LOCAL),y)
-  CMN_CSRCS += arm_tls.c
-endif
-
 ifeq ($(CONFIG_UNWINDER_FRAME_POINTER),y)
   CMN_CSRCS += arm_backtrace_fp.c
 endif

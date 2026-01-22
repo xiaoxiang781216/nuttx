@@ -90,10 +90,6 @@ if(CONFIG_ARCH_HAVE_FORK)
   list(APPEND SRCS fork.S riscv_fork.c)
 endif()
 
-if(CONFIG_SCHED_THREAD_LOCAL)
-  list(APPEND SRCS riscv_tls.c)
-endif()
-
 if(CONFIG_ARCH_FPU)
   list(APPEND SRCS riscv_fpu.S riscv_fpucmp.c)
 endif()

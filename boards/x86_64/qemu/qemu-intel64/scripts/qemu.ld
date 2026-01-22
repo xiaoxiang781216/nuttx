@@ -123,6 +123,8 @@ SECTIONS
         KEEP(*(.eh_frame))
     }
 
+    _ertonly = LOADADDR(.tdata_tbss);
+
     .tdata_tbss ALIGN(0x1000) :
     {
         _stdata = ABSOLUTE(.);

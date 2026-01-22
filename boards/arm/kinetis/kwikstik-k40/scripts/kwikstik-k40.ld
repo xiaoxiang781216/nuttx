@@ -89,6 +89,8 @@ SECTIONS
         __exidx_end = ABSOLUTE(.);
     } > progflash
 
+    _ertonly = LOADADDR(.tdata);
+
     .tdata : {
         _stdata = ABSOLUTE(.);
         *(.tdata .tdata.* .gnu.linkonce.td.*);

@@ -66,10 +66,6 @@ if(CONFIG_ARCH_HAVE_EL3)
   list(APPEND SRCS arm64_smccc.S)
 endif()
 
-if(CONFIG_SCHED_THREAD_LOCAL)
-  list(APPEND SRCS arm64_tls.c)
-endif()
-
 if(CONFIG_ARCH_HAVE_MMU)
   list(APPEND SRCS arm64_mmu.c)
 endif()

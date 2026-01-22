@@ -161,6 +161,7 @@ extern uint8_t g_isrstackalloc[];
 extern uint8_t _stext[];           /* Start of .text */
 extern uint8_t _etext[];           /* End_1 of .text + .rodata */
 extern const uint8_t _eronly[];    /* End+1 of read only section (.text + .rodata) */
+extern const uint8_t _ertonly[];   /* End+1 of read only section + data section */
 extern uint8_t _sdata[];           /* Start of .data */
 extern uint8_t _edata[];           /* End+1 of .data */
 extern uint8_t _sbss[];            /* Start of .bss */
@@ -270,7 +271,8 @@ static inline_function void write_msr(unsigned int msr, unsigned long val)
                    : "memory");
 }
 
-static inline_function void apic_write(unsigned int offset, unsigned long val)
+static inline_function void apic_write(unsigned int offset,
+                                       unsigned long val)
 {
 #ifdef CONFIG_ARCH_X86_64_X2APIC
   write_msr((offset >> 4) + MSR_X2APIC_BASE, val);

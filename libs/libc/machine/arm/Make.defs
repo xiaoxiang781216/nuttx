@@ -79,5 +79,11 @@ ifeq ($(CONFIG_LIBC_ARCH_CRC32),y)
 CSRCS += arch_crc32.c
 endif
 
+ifeq ($(CONFIG_SCHED_THREAD_LOCAL),y)
+ifeq ($(CONFIG_ARCH_ARM_M),y)
+CSRCS += arm_tls.c
+endif
+endif
+
 DEPPATH += --dep-path machine/arm
 VPATH += :machine/arm

@@ -83,4 +83,8 @@ if(CONFIG_LIBC_ARCH_CRC32)
   list(APPEND SRCS arch_crc32.c)
 endif()
 
+if(CONFIG_SCHED_THREAD_LOCAL AND CONFIG_ARCH_ARM_M)
+  list(APPEND SRCS arm_tls.c)
+endif()
+
 target_sources(c PRIVATE ${SRCS})
