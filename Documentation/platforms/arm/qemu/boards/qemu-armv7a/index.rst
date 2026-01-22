@@ -116,13 +116,18 @@ The Qemu version must be above 9.2 to support two serial ports.
 One window::
 
   ./tools/configure.sh qemu-armv7a:gdbstub; make -j25
-  qemu-system-arm -cpu cortex-a7 -nographic -machine virt,virtualization=off,gic-version=2 -net none -kernel ./nuttx  -serial mon:stdio -serial pty
-  char device redirected to /dev/pts/26 (label serial1)
+  qemu-system-arm -cpu cortex-a7 -nographic -machine virt,virtualization=off,gic-version=2 \
+  -serial mon:stdio -serial pty -gdb tcp::1128 -global virtio-mmio.force-legacy=false \
+  -netdev user,id=u1,hostfwd=tcp:127.0.0.1:10023-10.0.2.15:23,hostfwd=tcp:127.0.0.1:15001-10.0.2.15:5001,hostfwd=udp:127.0.0.1:15002-10.0.2.15:5002 \
+  -device virtio-net-device,netdev=u1,bus=virtio-mmio-bus.0 -kernel nuttx
   nx_start: Entry
   uart_register: Registering /dev/console
   uart_register: Registering /dev/ttyS0
+  nsh> gdbstub -p 5001 &
+  nsh> gdbstub -p 5002 -u &
 
-Another window::
+
+Another window connect with uart::
 
   gdb-multiarch nuttx -ex "target remot /dev/pts/26"
   GNU gdb (Ubuntu 15.0.50.20240403-0ubuntu1) 15.0.50.20240403-git
@@ -145,3 +150,13 @@ Another window::
   gdb_get_registers (state=0x402052f8) at gdbstub/lib_gdbstub.c:1020
   1020              reg = state->running_regs;
   (gdb) c
+
+
+Another window connect with tcp::
+
+  gdb-multiarch nuttx -ex "target remote 127.0.0.1:15001"
+
+
+Another window connect with udp::
+
+  gdb-multiarch nuttx -ex "target remote udp:127.0.0.1:15002"
