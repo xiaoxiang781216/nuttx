@@ -68,6 +68,10 @@
 #define udp_callback_free(dev,conn,cb) \
   devif_conn_callback_free((dev), (cb), &(conn)->sconn.s_list, &(conn)->sconn.s_listtail)
 
+#ifndef CONFIG_NET_UDP_MAX_CONNS
+#  define CONFIG_NET_UDP_MAX_CONNS 0
+#endif
+
 /* Definitions for the UDP connection struct flag field */
 
 #define _UDP_FLAG_CONNECTMODE (1 << 0) /* Bit 0:  UDP connection-mode */

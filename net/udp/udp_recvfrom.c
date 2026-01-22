@@ -35,6 +35,7 @@
 #include <sys/time.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/net/net.h>
+#include <nuttx/mm/mempool.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/ip.h>
@@ -62,6 +63,20 @@ struct udp_recvfrom_s
   int                      ir_result;    /* Success:OK, failure:negated errno */
   int                      ir_flags;     /* Flags on received message.  */
 };
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+/* This is the pool of pre-allocated UDP receive state structures. The pool
+ * is defined for potential future use in managing UDP receive operations
+ * that may require dynamic allocation of state information. Currently,
+ * UDP receive operations use stack-allocated state structures.
+ */
+
+MEMPOOL_DEFINE(g_udp_state_infos, sizeof(struct udp_recvfrom_s),
+               CONFIG_NET_UDP_PREALLOC_CONNS,
+               CONFIG_NET_UDP_MAX_CONNS, CONFIG_NET_UDP_ALLOC_CONNS);
 
 /****************************************************************************
  * Private Functions
@@ -662,7 +677,7 @@ ssize_t psock_udp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
   FAR struct udp_conn_s *conn = psock->s_conn;
   FAR struct net_driver_s *dev;
   struct udp_callback_s info;
-  struct udp_recvfrom_s state;
+  struct udp_recvfrom_s *state;
   int ret;
 
   /* Perform the UDP recvfrom() operation */
@@ -676,7 +691,16 @@ ssize_t psock_udp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
    * because we don't want anything to happen until we are ready.
    */
 
-  udp_recvfrom_initialize(conn, msg, &state, flags);
+  state = mempool_allocate(&g_udp_state_infos,
+                           _SO_TIMEOUT(conn->sconn.s_rcvtimeo));
+
+  if (state == NULL)
+    {
+      nerr("ERROR: Failed to allocate udp recieve state\n");
+      return -ENOMEM;
+    }
+
+  udp_recvfrom_initialize(conn, msg, state, flags);
 
   /* Get the device that will handle the packet transfers.  This may be
    * NULL if the UDP socket is bound to INADDR_ANY.  In that case, no
@@ -689,7 +713,7 @@ ssize_t psock_udp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
 
   /* Copy the read-ahead data from the packet */
 
-  udp_readahead(&state);
+  udp_readahead(state);
 
   /* The default return value is the number of bytes that we just copied
    * into the user buffer.  We will return this if the socket has become
@@ -697,7 +721,7 @@ ssize_t psock_udp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
    * data from the readahead buffers.
    */
 
-  ret = state.ir_recvlen;
+  ret = state->ir_recvlen;
 
   /* Handle non-blocking UDP sockets */
 
@@ -720,21 +744,21 @@ ssize_t psock_udp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
    * return the number of bytes read from the read-ahead buffer
    * (already in 'ret').
    *
-   * NOTE: that udp_readahead() may set state.ir_recvlen == -1.
+   * NOTE: that udp_readahead() may set state->ir_recvlen == -1.
    */
 
-  else if (state.ir_recvlen <= 0)
+  else if (state->ir_recvlen <= 0)
     {
       /* Set up the callback in the connection */
 
-      state.ir_cb = udp_callback_alloc(dev, conn);
-      if (state.ir_cb)
+      state->ir_cb = udp_callback_alloc(dev, conn);
+      if (state->ir_cb)
         {
           /* Set up the callback in the connection */
 
-          state.ir_cb->flags = (UDP_NEWDATA | NETDEV_DOWN);
-          state.ir_cb->priv  = (FAR void *)&state;
-          state.ir_cb->event = udp_eventhandler;
+          state->ir_cb->flags = (UDP_NEWDATA | NETDEV_DOWN);
+          state->ir_cb->priv  = (FAR void *)state;
+          state->ir_cb->event = udp_eventhandler;
 
           /* Push a cancellation point onto the stack.  This will be
            * called if the thread is canceled.
@@ -742,8 +766,8 @@ ssize_t psock_udp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
 
           info.dev  = dev;
           info.conn = conn;
-          info.udp_cb = state.ir_cb;
-          info.sem = &state.ir_sem;
+          info.udp_cb = state->ir_cb;
+          info.sem = &state->ir_sem;
           tls_cleanup_push(tls_get_info(), udp_callback_cleanup, &info);
 
           /* Wait for either the receive to complete or for an error/timeout
@@ -751,7 +775,7 @@ ssize_t psock_udp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
            * signal is received.
            */
 
-          ret = conn_dev_sem_timedwait(&state.ir_sem, true,
+          ret = conn_dev_sem_timedwait(&state->ir_sem, true,
                                        _SO_TIMEOUT(conn->sconn.s_rcvtimeo),
                                        &conn->sconn, dev);
           tls_cleanup_pop(tls_get_info(), 0);
@@ -762,8 +786,8 @@ ssize_t psock_udp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
 
           /* Make sure that no further events are processed */
 
-          udp_callback_free(dev, conn, state.ir_cb);
-          ret = udp_recvfrom_result(ret, &state);
+          udp_callback_free(dev, conn, state->ir_cb);
+          ret = udp_recvfrom_result(ret, state);
         }
       else
         {
@@ -774,7 +798,8 @@ ssize_t psock_udp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
   conn_dev_unlock(&conn->sconn, dev);
   udp_notify_recvcpu(conn);
 
-  udp_recvfrom_uninitialize(&state);
+  udp_recvfrom_uninitialize(state);
+  mempool_release(&g_udp_state_infos, state);
   return ret;
 }
 
