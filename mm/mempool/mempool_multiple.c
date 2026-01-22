@@ -585,7 +585,7 @@ mempool_multiple_init(FAR const char *name,
                   pools[i].expandsize = 0;
                   pools[i].initialsize =
                               MEMPOOL_REALBLOCKSIZE(pools[i].blocksize) *
-                              config->poolcount[i];
+                              config->poolcount[i] + MEMPOOL_HEADER_SIZE;
                   pools[i].initialbase = mempool_multiple_alloc_callback(
                                           &pools[i],
                                           pools[i].initialsize);
