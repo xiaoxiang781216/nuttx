@@ -55,48 +55,6 @@ struct mpool_chunk_s
   size_t used;
 };
 
-struct mempool_multiple_s
-{
-  FAR struct mempool_s         *pools;       /* The memory pool array */
-  size_t                        npools;      /* The number of memory pool array elements */
-  size_t                        headsize;    /* The header size for pool with fix blkcnt */
-  size_t                        expandsize;  /* The number not will use it to init erery
-                                              * pool expandsize
-                                              */
-  size_t                        minpoolsize; /* The number is align for each memory pool */
-  FAR void                     *arg;         /* This pointer is used to store the user's
-                                              * private data
-                                              */
-  mempool_multiple_alloc_t      alloc;       /* The alloc function for mempool */
-  mempool_multiple_alloc_size_t alloc_size;  /* Get the address size of the
-                                              * alloc function
-                                              */
-  mempool_multiple_free_t       free;        /* The free function for mempool */
-  size_t                        alloced;     /* Total size of alloc */
-
-  /* This delta describes the relationship between the block size of each
-   * mempool in multiple mempool by user initialized. It is automatically
-   * detected by the mempool_multiple_init function. If the delta is not
-   * equal to 0, the block size of the pool in the multiple mempool is an
-   * arithmetic progressions, otherwise it is an increasing progressions.
-   */
-
-  size_t                        delta;
-
-  /* It is used to record the information recorded by the mempool during
-   * expansion, and find the mempool by adding an index
-   */
-
-  rmutex_t                      lock;
-  sq_queue_t                    chunk_queue;
-  size_t                        chunksize;
-  size_t                        init_chunksize;
-  size_t                        dict_used;
-  size_t                        dict_col_num_log2;
-  size_t                        dict_row_num;
-  FAR struct mpool_dict_s     **dict;
-};
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
