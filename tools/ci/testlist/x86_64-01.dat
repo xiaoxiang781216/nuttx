@@ -1,3 +1,6 @@
 # x86_64-elf-gcc from homebrew doesn't seem to
 # provide __udivdi3 etc for -m32
 /x86_64
+
+# error: missing binary operator before token
+-qemu-intel64:earlyfb
