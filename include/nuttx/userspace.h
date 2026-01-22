@@ -149,6 +149,14 @@ struct userspace_s
   uintptr_t us_bssend;
   uintptr_t us_heapend;
 
+#ifdef CONFIG_SCHED_THREAD_LOCAL
+  uintptr_t us_tls_datasource;
+  uintptr_t us_tls_datastart;
+  uintptr_t us_tls_dataend;
+  uintptr_t us_tls_bssstart; /* not used */
+  uintptr_t us_tls_bssend;
+#endif
+
 #ifdef CONFIG_SCHED_BACKTRACE
   uintptr_t us_unwindstart;
   uintptr_t us_unwindend;

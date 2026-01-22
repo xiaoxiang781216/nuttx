@@ -89,6 +89,16 @@ const struct userspace_s userspace locate_data(".userspace") =
 
   .us_heapend       = (uintptr_t)__ld_usram_end,
 
+  /* psABI TLS support */
+
+#ifdef CONFIG_SCHED_THREAD_LOCAL
+  .us_tls_datasource  = (uintptr_t)_ertonly,
+  .us_tls_datastart   = (uintptr_t)_stdata,
+  .us_tls_dataend     = (uintptr_t)_etdata,
+  .us_tls_bssstart    = (uintptr_t)_stbss,
+  .us_tls_bssend      = (uintptr_t)_etbss,
+#endif
+
   /* User data memory structure */
 
   .us_data          = &g_userspace_data,

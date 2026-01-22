@@ -169,6 +169,22 @@ SECTIONS
     *(.sdata)
     *(.sdata.*)
     *(.gnu.linkonce.s.*)
+
+  _ertonly = LOADADDR(.tdata);
+
+  .tdata :
+  {
+    _stdata = ABSOLUTE(.);
+    *(.tdata .tdata.* .gnu.linkonce.td.*);
+    _etdata = ABSOLUTE(.);
+  } >UDRAM AT>ROM
+
+  .tbss :
+  {
+    _stbss = ABSOLUTE(.);
+    *(.tbss .tbss.* .gnu.linkonce.tb.* .tcommon);
+    _etbss = ABSOLUTE(.);
+  } >UDRAM
     *(.sdata2)
     *(.sdata2.*)
     *(.gnu.linkonce.s2.*)

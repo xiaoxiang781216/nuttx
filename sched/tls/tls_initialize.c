@@ -27,13 +27,25 @@
 #include <nuttx/config.h>
 #include <stdint.h>
 
+#ifdef CONFIG_BUILD_PROTECTED
+#  include <nuttx/userspace.h>
+#endif
+
 #include "tls.h"
 
+#ifdef CONFIG_BUILD_FLAT
 extern uint8_t _ertonly[];
 extern uint8_t _stdata[];
 extern uint8_t _etdata[];
 extern uint8_t _stbss[];
 extern uint8_t _etbss[];
+#elif defined(CONFIG_BUILD_PROTECTED)
+#  define _ertonly ((FAR uint8_t *)USERSPACE->us_tls_datasource)
+#  define _stdata ((FAR uint8_t *)USERSPACE->us_tls_datastart)
+#  define _etdata ((FAR uint8_t *)USERSPACE->us_tls_dataend)
+#  define _stbss ((FAR uint8_t *)USERSPACE->us_tls_bssstart)
+#  define _etbss ((FAR uint8_t *)USERSPACE->us_tls_bssend)
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -53,8 +65,7 @@ extern uint8_t _etbss[];
 size_t tls_size(void)
 {
   return sizeof(struct tls_info_s) +
-         ARCH_TP_OFFSET +
-         (_etbss - _stdata);
+         ARCH_TP_OFFSET + _etbss - _stdata;
 }
 
 /****************************************************************************
@@ -75,6 +86,6 @@ size_t tls_size(void)
 void tls_initialize(struct tls_info_s *info)
 {
   uint8_t *tls_data = (uint8_t *)(info + 1) + ARCH_TP_OFFSET;
-  uint32_t tdata_len = (_etdata - _stdata);
+  uint32_t tdata_len = _etdata - _stdata;
   memcpy(tls_data, _ertonly, tdata_len);
 }

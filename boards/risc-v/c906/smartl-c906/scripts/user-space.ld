@@ -90,6 +90,23 @@ SECTIONS
         _ebss = ABSOLUTE(.);
     } > usram
 
+
+    _ertonly = LOADADDR(.tdata);
+
+    .tdata :
+    {
+        _stdata = ABSOLUTE(.);
+        *(.tdata .tdata.* .gnu.linkonce.td.*);
+        _etdata = ABSOLUTE(.);
+    } > usram AT > uflash
+
+    .tbss :
+    {
+        _stbss = ABSOLUTE(.);
+        *(.tbss .tbss.* .gnu.linkonce.tb.* .tcommon);
+        _etbss = ABSOLUTE(.);
+    } > usram
+
     /* Stabs debugging sections */
 
     .stab 0 : { *(.stab) }
