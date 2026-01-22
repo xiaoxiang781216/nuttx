@@ -14,6 +14,9 @@
 
 /arm/stm32/stm32f429i-disco,CONFIG_ARM_TOOLCHAIN_CLANG
 
+# clang error
+-stm32f103-minimum:jlx12864g
+
 # Temporarily closed, will reopen after resolving the compilation issue
 -stm32f429i-disco:nxhello
 -stm32f429i-disco:lcd

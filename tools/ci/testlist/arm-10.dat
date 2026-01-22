@@ -21,3 +21,6 @@
 -stm3210e-eval:nsh2
 -stm3210e-eval:nx
 -shenzhou:nxwm
+
+# clang error
+-olimexino-stm32:tiny

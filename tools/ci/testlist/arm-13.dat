@@ -6,6 +6,12 @@
 -olimex-stm32-p407:kelf
 -stm32h745i-disco:lvgl
 
+# clang error
+-nucleo-f722ze:nsh
+-stm32f746g-disco:lvgl
+-nucleo-h745zi:pysim_cm7
+-linum-stm32h753bi:rndis
+
 # 'struct winsize' declared inside parameter
 -stm32f746g-disco:audio
 

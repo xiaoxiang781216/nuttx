@@ -13,6 +13,12 @@
 -olimex-stm32-p407:knsh
 -olimex-stm32-p407:kmodule
 
+# clang error
+-nucleo-f446re:lcd
+-nucleo-f446re:can
+-nucleo-g431rb:can
+-nucleo-g474re:usbserial
+
 # Temporarily closed, will reopen after resolving the compilation issue
 -nucleo-l152re:lcd
 
