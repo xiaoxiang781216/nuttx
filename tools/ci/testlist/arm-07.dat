@@ -37,3 +37,6 @@
 
 # undefined reference to `up_addrenv_leave_kernel'
 -sama5d4-ek:elf
+
+# error: missing argument to '-Wstack-usage='
+-s32k146evb:nsh

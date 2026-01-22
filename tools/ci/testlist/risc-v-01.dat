@@ -3,3 +3,6 @@
 
 # 'task_tls_alloc' undeclared here
 -bl602evb:elf
+
+# error: unrecognized command-line option '-mno-relax'
+-bl602evb:nsh

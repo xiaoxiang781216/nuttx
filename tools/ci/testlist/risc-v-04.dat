@@ -5,3 +5,6 @@
 -hpm6360evk:nsh
 -icicle:rpmsg-sbi
 -icicle:opensbi
+
+# error: missing argument to '-Wstack-usage='
+-hifive1-revb:nsh

@@ -57,3 +57,6 @@ CMake,sim:matter
 
 # "__SO_PROTOCOL" redefined
 -sim:matter
+
+# error: missing argument to '-Wstack-usage='
+-sim:configdata

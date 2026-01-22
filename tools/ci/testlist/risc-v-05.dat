@@ -1,3 +1,6 @@
 /risc-v/qemu-rv/rv-virt/configs/[a-c]*
 
 -rv-virt:citest
+
+# error: missing argument to '-Wstack-usage='
+-rv-virt:citest64

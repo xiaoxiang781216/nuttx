@@ -33,3 +33,6 @@
 -ea3131:usbserial
 -ea3131:nsh
 -olimex-lpc-h3131:nsh
+
+# error: missing argument to '-Wstack-usage='
+-lc823450-xgevk:elf

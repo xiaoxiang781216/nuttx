@@ -10,6 +10,9 @@
 -nucleo-f302r8:ihm07m1_f32
 -nucleo-f302r8:qenco
 
+# error: missing argument to '-Wstack-usage='
+-axoloti:nsh
+
 # Boards build by CMake
 
 CMake,nucleo-f103rb:adc

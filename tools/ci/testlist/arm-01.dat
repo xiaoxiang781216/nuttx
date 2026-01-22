@@ -21,3 +21,6 @@
 
 # undefined reference to `systick_initialize'
 -csk6011a-nano:nsh
+
+# missing argument to '-Wstack-usage='
+-pcduino-a10:nsh

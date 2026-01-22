@@ -16,6 +16,9 @@
 -moxa:nsh
 -nrf5340-dk:sdc_nimble_cpunet
 
+# error: missing argument to '-Wstack-usage='
+-max32660-evsys:nsh
+
 # Boards build by CMake
 
 CMake,arduino-nano-33ble:nsh

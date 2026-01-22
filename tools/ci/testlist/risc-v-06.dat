@@ -12,3 +12,6 @@ CMake,rv-virt:smp64
 # relocation truncated to fit:
 -rv-virt:netnsh64
 -rv-virt:netnsh64_smp
+
+# error: missing argument to '-Wstack-usage='
+-rv-virt:fb

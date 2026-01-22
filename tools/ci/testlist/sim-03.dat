@@ -5,6 +5,9 @@
 -sim:tflm
 -sim:wamr
 
+# error: missing argument to '-Wstack-usage='
+-sim:posix_spawn
+
 # macOS doesn't support 32bit anymore(CONFIG_SIM_M32=y)
 -Darwin,sim:posix_spawn
 -Darwin,sim:rpproxy

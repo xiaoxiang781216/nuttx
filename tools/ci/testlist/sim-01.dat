@@ -19,3 +19,6 @@ CMake,sim:bthcisock
 
 # SOF_TIMESTAMPING_SOFTWARE redefined
 -sim:can
+
+# error: missing argument to '-Wstack-usage='
+-sim:asan

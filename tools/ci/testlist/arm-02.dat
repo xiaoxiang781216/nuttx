@@ -16,3 +16,6 @@ CMake,sabre-6quad:nsh
 -imxrt1060-evk:can
 -imxrt1170-evk:canfd
 -imxrt1170-evk:can
+
+# error: missing argument to '-Wstack-usage='
+-sabre-6quad:libcxx

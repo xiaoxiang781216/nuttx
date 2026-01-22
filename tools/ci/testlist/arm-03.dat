@@ -7,3 +7,6 @@
 -open1788:knxterm
 -open1788:knsh
 -zkit-arm-1769:thttpd
+
+# error: missing argument to '-Wstack-usage='
+-lincoln60:thttpd-binfs
