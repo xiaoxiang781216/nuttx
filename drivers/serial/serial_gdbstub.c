@@ -230,22 +230,19 @@ static ssize_t uart_gdbstub_receive(FAR void *priv, FAR void *buf,
 
   rxbuf->tail = tail;
 
-  while (i < len)
+  while (i < len && dev->ops->rxavailable(dev))
     {
-      if (dev->ops->rxavailable(dev))
+      if (dev->ops->recvbuf)
         {
-          if (dev->ops->recvbuf)
-            {
-              i += dev->ops->recvbuf(dev, ptr + i, len - i);
-            }
-          else
-            {
-              ptr[i++] = dev->ops->receive(dev, &state);
-            }
+          i += dev->ops->recvbuf(dev, ptr + i, len - i);
+        }
+      else
+        {
+          ptr[i++] = dev->ops->receive(dev, &state);
         }
     }
 
-  return len;
+  return i;
 }
 
 /****************************************************************************
@@ -328,7 +325,9 @@ int uart_gdbstub_register(FAR uart_dev_t *dev, FAR const char *path)
 
   uart_gdbstub->state = gdb_state_init(uart_gdbstub_send,
                                        uart_gdbstub_receive,
-                                       NULL, uart_gdbstub);
+                                       NULL,
+                                       dev->ops->recvbuf != NULL,
+                                       uart_gdbstub);
   if (uart_gdbstub->state == NULL)
     {
       kmm_free(uart_gdbstub);
