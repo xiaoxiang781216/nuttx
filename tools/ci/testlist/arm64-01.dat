@@ -1,5 +1,8 @@
 /arm64
 
+# error: unknown type name 'g_interrupt_context'
+-fvp-armv8r:citest
+
 -vdk-armv8r:nsh
 -vdk-armv8r:nsh_smp
 
