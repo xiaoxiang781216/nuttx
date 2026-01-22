@@ -259,7 +259,7 @@ static int sim_audio_open(struct sim_audio_s *priv)
 
   if (priv->pcm)
     {
-      return -ENXIO;
+      return 0;
     }
 
   direction = priv->playback ? SND_PCM_STREAM_PLAYBACK
@@ -275,15 +275,6 @@ static int sim_audio_open(struct sim_audio_s *priv)
   if (ret < 0)
     {
       goto fail;
-    }
-
-  if (!priv->playback)
-    {
-      ret = host_snd_pcm_start(pcm);
-      if (ret < 0)
-        {
-          goto fail;
-        }
     }
 
   priv->pcm = pcm;
@@ -520,7 +511,16 @@ static int sim_audio_start(struct audio_lowerhalf_s *dev)
       return -ENOMEM;
     }
 
-  return sim_audio_open(priv);
+  if (!priv->playback)
+    {
+      ret = host_snd_pcm_start(priv->pcm);
+      if (ret < 0)
+        {
+          return ret;
+        }
+    }
+
+  return 0;
 }
 
 #ifndef CONFIG_AUDIO_EXCLUDE_STOP
@@ -745,6 +745,12 @@ static int sim_audio_ioctl(struct audio_lowerhalf_s *dev, int cmd,
                                       priv->frame_size);
             }
 
+          ret = sim_audio_open(priv);
+          if (ret < 0)
+            {
+              return ret;
+            }
+
           info->nbuffers    = priv->nbuffers;
           info->buffer_size = priv->buffer_size;
         }
@@ -935,7 +941,7 @@ static void sim_audio_process(struct sim_audio_s *priv)
   bool dequeue = false;
   int ret = 0;
 
-  if (!priv->pcm || priv->paused)
+  if (!priv->aux || priv->paused)
     {
       return;
     }
