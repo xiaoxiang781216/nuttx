@@ -146,25 +146,23 @@ static int gdb_recv_ack(FAR struct gdb_state_s *state)
 }
 
 /****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: gdb_putchar
+ * Name: gdb_putchar_direct
  *
  * Description:
- *   Put a character to the GDB server.
+ *   Send a character to the GDB server direct.
  *
  * Input Parameters:
  *   state   - The pointer to the GDB state structure.
  *   ch      - The character to be sent.
+ *   csum    - The checksum pointer (optional).
  *
  * Returned Value:
  *   The character sent to the GDB server.
  *
  ****************************************************************************/
 
-int gdb_putchar(FAR struct gdb_state_s *state, int ch, FAR char *csum)
+static int gdb_putchar_direct(FAR struct gdb_state_s *state, int ch,
+                              FAR char *csum)
 {
   unsigned char tmp = ch & 0xff;
   ssize_t ret;
@@ -177,7 +175,84 @@ int gdb_putchar(FAR struct gdb_state_s *state, int ch, FAR char *csum)
 
   if (csum)
     {
-      *csum += (char)tmp;
+      *csum += tmp;
+    }
+
+  return tmp;
+}
+
+/****************************************************************************
+ * Name: gdb_putchar_flush
+ *
+ * Description:
+ *   Guarantee flushing of the tx buffer.
+ *
+ * Input Parameters:
+ *   state   - The pointer to the GDB state structure.
+ *
+ * Returned Value:
+ *   Error code returned by the send function.
+ *
+ ****************************************************************************/
+
+static int gdb_putchar_flush(FAR struct gdb_state_s *state)
+{
+  int ret = 0;
+
+  if (state->tx_pos > 0)
+    {
+      ret = state->send(state->priv, state->tx_buf, state->tx_pos);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      state->tx_pos = 0;
+    }
+
+  return ret;
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: gdb_putchar
+ *
+ * Description:
+ *   Buffer a character for the current outgoing packet.
+ *
+ * Input Parameters:
+ *   state   - The pointer to the GDB state structure.
+ *   ch      - The character to be buffered.
+ *
+ * Returned Value:
+ *   The buffered character, or a negative value on error.
+ *
+ ****************************************************************************/
+
+int gdb_putchar(FAR struct gdb_state_s *state, int ch, FAR char *csum)
+{
+  unsigned char tmp = ch & 0xff;
+
+  if (!state->tx_size)
+    {
+      return gdb_putchar_direct(state, ch, csum);
+    }
+
+  if (state->tx_pos >= state->tx_size)
+    {
+#ifdef CONFIG_LIB_GDBSTUB_DEBUG
+      GDB_DEBUG(state, "Tx buffer overflow\n");
+#endif
+      return -EOVERFLOW;
+    }
+
+  state->tx_buf[state->tx_pos++] = tmp;
+  if (csum)
+    {
+      *csum += tmp;
     }
 
   return tmp;
@@ -199,16 +274,43 @@ int gdb_putchar(FAR struct gdb_state_s *state, int ch, FAR char *csum)
 
 int gdb_getchar(FAR struct gdb_state_s *state)
 {
-  unsigned char tmp;
   ssize_t ret;
 
-  ret = state->recv(state->priv, &tmp, 1);
-  if (ret < 0)
+  if (!state->rx_size)
     {
-      return ret;
+      char c;
+      do
+        {
+          ret = state->recv(state->priv, &c, 1);
+        }
+      while (ret == 0);
+
+      return ret > 0 ? c : ret;
     }
 
-  return tmp;
+  if (state->rx_pos < state->rx_len)
+    {
+      return state->rx_buf[state->rx_pos++];
+    }
+
+  state->rx_pos = 0;
+  state->rx_len = 0;
+
+  /* NOTE: The transport may block until data is available. */
+
+  while (state->rx_len == 0)
+    {
+      ret = state->recv(state->priv,
+                        state->rx_buf, state->rx_size);
+      if (ret < 0)
+        {
+          return ret;
+        }
+
+      state->rx_len = ret;
+    }
+
+  return state->rx_buf[state->rx_pos++];
 }
 
 /****************************************************************************
@@ -232,8 +334,9 @@ int gdb_send_packet(FAR struct gdb_state_s *state)
 {
   FAR char *buf = state->pkt_buf;
   size_t len = state->pkt_len;
-  size_t i = 0;
   char csum = 0;
+  size_t i = 0;
+  char hex[2];
   int ret;
 
   ret = gdb_putchar(state, '$', NULL); /* Send packet start, no checksum */
@@ -264,7 +367,7 @@ int gdb_send_packet(FAR struct gdb_state_s *state)
 
   while (i < len)
     {
-      const char c = buf[i];
+      char c = buf[i];
       size_t count = gdb_count_repeat(&buf[i], len - i);
 
       i += count;
@@ -313,16 +416,19 @@ int gdb_send_packet(FAR struct gdb_state_s *state)
       gdb_putchar(state, count, &csum);
     }
 
-  buf[0] = '#';
-  ret = gdb_bin2hex(buf + 1, 2, &csum, 1);
+  /* Append end marker and checksum */
+
+  gdb_putchar(state, '#', NULL);
+  ret = gdb_bin2hex(hex, sizeof(hex), &csum, 1);
   if (ret < 0)
     {
       return ret;
     }
 
-  /* Send the end marker and checksum */
+  gdb_putchar(state, hex[0], NULL);
+  gdb_putchar(state, hex[1], NULL);
 
-  ret = state->send(state->priv, buf, 3);
+  ret = gdb_putchar_flush(state);
   if (ret < 0)
     {
       return ret;
@@ -426,11 +532,27 @@ int gdb_recv_packet(FAR struct gdb_state_s *state)
     }
   while (state->pkt_len == 0); /* Ignore empty packets */
 
-  ret = state->recv(state->priv, buf, 2); /* Receive the checksum */
+  /* Receive the checksum (two hex digits). Prefer gdb_getchar() so that any
+   * optional read-ahead cache is honored and transports that block until the
+   * full requested length is available are not forced to read
+   * 2 bytes at once.
+   */
+
+  ret = gdb_getchar(state);
   if (ret < 0)
     {
       return ret;
     }
+
+  buf[0] = ret;
+
+  ret = gdb_getchar(state);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  buf[1] = ret;
 
 #ifdef CONFIG_LIB_GDBSTUB_DEBUG
     {
@@ -461,11 +583,11 @@ int gdb_recv_packet(FAR struct gdb_state_s *state)
   if (csum != expected) /* Verify */
     {
       GDB_DEBUG(state, "received packet with bad checksum\n");
-      gdb_putchar(state, '-', NULL); /* Send packet nack */
+      gdb_putchar_direct(state, '-', NULL); /* Send packet nack */
       return -EIO;
     }
 
-  gdb_putchar(state, '+', NULL); /* Send packet ack */
+  gdb_putchar_direct(state, '+', NULL); /* Send packet ack */
   state->pkt_next = state->pkt_buf;
   return 0;
 }

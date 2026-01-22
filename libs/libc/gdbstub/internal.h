@@ -79,7 +79,21 @@ struct gdb_state_s
   FAR char *pkt_next;                     /* Pointer to next byte in packet */
   char pkt_buf[GDB_PKTBUF_SIZE];          /* Packet buffer */
   size_t pkt_len;                         /* Packet send and receive length */
+  FAR char *rx_buf;                       /* RX read-ahead buffer */
+  size_t rx_size;                         /* RX buffer size */
+  size_t rx_pos;
+  size_t rx_len;
   FAR void *xcpregs;                      /* Pointer to the registers in context. */
+
+  /* TX coalescing buffer.
+   *
+   * Sized for worst-case outgoing packet expansion: escaped payload may grow
+   * up to 2x, plus framing ('$' + "#" + 2 checksum hex digits).
+   */
+
+  size_t tx_size;                         /* TX buffer size */
+  size_t tx_pos;                          /* Current TX buffer position */
+  char tx_buf[0];
 };
 
 struct gdb_debugpoint_s
@@ -103,15 +117,15 @@ typedef CODE ssize_t (*gdb_format_func_t)(FAR void *buf, size_t buf_len,
  * Name: gdb_putchar
  *
  * Description:
- *   Put a character to the GDB server.
+ *   Buffer a character for the current outgoing packet.
  *
  * Input Parameters:
  *   state   - The pointer to the GDB state structure.
- *   ch      - The character to be sent.
+ *   ch      - The character to be buffered.
  *   csum    - The checksum pointer (optional).
  *
  * Returned Value:
- *   The character sent to the GDB server.
+ *   The buffered character, or a negative value on error.
  *
  ****************************************************************************/
 

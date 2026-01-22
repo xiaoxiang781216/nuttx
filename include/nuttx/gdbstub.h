@@ -82,6 +82,7 @@ int gdb_debugpoint_remove(int type, void *addr, size_t size);
  *   send    - The pointer to the send function.
  *   recv    - The pointer to the receive function.
  *   monitor - The pointer to the monitor function.
+ *   packet  - True to enable packet buffer mode.
  *   priv    - The pointer to the private data.
  *
  * Returned Value:
@@ -93,6 +94,7 @@ int gdb_debugpoint_remove(int type, void *addr, size_t size);
 FAR struct gdb_state_s *gdb_state_init(gdb_send_func_t send,
                                        gdb_recv_func_t recv,
                                        gdb_monitor_func_t monitor,
+                                       bool packet,
                                        FAR void *priv);
 
 /****************************************************************************
