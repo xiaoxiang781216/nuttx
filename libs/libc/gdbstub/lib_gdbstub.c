@@ -70,18 +70,19 @@ FAR struct gdb_state_s *gdb_state_init(gdb_send_func_t send,
                                        gdb_monitor_func_t monitor,
                                        FAR void *priv)
 {
-  FAR struct gdb_state_s *state = lib_zalloc(sizeof(struct gdb_state_s));
+  FAR struct gdb_state_s *state = lib_memalign(XCPTCONTEXT_ALIGN,
+                                               sizeof(struct gdb_state_s));
 
   if (state == NULL)
     {
       return NULL;
     }
 
+  memset(state, 0, sizeof(struct gdb_state_s));
   state->send = send;
   state->recv = recv;
   state->priv = priv;
   state->monitor = monitor;
-  state->running_regs = lib_memalign(XCPTCONTEXT_ALIGN, XCPTCONTEXT_SIZE);
 
 #ifdef CONFIG_LIB_GDBSTUB_DEBUG
   lib_syslograwstream_open(&state->stream);
@@ -105,7 +106,6 @@ void gdb_state_uninit(FAR struct gdb_state_s *state)
 {
   if (state != NULL)
     {
-      lib_free(state->running_regs);
       lib_free(state);
     }
 }

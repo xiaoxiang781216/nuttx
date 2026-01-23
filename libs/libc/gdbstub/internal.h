@@ -63,6 +63,7 @@
 
 struct gdb_state_s
 {
+  uint8_t running_regs[XCPTCONTEXT_SIZE]; /* Registers of running thread */
 #ifdef CONFIG_LIB_GDBSTUB_DEBUG
   struct lib_syslograwstream_s stream;
 #endif
@@ -78,7 +79,6 @@ struct gdb_state_s
   FAR char *pkt_next;                     /* Pointer to next byte in packet */
   char pkt_buf[GDB_PKTBUF_SIZE];          /* Packet buffer */
   size_t pkt_len;                         /* Packet send and receive length */
-  FAR uint8_t *running_regs;              /* Registers of running thread */
   FAR void *xcpregs;                      /* Pointer to the registers in context. */
 };
 
