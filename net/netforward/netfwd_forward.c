@@ -259,15 +259,16 @@ static inline_function int netfwd_forward_notify(FAR struct forward_s *fwd)
 static void netfwd_forward_work(void *arg)
 {
   FAR struct forward_s *fwd = (FAR struct forward_s *)arg;
+  FAR struct net_driver_s *fwddev = fwd->f_dev;
   int ret;
 
-  netdev_lock(fwd->f_dev);
+  netdev_lock(fwddev);
 
   /* Notify the device driver of the availability of TX data */
 
   ret = netfwd_forward_notify(fwd);
 
-  netdev_unlock(fwd->f_dev);
+  netdev_unlock(fwddev);
 
   if (ret < 0)
     {
