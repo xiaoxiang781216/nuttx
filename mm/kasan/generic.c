@@ -67,7 +67,7 @@ struct kasan_region_s
  ****************************************************************************/
 
 static FAR struct kasan_region_s *g_region[CONFIG_MM_KASAN_REGIONS];
-static atomic_t g_region_count;
+static size_t g_region_count;
 static spinlock_t g_lock;
 
 /****************************************************************************
@@ -78,11 +78,10 @@ static inline_function FAR uintptr_t *
 kasan_mem_to_shadow(FAR const void *ptr, size_t size,
                     FAR unsigned int *bit)
 {
-  size_t count = atomic_read(&g_region_count);
   uintptr_t addr = (uintptr_t)ptr;
   size_t i;
 
-  for (i = 0; i < count; i++)
+  for (i = 0; i < g_region_count; i++)
     {
       if (addr >= g_region[i]->begin && addr < g_region[i]->end)
         {
@@ -240,7 +239,6 @@ void kasan_register(FAR void *addr, FAR size_t *size)
 {
   FAR struct kasan_region_s *region;
   irqstate_t flags;
-  size_t idx;
 
   region = (FAR struct kasan_region_s *)
     ((FAR char *)addr + *size - KASAN_REGION_SIZE(*size));
@@ -250,10 +248,8 @@ void kasan_register(FAR void *addr, FAR size_t *size)
 
   flags = spin_lock_irqsave_notrace(&g_lock);
 
-  idx = atomic_read(&g_region_count);
-  DEBUGASSERT(idx < CONFIG_MM_KASAN_REGIONS);
-  g_region[idx] = region;
-  atomic_add(&g_region_count, 1);
+  DEBUGASSERT(g_region_count < CONFIG_MM_KASAN_REGIONS);
+  g_region[g_region_count++] = region;
 
   spin_unlock_irqrestore_notrace(&g_lock, flags);
 
@@ -273,8 +269,7 @@ void kasan_unregister(FAR void *addr)
       if (g_region[i]->begin == (uintptr_t)addr)
         {
           size_t size = g_region[i]->end - g_region[i]->begin;
-          atomic_sub(&g_region_count, 1);
-          g_region[i] = NULL;
+          g_region_count--;
           memmove(&g_region[i], &g_region[i + 1],
                   (g_region_count - i) * sizeof(g_region[0]));
           spin_unlock_irqrestore_notrace(&g_lock, flags);
