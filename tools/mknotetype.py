@@ -111,7 +111,7 @@ class NoteFormatType:
         if len(typelist) > 29:
             raise ValueError(f"format string {fmt} has too many arguments")
 
-        # The number of parameters is placed in the highest 4 bits
+        # The number of parameters is placed in bits 58-61 (4 bits)
         notetypes = len(typelist) << 58
 
         for i, notetype in enumerate(typelist):
@@ -242,6 +242,9 @@ if __name__ == "__main__":
         note = NoteFormat(args.elf)
         print(args.verbose)
         note.generate_note_type_section(typefile, args.verbose)
+
+        # Flush the buffer to ensure all data is written to disk
+        typefile.flush()
 
         typefile_name = typefile.name
         output = args.output if args.output else ""
