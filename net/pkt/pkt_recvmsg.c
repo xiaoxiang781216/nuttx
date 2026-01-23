@@ -79,7 +79,7 @@ struct pkt_recvfrom_s
 
 MEMPOOL_DEFINE(g_pkt_state_infos, sizeof(struct pkt_recvfrom_s),
                CONFIG_NET_PKT_PREALLOC_CONNS,
-               CONFIG_NET_PKT_ALLOC_CONNS, CONFIG_NET_PKT_MAX_CONNS);
+               CONFIG_NET_PKT_MAX_CONNS, CONFIG_NET_PKT_ALLOC_CONNS);
 
 /****************************************************************************
  * Name: pkt_add_recvlen
