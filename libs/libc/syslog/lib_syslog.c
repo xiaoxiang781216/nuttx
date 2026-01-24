@@ -64,9 +64,13 @@ void vsyslog(int priority, FAR const IPTR char *fmt, va_list ap)
 {
   FAR struct task_info_s *info = task_get_info();
 
-  /* Check if this priority is enabled */
+  /* Check if this priority is enabled.
+   * During early boot (before idle task TLS is fully initialized),
+   * info may be NULL. In this case, allow all log priorities to ensure
+   * early initialization logging works properly.
+   */
 
-  if ((info && info->ta_syslog_mask & LOG_MASK(priority)) != 0)
+  if (info == NULL || (info->ta_syslog_mask & LOG_MASK(priority)) != 0)
     {
       /* Yes.. Perform the nx_vsyslog system call.
        *
